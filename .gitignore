@@ -1,0 +1,52 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Application output
+out/
+
+# Python
+ai-worker/.venv/
+ai-worker/__pycache__/
+ai-worker/*.pyc
+ai-worker/models/
+ai-worker/cache/
+**/__pycache__/
+**/*.pyc
+
+# Audio files (artifacts)
+*.wav
+*.mp3
+*.flac
+*.aiff
+*.m4a
+*.ogg
+
+# Models
+models/
+**/models/
+
+# Cache
+cache/
+**/cache/
+
+# Exports
+exports/
+**/exports/
+
+# Renders
+renders/
+**/renders/

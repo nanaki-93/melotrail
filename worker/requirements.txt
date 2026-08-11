@@ -1,0 +1,22 @@
+# AI Music Workstation - Python Dependencies
+
+# Core audio processing
+numpy>=1.24.0
+scipy>=1.10.0
+soundfile>=0.12.1
+librosa>=0.10.0
+
+# DSP and analysis
+onsetdetectors>=0.1.0
+madmom>=0.16.1
+
+# Stem separation (optional)
+# demucs>=4.0.0
+# spleeter>=2.4.0
+
+# AI generation (optional)
+# torch>=2.0.0
+# accelerate>=0.20.0
+
+# MP3 encoding (optional)
+# pydub>=0.25.1

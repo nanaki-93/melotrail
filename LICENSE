@@ -1,0 +1,7 @@
+Copyright (c) 2026
+
+This project skeleton does not grant rights to third-party model weights,
+datasets, native libraries, or Python packages.
+
+Before distributing the application, add a project-specific license and
+complete a license audit for every dependency and model.

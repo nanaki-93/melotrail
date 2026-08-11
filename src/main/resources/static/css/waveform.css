@@ -1,0 +1,194 @@
+/* ============================================
+   Waveform Renderer Styles
+   ============================================ */
+
+/* Waveform Container */
+.waveform-container {
+    background-color: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.waveform-header {
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.waveform-header h3 {
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
+}
+
+/* Canvas Wrapper */
+.waveform-canvas-wrapper {
+    position: relative;
+    width: 100%;
+    height: 120px;
+    background-color: var(--color-bg-primary);
+    cursor: crosshair;
+}
+
+.waveform-canvas-wrapper canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+/* Waveform Zoom */
+.waveform-zoom {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+}
+
+.waveform-zoom input[type="range"] {
+    width: 100px;
+}
+
+/* Waveform Controls */
+.waveform-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-top: 1px solid var(--color-border);
+}
+
+.time-display {
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+    min-width: 110px;
+    text-align: center;
+}
+
+/* Seek Bar */
+.seek-bar {
+    flex: 1;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--color-bg-primary);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+}
+
+.seek-bar::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-full);
+    background: var(--color-accent);
+    cursor: pointer;
+    transition: transform var(--transition-fast);
+}
+
+.seek-bar::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+/* Waveform Markers */
+.waveform-marker {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: var(--color-accent);
+    pointer-events: none;
+    z-index: 10;
+}
+
+.waveform-marker-label {
+    position: absolute;
+    bottom: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: var(--font-size-xs);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
+/* Loop Region */
+.loop-region {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background-color: rgba(233, 69, 96, 0.15);
+    border-left: 2px solid var(--color-accent);
+    border-right: 2px solid var(--color-accent);
+    pointer-events: auto;
+    cursor: move;
+}
+
+.loop-region-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    cursor: ew-resize;
+    background-color: var(--color-accent);
+    opacity: 0.7;
+}
+
+.loop-region-handle:hover {
+    opacity: 1;
+}
+
+.loop-region-handle-left {
+    left: 0;
+}
+
+.loop-region-handle-right {
+    right: 0;
+}
+
+/* Waveform Transport */
+.transport {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.transport-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--color-border);
+    background-color: var(--color-bg-tertiary);
+    color: var(--color-text-primary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-lg);
+    transition: all var(--transition-fast);
+}
+
+.transport-btn:hover {
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
+    color: #ffffff;
+}
+
+.transport-btn.active {
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
+    color: #ffffff;
+}
+
+/* Responsive Waveform */
+@media (max-width: 768px) {
+    .waveform-canvas-wrapper {
+        height: 100px;
+    }
+
+    .waveform-controls {
+        flex-wrap: wrap;
+    }
+}
