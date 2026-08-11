@@ -151,7 +151,7 @@ class ProcessingQueue(
     }
 
     private fun onJobComplete(jobId: String, response: WorkerResponse) {
-        val output = response.output?.mapValues { it.value } ?: emptyMap()
+        val output = response.output?.mapValues { (k, v) -> v.toString() } ?: emptyMap()
         val updated = _jobs.value.map {
             if (it.id == jobId) it.withResult(output)
             else it

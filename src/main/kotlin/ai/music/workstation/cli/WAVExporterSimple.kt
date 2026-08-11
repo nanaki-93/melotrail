@@ -30,22 +30,22 @@ class WAVExporterSimple {
             DataOutputStream(fos).use { dos ->
                 // RIFF header
                 dos.writeBytes("RIFF")
-                dos.writeInt(fileSize)
+                dos.writeLittleEndianInt(fileSize)
                 dos.writeBytes("WAVE")
 
                 // fmt chunk
                 dos.writeBytes("fmt ")
-                dos.writeInt(16) // chunk size
-                dos.writeShort(1) // PCM
-                dos.writeShort(resampled.format.channels)
-                dos.writeInt(resampled.format.sampleRate)
-                dos.writeInt(resampled.format.sampleRate * resampled.format.channels * bytesPerSample)
-                dos.writeShort(resampled.format.channels * bytesPerSample)
-                dos.writeShort(24) // 24-bit
+                dos.writeLittleEndianInt(16) // chunk size
+                dos.writeLittleEndianShort(1) // PCM
+                dos.writeLittleEndianShort(resampled.format.channels)
+                dos.writeLittleEndianInt(resampled.format.sampleRate)
+                dos.writeLittleEndianInt(resampled.format.sampleRate * resampled.format.channels * bytesPerSample)
+                dos.writeLittleEndianShort(resampled.format.channels * bytesPerSample)
+                dos.writeLittleEndianShort(24) // 24-bit
 
                 // data chunk
                 dos.writeBytes("data")
-                dos.writeInt(dataSize)
+                dos.writeLittleEndianInt(dataSize)
 
                 // Write samples as 24-bit PCM
                 for (i in 0 until totalSamples) {
@@ -59,6 +59,18 @@ class WAVExporterSimple {
                 }
             }
         }
+    }
+
+    private fun DataOutputStream.writeLittleEndianInt(value: Int) {
+        writeByte(value and 0xFF)
+        writeByte((value shr 8) and 0xFF)
+        writeByte((value shr 16) and 0xFF)
+        writeByte((value shr 24) and 0xFF)
+    }
+
+    private fun DataOutputStream.writeLittleEndianShort(value: Int) {
+        writeByte(value and 0xFF)
+        writeByte((value shr 8) and 0xFF)
     }
 
     /**
@@ -75,10 +87,10 @@ class WAVExporterSimple {
 
             for (c in 0 until buffer.format.channels) {
                 val srcPos = srcIndex * buffer.format.channels + c
-                if (srcPos + 1 < buffer.samples.size) {
+                if (srcPos + buffer.format.channels < buffer.samples.size) {
                     newSamples[i * buffer.format.channels + c] =
                         buffer.samples[srcPos] * (1f - frac.toFloat()) +
-                        buffer.samples[srcPos + 1] * frac.toFloat()
+                        buffer.samples[srcPos + buffer.format.channels] * frac.toFloat()
                 } else {
                     newSamples[i * buffer.format.channels + c] = buffer.samples[srcPos]
                 }

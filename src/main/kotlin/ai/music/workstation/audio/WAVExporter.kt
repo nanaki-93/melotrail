@@ -63,27 +63,39 @@ class WAVExporter(
             DataOutputStream(fos).use { dos ->
                 // RIFF header
                 dos.writeBytes("RIFF")
-                dos.writeInt(fileSize)
+                dos.writeLittleEndianInt(fileSize)
                 dos.writeBytes("WAVE")
 
                 // fmt chunk
                 dos.writeBytes("fmt ")
-                dos.writeInt(16) // chunk size
-                dos.writeShort(1) // PCM or float
-                dos.writeShort(buffer.format.channels.toShort().toInt())
-                dos.writeInt(buffer.format.sampleRate)
-                dos.writeInt(buffer.format.sampleRate * buffer.format.channels * bytesPerSample)
-                dos.writeShort((buffer.format.channels * bytesPerSample).toShort().toInt())
-                dos.writeShort(bitDepth.toShort().toInt())
+                dos.writeLittleEndianInt(16) // chunk size
+                dos.writeLittleEndianShort(1) // PCM
+                dos.writeLittleEndianShort(buffer.format.channels)
+                dos.writeLittleEndianInt(buffer.format.sampleRate)
+                dos.writeLittleEndianInt(buffer.format.sampleRate * buffer.format.channels * bytesPerSample)
+                dos.writeLittleEndianShort(buffer.format.channels * bytesPerSample)
+                dos.writeLittleEndianShort(bitDepth)
 
                 // data chunk
                 dos.writeBytes("data")
-                dos.writeInt(dataSize)
+                dos.writeLittleEndianInt(dataSize)
 
                 // Write samples
                 writeSamples(dos, buffer, bitDepth)
             }
         }
+    }
+
+    private fun DataOutputStream.writeLittleEndianInt(value: Int) {
+        writeByte(value and 0xFF)
+        writeByte((value shr 8) and 0xFF)
+        writeByte((value shr 16) and 0xFF)
+        writeByte((value shr 24) and 0xFF)
+    }
+
+    private fun DataOutputStream.writeLittleEndianShort(value: Int) {
+        writeByte(value and 0xFF)
+        writeByte((value shr 8) and 0xFF)
     }
 
     private fun writeSamples(
@@ -95,14 +107,17 @@ class WAVExporter(
             for (c in 0 until buffer.format.channels) {
                 val sample = buffer.getSample(c, i)
                 when (bitDepth) {
-                    16 -> dos.writeShort((sample * 32767).toInt().toShort().toInt())
+                    16 -> dos.writeLittleEndianShort((sample * 32767).toInt())
                     24 -> {
-                        val value = (sample * 8388607).toInt()
+                        val value = (sample * 8388607).toInt().coerceIn(-8388608, 8388607)
                         dos.writeByte(value and 0xFF)
                         dos.writeByte((value shr 8) and 0xFF)
                         dos.writeByte((value shr 16) and 0xFF)
                     }
-                    32 -> dos.writeFloat(sample)
+                    32 -> {
+                        val bits = java.lang.Float.floatToRawIntBits(sample)
+                        dos.writeLittleEndianInt(bits)
+                    }
                 }
             }
         }

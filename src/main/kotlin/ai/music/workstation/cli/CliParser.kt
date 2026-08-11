@@ -23,8 +23,6 @@ object CliParser {
         var dryRun = false
         var stagesList = emptyList<String>()
         var verbose = false
-        var workerUrl = "http://localhost:8081"
-
         var i = 0
         while (i < args.size) {
             when (args[i]) {
@@ -51,9 +49,6 @@ object CliParser {
                 }
                 "--verbose", "-v" -> {
                     verbose = true
-                }
-                "--worker-url" -> {
-                    workerUrl = args[++i]
                 }
                 "--help", "-h" -> {
                     printUsage()
@@ -113,8 +108,7 @@ object CliParser {
             mastering = MasteringConfig(),
             dryRun = dryRun,
             stages = stagesList,
-            verbose = verbose,
-            workerUrl = workerUrl
+            verbose = verbose
         )
     }
 
@@ -133,7 +127,7 @@ object CliParser {
             "Options:",
             "  --input, -i <path>             Input audio file",
             "  --output, -o <path>            Output WAV file",
-            "  --worker-url <url>             Worker HTTP URL (default: http://localhost:8081)",
+            "  --worker-url <url>             [deprecated] Worker URL (no longer used, process-based worker)",
             "  --preset <name>                LoFi preset to apply",
             "                                 [Warm Cassette, Dusty Vinyl, Bedroom LoFi,",
             "                                  Old Sampler, Late Night, Rainy Coffee Shop]",
@@ -147,10 +141,10 @@ object CliParser {
             "  --help, -h                     Show this help message",
             "",
             "Examples:",
-            "  ./gradlew :cli:run --args=\"--input input.wav --output output.wav --worker-url http://localhost:8081\"",
-            "  ./gradlew :cli:run --args=\"--input input.wav --output output.wav --worker-url http://localhost:8081 --preset Dusty Vinyl\"",
-            "  ./gradlew :cli:run --args=\"--input input.wav --output output.wav --worker-url http://localhost:8081 --stages analyze,repair\"",
-            "  ./gradlew :cli:run --args=\"--input input.wav --output output.wav --worker-url http://localhost:8081 --dry-run\""
+            "  ./gradlew :cli:run --args=\"--input input.wav --output output.wav\"",
+            "  ./gradlew :cli:run --args=\"--input input.wav --output output.wav --preset Dusty Vinyl\"",
+            "  ./gradlew :cli:run --args=\"--input input.wav --output output.wav --stages analyze,repair\"",
+            "  ./gradlew :cli:run --args=\"--input input.wav --output output.wav --dry-run\""
         )
         lines.forEach { println(it) }
     }

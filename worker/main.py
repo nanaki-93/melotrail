@@ -1,142 +1,141 @@
-#!/usr/bin/env python3
-"""AI Music Workstation - Python Worker
+"""HTTP server for the AI Music Workstation Python worker.
 
-The worker communicates with the Kotlin application via JSON over stdin/stdout.
-Supports commands: analyze, apply_dsp, health, repair, master, etc.
+The worker is a standalone service. Each operation has its own endpoint:
+    GET  /health
+    POST /analyze
+    POST /apply_dsp
+    POST /repair
+    POST /master
+    POST /mp3_convert
+
+Request bodies contain the command-specific input directly, rather than a
+generic {"command": "...", "input": {...}} envelope.
 """
 
-import sys
+from __future__ import annotations
+
+import argparse
 import json
 import logging
-import argparse
-from typing import Dict, Any
+import sys
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from typing import Any, Callable
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 logging.basicConfig(
-    stream=sys.stderr,
     level=logging.INFO,
-    format='[%(asctime)s] %(levelname)s %(name)s: %(message)s'
+    format="[%(asctime)s] %(levelname)s %(name)s: %(message)s",
 )
-logger = logging.getLogger('worker')
+logger = logging.getLogger("worker")
 
-COMMANDS: Dict[str, Any] = {}
+from worker.registry import COMMANDS, register_command
 
 
-def run_single_command():
-    """Process a single JSON command from stdin."""
-    try:
-        line = sys.stdin.readline().strip()
-        if not line:
+class WorkerHandler(BaseHTTPRequestHandler):
+    """HTTP handler exposing one POST endpoint per command."""
+
+    def log_message(self, fmt: str, *args: Any) -> None:
+        logger.info(fmt, *args)
+
+    def do_GET(self) -> None:
+        if self.path == "/health":
+            self._send_json(200, {
+                "status": "ok",
+                "version": "1.0.0",
+                "available": True,
+                "commands": sorted(COMMANDS.keys()),
+            })
             return
+        self._send_json(404, {"error": "Not found"})
 
-        request = json.loads(line)
-        command = request.get('command')
-
-        if command not in COMMANDS:
-            send_error(request.get('jobId', ''), f'Unknown command: {command}')
+    def do_POST(self) -> None:
+        handler = COMMANDS.get(self.path.removeprefix("/"))
+        if handler is None:
+            self._send_json(404, {
+                "error": "Not found",
+                "message": f"Unknown endpoint: {self.path}",
+            })
             return
 
         try:
-            result = COMMANDS[command](request)
-            send_response(request.get('jobId', ''), 'completed', result)
-        except Exception as e:
-            logger.exception(f"Error executing command: {command}")
-            send_error(request.get('jobId', ''), str(e))
-    except json.JSONDecodeError as e:
-        send_error('', f'Invalid JSON: {str(e)}')
-    except Exception as e:
-        logger.exception("Unexpected error")
-        send_error('', str(e))
+            request = self._read_json()
+            job_id = str(request.get("jobId", ""))
+            logger.info("Executing %s (jobId=%s)", self.path, job_id)
 
+            output = handler(request)
+            self._send_json(200, {
+                "version": 1,
+                "jobId": job_id,
+                "status": "completed",
+                "output": output or {},
+            })
+        except ValueError as exc:
+            logger.warning("Bad request on %s: %s", self.path, exc)
+            self._send_json(400, {
+                "version": 1,
+                "status": "error",
+                "error": {"type": "BadRequest", "message": str(exc)},
+            })
+        except Exception as exc:
+            logger.exception("Worker command failed: %s", self.path)
+            self._send_json(500, {
+                "version": 1,
+                "status": "error",
+                "error": {"type": "WorkerError", "message": str(exc)},
+            })
 
-def run_persistent_server():
-    """Run as persistent server, processing commands until EOF."""
-    logger.info("Starting persistent worker server")
-    while True:
-        line = sys.stdin.readline()
-        if not line:
-            break
+    def _read_json(self) -> dict[str, Any]:
+        length = int(self.headers.get("Content-Length", "0"))
+        raw = self.rfile.read(length)
+        if not raw:
+            return {}
         try:
-            run_single_command()
-        except Exception as e:
-            logger.exception("Error in persistent mode")
+            value = json.loads(raw.decode("utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Invalid JSON: {exc.msg}") from exc
+        if not isinstance(value, dict):
+            raise ValueError("JSON body must be an object")
+        return value
+
+    def _send_json(self, status_code: int, data: dict[str, Any]) -> None:
+        encoded = json.dumps(data).encode("utf-8")
+        self.send_response(status_code)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(encoded)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(encoded)
 
 
-def send_response(job_id: str, status: str, output: dict = None):
-    """Send a success response to stdout."""
-    response = {
-        'version': 1,
-        'jobId': job_id,
-        'status': status,
-        'output': output or {}
-    }
-    sys.stdout.write(json.dumps(response) + '\n')
-    sys.stdout.flush()
+def load_commands() -> None:
+    # Importing these modules executes @register_command decorators.
+    from worker.commands import analyze, dsp, repair, mastering, mp3_convert  # noqa: F401
+    logger.info("Loaded commands: %s", ", ".join(sorted(COMMANDS)))
 
 
-def send_error(job_id: str, message: str):
-    """Send an error response to stdout."""
-    response = {
-        'version': 1,
-        'jobId': job_id,
-        'status': 'error',
-        'error': {
-            'type': 'WorkerError',
-            'message': message
-        }
-    }
-    sys.stdout.write(json.dumps(response) + '\n')
-    sys.stdout.flush()
-
-
-def send_progress(job_id: str, progress: float, message: str = ''):
-    """Send a progress update to stdout."""
-    response = {
-        'version': 1,
-        'jobId': job_id,
-        'status': 'progress',
-        'progress': progress,
-        'message': message
-    }
-    sys.stdout.write(json.dumps(response) + '\n')
-    sys.stdout.flush()
-
-
-# Health check command
-def health_command(request: dict) -> dict:
-    """Health check - returns worker status."""
-    return {
-        'status': 'ok',
-        'version': '1.0.0',
-        'commands': list(COMMANDS.keys())
-    }
-
-
-def register_command(name: str):
-    """Decorator to register a command handler."""
-    def decorator(func):
-        COMMANDS[name] = func
-        return func
-    return decorator
-
-
-# Import commands
-try:
-    from worker.commands import analyze, dsp, health, repair, mastering
-except ImportError:
-    logger.warning("Could not import command modules")
-
-
-def main():
-    parser = argparse.ArgumentParser(description='AI Music Workstation Worker')
-    parser.add_argument('--persistent', action='store_true',
-                       help='Run in persistent mode (process multiple commands)')
+def main() -> None:
+    parser = argparse.ArgumentParser(description="AI Music Workstation Python worker")
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=8081)
     args = parser.parse_args()
 
-    if args.persistent:
-        run_persistent_server()
-    else:
-        run_single_command()
+    load_commands()
+
+    server = ThreadingHTTPServer((args.host, args.port), WorkerHandler)
+    logger.info("Python worker listening on http://%s:%d", args.host, args.port)
+    logger.info("Health endpoint: GET /health")
+
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        logger.info("Stopping worker")
+    finally:
+        server.server_close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

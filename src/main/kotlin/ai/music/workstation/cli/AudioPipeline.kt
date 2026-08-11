@@ -9,6 +9,7 @@ import ai.music.workstation.logging.DefaultLogger
 import ai.music.workstation.logging.Logger
 import ai.music.workstation.model.LoudnessReport
 import ai.music.workstation.worker.*
+import ai.music.workstation.worker.HttpWorkerClient
 import kotlinx.coroutines.*
 import java.nio.file.Files
 import java.nio.file.Path
@@ -30,9 +31,9 @@ class AudioPipeline(
     private val errorReporter: ErrorReporter
 ) {
 
-    private val workerClient: WorkerClient by lazy {
-        WorkerClient(
-            baseUrl = cliArgs.workerUrl,
+    private val workerClient: HttpWorkerClient by lazy {
+        HttpWorkerClient(
+            baseUrl = "http://127.0.0.1:8081",
             timeout = Duration.parse("PT10M"),
             logger = logger,
             errorReporter = errorReporter
@@ -71,6 +72,13 @@ class AudioPipeline(
         // Current working path for intermediate files
         val workDir = Files.createTempDirectory("ai-music-workstation-cli-")
         logger.info("Pipeline", "Working directory: $workDir")
+
+        // The Python worker is a separate service. Start it with `make worker`.
+        if (!workerClient.healthCheck()) {
+            throw RuntimeException(
+                "Python worker is not running. Start it with `make worker` before running the CLI."
+            )
+        }
 
         try {
             var currentInput = Path.of(cliArgs.inputPath).toAbsolutePath().normalize()
@@ -142,6 +150,7 @@ class AudioPipeline(
             // Cleanup temp directory
             deleteRecursively(workDir)
             logger.info("Pipeline", "Cleaned up working directory")
+
         }
 
         return result
@@ -152,14 +161,12 @@ class AudioPipeline(
      */
     private suspend fun convertMp3ToWav(inputPath: Path, outputPath: Path): Boolean {
         return try {
-            workerClient.start()
             val response = workerClient.execute(
                 MP3ConvertCommand(
                     path = inputPath.toString(),
                     outputPath = outputPath.toString()
                 )
             )
-            workerClient.stop()
 
             if (response.status != WorkerStatus.COMPLETED) {
                 val errorMsg = response.error?.message ?: "Unknown error"
@@ -178,8 +185,6 @@ class AudioPipeline(
      * Stage 1: Run audio analysis via worker.
      */
     private suspend fun runAnalysis(inputPath: Path): AnalysisResult {
-        workerClient.start()
-
         return try {
             val response = workerClient.execute(
                 AnalyzeCommand(
@@ -218,8 +223,9 @@ class AudioPipeline(
                 },
                 qualityIssues = emptyList()
             )
-        } finally {
-            workerClient.stop()
+        } catch (e: Exception) {
+            logger.error("Pipeline", "Analysis exception: ${e.message}")
+            throw e
         }
     }
 
@@ -227,8 +233,6 @@ class AudioPipeline(
      * Stage 2: Run repair via worker.
      */
     private suspend fun runRepair(inputPath: Path, outputPath: Path): Boolean {
-        workerClient.start()
-
         return try {
             val repairs = listOf(
                 RepairSpec("dc_offset", emptyMap()),
@@ -255,8 +259,6 @@ class AudioPipeline(
         } catch (e: Exception) {
             logger.error("Pipeline", "Repair exception: ${e.message}")
             false
-        } finally {
-            workerClient.stop()
         }
     }
 
@@ -298,8 +300,6 @@ class AudioPipeline(
      * @return Pair of (success, loudnessReport)
      */
     private suspend fun runMastering(inputPath: Path, outputPath: Path): Pair<Boolean, LoudnessReport?> {
-        workerClient.start()
-
         return try {
             val masteringSettings = mapOf(
                 "eq_enabled" to true,
@@ -356,8 +356,6 @@ class AudioPipeline(
         } catch (e: Exception) {
             logger.error("Pipeline", "Mastering exception: ${e.message}")
             Pair(false, null as LoudnessReport?)
-        } finally {
-            workerClient.stop()
         }
     }
 

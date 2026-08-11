@@ -21,8 +21,7 @@ data class CliArgs(
     val mastering: MasteringConfig = MasteringConfig(),
     val dryRun: Boolean = false,
     val stages: List<String> = emptyList(),
-    val verbose: Boolean = false,
-    val workerUrl: String = "http://localhost:8081"
+    val verbose: Boolean = false
 ) {
     companion object {
         val VALID_STAGES = listOf("analyze", "repair", "lofi", "master")

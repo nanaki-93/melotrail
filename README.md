@@ -11,21 +11,30 @@ The project is intentionally kept as **one Gradle module**. The Python worker re
 
 ## Run the application
 
-From the project root:
+The application has three independent processes:
+
+1. Python worker — audio/AI processing on port `8081`
+2. Kotlin/Spring API — application API on port `8080`
+3. Python frontend server — static pages on port `3000`
+
+For local development, run these in three terminals:
 
 ```bash
+make worker
 make run
+make frontend
 ```
 
 Then open:
 
 ```text
-http://localhost:8080/
+http://127.0.0.1:3000/index.html
 ```
 
-Do **not** open `src/main/resources/static/index.html` directly with `file://`. The frontend uses ES modules and API calls and must be served over HTTP by Spring Boot.
+You can also serve the frontend through Spring Boot at `http://localhost:8080/`.
+Do not open `src/main/resources/static/index.html` directly with `file://`.
 
-You can also run it without Make:
+You can run Spring Boot without Make:
 
 ```bash
 ./gradlew bootRun
@@ -62,7 +71,9 @@ Equivalent Gradle command:
 | `make run` | Start Spring Boot |
 | `make cli-help` | Show CLI help |
 | `make cli ARGS="..."` | Run CLI |
-| `make worker` | Start Python worker |
+| `make worker` | Start standalone Python worker on `:8081` |
+| `make frontend` | Start Python frontend server on `:3000` |
+| `make python-install` | Install Python dependencies |
 | `make clean` | Clean Gradle outputs |
 
 ## Project structure
@@ -110,3 +121,51 @@ Environment variables supported by the server include:
 ## License
 
 MIT
+
+
+## Local development architecture
+
+The Python worker is now a standalone HTTP service. Kotlin does not spawn or
+stop Python processes.
+
+Python exposes one endpoint per operation:
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/health` | Worker health |
+| POST | `/analyze` | Analyze audio |
+| POST | `/apply_dsp` | Python DSP integration |
+| POST | `/repair` | Repair audio |
+| POST | `/master` | Master audio |
+| POST | `/mp3_convert` | Convert MP3 to WAV |
+
+The Kotlin worker client maps each `WorkerCommand` directly to its endpoint.
+There is no generic `/api/worker/command` request envelope between Kotlin and
+Python anymore.
+
+### Run locally
+
+Use three terminals:
+
+```bash
+make worker
+make run
+make frontend
+```
+
+Then open `http://127.0.0.1:3000/index.html`.
+
+The services use:
+
+- Python worker: `127.0.0.1:8081`
+- Kotlin/Spring API: `127.0.0.1:8080`
+- Static frontend: `127.0.0.1:3000`
+
+The frontend development server is only a static file server. API requests are
+sent to the Kotlin server on port 8080.
+
+Install Python dependencies with:
+
+```bash
+make python-install
+```

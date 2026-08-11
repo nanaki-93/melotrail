@@ -35,13 +35,6 @@ fun main(args: Array<String>) = runBlocking {
         logger.info("CLI", "Verbose mode enabled")
     }
 
-    // Validate worker URL
-    if (!cliArgs.workerUrl.startsWith("http://") && !cliArgs.workerUrl.startsWith("https://")) {
-        System.err.println("Error: Worker URL must start with http:// or https://")
-        System.exit(1)
-        return@runBlocking
-    }
-
     // Start pipeline
     val pipeline = AudioPipeline(
         cliArgs = cliArgs,

@@ -1,22 +1,24 @@
 package ai.music.workstation.worker
 
+import kotlinx.serialization.json.JsonPrimitive
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 
 class WorkerResponseTest {
     @Test
     fun `should create valid response`() {
+        val output = mapOf("bpm" to JsonPrimitive("120.0"))
         val response = WorkerResponse(
             version = 1,
             jobId = "test-job",
             status = WorkerStatus.COMPLETED,
-            output = mapOf("bpm" to "120.0")
+            output = output
         )
 
         assertEquals(1, response.version)
         assertEquals("test-job", response.jobId)
         assertEquals(WorkerStatus.COMPLETED, response.status)
-        assertEquals(mapOf("bpm" to "120.0"), response.output)
+        assertEquals(output, response.output)
     }
 
     @Test

@@ -1,7 +1,9 @@
 // js/api.js - Comprehensive API client wrapper
 // Wraps all server endpoints with async/await methods and proper error handling.
 
-const API_BASE = '/api';
+const API_BASE = (window.location.port === '3000' || window.location.port === '3001')
+    ? 'http://127.0.0.1:8080/api'
+    : '/api';
 
 /**
  * Custom error class for API errors with structured information.
@@ -337,7 +339,18 @@ export const api = {
      * @returns {Promise<object>} Job info with jobId.
      */
     async submitCommand(command, params = {}) {
-        return request('POST', '/worker/command', { commandType: command, params });
+        const endpoints = {
+            analyze: '/worker/analyze',
+            apply_dsp: '/worker/apply_dsp',
+            repair: '/worker/repair',
+            master: '/worker/master',
+            mp3_convert: '/worker/mp3_convert'
+        };
+        const endpoint = endpoints[command];
+        if (!endpoint) {
+            throw new ApiError(`Unknown worker command: ${command}`, 400, command);
+        }
+        return request('POST', endpoint, params);
     },
 
     /**

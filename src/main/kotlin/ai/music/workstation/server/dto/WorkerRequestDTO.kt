@@ -5,11 +5,22 @@ import ai.music.workstation.queue.Job
 
 data class WorkerCommandRequest(
     val type: String = "",
-    val jobId: String? = null,
     val command: String? = null,
+    val jobId: String? = null,
     val projectId: String? = null,
+    val path: String? = null,
+    val outputPath: String? = null,
     val trackIds: List<String>? = null,
-    val dspSettings: DSPSettings? = null
+    val dspSettings: DSPSettings? = null,
+    val settings: Map<String, Any>? = null,
+    val options: Map<String, Any>? = null,
+    val repairs: List<RepairRequest>? = null,
+    val outputFormat: String? = null
+)
+
+data class RepairRequest(
+    val type: String,
+    val params: Map<String, Any> = emptyMap()
 )
 
 data class WorkerCommandResponse(

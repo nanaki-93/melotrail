@@ -11,19 +11,25 @@ class AudioResampler {
 
             val ratio = targetSampleRate.toDouble() / buffer.format.sampleRate
             val newLength = (buffer.length * ratio).toInt()
-            val newSamples = FloatArray(newLength)
+            val newSamples = FloatArray(newLength * buffer.format.channels)
 
             for (i in 0 until newLength) {
-                val sourceIndex = (i / ratio).toDouble()
+                val sourceIndex = (i / ratio)
                 val sourceIndexInt = sourceIndex.toInt()
-                val fraction = sourceIndex - sourceIndexInt
+                val fraction = (sourceIndex - sourceIndexInt).toFloat()
 
-                if (sourceIndexInt + 1 < buffer.length) {
-                    // Linear interpolation
-                    newSamples[i] = buffer.samples[sourceIndexInt] * (1f - fraction.toFloat()) +
-                            buffer.samples[sourceIndexInt + 1] * fraction.toFloat()
-                } else {
-                    newSamples[i] = buffer.samples.lastOrNull() ?: 0f
+                for (c in 0 until buffer.format.channels) {
+                    val srcPos = sourceIndexInt * buffer.format.channels + c
+                    val destPos = i * buffer.format.channels + c
+
+                    if (srcPos + buffer.format.channels < buffer.samples.size) {
+                        newSamples[destPos] = buffer.samples[srcPos] * (1f - fraction) +
+                                buffer.samples[srcPos + buffer.format.channels] * fraction
+                    } else if (srcPos < buffer.samples.size) {
+                        newSamples[destPos] = buffer.samples[srcPos]
+                    } else {
+                        newSamples[destPos] = 0f
+                    }
                 }
             }
 
