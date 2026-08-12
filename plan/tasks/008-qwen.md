@@ -4,7 +4,7 @@
 Add optional local Qwen planning.
 
 ## Agent prompt
-Implement a LocalQwenArrangementPlanner using the local model interface available on the machine.
+Implement a LocalQwenArrangementPlanner using the local model interface available on the machine through lm studio in http://127.0.0.1:1234.
 
 The model receives:
 - project metadata

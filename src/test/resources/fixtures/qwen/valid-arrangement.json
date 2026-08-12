@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "sections": [
+    {
+      "index": 0,
+      "partId": "A",
+      "instruments": [
+        {"name": "piano", "mode": "source"},
+        {"name": "bass", "mode": "generated", "role": "root_fifth", "density": 0.4}
+      ],
+      "transitionOut": {"type": "none", "bars": 0}
+    },
+    {
+      "index": 1,
+      "partId": "B",
+      "instruments": [
+        {"name": "piano", "mode": "source"}
+      ],
+      "transitionOut": {"type": "none", "bars": 0}
+    }
+  ]
+}

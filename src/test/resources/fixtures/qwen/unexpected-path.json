@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "sections": [
+    {
+      "index": 0,
+      "partId": "A",
+      "path": "/tmp/model-supplied.wav",
+      "instruments": [
+        {"name": "piano", "mode": "source"}
+      ],
+      "transitionOut": {"type": "none", "bars": 0}
+    },
+    {
+      "index": 1,
+      "partId": "B",
+      "instruments": [
+        {"name": "piano", "mode": "source"}
+      ],
+      "transitionOut": {"type": "none", "bars": 0}
+    }
+  ]
+}
