@@ -2,8 +2,8 @@
 
 import librosa
 import numpy as np
-import soundfile as sf
 
+from worker.commands.audio_output import write_pcm24_wav
 from worker.registry import register_command
 
 
@@ -32,7 +32,7 @@ def mp3_convert_command(request: dict) -> dict:
 
     data = np.nan_to_num(data, nan=0.0, posinf=0.0, neginf=0.0)
     data = np.clip(data, -1.0, 1.0)
-    sf.write(output_path, data, sample_rate, subtype="PCM_24")
+    write_pcm24_wav(output_path, data, sample_rate)
 
     return {
         "output": output_path,

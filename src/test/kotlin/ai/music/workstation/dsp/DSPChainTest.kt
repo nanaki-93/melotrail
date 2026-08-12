@@ -1,7 +1,10 @@
 package ai.music.workstation.dsp
 
+import ai.music.workstation.audio.AudioBuffer
+import ai.music.workstation.audio.AudioFormat
 import ai.music.workstation.model.DSPSettings
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 
@@ -24,7 +27,7 @@ class DSPChainTest {
         )
 
         val chain = DSPChain.createDefaultChain(settings)
-        assertTrue(chain != null)
+        assertEquals(4, chain.process(floatArrayOf(0.1f, -0.1f, 0.2f, -0.2f)).size)
     }
 
     @Test
@@ -34,6 +37,43 @@ class DSPChainTest {
         val output = chain.process(input)
 
         assertEquals(input.size, output.size)
+    }
+
+    @Test
+    fun `LoFi off keeps the dry signal free of injected noise`() {
+        val input = AudioBuffer(
+            samples = floatArrayOf(0.15f, -0.15f, 0.3f, -0.3f),
+            format = AudioFormat(32_000, 2, 24, false, false, "WAV"),
+            duration = 2.0 / 32_000
+        )
+
+        val output = DSPChain.createDefaultChain(
+            settings = DSPSettings(),
+            sampleRate = input.format.sampleRate,
+            channels = input.format.channels
+        ).process(input)
+
+        assertArrayEquals(input.samples, output.samples)
+        assertEquals(input.format, output.format)
+    }
+
+    @Test
+    fun `LoFi on changes samples but retains the input format`() {
+        val input = AudioBuffer(
+            samples = floatArrayOf(0.1f, -0.1f, 0.8f, -0.8f, -0.2f, 0.2f),
+            format = AudioFormat(32_000, 2, 24, false, false, "WAV"),
+            duration = 3.0 / 32_000
+        )
+
+        val output = DSPChain.createDefaultChain(
+            settings = DSPSettings(sampleRateReduction = 2),
+            sampleRate = input.format.sampleRate,
+            channels = input.format.channels
+        ).process(input)
+
+        assertTrue(!input.samples.contentEquals(output.samples))
+        assertEquals(input.format, output.format)
+        assertEquals(input.length, output.length)
     }
 
     @Test
@@ -60,7 +100,7 @@ class DSPChainTest {
         val output = effect.process(input)
 
         // Values should be quantized
-        val levels = (1 shl 8).toDouble()
+        val levels = ((1 shl (8 - 1)) - 1).toDouble()
         for (i in output.indices) {
             val quantized = Math.round(output[i] * levels) / levels
             assertTrue(Math.abs(output[i] - quantized) < 0.001)

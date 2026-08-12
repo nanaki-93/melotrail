@@ -17,10 +17,15 @@ import ai.music.workstation.arrangement.SectionInstance
 import ai.music.workstation.arrangement.StructureParser
 import ai.music.workstation.audio.WAVDecoder
 import ai.music.workstation.audio.AudioResampler
+import ai.music.workstation.dsp.DSPChain
+import ai.music.workstation.dsp.LOFIPresets
 import ai.music.workstation.errors.ErrorReporter
 import ai.music.workstation.logging.DefaultLogger
 import ai.music.workstation.worker.AnalyzeCommand
 import ai.music.workstation.worker.AnalyzeOptions
+import ai.music.workstation.worker.MasterCommand
+import ai.music.workstation.worker.RepairCommand
+import ai.music.workstation.worker.RepairSpec
 import ai.music.workstation.worker.WorkerClient
 import ai.music.workstation.worker.WorkerStatus
 import kotlinx.coroutines.runBlocking
@@ -51,7 +56,16 @@ object ArrangementProjectCommands {
         encodeDefaults = true
     }
 
-    fun handles(args: Array<String>): Boolean = args.firstOrNull() in setOf("project", "part", "arrange", "generate", "mix")
+    fun handles(args: Array<String>): Boolean =
+        args.firstOrNull() in setOf("project", "part", "arrange", "generate", "mix", "build")
+
+    /** Small boundary that lets the end-to-end command be tested without a running HTTP worker. */
+    internal interface BuildWorker {
+        suspend fun healthCheck(): Boolean
+        suspend fun analyze(path: Path): PartAnalysis
+        suspend fun repair(inputPath: Path, outputPath: Path)
+        suspend fun master(inputPath: Path, outputPath: Path)
+    }
 
     fun execute(args: Array<String>): String = runBlocking {
         executeAsync(args)
@@ -69,7 +83,12 @@ object ArrangementProjectCommands {
         "arrange" -> arrange(args)
         "generate" -> generateBass(args)
         "mix" -> mixStems(args)
+        "build" -> buildProject(args, createBuildWorker())
         else -> throw IllegalArgumentException("Unknown arranger command")
+    }
+
+    internal fun executeBuildForTest(args: Array<String>, worker: BuildWorker): String = runBlocking {
+        buildProject(args, worker)
     }
 
     private fun createProject(args: Array<String>): String {
@@ -310,6 +329,280 @@ object ArrangementProjectCommands {
         val output = mixer.writeWav(mixed, projectRoot.resolve("mix/mix.wav"))
         return "Created ${if ("--dry" in options) "dry " else ""}mix: $output"
     }
+
+    /**
+     * Creates one local arrangement from a validated project. Each lossless
+     * intermediate stays in the project directory so a failed later stage can
+     * be diagnosed or resumed without touching a source part.
+     */
+    private suspend fun buildProject(args: Array<String>, worker: BuildWorker): String {
+        val options = parseBuildOptions(args.drop(1))
+        val projectRoot = projectRoot(options.projectPath)
+        val projectFile = projectRoot.resolve(PROJECT_FILE)
+        require(Files.isRegularFile(projectFile)) { "Project file not found: $projectFile" }
+
+        var project = readProject(projectRoot)
+        project.requireValid(projectRoot)
+        val structure = project.structure.mapIndexed { index, partId -> SectionInstance(index, partId) }
+        require(structure.isNotEmpty()) { "Project structure must contain at least one part" }
+
+        val outputRoot = resolveOutputRoot(projectRoot, options.outputDirectory)
+        val repairedPath = outputRoot.resolve("repair.wav")
+        val lofiPath = outputRoot.resolve("lofi.wav")
+        val masterPath = outputRoot.resolve("master.wav")
+        requireNoSourceOverwrite(projectRoot, project, listOf(repairedPath, lofiPath, masterPath))
+
+        if (options.dryRun) {
+            return buildString {
+                appendLine("[DRY RUN] Project is valid: $projectRoot")
+                appendLine("[DRY RUN] Planner: deterministic${if (options.noAi) " (--no-ai)" else ""}")
+                appendLine("[DRY RUN] Output directory: $outputRoot")
+                append("[DRY RUN] No files were created or changed.")
+            }
+        }
+
+        require(worker.healthCheck()) {
+            "Stage worker health failed: Python worker is not running. Start it with `make worker`."
+        }
+
+        val progress = mutableListOf<String>()
+        fun complete(stage: Int, text: String) {
+            val message = "[$stage/10] $text"
+            println("✓ $message")
+            progress += message
+        }
+
+        complete(1, "Loaded project '${project.name}'")
+        complete(2, "Validated ${structure.size} structure sections")
+
+        val missingAnalyses = project.parts.filter { it.analysis == null }
+        missingAnalyses.forEach { part ->
+            val source = projectRoot.resolve(part.file).normalize()
+            val analysis = runBuildStage("Analyze part '${part.id}'") {
+                worker.analyze(source)
+            }
+            runBuildStage("Store analysis for part '${part.id}'") {
+                PartAnalysisStore.write(projectRoot, project, part.id, analysis)
+            }
+            project = readProject(projectRoot)
+        }
+        complete(3, if (missingAnalyses.isEmpty()) "Reused existing analyses" else "Analyzed ${missingAnalyses.size} missing part(s)")
+
+        runBuildStage("Create deterministic arrangement") {
+            val analyses = loadAnalyses(projectRoot, project)
+            val arrangement = DeterministicArrangementPlanner().plan(
+                ArrangementInput(
+                    project = project,
+                    analyses = analyses,
+                    structure = structure,
+                    requestedInstruments = listOf("source", "bass")
+                )
+            )
+            ArrangementStore.write(projectRoot, project, arrangement)
+        }
+        complete(4, "Created deterministic arrangement")
+
+        runBuildStage("Generate bass stem") {
+            val arrangement = readArrangement(projectRoot)
+            BassStemGenerationAdapter().generate(projectRoot, project, arrangement, loadAnalyses(projectRoot, project))
+        }
+        complete(5, "Generated stems/bass.wav")
+
+        runBuildStage("Mix stems") {
+            mixStems(arrayOf("mix", "--project", projectRoot.toString()))
+        }
+        val mixPath = projectRoot.resolve("mix/mix.wav")
+        requireWavOutput(mixPath, "Mix")
+        complete(6, "Created mix/mix.wav")
+
+        Files.createDirectories(outputRoot)
+        runBuildStage("Repair mix") { worker.repair(mixPath, repairedPath) }
+        requireWavOutput(repairedPath, "Repair")
+        complete(7, "Created ${outputRoot.relativizeOrName(repairedPath)}")
+
+        runBuildStage("Apply LoFi") { applyLoFi(repairedPath, lofiPath) }
+        requireWavOutput(lofiPath, "LoFi")
+        complete(8, "Created ${outputRoot.relativizeOrName(lofiPath)}")
+
+        runBuildStage("Master audio") { worker.master(lofiPath, masterPath) }
+        requireWavOutput(masterPath, "Master")
+        complete(9, "Created ${outputRoot.relativizeOrName(masterPath)}")
+        complete(10, "Build complete: $masterPath")
+        return progress.joinToString(separator = "\n")
+    }
+
+    private fun createBuildWorker(): BuildWorker {
+        val logger = DefaultLogger()
+        val client = WorkerClient(
+            baseUrl = System.getenv("WORKER_BASE_URL")
+                ?.takeIf { it.isNotBlank() }
+                ?: "http://127.0.0.1:8081",
+            logger = logger,
+            errorReporter = ErrorReporter(logger)
+        )
+        return object : BuildWorker {
+            override suspend fun healthCheck(): Boolean = client.healthCheck()
+
+            override suspend fun analyze(path: Path): PartAnalysis {
+                val response = client.execute(
+                    AnalyzeCommand(
+                        path = path.toString(),
+                        options = AnalyzeOptions(
+                            detectBPM = false,
+                            detectKey = false,
+                            detectLoudness = false,
+                            detectOnsets = false,
+                            detectBeats = false,
+                            detectSections = false
+                        )
+                    )
+                )
+                requireCompleted(response.status, response.error?.message, "analyze")
+                return analysisFrom(response.output.orEmpty())
+            }
+
+            override suspend fun repair(inputPath: Path, outputPath: Path) {
+                val response = client.execute(
+                    RepairCommand(
+                        path = inputPath.toString(),
+                        outputPath = outputPath.toString(),
+                        repairs = listOf(
+                            RepairSpec("dc_offset"),
+                            RepairSpec("clip_removal", mapOf("threshold" to 0.999, "max_run_samples" to 12))
+                        )
+                    )
+                )
+                requireCompleted(response.status, response.error?.message, "repair")
+            }
+
+            override suspend fun master(inputPath: Path, outputPath: Path) {
+                val response = client.execute(
+                    MasterCommand(
+                        path = inputPath.toString(),
+                        outputPath = outputPath.toString(),
+                        settings = mapOf(
+                            "eq_enabled" to false,
+                            "compressor_enabled" to false,
+                            "saturation_enabled" to false,
+                            "stereo_enabled" to false,
+                            "limiter_enabled" to true,
+                            "limiter" to mapOf("ceiling_db" to -1.0, "release_ms" to 100.0),
+                            "target_peak_db" to -1.0
+                        )
+                    )
+                )
+                requireCompleted(response.status, response.error?.message, "master")
+            }
+        }
+    }
+
+    private fun requireCompleted(status: WorkerStatus, error: String?, operation: String) {
+        require(status == WorkerStatus.COMPLETED) {
+            "Worker $operation failed: ${error ?: "Unknown worker error"}"
+        }
+    }
+
+    private fun applyLoFi(inputPath: Path, outputPath: Path) {
+        val input = WAVDecoder(NoOpErrorReporter).decode(inputPath)
+        val preset = LOFIPresets.DEFAULT_PRESETS.first()
+        val processed = DSPChain.createDefaultChain(
+            settings = preset.settings,
+            sampleRate = input.format.sampleRate,
+            channels = input.format.channels
+        ).process(input)
+        Files.createDirectories(checkNotNull(outputPath.parent))
+        WAVExporterSimple().export(processed, outputPath)
+    }
+
+    private fun loadAnalyses(projectRoot: Path, project: Project): Map<String, PartAnalysis> =
+        project.parts.associate { part ->
+            val reference = requireNotNull(part.analysis) {
+                "Missing analysis for part '${part.id}' after analysis stage"
+            }
+            part.id to json.decodeFromString<PartAnalysis>(Files.readString(projectRoot.resolve(reference.file)))
+        }
+
+    private fun readProject(projectRoot: Path): Project =
+        json.decodeFromString(Files.readString(projectRoot.resolve(PROJECT_FILE)))
+
+    private fun readArrangement(projectRoot: Path): ai.music.workstation.arrangement.Arrangement =
+        json.decodeFromString(Files.readString(projectRoot.resolve("arrangement.json")))
+
+    private fun parseBuildOptions(arguments: List<String>): BuildOptions {
+        var projectPath: String? = null
+        var outputDirectory: String? = null
+        var noAi = false
+        var dryRun = false
+        var index = 0
+        while (index < arguments.size) {
+            when (val option = arguments[index]) {
+                "--project" -> {
+                    require(projectPath == null && index + 1 < arguments.size) { "Missing or duplicate value for --project" }
+                    projectPath = arguments[++index]
+                }
+                "--output-dir" -> {
+                    require(outputDirectory == null && index + 1 < arguments.size) { "Missing or duplicate value for --output-dir" }
+                    outputDirectory = arguments[++index]
+                }
+                "--no-ai" -> {
+                    require(!noAi) { "Duplicate build option: --no-ai" }
+                    noAi = true
+                }
+                "--dry-run" -> {
+                    require(!dryRun) { "Duplicate build option: --dry-run" }
+                    dryRun = true
+                }
+                else -> throw IllegalArgumentException("Unknown build option: $option")
+            }
+            index++
+        }
+        require(projectPath != null) {
+            "Usage: build --project <project-directory> [--output-dir <directory>] [--no-ai] [--dry-run]"
+        }
+        return BuildOptions(projectPath, outputDirectory, noAi, dryRun)
+    }
+
+    private fun resolveOutputRoot(projectRoot: Path, configuredPath: String?): Path {
+        val path = configuredPath?.let(Path::of)
+        return (if (path == null) projectRoot.resolve("output") else if (path.isAbsolute) path else projectRoot.resolve(path))
+            .toAbsolutePath()
+            .normalize()
+    }
+
+    private fun requireNoSourceOverwrite(projectRoot: Path, project: Project, outputs: List<Path>) {
+        val sources = project.parts.map { projectRoot.resolve(it.file).normalize() }.toSet()
+        val conflictingOutput = outputs.firstOrNull { it in sources }
+        require(conflictingOutput == null) {
+            "Build output would overwrite a source audio file: $conflictingOutput"
+        }
+    }
+
+    private fun requireWavOutput(path: Path, stage: String) {
+        require(Files.isRegularFile(path) && Files.size(path) >= 44) {
+            "$stage stage did not create a valid WAV file: $path"
+        }
+        val header = Files.newInputStream(path).use { input -> input.readNBytes(12).decodeToString() }
+        require(header.startsWith("RIFF") && header.endsWith("WAVE")) {
+            "$stage stage did not create a WAV container: $path"
+        }
+    }
+
+    private fun Path.relativizeOrName(path: Path): String =
+        try { relativize(path).toString() } catch (_: IllegalArgumentException) { path.fileName.toString() }
+
+    private suspend fun <T> runBuildStage(name: String, action: suspend () -> T): T =
+        try {
+            action()
+        } catch (exception: Exception) {
+            throw IllegalStateException("$name failed: ${exception.message}", exception)
+        }
+
+    private data class BuildOptions(
+        val projectPath: String,
+        val outputDirectory: String?,
+        val noAi: Boolean,
+        val dryRun: Boolean
+    )
 
     private fun analysisFrom(output: Map<String, kotlinx.serialization.json.JsonElement>): PartAnalysis =
         PartAnalysis(

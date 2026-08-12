@@ -44,3 +44,14 @@ stems/
 mix/mix.wav
 output/master.wav
 ```
+
+Run the repeatable local workflow:
+
+```bash
+make worker
+./gradlew cliRun --args="build --project ./projects/demo --no-ai"
+```
+
+`--dry-run` validates the project without writing analysis, stems, mixes, or
+output files. The generated audio remains WAV/PCM-24 throughout; MP3 export is
+a separate final conversion step.

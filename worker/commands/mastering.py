@@ -11,6 +11,7 @@ import numpy as np
 from scipy import signal
 import soundfile as sf
 
+from worker.commands.audio_output import write_pcm24_wav
 from worker.registry import register_command
 
 logger = logging.getLogger("worker.mastering")
@@ -70,23 +71,9 @@ def master_command(request: dict) -> dict:
 
     loudness = analyze_loudness(audio)
 
-    # IMPORTANT:
-    # Explicitly specify both the container and PCM subtype.
-    #
-    # Do NOT pass endian="..." here. libsndfile handles the WAV byte order
-    # correctly. Supplying an endian value together with an incompatible
-    # format/subtype is what causes:
-    #   "Invalid combination of format, subtype and endian"
-    #
-    # PCM_24 is a valid WAV subtype and is preserved without the old
-    # implicit-format ambiguity.
-    sf.write(
-        output_path,
-        audio,
-        sample_rate,
-        format="WAV",
-        subtype="PCM_24",
-    )
+    # PCM_24 inside an explicit WAV container keeps the processing chain
+    # lossless and cannot be mistaken for MP3 export.
+    write_pcm24_wav(output_path, audio, sample_rate)
 
     logger.info(
         "Mastered %s -> %s (%d Hz, %s)",

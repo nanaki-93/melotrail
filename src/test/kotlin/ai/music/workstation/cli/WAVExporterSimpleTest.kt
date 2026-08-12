@@ -57,7 +57,7 @@ class WAVExporterSimpleTest {
     }
 
     @Test
-    fun `resampling should work and interpolate correctly`() {
+    fun `export preserves the actual sample rate and frame count`() {
         // Create 44.1kHz mono buffer
         val samples = floatArrayOf(0.0f, 1.0f, 0.0f, -1.0f)
         val format = AudioFormat(44100, 1, 16, false, false, "WAV")
@@ -71,16 +71,11 @@ class WAVExporterSimpleTest {
             val decoder = WAVDecoder(errorReporter)
             val decoded = decoder.decode(tempFile)
 
-            // Exported should be 48kHz
-            assertEquals(48000, decoded.format.sampleRate)
-            
-            // New length should be roughly 4 * 48000 / 44100 = 4.35 -> 4
-            // Ratio is 48000 / 44100 = 1.0884
-            // i=0: srcIndex=0, frac=0 -> sample=0
-            // i=1: srcIndex=1/1.0884 = 0, frac=0.918 -> 0*0.08 + 1.0*0.918 = 0.918
-            assertTrue(decoded.samples.size >= 4)
-            assertEquals(0.0f, decoded.samples[0], 0.0001f)
-            assertTrue(decoded.samples[1] > 0.8f)
+            assertEquals(44100, decoded.format.sampleRate)
+            assertEquals(samples.size, decoded.samples.size)
+            for (i in samples.indices) {
+                assertEquals(samples[i], decoded.samples[i], 0.0001f)
+            }
         } finally {
             Files.deleteIfExists(tempFile)
         }

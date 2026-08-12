@@ -11,6 +11,7 @@ import numpy as np
 from scipy import signal
 import soundfile as sf
 
+from worker.commands.audio_output import write_pcm24_wav
 from worker.registry import register_command
 
 logger = logging.getLogger("worker.repair")
@@ -63,7 +64,7 @@ def repair_command(request: dict) -> dict:
 
     audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
     audio = np.clip(audio, -1.0, 1.0)
-    sf.write(output_path, audio, sample_rate, subtype="PCM_24")
+    write_pcm24_wav(output_path, audio, sample_rate)
     logger.info("Repair complete: %s -> %s", input_path, output_path)
     return {"output": output_path}
 

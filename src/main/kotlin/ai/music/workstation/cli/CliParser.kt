@@ -75,6 +75,8 @@ object CliParser {
             throw IllegalArgumentException("Missing required argument: --output <path>")
         }
 
+        requireWavOutputPath(outputPath)
+
         // Validate input file
         val inputPathObj = Path.of(inputPath)
         if (!inputPathObj.exists() || !inputPathObj.isRegularFile()) {
@@ -147,5 +149,11 @@ object CliParser {
             "  ./gradlew :cli:run --args=\"--input input.wav --output output.wav --dry-run\""
         )
         lines.forEach { println(it) }
+    }
+
+    private fun requireWavOutputPath(outputPath: String) {
+        require(outputPath.endsWith(".wav", ignoreCase = true)) {
+            "Output must be a .wav file. MP3 export is a separate final step."
+        }
     }
 }

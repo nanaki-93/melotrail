@@ -61,6 +61,47 @@ Equivalent Gradle command:
 ./gradlew cliRun --args="<your CLI arguments>"
 ```
 
+Build a complete local arranger project (requires the Python worker):
+
+```bash
+./gradlew cliRun --args="build --project ./projects/demo --no-ai"
+```
+
+This keeps `analysis/`, `arrangement.json`, `stems/bass.wav`, and `mix/mix.wav`
+inside the project, then writes lossless `repair.wav`, `lofi.wav`, and
+`master.wav` under `output/`. Use `--output-dir <directory>` to choose another
+output directory, or `--dry-run` to validate without changing files.
+
+The build command is deterministic and local. `--no-ai` makes that choice
+explicit; no model output is executed as code, commands, or paths.
+
+### Optional local Qwen planning
+
+Qwen is optional and only plans validated `arrangement.json` data. Start an
+OpenAI-compatible LM Studio server, then configure its endpoint and model:
+
+```bash
+export LM_STUDIO_CHAT_COMPLETIONS_URL=http://127.0.0.1:1234/v1/chat/completions
+export QWEN_MODEL=qwen
+./gradlew cliRun --args="arrange --project ./projects/demo --planner qwen --structure 'A A B B' --instruments source,bass"
+```
+
+For repeatable local runs, use `--planner deterministic` (or the `build`
+command with `--no-ai`) instead. Qwen responses are parsed as strict JSON and
+validated against the project structure and allowed instruments.
+
+## Testing
+
+```bash
+make test                              # Kotlin unit/integration tests
+python3 -m unittest discover -s worker/tests
+make build                             # Full Gradle build
+```
+
+The end-to-end smoke path is `build --project … --no-ai`; it requires the
+worker running in another terminal (`make worker`). All processing stages use
+WAV/PCM-24 intermediates and preserve the source sample rate and channels.
+
 ## Make targets
 
 | Command | Purpose |

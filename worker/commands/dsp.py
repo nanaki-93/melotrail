@@ -8,6 +8,7 @@ called.
 import numpy as np
 import soundfile as sf
 
+from worker.commands.audio_output import write_pcm24_wav
 from worker.registry import register_command
 
 
@@ -31,5 +32,5 @@ def apply_dsp_command(request: dict) -> dict:
         audio *= 10 ** (gain_db / 20.0)
 
     audio = np.clip(audio, -1.0, 1.0)
-    sf.write(output_path, audio, sample_rate, subtype="PCM_24")
+    write_pcm24_wav(output_path, audio, sample_rate)
     return {"output": output_path, "settings": settings}

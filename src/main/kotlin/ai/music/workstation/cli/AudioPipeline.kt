@@ -185,6 +185,9 @@ class AudioPipeline(
                     .toAbsolutePath()
                     .normalize()
 
+                require(masteredPath.fileName.toString().endsWith(".wav", ignoreCase = true)) {
+                    "Master output must be a .wav file. MP3 export is a separate final step."
+                }
                 masteredPath.parent?.let { Files.createDirectories(it) }
 
                 println("▶ [$stageNumber/$totalStages] Mastering audio...")
@@ -387,7 +390,11 @@ class AudioPipeline(
                 return false
             }
 
-            val dspChain = DSPChain.createDefaultChain(preset.settings)
+            val dspChain = DSPChain.createDefaultChain(
+                settings = preset.settings,
+                sampleRate = audioBuffer.format.sampleRate,
+                channels = audioBuffer.format.channels
+            )
             val processed = dspChain.process(audioBuffer)
 
             /*

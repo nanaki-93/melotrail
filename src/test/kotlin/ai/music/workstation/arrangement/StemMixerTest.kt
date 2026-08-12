@@ -83,6 +83,21 @@ class StemMixerTest {
         assertEquals(mix.buffer.getSample(0, 2), mix.buffer.getSample(1, 2))
     }
 
+    @Test
+    fun `track output begins at its requested frame rather than sample offset`() {
+        val bass = buffer(32_000, 2, 0.4f, -0.4f, 0.2f, -0.2f)
+
+        val mix = DeterministicStemMixer().mix(
+            listOf(MixTrack("bass", bass, startFrame = 2, generated = true))
+        )
+
+        assertEquals(4, mix.buffer.length)
+        assertEquals(0f, mix.buffer.getSample(0, 0))
+        assertEquals(0f, mix.buffer.getSample(1, 1))
+        assertEquals(0.4f, mix.buffer.getSample(0, 2))
+        assertEquals(-0.4f, mix.buffer.getSample(1, 2))
+    }
+
     private fun buffer(sampleRate: Int, channels: Int, vararg samples: Float): AudioBuffer = AudioBuffer(
         samples = samples,
         format = AudioFormat(sampleRate, channels, 24, false, false, "WAV"),

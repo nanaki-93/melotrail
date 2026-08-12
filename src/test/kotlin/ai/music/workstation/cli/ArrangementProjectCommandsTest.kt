@@ -12,6 +12,7 @@ import ai.music.workstation.arrangement.PartAnalysis
 import ai.music.workstation.arrangement.PartAnalysisStore
 import ai.music.workstation.arrangement.Project
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -245,6 +246,110 @@ class ArrangementProjectCommandsTest {
         assertTrue(Files.readAllBytes(copiedSource).contentEquals(sourceBefore))
     }
 
+    @Test
+    fun `build runs deterministic arrangement through preserved WAV intermediates and custom output`() {
+        val projectRoot = createProject("build-demo")
+        val source = tempDir.resolve("piano.wav")
+        DeterministicTestBassRenderer().render(
+            BassRenderRequest(
+                notes = listOf(BassNote(0, 320, velocity = 0.7)),
+                sampleRate = 32_000,
+                channels = 1,
+                frameCount = 320
+            ),
+            source
+        )
+        addPart(projectRoot, "A", source)
+        writeProject(readProject(projectRoot).copy(structure = listOf("A")), projectRoot)
+        val copiedSource = projectRoot.resolve("parts/A.wav")
+        val sourceBefore = Files.readAllBytes(copiedSource)
+        val output = projectRoot.resolve("rendered")
+
+        val result = ArrangementProjectCommands.executeBuildForTest(
+            arrayOf(
+                "build", "--project", projectRoot.toString(),
+                "--output-dir", "rendered", "--no-ai"
+            ),
+            CopyingBuildWorker()
+        )
+
+        assertTrue(result.contains("[1/10] Loaded project"))
+        assertTrue(result.contains("[10/10] Build complete"))
+        assertTrue(Files.isRegularFile(projectRoot.resolve("analysis/A.json")))
+        assertTrue(Files.isRegularFile(projectRoot.resolve("arrangement.json")))
+        assertTrue(Files.isRegularFile(projectRoot.resolve("stems/bass.wav")))
+        assertWav(projectRoot.resolve("mix/mix.wav"))
+        assertWav(output.resolve("repair.wav"), sampleRate = 32_000, channels = 1)
+        assertWav(output.resolve("lofi.wav"), sampleRate = 32_000, channels = 1)
+        assertWav(output.resolve("master.wav"), sampleRate = 32_000, channels = 1)
+        assertTrue(Files.readAllBytes(copiedSource).contentEquals(sourceBefore))
+    }
+
+    @Test
+    fun `build dry run validates project but does not write derived files or require worker`() {
+        val projectRoot = createProject("dry-run-demo")
+        val source = tempDir.resolve("piano.wav")
+        DeterministicTestBassRenderer().render(
+            BassRenderRequest(
+                notes = listOf(BassNote(0, 64, velocity = 0.7)),
+                sampleRate = 22_050,
+                channels = 1,
+                frameCount = 64
+            ),
+            source
+        )
+        addPart(projectRoot, "A", source)
+        writeProject(readProject(projectRoot).copy(structure = listOf("A")), projectRoot)
+        val copiedSource = projectRoot.resolve("parts/A.wav")
+        val sourceBefore = Files.readAllBytes(copiedSource)
+
+        val result = ArrangementProjectCommands.executeBuildForTest(
+            arrayOf("build", "--project", projectRoot.toString(), "--dry-run"),
+            object : ArrangementProjectCommands.BuildWorker {
+                override suspend fun healthCheck(): Boolean = error("worker must not be used for dry run")
+                override suspend fun analyze(path: Path): PartAnalysis = error("worker must not be used for dry run")
+                override suspend fun repair(inputPath: Path, outputPath: Path) = error("worker must not be used for dry run")
+                override suspend fun master(inputPath: Path, outputPath: Path) = error("worker must not be used for dry run")
+            }
+        )
+
+        assertTrue(result.contains("[DRY RUN] Project is valid"))
+        assertFalse(Files.exists(projectRoot.resolve("analysis/A.json")))
+        assertFalse(Files.exists(projectRoot.resolve("arrangement.json")))
+        assertFalse(Files.exists(projectRoot.resolve("stems/bass.wav")))
+        assertFalse(Files.exists(projectRoot.resolve("output/master.wav")))
+        assertTrue(Files.readAllBytes(copiedSource).contentEquals(sourceBefore))
+    }
+
+    @Test
+    fun `build rejects an output directory that would overwrite a source part`() {
+        val projectRoot = createProject("protected-source-demo")
+        val source = tempDir.resolve("master.wav")
+        DeterministicTestBassRenderer().render(
+            BassRenderRequest(
+                notes = listOf(BassNote(0, 64, velocity = 0.7)),
+                sampleRate = 22_050,
+                channels = 1,
+                frameCount = 64
+            ),
+            source
+        )
+        addPart(projectRoot, "master", source)
+        writeProject(readProject(projectRoot).copy(structure = listOf("master")), projectRoot)
+        val copiedSource = projectRoot.resolve("parts/master.wav")
+        val sourceBefore = Files.readAllBytes(copiedSource)
+
+        val exception = assertThrows(IllegalArgumentException::class.java) {
+            ArrangementProjectCommands.executeBuildForTest(
+                arrayOf("build", "--project", projectRoot.toString(), "--output-dir", "parts", "--dry-run"),
+                CopyingBuildWorker()
+            )
+        }
+
+        assertTrue(exception.message.orEmpty().contains("would overwrite a source audio file"))
+        assertTrue(Files.readAllBytes(copiedSource).contentEquals(sourceBefore))
+    }
+
     private fun createProject(name: String): Path {
         val projectRoot = tempDir.resolve(name)
         ArrangementProjectCommands.execute(arrayOf("project", "create", projectRoot.toString()))
@@ -259,4 +364,41 @@ class ArrangementProjectCommandsTest {
 
     private fun readProject(projectRoot: Path): Project =
         json.decodeFromString(Files.readString(projectRoot.resolve("project.json")))
+
+    private fun writeProject(project: Project, projectRoot: Path) {
+        Files.writeString(projectRoot.resolve("project.json"), json.encodeToString(project))
+    }
+
+    private fun assertWav(path: Path, sampleRate: Int? = null, channels: Int? = null) {
+        assertTrue(Files.size(path) >= 44)
+        val bytes = Files.readAllBytes(path)
+        assertEquals("RIFF", bytes.copyOfRange(0, 4).decodeToString())
+        if (sampleRate != null || channels != null) {
+            val header = java.nio.ByteBuffer.wrap(bytes).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+            sampleRate?.let { assertEquals(it, header.getInt(24)) }
+            channels?.let { assertEquals(it, header.getShort(22).toInt()) }
+        }
+    }
+
+    private class CopyingBuildWorker : ArrangementProjectCommands.BuildWorker {
+        override suspend fun healthCheck(): Boolean = true
+
+        override suspend fun analyze(path: Path): PartAnalysis = PartAnalysis(
+            duration = 0.01,
+            sampleRate = 32_000,
+            channels = 1,
+            frameCount = 320,
+            peak = 0.5,
+            rms = 0.25,
+            nearSilence = false
+        )
+
+        override suspend fun repair(inputPath: Path, outputPath: Path) {
+            Files.copy(inputPath, outputPath)
+        }
+
+        override suspend fun master(inputPath: Path, outputPath: Path) {
+            Files.copy(inputPath, outputPath)
+        }
+    }
 }
