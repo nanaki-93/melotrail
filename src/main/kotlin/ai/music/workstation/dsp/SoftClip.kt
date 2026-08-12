@@ -1,30 +1,30 @@
 package ai.music.workstation.dsp
 
 import ai.music.workstation.model.DSPSettings
+import kotlin.math.tanh
 
 data class SoftClip(
-    val amount: Double = 0.8
+    val amount: Double = 0.15
 ) : DSPEffect() {
     override fun process(input: FloatArray): FloatArray {
+        val amountSafe = amount.coerceIn(0.0, 1.0)
+        if (amountSafe <= 0.0) return input.clone()
+
+        val drive = 1.0 + amountSafe * 2.0
+        val normalizer = tanh(drive)
         val output = FloatArray(input.size)
-        val threshold = 1.0f - amount.toFloat() * 0.2f
 
         for (i in input.indices) {
-            val absInput = Math.abs(input[i])
-            output[i] = when {
-                absInput <= threshold -> input[i]
-                else -> {
-                    val sign = if (input[i] >= 0) 1f else -1f
-                    val clipped = sign * (threshold + (1.0f - threshold) * (1 - Math.exp(-(absInput - threshold) * 5.0)).toFloat())
-                    clipped.coerceIn(-1.0f, 1.0f)
-                }
-            }
+            val dry = input[i].toDouble()
+            val wet = tanh(dry * drive) / normalizer
+            output[i] = (dry * (1.0 - amountSafe) + wet * amountSafe)
+                .toFloat()
+                .coerceIn(-1f, 1f)
         }
 
         return output
     }
 
-    override fun getSettings(): DSPSettings {
-        return DSPSettings(softClip = true)
-    }
+    override fun getSettings(): DSPSettings =
+        DSPSettings(softClip = amount > 0.0)
 }

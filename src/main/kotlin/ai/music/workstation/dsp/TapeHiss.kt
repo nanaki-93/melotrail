@@ -2,25 +2,29 @@ package ai.music.workstation.dsp
 
 import ai.music.workstation.model.DSPSettings
 
+/**
+ * Very quiet high-frequency hiss. It must never become the dominant signal.
+ */
 data class TapeHiss(
-    val amount: Double = 0.05
+    val amount: Double = 0.01
 ) : DSPEffect() {
     private val random = java.util.Random(123)
 
     override fun process(input: FloatArray): FloatArray {
+        val amountSafe = amount.coerceIn(0.0, 1.0)
+        if (amountSafe <= 0.0) return input.clone()
+
         val output = input.clone()
-        val amountF = amount.toFloat()
+        val amplitude = (amountSafe * 0.008).toFloat()
 
         for (i in input.indices) {
-            // White noise
-            val hiss = (random.nextFloat() * 2 - 1) * amountF * 0.1f
-            output[i] = (output[i] + hiss).coerceIn(-1.0f, 1.0f)
+            val hiss = (random.nextFloat() * 2f - 1f) * amplitude
+            output[i] = (input[i] + hiss).coerceIn(-1f, 1f)
         }
 
         return output
     }
 
-    override fun getSettings(): DSPSettings {
-        return DSPSettings(noise = amount)
-    }
+    override fun getSettings(): DSPSettings =
+        DSPSettings(noise = amount)
 }

@@ -9,26 +9,22 @@ data class StereoShaper(
         if (input.size % 2 != 0) return input.clone()
 
         val output = FloatArray(input.size)
-        val half = input.size / 2
-        val widthF = width.toFloat()
+        val widthF = width.coerceIn(0.0, 2.0).toFloat()
 
-        for (i in 0 until half) {
-            val left = input[i * 2]
-            val right = input[i * 2 + 1]
+        for (i in input.indices step 2) {
+            val left = input[i]
+            val right = input[i + 1]
 
             val mid = (left + right) * 0.5f
-            val side = (left - right) * 0.5f
+            val side = (left - right) * 0.5f * widthF
 
-            val newSide = side * widthF
-
-            output[i * 2] = (mid + newSide).coerceIn(-1.0f, 1.0f)
-            output[i * 2 + 1] = (mid - newSide).coerceIn(-1.0f, 1.0f)
+            output[i] = (mid + side).coerceIn(-1f, 1f)
+            output[i + 1] = (mid - side).coerceIn(-1f, 1f)
         }
 
         return output
     }
 
-    override fun getSettings(): DSPSettings {
-        return DSPSettings(stereoWidth = width)
-    }
+    override fun getSettings(): DSPSettings =
+        DSPSettings(stereoWidth = width)
 }

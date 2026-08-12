@@ -1,21 +1,28 @@
 package ai.music.workstation.dsp
 
 import ai.music.workstation.model.DSPSettings
+import kotlin.math.round
 
+/**
+ * Conservative quantizer. Uses the actual number of quantization steps
+ * instead of unnecessarily pushing values outside the requested range.
+ */
 data class BitDepthReduction(
-    val bits: Int = 12
+    val bits: Int = 16
 ) : DSPEffect() {
     override fun process(input: FloatArray): FloatArray {
-        val levels = (1 shl bits).toDouble()
+        val safeBits = bits.coerceIn(8, 24)
+        val levels = ((1 shl (safeBits - 1)) - 1).toDouble()
         val output = FloatArray(input.size)
+
         for (i in input.indices) {
-            val quantized = Math.round(input[i] * levels) / levels
-            output[i] = quantized.toFloat().coerceIn(-1.0f, 1.0f)
+            output[i] = (round(input[i].coerceIn(-1f, 1f) * levels) / levels)
+                .toFloat()
         }
+
         return output
     }
 
-    override fun getSettings(): DSPSettings {
-        return DSPSettings(bitDepthReduction = bits)
-    }
+    override fun getSettings(): DSPSettings =
+        DSPSettings(bitDepthReduction = bits)
 }

@@ -1,38 +1,67 @@
 package ai.music.workstation.dsp
 
 import ai.music.workstation.model.DSPSettings
+import kotlin.math.abs
+import kotlin.math.exp
+import kotlin.math.log10
+import kotlin.math.max
+import kotlin.math.pow
 
+/**
+ * Gentle frame/envelope compressor for interleaved mono/stereo audio.
+ */
 data class Compression(
-    val amount: Double = 0.5,
-    val threshold: Double = -12.0,
-    val ratio: Double = 4.0
+    val amount: Double = 0.1,
+    val threshold: Double = -18.0,
+    val ratio: Double = 2.0,
+    val sampleRate: Int = 48000,
+    val channels: Int = 2
 ) : DSPEffect() {
-    private val thresholdLinear: Double = 10.0 * (threshold / 20.0)
-
     override fun process(input: FloatArray): FloatArray {
-        val output = FloatArray(input.size)
-        var prevOutput = 0.0
+        if (input.isEmpty() || amount <= 0.0) return input.clone()
 
-        for (i in input.indices) {
-            val absInput = Math.abs(input[i])
-            val thresholdLinearAbs = Math.abs(thresholdLinear)
+        val ch = channels.coerceIn(1, 2)
+        if (input.size % ch != 0) return input.clone()
 
-            var gainReduction = 1.0
-            if (absInput > thresholdLinearAbs) {
-                val excess = absInput - thresholdLinearAbs
-                gainReduction = 1.0 + excess / (ratio * thresholdLinearAbs + 0.001)
+        val frames = input.size / ch
+        val output = input.clone()
+        val safeRatio = 1.0 + (ratio - 1.0).coerceAtLeast(0.0) * amount.coerceIn(0.0, 1.0)
+        val thresholdLinear = 10.0.pow(threshold / 20.0)
+
+        val attack = exp(-1.0 / (sampleRate.coerceAtLeast(8000) * 0.025))
+        val release = exp(-1.0 / (sampleRate.coerceAtLeast(8000) * 0.150))
+
+        var env = 0.0
+
+        for (frame in 0 until frames) {
+            var peak = 0.0
+            val base = frame * ch
+            for (c in 0 until ch) {
+                peak = max(peak, abs(input[base + c].toDouble()))
             }
 
-            val processed = input[i] * gainReduction
-            // Smooth transition
-            prevOutput = prevOutput * 0.95f + processed * 0.05f
-            output[i] = prevOutput.toFloat().coerceIn(-1.0f, 1.0f)
+            val coeff = if (peak > env) attack else release
+            env = coeff * env + (1.0 - coeff) * peak
+
+            val envDb = 20.0 * log10(max(env, 1e-12))
+            val over = envDb - threshold
+            val reductionDb = if (over > 0.0) {
+                -(over - over / safeRatio)
+            } else {
+                0.0
+            }
+            val gain = 10.0.pow(reductionDb / 20.0)
+
+            for (c in 0 until ch) {
+                output[base + c] = (input[base + c] * gain)
+                    .toFloat()
+                    .coerceIn(-1f, 1f)
+            }
         }
 
         return output
     }
 
-    override fun getSettings(): DSPSettings {
-        return DSPSettings(compression = amount)
-    }
+    override fun getSettings(): DSPSettings =
+        DSPSettings(compression = amount)
 }

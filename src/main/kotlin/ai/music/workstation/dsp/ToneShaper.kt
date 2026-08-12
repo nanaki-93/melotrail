@@ -2,27 +2,28 @@ package ai.music.workstation.dsp
 
 import ai.music.workstation.model.DSPSettings
 
+/**
+ * Very subtle tonal tilt. This is deliberately much less aggressive than the
+ * previous per-sample gain boost/cut.
+ */
 data class ToneShaper(
     val warmth: Double = 0.5,
     val brightness: Double = 0.5
 ) : DSPEffect() {
     override fun process(input: FloatArray): FloatArray {
-        val output = FloatArray(input.size)
-        val warmthBoost = warmth.toFloat() * 0.15f
-        val brightnessCut = 1.0f - brightness.toFloat() * 0.1f
+        val warmthSafe = warmth.coerceIn(0.0, 1.0)
+        val brightnessSafe = brightness.coerceIn(0.0, 1.0)
 
-        for (i in input.indices) {
-            // Apply warmth (low-mid boost) and brightness adjustment
-            var sample = input[i]
-            sample = (sample + sample * warmthBoost).coerceIn(-1.0f, 1.0f)
-            sample = (sample * brightnessCut).coerceIn(-1.0f, 1.0f)
-            output[i] = sample
+        val gain =
+            1.0 +
+                (warmthSafe - 0.5) * 0.08 -
+                (0.5 - brightnessSafe) * 0.04
+
+        return FloatArray(input.size) { i ->
+            (input[i] * gain).toFloat().coerceIn(-1f, 1f)
         }
-
-        return output
     }
 
-    override fun getSettings(): DSPSettings {
-        return DSPSettings(warmth = warmth)
-    }
+    override fun getSettings(): DSPSettings =
+        DSPSettings(warmth = warmth)
 }
