@@ -2,57 +2,117 @@
 
 ## Repository state — 2026-08-13
 
-This repository currently contains planning and task documentation only. There
-are no Kotlin sources, Python sources, audio assets, tests, build files, or
-dependency manifests. The Git repository has no commits yet.
+The application is a single Kotlin 2.0 / Spring Boot Gradle module with a
+separate Python HTTP worker. The repository also contains a static frontend,
+CLI, audio codecs/DSP, and Kotlin tests. No arranger implementation exists
+yet.
 
-Consequently, there is no existing application build, test suite, DSP worker,
-or pipeline command to run. This is a documented pre-implementation condition,
-not a build failure.
+Key entry points:
 
-## Current pipeline
+- Kotlin/Spring API: `src/main/kotlin/ai/music/workstation/server/Server.kt`
+- CLI: `src/main/kotlin/ai/music/workstation/cli/CliMain.kt`
+- Pipeline orchestration: `src/main/kotlin/ai/music/workstation/cli/AudioPipeline.kt`
+- Python worker: `worker/main.py`
+- Worker processing: `worker/commands/{analyze,dsp,repair,mastering,mp3_convert}.py`
 
-The intended pipeline is defined in `README.md` and `ARCHITECTURE.md`:
+The Gradle module uses Kotlin/JVM 21, Spring Boot, Kotlin serialization, and
+OkHttp. The worker uses Python with `soundfile`, NumPy, SciPy, and librosa.
 
-```text
-music-cli
-  -> project/parts
-  -> analyze
-  -> arrange
-  -> generation/render
-  -> stems/*.wav
-  -> mix.wav
-  -> repair -> lofi -> master
-  -> output/master.wav
-```
+## Current audio pipeline
 
-There is no executable implementation of this pipeline yet. The planned user
-commands are:
+Run the worker before running the CLI:
 
 ```bash
-music-cli arrange --project ./projects/demo --structure "A A B B A C B"
-music-cli render --project ./projects/demo
-music-cli process --project ./projects/demo
+make worker
+make cli ARGS="--input PianoSong.mp3 --output output/master.wav"
 ```
 
-## Future code placement
+The CLI's default processing flow is:
 
-When implementation starts, keep the responsibilities described by the
-architecture separate:
+```text
+input MP3 (when applicable)
+  -> worker /mp3_convert -> temporary PCM_24 WAV
+  -> worker /analyze
+  -> worker /repair (DC offset and conservative clip repair)
+  -> worker /master
+  -> requested output WAV
+```
 
-- Kotlin: CLI, project/part models, validation, arrangement planning, and
-  orchestration.
-- Python: audio conversion, analysis, rendering helpers, and the existing
-  repair/LoFi/master stages once they are introduced or imported.
-- Project data: `project.json`, source audio in `parts/`, analysis JSON,
-  `arrangement.json`, lossless WAV stems/mixes, and final output under the
-  local project directory.
+LoFi is deliberately opt-in rather than part of the default. Adding
+`--stages analyze,repair,lofi,master` invokes the existing Kotlin `DSPChain`
+and writes a temporary WAV before worker mastering. The pipeline creates an
+isolated temporary working directory and only writes the final master to the
+user-specified output path.
+
+The standalone worker exposes `GET /health` and these command-specific POST
+endpoints: `/analyze`, `/apply_dsp`, `/repair`, `/master`, and `/mp3_convert`.
+The Kotlin worker client maps its typed commands directly to those endpoints.
+
+## Audio format observations
+
+- MP3 input is decoded to a lossless PCM_24 WAV before subsequent processing.
+- Repair, optional Python DSP, and mastering write PCM_24 WAV.
+- The worker reads and writes the source sample rate and channel arrangement;
+  it does not resample or force stereo.
+- Kotlin `AudioBuffer` stores interleaved samples and computes length in
+  frames, using the buffer's actual channel count.
+- MP3 export is not implemented in the Kotlin exporter; it reports that an
+  encoder library is required. Treat MP3 as final-export-only when it is added.
+
+## Arranger placement
+
+Add arranger code under the existing package root without moving current
+pipeline code:
+
+- `model/`: small project, part, structure, analysis, and arrangement data
+  models.
+- `arrangement/`: `ArrangementPlanner`, deterministic planner, validation,
+  and later local-AI planner client.
+- `cli/`: commands that import parts, define structure, plan, render, and
+  invoke the existing processing path.
+- `worker/`: analysis and rendering helpers only; the worker must not execute
+  AI-generated code, commands, or paths.
+
+Keep planned project data local to a project directory:
+
+```text
+project.json
+parts/*.wav
+analysis/*.json
+arrangement.json
+stems/*.wav
+mix/*.wav
+output/master.wav
+```
+
+## Validation results
+
+Commands run on 2026-08-13:
+
+```bash
+./gradlew test
+./gradlew build
+python3 -m compileall -q worker
+./gradlew cliRun --args='--help'
+./gradlew cliRun --args='--input PianoSong.mp3 --output build/baseline-smoke.wav --dry-run'
+```
+
+- Python worker compilation succeeds.
+- Kotlin test suite runs 136 tests; 135 pass and one pre-existing test fails:
+  `DSPChainTest > bit depth reduction should quantize()` at
+  `src/test/kotlin/ai/music/workstation/dsp/DSPChainTest.kt:66`.
+- `./gradlew build` consequently fails in `:test` with that same assertion.
+- The CLI help text is printed, but `CliParser.parse()` throws after printing
+  help, so the help smoke command exits with status 1. This is documented as a
+  pre-existing CLI behavior and is out of scope for this baseline task.
+- The non-processing CLI dry-run smoke check succeeds and does not create
+  `build/baseline-smoke.wav`.
 
 ## Guardrails
 
 - Do not overwrite source audio.
-- Preserve each input's actual sample rate and channel count; operate on frames
-  for multi-channel data.
+- Preserve each input's actual sample rate and channel count; operate on
+  frames for multi-channel data.
 - Keep intermediate audio lossless. MP3 is only a separate final export.
 - Treat AI output only as validated arrangement data; never execute generated
   code, commands, or arbitrary paths.

@@ -18,6 +18,16 @@ import java.time.Instant
  *   4. Mastering → EQ, compression, saturation, limiting
  */
 fun main(args: Array<String>) = runBlocking {
+    if (ArrangementProjectCommands.handles(args)) {
+        try {
+            println(ArrangementProjectCommands.executeAsync(args))
+        } catch (e: IllegalArgumentException) {
+            System.err.println("Error: ${e.message}")
+            System.exit(1)
+        }
+        return@runBlocking
+    }
+
     val logger = DefaultLogger()
     val errorReporter = ai.music.workstation.errors.ErrorReporter(logger)
 
