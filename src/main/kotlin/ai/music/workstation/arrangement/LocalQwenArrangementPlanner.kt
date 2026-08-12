@@ -28,7 +28,10 @@ class LmStudioQwenClient(
     private val model: String = System.getenv("QWEN_MODEL")
         ?.takeIf { it.isNotBlank() }
         ?: DEFAULT_MODEL,
-    private val httpClient: OkHttpClient = OkHttpClient()
+    private val httpClient: OkHttpClient = OkHttpClient.Builder()
+        .callTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+        .build()
 ) : LocalQwenClient {
     override fun complete(systemPrompt: String, userPrompt: String): String {
         val payload = json.encodeToString(
@@ -204,7 +207,24 @@ class LocalQwenArrangementPlanner(
         )
         const val SYSTEM_PROMPT = """
             You are a music arrangement planner. You do not generate audio, code, commands, or file paths.
-            Return only a valid JSON arrangement matching schema version 1. Do not include markdown or prose.
+            Return only a valid JSON arrangement matching this schema:
+             ```json
+                {
+                  "version": 1,
+                  "sections": [
+                    {
+                      "index": 0,
+                      "partId": "A",
+                      "instruments": [
+                        {"name": "piano", "mode": "source"},
+                        {"name": "bass", "mode": "generated", "role": "root_fifth", "density": 0.3}
+                      ],
+                      "transitionOut": {"type": "none", "bars": 0}
+                    }
+                  ]
+                }
+                ```
+             Do not include markdown or prose.
         """
     }
 }

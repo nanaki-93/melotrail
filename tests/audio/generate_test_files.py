@@ -126,7 +126,7 @@ def generate_click_tracks():
         '140_bpm': 5,
     }
     for bpm, duration in durations.items():
-        beat_interval = 60.0 / bpm
+        beat_interval = 60.0 / int(bpm.split('_')[0])  # seconds per beat
         num_beats = int(duration / beat_interval)
         t = np.linspace(0, duration, sample_rate * duration)
         samples = np.zeros_like(t)
