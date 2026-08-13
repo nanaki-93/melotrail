@@ -14,7 +14,7 @@ Create a separate Compose Desktop JVM application that depends on the engine mod
 - Pin a verified stable Kotlin/Compose pair. First test the current stable Compose release with its required Kotlin upgrade against all engine tests; if incompatible, pin the newest compatible Compose version and document why.
 - Apply Compose dependencies/plugins only where needed; do not move the engine to Kotlin Multiplatform.
 - Add `DesktopMain`, service composition root, `WorkspaceViewModel`, immutable `WorkspaceUiState`, and explicit UI intents.
-- Add a dark theme and reusable tokens/components inspired by `plan/UI.png`: charcoal surfaces, teal focus/action color, compact cards, and instrument lane colors.
+- Add a dark theme and reusable tokens/components inspired by `../../UI.png`: charcoal surfaces, teal focus/action color, compact cards, and instrument lane colors.
 - Add an empty/start workspace, top project header, three-pane responsive shell, operation/status area, and placeholders for the functional panels.
 - Keep filesystem dialogs behind an injected `DesktopFileDialogs` interface.
 - Use `StateFlow`, `SupervisorJob`, and explicit dispatchers. Composables do not call services/files directly.

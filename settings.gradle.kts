@@ -15,3 +15,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "ai-music-workstation"
+
+include(":desktopApp")

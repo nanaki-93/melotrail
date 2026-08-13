@@ -227,7 +227,7 @@ Use `StateFlow`, a `SupervisorJob`, and injected interfaces. Composables render 
 |---|---|---|
 | [022](tasks/completed/022-project-application-services.md) | Typed project/part/structure services and CLI parity | Existing CLI behavior preserved |
 | [023](tasks/completed/023-arrangement-build-services.md) | Typed arrangement/mix/build orchestration and progress | CLI and service produce equivalent artifacts |
-| [024](tasks/024-compose-desktop-foundation.md) | Separate Compose Desktop app, theme, shell, and state wiring | Desktop launches without starting Spring |
+| [024](tasks/completed/024-compose-desktop-foundation.md) | Separate Compose Desktop app, theme, shell, and state wiring | Desktop launches without starting Spring |
 | [025](tasks/025-desktop-project-workflow.md) | Open/create/import/analyze/edit parts and drag structure | A project can be prepared entirely in UI |
 | [026](tasks/026-desktop-arrangement-workflow.md) | Planner controls, approval flow, plan table, song timeline | Valid arrangement can be generated/reviewed |
 | [027](tasks/027-desktop-mix-build-playback.md) | Mix controls, playback, progress, end-to-end Build Song | Valid master can be built and auditioned |
