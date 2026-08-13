@@ -17,6 +17,7 @@ import ai.music.workstation.arrangement.Project
 import ai.music.workstation.arrangement.ProjectStore
 import ai.music.workstation.arrangement.RenderFormat
 import ai.music.workstation.arrangement.SongPlan
+import ai.music.workstation.arrangement.SectionVariationPlan
 import ai.music.workstation.audio.AudioBuffer
 import ai.music.workstation.audio.AudioFormat
 import kotlinx.serialization.decodeFromString
@@ -130,11 +131,16 @@ class ArrangementProjectCommandsTest {
         val songPlan = json.decodeFromString<SongPlan>(
             Files.readString(projectRoot.resolve("song_plan.json"))
         )
+        val variations = json.decodeFromString<SectionVariationPlan>(
+            Files.readString(projectRoot.resolve("section_variations.json"))
+        )
         assertTrue(ArrangementProjectCommands.handles(arrayOf("arrange")))
         assertTrue(result.contains("Created deterministic global song plan"))
         assertEquals(listOf("A", "A"), songPlan.sections.map { it.partId })
         assertEquals(listOf("A1", "A2"), songPlan.sections.map { it.instanceId })
+        assertEquals(listOf(1, 2), songPlan.sections.map { it.occurrence })
         assertEquals(listOf("piano"), songPlan.sections.first().instrumentProgression)
+        assertEquals(listOf("A1", "A2"), variations.sections.map { it.instanceId })
         assertFalse(Files.exists(projectRoot.resolve("arrangement.json")))
     }
 

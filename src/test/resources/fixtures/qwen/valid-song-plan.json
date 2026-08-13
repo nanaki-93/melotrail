@@ -3,11 +3,11 @@
   "style": "warm melancholic lo-fi piano",
   "energyCurve": [0.20, 0.35, 0.58, 0.78, 0.42],
   "sections": [
-    {"index": 0, "instanceId": "A1", "partId": "A", "purpose": "introduction", "instrumentProgression": ["piano"], "transitionIntent": "none"},
-    {"index": 1, "instanceId": "A2", "partId": "A", "purpose": "development", "instrumentProgression": ["piano", "bass"], "transitionIntent": "none"},
-    {"index": 2, "instanceId": "B1", "partId": "B", "purpose": "development", "instrumentProgression": ["piano", "bass"], "transitionIntent": "build"},
-    {"index": 3, "instanceId": "B2", "partId": "B", "purpose": "climax", "instrumentProgression": ["piano", "bass", "pad"], "transitionIntent": "release"},
-    {"index": 4, "instanceId": "A3", "partId": "A", "purpose": "conclusion", "instrumentProgression": ["piano", "bass"], "transitionIntent": "none"}
+    {"index": 0, "instanceId": "A1", "partId": "A", "occurrence": 1, "purpose": "introduction", "instrumentProgression": ["piano"], "transitionIntent": "none"},
+    {"index": 1, "instanceId": "A2", "partId": "A", "occurrence": 2, "purpose": "development", "instrumentProgression": ["piano", "bass"], "transitionIntent": "none"},
+    {"index": 2, "instanceId": "B1", "partId": "B", "occurrence": 1, "purpose": "development", "instrumentProgression": ["piano", "bass"], "transitionIntent": "build"},
+    {"index": 3, "instanceId": "B2", "partId": "B", "occurrence": 2, "purpose": "climax", "instrumentProgression": ["piano", "bass", "pad"], "transitionIntent": "release"},
+    {"index": 4, "instanceId": "A3", "partId": "A", "occurrence": 3, "purpose": "conclusion", "instrumentProgression": ["piano", "bass"], "transitionIntent": "none"}
   ],
   "climaxIndex": 3,
   "ending": "resolved"

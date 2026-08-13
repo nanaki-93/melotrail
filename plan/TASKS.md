@@ -42,7 +42,7 @@ After implementation:
 | [007](tasks/completed/007-midi-sfz-wav-rendering.md) | MIDI → SFZ → WAV rendering | 006 | Render existing starter piano/bass assets | Assets present; renderer missing |
 | [008](tasks/completed/008-bass-midi-generator.md) | Deterministic bass MIDI generator | 005, 007 | `midi/generated/bass.mid` | Planned |
 | [009](tasks/completed/009-global-song-planner.md) | Global song planner | 005–006 | Validated whole-song `song_plan.json` | Planned |
-| [010](tasks/010-repeated-section-variation.md) | Repeated-section variation | 009 | Stable A1/A2/B1 identities and bounded variation | Planned |
+| [010](tasks/completed/010-repeated-section-variation.md) | Repeated-section variation | 009 | Stable A1/A2/B1 identities and bounded variation | Planned |
 | [011](tasks/011-detailed-arrangement-plan.md) | Detailed MIDI-first arrangement | 006, 009–010 | Version-3 `arrangement.json` roles | Planned |
 | [012](tasks/012-piano-bass-quality-gate.md) | First complete piano + bass gate | 001–011 | Musically accepted MIDI-first dry mix | Planned |
 | [013](tasks/013-drum-midi-generator.md) | Deterministic drum MIDI generator | 012 accepted | `midi/generated/drums.mid` | Blocked by gate |

@@ -25,6 +25,7 @@ class GlobalSongPlannerTest {
 
         assertEquals(listOf("A", "A", "B", "B", "A"), plan.sections.map { it.partId })
         assertEquals(listOf("A1", "A2", "B1", "B2", "A3"), plan.sections.map { it.instanceId })
+        assertEquals(listOf(1, 2, 1, 2, 3), plan.sections.map { it.occurrence })
         assertEquals(5, plan.energyCurve.size)
         assertTrue(plan.energyCurve.all { it.isFinite() && it in 0.0..1.0 })
         assertEquals(1, plan.sections.count { it.purpose == SongSectionPurpose.CLIMAX })

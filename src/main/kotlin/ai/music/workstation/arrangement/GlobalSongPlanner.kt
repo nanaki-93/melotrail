@@ -41,6 +41,8 @@ data class SongPlanSection(
     val index: Int,
     val instanceId: String,
     val partId: String,
+    /** One-based occurrence of this source part in the user-controlled structure. */
+    val occurrence: Int,
     val purpose: SongSectionPurpose,
     val instrumentProgression: List<String>,
     val transitionIntent: SongTransitionIntent
@@ -150,7 +152,8 @@ data class SongPlanningInput(
 data class SongPlanningSectionInstance(
     val index: Int,
     val instanceId: String,
-    val partId: String
+    val partId: String,
+    val occurrence: Int
 )
 
 /** Derives stable occurrence identities; neither a model nor a user supplies these values. */
@@ -160,7 +163,7 @@ object SongPlanningSectionInstances {
         return structure.map { section ->
             val occurrence = (occurrences[section.partId] ?: 0) + 1
             occurrences[section.partId] = occurrence
-            SongPlanningSectionInstance(section.index, "${section.partId}$occurrence", section.partId)
+            SongPlanningSectionInstance(section.index, "${section.partId}$occurrence", section.partId, occurrence)
         }
     }
 }
@@ -194,6 +197,7 @@ object SongPlanValidator {
             if (section.index != expected.index) errors += "Song-plan section ${position + 1} has index ${section.index}; expected ${expected.index}"
             if (section.instanceId != expected.instanceId) errors += "Song-plan section ${position + 1} has unexpected instance ID '${section.instanceId}'"
             if (section.partId != expected.partId) errors += "Song-plan section ${position + 1} has unexpected part ID '${section.partId}'"
+            if (section.occurrence != expected.occurrence) errors += "Song-plan section ${position + 1} has occurrence ${section.occurrence}; expected ${expected.occurrence}"
             validateInstruments(position, section.instrumentProgression, input, errors)
             if (position == plan.sections.lastIndex && section.transitionIntent != SongTransitionIntent.NONE) {
                 errors += "Final song-plan section must use transition intent none"
@@ -258,6 +262,7 @@ class DeterministicGlobalSongPlanner : GlobalSongPlanner {
                 index = section.index,
                 instanceId = section.instanceId,
                 partId = section.partId,
+                occurrence = section.occurrence,
                 purpose = purpose(position, climaxIndex, sections.lastIndex),
                 instrumentProgression = instruments,
                 transitionIntent = transition(position, climaxIndex, sections.lastIndex)
@@ -366,8 +371,8 @@ class LocalQwenGlobalSongPlanner(
             You are a whole-song musical planner. You do not generate notes, MIDI events, audio, code, commands,
             file paths, sample data, renderer settings, or executable behavior. Return JSON only, without markdown
             or prose. The top-level fields are exactly version, style, energyCurve, sections, climaxIndex, and ending.
-            Each section has exactly index, instanceId, partId, purpose, instrumentProgression, and transitionIntent.
-            Preserve every supplied section index, instanceId, and partId exactly. Use only supplied logical instruments,
+            Each section has exactly index, instanceId, partId, occurrence, purpose, instrumentProgression, and transitionIntent.
+            Preserve every supplied section index, instanceId, partId, and occurrence exactly. Use only supplied logical instruments,
             start each progression with piano, use one climax, and make the final transitionIntent none. Allowed purpose
             values: introduction, development, climax, release, conclusion. Allowed transitionIntent values: none, build,
             release. Allowed ending values: resolved, fade, open. Energy values must be finite numbers from 0 through 1.

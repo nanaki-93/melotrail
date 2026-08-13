@@ -6,6 +6,7 @@ import ai.music.workstation.arrangement.ArrangementRenderer
 import ai.music.workstation.arrangement.BassMidiGenerationAdapter
 import ai.music.workstation.arrangement.DeterministicArrangementPlanner
 import ai.music.workstation.arrangement.DeterministicGlobalSongPlanner
+import ai.music.workstation.arrangement.DeterministicSectionVariationPlanner
 import ai.music.workstation.arrangement.DeterministicStemMixer
 import ai.music.workstation.arrangement.LocalQwenGlobalSongPlanner
 import ai.music.workstation.arrangement.MixSettings
@@ -25,6 +26,7 @@ import ai.music.workstation.arrangement.Project
 import ai.music.workstation.arrangement.ProjectStore
 import ai.music.workstation.arrangement.RenderFormat
 import ai.music.workstation.arrangement.SectionInstance
+import ai.music.workstation.arrangement.SectionVariationStore
 import ai.music.workstation.arrangement.StructureParser
 import ai.music.workstation.arrangement.GlobalSongPlanner
 import ai.music.workstation.arrangement.SongPlanStore
@@ -442,10 +444,16 @@ object ArrangementProjectCommands {
         )
         val songPlan = planner.plan(input)
         val songPlanPath = SongPlanStore.write(projectRoot, input, songPlan)
+        val variationPath = SectionVariationStore.write(
+            projectRoot,
+            input,
+            songPlan,
+            DeterministicSectionVariationPlanner.plan(input, songPlan)
+        )
         return if (plannerName == QWEN_PLANNER) {
-            "Created Qwen global song plan: $songPlanPath. Review song_plan.json before creating a detailed arrangement."
+            "Created Qwen global song plan: $songPlanPath and section variations: $variationPath. Review both before creating a detailed arrangement."
         } else {
-            "Created $plannerName global song plan: $songPlanPath"
+            "Created $plannerName global song plan: $songPlanPath and section variations: $variationPath"
         }
     }
 

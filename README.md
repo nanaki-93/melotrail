@@ -132,18 +132,20 @@ for the required local sample-copy setup after a fresh checkout.
 
 ### Global song-planning workflow
 
-`arrange` first creates a standalone, reviewable `song_plan.json` for the
-whole user-controlled structure. It requires a v2 MIDI-first project with a
-versioned MIDI analysis for every part. The plan contains only section purpose,
-energy, logical instrument progression, transition intent, and ending behavior;
-it contains no notes, paths, renderer settings, or executable behavior.
+`arrange` first creates standalone, reviewable `song_plan.json` and
+`section_variations.json` artifacts for the whole user-controlled structure.
+It requires a v2 MIDI-first project with a versioned MIDI analysis for every
+part. The plan contains only section purpose, energy, logical instrument
+progression, transition intent, and ending behavior; the variation artifact
+adds stable repeated-section identities plus bounded roles/densities. Neither
+artifact contains notes, paths, renderer settings, or executable behavior.
 
 ```bash
 # Every MIDI-first part must have musical metadata first.
 make cli ARGS='part analyze ./projects/song-001 --id A'
 
 make cli ARGS='arrange --project ./projects/song-001 --planner deterministic --instruments piano,bass,pad --style "warm lo-fi"'
-# Inspect projects/song-001/song_plan.json before a later detailed-arrangement stage.
+# Inspect song_plan.json and section_variations.json before a later detailed-arrangement stage.
 ```
 
 The existing `render`/`build` workflow continues to use its compatible
