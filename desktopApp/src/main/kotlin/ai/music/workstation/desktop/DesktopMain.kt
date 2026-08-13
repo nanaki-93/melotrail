@@ -4,6 +4,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import ai.music.workstation.application.DefaultProjectApplicationService
+import ai.music.workstation.application.DefaultArrangementApplicationService
 import ai.music.workstation.application.LegacyPartAnalysisService
 import ai.music.workstation.application.MidiPreparationService
 import ai.music.workstation.application.ProjectApplicationService
@@ -31,7 +32,8 @@ fun main() = application {
     val viewModel = WorkspaceViewModel(
         projectService = DesktopServiceComposition.projectService(),
         fileDialogs = SwingDesktopFileDialogs(),
-        runtimeReadinessService = defaultRuntimeReadinessService()
+        runtimeReadinessService = defaultRuntimeReadinessService(),
+        arrangementService = DefaultArrangementApplicationService()
     )
     Window(
         onCloseRequest = {

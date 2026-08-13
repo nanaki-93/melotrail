@@ -229,7 +229,7 @@ Use `StateFlow`, a `SupervisorJob`, and injected interfaces. Composables render 
 | [023](tasks/completed/023-arrangement-build-services.md) | Typed arrangement/mix/build orchestration and progress | CLI and service produce equivalent artifacts |
 | [024](tasks/completed/024-compose-desktop-foundation.md) | Separate Compose Desktop app, theme, shell, and state wiring | Desktop launches without starting Spring |
 | [025](tasks/completed/025-desktop-project-workflow.md) | Open/create/import/analyze/edit parts and drag structure | A project can be prepared entirely in UI |
-| [026](tasks/026-desktop-arrangement-workflow.md) | Planner controls, approval flow, plan table, song timeline | Valid arrangement can be generated/reviewed |
+| [026](tasks/completed/026-desktop-arrangement-workflow.md) | Planner controls, approval flow, plan table, song timeline | Valid arrangement can be generated/reviewed |
 | [027](tasks/027-desktop-mix-build-playback.md) | Mix controls, playback, progress, end-to-end Build Song | Valid master can be built and auditioned |
 | [028](tasks/028-desktop-hardening-packaging.md) | UI tests, accessibility, recovery, current-OS package | Local release candidate passes smoke checklist |
 

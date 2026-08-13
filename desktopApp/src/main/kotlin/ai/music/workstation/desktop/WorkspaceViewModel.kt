@@ -1,10 +1,16 @@
 package ai.music.workstation.desktop
 
 import ai.music.workstation.application.AnalyzePartRequest
+import ai.music.workstation.application.ArrangementApplicationService
+import ai.music.workstation.application.ArrangementPlannerKind
+import ai.music.workstation.application.ArrangementSnapshot
 import ai.music.workstation.application.CreateProjectRequest
+import ai.music.workstation.application.DefaultArrangementApplicationService
+import ai.music.workstation.application.GenerateArrangementRequest
 import ai.music.workstation.application.ImportPartRequest
 import ai.music.workstation.application.OperationProgress
 import ai.music.workstation.application.PartSourceType
+import ai.music.workstation.application.PartAnalysisStatus
 import ai.music.workstation.application.ProjectApplicationService
 import ai.music.workstation.application.ProjectSnapshot
 import ai.music.workstation.application.SaveStructureRequest
@@ -30,6 +36,9 @@ data class WorkspaceDispatchers(
 
 data class WorkspaceUiState(
     val project: ProjectSnapshot? = null,
+    val arrangement: ArrangementSnapshot? = null,
+    val arrangementDraft: ArrangementDraft = ArrangementDraft(),
+    val selectedArrangementSection: Int? = null,
     val operation: WorkspaceOperation = WorkspaceOperation.Idle,
     val notification: String? = null,
     val runtimeReadiness: RuntimeReadiness? = null,
@@ -37,6 +46,12 @@ data class WorkspaceUiState(
     val structureDraft: List<String> = emptyList(),
     val downstreamArtifactsStale: Boolean = false,
     val retry: WorkspaceRetry? = null
+)
+
+data class ArrangementDraft(
+    val planner: ArrangementPlannerKind = ArrangementPlannerKind.DETERMINISTIC,
+    val style: String = "",
+    val instruments: Set<String> = setOf("piano")
 )
 
 sealed interface WorkspaceOperation {
@@ -47,6 +62,8 @@ sealed interface WorkspaceOperation {
     data class AnalyzingPart(val id: String, val progress: OperationProgress? = null) : WorkspaceOperation
     data class UpdatingPartRole(val id: String) : WorkspaceOperation
     data object SavingStructure : WorkspaceOperation
+    data class GeneratingArrangement(val progress: OperationProgress? = null) : WorkspaceOperation
+    data object ApprovingArrangement : WorkspaceOperation
     data class OpenFailed(val message: String) : WorkspaceOperation
     data class Failed(val action: String, val message: String) : WorkspaceOperation
 }
@@ -54,7 +71,8 @@ sealed interface WorkspaceOperation {
 val WorkspaceOperation.isMutating: Boolean
     get() = this is WorkspaceOperation.OpeningProject || this is WorkspaceOperation.CreatingProject ||
         this is WorkspaceOperation.ImportingPart || this is WorkspaceOperation.AnalyzingPart ||
-        this is WorkspaceOperation.UpdatingPartRole || this is WorkspaceOperation.SavingStructure
+        this is WorkspaceOperation.UpdatingPartRole || this is WorkspaceOperation.SavingStructure ||
+        this is WorkspaceOperation.GeneratingArrangement || this is WorkspaceOperation.ApprovingArrangement
 
 sealed interface WorkspaceDialog {
     data class CreateProject(
@@ -77,6 +95,7 @@ sealed interface WorkspaceDialog {
 sealed interface WorkspaceRetry {
     data class Import(val request: ImportPartRequest) : WorkspaceRetry
     data class Analyze(val root: Path, val partId: String) : WorkspaceRetry
+    data class GenerateArrangement(val request: GenerateArrangementRequest) : WorkspaceRetry
 }
 
 sealed interface WorkspaceIntent {
@@ -101,6 +120,13 @@ sealed interface WorkspaceIntent {
     data class RemoveStructurePart(val index: Int) : WorkspaceIntent
     data class MoveStructurePart(val fromIndex: Int, val toIndex: Int) : WorkspaceIntent
     data object ClearStructure : WorkspaceIntent
+    data class UpdateArrangementPlanner(val planner: ArrangementPlannerKind) : WorkspaceIntent
+    data class UpdateArrangementStyle(val style: String) : WorkspaceIntent
+    data class ToggleArrangementInstrument(val instrument: String) : WorkspaceIntent
+    data object GenerateArrangement : WorkspaceIntent
+    data object PreviewArrangement : WorkspaceIntent
+    data object ApproveArrangement : WorkspaceIntent
+    data class SelectArrangementSection(val index: Int?) : WorkspaceIntent
     data object Retry : WorkspaceIntent
     data object DismissDialog : WorkspaceIntent
     data object DismissNotification : WorkspaceIntent
@@ -110,7 +136,8 @@ class WorkspaceViewModel(
     private val projectService: ProjectApplicationService,
     private val fileDialogs: DesktopFileDialogs,
     dispatchers: WorkspaceDispatchers = WorkspaceDispatchers(),
-    private val runtimeReadinessService: RuntimeReadinessService = UnavailableRuntimeReadinessService
+    private val runtimeReadinessService: RuntimeReadinessService = UnavailableRuntimeReadinessService,
+    private val arrangementService: ArrangementApplicationService = DefaultArrangementApplicationService()
 ) : AutoCloseable {
     private val scope = CoroutineScope(SupervisorJob() + dispatchers.ui)
     private val ioDispatcher = dispatchers.io
@@ -141,6 +168,13 @@ class WorkspaceViewModel(
             is WorkspaceIntent.RemoveStructurePart -> removeStructurePart(intent.index)
             is WorkspaceIntent.MoveStructurePart -> moveStructurePart(intent.fromIndex, intent.toIndex)
             WorkspaceIntent.ClearStructure -> saveStructure(emptyList())
+            is WorkspaceIntent.UpdateArrangementPlanner -> updateArrangementPlanner(intent.planner)
+            is WorkspaceIntent.UpdateArrangementStyle -> mutableState.update { it.copy(arrangementDraft = it.arrangementDraft.copy(style = intent.style)) }
+            is WorkspaceIntent.ToggleArrangementInstrument -> toggleArrangementInstrument(intent.instrument)
+            WorkspaceIntent.GenerateArrangement -> generateArrangement()
+            WorkspaceIntent.PreviewArrangement -> previewArrangement()
+            WorkspaceIntent.ApproveArrangement -> approveArrangement()
+            is WorkspaceIntent.SelectArrangementSection -> mutableState.update { it.copy(selectedArrangementSection = intent.index) }
             WorkspaceIntent.Retry -> retry()
             WorkspaceIntent.DismissDialog -> mutableState.update { it.copy(dialog = null) }
             WorkspaceIntent.DismissNotification -> mutableState.update { it.copy(notification = null) }
@@ -314,7 +348,71 @@ class WorkspaceViewModel(
     private fun retry() = when (val action = state.value.retry) {
         is WorkspaceRetry.Import -> runImport(action.request)
         is WorkspaceRetry.Analyze -> analyzePart(action.partId)
+        is WorkspaceRetry.GenerateArrangement -> runGenerateArrangement(action.request)
         null -> Unit
+    }
+
+    private fun updateArrangementPlanner(planner: ArrangementPlannerKind) {
+        if (state.value.operation.isMutating) return
+        mutableState.update { it.copy(arrangementDraft = it.arrangementDraft.copy(planner = planner), notification = null) }
+    }
+
+    private fun toggleArrangementInstrument(instrument: String) {
+        if (state.value.operation.isMutating || instrument == "piano" || instrument !in arrangementInstruments) return
+        mutableState.update { current ->
+            val selected = current.arrangementDraft.instruments
+            current.copy(arrangementDraft = current.arrangementDraft.copy(instruments = if (instrument in selected) selected - instrument else selected + instrument))
+        }
+    }
+
+    private fun generateArrangement() {
+        val project = state.value.project ?: return fail("generate arrangement", "Open a project before arranging.")
+        if (state.value.operation.isMutating) return
+        val missing = state.value.structureDraft.toSet().filter { id -> project.parts.find { it.id == id }?.analysis?.status != PartAnalysisStatus.MIDI }
+        when {
+            state.value.structureDraft.isEmpty() -> fail("generate arrangement", "Add at least one section to the song structure before arranging.")
+            missing.isNotEmpty() -> fail("generate arrangement", "Analyze every structure part before arranging: ${missing.joinToString(", ")}.")
+            state.value.arrangementDraft.style.trim().length > MAX_STYLE_LENGTH -> fail("generate arrangement", "Style must be at most $MAX_STYLE_LENGTH characters.")
+            else -> runGenerateArrangement(
+                GenerateArrangementRequest(project.root, state.value.arrangementDraft.planner, state.value.arrangementDraft.style.trim().ifBlank { null }, arrangementInstruments.filter { it in state.value.arrangementDraft.instruments })
+            )
+        }
+    }
+
+    private fun runGenerateArrangement(request: GenerateArrangementRequest) {
+        mutableState.update { it.copy(operation = WorkspaceOperation.GeneratingArrangement(), notification = null, retry = null) }
+        scope.launch {
+            runCatching {
+                withContext(ioDispatcher) {
+                    arrangementService.generate(request) { progress ->
+                        scope.launch { updateProgress(WorkspaceOperation.GeneratingArrangement(progress)) }
+                    }
+                }
+            }.onSuccess { arrangement ->
+                mutableState.update { it.copy(arrangement = arrangement, selectedArrangementSection = arrangement.sections.firstOrNull()?.index, operation = WorkspaceOperation.Idle, notification = if (arrangement.approvalRequired) "Arrangement draft is ready for review and explicit approval." else "Approved deterministic arrangement generated.", retry = null) }
+            }.onFailure { fail("generate arrangement", it.message ?: "Unable to generate arrangement.", WorkspaceRetry.GenerateArrangement(request)) }
+        }
+    }
+
+    private fun previewArrangement() {
+        val project = state.value.project ?: return
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { arrangementService.preview(project.root) } }
+                .onSuccess { arrangement -> mutableState.update { it.copy(arrangement = arrangement, selectedArrangementSection = arrangement.sections.firstOrNull()?.index, notification = "Draft preview is validated. Approve it explicitly to make it current.") } }
+                .onFailure { fail("preview arrangement", it.message ?: "Unable to preview arrangement.") }
+        }
+    }
+
+    private fun approveArrangement() {
+        val project = state.value.project ?: return
+        val arrangement = state.value.arrangement
+        if (arrangement?.approvalRequired != true || arrangement.stale) return
+        mutableState.update { it.copy(operation = WorkspaceOperation.ApprovingArrangement, notification = null) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { arrangementService.approve(project.root) } }
+                .onSuccess { arrangement -> mutableState.update { it.copy(arrangement = arrangement, selectedArrangementSection = arrangement.sections.firstOrNull()?.index, operation = WorkspaceOperation.Idle, notification = "Arrangement approved.") } }
+                .onFailure { fail("approve arrangement", it.message ?: "Unable to approve arrangement.") }
+        }
     }
 
     private fun updateProgress(operation: WorkspaceOperation) {
@@ -327,6 +425,7 @@ class WorkspaceViewModel(
         mutableState.update {
             it.copy(
                 project = project,
+                arrangement = null,
                 operation = WorkspaceOperation.Idle,
                 notification = message,
                 dialog = null,
@@ -334,6 +433,14 @@ class WorkspaceViewModel(
                 downstreamArtifactsStale = stale,
                 retry = null
             )
+        }
+        refreshArrangement(project.root)
+    }
+
+    private fun refreshArrangement(root: Path) = scope.launch {
+        val arrangement = withContext(ioDispatcher) { runCatching { arrangementService.load(root) }.getOrNull() }
+        mutableState.update { current ->
+            if (current.project?.root == root) current.copy(arrangement = arrangement, selectedArrangementSection = arrangement?.sections?.firstOrNull()?.index) else current
         }
     }
 
@@ -348,6 +455,11 @@ class WorkspaceViewModel(
             worker = DependencyReadiness(false, "Worker readiness has not been configured."),
             renderer = DependencyReadiness(false, "Renderer readiness has not been configured.")
         )
+    }
+
+    private companion object {
+        val arrangementInstruments = listOf("piano", "bass", "drums", "pad", "strings")
+        const val MAX_STYLE_LENGTH = 160
     }
 }
 

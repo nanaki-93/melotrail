@@ -1,7 +1,13 @@
 package ai.music.workstation.desktop
 
 import ai.music.workstation.application.AnalyzePartRequest
+import ai.music.workstation.application.ArrangementApplicationService
+import ai.music.workstation.application.ArrangementPlannerKind
+import ai.music.workstation.application.ArrangementSectionSnapshot
+import ai.music.workstation.application.ArrangementSnapshot
 import ai.music.workstation.application.CreateProjectRequest
+import ai.music.workstation.application.GenerateArrangementRequest
+import ai.music.workstation.application.GeneratedMidiSnapshot
 import ai.music.workstation.application.ImportPartRequest
 import ai.music.workstation.application.ProjectApplicationService
 import ai.music.workstation.application.ProjectSnapshot
@@ -130,6 +136,96 @@ class WorkspaceViewModelTest {
         viewModel.close()
     }
 
+    @Test
+    fun `validates planner inputs then generates an approved deterministic arrangement`() = runTest {
+        val root = Path.of("build/arrangement-project")
+        val project = projectSnapshot(root).copy(
+            parts = listOf(analyzedPart("A")),
+            structure = listOf(ai.music.workstation.application.StructureSectionSummary(0, "A", 1, "A1", 4.0))
+        )
+        val arrangement = arrangementSnapshot(root)
+        val service = FakeArrangementService(generated = arrangement)
+        val viewModel = WorkspaceViewModel(FakeProjectService(result = project), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)), arrangementService = service)
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root))
+        advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.ToggleArrangementInstrument("bass"))
+        viewModel.accept(WorkspaceIntent.UpdateArrangementStyle("warm lo-fi"))
+        viewModel.accept(WorkspaceIntent.GenerateArrangement)
+        advanceUntilIdle()
+
+        assertEquals(ArrangementPlannerKind.DETERMINISTIC, service.generatedRequest?.planner)
+        assertEquals(listOf("piano", "bass"), service.generatedRequest?.instruments)
+        assertEquals("warm lo-fi", service.generatedRequest?.style)
+        assertEquals(arrangement, viewModel.state.value.arrangement)
+        assertEquals(0, viewModel.state.value.selectedArrangementSection)
+        viewModel.accept(WorkspaceIntent.SelectArrangementSection(null))
+        assertNull(viewModel.state.value.selectedArrangementSection)
+
+        viewModel.accept(WorkspaceIntent.UpdateArrangementStyle("x".repeat(161)))
+        viewModel.accept(WorkspaceIntent.GenerateArrangement)
+        assertEquals("Style must be at most 160 characters.", assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation).message)
+        viewModel.close()
+    }
+
+    @Test
+    fun `Qwen draft remains reviewable until explicit approval and reopens from artifacts`() = runTest {
+        val root = Path.of("build/qwen-project")
+        val project = projectSnapshot(root).copy(
+            parts = listOf(analyzedPart("A")),
+            structure = listOf(ai.music.workstation.application.StructureSectionSummary(0, "A", 1, "A1", 4.0))
+        )
+        val draft = arrangementSnapshot(root, approvalRequired = true, approved = false)
+        val approved = arrangementSnapshot(root)
+        val service = FakeArrangementService(loaded = approved, generated = draft, approved = approved)
+        val viewModel = WorkspaceViewModel(FakeProjectService(result = project), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)), arrangementService = service)
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root))
+        advanceUntilIdle()
+        assertEquals(approved, viewModel.state.value.arrangement)
+        viewModel.accept(WorkspaceIntent.UpdateArrangementPlanner(ArrangementPlannerKind.QWEN))
+        viewModel.accept(WorkspaceIntent.GenerateArrangement)
+        advanceUntilIdle()
+        assertTrue(viewModel.state.value.arrangement!!.approvalRequired)
+        viewModel.accept(WorkspaceIntent.PreviewArrangement)
+        advanceUntilIdle()
+        assertEquals(1, service.previewCalls)
+        viewModel.accept(WorkspaceIntent.ApproveArrangement)
+        advanceUntilIdle()
+        assertEquals(1, service.approveCalls)
+        assertTrue(viewModel.state.value.arrangement!!.approved)
+        viewModel.close()
+    }
+
+    @Test
+    fun `invalid Qwen response remains an actionable generation failure`() = runTest {
+        val root = Path.of("build/invalid-qwen-project")
+        val project = projectSnapshot(root).copy(
+            parts = listOf(analyzedPart("A")),
+            structure = listOf(ai.music.workstation.application.StructureSectionSummary(0, "A", 1, "A1", 4.0))
+        )
+        val service = FakeArrangementService(failureOnGenerate = IllegalArgumentException("Qwen response is not valid arrangement JSON"))
+        val viewModel = WorkspaceViewModel(FakeProjectService(result = project), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)), arrangementService = service)
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root))
+        advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.UpdateArrangementPlanner(ArrangementPlannerKind.QWEN))
+        viewModel.accept(WorkspaceIntent.GenerateArrangement)
+        advanceUntilIdle()
+
+        assertEquals("Qwen response is not valid arrangement JSON", assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation).message)
+        assertIs<WorkspaceRetry.GenerateArrangement>(viewModel.state.value.retry)
+        viewModel.close()
+    }
+
+    @Test
+    fun `timeline weights preserve duration proportions with a safe unknown-duration fallback`() {
+        assertEquals(2f, timelineSectionWeight(2.0))
+        assertEquals(6f, timelineSectionWeight(6.0))
+        assertEquals(1f, timelineSectionWeight(null))
+        assertEquals(1f, timelineSectionWeight(0.0))
+    }
+
     private fun testDispatchers(dispatcher: TestDispatcher): WorkspaceDispatchers {
         return WorkspaceDispatchers(ui = dispatcher, io = dispatcher)
     }
@@ -151,6 +247,22 @@ class WorkspaceViewModelTest {
         sourceName = "$id.mid",
         sourceType = ai.music.workstation.application.PartSourceType.MIDI,
         analysis = null
+    )
+
+    private fun analyzedPart(id: String) = part(id).copy(analysis = ai.music.workstation.application.PartAnalysisSummary(
+        ai.music.workstation.application.PartAnalysisStatus.MIDI, "analysis/$id.midi.json", bars = 2, durationSeconds = 4.0, key = "C major"
+    ))
+
+    private fun arrangementSnapshot(root: Path, approvalRequired: Boolean = false, approved: Boolean = true) = ArrangementSnapshot(
+        root = root,
+        sections = listOf(ArrangementSectionSnapshot(0, "A1", "A", "introduction", 0.4, listOf(
+            ai.music.workstation.application.ArrangementInstrumentSnapshot("piano", "source", null, null),
+            ai.music.workstation.application.ArrangementInstrumentSnapshot("bass", "generated", "bass", 0.4)
+        ), "none", 4.0)),
+        approvalRequired = approvalRequired,
+        approved = approved,
+        stale = false,
+        artifact = root.resolve(if (approvalRequired) "arrangement.draft.json" else "arrangement.json")
     )
 }
 
@@ -207,5 +319,37 @@ private class FakeProjectService(
             ai.music.workstation.application.StructureSectionSummary(index, id, request.partIds.take(index + 1).count { it == id }, "$id${request.partIds.take(index + 1).count { it == id }}", null)
         })
         return checkNotNull(current)
+    }
+}
+
+private class FakeArrangementService(
+    private val loaded: ArrangementSnapshot? = null,
+    private val generated: ArrangementSnapshot? = null,
+    private val approved: ArrangementSnapshot? = null,
+    private val failureOnGenerate: Throwable? = null
+) : ArrangementApplicationService {
+    var generatedRequest: GenerateArrangementRequest? = null
+    var previewCalls = 0
+    var approveCalls = 0
+
+    override suspend fun generate(request: GenerateArrangementRequest, progress: ai.music.workstation.application.ProgressSink): ArrangementSnapshot {
+        generatedRequest = request
+        failureOnGenerate?.let { throw it }
+        progress.report(ai.music.workstation.application.OperationProgress("arrange", 2, 3, "Creating reviewed song plan"))
+        return checkNotNull(generated)
+    }
+
+    override suspend fun generateRequiredMidi(root: Path, progress: ai.music.workstation.application.ProgressSink): GeneratedMidiSnapshot = GeneratedMidiSnapshot(emptyList())
+
+    override fun load(root: Path): ArrangementSnapshot = loaded ?: throw IllegalStateException("No detailed arrangement found")
+
+    override fun preview(root: Path): ArrangementSnapshot {
+        previewCalls++
+        return checkNotNull(generated)
+    }
+
+    override fun approve(root: Path): ArrangementSnapshot {
+        approveCalls++
+        return checkNotNull(approved)
     }
 }

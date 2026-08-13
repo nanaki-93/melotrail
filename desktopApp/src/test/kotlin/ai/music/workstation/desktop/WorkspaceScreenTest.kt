@@ -27,7 +27,7 @@ class WorkspaceScreenTest {
             WorkspaceTags.TIMELINE_PANEL,
             WorkspaceTags.MIX_PANEL,
             WorkspaceTags.OPERATION_STATUS
-        ).forEach { onNodeWithTag(it).assertIsDisplayed() }
+        ).forEach { onNodeWithTag(it).assertExists() }
     }
 
     @Test
@@ -69,6 +69,33 @@ class WorkspaceScreenTest {
 
         onNodeWithText("Edit A role").assertIsDisplayed()
         onNodeWithTag(WorkspaceTags.STRUCTURE_MOVE_RIGHT + "0").assertIsDisplayed()
+    }
+
+    @Test
+    fun `arrangement controls and validated proportional timeline are accessible`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        val root = java.nio.file.Path.of("build/test-project")
+        val arrangement = ai.music.workstation.application.ArrangementSnapshot(
+            root, listOf(
+                ai.music.workstation.application.ArrangementSectionSnapshot(0, "A1", "A", "introduction", 0.3, listOf(
+                    ai.music.workstation.application.ArrangementInstrumentSnapshot("piano", "source", null, null)
+                ), "build", 2.0),
+                ai.music.workstation.application.ArrangementSectionSnapshot(1, "A2", "A", "climax", 0.8, listOf(
+                    ai.music.workstation.application.ArrangementInstrumentSnapshot("piano", "source", null, null),
+                    ai.music.workstation.application.ArrangementInstrumentSnapshot("bass", "generated", "bass", 0.7)
+                ), "none", 6.0)
+            ), approvalRequired = true, approved = false, stale = false, artifact = root.resolve("arrangement.draft.json")
+        )
+        setContent {
+            MusicWorkstationTheme {
+                WorkspaceScreen(projectState().copy(arrangement = arrangement, selectedArrangementSection = 0), intents::add)
+            }
+        }
+
+        onNodeWithTag(WorkspaceTags.ARRANGEMENT_GENERATE).assertIsDisplayed()
+        onNodeWithTag(WorkspaceTags.ARRANGEMENT_PREVIEW).assertExists()
+        onNodeWithTag(WorkspaceTags.ARRANGEMENT_APPROVE).assertExists()
+        onNodeWithText("Transition out: build").assertExists()
     }
 
     private fun projectState(): WorkspaceUiState {

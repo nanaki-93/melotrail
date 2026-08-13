@@ -1,6 +1,7 @@
 package ai.music.workstation.desktop
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +19,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
@@ -59,6 +62,10 @@ object WorkspaceTags {
     const val STRUCTURE_CLEAR = "structure-clear"
     const val STRUCTURE_MOVE_LEFT = "structure-move-left-"
     const val STRUCTURE_MOVE_RIGHT = "structure-move-right-"
+    const val ARRANGEMENT_GENERATE = "arrangement-generate"
+    const val ARRANGEMENT_APPROVE = "arrangement-approve"
+    const val ARRANGEMENT_PREVIEW = "arrangement-preview"
+    const val ARRANGEMENT_STYLE = "arrangement-style"
 }
 
 @Composable
@@ -108,7 +115,10 @@ private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                 enabled = !mutationsDisabled,
                 modifier = Modifier.semantics { testTag = WorkspaceTags.OPEN_PROJECT }
             ) { Text("Open project") }
-            Button(onClick = {}, enabled = false) { Text("Build song") }
+            Column {
+                Button(onClick = {}, enabled = false) { Text("Build song") }
+                Text(buildSongPrerequisite(state), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }
@@ -166,11 +176,13 @@ private enum class Panel { Parts, Structure, Arrangement, Timeline, Mix, Status 
 
 @Composable
 private fun PanelColumn(modifier: Modifier, state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, panels: List<Panel>) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier = modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         panels.forEach { panel ->
             when (panel) {
                 Panel.Parts -> PartsPanel(state, onIntent)
                 Panel.Structure -> StructurePanel(state, onIntent)
+                Panel.Arrangement -> ArrangementPanel(state, onIntent)
+                Panel.Timeline -> TimelinePanel(state, onIntent)
                 else -> PlaceholderPanel(panel, state, onIntent)
             }
         }
@@ -280,17 +292,142 @@ private fun StructureRow(index: Int, partId: String, state: WorkspaceUiState, en
 }
 
 @Composable
+private fun ArrangementPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("AI arrangement", WorkspaceTags.ARRANGEMENT_PANEL) {
+    val project = state.project
+    val draft = state.arrangementDraft
+    val disabled = project == null || state.operation.isMutating
+    Text("Generate a reviewed whole-song plan and bounded detailed arrangement. Qwen drafts always need explicit approval.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        PlannerButton("Deterministic", draft.planner.name == "DETERMINISTIC", !disabled) { onIntent(WorkspaceIntent.UpdateArrangementPlanner(ai.music.workstation.application.ArrangementPlannerKind.DETERMINISTIC)) }
+        PlannerButton("Qwen", draft.planner.name == "QWEN", !disabled) { onIntent(WorkspaceIntent.UpdateArrangementPlanner(ai.music.workstation.application.ArrangementPlannerKind.QWEN)) }
+    }
+    OutlinedTextField(
+        value = draft.style,
+        onValueChange = { onIntent(WorkspaceIntent.UpdateArrangementStyle(it)) },
+        enabled = !disabled,
+        label = { Text("Style (optional, 160 characters max)") },
+        supportingText = { Text("${draft.style.length}/160") },
+        modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.ARRANGEMENT_STYLE }
+    )
+    Text("Instruments", style = MaterialTheme.typography.labelLarge)
+    listOf("piano", "bass", "drums", "pad", "strings").forEach { instrument ->
+        val piano = instrument == "piano"
+        Row(modifier = Modifier.semantics { contentDescription = "$instrument instrument ${if (piano) "required" else "optional"}" }, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Checkbox(
+                checked = instrument in draft.instruments,
+                onCheckedChange = { onIntent(WorkspaceIntent.ToggleArrangementInstrument(instrument)) },
+                enabled = !disabled && !piano
+            )
+            Text(instrument.replaceFirstChar(Char::uppercase), modifier = Modifier.padding(top = 12.dp), color = instrumentLaneColors[instrument] ?: MaterialTheme.colorScheme.onSurface)
+            if (piano) Text("Source · required", modifier = Modifier.padding(top = 12.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+    Button(onClick = { onIntent(WorkspaceIntent.GenerateArrangement) }, enabled = !disabled, modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.ARRANGEMENT_GENERATE }) { Text("Generate arrangement") }
+    ArrangementReview(state, onIntent)
+}
+
+@Composable
+private fun PlannerButton(label: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    if (selected) Button(onClick = onClick, enabled = enabled) { Text(label) }
+    else OutlinedButton(onClick = onClick, enabled = enabled) { Text(label) }
+}
+
+@Composable
+private fun ArrangementReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    val arrangement = state.arrangement ?: return
+    if (arrangement.stale) {
+        Text("Stale arrangement: its parts, structure, or planning inputs no longer validate. Regenerate before building.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        return
+    }
+    if (arrangement.approvalRequired) {
+        Text("Validated Qwen draft — review the plan and timeline, then approve explicitly.", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = { onIntent(WorkspaceIntent.PreviewArrangement) }, enabled = !state.operation.isMutating, modifier = Modifier.semantics { testTag = WorkspaceTags.ARRANGEMENT_PREVIEW }) { Text("Preview draft") }
+            Button(onClick = { onIntent(WorkspaceIntent.ApproveArrangement) }, enabled = !state.operation.isMutating, modifier = Modifier.semantics { testTag = WorkspaceTags.ARRANGEMENT_APPROVE }) { Text("Approve") }
+        }
+    } else if (arrangement.approved) {
+        Text("Approved arrangement is current.", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+@Composable
+private fun TimelinePanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Song timeline", WorkspaceTags.TIMELINE_PANEL) {
+    val arrangement = state.arrangement
+    when {
+        arrangement == null -> Text("Generate an arrangement to view validated song-plan sections and instrument lanes.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        arrangement.stale -> Text("Timeline is unavailable because the arrangement artifact is stale. Regenerate it from the current project.", color = MaterialTheme.colorScheme.error)
+        arrangement.sections.isEmpty() -> Text("No validated arrangement sections are available.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        else -> {
+            Text(if (arrangement.approvalRequired) "AI song plan · validated draft" else "AI song plan · approved", style = MaterialTheme.typography.labelLarge)
+            arrangement.sections.forEach { section ->
+                SongPlanRow(section, section.index == state.selectedArrangementSection) { onIntent(WorkspaceIntent.SelectArrangementSection(section.index)) }
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
+            Text("Instrument timeline", style = MaterialTheme.typography.labelLarge)
+            TimelineLanes(arrangement, state.selectedArrangementSection, onIntent)
+            state.selectedArrangementSection?.let { index -> arrangement.sections.find { it.index == index } }?.let { section ->
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
+                Text("${section.instanceId} details · ${section.purpose} · ${(section.energy * 100).toInt()}% energy", fontWeight = FontWeight.Medium)
+                section.instruments.forEach { instrument ->
+                    Text("${instrument.name.replaceFirstChar(Char::uppercase)} · ${instrument.mode}${instrument.role?.let { " · $it" }.orEmpty()}${instrument.density?.let { " · density %.2f".format(it) }.orEmpty()}", style = MaterialTheme.typography.bodySmall)
+                }
+                Text("Transition out: ${section.transition}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SongPlanRow(section: ai.music.workstation.application.ArrangementSectionSnapshot, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(5.dp))
+            .background(if (selected) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(onClick = onClick).padding(7.dp)
+            .semantics { contentDescription = "${section.instanceId}, ${section.purpose}, ${(section.energy * 100).toInt()} percent energy, ${section.instruments.joinToString { it.name }}, transition ${section.transition}" },
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(section.instanceId, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+        Text(section.purpose, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+        Text("${(section.energy * 100).toInt()}%", style = MaterialTheme.typography.bodySmall)
+        Text(section.instruments.joinToString(" + ") { it.name.replaceFirstChar(Char::uppercase) }, modifier = Modifier.weight(1.4f), style = MaterialTheme.typography.bodySmall)
+        Text(section.transition, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun TimelineLanes(arrangement: ai.music.workstation.application.ArrangementSnapshot, selectedIndex: Int?, onIntent: (WorkspaceIntent) -> Unit) {
+    listOf("piano", "bass", "drums", "pad", "strings").forEach { instrument ->
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(instrument.replaceFirstChar(Char::uppercase), modifier = Modifier.padding(top = 7.dp).widthIn(min = 52.dp), color = instrumentLaneColors.getValue(instrument), style = MaterialTheme.typography.labelMedium)
+            arrangement.sections.forEach { section ->
+                val active = section.instruments.any { it.name == instrument }
+                val weight = timelineSectionWeight(section.durationSeconds)
+                val color = instrumentLaneColors.getValue(instrument)
+                Text(
+                    text = if (active) section.instanceId else "",
+                    modifier = Modifier.weight(weight).clip(androidx.compose.foundation.shape.RoundedCornerShape(3.dp))
+                        .background(if (active) color.copy(alpha = if (section.index == selectedIndex) 0.72f else 0.42f) else MaterialTheme.colorScheme.surface)
+                        .clickable { onIntent(WorkspaceIntent.SelectArrangementSection(section.index)) }.padding(vertical = 6.dp, horizontal = 3.dp)
+                        .semantics { contentDescription = "$instrument lane, ${section.instanceId}, ${if (active) "active" else "inactive"}, duration ${section.durationSeconds ?: 0.0} seconds" },
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun PlaceholderPanel(panel: Panel, state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
     val (title, detail, tag) = when (panel) {
-        Panel.Arrangement -> Triple("AI arrangement", "Planner controls and approval remain explicit in the next workflow.", WorkspaceTags.ARRANGEMENT_PANEL)
-        Panel.Timeline -> Triple("Song timeline", "Validated arrangement sections and instrument lanes appear here.", WorkspaceTags.TIMELINE_PANEL)
         Panel.Mix -> Triple("Mix & transport", "Lossless mix controls and playback are available after rendering.", WorkspaceTags.MIX_PANEL)
         Panel.Status -> Triple("Operation status", statusText(state.operation), WorkspaceTags.OPERATION_STATUS)
         else -> error("Functional panels are handled separately")
     }
     WorkspaceCard(title, tag) {
         Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        val progress = (state.operation as? WorkspaceOperation.ImportingPart)?.progress ?: (state.operation as? WorkspaceOperation.AnalyzingPart)?.progress
+        val progress = (state.operation as? WorkspaceOperation.ImportingPart)?.progress
+            ?: (state.operation as? WorkspaceOperation.AnalyzingPart)?.progress
+            ?: (state.operation as? WorkspaceOperation.GeneratingArrangement)?.progress
         if (progress != null) {
             LinearProgressIndicator(
                 progress = { progress.stageIndex.toFloat() / progress.stageCount },
@@ -300,7 +437,6 @@ private fun PlaceholderPanel(panel: Panel, state: WorkspaceUiState, onIntent: (W
             progress.artifact?.let { Text(it.toString(), style = MaterialTheme.typography.bodySmall) }
         }
         if (state.retry != null) OutlinedButton(onClick = { onIntent(WorkspaceIntent.Retry) }) { Text("Retry") }
-        if (panel == Panel.Timeline) InstrumentLaneLegend()
     }
 }
 
@@ -326,6 +462,8 @@ private fun statusText(operation: WorkspaceOperation): String = when (operation)
     is WorkspaceOperation.AnalyzingPart -> "Analyzing ${operation.id}…"
     is WorkspaceOperation.UpdatingPartRole -> "Saving ${operation.id} role…"
     WorkspaceOperation.SavingStructure -> "Saving song structure…"
+    is WorkspaceOperation.GeneratingArrangement -> "Generating reviewed song plan and detailed arrangement…"
+    WorkspaceOperation.ApprovingArrangement -> "Approving validated arrangement…"
     is WorkspaceOperation.OpenFailed -> operation.message
     is WorkspaceOperation.Failed -> operation.message
 }
@@ -395,10 +533,15 @@ private fun EditRoleDialog(draft: WorkspaceDialog.EditRole, onIntent: (Workspace
 }
 
 @Composable
-private fun InstrumentLaneLegend() {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        instrumentLaneColors.forEach { (name, color) -> Text(name.replaceFirstChar(Char::uppercase), color = color, style = MaterialTheme.typography.labelMedium) }
-    }
+private fun buildSongPrerequisite(state: WorkspaceUiState): String = when {
+    state.project == null -> "Build Song needs an open project."
+    state.arrangement == null -> "Build Song needs an approved arrangement."
+    state.arrangement.stale -> "Build Song is blocked: regenerate the stale arrangement."
+    state.arrangement.approvalRequired -> "Build Song is blocked: approve the Qwen draft."
+    else -> "Build Song workflow is added in Task 027."
 }
+
+internal fun timelineSectionWeight(durationSeconds: Double?): Float =
+    (durationSeconds?.takeIf { it > 0.0 } ?: 1.0).toFloat()
 
 private fun formatDuration(seconds: Double): String = "%d:%02d".format(seconds.toInt() / 60, seconds.toInt() % 60)
