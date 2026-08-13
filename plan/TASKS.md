@@ -44,7 +44,7 @@ After implementation:
 | [009](tasks/completed/009-global-song-planner.md) | Global song planner | 005–006 | Validated whole-song `song_plan.json` | Planned |
 | [010](tasks/completed/010-repeated-section-variation.md) | Repeated-section variation | 009 | Stable A1/A2/B1 identities and bounded variation | Planned |
 | [011](tasks/completed/011-detailed-arrangement-plan.md) | Detailed MIDI-first arrangement | 006, 009–010 | Version-3 `arrangement.json` roles | Planned |
-| [012](tasks/012-piano-bass-quality-gate.md) | First complete piano + bass gate | 001–011 | Musically accepted MIDI-first dry mix | Planned |
+| [012](tasks/completed/012-piano-bass-quality-gate.md) | First complete piano + bass gate | 001–011 | Musically accepted MIDI-first dry mix | Planned |
 | [013](tasks/013-drum-midi-generator.md) | Deterministic drum MIDI generator | 012 accepted | `midi/generated/drums.mid` | Blocked by gate |
 | [014](tasks/014-pad-midi-generator.md) | Deterministic pad MIDI generator | 012 accepted | `midi/generated/pad.mid` | Blocked by gate |
 | [015](tasks/015-midi-transition-engine.md) | MIDI transition engine | 008, 013–014 | Contextual bass/drum/pad transitions | Blocked by gate |

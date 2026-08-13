@@ -162,6 +162,22 @@ make cli ARGS='approve --project ./projects/song-001'
 Existing version 1/2 arrangements remain available to the current audio
 renderer. MIDI generation from version 3 roles is introduced by later tasks.
 
+### Piano + bass quality gate
+
+The narrow quality gate renders only source piano and generated bass from an
+approved MIDI-first version-3 arrangement. It creates/reuses inspectable
+`midi/generated/piano.mid`, `midi/generated/bass.mid`, `stems/piano.wav`,
+`stems/bass.wav`, `mix/dry.wav`, and `quality-gate.json`. It intentionally does
+not invoke transitions, repair, LoFi, mastering, or MP3 export.
+
+```bash
+make cli ARGS='quality-gate --project ./projects/song-001'
+```
+
+It requires the configured local SFZ renderer (for example
+`SFZ_RENDERER_PATH=/path/to/sfizz_render`). The checked-in automated test uses
+a fake renderer; the real command remains a manual listening gate.
+
 The existing `render`/`build` workflow continues to use its compatible
 `arrangement.json` artifacts. A detailed MIDI-first arrangement is a later,
 separate stage; generating a global song plan never approves or overwrites one.

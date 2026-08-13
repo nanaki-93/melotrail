@@ -33,6 +33,9 @@ import ai.music.workstation.arrangement.RenderFormat
 import ai.music.workstation.arrangement.SectionInstance
 import ai.music.workstation.arrangement.SectionVariationStore
 import ai.music.workstation.arrangement.StructureParser
+import ai.music.workstation.arrangement.PianoBassQualityGate
+import ai.music.workstation.arrangement.InstrumentRenderer
+import ai.music.workstation.arrangement.SfizzInstrumentRenderer
 import ai.music.workstation.arrangement.GlobalSongPlanner
 import ai.music.workstation.arrangement.SongPlanStore
 import ai.music.workstation.arrangement.SongPlan
@@ -86,7 +89,7 @@ object ArrangementProjectCommands {
     }
 
     fun handles(args: Array<String>): Boolean =
-        args.firstOrNull() in setOf("project", "part", "arrange", "arrange-detail", "generate", "mix", "render", "preview", "approve", "build", "transcribe", "midi-clean", "licenses")
+        args.firstOrNull() in setOf("project", "part", "arrange", "arrange-detail", "generate", "mix", "render", "preview", "approve", "build", "quality-gate", "transcribe", "midi-clean", "licenses")
 
     /** Small boundary that lets the end-to-end command be tested without a running HTTP worker. */
     internal interface BuildWorker {
@@ -123,6 +126,7 @@ object ArrangementProjectCommands {
         "preview" -> previewDraft(args)
         "approve" -> approveDraft(args)
         "build" -> buildProject(args, createBuildWorker())
+        "quality-gate" -> pianoBassQualityGate(args, SfizzInstrumentRenderer())
         "transcribe" -> transcribe(args)
         "midi-clean" -> midiClean(args)
         "licenses" -> licenses(args)
@@ -135,6 +139,10 @@ object ArrangementProjectCommands {
 
     internal fun executePartAddForTest(args: Array<String>, worker: MidiPreparationWorker): String = runBlocking {
         addPart(args, worker)
+    }
+
+    internal fun executeQualityGateForTest(args: Array<String>, renderer: InstrumentRenderer): String = runBlocking {
+        pianoBassQualityGate(args, renderer)
     }
 
     private suspend fun transcribe(args: Array<String>): String {
@@ -524,6 +532,15 @@ object ArrangementProjectCommands {
         val bass = BassMidiGenerationAdapter().generate(projectRoot, project, arrangement, analyses)
         val suffix = if (bass.diagnostics.isEmpty()) "" else "; ${bass.diagnostics.joinToString(" ")}"
         return "Generated bass MIDI: ${bass.path} (${bass.notes.size} notes)$suffix"
+    }
+
+    private suspend fun pianoBassQualityGate(args: Array<String>, renderer: InstrumentRenderer): String {
+        require(args.size == 3 && args[1] == "--project") {
+            "Usage: quality-gate --project <project-directory>"
+        }
+        val result = PianoBassQualityGate(renderer).run(projectRoot(args[2]))
+        return result.progress.joinToString("\n") + "\nQuality gate ${if (result.reusedFinalArtifacts) "reused" else "created"} artifacts: " +
+            "midi/generated/piano.mid, midi/generated/bass.mid, stems/piano.wav, stems/bass.wav, mix/dry.wav, quality-gate.json"
     }
 
     private fun mixStems(args: Array<String>): String {
