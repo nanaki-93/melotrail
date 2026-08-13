@@ -1,6 +1,8 @@
 import unittest
+import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import numpy as np
@@ -8,9 +10,61 @@ import soundfile as sf
 
 from worker.commands.mastering import master_command
 from worker.commands.mp3_convert import mp3_convert_command
+from worker.commands.mp3_export import mp3_export_command
 
 
 class ProcessingCommandsTest(unittest.TestCase):
+    def test_mp3_export_validates_and_atomically_publishes_encoder_output(self):
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            input_path = root / "master.wav"
+            output_path = root / "song.mp3"
+            sf.write(input_path, np.array([[0.2], [-0.2]], dtype=np.float32), 22050, format="WAV", subtype="PCM_24")
+            output_path.write_bytes(b"old export")
+
+            class Encoder:
+                def set_bit_rate(self, value): self.bitrate = value
+                def set_in_sample_rate(self, value): self.sample_rate = value
+                def set_channels(self, value): self.channels = value
+                def set_quality(self, value): self.quality = value
+                def encode(self, value): return b"ID3\x04\x00\x00\x00\x00\x00\x00"
+                def flush(self): return b"\xff\xfb\x00\x00"
+
+            with patch.dict(sys.modules, {"lameenc": SimpleNamespace(Encoder=Encoder)}):
+                result = mp3_export_command({"path": str(input_path), "outputPath": str(output_path), "bitrateKbps": 256})
+
+            self.assertEqual(str(output_path), result["output"])
+            self.assertEqual(256, result["bitrateKbps"])
+            self.assertEqual(22050, result["sampleRate"])
+            self.assertEqual(1, result["channels"])
+            self.assertTrue(output_path.read_bytes().startswith(b"ID3"))
+            self.assertFalse(any(path.name.startswith(".song.mp3.") for path in root.iterdir()))
+
+    def test_mp3_export_rejects_invalid_bitrate_paths_and_riff_disguised_output(self):
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            input_path = root / "master.wav"
+            sf.write(input_path, np.array([[0.2]], dtype=np.float32), 22050, format="WAV", subtype="PCM_24")
+            with self.assertRaisesRegex(ValueError, "bitrateKbps"):
+                mp3_export_command({"path": str(input_path), "outputPath": str(root / "song.mp3"), "bitrateKbps": 111})
+            with self.assertRaisesRegex(ValueError, r"\.mp3"):
+                mp3_export_command({"path": str(input_path), "outputPath": str(root / "song.wav")})
+
+            class RiffEncoder:
+                def set_bit_rate(self, value): pass
+                def set_in_sample_rate(self, value): pass
+                def set_channels(self, value): pass
+                def set_quality(self, value): pass
+                def encode(self, value): return b"RIFFfakeWAVE"
+                def flush(self): return b""
+
+            output_path = root / "song.mp3"
+            output_path.write_bytes(b"previous valid export")
+            with patch.dict(sys.modules, {"lameenc": SimpleNamespace(Encoder=RiffEncoder)}):
+                with self.assertRaisesRegex(ValueError, "RIFF/WAVE"):
+                    mp3_export_command({"path": str(input_path), "outputPath": str(output_path)})
+            self.assertEqual(b"previous valid export", output_path.read_bytes())
+
     def test_mp3_conversion_writes_lossless_wav_with_decoded_format(self):
         with TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "decoded.wav"

@@ -31,6 +31,8 @@ import ai.music.workstation.arrangement.MidiAnalysisStore
 import ai.music.workstation.arrangement.MidiAnalysis
 import ai.music.workstation.arrangement.MidiPartAnalyzer
 import ai.music.workstation.arrangement.InstrumentRegistryLoader
+import ai.music.workstation.arrangement.InstrumentRegistryFile
+import ai.music.workstation.arrangement.LicenseRegistryFile
 import ai.music.workstation.arrangement.LogicalInstrument
 import ai.music.workstation.arrangement.Arrangement
 import ai.music.workstation.arrangement.AnalysisKind
@@ -103,14 +105,20 @@ object ArrangementProjectCommands {
     private const val MASTER_TRUE_PEAK_CEILING_DB = -1.0
     private const val MAX_MASTER_DURATION_DELTA_SECONDS = 0.05
     private const val PCM_24_QUANTIZATION_TOLERANCE = 1.0 / 8_388_608.0
+    private val SUPPORTED_MP3_BITRATES = setOf(128, 160, 192, 256, 320)
     private val supportedExtensions = setOf("mid", "midi", "wav", "wave", "mp3")
     private val json = Json {
         prettyPrint = true
         encodeDefaults = true
     }
 
+    internal sealed interface Mp3ExportResult {
+        data class Created(val encoder: String? = null) : Mp3ExportResult
+        data object Unavailable : Mp3ExportResult
+    }
+
     fun handles(args: Array<String>): Boolean =
-        args.firstOrNull() in setOf("project", "part", "arrange", "arrange-detail", "critic", "generate", "mix", "render", "preview", "approve", "build", "quality-gate", "transcribe", "midi-clean", "licenses")
+        args.firstOrNull() in setOf("project", "part", "arrange", "arrange-detail", "critic", "generate", "mix", "render", "preview", "approve", "build", "export-mp3", "quality-gate", "transcribe", "midi-clean", "licenses")
 
     /** Small boundary that lets the end-to-end command be tested without a running HTTP worker. */
     internal interface BuildWorker {
@@ -118,7 +126,7 @@ object ArrangementProjectCommands {
         suspend fun analyze(path: Path): PartAnalysis
         suspend fun repair(inputPath: Path, outputPath: Path)
         suspend fun master(inputPath: Path, outputPath: Path)
-        suspend fun exportMp3(inputPath: Path, outputPath: Path): Boolean = false
+        suspend fun exportMp3(inputPath: Path, outputPath: Path, bitrateKbps: Int): Mp3ExportResult = Mp3ExportResult.Unavailable
     }
 
     /** Testable boundary for the two worker calls used while importing a part. */
@@ -149,6 +157,7 @@ object ArrangementProjectCommands {
         "preview" -> previewDraft(args)
         "approve" -> approveDraft(args)
         "build" -> buildProject(args, createBuildWorker())
+        "export-mp3" -> exportMp3(args, createBuildWorker())
         "quality-gate" -> pianoBassQualityGate(args, SfizzInstrumentRenderer())
         "transcribe" -> transcribe(args)
         "midi-clean" -> midiClean(args)
@@ -158,6 +167,10 @@ object ArrangementProjectCommands {
 
     internal fun executeBuildForTest(args: Array<String>, worker: BuildWorker): String = runBlocking {
         buildProject(args, worker)
+    }
+
+    internal fun executeExportMp3ForTest(args: Array<String>, worker: BuildWorker): String = runBlocking {
+        exportMp3(args, worker)
     }
 
     internal fun executePartAddForTest(args: Array<String>, worker: MidiPreparationWorker): String = runBlocking {
@@ -860,6 +873,35 @@ object ArrangementProjectCommands {
         return projectRoot(args[2])
     }
 
+    /** Exports only a validated final master; all arrangement processing remains WAV-only. */
+    private suspend fun exportMp3(args: Array<String>, worker: BuildWorker): String {
+        val options = parseMp3ExportOptions(args.drop(1))
+        val master = options.input
+        require(master.fileName.toString().equals("master.wav", ignoreCase = true)) {
+            "MP3 export input must be the final master.wav artifact"
+        }
+        val masterWav = requireWavOutput(master, "MP3 export input", requirePcm24 = true)
+        require(options.output.fileName.toString().endsWith(".mp3", ignoreCase = true)) {
+            "MP3 export output must use a .mp3 extension"
+        }
+        require(!Files.isDirectory(options.output)) { "MP3 export output path is a directory: ${options.output}" }
+        requireDistinctFiles(master, options.output, "MP3 export input and output paths must differ")
+        requireMp3OutputIsSafe(master, options.output)
+
+        when (val result = runBuildStage("Export MP3") {
+            worker.exportMp3(master, options.output, options.bitrateKbps)
+        }) {
+            is Mp3ExportResult.Created -> {
+                val mp3 = inspectMp3(options.output)
+                updateExistingReleaseForMp3(master, options.output, options.bitrateKbps)
+                return "Created ${options.output} from ${master.fileName} (${options.bitrateKbps} kbps, ${masterWav.sampleRate} Hz, ${masterWav.channels} channel(s); ${result.encoder ?: "local encoder"}; ${mp3.sizeBytes} bytes)"
+            }
+            Mp3ExportResult.Unavailable -> throw IllegalStateException(
+                "MP3 export requires the optional local lameenc encoder; master WAV remains unchanged at $master"
+            )
+        }
+    }
+
     /**
      * Creates one local arrangement from a validated project. Each lossless
      * intermediate stays in the project directory so a failed later stage can
@@ -881,7 +923,7 @@ object ArrangementProjectCommands {
         val repairedPath = projectRoot.resolve("mix/repaired.wav")
         val lofiPath = projectRoot.resolve("mix/lofi.wav")
         val masterPath = outputRoot.resolve("master.wav")
-        val mp3Path = outputRoot.resolve("youtube.mp3")
+        val mp3Path = outputRoot.resolve("song.mp3")
         requireNoSourceOverwrite(projectRoot, project, listOf(dryPath, repairedPath, lofiPath, masterPath, mp3Path))
 
         if (options.dryRun) {
@@ -997,14 +1039,24 @@ object ArrangementProjectCommands {
             )
             requireWavOutput(masterPath, "Master", requirePcm24 = true)
         }
-        writeReleaseMetadata(outputRoot, projectRoot, masteringInput, masteringInputWav, masterPath, masterWav, options.enableLoFi)
         complete(9, "Created ${outputRoot.relativizeOrName(masterPath)} from ${projectRoot.relativizeOrName(masteringInput)}")
-        val mp3Created = runBuildStage("Export upload-ready MP3") { worker.exportMp3(masterPath, mp3Path) }
-        if (mp3Created) {
-            require(Files.isRegularFile(mp3Path) && Files.size(mp3Path) > 0) { "MP3 export did not create $mp3Path" }
-            complete(10, "Build complete: $masterPath and $mp3Path")
-        } else {
-            complete(10, "Build complete: $masterPath (MP3 export unavailable in this worker)")
+        if (!options.enableMp3) {
+            Files.deleteIfExists(mp3Path)
+            writeReleaseMetadata(outputRoot, projectRoot, masteringInput, masteringInputWav, masterPath, masterWav, options.enableLoFi)
+            complete(10, "Build complete: $masterPath (MP3 export not requested)")
+        } else when (val mp3Result = runBuildStage("Export upload-ready MP3") {
+            worker.exportMp3(masterPath, mp3Path, options.mp3BitrateKbps)
+        }) {
+            is Mp3ExportResult.Created -> {
+                val mp3 = inspectMp3(mp3Path)
+                writeReleaseMetadata(outputRoot, projectRoot, masteringInput, masteringInputWav, masterPath, masterWav, options.enableLoFi, mp3Path, options.mp3BitrateKbps)
+                complete(10, "Build complete: $masterPath and $mp3Path (${mp3.sizeBytes} bytes)")
+            }
+            Mp3ExportResult.Unavailable -> {
+                Files.deleteIfExists(mp3Path)
+                writeReleaseMetadata(outputRoot, projectRoot, masteringInput, masteringInputWav, masterPath, masterWav, options.enableLoFi)
+                complete(10, "Build complete: $masterPath (MP3 export unavailable: lameenc is not installed)")
+            }
         }
         return progress.joinToString(separator = "\n")
     }
@@ -1076,11 +1128,13 @@ object ArrangementProjectCommands {
                 requireCompleted(response.status, response.error?.message, "master")
             }
 
-            override suspend fun exportMp3(inputPath: Path, outputPath: Path): Boolean {
-                val response = client.execute(MP3ExportCommand(inputPath.toString(), outputPath.toString()))
-                if (response.status == WorkerStatus.COMPLETED) return true
+            override suspend fun exportMp3(inputPath: Path, outputPath: Path, bitrateKbps: Int): Mp3ExportResult {
+                val response = client.execute(MP3ExportCommand(inputPath.toString(), outputPath.toString(), bitrateKbps))
+                if (response.status == WorkerStatus.COMPLETED) {
+                    return Mp3ExportResult.Created(response.output?.get("encoder")?.jsonPrimitive?.contentOrNull)
+                }
                 val message = response.error?.message.orEmpty()
-                if (message.contains("requires lameenc")) return false
+                if (message.contains("requires lameenc")) return Mp3ExportResult.Unavailable
                 throw IllegalStateException("Worker mp3 export failed: $message")
             }
         }
@@ -1130,6 +1184,8 @@ object ArrangementProjectCommands {
         var outputDirectory: String? = null
         var noAi = false
         var enableLoFi = false
+        var enableMp3 = false
+        var mp3BitrateKbps = 320
         var dryRun = false
         var index = 0
         while (index < arguments.size) {
@@ -1150,6 +1206,15 @@ object ArrangementProjectCommands {
                     require(!enableLoFi) { "Duplicate build option: --lofi" }
                     enableLoFi = true
                 }
+                "--mp3" -> {
+                    require(!enableMp3) { "Duplicate build option: --mp3" }
+                    enableMp3 = true
+                }
+                "--mp3-bitrate" -> {
+                    require(index + 1 < arguments.size) { "Missing value for --mp3-bitrate" }
+                    mp3BitrateKbps = arguments[++index].toIntOrNull()
+                        ?: throw IllegalArgumentException("--mp3-bitrate must be an integer")
+                }
                 "--dry-run" -> {
                     require(!dryRun) { "Duplicate build option: --dry-run" }
                     dryRun = true
@@ -1159,9 +1224,41 @@ object ArrangementProjectCommands {
             index++
         }
         require(projectPath != null) {
-            "Usage: build --project <project-directory> [--output-dir <directory>] [--no-ai] [--lofi] [--dry-run]"
+            "Usage: build --project <project-directory> [--output-dir <directory>] [--no-ai] [--lofi] [--mp3 [--mp3-bitrate <kbps>]] [--dry-run]"
         }
-        return BuildOptions(projectPath, outputDirectory, noAi, enableLoFi, dryRun)
+        require(mp3BitrateKbps in SUPPORTED_MP3_BITRATES) {
+            "--mp3-bitrate must be one of ${SUPPORTED_MP3_BITRATES.joinToString(", ")}"
+        }
+        return BuildOptions(projectPath, outputDirectory, noAi, enableLoFi, enableMp3, mp3BitrateKbps, dryRun)
+    }
+
+    private fun parseMp3ExportOptions(arguments: List<String>): Mp3ExportOptions {
+        var input: Path? = null
+        var output: Path? = null
+        var bitrateKbps = 320
+        var index = 0
+        val seen = mutableSetOf<String>()
+        while (index < arguments.size) {
+            val option = arguments[index]
+            require(option in setOf("--input", "--output", "--bitrate")) {
+                "Usage: export-mp3 --input <output/master.wav> --output <output/song.mp3> [--bitrate <kbps>]"
+            }
+            require(seen.add(option)) { "Duplicate MP3 export option: $option" }
+            require(index + 1 < arguments.size && !arguments[index + 1].startsWith("--")) { "Missing value for $option" }
+            when (option) {
+                "--input" -> input = Path.of(arguments[index + 1]).toAbsolutePath().normalize()
+                "--output" -> output = Path.of(arguments[index + 1]).toAbsolutePath().normalize()
+                "--bitrate" -> bitrateKbps = arguments[index + 1].toIntOrNull()
+                    ?: throw IllegalArgumentException("--bitrate must be an integer")
+            }
+            index += 2
+        }
+        require(input != null && Files.isRegularFile(input)) { "MP3 export input WAV not found: $input" }
+        require(output != null) { "Missing required option: --output <output/song.mp3>" }
+        require(bitrateKbps in SUPPORTED_MP3_BITRATES) {
+            "--bitrate must be one of ${SUPPORTED_MP3_BITRATES.joinToString(", ")}"
+        }
+        return Mp3ExportOptions(input, output, bitrateKbps)
     }
 
     private fun resolveOutputRoot(projectRoot: Path, configuredPath: String?): Path {
@@ -1176,6 +1273,32 @@ object ArrangementProjectCommands {
         val conflictingOutput = outputs.firstOrNull { it in sources }
         require(conflictingOutput == null) {
             "Build output would overwrite a source audio file: $conflictingOutput"
+        }
+    }
+
+    private fun requireDistinctFiles(input: Path, output: Path, message: String) {
+        require(input != output && !(Files.exists(output) && Files.isSameFile(input, output))) { message }
+    }
+
+    private fun requireMp3OutputIsSafe(master: Path, output: Path) {
+        require(output.fileName.toString().lowercase() !in setOf("master.wav", "release.json", "project.json", "arrangement.json", "instruments.json", "licenses.json")) {
+            "MP3 export output would overwrite a protected project artifact: $output"
+        }
+        val projectRoot = master.parent.parent?.takeIf { Files.isRegularFile(it.resolve(PROJECT_FILE)) }
+        if (projectRoot != null) {
+            val project = readProject(projectRoot)
+            val protected = project.parts.map { projectRoot.resolve(it.file).normalize() } + listOf(
+                master,
+                projectRoot.resolve("arrangement.json"),
+                projectRoot.resolve("sounds/instruments.json"),
+                projectRoot.resolve("sounds/LICENSES.json")
+            )
+            require(protected.none { path -> output == path || (Files.exists(output) && Files.exists(path) && Files.isSameFile(output, path)) }) {
+                "MP3 export output would overwrite a protected source, MIDI, or project artifact: $output"
+            }
+            require(!output.startsWith(projectRoot.resolve("midi")) && !output.startsWith(projectRoot.resolve("stems")) && !output.startsWith(projectRoot.resolve("mix"))) {
+                "MP3 export output must not be placed in MIDI, stems, or mix artifacts: $output"
+            }
         }
     }
 
@@ -1255,7 +1378,9 @@ object ArrangementProjectCommands {
         inputWav: ValidatedWav,
         master: Path,
         masterWav: ValidatedWav,
-        loFiEnabled: Boolean
+        loFiEnabled: Boolean,
+        mp3: Path? = null,
+        mp3BitrateKbps: Int? = null
     ) {
         val metadata = MasterReleaseMetadata(
             inputArtifact = projectRoot.relativizeOrName(input),
@@ -1275,7 +1400,15 @@ object ArrangementProjectCommands {
             targetLufs = MASTER_TARGET_LOUDNESS_LUFS,
             truePeakCeilingDb = MASTER_TRUE_PEAK_CEILING_DB,
             repairEnabled = true,
-            loFiEnabled = loFiEnabled
+            loFiEnabled = loFiEnabled,
+            mp3 = mp3?.let {
+                Mp3ReleaseMetadata(
+                    name = it.fileName.toString(),
+                    fingerprint = sha256(it),
+                    bitrateKbps = mp3BitrateKbps ?: error("MP3 bitrate is required")
+                )
+            },
+            instrumentLicenses = instrumentLicenseReport(projectRoot)
         )
         val target = outputRoot.resolve("release.json")
         Files.createDirectories(checkNotNull(target.parent))
@@ -1283,6 +1416,25 @@ object ArrangementProjectCommands {
         try {
             Files.writeString(temporary, json.encodeToString(metadata), StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW)
             atomicReplace(temporary, target, "release metadata")
+        } finally {
+            Files.deleteIfExists(temporary)
+        }
+    }
+
+    /** A direct export enriches the existing build release report when it belongs to a project. */
+    private fun updateExistingReleaseForMp3(master: Path, mp3: Path, bitrateKbps: Int) {
+        val projectRoot = master.parent.parent?.takeIf { Files.isRegularFile(it.resolve(PROJECT_FILE)) } ?: return
+        val release = master.parent.resolve("release.json")
+        if (!Files.isRegularFile(release)) return
+        val existing = json.decodeFromString<MasterReleaseMetadata>(Files.readString(release, StandardCharsets.UTF_8))
+        val updated = existing.copy(
+            mp3 = Mp3ReleaseMetadata(mp3.fileName.toString(), sha256(mp3), bitrateKbps = bitrateKbps),
+            instrumentLicenses = instrumentLicenseReport(projectRoot)
+        )
+        val temporary = release.resolveSibling(".${release.fileName}.${UUID.randomUUID()}.tmp")
+        try {
+            Files.writeString(temporary, json.encodeToString(updated), StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW)
+            atomicReplace(temporary, release, "release metadata")
         } finally {
             Files.deleteIfExists(temporary)
         }
@@ -1309,8 +1461,12 @@ object ArrangementProjectCommands {
         val outputDirectory: String?,
         val noAi: Boolean,
         val enableLoFi: Boolean,
+        val enableMp3: Boolean,
+        val mp3BitrateKbps: Int,
         val dryRun: Boolean
     )
+
+    private data class Mp3ExportOptions(val input: Path, val output: Path, val bitrateKbps: Int)
 
     @Serializable
     private data class MasterReleaseMetadata(
@@ -1333,7 +1489,27 @@ object ArrangementProjectCommands {
         val truePeakCeilingDb: Double,
         val repairEnabled: Boolean,
         val loFiEnabled: Boolean,
+        val mp3: Mp3ReleaseMetadata? = null,
+        val instrumentLicenses: List<InstrumentLicenseMetadata> = emptyList(),
         val settings: MasteringSettingsMetadata = MasteringSettingsMetadata()
+    )
+
+    @Serializable
+    private data class Mp3ReleaseMetadata(
+        val name: String,
+        val fingerprint: String,
+        val format: String = "MP3",
+        val bitrateKbps: Int
+    )
+
+    @Serializable
+    private data class InstrumentLicenseMetadata(
+        val instrument: String,
+        val licenseId: String,
+        val displayName: String,
+        val commercialUse: Boolean,
+        val attributionRequired: Boolean,
+        val attribution: String? = null
     )
 
     @Serializable
@@ -1427,6 +1603,58 @@ object ArrangementProjectCommands {
                 frame++
             }
             return ValidatedWav(pcm, bits, sampleRate, channels, frames, peak)
+        }
+    }
+
+    private data class ValidatedMp3(val sizeBytes: Long)
+
+    /** Rejects empty output and RIFF data disguised with an MP3 extension. */
+    private fun inspectMp3(path: Path): ValidatedMp3 {
+        require(Files.isRegularFile(path) && Files.size(path) > 0) { "MP3 output is missing or empty: $path" }
+        val header = Files.newInputStream(path).use { it.readNBytes(10_240) }
+        require(header.size >= 2) { "MP3 output is too short: $path" }
+        require(!header.copyOfRange(0, minOf(4, header.size)).decodeToString().equals("RIFF", ignoreCase = false)) {
+            "MP3 output is a RIFF/WAVE container disguised as .mp3: $path"
+        }
+        val hasId3 = header.size >= 3 && header.copyOfRange(0, 3).decodeToString() == "ID3"
+        val hasFrame = (0 until header.size - 1).any { index ->
+            (header[index].toInt() and 0xff) == 0xff && (header[index + 1].toInt() and 0xe0) == 0xe0
+        }
+        require(hasId3 || hasFrame) { "MP3 output has no ID3 or MPEG frame signature: $path" }
+        return ValidatedMp3(Files.size(path))
+    }
+
+    /** Reads only license metadata so release generation does not require local sample copies. */
+    private fun instrumentLicenseReport(projectRoot: Path): List<InstrumentLicenseMetadata> {
+        val arrangementPath = projectRoot.resolve("arrangement.json")
+        if (!Files.isRegularFile(arrangementPath)) return emptyList()
+        val arrangement = json.decodeFromString<Arrangement>(Files.readString(arrangementPath, StandardCharsets.UTF_8))
+        val used = arrangement.sections.flatMap { section -> section.instruments }
+            .filter { it.mode != ai.music.workstation.arrangement.InstrumentMode.SOURCE }
+            .map { it.name }
+            .distinct()
+            .sorted()
+        if (used.isEmpty()) return emptyList()
+        val soundsRoot = Path.of(System.getenv("MUSIC_SOUNDS_ROOT")?.takeIf { it.isNotBlank() } ?: "sounds")
+        val instruments = json.decodeFromString<InstrumentRegistryFile>(
+            Files.readString(soundsRoot.resolve("instruments.json"), StandardCharsets.UTF_8)
+        )
+        val licenses = json.decodeFromString<LicenseRegistryFile>(
+            Files.readString(soundsRoot.resolve("LICENSES.json"), StandardCharsets.UTF_8)
+        )
+        return used.map { name ->
+            val entry = instruments.instruments[name]
+                ?: throw IllegalArgumentException("Arrangement uses unlicensed instrument '$name'")
+            val license = licenses.libraries[entry.licenseId]
+                ?: throw IllegalArgumentException("Instrument '$name' references missing license '${entry.licenseId}'")
+            InstrumentLicenseMetadata(
+                instrument = name,
+                licenseId = entry.licenseId,
+                displayName = license.displayName,
+                commercialUse = license.commercialUse,
+                attributionRequired = license.attributionRequired,
+                attribution = license.attributionText
+            )
         }
     }
 

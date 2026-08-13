@@ -79,6 +79,24 @@ worker latency or tail difference.
 The build command is deterministic and local. `--no-ai` makes that choice
 explicit; no model output is executed as code, commands, or paths.
 
+### Optional final MP3 export
+
+`output/master.wav` is always the authoritative lossless release artifact. MP3
+is an explicit final conversion only; no repair, mixing, or mastering stage
+writes MP3. With the optional local `lameenc` dependency installed, either
+request it during a build or export an already validated master:
+
+```bash
+make cli ARGS='build --project ./projects/song-001 --no-ai --mp3 --mp3-bitrate 320'
+make cli ARGS='export-mp3 --input ./projects/song-001/output/master.wav --output ./projects/song-001/output/song.mp3 --bitrate 320'
+```
+
+Supported bitrates are 128, 160, 192, 256, and 320 kbps. The exporter checks
+that the input is `master.wav` in a RIFF/WAVE container, writes `song.mp3`
+atomically, and rejects WAV data disguised as MP3. If `lameenc` is absent, a
+`build --mp3` still completes with its valid master WAV; the standalone export
+command reports that the explicitly requested MP3 could not be produced.
+
 ### LoFi A/B measurement
 
 Compare two WAV files without changing either input. The default requires equal
@@ -372,6 +390,7 @@ Python exposes one endpoint per operation:
 | POST | `/apply_dsp` | Python DSP integration |
 | POST | `/repair` | Repair audio |
 | POST | `/master` | Master audio |
+| POST | `/mp3_export` | Export validated final WAV master to MP3 |
 | POST | `/mp3_convert` | Convert MP3 to WAV |
 | POST | `/transcribe` | Transcribe solo piano to MIDI |
 | POST | `/midi-clean` | Conservatively clean a MIDI file |

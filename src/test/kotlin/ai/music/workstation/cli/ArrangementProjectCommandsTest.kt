@@ -461,6 +461,81 @@ class ArrangementProjectCommandsTest {
     }
 
     @Test
+    fun `build optionally exports song mp3 and records release metadata`() {
+        val projectRoot = createBuildProject("mp3-build-demo")
+        val worker = RecordingBuildWorker(mp3Writer = { output -> writeFakeMp3(output) })
+
+        val result = ArrangementProjectCommands.executeBuildForTest(
+            arrayOf("build", "--project", projectRoot.toString(), "--mp3", "--mp3-bitrate", "256"), worker
+        )
+
+        val song = projectRoot.resolve("output/song.mp3")
+        assertTrue(Files.isRegularFile(song))
+        assertEquals("ID3", Files.readAllBytes(song).copyOfRange(0, 3).decodeToString())
+        assertTrue(result.contains("song.mp3"))
+        val release = Files.readString(projectRoot.resolve("output/release.json"))
+        assertTrue(release.contains("\"name\": \"song.mp3\""))
+        assertTrue(release.contains("\"bitrateKbps\": 256"))
+        assertTrue(release.contains("\"instrumentLicenses\""))
+        assertEquals("mp3:master.wav:256", worker.events.last())
+    }
+
+    @Test
+    fun `build retains master when optional MP3 encoder is unavailable`() {
+        val projectRoot = createBuildProject("mp3-unavailable-demo")
+
+        val result = ArrangementProjectCommands.executeBuildForTest(
+            arrayOf("build", "--project", projectRoot.toString(), "--mp3"), RecordingBuildWorker()
+        )
+
+        assertTrue(Files.isRegularFile(projectRoot.resolve("output/master.wav")))
+        assertFalse(Files.exists(projectRoot.resolve("output/song.mp3")))
+        assertTrue(result.contains("MP3 export unavailable"))
+    }
+
+    @Test
+    fun `export mp3 accepts only final master and validates output`() {
+        val master = tempDir.resolve("output/master.wav")
+        Files.createDirectories(master.parent)
+        writeSourceWav(master, 22_050, 1, 64)
+        val output = master.parent.resolve("song.mp3")
+        val worker = RecordingBuildWorker(mp3Writer = { path -> writeFakeMp3(path) })
+
+        val result = ArrangementProjectCommands.executeExportMp3ForTest(
+            arrayOf("export-mp3", "--input", master.toString(), "--output", output.toString(), "--bitrate", "128"), worker
+        )
+
+        assertTrue(result.contains("128 kbps"))
+        assertTrue(Files.isRegularFile(output))
+        assertEquals("mp3:master.wav:128", worker.events.single())
+        assertThrows(IllegalArgumentException::class.java) {
+            ArrangementProjectCommands.executeExportMp3ForTest(
+                arrayOf("export-mp3", "--input", master.toString(), "--output", master.parent.resolve("song.wav").toString()), worker
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            ArrangementProjectCommands.executeExportMp3ForTest(
+                arrayOf("export-mp3", "--input", master.toString(), "--output", output.toString(), "--bitrate", "111"), worker
+            )
+        }
+    }
+
+    @Test
+    fun `explicit MP3 export reports missing encoder as required failure`() {
+        val master = tempDir.resolve("output/master.wav")
+        Files.createDirectories(master.parent)
+        writeSourceWav(master, 22_050, 1, 64)
+
+        val error = assertThrows(IllegalStateException::class.java) {
+            ArrangementProjectCommands.executeExportMp3ForTest(
+                arrayOf("export-mp3", "--input", master.toString(), "--output", master.parent.resolve("song.mp3").toString()),
+                RecordingBuildWorker()
+            )
+        }
+        assertTrue(error.message.orEmpty().contains("requires the optional local lameenc encoder"))
+    }
+
+    @Test
     fun `build keeps an existing master when temporary worker output is malformed`() {
         val projectRoot = createBuildProject("atomic-master-demo")
         val master = projectRoot.resolve("output/master.wav")
@@ -647,6 +722,11 @@ class ArrangementProjectCommandsTest {
         Files.write(path, bytes.array())
     }
 
+    private fun writeFakeMp3(path: Path) {
+        Files.createDirectories(path.parent)
+        Files.write(path, byteArrayOf('I'.code.toByte(), 'D'.code.toByte(), '3'.code.toByte(), 4, 0, 0, 0, 0, 0, 0, 0xff.toByte(), 0xfb.toByte(), 0, 0))
+    }
+
     private fun assertWav(path: Path, sampleRate: Int? = null, channels: Int? = null, bitDepth: Int? = null) {
         assertTrue(Files.size(path) >= 44)
         val bytes = Files.readAllBytes(path)
@@ -661,6 +741,7 @@ class ArrangementProjectCommandsTest {
 
     private class RecordingBuildWorker(
         private val masterWriter: ((Path, Path) -> Unit)? = null,
+        private val mp3Writer: ((Path) -> Unit)? = null,
         private val failure: String? = null
     ) : ArrangementProjectCommands.BuildWorker {
         val events = mutableListOf<String>()
@@ -693,6 +774,12 @@ class ArrangementProjectCommandsTest {
             events += "master:${inputPath.fileName}"
             if (failure == "master") error("worker master unavailable")
             masterWriter?.invoke(inputPath, outputPath) ?: Files.copy(inputPath, outputPath)
+        }
+
+        override suspend fun exportMp3(inputPath: Path, outputPath: Path, bitrateKbps: Int): ArrangementProjectCommands.Mp3ExportResult {
+            events += "mp3:${inputPath.fileName}:$bitrateKbps"
+            mp3Writer?.invoke(outputPath) ?: return ArrangementProjectCommands.Mp3ExportResult.Unavailable
+            return ArrangementProjectCommands.Mp3ExportResult.Created("fake-lameenc")
         }
     }
 }

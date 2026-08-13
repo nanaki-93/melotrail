@@ -6,6 +6,7 @@ The worker is a standalone service. Each operation has its own endpoint:
     POST /apply_dsp
     POST /repair
     POST /master
+    POST /mp3_export
     POST /mp3_convert
     POST /transcribe
     POST /midi-clean
