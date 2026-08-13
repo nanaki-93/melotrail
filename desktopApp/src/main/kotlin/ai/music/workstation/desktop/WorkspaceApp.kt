@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -38,9 +39,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
@@ -76,22 +86,35 @@ object WorkspaceTags {
 }
 
 @Composable
-fun WorkspaceApp(viewModel: WorkspaceViewModel) {
+fun WorkspaceApp(viewModel: WorkspaceViewModel, onExit: () -> Unit = {}) {
     val state by viewModel.state.collectAsState()
-    LaunchedEffect(Unit) { viewModel.accept(WorkspaceIntent.RefreshRuntimeReadiness) }
-    WorkspaceScreen(state, viewModel::accept)
+    LaunchedEffect(Unit) {
+        viewModel.accept(WorkspaceIntent.RefreshRuntimeReadiness)
+        viewModel.accept(WorkspaceIntent.RestoreLastProject)
+    }
+    WorkspaceScreen(state, viewModel::accept, onExit)
 }
 
 @Composable
-fun WorkspaceScreen(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+fun WorkspaceScreen(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, onExit: () -> Unit = {}) {
     Column(
-        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(16.dp),
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(16.dp)
+            .onPreviewKeyEvent { event: androidx.compose.ui.input.key.KeyEvent ->
+                if (event.type != KeyEventType.KeyDown || (!event.isCtrlPressed && !event.isMetaPressed)) false
+                else when (event.key) {
+                    Key.Spacebar -> { onIntent(WorkspaceIntent.PlayPause); true }
+                    Key.DirectionLeft -> { onIntent(WorkspaceIntent.SeekPlayback((state.playback.positionSeconds - 5.0).coerceAtLeast(0.0))); true }
+                    Key.DirectionRight -> { onIntent(WorkspaceIntent.SeekPlayback((state.playback.positionSeconds + 5.0).coerceAtMost(state.playback.durationSeconds))); true }
+                    Key.K -> { onIntent(WorkspaceIntent.StopPlayback); true }
+                    else -> false
+                }
+            },
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         ProjectHeader(state, onIntent)
         WorkspaceShell(state, onIntent)
     }
-    WorkspaceDialogs(state, onIntent)
+    WorkspaceDialogs(state, onIntent, onExit)
 }
 
 @Composable
@@ -115,15 +138,15 @@ private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
             OutlinedButton(
                 onClick = { onIntent(WorkspaceIntent.ShowCreateProject) },
                 enabled = !mutationsDisabled,
-                modifier = Modifier.semantics { testTag = WorkspaceTags.CREATE_PROJECT }
+                modifier = Modifier.semantics { testTag = WorkspaceTags.CREATE_PROJECT; contentDescription = "Create a new project" }
             ) { Text("Create") }
             OutlinedButton(
                 onClick = { onIntent(WorkspaceIntent.ChooseProject) },
                 enabled = !mutationsDisabled,
-                modifier = Modifier.semantics { testTag = WorkspaceTags.OPEN_PROJECT }
+                modifier = Modifier.semantics { testTag = WorkspaceTags.OPEN_PROJECT; contentDescription = "Open an existing project" }
             ) { Text("Open project") }
             Column {
-                Button(onClick = { onIntent(WorkspaceIntent.BuildSong) }, enabled = canBuild(state), modifier = Modifier.semantics { testTag = WorkspaceTags.BUILD_SONG }) { Text("Build song") }
+                Button(onClick = { onIntent(WorkspaceIntent.BuildSong) }, enabled = canBuild(state), modifier = Modifier.semantics { testTag = WorkspaceTags.BUILD_SONG; contentDescription = "Build song release artifacts" }) { Text("Build song") }
                 Text(buildSongPrerequisite(state), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -288,9 +311,9 @@ private fun StructureRow(index: Int, partId: String, state: WorkspaceUiState, en
         Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
             Text("${partId}${occurrence} · $duration", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
             TextButton(onClick = { onIntent(WorkspaceIntent.MoveStructurePart(index, index - 1)) }, enabled = enabled && index > 0,
-                modifier = Modifier.semantics { testTag = WorkspaceTags.STRUCTURE_MOVE_LEFT + index }) { Text("←") }
+                modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp).semantics { testTag = WorkspaceTags.STRUCTURE_MOVE_LEFT + index; contentDescription = "Move $partId$occurrence earlier" }) { Text("←") }
             TextButton(onClick = { onIntent(WorkspaceIntent.MoveStructurePart(index, index + 1)) }, enabled = enabled && index < state.structureDraft.lastIndex,
-                modifier = Modifier.semantics { testTag = WorkspaceTags.STRUCTURE_MOVE_RIGHT + index }) { Text("→") }
+                modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp).semantics { testTag = WorkspaceTags.STRUCTURE_MOVE_RIGHT + index; contentDescription = "Move $partId$occurrence later" }) { Text("→") }
             TextButton(onClick = { onIntent(WorkspaceIntent.DuplicateStructurePart(index)) }, enabled = enabled) { Text("Duplicate") }
             TextButton(onClick = { onIntent(WorkspaceIntent.RemoveStructurePart(index)) }, enabled = enabled) { Text("Remove") }
         }
@@ -466,6 +489,7 @@ private fun PlaybackControls(state: WorkspaceUiState, onIntent: (WorkspaceIntent
         PlaybackSource.MASTER -> state.project.readiness.masterAvailable && !state.downstreamArtifactsStale
     }
     Text("Audition validated artifacts", style = MaterialTheme.typography.labelLarge)
+    Text("Keyboard: Ctrl/Cmd+Space play or pause; Ctrl/Cmd+Left/Right seek 5 seconds; Ctrl/Cmd+K stop.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
         OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectPlaybackSource(PlaybackSource.DRY)) }, enabled = enabled(PlaybackSource.DRY), modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_DRY }) { Text("Dry") }
         OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectPlaybackSource(PlaybackSource.LOFI)) }, enabled = enabled(PlaybackSource.LOFI), modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_LOFI }) { Text("LoFi") }
@@ -474,7 +498,7 @@ private fun PlaybackControls(state: WorkspaceUiState, onIntent: (WorkspaceIntent
     val selectedEnabled = enabled(source)
     if (!selectedEnabled) Text("${source.name.lowercase().replaceFirstChar(Char::uppercase)} is unavailable or stale. Build Song creates current audition artifacts.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Button(onClick = { onIntent(WorkspaceIntent.PlayPause) }, enabled = selectedEnabled, modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_TOGGLE }) { Text(if (state.playback.state == ai.music.workstation.audio.PlaybackState.PLAYING) "Pause" else "Play") }
+        Button(onClick = { onIntent(WorkspaceIntent.PlayPause) }, enabled = selectedEnabled, modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_TOGGLE; contentDescription = if (state.playback.state == ai.music.workstation.audio.PlaybackState.PLAYING) "Pause selected audio artifact" else "Play selected audio artifact" }) { Text(if (state.playback.state == ai.music.workstation.audio.PlaybackState.PLAYING) "Pause" else "Play") }
         OutlinedButton(onClick = { onIntent(WorkspaceIntent.StopPlayback) }, enabled = state.playback.state != ai.music.workstation.audio.PlaybackState.STOPPED) { Text("Stop") }
         Text("${formatDuration(state.playback.positionSeconds)} / ${formatDuration(state.playback.durationSeconds)}", modifier = Modifier.padding(top = 12.dp), style = MaterialTheme.typography.labelSmall)
     }
@@ -490,7 +514,7 @@ private fun PlaceholderPanel(panel: Panel, state: WorkspaceUiState, onIntent: (W
         else -> error("Functional panels are handled separately")
     }
     WorkspaceCard(title, tag) {
-        Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         val progress = (state.operation as? WorkspaceOperation.ImportingPart)?.progress
             ?: (state.operation as? WorkspaceOperation.AnalyzingPart)?.progress
             ?: (state.operation as? WorkspaceOperation.GeneratingArrangement)?.progress
@@ -540,13 +564,37 @@ private fun statusText(operation: WorkspaceOperation): String = when (operation)
 }
 
 @Composable
-private fun WorkspaceDialogs(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+private fun WorkspaceDialogs(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, onExit: () -> Unit) {
     when (val dialog = state.dialog) {
         is WorkspaceDialog.CreateProject -> CreateProjectDialog(dialog, onIntent)
         is WorkspaceDialog.ImportPart -> ImportPartDialog(dialog, onIntent)
         is WorkspaceDialog.EditRole -> EditRoleDialog(dialog, onIntent)
+        is WorkspaceDialog.ConfirmDiscardDraft -> ConfirmDiscardDraftDialog(dialog, onIntent)
+        WorkspaceDialog.ConfirmClose -> ConfirmCloseDialog(onIntent, onExit)
         null -> Unit
     }
+}
+
+@Composable
+private fun ConfirmDiscardDraftDialog(draft: WorkspaceDialog.ConfirmDiscardDraft, onIntent: (WorkspaceIntent) -> Unit) {
+    AlertDialog(
+        onDismissRequest = { onIntent(WorkspaceIntent.DismissDialog) },
+        title = { Text("Discard arrangement draft?") },
+        text = { Text("Your planner, style, and instrument selections have not been generated or saved. ${if (draft.root != null) "Opening another project" else "Creating a project"} will discard them. Project artifacts are unchanged.") },
+        confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.ConfirmDiscardDraft) }) { Text("Discard and continue") } },
+        dismissButton = { TextButton(onClick = { onIntent(WorkspaceIntent.DismissDialog) }) { Text("Keep editing") } }
+    )
+}
+
+@Composable
+private fun ConfirmCloseDialog(onIntent: (WorkspaceIntent) -> Unit, onExit: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = { onIntent(WorkspaceIntent.DismissDialog) },
+        title = { Text("Close Personal AI Music Arranger?") },
+        text = { Text("A draft is unsaved or an operation is still running. Closing requests cancellation at a safe boundary; canonical project files are never replaced mid-write.") },
+        confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.ConfirmClose); onExit() }) { Text("Close") } },
+        dismissButton = { TextButton(onClick = { onIntent(WorkspaceIntent.DismissDialog) }) { Text("Keep working") } }
+    )
 }
 
 @Composable

@@ -49,19 +49,25 @@ fun main() = application {
         mixService = mixService,
         buildService = DefaultBuildApplicationService(arrangementService, mixService, ai.music.workstation.arrangement.SfizzInstrumentRenderer(), DesktopBuildWorker(client)),
         player = player,
-        partPreviewService = DefaultPartPreviewApplicationService(ai.music.workstation.arrangement.SfizzInstrumentRenderer())
+        partPreviewService = DefaultPartPreviewApplicationService(ai.music.workstation.arrangement.SfizzInstrumentRenderer()),
+        preferences = JvmDesktopPreferences(),
+        operationLogger = LocalDesktopOperationLogger()
     )
     Window(
         onCloseRequest = {
-            viewModel.close()
-            exitApplication()
+            if (viewModel.requestClose()) {
+                viewModel.close()
+                exitApplication()
+            }
         },
         title = "Personal AI Music Arranger"
     ) {
         window.minimumSize = java.awt.Dimension(900, 620)
         window.size = java.awt.Dimension(1440, 900)
         MusicWorkstationTheme {
-            WorkspaceApp(viewModel)
+            WorkspaceApp(viewModel) {
+                exitApplication()
+            }
         }
     }
 }

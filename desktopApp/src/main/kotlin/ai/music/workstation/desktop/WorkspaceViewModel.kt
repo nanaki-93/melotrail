@@ -60,6 +60,7 @@ data class WorkspaceUiState(
     val dialog: WorkspaceDialog? = null,
     val structureDraft: List<String> = emptyList(),
     val downstreamArtifactsStale: Boolean = false,
+    val arrangementDraftDirty: Boolean = false,
     val retry: WorkspaceRetry? = null
 )
 
@@ -118,6 +119,8 @@ sealed interface WorkspaceDialog {
     ) : WorkspaceDialog
 
     data class EditRole(val partId: String, val role: String) : WorkspaceDialog
+    data class ConfirmDiscardDraft(val root: Path? = null, val createProject: Boolean = false) : WorkspaceDialog
+    data object ConfirmClose : WorkspaceDialog
 }
 
 sealed interface WorkspaceRetry {
@@ -128,6 +131,7 @@ sealed interface WorkspaceRetry {
 
 sealed interface WorkspaceIntent {
     data object ChooseProject : WorkspaceIntent
+    data object RestoreLastProject : WorkspaceIntent
     data object ShowCreateProject : WorkspaceIntent
     data object ChooseCreateProjectDirectory : WorkspaceIntent
     data class UpdateCreateProject(val draft: WorkspaceDialog.CreateProject) : WorkspaceIntent
@@ -169,6 +173,9 @@ sealed interface WorkspaceIntent {
     data object Retry : WorkspaceIntent
     data object DismissDialog : WorkspaceIntent
     data object DismissNotification : WorkspaceIntent
+    data object ConfirmDiscardDraft : WorkspaceIntent
+    data object RequestClose : WorkspaceIntent
+    data object ConfirmClose : WorkspaceIntent
 }
 
 class WorkspaceViewModel(
@@ -180,7 +187,9 @@ class WorkspaceViewModel(
     private val mixService: MixApplicationService = DefaultMixApplicationService(),
     private val buildService: BuildApplicationService? = null,
     private val player: ArtifactAudioPlayer? = null,
-    private val partPreviewService: PartPreviewApplicationService? = null
+    private val partPreviewService: PartPreviewApplicationService? = null,
+    private val preferences: DesktopPreferences = NoOpDesktopPreferences,
+    private val operationLogger: DesktopOperationLogger = NoOpDesktopOperationLogger
 ) : AutoCloseable {
     private val scope = CoroutineScope(SupervisorJob() + dispatchers.ui)
     private val ioDispatcher = dispatchers.io
@@ -202,11 +211,12 @@ class WorkspaceViewModel(
     fun accept(intent: WorkspaceIntent) {
         when (intent) {
             WorkspaceIntent.ChooseProject -> chooseProject()
-            WorkspaceIntent.ShowCreateProject -> mutableState.update { it.copy(dialog = WorkspaceDialog.CreateProject(), notification = null) }
+            WorkspaceIntent.RestoreLastProject -> restoreLastProject()
+            WorkspaceIntent.ShowCreateProject -> showCreateProject()
             WorkspaceIntent.ChooseCreateProjectDirectory -> chooseCreateProjectDirectory()
             is WorkspaceIntent.UpdateCreateProject -> mutableState.update { it.copy(dialog = intent.draft) }
             WorkspaceIntent.CreateProject -> createProject()
-            is WorkspaceIntent.OpenProject -> openProject(intent.root)
+            is WorkspaceIntent.OpenProject -> requestOpenProject(intent.root)
             WorkspaceIntent.RefreshRuntimeReadiness -> refreshRuntimeReadiness()
             is WorkspaceIntent.ShowImportPart -> showImportPart(intent.audio)
             WorkspaceIntent.ChooseImportSource -> chooseImportSource()
@@ -224,7 +234,7 @@ class WorkspaceViewModel(
             is WorkspaceIntent.MoveStructurePart -> moveStructurePart(intent.fromIndex, intent.toIndex)
             WorkspaceIntent.ClearStructure -> saveStructure(emptyList())
             is WorkspaceIntent.UpdateArrangementPlanner -> updateArrangementPlanner(intent.planner)
-            is WorkspaceIntent.UpdateArrangementStyle -> mutableState.update { it.copy(arrangementDraft = it.arrangementDraft.copy(style = intent.style)) }
+            is WorkspaceIntent.UpdateArrangementStyle -> mutableState.update { it.copy(arrangementDraft = it.arrangementDraft.copy(style = intent.style), arrangementDraftDirty = true) }
             is WorkspaceIntent.ToggleArrangementInstrument -> toggleArrangementInstrument(intent.instrument)
             is WorkspaceIntent.UpdateMixSetting -> updateMixSetting(intent.instrument, intent.setting)
             WorkspaceIntent.ResetMix -> resetMix()
@@ -243,11 +253,30 @@ class WorkspaceViewModel(
             WorkspaceIntent.Retry -> retry()
             WorkspaceIntent.DismissDialog -> mutableState.update { it.copy(dialog = null) }
             WorkspaceIntent.DismissNotification -> mutableState.update { it.copy(notification = null) }
+            WorkspaceIntent.ConfirmDiscardDraft -> confirmDiscardDraft()
+            WorkspaceIntent.RequestClose -> requestClose()
+            WorkspaceIntent.ConfirmClose -> close()
         }
     }
 
     private fun chooseProject() = scope.launch {
-        fileDialogs.chooseProjectDirectory()?.let(::openProject)
+        fileDialogs.chooseProjectDirectory()?.let(::requestOpenProject)
+    }
+
+    private fun restoreLastProject() {
+        if (state.value.project != null || state.value.operation.isMutating) return
+        preferences.lastOpenedProject()?.let { root ->
+            openProject(root, restoring = true)
+        }
+    }
+
+    private fun showCreateProject() {
+        if (state.value.operation.isMutating) return busy("create a project")
+        if (hasUnsavedDraft()) {
+            mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmDiscardDraft(createProject = true)) }
+        } else {
+            mutableState.update { it.copy(dialog = WorkspaceDialog.CreateProject(), notification = null) }
+        }
     }
 
     private fun chooseCreateProjectDirectory() = scope.launch {
@@ -270,14 +299,34 @@ class WorkspaceViewModel(
         }
     }
 
-    private fun openProject(root: Path) {
-        if (state.value.operation.isMutating) return
+    private fun requestOpenProject(root: Path) {
+        if (state.value.operation.isMutating) return busy("switch projects")
+        if (hasUnsavedDraft()) {
+            mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmDiscardDraft(root = root)) }
+        } else {
+            openProject(root)
+        }
+    }
+
+    private fun confirmDiscardDraft() {
+        val dialog = state.value.dialog as? WorkspaceDialog.ConfirmDiscardDraft ?: return
+        mutableState.update { it.copy(dialog = null, arrangementDraftDirty = false) }
+        when {
+            dialog.root != null -> openProject(dialog.root)
+            dialog.createProject -> mutableState.update { it.copy(dialog = WorkspaceDialog.CreateProject(), notification = null) }
+        }
+    }
+
+    private fun openProject(root: Path, restoring: Boolean = false) {
+        if (state.value.operation.isMutating) return busy("open a project")
         val normalized = root.toAbsolutePath().normalize()
         mutableState.update { it.copy(operation = WorkspaceOperation.OpeningProject(normalized), notification = null, retry = null) }
         scope.launch {
             runCatching { withContext(ioDispatcher) { projectService.open(normalized) } }
-                .onSuccess { opened(it, "Opened ${it.name}") }
+            .onSuccess { opened(it, "Opened ${it.name}") }
                 .onFailure { failure ->
+                    if (restoring) preferences.clearLastOpenedProject()
+                    operationLogger.event("open-project", "failed", normalized, failure)
                     mutableState.update {
                         it.copy(
                             operation = WorkspaceOperation.OpenFailed(failure.message ?: "Unable to open project."),
@@ -430,14 +479,14 @@ class WorkspaceViewModel(
 
     private fun updateArrangementPlanner(planner: ArrangementPlannerKind) {
         if (state.value.operation.isMutating) return
-        mutableState.update { it.copy(arrangementDraft = it.arrangementDraft.copy(planner = planner), notification = null) }
+        mutableState.update { it.copy(arrangementDraft = it.arrangementDraft.copy(planner = planner), arrangementDraftDirty = true, notification = null) }
     }
 
     private fun toggleArrangementInstrument(instrument: String) {
         if (state.value.operation.isMutating || instrument == "piano" || instrument !in arrangementInstruments) return
         mutableState.update { current ->
             val selected = current.arrangementDraft.instruments
-            current.copy(arrangementDraft = current.arrangementDraft.copy(instruments = if (instrument in selected) selected - instrument else selected + instrument))
+            current.copy(arrangementDraft = current.arrangementDraft.copy(instruments = if (instrument in selected) selected - instrument else selected + instrument), arrangementDraftDirty = true)
         }
     }
 
@@ -465,7 +514,7 @@ class WorkspaceViewModel(
                     }
                 }
             }.onSuccess { arrangement ->
-                mutableState.update { it.copy(arrangement = arrangement, selectedArrangementSection = arrangement.sections.firstOrNull()?.index, operation = WorkspaceOperation.Idle, notification = if (arrangement.approvalRequired) "Arrangement draft is ready for review and explicit approval." else "Approved deterministic arrangement generated.", retry = null) }
+                mutableState.update { it.copy(arrangement = arrangement, selectedArrangementSection = arrangement.sections.firstOrNull()?.index, arrangementDraftDirty = false, operation = WorkspaceOperation.Idle, notification = if (arrangement.approvalRequired) "Arrangement draft is ready for review and explicit approval." else "Approved deterministic arrangement generated.", retry = null) }
             }.onFailure { fail("generate arrangement", it.message ?: "Unable to generate arrangement.", WorkspaceRetry.GenerateArrangement(request)) }
         }
     }
@@ -492,6 +541,15 @@ class WorkspaceViewModel(
     }
 
     private fun updateProgress(operation: WorkspaceOperation) {
+        val progress = when (operation) {
+            is WorkspaceOperation.ImportingPart -> operation.progress
+            is WorkspaceOperation.AnalyzingPart -> operation.progress
+            is WorkspaceOperation.GeneratingArrangement -> operation.progress
+            is WorkspaceOperation.ApplyingMix -> operation.progress
+            is WorkspaceOperation.BuildingSong -> operation.progress
+            else -> null
+        }
+        progress?.let { operationLogger.event(it.operation, "${it.stageIndex}-of-${it.stageCount}", it.artifact) }
         mutableState.update { current -> if (current.operation.isMutating) current.copy(operation = operation) else current }
     }
 
@@ -573,6 +631,9 @@ class WorkspaceViewModel(
     private fun ProjectSnapshot.refreshed(): ProjectSnapshot = projectService.open(root)
 
     private fun opened(project: ProjectSnapshot, message: String, stale: Boolean = false) {
+        player?.stop()
+        preferences.saveLastOpenedProject(project.root)
+        operationLogger.event("project", "opened", project.root)
         mutableState.update {
             it.copy(
                 project = project,
@@ -583,6 +644,7 @@ class WorkspaceViewModel(
                 dialog = null,
                 structureDraft = project.structure.map { section -> section.partId },
                 downstreamArtifactsStale = stale,
+                arrangementDraftDirty = false,
                 retry = null
             )
         }
@@ -597,7 +659,27 @@ class WorkspaceViewModel(
     }
 
     private fun fail(action: String, message: String, retry: WorkspaceRetry? = null) {
+        operationLogger.event(action, "failed", failure = IllegalStateException(message))
         mutableState.update { it.copy(operation = WorkspaceOperation.Failed(action, message), notification = message, retry = retry) }
+    }
+
+    private fun hasUnsavedDraft(): Boolean = state.value.project != null && state.value.arrangementDraftDirty
+
+    private fun busy(action: String) {
+        mutableState.update { it.copy(notification = "Wait for the current operation to reach a safe boundary before you $action.") }
+    }
+
+    /** Returns true when the caller may close immediately; otherwise it opens a confirmation dialog. */
+    fun requestClose(): Boolean {
+        if (state.value.operation.isMutating) {
+            mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmClose) }
+            return false
+        }
+        if (hasUnsavedDraft()) {
+            mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmClose) }
+            return false
+        }
+        return true
     }
 
     override fun close() { mixCommit?.cancel(); buildJob?.cancel(); player?.close(); scope.cancel() }

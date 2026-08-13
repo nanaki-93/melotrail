@@ -90,10 +90,11 @@ class JvmAudioPlayer : ArtifactAudioPlayer {
         val startFrame = frame
         worker?.interrupt()
         worker = thread(name = "jvm-audio-player", isDaemon = true) {
-            val format = AudioFormat(audio.format.sampleRate.toFloat(), 16, audio.format.channels, true, false)
-            val localLine = AudioSystem.getSourceDataLine(format).also { it.open(format); it.start() }
-            synchronized(lock) { line = localLine }
+            var localLine: SourceDataLine? = null
             try {
+                val format = AudioFormat(audio.format.sampleRate.toFloat(), 16, audio.format.channels, true, false)
+                localLine = AudioSystem.getSourceDataLine(format).also { it.open(format); it.start() }
+                synchronized(lock) { line = localLine }
                 var current = startFrame
                 val chunkFrames = 1024
                 while (!Thread.currentThread().isInterrupted && current < audio.length && _state.value == PlaybackState.PLAYING) {
@@ -110,9 +111,14 @@ class JvmAudioPlayer : ArtifactAudioPlayer {
                     _position.value = _duration.value
                     _state.value = PlaybackState.STOPPED
                 }
+            } catch (_: Exception) {
+                // Audio devices may be unplugged or unavailable. Monitoring must never crash the workspace.
+                synchronized(lock) { _state.value = PlaybackState.STOPPED }
             } finally {
-                localLine.drain(); localLine.close()
-                synchronized(lock) { if (line === localLine) line = null }
+                localLine?.let { active ->
+                    runCatching { active.drain(); active.close() }
+                    synchronized(lock) { if (line === active) line = null }
+                }
             }
         }
     }

@@ -231,7 +231,7 @@ Use `StateFlow`, a `SupervisorJob`, and injected interfaces. Composables render 
 | [025](tasks/completed/025-desktop-project-workflow.md) | Open/create/import/analyze/edit parts and drag structure | A project can be prepared entirely in UI |
 | [026](tasks/completed/026-desktop-arrangement-workflow.md) | Planner controls, approval flow, plan table, song timeline | Valid arrangement can be generated/reviewed |
 | [027](tasks/completed/027-desktop-mix-build-playback.md) | Mix controls, playback, progress, end-to-end Build Song | Valid master can be built and auditioned |
-| [028](tasks/028-desktop-hardening-packaging.md) | UI tests, accessibility, recovery, current-OS package | Local release candidate passes smoke checklist |
+| [028](tasks/completed/028-desktop-hardening-packaging.md) | UI tests, accessibility, recovery, current-OS package | Local release candidate passes smoke checklist |
 
 Implement one task at a time using `plan/PROMPT_TEMPLATE.md`. Do not begin Compose screens before Tasks 022–023 establish the shared application boundary.
 

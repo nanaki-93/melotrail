@@ -24,6 +24,8 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import java.nio.file.Path
+import java.util.UUID
+import java.util.prefs.Preferences
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WorkspaceViewModelTest {
@@ -72,6 +74,62 @@ class WorkspaceViewModelTest {
 
         assertNull(viewModel.state.value.project)
         assertEquals(WorkspaceOperation.Idle, viewModel.state.value.operation)
+        viewModel.close()
+    }
+
+    @Test
+    fun `project switching confirms unsaved arrangement controls and retains canonical project until confirmed`() = runTest {
+        val current = Path.of("build/current-project")
+        val next = Path.of("build/next-project")
+        val service = FakeProjectService(result = projectSnapshot(current))
+        val viewModel = WorkspaceViewModel(service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+
+        viewModel.accept(WorkspaceIntent.OpenProject(current))
+        advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.UpdateArrangementStyle("warm lo-fi"))
+        viewModel.accept(WorkspaceIntent.OpenProject(next))
+
+        assertEquals(current, viewModel.state.value.project?.root)
+        assertEquals(WorkspaceDialog.ConfirmDiscardDraft(root = next), viewModel.state.value.dialog)
+        viewModel.accept(WorkspaceIntent.ConfirmDiscardDraft)
+        advanceUntilIdle()
+        assertEquals(current, viewModel.state.value.project?.root, "the fake service returns the canonical current fixture")
+        assertTrue(!viewModel.state.value.arrangementDraftDirty)
+        viewModel.close()
+    }
+
+    @Test
+    fun `last successful project is restored as a preference and corrupt preferences are ignored`() = runTest {
+        val root = Path.of("build/restored-project")
+        val preferences = FakeDesktopPreferences(root)
+        val viewModel = WorkspaceViewModel(
+            FakeProjectService(result = projectSnapshot(root)), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)), preferences = preferences
+        )
+
+        viewModel.accept(WorkspaceIntent.RestoreLastProject)
+        advanceUntilIdle()
+        assertEquals(root, viewModel.state.value.project?.root)
+        assertEquals(root, preferences.saved)
+        viewModel.close()
+
+        val node = Preferences.userRoot().node("ai-music-workstation-test-${UUID.randomUUID()}")
+        try {
+            node.put("last-successfully-opened-project", "   ")
+            assertNull(JvmDesktopPreferences(node).lastOpenedProject())
+        } finally {
+            node.removeNode()
+        }
+    }
+
+    @Test
+    fun `close requires confirmation while an operation is active`() = runTest {
+        val viewModel = WorkspaceViewModel(FakeProjectService(result = projectSnapshot(Path.of("build/close-project"))), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+        viewModel.accept(WorkspaceIntent.OpenProject(Path.of("build/close-project")))
+        advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.UpdateArrangementStyle("draft"))
+
+        assertTrue(!viewModel.requestClose())
+        assertEquals(WorkspaceDialog.ConfirmClose, viewModel.state.value.dialog)
         viewModel.close()
     }
 
@@ -270,6 +328,13 @@ private class FakeFileDialogs : DesktopFileDialogs {
     override suspend fun chooseProjectDirectory(): Path? = null
     override suspend fun chooseNewProjectDirectory(): Path? = null
     override suspend fun choosePartSource(audio: Boolean): Path? = null
+}
+
+private class FakeDesktopPreferences(private val last: Path?) : DesktopPreferences {
+    var saved: Path? = null
+    override fun lastOpenedProject(): Path? = last
+    override fun saveLastOpenedProject(root: Path) { saved = root }
+    override fun clearLastOpenedProject() = Unit
 }
 
 private class FakeProjectService(

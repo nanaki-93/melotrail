@@ -40,6 +40,49 @@ You can run Spring Boot without Make:
 ./gradlew bootRun
 ```
 
+## Compose Desktop workspace
+
+The local desktop workspace uses the same typed Kotlin application services as
+the CLI. It launches in-process and does not start Spring or the static web UI:
+
+```bash
+./gradlew :desktopApp:run
+```
+
+Use **Create** or **Open project**, prepare/analyze parts, save the structure,
+generate an arrangement, explicitly approve a Qwen draft, then use **Build
+song**. Project files remain canonical: `project.json`, plans and arrangements,
+generated MIDI, stems, mixes, and release artifacts are all kept under the
+chosen project directory. Desktop settings retain only the last successfully
+opened project path; they never store project or audio data.
+
+The worker is required for audio import, repair, mastering, and optional MP3
+export. Start it with `make worker`. Rendering and MIDI preview additionally
+require a configured local SFZ renderer (`SFZ_RENDERER_PATH` or `sfizz_render`
+on `PATH`). The app reports missing/disconnected dependencies and stale
+artifacts without modifying the project. Local bounded diagnostic logs are
+written under `~/.personal-ai-music-arranger/logs/`; they contain operation and
+artifact metadata, not model responses or source content.
+
+Transport shortcuts are Ctrl/Cmd+Space for play/pause, Ctrl/Cmd+Left/Right to
+seek five seconds, and Ctrl/Cmd+K to stop. Structure rows provide keyboard
+reachable earlier/later controls as an alternative to drag reordering.
+
+### macOS package
+
+On this development OS, produce a DMG with its bundled runtime using:
+
+```bash
+./gradlew :desktopApp:packageDistributionForCurrentOS
+```
+
+The DMG is written under `desktopApp/build/compose/binaries/main/dmg/`. Open it
+and launch **Personal AI Music Arranger**; Gradle and Spring are not required
+to open existing projects. This is an unsigned local package—code signing and
+notarization are intentionally not configured. Windows and Linux packages must
+be built and tested natively on those operating systems before they can be
+claimed as supported.
+
 ## CLI
 
 Show CLI help:

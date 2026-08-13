@@ -117,6 +117,25 @@ class WorkspaceScreenTest {
         onNodeWithTag(WorkspaceTags.PLAYBACK_MASTER).assertExists()
     }
 
+    @Test
+    fun `discard and close confirmations are keyboard reachable dialogs`() = runComposeUiTest {
+        setContent {
+            MusicWorkstationTheme {
+                WorkspaceScreen(projectState().copy(dialog = WorkspaceDialog.ConfirmDiscardDraft(root = java.nio.file.Path.of("build/other"))), onIntent = {})
+            }
+        }
+        onNodeWithText("Discard arrangement draft?").assertIsDisplayed()
+        onNodeWithText("Discard and continue").assertIsDisplayed()
+
+        setContent {
+            MusicWorkstationTheme {
+                WorkspaceScreen(projectState().copy(dialog = WorkspaceDialog.ConfirmClose), onIntent = {})
+            }
+        }
+        onNodeWithText("Close Personal AI Music Arranger?").assertIsDisplayed()
+        onNodeWithText("Keep working").assertIsDisplayed()
+    }
+
     private fun projectState(): WorkspaceUiState {
         val root = java.nio.file.Path.of("build/test-project")
         return WorkspaceUiState(project = ai.music.workstation.application.ProjectSnapshot(

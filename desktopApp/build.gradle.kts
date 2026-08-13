@@ -31,8 +31,13 @@ compose.desktop {
 
         nativeDistributions {
             packageName = "Personal AI Music Arranger"
-            packageVersion = rootProject.version.toString()
+            // jpackage requires a positive major component; keep the engine's 0.x version independent.
+            packageVersion = "1.0.0"
             targetFormats(org.jetbrains.compose.desktop.application.dsl.TargetFormat.Dmg)
+            modules("java.desktop", "java.logging", "java.prefs", "java.management")
+            macOS {
+                iconFile.set(project.file("src/main/resources/PersonalAIMusicArranger.icns"))
+            }
         }
     }
 }
