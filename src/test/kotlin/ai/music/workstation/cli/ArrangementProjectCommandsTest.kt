@@ -400,7 +400,7 @@ class ArrangementProjectCommandsTest {
     }
 
     @Test
-    fun `build runs deterministic arrangement through preserved WAV intermediates and custom output`() {
+    fun `build masters the repaired dry mix with preserved PCM-24 format and release metadata`() {
         val projectRoot = createProject("build-demo")
         val source = tempDir.resolve("piano.wav")
         writeSourceWav(source, 32_000, 1, 320)
@@ -410,12 +410,13 @@ class ArrangementProjectCommandsTest {
         val sourceBefore = Files.readAllBytes(copiedSource)
         val output = projectRoot.resolve("rendered")
 
+        val worker = RecordingBuildWorker()
         val result = ArrangementProjectCommands.executeBuildForTest(
             arrayOf(
                 "build", "--project", projectRoot.toString(),
                 "--output-dir", "rendered", "--no-ai"
             ),
-            CopyingBuildWorker()
+            worker
         )
 
         assertTrue(result.contains("[1/10] Loaded project"))
@@ -423,11 +424,102 @@ class ArrangementProjectCommandsTest {
         assertTrue(Files.isRegularFile(projectRoot.resolve("analysis/A.json")))
         assertTrue(Files.isRegularFile(projectRoot.resolve("arrangement.json")))
         assertTrue(Files.isRegularFile(projectRoot.resolve("stems/drums.wav")))
-        assertWav(projectRoot.resolve("mix/mix.wav"))
-        assertWav(output.resolve("repair.wav"), sampleRate = 32_000, channels = 1)
-        assertWav(output.resolve("lofi.wav"), sampleRate = 32_000, channels = 1)
-        assertWav(output.resolve("master.wav"), sampleRate = 32_000, channels = 1)
+        assertWav(projectRoot.resolve("mix/mix.wav"), sampleRate = 32_000, channels = 1)
+        assertWav(projectRoot.resolve("mix/dry.wav"), sampleRate = 32_000, channels = 1, bitDepth = 24)
+        assertWav(projectRoot.resolve("mix/repaired.wav"), sampleRate = 32_000, channels = 1, bitDepth = 24)
+        assertFalse(Files.exists(projectRoot.resolve("mix/lofi.wav")))
+        assertWav(output.resolve("master.wav"), sampleRate = 32_000, channels = 1, bitDepth = 24)
+        assertEquals(Files.size(projectRoot.resolve("mix/dry.wav")), Files.size(projectRoot.resolve("mix/repaired.wav")))
+        assertEquals(Files.size(projectRoot.resolve("mix/repaired.wav")), Files.size(output.resolve("master.wav")))
+        assertFalse(output.resolve("master.wav").fileName.toString().endsWith(".mp3"))
+        assertTrue(result.contains("mastering input: mix/repaired.wav"))
+        assertEquals(listOf("health", "analyze", "repair:dry.wav", "master:repaired.wav"), worker.events)
+        val release = Files.readString(output.resolve("release.json"))
+        assertTrue(release.contains("\"inputArtifact\": \"mix/repaired.wav\""))
+        assertTrue(release.contains("\"pcmBitDepth\": 24"))
+        assertTrue(release.contains("\"targetLufs\": -14.0"))
         assertTrue(Files.readAllBytes(copiedSource).contentEquals(sourceBefore))
+    }
+
+    @Test
+    fun `build uses mix lofi only when explicitly enabled`() {
+        val projectRoot = createProject("lofi-build-demo")
+        val source = tempDir.resolve("piano.wav")
+        writeSourceWav(source, 44_100, 2, 320)
+        addPart(projectRoot, "A", source)
+        writeProject(readProject(projectRoot).copy(structure = listOf("A")), projectRoot)
+        val worker = RecordingBuildWorker()
+
+        val result = ArrangementProjectCommands.executeBuildForTest(
+            arrayOf("build", "--project", projectRoot.toString(), "--lofi"), worker
+        )
+
+        assertTrue(result.contains("mastering input: mix/lofi.wav"))
+        assertWav(projectRoot.resolve("mix/lofi.wav"), sampleRate = 44_100, channels = 2, bitDepth = 24)
+        assertEquals("master:lofi.wav", worker.events.last())
+        assertTrue(Files.readString(projectRoot.resolve("output/release.json")).contains("\"loFiEnabled\": true"))
+    }
+
+    @Test
+    fun `build keeps an existing master when temporary worker output is malformed`() {
+        val projectRoot = createBuildProject("atomic-master-demo")
+        val master = projectRoot.resolve("output/master.wav")
+        Files.createDirectories(master.parent)
+        writeSourceWav(master, 32_000, 1, 64)
+        val before = Files.readAllBytes(master)
+
+        val exception = assertThrows(IllegalStateException::class.java) {
+            ArrangementProjectCommands.executeBuildForTest(
+                arrayOf("build", "--project", projectRoot.toString()),
+                RecordingBuildWorker(masterWriter = { _, output -> Files.writeString(output, "not a wav") })
+            )
+        }
+
+        assertTrue(exception.message.orEmpty().contains("Master audio failed"))
+        assertEquals(before.toList(), Files.readAllBytes(master).toList())
+        assertFalse(Files.list(master.parent).use { paths -> paths.anyMatch { it.fileName.toString().contains(".mastering-") } })
+    }
+
+    @Test
+    fun `build rejects non finite or over ceiling master output`() {
+        val nonFinite = createBuildProject("non-finite-master-demo")
+        val nonFiniteFailure = assertThrows(IllegalStateException::class.java) {
+            ArrangementProjectCommands.executeBuildForTest(
+                arrayOf("build", "--project", nonFinite.toString()),
+                RecordingBuildWorker(masterWriter = { _, output -> writeFloatNanWav(output) })
+            )
+        }
+        assertTrue(nonFiniteFailure.message.orEmpty().contains("non-finite"))
+
+        val clipped = createBuildProject("clipped-master-demo")
+        val clippedFailure = assertThrows(IllegalStateException::class.java) {
+            ArrangementProjectCommands.executeBuildForTest(
+                arrayOf("build", "--project", clipped.toString()),
+                RecordingBuildWorker(masterWriter = { _, output -> writeSourceWav(output, 32_000, 1, 320, 0.95f) })
+            )
+        }
+        assertTrue(clippedFailure.message.orEmpty().contains("peak ceiling"))
+    }
+
+    @Test
+    fun `build reports worker health repair and mastering failures by stage`() {
+        val health = createBuildProject("health-failure-demo")
+        val healthFailure = assertThrows(IllegalArgumentException::class.java) {
+            ArrangementProjectCommands.executeBuildForTest(arrayOf("build", "--project", health.toString()), RecordingBuildWorker(failure = "health"))
+        }
+        assertTrue(healthFailure.message.orEmpty().contains("worker health"))
+
+        val repair = createBuildProject("repair-failure-demo")
+        val repairFailure = assertThrows(IllegalStateException::class.java) {
+            ArrangementProjectCommands.executeBuildForTest(arrayOf("build", "--project", repair.toString()), RecordingBuildWorker(failure = "repair"))
+        }
+        assertTrue(repairFailure.message.orEmpty().contains("Repair mix failed"))
+
+        val master = createBuildProject("master-failure-demo")
+        val masterFailure = assertThrows(IllegalStateException::class.java) {
+            ArrangementProjectCommands.executeBuildForTest(arrayOf("build", "--project", master.toString()), RecordingBuildWorker(failure = "master"))
+        }
+        assertTrue(masterFailure.message.orEmpty().contains("Master audio failed"))
     }
 
     @Test
@@ -471,7 +563,7 @@ class ArrangementProjectCommandsTest {
         val exception = assertThrows(IllegalArgumentException::class.java) {
             ArrangementProjectCommands.executeBuildForTest(
                 arrayOf("build", "--project", projectRoot.toString(), "--output-dir", "parts", "--dry-run"),
-                CopyingBuildWorker()
+                RecordingBuildWorker()
             )
         }
 
@@ -533,41 +625,74 @@ class ArrangementProjectCommandsTest {
         ProjectStore.write(projectRoot, project)
     }
 
-    private fun writeSourceWav(path: Path, sampleRate: Int, channels: Int, frames: Int) {
-        val format = AudioFormat(sampleRate, channels, 24, false, false, "WAV")
-        WAVExporterSimple().export(AudioBuffer(FloatArray(frames * channels) { 0.2f }, format, frames.toDouble() / sampleRate), path)
+    private fun createBuildProject(name: String): Path {
+        val projectRoot = createProject(name)
+        val source = tempDir.resolve("$name.wav")
+        writeSourceWav(source, 32_000, 1, 320)
+        addPart(projectRoot, "A", source)
+        writeProject(readProject(projectRoot).copy(structure = listOf("A")), projectRoot)
+        return projectRoot
     }
 
-    private fun assertWav(path: Path, sampleRate: Int? = null, channels: Int? = null) {
+    private fun writeSourceWav(path: Path, sampleRate: Int, channels: Int, frames: Int, sample: Float = 0.2f) {
+        val format = AudioFormat(sampleRate, channels, 24, false, false, "WAV")
+        WAVExporterSimple().export(AudioBuffer(FloatArray(frames * channels) { sample }, format, frames.toDouble() / sampleRate), path)
+    }
+
+    private fun writeFloatNanWav(path: Path) {
+        val bytes = java.nio.ByteBuffer.allocate(48).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        bytes.put("RIFF".encodeToByteArray()).putInt(40).put("WAVE".encodeToByteArray())
+        bytes.put("fmt ".encodeToByteArray()).putInt(16).putShort(3).putShort(1).putInt(32_000).putInt(128_000).putShort(4).putShort(32)
+        bytes.put("data".encodeToByteArray()).putInt(4).putInt(Float.NaN.toRawBits())
+        Files.write(path, bytes.array())
+    }
+
+    private fun assertWav(path: Path, sampleRate: Int? = null, channels: Int? = null, bitDepth: Int? = null) {
         assertTrue(Files.size(path) >= 44)
         val bytes = Files.readAllBytes(path)
         assertEquals("RIFF", bytes.copyOfRange(0, 4).decodeToString())
-        if (sampleRate != null || channels != null) {
+        if (sampleRate != null || channels != null || bitDepth != null) {
             val header = java.nio.ByteBuffer.wrap(bytes).order(java.nio.ByteOrder.LITTLE_ENDIAN)
             sampleRate?.let { assertEquals(it, header.getInt(24)) }
             channels?.let { assertEquals(it, header.getShort(22).toInt()) }
+            bitDepth?.let { assertEquals(it, header.getShort(34).toInt()) }
         }
     }
 
-    private class CopyingBuildWorker : ArrangementProjectCommands.BuildWorker {
-        override suspend fun healthCheck(): Boolean = true
+    private class RecordingBuildWorker(
+        private val masterWriter: ((Path, Path) -> Unit)? = null,
+        private val failure: String? = null
+    ) : ArrangementProjectCommands.BuildWorker {
+        val events = mutableListOf<String>()
 
-        override suspend fun analyze(path: Path): PartAnalysis = PartAnalysis(
-            duration = 0.01,
-            sampleRate = 32_000,
-            channels = 1,
-            frameCount = 320,
-            peak = 0.5,
-            rms = 0.25,
-            nearSilence = false
-        )
+        override suspend fun healthCheck(): Boolean {
+            events += "health"
+            return failure != "health"
+        }
+
+        override suspend fun analyze(path: Path): PartAnalysis {
+            events += "analyze"
+            return PartAnalysis(
+                duration = 0.01,
+                sampleRate = 32_000,
+                channels = 1,
+                frameCount = 320,
+                peak = 0.5,
+                rms = 0.25,
+                nearSilence = false
+            )
+        }
 
         override suspend fun repair(inputPath: Path, outputPath: Path) {
+            events += "repair:${inputPath.fileName}"
+            if (failure == "repair") error("worker repair unavailable")
             Files.copy(inputPath, outputPath)
         }
 
         override suspend fun master(inputPath: Path, outputPath: Path) {
-            Files.copy(inputPath, outputPath)
+            events += "master:${inputPath.fileName}"
+            if (failure == "master") error("worker master unavailable")
+            masterWriter?.invoke(inputPath, outputPath) ?: Files.copy(inputPath, outputPath)
         }
     }
 }

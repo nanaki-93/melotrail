@@ -67,10 +67,14 @@ Build a complete local arranger project (requires the Python worker):
 ./gradlew cliRun --args="build --project ./projects/demo --no-ai"
 ```
 
-This keeps `analysis/`, `arrangement.json`, `stems/bass.wav`, and `mix/mix.wav`
-inside the project, then writes lossless `repair.wav`, `lofi.wav`, and
-`master.wav` under `output/`. Use `--output-dir <directory>` to choose another
-output directory, or `--dry-run` to validate without changing files.
+This keeps `analysis/`, `arrangement.json`, `stems/bass.wav`, and the lossless
+`mix/dry.wav` and `mix/repaired.wav` intermediates inside the project, then
+writes the PCM-24 `master.wav` and `release.json` under `output/`. Add `--lofi`
+to create `mix/lofi.wav` and master that explicit input; otherwise the repaired
+dry mix is mastered. Use `--output-dir <directory>` to choose another output
+directory, or `--dry-run` to validate without changing files. Master validation
+requires the same sample rate and channel count and permits at most 50 ms of
+worker latency or tail difference.
 
 The build command is deterministic and local. `--no-ai` makes that choice
 explicit; no model output is executed as code, commands, or paths.

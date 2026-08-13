@@ -68,6 +68,7 @@ import ai.music.workstation.worker.MidiCleanCommand
 import ai.music.workstation.worker.WorkerClient
 import ai.music.workstation.worker.WorkerStatus
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -78,11 +79,16 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.contentOrNull
+import java.io.RandomAccessFile
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.nio.file.StandardCopyOption
+import java.util.UUID
+import kotlin.math.abs
+import kotlin.math.log10
+import kotlin.math.pow
 
 /**
  * Small file-based commands for the arranger project format.
@@ -93,6 +99,10 @@ import java.nio.file.StandardCopyOption
  */
 object ArrangementProjectCommands {
     private const val PROJECT_FILE = "project.json"
+    private const val MASTER_TARGET_LOUDNESS_LUFS = -14.0
+    private const val MASTER_TRUE_PEAK_CEILING_DB = -1.0
+    private const val MAX_MASTER_DURATION_DELTA_SECONDS = 0.05
+    private const val PCM_24_QUANTIZATION_TOLERANCE = 1.0 / 8_388_608.0
     private val supportedExtensions = setOf("mid", "midi", "wav", "wave", "mp3")
     private val json = Json {
         prettyPrint = true
@@ -867,17 +877,19 @@ object ArrangementProjectCommands {
         require(structure.isNotEmpty()) { "Project structure must contain at least one part" }
 
         val outputRoot = resolveOutputRoot(projectRoot, options.outputDirectory)
-        val repairedPath = outputRoot.resolve("repair.wav")
-        val lofiPath = outputRoot.resolve("lofi.wav")
+        val dryPath = projectRoot.resolve("mix/dry.wav")
+        val repairedPath = projectRoot.resolve("mix/repaired.wav")
+        val lofiPath = projectRoot.resolve("mix/lofi.wav")
         val masterPath = outputRoot.resolve("master.wav")
         val mp3Path = outputRoot.resolve("youtube.mp3")
-        requireNoSourceOverwrite(projectRoot, project, listOf(repairedPath, lofiPath, masterPath))
+        requireNoSourceOverwrite(projectRoot, project, listOf(dryPath, repairedPath, lofiPath, masterPath, mp3Path))
 
         if (options.dryRun) {
             return buildString {
                 appendLine("[DRY RUN] Project is valid: $projectRoot")
                 appendLine("[DRY RUN] Planner: deterministic${if (options.noAi) " (--no-ai)" else ""}")
                 appendLine("[DRY RUN] Output directory: $outputRoot")
+                appendLine("[DRY RUN] LoFi: ${if (options.enableLoFi) "enabled" else "disabled"}")
                 append("[DRY RUN] No files were created or changed.")
             }
         }
@@ -934,25 +946,62 @@ object ArrangementProjectCommands {
             mixStems(arrayOf("mix", "--project", projectRoot.toString()))
         }
         val mixPath = projectRoot.resolve("mix/mix.wav")
-        requireWavOutput(mixPath, "Mix")
-        complete(6, "Created mix/mix.wav")
+        val mixedWav = requireWavOutput(mixPath, "Mix", requirePcm24 = true)
+        publishCopy(mixPath, dryPath, "dry mix")
+        val dryWav = requireWavOutput(dryPath, "Dry mix", requirePcm24 = true)
+        require(dryWav.sampleRate == mixedWav.sampleRate && dryWav.channels == mixedWav.channels && dryWav.frameCount == mixedWav.frameCount) {
+            "Dry mix copy changed the mix format or duration"
+        }
+        require(dryWav.peak < 1.0) { "Dry mix is clipped (peak ${dryWav.peak}); fix the mix before mastering" }
+        complete(6, "Created mix/dry.wav")
 
         Files.createDirectories(outputRoot)
-        runBuildStage("Repair mix") { worker.repair(mixPath, repairedPath) }
-        requireWavOutput(repairedPath, "Repair")
-        complete(7, "Created ${outputRoot.relativizeOrName(repairedPath)}")
+        runBuildStage("Repair mix") {
+            publishWorkerWav(repairedPath, "repair", action = { temporary -> worker.repair(dryPath, temporary) })
+        }
+        val repairedWav = requireWavOutput(repairedPath, "Repair", requirePcm24 = true)
+        requireDerivedFormat(dryWav, repairedWav, "Repair")
+        complete(7, "Created ${projectRoot.relativizeOrName(repairedPath)}")
 
-        runBuildStage("Apply LoFi") { applyLoFi(repairedPath, lofiPath) }
-        requireWavOutput(lofiPath, "LoFi")
-        complete(8, "Created ${outputRoot.relativizeOrName(lofiPath)}")
+        val masteringInput: Path
+        val masteringInputWav: ValidatedWav
+        if (options.enableLoFi) {
+            runBuildStage("Apply LoFi") {
+                publishTemporaryWav(lofiPath, "lofi") { temporary ->
+                    applyLoFi(repairedPath, temporary)
+                    requireWavOutput(temporary, "LoFi", requirePcm24 = true)
+                }
+            }
+            val lofiWav = requireWavOutput(lofiPath, "LoFi", requirePcm24 = true)
+            requireDerivedFormat(repairedWav, lofiWav, "LoFi")
+            masteringInput = lofiPath
+            masteringInputWav = lofiWav
+            complete(8, "Created ${projectRoot.relativizeOrName(lofiPath)}; mastering input: mix/lofi.wav")
+        } else {
+            masteringInput = repairedPath
+            masteringInputWav = repairedWav
+            complete(8, "Skipped LoFi; mastering input: mix/repaired.wav")
+        }
 
-        runBuildStage("Master audio") { worker.master(lofiPath, masterPath) }
-        requireWavOutput(masterPath, "Master")
-        complete(9, "Created ${outputRoot.relativizeOrName(masterPath)}")
+        val masterWav = runBuildStage("Master audio") {
+            publishWorkerWav(
+                target = masterPath,
+                stage = "mastering",
+                action = { temporary -> worker.master(masteringInput, temporary) },
+                validate = { validated ->
+                    requireDerivedFormat(masteringInputWav, validated, "Master")
+                    require(validated.peak <= dbToAmplitude(MASTER_TRUE_PEAK_CEILING_DB) + PCM_24_QUANTIZATION_TOLERANCE) {
+                        "Master exceeds the ${MASTER_TRUE_PEAK_CEILING_DB} dB peak ceiling (peak ${validated.peak})"
+                    }
+                }
+            )
+            requireWavOutput(masterPath, "Master", requirePcm24 = true)
+        }
+        writeReleaseMetadata(outputRoot, projectRoot, masteringInput, masteringInputWav, masterPath, masterWav, options.enableLoFi)
+        complete(9, "Created ${outputRoot.relativizeOrName(masterPath)} from ${projectRoot.relativizeOrName(masteringInput)}")
         val mp3Created = runBuildStage("Export upload-ready MP3") { worker.exportMp3(masterPath, mp3Path) }
         if (mp3Created) {
             require(Files.isRegularFile(mp3Path) && Files.size(mp3Path) > 0) { "MP3 export did not create $mp3Path" }
-            Files.writeString(outputRoot.resolve("release.json"), "{\n  \"master\": \"master.wav\",\n  \"youtubeMp3\": \"youtube.mp3\",\n  \"targetLufs\": -14,\n  \"truePeakCeilingDb\": -1\n}\n", StandardCharsets.UTF_8)
             complete(10, "Build complete: $masterPath and $mp3Path")
         } else {
             complete(10, "Build complete: $masterPath (MP3 export unavailable in this worker)")
@@ -1080,6 +1129,7 @@ object ArrangementProjectCommands {
         var projectPath: String? = null
         var outputDirectory: String? = null
         var noAi = false
+        var enableLoFi = false
         var dryRun = false
         var index = 0
         while (index < arguments.size) {
@@ -1096,6 +1146,10 @@ object ArrangementProjectCommands {
                     require(!noAi) { "Duplicate build option: --no-ai" }
                     noAi = true
                 }
+                "--lofi" -> {
+                    require(!enableLoFi) { "Duplicate build option: --lofi" }
+                    enableLoFi = true
+                }
                 "--dry-run" -> {
                     require(!dryRun) { "Duplicate build option: --dry-run" }
                     dryRun = true
@@ -1105,9 +1159,9 @@ object ArrangementProjectCommands {
             index++
         }
         require(projectPath != null) {
-            "Usage: build --project <project-directory> [--output-dir <directory>] [--no-ai] [--dry-run]"
+            "Usage: build --project <project-directory> [--output-dir <directory>] [--no-ai] [--lofi] [--dry-run]"
         }
-        return BuildOptions(projectPath, outputDirectory, noAi, dryRun)
+        return BuildOptions(projectPath, outputDirectory, noAi, enableLoFi, dryRun)
     }
 
     private fun resolveOutputRoot(projectRoot: Path, configuredPath: String?): Path {
@@ -1125,15 +1179,120 @@ object ArrangementProjectCommands {
         }
     }
 
-    private fun requireWavOutput(path: Path, stage: String) {
-        require(Files.isRegularFile(path) && Files.size(path) >= 44) {
-            "$stage stage did not create a valid WAV file: $path"
+    private fun requireWavOutput(path: Path, stage: String, requirePcm24: Boolean = false): ValidatedWav =
+        try {
+            val wav = inspectWav(path)
+            require(!requirePcm24 || wav.pcm && wav.bitsPerSample == 24) {
+                "$stage stage did not create PCM-24 WAV audio: $path"
+            }
+            wav
+        } catch (error: Exception) {
+            throw IllegalArgumentException("$stage stage did not create a valid lossless WAV file: ${error.message}", error)
         }
-        val header = Files.newInputStream(path).use { input -> input.readNBytes(12).decodeToString() }
-        require(header.startsWith("RIFF") && header.endsWith("WAVE")) {
-            "$stage stage did not create a WAV container: $path"
+
+    private fun requireDerivedFormat(input: ValidatedWav, output: ValidatedWav, stage: String) {
+        require(input.sampleRate == output.sampleRate) {
+            "$stage changed sample rate from ${input.sampleRate} Hz to ${output.sampleRate} Hz"
+        }
+        require(input.channels == output.channels) {
+            "$stage changed channel count from ${input.channels} to ${output.channels}"
+        }
+        val durationDelta = abs(input.durationSeconds - output.durationSeconds)
+        require(durationDelta <= MAX_MASTER_DURATION_DELTA_SECONDS) {
+            "$stage changed duration by ${"%.3f".format(durationDelta)} seconds (maximum $MAX_MASTER_DURATION_DELTA_SECONDS seconds)"
         }
     }
+
+    private suspend fun publishWorkerWav(
+        target: Path,
+        stage: String,
+        action: suspend (Path) -> Unit,
+        validate: (ValidatedWav) -> Unit = {}
+    ) {
+        publishTemporaryWav(target, stage) { temporary ->
+            action(temporary)
+            validate(requireWavOutput(temporary, stage, requirePcm24 = true))
+        }
+    }
+
+    private suspend fun publishTemporaryWav(target: Path, stage: String, action: suspend (Path) -> Unit) {
+        Files.createDirectories(checkNotNull(target.parent))
+        val temporary = temporaryWav(target, stage)
+        try {
+            action(temporary)
+            atomicReplace(temporary, target, stage)
+        } finally {
+            Files.deleteIfExists(temporary)
+        }
+    }
+
+    private fun publishCopy(source: Path, target: Path, stage: String) {
+        Files.createDirectories(checkNotNull(target.parent))
+        val temporary = temporaryWav(target, stage)
+        try {
+            Files.copy(source, temporary, StandardCopyOption.REPLACE_EXISTING)
+            atomicReplace(temporary, target, stage)
+        } finally {
+            Files.deleteIfExists(temporary)
+        }
+    }
+
+    private fun temporaryWav(target: Path, stage: String): Path =
+        target.resolveSibling(".${target.fileName}.$stage-${UUID.randomUUID()}.wav")
+
+    private fun atomicReplace(source: Path, target: Path, stage: String) {
+        try {
+            Files.move(source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        } catch (error: java.nio.file.AtomicMoveNotSupportedException) {
+            throw IllegalStateException("Atomic publish is not supported for $stage output '$target'", error)
+        }
+    }
+
+    private fun writeReleaseMetadata(
+        outputRoot: Path,
+        projectRoot: Path,
+        input: Path,
+        inputWav: ValidatedWav,
+        master: Path,
+        masterWav: ValidatedWav,
+        loFiEnabled: Boolean
+    ) {
+        val metadata = MasterReleaseMetadata(
+            inputArtifact = projectRoot.relativizeOrName(input),
+            inputFingerprint = sha256(input),
+            inputSampleRate = inputWav.sampleRate,
+            inputChannels = inputWav.channels,
+            inputPcmBitDepth = inputWav.bitsPerSample,
+            master = master.fileName.toString(),
+            masterFingerprint = sha256(master),
+            sampleRate = masterWav.sampleRate,
+            channels = masterWav.channels,
+            pcmBitDepth = masterWav.bitsPerSample,
+            frameCount = masterWav.frameCount,
+            durationSeconds = masterWav.durationSeconds,
+            peak = masterWav.peak,
+            peakDb = amplitudeToDb(masterWav.peak),
+            targetLufs = MASTER_TARGET_LOUDNESS_LUFS,
+            truePeakCeilingDb = MASTER_TRUE_PEAK_CEILING_DB,
+            repairEnabled = true,
+            loFiEnabled = loFiEnabled
+        )
+        val target = outputRoot.resolve("release.json")
+        Files.createDirectories(checkNotNull(target.parent))
+        val temporary = target.resolveSibling(".${target.fileName}.${UUID.randomUUID()}.tmp")
+        try {
+            Files.writeString(temporary, json.encodeToString(metadata), StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW)
+            atomicReplace(temporary, target, "release metadata")
+        } finally {
+            Files.deleteIfExists(temporary)
+        }
+    }
+
+    private fun sha256(path: Path): String = java.security.MessageDigest.getInstance("SHA-256")
+        .digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
+
+    private fun dbToAmplitude(decibels: Double): Double = 10.0.pow(decibels / 20.0)
+    private fun amplitudeToDb(amplitude: Double): Double = if (amplitude <= 0.0) Double.NEGATIVE_INFINITY else 20.0 * log10(amplitude)
 
     private fun Path.relativizeOrName(path: Path): String =
         try { relativize(path).toString() } catch (_: IllegalArgumentException) { path.fileName.toString() }
@@ -1149,8 +1308,127 @@ object ArrangementProjectCommands {
         val projectPath: String,
         val outputDirectory: String?,
         val noAi: Boolean,
+        val enableLoFi: Boolean,
         val dryRun: Boolean
     )
+
+    @Serializable
+    private data class MasterReleaseMetadata(
+        val version: Int = 1,
+        val master: String,
+        val masterFingerprint: String,
+        val inputArtifact: String,
+        val inputFingerprint: String,
+        val inputSampleRate: Int,
+        val inputChannels: Int,
+        val inputPcmBitDepth: Int,
+        val sampleRate: Int,
+        val channels: Int,
+        val pcmBitDepth: Int,
+        val frameCount: Long,
+        val durationSeconds: Double,
+        val peak: Double,
+        val peakDb: Double,
+        val targetLufs: Double,
+        val truePeakCeilingDb: Double,
+        val repairEnabled: Boolean,
+        val loFiEnabled: Boolean,
+        val settings: MasteringSettingsMetadata = MasteringSettingsMetadata()
+    )
+
+    @Serializable
+    private data class MasteringSettingsMetadata(
+        val repair: List<String> = listOf("dc_offset", "clip_removal(threshold=0.999,max_run_samples=12)"),
+        val eqLowShelfHz: Double = 180.0,
+        val eqLowShelfGainDb: Double = 1.5,
+        val compressorThresholdDb: Double = -18.0,
+        val compressorRatio: Double = 2.0,
+        val compressorAttackMs: Double = 15.0,
+        val compressorReleaseMs: Double = 150.0,
+        val saturationDrive: Double = 1.08,
+        val saturationMix: Double = 0.08,
+        val limiterCeilingDb: Double = MASTER_TRUE_PEAK_CEILING_DB,
+        val limiterReleaseMs: Double = 100.0
+    )
+
+    private data class ValidatedWav(
+        val pcm: Boolean,
+        val bitsPerSample: Int,
+        val sampleRate: Int,
+        val channels: Int,
+        val frameCount: Long,
+        val peak: Double
+    ) {
+        val durationSeconds: Double get() = frameCount.toDouble() / sampleRate
+    }
+
+    /** Strict enough for worker output: RIFF/WAVE, supported lossless samples, finite and non-empty. */
+    private fun inspectWav(path: Path): ValidatedWav {
+        require(Files.isRegularFile(path) && Files.size(path) >= 44) { "file is missing, empty, or smaller than a RIFF header: $path" }
+        RandomAccessFile(path.toFile(), "r").use { input ->
+            require(input.readFourCcLE() == "RIFF") { "missing RIFF container" }
+            val riffSize = input.readUInt32LE()
+            require(riffSize + 8L == input.length()) { "RIFF size does not match file length" }
+            require(input.readFourCcLE() == "WAVE") { "missing WAVE container type" }
+
+            var encoding = -1
+            var channels = 0
+            var sampleRate = 0
+            var blockAlign = 0
+            var bits = 0
+            var dataOffset = -1L
+            var dataSize = -1L
+            while (input.filePointer + 8 <= input.length()) {
+                val chunkId = input.readFourCcLE()
+                val chunkSize = input.readUInt32LE()
+                require(chunkSize <= input.length() - input.filePointer) { "chunk '$chunkId' exceeds file length" }
+                when (chunkId) {
+                    "fmt " -> {
+                        require(chunkSize >= 16) { "fmt chunk is too short" }
+                        encoding = input.readUInt16LE()
+                        channels = input.readUInt16LE()
+                        sampleRate = input.readUInt32LE().toInt()
+                        input.readUInt32LE()
+                        blockAlign = input.readUInt16LE()
+                        bits = input.readUInt16LE()
+                        input.seek(input.filePointer + chunkSize - 16)
+                    }
+                    "data" -> {
+                        require(dataOffset < 0) { "multiple data chunks are not supported" }
+                        dataOffset = input.filePointer
+                        dataSize = chunkSize
+                        input.seek(input.filePointer + chunkSize)
+                    }
+                    else -> input.seek(input.filePointer + chunkSize)
+                }
+                if (chunkSize and 1L == 1L) {
+                    require(input.filePointer < input.length()) { "missing chunk padding" }
+                    input.seek(input.filePointer + 1)
+                }
+            }
+            val pcm = encoding == 1
+            val float = encoding == 3
+            require(pcm || float) { "WAV encoding must be PCM or IEEE float" }
+            require(channels in 1..32 && sampleRate > 0) { "invalid sample rate or channel count" }
+            require((pcm && bits in setOf(8, 16, 24, 32)) || (float && bits == 32)) { "unsupported WAV sample format" }
+            require(blockAlign == channels * (bits / 8)) { "inconsistent block alignment" }
+            require(dataOffset >= 0 && dataSize > 0 && dataSize % blockAlign == 0L) { "empty or incomplete data chunk" }
+
+            val frames = dataSize / blockAlign
+            var peak = 0.0
+            input.seek(dataOffset)
+            var frame = 0L
+            while (frame < frames) {
+                repeat(channels) {
+                    val sample = input.readWavSample(pcm, bits)
+                    require(sample.isFinite()) { "contains a non-finite sample" }
+                    peak = maxOf(peak, abs(sample))
+                }
+                frame++
+            }
+            return ValidatedWav(pcm, bits, sampleRate, channels, frames, peak)
+        }
+    }
 
     private fun analysisFrom(output: Map<String, kotlinx.serialization.json.JsonElement>): PartAnalysis =
         PartAnalysis(
@@ -1458,4 +1736,19 @@ object ArrangementProjectCommands {
         override fun report(message: String) = Unit
         override fun report(message: String, cause: Throwable) = Unit
     }
+}
+
+private fun RandomAccessFile.readFourCcLE(): String = ByteArray(4).also { readFully(it) }.toString(StandardCharsets.US_ASCII)
+private fun RandomAccessFile.readUInt16LE(): Int = readUnsignedByte() or (readUnsignedByte() shl 8)
+private fun RandomAccessFile.readUInt32LE(): Long = readUInt16LE().toLong() or (readUInt16LE().toLong() shl 16)
+private fun RandomAccessFile.readWavSample(pcm: Boolean, bits: Int): Double = when {
+    !pcm && bits == 32 -> java.lang.Float.intBitsToFloat(readUInt32LE().toInt()).toDouble()
+    pcm && bits == 8 -> (readUnsignedByte().toDouble() - 128.0) / 128.0
+    pcm && bits == 16 -> readUInt16LE().toShort().toDouble() / 32_768.0
+    pcm && bits == 24 -> {
+        val value = readUnsignedByte() or (readUnsignedByte() shl 8) or (readUnsignedByte() shl 16)
+        (if (value and 0x80_0000 != 0) value or -0x1_000000 else value).toDouble() / 8_388_608.0
+    }
+    pcm && bits == 32 -> readUInt32LE().toInt().toDouble() / 2_147_483_648.0
+    else -> error("Unsupported WAV sample format")
 }
