@@ -75,6 +75,21 @@ output directory, or `--dry-run` to validate without changing files.
 The build command is deterministic and local. `--no-ai` makes that choice
 explicit; no model output is executed as code, commands, or paths.
 
+### LoFi A/B measurement
+
+Compare two WAV files without changing either input. The default requires equal
+sample rate, channel count, PCM format, and timeline. `--align` is diagnostic
+only: it compares the shared frame range and never resamples.
+
+```bash
+make cli ARGS='compare ./projects/song-001/mix/dry.wav ./projects/song-001/mix/lofi.wav'
+make cli ARGS='compare ./projects/song-001/mix/dry.wav ./projects/song-001/mix/lofi.wav --json'
+```
+
+The report uses a changed-frame tolerance of `1e-6` and Hann-windowed 2048-point
+FFTs with a 1024-frame hop for deterministic spectral centroid and band-energy
+metrics.
+
 ### Optional solo-piano transcription
 
 The worker exposes local Basic Pitch transcription only after its optional

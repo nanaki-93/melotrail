@@ -18,6 +18,16 @@ import java.time.Instant
  *   4. Mastering → EQ, compression, saturation, limiting
  */
 fun main(args: Array<String>) = runBlocking {
+    if (AudioComparisonCommand.handles(args)) {
+        try {
+            println(AudioComparisonCommand.execute(args))
+        } catch (e: Exception) {
+            System.err.println("Error: ${e.message}")
+            System.exit(1)
+        }
+        return@runBlocking
+    }
+
     if (ArrangementProjectCommands.handles(args)) {
         try {
             println(ArrangementProjectCommands.executeAsync(args))
