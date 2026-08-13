@@ -283,6 +283,27 @@ class ArrangementProjectCommandsTest {
     }
 
     @Test
+    fun `generate transitions writes an inspectable deterministic midi artifact`() {
+        val projectRoot = createMidiPlanningProject("transition-demo")
+        val source = projectRoot.resolve("source/A.mid")
+        val sourceBefore = Files.readAllBytes(source)
+        ArrangementProjectCommands.execute(
+            arrayOf("arrange", "--project", projectRoot.toString(), "--planner", "deterministic", "--structure", "A A A", "--instruments", "piano,bass,drums,pad")
+        )
+        ArrangementProjectCommands.execute(
+            arrayOf("arrange-detail", "--project", projectRoot.toString(), "--planner", "deterministic")
+        )
+
+        val result = ArrangementProjectCommands.execute(
+            arrayOf("generate", "transitions", "--project", projectRoot.toString())
+        )
+
+        assertTrue(result.contains("Generated transition MIDI"))
+        assertTrue(Files.isRegularFile(projectRoot.resolve("midi/generated/transitions.mid")))
+        assertEquals(sourceBefore.toList(), Files.readAllBytes(source).toList())
+    }
+
+    @Test
     fun `mix creates full and dry lossless WAV files without a fixed-tone bass`() {
         val projectRoot = createProject("mix-demo")
         val source = tempDir.resolve("piano.wav")

@@ -172,6 +172,22 @@ make cli ARGS='generate drums --project ./projects/song-001'
 make cli ARGS='generate pad --project ./projects/song-001'
 ```
 
+### Deterministic MIDI transitions
+
+Generate the inspectable `midi/generated/transitions.mid` boundary artifact
+after drums and pads. The current approved v3 `bridge` intent becomes a
+bounded MIDI `build`; legacy `crossfade` remains an audio-renderer behavior and
+adds no MIDI notes. The artifact records inserted bars in its timeline so later
+MIDI/stem assembly can apply the offset once.
+
+```bash
+make cli ARGS='generate transitions --project ./projects/song-001'
+```
+
+The engine only uses deterministic drum-fill, bass-walk, and pad-sustain
+gestures. It rejects cymbal transitions: the starter `sounds/` drum map has no
+licensed cymbal sample, and it will never substitute a clap or hi-hat.
+
 ### Piano + bass quality gate
 
 The narrow quality gate renders only source piano and generated bass from an
