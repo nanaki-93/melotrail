@@ -57,4 +57,25 @@ Keep the same logical instrument names in instruments.json, so no arrangement co
 
 ## Renderer
 
-Use an SFZ-compatible renderer such as sfizz/sfizz_render, Sforzando, or another SFZ sampler.
+Task 007 uses the offline `sfizz_render` executable from sfizz, tested against
+the documented sfizz 1.2.3 command-line interface and licensed BSD-2-Clause.
+It is a local prerequisite, not an application dependency and not an automatic
+download. Install/build it yourself, then point the application at its absolute
+path when it is not on `PATH`:
+
+```bash
+export SFZ_RENDERER_PATH=/absolute/path/to/sfizz_render
+export SFZ_RENDERER_VERSION=1.2.3   # recorded in render metadata
+```
+
+The adapter calls it with structured arguments equivalent to:
+
+```text
+sfizz_render --sfz <registry-selected.sfz> --midi <validated.mid> --wav <temporary.wav> --samplerate <project-rate> --use-eot
+```
+
+`sfizz_render` renders stereo; the application then validates that temporary
+WAV and writes the requested project channel layout as PCM-24 WAV. It accepts
+at most a two-second renderer tail, pads short output with trailing silence,
+and atomically publishes only the verified `expectedFrames` result. MIDI, SFZ,
+samples, registry files, and other sound-library paths are never valid outputs.

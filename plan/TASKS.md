@@ -39,7 +39,7 @@ After implementation:
 | [004](tasks/completed/004-unified-input-adapter.md) | Unified MIDI-first input adapter | 002–003 | V2 project format and MIDI/audio convergence | Planned |
 | [005](tasks/completed/005-midi-analysis.md) | MIDI musical analysis | 004 | Versioned `analysis/<partId>.json` | Planned |
 | [006](tasks/completed/006-instrument-and-license-registry.md) | Instrument and license registry | 004 | Validate/enrich existing five-name `sounds/` registry and licenses | Assets present; implementation planned |
-| [007](tasks/007-midi-sfz-wav-rendering.md) | MIDI → SFZ → WAV rendering | 006 | Render existing starter piano/bass assets | Assets present; renderer missing |
+| [007](tasks/completed/007-midi-sfz-wav-rendering.md) | MIDI → SFZ → WAV rendering | 006 | Render existing starter piano/bass assets | Assets present; renderer missing |
 | [008](tasks/008-bass-midi-generator.md) | Deterministic bass MIDI generator | 005, 007 | `midi/generated/bass.mid` | Planned |
 | [009](tasks/009-global-song-planner.md) | Global song planner | 005–006 | Validated whole-song `song_plan.json` | Planned |
 | [010](tasks/010-repeated-section-variation.md) | Repeated-section variation | 009 | Stable A1/A2/B1 identities and bounded variation | Planned |

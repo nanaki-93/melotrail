@@ -77,7 +77,7 @@ class ValidatedInstrumentRegistry internal constructor(private val descriptors: 
 }
 
 /** Local-only registry loader. MUSIC_SOUNDS_ROOT is an explicit development override. */
-class InstrumentRegistryLoader(private val libraryRoot: Path = defaultLibraryRoot()) {
+class InstrumentRegistryLoader(val libraryRoot: Path = defaultLibraryRoot()) {
     fun load(): ValidatedInstrumentRegistry {
         val root = libraryRoot.toAbsolutePath().normalize()
         require(Files.isDirectory(root)) { "Sound library root does not exist: $root. See sounds/README.md for the local asset setup." }

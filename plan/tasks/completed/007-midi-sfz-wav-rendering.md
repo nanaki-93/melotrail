@@ -7,12 +7,12 @@ Prove that validated MIDI and a registry-selected SFZ instrument can produce a c
 ## Dependencies
 
 - Task 006 provides safe instrument lookup and licensing metadata.
-- The asset prerequisite is already satisfied by `sounds/piano/piano.sfz`, `sounds/bass/bass.sfz`, and their local sample files.
+- The asset prerequisite is already satisfied by `../../../sounds/piano/piano.sfz`, `../../../sounds/bass/bass.sfz`, and their local sample files.
 - A compatible SFZ renderer is not currently available on PATH and must be selected/configured by this task.
 
 ## Existing sound baseline
 
-Read `plan/SOUND_LIBRARY_BASELINE.md`. Use `sounds/` as the default registry root and exercise the existing starter piano and bass. Do not download or invent replacement instruments as part of renderer integration.
+Read `../../SOUND_LIBRARY_BASELINE.md`. Use `../../../sounds` as the default registry root and exercise the existing starter piano and bass. Do not download or invent replacement instruments as part of renderer integration.
 
 The source samples are mono, 44.1 kHz, PCM-16. That describes the sampler inputs only; the rendered stem must still match the project's explicit sample rate/channel layout and PCM-24 lossless output contract.
 
@@ -47,7 +47,7 @@ Select and install/configure one local SFZ renderer, preferring `sfizz_render`/s
 ## Functional requirements
 
 - Resolve the logical instrument through the registry immediately before rendering.
-- Resolve piano and bass to the existing `sounds/piano/piano.sfz` and `sounds/bass/bass.sfz`; do not hard-code those paths outside the registry test fixture.
+- Resolve piano and bass to the existing `../../../sounds/piano/piano.sfz` and `../../../sounds/bass/bass.sfz`; do not hard-code those paths outside the registry test fixture.
 - Validate MIDI and registry data before launching the renderer.
 - Render to a uniquely named temporary WAV and atomically replace the requested output only after verification.
 - Request the project's explicit sample rate and channel count; never assume 48 kHz.
@@ -83,7 +83,7 @@ Inspect WAV metadata and listen for correct pitch, timing, instrument selection,
 ## Acceptance criteria
 
 - Piano and bass MIDI render locally through the same interface.
-- The existing `sounds/` piano and bass are the instruments heard in the manual gate.
+- The existing `../../../sounds` piano and bass are the instruments heard in the manual gate.
 - Output matches project sample rate, channels, PCM-24 subtype, and expected timeline.
 - Instrument paths come only from the registry.
 - Unit tests require no installed SFZ renderer or sample library.
