@@ -13,7 +13,10 @@ import ai.music.workstation.arrangement.MixTrack
 import ai.music.workstation.arrangement.Part
 import ai.music.workstation.arrangement.PartAnalysis
 import ai.music.workstation.arrangement.PartAnalysisStore
+import ai.music.workstation.arrangement.MidiReferences
 import ai.music.workstation.arrangement.Project
+import ai.music.workstation.arrangement.ProjectStore
+import ai.music.workstation.arrangement.RenderFormat
 import ai.music.workstation.arrangement.SectionInstance
 import ai.music.workstation.arrangement.StructureParser
 import ai.music.workstation.audio.WAVDecoder
@@ -58,7 +61,7 @@ import java.nio.file.StandardCopyOption
  */
 object ArrangementProjectCommands {
     private const val PROJECT_FILE = "project.json"
-    private val supportedExtensions = setOf("wav", "wave", "mp3", "flac", "fla")
+    private val supportedExtensions = setOf("mid", "midi", "wav", "wave", "mp3")
     private val json = Json {
         prettyPrint = true
         encodeDefaults = true
@@ -76,6 +79,12 @@ object ArrangementProjectCommands {
         suspend fun exportMp3(inputPath: Path, outputPath: Path): Boolean = false
     }
 
+    /** Testable boundary for the two worker calls used while importing a part. */
+    internal interface MidiPreparationWorker {
+        suspend fun transcribe(input: Path, output: Path)
+        suspend fun clean(input: Path, output: Path)
+    }
+
     fun execute(args: Array<String>): String = runBlocking {
         executeAsync(args)
     }
@@ -83,7 +92,7 @@ object ArrangementProjectCommands {
     suspend fun executeAsync(args: Array<String>): String = when (args.firstOrNull()) {
         "project" -> createProject(args)
         "part" -> when (args.getOrNull(1)) {
-            "add" -> addPart(args)
+            "add" -> addPart(args, createMidiPreparationWorker())
             "analyze" -> analyzePart(args)
             else -> throw IllegalArgumentException(
                 "Usage: part add <project-directory> ... or part analyze <project-directory> --id <id>"
@@ -102,6 +111,10 @@ object ArrangementProjectCommands {
 
     internal fun executeBuildForTest(args: Array<String>, worker: BuildWorker): String = runBlocking {
         buildProject(args, worker)
+    }
+
+    internal fun executePartAddForTest(args: Array<String>, worker: MidiPreparationWorker): String = runBlocking {
+        addPart(args, worker)
     }
 
     private suspend fun transcribe(args: Array<String>): String {
@@ -182,10 +195,33 @@ object ArrangementProjectCommands {
         return "MIDI cleanup failed during $stage: ${error?.message ?: "Unknown worker error"}"
     }
 
-    private fun createProject(args: Array<String>): String {
-        require(args.size == 3 && args[1] == "create") {
-            "Usage: project create <project-directory>"
+    private fun createMidiPreparationWorker(): MidiPreparationWorker {
+        val logger = DefaultLogger()
+        val client = WorkerClient(
+            baseUrl = System.getenv("WORKER_BASE_URL")?.takeIf { it.isNotBlank() } ?: "http://127.0.0.1:8081",
+            logger = logger,
+            errorReporter = ErrorReporter(logger)
+        )
+        return object : MidiPreparationWorker {
+            override suspend fun transcribe(input: Path, output: Path) {
+                Files.createDirectories(checkNotNull(output.parent))
+                val response = client.execute(TranscribeCommand(input.toString(), output.toString(), "piano"))
+                require(response.status == WorkerStatus.COMPLETED) { transcriptionFailureMessage(response.error) }
+                requireMidiArtifact(output, "Transcription")
+            }
+
+            override suspend fun clean(input: Path, output: Path) {
+                Files.createDirectories(checkNotNull(output.parent))
+                val response = client.execute(MidiCleanCommand(input.toString(), output.toString()))
+                require(response.status == WorkerStatus.COMPLETED) { midiCleanupFailureMessage(response.error) }
+                requireMidiArtifact(output, "MIDI cleanup")
+            }
         }
+    }
+
+    private fun createProject(args: Array<String>): String {
+        require(args.size >= 3 && args[1] == "create") { "Usage: project create <project-directory> [--sample-rate 44100] [--channels 2]" }
+        val format = parseCreateOptions(args.drop(3))
 
         val projectRoot = projectRoot(args[2])
         require(!Files.exists(projectRoot) || Files.isDirectory(projectRoot)) {
@@ -197,17 +233,17 @@ object ArrangementProjectCommands {
             "Project already exists: $projectFile"
         }
 
-        Files.createDirectories(projectRoot.resolve("parts"))
+        listOf("source", "midi/raw", "midi/clean", "midi/generated").forEach { Files.createDirectories(projectRoot.resolve(it)) }
         val name = projectRoot.fileName?.toString().orEmpty()
         require(name.isNotBlank()) { "Project directory must have a name" }
-        writeNewProject(projectFile, Project(name = name))
+        ProjectStore.create(projectRoot, name, format)
 
         return "Created project: $projectRoot"
     }
 
-    private fun addPart(args: Array<String>): String {
+    private suspend fun addPart(args: Array<String>, worker: MidiPreparationWorker): String {
         require(args.size >= 3 && args[1] == "add") {
-            "Usage: part add <project-directory> --id <id> --file <audio-file> [--role <role>]"
+            "Usage: part add <project-directory> --id <id> --file <midi-or-audio-file> [--role <role>] [--transcribe]"
         }
 
         val projectRoot = projectRoot(args[2])
@@ -218,34 +254,56 @@ object ArrangementProjectCommands {
         }
 
         val source = Path.of(options.getValue("--file")).toAbsolutePath().normalize()
-        require(Files.isRegularFile(source)) { "Input audio file not found: $source" }
+        require(Files.isRegularFile(source)) { "Input file not found: $source" }
         val extension = source.fileName.toString().substringAfterLast('.', "").lowercase()
         require(extension in supportedExtensions) {
-            "Unsupported audio file extension: ${if (extension.isEmpty()) "(none)" else extension}"
+            "Unsupported input file extension: ${if (extension.isEmpty()) "(none)" else extension}"
         }
+        val isMidi = extension in MIDI_EXTENSIONS
+        val transcribe = "--transcribe" in options
+        require(!(isMidi && transcribe)) { "--transcribe is only valid for audio input" }
 
         val projectFile = projectRoot.resolve(PROJECT_FILE)
         require(Files.isRegularFile(projectFile)) { "Project file not found: $projectFile" }
-        val project = json.decodeFromString<Project>(Files.readString(projectFile))
+        val project = ProjectStore.read(projectRoot)
         project.requireValid(projectRoot)
         require(project.parts.none { it.id == id }) { "Part ID already exists: $id" }
 
-        val relativeFile = "parts/$id.$extension"
-        val destination = projectRoot.resolve(relativeFile)
+        // Keep the old v1 import behavior readable for existing projects. New
+        // v2 projects are MIDI-first and require transcription for audio.
+        if (project.version == 1 && !isMidi && !transcribe) {
+            val relativeFile = "parts/$id.$extension"
+            val destination = safeDestination(projectRoot, relativeFile)
+            require(source != destination) { "Input and destination paths must differ" }
+            require(!Files.exists(destination)) { "Part destination already exists: $destination" }
+            Files.createDirectories(destination.parent)
+            Files.copy(source, destination)
+            ProjectStore.write(projectRoot, project.copy(parts = project.parts + Part(id, relativeFile, options["--role"].orEmpty())))
+            return "Added legacy audio part '$id' to $projectRoot. Transcribe it before MIDI-only processing."
+        }
+        require(isMidi || transcribe) { "Audio input requires --transcribe so a clean MIDI artifact can be prepared" }
+
+        val relativeFile = "source/$id.$extension"
+        val destination = safeDestination(projectRoot, relativeFile)
+        require(source != destination && !(Files.exists(destination) && Files.isSameFile(source, destination))) { "Input and destination paths must differ" }
         require(!Files.exists(destination)) { "Part destination already exists: $destination" }
 
         Files.createDirectories(destination.parent)
         Files.copy(source, destination)
 
-        val updated = project.copy(
-            parts = project.parts + Part(
-                id = id,
-                file = relativeFile,
-                role = options["--role"].orEmpty()
-            )
-        )
-        updated.requireValid(projectRoot)
-        Files.writeString(projectFile, json.encodeToString(updated), StandardCharsets.UTF_8)
+        val raw = if (isMidi) null else "midi/raw/$id.mid"
+        val clean = "midi/clean/$id.mid"
+        try {
+            if (raw != null) worker.transcribe(destination, safeDestination(projectRoot, raw))
+            worker.clean(safeDestination(projectRoot, raw ?: relativeFile), safeDestination(projectRoot, clean))
+            requireMidiArtifact(projectRoot.resolve(clean), "MIDI cleanup")
+        } catch (exception: Exception) {
+            throw IllegalStateException("Part '$id' was not registered. Source preserved at $destination; unregistered MIDI artifacts remain for diagnosis: ${raw ?: "none"}, $clean. ${exception.message}", exception)
+        }
+
+        val part = Part(id, relativeFile, options["--role"].orEmpty(), midi = MidiReferences(raw, clean))
+        val updated = project.copy(parts = project.parts + part)
+        if (project.version == 1) ProjectStore.upgrade(projectRoot, project, updated.parts) else ProjectStore.write(projectRoot, updated)
 
         return "Added part '$id' to $projectRoot"
     }
@@ -260,7 +318,7 @@ object ArrangementProjectCommands {
         val projectFile = projectRoot.resolve(PROJECT_FILE)
         require(Files.isRegularFile(projectFile)) { "Project file not found: $projectFile" }
 
-        val project = json.decodeFromString<Project>(Files.readString(projectFile))
+        val project = ProjectStore.read(projectRoot)
         project.requireValid(projectRoot)
         val part = project.parts.find { it.id == id }
             ?: throw IllegalArgumentException("Part not found: $id")
@@ -309,7 +367,7 @@ object ArrangementProjectCommands {
         val projectRoot = projectRoot(options.getValue("--project"))
         val projectFile = projectRoot.resolve(PROJECT_FILE)
         require(Files.isRegularFile(projectFile)) { "Project file not found: $projectFile" }
-        val project = json.decodeFromString<Project>(Files.readString(projectFile))
+        val project = ProjectStore.read(projectRoot)
         project.requireValid(projectRoot)
 
         val structure = options["--structure"]?.let { StructureParser.parse(it, project) }
@@ -361,7 +419,7 @@ object ArrangementProjectCommands {
         require(Files.isRegularFile(projectFile)) { "Project file not found: $projectFile" }
         require(Files.isRegularFile(arrangementFile)) { "Arrangement file not found: $arrangementFile" }
 
-        val project = json.decodeFromString<Project>(Files.readString(projectFile))
+        val project = ProjectStore.read(projectRoot)
         project.requireValid(projectRoot)
         val arrangement = json.decodeFromString<ai.music.workstation.arrangement.Arrangement>(
             Files.readString(arrangementFile)
@@ -385,7 +443,7 @@ object ArrangementProjectCommands {
         require(Files.isRegularFile(projectFile)) { "Project file not found: $projectFile" }
         require(Files.isRegularFile(arrangementFile)) { "Arrangement file not found: $arrangementFile" }
 
-        val project = json.decodeFromString<Project>(Files.readString(projectFile))
+        val project = ProjectStore.read(projectRoot)
         project.requireValid(projectRoot)
         val arrangement = json.decodeFromString<ai.music.workstation.arrangement.Arrangement>(
             Files.readString(arrangementFile)
@@ -683,8 +741,7 @@ object ArrangementProjectCommands {
             }
         }.toMap()
 
-    private fun readProject(projectRoot: Path): Project =
-        json.decodeFromString(Files.readString(projectRoot.resolve(PROJECT_FILE)))
+    private fun readProject(projectRoot: Path): Project = ProjectStore.read(projectRoot)
 
     private fun readArrangement(projectRoot: Path): ai.music.workstation.arrangement.Arrangement =
         json.decodeFromString(Files.readString(projectRoot.resolve("arrangement.json")))
@@ -802,6 +859,12 @@ object ArrangementProjectCommands {
         while (index < arguments.size) {
             val option = arguments[index]
             require(option in ADD_OPTIONS) { "Unknown part option: $option" }
+            if (option == "--transcribe") {
+                require(option !in options) { "Duplicate part option: $option" }
+                options[option] = ""
+                index++
+                continue
+            }
             require(index + 1 < arguments.size) { "Missing value for $option" }
             require(option !in options) { "Duplicate part option: $option" }
             options[option] = arguments[index + 1]
@@ -810,6 +873,29 @@ object ArrangementProjectCommands {
         require("--id" in options) { "Missing required option: --id" }
         require("--file" in options) { "Missing required option: --file" }
         return options
+    }
+
+    private fun parseCreateOptions(arguments: List<String>): RenderFormat {
+        var sampleRate = 44_100
+        var channels = 2
+        var index = 0
+        val seen = mutableSetOf<String>()
+        while (index < arguments.size) {
+            val option = arguments[index]
+            require(option in setOf("--sample-rate", "--channels")) { "Unknown project create option: $option" }
+            require(seen.add(option)) { "Duplicate project create option: $option" }
+            require(index + 1 < arguments.size && !arguments[index + 1].startsWith("--")) { "Missing value for $option" }
+            val value = arguments[index + 1].toIntOrNull()
+                ?: throw IllegalArgumentException("$option must be an integer")
+            when (option) {
+                "--sample-rate" -> sampleRate = value
+                "--channels" -> channels = value
+            }
+            index += 2
+        }
+        require(sampleRate in 8_000..384_000) { "--sample-rate must be from 8000 to 384000" }
+        require(channels in 1..32) { "--channels must be from 1 to 32" }
+        return RenderFormat(sampleRate, channels, 24)
     }
 
     private fun parseAnalyzeOptions(arguments: List<String>): Map<String, String> {
@@ -975,23 +1061,34 @@ object ArrangementProjectCommands {
 
     private fun projectRoot(path: String): Path = Path.of(path).toAbsolutePath().normalize()
 
-    private fun writeNewProject(projectFile: Path, project: Project) {
-        Files.newBufferedWriter(
-            projectFile,
-            StandardCharsets.UTF_8,
-            StandardOpenOption.CREATE_NEW,
-            StandardOpenOption.WRITE
-        ).use { writer ->
-            writer.write(json.encodeToString(project))
+    private fun safeDestination(projectRoot: Path, reference: String): Path {
+        val relative = Path.of(reference)
+        require(!relative.isAbsolute && reference.isNotBlank()) { "Project destination must be relative: $reference" }
+        val root = projectRoot.toAbsolutePath().normalize()
+        val destination = root.resolve(relative).normalize()
+        require(destination.startsWith(root)) { "Project destination escapes the project root: $reference" }
+        val realRoot = root.toRealPath()
+        var existing = destination.parent
+        while (existing != null && !Files.exists(existing)) existing = existing.parent
+        if (existing != null) require(existing.toRealPath().startsWith(realRoot)) {
+            "Project destination escapes the project root through a symlink: $reference"
         }
+        return destination
+    }
+
+    private fun requireMidiArtifact(path: Path, stage: String) {
+        require(Files.isRegularFile(path) && Files.size(path) >= 14) { "$stage did not create a MIDI file: $path" }
+        val header = Files.newInputStream(path).use { it.readNBytes(4).decodeToString() }
+        require(header == "MThd") { "$stage did not create a MIDI file: $path" }
     }
 
     private val PART_ID = Regex("[A-Za-z0-9_-]+")
-    private val ADD_OPTIONS = setOf("--id", "--file", "--role")
+    private val ADD_OPTIONS = setOf("--id", "--file", "--role", "--transcribe")
     private val ARRANGE_OPTIONS = setOf("--project", "--planner", "--structure", "--instruments", "--style")
     private const val DETERMINISTIC_PLANNER = "deterministic"
     private const val QWEN_PLANNER = "qwen"
     private val WAV_EXTENSIONS = setOf("wav", "wave")
+    private val MIDI_EXTENSIONS = setOf("mid", "midi")
 
     private object NoOpErrorReporter : ai.music.workstation.model.ErrorReporter {
         override fun report(message: String) = Unit

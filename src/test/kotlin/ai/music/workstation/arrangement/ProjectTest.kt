@@ -100,6 +100,26 @@ class ProjectTest {
         assertTrue(validation.errors.any { it.contains("must not be blank") })
     }
 
+    @Test
+    fun `v2 validation rejects a source symlink that escapes the project root`() {
+        val outside = projectRoot.resolveSibling("outside")
+        Files.createDirectories(outside)
+        Files.writeString(outside.resolve("A.mid"), "outside")
+        Files.createSymbolicLink(projectRoot.resolve("source"), outside)
+        createFile("midi/clean/A.mid", "clean")
+        val project = Project(
+            version = 2,
+            name = "demo",
+            renderFormat = RenderFormat(),
+            parts = listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid")))
+        )
+
+        val validation = project.validate(projectRoot)
+
+        assertFalse(validation.isValid)
+        assertTrue(validation.errors.any { it.contains("source") && it.contains("escapes the project root") })
+    }
+
     private fun createFile(relativePath: String, contents: String): Path {
         val path = projectRoot.resolve(relativePath)
         Files.createDirectories(path.parent)

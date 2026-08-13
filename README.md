@@ -98,6 +98,22 @@ make cli ARGS='midi-clean --input ./projects/song-001/midi/raw/A.mid --output ./
 make cli ARGS='midi-clean --input ./projects/song-001/midi/raw/A.mid --output ./projects/song-001/midi/clean/A.mid --quantize 1/16 --strength 0.4'
 ```
 
+### MIDI-first project input
+
+New arranger projects store an explicit PCM-24 render format and preserve each
+original import under `source/`. Direct MIDI is cleaned before registration;
+audio requires explicit transcription and produces both raw and clean MIDI.
+
+```bash
+make cli ARGS='project create ./projects/song-001 --sample-rate 44100 --channels 2'
+make cli ARGS='part add ./projects/song-001 --id A --file ./inputs/verse.mid --role verse'
+make cli ARGS='part add ./projects/song-001 --id B --file ./inputs/chorus.wav --role chorus --transcribe'
+```
+
+Version-1 projects remain readable. Their original `parts/` files are not
+moved during migration; a v2 project is written only after every registered
+part has a valid clean-MIDI reference.
+
 ### AI bridge review workflow
 
 Qwen creates a reviewable draft instead of overwriting an approved song. Its

@@ -11,6 +11,7 @@ import ai.music.workstation.arrangement.InstrumentMode
 import ai.music.workstation.arrangement.PartAnalysis
 import ai.music.workstation.arrangement.PartAnalysisStore
 import ai.music.workstation.arrangement.Project
+import ai.music.workstation.arrangement.ProjectStore
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -30,7 +31,7 @@ class ArrangementProjectCommandsTest {
     lateinit var tempDir: Path
 
     @Test
-    fun `project create initializes project json and parts directory`() {
+    fun `project create initializes v2 project json and MIDI-first directories`() {
         val projectRoot = tempDir.resolve("demo")
 
         val result = ArrangementProjectCommands.execute(
@@ -39,7 +40,8 @@ class ArrangementProjectCommandsTest {
 
         val project = readProject(projectRoot)
         assertTrue(result.contains("Created project"))
-        assertTrue(Files.isDirectory(projectRoot.resolve("parts")))
+        assertTrue(Files.isDirectory(projectRoot.resolve("source")))
+        assertTrue(Files.isDirectory(projectRoot.resolve("midi/clean")))
         assertEquals(Project.CURRENT_VERSION, project.version)
         assertEquals("demo", project.name)
         assertTrue(project.parts.isEmpty())
@@ -61,7 +63,7 @@ class ArrangementProjectCommandsTest {
 
         val copied = projectRoot.resolve("parts/A.wav")
         val project = readProject(projectRoot)
-        assertTrue(result.contains("Added part 'A'"))
+        assertTrue(result.contains("Added legacy audio part 'A'"))
         assertEquals(sourceBefore, Files.readString(source))
         assertEquals(sourceBefore, Files.readString(copied))
         assertEquals(listOf("A"), project.parts.map { it.id })
@@ -98,7 +100,7 @@ class ArrangementProjectCommandsTest {
             addPart(projectRoot, "notes", unsupported)
         }
 
-        assertTrue(exception.message.orEmpty().contains("Unsupported audio file extension"))
+        assertTrue(exception.message.orEmpty().contains("Unsupported input file extension"))
         assertFalse(Files.exists(projectRoot.resolve("parts/notes.txt")))
         assertTrue(readProject(projectRoot).parts.isEmpty())
     }
@@ -353,6 +355,9 @@ class ArrangementProjectCommandsTest {
     private fun createProject(name: String): Path {
         val projectRoot = tempDir.resolve(name)
         ArrangementProjectCommands.execute(arrayOf("project", "create", projectRoot.toString()))
+        // Existing arrangement tests exercise legacy source-audio behavior.
+        Files.createDirectories(projectRoot.resolve("parts"))
+        ProjectStore.write(projectRoot, Project(name = name))
         return projectRoot
     }
 
@@ -362,11 +367,10 @@ class ArrangementProjectCommandsTest {
         )
     }
 
-    private fun readProject(projectRoot: Path): Project =
-        json.decodeFromString(Files.readString(projectRoot.resolve("project.json")))
+    private fun readProject(projectRoot: Path): Project = ProjectStore.read(projectRoot)
 
     private fun writeProject(project: Project, projectRoot: Path) {
-        Files.writeString(projectRoot.resolve("project.json"), json.encodeToString(project))
+        ProjectStore.write(projectRoot, project)
     }
 
     private fun assertWav(path: Path, sampleRate: Int? = null, channels: Int? = null) {

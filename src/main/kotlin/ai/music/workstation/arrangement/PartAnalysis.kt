@@ -60,11 +60,7 @@ object PartAnalysisStore {
             }
         )
         updated.requireValid(root)
-        Files.writeString(
-            root.resolve("project.json"),
-            json.encodeToString(updated),
-            StandardCharsets.UTF_8
-        )
+        ProjectStore.write(root, updated)
         return analysisPath
     }
 

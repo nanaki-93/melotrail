@@ -35,8 +35,8 @@ After implementation:
 |---|---|---|---|---|
 | [001](tasks/completed/001-audio-to-midi-research-spike.md) | Audio-to-MIDI research spike | — | Selected, locally proven solo-piano transcription engine | Planned |
 | [002](tasks/completed/002-transcribe-worker-endpoint.md) | Transcription worker endpoint and CLI | 001 | `/transcribe` and standalone `transcribe` command | Planned |
-| [003](tasks/003-midi-cleanup.md) | Deterministic MIDI cleanup | 002 | `/midi-clean`, soft quantization, validated clean MIDI | Planned |
-| [004](tasks/004-unified-input-adapter.md) | Unified MIDI-first input adapter | 002–003 | V2 project format and MIDI/audio convergence | Planned |
+| [003](tasks/completed/003-midi-cleanup.md) | Deterministic MIDI cleanup | 002 | `/midi-clean`, soft quantization, validated clean MIDI | Planned |
+| [004](tasks/completed/004-unified-input-adapter.md) | Unified MIDI-first input adapter | 002–003 | V2 project format and MIDI/audio convergence | Planned |
 | [005](tasks/005-midi-analysis.md) | MIDI musical analysis | 004 | Versioned `analysis/<partId>.json` | Planned |
 | [006](tasks/006-instrument-and-license-registry.md) | Instrument and license registry | 004 | Validate/enrich existing five-name `sounds/` registry and licenses | Assets present; implementation planned |
 | [007](tasks/007-midi-sfz-wav-rendering.md) | MIDI → SFZ → WAV rendering | 006 | Render existing starter piano/bass assets | Assets present; renderer missing |
