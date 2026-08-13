@@ -3,15 +3,17 @@ package ai.music.workstation.cli
 import ai.music.workstation.arrangement.Arrangement
 import ai.music.workstation.arrangement.ArrangementSection
 import ai.music.workstation.arrangement.ArrangementStore
-import ai.music.workstation.arrangement.BassNote
-import ai.music.workstation.arrangement.BassRenderRequest
-import ai.music.workstation.arrangement.DeterministicTestBassRenderer
 import ai.music.workstation.arrangement.InstrumentPlan
 import ai.music.workstation.arrangement.InstrumentMode
+import ai.music.workstation.arrangement.MidiReferences
 import ai.music.workstation.arrangement.PartAnalysis
 import ai.music.workstation.arrangement.PartAnalysisStore
+import ai.music.workstation.arrangement.Part
 import ai.music.workstation.arrangement.Project
 import ai.music.workstation.arrangement.ProjectStore
+import ai.music.workstation.arrangement.RenderFormat
+import ai.music.workstation.audio.AudioBuffer
+import ai.music.workstation.audio.AudioFormat
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -23,6 +25,10 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
+import javax.sound.midi.MidiEvent
+import javax.sound.midi.MidiSystem
+import javax.sound.midi.Sequence
+import javax.sound.midi.ShortMessage
 
 class ArrangementProjectCommandsTest {
     private val json = Json { ignoreUnknownKeys = true }
@@ -147,24 +153,29 @@ class ArrangementProjectCommandsTest {
     }
 
     @Test
-    fun `generate bass writes a stem under the project without changing the source`() {
-        val projectRoot = createProject("demo")
-        val source = tempDir.resolve("piano.wav")
-        Files.writeString(source, "original source bytes")
-        addPart(projectRoot, "A", source)
-        val copiedSource = projectRoot.resolve("parts/A.wav")
-        val sourceBefore = Files.readString(copiedSource)
-        val project = readProject(projectRoot)
-        PartAnalysisStore.write(
-            projectRoot,
-            project,
-            "A",
-            PartAnalysis(0.01, 32_000, 1, 320, 0.5, 0.25, false)
-        )
-        val updatedProject = readProject(projectRoot)
+    fun `generate bass writes inspectable MIDI without changing source MIDI`() {
+        val projectRoot = tempDir.resolve("midi-demo")
+        val clean = projectRoot.resolve("midi/clean/A.mid")
+        Files.createDirectories(clean.parent)
+        val sequence = Sequence(Sequence.PPQ, 480)
+        val track = sequence.createTrack()
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, 60, 100), 0))
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, 64, 90), 0))
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, 67, 80), 0))
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, 60, 0), 1920))
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, 64, 0), 1920))
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, 67, 0), 1920))
+        MidiSystem.write(sequence, 1, clean.toFile())
+        val source = projectRoot.resolve("source/A.mid")
+        Files.createDirectories(source.parent)
+        Files.copy(clean, source)
+        val sourceBefore = Files.readAllBytes(source)
+        val project = Project(Project.CURRENT_VERSION, "midi-demo", listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid"))), renderFormat = RenderFormat())
+        ProjectStore.write(projectRoot, project)
+        ArrangementProjectCommands.execute(arrayOf("part", "analyze", projectRoot.toString(), "--id", "A"))
         ArrangementStore.write(
             projectRoot,
-            updatedProject,
+            readProject(projectRoot),
             Arrangement(
                 sections = listOf(
                     ArrangementSection(
@@ -184,24 +195,16 @@ class ArrangementProjectCommandsTest {
         )
 
         assertTrue(ArrangementProjectCommands.handles(arrayOf("generate")))
-        assertTrue(result.contains("Generated bass stem"))
-        assertTrue(Files.isRegularFile(projectRoot.resolve("stems/bass.wav")))
-        assertEquals(sourceBefore, Files.readString(copiedSource))
+        assertTrue(result.contains("Generated bass MIDI"))
+        assertTrue(Files.isRegularFile(projectRoot.resolve("midi/generated/bass.mid")))
+        assertEquals(sourceBefore.toList(), Files.readAllBytes(source).toList())
     }
 
     @Test
-    fun `mix creates full and dry lossless WAV files from source and generated bass stems`() {
+    fun `mix creates full and dry lossless WAV files without a fixed-tone bass`() {
         val projectRoot = createProject("mix-demo")
         val source = tempDir.resolve("piano.wav")
-        DeterministicTestBassRenderer().render(
-            BassRenderRequest(
-                notes = listOf(BassNote(0, 320, velocity = 1.0)),
-                sampleRate = 32_000,
-                channels = 1,
-                frameCount = 320
-            ),
-            source
-        )
+        writeSourceWav(source, 32_000, 1, 320)
         addPart(projectRoot, "A", source)
         val copiedSource = projectRoot.resolve("parts/A.wav")
         val sourceBefore = Files.readAllBytes(copiedSource)
@@ -223,14 +226,12 @@ class ArrangementProjectCommandsTest {
                         partId = "A",
                         instruments = listOf(
                             InstrumentPlan("piano", InstrumentMode.SOURCE),
-                            InstrumentPlan("bass", InstrumentMode.GENERATED, "root_fifth", 0.5)
+                            InstrumentPlan("drums", InstrumentMode.GENERATED, "supporting", 0.5)
                         )
                     )
                 )
             )
         )
-        ArrangementProjectCommands.execute(arrayOf("generate", "bass", "--project", projectRoot.toString()))
-
         val fullResult = ArrangementProjectCommands.execute(arrayOf("mix", "--project", projectRoot.toString()))
         val mixPath = projectRoot.resolve("mix/mix.wav")
         val fullMix = Files.readAllBytes(mixPath)
@@ -252,15 +253,7 @@ class ArrangementProjectCommandsTest {
     fun `build runs deterministic arrangement through preserved WAV intermediates and custom output`() {
         val projectRoot = createProject("build-demo")
         val source = tempDir.resolve("piano.wav")
-        DeterministicTestBassRenderer().render(
-            BassRenderRequest(
-                notes = listOf(BassNote(0, 320, velocity = 0.7)),
-                sampleRate = 32_000,
-                channels = 1,
-                frameCount = 320
-            ),
-            source
-        )
+        writeSourceWav(source, 32_000, 1, 320)
         addPart(projectRoot, "A", source)
         writeProject(readProject(projectRoot).copy(structure = listOf("A")), projectRoot)
         val copiedSource = projectRoot.resolve("parts/A.wav")
@@ -279,7 +272,7 @@ class ArrangementProjectCommandsTest {
         assertTrue(result.contains("[10/10] Build complete"))
         assertTrue(Files.isRegularFile(projectRoot.resolve("analysis/A.json")))
         assertTrue(Files.isRegularFile(projectRoot.resolve("arrangement.json")))
-        assertTrue(Files.isRegularFile(projectRoot.resolve("stems/bass.wav")))
+        assertTrue(Files.isRegularFile(projectRoot.resolve("stems/drums.wav")))
         assertWav(projectRoot.resolve("mix/mix.wav"))
         assertWav(output.resolve("repair.wav"), sampleRate = 32_000, channels = 1)
         assertWav(output.resolve("lofi.wav"), sampleRate = 32_000, channels = 1)
@@ -291,15 +284,7 @@ class ArrangementProjectCommandsTest {
     fun `build dry run validates project but does not write derived files or require worker`() {
         val projectRoot = createProject("dry-run-demo")
         val source = tempDir.resolve("piano.wav")
-        DeterministicTestBassRenderer().render(
-            BassRenderRequest(
-                notes = listOf(BassNote(0, 64, velocity = 0.7)),
-                sampleRate = 22_050,
-                channels = 1,
-                frameCount = 64
-            ),
-            source
-        )
+        writeSourceWav(source, 22_050, 1, 64)
         addPart(projectRoot, "A", source)
         writeProject(readProject(projectRoot).copy(structure = listOf("A")), projectRoot)
         val copiedSource = projectRoot.resolve("parts/A.wav")
@@ -327,15 +312,7 @@ class ArrangementProjectCommandsTest {
     fun `build rejects an output directory that would overwrite a source part`() {
         val projectRoot = createProject("protected-source-demo")
         val source = tempDir.resolve("master.wav")
-        DeterministicTestBassRenderer().render(
-            BassRenderRequest(
-                notes = listOf(BassNote(0, 64, velocity = 0.7)),
-                sampleRate = 22_050,
-                channels = 1,
-                frameCount = 64
-            ),
-            source
-        )
+        writeSourceWav(source, 22_050, 1, 64)
         addPart(projectRoot, "master", source)
         writeProject(readProject(projectRoot).copy(structure = listOf("master")), projectRoot)
         val copiedSource = projectRoot.resolve("parts/master.wav")
@@ -371,6 +348,11 @@ class ArrangementProjectCommandsTest {
 
     private fun writeProject(project: Project, projectRoot: Path) {
         ProjectStore.write(projectRoot, project)
+    }
+
+    private fun writeSourceWav(path: Path, sampleRate: Int, channels: Int, frames: Int) {
+        val format = AudioFormat(sampleRate, channels, 24, false, false, "WAV")
+        WAVExporterSimple().export(AudioBuffer(FloatArray(frames * channels) { 0.2f }, format, frames.toDouble() / sampleRate), path)
     }
 
     private fun assertWav(path: Path, sampleRate: Int? = null, channels: Int? = null) {

@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test
 
 class ArrangementRendererTest {
     @Test
-    fun `renders a bounded local bridge and generated stems on one timeline`() {
+    fun `renders a bounded local bridge without synthesizing bass from a fixed tone`() {
         val format = AudioFormat(8_000, 1, 24, false, false, "WAV")
         val source = AudioBuffer(FloatArray(8_000) { 0.05f }, format, 1.0)
         val arrangement = Arrangement(
@@ -27,7 +27,8 @@ class ArrangementRendererTest {
 
         assertEquals(1, rendered.boundaries.size)
         assertEquals(8_000 * 2, rendered.boundaries.single().endFrame - rendered.boundaries.single().startFrame)
-        assertTrue(rendered.tracks.map { it.name }.containsAll(listOf("bass", "drums", "bridges")))
+        assertTrue(rendered.tracks.map { it.name }.containsAll(listOf("drums", "bridges")))
+        assertTrue("bass" !in rendered.tracks.map { it.name })
         assertTrue(rendered.frameCount > source.length * 2)
     }
 

@@ -1,262 +1,346 @@
 package ai.music.workstation.arrangement
 
-import java.io.BufferedOutputStream
-import java.io.DataOutputStream
-import java.io.FileOutputStream
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.math.PI
-import kotlin.math.pow
-import kotlin.math.sin
+import java.nio.file.StandardCopyOption
+import java.util.UUID
+import javax.sound.midi.MetaMessage
+import javax.sound.midi.MidiEvent
+import javax.sound.midi.MidiSystem
+import javax.sound.midi.Sequence
+import javax.sound.midi.ShortMessage
+import kotlin.math.ceil
+import kotlin.math.roundToInt
 
-/** A minimal note event passed from arrangement generation to the local renderer. */
-data class BassNote(
-    val startFrame: Int,
-    val durationFrames: Int,
-    val midiNote: Int = DEFAULT_BASS_MIDI_NOTE,
-    val velocity: Double
-) {
+/** The only deterministic bass roles accepted at the composition boundary. */
+enum class BassRole(val wireName: String) {
+    ROOT("root"), ROOT_FIFTH("root_fifth"), OCTAVE("octave"), SUSTAINED("sustained"), SIMPLE_WALKING("simple_walking");
+
     companion object {
-        const val DEFAULT_BASS_MIDI_NOTE = 36
+        fun parse(value: String?): BassRole = entries.firstOrNull { it.wireName == value?.lowercase() }
+            ?: throw IllegalArgumentException("Unsupported bass role '${value ?: "(missing)"}'. Allowed roles: ${entries.joinToString { it.wireName }}")
     }
 }
 
-data class BassRenderRequest(
-    val notes: List<BassNote>,
-    val sampleRate: Int,
-    val channels: Int,
-    val frameCount: Int
-)
+enum class BassMovement { STATIC, RISING, FALLING, BALANCED }
 
-/** Local rendering boundary. A future real instrument renderer can replace the test renderer. */
-fun interface BassStemRenderer {
-    fun render(request: BassRenderRequest, outputPath: Path)
-}
-
-/** Result metadata for one generated lossless WAV stem. */
-data class GeneratedBassStem(
-    val path: Path,
-    val sampleRate: Int,
-    val channels: Int,
-    val frameCount: Int,
-    val notes: List<BassNote>
-)
-
-interface InstrumentStemGenerator {
-    fun generate(
-        projectRoot: Path,
-        project: Project,
-        arrangement: Arrangement,
-        analyses: Map<String, PartAnalysis>
-    ): GeneratedBassStem
-}
+/** One generated event, expressed in the single, project-wide MIDI timeline. */
+data class BassMidiNote(val startTick: Long, val endTick: Long, val pitch: Int, val velocity: Int)
 
 /**
- * First generation spike: converts generated bass plans into note events and invokes
- * a deliberately small local renderer. It never reads or changes source part files.
+ * Validated local input for one arranged section. Chord and meter ticks are
+ * section-relative; [sectionStartTick] anchors the output in the full song.
+ * Syncopation is a fraction of one beat in the conservative 0.0..0.25 range.
  */
-class BassStemGenerationAdapter(
-    private val renderer: BassStemRenderer = DeterministicTestBassRenderer()
-) : InstrumentStemGenerator {
-    override fun generate(
-        projectRoot: Path,
-        project: Project,
-        arrangement: Arrangement,
-        analyses: Map<String, PartAnalysis>
-    ): GeneratedBassStem {
-        val root = projectRoot.toAbsolutePath().normalize()
-        project.requireValid(root)
-        arrangement.requireValid(project.parts.map { it.id })
-
-        val timeline = buildTimeline(arrangement, analyses)
-        require(timeline.notes.isNotEmpty()) {
-            "Arrangement does not contain a generated bass instrument"
+data class BassGenerationRequest(
+    val sectionIndex: Int,
+    val sectionStartTick: Long,
+    val ppq: Int,
+    val tempoMap: List<MidiTempoChange>,
+    val timeSignatures: List<MidiTimeSignature>,
+    val sectionLengthTicks: Long,
+    val key: MidiKey?,
+    val chords: List<MidiChord>,
+    val energy: Double,
+    val density: Double,
+    val role: BassRole,
+    val movement: BassMovement = BassMovement.BALANCED,
+    val register: String = "low",
+    val syncopation: Double = 0.0,
+    val midiChannel: Int = 0,
+    val midiProgram: Int? = null
+) {
+    fun requireValid() {
+        require(sectionIndex >= 0) { "Bass section index must not be negative" }
+        require(sectionStartTick >= 0) { "Bass section start tick must not be negative" }
+        require(ppq in 24..9_600) { "Bass PPQ must be from 24 to 9600" }
+        require(sectionLengthTicks > 0) { "Bass section length must be positive" }
+        require(energy.isFinite() && energy in 0.0..1.0) { "Bass energy must be from 0.0 to 1.0" }
+        require(density.isFinite() && density in 0.0..1.0) { "Bass density must be from 0.0 to 1.0" }
+        require(register == "low") { "Only the low bass register is supported" }
+        require(syncopation.isFinite() && syncopation in 0.0..MAX_SYNCOPATION) {
+            "Bass syncopation must be from 0.0 to $MAX_SYNCOPATION beats"
         }
-        require(timeline.frameCount <= Int.MAX_VALUE / timeline.channels) {
-            "Generated bass stem is too large to render in memory"
+        require(midiChannel in 0..15) { "Bass MIDI channel must be 0..15" }
+        require(midiProgram == null || midiProgram in 0..127) { "Bass MIDI program must be 0..127" }
+        require(tempoMap.isNotEmpty() && tempoMap.first().tick == 0L) { "Bass tempo map must start at tick 0" }
+        require(timeSignatures.isNotEmpty() && timeSignatures.first().tick == 0L) { "Bass time-signature map must start at tick 0" }
+        tempoMap.zipWithNext().forEach { (first, second) -> require(first.tick < second.tick) { "Bass tempo changes must be ordered" } }
+        timeSignatures.zipWithNext().forEach { (first, second) -> require(first.tick < second.tick) { "Bass time-signature changes must be ordered" } }
+        tempoMap.forEach { require(it.tick in 0..sectionLengthTicks && it.bpm.isFinite() && it.bpm > 0.0) { "Bass tempo map contains an invalid change" } }
+        timeSignatures.forEach {
+            require(it.tick in 0..sectionLengthTicks && it.numerator > 0 && it.denominator in setOf(1, 2, 4, 8, 16, 32)) {
+                "Bass time-signature map contains an invalid change"
+            }
+            require((ppq * 4) % it.denominator == 0) { "Bass PPQ cannot represent ${it.numerator}/${it.denominator}" }
         }
-
-        val frameCount = timeline.frameCount.toInt()
-        val outputPath = root.resolve(STEMS_DIRECTORY).resolve(BASS_FILE_NAME)
-        renderer.render(
-            BassRenderRequest(
-                notes = timeline.notes,
-                sampleRate = timeline.sampleRate,
-                channels = timeline.channels,
-                frameCount = frameCount
-            ),
-            outputPath
-        )
-        return GeneratedBassStem(
-            path = outputPath,
-            sampleRate = timeline.sampleRate,
-            channels = timeline.channels,
-            frameCount = frameCount,
-            notes = timeline.notes
-        )
+        chords.zipWithNext().forEach { (first, second) -> require(first.endTick <= second.startTick) { "Bass chords must not overlap" } }
+        chords.forEach { require(it.startTick >= 0 && it.endTick > it.startTick && it.endTick <= sectionLengthTicks && it.confidence.isFinite() && it.confidence in 0.0..1.0) { "Bass chord segment is invalid" } }
     }
 
-    private fun buildTimeline(
-        arrangement: Arrangement,
-        analyses: Map<String, PartAnalysis>
-    ): BassTimeline {
-        var sampleRate: Int? = null
-        var channels: Int? = null
-        var startFrame = 0L
-        val notes = mutableListOf<BassNote>()
+    private companion object { const val MAX_SYNCOPATION = 0.25 }
+}
 
-        arrangement.sections.forEachIndexed { position, section ->
-            val analysis = analyses[section.partId]
-                ?: throw IllegalArgumentException("Missing analysis for arranged part '${section.partId}'")
-            requireValidAnalysis(section.partId, analysis)
-            if (sampleRate == null) {
-                sampleRate = analysis.sampleRate
-                channels = analysis.channels
+data class BassGenerationResult(val notes: List<BassMidiNote>, val diagnostics: List<String>)
+
+/**
+ * Deterministic composition only. Chord symbols are used at >= 0.75 confidence;
+ * a key tonic is used at >= 0.55 confidence when a chord is weak. Otherwise that
+ * interval is intentionally silent. Pitches stay in E1..C3 (MIDI 28..48).
+ */
+class DeterministicBassMidiGenerator {
+    fun generate(request: BassGenerationRequest): BassGenerationResult {
+        request.requireValid()
+        if (request.density == 0.0) return BassGenerationResult(emptyList(), listOf("Bass density is 0.0; wrote silence."))
+
+        val notes = mutableListOf<BassMidiNote>()
+        val diagnostics = mutableListOf<String>()
+        intervals(request).forEach { interval ->
+            val root = harmonyRoot(request, interval.start)
+            if (root == null) {
+                diagnostics += "No confident harmony for section ${request.sectionIndex + 1} at tick ${interval.start}; left silent."
             } else {
-                require(sampleRate == analysis.sampleRate && channels == analysis.channels) {
-                    "All arranged parts must have the same sample rate and channels for this bass spike"
-                }
+                notes += pattern(request, interval, root, nextRoot(request, interval.end))
             }
-
-            val bass = section.instruments.firstOrNull {
-                it.mode == InstrumentMode.GENERATED && it.name.equals(BASS_INSTRUMENT_NAME, ignoreCase = true)
-            }
-            if (bass != null && bass.density!! > 0.0) {
-                require(startFrame <= Int.MAX_VALUE && analysis.frameCount <= Int.MAX_VALUE) {
-                    "Arrangement section ${position + 1} is too long to render"
-                }
-                notes += BassNote(
-                    startFrame = startFrame.toInt(),
-                    durationFrames = analysis.frameCount.toInt(),
-                    velocity = bass.density
-                )
-            }
-            startFrame = Math.addExact(startFrame, analysis.frameCount)
         }
-
-        return BassTimeline(
-            notes = notes,
-            sampleRate = checkNotNull(sampleRate),
-            channels = checkNotNull(channels),
-            frameCount = startFrame
-        )
+        validateNotes(notes, request)
+        if (notes.isEmpty() && diagnostics.isEmpty()) diagnostics += "No bass events were selected."
+        return BassGenerationResult(notes.sortedBy { it.startTick }, diagnostics.distinct())
     }
 
-    private fun requireValidAnalysis(partId: String, analysis: PartAnalysis) {
-        require(analysis.sampleRate > 0) { "Analysis for part '$partId' has an invalid sample rate" }
-        require(analysis.channels > 0) { "Analysis for part '$partId' has an invalid channel count" }
-        require(analysis.frameCount > 0) { "Analysis for part '$partId' has no audio frames" }
-        require(analysis.duration.isFinite() && analysis.duration > 0.0) {
-            "Analysis for part '$partId' has an invalid duration"
+    private fun intervals(request: BassGenerationRequest): List<TickInterval> {
+        val boundaries = sortedSetOf(0L, request.sectionLengthTicks)
+        request.chords.forEach { boundaries += it.startTick; boundaries += it.endTick }
+        request.timeSignatures.forEach { signature ->
+            var tick = signature.tick
+            val next = request.timeSignatures.firstOrNull { it.tick > signature.tick }?.tick ?: request.sectionLengthTicks
+            val bar = ticksPerBeat(request, signature) * signature.numerator
+            while (tick < minOf(next, request.sectionLengthTicks)) { boundaries += tick; tick += bar }
+        }
+        return boundaries.toList().zipWithNext().map { TickInterval(it.first, it.second) }.filter { it.end > it.start }
+    }
+
+    private fun pattern(request: BassGenerationRequest, interval: TickInterval, root: Int, followingRoot: Int?): List<BassMidiNote> {
+        val signature = request.timeSignatures.last { it.tick <= interval.start }
+        val beat = ticksPerBeat(request, signature)
+        val beats = ((interval.end - interval.start) / beat).toInt().coerceAtLeast(1)
+        val slots = when (request.role) {
+            BassRole.SUSTAINED -> listOf(BassSlot(0, 0, true))
+            BassRole.ROOT -> (0 until beats).map { BassSlot(it, 0) }
+            BassRole.ROOT_FIFTH -> (0 until beats).map { BassSlot(it, if (it % 2 == 0) 0 else 7) }
+            BassRole.OCTAVE -> (0 until beats).map { BassSlot(it, if (it % 2 == 0) 0 else 12) }
+            BassRole.SIMPLE_WALKING -> walkingSlots(beats, root, followingRoot)
+        }
+        val selected = if (request.role == BassRole.SUSTAINED) slots else slots.take(eventsForDensity(slots.size, request.density))
+        return selected.mapIndexed { index, slot ->
+            val originalStart = interval.start + slot.beat.toLong() * beat
+            val nextBeat = minOf(interval.end, originalStart + beat)
+            val offset = if (slot.sustained || originalStart == interval.start) 0L else (beat * request.syncopation).roundToInt().toLong()
+            val start = originalStart + offset
+            val end = if (slot.sustained) interval.end else minOf(nextBeat, start + (beat * NOTE_LENGTH_BEATS).roundToInt())
+            BassMidiNote(
+                startTick = request.sectionStartTick + start,
+                endTick = request.sectionStartTick + end,
+                pitch = applyMovement(normalizePitch(36 + root + slot.semitones), request.movement, index, selected.size),
+                velocity = velocity(request.energy, slot.semitones >= 12)
+            )
         }
     }
 
-    private data class BassTimeline(
-        val notes: List<BassNote>,
-        val sampleRate: Int,
-        val channels: Int,
-        val frameCount: Long
+    private fun walkingSlots(beats: Int, root: Int, followingRoot: Int?): List<BassSlot> = (0 until beats).map { beat ->
+        when (beat) {
+            0 -> BassSlot(beat, 0)
+            beats - 1 -> BassSlot(beat, followingRoot?.let { signedStep(root, it) } ?: 7)
+            else -> BassSlot(beat, if (followingRoot == null) 7 else signedStep(root, followingRoot) * beat / beats)
+        }
+    }
+
+    private fun signedStep(from: Int, to: Int): Int {
+        val delta = ((to - from + 18) % 12) - 6
+        return delta.coerceIn(-5, 6)
+    }
+
+    private fun eventsForDensity(slotCount: Int, density: Double): Int = ceil(slotCount * density).toInt().coerceIn(1, slotCount)
+
+    private fun harmonyRoot(request: BassGenerationRequest, tick: Long): Int? {
+        val chord = request.chords.firstOrNull { tick >= it.startTick && tick < it.endTick }
+        chord?.takeIf { it.confidence >= CHORD_CONFIDENCE }?.symbol?.let(::pitchClass)?.let { return it }
+        return request.key?.takeIf { it.confidence >= KEY_CONFIDENCE }?.tonic?.let(::pitchClass)
+    }
+
+    private fun nextRoot(request: BassGenerationRequest, tick: Long): Int? =
+        request.chords.firstOrNull { it.startTick >= tick && it.confidence >= CHORD_CONFIDENCE }?.symbol?.let(::pitchClass)
+            ?: request.key?.takeIf { it.confidence >= KEY_CONFIDENCE }?.tonic?.let(::pitchClass)
+
+    private fun pitchClass(symbol: String): Int? {
+        val value = symbol.trim()
+        if (value.isEmpty()) return null
+        val base = when (value[0].uppercaseChar()) { 'C' -> 0; 'D' -> 2; 'E' -> 4; 'F' -> 5; 'G' -> 7; 'A' -> 9; 'B' -> 11; else -> return null }
+        return when (value.getOrNull(1)) { '#' -> (base + 1) % 12; 'b' -> (base + 11) % 12; else -> base }
+    }
+
+    private fun normalizePitch(pitch: Int): Int {
+        var result = pitch
+        while (result < LOWEST_BASS_NOTE) result += 12
+        while (result > HIGHEST_BASS_NOTE) result -= 12
+        require(result in LOWEST_BASS_NOTE..HIGHEST_BASS_NOTE) { "Generated bass pitch is outside E1..C3" }
+        return result
+    }
+
+    private fun applyMovement(pitch: Int, movement: BassMovement, index: Int, count: Int): Int = normalizePitch(
+        pitch + when (movement) {
+            BassMovement.STATIC -> 0
+            BassMovement.RISING -> if (index == count - 1 && count > 1) 12 else 0
+            BassMovement.FALLING -> if (index == 0 && count > 1) 12 else 0
+            BassMovement.BALANCED -> if (index % 2 == 1) 12 else 0
+        }
     )
 
+    private fun velocity(energy: Double, octaveEmphasis: Boolean): Int =
+        (MIN_VELOCITY + (MAX_VELOCITY - MIN_VELOCITY) * energy).roundToInt().plus(if (octaveEmphasis) 6 else 0).coerceIn(MIN_VELOCITY, MAX_VELOCITY)
+
+    private fun ticksPerBeat(request: BassGenerationRequest, signature: MidiTimeSignature): Long =
+        (request.ppq * 4 / signature.denominator).toLong()
+
+    private fun validateNotes(notes: List<BassMidiNote>, request: BassGenerationRequest) {
+        val lastEndByPitch = mutableMapOf<Int, Long>()
+        notes.sortedBy { it.startTick }.forEach { note ->
+            require(note.pitch in LOWEST_BASS_NOTE..HIGHEST_BASS_NOTE) { "Generated bass pitch is outside E1..C3" }
+            require(note.velocity in 1..127) { "Generated bass velocity is invalid" }
+            require(note.endTick > note.startTick) { "Generated bass note has non-positive duration" }
+            require(note.startTick >= request.sectionStartTick && note.endTick <= request.sectionStartTick + request.sectionLengthTicks) { "Generated bass note escapes its section" }
+            require(note.startTick >= (lastEndByPitch[note.pitch] ?: Long.MIN_VALUE)) { "Generated bass has a same-pitch overlap" }
+            lastEndByPitch[note.pitch] = note.endTick
+        }
+    }
+
+    private data class TickInterval(val start: Long, val end: Long)
+    private data class BassSlot(val beat: Int, val semitones: Int, val sustained: Boolean = false)
+
     private companion object {
-        const val STEMS_DIRECTORY = "stems"
-        const val BASS_FILE_NAME = "bass.wav"
-        const val BASS_INSTRUMENT_NAME = "bass"
+        const val CHORD_CONFIDENCE = 0.75
+        const val KEY_CONFIDENCE = 0.55
+        const val LOWEST_BASS_NOTE = 28
+        const val HIGHEST_BASS_NOTE = 48
+        const val NOTE_LENGTH_BEATS = 0.75
+        const val MIN_VELOCITY = 52
+        const val MAX_VELOCITY = 100
     }
 }
 
-/**
- * Deterministic placeholder renderer for the spike, not a general synthesizer.
- * It writes PCM_24 WAV, matching the project's lossless intermediate convention.
- */
-class DeterministicTestBassRenderer : BassStemRenderer {
-    override fun render(request: BassRenderRequest, outputPath: Path) {
-        require(request.sampleRate > 0) { "Sample rate must be positive" }
-        require(request.channels > 0) { "Channel count must be positive" }
-        require(request.frameCount > 0) { "Frame count must be positive" }
-        require(request.frameCount <= Int.MAX_VALUE / request.channels) { "Render request is too large" }
-        request.notes.forEach { note ->
-            require(note.startFrame >= 0 && note.durationFrames > 0) { "Bass note frames must be positive" }
-            require(note.startFrame.toLong() + note.durationFrames <= request.frameCount) {
-                "Bass note exceeds the rendered timeline"
+/** Result of composing the one inspectable bass MIDI artifact for a project. */
+data class GeneratedBassMidi(val path: Path, val ppq: Int, val notes: List<BassMidiNote>, val diagnostics: List<String>)
+
+/** Kept as the generation boundary; rendering is deliberately a separate Task 007 concern. */
+interface InstrumentStemGenerator {
+    fun generate(projectRoot: Path, project: Project, arrangement: Arrangement, analyses: Map<String, MidiAnalysis>): GeneratedBassMidi
+}
+
+/** Maps validated arrangement choices and MIDI analysis into deterministic requests, never model-supplied notes. */
+class BassMidiGenerationAdapter(private val composer: DeterministicBassMidiGenerator = DeterministicBassMidiGenerator()) : InstrumentStemGenerator {
+    override fun generate(projectRoot: Path, project: Project, arrangement: Arrangement, analyses: Map<String, MidiAnalysis>): GeneratedBassMidi {
+        val root = projectRoot.toAbsolutePath().normalize()
+        project.requireCleanMidi(root)
+        arrangement.requireValid(project.parts.map { it.id })
+        val bass = InstrumentRegistryLoader().load().resolve(LogicalInstrument.BASS.wireName)
+        val requests = mutableListOf<BassGenerationRequest>()
+        var start = 0L
+        var ppq: Int? = null
+        arrangement.sections.forEachIndexed { position, section ->
+            val analysis = analyses[section.partId] ?: throw IllegalArgumentException("Missing MIDI analysis for arranged part '${section.partId}'")
+            require(analysis.ppq > 0 && analysis.durationTicks > 0) { "MIDI analysis for '${section.partId}' has invalid timing" }
+            if (ppq == null) ppq = analysis.ppq else require(ppq == analysis.ppq) { "All arranged MIDI parts must use the same PPQ" }
+            val plan = section.instruments.firstOrNull { it.mode == InstrumentMode.GENERATED && it.name.equals(LogicalInstrument.BASS.wireName, ignoreCase = true) }
+            if (plan != null) requests += BassGenerationRequest(
+                sectionIndex = position,
+                sectionStartTick = start,
+                ppq = analysis.ppq,
+                tempoMap = analysis.tempoMap,
+                timeSignatures = analysis.timeSignatures,
+                sectionLengthTicks = analysis.durationTicks,
+                key = analysis.key,
+                chords = analysis.chords,
+                energy = analysis.energy,
+                density = requireNotNull(plan.density),
+                role = BassRole.parse(plan.role),
+                midiChannel = bass.midiChannelZeroBased ?: 0,
+                midiProgram = bass.midiProgram
+            )
+            start = Math.addExact(start, analysis.durationTicks)
+        }
+        require(requests.isNotEmpty()) { "Arrangement does not contain a generated bass instrument" }
+        val result = requests.map { it to composer.generate(it) }
+        val output = root.resolve("midi/generated/bass.mid")
+        writeMidi(output, checkNotNull(ppq), start, requests, result)
+        return GeneratedBassMidi(output, checkNotNull(ppq), result.flatMap { it.second.notes }, result.flatMap { it.second.diagnostics })
+    }
+
+    private fun writeMidi(
+        output: Path,
+        ppq: Int,
+        endTick: Long,
+        requests: List<BassGenerationRequest>,
+        results: List<Pair<BassGenerationRequest, BassGenerationResult>>
+    ) {
+        Files.createDirectories(requireNotNull(output.parent))
+        val temporary = output.resolveSibling(".${output.fileName}.${UUID.randomUUID()}.tmp")
+        try {
+            val sequence = Sequence(Sequence.PPQ, ppq)
+            val meta = sequence.createTrack()
+            val notes = sequence.createTrack()
+            requests.forEach { request ->
+                request.tempoMap.forEach { tempo -> meta.add(MidiEvent(tempoMessage(tempo.bpm), request.sectionStartTick + tempo.tick)) }
+                request.timeSignatures.forEach { signature -> meta.add(MidiEvent(signatureMessage(signature), request.sectionStartTick + signature.tick)) }
             }
-            require(note.velocity.isFinite() && note.velocity in 0.0..1.0) {
-                "Bass note velocity must be between 0 and 1"
+            val first = requests.first()
+            first.midiProgram?.let { notes.add(MidiEvent(ShortMessage(ShortMessage.PROGRAM_CHANGE, first.midiChannel, it, 0), 0)) }
+            results.flatMap { it.second.notes }.sortedBy { it.startTick }.forEach { note ->
+                notes.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, first.midiChannel, note.pitch, note.velocity), note.startTick))
+                notes.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, first.midiChannel, note.pitch, 0), note.endTick))
+            }
+            meta.add(MidiEvent(MetaMessage(0x2F, byteArrayOf(), 0), endTick))
+            require(MidiSystem.write(sequence, 1, temporary.toFile()) > 0) { "Could not write bass MIDI" }
+            validateWrittenMidi(temporary, ppq, endTick, results.flatMap { it.second.notes })
+            try {
+                Files.move(temporary, output, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            } catch (error: AtomicMoveNotSupportedException) {
+                throw IllegalStateException("Atomic publish is not supported for generated bass MIDI '$output'", error)
+            }
+        } finally {
+            Files.deleteIfExists(temporary)
+        }
+    }
+
+    private fun validateWrittenMidi(path: Path, ppq: Int, endTick: Long, expected: List<BassMidiNote>) {
+        val sequence = MidiSystem.getSequence(path.toFile())
+        require(sequence.divisionType == Sequence.PPQ && sequence.resolution == ppq) { "Generated bass MIDI timing did not round-trip" }
+        val parsed = mutableListOf<BassMidiNote>()
+        val active = mutableMapOf<Int, Pair<Long, Int>>()
+        sequence.tracks.flatMap { track -> (0 until track.size()).map { track[it] } }.sortedBy { it.tick }.forEach { event ->
+            val message = event.message as? ShortMessage ?: return@forEach
+            val on = message.command == ShortMessage.NOTE_ON && message.data2 > 0
+            val off = message.command == ShortMessage.NOTE_OFF || (message.command == ShortMessage.NOTE_ON && message.data2 == 0)
+            if (on) {
+                require(active.put(message.data1, event.tick to message.data2) == null) { "Generated bass MIDI has overlapping active pitches" }
+            } else if (off) {
+                val start = requireNotNull(active.remove(message.data1)) { "Generated bass MIDI has a hanging note-off" }
+                parsed += BassMidiNote(start.first, event.tick, message.data1, start.second)
             }
         }
-
-        val samples = FloatArray(request.frameCount * request.channels)
-        request.notes.forEach { note -> renderNote(samples, request, note) }
-        writePcm24Wav(samples, request.sampleRate, request.channels, outputPath)
+        require(active.isEmpty()) { "Generated bass MIDI has hanging notes" }
+        require(parsed.sortedBy { it.startTick } == expected.sortedBy { it.startTick }) { "Generated bass MIDI events did not round-trip" }
+        require(sequence.tickLength >= endTick) { "Generated bass MIDI does not cover the complete timeline" }
     }
 
-    private fun renderNote(samples: FloatArray, request: BassRenderRequest, note: BassNote) {
-        val frequency = 440.0 * 2.0.pow((note.midiNote - 69) / 12.0)
-        val fadeFrames = minOf(MAX_FADE_FRAMES, note.durationFrames / 2)
-        for (offset in 0 until note.durationFrames) {
-            val envelope = when {
-                fadeFrames == 0 -> 1.0
-                offset < fadeFrames -> offset.toDouble() / fadeFrames
-                offset >= note.durationFrames - fadeFrames ->
-                    (note.durationFrames - offset - 1).toDouble() / fadeFrames
-                else -> 1.0
-            }
-            val sample = (
-                sin(2.0 * PI * frequency * offset / request.sampleRate) *
-                    MAX_AMPLITUDE * note.velocity * envelope
-                ).toFloat()
-            val frame = note.startFrame + offset
-            repeat(request.channels) { channel ->
-                samples[frame * request.channels + channel] += sample
-            }
-        }
+    private fun tempoMessage(bpm: Double): MetaMessage {
+        val micros = (60_000_000.0 / bpm).roundToInt()
+        return MetaMessage(0x51, byteArrayOf((micros shr 16).toByte(), (micros shr 8).toByte(), micros.toByte()), 3)
     }
 
-    private fun writePcm24Wav(samples: FloatArray, sampleRate: Int, channels: Int, outputPath: Path) {
-        val dataSize = Math.multiplyExact(samples.size, BYTES_PER_SAMPLE)
-        val byteRate = Math.multiplyExact(sampleRate, Math.multiplyExact(channels, BYTES_PER_SAMPLE))
-        Files.createDirectories(checkNotNull(outputPath.parent))
-        DataOutputStream(BufferedOutputStream(FileOutputStream(outputPath.toFile()))).use { output ->
-            output.writeBytes("RIFF")
-            output.writeLittleEndianInt(36 + dataSize)
-            output.writeBytes("WAVE")
-            output.writeBytes("fmt ")
-            output.writeLittleEndianInt(16)
-            output.writeLittleEndianShort(PCM_FORMAT)
-            output.writeLittleEndianShort(channels)
-            output.writeLittleEndianInt(sampleRate)
-            output.writeLittleEndianInt(byteRate)
-            output.writeLittleEndianShort(channels * BYTES_PER_SAMPLE)
-            output.writeLittleEndianShort(PCM_BIT_DEPTH)
-            output.writeBytes("data")
-            output.writeLittleEndianInt(dataSize)
-            samples.forEach { sample ->
-                val value = (sample.coerceIn(-1f, 1f) * PCM_24_MAX).toInt()
-                output.writeByte(value and 0xFF)
-                output.writeByte((value ushr 8) and 0xFF)
-                output.writeByte((value ushr 16) and 0xFF)
-            }
-        }
-    }
-
-    private fun DataOutputStream.writeLittleEndianInt(value: Int) {
-        writeByte(value and 0xFF)
-        writeByte((value ushr 8) and 0xFF)
-        writeByte((value ushr 16) and 0xFF)
-        writeByte((value ushr 24) and 0xFF)
-    }
-
-    private fun DataOutputStream.writeLittleEndianShort(value: Int) {
-        writeByte(value and 0xFF)
-        writeByte((value ushr 8) and 0xFF)
-    }
-
-    private companion object {
-        const val BYTES_PER_SAMPLE = 3
-        const val PCM_BIT_DEPTH = 24
-        const val PCM_FORMAT = 1
-        const val PCM_24_MAX = 8_388_607f
-        const val MAX_AMPLITUDE = 0.15
-        const val MAX_FADE_FRAMES = 240
-    }
+    private fun signatureMessage(signature: MidiTimeSignature): MetaMessage = MetaMessage(
+        0x58,
+        byteArrayOf(signature.numerator.toByte(), Integer.numberOfTrailingZeros(signature.denominator).toByte(), 24, 8),
+        4
+    )
 }

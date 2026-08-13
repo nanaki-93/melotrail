@@ -87,14 +87,13 @@ class ArrangementRenderer {
             )
         }
         val format = AudioFormat(sampleRate, channels, 24, false, false, "WAV")
-        val stemSamples = linkedMapOf("bass" to FloatArray(frameCount * channels), "drums" to FloatArray(frameCount * channels), "pad" to FloatArray(frameCount * channels), "bridges" to FloatArray(frameCount * channels))
+        val stemSamples = linkedMapOf("drums" to FloatArray(frameCount * channels), "pad" to FloatArray(frameCount * channels), "bridges" to FloatArray(frameCount * channels))
         arrangement.sections.forEachIndexed { index, section ->
             val sectionStart = starts[index]
             val sectionFrames = prepared[index].length
             val energy = section.instruments.filter { it.mode == InstrumentMode.GENERATED }.maxOfOrNull { it.density ?: 0.0 } ?: 0.0
             section.instruments.filter { it.mode == InstrumentMode.GENERATED }.forEach { instrument ->
                 when (instrument.name.lowercase()) {
-                    "bass" -> renderBass(stemSamples.getValue("bass"), sectionStart, sectionFrames, format, instrument.density ?: 0.0)
                     "drums" -> renderDrums(stemSamples.getValue("drums"), sectionStart, sectionFrames, format, instrument.density ?: 0.0)
                     "pad", "pads" -> renderPad(stemSamples.getValue("pad"), sectionStart, sectionFrames, format, instrument.density ?: 0.0)
                 }
@@ -108,14 +107,6 @@ class ArrangementRenderer {
             if (samples.any { it != 0f }) tracks += MixTrack(name, AudioBuffer(samples, format, frameCount.toDouble() / sampleRate), generated = true)
         }
         return RenderedArrangement(tracks, sampleRate, channels, frameCount, bridges)
-    }
-
-    private fun renderBass(output: FloatArray, start: Int, length: Int, format: AudioFormat, density: Double) {
-        val beat = (format.sampleRate * 60.0 / DEFAULT_BPM).toInt()
-        for (frame in 0 until length step max(1, beat)) {
-            val noteLength = min((beat * 0.72).toInt(), length - frame)
-            addTone(output, start + frame, noteLength, format, 55.0, 0.08 * density, ATTACK_RELEASE_MS)
-        }
     }
 
     private fun renderDrums(output: FloatArray, start: Int, length: Int, format: AudioFormat, density: Double) {

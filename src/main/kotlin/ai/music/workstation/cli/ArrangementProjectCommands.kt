@@ -4,7 +4,7 @@ import ai.music.workstation.arrangement.ArrangementInput
 import ai.music.workstation.arrangement.ArrangementPlanner
 import ai.music.workstation.arrangement.ArrangementStore
 import ai.music.workstation.arrangement.ArrangementRenderer
-import ai.music.workstation.arrangement.BassStemGenerationAdapter
+import ai.music.workstation.arrangement.BassMidiGenerationAdapter
 import ai.music.workstation.arrangement.DeterministicArrangementPlanner
 import ai.music.workstation.arrangement.DeterministicStemMixer
 import ai.music.workstation.arrangement.LocalQwenArrangementPlanner
@@ -460,15 +460,16 @@ object ArrangementProjectCommands {
         val arrangement = json.decodeFromString<ai.music.workstation.arrangement.Arrangement>(
             Files.readString(arrangementFile)
         )
-        val analyses = project.parts.mapNotNull { part ->
-            part.analysis?.takeIf { it.kind != AnalysisKind.MIDI }?.let { reference ->
-                part.id to json.decodeFromString<PartAnalysis>(
-                    Files.readString(projectRoot.resolve(reference.file))
-                )
-            }
-        }.toMap()
-        val stem = BassStemGenerationAdapter().generate(projectRoot, project, arrangement, analyses)
-        return "Generated bass stem: ${stem.path} (${stem.sampleRate} Hz, ${stem.channels} ch, ${stem.frameCount} frames)"
+        val analyses = project.parts.associate { part ->
+            val reference = requireNotNull(part.analysis) { "Missing MIDI analysis for part '${part.id}'. Run part analyze first." }
+            require(reference.kind == AnalysisKind.MIDI) { "Bass MIDI generation requires MIDI analysis for '${part.id}'. Run part analyze after MIDI cleanup." }
+            part.id to json.decodeFromString<ai.music.workstation.arrangement.MidiAnalysis>(
+                Files.readString(projectRoot.resolve(reference.file))
+            )
+        }
+        val bass = BassMidiGenerationAdapter().generate(projectRoot, project, arrangement, analyses)
+        val suffix = if (bass.diagnostics.isEmpty()) "" else "; ${bass.diagnostics.joinToString(" ")}"
+        return "Generated bass MIDI: ${bass.path} (${bass.notes.size} notes)$suffix"
     }
 
     private fun mixStems(args: Array<String>): String {
@@ -488,9 +489,13 @@ object ArrangementProjectCommands {
         require(arrangement.sections.isNotEmpty()) { "Arrangement must contain at least one section to mix" }
 
         val rendered = renderProject(projectRoot, project, arrangement)
+        val renderedBass = projectRoot.resolve("stems/bass.wav").takeIf(Files::isRegularFile)?.let { path ->
+            MixTrack("bass", WAVDecoder(NoOpErrorReporter).decode(path), generated = true)
+        }
+        val tracks = rendered.tracks + listOfNotNull(renderedBass)
         val mixer = DeterministicStemMixer()
         val mixed = mixer.mix(
-            rendered.tracks,
+            tracks,
             MixSettings(targetSampleRate = rendered.sampleRate, dry = "--dry" in options)
         )
         Files.createDirectories(projectRoot.resolve("stems"))
