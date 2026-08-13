@@ -262,6 +262,27 @@ class ArrangementProjectCommandsTest {
     }
 
     @Test
+    fun `generate pad writes v3 sustained harmony MIDI without changing source MIDI`() {
+        val projectRoot = createMidiPlanningProject("pad-demo")
+        val source = projectRoot.resolve("source/A.mid")
+        val sourceBefore = Files.readAllBytes(source)
+        ArrangementProjectCommands.execute(
+            arrayOf("arrange", "--project", projectRoot.toString(), "--planner", "deterministic", "--structure", "A A A", "--instruments", "piano,pad")
+        )
+        ArrangementProjectCommands.execute(
+            arrayOf("arrange-detail", "--project", projectRoot.toString(), "--planner", "deterministic")
+        )
+
+        val result = ArrangementProjectCommands.execute(
+            arrayOf("generate", "pad", "--project", projectRoot.toString())
+        )
+
+        assertTrue(result.contains("Generated pad MIDI"))
+        assertTrue(Files.isRegularFile(projectRoot.resolve("midi/generated/pad.mid")))
+        assertEquals(sourceBefore.toList(), Files.readAllBytes(source).toList())
+    }
+
+    @Test
     fun `mix creates full and dry lossless WAV files without a fixed-tone bass`() {
         val projectRoot = createProject("mix-demo")
         val source = tempDir.resolve("piano.wav")

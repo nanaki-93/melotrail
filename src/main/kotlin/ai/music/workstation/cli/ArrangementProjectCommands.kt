@@ -36,6 +36,7 @@ import ai.music.workstation.arrangement.SectionInstance
 import ai.music.workstation.arrangement.SectionVariationStore
 import ai.music.workstation.arrangement.StructureParser
 import ai.music.workstation.arrangement.PianoBassQualityGate
+import ai.music.workstation.arrangement.PadMidiGenerationAdapter
 import ai.music.workstation.arrangement.InstrumentRenderer
 import ai.music.workstation.arrangement.SfizzInstrumentRenderer
 import ai.music.workstation.arrangement.GlobalSongPlanner
@@ -511,7 +512,8 @@ object ArrangementProjectCommands {
     private fun generateMidi(args: Array<String>): String = when (args.getOrNull(1)) {
         "bass" -> generateBass(args)
         "drums" -> generateDrums(args)
-        else -> throw IllegalArgumentException("Usage: generate bass|drums --project <project-directory>")
+        "pad" -> generatePad(args)
+        else -> throw IllegalArgumentException("Usage: generate bass|drums|pad --project <project-directory>")
     }
 
     private fun generateBass(args: Array<String>): String {
@@ -560,6 +562,29 @@ object ArrangementProjectCommands {
         val drums = DrumMidiGenerationAdapter().generate(projectRoot, project, arrangement, analyses)
         val suffix = if (drums.diagnostics.isEmpty()) "" else "; ${drums.diagnostics.joinToString(" ")}"
         return "Generated drum MIDI: ${drums.path} (${drums.hits.size} hits)$suffix"
+    }
+
+    private fun generatePad(args: Array<String>): String {
+        val options = parseGenerateOptions(args.drop(2))
+        val projectRoot = projectRoot(options.getValue("--project"))
+        val projectFile = projectRoot.resolve(PROJECT_FILE)
+        val arrangementFile = projectRoot.resolve(DetailedArrangementStore.APPROVED_FILE)
+        require(Files.isRegularFile(projectFile)) { "Project file not found: $projectFile" }
+        require(Files.isRegularFile(arrangementFile)) { "Detailed arrangement file not found: $arrangementFile. Run arrange-detail first." }
+
+        val project = ProjectStore.read(projectRoot)
+        project.requireValid(projectRoot)
+        val input = detailedArrangementInput(projectRoot, project)
+        val arrangement = json.decodeFromString<DetailedArrangement>(Files.readString(arrangementFile, StandardCharsets.UTF_8))
+        arrangement.requireValid(input)
+        val analyses = project.parts.associate { part ->
+            val reference = requireNotNull(part.analysis) { "Missing MIDI analysis for part '${part.id}'. Run part analyze first." }
+            require(reference.kind == AnalysisKind.MIDI) { "Pad MIDI generation requires MIDI analysis for '${part.id}'. Run part analyze after MIDI cleanup." }
+            part.id to json.decodeFromString<MidiAnalysis>(Files.readString(projectRoot.resolve(reference.file)))
+        }
+        val pad = PadMidiGenerationAdapter().generate(projectRoot, project, arrangement, analyses)
+        val suffix = if (pad.diagnostics.isEmpty()) "" else "; ${pad.diagnostics.joinToString(" ")}"
+        return "Generated pad MIDI: ${pad.path} (${pad.notes.size} notes)$suffix"
     }
 
     private suspend fun pianoBassQualityGate(args: Array<String>, renderer: InstrumentRenderer): String {
@@ -1226,7 +1251,7 @@ object ArrangementProjectCommands {
 
     private fun parseGenerateOptions(arguments: List<String>): Map<String, String> {
         require(arguments.size == 2 && arguments[0] == "--project") {
-            "Usage: generate bass|drums --project <project-directory>"
+            "Usage: generate bass|drums|pad --project <project-directory>"
         }
         return mapOf("--project" to arguments[1])
     }

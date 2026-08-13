@@ -46,7 +46,7 @@ After implementation:
 | [011](tasks/completed/011-detailed-arrangement-plan.md) | Detailed MIDI-first arrangement | 006, 009–010 | Version-3 `arrangement.json` roles | Planned |
 | [012](tasks/completed/012-piano-bass-quality-gate.md) | First complete piano + bass gate | 001–011 | Musically accepted MIDI-first dry mix | Planned |
 | [013](tasks/completed/013-drum-midi-generator.md) | Deterministic drum MIDI generator | 012 accepted | `midi/generated/drums.mid` | Blocked by gate |
-| [014](tasks/014-pad-midi-generator.md) | Deterministic pad MIDI generator | 012 accepted | `midi/generated/pad.mid` | Blocked by gate |
+| [014](tasks/completed/014-pad-midi-generator.md) | Deterministic pad MIDI generator | 012 accepted | `midi/generated/pad.mid` | Blocked by gate |
 | [015](tasks/015-midi-transition-engine.md) | MIDI transition engine | 008, 013–014 | Contextual bass/drum/pad transitions | Blocked by gate |
 | [016](tasks/016-strings-midi-generator.md) | Deterministic strings MIDI generator | 013–015 | `midi/generated/strings.mid` | Blocked by gate |
 | [017](tasks/017-stem-rendering-and-mixer.md) | Render all stems and dry mix | 007–008, 013–016 | Compatible stems and `mix/dry.wav` | Blocked by gate |
