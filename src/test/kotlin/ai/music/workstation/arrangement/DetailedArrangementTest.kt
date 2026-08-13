@@ -29,6 +29,7 @@ class DetailedArrangementTest {
         assertEquals(listOf(SongSectionPurpose.INTRODUCTION, SongSectionPurpose.CLIMAX), arrangement.sections.map { it.role })
         assertTrue(arrangement.sections.all { it.instruments.singleOrNull { plan -> plan is PianoSourcePlan }?.mode == InstrumentMode.SOURCE })
         assertEquals(DetailedBassMovement.ROOT_MOTION.name, (arrangement.sections.first().instruments[1] as BassInstrumentPlan).movement.name)
+        assertEquals(MusicalRegister.LOW, (arrangement.sections.first().instruments[1] as BassInstrumentPlan).register)
         assertEquals(TransitionType.BRIDGE, arrangement.sections.first().transitionOut.type)
         assertTrue(arrangement.validate(input).isValid)
         assertEquals(arrangement, json.decodeFromString<DetailedArrangement>(json.encodeToString(arrangement)))
@@ -63,6 +64,13 @@ class DetailedArrangementTest {
         listOf(wrongIdentity, duplicatePiano, invalidBass, nan).forEach { candidate ->
             assertFalse(candidate.validate(input).isValid)
         }
+
+        val unsupportedBassControls = valid.copy(sections = valid.sections.mapIndexed { index, section ->
+            if (index == 0) section.copy(instruments = section.instruments.map { instrument ->
+                if (instrument is BassInstrumentPlan) instrument.copy(register = MusicalRegister.MID, syncopation = 0.26) else instrument
+            }) else section
+        })
+        assertFalse(unsupportedBassControls.validate(input).isValid)
     }
 
     @Test
@@ -74,6 +82,13 @@ class DetailedArrangementTest {
 
         assertTrue(arrangement.validate(input).isValid)
         assertTrue(client.systemPrompt.contains("never provide notes"))
+        assertTrue(client.systemPrompt.contains("Instrument objects are a tagged union"))
+        assertTrue(client.systemPrompt.contains("\"kind\":\"strings\""))
+        assertTrue(client.systemPrompt.contains("transitionOut is also a union"))
+        assertTrue(client.systemPrompt.contains("0..0.25"))
+        assertTrue(client.systemPrompt.contains("Bass must use register low"))
+        assertTrue(client.userPrompt.contains("exactly 2 sections"))
+        assertTrue(client.userPrompt.contains("MIDI analysis facts by part"))
         assertFalse(client.userPrompt.contains("midi/"))
 
         listOf("path", "notes", "command", "renderer", "outputPath").forEach { field ->

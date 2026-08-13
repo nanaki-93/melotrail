@@ -202,8 +202,8 @@ Critique an approved version-3 arrangement once before rendering. The determinis
 critic is the default and creates an unchanged review draft without LM Studio.
 It preserves the exact pre-critic approved JSON as `arrangement_v1.json`, writes
 only `arrangement.draft.json`, and still requires explicit approval. A Qwen critic
-may modify at most four sections and only energy, complete existing instrument
-plans, or transition plans; any replacement still has to satisfy the reviewed
+may modify at most four sections and only complete existing instrument plans or
+transition plans; any replacement still has to satisfy the reviewed
 song plan and the complete normal v3 validator.
 
 ```bash
@@ -216,9 +216,9 @@ The critic receives only reviewed plan metadata, path-free MIDI analyses, the
 validated arrangement, logical allow-lists, and compact section metrics. It never
 receives source audio, file paths, renderer settings, commands, or executable data.
 
-Existing version 1/2 arrangements remain available to the current audio
-renderer. Version-3 drum and pad MIDI generation are available separately;
-other version-3 instruments and rendering integration arrive in later tasks.
+Existing version 1/2 arrangements remain available to the legacy audio
+renderer. Version-3 generation supports bass, drums, pad, strings, and
+transitions before full stem rendering.
 
 Generate bounded, registry-mapped drum MIDI from an approved version-3
 arrangement. The current generator supports 4/4 and 3/4 only and writes an
@@ -266,9 +266,10 @@ It requires the configured local SFZ renderer (for example
 `SFZ_RENDERER_PATH=/path/to/sfizz_render`). The checked-in automated test uses
 a fake renderer; the real command remains a manual listening gate.
 
-The existing `mix`/`build` workflow continues to use its compatible
-`arrangement.json` artifacts. A detailed MIDI-first arrangement is a later,
-separate stage; generating a global song plan never approves or overwrites one.
+The `mix` command preserves its legacy arrangement behavior. For a version-3
+arrangement it publishes the already rendered `mix/dry.wav` as `mix/mix.wav`;
+run `render` first. `build` renders or reuses version-3 stems automatically
+before repair, optional LoFi, mastering, and optional MP3 export.
 
 ### Render all approved stems and the dry reference mix
 
@@ -283,8 +284,8 @@ make cli ARGS='render --project ./projects/song-001'
 The command requires the configured local SFZ renderer and never invokes
 repair, LoFi, mastering, or MP3 export. It writes `stem-render.json` with
 input/artifact fingerprints and the one uniform peak-safety gain applied to
-the dry mix. The legacy `mix` command continues to create `mix/mix.wav` for
-legacy arrangements.
+the dry mix. A later `build` reuses these artifacts when their fingerprints
+still match.
 
 ### Optional local Qwen planning
 

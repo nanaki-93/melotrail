@@ -1,0 +1,9 @@
+Detailed arrangement draft review
+section=0 instance=phrase11 part=phrase1 role=introduction energy=0.3 activeInstruments=1 instruments=piano transition=bridge
+section=1 instance=phrase12 part=phrase1 role=development energy=0.5 activeInstruments=2 instruments=piano,bass transition=bridge
+section=2 instance=phrase21 part=phrase2 role=development energy=0.6 activeInstruments=3 instruments=piano,bass,drums transition=bridge
+section=3 instance=chorus11 part=chorus1 role=climax energy=0.9 activeInstruments=3 instruments=piano,bass,drums transition=crossfade
+section=4 instance=phrase13 part=phrase1 role=release energy=0.7 activeInstruments=3 instruments=piano,bass,pad transition=bridge
+section=5 instance=phrase22 part=phrase2 role=release energy=0.6 activeInstruments=3 instruments=piano,bass,strings transition=bridge
+section=6 instance=chorus21 part=chorus2 role=development energy=0.8 activeInstruments=3 instruments=piano,bass,strings transition=bridge
+section=7 instance=phrase14 part=phrase1 role=conclusion energy=0.4 activeInstruments=3 instruments=piano,bass,strings transition=none

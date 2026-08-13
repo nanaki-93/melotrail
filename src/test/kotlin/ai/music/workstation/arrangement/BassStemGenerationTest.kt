@@ -116,6 +116,42 @@ class BassStemGenerationTest {
         assertEquals(sourceBefore, Files.readString(source))
     }
 
+    @Test
+    fun `adapter consumes detailed arrangement bass controls`() {
+        val source = projectRoot.resolve("source/A.mid")
+        val clean = projectRoot.resolve("midi/clean/A.mid")
+        Files.createDirectories(source.parent)
+        Files.createDirectories(clean.parent)
+        Files.writeString(source, "source MIDI remains untouched")
+        Files.writeString(clean, "clean MIDI reference")
+        val project = Project(Project.CURRENT_VERSION, "bass-v3", listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid"))), renderFormat = RenderFormat())
+        val arrangement = DetailedArrangement(sections = listOf(
+            DetailedArrangementSection(
+                0, "A1", "A", SongSectionPurpose.DEVELOPMENT, 0.6,
+                listOf(PianoSourcePlan(), BassInstrumentPlan(role = DetailedBassRole.ROOT_FIFTH, density = 1.0,
+                    movement = DetailedBassMovement.LEAPING, register = MusicalRegister.LOW, syncopation = 0.1)),
+                TransitionPlan()
+            ),
+            DetailedArrangementSection(
+                1, "A2", "A", SongSectionPurpose.DEVELOPMENT, 0.6,
+                listOf(PianoSourcePlan(), BassInstrumentPlan(role = DetailedBassRole.ROOT, density = 1.0,
+                    movement = DetailedBassMovement.ROOT_MOTION, register = MusicalRegister.LOW, syncopation = 0.0)),
+                TransitionPlan()
+            )
+        ))
+        val analysis = MidiAnalysis(
+            partId = "A", ppq = 480, durationTicks = 1920, durationSeconds = 2.0,
+            tempoMap = listOf(MidiTempoChange(0, 120.0)), timeSignatures = listOf(MidiTimeSignature(0, 4, 4)),
+            bars = 1, beats = 4.0, noteCount = 3, noteDensity = 0.1, rhythmicDensity = 0.1, energy = 0.5,
+            key = MidiKey("C", "major", 0.8), chords = listOf(chord(0, 1920, "C"))
+        )
+
+        val generated = BassMidiGenerationAdapter().generate(projectRoot, project, arrangement, mapOf("A" to analysis))
+
+        assertEquals(listOf(36, 43, 36, 43, 36, 36, 36, 36), generated.notes.map { it.pitch })
+        assertEquals(listOf(0L, 528L, 1008L, 1488L, 1920L, 2400L, 2880L, 3360L), generated.notes.map { it.startTick })
+    }
+
     private fun notes(
         role: BassRole,
         chords: List<MidiChord> = listOf(chord(0, 1920, "C")),

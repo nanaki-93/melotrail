@@ -359,6 +359,16 @@ class LocalQwenGlobalSongPlanner(
 
         Bounded constraints:
         ${promptJson.encodeToString(input.constraints)}
+
+        Response requirements:
+        - version must be 1.
+        - style must equal the supplied Style string exactly.
+        - energyCurve and sections must each contain exactly ${input.structure.size} entries in the supplied order.
+        - Copy index, instanceId, partId, and occurrence from each Requested sections entry exactly.
+        - instrumentProgression must start with piano and contain only Allowed instruments.
+        - When the section count and per-section limits permit it, use every Allowed instrument in at least one section.
+        - climaxIndex must point to the one section whose purpose is climax.
+        Return the complete object described by the system response schema and no other text.
     """.trimIndent()
 
     @Serializable private data class QwenProjectMetadata(val name: String, val version: Int)
@@ -370,10 +380,31 @@ class LocalQwenGlobalSongPlanner(
         const val SYSTEM_PROMPT = """
             You are a whole-song musical planner. You do not generate notes, MIDI events, audio, code, commands,
             file paths, sample data, renderer settings, or executable behavior. Return JSON only, without markdown
-            or prose. The top-level fields are exactly version, style, energyCurve, sections, climaxIndex, and ending.
-            Each section has exactly index, instanceId, partId, occurrence, purpose, instrumentProgression, and transitionIntent.
+            or prose.
+
+            The required response schema is exactly:
+            {
+              "version": 1,
+              "style": "the exact supplied style string",
+              "energyCurve": [0.0],
+              "sections": [{
+                "index": 0,
+                "instanceId": "A1",
+                "partId": "A",
+                "occurrence": 1,
+                "purpose": "introduction",
+                "instrumentProgression": ["piano"],
+                "transitionIntent": "none"
+              }],
+              "climaxIndex": 0,
+              "ending": "resolved"
+            }
+            All shown fields are required. Do not add fields. energyCurve and sections must have one entry per supplied
+            requested section, not merely the single illustrative entry above. Each section has exactly index, instanceId,
+            partId, occurrence, purpose, instrumentProgression, and transitionIntent.
             Preserve every supplied section index, instanceId, partId, and occurrence exactly. Use only supplied logical instruments,
-            start each progression with piano, use one climax, and make the final transitionIntent none. Allowed purpose
+            start each progression with piano, and use every supplied logical instrument somewhere in the song when the supplied
+            section count and limits permit it. Use one climax, and make the final transitionIntent none. Allowed purpose
             values: introduction, development, climax, release, conclusion. Allowed transitionIntent values: none, build,
             release. Allowed ending values: resolved, fade, open. Energy values must be finite numbers from 0 through 1.
         """

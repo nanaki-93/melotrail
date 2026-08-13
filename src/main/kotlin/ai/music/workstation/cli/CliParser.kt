@@ -114,8 +114,7 @@ object CliParser {
         )
     }
 
-    private fun printUsage() {
-        val lines = listOf(
+    fun usage(): String = listOf(
             "AI Music Workstation - CLI Processing Pipeline",
             "================================================",
             "",
@@ -147,9 +146,9 @@ object CliParser {
             "  ./gradlew :cli:run --args=\"--input input.wav --output output.wav --preset Dusty Vinyl\"",
             "  ./gradlew :cli:run --args=\"--input input.wav --output output.wav --stages analyze,repair\"",
             "  ./gradlew :cli:run --args=\"--input input.wav --output output.wav --dry-run\""
-        )
-        lines.forEach { println(it) }
-    }
+        ).joinToString("\n")
+
+    private fun printUsage() = println(usage())
 
     private fun requireWavOutputPath(outputPath: String) {
         require(outputPath.endsWith(".wav", ignoreCase = true)) {

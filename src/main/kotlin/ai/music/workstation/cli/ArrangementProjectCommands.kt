@@ -31,6 +31,7 @@ import ai.music.workstation.arrangement.MidiAnalysisStore
 import ai.music.workstation.arrangement.MidiAnalysis
 import ai.music.workstation.arrangement.MidiPartAnalyzer
 import ai.music.workstation.arrangement.InstrumentRegistryLoader
+import ai.music.workstation.arrangement.InstrumentMode
 import ai.music.workstation.arrangement.InstrumentRegistryFile
 import ai.music.workstation.arrangement.LicenseRegistryFile
 import ai.music.workstation.arrangement.LogicalInstrument
@@ -119,6 +120,28 @@ object ArrangementProjectCommands {
 
     fun handles(args: Array<String>): Boolean =
         args.firstOrNull() in setOf("project", "part", "arrange", "arrange-detail", "critic", "generate", "mix", "render", "preview", "approve", "build", "export-mp3", "quality-gate", "transcribe", "midi-clean", "licenses")
+
+    fun usage(): String = """
+        Arranger and project commands:
+          project create <project> [--sample-rate <hz>] [--channels <count>]
+          part add <project> --id <id> --file <path> [--role <role>] [--transcribe]
+          part analyze <project> --id <id>
+          transcribe --input <audio> --output <midi> --instrument piano
+          midi-clean --input <raw.mid> --output <clean.mid> [cleanup options]
+          licenses <project> [--commercial]
+          arrange --project <project> [--planner deterministic|qwen] [planning options]
+          arrange-detail --project <project> [--planner deterministic|qwen]
+          critic --project <project> [--planner deterministic|qwen]
+          preview --project <project>
+          approve --project <project>
+          generate bass|drums|pad|strings|transitions --project <project>
+          quality-gate --project <project>
+          render --project <project>
+          mix --project <project> [--dry]
+          build --project <project> [--lofi] [--mp3] [--dry-run]
+          export-mp3 --input <master.wav> --output <song.mp3> [--bitrate <kbps>]
+          compare <a.wav> <b.wav> [--json] [--align]
+    """.trimIndent()
 
     /** Small boundary that lets the end-to-end command be tested without a running HTTP worker. */
     internal interface BuildWorker {
@@ -441,9 +464,7 @@ object ArrangementProjectCommands {
         project.requireValid(root)
         val arrangementPath = listOf(root.resolve("arrangement.json"), root.resolve(ArrangementStore.DRAFT_FILE)).firstOrNull(Files::isRegularFile)
             ?: throw IllegalArgumentException("No approved or draft arrangement found in $root")
-        val arrangement = json.decodeFromString<Arrangement>(Files.readString(arrangementPath, StandardCharsets.UTF_8))
-        arrangement.requireValid(project.parts.map { it.id })
-        val used = arrangement.sections.flatMap { it.instruments }.map { it.name }.filterNot { it == "source" }.distinct().sorted()
+        val used = usedGeneratedInstrumentNames(root, project, arrangementPath)
         val registry = InstrumentRegistryLoader().load()
         val commercial = args.getOrNull(2) == "--commercial"
         val lines = used.map { name ->
@@ -591,9 +612,9 @@ object ArrangementProjectCommands {
 
         val project = ProjectStore.read(projectRoot)
         project.requireValid(projectRoot)
-        val arrangement = json.decodeFromString<ai.music.workstation.arrangement.Arrangement>(
-            Files.readString(arrangementFile)
-        )
+        val arrangementText = Files.readString(arrangementFile, StandardCharsets.UTF_8)
+        val arrangementVersion = json.parseToJsonElement(arrangementText).jsonObject["version"]
+            ?.jsonPrimitive?.contentOrNull?.toIntOrNull()
         val analyses = project.parts.associate { part ->
             val reference = requireNotNull(part.analysis) { "Missing MIDI analysis for part '${part.id}'. Run part analyze first." }
             require(reference.kind == AnalysisKind.MIDI) { "Bass MIDI generation requires MIDI analysis for '${part.id}'. Run part analyze after MIDI cleanup." }
@@ -601,7 +622,16 @@ object ArrangementProjectCommands {
                 Files.readString(projectRoot.resolve(reference.file))
             )
         }
-        val bass = BassMidiGenerationAdapter().generate(projectRoot, project, arrangement, analyses)
+        val adapter = BassMidiGenerationAdapter()
+        val bass = if (arrangementVersion == DetailedArrangement.CURRENT_VERSION) {
+            val input = detailedArrangementInput(projectRoot, project)
+            val arrangement = json.decodeFromString<DetailedArrangement>(arrangementText)
+            arrangement.requireValid(input)
+            adapter.generate(projectRoot, project, arrangement, analyses)
+        } else {
+            val arrangement = json.decodeFromString<ai.music.workstation.arrangement.Arrangement>(arrangementText)
+            adapter.generate(projectRoot, project, arrangement, analyses)
+        }
         val suffix = if (bass.diagnostics.isEmpty()) "" else "; ${bass.diagnostics.joinToString(" ")}"
         return "Generated bass MIDI: ${bass.path} (${bass.notes.size} notes)$suffix"
     }
@@ -739,9 +769,26 @@ object ArrangementProjectCommands {
 
         val project = ProjectStore.read(projectRoot)
         project.requireValid(projectRoot)
-        val arrangement = json.decodeFromString<ai.music.workstation.arrangement.Arrangement>(
-            Files.readString(arrangementFile)
-        )
+        val arrangementText = Files.readString(arrangementFile, StandardCharsets.UTF_8)
+        val arrangementVersion = json.parseToJsonElement(arrangementText).jsonObject["version"]
+            ?.jsonPrimitive?.contentOrNull?.toIntOrNull()
+        if (arrangementVersion == DetailedArrangement.CURRENT_VERSION) {
+            val arrangement = json.decodeFromString<DetailedArrangement>(arrangementText)
+            arrangement.requireValid(detailedArrangementInput(projectRoot, project))
+            val dryPath = projectRoot.resolve("mix/dry.wav")
+            require(Files.isRegularFile(dryPath)) {
+                "Rendered v3 dry mix not found: $dryPath. Run render --project $projectRoot first."
+            }
+            val dry = requireWavOutput(dryPath, "Rendered v3 dry mix", requirePcm24 = true)
+            val format = requireNotNull(project.renderFormat)
+            require(dry.sampleRate == format.sampleRate && dry.channels == format.channels) {
+                "Rendered v3 dry mix does not match the project render format"
+            }
+            val output = projectRoot.resolve("mix/mix.wav")
+            publishCopy(dryPath, output, "v3 stem mix")
+            return "Created ${if ("--dry" in options) "dry " else ""}mix from rendered v3 stems: $output"
+        }
+        val arrangement = json.decodeFromString<ai.music.workstation.arrangement.Arrangement>(arrangementText)
         arrangement.requireValid(project.parts.map { it.id })
         require(arrangement.sections.isNotEmpty()) { "Arrangement must contain at least one section to mix" }
 
@@ -982,7 +1029,17 @@ object ArrangementProjectCommands {
             complete(4, "Reused approved arrangement.json")
         }
 
-        complete(5, "Prepared local generated-instrument render")
+        val arrangementText = Files.readString(approvedArrangement, StandardCharsets.UTF_8)
+        val arrangementVersion = json.parseToJsonElement(arrangementText).jsonObject["version"]
+            ?.jsonPrimitive?.contentOrNull?.toIntOrNull()
+        if (arrangementVersion == DetailedArrangement.CURRENT_VERSION) {
+            runBuildStage("Render detailed arrangement stems") {
+                renderAllStems(arrayOf("render", "--project", projectRoot.toString()), SfizzInstrumentRenderer())
+            }
+            complete(5, "Rendered or reused detailed arrangement stems")
+        } else {
+            complete(5, "Prepared local generated-instrument render")
+        }
 
         runBuildStage("Mix stems") {
             mixStems(arrayOf("mix", "--project", projectRoot.toString()))
@@ -1628,12 +1685,8 @@ object ArrangementProjectCommands {
     private fun instrumentLicenseReport(projectRoot: Path): List<InstrumentLicenseMetadata> {
         val arrangementPath = projectRoot.resolve("arrangement.json")
         if (!Files.isRegularFile(arrangementPath)) return emptyList()
-        val arrangement = json.decodeFromString<Arrangement>(Files.readString(arrangementPath, StandardCharsets.UTF_8))
-        val used = arrangement.sections.flatMap { section -> section.instruments }
-            .filter { it.mode != ai.music.workstation.arrangement.InstrumentMode.SOURCE }
-            .map { it.name }
-            .distinct()
-            .sorted()
+        val project = ProjectStore.read(projectRoot)
+        val used = usedGeneratedInstrumentNames(projectRoot, project, arrangementPath)
         if (used.isEmpty()) return emptyList()
         val soundsRoot = Path.of(System.getenv("MUSIC_SOUNDS_ROOT")?.takeIf { it.isNotBlank() } ?: "sounds")
         val instruments = json.decodeFromString<InstrumentRegistryFile>(
@@ -1656,6 +1709,26 @@ object ArrangementProjectCommands {
                 attribution = license.attributionText
             )
         }
+    }
+
+    private fun usedGeneratedInstrumentNames(projectRoot: Path, project: Project, arrangementPath: Path): List<String> {
+        val arrangementText = Files.readString(arrangementPath, StandardCharsets.UTF_8)
+        val version = json.parseToJsonElement(arrangementText).jsonObject["version"]
+            ?.jsonPrimitive?.contentOrNull?.toIntOrNull()
+        val names = if (version == DetailedArrangement.CURRENT_VERSION) {
+            val arrangement = json.decodeFromString<DetailedArrangement>(arrangementText)
+            arrangement.requireValid(detailedArrangementInput(projectRoot, project))
+            arrangement.sections.flatMap { it.instruments }
+                .filter { it.mode != InstrumentMode.SOURCE }
+                .map { it.name }
+        } else {
+            val arrangement = json.decodeFromString<Arrangement>(arrangementText)
+            arrangement.requireValid(project.parts.map { it.id })
+            arrangement.sections.flatMap { it.instruments }
+                .filter { it.mode != InstrumentMode.SOURCE }
+                .map { it.name }
+        }
+        return names.distinct().sorted()
     }
 
     private fun analysisFrom(output: Map<String, kotlinx.serialization.json.JsonElement>): PartAnalysis =

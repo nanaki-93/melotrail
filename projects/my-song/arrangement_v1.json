@@ -221,7 +221,7 @@
                     "mode": "generated",
                     "role": "sustained_harmony",
                     "density": 0.48,
-                    "register": "high"
+                    "register": "mid"
                 }
             ],
             "transitionOut": {
@@ -307,7 +307,7 @@
                     "mode": "generated",
                     "role": "sustained_harmony",
                     "density": 0.28,
-                    "register": "high"
+                    "register": "mid"
                 }
             ],
             "transitionOut": {

@@ -2,4 +2,5 @@
 # Do not add this to requirements.txt: the normal worker test suite is model-free.
 # Use Python 3.11 on macOS until the Task 001 runtime gate documents another
 # verified Basic Pitch environment.
+setuptools<81  # resampy 0.4.x still imports pkg_resources
 basic-pitch==0.4.0

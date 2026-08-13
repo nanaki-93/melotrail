@@ -400,6 +400,27 @@ class ArrangementProjectCommandsTest {
     }
 
     @Test
+    fun `mix publishes an already rendered detailed arrangement dry mix`() {
+        val projectRoot = createMidiPlanningProject("v3-mix-demo")
+        ArrangementProjectCommands.execute(arrayOf(
+            "arrange", "--project", projectRoot.toString(), "--planner", "deterministic",
+            "--structure", "A A A", "--instruments", "piano,bass"
+        ))
+        ArrangementProjectCommands.execute(arrayOf(
+            "arrange-detail", "--project", projectRoot.toString(), "--planner", "deterministic"
+        ))
+        val dry = projectRoot.resolve("mix/dry.wav")
+        Files.createDirectories(dry.parent)
+        writeSourceWav(dry, 44_100, 2, 441)
+        val expected = Files.readAllBytes(dry)
+
+        val result = ArrangementProjectCommands.execute(arrayOf("mix", "--project", projectRoot.toString()))
+
+        assertTrue(result.contains("rendered v3 stems"))
+        assertTrue(Files.readAllBytes(projectRoot.resolve("mix/mix.wav")).contentEquals(expected))
+    }
+
+    @Test
     fun `build masters the repaired dry mix with preserved PCM-24 format and release metadata`() {
         val projectRoot = createProject("build-demo")
         val source = tempDir.resolve("piano.wav")

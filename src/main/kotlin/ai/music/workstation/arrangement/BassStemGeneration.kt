@@ -276,6 +276,65 @@ class BassMidiGenerationAdapter(private val composer: DeterministicBassMidiGener
         return GeneratedBassMidi(output, checkNotNull(ppq), result.flatMap { it.second.notes }, result.flatMap { it.second.diagnostics })
     }
 
+    /** Consumes the approved v3 controls while retaining the legacy adapter for older projects. */
+    fun generate(projectRoot: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): GeneratedBassMidi {
+        val root = projectRoot.toAbsolutePath().normalize()
+        project.requireCleanMidi(root)
+        val bass = InstrumentRegistryLoader().load().resolve(LogicalInstrument.BASS.wireName)
+        val requests = mutableListOf<BassGenerationRequest>()
+        var start = 0L
+        var ppq: Int? = null
+        arrangement.sections.forEachIndexed { position, section ->
+            val analysis = analyses[section.partId]
+                ?: throw IllegalArgumentException("Missing MIDI analysis for arranged part '${section.partId}'")
+            require(analysis.ppq > 0 && analysis.durationTicks > 0) { "MIDI analysis for '${section.partId}' has invalid timing" }
+            if (ppq == null) ppq = analysis.ppq else require(ppq == analysis.ppq) { "All arranged MIDI parts must use the same PPQ" }
+            val plans = section.instruments.filterIsInstance<BassInstrumentPlan>()
+            require(plans.size <= 1) { "Detailed arrangement section ${section.index + 1} contains duplicate bass plans" }
+            plans.singleOrNull()?.let { plan ->
+                require(plan.name == LogicalInstrument.BASS.wireName && plan.mode == InstrumentMode.GENERATED) {
+                    "Detailed arrangement section ${section.index + 1} has an invalid bass plan"
+                }
+                requests += BassGenerationRequest(
+                    sectionIndex = position,
+                    sectionStartTick = start,
+                    ppq = analysis.ppq,
+                    tempoMap = analysis.tempoMap,
+                    timeSignatures = analysis.timeSignatures,
+                    sectionLengthTicks = analysis.durationTicks,
+                    key = analysis.key,
+                    chords = analysis.chords,
+                    energy = section.energy,
+                    density = plan.density,
+                    role = plan.role.toBassRole(),
+                    movement = plan.movement.toBassMovement(),
+                    register = plan.register.name.lowercase(),
+                    syncopation = plan.syncopation,
+                    midiChannel = bass.midiChannelZeroBased ?: 0,
+                    midiProgram = bass.midiProgram
+                )
+            }
+            start = Math.addExact(start, analysis.durationTicks)
+        }
+        require(requests.isNotEmpty()) { "Detailed arrangement does not contain a generated bass instrument" }
+        val result = requests.map { it to composer.generate(it) }
+        val output = root.resolve("midi/generated/bass.mid")
+        writeMidi(output, checkNotNull(ppq), start, requests, result)
+        return GeneratedBassMidi(output, checkNotNull(ppq), result.flatMap { it.second.notes }, result.flatMap { it.second.diagnostics })
+    }
+
+    private fun DetailedBassRole.toBassRole(): BassRole = when (this) {
+        DetailedBassRole.ROOT -> BassRole.ROOT
+        DetailedBassRole.ROOT_FIFTH -> BassRole.ROOT_FIFTH
+        DetailedBassRole.OCTAVE -> BassRole.OCTAVE
+        DetailedBassRole.SUSTAINED -> BassRole.SUSTAINED
+    }
+
+    private fun DetailedBassMovement.toBassMovement(): BassMovement = when (this) {
+        DetailedBassMovement.STATIC, DetailedBassMovement.ROOT_MOTION -> BassMovement.STATIC
+        DetailedBassMovement.LEAPING, DetailedBassMovement.OCTAVES -> BassMovement.BALANCED
+    }
+
     private fun writeMidi(
         output: Path,
         ppq: Int,

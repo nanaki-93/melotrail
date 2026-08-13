@@ -154,6 +154,34 @@ class MidiCleanCommandTest(unittest.TestCase):
             self.assertIn(mido.Message("program_change", channel=2, program=48, time=0), cleaned.tracks[1])
             self.assertEqual({0, 2}, {note[1] for note in completed_notes(output)})
 
+    def test_orphan_note_offs_are_removed_and_output_is_strictly_paired(self) -> None:
+        with tempfile.TemporaryDirectory() as directory_name:
+            directory = Path(directory_name)
+            source = directory / "orphan.mid"
+            output = directory / "clean.mid"
+            midi = mido.MidiFile(ticks_per_beat=480)
+            track = mido.MidiTrack()
+            track.append(mido.Message("note_on", channel=0, note=65, velocity=80, time=0))
+            track.append(mido.Message("note_off", channel=0, note=65, velocity=0, time=240))
+            track.append(mido.Message("note_off", channel=0, note=65, velocity=0, time=120))
+            midi.tracks.append(track)
+            midi.save(source)
+
+            result = midi_clean_command({"path": str(source), "outputPath": str(output)})
+
+            self.assertEqual(1, result["orphanNoteOffsRemoved"])
+            self.assertEqual(1, result["outputNoteCount"])
+            self.assertEqual(1, len(completed_notes(output)))
+            active: set[tuple[int, int]] = set()
+            for message in mido.MidiFile(output).tracks[0]:
+                key = (getattr(message, "channel", -1), getattr(message, "note", -1))
+                if message.type == "note_on" and message.velocity > 0:
+                    active.add(key)
+                elif message.type in {"note_on", "note_off"}:
+                    self.assertIn(key, active)
+                    active.remove(key)
+            self.assertEqual(set(), active)
+
     def test_optional_sustain_cleanup_removes_only_redundant_changes(self) -> None:
         with tempfile.TemporaryDirectory() as directory_name:
             directory = Path(directory_name)

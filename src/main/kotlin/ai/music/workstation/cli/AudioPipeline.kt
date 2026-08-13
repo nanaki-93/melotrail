@@ -14,6 +14,12 @@ import ai.music.workstation.worker.RepairCommand
 import ai.music.workstation.worker.RepairSpec
 import ai.music.workstation.worker.WorkerStatus
 import kotlinx.coroutines.*
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.time.Duration
@@ -270,30 +276,7 @@ class AudioPipeline(
                 throw RuntimeException("Analysis failed: $errorMsg")
             }
 
-            val output = response.output ?: emptyMap()
-            val loudness = output["loudness"] as? Map<*, *>
-
-            AnalysisResult(
-                bpm = (output["bpm"] as? Number)?.toDouble(),
-                key = (output["key"] as? Map<*, *>)?.get("root")?.toString(),
-                duration = (output["duration"] as? Number)?.toDouble() ?: 0.0,
-                sampleRate = (output["sampleRate"] as? Number)?.toInt() ?: 44100,
-                channels = (output["channels"] as? Number)?.toInt() ?: 2,
-                loudness = loudness?.let {
-                    LoudnessInfo(
-                        integratedLUFS =
-                            (it["integratedLUFS"] as? Number)?.toDouble()
-                                ?: -14.0,
-                        truePeak =
-                            (it["truePeak"] as? Number)?.toDouble()
-                                ?: -1.0,
-                        rms =
-                            (it["rms"] as? Number)?.toDouble()
-                                ?: -18.0
-                    )
-                },
-                qualityIssues = emptyList()
-            )
+            analysisResultFrom(response.output ?: emptyMap())
         } catch (e: Exception) {
             logger.error(
                 "Pipeline",
@@ -660,4 +643,24 @@ class AudioPipeline(
                 }
             }
     }
+}
+
+/** Maps the worker's JSON element contract without lossy Any/Number casts. */
+internal fun analysisResultFrom(output: Map<String, JsonElement>): AnalysisResult {
+    val loudness = output["loudness"]?.let { runCatching { it.jsonObject }.getOrNull() }
+    return AnalysisResult(
+        bpm = output["bpm"]?.jsonPrimitive?.doubleOrNull,
+        key = output["key"]?.let { runCatching { it.jsonObject["root"]?.jsonPrimitive?.contentOrNull }.getOrNull() },
+        duration = output["duration"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
+        sampleRate = output["sampleRate"]?.jsonPrimitive?.intOrNull ?: 44_100,
+        channels = output["channels"]?.jsonPrimitive?.intOrNull ?: 2,
+        loudness = loudness?.let {
+            LoudnessInfo(
+                integratedLUFS = it["integratedLUFS"]?.jsonPrimitive?.doubleOrNull ?: -14.0,
+                truePeak = it["truePeak"]?.jsonPrimitive?.doubleOrNull ?: -1.0,
+                rms = it["rms"]?.jsonPrimitive?.doubleOrNull ?: -18.0
+            )
+        },
+        qualityIssues = emptyList()
+    )
 }

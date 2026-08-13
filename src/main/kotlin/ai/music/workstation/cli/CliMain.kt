@@ -18,6 +18,13 @@ import java.time.Instant
  *   4. Mastering → EQ, compression, saturation, limiting
  */
 fun main(args: Array<String>) = runBlocking {
+    if (args.size == 1 && args[0] in setOf("--help", "-h")) {
+        println(CliParser.usage())
+        println()
+        println(ArrangementProjectCommands.usage())
+        return@runBlocking
+    }
+
     if (AudioComparisonCommand.handles(args)) {
         try {
             println(AudioComparisonCommand.execute(args))

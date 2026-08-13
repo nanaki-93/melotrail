@@ -41,6 +41,8 @@ class ArrangementCriticTest {
         assertFalse(client.userPrompt.contains("midi/"))
         assertFalse(client.userPrompt.contains("project.json"))
         assertTrue(client.systemPrompt.contains("at most 4 sections"))
+        assertTrue(client.systemPrompt.contains("required accept response"))
+        assertTrue(client.systemPrompt.contains("required revise response shape"))
     }
 
     @Test

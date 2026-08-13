@@ -240,7 +240,10 @@ object DetailedArrangementValidator {
                         errors += "$label bass role or mode is invalid"
                     }
                     bounded(label, "bass density", instrument.density, errors)
-                    bounded(label, "bass syncopation", instrument.syncopation, errors)
+                    if (!instrument.syncopation.isFinite() || instrument.syncopation !in 0.0..0.25) {
+                        errors += "$label bass syncopation must be a finite number from 0 through 0.25"
+                    }
+                    if (instrument.register != MusicalRegister.LOW) errors += "$label bass register must be low"
                 }
                 is DrumsInstrumentPlan -> {
                     if (instrument.name != "drums" || instrument.mode != InstrumentMode.GENERATED || instrument.role.wireName != variation.role) {
@@ -327,7 +330,7 @@ class DeterministicDetailedArrangementPlanner : DetailedArrangementPlanner {
         "bass" -> BassInstrumentPlan(
             role = DetailedBassRole.entries.first { it.wireName == instrument.role }, density = instrument.density,
             movement = when (instrument.role) { "root" -> DetailedBassMovement.ROOT_MOTION; "root_fifth" -> DetailedBassMovement.LEAPING; "octave" -> DetailedBassMovement.OCTAVES; else -> DetailedBassMovement.STATIC },
-            register = register(energy), syncopation = (instrument.density * 0.4).coerceIn(0.0, 1.0)
+            register = MusicalRegister.LOW, syncopation = (instrument.density * 0.2).coerceIn(0.0, 0.25)
         )
         "drums" -> DrumsInstrumentPlan(
             role = DrumsRole.entries.first { it.wireName == instrument.role }, density = instrument.density,
@@ -389,8 +392,28 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
         Validated repeated-section variations:
         ${promptJson.encodeToString(input.variations)}
 
-        Return a version 3 arrangement that preserves every supplied section identity, role, energy, instrument name, and variation role exactly.
+        MIDI analysis facts by part (facts only; do not copy them into the response):
+        ${promptJson.encodeToString(input.planningInput.analyses.toSortedMap().map { (partId, analysis) ->
+            DetailedPlanningAnalysis(partId, analysis.pitchRange, analysis.melodicRange, analysis.noteDensity, analysis.rhythmicDensity)
+        })}
+
+        Response requirements:
+        - Return exactly ${input.variations.sections.size} sections in the supplied order.
+        - Copy every section index, instanceId, partId, role, and energy exactly.
+        - Keep the exact instrument order, names, modes, and variation roles supplied for each section.
+        - Fill only the instrument-specific fields required by the system response schema.
+        - Map transitionIntent none to transitionOut type none, build to bridge, and release to crossfade.
+        Return the complete version 3 object described by the system response schema and no other text.
     """.trimIndent()
+
+    @Serializable
+    private data class DetailedPlanningAnalysis(
+        val partId: String,
+        val pitchRange: MidiIntRange?,
+        val melodicRange: Int?,
+        val noteDensity: Double,
+        val rhythmicDensity: Double
+    )
 
     private companion object {
         val strictJson = Json { ignoreUnknownKeys = false }
@@ -398,13 +421,32 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
         const val SYSTEM_PROMPT = """
             You are a MIDI-first arrangement planner. Return JSON only, without markdown or prose. You never provide notes,
             MIDI events, frequencies, sample data, file paths, code, commands, renderer configuration, sample rates, or output paths.
-            The document is schema version 3 with top-level version and sections only. A section has index, instanceId, partId,
-            role, energy, instruments, transitionOut. Instrument objects use kind=piano|bass|drums|pad|strings. Piano is exactly
-            name=piano and mode=source. Generated plans use mode=generated and only their own typed fields: bass(role,density,
-            movement,register,syncopation); drums(role,density,kickDensity,snarePattern,hiHatDensity,swing,fillLastBar);
-            pad(role,density,register); strings(role,density,register), where strings role is sustained_harmony,
-            climax_reinforcement, long_notes, or simple_countermelody. Densities and syncopation are finite 0..1; swing is finite 0..0.5.
-            Use transitionOut none for intent none, bridge for build, and crossfade for release. Do not add fields.
+            The document has exactly these top-level fields:
+            {"version":3,"sections":[SECTION_OBJECTS]}
+            Every section object has exactly index, instanceId, partId, role, energy, instruments, and transitionOut.
+
+            Instrument objects are a tagged union. Use exactly one of these shapes and no extra fields:
+            piano:   {"kind":"piano","name":"piano","mode":"source"}
+            bass:    {"kind":"bass","name":"bass","mode":"generated","role":"root","density":0.4,"movement":"root_motion","register":"low","syncopation":0.1}
+            drums:   {"kind":"drums","name":"drums","mode":"generated","role":"soft_lofi","density":0.4,"kickDensity":0.4,"snarePattern":"beats_2_4","hiHatDensity":0.3,"swing":0.1,"fillLastBar":false}
+            pad:     {"kind":"pad","name":"pad","mode":"generated","role":"texture","density":0.4,"register":"mid"}
+            strings: {"kind":"strings","name":"strings","mode":"generated","role":"sustained_harmony","density":0.4,"register":"mid"}
+
+            Allowed bass roles: root, root_fifth, octave, sustained. Allowed bass movement: static, root_motion, leaping, octaves.
+            Allowed drum roles: minimal, soft_lofi, standard_groove, half_time, build. Allowed snarePattern: beats_2_4, beat_3, none.
+            Allowed pad roles: sustained, texture. Allowed strings roles: sustained_harmony, climax_reinforcement, long_notes,
+            simple_countermelody. Allowed register: low, mid, high. Densities are finite 0..1, bass syncopation is finite
+            0..0.25, and drum swing is finite 0..0.5. Bass must use register low. Strings are voiced above the source
+            piano range where practical: choose high when a strings section's MIDI analysis has a high pitchRange.max;
+            dense source material can still force conservative silence if no complete voicing fits above it.
+
+            transitionOut is also a union. Use exactly one of these shapes:
+            none:      {"type":"none","bars":0,"crossfadeMs":0}
+            crossfade: {"type":"crossfade","bars":0,"crossfadeMs":180}
+            bridge:    {"type":"bridge","bars":1,"crossfadeMs":0,"bridge":{"energy":0.5,"elements":["bass_pickup"]}}
+            Bridge bars are 1 or 2. Bridge energy is finite 0..1. Bridge elements may contain only bass_pickup, drum_fill,
+            pad_swell, melody_pickup. Map transition intent none to none, build to bridge, release to crossfade. The final section
+            must use none. Do not add fields.
         """
     }
 }

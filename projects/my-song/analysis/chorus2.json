@@ -1,9 +1,83 @@
 {
-    "duration": 10.60265306122449,
-    "sampleRate": 44100,
-    "channels": 2,
-    "frameCount": 467577,
-    "peak": 0.295745849609375,
-    "rms": 0.05137555698557853,
-    "nearSilence": false
+    "version": 1,
+    "partId": "chorus2",
+    "ppq": 480,
+    "durationTicks": 10104,
+    "durationSeconds": 10.525,
+    "tempoMap": [
+        {
+            "tick": 0,
+            "bpm": 120.0,
+            "inferred": false
+        }
+    ],
+    "timeSignatures": [
+        {
+            "tick": 0,
+            "numerator": 4,
+            "denominator": 4,
+            "inferred": true
+        }
+    ],
+    "bars": 6,
+    "beats": 21.05,
+    "noteCount": 134,
+    "pitchRange": {
+        "min": 36,
+        "max": 86
+    },
+    "velocity": {
+        "min": 30.0,
+        "max": 91.0,
+        "mean": 60.26865671641791
+    },
+    "noteLengthBeats": {
+        "min": 0.2791666666666667,
+        "max": 2.904166666666667,
+        "mean": 0.6140547263681592
+    },
+    "noteDensity": 1.0,
+    "rhythmicDensity": 1.0,
+    "melodicRange": 50,
+    "energy": 0.6847338112586673,
+    "key": {
+        "tonic": "C",
+        "mode": "major",
+        "confidence": 0.5044619783230325
+    },
+    "chords": [
+        {
+            "startTick": 0,
+            "endTick": 1920,
+            "confidence": 0.5169530103685277
+        },
+        {
+            "startTick": 1920,
+            "endTick": 3840,
+            "symbol": "Fm",
+            "confidence": 0.8789555473990032
+        },
+        {
+            "startTick": 3840,
+            "endTick": 5760,
+            "confidence": 0.581939206395255
+        },
+        {
+            "startTick": 5760,
+            "endTick": 7680,
+            "symbol": "G",
+            "confidence": 0.8391532631795183
+        },
+        {
+            "startTick": 7680,
+            "endTick": 9600,
+            "symbol": "Cm",
+            "confidence": 0.9575849373581398
+        },
+        {
+            "startTick": 9600,
+            "endTick": 10104,
+            "confidence": 1.0
+        }
+    ]
 }

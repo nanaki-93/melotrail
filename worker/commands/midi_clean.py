@@ -142,7 +142,11 @@ def _timed_tracks(midi: mido.MidiFile) -> list[list[TimedEvent]]:
     return tracks
 
 
-def _extract_notes(timed_tracks: list[list[TimedEvent]]) -> list[MidiNote]:
+def _extract_notes(
+    timed_tracks: list[list[TimedEvent]],
+    orphan_events: set[tuple[int, int]] | None = None,
+    reject_orphans: bool = False,
+) -> list[MidiNote]:
     notes: list[MidiNote] = []
     for track_index, events in enumerate(timed_tracks):
         active: dict[tuple[int, int], list[TimedEvent]] = {}
@@ -156,6 +160,13 @@ def _extract_notes(timed_tracks: list[list[TimedEvent]]) -> list[MidiNote]:
                 continue
             starts = active.get(key)
             if not starts:
+                if reject_orphans:
+                    raise MidiCleanupValidationError(
+                        f"Track {track_index} has a note-off at tick {event.tick} "
+                        f"without a matching note-on (channel {message.channel}, pitch {message.note})"
+                    )
+                if orphan_events is not None:
+                    orphan_events.add((track_index, event.index))
                 continue
             start = starts.pop(0)
             notes.append(MidiNote(
@@ -288,7 +299,7 @@ def _render_midi(
 def _validate_output(path: Path) -> list[MidiNote]:
     try:
         midi = _load_midi(path)
-        notes = _extract_notes(_timed_tracks(midi))
+        notes = _extract_notes(_timed_tracks(midi), reject_orphans=True)
     except MidiCleanupValidationError as exc:
         raise MidiCleanupOutputValidationError(f"Cleaned MIDI is invalid: {exc}") from exc
     if any(note.end_tick <= note.start_tick for note in notes):
@@ -301,15 +312,16 @@ def midi_clean_command(request: dict) -> dict:
     input_path, output_path, options = _parse_request(request)
     source = _load_midi(input_path)
     timed_tracks = _timed_tracks(source)
-    notes = _extract_notes(timed_tracks)
+    removed_events: set[tuple[int, int]] = set()
+    notes = _extract_notes(timed_tracks, orphan_events=removed_events)
     input_note_count = len(notes)
     tempos = _tempo_events(timed_tracks)
-    removed_events: set[tuple[int, int]] = set()
     stats = {
         "duplicatesRemoved": 0,
         "shortNotesRemoved": 0,
         "lowVelocityNotesRemoved": 0,
         "overlapsRepaired": 0,
+        "orphanNoteOffsRemoved": len(removed_events),
         "quantizedNotes": 0,
     }
 

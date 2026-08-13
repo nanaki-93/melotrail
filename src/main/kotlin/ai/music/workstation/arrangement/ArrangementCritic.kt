@@ -158,15 +158,48 @@ class LocalQwenArrangementCritic(private val client: LocalQwenClient = LmStudioQ
         ${promptJson.encodeToString(arrangement)}
 
         Versioned MIDI analyses without paths:
-        ${promptJson.encodeToString(input.planningInput.analyses.toSortedMap().map { CriticAnalysis(it.key, it.value) })}
+        ${promptJson.encodeToString(input.planningInput.analyses.toSortedMap().map { (partId, analysis) ->
+            CriticAnalysis(partId, analysis.pitchRange, analysis.melodicRange, analysis.noteDensity, analysis.rhythmicDensity)
+        })}
 
         Allowed logical instruments: ${promptJson.encodeToString(input.planningInput.allowedInstruments)}
         Allowed role and transition enums: ${promptJson.encodeToString(AllowedCriticValues())}
-        Deterministic render metrics: ${promptJson.encodeToString(arrangement.sections.map { CriticRenderMetric(it.index, it.energy, it.instruments.size, it.transitionOut.type != TransitionType.NONE) })}
+        Deterministic render metrics: ${promptJson.encodeToString(arrangement.sections.map { section ->
+            val strings = section.instruments.filterIsInstance<StringsInstrumentPlan>().singleOrNull()
+            val sourceTop = input.planningInput.analyses[section.partId]?.pitchRange?.max
+            val currentRange = strings?.register?.toStringsRange()
+            val highRange = StringsGenerationRequest.REGISTER_RANGES.getValue("high")
+            CriticRenderMetric(
+                section.index,
+                section.energy,
+                section.instruments.size,
+                section.transitionOut.type != TransitionType.NONE,
+                strings?.register?.name?.lowercase(),
+                currentRange?.hasPracticalSpaceAbove(sourceTop),
+                if (strings != null && currentRange?.hasPracticalSpaceAbove(sourceTop) == false && highRange.hasPracticalSpaceAbove(sourceTop)) "high" else null
+            )
+        })}
+
+        Return exactly one complete critique object matching the system response schema. If no valid bounded improvement is
+        necessary, return the accept form. Never omit version, decision, issues, or changes.
     """.trimIndent()
 
-    @Serializable private data class CriticRenderMetric(val sectionIndex: Int, val energy: Double, val activeInstrumentCount: Int, val hasTransition: Boolean)
-    @Serializable private data class CriticAnalysis(val partId: String, val analysis: MidiAnalysis)
+    @Serializable private data class CriticRenderMetric(
+        val sectionIndex: Int,
+        val energy: Double,
+        val activeInstrumentCount: Int,
+        val hasTransition: Boolean,
+        val stringsRegister: String?,
+        val stringsRegisterHasPracticalSpace: Boolean?,
+        val suggestedStringsRegister: String?
+    )
+    @Serializable private data class CriticAnalysis(
+        val partId: String,
+        val pitchRange: MidiIntRange?,
+        val melodicRange: Int?,
+        val noteDensity: Double,
+        val rhythmicDensity: Double
+    )
     @Serializable private data class AllowedCriticValues(
         val bassRoles: List<String> = DetailedBassRole.entries.map { it.name.lowercase() },
         val drumsRoles: List<String> = DrumsRole.entries.map { it.name.lowercase() },
@@ -180,15 +213,41 @@ class LocalQwenArrangementCritic(private val client: LocalQwenClient = LmStudioQ
         val promptJson = Json { encodeDefaults = true }
         const val SYSTEM_PROMPT = """
             You are a music-arrangement critic. Return JSON only, without markdown or prose. You do not generate audio, notes,
-            MIDI events, code, commands, paths, sample data, or renderer settings. Top-level fields are exactly version, decision,
-            issues, and changes. Version is 1. Decision is accept or revise. Issues contain only category, targetSectionIndexes,
-            and a short musical rationale. Categories are too_repetitive, weak_transition, abrupt_energy_change,
+            MIDI events, code, commands, paths, sample data, or renderer settings.
+            The required accept response is exactly:
+            {"version":1,"decision":"accept","issues":[],"changes":[]}
+            The required revise response shape is exactly:
+            {"version":1,"decision":"revise","issues":[{"category":"insufficient_contrast","targetSectionIndexes":[2],"rationale":"Move the planned strings above the source range."}],"changes":[{"sectionIndex":2,"instruments":[{"kind":"piano","name":"piano","mode":"source"},{"kind":"strings","name":"strings","mode":"generated","role":"sustained_harmony","density":0.4,"register":"high"}]}]}
+            Top-level fields are exactly version, decision, issues, and changes. All four are required. For a revise change,
+            sectionIndex is required and energy, instruments, transitionOut are optional replacement fields; include only fields
+            that should be replaced. Do not replace energy because it is fixed by the reviewed variation plan. When replacing
+            instruments, return the complete existing instrument list in its original order; preserve every kind, name, mode,
+            and role, and change only bounded controls. Instrument objects use exactly these tagged-union shapes and no extras:
+            {"kind":"piano","name":"piano","mode":"source"}
+            {"kind":"bass","name":"bass","mode":"generated","role":"root","density":0.4,"movement":"root_motion","register":"low","syncopation":0.1}
+            {"kind":"drums","name":"drums","mode":"generated","role":"soft_lofi","density":0.4,"kickDensity":0.4,"snarePattern":"beats_2_4","hiHatDensity":0.3,"swing":0.1,"fillLastBar":false}
+            {"kind":"pad","name":"pad","mode":"generated","role":"texture","density":0.4,"register":"mid"}
+            {"kind":"strings","name":"strings","mode":"generated","role":"sustained_harmony","density":0.4,"register":"high"}
+            transitionOut is exactly one of {"type":"none","bars":0,"crossfadeMs":0},
+            {"type":"crossfade","bars":0,"crossfadeMs":180}, or
+            {"type":"bridge","bars":1,"crossfadeMs":0,"bridge":{"energy":0.5,"elements":["bass_pickup"]}}.
+            Issues contain only category, targetSectionIndexes, and a rationale of at most 100 characters using only letters,
+            spaces, and periods. Do not use slashes, punctuation other than a period, or technical terms in rationale text.
+            Categories are too_repetitive, weak_transition, abrupt_energy_change,
             too_many_instruments, insufficient_contrast, weak_climax, source_identity_risk. Changes contain only sectionIndex
             and optional replacement values for energy, instruments, transitionOut. A pass modifies at most 4 sections and 3
             fields per section. For accept use empty issues and changes. For revise use at least one issue and one change.
             Preserve every section identity, order, part, role, source piano plan, allowed instrument, and song-plan constraint.
+            A false stringsRegisterHasPracticalSpace means that register will render silent. If suggestedStringsRegister is high,
+            prefer replacing that section's complete instrument list with only its strings register changed to high.
             Do not add fields or use JSON Patch.
         """
+    }
+
+    private fun MusicalRegister.toStringsRange(): IntRange = StringsGenerationRequest.REGISTER_RANGES.getValue(name.lowercase())
+    private fun IntRange.hasPracticalSpaceAbove(sourceTop: Int?): Boolean {
+        val start = if (sourceTop == null) first else maxOf(first, sourceTop + 2)
+        return last - start >= 7
     }
 }
 

@@ -31,5 +31,13 @@ class CliParserTest {
         assertEquals("master.wav", args.outputPath)
     }
 
+    @Test
+    fun `help text includes the lossless pipeline contract`() {
+        val usage = CliParser.usage()
+
+        org.junit.jupiter.api.Assertions.assertTrue(usage.contains("Output WAV file"))
+        org.junit.jupiter.api.Assertions.assertTrue(ArrangementProjectCommands.usage().contains("generate bass|drums|pad|strings|transitions"))
+    }
+
     private fun inputFile(): Path = tempDir.resolve("mix.wav").also { Files.writeString(it, "fixture") }
 }
