@@ -130,43 +130,41 @@ The starter library is rooted at `sounds/` (override only with
 drum channel 10 becomes MIDI API channel 9. See [`sounds/README.md`](sounds/README.md)
 for the required local sample-copy setup after a fresh checkout.
 
-### AI bridge review workflow
+### Global song-planning workflow
 
-Qwen creates a reviewable draft instead of overwriting an approved song. Its
-transition plan can request only local, bounded 0–2 bar bridges made from
-generated bass pickups, drum fills, pad swells, and short melody pickups.
+`arrange` first creates a standalone, reviewable `song_plan.json` for the
+whole user-controlled structure. It requires a v2 MIDI-first project with a
+versioned MIDI analysis for every part. The plan contains only section purpose,
+energy, logical instrument progression, transition intent, and ending behavior;
+it contains no notes, paths, renderer settings, or executable behavior.
 
 ```bash
-# Re-run analysis after upgrading so BPM/key/silence metadata is available.
-make cli ARGS='part analyze ./projects/my-song --id phrase1'
+# Every MIDI-first part must have musical metadata first.
+make cli ARGS='part analyze ./projects/song-001 --id A'
 
-make cli ARGS='arrange --project ./projects/my-song --planner qwen --instruments source,bass,drums,pad --style "warm lo-fi"'
-make cli ARGS='preview --project ./projects/my-song'
-# Listen to projects/my-song/previews/*.wav.
-make cli ARGS='approve --project ./projects/my-song'
-make cli ARGS='render --project ./projects/my-song'
+make cli ARGS='arrange --project ./projects/song-001 --planner deterministic --instruments piano,bass,pad --style "warm lo-fi"'
+# Inspect projects/song-001/song_plan.json before a later detailed-arrangement stage.
 ```
 
-`render` writes the generated `bass.wav`, `drums.wav`, `pad.wav`, and
-`bridges.wav` stems when the plan uses them, plus `mix/mix.wav`. `build` keeps
-an approved `arrangement.json`, applies the audible Bedroom LoFi preset, and
-creates `output/master.wav`. It also creates `output/youtube.mp3` when the
-optional local `lameenc` dependency is installed with `make python-install`.
+The existing `render`/`build` workflow continues to use its compatible
+`arrangement.json` artifacts. A detailed MIDI-first arrangement is a later,
+separate stage; generating a global song plan never approves or overwrites one.
 
 ### Optional local Qwen planning
 
-Qwen is optional and only plans validated `arrangement.json` data. Start an
-OpenAI-compatible LM Studio server, then configure its endpoint and model:
+Qwen is optional and makes exactly one strict JSON-only request for the global
+song plan. Start an OpenAI-compatible LM Studio server, then configure its
+endpoint and model:
 
 ```bash
 export LM_STUDIO_CHAT_COMPLETIONS_URL=http://127.0.0.1:1234/v1/chat/completions
 export QWEN_MODEL=qwen
-./gradlew cliRun --args="arrange --project ./projects/demo --planner qwen --structure 'A A B B' --instruments source,bass"
+./gradlew cliRun --args="arrange --project ./projects/demo --planner qwen --structure 'A A B B' --instruments piano,bass"
 ```
 
-For repeatable local runs, use `--planner deterministic` (or the `build`
-command with `--no-ai`) instead. Qwen responses are parsed as strict JSON and
-validated against the project structure and allowed instruments.
+For repeatable local runs, use `--planner deterministic`. Qwen responses are
+parsed as strict JSON and validated against the exact structure, generated
+instance identities, MIDI analysis bounds, and instrument/enum allow-lists.
 
 ## Testing
 

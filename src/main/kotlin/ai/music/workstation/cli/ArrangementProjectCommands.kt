@@ -1,13 +1,13 @@
 package ai.music.workstation.cli
 
 import ai.music.workstation.arrangement.ArrangementInput
-import ai.music.workstation.arrangement.ArrangementPlanner
 import ai.music.workstation.arrangement.ArrangementStore
 import ai.music.workstation.arrangement.ArrangementRenderer
 import ai.music.workstation.arrangement.BassMidiGenerationAdapter
 import ai.music.workstation.arrangement.DeterministicArrangementPlanner
+import ai.music.workstation.arrangement.DeterministicGlobalSongPlanner
 import ai.music.workstation.arrangement.DeterministicStemMixer
-import ai.music.workstation.arrangement.LocalQwenArrangementPlanner
+import ai.music.workstation.arrangement.LocalQwenGlobalSongPlanner
 import ai.music.workstation.arrangement.MixSettings
 import ai.music.workstation.arrangement.MixTrack
 import ai.music.workstation.arrangement.Part
@@ -15,8 +15,10 @@ import ai.music.workstation.arrangement.PartAnalysis
 import ai.music.workstation.arrangement.PartAnalysisStore
 import ai.music.workstation.arrangement.MidiReferences
 import ai.music.workstation.arrangement.MidiAnalysisStore
+import ai.music.workstation.arrangement.MidiAnalysis
 import ai.music.workstation.arrangement.MidiPartAnalyzer
 import ai.music.workstation.arrangement.InstrumentRegistryLoader
+import ai.music.workstation.arrangement.LogicalInstrument
 import ai.music.workstation.arrangement.Arrangement
 import ai.music.workstation.arrangement.AnalysisKind
 import ai.music.workstation.arrangement.Project
@@ -24,6 +26,9 @@ import ai.music.workstation.arrangement.ProjectStore
 import ai.music.workstation.arrangement.RenderFormat
 import ai.music.workstation.arrangement.SectionInstance
 import ai.music.workstation.arrangement.StructureParser
+import ai.music.workstation.arrangement.GlobalSongPlanner
+import ai.music.workstation.arrangement.SongPlanStore
+import ai.music.workstation.arrangement.SongPlanningInput
 import ai.music.workstation.audio.WAVDecoder
 import ai.music.workstation.audio.AudioResampler
 import ai.music.workstation.dsp.DSPChain
@@ -398,7 +403,7 @@ object ArrangementProjectCommands {
     private fun arrange(args: Array<String>): String {
         val options = parseArrangeOptions(args.drop(1))
         val plannerName = options["--planner"] ?: DETERMINISTIC_PLANNER
-        val planner = plannerFor(plannerName)
+        val planner = globalPlannerFor(plannerName)
 
         val projectRoot = projectRoot(options.getValue("--project"))
         val projectFile = projectRoot.resolve(PROJECT_FILE)
@@ -408,37 +413,45 @@ object ArrangementProjectCommands {
 
         val structure = options["--structure"]?.let { StructureParser.parse(it, project) }
             ?: project.structure.mapIndexed { index, partId -> SectionInstance(index, partId) }
-        val analyses = project.parts.mapNotNull { part ->
-            part.analysis?.takeIf { it.kind != AnalysisKind.MIDI }?.let { reference ->
-                part.id to json.decodeFromString<PartAnalysis>(
-                    Files.readString(projectRoot.resolve(reference.file))
-                )
-            }
-        }.toMap()
-        val arrangement = planner.plan(
-            ArrangementInput(
-                project = project,
-                analyses = analyses,
-                structure = structure,
-                requestedInstruments = parseInstrumentList(options["--instruments"]),
-                style = options["--style"]
-            )
-        )
-        val arrangementPath = if (plannerName == QWEN_PLANNER) {
-            ArrangementStore.writeDraft(projectRoot, project, arrangement)
-        } else {
-            ArrangementStore.write(projectRoot, project, arrangement)
+        val availableInstruments = LogicalInstrument.entries.map { it.wireName }
+        val requestedInstruments = parseInstrumentList(options["--instruments"])
+        val allowedInstruments = if (requestedInstruments.isEmpty()) availableInstruments else requestedInstruments
+        require(allowedInstruments.all { it in availableInstruments }) {
+            "Requested instruments must be available in the local sound library: ${availableInstruments.joinToString(", ")}"
         }
+        val partsById = project.parts.associateBy { it.id }
+        val analyses = structure.map { it.partId }.distinct().associateWith { partId ->
+            val part = checkNotNull(partsById[partId]) { "Structure references unknown part '$partId'" }
+            val reference = requireNotNull(part.analysis) {
+                "Missing MIDI analysis for part '${part.id}'. Run part analyze first."
+            }
+            require(reference.kind == AnalysisKind.MIDI) {
+                "Global song planning requires MIDI analysis for part '${part.id}'. Run part analyze after MIDI cleanup."
+            }
+            json.decodeFromString<MidiAnalysis>(
+                Files.readString(projectRoot.resolve(reference.file), StandardCharsets.UTF_8)
+            )
+        }
+        val input = SongPlanningInput(
+            projectName = project.name,
+            projectVersion = project.version,
+            analyses = analyses,
+            structure = structure,
+            allowedInstruments = allowedInstruments,
+            style = options["--style"]
+        )
+        val songPlan = planner.plan(input)
+        val songPlanPath = SongPlanStore.write(projectRoot, input, songPlan)
         return if (plannerName == QWEN_PLANNER) {
-            "Created Qwen arrangement draft: $arrangementPath. Run `preview --project ${projectRoot}` then `approve --project ${projectRoot}`."
+            "Created Qwen global song plan: $songPlanPath. Review song_plan.json before creating a detailed arrangement."
         } else {
-            "Created $plannerName arrangement: $arrangementPath"
+            "Created $plannerName global song plan: $songPlanPath"
         }
     }
 
-    private fun plannerFor(name: String): ArrangementPlanner = when (name) {
-        DETERMINISTIC_PLANNER -> DeterministicArrangementPlanner()
-        QWEN_PLANNER -> LocalQwenArrangementPlanner()
+    private fun globalPlannerFor(name: String): GlobalSongPlanner = when (name) {
+        DETERMINISTIC_PLANNER -> DeterministicGlobalSongPlanner()
+        QWEN_PLANNER -> LocalQwenGlobalSongPlanner()
         else -> throw IllegalArgumentException(
             "Unsupported planner: $name. Available planners: $DETERMINISTIC_PLANNER, $QWEN_PLANNER"
         )

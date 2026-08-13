@@ -6,12 +6,17 @@ import ai.music.workstation.arrangement.ArrangementStore
 import ai.music.workstation.arrangement.InstrumentPlan
 import ai.music.workstation.arrangement.InstrumentMode
 import ai.music.workstation.arrangement.MidiReferences
+import ai.music.workstation.arrangement.MidiAnalysis
+import ai.music.workstation.arrangement.MidiAnalysisStore
+import ai.music.workstation.arrangement.MidiTempoChange
+import ai.music.workstation.arrangement.MidiTimeSignature
 import ai.music.workstation.arrangement.PartAnalysis
 import ai.music.workstation.arrangement.PartAnalysisStore
 import ai.music.workstation.arrangement.Part
 import ai.music.workstation.arrangement.Project
 import ai.music.workstation.arrangement.ProjectStore
 import ai.music.workstation.arrangement.RenderFormat
+import ai.music.workstation.arrangement.SongPlan
 import ai.music.workstation.audio.AudioBuffer
 import ai.music.workstation.audio.AudioFormat
 import kotlinx.serialization.decodeFromString
@@ -112,13 +117,8 @@ class ArrangementProjectCommandsTest {
     }
 
     @Test
-    fun `arrange explicitly selects deterministic planner and writes arrangement json`() {
-        val projectRoot = createProject("demo")
-        val source = tempDir.resolve("piano.wav")
-        Files.writeString(source, "original source bytes")
-        addPart(projectRoot, "A", source)
-        val copiedSource = projectRoot.resolve("parts/A.wav")
-        val copiedSourceBefore = Files.readString(copiedSource)
+    fun `arrange explicitly selects deterministic global planner and writes song plan json`() {
+        val projectRoot = createMidiPlanningProject("demo")
 
         val result = ArrangementProjectCommands.execute(
             arrayOf(
@@ -127,20 +127,20 @@ class ArrangementProjectCommandsTest {
             )
         )
 
-        val arrangement = json.decodeFromString<Arrangement>(
-            Files.readString(projectRoot.resolve("arrangement.json"))
+        val songPlan = json.decodeFromString<SongPlan>(
+            Files.readString(projectRoot.resolve("song_plan.json"))
         )
         assertTrue(ArrangementProjectCommands.handles(arrayOf("arrange")))
-        assertTrue(result.contains("Created deterministic arrangement"))
-        assertEquals(listOf("A", "A"), arrangement.sections.map { it.partId })
-        assertEquals(InstrumentMode.SOURCE, arrangement.sections.first().instruments.first().mode)
-        assertEquals(InstrumentMode.GENERATED, arrangement.sections.first().instruments[1].mode)
-        assertEquals(copiedSourceBefore, Files.readString(copiedSource))
+        assertTrue(result.contains("Created deterministic global song plan"))
+        assertEquals(listOf("A", "A"), songPlan.sections.map { it.partId })
+        assertEquals(listOf("A1", "A2"), songPlan.sections.map { it.instanceId })
+        assertEquals(listOf("piano"), songPlan.sections.first().instrumentProgression)
+        assertFalse(Files.exists(projectRoot.resolve("arrangement.json")))
     }
 
     @Test
-    fun `arrange rejects unknown planners without writing an arrangement`() {
-        val projectRoot = createProject("demo")
+    fun `arrange rejects unknown planners without writing a song plan`() {
+        val projectRoot = createMidiPlanningProject("demo")
 
         val exception = assertThrows(IllegalArgumentException::class.java) {
             ArrangementProjectCommands.execute(
@@ -149,7 +149,7 @@ class ArrangementProjectCommandsTest {
         }
 
         assertEquals("Unsupported planner: unknown. Available planners: deterministic, qwen", exception.message)
-        assertFalse(Files.exists(projectRoot.resolve("arrangement.json")))
+        assertFalse(Files.exists(projectRoot.resolve("song_plan.json")))
     }
 
     @Test
@@ -335,6 +335,39 @@ class ArrangementProjectCommandsTest {
         // Existing arrangement tests exercise legacy source-audio behavior.
         Files.createDirectories(projectRoot.resolve("parts"))
         ProjectStore.write(projectRoot, Project(name = name))
+        return projectRoot
+    }
+
+    private fun createMidiPlanningProject(name: String): Path {
+        val projectRoot = tempDir.resolve(name)
+        val source = projectRoot.resolve("source/A.mid")
+        val clean = projectRoot.resolve("midi/clean/A.mid")
+        Files.createDirectories(source.parent)
+        Files.createDirectories(clean.parent)
+        Files.write(source, byteArrayOf(0x4d, 0x54, 0x68, 0x64))
+        Files.write(clean, byteArrayOf(0x4d, 0x54, 0x68, 0x64))
+        val project = Project(
+            version = Project.CURRENT_VERSION,
+            name = name,
+            parts = listOf(Part("A", "source/A.mid", "verse", midi = MidiReferences(clean = "midi/clean/A.mid"))),
+            structure = listOf("A"),
+            renderFormat = RenderFormat()
+        )
+        ProjectStore.write(projectRoot, project)
+        MidiAnalysisStore.write(projectRoot, project, "A", MidiAnalysis(
+            partId = "A",
+            ppq = 480,
+            durationTicks = 1_920,
+            durationSeconds = 2.0,
+            tempoMap = listOf(MidiTempoChange(0, 120.0)),
+            timeSignatures = listOf(MidiTimeSignature(0, 4, 4)),
+            bars = 1,
+            beats = 4.0,
+            noteCount = 4,
+            noteDensity = 0.25,
+            rhythmicDensity = 0.5,
+            energy = 0.5
+        ))
         return projectRoot
     }
 
