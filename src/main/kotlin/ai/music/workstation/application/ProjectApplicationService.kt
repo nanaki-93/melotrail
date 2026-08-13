@@ -16,8 +16,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 /** UI- and CLI-neutral boundary for the local, file-backed arranger project. */
@@ -180,29 +183,46 @@ class DefaultProjectApplicationService(
         require(source != destination && !(Files.exists(destination) && Files.isSameFile(source, destination))) {
             "Input and destination paths must differ"
         }
-        require(!Files.exists(destination)) { "Part destination already exists: $destination" }
-        progress.report(OperationProgress("import-part", 1, 4, "Copying source", destination))
-        Files.createDirectories(checkNotNull(destination.parent))
-        Files.copy(source, destination)
+        if (Files.exists(destination)) {
+            require(Files.isRegularFile(destination) && Files.mismatch(source, destination) == -1L) {
+                "Part destination already exists with different source content: $destination"
+            }
+            progress.report(OperationProgress("import-part", 1, 4, "Reusing preserved source", destination))
+        } else {
+            progress.report(OperationProgress("import-part", 1, 4, "Copying source", destination))
+            Files.createDirectories(checkNotNull(destination.parent))
+            Files.copy(source, destination)
+        }
 
         val raw = if (isMidi) null else "midi/raw/${request.id}.mid"
         val clean = "midi/clean/${request.id}.mid"
+        val rawPath = raw?.let { safeDestination(root, it) }
+        val cleanPath = safeDestination(root, clean)
+        // Preserve the first failed attempt for diagnosis. An explicit retry writes
+        // to a sibling temporary path, then atomically replaces only derived MIDI.
+        val rawWork = rawPath?.takeIf(Files::exists)?.let(::temporaryMidi)
+        val rawOutput = rawWork ?: rawPath
+        val cleanWork = cleanPath.takeIf(Files::exists)?.let(::temporaryMidi)
+        val cleanOutput = cleanWork ?: cleanPath
         try {
-            if (raw != null) {
-                val rawPath = safeDestination(root, raw)
+            if (rawPath != null && rawOutput != null) {
                 progress.report(OperationProgress("import-part", 2, 4, "Transcribing audio", rawPath))
-                midiPreparation.transcribe(destination, rawPath)
-                requireMidiArtifact(rawPath, "Transcription")
+                midiPreparation.transcribe(destination, rawOutput)
+                requireMidiArtifact(rawOutput, "Transcription")
             }
-            val cleanPath = safeDestination(root, clean)
             progress.report(OperationProgress("import-part", 3, 4, "Cleaning MIDI", cleanPath))
-            midiPreparation.clean(safeDestination(root, raw ?: relativeFile), cleanPath)
-            requireMidiArtifact(cleanPath, "MIDI cleanup")
+            midiPreparation.clean(rawOutput ?: safeDestination(root, relativeFile), cleanOutput)
+            requireMidiArtifact(cleanOutput, "MIDI cleanup")
+            rawWork?.let { atomicReplace(it, checkNotNull(rawPath), "Transcription") }
+            cleanWork?.let { atomicReplace(it, cleanPath, "MIDI cleanup") }
         } catch (exception: Exception) {
             throw IllegalStateException(
-                "Part '${request.id}' was not registered. Source preserved at $destination; unregistered MIDI artifacts remain for diagnosis: ${raw ?: "none"}, $clean. ${exception.message}",
+                "Part '${request.id}' was not registered. Source preserved at $destination; temporary MIDI preparation failed: ${exception.message}",
                 exception
             )
+        } finally {
+            rawWork?.let(Files::deleteIfExists)
+            cleanWork?.let(Files::deleteIfExists)
         }
 
         val updated = project.copy(parts = project.parts + Part(request.id, relativeFile, request.role, midi = MidiReferences(raw, clean)))
@@ -333,6 +353,16 @@ class DefaultProjectApplicationService(
         require(Files.isRegularFile(path) && Files.size(path) >= 14) { "$stage did not create a MIDI file: $path" }
         val header = Files.newInputStream(path).use { it.readNBytes(4).decodeToString() }
         require(header == "MThd") { "$stage did not create a MIDI file: $path" }
+    }
+
+    private fun temporaryMidi(target: Path): Path = target.resolveSibling(".${target.fileName}.prepare-${UUID.randomUUID()}.mid")
+
+    private fun atomicReplace(source: Path, target: Path, stage: String) {
+        try {
+            Files.move(source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        } catch (error: AtomicMoveNotSupportedException) {
+            throw IllegalStateException("Atomic publish is not supported for $stage output '$target'", error)
+        }
     }
 
     private fun sourceType(file: String): PartSourceType = when (file.substringAfterLast('.', "").lowercase()) {

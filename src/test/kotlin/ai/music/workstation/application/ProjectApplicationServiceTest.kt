@@ -78,6 +78,33 @@ class ProjectApplicationServiceTest {
     }
 
     @Test
+    fun `retrying a failed import reuses its preserved source only when bytes match`() {
+        val root = tempDir.resolve("retry")
+        var failCleanup = true
+        val service = service(object : MidiPreparationService {
+            override suspend fun transcribe(input: Path, output: Path) { Files.copy(midi("transcribed.mid"), output); Unit }
+            override suspend fun clean(input: Path, output: Path) {
+                if (failCleanup) error("cleanup unavailable")
+                Files.copy(input, output)
+            }
+        })
+        service.create(CreateProjectRequest(root))
+        val audio = tempDir.resolve("retry.wav").also { Files.writeString(it, "original audio") }
+        val sourceBefore = Files.readAllBytes(audio)
+
+        assertThrows(IllegalStateException::class.java) {
+            kotlinx.coroutines.runBlocking { service.importPart(ImportPartRequest(root, "A", audio, transcribe = true)) }
+        }
+        failCleanup = false
+
+        val retried = blocking { service.importPart(ImportPartRequest(root, "A", audio, transcribe = true)) }
+
+        assertEquals(listOf("A"), retried.parts.map { it.id })
+        assertTrue(sourceBefore.contentEquals(Files.readAllBytes(audio)))
+        assertTrue(sourceBefore.contentEquals(Files.readAllBytes(root.resolve("source/A.wav"))))
+    }
+
+    @Test
     fun `role and complete structure updates are atomic and expose occurrence labels`() {
         val service = service()
         val root = tempDir.resolve("song")
