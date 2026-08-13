@@ -41,6 +41,7 @@ import ai.music.workstation.arrangement.StringsMidiGenerationAdapter
 import ai.music.workstation.arrangement.MidiTransitionGenerationAdapter
 import ai.music.workstation.arrangement.InstrumentRenderer
 import ai.music.workstation.arrangement.SfizzInstrumentRenderer
+import ai.music.workstation.arrangement.StemRenderingMixer
 import ai.music.workstation.arrangement.GlobalSongPlanner
 import ai.music.workstation.arrangement.SongPlanStore
 import ai.music.workstation.arrangement.SongPlan
@@ -127,7 +128,8 @@ object ArrangementProjectCommands {
         "arrange" -> arrange(args)
         "arrange-detail" -> arrangeDetail(args)
         "generate" -> generateMidi(args)
-        "mix", "render" -> mixStems(args)
+        "mix" -> mixStems(args)
+        "render" -> renderAllStems(args, SfizzInstrumentRenderer())
         "preview" -> previewDraft(args)
         "approve" -> approveDraft(args)
         "build" -> buildProject(args, createBuildWorker())
@@ -148,6 +150,10 @@ object ArrangementProjectCommands {
 
     internal fun executeQualityGateForTest(args: Array<String>, renderer: InstrumentRenderer): String = runBlocking {
         pianoBassQualityGate(args, renderer)
+    }
+
+    internal fun executeStemRenderingForTest(args: Array<String>, renderer: InstrumentRenderer): String = runBlocking {
+        renderAllStems(args, renderer)
     }
 
     private suspend fun transcribe(args: Array<String>): String {
@@ -644,6 +650,28 @@ object ArrangementProjectCommands {
         val result = PianoBassQualityGate(renderer).run(projectRoot(args[2]))
         return result.progress.joinToString("\n") + "\nQuality gate ${if (result.reusedFinalArtifacts) "reused" else "created"} artifacts: " +
             "midi/generated/piano.mid, midi/generated/bass.mid, stems/piano.wav, stems/bass.wav, mix/dry.wav, quality-gate.json"
+    }
+
+    private suspend fun renderAllStems(args: Array<String>, renderer: InstrumentRenderer): String {
+        val root = parseProjectOnly(args, "render")
+        require(Files.isRegularFile(root.resolve(PROJECT_FILE))) { "Project file not found: ${root.resolve(PROJECT_FILE)}" }
+        require(Files.isRegularFile(root.resolve(DetailedArrangementStore.APPROVED_FILE))) {
+            "Detailed arrangement file not found: ${root.resolve(DetailedArrangementStore.APPROVED_FILE)}. Run arrange-detail first."
+        }
+        val project = ProjectStore.read(root)
+        project.requireValid(root)
+        val input = detailedArrangementInput(root, project)
+        val arrangement = json.decodeFromString<DetailedArrangement>(Files.readString(root.resolve(DetailedArrangementStore.APPROVED_FILE), StandardCharsets.UTF_8))
+        arrangement.requireValid(input)
+        val analyses = project.parts.associate { part ->
+            val reference = requireNotNull(part.analysis) { "Missing MIDI analysis for part '${part.id}'. Run part analyze first." }
+            require(reference.kind == AnalysisKind.MIDI) { "Stem rendering requires MIDI analysis for '${part.id}'. Run part analyze after MIDI cleanup." }
+            part.id to json.decodeFromString<MidiAnalysis>(Files.readString(root.resolve(reference.file), StandardCharsets.UTF_8))
+        }
+        val result = StemRenderingMixer(renderer).render(root, project, arrangement, analyses)
+        val report = result.report
+        return "${if (result.reused) "Reused" else "Rendered"} ${report.stems.joinToString { it.path }} and ${report.dryMix} " +
+            "(${report.timelineFrames} frames, ${report.sampleRate} Hz, ${report.channels} channels, peak gain ${"%.2f".format(report.appliedGainDb)} dB)"
     }
 
     private fun mixStems(args: Array<String>): String {

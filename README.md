@@ -209,9 +209,25 @@ It requires the configured local SFZ renderer (for example
 `SFZ_RENDERER_PATH=/path/to/sfizz_render`). The checked-in automated test uses
 a fake renderer; the real command remains a manual listening gate.
 
-The existing `render`/`build` workflow continues to use its compatible
+The existing `mix`/`build` workflow continues to use its compatible
 `arrangement.json` artifacts. A detailed MIDI-first arrangement is a later,
 separate stage; generating a global song plan never approves or overwrites one.
+
+### Render all approved stems and the dry reference mix
+
+After generating the active MIDI tracks (including transitions when a bridge
+inserts bars), render the approved detailed arrangement to project-format
+PCM-24 WAV stems and `mix/dry.wav`:
+
+```bash
+make cli ARGS='render --project ./projects/song-001'
+```
+
+The command requires the configured local SFZ renderer and never invokes
+repair, LoFi, mastering, or MP3 export. It writes `stem-render.json` with
+input/artifact fingerprints and the one uniform peak-safety gain applied to
+the dry mix. The legacy `mix` command continues to create `mix/mix.wav` for
+legacy arrangements.
 
 ### Optional local Qwen planning
 

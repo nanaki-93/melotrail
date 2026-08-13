@@ -8,6 +8,9 @@ import java.io.DataOutputStream
 import java.io.FileOutputStream
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+import java.util.UUID
+import kotlin.math.log10
 import kotlin.math.pow
 
 /** One source or generated stem placed on the mix timeline in frames. */
@@ -24,29 +27,45 @@ data class MixTrack(
 data class MixSettings(
     val targetSampleRate: Int? = null,
     val dry: Boolean = false,
+    /** A reference mix includes source tracks only, just like the legacy dry mode. */
+    val reference: Boolean = false,
+    /** Project-format stems must match exactly; legacy imports may opt out explicitly. */
+    val requiredFormat: RenderFormat? = null,
     /** Optional deterministic safety ceiling applied once to the completed mix. */
-    val peakCeiling: Double? = null
+    val peakCeiling: Double? = 0.95
 )
 
 data class MixedStem(
     val buffer: AudioBuffer,
-    val includedTracks: List<String>
+    val includedTracks: List<String>,
+    val predictedPeak: Float = 0f,
+    val appliedGain: Float = 1f,
+    val appliedGainDb: Double = 0.0
 )
 
 /**
  * Deterministic, frame-based mixer for the first arranger output. It supports
- * mono/stereo source material, explicitly resamples to one selected rate, and
- * clamps only the final mixed samples to prevent digital overflow.
+ * mono/stereo legacy material and exact project-format stems. The mix is summed
+ * in floating point then, when needed, reduced once by a uniform peak-safe gain.
  */
 class DeterministicStemMixer {
     fun mix(tracks: List<MixTrack>, settings: MixSettings = MixSettings()): MixedStem {
-        val activeTracks = tracks.filterNot { it.muted || (settings.dry && it.generated) }
+        val activeTracks = tracks.filterNot { it.muted || ((settings.dry || settings.reference) && it.generated) }
         require(activeTracks.isNotEmpty()) { "No unmuted tracks available for mixing" }
         activeTracks.forEach(::validateTrack)
 
-        val sampleRate = settings.targetSampleRate ?: activeTracks.first().buffer.format.sampleRate
+        settings.requiredFormat?.let { required ->
+            require(required.bitDepth == PCM_BIT_DEPTH) { "Project stem format must be PCM-24" }
+            activeTracks.forEach { track ->
+                val actual = track.buffer.format
+                require(actual.sampleRate == required.sampleRate && actual.channels == required.channels && actual.bitDepth == PCM_BIT_DEPTH) {
+                    "Mix track '${track.name}' does not match required project format ${required.sampleRate} Hz, ${required.channels} channels, PCM-24"
+                }
+            }
+        }
+        val sampleRate = settings.requiredFormat?.sampleRate ?: settings.targetSampleRate ?: activeTracks.first().buffer.format.sampleRate
         require(sampleRate > 0) { "Target sample rate must be positive" }
-        val outputChannels = activeTracks.maxOf { it.buffer.format.channels }
+        val outputChannels = settings.requiredFormat?.channels ?: activeTracks.maxOf { it.buffer.format.channels }
         require(outputChannels in 1..32) { "The simple stem mixer supports one through 32 channels" }
         settings.peakCeiling?.let { ceiling ->
             require(ceiling.isFinite() && ceiling > 0.0 && ceiling < 1.0) {
@@ -55,8 +74,8 @@ class DeterministicStemMixer {
         }
 
         val preparedTracks = activeTracks.map { track ->
-            val resampled = AudioResampler.resample(track.buffer, sampleRate)
-            track to convertChannels(resampled, outputChannels)
+            val prepared = if (settings.requiredFormat != null) track.buffer else AudioResampler.resample(track.buffer, sampleRate)
+            track to if (settings.requiredFormat != null) prepared else convertChannels(prepared, outputChannels)
         }
         val outputFrames = preparedTracks.maxOf { (track, buffer) ->
             Math.addExact(track.startFrame, buffer.length)
@@ -66,12 +85,14 @@ class DeterministicStemMixer {
 
         val output = FloatArray(outputFrames * outputChannels)
         preparedTracks.forEach { (track, buffer) -> addTrack(output, outputChannels, track, buffer) }
+        require(output.all { it.isFinite() }) { "Mix contains non-finite samples" }
         val peak = output.maxOf { kotlin.math.abs(it) }
-        settings.peakCeiling?.takeIf { peak > it }?.let { ceiling ->
-            val gain = (ceiling / peak).toFloat()
-            output.indices.forEach { index -> output[index] *= gain }
+        val appliedGain = settings.peakCeiling?.takeIf { peak > it }?.let { ceiling ->
+            (ceiling / peak).toFloat().also { gain -> output.indices.forEach { index -> output[index] *= gain } }
+        } ?: 1f
+        require(output.all { it.isFinite() && kotlin.math.abs(it) <= 1f }) {
+            "Mix exceeds PCM range; configure a finite peak ceiling below 1"
         }
-        output.indices.forEach { index -> output[index] = output[index].coerceIn(-1f, 1f) }
 
         return MixedStem(
             buffer = AudioBuffer(
@@ -86,7 +107,10 @@ class DeterministicStemMixer {
                 ),
                 duration = outputFrames.toDouble() / sampleRate
             ),
-            includedTracks = activeTracks.map { it.name }
+            includedTracks = activeTracks.map { it.name },
+            predictedPeak = peak,
+            appliedGain = appliedGain,
+            appliedGainDb = if (appliedGain == 1f) 0.0 else 20.0 * log10(appliedGain.toDouble())
         )
     }
 
@@ -97,8 +121,11 @@ class DeterministicStemMixer {
             buffer.format.sampleRate,
             Math.multiplyExact(buffer.format.channels, BYTES_PER_PCM_SAMPLE)
         )
+        require(buffer.samples.all { it.isFinite() && kotlin.math.abs(it) <= 1f }) { "Cannot write non-finite or out-of-range PCM samples" }
         Files.createDirectories(checkNotNull(outputPath.parent))
-        DataOutputStream(BufferedOutputStream(FileOutputStream(outputPath.toFile()))).use { output ->
+        val temporary = outputPath.resolveSibling(".${outputPath.fileName}.${UUID.randomUUID()}.tmp")
+        try {
+        DataOutputStream(BufferedOutputStream(FileOutputStream(temporary.toFile()))).use { output ->
             output.writeBytes("RIFF")
             output.writeLittleEndianInt(36 + dataSize)
             output.writeBytes("WAVE")
@@ -113,6 +140,14 @@ class DeterministicStemMixer {
             output.writeBytes("data")
             output.writeLittleEndianInt(dataSize)
             buffer.samples.forEach { sample -> output.writePcm24(sample) }
+        }
+        try {
+            Files.move(temporary, outputPath, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        } catch (_: java.nio.file.AtomicMoveNotSupportedException) {
+            Files.move(temporary, outputPath, StandardCopyOption.REPLACE_EXISTING)
+        }
+        } finally {
+            Files.deleteIfExists(temporary)
         }
         return outputPath
     }
@@ -129,6 +164,7 @@ class DeterministicStemMixer {
         require(track.pan.isFinite() && track.pan in -1.0..1.0) {
             "Mix track '${track.name}' pan must be between -1 and 1"
         }
+        require(track.buffer.samples.all { it.isFinite() }) { "Mix track '${track.name}' contains non-finite samples" }
     }
 
     private fun convertChannels(buffer: AudioBuffer, targetChannels: Int): AudioBuffer {
@@ -174,7 +210,7 @@ class DeterministicStemMixer {
     }
 
     private fun DataOutputStream.writePcm24(sample: Float) {
-        val value = (sample.coerceIn(-1f, 1f) * PCM_24_MAX).toInt()
+        val value = (sample * PCM_24_MAX).toInt()
         writeByte(value and 0xFF)
         writeByte((value ushr 8) and 0xFF)
         writeByte((value ushr 16) and 0xFF)

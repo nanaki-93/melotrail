@@ -36,7 +36,7 @@ class StemMixerTest {
     }
 
     @Test
-    fun `piano and bass mix applies gain pan mute dry mode and safe clipping`() {
+    fun `piano and bass mix applies gain pan mute dry mode and uniform peak safety`() {
         val piano = buffer(44_100, 1, 0.8f, 0.8f)
         val bass = buffer(44_100, 2, 0.8f, 0.8f, 0.8f, 0.8f)
         val mixer = DeterministicStemMixer()
@@ -55,8 +55,8 @@ class StemMixerTest {
         )
 
         assertEquals(2, full.buffer.format.channels)
-        assertEquals(0.8f, full.buffer.getSample(0, 0))
-        assertEquals(1.0f, full.buffer.getSample(1, 0))
+        assertTrue(full.buffer.samples.all { kotlin.math.abs(it) <= 0.9501f })
+        assertTrue(full.appliedGain < 1f)
         assertEquals(listOf("piano"), dry.includedTracks)
         assertEquals(0.8f, dry.buffer.getSample(0, 0))
         assertEquals(0.8f, dry.buffer.getSample(1, 0))
@@ -77,8 +77,8 @@ class StemMixerTest {
         assertEquals(4, mix.buffer.format.sampleRate)
         assertEquals(2, mix.buffer.format.channels)
         assertEquals(5, mix.buffer.length)
-        assertEquals(0.1f, mix.buffer.getSample(0, 0))
-        assertEquals(0.2f, mix.buffer.getSample(1, 0))
+        assertEquals(0.095f, mix.buffer.getSample(0, 0), 0.0001f)
+        assertEquals(0.19f, mix.buffer.getSample(1, 0), 0.0001f)
         assertTrue(mix.buffer.getSample(0, 2) > mix.buffer.getSample(0, 1))
         assertEquals(mix.buffer.getSample(0, 2), mix.buffer.getSample(1, 2))
     }
