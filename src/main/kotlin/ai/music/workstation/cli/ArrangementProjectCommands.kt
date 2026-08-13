@@ -4,10 +4,12 @@ import ai.music.workstation.arrangement.ArrangementInput
 import ai.music.workstation.arrangement.ArrangementStore
 import ai.music.workstation.arrangement.ArrangementRenderer
 import ai.music.workstation.arrangement.BassMidiGenerationAdapter
+import ai.music.workstation.arrangement.DrumMidiGenerationAdapter
 import ai.music.workstation.arrangement.DeterministicArrangementPlanner
 import ai.music.workstation.arrangement.DeterministicGlobalSongPlanner
 import ai.music.workstation.arrangement.DeterministicDetailedArrangementPlanner
 import ai.music.workstation.arrangement.DeterministicSectionVariationPlanner
+import ai.music.workstation.arrangement.DetailedArrangement
 import ai.music.workstation.arrangement.DetailedArrangementInput
 import ai.music.workstation.arrangement.DetailedArrangementPlanner
 import ai.music.workstation.arrangement.DetailedArrangementStore
@@ -121,7 +123,7 @@ object ArrangementProjectCommands {
         }
         "arrange" -> arrange(args)
         "arrange-detail" -> arrangeDetail(args)
-        "generate" -> generateBass(args)
+        "generate" -> generateMidi(args)
         "mix", "render" -> mixStems(args)
         "preview" -> previewDraft(args)
         "approve" -> approveDraft(args)
@@ -506,10 +508,13 @@ object ArrangementProjectCommands {
         }
     }
 
+    private fun generateMidi(args: Array<String>): String = when (args.getOrNull(1)) {
+        "bass" -> generateBass(args)
+        "drums" -> generateDrums(args)
+        else -> throw IllegalArgumentException("Usage: generate bass|drums --project <project-directory>")
+    }
+
     private fun generateBass(args: Array<String>): String {
-        require(args.size >= 2 && args[1] == "bass") {
-            "Usage: generate bass --project <project-directory>"
-        }
         val options = parseGenerateOptions(args.drop(2))
         val projectRoot = projectRoot(options.getValue("--project"))
         val projectFile = projectRoot.resolve(PROJECT_FILE)
@@ -532,6 +537,29 @@ object ArrangementProjectCommands {
         val bass = BassMidiGenerationAdapter().generate(projectRoot, project, arrangement, analyses)
         val suffix = if (bass.diagnostics.isEmpty()) "" else "; ${bass.diagnostics.joinToString(" ")}"
         return "Generated bass MIDI: ${bass.path} (${bass.notes.size} notes)$suffix"
+    }
+
+    private fun generateDrums(args: Array<String>): String {
+        val options = parseGenerateOptions(args.drop(2))
+        val projectRoot = projectRoot(options.getValue("--project"))
+        val projectFile = projectRoot.resolve(PROJECT_FILE)
+        val arrangementFile = projectRoot.resolve(DetailedArrangementStore.APPROVED_FILE)
+        require(Files.isRegularFile(projectFile)) { "Project file not found: $projectFile" }
+        require(Files.isRegularFile(arrangementFile)) { "Detailed arrangement file not found: $arrangementFile. Run arrange-detail first." }
+
+        val project = ProjectStore.read(projectRoot)
+        project.requireValid(projectRoot)
+        val input = detailedArrangementInput(projectRoot, project)
+        val arrangement = json.decodeFromString<DetailedArrangement>(Files.readString(arrangementFile, StandardCharsets.UTF_8))
+        arrangement.requireValid(input)
+        val analyses = project.parts.associate { part ->
+            val reference = requireNotNull(part.analysis) { "Missing MIDI analysis for part '${part.id}'. Run part analyze first." }
+            require(reference.kind == AnalysisKind.MIDI) { "Drum MIDI generation requires MIDI analysis for '${part.id}'. Run part analyze after MIDI cleanup." }
+            part.id to json.decodeFromString<MidiAnalysis>(Files.readString(projectRoot.resolve(reference.file)))
+        }
+        val drums = DrumMidiGenerationAdapter().generate(projectRoot, project, arrangement, analyses)
+        val suffix = if (drums.diagnostics.isEmpty()) "" else "; ${drums.diagnostics.joinToString(" ")}"
+        return "Generated drum MIDI: ${drums.path} (${drums.hits.size} hits)$suffix"
     }
 
     private suspend fun pianoBassQualityGate(args: Array<String>, renderer: InstrumentRenderer): String {
@@ -1198,7 +1226,7 @@ object ArrangementProjectCommands {
 
     private fun parseGenerateOptions(arguments: List<String>): Map<String, String> {
         require(arguments.size == 2 && arguments[0] == "--project") {
-            "Usage: generate bass --project <project-directory>"
+            "Usage: generate bass|drums --project <project-directory>"
         }
         return mapOf("--project" to arguments[1])
     }

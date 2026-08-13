@@ -160,7 +160,16 @@ make cli ARGS='approve --project ./projects/song-001'
 ```
 
 Existing version 1/2 arrangements remain available to the current audio
-renderer. MIDI generation from version 3 roles is introduced by later tasks.
+renderer. Version-3 drum-role MIDI generation is available separately; other
+version-3 instruments and rendering integration arrive in later tasks.
+
+Generate bounded, registry-mapped drum MIDI from an approved version-3
+arrangement. The current generator supports 4/4 and 3/4 only and writes an
+inspectable full-timeline artifact before any drum rendering.
+
+```bash
+make cli ARGS='generate drums --project ./projects/song-001'
+```
 
 ### Piano + bass quality gate
 

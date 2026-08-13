@@ -125,15 +125,18 @@ enum class DetailedBassMovement {
 
 @Serializable
 enum class DrumsRole {
-    @SerialName("sparse") SPARSE,
-    @SerialName("groove") GROOVE
+    @SerialName("minimal") MINIMAL,
+    @SerialName("soft_lofi") SOFT_LOFI,
+    @SerialName("standard_groove") STANDARD_GROOVE,
+    @SerialName("half_time") HALF_TIME,
+    @SerialName("build") BUILD
 }
 
 @Serializable
 enum class SnarePattern {
-    @SerialName("sparse") SPARSE,
-    @SerialName("half_time") HALF_TIME,
-    @SerialName("backbeat") BACKBEAT
+    @SerialName("beats_2_4") BEATS_2_4,
+    @SerialName("beat_3") BEAT_3,
+    @SerialName("none") NONE
 }
 
 @Serializable
@@ -310,7 +313,12 @@ class DeterministicDetailedArrangementPlanner : DetailedArrangementPlanner {
         )
         "drums" -> DrumsInstrumentPlan(
             role = DrumsRole.entries.first { it.wireName == instrument.role }, density = instrument.density,
-            kickDensity = instrument.density, snarePattern = if (instrument.role == "sparse") SnarePattern.SPARSE else SnarePattern.BACKBEAT,
+            kickDensity = instrument.density,
+            snarePattern = when (instrument.role) {
+                "minimal" -> SnarePattern.NONE
+                "half_time" -> SnarePattern.BEAT_3
+                else -> SnarePattern.BEATS_2_4
+            },
             hiHatDensity = (instrument.density * 0.8).coerceIn(0.0, 1.0), swing = 0.0, fillLastBar = energy >= 0.7
         )
         "pad" -> PadInstrumentPlan(role = SustainedRole.entries.first { it.wireName == instrument.role }, density = instrument.density, register = register(energy))

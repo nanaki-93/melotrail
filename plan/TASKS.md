@@ -45,7 +45,7 @@ After implementation:
 | [010](tasks/completed/010-repeated-section-variation.md) | Repeated-section variation | 009 | Stable A1/A2/B1 identities and bounded variation | Planned |
 | [011](tasks/completed/011-detailed-arrangement-plan.md) | Detailed MIDI-first arrangement | 006, 009–010 | Version-3 `arrangement.json` roles | Planned |
 | [012](tasks/completed/012-piano-bass-quality-gate.md) | First complete piano + bass gate | 001–011 | Musically accepted MIDI-first dry mix | Planned |
-| [013](tasks/013-drum-midi-generator.md) | Deterministic drum MIDI generator | 012 accepted | `midi/generated/drums.mid` | Blocked by gate |
+| [013](tasks/completed/013-drum-midi-generator.md) | Deterministic drum MIDI generator | 012 accepted | `midi/generated/drums.mid` | Blocked by gate |
 | [014](tasks/014-pad-midi-generator.md) | Deterministic pad MIDI generator | 012 accepted | `midi/generated/pad.mid` | Blocked by gate |
 | [015](tasks/015-midi-transition-engine.md) | MIDI transition engine | 008, 013–014 | Contextual bass/drum/pad transitions | Blocked by gate |
 | [016](tasks/016-strings-midi-generator.md) | Deterministic strings MIDI generator | 013–015 | `midi/generated/strings.mid` | Blocked by gate |

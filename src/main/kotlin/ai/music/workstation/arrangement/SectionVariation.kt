@@ -108,8 +108,10 @@ object DeterministicSectionVariationPlanner {
             else -> "root"
         }
         "drums" -> when {
-            section.purpose == SongSectionPurpose.INTRODUCTION || fallingEnergy -> "sparse"
-            else -> "groove"
+            section.purpose == SongSectionPurpose.INTRODUCTION || fallingEnergy -> "minimal"
+            section.purpose == SongSectionPurpose.CLIMAX -> "build"
+            section.occurrence % 2 == 0 -> "soft_lofi"
+            else -> "standard_groove"
         }
         "pad", "strings" -> if (fallingEnergy || section.purpose == SongSectionPurpose.CONCLUSION) "sustained" else "texture"
         else -> error("Song plan contains unsupported instrument '$instrument'")
@@ -197,7 +199,7 @@ object SectionVariationValidator {
     private val ROLES_BY_INSTRUMENT = mapOf(
         "piano" to setOf("source"),
         "bass" to setOf("root", "root_fifth", "octave", "sustained"),
-        "drums" to setOf("sparse", "groove"),
+        "drums" to setOf("minimal", "soft_lofi", "standard_groove", "half_time", "build"),
         "pad" to setOf("sustained", "texture"),
         "strings" to setOf("sustained", "texture")
     )

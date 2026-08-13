@@ -130,7 +130,7 @@ class DetailedArrangementTest {
                 SectionVariationInstrument("piano", "source", 1.0), SectionVariationInstrument("bass", "root", 0.3)
             ), SongTransitionIntent.BUILD),
             SectionVariation(1, "B1", "B", 1, SongSectionPurpose.CLIMAX, 0.9, listOf(
-                SectionVariationInstrument("piano", "source", 1.0), SectionVariationInstrument("drums", "groove", 0.9),
+                SectionVariationInstrument("piano", "source", 1.0), SectionVariationInstrument("drums", "standard_groove", 0.9),
                 SectionVariationInstrument("pad", "texture", 0.9), SectionVariationInstrument("strings", "texture", 0.9)
             ), SongTransitionIntent.NONE)
         ))
