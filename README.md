@@ -87,6 +87,17 @@ make worker
 make cli ARGS='transcribe --input ./recordings/verse.wav --output ./projects/song-001/midi/raw/A.mid --instrument piano'
 ```
 
+### Deterministic MIDI cleanup
+
+Clean raw piano transcription before later MIDI analysis. Defaults only remove
+exact duplicates, notes shorter than 50 ms, and note-on velocities below 8;
+they do not quantize expressive timing.
+
+```bash
+make cli ARGS='midi-clean --input ./projects/song-001/midi/raw/A.mid --output ./projects/song-001/midi/clean/A.mid'
+make cli ARGS='midi-clean --input ./projects/song-001/midi/raw/A.mid --output ./projects/song-001/midi/clean/A.mid --quantize 1/16 --strength 0.4'
+```
+
 ### AI bridge review workflow
 
 Qwen creates a reviewable draft instead of overwriting an approved song. Its
@@ -214,6 +225,8 @@ Python exposes one endpoint per operation:
 | POST | `/repair` | Repair audio |
 | POST | `/master` | Master audio |
 | POST | `/mp3_convert` | Convert MP3 to WAV |
+| POST | `/transcribe` | Transcribe solo piano to MIDI |
+| POST | `/midi-clean` | Conservatively clean a MIDI file |
 
 The Kotlin worker client maps each `WorkerCommand` directly to its endpoint.
 There is no generic `/api/worker/command` request envelope between Kotlin and

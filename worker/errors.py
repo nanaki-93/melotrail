@@ -28,3 +28,13 @@ class TranscriptionModelError(WorkerCommandError):
 class TranscriptionOutputValidationError(WorkerCommandError):
     error_type = "OutputValidationError"
     status_code = 422
+
+
+class MidiCleanupValidationError(WorkerCommandError):
+    error_type = "MidiCleanupValidationError"
+    status_code = 400
+
+
+class MidiCleanupOutputValidationError(WorkerCommandError):
+    error_type = "MidiCleanupOutputValidationError"
+    status_code = 422

@@ -26,3 +26,29 @@ Example request:
 ```json
 {"path":"/absolute/input.wav","outputPath":"/absolute/output.mid","instrument":"piano"}
 ```
+
+## Deterministic MIDI cleanup
+
+`POST /midi-clean` uses the pinned `mido==1.3.3` worker dependency to clean an
+existing `.mid`/`.midi` file. It keeps the MIDI tracks and safe metadata in
+place, writes through a temporary file, reparses it, and atomically publishes
+only a valid result. It never changes the raw input.
+
+By default it removes exact duplicate notes, notes shorter than 50 ms (using
+the MIDI tempo map), and note-on velocities below 8. It repairs
+same-channel/pitch overlaps by ending the earlier note at the later start. It
+does not quantize by default. `--quantize` accepts `1/4`, `1/8`, `1/16`, or
+`1/32`; a strength of `0.0` leaves timing unchanged and `1.0` snaps it to the
+grid. The CLI uses strength `0.4` when a grid is provided without an explicit
+strength.
+
+Optional `--clean-sustain` removes only repeated adjacent CC64 values on the
+same track/channel, preserving valid pedal changes. Optional
+`--normalize-velocity` linearly maps retained note-on velocities to 32–112;
+it is off by default to retain performance dynamics.
+
+Example request:
+
+```json
+{"path":"/project/midi/raw/A.mid","outputPath":"/project/midi/clean/A.mid","quantize":"1/16","strength":0.4,"minNoteMs":50,"minVelocity":8,"normalizeVelocity":false,"cleanSustain":false}
+```

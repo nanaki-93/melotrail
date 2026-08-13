@@ -79,3 +79,16 @@ data class TranscribeCommand(
 ) : WorkerCommand() {
     override val commandName: String = "transcribe"
 }
+
+data class MidiCleanCommand(
+    val path: String,
+    val outputPath: String,
+    val quantize: String? = null,
+    val strength: Double = 0.0,
+    val minNoteMs: Int = 50,
+    val minVelocity: Int = 8,
+    val normalizeVelocity: Boolean = false,
+    val cleanSustain: Boolean = false
+) : WorkerCommand() {
+    override val commandName: String = "midi-clean"
+}

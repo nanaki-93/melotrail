@@ -29,6 +29,7 @@ import ai.music.workstation.worker.MP3ExportCommand
 import ai.music.workstation.worker.RepairCommand
 import ai.music.workstation.worker.RepairSpec
 import ai.music.workstation.worker.TranscribeCommand
+import ai.music.workstation.worker.MidiCleanCommand
 import ai.music.workstation.worker.WorkerClient
 import ai.music.workstation.worker.WorkerStatus
 import kotlinx.coroutines.runBlocking
@@ -64,7 +65,7 @@ object ArrangementProjectCommands {
     }
 
     fun handles(args: Array<String>): Boolean =
-        args.firstOrNull() in setOf("project", "part", "arrange", "generate", "mix", "render", "preview", "approve", "build", "transcribe")
+        args.firstOrNull() in setOf("project", "part", "arrange", "generate", "mix", "render", "preview", "approve", "build", "transcribe", "midi-clean")
 
     /** Small boundary that lets the end-to-end command be tested without a running HTTP worker. */
     internal interface BuildWorker {
@@ -95,6 +96,7 @@ object ArrangementProjectCommands {
         "approve" -> approveDraft(args)
         "build" -> buildProject(args, createBuildWorker())
         "transcribe" -> transcribe(args)
+        "midi-clean" -> midiClean(args)
         else -> throw IllegalArgumentException("Unknown arranger command")
     }
 
@@ -127,6 +129,39 @@ object ArrangementProjectCommands {
         return "Transcribed ${options.input} -> $outputPath (${notes} notes, ${"%.2f".format(duration)}s, $engine $engineVersion)"
     }
 
+    private suspend fun midiClean(args: Array<String>): String {
+        val options = parseMidiCleanOptions(args.drop(1))
+        val logger = DefaultLogger()
+        val client = WorkerClient(
+            baseUrl = System.getenv("WORKER_BASE_URL")?.takeIf { it.isNotBlank() } ?: "http://127.0.0.1:8081",
+            logger = logger,
+            errorReporter = ErrorReporter(logger)
+        )
+        val response = client.execute(
+            MidiCleanCommand(
+                path = options.input.toString(),
+                outputPath = options.output.toString(),
+                quantize = options.quantize,
+                strength = options.strength,
+                minNoteMs = options.minNoteMs,
+                minVelocity = options.minVelocity,
+                normalizeVelocity = options.normalizeVelocity,
+                cleanSustain = options.cleanSustain
+            )
+        )
+        if (response.status != WorkerStatus.COMPLETED) {
+            throw IllegalArgumentException(midiCleanupFailureMessage(response.error))
+        }
+        val output = response.output.orEmpty()
+        fun stat(name: String): Long = output[name]?.jsonPrimitive?.longOrNull
+            ?: throw IllegalArgumentException("MIDI cleanup failed during output validation: worker returned no $name")
+        val outputPath = output["output"]?.jsonPrimitive?.contentOrNull ?: options.output.toString()
+        return "Cleaned ${options.input} -> $outputPath (notes ${stat("inputNoteCount")} -> ${stat("outputNoteCount")}, " +
+            "duplicates ${stat("duplicatesRemoved")}, short ${stat("shortNotesRemoved")}, " +
+            "low velocity ${stat("lowVelocityNotesRemoved")}, overlaps ${stat("overlapsRepaired")}, " +
+            "quantized ${stat("quantizedNotes")})"
+    }
+
     internal fun transcriptionFailureMessage(error: ai.music.workstation.worker.WorkerError?): String {
         val stage = when (error?.type) {
             "ValidationError" -> "validation"
@@ -136,6 +171,15 @@ object ArrangementProjectCommands {
             else -> "worker"
         }
         return "Transcription failed during $stage: ${error?.message ?: "Unknown worker error"}"
+    }
+
+    internal fun midiCleanupFailureMessage(error: ai.music.workstation.worker.WorkerError?): String {
+        val stage = when (error?.type) {
+            "MidiCleanupValidationError" -> "validation"
+            "MidiCleanupOutputValidationError" -> "MIDI output validation"
+            else -> "worker"
+        }
+        return "MIDI cleanup failed during $stage: ${error?.message ?: "Unknown worker error"}"
     }
 
     private fun createProject(args: Array<String>): String {
@@ -777,6 +821,17 @@ object ArrangementProjectCommands {
 
     internal data class TranscribeOptions(val input: Path, val output: Path, val instrument: String)
 
+    internal data class MidiCleanOptions(
+        val input: Path,
+        val output: Path,
+        val quantize: String?,
+        val strength: Double,
+        val minNoteMs: Int,
+        val minVelocity: Int,
+        val normalizeVelocity: Boolean,
+        val cleanSustain: Boolean
+    )
+
     internal fun parseTranscribeOptions(arguments: List<String>): TranscribeOptions {
         val values = mutableMapOf<String, String>()
         var index = 0
@@ -812,6 +867,63 @@ object ArrangementProjectCommands {
         require(instrument.lowercase() == "piano") { "Unsupported instrument: $instrument. Supported instruments: piano" }
         require(!Files.isDirectory(output)) { "Output path is a directory: $output" }
         return TranscribeOptions(input, output, instrument.lowercase())
+    }
+
+    internal fun parseMidiCleanOptions(arguments: List<String>): MidiCleanOptions {
+        val valueOptions = setOf("--input", "--output", "--quantize", "--strength", "--min-note-ms", "--min-velocity")
+        val flagOptions = setOf("--normalize-velocity", "--clean-sustain")
+        val values = mutableMapOf<String, String>()
+        val flags = mutableSetOf<String>()
+        var index = 0
+        while (index < arguments.size) {
+            val option = arguments[index]
+            require(option in valueOptions || option in flagOptions) {
+                "Usage: midi-clean --input <raw.mid> --output <clean.mid> [--quantize 1/16 --strength 0.4]"
+            }
+            if (option in flagOptions) {
+                require(flags.add(option)) { "Duplicate option: $option" }
+                index++
+            } else {
+                require(index + 1 < arguments.size && !arguments[index + 1].startsWith("--")) {
+                    "Missing value for $option"
+                }
+                require(values.put(option, arguments[index + 1]) == null) { "Duplicate option: $option" }
+                index += 2
+            }
+        }
+        val rawInput = values["--input"]
+            ?: throw IllegalArgumentException("Missing required option: --input <raw.mid>")
+        val rawOutput = values["--output"]
+            ?: throw IllegalArgumentException("Missing required option: --output <clean.mid>")
+        val input = Path.of(rawInput).toAbsolutePath().normalize()
+        val output = Path.of(rawOutput).toAbsolutePath().normalize()
+        require(Files.isRegularFile(input)) { "Input MIDI file not found: $input" }
+        require(input != output && !(Files.exists(output) && Files.isSameFile(input, output))) {
+            "Input and output paths must differ"
+        }
+        require(input.fileName.toString().substringAfterLast('.', "").lowercase() in setOf("mid", "midi")) {
+            "Input must use a .mid or .midi extension"
+        }
+        require(output.fileName.toString().substringAfterLast('.', "").lowercase() in setOf("mid", "midi")) {
+            "Output must use a .mid or .midi extension"
+        }
+        require(!Files.isDirectory(output)) { "Output path is a directory: $output" }
+        val quantize = values["--quantize"]
+        require(quantize == null || quantize in setOf("1/4", "1/8", "1/16", "1/32")) {
+            "Quantize must be one of: 1/4, 1/8, 1/16, 1/32"
+        }
+        val strength = values["--strength"]?.toDoubleOrNull()
+            ?: if (quantize != null) 0.4 else 0.0
+        require(strength in 0.0..1.0) { "Strength must be from 0.0 to 1.0" }
+        require(quantize != null || strength == 0.0) { "--strength requires --quantize" }
+        val minNoteMs = values["--min-note-ms"]?.toIntOrNull() ?: 50
+        val minVelocity = values["--min-velocity"]?.toIntOrNull() ?: 8
+        require(minNoteMs in 0..60_000) { "--min-note-ms must be from 0 to 60000" }
+        require(minVelocity in 0..127) { "--min-velocity must be from 0 to 127" }
+        return MidiCleanOptions(
+            input, output, quantize, strength, minNoteMs, minVelocity,
+            "--normalize-velocity" in flags, "--clean-sustain" in flags
+        )
     }
 
     private fun parseArrangeOptions(arguments: List<String>): Map<String, String> {

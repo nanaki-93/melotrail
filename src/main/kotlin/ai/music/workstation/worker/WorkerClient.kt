@@ -89,6 +89,7 @@ class WorkerClient(
         is MP3ConvertCommand -> "/mp3_convert"
         is MP3ExportCommand -> "/mp3_export"
         is TranscribeCommand -> "/transcribe"
+        is MidiCleanCommand -> "/midi-clean"
         is HealthCheck -> "/health"
     }
 
@@ -142,6 +143,16 @@ class WorkerClient(
                     put("path", command.path)
                     put("outputPath", command.outputPath)
                     put("instrument", command.instrument)
+                }
+                is MidiCleanCommand -> {
+                    put("path", command.path)
+                    put("outputPath", command.outputPath)
+                    command.quantize?.let { put("quantize", it) }
+                    put("strength", command.strength)
+                    put("minNoteMs", command.minNoteMs)
+                    put("minVelocity", command.minVelocity)
+                    put("normalizeVelocity", command.normalizeVelocity)
+                    put("cleanSustain", command.cleanSustain)
                 }
                 is HealthCheck -> Unit
             }
