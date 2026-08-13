@@ -3,6 +3,7 @@ package ai.music.workstation.cli
 import ai.music.workstation.arrangement.Arrangement
 import ai.music.workstation.arrangement.ArrangementSection
 import ai.music.workstation.arrangement.ArrangementStore
+import ai.music.workstation.arrangement.DetailedArrangement
 import ai.music.workstation.arrangement.InstrumentPlan
 import ai.music.workstation.arrangement.InstrumentMode
 import ai.music.workstation.arrangement.MidiReferences
@@ -142,6 +143,39 @@ class ArrangementProjectCommandsTest {
         assertEquals(listOf("piano"), songPlan.sections.first().instrumentProgression)
         assertEquals(listOf("A1", "A2"), variations.sections.map { it.instanceId })
         assertFalse(Files.exists(projectRoot.resolve("arrangement.json")))
+    }
+
+    @Test
+    fun `arrange detail expands reviewed artifacts into an approved v3 arrangement`() {
+        val projectRoot = createMidiPlanningProject("detailed-demo")
+        ArrangementProjectCommands.execute(
+            arrayOf("arrange", "--project", projectRoot.toString(), "--planner", "deterministic", "--instruments", "piano,bass")
+        )
+
+        val result = ArrangementProjectCommands.execute(
+            arrayOf("arrange-detail", "--project", projectRoot.toString(), "--planner", "deterministic")
+        )
+
+        val arrangement = json.decodeFromString<DetailedArrangement>(Files.readString(projectRoot.resolve("arrangement.json")))
+        assertTrue(ArrangementProjectCommands.handles(arrayOf("arrange-detail")))
+        assertTrue(result.contains("Created deterministic detailed arrangement"))
+        assertEquals(3, arrangement.version)
+        assertEquals("A1", arrangement.sections.single().instanceId)
+    }
+
+    @Test
+    fun `preview and approve validate a v3 draft without attempting audio rendering`() {
+        val projectRoot = createMidiPlanningProject("detailed-draft-demo")
+        ArrangementProjectCommands.execute(arrayOf("arrange", "--project", projectRoot.toString(), "--planner", "deterministic"))
+        ArrangementProjectCommands.execute(arrayOf("arrange-detail", "--project", projectRoot.toString(), "--planner", "deterministic"))
+        Files.copy(projectRoot.resolve("arrangement.json"), projectRoot.resolve("arrangement.draft.json"), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+
+        val preview = ArrangementProjectCommands.execute(arrayOf("preview", "--project", projectRoot.toString()))
+        val approve = ArrangementProjectCommands.execute(arrayOf("approve", "--project", projectRoot.toString()))
+
+        assertTrue(preview.contains("Validated detailed arrangement draft"))
+        assertTrue(approve.contains("Approved detailed arrangement"))
+        assertEquals(3, json.decodeFromString<DetailedArrangement>(Files.readString(projectRoot.resolve("arrangement.json"))).version)
     }
 
     @Test

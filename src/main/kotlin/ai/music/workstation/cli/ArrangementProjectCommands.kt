@@ -6,8 +6,13 @@ import ai.music.workstation.arrangement.ArrangementRenderer
 import ai.music.workstation.arrangement.BassMidiGenerationAdapter
 import ai.music.workstation.arrangement.DeterministicArrangementPlanner
 import ai.music.workstation.arrangement.DeterministicGlobalSongPlanner
+import ai.music.workstation.arrangement.DeterministicDetailedArrangementPlanner
 import ai.music.workstation.arrangement.DeterministicSectionVariationPlanner
+import ai.music.workstation.arrangement.DetailedArrangementInput
+import ai.music.workstation.arrangement.DetailedArrangementPlanner
+import ai.music.workstation.arrangement.DetailedArrangementStore
 import ai.music.workstation.arrangement.DeterministicStemMixer
+import ai.music.workstation.arrangement.LocalQwenDetailedArrangementPlanner
 import ai.music.workstation.arrangement.LocalQwenGlobalSongPlanner
 import ai.music.workstation.arrangement.MixSettings
 import ai.music.workstation.arrangement.MixTrack
@@ -30,6 +35,7 @@ import ai.music.workstation.arrangement.SectionVariationStore
 import ai.music.workstation.arrangement.StructureParser
 import ai.music.workstation.arrangement.GlobalSongPlanner
 import ai.music.workstation.arrangement.SongPlanStore
+import ai.music.workstation.arrangement.SongPlan
 import ai.music.workstation.arrangement.SongPlanningInput
 import ai.music.workstation.audio.WAVDecoder
 import ai.music.workstation.audio.AudioResampler
@@ -80,7 +86,7 @@ object ArrangementProjectCommands {
     }
 
     fun handles(args: Array<String>): Boolean =
-        args.firstOrNull() in setOf("project", "part", "arrange", "generate", "mix", "render", "preview", "approve", "build", "transcribe", "midi-clean", "licenses")
+        args.firstOrNull() in setOf("project", "part", "arrange", "arrange-detail", "generate", "mix", "render", "preview", "approve", "build", "transcribe", "midi-clean", "licenses")
 
     /** Small boundary that lets the end-to-end command be tested without a running HTTP worker. */
     internal interface BuildWorker {
@@ -111,6 +117,7 @@ object ArrangementProjectCommands {
             )
         }
         "arrange" -> arrange(args)
+        "arrange-detail" -> arrangeDetail(args)
         "generate" -> generateBass(args)
         "mix", "render" -> mixStems(args)
         "preview" -> previewDraft(args)
@@ -465,6 +472,32 @@ object ArrangementProjectCommands {
         )
     }
 
+    /** Expands the reviewed Task 009/010 artifacts into a v3 decision document. */
+    private fun arrangeDetail(args: Array<String>): String {
+        val options = parseArrangeDetailOptions(args.drop(1))
+        val plannerName = options["--planner"] ?: DETERMINISTIC_PLANNER
+        val projectRoot = projectRoot(options.getValue("--project"))
+        val project = readProject(projectRoot)
+        project.requireValid(projectRoot)
+        val input = detailedArrangementInput(projectRoot, project)
+        val planner: DetailedArrangementPlanner = when (plannerName) {
+            DETERMINISTIC_PLANNER -> DeterministicDetailedArrangementPlanner()
+            QWEN_PLANNER -> LocalQwenDetailedArrangementPlanner()
+            else -> throw IllegalArgumentException("Unsupported planner: $plannerName. Available planners: $DETERMINISTIC_PLANNER, $QWEN_PLANNER")
+        }
+        val arrangement = planner.plan(input)
+        val path = if (plannerName == QWEN_PLANNER) {
+            DetailedArrangementStore.writeDraft(projectRoot, input, arrangement)
+        } else {
+            DetailedArrangementStore.writeApproved(projectRoot, input, arrangement)
+        }
+        return if (plannerName == QWEN_PLANNER) {
+            "Created Qwen detailed arrangement draft: $path. Review it, then run `approve --project $projectRoot`."
+        } else {
+            "Created deterministic detailed arrangement: $path"
+        }
+    }
+
     private fun generateBass(args: Array<String>): String {
         require(args.size >= 2 && args[1] == "bass") {
             "Usage: generate bass --project <project-directory>"
@@ -533,6 +566,12 @@ object ArrangementProjectCommands {
         project.requireValid(projectRoot)
         val draftPath = projectRoot.resolve(ArrangementStore.DRAFT_FILE)
         require(Files.isRegularFile(draftPath)) { "Arrangement draft not found: $draftPath. Run arrange --planner qwen first." }
+        val draftVersion = json.parseToJsonElement(Files.readString(draftPath)).jsonObject["version"]
+            ?.jsonPrimitive?.contentOrNull?.toIntOrNull()
+        if (draftVersion == 3) {
+            val arrangement = DetailedArrangementStore.readDraft(projectRoot, detailedArrangementInput(projectRoot, project))
+            return "Validated detailed arrangement draft: $draftPath (${arrangement.sections.size} sections). Inspect its roles, energy, and transition intents, then run `approve --project $projectRoot`."
+        }
         val arrangement = json.decodeFromString<ai.music.workstation.arrangement.Arrangement>(Files.readString(draftPath))
         arrangement.requireValid(project.parts.map { it.id })
         val rendered = renderProject(projectRoot, project, arrangement)
@@ -559,12 +598,45 @@ object ArrangementProjectCommands {
         val project = readProject(projectRoot)
         val draft = projectRoot.resolve(ArrangementStore.DRAFT_FILE)
         require(Files.isRegularFile(draft)) { "Arrangement draft not found: $draft" }
+        val draftVersion = json.parseToJsonElement(Files.readString(draft)).jsonObject["version"]
+            ?.jsonPrimitive?.contentOrNull?.toIntOrNull()
+        if (draftVersion == 3) {
+            val approved = DetailedArrangementStore.approve(projectRoot, detailedArrangementInput(projectRoot, project))
+            return "Approved detailed arrangement: $approved"
+        }
         val arrangement = json.decodeFromString<ai.music.workstation.arrangement.Arrangement>(Files.readString(draft))
         arrangement.requireValid(project.parts.map { it.id })
         val temp = projectRoot.resolve("arrangement.approving.json")
         Files.copy(draft, temp, StandardCopyOption.REPLACE_EXISTING)
         Files.move(temp, projectRoot.resolve("arrangement.json"), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
         return "Approved arrangement: ${projectRoot.resolve("arrangement.json")}"
+    }
+
+    /** Reconstructs validation input only from reviewed, path-free planning artifacts and registered MIDI analyses. */
+    private fun detailedArrangementInput(projectRoot: Path, project: Project): DetailedArrangementInput {
+        val planPath = projectRoot.resolve(SongPlanStore.FILE_NAME)
+        require(Files.isRegularFile(planPath)) { "Song plan not found: $planPath. Run arrange first." }
+        val rawPlan = json.decodeFromString<SongPlan>(Files.readString(planPath, StandardCharsets.UTF_8))
+        val structure = rawPlan.sections.map { SectionInstance(it.index, it.partId) }
+        val allowedInstruments = rawPlan.sections.flatMap { it.instrumentProgression }.distinct()
+        val partsById = project.parts.associateBy { it.id }
+        val analyses = structure.map { it.partId }.distinct().associateWith { partId ->
+            val part = checkNotNull(partsById[partId]) { "Song plan references unknown project part '$partId'" }
+            val reference = requireNotNull(part.analysis) { "Missing MIDI analysis for part '$partId'. Run part analyze first." }
+            require(reference.kind == AnalysisKind.MIDI) { "Detailed arrangement requires MIDI analysis for '$partId'" }
+            json.decodeFromString<MidiAnalysis>(Files.readString(projectRoot.resolve(reference.file), StandardCharsets.UTF_8))
+        }
+        val planningInput = SongPlanningInput(
+            projectName = project.name,
+            projectVersion = project.version,
+            analyses = analyses,
+            structure = structure,
+            allowedInstruments = allowedInstruments,
+            style = rawPlan.style
+        )
+        val songPlan = SongPlanStore.read(projectRoot, planningInput)
+        val variations = SectionVariationStore.read(projectRoot, planningInput, songPlan)
+        return DetailedArrangementInput(planningInput, songPlan, variations)
     }
 
     private fun renderProject(projectRoot: Path, project: Project, arrangement: ai.music.workstation.arrangement.Arrangement): ArrangementRenderer.RenderedArrangement {
@@ -1091,6 +1163,22 @@ object ArrangementProjectCommands {
         return options
     }
 
+    private fun parseArrangeDetailOptions(arguments: List<String>): Map<String, String> {
+        val options = mutableMapOf<String, String>()
+        var index = 0
+        while (index < arguments.size) {
+            val option = arguments[index]
+            require(option in ARRANGE_DETAIL_OPTIONS) { "Unknown arrange-detail option: $option" }
+            require(index + 1 < arguments.size && !arguments[index + 1].startsWith("--")) { "Missing value for $option" }
+            require(options.put(option, arguments[index + 1]) == null) { "Duplicate arrange-detail option: $option" }
+            index += 2
+        }
+        require("--project" in options) {
+            "Usage: arrange-detail --project <project-directory> [--planner deterministic|qwen]"
+        }
+        return options
+    }
+
     private fun parseGenerateOptions(arguments: List<String>): Map<String, String> {
         require(arguments.size == 2 && arguments[0] == "--project") {
             "Usage: generate bass --project <project-directory>"
@@ -1147,6 +1235,7 @@ object ArrangementProjectCommands {
     private val PART_ID = Regex("[A-Za-z0-9_-]+")
     private val ADD_OPTIONS = setOf("--id", "--file", "--role", "--transcribe")
     private val ARRANGE_OPTIONS = setOf("--project", "--planner", "--structure", "--instruments", "--style")
+    private val ARRANGE_DETAIL_OPTIONS = setOf("--project", "--planner")
     private const val DETERMINISTIC_PLANNER = "deterministic"
     private const val QWEN_PLANNER = "qwen"
     private val WAV_EXTENSIONS = setOf("wav", "wave")

@@ -1,0 +1,31 @@
+{
+  "version": 3,
+  "sections": [
+    {
+      "index": 0,
+      "instanceId": "A1",
+      "partId": "A",
+      "role": "introduction",
+      "energy": 0.3,
+      "instruments": [
+        {"kind": "piano", "name": "piano", "mode": "source"},
+        {"kind": "bass", "name": "bass", "mode": "generated", "role": "root", "density": 0.3, "movement": "root_motion", "register": "low", "syncopation": 0.12}
+      ],
+      "transitionOut": {"type": "bridge", "bars": 1, "crossfadeMs": 0, "bridge": {"energy": 0.3, "elements": ["melody_pickup"]}}
+    },
+    {
+      "index": 1,
+      "instanceId": "B1",
+      "partId": "B",
+      "role": "climax",
+      "energy": 0.9,
+      "instruments": [
+        {"kind": "piano", "name": "piano", "mode": "source"},
+        {"kind": "drums", "name": "drums", "mode": "generated", "role": "groove", "density": 0.9, "kickDensity": 0.9, "snarePattern": "backbeat", "hiHatDensity": 0.72, "swing": 0.0, "fillLastBar": true},
+        {"kind": "pad", "name": "pad", "mode": "generated", "role": "texture", "density": 0.9, "register": "high"},
+        {"kind": "strings", "name": "strings", "mode": "generated", "role": "texture", "density": 0.9, "register": "high"}
+      ],
+      "transitionOut": {"type": "none", "bars": 0, "crossfadeMs": 0}
+    }
+  ]
+}

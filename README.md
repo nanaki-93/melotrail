@@ -148,6 +148,20 @@ make cli ARGS='arrange --project ./projects/song-001 --planner deterministic --i
 # Inspect song_plan.json and section_variations.json before a later detailed-arrangement stage.
 ```
 
+Expand those reviewed artifacts into the MIDI-first version 3 `arrangement.json`.
+The deterministic planner writes an approved document directly; Qwen writes only
+`arrangement.draft.json`, which must be approved explicitly. Version 3 contains
+bounded instrument roles and pattern controls, never MIDI notes or render paths.
+
+```bash
+make cli ARGS='arrange-detail --project ./projects/song-001 --planner deterministic'
+make cli ARGS='arrange-detail --project ./projects/song-001 --planner qwen'
+make cli ARGS='approve --project ./projects/song-001'
+```
+
+Existing version 1/2 arrangements remain available to the current audio
+renderer. MIDI generation from version 3 roles is introduced by later tasks.
+
 The existing `render`/`build` workflow continues to use its compatible
 `arrangement.json` artifacts. A detailed MIDI-first arrangement is a later,
 separate stage; generating a global song plan never approves or overwrites one.
