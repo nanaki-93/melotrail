@@ -98,6 +98,7 @@ class WorkerService(
         is MasterCommand -> command.path
         is MP3ConvertCommand -> command.path
         is MP3ExportCommand -> command.path
+        is TranscribeCommand -> command.path
         is HealthCheck -> ""
     }
 

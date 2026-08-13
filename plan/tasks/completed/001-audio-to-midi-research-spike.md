@@ -10,8 +10,8 @@ The current arranger imports audio and generates supporting WAV stems directly. 
 
 ## Mandatory workflow
 
-1. Read `README.md`, `plan/AGENT_GUIDELINES.md`, and `plan/PLAN_MIDI.md`.
-2. Inspect `worker/requirements.txt`, the worker command registry, the current MP3 conversion command, and existing audio fixtures.
+1. Read `../../../README.md`, `../../AGENT_GUIDELINES.md`, and `../../PLAN_MIDI.md`.
+2. Inspect `../../../worker/requirements.txt`, the worker command registry, the current MP3 conversion command, and existing audio fixtures.
 3. Run `./gradlew test` and `python3 -m unittest discover -s worker/tests` before changing anything.
 4. Record pre-existing failures separately. The current Python 3.14 environment is known to expose a `librosa`/`numba` cache failure; do not report it as a transcription regression.
 
@@ -21,7 +21,7 @@ None. This is the first MIDI-first task.
 
 ## Deliverables
 
-- A short research report under `plan/research/` containing:
+- A short research report under `../../research` containing:
   - engines evaluated;
   - exact versions and licenses;
   - offline/local operation confirmation;
@@ -30,7 +30,7 @@ None. This is the first MIDI-first task.
   - CPU/RAM and elapsed time for the fixture;
   - note/timing/sustain observations;
   - the selected engine and reasons rejected alternatives were not selected.
-- A minimal spike script under `tools/` that accepts one WAV input and one MIDI output. It must not use the HTTP worker or modify a song project.
+- A minimal spike script under `../../../tools` that accepts one WAV input and one MIDI output. It must not use the HTTP worker or modify a song project.
 - One small, legally usable solo-piano WAV fixture, or documented instructions for producing it locally without committing copyrighted source material.
 - A generated MIDI result kept outside tracked source files unless it is deliberately added as a small test fixture.
 - Reproducible setup instructions using a clean Python 3.12 virtual environment. Update broad Python compatibility claims only to versions actually verified.

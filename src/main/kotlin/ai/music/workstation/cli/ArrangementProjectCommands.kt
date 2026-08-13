@@ -28,6 +28,7 @@ import ai.music.workstation.worker.MasterCommand
 import ai.music.workstation.worker.MP3ExportCommand
 import ai.music.workstation.worker.RepairCommand
 import ai.music.workstation.worker.RepairSpec
+import ai.music.workstation.worker.TranscribeCommand
 import ai.music.workstation.worker.WorkerClient
 import ai.music.workstation.worker.WorkerStatus
 import kotlinx.coroutines.runBlocking
@@ -63,7 +64,7 @@ object ArrangementProjectCommands {
     }
 
     fun handles(args: Array<String>): Boolean =
-        args.firstOrNull() in setOf("project", "part", "arrange", "generate", "mix", "render", "preview", "approve", "build")
+        args.firstOrNull() in setOf("project", "part", "arrange", "generate", "mix", "render", "preview", "approve", "build", "transcribe")
 
     /** Small boundary that lets the end-to-end command be tested without a running HTTP worker. */
     internal interface BuildWorker {
@@ -93,11 +94,48 @@ object ArrangementProjectCommands {
         "preview" -> previewDraft(args)
         "approve" -> approveDraft(args)
         "build" -> buildProject(args, createBuildWorker())
+        "transcribe" -> transcribe(args)
         else -> throw IllegalArgumentException("Unknown arranger command")
     }
 
     internal fun executeBuildForTest(args: Array<String>, worker: BuildWorker): String = runBlocking {
         buildProject(args, worker)
+    }
+
+    private suspend fun transcribe(args: Array<String>): String {
+        val options = parseTranscribeOptions(args.drop(1))
+        val logger = DefaultLogger()
+        val client = WorkerClient(
+            baseUrl = System.getenv("WORKER_BASE_URL")?.takeIf { it.isNotBlank() } ?: "http://127.0.0.1:8081",
+            logger = logger,
+            errorReporter = ErrorReporter(logger)
+        )
+        val response = client.execute(
+            TranscribeCommand(options.input.toString(), options.output.toString(), options.instrument)
+        )
+        if (response.status != WorkerStatus.COMPLETED) {
+            throw IllegalArgumentException(transcriptionFailureMessage(response.error))
+        }
+        val output = response.output.orEmpty()
+        val notes = output["notes"]?.jsonPrimitive?.longOrNull
+            ?: throw IllegalArgumentException("Transcription failed during MIDI output validation: worker returned no note count")
+        val duration = output["duration"]?.jsonPrimitive?.doubleOrNull
+            ?: throw IllegalArgumentException("Transcription failed during MIDI output validation: worker returned no duration")
+        val engine = output["engine"]?.jsonPrimitive?.contentOrNull ?: "unknown"
+        val engineVersion = output["engineVersion"]?.jsonPrimitive?.contentOrNull ?: "unknown"
+        val outputPath = output["output"]?.jsonPrimitive?.contentOrNull ?: options.output.toString()
+        return "Transcribed ${options.input} -> $outputPath (${notes} notes, ${"%.2f".format(duration)}s, $engine $engineVersion)"
+    }
+
+    internal fun transcriptionFailureMessage(error: ai.music.workstation.worker.WorkerError?): String {
+        val stage = when (error?.type) {
+            "ValidationError" -> "validation"
+            "DecodeError" -> "MP3 decode"
+            "ModelError" -> "model inference"
+            "OutputValidationError" -> "MIDI output validation"
+            else -> "worker"
+        }
+        return "Transcription failed during $stage: ${error?.message ?: "Unknown worker error"}"
     }
 
     private fun createProject(args: Array<String>): String {
@@ -735,6 +773,45 @@ object ArrangementProjectCommands {
             "Usage: part analyze <project-directory> --id <id>"
         }
         return mapOf("--id" to arguments[1])
+    }
+
+    internal data class TranscribeOptions(val input: Path, val output: Path, val instrument: String)
+
+    internal fun parseTranscribeOptions(arguments: List<String>): TranscribeOptions {
+        val values = mutableMapOf<String, String>()
+        var index = 0
+        while (index < arguments.size) {
+            val option = arguments[index]
+            require(option in setOf("--input", "--output", "--instrument")) {
+                "Usage: transcribe --input <audio-file> --output <midi-file> --instrument piano"
+            }
+            require(index + 1 < arguments.size && !arguments[index + 1].startsWith("--")) {
+                "Missing value for $option"
+            }
+            require(values.put(option, arguments[index + 1]) == null) { "Duplicate option: $option" }
+            index += 2
+        }
+        val rawInput = values["--input"]
+            ?: throw IllegalArgumentException("Missing required option: --input <audio-file>")
+        val rawOutput = values["--output"]
+            ?: throw IllegalArgumentException("Missing required option: --output <midi-file>")
+        val instrument = values["--instrument"]
+            ?: throw IllegalArgumentException("Missing required option: --instrument piano")
+        val input = Path.of(rawInput).toAbsolutePath().normalize()
+        val output = Path.of(rawOutput).toAbsolutePath().normalize()
+        require(Files.isRegularFile(input)) { "Input audio file not found: $input" }
+        require(input != output && !(Files.exists(output) && Files.isSameFile(input, output))) {
+            "Input and output paths must differ"
+        }
+        require(input.fileName.toString().substringAfterLast('.', "").lowercase() in setOf("wav", "wave", "mp3")) {
+            "Input must use a .wav, .wave, or .mp3 extension"
+        }
+        require(output.fileName.toString().substringAfterLast('.', "").lowercase() in setOf("mid", "midi")) {
+            "Output must use a .mid or .midi extension"
+        }
+        require(instrument.lowercase() == "piano") { "Unsupported instrument: $instrument. Supported instruments: piano" }
+        require(!Files.isDirectory(output)) { "Output path is a directory: $output" }
+        return TranscribeOptions(input, output, instrument.lowercase())
     }
 
     private fun parseArrangeOptions(arguments: List<String>): Map<String, String> {

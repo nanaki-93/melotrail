@@ -71,3 +71,11 @@ data class MP3ExportCommand(
 ) : WorkerCommand() {
     override val commandName: String = "mp3_export"
 }
+
+data class TranscribeCommand(
+    val path: String,
+    val outputPath: String,
+    val instrument: String
+) : WorkerCommand() {
+    override val commandName: String = "transcribe"
+}

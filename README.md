@@ -75,6 +75,18 @@ output directory, or `--dry-run` to validate without changing files.
 The build command is deterministic and local. `--no-ai` makes that choice
 explicit; no model output is executed as code, commands, or paths.
 
+### Optional solo-piano transcription
+
+The worker exposes local Basic Pitch transcription only after its optional
+runtime is installed in a separate Python 3.11 environment. It is intentionally
+not part of the normal worker dependencies or test suite. See
+[`worker/README.md`](worker/README.md) for setup and the Task 001 runtime gate.
+
+```bash
+make worker
+make cli ARGS='transcribe --input ./recordings/verse.wav --output ./projects/song-001/midi/raw/A.mid --instrument piano'
+```
+
 ### AI bridge review workflow
 
 Qwen creates a reviewable draft instead of overwriting an approved song. Its

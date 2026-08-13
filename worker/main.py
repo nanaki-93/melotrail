@@ -7,6 +7,7 @@ The worker is a standalone service. Each operation has its own endpoint:
     POST /repair
     POST /master
     POST /mp3_convert
+    POST /transcribe
 
 Request bodies contain the command-specific input directly, rather than a
 generic {"command": "...", "input": {...}} envelope.
@@ -33,6 +34,7 @@ logging.basicConfig(
 logger = logging.getLogger("worker")
 
 from worker.registry import COMMANDS, register_command
+from worker.errors import WorkerCommandError
 
 
 class WorkerHandler(BaseHTTPRequestHandler):
@@ -61,6 +63,7 @@ class WorkerHandler(BaseHTTPRequestHandler):
             })
             return
 
+        job_id = ""
         try:
             request = self._read_json()
             job_id = str(request.get("jobId", ""))
@@ -73,10 +76,19 @@ class WorkerHandler(BaseHTTPRequestHandler):
                 "status": "completed",
                 "output": output or {},
             })
+        except WorkerCommandError as exc:
+            logger.warning("Worker command rejected %s: %s", self.path, exc)
+            self._send_json(exc.status_code, {
+                "version": 1,
+                "jobId": job_id,
+                "status": "error",
+                "error": {"type": exc.error_type, "message": str(exc)},
+            })
         except ValueError as exc:
             logger.warning("Bad request on %s: %s", self.path, exc)
             self._send_json(400, {
                 "version": 1,
+                "jobId": job_id,
                 "status": "error",
                 "error": {"type": "BadRequest", "message": str(exc)},
             })
@@ -84,6 +96,7 @@ class WorkerHandler(BaseHTTPRequestHandler):
             logger.exception("Worker command failed: %s", self.path)
             self._send_json(500, {
                 "version": 1,
+                "jobId": job_id,
                 "status": "error",
                 "error": {"type": "WorkerError", "message": str(exc)},
             })
@@ -113,7 +126,7 @@ class WorkerHandler(BaseHTTPRequestHandler):
 
 def load_commands() -> None:
     # Importing these modules executes @register_command decorators.
-    from worker.commands import analyze, dsp, repair, mastering, mp3_convert, mp3_export  # noqa: F401
+    from worker.commands import analyze, dsp, repair, mastering, mp3_convert, mp3_export, transcribe  # noqa: F401
     logger.info("Loaded commands: %s", ", ".join(sorted(COMMANDS)))
 
 

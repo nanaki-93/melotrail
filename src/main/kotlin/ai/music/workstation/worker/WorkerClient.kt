@@ -40,7 +40,8 @@ class WorkerClient(
                 return@withContext WorkerResponse(
                     jobId = jobId,
                     status = WorkerStatus.ERROR,
-                    error = WorkerError("HttpError", "HTTP ${response.code}: ${response.body}")
+                    error = errorFrom(response.body)
+                        ?: WorkerError("HttpError", "Worker request failed with HTTP ${response.code}")
                 )
             }
 
@@ -80,17 +81,18 @@ class WorkerClient(
 
     override fun close() = Unit
 
-    private fun endpointFor(command: WorkerCommand): String = when (command) {
+    internal fun endpointFor(command: WorkerCommand): String = when (command) {
         is AnalyzeCommand -> "/analyze"
         is ApplyDSPCommand -> "/apply_dsp"
         is RepairCommand -> "/repair"
         is MasterCommand -> "/master"
         is MP3ConvertCommand -> "/mp3_convert"
         is MP3ExportCommand -> "/mp3_export"
+        is TranscribeCommand -> "/transcribe"
         is HealthCheck -> "/health"
     }
 
-    private fun buildRequest(command: WorkerCommand, jobId: String): JsonObject =
+    internal fun buildRequest(command: WorkerCommand, jobId: String): JsonObject =
         buildJsonObject {
             put("jobId", jobId)
             when (command) {
@@ -136,6 +138,11 @@ class WorkerClient(
                     put("outputPath", command.outputPath)
                     put("bitrateKbps", command.bitrateKbps)
                 }
+                is TranscribeCommand -> {
+                    put("path", command.path)
+                    put("outputPath", command.outputPath)
+                    put("instrument", command.instrument)
+                }
                 is HealthCheck -> Unit
             }
         }
@@ -164,6 +171,13 @@ class WorkerClient(
 
     private fun post(path: String, body: JsonObject): HttpResponse =
         request("POST", path, json.encodeToString(body))
+
+    private fun errorFrom(body: String): WorkerError? = runCatching {
+        val error = json.parseToJsonElement(body).jsonObject["error"]?.jsonObject ?: return null
+        val type = error["type"]?.jsonPrimitive?.contentOrNull ?: return null
+        val message = error["message"]?.jsonPrimitive?.contentOrNull ?: return null
+        WorkerError(type, message)
+    }.getOrNull()
 
     private fun request(method: String, path: String, body: String?): HttpResponse {
         val url = URI.create(baseUrl.trimEnd('/') + path).toURL()

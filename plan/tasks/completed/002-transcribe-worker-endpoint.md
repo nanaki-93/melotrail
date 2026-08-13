@@ -11,8 +11,8 @@ Expose the engine selected in Task 001 through the standalone Python worker and 
 
 ## Existing code to reuse
 
-- `worker/main.py` and `worker/registry.py` for one-endpoint-per-operation registration.
-- `worker/commands/mp3_convert.py` for compressed-audio decoding behavior.
+- `../../../worker/main.py` and `../../../worker/registry.py` for one-endpoint-per-operation registration.
+- `../../../worker/commands/mp3_convert.py` for compressed-audio decoding behavior.
 - `WorkerCommand` and `WorkerClient` for Kotlin-to-worker requests.
 - `ArrangementProjectCommands` for arranger-oriented CLI dispatch.
 

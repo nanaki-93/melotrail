@@ -1,0 +1,5 @@
+# Optional, isolated solo-piano transcription runtime.
+# Do not add this to requirements.txt: the normal worker test suite is model-free.
+# Use Python 3.11 on macOS until the Task 001 runtime gate documents another
+# verified Basic Pitch environment.
+basic-pitch==0.4.0
