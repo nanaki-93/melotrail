@@ -1,0 +1,6 @@
+<group> loop_mode=one_shot
+<region> sample=samples/kick.wav key=36
+<region> sample=samples/snare.wav key=38
+<region> sample=samples/clap.wav key=39
+<region> sample=samples/hat_closed.wav key=42
+<region> sample=samples/hat_open.wav key=46

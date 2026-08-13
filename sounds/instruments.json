@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "workingSampleRate": 44100,
+  "instruments": {
+    "piano": {
+      "engine": "sfz",
+      "path": "piano/piano.sfz",
+      "midiProgram": 0
+    },
+    "bass": {
+      "engine": "sfz",
+      "path": "bass/bass.sfz",
+      "midiProgram": 32
+    },
+    "drums": {
+      "engine": "sfz",
+      "path": "drums/drums.sfz",
+      "midiChannel": 10
+    },
+    "pad": {
+      "engine": "sfz",
+      "path": "pad/pad.sfz",
+      "midiProgram": 89
+    },
+    "strings": {
+      "engine": "sfz",
+      "path": "strings/strings.sfz",
+      "midiProgram": 48
+    }
+  }
+}

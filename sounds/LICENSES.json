@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "libraries": {
+    "starter-generated": {
+      "source": "Generated specifically for this starter pack; no third-party audio samples included.",
+      "commercialUse": true,
+      "attributionRequired": false,
+      "notes": "For development/MVP use. Replace with higher-quality CC0 libraries such as VCSL/VSCO 2 CE when desired."
+    }
+  }
+}
