@@ -4,6 +4,7 @@ import ai.music.workstation.arrangement.MidiReferences
 import ai.music.workstation.arrangement.Part
 import ai.music.workstation.arrangement.Project
 import ai.music.workstation.arrangement.ProjectStore
+import ai.music.workstation.application.MidiPreparationService
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -81,7 +82,7 @@ class UnifiedInputAdapterTest {
         val error = assertThrows(IllegalStateException::class.java) {
             ArrangementProjectCommands.executePartAddForTest(
                 arrayOf("part", "add", root.toString(), "--id", "A", "--file", input.toString(), "--transcribe"),
-                object : ArrangementProjectCommands.MidiPreparationWorker {
+                object : MidiPreparationService {
                     override suspend fun transcribe(input: Path, output: Path) = writeMidi(output)
                     override suspend fun clean(input: Path, output: Path) = error("cleanup unavailable")
                 }
@@ -156,7 +157,7 @@ class UnifiedInputAdapterTest {
 
     private fun midiFile(name: String): Path = tempDir.resolve(name).also(::writeMidi)
 
-    private class CopyingPreparationWorker : ArrangementProjectCommands.MidiPreparationWorker {
+    private class CopyingPreparationWorker : MidiPreparationService {
         override suspend fun transcribe(input: Path, output: Path) = writeMidi(output)
         override suspend fun clean(input: Path, output: Path) { Files.copy(input, output) }
     }

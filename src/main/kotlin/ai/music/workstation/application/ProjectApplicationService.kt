@@ -1,0 +1,351 @@
+package ai.music.workstation.application
+
+import ai.music.workstation.arrangement.AnalysisKind
+import ai.music.workstation.arrangement.MidiAnalysis
+import ai.music.workstation.arrangement.MidiAnalysisStore
+import ai.music.workstation.arrangement.MidiPartAnalyzer
+import ai.music.workstation.arrangement.MidiReferences
+import ai.music.workstation.arrangement.Part
+import ai.music.workstation.arrangement.PartAnalysis
+import ai.music.workstation.arrangement.PartAnalysisReference
+import ai.music.workstation.arrangement.PartAnalysisStore
+import ai.music.workstation.arrangement.Project
+import ai.music.workstation.arrangement.ProjectStore
+import ai.music.workstation.arrangement.RenderFormat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
+
+/** UI- and CLI-neutral boundary for the local, file-backed arranger project. */
+interface ProjectApplicationService {
+    fun open(root: Path): ProjectSnapshot
+    fun create(request: CreateProjectRequest): ProjectSnapshot
+    suspend fun importPart(request: ImportPartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
+    suspend fun analyzePart(request: AnalyzePartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
+    fun updatePart(request: UpdatePartRoleRequest): ProjectSnapshot
+    fun saveStructure(request: SaveStructureRequest): ProjectSnapshot
+}
+
+data class CreateProjectRequest(
+    val root: Path,
+    val name: String? = null,
+    val renderFormat: RenderFormat = RenderFormat()
+)
+
+data class ImportPartRequest(
+    val root: Path,
+    val id: String,
+    val source: Path,
+    val role: String = "",
+    val transcribe: Boolean = false
+)
+
+data class AnalyzePartRequest(val root: Path, val partId: String)
+data class UpdatePartRoleRequest(val root: Path, val partId: String, val role: String)
+data class SaveStructureRequest(val root: Path, val partIds: List<String>)
+
+data class OperationProgress(
+    val operation: String,
+    val stageIndex: Int,
+    val stageCount: Int,
+    val message: String,
+    val artifact: Path? = null
+)
+
+fun interface ProgressSink {
+    fun report(progress: OperationProgress)
+
+    data object None : ProgressSink {
+        override fun report(progress: OperationProgress) = Unit
+    }
+}
+
+/** Worker boundary needed by the MIDI-first import workflow. */
+interface MidiPreparationService {
+    suspend fun transcribe(input: Path, output: Path)
+    suspend fun clean(input: Path, output: Path)
+}
+
+/** Worker boundary retained for readable legacy v1 projects. */
+fun interface LegacyPartAnalysisService {
+    suspend fun analyze(source: Path): PartAnalysis
+}
+
+data class ProjectSnapshot(
+    val root: Path,
+    val version: Int,
+    val name: String,
+    val renderFormat: RenderFormat?,
+    val parts: List<PartSummary>,
+    val structure: List<StructureSectionSummary>,
+    val readiness: ProjectReadiness
+)
+
+data class PartSummary(
+    val id: String,
+    val role: String,
+    val sourceFile: String,
+    val sourceName: String,
+    val sourceType: PartSourceType,
+    val analysis: PartAnalysisSummary?
+)
+
+enum class PartSourceType { MIDI, AUDIO, UNKNOWN }
+enum class PartAnalysisStatus { NONE, LEGACY_AUDIO, MIDI }
+
+data class PartAnalysisSummary(
+    val status: PartAnalysisStatus,
+    val file: String,
+    val bars: Int? = null,
+    val durationSeconds: Double? = null,
+    val key: String? = null
+)
+
+data class StructureSectionSummary(
+    val index: Int,
+    val partId: String,
+    val occurrence: Int,
+    val instanceId: String,
+    val durationSeconds: Double?
+)
+
+data class ProjectReadiness(
+    val cleanMidiReady: Boolean,
+    val analysesReady: Boolean,
+    val structureReady: Boolean,
+    val songPlanAvailable: Boolean,
+    val arrangementAvailable: Boolean,
+    val generatedMidiAvailable: Boolean,
+    val stemsAvailable: Boolean,
+    val dryMixAvailable: Boolean,
+    val loFiMixAvailable: Boolean,
+    val masterAvailable: Boolean
+)
+
+class DefaultProjectApplicationService(
+    private val midiPreparation: MidiPreparationService,
+    private val legacyPartAnalysis: LegacyPartAnalysisService,
+    private val midiPartAnalyzer: MidiPartAnalyzer = MidiPartAnalyzer()
+) : ProjectApplicationService {
+    override fun open(root: Path): ProjectSnapshot {
+        val normalizedRoot = root.normalizeRoot()
+        require(Files.isRegularFile(normalizedRoot.resolve(ProjectStore.FILE_NAME))) {
+            "Project file not found: ${normalizedRoot.resolve(ProjectStore.FILE_NAME)}"
+        }
+        return snapshot(normalizedRoot, readValidProject(normalizedRoot))
+    }
+
+    override fun create(request: CreateProjectRequest): ProjectSnapshot = mutate(request.root) { root ->
+        require(!Files.exists(root) || Files.isDirectory(root)) { "Project path is not a directory: $root" }
+        require(!Files.exists(root.resolve(ProjectStore.FILE_NAME))) { "Project already exists: ${root.resolve(ProjectStore.FILE_NAME)}" }
+        val name = request.name ?: root.fileName?.toString().orEmpty()
+        require(name.isNotBlank()) { "Project directory must have a name" }
+        listOf("source", "midi/raw", "midi/clean", "midi/generated").forEach { Files.createDirectories(root.resolve(it)) }
+        val project = ProjectStore.create(root, name, request.renderFormat)
+        snapshot(root, project)
+    }
+
+    override suspend fun importPart(request: ImportPartRequest, progress: ProgressSink): ProjectSnapshot = mutateSuspend(request.root) { root ->
+        require(PART_ID.matches(request.id)) { "Part ID must contain only letters, numbers, underscores, or hyphens: ${request.id}" }
+        val source = request.source.toAbsolutePath().normalize()
+        require(Files.isRegularFile(source)) { "Input file not found: $source" }
+        val extension = source.fileName.toString().substringAfterLast('.', "").lowercase()
+        require(extension in SUPPORTED_EXTENSIONS) { "Unsupported input file extension: ${if (extension.isEmpty()) "(none)" else extension}" }
+        val isMidi = extension in MIDI_EXTENSIONS
+        require(!(isMidi && request.transcribe)) { "--transcribe is only valid for audio input" }
+
+        val project = readValidProject(root)
+        require(project.parts.none { it.id == request.id }) { "Part ID already exists: ${request.id}" }
+        if (project.version == 1 && !isMidi && !request.transcribe) {
+            val relativeFile = "parts/${request.id}.$extension"
+            val destination = safeDestination(root, relativeFile)
+            require(source != destination) { "Input and destination paths must differ" }
+            require(!Files.exists(destination)) { "Part destination already exists: $destination" }
+            progress.report(OperationProgress("import-part", 1, 2, "Copying source", destination))
+            Files.createDirectories(checkNotNull(destination.parent))
+            Files.copy(source, destination)
+            val updated = project.copy(parts = project.parts + Part(request.id, relativeFile, request.role))
+            ProjectStore.write(root, updated)
+            progress.report(OperationProgress("import-part", 2, 2, "Registered legacy audio part", destination))
+            return@mutateSuspend snapshot(root, updated)
+        }
+
+        require(isMidi || request.transcribe) { "Audio input requires --transcribe so a clean MIDI artifact can be prepared" }
+        val relativeFile = "source/${request.id}.$extension"
+        val destination = safeDestination(root, relativeFile)
+        require(source != destination && !(Files.exists(destination) && Files.isSameFile(source, destination))) {
+            "Input and destination paths must differ"
+        }
+        require(!Files.exists(destination)) { "Part destination already exists: $destination" }
+        progress.report(OperationProgress("import-part", 1, 4, "Copying source", destination))
+        Files.createDirectories(checkNotNull(destination.parent))
+        Files.copy(source, destination)
+
+        val raw = if (isMidi) null else "midi/raw/${request.id}.mid"
+        val clean = "midi/clean/${request.id}.mid"
+        try {
+            if (raw != null) {
+                val rawPath = safeDestination(root, raw)
+                progress.report(OperationProgress("import-part", 2, 4, "Transcribing audio", rawPath))
+                midiPreparation.transcribe(destination, rawPath)
+                requireMidiArtifact(rawPath, "Transcription")
+            }
+            val cleanPath = safeDestination(root, clean)
+            progress.report(OperationProgress("import-part", 3, 4, "Cleaning MIDI", cleanPath))
+            midiPreparation.clean(safeDestination(root, raw ?: relativeFile), cleanPath)
+            requireMidiArtifact(cleanPath, "MIDI cleanup")
+        } catch (exception: Exception) {
+            throw IllegalStateException(
+                "Part '${request.id}' was not registered. Source preserved at $destination; unregistered MIDI artifacts remain for diagnosis: ${raw ?: "none"}, $clean. ${exception.message}",
+                exception
+            )
+        }
+
+        val updated = project.copy(parts = project.parts + Part(request.id, relativeFile, request.role, midi = MidiReferences(raw, clean)))
+        val saved = if (project.version == 1) ProjectStore.upgrade(root, project, updated.parts) else updated.also { ProjectStore.write(root, it) }
+        progress.report(OperationProgress("import-part", 4, 4, "Registered part", root.resolve(ProjectStore.FILE_NAME)))
+        snapshot(root, saved)
+    }
+
+    override suspend fun analyzePart(request: AnalyzePartRequest, progress: ProgressSink): ProjectSnapshot = mutateSuspend(request.root) { root ->
+        val project = readValidProject(root)
+        val part = project.parts.find { it.id == request.partId } ?: throw IllegalArgumentException("Part not found: ${request.partId}")
+        val analysisPath = if (project.version == Project.CURRENT_VERSION) {
+            val cleanMidi = root.resolve(requireNotNull(part.midi).clean).normalize()
+            progress.report(OperationProgress("analyze-part", 1, 2, "Analyzing clean MIDI", cleanMidi))
+            MidiAnalysisStore.write(root, project, request.partId, midiPartAnalyzer.analyze(cleanMidi, request.partId))
+        } else {
+            val source = root.resolve(part.file).normalize()
+            progress.report(OperationProgress("analyze-part", 1, 2, "Analyzing source audio", source))
+            PartAnalysisStore.write(root, project, request.partId, legacyPartAnalysis.analyze(source))
+        }
+        progress.report(OperationProgress("analyze-part", 2, 2, "Saved analysis", analysisPath))
+        snapshot(root, readValidProject(root))
+    }
+
+    override fun updatePart(request: UpdatePartRoleRequest): ProjectSnapshot = mutate(request.root) { root ->
+        val project = readValidProject(root)
+        require(project.parts.any { it.id == request.partId }) { "Part not found: ${request.partId}" }
+        val updated = project.copy(parts = project.parts.map { if (it.id == request.partId) it.copy(role = request.role) else it })
+        ProjectStore.write(root, updated)
+        snapshot(root, updated)
+    }
+
+    override fun saveStructure(request: SaveStructureRequest): ProjectSnapshot = mutate(request.root) { root ->
+        val project = readValidProject(root)
+        val knownIds = project.parts.map { it.id }.toSet()
+        request.partIds.forEach { id -> require(id in knownIds) { "Unknown part ID in structure: $id" } }
+        val updated = project.copy(structure = request.partIds.toList())
+        ProjectStore.write(root, updated)
+        snapshot(root, updated)
+    }
+
+    private fun readValidProject(root: Path): Project {
+        require(Files.isRegularFile(root.resolve(ProjectStore.FILE_NAME))) { "Project file not found: ${root.resolve(ProjectStore.FILE_NAME)}" }
+        return ProjectStore.read(root).also { it.requireValid(root) }
+    }
+
+    private fun snapshot(root: Path, project: Project): ProjectSnapshot {
+        val summaries = project.parts.map { part -> part.summary(root) }
+        val durationById = summaries.associate { it.id to it.analysis?.durationSeconds }
+        val occurrences = mutableMapOf<String, Int>()
+        val structure = project.structure.mapIndexed { index, partId ->
+            val occurrence = (occurrences[partId] ?: 0) + 1
+            occurrences[partId] = occurrence
+            StructureSectionSummary(index, partId, occurrence, "$partId$occurrence", durationById[partId])
+        }
+        return ProjectSnapshot(
+            root = root,
+            version = project.version,
+            name = project.name,
+            renderFormat = project.renderFormat,
+            parts = summaries,
+            structure = structure,
+            readiness = ProjectReadiness(
+                cleanMidiReady = project.version == Project.CURRENT_VERSION && project.parts.isNotEmpty() && project.parts.all { it.midi != null },
+                analysesReady = project.parts.isNotEmpty() && project.parts.all { it.analysis != null },
+                structureReady = project.structure.isNotEmpty(),
+                songPlanAvailable = Files.isRegularFile(root.resolve("song_plan.json")),
+                arrangementAvailable = Files.isRegularFile(root.resolve("arrangement.json")),
+                generatedMidiAvailable = Files.isDirectory(root.resolve("midi/generated")) && Files.list(root.resolve("midi/generated")).use { it.anyMatch { Files.isRegularFile(it) } },
+                stemsAvailable = Files.isDirectory(root.resolve("stems")) && Files.list(root.resolve("stems")).use { it.anyMatch { Files.isRegularFile(it) } },
+                dryMixAvailable = Files.isRegularFile(root.resolve("mix/dry.wav")),
+                loFiMixAvailable = Files.isRegularFile(root.resolve("mix/lofi.wav")),
+                masterAvailable = Files.isRegularFile(root.resolve("output/master.wav"))
+            )
+        )
+    }
+
+    private fun Part.summary(root: Path): PartSummary {
+        val sourcePath = Path.of(file)
+        return PartSummary(id, role, file, sourcePath.fileName.toString(), sourceType(file), analysis?.summary(root))
+    }
+
+    private fun PartAnalysisReference.summary(root: Path): PartAnalysisSummary {
+        val path = root.resolve(file).normalize()
+        return when (kind) {
+            AnalysisKind.MIDI -> {
+                val analysis = json.decodeFromString(MidiAnalysis.serializer(), Files.readString(path))
+                PartAnalysisSummary(PartAnalysisStatus.MIDI, file, analysis.bars, analysis.durationSeconds, analysis.key?.let { "${it.tonic} ${it.mode}" })
+            }
+            AnalysisKind.AUDIO, null -> {
+                val analysis = json.decodeFromString(PartAnalysis.serializer(), Files.readString(path))
+                PartAnalysisSummary(PartAnalysisStatus.LEGACY_AUDIO, file, null, analysis.duration, listOfNotNull(analysis.keyRoot, analysis.keyMode).takeIf { it.isNotEmpty() }?.joinToString(" "))
+            }
+        }
+    }
+
+    private fun mutate(root: Path, action: (Path) -> ProjectSnapshot): ProjectSnapshot {
+        val normalizedRoot = root.normalizeRoot()
+        val lock = locks.computeIfAbsent(normalizedRoot) { Mutex() }
+        require(lock.tryLock()) { "Another project mutation is already running: $normalizedRoot" }
+        return try { action(normalizedRoot) } finally { lock.unlock() }
+    }
+
+    private suspend fun mutateSuspend(root: Path, action: suspend (Path) -> ProjectSnapshot): ProjectSnapshot {
+        val normalizedRoot = root.normalizeRoot()
+        val lock = locks.computeIfAbsent(normalizedRoot) { Mutex() }
+        require(lock.tryLock()) { "Another project mutation is already running: $normalizedRoot" }
+        return try { withContext(Dispatchers.IO) { action(normalizedRoot) } } finally { lock.unlock() }
+    }
+
+    private fun Path.normalizeRoot(): Path = toAbsolutePath().normalize()
+
+    private fun safeDestination(projectRoot: Path, reference: String): Path {
+        val relative = Path.of(reference)
+        require(!relative.isAbsolute && reference.isNotBlank()) { "Project destination must be relative: $reference" }
+        val destination = projectRoot.resolve(relative).normalize()
+        require(destination.startsWith(projectRoot)) { "Project destination escapes the project root: $reference" }
+        val realRoot = projectRoot.toRealPath()
+        var existing = destination.parent
+        while (existing != null && !Files.exists(existing)) existing = existing.parent
+        if (existing != null) require(existing.toRealPath().startsWith(realRoot)) {
+            "Project destination escapes the project root through a symlink: $reference"
+        }
+        return destination
+    }
+
+    private fun requireMidiArtifact(path: Path, stage: String) {
+        require(Files.isRegularFile(path) && Files.size(path) >= 14) { "$stage did not create a MIDI file: $path" }
+        val header = Files.newInputStream(path).use { it.readNBytes(4).decodeToString() }
+        require(header == "MThd") { "$stage did not create a MIDI file: $path" }
+    }
+
+    private fun sourceType(file: String): PartSourceType = when (file.substringAfterLast('.', "").lowercase()) {
+        in MIDI_EXTENSIONS -> PartSourceType.MIDI
+        "wav", "wave", "mp3" -> PartSourceType.AUDIO
+        else -> PartSourceType.UNKNOWN
+    }
+
+    private companion object {
+        val locks = ConcurrentHashMap<Path, Mutex>()
+        val json = Json { ignoreUnknownKeys = false }
+        val PART_ID = Regex("[A-Za-z0-9_-]+")
+        val MIDI_EXTENSIONS = setOf("mid", "midi")
+        val SUPPORTED_EXTENSIONS = MIDI_EXTENSIONS + setOf("wav", "wave", "mp3")
+    }
+}

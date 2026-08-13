@@ -70,6 +70,12 @@ import ai.music.workstation.worker.TranscribeCommand
 import ai.music.workstation.worker.MidiCleanCommand
 import ai.music.workstation.worker.WorkerClient
 import ai.music.workstation.worker.WorkerStatus
+import ai.music.workstation.application.AnalyzePartRequest
+import ai.music.workstation.application.CreateProjectRequest
+import ai.music.workstation.application.DefaultProjectApplicationService
+import ai.music.workstation.application.ImportPartRequest
+import ai.music.workstation.application.LegacyPartAnalysisService
+import ai.music.workstation.application.MidiPreparationService
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
@@ -107,7 +113,6 @@ object ArrangementProjectCommands {
     private const val MAX_MASTER_DURATION_DELTA_SECONDS = 0.05
     private const val PCM_24_QUANTIZATION_TOLERANCE = 1.0 / 8_388_608.0
     private val SUPPORTED_MP3_BITRATES = setOf(128, 160, 192, 256, 320)
-    private val supportedExtensions = setOf("mid", "midi", "wav", "wave", "mp3")
     private val json = Json {
         prettyPrint = true
         encodeDefaults = true
@@ -152,12 +157,6 @@ object ArrangementProjectCommands {
         suspend fun exportMp3(inputPath: Path, outputPath: Path, bitrateKbps: Int): Mp3ExportResult = Mp3ExportResult.Unavailable
     }
 
-    /** Testable boundary for the two worker calls used while importing a part. */
-    internal interface MidiPreparationWorker {
-        suspend fun transcribe(input: Path, output: Path)
-        suspend fun clean(input: Path, output: Path)
-    }
-
     fun execute(args: Array<String>): String = runBlocking {
         executeAsync(args)
     }
@@ -196,7 +195,7 @@ object ArrangementProjectCommands {
         exportMp3(args, worker)
     }
 
-    internal fun executePartAddForTest(args: Array<String>, worker: MidiPreparationWorker): String = runBlocking {
+    internal fun executePartAddForTest(args: Array<String>, worker: MidiPreparationService): String = runBlocking {
         addPart(args, worker)
     }
 
@@ -286,14 +285,14 @@ object ArrangementProjectCommands {
         return "MIDI cleanup failed during $stage: ${error?.message ?: "Unknown worker error"}"
     }
 
-    private fun createMidiPreparationWorker(): MidiPreparationWorker {
+    private fun createMidiPreparationWorker(): MidiPreparationService {
         val logger = DefaultLogger()
         val client = WorkerClient(
             baseUrl = System.getenv("WORKER_BASE_URL")?.takeIf { it.isNotBlank() } ?: "http://127.0.0.1:8081",
             logger = logger,
             errorReporter = ErrorReporter(logger)
         )
-        return object : MidiPreparationWorker {
+        return object : MidiPreparationService {
             override suspend fun transcribe(input: Path, output: Path) {
                 Files.createDirectories(checkNotNull(output.parent))
                 val response = client.execute(TranscribeCommand(input.toString(), output.toString(), "piano"))
@@ -307,6 +306,40 @@ object ArrangementProjectCommands {
                 require(response.status == WorkerStatus.COMPLETED) { midiCleanupFailureMessage(response.error) }
                 requireMidiArtifact(output, "MIDI cleanup")
             }
+        }
+    }
+
+    /** CLI-only construction of HTTP adapters; the application service owns the use case. */
+    private fun defaultProjectService(
+        midiPreparation: MidiPreparationService = createMidiPreparationWorker()
+    ) = DefaultProjectApplicationService(midiPreparation, createLegacyPartAnalysisService())
+
+    private fun createLegacyPartAnalysisService(): LegacyPartAnalysisService {
+        val logger = DefaultLogger()
+        val client = WorkerClient(
+            baseUrl = System.getenv("WORKER_BASE_URL")
+                ?.takeIf { it.isNotBlank() }
+                ?: "http://127.0.0.1:8081",
+            logger = logger,
+            errorReporter = ErrorReporter(logger)
+        )
+        return LegacyPartAnalysisService { source ->
+            val response = client.execute(
+                AnalyzeCommand(
+                    path = source.toString(),
+                    options = AnalyzeOptions(
+                        detectBPM = true,
+                        detectKey = true,
+                        detectLoudness = true,
+                        detectOnsets = true,
+                        detectBeats = true,
+                        detectSections = false
+                    )
+                )
+            )
+            val workerError = response.error?.message ?: "Unknown worker error"
+            require(response.status == WorkerStatus.COMPLETED) { "Part analysis failed: $workerError" }
+            analysisFrom(response.output.orEmpty())
         }
     }
 
@@ -324,15 +357,13 @@ object ArrangementProjectCommands {
             "Project already exists: $projectFile"
         }
 
-        listOf("source", "midi/raw", "midi/clean", "midi/generated").forEach { Files.createDirectories(projectRoot.resolve(it)) }
         val name = projectRoot.fileName?.toString().orEmpty()
-        require(name.isNotBlank()) { "Project directory must have a name" }
-        ProjectStore.create(projectRoot, name, format)
+        defaultProjectService().create(CreateProjectRequest(projectRoot, name, format))
 
         return "Created project: $projectRoot"
     }
 
-    private suspend fun addPart(args: Array<String>, worker: MidiPreparationWorker): String {
+    private suspend fun addPart(args: Array<String>, worker: MidiPreparationService): String {
         require(args.size >= 3 && args[1] == "add") {
             "Usage: part add <project-directory> --id <id> --file <midi-or-audio-file> [--role <role>] [--transcribe]"
         }
@@ -340,63 +371,17 @@ object ArrangementProjectCommands {
         val projectRoot = projectRoot(args[2])
         val options = parseAddOptions(args.drop(3))
         val id = options.getValue("--id")
-        require(PART_ID.matches(id)) {
-            "Part ID must contain only letters, numbers, underscores, or hyphens: $id"
-        }
-
-        val source = Path.of(options.getValue("--file")).toAbsolutePath().normalize()
-        require(Files.isRegularFile(source)) { "Input file not found: $source" }
+        val source = Path.of(options.getValue("--file"))
         val extension = source.fileName.toString().substringAfterLast('.', "").lowercase()
-        require(extension in supportedExtensions) {
-            "Unsupported input file extension: ${if (extension.isEmpty()) "(none)" else extension}"
-        }
         val isMidi = extension in MIDI_EXTENSIONS
         val transcribe = "--transcribe" in options
-        require(!(isMidi && transcribe)) { "--transcribe is only valid for audio input" }
+        val snapshot = defaultProjectService(worker).importPart(
+            ImportPartRequest(projectRoot, id, source, options["--role"].orEmpty(), transcribe)
+        )
 
-        val projectFile = projectRoot.resolve(PROJECT_FILE)
-        require(Files.isRegularFile(projectFile)) { "Project file not found: $projectFile" }
-        val project = ProjectStore.read(projectRoot)
-        project.requireValid(projectRoot)
-        require(project.parts.none { it.id == id }) { "Part ID already exists: $id" }
-
-        // Keep the old v1 import behavior readable for existing projects. New
-        // v2 projects are MIDI-first and require transcription for audio.
-        if (project.version == 1 && !isMidi && !transcribe) {
-            val relativeFile = "parts/$id.$extension"
-            val destination = safeDestination(projectRoot, relativeFile)
-            require(source != destination) { "Input and destination paths must differ" }
-            require(!Files.exists(destination)) { "Part destination already exists: $destination" }
-            Files.createDirectories(destination.parent)
-            Files.copy(source, destination)
-            ProjectStore.write(projectRoot, project.copy(parts = project.parts + Part(id, relativeFile, options["--role"].orEmpty())))
-            return "Added legacy audio part '$id' to $projectRoot. Transcribe it before MIDI-only processing."
-        }
-        require(isMidi || transcribe) { "Audio input requires --transcribe so a clean MIDI artifact can be prepared" }
-
-        val relativeFile = "source/$id.$extension"
-        val destination = safeDestination(projectRoot, relativeFile)
-        require(source != destination && !(Files.exists(destination) && Files.isSameFile(source, destination))) { "Input and destination paths must differ" }
-        require(!Files.exists(destination)) { "Part destination already exists: $destination" }
-
-        Files.createDirectories(destination.parent)
-        Files.copy(source, destination)
-
-        val raw = if (isMidi) null else "midi/raw/$id.mid"
-        val clean = "midi/clean/$id.mid"
-        try {
-            if (raw != null) worker.transcribe(destination, safeDestination(projectRoot, raw))
-            worker.clean(safeDestination(projectRoot, raw ?: relativeFile), safeDestination(projectRoot, clean))
-            requireMidiArtifact(projectRoot.resolve(clean), "MIDI cleanup")
-        } catch (exception: Exception) {
-            throw IllegalStateException("Part '$id' was not registered. Source preserved at $destination; unregistered MIDI artifacts remain for diagnosis: ${raw ?: "none"}, $clean. ${exception.message}", exception)
-        }
-
-        val part = Part(id, relativeFile, options["--role"].orEmpty(), midi = MidiReferences(raw, clean))
-        val updated = project.copy(parts = project.parts + part)
-        if (project.version == 1) ProjectStore.upgrade(projectRoot, project, updated.parts) else ProjectStore.write(projectRoot, updated)
-
-        return "Added part '$id' to $projectRoot"
+        return if (snapshot.version == 1 && !isMidi && !transcribe) {
+            "Added legacy audio part '$id' to $projectRoot. Transcribe it before MIDI-only processing."
+        } else "Added part '$id' to $projectRoot"
     }
 
     private suspend fun analyzePart(args: Array<String>): String {
@@ -406,53 +391,11 @@ object ArrangementProjectCommands {
 
         val projectRoot = projectRoot(args[2])
         val id = parseAnalyzeOptions(args.drop(3)).getValue("--id")
-        val projectFile = projectRoot.resolve(PROJECT_FILE)
-        require(Files.isRegularFile(projectFile)) { "Project file not found: $projectFile" }
-
-        val project = ProjectStore.read(projectRoot)
-        project.requireValid(projectRoot)
-        val part = project.parts.find { it.id == id }
-            ?: throw IllegalArgumentException("Part not found: $id")
-        if (project.version == Project.CURRENT_VERSION) {
-            val cleanMidi = projectRoot.resolve(requireNotNull(part.midi).clean).normalize()
-            val analysisPath = MidiAnalysisStore.write(projectRoot, project, id, MidiPartAnalyzer().analyze(cleanMidi, id))
-            return "Analyzed MIDI part '$id': $analysisPath"
-        }
-        val source = projectRoot.resolve(part.file).normalize()
-
-        val logger = DefaultLogger()
-        val client = WorkerClient(
-            baseUrl = System.getenv("WORKER_BASE_URL")
-                ?.takeIf { it.isNotBlank() }
-                ?: "http://127.0.0.1:8081",
-            logger = logger,
-            errorReporter = ErrorReporter(logger)
-        )
-        val response = client.execute(
-            AnalyzeCommand(
-                path = source.toString(),
-                options = AnalyzeOptions(
-                    detectBPM = true,
-                    detectKey = true,
-                    detectLoudness = true,
-                    detectOnsets = true,
-                    detectBeats = true,
-                    detectSections = false
-                )
-            )
-        )
-        val workerError = response.error?.message ?: "Unknown worker error"
-        require(response.status == WorkerStatus.COMPLETED) {
-            "Part analysis failed: $workerError"
-        }
-
-        val analysisPath = PartAnalysisStore.write(
-            projectRoot,
-            project,
-            id,
-            analysisFrom(response.output.orEmpty())
-        )
-        return "Analyzed part '$id': $analysisPath"
+        val snapshot = defaultProjectService().analyzePart(AnalyzePartRequest(projectRoot, id))
+        val analysis = checkNotNull(snapshot.parts.single { it.id == id }.analysis)
+        return if (analysis.status == ai.music.workstation.application.PartAnalysisStatus.MIDI) {
+            "Analyzed MIDI part '$id': ${projectRoot.resolve(analysis.file)}"
+        } else "Analyzed part '$id': ${projectRoot.resolve(analysis.file)}"
     }
 
     private fun licenses(args: Array<String>): String {
@@ -2002,28 +1945,12 @@ object ArrangementProjectCommands {
 
     private fun projectRoot(path: String): Path = Path.of(path).toAbsolutePath().normalize()
 
-    private fun safeDestination(projectRoot: Path, reference: String): Path {
-        val relative = Path.of(reference)
-        require(!relative.isAbsolute && reference.isNotBlank()) { "Project destination must be relative: $reference" }
-        val root = projectRoot.toAbsolutePath().normalize()
-        val destination = root.resolve(relative).normalize()
-        require(destination.startsWith(root)) { "Project destination escapes the project root: $reference" }
-        val realRoot = root.toRealPath()
-        var existing = destination.parent
-        while (existing != null && !Files.exists(existing)) existing = existing.parent
-        if (existing != null) require(existing.toRealPath().startsWith(realRoot)) {
-            "Project destination escapes the project root through a symlink: $reference"
-        }
-        return destination
-    }
-
     private fun requireMidiArtifact(path: Path, stage: String) {
         require(Files.isRegularFile(path) && Files.size(path) >= 14) { "$stage did not create a MIDI file: $path" }
         val header = Files.newInputStream(path).use { it.readNBytes(4).decodeToString() }
         require(header == "MThd") { "$stage did not create a MIDI file: $path" }
     }
 
-    private val PART_ID = Regex("[A-Za-z0-9_-]+")
     private val ADD_OPTIONS = setOf("--id", "--file", "--role", "--transcribe")
     private val ARRANGE_OPTIONS = setOf("--project", "--planner", "--structure", "--instruments", "--style")
     private val ARRANGE_DETAIL_OPTIONS = setOf("--project", "--planner")
