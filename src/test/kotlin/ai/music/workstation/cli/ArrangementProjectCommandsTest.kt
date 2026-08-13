@@ -174,8 +174,29 @@ class ArrangementProjectCommandsTest {
         val approve = ArrangementProjectCommands.execute(arrayOf("approve", "--project", projectRoot.toString()))
 
         assertTrue(preview.contains("Validated detailed arrangement draft"))
+        assertTrue(Files.readString(projectRoot.resolve("previews/detailed-arrangement-preview.txt")).contains("Detailed arrangement draft review"))
         assertTrue(approve.contains("Approved detailed arrangement"))
         assertEquals(3, json.decodeFromString<DetailedArrangement>(Files.readString(projectRoot.resolve("arrangement.json"))).version)
+    }
+
+    @Test
+    fun `deterministic critic snapshots approved v3 arrangement and requires explicit approval`() {
+        val projectRoot = createMidiPlanningProject("critic-demo")
+        ArrangementProjectCommands.execute(arrayOf("arrange", "--project", projectRoot.toString(), "--planner", "deterministic"))
+        ArrangementProjectCommands.execute(arrayOf("arrange-detail", "--project", projectRoot.toString(), "--planner", "deterministic"))
+        val approved = projectRoot.resolve("arrangement.json")
+        val approvedBytes = Files.readAllBytes(approved)
+
+        val result = ArrangementProjectCommands.execute(arrayOf("critic", "--project", projectRoot.toString(), "--planner", "deterministic"))
+
+        assertTrue(ArrangementProjectCommands.handles(arrayOf("critic")))
+        assertTrue(result.contains("arrangement-critic draft"))
+        assertEquals(approvedBytes.toList(), Files.readAllBytes(approved).toList())
+        assertEquals(approvedBytes.toList(), Files.readAllBytes(projectRoot.resolve("arrangement_v1.json")).toList())
+        assertEquals(
+            json.decodeFromString<DetailedArrangement>(Files.readString(approved)),
+            json.decodeFromString<DetailedArrangement>(Files.readString(projectRoot.resolve("arrangement.draft.json")))
+        )
     }
 
     @Test

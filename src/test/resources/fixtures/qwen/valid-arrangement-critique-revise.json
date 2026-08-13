@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "decision": "revise",
+  "issues": [{"category":"too_repetitive","targetSectionIndexes":[0],"rationale":"Add a little bass movement to distinguish the opening."}],
+  "changes": [{
+    "sectionIndex": 0,
+    "instruments": [
+      {"kind":"piano","name":"piano","mode":"source"},
+      {"kind":"bass","name":"bass","mode":"generated","role":"root","density":0.5,"movement":"root_motion","register":"low","syncopation":0.2}
+    ]
+  }]
+}

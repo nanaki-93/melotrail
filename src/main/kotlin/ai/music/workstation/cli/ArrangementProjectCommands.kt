@@ -13,6 +13,11 @@ import ai.music.workstation.arrangement.DetailedArrangement
 import ai.music.workstation.arrangement.DetailedArrangementInput
 import ai.music.workstation.arrangement.DetailedArrangementPlanner
 import ai.music.workstation.arrangement.DetailedArrangementStore
+import ai.music.workstation.arrangement.ArrangementCritic
+import ai.music.workstation.arrangement.ArrangementCriticStore
+import ai.music.workstation.arrangement.ArrangementCritiqueValidator
+import ai.music.workstation.arrangement.DeterministicArrangementCritic
+import ai.music.workstation.arrangement.LocalQwenArrangementCritic
 import ai.music.workstation.arrangement.DeterministicStemMixer
 import ai.music.workstation.arrangement.LocalQwenDetailedArrangementPlanner
 import ai.music.workstation.arrangement.LocalQwenGlobalSongPlanner
@@ -95,7 +100,7 @@ object ArrangementProjectCommands {
     }
 
     fun handles(args: Array<String>): Boolean =
-        args.firstOrNull() in setOf("project", "part", "arrange", "arrange-detail", "generate", "mix", "render", "preview", "approve", "build", "quality-gate", "transcribe", "midi-clean", "licenses")
+        args.firstOrNull() in setOf("project", "part", "arrange", "arrange-detail", "critic", "generate", "mix", "render", "preview", "approve", "build", "quality-gate", "transcribe", "midi-clean", "licenses")
 
     /** Small boundary that lets the end-to-end command be tested without a running HTTP worker. */
     internal interface BuildWorker {
@@ -127,6 +132,7 @@ object ArrangementProjectCommands {
         }
         "arrange" -> arrange(args)
         "arrange-detail" -> arrangeDetail(args)
+        "critic" -> critiqueArrangement(args)
         "generate" -> generateMidi(args)
         "mix" -> mixStems(args)
         "render" -> renderAllStems(args, SfizzInstrumentRenderer())
@@ -517,6 +523,32 @@ object ArrangementProjectCommands {
         }
     }
 
+    /** Creates a review-only draft from the approved v3 arrangement; approval stays explicit. */
+    private fun critiqueArrangement(args: Array<String>): String {
+        val options = parseCriticOptions(args.drop(1))
+        val plannerName = options["--planner"] ?: DETERMINISTIC_PLANNER
+        val projectRoot = projectRoot(options.getValue("--project"))
+        val project = readProject(projectRoot)
+        project.requireValid(projectRoot)
+        val input = detailedArrangementInput(projectRoot, project)
+        val approvedPath = projectRoot.resolve(DetailedArrangementStore.APPROVED_FILE)
+        require(Files.isRegularFile(approvedPath)) {
+            "Approved detailed arrangement not found: $approvedPath. Run arrange-detail and approve a draft first."
+        }
+        val approvedText = Files.readString(approvedPath, StandardCharsets.UTF_8)
+        val approved = json.decodeFromString<DetailedArrangement>(approvedText)
+        approved.requireValid(input)
+        val critic: ArrangementCritic = when (plannerName) {
+            DETERMINISTIC_PLANNER -> DeterministicArrangementCritic()
+            QWEN_PLANNER -> LocalQwenArrangementCritic()
+            else -> throw IllegalArgumentException("Unsupported critic planner: $plannerName. Available planners: $DETERMINISTIC_PLANNER, $QWEN_PLANNER")
+        }
+        val critique = critic.critique(input, approved)
+        val draft = ArrangementCritiqueValidator.apply(input, approved, critique)
+        val draftPath = ArrangementCriticStore.writeReviewArtifacts(projectRoot, input, approvedText, draft, critique)
+        return "Created $plannerName arrangement-critic draft: $draftPath (snapshot: ${projectRoot.resolve(ArrangementCriticStore.PRE_CRITIC_FILE)}). Review it with `preview --project $projectRoot`, then run `approve --project $projectRoot`."
+    }
+
     private fun generateMidi(args: Array<String>): String = when (args.getOrNull(1)) {
         "bass" -> generateBass(args)
         "drums" -> generateDrums(args)
@@ -718,7 +750,11 @@ object ArrangementProjectCommands {
             ?.jsonPrimitive?.contentOrNull?.toIntOrNull()
         if (draftVersion == 3) {
             val arrangement = DetailedArrangementStore.readDraft(projectRoot, detailedArrangementInput(projectRoot, project))
-            return "Validated detailed arrangement draft: $draftPath (${arrangement.sections.size} sections). Inspect its roles, energy, and transition intents, then run `approve --project $projectRoot`."
+            val previewDir = projectRoot.resolve("previews")
+            Files.createDirectories(previewDir)
+            val preview = previewDir.resolve("detailed-arrangement-preview.txt")
+            Files.writeString(preview, detailedPreviewSummary(arrangement), StandardCharsets.UTF_8)
+            return "Validated detailed arrangement draft: $draftPath (${arrangement.sections.size} sections). Created representative section preview manifest: $preview. Inspect it, then run `approve --project $projectRoot`."
         }
         val arrangement = json.decodeFromString<ai.music.workstation.arrangement.Arrangement>(Files.readString(draftPath))
         arrangement.requireValid(project.parts.map { it.id })
@@ -758,6 +794,18 @@ object ArrangementProjectCommands {
         Files.copy(draft, temp, StandardCopyOption.REPLACE_EXISTING)
         Files.move(temp, projectRoot.resolve("arrangement.json"), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
         return "Approved arrangement: ${projectRoot.resolve("arrangement.json")}"
+    }
+
+    /** A path-free, deterministic review artifact for v3 drafts before any MIDI/stem re-render. */
+    private fun detailedPreviewSummary(arrangement: DetailedArrangement): String = buildString {
+        appendLine("Detailed arrangement draft review")
+        arrangement.sections.forEach { section ->
+            appendLine(
+                "section=${section.index} instance=${section.instanceId} part=${section.partId} role=${section.role.name.lowercase()} " +
+                    "energy=${section.energy} activeInstruments=${section.instruments.size} " +
+                    "instruments=${section.instruments.joinToString(",") { it.name }} transition=${section.transitionOut.type.name.lowercase()}"
+            )
+        }
     }
 
     /** Reconstructs validation input only from reviewed, path-free planning artifacts and registered MIDI analyses. */
@@ -1327,6 +1375,22 @@ object ArrangementProjectCommands {
         return options
     }
 
+    private fun parseCriticOptions(arguments: List<String>): Map<String, String> {
+        val options = mutableMapOf<String, String>()
+        var index = 0
+        while (index < arguments.size) {
+            val option = arguments[index]
+            require(option in CRITIC_OPTIONS) { "Unknown critic option: $option" }
+            require(index + 1 < arguments.size && !arguments[index + 1].startsWith("--")) { "Missing value for $option" }
+            require(options.put(option, arguments[index + 1]) == null) { "Duplicate critic option: $option" }
+            index += 2
+        }
+        require("--project" in options) {
+            "Usage: critic --project <project-directory> [--planner deterministic|qwen]"
+        }
+        return options
+    }
+
     private fun parseGenerateOptions(arguments: List<String>): Map<String, String> {
         require(arguments.size == 2 && arguments[0] == "--project") {
             "Usage: generate bass|drums|pad|transitions --project <project-directory>"
@@ -1384,6 +1448,7 @@ object ArrangementProjectCommands {
     private val ADD_OPTIONS = setOf("--id", "--file", "--role", "--transcribe")
     private val ARRANGE_OPTIONS = setOf("--project", "--planner", "--structure", "--instruments", "--style")
     private val ARRANGE_DETAIL_OPTIONS = setOf("--project", "--planner")
+    private val CRITIC_OPTIONS = setOf("--project", "--planner")
     private const val DETERMINISTIC_PLANNER = "deterministic"
     private const val QWEN_PLANNER = "qwen"
     private val WAV_EXTENSIONS = setOf("wav", "wave")

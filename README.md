@@ -159,6 +159,26 @@ make cli ARGS='arrange-detail --project ./projects/song-001 --planner qwen'
 make cli ARGS='approve --project ./projects/song-001'
 ```
 
+### Optional structured arrangement critique
+
+Critique an approved version-3 arrangement once before rendering. The deterministic
+critic is the default and creates an unchanged review draft without LM Studio.
+It preserves the exact pre-critic approved JSON as `arrangement_v1.json`, writes
+only `arrangement.draft.json`, and still requires explicit approval. A Qwen critic
+may modify at most four sections and only energy, complete existing instrument
+plans, or transition plans; any replacement still has to satisfy the reviewed
+song plan and the complete normal v3 validator.
+
+```bash
+make cli ARGS='critic --project ./projects/song-001 --planner deterministic'
+make cli ARGS='preview --project ./projects/song-001'
+make cli ARGS='approve --project ./projects/song-001'
+```
+
+The critic receives only reviewed plan metadata, path-free MIDI analyses, the
+validated arrangement, logical allow-lists, and compact section metrics. It never
+receives source audio, file paths, renderer settings, commands, or executable data.
+
 Existing version 1/2 arrangements remain available to the current audio
 renderer. Version-3 drum and pad MIDI generation are available separately;
 other version-3 instruments and rendering integration arrive in later tasks.

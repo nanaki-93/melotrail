@@ -50,7 +50,7 @@ After implementation:
 | [015](tasks/completed/015-midi-transition-engine.md) | MIDI transition engine | 008, 013–014 | Contextual bass/drum/pad transitions | Blocked by gate |
 | [016](tasks/completed/016-strings-midi-generator.md) | Deterministic strings MIDI generator | 013–015 | `midi/generated/strings.mid` | Blocked by gate |
 | [017](tasks/completed/017-stem-rendering-and-mixer.md) | Render all stems and dry mix | 007–008, 013–016 | Compatible stems and `mix/dry.wav` | Blocked by gate |
-| [018](tasks/018-ai-arrangement-critic.md) | Structured AI arrangement critic | 011, 017 | Reviewable `arrangement_v1.json` → approved plan | Blocked by gate |
+| [018](tasks/completed/018-ai-arrangement-critic.md) | Structured AI arrangement critic | 011, 017 | Reviewable `arrangement_v1.json` → approved plan | Blocked by gate |
 | [019](tasks/019-lofi-ab-debugging.md) | LoFi A/B measurement and debugging | 017–018 | Measurable `mix/lofi.wav` and compare command | Blocked by gate |
 | [020](tasks/020-mastering-integration.md) | Mastering integration | 017, optional 019 | Validated `output/master.wav` | Blocked by gate |
 | [021](tasks/021-final-mp3-export.md) | Final MP3 export and release check | 020 | Optional `output/song.mp3` and release report | Blocked by gate |
