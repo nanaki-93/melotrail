@@ -161,6 +161,8 @@ object ArrangementValidator {
     ) {
         if (instrument.name.isBlank()) {
             errors += "$sectionLabel instrument name must not be blank"
+        } else if (instrument.name != SOURCE_INSTRUMENT_NAME && instrument.name !in LOGICAL_INSTRUMENT_NAMES) {
+            errors += "$sectionLabel uses unsupported logical instrument '${instrument.name}'"
         }
         instrument.density?.let { density ->
             if (!density.isFinite() || density !in 0.0..1.0) {
@@ -240,6 +242,9 @@ data class ArrangementInput(
         if (requestedInstruments.any { it.isBlank() }) {
             errors += "Requested instrument names must not be blank"
         }
+        requestedInstruments.filter { it != SOURCE_INSTRUMENT_NAME && it !in LOGICAL_INSTRUMENT_NAMES }.forEach { name ->
+            errors += "Unsupported logical instrument: $name"
+        }
         val duplicateRequestedNames = requestedInstruments
             .groupingBy { it.lowercase() }
             .eachCount()
@@ -251,6 +256,9 @@ data class ArrangementInput(
         require(errors.isEmpty()) { errors.joinToString("; ") }
     }
 }
+
+private const val SOURCE_INSTRUMENT_NAME = "source"
+private val LOGICAL_INSTRUMENT_NAMES = LogicalInstrument.entries.map { it.wireName }.toSet()
 
 /** Keeps arrangement planning independent from rendering and model integrations. */
 interface ArrangementPlanner {

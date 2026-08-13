@@ -14,6 +14,11 @@ import ai.music.workstation.arrangement.Part
 import ai.music.workstation.arrangement.PartAnalysis
 import ai.music.workstation.arrangement.PartAnalysisStore
 import ai.music.workstation.arrangement.MidiReferences
+import ai.music.workstation.arrangement.MidiAnalysisStore
+import ai.music.workstation.arrangement.MidiPartAnalyzer
+import ai.music.workstation.arrangement.InstrumentRegistryLoader
+import ai.music.workstation.arrangement.Arrangement
+import ai.music.workstation.arrangement.AnalysisKind
 import ai.music.workstation.arrangement.Project
 import ai.music.workstation.arrangement.ProjectStore
 import ai.music.workstation.arrangement.RenderFormat
@@ -68,7 +73,7 @@ object ArrangementProjectCommands {
     }
 
     fun handles(args: Array<String>): Boolean =
-        args.firstOrNull() in setOf("project", "part", "arrange", "generate", "mix", "render", "preview", "approve", "build", "transcribe", "midi-clean")
+        args.firstOrNull() in setOf("project", "part", "arrange", "generate", "mix", "render", "preview", "approve", "build", "transcribe", "midi-clean", "licenses")
 
     /** Small boundary that lets the end-to-end command be tested without a running HTTP worker. */
     internal interface BuildWorker {
@@ -106,6 +111,7 @@ object ArrangementProjectCommands {
         "build" -> buildProject(args, createBuildWorker())
         "transcribe" -> transcribe(args)
         "midi-clean" -> midiClean(args)
+        "licenses" -> licenses(args)
         else -> throw IllegalArgumentException("Unknown arranger command")
     }
 
@@ -322,6 +328,11 @@ object ArrangementProjectCommands {
         project.requireValid(projectRoot)
         val part = project.parts.find { it.id == id }
             ?: throw IllegalArgumentException("Part not found: $id")
+        if (project.version == Project.CURRENT_VERSION) {
+            val cleanMidi = projectRoot.resolve(requireNotNull(part.midi).clean).normalize()
+            val analysisPath = MidiAnalysisStore.write(projectRoot, project, id, MidiPartAnalyzer().analyze(cleanMidi, id))
+            return "Analyzed MIDI part '$id': $analysisPath"
+        }
         val source = projectRoot.resolve(part.file).normalize()
 
         val logger = DefaultLogger()
@@ -359,6 +370,31 @@ object ArrangementProjectCommands {
         return "Analyzed part '$id': $analysisPath"
     }
 
+    private fun licenses(args: Array<String>): String {
+        require(args.size in 2..3 && (args.size == 2 || args[2] == "--commercial")) {
+            "Usage: licenses <project-directory> [--commercial]"
+        }
+        val root = projectRoot(args[1])
+        val project = ProjectStore.read(root)
+        project.requireValid(root)
+        val arrangementPath = listOf(root.resolve("arrangement.json"), root.resolve(ArrangementStore.DRAFT_FILE)).firstOrNull(Files::isRegularFile)
+            ?: throw IllegalArgumentException("No approved or draft arrangement found in $root")
+        val arrangement = json.decodeFromString<Arrangement>(Files.readString(arrangementPath, StandardCharsets.UTF_8))
+        arrangement.requireValid(project.parts.map { it.id })
+        val used = arrangement.sections.flatMap { it.instruments }.map { it.name }.filterNot { it == "source" }.distinct().sorted()
+        val registry = InstrumentRegistryLoader().load()
+        val commercial = args.getOrNull(2) == "--commercial"
+        val lines = used.map { name ->
+            val descriptor = try { registry.resolve(name) } catch (error: IllegalArgumentException) {
+                throw IllegalArgumentException("Arrangement uses unverified instrument '$name': ${error.message}", error)
+            }
+            val license = descriptor.license
+            if (commercial && !license.commercialUse) throw IllegalArgumentException("Instrument '$name' is not licensed for commercial export")
+            "$name: license=${descriptor.license.displayName}; commercialUse=${license.commercialUse}; attribution=${if (license.attributionRequired) license.attributionText else "none"}"
+        }
+        return if (lines.isEmpty()) "No generated logical instruments require a sound-library license." else lines.joinToString("\n")
+    }
+
     private fun arrange(args: Array<String>): String {
         val options = parseArrangeOptions(args.drop(1))
         val plannerName = options["--planner"] ?: DETERMINISTIC_PLANNER
@@ -373,7 +409,7 @@ object ArrangementProjectCommands {
         val structure = options["--structure"]?.let { StructureParser.parse(it, project) }
             ?: project.structure.mapIndexed { index, partId -> SectionInstance(index, partId) }
         val analyses = project.parts.mapNotNull { part ->
-            part.analysis?.let { reference ->
+            part.analysis?.takeIf { it.kind != AnalysisKind.MIDI }?.let { reference ->
                 part.id to json.decodeFromString<PartAnalysis>(
                     Files.readString(projectRoot.resolve(reference.file))
                 )
@@ -425,7 +461,7 @@ object ArrangementProjectCommands {
             Files.readString(arrangementFile)
         )
         val analyses = project.parts.mapNotNull { part ->
-            part.analysis?.let { reference ->
+            part.analysis?.takeIf { it.kind != AnalysisKind.MIDI }?.let { reference ->
                 part.id to json.decodeFromString<PartAnalysis>(
                     Files.readString(projectRoot.resolve(reference.file))
                 )
@@ -735,7 +771,7 @@ object ArrangementProjectCommands {
 
     private fun loadAnalysesIfPresent(projectRoot: Path, project: Project): Map<String, PartAnalysis> =
         project.parts.mapNotNull { part ->
-            part.analysis?.let { reference ->
+            part.analysis?.takeIf { it.kind != AnalysisKind.MIDI }?.let { reference ->
                 val path = projectRoot.resolve(reference.file)
                 if (Files.isRegularFile(path)) part.id to json.decodeFromString<PartAnalysis>(Files.readString(path)) else null
             }

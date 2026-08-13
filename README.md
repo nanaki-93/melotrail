@@ -114,6 +114,22 @@ Version-1 projects remain readable. Their original `parts/` files are not
 moved during migration; a v2 project is written only after every registered
 part has a valid clean-MIDI reference.
 
+### MIDI analysis and sound-library licenses
+
+For v2 projects, `part analyze` reads the registered clean MIDI locally and
+writes a distinct versioned musical analysis under `analysis/`; v1 projects
+continue to use the existing audio worker analysis.
+
+```bash
+make cli ARGS='part analyze ./projects/song-001 --id A'
+make cli ARGS='licenses ./projects/song-001 --commercial'
+```
+
+The starter library is rooted at `sounds/` (override only with
+`MUSIC_SOUNDS_ROOT`). Its MIDI channels are human-readable one-based values:
+drum channel 10 becomes MIDI API channel 9. See [`sounds/README.md`](sounds/README.md)
+for the required local sample-copy setup after a fresh checkout.
+
 ### AI bridge review workflow
 
 Qwen creates a reviewable draft instead of overwriting an approved song. Its

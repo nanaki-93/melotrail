@@ -1,30 +1,43 @@
 {
   "version": 1,
   "workingSampleRate": 44100,
+  "midiChannelConvention": "one-based",
   "instruments": {
     "piano": {
       "engine": "sfz",
       "path": "piano/piano.sfz",
+      "licenseId": "starter-generated",
       "midiProgram": 0
     },
     "bass": {
       "engine": "sfz",
       "path": "bass/bass.sfz",
+      "licenseId": "starter-generated",
       "midiProgram": 32
     },
     "drums": {
       "engine": "sfz",
       "path": "drums/drums.sfz",
-      "midiChannel": 10
+      "licenseId": "starter-generated",
+      "midiChannel": 10,
+      "noteMap": {
+        "kick": 36,
+        "snare": 38,
+        "clap": 39,
+        "closedHat": 42,
+        "openHat": 46
+      }
     },
     "pad": {
       "engine": "sfz",
       "path": "pad/pad.sfz",
+      "licenseId": "starter-generated",
       "midiProgram": 89
     },
     "strings": {
       "engine": "sfz",
       "path": "strings/strings.sfz",
+      "licenseId": "starter-generated",
       "midiProgram": 48
     }
   }

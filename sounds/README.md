@@ -22,6 +22,22 @@ These sounds are intentionally small and lightweight. They are suitable for:
 
 They are not intended to replace a high-quality production sample library.
 
+## Local asset setup and portability
+
+The starter WAV files are intentionally local assets and are excluded by the
+repository-wide audio-artifact ignore rule. A fresh checkout is render-ready
+only after you copy the approved 25 WAV files into the existing `sounds/`
+subdirectories, preserving the SFZ-relative `samples/*.wav` paths. Copy them
+from an approved local checkout or archive of this project; the application
+never downloads samples. Run `music-cli licenses <project>` (or load the
+registry before rendering) to verify the complete pack. Do not create an
+`instruments/` tree or substitute third-party files under `starter-generated`.
+
+`instruments.json` uses human-readable, one-based MIDI channels: drums value
+`10` is converted to zero-based MIDI API channel `9`. The supported drum map
+contains kick, snare, clap, closed hat, and open hat only; there is no crash or
+cymbal mapping in this starter pack.
+
 ## MIDI drum mapping
 
 - 36: Kick

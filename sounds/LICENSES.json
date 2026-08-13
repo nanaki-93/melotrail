@@ -2,9 +2,14 @@
   "version": 1,
   "libraries": {
     "starter-generated": {
+      "displayName": "AI Music Workstation starter-generated pack",
       "source": "Generated specifically for this starter pack; no third-party audio samples included.",
+      "provenance": "generated-original",
+      "license": "generated-original",
+      "redistribution": "allowed",
       "commercialUse": true,
       "attributionRequired": false,
+      "date": "2026-08-13",
       "notes": "For development/MVP use. Replace with higher-quality CC0 libraries such as VCSL/VSCO 2 CE when desired."
     }
   }

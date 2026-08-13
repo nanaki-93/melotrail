@@ -69,8 +69,13 @@ data class MidiReferences(
 /** Reference to the analysis JSON generated for a part, when available. */
 @Serializable
 data class PartAnalysisReference(
-    val file: String
+    val file: String,
+    /** Null means legacy audio analysis; MIDI is deliberately a distinct JSON contract. */
+    val kind: AnalysisKind? = null
 )
+
+@Serializable
+enum class AnalysisKind { AUDIO, MIDI }
 
 data class ProjectValidationResult(
     val errors: List<String>
