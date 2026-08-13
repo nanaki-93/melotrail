@@ -23,7 +23,7 @@
         {"kind": "piano", "name": "piano", "mode": "source"},
         {"kind": "drums", "name": "drums", "mode": "generated", "role": "standard_groove", "density": 0.9, "kickDensity": 0.9, "snarePattern": "beats_2_4", "hiHatDensity": 0.72, "swing": 0.0, "fillLastBar": true},
         {"kind": "pad", "name": "pad", "mode": "generated", "role": "texture", "density": 0.9, "register": "high"},
-        {"kind": "strings", "name": "strings", "mode": "generated", "role": "texture", "density": 0.9, "register": "high"}
+        {"kind": "strings", "name": "strings", "mode": "generated", "role": "climax_reinforcement", "density": 0.9, "register": "high"}
       ],
       "transitionOut": {"type": "none", "bars": 0, "crossfadeMs": 0}
     }

@@ -170,7 +170,12 @@ inspectable full-timeline artifact before any drum rendering.
 ```bash
 make cli ARGS='generate drums --project ./projects/song-001'
 make cli ARGS='generate pad --project ./projects/song-001'
+make cli ARGS='generate strings --project ./projects/song-001'
 ```
+
+Strings are written separately to `midi/generated/strings.mid`. Their roles are
+bounded deterministic harmony, long notes, climax reinforcement, or a strictly
+confidence- and source-space-gated simple countermelody; they never accept raw notes.
 
 ### Deterministic MIDI transitions
 

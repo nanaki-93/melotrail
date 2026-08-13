@@ -283,6 +283,32 @@ class ArrangementProjectCommandsTest {
     }
 
     @Test
+    fun `generate strings writes v3 registry-mapped MIDI without changing earlier generated MIDI`() {
+        val projectRoot = createMidiPlanningProject("strings-demo")
+        val source = projectRoot.resolve("source/A.mid")
+        val sourceBefore = Files.readAllBytes(source)
+        val pad = projectRoot.resolve("midi/generated/pad.mid")
+        Files.createDirectories(pad.parent)
+        Files.writeString(pad, "pad MIDI remains untouched")
+        val padBefore = Files.readAllBytes(pad)
+        ArrangementProjectCommands.execute(
+            arrayOf("arrange", "--project", projectRoot.toString(), "--planner", "deterministic", "--structure", "A A A", "--instruments", "piano,strings")
+        )
+        ArrangementProjectCommands.execute(
+            arrayOf("arrange-detail", "--project", projectRoot.toString(), "--planner", "deterministic")
+        )
+
+        val result = ArrangementProjectCommands.execute(
+            arrayOf("generate", "strings", "--project", projectRoot.toString())
+        )
+
+        assertTrue(result.contains("Generated strings MIDI"))
+        assertTrue(Files.isRegularFile(projectRoot.resolve("midi/generated/strings.mid")))
+        assertEquals(sourceBefore.toList(), Files.readAllBytes(source).toList())
+        assertTrue(Files.readAllBytes(pad).contentEquals(padBefore))
+    }
+
+    @Test
     fun `generate transitions writes an inspectable deterministic midi artifact`() {
         val projectRoot = createMidiPlanningProject("transition-demo")
         val source = projectRoot.resolve("source/A.mid")

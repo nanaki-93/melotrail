@@ -102,7 +102,7 @@ data class PadInstrumentPlan(
 data class StringsInstrumentPlan(
     override val name: String = "strings",
     override val mode: InstrumentMode = InstrumentMode.GENERATED,
-    val role: SustainedRole,
+    val role: StringsRole,
     val density: Double,
     val register: MusicalRegister
 ) : DetailedInstrumentPlan()
@@ -143,6 +143,17 @@ enum class SnarePattern {
 enum class SustainedRole {
     @SerialName("sustained") SUSTAINED,
     @SerialName("texture") TEXTURE
+}
+
+/** Bounded composition choices; legacy roles keep existing approved v3 plans readable. */
+@Serializable
+enum class StringsRole {
+    @SerialName("sustained_harmony") SUSTAINED_HARMONY,
+    @SerialName("climax_reinforcement") CLIMAX_REINFORCEMENT,
+    @SerialName("long_notes") LONG_NOTES,
+    @SerialName("simple_countermelody") SIMPLE_COUNTERMELODY,
+    @SerialName("sustained") LEGACY_SUSTAINED,
+    @SerialName("texture") LEGACY_TEXTURE
 }
 
 @Serializable
@@ -197,7 +208,7 @@ object DetailedArrangementValidator {
             if (section.instruments.map { it.name } != expectedNames) {
                 errors += "$label instruments must match the section variation exactly"
             }
-            validateInstruments(label, section.instruments, expected.instruments, errors)
+            validateInstruments(label, section.role, section.instruments, expected.instruments, errors)
             validateTransition(label, section.transitionOut, expected.transitionIntent, position == input.variations.sections.lastIndex, errors)
         }
         return DetailedArrangementValidationResult(errors)
@@ -205,6 +216,7 @@ object DetailedArrangementValidator {
 
     private fun validateInstruments(
         label: String,
+        sectionRole: SongSectionPurpose,
         instruments: List<DetailedInstrumentPlan>,
         expected: List<SectionVariationInstrument>,
         errors: MutableList<String>
@@ -246,7 +258,7 @@ object DetailedArrangementValidator {
                     bounded(label, "pad density", instrument.density, errors)
                 }
                 is StringsInstrumentPlan -> {
-                    if (instrument.name != "strings" || instrument.mode != InstrumentMode.GENERATED || instrument.role.wireName != variation.role) {
+                    if (instrument.name != "strings" || instrument.mode != InstrumentMode.GENERATED || !instrument.role.matches(variation.role, sectionRole)) {
                         errors += "$label strings role or mode is invalid"
                     }
                     bounded(label, "strings density", instrument.density, errors)
@@ -281,6 +293,12 @@ object DetailedArrangementValidator {
     private val DetailedBassRole.wireName: String get() = name.lowercase()
     private val DrumsRole.wireName: String get() = name.lowercase()
     private val SustainedRole.wireName: String get() = name.lowercase()
+
+    private fun StringsRole.matches(variationRole: String, sectionRole: SongSectionPurpose): Boolean = when (variationRole) {
+        "sustained" -> this in setOf(StringsRole.SUSTAINED_HARMONY, StringsRole.LONG_NOTES, StringsRole.LEGACY_SUSTAINED)
+        "texture" -> this != StringsRole.CLIMAX_REINFORCEMENT || sectionRole == SongSectionPurpose.CLIMAX
+        else -> false
+    }
 }
 
 interface DetailedArrangementPlanner {
@@ -298,13 +316,13 @@ class DeterministicDetailedArrangementPlanner : DetailedArrangementPlanner {
                 partId = section.partId,
                 role = section.purpose,
                 energy = section.energy,
-                instruments = section.instruments.map { instrument -> detail(instrument, section.energy) },
+                instruments = section.instruments.map { instrument -> detail(instrument, section.energy, section.purpose) },
                 transitionOut = transition(section.transitionIntent, section.energy, index == input.variations.sections.lastIndex)
             )
         }).also { it.requireValid(input) }
     }
 
-    private fun detail(instrument: SectionVariationInstrument, energy: Double): DetailedInstrumentPlan = when (instrument.name) {
+    private fun detail(instrument: SectionVariationInstrument, energy: Double, purpose: SongSectionPurpose): DetailedInstrumentPlan = when (instrument.name) {
         "piano" -> PianoSourcePlan()
         "bass" -> BassInstrumentPlan(
             role = DetailedBassRole.entries.first { it.wireName == instrument.role }, density = instrument.density,
@@ -322,7 +340,7 @@ class DeterministicDetailedArrangementPlanner : DetailedArrangementPlanner {
             hiHatDensity = (instrument.density * 0.8).coerceIn(0.0, 1.0), swing = 0.0, fillLastBar = energy >= 0.7
         )
         "pad" -> PadInstrumentPlan(role = SustainedRole.entries.first { it.wireName == instrument.role }, density = instrument.density, register = register(energy))
-        "strings" -> StringsInstrumentPlan(role = SustainedRole.entries.first { it.wireName == instrument.role }, density = instrument.density, register = register(energy))
+        "strings" -> StringsInstrumentPlan(role = stringsRole(instrument.role, energy, purpose), density = instrument.density, register = register(energy))
         else -> error("Unsupported variation instrument '${instrument.name}'")
     }
 
@@ -336,6 +354,12 @@ class DeterministicDetailedArrangementPlanner : DetailedArrangementPlanner {
         energy < 0.34 -> MusicalRegister.LOW
         energy > 0.72 -> MusicalRegister.HIGH
         else -> MusicalRegister.MID
+    }
+
+    private fun stringsRole(variationRole: String, energy: Double, purpose: SongSectionPurpose): StringsRole = when (variationRole) {
+        "sustained" -> StringsRole.LONG_NOTES
+        "texture" -> if (purpose == SongSectionPurpose.CLIMAX && energy >= 0.8) StringsRole.CLIMAX_REINFORCEMENT else StringsRole.SUSTAINED_HARMONY
+        else -> error("Unsupported strings variation role '$variationRole'")
     }
 
     private val DetailedBassRole.wireName: String get() = name.lowercase()
@@ -378,7 +402,8 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
             role, energy, instruments, transitionOut. Instrument objects use kind=piano|bass|drums|pad|strings. Piano is exactly
             name=piano and mode=source. Generated plans use mode=generated and only their own typed fields: bass(role,density,
             movement,register,syncopation); drums(role,density,kickDensity,snarePattern,hiHatDensity,swing,fillLastBar);
-            pad/strings(role,density,register). Densities and syncopation are finite 0..1; swing is finite 0..0.5.
+            pad(role,density,register); strings(role,density,register), where strings role is sustained_harmony,
+            climax_reinforcement, long_notes, or simple_countermelody. Densities and syncopation are finite 0..1; swing is finite 0..0.5.
             Use transitionOut none for intent none, bridge for build, and crossfade for release. Do not add fields.
         """
     }
