@@ -10,6 +10,7 @@ This is a local personal project. Keep the implementation simple.
 Before coding:
 1. Read README.md.
 2. Read ARCHITECTURE.md and AGENT_GUIDELINES.md.
+   If the task touches instruments, SFZ, samples, licenses, MIDI rendering, drums, or transitions, also read SOUND_LIBRARY_BASELINE.md.
 3. Inspect the current repository tree.
 4. Find existing implementations that overlap with this task.
 5. Run the current tests/build.
@@ -36,6 +37,7 @@ Implementation rules:
 - Never execute AI-generated code.
 - Keep audio processing lossless until final MP3 export.
 - Never assume 48kHz or stereo.
+- Reuse the existing sounds/ starter library; do not create a duplicate instruments/ tree.
 
 After implementation:
 1. Run relevant tests.

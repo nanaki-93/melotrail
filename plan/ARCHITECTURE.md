@@ -155,6 +155,28 @@ Arrangement
 
 Do not build a custom synthesizer for MVP.
 
+## Local instrument library
+
+The MVP sound library already exists separately from song projects:
+
+```text
+sounds/
+  instruments.json
+  LICENSES.json
+  piano/piano.sfz
+  bass/bass.sfz
+  drums/drums.sfz
+  pad/pad.sfz
+  strings/strings.sfz
+  */samples/*.wav
+```
+
+Use `sounds/` as the default library root. The current pack provides all five approved logical instruments and 25 mono 44.1 kHz PCM-16 source samples. The instrument renderer must convert/render these assets into each project's explicit lossless stem format; it must not treat sample-source bit depth or channel count as the project output format.
+
+Only the renderer/registry boundary sees SFZ and sample paths. Project metadata, deterministic planners, and Qwen use logical names only: `piano`, `bass`, `drums`, `pad`, and `strings`.
+
+The current sample WAV files are ignored by Git, so local setup/portability must be documented before a clean checkout can be considered render-ready. See `SOUND_LIBRARY_BASELINE.md`.
+
 ## Mixing
 
 First mixer only needs:

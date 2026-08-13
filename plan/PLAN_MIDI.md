@@ -253,19 +253,40 @@ They are critical for debugging.
 
 # 6. Instrument Library
 
-Maintain instruments separately from song projects.
+Maintain instruments separately from song projects. A lightweight starter library already exists under `sounds/`; use it as the default instrument-library root instead of creating a second `instruments/` directory.
 
 ```text
-instruments/
+sounds/
 ├── instruments.json
 ├── LICENSES.json
 │
 ├── piano/
+│   ├── piano.sfz
+│   └── samples/
 ├── bass/
+│   ├── bass.sfz
+│   └── samples/
 ├── drums/
-├── pads/
+│   ├── drums.sfz
+│   └── samples/
+├── pad/
+│   ├── pad.sfz
+│   └── samples/
 └── strings/
+    ├── strings.sfz
+    └── samples/
 ```
+
+Current workspace baseline:
+
+```text
+5 logical instruments
+25 local WAV samples
+44.1 kHz / mono / PCM 16-bit sample sources
+starter-generated commercial-use license declaration
+```
+
+See `plan/SOUND_LIBRARY_BASELINE.md` for the verified inventory, Git portability constraint, registry gaps, and renderer status.
 
 For the first version support only:
 
@@ -283,42 +304,29 @@ Do not collect dozens of instruments yet.
 
 # 7. Instrument Registry
 
-Create:
+Validate and enrich the existing registry:
 
 ```text
-instruments/instruments.json
+sounds/instruments.json
 ```
 
-Example:
+Current shape:
 
 ```json
 {
-  "piano": {
-    "engine": "sfz",
-    "path": "piano/piano.sfz"
-  },
-
-  "bass": {
-    "engine": "sfz",
-    "path": "bass/upright-bass.sfz"
-  },
-
-  "drums": {
-    "engine": "sfz",
-    "path": "drums/lofi-kit.sfz"
-  },
-
-  "pad": {
-    "engine": "sfz",
-    "path": "pads/warm-pad.sfz"
-  },
-
-  "strings": {
-    "engine": "sfz",
-    "path": "strings/chamber.sfz"
+  "version": 1,
+  "workingSampleRate": 44100,
+  "instruments": {
+    "piano": {"engine": "sfz", "path": "piano/piano.sfz", "midiProgram": 0},
+    "bass": {"engine": "sfz", "path": "bass/bass.sfz", "midiProgram": 32},
+    "drums": {"engine": "sfz", "path": "drums/drums.sfz", "midiChannel": 10},
+    "pad": {"engine": "sfz", "path": "pad/pad.sfz", "midiProgram": 89},
+    "strings": {"engine": "sfz", "path": "strings/strings.sfz", "midiProgram": 48}
   }
 }
 ```
+
+Task 6 adds validation plus explicit license references, drum note names, MIDI-channel convention, SFZ sample-reference checks, and sample-format checks. It must preserve the existing logical names and paths unless a verified local asset is deliberately replaced.
 
 The AI should only receive:
 
@@ -340,26 +348,37 @@ The application resolves logical names to actual instruments.
 
 Because resulting music may later be monetized, track sample/instrument licenses.
 
-Create:
+Validate and enrich the existing license registry:
 
 ```text
-instruments/LICENSES.json
+sounds/LICENSES.json
 ```
 
-Example:
+Current starter-library declaration:
 
 ```json
 {
-  "upright-bass": {
+  "version": 1,
+  "libraries": {
+    "starter-generated": {
+      "source": "Generated specifically for this starter pack; no third-party audio samples included.",
+      "commercialUse": true,
+      "attributionRequired": false
+    }
+  }
+}
+```
+
+When adding or replacing a downloaded library, create a separate record such as:
+
+```json
+{
+  "downloaded-library-id": {
+    "source": "https://authoritative-source.example/library",
     "license": "CC0-1.0",
     "commercialUse": true,
-    "attributionRequired": false
-  },
-
-  "example-piano": {
-    "license": "CC-BY-3.0",
-    "commercialUse": true,
-    "attributionRequired": true
+    "attributionRequired": false,
+    "redistributionAllowed": true
   }
 }
 ```
@@ -1683,7 +1702,7 @@ Extract musical information from MIDI.
 
 ## Task 6 — Instrument registry
 
-Create logical instrument mapping and license registry.
+Validate and enrich the existing `sounds/instruments.json` and `sounds/LICENSES.json`, verify every SFZ/sample reference, and define the local asset portability policy. Do not create a duplicate sound library.
 
 ---
 
@@ -1700,6 +1719,8 @@ and:
 ```text
 bass.mid → bass.wav
 ```
+
+The required piano and bass SFZ/sample assets are already present under `sounds/`. This task must select/install a compatible local renderer and validate real output; asset acquisition is no longer part of the task.
 
 ---
 

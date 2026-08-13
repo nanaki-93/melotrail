@@ -38,8 +38,8 @@ After implementation:
 | [003](tasks/003-midi-cleanup.md) | Deterministic MIDI cleanup | 002 | `/midi-clean`, soft quantization, validated clean MIDI | Planned |
 | [004](tasks/004-unified-input-adapter.md) | Unified MIDI-first input adapter | 002–003 | V2 project format and MIDI/audio convergence | Planned |
 | [005](tasks/005-midi-analysis.md) | MIDI musical analysis | 004 | Versioned `analysis/<partId>.json` | Planned |
-| [006](tasks/006-instrument-and-license-registry.md) | Instrument and license registry | 004 | Five-name registry and commercial-use report | Planned |
-| [007](tasks/007-midi-sfz-wav-rendering.md) | MIDI → SFZ → WAV rendering | 006 | Validated piano/bass instrument rendering | Planned |
+| [006](tasks/006-instrument-and-license-registry.md) | Instrument and license registry | 004 | Validate/enrich existing five-name `sounds/` registry and licenses | Assets present; implementation planned |
+| [007](tasks/007-midi-sfz-wav-rendering.md) | MIDI → SFZ → WAV rendering | 006 | Render existing starter piano/bass assets | Assets present; renderer missing |
 | [008](tasks/008-bass-midi-generator.md) | Deterministic bass MIDI generator | 005, 007 | `midi/generated/bass.mid` | Planned |
 | [009](tasks/009-global-song-planner.md) | Global song planner | 005–006 | Validated whole-song `song_plan.json` | Planned |
 | [010](tasks/010-repeated-section-variation.md) | Repeated-section variation | 009 | Stable A1/A2/B1 identities and bounded variation | Planned |
@@ -56,6 +56,12 @@ After implementation:
 | [021](tasks/021-final-mp3-export.md) | Final MP3 export and release check | 020 | Optional `output/song.mp3` and release report | Blocked by gate |
 
 ## Phase gates and artifacts
+
+### Existing sound-library baseline
+
+The workspace already contains the five MVP SFZ instruments and 25 local 44.1 kHz mono PCM-16 sample files under `sounds/`. Reuse them; do not create `instruments/` or schedule sound acquisition as part of Tasks 006–007.
+
+Task 006 still must validate/enrich registry and license links, define the MIDI-channel convention, verify SFZ/sample references, and resolve the fact that sample WAVs are ignored by Git. Task 007 still must install/configure a compatible SFZ renderer and prove real piano/bass output. See `SOUND_LIBRARY_BASELINE.md`.
 
 ### Gate A — Transcription selected
 
@@ -74,7 +80,7 @@ analysis/<part>.json
 
 ### Gate C — Real instrument rendering
 
-Task 007 must audibly prove both piano and bass SFZ rendering in the project's explicit format. A test oscillator does not satisfy this gate.
+The piano/bass SFZ and sample prerequisite is satisfied by `sounds/`. Task 007 must still audibly prove both instruments through an installed local renderer in the project's explicit format. A test oscillator or the mere presence of sample files does not satisfy this gate.
 
 ### Gate D — Piano + bass musical usefulness
 

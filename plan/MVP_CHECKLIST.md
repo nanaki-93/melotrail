@@ -45,6 +45,16 @@
 - [ ] deterministic mode works without Qwen
 
 ## Generation
+- [x] local SFZ definitions exist for piano, bass, drums, pad, and strings
+- [x] local starter WAV samples exist for all five instruments
+- [x] current sample metadata audited: 44.1 kHz, mono, PCM 16-bit
+- [ ] registry entries reference validated license IDs
+- [ ] drum note map/channel convention validated
+- [ ] every SFZ sample reference and WAV format validated in code
+- [ ] local sample installation/Git portability policy documented
+- [ ] compatible SFZ renderer installed/configured
+- [ ] piano MIDI renders through `sounds/piano/piano.sfz`
+- [ ] bass MIDI renders through `sounds/bass/bass.sfz`
 - [ ] one bass stem
 - [ ] correct duration
 - [ ] correct sample rate

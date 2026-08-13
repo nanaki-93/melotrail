@@ -1,5 +1,20 @@
 # Example Personal Project
 
+The shared instrument library remains outside the song project and is resolved by logical name:
+
+```text
+sounds/
+  instruments.json
+  LICENSES.json
+  piano/piano.sfz
+  bass/bass.sfz
+  drums/drums.sfz
+  pad/pad.sfz
+  strings/strings.sfz
+```
+
+Do not copy SFZ files or samples into every project. Project/plan JSON uses only `piano`, `bass`, `drums`, `pad`, and `strings`; the registry resolves those names at rendering time.
+
 ```text
 projects/demo/
   project.json
@@ -32,6 +47,8 @@ bass
 drums
 pad
 ```
+
+These instruments already exist in the local `sounds/` starter pack. The first quality gate still renders only piano and bass; drums and pad remain disabled until that gate is accepted.
 
 Expected output:
 

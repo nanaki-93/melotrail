@@ -10,6 +10,8 @@ Add musically bounded drum MIDI and simple fills after the piano+bass architectu
 - Task 006 provides the validated drum note map.
 - Task 011 provides typed drum role parameters.
 
+The current `sounds/drums/drums.sfz` maps kick 36, snare 38, clap 39, closed hat 42, and open hat 46. Use the validated Task 006 registry map; do not assume a crash/cymbal note exists.
+
 ## Input and roles
 
 Consume tempo map, time signature, section duration, energy, density, transition intent, and typed drum parameters. Support only:

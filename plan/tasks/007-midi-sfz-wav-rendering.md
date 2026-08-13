@@ -7,7 +7,14 @@ Prove that validated MIDI and a registry-selected SFZ instrument can produce a c
 ## Dependencies
 
 - Task 006 provides safe instrument lookup and licensing metadata.
-- At least one piano and one bass SFZ are configured locally.
+- The asset prerequisite is already satisfied by `sounds/piano/piano.sfz`, `sounds/bass/bass.sfz`, and their local sample files.
+- A compatible SFZ renderer is not currently available on PATH and must be selected/configured by this task.
+
+## Existing sound baseline
+
+Read `plan/SOUND_LIBRARY_BASELINE.md`. Use `sounds/` as the default registry root and exercise the existing starter piano and bass. Do not download or invent replacement instruments as part of renderer integration.
+
+The source samples are mono, 44.1 kHz, PCM-16. That describes the sampler inputs only; the rendered stem must still match the project's explicit sample rate/channel layout and PCM-24 lossless output contract.
 
 ## Existing code to reuse
 
@@ -35,11 +42,12 @@ interface InstrumentRenderer {
 
 `RenderResult` must include output path, sample rate, channels, bit depth, frame count, duration, peak, and renderer identity/version.
 
-Implement one local SFZ renderer adapter. Its executable/library and configuration must be the one proven during this task; invoke external processes with structured arguments, never a shell command string. Support an environment/config override such as `SFZ_RENDERER_PATH` without allowing Qwen to influence it.
+Select and install/configure one local SFZ renderer, preferring `sfizz_render`/sfizz when it supports the existing SFZ subset and required offline output. Document its version and license. Implement its adapter with structured arguments, never a shell command string. Support an environment/config override such as `SFZ_RENDERER_PATH` without allowing Qwen to influence it.
 
 ## Functional requirements
 
 - Resolve the logical instrument through the registry immediately before rendering.
+- Resolve piano and bass to the existing `sounds/piano/piano.sfz` and `sounds/bass/bass.sfz`; do not hard-code those paths outside the registry test fixture.
 - Validate MIDI and registry data before launching the renderer.
 - Render to a uniquely named temporary WAV and atomically replace the requested output only after verification.
 - Request the project's explicit sample rate and channel count; never assume 48 kHz.
@@ -61,7 +69,7 @@ Unit tests with a fake renderer process/boundary:
 - output cannot overwrite MIDI, source, registry, or SFZ files;
 - no final partial output after failure.
 
-Optional integration tests are enabled only when the configured renderer and test SFZ are present; otherwise they must skip with a clear reason.
+Integration tests use the existing starter piano/bass assets when the configured renderer is present. They must skip with a clear renderer-unavailable reason, not an asset-unavailable reason, when the audited local sample inventory exists.
 
 Manual gate:
 
@@ -75,6 +83,7 @@ Inspect WAV metadata and listen for correct pitch, timing, instrument selection,
 ## Acceptance criteria
 
 - Piano and bass MIDI render locally through the same interface.
+- The existing `sounds/` piano and bass are the instruments heard in the manual gate.
 - Output matches project sample rate, channels, PCM-24 subtype, and expected timeline.
 - Instrument paths come only from the registry.
 - Unit tests require no installed SFZ renderer or sample library.
@@ -83,7 +92,7 @@ Inspect WAV metadata and listen for correct pitch, timing, instrument selection,
 ## Out of scope
 
 - Bass/drum/pad/string composition.
-- A VST host, DAW, sampler implementation, or automatic sample download.
+- A VST host, DAW, sampler implementation, automatic sample download, or replacement of the existing starter pack.
 - Mixing or mastering.
 
 ## Completion report

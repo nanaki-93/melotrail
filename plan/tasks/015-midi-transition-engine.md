@@ -28,6 +28,8 @@ cymbal
 
 Each transition declares zero, one, or two bars. `none` and `drop` insert zero bars; other types follow explicit schema rules. The final section cannot request a transition to a nonexistent next section.
 
+The current starter drum pack has no crash/cymbal sample or registry mapping. Keep `cymbal` unavailable until a separately licensed asset is added and validated. If an approved plan requests it before then, reject it clearly or apply a documented deterministic `none` fallback; never substitute clap/open-hat silently.
+
 ## Harmonic and timeline rules
 
 - Read the previous section's final confident chord and next section's first confident chord.

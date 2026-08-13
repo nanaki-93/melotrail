@@ -85,6 +85,33 @@ mix/*.wav
 output/master.wav
 ```
 
+## Local sound-library baseline
+
+The current workspace includes a separate starter SFZ library under `sounds/`; it is not copied into individual song projects.
+
+```text
+sounds/
+  instruments.json
+  LICENSES.json
+  piano/piano.sfz
+  bass/bass.sfz
+  drums/drums.sfz
+  pad/pad.sfz
+  strings/strings.sfz
+  */samples/*.wav
+```
+
+The five MVP logical instruments and 25 referenced sample WAV files are present locally. The samples are 44.1 kHz, mono, PCM 16-bit and are declared as locally generated/commercial-use starter assets in `sounds/LICENSES.json`.
+
+This is an asset baseline, not a completed renderer implementation:
+
+- registry/license relationships still require Task 006 validation and enrichment;
+- the sample WAV files are ignored by Git and need an explicit local portability/setup policy;
+- no compatible SFZ renderer is currently available on PATH;
+- the drum kit contains kick, snare, clap, closed hat, and open hat, but no crash/cymbal.
+
+See `SOUND_LIBRARY_BASELINE.md` for the authoritative inventory and task implications.
+
 ## Validation results
 
 Commands run on 2026-08-13:

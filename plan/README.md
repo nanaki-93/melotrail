@@ -29,6 +29,8 @@ Do not start by asking an LLM to generate finished audio.
 
 The first AI layer produces a **strict JSON arrangement plan**. Audio generation is a separate layer.
 
+The workspace already includes the five-instrument starter SFZ library under `sounds/`. Planning and implementation must reuse that library; see `SOUND_LIBRARY_BASELINE.md` for its verified inventory, licensing declaration, portability constraint, and remaining renderer gate.
+
 Example:
 
 ```json
