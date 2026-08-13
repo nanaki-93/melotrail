@@ -25,6 +25,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -66,6 +67,12 @@ object WorkspaceTags {
     const val ARRANGEMENT_APPROVE = "arrangement-approve"
     const val ARRANGEMENT_PREVIEW = "arrangement-preview"
     const val ARRANGEMENT_STYLE = "arrangement-style"
+    const val BUILD_SONG = "build-song"
+    const val MIX_RESET = "mix-reset"
+    const val PLAYBACK_DRY = "playback-dry"
+    const val PLAYBACK_LOFI = "playback-lofi"
+    const val PLAYBACK_MASTER = "playback-master"
+    const val PLAYBACK_TOGGLE = "playback-toggle"
 }
 
 @Composable
@@ -116,7 +123,7 @@ private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                 modifier = Modifier.semantics { testTag = WorkspaceTags.OPEN_PROJECT }
             ) { Text("Open project") }
             Column {
-                Button(onClick = {}, enabled = false) { Text("Build song") }
+                Button(onClick = { onIntent(WorkspaceIntent.BuildSong) }, enabled = canBuild(state), modifier = Modifier.semantics { testTag = WorkspaceTags.BUILD_SONG }) { Text("Build song") }
                 Text(buildSongPrerequisite(state), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -183,6 +190,7 @@ private fun PanelColumn(modifier: Modifier, state: WorkspaceUiState, onIntent: (
                 Panel.Structure -> StructurePanel(state, onIntent)
                 Panel.Arrangement -> ArrangementPanel(state, onIntent)
                 Panel.Timeline -> TimelinePanel(state, onIntent)
+                Panel.Mix -> MixPanel(state, onIntent)
                 else -> PlaceholderPanel(panel, state, onIntent)
             }
         }
@@ -208,6 +216,7 @@ private fun PartsPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     TextButton(onClick = { onIntent(WorkspaceIntent.ShowRoleEditor(part.id)) }, enabled = !disabled) { Text("Edit role") }
+                    TextButton(onClick = { onIntent(WorkspaceIntent.PreviewPart(part.id)) }, enabled = !disabled) { Text("Preview") }
                     TextButton(onClick = { onIntent(WorkspaceIntent.AnalyzePart(part.id)) }, enabled = !disabled) {
                         Text(if (analysis == null) "Analyze" else "Analyze again")
                     }
@@ -417,9 +426,66 @@ private fun TimelineLanes(arrangement: ai.music.workstation.application.Arrangem
 }
 
 @Composable
+private fun MixPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Mix & transport", WorkspaceTags.MIX_PANEL) {
+    val mix = state.mix
+    val disabled = state.project == null || state.operation.isMutating
+    if (mix == null || mix.availableStems.isEmpty()) {
+        Text("Render or build the approved arrangement to create compatible stems and a dry mix.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+    } else {
+        mix.availableStems.forEach { instrument ->
+            val setting = mix.settings.tracks[instrument] ?: ai.music.workstation.application.LogicalMixSetting()
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row { Text(instrument.replaceFirstChar(Char::uppercase), modifier = Modifier.weight(1f), color = instrumentLaneColors[instrument] ?: MaterialTheme.colorScheme.onSurface); Text("%.1f dB".format(setting.gainDb)) }
+                Slider(value = setting.gainDb.toFloat(), onValueChange = { onIntent(WorkspaceIntent.UpdateMixSetting(instrument, setting.copy(gainDb = it.toDouble()))) }, valueRange = -24f..12f, enabled = !disabled)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TextButton(onClick = { onIntent(WorkspaceIntent.UpdateMixSetting(instrument, setting.copy(muted = !setting.muted))) }, enabled = !disabled) { Text(if (setting.muted) "Unmute" else "Mute") }
+                    TextButton(onClick = { onIntent(WorkspaceIntent.UpdateMixSetting(instrument, setting.copy(solo = !setting.solo))) }, enabled = !disabled) { Text(if (setting.solo) "Unsolo" else "Solo") }
+                    Text("Pan %.2f".format(setting.pan), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 12.dp))
+                }
+                Slider(value = setting.pan.toFloat(), onValueChange = { onIntent(WorkspaceIntent.UpdateMixSetting(instrument, setting.copy(pan = it.toDouble()))) }, valueRange = -1f..1f, enabled = !disabled)
+            }
+        }
+        OutlinedButton(onClick = { onIntent(WorkspaceIntent.ResetMix) }, enabled = !disabled, modifier = Modifier.semantics { testTag = WorkspaceTags.MIX_RESET }) { Text("Reset engine defaults") }
+    }
+    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
+    Text("Build options", style = MaterialTheme.typography.labelLarge)
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Checkbox(state.buildOptions.loFi, { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(loFi = it))) }, enabled = !disabled); Text("LoFi", modifier = Modifier.padding(top = 12.dp))
+        Checkbox(state.buildOptions.mp3, { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(mp3 = it))) }, enabled = !disabled); Text("MP3", modifier = Modifier.padding(top = 12.dp))
+    }
+    PlaybackControls(state, onIntent)
+}
+
+@Composable
+private fun PlaybackControls(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    val root = state.project?.root
+    val source = state.playback.source
+    fun enabled(value: PlaybackSource) = root != null && when (value) {
+        PlaybackSource.DRY -> state.project.readiness.dryMixAvailable && !state.downstreamArtifactsStale
+        PlaybackSource.LOFI -> state.project.readiness.loFiMixAvailable && !state.downstreamArtifactsStale
+        PlaybackSource.MASTER -> state.project.readiness.masterAvailable && !state.downstreamArtifactsStale
+    }
+    Text("Audition validated artifacts", style = MaterialTheme.typography.labelLarge)
+    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectPlaybackSource(PlaybackSource.DRY)) }, enabled = enabled(PlaybackSource.DRY), modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_DRY }) { Text("Dry") }
+        OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectPlaybackSource(PlaybackSource.LOFI)) }, enabled = enabled(PlaybackSource.LOFI), modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_LOFI }) { Text("LoFi") }
+        OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectPlaybackSource(PlaybackSource.MASTER)) }, enabled = enabled(PlaybackSource.MASTER), modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_MASTER }) { Text("Master") }
+    }
+    val selectedEnabled = enabled(source)
+    if (!selectedEnabled) Text("${source.name.lowercase().replaceFirstChar(Char::uppercase)} is unavailable or stale. Build Song creates current audition artifacts.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Button(onClick = { onIntent(WorkspaceIntent.PlayPause) }, enabled = selectedEnabled, modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_TOGGLE }) { Text(if (state.playback.state == ai.music.workstation.audio.PlaybackState.PLAYING) "Pause" else "Play") }
+        OutlinedButton(onClick = { onIntent(WorkspaceIntent.StopPlayback) }, enabled = state.playback.state != ai.music.workstation.audio.PlaybackState.STOPPED) { Text("Stop") }
+        Text("${formatDuration(state.playback.positionSeconds)} / ${formatDuration(state.playback.durationSeconds)}", modifier = Modifier.padding(top = 12.dp), style = MaterialTheme.typography.labelSmall)
+    }
+    Slider(value = state.playback.positionSeconds.toFloat(), onValueChange = { onIntent(WorkspaceIntent.SeekPlayback(it.toDouble())) }, valueRange = 0f..state.playback.durationSeconds.coerceAtLeast(0.01).toFloat(), enabled = selectedEnabled && state.playback.durationSeconds > 0.0)
+    Text("Output volume ${(state.playback.volume * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
+    Slider(value = state.playback.volume.toFloat(), onValueChange = { onIntent(WorkspaceIntent.SetPlaybackVolume(it.toDouble())) }, enabled = selectedEnabled)
+}
+
+@Composable
 private fun PlaceholderPanel(panel: Panel, state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
     val (title, detail, tag) = when (panel) {
-        Panel.Mix -> Triple("Mix & transport", "Lossless mix controls and playback are available after rendering.", WorkspaceTags.MIX_PANEL)
         Panel.Status -> Triple("Operation status", statusText(state.operation), WorkspaceTags.OPERATION_STATUS)
         else -> error("Functional panels are handled separately")
     }
@@ -428,6 +494,8 @@ private fun PlaceholderPanel(panel: Panel, state: WorkspaceUiState, onIntent: (W
         val progress = (state.operation as? WorkspaceOperation.ImportingPart)?.progress
             ?: (state.operation as? WorkspaceOperation.AnalyzingPart)?.progress
             ?: (state.operation as? WorkspaceOperation.GeneratingArrangement)?.progress
+            ?: (state.operation as? WorkspaceOperation.ApplyingMix)?.progress
+            ?: (state.operation as? WorkspaceOperation.BuildingSong)?.progress
         if (progress != null) {
             LinearProgressIndicator(
                 progress = { progress.stageIndex.toFloat() / progress.stageCount },
@@ -437,6 +505,7 @@ private fun PlaceholderPanel(panel: Panel, state: WorkspaceUiState, onIntent: (W
             progress.artifact?.let { Text(it.toString(), style = MaterialTheme.typography.bodySmall) }
         }
         if (state.retry != null) OutlinedButton(onClick = { onIntent(WorkspaceIntent.Retry) }) { Text("Retry") }
+        if (state.operation is WorkspaceOperation.BuildingSong) OutlinedButton(onClick = { onIntent(WorkspaceIntent.CancelOperation) }) { Text("Cancel at boundary") }
     }
 }
 
@@ -463,6 +532,8 @@ private fun statusText(operation: WorkspaceOperation): String = when (operation)
     is WorkspaceOperation.UpdatingPartRole -> "Saving ${operation.id} role…"
     WorkspaceOperation.SavingStructure -> "Saving song structure…"
     is WorkspaceOperation.GeneratingArrangement -> "Generating reviewed song plan and detailed arrangement…"
+    is WorkspaceOperation.ApplyingMix -> "Applying persisted mix settings to existing stems…"
+    is WorkspaceOperation.BuildingSong -> "Building song through the lossless release pipeline…"
     WorkspaceOperation.ApprovingArrangement -> "Approving validated arrangement…"
     is WorkspaceOperation.OpenFailed -> operation.message
     is WorkspaceOperation.Failed -> operation.message
@@ -538,8 +609,10 @@ private fun buildSongPrerequisite(state: WorkspaceUiState): String = when {
     state.arrangement == null -> "Build Song needs an approved arrangement."
     state.arrangement.stale -> "Build Song is blocked: regenerate the stale arrangement."
     state.arrangement.approvalRequired -> "Build Song is blocked: approve the Qwen draft."
-    else -> "Build Song workflow is added in Task 027."
+    else -> "Build Song will generate/reuse MIDI and stems, then mix, repair, master, and write release metadata."
 }
+
+private fun canBuild(state: WorkspaceUiState): Boolean = state.project != null && !state.operation.isMutating && state.arrangement?.approved == true && state.arrangement?.approvalRequired == false && state.arrangement?.stale == false
 
 internal fun timelineSectionWeight(durationSeconds: Double?): Float =
     (durationSeconds?.takeIf { it > 0.0 } ?: 1.0).toFloat()

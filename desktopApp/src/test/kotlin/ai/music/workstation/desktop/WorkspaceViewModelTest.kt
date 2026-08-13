@@ -341,6 +341,12 @@ private class FakeArrangementService(
 
     override suspend fun generateRequiredMidi(root: Path, progress: ai.music.workstation.application.ProgressSink): GeneratedMidiSnapshot = GeneratedMidiSnapshot(emptyList())
 
+    override suspend fun renderApprovedStems(
+        root: Path,
+        renderer: ai.music.workstation.arrangement.InstrumentRenderer,
+        progress: ai.music.workstation.application.ProgressSink
+    ): ai.music.workstation.arrangement.StemRenderResult = error("Not used by this fake")
+
     override fun load(root: Path): ArrangementSnapshot = loaded ?: throw IllegalStateException("No detailed arrangement found")
 
     override fun preview(root: Path): ArrangementSnapshot {

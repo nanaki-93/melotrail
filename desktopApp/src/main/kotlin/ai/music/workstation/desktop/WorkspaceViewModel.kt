@@ -8,6 +8,14 @@ import ai.music.workstation.application.CreateProjectRequest
 import ai.music.workstation.application.DefaultArrangementApplicationService
 import ai.music.workstation.application.GenerateArrangementRequest
 import ai.music.workstation.application.ImportPartRequest
+import ai.music.workstation.application.MixApplicationService
+import ai.music.workstation.application.MixSnapshot
+import ai.music.workstation.application.PersistedMixSettings
+import ai.music.workstation.application.LogicalMixSetting
+import ai.music.workstation.application.DefaultMixApplicationService
+import ai.music.workstation.application.BuildApplicationService
+import ai.music.workstation.application.BuildSongRequest
+import ai.music.workstation.application.PartPreviewApplicationService
 import ai.music.workstation.application.OperationProgress
 import ai.music.workstation.application.PartSourceType
 import ai.music.workstation.application.PartAnalysisStatus
@@ -26,6 +34,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
 import java.nio.file.Path
 
@@ -37,6 +49,9 @@ data class WorkspaceDispatchers(
 data class WorkspaceUiState(
     val project: ProjectSnapshot? = null,
     val arrangement: ArrangementSnapshot? = null,
+    val mix: MixSnapshot? = null,
+    val buildOptions: BuildOptionsDraft = BuildOptionsDraft(),
+    val playback: PlaybackSnapshot = PlaybackSnapshot(),
     val arrangementDraft: ArrangementDraft = ArrangementDraft(),
     val selectedArrangementSection: Int? = null,
     val operation: WorkspaceOperation = WorkspaceOperation.Idle,
@@ -47,6 +62,16 @@ data class WorkspaceUiState(
     val downstreamArtifactsStale: Boolean = false,
     val retry: WorkspaceRetry? = null
 )
+
+data class BuildOptionsDraft(val loFi: Boolean = false, val mp3: Boolean = false)
+data class PlaybackSnapshot(
+    val source: PlaybackSource = PlaybackSource.DRY,
+    val state: ai.music.workstation.audio.PlaybackState = ai.music.workstation.audio.PlaybackState.STOPPED,
+    val positionSeconds: Double = 0.0,
+    val durationSeconds: Double = 0.0,
+    val volume: Double = 1.0
+)
+enum class PlaybackSource { DRY, LOFI, MASTER }
 
 data class ArrangementDraft(
     val planner: ArrangementPlannerKind = ArrangementPlannerKind.DETERMINISTIC,
@@ -63,6 +88,8 @@ sealed interface WorkspaceOperation {
     data class UpdatingPartRole(val id: String) : WorkspaceOperation
     data object SavingStructure : WorkspaceOperation
     data class GeneratingArrangement(val progress: OperationProgress? = null) : WorkspaceOperation
+    data class ApplyingMix(val progress: OperationProgress? = null) : WorkspaceOperation
+    data class BuildingSong(val progress: OperationProgress? = null) : WorkspaceOperation
     data object ApprovingArrangement : WorkspaceOperation
     data class OpenFailed(val message: String) : WorkspaceOperation
     data class Failed(val action: String, val message: String) : WorkspaceOperation
@@ -73,6 +100,7 @@ val WorkspaceOperation.isMutating: Boolean
         this is WorkspaceOperation.ImportingPart || this is WorkspaceOperation.AnalyzingPart ||
         this is WorkspaceOperation.UpdatingPartRole || this is WorkspaceOperation.SavingStructure ||
         this is WorkspaceOperation.GeneratingArrangement || this is WorkspaceOperation.ApprovingArrangement
+        || this is WorkspaceOperation.ApplyingMix || this is WorkspaceOperation.BuildingSong
 
 sealed interface WorkspaceDialog {
     data class CreateProject(
@@ -112,6 +140,7 @@ sealed interface WorkspaceIntent {
     data class UpdateImportPart(val draft: WorkspaceDialog.ImportPart) : WorkspaceIntent
     data object ImportPart : WorkspaceIntent
     data class AnalyzePart(val partId: String) : WorkspaceIntent
+    data class PreviewPart(val partId: String) : WorkspaceIntent
     data class ShowRoleEditor(val partId: String) : WorkspaceIntent
     data class UpdateRole(val role: String) : WorkspaceIntent
     data object SaveRole : WorkspaceIntent
@@ -123,6 +152,16 @@ sealed interface WorkspaceIntent {
     data class UpdateArrangementPlanner(val planner: ArrangementPlannerKind) : WorkspaceIntent
     data class UpdateArrangementStyle(val style: String) : WorkspaceIntent
     data class ToggleArrangementInstrument(val instrument: String) : WorkspaceIntent
+    data class UpdateMixSetting(val instrument: String, val setting: LogicalMixSetting) : WorkspaceIntent
+    data object ResetMix : WorkspaceIntent
+    data class UpdateBuildOptions(val options: BuildOptionsDraft) : WorkspaceIntent
+    data object BuildSong : WorkspaceIntent
+    data object CancelOperation : WorkspaceIntent
+    data class SelectPlaybackSource(val source: PlaybackSource) : WorkspaceIntent
+    data object PlayPause : WorkspaceIntent
+    data object StopPlayback : WorkspaceIntent
+    data class SeekPlayback(val seconds: Double) : WorkspaceIntent
+    data class SetPlaybackVolume(val volume: Double) : WorkspaceIntent
     data object GenerateArrangement : WorkspaceIntent
     data object PreviewArrangement : WorkspaceIntent
     data object ApproveArrangement : WorkspaceIntent
@@ -137,13 +176,28 @@ class WorkspaceViewModel(
     private val fileDialogs: DesktopFileDialogs,
     dispatchers: WorkspaceDispatchers = WorkspaceDispatchers(),
     private val runtimeReadinessService: RuntimeReadinessService = UnavailableRuntimeReadinessService,
-    private val arrangementService: ArrangementApplicationService = DefaultArrangementApplicationService()
+    private val arrangementService: ArrangementApplicationService = DefaultArrangementApplicationService(),
+    private val mixService: MixApplicationService = DefaultMixApplicationService(),
+    private val buildService: BuildApplicationService? = null,
+    private val player: ArtifactAudioPlayer? = null,
+    private val partPreviewService: PartPreviewApplicationService? = null
 ) : AutoCloseable {
     private val scope = CoroutineScope(SupervisorJob() + dispatchers.ui)
     private val ioDispatcher = dispatchers.io
     private val mutableState = MutableStateFlow(WorkspaceUiState())
+    private var mixCommit: Job? = null
+    private var buildJob: Job? = null
 
     val state: StateFlow<WorkspaceUiState> = mutableState.asStateFlow()
+
+    init {
+        player?.let { monitor ->
+            scope.launch { monitor.state.collect { updatePlayback() } }
+            scope.launch { monitor.currentPosition.collect { updatePlayback() } }
+            scope.launch { monitor.totalDuration.collect { updatePlayback() } }
+            scope.launch { monitor.volume.collect { updatePlayback() } }
+        }
+    }
 
     fun accept(intent: WorkspaceIntent) {
         when (intent) {
@@ -160,6 +214,7 @@ class WorkspaceViewModel(
             is WorkspaceIntent.UpdateImportPart -> mutableState.update { it.copy(dialog = intent.draft) }
             WorkspaceIntent.ImportPart -> importPart()
             is WorkspaceIntent.AnalyzePart -> analyzePart(intent.partId)
+            is WorkspaceIntent.PreviewPart -> previewPart(intent.partId)
             is WorkspaceIntent.ShowRoleEditor -> showRoleEditor(intent.partId)
             is WorkspaceIntent.UpdateRole -> updateRole(intent.role)
             WorkspaceIntent.SaveRole -> saveRole()
@@ -171,6 +226,16 @@ class WorkspaceViewModel(
             is WorkspaceIntent.UpdateArrangementPlanner -> updateArrangementPlanner(intent.planner)
             is WorkspaceIntent.UpdateArrangementStyle -> mutableState.update { it.copy(arrangementDraft = it.arrangementDraft.copy(style = intent.style)) }
             is WorkspaceIntent.ToggleArrangementInstrument -> toggleArrangementInstrument(intent.instrument)
+            is WorkspaceIntent.UpdateMixSetting -> updateMixSetting(intent.instrument, intent.setting)
+            WorkspaceIntent.ResetMix -> resetMix()
+            is WorkspaceIntent.UpdateBuildOptions -> mutableState.update { it.copy(buildOptions = intent.options) }
+            WorkspaceIntent.BuildSong -> buildSong()
+            WorkspaceIntent.CancelOperation -> buildJob?.cancel()
+            is WorkspaceIntent.SelectPlaybackSource -> selectPlaybackSource(intent.source)
+            WorkspaceIntent.PlayPause -> playPause()
+            WorkspaceIntent.StopPlayback -> player?.stop()
+            is WorkspaceIntent.SeekPlayback -> player?.seek(intent.seconds)
+            is WorkspaceIntent.SetPlaybackVolume -> player?.setVolume(intent.volume)
             WorkspaceIntent.GenerateArrangement -> generateArrangement()
             WorkspaceIntent.PreviewArrangement -> previewArrangement()
             WorkspaceIntent.ApproveArrangement -> approveArrangement()
@@ -281,6 +346,17 @@ class WorkspaceViewModel(
                 }
             }.onSuccess { opened(it, "Analyzed $partId") }
                 .onFailure { fail("analyze part", it.message ?: "Unable to analyze $partId.", WorkspaceRetry.Analyze(project.root, partId)) }
+        }
+    }
+
+    private fun previewPart(partId: String) {
+        val project = state.value.project ?: return
+        val monitor = player ?: return fail("preview part", "Local audio playback is not configured.")
+        val previews = partPreviewService ?: return fail("preview part", "Part preview service is not configured for this desktop session.")
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { previews.preview(project.root, partId) } }
+                .onSuccess { path -> monitor.play(path); mutableState.update { it.copy(notification = "Previewing $partId") } }
+                .onFailure { fail("preview part", it.message ?: "Unable to preview $partId.") }
         }
     }
 
@@ -419,6 +495,81 @@ class WorkspaceViewModel(
         mutableState.update { current -> if (current.operation.isMutating) current.copy(operation = operation) else current }
     }
 
+    private fun updateMixSetting(instrument: String, setting: LogicalMixSetting) {
+        val mix = state.value.mix ?: return
+        val settings = mix.settings.copy(tracks = mix.settings.tracks + (instrument to setting))
+        mutableState.update { it.copy(mix = mix.copy(settings = settings)) }
+        mixCommit?.cancel()
+        mixCommit = scope.launch {
+            delay(250)
+            applyMix(settings)
+        }
+    }
+
+    private fun resetMix() {
+        val root = state.value.project?.root ?: return
+        val settings = PersistedMixSettings()
+        mutableState.update { current -> current.copy(mix = current.mix?.copy(settings = settings)) }
+        applyMix(settings, root)
+    }
+
+    private fun applyMix(settings: PersistedMixSettings, root: Path? = state.value.project?.root) {
+        val projectRoot = root ?: return
+        if (state.value.operation.isMutating) return
+        mutableState.update { it.copy(operation = WorkspaceOperation.ApplyingMix(), notification = null) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { mixService.apply(ai.music.workstation.application.ApplyMixRequest(projectRoot, settings)) { progress -> scope.launch { updateProgress(WorkspaceOperation.ApplyingMix(progress)) } } } }
+                .onSuccess { snapshot -> mutableState.update { it.copy(mix = snapshot, operation = WorkspaceOperation.Idle, notification = "Updated lossless dry mix from existing stems.") } }
+                .onFailure { fail("apply mix", it.message ?: "Unable to apply mix settings.") }
+        }
+    }
+
+    private fun buildSong() {
+        val project = state.value.project ?: return fail("build song", "Open a project before building.")
+        val service = buildService ?: return fail("build song", "Build service is not configured for this desktop session.")
+        val arrangement = state.value.arrangement
+        if (arrangement == null || arrangement.stale || arrangement.approvalRequired || !arrangement.approved) return fail("build song", "Build Song requires a current approved arrangement.")
+        val options = state.value.buildOptions
+        mutableState.update { it.copy(operation = WorkspaceOperation.BuildingSong(), notification = null, retry = null) }
+        buildJob = scope.launch {
+            runCatching { withContext(ioDispatcher) { service.build(BuildSongRequest(project.root, options.loFi, options.mp3)) { progress -> scope.launch { updateProgress(WorkspaceOperation.BuildingSong(progress)) } } } }
+                .onSuccess {
+                    val refreshed = withContext(ioDispatcher) { projectService.open(project.root) }
+                    mutableState.update { current -> current.copy(project = refreshed, mix = mixService.load(project.root), operation = WorkspaceOperation.Idle, notification = "Build complete: ${it.master}") }
+                }.onFailure {
+                    if (it is CancellationException) mutableState.update { current -> current.copy(operation = WorkspaceOperation.Idle, notification = "Build cancellation requested; the current atomic stage was allowed to finish safely.") }
+                    else fail("build song", it.message ?: "Build Song failed.")
+                }
+        }
+    }
+
+    private fun selectPlaybackSource(source: PlaybackSource) {
+        player?.stop()
+        mutableState.update { it.copy(playback = it.playback.copy(source = source)) }
+    }
+
+    private fun playPause() {
+        val monitor = player ?: return fail("playback", "Local audio playback is not configured.")
+        when (monitor.state.value) {
+            ai.music.workstation.audio.PlaybackState.PLAYING -> monitor.pause()
+            ai.music.workstation.audio.PlaybackState.PAUSED -> monitor.resume()
+            ai.music.workstation.audio.PlaybackState.STOPPED -> {
+                val root = state.value.project?.root ?: return
+                val artifact = when (state.value.playback.source) {
+                    PlaybackSource.DRY -> root.resolve("mix/dry.wav")
+                    PlaybackSource.LOFI -> root.resolve("mix/lofi.wav")
+                    PlaybackSource.MASTER -> root.resolve("output/master.wav")
+                }
+                runCatching { monitor.play(artifact) }.onFailure { fail("playback", it.message ?: "Unable to play selected artifact.") }
+            }
+        }
+    }
+
+    private fun updatePlayback() {
+        val monitor = player ?: return
+        mutableState.update { current -> current.copy(playback = current.playback.copy(state = monitor.state.value, positionSeconds = monitor.currentPosition.value, durationSeconds = monitor.totalDuration.value, volume = monitor.volume.value)) }
+    }
+
     private fun ProjectSnapshot.refreshed(): ProjectSnapshot = projectService.open(root)
 
     private fun opened(project: ProjectSnapshot, message: String, stale: Boolean = false) {
@@ -426,6 +577,7 @@ class WorkspaceViewModel(
             it.copy(
                 project = project,
                 arrangement = null,
+                mix = runCatching { mixService.load(project.root) }.getOrNull(),
                 operation = WorkspaceOperation.Idle,
                 notification = message,
                 dialog = null,
@@ -448,7 +600,7 @@ class WorkspaceViewModel(
         mutableState.update { it.copy(operation = WorkspaceOperation.Failed(action, message), notification = message, retry = retry) }
     }
 
-    override fun close() = scope.cancel()
+    override fun close() { mixCommit?.cancel(); buildJob?.cancel(); player?.close(); scope.cancel() }
 
     private object UnavailableRuntimeReadinessService : RuntimeReadinessService {
         override suspend fun check(): RuntimeReadiness = RuntimeReadiness(

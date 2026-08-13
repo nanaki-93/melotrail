@@ -76,6 +76,11 @@ import ai.music.workstation.application.DefaultProjectApplicationService
 import ai.music.workstation.application.ImportPartRequest
 import ai.music.workstation.application.LegacyPartAnalysisService
 import ai.music.workstation.application.MidiPreparationService
+import ai.music.workstation.application.BuildAudioWorker
+import ai.music.workstation.application.BuildSongRequest
+import ai.music.workstation.application.DefaultArrangementApplicationService
+import ai.music.workstation.application.DefaultBuildApplicationService
+import ai.music.workstation.application.DefaultMixApplicationService
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
@@ -902,6 +907,33 @@ object ArrangementProjectCommands {
         val projectRoot = projectRoot(options.projectPath)
         val projectFile = projectRoot.resolve(PROJECT_FILE)
         require(Files.isRegularFile(projectFile)) { "Project file not found: $projectFile" }
+
+        // The current detailed-arrangement build is shared with Compose. Keep
+        // the established legacy path below for v1/v2 projects, dry runs, and
+        // a caller-selected alternate output directory.
+        val arrangementPath = projectRoot.resolve("arrangement.json")
+        val existingArrangementVersion = arrangementPath.takeIf(Files::isRegularFile)?.let { path ->
+            json.parseToJsonElement(Files.readString(path, StandardCharsets.UTF_8)).jsonObject["version"]
+                ?.jsonPrimitive?.contentOrNull?.toIntOrNull()
+        }
+        if (existingArrangementVersion == DetailedArrangement.CURRENT_VERSION && !options.dryRun && options.outputDirectory == null) {
+            val service = DefaultBuildApplicationService(
+                DefaultArrangementApplicationService(),
+                DefaultMixApplicationService(),
+                SfizzInstrumentRenderer(),
+                object : BuildAudioWorker {
+                    override suspend fun healthCheck(): Boolean = worker.healthCheck()
+                    override suspend fun repair(input: Path, output: Path) = worker.repair(input, output)
+                    override suspend fun master(input: Path, output: Path) = worker.master(input, output)
+                    override suspend fun exportMp3(input: Path, output: Path, bitrateKbps: Int): Boolean =
+                        worker.exportMp3(input, output, bitrateKbps) is Mp3ExportResult.Created
+                }
+            )
+            val result = service.build(BuildSongRequest(projectRoot, options.enableLoFi, options.enableMp3, options.mp3BitrateKbps)) { progress ->
+                println("✓ [${progress.stageIndex}/${progress.stageCount}] ${progress.message}")
+            }
+            return "Build complete: ${result.master}" + (result.mp3?.let { " and $it" } ?: "")
+        }
 
         var project = readProject(projectRoot)
         project.requireValid(projectRoot)

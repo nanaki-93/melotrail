@@ -98,6 +98,25 @@ class WorkspaceScreenTest {
         onNodeWithText("Transition out: build").assertExists()
     }
 
+    @Test
+    fun `mix and transport expose available artifact controls`() = runComposeUiTest {
+        val root = java.nio.file.Path.of("build/test-project")
+        val project = projectState().project!!.copy(
+            readiness = ai.music.workstation.application.ProjectReadiness(true, true, true, true, true, true, true, true, true, true)
+        )
+        val mix = ai.music.workstation.application.MixSnapshot(
+            root, ai.music.workstation.application.PersistedMixSettings(), listOf("piano"), root.resolve("mix/dry.wav"), stale = false
+        )
+        val arrangement = ai.music.workstation.application.ArrangementSnapshot(root, emptyList(), false, true, false, root.resolve("arrangement.json"))
+        setContent { MusicWorkstationTheme { WorkspaceScreen(WorkspaceUiState(project = project, arrangement = arrangement, mix = mix), onIntent = {}) } }
+
+        onNodeWithTag(WorkspaceTags.BUILD_SONG).assertExists()
+        onNodeWithTag(WorkspaceTags.MIX_RESET).assertExists()
+        onNodeWithTag(WorkspaceTags.PLAYBACK_DRY).assertExists()
+        onNodeWithTag(WorkspaceTags.PLAYBACK_LOFI).assertExists()
+        onNodeWithTag(WorkspaceTags.PLAYBACK_MASTER).assertExists()
+    }
+
     private fun projectState(): WorkspaceUiState {
         val root = java.nio.file.Path.of("build/test-project")
         return WorkspaceUiState(project = ai.music.workstation.application.ProjectSnapshot(

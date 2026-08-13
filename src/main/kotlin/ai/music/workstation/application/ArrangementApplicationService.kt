@@ -24,6 +24,9 @@ import ai.music.workstation.arrangement.SectionVariationStore
 import ai.music.workstation.arrangement.SongPlan
 import ai.music.workstation.arrangement.SongPlanStore
 import ai.music.workstation.arrangement.SongPlanningInput
+import ai.music.workstation.arrangement.StemRenderResult
+import ai.music.workstation.arrangement.StemRenderingMixer
+import ai.music.workstation.arrangement.InstrumentRenderer
 import ai.music.workstation.arrangement.StringsMidiGenerationAdapter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -93,6 +96,7 @@ class ApplicationServiceException(
 interface ArrangementApplicationService {
     suspend fun generate(request: GenerateArrangementRequest, progress: ProgressSink = ProgressSink.None): ArrangementSnapshot
     suspend fun generateRequiredMidi(root: Path, progress: ProgressSink = ProgressSink.None): GeneratedMidiSnapshot
+    suspend fun renderApprovedStems(root: Path, renderer: InstrumentRenderer, progress: ProgressSink = ProgressSink.None): StemRenderResult
     fun load(root: Path): ArrangementSnapshot
     fun preview(root: Path): ArrangementSnapshot
     fun approve(root: Path): ArrangementSnapshot
@@ -165,6 +169,17 @@ class DefaultArrangementApplicationService(
             MidiTransitionGenerationAdapter().generate(normalized, project, arrangement, analyses).let { emit("transitions", it.path, it.result.events.size) }
         }
         GeneratedMidiSnapshot(artifacts)
+    }
+
+    /** Renders only a validated, approved detailed arrangement. DSP and mastering remain separate build stages. */
+    override suspend fun renderApprovedStems(root: Path, renderer: InstrumentRenderer, progress: ProgressSink): StemRenderResult = mutate(root) { normalized ->
+        progress.report(OperationProgress("render", 1, 2, "Validating approved arrangement"))
+        val project = readProject(normalized)
+        val input = detailedInput(normalized, project)
+        val arrangement = readApproved(normalized, input)
+        val analyses = midiAnalyses(normalized, project, project.parts.map { it.id }.toSet())
+        progress.report(OperationProgress("render", 2, 2, "Rendering or reusing PCM-24 stems", normalized.resolve("mix/dry.wav")))
+        StemRenderingMixer(renderer).render(normalized, project, arrangement, analyses)
     }
 
     override fun load(root: Path): ArrangementSnapshot {
