@@ -38,6 +38,18 @@ class InstrumentRegistryTest {
     }
 
     @Test
+    fun `rejects duplicate names unknown engines and absolute registry paths`() {
+        copyLibrary(); replace("\"bass\": {", "\"piano\": {")
+        assertTrue(failure().contains("duplicate logical instrument name 'piano'"))
+
+        copyLibrary(); replace("\"engine\": \"sfz\"", "\"engine\": \"vst\"")
+        assertTrue(failure().contains("unsupported engine"))
+
+        copyLibrary(); replace("\"piano/piano.sfz\"", "\"/tmp/piano.sfz\"")
+        assertTrue(failure().contains("must be relative"))
+    }
+
+    @Test
     fun `rejects malformed SFZ missing sample wrong WAV rate and symlink escape`() {
         copyLibrary()
         Files.writeString(root.resolve("piano/piano.sfz"), "<region> key=60")
@@ -57,6 +69,30 @@ class InstrumentRegistryTest {
         val outside = root.parent.resolve("outside.wav").also { Files.write(it, Files.readAllBytes(root.resolve("piano/samples/C2.wav"))) }
         Files.delete(root.resolve("piano/samples/C2.wav")); Files.createSymbolicLink(root.resolve("piano/samples/C2.wav"), outside)
         assertTrue(failure().contains("escapes"))
+    }
+
+    @Test
+    fun `rejects unsupported WAV encoding channels frame layout and empty audio`() {
+        copyLibrary()
+        val wave = root.resolve("piano/samples/C2.wav")
+        val bytes = Files.readAllBytes(wave); bytes[20] = 3; bytes[21] = 0
+        Files.write(wave, bytes)
+        assertTrue(failure().contains("must use PCM encoding"))
+
+        copyLibrary()
+        val noChannels = Files.readAllBytes(wave); noChannels[22] = 0; noChannels[23] = 0
+        Files.write(wave, noChannels)
+        assertTrue(failure().contains("invalid WAV format"))
+
+        copyLibrary()
+        val badLayout = Files.readAllBytes(wave); badLayout[32] = 1; badLayout[33] = 0
+        Files.write(wave, badLayout)
+        assertTrue(failure().contains("inconsistent PCM frame layout"))
+
+        copyLibrary()
+        val emptyData = Files.readAllBytes(wave); emptyData[40] = 0; emptyData[41] = 0; emptyData[42] = 0; emptyData[43] = 0
+        Files.write(wave, emptyData.copyOfRange(0, 44))
+        assertTrue(failure().contains("no complete frames"))
     }
 
     private fun failure(): String = assertThrows(IllegalArgumentException::class.java) { InstrumentRegistryLoader(root).load() }.message.orEmpty()

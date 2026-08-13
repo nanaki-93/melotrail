@@ -2,7 +2,7 @@
 
 ## Goal
 
-Validate and enrich the existing `sounds/` starter library so the small logical instrument allow-list resolves safely to local SFZ assets with explicit commercial-use and attribution data.
+Validate and enrich the existing `../../../sounds` starter library so the small logical instrument allow-list resolves safely to local SFZ assets with explicit commercial-use and attribution data.
 
 ## Dependencies
 
@@ -11,11 +11,11 @@ Validate and enrich the existing `sounds/` starter library so the small logical 
 
 ## Existing asset baseline
 
-Read `plan/SOUND_LIBRARY_BASELINE.md` before implementation. Do not create a second `instruments/` library.
+Read `../../SOUND_LIBRARY_BASELINE.md` before implementation. Do not create a second `instruments/` library.
 
 The workspace already contains:
 
-- `sounds/instruments.json` and `sounds/LICENSES.json`;
+- `../../../sounds/instruments.json` and `../../../sounds/LICENSES.json`;
 - SFZ definitions for piano, bass, drums, pad, and strings;
 - 25 local WAV samples referenced by those SFZ files;
 - a `starter-generated` commercial-use/no-attribution declaration;
@@ -39,7 +39,7 @@ Do not add aliases or arbitrary model-selected names.
 
 ## Registry contracts
 
-Load and preserve `sounds/instruments.json`. Enrich it to a validated shape conceptually equivalent to:
+Load and preserve `../../../sounds/instruments.json`. Enrich it to a validated shape conceptually equivalent to:
 
 ```json
 {
@@ -71,7 +71,7 @@ Load and preserve `sounds/instruments.json`. Enrich it to a validated shape conc
 
 Before accepting `midiChannel`, define whether registry values are zero-based (`0..15`) or one-based (`1..16`). Preserve human-readable channel 10 only if the loader converts it explicitly to zero-based channel 9 for MIDI events. Do not leave the convention implicit.
 
-Validate and enrich `sounds/LICENSES.json`. Preserve `starter-generated` and require each library entry to contain:
+Validate and enrich `../../../sounds/LICENSES.json`. Preserve `starter-generated` and require each library entry to contain:
 
 - display name and source URL/reference;
 - license identifier or an explicit `generated-original` provenance designation, plus optional license text path;
@@ -85,7 +85,7 @@ If any existing file is actually from a downloaded third-party library rather th
 ## Kotlin responsibilities
 
 - Add small serializable registry/license models and a loader/validator.
-- Use `sounds/` as the default instrument-library root and allow only an explicit local configuration override.
+- Use `../../../sounds` as the default instrument-library root and allow only an explicit local configuration override.
 - Resolve registry-relative paths against that root.
 - Parse the supported SFZ subset used by this pack and validate every `sample=` reference against path traversal, symlink escape, and file existence.
 - Read every referenced WAV header and validate RIFF/WAVE PCM, positive sample rate/channels/frame count, finite decoded samples when decoded, and sample rate matching `workingSampleRate`.
@@ -154,4 +154,4 @@ Manual smoke test:
 
 ## Completion report
 
-Report schema, `sounds/` root/configuration, all SFZ/sample validation results, asset-portability policy, license provenance, MIDI channel convention, changed files, tests/build commands, manual validation, assumptions, and missing mappings/assets (currently crash/cymbal).
+Report schema, `../../../sounds` root/configuration, all SFZ/sample validation results, asset-portability policy, license provenance, MIDI channel convention, changed files, tests/build commands, manual validation, assumptions, and missing mappings/assets (currently crash/cymbal).
