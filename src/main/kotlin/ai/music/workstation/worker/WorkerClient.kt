@@ -86,6 +86,7 @@ class WorkerClient(
         is RepairCommand -> "/repair"
         is MasterCommand -> "/master"
         is MP3ConvertCommand -> "/mp3_convert"
+        is MP3ExportCommand -> "/mp3_export"
         is HealthCheck -> "/health"
     }
 
@@ -129,6 +130,11 @@ class WorkerClient(
                 is MP3ConvertCommand -> {
                     put("path", command.path)
                     put("outputPath", command.outputPath)
+                }
+                is MP3ExportCommand -> {
+                    put("path", command.path)
+                    put("outputPath", command.outputPath)
+                    put("bitrateKbps", command.bitrateKbps)
                 }
                 is HealthCheck -> Unit
             }

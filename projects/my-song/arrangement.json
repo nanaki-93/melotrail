@@ -1,0 +1,177 @@
+{
+    "version": 1,
+    "sections": [
+        {
+            "index": 0,
+            "partId": "phrase1",
+            "instruments": [
+                {
+                    "name": "source",
+                    "mode": "source"
+                },
+                {
+                    "name": "bass",
+                    "mode": "generated",
+                    "role": "root_fifth",
+                    "density": 0.4
+                }
+            ],
+            "transitionOut": {
+                "type": "none",
+                "bars": 0
+            }
+        },
+        {
+            "index": 1,
+            "partId": "phrase1",
+            "instruments": [
+                {
+                    "name": "source",
+                    "mode": "source"
+                },
+                {
+                    "name": "drums",
+                    "mode": "generated",
+                    "role": "rhythm",
+                    "density": 0.6
+                }
+            ],
+            "transitionOut": {
+                "type": "none",
+                "bars": 0
+            }
+        },
+        {
+            "index": 2,
+            "partId": "phrase2",
+            "instruments": [
+                {
+                    "name": "source",
+                    "mode": "source"
+                },
+                {
+                    "name": "pad",
+                    "mode": "generated",
+                    "role": "harmony",
+                    "density": 0.3
+                }
+            ],
+            "transitionOut": {
+                "type": "none",
+                "bars": 0
+            }
+        },
+        {
+            "index": 3,
+            "partId": "chorus1",
+            "instruments": [
+                {
+                    "name": "source",
+                    "mode": "source"
+                },
+                {
+                    "name": "bass",
+                    "mode": "generated",
+                    "role": "root_fifth",
+                    "density": 0.8
+                },
+                {
+                    "name": "drums",
+                    "mode": "generated",
+                    "role": "rhythm",
+                    "density": 0.9
+                }
+            ],
+            "transitionOut": {
+                "type": "none",
+                "bars": 0
+            }
+        },
+        {
+            "index": 4,
+            "partId": "phrase1",
+            "instruments": [
+                {
+                    "name": "source",
+                    "mode": "source"
+                },
+                {
+                    "name": "bass",
+                    "mode": "generated",
+                    "role": "root_fifth",
+                    "density": 0.5
+                }
+            ],
+            "transitionOut": {
+                "type": "none",
+                "bars": 0
+            }
+        },
+        {
+            "index": 5,
+            "partId": "phrase2",
+            "instruments": [
+                {
+                    "name": "source",
+                    "mode": "source"
+                },
+                {
+                    "name": "drums",
+                    "mode": "generated",
+                    "role": "rhythm",
+                    "density": 0.7
+                }
+            ],
+            "transitionOut": {
+                "type": "none",
+                "bars": 0
+            }
+        },
+        {
+            "index": 6,
+            "partId": "chorus2",
+            "instruments": [
+                {
+                    "name": "source",
+                    "mode": "source"
+                },
+                {
+                    "name": "pad",
+                    "mode": "generated",
+                    "role": "harmony",
+                    "density": 0.6
+                },
+                {
+                    "name": "bass",
+                    "mode": "generated",
+                    "role": "root_fifth",
+                    "density": 0.8
+                }
+            ],
+            "transitionOut": {
+                "type": "none",
+                "bars": 0
+            }
+        },
+        {
+            "index": 7,
+            "partId": "phrase1",
+            "instruments": [
+                {
+                    "name": "source",
+                    "mode": "source"
+                },
+                {
+                    "name": "drums",
+                    "mode": "generated",
+                    "role": "rhythm",
+                    "density": 0.5
+                }
+            ],
+            "transitionOut": {
+                "type": "none",
+                "bars": 0
+            }
+        }
+    ]
+}

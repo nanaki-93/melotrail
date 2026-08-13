@@ -197,33 +197,25 @@ class LocalQwenArrangementPlanner(
         val promptJson = Json { encodeDefaults = true }
         val CONSTRAINTS = listOf(
             "Return JSON only, with no markdown or prose.",
-            "Use arrangement schema version 1 exactly; do not add fields.",
+            "Use arrangement schema version 2 exactly; do not add fields.",
             "Preserve the requested structure exactly.",
             "Use only allowed instruments.",
             "Every section must retain one source instrument.",
             "Generated instrument density must be a finite number from 0 through 1.",
-            "Only transition type none with 0 bars is supported.",
+            "A transition is either none (0 bars), crossfade (0 bars and crossfadeMs 80..4000), or bridge (1..2 bars with bridge data).",
+            "Bridge data can use only bass_pickup, drum_fill, pad_swell, and melody_pickup; use melody_pickup only with confident harmony.",
             "Do not include paths, code, commands, or executable content."
         )
         const val SYSTEM_PROMPT = """
             You are a music arrangement planner. You do not generate audio, code, commands, or file paths.
-            Return only a valid JSON arrangement matching this schema:
-             ```json
-                {
-                  "version": 1,
-                  "sections": [
-                    {
-                      "index": 0,
-                      "partId": "A",
-                      "instruments": [
-                        {"name": "piano", "mode": "source"},
-                        {"name": "bass", "mode": "generated", "role": "root_fifth", "density": 0.3}
-                      ],
-                      "transitionOut": {"type": "none", "bars": 0}
-                    }
-                  ]
-                }
-                ```
+            Return only a valid JSON arrangement matching this schema. Top-level fields are exactly version and sections.
+            {"version":2,"sections":[{"index":0,"partId":"A","instruments":[
+            {"name":"source","mode":"source"},
+            {"name":"bass","mode":"generated","role":"root_fifth","density":0.3}],
+            "transitionOut":{"type":"bridge","bars":1,"crossfadeMs":180,
+            "bridge":{"energy":0.5,"elements":["bass_pickup","drum_fill","pad_swell"]}}}]}
+            Source instruments never set density. Generated instruments always set density. For the final section use
+            {"type":"none","bars":0,"crossfadeMs":0}. Do not use markdown.
              Do not include markdown or prose.
         """
     }

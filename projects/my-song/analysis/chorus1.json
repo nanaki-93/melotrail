@@ -1,0 +1,9 @@
+{
+    "duration": 13.561519274376417,
+    "sampleRate": 44100,
+    "channels": 2,
+    "frameCount": 598063,
+    "peak": 0.28948974609375,
+    "rms": 0.04706520128280828,
+    "nearSilence": false
+}

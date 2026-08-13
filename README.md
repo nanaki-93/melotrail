@@ -75,6 +75,29 @@ output directory, or `--dry-run` to validate without changing files.
 The build command is deterministic and local. `--no-ai` makes that choice
 explicit; no model output is executed as code, commands, or paths.
 
+### AI bridge review workflow
+
+Qwen creates a reviewable draft instead of overwriting an approved song. Its
+transition plan can request only local, bounded 0–2 bar bridges made from
+generated bass pickups, drum fills, pad swells, and short melody pickups.
+
+```bash
+# Re-run analysis after upgrading so BPM/key/silence metadata is available.
+make cli ARGS='part analyze ./projects/my-song --id phrase1'
+
+make cli ARGS='arrange --project ./projects/my-song --planner qwen --instruments source,bass,drums,pad --style "warm lo-fi"'
+make cli ARGS='preview --project ./projects/my-song'
+# Listen to projects/my-song/previews/*.wav.
+make cli ARGS='approve --project ./projects/my-song'
+make cli ARGS='render --project ./projects/my-song'
+```
+
+`render` writes the generated `bass.wav`, `drums.wav`, `pad.wav`, and
+`bridges.wav` stems when the plan uses them, plus `mix/mix.wav`. `build` keeps
+an approved `arrangement.json`, applies the audible Bedroom LoFi preset, and
+creates `output/master.wav`. It also creates `output/youtube.mp3` when the
+optional local `lameenc` dependency is installed with `make python-install`.
+
 ### Optional local Qwen planning
 
 Qwen is optional and only plans validated `arrangement.json` data. Start an

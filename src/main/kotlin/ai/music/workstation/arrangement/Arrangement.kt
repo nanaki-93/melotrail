@@ -9,10 +9,11 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 
-/** Version 1 of the local arrangement.json format. */
+/** Versioned local arrangement.json format. Version 1 remains readable. */
 @Serializable
 data class Arrangement(
-    val version: Int = CURRENT_VERSION,
+    /** New plans use V2 explicitly; the default keeps programmatic V1 callers compatible. */
+    val version: Int = 1,
     val sections: List<ArrangementSection> = emptyList()
 ) {
     fun validate(
@@ -29,7 +30,9 @@ data class Arrangement(
     }
 
     companion object {
+        /** V1 is the compatibility default. V2 adds renderable transition metadata. */
         const val CURRENT_VERSION = 1
+        const val LATEST_VERSION = 2
     }
 }
 
@@ -58,13 +61,33 @@ enum class InstrumentMode {
 @Serializable
 data class TransitionPlan(
     val type: TransitionType = TransitionType.NONE,
-    val bars: Int = 0
+    val bars: Int = 0,
+    /** Equal-power overlap for a crossfade, or source fade length around a bridge. */
+    val crossfadeMs: Int = 0,
+    val bridge: BridgePlan? = null
 )
 
-/** Only no-op transitions are supported until rendering adds transition effects. */
+/** Transitions are plans, never arbitrary model-supplied audio or code. */
 @Serializable
 enum class TransitionType {
-    @SerialName("none") NONE
+    @SerialName("none") NONE,
+    @SerialName("crossfade") CROSSFADE,
+    @SerialName("bridge") BRIDGE
+}
+
+@Serializable
+data class BridgePlan(
+    val energy: Double = 0.5,
+    /** Built-in renderer names only: bass_pickup, drum_fill, pad_swell, melody_pickup. */
+    val elements: List<BridgeElement> = emptyList()
+)
+
+@Serializable
+enum class BridgeElement {
+    @SerialName("bass_pickup") BASS_PICKUP,
+    @SerialName("drum_fill") DRUM_FILL,
+    @SerialName("pad_swell") PAD_SWELL,
+    @SerialName("melody_pickup") MELODY_PICKUP
 }
 
 data class ArrangementValidationResult(
@@ -84,7 +107,7 @@ object ArrangementValidator {
         val errors = mutableListOf<String>()
         val knownPartIds = validPartIds.toSet()
 
-        if (arrangement.version != Arrangement.CURRENT_VERSION) {
+        if (arrangement.version !in 1..Arrangement.LATEST_VERSION) {
             errors += "Unsupported arrangement version: ${arrangement.version}"
         }
 
@@ -157,8 +180,28 @@ object ArrangementValidator {
         transition: TransitionPlan,
         errors: MutableList<String>
     ) {
-        if (transition.bars != 0) {
-            errors += "$sectionLabel transition '${transition.type.name.lowercase()}' must use 0 bars"
+        if (transition.bars !in 0..2) errors += "$sectionLabel transition bars must be between 0 and 2"
+        if (transition.crossfadeMs !in 0..4_000) errors += "$sectionLabel transition crossfade must be between 0 and 4000 ms"
+        when (transition.type) {
+            TransitionType.NONE -> if (transition.bars != 0 || transition.bridge != null) {
+                if (transition.bars != 0) errors += "$sectionLabel transition 'none' must use 0 bars"
+                if (transition.bridge != null) errors += "$sectionLabel no-op transition cannot contain bridge data"
+            }
+            TransitionType.CROSSFADE -> if (transition.crossfadeMs <= 0 || transition.bars != 0 || transition.bridge != null) {
+                errors += "$sectionLabel crossfade requires crossfadeMs and no bridge data"
+            }
+            TransitionType.BRIDGE -> {
+                if (transition.bars !in 1..2 || transition.bridge == null) {
+                    errors += "$sectionLabel bridge requires 1 or 2 bars and bridge data"
+                }
+                transition.bridge?.let { bridge ->
+                    if (!bridge.energy.isFinite() || bridge.energy !in 0.0..1.0) {
+                        errors += "$sectionLabel bridge energy must be between 0 and 1"
+                    }
+                    if (bridge.elements.isEmpty()) errors += "$sectionLabel bridge must contain at least one element"
+                    if (bridge.elements.distinct().size != bridge.elements.size) errors += "$sectionLabel bridge contains duplicate elements"
+                }
+            }
         }
     }
 }
@@ -262,11 +305,19 @@ object ArrangementStore {
     }
 
     fun write(projectRoot: Path, project: Project, arrangement: Arrangement): Path {
+        return writeNamed(projectRoot, project, arrangement, ARRANGEMENT_FILE)
+    }
+
+    fun writeDraft(projectRoot: Path, project: Project, arrangement: Arrangement): Path =
+        writeNamed(projectRoot, project, arrangement, DRAFT_FILE)
+
+    fun writeNamed(projectRoot: Path, project: Project, arrangement: Arrangement, fileName: String): Path {
         val root = projectRoot.toAbsolutePath().normalize()
         project.requireValid(root)
         arrangement.requireValid(project.parts.map { it.id })
 
-        val arrangementPath = root.resolve(ARRANGEMENT_FILE)
+        require(fileName in setOf(ARRANGEMENT_FILE, DRAFT_FILE)) { "Unsupported arrangement filename: $fileName" }
+        val arrangementPath = root.resolve(fileName)
         Files.writeString(
             arrangementPath,
             json.encodeToString(arrangement),
@@ -274,4 +325,6 @@ object ArrangementStore {
         )
         return arrangementPath
     }
+
+    const val DRAFT_FILE = "arrangement.draft.json"
 }

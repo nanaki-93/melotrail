@@ -1,0 +1,48 @@
+{
+    "version": 1,
+    "name": "my-song",
+    "parts": [
+        {
+            "id": "phrase1",
+            "file": "parts/phrase1.wav",
+            "role": "verse",
+            "analysis": {
+                "file": "analysis/phrase1.json"
+            }
+        },
+        {
+            "id": "phrase2",
+            "file": "parts/phrase2.wav",
+            "role": "verse",
+            "analysis": {
+                "file": "analysis/phrase2.json"
+            }
+        },
+        {
+            "id": "chorus1",
+            "file": "parts/chorus1.wav",
+            "role": "chorus",
+            "analysis": {
+                "file": "analysis/chorus1.json"
+            }
+        },
+        {
+            "id": "chorus2",
+            "file": "parts/chorus2.wav",
+            "role": "chorus",
+            "analysis": {
+                "file": "analysis/chorus2.json"
+            }
+        }
+    ],
+    "structure": [
+        "phrase1",
+        "phrase1",
+        "phrase2",
+        "chorus1",
+        "phrase1",
+        "phrase2",
+        "chorus2",
+        "phrase1"
+    ]
+}

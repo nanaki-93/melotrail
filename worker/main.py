@@ -113,7 +113,7 @@ class WorkerHandler(BaseHTTPRequestHandler):
 
 def load_commands() -> None:
     # Importing these modules executes @register_command decorators.
-    from worker.commands import analyze, dsp, repair, mastering, mp3_convert  # noqa: F401
+    from worker.commands import analyze, dsp, repair, mastering, mp3_convert, mp3_export  # noqa: F401
     logger.info("Loaded commands: %s", ", ".join(sorted(COMMANDS)))
 
 

@@ -3,6 +3,7 @@ package ai.music.workstation.cli
 import ai.music.workstation.arrangement.ArrangementInput
 import ai.music.workstation.arrangement.ArrangementPlanner
 import ai.music.workstation.arrangement.ArrangementStore
+import ai.music.workstation.arrangement.ArrangementRenderer
 import ai.music.workstation.arrangement.BassStemGenerationAdapter
 import ai.music.workstation.arrangement.DeterministicArrangementPlanner
 import ai.music.workstation.arrangement.DeterministicStemMixer
@@ -24,6 +25,7 @@ import ai.music.workstation.logging.DefaultLogger
 import ai.music.workstation.worker.AnalyzeCommand
 import ai.music.workstation.worker.AnalyzeOptions
 import ai.music.workstation.worker.MasterCommand
+import ai.music.workstation.worker.MP3ExportCommand
 import ai.music.workstation.worker.RepairCommand
 import ai.music.workstation.worker.RepairSpec
 import ai.music.workstation.worker.WorkerClient
@@ -35,11 +37,15 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.contentOrNull
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
+import java.nio.file.StandardCopyOption
 
 /**
  * Small file-based commands for the arranger project format.
@@ -57,7 +63,7 @@ object ArrangementProjectCommands {
     }
 
     fun handles(args: Array<String>): Boolean =
-        args.firstOrNull() in setOf("project", "part", "arrange", "generate", "mix", "build")
+        args.firstOrNull() in setOf("project", "part", "arrange", "generate", "mix", "render", "preview", "approve", "build")
 
     /** Small boundary that lets the end-to-end command be tested without a running HTTP worker. */
     internal interface BuildWorker {
@@ -65,6 +71,7 @@ object ArrangementProjectCommands {
         suspend fun analyze(path: Path): PartAnalysis
         suspend fun repair(inputPath: Path, outputPath: Path)
         suspend fun master(inputPath: Path, outputPath: Path)
+        suspend fun exportMp3(inputPath: Path, outputPath: Path): Boolean = false
     }
 
     fun execute(args: Array<String>): String = runBlocking {
@@ -82,7 +89,9 @@ object ArrangementProjectCommands {
         }
         "arrange" -> arrange(args)
         "generate" -> generateBass(args)
-        "mix" -> mixStems(args)
+        "mix", "render" -> mixStems(args)
+        "preview" -> previewDraft(args)
+        "approve" -> approveDraft(args)
         "build" -> buildProject(args, createBuildWorker())
         else -> throw IllegalArgumentException("Unknown arranger command")
     }
@@ -187,11 +196,11 @@ object ArrangementProjectCommands {
             AnalyzeCommand(
                 path = source.toString(),
                 options = AnalyzeOptions(
-                    detectBPM = false,
-                    detectKey = false,
-                    detectLoudness = false,
-                    detectOnsets = false,
-                    detectBeats = false,
+                    detectBPM = true,
+                    detectKey = true,
+                    detectLoudness = true,
+                    detectOnsets = true,
+                    detectBeats = true,
                     detectSections = false
                 )
             )
@@ -239,8 +248,16 @@ object ArrangementProjectCommands {
                 style = options["--style"]
             )
         )
-        val arrangementPath = ArrangementStore.write(projectRoot, project, arrangement)
-        return "Created $plannerName arrangement: $arrangementPath"
+        val arrangementPath = if (plannerName == QWEN_PLANNER) {
+            ArrangementStore.writeDraft(projectRoot, project, arrangement)
+        } else {
+            ArrangementStore.write(projectRoot, project, arrangement)
+        }
+        return if (plannerName == QWEN_PLANNER) {
+            "Created Qwen arrangement draft: $arrangementPath. Run `preview --project ${projectRoot}` then `approve --project ${projectRoot}`."
+        } else {
+            "Created $plannerName arrangement: $arrangementPath"
+        }
     }
 
     private fun plannerFor(name: String): ArrangementPlanner = when (name) {
@@ -294,40 +311,73 @@ object ArrangementProjectCommands {
         arrangement.requireValid(project.parts.map { it.id })
         require(arrangement.sections.isNotEmpty()) { "Arrangement must contain at least one section to mix" }
 
-        val decoder = WAVDecoder(NoOpErrorReporter)
-        val decodedSources = arrangement.sections.map { section ->
-            val part = project.parts.first { it.id == section.partId }
-            val source = projectRoot.resolve(part.file)
-            require(source.fileName.toString().substringAfterLast('.', "").lowercase() in WAV_EXTENSIONS) {
-                "Simple stem mixing currently supports WAV source parts: ${part.file}"
-            }
-            section to decoder.decode(source)
-        }
-        val targetSampleRate = decodedSources.first().second.format.sampleRate
-        var startFrame = 0
-        val sourceTracks = decodedSources.map { (section, decoded) ->
-            val buffer = AudioResampler.resample(decoded, targetSampleRate)
-            val track = MixTrack(
-                name = "source-${section.index}-${section.partId}",
-                buffer = buffer,
-                startFrame = startFrame
-            )
-            startFrame = Math.addExact(startFrame, buffer.length)
-            track
-        }
-        val bassPath = projectRoot.resolve("stems/bass.wav")
-        val generatedTracks = if (Files.isRegularFile(bassPath)) {
-            listOf(MixTrack("bass", decoder.decode(bassPath), generated = true))
-        } else {
-            emptyList()
-        }
+        val rendered = renderProject(projectRoot, project, arrangement)
         val mixer = DeterministicStemMixer()
         val mixed = mixer.mix(
-            sourceTracks + generatedTracks,
-            MixSettings(targetSampleRate = targetSampleRate, dry = "--dry" in options)
+            rendered.tracks,
+            MixSettings(targetSampleRate = rendered.sampleRate, dry = "--dry" in options)
         )
+        Files.createDirectories(projectRoot.resolve("stems"))
+        rendered.tracks.filter { it.generated }.forEach { track ->
+            mixer.writeWav(mixer.mix(listOf(track), MixSettings(targetSampleRate = rendered.sampleRate)), projectRoot.resolve("stems/${track.name}.wav"))
+        }
         val output = mixer.writeWav(mixed, projectRoot.resolve("mix/mix.wav"))
-        return "Created ${if ("--dry" in options) "dry " else ""}mix: $output"
+        return "Created ${if ("--dry" in options) "dry " else ""}mix: $output (${rendered.boundaries.size} rendered transitions)"
+    }
+
+    private fun previewDraft(args: Array<String>): String {
+        val projectRoot = parseProjectOnly(args, "preview")
+        val project = readProject(projectRoot)
+        project.requireValid(projectRoot)
+        val draftPath = projectRoot.resolve(ArrangementStore.DRAFT_FILE)
+        require(Files.isRegularFile(draftPath)) { "Arrangement draft not found: $draftPath. Run arrange --planner qwen first." }
+        val arrangement = json.decodeFromString<ai.music.workstation.arrangement.Arrangement>(Files.readString(draftPath))
+        arrangement.requireValid(project.parts.map { it.id })
+        val rendered = renderProject(projectRoot, project, arrangement)
+        val mixer = DeterministicStemMixer()
+        val mixed = mixer.mix(rendered.tracks, MixSettings(targetSampleRate = rendered.sampleRate))
+        val previewDir = projectRoot.resolve("previews")
+        Files.createDirectories(previewDir)
+        rendered.boundaries.forEach { boundary ->
+            val before = rendered.sampleRate * 2
+            val from = maxOf(0, boundary.startFrame - before)
+            val until = minOf(mixed.buffer.length, boundary.endFrame + before)
+            val samples = mixed.buffer.samples.copyOfRange(from * mixed.buffer.format.channels, until * mixed.buffer.format.channels)
+            mixer.writeWav(
+                ai.music.workstation.arrangement.MixedStem(mixed.buffer.copy(samples = samples, duration = (until - from).toDouble() / rendered.sampleRate), mixed.includedTracks),
+                previewDir.resolve("boundary-${boundary.index + 1}.wav")
+            )
+        }
+        Files.writeString(previewDir.resolve("manifest.txt"), rendered.boundaries.joinToString("\n") { "${it.index + 1}: ${it.description}" }, StandardCharsets.UTF_8)
+        return "Created ${rendered.boundaries.size} boundary previews in $previewDir. Listen to them, then run `approve --project $projectRoot`."
+    }
+
+    private fun approveDraft(args: Array<String>): String {
+        val projectRoot = parseProjectOnly(args, "approve")
+        val project = readProject(projectRoot)
+        val draft = projectRoot.resolve(ArrangementStore.DRAFT_FILE)
+        require(Files.isRegularFile(draft)) { "Arrangement draft not found: $draft" }
+        val arrangement = json.decodeFromString<ai.music.workstation.arrangement.Arrangement>(Files.readString(draft))
+        arrangement.requireValid(project.parts.map { it.id })
+        val temp = projectRoot.resolve("arrangement.approving.json")
+        Files.copy(draft, temp, StandardCopyOption.REPLACE_EXISTING)
+        Files.move(temp, projectRoot.resolve("arrangement.json"), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+        return "Approved arrangement: ${projectRoot.resolve("arrangement.json")}"
+    }
+
+    private fun renderProject(projectRoot: Path, project: Project, arrangement: ai.music.workstation.arrangement.Arrangement): ArrangementRenderer.RenderedArrangement {
+        val decoder = WAVDecoder(NoOpErrorReporter)
+        val sources = arrangement.sections.map { section ->
+            val part = project.parts.first { it.id == section.partId }
+            require(part.file.substringAfterLast('.', "").lowercase() in WAV_EXTENSIONS) { "Rendering requires WAV source parts: ${part.file}" }
+            decoder.decode(projectRoot.resolve(part.file))
+        }
+        return ArrangementRenderer().render(arrangement, sources, loadAnalysesIfPresent(projectRoot, project))
+    }
+
+    private fun parseProjectOnly(args: Array<String>, command: String): Path {
+        require(args.size == 3 && args[1] == "--project") { "Usage: $command --project <project-directory>" }
+        return projectRoot(args[2])
     }
 
     /**
@@ -350,6 +400,7 @@ object ArrangementProjectCommands {
         val repairedPath = outputRoot.resolve("repair.wav")
         val lofiPath = outputRoot.resolve("lofi.wav")
         val masterPath = outputRoot.resolve("master.wav")
+        val mp3Path = outputRoot.resolve("youtube.mp3")
         requireNoSourceOverwrite(projectRoot, project, listOf(repairedPath, lofiPath, masterPath))
 
         if (options.dryRun) {
@@ -388,25 +439,26 @@ object ArrangementProjectCommands {
         }
         complete(3, if (missingAnalyses.isEmpty()) "Reused existing analyses" else "Analyzed ${missingAnalyses.size} missing part(s)")
 
-        runBuildStage("Create deterministic arrangement") {
-            val analyses = loadAnalyses(projectRoot, project)
-            val arrangement = DeterministicArrangementPlanner().plan(
-                ArrangementInput(
-                    project = project,
-                    analyses = analyses,
-                    structure = structure,
-                    requestedInstruments = listOf("source", "bass")
+        val approvedArrangement = projectRoot.resolve("arrangement.json")
+        if (!Files.isRegularFile(approvedArrangement)) {
+            runBuildStage("Create deterministic arrangement") {
+                val analyses = loadAnalyses(projectRoot, project)
+                val arrangement = DeterministicArrangementPlanner().plan(
+                    ArrangementInput(
+                        project = project,
+                        analyses = analyses,
+                        structure = structure,
+                        requestedInstruments = listOf("source", "bass", "drums", "pad")
+                    )
                 )
-            )
-            ArrangementStore.write(projectRoot, project, arrangement)
+                ArrangementStore.write(projectRoot, project, arrangement)
+            }
+            complete(4, "Created deterministic arrangement")
+        } else {
+            complete(4, "Reused approved arrangement.json")
         }
-        complete(4, "Created deterministic arrangement")
 
-        runBuildStage("Generate bass stem") {
-            val arrangement = readArrangement(projectRoot)
-            BassStemGenerationAdapter().generate(projectRoot, project, arrangement, loadAnalyses(projectRoot, project))
-        }
-        complete(5, "Generated stems/bass.wav")
+        complete(5, "Prepared local generated-instrument render")
 
         runBuildStage("Mix stems") {
             mixStems(arrayOf("mix", "--project", projectRoot.toString()))
@@ -427,7 +479,14 @@ object ArrangementProjectCommands {
         runBuildStage("Master audio") { worker.master(lofiPath, masterPath) }
         requireWavOutput(masterPath, "Master")
         complete(9, "Created ${outputRoot.relativizeOrName(masterPath)}")
-        complete(10, "Build complete: $masterPath")
+        val mp3Created = runBuildStage("Export upload-ready MP3") { worker.exportMp3(masterPath, mp3Path) }
+        if (mp3Created) {
+            require(Files.isRegularFile(mp3Path) && Files.size(mp3Path) > 0) { "MP3 export did not create $mp3Path" }
+            Files.writeString(outputRoot.resolve("release.json"), "{\n  \"master\": \"master.wav\",\n  \"youtubeMp3\": \"youtube.mp3\",\n  \"targetLufs\": -14,\n  \"truePeakCeilingDb\": -1\n}\n", StandardCharsets.UTF_8)
+            complete(10, "Build complete: $masterPath and $mp3Path")
+        } else {
+            complete(10, "Build complete: $masterPath (MP3 export unavailable in this worker)")
+        }
         return progress.joinToString(separator = "\n")
     }
 
@@ -448,11 +507,11 @@ object ArrangementProjectCommands {
                     AnalyzeCommand(
                         path = path.toString(),
                         options = AnalyzeOptions(
-                            detectBPM = false,
-                            detectKey = false,
-                            detectLoudness = false,
-                            detectOnsets = false,
-                            detectBeats = false,
+                            detectBPM = true,
+                            detectKey = true,
+                            detectLoudness = true,
+                            detectOnsets = true,
+                            detectBeats = true,
                             detectSections = false
                         )
                     )
@@ -481,17 +540,29 @@ object ArrangementProjectCommands {
                         path = inputPath.toString(),
                         outputPath = outputPath.toString(),
                         settings = mapOf(
-                            "eq_enabled" to false,
-                            "compressor_enabled" to false,
-                            "saturation_enabled" to false,
+                            "eq_enabled" to true,
+                            "eq" to mapOf("bands" to listOf(mapOf("type" to "lowshelf", "frequency" to 180.0, "gain" to 1.5))),
+                            "compressor_enabled" to true,
+                            "compressor" to mapOf("threshold_db" to -18.0, "ratio" to 2.0, "attack_ms" to 15.0, "release_ms" to 150.0),
+                            "saturation_enabled" to true,
+                            "saturation" to mapOf("drive" to 1.08, "mix" to 0.08),
                             "stereo_enabled" to false,
                             "limiter_enabled" to true,
                             "limiter" to mapOf("ceiling_db" to -1.0, "release_ms" to 100.0),
-                            "target_peak_db" to -1.0
+                            "target_peak_db" to -1.0,
+                            "target_lufs" to -14.0
                         )
                     )
                 )
                 requireCompleted(response.status, response.error?.message, "master")
+            }
+
+            override suspend fun exportMp3(inputPath: Path, outputPath: Path): Boolean {
+                val response = client.execute(MP3ExportCommand(inputPath.toString(), outputPath.toString()))
+                if (response.status == WorkerStatus.COMPLETED) return true
+                val message = response.error?.message.orEmpty()
+                if (message.contains("requires lameenc")) return false
+                throw IllegalStateException("Worker mp3 export failed: $message")
             }
         }
     }
@@ -504,7 +575,7 @@ object ArrangementProjectCommands {
 
     private fun applyLoFi(inputPath: Path, outputPath: Path) {
         val input = WAVDecoder(NoOpErrorReporter).decode(inputPath)
-        val preset = LOFIPresets.DEFAULT_PRESETS.first()
+        val preset = checkNotNull(LOFIPresets.getByName("Bedroom LoFi"))
         val processed = DSPChain.createDefaultChain(
             settings = preset.settings,
             sampleRate = input.format.sampleRate,
@@ -521,6 +592,14 @@ object ArrangementProjectCommands {
             }
             part.id to json.decodeFromString<PartAnalysis>(Files.readString(projectRoot.resolve(reference.file)))
         }
+
+    private fun loadAnalysesIfPresent(projectRoot: Path, project: Project): Map<String, PartAnalysis> =
+        project.parts.mapNotNull { part ->
+            part.analysis?.let { reference ->
+                val path = projectRoot.resolve(reference.file)
+                if (Files.isRegularFile(path)) part.id to json.decodeFromString<PartAnalysis>(Files.readString(path)) else null
+            }
+        }.toMap()
 
     private fun readProject(projectRoot: Path): Project =
         json.decodeFromString(Files.readString(projectRoot.resolve(PROJECT_FILE)))
@@ -613,7 +692,14 @@ object ArrangementProjectCommands {
             peak = requiredDouble(output, "peak"),
             rms = requiredDouble(output, "rms"),
             nearSilence = output["nearSilence"]?.jsonPrimitive?.booleanOrNull
-                ?: throw IllegalArgumentException("Worker analysis did not return nearSilence")
+                ?: throw IllegalArgumentException("Worker analysis did not return nearSilence"),
+            bpm = output["bpm"]?.jsonPrimitive?.doubleOrNull,
+            keyRoot = (output["key"] as? kotlinx.serialization.json.JsonObject)?.get("root")?.jsonPrimitive?.contentOrNull,
+            keyMode = (output["key"] as? kotlinx.serialization.json.JsonObject)?.get("mode")?.jsonPrimitive?.contentOrNull,
+            keyConfidence = output["keyConfidence"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
+            leadingSilenceSeconds = output["leadingSilenceSeconds"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
+            trailingSilenceSeconds = output["trailingSilenceSeconds"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
+            onsetsSeconds = output["onsets"]?.jsonArray?.mapNotNull { it.jsonPrimitive.doubleOrNull } ?: emptyList()
         )
 
     private fun requiredDouble(

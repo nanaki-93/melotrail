@@ -63,3 +63,11 @@ data class MP3ConvertCommand(
 ) : WorkerCommand() {
     override val commandName: String = "mp3_convert"
 }
+
+data class MP3ExportCommand(
+    val path: String,
+    val outputPath: String,
+    val bitrateKbps: Int = 320
+) : WorkerCommand() {
+    override val commandName: String = "mp3_export"
+}

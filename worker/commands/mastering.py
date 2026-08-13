@@ -50,6 +50,15 @@ def master_command(request: dict) -> dict:
     if settings.get("stereo_enabled", False):
         audio = apply_stereo(audio, settings.get("stereo", {}))
 
+    # Loudness is set before final limiting so the limiter protects the upload
+    # master without silently leaving quiet songs far below the release target.
+    target_lufs = settings.get("target_lufs")
+    if target_lufs is not None:
+        current_lufs = analyze_loudness(audio)["integrated_lufs"]
+        gain_db = float(target_lufs) - float(current_lufs)
+        gain_db = max(-12.0, min(12.0, gain_db))
+        audio *= 10 ** (gain_db / 20.0)
+
     if settings.get("limiter_enabled", False):
         audio = apply_limiter(
             audio, sample_rate, settings.get("limiter", {})

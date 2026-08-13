@@ -16,7 +16,15 @@ data class PartAnalysis(
     val frameCount: Long,
     val peak: Double,
     val rms: Double,
-    val nearSilence: Boolean
+    val nearSilence: Boolean,
+    /** Optional musical metadata; null keeps analyses written by V1 compatible. */
+    val bpm: Double? = null,
+    val keyRoot: String? = null,
+    val keyMode: String? = null,
+    val keyConfidence: Double = 0.0,
+    val leadingSilenceSeconds: Double = 0.0,
+    val trailingSilenceSeconds: Double = 0.0,
+    val onsetsSeconds: List<Double> = emptyList()
 )
 
 /** Stores a part analysis locally and points the part at its JSON file. */

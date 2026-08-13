@@ -5,6 +5,7 @@ numpy>=1.24.0
 scipy>=1.10.0
 soundfile>=0.12.1
 librosa>=0.10.0
+lameenc>=1.8.1
 
 # DSP and analysis
 onsetdetectors>=0.1.0
