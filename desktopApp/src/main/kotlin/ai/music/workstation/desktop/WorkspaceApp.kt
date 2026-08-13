@@ -1,6 +1,7 @@
 package ai.music.workstation.desktop
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.horizontalScroll
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
@@ -37,6 +39,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.key.Key
@@ -59,6 +62,7 @@ import kotlin.math.roundToInt
 
 object WorkspaceTags {
     const val PROJECT_HEADER = "project-header"
+    const val WORKSPACE_NAV = "workspace-nav"
     const val PARTS_PANEL = "parts-panel"
     const val STRUCTURE_PANEL = "structure-panel"
     const val ARRANGEMENT_PANEL = "arrangement-panel"
@@ -98,7 +102,7 @@ fun WorkspaceApp(viewModel: WorkspaceViewModel, onExit: () -> Unit = {}) {
 @Composable
 fun WorkspaceScreen(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, onExit: () -> Unit = {}) {
     Column(
-        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(16.dp)
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(14.dp)
             .onPreviewKeyEvent { event: androidx.compose.ui.input.key.KeyEvent ->
                 if (event.type != KeyEventType.KeyDown || (!event.isCtrlPressed && !event.isMetaPressed)) false
                 else when (event.key) {
@@ -122,35 +126,65 @@ private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
     val mutationsDisabled = state.operation.isMutating
     Card(
         modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.PROJECT_HEADER },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.Surface),
+        border = BorderStroke(1.dp, MusicWorkspaceTokens.Border)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text("Personal AI Music Arranger", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("♫", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.headlineMedium)
+                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    Text("AI Music Studio", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    Text("Compose · Arrange · Mix", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                WorkspaceNavigation()
+                Spacer(Modifier.weight(1f))
+                OutlinedButton(
+                    onClick = { onIntent(WorkspaceIntent.ShowCreateProject) },
+                    enabled = !mutationsDisabled,
+                    modifier = Modifier.semantics { testTag = WorkspaceTags.CREATE_PROJECT; contentDescription = "Create a new project" }
+                ) { Text("New") }
+                OutlinedButton(
+                    onClick = { onIntent(WorkspaceIntent.ChooseProject) },
+                    enabled = !mutationsDisabled,
+                    modifier = Modifier.semantics { testTag = WorkspaceTags.OPEN_PROJECT; contentDescription = "Open an existing project" }
+                ) { Text("Open") }
+                Button(onClick = { onIntent(WorkspaceIntent.BuildSong) }, enabled = canBuild(state), modifier = Modifier.semantics { testTag = WorkspaceTags.BUILD_SONG; contentDescription = "Build song release artifacts" }) { Text("Build song") }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 val projectText = state.project?.let { "Project · ${it.name} · ${it.renderFormat?.sampleRate ?: "?"} Hz / ${it.renderFormat?.channels ?: "?"} ch / PCM-24" }
                     ?: "Start workspace · create or open an arranger project"
                 Text(projectText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 ReadinessText(state.runtimeReadiness, onIntent)
-            }
-            OutlinedButton(
-                onClick = { onIntent(WorkspaceIntent.ShowCreateProject) },
-                enabled = !mutationsDisabled,
-                modifier = Modifier.semantics { testTag = WorkspaceTags.CREATE_PROJECT; contentDescription = "Create a new project" }
-            ) { Text("Create") }
-            OutlinedButton(
-                onClick = { onIntent(WorkspaceIntent.ChooseProject) },
-                enabled = !mutationsDisabled,
-                modifier = Modifier.semantics { testTag = WorkspaceTags.OPEN_PROJECT; contentDescription = "Open an existing project" }
-            ) { Text("Open project") }
-            Column {
-                Button(onClick = { onIntent(WorkspaceIntent.BuildSong) }, enabled = canBuild(state), modifier = Modifier.semantics { testTag = WorkspaceTags.BUILD_SONG; contentDescription = "Build song release artifacts" }) { Text("Build song") }
-                Text(buildSongPrerequisite(state), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Text(buildSongPrerequisite(state), modifier = Modifier.widthIn(max = 330.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
+}
+
+@Composable
+private fun WorkspaceNavigation() {
+    Row(
+        modifier = Modifier.semantics { testTag = WorkspaceTags.WORKSPACE_NAV; contentDescription = "Workspace sections: Project, Arrange, Mix and Master" },
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        WorkspaceNavItem("Project", active = true)
+        WorkspaceNavItem("Arrange")
+        WorkspaceNavItem("Mix & Master")
+    }
+}
+
+@Composable
+private fun WorkspaceNavItem(label: String, active: Boolean = false) {
+    Text(
+        label,
+        modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+            .background(if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else MusicWorkspaceTokens.ElevatedSurface)
+            .padding(horizontal = 10.dp, vertical = 7.dp),
+        color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.labelMedium
+    )
 }
 
 @Composable
@@ -266,6 +300,21 @@ private fun StructurePanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) 
     if (state.structureDraft.isEmpty()) {
         Text("Add parts in the intended order. Empty structure cannot be arranged or built.", color = MaterialTheme.colorScheme.onSurfaceVariant)
     } else {
+        Text("SECTION FLOW", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            state.structureDraft.forEachIndexed { index, partId ->
+                val occurrence = state.structureDraft.take(index + 1).count { it == partId }
+                Text(
+                    "$partId$occurrence",
+                    modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(7.dp))
+                        .background(if (index % 2 == 0) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f) else MusicWorkspaceTokens.ElevatedSurface)
+                        .padding(horizontal = 10.dp, vertical = 7.dp),
+                    color = if (index % 2 == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
         state.structureDraft.forEachIndexed { index, partId ->
             StructureRow(index, partId, state, !disabled, onIntent)
         }
@@ -537,10 +586,11 @@ private fun PlaceholderPanel(panel: Panel, state: WorkspaceUiState, onIntent: (W
 private fun WorkspaceCard(title: String, tag: String, content: @Composable () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().semantics { testTag = tag },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface),
+        border = BorderStroke(1.dp, MusicWorkspaceTokens.Border)
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
+        Column(modifier = Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(title.uppercase(), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
             content()
         }

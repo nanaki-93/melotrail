@@ -21,6 +21,7 @@ class WorkspaceScreenTest {
 
         listOf(
             WorkspaceTags.PROJECT_HEADER,
+            WorkspaceTags.WORKSPACE_NAV,
             WorkspaceTags.PARTS_PANEL,
             WorkspaceTags.STRUCTURE_PANEL,
             WorkspaceTags.ARRANGEMENT_PANEL,

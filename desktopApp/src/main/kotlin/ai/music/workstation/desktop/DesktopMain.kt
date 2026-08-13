@@ -2,7 +2,9 @@ package ai.music.workstation.desktop
 
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.application
+import androidx.compose.ui.window.rememberWindowState
 import ai.music.workstation.application.DefaultProjectApplicationService
 import ai.music.workstation.application.DefaultArrangementApplicationService
 import ai.music.workstation.application.DefaultMixApplicationService
@@ -37,6 +39,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 fun main() = application {
+    val desktopWindowState = rememberWindowState(placement = WindowPlacement.Maximized)
     val arrangementService = DefaultArrangementApplicationService()
     val mixService = DefaultMixApplicationService()
     val client = DesktopServiceComposition.workerClient()
@@ -54,6 +57,7 @@ fun main() = application {
         operationLogger = LocalDesktopOperationLogger()
     )
     Window(
+        state = desktopWindowState,
         onCloseRequest = {
             if (viewModel.requestClose()) {
                 viewModel.close()
@@ -63,7 +67,6 @@ fun main() = application {
         title = "Personal AI Music Arranger"
     ) {
         window.minimumSize = java.awt.Dimension(900, 620)
-        window.size = java.awt.Dimension(1440, 900)
         MusicWorkstationTheme {
             WorkspaceApp(viewModel) {
                 exitApplication()
