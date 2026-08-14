@@ -67,6 +67,8 @@ data class WorkspaceUiState(
     val playback: PlaybackSnapshot = PlaybackSnapshot(),
     val preview: PreviewUiState = PreviewUiState(),
     val selectedPartId: String? = null,
+    /** UI-only selected canonical artifact; it is never written to project files. */
+    val selectedArtifact: CreationArtifactReference? = null,
     val midiQualityReview: MidiQualityReviewDraft = MidiQualityReviewDraft(),
     val audioPreparation: AudioPreparationUiState = AudioPreparationUiState(),
     val arrangementDraft: ArrangementDraft = ArrangementDraft(),
@@ -80,7 +82,10 @@ data class WorkspaceUiState(
     val downstreamArtifactsStale: Boolean = false,
     val arrangementDraftDirty: Boolean = false,
     val retry: WorkspaceRetry? = null
-)
+) {
+    val creationSelection: CreationSelection
+        get() = CreationSelection(selectedPartId, selectedArrangementSection, selectedArtifact)
+}
 
 /** The UI exposes three named cleanup choices only; no worker parameters are editable here. */
 data class MidiQualityReviewDraft(val profile: MidiCleanupProfile = MidiCleanupProfile.CONSERVATIVE)
@@ -379,7 +384,7 @@ class WorkspaceViewModel(
             WorkspaceIntent.GenerateArrangement -> generateArrangement()
             WorkspaceIntent.PreviewArrangement -> previewArrangement()
             WorkspaceIntent.ApproveArrangement -> approveArrangement()
-            is WorkspaceIntent.SelectArrangementSection -> mutableState.update { it.copy(selectedArrangementSection = intent.index) }
+            is WorkspaceIntent.SelectArrangementSection -> selectArrangementSection(intent.index)
             WorkspaceIntent.Retry -> retry()
             WorkspaceIntent.DismissDialog -> mutableState.update { it.copy(dialog = null) }
             WorkspaceIntent.DismissNotification -> mutableState.update { it.copy(notification = null) }
@@ -559,10 +564,10 @@ class WorkspaceViewModel(
         val project = state.value.project ?: return
         val part = project.parts.find { it.id == partId } ?: return
         if (part.sourceType != PartSourceType.AUDIO) {
-            mutableState.update { it.copy(selectedPartId = partId, midiQualityReview = MidiQualityReviewDraft(), audioPreparation = AudioPreparationUiState(partId = partId), notification = "Audio preparation is available for WAV/MP3 parts only.") }
+            mutableState.update { it.copy(selectedPartId = partId, selectedArtifact = CreationArtifactReference(CreationArtifactKind.PART_SOURCE, partId), midiQualityReview = MidiQualityReviewDraft(), audioPreparation = AudioPreparationUiState(partId = partId), notification = "Audio preparation is available for WAV/MP3 parts only.") }
             return
         }
-        mutableState.update { it.copy(selectedPartId = partId, midiQualityReview = MidiQualityReviewDraft(), audioPreparation = AudioPreparationUiState(partId = partId), notification = null) }
+        mutableState.update { it.copy(selectedPartId = partId, selectedArtifact = CreationArtifactReference(CreationArtifactKind.PART_SOURCE, partId), midiQualityReview = MidiQualityReviewDraft(), audioPreparation = AudioPreparationUiState(partId = partId), notification = null) }
         loadPreparation(project.root, partId)
     }
 
@@ -1015,7 +1020,28 @@ class WorkspaceViewModel(
 
     private fun selectPlaybackSource(source: PlaybackSource) {
         player?.stop()
-        mutableState.update { it.copy(playback = it.playback.copy(source = source)) }
+        val artifact = when (source) {
+            PlaybackSource.DRY -> CreationArtifactReference(CreationArtifactKind.DRY_MIX)
+            PlaybackSource.LOFI -> CreationArtifactReference(CreationArtifactKind.LOFI_MIX)
+            PlaybackSource.MASTER -> CreationArtifactReference(CreationArtifactKind.MASTER)
+        }
+        mutableState.update { it.copy(playback = it.playback.copy(source = source), selectedArtifact = artifact) }
+    }
+
+    private fun selectArrangementSection(index: Int?) {
+        val current = state.value
+        val arrangementPartId = index?.let { selected -> current.arrangement?.sections?.firstOrNull { it.index == selected }?.partId }
+        val structurePartId = index?.let { selected -> current.project?.structure?.firstOrNull { it.index == selected }?.partId }
+        val artifact = current.arrangement?.let {
+            CreationArtifactReference(if (it.approvalRequired) CreationArtifactKind.ARRANGEMENT_DRAFT else CreationArtifactKind.ARRANGEMENT, sectionIndex = index)
+        }
+        mutableState.update {
+            it.copy(
+                selectedArrangementSection = index,
+                selectedPartId = arrangementPartId ?: structurePartId ?: it.selectedPartId,
+                selectedArtifact = artifact ?: it.selectedArtifact
+            )
+        }
     }
 
     private fun playPause() {
@@ -1070,6 +1096,7 @@ class WorkspaceViewModel(
                 arrangement = null,
                 mix = runCatching { mixService.load(project.root) }.getOrNull(),
                 selectedPartId = null,
+                selectedArtifact = null,
                 midiQualityReview = MidiQualityReviewDraft(),
                 audioPreparation = AudioPreparationUiState(),
                 operation = WorkspaceOperation.Idle,

@@ -194,7 +194,9 @@ data class ProjectReadiness(
     val dryMixAvailable: Boolean,
     val loFiMixAvailable: Boolean,
     val masterAvailable: Boolean,
-    val midiQualityReportsReady: Boolean = false
+    val midiQualityReportsReady: Boolean = false,
+    /** A final release is complete only when metadata accompanies the validated master. */
+    val releaseAvailable: Boolean = false
 )
 
 class DefaultProjectApplicationService(
@@ -467,7 +469,8 @@ class DefaultProjectApplicationService(
                 dryMixAvailable = Files.isRegularFile(root.resolve("mix/dry.wav")),
                 loFiMixAvailable = Files.isRegularFile(root.resolve("mix/lofi.wav")),
                 masterAvailable = Files.isRegularFile(root.resolve("output/master.wav")),
-                midiQualityReportsReady = summaries.isNotEmpty() && summaries.all { it.preparation.midiQuality.status == MidiQualityStatus.CURRENT }
+                midiQualityReportsReady = summaries.isNotEmpty() && summaries.all { it.preparation.midiQuality.status == MidiQualityStatus.CURRENT },
+                releaseAvailable = Files.isRegularFile(root.resolve("output/release.json"))
             )
         )
     }
