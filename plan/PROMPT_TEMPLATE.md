@@ -110,7 +110,15 @@ Testing and completion:
 4. Review the final diff for CWD-dependent library access, UI-only orchestration,
    leaked paths, false-success messages, source mutation, task leakage, and
    unrelated user changes.
-5. Report: changed files; commands/tests and results; manual results; source /
+5. When and only when this task meets every required acceptance criterion,
+   commit its changes before reporting completion. Stage explicitly only the
+   files changed for this task (never use `git add .` or `git add -A`), inspect
+   the staged diff, and commit with a message beginning `Task XXX:`, for example
+   `Task XXX: derive creation progress model`. Do not commit pre-existing,
+   unrelated, or another user's changes. If required acceptance checks fail or
+   are skipped, do not commit; report the task as incomplete with the blocker.
+6. Report: changed files; commit hash and message (or why no commit was made);
+   commands/tests and results; manual results; source /
    artifact validation; assumptions; pre-existing failures; deferred work; and
    remaining limitations. Do not claim optional model, renderer, assets, or OS
    support that you did not actually verify.
