@@ -4,7 +4,7 @@
 
 The Compose Desktop application is the product UI. Improve that application;
 do not extend the older static Spring frontend. It is deprecated and will be
-retired in Task 037 after the desktop workflow and its package have passed the
+retired in Task 057 after the desktop workflow and its package have passed the
 release gate. The reference in `plan/UI.png` is a visual and interaction
 reference, not a feature specification: retain its dark, compact, three-column
 studio feel and section timeline, but do not add its travel, scene, video,
@@ -129,7 +129,7 @@ path traversal, license, or sample validation.
 ## Repository health, bug audit, and legacy retirement
 
 Every implementation task must check its changed surface for regressions and
-leave unrelated working-tree changes alone. Task 037 is the dedicated
+leave unrelated working-tree changes alone. Task 056 is the dedicated
 repository-wide pass; it must not be folded invisibly into a UI task.
 
 It first creates a written, prioritized bug inventory with reproducible steps,
@@ -152,27 +152,42 @@ inventory references and API coverage
   -> assert no tracked legacy-web references remain
 ```
 
-Before deletion, verify no supported users depend on a browser UI and preserve
-the Spring JSON API only if CLI/tests or documented local integrations still
-use it. Do not delete project data, audio assets under `sounds/`, API
-controllers, or worker code. The resulting root route may return a normal 404
-or an explicit API-only response; it must not redirect to stale HTML.
+Before deletion, verify the Compose app and CLI do not depend on the browser UI.
+Preserve the Spring JSON API in this sequence; removing it requires a separate
+explicit product decision even if current adapters do not call it. Do not delete
+project data, audio assets under `sounds/`, API controllers, or worker code. The
+resulting root route may return a normal 404 or an explicit API-only response;
+it must not redirect to stale HTML.
+
+## Task sizing for Qwen3-Coder-30B
+
+Each task has one primary layer or concern. A task may add its matching tests,
+fixtures, and the smallest compile-safe seam, but should not combine a worker
+algorithm, application orchestration, view-model state, and visual redesign.
+Aim for a reviewable change rather than a line-count target. If the selected
+task requires a new public contract that makes the next task possible, keep the
+next behavior inert.
+
+Implement exactly one numbered task per Qwen session. Do not start the next task
+until focused tests, required module tests, acceptance criteria, and diff review
+pass. When a task exposes an unrelated defect, record it; do not expand scope.
+Task 056 is the only full-repository audit. It creates one new Task 059+ per
+verified critical/blocking issue, which must be completed before Task 057.
 
 ## Delivery sequence
 
-| Task | Outcome | Depends on |
+| Phase | Tasks | Outcomes |
 |---|---|---|
-| 029 | Runtime resource locator and comprehensive readiness | 028 |
-| 030 | Reliable part and artifact preview/playback | 029 |
-| 031 | Guided input import and inspection manifest | 029 |
-| 032 | Non-destructive audio cleanup and transcription quality gate | 031 |
-| 033 | Auditable MIDI cleanup profiles and musical quality review | 031 |
-| 034 | Guided creation workspace and state-driven next actions | 029–033 |
-| 035 | Reference-aligned visual shell, timeline, and responsive layout | 034 |
-| 036 | Full workflow verification, migration, documentation, and packaging | 029–035 |
-| 037 | Repository bug audit, cleanup, and static-frontend retirement | 036 |
+| Runtime/playback foundations | 029–032 | Library location/settings, reliable player, typed readiness |
+| Preview | 033–035 | Preview artifacts/state and usable transport UI |
+| Input inspection | 036–039 | Stable report, worker measurement, service integration, guided import |
+| Audio preparation | 040–043 | Deterministic cleanup, bounded plan, transcription gate, A/B UI |
+| MIDI quality | 044–046 | Named cleanup profiles, quality report, review UI |
+| Creation workflow | 047–050 | Derived progress, header/checklist, parts/structure, arrangement/build |
+| Visual refinement | 051–053 | Theme tokens, responsive shell, real timeline/mixer states |
+| Release proof | 054–055 | End-to-end compatibility, docs, packaged-app smoke |
+| Repository health | 056 | Read-only full audit and small follow-up Task 059+ contracts |
+| Legacy retirement | 057–058 | Static frontend removal, guards, reconciled docs/final verification |
 
-Tasks 029–033 deliberately establish behavior before Tasks 034–035 restyle
-it. Task 037 makes the repository match the final desktop-first architecture.
-Implement exactly one task at a time. The existing CLI remains supported and
-calls the same application services; no workflow logic belongs in a composable.
+The existing CLI remains supported and calls the same application services; no
+workflow logic belongs in a composable.

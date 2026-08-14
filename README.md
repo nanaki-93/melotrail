@@ -36,7 +36,7 @@ You can also serve the frontend through Spring Boot at `http://localhost:8080/`.
 Do not open `src/main/resources/static/index.html` directly with `file://`.
 
 The Compose Desktop application below is the supported product UI. The browser
-frontend is scheduled for complete removal in Task 037 of
+frontend is scheduled for complete removal in Task 057 of
 [`plan/PLAN_UI_AND_CREATION.md`](plan/PLAN_UI_AND_CREATION.md); do not build new
 features on it.
 

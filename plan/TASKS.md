@@ -117,12 +117,37 @@ These tasks start only after Task 028 and must be implemented one at a time.
 
 | Task | Name | Depends on | Primary result |
 |---|---|---|---|
-| [029](tasks/029-runtime-resource-readiness.md) | Runtime resource locator and readiness | 028 | Sound library works outside repository CWD; actionable dependency states |
-| [030](tasks/030-reliable-preview-playback.md) | Reliable preview and playback | 029 | Truthful, responsive source/MIDI/artifact monitoring |
-| [031](tasks/031-guided-input-import-inspection.md) | Guided input import and inspection | 029 | WAV/MP3/MIDI preflight and durable preparation report |
-| [032](tasks/032-nondestructive-audio-cleanup.md) | Non-destructive audio cleanup | 031 | Safe input cleanup, A/B, and transcription quality gate |
-| [033](tasks/033-midi-quality-profiles.md) | MIDI cleanup profiles and review | 031 | Auditable transcription-oriented MIDI cleanup |
-| [034](tasks/034-guided-creation-workspace.md) | Guided creation workspace | 029–033 | Clear state-driven creation flow |
-| [035](tasks/035-reference-aligned-desktop-ui.md) | Reference-aligned desktop UI | 034 | Dark compact Compose workspace close to UI.png |
-| [036](tasks/036-creation-workflow-release-gate.md) | Creation workflow release gate | 029–035 | Verified local workflow, docs, and package smoke |
-| [037](tasks/037-repository-health-static-frontend-retirement.md) | Repository health audit and static-frontend retirement | 036 | Audited cleanup and one supported Compose UI |
+| [029](tasks/029-sound-library-locator.md) | Sound-library locator | 028 | One CWD-independent injected library root |
+| [030](tasks/030-desktop-library-settings.md) | Desktop library settings | 029 | Validated user-selectable library root |
+| [031](tasks/031-audio-player-lifecycle.md) | JVM audio-player lifecycle | 028 | Reliable one-line/one-thread WAV playback |
+| [032](tasks/032-runtime-readiness-model.md) | Runtime readiness model | 029–031 | Capability-specific dependency states |
+| [033](tasks/033-preview-artifact-resolver.md) | Preview artifact resolver | 029, 031 | Validated WAV/MP3/MIDI preview artifacts |
+| [034](tasks/034-preview-viewmodel-state.md) | Preview view-model state | 032–033 | Truthful preview/playback state machine |
+| [035](tasks/035-preview-transport-ui.md) | Preview and transport UI | 034 | Accessible preview controls and errors |
+| [036](tasks/036-input-inspection-contract.md) | Input inspection contract | 032 | Versioned preparation report schema |
+| [037](tasks/037-input-inspection-worker.md) | Input inspection worker | 036 | Deterministic MIDI/WAV/MP3 validation and metrics |
+| [038](tasks/038-input-inspection-service.md) | Input inspection service | 036–037 | Atomic reports and preparation snapshot |
+| [039](tasks/039-guided-import-dialog.md) | Guided import dialog | 032, 038 | Clear MIDI/WAV/MP3 import workflow |
+| [040](tasks/040-deterministic-audio-cleanup-worker.md) | Deterministic audio cleanup worker | 037 | Safe independently tested repair operations |
+| [041](tasks/041-cleanup-plan-service.md) | Cleanup plan and provenance service | 038, 040 | Bounded deterministic/AI-assisted cleanup plan |
+| [042](tasks/042-transcription-quality-gate.md) | Transcription quality gate | 038, 041 | Validated raw MIDI and stage-specific failures |
+| [043](tasks/043-audio-preparation-ui.md) | Audio preparation and A/B UI | 035, 039, 041–042 | Consented cleanup, A/B, input selection |
+| [044](tasks/044-midi-cleanup-profiles.md) | MIDI cleanup profiles | 042 | Conservative/transcription/timing profiles |
+| [045](tasks/045-midi-quality-report.md) | MIDI quality report | 044 | Persisted raw-to-clean metrics/provenance |
+| [046](tasks/046-midi-quality-ui.md) | MIDI quality review UI | 035, 045 | Explicit cleanup review and retry |
+| [047](tasks/047-creation-progress-model.md) | Creation progress model | 032, 034, 039, 043, 046 | Deterministic stage and next-action state |
+| [048](tasks/048-creation-header-and-checklist.md) | Creation header and checklist | 047 | Visible creation stepper and next action |
+| [049](tasks/049-parts-and-structure-workspace.md) | Parts and structure workspace | 048 | Linked parts/preparation/structure experience |
+| [050](tasks/050-arrangement-build-workspace.md) | Arrangement and build workspace | 049 | Clear approval and build lifecycle |
+| [051](tasks/051-workspace-theme-tokens.md) | Workspace theme tokens | 050 | Stable reference-aligned visual vocabulary |
+| [052](tasks/052-responsive-workspace-shell.md) | Responsive workspace shell | 051 | Wide/medium/narrow reference layout |
+| [053](tasks/053-timeline-mixer-visualization.md) | Timeline, mixer, visual states | 052 | Real-data timeline and final visual states |
+| [054](tasks/054-end-to-end-workflow-compatibility.md) | End-to-end workflow and compatibility | 029–053 | Fixture-backed new/legacy flow proof |
+| [055](tasks/055-documentation-and-package-smoke.md) | Documentation and package smoke | 054 | Verified current-OS desktop documentation/package |
+| [056](tasks/056-repository-bug-audit.md) | Repository-wide bug audit | 055 | Reproducible report and Task 059+ blockers |
+| [057](tasks/057-static-frontend-retirement.md) | Static-frontend retirement | 056 + blockers | Deprecated web source/server/fallback removed |
+| [058](tasks/058-repository-guards-and-final-docs.md) | Repository guards and final docs | 057 | Drift guard and final verified desktop-first repo |
+
+Task 056 is intentionally read-only except for reports/task contracts. Complete
+every P0/P1 or retirement-blocking Task 059+ it creates before Task 057. Do not
+merge unknown bug fixes into the frontend-removal diff.

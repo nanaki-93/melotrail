@@ -2,7 +2,7 @@
 
 Copy the prompt below into Qwen3-Coder-30B for **one task at a time**. Replace
 `XXX` with a task number. Tasks 022–028 live under `plan/tasks/completed/`;
-the new UI, song-creation, and repository-health tasks are 029–037 under
+the new UI, song-creation, and repository-health tasks are 029–058 under
 `plan/tasks/`.
 
 ```text
@@ -14,13 +14,19 @@ another task. The selected task file is the implementation contract; its Goal,
 Dependencies, Requirements, Tests, Acceptance criteria, and Out of scope are
 binding.
 
+Task-size rule: implement one primary concern and its direct tests. Do not pull
+worker algorithms, application orchestration, view-model state, and visual UI
+from later tasks into this task. If a later task needs a compile-safe seam, add
+the smallest inert contract and report it.
+
 Before coding:
 1. Read README.md and plan/AGENT_GUIDELINES.md completely.
 2. Find the selected task with:
    rg --files plan/tasks | sort | rg '/XXX-'
    Read that single file completely. If it is not found or more than one file
    matches, stop and report the ambiguity; do not guess.
-3. For Tasks 029–037, read plan/PLAN_UI_AND_CREATION.md completely. For desktop
+3. For Tasks 029–058 and any audit-created Task 059+, read
+   plan/PLAN_UI_AND_CREATION.md completely. For desktop
    work also read the relevant sections of plan/PLAN_COMPOSE_DESKTOP.md.
 4. Read plan/ARCHITECTURE.md. If the task touches MIDI, SFZ, samples, rendering,
    sound-library location, licenses, drums, or transitions, also read
@@ -83,8 +89,11 @@ Architecture and safety rules:
 - For every task, inspect the changed surface for reproducible bugs, dead
   references, documentation drift, source/artifact safety regressions, and
   leaked resources. Record a narrow follow-up rather than silently expanding
-  scope. Task 037 is the only repository-wide audit and legacy-frontend removal
-  task; do not delete static frontend files earlier.
+  scope. Task 056 is the only repository-wide audit. Task 057 is the only
+  legacy-frontend removal task; do not delete static frontend files earlier.
+- Task 056 must not fix code: it writes the audit and creates one narrow Task
+  059+ contract per verified P0/P1 or retirement blocker. Complete those tasks
+  separately before Task 057. Do not group unrelated bugs into one task.
 
 Testing and completion:
 1. Add or update focused unit/service/view-model/Compose tests required by the
@@ -107,5 +116,8 @@ Testing and completion:
    support that you did not actually verify.
 ```
 
-Start with Task 029. Do not begin Tasks 030–037 until the prior task’s
-acceptance criteria and relevant checks are satisfied.
+Start with Task 029 and follow each task file's Dependencies, normally in
+ascending order. After Task 056, implement every generated Task 059+ marked P0,
+P1, or retirement-blocking before Task 057; then finish Task 058. Do not mark a
+task complete when a required acceptance check was skipped because a dependency
+was unavailable—report it as incomplete with the exact blocker.
