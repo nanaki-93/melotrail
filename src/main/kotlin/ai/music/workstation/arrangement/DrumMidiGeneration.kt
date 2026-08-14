@@ -209,11 +209,14 @@ class DeterministicDrumMidiGenerator {
 data class GeneratedDrumMidi(val path: Path, val ppq: Int, val hits: List<DrumMidiHit>, val diagnostics: List<String>)
 
 /** Converts reviewed v3 drum controls into a full-timeline, registry-mapped MIDI file. */
-class DrumMidiGenerationAdapter(private val composer: DeterministicDrumMidiGenerator = DeterministicDrumMidiGenerator()) {
+class DrumMidiGenerationAdapter(
+    private val composer: DeterministicDrumMidiGenerator = DeterministicDrumMidiGenerator(),
+    private val libraryRoot: Path
+) {
     fun generate(projectRoot: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): GeneratedDrumMidi {
         val root = projectRoot.toAbsolutePath().normalize()
         project.requireCleanMidi(root)
-        val drums = InstrumentRegistryLoader().load().resolve(LogicalInstrument.DRUMS.wireName)
+        val drums = InstrumentRegistryLoader(libraryRoot).load().resolve(LogicalInstrument.DRUMS.wireName)
         val requests = mutableListOf<DrumGenerationRequest>()
         val timeline = mutableListOf<TimelineSegment>()
         var start = 0L

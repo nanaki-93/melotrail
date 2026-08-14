@@ -243,11 +243,14 @@ class DeterministicStringsMidiGenerator {
 data class GeneratedStringsMidi(val path: Path, val ppq: Int, val notes: List<StringsMidiNote>, val diagnostics: List<String>)
 
 /** Converts approved v3 strings controls into one atomic, inspectable MIDI artifact. */
-class StringsMidiGenerationAdapter(private val composer: DeterministicStringsMidiGenerator = DeterministicStringsMidiGenerator()) {
+class StringsMidiGenerationAdapter(
+    private val composer: DeterministicStringsMidiGenerator = DeterministicStringsMidiGenerator(),
+    private val libraryRoot: Path
+) {
     fun generate(projectRoot: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): GeneratedStringsMidi {
         val root = projectRoot.toAbsolutePath().normalize()
         project.requireCleanMidi(root)
-        val strings = InstrumentRegistryLoader().load().resolve(LogicalInstrument.STRINGS.wireName)
+        val strings = InstrumentRegistryLoader(libraryRoot).load().resolve(LogicalInstrument.STRINGS.wireName)
         val requests = mutableListOf<StringsGenerationRequest>()
         val timeline = mutableListOf<TimelineSegment>()
         var start = 0L

@@ -50,6 +50,8 @@ import ai.music.workstation.arrangement.MidiTransitionGenerationAdapter
 import ai.music.workstation.arrangement.InstrumentRenderer
 import ai.music.workstation.arrangement.SfizzInstrumentRenderer
 import ai.music.workstation.arrangement.StemRenderingMixer
+import ai.music.workstation.arrangement.SoundLibraryLocator
+import ai.music.workstation.arrangement.SoundLibraryLocation
 import ai.music.workstation.arrangement.GlobalSongPlanner
 import ai.music.workstation.arrangement.SongPlanStore
 import ai.music.workstation.arrangement.SongPlan
@@ -180,12 +182,12 @@ object ArrangementProjectCommands {
         "critic" -> critiqueArrangement(args)
         "generate" -> generateMidi(args)
         "mix" -> mixStems(args)
-        "render" -> renderAllStems(args, SfizzInstrumentRenderer())
+        "render" -> renderAllStems(args, buildSfizzRenderer())
         "preview" -> previewDraft(args)
         "approve" -> approveDraft(args)
         "build" -> buildProject(args, createBuildWorker())
         "export-mp3" -> exportMp3(args, createBuildWorker())
-        "quality-gate" -> pianoBassQualityGate(args, SfizzInstrumentRenderer())
+        "quality-gate" -> pianoBassQualityGate(args, buildSfizzRenderer())
         "transcribe" -> transcribe(args)
         "midi-clean" -> midiClean(args)
         "licenses" -> licenses(args)
@@ -413,7 +415,7 @@ object ArrangementProjectCommands {
         val arrangementPath = listOf(root.resolve("arrangement.json"), root.resolve(ArrangementStore.DRAFT_FILE)).firstOrNull(Files::isRegularFile)
             ?: throw IllegalArgumentException("No approved or draft arrangement found in $root")
         val used = usedGeneratedInstrumentNames(root, project, arrangementPath)
-        val registry = InstrumentRegistryLoader().load()
+        val registry = InstrumentRegistryLoader(resolveLibraryRoot().root).load()
         val commercial = args.getOrNull(2) == "--commercial"
         val lines = used.map { name ->
             val descriptor = try { registry.resolve(name) } catch (error: IllegalArgumentException) {
@@ -570,7 +572,7 @@ object ArrangementProjectCommands {
                 Files.readString(projectRoot.resolve(reference.file))
             )
         }
-        val adapter = BassMidiGenerationAdapter()
+        val adapter = BassMidiGenerationAdapter(libraryRoot = resolveLibraryRoot().root)
         val bass = if (arrangementVersion == DetailedArrangement.CURRENT_VERSION) {
             val input = detailedArrangementInput(projectRoot, project)
             val arrangement = json.decodeFromString<DetailedArrangement>(arrangementText)
@@ -602,7 +604,7 @@ object ArrangementProjectCommands {
             require(reference.kind == AnalysisKind.MIDI) { "Drum MIDI generation requires MIDI analysis for '${part.id}'. Run part analyze after MIDI cleanup." }
             part.id to json.decodeFromString<MidiAnalysis>(Files.readString(projectRoot.resolve(reference.file)))
         }
-        val drums = DrumMidiGenerationAdapter().generate(projectRoot, project, arrangement, analyses)
+        val drums = DrumMidiGenerationAdapter(libraryRoot = resolveLibraryRoot().root).generate(projectRoot, project, arrangement, analyses)
         val suffix = if (drums.diagnostics.isEmpty()) "" else "; ${drums.diagnostics.joinToString(" ")}"
         return "Generated drum MIDI: ${drums.path} (${drums.hits.size} hits)$suffix"
     }
@@ -625,7 +627,7 @@ object ArrangementProjectCommands {
             require(reference.kind == AnalysisKind.MIDI) { "Pad MIDI generation requires MIDI analysis for '${part.id}'. Run part analyze after MIDI cleanup." }
             part.id to json.decodeFromString<MidiAnalysis>(Files.readString(projectRoot.resolve(reference.file)))
         }
-        val pad = PadMidiGenerationAdapter().generate(projectRoot, project, arrangement, analyses)
+        val pad = PadMidiGenerationAdapter(libraryRoot = resolveLibraryRoot().root).generate(projectRoot, project, arrangement, analyses)
         val suffix = if (pad.diagnostics.isEmpty()) "" else "; ${pad.diagnostics.joinToString(" ")}"
         return "Generated pad MIDI: ${pad.path} (${pad.notes.size} notes)$suffix"
     }
@@ -648,7 +650,7 @@ object ArrangementProjectCommands {
             require(reference.kind == AnalysisKind.MIDI) { "Strings MIDI generation requires MIDI analysis for '${part.id}'. Run part analyze after MIDI cleanup." }
             part.id to json.decodeFromString<MidiAnalysis>(Files.readString(projectRoot.resolve(reference.file)))
         }
-        val strings = StringsMidiGenerationAdapter().generate(projectRoot, project, arrangement, analyses)
+        val strings = StringsMidiGenerationAdapter(libraryRoot = resolveLibraryRoot().root).generate(projectRoot, project, arrangement, analyses)
         val suffix = if (strings.diagnostics.isEmpty()) "" else "; ${strings.diagnostics.joinToString(" ")}"
         return "Generated strings MIDI: ${strings.path} (${strings.notes.size} notes)$suffix"
     }
@@ -671,7 +673,7 @@ object ArrangementProjectCommands {
             require(reference.kind == AnalysisKind.MIDI) { "Transition generation requires MIDI analysis for '${part.id}'. Run part analyze after MIDI cleanup." }
             part.id to json.decodeFromString<MidiAnalysis>(Files.readString(projectRoot.resolve(reference.file)))
         }
-        val transitions = MidiTransitionGenerationAdapter().generate(projectRoot, project, arrangement, analyses)
+        val transitions = MidiTransitionGenerationAdapter(libraryRoot = resolveLibraryRoot().root).generate(projectRoot, project, arrangement, analyses)
         val suffix = if (transitions.result.diagnostics.isEmpty()) "" else "; ${transitions.result.diagnostics.joinToString(" ")}"
         return "Generated transition MIDI: ${transitions.path} (${transitions.result.events.size} notes; ${transitions.result.placements.sumOf { it.insertedTicksAfter }} inserted ticks)$suffix"
     }
@@ -680,7 +682,10 @@ object ArrangementProjectCommands {
         require(args.size == 3 && args[1] == "--project") {
             "Usage: quality-gate --project <project-directory>"
         }
-        val result = PianoBassQualityGate(renderer).run(projectRoot(args[2]))
+        val result = PianoBassQualityGate(
+            renderer,
+            bassGenerator = BassMidiGenerationAdapter(libraryRoot = resolveLibraryRoot().root)
+        ).run(projectRoot(args[2]))
         return result.progress.joinToString("\n") + "\nQuality gate ${if (result.reusedFinalArtifacts) "reused" else "created"} artifacts: " +
             "midi/generated/piano.mid, midi/generated/bass.mid, stems/piano.wav, stems/bass.wav, mix/dry.wav, quality-gate.json"
     }
@@ -701,7 +706,7 @@ object ArrangementProjectCommands {
             require(reference.kind == AnalysisKind.MIDI) { "Stem rendering requires MIDI analysis for '${part.id}'. Run part analyze after MIDI cleanup." }
             part.id to json.decodeFromString<MidiAnalysis>(Files.readString(root.resolve(reference.file), StandardCharsets.UTF_8))
         }
-        val result = StemRenderingMixer(renderer).render(root, project, arrangement, analyses)
+        val result = StemRenderingMixer(renderer, resolveLibraryRoot().root).render(root, project, arrangement, analyses)
         val report = result.report
         return "${if (result.reused) "Reused" else "Rendered"} ${report.stems.joinToString { it.path }} and ${report.dryMix} " +
             "(${report.timelineFrames} frames, ${report.sampleRate} Hz, ${report.channels} channels, peak gain ${"%.2f".format(report.appliedGainDb)} dB)"
@@ -918,9 +923,9 @@ object ArrangementProjectCommands {
         }
         if (existingArrangementVersion == DetailedArrangement.CURRENT_VERSION && !options.dryRun && options.outputDirectory == null) {
             val service = DefaultBuildApplicationService(
-                DefaultArrangementApplicationService(),
+                DefaultArrangementApplicationService(libraryRoot = resolveLibraryRoot().root),
                 DefaultMixApplicationService(),
-                SfizzInstrumentRenderer(),
+                SfizzInstrumentRenderer(InstrumentRegistryLoader(resolveLibraryRoot().root)),
                 object : BuildAudioWorker {
                     override suspend fun healthCheck(): Boolean = worker.healthCheck()
                     override suspend fun repair(input: Path, output: Path) = worker.repair(input, output)
@@ -1009,7 +1014,7 @@ object ArrangementProjectCommands {
             ?.jsonPrimitive?.contentOrNull?.toIntOrNull()
         if (arrangementVersion == DetailedArrangement.CURRENT_VERSION) {
             runBuildStage("Render detailed arrangement stems") {
-                renderAllStems(arrayOf("render", "--project", projectRoot.toString()), SfizzInstrumentRenderer())
+                renderAllStems(arrayOf("render", "--project", projectRoot.toString()), SfizzInstrumentRenderer(InstrumentRegistryLoader(resolveLibraryRoot().root)))
             }
             complete(5, "Rendered or reused detailed arrangement stems")
         } else {
@@ -1991,6 +1996,24 @@ object ArrangementProjectCommands {
     private const val QWEN_PLANNER = "qwen"
     private val WAV_EXTENSIONS = setOf("wav", "wave")
     private val MIDI_EXTENSIONS = setOf("mid", "midi")
+
+    /** Resolve the validated sound-library root once per CLI invocation. */
+    private fun resolveLibraryRoot(): SoundLibraryLocation.Success {
+        val locator = SoundLibraryLocator()
+        return when (val result = locator.locate(configuredRoot = null)) {
+            is SoundLibraryLocation.Success -> result
+            is SoundLibraryLocation.Failure -> throw IllegalArgumentException(
+                "Sound library not found. Checked: ${result.candidates.joinToString("; ") { "${it.path} (${it.reason})" }}. " +
+                    "Set MUSIC_SOUNDS_ROOT to an absolute path containing sounds/instruments.json."
+            )
+        }
+    }
+
+    /** Build a SfizzInstrumentRenderer wired to the resolved library root. */
+    private fun buildSfizzRenderer(): SfizzInstrumentRenderer {
+        val libRoot = resolveLibraryRoot().root
+        return SfizzInstrumentRenderer(InstrumentRegistryLoader(libRoot))
+    }
 
     private object NoOpErrorReporter : ai.music.workstation.model.ErrorReporter {
         override fun report(message: String) = Unit

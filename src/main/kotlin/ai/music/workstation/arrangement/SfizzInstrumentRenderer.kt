@@ -100,7 +100,7 @@ class LocalRendererProcess : RendererProcess {
 
 /** sfizz_render is stereo-only, so this adapter converts its WAV to the project's PCM-24 layout. */
 class SfizzInstrumentRenderer(
-    private val registryLoader: InstrumentRegistryLoader = InstrumentRegistryLoader(),
+    private val registryLoader: InstrumentRegistryLoader,
     private val process: RendererProcess = LocalRendererProcess(),
     private val executable: String = System.getenv("SFZ_RENDERER_PATH")?.takeIf { it.isNotBlank() } ?: "sfizz_render",
     private val rendererVersion: String = System.getenv("SFZ_RENDERER_VERSION")?.takeIf { it.isNotBlank() } ?: "not reported by renderer",

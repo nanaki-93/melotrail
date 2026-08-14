@@ -24,7 +24,7 @@ import kotlin.math.roundToLong
 class PianoBassQualityGate(
     private val renderer: InstrumentRenderer,
     private val analyzer: MidiPartAnalyzer = MidiPartAnalyzer(),
-    private val bassGenerator: BassMidiGenerationAdapter = BassMidiGenerationAdapter(),
+    private val bassGenerator: BassMidiGenerationAdapter,
     private val mixer: DeterministicStemMixer = DeterministicStemMixer()
 ) {
     suspend fun run(projectRoot: Path): PianoBassQualityGateResult {

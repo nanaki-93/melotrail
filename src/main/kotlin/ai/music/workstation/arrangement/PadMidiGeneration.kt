@@ -221,11 +221,14 @@ class DeterministicPadMidiGenerator {
 data class GeneratedPadMidi(val path: Path, val ppq: Int, val notes: List<PadMidiNote>, val diagnostics: List<String>)
 
 /** Converts approved v3 pad controls into a full-timeline, registry-mapped MIDI artifact. */
-class PadMidiGenerationAdapter(private val composer: DeterministicPadMidiGenerator = DeterministicPadMidiGenerator()) {
+class PadMidiGenerationAdapter(
+    private val composer: DeterministicPadMidiGenerator = DeterministicPadMidiGenerator(),
+    private val libraryRoot: Path
+) {
     fun generate(projectRoot: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): GeneratedPadMidi {
         val root = projectRoot.toAbsolutePath().normalize()
         project.requireCleanMidi(root)
-        val pad = InstrumentRegistryLoader().load().resolve(LogicalInstrument.PAD.wireName)
+        val pad = InstrumentRegistryLoader(libraryRoot).load().resolve(LogicalInstrument.PAD.wireName)
         val requests = mutableListOf<PadGenerationRequest>()
         val timeline = mutableListOf<TimelineSegment>()
         var start = 0L

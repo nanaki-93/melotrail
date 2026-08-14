@@ -238,12 +238,15 @@ interface InstrumentStemGenerator {
 }
 
 /** Maps validated arrangement choices and MIDI analysis into deterministic requests, never model-supplied notes. */
-class BassMidiGenerationAdapter(private val composer: DeterministicBassMidiGenerator = DeterministicBassMidiGenerator()) : InstrumentStemGenerator {
+class BassMidiGenerationAdapter(
+    private val composer: DeterministicBassMidiGenerator = DeterministicBassMidiGenerator(),
+    private val libraryRoot: Path
+) : InstrumentStemGenerator {
     override fun generate(projectRoot: Path, project: Project, arrangement: Arrangement, analyses: Map<String, MidiAnalysis>): GeneratedBassMidi {
         val root = projectRoot.toAbsolutePath().normalize()
         project.requireCleanMidi(root)
         arrangement.requireValid(project.parts.map { it.id })
-        val bass = InstrumentRegistryLoader().load().resolve(LogicalInstrument.BASS.wireName)
+        val bass = InstrumentRegistryLoader(libraryRoot).load().resolve(LogicalInstrument.BASS.wireName)
         val requests = mutableListOf<BassGenerationRequest>()
         var start = 0L
         var ppq: Int? = null
@@ -280,7 +283,7 @@ class BassMidiGenerationAdapter(private val composer: DeterministicBassMidiGener
     fun generate(projectRoot: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): GeneratedBassMidi {
         val root = projectRoot.toAbsolutePath().normalize()
         project.requireCleanMidi(root)
-        val bass = InstrumentRegistryLoader().load().resolve(LogicalInstrument.BASS.wireName)
+        val bass = InstrumentRegistryLoader(libraryRoot).load().resolve(LogicalInstrument.BASS.wireName)
         val requests = mutableListOf<BassGenerationRequest>()
         var start = 0L
         var ppq: Int? = null

@@ -12,6 +12,14 @@ import javax.sound.midi.ShortMessage
 class StringsMidiGenerationTest {
     private val generator = DeterministicStringsMidiGenerator()
     @TempDir lateinit var projectRoot: Path
+    private lateinit var testLibrary: Path
+
+    @org.junit.jupiter.api.BeforeEach
+    fun setupTestLibrary() {
+        testLibrary = createTestLibrary()
+    }
+
+    private fun createTestLibrary(): Path {
 
     @Test
     fun `every supported role has deterministic bounded output`() {
@@ -77,7 +85,7 @@ class StringsMidiGenerationTest {
             section(1, SongSectionPurpose.CLIMAX, StringsRole.CLIMAX_REINFORCEMENT)
         ))
 
-        val generated = StringsMidiGenerationAdapter().generate(projectRoot, project, arrangement, mapOf("A" to analysis()))
+        val generated = StringsMidiGenerationAdapter(libraryRoot = testLibrary).generate(projectRoot, project, arrangement, mapOf("A" to analysis()))
         val sequence = MidiSystem.getSequence(generated.path.toFile())
         val channels = sequence.tracks.flatMap { track -> (0 until track.size()).map(track::get) }.mapNotNull { it.message as? ShortMessage }
             .filter { it.command == ShortMessage.NOTE_ON && it.data2 > 0 }.map { it.channel }.toSet()

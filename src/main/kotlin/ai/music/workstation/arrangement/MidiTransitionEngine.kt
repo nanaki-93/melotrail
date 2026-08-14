@@ -282,11 +282,14 @@ class DeterministicMidiTransitionEngine {
 data class GeneratedTransitionMidi(val path: Path, val result: TransitionGenerationResult)
 
 /** Publishes the pure engine output as midi/generated/transitions.mid, atomically and idempotently. */
-class MidiTransitionGenerationAdapter(private val engine: DeterministicMidiTransitionEngine = DeterministicMidiTransitionEngine()) {
+class MidiTransitionGenerationAdapter(
+    private val engine: DeterministicMidiTransitionEngine = DeterministicMidiTransitionEngine(),
+    private val libraryRoot: Path
+) {
     fun generate(projectRoot: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): GeneratedTransitionMidi {
         val root = projectRoot.toAbsolutePath().normalize()
         project.requireCleanMidi(root)
-        val registry = InstrumentRegistryLoader().load()
+        val registry = InstrumentRegistryLoader(libraryRoot).load()
         val available = LogicalInstrument.entries.associateWith { logical ->
             val descriptor = registry.resolve(logical.wireName)
             TransitionInstrument(descriptor.midiChannelZeroBased ?: 0, descriptor.midiProgram)

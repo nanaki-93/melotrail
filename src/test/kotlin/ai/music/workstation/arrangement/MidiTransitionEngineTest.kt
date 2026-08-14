@@ -96,8 +96,9 @@ class MidiTransitionEngineTest {
             detailedSection(1, TransitionPlan())
         ))
         val before = Files.readAllBytes(source)
+        val testLibrary = createTestLibrary()
 
-        val generated = MidiTransitionGenerationAdapter().generate(projectRoot, project, arrangement, mapOf("A" to analysis()))
+        val generated = MidiTransitionGenerationAdapter(libraryRoot = testLibrary).generate(projectRoot, project, arrangement, mapOf("A" to analysis()))
         val sequence = MidiSystem.getSequence(generated.path.toFile())
 
         assertEquals(projectRoot.resolve("midi/generated/transitions.mid"), generated.path)
@@ -106,7 +107,65 @@ class MidiTransitionEngineTest {
         assertEquals(480, sequence.resolution)
         assertTrue(sequence.tickLength >= 5760)
         assertTrue(Files.readAllBytes(source).contentEquals(before))
-        assertEquals(Files.readAllBytes(generated.path).toList(), Files.readAllBytes(MidiTransitionGenerationAdapter().generate(projectRoot, project, arrangement, mapOf("A" to analysis())).path).toList())
+        assertEquals(Files.readAllBytes(generated.path).toList(), Files.readAllBytes(MidiTransitionGenerationAdapter(libraryRoot = testLibrary).generate(projectRoot, project, arrangement, mapOf("A" to analysis())).path).toList())
+    }
+
+    private fun createTestLibrary(): Path {
+        val library = projectRoot.resolve("test-library")
+        Files.createDirectories(library)
+        Files.writeString(library.resolve("instruments.json"), """{
+            "version": 1,
+            "workingSampleRate": 44100,
+            "midiChannelConvention": "one-based",
+            "instruments": {
+                "piano": {"engine": "sfz", "path": "piano/piano.sfz", "licenseId": "starter-generated", "midiProgram": 0},
+                "bass": {"engine": "sfz", "path": "bass/bass.sfz", "licenseId": "starter-generated", "midiProgram": 33},
+                "drums": {"engine": "sfz", "path": "drums/drums.sfz", "licenseId": "starter-generated", "midiChannel": 10, "noteMap": {"kick": 36, "snare": 38, "clap": 39, "closedHat": 42, "openHat": 46}},
+                "pad": {"engine": "sfz", "path": "pad/pad.sfz", "licenseId": "starter-generated", "midiProgram": 17},
+                "strings": {"engine": "sfz", "path": "strings/strings.sfz", "licenseId": "starter-generated", "midiProgram": 48}
+            }
+        }""".trimIndent())
+        Files.writeString(library.resolve("LICENSES.json"), """{
+            "version": 1,
+            "libraries": {
+                "starter-generated": {
+                    "displayName": "Starter Generated",
+                    "source": "local",
+                    "provenance": "generated-original",
+                    "license": "MIT",
+                    "commercialUse": true,
+                    "attributionRequired": false,
+                    "redistribution": "allowed"
+                }
+            }
+        }""".trimIndent())
+        val instrumentSamples = mapOf(
+            "piano" to listOf("C2.wav"), "bass" to listOf("E1.wav"), "pad" to listOf("C2.wav"), "strings" to listOf("C2.wav"),
+            "drums" to listOf("kick.wav", "snare.wav", "clap.wav", "hat_closed.wav", "hat_open.wav")
+        )
+        instrumentSamples.forEach { (instrument, samples) ->
+            val directory = library.resolve(instrument)
+            Files.createDirectories(directory.resolve("samples"))
+            val sfz = when (instrument) {
+                "drums" -> "<region> sample=samples/kick.wav key=36\n<region> sample=samples/snare.wav key=38\n<region> sample=samples/clap.wav key=39\n<region> sample=samples/hat_closed.wav key=42\n<region> sample=samples/hat_open.wav key=46\n"
+                else -> "<region> sample=samples/${samples.first()} key=36\n"
+            }
+            Files.writeString(directory.resolve("$instrument.sfz"), sfz)
+            samples.forEach { writeTestWav(directory.resolve("samples/$it")) }
+        }
+        return library
+    }
+
+    private fun writeTestWav(path: Path) {
+        Files.createDirectories(requireNotNull(path.parent))
+        java.io.DataOutputStream(java.io.FileOutputStream(path.toFile())).use { out ->
+            val dataSize = 4 * 1 * 2
+            out.writeBytes("RIFF"); out.writeInt(36 + dataSize); out.writeBytes("WAVE")
+            out.writeBytes("fmt "); out.writeInt(16); out.writeShort(1); out.writeShort(1); out.writeInt(44100)
+            out.writeInt(44100); out.writeShort(2); out.writeShort(16)
+            out.writeBytes("data"); out.writeInt(dataSize)
+            repeat(4) { out.writeShort(8192) }
+        }
     }
 
     private fun result(type: MidiTransitionType, bars: Int) = engine.generate(

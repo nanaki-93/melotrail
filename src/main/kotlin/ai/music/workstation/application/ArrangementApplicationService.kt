@@ -106,7 +106,8 @@ class DefaultArrangementApplicationService(
     private val deterministicGlobalPlanner: GlobalSongPlanner = DeterministicGlobalSongPlanner(),
     private val qwenGlobalPlanner: GlobalSongPlanner = LocalQwenGlobalSongPlanner(),
     private val deterministicDetailedPlanner: DetailedArrangementPlanner = DeterministicDetailedArrangementPlanner(),
-    private val qwenDetailedPlanner: DetailedArrangementPlanner = LocalQwenDetailedArrangementPlanner()
+    private val qwenDetailedPlanner: DetailedArrangementPlanner = LocalQwenDetailedArrangementPlanner(),
+    private val libraryRoot: Path
 ) : ArrangementApplicationService {
     override suspend fun generate(request: GenerateArrangementRequest, progress: ProgressSink): ArrangementSnapshot = mutate(request.root) { root ->
         progress.report(OperationProgress("arrange", 1, 3, "Validating MIDI analyses"))
@@ -157,16 +158,16 @@ class DefaultArrangementApplicationService(
             progress.report(OperationProgress("generate-midi", stage, total, "Generated $name MIDI", path))
             artifacts += GeneratedMidiArtifact(name, path, events)
         }
-        if ("bass" in active) BassMidiGenerationAdapter().generate(normalized, project, arrangement, analyses).let { emit("bass", it.path, it.notes.size) }
+        if ("bass" in active) BassMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("bass", it.path, it.notes.size) }
         coroutineContext.ensureActive()
-        if ("drums" in active) DrumMidiGenerationAdapter().generate(normalized, project, arrangement, analyses).let { emit("drums", it.path, it.hits.size) }
+        if ("drums" in active) DrumMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("drums", it.path, it.hits.size) }
         coroutineContext.ensureActive()
-        if ("pad" in active) PadMidiGenerationAdapter().generate(normalized, project, arrangement, analyses).let { emit("pad", it.path, it.notes.size) }
+        if ("pad" in active) PadMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("pad", it.path, it.notes.size) }
         coroutineContext.ensureActive()
-        if ("strings" in active) StringsMidiGenerationAdapter().generate(normalized, project, arrangement, analyses).let { emit("strings", it.path, it.notes.size) }
+        if ("strings" in active) StringsMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("strings", it.path, it.notes.size) }
         if (arrangement.sections.any { it.transitionOut.type.name != "NONE" }) {
             coroutineContext.ensureActive()
-            MidiTransitionGenerationAdapter().generate(normalized, project, arrangement, analyses).let { emit("transitions", it.path, it.result.events.size) }
+            MidiTransitionGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("transitions", it.path, it.result.events.size) }
         }
         GeneratedMidiSnapshot(artifacts)
     }
@@ -179,7 +180,7 @@ class DefaultArrangementApplicationService(
         val arrangement = readApproved(normalized, input)
         val analyses = midiAnalyses(normalized, project, project.parts.map { it.id }.toSet())
         progress.report(OperationProgress("render", 2, 2, "Rendering or reusing PCM-24 stems", normalized.resolve("mix/dry.wav")))
-        StemRenderingMixer(renderer).render(normalized, project, arrangement, analyses)
+        StemRenderingMixer(renderer, libraryRoot).render(normalized, project, arrangement, analyses)
     }
 
     override fun load(root: Path): ArrangementSnapshot {

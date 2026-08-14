@@ -27,6 +27,7 @@ import kotlin.math.roundToLong
  */
 class StemRenderingMixer(
     private val renderer: InstrumentRenderer,
+    private val libraryRoot: Path,
     private val mixer: DeterministicStemMixer = DeterministicStemMixer()
 ) {
     suspend fun render(
@@ -153,7 +154,7 @@ class StemRenderingMixer(
     }
 
     private fun copyTransitionEvents(source: Sequence, destination: Sequence, instrument: LogicalInstrument) {
-        val descriptor = InstrumentRegistryLoader().load().resolve(instrument.wireName)
+        val descriptor = InstrumentRegistryLoader(libraryRoot).load().resolve(instrument.wireName)
         source.tracks.drop(1).filter { track -> belongsTo(track, instrument, descriptor) }.forEach { sourceTrack ->
             val target = destination.createTrack()
             (0 until sourceTrack.size()).map(sourceTrack::get)
@@ -189,7 +190,7 @@ class StemRenderingMixer(
         analyses.toSortedMap().forEach { (id, analysis) -> append(id).append(':').append(analysis.durationTicks).append(':').append(analysis.durationSeconds).append(':').append(analysis.tempoMap).append('|') }
         generated.sorted().forEach { append(it.fileName).append(':').append(digest(Files.readAllBytes(it))).append('|') }
         transitions?.let { append("transitions:").append(digest(Files.readAllBytes(it))).append('|') }
-        val registry = InstrumentRegistryLoader().libraryRoot.resolve("instruments.json")
+        val registry = libraryRoot.resolve("instruments.json")
         append("registry:").append(digest(Files.readAllBytes(registry))).append('|')
         append("renderer:").append(renderer.javaClass.name).append(':').append(System.getenv("SFZ_RENDERER_PATH").orEmpty()).append(':').append(System.getenv("SFZ_RENDERER_VERSION").orEmpty())
     }.toByteArray(StandardCharsets.UTF_8))

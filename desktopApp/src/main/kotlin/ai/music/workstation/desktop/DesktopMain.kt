@@ -15,6 +15,9 @@ import ai.music.workstation.application.LegacyPartAnalysisService
 import ai.music.workstation.application.MidiPreparationService
 import ai.music.workstation.application.ProjectApplicationService
 import ai.music.workstation.arrangement.PartAnalysis
+import ai.music.workstation.arrangement.InstrumentRegistryLoader
+import ai.music.workstation.arrangement.SoundLibraryLocator
+import ai.music.workstation.arrangement.SoundLibraryLocation
 import ai.music.workstation.errors.ErrorReporter
 import ai.music.workstation.logging.DefaultLogger
 import ai.music.workstation.worker.AnalyzeCommand
@@ -40,19 +43,24 @@ import java.nio.file.Path
 
 fun main() = application {
     val desktopWindowState = rememberWindowState(placement = WindowPlacement.Maximized)
-    val arrangementService = DefaultArrangementApplicationService()
+    val libraryRoot = DesktopServiceComposition.resolveLibraryRoot().root
+    val arrangementService = DefaultArrangementApplicationService(libraryRoot = libraryRoot)
     val mixService = DefaultMixApplicationService()
     val client = DesktopServiceComposition.workerClient()
     val player = JvmAudioPlayer()
+    val sfizzRenderer = ai.music.workstation.arrangement.SfizzInstrumentRenderer(
+        InstrumentRegistryLoader(libraryRoot)
+    )
     val viewModel = WorkspaceViewModel(
         projectService = DesktopServiceComposition.projectService(),
         fileDialogs = SwingDesktopFileDialogs(),
         runtimeReadinessService = defaultRuntimeReadinessService(),
+        libraryRoot = libraryRoot,
         arrangementService = arrangementService,
         mixService = mixService,
-        buildService = DefaultBuildApplicationService(arrangementService, mixService, ai.music.workstation.arrangement.SfizzInstrumentRenderer(), DesktopBuildWorker(client)),
+        buildService = DefaultBuildApplicationService(arrangementService, mixService, sfizzRenderer, DesktopBuildWorker(client)),
         player = player,
-        partPreviewService = DefaultPartPreviewApplicationService(ai.music.workstation.arrangement.SfizzInstrumentRenderer()),
+        partPreviewService = DefaultPartPreviewApplicationService(sfizzRenderer),
         preferences = JvmDesktopPreferences(),
         operationLogger = LocalDesktopOperationLogger()
     )
@@ -81,6 +89,18 @@ fun main() = application {
  * cleanup, analysis, registration, and atomic project writes.
  */
 object DesktopServiceComposition {
+    /** Resolve the validated sound-library root once at desktop startup. */
+    fun resolveLibraryRoot(): SoundLibraryLocation.Success {
+        val locator = SoundLibraryLocator()
+        return when (val result = locator.locate(configuredRoot = null)) {
+            is SoundLibraryLocation.Success -> result
+            is SoundLibraryLocation.Failure -> throw IllegalStateException(
+                "Sound library not found. Checked: ${result.candidates.joinToString("; ") { "${it.path} (${it.reason})" }}. " +
+                    "Set MUSIC_SOUNDS_ROOT to an absolute path containing sounds/instruments.json."
+            )
+        }
+    }
+
     fun workerClient(): WorkerClient {
         val logger = DefaultLogger()
         return WorkerClient(

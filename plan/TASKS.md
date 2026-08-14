@@ -117,7 +117,7 @@ These tasks start only after Task 028 and must be implemented one at a time.
 
 | Task | Name | Depends on | Primary result |
 |---|---|---|---|
-| [029](tasks/029-sound-library-locator.md) | Sound-library locator | 028 | One CWD-independent injected library root |
+| [029](tasks/completed/029-sound-library-locator.md) | Sound-library locator | 028 | One CWD-independent injected library root |
 | [030](tasks/030-desktop-library-settings.md) | Desktop library settings | 029 | Validated user-selectable library root |
 | [031](tasks/031-audio-player-lifecycle.md) | JVM audio-player lifecycle | 028 | Reliable one-line/one-thread WAV playback |
 | [032](tasks/032-runtime-readiness-model.md) | Runtime readiness model | 029–031 | Capability-specific dependency states |
