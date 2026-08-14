@@ -1,5 +1,23 @@
 # Worker directory for Python-based AI processing services
 
+## Read-only input inspection
+
+`POST /inspect-input` accepts one existing `.mid`, `.midi`, `.wav`, `.wave`,
+or `.mp3` file and returns only bounded validation and measurement data. It
+checks both extension and actual container, rejects empty/corrupt/non-finite
+input, and never changes the source. MP3 is decoded to a unique temporary
+PCM-24 WAV which is removed before the response. Audio preserves its decoded
+sample rate and channel count and is measured in frames: silence is a frame
+peak at or below `1e-4`, clipping at or above `0.999`, and the 50/60 Hz hum and
+first-difference noise indicators use fixed `0.05/0.15/0.30` evidence
+thresholds. The endpoint does not publish a report or prepared artifact.
+
+Example request:
+
+```json
+{"path":"/project/source/intro.wav"}
+```
+
 ## Optional solo-piano transcription
 
 `POST /transcribe` accepts a local `.wav`, `.wave`, or `.mp3` source and writes

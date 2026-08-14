@@ -125,7 +125,7 @@ These tasks start only after Task 028 and must be implemented one at a time.
 | [034](tasks/completed/034-preview-viewmodel-state.md) | Preview view-model state | 032–033 | Truthful preview/playback state machine |
 | [035](tasks/completed/035-preview-transport-ui.md) | Preview and transport UI | 034 | Accessible preview controls and errors |
 | [036](tasks/completed/036-input-inspection-contract.md) | Input inspection contract | 032 | Versioned preparation report schema |
-| [037](tasks/037-input-inspection-worker.md) | Input inspection worker | 036 | Deterministic MIDI/WAV/MP3 validation and metrics |
+| [037](tasks/completed/037-input-inspection-worker.md) | Input inspection worker | 036 | Deterministic MIDI/WAV/MP3 validation and metrics |
 | [038](tasks/038-input-inspection-service.md) | Input inspection service | 036–037 | Atomic reports and preparation snapshot |
 | [039](tasks/039-guided-import-dialog.md) | Guided import dialog | 032, 038 | Clear MIDI/WAV/MP3 import workflow |
 | [040](tasks/040-deterministic-audio-cleanup-worker.md) | Deterministic audio cleanup worker | 037 | Safe independently tested repair operations |

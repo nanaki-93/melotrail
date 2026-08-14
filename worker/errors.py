@@ -38,3 +38,13 @@ class MidiCleanupValidationError(WorkerCommandError):
 class MidiCleanupOutputValidationError(WorkerCommandError):
     error_type = "MidiCleanupOutputValidationError"
     status_code = 422
+
+
+class InputInspectionValidationError(WorkerCommandError):
+    error_type = "InputInspectionValidationError"
+    status_code = 400
+
+
+class InputInspectionDecodeError(WorkerCommandError):
+    error_type = "InputInspectionDecodeError"
+    status_code = 422

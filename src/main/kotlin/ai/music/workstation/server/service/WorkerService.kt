@@ -100,6 +100,7 @@ class WorkerService(
         is MP3ExportCommand -> command.path
         is TranscribeCommand -> command.path
         is MidiCleanCommand -> command.path
+        is InputInspectionCommand -> command.path
         is HealthCheck -> ""
     }
 

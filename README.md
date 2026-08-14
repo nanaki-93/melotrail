@@ -450,6 +450,7 @@ Python exposes one endpoint per operation:
 | POST | `/mp3_convert` | Convert MP3 to WAV |
 | POST | `/transcribe` | Transcribe solo piano to MIDI |
 | POST | `/midi-clean` | Conservatively clean a MIDI file |
+| POST | `/inspect-input` | Validate and measure one MIDI/WAV/MP3 input without changing it |
 
 The Kotlin worker client maps each `WorkerCommand` directly to its endpoint.
 There is no generic `/api/worker/command` request envelope between Kotlin and

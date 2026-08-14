@@ -106,6 +106,7 @@ class WorkerClient(
         is MP3ExportCommand -> "/mp3_export"
         is TranscribeCommand -> "/transcribe"
         is MidiCleanCommand -> "/midi-clean"
+        is InputInspectionCommand -> "/inspect-input"
         is HealthCheck -> "/health"
     }
 
@@ -170,6 +171,7 @@ class WorkerClient(
                     put("normalizeVelocity", command.normalizeVelocity)
                     put("cleanSustain", command.cleanSustain)
                 }
+                is InputInspectionCommand -> put("path", command.path)
                 is HealthCheck -> Unit
             }
         }

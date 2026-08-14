@@ -92,3 +92,10 @@ data class MidiCleanCommand(
 ) : WorkerCommand() {
     override val commandName: String = "midi-clean"
 }
+
+/** Read-only validation and measurement of one already project-confined input. */
+data class InputInspectionCommand(
+    val path: String
+) : WorkerCommand() {
+    override val commandName: String = "inspect-input"
+}
