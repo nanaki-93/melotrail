@@ -41,6 +41,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
+import java.nio.file.Files
 import java.nio.file.Path
 
 data class WorkspaceDispatchers(
@@ -132,13 +133,32 @@ sealed interface WorkspaceDialog {
         val audio: Boolean,
         val source: Path? = null,
         val id: String = "",
-        val role: String = ""
+        val role: String = "",
+        val detectedType: ImportSourceKind? = null,
+        val sourceSizeBytes: Long? = null,
+        val validationMessage: String? = null
     ) : WorkspaceDialog
 
     data class EditRole(val partId: String, val role: String) : WorkspaceDialog
     data class ConfirmDiscardDraft(val root: Path? = null, val createProject: Boolean = false) : WorkspaceDialog
     data object ConfirmClose : WorkspaceDialog
     data object SoundLibrarySettings : WorkspaceDialog
+}
+
+enum class ImportSourceKind(val label: String, val isAudio: Boolean) {
+    MIDI("MIDI", false),
+    WAV("WAV", true),
+    MP3("MP3", true),
+    UNSUPPORTED("Unsupported", false)
+}
+
+internal fun detectImportSourceKind(source: Path): ImportSourceKind = when (
+    source.fileName.toString().substringAfterLast('.', "").lowercase()
+) {
+    "mid", "midi" -> ImportSourceKind.MIDI
+    "wav", "wave" -> ImportSourceKind.WAV
+    "mp3" -> ImportSourceKind.MP3
+    else -> ImportSourceKind.UNSUPPORTED
 }
 
 sealed interface WorkspaceRetry {
@@ -394,26 +414,44 @@ class WorkspaceViewModel(
 
     private fun showImportPart(audio: Boolean) {
         if (state.value.project == null || state.value.operation.isMutating) return
-        if (audio) state.value.runtimeReadiness.capabilityFailure(RuntimeCapability.AUDIO_IMPORT)?.let { return fail("import audio", it) }
-        mutableState.update { it.copy(dialog = WorkspaceDialog.ImportPart(audio), notification = null) }
+        // The single dialog detects the source type after selection. Keep the former intent
+        // parameter only as a compile-safe adapter for existing callers.
+        mutableState.update { it.copy(dialog = WorkspaceDialog.ImportPart(audio = false), notification = null) }
     }
 
     private fun chooseImportSource() = scope.launch {
         val draft = state.value.dialog as? WorkspaceDialog.ImportPart ?: return@launch
-        updateImportSource(fileDialogs.choosePartSource(draft.audio))
+        updateImportSource(fileDialogs.choosePartSource())
     }
 
     private fun updateImportSource(source: Path?) {
-        if (source == null) return
         val draft = state.value.dialog as? WorkspaceDialog.ImportPart ?: return
-        mutableState.update { it.copy(dialog = draft.copy(source = source)) }
+        if (source == null) return
+        val type = detectImportSourceKind(source)
+        val size = runCatching { Files.size(source) }.getOrNull()
+        val message = when {
+            type == ImportSourceKind.UNSUPPORTED -> "Unsupported source type. Choose MIDI (.mid/.midi), WAV (.wav/.wave), or MP3 (.mp3)."
+            else -> null
+        }
+        mutableState.update {
+            it.copy(dialog = draft.copy(
+                audio = type.isAudio,
+                source = source,
+                detectedType = type,
+                sourceSizeBytes = size,
+                validationMessage = message
+            ))
+        }
     }
 
     private fun importPart() {
         val project = state.value.project ?: return
         val draft = state.value.dialog as? WorkspaceDialog.ImportPart ?: return
         val source = draft.source ?: return fail("import part", "Choose a ${if (draft.audio) "WAV or MP3" else "MIDI"} source first.")
+        if (draft.detectedType == ImportSourceKind.UNSUPPORTED) return fail("import part", draft.validationMessage ?: "Unsupported source type.")
         if (draft.id.isBlank()) return fail("import part", "Part ID is required and remains stable after import.")
+        if (project.parts.any { it.id == draft.id }) return fail("import part", "Part ID already exists: ${draft.id}")
+        if (draft.detectedType?.isAudio == true) state.value.runtimeReadiness.capabilityFailure(RuntimeCapability.AUDIO_IMPORT)?.let { return fail("import audio", it) }
         val request = ImportPartRequest(project.root, draft.id, source, draft.role, transcribe = draft.audio)
         runImport(request)
     }

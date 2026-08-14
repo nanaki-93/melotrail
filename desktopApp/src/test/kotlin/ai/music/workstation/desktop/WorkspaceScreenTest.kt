@@ -35,7 +35,7 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `empty project workflow exposes import actions and an audio requirement dialog`() = runComposeUiTest {
+    fun `empty project workflow exposes one guided import dialog`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         setContent {
             MusicWorkstationTheme {
@@ -44,16 +44,19 @@ class WorkspaceScreenTest {
         }
 
         onNodeWithTag(WorkspaceTags.ADD_MIDI).assertIsDisplayed()
-        onNodeWithTag(WorkspaceTags.ADD_AUDIO).performClick()
-        assertEquals(WorkspaceIntent.ShowImportPart(audio = true), intents.last())
+        onNodeWithTag(WorkspaceTags.ADD_MIDI).performClick()
+        assertEquals(WorkspaceIntent.ShowImportPart(audio = false), intents.last())
 
         setContent {
             MusicWorkstationTheme {
-                WorkspaceScreen(projectState().copy(dialog = WorkspaceDialog.ImportPart(audio = true)), onIntent = {})
+                WorkspaceScreen(projectState().copy(dialog = WorkspaceDialog.ImportPart(audio = true, source = java.nio.file.Path.of("build/solo.wav"), detectedType = ImportSourceKind.WAV, sourceSizeBytes = 1_536)), onIntent = {})
             }
         }
-        onNodeWithText("Add audio part").assertIsDisplayed()
-        onNodeWithText("Prepare part").assertIsDisplayed()
+        onNodeWithText("Import part").assertIsDisplayed()
+        onNodeWithText("Filename: solo.wav · Type: WAV · Size: 1 KiB").assertIsDisplayed()
+        onNodeWithText("WAV/MP3 transcription currently supports solo piano only—not full mixes, vocals, or arbitrary polyphonic sources.").assertIsDisplayed()
+        onNodeWithTag(WorkspaceTags.IMPORT_SOURCE).assertIsDisplayed()
+        onNodeWithTag(WorkspaceTags.IMPORT_CONFIRM).assertIsEnabled()
     }
 
     @Test

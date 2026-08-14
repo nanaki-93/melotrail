@@ -8,7 +8,8 @@ import kotlin.coroutines.resume
 interface DesktopFileDialogs {
     suspend fun chooseProjectDirectory(): Path?
     suspend fun chooseNewProjectDirectory(): Path?
-    suspend fun choosePartSource(audio: Boolean): Path?
+    /** Filters are only selection hints; the application service validates the actual input. */
+    suspend fun choosePartSource(): Path?
     suspend fun chooseSoundLibraryDirectory(): Path?
 }
 
@@ -21,14 +22,13 @@ class SwingDesktopFileDialogs : DesktopFileDialogs {
         chooseDirectory("Choose new project folder", continuation)
     }
 
-    override suspend fun choosePartSource(audio: Boolean): Path? = suspendCancellableCoroutine { continuation ->
+    override suspend fun choosePartSource(): Path? = suspendCancellableCoroutine { continuation ->
         val chooser = JFileChooser().apply {
-            dialogTitle = if (audio) "Choose audio source" else "Choose MIDI source"
+            dialogTitle = "Choose MIDI, WAV, or MP3 source"
             fileSelectionMode = JFileChooser.FILES_ONLY
             isAcceptAllFileFilterUsed = false
             fileFilter = javax.swing.filechooser.FileNameExtensionFilter(
-                if (audio) "Audio files (WAV, WAVE, MP3)" else "MIDI files (MID, MIDI)",
-                *(if (audio) arrayOf("wav", "wave", "mp3") else arrayOf("mid", "midi"))
+                "Supported sources (MIDI, WAV, MP3)", "mid", "midi", "wav", "wave", "mp3"
             )
         }
         val selected = if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFile?.toPath() else null

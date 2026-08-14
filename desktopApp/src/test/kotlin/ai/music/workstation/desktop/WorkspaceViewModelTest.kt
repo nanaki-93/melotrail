@@ -162,11 +162,11 @@ class WorkspaceViewModelTest {
         assertEquals(root, service.created?.root)
 
         viewModel.accept(WorkspaceIntent.ShowImportPart(audio = false))
-        viewModel.accept(WorkspaceIntent.UpdateImportPart(WorkspaceDialog.ImportPart(false, Path.of("input.mid"), "A", "verse")))
+        viewModel.accept(WorkspaceIntent.UpdateImportPart(WorkspaceDialog.ImportPart(false, Path.of("input.mid"), "C", "verse")))
         viewModel.accept(WorkspaceIntent.ImportPart)
         assertIs<WorkspaceOperation.ImportingPart>(viewModel.state.value.operation)
         advanceUntilIdle()
-        assertEquals("A", service.imported?.id)
+        assertEquals("C", service.imported?.id)
 
         viewModel.accept(WorkspaceIntent.AnalyzePart("A"))
         advanceUntilIdle()
@@ -206,6 +206,69 @@ class WorkspaceViewModelTest {
 
         assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation)
         assertIs<WorkspaceRetry.Import>(viewModel.state.value.retry)
+        viewModel.close()
+    }
+
+    @Test
+    fun `guided import detects supported types and cancellation preserves the draft`() = runTest {
+        val root = Path.of("build/import-project")
+        val viewModel = WorkspaceViewModel(FakeProjectService(result = projectSnapshot(root)), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.ShowImportPart(audio = false))
+        viewModel.accept(WorkspaceIntent.ImportSourceChosen(Path.of("recording.MP3")))
+
+        val selected = assertIs<WorkspaceDialog.ImportPart>(viewModel.state.value.dialog)
+        assertEquals(ImportSourceKind.MP3, selected.detectedType)
+        assertTrue(selected.audio)
+        viewModel.accept(WorkspaceIntent.ImportSourceChosen(null))
+        assertEquals(selected, viewModel.state.value.dialog)
+        assertEquals(ImportSourceKind.MIDI, detectImportSourceKind(Path.of("intro.midi")))
+        assertEquals(ImportSourceKind.WAV, detectImportSourceKind(Path.of("intro.wave")))
+        viewModel.close()
+    }
+
+    @Test
+    fun `guided import rejects unsupported source and duplicate ID before service work`() = runTest {
+        val root = Path.of("build/import-project")
+        val service = FakeProjectService(result = projectSnapshot(root).copy(parts = listOf(part("A"))))
+        val viewModel = WorkspaceViewModel(service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.ShowImportPart(audio = false))
+        viewModel.accept(WorkspaceIntent.ImportSourceChosen(Path.of("intro.txt")))
+        viewModel.accept(WorkspaceIntent.UpdateImportPart(assertIs<WorkspaceDialog.ImportPart>(viewModel.state.value.dialog).copy(id = "A")))
+        viewModel.accept(WorkspaceIntent.ImportPart)
+        assertTrue(assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation).message.contains("Unsupported source type"))
+        assertNull(service.imported)
+
+        viewModel.accept(WorkspaceIntent.UpdateImportPart(WorkspaceDialog.ImportPart(false, Path.of("intro.mid"), "A", "verse", ImportSourceKind.MIDI)))
+        viewModel.accept(WorkspaceIntent.ImportPart)
+        assertTrue(assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation).message.contains("Part ID already exists: A"))
+        assertNull(service.imported)
+        viewModel.close()
+    }
+
+    @Test
+    fun `audio import checks worker and transcription prerequisites only on confirmation`() = runTest {
+        val root = Path.of("build/import-project")
+        val unavailable = RuntimeReadiness.of(
+            RuntimeDependency.WORKER to DependencyReadiness(DependencyStatus.UNAVAILABLE, "Start the Python worker with make worker."),
+            RuntimeDependency.TRANSCRIPTION to DependencyReadiness(DependencyStatus.UNAVAILABLE, "Transcription needs the running Python worker."),
+            RuntimeDependency.SOUND_LIBRARY to DependencyReadiness(DependencyStatus.READY, "ready"),
+            RuntimeDependency.SAMPLES to DependencyReadiness(DependencyStatus.READY, "ready"),
+            RuntimeDependency.RENDERER to DependencyReadiness(DependencyStatus.READY, "ready"),
+            RuntimeDependency.AUDIO_OUTPUT to DependencyReadiness(DependencyStatus.READY, "ready")
+        )
+        val service = FakeProjectService(result = projectSnapshot(root))
+        val viewModel = WorkspaceViewModel(service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)), runtimeReadinessService = RuntimeReadinessService { unavailable })
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.RefreshRuntimeReadiness); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.ShowImportPart(audio = false))
+        viewModel.accept(WorkspaceIntent.ImportSourceChosen(Path.of("solo.wav")))
+        viewModel.accept(WorkspaceIntent.UpdateImportPart(assertIs<WorkspaceDialog.ImportPart>(viewModel.state.value.dialog).copy(id = "A")))
+        viewModel.accept(WorkspaceIntent.ImportPart)
+
+        assertEquals("Start the Python worker with make worker.", assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation).message)
+        assertNull(service.imported)
         viewModel.close()
     }
 
@@ -328,7 +391,7 @@ class WorkspaceViewModelTest {
     }
 
     @Test
-    fun `readiness refresh failure is visible and unavailable audio import keeps its reason`() = runTest {
+    fun `readiness refresh failure is visible and guided import remains available`() = runTest {
         val root = Path.of("build/readiness-project")
         val unavailable = RuntimeReadiness.of(
             RuntimeDependency.WORKER to DependencyReadiness(DependencyStatus.UNAVAILABLE, "Start the Python worker with make worker."),
@@ -343,7 +406,8 @@ class WorkspaceViewModelTest {
         viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
         viewModel.accept(WorkspaceIntent.RefreshRuntimeReadiness); advanceUntilIdle()
         viewModel.accept(WorkspaceIntent.ShowImportPart(audio = true))
-        assertEquals("Start the Python worker with make worker.", assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation).message)
+        assertIs<WorkspaceDialog.ImportPart>(viewModel.state.value.dialog)
+        assertEquals(WorkspaceOperation.Idle, viewModel.state.value.operation)
         viewModel.close()
 
         val failed = WorkspaceViewModel(FakeProjectService(), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)), runtimeReadinessService = RuntimeReadinessService { throw IllegalStateException("probe failed") })
@@ -488,7 +552,7 @@ private class FakeFileDialogs(libraryRoot: Path? = null) : DesktopFileDialogs {
     private var nextLibraryRoot = libraryRoot
     override suspend fun chooseProjectDirectory(): Path? = null
     override suspend fun chooseNewProjectDirectory(): Path? = null
-    override suspend fun choosePartSource(audio: Boolean): Path? = null
+    override suspend fun choosePartSource(): Path? = null
     override suspend fun chooseSoundLibraryDirectory(): Path? = nextLibraryRoot.also { nextLibraryRoot = null }
 }
 

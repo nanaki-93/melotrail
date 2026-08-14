@@ -73,6 +73,8 @@ object WorkspaceTags {
     const val OPEN_PROJECT = "open-project"
     const val ADD_MIDI = "add-midi"
     const val ADD_AUDIO = "add-audio"
+    const val IMPORT_SOURCE = "import-source"
+    const val IMPORT_CONFIRM = "import-confirm"
     const val IMPORT_PROGRESS = "import-progress"
     const val STRUCTURE_CLEAR = "structure-clear"
     const val STRUCTURE_MOVE_LEFT = "structure-move-left-"
@@ -330,17 +332,10 @@ private fun PartsPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
         }
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(
-            onClick = { onIntent(WorkspaceIntent.ShowImportPart(audio = false)) }, enabled = !disabled,
-            modifier = Modifier.weight(1f).semantics { testTag = WorkspaceTags.ADD_MIDI }
-        ) { Text("Add MIDI") }
-        OutlinedButton(
-            onClick = { onIntent(WorkspaceIntent.ShowImportPart(audio = true)) }, enabled = !disabled && state.runtimeReadiness?.capability(RuntimeCapability.AUDIO_IMPORT)?.available == true,
-            modifier = Modifier.weight(1f).semantics { testTag = WorkspaceTags.ADD_AUDIO }
-        ) { Text("Add audio") }
-    }
-    state.runtimeReadiness?.capability(RuntimeCapability.AUDIO_IMPORT)?.reason?.let { Text("Audio import unavailable — $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+    OutlinedButton(
+        onClick = { onIntent(WorkspaceIntent.ShowImportPart(audio = false)) }, enabled = !disabled,
+        modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.ADD_MIDI }
+    ) { Text("Import MIDI, WAV, or MP3") }
 }
 
 @Composable
@@ -820,21 +815,44 @@ private fun CreateProjectDialog(draft: WorkspaceDialog.CreateProject, onIntent: 
 
 @Composable
 private fun ImportPartDialog(draft: WorkspaceDialog.ImportPart, onIntent: (WorkspaceIntent) -> Unit) {
+    val type = draft.detectedType
+    val audio = type?.isAudio == true
+    val readinessMessage = if (audio) "Prerequisites: local worker and optional Basic Pitch runtime are required for solo-piano transcription." else null
+    val stages = when (type) {
+        ImportSourceKind.MIDI -> "Stages: preserve original MIDI → clean MIDI → register part. Analysis is offered after import."
+        ImportSourceKind.WAV, ImportSourceKind.MP3 -> "Stages: preserve original audio → inspect it → transcribe solo piano → clean MIDI → register part."
+        ImportSourceKind.UNSUPPORTED -> "Choose a supported source to continue."
+        null -> "Choose a source to see the intended stages and prerequisites."
+    }
     AlertDialog(
         onDismissRequest = { onIntent(WorkspaceIntent.DismissDialog) },
-        title = { Text(if (draft.audio) "Add audio part" else "Add MIDI part") },
+        title = { Text("Import part") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (draft.audio) Text("Audio import supports solo piano WAV/MP3. It requires the local transcription worker, then deterministic MIDI cleanup before the part is registered.")
-                else Text("The original MIDI is preserved under source/ and a cleaned MIDI artifact is prepared before registration.")
-                OutlinedButton(onClick = { onIntent(WorkspaceIntent.ChooseImportSource) }) { Text(draft.source?.fileName?.toString() ?: "Choose source") }
+                Text("Choose MIDI, WAV, or MP3. File filters are hints; the import service validates the actual format.")
+                Text("WAV/MP3 transcription currently supports solo piano only—not full mixes, vocals, or arbitrary polyphonic sources.", style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(
+                    onClick = { onIntent(WorkspaceIntent.ChooseImportSource) },
+                    modifier = Modifier.semantics { testTag = WorkspaceTags.IMPORT_SOURCE }
+                ) { Text(draft.source?.fileName?.toString() ?: "Choose source") }
+                draft.source?.let { Text("Filename: ${it.fileName} · Type: ${type?.label ?: "unknown"} · Size: ${formatFileSize(draft.sourceSizeBytes)}", style = MaterialTheme.typography.bodySmall) }
+                Text(stages, style = MaterialTheme.typography.bodySmall)
+                readinessMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                draft.validationMessage?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                 OutlinedTextField(draft.id, { onIntent(WorkspaceIntent.UpdateImportPart(draft.copy(id = it))) }, label = { Text("Part ID (stable after import)") })
                 OutlinedTextField(draft.role, { onIntent(WorkspaceIntent.UpdateImportPart(draft.copy(role = it))) }, label = { Text("Role") })
             }
         },
-        confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.ImportPart) }) { Text("Prepare part") } },
+        confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.ImportPart) }, enabled = draft.source != null && type != ImportSourceKind.UNSUPPORTED, modifier = Modifier.semantics { testTag = WorkspaceTags.IMPORT_CONFIRM }) { Text("Confirm import") } },
         dismissButton = { TextButton(onClick = { onIntent(WorkspaceIntent.DismissDialog) }) { Text("Cancel") } }
     )
+}
+
+private fun formatFileSize(bytes: Long?): String = when {
+    bytes == null -> "size unavailable"
+    bytes < 1024 -> "$bytes B"
+    bytes < 1024 * 1024 -> "${bytes / 1024} KiB"
+    else -> String.format(java.util.Locale.ROOT, "%.1f MiB", bytes / (1024.0 * 1024.0))
 }
 
 @Composable
