@@ -70,7 +70,11 @@ object WorkspaceTags {
     const val CREATION_NEXT_ACTION = "creation-next-action"
     const val CREATION_DEPENDENCY = "creation-dependency"
     const val PARTS_PANEL = "parts-panel"
+    const val PART_ROW_PREFIX = "part-row-"
     const val STRUCTURE_PANEL = "structure-panel"
+    const val STRUCTURE_OCCURRENCE_PREFIX = "structure-occurrence-"
+    const val STRUCTURE_OVERVIEW = "structure-overview"
+    const val STRUCTURE_SELECTED_DETAIL = "structure-selected-detail"
     const val ARRANGEMENT_PANEL = "arrangement-panel"
     const val TIMELINE_PANEL = "timeline-panel"
     const val MIX_PANEL = "mix-panel"
@@ -417,7 +421,14 @@ private fun PartsPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
         Text("Import MIDI or solo-piano WAV/MP3 to prepare the first part.", color = MaterialTheme.colorScheme.onSurfaceVariant)
     } else {
         state.project!!.parts.forEach { part ->
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            val selected = state.selectedPartId == part.id
+            Column(
+                modifier = Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(7.dp))
+                    .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surface)
+                    .clickable(enabled = !disabled) { onIntent(WorkspaceIntent.SelectPart(part.id)) }
+                    .semantics { testTag = WorkspaceTags.PART_ROW_PREFIX + part.id; contentDescription = "Part ${part.id}, ${part.sourceType.name.lowercase()}, ${state.partPreparationLabel(part.id)}" },
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 Text("${part.id} · ${part.sourceName} (${part.sourceType.name.lowercase()})", fontWeight = FontWeight.Medium)
                 val role = part.role.ifBlank { "not set" }
                 Text("Role: $role · ${state.partPreparationLabel(part.id)}", style = MaterialTheme.typography.bodySmall)
@@ -427,6 +438,9 @@ private fun PartsPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                part.preparation.warnings.forEach { warning ->
+                    Text("Warning: $warning", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
                 val previewCapability = if (part.sourceType == ai.music.workstation.application.PartSourceType.AUDIO) RuntimeCapability.SOURCE_PREVIEW else RuntimeCapability.MIDI_PREVIEW
                 val previewReadiness = state.runtimeReadiness?.capability(previewCapability)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -693,17 +707,21 @@ private fun StructurePanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) 
                 Text(
                     "$partId$occurrence",
                     modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(7.dp))
-                        .background(if (index % 2 == 0) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f) else MusicWorkspaceTokens.ElevatedSurface)
-                        .padding(horizontal = 10.dp, vertical = 7.dp),
-                    color = if (index % 2 == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                        .background(if (index == state.selectedArrangementSection) MaterialTheme.colorScheme.primary.copy(alpha = 0.22f) else MusicWorkspaceTokens.ElevatedSurface)
+                        .clickable(enabled = !disabled) { onIntent(WorkspaceIntent.SelectArrangementSection(index)) }
+                        .padding(horizontal = 10.dp, vertical = 7.dp)
+                        .semantics { testTag = WorkspaceTags.STRUCTURE_OCCURRENCE_PREFIX + index; contentDescription = "Section $partId$occurrence" },
+                    color = if (index == state.selectedArrangementSection) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.labelMedium
                 )
             }
         }
+        StructureOverview(state, onIntent)
         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
         state.structureDraft.forEachIndexed { index, partId ->
             StructureRow(index, partId, state, !disabled, onIntent)
         }
+        SelectedStructureDetail(state)
     }
     if (!state.project?.parts.isNullOrEmpty()) {
         Text("Add section", style = MaterialTheme.typography.labelMedium)
@@ -718,6 +736,43 @@ private fun StructurePanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) 
     if (state.downstreamArtifactsStale) {
         Text("Structure changed: existing plans, generated MIDI, stems, mixes, and releases are stale; nothing was deleted.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
     }
+}
+
+@Composable
+private fun StructureOverview(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    val durations = state.structureDraft.mapIndexed { index, _ -> state.project?.structure?.getOrNull(index)?.durationSeconds }
+    if (durations.any { it == null } || durations.sumOf { it ?: 0.0 } <= 0.0) {
+        Text("Overview needs validated section durations.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        return
+    }
+    Row(modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.STRUCTURE_OVERVIEW }, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        state.structureDraft.forEachIndexed { index, partId ->
+            val occurrence = state.structureDraft.take(index + 1).count { it == partId }
+            Text(
+                "$partId$occurrence",
+                modifier = Modifier.weight(durations[index]!!.toFloat()).clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+                    .background(if (index == state.selectedArrangementSection) MaterialTheme.colorScheme.primary.copy(alpha = 0.60f) else MusicWorkspaceTokens.ElevatedSurface)
+                    .clickable { onIntent(WorkspaceIntent.SelectArrangementSection(index)) }
+                    .padding(vertical = 6.dp, horizontal = 3.dp),
+                style = MaterialTheme.typography.labelSmall
+            )
+        }
+    }
+}
+
+@Composable
+private fun SelectedStructureDetail(state: WorkspaceUiState) {
+    val index = state.selectedArrangementSection ?: return
+    val partId = state.structureDraft.getOrNull(index) ?: return
+    val occurrence = state.structureDraft.take(index + 1).count { it == partId }
+    val part = state.project?.parts?.find { it.id == partId }
+    val duration = state.project?.structure?.getOrNull(index)?.durationSeconds?.let(::formatDuration) ?: "duration unavailable"
+    Text(
+        "Selected $partId$occurrence · ${part?.role?.ifBlank { "role not set" } ?: "part unavailable"} · $duration",
+        modifier = Modifier.semantics { testTag = WorkspaceTags.STRUCTURE_SELECTED_DETAIL },
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }
 
 @Composable
@@ -741,7 +796,7 @@ private fun StructureRow(index: Int, partId: String, state: WorkspaceUiState, en
                     onDragCancel = { dragY = 0f },
                     onDrag = { change, amount -> change.consume(); dragY += amount.y }
                 )
-            }.padding(vertical = 3.dp)
+            }.clickable(enabled = enabled) { onIntent(WorkspaceIntent.SelectArrangementSection(index)) }.padding(vertical = 3.dp)
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
             Text("${partId}${occurrence} · $duration", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)

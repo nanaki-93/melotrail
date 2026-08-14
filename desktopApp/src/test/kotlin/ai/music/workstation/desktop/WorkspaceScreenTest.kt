@@ -79,6 +79,24 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `parts and structure occurrences are selectable and use validated duration overview`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        val project = projectState().project!!.copy(
+            parts = listOf(ai.music.workstation.application.PartSummary("A", "verse", "source/A.mid", "A.mid", ai.music.workstation.application.PartSourceType.MIDI, null)),
+            structure = listOf(ai.music.workstation.application.StructureSectionSummary(0, "A", 1, "A1", 12.0))
+        )
+        setContent {
+            MusicWorkstationTheme {
+                WorkspaceScreen(WorkspaceUiState(project = project, structureDraft = listOf("A")), intents::add)
+            }
+        }
+        onNodeWithTag(WorkspaceTags.PART_ROW_PREFIX + "A").assertIsDisplayed()
+        onNodeWithTag(WorkspaceTags.STRUCTURE_OVERVIEW).assertIsDisplayed()
+        onNodeWithTag(WorkspaceTags.STRUCTURE_OCCURRENCE_PREFIX + "0").performClick()
+        assertEquals(WorkspaceIntent.SelectArrangementSection(0), intents.last())
+    }
+
+    @Test
     fun `arrangement controls and validated proportional timeline are accessible`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         val root = java.nio.file.Path.of("build/test-project")
