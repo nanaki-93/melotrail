@@ -116,6 +116,12 @@ class WorkspaceViewModelTest {
         try {
             node.put("last-successfully-opened-project", "   ")
             assertNull(JvmDesktopPreferences(node).lastOpenedProject())
+            val soundRoot = java.nio.file.Files.createTempDirectory("desktop-preference-library")
+            val desktopPreferences = JvmDesktopPreferences(node)
+            desktopPreferences.saveSoundLibraryRoot(soundRoot)
+            assertEquals(soundRoot, desktopPreferences.soundLibraryRoot())
+            node.put("sound-library-root", "   ")
+            assertNull(desktopPreferences.soundLibraryRoot())
         } finally {
             node.removeNode()
         }
@@ -277,6 +283,34 @@ class WorkspaceViewModelTest {
     }
 
     @Test
+    fun `sound library selection updates settings state and cancellation keeps last valid root`() = runTest {
+        val root = java.nio.file.Files.createTempDirectory("desktop-library")
+        val preferences = object : DesktopPreferences {
+            var library: Path? = null
+            override fun lastOpenedProject(): Path? = null
+            override fun saveLastOpenedProject(root: Path) = Unit
+            override fun clearLastOpenedProject() = Unit
+            override fun soundLibraryRoot(): Path? = library
+            override fun saveSoundLibraryRoot(root: Path) { library = root }
+            override fun clearSoundLibraryRoot() { library = null }
+        }
+        val settings = SoundLibrarySettingsService(preferences, ai.music.workstation.arrangement.SoundLibraryLocator(emptyMap()), SoundLibraryValidator { Result.success(Unit) }, environment = emptyMap())
+        val viewModel = WorkspaceViewModel(
+            FakeProjectService(result = projectSnapshot(root)), FakeFileDialogs(libraryRoot = root), testDispatchers(StandardTestDispatcher(testScheduler)),
+            preferences = preferences, soundLibrarySettings = settings
+        )
+
+        viewModel.accept(WorkspaceIntent.ShowSoundLibrarySettings)
+        viewModel.accept(WorkspaceIntent.ChooseSoundLibraryRoot)
+        advanceUntilIdle()
+        assertEquals(root, viewModel.state.value.soundLibrary.resolvedRoot)
+        viewModel.accept(WorkspaceIntent.ChooseSoundLibraryRoot) // chooser cancellation
+        advanceUntilIdle()
+        assertEquals(root, viewModel.state.value.soundLibrary.resolvedRoot)
+        viewModel.close()
+    }
+
+    @Test
     fun `timeline weights preserve duration proportions with a safe unknown-duration fallback`() {
         assertEquals(2f, timelineSectionWeight(2.0))
         assertEquals(6f, timelineSectionWeight(6.0))
@@ -324,10 +358,12 @@ class WorkspaceViewModelTest {
     )
 }
 
-private class FakeFileDialogs : DesktopFileDialogs {
+private class FakeFileDialogs(libraryRoot: Path? = null) : DesktopFileDialogs {
+    private var nextLibraryRoot = libraryRoot
     override suspend fun chooseProjectDirectory(): Path? = null
     override suspend fun chooseNewProjectDirectory(): Path? = null
     override suspend fun choosePartSource(audio: Boolean): Path? = null
+    override suspend fun chooseSoundLibraryDirectory(): Path? = nextLibraryRoot.also { nextLibraryRoot = null }
 }
 
 private class FakeDesktopPreferences(private val last: Path?) : DesktopPreferences {
@@ -335,6 +371,9 @@ private class FakeDesktopPreferences(private val last: Path?) : DesktopPreferenc
     override fun lastOpenedProject(): Path? = last
     override fun saveLastOpenedProject(root: Path) { saved = root }
     override fun clearLastOpenedProject() = Unit
+    override fun soundLibraryRoot(): Path? = null
+    override fun saveSoundLibraryRoot(root: Path) = Unit
+    override fun clearSoundLibraryRoot() = Unit
 }
 
 private class FakeProjectService(

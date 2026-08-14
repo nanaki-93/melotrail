@@ -87,6 +87,9 @@ object WorkspaceTags {
     const val PLAYBACK_LOFI = "playback-lofi"
     const val PLAYBACK_MASTER = "playback-master"
     const val PLAYBACK_TOGGLE = "playback-toggle"
+    const val SOUND_LIBRARY_SETTINGS = "sound-library-settings"
+    const val SOUND_LIBRARY_CHOOSE = "sound-library-choose"
+    const val SOUND_LIBRARY_CLEAR = "sound-library-clear"
 }
 
 @Composable
@@ -94,6 +97,7 @@ fun WorkspaceApp(viewModel: WorkspaceViewModel, onExit: () -> Unit = {}) {
     val state by viewModel.state.collectAsState()
     LaunchedEffect(Unit) {
         viewModel.accept(WorkspaceIntent.RefreshRuntimeReadiness)
+        viewModel.accept(WorkspaceIntent.RefreshSoundLibrary)
         viewModel.accept(WorkspaceIntent.RestoreLastProject)
     }
     WorkspaceScreen(state, viewModel::accept, onExit)
@@ -148,6 +152,10 @@ private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                     enabled = !mutationsDisabled,
                     modifier = Modifier.semantics { testTag = WorkspaceTags.OPEN_PROJECT; contentDescription = "Open an existing project" }
                 ) { Text("Open") }
+                OutlinedButton(
+                    onClick = { onIntent(WorkspaceIntent.ShowSoundLibrarySettings) },
+                    modifier = Modifier.semantics { testTag = WorkspaceTags.SOUND_LIBRARY_SETTINGS; contentDescription = "Configure local sound library" }
+                ) { Text("Library") }
                 Button(onClick = { onIntent(WorkspaceIntent.BuildSong) }, enabled = canBuild(state), modifier = Modifier.semantics { testTag = WorkspaceTags.BUILD_SONG; contentDescription = "Build song release artifacts" }) { Text("Build song") }
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -156,11 +164,17 @@ private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                     ?: "Start workspace · create or open an arranger project"
                 Text(projectText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 ReadinessText(state.runtimeReadiness, onIntent)
+                Text(soundLibrarySummary(state.soundLibrary), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Text(buildSongPrerequisite(state), modifier = Modifier.widthIn(max = 330.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
+}
+
+private fun soundLibrarySummary(library: SoundLibrarySettingsState): String = when {
+    library.resolvedRoot != null && library.validationError == null -> "Library: ${library.source ?: "configured"} · ${library.resolvedRoot}"
+    else -> "Library unavailable — ${library.validationError ?: "choose a valid folder"}"
 }
 
 @Composable
@@ -621,8 +635,43 @@ private fun WorkspaceDialogs(state: WorkspaceUiState, onIntent: (WorkspaceIntent
         is WorkspaceDialog.EditRole -> EditRoleDialog(dialog, onIntent)
         is WorkspaceDialog.ConfirmDiscardDraft -> ConfirmDiscardDraftDialog(dialog, onIntent)
         WorkspaceDialog.ConfirmClose -> ConfirmCloseDialog(onIntent, onExit)
+        WorkspaceDialog.SoundLibrarySettings -> SoundLibrarySettingsDialog(state.soundLibrary, onIntent)
         null -> Unit
     }
+}
+
+@Composable
+private fun SoundLibrarySettingsDialog(settings: SoundLibrarySettingsState, onIntent: (WorkspaceIntent) -> Unit) {
+    val selectionDisabled = settings.selectionDisabledReason != null
+    AlertDialog(
+        onDismissRequest = { onIntent(WorkspaceIntent.DismissDialog) },
+        title = { Text("Local sound library") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(settings.resolvedRoot?.toString() ?: "No validated sound-library folder is available.")
+                Text("Discovery source: ${settings.source ?: "none"}", style = MaterialTheme.typography.bodySmall)
+                settings.validationError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                settings.selectionDisabledReason?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                Text("Choose the folder containing instruments.json and LICENSES.json. If starter samples are missing, copy the approved 25 WAV files into the existing sounds subfolders; see sounds/README.md. No files are copied or changed here.", style = MaterialTheme.typography.bodySmall)
+                if (settings.restartRequired) Text("Restart the desktop app to apply this validated library to renderer services.", style = MaterialTheme.typography.bodySmall)
+            }
+        },
+        confirmButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    enabled = !selectionDisabled,
+                    onClick = { onIntent(WorkspaceIntent.ClearSoundLibraryRoot) },
+                    modifier = Modifier.semantics { testTag = WorkspaceTags.SOUND_LIBRARY_CLEAR }
+                ) { Text("Clear") }
+                Button(
+                    enabled = !selectionDisabled,
+                    onClick = { onIntent(WorkspaceIntent.ChooseSoundLibraryRoot) },
+                    modifier = Modifier.semantics { testTag = WorkspaceTags.SOUND_LIBRARY_CHOOSE }
+                ) { Text("Choose folder") }
+            }
+        },
+        dismissButton = { TextButton(onClick = { onIntent(WorkspaceIntent.RefreshSoundLibrary) }) { Text("Refresh") } }
+    )
 }
 
 @Composable

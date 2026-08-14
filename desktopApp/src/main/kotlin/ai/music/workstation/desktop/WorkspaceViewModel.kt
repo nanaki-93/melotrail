@@ -57,6 +57,7 @@ data class WorkspaceUiState(
     val operation: WorkspaceOperation = WorkspaceOperation.Idle,
     val notification: String? = null,
     val runtimeReadiness: RuntimeReadiness? = null,
+    val soundLibrary: SoundLibrarySettingsState = SoundLibrarySettingsState(),
     val dialog: WorkspaceDialog? = null,
     val structureDraft: List<String> = emptyList(),
     val downstreamArtifactsStale: Boolean = false,
@@ -121,6 +122,7 @@ sealed interface WorkspaceDialog {
     data class EditRole(val partId: String, val role: String) : WorkspaceDialog
     data class ConfirmDiscardDraft(val root: Path? = null, val createProject: Boolean = false) : WorkspaceDialog
     data object ConfirmClose : WorkspaceDialog
+    data object SoundLibrarySettings : WorkspaceDialog
 }
 
 sealed interface WorkspaceRetry {
@@ -138,6 +140,10 @@ sealed interface WorkspaceIntent {
     data object CreateProject : WorkspaceIntent
     data class OpenProject(val root: Path) : WorkspaceIntent
     data object RefreshRuntimeReadiness : WorkspaceIntent
+    data object ShowSoundLibrarySettings : WorkspaceIntent
+    data object ChooseSoundLibraryRoot : WorkspaceIntent
+    data object ClearSoundLibraryRoot : WorkspaceIntent
+    data object RefreshSoundLibrary : WorkspaceIntent
     data class ShowImportPart(val audio: Boolean) : WorkspaceIntent
     data object ChooseImportSource : WorkspaceIntent
     data class ImportSourceChosen(val source: Path?) : WorkspaceIntent
@@ -183,13 +189,14 @@ class WorkspaceViewModel(
     private val fileDialogs: DesktopFileDialogs,
     dispatchers: WorkspaceDispatchers = WorkspaceDispatchers(),
     private val runtimeReadinessService: RuntimeReadinessService = UnavailableRuntimeReadinessService,
-    private val libraryRoot: Path,
+    private val libraryRoot: Path = Path.of(System.getProperty("java.io.tmpdir"), "personal-ai-music-arranger", "missing-sound-library"),
     private val arrangementService: ArrangementApplicationService = DefaultArrangementApplicationService(libraryRoot = libraryRoot),
     private val mixService: MixApplicationService = DefaultMixApplicationService(),
     private val buildService: BuildApplicationService? = null,
     private val player: ArtifactAudioPlayer? = null,
     private val partPreviewService: PartPreviewApplicationService? = null,
     private val preferences: DesktopPreferences = NoOpDesktopPreferences,
+    private val soundLibrarySettings: SoundLibrarySettingsService = SoundLibrarySettingsService(preferences),
     private val operationLogger: DesktopOperationLogger = NoOpDesktopOperationLogger
 ) : AutoCloseable {
     private val scope = CoroutineScope(SupervisorJob() + dispatchers.ui)
@@ -219,6 +226,10 @@ class WorkspaceViewModel(
             WorkspaceIntent.CreateProject -> createProject()
             is WorkspaceIntent.OpenProject -> requestOpenProject(intent.root)
             WorkspaceIntent.RefreshRuntimeReadiness -> refreshRuntimeReadiness()
+            WorkspaceIntent.ShowSoundLibrarySettings -> mutableState.update { it.copy(dialog = WorkspaceDialog.SoundLibrarySettings, soundLibrary = soundLibrarySettings.refresh()) }
+            WorkspaceIntent.ChooseSoundLibraryRoot -> chooseSoundLibraryRoot()
+            WorkspaceIntent.ClearSoundLibraryRoot -> mutableState.update { it.copy(soundLibrary = soundLibrarySettings.clear()) }
+            WorkspaceIntent.RefreshSoundLibrary -> mutableState.update { it.copy(soundLibrary = soundLibrarySettings.refresh()) }
             is WorkspaceIntent.ShowImportPart -> showImportPart(intent.audio)
             WorkspaceIntent.ChooseImportSource -> chooseImportSource()
             is WorkspaceIntent.ImportSourceChosen -> updateImportSource(intent.source)
@@ -342,6 +353,11 @@ class WorkspaceViewModel(
         runCatching { withContext(ioDispatcher) { runtimeReadinessService.check() } }
             .onSuccess { readiness -> mutableState.update { it.copy(runtimeReadiness = readiness) } }
             .onFailure { failure -> mutableState.update { it.copy(notification = "Could not check local readiness: ${failure.message}") } }
+    }
+
+    private fun chooseSoundLibraryRoot() = scope.launch {
+        val root = fileDialogs.chooseSoundLibraryDirectory() ?: return@launch
+        mutableState.update { it.copy(soundLibrary = soundLibrarySettings.select(root)) }
     }
 
     private fun showImportPart(audio: Boolean) {

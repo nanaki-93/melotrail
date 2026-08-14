@@ -1,6 +1,7 @@
 package ai.music.workstation.desktop
 
 import java.nio.file.Path
+import java.nio.file.Files
 import java.util.logging.FileHandler
 import java.util.logging.Level
 import java.util.logging.Logger
@@ -15,6 +16,9 @@ interface DesktopPreferences {
     fun lastOpenedProject(): Path?
     fun saveLastOpenedProject(root: Path)
     fun clearLastOpenedProject()
+    fun soundLibraryRoot(): Path?
+    fun saveSoundLibraryRoot(root: Path)
+    fun clearSoundLibraryRoot()
 }
 
 class JvmDesktopPreferences(
@@ -32,8 +36,28 @@ class JvmDesktopPreferences(
         runCatching { preferences.remove(LAST_PROJECT_KEY) }
     }
 
+    override fun soundLibraryRoot(): Path? = runCatching {
+        preferences.get(SOUND_LIBRARY_ROOT_KEY, null)
+            ?.takeIf(String::isNotBlank)
+            ?.let(Path::of)
+            ?.toAbsolutePath()
+            ?.normalize()
+            ?.takeIf { it.isAbsolute && Files.isDirectory(it) }
+    }.getOrNull()
+
+    override fun saveSoundLibraryRoot(root: Path) {
+        val normalized = root.toAbsolutePath().normalize()
+        require(normalized.isAbsolute) { "Sound-library root must be absolute" }
+        runCatching { preferences.put(SOUND_LIBRARY_ROOT_KEY, normalized.toString()) }
+    }
+
+    override fun clearSoundLibraryRoot() {
+        runCatching { preferences.remove(SOUND_LIBRARY_ROOT_KEY) }
+    }
+
     private companion object {
         const val LAST_PROJECT_KEY = "last-successfully-opened-project"
+        const val SOUND_LIBRARY_ROOT_KEY = "sound-library-root"
     }
 }
 
@@ -68,6 +92,9 @@ object NoOpDesktopPreferences : DesktopPreferences {
     override fun lastOpenedProject(): Path? = null
     override fun saveLastOpenedProject(root: Path) = Unit
     override fun clearLastOpenedProject() = Unit
+    override fun soundLibraryRoot(): Path? = null
+    override fun saveSoundLibraryRoot(root: Path) = Unit
+    override fun clearSoundLibraryRoot() = Unit
 }
 
 object NoOpDesktopOperationLogger : DesktopOperationLogger {

@@ -9,6 +9,7 @@ interface DesktopFileDialogs {
     suspend fun chooseProjectDirectory(): Path?
     suspend fun chooseNewProjectDirectory(): Path?
     suspend fun choosePartSource(audio: Boolean): Path?
+    suspend fun chooseSoundLibraryDirectory(): Path?
 }
 
 class SwingDesktopFileDialogs : DesktopFileDialogs {
@@ -32,6 +33,10 @@ class SwingDesktopFileDialogs : DesktopFileDialogs {
         }
         val selected = if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFile?.toPath() else null
         if (continuation.isActive) continuation.resume(selected)
+    }
+
+    override suspend fun chooseSoundLibraryDirectory(): Path? = suspendCancellableCoroutine { continuation ->
+        chooseDirectory("Choose sound-library folder", continuation)
     }
 
     private fun chooseDirectory(

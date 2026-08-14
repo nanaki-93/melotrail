@@ -43,7 +43,9 @@ import java.nio.file.Path
 
 fun main() = application {
     val desktopWindowState = rememberWindowState(placement = WindowPlacement.Maximized)
-    val libraryRoot = DesktopServiceComposition.resolveLibraryRoot().root
+    val preferences = JvmDesktopPreferences()
+    val librarySettings = SoundLibrarySettingsService(preferences)
+    val libraryRoot = librarySettings.refresh().resolvedRoot ?: DesktopServiceComposition.unavailableLibraryRoot()
     val arrangementService = DefaultArrangementApplicationService(libraryRoot = libraryRoot)
     val mixService = DefaultMixApplicationService()
     val client = DesktopServiceComposition.workerClient()
@@ -61,7 +63,8 @@ fun main() = application {
         buildService = DefaultBuildApplicationService(arrangementService, mixService, sfizzRenderer, DesktopBuildWorker(client)),
         player = player,
         partPreviewService = DefaultPartPreviewApplicationService(sfizzRenderer),
-        preferences = JvmDesktopPreferences(),
+        preferences = preferences,
+        soundLibrarySettings = SoundLibrarySettingsService(preferences, activeRoot = libraryRoot),
         operationLogger = LocalDesktopOperationLogger()
     )
     Window(
@@ -89,17 +92,8 @@ fun main() = application {
  * cleanup, analysis, registration, and atomic project writes.
  */
 object DesktopServiceComposition {
-    /** Resolve the validated sound-library root once at desktop startup. */
-    fun resolveLibraryRoot(): SoundLibraryLocation.Success {
-        val locator = SoundLibraryLocator()
-        return when (val result = locator.locate(configuredRoot = null)) {
-            is SoundLibraryLocation.Success -> result
-            is SoundLibraryLocation.Failure -> throw IllegalStateException(
-                "Sound library not found. Checked: ${result.candidates.joinToString("; ") { "${it.path} (${it.reason})" }}. " +
-                    "Set MUSIC_SOUNDS_ROOT to an absolute path containing sounds/instruments.json."
-            )
-        }
-    }
+    /** An inert, non-CWD fallback lets the settings screen recover a missing library. */
+    fun unavailableLibraryRoot(): Path = Path.of(System.getProperty("java.io.tmpdir"), "personal-ai-music-arranger", "missing-sound-library")
 
     fun workerClient(): WorkerClient {
         val logger = DefaultLogger()

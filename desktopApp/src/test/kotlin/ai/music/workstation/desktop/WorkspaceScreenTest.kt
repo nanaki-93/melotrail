@@ -137,6 +137,18 @@ class WorkspaceScreenTest {
         onNodeWithText("Keep working").assertIsDisplayed()
     }
 
+    @Test
+    fun `sound library dialog exposes choose clear and validation feedback`() = runComposeUiTest {
+        setContent {
+            MusicWorkstationTheme {
+                WorkspaceScreen(WorkspaceUiState(dialog = WorkspaceDialog.SoundLibrarySettings, soundLibrary = SoundLibrarySettingsState(validationError = "Registry is invalid")), onIntent = {})
+            }
+        }
+        onNodeWithTag(WorkspaceTags.SOUND_LIBRARY_CHOOSE).assertIsDisplayed()
+        onNodeWithTag(WorkspaceTags.SOUND_LIBRARY_CLEAR).assertIsDisplayed()
+        onNodeWithText("Registry is invalid").assertIsDisplayed()
+    }
+
     private fun projectState(): WorkspaceUiState {
         val root = java.nio.file.Path.of("build/test-project")
         return WorkspaceUiState(project = ai.music.workstation.application.ProjectSnapshot(

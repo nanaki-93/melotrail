@@ -46,7 +46,10 @@ sealed class SoundLibraryLocation {
  * An invalid environment override fails immediately — it never silently falls
  * back to another candidate.
  */
-class SoundLibraryLocator {
+class SoundLibraryLocator(
+    private val environment: Map<String, String> = System.getenv(),
+    private val configuredDevelopmentCandidates: List<Path> = defaultDevelopmentCandidates()
+) {
 
     /**
      * Resolve the sound-library root.
@@ -59,7 +62,7 @@ class SoundLibraryLocator {
         val checked = mutableListOf<SoundLibraryLocation.Failure.Candidate>()
 
         // 1. Environment variable — strict, no fallback on failure.
-        val envValue = System.getenv("MUSIC_SOUNDS_ROOT").orEmpty()
+        val envValue = environment["MUSIC_SOUNDS_ROOT"].orEmpty()
         if (envValue.isNotBlank()) {
             val envPath = try {
                 Path.of(envValue)
@@ -96,8 +99,7 @@ class SoundLibraryLocator {
         }
 
         // 3. Development / bundled candidates.
-        val devCandidates = developmentCandidates()
-        for (candidate in devCandidates) {
+        for (candidate in configuredDevelopmentCandidates) {
             if (Files.isDirectory(candidate)) {
                 return SoundLibraryLocation.Success(candidate, "development")
             }
@@ -115,9 +117,11 @@ class SoundLibraryLocator {
      * bundled locations.  These are only reached when no env or config path
      * is set.
      */
-    private fun developmentCandidates(): List<Path> = listOf(
-        Path.of("sounds").toAbsolutePath().normalize(),
-        Path.of("resources", "sounds").toAbsolutePath().normalize(),
-        Path.of("assets", "sounds").toAbsolutePath().normalize()
-    )
+    companion object {
+        private fun defaultDevelopmentCandidates(): List<Path> = listOf(
+            Path.of("sounds").toAbsolutePath().normalize(),
+            Path.of("resources", "sounds").toAbsolutePath().normalize(),
+            Path.of("assets", "sounds").toAbsolutePath().normalize()
+        )
+    }
 }

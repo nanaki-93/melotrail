@@ -18,7 +18,7 @@ root without storing project or audio data in preferences.
 - Environment configuration remains authoritative and read-only in the UI; show
   why selection is disabled when it is present.
 - Display the resolved path, discovery source, validation error, and concise
-  `sounds/README.md` recovery guidance.
+  `../../../sounds/README.md` recovery guidance.
 
 ## Tests
 
