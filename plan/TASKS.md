@@ -134,7 +134,7 @@ These tasks start only after Task 028 and must be implemented one at a time.
 | [043](tasks/completed/043-audio-preparation-ui.md) | Audio preparation and A/B UI | 035, 039, 041–042 | Consented cleanup, A/B, input selection |
 | [044](tasks/completed/044-midi-cleanup-profiles.md) | MIDI cleanup profiles | 042 | Conservative/transcription/timing profiles |
 | [045](tasks/completed/045-midi-quality-report.md) | MIDI quality report | 044 | Persisted raw-to-clean metrics/provenance |
-| [046](tasks/046-midi-quality-ui.md) | MIDI quality review UI | 035, 045 | Explicit cleanup review and retry |
+| [046](tasks/completed/046-midi-quality-ui.md) | MIDI quality review UI | 035, 045 | Explicit cleanup review and retry |
 | [047](tasks/047-creation-progress-model.md) | Creation progress model | 032, 034, 039, 043, 046 | Deterministic stage and next-action state |
 | [048](tasks/048-creation-header-and-checklist.md) | Creation header and checklist | 047 | Visible creation stepper and next action |
 | [049](tasks/049-parts-and-structure-workspace.md) | Parts and structure workspace | 048 | Linked parts/preparation/structure experience |

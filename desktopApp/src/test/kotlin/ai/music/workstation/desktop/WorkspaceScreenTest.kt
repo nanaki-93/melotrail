@@ -192,6 +192,56 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `MIDI quality inspector shows metrics warnings profiles and downstream next action`() = runComposeUiTest {
+        val project = projectState().project!!.copy(parts = listOf(qualityPart(ai.music.workstation.application.MidiQualityStatus.CURRENT)))
+        setContent {
+            MusicWorkstationTheme {
+                WorkspaceScreen(WorkspaceUiState(project = project, selectedPartId = "A"), onIntent = {})
+            }
+        }
+
+        onNodeWithTag(WorkspaceTags.MIDI_QUALITY_PANEL).assertIsDisplayed()
+        onNodeWithText("Raw → clean").assertExists()
+        onNodeWithText("Notes 12 → 10", substring = true).assertExists()
+        onNodeWithText("Timing: 2 starts, 1 ends changed", substring = true).assertExists()
+        onNodeWithText("Warning: Cleanup shifted note timing", substring = true).assertExists()
+        onNodeWithText("Next: analyze A.").assertExists()
+        onNodeWithTag(WorkspaceTags.MIDI_QUALITY_PROFILE_PREFIX + "conservative").assertExists()
+        onNodeWithTag(WorkspaceTags.MIDI_QUALITY_PROFILE_PREFIX + "transcription_safe").assertExists()
+        onNodeWithTag(WorkspaceTags.MIDI_QUALITY_RETRY).assertExists()
+    }
+
+    @Test
+    fun `MIDI quality inspector explains legacy stale failed and timing confirmation states`() = runComposeUiTest {
+        listOf(
+            ai.music.workstation.application.MidiQualityStatus.LEGACY_UNKNOWN to "Legacy MIDI has no raw-to-clean quality record.",
+            ai.music.workstation.application.MidiQualityStatus.STALE_OR_INVALID to "The raw-to-clean quality report or clean MIDI is stale or invalid."
+        ).forEach { (status, message) ->
+            val project = projectState().project!!.copy(parts = listOf(qualityPart(status)))
+            setContent { MusicWorkstationTheme { WorkspaceScreen(WorkspaceUiState(project = project, selectedPartId = "A"), onIntent = {}) } }
+            onNodeWithText(message).assertIsDisplayed()
+        }
+        val project = projectState().project!!.copy(parts = listOf(qualityPart(ai.music.workstation.application.MidiQualityStatus.CURRENT)))
+        setContent {
+            MusicWorkstationTheme {
+                WorkspaceScreen(
+                    WorkspaceUiState(
+                        project = project,
+                        selectedPartId = "A",
+                        midiQualityReview = MidiQualityReviewDraft(ai.music.workstation.arrangement.MidiCleanupProfile.TIGHTEN_TIMING),
+                        operation = WorkspaceOperation.Failed("MIDI cleanup", "worker unavailable"),
+                        dialog = WorkspaceDialog.ConfirmTightenTiming("A")
+                    ), onIntent = {}
+                )
+            }
+        }
+        onNodeWithText("Timing warning: tighten timing uses a fixed 1/16 grid", substring = true).assertExists()
+        onNodeWithText("Retry failed: worker unavailable").assertExists()
+        onNodeWithText("Tighten timing for A?").assertIsDisplayed()
+        onNodeWithText("Retry with timing changes").assertIsDisplayed()
+    }
+
+    @Test
     fun `transport shortcuts retain play seek and stop behavior`() {
         val playback = PlaybackSnapshot(positionSeconds = 10.0, durationSeconds = 12.0)
 
@@ -278,6 +328,30 @@ class WorkspaceScreenTest {
             structure = emptyList(),
             readiness = ai.music.workstation.application.ProjectReadiness(false, false, false, false, false, false, false, false, false, false)
         ), runtimeReadiness = runtimeReadiness(DependencyReadiness(DependencyStatus.READY, "ready")))
+    }
+
+    private fun qualityPart(status: ai.music.workstation.application.MidiQualityStatus): ai.music.workstation.application.PartSummary {
+        val cleanup = ai.music.workstation.arrangement.MidiCleanupOptions()
+        val report = if (status == ai.music.workstation.application.MidiQualityStatus.CURRENT) {
+            val raw = ai.music.workstation.arrangement.MidiQualityArtifact("0".repeat(64), 12, 3.0, null, 2, 480, 1.0, null, listOf(ai.music.workstation.arrangement.MidiTempoChange(0, 120.0)), listOf(ai.music.workstation.arrangement.MidiTimeSignature(0, 4, 4)))
+            val clean = raw.copy(sha256 = "1".repeat(64), noteCount = 10, notesPerSecond = 2.5)
+            ai.music.workstation.arrangement.MidiQualityReport(
+                partId = "A", raw = raw, clean = clean, cleanup = cleanup,
+                timing = ai.music.workstation.arrangement.MidiTimingChangeSummary(10, 2, 0, 2, 1, 48, 24),
+                tempoAndTimeSignaturesPreserved = true,
+                warnings = listOf(ai.music.workstation.arrangement.MidiQualityWarning(ai.music.workstation.arrangement.MidiQualityWarningCode.LARGE_TIMING_SHIFT, "Cleanup shifted note timing by more than 240 ticks."))
+            )
+        } else null
+        val quality = ai.music.workstation.application.MidiQualitySummary(
+            status,
+            cleanup = if (status == ai.music.workstation.application.MidiQualityStatus.CURRENT) cleanup else null,
+            warnings = report?.warnings.orEmpty(),
+            report = report
+        )
+        return ai.music.workstation.application.PartSummary(
+            "A", "verse", "source/A.mid", "A.mid", ai.music.workstation.application.PartSourceType.MIDI, null,
+            ai.music.workstation.application.PartPreparationSummary(false, false, false, true, true, false, false, emptyList(), quality)
+        )
     }
 
     private fun preparationSnapshot(partId: String, recommendation: Boolean, clean: Boolean): ai.music.workstation.application.AudioPreparationSnapshot {

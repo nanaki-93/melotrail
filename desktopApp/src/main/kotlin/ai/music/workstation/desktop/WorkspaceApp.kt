@@ -58,6 +58,7 @@ import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import ai.music.workstation.arrangement.MidiCleanupProfile
 import kotlin.math.roundToInt
 
 object WorkspaceTags {
@@ -102,6 +103,9 @@ object WorkspaceTags {
     const val PREPARATION_TRANSCRIBE = "preparation-transcribe"
     const val PREPARATION_ORIGINAL = "preparation-original"
     const val PREPARATION_CLEAN = "preparation-clean"
+    const val MIDI_QUALITY_PANEL = "midi-quality-panel"
+    const val MIDI_QUALITY_RETRY = "midi-quality-retry"
+    const val MIDI_QUALITY_PROFILE_PREFIX = "midi-quality-profile-"
     const val SOUND_LIBRARY_SETTINGS = "sound-library-settings"
     const val SOUND_LIBRARY_CHOOSE = "sound-library-choose"
     const val SOUND_LIBRARY_CLEAR = "sound-library-clear"
@@ -264,7 +268,7 @@ private fun WorkspaceShell(state: WorkspaceUiState, onIntent: (WorkspaceIntent) 
 @Composable
 private fun WideWorkspace(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
     Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        PanelColumn(Modifier.widthIn(min = 235.dp, max = 300.dp).weight(0.95f), state, onIntent, listOf(Panel.Parts, Panel.Preparation, Panel.Structure))
+        PanelColumn(Modifier.widthIn(min = 235.dp, max = 300.dp).weight(0.95f), state, onIntent, listOf(Panel.Parts, Panel.Preparation, Panel.MidiQuality, Panel.Structure))
         PanelColumn(Modifier.weight(1.7f), state, onIntent, listOf(Panel.Arrangement, Panel.Timeline))
         PanelColumn(Modifier.widthIn(min = 255.dp, max = 340.dp).weight(1f), state, onIntent, listOf(Panel.Mix, Panel.Status))
     }
@@ -273,7 +277,7 @@ private fun WideWorkspace(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
 @Composable
 private fun MediumWorkspace(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
     Row(modifier = Modifier.fillMaxSize().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        PanelColumn(Modifier.widthIn(min = 300.dp, max = 340.dp), state, onIntent, listOf(Panel.Parts, Panel.Preparation, Panel.Structure, Panel.Status))
+        PanelColumn(Modifier.widthIn(min = 300.dp, max = 340.dp), state, onIntent, listOf(Panel.Parts, Panel.Preparation, Panel.MidiQuality, Panel.Structure, Panel.Status))
         PanelColumn(Modifier.widthIn(min = 500.dp, max = 720.dp), state, onIntent, listOf(Panel.Arrangement, Panel.Timeline, Panel.Mix))
     }
 }
@@ -283,7 +287,7 @@ private fun NarrowWorkspace(state: WorkspaceUiState, onIntent: (WorkspaceIntent)
     PanelColumn(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), state, onIntent, Panel.entries.toList())
 }
 
-private enum class Panel { Parts, Preparation, Structure, Arrangement, Timeline, Mix, Status }
+private enum class Panel { Parts, MidiQuality, Preparation, Structure, Arrangement, Timeline, Mix, Status }
 
 @Composable
 private fun PanelColumn(modifier: Modifier, state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, panels: List<Panel>) {
@@ -291,6 +295,7 @@ private fun PanelColumn(modifier: Modifier, state: WorkspaceUiState, onIntent: (
         panels.forEach { panel ->
             when (panel) {
                 Panel.Parts -> PartsPanel(state, onIntent)
+                Panel.MidiQuality -> if (state.selectedPartId != null) MidiQualityReviewPanel(state, onIntent)
                 Panel.Preparation -> if (state.selectedPartId != null) AudioPreparationPanel(state, onIntent)
                 Panel.Structure -> StructurePanel(state, onIntent)
                 Panel.Arrangement -> ArrangementPanel(state, onIntent)
@@ -344,6 +349,89 @@ private fun PartsPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
         onClick = { onIntent(WorkspaceIntent.ShowImportPart(audio = false)) }, enabled = !disabled,
         modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.ADD_MIDI }
     ) { Text("Import MIDI, WAV, or MP3") }
+}
+
+@Composable
+private fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("MIDI quality review", WorkspaceTags.MIDI_QUALITY_PANEL) {
+    val part = state.selectedPartId?.let { id -> state.project?.parts?.find { it.id == id } } ?: return@WorkspaceCard
+    val quality = part.preparation.midiQuality
+    Text("Part ${part.id}", fontWeight = FontWeight.Medium)
+    when (quality.status) {
+        ai.music.workstation.application.MidiQualityStatus.LEGACY_UNKNOWN -> {
+            Text("Legacy MIDI has no raw-to-clean quality record.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            Text("Analysis and arrangement are blocked until this part is re-imported with MIDI cleanup. Structure may still be edited.", style = MaterialTheme.typography.bodySmall)
+        }
+        ai.music.workstation.application.MidiQualityStatus.STALE_OR_INVALID -> {
+            Text("The raw-to-clean quality report or clean MIDI is stale or invalid.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            Text("Analysis and arrangement are blocked. Retry MIDI cleanup, then analyze ${part.id}; structure may still be edited.", style = MaterialTheme.typography.bodySmall)
+        }
+        ai.music.workstation.application.MidiQualityStatus.CURRENT -> {
+            val report = quality.report
+            Text("Current profile: ${quality.cleanup?.profile?.qualityProfileLabel() ?: "unknown"}", style = MaterialTheme.typography.bodySmall)
+            if (report != null) {
+                Text("Raw → clean", style = MaterialTheme.typography.labelLarge)
+                Text(
+                    "Notes ${report.raw.noteCount} → ${report.clean.noteCount} · ${formatMetric(report.raw.notesPerSecond)} → ${formatMetric(report.clean.notesPerSecond)} notes/s · polyphony ${report.raw.maximumPolyphony} → ${report.clean.maximumPolyphony}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    "Timing: ${report.timing.changedStarts} starts, ${report.timing.changedEnds} ends changed; ${report.timing.removedNotes} removed, ${report.timing.addedNotes} added; max shift ${maxOf(report.timing.maxStartShiftTicks, report.timing.maxEndShiftTicks)} ticks.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Text(
+                    if (report.tempoAndTimeSignaturesPreserved) "Tempo and time signatures preserved." else "Tempo or time signatures changed; review before arranging.",
+                    color = if (report.tempoAndTimeSignaturesPreserved) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            if (quality.warnings.isEmpty()) Text("No quality warnings.", style = MaterialTheme.typography.bodySmall)
+            quality.warnings.forEach { Text("Warning: ${it.message}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+            quality.recommendations.forEach { Text(midiQualityRecommendationText(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            val next = when {
+                part.analysis == null -> "Next: analyze ${part.id}."
+                state.structureDraft.isEmpty() -> "Next: add at least one structure section before arranging."
+                state.project?.readiness?.analysesReady != true -> "Arrangement is blocked until every part has MIDI analysis."
+                else -> "This part is ready for structure and arrangement."
+            }
+            Text(next, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+
+    if (quality.status != ai.music.workstation.application.MidiQualityStatus.LEGACY_UNKNOWN) {
+        Text("Retry cleanup", style = MaterialTheme.typography.labelLarge)
+        Text("Choose a named profile. This never edits source MIDI or exposes worker parameters.", style = MaterialTheme.typography.bodySmall)
+        MidiCleanupProfile.entries.forEach { profile ->
+            val selected = state.midiQualityReview.profile == profile
+            OutlinedButton(
+                onClick = { onIntent(WorkspaceIntent.SelectMidiCleanupProfile(profile)) },
+                enabled = !state.operation.isMutating,
+                modifier = Modifier.semantics { testTag = WorkspaceTags.MIDI_QUALITY_PROFILE_PREFIX + profile.name.lowercase() }
+            ) { Text(if (selected) "${profile.qualityProfileLabel()} ✓" else profile.qualityProfileLabel()) }
+        }
+        if (state.midiQualityReview.profile == MidiCleanupProfile.TIGHTEN_TIMING) {
+            Text("Timing warning: tighten timing uses a fixed 1/16 grid at 40% strength. It may shift expressive note starts and ends; confirmation is required.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        }
+        Button(
+            onClick = { onIntent(WorkspaceIntent.RetryMidiCleanup) },
+            enabled = !state.operation.isMutating,
+            modifier = Modifier.semantics { testTag = WorkspaceTags.MIDI_QUALITY_RETRY }
+        ) { Text("Retry MIDI cleanup") }
+    }
+    if ((state.operation as? WorkspaceOperation.Failed)?.action == "MIDI cleanup") {
+        Text("Retry failed: ${(state.operation as WorkspaceOperation.Failed).message}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+private fun MidiCleanupProfile.qualityProfileLabel(): String = when (this) {
+    MidiCleanupProfile.CONSERVATIVE -> "Conservative"
+    MidiCleanupProfile.TRANSCRIPTION_SAFE -> "Transcription-safe"
+    MidiCleanupProfile.TIGHTEN_TIMING -> "Tighten timing"
+}
+
+private fun midiQualityRecommendationText(recommendation: ai.music.workstation.arrangement.MidiQualityRecommendation): String = when (recommendation) {
+    ai.music.workstation.arrangement.MidiQualityRecommendation.RETRY_TRANSCRIPTION -> "Recommendation: retry transcription before analysis."
+    ai.music.workstation.arrangement.MidiQualityRecommendation.REVIEW_CLEANUP_PROFILE -> "Recommendation: review the cleanup profile before arranging."
+    ai.music.workstation.arrangement.MidiQualityRecommendation.REVIEW_TIMING -> "Recommendation: review timing changes before arranging."
 }
 
 @Composable
@@ -776,6 +864,7 @@ private fun PlaceholderPanel(panel: Panel, state: WorkspaceUiState, onIntent: (W
         }
         val progress = (state.operation as? WorkspaceOperation.ImportingPart)?.progress
             ?: (state.operation as? WorkspaceOperation.AnalyzingPart)?.progress
+            ?: (state.operation as? WorkspaceOperation.RetryingMidiCleanup)?.progress
             ?: (state.operation as? WorkspaceOperation.GeneratingArrangement)?.progress
             ?: (state.operation as? WorkspaceOperation.ApplyingMix)?.progress
             ?: (state.operation as? WorkspaceOperation.BuildingSong)?.progress
@@ -819,6 +908,7 @@ private fun statusText(operation: WorkspaceOperation): String = when (operation)
     is WorkspaceOperation.AnalyzingPart -> "Analyzing ${operation.id}…"
     is WorkspaceOperation.InspectingPart -> "Inspecting preserved source for ${operation.id}…"
     is WorkspaceOperation.ApplyingAudioCleanup -> "Applying selected cleanup for ${operation.id}…"
+    is WorkspaceOperation.RetryingMidiCleanup -> "Retrying MIDI cleanup for ${operation.id}…"
     is WorkspaceOperation.TranscribingPart -> "Running transcription quality gate for ${operation.id}…"
     is WorkspaceOperation.UpdatingPartRole -> "Saving ${operation.id} role…"
     WorkspaceOperation.SavingStructure -> "Saving song structure…"
@@ -837,6 +927,7 @@ private fun WorkspaceDialogs(state: WorkspaceUiState, onIntent: (WorkspaceIntent
         is WorkspaceDialog.ImportPart -> ImportPartDialog(dialog, onIntent)
         is WorkspaceDialog.EditRole -> EditRoleDialog(dialog, onIntent)
         is WorkspaceDialog.ConfirmSafeCleanup -> ConfirmSafeCleanupDialog(dialog, onIntent)
+        is WorkspaceDialog.ConfirmTightenTiming -> ConfirmTightenTimingDialog(dialog, onIntent)
         is WorkspaceDialog.ConfirmDiscardDraft -> ConfirmDiscardDraftDialog(dialog, onIntent)
         WorkspaceDialog.ConfirmClose -> ConfirmCloseDialog(onIntent, onExit)
         WorkspaceDialog.SoundLibrarySettings -> SoundLibrarySettingsDialog(state.soundLibrary, onIntent)
@@ -852,6 +943,17 @@ private fun ConfirmSafeCleanupDialog(dialog: WorkspaceDialog.ConfirmSafeCleanup,
         text = { Text("This creates a separate prepared clean WAV from the measured recommendation. The original source remains available and unchanged. Continue only if you want this derived monitor/transcription option.") },
         confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.ConfirmSafeCleanup) }) { Text("Apply safe cleanup") } },
         dismissButton = { TextButton(onClick = { onIntent(WorkspaceIntent.DismissDialog) }) { Text("Keep original") } }
+    )
+}
+
+@Composable
+private fun ConfirmTightenTimingDialog(dialog: WorkspaceDialog.ConfirmTightenTiming, onIntent: (WorkspaceIntent) -> Unit) {
+    AlertDialog(
+        onDismissRequest = { onIntent(WorkspaceIntent.DismissDialog) },
+        title = { Text("Tighten timing for ${dialog.partId}?") },
+        text = { Text("This retry uses the fixed 1/16 grid at 40% strength. It can move expressive note timing. The raw source MIDI remains unchanged; clean MIDI, its quality report, analysis, and preview fingerprint will be replaced or refreshed only after validation.") },
+        confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.ConfirmTightenTiming) }) { Text("Retry with timing changes") } },
+        dismissButton = { TextButton(onClick = { onIntent(WorkspaceIntent.DismissDialog) }) { Text("Keep current cleanup") } }
     )
 }
 

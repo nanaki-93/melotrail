@@ -210,6 +210,59 @@ class WorkspaceViewModelTest {
     }
 
     @Test
+    fun `MIDI quality retry uses only named profiles confirms timing and invalidates downstream state`() = runTest {
+        val root = Path.of("build/quality-project")
+        val currentQuality = ai.music.workstation.application.MidiQualitySummary(
+            ai.music.workstation.application.MidiQualityStatus.CURRENT,
+            ai.music.workstation.arrangement.MidiCleanupOptions()
+        )
+        val snapshot = projectSnapshot(root).copy(
+            parts = listOf(part("A").copy(preparation = part("A").preparation.copy(midiQuality = currentQuality))),
+            readiness = ai.music.workstation.application.ProjectReadiness(true, true, true, true, true, false, false, false, false, false, true)
+        )
+        val service = FakeProjectService(result = snapshot)
+        val viewModel = WorkspaceViewModel(service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.SelectPart("A"))
+
+        assertEquals(ai.music.workstation.arrangement.MidiCleanupProfile.CONSERVATIVE, viewModel.state.value.midiQualityReview.profile)
+        viewModel.accept(WorkspaceIntent.RetryMidiCleanup); advanceUntilIdle()
+        assertEquals(ai.music.workstation.arrangement.MidiCleanupProfile.CONSERVATIVE, service.midiCleanupRetry?.cleanup?.profile)
+        viewModel.accept(WorkspaceIntent.SelectMidiCleanupProfile(ai.music.workstation.arrangement.MidiCleanupProfile.TRANSCRIPTION_SAFE))
+        viewModel.accept(WorkspaceIntent.RetryMidiCleanup); advanceUntilIdle()
+        assertEquals(ai.music.workstation.arrangement.MidiCleanupProfile.TRANSCRIPTION_SAFE, service.midiCleanupRetry?.cleanup?.profile)
+        assertTrue(viewModel.state.value.downstreamArtifactsStale)
+        assertNull(viewModel.state.value.arrangement)
+
+        viewModel.accept(WorkspaceIntent.SelectMidiCleanupProfile(ai.music.workstation.arrangement.MidiCleanupProfile.TIGHTEN_TIMING))
+        viewModel.accept(WorkspaceIntent.RetryMidiCleanup)
+        assertEquals(WorkspaceDialog.ConfirmTightenTiming("A"), viewModel.state.value.dialog)
+        assertEquals(ai.music.workstation.arrangement.MidiCleanupProfile.TRANSCRIPTION_SAFE, service.midiCleanupRetry?.cleanup?.profile)
+        viewModel.accept(WorkspaceIntent.ConfirmTightenTiming); advanceUntilIdle()
+        val options = checkNotNull(service.midiCleanupRetry).cleanup
+        assertEquals(ai.music.workstation.arrangement.MidiCleanupProfile.TIGHTEN_TIMING, options.profile)
+        assertEquals("1/16", options.quantize)
+        assertEquals(0.4, options.strength)
+        viewModel.close()
+    }
+
+    @Test
+    fun `stale MIDI quality retry failure remains actionable`() = runTest {
+        val root = Path.of("build/stale-quality-project")
+        val stale = ai.music.workstation.application.MidiQualitySummary(ai.music.workstation.application.MidiQualityStatus.STALE_OR_INVALID)
+        val snapshot = projectSnapshot(root).copy(parts = listOf(part("A").copy(preparation = part("A").preparation.copy(midiQuality = stale))))
+        val service = FakeProjectService(result = snapshot, failureOnMidiCleanup = IllegalStateException("worker unavailable"))
+        val viewModel = WorkspaceViewModel(service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.SelectPart("A"))
+        viewModel.accept(WorkspaceIntent.RetryMidiCleanup); advanceUntilIdle()
+
+        assertEquals("worker unavailable", assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation).message)
+        assertIs<WorkspaceRetry.MidiCleanup>(viewModel.state.value.retry)
+        viewModel.close()
+    }
+
+    @Test
     fun `guided import detects supported types and cancellation preserves the draft`() = runTest {
         val root = Path.of("build/import-project")
         val viewModel = WorkspaceViewModel(FakeProjectService(result = projectSnapshot(root)), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
@@ -717,11 +770,13 @@ private class FakeDesktopPreferences(private val last: Path?) : DesktopPreferenc
 private class FakeProjectService(
     private val result: ProjectSnapshot? = null,
     private val failure: Throwable? = null,
-    private val failureOnImport: Throwable? = null
+    private val failureOnImport: Throwable? = null,
+    private val failureOnMidiCleanup: Throwable? = null
 ) : ProjectApplicationService {
     private var current: ProjectSnapshot? = result
     var created: CreateProjectRequest? = null
     var imported: ImportPartRequest? = null
+    var midiCleanupRetry: ai.music.workstation.application.RetryMidiCleanupRequest? = null
     var analyzed: AnalyzePartRequest? = null
     var updatedRole: UpdatePartRoleRequest? = null
     var savedStructure: SaveStructureRequest? = null
@@ -742,6 +797,16 @@ private class FakeProjectService(
         imported = request
         failureOnImport?.let { throw it }
         progress.report(ai.music.workstation.application.OperationProgress("import-part", 2, 4, "Cleaning MIDI"))
+        return checkNotNull(current)
+    }
+
+    override suspend fun retryMidiCleanup(
+        request: ai.music.workstation.application.RetryMidiCleanupRequest,
+        progress: ai.music.workstation.application.ProgressSink
+    ): ProjectSnapshot {
+        midiCleanupRetry = request
+        failureOnMidiCleanup?.let { throw it }
+        progress.report(ai.music.workstation.application.OperationProgress("retry-midi-cleanup", 2, 3, "Saving quality report"))
         return checkNotNull(current)
     }
 

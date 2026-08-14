@@ -23,6 +23,7 @@ import ai.music.workstation.application.PartSourceType
 import ai.music.workstation.application.PartAnalysisStatus
 import ai.music.workstation.application.ProjectApplicationService
 import ai.music.workstation.application.ProjectSnapshot
+import ai.music.workstation.application.RetryMidiCleanupRequest
 import ai.music.workstation.application.AudioPreparationApplicationService
 import ai.music.workstation.application.AudioPreparationAvailability
 import ai.music.workstation.application.AudioPreparationSnapshot
@@ -30,6 +31,9 @@ import ai.music.workstation.application.PreviewAudioSource
 import ai.music.workstation.application.SaveStructureRequest
 import ai.music.workstation.application.UpdatePartRoleRequest
 import ai.music.workstation.arrangement.RenderFormat
+import ai.music.workstation.arrangement.MidiCleanupOptions
+import ai.music.workstation.arrangement.MidiCleanupProfile
+import ai.music.workstation.application.MidiQualityStatus
 import ai.music.workstation.preparation.InputCleanupMode
 import ai.music.workstation.preparation.TranscriptionInputArtifact
 import kotlinx.coroutines.CoroutineDispatcher
@@ -63,6 +67,7 @@ data class WorkspaceUiState(
     val playback: PlaybackSnapshot = PlaybackSnapshot(),
     val preview: PreviewUiState = PreviewUiState(),
     val selectedPartId: String? = null,
+    val midiQualityReview: MidiQualityReviewDraft = MidiQualityReviewDraft(),
     val audioPreparation: AudioPreparationUiState = AudioPreparationUiState(),
     val arrangementDraft: ArrangementDraft = ArrangementDraft(),
     val selectedArrangementSection: Int? = null,
@@ -76,6 +81,15 @@ data class WorkspaceUiState(
     val arrangementDraftDirty: Boolean = false,
     val retry: WorkspaceRetry? = null
 )
+
+/** The UI exposes three named cleanup choices only; no worker parameters are editable here. */
+data class MidiQualityReviewDraft(val profile: MidiCleanupProfile = MidiCleanupProfile.CONSERVATIVE)
+
+internal fun namedMidiCleanupOptions(profile: MidiCleanupProfile): MidiCleanupOptions = when (profile) {
+    MidiCleanupProfile.CONSERVATIVE -> MidiCleanupOptions(profile = profile)
+    MidiCleanupProfile.TRANSCRIPTION_SAFE -> MidiCleanupOptions(profile = profile)
+    MidiCleanupProfile.TIGHTEN_TIMING -> MidiCleanupOptions(profile = profile, quantize = "1/16", strength = 0.4)
+}
 
 data class AudioPreparationUiState(
     val partId: String? = null,
@@ -126,6 +140,7 @@ sealed interface WorkspaceOperation {
     data class AnalyzingPart(val id: String, val progress: OperationProgress? = null) : WorkspaceOperation
     data class InspectingPart(val id: String) : WorkspaceOperation
     data class ApplyingAudioCleanup(val id: String) : WorkspaceOperation
+    data class RetryingMidiCleanup(val id: String, val progress: OperationProgress? = null) : WorkspaceOperation
     data class TranscribingPart(val id: String) : WorkspaceOperation
     data class UpdatingPartRole(val id: String) : WorkspaceOperation
     data object SavingStructure : WorkspaceOperation
@@ -141,6 +156,7 @@ val WorkspaceOperation.isMutating: Boolean
     get() = this is WorkspaceOperation.OpeningProject || this is WorkspaceOperation.CreatingProject ||
         this is WorkspaceOperation.ImportingPart || this is WorkspaceOperation.AnalyzingPart ||
         this is WorkspaceOperation.InspectingPart || this is WorkspaceOperation.ApplyingAudioCleanup || this is WorkspaceOperation.TranscribingPart ||
+        this is WorkspaceOperation.RetryingMidiCleanup ||
         this is WorkspaceOperation.UpdatingPartRole || this is WorkspaceOperation.SavingStructure ||
         this is WorkspaceOperation.GeneratingArrangement || this is WorkspaceOperation.ApprovingArrangement
         || this is WorkspaceOperation.ApplyingMix || this is WorkspaceOperation.BuildingSong
@@ -165,6 +181,7 @@ sealed interface WorkspaceDialog {
 
     data class EditRole(val partId: String, val role: String) : WorkspaceDialog
     data class ConfirmSafeCleanup(val partId: String) : WorkspaceDialog
+    data class ConfirmTightenTiming(val partId: String) : WorkspaceDialog
     data class ConfirmDiscardDraft(val root: Path? = null, val createProject: Boolean = false) : WorkspaceDialog
     data object ConfirmClose : WorkspaceDialog
     data object SoundLibrarySettings : WorkspaceDialog
@@ -191,6 +208,7 @@ sealed interface WorkspaceRetry {
     data class Analyze(val root: Path, val partId: String) : WorkspaceRetry
     data class Inspect(val root: Path, val partId: String) : WorkspaceRetry
     data class Cleanup(val root: Path, val partId: String, val mode: InputCleanupMode) : WorkspaceRetry
+    data class MidiCleanup(val request: RetryMidiCleanupRequest) : WorkspaceRetry
     data class Transcribe(val root: Path, val partId: String, val selectedInput: TranscriptionInputArtifact) : WorkspaceRetry
     data class GenerateArrangement(val request: GenerateArrangementRequest) : WorkspaceRetry
 }
@@ -219,6 +237,9 @@ sealed interface WorkspaceIntent {
     data class SelectCleanupMode(val mode: InputCleanupMode) : WorkspaceIntent
     data object ApplySelectedCleanup : WorkspaceIntent
     data object ConfirmSafeCleanup : WorkspaceIntent
+    data class SelectMidiCleanupProfile(val profile: MidiCleanupProfile) : WorkspaceIntent
+    data object RetryMidiCleanup : WorkspaceIntent
+    data object ConfirmTightenTiming : WorkspaceIntent
     data class SelectTranscriptionInput(val input: TranscriptionInputArtifact) : WorkspaceIntent
     data object TranscribeSelectedPart : WorkspaceIntent
     data class PreviewPart(val partId: String) : WorkspaceIntent
@@ -322,6 +343,9 @@ class WorkspaceViewModel(
             is WorkspaceIntent.SelectCleanupMode -> mutableState.update { it.copy(audioPreparation = it.audioPreparation.copy(cleanupMode = intent.mode)) }
             WorkspaceIntent.ApplySelectedCleanup -> applySelectedCleanup()
             WorkspaceIntent.ConfirmSafeCleanup -> confirmSafeCleanup()
+            is WorkspaceIntent.SelectMidiCleanupProfile -> mutableState.update { it.copy(midiQualityReview = it.midiQualityReview.copy(profile = intent.profile)) }
+            WorkspaceIntent.RetryMidiCleanup -> retryMidiCleanup()
+            WorkspaceIntent.ConfirmTightenTiming -> confirmTightenTiming()
             is WorkspaceIntent.SelectTranscriptionInput -> mutableState.update { it.copy(audioPreparation = it.audioPreparation.copy(transcriptionInput = intent.input)) }
             WorkspaceIntent.TranscribeSelectedPart -> transcribeSelectedPart()
             is WorkspaceIntent.PreviewPart -> previewPart(intent.partId)
@@ -535,10 +559,10 @@ class WorkspaceViewModel(
         val project = state.value.project ?: return
         val part = project.parts.find { it.id == partId } ?: return
         if (part.sourceType != PartSourceType.AUDIO) {
-            mutableState.update { it.copy(selectedPartId = partId, audioPreparation = AudioPreparationUiState(partId = partId), notification = "Audio preparation is available for WAV/MP3 parts only.") }
+            mutableState.update { it.copy(selectedPartId = partId, midiQualityReview = MidiQualityReviewDraft(), audioPreparation = AudioPreparationUiState(partId = partId), notification = "Audio preparation is available for WAV/MP3 parts only.") }
             return
         }
-        mutableState.update { it.copy(selectedPartId = partId, audioPreparation = AudioPreparationUiState(partId = partId), notification = null) }
+        mutableState.update { it.copy(selectedPartId = partId, midiQualityReview = MidiQualityReviewDraft(), audioPreparation = AudioPreparationUiState(partId = partId), notification = null) }
         loadPreparation(project.root, partId)
     }
 
@@ -588,6 +612,60 @@ class WorkspaceViewModel(
         val dialog = state.value.dialog as? WorkspaceDialog.ConfirmSafeCleanup ?: return
         mutableState.update { it.copy(dialog = null) }
         runCleanup(dialog.partId, InputCleanupMode.SAFE_CLEANUP, confirmed = true)
+    }
+
+    private fun retryMidiCleanup() {
+        val project = state.value.project ?: return fail("MIDI cleanup", "Open a project before retrying MIDI cleanup.")
+        val partId = state.value.selectedPartId ?: return fail("MIDI cleanup", "Select a part before retrying MIDI cleanup.")
+        val part = project.parts.find { it.id == partId } ?: return fail("MIDI cleanup", "Selected part is no longer available.")
+        when (part.preparation.midiQuality.status) {
+            MidiQualityStatus.LEGACY_UNKNOWN -> return fail("MIDI cleanup", "This legacy part has no cleanup provenance. Re-import it to create a reviewable raw-to-clean MIDI record.")
+            MidiQualityStatus.CURRENT, MidiQualityStatus.STALE_OR_INVALID -> Unit
+        }
+        val profile = state.value.midiQualityReview.profile
+        if (profile == MidiCleanupProfile.TIGHTEN_TIMING) {
+            mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmTightenTiming(partId)) }
+        } else {
+            runMidiCleanupRetry(RetryMidiCleanupRequest(project.root, partId, namedMidiCleanupOptions(profile)))
+        }
+    }
+
+    private fun confirmTightenTiming() {
+        val dialog = state.value.dialog as? WorkspaceDialog.ConfirmTightenTiming ?: return
+        val project = state.value.project ?: return
+        mutableState.update { it.copy(dialog = null) }
+        runMidiCleanupRetry(
+            RetryMidiCleanupRequest(project.root, dialog.partId, namedMidiCleanupOptions(MidiCleanupProfile.TIGHTEN_TIMING))
+        )
+    }
+
+    private fun runMidiCleanupRetry(request: RetryMidiCleanupRequest) {
+        if (state.value.operation.isMutating) return
+        mutableState.update { it.copy(operation = WorkspaceOperation.RetryingMidiCleanup(request.partId), notification = null, retry = null) }
+        scope.launch {
+            runCatching {
+                withContext(ioDispatcher) {
+                    projectService.retryMidiCleanup(request) { progress ->
+                        scope.launch { updateProgress(WorkspaceOperation.RetryingMidiCleanup(request.partId, progress)) }
+                    }
+                }
+            }.onSuccess { snapshot ->
+                // A MIDI retry changes the clean-MIDI digest. Do not leave the old monitor artifact selected.
+                cancelPreview(resetState = true)
+                mutableState.update {
+                    it.copy(
+                        project = snapshot,
+                        arrangement = null,
+                        operation = WorkspaceOperation.Idle,
+                        notification = "MIDI cleanup retried with ${request.cleanup.profile.name.lowercase().replace('_', '-')}. Preview will resolve a fresh fingerprint; analyze ${request.partId} before arranging.",
+                        downstreamArtifactsStale = true,
+                        retry = null
+                    )
+                }
+            }.onFailure { failure ->
+                fail("MIDI cleanup", failure.message ?: "Unable to retry MIDI cleanup for ${request.partId}.", WorkspaceRetry.MidiCleanup(request))
+            }
+        }
     }
 
     private fun runCleanup(partId: String, mode: InputCleanupMode, confirmed: Boolean) {
@@ -795,6 +873,12 @@ class WorkspaceViewModel(
             if (action.mode == InputCleanupMode.SAFE_CLEANUP) mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmSafeCleanup(action.partId)) }
             else runCleanup(action.partId, action.mode, confirmed = false)
         }
+        is WorkspaceRetry.MidiCleanup -> {
+            mutableState.update { it.copy(selectedPartId = action.request.partId, midiQualityReview = MidiQualityReviewDraft(action.request.cleanup.profile)) }
+            if (action.request.cleanup.profile == MidiCleanupProfile.TIGHTEN_TIMING) {
+                mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmTightenTiming(action.request.partId)) }
+            } else runMidiCleanupRetry(action.request)
+        }
         is WorkspaceRetry.Transcribe -> {
             mutableState.update { it.copy(selectedPartId = action.partId, audioPreparation = it.audioPreparation.copy(partId = action.partId, transcriptionInput = action.selectedInput)) }
             transcribeSelectedPart()
@@ -870,6 +954,7 @@ class WorkspaceViewModel(
         val progress = when (operation) {
             is WorkspaceOperation.ImportingPart -> operation.progress
             is WorkspaceOperation.AnalyzingPart -> operation.progress
+            is WorkspaceOperation.RetryingMidiCleanup -> operation.progress
             is WorkspaceOperation.GeneratingArrangement -> operation.progress
             is WorkspaceOperation.ApplyingMix -> operation.progress
             is WorkspaceOperation.BuildingSong -> operation.progress
@@ -985,6 +1070,7 @@ class WorkspaceViewModel(
                 arrangement = null,
                 mix = runCatching { mixService.load(project.root) }.getOrNull(),
                 selectedPartId = null,
+                midiQualityReview = MidiQualityReviewDraft(),
                 audioPreparation = AudioPreparationUiState(),
                 operation = WorkspaceOperation.Idle,
                 notification = message,

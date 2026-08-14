@@ -6,6 +6,7 @@ import ai.music.workstation.arrangement.MidiAnalysisStore
 import ai.music.workstation.arrangement.MidiCleanupOptions
 import ai.music.workstation.arrangement.MidiPartAnalyzer
 import ai.music.workstation.arrangement.MidiQualityRecommendation
+import ai.music.workstation.arrangement.MidiQualityReport
 import ai.music.workstation.arrangement.MidiQualityReportStore
 import ai.music.workstation.arrangement.MidiQualityReporter
 import ai.music.workstation.arrangement.MidiQualityWarning
@@ -43,6 +44,7 @@ interface ProjectApplicationService {
     fun open(root: Path): ProjectSnapshot
     fun create(request: CreateProjectRequest): ProjectSnapshot
     suspend fun importPart(request: ImportPartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
+    suspend fun retryMidiCleanup(request: RetryMidiCleanupRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
     suspend fun inspectPart(request: InspectPartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
     suspend fun analyzePart(request: AnalyzePartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
     fun updatePart(request: UpdatePartRoleRequest): ProjectSnapshot
@@ -62,6 +64,13 @@ data class ImportPartRequest(
     val role: String = "",
     val transcribe: Boolean = false,
     val cleanup: MidiCleanupOptions = MidiCleanupOptions()
+)
+
+/** A retry may choose only an already validated named cleanup profile. */
+data class RetryMidiCleanupRequest(
+    val root: Path,
+    val partId: String,
+    val cleanup: MidiCleanupOptions
 )
 
 data class AnalyzePartRequest(val root: Path, val partId: String)
@@ -146,7 +155,9 @@ data class MidiQualitySummary(
     val status: MidiQualityStatus,
     val cleanup: MidiCleanupOptions? = null,
     val warnings: List<MidiQualityWarning> = emptyList(),
-    val recommendations: List<MidiQualityRecommendation> = emptyList()
+    val recommendations: List<MidiQualityRecommendation> = emptyList(),
+    /** Current canonical report only; it contains no external source path. */
+    val report: MidiQualityReport? = null
 ) {
     companion object {
         fun legacyUnknown() = MidiQualitySummary(MidiQualityStatus.LEGACY_UNKNOWN)
@@ -301,6 +312,60 @@ class DefaultProjectApplicationService(
         snapshot(root, saved)
     }
 
+    override suspend fun retryMidiCleanup(request: RetryMidiCleanupRequest, progress: ProgressSink): ProjectSnapshot = mutateSuspend(request.root) { root ->
+        request.cleanup.requireValid()
+        val project = readValidProject(root)
+        require(project.version == Project.CURRENT_VERSION) {
+            "Part '${request.partId}' is legacy and has no retryable MIDI cleanup provenance. Re-import it to establish MIDI quality review."
+        }
+        val part = project.parts.find { it.id == request.partId }
+            ?: throw IllegalArgumentException("Part not found: ${request.partId}")
+        val midi = requireNotNull(part.midi) { "Part '${request.partId}' has no clean MIDI artifact to retry." }
+        val rawReference = midi.raw ?: part.file
+        val rawPath = safeDestination(root, rawReference)
+        val cleanPath = safeDestination(root, midi.clean)
+        requireMidiArtifact(rawPath, "Raw MIDI")
+        requireMidiArtifact(cleanPath, "Existing clean MIDI")
+
+        val cleanWork = temporaryMidi(cleanPath)
+        val cleanBackup = temporaryMidi(cleanPath)
+        val reportPath = MidiQualityReportStore.path(root, request.partId)
+        val reportBackup = reportPath.takeIf(Files::isRegularFile)?.let(Files::readAllBytes)
+        Files.copy(cleanPath, cleanBackup, StandardCopyOption.REPLACE_EXISTING)
+        var cleanPublished = false
+        var reportPublished = false
+        try {
+            progress.report(OperationProgress("retry-midi-cleanup", 1, 3, "Cleaning MIDI with ${request.cleanup.profile.name.lowercase().replace('_', '-')}", cleanPath))
+            midiPreparation.clean(rawPath, cleanWork, request.cleanup)
+            requireMidiArtifact(cleanWork, "MIDI cleanup")
+            val report = midiQualityReporter.report(request.partId, rawPath, cleanWork, request.cleanup)
+            atomicReplace(cleanWork, cleanPath, "MIDI cleanup")
+            cleanPublished = true
+            val publishedReport = MidiQualityReportStore.write(root, report)
+            reportPublished = true
+            val qualityReference = root.relativize(publishedReport).toString().replace('\\', '/')
+            val updated = project.copy(parts = project.parts.map {
+                if (it.id == request.partId) it.copy(
+                    analysis = null,
+                    midi = midi.copy(cleanup = request.cleanup, quality = qualityReference)
+                ) else it
+            })
+            ProjectStore.write(root, updated)
+            progress.report(OperationProgress("retry-midi-cleanup", 3, 3, "Saved MIDI quality report; analyze this part again", publishedReport))
+            snapshot(root, updated)
+        } catch (failure: Exception) {
+            if (cleanPublished) runCatching { atomicReplace(cleanBackup, cleanPath, "MIDI cleanup rollback") }
+            if (reportPublished) runCatching {
+                if (reportBackup == null) Files.deleteIfExists(reportPath)
+                else atomicWrite(reportPath, reportBackup)
+            }
+            throw failure
+        } finally {
+            Files.deleteIfExists(cleanWork)
+            Files.deleteIfExists(cleanBackup)
+        }
+    }
+
     override suspend fun analyzePart(request: AnalyzePartRequest, progress: ProgressSink): ProjectSnapshot = mutateSuspend(request.root) { root ->
         val project = readValidProject(root)
         val part = project.parts.find { it.id == request.partId } ?: throw IllegalArgumentException("Part not found: ${request.partId}")
@@ -450,7 +515,7 @@ class DefaultProjectApplicationService(
         if (!MidiQualityReportStore.isCurrent(root, part.id, rawReference, midi.clean, midi.cleanup, midi.quality)) {
             return MidiQualitySummary(MidiQualityStatus.STALE_OR_INVALID)
         }
-        return MidiQualitySummary(MidiQualityStatus.CURRENT, report.cleanup, report.warnings, report.recommendations)
+        return MidiQualitySummary(MidiQualityStatus.CURRENT, report.cleanup, report.warnings, report.recommendations, report)
     }
 
     private fun isProjectFile(root: Path, reference: String): Boolean = runCatching {
@@ -542,6 +607,16 @@ class DefaultProjectApplicationService(
             Files.move(source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
         } catch (error: AtomicMoveNotSupportedException) {
             throw IllegalStateException("Atomic publish is not supported for $stage output '$target'", error)
+        }
+    }
+
+    private fun atomicWrite(target: Path, bytes: ByteArray) {
+        val temporary = target.resolveSibling(".${target.fileName}.restore-${UUID.randomUUID()}.tmp")
+        try {
+            Files.write(temporary, bytes)
+            atomicReplace(temporary, target, "MIDI quality report rollback")
+        } finally {
+            Files.deleteIfExists(temporary)
         }
     }
 
