@@ -13,10 +13,19 @@ import ai.music.workstation.application.ProjectApplicationService
 import ai.music.workstation.application.ProjectSnapshot
 import ai.music.workstation.application.SaveStructureRequest
 import ai.music.workstation.application.UpdatePartRoleRequest
+import ai.music.workstation.application.PartPreviewApplicationService
+import ai.music.workstation.application.PreviewRequest
+import ai.music.workstation.application.PreviewResult
+import ai.music.workstation.audio.AudioBuffer
+import ai.music.workstation.audio.PlaybackState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -343,6 +352,98 @@ class WorkspaceViewModelTest {
         failed.close()
     }
 
+    @Test
+    fun `preview exposes resolver and player lifecycle without success notifications`() = runTest {
+        val root = Path.of("build/preview-project")
+        val player = FakeArtifactAudioPlayer()
+        val previews = FakePreviewService(PreviewResult.Resolved(root.resolve("previews/A.wav"), emptyList(), false))
+        val viewModel = WorkspaceViewModel(
+            FakeProjectService(result = projectSnapshot(root).copy(parts = listOf(part("A")))), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
+            runtimeReadinessService = ReadyReadinessService, player = player, partPreviewService = previews
+        )
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.RefreshRuntimeReadiness); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.PreviewPart("A")); advanceUntilIdle()
+
+        assertEquals(PreviewPhase.PLAYING, viewModel.state.value.preview.phase)
+        assertEquals("A", viewModel.state.value.preview.source?.partId)
+        assertEquals(root.resolve("previews/A.wav"), viewModel.state.value.preview.source?.artifact)
+        assertEquals("Opened test-project", viewModel.state.value.notification)
+        assertNull(viewModel.state.value.preview.reason)
+        viewModel.accept(WorkspaceIntent.SeekPreview(1.5))
+        assertEquals(1.5, viewModel.state.value.preview.elapsedSeconds)
+        viewModel.accept(WorkspaceIntent.PausePreview)
+        assertEquals(PreviewPhase.PAUSED, viewModel.state.value.preview.phase)
+        viewModel.accept(WorkspaceIntent.ResumePreview)
+        assertEquals(PreviewPhase.PLAYING, viewModel.state.value.preview.phase)
+        player.emit(PlaybackState.STOPPED)
+        advanceUntilIdle()
+        assertEquals(PreviewPhase.STOPPED, viewModel.state.value.preview.phase)
+        viewModel.close()
+        assertTrue(player.closed)
+    }
+
+    @Test
+    fun `preview failures retry and project switches discard stale callbacks`() = runTest {
+        val first = Path.of("build/first-preview-project")
+        val second = Path.of("build/second-preview-project")
+        val previews = FakePreviewService(PreviewResult.Prerequisite(ai.music.workstation.application.PreviewStage.VALIDATE, "Analyze A before previewing it."))
+        val viewModel = WorkspaceViewModel(
+            FakeProjectService(result = projectSnapshot(first).copy(parts = listOf(part("A")))), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
+            runtimeReadinessService = ReadyReadinessService, player = FakeArtifactAudioPlayer(), partPreviewService = previews
+        )
+        viewModel.accept(WorkspaceIntent.OpenProject(first)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.RefreshRuntimeReadiness); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.PreviewPart("A")); advanceUntilIdle()
+        assertEquals(PreviewPhase.FAILED, viewModel.state.value.preview.phase)
+        assertEquals("Analyze A before previewing it.", viewModel.state.value.preview.reason)
+        previews.result = PreviewResult.Resolved(first.resolve("previews/A.wav"), emptyList(), true)
+        viewModel.accept(WorkspaceIntent.RetryPreview); advanceUntilIdle()
+        assertEquals(2, previews.calls)
+
+        previews.delay = true
+        viewModel.accept(WorkspaceIntent.PreviewPart("A"))
+        runCurrent()
+        viewModel.accept(WorkspaceIntent.OpenProject(second)); advanceUntilIdle()
+        previews.release()
+        advanceUntilIdle()
+        assertEquals(PreviewPhase.STOPPED, viewModel.state.value.preview.phase)
+        assertNull(viewModel.state.value.preview.source)
+        viewModel.close()
+    }
+
+    @Test
+    fun `WAV MP3 and MIDI previews resolve to playing and a device failure is actionable`() = runTest {
+        listOf("wav", "mp3", "midi").forEach { kind ->
+            val root = Path.of("build/$kind-preview-project")
+            val player = FakeArtifactAudioPlayer()
+            val viewModel = WorkspaceViewModel(
+                FakeProjectService(result = projectSnapshot(root).copy(parts = listOf(part("A")))), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
+                runtimeReadinessService = ReadyReadinessService, player = player,
+                partPreviewService = FakePreviewService(PreviewResult.Resolved(root.resolve("previews/A.$kind.wav"), emptyList(), false))
+            )
+            viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+            viewModel.accept(WorkspaceIntent.RefreshRuntimeReadiness); advanceUntilIdle()
+            viewModel.accept(WorkspaceIntent.PreviewPart("A")); advanceUntilIdle()
+            assertEquals(PreviewPhase.PLAYING, viewModel.state.value.preview.phase, kind)
+            viewModel.close()
+        }
+
+        val root = Path.of("build/device-preview-project")
+        val player = FakeArtifactAudioPlayer(startFailure = "Audio output could not be started. Check the selected output device and retry.")
+        val viewModel = WorkspaceViewModel(
+            FakeProjectService(result = projectSnapshot(root).copy(parts = listOf(part("A")))), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
+            runtimeReadinessService = ReadyReadinessService, player = player,
+            partPreviewService = FakePreviewService(PreviewResult.Resolved(root.resolve("previews/A.wav"), emptyList(), false))
+        )
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.RefreshRuntimeReadiness); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.PreviewPart("A")); advanceUntilIdle()
+        assertEquals(PreviewPhase.FAILED, viewModel.state.value.preview.phase)
+        assertTrue(viewModel.state.value.preview.reason!!.contains("selected output device"))
+        viewModel.close()
+    }
+
     private fun testDispatchers(dispatcher: TestDispatcher): WorkspaceDispatchers {
         return WorkspaceDispatchers(ui = dispatcher, io = dispatcher)
     }
@@ -389,6 +490,58 @@ private class FakeFileDialogs(libraryRoot: Path? = null) : DesktopFileDialogs {
     override suspend fun chooseNewProjectDirectory(): Path? = null
     override suspend fun choosePartSource(audio: Boolean): Path? = null
     override suspend fun chooseSoundLibraryDirectory(): Path? = nextLibraryRoot.also { nextLibraryRoot = null }
+}
+
+private object ReadyReadinessService : RuntimeReadinessService {
+    override suspend fun check(): RuntimeReadiness = RuntimeReadiness.of(
+        RuntimeDependency.WORKER to DependencyReadiness(DependencyStatus.READY, "ready"),
+        RuntimeDependency.TRANSCRIPTION to DependencyReadiness(DependencyStatus.READY, "ready"),
+        RuntimeDependency.SOUND_LIBRARY to DependencyReadiness(DependencyStatus.READY, "ready"),
+        RuntimeDependency.SAMPLES to DependencyReadiness(DependencyStatus.READY, "ready"),
+        RuntimeDependency.RENDERER to DependencyReadiness(DependencyStatus.READY, "ready"),
+        RuntimeDependency.AUDIO_OUTPUT to DependencyReadiness(DependencyStatus.READY, "ready")
+    )
+}
+
+private class FakePreviewService(var result: PreviewResult) : PartPreviewApplicationService {
+    var calls = 0
+    var delay = false
+    private var gate: CompletableDeferred<Unit>? = null
+    override suspend fun resolve(request: PreviewRequest): PreviewResult {
+        calls++
+        if (delay) (gate ?: CompletableDeferred<Unit>().also { gate = it }).await()
+        return result
+    }
+    fun release() { gate?.complete(Unit) }
+}
+
+private class FakeArtifactAudioPlayer(private val startFailure: String? = null) : ArtifactAudioPlayer {
+    private val mutableState = MutableStateFlow(PlaybackState.STOPPED)
+    private val position = MutableStateFlow(0.0)
+    private val duration = MutableStateFlow(3.0)
+    private val volumeState = MutableStateFlow(1.0)
+    override val state: StateFlow<PlaybackState> = mutableState
+    override val currentPosition: StateFlow<Double> = position
+    override val totalDuration: StateFlow<Double> = duration
+    override val volume: StateFlow<Double> = volumeState
+    var closed = false
+
+    override suspend fun prepare(path: Path): PlaybackPrepareResult = PlaybackPrepareResult.Ready(duration.value)
+    override suspend fun start(): PlaybackStartResult {
+        startFailure?.let { return PlaybackStartResult.Failed(PlaybackFailure(PlaybackFailureStage.START, it, IllegalStateException(it))) }
+        mutableState.value = PlaybackState.PLAYING
+        return PlaybackStartResult.Started
+    }
+    override suspend fun play(path: Path): PlaybackStartResult { prepare(path); return start() }
+    override fun play(buffer: AudioBuffer) = Unit
+    override fun pause() { mutableState.value = PlaybackState.PAUSED }
+    override fun resume() { mutableState.value = PlaybackState.PLAYING }
+    override fun stop() { mutableState.value = PlaybackState.STOPPED; position.value = 0.0 }
+    override fun seek(position: Double) { this.position.value = position.coerceIn(0.0, duration.value) }
+    override fun setVolume(volume: Double) { volumeState.value = volume }
+    override fun getVolume(): Double = volumeState.value
+    override fun close() { closed = true; stop() }
+    fun emit(value: PlaybackState) { mutableState.value = value }
 }
 
 private class FakeDesktopPreferences(private val last: Path?) : DesktopPreferences {

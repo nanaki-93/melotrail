@@ -16,6 +16,8 @@ import ai.music.workstation.application.DefaultMixApplicationService
 import ai.music.workstation.application.BuildApplicationService
 import ai.music.workstation.application.BuildSongRequest
 import ai.music.workstation.application.PartPreviewApplicationService
+import ai.music.workstation.application.PreviewRequest
+import ai.music.workstation.application.PreviewResult
 import ai.music.workstation.application.OperationProgress
 import ai.music.workstation.application.PartSourceType
 import ai.music.workstation.application.PartAnalysisStatus
@@ -52,6 +54,7 @@ data class WorkspaceUiState(
     val mix: MixSnapshot? = null,
     val buildOptions: BuildOptionsDraft = BuildOptionsDraft(),
     val playback: PlaybackSnapshot = PlaybackSnapshot(),
+    val preview: PreviewUiState = PreviewUiState(),
     val arrangementDraft: ArrangementDraft = ArrangementDraft(),
     val selectedArrangementSection: Int? = null,
     val operation: WorkspaceOperation = WorkspaceOperation.Idle,
@@ -74,6 +77,19 @@ data class PlaybackSnapshot(
     val volume: Double = 1.0
 )
 enum class PlaybackSource { DRY, LOFI, MASTER }
+
+/** Immutable monitor-only lifecycle for a selected part. It is independent of notifications. */
+data class PreviewSourceIdentity(val projectRoot: Path, val partId: String, val artifact: Path? = null)
+
+enum class PreviewPhase { CHECKING, PREPARING, READY, STARTING, PLAYING, PAUSED, STOPPED, FAILED }
+
+data class PreviewUiState(
+    val source: PreviewSourceIdentity? = null,
+    val phase: PreviewPhase = PreviewPhase.STOPPED,
+    val reason: String? = null,
+    val elapsedSeconds: Double = 0.0,
+    val durationSeconds: Double = 0.0
+)
 
 data class ArrangementDraft(
     val planner: ArrangementPlannerKind = ArrangementPlannerKind.DETERMINISTIC,
@@ -151,6 +167,11 @@ sealed interface WorkspaceIntent {
     data object ImportPart : WorkspaceIntent
     data class AnalyzePart(val partId: String) : WorkspaceIntent
     data class PreviewPart(val partId: String) : WorkspaceIntent
+    data object RetryPreview : WorkspaceIntent
+    data object PausePreview : WorkspaceIntent
+    data object ResumePreview : WorkspaceIntent
+    data object StopPreview : WorkspaceIntent
+    data class SeekPreview(val seconds: Double) : WorkspaceIntent
     data class ShowRoleEditor(val partId: String) : WorkspaceIntent
     data class UpdateRole(val role: String) : WorkspaceIntent
     data object SaveRole : WorkspaceIntent
@@ -204,6 +225,8 @@ class WorkspaceViewModel(
     private val mutableState = MutableStateFlow(WorkspaceUiState())
     private var mixCommit: Job? = null
     private var buildJob: Job? = null
+    private var previewJob: Job? = null
+    private var previewGeneration = 0L
     private var readinessGeneration = 0L
 
     val state: StateFlow<WorkspaceUiState> = mutableState.asStateFlow()
@@ -238,6 +261,11 @@ class WorkspaceViewModel(
             WorkspaceIntent.ImportPart -> importPart()
             is WorkspaceIntent.AnalyzePart -> analyzePart(intent.partId)
             is WorkspaceIntent.PreviewPart -> previewPart(intent.partId)
+            WorkspaceIntent.RetryPreview -> state.value.preview.source?.let { previewPart(it.partId) }
+            WorkspaceIntent.PausePreview -> pausePreview()
+            WorkspaceIntent.ResumePreview -> resumePreview()
+            WorkspaceIntent.StopPreview -> stopPreview()
+            is WorkspaceIntent.SeekPreview -> seekPreview(intent.seconds)
             is WorkspaceIntent.ShowRoleEditor -> showRoleEditor(intent.partId)
             is WorkspaceIntent.UpdateRole -> updateRole(intent.role)
             WorkspaceIntent.SaveRole -> saveRole()
@@ -332,6 +360,7 @@ class WorkspaceViewModel(
 
     private fun openProject(root: Path, restoring: Boolean = false) {
         if (state.value.operation.isMutating) return busy("open a project")
+        cancelPreview(resetState = true)
         val normalized = root.toAbsolutePath().normalize()
         mutableState.update { it.copy(operation = WorkspaceOperation.OpeningProject(normalized), notification = null, retry = null) }
         scope.launch {
@@ -422,21 +451,85 @@ class WorkspaceViewModel(
     private fun previewPart(partId: String) {
         val project = state.value.project ?: return
         val part = project.parts.find { it.id == partId } ?: return
+        cancelPreview(resetState = false)
+        val generation = previewGeneration
+        val source = PreviewSourceIdentity(project.root, partId)
         val capability = if (part.sourceType == PartSourceType.AUDIO) RuntimeCapability.SOURCE_PREVIEW else RuntimeCapability.MIDI_PREVIEW
-        state.value.runtimeReadiness.capabilityFailure(capability)?.let { return fail("preview part", it) }
-        val monitor = player ?: return fail("preview part", "Local audio playback is not configured.")
-        val previews = partPreviewService ?: return fail("preview part", "Part preview service is not configured for this desktop session.")
-        scope.launch {
-            runCatching {
-                val path = withContext(ioDispatcher) { previews.preview(project.root, partId) }
-                path to monitor.play(path)
-            }.onSuccess { (path, result) ->
-                when (result) {
-                    PlaybackStartResult.Started -> mutableState.update { it.copy(notification = "Previewing $partId") }
-                    is PlaybackStartResult.Failed -> fail("preview part", result.failure.message)
-                }
-            }.onFailure { fail("preview part", it.message ?: "Unable to preview $partId.") }
+        state.value.runtimeReadiness.capabilityFailure(capability)?.let {
+            return setPreview(generation, PreviewUiState(source, PreviewPhase.FAILED, it))
         }
+        val monitor = player ?: return setPreview(generation, PreviewUiState(source, PreviewPhase.FAILED, "Local audio playback is not configured."))
+        val previews = partPreviewService ?: return setPreview(generation, PreviewUiState(source, PreviewPhase.FAILED, "Part preview service is not configured for this desktop session."))
+        setPreview(generation, PreviewUiState(source, PreviewPhase.CHECKING))
+        previewJob = scope.launch {
+            try {
+                val resolved = withContext(ioDispatcher) { previews.resolve(PreviewRequest(project.root, partId)) }
+                if (!isCurrentPreview(generation, source)) return@launch
+                when (resolved) {
+                    is PreviewResult.Prerequisite -> setPreview(generation, PreviewUiState(source, PreviewPhase.FAILED, resolved.message))
+                    is PreviewResult.Failed -> setPreview(generation, PreviewUiState(source, PreviewPhase.FAILED, resolved.message))
+                    is PreviewResult.Resolved -> {
+                        val artifactSource = source.copy(artifact = resolved.artifact)
+                        setPreview(generation, PreviewUiState(artifactSource, PreviewPhase.PREPARING))
+                        when (val prepared = monitor.prepare(resolved.artifact)) {
+                            is PlaybackPrepareResult.Failed -> setPreview(generation, PreviewUiState(artifactSource, PreviewPhase.FAILED, prepared.failure.message))
+                            is PlaybackPrepareResult.Ready -> {
+                                setPreview(generation, PreviewUiState(artifactSource, PreviewPhase.READY, durationSeconds = prepared.durationSeconds))
+                                setPreview(generation, PreviewUiState(artifactSource, PreviewPhase.STARTING, durationSeconds = prepared.durationSeconds))
+                                when (val started = monitor.start()) {
+                                    PlaybackStartResult.Started -> setPreview(generation, PreviewUiState(artifactSource, PreviewPhase.PLAYING, durationSeconds = prepared.durationSeconds))
+                                    is PlaybackStartResult.Failed -> setPreview(generation, PreviewUiState(artifactSource, PreviewPhase.FAILED, started.failure.message, durationSeconds = prepared.durationSeconds))
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (_: CancellationException) {
+                // A newer source, project switch, or close owns the next state.
+            } catch (error: Throwable) {
+                setPreview(generation, PreviewUiState(source, PreviewPhase.FAILED, error.message ?: "Unable to prepare this preview."))
+            }
+        }
+    }
+
+    private fun pausePreview() {
+        if (state.value.preview.phase != PreviewPhase.PLAYING) return
+        player?.pause() ?: return
+        mutableState.update { it.copy(preview = it.preview.copy(phase = PreviewPhase.PAUSED)) }
+    }
+
+    private fun resumePreview() {
+        if (state.value.preview.phase != PreviewPhase.PAUSED) return
+        player?.resume() ?: return
+        mutableState.update { it.copy(preview = it.preview.copy(phase = PreviewPhase.PLAYING)) }
+    }
+
+    private fun stopPreview() {
+        cancelPreview(resetState = false)
+        mutableState.update { current -> current.copy(preview = current.preview.copy(phase = PreviewPhase.STOPPED, reason = null, elapsedSeconds = 0.0)) }
+    }
+
+    private fun seekPreview(seconds: Double) {
+        val preview = state.value.preview
+        if (preview.source?.artifact == null || preview.phase !in setOf(PreviewPhase.READY, PreviewPhase.STARTING, PreviewPhase.PLAYING, PreviewPhase.PAUSED, PreviewPhase.STOPPED)) return
+        player?.seek(seconds) ?: return
+        mutableState.update { it.copy(preview = preview.copy(elapsedSeconds = seconds.coerceIn(0.0, preview.durationSeconds))) }
+    }
+
+    private fun cancelPreview(resetState: Boolean) {
+        previewGeneration++
+        previewJob?.cancel()
+        previewJob = null
+        player?.stop()
+        if (resetState) mutableState.update { it.copy(preview = PreviewUiState()) }
+    }
+
+    private fun isCurrentPreview(generation: Long, source: PreviewSourceIdentity): Boolean =
+        generation == previewGeneration && state.value.project?.root == source.projectRoot && state.value.preview.source?.let { it.projectRoot == source.projectRoot && it.partId == source.partId } != false
+
+    private fun setPreview(generation: Long, preview: PreviewUiState) {
+        if (generation != previewGeneration || state.value.project?.root != preview.source?.projectRoot) return
+        mutableState.update { it.copy(preview = preview) }
     }
 
     private fun showRoleEditor(partId: String) {
@@ -661,13 +754,26 @@ class WorkspaceViewModel(
 
     private fun updatePlayback() {
         val monitor = player ?: return
-        mutableState.update { current -> current.copy(playback = current.playback.copy(state = monitor.state.value, positionSeconds = monitor.currentPosition.value, durationSeconds = monitor.totalDuration.value, volume = monitor.volume.value)) }
+        mutableState.update { current ->
+            val monitorState = monitor.state.value
+            val preview = current.preview
+            val previewPhase = when {
+                preview.source?.artifact == null || preview.phase !in setOf(PreviewPhase.PLAYING, PreviewPhase.PAUSED, PreviewPhase.STARTING) -> preview.phase
+                monitorState == ai.music.workstation.audio.PlaybackState.PLAYING -> PreviewPhase.PLAYING
+                monitorState == ai.music.workstation.audio.PlaybackState.PAUSED -> PreviewPhase.PAUSED
+                else -> PreviewPhase.STOPPED
+            }
+            current.copy(
+                playback = current.playback.copy(state = monitorState, positionSeconds = monitor.currentPosition.value, durationSeconds = monitor.totalDuration.value, volume = monitor.volume.value),
+                preview = preview.copy(phase = previewPhase, elapsedSeconds = monitor.currentPosition.value, durationSeconds = if (preview.source?.artifact == null) preview.durationSeconds else monitor.totalDuration.value)
+            )
+        }
     }
 
     private fun ProjectSnapshot.refreshed(): ProjectSnapshot = projectService.open(root)
 
     private fun opened(project: ProjectSnapshot, message: String, stale: Boolean = false) {
-        player?.stop()
+        cancelPreview(resetState = true)
         preferences.saveLastOpenedProject(project.root)
         operationLogger.event("project", "opened", project.root)
         mutableState.update {
@@ -718,7 +824,7 @@ class WorkspaceViewModel(
         return true
     }
 
-    override fun close() { mixCommit?.cancel(); buildJob?.cancel(); player?.close(); scope.cancel() }
+    override fun close() { mixCommit?.cancel(); buildJob?.cancel(); cancelPreview(resetState = true); player?.close(); scope.cancel() }
 
     private object UnavailableRuntimeReadinessService : RuntimeReadinessService {
         override suspend fun check(): RuntimeReadiness = RuntimeReadiness.checking()
