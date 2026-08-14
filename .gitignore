@@ -19,6 +19,7 @@ Thumbs.db
 out/
 
 # Python
+.venv/
 ai-worker/.venv/
 .venv-transcription-spike/
 ai-worker/__pycache__/

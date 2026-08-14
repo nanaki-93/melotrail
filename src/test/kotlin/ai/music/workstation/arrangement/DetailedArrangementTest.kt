@@ -31,6 +31,7 @@ class DetailedArrangementTest {
         assertEquals(DetailedBassMovement.ROOT_MOTION.name, (arrangement.sections.first().instruments[1] as BassInstrumentPlan).movement.name)
         assertEquals(MusicalRegister.LOW, (arrangement.sections.first().instruments[1] as BassInstrumentPlan).register)
         assertEquals(TransitionType.BRIDGE, arrangement.sections.first().transitionOut.type)
+        assertEquals(listOf(BridgeElement.DRUM_FILL, BridgeElement.BASS_PICKUP), arrangement.sections.first().transitionOut.bridge?.elements)
         assertTrue(arrangement.validate(input).isValid)
         assertEquals(arrangement, json.decodeFromString<DetailedArrangement>(json.encodeToString(arrangement)))
     }

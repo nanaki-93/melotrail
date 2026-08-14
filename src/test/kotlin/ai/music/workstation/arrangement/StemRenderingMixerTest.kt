@@ -74,6 +74,26 @@ class StemRenderingMixerTest {
         }
     }
 
+    @Test
+    fun `bridge uses the incoming tempo before generated MIDI resumes`() = runBlocking {
+        val project = project()
+        val analyses = mapOf("A" to analysis("A", bpm = 120.0), "B" to analysis("B", bpm = 90.0))
+        writeMidi(root.resolve("source/A.mid"), 0, 1_920)
+        writeMidi(root.resolve("source/B.mid"), 0, 1_920)
+        Files.createDirectories(root.resolve("midi/clean"))
+        Files.copy(root.resolve("source/A.mid"), root.resolve("midi/clean/A.mid"))
+        Files.copy(root.resolve("source/B.mid"), root.resolve("midi/clean/B.mid"))
+        writeMidi(root.resolve("midi/generated/bass.mid"), 0, 3_840)
+        writeMidi(root.resolve("midi/generated/transitions.mid"), 1_920, 2_040)
+
+        val renderer = FakeRenderer()
+        StemRenderingMixer(renderer).render(root, project, arrangement(), analyses)
+
+        val bass = requireNotNull(renderer.sequences[LogicalInstrument.BASS])
+        assertEquals(90.0, tempos(bass).getValue(1_920L), 0.001)
+        assertEquals(90.0, tempos(bass).getValue(3_840L), 0.001)
+    }
+
     private fun project() = Project(Project.CURRENT_VERSION, "render", listOf(
         Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid")),
         Part("B", "source/B.mid", midi = MidiReferences(clean = "midi/clean/B.mid"))
@@ -84,8 +104,8 @@ class StemRenderingMixerTest {
         DetailedArrangementSection(1, "B1", "B", SongSectionPurpose.CLIMAX, 0.7, listOf(PianoSourcePlan(), BassInstrumentPlan(role = DetailedBassRole.ROOT, density = 0.6, movement = DetailedBassMovement.ROOT_MOTION, register = MusicalRegister.LOW, syncopation = 0.0)), TransitionPlan())
     ))
 
-    private fun analysis(id: String) = MidiAnalysis(partId = id, ppq = 480, durationTicks = 1_920, durationSeconds = 2.0,
-        tempoMap = listOf(MidiTempoChange(0, 120.0)), timeSignatures = listOf(MidiTimeSignature(0, 4, 4)), bars = 1, beats = 4.0,
+    private fun analysis(id: String, bpm: Double = 120.0) = MidiAnalysis(partId = id, ppq = 480, durationTicks = 1_920, durationSeconds = 240.0 / bpm,
+        tempoMap = listOf(MidiTempoChange(0, bpm)), timeSignatures = listOf(MidiTimeSignature(0, 4, 4)), bars = 1, beats = 4.0,
         noteCount = 1, noteDensity = 0.1, rhythmicDensity = 0.1, energy = 0.5)
 
     private fun writeMidi(path: Path, start: Long, end: Long) {
@@ -99,12 +119,29 @@ class StemRenderingMixerTest {
 
     private class FakeRenderer : InstrumentRenderer {
         var calls = 0
+        val sequences = mutableMapOf<LogicalInstrument, Sequence>()
         override suspend fun render(midi: Path, instrument: LogicalInstrument, output: Path, format: RenderFormat, expectedFrames: Long): RenderResult {
             calls++
+            sequences[instrument] = MidiSystem.getSequence(midi.toFile())
             val sample = if (instrument == LogicalInstrument.PIANO) 0.8f else 0.8f
             val audio = AudioBuffer(FloatArray(expectedFrames.toInt() * format.channels) { sample }, AudioFormat(format.sampleRate, format.channels, 24, false, false, "WAV"), expectedFrames.toDouble() / format.sampleRate)
             DeterministicStemMixer().writeWav(MixedStem(audio, listOf(instrument.wireName)), output)
             return RenderResult(output, format.sampleRate, format.channels, 24, expectedFrames, audio.duration, sample.toDouble(), "fake", "test", "", "")
+        }
+    }
+
+    private fun tempos(sequence: Sequence): Map<Long, Double> = buildMap {
+        sequence.tracks.first().let { track ->
+            (0 until track.size()).map(track::get).forEach { event ->
+                val message = event.message as? javax.sound.midi.MetaMessage ?: return@forEach
+                if (message.type == 0x51) {
+                    val data = message.data
+                    val micros = ((data[0].toInt() and 0xff) shl 16) or
+                        ((data[1].toInt() and 0xff) shl 8) or
+                        (data[2].toInt() and 0xff)
+                    put(event.tick, 60_000_000.0 / micros)
+                }
+            }
         }
     }
 

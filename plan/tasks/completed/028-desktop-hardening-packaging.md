@@ -17,7 +17,9 @@ Turn the functional desktop workflow into a reliable local release candidate wit
 - Handle worker disconnect, renderer configuration changes, stale artifacts, corrupted optional UI preferences, and audio-device loss without crashing the workspace.
 - Finalize app name, icon, version, bundled JRE modules, and native distribution for the current OS.
 - Document development run, worker/renderer prerequisites, packaging, project workflow, artifact locations, limitations, and troubleshooting.
-- Keep the old static web UI unchanged unless separately deprecated; this task does not remove it.
+- Keep the old static web UI unchanged unless separately deprecated; this task
+  does not remove it. It is separately deprecated and scheduled for audited
+  retirement in Task 037.
 
 ## Verification
 

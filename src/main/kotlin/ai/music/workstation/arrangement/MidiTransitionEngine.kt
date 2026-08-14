@@ -148,7 +148,7 @@ class DeterministicMidiTransitionEngine {
                 "Section ${current.sectionIndex + 1}: cymbal transition is unavailable because the validated starter drum map has no cymbal sample."
             )
             MidiTransitionType.BASS_WALK -> bassWalk(current, next, start, length, available, diagnostics)
-            MidiTransitionType.PAD_SUSTAIN -> padSustain(current, start, length, available, diagnostics)
+            MidiTransitionType.PAD_SUSTAIN -> padSustain(current, next, start, length, available, diagnostics)
             MidiTransitionType.DRUM_FILL -> drumFill(current, next, start, length, available, drumMap, diagnostics)
             MidiTransitionType.BUILD -> build(previous, current, next, start, length, available, drumMap, diagnostics)
         }
@@ -181,15 +181,16 @@ class DeterministicMidiTransitionEngine {
     }
 
     private fun padSustain(
-        current: TransitionSectionContext, start: Long, length: Long,
+        current: TransitionSectionContext, next: TransitionSectionContext, start: Long, length: Long,
         available: Map<LogicalInstrument, TransitionInstrument>, diagnostics: MutableList<String>
     ): List<TransitionMidiEvent> {
-        if (LogicalInstrument.PAD !in current.instruments) {
-            diagnostics += "Section ${current.sectionIndex + 1}: pad_sustain degraded to none because pad is not active in the outgoing section."
+        if (LogicalInstrument.PAD !in current.instruments && LogicalInstrument.PAD !in next.instruments) {
+            diagnostics += "Section ${current.sectionIndex + 1}: pad_sustain degraded to none because pad is not active around the boundary."
             return emptyList()
         }
         requireAvailable(LogicalInstrument.PAD, available)
-        val harmony = current.chords.lastOrNull { it.confidence >= HARMONY_CONFIDENCE }?.let(::parseHarmony)
+        val harmony = (current.chords.lastOrNull { it.confidence >= HARMONY_CONFIDENCE }
+            ?: next.chords.firstOrNull { it.confidence >= HARMONY_CONFIDENCE })?.let(::parseHarmony)
         if (harmony == null) {
             diagnostics += "Section ${current.sectionIndex + 1}: pad_sustain degraded to none because final harmony is missing, unsupported, or low-confidence."
             return emptyList()
@@ -225,7 +226,9 @@ class DeterministicMidiTransitionEngine {
         val result = mutableListOf<TransitionMidiEvent>()
         if (LogicalInstrument.DRUMS in current.instruments || LogicalInstrument.DRUMS in next.instruments) result += drumFill(current, next, start, length, available, drumMap, diagnostics)
         if (LogicalInstrument.BASS in current.instruments || LogicalInstrument.BASS in next.instruments) result += bassWalk(current, next, start, length, available, diagnostics)
-        if (LogicalInstrument.PAD in current.instruments) result += padSustain(current, start, length, available, diagnostics)
+        if (LogicalInstrument.PAD in current.instruments || LogicalInstrument.PAD in next.instruments) {
+            result += padSustain(current, next, start, length, available, diagnostics)
+        }
         if (result.isEmpty()) diagnostics += "Section ${current.sectionIndex + 1}: build degraded to none because no supported generated instrument is active around the boundary${previous?.let { " (previous section ${it.sectionIndex + 1})" }.orEmpty()}."
         return result
     }
@@ -294,10 +297,7 @@ class MidiTransitionGenerationAdapter(private val engine: DeterministicMidiTrans
                 section.instruments.filter { it.mode == InstrumentMode.GENERATED }.map { LogicalInstrument.parse(it.name) }.toSet(), section.energy)
         }
         val plans = arrangement.sections.mapIndexed { index, section ->
-            if (index == arrangement.sections.lastIndex) MidiTransitionPlan() else when (section.transitionOut.type) {
-                TransitionType.NONE, TransitionType.CROSSFADE -> MidiTransitionPlan()
-                TransitionType.BRIDGE -> MidiTransitionPlan(MidiTransitionType.BUILD, section.transitionOut.bars)
-            }
+            if (index == arrangement.sections.lastIndex) MidiTransitionPlan() else section.transitionOut.toMidiPlan()
         }
         val result = engine.generate(sections, plans, available, registry.resolve(LogicalInstrument.DRUMS.wireName).noteMap)
         val output = root.resolve("midi/generated/transitions.mid")
@@ -363,4 +363,22 @@ class MidiTransitionGenerationAdapter(private val engine: DeterministicMidiTrans
         return MetaMessage(0x51, byteArrayOf((micros shr 16).toByte(), (micros shr 8).toByte(), micros.toByte()), 3)
     }
     private fun signatureMessage(signature: MidiTimeSignature): MetaMessage = MetaMessage(0x58, byteArrayOf(signature.numerator.toByte(), Integer.numberOfTrailingZeros(signature.denominator).toByte(), 24, 8), 4)
+
+    /** Preserve the approved bridge vocabulary instead of turning every bridge into a generic build. */
+    private fun TransitionPlan.toMidiPlan(): MidiTransitionPlan = when (type) {
+        TransitionType.NONE, TransitionType.CROSSFADE -> MidiTransitionPlan()
+        TransitionType.BRIDGE -> {
+            val elements = requireNotNull(bridge).elements.toSet()
+            val type = when {
+                elements.size > 1 -> MidiTransitionType.BUILD
+                BridgeElement.BASS_PICKUP in elements -> MidiTransitionType.BASS_WALK
+                BridgeElement.DRUM_FILL in elements -> MidiTransitionType.DRUM_FILL
+                BridgeElement.PAD_SWELL in elements -> MidiTransitionType.PAD_SUSTAIN
+                // There is no generated melody voice. BUILD is the musical,
+                // registry-safe fallback for a melody pickup request.
+                else -> MidiTransitionType.BUILD
+            }
+            MidiTransitionPlan(type, bars)
+        }
+    }
 }

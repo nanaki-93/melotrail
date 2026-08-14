@@ -114,11 +114,7 @@ class StemRenderingMixer(
         Files.createDirectories(requireNotNull(output.parent))
         val sequence = Sequence(Sequence.PPQ, timeline.ppq)
         val meta = sequence.createTrack()
-        timeline.segments.forEach { segment ->
-            val analysis = segment.analysis
-            analysis.tempoMap.forEach { tempo -> meta.add(MidiEvent(tempoMessage(tempo.bpm), segment.timelineStartTick + tempo.tick)) }
-            analysis.timeSignatures.forEach { signature -> meta.add(MidiEvent(signatureMessage(signature), segment.timelineStartTick + signature.tick)) }
-        }
+        timeline.writeTimingMeta(meta)
         if (instrument == LogicalInstrument.PIANO) {
             timeline.segments.forEach { segment ->
                 val part = project.parts.first { it.id == segment.partId }
@@ -139,7 +135,7 @@ class StemRenderingMixer(
         source.tracks.forEach { sourceTrack ->
             val target = destination.createTrack()
             (0 until sourceTrack.size()).map(sourceTrack::get)
-                .filterNot { (it.message as? MetaMessage)?.type == 0x2F }
+                .filterNot(::isTimelineMeta)
                 .filter { it.tick <= segment.analysis.durationTicks }
                 .forEach { event -> target.add(MidiEvent(event.message.copy(), segment.timelineStartTick + event.tick)) }
         }
@@ -150,7 +146,7 @@ class StemRenderingMixer(
         source.tracks.forEach { sourceTrack ->
             val target = destination.createTrack()
             (0 until sourceTrack.size()).map(sourceTrack::get)
-                .filterNot { (it.message as? MetaMessage)?.type == 0x2F }
+                .filterNot(::isTimelineMeta)
                 .filter { it.tick <= timeline.originalEndTick }
                 .forEach { event -> target.add(MidiEvent(event.message.copy(), timeline.map(event.tick, isNoteOff(event.message)))) }
         }
@@ -209,6 +205,7 @@ class StemRenderingMixer(
     }
     private fun digest(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun isNoteOff(message: MidiMessage): Boolean = (message as? ShortMessage)?.let { it.command == ShortMessage.NOTE_OFF || (it.command == ShortMessage.NOTE_ON && it.data2 == 0) } == true
+    private fun isTimelineMeta(event: MidiEvent): Boolean = (event.message as? MetaMessage)?.type in setOf(0x2F, 0x51, 0x58)
     private fun MidiMessage.copy(): MidiMessage = clone() as MidiMessage
     private fun tempoMessage(bpm: Double): MetaMessage { val micros = (60_000_000.0 / bpm).roundToLong().toInt(); return MetaMessage(0x51, byteArrayOf((micros shr 16).toByte(), (micros shr 8).toByte(), micros.toByte()), 3) }
     private fun signatureMessage(signature: MidiTimeSignature) = MetaMessage(0x58, byteArrayOf(signature.numerator.toByte(), Integer.numberOfTrailingZeros(signature.denominator).toByte(), 24, 8), 4)
@@ -243,6 +240,43 @@ private data class Timeline(val ppq: Int, val segments: List<TimelineSegment>) {
             (segment.insertedTicksAfter.toDouble() / ppq * 60.0 / bpm * sampleRate).roundToLong()
         }
     }
+
+    /**
+     * Writes one authoritative tempo/meter map for the rendered timeline.
+     *
+     * A bridge belongs to the incoming section's tempo and meter.  Without the
+     * events at its start, a MIDI renderer keeps using the outgoing section's
+     * tempo during the inserted ticks while the frame timeline already counts
+     * them at the incoming tempo.  That makes every later generated instrument
+     * audibly drift from the source piano.
+     */
+    fun writeTimingMeta(meta: javax.sound.midi.Track) {
+        segments.forEachIndexed { index, segment ->
+            val analysis = segment.analysis
+            analysis.tempoMap.forEach { tempo ->
+                meta.add(MidiEvent(tempoMessage(tempo.bpm), segment.timelineStartTick + tempo.tick))
+            }
+            analysis.timeSignatures.forEach { signature ->
+                meta.add(MidiEvent(signatureMessage(signature), segment.timelineStartTick + signature.tick))
+            }
+            if (segment.insertedTicksAfter > 0L) {
+                val incoming = segments[index + 1].analysis
+                meta.add(MidiEvent(tempoMessage(incoming.tempoMap.first().bpm), segment.timelineEndTick))
+                meta.add(MidiEvent(signatureMessage(incoming.timeSignatures.first()), segment.timelineEndTick))
+            }
+        }
+    }
+
+    private fun tempoMessage(bpm: Double): MetaMessage {
+        val micros = (60_000_000.0 / bpm).roundToLong().toInt()
+        return MetaMessage(0x51, byteArrayOf((micros shr 16).toByte(), (micros shr 8).toByte(), micros.toByte()), 3)
+    }
+
+    private fun signatureMessage(signature: MidiTimeSignature) = MetaMessage(
+        0x58,
+        byteArrayOf(signature.numerator.toByte(), Integer.numberOfTrailingZeros(signature.denominator).toByte(), 24, 8),
+        4
+    )
     private val TimelineSegment.index get() = segments.indexOf(this)
     companion object {
         fun create(arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): Timeline {

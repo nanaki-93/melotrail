@@ -108,3 +108,21 @@ output/release.json
 ## Scope boundary
 
 This plan is for a local personal tool. It intentionally excludes authentication, databases, cloud queues, multi-user support, payments, publishing integrations, generic plugin frameworks, arbitrary AI-generated notes/code/paths, and unrelated DSP rewrites.
+
+## UI and song-creation improvement sequence
+
+The Compose Desktop workflow is the active product UI. The detailed visual,
+input-quality, and creation-flow plan is [PLAN_UI_AND_CREATION.md](PLAN_UI_AND_CREATION.md).
+These tasks start only after Task 028 and must be implemented one at a time.
+
+| Task | Name | Depends on | Primary result |
+|---|---|---|---|
+| [029](tasks/029-runtime-resource-readiness.md) | Runtime resource locator and readiness | 028 | Sound library works outside repository CWD; actionable dependency states |
+| [030](tasks/030-reliable-preview-playback.md) | Reliable preview and playback | 029 | Truthful, responsive source/MIDI/artifact monitoring |
+| [031](tasks/031-guided-input-import-inspection.md) | Guided input import and inspection | 029 | WAV/MP3/MIDI preflight and durable preparation report |
+| [032](tasks/032-nondestructive-audio-cleanup.md) | Non-destructive audio cleanup | 031 | Safe input cleanup, A/B, and transcription quality gate |
+| [033](tasks/033-midi-quality-profiles.md) | MIDI cleanup profiles and review | 031 | Auditable transcription-oriented MIDI cleanup |
+| [034](tasks/034-guided-creation-workspace.md) | Guided creation workspace | 029–033 | Clear state-driven creation flow |
+| [035](tasks/035-reference-aligned-desktop-ui.md) | Reference-aligned desktop UI | 034 | Dark compact Compose workspace close to UI.png |
+| [036](tasks/036-creation-workflow-release-gate.md) | Creation workflow release gate | 029–035 | Verified local workflow, docs, and package smoke |
+| [037](tasks/037-repository-health-static-frontend-retirement.md) | Repository health audit and static-frontend retirement | 036 | Audited cleanup and one supported Compose UI |

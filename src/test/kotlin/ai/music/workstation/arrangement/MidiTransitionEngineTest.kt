@@ -102,6 +102,7 @@ class MidiTransitionEngineTest {
 
         assertEquals(projectRoot.resolve("midi/generated/transitions.mid"), generated.path)
         assertTrue(generated.result.events.isNotEmpty())
+        assertTrue(generated.result.events.all { it.instrument == LogicalInstrument.DRUMS })
         assertEquals(480, sequence.resolution)
         assertTrue(sequence.tickLength >= 5760)
         assertTrue(Files.readAllBytes(source).contentEquals(before))

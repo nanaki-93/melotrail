@@ -320,7 +320,13 @@ class DeterministicDetailedArrangementPlanner : DetailedArrangementPlanner {
                 role = section.purpose,
                 energy = section.energy,
                 instruments = section.instruments.map { instrument -> detail(instrument, section.energy, section.purpose) },
-                transitionOut = transition(section.transitionIntent, section.energy, index == input.variations.sections.lastIndex)
+                transitionOut = transition(
+                    section.transitionIntent,
+                    section.energy,
+                    section.instruments.map { it.name }.toSet(),
+                    input.variations.sections.getOrNull(index + 1)?.instruments?.map { it.name }?.toSet().orEmpty(),
+                    index == input.variations.sections.lastIndex
+                )
             )
         }).also { it.requireValid(input) }
     }
@@ -347,10 +353,28 @@ class DeterministicDetailedArrangementPlanner : DetailedArrangementPlanner {
         else -> error("Unsupported variation instrument '${instrument.name}'")
     }
 
-    private fun transition(intent: SongTransitionIntent, energy: Double, isFinal: Boolean): TransitionPlan = when {
+    private fun transition(
+        intent: SongTransitionIntent,
+        energy: Double,
+        outgoing: Set<String>,
+        incoming: Set<String>,
+        isFinal: Boolean
+    ): TransitionPlan = when {
         isFinal || intent == SongTransitionIntent.NONE -> TransitionPlan()
-        intent == SongTransitionIntent.BUILD -> TransitionPlan(TransitionType.BRIDGE, bars = 1, bridge = BridgePlan(energy, listOf(BridgeElement.MELODY_PICKUP)))
+        intent == SongTransitionIntent.BUILD -> TransitionPlan(
+            TransitionType.BRIDGE,
+            bars = 1,
+            bridge = BridgePlan(energy, bridgeElements(outgoing + incoming))
+        )
         else -> TransitionPlan(TransitionType.CROSSFADE, crossfadeMs = 180)
+    }
+
+    private fun bridgeElements(instruments: Set<String>): List<BridgeElement> = when {
+        "drums" in instruments && "bass" in instruments -> listOf(BridgeElement.DRUM_FILL, BridgeElement.BASS_PICKUP)
+        "drums" in instruments -> listOf(BridgeElement.DRUM_FILL)
+        "pad" in instruments -> listOf(BridgeElement.PAD_SWELL)
+        "bass" in instruments -> listOf(BridgeElement.BASS_PICKUP)
+        else -> listOf(BridgeElement.MELODY_PICKUP)
     }
 
     private fun register(energy: Double): MusicalRegister = when {
@@ -445,8 +469,11 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
             crossfade: {"type":"crossfade","bars":0,"crossfadeMs":180}
             bridge:    {"type":"bridge","bars":1,"crossfadeMs":0,"bridge":{"energy":0.5,"elements":["bass_pickup"]}}
             Bridge bars are 1 or 2. Bridge energy is finite 0..1. Bridge elements may contain only bass_pickup, drum_fill,
-            pad_swell, melody_pickup. Map transition intent none to none, build to bridge, release to crossfade. The final section
-            must use none. Do not add fields.
+            pad_swell, melody_pickup. Choose elements that have a matching generated instrument in the outgoing or incoming
+            section: use drum_fill for a drum entry, pad_swell for a pad entry/release, and bass_pickup only where bass is active.
+            Do not use bass_pickup for every bridge; use a drum_fill plus bass_pickup together for a strong build when both are
+            active. Map transition intent none to none, build to bridge, release to crossfade. The final section must use none.
+            Do not add fields.
         """
     }
 }

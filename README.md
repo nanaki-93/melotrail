@@ -9,9 +9,10 @@ The project is intentionally kept as **one Gradle module**. The Python worker re
 - Python 3.10+ (only needed for the worker)
 - `make` (optional; you can use Gradle directly)
 
-## Run the application
+## Legacy browser frontend (deprecated)
 
-The application has three independent processes:
+The repository currently still contains an older browser UI. It requires three
+independent processes:
 
 1. Python worker — audio/AI processing on port `8081`
 2. Kotlin/Spring API — application API on port `8080`
@@ -33,6 +34,11 @@ http://127.0.0.1:3000/index.html
 
 You can also serve the frontend through Spring Boot at `http://localhost:8080/`.
 Do not open `src/main/resources/static/index.html` directly with `file://`.
+
+The Compose Desktop application below is the supported product UI. The browser
+frontend is scheduled for complete removal in Task 037 of
+[`plan/PLAN_UI_AND_CREATION.md`](plan/PLAN_UI_AND_CREATION.md); do not build new
+features on it.
 
 You can run Spring Boot without Make:
 
@@ -67,6 +73,12 @@ artifact metadata, not model responses or source content.
 Transport shortcuts are Ctrl/Cmd+Space for play/pause, Ctrl/Cmd+Left/Right to
 seek five seconds, and Ctrl/Cmd+K to stop. Structure rows provide keyboard
 reachable earlier/later controls as an alternative to drag reordering.
+
+The next desktop UI and input-quality work is planned in
+[`plan/PLAN_UI_AND_CREATION.md`](plan/PLAN_UI_AND_CREATION.md). It targets a
+clearer Compose workflow, reliable WAV/MP3 import and preview feedback,
+non-destructive input preparation, and working-directory-independent sound
+library setup.
 
 ### macOS package
 
@@ -443,7 +455,7 @@ The Kotlin worker client maps each `WorkerCommand` directly to its endpoint.
 There is no generic `/api/worker/command` request envelope between Kotlin and
 Python anymore.
 
-### Run locally
+### Legacy browser frontend: run locally
 
 Use three terminals:
 

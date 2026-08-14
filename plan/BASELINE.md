@@ -5,7 +5,8 @@
 The application is a single Kotlin 2.0 / Spring Boot Gradle module with a
 separate Python HTTP worker. The repository also contains a static frontend,
 CLI, audio codecs/DSP, and Kotlin tests. No arranger implementation exists
-yet.
+yet. This is a historical baseline: the static frontend is deprecated and
+scheduled for audited removal in Task 037 of `PLAN_UI_AND_CREATION.md`.
 
 Key entry points:
 
