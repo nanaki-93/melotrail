@@ -129,7 +129,7 @@ These tasks start only after Task 028 and must be implemented one at a time.
 | [038](tasks/completed/038-input-inspection-service.md) | Input inspection service | 036–037 | Atomic reports and preparation snapshot |
 | [039](tasks/completed/039-guided-import-dialog.md) | Guided import dialog | 032, 038 | Clear MIDI/WAV/MP3 import workflow |
 | [040](tasks/completed/040-deterministic-audio-cleanup-worker.md) | Deterministic audio cleanup worker | 037 | Safe independently tested repair operations |
-| [041](tasks/041-cleanup-plan-service.md) | Cleanup plan and provenance service | 038, 040 | Bounded deterministic/AI-assisted cleanup plan |
+| [041](tasks/completed/041-cleanup-plan-service.md) | Cleanup plan and provenance service | 038, 040 | Bounded deterministic/AI-assisted cleanup plan |
 | [042](tasks/042-transcription-quality-gate.md) | Transcription quality gate | 038, 041 | Validated raw MIDI and stage-specific failures |
 | [043](tasks/043-audio-preparation-ui.md) | Audio preparation and A/B UI | 035, 039, 041–042 | Consented cleanup, A/B, input selection |
 | [044](tasks/044-midi-cleanup-profiles.md) | MIDI cleanup profiles | 042 | Conservative/transcription/timing profiles |

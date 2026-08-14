@@ -86,7 +86,9 @@ data class InputInspectionReport(
     val measurements: AudioInspectionMeasurements? = null,
     val warnings: List<String> = emptyList(),
     val toolVersions: Map<String, String> = emptyMap(),
-    val preparation: PreparationStatus = PreparationStatus.INSPECT_ONLY
+    val preparation: PreparationStatus = PreparationStatus.INSPECT_ONLY,
+    /** Optional Task 041 decision and outcome; absent reports remain valid v1 inspections. */
+    val cleanup: CleanupPlanRecord? = null
 ) {
     fun requireValid() {
         require(version == CURRENT_VERSION) { "Unsupported input inspection report version: $version" }
@@ -107,6 +109,12 @@ data class InputInspectionReport(
         toolVersions.forEach { (name, version) ->
             require(TOOL_NAME.matches(name)) { "Tool version name is invalid." }
             requireSafeText(version, "Tool version", 120)
+        }
+        cleanup?.let {
+            it.requireValid()
+            require(it.plan.partId == partId && it.plan.source == source) {
+                "Cleanup plan must describe this inspection source."
+            }
         }
     }
 
