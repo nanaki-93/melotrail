@@ -85,7 +85,9 @@ class MidiCleanCommandTest(unittest.TestCase):
             self.assertEqual(1, result["duplicatesRemoved"])
             self.assertEqual(1, result["shortNotesRemoved"])
             self.assertEqual(1, result["lowVelocityNotesRemoved"])
-            self.assertEqual(1, result["overlapsRepaired"])
+            self.assertEqual("conservative", result["profile"])
+            self.assertEqual(2, result["version"])
+            self.assertEqual(0, result["overlapsRepaired"])
             self.assertEqual(0, result["quantizedNotes"])
             self.assertEqual(1, result["preservedTempoEvents"])
             self.assertEqual(1, result["preservedTimeSignatureEvents"])
@@ -96,7 +98,7 @@ class MidiCleanCommandTest(unittest.TestCase):
 
             notes = completed_notes(output)
             overlap_notes = [note for note in notes if note[2] == 64]
-            self.assertEqual([(984, 1224), (1224, 1704)], [(note[4], note[5]) for note in overlap_notes])
+            self.assertEqual([(984, 1464), (1224, 1704)], [(note[4], note[5]) for note in overlap_notes])
             self.assertTrue(all(end > start for *_, start, end in notes))
             velocity_zero_events = [message for message in mido.MidiFile(output).tracks[1] if message.type == "note_on" and message.note == 65 and message.velocity == 0]
             self.assertEqual([], velocity_zero_events)
@@ -108,7 +110,10 @@ class MidiCleanCommandTest(unittest.TestCase):
             normalized = directory / "normalized.mid"
             self.write_artifact_fixture(source)
 
-            midi_clean_command({"path": str(source), "outputPath": str(normalized), "normalizeVelocity": True})
+            midi_clean_command({
+                "path": str(source), "outputPath": str(normalized),
+                "profile": "transcription-safe", "normalizeVelocity": True,
+            })
 
             velocities = [note[3] for note in completed_notes(normalized)]
             self.assertEqual(32, min(velocities))
@@ -154,11 +159,12 @@ class MidiCleanCommandTest(unittest.TestCase):
             self.assertIn(mido.Message("program_change", channel=2, program=48, time=0), cleaned.tracks[1])
             self.assertEqual({0, 2}, {note[1] for note in completed_notes(output)})
 
-    def test_orphan_note_offs_are_removed_and_output_is_strictly_paired(self) -> None:
+    def test_conservative_preserves_orphan_note_offs_and_transcription_safe_removes_them(self) -> None:
         with tempfile.TemporaryDirectory() as directory_name:
             directory = Path(directory_name)
             source = directory / "orphan.mid"
-            output = directory / "clean.mid"
+            conservative = directory / "conservative.mid"
+            safe = directory / "safe.mid"
             midi = mido.MidiFile(ticks_per_beat=480)
             track = mido.MidiTrack()
             track.append(mido.Message("note_on", channel=0, note=65, velocity=80, time=0))
@@ -167,13 +173,21 @@ class MidiCleanCommandTest(unittest.TestCase):
             midi.tracks.append(track)
             midi.save(source)
 
-            result = midi_clean_command({"path": str(source), "outputPath": str(output)})
+            conservative_result = midi_clean_command({"path": str(source), "outputPath": str(conservative)})
+            result = midi_clean_command({
+                "path": str(source), "outputPath": str(safe), "profile": "transcription-safe",
+            })
 
+            self.assertEqual(0, conservative_result["orphanNoteOffsRemoved"])
             self.assertEqual(1, result["orphanNoteOffsRemoved"])
             self.assertEqual(1, result["outputNoteCount"])
-            self.assertEqual(1, len(completed_notes(output)))
+            self.assertEqual(1, len(completed_notes(safe)))
+            self.assertEqual(2, sum(
+                1 for message in mido.MidiFile(conservative).tracks[0]
+                if message.type in {"note_on", "note_off"} and not (message.type == "note_on" and message.velocity > 0)
+            ))
             active: set[tuple[int, int]] = set()
-            for message in mido.MidiFile(output).tracks[0]:
+            for message in mido.MidiFile(safe).tracks[0]:
                 key = (getattr(message, "channel", -1), getattr(message, "note", -1))
                 if message.type == "note_on" and message.velocity > 0:
                     active.add(key)
@@ -189,13 +203,39 @@ class MidiCleanCommandTest(unittest.TestCase):
             output = directory / "clean.mid"
             self.write_artifact_fixture(source)
 
-            midi_clean_command({"path": str(source), "outputPath": str(output), "cleanSustain": True})
+            result = midi_clean_command({
+                "path": str(source), "outputPath": str(output), "profile": "transcription-safe",
+            })
 
             sustain_values = [
                 message.value for message in mido.MidiFile(output).tracks[1]
                 if message.type == "control_change" and message.control == 64
             ]
             self.assertEqual([127, 0], sustain_values)
+            self.assertEqual(1, result["redundantSustainControlsRemoved"])
+
+    def test_transcription_safe_repairs_retriggers_and_limits_velocity_outliers(self) -> None:
+        with tempfile.TemporaryDirectory() as directory_name:
+            directory = Path(directory_name)
+            source = directory / "raw.mid"
+            output = directory / "safe.mid"
+            self.write_artifact_fixture(source)
+            midi = mido.MidiFile(source)
+            for message in midi.tracks[1]:
+                if message.type == "note_on" and message.note == 65 and message.velocity > 0:
+                    message.velocity = 127
+            midi.save(source)
+
+            result = midi_clean_command({
+                "path": str(source), "outputPath": str(output), "profile": "transcription-safe",
+            })
+
+            self.assertEqual(1, result["overlapsRepaired"])
+            self.assertEqual(1, result["velocityOutliersLimited"])
+            notes = completed_notes(output)
+            self.assertIn((1, 0, 65, 120, 1704, 2184), notes)
+            overlap_notes = [note for note in notes if note[2] == 64]
+            self.assertEqual([(984, 1224), (1224, 1704)], [(note[4], note[5]) for note in overlap_notes])
 
     def test_partial_and_full_quantization_follow_strength_and_are_deterministic(self) -> None:
         with tempfile.TemporaryDirectory() as directory_name:
@@ -206,11 +246,11 @@ class MidiCleanCommandTest(unittest.TestCase):
             full = directory / "full.mid"
             self.write_quantize_fixture(source)
 
-            partial_request = {"path": str(source), "outputPath": str(partial_a), "quantize": "1/16", "strength": 0.5, "minNoteMs": 0, "minVelocity": 0}
+            partial_request = {"path": str(source), "outputPath": str(partial_a), "profile": "tighten-timing", "quantize": "1/16", "strength": 0.5, "minNoteMs": 0, "minVelocity": 0}
             partial_result = midi_clean_command(partial_request)
             partial_request["outputPath"] = str(partial_b)
             midi_clean_command(partial_request)
-            full_result = midi_clean_command({"path": str(source), "outputPath": str(full), "quantize": "1/16", "strength": 1.0, "minNoteMs": 0, "minVelocity": 0})
+            full_result = midi_clean_command({"path": str(source), "outputPath": str(full), "profile": "tighten-timing", "quantize": "1/16", "strength": 1.0, "minNoteMs": 0, "minVelocity": 0})
 
             self.assertEqual([(0, 1, 67, 90, 111, 380)], completed_notes(partial_a))
             self.assertEqual([(0, 1, 67, 90, 120, 360)], completed_notes(full))
@@ -229,6 +269,10 @@ class MidiCleanCommandTest(unittest.TestCase):
                 ({"path": str(source)}, "Missing outputPath"),
                 ({"path": str(source), "outputPath": str(output), "quantize": "1/12"}, "quantize must"),
                 ({"path": str(source), "outputPath": str(output), "strength": 0.4}, "strength requires"),
+                ({"path": str(source), "outputPath": str(output), "profile": "unknown"}, "profile must"),
+                ({"path": str(source), "outputPath": str(output), "quantize": "1/16"}, "quantize requires"),
+                ({"path": str(source), "outputPath": str(output), "profile": "tighten-timing", "quantize": "1/16"}, "requires strength"),
+                ({"path": str(source), "outputPath": str(output), "cleanSustain": True}, "require transcription-safe"),
                 ({"path": str(source), "outputPath": str(output), "minNoteMs": -1}, "minNoteMs must"),
                 ({"path": str(source), "outputPath": str(output)}, "Could not parse MIDI input"),
             )

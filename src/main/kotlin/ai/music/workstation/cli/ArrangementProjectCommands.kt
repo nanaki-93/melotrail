@@ -251,6 +251,8 @@ object ArrangementProjectCommands {
             MidiCleanCommand(
                 path = options.input.toString(),
                 outputPath = options.output.toString(),
+                version = 2,
+                profile = options.profile,
                 quantize = options.quantize,
                 strength = options.strength,
                 minNoteMs = options.minNoteMs,
@@ -266,10 +268,11 @@ object ArrangementProjectCommands {
         fun stat(name: String): Long = output[name]?.jsonPrimitive?.longOrNull
             ?: throw IllegalArgumentException("MIDI cleanup failed during output validation: worker returned no $name")
         val outputPath = output["output"]?.jsonPrimitive?.contentOrNull ?: options.output.toString()
-        return "Cleaned ${options.input} -> $outputPath (notes ${stat("inputNoteCount")} -> ${stat("outputNoteCount")}, " +
+        return "Cleaned ${options.input} -> $outputPath (${options.profile}, notes ${stat("inputNoteCount")} -> ${stat("outputNoteCount")}, " +
             "duplicates ${stat("duplicatesRemoved")}, short ${stat("shortNotesRemoved")}, " +
-            "low velocity ${stat("lowVelocityNotesRemoved")}, overlaps ${stat("overlapsRepaired")}, " +
-            "quantized ${stat("quantizedNotes")})"
+            "low velocity ${stat("lowVelocityNotesRemoved")}, orphan offs ${stat("orphanNoteOffsRemoved")}, " +
+            "retriggers ${stat("overlapsRepaired")}, sustain ${stat("redundantSustainControlsRemoved")}, " +
+            "velocity outliers ${stat("velocityOutliersLimited")}, quantized ${stat("quantizedNotes")})"
     }
 
     internal fun transcriptionFailureMessage(error: ai.music.workstation.worker.WorkerError?): String {
@@ -1799,6 +1802,7 @@ object ArrangementProjectCommands {
     internal data class MidiCleanOptions(
         val input: Path,
         val output: Path,
+        val profile: String,
         val quantize: String?,
         val strength: Double,
         val minNoteMs: Int,
@@ -1845,7 +1849,7 @@ object ArrangementProjectCommands {
     }
 
     internal fun parseMidiCleanOptions(arguments: List<String>): MidiCleanOptions {
-        val valueOptions = setOf("--input", "--output", "--quantize", "--strength", "--min-note-ms", "--min-velocity")
+        val valueOptions = setOf("--input", "--output", "--profile", "--quantize", "--strength", "--min-note-ms", "--min-velocity")
         val flagOptions = setOf("--normalize-velocity", "--clean-sustain")
         val values = mutableMapOf<String, String>()
         val flags = mutableSetOf<String>()
@@ -1853,7 +1857,7 @@ object ArrangementProjectCommands {
         while (index < arguments.size) {
             val option = arguments[index]
             require(option in valueOptions || option in flagOptions) {
-                "Usage: midi-clean --input <raw.mid> --output <clean.mid> [--quantize 1/16 --strength 0.4]"
+                "Usage: midi-clean --input <raw.mid> --output <clean.mid> [--profile conservative|transcription-safe|tighten-timing]"
             }
             if (option in flagOptions) {
                 require(flags.add(option)) { "Duplicate option: $option" }
@@ -1883,20 +1887,34 @@ object ArrangementProjectCommands {
             "Output must use a .mid or .midi extension"
         }
         require(!Files.isDirectory(output)) { "Output path is a directory: $output" }
+        val profile = values["--profile"] ?: "conservative"
+        require(profile in setOf("conservative", "transcription-safe", "tighten-timing")) {
+            "Profile must be one of: conservative, transcription-safe, tighten-timing"
+        }
         val quantize = values["--quantize"]
         require(quantize == null || quantize in setOf("1/4", "1/8", "1/16", "1/32")) {
             "Quantize must be one of: 1/4, 1/8, 1/16, 1/32"
         }
-        val strength = values["--strength"]?.toDoubleOrNull()
-            ?: if (quantize != null) 0.4 else 0.0
+        val strength = values["--strength"]?.toDoubleOrNull() ?: 0.0
         require(strength in 0.0..1.0) { "Strength must be from 0.0 to 1.0" }
         require(quantize != null || strength == 0.0) { "--strength requires --quantize" }
+        if (profile == "tighten-timing") {
+            require(quantize != null) { "--profile tighten-timing requires --quantize" }
+            require("--strength" in values && strength > 0.0) {
+                "--profile tighten-timing requires --strength from 0.0 to 1.0 (exclusive of 0.0)"
+            }
+        } else {
+            require(quantize == null) { "--quantize requires --profile tighten-timing" }
+        }
         val minNoteMs = values["--min-note-ms"]?.toIntOrNull() ?: 50
         val minVelocity = values["--min-velocity"]?.toIntOrNull() ?: 8
         require(minNoteMs in 0..60_000) { "--min-note-ms must be from 0 to 60000" }
         require(minVelocity in 0..127) { "--min-velocity must be from 0 to 127" }
+        require(profile != "conservative" || flags.intersect(setOf("--normalize-velocity", "--clean-sustain")).isEmpty()) {
+            "--normalize-velocity and --clean-sustain require --profile transcription-safe or tighten-timing"
+        }
         return MidiCleanOptions(
-            input, output, quantize, strength, minNoteMs, minVelocity,
+            input, output, profile, quantize, strength, minNoteMs, minVelocity,
             "--normalize-velocity" in flags, "--clean-sustain" in flags
         )
     }

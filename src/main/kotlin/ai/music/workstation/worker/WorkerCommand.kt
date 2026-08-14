@@ -83,6 +83,8 @@ data class TranscribeCommand(
 data class MidiCleanCommand(
     val path: String,
     val outputPath: String,
+    val version: Int = 2,
+    val profile: String = "conservative",
     val quantize: String? = null,
     val strength: Double = 0.0,
     val minNoteMs: Int = 50,

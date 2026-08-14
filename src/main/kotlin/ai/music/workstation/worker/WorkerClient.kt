@@ -165,6 +165,8 @@ class WorkerClient(
                 is MidiCleanCommand -> {
                     put("path", command.path)
                     put("outputPath", command.outputPath)
+                    put("version", command.version)
+                    put("profile", command.profile)
                     command.quantize?.let { put("quantize", it) }
                     put("strength", command.strength)
                     put("minNoteMs", command.minNoteMs)

@@ -181,13 +181,23 @@ make cli ARGS='transcribe --input ./recordings/verse.wav --output ./projects/son
 
 ### Deterministic MIDI cleanup
 
-Clean raw piano transcription before later MIDI analysis. Defaults only remove
-exact duplicates, notes shorter than 50 ms, and note-on velocities below 8;
-they do not quantize expressive timing.
+Clean raw piano transcription before later MIDI analysis. Requests use cleanup
+contract version 2. The default `conservative` profile removes only exact
+duplicates, notes shorter than 50 ms, and note-on velocities below 8; it
+preserves expressive timing, pedal controls, orphan note-offs, and retriggers.
+
+`transcription-safe` additionally removes orphan note-offs and redundant CC64
+pedal values, ends same-channel/pitch retriggers at the next start, and limits
+retained velocity outliers to 12–120. `tighten-timing` includes those repairs
+and requires an explicit `1/4`, `1/8`, `1/16`, or `1/32` grid plus a strength
+strictly greater than 0.0 and at most 1.0. It is the only profile that can
+quantize. Every response reports the profile, before/after note and event
+counts, and each applied-change count.
 
 ```bash
 make cli ARGS='midi-clean --input ./projects/song-001/midi/raw/A.mid --output ./projects/song-001/midi/clean/A.mid'
-make cli ARGS='midi-clean --input ./projects/song-001/midi/raw/A.mid --output ./projects/song-001/midi/clean/A.mid --quantize 1/16 --strength 0.4'
+make cli ARGS='midi-clean --input ./projects/song-001/midi/raw/A.mid --output ./projects/song-001/midi/clean/A.mid --profile transcription-safe'
+make cli ARGS='midi-clean --input ./projects/song-001/midi/raw/A.mid --output ./projects/song-001/midi/clean/A.mid --profile tighten-timing --quantize 1/16 --strength 0.4'
 ```
 
 ### MIDI-first project input

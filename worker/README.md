@@ -72,21 +72,27 @@ existing `.mid`/`.midi` file. It keeps the MIDI tracks and safe metadata in
 place, writes through a temporary file, reparses it, and atomically publishes
 only a valid result. It never changes the raw input.
 
-By default it removes exact duplicate notes, notes shorter than 50 ms (using
-the MIDI tempo map), and note-on velocities below 8. It repairs
-same-channel/pitch overlaps by ending the earlier note at the later start. It
-does not quantize by default. `--quantize` accepts `1/4`, `1/8`, `1/16`, or
-`1/32`; a strength of `0.0` leaves timing unchanged and `1.0` snaps it to the
-grid. The CLI uses strength `0.4` when a grid is provided without an explicit
-strength.
+Cleanup requests use version `2` and a named profile. The default
+`conservative` profile removes exact duplicate notes, notes shorter than 50 ms
+(using the MIDI tempo map), and note-on velocities below 8. It preserves
+expressive timing, pedal controls, orphan note-offs, and same-pitch retriggers.
 
-Optional `--clean-sustain` removes only repeated adjacent CC64 values on the
-same track/channel, preserving valid pedal changes. Optional
-`--normalize-velocity` linearly maps retained note-on velocities to 32–112;
-it is off by default to retain performance dynamics.
+`transcription-safe` additionally removes orphan note-offs and repeated CC64
+values on the same track/channel, ends an earlier same-channel/pitch retrigger
+at the later start, and clamps retained velocity outliers to 12–120.
+`tighten-timing` includes those repairs and is the only profile that permits
+quantization. It requires a grid of `1/4`, `1/8`, `1/16`, or `1/32` and a
+strength greater than `0.0` and at most `1.0`. It never invents notes.
+
+The legacy `normalizeVelocity` request field remains available only with a
+non-conservative profile and maps retained velocities linearly to 32–112.
+Likewise, legacy `cleanSustain` is accepted only with a non-conservative
+profile; profile-based sustain cleanup is already enabled there. Ambiguous
+profile/quantization combinations are rejected. Responses include exact input
+and output note/event counts and an `appliedChanges` object.
 
 Example request:
 
 ```json
-{"path":"/project/midi/raw/A.mid","outputPath":"/project/midi/clean/A.mid","quantize":"1/16","strength":0.4,"minNoteMs":50,"minVelocity":8,"normalizeVelocity":false,"cleanSustain":false}
+{"version":2,"profile":"tighten-timing","path":"/project/midi/raw/A.mid","outputPath":"/project/midi/clean/A.mid","quantize":"1/16","strength":0.4,"minNoteMs":50,"minVelocity":8,"normalizeVelocity":false,"cleanSustain":false}
 ```

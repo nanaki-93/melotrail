@@ -21,10 +21,23 @@ DEFAULT_MIN_NOTE_MS = 50
 DEFAULT_MIN_VELOCITY = 8
 NORMALIZED_VELOCITY_MIN = 32
 NORMALIZED_VELOCITY_MAX = 112
+CLEANUP_REQUEST_VERSION = 2
+CONSERVATIVE_PROFILE = "conservative"
+TRANSCRIPTION_SAFE_PROFILE = "transcription-safe"
+TIGHTEN_TIMING_PROFILE = "tighten-timing"
+SUPPORTED_PROFILES = {
+    CONSERVATIVE_PROFILE,
+    TRANSCRIPTION_SAFE_PROFILE,
+    TIGHTEN_TIMING_PROFILE,
+}
+TRANSCRIPTION_SAFE_VELOCITY_MIN = 12
+TRANSCRIPTION_SAFE_VELOCITY_MAX = 120
 
 
 @dataclass(frozen=True)
 class CleanupOptions:
+    version: int
+    profile: str
     quantize: str | None
     strength: float
     min_note_ms: int
@@ -81,6 +94,17 @@ def _parse_request(request: dict) -> tuple[Path, Path, CleanupOptions]:
     if output_path.exists() and output_path.is_dir():
         raise MidiCleanupValidationError(f"Output path is a directory: {output_path}")
 
+    version = _require_value(request, "version", int, CLEANUP_REQUEST_VERSION)
+    if version != CLEANUP_REQUEST_VERSION:
+        raise MidiCleanupValidationError(
+            f"version must be {CLEANUP_REQUEST_VERSION}"
+        )
+    profile = request.get("profile", CONSERVATIVE_PROFILE)
+    if not isinstance(profile, str) or profile not in SUPPORTED_PROFILES:
+        raise MidiCleanupValidationError(
+            "profile must be one of: " + ", ".join(sorted(SUPPORTED_PROFILES))
+        )
+
     quantize = request.get("quantize")
     if quantize is not None and quantize not in SUPPORTED_GRIDS:
         raise MidiCleanupValidationError(
@@ -91,6 +115,13 @@ def _parse_request(request: dict) -> tuple[Path, Path, CleanupOptions]:
         raise MidiCleanupValidationError("strength must be a number from 0.0 to 1.0")
     if quantize is None and float(strength) != 0.0:
         raise MidiCleanupValidationError("strength requires a quantize grid")
+    if profile == TIGHTEN_TIMING_PROFILE:
+        if quantize is None:
+            raise MidiCleanupValidationError("tighten-timing profile requires a quantize grid")
+        if float(strength) == 0.0:
+            raise MidiCleanupValidationError("tighten-timing profile requires strength greater than 0.0")
+    elif quantize is not None:
+        raise MidiCleanupValidationError("quantize requires the tighten-timing profile")
 
     min_note_ms = _require_value(request, "minNoteMs", int, DEFAULT_MIN_NOTE_MS)
     min_velocity = _require_value(request, "minVelocity", int, DEFAULT_MIN_VELOCITY)
@@ -100,8 +131,14 @@ def _parse_request(request: dict) -> tuple[Path, Path, CleanupOptions]:
         raise MidiCleanupValidationError("minNoteMs must be from 0 to 60000")
     if not 0 <= min_velocity <= 127:
         raise MidiCleanupValidationError("minVelocity must be from 0 to 127")
+    if profile == CONSERVATIVE_PROFILE and (normalize_velocity or clean_sustain):
+        raise MidiCleanupValidationError(
+            "normalizeVelocity and cleanSustain require transcription-safe or tighten-timing profile"
+        )
 
     return input_path, output_path, CleanupOptions(
+        version=version,
+        profile=profile,
         quantize=quantize,
         strength=float(strength),
         min_note_ms=min_note_ms,
@@ -224,7 +261,8 @@ def _quantized_tick(tick: int, grid_ticks: int, strength: float) -> int:
     return tick + _round_half_away_from_zero((nearest - tick) * strength)
 
 
-def _remove_redundant_sustain(timed_tracks: list[list[TimedEvent]], removed_events: set[tuple[int, int]]) -> None:
+def _remove_redundant_sustain(timed_tracks: list[list[TimedEvent]], removed_events: set[tuple[int, int]]) -> int:
+    removed = 0
     for track_index, events in enumerate(timed_tracks):
         previous_values: dict[int, int] = {}
         for event in events:
@@ -233,8 +271,58 @@ def _remove_redundant_sustain(timed_tracks: list[list[TimedEvent]], removed_even
                 continue
             if previous_values.get(message.channel) == message.value:
                 removed_events.add((track_index, event.index))
+                removed += 1
             else:
                 previous_values[message.channel] = message.value
+    return removed
+
+
+def _repair_retrigger_collisions(notes: list[MidiNote]) -> int:
+    repaired = 0
+    by_pitch: dict[tuple[int, int], list[MidiNote]] = {}
+    for note in notes:
+        if not note.removed:
+            by_pitch.setdefault((note.channel, note.pitch), []).append(note)
+    for same_pitch_notes in by_pitch.values():
+        same_pitch_notes.sort(key=lambda note: (note.start_tick, note.end_tick, note.track, note.on_index))
+        for earlier, later in zip(same_pitch_notes, same_pitch_notes[1:]):
+            if earlier.removed or earlier.end_tick <= later.start_tick:
+                continue
+            earlier.end_tick = later.start_tick
+            repaired += 1
+            if earlier.end_tick <= earlier.start_tick:
+                earlier.removed = True
+    return repaired
+
+
+def _limit_velocity_outliers(notes: list[MidiNote]) -> int:
+    limited = 0
+    for note in notes:
+        if note.removed:
+            continue
+        velocity = min(max(note.velocity, TRANSCRIPTION_SAFE_VELOCITY_MIN), TRANSCRIPTION_SAFE_VELOCITY_MAX)
+        if velocity != note.velocity:
+            note.velocity = velocity
+            limited += 1
+    return limited
+
+
+def _normalize_velocities(notes: list[MidiNote]) -> int:
+    kept_notes = [note for note in notes if not note.removed]
+    velocities = [note.velocity for note in kept_notes]
+    velocity_min, velocity_max = min(velocities, default=0), max(velocities, default=0)
+    if velocity_min == velocity_max:
+        return 0
+    normalized = 0
+    for note in kept_notes:
+        ratio = (note.velocity - velocity_min) / (velocity_max - velocity_min)
+        velocity = _round_half_away_from_zero(
+            NORMALIZED_VELOCITY_MIN + ratio * (NORMALIZED_VELOCITY_MAX - NORMALIZED_VELOCITY_MIN)
+        )
+        if velocity != note.velocity:
+            note.velocity = velocity
+            normalized += 1
+    return normalized
 
 
 def _render_midi(
@@ -242,18 +330,9 @@ def _render_midi(
     timed_tracks: list[list[TimedEvent]],
     notes: list[MidiNote],
     removed_events: set[tuple[int, int]],
-    normalize_velocity: bool,
 ) -> mido.MidiFile:
     notes_by_event: dict[tuple[int, int], tuple[MidiNote, bool]] = {}
     kept_notes = [note for note in notes if not note.removed]
-    velocities = [note.velocity for note in kept_notes]
-    velocity_min, velocity_max = min(velocities, default=0), max(velocities, default=0)
-
-    def cleaned_velocity(note: MidiNote) -> int:
-        if not normalize_velocity or velocity_min == velocity_max:
-            return note.velocity
-        ratio = (note.velocity - velocity_min) / (velocity_max - velocity_min)
-        return _round_half_away_from_zero(NORMALIZED_VELOCITY_MIN + ratio * (NORMALIZED_VELOCITY_MAX - NORMALIZED_VELOCITY_MIN))
 
     for note in kept_notes:
         notes_by_event[(note.track, note.on_index)] = (note, True)
@@ -261,7 +340,7 @@ def _render_midi(
 
     output = mido.MidiFile(type=source.type, ticks_per_beat=source.ticks_per_beat, charset=source.charset)
     for track_index, events in enumerate(timed_tracks):
-        track_events: list[tuple[int, int, mido.Message | mido.MetaMessage]] = []
+        track_events: list[tuple[int, int, int, mido.Message | mido.MetaMessage]] = []
         end_of_track: TimedEvent | None = None
         for event in events:
             if (track_index, event.index) in removed_events:
@@ -273,21 +352,21 @@ def _render_midi(
             if mapped_note is not None:
                 note, is_start = mapped_note
                 if is_start:
-                    message = mido.Message(
-                        "note_on", channel=note.channel, note=note.pitch, velocity=cleaned_velocity(note)
-                    )
+                    message = mido.Message("note_on", channel=note.channel, note=note.pitch, velocity=note.velocity)
                     tick = note.start_tick
+                    priority = 2
                 else:
                     # Velocity-zero note-ons are canonicalized as legal note-off messages.
                     message = mido.Message("note_off", channel=note.channel, note=note.pitch, velocity=0)
                     tick = note.end_tick
-                track_events.append((tick, event.index, message))
+                    priority = 0
+                track_events.append((tick, priority, event.index, message))
             else:
-                track_events.append((event.tick, event.index, event.message.copy()))
-        track_events.sort(key=lambda item: (item[0], item[1]))
+                track_events.append((event.tick, 1, event.index, event.message.copy()))
+        track_events.sort(key=lambda item: (item[0], item[1], item[2]))
         last_tick = 0
         output_track = mido.MidiTrack()
-        for tick, _, message in track_events:
+        for tick, _, _, message in track_events:
             output_track.append(message.copy(time=tick - last_tick))
             last_tick = tick
         if end_of_track is not None:
@@ -299,7 +378,7 @@ def _render_midi(
 def _validate_output(path: Path) -> list[MidiNote]:
     try:
         midi = _load_midi(path)
-        notes = _extract_notes(_timed_tracks(midi), reject_orphans=True)
+        notes = _extract_notes(_timed_tracks(midi))
     except MidiCleanupValidationError as exc:
         raise MidiCleanupOutputValidationError(f"Cleaned MIDI is invalid: {exc}") from exc
     if any(note.end_tick <= note.start_tick for note in notes):
@@ -313,7 +392,10 @@ def midi_clean_command(request: dict) -> dict:
     source = _load_midi(input_path)
     timed_tracks = _timed_tracks(source)
     removed_events: set[tuple[int, int]] = set()
-    notes = _extract_notes(timed_tracks, orphan_events=removed_events)
+    notes = _extract_notes(
+        timed_tracks,
+        orphan_events=removed_events if options.profile != CONSERVATIVE_PROFILE else None,
+    )
     input_note_count = len(notes)
     tempos = _tempo_events(timed_tracks)
     stats = {
@@ -322,12 +404,15 @@ def midi_clean_command(request: dict) -> dict:
         "lowVelocityNotesRemoved": 0,
         "overlapsRepaired": 0,
         "orphanNoteOffsRemoved": len(removed_events),
+        "redundantSustainControlsRemoved": 0,
+        "velocityOutliersLimited": 0,
+        "velocitiesNormalized": 0,
         "quantizedNotes": 0,
     }
 
-    seen: set[tuple[int, int, int, int]] = set()
+    seen: set[tuple[int, int, int, int, int]] = set()
     for note in notes:
-        key = (note.channel, note.pitch, note.start_tick, note.end_tick)
+        key = (note.track, note.channel, note.pitch, note.start_tick, note.end_tick)
         if key in seen:
             note.removed = True
             stats["duplicatesRemoved"] += 1
@@ -343,18 +428,9 @@ def midi_clean_command(request: dict) -> dict:
             note.removed = True
             stats["lowVelocityNotesRemoved"] += 1
 
-    by_pitch: dict[tuple[int, int], list[MidiNote]] = {}
-    for note in notes:
-        if not note.removed:
-            by_pitch.setdefault((note.channel, note.pitch), []).append(note)
-    for same_pitch_notes in by_pitch.values():
-        same_pitch_notes.sort(key=lambda note: (note.start_tick, note.end_tick, note.track, note.on_index))
-        for earlier, later in zip(same_pitch_notes, same_pitch_notes[1:]):
-            if earlier.end_tick > later.start_tick:
-                earlier.end_tick = later.start_tick
-                stats["overlapsRepaired"] += 1
-                if earlier.end_tick <= earlier.start_tick:
-                    earlier.removed = True
+    if options.profile != CONSERVATIVE_PROFILE:
+        stats["overlapsRepaired"] += _repair_retrigger_collisions(notes)
+        stats["velocityOutliersLimited"] = _limit_velocity_outliers(notes)
 
     if options.quantize is not None and options.strength > 0:
         divisor = SUPPORTED_GRIDS[options.quantize]
@@ -374,20 +450,23 @@ def midi_clean_command(request: dict) -> dict:
             if start_tick != note.start_tick or end_tick != note.end_tick:
                 stats["quantizedNotes"] += 1
                 note.start_tick, note.end_tick = start_tick, end_tick
+        stats["overlapsRepaired"] += _repair_retrigger_collisions(notes)
 
     for note in notes:
         if note.removed:
             removed_events.add((note.track, note.on_index))
             removed_events.add((note.track, note.off_index))
-    if options.clean_sustain:
-        _remove_redundant_sustain(timed_tracks, removed_events)
+    if options.profile != CONSERVATIVE_PROFILE:
+        stats["redundantSustainControlsRemoved"] = _remove_redundant_sustain(timed_tracks, removed_events)
+    if options.normalize_velocity:
+        stats["velocitiesNormalized"] = _normalize_velocities(notes)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path: Path | None = None
     try:
         with tempfile.NamedTemporaryFile(prefix=f".{output_path.stem}.", suffix=".mid", dir=output_path.parent, delete=False) as temporary:
             temporary_path = Path(temporary.name)
-        _render_midi(source, timed_tracks, notes, removed_events, options.normalize_velocity).save(temporary_path)
+        _render_midi(source, timed_tracks, notes, removed_events).save(temporary_path)
         output_notes = _validate_output(temporary_path)
         os.replace(temporary_path, output_path)
     except MidiCleanupOutputValidationError:
@@ -399,10 +478,15 @@ def midi_clean_command(request: dict) -> dict:
             temporary_path.unlink(missing_ok=True)
 
     return {
+        "version": options.version,
+        "profile": options.profile,
         "output": str(output_path),
         "inputNoteCount": input_note_count,
         "outputNoteCount": len(output_notes),
+        "inputEventCount": sum(len(track) for track in timed_tracks),
+        "outputEventCount": sum(len(track) for track in _timed_tracks(_load_midi(output_path))),
         **stats,
+        "appliedChanges": stats.copy(),
         "preservedTempoEvents": sum(
             1 for track in timed_tracks for event in track
             if event.message.is_meta and event.message.type == "set_tempo"
