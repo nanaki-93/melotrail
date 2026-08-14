@@ -87,6 +87,13 @@ object WorkspaceTags {
     const val PLAYBACK_LOFI = "playback-lofi"
     const val PLAYBACK_MASTER = "playback-master"
     const val PLAYBACK_TOGGLE = "playback-toggle"
+    const val PLAYBACK_SEEK = "playback-seek"
+    const val PLAYBACK_VOLUME = "playback-volume"
+    const val PREVIEW_TRANSPORT = "preview-transport"
+    const val PREVIEW_TOGGLE = "preview-toggle"
+    const val PREVIEW_STOP = "preview-stop"
+    const val PREVIEW_SEEK = "preview-seek"
+    const val PREVIEW_RETRY = "preview-retry"
     const val SOUND_LIBRARY_SETTINGS = "sound-library-settings"
     const val SOUND_LIBRARY_CHOOSE = "sound-library-choose"
     const val SOUND_LIBRARY_CLEAR = "sound-library-clear"
@@ -108,14 +115,7 @@ fun WorkspaceScreen(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit
     Column(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(14.dp)
             .onPreviewKeyEvent { event: androidx.compose.ui.input.key.KeyEvent ->
-                if (event.type != KeyEventType.KeyDown || (!event.isCtrlPressed && !event.isMetaPressed)) false
-                else when (event.key) {
-                    Key.Spacebar -> { onIntent(WorkspaceIntent.PlayPause); true }
-                    Key.DirectionLeft -> { onIntent(WorkspaceIntent.SeekPlayback((state.playback.positionSeconds - 5.0).coerceAtLeast(0.0))); true }
-                    Key.DirectionRight -> { onIntent(WorkspaceIntent.SeekPlayback((state.playback.positionSeconds + 5.0).coerceAtMost(state.playback.durationSeconds))); true }
-                    Key.K -> { onIntent(WorkspaceIntent.StopPlayback); true }
-                    else -> false
-                }
+                transportShortcutIntent(event, state.playback)?.let(onIntent) != null
             },
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -123,6 +123,32 @@ fun WorkspaceScreen(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit
         WorkspaceShell(state, onIntent)
     }
     WorkspaceDialogs(state, onIntent, onExit)
+}
+
+internal fun transportShortcutIntent(
+    event: androidx.compose.ui.input.key.KeyEvent,
+    playback: PlaybackSnapshot
+): WorkspaceIntent? = transportShortcutIntent(
+    key = event.key,
+    shortcutPressed = event.isCtrlPressed || event.isMetaPressed,
+    keyDown = event.type == KeyEventType.KeyDown,
+    playback = playback
+)
+
+internal fun transportShortcutIntent(
+    key: Key,
+    shortcutPressed: Boolean,
+    keyDown: Boolean,
+    playback: PlaybackSnapshot
+): WorkspaceIntent? {
+    if (!keyDown || !shortcutPressed) return null
+    return when (key) {
+        Key.Spacebar -> WorkspaceIntent.PlayPause
+        Key.DirectionLeft -> WorkspaceIntent.SeekPlayback((playback.positionSeconds - 5.0).coerceAtLeast(0.0))
+        Key.DirectionRight -> WorkspaceIntent.SeekPlayback((playback.positionSeconds + 5.0).coerceAtMost(playback.durationSeconds))
+        Key.K -> WorkspaceIntent.StopPlayback
+        else -> null
+    }
 }
 
 @Composable
@@ -284,13 +310,21 @@ private fun PartsPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                val previewCapability = if (part.sourceType == ai.music.workstation.application.PartSourceType.AUDIO) RuntimeCapability.SOURCE_PREVIEW else RuntimeCapability.MIDI_PREVIEW
+                val previewReadiness = state.runtimeReadiness?.capability(previewCapability)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     TextButton(onClick = { onIntent(WorkspaceIntent.ShowRoleEditor(part.id)) }, enabled = !disabled) { Text("Edit role") }
-                    val previewCapability = if (part.sourceType == ai.music.workstation.application.PartSourceType.AUDIO) RuntimeCapability.SOURCE_PREVIEW else RuntimeCapability.MIDI_PREVIEW
-                    TextButton(onClick = { onIntent(WorkspaceIntent.PreviewPart(part.id)) }, enabled = !disabled && state.runtimeReadiness?.capability(previewCapability)?.available == true) { Text("Preview") }
+                    TextButton(onClick = { onIntent(WorkspaceIntent.PreviewPart(part.id)) }, enabled = !disabled && previewReadiness?.available == true) { Text("Preview") }
                     TextButton(onClick = { onIntent(WorkspaceIntent.AnalyzePart(part.id)) }, enabled = !disabled) {
                         Text(if (analysis == null) "Analyze" else "Analyze again")
                     }
+                }
+                if (!disabled && previewReadiness?.available != true) {
+                    Text(
+                        "Preview unavailable — ${previewReadiness?.reason ?: "Checking local preview requirements."}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
@@ -307,6 +341,59 @@ private fun PartsPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
         ) { Text("Add audio") }
     }
     state.runtimeReadiness?.capability(RuntimeCapability.AUDIO_IMPORT)?.reason?.let { Text("Audio import unavailable — $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+}
+
+@Composable
+private fun PreviewTransport(preview: PreviewUiState, volume: Double, onIntent: (WorkspaceIntent) -> Unit) = Column(
+    modifier = Modifier.semantics { testTag = WorkspaceTags.PREVIEW_TRANSPORT },
+    verticalArrangement = Arrangement.spacedBy(6.dp)
+) {
+    Text("Selected preview", style = MaterialTheme.typography.labelLarge)
+    val partLabel = preview.source?.partId?.let { "Part $it" } ?: "No part selected"
+    val hasArtifact = preview.source?.artifact != null
+    val canPause = preview.phase == PreviewPhase.PLAYING
+    val canResume = preview.phase == PreviewPhase.PAUSED
+    val canStop = preview.phase in setOf(PreviewPhase.PREPARING, PreviewPhase.READY, PreviewPhase.STARTING, PreviewPhase.PLAYING, PreviewPhase.PAUSED)
+    val canSeek = hasArtifact && preview.durationSeconds > 0.0 && preview.phase in setOf(PreviewPhase.READY, PreviewPhase.PLAYING, PreviewPhase.PAUSED, PreviewPhase.STOPPED)
+
+    Text(partLabel, fontWeight = FontWeight.Medium)
+    Text(previewStatusLabel(preview.phase), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    if (preview.phase == PreviewPhase.FAILED) {
+        Text(preview.reason ?: "Preview failed. Retry after resolving the prerequisite.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        OutlinedButton(onClick = { onIntent(WorkspaceIntent.RetryPreview) }, enabled = preview.source != null, modifier = Modifier.semantics { testTag = WorkspaceTags.PREVIEW_RETRY; contentDescription = "Retry selected preview" }) { Text("Retry preview") }
+    } else if (preview.phase == PreviewPhase.STOPPED && preview.source != null && !hasArtifact) {
+        Text("Select Preview on a part to prepare its monitor artifact.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Button(
+            onClick = { onIntent(if (canPause) WorkspaceIntent.PausePreview else WorkspaceIntent.ResumePreview) },
+            enabled = canPause || canResume,
+            modifier = Modifier.semantics { testTag = WorkspaceTags.PREVIEW_TOGGLE; contentDescription = if (canPause) "Pause selected preview" else "Resume selected preview" }
+        ) { Text(if (canPause) "Pause" else "Resume") }
+        OutlinedButton(onClick = { onIntent(WorkspaceIntent.StopPreview) }, enabled = canStop, modifier = Modifier.semantics { testTag = WorkspaceTags.PREVIEW_STOP; contentDescription = "Stop selected preview" }) { Text("Stop") }
+        Text("${formatDuration(preview.elapsedSeconds)} / ${formatDuration(preview.durationSeconds)}", modifier = Modifier.padding(top = 12.dp), style = MaterialTheme.typography.labelSmall)
+    }
+    Slider(
+        value = preview.elapsedSeconds.toFloat(), onValueChange = { onIntent(WorkspaceIntent.SeekPreview(it.toDouble())) },
+        valueRange = 0f..preview.durationSeconds.coerceAtLeast(0.01).toFloat(), enabled = canSeek,
+        modifier = Modifier.semantics { testTag = WorkspaceTags.PREVIEW_SEEK; contentDescription = "Seek selected preview" }
+    )
+    Text("Output volume ${(volume * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
+    Slider(
+        value = volume.toFloat(), onValueChange = { onIntent(WorkspaceIntent.SetPlaybackVolume(it.toDouble())) }, enabled = hasArtifact,
+        modifier = Modifier.semantics { contentDescription = "Selected preview output volume" }
+    )
+}
+
+internal fun previewStatusLabel(phase: PreviewPhase): String = when (phase) {
+    PreviewPhase.CHECKING -> "Checking preview prerequisites…"
+    PreviewPhase.PREPARING -> "Preparing monitor audio…"
+    PreviewPhase.READY -> "Preview ready; starting audio output…"
+    PreviewPhase.STARTING -> "Starting audio output…"
+    PreviewPhase.PLAYING -> "Playing"
+    PreviewPhase.PAUSED -> "Paused"
+    PreviewPhase.STOPPED -> "Stopped"
+    PreviewPhase.FAILED -> "Preview unavailable"
 }
 
 @Composable
@@ -566,9 +653,9 @@ private fun PlaybackControls(state: WorkspaceUiState, onIntent: (WorkspaceIntent
         OutlinedButton(onClick = { onIntent(WorkspaceIntent.StopPlayback) }, enabled = state.playback.state != ai.music.workstation.audio.PlaybackState.STOPPED) { Text("Stop") }
         Text("${formatDuration(state.playback.positionSeconds)} / ${formatDuration(state.playback.durationSeconds)}", modifier = Modifier.padding(top = 12.dp), style = MaterialTheme.typography.labelSmall)
     }
-    Slider(value = state.playback.positionSeconds.toFloat(), onValueChange = { onIntent(WorkspaceIntent.SeekPlayback(it.toDouble())) }, valueRange = 0f..state.playback.durationSeconds.coerceAtLeast(0.01).toFloat(), enabled = selectedEnabled && state.playback.durationSeconds > 0.0)
+    Slider(value = state.playback.positionSeconds.toFloat(), onValueChange = { onIntent(WorkspaceIntent.SeekPlayback(it.toDouble())) }, valueRange = 0f..state.playback.durationSeconds.coerceAtLeast(0.01).toFloat(), enabled = selectedEnabled && state.playback.durationSeconds > 0.0, modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_SEEK; contentDescription = "Seek selected audio artifact" })
     Text("Output volume ${(state.playback.volume * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
-    Slider(value = state.playback.volume.toFloat(), onValueChange = { onIntent(WorkspaceIntent.SetPlaybackVolume(it.toDouble())) }, enabled = selectedEnabled)
+    Slider(value = state.playback.volume.toFloat(), onValueChange = { onIntent(WorkspaceIntent.SetPlaybackVolume(it.toDouble())) }, enabled = selectedEnabled, modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_VOLUME; contentDescription = "Selected audio artifact output volume" })
 }
 
 @Composable
@@ -580,6 +667,8 @@ private fun PlaceholderPanel(panel: Panel, state: WorkspaceUiState, onIntent: (W
     WorkspaceCard(title, tag) {
         Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         if (panel == Panel.Status) {
+            PreviewTransport(state.preview, state.playback.volume, onIntent)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
             state.runtimeReadiness?.let { readiness ->
                 Text("Local readiness", style = MaterialTheme.typography.labelLarge)
                 RuntimeDependency.entries.forEach { dependency ->

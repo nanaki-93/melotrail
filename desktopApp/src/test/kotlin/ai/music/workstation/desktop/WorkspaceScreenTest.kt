@@ -1,10 +1,13 @@
 package ai.music.workstation.desktop
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.v2.runComposeUiTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -116,6 +119,66 @@ class WorkspaceScreenTest {
         onNodeWithTag(WorkspaceTags.PLAYBACK_DRY).assertExists()
         onNodeWithTag(WorkspaceTags.PLAYBACK_LOFI).assertExists()
         onNodeWithTag(WorkspaceTags.PLAYBACK_MASTER).assertExists()
+        onNodeWithTag(WorkspaceTags.PLAYBACK_SEEK).assertExists()
+        onNodeWithTag(WorkspaceTags.PLAYBACK_VOLUME).assertExists()
+    }
+
+    @Test
+    fun `selected preview shows lifecycle states labels controls and recovery`() = runComposeUiTest {
+        val root = java.nio.file.Path.of("build/test-project")
+        val source = PreviewSourceIdentity(root, "A", root.resolve("previews/piano-A.wav"))
+
+        setContent {
+            MusicWorkstationTheme {
+                WorkspaceScreen(projectState().copy(preview = PreviewUiState(source, PreviewPhase.PREPARING, elapsedSeconds = 2.0, durationSeconds = 12.0)), onIntent = {})
+            }
+        }
+        onNodeWithTag(WorkspaceTags.PREVIEW_TRANSPORT).assertIsDisplayed()
+        onNodeWithText("Part A").assertIsDisplayed()
+        onNodeWithText("Preparing monitor audio…").assertIsDisplayed()
+        onNodeWithTag(WorkspaceTags.PREVIEW_TOGGLE).assertIsNotEnabled()
+        onNodeWithTag(WorkspaceTags.PREVIEW_STOP).assertIsEnabled()
+        onNodeWithTag(WorkspaceTags.PREVIEW_SEEK).assertIsNotEnabled()
+
+        setContent {
+            MusicWorkstationTheme {
+                WorkspaceScreen(projectState().copy(preview = PreviewUiState(source, PreviewPhase.PLAYING, elapsedSeconds = 2.0, durationSeconds = 12.0)), onIntent = {})
+            }
+        }
+        onNodeWithText("Playing").assertIsDisplayed()
+        onNodeWithTag(WorkspaceTags.PREVIEW_TOGGLE).assertIsEnabled()
+        onNodeWithTag(WorkspaceTags.PREVIEW_SEEK).assertIsEnabled()
+
+        setContent {
+            MusicWorkstationTheme {
+                WorkspaceScreen(projectState().copy(preview = PreviewUiState(source, PreviewPhase.FAILED, "Analyze A before previewing it.")), onIntent = {})
+            }
+        }
+        onNodeWithText("Preview unavailable").assertIsDisplayed()
+        onNodeWithText("Analyze A before previewing it.").assertExists()
+        onNodeWithTag(WorkspaceTags.PREVIEW_RETRY).assertIsEnabled()
+    }
+
+    @Test
+    fun `transport shortcuts retain play seek and stop behavior`() {
+        val playback = PlaybackSnapshot(positionSeconds = 10.0, durationSeconds = 12.0)
+
+        assertEquals(WorkspaceIntent.PlayPause, transportShortcutIntent(Key.Spacebar, shortcutPressed = true, keyDown = true, playback))
+        assertEquals(WorkspaceIntent.SeekPlayback(5.0), transportShortcutIntent(Key.DirectionLeft, shortcutPressed = true, keyDown = true, playback))
+        assertEquals(WorkspaceIntent.SeekPlayback(12.0), transportShortcutIntent(Key.DirectionRight, shortcutPressed = true, keyDown = true, playback))
+        assertEquals(WorkspaceIntent.StopPlayback, transportShortcutIntent(Key.K, shortcutPressed = true, keyDown = true, playback))
+        assertEquals(null, transportShortcutIntent(Key.Spacebar, shortcutPressed = false, keyDown = true, playback))
+    }
+
+    @Test
+    fun `every preview lifecycle phase has a user-facing status`() {
+        assertEquals(
+            setOf(
+                "Checking preview prerequisites…", "Preparing monitor audio…", "Preview ready; starting audio output…",
+                "Starting audio output…", "Playing", "Paused", "Stopped", "Preview unavailable"
+            ),
+            PreviewPhase.entries.map(::previewStatusLabel).toSet()
+        )
     }
 
     @Test

@@ -123,7 +123,7 @@ These tasks start only after Task 028 and must be implemented one at a time.
 | [032](tasks/completed/032-runtime-readiness-model.md) | Runtime readiness model | 029–031 | Capability-specific dependency states |
 | [033](tasks/completed/033-preview-artifact-resolver.md) | Preview artifact resolver | 029, 031 | Validated WAV/MP3/MIDI preview artifacts |
 | [034](tasks/completed/034-preview-viewmodel-state.md) | Preview view-model state | 032–033 | Truthful preview/playback state machine |
-| [035](tasks/035-preview-transport-ui.md) | Preview and transport UI | 034 | Accessible preview controls and errors |
+| [035](tasks/completed/035-preview-transport-ui.md) | Preview and transport UI | 034 | Accessible preview controls and errors |
 | [036](tasks/036-input-inspection-contract.md) | Input inspection contract | 032 | Versioned preparation report schema |
 | [037](tasks/037-input-inspection-worker.md) | Input inspection worker | 036 | Deterministic MIDI/WAV/MP3 validation and metrics |
 | [038](tasks/038-input-inspection-service.md) | Input inspection service | 036–037 | Atomic reports and preparation snapshot |
