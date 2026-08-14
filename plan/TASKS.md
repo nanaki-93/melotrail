@@ -120,7 +120,7 @@ These tasks start only after Task 028 and must be implemented one at a time.
 | [029](tasks/completed/029-sound-library-locator.md) | Sound-library locator | 028 | One CWD-independent injected library root |
 | [030](tasks/completed/030-desktop-library-settings.md) | Desktop library settings | 029 | Validated user-selectable library root |
 | [031](tasks/completed/031-audio-player-lifecycle.md) | JVM audio-player lifecycle | 028 | Reliable one-line/one-thread WAV playback |
-| [032](tasks/032-runtime-readiness-model.md) | Runtime readiness model | 029–031 | Capability-specific dependency states |
+| [032](tasks/completed/032-runtime-readiness-model.md) | Runtime readiness model | 029–031 | Capability-specific dependency states |
 | [033](tasks/033-preview-artifact-resolver.md) | Preview artifact resolver | 029, 031 | Validated WAV/MP3/MIDI preview artifacts |
 | [034](tasks/034-preview-viewmodel-state.md) | Preview view-model state | 032–033 | Truthful preview/playback state machine |
 | [035](tasks/035-preview-transport-ui.md) | Preview and transport UI | 034 | Accessible preview controls and errors |

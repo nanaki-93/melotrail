@@ -149,6 +149,29 @@ class WorkspaceScreenTest {
         onNodeWithText("Registry is invalid").assertIsDisplayed()
     }
 
+    @Test
+    fun `readiness header renders checking ready partial and failed states`() = runComposeUiTest {
+        val states = listOf(
+            RuntimeReadiness.checking(),
+            runtimeReadiness(DependencyReadiness(DependencyStatus.READY, "ready")),
+            runtimeReadiness(DependencyReadiness(DependencyStatus.UNAVAILABLE, "Basic Pitch missing")),
+            runtimeReadiness(DependencyReadiness(DependencyStatus.FAILED, "Registry invalid"))
+        )
+        states.forEach { readiness ->
+            setContent { MusicWorkstationTheme { WorkspaceScreen(projectState().copy(runtimeReadiness = readiness), onIntent = {}) } }
+            onNodeWithTag(WorkspaceTags.PROJECT_HEADER).assertIsDisplayed()
+        }
+    }
+
+    private fun runtimeReadiness(worker: DependencyReadiness): RuntimeReadiness = RuntimeReadiness.of(
+        RuntimeDependency.WORKER to worker,
+        RuntimeDependency.TRANSCRIPTION to DependencyReadiness(DependencyStatus.READY, "ready"),
+        RuntimeDependency.SOUND_LIBRARY to DependencyReadiness(DependencyStatus.READY, "ready"),
+        RuntimeDependency.SAMPLES to DependencyReadiness(DependencyStatus.READY, "ready"),
+        RuntimeDependency.RENDERER to DependencyReadiness(DependencyStatus.READY, "ready"),
+        RuntimeDependency.AUDIO_OUTPUT to DependencyReadiness(DependencyStatus.READY, "ready")
+    )
+
     private fun projectState(): WorkspaceUiState {
         val root = java.nio.file.Path.of("build/test-project")
         return WorkspaceUiState(project = ai.music.workstation.application.ProjectSnapshot(
@@ -159,6 +182,6 @@ class WorkspaceScreenTest {
             parts = emptyList(),
             structure = emptyList(),
             readiness = ai.music.workstation.application.ProjectReadiness(false, false, false, false, false, false, false, false, false, false)
-        ))
+        ), runtimeReadiness = runtimeReadiness(DependencyReadiness(DependencyStatus.READY, "ready")))
     }
 }

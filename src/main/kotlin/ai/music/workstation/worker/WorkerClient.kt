@@ -11,6 +11,8 @@ import java.net.URI
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
+data class WorkerRuntimeStatus(val reachable: Boolean, val transcriptionAvailable: Boolean, val version: String? = null)
+
 /**
  * Small HTTP client for the standalone Python worker.
  *
@@ -64,6 +66,20 @@ class WorkerClient(
                 .jsonObject["status"]?.jsonPrimitive?.content == "ok"
         } catch (_: Exception) {
             false
+        }
+    }
+
+    /** Bounded health metadata for local readiness UI; it contains no paths or source content. */
+    suspend fun runtimeStatus(): WorkerRuntimeStatus = withContext(Dispatchers.IO) {
+        try {
+            val response = request("GET", "/health", null)
+            if (response.code !in 200..299) return@withContext WorkerRuntimeStatus(false, false)
+            val body = json.parseToJsonElement(response.body).jsonObject
+            val reachable = body["status"]?.jsonPrimitive?.content == "ok"
+            val transcription = body["transcriptionRuntime"]?.jsonPrimitive?.booleanOrNull == true
+            WorkerRuntimeStatus(reachable, transcription, body["version"]?.jsonPrimitive?.contentOrNull)
+        } catch (_: Exception) {
+            WorkerRuntimeStatus(false, false)
         }
     }
 

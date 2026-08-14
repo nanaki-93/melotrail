@@ -18,6 +18,7 @@ generic {"command": "...", "input": {...}} envelope.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import logging
 import sys
@@ -52,6 +53,7 @@ class WorkerHandler(BaseHTTPRequestHandler):
                 "version": "1.0.0",
                 "available": True,
                 "commands": sorted(COMMANDS.keys()),
+                "transcriptionRuntime": importlib.util.find_spec("basic_pitch") is not None,
             })
             return
         self._send_json(404, {"error": "Not found"})

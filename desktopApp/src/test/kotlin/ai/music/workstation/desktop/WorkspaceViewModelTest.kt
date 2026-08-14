@@ -318,6 +318,31 @@ class WorkspaceViewModelTest {
         assertEquals(1f, timelineSectionWeight(0.0))
     }
 
+    @Test
+    fun `readiness refresh failure is visible and unavailable audio import keeps its reason`() = runTest {
+        val root = Path.of("build/readiness-project")
+        val unavailable = RuntimeReadiness.of(
+            RuntimeDependency.WORKER to DependencyReadiness(DependencyStatus.UNAVAILABLE, "Start the Python worker with make worker."),
+            RuntimeDependency.TRANSCRIPTION to DependencyReadiness(DependencyStatus.UNAVAILABLE, "Transcription needs the running Python worker."),
+            RuntimeDependency.SOUND_LIBRARY to DependencyReadiness(DependencyStatus.READY, "ready"),
+            RuntimeDependency.SAMPLES to DependencyReadiness(DependencyStatus.READY, "ready"),
+            RuntimeDependency.RENDERER to DependencyReadiness(DependencyStatus.READY, "ready"),
+            RuntimeDependency.AUDIO_OUTPUT to DependencyReadiness(DependencyStatus.READY, "ready")
+        )
+        val readiness = object : RuntimeReadinessService { override suspend fun check() = unavailable }
+        val viewModel = WorkspaceViewModel(FakeProjectService(result = projectSnapshot(root)), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)), runtimeReadinessService = readiness)
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.RefreshRuntimeReadiness); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.ShowImportPart(audio = true))
+        assertEquals("Start the Python worker with make worker.", assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation).message)
+        viewModel.close()
+
+        val failed = WorkspaceViewModel(FakeProjectService(), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)), runtimeReadinessService = RuntimeReadinessService { throw IllegalStateException("probe failed") })
+        failed.accept(WorkspaceIntent.RefreshRuntimeReadiness); advanceUntilIdle()
+        assertTrue(failed.state.value.notification!!.contains("probe failed"))
+        failed.close()
+    }
+
     private fun testDispatchers(dispatcher: TestDispatcher): WorkspaceDispatchers {
         return WorkspaceDispatchers(ui = dispatcher, io = dispatcher)
     }

@@ -28,7 +28,7 @@ can explain exactly which operations are available.
 
 ## Acceptance criteria
 
-- Missing `sounds/`, Basic Pitch, renderer, worker, or audio device produces a
+- Missing `../../../sounds`, Basic Pitch, renderer, worker, or audio device produces a
   distinct actionable state before a long operation starts.
 
 ## Out of scope

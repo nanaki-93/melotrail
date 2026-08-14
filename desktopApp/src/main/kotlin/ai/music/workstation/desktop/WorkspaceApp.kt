@@ -203,17 +203,16 @@ private fun WorkspaceNavItem(label: String, active: Boolean = false) {
 
 @Composable
 private fun ReadinessText(readiness: RuntimeReadiness?, onIntent: (WorkspaceIntent) -> Unit) {
-    val text = readiness?.let {
-        buildString {
-            append("Worker: ").append(if (it.worker.available) "ready" else "unavailable")
-            if (!it.worker.available) append(" — ").append(it.worker.detail)
-            append(" · Renderer: ").append(if (it.renderer.available) "ready" else "unavailable")
-            if (!it.renderer.available) append(" — ").append(it.renderer.detail)
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        val text = readiness?.let {
+            val unavailable = RuntimeDependency.entries.map { dependency -> dependency to it.dependency(dependency) }.firstOrNull { !it.second.available }
+            if (unavailable == null) "Local readiness: all dependencies ready."
+            else "Local readiness: ${unavailable.first.name.lowercase().replace('_', ' ')} ${unavailable.second.status.name.lowercase()} — ${unavailable.second.detail}"
+        } ?: "Checking local dependency readiness…"
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TextButton(onClick = { onIntent(WorkspaceIntent.RefreshRuntimeReadiness) }) { Text("Refresh") }
         }
-    } ?: "Checking local worker and renderer readiness…"
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        TextButton(onClick = { onIntent(WorkspaceIntent.RefreshRuntimeReadiness) }) { Text("Refresh") }
     }
 }
 
@@ -287,7 +286,8 @@ private fun PartsPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     TextButton(onClick = { onIntent(WorkspaceIntent.ShowRoleEditor(part.id)) }, enabled = !disabled) { Text("Edit role") }
-                    TextButton(onClick = { onIntent(WorkspaceIntent.PreviewPart(part.id)) }, enabled = !disabled) { Text("Preview") }
+                    val previewCapability = if (part.sourceType == ai.music.workstation.application.PartSourceType.AUDIO) RuntimeCapability.SOURCE_PREVIEW else RuntimeCapability.MIDI_PREVIEW
+                    TextButton(onClick = { onIntent(WorkspaceIntent.PreviewPart(part.id)) }, enabled = !disabled && state.runtimeReadiness?.capability(previewCapability)?.available == true) { Text("Preview") }
                     TextButton(onClick = { onIntent(WorkspaceIntent.AnalyzePart(part.id)) }, enabled = !disabled) {
                         Text(if (analysis == null) "Analyze" else "Analyze again")
                     }
@@ -302,10 +302,11 @@ private fun PartsPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
             modifier = Modifier.weight(1f).semantics { testTag = WorkspaceTags.ADD_MIDI }
         ) { Text("Add MIDI") }
         OutlinedButton(
-            onClick = { onIntent(WorkspaceIntent.ShowImportPart(audio = true)) }, enabled = !disabled,
+            onClick = { onIntent(WorkspaceIntent.ShowImportPart(audio = true)) }, enabled = !disabled && state.runtimeReadiness?.capability(RuntimeCapability.AUDIO_IMPORT)?.available == true,
             modifier = Modifier.weight(1f).semantics { testTag = WorkspaceTags.ADD_AUDIO }
         ) { Text("Add audio") }
     }
+    state.runtimeReadiness?.capability(RuntimeCapability.AUDIO_IMPORT)?.reason?.let { Text("Audio import unavailable — $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
 }
 
 @Composable
@@ -578,6 +579,19 @@ private fun PlaceholderPanel(panel: Panel, state: WorkspaceUiState, onIntent: (W
     }
     WorkspaceCard(title, tag) {
         Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+        if (panel == Panel.Status) {
+            state.runtimeReadiness?.let { readiness ->
+                Text("Local readiness", style = MaterialTheme.typography.labelLarge)
+                RuntimeDependency.entries.forEach { dependency ->
+                    val item = readiness.dependency(dependency)
+                    Text(
+                        "${dependency.name.lowercase().replace('_', ' ')}: ${item.status.name.lowercase()}${if (item.available) "" else " — ${item.detail}"}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
         val progress = (state.operation as? WorkspaceOperation.ImportingPart)?.progress
             ?: (state.operation as? WorkspaceOperation.AnalyzingPart)?.progress
             ?: (state.operation as? WorkspaceOperation.GeneratingArrangement)?.progress
@@ -756,10 +770,11 @@ private fun buildSongPrerequisite(state: WorkspaceUiState): String = when {
     state.arrangement == null -> "Build Song needs an approved arrangement."
     state.arrangement.stale -> "Build Song is blocked: regenerate the stale arrangement."
     state.arrangement.approvalRequired -> "Build Song is blocked: approve the Qwen draft."
+    state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.available != true -> state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.reason ?: "Build Song is checking local readiness."
     else -> "Build Song will generate/reuse MIDI and stems, then mix, repair, master, and write release metadata."
 }
 
-private fun canBuild(state: WorkspaceUiState): Boolean = state.project != null && !state.operation.isMutating && state.arrangement?.approved == true && state.arrangement?.approvalRequired == false && state.arrangement?.stale == false
+private fun canBuild(state: WorkspaceUiState): Boolean = state.project != null && !state.operation.isMutating && state.arrangement?.approved == true && state.arrangement?.approvalRequired == false && state.arrangement?.stale == false && state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.available == true
 
 internal fun timelineSectionWeight(durationSeconds: Double?): Float =
     (durationSeconds?.takeIf { it > 0.0 } ?: 1.0).toFloat()

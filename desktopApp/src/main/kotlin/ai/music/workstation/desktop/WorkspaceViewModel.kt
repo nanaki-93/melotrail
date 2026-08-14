@@ -204,6 +204,7 @@ class WorkspaceViewModel(
     private val mutableState = MutableStateFlow(WorkspaceUiState())
     private var mixCommit: Job? = null
     private var buildJob: Job? = null
+    private var readinessGeneration = 0L
 
     val state: StateFlow<WorkspaceUiState> = mutableState.asStateFlow()
 
@@ -350,9 +351,11 @@ class WorkspaceViewModel(
     }
 
     private fun refreshRuntimeReadiness() = scope.launch {
+        val generation = ++readinessGeneration
+        mutableState.update { it.copy(runtimeReadiness = RuntimeReadiness.checking()) }
         runCatching { withContext(ioDispatcher) { runtimeReadinessService.check() } }
-            .onSuccess { readiness -> mutableState.update { it.copy(runtimeReadiness = readiness) } }
-            .onFailure { failure -> mutableState.update { it.copy(notification = "Could not check local readiness: ${failure.message}") } }
+            .onSuccess { readiness -> if (generation == readinessGeneration) mutableState.update { it.copy(runtimeReadiness = readiness) } }
+            .onFailure { failure -> if (generation == readinessGeneration) mutableState.update { it.copy(notification = "Could not check local readiness: ${failure.message}") } }
     }
 
     private fun chooseSoundLibraryRoot() = scope.launch {
@@ -362,6 +365,7 @@ class WorkspaceViewModel(
 
     private fun showImportPart(audio: Boolean) {
         if (state.value.project == null || state.value.operation.isMutating) return
+        if (audio) state.value.runtimeReadiness.capabilityFailure(RuntimeCapability.AUDIO_IMPORT)?.let { return fail("import audio", it) }
         mutableState.update { it.copy(dialog = WorkspaceDialog.ImportPart(audio), notification = null) }
     }
 
@@ -417,6 +421,9 @@ class WorkspaceViewModel(
 
     private fun previewPart(partId: String) {
         val project = state.value.project ?: return
+        val part = project.parts.find { it.id == partId } ?: return
+        val capability = if (part.sourceType == PartSourceType.AUDIO) RuntimeCapability.SOURCE_PREVIEW else RuntimeCapability.MIDI_PREVIEW
+        state.value.runtimeReadiness.capabilityFailure(capability)?.let { return fail("preview part", it) }
         val monitor = player ?: return fail("preview part", "Local audio playback is not configured.")
         val previews = partPreviewService ?: return fail("preview part", "Part preview service is not configured for this desktop session.")
         scope.launch {
@@ -610,6 +617,7 @@ class WorkspaceViewModel(
         val service = buildService ?: return fail("build song", "Build service is not configured for this desktop session.")
         val arrangement = state.value.arrangement
         if (arrangement == null || arrangement.stale || arrangement.approvalRequired || !arrangement.approved) return fail("build song", "Build Song requires a current approved arrangement.")
+        state.value.runtimeReadiness.capabilityFailure(RuntimeCapability.BUILD_SONG)?.let { return fail("build song", it) }
         val options = state.value.buildOptions
         mutableState.update { it.copy(operation = WorkspaceOperation.BuildingSong(), notification = null, retry = null) }
         buildJob = scope.launch {
@@ -713,10 +721,7 @@ class WorkspaceViewModel(
     override fun close() { mixCommit?.cancel(); buildJob?.cancel(); player?.close(); scope.cancel() }
 
     private object UnavailableRuntimeReadinessService : RuntimeReadinessService {
-        override suspend fun check(): RuntimeReadiness = RuntimeReadiness(
-            worker = DependencyReadiness(false, "Worker readiness has not been configured."),
-            renderer = DependencyReadiness(false, "Renderer readiness has not been configured.")
-        )
+        override suspend fun check(): RuntimeReadiness = RuntimeReadiness.checking()
     }
 
     private companion object {
@@ -724,6 +729,12 @@ class WorkspaceViewModel(
         const val MAX_STYLE_LENGTH = 160
     }
 }
+
+private fun RuntimeReadiness?.capabilityFailure(capability: RuntimeCapability): String? =
+    when (this) {
+        null -> "Checking local readiness before ${capability.name.lowercase().replace('_', ' ')}."
+        else -> capability(capability).reason
+    }
 
 fun WorkspaceUiState.partPreparationLabel(partId: String): String {
     val part = project?.parts?.find { it.id == partId } ?: return "Unknown"
