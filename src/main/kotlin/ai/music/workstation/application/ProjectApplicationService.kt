@@ -12,6 +12,15 @@ import ai.music.workstation.arrangement.PartAnalysisStore
 import ai.music.workstation.arrangement.Project
 import ai.music.workstation.arrangement.ProjectStore
 import ai.music.workstation.arrangement.RenderFormat
+import ai.music.workstation.preparation.InputInspectionBoundary
+import ai.music.workstation.preparation.InputInspectionError
+import ai.music.workstation.preparation.InputInspectionErrorCode
+import ai.music.workstation.preparation.InputInspectionPaths
+import ai.music.workstation.preparation.InputInspectionReportStore
+import ai.music.workstation.preparation.InputInspectionRequest
+import ai.music.workstation.preparation.InputInspectionResult
+import ai.music.workstation.preparation.InspectionSourceIdentity
+import ai.music.workstation.preparation.PreparationStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
@@ -20,6 +29,7 @@ import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -28,6 +38,7 @@ interface ProjectApplicationService {
     fun open(root: Path): ProjectSnapshot
     fun create(request: CreateProjectRequest): ProjectSnapshot
     suspend fun importPart(request: ImportPartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
+    suspend fun inspectPart(request: InspectPartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
     suspend fun analyzePart(request: AnalyzePartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
     fun updatePart(request: UpdatePartRoleRequest): ProjectSnapshot
     fun saveStructure(request: SaveStructureRequest): ProjectSnapshot
@@ -48,6 +59,7 @@ data class ImportPartRequest(
 )
 
 data class AnalyzePartRequest(val root: Path, val partId: String)
+data class InspectPartRequest(val root: Path, val partId: String)
 data class UpdatePartRoleRequest(val root: Path, val partId: String, val role: String)
 data class SaveStructureRequest(val root: Path, val partIds: List<String>)
 
@@ -94,7 +106,29 @@ data class PartSummary(
     val sourceFile: String,
     val sourceName: String,
     val sourceType: PartSourceType,
-    val analysis: PartAnalysisSummary?
+    val analysis: PartAnalysisSummary?,
+    val preparation: PartPreparationSummary = PartPreparationSummary(
+        sourcePreserved = false,
+        inspected = false,
+        preparedAudio = false,
+        rawMidi = false,
+        cleanMidi = false,
+        analyzed = false,
+        ready = false,
+        warnings = emptyList()
+    )
+)
+
+/** Truthful, artifact-derived input state for one canonical project part. */
+data class PartPreparationSummary(
+    val sourcePreserved: Boolean,
+    val inspected: Boolean,
+    val preparedAudio: Boolean,
+    val rawMidi: Boolean,
+    val cleanMidi: Boolean,
+    val analyzed: Boolean,
+    val ready: Boolean,
+    val warnings: List<String>
 )
 
 enum class PartSourceType { MIDI, AUDIO, UNKNOWN }
@@ -132,7 +166,14 @@ data class ProjectReadiness(
 class DefaultProjectApplicationService(
     private val midiPreparation: MidiPreparationService,
     private val legacyPartAnalysis: LegacyPartAnalysisService,
-    private val midiPartAnalyzer: MidiPartAnalyzer = MidiPartAnalyzer()
+    private val midiPartAnalyzer: MidiPartAnalyzer = MidiPartAnalyzer(),
+    private val inputInspection: InputInspectionBoundary = object : InputInspectionBoundary {
+        override suspend fun inspect(request: InputInspectionRequest): InputInspectionResult =
+            InputInspectionResult.Rejected(InputInspectionError(
+                InputInspectionErrorCode.MEASUREMENT_FAILED,
+                "Input inspection is not configured."
+            ))
+    }
 ) : ProjectApplicationService {
     override fun open(root: Path): ProjectSnapshot {
         val normalizedRoot = root.normalizeRoot()
@@ -247,6 +288,42 @@ class DefaultProjectApplicationService(
         snapshot(root, readValidProject(root))
     }
 
+    override suspend fun inspectPart(request: InspectPartRequest, progress: ProgressSink): ProjectSnapshot = mutateSuspend(request.root) { root ->
+        val project = readValidProject(root)
+        val part = project.parts.find { it.id == request.partId }
+            ?: throw IllegalArgumentException("Part not found: ${request.partId}")
+        require(part.file.startsWith("source/")) {
+            "Part '${part.id}' has no canonical source/ artifact and cannot be inspected."
+        }
+        val sourcePath = safeDestination(root, part.file)
+        require(Files.isRegularFile(sourcePath)) { "Part source is missing: ${part.file}" }
+        val source = InspectionSourceIdentity(part.file, sha256(sourcePath))
+        val inspectionRequest = InputInspectionRequest(root, part.id, source).also { it.requireValid() }
+
+        val existing = runCatching { InputInspectionReportStore.read(root, part.id) }.getOrNull()
+        if (existing?.source == source) {
+            progress.report(OperationProgress("inspect-part", 1, 1, "Reusing current inspection report", InputInspectionPaths.report(root, part.id)))
+            return@mutateSuspend snapshot(root, project)
+        }
+
+        progress.report(OperationProgress("inspect-part", 1, 2, "Inspecting preserved source", sourcePath))
+        val result = inputInspection.inspect(inspectionRequest)
+        val report = when (result) {
+            is InputInspectionResult.Inspected -> result.report
+            is InputInspectionResult.Rejected -> {
+                result.error.requireValid()
+                throw IllegalStateException("Input inspection failed (${result.error.code}): ${result.error.message}")
+            }
+        }
+        require(report.partId == part.id && report.source == source) {
+            "Input inspection returned a report for a different project source."
+        }
+        report.requireValid()
+        InputInspectionReportStore.write(root, report)
+        progress.report(OperationProgress("inspect-part", 2, 2, "Saved inspection report", InputInspectionPaths.report(root, part.id)))
+        snapshot(root, project)
+    }
+
     override fun updatePart(request: UpdatePartRoleRequest): ProjectSnapshot = mutate(request.root) { root ->
         val project = readValidProject(root)
         require(project.parts.any { it.id == request.partId }) { "Part not found: ${request.partId}" }
@@ -286,8 +363,8 @@ class DefaultProjectApplicationService(
             parts = summaries,
             structure = structure,
             readiness = ProjectReadiness(
-                cleanMidiReady = project.version == Project.CURRENT_VERSION && project.parts.isNotEmpty() && project.parts.all { it.midi != null },
-                analysesReady = project.parts.isNotEmpty() && project.parts.all { it.analysis != null },
+                cleanMidiReady = summaries.isNotEmpty() && summaries.all { it.preparation.cleanMidi },
+                analysesReady = summaries.isNotEmpty() && summaries.all { it.preparation.analyzed },
                 structureReady = project.structure.isNotEmpty(),
                 songPlanAvailable = Files.isRegularFile(root.resolve("song_plan.json")),
                 arrangementAvailable = Files.isRegularFile(root.resolve("arrangement.json")),
@@ -302,7 +379,65 @@ class DefaultProjectApplicationService(
 
     private fun Part.summary(root: Path): PartSummary {
         val sourcePath = Path.of(file)
-        return PartSummary(id, role, file, sourcePath.fileName.toString(), sourceType(file), analysis?.summary(root))
+        val sourceType = sourceType(file)
+        val sourcePreserved = sourcePath.startsWith("source") && isProjectFile(root, file)
+        val source = if (sourcePreserved) InspectionSourceIdentity(file, sha256(root.resolve(file))) else null
+        val report = runCatching { InputInspectionReportStore.read(root, id) }.getOrNull()
+        val inspected = source != null && report?.source == source
+        val warnings = when {
+            report == null && Files.isRegularFile(InputInspectionPaths.report(root, id)) -> listOf("Inspection report is invalid; inspect again.")
+            report != null && source != null && report.source != source -> listOf("Inspection report is stale; inspect again.")
+            inspected -> report.warnings
+            else -> emptyList()
+        }
+        val rawMidi = midi?.raw?.let { isMidiArtifact(root, it) } ?: false
+        val cleanMidi = midi?.let { isMidiArtifact(root, it.clean) } ?: false
+        val analyzed = analysis?.let { runCatching { it.summary(root) }.isSuccess } ?: false
+        val preparedAudio = sourceType == PartSourceType.AUDIO && inspected &&
+            report?.preparation == PreparationStatus.CLEANED && isWaveArtifact(InputInspectionPaths.cleanWav(root, id))
+        val preparation = PartPreparationSummary(
+            sourcePreserved = sourcePreserved,
+            inspected = inspected,
+            preparedAudio = preparedAudio,
+            rawMidi = rawMidi,
+            cleanMidi = cleanMidi,
+            analyzed = analyzed,
+            ready = sourcePreserved && inspected && cleanMidi && analyzed,
+            warnings = warnings
+        )
+        return PartSummary(id, role, file, sourcePath.fileName.toString(), sourceType, analysis?.summary(root), preparation)
+    }
+
+    private fun isProjectFile(root: Path, reference: String): Boolean = runCatching {
+        val path = safeDestination(root, reference)
+        Files.isRegularFile(path) && path.toRealPath().startsWith(root.toRealPath())
+    }.getOrDefault(false)
+
+    private fun isMidiArtifact(root: Path, reference: String): Boolean = runCatching {
+        val path = safeDestination(root, reference)
+        Files.isRegularFile(path) && Files.size(path) >= 14 &&
+            Files.newInputStream(path).use { it.readNBytes(4).decodeToString() == "MThd" }
+    }.getOrDefault(false)
+
+    private fun isWaveArtifact(path: Path): Boolean = runCatching {
+        Files.isRegularFile(path) && Files.newInputStream(path).use {
+            val header = it.readNBytes(12)
+            header.size == 12 && header.copyOfRange(0, 4).decodeToString() == "RIFF" &&
+                header.copyOfRange(8, 12).decodeToString() == "WAVE"
+        }
+    }.getOrDefault(false)
+
+    private fun sha256(path: Path): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        Files.newInputStream(path).use { input ->
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                digest.update(buffer, 0, count)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     private fun PartAnalysisReference.summary(root: Path): PartAnalysisSummary {

@@ -45,7 +45,7 @@ data class InspectionSourceIdentity(
 }
 
 /** Inert seam for Task 037's worker-backed measurement implementation. */
-interface InputInspectionBoundary {
+fun interface InputInspectionBoundary {
     suspend fun inspect(request: InputInspectionRequest): InputInspectionResult
 }
 

@@ -585,6 +585,11 @@ private class FakeProjectService(
         return checkNotNull(current)
     }
 
+    override suspend fun inspectPart(
+        request: ai.music.workstation.application.InspectPartRequest,
+        progress: ai.music.workstation.application.ProgressSink
+    ): ProjectSnapshot = checkNotNull(current)
+
     override suspend fun analyzePart(request: AnalyzePartRequest, progress: ai.music.workstation.application.ProgressSink): ProjectSnapshot {
         analyzed = request
         return checkNotNull(current)

@@ -14,6 +14,7 @@ import ai.music.workstation.application.DefaultPartPreviewApplicationService
 import ai.music.workstation.application.LegacyPartAnalysisService
 import ai.music.workstation.application.MidiPreparationService
 import ai.music.workstation.application.ProjectApplicationService
+import ai.music.workstation.preparation.WorkerInputInspectionBoundary
 import ai.music.workstation.arrangement.PartAnalysis
 import ai.music.workstation.arrangement.InstrumentRegistryLoader
 import ai.music.workstation.arrangement.SoundLibraryLocator
@@ -111,7 +112,8 @@ object DesktopServiceComposition {
         val client = workerClient()
         return DefaultProjectApplicationService(
             midiPreparation = DesktopMidiPreparationService(client),
-            legacyPartAnalysis = DesktopLegacyPartAnalysisService(client)
+            legacyPartAnalysis = DesktopLegacyPartAnalysisService(client),
+            inputInspection = WorkerInputInspectionBoundary(client)
         )
     }
 
