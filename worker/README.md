@@ -18,6 +18,26 @@ Example request:
 {"path":"/project/source/intro.wav"}
 ```
 
+## Deterministic audio cleanup
+
+`POST /cleanup` accepts a RIFF/WAVE input and a different `.wav` output path.
+It only accepts explicitly requested schema operations: `dc_removal`,
+`clip_repair` (threshold `0.95..1.0`), `declick` (threshold `0.5..0.99`),
+`hum_removal` (50 or 60 Hz), and `noise_reduction` (strength `0.05..0.5`).
+It rejects unknown, duplicate, or unbounded settings. There is no normalize,
+silence removal, pitch, tempo, or source overwrite operation.
+
+Requested operations are conservatively skipped unless evidence is present:
+absolute DC offset at least `0.005`, clipped frames at least `0.999`, an
+isolated frame jump at least `0.25`, hum confidence at least `0.15`, or noise
+confidence at least `0.15`. The response records before/after metrics,
+applied/skipped operations, warnings, and tool versions. Output is atomically
+published PCM-24 WAV with the original frame count, sample rate, and channels.
+
+```json
+{"path":"/project/source/intro.wav","outputPath":"/project/prepared/intro/clean.wav","operations":[{"type":"dc_removal"},{"type":"hum_removal","params":{"frequencyHz":50}}]}
+```
+
 ## Optional solo-piano transcription
 
 `POST /transcribe` accepts a local `.wav`, `.wave`, or `.mp3` source and writes

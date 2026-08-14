@@ -48,3 +48,13 @@ class InputInspectionValidationError(WorkerCommandError):
 class InputInspectionDecodeError(WorkerCommandError):
     error_type = "InputInspectionDecodeError"
     status_code = 422
+
+
+class AudioCleanupValidationError(WorkerCommandError):
+    error_type = "AudioCleanupValidationError"
+    status_code = 400
+
+
+class AudioCleanupOutputError(WorkerCommandError):
+    error_type = "AudioCleanupOutputError"
+    status_code = 422

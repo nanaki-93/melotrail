@@ -101,6 +101,7 @@ class WorkerService(
         is TranscribeCommand -> command.path
         is MidiCleanCommand -> command.path
         is InputInspectionCommand -> command.path
+        is AudioCleanupCommand -> command.path
         is HealthCheck -> ""
     }
 

@@ -107,6 +107,7 @@ class WorkerClient(
         is TranscribeCommand -> "/transcribe"
         is MidiCleanCommand -> "/midi-clean"
         is InputInspectionCommand -> "/inspect-input"
+        is AudioCleanupCommand -> "/cleanup"
         is HealthCheck -> "/health"
     }
 
@@ -172,6 +173,24 @@ class WorkerClient(
                     put("cleanSustain", command.cleanSustain)
                 }
                 is InputInspectionCommand -> put("path", command.path)
+                is AudioCleanupCommand -> {
+                    put("path", command.path)
+                    put("outputPath", command.outputPath)
+                    put("operations", buildJsonArray {
+                        command.operations.forEach { operation ->
+                            add(buildJsonObject {
+                                put("type", operation.wireType)
+                                when (operation) {
+                                    AudioCleanupOperation.DcRemoval -> Unit
+                                    is AudioCleanupOperation.ClipRepair -> put("params", buildJsonObject { put("threshold", operation.threshold) })
+                                    is AudioCleanupOperation.Declick -> put("params", buildJsonObject { put("threshold", operation.threshold) })
+                                    is AudioCleanupOperation.HumRemoval -> put("params", buildJsonObject { put("frequencyHz", operation.frequencyHz) })
+                                    is AudioCleanupOperation.NoiseReduction -> put("params", buildJsonObject { put("strength", operation.strength) })
+                                }
+                            })
+                        }
+                    })
+                }
                 is HealthCheck -> Unit
             }
         }
