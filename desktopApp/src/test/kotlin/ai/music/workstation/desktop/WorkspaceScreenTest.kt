@@ -308,6 +308,69 @@ class WorkspaceScreenTest {
         }
     }
 
+    @Test
+    fun `creation header exposes all stages dispatches its next action and pauses during work`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MusicWorkstationTheme { WorkspaceScreen(projectState(), intents::add) } }
+
+        CreationStage.entries.forEach { stage ->
+            onNodeWithTag(WorkspaceTags.CREATION_STAGE_PREFIX + stage.name.lowercase()).assertExists()
+        }
+        onNodeWithTag(WorkspaceTags.CREATION_DEPENDENCY).assertIsDisplayed()
+        onNodeWithTag(WorkspaceTags.CREATION_CHECKLIST).assertExists()
+        onNodeWithText("Next safe action").assertExists()
+        onNodeWithTag(WorkspaceTags.CREATION_STAGE_PREFIX + "project").performClick()
+        assertEquals(WorkspaceIntent.ShowImportPart(audio = false), intents.last())
+
+        setContent {
+            MusicWorkstationTheme {
+                WorkspaceScreen(projectState().copy(operation = WorkspaceOperation.ImportingPart("A")), onIntent = {})
+            }
+        }
+        onNodeWithTag(WorkspaceTags.CREATION_NEXT_ACTION).assertIsNotEnabled()
+        onNodeWithText("Operation in progress").assertExists()
+    }
+
+    @Test
+    fun `creation header explains Qwen approval and completed release states`() = runComposeUiTest {
+        val root = java.nio.file.Path.of("build/creation-header")
+        val part = ai.music.workstation.application.PartSummary(
+            "A", "verse", "source/A.mid", "A.mid", ai.music.workstation.application.PartSourceType.MIDI,
+            ai.music.workstation.application.PartAnalysisSummary(ai.music.workstation.application.PartAnalysisStatus.MIDI, "analysis/A.json", 4, 4.0, "C major"),
+            ai.music.workstation.application.PartPreparationSummary(
+                sourcePreserved = true, inspected = true, preparedAudio = false, rawMidi = true,
+                cleanMidi = true, analyzed = true, ready = true, warnings = emptyList(),
+                midiQuality = ai.music.workstation.application.MidiQualitySummary(ai.music.workstation.application.MidiQualityStatus.CURRENT)
+            )
+        )
+        val project = ai.music.workstation.application.ProjectSnapshot(
+            root, 2, "creation-header", ai.music.workstation.arrangement.RenderFormat(), listOf(part),
+            listOf(ai.music.workstation.application.StructureSectionSummary(0, "A", 1, "A1", 4.0)),
+            ai.music.workstation.application.ProjectReadiness(true, true, true, false, false, false, false, false, false, false)
+        )
+        val draft = ai.music.workstation.application.ArrangementSnapshot(
+            root, listOf(ai.music.workstation.application.ArrangementSectionSnapshot(0, "A1", "A", "verse", 0.5, emptyList(), "none", 4.0)),
+            approvalRequired = true, approved = false, stale = false, artifact = root.resolve("arrangement.draft.json")
+        )
+        assertEquals(CreationIntent.APPROVE_ARRANGEMENT, CreationProgressDeriver.derive(CreationProgressInput(project, draft)).nextAction.intent)
+        setContent { MusicWorkstationTheme { WorkspaceScreen(WorkspaceUiState(project = project, arrangement = draft), onIntent = {}) } }
+        onNodeWithText("Start approve arrangement").assertExists()
+        onNodeWithTag(WorkspaceTags.CREATION_NEXT_ACTION).assertIsEnabled()
+
+        setContent {
+            MusicWorkstationTheme {
+                WorkspaceScreen(
+                    WorkspaceUiState(
+                        project = project.copy(readiness = project.readiness.copy(masterAvailable = true, releaseAvailable = true)),
+                        arrangement = draft.copy(approvalRequired = false, approved = true, artifact = root.resolve("arrangement.json"))
+                    ),
+                    onIntent = {}
+                )
+            }
+        }
+        onNodeWithText("Mix & Master · Complete").assertExists()
+    }
+
     private fun runtimeReadiness(worker: DependencyReadiness): RuntimeReadiness = RuntimeReadiness.of(
         RuntimeDependency.WORKER to worker,
         RuntimeDependency.TRANSCRIPTION to DependencyReadiness(DependencyStatus.READY, "ready"),

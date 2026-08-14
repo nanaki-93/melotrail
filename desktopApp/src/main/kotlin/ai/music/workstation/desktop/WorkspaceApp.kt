@@ -56,6 +56,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import ai.music.workstation.arrangement.MidiCleanupProfile
@@ -64,6 +65,10 @@ import kotlin.math.roundToInt
 object WorkspaceTags {
     const val PROJECT_HEADER = "project-header"
     const val WORKSPACE_NAV = "workspace-nav"
+    const val CREATION_STAGE_PREFIX = "creation-stage-"
+    const val CREATION_CHECKLIST = "creation-checklist"
+    const val CREATION_NEXT_ACTION = "creation-next-action"
+    const val CREATION_DEPENDENCY = "creation-dependency"
     const val PARTS_PANEL = "parts-panel"
     const val STRUCTURE_PANEL = "structure-panel"
     const val ARRANGEMENT_PANEL = "arrangement-panel"
@@ -166,6 +171,7 @@ internal fun transportShortcutIntent(
 @Composable
 private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
     val mutationsDisabled = state.operation.isMutating
+    val progress = state.creationProgress()
     Card(
         modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.PROJECT_HEADER },
         colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.Surface),
@@ -178,7 +184,6 @@ private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                     Text("AI Music Studio", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
                     Text("Compose · Arrange · Mix", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                WorkspaceNavigation()
                 Spacer(Modifier.weight(1f))
                 OutlinedButton(
                     onClick = { onIntent(WorkspaceIntent.ShowCreateProject) },
@@ -196,15 +201,13 @@ private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                 ) { Text("Library") }
                 Button(onClick = { onIntent(WorkspaceIntent.BuildSong) }, enabled = canBuild(state), modifier = Modifier.semantics { testTag = WorkspaceTags.BUILD_SONG; contentDescription = "Build song release artifacts" }) { Text("Build song") }
             }
+            WorkspaceNavigation(progress, state, onIntent, Modifier.fillMaxWidth())
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 val projectText = state.project?.let { "Project · ${it.name} · ${it.renderFormat?.sampleRate ?: "?"} Hz / ${it.renderFormat?.channels ?: "?"} ch / PCM-24" }
                     ?: "Start workspace · create or open an arranger project"
-                Text(projectText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                ReadinessText(state.runtimeReadiness, onIntent)
-                Text(soundLibrarySummary(state.soundLibrary), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Text(buildSongPrerequisite(state), modifier = Modifier.widthIn(max = 330.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(projectText, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ReadinessText(state.runtimeReadiness, onIntent, Modifier.weight(1f))
+                Text(buildSongPrerequisite(state), modifier = Modifier.weight(0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -216,41 +219,141 @@ private fun soundLibrarySummary(library: SoundLibrarySettingsState): String = wh
 }
 
 @Composable
-private fun WorkspaceNavigation() {
+private fun WorkspaceNavigation(progress: CreationProgress, state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier) {
     Row(
-        modifier = Modifier.semantics { testTag = WorkspaceTags.WORKSPACE_NAV; contentDescription = "Workspace sections: Project, Arrange, Mix and Master" },
+        modifier = modifier.horizontalScroll(rememberScrollState())
+            .semantics { testTag = WorkspaceTags.WORKSPACE_NAV; contentDescription = "Creation workflow stepper" },
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        WorkspaceNavItem("Project", active = true)
-        WorkspaceNavItem("Arrange")
-        WorkspaceNavItem("Mix & Master")
+        progress.stages.forEach { WorkspaceNavItem(it, state, onIntent) }
     }
 }
 
 @Composable
-private fun WorkspaceNavItem(label: String, active: Boolean = false) {
+private fun WorkspaceNavItem(stage: CreationStageProgress, state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    val enabled = !state.operation.isMutating && creationActionAvailable(stage.nextAction, state)
     Text(
-        label,
+        "${creationStageLabel(stage.stage)} · ${creationStatusLabel(stage.status)}",
         modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
-            .background(if (active) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else MusicWorkspaceTokens.ElevatedSurface)
-            .padding(horizontal = 10.dp, vertical = 7.dp),
-        color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.labelMedium
+            .background(if (stage.status == CreationStageStatus.CURRENT) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else MusicWorkspaceTokens.ElevatedSurface)
+            .clickable(enabled = enabled) { dispatchCreationAction(stage.nextAction, state, onIntent) }
+            .padding(horizontal = 8.dp, vertical = 7.dp)
+            .semantics {
+                testTag = WorkspaceTags.CREATION_STAGE_PREFIX + stage.stage.name.lowercase()
+                contentDescription = "${creationStageLabel(stage.stage)}: ${creationStatusLabel(stage.status)}${stage.reason?.let { ". $it" } ?: ""}"
+            },
+        color = if (stage.status == CreationStageStatus.CURRENT) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.labelMedium,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
     )
 }
 
 @Composable
-private fun ReadinessText(readiness: RuntimeReadiness?, onIntent: (WorkspaceIntent) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+private fun ReadinessText(readiness: RuntimeReadiness?, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier) {
+    Row(modifier = modifier.semantics { testTag = WorkspaceTags.CREATION_DEPENDENCY }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         val text = readiness?.let {
             val unavailable = RuntimeDependency.entries.map { dependency -> dependency to it.dependency(dependency) }.firstOrNull { !it.second.available }
             if (unavailable == null) "Local readiness: all dependencies ready."
             else "Local readiness: ${unavailable.first.name.lowercase().replace('_', ' ')} ${unavailable.second.status.name.lowercase()} — ${unavailable.second.detail}"
         } ?: "Checking local dependency readiness…"
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            TextButton(onClick = { onIntent(WorkspaceIntent.RefreshRuntimeReadiness) }) { Text("Refresh") }
-        }
+        Text(text, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        TextButton(onClick = { onIntent(WorkspaceIntent.RefreshRuntimeReadiness) }) { Text("Refresh") }
+    }
+}
+
+@Composable
+private fun CreationChecklist(progress: CreationProgress, state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    val next = progress.nextAction
+    val current = progress.stages.firstOrNull { it.status != CreationStageStatus.COMPLETE } ?: progress.stages.last()
+    val busy = state.operation.isMutating
+    Column(
+        modifier = Modifier.fillMaxWidth()
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+            .background(MusicWorkspaceTokens.ElevatedSurface)
+            .padding(10.dp)
+            .semantics { testTag = WorkspaceTags.CREATION_CHECKLIST },
+        verticalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+        Text("Next safe action", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+        Text("${creationStageLabel(current.stage)} · ${current.reason ?: current.nextAction.prerequisite}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Button(
+            onClick = { dispatchCreationAction(next, state, onIntent) },
+            enabled = !busy && creationActionAvailable(next, state),
+            modifier = Modifier.semantics {
+                testTag = WorkspaceTags.CREATION_NEXT_ACTION
+                contentDescription = if (busy) "Next action unavailable while an operation is in progress" else "Next action: ${creationActionLabel(next.intent)}"
+            }
+        ) { Text(if (busy) "Operation in progress" else "Start ${creationActionLabel(next.intent).lowercase()}") }
+    }
+}
+
+private fun WorkspaceUiState.creationProgress(): CreationProgress = CreationProgressDeriver.derive(
+    CreationProgressInput(
+        project = project,
+        arrangement = arrangement,
+        mix = mix,
+        runtimeReadiness = runtimeReadiness,
+        buildEvidence = (operation as? WorkspaceOperation.Failed)
+            ?.takeIf { it.action.equals("build song", ignoreCase = true) }
+            ?.let { BuildEvidence.Failed(it.message) }
+            ?: BuildEvidence.None
+    )
+)
+
+private fun creationStageLabel(stage: CreationStage): String = when (stage) {
+    CreationStage.PROJECT -> "Project"
+    CreationStage.PREPARE -> "Prepare"
+    CreationStage.STRUCTURE -> "Structure"
+    CreationStage.ARRANGE -> "Arrange"
+    CreationStage.MIX_AND_MASTER -> "Mix & Master"
+}
+
+private fun creationStatusLabel(status: CreationStageStatus): String = when (status) {
+    CreationStageStatus.NOT_STARTED -> "Not started"
+    CreationStageStatus.CURRENT -> "Current"
+    CreationStageStatus.COMPLETE -> "Complete"
+    CreationStageStatus.BLOCKED -> "Blocked"
+    CreationStageStatus.STALE -> "Stale"
+}
+
+private fun creationActionLabel(intent: CreationIntent): String = when (intent) {
+    CreationIntent.CREATE_OR_OPEN_PROJECT -> "Create or open project"
+    CreationIntent.IMPORT_PART -> "Import part"
+    CreationIntent.INSPECT_PART -> "Inspect selected part"
+    CreationIntent.RETRY_MIDI_CLEANUP -> "Retry MIDI cleanup"
+    CreationIntent.ANALYZE_PART -> "Analyze selected part"
+    CreationIntent.SAVE_STRUCTURE -> "Save structure in Song structure"
+    CreationIntent.GENERATE_ARRANGEMENT -> "Generate arrangement"
+    CreationIntent.APPROVE_ARRANGEMENT -> "Approve arrangement"
+    CreationIntent.CONFIGURE_BUILD_DEPENDENCY -> "Refresh build readiness"
+    CreationIntent.BUILD_SONG -> "Build song"
+    CreationIntent.RETRY_BUILD -> "Retry build"
+}
+
+private fun creationActionAvailable(action: CreationNextAction, state: WorkspaceUiState): Boolean = when (action.intent) {
+    CreationIntent.CREATE_OR_OPEN_PROJECT -> true
+    CreationIntent.IMPORT_PART, CreationIntent.GENERATE_ARRANGEMENT -> state.project != null
+    CreationIntent.INSPECT_PART, CreationIntent.RETRY_MIDI_CLEANUP, CreationIntent.ANALYZE_PART -> action.artifact.partId?.let { id -> state.project?.parts?.any { it.id == id } == true } == true
+    CreationIntent.SAVE_STRUCTURE -> false // Never create a guessed structure occurrence on the user's behalf.
+    CreationIntent.APPROVE_ARRANGEMENT -> state.arrangement?.let { it.approvalRequired && !it.approved && !it.stale } == true
+    CreationIntent.CONFIGURE_BUILD_DEPENDENCY -> true
+    CreationIntent.BUILD_SONG, CreationIntent.RETRY_BUILD -> canBuild(state)
+}
+
+private fun dispatchCreationAction(action: CreationNextAction, state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    if (!creationActionAvailable(action, state) || state.operation.isMutating) return
+    when (action.intent) {
+        CreationIntent.CREATE_OR_OPEN_PROJECT -> onIntent(WorkspaceIntent.ShowCreateProject)
+        CreationIntent.IMPORT_PART -> onIntent(WorkspaceIntent.ShowImportPart(audio = false))
+        CreationIntent.INSPECT_PART -> action.artifact.partId?.let { partId -> onIntent(WorkspaceIntent.SelectPart(partId)); onIntent(WorkspaceIntent.InspectSelectedPart) }
+        CreationIntent.RETRY_MIDI_CLEANUP -> action.artifact.partId?.let { partId -> onIntent(WorkspaceIntent.SelectPart(partId)); onIntent(WorkspaceIntent.RetryMidiCleanup) }
+        CreationIntent.ANALYZE_PART -> action.artifact.partId?.let { onIntent(WorkspaceIntent.AnalyzePart(it)) }
+        CreationIntent.SAVE_STRUCTURE -> Unit
+        CreationIntent.GENERATE_ARRANGEMENT -> onIntent(WorkspaceIntent.GenerateArrangement)
+        CreationIntent.APPROVE_ARRANGEMENT -> onIntent(WorkspaceIntent.ApproveArrangement)
+        CreationIntent.CONFIGURE_BUILD_DEPENDENCY -> onIntent(WorkspaceIntent.RefreshRuntimeReadiness)
+        CreationIntent.BUILD_SONG, CreationIntent.RETRY_BUILD -> onIntent(WorkspaceIntent.BuildSong)
     }
 }
 
@@ -846,9 +949,11 @@ private fun PlaceholderPanel(panel: Panel, state: WorkspaceUiState, onIntent: (W
         else -> error("Functional panels are handled separately")
     }
     WorkspaceCard(title, tag) {
-        Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         if (panel == Panel.Status) {
+            Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
             PreviewTransport(state.preview, state.playback.volume, onIntent)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
+            CreationChecklist(state.creationProgress(), state, onIntent)
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
             state.runtimeReadiness?.let { readiness ->
                 Text("Local readiness", style = MaterialTheme.typography.labelLarge)
@@ -861,6 +966,8 @@ private fun PlaceholderPanel(panel: Panel, state: WorkspaceUiState, onIntent: (W
                     )
                 }
             }
+        } else {
+            Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         }
         val progress = (state.operation as? WorkspaceOperation.ImportingPart)?.progress
             ?: (state.operation as? WorkspaceOperation.AnalyzingPart)?.progress
