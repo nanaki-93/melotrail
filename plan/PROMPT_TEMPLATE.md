@@ -41,7 +41,7 @@ Before coding:
 7. Run the baseline checks relevant to the selected task before editing:
    - ./gradlew test
    - ./gradlew :desktopApp:test when desktop code exists
-   - python3 -m unittest discover -s worker/tests only when worker code changes
+   - python -m unittest discover -s worker/tests only when worker code changes
    Record pre-existing failures separately; never hide or “fix” an unrelated
    failure.
 8. State briefly: repository findings, pre-existing failures, assumptions, and

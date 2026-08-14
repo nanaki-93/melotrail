@@ -316,6 +316,18 @@ object ArrangementProjectCommands {
                 require(response.status == WorkerStatus.COMPLETED) { midiCleanupFailureMessage(response.error) }
                 requireMidiArtifact(output, "MIDI cleanup")
             }
+
+            override suspend fun clean(input: Path, output: Path, options: ai.music.workstation.arrangement.MidiCleanupOptions) {
+                Files.createDirectories(checkNotNull(output.parent))
+                val response = client.execute(MidiCleanCommand(
+                    path = input.toString(), outputPath = output.toString(), version = options.requestVersion,
+                    profile = options.profile.name.lowercase().replace('_', '-'), quantize = options.quantize,
+                    strength = options.strength, minNoteMs = options.minNoteMs, minVelocity = options.minVelocity,
+                    normalizeVelocity = options.normalizeVelocity, cleanSustain = options.cleanSustain
+                ))
+                require(response.status == WorkerStatus.COMPLETED) { midiCleanupFailureMessage(response.error) }
+                requireMidiArtifact(output, "MIDI cleanup")
+            }
         }
     }
 

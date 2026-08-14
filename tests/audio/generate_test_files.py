@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 Generate test audio files for the AI Music Workstation regression test suite.
 All files are 44.1 kHz, 16-bit WAV format.

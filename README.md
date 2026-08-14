@@ -372,7 +372,7 @@ instance identities, MIDI analysis bounds, and instrument/enum allow-lists.
 
 ```bash
 make test                              # Kotlin unit/integration tests
-python3 -m unittest discover -s worker/tests
+python -m unittest discover -s worker/tests
 make build                             # Full Gradle build
 ```
 

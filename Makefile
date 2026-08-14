@@ -1,9 +1,8 @@
 SHELL := /bin/bash
 GRADLE := ./gradlew
-# Python 3.12 is installed by default on the supported macOS setup. Override
-# this if a different compatible interpreter is required, e.g.
-# `make worker PYTHON=python3.11`.
-PYTHON ?= python3.12
+# The supported macOS setup exposes Python 3.12 as `python`. Override this if
+# a different compatible interpreter is required, e.g. `make worker PYTHON=python3.11`.
+PYTHON ?= python
 VENV ?= .venv
 VENV_PYTHON := $(VENV)/bin/python
 WORKER_REQUIREMENTS := worker/requirements.txt

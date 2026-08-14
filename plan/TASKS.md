@@ -8,7 +8,7 @@ Before implementation:
 
 1. Read `README.md`, `plan/AGENT_GUIDELINES.md`, `plan/PLAN_MIDI.md`, and the selected task file completely.
 2. Inspect the repository tree and find existing equivalent code.
-3. Run `./gradlew test`, `python3 -m unittest discover -s worker/tests`, and the smallest relevant build/check.
+3. Run `./gradlew test`, `python -m unittest discover -s worker/tests`, and the smallest relevant build/check.
 4. Record pre-existing failures separately. At task-set creation time, Kotlin tests pass; the local Python 3.14 environment has a pre-existing `librosa`/`numba` cache-related worker-test failure.
 5. State the smallest intended file set before coding.
 
@@ -133,7 +133,7 @@ These tasks start only after Task 028 and must be implemented one at a time.
 | [042](tasks/completed/042-transcription-quality-gate.md) | Transcription quality gate | 038, 041 | Validated raw MIDI and stage-specific failures |
 | [043](tasks/completed/043-audio-preparation-ui.md) | Audio preparation and A/B UI | 035, 039, 041–042 | Consented cleanup, A/B, input selection |
 | [044](tasks/completed/044-midi-cleanup-profiles.md) | MIDI cleanup profiles | 042 | Conservative/transcription/timing profiles |
-| [045](tasks/045-midi-quality-report.md) | MIDI quality report | 044 | Persisted raw-to-clean metrics/provenance |
+| [045](tasks/completed/045-midi-quality-report.md) | MIDI quality report | 044 | Persisted raw-to-clean metrics/provenance |
 | [046](tasks/046-midi-quality-ui.md) | MIDI quality review UI | 035, 045 | Explicit cleanup review and retry |
 | [047](tasks/047-creation-progress-model.md) | Creation progress model | 032, 034, 039, 043, 046 | Deterministic stage and next-action state |
 | [048](tasks/048-creation-header-and-checklist.md) | Creation header and checklist | 047 | Visible creation stepper and next action |

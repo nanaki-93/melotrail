@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """Run the Task 001 local solo-piano WAV-to-MIDI transcription spike.
 
 This script intentionally does not import the application worker or modify a

@@ -3,7 +3,12 @@ package ai.music.workstation.application
 import ai.music.workstation.arrangement.AnalysisKind
 import ai.music.workstation.arrangement.MidiAnalysis
 import ai.music.workstation.arrangement.MidiAnalysisStore
+import ai.music.workstation.arrangement.MidiCleanupOptions
 import ai.music.workstation.arrangement.MidiPartAnalyzer
+import ai.music.workstation.arrangement.MidiQualityRecommendation
+import ai.music.workstation.arrangement.MidiQualityReportStore
+import ai.music.workstation.arrangement.MidiQualityReporter
+import ai.music.workstation.arrangement.MidiQualityWarning
 import ai.music.workstation.arrangement.MidiReferences
 import ai.music.workstation.arrangement.Part
 import ai.music.workstation.arrangement.PartAnalysis
@@ -55,7 +60,8 @@ data class ImportPartRequest(
     val id: String,
     val source: Path,
     val role: String = "",
-    val transcribe: Boolean = false
+    val transcribe: Boolean = false,
+    val cleanup: MidiCleanupOptions = MidiCleanupOptions()
 )
 
 data class AnalyzePartRequest(val root: Path, val partId: String)
@@ -83,6 +89,8 @@ fun interface ProgressSink {
 interface MidiPreparationService {
     suspend fun transcribe(input: Path, output: Path)
     suspend fun clean(input: Path, output: Path)
+    /** Kept as a default bridge for existing worker fakes while cleanup options become persisted provenance. */
+    suspend fun clean(input: Path, output: Path, options: MidiCleanupOptions) = clean(input, output)
 }
 
 /** Worker boundary retained for readable legacy v1 projects. */
@@ -128,8 +136,22 @@ data class PartPreparationSummary(
     val cleanMidi: Boolean,
     val analyzed: Boolean,
     val ready: Boolean,
-    val warnings: List<String>
+    val warnings: List<String>,
+    val midiQuality: MidiQualitySummary = MidiQualitySummary.legacyUnknown()
 )
+
+enum class MidiQualityStatus { CURRENT, LEGACY_UNKNOWN, STALE_OR_INVALID }
+
+data class MidiQualitySummary(
+    val status: MidiQualityStatus,
+    val cleanup: MidiCleanupOptions? = null,
+    val warnings: List<MidiQualityWarning> = emptyList(),
+    val recommendations: List<MidiQualityRecommendation> = emptyList()
+) {
+    companion object {
+        fun legacyUnknown() = MidiQualitySummary(MidiQualityStatus.LEGACY_UNKNOWN)
+    }
+}
 
 enum class PartSourceType { MIDI, AUDIO, UNKNOWN }
 enum class PartAnalysisStatus { NONE, LEGACY_AUDIO, MIDI }
@@ -160,13 +182,15 @@ data class ProjectReadiness(
     val stemsAvailable: Boolean,
     val dryMixAvailable: Boolean,
     val loFiMixAvailable: Boolean,
-    val masterAvailable: Boolean
+    val masterAvailable: Boolean,
+    val midiQualityReportsReady: Boolean = false
 )
 
 class DefaultProjectApplicationService(
     private val midiPreparation: MidiPreparationService,
     private val legacyPartAnalysis: LegacyPartAnalysisService,
     private val midiPartAnalyzer: MidiPartAnalyzer = MidiPartAnalyzer(),
+    private val midiQualityReporter: MidiQualityReporter = MidiQualityReporter(),
     private val inputInspection: InputInspectionBoundary = object : InputInspectionBoundary {
         override suspend fun inspect(request: InputInspectionRequest): InputInspectionResult =
             InputInspectionResult.Rejected(InputInspectionError(
@@ -201,6 +225,7 @@ class DefaultProjectApplicationService(
         require(extension in SUPPORTED_EXTENSIONS) { "Unsupported input file extension: ${if (extension.isEmpty()) "(none)" else extension}" }
         val isMidi = extension in MIDI_EXTENSIONS
         require(!(isMidi && request.transcribe)) { "--transcribe is only valid for audio input" }
+        request.cleanup.requireValid()
 
         val project = readValidProject(root)
         require(project.parts.none { it.id == request.id }) { "Part ID already exists: ${request.id}" }
@@ -252,7 +277,7 @@ class DefaultProjectApplicationService(
                 requireMidiArtifact(rawOutput, "Transcription")
             }
             progress.report(OperationProgress("import-part", 3, 4, "Cleaning MIDI", cleanPath))
-            midiPreparation.clean(rawOutput ?: safeDestination(root, relativeFile), cleanOutput)
+            midiPreparation.clean(rawOutput ?: safeDestination(root, relativeFile), cleanOutput, request.cleanup)
             requireMidiArtifact(cleanOutput, "MIDI cleanup")
             rawWork?.let { atomicReplace(it, checkNotNull(rawPath), "Transcription") }
             cleanWork?.let { atomicReplace(it, cleanPath, "MIDI cleanup") }
@@ -266,7 +291,11 @@ class DefaultProjectApplicationService(
             cleanWork?.let(Files::deleteIfExists)
         }
 
-        val updated = project.copy(parts = project.parts + Part(request.id, relativeFile, request.role, midi = MidiReferences(raw, clean)))
+        val rawReference = raw ?: relativeFile
+        val report = midiQualityReporter.report(request.id, safeDestination(root, rawReference), cleanPath, request.cleanup)
+        val reportPath = MidiQualityReportStore.write(root, report)
+        val reportReference = root.relativize(reportPath).toString().replace('\\', '/')
+        val updated = project.copy(parts = project.parts + Part(request.id, relativeFile, request.role, midi = MidiReferences(raw, clean, request.cleanup, reportReference)))
         val saved = if (project.version == 1) ProjectStore.upgrade(root, project, updated.parts) else updated.also { ProjectStore.write(root, it) }
         progress.report(OperationProgress("import-part", 4, 4, "Registered part", root.resolve(ProjectStore.FILE_NAME)))
         snapshot(root, saved)
@@ -372,7 +401,8 @@ class DefaultProjectApplicationService(
                 stemsAvailable = Files.isDirectory(root.resolve("stems")) && Files.list(root.resolve("stems")).use { it.anyMatch { Files.isRegularFile(it) } },
                 dryMixAvailable = Files.isRegularFile(root.resolve("mix/dry.wav")),
                 loFiMixAvailable = Files.isRegularFile(root.resolve("mix/lofi.wav")),
-                masterAvailable = Files.isRegularFile(root.resolve("output/master.wav"))
+                masterAvailable = Files.isRegularFile(root.resolve("output/master.wav")),
+                midiQualityReportsReady = summaries.isNotEmpty() && summaries.all { it.preparation.midiQuality.status == MidiQualityStatus.CURRENT }
             )
         )
     }
@@ -392,6 +422,7 @@ class DefaultProjectApplicationService(
         }
         val rawMidi = midi?.raw?.let { isMidiArtifact(root, it) } ?: false
         val cleanMidi = midi?.let { isMidiArtifact(root, it.clean) } ?: false
+        val quality = midiQuality(root, this, cleanMidi)
         val analyzed = analysis?.let { runCatching { it.summary(root) }.isSuccess } ?: false
         val preparedAudio = sourceType == PartSourceType.AUDIO && inspected &&
             report?.preparation == PreparationStatus.CLEANED && isWaveArtifact(InputInspectionPaths.cleanWav(root, id))
@@ -402,10 +433,24 @@ class DefaultProjectApplicationService(
             rawMidi = rawMidi,
             cleanMidi = cleanMidi,
             analyzed = analyzed,
-            ready = sourcePreserved && inspected && cleanMidi && analyzed,
-            warnings = warnings
+            ready = sourcePreserved && inspected && cleanMidi && analyzed && quality.status != MidiQualityStatus.STALE_OR_INVALID,
+            warnings = warnings + quality.warnings.map { it.message },
+            midiQuality = quality
         )
         return PartSummary(id, role, file, sourcePath.fileName.toString(), sourceType, analysis?.summary(root), preparation)
+    }
+
+    private fun midiQuality(root: Path, part: Part, cleanMidi: Boolean): MidiQualitySummary {
+        val midi = part.midi ?: return MidiQualitySummary.legacyUnknown()
+        if (midi.cleanup == null && midi.quality == null) return MidiQualitySummary.legacyUnknown()
+        if (midi.cleanup == null || midi.quality == null || !cleanMidi) return MidiQualitySummary(MidiQualityStatus.STALE_OR_INVALID)
+        val rawReference = midi.raw ?: part.file
+        val report = runCatching { MidiQualityReportStore.read(root, midi.quality) }.getOrNull()
+            ?: return MidiQualitySummary(MidiQualityStatus.STALE_OR_INVALID)
+        if (!MidiQualityReportStore.isCurrent(root, part.id, rawReference, midi.clean, midi.cleanup, midi.quality)) {
+            return MidiQualitySummary(MidiQualityStatus.STALE_OR_INVALID)
+        }
+        return MidiQualitySummary(MidiQualityStatus.CURRENT, report.cleanup, report.warnings, report.recommendations)
     }
 
     private fun isProjectFile(root: Path, reference: String): Boolean = runCatching {

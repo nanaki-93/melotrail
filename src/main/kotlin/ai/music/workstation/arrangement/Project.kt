@@ -35,7 +35,21 @@ data class Project(
             "Project uses legacy v1 source audio. Prepare clean MIDI for every part before running MIDI-first commands."
         }
         requireValid(projectRoot)
-        return parts.map { part -> projectRoot.resolve(requireNotNull(part.midi).clean).normalize() }
+        return parts.map { part ->
+            val midi = requireNotNull(part.midi)
+            if (midi.cleanup != null || midi.quality != null) {
+                require(midi.cleanup != null && midi.quality != null) { "Part '${part.id}' has incomplete MIDI cleanup provenance." }
+                MidiQualityReportStore.requireCurrent(
+                    projectRoot,
+                    part.id,
+                    midi.raw ?: part.file,
+                    midi.clean,
+                    midi.cleanup,
+                    midi.quality
+                )
+            }
+            projectRoot.resolve(midi.clean).normalize()
+        }
     }
 
     companion object {
@@ -63,7 +77,10 @@ data class RenderFormat(
 @Serializable
 data class MidiReferences(
     val raw: String? = null,
-    val clean: String
+    val clean: String,
+    /** Null only for pre-quality-report projects, which remain readable as legacy/unknown. */
+    val cleanup: MidiCleanupOptions? = null,
+    val quality: String? = null
 )
 
 /** Reference to the analysis JSON generated for a part, when available. */
@@ -128,6 +145,15 @@ object ProjectValidator {
                 } else {
                     midi.raw?.let { validateFileReference(root, it, "Part '${part.id}' raw MIDI", errors) }
                     validateFileReference(root, midi.clean, "Part '${part.id}' clean MIDI", errors)
+                    if ((midi.cleanup == null) != (midi.quality == null)) {
+                        errors += "Part '${part.id}' MIDI cleanup provenance and quality report must be present together"
+                    }
+                    midi.cleanup?.let {
+                        runCatching(it::requireValid).exceptionOrNull()?.let { error ->
+                            errors += "Part '${part.id}' MIDI cleanup options are invalid: ${error.message}"
+                        }
+                    }
+                    midi.quality?.let { validateFileReference(root, it, "Part '${part.id}' MIDI quality report", errors) }
                 }
             }
             part.analysis?.let {
