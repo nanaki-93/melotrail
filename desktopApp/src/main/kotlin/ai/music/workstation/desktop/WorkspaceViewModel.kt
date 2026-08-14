@@ -420,9 +420,15 @@ class WorkspaceViewModel(
         val monitor = player ?: return fail("preview part", "Local audio playback is not configured.")
         val previews = partPreviewService ?: return fail("preview part", "Part preview service is not configured for this desktop session.")
         scope.launch {
-            runCatching { withContext(ioDispatcher) { previews.preview(project.root, partId) } }
-                .onSuccess { path -> monitor.play(path); mutableState.update { it.copy(notification = "Previewing $partId") } }
-                .onFailure { fail("preview part", it.message ?: "Unable to preview $partId.") }
+            runCatching {
+                val path = withContext(ioDispatcher) { previews.preview(project.root, partId) }
+                path to monitor.play(path)
+            }.onSuccess { (path, result) ->
+                when (result) {
+                    PlaybackStartResult.Started -> mutableState.update { it.copy(notification = "Previewing $partId") }
+                    is PlaybackStartResult.Failed -> fail("preview part", result.failure.message)
+                }
+            }.onFailure { fail("preview part", it.message ?: "Unable to preview $partId.") }
         }
     }
 
@@ -635,7 +641,12 @@ class WorkspaceViewModel(
                     PlaybackSource.LOFI -> root.resolve("mix/lofi.wav")
                     PlaybackSource.MASTER -> root.resolve("output/master.wav")
                 }
-                runCatching { monitor.play(artifact) }.onFailure { fail("playback", it.message ?: "Unable to play selected artifact.") }
+                scope.launch {
+                    when (val result = monitor.play(artifact)) {
+                        PlaybackStartResult.Started -> Unit
+                        is PlaybackStartResult.Failed -> fail("playback", result.failure.message)
+                    }
+                }
             }
         }
     }

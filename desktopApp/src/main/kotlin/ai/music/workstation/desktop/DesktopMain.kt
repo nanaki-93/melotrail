@@ -49,7 +49,10 @@ fun main() = application {
     val arrangementService = DefaultArrangementApplicationService(libraryRoot = libraryRoot)
     val mixService = DefaultMixApplicationService()
     val client = DesktopServiceComposition.workerClient()
-    val player = JvmAudioPlayer()
+    val operationLogger = LocalDesktopOperationLogger()
+    val player = JvmAudioPlayer(failureReporter = { failure ->
+        operationLogger.event("playback", failure.stage.name.lowercase(), failure = failure.cause)
+    })
     val sfizzRenderer = ai.music.workstation.arrangement.SfizzInstrumentRenderer(
         InstrumentRegistryLoader(libraryRoot)
     )
@@ -65,7 +68,7 @@ fun main() = application {
         partPreviewService = DefaultPartPreviewApplicationService(sfizzRenderer),
         preferences = preferences,
         soundLibrarySettings = SoundLibrarySettingsService(preferences, activeRoot = libraryRoot),
-        operationLogger = LocalDesktopOperationLogger()
+        operationLogger = operationLogger
     )
     Window(
         state = desktopWindowState,
