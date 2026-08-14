@@ -163,6 +163,35 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `selected audio preparation shows no issue guidance and bounded A B transcription controls`() = runComposeUiTest {
+        val root = java.nio.file.Path.of("build/test-project")
+        val audioPart = ai.music.workstation.application.PartSummary("A", "verse", "source/A.wav", "A.wav", ai.music.workstation.application.PartSourceType.AUDIO, null)
+        val project = projectState().project!!.copy(parts = listOf(audioPart))
+        val snapshot = preparationSnapshot("A", recommendation = false, clean = true)
+        setContent {
+            MusicWorkstationTheme {
+                WorkspaceScreen(WorkspaceUiState(project = project, selectedPartId = "A", audioPreparation = AudioPreparationUiState("A", snapshot)), onIntent = {})
+            }
+        }
+        onNodeWithTag(WorkspaceTags.PREPARATION_PANEL).assertIsDisplayed()
+        onNodeWithText("No measured safe cleanup is recommended. Inspect-only keeps original audio selected for transcription.").assertIsDisplayed()
+        onNodeWithTag(WorkspaceTags.PREPARATION_ORIGINAL).assertIsEnabled()
+        onNodeWithTag(WorkspaceTags.PREPARATION_CLEAN).assertIsEnabled()
+        onNodeWithTag(WorkspaceTags.PREPARATION_TRANSCRIBE).assertIsEnabled()
+    }
+
+    @Test
+    fun `safe cleanup confirmation explains that original audio remains unchanged`() = runComposeUiTest {
+        setContent {
+            MusicWorkstationTheme {
+                WorkspaceScreen(projectState().copy(dialog = WorkspaceDialog.ConfirmSafeCleanup("A")), onIntent = {})
+            }
+        }
+        onNodeWithText("Apply safe cleanup to A?").assertIsDisplayed()
+        onNodeWithText("The original source remains available and unchanged.", substring = true).assertIsDisplayed()
+    }
+
+    @Test
     fun `transport shortcuts retain play seek and stop behavior`() {
         val playback = PlaybackSnapshot(positionSeconds = 10.0, durationSeconds = 12.0)
 
@@ -249,5 +278,26 @@ class WorkspaceScreenTest {
             structure = emptyList(),
             readiness = ai.music.workstation.application.ProjectReadiness(false, false, false, false, false, false, false, false, false, false)
         ), runtimeReadiness = runtimeReadiness(DependencyReadiness(DependencyStatus.READY, "ready")))
+    }
+
+    private fun preparationSnapshot(partId: String, recommendation: Boolean, clean: Boolean): ai.music.workstation.application.AudioPreparationSnapshot {
+        val source = ai.music.workstation.preparation.InspectionSourceIdentity("source/$partId.wav", "0".repeat(64))
+        val measurements = ai.music.workstation.preparation.AudioInspectionMeasurements(
+            0.5, 0.2, 0.0, 0, 0,
+            ai.music.workstation.preparation.SilenceEvidence(0, 0),
+            ai.music.workstation.preparation.SignalIndicator(ai.music.workstation.preparation.EvidenceLevel.NONE, 0.0),
+            ai.music.workstation.preparation.SignalIndicator(ai.music.workstation.preparation.EvidenceLevel.NONE, 0.0)
+        )
+        val report = ai.music.workstation.preparation.InputInspectionReport(
+            partId = partId, source = source,
+            detectedInput = ai.music.workstation.preparation.DetectedInput(ai.music.workstation.preparation.InputContainer.RIFF_WAVE, "pcm", "wav"),
+            durationSeconds = 1.0, audioFormat = ai.music.workstation.preparation.DetectedAudioFormat(44100, 1, 24), measurements = measurements
+        )
+        val plan = if (!recommendation) null else ai.music.workstation.preparation.InputCleanupPlan(
+            partId = partId, source = source, mode = ai.music.workstation.preparation.InputCleanupMode.SAFE_CLEANUP,
+            operations = listOf(ai.music.workstation.preparation.CleanupPlanOperation(ai.music.workstation.preparation.CleanupOperationType.DC_REMOVAL)),
+            evidence = measurements, confidence = 0.5, transcriptionInput = ai.music.workstation.preparation.TranscriptionInputArtifact.CLEAN_WAV
+        )
+        return ai.music.workstation.application.AudioPreparationSnapshot(partId, ai.music.workstation.application.AudioPreparationAvailability.AVAILABLE, report, plan, cleanWavAvailable = clean)
     }
 }

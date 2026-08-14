@@ -96,6 +96,12 @@ object WorkspaceTags {
     const val PREVIEW_STOP = "preview-stop"
     const val PREVIEW_SEEK = "preview-seek"
     const val PREVIEW_RETRY = "preview-retry"
+    const val PREPARATION_PANEL = "preparation-panel"
+    const val PREPARATION_INSPECT = "preparation-inspect"
+    const val PREPARATION_APPLY = "preparation-apply"
+    const val PREPARATION_TRANSCRIBE = "preparation-transcribe"
+    const val PREPARATION_ORIGINAL = "preparation-original"
+    const val PREPARATION_CLEAN = "preparation-clean"
     const val SOUND_LIBRARY_SETTINGS = "sound-library-settings"
     const val SOUND_LIBRARY_CHOOSE = "sound-library-choose"
     const val SOUND_LIBRARY_CLEAR = "sound-library-clear"
@@ -258,7 +264,7 @@ private fun WorkspaceShell(state: WorkspaceUiState, onIntent: (WorkspaceIntent) 
 @Composable
 private fun WideWorkspace(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
     Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        PanelColumn(Modifier.widthIn(min = 235.dp, max = 300.dp).weight(0.95f), state, onIntent, listOf(Panel.Parts, Panel.Structure))
+        PanelColumn(Modifier.widthIn(min = 235.dp, max = 300.dp).weight(0.95f), state, onIntent, listOf(Panel.Parts, Panel.Preparation, Panel.Structure))
         PanelColumn(Modifier.weight(1.7f), state, onIntent, listOf(Panel.Arrangement, Panel.Timeline))
         PanelColumn(Modifier.widthIn(min = 255.dp, max = 340.dp).weight(1f), state, onIntent, listOf(Panel.Mix, Panel.Status))
     }
@@ -267,7 +273,7 @@ private fun WideWorkspace(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
 @Composable
 private fun MediumWorkspace(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
     Row(modifier = Modifier.fillMaxSize().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        PanelColumn(Modifier.widthIn(min = 300.dp, max = 340.dp), state, onIntent, listOf(Panel.Parts, Panel.Structure, Panel.Status))
+        PanelColumn(Modifier.widthIn(min = 300.dp, max = 340.dp), state, onIntent, listOf(Panel.Parts, Panel.Preparation, Panel.Structure, Panel.Status))
         PanelColumn(Modifier.widthIn(min = 500.dp, max = 720.dp), state, onIntent, listOf(Panel.Arrangement, Panel.Timeline, Panel.Mix))
     }
 }
@@ -277,7 +283,7 @@ private fun NarrowWorkspace(state: WorkspaceUiState, onIntent: (WorkspaceIntent)
     PanelColumn(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), state, onIntent, Panel.entries.toList())
 }
 
-private enum class Panel { Parts, Structure, Arrangement, Timeline, Mix, Status }
+private enum class Panel { Parts, Preparation, Structure, Arrangement, Timeline, Mix, Status }
 
 @Composable
 private fun PanelColumn(modifier: Modifier, state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, panels: List<Panel>) {
@@ -285,6 +291,7 @@ private fun PanelColumn(modifier: Modifier, state: WorkspaceUiState, onIntent: (
         panels.forEach { panel ->
             when (panel) {
                 Panel.Parts -> PartsPanel(state, onIntent)
+                Panel.Preparation -> if (state.selectedPartId != null) AudioPreparationPanel(state, onIntent)
                 Panel.Structure -> StructurePanel(state, onIntent)
                 Panel.Arrangement -> ArrangementPanel(state, onIntent)
                 Panel.Timeline -> TimelinePanel(state, onIntent)
@@ -315,6 +322,7 @@ private fun PartsPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
                 val previewCapability = if (part.sourceType == ai.music.workstation.application.PartSourceType.AUDIO) RuntimeCapability.SOURCE_PREVIEW else RuntimeCapability.MIDI_PREVIEW
                 val previewReadiness = state.runtimeReadiness?.capability(previewCapability)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TextButton(onClick = { onIntent(WorkspaceIntent.SelectPart(part.id)) }, enabled = !disabled) { Text(if (state.selectedPartId == part.id) "Selected" else "Prepare") }
                     TextButton(onClick = { onIntent(WorkspaceIntent.ShowRoleEditor(part.id)) }, enabled = !disabled) { Text("Edit role") }
                     TextButton(onClick = { onIntent(WorkspaceIntent.PreviewPart(part.id)) }, enabled = !disabled && previewReadiness?.available == true) { Text("Preview") }
                     TextButton(onClick = { onIntent(WorkspaceIntent.AnalyzePart(part.id)) }, enabled = !disabled) {
@@ -337,6 +345,96 @@ private fun PartsPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
         modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.ADD_MIDI }
     ) { Text("Import MIDI, WAV, or MP3") }
 }
+
+@Composable
+private fun AudioPreparationPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Selected-part preparation", WorkspaceTags.PREPARATION_PANEL) {
+    val part = state.selectedPartId?.let { id -> state.project?.parts?.find { it.id == id } }
+    if (part == null) {
+        Text("Select a WAV or MP3 part to inspect its source, compare prepared audio, and choose transcription input.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+        return@WorkspaceCard
+    }
+    if (part.sourceType != ai.music.workstation.application.PartSourceType.AUDIO) {
+        Text("${part.id} is MIDI. Audio preparation applies only to WAV/MP3 sources; its original MIDI remains unchanged.", style = MaterialTheme.typography.bodySmall)
+        return@WorkspaceCard
+    }
+    val preparation = state.audioPreparation
+    val snapshot = preparation.snapshot
+    Text("Part ${part.id} · Original source is always preserved", fontWeight = FontWeight.Medium)
+    when (snapshot?.availability) {
+        null, ai.music.workstation.application.AudioPreparationAvailability.NOT_INSPECTED -> {
+            Text("No current inspection report. Inspect only measures the preserved source and does not create or modify audio.", style = MaterialTheme.typography.bodySmall)
+            Button(onClick = { onIntent(WorkspaceIntent.InspectSelectedPart) }, enabled = !state.operation.isMutating, modifier = Modifier.semantics { testTag = WorkspaceTags.PREPARATION_INSPECT }) { Text("Inspect source") }
+        }
+        ai.music.workstation.application.AudioPreparationAvailability.STALE -> {
+            Text("The inspection report is stale or unavailable. Inspect the preserved source again before cleanup or transcription.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            Button(onClick = { onIntent(WorkspaceIntent.InspectSelectedPart) }, enabled = !state.operation.isMutating, modifier = Modifier.semantics { testTag = WorkspaceTags.PREPARATION_INSPECT }) { Text("Inspect again") }
+        }
+        ai.music.workstation.application.AudioPreparationAvailability.NOT_AUDIO -> Unit
+        ai.music.workstation.application.AudioPreparationAvailability.AVAILABLE -> {
+            val report = checkNotNull(snapshot.report)
+            val metrics = checkNotNull(report.measurements)
+            Text("Inspection", style = MaterialTheme.typography.labelLarge)
+            Text(
+                "${formatDuration(report.durationSeconds)} · ${report.audioFormat?.sampleRate ?: "—"} Hz · ${report.audioFormat?.channels ?: "—"} channel(s) · peak ${formatMetric(metrics.peak)} · DC ${formatMetric(metrics.dcOffset)}",
+                style = MaterialTheme.typography.bodySmall
+            )
+            Text("Clipped runs: ${metrics.clippedRunCount}; hum evidence: ${metrics.hum.evidence.name.lowercase()}; noise evidence: ${metrics.noise.evidence.name.lowercase()}.", style = MaterialTheme.typography.bodySmall)
+            report.warnings.forEach { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+
+            val recommendation = snapshot.safeCleanupPlan
+            if (recommendation == null) {
+                Text("No measured safe cleanup is recommended. Inspect-only keeps original audio selected for transcription.", style = MaterialTheme.typography.bodySmall)
+            } else {
+                Text("Measured safe cleanup recommendation", style = MaterialTheme.typography.labelLarge)
+                Text(recommendation.operations.joinToString(" · ") { cleanupOperationLabel(it) }, style = MaterialTheme.typography.bodySmall)
+                Text("Only these measured, reversible operations are available. Loudness, silence/timing, pitch, tempo, stems, and the original source are never changed.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text("Cleanup choice", style = MaterialTheme.typography.labelLarge)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectCleanupMode(ai.music.workstation.preparation.InputCleanupMode.INSPECT_ONLY)) }) { Text(if (preparation.cleanupMode == ai.music.workstation.preparation.InputCleanupMode.INSPECT_ONLY) "Inspect only ✓" else "Inspect only") }
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectCleanupMode(ai.music.workstation.preparation.InputCleanupMode.SAFE_CLEANUP)) }, enabled = recommendation != null) { Text(if (preparation.cleanupMode == ai.music.workstation.preparation.InputCleanupMode.SAFE_CLEANUP) "Safe cleanup ✓" else "Safe cleanup") }
+            }
+            Button(
+                onClick = { onIntent(WorkspaceIntent.ApplySelectedCleanup) },
+                enabled = !state.operation.isMutating && (preparation.cleanupMode == ai.music.workstation.preparation.InputCleanupMode.INSPECT_ONLY || recommendation != null),
+                modifier = Modifier.semantics { testTag = WorkspaceTags.PREPARATION_APPLY }
+            ) { Text(if (preparation.cleanupMode == ai.music.workstation.preparation.InputCleanupMode.INSPECT_ONLY) "Record inspect-only choice" else "Review and apply safe cleanup") }
+
+            val cleanAvailable = snapshot.cleanWavAvailable
+            Text("A/B monitor", style = MaterialTheme.typography.labelLarge)
+            Text("Original and prepared audio use the same monitor volume (${(state.playback.volume * 100).toInt()}%). A/B never changes release files.", style = MaterialTheme.typography.bodySmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.PreviewPreparation(ai.music.workstation.application.PreviewAudioSource.ORIGINAL)) }, enabled = !state.operation.isMutating, modifier = Modifier.semantics { testTag = WorkspaceTags.PREPARATION_ORIGINAL }) { Text("Play original") }
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.PreviewPreparation(ai.music.workstation.application.PreviewAudioSource.PREPARED_CLEAN)) }, enabled = !state.operation.isMutating && cleanAvailable, modifier = Modifier.semantics { testTag = WorkspaceTags.PREPARATION_CLEAN }) { Text("Play prepared") }
+            }
+            Text("Active monitor: ${if (state.preview.source?.partId == part.id && state.preview.source?.audioSource == ai.music.workstation.application.PreviewAudioSource.PREPARED_CLEAN) "prepared clean audio" else "original source"}", style = MaterialTheme.typography.bodySmall)
+
+            Text("Transcription input", style = MaterialTheme.typography.labelLarge)
+            Text("Choose exactly which validated project artifact feeds solo-piano transcription.", style = MaterialTheme.typography.bodySmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectTranscriptionInput(ai.music.workstation.preparation.TranscriptionInputArtifact.SOURCE)) }) { Text(if (preparation.transcriptionInput == ai.music.workstation.preparation.TranscriptionInputArtifact.SOURCE) "Original ✓" else "Original") }
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectTranscriptionInput(ai.music.workstation.preparation.TranscriptionInputArtifact.DECODED_WAV)) }, enabled = snapshot.decodedWavAvailable) { Text(if (preparation.transcriptionInput == ai.music.workstation.preparation.TranscriptionInputArtifact.DECODED_WAV) "Decoded ✓" else "Decoded WAV") }
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectTranscriptionInput(ai.music.workstation.preparation.TranscriptionInputArtifact.CLEAN_WAV)) }, enabled = cleanAvailable) { Text(if (preparation.transcriptionInput == ai.music.workstation.preparation.TranscriptionInputArtifact.CLEAN_WAV) "Prepared ✓" else "Prepared") }
+            }
+            Button(onClick = { onIntent(WorkspaceIntent.TranscribeSelectedPart) }, enabled = !state.operation.isMutating && (preparation.transcriptionInput != ai.music.workstation.preparation.TranscriptionInputArtifact.CLEAN_WAV || cleanAvailable), modifier = Modifier.semantics { testTag = WorkspaceTags.PREPARATION_TRANSCRIBE }) { Text("Run transcription quality gate") }
+            report.transcription?.let { transcription ->
+                val detail = transcription.metrics?.let { "${it.noteCount} notes · ${formatDuration(it.durationSeconds)} · piano ${it.minPitch}–${it.maxPitch}" }
+                Text("Quality gate: ${transcription.status.name.lowercase()}${detail?.let { " · $it" } ?: ""}", style = MaterialTheme.typography.bodySmall)
+            }
+            Text("Next: analyze ${part.id} after the quality gate succeeds.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+private fun cleanupOperationLabel(operation: ai.music.workstation.preparation.CleanupPlanOperation): String = when (operation.type) {
+    ai.music.workstation.preparation.CleanupOperationType.DC_REMOVAL -> "Remove measured DC offset"
+    ai.music.workstation.preparation.CleanupOperationType.CLIP_REPAIR -> "Repair short clipped runs"
+    ai.music.workstation.preparation.CleanupOperationType.DECLICK -> "Repair measured clicks"
+    ai.music.workstation.preparation.CleanupOperationType.HUM_REMOVAL -> "Reduce ${operation.frequencyHz} Hz hum"
+    ai.music.workstation.preparation.CleanupOperationType.NOISE_REDUCTION -> "Gently reduce stationary noise"
+}
+
+private fun formatMetric(value: Double): String = String.format(java.util.Locale.ROOT, "%.3f", value)
 
 @Composable
 private fun PreviewTransport(preview: PreviewUiState, volume: Double, onIntent: (WorkspaceIntent) -> Unit) = Column(
@@ -689,6 +787,10 @@ private fun PlaceholderPanel(panel: Panel, state: WorkspaceUiState, onIntent: (W
             Text("${progress.stageIndex}/${progress.stageCount} · ${progress.message}", style = MaterialTheme.typography.bodySmall)
             progress.artifact?.let { Text(it.toString(), style = MaterialTheme.typography.bodySmall) }
         }
+        if (state.operation is WorkspaceOperation.InspectingPart || state.operation is WorkspaceOperation.ApplyingAudioCleanup || state.operation is WorkspaceOperation.TranscribingPart) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.IMPORT_PROGRESS })
+            Text("Working at a safe project-artifact boundary…", style = MaterialTheme.typography.bodySmall)
+        }
         if (state.retry != null) OutlinedButton(onClick = { onIntent(WorkspaceIntent.Retry) }) { Text("Retry") }
         if (state.operation is WorkspaceOperation.BuildingSong) OutlinedButton(onClick = { onIntent(WorkspaceIntent.CancelOperation) }) { Text("Cancel at boundary") }
     }
@@ -715,6 +817,9 @@ private fun statusText(operation: WorkspaceOperation): String = when (operation)
     is WorkspaceOperation.CreatingProject -> "Creating ${operation.root.fileName}…"
     is WorkspaceOperation.ImportingPart -> "Preparing ${operation.id}…"
     is WorkspaceOperation.AnalyzingPart -> "Analyzing ${operation.id}…"
+    is WorkspaceOperation.InspectingPart -> "Inspecting preserved source for ${operation.id}…"
+    is WorkspaceOperation.ApplyingAudioCleanup -> "Applying selected cleanup for ${operation.id}…"
+    is WorkspaceOperation.TranscribingPart -> "Running transcription quality gate for ${operation.id}…"
     is WorkspaceOperation.UpdatingPartRole -> "Saving ${operation.id} role…"
     WorkspaceOperation.SavingStructure -> "Saving song structure…"
     is WorkspaceOperation.GeneratingArrangement -> "Generating reviewed song plan and detailed arrangement…"
@@ -731,11 +836,23 @@ private fun WorkspaceDialogs(state: WorkspaceUiState, onIntent: (WorkspaceIntent
         is WorkspaceDialog.CreateProject -> CreateProjectDialog(dialog, onIntent)
         is WorkspaceDialog.ImportPart -> ImportPartDialog(dialog, onIntent)
         is WorkspaceDialog.EditRole -> EditRoleDialog(dialog, onIntent)
+        is WorkspaceDialog.ConfirmSafeCleanup -> ConfirmSafeCleanupDialog(dialog, onIntent)
         is WorkspaceDialog.ConfirmDiscardDraft -> ConfirmDiscardDraftDialog(dialog, onIntent)
         WorkspaceDialog.ConfirmClose -> ConfirmCloseDialog(onIntent, onExit)
         WorkspaceDialog.SoundLibrarySettings -> SoundLibrarySettingsDialog(state.soundLibrary, onIntent)
         null -> Unit
     }
+}
+
+@Composable
+private fun ConfirmSafeCleanupDialog(dialog: WorkspaceDialog.ConfirmSafeCleanup, onIntent: (WorkspaceIntent) -> Unit) {
+    AlertDialog(
+        onDismissRequest = { onIntent(WorkspaceIntent.DismissDialog) },
+        title = { Text("Apply safe cleanup to ${dialog.partId}?") },
+        text = { Text("This creates a separate prepared clean WAV from the measured recommendation. The original source remains available and unchanged. Continue only if you want this derived monitor/transcription option.") },
+        confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.ConfirmSafeCleanup) }) { Text("Apply safe cleanup") } },
+        dismissButton = { TextButton(onClick = { onIntent(WorkspaceIntent.DismissDialog) }) { Text("Keep original") } }
+    )
 }
 
 @Composable

@@ -508,6 +508,53 @@ class WorkspaceViewModelTest {
         viewModel.close()
     }
 
+    @Test
+    fun `audio preparation keeps inspect only selected until measured cleanup is explicitly confirmed`() = runTest {
+        val root = Path.of("build/preparation-project")
+        val project = projectSnapshot(root).copy(parts = listOf(audioPart("A")))
+        val preparation = FakeAudioPreparationService(project, availablePreparation("A", recommended = true))
+        val viewModel = WorkspaceViewModel(
+            FakeProjectService(result = project), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
+            runtimeReadinessService = ReadyReadinessService, audioPreparationService = preparation
+        )
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.RefreshRuntimeReadiness); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.SelectPart("A")); advanceUntilIdle()
+        assertEquals(ai.music.workstation.preparation.InputCleanupMode.INSPECT_ONLY, viewModel.state.value.audioPreparation.cleanupMode)
+        viewModel.accept(WorkspaceIntent.SelectCleanupMode(ai.music.workstation.preparation.InputCleanupMode.SAFE_CLEANUP))
+        viewModel.accept(WorkspaceIntent.ApplySelectedCleanup)
+        assertIs<WorkspaceDialog.ConfirmSafeCleanup>(viewModel.state.value.dialog)
+        assertNull(preparation.cleanup)
+        viewModel.accept(WorkspaceIntent.ConfirmSafeCleanup); advanceUntilIdle()
+        assertEquals(true, preparation.cleanup?.confirmedSafeCleanup)
+        viewModel.close()
+    }
+
+    @Test
+    fun `preparation A B and transcription selections use bounded artifact identifiers and retry failures`() = runTest {
+        val root = Path.of("build/preparation-preview-project")
+        val project = projectSnapshot(root).copy(parts = listOf(audioPart("A")))
+        val preparation = FakeAudioPreparationService(project, availablePreparation("A", recommended = true), transcriptionFailure = IllegalStateException("model runtime unavailable"))
+        val previews = FakePreviewService(PreviewResult.Resolved(root.resolve("previews/A.wav"), emptyList(), true))
+        val viewModel = WorkspaceViewModel(
+            FakeProjectService(result = project), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
+            runtimeReadinessService = ReadyReadinessService, player = FakeArtifactAudioPlayer(), partPreviewService = previews,
+            audioPreparationService = preparation
+        )
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.RefreshRuntimeReadiness); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.SelectPart("A")); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.PreviewPreparation(ai.music.workstation.application.PreviewAudioSource.PREPARED_CLEAN)); advanceUntilIdle()
+        assertEquals(ai.music.workstation.application.PreviewAudioSource.PREPARED_CLEAN, previews.lastRequest?.audioSource)
+        viewModel.accept(WorkspaceIntent.SelectTranscriptionInput(ai.music.workstation.preparation.TranscriptionInputArtifact.CLEAN_WAV))
+        viewModel.accept(WorkspaceIntent.TranscribeSelectedPart); advanceUntilIdle()
+        assertTrue(viewModel.state.value.retry is WorkspaceRetry.Transcribe)
+        preparation.transcriptionFailure = null
+        viewModel.accept(WorkspaceIntent.Retry); advanceUntilIdle()
+        assertEquals(ai.music.workstation.preparation.TranscriptionInputArtifact.CLEAN_WAV, preparation.transcribedInput)
+        viewModel.close()
+    }
+
     private fun testDispatchers(dispatcher: TestDispatcher): WorkspaceDispatchers {
         return WorkspaceDispatchers(ui = dispatcher, io = dispatcher)
     }
@@ -530,6 +577,8 @@ class WorkspaceViewModelTest {
         sourceType = ai.music.workstation.application.PartSourceType.MIDI,
         analysis = null
     )
+
+    private fun audioPart(id: String) = part(id).copy(sourceFile = "source/$id.wav", sourceName = "$id.wav", sourceType = ai.music.workstation.application.PartSourceType.AUDIO)
 
     private fun analyzedPart(id: String) = part(id).copy(analysis = ai.music.workstation.application.PartAnalysisSummary(
         ai.music.workstation.application.PartAnalysisStatus.MIDI, "analysis/$id.midi.json", bars = 2, durationSeconds = 4.0, key = "C major"
@@ -570,13 +619,60 @@ private object ReadyReadinessService : RuntimeReadinessService {
 private class FakePreviewService(var result: PreviewResult) : PartPreviewApplicationService {
     var calls = 0
     var delay = false
+    var lastRequest: PreviewRequest? = null
     private var gate: CompletableDeferred<Unit>? = null
     override suspend fun resolve(request: PreviewRequest): PreviewResult {
         calls++
+        lastRequest = request
         if (delay) (gate ?: CompletableDeferred<Unit>().also { gate = it }).await()
         return result
     }
     fun release() { gate?.complete(Unit) }
+}
+
+private data class CleanupCall(val mode: ai.music.workstation.preparation.InputCleanupMode, val confirmedSafeCleanup: Boolean)
+
+private class FakeAudioPreparationService(
+    private val project: ProjectSnapshot,
+    private val snapshot: ai.music.workstation.application.AudioPreparationSnapshot,
+    var transcriptionFailure: Throwable? = null
+) : ai.music.workstation.application.AudioPreparationApplicationService {
+    var cleanup: CleanupCall? = null
+    var transcribedInput: ai.music.workstation.preparation.TranscriptionInputArtifact? = null
+
+    override fun load(projectRoot: Path, partId: String) = snapshot
+    override suspend fun inspect(projectRoot: Path, partId: String, progress: ai.music.workstation.application.ProgressSink) =
+        ai.music.workstation.application.AudioPreparationOperation(project, snapshot)
+    override suspend fun applyCleanup(projectRoot: Path, partId: String, mode: ai.music.workstation.preparation.InputCleanupMode, confirmedSafeCleanup: Boolean): ai.music.workstation.application.AudioPreparationOperation {
+        cleanup = CleanupCall(mode, confirmedSafeCleanup)
+        return ai.music.workstation.application.AudioPreparationOperation(project, snapshot)
+    }
+    override suspend fun transcribe(projectRoot: Path, partId: String, selectedInput: ai.music.workstation.preparation.TranscriptionInputArtifact): ai.music.workstation.application.AudioPreparationOperation {
+        transcriptionFailure?.let { throw it }
+        transcribedInput = selectedInput
+        return ai.music.workstation.application.AudioPreparationOperation(project, snapshot)
+    }
+}
+
+private fun availablePreparation(partId: String, recommended: Boolean): ai.music.workstation.application.AudioPreparationSnapshot {
+    val source = ai.music.workstation.preparation.InspectionSourceIdentity("source/$partId.wav", "0".repeat(64))
+    val measurements = ai.music.workstation.preparation.AudioInspectionMeasurements(
+        peak = 0.8, rms = 0.2, dcOffset = 0.01, clippedRunCount = 0, clippedFrameCount = 0,
+        silence = ai.music.workstation.preparation.SilenceEvidence(0, 0),
+        hum = ai.music.workstation.preparation.SignalIndicator(ai.music.workstation.preparation.EvidenceLevel.NONE, 0.0),
+        noise = ai.music.workstation.preparation.SignalIndicator(ai.music.workstation.preparation.EvidenceLevel.NONE, 0.0)
+    )
+    val report = ai.music.workstation.preparation.InputInspectionReport(
+        partId = partId, source = source,
+        detectedInput = ai.music.workstation.preparation.DetectedInput(ai.music.workstation.preparation.InputContainer.RIFF_WAVE, "pcm", "wav"),
+        durationSeconds = 1.0, audioFormat = ai.music.workstation.preparation.DetectedAudioFormat(44100, 1, 24), measurements = measurements
+    )
+    val plan = if (!recommended) null else ai.music.workstation.preparation.InputCleanupPlan(
+        partId = partId, source = source, mode = ai.music.workstation.preparation.InputCleanupMode.SAFE_CLEANUP,
+        operations = listOf(ai.music.workstation.preparation.CleanupPlanOperation(ai.music.workstation.preparation.CleanupOperationType.DC_REMOVAL)),
+        evidence = measurements, confidence = 0.5, transcriptionInput = ai.music.workstation.preparation.TranscriptionInputArtifact.CLEAN_WAV
+    )
+    return ai.music.workstation.application.AudioPreparationSnapshot(partId, ai.music.workstation.application.AudioPreparationAvailability.AVAILABLE, report, plan)
 }
 
 private class FakeArtifactAudioPlayer(private val startFailure: String? = null) : ArtifactAudioPlayer {

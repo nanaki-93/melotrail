@@ -23,9 +23,15 @@ import ai.music.workstation.application.PartSourceType
 import ai.music.workstation.application.PartAnalysisStatus
 import ai.music.workstation.application.ProjectApplicationService
 import ai.music.workstation.application.ProjectSnapshot
+import ai.music.workstation.application.AudioPreparationApplicationService
+import ai.music.workstation.application.AudioPreparationAvailability
+import ai.music.workstation.application.AudioPreparationSnapshot
+import ai.music.workstation.application.PreviewAudioSource
 import ai.music.workstation.application.SaveStructureRequest
 import ai.music.workstation.application.UpdatePartRoleRequest
 import ai.music.workstation.arrangement.RenderFormat
+import ai.music.workstation.preparation.InputCleanupMode
+import ai.music.workstation.preparation.TranscriptionInputArtifact
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -56,6 +62,8 @@ data class WorkspaceUiState(
     val buildOptions: BuildOptionsDraft = BuildOptionsDraft(),
     val playback: PlaybackSnapshot = PlaybackSnapshot(),
     val preview: PreviewUiState = PreviewUiState(),
+    val selectedPartId: String? = null,
+    val audioPreparation: AudioPreparationUiState = AudioPreparationUiState(),
     val arrangementDraft: ArrangementDraft = ArrangementDraft(),
     val selectedArrangementSection: Int? = null,
     val operation: WorkspaceOperation = WorkspaceOperation.Idle,
@@ -69,6 +77,13 @@ data class WorkspaceUiState(
     val retry: WorkspaceRetry? = null
 )
 
+data class AudioPreparationUiState(
+    val partId: String? = null,
+    val snapshot: AudioPreparationSnapshot? = null,
+    val cleanupMode: InputCleanupMode = InputCleanupMode.INSPECT_ONLY,
+    val transcriptionInput: TranscriptionInputArtifact = TranscriptionInputArtifact.SOURCE
+)
+
 data class BuildOptionsDraft(val loFi: Boolean = false, val mp3: Boolean = false)
 data class PlaybackSnapshot(
     val source: PlaybackSource = PlaybackSource.DRY,
@@ -80,7 +95,12 @@ data class PlaybackSnapshot(
 enum class PlaybackSource { DRY, LOFI, MASTER }
 
 /** Immutable monitor-only lifecycle for a selected part. It is independent of notifications. */
-data class PreviewSourceIdentity(val projectRoot: Path, val partId: String, val artifact: Path? = null)
+data class PreviewSourceIdentity(
+    val projectRoot: Path,
+    val partId: String,
+    val artifact: Path? = null,
+    val audioSource: PreviewAudioSource = PreviewAudioSource.ORIGINAL
+)
 
 enum class PreviewPhase { CHECKING, PREPARING, READY, STARTING, PLAYING, PAUSED, STOPPED, FAILED }
 
@@ -104,6 +124,9 @@ sealed interface WorkspaceOperation {
     data class CreatingProject(val root: Path) : WorkspaceOperation
     data class ImportingPart(val id: String, val progress: OperationProgress? = null) : WorkspaceOperation
     data class AnalyzingPart(val id: String, val progress: OperationProgress? = null) : WorkspaceOperation
+    data class InspectingPart(val id: String) : WorkspaceOperation
+    data class ApplyingAudioCleanup(val id: String) : WorkspaceOperation
+    data class TranscribingPart(val id: String) : WorkspaceOperation
     data class UpdatingPartRole(val id: String) : WorkspaceOperation
     data object SavingStructure : WorkspaceOperation
     data class GeneratingArrangement(val progress: OperationProgress? = null) : WorkspaceOperation
@@ -117,6 +140,7 @@ sealed interface WorkspaceOperation {
 val WorkspaceOperation.isMutating: Boolean
     get() = this is WorkspaceOperation.OpeningProject || this is WorkspaceOperation.CreatingProject ||
         this is WorkspaceOperation.ImportingPart || this is WorkspaceOperation.AnalyzingPart ||
+        this is WorkspaceOperation.InspectingPart || this is WorkspaceOperation.ApplyingAudioCleanup || this is WorkspaceOperation.TranscribingPart ||
         this is WorkspaceOperation.UpdatingPartRole || this is WorkspaceOperation.SavingStructure ||
         this is WorkspaceOperation.GeneratingArrangement || this is WorkspaceOperation.ApprovingArrangement
         || this is WorkspaceOperation.ApplyingMix || this is WorkspaceOperation.BuildingSong
@@ -140,6 +164,7 @@ sealed interface WorkspaceDialog {
     ) : WorkspaceDialog
 
     data class EditRole(val partId: String, val role: String) : WorkspaceDialog
+    data class ConfirmSafeCleanup(val partId: String) : WorkspaceDialog
     data class ConfirmDiscardDraft(val root: Path? = null, val createProject: Boolean = false) : WorkspaceDialog
     data object ConfirmClose : WorkspaceDialog
     data object SoundLibrarySettings : WorkspaceDialog
@@ -164,6 +189,9 @@ internal fun detectImportSourceKind(source: Path): ImportSourceKind = when (
 sealed interface WorkspaceRetry {
     data class Import(val request: ImportPartRequest) : WorkspaceRetry
     data class Analyze(val root: Path, val partId: String) : WorkspaceRetry
+    data class Inspect(val root: Path, val partId: String) : WorkspaceRetry
+    data class Cleanup(val root: Path, val partId: String, val mode: InputCleanupMode) : WorkspaceRetry
+    data class Transcribe(val root: Path, val partId: String, val selectedInput: TranscriptionInputArtifact) : WorkspaceRetry
     data class GenerateArrangement(val request: GenerateArrangementRequest) : WorkspaceRetry
 }
 
@@ -186,7 +214,15 @@ sealed interface WorkspaceIntent {
     data class UpdateImportPart(val draft: WorkspaceDialog.ImportPart) : WorkspaceIntent
     data object ImportPart : WorkspaceIntent
     data class AnalyzePart(val partId: String) : WorkspaceIntent
+    data class SelectPart(val partId: String) : WorkspaceIntent
+    data object InspectSelectedPart : WorkspaceIntent
+    data class SelectCleanupMode(val mode: InputCleanupMode) : WorkspaceIntent
+    data object ApplySelectedCleanup : WorkspaceIntent
+    data object ConfirmSafeCleanup : WorkspaceIntent
+    data class SelectTranscriptionInput(val input: TranscriptionInputArtifact) : WorkspaceIntent
+    data object TranscribeSelectedPart : WorkspaceIntent
     data class PreviewPart(val partId: String) : WorkspaceIntent
+    data class PreviewPreparation(val source: PreviewAudioSource) : WorkspaceIntent
     data object RetryPreview : WorkspaceIntent
     data object PausePreview : WorkspaceIntent
     data object ResumePreview : WorkspaceIntent
@@ -236,6 +272,7 @@ class WorkspaceViewModel(
     private val buildService: BuildApplicationService? = null,
     private val player: ArtifactAudioPlayer? = null,
     private val partPreviewService: PartPreviewApplicationService? = null,
+    private val audioPreparationService: AudioPreparationApplicationService? = null,
     private val preferences: DesktopPreferences = NoOpDesktopPreferences,
     private val soundLibrarySettings: SoundLibrarySettingsService = SoundLibrarySettingsService(preferences),
     private val operationLogger: DesktopOperationLogger = NoOpDesktopOperationLogger
@@ -280,7 +317,15 @@ class WorkspaceViewModel(
             is WorkspaceIntent.UpdateImportPart -> mutableState.update { it.copy(dialog = intent.draft) }
             WorkspaceIntent.ImportPart -> importPart()
             is WorkspaceIntent.AnalyzePart -> analyzePart(intent.partId)
+            is WorkspaceIntent.SelectPart -> selectPart(intent.partId)
+            WorkspaceIntent.InspectSelectedPart -> inspectSelectedPart()
+            is WorkspaceIntent.SelectCleanupMode -> mutableState.update { it.copy(audioPreparation = it.audioPreparation.copy(cleanupMode = intent.mode)) }
+            WorkspaceIntent.ApplySelectedCleanup -> applySelectedCleanup()
+            WorkspaceIntent.ConfirmSafeCleanup -> confirmSafeCleanup()
+            is WorkspaceIntent.SelectTranscriptionInput -> mutableState.update { it.copy(audioPreparation = it.audioPreparation.copy(transcriptionInput = intent.input)) }
+            WorkspaceIntent.TranscribeSelectedPart -> transcribeSelectedPart()
             is WorkspaceIntent.PreviewPart -> previewPart(intent.partId)
+            is WorkspaceIntent.PreviewPreparation -> previewPreparation(intent.source)
             WorkspaceIntent.RetryPreview -> state.value.preview.source?.let { previewPart(it.partId) }
             WorkspaceIntent.PausePreview -> pausePreview()
             WorkspaceIntent.ResumePreview -> resumePreview()
@@ -486,12 +531,119 @@ class WorkspaceViewModel(
         }
     }
 
-    private fun previewPart(partId: String) {
+    private fun selectPart(partId: String) {
+        val project = state.value.project ?: return
+        val part = project.parts.find { it.id == partId } ?: return
+        if (part.sourceType != PartSourceType.AUDIO) {
+            mutableState.update { it.copy(selectedPartId = partId, audioPreparation = AudioPreparationUiState(partId = partId), notification = "Audio preparation is available for WAV/MP3 parts only.") }
+            return
+        }
+        mutableState.update { it.copy(selectedPartId = partId, audioPreparation = AudioPreparationUiState(partId = partId), notification = null) }
+        loadPreparation(project.root, partId)
+    }
+
+    private fun loadPreparation(root: Path, partId: String) {
+        val service = audioPreparationService ?: return
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { service.load(root, partId) } }
+                .onSuccess { snapshot ->
+                    mutableState.update { current ->
+                        if (current.project?.root == root && current.selectedPartId == partId) {
+                            current.copy(audioPreparation = current.audioPreparation.copy(snapshot = snapshot))
+                        } else current
+                    }
+                }
+                .onFailure { failure ->
+                    mutableState.update { current ->
+                        if (current.selectedPartId == partId) current.copy(notification = "Could not load preparation report: ${failure.message ?: "unknown error"}") else current
+                    }
+                }
+        }
+    }
+
+    private fun inspectSelectedPart() {
+        val project = state.value.project ?: return
+        val partId = state.value.selectedPartId ?: return fail("inspect part", "Select an audio part before inspection.")
+        workerFailure()?.let { return fail("inspect part", it) }
+        val service = audioPreparationService ?: return fail("inspect part", "Audio preparation is not configured for this desktop session.")
+        mutableState.update { it.copy(operation = WorkspaceOperation.InspectingPart(partId), notification = null, retry = null) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { service.inspect(project.root, partId) } }
+                .onSuccess { completedPreparation(it, "Inspection report is ready. Choose inspect-only or review the measured safe cleanup recommendation.") }
+                .onFailure { fail("inspect part", it.message ?: "Unable to inspect $partId.", WorkspaceRetry.Inspect(project.root, partId)) }
+        }
+    }
+
+    private fun applySelectedCleanup() {
+        val partId = state.value.selectedPartId ?: return fail("audio cleanup", "Select an audio part before choosing cleanup.")
+        val mode = state.value.audioPreparation.cleanupMode
+        if (mode == InputCleanupMode.SAFE_CLEANUP) {
+            val snapshot = state.value.audioPreparation.snapshot
+            if (snapshot?.safeCleanupPlan == null) return fail("audio cleanup", "No measured safe cleanup recommendation is available for this source.")
+            mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmSafeCleanup(partId)) }
+        } else runCleanup(partId, mode, confirmed = false)
+    }
+
+    private fun confirmSafeCleanup() {
+        val dialog = state.value.dialog as? WorkspaceDialog.ConfirmSafeCleanup ?: return
+        mutableState.update { it.copy(dialog = null) }
+        runCleanup(dialog.partId, InputCleanupMode.SAFE_CLEANUP, confirmed = true)
+    }
+
+    private fun runCleanup(partId: String, mode: InputCleanupMode, confirmed: Boolean) {
+        val project = state.value.project ?: return
+        workerFailure()?.let { return fail("audio cleanup", it) }
+        val service = audioPreparationService ?: return fail("audio cleanup", "Audio preparation is not configured for this desktop session.")
+        mutableState.update { it.copy(operation = WorkspaceOperation.ApplyingAudioCleanup(partId), notification = null, retry = null) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { service.applyCleanup(project.root, partId, mode, confirmed) } }
+                .onSuccess { completedPreparation(it, if (mode == InputCleanupMode.INSPECT_ONLY) "Inspect-only choice recorded. Original audio remains selected for transcription." else "Prepared audio is ready for A/B monitoring and transcription selection.") }
+                .onFailure { fail("audio cleanup", it.message ?: "Unable to apply cleanup for $partId.", WorkspaceRetry.Cleanup(project.root, partId, mode)) }
+        }
+    }
+
+    private fun transcribeSelectedPart() {
+        val project = state.value.project ?: return
+        val partId = state.value.selectedPartId ?: return fail("transcribe", "Select an audio part before transcription.")
+        state.value.runtimeReadiness.capabilityFailure(RuntimeCapability.AUDIO_IMPORT)?.let { return fail("transcribe", it) }
+        val service = audioPreparationService ?: return fail("transcribe", "Audio preparation is not configured for this desktop session.")
+        val input = state.value.audioPreparation.transcriptionInput
+        mutableState.update { it.copy(operation = WorkspaceOperation.TranscribingPart(partId), notification = null, retry = null) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { service.transcribe(project.root, partId, input) } }
+                .onSuccess { completedPreparation(it, "Transcription quality gate passed. Analyze $partId next.") }
+                .onFailure { fail("transcribe", it.message ?: "Transcription failed for $partId.", WorkspaceRetry.Transcribe(project.root, partId, input)) }
+        }
+    }
+
+    private fun completedPreparation(result: ai.music.workstation.application.AudioPreparationOperation, message: String) {
+        mutableState.update { current ->
+            current.copy(
+                project = result.project,
+                selectedPartId = result.preparation.partId,
+                audioPreparation = current.audioPreparation.copy(partId = result.preparation.partId, snapshot = result.preparation),
+                operation = WorkspaceOperation.Idle,
+                notification = message,
+                retry = null
+            )
+        }
+    }
+
+    private fun workerFailure(): String? = state.value.runtimeReadiness?.dependency(RuntimeDependency.WORKER)
+        ?.takeUnless { it.available }
+        ?.detail ?: if (state.value.runtimeReadiness == null) "Checking local worker readiness before this operation." else null
+
+    private fun previewPreparation(source: PreviewAudioSource) {
+        val partId = state.value.selectedPartId ?: return fail("preview preparation", "Select an audio part before A/B preview.")
+        previewPart(partId, source)
+    }
+
+    private fun previewPart(partId: String, audioSource: PreviewAudioSource = PreviewAudioSource.ORIGINAL) {
         val project = state.value.project ?: return
         val part = project.parts.find { it.id == partId } ?: return
         cancelPreview(resetState = false)
         val generation = previewGeneration
-        val source = PreviewSourceIdentity(project.root, partId)
+        val source = PreviewSourceIdentity(project.root, partId, audioSource = audioSource)
         val capability = if (part.sourceType == PartSourceType.AUDIO) RuntimeCapability.SOURCE_PREVIEW else RuntimeCapability.MIDI_PREVIEW
         state.value.runtimeReadiness.capabilityFailure(capability)?.let {
             return setPreview(generation, PreviewUiState(source, PreviewPhase.FAILED, it))
@@ -501,7 +653,7 @@ class WorkspaceViewModel(
         setPreview(generation, PreviewUiState(source, PreviewPhase.CHECKING))
         previewJob = scope.launch {
             try {
-                val resolved = withContext(ioDispatcher) { previews.resolve(PreviewRequest(project.root, partId)) }
+                val resolved = withContext(ioDispatcher) { previews.resolve(PreviewRequest(project.root, partId, audioSource)) }
                 if (!isCurrentPreview(generation, source)) return@launch
                 when (resolved) {
                     is PreviewResult.Prerequisite -> setPreview(generation, PreviewUiState(source, PreviewPhase.FAILED, resolved.message))
@@ -634,6 +786,19 @@ class WorkspaceViewModel(
     private fun retry() = when (val action = state.value.retry) {
         is WorkspaceRetry.Import -> runImport(action.request)
         is WorkspaceRetry.Analyze -> analyzePart(action.partId)
+        is WorkspaceRetry.Inspect -> {
+            mutableState.update { it.copy(selectedPartId = action.partId, audioPreparation = AudioPreparationUiState(partId = action.partId)) }
+            inspectSelectedPart()
+        }
+        is WorkspaceRetry.Cleanup -> {
+            mutableState.update { it.copy(selectedPartId = action.partId, audioPreparation = it.audioPreparation.copy(partId = action.partId, cleanupMode = action.mode)) }
+            if (action.mode == InputCleanupMode.SAFE_CLEANUP) mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmSafeCleanup(action.partId)) }
+            else runCleanup(action.partId, action.mode, confirmed = false)
+        }
+        is WorkspaceRetry.Transcribe -> {
+            mutableState.update { it.copy(selectedPartId = action.partId, audioPreparation = it.audioPreparation.copy(partId = action.partId, transcriptionInput = action.selectedInput)) }
+            transcribeSelectedPart()
+        }
         is WorkspaceRetry.GenerateArrangement -> runGenerateArrangement(action.request)
         null -> Unit
     }
@@ -819,6 +984,8 @@ class WorkspaceViewModel(
                 project = project,
                 arrangement = null,
                 mix = runCatching { mixService.load(project.root) }.getOrNull(),
+                selectedPartId = null,
+                audioPreparation = AudioPreparationUiState(),
                 operation = WorkspaceOperation.Idle,
                 notification = message,
                 dialog = null,

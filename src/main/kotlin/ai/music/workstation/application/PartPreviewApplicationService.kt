@@ -6,6 +6,9 @@ import ai.music.workstation.arrangement.LogicalInstrument
 import ai.music.workstation.arrangement.MidiAnalysis
 import ai.music.workstation.arrangement.ProjectStore
 import ai.music.workstation.arrangement.RenderFormat
+import ai.music.workstation.preparation.InputInspectionPaths
+import ai.music.workstation.preparation.InputInspectionReportStore
+import ai.music.workstation.preparation.PreparationStatus
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -19,7 +22,14 @@ import javax.sound.sampled.AudioSystem
 import kotlin.math.roundToLong
 
 /** A UI-neutral request for one monitor-only part artifact. */
-data class PreviewRequest(val projectRoot: Path, val partId: String)
+data class PreviewRequest(
+    val projectRoot: Path,
+    val partId: String,
+    val audioSource: PreviewAudioSource = PreviewAudioSource.ORIGINAL
+)
+
+/** Bounded monitor choices for a selected audio part; neither changes project release artifacts. */
+enum class PreviewAudioSource { ORIGINAL, PREPARED_CLEAN }
 
 enum class PreviewStage { VALIDATE, DECODE_OR_RENDER, VALIDATE_ARTIFACT, REUSE_OR_PUBLISH }
 
@@ -93,6 +103,12 @@ class DefaultPartPreviewApplicationService(
                 return@withContext PreviewResult.Failed(PreviewStage.VALIDATE, "Part '${part.id}' source is missing or outside the project.")
             }
 
+            if (request.audioSource == PreviewAudioSource.PREPARED_CLEAN) {
+                if (extension(source) !in setOf("wav", "wave", "mp3")) {
+                    return@withContext PreviewResult.Failed(PreviewStage.VALIDATE, "Prepared-audio preview is available only for WAV or MP3 source parts.")
+                }
+                return@withContext resolvePreparedClean(root, part.id, source, stages)
+            }
             when (extension(source)) {
                 "wav", "wave" -> resolveWavSource(source, stages)
                 "mp3" -> resolveMp3(root, part.id, source, stages)
@@ -111,6 +127,23 @@ class DefaultPartPreviewApplicationService(
         if (info.frames <= 0) return PreviewResult.Failed(PreviewStage.VALIDATE, "WAV source contains no audio frames.")
         stages += PreviewStage.VALIDATE_ARTIFACT
         return PreviewResult.Resolved(source, stages + PreviewStage.REUSE_OR_PUBLISH, reused = true)
+    }
+
+    private fun resolvePreparedClean(root: Path, partId: String, source: Path, stages: MutableList<PreviewStage>): PreviewResult {
+        val report = runCatching { InputInspectionReportStore.read(root, partId) }.getOrNull()
+            ?: return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Inspect the original source before previewing prepared audio.")
+        val cleanup = report.cleanup?.output
+        if (report.preparation != PreparationStatus.CLEANED || cleanup == null || report.source.sha256 != digest(Files.readAllBytes(source))) {
+            return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Prepared audio is unavailable or stale. Inspect and apply the current cleanup recommendation again.")
+        }
+        val clean = InputInspectionPaths.cleanWav(root, partId)
+        if (!clean.startsWith(root) || !Files.isRegularFile(clean) || cleanup.sha256 != digest(Files.readAllBytes(clean))) {
+            return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Prepared audio is unavailable or stale. Inspect and apply the current cleanup recommendation again.")
+        }
+        val info = inspectWav(clean) ?: return PreviewResult.Failed(PreviewStage.VALIDATE, "Prepared audio is not a supported RIFF PCM WAV.")
+        if (info.frames <= 0) return PreviewResult.Failed(PreviewStage.VALIDATE, "Prepared audio contains no audio frames.")
+        stages += PreviewStage.VALIDATE_ARTIFACT
+        return PreviewResult.Resolved(clean, stages + PreviewStage.REUSE_OR_PUBLISH, reused = true)
     }
 
     private suspend fun resolveMp3(root: Path, partId: String, source: Path, stages: MutableList<PreviewStage>): PreviewResult {

@@ -131,7 +131,7 @@ These tasks start only after Task 028 and must be implemented one at a time.
 | [040](tasks/completed/040-deterministic-audio-cleanup-worker.md) | Deterministic audio cleanup worker | 037 | Safe independently tested repair operations |
 | [041](tasks/completed/041-cleanup-plan-service.md) | Cleanup plan and provenance service | 038, 040 | Bounded deterministic/AI-assisted cleanup plan |
 | [042](tasks/completed/042-transcription-quality-gate.md) | Transcription quality gate | 038, 041 | Validated raw MIDI and stage-specific failures |
-| [043](tasks/043-audio-preparation-ui.md) | Audio preparation and A/B UI | 035, 039, 041–042 | Consented cleanup, A/B, input selection |
+| [043](tasks/completed/043-audio-preparation-ui.md) | Audio preparation and A/B UI | 035, 039, 041–042 | Consented cleanup, A/B, input selection |
 | [044](tasks/044-midi-cleanup-profiles.md) | MIDI cleanup profiles | 042 | Conservative/transcription/timing profiles |
 | [045](tasks/045-midi-quality-report.md) | MIDI quality report | 044 | Persisted raw-to-clean metrics/provenance |
 | [046](tasks/046-midi-quality-ui.md) | MIDI quality review UI | 035, 045 | Explicit cleanup review and retry |

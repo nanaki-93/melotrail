@@ -14,7 +14,12 @@ import ai.music.workstation.application.DefaultPartPreviewApplicationService
 import ai.music.workstation.application.LegacyPartAnalysisService
 import ai.music.workstation.application.MidiPreparationService
 import ai.music.workstation.application.ProjectApplicationService
+import ai.music.workstation.application.DefaultAudioPreparationApplicationService
 import ai.music.workstation.preparation.WorkerInputInspectionBoundary
+import ai.music.workstation.preparation.InputCleanupApplicationService
+import ai.music.workstation.preparation.WorkerAudioCleanupBoundary
+import ai.music.workstation.preparation.TranscriptionQualityGateService
+import ai.music.workstation.preparation.WorkerTranscriptionBoundary
 import ai.music.workstation.arrangement.PartAnalysis
 import ai.music.workstation.arrangement.InstrumentRegistryLoader
 import ai.music.workstation.arrangement.SoundLibraryLocator
@@ -50,6 +55,7 @@ fun main() = application {
     val arrangementService = DefaultArrangementApplicationService(libraryRoot = libraryRoot)
     val mixService = DefaultMixApplicationService()
     val client = DesktopServiceComposition.workerClient()
+    val projectService = DesktopServiceComposition.projectService()
     val operationLogger = LocalDesktopOperationLogger()
     val player = JvmAudioPlayer(failureReporter = { failure ->
         operationLogger.event("playback", failure.stage.name.lowercase(), failure = failure.cause)
@@ -58,7 +64,7 @@ fun main() = application {
         InstrumentRegistryLoader(libraryRoot)
     )
     val viewModel = WorkspaceViewModel(
-        projectService = DesktopServiceComposition.projectService(),
+        projectService = projectService,
         fileDialogs = SwingDesktopFileDialogs(),
         runtimeReadinessService = defaultRuntimeReadinessService { librarySettings.refresh().resolvedRoot },
         libraryRoot = libraryRoot,
@@ -67,6 +73,11 @@ fun main() = application {
         buildService = DefaultBuildApplicationService(arrangementService, mixService, sfizzRenderer, DesktopBuildWorker(client)),
         player = player,
         partPreviewService = DefaultPartPreviewApplicationService(sfizzRenderer),
+        audioPreparationService = DefaultAudioPreparationApplicationService(
+            projectService,
+            InputCleanupApplicationService(WorkerAudioCleanupBoundary(client)),
+            TranscriptionQualityGateService(WorkerTranscriptionBoundary(client))
+        ),
         preferences = preferences,
         soundLibrarySettings = SoundLibrarySettingsService(preferences, activeRoot = libraryRoot),
         operationLogger = operationLogger
