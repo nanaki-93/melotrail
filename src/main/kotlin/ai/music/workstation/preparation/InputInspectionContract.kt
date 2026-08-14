@@ -88,7 +88,9 @@ data class InputInspectionReport(
     val toolVersions: Map<String, String> = emptyMap(),
     val preparation: PreparationStatus = PreparationStatus.INSPECT_ONLY,
     /** Optional Task 041 decision and outcome; absent reports remain valid v1 inspections. */
-    val cleanup: CleanupPlanRecord? = null
+    val cleanup: CleanupPlanRecord? = null,
+    /** Optional Task 042 quality-gate outcome; it never stores a worker path. */
+    val transcription: TranscriptionGateRecord? = null
 ) {
     fun requireValid() {
         require(version == CURRENT_VERSION) { "Unsupported input inspection report version: $version" }
@@ -116,6 +118,7 @@ data class InputInspectionReport(
                 "Cleanup plan must describe this inspection source."
             }
         }
+        transcription?.requireValid(partId)
     }
 
     companion object {
@@ -215,6 +218,8 @@ object InputInspectionPaths {
     fun report(projectRoot: Path, partId: String): Path = preparedDirectory(projectRoot, partId).resolve("report.json")
     fun decodedWav(projectRoot: Path, partId: String): Path = preparedDirectory(projectRoot, partId).resolve("decoded.wav")
     fun cleanWav(projectRoot: Path, partId: String): Path = preparedDirectory(projectRoot, partId).resolve("clean.wav")
+    fun rawMidi(projectRoot: Path, partId: String): Path = resolvedProjectPath(projectRoot, "midi/raw/$partId.mid")
+    fun diagnosticMidiDirectory(projectRoot: Path): Path = resolvedProjectPath(projectRoot, "midi/diagnostics")
 
     fun requirePartId(partId: String) {
         require(PART_ID.matches(partId)) { "Part ID is invalid." }

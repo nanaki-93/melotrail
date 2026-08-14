@@ -45,7 +45,12 @@ data class InputCleanupPlan(
 }
 
 @Serializable enum class InputCleanupMode { INSPECT_ONLY, SAFE_CLEANUP }
-@Serializable enum class TranscriptionInputArtifact { SOURCE, CLEAN_WAV }
+/**
+ * The only project-local audio artifacts that may be passed to transcription.
+ * `DECODED_WAV` is intentionally an identifier, not a caller-supplied path;
+ * the quality gate resolves it to `prepared/<part>/decoded.wav` itself.
+ */
+@Serializable enum class TranscriptionInputArtifact { SOURCE, DECODED_WAV, CLEAN_WAV }
 @Serializable enum class CleanupOperationType { DC_REMOVAL, CLIP_REPAIR, DECLICK, HUM_REMOVAL, NOISE_REDUCTION }
 
 /** Fixed, bounded settings only. Null fields are forbidden unless the operation has no setting. */
