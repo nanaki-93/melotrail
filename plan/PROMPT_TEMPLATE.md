@@ -1,4 +1,4 @@
-# AI Music Workstation — Implementation Task Prompt Template
+# Melotrail — Implementation Task Prompt Template
 
 Use this prompt for one implementation task at a time. Replace `XXX` with the
 task number and make sure exactly one matching task contract exists under
@@ -6,7 +6,7 @@ task number and make sure exactly one matching task contract exists under
 promoted before implementation.
 
 ```text
-You are implementing exactly Task XXX for the AI Music Workstation.
+You are implementing exactly Task XXX for the Melotrail.
 
 This is a local Kotlin/Compose Desktop music workstation with a separate Python
 HTTP worker. Keep the implementation small, deterministic, safe, and testable.

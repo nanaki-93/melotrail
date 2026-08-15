@@ -1,4 +1,4 @@
-# AI Music Workstation - Python Dependencies
+# Melotrail - Python Dependencies
 
 # Core audio processing
 numpy>=1.24.0

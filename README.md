@@ -1,4 +1,4 @@
-# AI Music Workstation
+# Melotrail
 
 Kotlin 2.0 / Spring Boot application for AI-powered music creation and production.
 The project is intentionally kept as **one Gradle module**. The Python worker remains a separate process.
@@ -28,6 +28,11 @@ the CLI. It launches in-process and does not start Spring:
 make desktop
 ```
 
+On the first Melotrail launch, a missing desktop preference is migrated from
+the former `ai.music.workstation` preference node and retained there; the new
+value is then stored under the Melotrail node. Project files are not rewritten
+as part of this compatibility migration.
+
 Equivalent Gradle command: `./gradlew :desktopApp:run`.
 
 Use **Create** or **Open project**, prepare/analyze parts, save the structure,
@@ -48,7 +53,7 @@ export. Start it with `make worker`. Rendering and MIDI preview additionally
 require a configured local SFZ renderer (`SFZ_RENDERER_PATH` or `sfizz_render`
 on `PATH`). The app reports missing/disconnected dependencies and stale
 artifacts without modifying the project. Local bounded diagnostic logs are
-written under `~/.personal-ai-music-arranger/logs/`; they contain operation and
+written under `~/.melotrail/logs/`; they contain operation and
 artifact metadata, not model responses or source content.
 
 Transport shortcuts are Ctrl/Cmd+Space for play/pause, Ctrl/Cmd+Left/Right to
@@ -64,7 +69,7 @@ On this development OS, produce a DMG with its bundled runtime using:
 ```
 
 The DMG is written under `desktopApp/build/compose/binaries/main/dmg/`. Open it,
-drag **Personal AI Music Arranger** to Applications (or another local folder),
+drag **Melotrail** to Applications (or another local folder),
 and launch it there. The package includes its Java runtime: Gradle, Spring, and
 the repository working directory are not required to create or open a project.
 
@@ -81,6 +86,10 @@ This is an unsigned local macOS package—code signing and notarization are
 intentionally not configured. Windows and Linux packages must be built and
 tested natively on those operating systems before they can be claimed as
 supported.
+
+A hosted Git repository rename is intentionally not part of this local change.
+With separately authorized provider access, rename the hosted repository and
+then update a local checkout with `git remote set-url origin <new-url>`.
 
 ### Desktop workflow and local prerequisites
 
@@ -412,7 +421,7 @@ WAV/PCM-24 intermediates and preserve the source sample rate and channels.
 ## Project structure
 
 ```text
-ai-music-workstation/
+melotrail/
 ├── src/
 │   ├── main/
 │   │   ├── kotlin/ai/music/workstation/

@@ -14,6 +14,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ai-music-workstation"
+rootProject.name = "melotrail"
 
 include(":desktopApp")

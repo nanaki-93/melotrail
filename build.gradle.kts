@@ -6,7 +6,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7"
 }
 
-group = "ai.music.workstation"
+group = "app.melotrail"
 version = "0.1.0"
 
 kotlin {
@@ -33,7 +33,7 @@ tasks.test {
 }
 
 springBoot {
-    mainClass.set("ai.music.workstation.server.ServerKt")
+    mainClass.set("app.melotrail.server.ServerKt")
 }
 
 tasks.named<JavaExec>("bootRun") {
@@ -42,8 +42,8 @@ tasks.named<JavaExec>("bootRun") {
 
 tasks.register<JavaExec>("cliRun") {
     group = "application"
-    description = "Run the AI Music Workstation CLI"
+    description = "Run the Melotrail CLI"
     classpath = sourceSets["main"].runtimeClasspath
-    mainClass.set("ai.music.workstation.cli.CliMainKt")
+    mainClass.set("app.melotrail.cli.CliMainKt")
     jvmArgs("-Xmx4g")
 }

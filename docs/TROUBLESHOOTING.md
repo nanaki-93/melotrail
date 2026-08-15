@@ -11,7 +11,7 @@ Build the current macOS package with:
 ./gradlew :desktopApp:packageDistributionForCurrentOS
 ```
 
-Open `desktopApp/build/compose/binaries/main/dmg/Personal AI Music Arranger-1.0.0.dmg`,
+Open `desktopApp/build/compose/binaries/main/dmg/Melotrail-1.0.0.dmg`,
 copy the app to Applications (or another local folder), and launch it. The
 package includes a Java runtime but is unsigned and not notarized. It has only
 been packaged and smoke-tested on macOS; do not infer Windows or Linux support.
@@ -97,4 +97,4 @@ downstream artifacts stale; regenerate rather than copying old outputs.
 `master.wav` is always the authoritative lossless release. MP3 is a separate
 optional final conversion. If a failure occurs, keep the source and inspect the
 project-local reports/artifacts plus the bounded diagnostic logs under
-`~/.personal-ai-music-arranger/logs/`.
+`~/.melotrail/logs/`.

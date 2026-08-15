@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Generate test audio files for the AI Music Workstation regression test suite.
+Generate test audio files for the Melotrail regression test suite.
 All files are 44.1 kHz, 16-bit WAV format.
 """
 

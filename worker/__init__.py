@@ -1,1 +1,1 @@
-"""AI Music Workstation - Python Worker Package"""
+"""Melotrail - Python Worker Package"""

@@ -1,4 +1,4 @@
-"""HTTP server for the AI Music Workstation Python worker.
+"""HTTP server for the Melotrail Python worker.
 
 The worker is a standalone service. Each operation has its own endpoint:
     GET  /health
@@ -137,7 +137,7 @@ def load_commands() -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="AI Music Workstation Python worker")
+    parser = argparse.ArgumentParser(description="Melotrail Python worker")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8081)
     args = parser.parse_args()

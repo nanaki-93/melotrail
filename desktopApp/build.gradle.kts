@@ -27,16 +27,16 @@ tasks.test {
 
 compose.desktop {
     application {
-        mainClass = "ai.music.workstation.desktop.DesktopMainKt"
+        mainClass = "app.melotrail.desktop.DesktopMainKt"
 
         nativeDistributions {
-            packageName = "Personal AI Music Arranger"
+            packageName = "Melotrail"
             // jpackage requires a positive major component; keep the engine's 0.x version independent.
             packageVersion = "1.0.0"
             targetFormats(org.jetbrains.compose.desktop.application.dsl.TargetFormat.Dmg)
             modules("java.desktop", "java.logging", "java.prefs", "java.management")
             macOS {
-                iconFile.set(project.file("src/main/resources/PersonalAIMusicArranger.icns"))
+                iconFile.set(project.file("src/main/resources/Melotrail.icns"))
             }
         }
     }

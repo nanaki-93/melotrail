@@ -12,10 +12,10 @@ WORKER_DEPS_STAMP := $(VENV)/.worker-deps-installed
 WORKER_HOST ?= 127.0.0.1
 WORKER_PORT ?= 8081
 
-.PHONY: help build test check check-legacy-frontend run desktop cli cli-help worker python-install verify-worker-python clean
+.PHONY: help build test check check-legacy-frontend check-legacy-product-name run desktop cli cli-help worker python-install verify-worker-python clean
 
 help:
-	@echo "AI Music Workstation"
+	@echo "Melotrail"
 	@echo ""
 	@echo "Kotlin/Spring:"
 	@echo "  make build                         Build the application"
@@ -41,10 +41,14 @@ test:
 
 check:
 	$(MAKE) check-legacy-frontend
+	$(MAKE) check-legacy-product-name
 	$(GRADLE) check
 
 check-legacy-frontend:
 	bash tools/check_no_legacy_frontend.sh
+
+check-legacy-product-name:
+	bash tools/check_no_legacy_product_name.sh
 
 run:
 	$(GRADLE) bootRun
