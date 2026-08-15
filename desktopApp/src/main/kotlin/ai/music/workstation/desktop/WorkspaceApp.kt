@@ -369,28 +369,40 @@ private fun dispatchCreationAction(action: CreationNextAction, state: WorkspaceU
 @Composable
 private fun WorkspaceShell(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        when {
-            maxWidth >= 1180.dp -> WideWorkspace(state, onIntent)
-            maxWidth >= 760.dp -> MediumWorkspace(state, onIntent)
-            else -> NarrowWorkspace(state, onIntent)
+        when (workspaceLayoutForWidth(maxWidth)) {
+            WorkspaceLayout.WIDE -> WideWorkspace(state, onIntent)
+            WorkspaceLayout.MEDIUM -> MediumWorkspace(state, onIntent)
+            WorkspaceLayout.NARROW -> NarrowWorkspace(state, onIntent)
         }
     }
 }
 
+internal enum class WorkspaceLayout { WIDE, MEDIUM, NARROW }
+
+internal fun workspaceLayoutForWidth(width: androidx.compose.ui.unit.Dp): WorkspaceLayout = when {
+    width >= 1180.dp -> WorkspaceLayout.WIDE
+    width >= 760.dp -> WorkspaceLayout.MEDIUM
+    else -> WorkspaceLayout.NARROW
+}
+
 @Composable
 private fun WideWorkspace(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
-    Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        PanelColumn(Modifier.widthIn(min = 235.dp, max = 300.dp).weight(0.95f), state, onIntent, listOf(Panel.Parts, Panel.Preparation, Panel.MidiQuality, Panel.Structure))
-        PanelColumn(Modifier.weight(1.7f), state, onIntent, listOf(Panel.Arrangement, Panel.Timeline))
-        PanelColumn(Modifier.widthIn(min = 255.dp, max = 340.dp).weight(1f), state, onIntent, listOf(Panel.Mix, Panel.Status))
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
+        Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
+            PanelColumn(Modifier.widthIn(min = 235.dp, max = 300.dp).weight(0.95f), state, onIntent, listOf(Panel.Parts, Panel.Preparation, Panel.MidiQuality))
+            PanelColumn(Modifier.weight(1.7f), state, onIntent, listOf(Panel.Structure, Panel.Arrangement, Panel.Timeline))
+            PanelColumn(Modifier.widthIn(min = 255.dp, max = 340.dp).weight(1f), state, onIntent, listOf(Panel.Status))
+        }
+        MixPanel(state, onIntent)
     }
 }
 
 @Composable
 private fun MediumWorkspace(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
-    Row(modifier = Modifier.fillMaxSize().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        PanelColumn(Modifier.widthIn(min = 300.dp, max = 340.dp), state, onIntent, listOf(Panel.Parts, Panel.Preparation, Panel.MidiQuality, Panel.Structure, Panel.Status))
-        PanelColumn(Modifier.widthIn(min = 500.dp, max = 720.dp), state, onIntent, listOf(Panel.Arrangement, Panel.Timeline, Panel.Mix))
+    Row(modifier = Modifier.fillMaxSize().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
+        PanelColumn(Modifier.widthIn(min = 300.dp, max = 340.dp), state, onIntent, listOf(Panel.Parts, Panel.Preparation, Panel.MidiQuality))
+        PanelColumn(Modifier.widthIn(min = 500.dp, max = 720.dp), state, onIntent, listOf(Panel.Structure, Panel.Arrangement, Panel.Timeline))
+        PanelColumn(Modifier.widthIn(min = 300.dp, max = 360.dp), state, onIntent, listOf(Panel.Status, Panel.Mix))
     }
 }
 

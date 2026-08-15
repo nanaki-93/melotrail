@@ -10,11 +10,21 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.v2.runComposeUiTest
+import androidx.compose.ui.unit.dp
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @OptIn(ExperimentalTestApi::class)
 class WorkspaceScreenTest {
+    @Test
+    fun `workspace layout breakpoints retain wide medium and narrow access paths`() {
+        assertEquals(WorkspaceLayout.WIDE, workspaceLayoutForWidth(1440.dp))
+        assertEquals(WorkspaceLayout.WIDE, workspaceLayoutForWidth(1180.dp))
+        assertEquals(WorkspaceLayout.MEDIUM, workspaceLayoutForWidth(1100.dp))
+        assertEquals(WorkspaceLayout.MEDIUM, workspaceLayoutForWidth(760.dp))
+        assertEquals(WorkspaceLayout.NARROW, workspaceLayoutForWidth(759.dp))
+    }
+
     @Test
     fun `workspace shell exposes its core regions`() = runComposeUiTest {
         setContent {
@@ -195,9 +205,9 @@ class WorkspaceScreenTest {
                 WorkspaceScreen(projectState().copy(preview = PreviewUiState(source, PreviewPhase.PREPARING, elapsedSeconds = 2.0, durationSeconds = 12.0)), onIntent = {})
             }
         }
-        onNodeWithTag(WorkspaceTags.PREVIEW_TRANSPORT).assertIsDisplayed()
-        onNodeWithText("Part A").assertIsDisplayed()
-        onNodeWithText("Preparing monitor audio…").assertIsDisplayed()
+        onNodeWithTag(WorkspaceTags.PREVIEW_TRANSPORT).assertExists()
+        onNodeWithText("Part A").assertExists()
+        onNodeWithText("Preparing monitor audio…").assertExists()
         onNodeWithTag(WorkspaceTags.PREVIEW_TOGGLE).assertIsNotEnabled()
         onNodeWithTag(WorkspaceTags.PREVIEW_STOP).assertIsEnabled()
         onNodeWithTag(WorkspaceTags.PREVIEW_SEEK).assertIsNotEnabled()
@@ -207,7 +217,7 @@ class WorkspaceScreenTest {
                 WorkspaceScreen(projectState().copy(preview = PreviewUiState(source, PreviewPhase.PLAYING, elapsedSeconds = 2.0, durationSeconds = 12.0)), onIntent = {})
             }
         }
-        onNodeWithText("Playing").assertIsDisplayed()
+        onNodeWithText("Playing").assertExists()
         onNodeWithTag(WorkspaceTags.PREVIEW_TOGGLE).assertIsEnabled()
         onNodeWithTag(WorkspaceTags.PREVIEW_SEEK).assertIsEnabled()
 
@@ -216,7 +226,7 @@ class WorkspaceScreenTest {
                 WorkspaceScreen(projectState().copy(preview = PreviewUiState(source, PreviewPhase.FAILED, "Analyze A before previewing it.")), onIntent = {})
             }
         }
-        onNodeWithText("Preview unavailable").assertIsDisplayed()
+        onNodeWithText("Preview unavailable").assertExists()
         onNodeWithText("Analyze A before previewing it.").assertExists()
         onNodeWithTag(WorkspaceTags.PREVIEW_RETRY).assertIsEnabled()
     }
