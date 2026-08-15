@@ -139,7 +139,7 @@ These tasks start only after Task 028 and must be implemented one at a time.
 | [048](tasks/completed/048-creation-header-and-checklist.md) | Creation header and checklist | 047 | Visible creation stepper and next action |
 | [049](tasks/completed/049-parts-and-structure-workspace.md) | Parts and structure workspace | 048 | Linked parts/preparation/structure experience |
 | [050](tasks/completed/050-arrangement-build-workspace.md) | Arrangement and build workspace | 049 | Clear approval and build lifecycle |
-| [051](tasks/051-workspace-theme-tokens.md) | Workspace theme tokens | 050 | Stable reference-aligned visual vocabulary |
+| [051](tasks/completed/051-workspace-theme-tokens.md) | Workspace theme tokens | 050 | Stable reference-aligned visual vocabulary |
 | [052](tasks/052-responsive-workspace-shell.md) | Responsive workspace shell | 051 | Wide/medium/narrow reference layout |
 | [053](tasks/053-timeline-mixer-visualization.md) | Timeline, mixer, visual states | 052 | Real-data timeline and final visual states |
 | [054](tasks/054-end-to-end-workflow-compatibility.md) | End-to-end workflow and compatibility | 029–053 | Fixture-backed new/legacy flow proof |

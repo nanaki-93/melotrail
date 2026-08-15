@@ -137,11 +137,11 @@ fun WorkspaceApp(viewModel: WorkspaceViewModel, onExit: () -> Unit = {}) {
 @Composable
 fun WorkspaceScreen(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, onExit: () -> Unit = {}) {
     Column(
-        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(14.dp)
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(MusicWorkspaceTokens.Spacing.Md)
             .onPreviewKeyEvent { event: androidx.compose.ui.input.key.KeyEvent ->
                 transportShortcutIntent(event, state.playback)?.let(onIntent) != null
             },
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)
     ) {
         ProjectHeader(state, onIntent)
         WorkspaceShell(state, onIntent)
@@ -184,8 +184,8 @@ private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
         colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.Surface),
         border = BorderStroke(1.dp, MusicWorkspaceTokens.Border)
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = MusicWorkspaceTokens.Spacing.Lg, vertical = MusicWorkspaceTokens.Spacing.Md), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
                 Text("♫", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.headlineMedium)
                 Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Text("AI Music Studio", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
@@ -206,10 +206,10 @@ private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                     onClick = { onIntent(WorkspaceIntent.ShowSoundLibrarySettings) },
                     modifier = Modifier.semantics { testTag = WorkspaceTags.SOUND_LIBRARY_SETTINGS; contentDescription = "Configure local sound library" }
                 ) { Text("Library") }
-                Button(onClick = { onIntent(WorkspaceIntent.BuildSong) }, enabled = canBuild(state), modifier = Modifier.semantics { testTag = WorkspaceTags.BUILD_SONG; contentDescription = "Build song release artifacts" }) { Text("Build song") }
+                Button(onClick = { onIntent(WorkspaceIntent.BuildSong) }, enabled = canBuild(state), colors = workspacePrimaryButtonColors(), modifier = Modifier.semantics { testTag = WorkspaceTags.BUILD_SONG; contentDescription = "Build song release artifacts" }) { Text("Build song") }
             }
             WorkspaceNavigation(progress, state, onIntent, Modifier.fillMaxWidth())
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
                 val projectText = state.project?.let { "Project · ${it.name} · ${it.renderFormat?.sampleRate ?: "?"} Hz / ${it.renderFormat?.channels ?: "?"} ch / PCM-24" }
                     ?: "Start workspace · create or open an arranger project"
                 Text(projectText, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -230,7 +230,7 @@ private fun WorkspaceNavigation(progress: CreationProgress, state: WorkspaceUiSt
     Row(
         modifier = modifier.horizontalScroll(rememberScrollState())
             .semantics { testTag = WorkspaceTags.WORKSPACE_NAV; contentDescription = "Creation workflow stepper" },
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)
     ) {
         progress.stages.forEach { WorkspaceNavItem(it, state, onIntent) }
     }
@@ -241,10 +241,10 @@ private fun WorkspaceNavItem(stage: CreationStageProgress, state: WorkspaceUiSta
     val enabled = !state.operation.isMutating && creationActionAvailable(stage.nextAction, state)
     Text(
         "${creationStageLabel(stage.stage)} · ${creationStatusLabel(stage.status)}",
-        modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
-            .background(if (stage.status == CreationStageStatus.CURRENT) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else MusicWorkspaceTokens.ElevatedSurface)
+        modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(MusicWorkspaceTokens.Radius.Control))
+            .background(if (stage.status == CreationStageStatus.CURRENT) MaterialTheme.colorScheme.primary.copy(alpha = MusicWorkspaceTokens.Interaction.HoverAlpha) else MusicWorkspaceTokens.ElevatedSurface)
             .clickable(enabled = enabled) { dispatchCreationAction(stage.nextAction, state, onIntent) }
-            .padding(horizontal = 8.dp, vertical = 7.dp)
+            .padding(horizontal = MusicWorkspaceTokens.Spacing.Sm, vertical = MusicWorkspaceTokens.Spacing.Sm)
             .semantics {
                 testTag = WorkspaceTags.CREATION_STAGE_PREFIX + stage.stage.name.lowercase()
                 val statusAndReason = stage.reason?.let { "${creationStatusLabel(stage.status)}. $it" }
@@ -278,11 +278,11 @@ private fun CreationChecklist(progress: CreationProgress, state: WorkspaceUiStat
     val busy = state.operation.isMutating
     Column(
         modifier = Modifier.fillMaxWidth()
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(MusicWorkspaceTokens.Radius.Control))
             .background(MusicWorkspaceTokens.ElevatedSurface)
-            .padding(10.dp)
+            .padding(MusicWorkspaceTokens.Spacing.Sm)
             .semantics { testTag = WorkspaceTags.CREATION_CHECKLIST },
-        verticalArrangement = Arrangement.spacedBy(5.dp)
+        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)
     ) {
         Text("Next safe action", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
         Text("${creationStageLabel(current.stage)} · ${current.reason ?: current.nextAction.prerequisite}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -806,9 +806,9 @@ private fun StructureRow(index: Int, partId: String, state: WorkspaceUiState, en
         Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
             Text("${partId}${occurrence} · $duration", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
             TextButton(onClick = { onIntent(WorkspaceIntent.MoveStructurePart(index, index - 1)) }, enabled = enabled && index > 0,
-                modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp).semantics { testTag = WorkspaceTags.STRUCTURE_MOVE_LEFT + index; contentDescription = "Move $partId$occurrence earlier" }) { Text("←") }
+                modifier = Modifier.sizeIn(minWidth = MusicWorkspaceTokens.Interaction.MinimumHitTarget, minHeight = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics { testTag = WorkspaceTags.STRUCTURE_MOVE_LEFT + index; contentDescription = "Move $partId$occurrence earlier" }) { Text("←") }
             TextButton(onClick = { onIntent(WorkspaceIntent.MoveStructurePart(index, index + 1)) }, enabled = enabled && index < state.structureDraft.lastIndex,
-                modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp).semantics { testTag = WorkspaceTags.STRUCTURE_MOVE_RIGHT + index; contentDescription = "Move $partId$occurrence later" }) { Text("→") }
+                modifier = Modifier.sizeIn(minWidth = MusicWorkspaceTokens.Interaction.MinimumHitTarget, minHeight = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics { testTag = WorkspaceTags.STRUCTURE_MOVE_RIGHT + index; contentDescription = "Move $partId$occurrence later" }) { Text("→") }
             TextButton(onClick = { onIntent(WorkspaceIntent.DuplicateStructurePart(index)) }, enabled = enabled) { Text("Duplicate") }
             TextButton(onClick = { onIntent(WorkspaceIntent.RemoveStructurePart(index)) }, enabled = enabled) { Text("Remove") }
         }
@@ -993,7 +993,7 @@ private fun BuildLifecycle(state: WorkspaceUiState, onIntent: (WorkspaceIntent) 
             progress.artifact?.let { Text("Current artifact: ${it.fileName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             OutlinedButton(onClick = { onIntent(WorkspaceIntent.CancelOperation) }, modifier = Modifier.semantics { testTag = WorkspaceTags.BUILD_CANCEL }) { Text("Cancel at boundary") }
         } else {
-            Button(onClick = { onIntent(WorkspaceIntent.BuildSong) }, enabled = canBuild(state), modifier = Modifier.semantics { testTag = WorkspaceTags.BUILD_START }) { Text("Start Build Song") }
+            Button(onClick = { onIntent(WorkspaceIntent.BuildSong) }, enabled = canBuild(state), colors = workspacePrimaryButtonColors(), modifier = Modifier.semantics { testTag = WorkspaceTags.BUILD_START }) { Text("Start Build Song") }
         }
         state.project?.readiness?.let { readiness ->
             Text(
@@ -1092,7 +1092,7 @@ private fun WorkspaceCard(title: String, tag: String, content: @Composable () ->
         colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface),
         border = BorderStroke(1.dp, MusicWorkspaceTokens.Border)
     ) {
-        Column(modifier = Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier = Modifier.padding(MusicWorkspaceTokens.Spacing.Lg), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
             Text(title.uppercase(), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
             content()
