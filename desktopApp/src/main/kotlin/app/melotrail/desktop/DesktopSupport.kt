@@ -77,6 +77,14 @@ class JvmDesktopPreferences(
 /** Logs bounded diagnostic metadata without recording model output or source content. */
 interface DesktopOperationLogger {
     fun event(operation: String, stage: String, artifact: Path? = null, failure: Throwable? = null)
+
+    fun operationEvent(
+        sessionId: String,
+        kind: OperationKind?,
+        phase: OperationPhase,
+        artifact: Path? = null,
+        failure: Throwable? = null
+    ) = event(kind?.name?.lowercase() ?: "workspace", "$sessionId-${phase.name.lowercase()}", artifact, failure)
 }
 
 class LocalDesktopOperationLogger : DesktopOperationLogger {
@@ -95,7 +103,7 @@ class LocalDesktopOperationLogger : DesktopOperationLogger {
     override fun event(operation: String, stage: String, artifact: Path?, failure: Throwable?) {
         val artifactValue = artifact?.toAbsolutePath()?.normalize()?.toString()?.replace('"', '\'') ?: ""
         val failureType = failure?.javaClass?.simpleName ?: ""
-        logger.info("operation=${safe(operation)} stage=${safe(stage)} artifact=\"$artifactValue\" failure=$failureType")
+        logger.info("operation=${safe(operation)} phase_or_stage=${safe(stage)} artifact=\"$artifactValue\" failure=$failureType")
     }
 
     private fun safe(value: String): String = value.replace(Regex("[^A-Za-z0-9_.-]"), "_")

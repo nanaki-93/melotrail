@@ -36,7 +36,9 @@ object MusicWorkspaceTokens {
     val Disabled = Color(0xFF60717B)
     val Error = Color(0xFFFFB4AB)
     val Warning = Color(0xFFF0B356)
-    val Success = Color(0xFF86C979)
+    val Information = Color(0xFF8AB4F8)
+    val Loading = Color(0xFFC7A6FF)
+    val Success = Teal
     val Piano = Color(0xFF59CCC4)
     val Bass = Color(0xFF86C979)
     val Drums = Color(0xFFF0B356)

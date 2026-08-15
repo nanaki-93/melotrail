@@ -73,6 +73,7 @@ data class WorkspaceUiState(
     val arrangementDraft: ArrangementDraft = ArrangementDraft(),
     val selectedArrangementSection: Int? = null,
     val operation: WorkspaceOperation = WorkspaceOperation.Idle,
+    val operationFeedback: OperationFeedback = OperationFeedback.idle(),
     val notification: String? = null,
     val runtimeReadiness: RuntimeReadiness? = null,
     val soundLibrary: SoundLibrarySettingsState = SoundLibrarySettingsState(),
@@ -390,7 +391,10 @@ class WorkspaceViewModel(
     private var buildJob: Job? = null
     private var playbackJob: Job? = null
     private var playbackSessionId = 0L
+    private var playbackFeedbackSessionId: Long? = null
+    private var playbackFeedbackId: String? = null
     private var readinessGeneration = 0L
+    private val feedbackTracker = OperationFeedbackTracker()
 
     val state: StateFlow<WorkspaceUiState> = mutableState.asStateFlow()
 
@@ -457,7 +461,7 @@ class WorkspaceViewModel(
             WorkspaceIntent.ResetMix -> resetMix()
             is WorkspaceIntent.UpdateBuildOptions -> mutableState.update { it.copy(buildOptions = intent.options) }
             WorkspaceIntent.BuildSong -> buildSong()
-            WorkspaceIntent.CancelOperation -> buildJob?.cancel()
+            WorkspaceIntent.CancelOperation -> cancelOperation()
             is WorkspaceIntent.SelectPlaybackSource -> selectPlaybackSource(intent.source)
             WorkspaceIntent.PlayPause -> playPause()
             WorkspaceIntent.StopPlayback -> stopPlaybackSession()
@@ -469,7 +473,10 @@ class WorkspaceViewModel(
             is WorkspaceIntent.SelectArrangementSection -> selectArrangementSection(intent.index)
             WorkspaceIntent.Retry -> retry()
             WorkspaceIntent.DismissDialog -> mutableState.update { it.copy(dialog = null) }
-            WorkspaceIntent.DismissNotification -> mutableState.update { it.copy(notification = null) }
+            WorkspaceIntent.DismissNotification -> mutableState.update { current ->
+                feedbackTracker.dismiss(current.operationFeedback.sessionId)
+                current.copy(notification = null, operationFeedback = feedbackTracker.current)
+            }
             WorkspaceIntent.ConfirmDiscardDraft -> confirmDiscardDraft()
             WorkspaceIntent.RequestClose -> requestClose()
             WorkspaceIntent.ConfirmClose -> close()
@@ -477,7 +484,6 @@ class WorkspaceViewModel(
     }
 
     private fun selectWorkspaceSection(section: WorkspaceSection) {
-        if (state.value.operation.isMutating) return busy("change workspace sections")
         mutableState.update { it.copy(workspaceSection = section, notification = null) }
     }
 
@@ -519,11 +525,12 @@ class WorkspaceViewModel(
         val sampleRate = draft.sampleRate.toIntOrNull() ?: return fail("create project", "Sample rate must be a whole number.")
         val channels = draft.channels.toIntOrNull() ?: return fail("create project", "Channels must be a whole number.")
         val request = CreateProjectRequest(root, draft.name.ifBlank { null }, RenderFormat(sampleRate, channels))
-        mutableState.update { it.copy(operation = WorkspaceOperation.CreatingProject(root), notification = null, retry = null) }
+        val feedbackId = beginFeedback(OperationKind.PROJECT_OPEN, OperationPhase.LOCAL, "Creating project ${root.fileName}…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.CreatingProject(root), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
             runCatching { withContext(ioDispatcher) { projectService.create(request).refreshed() } }
-                .onSuccess { opened(it, "Created ${it.name}") }
-                .onFailure { fail("create project", it.message ?: "Unable to create project.") }
+                .onSuccess { opened(it, "Created ${it.name}", feedbackId) }
+                .onFailure { fail("create project", it.message ?: "Unable to create project.", sessionId = feedbackId) }
         }
     }
 
@@ -549,17 +556,19 @@ class WorkspaceViewModel(
         if (state.value.operation.isMutating) return busy("open a project")
         cancelPlaybackSession(resetState = true)
         val normalized = root.toAbsolutePath().normalize()
-        mutableState.update { it.copy(operation = WorkspaceOperation.OpeningProject(normalized), notification = null, retry = null) }
+        val feedbackId = beginFeedback(OperationKind.PROJECT_OPEN, OperationPhase.LOCAL, "Opening ${normalized.fileName}…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.OpeningProject(normalized), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
             runCatching { withContext(ioDispatcher) { projectService.open(normalized) } }
-            .onSuccess { opened(it, "Opened ${it.name}") }
+            .onSuccess { opened(it, "Opened ${it.name}", feedbackId) }
                 .onFailure { failure ->
                     if (restoring) preferences.clearLastOpenedProject()
                     operationLogger.event("open-project", "failed", normalized, failure)
                     mutableState.update {
                         it.copy(
                             operation = WorkspaceOperation.OpenFailed(failure.message ?: "Unable to open project."),
-                            notification = "Unable to open project: ${failure.message ?: "Unknown error"}"
+                            notification = "Unable to open project: ${failure.message ?: "Unknown error"}",
+                            operationFeedback = feedbackTracker.fail(feedbackId, "Unable to open project: ${failure.message ?: "Unknown error"}") ?: it.operationFeedback
                         )
                     }
                 }
@@ -642,32 +651,34 @@ class WorkspaceViewModel(
     }
 
     private fun runImport(request: ImportPartRequest) {
-        mutableState.update { it.copy(operation = WorkspaceOperation.ImportingPart(request.id), notification = null, retry = null, dialog = null) }
+        val feedbackId = beginFeedback(OperationKind.IMPORT, OperationPhase.VALIDATING, "Validating import for ${request.id}…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.ImportingPart(request.id), notification = null, retry = null, dialog = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
             runCatching {
                 withContext(ioDispatcher) {
                     projectService.importPart(request) { progress ->
-                        scope.launch { updateProgress(WorkspaceOperation.ImportingPart(request.id, progress)) }
+                        scope.launch { updateProgress(feedbackId, WorkspaceOperation.ImportingPart(request.id, progress)) }
                     }.refreshed()
                 }
-            }.onSuccess { opened(it, "Imported ${request.id}") }
-                .onFailure { fail("import part", it.message ?: "Unable to import ${request.id}.", WorkspaceRetry.Import(request)) }
+            }.onSuccess { opened(it, "Imported ${request.id}", feedbackId) }
+                .onFailure { fail("import part", it.message ?: "Unable to import ${request.id}.", WorkspaceRetry.Import(request), feedbackId) }
         }
     }
 
     private fun analyzePart(partId: String) {
         val project = state.value.project ?: return
         val request = AnalyzePartRequest(project.root, partId)
-        mutableState.update { it.copy(operation = WorkspaceOperation.AnalyzingPart(partId), notification = null, retry = null) }
+        val feedbackId = beginFeedback(OperationKind.COHESION, OperationPhase.VALIDATING, "Analyzing ${partId}…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.AnalyzingPart(partId), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
             runCatching {
                 withContext(ioDispatcher) {
                     projectService.analyzePart(request) { progress ->
-                        scope.launch { updateProgress(WorkspaceOperation.AnalyzingPart(partId, progress)) }
+                        scope.launch { updateProgress(feedbackId, WorkspaceOperation.AnalyzingPart(partId, progress)) }
                     }.refreshed()
                 }
-            }.onSuccess { opened(it, "Analyzed $partId") }
-                .onFailure { fail("analyze part", it.message ?: "Unable to analyze $partId.", WorkspaceRetry.Analyze(project.root, partId)) }
+            }.onSuccess { opened(it, "Analyzed $partId", feedbackId) }
+                .onFailure { fail("analyze part", it.message ?: "Unable to analyze $partId.", WorkspaceRetry.Analyze(project.root, partId), feedbackId) }
         }
     }
 
@@ -706,11 +717,12 @@ class WorkspaceViewModel(
         val partId = state.value.selectedPartId ?: return fail("inspect part", "Select an audio part before inspection.")
         workerFailure()?.let { return fail("inspect part", it) }
         val service = audioPreparationService ?: return fail("inspect part", "Audio preparation is not configured for this desktop session.")
-        mutableState.update { it.copy(operation = WorkspaceOperation.InspectingPart(partId), notification = null, retry = null) }
+        val feedbackId = beginFeedback(OperationKind.INSPECTION, OperationPhase.WAITING_FOR_WORKER, "Inspecting preserved source for ${partId}…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.InspectingPart(partId), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
             runCatching { withContext(ioDispatcher) { service.inspect(project.root, partId) } }
-                .onSuccess { completedPreparation(it, "Inspection report is ready. Choose inspect-only or review the measured safe cleanup recommendation.") }
-                .onFailure { fail("inspect part", it.message ?: "Unable to inspect $partId.", WorkspaceRetry.Inspect(project.root, partId)) }
+                .onSuccess { completedPreparation(it, "Inspection report is ready. Choose inspect-only or review the measured safe cleanup recommendation.", feedbackId) }
+                .onFailure { fail("inspect part", it.message ?: "Unable to inspect $partId.", WorkspaceRetry.Inspect(project.root, partId), feedbackId) }
         }
     }
 
@@ -757,12 +769,13 @@ class WorkspaceViewModel(
 
     private fun runMidiCleanupRetry(request: RetryMidiCleanupRequest) {
         if (state.value.operation.isMutating) return
-        mutableState.update { it.copy(operation = WorkspaceOperation.RetryingMidiCleanup(request.partId), notification = null, retry = null) }
+        val feedbackId = beginFeedback(OperationKind.MIDI_REPAIR, OperationPhase.WAITING_FOR_WORKER, "Repairing MIDI for ${request.partId}…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.RetryingMidiCleanup(request.partId), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
             runCatching {
                 withContext(ioDispatcher) {
                     projectService.retryMidiCleanup(request) { progress ->
-                        scope.launch { updateProgress(WorkspaceOperation.RetryingMidiCleanup(request.partId, progress)) }
+                        scope.launch { updateProgress(feedbackId, WorkspaceOperation.RetryingMidiCleanup(request.partId, progress)) }
                     }
                 }
             }.onSuccess { snapshot ->
@@ -774,12 +787,13 @@ class WorkspaceViewModel(
                         arrangement = null,
                         operation = WorkspaceOperation.Idle,
                         notification = "MIDI cleanup retried with ${request.cleanup.profile.name.lowercase().replace('_', '-')}. Preview will resolve a fresh fingerprint; analyze ${request.partId} before arranging.",
+                        operationFeedback = feedbackTracker.complete(feedbackId, "MIDI repair complete for ${request.partId}.", OperationSeverity.SUCCESS) ?: it.operationFeedback,
                         downstreamArtifactsStale = true,
                         retry = null
                     )
                 }
             }.onFailure { failure ->
-                fail("MIDI cleanup", failure.message ?: "Unable to retry MIDI cleanup for ${request.partId}.", WorkspaceRetry.MidiCleanup(request))
+                fail("MIDI cleanup", failure.message ?: "Unable to retry MIDI cleanup for ${request.partId}.", WorkspaceRetry.MidiCleanup(request), feedbackId)
             }
         }
     }
@@ -788,11 +802,12 @@ class WorkspaceViewModel(
         val project = state.value.project ?: return
         workerFailure()?.let { return fail("audio cleanup", it) }
         val service = audioPreparationService ?: return fail("audio cleanup", "Audio preparation is not configured for this desktop session.")
-        mutableState.update { it.copy(operation = WorkspaceOperation.ApplyingAudioCleanup(partId), notification = null, retry = null) }
+        val feedbackId = beginFeedback(OperationKind.AUDIO_CLEANUP, OperationPhase.WAITING_FOR_WORKER, "Applying selected cleanup for ${partId}…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.ApplyingAudioCleanup(partId), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
             runCatching { withContext(ioDispatcher) { service.applyCleanup(project.root, partId, mode, confirmed) } }
-                .onSuccess { completedPreparation(it, if (mode == InputCleanupMode.INSPECT_ONLY) "Inspect-only choice recorded. Original audio remains selected for transcription." else "Prepared audio is ready for A/B monitoring and transcription selection.") }
-                .onFailure { fail("audio cleanup", it.message ?: "Unable to apply cleanup for $partId.", WorkspaceRetry.Cleanup(project.root, partId, mode)) }
+                .onSuccess { completedPreparation(it, if (mode == InputCleanupMode.INSPECT_ONLY) "Inspect-only choice recorded. Original audio remains selected for transcription." else "Prepared audio is ready for A/B monitoring and transcription selection.", feedbackId) }
+                .onFailure { fail("audio cleanup", it.message ?: "Unable to apply cleanup for $partId.", WorkspaceRetry.Cleanup(project.root, partId, mode), feedbackId) }
         }
     }
 
@@ -802,15 +817,16 @@ class WorkspaceViewModel(
         state.value.runtimeReadiness.capabilityFailure(RuntimeCapability.AUDIO_IMPORT)?.let { return fail("transcribe", it) }
         val service = audioPreparationService ?: return fail("transcribe", "Audio preparation is not configured for this desktop session.")
         val input = state.value.audioPreparation.transcriptionInput
-        mutableState.update { it.copy(operation = WorkspaceOperation.TranscribingPart(partId), notification = null, retry = null) }
+        val feedbackId = beginFeedback(OperationKind.TRANSCRIPTION, OperationPhase.WAITING_FOR_WORKER, "Running transcription quality gate for ${partId}…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.TranscribingPart(partId), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
             runCatching { withContext(ioDispatcher) { service.transcribe(project.root, partId, input) } }
-                .onSuccess { completedPreparation(it, "Transcription quality gate passed. Analyze $partId next.") }
-                .onFailure { fail("transcribe", it.message ?: "Transcription failed for $partId.", WorkspaceRetry.Transcribe(project.root, partId, input)) }
+                .onSuccess { completedPreparation(it, "Transcription quality gate passed. Analyze $partId next.", feedbackId) }
+                .onFailure { fail("transcribe", it.message ?: "Transcription failed for $partId.", WorkspaceRetry.Transcribe(project.root, partId, input), feedbackId) }
         }
     }
 
-    private fun completedPreparation(result: app.melotrail.application.AudioPreparationOperation, message: String) {
+    private fun completedPreparation(result: app.melotrail.application.AudioPreparationOperation, message: String, feedbackId: String) {
         mutableState.update { current ->
             current.copy(
                 project = result.project,
@@ -818,6 +834,7 @@ class WorkspaceViewModel(
                 audioPreparation = current.audioPreparation.copy(partId = result.preparation.partId, snapshot = result.preparation),
                 operation = WorkspaceOperation.Idle,
                 notification = message,
+                operationFeedback = feedbackTracker.complete(feedbackId, message) ?: current.operationFeedback,
                 retry = null
             )
         }
@@ -851,7 +868,10 @@ class WorkspaceViewModel(
         cancelPlaybackSession(resetState = false)
         val id = ++playbackSessionId
         val kind = request.sourceKind()
-        mutableState.update { it.copy(playbackSession = PlaybackSession(id, request, kind, volume = player?.volume?.value ?: it.playbackSession.volume, phase = PlaybackSessionPhase.RESOLVING)) }
+        val feedbackId = beginFeedback(OperationKind.PREVIEW_DECODE_RENDER, OperationPhase.VALIDATING, "Checking preview prerequisites…")
+        playbackFeedbackSessionId = id
+        playbackFeedbackId = feedbackId
+        mutableState.update { it.copy(playbackSession = PlaybackSession(id, request, kind, volume = player?.volume?.value ?: it.playbackSession.volume, phase = PlaybackSessionPhase.RESOLVING), operationFeedback = feedbackTracker.current) }
         capability?.let { needed ->
             state.value.runtimeReadiness.capabilityFailure(needed)?.let { message ->
                 return failPlaybackSession(id, PlaybackFailureStage.RESOLUTION, message)
@@ -865,6 +885,9 @@ class WorkspaceViewModel(
                     is PlaybackRequest.Mix -> request.artifact()
                 }
                 if (!isCurrentPlaybackSession(id)) return@launch
+                feedbackTracker.progress(feedbackId, OperationPhase.LOCAL, "Decoding or rendering preview audio…")?.let { feedback ->
+                    mutableState.update { current -> if (current.playbackSession.id == id) current.copy(operationFeedback = feedback) else current }
+                }
                 updatePlaybackSession(id) { it.copy(artifact = artifact, phase = PlaybackSessionPhase.PREPARING) }
                 when (val prepared = monitor.prepare(artifact.path)) {
                     is PlaybackPrepareResult.Failed -> failPlaybackSession(id, prepared.failure.stage, prepared.failure.message)
@@ -872,7 +895,12 @@ class WorkspaceViewModel(
                         updatePlaybackSession(id) { it.copy(phase = PlaybackSessionPhase.READY, durationSeconds = prepared.durationSeconds) }
                         updatePlaybackSession(id) { it.copy(phase = PlaybackSessionPhase.STARTING) }
                         when (val started = monitor.start()) {
-                            PlaybackStartResult.Started -> updatePlaybackSession(id) { it.copy(phase = PlaybackSessionPhase.PLAYING) }
+                            PlaybackStartResult.Started -> {
+                                updatePlaybackSession(id) { it.copy(phase = PlaybackSessionPhase.PLAYING) }
+                                feedbackTracker.complete(feedbackId, "Preview playback started.")?.let { feedback ->
+                                    mutableState.update { current -> if (current.playbackSession.id == id) current.copy(operationFeedback = feedback) else current }
+                                }
+                            }
                             is PlaybackStartResult.Failed -> failPlaybackSession(id, started.failure.stage, started.failure.message)
                         }
                     }
@@ -954,6 +982,8 @@ class WorkspaceViewModel(
         ++playbackSessionId
         playbackJob?.cancel()
         playbackJob = null
+        playbackFeedbackSessionId = null
+        playbackFeedbackId = null
         player?.stop()
         if (resetState) mutableState.update { it.copy(playbackSession = PlaybackSession(volume = player?.volume?.value ?: 1.0)) }
     }
@@ -967,8 +997,14 @@ class WorkspaceViewModel(
         }
     }
 
-    private fun failPlaybackSession(id: Long, stage: PlaybackFailureStage, message: String) =
+    private fun failPlaybackSession(id: Long, stage: PlaybackFailureStage, message: String) {
         updatePlaybackSession(id) { it.copy(phase = PlaybackSessionPhase.FAILED, failureStage = stage, failureMessage = message, retryAction = PlaybackRetryAction.RETRY_SAME_SELECTION) }
+        if (playbackFeedbackSessionId == id) playbackFeedbackId?.let { feedbackId ->
+            feedbackTracker.fail(feedbackId, message, OperationRetryAction.RETRY_SAFE_OPERATION)?.let { feedback ->
+                mutableState.update { current -> if (current.playbackSession.id == id) current.copy(operationFeedback = feedback) else current }
+            }
+        }
+    }
 
     private fun PlaybackRequest.sourceKind(): PlaybackSourceKind = when (this) {
         is PlaybackRequest.Part -> when (audioSource) {
@@ -1014,14 +1050,15 @@ class WorkspaceViewModel(
     private fun saveRole() {
         val project = state.value.project ?: return
         val draft = state.value.dialog as? WorkspaceDialog.EditRole ?: return
-        mutableState.update { it.copy(operation = WorkspaceOperation.UpdatingPartRole(draft.partId), notification = null) }
+        val feedbackId = beginFeedback(OperationKind.PROJECT_HYDRATION, OperationPhase.LOCAL, "Saving ${draft.partId} role…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.UpdatingPartRole(draft.partId), notification = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
             runCatching {
                 withContext(ioDispatcher) {
                     projectService.updatePart(UpdatePartRoleRequest(project.root, draft.partId, draft.role)).refreshed()
                 }
-            }.onSuccess { opened(it, "Updated ${draft.partId} role") }
-                .onFailure { fail("update role", it.message ?: "Unable to update role.") }
+            }.onSuccess { opened(it, "Updated ${draft.partId} role", feedbackId) }
+                .onFailure { fail("update role", it.message ?: "Unable to update role.", sessionId = feedbackId) }
         }
     }
 
@@ -1047,7 +1084,8 @@ class WorkspaceViewModel(
         val project = state.value.project ?: return
         if (state.value.operation.isMutating) return
         val existing = state.value.structureDraft
-        mutableState.update { it.copy(operation = WorkspaceOperation.SavingStructure, notification = null, retry = null) }
+        val feedbackId = beginFeedback(OperationKind.PROJECT_HYDRATION, OperationPhase.LOCAL, "Saving song structure…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.SavingStructure, notification = null, retry = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
             runCatching { withContext(ioDispatcher) { projectService.saveStructure(SaveStructureRequest(project.root, partIds)).refreshed() } }
                 .onSuccess { snapshot ->
@@ -1055,10 +1093,10 @@ class WorkspaceViewModel(
                         it.songPlanAvailable || it.arrangementAvailable || it.generatedMidiAvailable || it.stemsAvailable ||
                             it.dryMixAvailable || it.loFiMixAvailable || it.masterAvailable
                     }
-                    opened(snapshot, if (partIds.isEmpty()) "Cleared structure" else "Saved song structure", stale =
+                    opened(snapshot, if (partIds.isEmpty()) "Cleared structure" else "Saved song structure", feedbackId, stale =
                         state.value.downstreamArtifactsStale || (existing != partIds && artifactsExist))
                 }
-                .onFailure { fail("save structure", it.message ?: "Unable to save structure.") }
+                .onFailure { fail("save structure", it.message ?: "Unable to save structure.", sessionId = feedbackId) }
         }
     }
 
@@ -1116,17 +1154,19 @@ class WorkspaceViewModel(
     }
 
     private fun runGenerateArrangement(request: GenerateArrangementRequest) {
-        mutableState.update { it.copy(operation = WorkspaceOperation.GeneratingArrangement(), notification = null, retry = null) }
+        val feedbackId = beginFeedback(OperationKind.ARRANGEMENT, OperationPhase.VALIDATING, "Validating analyses before arranging…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.GeneratingArrangement(), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
             runCatching {
                 withContext(ioDispatcher) {
                     arrangementService.generate(request) { progress ->
-                        scope.launch { updateProgress(WorkspaceOperation.GeneratingArrangement(progress)) }
+                        scope.launch { updateProgress(feedbackId, WorkspaceOperation.GeneratingArrangement(progress)) }
                     }
                 }
             }.onSuccess { arrangement ->
-                mutableState.update { it.copy(arrangement = arrangement, selectedArrangementSection = arrangement.sections.firstOrNull()?.index, arrangementDraftDirty = false, operation = WorkspaceOperation.Idle, notification = if (arrangement.approvalRequired) "Arrangement draft is ready for review and explicit approval." else "Approved deterministic arrangement generated.", retry = null) }
-            }.onFailure { fail("generate arrangement", it.message ?: "Unable to generate arrangement.", WorkspaceRetry.GenerateArrangement(request)) }
+                val message = if (arrangement.approvalRequired) "Arrangement draft is ready for review and explicit approval." else "Approved deterministic arrangement generated."
+                mutableState.update { it.copy(arrangement = arrangement, selectedArrangementSection = arrangement.sections.firstOrNull()?.index, arrangementDraftDirty = false, operation = WorkspaceOperation.Idle, notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message, if (arrangement.approvalRequired) OperationSeverity.WARNING else OperationSeverity.SUCCESS) ?: it.operationFeedback, retry = null) }
+            }.onFailure { fail("generate arrangement", it.message ?: "Unable to generate arrangement.", WorkspaceRetry.GenerateArrangement(request), feedbackId) }
         }
     }
 
@@ -1143,15 +1183,16 @@ class WorkspaceViewModel(
         val project = state.value.project ?: return
         val arrangement = state.value.arrangement
         if (arrangement?.approvalRequired != true || arrangement.stale) return
-        mutableState.update { it.copy(operation = WorkspaceOperation.ApprovingArrangement, notification = null) }
+        val feedbackId = beginFeedback(OperationKind.APPROVAL, OperationPhase.VALIDATING, "Approving validated arrangement…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.ApprovingArrangement, notification = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
             runCatching { withContext(ioDispatcher) { arrangementService.approve(project.root) } }
-                .onSuccess { arrangement -> mutableState.update { it.copy(arrangement = arrangement, selectedArrangementSection = arrangement.sections.firstOrNull()?.index, operation = WorkspaceOperation.Idle, notification = "Arrangement approved.") } }
-                .onFailure { fail("approve arrangement", it.message ?: "Unable to approve arrangement.") }
+                .onSuccess { arrangement -> mutableState.update { it.copy(arrangement = arrangement, selectedArrangementSection = arrangement.sections.firstOrNull()?.index, operation = WorkspaceOperation.Idle, notification = "Arrangement approved.", operationFeedback = feedbackTracker.complete(feedbackId, "Arrangement approved.") ?: it.operationFeedback) } }
+                .onFailure { fail("approve arrangement", it.message ?: "Unable to approve arrangement.", sessionId = feedbackId) }
         }
     }
 
-    private fun updateProgress(operation: WorkspaceOperation) {
+    private fun updateProgress(feedbackId: String, operation: WorkspaceOperation) {
         val progress = when (operation) {
             is WorkspaceOperation.ImportingPart -> operation.progress
             is WorkspaceOperation.AnalyzingPart -> operation.progress
@@ -1161,8 +1202,16 @@ class WorkspaceViewModel(
             is WorkspaceOperation.BuildingSong -> operation.progress
             else -> null
         }
-        progress?.let { operationLogger.event(it.operation, "${it.stageIndex}-of-${it.stageCount}", it.artifact) }
-        mutableState.update { current -> if (current.operation.isMutating) current.copy(operation = operation) else current }
+        val feedback = progress?.let {
+            feedbackTracker.progress(
+                feedbackId, OperationProgressFeedbackPhase(it), it.message, it.stageIndex, it.stageCount,
+                it.artifact?.fileName?.toString(), OperationProgressFeedbackKind(it)
+            )
+        } ?: return
+        operationLogger.operationEvent(feedback.sessionId, feedback.kind, feedback.phase, progress.artifact)
+        mutableState.update { current ->
+            if (current.operation.isMutating && current.operationFeedback.sessionId == feedbackId) current.copy(operation = operation, operationFeedback = feedback) else current
+        }
     }
 
     private fun updateMixSetting(instrument: String, setting: LogicalMixSetting) {
@@ -1186,11 +1235,12 @@ class WorkspaceViewModel(
     private fun applyMix(settings: PersistedMixSettings, root: Path? = state.value.project?.root) {
         val projectRoot = root ?: return
         if (state.value.operation.isMutating) return
-        mutableState.update { it.copy(operation = WorkspaceOperation.ApplyingMix(), notification = null) }
+        val feedbackId = beginFeedback(OperationKind.MIXING, OperationPhase.VALIDATING, "Validating rendered stems…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.ApplyingMix(), notification = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
-            runCatching { withContext(ioDispatcher) { mixService.apply(app.melotrail.application.ApplyMixRequest(projectRoot, settings)) { progress -> scope.launch { updateProgress(WorkspaceOperation.ApplyingMix(progress)) } } } }
-                .onSuccess { snapshot -> mutableState.update { it.copy(mix = snapshot, operation = WorkspaceOperation.Idle, notification = "Updated lossless dry mix from existing stems.") } }
-                .onFailure { fail("apply mix", it.message ?: "Unable to apply mix settings.") }
+            runCatching { withContext(ioDispatcher) { mixService.apply(app.melotrail.application.ApplyMixRequest(projectRoot, settings)) { progress -> scope.launch { updateProgress(feedbackId, WorkspaceOperation.ApplyingMix(progress)) } } } }
+                .onSuccess { snapshot -> mutableState.update { it.copy(mix = snapshot, operation = WorkspaceOperation.Idle, notification = "Updated lossless dry mix from existing stems.", operationFeedback = feedbackTracker.complete(feedbackId, "Updated lossless dry mix from existing stems.") ?: it.operationFeedback) } }
+                .onFailure { fail("apply mix", it.message ?: "Unable to apply mix settings.", sessionId = feedbackId) }
         }
     }
 
@@ -1201,10 +1251,11 @@ class WorkspaceViewModel(
         if (arrangement == null || arrangement.stale || arrangement.approvalRequired || !arrangement.approved) return fail("build song", "Build Song requires a current approved arrangement.")
         state.value.runtimeReadiness.capabilityFailure(RuntimeCapability.BUILD_SONG)?.let { return fail("build song", it) }
         val options = state.value.buildOptions
-        mutableState.update { it.copy(operation = WorkspaceOperation.BuildingSong(), notification = null, retry = null) }
+        val feedbackId = beginFeedback(OperationKind.MASTERING, OperationPhase.VALIDATING, "Validating release pipeline…", cancellableAtBoundary = true)
+        mutableState.update { it.copy(operation = WorkspaceOperation.BuildingSong(), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
         buildJob = scope.launch {
-            runCatching { withContext(ioDispatcher) { service.build(BuildSongRequest(project.root, options.loFi, options.mp3)) { progress -> scope.launch { updateProgress(WorkspaceOperation.BuildingSong(progress)) } } } }
-                .onSuccess {
+            runCatching { withContext(ioDispatcher) { service.build(BuildSongRequest(project.root, options.loFi, options.mp3)) { progress -> scope.launch { updateProgress(feedbackId, WorkspaceOperation.BuildingSong(progress)) } } } }
+                .onSuccess { result ->
                     val (refreshed, loadedMix) = withContext(ioDispatcher) {
                         projectService.open(project.root) to runCatching { mixService.load(project.root) }
                     }
@@ -1213,13 +1264,14 @@ class WorkspaceViewModel(
                             project = refreshed,
                             mix = loadedMix.getOrNull(),
                             operation = WorkspaceOperation.Idle,
-                            notification = loadedMix.exceptionOrNull()?.message?.let { warning -> "Build complete: ${it.master}. Mix controls could not be loaded: $warning" }
-                                ?: "Build complete: ${it.master}"
+                            notification = loadedMix.exceptionOrNull()?.message?.let { warning -> "Build complete: ${result.master}. Mix controls could not be loaded: $warning" }
+                                ?: "Build complete: ${result.master}",
+                            operationFeedback = feedbackTracker.complete(feedbackId, "Build complete: ${result.master.fileName}", if (loadedMix.isFailure) OperationSeverity.WARNING else OperationSeverity.SUCCESS, result.master.fileName.toString()) ?: current.operationFeedback
                         )
                     }
                 }.onFailure {
-                    if (it is CancellationException) mutableState.update { current -> current.copy(operation = WorkspaceOperation.Idle, notification = "Build cancellation requested; the current atomic stage was allowed to finish safely.") }
-                    else fail("build song", it.message ?: "Build Song failed.")
+                    if (it is CancellationException) mutableState.update { current -> current.copy(operation = WorkspaceOperation.Idle, notification = "Build cancellation requested; the current atomic stage was allowed to finish safely.", operationFeedback = feedbackTracker.complete(feedbackId, "Build cancellation completed at a safe boundary.", OperationSeverity.INFORMATION) ?: current.operationFeedback) }
+                    else fail("build song", it.message ?: "Build Song failed.", sessionId = feedbackId)
                 }
         }
     }
@@ -1288,7 +1340,7 @@ class WorkspaceViewModel(
 
     private fun ProjectSnapshot.refreshed(): ProjectSnapshot = projectService.open(root)
 
-    private fun opened(project: ProjectSnapshot, message: String, stale: Boolean = false) {
+    private fun opened(project: ProjectSnapshot, message: String, feedbackId: String? = null, stale: Boolean = false) {
         cancelPlaybackSession(resetState = true)
         preferences.saveLastOpenedProject(project.root)
         operationLogger.event("project", "opened", project.root)
@@ -1306,6 +1358,7 @@ class WorkspaceViewModel(
                 audioPreparation = AudioPreparationUiState(),
                 operation = WorkspaceOperation.Idle,
                 notification = openedMessage,
+                operationFeedback = feedbackId?.let { feedbackTracker.complete(it, openedMessage) } ?: it.operationFeedback,
                 dialog = null,
                 structureDraft = project.structure.map { section -> section.partId },
                 downstreamArtifactsStale = stale,
@@ -1318,6 +1371,10 @@ class WorkspaceViewModel(
     }
 
     private fun hydrateProject(project: ProjectSnapshot, openedMessage: String) = scope.launch {
+        val feedbackId = beginFeedback(OperationKind.PROJECT_HYDRATION, OperationPhase.LOCAL, "Loading project artifacts…")
+        mutableState.update { current ->
+            if (current.project?.root == project.root) current.copy(operationFeedback = feedbackTracker.current) else current
+        }
         val hydration = withContext(ioDispatcher) {
             val mix = runCatching { mixService.load(project.root) }
             val arrangement = runCatching { arrangementService.load(project.root) }
@@ -1338,15 +1395,49 @@ class WorkspaceViewModel(
                     arrangement = arrangement,
                     selectedArrangementSection = arrangement?.sections?.firstOrNull()?.index,
                     notification = if (warnings.isEmpty()) current.notification ?: openedMessage
-                    else "$openedMessage Some optional artifacts need attention: ${warnings.joinToString("; ")}"
+                    else "$openedMessage Some optional artifacts need attention: ${warnings.joinToString("; ")}",
+                    operationFeedback = feedbackTracker.complete(
+                        feedbackId,
+                        if (warnings.isEmpty()) openedMessage else "Project opened with optional artifact warnings.",
+                        if (warnings.isEmpty()) OperationSeverity.SUCCESS else OperationSeverity.WARNING
+                    ) ?: current.operationFeedback
                 )
             }
         }
     }
 
-    private fun fail(action: String, message: String, retry: WorkspaceRetry? = null) {
-        operationLogger.event(action, "failed", failure = IllegalStateException(message))
-        mutableState.update { it.copy(operation = WorkspaceOperation.Failed(action, message), notification = message, retry = retry) }
+    private fun beginFeedback(
+        kind: OperationKind,
+        phase: OperationPhase,
+        message: String,
+        artifactLabel: String? = null,
+        cancellableAtBoundary: Boolean = false
+    ): String {
+        val feedback = feedbackTracker.begin(kind, phase, message, artifactLabel, cancellableAtBoundary)
+        operationLogger.operationEvent(feedback.sessionId, feedback.kind, feedback.phase)
+        return feedback.sessionId
+    }
+
+    private fun fail(action: String, message: String, retry: WorkspaceRetry? = null, sessionId: String? = null) {
+        val feedback = if (sessionId != null) {
+            feedbackTracker.fail(sessionId, message, retry?.let { OperationRetryAction.RETRY_SAFE_OPERATION })
+        } else {
+            val id = beginFeedback(OperationKind.PROJECT_HYDRATION, OperationPhase.VALIDATING, "Validating $action…")
+            feedbackTracker.fail(id, message, retry?.let { OperationRetryAction.RETRY_SAFE_OPERATION })
+        }
+        val visible = feedback ?: state.value.operationFeedback
+        operationLogger.operationEvent(visible.sessionId, visible.kind, visible.phase, failure = IllegalStateException(message))
+        mutableState.update { current ->
+            if (sessionId != null && current.operationFeedback.sessionId != sessionId) current
+            else current.copy(operation = WorkspaceOperation.Failed(action, message), notification = message, retry = retry, operationFeedback = visible)
+        }
+    }
+
+    private fun cancelOperation() {
+        val feedback = feedbackTracker.cancelAtBoundary(state.value.operationFeedback.sessionId, "Cancellation requested; finishing the current safe boundary…") ?: return
+        mutableState.update { it.copy(operationFeedback = feedback) }
+        operationLogger.operationEvent(feedback.sessionId, feedback.kind, feedback.phase)
+        buildJob?.cancel()
     }
 
     private fun hasUnsavedDraft(): Boolean = state.value.project != null && state.value.arrangementDraftDirty

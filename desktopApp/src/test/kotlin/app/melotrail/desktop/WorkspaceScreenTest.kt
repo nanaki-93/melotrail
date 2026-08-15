@@ -76,21 +76,52 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `global feedback renders success failure dismissal and retry actions`() = runComposeUiTest {
+    fun `stable status feedback renders typed error dismissal and retry actions`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
+        val feedback = OperationFeedback(
+            sessionId = "operation-7", kind = OperationKind.IMPORT, phase = OperationPhase.FAILED,
+            message = "Worker unavailable", outcomeSeverity = OperationSeverity.ERROR,
+            retryAction = OperationRetryAction.RETRY_SAFE_OPERATION
+        )
         setContent {
             MelotrailTheme {
-                WorkspaceScreen(projectState().copy(notification = "Unable to import part: worker unavailable", retry = WorkspaceRetry.Analyze(java.nio.file.Path.of("build/test-project"), "A")), intents::add)
+                OperationStatusSurface(projectState().copy(notification = "Worker unavailable", operationFeedback = feedback, retry = WorkspaceRetry.Analyze(java.nio.file.Path.of("build/test-project"), "A")), intents::add)
             }
         }
 
-        onNodeWithTag(WorkspaceTags.GLOBAL_FEEDBACK).assertIsDisplayed()
-        onNodeWithText("Unable to import part: worker unavailable").assertIsDisplayed()
+        onNodeWithTag(WorkspaceTags.OPERATION_FEEDBACK).assertExists()
+        onNodeWithText("✕  Error").assertExists()
+        onNodeWithText("Worker unavailable").assertExists()
         onAllNodesWithTag(WorkspaceTags.GLOBAL_FEEDBACK_RETRY).assertCountEquals(1)
         onNodeWithTag(WorkspaceTags.GLOBAL_FEEDBACK_RETRY).performClick()
         assertEquals(WorkspaceIntent.Retry, intents.last())
         onNodeWithTag(WorkspaceTags.GLOBAL_FEEDBACK_DISMISS).performClick()
         assertEquals(WorkspaceIntent.DismissNotification, intents.last())
+    }
+
+    @Test
+    fun `status surface keeps text and icons for all severities and loading modes`() = runComposeUiTest {
+        fun status(phase: OperationPhase, severity: OperationSeverity? = null, work: OperationWork? = null) = OperationFeedback(
+            sessionId = "operation-${phase.name}", kind = OperationKind.MIXING, phase = phase,
+            message = "Backend phase is explicit", work = work, outcomeSeverity = severity
+        )
+
+        setContent { MelotrailTheme { WorkspaceScreen(projectState().copy(operationFeedback = status(OperationPhase.WAITING_FOR_WORKER)), onIntent = {}) } }
+        onNodeWithText("↻  Loading · waiting for worker").assertExists()
+        onNodeWithTag(WorkspaceTags.IMPORT_PROGRESS).assertExists()
+
+        setContent { MelotrailTheme { WorkspaceScreen(projectState().copy(operationFeedback = status(OperationPhase.LOCAL, work = OperationWork(2, 5))), onIntent = {}) } }
+        onNodeWithText("2/5 steps").assertExists()
+
+        listOf(
+            OperationSeverity.INFORMATION to "ℹ  Information",
+            OperationSeverity.WARNING to "⚠  Warning",
+            OperationSeverity.SUCCESS to "✓  Complete",
+            OperationSeverity.ERROR to "✕  Error"
+        ).forEach { (severity, label) ->
+            setContent { MelotrailTheme { WorkspaceScreen(projectState().copy(operationFeedback = status(if (severity == OperationSeverity.ERROR) OperationPhase.FAILED else OperationPhase.COMPLETE, severity)), onIntent = {}) } }
+            onNodeWithText(label).assertExists()
+        }
     }
 
     @Test

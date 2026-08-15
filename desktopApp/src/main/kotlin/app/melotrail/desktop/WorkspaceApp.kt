@@ -86,6 +86,7 @@ object WorkspaceTags {
     const val LIBRARY_PANEL = "library-panel"
     const val MIX_TRACK_PREFIX = "mix-track-"
     const val OPERATION_STATUS = "operation-status"
+    const val OPERATION_FEEDBACK = "operation-feedback"
     const val CREATE_PROJECT = "create-project"
     const val OPEN_PROJECT = "open-project"
     const val ADD_MIDI = "add-midi"
@@ -147,35 +148,10 @@ fun WorkspaceScreen(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit
         verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)
     ) {
         ProjectHeader(state, onIntent)
-        state.notification?.let { GlobalFeedback(it, state.retry != null, onIntent) }
         WorkspaceShell(state, onIntent, Modifier.weight(1f))
         CompactTransport(state, onIntent)
     }
     WorkspaceDialogs(state, onIntent, onExit)
-}
-
-@Composable
-private fun GlobalFeedback(message: String, retryAvailable: Boolean, onIntent: (WorkspaceIntent) -> Unit) {
-    val failed = message.contains("unable", ignoreCase = true) || message.contains("failed", ignoreCase = true) || message.contains("could not", ignoreCase = true)
-    Card(
-        modifier = Modifier.fillMaxWidth().semantics {
-            testTag = WorkspaceTags.GLOBAL_FEEDBACK
-            liveRegion = LiveRegionMode.Polite
-            contentDescription = message
-        },
-        colors = CardDefaults.cardColors(containerColor = if (failed) MaterialTheme.colorScheme.error.copy(alpha = 0.14f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
-        border = BorderStroke(1.dp, if (failed) MaterialTheme.colorScheme.error.copy(alpha = 0.55f) else MaterialTheme.colorScheme.primary.copy(alpha = 0.45f))
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = MusicWorkspaceTokens.Spacing.Lg, vertical = MusicWorkspaceTokens.Spacing.Sm),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)
-        ) {
-            Text(message, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-            if (retryAvailable) TextButton(onClick = { onIntent(WorkspaceIntent.Retry) }, modifier = Modifier.semantics { testTag = WorkspaceTags.GLOBAL_FEEDBACK_RETRY }) { Text("Retry") }
-            TextButton(onClick = { onIntent(WorkspaceIntent.DismissNotification) }, modifier = Modifier.semantics { testTag = WorkspaceTags.GLOBAL_FEEDBACK_DISMISS }) { Text("Dismiss") }
-        }
-    }
 }
 
 internal fun transportShortcutIntent(
@@ -288,7 +264,7 @@ private fun WorkspaceNavigation(state: WorkspaceUiState, onIntent: (WorkspaceInt
                 section.label,
                 modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(MusicWorkspaceTokens.Radius.Control))
                     .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f) else MusicWorkspaceTokens.ElevatedSurface)
-                    .clickable(enabled = !state.operation.isMutating) { onIntent(WorkspaceIntent.SelectWorkspaceSection(section)) }
+                    .clickable { onIntent(WorkspaceIntent.SelectWorkspaceSection(section)) }
                     .padding(horizontal = MusicWorkspaceTokens.Spacing.Md, vertical = MusicWorkspaceTokens.Spacing.Sm)
                     .semantics {
                         testTag = WorkspaceTags.WORKSPACE_SECTION_PREFIX + section.name.lowercase()
@@ -1086,33 +1062,71 @@ private fun PlaceholderPanel(panel: Panel, state: WorkspaceUiState, onIntent: (W
     }
     WorkspaceCard(title, tag) {
         if (panel == Panel.Status) {
-            Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+            OperationStatusSurface(state, onIntent)
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
             ReadinessRecovery(state.runtimeReadiness, onIntent)
         } else {
             Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         }
-        val progress = (state.operation as? WorkspaceOperation.ImportingPart)?.progress
-            ?: (state.operation as? WorkspaceOperation.AnalyzingPart)?.progress
-            ?: (state.operation as? WorkspaceOperation.RetryingMidiCleanup)?.progress
-            ?: (state.operation as? WorkspaceOperation.GeneratingArrangement)?.progress
-            ?: (state.operation as? WorkspaceOperation.ApplyingMix)?.progress
-            ?: (state.operation as? WorkspaceOperation.BuildingSong)?.progress
-        if (progress != null) {
-            LinearProgressIndicator(
-                progress = { progress.stageIndex.toFloat() / progress.stageCount },
-                modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.IMPORT_PROGRESS }
-            )
-            Text("${progress.stageIndex}/${progress.stageCount} · ${progress.message}", style = MaterialTheme.typography.bodySmall)
-            progress.artifact?.let { Text(it.toString(), style = MaterialTheme.typography.bodySmall) }
-        }
-        if (state.operation is WorkspaceOperation.InspectingPart || state.operation is WorkspaceOperation.ApplyingAudioCleanup || state.operation is WorkspaceOperation.TranscribingPart) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.IMPORT_PROGRESS })
-            Text("Working at a safe project-artifact boundary…", style = MaterialTheme.typography.bodySmall)
-        }
-        if (state.operation is WorkspaceOperation.BuildingSong) OutlinedButton(onClick = { onIntent(WorkspaceIntent.CancelOperation) }) { Text("Cancel at boundary") }
     }
 }
+
+@Composable
+internal fun OperationStatusSurface(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    val feedback = state.operationFeedback
+    val (label, icon, color) = when {
+        feedback.active -> Triple("Loading · ${feedback.phase.label()}", "↻", MusicWorkspaceTokens.Loading)
+        feedback.outcomeSeverity == OperationSeverity.ERROR -> Triple("Error", "✕", MusicWorkspaceTokens.Error)
+        feedback.outcomeSeverity == OperationSeverity.WARNING -> Triple("Warning", "⚠", MusicWorkspaceTokens.Warning)
+        feedback.outcomeSeverity == OperationSeverity.INFORMATION -> Triple("Information", "ℹ", MusicWorkspaceTokens.Information)
+        feedback.outcomeSeverity == OperationSeverity.SUCCESS -> Triple("Complete", "✓", MusicWorkspaceTokens.Teal)
+        else -> Triple("Ready", "✓", MusicWorkspaceTokens.Teal)
+    }
+    Column(
+        modifier = Modifier.semantics {
+            testTag = WorkspaceTags.OPERATION_FEEDBACK
+            liveRegion = LiveRegionMode.Polite
+            contentDescription = "$label: ${if (feedback.phase == OperationPhase.IDLE) detailForIdle(state) else feedback.message}"
+        },
+        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)
+    ) {
+        Text("$icon  $label", color = color, style = MaterialTheme.typography.labelLarge)
+        Text(if (feedback.phase == OperationPhase.IDLE) detailForIdle(state) else feedback.message, color = MaterialTheme.colorScheme.onSurface)
+        feedback.artifactLabel?.let { Text("Artifact: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        if (feedback.active) {
+            if (feedback.determinate) {
+                val work = checkNotNull(feedback.work)
+                LinearProgressIndicator(progress = { work.completed.toFloat() / work.total }, modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.IMPORT_PROGRESS })
+                Text("${work.completed}/${work.total} steps", style = MaterialTheme.typography.bodySmall)
+            } else {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.IMPORT_PROGRESS })
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+            if (feedback.retryAction != null && state.retry != null) {
+                TextButton(onClick = { onIntent(WorkspaceIntent.Retry) }, modifier = Modifier.semantics { testTag = WorkspaceTags.GLOBAL_FEEDBACK_RETRY }) { Text("Retry") }
+            }
+            if (feedback.cancellableAtBoundary) {
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.CancelOperation) }, modifier = Modifier.semantics { testTag = WorkspaceTags.BUILD_CANCEL }) { Text("Cancel at boundary") }
+            }
+            if (!feedback.active && feedback.phase != OperationPhase.IDLE) {
+                TextButton(onClick = { onIntent(WorkspaceIntent.DismissNotification) }, modifier = Modifier.semantics { testTag = WorkspaceTags.GLOBAL_FEEDBACK_DISMISS }) { Text("Dismiss") }
+            }
+        }
+    }
+}
+
+private fun OperationPhase.label(): String = when (this) {
+    OperationPhase.LOCAL -> "working locally"
+    OperationPhase.WAITING_FOR_WORKER -> "waiting for worker"
+    OperationPhase.WAITING_FOR_MODEL -> "waiting for model"
+    OperationPhase.WAITING_FOR_RENDERER -> "waiting for renderer"
+    OperationPhase.VALIDATING -> "validating"
+    OperationPhase.CANCELLING -> "reaching safe boundary"
+    else -> name.lowercase()
+}
+
+private fun detailForIdle(state: WorkspaceUiState): String = state.project?.let { "Ready · ${it.name} is open." } ?: "Ready. Create or open a project to begin."
 
 @Composable
 private fun ReadinessRecovery(readiness: RuntimeReadiness?, onIntent: (WorkspaceIntent) -> Unit) {

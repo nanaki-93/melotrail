@@ -19,6 +19,10 @@ class WorkspaceThemeTest {
         assertTrue(contrastRatio(MusicWorkspaceTokens.TextPrimary, MusicWorkspaceTokens.Canvas) >= 7.0)
         assertTrue(contrastRatio(MusicWorkspaceTokens.TextSecondary, MusicWorkspaceTokens.Surface) >= 4.5)
         assertTrue(contrastRatio(MusicWorkspaceTokens.Error, MusicWorkspaceTokens.Surface) >= 4.5)
+        assertTrue(contrastRatio(MusicWorkspaceTokens.Information, MusicWorkspaceTokens.Surface) >= 4.5)
+        assertTrue(contrastRatio(MusicWorkspaceTokens.Warning, MusicWorkspaceTokens.Surface) >= 4.5)
+        assertTrue(contrastRatio(MusicWorkspaceTokens.Loading, MusicWorkspaceTokens.Surface) >= 4.5)
+        assertEquals(MusicWorkspaceTokens.Teal, MusicWorkspaceTokens.Success)
     }
 
     @Test
