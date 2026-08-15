@@ -10,7 +10,7 @@ WORKER_DEPS_STAMP := $(VENV)/.worker-deps-installed
 WORKER_HOST ?= 127.0.0.1
 WORKER_PORT ?= 8081
 
-.PHONY: help build test check run cli cli-help worker python-install clean
+.PHONY: help build test check check-legacy-frontend run cli cli-help worker python-install clean
 
 help:
 	@echo "AI Music Workstation"
@@ -37,7 +37,11 @@ test:
 	$(GRADLE) test
 
 check:
+	$(MAKE) check-legacy-frontend
 	$(GRADLE) check
+
+check-legacy-frontend:
+	bash tools/check_no_legacy_frontend.sh
 
 run:
 	$(GRADLE) bootRun

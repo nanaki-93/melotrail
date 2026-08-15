@@ -29,6 +29,9 @@
 
 ### Kotlin
 - CLI.
+- Compose Desktop product UI over typed application services.
+- Optional local Spring JSON API; it does not serve a browser UI or static
+  fallback.
 - Project/part/structure domain models.
 - Validation.
 - Arrangement model.

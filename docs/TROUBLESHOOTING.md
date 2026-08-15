@@ -1,7 +1,7 @@
 # Desktop troubleshooting
 
 This guide covers the local Compose Desktop application. It does not require
-Spring or the deprecated browser frontend.
+Spring.
 
 ## Package and project startup
 

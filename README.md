@@ -383,7 +383,7 @@ instance identities, MIDI analysis bounds, and instrument/enum allow-lists.
 
 ```bash
 make test                              # Kotlin unit/integration tests
-python -m unittest discover -s worker/tests
+.venv/bin/python -m unittest discover -s worker/tests
 make build                             # Full Gradle build
 ```
 
@@ -398,6 +398,7 @@ WAV/PCM-24 intermediates and preserve the source sample rate and channels.
 | `make build` | Build the application |
 | `make test` | Run tests |
 | `make check` | Run Gradle verification |
+| `make check-legacy-frontend` | Reject reintroduced browser-frontend files/references |
 | `make run` | Start Spring Boot |
 | `make cli-help` | Show CLI help |
 | `make cli ARGS="..."` | Run CLI |

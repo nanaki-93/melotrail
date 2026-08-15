@@ -3,10 +3,9 @@
 ## Repository state — 2026-08-13
 
 The application is a single Kotlin 2.0 / Spring Boot Gradle module with a
-separate Python HTTP worker. The repository also contains a static frontend,
-CLI, audio codecs/DSP, and Kotlin tests. No arranger implementation exists
-yet. This is a historical baseline: the static frontend is deprecated and
-scheduled for audited removal in Task 057 of `PLAN_UI_AND_CREATION.md`.
+separate Python HTTP worker, CLI, audio codecs/DSP, and Kotlin tests. No
+arranger implementation exists yet. This is a historical pre-retirement
+baseline: the former static frontend was removed in Task 057 on 2026-08-15.
 
 Key entry points:
 

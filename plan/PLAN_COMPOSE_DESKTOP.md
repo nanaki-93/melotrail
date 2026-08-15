@@ -249,7 +249,7 @@ Implement one task at a time using `plan/PROMPT_TEMPLATE.md`. Do not begin Compo
 ## Definition of done
 
 - `./gradlew cliRun --args="..."` remains supported.
-- `./gradlew :desktopApp:run` opens the local desktop workspace without Spring or the static frontend.
+- `./gradlew :desktopApp:run` opens the local desktop workspace without Spring.
 - Both adapters call the same typed application services.
 - A user can create/open a project, import and analyze parts, save a structure, generate/approve an arrangement, build a master, adjust a persisted mix, and audition available outputs.
 - Every existing project artifact and safety rule remains canonical and inspectable.
@@ -273,4 +273,3 @@ Primary references:
 
 - https://github.com/JetBrains/compose-multiplatform/releases
 - https://blog.jetbrains.com/kotlin/2026/05/new-kmp-default-structure/
-

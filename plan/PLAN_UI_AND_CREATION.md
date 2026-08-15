@@ -2,13 +2,12 @@
 
 ## Product decision
 
-The Compose Desktop application is the product UI. Improve that application;
-do not extend the older static Spring frontend. It is deprecated and will be
-retired in Task 057 after the desktop workflow and its package have passed the
-release gate. The reference in `plan/UI.png` is a visual and interaction
-reference, not a feature specification: retain its dark, compact, three-column
-studio feel and section timeline, but do not add its travel, scene, video,
-weather, or image features.
+The Compose Desktop application is the product UI. The older static Spring
+frontend was retired in Task 057 after the desktop workflow and package release
+gate. The reference in `plan/UI.png` is a visual and interaction reference, not
+a feature specification: retain its dark, compact, three-column studio feel and
+section timeline, but do not add its travel, scene, video, weather, or image
+features.
 
 The workflow becomes a guided, recoverable path:
 
@@ -141,7 +140,8 @@ the public local command surface. A known failure is reported separately from a
 new regression. Fix only verified, in-scope defects; do not use the audit as
 permission for an uncontrolled rewrite.
 
-Static frontend retirement is deliberate and complete, not a partial hide:
+The completed static-frontend retirement was deliberate and complete, not a
+partial hide:
 
 ```text
 inventory references and API coverage
@@ -152,12 +152,12 @@ inventory references and API coverage
   -> assert no tracked legacy-web references remain
 ```
 
-Before deletion, verify the Compose app and CLI do not depend on the browser UI.
-Preserve the Spring JSON API in this sequence; removing it requires a separate
-explicit product decision even if current adapters do not call it. Do not delete
-project data, audio assets under `sounds/`, API controllers, or worker code. The
-resulting root route may return a normal 404 or an explicit API-only response;
-it must not redirect to stale HTML.
+The retirement verified that the Compose app and CLI do not depend on the
+browser UI. The Spring JSON API remains; removing it requires a separate
+explicit product decision even if current adapters do not call it. Project data,
+audio assets under `sounds/`, API controllers, and worker code were preserved.
+The resulting root route returns a normal 404 and does not redirect to stale
+HTML.
 
 ## Task sizing for Qwen3-Coder-30B
 

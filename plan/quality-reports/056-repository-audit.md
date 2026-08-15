@@ -12,7 +12,8 @@ Task 057 already owns the complete, deliberate static-frontend removal listed
 below; it is not a surprise audit finding to be folded into an unrelated fix.
 
 P2/P3 findings are recorded as deferred. No source, project, audio, worker, or
-static-frontend file was modified by this audit.
+static-frontend file was modified by this audit. Task 058 assigned the deferred
+items to future contracts 059–062; Task 057 completed the retirement scope.
 
 ## Reproducible verification record
 
@@ -46,8 +47,8 @@ The initial API probe used `/api/health` and the first jar-name attempt used
 | Evidence/location | Audit command output; `Makefile` intentionally uses `.venv/bin/python` for `make worker`. `.venv/bin/python` runs all 34 tests successfully. |
 | Classification | Pre-existing local environment configuration, not a source regression. |
 | Risk | A contributor can run the wrong interpreter and misdiagnose healthy worker code. |
-| Disposition | Deferred P2 documentation/setup clarity. No Task 059+: the supported Make target already selects the virtualenv and the code is healthy there. |
-| Task/status | Record for Task 058 final documentation reconciliation if promoted. |
+| Disposition | Deferred P2 documentation/setup clarity. |
+| Task/status | Future Task 059; not active without explicit promotion. |
 
 ### AUD-056-02 — CLI help describes a retired worker mode
 
@@ -61,8 +62,8 @@ The initial API probe used `/api/health` and the first jar-name attempt used
 | Evidence/location | `CliMain` help output; `ArrangementProjectCommands.kt` and desktop readiness use `WORKER_BASE_URL`. |
 | Classification | Verified pre-existing documentation/interface drift. |
 | Risk | Confusing recovery/setup guidance; no demonstrated artifact corruption. |
-| Disposition | Deferred P2 to Task 058 documentation reconciliation; do not alter CLI behavior in this audit. |
-| Task/status | No Task 059+ required. |
+| Disposition | Deferred P2; do not alter CLI behavior in this audit. |
+| Task/status | Future Task 060; not active without explicit promotion. |
 
 ### AUD-056-03 — Legacy `/api/config` does not report process environment overrides
 
@@ -76,8 +77,8 @@ The initial API probe used `/api/health` and the first jar-name attempt used
 | Evidence/location | `ConfigService.defaults()` and its separate `data/config/server-config.json`, versus `application.properties`/`ServerConfig`. |
 | Classification | Verified pre-existing legacy-API behavior. |
 | Risk | Misleading API configuration display/update semantics; Compose and CLI do not use this adapter. |
-| Disposition | Deferred P2. Preserve the API during Task 057; create a narrow post-retirement API contract only if the endpoint remains product-relevant. |
-| Task/status | No Task 059+ required. |
+| Disposition | Deferred P2. The API was preserved during Task 057. |
+| Task/status | Future Task 061; not active without explicit promotion. |
 
 ### AUD-056-04 — Static frontend is fully present and bundled with the desktop package
 
@@ -91,8 +92,8 @@ The initial API probe used `/api/health` and the first jar-name attempt used
 | Evidence/location | `src/main/resources/static/`, `tools/frontend_server.py`, `Makefile`, `README.md`, `src/main/kotlin/ai/music/workstation/server/config/WebController.kt`, package contents. |
 | Classification | Intentional pre-retirement state, not an unplanned regression. |
 | Risk | Desktop package carries obsolete UI and users can start two divergent frontends. |
-| Disposition | Task 057 must remove the entire inventory while preserving JSON API controllers; Task 058 must add the drift guard and reconcile docs. |
-| Task/status | Covered by existing Task 057, not a new blocker. |
+| Disposition | Completed by Task 057 while preserving JSON API controllers; Task 058 adds the drift guard and reconciles docs. |
+| Task/status | Completed; no new blocker. |
 
 ### AUD-056-05 — CWD-relative paths remain in legacy/server development fallbacks
 
@@ -107,7 +108,7 @@ The initial API probe used `/api/health` and the first jar-name attempt used
 | Classification | Mixed intentional compatibility/default behavior; no packaged-desktop failure reproduced. |
 | Risk | Legacy launchers can use unexpected local storage or worker endpoint. |
 | Disposition | Deferred P3; do not widen Task 057 beyond frontend removal. |
-| Task/status | No Task 059+ required. |
+| Task/status | Future Task 062; not active without explicit promotion. |
 
 ## Safety, resource, and compatibility review
 
