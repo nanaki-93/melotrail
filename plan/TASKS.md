@@ -138,7 +138,7 @@ These tasks start only after Task 028 and must be implemented one at a time.
 | [047](tasks/completed/047-creation-progress-model.md) | Creation progress model | 032, 034, 039, 043, 046 | Deterministic stage and next-action state |
 | [048](tasks/completed/048-creation-header-and-checklist.md) | Creation header and checklist | 047 | Visible creation stepper and next action |
 | [049](tasks/completed/049-parts-and-structure-workspace.md) | Parts and structure workspace | 048 | Linked parts/preparation/structure experience |
-| [050](tasks/050-arrangement-build-workspace.md) | Arrangement and build workspace | 049 | Clear approval and build lifecycle |
+| [050](tasks/completed/050-arrangement-build-workspace.md) | Arrangement and build workspace | 049 | Clear approval and build lifecycle |
 | [051](tasks/051-workspace-theme-tokens.md) | Workspace theme tokens | 050 | Stable reference-aligned visual vocabulary |
 | [052](tasks/052-responsive-workspace-shell.md) | Responsive workspace shell | 051 | Wide/medium/narrow reference layout |
 | [053](tasks/053-timeline-mixer-visualization.md) | Timeline, mixer, visual states | 052 | Real-data timeline and final visual states |

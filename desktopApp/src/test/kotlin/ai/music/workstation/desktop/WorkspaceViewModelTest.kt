@@ -5,6 +5,9 @@ import ai.music.workstation.application.ArrangementApplicationService
 import ai.music.workstation.application.ArrangementPlannerKind
 import ai.music.workstation.application.ArrangementSectionSnapshot
 import ai.music.workstation.application.ArrangementSnapshot
+import ai.music.workstation.application.BuildApplicationService
+import ai.music.workstation.application.BuildResult
+import ai.music.workstation.application.BuildSongRequest
 import ai.music.workstation.application.CreateProjectRequest
 import ai.music.workstation.application.GenerateArrangementRequest
 import ai.music.workstation.application.GeneratedMidiSnapshot
@@ -404,6 +407,26 @@ class WorkspaceViewModelTest {
 
         assertEquals("Qwen response is not valid arrangement JSON", assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation).message)
         assertIs<WorkspaceRetry.GenerateArrangement>(viewModel.state.value.retry)
+        viewModel.close()
+    }
+
+    @Test
+    fun `build dispatch remains gated by a Qwen draft without implicit approval`() = runTest {
+        val root = Path.of("build/build-workspace-project")
+        val project = projectSnapshot(root)
+        val draft = arrangementSnapshot(root, approvalRequired = true, approved = false)
+        val build = FakeBuildService()
+        val viewModel = WorkspaceViewModel(
+            FakeProjectService(result = project), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
+            runtimeReadinessService = ReadyReadinessService, arrangementService = FakeArrangementService(loaded = draft), buildService = build
+        )
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.RefreshRuntimeReadiness); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.BuildSong)
+        assertEquals(0, build.calls)
+        assertEquals("Build Song requires a current approved arrangement.", assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation).message)
+
         viewModel.close()
     }
 
@@ -869,5 +892,17 @@ private class FakeArrangementService(
     override fun approve(root: Path): ArrangementSnapshot {
         approveCalls++
         return checkNotNull(approved)
+    }
+}
+
+private class FakeBuildService : BuildApplicationService {
+    var calls = 0
+    var request: BuildSongRequest? = null
+
+    override suspend fun build(request: BuildSongRequest, progress: ai.music.workstation.application.ProgressSink): BuildResult {
+        calls++
+        this.request = request
+        progress.report(ai.music.workstation.application.OperationProgress("build", 3, 9, "Rendering or reusing stems", request.root.resolve("stems/piano.wav")))
+        return BuildResult(request.root, request.root.resolve("mix/dry.wav"), null, request.root.resolve("output/master.wav"), null, reusedStems = true)
     }
 }

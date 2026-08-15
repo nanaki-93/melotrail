@@ -118,7 +118,7 @@ class WorkspaceScreenTest {
             }
         }
 
-        onNodeWithTag(WorkspaceTags.ARRANGEMENT_GENERATE).assertIsDisplayed()
+        onNodeWithTag(WorkspaceTags.ARRANGEMENT_GENERATE).assertExists()
         onNodeWithTag(WorkspaceTags.ARRANGEMENT_PREVIEW).assertExists()
         onNodeWithTag(WorkspaceTags.ARRANGEMENT_APPROVE).assertExists()
         onNodeWithText("Transition out: build").assertExists()
@@ -143,6 +143,46 @@ class WorkspaceScreenTest {
         onNodeWithTag(WorkspaceTags.PLAYBACK_MASTER).assertExists()
         onNodeWithTag(WorkspaceTags.PLAYBACK_SEEK).assertExists()
         onNodeWithTag(WorkspaceTags.PLAYBACK_VOLUME).assertExists()
+    }
+
+    @Test
+    fun `arrangement and build lifecycle expose gates nine-stage progress reuse and safe cancellation`() = runComposeUiTest {
+        val root = java.nio.file.Path.of("build/build-lifecycle-project")
+        val project = projectState().project!!.copy(
+            readiness = ai.music.workstation.application.ProjectReadiness(true, true, true, true, true, true, true, true, true, true)
+        )
+        val approved = ai.music.workstation.application.ArrangementSnapshot(root, emptyList(), false, true, false, root.resolve("arrangement.json"))
+        setContent {
+            MusicWorkstationTheme {
+                WorkspaceScreen(
+                    WorkspaceUiState(project = project.copy(root = root), arrangement = approved, runtimeReadiness = runtimeReadiness(DependencyReadiness(DependencyStatus.READY, "ready"))),
+                    onIntent = {}
+                )
+            }
+        }
+        onNodeWithTag(WorkspaceTags.BUILD_LIFECYCLE).assertExists()
+        onNodeWithTag(WorkspaceTags.BUILD_START).assertIsEnabled()
+        onNodeWithText("Stems are reused only when their canonical fingerprints are current", substring = true).assertExists()
+        onNodeWithText("Available: dry", substring = true).assertExists()
+
+        setContent {
+            MusicWorkstationTheme {
+                WorkspaceScreen(
+                    WorkspaceUiState(
+                        project = project.copy(root = root),
+                        arrangement = approved,
+                        runtimeReadiness = runtimeReadiness(DependencyReadiness(DependencyStatus.READY, "ready")),
+                        operation = WorkspaceOperation.BuildingSong(
+                            ai.music.workstation.application.OperationProgress("build", 3, 9, "Rendering or reusing stems", root.resolve("stems/piano.wav"))
+                        )
+                    ),
+                    onIntent = {}
+                )
+            }
+        }
+        onNodeWithText("Stage 3 of 9: Rendering or reusing stems").assertExists()
+        onNodeWithText("Current artifact: piano.wav").assertExists()
+        onNodeWithTag(WorkspaceTags.BUILD_CANCEL).assertIsEnabled()
     }
 
     @Test

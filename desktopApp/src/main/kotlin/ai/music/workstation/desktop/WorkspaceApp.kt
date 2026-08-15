@@ -94,6 +94,9 @@ object WorkspaceTags {
     const val ARRANGEMENT_PREVIEW = "arrangement-preview"
     const val ARRANGEMENT_STYLE = "arrangement-style"
     const val BUILD_SONG = "build-song"
+    const val BUILD_LIFECYCLE = "build-lifecycle"
+    const val BUILD_START = "build-start"
+    const val BUILD_CANCEL = "build-cancel"
     const val MIX_RESET = "mix-reset"
     const val PLAYBACK_DRY = "playback-dry"
     const val PLAYBACK_LOFI = "playback-lofi"
@@ -846,6 +849,7 @@ private fun ArrangementPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent
             if (piano) Text("Source · required", modifier = Modifier.padding(top = 12.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
+    Text(arrangementPrerequisite(state), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     Button(onClick = { onIntent(WorkspaceIntent.GenerateArrangement) }, enabled = !disabled, modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.ARRANGEMENT_GENERATE }) { Text("Generate arrangement") }
     ArrangementReview(state, onIntent)
 }
@@ -968,8 +972,40 @@ private fun MixPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Uni
         Checkbox(state.buildOptions.loFi, { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(loFi = it))) }, enabled = !disabled); Text("LoFi", modifier = Modifier.padding(top = 12.dp))
         Checkbox(state.buildOptions.mp3, { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(mp3 = it))) }, enabled = !disabled); Text("MP3", modifier = Modifier.padding(top = 12.dp))
     }
+    BuildLifecycle(state, onIntent)
     PlaybackControls(state, onIntent)
 }
+
+@Composable
+private fun BuildLifecycle(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    val progress = (state.operation as? WorkspaceOperation.BuildingSong)?.progress
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = 6.dp).semantics { testTag = WorkspaceTags.BUILD_LIFECYCLE },
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text("Build Song", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+        Text(buildSongPrerequisite(state), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("The service validates, generates/reuses MIDI and stems, mixes, repairs, optionally applies LoFi/MP3, masters, then writes release metadata.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Stems are reused only when their canonical fingerprints are current; cancellation waits for the current atomic stage.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (progress != null) {
+            LinearProgressIndicator(progress = { progress.stageIndex.toFloat() / progress.stageCount }, modifier = Modifier.fillMaxWidth())
+            Text("Stage ${progress.stageIndex} of ${progress.stageCount}: ${progress.message}", style = MaterialTheme.typography.bodySmall)
+            progress.artifact?.let { Text("Current artifact: ${it.fileName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            OutlinedButton(onClick = { onIntent(WorkspaceIntent.CancelOperation) }, modifier = Modifier.semantics { testTag = WorkspaceTags.BUILD_CANCEL }) { Text("Cancel at boundary") }
+        } else {
+            Button(onClick = { onIntent(WorkspaceIntent.BuildSong) }, enabled = canBuild(state), modifier = Modifier.semantics { testTag = WorkspaceTags.BUILD_START }) { Text("Start Build Song") }
+        }
+        state.project?.readiness?.let { readiness ->
+            Text(
+                "Available: dry ${availabilityLabel(readiness.dryMixAvailable)}, LoFi ${availabilityLabel(readiness.loFiMixAvailable)}, master ${availabilityLabel(readiness.masterAvailable)}, release ${availabilityLabel(readiness.releaseAvailable)}.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+private fun availabilityLabel(available: Boolean): String = if (available) "ready" else "not yet built"
 
 @Composable
 private fun PlaybackControls(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
@@ -1262,6 +1298,22 @@ private fun buildSongPrerequisite(state: WorkspaceUiState): String = when {
     state.arrangement.approvalRequired -> "Build Song is blocked: approve the Qwen draft."
     state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.available != true -> state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.reason ?: "Build Song is checking local readiness."
     else -> "Build Song will generate/reuse MIDI and stems, then mix, repair, master, and write release metadata."
+}
+
+private fun arrangementPrerequisite(state: WorkspaceUiState): String = when {
+    state.project == null -> "Open a project before generating an arrangement."
+    state.structureDraft.isEmpty() -> "Add and save at least one section before generating an arrangement."
+    else -> {
+        val missing = state.structureDraft.toSet().filter { id ->
+            state.project.parts.firstOrNull { it.id == id }?.analysis?.status != ai.music.workstation.application.PartAnalysisStatus.MIDI
+        }
+        when {
+            missing.isNotEmpty() -> "Analyze every structure part before arranging: ${missing.joinToString(", ")}."
+            state.arrangement?.stale == true -> "The arrangement is stale; regenerate it from the current analyses and structure."
+            state.arrangement?.approvalRequired == true -> "Review and explicitly approve the Qwen draft before building."
+            else -> "Analyses and structure are ready. Generate a deterministic arrangement or a reviewable Qwen draft."
+        }
+    }
 }
 
 private fun canBuild(state: WorkspaceUiState): Boolean = state.project != null && !state.operation.isMutating && state.arrangement?.approved == true && state.arrangement?.approvalRequired == false && state.arrangement?.stale == false && state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.available == true
