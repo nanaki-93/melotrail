@@ -71,10 +71,11 @@ existing `.mid`/`.midi` file. It keeps the MIDI tracks and safe metadata in
 place, writes through a temporary file, reparses it, and atomically publishes
 only a valid result. It never changes the raw input.
 
-Cleanup requests use version `2` and a named profile. The default
-`conservative` profile removes exact duplicate notes, notes shorter than 50 ms
-(using the MIDI tempo map), and note-on velocities below 8. It preserves
-expressive timing, pedal controls, orphan note-offs, and same-pitch retriggers.
+Repair requests use version `2` and a named profile. The default documented
+standard is `transcription-safe`; it removes exact duplicate notes, notes
+shorter than 50 ms, quiet noise, orphan note-offs, and redundant sustain values,
+ends same-pitch retriggers at their next start, and bounds retained velocities.
+It preserves valid tempo and time-signature metadata.
 
 `transcription-safe` additionally removes orphan note-offs and repeated CC64
 values on the same track/channel, ends an earlier same-channel/pitch retrigger

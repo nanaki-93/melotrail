@@ -21,6 +21,7 @@ import app.melotrail.preparation.WorkerAudioCleanupBoundary
 import app.melotrail.preparation.TranscriptionQualityGateService
 import app.melotrail.preparation.WorkerTranscriptionBoundary
 import app.melotrail.arrangement.PartAnalysis
+import app.melotrail.arrangement.MidiCleanupOptions
 import app.melotrail.arrangement.InstrumentRegistryLoader
 import app.melotrail.arrangement.SoundLibraryLocator
 import app.melotrail.arrangement.SoundLibraryLocation
@@ -137,8 +138,16 @@ object DesktopServiceComposition {
         }
 
         override suspend fun clean(input: Path, output: Path) {
+            clean(input, output, MidiCleanupOptions())
+        }
+
+        override suspend fun clean(input: Path, output: Path, options: MidiCleanupOptions) {
             Files.createDirectories(checkNotNull(output.parent))
-            val response = client.execute(MidiCleanCommand(input.toString(), output.toString()))
+            val response = client.execute(MidiCleanCommand(
+                input.toString(), output.toString(), options.requestVersion,
+                options.profile.name.lowercase().replace('_', '-'), options.quantize, options.strength,
+                options.minNoteMs, options.minVelocity, options.normalizeVelocity, options.cleanSustain
+            ))
             require(response.status == WorkerStatus.COMPLETED) { cleanupFailureMessage(response.error) }
             requireMidi(output, "MIDI cleanup")
         }

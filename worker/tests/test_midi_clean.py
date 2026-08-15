@@ -85,9 +85,9 @@ class MidiCleanCommandTest(unittest.TestCase):
             self.assertEqual(1, result["duplicatesRemoved"])
             self.assertEqual(1, result["shortNotesRemoved"])
             self.assertEqual(1, result["lowVelocityNotesRemoved"])
-            self.assertEqual("conservative", result["profile"])
+            self.assertEqual("transcription-safe", result["profile"])
             self.assertEqual(2, result["version"])
-            self.assertEqual(0, result["overlapsRepaired"])
+            self.assertEqual(1, result["overlapsRepaired"])
             self.assertEqual(0, result["quantizedNotes"])
             self.assertEqual(1, result["preservedTempoEvents"])
             self.assertEqual(1, result["preservedTimeSignatureEvents"])
@@ -98,10 +98,13 @@ class MidiCleanCommandTest(unittest.TestCase):
 
             notes = completed_notes(output)
             overlap_notes = [note for note in notes if note[2] == 64]
-            self.assertEqual([(984, 1464), (1224, 1704)], [(note[4], note[5]) for note in overlap_notes])
+            self.assertEqual([(984, 1224), (1224, 1704)], [(note[4], note[5]) for note in overlap_notes])
             self.assertTrue(all(end > start for *_, start, end in notes))
             velocity_zero_events = [message for message in mido.MidiFile(output).tracks[1] if message.type == "note_on" and message.note == 65 and message.velocity == 0]
             self.assertEqual([], velocity_zero_events)
+            self.assertEqual(64, len(result["inputSha256"]))
+            self.assertEqual(64, len(result["outputSha256"]))
+            self.assertTrue(result["tempoAndTimeSignaturesPreserved"])
 
     def test_velocity_normalization_and_tempo_map_threshold_are_explicit(self) -> None:
         with tempfile.TemporaryDirectory() as directory_name:
@@ -173,7 +176,7 @@ class MidiCleanCommandTest(unittest.TestCase):
             midi.tracks.append(track)
             midi.save(source)
 
-            conservative_result = midi_clean_command({"path": str(source), "outputPath": str(conservative)})
+            conservative_result = midi_clean_command({"path": str(source), "outputPath": str(conservative), "profile": "conservative"})
             result = midi_clean_command({
                 "path": str(source), "outputPath": str(safe), "profile": "transcription-safe",
             })
@@ -272,7 +275,7 @@ class MidiCleanCommandTest(unittest.TestCase):
                 ({"path": str(source), "outputPath": str(output), "profile": "unknown"}, "profile must"),
                 ({"path": str(source), "outputPath": str(output), "quantize": "1/16"}, "quantize requires"),
                 ({"path": str(source), "outputPath": str(output), "profile": "tighten-timing", "quantize": "1/16"}, "requires strength"),
-                ({"path": str(source), "outputPath": str(output), "cleanSustain": True}, "require transcription-safe"),
+                ({"path": str(source), "outputPath": str(output), "profile": "conservative", "cleanSustain": True}, "require transcription-safe"),
                 ({"path": str(source), "outputPath": str(output), "minNoteMs": -1}, "minNoteMs must"),
                 ({"path": str(source), "outputPath": str(output)}, "Could not parse MIDI input"),
             )

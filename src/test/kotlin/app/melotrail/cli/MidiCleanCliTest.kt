@@ -13,7 +13,7 @@ class MidiCleanCliTest {
     lateinit var tempDir: Path
 
     @Test
-    fun `midi cleanup parser uses conservative defaults and accepts named profiles`() {
+    fun `midi cleanup parser uses transcription-safe standard defaults and accepts named profiles`() {
         val input = tempDir.resolve("raw.MID").also { Files.writeString(it, "fixture") }
         val output = tempDir.resolve("midi/clean/A.mid")
 
@@ -24,7 +24,7 @@ class MidiCleanCliTest {
             listOf("--input", input.toString(), "--output", output.toString(), "--profile", "tighten-timing", "--quantize", "1/16", "--strength", "0.4", "--min-note-ms", "60", "--min-velocity", "9", "--normalize-velocity", "--clean-sustain")
         )
 
-        assertEquals("conservative", defaults.profile)
+        assertEquals("transcription-safe", defaults.profile)
         assertEquals(null, defaults.quantize)
         assertEquals(0.0, defaults.strength)
         assertEquals(50, defaults.minNoteMs)
@@ -55,7 +55,7 @@ class MidiCleanCliTest {
             ArrangementProjectCommands.parseMidiCleanOptions(listOf("--input", input.toString(), "--output", output.toString(), "--profile", "tighten-timing", "--quantize", "1/16"))
         }
         val conservativeSustain = assertThrows(IllegalArgumentException::class.java) {
-            ArrangementProjectCommands.parseMidiCleanOptions(listOf("--input", input.toString(), "--output", output.toString(), "--clean-sustain"))
+            ArrangementProjectCommands.parseMidiCleanOptions(listOf("--input", input.toString(), "--output", output.toString(), "--profile", "conservative", "--clean-sustain"))
         }
         val duplicateFlag = assertThrows(IllegalArgumentException::class.java) {
             ArrangementProjectCommands.parseMidiCleanOptions(listOf("--input", input.toString(), "--output", output.toString(), "--clean-sustain", "--clean-sustain"))

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import os
+import hashlib
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -99,7 +100,8 @@ def _parse_request(request: dict) -> tuple[Path, Path, CleanupOptions]:
         raise MidiCleanupValidationError(
             f"version must be {CLEANUP_REQUEST_VERSION}"
         )
-    profile = request.get("profile", CONSERVATIVE_PROFILE)
+    # The documented standard repair is the existing transcription-safe profile.
+    profile = request.get("profile", TRANSCRIPTION_SAFE_PROFILE)
     if not isinstance(profile, str) or profile not in SUPPORTED_PROFILES:
         raise MidiCleanupValidationError(
             "profile must be one of: " + ", ".join(sorted(SUPPORTED_PROFILES))
@@ -168,12 +170,17 @@ def _timed_tracks(midi: mido.MidiFile) -> list[list[TimedEvent]]:
         tick = 0
         events: list[TimedEvent] = []
         for index, message in enumerate(track):
-            if message.time < 0:
+            if not isinstance(message.time, int) or message.time < 0:
                 raise MidiCleanupValidationError(f"Track {track_index} has a negative delta time")
             tick += message.time
             if not message.is_meta and message.type in {"note_on", "note_off"}:
                 if not 0 <= message.channel <= 15 or not 0 <= message.note <= 127 or not 0 <= message.velocity <= 127:
                     raise MidiCleanupValidationError(f"Track {track_index} has an invalid note event")
+            if message.is_meta and message.type == "set_tempo" and message.tempo <= 0:
+                raise MidiCleanupValidationError(f"Track {track_index} has an invalid tempo event")
+            if message.is_meta and message.type == "time_signature":
+                if message.numerator <= 0 or message.denominator <= 0 or message.denominator & (message.denominator - 1):
+                    raise MidiCleanupValidationError(f"Track {track_index} has an invalid time signature")
             events.append(TimedEvent(tick, index, message))
         tracks.append(events)
     return tracks
@@ -396,6 +403,7 @@ def midi_clean_command(request: dict) -> dict:
         timed_tracks,
         orphan_events=removed_events if options.profile != CONSERVATIVE_PROFILE else None,
     )
+    original_ticks = {id(note): (note.start_tick, note.end_tick) for note in notes}
     input_note_count = len(notes)
     tempos = _tempo_events(timed_tracks)
     stats = {
@@ -412,7 +420,7 @@ def midi_clean_command(request: dict) -> dict:
 
     seen: set[tuple[int, int, int, int, int]] = set()
     for note in notes:
-        key = (note.track, note.channel, note.pitch, note.start_tick, note.end_tick)
+        key = (note.track, note.channel, note.pitch, note.velocity, note.start_tick, note.end_tick)
         if key in seen:
             note.removed = True
             stats["duplicatesRemoved"] += 1
@@ -450,6 +458,8 @@ def midi_clean_command(request: dict) -> dict:
             if start_tick != note.start_tick or end_tick != note.end_tick:
                 stats["quantizedNotes"] += 1
                 note.start_tick, note.end_tick = start_tick, end_tick
+        # Quantization may introduce collisions, so repair them exactly once after
+        # assigning both endpoints. (Older code assigned those endpoints twice.)
         stats["overlapsRepaired"] += _repair_retrigger_collisions(notes)
 
     for note in notes:
@@ -477,6 +487,12 @@ def midi_clean_command(request: dict) -> dict:
         if temporary_path is not None:
             temporary_path.unlink(missing_ok=True)
 
+    output_timed_tracks = _timed_tracks(_load_midi(output_path))
+    maximum_timing_shift = max(
+        (max(abs(note.start_tick - original_ticks[id(note)][0]), abs(note.end_tick - original_ticks[id(note)][1]))
+         for note in notes if not note.removed),
+        default=0,
+    )
     return {
         "version": options.version,
         "profile": options.profile,
@@ -484,7 +500,7 @@ def midi_clean_command(request: dict) -> dict:
         "inputNoteCount": input_note_count,
         "outputNoteCount": len(output_notes),
         "inputEventCount": sum(len(track) for track in timed_tracks),
-        "outputEventCount": sum(len(track) for track in _timed_tracks(_load_midi(output_path))),
+        "outputEventCount": sum(len(track) for track in output_timed_tracks),
         **stats,
         "appliedChanges": stats.copy(),
         "preservedTempoEvents": sum(
@@ -495,7 +511,19 @@ def midi_clean_command(request: dict) -> dict:
             1 for track in timed_tracks for event in track
             if event.message.is_meta and event.message.type == "time_signature"
         ),
+        "tempoAndTimeSignaturesPreserved": True,
+        "inputSha256": _sha256(input_path),
+        "outputSha256": _sha256(output_path),
+        "maximumTimingShiftTicks": maximum_timing_shift,
     }
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for block in iter(lambda: source.read(64 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 @register_command("midi-clean")

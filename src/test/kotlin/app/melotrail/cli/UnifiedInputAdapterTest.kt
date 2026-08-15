@@ -39,7 +39,7 @@ class UnifiedInputAdapterTest {
     }
 
     @Test
-    fun `direct MIDI copies source and registers a clean MIDI artifact`() {
+    fun `direct MIDI copies source and registers immutable raw MIDI for explicit repair`() {
         val root = createProject("midi")
         val input = midiFile("verse.mid")
 
@@ -51,15 +51,15 @@ class UnifiedInputAdapterTest {
         val project = ProjectStore.read(root)
         val part = project.parts.single()
         assertEquals("source/A.mid", part.file)
-        assertEquals(null, part.midi?.raw)
-        assertEquals("midi/clean/A.mid", part.midi?.clean)
+        assertEquals("midi/raw/A.mid", part.midi?.raw)
+        assertEquals(null, part.midi?.clean)
         assertTrue(Files.readAllBytes(input).contentEquals(Files.readAllBytes(root.resolve(part.file))))
-        assertMidi(root.resolve(requireNotNull(part.midi).clean))
-        assertEquals(listOf(root.resolve("midi/clean/A.mid")), project.requireCleanMidi(root))
+        assertMidi(root.resolve(requireNotNull(part.midi).raw))
+        assertThrows(IllegalArgumentException::class.java) { project.requireCleanMidi(root) }
     }
 
     @Test
-    fun `audio WAV and MP3 imports use transcription and cleanup without changing originals`() {
+    fun `audio WAV and MP3 imports use transcription without changing originals`() {
         listOf("wav", "mp3").forEachIndexed { index, extension ->
             val root = createProject("audio-$extension")
             val input = tempDir.resolve("input-$extension.$extension").also { Files.write(it, "original-$extension".encodeToByteArray()) }
@@ -72,32 +72,29 @@ class UnifiedInputAdapterTest {
 
             val part = ProjectStore.read(root).parts.single()
             assertEquals("midi/raw/P$index.mid", part.midi?.raw)
-            assertMidi(root.resolve(requireNotNull(part.midi).clean))
+            assertEquals(null, part.midi?.clean)
+            assertMidi(root.resolve(requireNotNull(part.midi).raw))
             assertTrue(before.contentEquals(Files.readAllBytes(input)))
             assertTrue(before.contentEquals(Files.readAllBytes(root.resolve(part.file))))
         }
     }
 
     @Test
-    fun `failure leaves copied source and unregistered artifacts but does not update metadata`() {
+    fun `import does not invoke cleanup and registers raw artifacts`() {
         val root = createProject("failure")
         val input = tempDir.resolve("verse.wav").also { Files.writeString(it, "source") }
 
-        val error = assertThrows(IllegalStateException::class.java) {
-            ArrangementProjectCommands.executePartAddForTest(
+        ArrangementProjectCommands.executePartAddForTest(
                 arrayOf("part", "add", root.toString(), "--id", "A", "--file", input.toString(), "--transcribe"),
                 object : MidiPreparationService {
                     override suspend fun transcribe(input: Path, output: Path) = writeMidi(output)
                     override suspend fun clean(input: Path, output: Path) = error("cleanup unavailable")
                 }
             )
-        }
-
-        assertTrue(error.message.orEmpty().contains("was not registered"))
         assertTrue(Files.isRegularFile(root.resolve("source/A.wav")))
         assertTrue(Files.isRegularFile(root.resolve("midi/raw/A.mid")))
         assertFalse(Files.exists(root.resolve("midi/clean/A.mid")))
-        assertTrue(ProjectStore.read(root).parts.isEmpty())
+        assertEquals(listOf("A"), ProjectStore.read(root).parts.map { it.id })
     }
 
     @Test

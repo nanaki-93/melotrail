@@ -98,7 +98,7 @@ or an eligible WAV/MP3 source, inspect/prepare it, clean/analyze MIDI, save the
 structure, generate/review an arrangement, then build and audition validated
 artifacts. The app never requires Spring.
 
-- Direct MIDI is preserved under `source/` and cleaned before analysis.
+- Direct MIDI is preserved under `source/` and copied as immutable evidence under `midi/raw/`. Use the explicit **Repair MIDI** stage before analysis.
 - WAV/WAVE and MP3 input is accepted only for the optional **solo-piano**
   transcription workflow. Do not use it to claim reliable editable MIDI from
   vocals, full mixes, or arbitrary polyphonic material.
@@ -203,10 +203,11 @@ make cli ARGS='transcribe --input ./recordings/verse.wav --output ./projects/son
 
 ### Deterministic MIDI cleanup
 
-Clean raw piano transcription before later MIDI analysis. Requests use cleanup
-contract version 2. The default `conservative` profile removes only exact
-duplicates, notes shorter than 50 ms, and note-on velocities below 8; it
-preserves expressive timing, pedal controls, orphan note-offs, and retriggers.
+Repair raw piano transcription before later MIDI analysis. Requests use repair
+contract version 2. The default documented standard is `transcription-safe`:
+it removes exact duplicates, notes shorter than 50 ms, quiet noise, orphan
+note-offs, and redundant sustain controls; it fixes retrigger overlaps and
+bounds retained velocities while preserving tempo and time signatures.
 
 `transcription-safe` additionally removes orphan note-offs and redundant CC64
 pedal values, ends same-channel/pitch retriggers at the next start, and limits
@@ -217,7 +218,7 @@ quantize. Every response reports the profile, before/after note and event
 counts, and each applied-change count.
 
 ```bash
-make cli ARGS='midi-clean --input ./projects/song-001/midi/raw/A.mid --output ./projects/song-001/midi/clean/A.mid'
+make cli ARGS='part repair ./projects/song-001 --id A'
 make cli ARGS='midi-clean --input ./projects/song-001/midi/raw/A.mid --output ./projects/song-001/midi/clean/A.mid --profile transcription-safe'
 make cli ARGS='midi-clean --input ./projects/song-001/midi/raw/A.mid --output ./projects/song-001/midi/clean/A.mid --profile tighten-timing --quantize 1/16 --strength 0.4'
 ```
@@ -225,8 +226,9 @@ make cli ARGS='midi-clean --input ./projects/song-001/midi/raw/A.mid --output ./
 ### MIDI-first project input
 
 New arranger projects store an explicit PCM-24 render format and preserve each
-original import under `source/`. Direct MIDI is cleaned before registration;
-audio requires explicit transcription and produces both raw and clean MIDI.
+original import under `source/`. Direct MIDI and audio transcription publish
+immutable raw MIDI first; Repair MIDI explicitly publishes the canonical
+repaired MIDI and its quality report before analysis.
 
 ```bash
 make cli ARGS='project create ./projects/song-001 --sample-rate 44100 --channels 2'

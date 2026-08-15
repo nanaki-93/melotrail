@@ -21,7 +21,7 @@ import javax.sound.midi.ShortMessage
 @Serializable
 data class MidiCleanupOptions(
     val requestVersion: Int = 2,
-    val profile: MidiCleanupProfile = MidiCleanupProfile.CONSERVATIVE,
+    val profile: MidiCleanupProfile = MidiCleanupProfile.TRANSCRIPTION_SAFE,
     val quantize: String? = null,
     val strength: Double = 0.0,
     val minNoteMs: Int = 50,
@@ -63,6 +63,7 @@ data class MidiQualityReport(
     val cleanup: MidiCleanupOptions,
     val timing: MidiTimingChangeSummary,
     val tempoAndTimeSignaturesPreserved: Boolean,
+    val approvalRequired: Boolean = false,
     val warnings: List<MidiQualityWarning> = emptyList(),
     val recommendations: List<MidiQualityRecommendation> = emptyList()
 ) {
@@ -84,6 +85,8 @@ data class MidiQualityReport(
         internal val PART_ID = Regex("[A-Za-z0-9_-]+")
         const val MAX_WARNINGS = 8
         const val MAX_RECOMMENDATIONS = 3
+        const val MAX_AUTOMATIC_REMOVED_NOTES = 8
+        const val MAX_AUTOMATIC_TIMING_SHIFT_TICKS = 120L
     }
 }
 
@@ -164,6 +167,8 @@ class MidiQualityReporter {
             cleanup = cleanup,
             timing = timing,
             tempoAndTimeSignaturesPreserved = preserved,
+            approvalRequired = raw.artifact.noteCount - clean.artifact.noteCount > MidiQualityReport.MAX_AUTOMATIC_REMOVED_NOTES ||
+                maxOf(timing.maxStartShiftTicks, timing.maxEndShiftTicks) > MidiQualityReport.MAX_AUTOMATIC_TIMING_SHIFT_TICKS,
             warnings = warnings,
             recommendations = recommendations
         ).also(MidiQualityReport::requireValid)

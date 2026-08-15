@@ -287,9 +287,9 @@ class WorkspaceViewModelTest {
         viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
         viewModel.accept(WorkspaceIntent.SelectPart("A"))
 
-        assertEquals(app.melotrail.arrangement.MidiCleanupProfile.CONSERVATIVE, viewModel.state.value.midiQualityReview.profile)
+        assertEquals(app.melotrail.arrangement.MidiCleanupProfile.TRANSCRIPTION_SAFE, viewModel.state.value.midiQualityReview.profile)
         viewModel.accept(WorkspaceIntent.RetryMidiCleanup); advanceUntilIdle()
-        assertEquals(app.melotrail.arrangement.MidiCleanupProfile.CONSERVATIVE, service.midiCleanupRetry?.cleanup?.profile)
+        assertEquals(app.melotrail.arrangement.MidiCleanupProfile.TRANSCRIPTION_SAFE, service.midiCleanupRetry?.cleanup?.profile)
         viewModel.accept(WorkspaceIntent.SelectMidiCleanupProfile(app.melotrail.arrangement.MidiCleanupProfile.TRANSCRIPTION_SAFE))
         viewModel.accept(WorkspaceIntent.RetryMidiCleanup); advanceUntilIdle()
         assertEquals(app.melotrail.arrangement.MidiCleanupProfile.TRANSCRIPTION_SAFE, service.midiCleanupRetry?.cleanup?.profile)
@@ -972,6 +972,8 @@ private class FakeProjectService(
         progress.report(app.melotrail.application.OperationProgress("retry-midi-cleanup", 2, 3, "Saving quality report"))
         return checkNotNull(current)
     }
+
+    override fun approveMidiRepair(root: Path, partId: String): ProjectSnapshot = checkNotNull(current)
 
     override suspend fun inspectPart(
         request: app.melotrail.application.InspectPartRequest,

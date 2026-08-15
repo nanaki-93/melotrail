@@ -4,6 +4,7 @@ import app.melotrail.arrangement.AnalysisKind
 import app.melotrail.arrangement.InstrumentRenderer
 import app.melotrail.arrangement.LogicalInstrument
 import app.melotrail.arrangement.MidiAnalysis
+import app.melotrail.arrangement.MidiQualityReportStore
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.preparation.InputInspectionPaths
@@ -25,11 +26,14 @@ import kotlin.math.roundToLong
 data class PreviewRequest(
     val projectRoot: Path,
     val partId: String,
-    val audioSource: PreviewAudioSource = PreviewAudioSource.ORIGINAL
+    val audioSource: PreviewAudioSource = PreviewAudioSource.ORIGINAL,
+    /** Explicit A/B selection for the immutable raw and repaired MIDI artifacts. */
+    val midiSource: PreviewMidiSource? = null
 )
 
 /** Bounded monitor choices for a selected audio part; neither changes project release artifacts. */
 enum class PreviewAudioSource { ORIGINAL, PREPARED_CLEAN }
+enum class PreviewMidiSource { RAW, REPAIRED }
 
 enum class PreviewStage { VALIDATE, DECODE_OR_RENDER, VALIDATE_ARTIFACT, REUSE_OR_PUBLISH }
 
@@ -109,6 +113,9 @@ class DefaultPartPreviewApplicationService(
                 }
                 return@withContext resolvePreparedClean(root, part.id, source, stages)
             }
+            request.midiSource?.let { midiSource ->
+                return@withContext resolveSelectedMidi(root, part, project.renderFormat, midiSource, stages)
+            }
             when (extension(source)) {
                 "wav", "wave" -> resolveWavSource(source, stages)
                 "mp3" -> resolveMp3(root, part.id, source, stages)
@@ -182,6 +189,40 @@ class DefaultPartPreviewApplicationService(
             if (!published) {
                 PreviewResult.Failed(PreviewStage.VALIDATE_ARTIFACT, "Piano renderer did not produce a valid project-format WAV monitor artifact.")
             } else PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, false)
+        } catch (error: Exception) {
+            PreviewResult.Prerequisite(PreviewStage.DECODE_OR_RENDER, "Piano preview renderer or sound library is unavailable: ${error.message ?: "unknown failure"}")
+        }
+    }
+
+    private suspend fun resolveSelectedMidi(
+        root: Path,
+        part: app.melotrail.arrangement.Part,
+        format: RenderFormat?,
+        source: PreviewMidiSource,
+        stages: MutableList<PreviewStage>
+    ): PreviewResult {
+        val midi = part.midi ?: return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Raw MIDI is not available for '${part.id}'.")
+        val reference = when (source) {
+            PreviewMidiSource.RAW -> midi.raw
+            PreviewMidiSource.REPAIRED -> midi.clean
+        } ?: return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "${source.name.lowercase().replaceFirstChar(Char::uppercase)} MIDI is not available for '${part.id}'.")
+        if (source == PreviewMidiSource.REPAIRED && midi.raw != null) {
+            val current = midi.cleanup != null && midi.quality != null && MidiQualityReportStore.isCurrent(root, part.id, midi.raw, reference, midi.cleanup, midi.quality)
+            if (!current) return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Repaired MIDI quality evidence is missing or stale. Run Repair MIDI again.")
+        }
+        if (format == null) return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Project render format is required before previewing MIDI.")
+        val midiPath = root.resolve(reference).normalize()
+        if (!midiPath.startsWith(root) || !Files.isRegularFile(midiPath)) return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Selected MIDI is missing for '${part.id}'.")
+        val duration = try { javax.sound.midi.MidiSystem.getSequence(midiPath.toFile()).microsecondLength / 1_000_000.0 } catch (_: Exception) { 0.0 }
+        if (!duration.isFinite() || duration <= 0.0) return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Selected MIDI has no usable duration.")
+        val frames = (duration * format.sampleRate).roundToLong()
+        val target = previewTarget(root, "piano-${source.name.lowercase()}", part.id, fingerprint(midiPath, "${format.sampleRate}|${format.channels}|$frames|${rendererConfigurationFingerprint()}"))
+        stages += PreviewStage.DECODE_OR_RENDER
+        if (validMonitorWav(target, format.sampleRate, format.channels, 24, frames)) return PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, true)
+        return try {
+            val published = publish(target, { temporary -> renderer.render(midiPath, LogicalInstrument.PIANO, temporary, format, frames) }) { temporary -> validMonitorWav(temporary, format.sampleRate, format.channels, 24, frames) }
+            if (!published) PreviewResult.Failed(PreviewStage.VALIDATE_ARTIFACT, "Piano renderer did not produce a valid project-format WAV monitor artifact.")
+            else PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, false)
         } catch (error: Exception) {
             PreviewResult.Prerequisite(PreviewStage.DECODE_OR_RENDER, "Piano preview renderer or sound library is unavailable: ${error.message ?: "unknown failure"}")
         }

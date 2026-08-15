@@ -442,18 +442,37 @@ private fun PartsPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
 }
 
 @Composable
-private fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("MIDI quality review", WorkspaceTags.MIDI_QUALITY_PANEL) {
+private fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Repair MIDI", WorkspaceTags.MIDI_QUALITY_PANEL) {
     val part = state.selectedPartId?.let { id -> state.project?.parts?.find { it.id == id } } ?: return@WorkspaceCard
     val quality = part.preparation.midiQuality
     Text("Part ${part.id}", fontWeight = FontWeight.Medium)
+    val midiPreviewReady = state.runtimeReadiness?.capability(RuntimeCapability.MIDI_PREVIEW)?.available == true
+    if (part.preparation.rawMidi) {
+        Text("Audition", style = MaterialTheme.typography.labelLarge)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            OutlinedButton(
+                onClick = { onIntent(WorkspaceIntent.PreviewMidiPart(part.id, app.melotrail.application.PreviewMidiSource.RAW)) },
+                enabled = !state.operation.isMutating && midiPreviewReady
+            ) { Text("Preview raw MIDI") }
+            OutlinedButton(
+                onClick = { onIntent(WorkspaceIntent.PreviewMidiPart(part.id, app.melotrail.application.PreviewMidiSource.REPAIRED)) },
+                enabled = !state.operation.isMutating && midiPreviewReady && part.preparation.cleanMidi
+            ) { Text("Preview repaired MIDI") }
+        }
+    }
     when (quality.status) {
         app.melotrail.application.MidiQualityStatus.LEGACY_UNKNOWN -> {
             Text("Legacy MIDI has no raw-to-clean quality record.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             Text("Analysis and arrangement are blocked until this part is re-imported with MIDI cleanup. Structure may still be edited.", style = MaterialTheme.typography.bodySmall)
         }
         app.melotrail.application.MidiQualityStatus.STALE_OR_INVALID -> {
-            Text("The raw-to-clean quality report or clean MIDI is stale or invalid.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-            Text("Analysis and arrangement are blocked. Retry MIDI cleanup, then analyze ${part.id}; structure may still be edited.", style = MaterialTheme.typography.bodySmall)
+            Text("Raw MIDI is ready but repaired MIDI evidence is missing, stale, or invalid.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            Text("Analysis and arrangement are blocked. Run Repair MIDI, review its report, then analyze ${part.id}; structure may still be edited.", style = MaterialTheme.typography.bodySmall)
+        }
+        app.melotrail.application.MidiQualityStatus.APPROVAL_REQUIRED -> {
+            Text("Repair changed more notes or timing than the automatic threshold allows.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            Text("Review the raw/repaired previews and report, then explicitly approve before analysis.", style = MaterialTheme.typography.bodySmall)
+            Button(onClick = { onIntent(WorkspaceIntent.ApproveMidiRepair) }, enabled = !state.operation.isMutating) { Text("Approve MIDI repair") }
         }
         app.melotrail.application.MidiQualityStatus.CURRENT -> {
             val report = quality.report
@@ -488,7 +507,7 @@ private fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (Workspace
     }
 
     if (quality.status != app.melotrail.application.MidiQualityStatus.LEGACY_UNKNOWN) {
-        Text("Retry cleanup", style = MaterialTheme.typography.labelLarge)
+        Text("Repair profile", style = MaterialTheme.typography.labelLarge)
         Text("Choose a named profile. This never edits source MIDI or exposes worker parameters.", style = MaterialTheme.typography.bodySmall)
         MidiCleanupProfile.entries.forEach { profile ->
             val selected = state.midiQualityReview.profile == profile
@@ -505,7 +524,7 @@ private fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (Workspace
             onClick = { onIntent(WorkspaceIntent.RetryMidiCleanup) },
             enabled = !state.operation.isMutating,
             modifier = Modifier.semantics { testTag = WorkspaceTags.MIDI_QUALITY_RETRY }
-        ) { Text("Retry MIDI cleanup") }
+        ) { Text("Repair MIDI") }
     }
     if ((state.operation as? WorkspaceOperation.Failed)?.action == "MIDI cleanup") {
         Text("Retry failed: ${(state.operation as WorkspaceOperation.Failed).message}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)

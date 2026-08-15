@@ -37,18 +37,23 @@ data class Project(
         requireValid(projectRoot)
         return parts.map { part ->
             val midi = requireNotNull(part.midi)
-            if (midi.cleanup != null || midi.quality != null) {
-                require(midi.cleanup != null && midi.quality != null) { "Part '${part.id}' has incomplete MIDI cleanup provenance." }
+            val clean = requireNotNull(midi.clean) { "Part '${part.id}' has not been repaired. Run Repair MIDI before continuing." }
+            // A raw reference marks Task 067's explicit repair flow. Old v2
+            // projects without raw evidence remain readable without migration.
+            if (midi.raw != null) {
+                require(midi.cleanup != null && midi.quality != null) { "Part '${part.id}' has incomplete MIDI repair provenance." }
+                val report = MidiQualityReportStore.read(projectRoot, requireNotNull(midi.quality))
+                require(!report.approvalRequired || midi.approvedRepair) { "Part '${part.id}' needs explicit approval of its MIDI repair." }
                 MidiQualityReportStore.requireCurrent(
                     projectRoot,
                     part.id,
-                    midi.raw ?: part.file,
-                    midi.clean,
-                    midi.cleanup,
-                    midi.quality
+                    midi.raw,
+                    clean,
+                    requireNotNull(midi.cleanup),
+                    requireNotNull(midi.quality)
                 )
             }
-            projectRoot.resolve(midi.clean).normalize()
+            projectRoot.resolve(clean).normalize()
         }
     }
 
@@ -76,11 +81,15 @@ data class RenderFormat(
 
 @Serializable
 data class MidiReferences(
+    /** Immutable project-confined evidence produced by import or transcription. */
     val raw: String? = null,
-    val clean: String,
+    /** Absent until the user explicitly runs Repair MIDI. */
+    val clean: String? = null,
     /** Null only for pre-quality-report projects, which remain readable as legacy/unknown. */
     val cleanup: MidiCleanupOptions? = null,
-    val quality: String? = null
+    val quality: String? = null,
+    /** True automatically for conservative repairs; explicit only above report thresholds. */
+    val approvedRepair: Boolean = false
 )
 
 /** Reference to the analysis JSON generated for a part, when available. */
@@ -141,12 +150,24 @@ object ProjectValidator {
             if (project.version == Project.CURRENT_VERSION) {
                 val midi = part.midi
                 if (midi == null) {
-                    errors += "Part '${part.id}' requires a clean MIDI reference; import it with MIDI cleanup first"
+                    errors += "Part '${part.id}' requires raw MIDI; import it before Repair MIDI"
                 } else {
                     midi.raw?.let { validateFileReference(root, it, "Part '${part.id}' raw MIDI", errors) }
-                    validateFileReference(root, midi.clean, "Part '${part.id}' clean MIDI", errors)
+                    midi.clean?.let { validateFileReference(root, it, "Part '${part.id}' repaired MIDI", errors) }
+                    if (midi.raw != null && midi.clean == null && (midi.cleanup != null || midi.quality != null)) {
+                        errors += "Part '${part.id}' has repair evidence without repaired MIDI"
+                    }
+                    if (midi.raw != null && midi.clean != null && (midi.cleanup == null || midi.quality == null)) {
+                        errors += "Part '${part.id}' repaired MIDI requires a quality report"
+                    }
+                    if (midi.raw == null && midi.clean == null) {
+                        errors += "Part '${part.id}' requires a repaired MIDI reference"
+                    }
                     if ((midi.cleanup == null) != (midi.quality == null)) {
                         errors += "Part '${part.id}' MIDI cleanup provenance and quality report must be present together"
+                    }
+                    if (midi.approvedRepair && (midi.cleanup == null || midi.quality == null)) {
+                        errors += "Part '${part.id}' cannot approve a missing MIDI repair"
                     }
                     midi.cleanup?.let {
                         runCatching(it::requireValid).exceptionOrNull()?.let { error ->

@@ -366,7 +366,7 @@ class WorkspaceScreenTest {
     fun `MIDI quality inspector explains legacy stale failed and timing confirmation states`() = runComposeUiTest {
         listOf(
             app.melotrail.application.MidiQualityStatus.LEGACY_UNKNOWN to "Legacy MIDI has no raw-to-clean quality record.",
-            app.melotrail.application.MidiQualityStatus.STALE_OR_INVALID to "The raw-to-clean quality report or clean MIDI is stale or invalid."
+            app.melotrail.application.MidiQualityStatus.STALE_OR_INVALID to "Raw MIDI is ready but repaired MIDI evidence is missing, stale, or invalid."
         ).forEach { (status, message) ->
             val project = projectState().project!!.copy(parts = listOf(qualityPart(status)))
             setContent { MelotrailTheme { WorkspaceScreen(WorkspaceUiState(project = project, selectedPartId = "A"), onIntent = {}) } }

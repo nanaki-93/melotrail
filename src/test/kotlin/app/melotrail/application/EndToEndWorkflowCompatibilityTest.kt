@@ -77,6 +77,8 @@ class EndToEndWorkflowCompatibilityTest {
             } else if (fixture.extension != "mid") {
                 services.preparation.transcribe(root, "A", TranscriptionInputArtifact.SOURCE)
                 services.projects.retryMidiCleanup(RetryMidiCleanupRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
+            } else {
+                services.projects.retryMidiCleanup(RetryMidiCleanupRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
             }
 
             services.projects.analyzePart(AnalyzePartRequest(root, "A"))
@@ -103,11 +105,12 @@ class EndToEndWorkflowCompatibilityTest {
         val services = services(failCleanup = true)
         services.projects.create(CreateProjectRequest(root))
 
-        val failure = runCatching { services.projects.importPart(ImportPartRequest(root, "A", source, transcribe = true)) }.exceptionOrNull()
-        assertTrue(failure?.message.orEmpty().contains("was not registered"))
+        services.projects.importPart(ImportPartRequest(root, "A", source, transcribe = true))
+        val failure = runCatching { services.projects.retryMidiCleanup(RetryMidiCleanupRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions())) }.exceptionOrNull()
+        assertTrue(failure?.message.orEmpty().contains("cleanup failure"))
         assertTrue(Files.isRegularFile(root.resolve("source/A.wav")))
         assertFalse(Files.exists(root.resolve("midi/clean/A.mid")))
-        assertTrue(services.projects.open(root).parts.isEmpty())
+        assertEquals(listOf("A"), services.projects.open(root).parts.map { it.id })
 
         val current = services(failCleanup = false)
         val currentRoot = tempDir.resolve("project/my-song-stale-report")
@@ -135,7 +138,7 @@ class EndToEndWorkflowCompatibilityTest {
 
         val current = tempDir.resolve("compat/current")
         val source = fixtureSource(Fixture("approved-v3", "mid", false))
-        services.projects.create(CreateProjectRequest(current)); services.projects.importPart(ImportPartRequest(current, "A", source)); services.projects.analyzePart(AnalyzePartRequest(current, "A")); services.projects.saveStructure(SaveStructureRequest(current, listOf("A")))
+        services.projects.create(CreateProjectRequest(current)); services.projects.importPart(ImportPartRequest(current, "A", source)); services.projects.retryMidiCleanup(RetryMidiCleanupRequest(current, "A", app.melotrail.arrangement.MidiCleanupOptions())); services.projects.analyzePart(AnalyzePartRequest(current, "A")); services.projects.saveStructure(SaveStructureRequest(current, listOf("A")))
         assertTrue(services.arrangements.generate(GenerateArrangementRequest(current, instruments = listOf("piano"))).approved)
         assertTrue(Files.readString(current.resolve("arrangement.json")).contains("\"version\": 3"))
     }

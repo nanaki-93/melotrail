@@ -45,6 +45,7 @@ interface ProjectApplicationService {
     fun create(request: CreateProjectRequest): ProjectSnapshot
     suspend fun importPart(request: ImportPartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
     suspend fun retryMidiCleanup(request: RetryMidiCleanupRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
+    fun approveMidiRepair(root: Path, partId: String): ProjectSnapshot
     suspend fun inspectPart(request: InspectPartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
     suspend fun analyzePart(request: AnalyzePartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
     fun updatePart(request: UpdatePartRoleRequest): ProjectSnapshot
@@ -149,7 +150,7 @@ data class PartPreparationSummary(
     val midiQuality: MidiQualitySummary = MidiQualitySummary.legacyUnknown()
 )
 
-enum class MidiQualityStatus { CURRENT, LEGACY_UNKNOWN, STALE_OR_INVALID }
+enum class MidiQualityStatus { CURRENT, APPROVAL_REQUIRED, LEGACY_UNKNOWN, STALE_OR_INVALID }
 
 data class MidiQualitySummary(
     val status: MidiQualityStatus,
@@ -225,7 +226,7 @@ class DefaultProjectApplicationService(
         require(!Files.exists(root.resolve(ProjectStore.FILE_NAME))) { "Project already exists: ${root.resolve(ProjectStore.FILE_NAME)}" }
         val name = request.name ?: root.fileName?.toString().orEmpty()
         require(name.isNotBlank()) { "Project directory must have a name" }
-        listOf("source", "midi/raw", "midi/clean", "midi/generated").forEach { Files.createDirectories(root.resolve(it)) }
+        listOf("source", "midi/raw", "midi/clean", "midi/quality", "midi/generated").forEach { Files.createDirectories(root.resolve(it)) }
         val project = ProjectStore.create(root, name, request.renderFormat)
         snapshot(root, project)
     }
@@ -238,8 +239,6 @@ class DefaultProjectApplicationService(
         require(extension in SUPPORTED_EXTENSIONS) { "Unsupported input file extension: ${if (extension.isEmpty()) "(none)" else extension}" }
         val isMidi = extension in MIDI_EXTENSIONS
         require(!(isMidi && request.transcribe)) { "--transcribe is only valid for audio input" }
-        request.cleanup.requireValid()
-
         val project = readValidProject(root)
         require(project.parts.none { it.id == request.id }) { "Part ID already exists: ${request.id}" }
         if (project.version == 1 && !isMidi && !request.transcribe) {
@@ -256,7 +255,7 @@ class DefaultProjectApplicationService(
             return@mutateSuspend snapshot(root, updated)
         }
 
-        require(isMidi || request.transcribe) { "Audio input requires --transcribe so a clean MIDI artifact can be prepared" }
+        require(isMidi || request.transcribe) { "Audio input requires --transcribe so immutable raw MIDI can be prepared" }
         val relativeFile = "source/${request.id}.$extension"
         val destination = safeDestination(root, relativeFile)
         require(source != destination && !(Files.exists(destination) && Files.isSameFile(source, destination))) {
@@ -273,44 +272,36 @@ class DefaultProjectApplicationService(
             Files.copy(source, destination)
         }
 
-        val raw = if (isMidi) null else "midi/raw/${request.id}.mid"
-        val clean = "midi/clean/${request.id}.mid"
-        val rawPath = raw?.let { safeDestination(root, it) }
-        val cleanPath = safeDestination(root, clean)
-        // Preserve the first failed attempt for diagnosis. An explicit retry writes
-        // to a sibling temporary path, then atomically replaces only derived MIDI.
-        val rawWork = rawPath?.takeIf(Files::exists)?.let(::temporaryMidi)
-        val rawOutput = rawWork ?: rawPath
-        val cleanWork = cleanPath.takeIf(Files::exists)?.let(::temporaryMidi)
-        val cleanOutput = cleanWork ?: cleanPath
+        val raw = "midi/raw/${request.id}.mid"
+        val rawPath = safeDestination(root, raw)
+        val rawWork = temporaryMidi(rawPath)
         try {
-            if (rawPath != null && rawOutput != null) {
-                progress.report(OperationProgress("import-part", 2, 4, "Transcribing audio", rawPath))
-                midiPreparation.transcribe(destination, rawOutput)
-                requireMidiArtifact(rawOutput, "Transcription")
+            if (Files.isRegularFile(rawPath)) {
+                requireMidiArtifact(rawPath, "Existing raw MIDI")
+                progress.report(OperationProgress("import-part", 2, 3, "Reusing immutable raw MIDI", rawPath))
+            } else {
+                if (isMidi) {
+                    progress.report(OperationProgress("import-part", 2, 3, "Publishing immutable raw MIDI", rawPath))
+                    Files.copy(destination, rawWork)
+                } else {
+                    progress.report(OperationProgress("import-part", 2, 3, "Transcribing audio to raw MIDI", rawPath))
+                    midiPreparation.transcribe(destination, rawWork)
+                }
+                requireMidiArtifact(rawWork, if (isMidi) "MIDI import" else "Transcription")
+                atomicReplace(rawWork, rawPath, if (isMidi) "raw MIDI import" else "transcription")
             }
-            progress.report(OperationProgress("import-part", 3, 4, "Cleaning MIDI", cleanPath))
-            midiPreparation.clean(rawOutput ?: safeDestination(root, relativeFile), cleanOutput, request.cleanup)
-            requireMidiArtifact(cleanOutput, "MIDI cleanup")
-            rawWork?.let { atomicReplace(it, checkNotNull(rawPath), "Transcription") }
-            cleanWork?.let { atomicReplace(it, cleanPath, "MIDI cleanup") }
         } catch (exception: Exception) {
             throw IllegalStateException(
-                "Part '${request.id}' was not registered. Source preserved at $destination; temporary MIDI preparation failed: ${exception.message}",
+                "Part '${request.id}' was not registered. Source preserved at $destination; raw MIDI publication failed: ${exception.message}",
                 exception
             )
         } finally {
-            rawWork?.let(Files::deleteIfExists)
-            cleanWork?.let(Files::deleteIfExists)
+            Files.deleteIfExists(rawWork)
         }
 
-        val rawReference = raw ?: relativeFile
-        val report = midiQualityReporter.report(request.id, safeDestination(root, rawReference), cleanPath, request.cleanup)
-        val reportPath = MidiQualityReportStore.write(root, report)
-        val reportReference = root.relativize(reportPath).toString().replace('\\', '/')
-        val updated = project.copy(parts = project.parts + Part(request.id, relativeFile, request.role, midi = MidiReferences(raw, clean, request.cleanup, reportReference)))
+        val updated = project.copy(parts = project.parts + Part(request.id, relativeFile, request.role, midi = MidiReferences(raw = raw)))
         val saved = if (project.version == 1) ProjectStore.upgrade(root, project, updated.parts) else updated.also { ProjectStore.write(root, it) }
-        progress.report(OperationProgress("import-part", 4, 4, "Registered part", root.resolve(ProjectStore.FILE_NAME)))
+        progress.report(OperationProgress("import-part", 3, 3, "Registered raw MIDI; run Repair MIDI before analysis", root.resolve(ProjectStore.FILE_NAME)))
         snapshot(root, saved)
     }
 
@@ -322,22 +313,23 @@ class DefaultProjectApplicationService(
         }
         val part = project.parts.find { it.id == request.partId }
             ?: throw IllegalArgumentException("Part not found: ${request.partId}")
-        val midi = requireNotNull(part.midi) { "Part '${request.partId}' has no clean MIDI artifact to retry." }
-        val rawReference = midi.raw ?: part.file
+        val midi = requireNotNull(part.midi) { "Part '${request.partId}' has no raw MIDI artifact to repair." }
+        val rawReference = requireNotNull(midi.raw) {
+            "Part '${request.partId}' predates explicit raw MIDI evidence. Re-import it before repairing."
+        }
         val rawPath = safeDestination(root, rawReference)
-        val cleanPath = safeDestination(root, midi.clean)
+        val cleanPath = safeDestination(root, "midi/clean/${request.partId}.mid")
         requireMidiArtifact(rawPath, "Raw MIDI")
-        requireMidiArtifact(cleanPath, "Existing clean MIDI")
 
         val cleanWork = temporaryMidi(cleanPath)
-        val cleanBackup = temporaryMidi(cleanPath)
+        val cleanBackup = cleanPath.takeIf(Files::isRegularFile)?.let(::temporaryMidi)
         val reportPath = MidiQualityReportStore.path(root, request.partId)
         val reportBackup = reportPath.takeIf(Files::isRegularFile)?.let(Files::readAllBytes)
-        Files.copy(cleanPath, cleanBackup, StandardCopyOption.REPLACE_EXISTING)
+        cleanBackup?.let { Files.copy(cleanPath, it, StandardCopyOption.REPLACE_EXISTING) }
         var cleanPublished = false
         var reportPublished = false
         try {
-            progress.report(OperationProgress("retry-midi-cleanup", 1, 3, "Cleaning MIDI with ${request.cleanup.profile.name.lowercase().replace('_', '-')}", cleanPath))
+            progress.report(OperationProgress("repair-midi", 1, 3, "Repairing MIDI with ${request.cleanup.profile.name.lowercase().replace('_', '-')}", cleanPath))
             midiPreparation.clean(rawPath, cleanWork, request.cleanup)
             requireMidiArtifact(cleanWork, "MIDI cleanup")
             val report = midiQualityReporter.report(request.partId, rawPath, cleanWork, request.cleanup)
@@ -349,14 +341,23 @@ class DefaultProjectApplicationService(
             val updated = project.copy(parts = project.parts.map {
                 if (it.id == request.partId) it.copy(
                     analysis = null,
-                    midi = midi.copy(cleanup = request.cleanup, quality = qualityReference)
+                    midi = midi.copy(
+                        clean = root.relativize(cleanPath).toString().replace('\\', '/'),
+                        cleanup = request.cleanup,
+                        quality = qualityReference,
+                        approvedRepair = !report.approvalRequired
+                    )
                 ) else it
             })
             ProjectStore.write(root, updated)
-            progress.report(OperationProgress("retry-midi-cleanup", 3, 3, "Saved MIDI quality report; analyze this part again", publishedReport))
+            invalidateAfterMidiRepair(root, request.partId)
+            progress.report(OperationProgress("repair-midi", 3, 3, "Saved MIDI repair report; analyze this part again", publishedReport))
             snapshot(root, updated)
         } catch (failure: Exception) {
-            if (cleanPublished) runCatching { atomicReplace(cleanBackup, cleanPath, "MIDI cleanup rollback") }
+            if (cleanPublished) runCatching {
+                if (cleanBackup == null) Files.deleteIfExists(cleanPath)
+                else atomicReplace(cleanBackup, cleanPath, "MIDI cleanup rollback")
+            }
             if (reportPublished) runCatching {
                 if (reportBackup == null) Files.deleteIfExists(reportPath)
                 else atomicWrite(reportPath, reportBackup)
@@ -364,16 +365,41 @@ class DefaultProjectApplicationService(
             throw failure
         } finally {
             Files.deleteIfExists(cleanWork)
-            Files.deleteIfExists(cleanBackup)
+            cleanBackup?.let(Files::deleteIfExists)
         }
+    }
+
+    override fun approveMidiRepair(root: Path, partId: String): ProjectSnapshot = mutate(root) { projectRoot ->
+        val project = readValidProject(projectRoot)
+        val part = project.parts.find { it.id == partId } ?: throw IllegalArgumentException("Part not found: $partId")
+        val midi = requireNotNull(part.midi) { "Part '$partId' has no MIDI repair." }
+        val raw = requireNotNull(midi.raw) { "Part '$partId' predates explicit MIDI repair evidence." }
+        val clean = requireNotNull(midi.clean) { "Part '$partId' has no repaired MIDI." }
+        val cleanup = requireNotNull(midi.cleanup) { "Part '$partId' has no MIDI repair report." }
+        val quality = requireNotNull(midi.quality) { "Part '$partId' has no MIDI repair report." }
+        MidiQualityReportStore.requireCurrent(projectRoot, partId, raw, clean, cleanup, quality)
+        val report = MidiQualityReportStore.read(projectRoot, quality)
+        require(report.approvalRequired) { "Part '$partId' does not require MIDI repair approval." }
+        val updated = project.copy(parts = project.parts.map { if (it.id == partId) it.copy(midi = midi.copy(approvedRepair = true)) else it })
+        ProjectStore.write(projectRoot, updated)
+        snapshot(projectRoot, updated)
     }
 
     override suspend fun analyzePart(request: AnalyzePartRequest, progress: ProgressSink): ProjectSnapshot = mutateSuspend(request.root) { root ->
         val project = readValidProject(root)
         val part = project.parts.find { it.id == request.partId } ?: throw IllegalArgumentException("Part not found: ${request.partId}")
         val analysisPath = if (project.version == Project.CURRENT_VERSION) {
-            val cleanMidi = root.resolve(requireNotNull(part.midi).clean).normalize()
-            progress.report(OperationProgress("analyze-part", 1, 2, "Analyzing clean MIDI", cleanMidi))
+            val midi = requireNotNull(part.midi)
+            val cleanReference = requireNotNull(midi.clean) { "Part '${part.id}' has no repaired MIDI. Run Repair MIDI before analysis." }
+            if (midi.raw != null) MidiQualityReportStore.requireCurrent(
+                root, part.id, midi.raw, cleanReference, requireNotNull(midi.cleanup), requireNotNull(midi.quality)
+            )
+            if (midi.raw != null) {
+                val report = MidiQualityReportStore.read(root, requireNotNull(midi.quality))
+                require(!report.approvalRequired || midi.approvedRepair) { "Part '${part.id}' MIDI repair requires approval before analysis." }
+            }
+            val cleanMidi = root.resolve(cleanReference).normalize()
+            progress.report(OperationProgress("analyze-part", 1, 2, "Analyzing repaired MIDI", cleanMidi))
             MidiAnalysisStore.write(root, project, request.partId, midiPartAnalyzer.analyze(cleanMidi, request.partId))
         } else {
             val source = root.resolve(part.file).normalize()
@@ -489,7 +515,7 @@ class DefaultProjectApplicationService(
             else -> emptyList()
         }
         val rawMidi = midi?.raw?.let { isMidiArtifact(root, it) } ?: false
-        val cleanMidi = midi?.let { isMidiArtifact(root, it.clean) } ?: false
+        val cleanMidi = midi?.clean?.let { isMidiArtifact(root, it) } ?: false
         val quality = midiQuality(root, this, cleanMidi)
         val analyzed = analysis?.let { runCatching { it.summary(root) }.isSuccess } ?: false
         val preparedAudio = sourceType == PartSourceType.AUDIO && inspected &&
@@ -501,7 +527,7 @@ class DefaultProjectApplicationService(
             rawMidi = rawMidi,
             cleanMidi = cleanMidi,
             analyzed = analyzed,
-            ready = sourcePreserved && inspected && cleanMidi && analyzed && quality.status != MidiQualityStatus.STALE_OR_INVALID,
+            ready = sourcePreserved && inspected && cleanMidi && analyzed && quality.status == MidiQualityStatus.CURRENT,
             warnings = warnings + quality.warnings.map { it.message },
             midiQuality = quality
         )
@@ -510,15 +536,16 @@ class DefaultProjectApplicationService(
 
     private fun midiQuality(root: Path, part: Part, cleanMidi: Boolean): MidiQualitySummary {
         val midi = part.midi ?: return MidiQualitySummary.legacyUnknown()
-        if (midi.cleanup == null && midi.quality == null) return MidiQualitySummary.legacyUnknown()
+        if (midi.raw == null && midi.cleanup == null && midi.quality == null) return MidiQualitySummary.legacyUnknown()
         if (midi.cleanup == null || midi.quality == null || !cleanMidi) return MidiQualitySummary(MidiQualityStatus.STALE_OR_INVALID)
-        val rawReference = midi.raw ?: part.file
+        val rawReference = requireNotNull(midi.raw)
         val report = runCatching { MidiQualityReportStore.read(root, midi.quality) }.getOrNull()
             ?: return MidiQualitySummary(MidiQualityStatus.STALE_OR_INVALID)
-        if (!MidiQualityReportStore.isCurrent(root, part.id, rawReference, midi.clean, midi.cleanup, midi.quality)) {
+        if (!MidiQualityReportStore.isCurrent(root, part.id, rawReference, requireNotNull(midi.clean), midi.cleanup, midi.quality)) {
             return MidiQualitySummary(MidiQualityStatus.STALE_OR_INVALID)
         }
-        return MidiQualitySummary(MidiQualityStatus.CURRENT, report.cleanup, report.warnings, report.recommendations, report)
+        val status = if (report.approvalRequired && !midi.approvedRepair) MidiQualityStatus.APPROVAL_REQUIRED else MidiQualityStatus.CURRENT
+        return MidiQualitySummary(status, report.cleanup, report.warnings, report.recommendations, report)
     }
 
     private fun isProjectFile(root: Path, reference: String): Boolean = runCatching {
@@ -621,6 +648,24 @@ class DefaultProjectApplicationService(
         } finally {
             Files.deleteIfExists(temporary)
         }
+    }
+
+    /** A new repair invalidates only named derived artifacts; source and raw MIDI are never touched. */
+    private fun invalidateAfterMidiRepair(root: Path, partId: String) {
+        Files.deleteIfExists(root.resolve("analysis/$partId.json"))
+        listOf(
+            "midi/generated", "cohesion", "stems", "mix", "output"
+        ).forEach { deleteTree(root.resolve(it)) }
+        listOf(
+            "song_plan.json", "section_variations.json", "arrangement.json", "arrangement.draft.json", "arrangement_v1.json",
+            "stem-render.json", "quality-gate.json", "release.json"
+        ).forEach { Files.deleteIfExists(root.resolve(it)) }
+    }
+
+    private fun deleteTree(target: Path) {
+        if (!Files.exists(target)) return
+        require(target.normalize().startsWith(target.parent?.normalize() ?: target)) { "Invalid derived artifact target: $target" }
+        Files.walk(target).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) }
     }
 
     private fun sourceType(file: String): PartSourceType = when (file.substringAfterLast('.', "").lowercase()) {

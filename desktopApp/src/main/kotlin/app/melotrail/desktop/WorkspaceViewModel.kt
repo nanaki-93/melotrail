@@ -28,6 +28,7 @@ import app.melotrail.application.AudioPreparationApplicationService
 import app.melotrail.application.AudioPreparationAvailability
 import app.melotrail.application.AudioPreparationSnapshot
 import app.melotrail.application.PreviewAudioSource
+import app.melotrail.application.PreviewMidiSource
 import app.melotrail.application.SaveStructureRequest
 import app.melotrail.application.UpdatePartRoleRequest
 import app.melotrail.arrangement.RenderFormat
@@ -97,7 +98,7 @@ enum class WorkspaceSection(val label: String) {
 }
 
 /** The UI exposes three named cleanup choices only; no worker parameters are editable here. */
-data class MidiQualityReviewDraft(val profile: MidiCleanupProfile = MidiCleanupProfile.CONSERVATIVE)
+data class MidiQualityReviewDraft(val profile: MidiCleanupProfile = MidiCleanupProfile.TRANSCRIPTION_SAFE)
 
 internal fun namedMidiCleanupOptions(profile: MidiCleanupProfile): MidiCleanupOptions = when (profile) {
     MidiCleanupProfile.CONSERVATIVE -> MidiCleanupOptions(profile = profile)
@@ -139,7 +140,7 @@ data class PlaybackSession(
 
 sealed interface PlaybackRequest {
     val projectRoot: Path
-    data class Part(override val projectRoot: Path, val partId: String, val audioSource: PreviewAudioSource) : PlaybackRequest
+    data class Part(override val projectRoot: Path, val partId: String, val audioSource: PreviewAudioSource, val midiSource: PreviewMidiSource? = null) : PlaybackRequest
     data class Mix(override val projectRoot: Path, val source: PlaybackSource) : PlaybackRequest
 }
 
@@ -325,10 +326,12 @@ sealed interface WorkspaceIntent {
     data object ConfirmSafeCleanup : WorkspaceIntent
     data class SelectMidiCleanupProfile(val profile: MidiCleanupProfile) : WorkspaceIntent
     data object RetryMidiCleanup : WorkspaceIntent
+    data object ApproveMidiRepair : WorkspaceIntent
     data object ConfirmTightenTiming : WorkspaceIntent
     data class SelectTranscriptionInput(val input: TranscriptionInputArtifact) : WorkspaceIntent
     data object TranscribeSelectedPart : WorkspaceIntent
     data class PreviewPart(val partId: String) : WorkspaceIntent
+    data class PreviewMidiPart(val partId: String, val source: PreviewMidiSource) : WorkspaceIntent
     data class PreviewPreparation(val source: PreviewAudioSource) : WorkspaceIntent
     data object RetryPreview : WorkspaceIntent
     data object PausePreview : WorkspaceIntent
@@ -436,10 +439,12 @@ class WorkspaceViewModel(
             WorkspaceIntent.ConfirmSafeCleanup -> confirmSafeCleanup()
             is WorkspaceIntent.SelectMidiCleanupProfile -> mutableState.update { it.copy(midiQualityReview = it.midiQualityReview.copy(profile = intent.profile)) }
             WorkspaceIntent.RetryMidiCleanup -> retryMidiCleanup()
+            WorkspaceIntent.ApproveMidiRepair -> approveMidiRepair()
             WorkspaceIntent.ConfirmTightenTiming -> confirmTightenTiming()
             is WorkspaceIntent.SelectTranscriptionInput -> mutableState.update { it.copy(audioPreparation = it.audioPreparation.copy(transcriptionInput = intent.input)) }
             WorkspaceIntent.TranscribeSelectedPart -> transcribeSelectedPart()
             is WorkspaceIntent.PreviewPart -> previewPart(intent.partId)
+            is WorkspaceIntent.PreviewMidiPart -> previewMidiPart(intent.partId, intent.source)
             is WorkspaceIntent.PreviewPreparation -> previewPreparation(intent.source)
             WorkspaceIntent.RetryPreview -> retryPlaybackSession()
             WorkspaceIntent.PausePreview -> pausePreview()
@@ -749,12 +754,25 @@ class WorkspaceViewModel(
         when (part.preparation.midiQuality.status) {
             MidiQualityStatus.LEGACY_UNKNOWN -> return fail("MIDI cleanup", "This legacy part has no cleanup provenance. Re-import it to create a reviewable raw-to-clean MIDI record.")
             MidiQualityStatus.CURRENT, MidiQualityStatus.STALE_OR_INVALID -> Unit
+            MidiQualityStatus.APPROVAL_REQUIRED -> return fail("MIDI repair", "Review the repair report and explicitly approve it before analysis.")
         }
         val profile = state.value.midiQualityReview.profile
         if (profile == MidiCleanupProfile.TIGHTEN_TIMING) {
             mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmTightenTiming(partId)) }
         } else {
             runMidiCleanupRetry(RetryMidiCleanupRequest(project.root, partId, namedMidiCleanupOptions(profile)))
+        }
+    }
+
+    private fun approveMidiRepair() {
+        val project = state.value.project ?: return fail("MIDI repair", "Open a project before approving MIDI repair.")
+        val partId = state.value.selectedPartId ?: return fail("MIDI repair", "Select a part before approving MIDI repair.")
+        if (state.value.operation.isMutating) return
+        mutableState.update { it.copy(operation = WorkspaceOperation.RetryingMidiCleanup(partId), notification = null, retry = null) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { projectService.approveMidiRepair(project.root, partId) } }
+                .onSuccess { snapshot -> mutableState.update { it.copy(project = snapshot, operation = WorkspaceOperation.Idle, notification = "MIDI repair approved. Analyze $partId next.") } }
+                .onFailure { failure -> fail("MIDI repair", failure.message ?: "Unable to approve MIDI repair for $partId.") }
         }
     }
 
@@ -856,6 +874,11 @@ class WorkspaceViewModel(
         startPlaybackSession(PlaybackRequest.Part(project.root, partId, audioSource), capability)
     }
 
+    private fun previewMidiPart(partId: String, source: PreviewMidiSource) {
+        val project = state.value.project ?: return
+        startPlaybackSession(PlaybackRequest.Part(project.root, partId, PreviewAudioSource.ORIGINAL, source), RuntimeCapability.MIDI_PREVIEW)
+    }
+
     private fun pausePreview() = pausePlaybackSession()
 
     private fun resumePreview() = resumePlaybackSession()
@@ -918,7 +941,7 @@ class WorkspaceViewModel(
             failPlaybackSession(id, PlaybackFailureStage.RUNTIME, "Part preview service is not configured for this desktop session.")
             return null
         }
-        return when (val resolved = withContext(ioDispatcher) { previews.resolve(PreviewRequest(request.projectRoot, request.partId, request.audioSource)) }) {
+        return when (val resolved = withContext(ioDispatcher) { previews.resolve(PreviewRequest(request.projectRoot, request.partId, request.audioSource, request.midiSource)) }) {
             is PreviewResult.Resolved -> PlaybackArtifactIdentity(request.projectRoot, resolved.artifact, request.partId, request.audioSource)
             is PreviewResult.Prerequisite -> {
                 val stage = if (resolved.stage == app.melotrail.application.PreviewStage.DECODE_OR_RENDER) PlaybackFailureStage.RUNTIME else PlaybackFailureStage.RESOLUTION

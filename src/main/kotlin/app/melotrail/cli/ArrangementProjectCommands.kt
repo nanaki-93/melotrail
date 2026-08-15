@@ -76,6 +76,7 @@ import app.melotrail.application.AnalyzePartRequest
 import app.melotrail.application.CreateProjectRequest
 import app.melotrail.application.DefaultProjectApplicationService
 import app.melotrail.application.ImportPartRequest
+import app.melotrail.application.RetryMidiCleanupRequest
 import app.melotrail.application.LegacyPartAnalysisService
 import app.melotrail.application.MidiPreparationService
 import app.melotrail.application.BuildAudioWorker
@@ -137,6 +138,7 @@ object ArrangementProjectCommands {
         Arranger and project commands:
           project create <project> [--sample-rate <hz>] [--channels <count>]
           part add <project> --id <id> --file <path> [--role <role>] [--transcribe]
+          part repair <project> --id <id>
           part analyze <project> --id <id>
           transcribe --input <audio> --output <midi> --instrument piano
           midi-clean --input <raw.mid> --output <clean.mid> [cleanup options]
@@ -172,9 +174,10 @@ object ArrangementProjectCommands {
         "project" -> createProject(args)
         "part" -> when (args.getOrNull(1)) {
             "add" -> addPart(args, createMidiPreparationWorker())
+            "repair" -> repairPart(args, createMidiPreparationWorker())
             "analyze" -> analyzePart(args)
             else -> throw IllegalArgumentException(
-                "Usage: part add <project-directory> ... or part analyze <project-directory> --id <id>"
+                "Usage: part add <project-directory> ..., part repair <project-directory> --id <id>, or part analyze <project-directory> --id <id>"
             )
         }
         "arrange" -> arrange(args)
@@ -404,6 +407,21 @@ object ArrangementProjectCommands {
         return if (snapshot.version == 1 && !isMidi && !transcribe) {
             "Added legacy audio part '$id' to $projectRoot. Transcribe it before MIDI-only processing."
         } else "Added part '$id' to $projectRoot"
+    }
+
+    private suspend fun repairPart(args: Array<String>, worker: MidiPreparationService): String {
+        require(args.size == 5 && args[2].isNotBlank() && args[3] == "--id" && args[4].isNotBlank()) {
+            "Usage: part repair <project-directory> --id <id>"
+        }
+        val root = projectRoot(args[2])
+        val id = args[4]
+        val snapshot = defaultProjectService(worker).retryMidiCleanup(
+            RetryMidiCleanupRequest(root, id, app.melotrail.arrangement.MidiCleanupOptions())
+        )
+        val quality = snapshot.parts.single { it.id == id }.preparation.midiQuality
+        return if (quality.status == app.melotrail.application.MidiQualityStatus.APPROVAL_REQUIRED) {
+            "Repaired MIDI part '$id'; review the report and approve it in the desktop workspace before analysis."
+        } else "Repaired MIDI part '$id'; analyze it next."
     }
 
     private suspend fun analyzePart(args: Array<String>): String {
@@ -1899,7 +1917,7 @@ object ArrangementProjectCommands {
             "Output must use a .mid or .midi extension"
         }
         require(!Files.isDirectory(output)) { "Output path is a directory: $output" }
-        val profile = values["--profile"] ?: "conservative"
+        val profile = values["--profile"] ?: "transcription-safe"
         require(profile in setOf("conservative", "transcription-safe", "tighten-timing")) {
             "Profile must be one of: conservative, transcription-safe, tighten-timing"
         }

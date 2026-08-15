@@ -38,14 +38,19 @@ class ProjectApplicationServiceTest {
     }
 
     @Test
-    fun `imports analyzes and snapshots MIDI without changing source`() {
+    fun `imports immutable raw MIDI and requires explicit repair before analysis`() {
         val service = service()
         val root = tempDir.resolve("song")
         service.create(CreateProjectRequest(root))
         val input = midi("verse.mid")
         val sourceBefore = Files.readAllBytes(input)
 
-        blocking { service.importPart(ImportPartRequest(root, "A", input, role = "verse")) }
+        val imported = blocking { service.importPart(ImportPartRequest(root, "A", input, role = "verse")) }
+        assertTrue(Files.isRegularFile(root.resolve("midi/raw/A.mid")))
+        assertFalse(Files.exists(root.resolve("midi/clean/A.mid")))
+        assertFalse(imported.readiness.cleanMidiReady)
+        assertThrows(IllegalArgumentException::class.java) { blocking { service.analyzePart(AnalyzePartRequest(root, "A")) } }
+        blocking { service.retryMidiCleanup(RetryMidiCleanupRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions())) }
         val analyzed = blocking { service.analyzePart(AnalyzePartRequest(root, "A")) }
 
         val part = analyzed.parts.single()
@@ -57,28 +62,27 @@ class ProjectApplicationServiceTest {
     }
 
     @Test
-    fun `failed audio preparation preserves source without registering part`() {
+    fun `audio transcription publishes raw MIDI without implicitly invoking repair`() {
         val root = tempDir.resolve("failure")
         val service = service(object : MidiPreparationService {
-            override suspend fun transcribe(input: Path, output: Path) { Files.copy(input, output); Unit }
-            override suspend fun clean(input: Path, output: Path) = error("cleanup unavailable")
+            override suspend fun transcribe(input: Path, output: Path) { Files.copy(midi("transcribed.mid"), output); Unit }
+            override suspend fun clean(input: Path, output: Path) = error("cleanup must not run during import")
         })
         service.create(CreateProjectRequest(root))
         val audio = tempDir.resolve("input.wav").also { Files.writeString(it, "original audio") }
         val before = Files.readAllBytes(audio)
 
-        assertTrue(assertThrows(IllegalStateException::class.java) {
-            kotlinx.coroutines.runBlocking { service.importPart(ImportPartRequest(root, "A", audio, transcribe = true)) }
-        }.message.orEmpty().contains("was not registered"))
+        blocking { service.importPart(ImportPartRequest(root, "A", audio, transcribe = true)) }
 
         assertTrue(before.contentEquals(Files.readAllBytes(audio)))
         assertTrue(before.contentEquals(Files.readAllBytes(root.resolve("source/A.wav"))))
+        assertTrue(Files.isRegularFile(root.resolve("midi/raw/A.mid")))
         assertFalse(Files.exists(root.resolve("midi/clean/A.mid")))
-        assertTrue(ProjectStore.read(root).parts.isEmpty())
+        assertEquals(listOf("A"), ProjectStore.read(root).parts.map { it.id })
     }
 
     @Test
-    fun `retrying a failed import reuses its preserved source only when bytes match`() {
+    fun `repair can retry after a worker failure without changing raw MIDI`() {
         val root = tempDir.resolve("retry")
         var failCleanup = true
         val service = service(object : MidiPreparationService {
@@ -92,16 +96,19 @@ class ProjectApplicationServiceTest {
         val audio = tempDir.resolve("retry.wav").also { Files.writeString(it, "original audio") }
         val sourceBefore = Files.readAllBytes(audio)
 
+        blocking { service.importPart(ImportPartRequest(root, "A", audio, transcribe = true)) }
+        val rawBefore = Files.readAllBytes(root.resolve("midi/raw/A.mid"))
         assertThrows(IllegalStateException::class.java) {
-            kotlinx.coroutines.runBlocking { service.importPart(ImportPartRequest(root, "A", audio, transcribe = true)) }
+            blocking { service.retryMidiCleanup(RetryMidiCleanupRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions())) }
         }
         failCleanup = false
 
-        val retried = blocking { service.importPart(ImportPartRequest(root, "A", audio, transcribe = true)) }
+        val retried = blocking { service.retryMidiCleanup(RetryMidiCleanupRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions())) }
 
         assertEquals(listOf("A"), retried.parts.map { it.id })
         assertTrue(sourceBefore.contentEquals(Files.readAllBytes(audio)))
         assertTrue(sourceBefore.contentEquals(Files.readAllBytes(root.resolve("source/A.wav"))))
+        assertTrue(rawBefore.contentEquals(Files.readAllBytes(root.resolve("midi/raw/A.mid"))))
     }
 
     @Test
@@ -123,6 +130,31 @@ class ProjectApplicationServiceTest {
         }.message.orEmpty().contains("Unknown part ID"))
         assertEquals(listOf("B", "A", "B"), ProjectStore.read(root).structure)
         assertTrue(service.saveStructure(SaveStructureRequest(root, emptyList())).structure.isEmpty())
+    }
+
+    @Test
+    fun `repair invalidates only downstream artifacts and keeps source and raw MIDI immutable`() {
+        val service = service()
+        val root = tempDir.resolve("repair-invalidation")
+        val input = midi("repair-source.mid")
+        val sourceHash = Files.readAllBytes(input)
+        service.create(CreateProjectRequest(root))
+        blocking { service.importPart(ImportPartRequest(root, "A", input)) }
+        val rawBefore = Files.readAllBytes(root.resolve("midi/raw/A.mid"))
+        blocking { service.retryMidiCleanup(RetryMidiCleanupRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions())) }
+        listOf("analysis/A.json", "midi/generated/bass.mid", "cohesion/A.json", "stems/piano.wav", "mix/dry.wav", "output/master.wav", "arrangement.json").forEach { relative ->
+            val path = root.resolve(relative)
+            Files.createDirectories(checkNotNull(path.parent)); Files.writeString(path, "derived")
+        }
+
+        blocking { service.retryMidiCleanup(RetryMidiCleanupRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions())) }
+
+        assertTrue(sourceHash.contentEquals(Files.readAllBytes(input)))
+        assertTrue(rawBefore.contentEquals(Files.readAllBytes(root.resolve("midi/raw/A.mid"))))
+        assertTrue(Files.isRegularFile(root.resolve("midi/clean/A.mid")))
+        listOf("analysis/A.json", "midi/generated/bass.mid", "cohesion/A.json", "stems/piano.wav", "mix/dry.wav", "output/master.wav", "arrangement.json").forEach { relative ->
+            assertFalse(Files.exists(root.resolve(relative)), "$relative should be invalidated")
+        }
     }
 
     @Test
@@ -168,7 +200,7 @@ class ProjectApplicationServiceTest {
 
         assertEquals(Files.readString(serviceRoot.resolve("project.json")), Files.readString(cliRoot.resolve("project.json")))
         assertTrue(Files.readAllBytes(serviceRoot.resolve("source/A.mid")).contentEquals(Files.readAllBytes(cliRoot.resolve("source/A.mid"))))
-        assertTrue(Files.readAllBytes(serviceRoot.resolve("midi/clean/A.mid")).contentEquals(Files.readAllBytes(cliRoot.resolve("midi/clean/A.mid"))))
+        assertTrue(Files.readAllBytes(serviceRoot.resolve("midi/raw/A.mid")).contentEquals(Files.readAllBytes(cliRoot.resolve("midi/raw/A.mid"))))
     }
 
     private fun service(preparation: MidiPreparationService = copyingPreparation()) = DefaultProjectApplicationService(
