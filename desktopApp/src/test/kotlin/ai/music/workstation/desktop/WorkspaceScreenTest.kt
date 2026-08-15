@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -347,6 +348,21 @@ class WorkspaceScreenTest {
         }
         onNodeWithTag(WorkspaceTags.CREATION_NEXT_ACTION).assertIsNotEnabled()
         onNodeWithText("Operation in progress").assertExists()
+    }
+
+    @Test
+    fun `creation stepper gives blocked stages an accessible reason and recovery action`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MusicWorkstationTheme { WorkspaceScreen(projectState(), intents::add) } }
+
+        val stage = onNodeWithTag(WorkspaceTags.CREATION_STAGE_PREFIX + "structure")
+        assertEquals(
+            listOf("Structure: Blocked. Every part must be prepared before the structure can be arranged. Recovery: Import a MIDI, WAV, or MP3 source."),
+            stage.fetchSemanticsNode().config[SemanticsProperties.ContentDescription]
+        )
+        stage.performClick()
+
+        assertEquals(WorkspaceIntent.ShowImportPart(audio = false), intents.last())
     }
 
     @Test

@@ -244,7 +244,9 @@ private fun WorkspaceNavItem(stage: CreationStageProgress, state: WorkspaceUiSta
             .padding(horizontal = 8.dp, vertical = 7.dp)
             .semantics {
                 testTag = WorkspaceTags.CREATION_STAGE_PREFIX + stage.stage.name.lowercase()
-                contentDescription = "${creationStageLabel(stage.stage)}: ${creationStatusLabel(stage.status)}${stage.reason?.let { ". $it" } ?: ""}"
+                val statusAndReason = stage.reason?.let { "${creationStatusLabel(stage.status)}. $it" }
+                    ?: "${creationStatusLabel(stage.status)}."
+                contentDescription = "${creationStageLabel(stage.stage)}: $statusAndReason Recovery: ${stage.nextAction.prerequisite}"
             },
         color = if (stage.status == CreationStageStatus.CURRENT) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
         style = MaterialTheme.typography.labelMedium,
