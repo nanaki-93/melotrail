@@ -142,11 +142,11 @@ These tasks start only after Task 028 and must be implemented one at a time.
 | [051](tasks/completed/051-workspace-theme-tokens.md) | Workspace theme tokens | 050 | Stable reference-aligned visual vocabulary |
 | [052](tasks/completed/052-responsive-workspace-shell.md) | Responsive workspace shell | 051 | Wide/medium/narrow reference layout |
 | [053](tasks/completed/053-timeline-mixer-visualization.md) | Timeline, mixer, visual states | 052 | Real-data timeline and final visual states |
-| [054](tasks/054-end-to-end-workflow-compatibility.md) | End-to-end workflow and compatibility | 029–053 | Fixture-backed new/legacy flow proof |
-| [055](tasks/055-documentation-and-package-smoke.md) | Documentation and package smoke | 054 | Verified current-OS desktop documentation/package |
-| [056](tasks/056-repository-bug-audit.md) | Repository-wide bug audit | 055 | Reproducible report and Task 059+ blockers |
-| [057](tasks/057-static-frontend-retirement.md) | Static-frontend retirement | 056 + blockers | Deprecated web source/server/fallback removed |
-| [058](tasks/058-repository-guards-and-final-docs.md) | Repository guards and final docs | 057 | Drift guard and final verified desktop-first repo |
+| [054](tasks/completed/054-end-to-end-workflow-compatibility.md) | End-to-end workflow and compatibility | 029–053 | Fixture-backed new/legacy flow proof |
+| [055](tasks/completed/055-documentation-and-package-smoke.md) | Documentation and package smoke | 054 | Verified current-OS desktop documentation/package |
+| [056](tasks/completed/056-repository-bug-audit.md) | Repository-wide bug audit | 055 | Reproducible report and Task 059+ blockers |
+| [057](tasks/completed/057-static-frontend-retirement.md) | Static-frontend retirement | 056 + blockers | Deprecated web source/server/fallback removed |
+| [058](tasks/completed/058-repository-guards-and-final-docs.md) | Repository guards and final docs | 057 | Drift guard and final verified desktop-first repo |
 
 Task 056 is intentionally read-only except for reports/task contracts. Complete
 every P0/P1 or retirement-blocking Task 059+ it creates before Task 057. Do not
