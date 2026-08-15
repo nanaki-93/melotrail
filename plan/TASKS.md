@@ -141,7 +141,7 @@ These tasks start only after Task 028 and must be implemented one at a time.
 | [050](tasks/completed/050-arrangement-build-workspace.md) | Arrangement and build workspace | 049 | Clear approval and build lifecycle |
 | [051](tasks/completed/051-workspace-theme-tokens.md) | Workspace theme tokens | 050 | Stable reference-aligned visual vocabulary |
 | [052](tasks/completed/052-responsive-workspace-shell.md) | Responsive workspace shell | 051 | Wide/medium/narrow reference layout |
-| [053](tasks/053-timeline-mixer-visualization.md) | Timeline, mixer, visual states | 052 | Real-data timeline and final visual states |
+| [053](tasks/completed/053-timeline-mixer-visualization.md) | Timeline, mixer, visual states | 052 | Real-data timeline and final visual states |
 | [054](tasks/054-end-to-end-workflow-compatibility.md) | End-to-end workflow and compatibility | 029–053 | Fixture-backed new/legacy flow proof |
 | [055](tasks/055-documentation-and-package-smoke.md) | Documentation and package smoke | 054 | Verified current-OS desktop documentation/package |
 | [056](tasks/056-repository-bug-audit.md) | Repository-wide bug audit | 055 | Reproducible report and Task 059+ blockers |

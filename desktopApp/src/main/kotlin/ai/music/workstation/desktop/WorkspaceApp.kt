@@ -77,7 +77,9 @@ object WorkspaceTags {
     const val STRUCTURE_SELECTED_DETAIL = "structure-selected-detail"
     const val ARRANGEMENT_PANEL = "arrangement-panel"
     const val TIMELINE_PANEL = "timeline-panel"
+    const val TIMELINE_LANE_PREFIX = "timeline-lane-"
     const val MIX_PANEL = "mix-panel"
+    const val MIX_TRACK_PREFIX = "mix-track-"
     const val OPERATION_STATUS = "operation-status"
     const val CREATE_PROJECT = "create-project"
     const val OPEN_PROJECT = "open-project"
@@ -937,7 +939,7 @@ private fun SongPlanRow(section: ai.music.workstation.application.ArrangementSec
 @Composable
 private fun TimelineLanes(arrangement: ai.music.workstation.application.ArrangementSnapshot, selectedIndex: Int?, onIntent: (WorkspaceIntent) -> Unit) {
     listOf("piano", "bass", "drums", "pad", "strings").forEach { instrument ->
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        Row(modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.TIMELINE_LANE_PREFIX + instrument }, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(instrument.replaceFirstChar(Char::uppercase), modifier = Modifier.padding(top = 7.dp).widthIn(min = 52.dp), color = instrumentLaneColors.getValue(instrument), style = MaterialTheme.typography.labelMedium)
             arrangement.sections.forEach { section ->
                 val active = section.instruments.any { it.name == instrument }
@@ -965,7 +967,7 @@ private fun MixPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Uni
     } else {
         mix.availableStems.forEach { instrument ->
             val setting = mix.settings.tracks[instrument] ?: ai.music.workstation.application.LogicalMixSetting()
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(modifier = Modifier.semantics { testTag = WorkspaceTags.MIX_TRACK_PREFIX + instrument; contentDescription = "$instrument mix track" }, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row { Text(instrument.replaceFirstChar(Char::uppercase), modifier = Modifier.weight(1f), color = instrumentLaneColors[instrument] ?: MaterialTheme.colorScheme.onSurface); Text("%.1f dB".format(setting.gainDb)) }
                 Slider(value = setting.gainDb.toFloat(), onValueChange = { onIntent(WorkspaceIntent.UpdateMixSetting(instrument, setting.copy(gainDb = it.toDouble()))) }, valueRange = -24f..12f, enabled = !disabled)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

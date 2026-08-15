@@ -131,6 +131,8 @@ class WorkspaceScreenTest {
         onNodeWithTag(WorkspaceTags.ARRANGEMENT_GENERATE).assertExists()
         onNodeWithTag(WorkspaceTags.ARRANGEMENT_PREVIEW).assertExists()
         onNodeWithTag(WorkspaceTags.ARRANGEMENT_APPROVE).assertExists()
+        onNodeWithTag(WorkspaceTags.TIMELINE_LANE_PREFIX + "piano").assertExists()
+        onNodeWithTag(WorkspaceTags.TIMELINE_LANE_PREFIX + "bass").assertExists()
         onNodeWithText("Transition out: build").assertExists()
     }
 
@@ -148,6 +150,7 @@ class WorkspaceScreenTest {
 
         onNodeWithTag(WorkspaceTags.BUILD_SONG).assertExists()
         onNodeWithTag(WorkspaceTags.MIX_RESET).assertExists()
+        onNodeWithTag(WorkspaceTags.MIX_TRACK_PREFIX + "piano").assertExists()
         onNodeWithTag(WorkspaceTags.PLAYBACK_DRY).assertExists()
         onNodeWithTag(WorkspaceTags.PLAYBACK_LOFI).assertExists()
         onNodeWithTag(WorkspaceTags.PLAYBACK_MASTER).assertExists()
