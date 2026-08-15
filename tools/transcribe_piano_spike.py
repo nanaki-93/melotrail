@@ -1,12 +1,11 @@
 #!/usr/bin/env python
-"""Run the Task 001 local solo-piano WAV-to-MIDI transcription spike.
+"""Run the local solo-piano WAV-to-MIDI transcription utility.
 
 This script intentionally does not import the application worker or modify a
 song project. It loads Basic Pitch only when actual inference is requested, so
 ``--validate-midi`` and the parser tests work without model dependencies.
 
-See ``plan/research/audio-to-midi-transcription-spike.md`` for the supported
-environment, model/runtime setup, evaluation status, and licensing notes.
+See ``worker/README.md`` for the supported optional runtime and setup.
 """
 
 from __future__ import annotations
@@ -204,7 +203,7 @@ def transcribe(input_path: Path, output_path: Path) -> tuple[MidiNote, ...]:
     except ImportError as error:
         raise RuntimeError(
             "Basic Pitch is unavailable. Create the documented isolated environment "
-            "from plan/research/audio-to-midi-transcription-spike.md."
+            "from worker/README.md."
         ) from error
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

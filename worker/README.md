@@ -55,9 +55,11 @@ python3.11 -m venv .venv-transcription
 .venv-transcription/bin/python -m worker.main
 ```
 
-The Task 001 report records an unresolved macOS/Python 3.12 compatibility gate.
 Use the command only after confirming Basic Pitch inference in the chosen local
-Python 3.11 environment; no model download is attempted automatically.
+Python 3.11 environment; no model download is attempted automatically. The
+optional transcription dependencies are kept separate because the supported
+Basic Pitch release is not compatible with the normal macOS/Python 3.12 worker
+environment.
 
 Example request:
 

@@ -1,131 +1,88 @@
-# Personal AI Music Arranger — Implementation Task Prompt Template
+# AI Music Workstation — Implementation Task Prompt Template
 
-Copy the prompt below into Qwen3-Coder-30B for **one task at a time**. Replace
-`XXX` with a task number. Tasks 022–028 live under `plan/tasks/completed/`;
-the new UI, song-creation, and repository-health tasks are 029–058 under
-`plan/tasks/`.
+Use this prompt for one implementation task at a time. Replace `XXX` with the
+task number and make sure exactly one matching task contract exists under
+`plan/tasks/` or `plan/future-tasks/`. A deferred future task must be explicitly
+promoted before implementation.
 
 ```text
-You are implementing exactly Task XXX for the Personal AI Music Arranger.
+You are implementing exactly Task XXX for the AI Music Workstation.
 
-This is a local personal Kotlin/Compose Desktop music workstation. Keep the
-implementation small, deterministic, safe, and testable. Do not continue into
-another task. The selected task file is the implementation contract; its Goal,
-Dependencies, Requirements, Tests, Acceptance criteria, and Out of scope are
-binding.
-
-Task-size rule: implement one primary concern and its direct tests. Do not pull
-worker algorithms, application orchestration, view-model state, and visual UI
-from later tasks into this task. If a later task needs a compile-safe seam, add
-the smallest inert contract and report it.
+This is a local Kotlin/Compose Desktop music workstation with a separate Python
+HTTP worker. Keep the implementation small, deterministic, safe, and testable.
+Do not continue into another task. The selected task contract's goal, scope,
+requirements, tests, acceptance criteria, and exclusions are binding.
 
 Before coding:
-1. Read README.md and plan/AGENT_GUIDELINES.md completely.
-2. Find the selected task with:
-   rg --files plan/tasks | sort | rg '/XXX-'
-   Read that single file completely. If it is not found or more than one file
-   matches, stop and report the ambiguity; do not guess.
-3. For Tasks 029–058 and any audit-created Task 059+, read
-   plan/PLAN_UI_AND_CREATION.md completely. For desktop
-   work also read the relevant sections of plan/PLAN_COMPOSE_DESKTOP.md.
-4. Read plan/ARCHITECTURE.md. If the task touches MIDI, SFZ, samples, rendering,
-   sound-library location, licenses, drums, or transitions, also read
-   plan/SOUND_LIBRARY_BASELINE.md and sounds/README.md. If it changes MIDI-first
-   artifacts, read the relevant sections of plan/PLAN_MIDI.md.
-5. Inspect plan/UI.png before changing Compose layout, visual tokens, responsive
-   behavior, or timeline presentation. It is a visual direction only: do not
-   implement its travel, scene, video, weather, image, or location features.
-6. Inspect the repository tree and `git status --short`. Preserve all existing
-   user changes. Find the current implementation and tests that overlap with
-   this task before proposing edits.
-7. Run the baseline checks relevant to the selected task before editing:
-   - ./gradlew test
-   - ./gradlew :desktopApp:test when desktop code exists
-   - python -m unittest discover -s worker/tests only when worker code changes
-   Record pre-existing failures separately; never hide or “fix” an unrelated
-   failure.
-8. State briefly: repository findings, pre-existing failures, assumptions, and
-   the smallest intended file set. Then implement.
+1. Read README.md completely.
+2. Find the selected contract with:
+   rg --files plan/tasks plan/future-tasks 2>/dev/null | sort | rg '/XXX-'
+   Read the one matching file completely. If zero or multiple files match, stop
+   and report the ambiguity. Do not implement a future contract unless the user
+   has explicitly promoted it.
+3. Read only the current operational docs relevant to the task:
+   - docs/TROUBLESHOOTING.md for desktop setup, readiness, import, or packaging;
+   - worker/README.md for Python worker, inspection, cleanup, or transcription;
+   - sounds/README.md for MIDI, SFZ, samples, rendering, or licenses.
+4. Inspect the repository tree and git status. Preserve existing user changes.
+   Find the current implementation and tests overlapping the task before
+   proposing edits; treat code and tests as the architecture source of truth.
+5. Run the smallest relevant baseline before editing. Normally use:
+   - ./gradlew test for root Kotlin changes;
+   - ./gradlew :desktopApp:test for desktop changes;
+   - .venv/bin/python -m unittest discover -s worker/tests for worker changes.
+   Record pre-existing failures separately and do not fix unrelated failures.
+6. State the repository findings, assumptions, and smallest intended file set,
+   then implement one primary concern plus its direct tests.
 
 Architecture and safety rules:
-- The Compose Desktop app is the active product UI. Do not extend or remove the
-  old static Spring frontend unless this task explicitly says so.
-- Compose is an adapter over typed Kotlin application services. Do not call the
-  CLI, parse CLI output, call Spring HTTP, write project files, invoke workers,
-  render audio, or perform business orchestration from composables/view models.
-- Keep canonical project artifacts as the source of truth. UI state is only
-  selection, drafts, display, and operation state; never add a desktop database
-  or competing project format.
-- Preserve existing CLI behavior and compatibility. When moving behavior into a
-  service, add parity tests against canonical artifacts rather than console
-  wording.
-- Resolve the sound library through one validated injected configuration/locator.
-  Do not rely on `Path.of("sounds")`, `/sound`, or process CWD in packaged or
-  desktop paths. Preserve the registry’s security/license/sample validation and
-  never create a duplicate `instruments/` tree.
-- Treat every external input as untrusted: validate extension and actual format,
-  IDs, paths, headers, MIDI, registry values, worker output, and model output.
-  Do not reveal arbitrary external source paths in persisted project reports.
-- Source audio/MIDI is immutable. Derived files must use project-relative,
-  validated locations, atomic writes, and output validation. Preserve actual
-  sample rate/channel count; work in frames; keep intermediates lossless PCM-24;
-  MP3 is final-export-only.
+- Compose Desktop is the product UI. Spring is an optional local JSON API and
+  must not regain a browser frontend or static fallback.
+- Keep Compose as an adapter over typed Kotlin application services. Do not put
+  file writes, worker calls, rendering, CLI parsing, or business orchestration
+  in composables.
+- Canonical project artifacts are the source of truth. Do not add a competing
+  database or project format. Preserve supported legacy project reads unless
+  the contract explicitly changes them.
+- Resolve the sound library through the validated locator/settings boundary.
+  Do not depend on process CWD or create a second instrument tree.
+- Validate all external input: extensions and actual formats, identifiers,
+  paths, MIDI, registry values, worker responses, and model output.
+- Source audio and MIDI are immutable. Use validated project-relative derived
+  paths, atomic publication, and output validation. Preserve sample rate and
+  channels, work in frames, keep intermediates lossless, and make MP3 a final
+  export only.
 - Audio cleanup must be explicit, conservative, measurable, and reversible.
-  Never silently normalize, remove time/silence, alter pitch/tempo, separate
-  stems, or overwrite source. Default to inspect-only where the task requires
-  consent for cleanup.
-- AI is a bounded advisor/planner, never an executor. It may choose only from a
-  schema allow-list of logical instruments or measured cleanup candidates. Parse
-  and validate JSON; reject invalid output; never execute generated code, shell
-  commands, paths, DSP values, MIDI notes, or arbitrary instruments. Retain a
-  deterministic fallback and preserve explicit Qwen arrangement approval.
-- Keep preview monitoring separate from releases. Never report preview success
-  until rendering/decoding/output has actually started; surface renderer,
-  library, worker, and device errors with an actionable recovery step.
-- Do not introduce a cloud service, database, DI/navigation framework, generic
-  plugin system, DAW editor, telemetry, auto-download, source separation, or
-  unrelated refactor. Do not implement later task work except for the smallest
-  inert compile-safe seam, and report that seam.
-- For every task, inspect the changed surface for reproducible bugs, dead
-  references, documentation drift, source/artifact safety regressions, and
-  leaked resources. Record a narrow follow-up rather than silently expanding
-  scope. Task 056 is the only repository-wide audit. Task 057 is the only
-  legacy-frontend removal task; do not delete static frontend files earlier.
-- Task 056 must not fix code: it writes the audit and creates one narrow Task
-  059+ contract per verified P0/P1 or retirement blocker. Complete those tasks
-  separately before Task 057. Do not group unrelated bugs into one task.
+  Never silently normalize, remove time, alter pitch or tempo, separate stems,
+  or overwrite a source.
+- AI is a bounded planner/advisor, never an executor. Parse and validate strict
+  JSON against schemas and allow-lists. Never execute generated code, commands,
+  paths, DSP values, or arbitrary instruments. Keep deterministic behavior and
+  explicit approval where the current workflow requires it.
+- Preview is not a release artifact. Report success only after the applicable
+  decode, render, and output operation has actually started or completed, and
+  expose dependency failures with a useful recovery action.
+- Do not add cloud infrastructure, telemetry, auto-downloads, a generic plugin
+  system, a DAW editor, or unrelated refactors. If another concern is found,
+  record a narrow follow-up instead of expanding this task.
 
 Testing and completion:
-1. Add or update focused unit/service/view-model/Compose tests required by the
-   selected task. Use fakes for worker, renderer, model, and audio device
-   boundaries; standard tests must run offline.
-2. Run focused tests, then ./gradlew test and relevant changed-module checks.
-   When desktopApp changes, run ./gradlew :desktopApp:test :desktopApp:build.
-   Run worker tests only when worker code changed. Run packaging/current-OS
-   smoke tests only when the selected task requires them.
-3. When UI changes, perform the selected task’s manual visual check at 1440×900
-   and 1100×720 (plus HiDPI where required). When audio behavior changes, run
-   the specified manual A/B/listening smoke and verify source hashes plus output
-   WAV/MP3 format rules.
-4. Review the final diff for CWD-dependent library access, UI-only orchestration,
-   leaked paths, false-success messages, source mutation, task leakage, and
-   unrelated user changes.
-5. When and only when this task meets every required acceptance criterion,
-   commit its changes before reporting completion. Stage explicitly only the
-   files changed for this task (never use `git add .` or `git add -A`), inspect
-   the staged diff, and commit with a message beginning `Task XXX:`, for example
-   `Task XXX: derive creation progress model`. Do not commit pre-existing,
-   unrelated, or another user's changes. If required acceptance checks fail or
-   are skipped, do not commit; report the task as incomplete with the blocker.
-6. Report: changed files; commit hash and message (or why no commit was made);
-   commands/tests and results; manual results; source /
-   artifact validation; assumptions; pre-existing failures; deferred work; and
-   remaining limitations. Do not claim optional model, renderer, assets, or OS
-   support that you did not actually verify.
+1. Add focused tests at the affected boundary. Use fakes for worker, renderer,
+   model, filesystem, and audio-device boundaries where appropriate; automated
+   tests must remain offline.
+2. Run focused tests, then the relevant full module checks. For desktop changes,
+   run ./gradlew :desktopApp:test :desktopApp:build. Run worker tests only when
+   worker code changes. Run packaging only when the contract requires it.
+3. For UI changes, perform the contract's visual and keyboard checks. For audio
+   changes, perform its specified listening/A-B smoke and verify source hashes
+   and output format when those checks are available.
+4. Review the final diff for unrelated user changes, source mutation, unsafe
+   paths, CWD assumptions, false-success states, leaked resources, and docs that
+   no longer match behavior.
+5. Commit only if the user or repository workflow requests a commit. Stage
+   explicit files only; never stage unrelated or pre-existing changes.
+6. Report changed files, commands and results, manual checks, assumptions,
+   pre-existing failures, deferred work, and unverified optional dependencies.
+   Never claim renderer, model, sample, audio-device, package, or OS support that
+   was not actually verified.
 ```
-
-Start with Task 029 and follow each task file's Dependencies, normally in
-ascending order. After Task 056, implement every generated Task 059+ marked P0,
-P1, or retirement-blocking before Task 057; then finish Task 058. Do not mark a
-task complete when a required acceptance check was skipped because a dependency
-was unavailable—report it as incomplete with the exact blocker.

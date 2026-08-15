@@ -72,8 +72,9 @@ Keep the same logical instrument names in instruments.json, so no arrangement co
 
 ## Renderer
 
-Task 007 uses the offline `sfizz_render` executable from sfizz, tested against
-the documented sfizz 1.2.3 command-line interface and licensed BSD-2-Clause.
+The application uses the offline `sfizz_render` executable from sfizz, tested
+against the documented sfizz 1.2.3 command-line interface and licensed
+BSD-2-Clause.
 It is a local prerequisite, not an application dependency and not an automatic
 download. Install/build it yourself, then point the application at its absolute
 path when it is not on `PATH`:

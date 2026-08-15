@@ -25,8 +25,10 @@ The local desktop workspace uses the same typed Kotlin application services as
 the CLI. It launches in-process and does not start Spring:
 
 ```bash
-./gradlew :desktopApp:run
+make desktop
 ```
+
+Equivalent Gradle command: `./gradlew :desktopApp:run`.
 
 Use **Create** or **Open project**, prepare/analyze parts, save the structure,
 generate an arrangement, explicitly approve a Qwen draft, then use **Build
@@ -46,12 +48,6 @@ artifact metadata, not model responses or source content.
 Transport shortcuts are Ctrl/Cmd+Space for play/pause, Ctrl/Cmd+Left/Right to
 seek five seconds, and Ctrl/Cmd+K to stop. Structure rows provide keyboard
 reachable earlier/later controls as an alternative to drag reordering.
-
-The next desktop UI and input-quality work is planned in
-[`plan/PLAN_UI_AND_CREATION.md`](plan/PLAN_UI_AND_CREATION.md). It targets a
-clearer Compose workflow, reliable WAV/MP3 import and preview feedback,
-non-destructive input preparation, and working-directory-independent sound
-library setup.
 
 ### macOS package
 
@@ -183,7 +179,7 @@ metrics.
 The worker exposes local Basic Pitch transcription only after its optional
 runtime is installed in a separate Python 3.11 environment. It is intentionally
 not part of the normal worker dependencies or test suite. See
-[`worker/README.md`](worker/README.md) for setup and the Task 001 runtime gate.
+[`worker/README.md`](worker/README.md) for setup and runtime verification.
 
 ```bash
 make worker
@@ -400,6 +396,7 @@ WAV/PCM-24 intermediates and preserve the source sample rate and channels.
 | `make check` | Run Gradle verification |
 | `make check-legacy-frontend` | Reject reintroduced browser-frontend files/references |
 | `make run` | Start Spring Boot |
+| `make desktop` | Start the Compose Desktop application |
 | `make cli-help` | Show CLI help |
 | `make cli ARGS="..."` | Run CLI |
 | `make worker` | Start standalone Python worker on `:8081` |

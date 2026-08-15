@@ -10,7 +10,7 @@ WORKER_DEPS_STAMP := $(VENV)/.worker-deps-installed
 WORKER_HOST ?= 127.0.0.1
 WORKER_PORT ?= 8081
 
-.PHONY: help build test check check-legacy-frontend run cli cli-help worker python-install clean
+.PHONY: help build test check check-legacy-frontend run desktop cli cli-help worker python-install clean
 
 help:
 	@echo "AI Music Workstation"
@@ -20,6 +20,7 @@ help:
 	@echo "  make test                          Run tests"
 	@echo "  make check                         Run all verification tasks"
 	@echo "  make run                           Start the Kotlin/Spring server"
+	@echo "  make desktop                       Start the Compose Desktop application"
 	@echo "  make cli ARGS='...'                Run the Kotlin CLI"
 	@echo ""
 	@echo "Python services:"
@@ -45,6 +46,9 @@ check-legacy-frontend:
 
 run:
 	$(GRADLE) bootRun
+
+desktop:
+	$(GRADLE) :desktopApp:run
 
 cli:
 	$(GRADLE) cliRun --args='$(ARGS)'
