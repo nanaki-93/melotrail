@@ -66,6 +66,61 @@ class WorkspaceViewModelTest {
     }
 
     @Test
+    fun `workspace navigation updates one explicit selected destination`() = runTest {
+        val viewModel = WorkspaceViewModel(FakeProjectService(), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+
+        viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.ARRANGE))
+
+        assertEquals(WorkspaceSection.ARRANGE, viewModel.state.value.workspaceSection)
+        viewModel.close()
+    }
+
+    @Test
+    fun `adding a part without a project produces visible guidance`() = runTest {
+        val viewModel = WorkspaceViewModel(FakeProjectService(), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+
+        viewModel.accept(WorkspaceIntent.ShowImportPart(audio = false))
+
+        assertEquals("Create or open a project before adding a part.", viewModel.state.value.notification)
+        assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation)
+        viewModel.close()
+    }
+
+    @Test
+    fun `opening a legacy project is successful and visibly explains its limitations`() = runTest {
+        val root = Path.of("build/legacy-project")
+        val legacy = projectSnapshot(root).copy(version = 1, name = "legacy-song")
+        val viewModel = WorkspaceViewModel(FakeProjectService(result = legacy), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root))
+        advanceUntilIdle()
+
+        assertEquals(legacy, viewModel.state.value.project)
+        assertTrue(viewModel.state.value.notification!!.contains("Legacy v1 project opened"))
+        assertEquals(WorkspaceOperation.Idle, viewModel.state.value.operation)
+        viewModel.close()
+    }
+
+    @Test
+    fun `opening a project surfaces optional artifact hydration failures`() = runTest {
+        val root = Path.of("build/partial-project")
+        val project = projectSnapshot(root).copy(
+            readiness = projectSnapshot(root).readiness.copy(arrangementAvailable = true)
+        )
+        val viewModel = WorkspaceViewModel(
+            FakeProjectService(result = project), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
+            arrangementService = FakeArrangementService()
+        )
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root))
+        advanceUntilIdle()
+
+        assertEquals(project, viewModel.state.value.project)
+        assertTrue(viewModel.state.value.notification!!.contains("arrangement artifacts could not be loaded"))
+        viewModel.close()
+    }
+
+    @Test
     fun `keeps the workspace empty when opening fails`() = runTest {
         val viewModel = WorkspaceViewModel(FakeProjectService(failure = IllegalArgumentException("Project file not found")), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
 
@@ -74,6 +129,7 @@ class WorkspaceViewModelTest {
 
         assertNull(viewModel.state.value.project)
         assertEquals("Project file not found", assertIs<WorkspaceOperation.OpenFailed>(viewModel.state.value.operation).message)
+        assertTrue(viewModel.state.value.notification!!.contains("Unable to open project"))
         viewModel.close()
     }
 
@@ -209,6 +265,8 @@ class WorkspaceViewModelTest {
 
         assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation)
         assertIs<WorkspaceRetry.Import>(viewModel.state.value.retry)
+        assertNull(viewModel.state.value.dialog, "the import modal must not hide progress or retryable failures")
+        assertEquals("worker unavailable", viewModel.state.value.notification)
         viewModel.close()
     }
 
@@ -294,6 +352,7 @@ class WorkspaceViewModelTest {
         viewModel.accept(WorkspaceIntent.UpdateImportPart(assertIs<WorkspaceDialog.ImportPart>(viewModel.state.value.dialog).copy(id = "A")))
         viewModel.accept(WorkspaceIntent.ImportPart)
         assertTrue(assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation).message.contains("Unsupported source type"))
+        assertTrue(assertIs<WorkspaceDialog.ImportPart>(viewModel.state.value.dialog).validationMessage!!.contains("Unsupported source type"))
         assertNull(service.imported)
 
         viewModel.accept(WorkspaceIntent.UpdateImportPart(WorkspaceDialog.ImportPart(false, Path.of("intro.mid"), "A", "verse", ImportSourceKind.MIDI)))

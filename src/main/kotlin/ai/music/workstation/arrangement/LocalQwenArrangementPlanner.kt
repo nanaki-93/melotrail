@@ -29,8 +29,8 @@ class LmStudioQwenClient(
         ?.takeIf { it.isNotBlank() }
         ?: DEFAULT_MODEL,
     private val httpClient: OkHttpClient = OkHttpClient.Builder()
-        .callTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
-        .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+        .callTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(300, java.util.concurrent.TimeUnit.SECONDS)
         .build()
 ) : LocalQwenClient {
     override fun complete(systemPrompt: String, userPrompt: String): String {

@@ -81,10 +81,19 @@ data class WorkspaceUiState(
     val structureDraft: List<String> = emptyList(),
     val downstreamArtifactsStale: Boolean = false,
     val arrangementDraftDirty: Boolean = false,
-    val retry: WorkspaceRetry? = null
+    val retry: WorkspaceRetry? = null,
+    val workspaceSection: WorkspaceSection = WorkspaceSection.PROJECT
 ) {
     val creationSelection: CreationSelection
         get() = CreationSelection(selectedPartId, selectedArrangementSection, selectedArtifact)
+}
+
+enum class WorkspaceSection(val label: String) {
+    PROJECT("Project"),
+    STRUCTURE("Structure"),
+    ARRANGE("Arrange"),
+    MIX_MASTER("Mix & Master"),
+    LIBRARY("Library")
 }
 
 /** The UI exposes three named cleanup choices only; no worker parameters are editable here. */
@@ -219,6 +228,7 @@ sealed interface WorkspaceRetry {
 }
 
 sealed interface WorkspaceIntent {
+    data class SelectWorkspaceSection(val section: WorkspaceSection) : WorkspaceIntent
     data object ChooseProject : WorkspaceIntent
     data object RestoreLastProject : WorkspaceIntent
     data object ShowCreateProject : WorkspaceIntent
@@ -325,6 +335,7 @@ class WorkspaceViewModel(
 
     fun accept(intent: WorkspaceIntent) {
         when (intent) {
+            is WorkspaceIntent.SelectWorkspaceSection -> selectWorkspaceSection(intent.section)
             WorkspaceIntent.ChooseProject -> chooseProject()
             WorkspaceIntent.RestoreLastProject -> restoreLastProject()
             WorkspaceIntent.ShowCreateProject -> showCreateProject()
@@ -394,8 +405,15 @@ class WorkspaceViewModel(
         }
     }
 
+    private fun selectWorkspaceSection(section: WorkspaceSection) {
+        if (state.value.operation.isMutating) return busy("change workspace sections")
+        mutableState.update { it.copy(workspaceSection = section, notification = null) }
+    }
+
     private fun chooseProject() = scope.launch {
-        fileDialogs.chooseProjectDirectory()?.let(::requestOpenProject)
+        runCatching { fileDialogs.chooseProjectDirectory() }
+            .onSuccess { selected -> selected?.let(::requestOpenProject) }
+            .onFailure { fail("open project", it.message ?: "The project chooser could not be opened.") }
     }
 
     private fun restoreLastProject() {
@@ -415,9 +433,13 @@ class WorkspaceViewModel(
     }
 
     private fun chooseCreateProjectDirectory() = scope.launch {
-        val root = fileDialogs.chooseNewProjectDirectory() ?: return@launch
-        val dialog = state.value.dialog as? WorkspaceDialog.CreateProject ?: return@launch
-        mutableState.update { it.copy(dialog = dialog.copy(root = root, name = dialog.name.ifBlank { root.fileName.toString() })) }
+        runCatching { fileDialogs.chooseNewProjectDirectory() }
+            .onSuccess { root ->
+                root ?: return@onSuccess
+                val dialog = state.value.dialog as? WorkspaceDialog.CreateProject ?: return@onSuccess
+                mutableState.update { it.copy(dialog = dialog.copy(root = root, name = dialog.name.ifBlank { root.fileName.toString() })) }
+            }
+            .onFailure { fail("create project", it.message ?: "The folder chooser could not be opened.") }
     }
 
     private fun createProject() {
@@ -482,12 +504,14 @@ class WorkspaceViewModel(
     }
 
     private fun chooseSoundLibraryRoot() = scope.launch {
-        val root = fileDialogs.chooseSoundLibraryDirectory() ?: return@launch
-        mutableState.update { it.copy(soundLibrary = soundLibrarySettings.select(root)) }
+        runCatching { fileDialogs.chooseSoundLibraryDirectory() }
+            .onSuccess { root -> root?.let { mutableState.update { current -> current.copy(soundLibrary = soundLibrarySettings.select(it)) } } }
+            .onFailure { fail("sound library", it.message ?: "The library chooser could not be opened.") }
     }
 
     private fun showImportPart(audio: Boolean) {
-        if (state.value.project == null || state.value.operation.isMutating) return
+        if (state.value.project == null) return fail("import part", "Create or open a project before adding a part.")
+        if (state.value.operation.isMutating) return busy("add a part")
         // The single dialog detects the source type after selection. Keep the former intent
         // parameter only as a compile-safe adapter for existing callers.
         mutableState.update { it.copy(dialog = WorkspaceDialog.ImportPart(audio = false), notification = null) }
@@ -495,7 +519,12 @@ class WorkspaceViewModel(
 
     private fun chooseImportSource() = scope.launch {
         val draft = state.value.dialog as? WorkspaceDialog.ImportPart ?: return@launch
-        updateImportSource(fileDialogs.choosePartSource())
+        runCatching { fileDialogs.choosePartSource() }
+            .onSuccess(::updateImportSource)
+            .onFailure { failure ->
+                mutableState.update { it.copy(dialog = draft.copy(validationMessage = failure.message ?: "The source chooser could not be opened.")) }
+                fail("import part", failure.message ?: "The source chooser could not be opened.")
+            }
     }
 
     private fun updateImportSource(source: Path?) {
@@ -521,17 +550,28 @@ class WorkspaceViewModel(
     private fun importPart() {
         val project = state.value.project ?: return
         val draft = state.value.dialog as? WorkspaceDialog.ImportPart ?: return
-        val source = draft.source ?: return fail("import part", "Choose a ${if (draft.audio) "WAV or MP3" else "MIDI"} source first.")
-        if (draft.detectedType == ImportSourceKind.UNSUPPORTED) return fail("import part", draft.validationMessage ?: "Unsupported source type.")
-        if (draft.id.isBlank()) return fail("import part", "Part ID is required and remains stable after import.")
-        if (project.parts.any { it.id == draft.id }) return fail("import part", "Part ID already exists: ${draft.id}")
-        if (draft.detectedType?.isAudio == true) state.value.runtimeReadiness.capabilityFailure(RuntimeCapability.AUDIO_IMPORT)?.let { return fail("import audio", it) }
+        val source = draft.source ?: return failImportDraft(draft, "Choose a MIDI, WAV, or MP3 source first.")
+        if (draft.detectedType == ImportSourceKind.UNSUPPORTED) return failImportDraft(draft, draft.validationMessage ?: "Unsupported source type.")
+        if (draft.id.isBlank()) return failImportDraft(draft, "Part ID is required and remains stable after import.")
+        if (project.parts.any { it.id == draft.id }) return failImportDraft(draft, "Part ID already exists: ${draft.id}")
+        if (draft.detectedType?.isAudio == true) state.value.runtimeReadiness.capabilityFailure(RuntimeCapability.AUDIO_IMPORT)?.let { return failImportDraft(draft, it, "import audio") }
         val request = ImportPartRequest(project.root, draft.id, source, draft.role, transcribe = draft.audio)
         runImport(request)
     }
 
+    private fun failImportDraft(draft: WorkspaceDialog.ImportPart, message: String, action: String = "import part") {
+        operationLogger.event(action, "validation-failed", draft.source, IllegalArgumentException(message))
+        mutableState.update {
+            it.copy(
+                operation = WorkspaceOperation.Failed(action, message),
+                notification = message,
+                dialog = draft.copy(validationMessage = message)
+            )
+        }
+    }
+
     private fun runImport(request: ImportPartRequest) {
-        mutableState.update { it.copy(operation = WorkspaceOperation.ImportingPart(request.id), notification = null, retry = null) }
+        mutableState.update { it.copy(operation = WorkspaceOperation.ImportingPart(request.id), notification = null, retry = null, dialog = null) }
         scope.launch {
             runCatching {
                 withContext(ioDispatcher) {
@@ -1009,8 +1049,18 @@ class WorkspaceViewModel(
         buildJob = scope.launch {
             runCatching { withContext(ioDispatcher) { service.build(BuildSongRequest(project.root, options.loFi, options.mp3)) { progress -> scope.launch { updateProgress(WorkspaceOperation.BuildingSong(progress)) } } } }
                 .onSuccess {
-                    val refreshed = withContext(ioDispatcher) { projectService.open(project.root) }
-                    mutableState.update { current -> current.copy(project = refreshed, mix = mixService.load(project.root), operation = WorkspaceOperation.Idle, notification = "Build complete: ${it.master}") }
+                    val (refreshed, loadedMix) = withContext(ioDispatcher) {
+                        projectService.open(project.root) to runCatching { mixService.load(project.root) }
+                    }
+                    mutableState.update { current ->
+                        current.copy(
+                            project = refreshed,
+                            mix = loadedMix.getOrNull(),
+                            operation = WorkspaceOperation.Idle,
+                            notification = loadedMix.exceptionOrNull()?.message?.let { warning -> "Build complete: ${it.master}. Mix controls could not be loaded: $warning" }
+                                ?: "Build complete: ${it.master}"
+                        )
+                    }
                 }.onFailure {
                     if (it is CancellationException) mutableState.update { current -> current.copy(operation = WorkspaceOperation.Idle, notification = "Build cancellation requested; the current atomic stage was allowed to finish safely.") }
                     else fail("build song", it.message ?: "Build Song failed.")
@@ -1090,31 +1140,55 @@ class WorkspaceViewModel(
         cancelPreview(resetState = true)
         preferences.saveLastOpenedProject(project.root)
         operationLogger.event("project", "opened", project.root)
+        val openedMessage = if (project.version == 1) {
+            "$message · Legacy v1 project opened. Re-import parts as MIDI-first sources to unlock the current arrangement workflow."
+        } else message
         mutableState.update {
             it.copy(
                 project = project,
                 arrangement = null,
-                mix = runCatching { mixService.load(project.root) }.getOrNull(),
+                mix = null,
                 selectedPartId = null,
                 selectedArtifact = null,
                 midiQualityReview = MidiQualityReviewDraft(),
                 audioPreparation = AudioPreparationUiState(),
                 operation = WorkspaceOperation.Idle,
-                notification = message,
+                notification = openedMessage,
                 dialog = null,
                 structureDraft = project.structure.map { section -> section.partId },
                 downstreamArtifactsStale = stale,
                 arrangementDraftDirty = false,
-                retry = null
+                retry = null,
+                workspaceSection = WorkspaceSection.PROJECT
             )
         }
-        refreshArrangement(project.root)
+        hydrateProject(project, openedMessage)
     }
 
-    private fun refreshArrangement(root: Path) = scope.launch {
-        val arrangement = withContext(ioDispatcher) { runCatching { arrangementService.load(root) }.getOrNull() }
+    private fun hydrateProject(project: ProjectSnapshot, openedMessage: String) = scope.launch {
+        val hydration = withContext(ioDispatcher) {
+            val mix = runCatching { mixService.load(project.root) }
+            val arrangement = runCatching { arrangementService.load(project.root) }
+            mix to arrangement
+        }
+        val warnings = buildList {
+            hydration.first.exceptionOrNull()?.message?.let { add("mix settings could not be loaded: $it") }
+            if (project.readiness.arrangementAvailable || project.readiness.songPlanAvailable) {
+                hydration.second.exceptionOrNull()?.message?.let { add("arrangement artifacts could not be loaded: $it") }
+            }
+        }
         mutableState.update { current ->
-            if (current.project?.root == root) current.copy(arrangement = arrangement, selectedArrangementSection = arrangement?.sections?.firstOrNull()?.index) else current
+            if (current.project?.root != project.root) current
+            else {
+                val arrangement = hydration.second.getOrNull()
+                current.copy(
+                    mix = hydration.first.getOrNull(),
+                    arrangement = arrangement,
+                    selectedArrangementSection = arrangement?.sections?.firstOrNull()?.index,
+                    notification = if (warnings.isEmpty()) current.notification ?: openedMessage
+                    else "$openedMessage Some optional artifacts need attention: ${warnings.joinToString("; ")}"
+                )
+            }
         }
     }
 

@@ -40,9 +40,51 @@ class WorkspaceScreenTest {
             WorkspaceTags.STRUCTURE_PANEL,
             WorkspaceTags.ARRANGEMENT_PANEL,
             WorkspaceTags.TIMELINE_PANEL,
-            WorkspaceTags.MIX_PANEL,
+            WorkspaceTags.COMPACT_TRANSPORT,
             WorkspaceTags.OPERATION_STATUS
         ).forEach { onNodeWithTag(it).assertExists() }
+    }
+
+    @Test
+    fun `top navigation has explicit destinations and dispatches section selection`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MusicWorkstationTheme { WorkspaceScreen(projectState(), intents::add) } }
+
+        WorkspaceSection.entries.forEach { section ->
+            onNodeWithTag(WorkspaceTags.WORKSPACE_SECTION_PREFIX + section.name.lowercase()).assertExists()
+        }
+        onNodeWithTag(WorkspaceTags.WORKSPACE_SECTION_PREFIX + WorkspaceSection.ARRANGE.name.lowercase()).performClick()
+        assertEquals(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.ARRANGE), intents.last())
+    }
+
+    @Test
+    fun `library destination exposes configuration and readiness actions`() = runComposeUiTest {
+        setContent {
+            MusicWorkstationTheme {
+                WorkspaceScreen(projectState().copy(workspaceSection = WorkspaceSection.LIBRARY), onIntent = {})
+            }
+        }
+
+        onNodeWithTag(WorkspaceTags.LIBRARY_PANEL).assertIsDisplayed()
+        onNodeWithTag(WorkspaceTags.SOUND_LIBRARY_SETTINGS).assertIsDisplayed()
+        onNodeWithText("Refresh readiness").assertIsDisplayed()
+    }
+
+    @Test
+    fun `global feedback renders success failure dismissal and retry actions`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent {
+            MusicWorkstationTheme {
+                WorkspaceScreen(projectState().copy(notification = "Unable to import part: worker unavailable", retry = WorkspaceRetry.Analyze(java.nio.file.Path.of("build/test-project"), "A")), intents::add)
+            }
+        }
+
+        onNodeWithTag(WorkspaceTags.GLOBAL_FEEDBACK).assertIsDisplayed()
+        onNodeWithText("Unable to import part: worker unavailable").assertIsDisplayed()
+        onNodeWithTag(WorkspaceTags.GLOBAL_FEEDBACK_RETRY).performClick()
+        assertEquals(WorkspaceIntent.Retry, intents.last())
+        onNodeWithTag(WorkspaceTags.GLOBAL_FEEDBACK_DISMISS).performClick()
+        assertEquals(WorkspaceIntent.DismissNotification, intents.last())
     }
 
     @Test
@@ -146,7 +188,7 @@ class WorkspaceScreenTest {
             root, ai.music.workstation.application.PersistedMixSettings(), listOf("piano"), root.resolve("mix/dry.wav"), stale = false
         )
         val arrangement = ai.music.workstation.application.ArrangementSnapshot(root, emptyList(), false, true, false, root.resolve("arrangement.json"))
-        setContent { MusicWorkstationTheme { WorkspaceScreen(WorkspaceUiState(project = project, arrangement = arrangement, mix = mix), onIntent = {}) } }
+        setContent { MusicWorkstationTheme { WorkspaceScreen(WorkspaceUiState(project = project, arrangement = arrangement, mix = mix, workspaceSection = WorkspaceSection.MIX_MASTER), onIntent = {}) } }
 
         onNodeWithTag(WorkspaceTags.BUILD_SONG).assertExists()
         onNodeWithTag(WorkspaceTags.MIX_RESET).assertExists()
@@ -168,7 +210,7 @@ class WorkspaceScreenTest {
         setContent {
             MusicWorkstationTheme {
                 WorkspaceScreen(
-                    WorkspaceUiState(project = project.copy(root = root), arrangement = approved, runtimeReadiness = runtimeReadiness(DependencyReadiness(DependencyStatus.READY, "ready"))),
+                    WorkspaceUiState(project = project.copy(root = root), arrangement = approved, runtimeReadiness = runtimeReadiness(DependencyReadiness(DependencyStatus.READY, "ready")), workspaceSection = WorkspaceSection.MIX_MASTER),
                     onIntent = {}
                 )
             }
@@ -185,6 +227,7 @@ class WorkspaceScreenTest {
                         project = project.copy(root = root),
                         arrangement = approved,
                         runtimeReadiness = runtimeReadiness(DependencyReadiness(DependencyStatus.READY, "ready")),
+                        workspaceSection = WorkspaceSection.MIX_MASTER,
                         operation = WorkspaceOperation.BuildingSong(
                             ai.music.workstation.application.OperationProgress("build", 3, 9, "Rendering or reusing stems", root.resolve("stems/piano.wav"))
                         )

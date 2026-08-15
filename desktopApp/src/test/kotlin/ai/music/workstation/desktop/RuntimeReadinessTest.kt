@@ -1,6 +1,7 @@
 package ai.music.workstation.desktop
 
 import kotlinx.coroutines.test.runTest
+import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -37,6 +38,42 @@ class RuntimeReadinessTest {
         assertEquals(DependencyStatus.UNAVAILABLE, readiness.transcription.status)
         assertEquals(DependencyStatus.UNAVAILABLE, readiness.audioOutput.status)
         assertEquals(RecoveryAction.CHECK_AUDIO_OUTPUT, readiness.audioOutput.recoveryAction)
+    }
+
+    @Test fun `executable renderer is ready without a version command`() = runTest {
+        val renderer = Files.createTempFile("sfizz_render", "")
+        try {
+            assertTrue(renderer.toFile().setExecutable(true))
+            val readiness = LocalRuntimeReadinessService(
+                workerProbe = { ai.music.workstation.worker.WorkerRuntimeStatus(false, false) },
+                libraryRoot = { null },
+                environment = mapOf("SFZ_RENDERER_PATH" to renderer.toString()),
+                audioOutputProbe = { false }
+            ).check()
+
+            assertEquals(DependencyStatus.READY, readiness.renderer.status)
+            assertEquals("SFZ renderer ready", readiness.renderer.detail)
+            assertTrue(readiness.renderer.diagnostics.isEmpty())
+        } finally {
+            Files.deleteIfExists(renderer)
+        }
+    }
+
+    @Test fun `configured renderer version is included in diagnostics`() = runTest {
+        val renderer = Files.createTempFile("sfizz_render", "")
+        try {
+            assertTrue(renderer.toFile().setExecutable(true))
+            val readiness = LocalRuntimeReadinessService(
+                workerProbe = { ai.music.workstation.worker.WorkerRuntimeStatus(false, false) },
+                libraryRoot = { null },
+                environment = mapOf("SFZ_RENDERER_PATH" to renderer.toString(), "SFZ_RENDERER_VERSION" to "1.2.3"),
+                audioOutputProbe = { false }
+            ).check()
+
+            assertEquals("1.2.3", readiness.renderer.diagnostics["version"])
+        } finally {
+            Files.deleteIfExists(renderer)
+        }
     }
 
     private fun readiness(

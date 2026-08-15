@@ -1,9 +1,12 @@
 package ai.music.workstation.desktop
 
 import kotlinx.coroutines.suspendCancellableCoroutine
+import java.awt.KeyboardFocusManager
 import java.nio.file.Path
 import javax.swing.JFileChooser
+import javax.swing.SwingUtilities
 import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 interface DesktopFileDialogs {
     suspend fun chooseProjectDirectory(): Path?
@@ -23,16 +26,16 @@ class SwingDesktopFileDialogs : DesktopFileDialogs {
     }
 
     override suspend fun choosePartSource(): Path? = suspendCancellableCoroutine { continuation ->
-        val chooser = JFileChooser().apply {
-            dialogTitle = "Choose MIDI, WAV, or MP3 source"
-            fileSelectionMode = JFileChooser.FILES_ONLY
-            isAcceptAllFileFilterUsed = false
-            fileFilter = javax.swing.filechooser.FileNameExtensionFilter(
-                "Supported sources (MIDI, WAV, MP3)", "mid", "midi", "wav", "wave", "mp3"
-            )
+        showChooser(continuation) {
+            JFileChooser().apply {
+                dialogTitle = "Choose MIDI, WAV, or MP3 source"
+                fileSelectionMode = JFileChooser.FILES_ONLY
+                isAcceptAllFileFilterUsed = false
+                fileFilter = javax.swing.filechooser.FileNameExtensionFilter(
+                    "Supported sources (MIDI, WAV, MP3)", "mid", "midi", "wav", "wave", "mp3"
+                )
+            }
         }
-        val selected = if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFile?.toPath() else null
-        if (continuation.isActive) continuation.resume(selected)
     }
 
     override suspend fun chooseSoundLibraryDirectory(): Path? = suspendCancellableCoroutine { continuation ->
@@ -43,12 +46,29 @@ class SwingDesktopFileDialogs : DesktopFileDialogs {
         title: String,
         continuation: kotlinx.coroutines.CancellableContinuation<Path?>
     ) {
-        val chooser = JFileChooser().apply {
-            dialogTitle = title
-            fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-            isAcceptAllFileFilterUsed = false
+        showChooser(continuation) {
+            JFileChooser().apply {
+                dialogTitle = title
+                fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
+                isAcceptAllFileFilterUsed = false
+            }
         }
-        val selected = if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFile?.toPath() else null
-        if (continuation.isActive) continuation.resume(selected)
+    }
+
+    private fun showChooser(
+        continuation: kotlinx.coroutines.CancellableContinuation<Path?>,
+        chooser: () -> JFileChooser
+    ) {
+        val open = Runnable {
+            try {
+                val dialog = chooser()
+                val owner = KeyboardFocusManager.getCurrentKeyboardFocusManager().activeWindow
+                val selected = if (dialog.showOpenDialog(owner) == JFileChooser.APPROVE_OPTION) dialog.selectedFile?.toPath() else null
+                if (continuation.isActive) continuation.resume(selected)
+            } catch (failure: Throwable) {
+                if (continuation.isActive) continuation.resumeWithException(failure)
+            }
+        }
+        if (SwingUtilities.isEventDispatchThread()) open.run() else SwingUtilities.invokeLater(open)
     }
 }

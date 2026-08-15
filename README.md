@@ -37,6 +37,12 @@ generated MIDI, stems, mixes, and release artifacts are all kept under the
 chosen project directory. Desktop settings retain only the last successfully
 opened project path; they never store project or audio data.
 
+The top navigation has five explicit destinations: **Project**, **Structure**,
+**Arrange**, **Mix & Master**, and **Library**. Workflow-status badges report
+progress but do not replace navigation. **Add Part** remains at the top of the
+Parts panel, and project open/import/build results are shown in a dismissible
+workspace banner so failures and recovery actions are never hidden in a panel.
+
 The worker is required for audio import, repair, mastering, and optional MP3
 export. Start it with `make worker`. Rendering and MIDI preview additionally
 require a configured local SFZ renderer (`SFZ_RENDERER_PATH` or `sfizz_render`
@@ -176,9 +182,9 @@ metrics.
 
 ### Optional solo-piano transcription
 
-The worker exposes local Basic Pitch transcription only after its optional
-runtime is installed in a separate Python 3.11 environment. It is intentionally
-not part of the normal worker dependencies or test suite. See
+The worker exposes local Basic Pitch transcription through its unified Python
+3.11 environment. After selecting Python 3.11 (for example, with `pyenv local
+3.11`), `make worker` installs and starts every worker capability. See
 [`worker/README.md`](worker/README.md) for setup and runtime verification.
 
 ```bash

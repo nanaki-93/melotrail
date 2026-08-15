@@ -46,20 +46,17 @@ only a validated `.mid`/`.midi` result. The initial instrument allow-list is
 never changed. The requested MIDI is published only after validation succeeds.
 
 The selected engine is [Spotify Basic Pitch 0.4.0](https://github.com/spotify/basic-pitch)
-(Apache-2.0). It is loaded lazily, so normal worker commands and tests neither
-download nor require a model. Install it in an isolated Python 3.11 environment:
+(Apache-2.0). The project runs one unified worker environment, including the
+optional transcription runtime. It requires Python 3.11. With pyenv, select it
+once with `pyenv local 3.11`, then start the worker with:
 
 ```bash
-python3.11 -m venv .venv-transcription
-.venv-transcription/bin/python -m pip install -r worker/requirements.txt -r worker/requirements-transcription.txt
-.venv-transcription/bin/python -m worker.main
+make worker
 ```
 
-Use the command only after confirming Basic Pitch inference in the chosen local
-Python 3.11 environment; no model download is attempted automatically. The
-optional transcription dependencies are kept separate because the supported
-Basic Pitch release is not compatible with the normal macOS/Python 3.12 worker
-environment.
+`make worker` creates `.venv-worker` and installs both requirements files.
+Use the command only after confirming Basic Pitch inference in the selected
+Python 3.11 environment; no model download is attempted automatically.
 
 Example request:
 

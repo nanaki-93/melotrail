@@ -10,7 +10,6 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.concurrent.TimeUnit
 import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 
@@ -100,13 +99,14 @@ class LocalRuntimeReadinessService(
         val executable = environment["SFZ_RENDERER_PATH"]?.takeIf(String::isNotBlank)?.let { runCatching { Path.of(it) }.getOrNull() }
             ?: environment["PATH"].orEmpty().split(File.pathSeparator).asSequence().mapNotNull { runCatching { Path.of(it).resolve("sfizz_render") }.getOrNull() }.firstOrNull { Files.isRegularFile(it) && Files.isExecutable(it) }
         if (executable == null || !Files.isRegularFile(executable) || !Files.isExecutable(executable)) return DependencyReadiness(DependencyStatus.UNAVAILABLE, "Set SFZ_RENDERER_PATH to an executable sfizz_render.", RecoveryAction.CONFIGURE_RENDERER)
-        val version = runCatching {
-            val process = ProcessBuilder(executable.toString(), "--version").redirectErrorStream(true).start()
-            require(process.waitFor(2, TimeUnit.SECONDS)) { "Renderer version check timed out" }
-            require(process.exitValue() == 0) { "Renderer version check failed" }
-            process.inputStream.bufferedReader().use { it.readLine()?.take(80) ?: "unknown" }
-        }.getOrElse { return DependencyReadiness(DependencyStatus.FAILED, "Renderer is executable but its version could not be verified.", RecoveryAction.CONFIGURE_RENDERER) }
-        return DependencyReadiness(DependencyStatus.READY, "SFZ renderer ready", diagnostics = mapOf("version" to version))
+        // sfizz_render has no version-reporting command. Being a regular executable is
+        // the only non-rendering readiness check it supports; its version may be
+        // supplied separately for render metadata.
+        val diagnostics = environment["SFZ_RENDERER_VERSION"]
+            ?.takeIf(String::isNotBlank)
+            ?.let { mapOf("version" to it) }
+            ?: emptyMap()
+        return DependencyReadiness(DependencyStatus.READY, "SFZ renderer ready", diagnostics = diagnostics)
     }
 }
 
