@@ -24,12 +24,13 @@ class JvmAudioPlayerTest {
         val prepared = player.prepare(tempArtifact())
         assertIs<PlaybackPrepareResult.Ready>(prepared)
         val failed = assertIs<PlaybackStartResult.Failed>(player.start())
-        assertEquals(PlaybackFailureStage.START, failed.failure.stage)
+        assertEquals(PlaybackFailureStage.DEVICE_OPEN, failed.failure.stage)
         assertEquals(PlaybackState.STOPPED, player.state.value)
 
         device.failOpen = false
         device.failStart = true
-        assertIs<PlaybackStartResult.Failed>(player.start())
+        val startFailure = assertIs<PlaybackStartResult.Failed>(player.start())
+        assertEquals(PlaybackFailureStage.DEVICE_START, startFailure.failure.stage)
         assertTrue(device.lines.single().closed)
         device.failStart = false
         assertEquals(PlaybackStartResult.Started, player.start())
@@ -105,6 +106,40 @@ class JvmAudioPlayerTest {
         player.close()
     }
 
+    @Test
+    fun `container validation and EOF replay keep playback on one output line`() = runBlocking {
+        val malformed = java.nio.file.Files.createTempFile("jvm-audio-player-invalid", ".wav")
+        java.nio.file.Files.writeString(malformed, "not a wave")
+        val device = FakeDevice(writeDelayMillis = 1)
+        val player = player(device = device, frames = 1_024)
+        try {
+            val invalid = assertIs<PlaybackPrepareResult.Failed>(player.prepare(malformed))
+            assertEquals(PlaybackFailureStage.DECODE, invalid.failure.stage)
+
+            assertEquals(PlaybackStartResult.Started, player.play(tempArtifact()))
+            waitUntil { player.state.value == PlaybackState.STOPPED }
+            assertEquals(PlaybackStartResult.Started, player.play(tempArtifact()))
+            waitUntil { player.state.value == PlaybackState.STOPPED && device.lines.size >= 2 && device.lines[1].writes.get() > 0 }
+            assertTrue(device.maxActive.get() <= 1)
+        } finally {
+            player.close()
+            java.nio.file.Files.deleteIfExists(malformed)
+        }
+    }
+
+    @Test
+    fun `runtime line failures remain typed after the worker stops`() = runBlocking {
+        val device = FakeDevice(failWrite = true)
+        val player = player(device = device)
+        try {
+            assertEquals(PlaybackStartResult.Started, player.play(tempArtifact()))
+            waitUntil { player.state.value == PlaybackState.STOPPED }
+            assertEquals(PlaybackFailureStage.RUNTIME, player.failure.value?.stage)
+        } finally {
+            player.close()
+        }
+    }
+
     private fun player(device: FakeDevice, frames: Int = 4_096): JvmAudioPlayer = JvmAudioPlayer(
         decoder = AudioArtifactDecoder { audio(frames) },
         outputDevice = device,
@@ -118,6 +153,7 @@ class JvmAudioPlayerTest {
     )
 
     private fun tempArtifact() = java.nio.file.Files.createTempFile("jvm-audio-player", ".wav").also {
+        java.nio.file.Files.write(it, "RIFF\u0000\u0000\u0000\u0000WAVE".toByteArray(Charsets.US_ASCII))
         it.toFile().deleteOnExit()
     }
 
@@ -131,6 +167,7 @@ class JvmAudioPlayerTest {
         private val onOpen: () -> Unit = {},
         var failOpen: Boolean = false,
         var failStart: Boolean = false,
+        var failWrite: Boolean = false,
         private val writeDelayMillis: Long = 0
     ) : AudioOutputDevice {
         val active = AtomicInteger()
@@ -169,6 +206,7 @@ class JvmAudioPlayerTest {
 
         override fun write(bytes: ByteArray, offset: Int, length: Int): Int {
             writes.incrementAndGet()
+            check(!device.failWrite) { "Line failed during write" }
             if (writeDelayMillis > 0) Thread.sleep(writeDelayMillis)
             return length
         }

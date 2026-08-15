@@ -19,6 +19,7 @@ import app.melotrail.application.UpdatePartRoleRequest
 import app.melotrail.application.PartPreviewApplicationService
 import app.melotrail.application.PreviewRequest
 import app.melotrail.application.PreviewResult
+import app.melotrail.application.PreviewAudioSource
 import app.melotrail.audio.AudioBuffer
 import app.melotrail.audio.PlaybackState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -574,6 +575,7 @@ class WorkspaceViewModelTest {
         viewModel.accept(WorkspaceIntent.PausePreview)
         assertEquals(PreviewPhase.PAUSED, viewModel.state.value.preview.phase)
         viewModel.accept(WorkspaceIntent.ResumePreview)
+        advanceUntilIdle()
         assertEquals(PreviewPhase.PLAYING, viewModel.state.value.preview.phase)
         player.emit(PlaybackState.STOPPED)
         advanceUntilIdle()
@@ -608,6 +610,80 @@ class WorkspaceViewModelTest {
         advanceUntilIdle()
         assertEquals(PreviewPhase.STOPPED, viewModel.state.value.preview.phase)
         assertNull(viewModel.state.value.preview.source)
+        viewModel.close()
+    }
+
+    @Test
+    fun `prepared preview retry and shared transport retain one exact selection`() = runTest {
+        val root = Path.of("build/prepared-session-project")
+        val project = projectSnapshot(root).copy(parts = listOf(audioPart("A")))
+        val previews = FakePreviewService(PreviewResult.Prerequisite(app.melotrail.application.PreviewStage.VALIDATE, "Prepared audio is stale."))
+        val player = FakeArtifactAudioPlayer()
+        val viewModel = WorkspaceViewModel(
+            FakeProjectService(result = project), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
+            runtimeReadinessService = ReadyReadinessService, player = player, partPreviewService = previews
+        )
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.RefreshRuntimeReadiness); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.SelectPart("A")); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.PreviewPreparation(PreviewAudioSource.PREPARED_CLEAN)); advanceUntilIdle()
+        assertEquals(PlaybackSessionPhase.FAILED, viewModel.state.value.playbackSession.phase)
+        assertEquals(PlaybackFailureStage.RESOLUTION, viewModel.state.value.playbackSession.failureStage)
+
+        previews.result = PreviewResult.Resolved(root.resolve("prepared/A/clean.wav"), emptyList(), true)
+        viewModel.accept(WorkspaceIntent.RetryPreview); advanceUntilIdle()
+        assertEquals(PreviewAudioSource.PREPARED_CLEAN, previews.lastRequest?.audioSource)
+        assertEquals(PlaybackSourceKind.PREPARED_AUDIO, viewModel.state.value.playbackSession.sourceKind)
+        assertEquals(PlaybackSessionPhase.PLAYING, viewModel.state.value.playbackSession.phase)
+
+        viewModel.accept(WorkspaceIntent.StopPlayback)
+        assertEquals(PlaybackSessionPhase.STOPPED, viewModel.state.value.playbackSession.phase)
+        assertEquals("A", (viewModel.state.value.playbackSession.request as PlaybackRequest.Part).partId)
+        viewModel.close()
+    }
+
+    @Test
+    fun `replacing a mix session with a part preview cannot leave two logical sources active`() = runTest {
+        val root = Path.of("build/unified-session-project")
+        val project = projectSnapshot(root).copy(
+            parts = listOf(part("A")),
+            readiness = projectSnapshot(root).readiness.copy(dryMixAvailable = true)
+        )
+        val player = FakeArtifactAudioPlayer()
+        val viewModel = WorkspaceViewModel(
+            FakeProjectService(result = project), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
+            runtimeReadinessService = ReadyReadinessService, player = player,
+            partPreviewService = FakePreviewService(PreviewResult.Resolved(root.resolve("previews/A.wav"), emptyList(), true))
+        )
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.RefreshRuntimeReadiness); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.SelectPlaybackSource(PlaybackSource.DRY))
+        viewModel.accept(WorkspaceIntent.PlayPause); advanceUntilIdle()
+        assertEquals(PlaybackSourceKind.DRY_MIX, viewModel.state.value.playbackSession.sourceKind)
+        viewModel.accept(WorkspaceIntent.PreviewPart("A")); advanceUntilIdle()
+        assertEquals(PlaybackSourceKind.MIDI, viewModel.state.value.playbackSession.sourceKind)
+        assertIs<PlaybackRequest.Part>(viewModel.state.value.playbackSession.request)
+        assertEquals(PlaybackSessionPhase.PLAYING, viewModel.state.value.playbackSession.phase)
+        assertEquals(1, player.maxActive)
+        viewModel.close()
+    }
+
+    @Test
+    fun `a delayed callback from a replaced preview session cannot overwrite the new source`() = runTest {
+        val root = Path.of("build/replaced-preview-session-project")
+        val previews = FakePreviewService(PreviewResult.Resolved(root.resolve("previews/current.wav"), emptyList(), true)).also { it.delay = true }
+        val viewModel = WorkspaceViewModel(
+            FakeProjectService(result = projectSnapshot(root).copy(parts = listOf(part("A"), part("B")))), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
+            runtimeReadinessService = ReadyReadinessService, player = FakeArtifactAudioPlayer(), partPreviewService = previews
+        )
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.RefreshRuntimeReadiness); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.PreviewPart("A")); runCurrent()
+        viewModel.accept(WorkspaceIntent.PreviewPart("B")); runCurrent()
+        previews.release(); advanceUntilIdle()
+
+        assertEquals("B", (viewModel.state.value.playbackSession.request as PlaybackRequest.Part).partId)
+        assertEquals(PlaybackSessionPhase.PLAYING, viewModel.state.value.playbackSession.phase)
         viewModel.close()
     }
 
@@ -819,11 +895,16 @@ private class FakeArtifactAudioPlayer(private val startFailure: String? = null) 
     override val currentPosition: StateFlow<Double> = position
     override val totalDuration: StateFlow<Double> = duration
     override val volume: StateFlow<Double> = volumeState
+    override val failure: StateFlow<PlaybackFailure?> = MutableStateFlow(null)
     var closed = false
+    var maxActive = 0
+    private var active = 0
 
     override suspend fun prepare(path: Path): PlaybackPrepareResult = PlaybackPrepareResult.Ready(duration.value)
     override suspend fun start(): PlaybackStartResult {
-        startFailure?.let { return PlaybackStartResult.Failed(PlaybackFailure(PlaybackFailureStage.START, it, IllegalStateException(it))) }
+        startFailure?.let { return PlaybackStartResult.Failed(PlaybackFailure(PlaybackFailureStage.DEVICE_START, it, IllegalStateException(it))) }
+        active = 1
+        maxActive = maxOf(maxActive, active)
         mutableState.value = PlaybackState.PLAYING
         return PlaybackStartResult.Started
     }
@@ -831,7 +912,7 @@ private class FakeArtifactAudioPlayer(private val startFailure: String? = null) 
     override fun play(buffer: AudioBuffer) = Unit
     override fun pause() { mutableState.value = PlaybackState.PAUSED }
     override fun resume() { mutableState.value = PlaybackState.PLAYING }
-    override fun stop() { mutableState.value = PlaybackState.STOPPED; position.value = 0.0 }
+    override fun stop() { active = 0; mutableState.value = PlaybackState.STOPPED; position.value = 0.0 }
     override fun seek(position: Double) { this.position.value = position.coerceIn(0.0, duration.value) }
     override fun setVolume(volume: Double) { volumeState.value = volume }
     override fun getVolume(): Double = volumeState.value

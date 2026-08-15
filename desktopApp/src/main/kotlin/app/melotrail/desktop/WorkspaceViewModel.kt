@@ -64,8 +64,7 @@ data class WorkspaceUiState(
     val arrangement: ArrangementSnapshot? = null,
     val mix: MixSnapshot? = null,
     val buildOptions: BuildOptionsDraft = BuildOptionsDraft(),
-    val playback: PlaybackSnapshot = PlaybackSnapshot(),
-    val preview: PreviewUiState = PreviewUiState(),
+    val playbackSession: PlaybackSession = PlaybackSession(),
     val selectedPartId: String? = null,
     /** UI-only selected canonical artifact; it is never written to project files. */
     val selectedArtifact: CreationArtifactReference? = null,
@@ -122,6 +121,38 @@ data class PlaybackSnapshot(
 )
 enum class PlaybackSource { DRY, LOFI, MASTER }
 
+/** One immutable source of truth for every audible artifact in the desktop workspace. */
+data class PlaybackSession(
+    val id: Long = 0L,
+    val request: PlaybackRequest? = null,
+    val sourceKind: PlaybackSourceKind? = null,
+    val artifact: PlaybackArtifactIdentity? = null,
+    val phase: PlaybackSessionPhase = PlaybackSessionPhase.STOPPED,
+    val positionSeconds: Double = 0.0,
+    val durationSeconds: Double = 0.0,
+    val volume: Double = 1.0,
+    val failureStage: PlaybackFailureStage? = null,
+    val failureMessage: String? = null,
+    val retryAction: PlaybackRetryAction? = null
+)
+
+sealed interface PlaybackRequest {
+    val projectRoot: Path
+    data class Part(override val projectRoot: Path, val partId: String, val audioSource: PreviewAudioSource) : PlaybackRequest
+    data class Mix(override val projectRoot: Path, val source: PlaybackSource) : PlaybackRequest
+}
+
+data class PlaybackArtifactIdentity(
+    val projectRoot: Path,
+    val path: Path,
+    val partId: String? = null,
+    val audioSource: PreviewAudioSource? = null
+)
+
+enum class PlaybackSourceKind { SOURCE_AUDIO, PREPARED_AUDIO, MIDI, DRY_MIX, LOFI_MIX, MASTER }
+enum class PlaybackSessionPhase { RESOLVING, PREPARING, READY, STARTING, PLAYING, PAUSED, STOPPED, FAILED }
+enum class PlaybackRetryAction { RETRY_SAME_SELECTION }
+
 /** Immutable monitor-only lifecycle for a selected part. It is independent of notifications. */
 data class PreviewSourceIdentity(
     val projectRoot: Path,
@@ -139,6 +170,45 @@ data class PreviewUiState(
     val elapsedSeconds: Double = 0.0,
     val durationSeconds: Double = 0.0
 )
+
+/** Compatibility views for the existing Compose widgets; neither owns playback state. */
+val WorkspaceUiState.playback: PlaybackSnapshot
+    get() {
+        val request = playbackSession.request as? PlaybackRequest.Mix
+        return PlaybackSnapshot(
+            source = request?.source ?: PlaybackSource.DRY,
+            state = when (playbackSession.phase) {
+                PlaybackSessionPhase.PLAYING -> app.melotrail.audio.PlaybackState.PLAYING
+                PlaybackSessionPhase.PAUSED -> app.melotrail.audio.PlaybackState.PAUSED
+                else -> app.melotrail.audio.PlaybackState.STOPPED
+            },
+            positionSeconds = playbackSession.positionSeconds,
+            durationSeconds = playbackSession.durationSeconds,
+            volume = playbackSession.volume
+        )
+    }
+
+val WorkspaceUiState.preview: PreviewUiState
+    get() {
+        val request = playbackSession.request as? PlaybackRequest.Part ?: return PreviewUiState()
+        val artifact = playbackSession.artifact?.path
+        return PreviewUiState(
+            source = PreviewSourceIdentity(request.projectRoot, request.partId, artifact, request.audioSource),
+            phase = when (playbackSession.phase) {
+                PlaybackSessionPhase.RESOLVING -> PreviewPhase.CHECKING
+                PlaybackSessionPhase.PREPARING -> PreviewPhase.PREPARING
+                PlaybackSessionPhase.READY -> PreviewPhase.READY
+                PlaybackSessionPhase.STARTING -> PreviewPhase.STARTING
+                PlaybackSessionPhase.PLAYING -> PreviewPhase.PLAYING
+                PlaybackSessionPhase.PAUSED -> PreviewPhase.PAUSED
+                PlaybackSessionPhase.STOPPED -> PreviewPhase.STOPPED
+                PlaybackSessionPhase.FAILED -> PreviewPhase.FAILED
+            },
+            reason = playbackSession.failureMessage,
+            elapsedSeconds = playbackSession.positionSeconds,
+            durationSeconds = playbackSession.durationSeconds
+        )
+    }
 
 data class ArrangementDraft(
     val planner: ArrangementPlannerKind = ArrangementPlannerKind.DETERMINISTIC,
@@ -318,18 +388,19 @@ class WorkspaceViewModel(
     private val mutableState = MutableStateFlow(WorkspaceUiState())
     private var mixCommit: Job? = null
     private var buildJob: Job? = null
-    private var previewJob: Job? = null
-    private var previewGeneration = 0L
+    private var playbackJob: Job? = null
+    private var playbackSessionId = 0L
     private var readinessGeneration = 0L
 
     val state: StateFlow<WorkspaceUiState> = mutableState.asStateFlow()
 
     init {
         player?.let { monitor ->
-            scope.launch { monitor.state.collect { updatePlayback() } }
-            scope.launch { monitor.currentPosition.collect { updatePlayback() } }
-            scope.launch { monitor.totalDuration.collect { updatePlayback() } }
-            scope.launch { monitor.volume.collect { updatePlayback() } }
+            scope.launch { monitor.state.collect { updatePlaybackSession() } }
+            scope.launch { monitor.currentPosition.collect { updatePlaybackSession() } }
+            scope.launch { monitor.totalDuration.collect { updatePlaybackSession() } }
+            scope.launch { monitor.volume.collect { updatePlaybackSession() } }
+            scope.launch { monitor.failure.collect { failure -> failure?.let(::updatePlaybackFailure) } }
         }
     }
 
@@ -366,7 +437,7 @@ class WorkspaceViewModel(
             WorkspaceIntent.TranscribeSelectedPart -> transcribeSelectedPart()
             is WorkspaceIntent.PreviewPart -> previewPart(intent.partId)
             is WorkspaceIntent.PreviewPreparation -> previewPreparation(intent.source)
-            WorkspaceIntent.RetryPreview -> state.value.preview.source?.let { previewPart(it.partId) }
+            WorkspaceIntent.RetryPreview -> retryPlaybackSession()
             WorkspaceIntent.PausePreview -> pausePreview()
             WorkspaceIntent.ResumePreview -> resumePreview()
             WorkspaceIntent.StopPreview -> stopPreview()
@@ -389,9 +460,9 @@ class WorkspaceViewModel(
             WorkspaceIntent.CancelOperation -> buildJob?.cancel()
             is WorkspaceIntent.SelectPlaybackSource -> selectPlaybackSource(intent.source)
             WorkspaceIntent.PlayPause -> playPause()
-            WorkspaceIntent.StopPlayback -> player?.stop()
-            is WorkspaceIntent.SeekPlayback -> player?.seek(intent.seconds)
-            is WorkspaceIntent.SetPlaybackVolume -> player?.setVolume(intent.volume)
+            WorkspaceIntent.StopPlayback -> stopPlaybackSession()
+            is WorkspaceIntent.SeekPlayback -> seekPlaybackSession(intent.seconds)
+            is WorkspaceIntent.SetPlaybackVolume -> setPlaybackVolume(intent.volume)
             WorkspaceIntent.GenerateArrangement -> generateArrangement()
             WorkspaceIntent.PreviewArrangement -> previewArrangement()
             WorkspaceIntent.ApproveArrangement -> approveArrangement()
@@ -476,7 +547,7 @@ class WorkspaceViewModel(
 
     private fun openProject(root: Path, restoring: Boolean = false) {
         if (state.value.operation.isMutating) return busy("open a project")
-        cancelPreview(resetState = true)
+        cancelPlaybackSession(resetState = true)
         val normalized = root.toAbsolutePath().normalize()
         mutableState.update { it.copy(operation = WorkspaceOperation.OpeningProject(normalized), notification = null, retry = null) }
         scope.launch {
@@ -696,7 +767,7 @@ class WorkspaceViewModel(
                 }
             }.onSuccess { snapshot ->
                 // A MIDI retry changes the clean-MIDI digest. Do not leave the old monitor artifact selected.
-                cancelPreview(resetState = true)
+                cancelPlaybackSession(resetState = true)
                 mutableState.update {
                     it.copy(
                         project = snapshot,
@@ -764,87 +835,172 @@ class WorkspaceViewModel(
     private fun previewPart(partId: String, audioSource: PreviewAudioSource = PreviewAudioSource.ORIGINAL) {
         val project = state.value.project ?: return
         val part = project.parts.find { it.id == partId } ?: return
-        cancelPreview(resetState = false)
-        val generation = previewGeneration
-        val source = PreviewSourceIdentity(project.root, partId, audioSource = audioSource)
         val capability = if (part.sourceType == PartSourceType.AUDIO) RuntimeCapability.SOURCE_PREVIEW else RuntimeCapability.MIDI_PREVIEW
-        state.value.runtimeReadiness.capabilityFailure(capability)?.let {
-            return setPreview(generation, PreviewUiState(source, PreviewPhase.FAILED, it))
+        startPlaybackSession(PlaybackRequest.Part(project.root, partId, audioSource), capability)
+    }
+
+    private fun pausePreview() = pausePlaybackSession()
+
+    private fun resumePreview() = resumePlaybackSession()
+
+    private fun stopPreview() = stopPlaybackSession()
+
+    private fun seekPreview(seconds: Double) = seekPlaybackSession(seconds)
+
+    private fun startPlaybackSession(request: PlaybackRequest, capability: RuntimeCapability? = null) {
+        cancelPlaybackSession(resetState = false)
+        val id = ++playbackSessionId
+        val kind = request.sourceKind()
+        mutableState.update { it.copy(playbackSession = PlaybackSession(id, request, kind, volume = player?.volume?.value ?: it.playbackSession.volume, phase = PlaybackSessionPhase.RESOLVING)) }
+        capability?.let { needed ->
+            state.value.runtimeReadiness.capabilityFailure(needed)?.let { message ->
+                return failPlaybackSession(id, PlaybackFailureStage.RESOLUTION, message)
+            }
         }
-        val monitor = player ?: return setPreview(generation, PreviewUiState(source, PreviewPhase.FAILED, "Local audio playback is not configured."))
-        val previews = partPreviewService ?: return setPreview(generation, PreviewUiState(source, PreviewPhase.FAILED, "Part preview service is not configured for this desktop session."))
-        setPreview(generation, PreviewUiState(source, PreviewPhase.CHECKING))
-        previewJob = scope.launch {
+        val monitor = player ?: return failPlaybackSession(id, PlaybackFailureStage.RUNTIME, "Local audio playback is not configured.")
+        playbackJob = scope.launch {
             try {
-                val resolved = withContext(ioDispatcher) { previews.resolve(PreviewRequest(project.root, partId, audioSource)) }
-                if (!isCurrentPreview(generation, source)) return@launch
-                when (resolved) {
-                    is PreviewResult.Prerequisite -> setPreview(generation, PreviewUiState(source, PreviewPhase.FAILED, resolved.message))
-                    is PreviewResult.Failed -> setPreview(generation, PreviewUiState(source, PreviewPhase.FAILED, resolved.message))
-                    is PreviewResult.Resolved -> {
-                        val artifactSource = source.copy(artifact = resolved.artifact)
-                        setPreview(generation, PreviewUiState(artifactSource, PreviewPhase.PREPARING))
-                        when (val prepared = monitor.prepare(resolved.artifact)) {
-                            is PlaybackPrepareResult.Failed -> setPreview(generation, PreviewUiState(artifactSource, PreviewPhase.FAILED, prepared.failure.message))
-                            is PlaybackPrepareResult.Ready -> {
-                                setPreview(generation, PreviewUiState(artifactSource, PreviewPhase.READY, durationSeconds = prepared.durationSeconds))
-                                setPreview(generation, PreviewUiState(artifactSource, PreviewPhase.STARTING, durationSeconds = prepared.durationSeconds))
-                                when (val started = monitor.start()) {
-                                    PlaybackStartResult.Started -> setPreview(generation, PreviewUiState(artifactSource, PreviewPhase.PLAYING, durationSeconds = prepared.durationSeconds))
-                                    is PlaybackStartResult.Failed -> setPreview(generation, PreviewUiState(artifactSource, PreviewPhase.FAILED, started.failure.message, durationSeconds = prepared.durationSeconds))
-                                }
-                            }
+                val artifact = when (request) {
+                    is PlaybackRequest.Part -> resolvePartArtifact(request, id) ?: return@launch
+                    is PlaybackRequest.Mix -> request.artifact()
+                }
+                if (!isCurrentPlaybackSession(id)) return@launch
+                updatePlaybackSession(id) { it.copy(artifact = artifact, phase = PlaybackSessionPhase.PREPARING) }
+                when (val prepared = monitor.prepare(artifact.path)) {
+                    is PlaybackPrepareResult.Failed -> failPlaybackSession(id, prepared.failure.stage, prepared.failure.message)
+                    is PlaybackPrepareResult.Ready -> {
+                        updatePlaybackSession(id) { it.copy(phase = PlaybackSessionPhase.READY, durationSeconds = prepared.durationSeconds) }
+                        updatePlaybackSession(id) { it.copy(phase = PlaybackSessionPhase.STARTING) }
+                        when (val started = monitor.start()) {
+                            PlaybackStartResult.Started -> updatePlaybackSession(id) { it.copy(phase = PlaybackSessionPhase.PLAYING) }
+                            is PlaybackStartResult.Failed -> failPlaybackSession(id, started.failure.stage, started.failure.message)
                         }
                     }
                 }
             } catch (_: CancellationException) {
-                // A newer source, project switch, or close owns the next state.
+                // The replacing session owns every subsequent callback.
             } catch (error: Throwable) {
-                setPreview(generation, PreviewUiState(source, PreviewPhase.FAILED, error.message ?: "Unable to prepare this preview."))
+                failPlaybackSession(id, PlaybackFailureStage.RUNTIME, error.message ?: "Unable to start local playback.")
             }
         }
     }
 
-    private fun pausePreview() {
-        if (state.value.preview.phase != PreviewPhase.PLAYING) return
+    private suspend fun resolvePartArtifact(request: PlaybackRequest.Part, id: Long): PlaybackArtifactIdentity? {
+        val previews = partPreviewService ?: run {
+            failPlaybackSession(id, PlaybackFailureStage.RUNTIME, "Part preview service is not configured for this desktop session.")
+            return null
+        }
+        return when (val resolved = withContext(ioDispatcher) { previews.resolve(PreviewRequest(request.projectRoot, request.partId, request.audioSource)) }) {
+            is PreviewResult.Resolved -> PlaybackArtifactIdentity(request.projectRoot, resolved.artifact, request.partId, request.audioSource)
+            is PreviewResult.Prerequisite -> {
+                val stage = if (resolved.stage == app.melotrail.application.PreviewStage.DECODE_OR_RENDER) PlaybackFailureStage.RUNTIME else PlaybackFailureStage.RESOLUTION
+                failPlaybackSession(id, stage, resolved.message)
+                null
+            }
+            is PreviewResult.Failed -> {
+                val stage = if (resolved.stage == app.melotrail.application.PreviewStage.DECODE_OR_RENDER) PlaybackFailureStage.DECODE else PlaybackFailureStage.RESOLUTION
+                failPlaybackSession(id, stage, resolved.message)
+                null
+            }
+        }
+    }
+
+    private fun pausePlaybackSession() {
+        if (state.value.playbackSession.phase != PlaybackSessionPhase.PLAYING) return
         player?.pause() ?: return
-        mutableState.update { it.copy(preview = it.preview.copy(phase = PreviewPhase.PAUSED)) }
+        updatePlaybackSession(state.value.playbackSession.id) { it.copy(phase = PlaybackSessionPhase.PAUSED) }
     }
 
-    private fun resumePreview() {
-        if (state.value.preview.phase != PreviewPhase.PAUSED) return
-        player?.resume() ?: return
-        mutableState.update { it.copy(preview = it.preview.copy(phase = PreviewPhase.PLAYING)) }
+    private fun resumePlaybackSession() {
+        val session = state.value.playbackSession
+        if (session.phase != PlaybackSessionPhase.PAUSED) return
+        val monitor = player ?: return failPlaybackSession(session.id, PlaybackFailureStage.RUNTIME, "Local audio playback is not configured.")
+        playbackJob = scope.launch {
+            updatePlaybackSession(session.id) { it.copy(phase = PlaybackSessionPhase.STARTING) }
+            when (val started = monitor.start()) {
+                PlaybackStartResult.Started -> updatePlaybackSession(session.id) { it.copy(phase = PlaybackSessionPhase.PLAYING) }
+                is PlaybackStartResult.Failed -> failPlaybackSession(session.id, started.failure.stage, started.failure.message)
+            }
+        }
     }
 
-    private fun stopPreview() {
-        cancelPreview(resetState = false)
-        mutableState.update { current -> current.copy(preview = current.preview.copy(phase = PreviewPhase.STOPPED, reason = null, elapsedSeconds = 0.0)) }
+    private fun stopPlaybackSession() {
+        val session = state.value.playbackSession
+        cancelPlaybackSession(resetState = false)
+        val stoppedId = ++playbackSessionId
+        mutableState.update {
+            it.copy(playbackSession = session.copy(id = stoppedId, phase = PlaybackSessionPhase.STOPPED, positionSeconds = 0.0, failureStage = null, failureMessage = null, retryAction = null))
+        }
     }
 
-    private fun seekPreview(seconds: Double) {
-        val preview = state.value.preview
-        if (preview.source?.artifact == null || preview.phase !in setOf(PreviewPhase.READY, PreviewPhase.STARTING, PreviewPhase.PLAYING, PreviewPhase.PAUSED, PreviewPhase.STOPPED)) return
+    private fun seekPlaybackSession(seconds: Double) {
+        val session = state.value.playbackSession
+        if (session.artifact == null || session.phase !in setOf(PlaybackSessionPhase.READY, PlaybackSessionPhase.STARTING, PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED, PlaybackSessionPhase.STOPPED)) return
         player?.seek(seconds) ?: return
-        mutableState.update { it.copy(preview = preview.copy(elapsedSeconds = seconds.coerceIn(0.0, preview.durationSeconds))) }
+        updatePlaybackSession(session.id) { it.copy(positionSeconds = seconds.coerceIn(0.0, session.durationSeconds)) }
     }
 
-    private fun cancelPreview(resetState: Boolean) {
-        previewGeneration++
-        previewJob?.cancel()
-        previewJob = null
+    private fun setPlaybackVolume(volume: Double) {
+        player?.setVolume(volume)
+        val session = state.value.playbackSession
+        updatePlaybackSession(session.id) { it.copy(volume = volume.coerceIn(0.0, 1.0)) }
+    }
+
+    private fun retryPlaybackSession() {
+        state.value.playbackSession.takeIf { it.retryAction == PlaybackRetryAction.RETRY_SAME_SELECTION }?.request?.let { startPlaybackSession(it, it.requiredCapability()) }
+    }
+
+    private fun cancelPlaybackSession(resetState: Boolean) {
+        ++playbackSessionId
+        playbackJob?.cancel()
+        playbackJob = null
         player?.stop()
-        if (resetState) mutableState.update { it.copy(preview = PreviewUiState()) }
+        if (resetState) mutableState.update { it.copy(playbackSession = PlaybackSession(volume = player?.volume?.value ?: 1.0)) }
     }
 
-    private fun isCurrentPreview(generation: Long, source: PreviewSourceIdentity): Boolean =
-        generation == previewGeneration && state.value.project?.root == source.projectRoot && state.value.preview.source?.let { it.projectRoot == source.projectRoot && it.partId == source.partId } != false
+    private fun isCurrentPlaybackSession(id: Long): Boolean = id == playbackSessionId && state.value.playbackSession.id == id
 
-    private fun setPreview(generation: Long, preview: PreviewUiState) {
-        if (generation != previewGeneration || state.value.project?.root != preview.source?.projectRoot) return
-        mutableState.update { it.copy(preview = preview) }
+    private fun updatePlaybackSession(id: Long, update: (PlaybackSession) -> PlaybackSession) {
+        if (!isCurrentPlaybackSession(id)) return
+        mutableState.update { current ->
+            if (current.playbackSession.id == id) current.copy(playbackSession = update(current.playbackSession)) else current
+        }
     }
 
+    private fun failPlaybackSession(id: Long, stage: PlaybackFailureStage, message: String) =
+        updatePlaybackSession(id) { it.copy(phase = PlaybackSessionPhase.FAILED, failureStage = stage, failureMessage = message, retryAction = PlaybackRetryAction.RETRY_SAME_SELECTION) }
+
+    private fun PlaybackRequest.sourceKind(): PlaybackSourceKind = when (this) {
+        is PlaybackRequest.Part -> when (audioSource) {
+            PreviewAudioSource.PREPARED_CLEAN -> PlaybackSourceKind.PREPARED_AUDIO
+            PreviewAudioSource.ORIGINAL -> if (state.value.project?.parts?.find { it.id == partId }?.sourceType == PartSourceType.MIDI) PlaybackSourceKind.MIDI else PlaybackSourceKind.SOURCE_AUDIO
+        }
+        is PlaybackRequest.Mix -> when (source) {
+            PlaybackSource.DRY -> PlaybackSourceKind.DRY_MIX
+            PlaybackSource.LOFI -> PlaybackSourceKind.LOFI_MIX
+            PlaybackSource.MASTER -> PlaybackSourceKind.MASTER
+        }
+    }
+
+    private fun PlaybackRequest.requiredCapability(): RuntimeCapability? = when (this) {
+        is PlaybackRequest.Mix -> null
+        is PlaybackRequest.Part -> state.value.project?.parts?.find { it.id == partId }?.let {
+            if (it.sourceType == PartSourceType.AUDIO) RuntimeCapability.SOURCE_PREVIEW else RuntimeCapability.MIDI_PREVIEW
+        }
+    }
+
+    private fun PlaybackRequest.Mix.artifact(): PlaybackArtifactIdentity {
+        val root = projectRoot.toAbsolutePath().normalize()
+        val path = root.resolve(
+            when (source) {
+                PlaybackSource.DRY -> "mix/dry.wav"
+                PlaybackSource.LOFI -> "mix/lofi.wav"
+                PlaybackSource.MASTER -> "output/master.wav"
+            }
+        ).normalize()
+        require(path.startsWith(root)) { "Playback artifact must remain inside the selected project." }
+        return PlaybackArtifactIdentity(root, path)
+    }
     private fun showRoleEditor(partId: String) {
         val part = state.value.project?.parts?.find { it.id == partId } ?: return
         mutableState.update { it.copy(dialog = WorkspaceDialog.EditRole(part.id, part.role)) }
@@ -1069,13 +1225,16 @@ class WorkspaceViewModel(
     }
 
     private fun selectPlaybackSource(source: PlaybackSource) {
-        player?.stop()
+        val root = state.value.project?.root ?: return
+        cancelPlaybackSession(resetState = false)
         val artifact = when (source) {
             PlaybackSource.DRY -> CreationArtifactReference(CreationArtifactKind.DRY_MIX)
             PlaybackSource.LOFI -> CreationArtifactReference(CreationArtifactKind.LOFI_MIX)
             PlaybackSource.MASTER -> CreationArtifactReference(CreationArtifactKind.MASTER)
         }
-        mutableState.update { it.copy(playback = it.playback.copy(source = source), selectedArtifact = artifact) }
+        val request = PlaybackRequest.Mix(root, source)
+        val id = ++playbackSessionId
+        mutableState.update { it.copy(playbackSession = PlaybackSession(id, request, request.sourceKind(), request.artifact(), PlaybackSessionPhase.STOPPED, volume = player?.volume?.value ?: it.playbackSession.volume), selectedArtifact = artifact) }
     }
 
     private fun selectArrangementSection(index: Int?) {
@@ -1095,49 +1254,42 @@ class WorkspaceViewModel(
     }
 
     private fun playPause() {
-        val monitor = player ?: return fail("playback", "Local audio playback is not configured.")
-        when (monitor.state.value) {
-            app.melotrail.audio.PlaybackState.PLAYING -> monitor.pause()
-            app.melotrail.audio.PlaybackState.PAUSED -> monitor.resume()
-            app.melotrail.audio.PlaybackState.STOPPED -> {
-                val root = state.value.project?.root ?: return
-                val artifact = when (state.value.playback.source) {
-                    PlaybackSource.DRY -> root.resolve("mix/dry.wav")
-                    PlaybackSource.LOFI -> root.resolve("mix/lofi.wav")
-                    PlaybackSource.MASTER -> root.resolve("output/master.wav")
-                }
-                scope.launch {
-                    when (val result = monitor.play(artifact)) {
-                        PlaybackStartResult.Started -> Unit
-                        is PlaybackStartResult.Failed -> fail("playback", result.failure.message)
-                    }
-                }
+        val session = state.value.playbackSession
+        when (session.phase) {
+            PlaybackSessionPhase.PLAYING -> pausePlaybackSession()
+            PlaybackSessionPhase.PAUSED -> resumePlaybackSession()
+            else -> {
+                val request = session.request ?: state.value.project?.root?.let { PlaybackRequest.Mix(it, PlaybackSource.DRY) } ?: return
+                startPlaybackSession(request, request.requiredCapability())
             }
         }
     }
 
-    private fun updatePlayback() {
+    private fun updatePlaybackSession() {
         val monitor = player ?: return
         mutableState.update { current ->
-            val monitorState = monitor.state.value
-            val preview = current.preview
-            val previewPhase = when {
-                preview.source?.artifact == null || preview.phase !in setOf(PreviewPhase.PLAYING, PreviewPhase.PAUSED, PreviewPhase.STARTING) -> preview.phase
-                monitorState == app.melotrail.audio.PlaybackState.PLAYING -> PreviewPhase.PLAYING
-                monitorState == app.melotrail.audio.PlaybackState.PAUSED -> PreviewPhase.PAUSED
-                else -> PreviewPhase.STOPPED
+            val session = current.playbackSession
+            if (session.artifact == null || session.phase !in setOf(PlaybackSessionPhase.STARTING, PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED)) return@update current
+            val phase = when (monitor.state.value) {
+                app.melotrail.audio.PlaybackState.PLAYING -> PlaybackSessionPhase.PLAYING
+                app.melotrail.audio.PlaybackState.PAUSED -> PlaybackSessionPhase.PAUSED
+                app.melotrail.audio.PlaybackState.STOPPED -> PlaybackSessionPhase.STOPPED
             }
-            current.copy(
-                playback = current.playback.copy(state = monitorState, positionSeconds = monitor.currentPosition.value, durationSeconds = monitor.totalDuration.value, volume = monitor.volume.value),
-                preview = preview.copy(phase = previewPhase, elapsedSeconds = monitor.currentPosition.value, durationSeconds = if (preview.source?.artifact == null) preview.durationSeconds else monitor.totalDuration.value)
-            )
+            current.copy(playbackSession = session.copy(phase = phase, positionSeconds = monitor.currentPosition.value, durationSeconds = monitor.totalDuration.value, volume = monitor.volume.value))
+        }
+    }
+
+    private fun updatePlaybackFailure(failure: PlaybackFailure) {
+        val session = state.value.playbackSession
+        if (session.artifact != null && session.phase in setOf(PlaybackSessionPhase.PREPARING, PlaybackSessionPhase.STARTING, PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED, PlaybackSessionPhase.STOPPED)) {
+            failPlaybackSession(session.id, failure.stage, failure.message)
         }
     }
 
     private fun ProjectSnapshot.refreshed(): ProjectSnapshot = projectService.open(root)
 
     private fun opened(project: ProjectSnapshot, message: String, stale: Boolean = false) {
-        cancelPreview(resetState = true)
+        cancelPlaybackSession(resetState = true)
         preferences.saveLastOpenedProject(project.root)
         operationLogger.event("project", "opened", project.root)
         val openedMessage = if (project.version == 1) {
@@ -1216,7 +1368,7 @@ class WorkspaceViewModel(
         return true
     }
 
-    override fun close() { mixCommit?.cancel(); buildJob?.cancel(); cancelPreview(resetState = true); player?.close(); scope.cancel() }
+    override fun close() { mixCommit?.cancel(); buildJob?.cancel(); cancelPlaybackSession(resetState = true); player?.close(); scope.cancel() }
 
     private object UnavailableRuntimeReadinessService : RuntimeReadinessService {
         override suspend fun check(): RuntimeReadiness = RuntimeReadiness.checking()

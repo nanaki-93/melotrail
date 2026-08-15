@@ -249,7 +249,7 @@ class WorkspaceScreenTest {
 
         setContent {
             MelotrailTheme {
-                WorkspaceScreen(projectState().copy(preview = PreviewUiState(source, PreviewPhase.PREPARING, elapsedSeconds = 2.0, durationSeconds = 12.0)), onIntent = {})
+                WorkspaceScreen(projectState().copy(playbackSession = previewSession(source, PlaybackSessionPhase.PREPARING, elapsedSeconds = 2.0, durationSeconds = 12.0)), onIntent = {})
             }
         }
         onNodeWithTag(WorkspaceTags.PREVIEW_TRANSPORT).assertExists()
@@ -261,7 +261,7 @@ class WorkspaceScreenTest {
 
         setContent {
             MelotrailTheme {
-                WorkspaceScreen(projectState().copy(preview = PreviewUiState(source, PreviewPhase.PLAYING, elapsedSeconds = 2.0, durationSeconds = 12.0)), onIntent = {})
+                WorkspaceScreen(projectState().copy(playbackSession = previewSession(source, PlaybackSessionPhase.PLAYING, elapsedSeconds = 2.0, durationSeconds = 12.0)), onIntent = {})
             }
         }
         onNodeWithText("Playing").assertExists()
@@ -270,7 +270,7 @@ class WorkspaceScreenTest {
 
         setContent {
             MelotrailTheme {
-                WorkspaceScreen(projectState().copy(preview = PreviewUiState(source, PreviewPhase.FAILED, "Analyze A before previewing it.")), onIntent = {})
+                WorkspaceScreen(projectState().copy(playbackSession = previewSession(source, PlaybackSessionPhase.FAILED, message = "Analyze A before previewing it.")), onIntent = {})
             }
         }
         onNodeWithText("Preview unavailable").assertExists()
@@ -523,6 +523,25 @@ class WorkspaceScreenTest {
             readiness = app.melotrail.application.ProjectReadiness(false, false, false, false, false, false, false, false, false, false)
         ), runtimeReadiness = runtimeReadiness(DependencyReadiness(DependencyStatus.READY, "ready")))
     }
+
+    private fun previewSession(
+        source: PreviewSourceIdentity,
+        phase: PlaybackSessionPhase,
+        elapsedSeconds: Double = 0.0,
+        durationSeconds: Double = 0.0,
+        message: String? = null
+    ) = PlaybackSession(
+        id = 1,
+        request = PlaybackRequest.Part(source.projectRoot, source.partId, source.audioSource),
+        sourceKind = PlaybackSourceKind.MIDI,
+        artifact = source.artifact?.let { PlaybackArtifactIdentity(source.projectRoot, it, source.partId, source.audioSource) },
+        phase = phase,
+        positionSeconds = elapsedSeconds,
+        durationSeconds = durationSeconds,
+        failureStage = if (phase == PlaybackSessionPhase.FAILED) PlaybackFailureStage.RESOLUTION else null,
+        failureMessage = message,
+        retryAction = if (phase == PlaybackSessionPhase.FAILED) PlaybackRetryAction.RETRY_SAME_SELECTION else null
+    )
 
     private fun qualityPart(status: app.melotrail.application.MidiQualityStatus): app.melotrail.application.PartSummary {
         val cleanup = app.melotrail.arrangement.MidiCleanupOptions()

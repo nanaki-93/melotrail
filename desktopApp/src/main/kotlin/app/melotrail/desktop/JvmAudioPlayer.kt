@@ -24,7 +24,8 @@ import javax.sound.sampled.AudioFormat
 import javax.sound.sampled.AudioSystem
 import javax.sound.sampled.SourceDataLine
 
-enum class PlaybackFailureStage { PREPARE, START }
+/** The boundary at which a monitor session failed. Kept deliberately distinct for recovery UI. */
+enum class PlaybackFailureStage { RESOLUTION, DECODE, PREPARE, DEVICE_OPEN, DEVICE_START, RUNTIME }
 
 data class PlaybackFailure(
     val stage: PlaybackFailureStage,
@@ -43,6 +44,8 @@ sealed interface PlaybackStartResult {
 }
 
 interface ArtifactAudioPlayer : AudioPlayer {
+    /** The last typed boundary failure; cleared only after a new valid preparation or start. */
+    val failure: StateFlow<PlaybackFailure?>
     suspend fun prepare(path: Path): PlaybackPrepareResult
     suspend fun start(): PlaybackStartResult
     suspend fun play(path: Path): PlaybackStartResult
@@ -80,10 +83,12 @@ class JvmAudioPlayer internal constructor(
     private val _position = MutableStateFlow(0.0)
     private val _duration = MutableStateFlow(0.0)
     private val _volume = MutableStateFlow(1.0)
+    private val _failure = MutableStateFlow<PlaybackFailure?>(null)
     override val state: StateFlow<PlaybackState> = _state
     override val currentPosition: StateFlow<Double> = _position
     override val totalDuration: StateFlow<Double> = _duration
     override val volume: StateFlow<Double> = _volume
+    override val failure: StateFlow<PlaybackFailure?> = _failure
 
     private val lifecycleLock = ReentrantLock()
     private val stateLock = Object()
@@ -96,11 +101,12 @@ class JvmAudioPlayer internal constructor(
     private var closed = false
 
     override suspend fun prepare(path: Path): PlaybackPrepareResult = withContext(workDispatcher) {
-        if (!Files.isRegularFile(path)) return@withContext prepareFailure("Preview artifact is missing.", IllegalArgumentException("Preview artifact is missing: $path"))
+        if (!Files.isRegularFile(path)) return@withContext prepareFailure(PlaybackFailureStage.RESOLUTION, "Preview artifact is missing.", IllegalArgumentException("Preview artifact is missing: $path"))
+        if (!isRiffWave(path)) return@withContext prepareFailure(PlaybackFailureStage.DECODE, "Preview artifact is not a RIFF/WAVE file.", IllegalArgumentException("Preview artifact is not a RIFF/WAVE file: $path"))
         val decoded = try {
             decoder.decode(path)
         } catch (error: Throwable) {
-            return@withContext prepareFailure("Preview artifact could not be decoded.", error)
+            return@withContext prepareFailure(PlaybackFailureStage.DECODE, "Preview artifact could not be decoded.", error)
         }
         prepareDecoded(decoded)
     }
@@ -118,32 +124,43 @@ class JvmAudioPlayer internal constructor(
                 if (closed) null
                 else if (_state.value == PlaybackState.PLAYING) return@withLock PlaybackStartResult.Started
                 else if (_state.value == PlaybackState.PAUSED && line != null) {
-                    line?.start()
+                    try {
+                        line?.start()
+                    } catch (error: Throwable) {
+                        return@withLock startFailure(PlaybackFailureStage.DEVICE_START, "Audio output could not be restarted. Check the selected output device and retry.", error)
+                    }
                     _state.value = PlaybackState.PLAYING
                     stateLock.notifyAll()
                     return@withLock PlaybackStartResult.Started
                 } else buffer
             }
-                ?: return@withLock startFailure("No prepared audio is available.", IllegalStateException("No prepared audio is available"))
+                ?: return@withLock startFailure(PlaybackFailureStage.PREPARE, "No prepared audio is available.", IllegalStateException("No prepared audio is available"))
+            synchronized(stateLock) {
+                if (_state.value == PlaybackState.STOPPED && frame >= audio.length) {
+                    frame = 0
+                    _position.value = 0.0
+                }
+            }
             val output = try {
                 outputDevice.open(deviceFormat(audio))
             } catch (error: Throwable) {
-                return@withLock startFailure("Audio output could not be started. Check the selected output device and retry.", error)
+                return@withLock startFailure(PlaybackFailureStage.DEVICE_OPEN, "Audio output could not be opened. Check the selected output device and retry.", error)
             }
             try {
                 output.start()
             } catch (error: Throwable) {
                 closeQuietly(output)
-                return@withLock startFailure("Audio output could not be started. Check the selected output device and retry.", error)
+                return@withLock startFailure(PlaybackFailureStage.DEVICE_START, "Audio output could not be started. Check the selected output device and retry.", error)
             }
             val token: Long
             synchronized(stateLock) {
                 if (closed || buffer !== audio) {
                     closeQuietly(output)
-                    return@withLock startFailure("Prepared audio changed before playback could start.", IllegalStateException("Prepared audio replaced during start"))
+                    return@withLock startFailure(PlaybackFailureStage.PREPARE, "Prepared audio changed before playback could start.", IllegalStateException("Prepared audio replaced during start"))
                 }
                 token = ++generation
                 line = output
+                _failure.value = null
                 _state.value = PlaybackState.PLAYING
                 worker = thread(name = "jvm-audio-player", isDaemon = true) { runPlayback(token, audio, output) }
             }
@@ -201,11 +218,12 @@ class JvmAudioPlayer internal constructor(
 
     private fun prepareDecoded(audio: AudioBuffer): PlaybackPrepareResult = lifecycleLock.withLock {
         val invalid = validationFailure(audio)
-        if (invalid != null) return@withLock prepareFailure("Preview artifact is not valid audio.", invalid)
+        if (invalid != null) return@withLock prepareFailure(PlaybackFailureStage.PREPARE, "Preview artifact is not valid audio.", invalid)
         stopActive(resetPosition = true)
         synchronized(stateLock) {
-            if (closed) return@withLock prepareFailure("Audio player is closed.", IllegalStateException("Audio player is closed"))
+            if (closed) return@withLock prepareFailure(PlaybackFailureStage.RUNTIME, "Audio player is closed.", IllegalStateException("Audio player is closed"))
             buffer = audio
+            _failure.value = null
             _duration.value = audio.length.toDouble() / audio.format.sampleRate
             _position.value = 0.0
             frame = 0
@@ -263,8 +281,8 @@ class JvmAudioPlayer internal constructor(
                     worker = null
                 }
             }
-            outputFailure?.let {
-                failureReporter(PlaybackFailure(PlaybackFailureStage.START, "Audio output stopped unexpectedly. Check the selected output device and retry.", it))
+            if (outputFailure != null && token == generation) {
+                reportFailure(PlaybackFailure(PlaybackFailureStage.RUNTIME, "Audio output stopped unexpectedly. Check the selected output device and retry.", outputFailure))
             }
         }
     }
@@ -278,13 +296,27 @@ class JvmAudioPlayer internal constructor(
         else -> null
     }
 
-    private fun prepareFailure(message: String, cause: Throwable): PlaybackPrepareResult.Failed = PlaybackPrepareResult.Failed(
-        PlaybackFailure(PlaybackFailureStage.PREPARE, message, cause).also(failureReporter)
+    private fun prepareFailure(stage: PlaybackFailureStage, message: String, cause: Throwable): PlaybackPrepareResult.Failed = PlaybackPrepareResult.Failed(
+        PlaybackFailure(stage, message, cause).also(::reportFailure)
     )
 
-    private fun startFailure(message: String, cause: Throwable): PlaybackStartResult.Failed = PlaybackStartResult.Failed(
-        PlaybackFailure(PlaybackFailureStage.START, message, cause).also(failureReporter)
+    private fun startFailure(stage: PlaybackFailureStage, message: String, cause: Throwable): PlaybackStartResult.Failed = PlaybackStartResult.Failed(
+        PlaybackFailure(stage, message, cause).also(::reportFailure)
     )
+
+    private fun reportFailure(failure: PlaybackFailure) {
+        _failure.value = failure
+        failureReporter(failure)
+    }
+
+    private fun isRiffWave(path: Path): Boolean = runCatching {
+        Files.newInputStream(path).use { input ->
+            val header = ByteArray(12)
+            input.read(header) == header.size &&
+                header.copyOfRange(0, 4).toString(Charsets.US_ASCII) == "RIFF" &&
+                header.copyOfRange(8, 12).toString(Charsets.US_ASCII) == "WAVE"
+        }
+    }.getOrDefault(false)
 
     private fun deviceFormat(audio: AudioBuffer) = AudioFormat(audio.format.sampleRate.toFloat(), 16, audio.format.channels, true, false)
 
