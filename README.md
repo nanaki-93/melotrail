@@ -88,12 +88,51 @@ On this development OS, produce a DMG with its bundled runtime using:
 ./gradlew :desktopApp:packageDistributionForCurrentOS
 ```
 
-The DMG is written under `desktopApp/build/compose/binaries/main/dmg/`. Open it
-and launch **Personal AI Music Arranger**; Gradle and Spring are not required
-to open existing projects. This is an unsigned local package—code signing and
-notarization are intentionally not configured. Windows and Linux packages must
-be built and tested natively on those operating systems before they can be
-claimed as supported.
+The DMG is written under `desktopApp/build/compose/binaries/main/dmg/`. Open it,
+drag **Personal AI Music Arranger** to Applications (or another local folder),
+and launch it there. The package includes its Java runtime: Gradle, Spring, the
+legacy static frontend, and the repository working directory are not required
+to create or open a project.
+
+The package does not bundle the local SFZ samples, renderer, Python worker, or
+optional transcription runtime. Use the **Library** button to choose the
+absolute folder containing the validated `sounds/` pack; that preference is
+stored separately from project data. For a terminal launch, a validated
+`MUSIC_SOUNDS_ROOT` is an alternative and takes precedence over the chooser.
+Start the worker separately only for operations that need it, and configure the
+renderer before MIDI preview or rendering. See
+[`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) for recovery steps.
+
+This is an unsigned local macOS package—code signing and notarization are
+intentionally not configured. Windows and Linux packages must be built and
+tested natively on those operating systems before they can be claimed as
+supported.
+
+### Desktop workflow and local prerequisites
+
+Use the desktop app as a guided sequence: create/open a project, import MIDI
+or an eligible WAV/MP3 source, inspect/prepare it, clean/analyze MIDI, save the
+structure, generate/review an arrangement, then build and audition validated
+artifacts. The app never requires Spring or the deprecated browser UI.
+
+- Direct MIDI is preserved under `source/` and cleaned before analysis.
+- WAV/WAVE and MP3 input is accepted only for the optional **solo-piano**
+  transcription workflow. Do not use it to claim reliable editable MIDI from
+  vocals, full mixes, or arbitrary polyphonic material.
+- Inspection is the default and creates a measured `prepared/<part>/report.json`
+  without changing the source. Safe cleanup requires explicit confirmation,
+  keeps the original immutable, and can create `decoded.wav` and `clean.wav`
+  under that part's `prepared/` directory.
+- Audio-source preview can work without a renderer. MIDI preview and rendering
+  require a valid local library with samples plus an executable SFZ renderer.
+  The readiness panel names the missing dependency and its recovery action.
+
+The project directory remains canonical. Its inspectable artifacts include
+`source/`, `prepared/`, `midi/raw/`, `midi/clean/`, `analysis/`, `previews/`,
+plans and arrangements, generated MIDI, stems, `mix/`, and `output/`.
+`output/master.wav` is the authoritative lossless release; MP3 is an optional
+final conversion only. For worker, library, renderer, preview, and package
+troubleshooting, use [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
 
 ## CLI
 

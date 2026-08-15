@@ -38,6 +38,21 @@ registry before rendering) to verify the complete pack. Do not create an
 contains kick, snare, clap, closed hat, and open hat only; there is no crash or
 cymbal mapping in this starter pack.
 
+### Selecting the pack in the desktop application
+
+The macOS package does not rely on its launch directory and does not bundle
+this local pack. In **Personal AI Music Arranger**, select **Library** and
+choose this `sounds/` directory after the sample-copy step. The app validates
+the registry and samples before retaining an absolute desktop preference; it
+does not copy, download, or modify the library. A terminal-launched desktop
+app may instead use `MUSIC_SOUNDS_ROOT=/absolute/path/to/sounds`, which is
+authoritative for that launch and disables folder selection until it is unset.
+
+If the app reports missing samples, restore only the approved 25 files at the
+existing SFZ-relative `*/samples/*.wav` locations and refresh readiness. If it
+reports an invalid registry, do not substitute a different directory layout or
+weaken the registry checks; correct the selected library instead.
+
 ## MIDI drum mapping
 
 - 36: Kick
