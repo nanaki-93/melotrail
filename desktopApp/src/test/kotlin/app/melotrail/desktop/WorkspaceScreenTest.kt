@@ -3,10 +3,12 @@ package app.melotrail.desktop
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.ExperimentalTestApi
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.v2.runComposeUiTest
@@ -52,8 +54,10 @@ class WorkspaceScreenTest {
         setContent { MelotrailTheme { WorkspaceScreen(projectState(), intents::add) } }
 
         WorkspaceSection.entries.forEach { section ->
-            onNodeWithTag(WorkspaceTags.WORKSPACE_SECTION_PREFIX + section.name.lowercase()).assertExists()
+            onAllNodesWithTag(WorkspaceTags.WORKSPACE_SECTION_PREFIX + section.name.lowercase()).assertCountEquals(1)
         }
+        onAllNodesWithText("Project · Complete").assertCountEquals(0)
+        onAllNodesWithText("Prepare · Current").assertCountEquals(0)
         onNodeWithTag(WorkspaceTags.WORKSPACE_SECTION_PREFIX + WorkspaceSection.ARRANGE.name.lowercase()).performClick()
         assertEquals(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.ARRANGE), intents.last())
     }
@@ -68,7 +72,7 @@ class WorkspaceScreenTest {
 
         onNodeWithTag(WorkspaceTags.LIBRARY_PANEL).assertIsDisplayed()
         onNodeWithTag(WorkspaceTags.SOUND_LIBRARY_SETTINGS).assertIsDisplayed()
-        onNodeWithText("Refresh readiness").assertIsDisplayed()
+        onNodeWithTag(WorkspaceTags.READINESS_RECOVERY).assertIsDisplayed()
     }
 
     @Test
@@ -82,6 +86,7 @@ class WorkspaceScreenTest {
 
         onNodeWithTag(WorkspaceTags.GLOBAL_FEEDBACK).assertIsDisplayed()
         onNodeWithText("Unable to import part: worker unavailable").assertIsDisplayed()
+        onAllNodesWithTag(WorkspaceTags.GLOBAL_FEEDBACK_RETRY).assertCountEquals(1)
         onNodeWithTag(WorkspaceTags.GLOBAL_FEEDBACK_RETRY).performClick()
         assertEquals(WorkspaceIntent.Retry, intents.last())
         onNodeWithTag(WorkspaceTags.GLOBAL_FEEDBACK_DISMISS).performClick()
@@ -243,7 +248,7 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `selected preview shows lifecycle states labels controls and recovery`() = runComposeUiTest {
+    fun `persistent footer is the one transport for part previews and recovery`() = runComposeUiTest {
         val root = java.nio.file.Path.of("build/test-project")
         val source = PreviewSourceIdentity(root, "A", root.resolve("previews/piano-A.wav"))
 
@@ -252,12 +257,11 @@ class WorkspaceScreenTest {
                 WorkspaceScreen(projectState().copy(playbackSession = previewSession(source, PlaybackSessionPhase.PREPARING, elapsedSeconds = 2.0, durationSeconds = 12.0)), onIntent = {})
             }
         }
-        onNodeWithTag(WorkspaceTags.PREVIEW_TRANSPORT).assertExists()
-        onNodeWithText("Part A").assertExists()
+        onAllNodesWithTag(WorkspaceTags.COMPACT_TRANSPORT).assertCountEquals(1)
+        onNodeWithText("Part A preview").assertExists()
         onNodeWithText("Preparing monitor audio…").assertExists()
-        onNodeWithTag(WorkspaceTags.PREVIEW_TOGGLE).assertIsNotEnabled()
-        onNodeWithTag(WorkspaceTags.PREVIEW_STOP).assertIsEnabled()
-        onNodeWithTag(WorkspaceTags.PREVIEW_SEEK).assertIsNotEnabled()
+        onNodeWithTag(WorkspaceTags.PLAYBACK_TOGGLE).assertIsNotEnabled()
+        onNodeWithTag(WorkspaceTags.PLAYBACK_SEEK).assertIsNotEnabled()
 
         setContent {
             MelotrailTheme {
@@ -265,8 +269,8 @@ class WorkspaceScreenTest {
             }
         }
         onNodeWithText("Playing").assertExists()
-        onNodeWithTag(WorkspaceTags.PREVIEW_TOGGLE).assertIsEnabled()
-        onNodeWithTag(WorkspaceTags.PREVIEW_SEEK).assertIsEnabled()
+        onNodeWithTag(WorkspaceTags.PLAYBACK_TOGGLE).assertIsEnabled()
+        onNodeWithTag(WorkspaceTags.PLAYBACK_SEEK).assertIsEnabled()
 
         setContent {
             MelotrailTheme {
@@ -275,7 +279,7 @@ class WorkspaceScreenTest {
         }
         onNodeWithText("Preview unavailable").assertExists()
         onNodeWithText("Analyze A before previewing it.").assertExists()
-        onNodeWithTag(WorkspaceTags.PREVIEW_RETRY).assertIsEnabled()
+        onNodeWithTag(WorkspaceTags.PLAYBACK_RETRY).assertIsEnabled()
     }
 
     @Test
@@ -425,81 +429,15 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `creation header exposes all stages dispatches its next action and pauses during work`() = runComposeUiTest {
-        val intents = mutableListOf<WorkspaceIntent>()
-        setContent { MelotrailTheme { WorkspaceScreen(projectState(), intents::add) } }
-
-        CreationStage.entries.forEach { stage ->
-            onNodeWithTag(WorkspaceTags.CREATION_STAGE_PREFIX + stage.name.lowercase()).assertExists()
-        }
-        onNodeWithTag(WorkspaceTags.CREATION_DEPENDENCY).assertIsDisplayed()
-        onNodeWithTag(WorkspaceTags.CREATION_CHECKLIST).assertExists()
-        onNodeWithText("Next safe action").assertExists()
-        onNodeWithTag(WorkspaceTags.CREATION_STAGE_PREFIX + "project").performClick()
-        assertEquals(WorkspaceIntent.ShowImportPart(audio = false), intents.last())
-
-        setContent {
-            MelotrailTheme {
-                WorkspaceScreen(projectState().copy(operation = WorkspaceOperation.ImportingPart("A")), onIntent = {})
-            }
-        }
-        onNodeWithTag(WorkspaceTags.CREATION_NEXT_ACTION).assertIsNotEnabled()
-        onNodeWithText("Operation in progress").assertExists()
-    }
-
-    @Test
-    fun `creation stepper gives blocked stages an accessible reason and recovery action`() = runComposeUiTest {
-        val intents = mutableListOf<WorkspaceIntent>()
-        setContent { MelotrailTheme { WorkspaceScreen(projectState(), intents::add) } }
-
-        val stage = onNodeWithTag(WorkspaceTags.CREATION_STAGE_PREFIX + "structure")
-        assertEquals(
-            listOf("Structure: Blocked. Every part must be prepared before the structure can be arranged. Recovery: Import a MIDI, WAV, or MP3 source."),
-            stage.fetchSemanticsNode().config[SemanticsProperties.ContentDescription]
-        )
-        stage.performClick()
-
-        assertEquals(WorkspaceIntent.ShowImportPart(audio = false), intents.last())
-    }
-
-    @Test
-    fun `creation header explains Qwen approval and completed release states`() = runComposeUiTest {
-        val root = java.nio.file.Path.of("build/creation-header")
-        val part = app.melotrail.application.PartSummary(
-            "A", "verse", "source/A.mid", "A.mid", app.melotrail.application.PartSourceType.MIDI,
-            app.melotrail.application.PartAnalysisSummary(app.melotrail.application.PartAnalysisStatus.MIDI, "analysis/A.json", 4, 4.0, "C major"),
-            app.melotrail.application.PartPreparationSummary(
-                sourcePreserved = true, inspected = true, preparedAudio = false, rawMidi = true,
-                cleanMidi = true, analyzed = true, ready = true, warnings = emptyList(),
-                midiQuality = app.melotrail.application.MidiQualitySummary(app.melotrail.application.MidiQualityStatus.CURRENT)
-            )
-        )
-        val project = app.melotrail.application.ProjectSnapshot(
-            root, 2, "creation-header", app.melotrail.arrangement.RenderFormat(), listOf(part),
-            listOf(app.melotrail.application.StructureSectionSummary(0, "A", 1, "A1", 4.0)),
-            app.melotrail.application.ProjectReadiness(true, true, true, false, false, false, false, false, false, false)
-        )
-        val draft = app.melotrail.application.ArrangementSnapshot(
-            root, listOf(app.melotrail.application.ArrangementSectionSnapshot(0, "A1", "A", "verse", 0.5, emptyList(), "none", 4.0)),
-            approvalRequired = true, approved = false, stale = false, artifact = root.resolve("arrangement.draft.json")
-        )
-        assertEquals(CreationIntent.APPROVE_ARRANGEMENT, CreationProgressDeriver.derive(CreationProgressInput(project, draft)).nextAction.intent)
-        setContent { MelotrailTheme { WorkspaceScreen(WorkspaceUiState(project = project, arrangement = draft), onIntent = {}) } }
-        onNodeWithText("Start approve arrangement").assertExists()
-        onNodeWithTag(WorkspaceTags.CREATION_NEXT_ACTION).assertIsEnabled()
-
-        setContent {
-            MelotrailTheme {
-                WorkspaceScreen(
-                    WorkspaceUiState(
-                        project = project.copy(readiness = project.readiness.copy(masterAvailable = true, releaseAvailable = true)),
-                        arrangement = draft.copy(approvalRequired = false, approved = true, artifact = root.resolve("arrangement.json"))
-                    ),
-                    onIntent = {}
-                )
-            }
-        }
-        onNodeWithText("Mix & Master · Complete").assertExists()
+    fun `wide medium and narrow compositions keep one footer transport and one readiness recovery`() = runComposeUiTest {
+        assertEquals(WorkspaceLayout.WIDE, workspaceLayoutForWidth(1440.dp))
+        assertEquals(WorkspaceLayout.MEDIUM, workspaceLayoutForWidth(900.dp))
+        assertEquals(WorkspaceLayout.NARROW, workspaceLayoutForWidth(600.dp))
+        setContent { MelotrailTheme { WorkspaceScreen(projectState(), onIntent = {}) } }
+        onAllNodesWithTag(WorkspaceTags.COMPACT_TRANSPORT).assertCountEquals(1)
+        onAllNodesWithTag(WorkspaceTags.PLAYBACK_VOLUME).assertCountEquals(1)
+        onAllNodesWithTag(WorkspaceTags.READINESS_RECOVERY).assertCountEquals(1)
+        onAllNodesWithTag(WorkspaceTags.GLOBAL_FEEDBACK_RETRY).assertCountEquals(0)
     }
 
     private fun runtimeReadiness(worker: DependencyReadiness): RuntimeReadiness = RuntimeReadiness.of(

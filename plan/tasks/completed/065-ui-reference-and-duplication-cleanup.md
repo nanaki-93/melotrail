@@ -2,7 +2,7 @@
 
 ## Goal
 
-Bring the Compose workspace as close as practical to `plan/UI.png`, remove the
+Bring the Compose workspace as close as practical to `../../UI.png`, remove the
 workflow-status menu line, and give every user action one clear home.
 
 ## Dependencies
@@ -43,14 +43,14 @@ workflow-status menu line, and give every user action one clear home.
 - Assert a single transport, volume control, readiness recovery action, and
   operation retry surface in each relevant layout.
 - Screenshot/golden or documented visual comparison at wide, medium, and narrow
-  sizes against `plan/UI.png`.
+  sizes against `../../UI.png`.
 - Keyboard traversal, shortcut, accessible-name, disabled-reason, and contrast
   checks.
 
 ## Acceptance criteria
 
 - No `Project · Complete` / `Prepare · Current` status row remains.
-- The visible workspace is recognizably organized like `plan/UI.png`.
+- The visible workspace is recognizably organized like `../../UI.png`.
 - The same command is not presented in multiple competing panels.
 - All contextual preview buttons control the one persistent transport.
 - Wide, medium, and narrow layouts contain no duplicate branch or unreachable

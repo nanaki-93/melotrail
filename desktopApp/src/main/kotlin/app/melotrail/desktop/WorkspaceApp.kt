@@ -71,10 +71,7 @@ object WorkspaceTags {
     const val GLOBAL_FEEDBACK = "global-feedback"
     const val GLOBAL_FEEDBACK_RETRY = "global-feedback-retry"
     const val GLOBAL_FEEDBACK_DISMISS = "global-feedback-dismiss"
-    const val CREATION_STAGE_PREFIX = "creation-stage-"
-    const val CREATION_CHECKLIST = "creation-checklist"
-    const val CREATION_NEXT_ACTION = "creation-next-action"
-    const val CREATION_DEPENDENCY = "creation-dependency"
+    const val READINESS_RECOVERY = "readiness-recovery"
     const val PARTS_PANEL = "parts-panel"
     const val PART_ROW_PREFIX = "part-row-"
     const val STRUCTURE_PANEL = "structure-panel"
@@ -114,11 +111,7 @@ object WorkspaceTags {
     const val PLAYBACK_TOGGLE = "playback-toggle"
     const val PLAYBACK_SEEK = "playback-seek"
     const val PLAYBACK_VOLUME = "playback-volume"
-    const val PREVIEW_TRANSPORT = "preview-transport"
-    const val PREVIEW_TOGGLE = "preview-toggle"
-    const val PREVIEW_STOP = "preview-stop"
-    const val PREVIEW_SEEK = "preview-seek"
-    const val PREVIEW_RETRY = "preview-retry"
+    const val PLAYBACK_RETRY = "playback-retry"
     const val PREPARATION_PANEL = "preparation-panel"
     const val PREPARATION_INSPECT = "preparation-inspect"
     const val PREPARATION_APPLY = "preparation-apply"
@@ -156,6 +149,7 @@ fun WorkspaceScreen(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit
         ProjectHeader(state, onIntent)
         state.notification?.let { GlobalFeedback(it, state.retry != null, onIntent) }
         WorkspaceShell(state, onIntent, Modifier.weight(1f))
+        CompactTransport(state, onIntent)
     }
     WorkspaceDialogs(state, onIntent, onExit)
 }
@@ -213,7 +207,6 @@ internal fun transportShortcutIntent(
 @Composable
 private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
     val mutationsDisabled = state.operation.isMutating
-    val progress = state.creationProgress()
     Card(
         modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.PROJECT_HEADER },
         colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.Surface),
@@ -238,12 +231,10 @@ private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                     }
                 }
             }
-            CreationStatusStrip(progress, state, onIntent, Modifier.fillMaxWidth())
             val projectText = state.project?.let { "Project · ${it.name} · v${it.version} · ${it.renderFormat?.sampleRate ?: "?"} Hz / ${it.renderFormat?.channels ?: "?"} ch / PCM-24" }
                 ?: "Start workspace · create or open an arranger project"
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
                 Text(projectText, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                ReadinessText(state.runtimeReadiness, onIntent, Modifier.weight(1.2f))
                 if (!canBuild(state)) Text(buildSongPrerequisite(state), modifier = Modifier.weight(0.8f), maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -312,147 +303,6 @@ private fun WorkspaceNavigation(state: WorkspaceUiState, onIntent: (WorkspaceInt
 }
 
 @Composable
-private fun CreationStatusStrip(progress: CreationProgress, state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier) {
-    Row(
-        modifier = modifier.horizontalScroll(rememberScrollState())
-            .semantics { contentDescription = "Creation workflow progress" },
-        horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)
-    ) {
-        progress.stages.forEach { WorkspaceNavItem(it, state, onIntent) }
-    }
-}
-
-@Composable
-private fun WorkspaceNavItem(stage: CreationStageProgress, state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
-    val enabled = !state.operation.isMutating && creationActionAvailable(stage.nextAction, state)
-    Text(
-        "${creationStageLabel(stage.stage)} · ${creationStatusLabel(stage.status)}",
-        modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(MusicWorkspaceTokens.Radius.Control))
-            .background(if (stage.status == CreationStageStatus.CURRENT) MaterialTheme.colorScheme.primary.copy(alpha = MusicWorkspaceTokens.Interaction.HoverAlpha) else MusicWorkspaceTokens.ElevatedSurface)
-            .clickable(enabled = enabled) { dispatchCreationAction(stage.nextAction, state, onIntent) }
-            .padding(horizontal = MusicWorkspaceTokens.Spacing.Sm, vertical = MusicWorkspaceTokens.Spacing.Sm)
-            .semantics {
-                testTag = WorkspaceTags.CREATION_STAGE_PREFIX + stage.stage.name.lowercase()
-                val statusAndReason = stage.reason?.let { "${creationStatusLabel(stage.status)}. $it" }
-                    ?: "${creationStatusLabel(stage.status)}."
-                contentDescription = "${creationStageLabel(stage.stage)}: $statusAndReason Recovery: ${stage.nextAction.prerequisite}"
-            },
-        color = if (stage.status == CreationStageStatus.CURRENT) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.labelMedium,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis
-    )
-}
-
-@Composable
-private fun ReadinessText(readiness: RuntimeReadiness?, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier) {
-    Row(modifier = modifier.semantics { testTag = WorkspaceTags.CREATION_DEPENDENCY }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        val text = readiness?.let {
-            val unavailable = RuntimeDependency.entries.map { dependency -> dependency to it.dependency(dependency) }.firstOrNull { !it.second.available }
-            if (unavailable == null) "Local readiness: all dependencies ready."
-            else "Local readiness: ${unavailable.first.name.lowercase().replace('_', ' ')} ${unavailable.second.status.name.lowercase()} — ${unavailable.second.detail}"
-        } ?: "Checking local dependency readiness…"
-        Text(text, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        TextButton(onClick = { onIntent(WorkspaceIntent.RefreshRuntimeReadiness) }) { Text("Refresh") }
-    }
-}
-
-@Composable
-private fun CreationChecklist(progress: CreationProgress, state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
-    val next = progress.nextAction
-    val current = progress.stages.firstOrNull { it.status != CreationStageStatus.COMPLETE } ?: progress.stages.last()
-    val busy = state.operation.isMutating
-    Column(
-        modifier = Modifier.fillMaxWidth()
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(MusicWorkspaceTokens.Radius.Control))
-            .background(MusicWorkspaceTokens.ElevatedSurface)
-            .padding(MusicWorkspaceTokens.Spacing.Sm)
-            .semantics { testTag = WorkspaceTags.CREATION_CHECKLIST },
-        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)
-    ) {
-        Text("Next safe action", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-        Text("${creationStageLabel(current.stage)} · ${current.reason ?: current.nextAction.prerequisite}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Button(
-            onClick = { dispatchCreationAction(next, state, onIntent) },
-            enabled = !busy && creationActionAvailable(next, state),
-            modifier = Modifier.semantics {
-                testTag = WorkspaceTags.CREATION_NEXT_ACTION
-                contentDescription = if (busy) "Next action unavailable while an operation is in progress" else "Next action: ${creationActionLabel(next.intent)}"
-            }
-        ) { Text(if (busy) "Operation in progress" else "Start ${creationActionLabel(next.intent).lowercase()}") }
-    }
-}
-
-private fun WorkspaceUiState.creationProgress(): CreationProgress = CreationProgressDeriver.derive(
-    CreationProgressInput(
-        project = project,
-        arrangement = arrangement,
-        mix = mix,
-        runtimeReadiness = runtimeReadiness,
-        buildEvidence = (operation as? WorkspaceOperation.Failed)
-            ?.takeIf { it.action.equals("build song", ignoreCase = true) }
-            ?.let { BuildEvidence.Failed(it.message) }
-            ?: BuildEvidence.None
-    )
-)
-
-private fun creationStageLabel(stage: CreationStage): String = when (stage) {
-    CreationStage.PROJECT -> "Project"
-    CreationStage.PREPARE -> "Prepare"
-    CreationStage.STRUCTURE -> "Structure"
-    CreationStage.ARRANGE -> "Arrange"
-    CreationStage.MIX_AND_MASTER -> "Mix & Master"
-}
-
-private fun creationStatusLabel(status: CreationStageStatus): String = when (status) {
-    CreationStageStatus.NOT_STARTED -> "Not started"
-    CreationStageStatus.CURRENT -> "Current"
-    CreationStageStatus.COMPLETE -> "Complete"
-    CreationStageStatus.BLOCKED -> "Blocked"
-    CreationStageStatus.STALE -> "Stale"
-}
-
-private fun creationActionLabel(intent: CreationIntent): String = when (intent) {
-    CreationIntent.CREATE_OR_OPEN_PROJECT -> "Create or open project"
-    CreationIntent.IMPORT_PART -> "Import part"
-    CreationIntent.INSPECT_PART -> "Inspect selected part"
-    CreationIntent.RETRY_MIDI_CLEANUP -> "Retry MIDI cleanup"
-    CreationIntent.ANALYZE_PART -> "Analyze selected part"
-    CreationIntent.SAVE_STRUCTURE -> "Save structure in Song structure"
-    CreationIntent.GENERATE_ARRANGEMENT -> "Generate arrangement"
-    CreationIntent.APPROVE_ARRANGEMENT -> "Approve arrangement"
-    CreationIntent.CONFIGURE_BUILD_DEPENDENCY -> "Refresh build readiness"
-    CreationIntent.BUILD_SONG -> "Build song"
-    CreationIntent.RETRY_BUILD -> "Retry build"
-}
-
-private fun creationActionAvailable(action: CreationNextAction, state: WorkspaceUiState): Boolean = when (action.intent) {
-    CreationIntent.CREATE_OR_OPEN_PROJECT -> true
-    CreationIntent.IMPORT_PART, CreationIntent.GENERATE_ARRANGEMENT -> state.project != null
-    CreationIntent.INSPECT_PART, CreationIntent.RETRY_MIDI_CLEANUP, CreationIntent.ANALYZE_PART -> action.artifact.partId?.let { id -> state.project?.parts?.any { it.id == id } == true } == true
-    CreationIntent.SAVE_STRUCTURE -> false // Never create a guessed structure occurrence on the user's behalf.
-    CreationIntent.APPROVE_ARRANGEMENT -> state.arrangement?.let { it.approvalRequired && !it.approved && !it.stale } == true
-    CreationIntent.CONFIGURE_BUILD_DEPENDENCY -> true
-    CreationIntent.BUILD_SONG, CreationIntent.RETRY_BUILD -> canBuild(state)
-}
-
-private fun dispatchCreationAction(action: CreationNextAction, state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
-    if (!creationActionAvailable(action, state) || state.operation.isMutating) return
-    when (action.intent) {
-        CreationIntent.CREATE_OR_OPEN_PROJECT -> onIntent(WorkspaceIntent.ShowCreateProject)
-        CreationIntent.IMPORT_PART -> onIntent(WorkspaceIntent.ShowImportPart(audio = false))
-        CreationIntent.INSPECT_PART -> action.artifact.partId?.let { partId -> onIntent(WorkspaceIntent.SelectPart(partId)); onIntent(WorkspaceIntent.InspectSelectedPart) }
-        CreationIntent.RETRY_MIDI_CLEANUP -> action.artifact.partId?.let { partId -> onIntent(WorkspaceIntent.SelectPart(partId)); onIntent(WorkspaceIntent.RetryMidiCleanup) }
-        CreationIntent.ANALYZE_PART -> action.artifact.partId?.let { onIntent(WorkspaceIntent.AnalyzePart(it)) }
-        CreationIntent.SAVE_STRUCTURE -> Unit
-        CreationIntent.GENERATE_ARRANGEMENT -> onIntent(WorkspaceIntent.GenerateArrangement)
-        CreationIntent.APPROVE_ARRANGEMENT -> onIntent(WorkspaceIntent.ApproveArrangement)
-        CreationIntent.CONFIGURE_BUILD_DEPENDENCY -> onIntent(WorkspaceIntent.RefreshRuntimeReadiness)
-        CreationIntent.BUILD_SONG, CreationIntent.RETRY_BUILD -> onIntent(WorkspaceIntent.BuildSong)
-    }
-}
-
-@Composable
 private fun WorkspaceShell(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier = Modifier) {
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         when (workspaceLayoutForWidth(maxWidth)) {
@@ -502,7 +352,6 @@ private fun WideWorkspace(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                 }
             }
         }
-        if (state.workspaceSection != WorkspaceSection.MIX_MASTER) CompactTransport(state, onIntent)
     }
 }
 
@@ -515,7 +364,6 @@ private fun MediumWorkspace(state: WorkspaceUiState, onIntent: (WorkspaceIntent)
             PanelColumn(Modifier.widthIn(min = 500.dp, max = 720.dp), state, onIntent, panels.second)
             if (panels.third.isNotEmpty()) PanelColumn(Modifier.widthIn(min = 300.dp, max = 380.dp), state, onIntent, panels.third)
         }
-        if (state.workspaceSection != WorkspaceSection.MIX_MASTER) CompactTransport(state, onIntent)
     }
 }
 
@@ -789,48 +637,6 @@ private fun cleanupOperationLabel(operation: app.melotrail.preparation.CleanupPl
 }
 
 private fun formatMetric(value: Double): String = String.format(java.util.Locale.ROOT, "%.3f", value)
-
-@Composable
-private fun PreviewTransport(preview: PreviewUiState, volume: Double, onIntent: (WorkspaceIntent) -> Unit) = Column(
-    modifier = Modifier.semantics { testTag = WorkspaceTags.PREVIEW_TRANSPORT },
-    verticalArrangement = Arrangement.spacedBy(6.dp)
-) {
-    Text("Selected preview", style = MaterialTheme.typography.labelLarge)
-    val partLabel = preview.source?.partId?.let { "Part $it" } ?: "No part selected"
-    val hasArtifact = preview.source?.artifact != null
-    val canPause = preview.phase == PreviewPhase.PLAYING
-    val canResume = preview.phase == PreviewPhase.PAUSED
-    val canStop = preview.phase in setOf(PreviewPhase.PREPARING, PreviewPhase.READY, PreviewPhase.STARTING, PreviewPhase.PLAYING, PreviewPhase.PAUSED)
-    val canSeek = hasArtifact && preview.durationSeconds > 0.0 && preview.phase in setOf(PreviewPhase.READY, PreviewPhase.PLAYING, PreviewPhase.PAUSED, PreviewPhase.STOPPED)
-
-    Text(partLabel, fontWeight = FontWeight.Medium)
-    Text(previewStatusLabel(preview.phase), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    if (preview.phase == PreviewPhase.FAILED) {
-        Text(preview.reason ?: "Preview failed. Retry after resolving the prerequisite.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-        OutlinedButton(onClick = { onIntent(WorkspaceIntent.RetryPreview) }, enabled = preview.source != null, modifier = Modifier.semantics { testTag = WorkspaceTags.PREVIEW_RETRY; contentDescription = "Retry selected preview" }) { Text("Retry preview") }
-    } else if (preview.phase == PreviewPhase.STOPPED && preview.source != null && !hasArtifact) {
-        Text("Select Preview on a part to prepare its monitor artifact.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-    }
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Button(
-            onClick = { onIntent(if (canPause) WorkspaceIntent.PausePreview else WorkspaceIntent.ResumePreview) },
-            enabled = canPause || canResume,
-            modifier = Modifier.semantics { testTag = WorkspaceTags.PREVIEW_TOGGLE; contentDescription = if (canPause) "Pause selected preview" else "Resume selected preview" }
-        ) { Text(if (canPause) "Pause" else "Resume") }
-        OutlinedButton(onClick = { onIntent(WorkspaceIntent.StopPreview) }, enabled = canStop, modifier = Modifier.semantics { testTag = WorkspaceTags.PREVIEW_STOP; contentDescription = "Stop selected preview" }) { Text("Stop") }
-        Text("${formatDuration(preview.elapsedSeconds)} / ${formatDuration(preview.durationSeconds)}", modifier = Modifier.padding(top = 12.dp), style = MaterialTheme.typography.labelSmall)
-    }
-    Slider(
-        value = preview.elapsedSeconds.toFloat(), onValueChange = { onIntent(WorkspaceIntent.SeekPreview(it.toDouble())) },
-        valueRange = 0f..preview.durationSeconds.coerceAtLeast(0.01).toFloat(), enabled = canSeek,
-        modifier = Modifier.semantics { testTag = WorkspaceTags.PREVIEW_SEEK; contentDescription = "Seek selected preview" }
-    )
-    Text("Output volume ${(volume * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
-    Slider(
-        value = volume.toFloat(), onValueChange = { onIntent(WorkspaceIntent.SetPlaybackVolume(it.toDouble())) }, enabled = hasArtifact,
-        modifier = Modifier.semantics { contentDescription = "Selected preview output volume" }
-    )
-}
 
 internal fun previewStatusLabel(phase: PreviewPhase): String = when (phase) {
     PreviewPhase.CHECKING -> "Checking preview prerequisites…"
@@ -1111,13 +917,24 @@ private fun LibraryPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) ->
             onClick = { onIntent(WorkspaceIntent.ShowSoundLibrarySettings) },
             modifier = Modifier.semantics { testTag = WorkspaceTags.SOUND_LIBRARY_SETTINGS; contentDescription = "Configure local sound library" }
         ) { Text("Configure library") }
-        OutlinedButton(onClick = { onIntent(WorkspaceIntent.RefreshRuntimeReadiness) }) { Text("Refresh readiness") }
     }
 }
 
 @Composable
 private fun CompactTransport(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
-    val available = playbackSourceAvailable(state, state.playback.source)
+    val session = state.playbackSession
+    val hasPlayableSelection = when (val request = session.request) {
+        is PlaybackRequest.Part -> session.phase in setOf(PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED) || (session.phase == PlaybackSessionPhase.STOPPED && session.artifact != null)
+        is PlaybackRequest.Mix -> playbackSourceAvailable(state, request.source)
+        null -> playbackSourceAvailable(state, PlaybackSource.DRY)
+    }
+    val canStop = session.phase in setOf(PlaybackSessionPhase.RESOLVING, PlaybackSessionPhase.PREPARING, PlaybackSessionPhase.READY, PlaybackSessionPhase.STARTING, PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED)
+    val canSeek = session.artifact != null && session.durationSeconds > 0.0 && session.phase in setOf(PlaybackSessionPhase.READY, PlaybackSessionPhase.STARTING, PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED, PlaybackSessionPhase.STOPPED)
+    val label = when (val request = session.request) {
+        is PlaybackRequest.Part -> "Part ${request.partId} preview"
+        is PlaybackRequest.Mix -> request.source.name.lowercase().replaceFirstChar(Char::uppercase) + " mix"
+        null -> "Dry mix"
+    }
     Card(
         modifier = Modifier.fillMaxWidth().heightIn(min = 82.dp, max = 118.dp).semantics {
             testTag = WorkspaceTags.COMPACT_TRANSPORT
@@ -1132,32 +949,41 @@ private fun CompactTransport(state: WorkspaceUiState, onIntent: (WorkspaceIntent
             horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)
         ) {
             Button(
-                onClick = { onIntent(WorkspaceIntent.PlayPause) }, enabled = available,
-                modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_TOGGLE; contentDescription = if (available) "Play or pause ${state.playback.source.name.lowercase()} mix" else "Playback unavailable. Build the selected mix first." }
-            ) { Text(if (state.playback.state == app.melotrail.audio.PlaybackState.PLAYING) "Ⅱ" else "▶") }
-            OutlinedButton(onClick = { onIntent(WorkspaceIntent.StopPlayback) }, enabled = state.playback.state != app.melotrail.audio.PlaybackState.STOPPED) { Text("■") }
+                onClick = { onIntent(WorkspaceIntent.PlayPause) }, enabled = hasPlayableSelection,
+                modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_TOGGLE; contentDescription = if (hasPlayableSelection) "Play or pause $label" else "Playback unavailable. Select a ready preview or build a current mix first." }
+            ) { Text(if (session.phase == PlaybackSessionPhase.PLAYING) "Ⅱ" else "▶") }
+            OutlinedButton(onClick = { onIntent(WorkspaceIntent.StopPlayback) }, enabled = canStop) { Text("■") }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Row(Modifier.fillMaxWidth()) {
-                    Text(state.playback.source.name.lowercase().replaceFirstChar(Char::uppercase), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.weight(1f))
-                    Text("${formatDuration(state.playback.positionSeconds)} / ${formatDuration(state.playback.durationSeconds)}", style = MaterialTheme.typography.labelSmall)
+                    Text("${formatDuration(session.positionSeconds)} / ${formatDuration(session.durationSeconds)}", style = MaterialTheme.typography.labelSmall)
+                }
+                if (session.request is PlaybackRequest.Part) {
+                    Text(previewStatusLabel(state.preview.phase), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    state.preview.reason?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
                 Slider(
-                    value = state.playback.positionSeconds.toFloat(),
+                    value = session.positionSeconds.toFloat(),
                     onValueChange = { onIntent(WorkspaceIntent.SeekPlayback(it.toDouble())) },
-                    valueRange = 0f..state.playback.durationSeconds.coerceAtLeast(0.01).toFloat(),
-                    enabled = available && state.playback.durationSeconds > 0.0,
-                    modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_SEEK; contentDescription = "Seek selected mix" }
+                    valueRange = 0f..session.durationSeconds.coerceAtLeast(0.01).toFloat(), enabled = canSeek,
+                    modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_SEEK; contentDescription = "Seek $label" }
                 )
             }
             Column(modifier = Modifier.widthIn(min = 150.dp, max = 210.dp)) {
-                Text("Master ${(state.playback.volume * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
+                Text("Master ${(session.volume * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
                 Slider(
-                    value = state.playback.volume.toFloat(),
+                    value = session.volume.toFloat(),
                     onValueChange = { onIntent(WorkspaceIntent.SetPlaybackVolume(it.toDouble())) },
-                    enabled = available,
+                    enabled = session.request != null || state.project != null,
                     modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_VOLUME; contentDescription = "Master output volume" }
                 )
+            }
+            if (session.phase == PlaybackSessionPhase.FAILED && session.retryAction == PlaybackRetryAction.RETRY_SAME_SELECTION) {
+                OutlinedButton(
+                    onClick = { onIntent(WorkspaceIntent.RetryPreview) },
+                    modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_RETRY; contentDescription = "Retry $label" }
+                ) { Text("Retry") }
             }
             OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.MIX_MASTER)) }) { Text("Mixer") }
         }
@@ -1193,7 +1019,7 @@ private fun MixPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Uni
         Checkbox(state.buildOptions.mp3, { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(mp3 = it))) }, enabled = !disabled); Text("MP3", modifier = Modifier.padding(top = 12.dp))
     }
     BuildLifecycle(state, onIntent)
-    PlaybackControls(state, onIntent)
+    PlaybackSourceSelector(state, onIntent)
 }
 
 @Composable
@@ -1238,11 +1064,11 @@ private fun playbackSourceAvailable(state: WorkspaceUiState, source: PlaybackSou
 }
 
 @Composable
-private fun PlaybackControls(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
-    val source = state.playback.source
+private fun PlaybackSourceSelector(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    val source = (state.playbackSession.request as? PlaybackRequest.Mix)?.source ?: PlaybackSource.DRY
     fun enabled(value: PlaybackSource) = playbackSourceAvailable(state, value)
-    Text("Audition validated artifacts", style = MaterialTheme.typography.labelLarge)
-    Text("Keyboard: Ctrl/Cmd+Space play or pause; Ctrl/Cmd+Left/Right seek 5 seconds; Ctrl/Cmd+K stop.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text("Audition source", style = MaterialTheme.typography.labelLarge)
+    Text("Choose the release artifact controlled by the persistent footer transport.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
         OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectPlaybackSource(PlaybackSource.DRY)) }, enabled = enabled(PlaybackSource.DRY), modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_DRY }) { Text("Dry") }
         OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectPlaybackSource(PlaybackSource.LOFI)) }, enabled = enabled(PlaybackSource.LOFI), modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_LOFI }) { Text("LoFi") }
@@ -1250,14 +1076,6 @@ private fun PlaybackControls(state: WorkspaceUiState, onIntent: (WorkspaceIntent
     }
     val selectedEnabled = enabled(source)
     if (!selectedEnabled) Text("${source.name.lowercase().replaceFirstChar(Char::uppercase)} is unavailable or stale. Build Song creates current audition artifacts.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Button(onClick = { onIntent(WorkspaceIntent.PlayPause) }, enabled = selectedEnabled, modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_TOGGLE; contentDescription = if (state.playback.state == app.melotrail.audio.PlaybackState.PLAYING) "Pause selected audio artifact" else "Play selected audio artifact" }) { Text(if (state.playback.state == app.melotrail.audio.PlaybackState.PLAYING) "Pause" else "Play") }
-        OutlinedButton(onClick = { onIntent(WorkspaceIntent.StopPlayback) }, enabled = state.playback.state != app.melotrail.audio.PlaybackState.STOPPED) { Text("Stop") }
-        Text("${formatDuration(state.playback.positionSeconds)} / ${formatDuration(state.playback.durationSeconds)}", modifier = Modifier.padding(top = 12.dp), style = MaterialTheme.typography.labelSmall)
-    }
-    Slider(value = state.playback.positionSeconds.toFloat(), onValueChange = { onIntent(WorkspaceIntent.SeekPlayback(it.toDouble())) }, valueRange = 0f..state.playback.durationSeconds.coerceAtLeast(0.01).toFloat(), enabled = selectedEnabled && state.playback.durationSeconds > 0.0, modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_SEEK; contentDescription = "Seek selected audio artifact" })
-    Text("Output volume ${(state.playback.volume * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
-    Slider(value = state.playback.volume.toFloat(), onValueChange = { onIntent(WorkspaceIntent.SetPlaybackVolume(it.toDouble())) }, enabled = selectedEnabled, modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_VOLUME; contentDescription = "Selected audio artifact output volume" })
 }
 
 @Composable
@@ -1269,21 +1087,8 @@ private fun PlaceholderPanel(panel: Panel, state: WorkspaceUiState, onIntent: (W
     WorkspaceCard(title, tag) {
         if (panel == Panel.Status) {
             Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-            PreviewTransport(state.preview, state.playback.volume, onIntent)
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
-            CreationChecklist(state.creationProgress(), state, onIntent)
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
-            state.runtimeReadiness?.let { readiness ->
-                Text("Local readiness", style = MaterialTheme.typography.labelLarge)
-                RuntimeDependency.entries.forEach { dependency ->
-                    val item = readiness.dependency(dependency)
-                    Text(
-                        "${dependency.name.lowercase().replace('_', ' ')}: ${item.status.name.lowercase()}${if (item.available) "" else " — ${item.detail}"}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
+            ReadinessRecovery(state.runtimeReadiness, onIntent)
         } else {
             Text(detail, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
         }
@@ -1305,8 +1110,30 @@ private fun PlaceholderPanel(panel: Panel, state: WorkspaceUiState, onIntent: (W
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.IMPORT_PROGRESS })
             Text("Working at a safe project-artifact boundary…", style = MaterialTheme.typography.bodySmall)
         }
-        if (state.retry != null) OutlinedButton(onClick = { onIntent(WorkspaceIntent.Retry) }) { Text("Retry") }
         if (state.operation is WorkspaceOperation.BuildingSong) OutlinedButton(onClick = { onIntent(WorkspaceIntent.CancelOperation) }) { Text("Cancel at boundary") }
+    }
+}
+
+@Composable
+private fun ReadinessRecovery(readiness: RuntimeReadiness?, onIntent: (WorkspaceIntent) -> Unit) {
+    Column(
+        modifier = Modifier.semantics { testTag = WorkspaceTags.READINESS_RECOVERY },
+        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)
+    ) {
+        Text("Local readiness", style = MaterialTheme.typography.labelLarge)
+        if (readiness == null) {
+            Text("Checking local dependency readiness…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            RuntimeDependency.entries.forEach { dependency ->
+                val item = readiness.dependency(dependency)
+                Text(
+                    "${dependency.name.lowercase().replace('_', ' ')}: ${item.status.name.lowercase()}${if (item.available) "" else " — ${item.detail}"}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        OutlinedButton(onClick = { onIntent(WorkspaceIntent.RefreshRuntimeReadiness) }) { Text("Refresh readiness") }
     }
 }
 
