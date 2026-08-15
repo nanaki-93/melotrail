@@ -9,10 +9,8 @@ WORKER_REQUIREMENTS := worker/requirements.txt
 WORKER_DEPS_STAMP := $(VENV)/.worker-deps-installed
 WORKER_HOST ?= 127.0.0.1
 WORKER_PORT ?= 8081
-FRONTEND_HOST ?= 127.0.0.1
-FRONTEND_PORT ?= 3000
 
-.PHONY: help build test check run cli cli-help worker frontend python-install clean
+.PHONY: help build test check run cli cli-help worker python-install clean
 
 help:
 	@echo "AI Music Workstation"
@@ -26,13 +24,11 @@ help:
 	@echo ""
 	@echo "Python services:"
 	@echo "  make worker                        Set up and start the Python worker on :8081"
-	@echo "  make frontend                      Serve frontend pages on :3000"
 	@echo "  make python-install                Install Python worker dependencies"
 	@echo ""
-	@echo "Typical development setup (3 terminals):"
+	@echo "Typical API development setup (2 terminals):"
 	@echo "  make worker"
 	@echo "  make run"
-	@echo "  make frontend"
 
 build:
 	$(GRADLE) build
@@ -54,9 +50,6 @@ cli-help:
 
 worker: $(WORKER_DEPS_STAMP)
 	$(VENV_PYTHON) -m worker.main --host $(WORKER_HOST) --port $(WORKER_PORT)
-
-frontend:
-	$(PYTHON) tools/frontend_server.py --host $(FRONTEND_HOST) --port $(FRONTEND_PORT)
 
 python-install: $(WORKER_DEPS_STAMP)
 

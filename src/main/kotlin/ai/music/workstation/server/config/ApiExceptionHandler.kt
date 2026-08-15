@@ -5,11 +5,17 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.http.converter.HttpMessageNotReadableException
+import org.springframework.web.servlet.resource.NoResourceFoundException
 
 data class ErrorResponse(val error: String)
 
 @RestControllerAdvice
 class ApiExceptionHandler {
+    @ExceptionHandler(NoResourceFoundException::class)
+    fun notFound(ex: NoResourceFoundException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(ErrorResponse(ex.message ?: "Resource not found"))
+
     @ExceptionHandler(IllegalArgumentException::class, HttpMessageNotReadableException::class)
     fun badRequest(ex: Exception): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(HttpStatus.BAD_REQUEST)

@@ -9,38 +9,11 @@ The project is intentionally kept as **one Gradle module**. The Python worker re
 - Python 3.10+ (only needed for the worker)
 - `make` (optional; you can use Gradle directly)
 
-## Legacy browser frontend (deprecated)
+## Local API service
 
-The repository currently still contains an older browser UI. It requires three
-independent processes:
-
-1. Python worker — audio/AI processing on port `8081`
-2. Kotlin/Spring API — application API on port `8080`
-3. Python frontend server — static pages on port `3000`
-
-For local development, run these in three terminals:
-
-```bash
-make worker
-make run
-make frontend
-```
-
-Then open:
-
-```text
-http://127.0.0.1:3000/index.html
-```
-
-You can also serve the frontend through Spring Boot at `http://localhost:8080/`.
-Do not open `src/main/resources/static/index.html` directly with `file://`.
-
-The Compose Desktop application below is the supported product UI. The browser
-frontend is scheduled for complete removal in Task 057 of
-[`plan/PLAN_UI_AND_CREATION.md`](plan/PLAN_UI_AND_CREATION.md); do not build new
-features on it.
-
-You can run Spring Boot without Make:
+The Compose Desktop application is the supported product UI. The Spring process
+is an optional local JSON API service; it does not serve a browser interface.
+You can run it without Make:
 
 ```bash
 ./gradlew bootRun
@@ -49,7 +22,7 @@ You can run Spring Boot without Make:
 ## Compose Desktop workspace
 
 The local desktop workspace uses the same typed Kotlin application services as
-the CLI. It launches in-process and does not start Spring or the static web UI:
+the CLI. It launches in-process and does not start Spring:
 
 ```bash
 ./gradlew :desktopApp:run
@@ -90,9 +63,8 @@ On this development OS, produce a DMG with its bundled runtime using:
 
 The DMG is written under `desktopApp/build/compose/binaries/main/dmg/`. Open it,
 drag **Personal AI Music Arranger** to Applications (or another local folder),
-and launch it there. The package includes its Java runtime: Gradle, Spring, the
-legacy static frontend, and the repository working directory are not required
-to create or open a project.
+and launch it there. The package includes its Java runtime: Gradle, Spring, and
+the repository working directory are not required to create or open a project.
 
 The package does not bundle the local SFZ samples, renderer, Python worker, or
 optional transcription runtime. Use the **Library** button to choose the
@@ -113,7 +85,7 @@ supported.
 Use the desktop app as a guided sequence: create/open a project, import MIDI
 or an eligible WAV/MP3 source, inspect/prepare it, clean/analyze MIDI, save the
 structure, generate/review an arrangement, then build and audition validated
-artifacts. The app never requires Spring or the deprecated browser UI.
+artifacts. The app never requires Spring.
 
 - Direct MIDI is preserved under `source/` and cleaned before analysis.
 - WAV/WAVE and MP3 input is accepted only for the optional **solo-piano**
@@ -430,7 +402,6 @@ WAV/PCM-24 intermediates and preserve the source sample rate and channels.
 | `make cli-help` | Show CLI help |
 | `make cli ARGS="..."` | Run CLI |
 | `make worker` | Start standalone Python worker on `:8081` |
-| `make frontend` | Start Python frontend server on `:3000` |
 | `make python-install` | Install Python dependencies |
 | `make clean` | Clean Gradle outputs |
 
@@ -449,7 +420,6 @@ ai-music-workstation/
 │   │   │   ├── worker/         # Worker integration
 │   │   │   └── server/         # Spring Boot API
 │   │   └── resources/
-│   │       ├── static/         # Web application
 │   │       └── application.properties
 │   └── test/                    # All Kotlin tests
 ├── worker/                      # Python worker (separate process)
@@ -505,27 +475,6 @@ Python exposes one endpoint per operation:
 The Kotlin worker client maps each `WorkerCommand` directly to its endpoint.
 There is no generic `/api/worker/command` request envelope between Kotlin and
 Python anymore.
-
-### Legacy browser frontend: run locally
-
-Use three terminals:
-
-```bash
-make worker
-make run
-make frontend
-```
-
-Then open `http://127.0.0.1:3000/index.html`.
-
-The services use:
-
-- Python worker: `127.0.0.1:8081`
-- Kotlin/Spring API: `127.0.0.1:8080`
-- Static frontend: `127.0.0.1:3000`
-
-The frontend development server is only a static file server. API requests are
-sent to the Kotlin server on port 8080.
 
 Install Python dependencies with:
 
