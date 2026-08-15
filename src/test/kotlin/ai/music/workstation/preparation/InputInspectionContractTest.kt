@@ -25,7 +25,7 @@ class InputInspectionContractTest {
         assertEquals(root.toAbsolutePath().normalize().resolve("prepared/intro/report.json"), InputInspectionPaths.report(root, "intro"))
         assertEquals(root.toAbsolutePath().normalize().resolve("prepared/intro/decoded.wav"), InputInspectionPaths.decodedWav(root, "intro"))
         assertEquals(root.toAbsolutePath().normalize().resolve("prepared/intro/clean.wav"), InputInspectionPaths.cleanWav(root, "intro"))
-        assertFailsWith<IllegalArgumentException> { InputInspectionPaths.report(root, "../escape") }
+        assertFailsWith<IllegalArgumentException> { InputInspectionPaths.requirePartId("../escape") }
         assertFailsWith<IllegalArgumentException> { InspectionSourceIdentity("/Users/me/input.wav", digest()).requireValid() }
         assertFailsWith<IllegalArgumentException> { InspectionSourceIdentity("source/../outside.wav", digest()).requireValid() }
     }

@@ -102,7 +102,7 @@ class DrumMidiGenerationTest {
         val sourceBefore = Files.readAllBytes(source)
         val bassBefore = Files.readAllBytes(bass)
 
-        val generated = DrumMidiGenerationAdapter().generate(projectRoot, project, arrangement, mapOf("A" to analysis))
+        val generated = DrumMidiGenerationAdapter(libraryRoot = Path.of("sounds")).generate(projectRoot, project, arrangement, mapOf("A" to analysis))
         val sequence = MidiSystem.getSequence(generated.path.toFile())
         val channels = sequence.tracks.flatMap { track -> (0 until track.size()).map(track::get) }
             .mapNotNull { it.message as? javax.sound.midi.ShortMessage }

@@ -16,6 +16,10 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
+import javax.sound.midi.MidiEvent
+import javax.sound.midi.MidiSystem
+import javax.sound.midi.Sequence
+import javax.sound.midi.ShortMessage
 
 class UnifiedInputAdapterTest {
     @TempDir lateinit var tempDir: Path
@@ -167,7 +171,11 @@ class UnifiedInputAdapterTest {
     private companion object {
         fun writeMidi(path: Path) {
             Files.createDirectories(checkNotNull(path.parent))
-            Files.write(path, byteArrayOf(0x4d, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 0, 0, 1, 0, 96))
+            val sequence = Sequence(Sequence.PPQ, 480)
+            val track = sequence.createTrack()
+            track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, 60, 96), 0))
+            track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, 60, 0), 480))
+            require(MidiSystem.write(sequence, 1, path.toFile()) > 0) { "Could not write test MIDI" }
         }
     }
 }

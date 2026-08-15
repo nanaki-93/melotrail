@@ -33,7 +33,7 @@ class StemRenderingMixerTest {
         ProjectStore.write(root, project)
 
         val renderer = FakeRenderer()
-        val service = StemRenderingMixer(renderer)
+        val service = StemRenderingMixer(renderer, libraryRoot = Path.of("sounds"))
         val first = service.render(root, project, arrangement(), analyses)
 
         assertFalse(first.reused)
@@ -87,7 +87,7 @@ class StemRenderingMixerTest {
         writeMidi(root.resolve("midi/generated/transitions.mid"), 1_920, 2_040)
 
         val renderer = FakeRenderer()
-        StemRenderingMixer(renderer).render(root, project, arrangement(), analyses)
+        StemRenderingMixer(renderer, libraryRoot = Path.of("sounds")).render(root, project, arrangement(), analyses)
 
         val bass = requireNotNull(renderer.sequences[LogicalInstrument.BASS])
         assertEquals(90.0, tempos(bass).getValue(1_920L), 0.001)

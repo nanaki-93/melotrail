@@ -138,7 +138,7 @@ class SfizzInstrumentRendererTest {
         val midi = midiFile()
         listOf(LogicalInstrument.PIANO, LogicalInstrument.BASS).forEach { instrument ->
             val output = root.resolve("${instrument.wireName}.wav")
-            val result = SfizzInstrumentRenderer(executable = executable).render(midi, instrument, output, RenderFormat(44_100, 2, 24), 44_100)
+            val result = SfizzInstrumentRenderer(InstrumentRegistryLoader(Path.of("sounds")), executable = executable).render(midi, instrument, output, RenderFormat(44_100, 2, 24), 44_100)
             assertEquals(44_100, result.sampleRate)
             assertEquals(2, result.channels)
             assertEquals(24, result.bitDepth)

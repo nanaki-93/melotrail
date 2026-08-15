@@ -73,11 +73,11 @@ class PartPreviewApplicationServiceTest {
 private fun writeWav(path: Path, bits: Int): Path {
     Files.createDirectories(path.parent)
     val bytes = if (bits == 24) 3 else 2
-    val data = ByteArray(bytes)
+    val data = ByteArray(bytes * 8)
     Files.newOutputStream(path).use { out ->
         fun i(value: Int) { out.write(value); out.write(value shr 8); out.write(value shr 16); out.write(value shr 24) }
         fun s(value: Int) { out.write(value); out.write(value shr 8) }
-        out.write("RIFF".toByteArray()); i(36 + data.size); out.write("WAVEfmt ".toByteArray()); i(16); s(1); s(1); i(44_100); i(44_100 * bytes); s(bytes); s(bits); out.write("data".toByteArray()); i(data.size); out.write(data)
+        out.write("RIFF".toByteArray()); i(40 + data.size); out.write("WAVEfmt ".toByteArray()); i(18); s(1); s(1); i(44_100); i(44_100 * bytes); s(bytes); s(bits); s(bits); out.write(byteArrayOf(0, 0)); out.write("data".toByteArray()); i(data.size); out.write(data)
     }
     return path
 }

@@ -160,11 +160,11 @@ class MidiTransitionEngineTest {
         Files.createDirectories(requireNotNull(path.parent))
         java.io.DataOutputStream(java.io.FileOutputStream(path.toFile())).use { out ->
             val dataSize = 4 * 1 * 2
-            out.writeBytes("RIFF"); out.writeInt(36 + dataSize); out.writeBytes("WAVE")
-            out.writeBytes("fmt "); out.writeInt(16); out.writeShort(1); out.writeShort(1); out.writeInt(44100)
-            out.writeInt(44100); out.writeShort(2); out.writeShort(16)
-            out.writeBytes("data"); out.writeInt(dataSize)
-            repeat(4) { out.writeShort(8192) }
+            out.writeBytes("RIFF"); out.writeInt(java.lang.Integer.reverseBytes(36 + dataSize)); out.writeBytes("WAVE")
+            out.writeBytes("fmt "); out.writeInt(java.lang.Integer.reverseBytes(16)); out.writeShort(java.lang.Short.reverseBytes(1).toInt()); out.writeShort(java.lang.Short.reverseBytes(1).toInt()); out.writeInt(java.lang.Integer.reverseBytes(44100))
+            out.writeInt(java.lang.Integer.reverseBytes(88_200)); out.writeShort(java.lang.Short.reverseBytes(2).toInt()); out.writeShort(java.lang.Short.reverseBytes(16).toInt())
+            out.writeBytes("data"); out.writeInt(java.lang.Integer.reverseBytes(dataSize))
+            repeat(4) { out.writeShort(java.lang.Short.reverseBytes(8192).toInt()) }
         }
     }
 

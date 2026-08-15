@@ -23,7 +23,7 @@ class ArrangementApplicationServiceTest {
     @Test
     fun `deterministic generation writes an approved inspectable arrangement snapshot`() = runBlocking {
         val root = project("approved")
-        val result = DefaultArrangementApplicationService().generate(GenerateArrangementRequest(root, instruments = listOf("piano", "bass")))
+        val result = DefaultArrangementApplicationService(libraryRoot = Path.of("sounds")).generate(GenerateArrangementRequest(root, instruments = listOf("piano", "bass")))
 
         assertTrue(Files.isRegularFile(root.resolve("song_plan.json")))
         assertTrue(Files.isRegularFile(root.resolve("section_variations.json")))
@@ -41,7 +41,8 @@ class ArrangementApplicationServiceTest {
             deterministicGlobalPlanner = ai.music.workstation.arrangement.DeterministicGlobalSongPlanner(),
             qwenGlobalPlanner = ai.music.workstation.arrangement.DeterministicGlobalSongPlanner(),
             deterministicDetailedPlanner = ai.music.workstation.arrangement.DeterministicDetailedArrangementPlanner(),
-            qwenDetailedPlanner = ai.music.workstation.arrangement.DeterministicDetailedArrangementPlanner()
+            qwenDetailedPlanner = ai.music.workstation.arrangement.DeterministicDetailedArrangementPlanner(),
+            libraryRoot = Path.of("sounds")
         )
 
         val draft = service.generate(GenerateArrangementRequest(root, ArrangementPlannerKind.QWEN, instruments = listOf("piano")))
