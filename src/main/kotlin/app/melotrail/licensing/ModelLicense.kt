@@ -3,6 +3,12 @@ package app.melotrail.licensing
 import kotlinx.datetime.Instant
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import app.melotrail.commercial.CommercialDependency
+import app.melotrail.commercial.CommercialDependencyKind
+import app.melotrail.commercial.CommercialTerm
+
+@Serializable
+enum class ModelUse { TRANSCRIPTION, PLANNING, COHESION, REPAIR_ASSISTANCE, GENERATION }
 
 @Serializable
 data class ModelId(
@@ -56,6 +62,9 @@ data class ModelLicense(
     val minimumRAM: String? = null,
     @SerialName("tags")
     val tags: List<String> = emptyList(),
+    /** Every actual use is explicit; unlisted use cannot be presented as reviewed. */
+    @SerialName("approvedUses")
+    val approvedUses: Set<ModelUse> = emptySet(),
     @SerialName("createdAt")
     val createdAt: Instant = kotlinx.datetime.Clock.System.now(),
     @SerialName("updatedAt")
@@ -76,4 +85,24 @@ data class ModelLicense(
     fun isBlocked(): Boolean {
         return status == LicenseStatus.BLOCKED
     }
+
+    fun commercialDependency(use: ModelUse, promptContract: String? = null, approved: Boolean? = null): CommercialDependency = CommercialDependency(
+        kind = CommercialDependencyKind.MODEL,
+        identity = id.name,
+        version = id.version,
+        contentHash = modelHash,
+        commercialTerm = when (commercialUse) {
+            LicensePermission.PERMITTED -> CommercialTerm.PERMITTED
+            LicensePermission.CONDITIONAL -> CommercialTerm.CONDITIONAL
+            LicensePermission.PROHIBITED -> CommercialTerm.BLOCKED
+            LicensePermission.UNKNOWN -> CommercialTerm.UNKNOWN
+        },
+        reviewed = status == LicenseStatus.APPROVED && reviewedAt != null && use in approvedUses,
+        license = listOfNotNull(codeLicense, weightLicense).joinToString(" / ").ifBlank { "unknown" },
+        source = displayName,
+        attribution = reviewNotes?.takeIf { attribution == AttributionRequirement.REQUIRED },
+        outputRightsNote = outputRights,
+        promptContract = promptContract,
+        approved = approved
+    )
 }

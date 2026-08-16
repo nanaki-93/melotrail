@@ -89,13 +89,13 @@ object ProjectStore {
     @Serializable private data class ProjectV1Dto(val version: Int = 1, val name: String, val parts: List<PartV1Dto> = emptyList(), val structure: List<String> = emptyList())
     @Serializable private data class PartV1Dto(val id: String, val file: String, val role: String = "", val analysis: PartAnalysisReference? = null)
     @Serializable private data class ProjectV2Dto(val version: Int = 2, val name: String, val renderFormat: RenderFormat, val parts: List<PartV2Dto> = emptyList(), val structure: List<String> = emptyList())
-    @Serializable private data class PartV2Dto(val id: String, val role: String = "", val sourceFile: String, val midi: MidiReferences, val analysis: PartAnalysisReference? = null)
+    @Serializable private data class PartV2Dto(val id: String, val role: String = "", val sourceFile: String, val midi: MidiReferences, val analysis: PartAnalysisReference? = null, val sourceAttestation: app.melotrail.commercial.SourceRightsAttestation? = null)
     @Serializable private data class ProjectV3Dto(val version: Int = 3, val name: String, val renderFormat: RenderFormat, val parts: List<PartV2Dto> = emptyList(), val structure: List<String> = emptyList(), val workflow: ProjectWorkflowReferences = ProjectWorkflowReferences())
 
     private fun ProjectV1Dto.toProject() = Project(1, name, parts.map { Part(it.id, it.file, it.role, it.analysis) }, structure)
-    private fun ProjectV2Dto.toProject() = Project(2, name, parts.map { Part(it.id, it.sourceFile, it.role, it.analysis, it.midi) }, structure, renderFormat)
-    private fun ProjectV3Dto.toProject() = Project(3, name, parts.map { Part(it.id, it.sourceFile, it.role, it.analysis, it.midi) }, structure, renderFormat, workflow)
+    private fun ProjectV2Dto.toProject() = Project(2, name, parts.map { Part(it.id, it.sourceFile, it.role, it.analysis, it.midi, it.sourceAttestation) }, structure, renderFormat)
+    private fun ProjectV3Dto.toProject() = Project(3, name, parts.map { Part(it.id, it.sourceFile, it.role, it.analysis, it.midi, it.sourceAttestation) }, structure, renderFormat, workflow)
     private fun Project.toV1Dto() = ProjectV1Dto(name = name, parts = parts.map { PartV1Dto(it.id, it.file, it.role, it.analysis) }, structure = structure)
-    private fun Project.toV2Dto() = ProjectV2Dto(name = name, renderFormat = requireNotNull(renderFormat), parts = parts.map { PartV2Dto(it.id, it.role, it.file, requireNotNull(it.midi), it.analysis) }, structure = structure)
-    private fun Project.toV3Dto() = ProjectV3Dto(name = name, renderFormat = requireNotNull(renderFormat), parts = parts.map { PartV2Dto(it.id, it.role, it.file, requireNotNull(it.midi), it.analysis) }, structure = structure, workflow = workflow)
+    private fun Project.toV2Dto() = ProjectV2Dto(name = name, renderFormat = requireNotNull(renderFormat), parts = parts.map { PartV2Dto(it.id, it.role, it.file, requireNotNull(it.midi), it.analysis, it.sourceAttestation) }, structure = structure)
+    private fun Project.toV3Dto() = ProjectV3Dto(name = name, renderFormat = requireNotNull(renderFormat), parts = parts.map { PartV2Dto(it.id, it.role, it.file, requireNotNull(it.midi), it.analysis, it.sourceAttestation) }, structure = structure, workflow = workflow)
 }

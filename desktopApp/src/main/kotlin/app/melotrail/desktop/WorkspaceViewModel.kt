@@ -41,6 +41,9 @@ import app.melotrail.arrangement.MidiAnalysisInput
 import app.melotrail.application.MidiQualityStatus
 import app.melotrail.preparation.InputCleanupMode
 import app.melotrail.preparation.TranscriptionInputArtifact
+import app.melotrail.commercial.SourceRightsAttestation
+import app.melotrail.commercial.SourceRightsClaim
+import app.melotrail.commercial.CommercialProvenanceService
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -58,6 +61,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Instant
 
 data class WorkspaceDispatchers(
     val ui: CoroutineDispatcher = Dispatchers.Main.immediate,
@@ -241,6 +245,7 @@ sealed interface WorkspaceOperation {
     data class GeneratingArrangement(val progress: OperationProgress? = null) : WorkspaceOperation
     data class ApplyingMix(val progress: OperationProgress? = null) : WorkspaceOperation
     data class BuildingSong(val progress: OperationProgress? = null) : WorkspaceOperation
+    data object ExportingCommercialProvenance : WorkspaceOperation
     data object ApprovingArrangement : WorkspaceOperation
     data class OpenFailed(val message: String) : WorkspaceOperation
     data class Failed(val action: String, val message: String) : WorkspaceOperation
@@ -254,7 +259,7 @@ val WorkspaceOperation.isMutating: Boolean
         this is WorkspaceOperation.SelectingMidiFeel ||
         this is WorkspaceOperation.UpdatingPartRole || this is WorkspaceOperation.SavingStructure ||
         this is WorkspaceOperation.GeneratingArrangement || this is WorkspaceOperation.ApprovingArrangement
-        || this is WorkspaceOperation.ApplyingMix || this is WorkspaceOperation.BuildingSong
+        || this is WorkspaceOperation.ApplyingMix || this is WorkspaceOperation.BuildingSong || this is WorkspaceOperation.ExportingCommercialProvenance
 
 sealed interface WorkspaceDialog {
     data class CreateProject(
@@ -271,7 +276,9 @@ sealed interface WorkspaceDialog {
         val role: String = "",
         val detectedType: ImportSourceKind? = null,
         val sourceSizeBytes: Long? = null,
-        val validationMessage: String? = null
+        val validationMessage: String? = null,
+        /** An explicit conservative default; commercial export remains blocked until changed if applicable. */
+        val rightsClaim: SourceRightsClaim = SourceRightsClaim.NOT_ESTABLISHED
     ) : WorkspaceDialog
 
     data class EditRole(val partId: String, val role: String) : WorkspaceDialog
@@ -364,6 +371,7 @@ sealed interface WorkspaceIntent {
     data object ResetMix : WorkspaceIntent
     data class UpdateBuildOptions(val options: BuildOptionsDraft) : WorkspaceIntent
     data object BuildSong : WorkspaceIntent
+    data object ExportCommercialProvenance : WorkspaceIntent
     data object CancelOperation : WorkspaceIntent
     data class SelectPlaybackSource(val source: PlaybackSource) : WorkspaceIntent
     data object PlayPause : WorkspaceIntent
@@ -396,7 +404,8 @@ class WorkspaceViewModel(
     private val audioPreparationService: AudioPreparationApplicationService? = null,
     private val preferences: DesktopPreferences = NoOpDesktopPreferences,
     private val soundLibrarySettings: SoundLibrarySettingsService = SoundLibrarySettingsService(preferences),
-    private val operationLogger: DesktopOperationLogger = NoOpDesktopOperationLogger
+    private val operationLogger: DesktopOperationLogger = NoOpDesktopOperationLogger,
+    private val commercialProvenanceService: CommercialProvenanceService = CommercialProvenanceService(libraryRoot)
 ) : AutoCloseable {
     private val scope = CoroutineScope(SupervisorJob() + dispatchers.ui)
     private val ioDispatcher = dispatchers.io
@@ -479,6 +488,7 @@ class WorkspaceViewModel(
             WorkspaceIntent.ResetMix -> resetMix()
             is WorkspaceIntent.UpdateBuildOptions -> mutableState.update { it.copy(buildOptions = intent.options) }
             WorkspaceIntent.BuildSong -> buildSong()
+            WorkspaceIntent.ExportCommercialProvenance -> exportCommercialProvenance()
             WorkspaceIntent.CancelOperation -> cancelOperation()
             is WorkspaceIntent.SelectPlaybackSource -> selectPlaybackSource(intent.source)
             WorkspaceIntent.PlayPause -> playPause()
@@ -666,7 +676,10 @@ class WorkspaceViewModel(
         if (draft.id.isBlank()) return failImportDraft(draft, "Part ID is required and remains stable after import.")
         if (project.parts.any { it.id == draft.id }) return failImportDraft(draft, "Part ID already exists: ${draft.id}")
         if (draft.detectedType?.isAudio == true) state.value.runtimeReadiness.capabilityFailure(RuntimeCapability.AUDIO_IMPORT)?.let { return failImportDraft(draft, it, "import audio") }
-        val request = ImportPartRequest(project.root, draft.id, source, draft.role, transcribe = draft.audio)
+        val request = ImportPartRequest(
+            project.root, draft.id, source, draft.role, transcribe = draft.audio,
+            sourceAttestation = SourceRightsAttestation(draft.rightsClaim, Instant.now().toString())
+        )
         runImport(request)
     }
 
@@ -1341,6 +1354,21 @@ class WorkspaceViewModel(
                     if (it is CancellationException) mutableState.update { current -> current.copy(operation = WorkspaceOperation.Idle, notification = "Build cancellation requested; the current atomic stage was allowed to finish safely.", operationFeedback = feedbackTracker.complete(feedbackId, "Build cancellation completed at a safe boundary.", OperationSeverity.INFORMATION) ?: current.operationFeedback) }
                     else fail("build song", it.message ?: "Build Song failed.", sessionId = feedbackId)
                 }
+        }
+    }
+
+    private fun exportCommercialProvenance() {
+        val project = state.value.project ?: return fail("commercial provenance", "Open a project before creating commercial evidence.")
+        if (!project.readiness.releaseAvailable || state.value.operation.isMutating) return fail("commercial provenance", "Build a current master and release metadata before creating commercial evidence.")
+        mutableState.update { it.copy(operation = WorkspaceOperation.ExportingCommercialProvenance, notification = null, retry = null) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { commercialProvenanceService.export(project.root) } }
+                .onSuccess { result ->
+                    val message = if (result.readiness.ready) "Commercial provenance exported. Review the report and YouTube checklist before release."
+                    else "Commercial evidence exported with blocking warnings. It is not labeled Commercial-ready."
+                    mutableState.update { current -> current.copy(operation = WorkspaceOperation.Idle, notification = message) }
+                }
+                .onFailure { failure -> fail("commercial provenance", failure.message ?: "Unable to create commercial evidence.") }
         }
     }
 

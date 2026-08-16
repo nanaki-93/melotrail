@@ -10,6 +10,9 @@ import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
+import app.melotrail.commercial.CommercialDependency
+import app.melotrail.commercial.CommercialDependencyKind
+import app.melotrail.commercial.CommercialTerm
 
 /** The only logical names planners may use. Filesystem paths never leave this boundary. */
 enum class LogicalInstrument(val wireName: String) {
@@ -58,6 +61,19 @@ data class SoundLibraryLicense(
     val notes: String? = null
 )
 
+/** Commercial export uses this snapshot, not mutable library paths. */
+fun SoundLibraryLicense.commercialDependency(identity: String, contentHash: String?): CommercialDependency = CommercialDependency(
+    kind = CommercialDependencyKind.SOUND_LIBRARY,
+    identity = identity,
+    version = "registry-v1",
+    contentHash = contentHash,
+    commercialTerm = if (commercialUse) CommercialTerm.PERMITTED else CommercialTerm.BLOCKED,
+    reviewed = date != null,
+    license = license,
+    source = source,
+    attribution = attributionText?.takeIf { attributionRequired }
+)
+
 data class ValidatedInstrumentDescriptor(
     val instrument: LogicalInstrument,
     val sfzPath: Path,
@@ -74,6 +90,8 @@ class ValidatedInstrumentRegistry internal constructor(private val descriptors: 
     fun plannerNames(): List<String> = descriptors.keys.map { it.wireName }.sorted()
     fun resolve(name: String): ValidatedInstrumentDescriptor = descriptors[LogicalInstrument.parse(name)]
         ?: throw IllegalArgumentException("Instrument is not validated: $name")
+    /** Immutable validated descriptors for evidence export; callers never receive registry paths as outputs. */
+    fun all(): List<ValidatedInstrumentDescriptor> = descriptors.values.sortedBy { it.instrument.wireName }
 }
 
 /** Local-only registry loader. Accepts a validated [SoundLibraryLocation.Success] from [SoundLibraryLocator]. */

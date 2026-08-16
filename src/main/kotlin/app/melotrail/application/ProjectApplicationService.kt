@@ -26,6 +26,7 @@ import app.melotrail.arrangement.PartAnalysisStore
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.RenderFormat
+import app.melotrail.commercial.SourceRightsAttestation
 import app.melotrail.preparation.InputInspectionBoundary
 import app.melotrail.preparation.InputInspectionError
 import app.melotrail.preparation.InputInspectionErrorCode
@@ -75,7 +76,9 @@ data class ImportPartRequest(
     val source: Path,
     val role: String = "",
     val transcribe: Boolean = false,
-    val cleanup: MidiCleanupOptions = MidiCleanupOptions()
+    val cleanup: MidiCleanupOptions = MidiCleanupOptions(),
+    /** Required by the desktop confirmation UI; null is retained only for legacy CLI compatibility. */
+    val sourceAttestation: SourceRightsAttestation? = null
 )
 
 /** A retry may choose only an already validated named cleanup profile. */
@@ -221,7 +224,9 @@ data class ProjectReadiness(
     val releaseAvailable: Boolean = false,
     /** Durable invalidation evidence; availability above remains file-derived. */
     val staleArtifacts: Set<app.melotrail.arrangement.WorkflowArtifact> = emptySet(),
-    val cohesionApprovalRequired: Boolean = false
+    val cohesionApprovalRequired: Boolean = false,
+    /** Creator attestation is evidence only; absence always blocks commercial-ready status. */
+    val commercialSourceAttestationsComplete: Boolean = false
 )
 
 class DefaultProjectApplicationService(
@@ -329,7 +334,7 @@ class DefaultProjectApplicationService(
         }
 
         val updated = project.copy(
-            parts = project.parts + Part(request.id, relativeFile, request.role, midi = MidiReferences(raw = raw)),
+            parts = project.parts + Part(request.id, relativeFile, request.role, midi = MidiReferences(raw = raw), sourceAttestation = request.sourceAttestation),
             workflow = project.workflow.invalidate(WorkflowChange.SOURCE_OR_RAW)
         )
         val saved = if (project.version == 1) ProjectStore.upgrade(root, project, updated.parts) else updated.also { ProjectStore.write(root, it) }
@@ -570,7 +575,8 @@ class DefaultProjectApplicationService(
                 midiQualityReportsReady = summaries.isNotEmpty() && summaries.all { it.preparation.midiQuality.status == MidiQualityStatus.CURRENT },
                 releaseAvailable = Files.isRegularFile(root.resolve("output/release.json")) && current(WorkflowArtifact.RELEASE),
                 staleArtifacts = project.workflow.stale,
-                cohesionApprovalRequired = project.workflow.cohesion?.let { !it.approved && WorkflowArtifact.COHESION !in project.workflow.stale } == true
+                cohesionApprovalRequired = project.workflow.cohesion?.let { !it.approved && WorkflowArtifact.COHESION !in project.workflow.stale } == true,
+                commercialSourceAttestationsComplete = project.parts.isNotEmpty() && project.parts.all { it.sourceAttestation?.supportsCommercialUse == true }
             )
         )
     }

@@ -145,6 +145,9 @@ class WorkspaceScreenTest {
         onNodeWithText("Import part").assertIsDisplayed()
         onNodeWithText("Filename: solo.wav · Type: WAV · Size: 1 KiB").assertIsDisplayed()
         onNodeWithText("WAV/MP3 transcription currently supports solo piano only—not full mixes, vocals, or arbitrary polyphonic sources.").assertIsDisplayed()
+        onNodeWithText("Rights attestation").assertExists()
+        onNodeWithText("I have not established rights").assertExists()
+        onNodeWithText("Transposition, timing changes, repair, arrangement, or AI patching do not automatically clear rights attached to an input melody.").assertExists()
         onNodeWithTag(WorkspaceTags.IMPORT_SOURCE).assertIsDisplayed()
         onNodeWithTag(WorkspaceTags.IMPORT_CONFIRM).assertIsEnabled()
     }
@@ -235,7 +238,7 @@ class WorkspaceScreenTest {
     fun `mix and transport expose available artifact controls`() = runComposeUiTest {
         val root = java.nio.file.Path.of("build/test-project")
         val project = projectState().project!!.copy(
-            readiness = app.melotrail.application.ProjectReadiness(true, true, true, true, true, true, true, true, true, true)
+            readiness = app.melotrail.application.ProjectReadiness(true, true, true, true, true, true, true, true, true, true, releaseAvailable = true)
         )
         val mix = app.melotrail.application.MixSnapshot(
             root, app.melotrail.application.PersistedMixSettings(), listOf("piano"), root.resolve("mix/dry.wav"), stale = false
@@ -252,6 +255,9 @@ class WorkspaceScreenTest {
         onNodeWithTag(WorkspaceTags.PLAYBACK_MASTER).assertExists()
         onNodeWithTag(WorkspaceTags.PLAYBACK_SEEK).assertExists()
         onNodeWithTag(WorkspaceTags.PLAYBACK_VOLUME).assertExists()
+        onNodeWithTag(WorkspaceTags.COMMERCIAL_READINESS).assertExists()
+        onNodeWithText("Commercial-ready is blocked").assertExists()
+        onNodeWithTag(WorkspaceTags.COMMERCIAL_EXPORT).assertIsEnabled()
     }
 
     @Test

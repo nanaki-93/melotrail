@@ -30,6 +30,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -103,6 +104,8 @@ object WorkspaceTags {
     const val ARRANGEMENT_PREVIEW = "arrangement-preview"
     const val ARRANGEMENT_STYLE = "arrangement-style"
     const val BUILD_SONG = "build-song"
+    const val COMMERCIAL_READINESS = "commercial-readiness-panel"
+    const val COMMERCIAL_EXPORT = "commercial-export"
     const val BUILD_LIFECYCLE = "build-lifecycle"
     const val BUILD_START = "build-start"
     const val BUILD_CANCEL = "build-cancel"
@@ -1052,7 +1055,24 @@ private fun MixPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Uni
         Checkbox(state.buildOptions.mp3, { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(mp3 = it))) }, enabled = !disabled); Text("MP3", modifier = Modifier.padding(top = 12.dp))
     }
     BuildLifecycle(state, onIntent)
+    CommercialReadinessPanel(state, onIntent)
     PlaybackSourceSelector(state, onIntent)
+}
+
+/** A presentation-only adapter over project readiness; report generation remains a typed application service. */
+@Composable
+private fun CommercialReadinessPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Commercial & YouTube", WorkspaceTags.COMMERCIAL_READINESS) {
+    val readiness = state.project?.readiness
+    val ready = readiness?.releaseAvailable == true && readiness.commercialSourceAttestationsComplete && !state.downstreamArtifactsStale
+    Text(if (ready) "Commercial-ready review still required" else "Commercial-ready is blocked", style = MaterialTheme.typography.labelLarge)
+    Text(
+        if (ready) "Verify the hash-bound provenance manifest and every reviewed model/sample term before release."
+        else "Every imported source needs an ownership/permission/public-domain attestation, and every used model/sample needs reviewed permitted commercial terms.",
+        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    Text("For AI-generated music, use the YouTube Studio AI-use disclosure when the policy applies; disclosure is not a monetization guarantee.", style = MaterialTheme.typography.bodySmall)
+    Text("Add required attribution and original, non-mass-produced video/channel value. This is evidence and workflow assistance—not legal advice, copyright clearance, Content ID clearance, or a monetization guarantee.", style = MaterialTheme.typography.bodySmall)
+    OutlinedButton(onClick = { onIntent(WorkspaceIntent.ExportCommercialProvenance) }, enabled = readiness?.releaseAvailable == true && !state.operation.isMutating, modifier = Modifier.semantics { testTag = WorkspaceTags.COMMERCIAL_EXPORT }) { Text("Create commercial evidence") }
 }
 
 @Composable
@@ -1238,6 +1258,7 @@ private fun statusText(state: WorkspaceUiState): String = when (val operation = 
     WorkspaceOperation.SavingStructure -> "Saving song structure…"
     is WorkspaceOperation.GeneratingArrangement -> "Generating reviewed song plan and detailed arrangement…"
     is WorkspaceOperation.ApplyingMix -> "Applying persisted mix settings to existing stems…"
+    WorkspaceOperation.ExportingCommercialProvenance -> "Writing hash-bound commercial provenance evidence…"
     is WorkspaceOperation.BuildingSong -> "Building song through the lossless release pipeline…"
     WorkspaceOperation.ApprovingArrangement -> "Approving validated arrangement…"
     is WorkspaceOperation.OpenFailed -> operation.message
@@ -1384,6 +1405,19 @@ private fun ImportPartDialog(draft: WorkspaceDialog.ImportPart, onIntent: (Works
                 draft.validationMessage?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                 OutlinedTextField(draft.id, { onIntent(WorkspaceIntent.UpdateImportPart(draft.copy(id = it))) }, label = { Text("Part ID (stable after import)") })
                 OutlinedTextField(draft.role, { onIntent(WorkspaceIntent.UpdateImportPart(draft.copy(role = it))) }, label = { Text("Role") })
+                Text("Rights attestation", style = MaterialTheme.typography.labelLarge)
+                Text("Transposition, timing changes, repair, arrangement, or AI patching do not automatically clear rights attached to an input melody.", style = MaterialTheme.typography.bodySmall)
+                app.melotrail.commercial.SourceRightsClaim.entries.forEach { claim ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(claim == draft.rightsClaim, { onIntent(WorkspaceIntent.UpdateImportPart(draft.copy(rightsClaim = claim))) })
+                        Text(when (claim) {
+                            app.melotrail.commercial.SourceRightsClaim.OWNED -> "I own this source"
+                            app.melotrail.commercial.SourceRightsClaim.COMMERCIAL_PERMISSION -> "I have commercial permission"
+                            app.melotrail.commercial.SourceRightsClaim.PUBLIC_DOMAIN -> "I believe it is public domain"
+                            app.melotrail.commercial.SourceRightsClaim.NOT_ESTABLISHED -> "I have not established rights"
+                        })
+                    }
+                }
             }
         },
         confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.ImportPart) }, enabled = draft.source != null && type != ImportSourceKind.UNSUPPORTED, modifier = Modifier.semantics { testTag = WorkspaceTags.IMPORT_CONFIRM }) { Text("Confirm import") } },

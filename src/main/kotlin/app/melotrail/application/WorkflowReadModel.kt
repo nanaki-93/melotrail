@@ -98,8 +98,11 @@ object WorkflowReadModelDeriver {
         val render = downstream(WorkflowStage.RENDER, arrangementStep, WorkflowArtifact.STEMS, stale, project.readiness.stemsAvailable, WorkflowAction.RENDER, "Render current stems from the approved arrangement.")
         val mix = downstream(WorkflowStage.MIX, render, WorkflowArtifact.DRY_MIX, stale, project.readiness.dryMixAvailable, WorkflowAction.MIX, "Create the current dry mix.")
         val master = downstream(WorkflowStage.MASTER, mix, WorkflowArtifact.MASTER, stale, project.readiness.masterAvailable && project.readiness.releaseAvailable, WorkflowAction.MASTER, "Master the current mix and validate its release metadata.")
-        val commercial = if (master.state != WorkflowState.COMPLETE) blocked(WorkflowStage.COMMERCIAL_EXPORT, master)
-        else step(WorkflowStage.COMMERCIAL_EXPORT, WorkflowState.CURRENT, "Commercial provenance review is available after mastering.", WorkflowAction.REVIEW_COMMERCIAL_PROVENANCE)
+        val commercial = when {
+            master.state != WorkflowState.COMPLETE -> blocked(WorkflowStage.COMMERCIAL_EXPORT, master)
+            !project.readiness.commercialSourceAttestationsComplete -> step(WorkflowStage.COMMERCIAL_EXPORT, WorkflowState.REVIEW, "Commercial-ready is blocked until every source has an ownership, permission, or public-domain attestation.", WorkflowAction.REVIEW_COMMERCIAL_PROVENANCE)
+            else -> step(WorkflowStage.COMMERCIAL_EXPORT, WorkflowState.CURRENT, "Commercial provenance review is available after mastering.", WorkflowAction.REVIEW_COMMERCIAL_PROVENANCE)
+        }
         return WorkflowReadModel(listOf(
             step(WorkflowStage.PROJECT, WorkflowState.COMPLETE, "The canonical project is open.", WorkflowAction.IMPORT),
             imported, transcription, repair, feel, analysis, structure, cohesion, arrangementStep, render, mix, master, commercial

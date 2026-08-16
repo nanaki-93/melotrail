@@ -1,5 +1,6 @@
 package app.melotrail.arrangement
 
+import app.melotrail.commercial.SourceRightsAttestation
 import kotlinx.serialization.Serializable
 import java.nio.file.Files
 import java.nio.file.Path
@@ -79,7 +80,9 @@ data class Part(
     val file: String,
     val role: String = "",
     val analysis: PartAnalysisReference? = null,
-    val midi: MidiReferences? = null
+    val midi: MidiReferences? = null,
+    /** Null is a legacy/unattested source; it can never be commercial-ready. */
+    val sourceAttestation: SourceRightsAttestation? = null
 )
 
 @Serializable
