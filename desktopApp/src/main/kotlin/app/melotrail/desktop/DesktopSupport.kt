@@ -87,8 +87,8 @@ interface DesktopOperationLogger {
     ) = event(kind?.name?.lowercase() ?: "workspace", "$sessionId-${phase.name.lowercase()}", artifact, failure)
 }
 
-class LocalDesktopOperationLogger : DesktopOperationLogger {
-    private val logger = Logger.getLogger("app.melotrail.desktop.operations").apply {
+class LocalDesktopOperationLogger(
+    private val logger: Logger = Logger.getLogger("app.melotrail.desktop.operations").apply {
         useParentHandlers = true
         level = Level.INFO
         runCatching {
@@ -99,14 +99,29 @@ class LocalDesktopOperationLogger : DesktopOperationLogger {
             })
         }
     }
+) : DesktopOperationLogger {
 
     override fun event(operation: String, stage: String, artifact: Path?, failure: Throwable?) {
-        val artifactValue = artifact?.toAbsolutePath()?.normalize()?.toString()?.replace('"', '\'') ?: ""
+        val artifactValue = artifact?.let(::artifactClass).orEmpty()
         val failureType = failure?.javaClass?.simpleName ?: ""
         logger.info("operation=${safe(operation)} phase_or_stage=${safe(stage)} artifact=\"$artifactValue\" failure=$failureType")
     }
 
     private fun safe(value: String): String = value.replace(Regex("[^A-Za-z0-9_.-]"), "_")
+
+    /** Keep diagnostics useful without recording user paths or source file names. */
+    private fun artifactClass(path: Path): String {
+        val name = path.fileName?.toString().orEmpty()
+        val extension = name.substringAfterLast('.', "").lowercase()
+        return when (extension) {
+            "mid", "midi" -> "midi"
+            "wav", "wave" -> "wav"
+            "mp3" -> "mp3"
+            "json" -> "json"
+            "" -> "directory_or_extensionless"
+            else -> "other"
+        }
+    }
 }
 
 object NoOpDesktopPreferences : DesktopPreferences {

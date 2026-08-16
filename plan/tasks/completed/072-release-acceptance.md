@@ -26,7 +26,7 @@ evidence, and packaged desktop application before declaring the milestone done.
 - Verify playback for source, prepared, raw MIDI render, repaired MIDI render,
   lo-fi MIDI render, cohesion boundaries, dry mix, lo-fi audio texture, and
   master on a real supported audio device.
-- Compare UI screenshots at wide, medium, and narrow sizes against `plan/UI.png`;
+- Compare UI screenshots at wide, medium, and narrow sizes against `../../UI.png`;
   document intentional differences and fix unintentional hierarchy, spacing,
   color, clipping, duplication, or scrolling regressions.
 - Verify semantic colors plus text/icons for information, warning, loading,
@@ -64,7 +64,7 @@ contract's command examples as part of that rename without weakening coverage.
   the single transport; unavailable dependencies are reported truthfully.
 - No source/raw/repaired artifact changes unexpectedly.
 - The UI has no workflow-status second menu or duplicate controls and remains
-  recognizably aligned with `plan/UI.png`.
+  recognizably aligned with `../../UI.png`.
 - Backend work and all severities are visible and semantically styled.
 - AI Cohesion can produce approved bounded transformations and rejects unsafe
   plans without corrupting last-known-good work.
