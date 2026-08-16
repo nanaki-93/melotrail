@@ -89,6 +89,7 @@ object WorkspaceTags {
     const val OPERATION_FEEDBACK = "operation-feedback"
     const val CREATE_PROJECT = "create-project"
     const val OPEN_PROJECT = "open-project"
+    const val MIGRATE_PROJECT = "migrate-project"
     const val ADD_MIDI = "add-midi"
     const val ADD_AUDIO = "add-audio"
     const val IMPORT_SOURCE = "import-source"
@@ -211,9 +212,22 @@ private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
             }
             val projectText = state.project?.let { "Project · ${it.name} · v${it.version} · ${it.renderFormat?.sampleRate ?: "?"} Hz / ${it.renderFormat?.channels ?: "?"} ch / PCM-24" }
                 ?: "Start workspace · create or open an arranger project"
+            val workflow = state.workflow.current
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
                 Text(projectText, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (!canBuild(state)) Text(buildSongPrerequisite(state), modifier = Modifier.weight(0.8f), maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text(
+                "Next safe action · ${workflow.context}",
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (state.project?.version == 2) {
+                TextButton(onClick = { onIntent(WorkspaceIntent.MigrateProject) }, modifier = Modifier.semantics { testTag = WorkspaceTags.MIGRATE_PROJECT }) {
+                    Text("Migrate project to v3")
+                }
             }
         }
     }

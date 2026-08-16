@@ -337,7 +337,15 @@ object MelodyCohesionStore {
 
     fun writeDraft(root: Path, input: MelodyCohesionInput, plan: MelodyCohesionPlan): Path {
         plan.requireValid(input)
-        return atomicWrite(root.resolve(DRAFT_FILE), json.encodeToString(plan))
+        val text = json.encodeToString(plan)
+        return atomicWrite(root.resolve(DRAFT_FILE), text).also {
+            persistWorkflow(root, CohesionWorkflowReferences(
+                inputSha256 = input.inputHash,
+                plan = WorkflowArtifactReference(DRAFT_FILE, sha256(text)),
+                occurrences = emptyList(),
+                approved = false
+            ))
+        }
     }
 
     fun readDraft(root: Path, input: MelodyCohesionInput): MelodyCohesionPlan = read(root.resolve(DRAFT_FILE), input)
@@ -361,7 +369,23 @@ object MelodyCohesionStore {
             atomicWrite(root.resolve(AUDIT_FILE), json.encodeToString(audit))
             val planText = json.encodeToString(plan)
             atomicWrite(root.resolve(PROVENANCE_FILE), json.encodeToString(MelodyCohesionProvenance(plan.inputHash, sha256(planText), plan.model, approved = true)))
-            return atomicWrite(root.resolve(APPROVED_FILE), planText)
+            return atomicWrite(root.resolve(APPROVED_FILE), planText).also {
+                val references = transformed.keys.map { occurrence ->
+                    val path = derivedMidi(root, occurrence.instanceId)
+                    CohesionOccurrenceReference(
+                        occurrence.instanceId,
+                        occurrence.sourceHash,
+                        WorkflowArtifactReference(root.relativize(path).toString().replace('\\', '/'), digest(path)),
+                        approved = true
+                    )
+                }
+                persistWorkflow(root, CohesionWorkflowReferences(
+                    inputSha256 = input.inputHash,
+                    plan = WorkflowArtifactReference(APPROVED_FILE, sha256(planText)),
+                    occurrences = references,
+                    approved = true
+                ))
+            }
         } finally { Files.list(staging).use { stream -> stream.forEach { Files.deleteIfExists(it) } } }
     }
 
@@ -414,6 +438,17 @@ object MelodyCohesionStore {
     private fun move(from: Path, to: Path) { try { Files.move(from, to, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE) } catch (_: AtomicMoveNotSupportedException) { Files.move(from, to, StandardCopyOption.REPLACE_EXISTING) } }
     private fun log2(value: Int): Int { require(value > 0 && value and (value - 1) == 0) { "Invalid MIDI denominator" }; return Integer.numberOfTrailingZeros(value) }
     private fun sha256(value: String): String = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(StandardCharsets.UTF_8)).joinToString("") { "%02x".format(it) }
+    private fun digest(path: Path): String = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
+
+    /** V3 records cohesion review atomically in project metadata; legacy files remain untouched. */
+    private fun persistWorkflow(root: Path, cohesion: CohesionWorkflowReferences) {
+        val project = runCatching { ProjectStore.read(root) }.getOrNull() ?: return
+        if (project.version != Project.CURRENT_VERSION) return
+        val workflow = project.workflow.invalidate(WorkflowChange.COHESION)
+            .markCurrent(WorkflowArtifact.COHESION)
+            .copy(cohesion = cohesion)
+        ProjectStore.write(root, project.copy(workflow = workflow))
+    }
 }
 
 /** Commercial projects must use an explicitly approved registry entry and exact model hash. */

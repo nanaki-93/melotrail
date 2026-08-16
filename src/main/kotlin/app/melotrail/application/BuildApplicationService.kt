@@ -3,6 +3,8 @@ package app.melotrail.application
 import app.melotrail.arrangement.InstrumentRenderer
 import app.melotrail.arrangement.DeterministicStemMixer
 import app.melotrail.arrangement.MixedStem
+import app.melotrail.arrangement.ProjectWorkflowStore
+import app.melotrail.arrangement.WorkflowArtifact
 import app.melotrail.audio.WAVDecoder
 import app.melotrail.dsp.DSPChain
 import app.melotrail.dsp.LOFIPresets
@@ -127,6 +129,11 @@ class DefaultBuildApplicationService(
                     null
                 }
                 stage(progress, 9, "Writing release metadata", master) { writeRelease(root, masteringInput, master, mp3, request) }
+                ProjectWorkflowStore.update(root) { workflow ->
+                    workflow.markCurrent(WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE).let {
+                        if (request.enableLoFi) it.markCurrent(WorkflowArtifact.AUDIO_TEXTURE) else it
+                    }
+                }
                 progress.report(OperationProgress("build", STAGE_COUNT, STAGE_COUNT, "Build complete", master))
                 BuildResult(root, dry, root.resolve("mix/lofi.wav").takeIf { request.enableLoFi }, master, mp3, render.reused)
             }

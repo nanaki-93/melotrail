@@ -5,6 +5,9 @@ import app.melotrail.arrangement.LogicalInstrument
 import app.melotrail.arrangement.MixSettings
 import app.melotrail.arrangement.MixTrack
 import app.melotrail.arrangement.ProjectStore
+import app.melotrail.arrangement.ProjectWorkflowStore
+import app.melotrail.arrangement.WorkflowArtifact
+import app.melotrail.arrangement.WorkflowChange
 import app.melotrail.audio.WAVDecoder
 import app.melotrail.model.ErrorReporter
 import kotlinx.coroutines.Dispatchers
@@ -98,6 +101,7 @@ class DefaultMixApplicationService(private val mixer: DeterministicStemMixer = D
                 val output = root.resolve("mix/dry.wav")
                 mixer.writeWav(mixed, output)
                 writeSettings(root, request.settings)
+                ProjectWorkflowStore.update(root) { it.invalidate(WorkflowChange.MIX_ONLY).markCurrent(WorkflowArtifact.DRY_MIX) }
                 load(root)
             }
         } catch (error: ApplicationServiceException) {

@@ -256,14 +256,17 @@ object MidiAnalysisStore {
 
     fun write(projectRoot: Path, project: Project, partId: String, analysis: MidiAnalysis): Path {
         val root = projectRoot.toAbsolutePath().normalize()
-        require(project.version == Project.CURRENT_VERSION) { "MIDI analysis requires a v2 project" }
+        require(project.version >= Project.MIDI_FIRST_VERSION) { "MIDI analysis requires a MIDI-first project" }
         project.requireValid(root)
         require(project.parts.any { it.id == partId }) { "Part not found: $partId" }
         require(analysis.partId == partId) { "MIDI analysis part ID does not match: $partId" }
         val reference = "analysis/$partId.json"
         val target = root.resolve(reference)
         atomicWrite(target, json.encodeToString(analysis))
-        val updated = project.copy(parts = project.parts.map { if (it.id == partId) it.copy(analysis = PartAnalysisReference(reference, AnalysisKind.MIDI)) else it })
+        val updated = project.copy(
+            parts = project.parts.map { if (it.id == partId) it.copy(analysis = PartAnalysisReference(reference, AnalysisKind.MIDI)) else it },
+            workflow = project.workflow.invalidate(WorkflowChange.ANALYSIS).markCurrent(WorkflowArtifact.ANALYSIS)
+        )
         updated.requireValid(root)
         ProjectStore.write(root, updated)
         return target

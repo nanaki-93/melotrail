@@ -13,7 +13,8 @@ import java.nio.file.StandardOpenOption
 
 /**
  * Versioned project-file boundary. V1 remains readable without changing its
- * metadata or files; only a fully prepared project is written as v2.
+ * metadata or files; v2 remains readable in memory and newly created or
+ * explicitly saved MIDI-first projects use v3.
  */
 object ProjectStore {
     const val FILE_NAME = "project.json"
@@ -32,6 +33,7 @@ object ProjectStore {
         return when (element["version"]?.jsonPrimitive?.content?.toIntOrNull() ?: 1) {
             1 -> json.decodeFromString<ProjectV1Dto>(text).toProject()
             2 -> json.decodeFromString<ProjectV2Dto>(text).toProject()
+            3 -> json.decodeFromString<ProjectV3Dto>(text).toProject()
             else -> throw IllegalArgumentException("Unsupported project version: ${element["version"]?.jsonPrimitive?.content}")
         }
     }
@@ -41,9 +43,23 @@ object ProjectStore {
         val serialized = when (project.version) {
             1 -> json.encodeToString(project.toV1Dto())
             2 -> json.encodeToString(project.toV2Dto())
+            3 -> json.encodeToString(project.toV3Dto())
             else -> throw IllegalArgumentException("Unsupported project version: ${project.version}")
         }
         atomicWrite(root.resolve(FILE_NAME), serialized)
+    }
+
+    /**
+     * Opens never rewrite metadata. Call this explicit atomic boundary only
+     * after the caller has presented the v2 migration state to the user.
+     */
+    fun migrateV2(root: Path): Project {
+        val project = read(root)
+        require(project.version == 2) { "Only version 2 projects require this migration" }
+        val migrated = project.copy(version = Project.CURRENT_VERSION)
+        migrated.requireValid(root)
+        write(root, migrated)
+        return migrated
     }
 
     /** Upgrades metadata only. Source files remain exactly where v1 stored them. */
@@ -74,9 +90,12 @@ object ProjectStore {
     @Serializable private data class PartV1Dto(val id: String, val file: String, val role: String = "", val analysis: PartAnalysisReference? = null)
     @Serializable private data class ProjectV2Dto(val version: Int = 2, val name: String, val renderFormat: RenderFormat, val parts: List<PartV2Dto> = emptyList(), val structure: List<String> = emptyList())
     @Serializable private data class PartV2Dto(val id: String, val role: String = "", val sourceFile: String, val midi: MidiReferences, val analysis: PartAnalysisReference? = null)
+    @Serializable private data class ProjectV3Dto(val version: Int = 3, val name: String, val renderFormat: RenderFormat, val parts: List<PartV2Dto> = emptyList(), val structure: List<String> = emptyList(), val workflow: ProjectWorkflowReferences = ProjectWorkflowReferences())
 
     private fun ProjectV1Dto.toProject() = Project(1, name, parts.map { Part(it.id, it.file, it.role, it.analysis) }, structure)
     private fun ProjectV2Dto.toProject() = Project(2, name, parts.map { Part(it.id, it.sourceFile, it.role, it.analysis, it.midi) }, structure, renderFormat)
+    private fun ProjectV3Dto.toProject() = Project(3, name, parts.map { Part(it.id, it.sourceFile, it.role, it.analysis, it.midi) }, structure, renderFormat, workflow)
     private fun Project.toV1Dto() = ProjectV1Dto(name = name, parts = parts.map { PartV1Dto(it.id, it.file, it.role, it.analysis) }, structure = structure)
     private fun Project.toV2Dto() = ProjectV2Dto(name = name, renderFormat = requireNotNull(renderFormat), parts = parts.map { PartV2Dto(it.id, it.role, it.file, requireNotNull(it.midi), it.analysis) }, structure = structure)
+    private fun Project.toV3Dto() = ProjectV3Dto(name = name, renderFormat = requireNotNull(renderFormat), parts = parts.map { PartV2Dto(it.id, it.role, it.file, requireNotNull(it.midi), it.analysis) }, structure = structure, workflow = workflow)
 }

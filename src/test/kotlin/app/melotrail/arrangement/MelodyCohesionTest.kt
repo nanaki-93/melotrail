@@ -90,6 +90,30 @@ class MelodyCohesionTest {
         assertFalse(Files.exists(tempDir.resolve(MelodyCohesionStore.APPROVED_FILE)))
     }
 
+    @Test
+    fun `v3 project records per occurrence cohesion review and approval references`() {
+        Files.createDirectories(tempDir.resolve("source")); Files.createDirectories(tempDir.resolve("midi/clean"))
+        Files.writeString(tempDir.resolve("source/A.mid"), "source")
+        Files.writeString(tempDir.resolve("midi/clean/A.mid"), "clean")
+        ProjectStore.write(tempDir, Project(
+            version = Project.CURRENT_VERSION,
+            name = "cohesion",
+            renderFormat = RenderFormat(),
+            parts = listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid")))
+        ))
+        val input = input()
+        val plan = plan(input, input.occurrences.map { MelodyOccurrencePlan(it.instanceId, it.partId, it.sourceHash, rationale = "Preserve") })
+
+        MelodyCohesionStore.writeDraft(tempDir, input, plan)
+        assertFalse(requireNotNull(ProjectStore.read(tempDir).workflow.cohesion).approved)
+
+        MelodyCohesionStore.approve(tempDir, input, input.occurrences.associate { it.instanceId to emptyList<MidiNote>() })
+        val cohesion = requireNotNull(ProjectStore.read(tempDir).workflow.cohesion)
+        assertTrue(cohesion.approved)
+        assertEquals(listOf("A1", "A2"), cohesion.occurrences.map { it.instanceId })
+        assertTrue(cohesion.occurrences.all { it.approved && Files.isRegularFile(tempDir.resolve(it.result.file)) })
+    }
+
     private fun input() = MelodyCohesionInput(
         inputHash = INPUT_HASH,
         occurrences = listOf("A1", "A2").map { id ->

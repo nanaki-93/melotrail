@@ -96,3 +96,8 @@ Example request:
 ```json
 {"version":2,"profile":"tighten-timing","path":"/project/midi/raw/A.mid","outputPath":"/project/midi/clean/A.mid","quantize":"1/16","strength":0.4,"minNoteMs":50,"minVelocity":8,"normalizeVelocity":false,"cleanSustain":false}
 ```
+
+Worker responses and outputs are stage evidence, not workflow completion flags.
+The Kotlin project boundary validates published files and their fingerprints
+before later analysis or rendering is ready; a worker failure leaves prior
+artifacts available for inspection.

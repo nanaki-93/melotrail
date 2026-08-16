@@ -34,7 +34,7 @@ class PianoBassQualityGate(
 
         var project = ProjectStore.read(root)
         project.requireValid(root)
-        require(project.version == Project.CURRENT_VERSION) { "Piano+bass quality gate requires a MIDI-first v2 project" }
+        require(project.version >= Project.MIDI_FIRST_VERSION) { "Piano+bass quality gate requires a MIDI-first project" }
         val structure = project.structure.mapIndexed { index, partId -> SectionInstance(index, partId) }
         require(structure.size == 5 && structure[0].partId == structure[1].partId && structure[0].partId == structure[4].partId && structure[2].partId == structure[3].partId && structure[0].partId != structure[2].partId) {
             "Piano+bass quality gate requires the audible repeated-section structure A A B B A using two distinct project parts"

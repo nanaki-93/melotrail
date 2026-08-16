@@ -98,3 +98,16 @@ downstream artifacts stale; regenerate rather than copying old outputs.
 optional final conversion. If a failure occurs, keep the source and inspect the
 project-local reports/artifacts plus the bounded diagnostic logs under
 `~/.melotrail/logs/`.
+
+## Workflow migration and stale artifacts
+
+New MIDI-first projects are schema v3. Existing v1/v2 project files are read
+without being rewritten during open. A v2 migration is an explicit atomic save;
+if a migration or artifact is incomplete, leave the last known-good files in
+place and follow the workspace's next safe action.
+
+Changing source/raw MIDI, repaired MIDI, the selected Lo-fi Feel, analysis,
+structure, cohesion, mix-only settings, or audio texture can mark downstream
+artifacts stale. Retained stems, mixes, and masters are inspectable but not
+build-ready until their prerequisites and fingerprints are current again. Do
+not delete stale artifacts to make a stage look complete.

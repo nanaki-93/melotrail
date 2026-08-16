@@ -17,6 +17,8 @@ import app.melotrail.arrangement.MidiFeelReferences
 import app.melotrail.arrangement.MidiFeelReport
 import app.melotrail.arrangement.MidiFeelReportStore
 import app.melotrail.arrangement.MidiLoFiFeelTransformer
+import app.melotrail.arrangement.WorkflowArtifact
+import app.melotrail.arrangement.WorkflowChange
 import app.melotrail.arrangement.Part
 import app.melotrail.arrangement.PartAnalysis
 import app.melotrail.arrangement.PartAnalysisReference
@@ -48,6 +50,8 @@ import java.util.concurrent.ConcurrentHashMap
 /** UI- and CLI-neutral boundary for the local, file-backed arranger project. */
 interface ProjectApplicationService {
     fun open(root: Path): ProjectSnapshot
+    /** Optional explicit migration boundary; older adapters remain read-only. */
+    fun migrateV2(root: Path): ProjectSnapshot = throw UnsupportedOperationException("This project service does not support schema-v2 migration.")
     fun create(request: CreateProjectRequest): ProjectSnapshot
     suspend fun importPart(request: ImportPartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
     suspend fun retryMidiCleanup(request: RetryMidiCleanupRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
@@ -214,7 +218,10 @@ data class ProjectReadiness(
     val masterAvailable: Boolean,
     val midiQualityReportsReady: Boolean = false,
     /** A final release is complete only when metadata accompanies the validated master. */
-    val releaseAvailable: Boolean = false
+    val releaseAvailable: Boolean = false,
+    /** Durable invalidation evidence; availability above remains file-derived. */
+    val staleArtifacts: Set<app.melotrail.arrangement.WorkflowArtifact> = emptySet(),
+    val cohesionApprovalRequired: Boolean = false
 )
 
 class DefaultProjectApplicationService(
@@ -237,6 +244,10 @@ class DefaultProjectApplicationService(
             "Project file not found: ${normalizedRoot.resolve(ProjectStore.FILE_NAME)}"
         }
         return snapshot(normalizedRoot, readValidProject(normalizedRoot))
+    }
+
+    override fun migrateV2(root: Path): ProjectSnapshot = mutate(root) { normalizedRoot ->
+        snapshot(normalizedRoot, ProjectStore.migrateV2(normalizedRoot))
     }
 
     override fun create(request: CreateProjectRequest): ProjectSnapshot = mutate(request.root) { root ->
@@ -317,7 +328,10 @@ class DefaultProjectApplicationService(
             Files.deleteIfExists(rawWork)
         }
 
-        val updated = project.copy(parts = project.parts + Part(request.id, relativeFile, request.role, midi = MidiReferences(raw = raw)))
+        val updated = project.copy(
+            parts = project.parts + Part(request.id, relativeFile, request.role, midi = MidiReferences(raw = raw)),
+            workflow = project.workflow.invalidate(WorkflowChange.SOURCE_OR_RAW)
+        )
         val saved = if (project.version == 1) ProjectStore.upgrade(root, project, updated.parts) else updated.also { ProjectStore.write(root, it) }
         progress.report(OperationProgress("import-part", 3, 3, "Registered raw MIDI; run Repair MIDI before analysis", root.resolve(ProjectStore.FILE_NAME)))
         snapshot(root, saved)
@@ -326,7 +340,7 @@ class DefaultProjectApplicationService(
     override suspend fun retryMidiCleanup(request: RetryMidiCleanupRequest, progress: ProgressSink): ProjectSnapshot = mutateSuspend(request.root) { root ->
         request.cleanup.requireValid()
         val project = readValidProject(root)
-        require(project.version == Project.CURRENT_VERSION) {
+        require(project.version >= Project.MIDI_FIRST_VERSION) {
             "Part '${request.partId}' is legacy and has no retryable MIDI cleanup provenance. Re-import it to establish MIDI quality review."
         }
         val part = project.parts.find { it.id == request.partId }
@@ -368,9 +382,8 @@ class DefaultProjectApplicationService(
                         feel = null
                     )
                 ) else it
-            })
+            }, workflow = project.workflow.invalidate(WorkflowChange.REPAIRED_MIDI).markCurrent(WorkflowArtifact.MIDI_REPAIR))
             ProjectStore.write(root, updated)
-            invalidateAfterMidiRepair(root, request.partId)
             progress.report(OperationProgress("repair-midi", 3, 3, "Saved MIDI repair report; analyze this part again", publishedReport))
             snapshot(root, updated)
         } catch (failure: Exception) {
@@ -407,7 +420,7 @@ class DefaultProjectApplicationService(
 
     override fun selectMidiFeel(request: SelectMidiFeelRequest): ProjectSnapshot = mutate(request.root) { root ->
         val project = readValidProject(root)
-        require(project.version == Project.CURRENT_VERSION) { "Lo-fi Feel requires a MIDI-first project." }
+        require(project.version >= Project.MIDI_FIRST_VERSION) { "Lo-fi Feel requires a MIDI-first project." }
         val part = project.parts.find { it.id == request.partId } ?: throw IllegalArgumentException("Part not found: ${request.partId}")
         val midi = requireNotNull(part.midi) { "Part '${part.id}' has no repaired MIDI." }
         val clean = requireNotNull(midi.clean) { "Part '${part.id}' has no repaired MIDI. Run Repair MIDI first." }
@@ -428,16 +441,18 @@ class DefaultProjectApplicationService(
             }
         }
         if (selectedMidi == midi) return@mutate snapshot(root, project)
-        val updated = project.copy(parts = project.parts.map { if (it.id == part.id) it.copy(analysis = null, midi = selectedMidi) else it })
+        val updated = project.copy(
+            parts = project.parts.map { if (it.id == part.id) it.copy(analysis = null, midi = selectedMidi) else it },
+            workflow = project.workflow.invalidate(WorkflowChange.MIDI_FEEL).markCurrent(WorkflowArtifact.MIDI_FEEL)
+        )
         ProjectStore.write(root, updated)
-        invalidateAfterMidiFeel(root, part.id)
         snapshot(root, updated)
     }
 
     override suspend fun analyzePart(request: AnalyzePartRequest, progress: ProgressSink): ProjectSnapshot = mutateSuspend(request.root) { root ->
         val project = readValidProject(root)
         val part = project.parts.find { it.id == request.partId } ?: throw IllegalArgumentException("Part not found: ${request.partId}")
-        val analysisPath = if (project.version == Project.CURRENT_VERSION) {
+        val analysisPath = if (project.version >= Project.MIDI_FIRST_VERSION) {
             val midi = requireNotNull(part.midi)
             val cleanReference = requireNotNull(midi.clean) { "Part '${part.id}' has no repaired MIDI. Run Repair MIDI before analysis." }
             if (midi.raw != null) MidiQualityReportStore.requireCurrent(
@@ -511,7 +526,10 @@ class DefaultProjectApplicationService(
         val project = readValidProject(root)
         val knownIds = project.parts.map { it.id }.toSet()
         request.partIds.forEach { id -> require(id in knownIds) { "Unknown part ID in structure: $id" } }
-        val updated = project.copy(structure = request.partIds.toList())
+        val updated = project.copy(
+            structure = request.partIds.toList(),
+            workflow = project.workflow.invalidate(WorkflowChange.STRUCTURE)
+        )
         ProjectStore.write(root, updated)
         snapshot(root, updated)
     }
@@ -530,6 +548,7 @@ class DefaultProjectApplicationService(
             occurrences[partId] = occurrence
             StructureSectionSummary(index, partId, occurrence, "$partId$occurrence", durationById[partId])
         }
+        fun current(artifact: WorkflowArtifact) = artifact !in project.workflow.stale
         return ProjectSnapshot(
             root = root,
             version = project.version,
@@ -541,15 +560,17 @@ class DefaultProjectApplicationService(
                 cleanMidiReady = summaries.isNotEmpty() && summaries.all { it.preparation.cleanMidi },
                 analysesReady = summaries.isNotEmpty() && summaries.all { it.preparation.analyzed },
                 structureReady = project.structure.isNotEmpty(),
-                songPlanAvailable = Files.isRegularFile(root.resolve("song_plan.json")),
-                arrangementAvailable = Files.isRegularFile(root.resolve("arrangement.json")),
-                generatedMidiAvailable = Files.isDirectory(root.resolve("midi/generated")) && Files.list(root.resolve("midi/generated")).use { it.anyMatch { Files.isRegularFile(it) } },
-                stemsAvailable = Files.isDirectory(root.resolve("stems")) && Files.list(root.resolve("stems")).use { it.anyMatch { Files.isRegularFile(it) } },
-                dryMixAvailable = Files.isRegularFile(root.resolve("mix/dry.wav")),
-                loFiMixAvailable = Files.isRegularFile(root.resolve("mix/lofi.wav")),
-                masterAvailable = Files.isRegularFile(root.resolve("output/master.wav")),
+                songPlanAvailable = Files.isRegularFile(root.resolve("song_plan.json")) && current(WorkflowArtifact.COHESION),
+                arrangementAvailable = Files.isRegularFile(root.resolve("arrangement.json")) && current(WorkflowArtifact.ARRANGEMENT),
+                generatedMidiAvailable = Files.isDirectory(root.resolve("midi/generated")) && current(WorkflowArtifact.GENERATED_MIDI) && Files.list(root.resolve("midi/generated")).use { it.anyMatch { Files.isRegularFile(it) } },
+                stemsAvailable = Files.isDirectory(root.resolve("stems")) && current(WorkflowArtifact.STEMS) && Files.list(root.resolve("stems")).use { it.anyMatch { Files.isRegularFile(it) } },
+                dryMixAvailable = Files.isRegularFile(root.resolve("mix/dry.wav")) && current(WorkflowArtifact.DRY_MIX),
+                loFiMixAvailable = Files.isRegularFile(root.resolve("mix/lofi.wav")) && current(WorkflowArtifact.AUDIO_TEXTURE),
+                masterAvailable = Files.isRegularFile(root.resolve("output/master.wav")) && current(WorkflowArtifact.MASTER),
                 midiQualityReportsReady = summaries.isNotEmpty() && summaries.all { it.preparation.midiQuality.status == MidiQualityStatus.CURRENT },
-                releaseAvailable = Files.isRegularFile(root.resolve("output/release.json"))
+                releaseAvailable = Files.isRegularFile(root.resolve("output/release.json")) && current(WorkflowArtifact.RELEASE),
+                staleArtifacts = project.workflow.stale,
+                cohesionApprovalRequired = project.workflow.cohesion?.let { !it.approved && WorkflowArtifact.COHESION !in project.workflow.stale } == true
             )
         )
     }
@@ -714,27 +735,6 @@ class DefaultProjectApplicationService(
         }
     }
 
-    /** A new repair invalidates only named derived artifacts; source and raw MIDI are never touched. */
-    private fun invalidateAfterMidiRepair(root: Path, partId: String) {
-        deleteTree(root.resolve("midi/derived/$partId"))
-        deleteTree(root.resolve("midi/feel/$partId"))
-        invalidateMidiFirstDerivatives(root, partId)
-    }
-
-    private fun invalidateMidiFirstDerivatives(root: Path, partId: String) {
-        Files.deleteIfExists(root.resolve("analysis/$partId.json"))
-        listOf(
-            "midi/generated", "cohesion", "stems", "mix", "output"
-        ).forEach { deleteTree(root.resolve(it)) }
-        listOf(
-            "song_plan.json", "section_variations.json", "arrangement.json", "arrangement.draft.json", "arrangement_v1.json",
-            "stem-render.json", "quality-gate.json", "release.json"
-        ).forEach { Files.deleteIfExists(root.resolve(it)) }
-    }
-
-    /** Switching canonical analysis input invalidates analysis/release derivatives, never repair evidence. */
-    private fun invalidateAfterMidiFeel(root: Path, partId: String) = invalidateMidiFirstDerivatives(root, partId)
-
     private fun publishMidiFeel(root: Path, partId: String, cleanReference: String, derived: Path, reportPath: Path, profile: MidiFeelProfile): MidiFeelReferences {
         val work = temporaryMidi(derived)
         val oldDerived = derived.takeIf(Files::isRegularFile)?.let { Files.readAllBytes(it) }
@@ -761,12 +761,6 @@ class DefaultProjectApplicationService(
             val temporary = target.resolveSibling(".${target.fileName}.restore-${UUID.randomUUID()}.tmp")
             try { Files.write(temporary, old); atomicReplace(temporary, target, stage) } finally { Files.deleteIfExists(temporary) }
         }
-    }
-
-    private fun deleteTree(target: Path) {
-        if (!Files.exists(target)) return
-        require(target.normalize().startsWith(target.parent?.normalize() ?: target)) { "Invalid derived artifact target: $target" }
-        Files.walk(target).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) }
     }
 
     private fun sourceType(file: String): PartSourceType = when (file.substringAfterLast('.', "").lowercase()) {

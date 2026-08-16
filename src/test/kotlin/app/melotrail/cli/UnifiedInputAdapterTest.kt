@@ -25,13 +25,13 @@ class UnifiedInputAdapterTest {
     @TempDir lateinit var tempDir: Path
 
     @Test
-    fun `v2 creation stores explicit format and round trips through project store`() {
+    fun `v3 creation stores explicit format and round trips through project store`() {
         val root = tempDir.resolve("song")
         ArrangementProjectCommands.execute(arrayOf("project", "create", root.toString(), "--sample-rate", "48000", "--channels", "1"))
 
         val project = ProjectStore.read(root)
 
-        assertEquals(2, project.version)
+        assertEquals(Project.CURRENT_VERSION, project.version)
         assertEquals(48_000, project.renderFormat?.sampleRate)
         assertEquals(1, project.renderFormat?.channels)
         assertEquals(24, project.renderFormat?.bitDepth)
@@ -111,7 +111,7 @@ class UnifiedInputAdapterTest {
             Part("A", "parts/A.wav", midi = MidiReferences(clean = "midi/clean/A.mid"))
         ))
 
-        assertEquals(2, upgraded.version)
+        assertEquals(Project.CURRENT_VERSION, upgraded.version)
         assertEquals("parts/A.wav", upgraded.parts.single().file)
         assertTrue(sourceBefore.contentEquals(Files.readAllBytes(root.resolve("parts/A.wav"))))
         assertTrue("sourceFile" in Json.parseToJsonElement(Files.readString(root.resolve("project.json"))).jsonObject["parts"]!!.jsonArray.first().jsonObject)

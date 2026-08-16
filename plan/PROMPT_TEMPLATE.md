@@ -43,7 +43,9 @@ Architecture and safety rules:
   in composables.
 - Canonical project artifacts are the source of truth. Do not add a competing
   database or project format. Preserve supported legacy project reads unless
-  the contract explicitly changes them.
+  the contract explicitly changes them. Project migration must be in memory or
+  an explicit atomic save; open must not partially rewrite a project. Treat
+  stale artifacts as inspectable evidence, never completion.
 - Resolve the sound library through the validated locator/settings boundary.
   Do not depend on process CWD or create a second instrument tree.
 - Validate all external input: extensions and actual formats, identifiers,

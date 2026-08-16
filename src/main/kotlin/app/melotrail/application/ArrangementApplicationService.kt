@@ -19,6 +19,8 @@ import app.melotrail.arrangement.MidiTransitionGenerationAdapter
 import app.melotrail.arrangement.PadMidiGenerationAdapter
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
+import app.melotrail.arrangement.ProjectWorkflowStore
+import app.melotrail.arrangement.WorkflowArtifact
 import app.melotrail.arrangement.SectionInstance
 import app.melotrail.arrangement.SectionVariationStore
 import app.melotrail.arrangement.SongPlan
@@ -141,6 +143,7 @@ class DefaultArrangementApplicationService(
         } else {
             DetailedArrangementStore.writeApproved(root, detailedInput, arrangement)
         }
+        ProjectWorkflowStore.update(root) { it.markCurrent(WorkflowArtifact.ARRANGEMENT) }
         snapshot(root, project, arrangement, artifact, request.planner == ArrangementPlannerKind.QWEN)
     }
 
@@ -169,6 +172,7 @@ class DefaultArrangementApplicationService(
             coroutineContext.ensureActive()
             MidiTransitionGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("transitions", it.path, it.result.events.size) }
         }
+        ProjectWorkflowStore.update(normalized) { it.markCurrent(WorkflowArtifact.GENERATED_MIDI) }
         GeneratedMidiSnapshot(artifacts)
     }
 
@@ -180,7 +184,9 @@ class DefaultArrangementApplicationService(
         val arrangement = readApproved(normalized, input)
         val analyses = midiAnalyses(normalized, project, project.parts.map { it.id }.toSet())
         progress.report(OperationProgress("render", 2, 2, "Rendering or reusing PCM-24 stems", normalized.resolve("mix/dry.wav")))
-        StemRenderingMixer(renderer, libraryRoot).render(normalized, project, arrangement, analyses)
+        StemRenderingMixer(renderer, libraryRoot).render(normalized, project, arrangement, analyses).also {
+            ProjectWorkflowStore.update(normalized) { workflow -> workflow.markCurrent(WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX) }
+        }
     }
 
     override fun load(root: Path): ArrangementSnapshot {
@@ -212,6 +218,7 @@ class DefaultArrangementApplicationService(
         val project = readProject(normalized)
         val input = detailedInput(normalized, project)
         val approved = DetailedArrangementStore.approve(normalized, input)
+        ProjectWorkflowStore.update(normalized) { it.markCurrent(WorkflowArtifact.ARRANGEMENT) }
         snapshot(normalized, project, readApproved(normalized, input), approved, false)
     }
 

@@ -150,6 +150,22 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `header shows the shared next safe action without adding a workflow navigation destination`() = runComposeUiTest {
+        setContent { MelotrailTheme { WorkspaceScreen(projectState(), onIntent = {}) } }
+
+        onNodeWithText("Next safe action · Import a MIDI or eligible solo-piano audio source.").assertIsDisplayed()
+    }
+
+    @Test
+    fun `readable v2 project has an explicit migration action`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(projectState().copy(project = projectState().project!!.copy(version = 2)), intents::add) } }
+
+        onNodeWithTag(WorkspaceTags.MIGRATE_PROJECT).performClick()
+        assertEquals(WorkspaceIntent.MigrateProject, intents.last())
+    }
+
+    @Test
     fun `role editor and keyboard structure movement controls are visible`() = runComposeUiTest {
         val project = projectState().project!!.copy(
             parts = listOf(app.melotrail.application.PartSummary("A", "verse", "source/A.mid", "A.mid", app.melotrail.application.PartSourceType.MIDI, null)),
@@ -488,7 +504,7 @@ class WorkspaceScreenTest {
         val root = java.nio.file.Path.of("build/test-project")
         return WorkspaceUiState(project = app.melotrail.application.ProjectSnapshot(
             root = root,
-            version = 2,
+            version = 3,
             name = "test-project",
             renderFormat = app.melotrail.arrangement.RenderFormat(),
             parts = emptyList(),

@@ -5,7 +5,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * In-memory local arranger project. ProjectStore owns the v1/v2 JSON format
+ * In-memory local arranger project. ProjectStore owns the v1/v2/v3 JSON format
  * boundary; this model deliberately keeps source references uniform for the
  * existing arranger code.
  *
@@ -19,7 +19,9 @@ data class Project(
     val name: String,
     val parts: List<Part> = emptyList(),
     val structure: List<String> = emptyList(),
-    val renderFormat: RenderFormat? = null
+    val renderFormat: RenderFormat? = null,
+    /** v3 durable stale evidence and bounded cross-stage references. */
+    val workflow: ProjectWorkflowReferences = ProjectWorkflowReferences()
 ) {
     fun validate(projectRoot: Path): ProjectValidationResult =
         ProjectValidator.validate(this, projectRoot)
@@ -31,7 +33,7 @@ data class Project(
 
     /** Boundary for MIDI-first stages introduced after the v1 source-audio format. */
     fun requireCleanMidi(projectRoot: Path): List<Path> {
-        require(version == CURRENT_VERSION) {
+        require(version >= MIDI_FIRST_VERSION) {
             "Project uses legacy v1 source audio. Prepare clean MIDI for every part before running MIDI-first commands."
         }
         requireValid(projectRoot)
@@ -65,7 +67,8 @@ data class Project(
     }
 
     companion object {
-        const val CURRENT_VERSION = 2
+        const val MIDI_FIRST_VERSION = 2
+        const val CURRENT_VERSION = 3
     }
 }
 
@@ -127,13 +130,13 @@ object ProjectValidator {
         val errors = mutableListOf<String>()
         val root = projectRoot.toAbsolutePath().normalize()
 
-        if (project.version !in setOf(1, Project.CURRENT_VERSION)) {
+        if (project.version !in setOf(1, 2, Project.CURRENT_VERSION)) {
             errors += "Unsupported project version: ${project.version}"
         }
-        if (project.version == Project.CURRENT_VERSION) {
+        if (project.version >= Project.MIDI_FIRST_VERSION) {
             val format = project.renderFormat
             if (format == null) {
-                errors += "Version 2 projects require an explicit render format"
+                errors += "MIDI-first projects require an explicit render format"
             } else {
                 if (format.sampleRate !in 8_000..384_000) errors += "Render sample rate must be from 8000 to 384000"
                 if (format.channels !in 1..32) errors += "Render channels must be from 1 to 32"
@@ -158,7 +161,7 @@ object ProjectValidator {
                 errors += "Part ID must not be blank"
             }
             validateFileReference(root, part.file, "Part '${part.id}' source", errors)
-            if (project.version == Project.CURRENT_VERSION) {
+            if (project.version >= Project.MIDI_FIRST_VERSION) {
                 val midi = part.midi
                 if (midi == null) {
                     errors += "Part '${part.id}' requires raw MIDI; import it before Repair MIDI"

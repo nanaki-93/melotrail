@@ -32,6 +32,8 @@ import app.melotrail.application.PreviewAudioSource
 import app.melotrail.application.PreviewMidiSource
 import app.melotrail.application.SaveStructureRequest
 import app.melotrail.application.UpdatePartRoleRequest
+import app.melotrail.application.WorkflowReadModel
+import app.melotrail.application.WorkflowReadModelDeriver
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.MidiCleanupOptions
 import app.melotrail.arrangement.MidiCleanupProfile
@@ -89,6 +91,9 @@ data class WorkspaceUiState(
 ) {
     val creationSelection: CreationSelection
         get() = CreationSelection(selectedPartId, selectedArrangementSection, selectedArtifact)
+    /** Shared application read model; it never creates a second navigation row. */
+    val workflow: WorkflowReadModel
+        get() = WorkflowReadModelDeriver.derive(project, arrangement)
 }
 
 enum class WorkspaceSection(val label: String) {
@@ -312,6 +317,7 @@ sealed interface WorkspaceIntent {
     data class UpdateCreateProject(val draft: WorkspaceDialog.CreateProject) : WorkspaceIntent
     data object CreateProject : WorkspaceIntent
     data class OpenProject(val root: Path) : WorkspaceIntent
+    data object MigrateProject : WorkspaceIntent
     data object RefreshRuntimeReadiness : WorkspaceIntent
     data object ShowSoundLibrarySettings : WorkspaceIntent
     data object ChooseSoundLibraryRoot : WorkspaceIntent
@@ -426,6 +432,7 @@ class WorkspaceViewModel(
             is WorkspaceIntent.UpdateCreateProject -> mutableState.update { it.copy(dialog = intent.draft) }
             WorkspaceIntent.CreateProject -> createProject()
             is WorkspaceIntent.OpenProject -> requestOpenProject(intent.root)
+            WorkspaceIntent.MigrateProject -> migrateProject()
             WorkspaceIntent.RefreshRuntimeReadiness -> refreshRuntimeReadiness()
             WorkspaceIntent.ShowSoundLibrarySettings -> mutableState.update { it.copy(dialog = WorkspaceDialog.SoundLibrarySettings, soundLibrary = soundLibrarySettings.refresh()) }
             WorkspaceIntent.ChooseSoundLibraryRoot -> chooseSoundLibraryRoot()
@@ -583,6 +590,19 @@ class WorkspaceViewModel(
                         )
                     }
                 }
+        }
+    }
+
+    private fun migrateProject() {
+        val project = state.value.project ?: return fail("project migration", "Open a v2 project first.")
+        if (project.version != 2) return fail("project migration", "Only readable v2 projects require migration.")
+        if (state.value.operation.isMutating) return busy("migrate project")
+        val feedbackId = beginFeedback(OperationKind.PROJECT_OPEN, OperationPhase.LOCAL, "Migrating ${project.name} to schema v3…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.OpeningProject(project.root), operationFeedback = feedbackTracker.current, notification = null) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { projectService.migrateV2(project.root) } }
+                .onSuccess { opened(it, "Migrated ${it.name} to project schema v3", feedbackId) }
+                .onFailure { fail("project migration", it.message ?: "Unable to migrate project.", sessionId = feedbackId) }
         }
     }
 

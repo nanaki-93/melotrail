@@ -43,8 +43,9 @@ chosen project directory. Desktop settings retain only the last successfully
 opened project path; they never store project or audio data.
 
 The top navigation has five explicit destinations: **Project**, **Structure**,
-**Arrange**, **Mix & Master**, and **Library**. Workflow-status badges report
-progress but do not replace navigation. **Add Part** remains at the top of the
+**Arrange**, **Mix & Master**, and **Library**. The workspace derives the
+current stage, prerequisites, and next safe action from validated artifacts; it
+does not add a workflow-status navigation row. **Add Part** remains at the top of the
 Parts panel, and project open/import/build results are shown in a dismissible
 workspace banner so failures and recovery actions are never hidden in a panel.
 
@@ -116,6 +117,17 @@ plans and arrangements, generated MIDI, stems, `mix/`, and `output/`.
 `output/master.wav` is the authoritative lossless release; MP3 is an optional
 final conversion only. For worker, library, renderer, preview, and package
 troubleshooting, use [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
+
+### Workflow state and migration
+
+New MIDI-first projects use project schema v3. Schema v1 and v2 projects stay
+readable without an open-time rewrite; a v2 project can be explicitly and
+atomically saved as v3 once normal project validation succeeds. Readiness comes
+from validated files and available fingerprints, never a completion flag alone.
+Changes to source/raw MIDI, repair, Lo-fi Feel, analysis, structure, cohesion,
+mix-only settings, or audio texture mark only their documented descendants
+stale. Stale artifacts remain inspectable evidence; regenerate them instead of
+deleting, copying, or treating them as release-ready.
 
 ## CLI
 
@@ -247,12 +259,12 @@ make cli ARGS='part add ./projects/song-001 --id B --file ./inputs/chorus.wav --
 ```
 
 Version-1 projects remain readable. Their original `parts/` files are not
-moved during migration; a v2 project is written only after every registered
+moved during migration; a MIDI-first v3 project is written only after every registered
 part has a valid clean-MIDI reference.
 
 ### MIDI analysis and sound-library licenses
 
-For v2 projects, `part analyze` reads the registered clean MIDI locally and
+For MIDI-first v3 projects, `part analyze` reads the registered clean MIDI locally and
 writes a distinct versioned musical analysis under `analysis/`; v1 projects
 continue to use the existing audio worker analysis.
 
@@ -270,7 +282,7 @@ for the required local sample-copy setup after a fresh checkout.
 
 `arrange` first creates standalone, reviewable `song_plan.json` and
 `section_variations.json` artifacts for the whole user-controlled structure.
-It requires a v2 MIDI-first project with a versioned MIDI analysis for every
+It requires a MIDI-first v3 project with a versioned MIDI analysis for every
 part. The plan contains only section purpose, energy, logical instrument
 progression, transition intent, and ending behavior; the variation artifact
 adds stable repeated-section identities plus bounded roles/densities. Neither

@@ -95,3 +95,8 @@ WAV and writes the requested project channel layout as PCM-24 WAV. It accepts
 at most a two-second renderer tail, pads short output with trailing silence,
 and atomically publishes only the verified `expectedFrames` result. MIDI, SFZ,
 samples, registry files, and other sound-library paths are never valid outputs.
+
+Rendered stems are workflow-derived artifacts. If the selected MIDI, analysis,
+structure, cohesion, or mix prerequisites change, Melotrail marks affected
+renders stale and retains them only for inspection; it never mutates the
+library, samples, or source MIDI to refresh them.

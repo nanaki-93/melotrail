@@ -133,7 +133,7 @@ class ProjectApplicationServiceTest {
     }
 
     @Test
-    fun `repair invalidates only downstream artifacts and keeps source and raw MIDI immutable`() {
+    fun `repair marks only downstream artifacts stale and keeps last known good files immutable`() {
         val service = service()
         val root = tempDir.resolve("repair-invalidation")
         val input = midi("repair-source.mid")
@@ -153,8 +153,13 @@ class ProjectApplicationServiceTest {
         assertTrue(rawBefore.contentEquals(Files.readAllBytes(root.resolve("midi/raw/A.mid"))))
         assertTrue(Files.isRegularFile(root.resolve("midi/clean/A.mid")))
         listOf("analysis/A.json", "midi/generated/bass.mid", "cohesion/A.json", "stems/piano.wav", "mix/dry.wav", "output/master.wav", "arrangement.json").forEach { relative ->
-            assertFalse(Files.exists(root.resolve(relative)), "$relative should be invalidated")
+            assertTrue(Files.exists(root.resolve(relative)), "$relative must remain inspectable after invalidation")
         }
+        val stale = service.open(root).readiness.staleArtifacts
+        assertTrue(app.melotrail.arrangement.WorkflowArtifact.ANALYSIS in stale)
+        assertTrue(app.melotrail.arrangement.WorkflowArtifact.COHESION in stale)
+        assertTrue(app.melotrail.arrangement.WorkflowArtifact.ARRANGEMENT in stale)
+        assertTrue(app.melotrail.arrangement.WorkflowArtifact.MASTER in stale)
     }
 
     @Test
@@ -176,7 +181,8 @@ class ProjectApplicationServiceTest {
         assertTrue(Files.isRegularFile(root.resolve(midi.feel.report)))
         assertTrue(rawBefore.contentEquals(Files.readAllBytes(root.resolve("midi/raw/A.mid"))))
         assertTrue(cleanBefore.contentEquals(Files.readAllBytes(root.resolve("midi/clean/A.mid"))))
-        assertFalse(Files.exists(root.resolve("analysis/A.json")))
+        assertTrue(Files.exists(root.resolve("analysis/A.json")))
+        assertTrue(app.melotrail.arrangement.WorkflowArtifact.ANALYSIS in selected.readiness.staleArtifacts)
         assertFalse(selected.parts.single().preparation.analyzed)
 
         service.selectMidiFeel(SelectMidiFeelRequest(root, "A", app.melotrail.arrangement.MidiAnalysisInput.REPAIRED))
