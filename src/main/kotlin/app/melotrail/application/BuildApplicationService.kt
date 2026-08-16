@@ -98,13 +98,13 @@ class DefaultBuildApplicationService(
                 coroutineContext.ensureActive()
                 val masteringInput = if (request.enableLoFi) {
                     val lofi = root.resolve("mix/lofi.wav")
-                    stage(progress, 6, "Applying LoFi", lofi) {
+                    stage(progress, 6, "Applying Lo-fi audio texture", lofi) {
                         publishWav(lofi, "lofi") { temporary -> applyLoFi(repaired, temporary) }
-                        requireCompatible(validate(repaired, "Repair"), validate(lofi, "LoFi"), "LoFi")
+                        requireCompatible(validate(repaired, "Repair"), validate(lofi, "Lo-fi audio texture"), "Lo-fi audio texture")
                     }
                     lofi
                 } else {
-                    progress.report(OperationProgress("build", 6, STAGE_COUNT, "Skipping LoFi; mastering repaired dry mix", repaired))
+                    progress.report(OperationProgress("build", 6, STAGE_COUNT, "Skipping Lo-fi audio texture; mastering repaired dry mix", repaired))
                     repaired
                 }
                 coroutineContext.ensureActive()
@@ -187,7 +187,7 @@ class DefaultBuildApplicationService(
             inputPcmBitDepth = 24, sampleRate = audio.sampleRate, channels = audio.channels, pcmBitDepth = 24,
             frameCount = audio.frames, durationSeconds = audio.frames.toDouble() / audio.sampleRate, peak = audio.peak,
             peakDb = if (audio.peak == 0.0) Double.NEGATIVE_INFINITY else 20.0 * kotlin.math.log10(audio.peak),
-            repairEnabled = true, loFiEnabled = request.enableLoFi,
+            repairEnabled = true, loFiAudioTextureEnabled = request.enableLoFi,
             mp3 = mp3?.let { DesktopMp3Metadata("song.mp3", digest(it), request.mp3BitrateKbps) }
         )
         val target = root.resolve("output/release.json")
@@ -214,7 +214,7 @@ class DefaultBuildApplicationService(
         val inputFingerprint: String, val inputSampleRate: Int, val inputChannels: Int, val inputPcmBitDepth: Int,
         val sampleRate: Int, val channels: Int, val pcmBitDepth: Int, val frameCount: Long, val durationSeconds: Double,
         val peak: Double, val peakDb: Double, val targetLufs: Double = -14.0, val truePeakCeilingDb: Double = -1.0,
-        val repairEnabled: Boolean, val loFiEnabled: Boolean, val mp3: DesktopMp3Metadata? = null
+        val repairEnabled: Boolean, val loFiAudioTextureEnabled: Boolean, val mp3: DesktopMp3Metadata? = null
     )
     @Serializable private data class DesktopMp3Metadata(val name: String, val fingerprint: String, val bitrateKbps: Int, val format: String = "MP3")
 

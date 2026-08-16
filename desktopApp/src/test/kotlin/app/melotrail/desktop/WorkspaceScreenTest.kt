@@ -232,6 +232,7 @@ class WorkspaceScreenTest {
         onNodeWithTag(WorkspaceTags.MIX_TRACK_PREFIX + "piano").assertExists()
         onNodeWithTag(WorkspaceTags.PLAYBACK_DRY).assertExists()
         onNodeWithTag(WorkspaceTags.PLAYBACK_LOFI).assertExists()
+        onAllNodesWithText("Lo-fi audio texture").assertCountEquals(2)
         onNodeWithTag(WorkspaceTags.PLAYBACK_MASTER).assertExists()
         onNodeWithTag(WorkspaceTags.PLAYBACK_SEEK).assertExists()
         onNodeWithTag(WorkspaceTags.PLAYBACK_VOLUME).assertExists()
@@ -360,6 +361,9 @@ class WorkspaceScreenTest {
         onNodeWithTag(WorkspaceTags.MIDI_QUALITY_PROFILE_PREFIX + "conservative").assertExists()
         onNodeWithTag(WorkspaceTags.MIDI_QUALITY_PROFILE_PREFIX + "transcription_safe").assertExists()
         onNodeWithTag(WorkspaceTags.MIDI_QUALITY_RETRY).assertExists()
+        onNodeWithTag(WorkspaceTags.MIDI_FEEL_ORIGINAL).assertExists()
+        onNodeWithTag(WorkspaceTags.MIDI_FEEL_LOFI).assertExists()
+        onNodeWithText("Lo-fi Feel is fixed at 80 BPM", substring = true).assertExists()
     }
 
     @Test

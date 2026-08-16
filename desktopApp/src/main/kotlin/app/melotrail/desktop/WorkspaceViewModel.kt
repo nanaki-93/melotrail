@@ -24,6 +24,7 @@ import app.melotrail.application.PartAnalysisStatus
 import app.melotrail.application.ProjectApplicationService
 import app.melotrail.application.ProjectSnapshot
 import app.melotrail.application.RetryMidiCleanupRequest
+import app.melotrail.application.SelectMidiFeelRequest
 import app.melotrail.application.AudioPreparationApplicationService
 import app.melotrail.application.AudioPreparationAvailability
 import app.melotrail.application.AudioPreparationSnapshot
@@ -34,6 +35,7 @@ import app.melotrail.application.UpdatePartRoleRequest
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.MidiCleanupOptions
 import app.melotrail.arrangement.MidiCleanupProfile
+import app.melotrail.arrangement.MidiAnalysisInput
 import app.melotrail.application.MidiQualityStatus
 import app.melotrail.preparation.InputCleanupMode
 import app.melotrail.preparation.TranscriptionInputArtifact
@@ -227,6 +229,7 @@ sealed interface WorkspaceOperation {
     data class InspectingPart(val id: String) : WorkspaceOperation
     data class ApplyingAudioCleanup(val id: String) : WorkspaceOperation
     data class RetryingMidiCleanup(val id: String, val progress: OperationProgress? = null) : WorkspaceOperation
+    data class SelectingMidiFeel(val id: String) : WorkspaceOperation
     data class TranscribingPart(val id: String) : WorkspaceOperation
     data class UpdatingPartRole(val id: String) : WorkspaceOperation
     data object SavingStructure : WorkspaceOperation
@@ -243,6 +246,7 @@ val WorkspaceOperation.isMutating: Boolean
         this is WorkspaceOperation.ImportingPart || this is WorkspaceOperation.AnalyzingPart ||
         this is WorkspaceOperation.InspectingPart || this is WorkspaceOperation.ApplyingAudioCleanup || this is WorkspaceOperation.TranscribingPart ||
         this is WorkspaceOperation.RetryingMidiCleanup ||
+        this is WorkspaceOperation.SelectingMidiFeel ||
         this is WorkspaceOperation.UpdatingPartRole || this is WorkspaceOperation.SavingStructure ||
         this is WorkspaceOperation.GeneratingArrangement || this is WorkspaceOperation.ApprovingArrangement
         || this is WorkspaceOperation.ApplyingMix || this is WorkspaceOperation.BuildingSong
@@ -327,6 +331,7 @@ sealed interface WorkspaceIntent {
     data class SelectMidiCleanupProfile(val profile: MidiCleanupProfile) : WorkspaceIntent
     data object RetryMidiCleanup : WorkspaceIntent
     data object ApproveMidiRepair : WorkspaceIntent
+    data class SelectMidiFeel(val input: MidiAnalysisInput) : WorkspaceIntent
     data object ConfirmTightenTiming : WorkspaceIntent
     data class SelectTranscriptionInput(val input: TranscriptionInputArtifact) : WorkspaceIntent
     data object TranscribeSelectedPart : WorkspaceIntent
@@ -440,6 +445,7 @@ class WorkspaceViewModel(
             is WorkspaceIntent.SelectMidiCleanupProfile -> mutableState.update { it.copy(midiQualityReview = it.midiQualityReview.copy(profile = intent.profile)) }
             WorkspaceIntent.RetryMidiCleanup -> retryMidiCleanup()
             WorkspaceIntent.ApproveMidiRepair -> approveMidiRepair()
+            is WorkspaceIntent.SelectMidiFeel -> selectMidiFeel(intent.input)
             WorkspaceIntent.ConfirmTightenTiming -> confirmTightenTiming()
             is WorkspaceIntent.SelectTranscriptionInput -> mutableState.update { it.copy(audioPreparation = it.audioPreparation.copy(transcriptionInput = intent.input)) }
             WorkspaceIntent.TranscribeSelectedPart -> transcribeSelectedPart()
@@ -773,6 +779,25 @@ class WorkspaceViewModel(
             runCatching { withContext(ioDispatcher) { projectService.approveMidiRepair(project.root, partId) } }
                 .onSuccess { snapshot -> mutableState.update { it.copy(project = snapshot, operation = WorkspaceOperation.Idle, notification = "MIDI repair approved. Analyze $partId next.") } }
                 .onFailure { failure -> fail("MIDI repair", failure.message ?: "Unable to approve MIDI repair for $partId.") }
+        }
+    }
+
+    private fun selectMidiFeel(input: MidiAnalysisInput) {
+        val project = state.value.project ?: return fail("Lo-fi Feel", "Open a project before choosing MIDI feel.")
+        val partId = state.value.selectedPartId ?: return fail("Lo-fi Feel", "Select a repaired MIDI part first.")
+        val part = project.parts.find { it.id == partId } ?: return fail("Lo-fi Feel", "Selected part is no longer available.")
+        if (part.preparation.midiQuality.status != MidiQualityStatus.CURRENT) return fail("Lo-fi Feel", "Approve a current MIDI repair before choosing a MIDI feel.")
+        if (state.value.operation.isMutating) return
+        val feedbackId = beginFeedback(OperationKind.MIDI_REPAIR, OperationPhase.VALIDATING, "Selecting ${if (input == MidiAnalysisInput.LOFI_FEEL) "Lo-fi Feel · 80 BPM + swing" else "Original feel"}…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.SelectingMidiFeel(partId), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { projectService.selectMidiFeel(SelectMidiFeelRequest(project.root, partId, input)) } }
+                .onSuccess { snapshot ->
+                    cancelPlaybackSession(resetState = true)
+                    val message = if (input == MidiAnalysisInput.LOFI_FEEL) "Lo-fi Feel · 80 BPM + swing selected. Preview A/B, then analyze $partId again." else "Original feel selected. Analyze $partId again."
+                    mutableState.update { current -> current.copy(project = snapshot, arrangement = null, operation = WorkspaceOperation.Idle, notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message) ?: current.operationFeedback, downstreamArtifactsStale = true) }
+                }
+                .onFailure { fail("Lo-fi Feel", it.message ?: "Unable to select MIDI feel for $partId.", sessionId = feedbackId) }
         }
     }
 

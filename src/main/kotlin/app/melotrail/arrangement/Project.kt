@@ -53,7 +53,14 @@ data class Project(
                     requireNotNull(midi.quality)
                 )
             }
-            projectRoot.resolve(clean).normalize()
+            when (midi.analysisInput) {
+                MidiAnalysisInput.REPAIRED -> projectRoot.resolve(clean).normalize()
+                MidiAnalysisInput.LOFI_FEEL -> {
+                    val feel = requireNotNull(midi.feel) { "Part '${part.id}' has no current Lo-fi Feel artifact." }
+                    MidiFeelReportStore.requireCurrent(projectRoot, part.id, clean, feel)
+                    projectRoot.resolve(feel.derived).normalize()
+                }
+            }
         }
     }
 
@@ -89,7 +96,11 @@ data class MidiReferences(
     val cleanup: MidiCleanupOptions? = null,
     val quality: String? = null,
     /** True automatically for conservative repairs; explicit only above report thresholds. */
-    val approvedRepair: Boolean = false
+    val approvedRepair: Boolean = false,
+    /** The sole MIDI artifact used by analysis and all downstream MIDI-first stages. */
+    val analysisInput: MidiAnalysisInput = MidiAnalysisInput.REPAIRED,
+    /** Optional derived MIDI; repaired MIDI remains immutable evidence. */
+    val feel: MidiFeelReferences? = null
 )
 
 /** Reference to the analysis JSON generated for a part, when available. */
@@ -175,6 +186,13 @@ object ProjectValidator {
                         }
                     }
                     midi.quality?.let { validateFileReference(root, it, "Part '${part.id}' MIDI quality report", errors) }
+                    midi.feel?.let { feel ->
+                        validateFileReference(root, feel.derived, "Part '${part.id}' Lo-fi Feel MIDI", errors)
+                        validateFileReference(root, feel.report, "Part '${part.id}' Lo-fi Feel report", errors)
+                    }
+                    if (midi.analysisInput == MidiAnalysisInput.LOFI_FEEL && midi.feel == null) {
+                        errors += "Part '${part.id}' selects Lo-fi Feel without a derived MIDI artifact"
+                    }
                 }
             }
             part.analysis?.let {

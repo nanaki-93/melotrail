@@ -309,6 +309,25 @@ class WorkspaceViewModelTest {
     }
 
     @Test
+    fun `Lo-fi Feel is an opt-in canonical analysis choice and invalidates downstream state`() = runTest {
+        val root = Path.of("build/lofi-feel-project")
+        val quality = app.melotrail.application.MidiQualitySummary(app.melotrail.application.MidiQualityStatus.CURRENT, app.melotrail.arrangement.MidiCleanupOptions())
+        val snapshot = projectSnapshot(root).copy(parts = listOf(part("A").copy(preparation = part("A").preparation.copy(midiQuality = quality))))
+        val service = FakeProjectService(result = snapshot)
+        val viewModel = WorkspaceViewModel(service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.SelectPart("A"))
+        viewModel.accept(WorkspaceIntent.SelectMidiFeel(app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL)); advanceUntilIdle()
+
+        assertEquals(app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL, service.midiFeelSelection?.input)
+        assertTrue(viewModel.state.value.downstreamArtifactsStale)
+        assertNull(viewModel.state.value.arrangement)
+        viewModel.accept(WorkspaceIntent.SelectMidiFeel(app.melotrail.arrangement.MidiAnalysisInput.REPAIRED)); advanceUntilIdle()
+        assertEquals(app.melotrail.arrangement.MidiAnalysisInput.REPAIRED, service.midiFeelSelection?.input)
+        viewModel.close()
+    }
+
+    @Test
     fun `stale MIDI quality retry failure remains actionable`() = runTest {
         val root = Path.of("build/stale-quality-project")
         val stale = app.melotrail.application.MidiQualitySummary(app.melotrail.application.MidiQualityStatus.STALE_OR_INVALID)
@@ -940,6 +959,7 @@ private class FakeProjectService(
     var created: CreateProjectRequest? = null
     var imported: ImportPartRequest? = null
     var midiCleanupRetry: app.melotrail.application.RetryMidiCleanupRequest? = null
+    var midiFeelSelection: app.melotrail.application.SelectMidiFeelRequest? = null
     var analyzed: AnalyzePartRequest? = null
     var updatedRole: UpdatePartRoleRequest? = null
     var savedStructure: SaveStructureRequest? = null
@@ -974,6 +994,11 @@ private class FakeProjectService(
     }
 
     override fun approveMidiRepair(root: Path, partId: String): ProjectSnapshot = checkNotNull(current)
+
+    override fun selectMidiFeel(request: app.melotrail.application.SelectMidiFeelRequest): ProjectSnapshot {
+        midiFeelSelection = request
+        return checkNotNull(current)
+    }
 
     override suspend fun inspectPart(
         request: app.melotrail.application.InspectPartRequest,

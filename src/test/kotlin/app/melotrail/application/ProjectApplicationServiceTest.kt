@@ -158,6 +158,32 @@ class ProjectApplicationServiceTest {
     }
 
     @Test
+    fun `Lo-fi Feel publishes a separate fixed artifact selects canonical analysis input and restores repaired MIDI`() {
+        val service = service()
+        val root = tempDir.resolve("lofi-feel")
+        val input = midi("lofi-source.mid")
+        service.create(CreateProjectRequest(root))
+        blocking { service.importPart(ImportPartRequest(root, "A", input)) }
+        blocking { service.retryMidiCleanup(RetryMidiCleanupRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions())) }
+        val rawBefore = Files.readAllBytes(root.resolve("midi/raw/A.mid"))
+        val cleanBefore = Files.readAllBytes(root.resolve("midi/clean/A.mid"))
+        Files.createDirectories(root.resolve("analysis")); Files.writeString(root.resolve("analysis/A.json"), "stale")
+
+        val selected = service.selectMidiFeel(SelectMidiFeelRequest(root, "A", app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL))
+        val midi = checkNotNull(ProjectStore.read(root).parts.single().midi)
+        assertEquals(app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL, midi.analysisInput)
+        assertTrue(Files.isRegularFile(root.resolve(checkNotNull(midi.feel).derived)))
+        assertTrue(Files.isRegularFile(root.resolve(midi.feel.report)))
+        assertTrue(rawBefore.contentEquals(Files.readAllBytes(root.resolve("midi/raw/A.mid"))))
+        assertTrue(cleanBefore.contentEquals(Files.readAllBytes(root.resolve("midi/clean/A.mid"))))
+        assertFalse(Files.exists(root.resolve("analysis/A.json")))
+        assertFalse(selected.parts.single().preparation.analyzed)
+
+        service.selectMidiFeel(SelectMidiFeelRequest(root, "A", app.melotrail.arrangement.MidiAnalysisInput.REPAIRED))
+        assertEquals(app.melotrail.arrangement.MidiAnalysisInput.REPAIRED, checkNotNull(ProjectStore.read(root).parts.single().midi).analysisInput)
+    }
+
+    @Test
     fun `rejects a conflicting mutation while an import is preparing MIDI`() = kotlinx.coroutines.runBlocking {
         val started = kotlinx.coroutines.CompletableDeferred<Unit>()
         val release = kotlinx.coroutines.CompletableDeferred<Unit>()

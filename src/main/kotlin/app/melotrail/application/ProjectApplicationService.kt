@@ -11,6 +11,12 @@ import app.melotrail.arrangement.MidiQualityReportStore
 import app.melotrail.arrangement.MidiQualityReporter
 import app.melotrail.arrangement.MidiQualityWarning
 import app.melotrail.arrangement.MidiReferences
+import app.melotrail.arrangement.MidiAnalysisInput
+import app.melotrail.arrangement.MidiFeelProfile
+import app.melotrail.arrangement.MidiFeelReferences
+import app.melotrail.arrangement.MidiFeelReport
+import app.melotrail.arrangement.MidiFeelReportStore
+import app.melotrail.arrangement.MidiLoFiFeelTransformer
 import app.melotrail.arrangement.Part
 import app.melotrail.arrangement.PartAnalysis
 import app.melotrail.arrangement.PartAnalysisReference
@@ -46,6 +52,7 @@ interface ProjectApplicationService {
     suspend fun importPart(request: ImportPartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
     suspend fun retryMidiCleanup(request: RetryMidiCleanupRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
     fun approveMidiRepair(root: Path, partId: String): ProjectSnapshot
+    fun selectMidiFeel(request: SelectMidiFeelRequest): ProjectSnapshot
     suspend fun inspectPart(request: InspectPartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
     suspend fun analyzePart(request: AnalyzePartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
     fun updatePart(request: UpdatePartRoleRequest): ProjectSnapshot
@@ -73,6 +80,9 @@ data class RetryMidiCleanupRequest(
     val partId: String,
     val cleanup: MidiCleanupOptions
 )
+
+/** Fixed named profile only. This is deliberately not a tempo/swing control surface. */
+data class SelectMidiFeelRequest(val root: Path, val partId: String, val input: MidiAnalysisInput)
 
 data class AnalyzePartRequest(val root: Path, val partId: String)
 data class InspectPartRequest(val root: Path, val partId: String)
@@ -147,7 +157,14 @@ data class PartPreparationSummary(
     val analyzed: Boolean,
     val ready: Boolean,
     val warnings: List<String>,
-    val midiQuality: MidiQualitySummary = MidiQualitySummary.legacyUnknown()
+    val midiQuality: MidiQualitySummary = MidiQualitySummary.legacyUnknown(),
+    val midiFeel: MidiFeelSummary = MidiFeelSummary()
+)
+
+data class MidiFeelSummary(
+    val selected: MidiAnalysisInput = MidiAnalysisInput.REPAIRED,
+    val available: Boolean = false,
+    val report: MidiFeelReport? = null
 )
 
 enum class MidiQualityStatus { CURRENT, APPROVAL_REQUIRED, LEGACY_UNKNOWN, STALE_OR_INVALID }
@@ -205,6 +222,7 @@ class DefaultProjectApplicationService(
     private val legacyPartAnalysis: LegacyPartAnalysisService,
     private val midiPartAnalyzer: MidiPartAnalyzer = MidiPartAnalyzer(),
     private val midiQualityReporter: MidiQualityReporter = MidiQualityReporter(),
+    private val midiFeelTransformer: MidiLoFiFeelTransformer = MidiLoFiFeelTransformer(),
     private val inputInspection: InputInspectionBoundary = object : InputInspectionBoundary {
         override suspend fun inspect(request: InputInspectionRequest): InputInspectionResult =
             InputInspectionResult.Rejected(InputInspectionError(
@@ -226,7 +244,7 @@ class DefaultProjectApplicationService(
         require(!Files.exists(root.resolve(ProjectStore.FILE_NAME))) { "Project already exists: ${root.resolve(ProjectStore.FILE_NAME)}" }
         val name = request.name ?: root.fileName?.toString().orEmpty()
         require(name.isNotBlank()) { "Project directory must have a name" }
-        listOf("source", "midi/raw", "midi/clean", "midi/quality", "midi/generated").forEach { Files.createDirectories(root.resolve(it)) }
+        listOf("source", "midi/raw", "midi/clean", "midi/quality", "midi/derived", "midi/feel", "midi/generated").forEach { Files.createDirectories(root.resolve(it)) }
         val project = ProjectStore.create(root, name, request.renderFormat)
         snapshot(root, project)
     }
@@ -345,7 +363,9 @@ class DefaultProjectApplicationService(
                         clean = root.relativize(cleanPath).toString().replace('\\', '/'),
                         cleanup = request.cleanup,
                         quality = qualityReference,
-                        approvedRepair = !report.approvalRequired
+                        approvedRepair = !report.approvalRequired,
+                        analysisInput = MidiAnalysisInput.REPAIRED,
+                        feel = null
                     )
                 ) else it
             })
@@ -385,6 +405,35 @@ class DefaultProjectApplicationService(
         snapshot(projectRoot, updated)
     }
 
+    override fun selectMidiFeel(request: SelectMidiFeelRequest): ProjectSnapshot = mutate(request.root) { root ->
+        val project = readValidProject(root)
+        require(project.version == Project.CURRENT_VERSION) { "Lo-fi Feel requires a MIDI-first project." }
+        val part = project.parts.find { it.id == request.partId } ?: throw IllegalArgumentException("Part not found: ${request.partId}")
+        val midi = requireNotNull(part.midi) { "Part '${part.id}' has no repaired MIDI." }
+        val clean = requireNotNull(midi.clean) { "Part '${part.id}' has no repaired MIDI. Run Repair MIDI first." }
+        if (midi.raw != null) {
+            MidiQualityReportStore.requireCurrent(root, part.id, midi.raw, clean, requireNotNull(midi.cleanup), requireNotNull(midi.quality))
+            val repair = MidiQualityReportStore.read(root, requireNotNull(midi.quality))
+            require(!repair.approvalRequired || midi.approvedRepair) { "Part '${part.id}' MIDI repair requires approval before selecting Lo-fi Feel." }
+        }
+        val selectedMidi = when (request.input) {
+            MidiAnalysisInput.REPAIRED -> midi.copy(analysisInput = MidiAnalysisInput.REPAIRED)
+            MidiAnalysisInput.LOFI_FEEL -> {
+                val profile = MidiFeelProfile.LOFI_80_SWING_V1
+                val derived = MidiFeelReportStore.derivedPath(root, part.id, profile)
+                val reportPath = MidiFeelReportStore.reportPath(root, part.id, profile)
+                val existing = midi.feel?.takeIf { it.profile == profile && MidiFeelReportStore.isCurrent(root, part.id, clean, it) }
+                val feel = existing ?: publishMidiFeel(root, part.id, clean, derived, reportPath, profile)
+                midi.copy(analysisInput = MidiAnalysisInput.LOFI_FEEL, feel = feel)
+            }
+        }
+        if (selectedMidi == midi) return@mutate snapshot(root, project)
+        val updated = project.copy(parts = project.parts.map { if (it.id == part.id) it.copy(analysis = null, midi = selectedMidi) else it })
+        ProjectStore.write(root, updated)
+        invalidateAfterMidiFeel(root, part.id)
+        snapshot(root, updated)
+    }
+
     override suspend fun analyzePart(request: AnalyzePartRequest, progress: ProgressSink): ProjectSnapshot = mutateSuspend(request.root) { root ->
         val project = readValidProject(root)
         val part = project.parts.find { it.id == request.partId } ?: throw IllegalArgumentException("Part not found: ${request.partId}")
@@ -398,9 +447,13 @@ class DefaultProjectApplicationService(
                 val report = MidiQualityReportStore.read(root, requireNotNull(midi.quality))
                 require(!report.approvalRequired || midi.approvedRepair) { "Part '${part.id}' MIDI repair requires approval before analysis." }
             }
-            val cleanMidi = root.resolve(cleanReference).normalize()
-            progress.report(OperationProgress("analyze-part", 1, 2, "Analyzing repaired MIDI", cleanMidi))
-            MidiAnalysisStore.write(root, project, request.partId, midiPartAnalyzer.analyze(cleanMidi, request.partId))
+            val analysisReference = when (midi.analysisInput) {
+                MidiAnalysisInput.REPAIRED -> cleanReference
+                MidiAnalysisInput.LOFI_FEEL -> requireNotNull(midi.feel).also { MidiFeelReportStore.requireCurrent(root, part.id, cleanReference, it) }.derived
+            }
+            val analysisMidi = safeDestination(root, analysisReference)
+            progress.report(OperationProgress("analyze-part", 1, 2, "Analyzing ${if (midi.analysisInput == MidiAnalysisInput.LOFI_FEEL) "Lo-fi Feel" else "repaired"} MIDI", analysisMidi))
+            MidiAnalysisStore.write(root, project, request.partId, midiPartAnalyzer.analyze(analysisMidi, request.partId))
         } else {
             val source = root.resolve(part.file).normalize()
             progress.report(OperationProgress("analyze-part", 1, 2, "Analyzing source audio", source))
@@ -520,6 +573,7 @@ class DefaultProjectApplicationService(
         val analyzed = analysis?.let { runCatching { it.summary(root) }.isSuccess } ?: false
         val preparedAudio = sourceType == PartSourceType.AUDIO && inspected &&
             report?.preparation == PreparationStatus.CLEANED && isWaveArtifact(InputInspectionPaths.cleanWav(root, id))
+        val feel = midiFeel(root, this, cleanMidi)
         val preparation = PartPreparationSummary(
             sourcePreserved = sourcePreserved,
             inspected = inspected,
@@ -529,7 +583,8 @@ class DefaultProjectApplicationService(
             analyzed = analyzed,
             ready = sourcePreserved && inspected && cleanMidi && analyzed && quality.status == MidiQualityStatus.CURRENT,
             warnings = warnings + quality.warnings.map { it.message },
-            midiQuality = quality
+            midiQuality = quality,
+            midiFeel = feel
         )
         return PartSummary(id, role, file, sourcePath.fileName.toString(), sourceType, analysis?.summary(root), preparation)
     }
@@ -546,6 +601,15 @@ class DefaultProjectApplicationService(
         }
         val status = if (report.approvalRequired && !midi.approvedRepair) MidiQualityStatus.APPROVAL_REQUIRED else MidiQualityStatus.CURRENT
         return MidiQualitySummary(status, report.cleanup, report.warnings, report.recommendations, report)
+    }
+
+    private fun midiFeel(root: Path, part: Part, cleanMidi: Boolean): MidiFeelSummary {
+        val midi = part.midi ?: return MidiFeelSummary()
+        val references = midi.feel ?: return MidiFeelSummary(midi.analysisInput)
+        val clean = midi.clean ?: return MidiFeelSummary(midi.analysisInput)
+        val report = runCatching { MidiFeelReportStore.read(root, references.report) }.getOrNull()
+        val current = cleanMidi && MidiFeelReportStore.isCurrent(root, part.id, clean, references)
+        return MidiFeelSummary(midi.analysisInput, current, report?.takeIf { current })
     }
 
     private fun isProjectFile(root: Path, reference: String): Boolean = runCatching {
@@ -652,6 +716,12 @@ class DefaultProjectApplicationService(
 
     /** A new repair invalidates only named derived artifacts; source and raw MIDI are never touched. */
     private fun invalidateAfterMidiRepair(root: Path, partId: String) {
+        deleteTree(root.resolve("midi/derived/$partId"))
+        deleteTree(root.resolve("midi/feel/$partId"))
+        invalidateMidiFirstDerivatives(root, partId)
+    }
+
+    private fun invalidateMidiFirstDerivatives(root: Path, partId: String) {
         Files.deleteIfExists(root.resolve("analysis/$partId.json"))
         listOf(
             "midi/generated", "cohesion", "stems", "mix", "output"
@@ -660,6 +730,37 @@ class DefaultProjectApplicationService(
             "song_plan.json", "section_variations.json", "arrangement.json", "arrangement.draft.json", "arrangement_v1.json",
             "stem-render.json", "quality-gate.json", "release.json"
         ).forEach { Files.deleteIfExists(root.resolve(it)) }
+    }
+
+    /** Switching canonical analysis input invalidates analysis/release derivatives, never repair evidence. */
+    private fun invalidateAfterMidiFeel(root: Path, partId: String) = invalidateMidiFirstDerivatives(root, partId)
+
+    private fun publishMidiFeel(root: Path, partId: String, cleanReference: String, derived: Path, reportPath: Path, profile: MidiFeelProfile): MidiFeelReferences {
+        val work = temporaryMidi(derived)
+        val oldDerived = derived.takeIf(Files::isRegularFile)?.let { Files.readAllBytes(it) }
+        val oldReport = reportPath.takeIf(Files::isRegularFile)?.let { Files.readAllBytes(it) }
+        var derivedPublished = false
+        var reportPublished = false
+        try {
+            val result = midiFeelTransformer.transform(safeDestination(root, cleanReference), work, partId, profile)
+            requireMidiArtifact(work, "Lo-fi Feel")
+            atomicReplace(work, derived, "Lo-fi Feel MIDI")
+            derivedPublished = true
+            val report = MidiFeelReportStore.write(root, result.report)
+            reportPublished = true
+            return MidiFeelReferences(profile, root.relativize(derived).toString().replace('\\', '/'), root.relativize(report).toString().replace('\\', '/'))
+        } catch (failure: Exception) {
+            if (derivedPublished) runCatching { restoreArtifact(derived, oldDerived, "Lo-fi Feel MIDI rollback") }
+            if (reportPublished) runCatching { restoreArtifact(reportPath, oldReport, "Lo-fi Feel report rollback") }
+            throw failure
+        } finally { Files.deleteIfExists(work) }
+    }
+
+    private fun restoreArtifact(target: Path, old: ByteArray?, stage: String) {
+        if (old == null) Files.deleteIfExists(target) else {
+            val temporary = target.resolveSibling(".${target.fileName}.restore-${UUID.randomUUID()}.tmp")
+            try { Files.write(temporary, old); atomicReplace(temporary, target, stage) } finally { Files.deleteIfExists(temporary) }
+        }
     }
 
     private fun deleteTree(target: Path) {

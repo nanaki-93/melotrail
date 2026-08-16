@@ -5,6 +5,7 @@ import app.melotrail.arrangement.InstrumentRenderer
 import app.melotrail.arrangement.LogicalInstrument
 import app.melotrail.arrangement.MidiAnalysis
 import app.melotrail.arrangement.MidiQualityReportStore
+import app.melotrail.arrangement.MidiFeelReportStore
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.preparation.InputInspectionPaths
@@ -33,7 +34,7 @@ data class PreviewRequest(
 
 /** Bounded monitor choices for a selected audio part; neither changes project release artifacts. */
 enum class PreviewAudioSource { ORIGINAL, PREPARED_CLEAN }
-enum class PreviewMidiSource { RAW, REPAIRED }
+enum class PreviewMidiSource { RAW, REPAIRED, LOFI_FEEL }
 
 enum class PreviewStage { VALIDATE, DECODE_OR_RENDER, VALIDATE_ARTIFACT, REUSE_OR_PUBLISH }
 
@@ -205,10 +206,18 @@ class DefaultPartPreviewApplicationService(
         val reference = when (source) {
             PreviewMidiSource.RAW -> midi.raw
             PreviewMidiSource.REPAIRED -> midi.clean
+            PreviewMidiSource.LOFI_FEEL -> midi.feel?.derived
         } ?: return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "${source.name.lowercase().replaceFirstChar(Char::uppercase)} MIDI is not available for '${part.id}'.")
         if (source == PreviewMidiSource.REPAIRED && midi.raw != null) {
             val current = midi.cleanup != null && midi.quality != null && MidiQualityReportStore.isCurrent(root, part.id, midi.raw, reference, midi.cleanup, midi.quality)
             if (!current) return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Repaired MIDI quality evidence is missing or stale. Run Repair MIDI again.")
+        }
+        if (source == PreviewMidiSource.LOFI_FEEL) {
+            val clean = midi.clean
+            val feel = midi.feel
+            if (clean == null || feel == null || !MidiFeelReportStore.isCurrent(root, part.id, clean, feel)) {
+                return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Lo-fi Feel MIDI is unavailable or stale. Choose Original feel or regenerate the fixed profile.")
+            }
         }
         if (format == null) return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Project render format is required before previewing MIDI.")
         val midiPath = root.resolve(reference).normalize()

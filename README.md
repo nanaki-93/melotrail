@@ -217,6 +217,16 @@ strictly greater than 0.0 and at most 1.0. It is the only profile that can
 quantize. Every response reports the profile, before/after note and event
 counts, and each applied-change count.
 
+### Fixed Lo-fi MIDI Feel
+
+After approved MIDI repair, the desktop can retain **Original feel** or create
+the separate `lofi-80-swing-v1` derived MIDI artifact and select it as the
+canonical analysis input. Version 1 is fixed at exactly **80 BPM** with a
+code-owned **58% eighth-note swing**. It is an opt-in MIDI timing transform,
+not the final **Lo-fi audio texture** effect; raw and repaired MIDI remain
+unchanged, and switching either choice invalidates analysis and later derived
+artifacts.
+
 ```bash
 make cli ARGS='part repair ./projects/song-001 --id A'
 make cli ARGS='midi-clean --input ./projects/song-001/midi/raw/A.mid --output ./projects/song-001/midi/clean/A.mid --profile transcription-safe'

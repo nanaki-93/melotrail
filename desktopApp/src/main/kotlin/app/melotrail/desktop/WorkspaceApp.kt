@@ -122,6 +122,8 @@ object WorkspaceTags {
     const val MIDI_QUALITY_PANEL = "midi-quality-panel"
     const val MIDI_QUALITY_RETRY = "midi-quality-retry"
     const val MIDI_QUALITY_PROFILE_PREFIX = "midi-quality-profile-"
+    const val MIDI_FEEL_ORIGINAL = "midi-feel-original"
+    const val MIDI_FEEL_LOFI = "midi-feel-lofi"
     const val SOUND_LIBRARY_SETTINGS = "sound-library-settings"
     const val SOUND_LIBRARY_CHOOSE = "sound-library-choose"
     const val SOUND_LIBRARY_CLEAR = "sound-library-clear"
@@ -458,6 +460,12 @@ private fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (Workspace
                 onClick = { onIntent(WorkspaceIntent.PreviewMidiPart(part.id, app.melotrail.application.PreviewMidiSource.REPAIRED)) },
                 enabled = !state.operation.isMutating && midiPreviewReady && part.preparation.cleanMidi
             ) { Text("Preview repaired MIDI") }
+            if (part.preparation.midiFeel.available) {
+                OutlinedButton(
+                    onClick = { onIntent(WorkspaceIntent.PreviewMidiPart(part.id, app.melotrail.application.PreviewMidiSource.LOFI_FEEL)) },
+                    enabled = !state.operation.isMutating && midiPreviewReady
+                ) { Text("Preview Lo-fi Feel") }
+            }
         }
     }
     when (quality.status) {
@@ -503,6 +511,22 @@ private fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (Workspace
                 else -> "This part is ready for structure and arrangement."
             }
             Text(next, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
+            Text("Lo-fi Feel", style = MaterialTheme.typography.labelLarge)
+            Text("Choose the canonical analysis input. Lo-fi Feel is fixed at 80 BPM with the documented 58% eighth-note swing; it does not apply audio texture.", style = MaterialTheme.typography.bodySmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                OutlinedButton(
+                    onClick = { onIntent(WorkspaceIntent.SelectMidiFeel(app.melotrail.arrangement.MidiAnalysisInput.REPAIRED)) },
+                    enabled = !state.operation.isMutating,
+                    modifier = Modifier.semantics { testTag = WorkspaceTags.MIDI_FEEL_ORIGINAL }
+                ) { Text(if (part.preparation.midiFeel.selected == app.melotrail.arrangement.MidiAnalysisInput.REPAIRED) "Original feel ✓" else "Original feel") }
+                OutlinedButton(
+                    onClick = { onIntent(WorkspaceIntent.SelectMidiFeel(app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL)) },
+                    enabled = !state.operation.isMutating,
+                    modifier = Modifier.semantics { testTag = WorkspaceTags.MIDI_FEEL_LOFI }
+                ) { Text(if (part.preparation.midiFeel.selected == app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL) "Lo-fi feel · 80 BPM + swing ✓" else "Lo-fi feel · 80 BPM + swing") }
+            }
+            if (part.preparation.midiFeel.available) Text("A/B preview uses the same monitor-volume control for repaired MIDI and Lo-fi Feel.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 
@@ -1010,7 +1034,7 @@ private fun MixPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Uni
     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
     Text("Build options", style = MaterialTheme.typography.labelLarge)
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Checkbox(state.buildOptions.loFi, { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(loFi = it))) }, enabled = !disabled); Text("LoFi", modifier = Modifier.padding(top = 12.dp))
+        Checkbox(state.buildOptions.loFi, { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(loFi = it))) }, enabled = !disabled); Text("Lo-fi audio texture", modifier = Modifier.padding(top = 12.dp))
         Checkbox(state.buildOptions.mp3, { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(mp3 = it))) }, enabled = !disabled); Text("MP3", modifier = Modifier.padding(top = 12.dp))
     }
     BuildLifecycle(state, onIntent)
@@ -1026,7 +1050,7 @@ private fun BuildLifecycle(state: WorkspaceUiState, onIntent: (WorkspaceIntent) 
     ) {
         Text("Build Song", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
         Text(buildSongPrerequisite(state), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("The service validates, generates/reuses MIDI and stems, mixes, repairs, optionally applies LoFi/MP3, masters, then writes release metadata.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("The service validates, generates/reuses MIDI and stems, mixes, repairs, optionally applies Lo-fi audio texture/MP3, masters, then writes release metadata.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text("Stems are reused only when their canonical fingerprints are current; cancellation waits for the current atomic stage.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (progress != null) {
             LinearProgressIndicator(progress = { progress.stageIndex.toFloat() / progress.stageCount }, modifier = Modifier.fillMaxWidth())
@@ -1038,7 +1062,7 @@ private fun BuildLifecycle(state: WorkspaceUiState, onIntent: (WorkspaceIntent) 
         }
         state.project?.readiness?.let { readiness ->
             Text(
-                "Available: dry ${availabilityLabel(readiness.dryMixAvailable)}, LoFi ${availabilityLabel(readiness.loFiMixAvailable)}, master ${availabilityLabel(readiness.masterAvailable)}, release ${availabilityLabel(readiness.releaseAvailable)}.",
+                "Available: dry ${availabilityLabel(readiness.dryMixAvailable)}, Lo-fi audio texture ${availabilityLabel(readiness.loFiMixAvailable)}, master ${availabilityLabel(readiness.masterAvailable)}, release ${availabilityLabel(readiness.releaseAvailable)}.",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1066,7 +1090,7 @@ private fun PlaybackSourceSelector(state: WorkspaceUiState, onIntent: (Workspace
     Text("Choose the release artifact controlled by the persistent footer transport.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
         OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectPlaybackSource(PlaybackSource.DRY)) }, enabled = enabled(PlaybackSource.DRY), modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_DRY }) { Text("Dry") }
-        OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectPlaybackSource(PlaybackSource.LOFI)) }, enabled = enabled(PlaybackSource.LOFI), modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_LOFI }) { Text("LoFi") }
+        OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectPlaybackSource(PlaybackSource.LOFI)) }, enabled = enabled(PlaybackSource.LOFI), modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_LOFI }) { Text("Lo-fi audio texture") }
         OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectPlaybackSource(PlaybackSource.MASTER)) }, enabled = enabled(PlaybackSource.MASTER), modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_MASTER }) { Text("Master") }
     }
     val selectedEnabled = enabled(source)
@@ -1194,6 +1218,7 @@ private fun statusText(state: WorkspaceUiState): String = when (val operation = 
     is WorkspaceOperation.InspectingPart -> "Inspecting preserved source for ${operation.id}…"
     is WorkspaceOperation.ApplyingAudioCleanup -> "Applying selected cleanup for ${operation.id}…"
     is WorkspaceOperation.RetryingMidiCleanup -> "Retrying MIDI cleanup for ${operation.id}…"
+    is WorkspaceOperation.SelectingMidiFeel -> "Selecting Lo-fi Feel for ${operation.id}…"
     is WorkspaceOperation.TranscribingPart -> "Running transcription quality gate for ${operation.id}…"
     is WorkspaceOperation.UpdatingPartRole -> "Saving ${operation.id} role…"
     WorkspaceOperation.SavingStructure -> "Saving song structure…"
