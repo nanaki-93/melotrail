@@ -175,7 +175,9 @@ data class PartSummary(
         analyzed = false,
         ready = false,
         warnings = emptyList()
-    )
+    ),
+    /** Read by the application service from the canonical immutable source; UI never touches files. */
+    val sourceSizeBytes: Long? = null
 )
 
 /** Truthful, artifact-derived input state for one canonical project part. */
@@ -653,7 +655,10 @@ class DefaultProjectApplicationService(
             midiQuality = quality,
             midiFeel = feel
         )
-        return PartSummary(id, role, file, sourcePath.fileName.toString(), sourceType, analysis?.summary(root), preparation)
+        val sourceSize = root.resolve(file).takeIf { sourcePreserved }?.let { path ->
+            runCatching { Files.size(path) }.getOrNull()
+        }
+        return PartSummary(id, role, file, sourcePath.fileName.toString(), sourceType, analysis?.summary(root), preparation, sourceSize)
     }
 
     private fun midiQuality(root: Path, part: Part, cleanMidi: Boolean): MidiQualitySummary {

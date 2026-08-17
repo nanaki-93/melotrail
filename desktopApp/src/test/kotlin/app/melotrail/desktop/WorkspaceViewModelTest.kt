@@ -126,7 +126,7 @@ class WorkspaceViewModelTest {
 
         assertIs<PartPrimaryAction.PrepareMidi>(primaryPartAction(raw))
         assertIs<PartPrimaryAction.ReviewRepair>(primaryPartAction(review))
-        assertIs<PartPrimaryAction.AddToStructure>(primaryPartAction(ready))
+        assertIs<PartPrimaryAction.ContinueToStructure>(primaryPartAction(ready))
         assertIs<PartPrimaryAction.ApplyLoFiChange>(primaryPartAction(ready, app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL))
     }
 
@@ -422,6 +422,22 @@ class WorkspaceViewModelTest {
         assertEquals(selected, viewModel.state.value.dialog)
         assertEquals(ImportSourceKind.MIDI, detectImportSourceKind(Path.of("intro.midi")))
         assertEquals(ImportSourceKind.WAV, detectImportSourceKind(Path.of("intro.wave")))
+        viewModel.close()
+    }
+
+    @Test
+    fun `dropped source enters the same import draft and remains unimported until confirmation`() = runTest {
+        val root = Path.of("build/dropped-import-project")
+        val service = FakeProjectService(result = projectSnapshot(root))
+        val viewModel = WorkspaceViewModel(service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+
+        viewModel.accept(WorkspaceIntent.ImportSourceChosen(Path.of("dropped-song.wav")))
+
+        val draft = assertIs<WorkspaceDialog.ImportPart>(viewModel.state.value.dialog)
+        assertEquals(ImportSourceKind.WAV, draft.detectedType)
+        assertEquals("dropped-song", draft.id)
+        assertNull(service.imported)
         viewModel.close()
     }
 

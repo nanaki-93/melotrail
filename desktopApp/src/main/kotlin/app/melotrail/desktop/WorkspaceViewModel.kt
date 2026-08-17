@@ -327,24 +327,28 @@ enum class ImportSourceKind(val label: String, val isAudio: Boolean) {
 sealed interface PartPrimaryAction {
     data class PrepareMidi(val partId: String) : PartPrimaryAction
     data class ReviewRepair(val partId: String) : PartPrimaryAction
+    data class InspectOrTranscribeAudio(val partId: String, val inspected: Boolean) : PartPrimaryAction
     data class ApplyLoFiChange(val partId: String) : PartPrimaryAction
-    data class AddToStructure(val partId: String) : PartPrimaryAction
+    data class ContinueToStructure(val partId: String) : PartPrimaryAction
     data class FixIssue(val partId: String) : PartPrimaryAction
 }
 
 internal fun primaryPartAction(part: app.melotrail.application.PartSummary, pendingMidiFeel: MidiAnalysisInput? = null): PartPrimaryAction = when {
-    part.preparation.midiQuality.status == MidiQualityStatus.APPROVAL_REQUIRED -> PartPrimaryAction.ReviewRepair(part.id)
     pendingMidiFeel != null && pendingMidiFeel != part.preparation.midiFeel.selected -> PartPrimaryAction.ApplyLoFiChange(part.id)
+    part.preparation.midiQuality.status == MidiQualityStatus.APPROVAL_REQUIRED -> PartPrimaryAction.ReviewRepair(part.id)
     part.preparation.rawMidi && part.preparation.midiQuality.status == MidiQualityStatus.STALE_OR_INVALID -> PartPrimaryAction.PrepareMidi(part.id)
-    part.analysis?.status == PartAnalysisStatus.MIDI -> PartPrimaryAction.AddToStructure(part.id)
+    part.preparation.warnings.isNotEmpty() -> PartPrimaryAction.FixIssue(part.id)
+    part.sourceType == PartSourceType.AUDIO && !part.preparation.rawMidi -> PartPrimaryAction.InspectOrTranscribeAudio(part.id, part.preparation.inspected)
+    part.analysis?.status == PartAnalysisStatus.MIDI -> PartPrimaryAction.ContinueToStructure(part.id)
     else -> PartPrimaryAction.FixIssue(part.id)
 }
 
 internal fun PartPrimaryAction.label(): String = when (this) {
     is PartPrimaryAction.PrepareMidi -> "Prepare MIDI"
     is PartPrimaryAction.ReviewRepair -> "Review repair"
+    is PartPrimaryAction.InspectOrTranscribeAudio -> if (inspected) "Transcribe solo piano" else "Inspect audio"
     is PartPrimaryAction.ApplyLoFiChange -> "Apply Lo-fi change"
-    is PartPrimaryAction.AddToStructure -> "Add to structure"
+    is PartPrimaryAction.ContinueToStructure -> "Continue to Structure"
     is PartPrimaryAction.FixIssue -> "Fix issue"
 }
 
@@ -738,8 +742,8 @@ class WorkspaceViewModel(
     }
 
     private fun updateImportSource(source: Path?) {
-        val draft = state.value.dialog as? WorkspaceDialog.ImportPart ?: return
         if (source == null) return
+        val draft = state.value.dialog as? WorkspaceDialog.ImportPart ?: WorkspaceDialog.ImportPart()
         val type = detectImportSourceKind(source)
         val size = runCatching { Files.size(source) }.getOrNull()
         val message = when {

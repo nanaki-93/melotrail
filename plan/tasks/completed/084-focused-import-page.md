@@ -2,7 +2,7 @@
 
 ## Goal
 
-Build the standalone Import destination from `../pictures/App-pages.png` and
+Build the standalone Import destination from `../../pictures/App-pages.png` and
 give every imported part one clear, state-derived next action.
 
 ## Dependencies
@@ -39,7 +39,7 @@ give every imported part one clear, state-derived next action.
 - Interaction tests prove each primary CTA dispatches the expected typed intent
   and unsupported input never appears imported.
 - Capture and overlay a deterministic Import golden against the numbered Import
-  region of `../pictures/App-pages.png`.
+  region of `../../pictures/App-pages.png`.
 - Run `./gradlew :desktopApp:test :desktopApp:build`.
 
 ## Out of scope
