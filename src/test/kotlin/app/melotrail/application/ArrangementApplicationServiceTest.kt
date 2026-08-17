@@ -16,6 +16,10 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
+import javax.sound.midi.MidiEvent
+import javax.sound.midi.MidiSystem
+import javax.sound.midi.Sequence
+import javax.sound.midi.ShortMessage
 
 class ArrangementApplicationServiceTest {
     @TempDir lateinit var tempDir: Path
@@ -23,6 +27,7 @@ class ArrangementApplicationServiceTest {
     @Test
     fun `deterministic generation writes an approved inspectable arrangement snapshot`() = runBlocking {
         val root = project("approved")
+        DefaultCohesionApplicationService().generate(GenerateCohesionRequest(root))
         val result = DefaultArrangementApplicationService(libraryRoot = Path.of("sounds")).generate(GenerateArrangementRequest(root, instruments = listOf("piano", "bass")))
 
         assertTrue(Files.isRegularFile(root.resolve("song_plan.json")))
@@ -37,6 +42,7 @@ class ArrangementApplicationServiceTest {
     @Test
     fun `Qwen mode always creates a draft that requires explicit approval`() = runBlocking {
         val root = project("draft")
+        DefaultCohesionApplicationService().generate(GenerateCohesionRequest(root))
         val service = DefaultArrangementApplicationService(
             deterministicGlobalPlanner = app.melotrail.arrangement.DeterministicGlobalSongPlanner(),
             qwenGlobalPlanner = app.melotrail.arrangement.DeterministicGlobalSongPlanner(),
@@ -59,11 +65,17 @@ class ArrangementApplicationServiceTest {
     private fun project(name: String): Path {
         val root = tempDir.resolve(name)
         Files.createDirectories(root.resolve("source")); Files.createDirectories(root.resolve("midi/clean"))
-        Files.write(root.resolve("source/A.mid"), byteArrayOf(0x4d, 0x54, 0x68, 0x64))
-        Files.write(root.resolve("midi/clean/A.mid"), byteArrayOf(0x4d, 0x54, 0x68, 0x64))
+        writeMidi(root.resolve("source/A.mid")); writeMidi(root.resolve("midi/clean/A.mid"))
         val project = Project(Project.CURRENT_VERSION, name, listOf(Part("A", "source/A.mid", "verse", midi = MidiReferences(clean = "midi/clean/A.mid"))), listOf("A"), RenderFormat())
         ProjectStore.write(root, project)
         MidiAnalysisStore.write(root, project, "A", MidiAnalysis(partId = "A", ppq = 480, durationTicks = 1920, durationSeconds = 2.0, tempoMap = listOf(MidiTempoChange(0, 120.0)), timeSignatures = listOf(MidiTimeSignature(0, 4, 4)), bars = 1, beats = 4.0, noteCount = 4, noteDensity = 0.25, rhythmicDensity = 0.5, energy = 0.5))
         return root
+    }
+
+    private fun writeMidi(path: Path) {
+        val sequence = Sequence(Sequence.PPQ, 480); val track = sequence.createTrack()
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, 60, 90), 0))
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, 60, 0), 1_920))
+        MidiSystem.write(sequence, 1, path.toFile())
     }
 }

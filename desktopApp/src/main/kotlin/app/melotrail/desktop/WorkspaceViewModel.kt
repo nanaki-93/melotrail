@@ -5,6 +5,11 @@ import app.melotrail.application.ArrangementApplicationService
 import app.melotrail.application.ArrangementPlannerKind
 import app.melotrail.application.ArrangementSnapshot
 import app.melotrail.application.CreateProjectRequest
+import app.melotrail.application.CohesionApplicationService
+import app.melotrail.application.CohesionPlannerKind
+import app.melotrail.application.CohesionSnapshot
+import app.melotrail.application.DefaultCohesionApplicationService
+import app.melotrail.application.GenerateCohesionRequest
 import app.melotrail.application.DefaultArrangementApplicationService
 import app.melotrail.application.GenerateArrangementRequest
 import app.melotrail.application.ImportPartRequest
@@ -70,6 +75,8 @@ data class WorkspaceDispatchers(
 
 data class WorkspaceUiState(
     val project: ProjectSnapshot? = null,
+    /** Immutable review model; composables never inspect cohesion files. */
+    val cohesion: CohesionSnapshot? = null,
     val arrangement: ArrangementSnapshot? = null,
     val mix: MixSnapshot? = null,
     val buildOptions: BuildOptionsDraft = BuildOptionsDraft(),
@@ -82,6 +89,7 @@ data class WorkspaceUiState(
     val midiQualityReview: MidiQualityReviewDraft = MidiQualityReviewDraft(),
     val audioPreparation: AudioPreparationUiState = AudioPreparationUiState(),
     val arrangementDraft: ArrangementDraft = ArrangementDraft(),
+    val cohesionDraft: CohesionDraft = CohesionDraft(),
     val selectedArrangementSection: Int? = null,
     val operation: WorkspaceOperation = WorkspaceOperation.Idle,
     val operationFeedback: OperationFeedback = OperationFeedback.idle(),
@@ -231,6 +239,8 @@ data class ArrangementDraft(
     val instruments: Set<String> = setOf("piano")
 )
 
+data class CohesionDraft(val planner: CohesionPlannerKind = CohesionPlannerKind.DETERMINISTIC)
+
 sealed interface WorkspaceOperation {
     data object Idle : WorkspaceOperation
     data class OpeningProject(val root: Path) : WorkspaceOperation
@@ -244,6 +254,8 @@ sealed interface WorkspaceOperation {
     data class TranscribingPart(val id: String) : WorkspaceOperation
     data class UpdatingPartRole(val id: String) : WorkspaceOperation
     data object SavingStructure : WorkspaceOperation
+    data class GeneratingCohesion(val progress: OperationProgress? = null) : WorkspaceOperation
+    data object ApprovingCohesion : WorkspaceOperation
     data class GeneratingArrangement(val progress: OperationProgress? = null) : WorkspaceOperation
     data class ApplyingMix(val progress: OperationProgress? = null) : WorkspaceOperation
     data class BuildingSong(val progress: OperationProgress? = null) : WorkspaceOperation
@@ -260,6 +272,7 @@ val WorkspaceOperation.isMutating: Boolean
         this is WorkspaceOperation.RetryingMidiCleanup ||
         this is WorkspaceOperation.SelectingMidiFeel ||
         this is WorkspaceOperation.UpdatingPartRole || this is WorkspaceOperation.SavingStructure ||
+        this is WorkspaceOperation.GeneratingCohesion || this is WorkspaceOperation.ApprovingCohesion ||
         this is WorkspaceOperation.GeneratingArrangement || this is WorkspaceOperation.ApprovingArrangement
         || this is WorkspaceOperation.ApplyingMix || this is WorkspaceOperation.BuildingSong || this is WorkspaceOperation.ExportingCommercialProvenance
 
@@ -316,6 +329,7 @@ sealed interface WorkspaceRetry {
     data class ApplyMidiFeel(val root: Path, val partId: String, val input: MidiAnalysisInput) : WorkspaceRetry
     data class Transcribe(val root: Path, val partId: String, val selectedInput: TranscriptionInputArtifact) : WorkspaceRetry
     data class GenerateArrangement(val request: GenerateArrangementRequest) : WorkspaceRetry
+    data class GenerateCohesion(val request: GenerateCohesionRequest) : WorkspaceRetry
 }
 
 sealed interface WorkspaceIntent {
@@ -369,6 +383,7 @@ sealed interface WorkspaceIntent {
     data class MoveStructurePart(val fromIndex: Int, val toIndex: Int) : WorkspaceIntent
     data object ClearStructure : WorkspaceIntent
     data class UpdateArrangementPlanner(val planner: ArrangementPlannerKind) : WorkspaceIntent
+    data class UpdateCohesionPlanner(val planner: CohesionPlannerKind) : WorkspaceIntent
     data class UpdateArrangementStyle(val style: String) : WorkspaceIntent
     data class ToggleArrangementInstrument(val instrument: String) : WorkspaceIntent
     data class UpdateMixSetting(val instrument: String, val setting: LogicalMixSetting) : WorkspaceIntent
@@ -383,6 +398,9 @@ sealed interface WorkspaceIntent {
     data class SeekPlayback(val seconds: Double) : WorkspaceIntent
     data class SetPlaybackVolume(val volume: Double) : WorkspaceIntent
     data object GenerateArrangement : WorkspaceIntent
+    data object GenerateCohesion : WorkspaceIntent
+    data object ApproveCohesion : WorkspaceIntent
+    data object RejectCohesion : WorkspaceIntent
     data object PreviewArrangement : WorkspaceIntent
     data object ApproveArrangement : WorkspaceIntent
     data class SelectArrangementSection(val index: Int?) : WorkspaceIntent
@@ -401,6 +419,7 @@ class WorkspaceViewModel(
     private val runtimeReadinessService: RuntimeReadinessService = UnavailableRuntimeReadinessService,
     private val libraryRoot: Path = Path.of(System.getProperty("java.io.tmpdir"), "melotrail", "missing-sound-library"),
     private val arrangementService: ArrangementApplicationService = DefaultArrangementApplicationService(libraryRoot = libraryRoot),
+    private val cohesionService: CohesionApplicationService = DefaultCohesionApplicationService(),
     private val mixService: MixApplicationService = DefaultMixApplicationService(),
     private val buildService: BuildApplicationService? = null,
     private val player: ArtifactAudioPlayer? = null,
@@ -487,6 +506,7 @@ class WorkspaceViewModel(
             is WorkspaceIntent.MoveStructurePart -> moveStructurePart(intent.fromIndex, intent.toIndex)
             WorkspaceIntent.ClearStructure -> saveStructure(emptyList())
             is WorkspaceIntent.UpdateArrangementPlanner -> updateArrangementPlanner(intent.planner)
+            is WorkspaceIntent.UpdateCohesionPlanner -> mutableState.update { it.copy(cohesionDraft = it.cohesionDraft.copy(planner = intent.planner), notification = null) }
             is WorkspaceIntent.UpdateArrangementStyle -> mutableState.update { it.copy(arrangementDraft = it.arrangementDraft.copy(style = intent.style), arrangementDraftDirty = true) }
             is WorkspaceIntent.ToggleArrangementInstrument -> toggleArrangementInstrument(intent.instrument)
             is WorkspaceIntent.UpdateMixSetting -> updateMixSetting(intent.instrument, intent.setting)
@@ -501,6 +521,9 @@ class WorkspaceViewModel(
             is WorkspaceIntent.SeekPlayback -> seekPlaybackSession(intent.seconds)
             is WorkspaceIntent.SetPlaybackVolume -> setPlaybackVolume(intent.volume)
             WorkspaceIntent.GenerateArrangement -> generateArrangement()
+            WorkspaceIntent.GenerateCohesion -> generateCohesion()
+            WorkspaceIntent.ApproveCohesion -> approveCohesion()
+            WorkspaceIntent.RejectCohesion -> rejectCohesion()
             WorkspaceIntent.PreviewArrangement -> previewArrangement()
             WorkspaceIntent.ApproveArrangement -> approveArrangement()
             is WorkspaceIntent.SelectArrangementSection -> selectArrangementSection(intent.index)
@@ -1226,6 +1249,7 @@ class WorkspaceViewModel(
             transcribeSelectedPart()
         }
         is WorkspaceRetry.GenerateArrangement -> runGenerateArrangement(action.request)
+        is WorkspaceRetry.GenerateCohesion -> runGenerateCohesion(action.request)
         null -> Unit
     }
 
@@ -1242,6 +1266,61 @@ class WorkspaceViewModel(
         }
     }
 
+    private fun generateCohesion() {
+        val project = state.value.project ?: return fail("generate cohesion", "Open a project before generating cohesion.")
+        if (state.value.operation.isMutating) return
+        val missing = state.value.structureDraft.toSet().filter { id -> project.parts.find { it.id == id }?.analysis?.status != PartAnalysisStatus.MIDI }
+        when {
+            state.value.structureDraft.isEmpty() -> fail("generate cohesion", "Save at least one structure occurrence before generating cohesion.")
+            missing.isNotEmpty() -> fail("generate cohesion", "Analyze every structure part before generating cohesion: ${missing.joinToString(", ")}.")
+            else -> runGenerateCohesion(GenerateCohesionRequest(project.root, state.value.cohesionDraft.planner))
+        }
+    }
+
+    private fun runGenerateCohesion(request: GenerateCohesionRequest) {
+        val feedbackId = beginFeedback(OperationKind.COHESION, OperationPhase.VALIDATING, "Validating occurrence MIDI for cohesion…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.GeneratingCohesion(), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
+        scope.launch {
+            runCatching {
+                withContext(ioDispatcher) { cohesionService.generate(request) { progress -> scope.launch { updateProgress(feedbackId, WorkspaceOperation.GeneratingCohesion(progress)) } } }
+            }.onSuccess { cohesion ->
+                val message = if (cohesion.approved) "Safe deterministic cohesion is approved for every occurrence." else "Cohesion draft is ready for review and explicit approval."
+                val refreshed = runCatching { projectService.open(request.root) }.getOrNull()
+                mutableState.update { it.copy(project = refreshed ?: it.project, cohesion = cohesion, operation = WorkspaceOperation.Idle, notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message, if (cohesion.approved) OperationSeverity.SUCCESS else OperationSeverity.WARNING) ?: it.operationFeedback) }
+            }.onFailure { fail("generate cohesion", it.message ?: "Unable to generate cohesion.", WorkspaceRetry.GenerateCohesion(request), feedbackId) }
+        }
+    }
+
+    private fun approveCohesion() {
+        val project = state.value.project ?: return
+        val cohesion = state.value.cohesion ?: return fail("approve cohesion", "Generate a cohesion draft before approving it.")
+        if (cohesion.approved || cohesion.stale || state.value.operation.isMutating) return
+        val feedbackId = beginFeedback(OperationKind.APPROVAL, OperationPhase.VALIDATING, "Approving validated cohesion…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.ApprovingCohesion, notification = null, operationFeedback = feedbackTracker.current) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { cohesionService.approve(project.root) } }
+                .onSuccess { approved ->
+                    val refreshed = runCatching { projectService.open(project.root) }.getOrNull()
+                    mutableState.update { it.copy(project = refreshed ?: it.project, cohesion = approved, operation = WorkspaceOperation.Idle, notification = "Cohesion approved for every occurrence.", operationFeedback = feedbackTracker.complete(feedbackId, "Cohesion approved for every occurrence.") ?: it.operationFeedback) }
+                }
+                .onFailure { fail("approve cohesion", it.message ?: "Unable to approve cohesion.", sessionId = feedbackId) }
+        }
+    }
+
+    private fun rejectCohesion() {
+        val project = state.value.project ?: return
+        val cohesion = state.value.cohesion ?: return
+        if (cohesion.approved || state.value.operation.isMutating) return
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { cohesionService.reject(project.root) } }
+                .onSuccess { rejected ->
+                    val refreshed = runCatching { projectService.open(project.root) }.getOrNull()
+                    mutableState.update { it.copy(project = refreshed ?: it.project, cohesion = rejected, notification = "Cohesion draft rejected. The last approved cohesion, if any, is preserved.") }
+                }
+                .onFailure { fail("reject cohesion", it.message ?: "Unable to reject cohesion.") }
+        }
+    }
+
     private fun generateArrangement() {
         val project = state.value.project ?: return fail("generate arrangement", "Open a project before arranging.")
         if (state.value.operation.isMutating) return
@@ -1249,6 +1328,7 @@ class WorkspaceViewModel(
         when {
             state.value.structureDraft.isEmpty() -> fail("generate arrangement", "Add at least one section to the song structure before arranging.")
             missing.isNotEmpty() -> fail("generate arrangement", "Analyze every structure part before arranging: ${missing.joinToString(", ")}.")
+            project.version >= 3 && !project.readiness.cohesionReady -> fail("generate arrangement", "Generate and approve current cohesion for every structure occurrence before arranging.")
             state.value.arrangementDraft.style.trim().length > MAX_STYLE_LENGTH -> fail("generate arrangement", "Style must be at most $MAX_STYLE_LENGTH characters.")
             else -> runGenerateArrangement(
                 GenerateArrangementRequest(project.root, state.value.arrangementDraft.planner, state.value.arrangementDraft.style.trim().ifBlank { null }, arrangementInstruments.filter { it in state.value.arrangementDraft.instruments })
@@ -1300,6 +1380,7 @@ class WorkspaceViewModel(
             is WorkspaceOperation.ImportingPart -> operation.progress
             is WorkspaceOperation.AnalyzingPart -> operation.progress
             is WorkspaceOperation.RetryingMidiCleanup -> operation.progress
+            is WorkspaceOperation.GeneratingCohesion -> operation.progress
             is WorkspaceOperation.GeneratingArrangement -> operation.progress
             is WorkspaceOperation.ApplyingMix -> operation.progress
             is WorkspaceOperation.BuildingSong -> operation.progress
@@ -1468,6 +1549,7 @@ class WorkspaceViewModel(
         mutableState.update {
             it.copy(
                 project = project,
+                cohesion = null,
                 arrangement = null,
                 mix = null,
                 selectedPartId = null,
@@ -1496,12 +1578,16 @@ class WorkspaceViewModel(
         val hydration = withContext(ioDispatcher) {
             val mix = runCatching { mixService.load(project.root) }
             val arrangement = runCatching { arrangementService.load(project.root) }
-            mix to arrangement
+            val cohesion = runCatching { cohesionService.load(project.root) }
+            Triple(mix, arrangement, cohesion)
         }
         val warnings = buildList {
             hydration.first.exceptionOrNull()?.message?.let { add("mix settings could not be loaded: $it") }
             if (project.readiness.arrangementAvailable || project.readiness.songPlanAvailable) {
                 hydration.second.exceptionOrNull()?.message?.let { add("arrangement artifacts could not be loaded: $it") }
+            }
+            if (project.readiness.cohesionReady || project.readiness.cohesionApprovalRequired) {
+                hydration.third.exceptionOrNull()?.message?.let { add("cohesion artifacts could not be loaded: $it") }
             }
         }
         mutableState.update { current ->
@@ -1511,6 +1597,7 @@ class WorkspaceViewModel(
                 current.copy(
                     mix = hydration.first.getOrNull(),
                     arrangement = arrangement,
+                    cohesion = hydration.third.getOrNull(),
                     selectedArrangementSection = arrangement?.sections?.firstOrNull()?.index,
                     notification = if (warnings.isEmpty()) current.notification ?: openedMessage
                     else "$openedMessage Some optional artifacts need attention: ${warnings.joinToString("; ")}",

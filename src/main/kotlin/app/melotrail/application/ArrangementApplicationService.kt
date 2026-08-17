@@ -14,8 +14,10 @@ import app.melotrail.arrangement.InstrumentMode
 import app.melotrail.arrangement.LocalQwenDetailedArrangementPlanner
 import app.melotrail.arrangement.LocalQwenGlobalSongPlanner
 import app.melotrail.arrangement.LogicalInstrument
+import app.melotrail.arrangement.MelodyCohesionInputFactory
 import app.melotrail.arrangement.MidiAnalysis
 import app.melotrail.arrangement.MidiTransitionGenerationAdapter
+import app.melotrail.arrangement.OccurrenceMidiArtifactResolver
 import app.melotrail.arrangement.PadMidiGenerationAdapter
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
@@ -125,6 +127,7 @@ class DefaultArrangementApplicationService(
         val analyses = midiAnalyses(root, project, structure.map(SectionInstance::partId).toSet())
         val input = SongPlanningInput(project.name, project.version, analyses, structure, allowed, request.style)
         input.requireValid()
+        requireApprovedCohesion(root, project, input)
         coroutineContext.ensureActive()
 
         progress.report(OperationProgress("arrange", 2, 3, "Creating reviewed song plan"))
@@ -232,6 +235,7 @@ class DefaultArrangementApplicationService(
             project.name, project.version, analyses, structure,
             rawPlan.sections.flatMap { it.instrumentProgression }.distinct(), rawPlan.style
         )
+        requireApprovedCohesion(root, project, planningInput)
         val plan = SongPlanStore.read(root, planningInput)
         return DetailedArrangementInput(planningInput, plan, SectionVariationStore.read(root, planningInput, plan))
     }
@@ -244,6 +248,19 @@ class DefaultArrangementApplicationService(
         val reference = requireNotNull(part.analysis) { "Missing MIDI analysis for part '$id'. Run part analyze first." }
         require(reference.kind?.name == "MIDI") { "MIDI analysis is required for part '$id'. Run part analyze first." }
         json.decodeFromString(MidiAnalysis.serializer(), Files.readString(root.resolve(reference.file), StandardCharsets.UTF_8))
+    }
+
+    /** A song plan is review evidence, never proof that occurrence cohesion is usable. */
+    private fun requireApprovedCohesion(root: Path, project: Project, input: SongPlanningInput) {
+        val (cohesionInput, _) = MelodyCohesionInputFactory.build(root, project, input)
+        require(project.workflow.cohesion?.approved == true) {
+            "Generate and approve current cohesion for every structure occurrence before detailed arrangement."
+        }
+        OccurrenceMidiArtifactResolver().resolve(root, project, cohesionInput).also { resolved ->
+            require(resolved.size == input.sectionsWithIdentity().size && resolved.all { it.source == app.melotrail.arrangement.OccurrenceMidiSource.APPROVED_COHESION }) {
+                "Approved cohesion is incomplete; regenerate it before detailed arrangement."
+            }
+        }
     }
 
     private fun snapshot(root: Path, project: Project, arrangement: DetailedArrangement, artifact: Path, approvalRequired: Boolean): ArrangementSnapshot {

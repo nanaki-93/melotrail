@@ -9,7 +9,7 @@ consume one authoritative song clock without drift.
 ## Dependencies
 
 - Task 074 accepted.
-- Read `../PLAN.md` and Tasks 073–074 completely before implementation.
+- Read `../../PLAN.md` and Tasks 073–074 completely before implementation.
 
 ## Scope
 

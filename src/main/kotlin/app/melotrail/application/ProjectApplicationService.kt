@@ -17,6 +17,10 @@ import app.melotrail.arrangement.MidiFeelReferences
 import app.melotrail.arrangement.MidiFeelReport
 import app.melotrail.arrangement.MidiFeelReportStore
 import app.melotrail.arrangement.MidiLoFiFeelTransformer
+import app.melotrail.arrangement.MelodyCohesionInputFactory
+import app.melotrail.arrangement.LogicalInstrument
+import app.melotrail.arrangement.SectionInstance
+import app.melotrail.arrangement.SongPlanningInput
 import app.melotrail.arrangement.WorkflowArtifact
 import app.melotrail.arrangement.WorkflowChange
 import app.melotrail.arrangement.Part
@@ -225,6 +229,8 @@ data class ProjectReadiness(
     /** Durable invalidation evidence; availability above remains file-derived. */
     val staleArtifacts: Set<app.melotrail.arrangement.WorkflowArtifact> = emptySet(),
     val cohesionApprovalRequired: Boolean = false,
+    /** True only for a complete, approved, non-stale per-occurrence cohesion result. */
+    val cohesionReady: Boolean = false,
     /** Creator attestation is evidence only; absence always blocks commercial-ready status. */
     val commercialSourceAttestationsComplete: Boolean = false
 )
@@ -564,10 +570,35 @@ class DefaultProjectApplicationService(
                 releaseAvailable = Files.isRegularFile(root.resolve("output/release.json")) && current(WorkflowArtifact.RELEASE),
                 staleArtifacts = project.workflow.stale,
                 cohesionApprovalRequired = project.workflow.cohesion?.let { !it.approved && WorkflowArtifact.COHESION !in project.workflow.stale } == true,
+                cohesionReady = currentCohesion(root, project),
                 commercialSourceAttestationsComplete = project.parts.isNotEmpty() && project.parts.all { it.sourceAttestation?.supportsCommercialUse == true }
             )
         )
     }
+
+    /** Rebuilds the bounded cohesion input so readiness cannot be inferred from a plan file. */
+    private fun currentCohesion(root: Path, project: Project): Boolean = runCatching {
+        val cohesion = project.workflow.cohesion ?: return false
+        if (!cohesion.approved || WorkflowArtifact.COHESION in project.workflow.stale || project.structure.isEmpty()) return false
+        val structure = project.structure.mapIndexed { index, partId -> SectionInstance(index, partId) }
+        val analyses = structure.map(SectionInstance::partId).distinct().associateWith { partId ->
+            val part = project.parts.first { it.id == partId }
+            val reference = requireNotNull(part.analysis)
+            require(reference.kind == AnalysisKind.MIDI)
+            json.decodeFromString(MidiAnalysis.serializer(), Files.readString(root.resolve(reference.file)))
+        }
+        val input = SongPlanningInput(project.name, project.version, analyses, structure, LogicalInstrument.entries.map { it.wireName })
+        val current = MelodyCohesionInputFactory.build(root, project, input).first
+        val references = cohesion.occurrences.associateBy { it.instanceId }
+        cohesion.inputSha256 == current.inputHash && references.keys == current.occurrences.map { it.instanceId }.toSet() &&
+            current.occurrences.all { occurrence ->
+                val reference = references.getValue(occurrence.instanceId)
+                reference.approved && reference.sourceSha256 == occurrence.sourceHash && run {
+                    val file = root.resolve(reference.result.file).normalize()
+                    file.startsWith(root) && Files.isRegularFile(file) && sha256(file) == reference.result.sha256
+                }
+            }
+    }.getOrDefault(false)
 
     private fun Part.summary(root: Path): PartSummary {
         val sourcePath = Path.of(file)

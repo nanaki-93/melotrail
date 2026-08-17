@@ -14,13 +14,13 @@ class WorkflowReadModelTest {
         assertEquals(WorkflowState.CURRENT, current[WorkflowStage.COHESION].state)
         assertEquals(WorkflowState.BLOCKED, current[WorkflowStage.ARRANGEMENT].state)
 
-        val review = WorkflowReadModelDeriver.derive(base.copy(readiness = base.readiness.copy(songPlanAvailable = true)), ArrangementSnapshot(base.root, emptyList(), true, false, false, base.root.resolve("arrangement.draft.json")))
+        val review = WorkflowReadModelDeriver.derive(base.copy(readiness = base.readiness.copy(songPlanAvailable = true, cohesionReady = true)), ArrangementSnapshot(base.root, emptyList(), true, false, false, base.root.resolve("arrangement.draft.json")))
         assertEquals(WorkflowState.REVIEW, review[WorkflowStage.ARRANGEMENT].state)
 
         val stale = WorkflowReadModelDeriver.derive(base.copy(readiness = base.readiness.copy(staleArtifacts = setOf(WorkflowArtifact.ANALYSIS))))
         assertEquals(WorkflowState.STALE, stale[WorkflowStage.ANALYSIS].state)
 
-        val complete = WorkflowReadModelDeriver.derive(base.copy(readiness = base.readiness.copy(songPlanAvailable = true, stemsAvailable = true, dryMixAvailable = true, masterAvailable = true, releaseAvailable = true)), ArrangementSnapshot(base.root, emptyList(), false, true, false, base.root.resolve("arrangement.json")))
+        val complete = WorkflowReadModelDeriver.derive(base.copy(readiness = base.readiness.copy(songPlanAvailable = true, cohesionReady = true, stemsAvailable = true, dryMixAvailable = true, masterAvailable = true, releaseAvailable = true)), ArrangementSnapshot(base.root, emptyList(), false, true, false, base.root.resolve("arrangement.json")))
         assertEquals(WorkflowState.COMPLETE, complete[WorkflowStage.MASTER].state)
     }
 

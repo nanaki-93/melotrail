@@ -85,7 +85,7 @@ object WorkflowReadModelDeriver {
             structure.state != WorkflowState.COMPLETE -> blocked(WorkflowStage.COHESION, structure)
             WorkflowArtifact.COHESION in stale -> step(WorkflowStage.COHESION, WorkflowState.STALE, "Analysis or structure changed; regenerate cohesion.", WorkflowAction.GENERATE_COHESION)
             project.readiness.cohesionApprovalRequired -> step(WorkflowStage.COHESION, WorkflowState.REVIEW, "Review and explicitly approve the per-occurrence cohesion plan.", WorkflowAction.APPROVE_COHESION)
-            !project.readiness.songPlanAvailable -> step(WorkflowStage.COHESION, WorkflowState.CURRENT, "Generate and review a per-occurrence cohesion plan.", WorkflowAction.GENERATE_COHESION)
+            !project.readiness.cohesionReady -> step(WorkflowStage.COHESION, WorkflowState.CURRENT, "Generate and review a per-occurrence cohesion plan.", WorkflowAction.GENERATE_COHESION)
             else -> step(WorkflowStage.COHESION, WorkflowState.COMPLETE, "A current cohesion plan is available.", WorkflowAction.GENERATE_COHESION)
         }
         val arrangementStep = when {
