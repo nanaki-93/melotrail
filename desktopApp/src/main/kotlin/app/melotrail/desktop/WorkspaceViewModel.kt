@@ -111,6 +111,8 @@ data class WorkspaceUiState(
     val notification: String? = null,
     val runtimeReadiness: RuntimeReadiness? = null,
     val soundLibrary: SoundLibrarySettingsState = SoundLibrarySettingsState(),
+    /** Settings navigation is ephemeral; it never changes a project or playback session. */
+    val settingsReturnSection: WorkspaceSection? = null,
     /** Read-only inventory from the validated registry boundary; never project data. */
     val libraryBrowser: LibraryBrowserState = LibraryBrowserState(),
     val dialog: WorkspaceDialog? = null,
@@ -359,8 +361,8 @@ sealed interface WorkspaceDialog {
     data class ConfirmSafeCleanup(val partId: String) : WorkspaceDialog
     data class ConfirmTightenTiming(val partId: String) : WorkspaceDialog
     data class ConfirmDiscardDraft(val root: Path? = null, val createProject: Boolean = false) : WorkspaceDialog
+    data object ConfirmClearSoundLibraryRoot : WorkspaceDialog
     data object ConfirmClose : WorkspaceDialog
-    data object SoundLibrarySettings : WorkspaceDialog
 }
 
 sealed interface PartDetailsFocusReturn {
@@ -436,6 +438,9 @@ sealed interface WorkspaceRetry {
 
 sealed interface WorkspaceIntent {
     data class SelectWorkspaceSection(val section: WorkspaceSection) : WorkspaceIntent
+    /** Opens the one Settings destination while retaining a safe return destination. */
+    data object OpenSettings : WorkspaceIntent
+    data object BackFromSettings : WorkspaceIntent
     data object ChooseProject : WorkspaceIntent
     data object RestoreLastProject : WorkspaceIntent
     data object ShowCreateProject : WorkspaceIntent
@@ -445,9 +450,9 @@ sealed interface WorkspaceIntent {
     data class OpenProject(val root: Path) : WorkspaceIntent
     data object MigrateProject : WorkspaceIntent
     data object RefreshRuntimeReadiness : WorkspaceIntent
-    data object ShowSoundLibrarySettings : WorkspaceIntent
     data object ChooseSoundLibraryRoot : WorkspaceIntent
-    data object ClearSoundLibraryRoot : WorkspaceIntent
+    data object RequestClearSoundLibraryRoot : WorkspaceIntent
+    data object ConfirmClearSoundLibraryRoot : WorkspaceIntent
     data object RefreshSoundLibrary : WorkspaceIntent
     data class UpdateLibrarySearch(val query: String) : WorkspaceIntent
     data class SelectLibraryCategory(val category: String?) : WorkspaceIntent
@@ -583,6 +588,8 @@ class WorkspaceViewModel(
     fun accept(intent: WorkspaceIntent) {
         when (intent) {
             is WorkspaceIntent.SelectWorkspaceSection -> selectWorkspaceSection(intent.section)
+            WorkspaceIntent.OpenSettings -> openSettings()
+            WorkspaceIntent.BackFromSettings -> backFromSettings()
             WorkspaceIntent.ChooseProject -> chooseProject()
             WorkspaceIntent.RestoreLastProject -> restoreLastProject()
             WorkspaceIntent.ShowCreateProject -> showCreateProject()
@@ -592,9 +599,9 @@ class WorkspaceViewModel(
             is WorkspaceIntent.OpenProject -> requestOpenProject(intent.root)
             WorkspaceIntent.MigrateProject -> migrateProject()
             WorkspaceIntent.RefreshRuntimeReadiness -> refreshRuntimeReadiness()
-            WorkspaceIntent.ShowSoundLibrarySettings -> refreshSoundLibrary(showSettings = true)
             WorkspaceIntent.ChooseSoundLibraryRoot -> chooseSoundLibraryRoot()
-            WorkspaceIntent.ClearSoundLibraryRoot -> updateSoundLibrary(soundLibrarySettings.clear())
+            WorkspaceIntent.RequestClearSoundLibraryRoot -> requestClearSoundLibraryRoot()
+            WorkspaceIntent.ConfirmClearSoundLibraryRoot -> clearSoundLibraryRoot()
             WorkspaceIntent.RefreshSoundLibrary -> refreshSoundLibrary()
             is WorkspaceIntent.UpdateLibrarySearch -> mutableState.update { it.copy(libraryBrowser = it.libraryBrowser.copy(query = intent.query, selectedId = selectedLibraryId(it.libraryBrowser, intent.query, it.libraryBrowser.category))) }
             is WorkspaceIntent.SelectLibraryCategory -> mutableState.update { it.copy(libraryBrowser = it.libraryBrowser.copy(category = intent.category, selectedId = selectedLibraryId(it.libraryBrowser, it.libraryBrowser.query, intent.category))) }
@@ -687,9 +694,31 @@ class WorkspaceViewModel(
     }
 
     private fun selectWorkspaceSection(section: WorkspaceSection) {
-        mutableState.update { it.copy(workspaceSection = section) }
+        mutableState.update { current ->
+            current.copy(
+                workspaceSection = section,
+                settingsReturnSection = when {
+                    section == WorkspaceSection.SETTINGS && current.workspaceSection != WorkspaceSection.SETTINGS -> current.workspaceSection
+                    section != WorkspaceSection.SETTINGS -> null
+                    else -> current.settingsReturnSection
+                }
+            )
+        }
         if (section == WorkspaceSection.EXPORT) refreshExport()
         if (section == WorkspaceSection.LIBRARY) refreshSoundLibrary()
+        if (section == WorkspaceSection.SETTINGS) {
+            refreshSoundLibrary()
+            refreshRuntimeReadiness()
+        }
+    }
+
+    private fun openSettings() = selectWorkspaceSection(WorkspaceSection.SETTINGS)
+
+    private fun backFromSettings() {
+        val destination = state.value.settingsReturnSection ?: WorkspaceSection.OVERVIEW
+        mutableState.update { it.copy(workspaceSection = destination, settingsReturnSection = null) }
+        if (destination == WorkspaceSection.EXPORT) refreshExport()
+        if (destination == WorkspaceSection.LIBRARY) refreshSoundLibrary()
     }
 
     private fun chooseProject() = scope.launch {
@@ -808,12 +837,12 @@ class WorkspaceViewModel(
             .onFailure { failure -> if (generation == readinessGeneration) mutableState.update { it.copy(notification = "Could not check local readiness: ${failure.message}") } }
     }
 
-    private fun refreshSoundLibrary(showSettings: Boolean = false) {
+    private fun refreshSoundLibrary() {
         val settings = soundLibrarySettings.refresh()
-        updateSoundLibrary(settings, showSettings)
+        updateSoundLibrary(settings)
     }
 
-    private fun updateSoundLibrary(settings: SoundLibrarySettingsState, showSettings: Boolean = false) {
+    private fun updateSoundLibrary(settings: SoundLibrarySettingsState) {
         val inventoryResult = runCatching { soundLibraryInventory.read(settings.resolvedRoot) }
         mutableState.update { current ->
             val inventory = inventoryResult.getOrElse {
@@ -830,7 +859,7 @@ class WorkspaceViewModel(
             current.copy(
                 soundLibrary = settings,
                 libraryBrowser = browser,
-                dialog = if (showSettings) WorkspaceDialog.SoundLibrarySettings else current.dialog
+                dialog = current.dialog
             )
         }
     }
@@ -842,8 +871,27 @@ class WorkspaceViewModel(
 
     private fun chooseSoundLibraryRoot() = scope.launch {
         runCatching { fileDialogs.chooseSoundLibraryDirectory() }
-            .onSuccess { root -> root?.let { updateSoundLibrary(soundLibrarySettings.select(it)) } }
+            .onSuccess { root ->
+                if (root == null) {
+                    mutableState.update { it.copy(notification = "Sound-library selection cancelled; the current setting was kept.") }
+                } else {
+                    updateSoundLibrary(soundLibrarySettings.select(root))
+                    refreshRuntimeReadiness()
+                }
+            }
             .onFailure { fail("sound library", it.message ?: "The library chooser could not be opened.") }
+    }
+
+    private fun requestClearSoundLibraryRoot() {
+        if (state.value.soundLibrary.selectionDisabledReason != null) return
+        if (state.value.soundLibrary.resolvedRoot == null) return
+        mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmClearSoundLibraryRoot) }
+    }
+
+    private fun clearSoundLibraryRoot() {
+        updateSoundLibrary(soundLibrarySettings.clear())
+        mutableState.update { it.copy(dialog = null, notification = "Cleared the saved sound-library preference.") }
+        refreshRuntimeReadiness()
     }
 
     private fun showImportPart(audio: Boolean) {

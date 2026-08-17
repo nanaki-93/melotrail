@@ -3,7 +3,7 @@
 ## Goal
 
 Replace the interim/dialog-only settings experience with a focused Settings
-destination inspired by `../pictures/UI/10-settings.png`, containing only real,
+destination inspired by `../../pictures/UI/10-settings.png`, containing only real,
 locally persisted, validated configuration and runtime information.
 
 ## Dependencies
@@ -58,7 +58,7 @@ locally persisted, validated configuration and runtime information.
 - Assert no settings action writes project/audio data or introduces a CWD
   dependency.
 - Capture and overlay a full 1536 × 1024 fixture against
-  `../pictures/UI/10-settings.png`; document omitted unsupported sections.
+  `../../pictures/UI/10-settings.png`; document omitted unsupported sections.
 - Run `./gradlew :desktopApp:test :desktopApp:build`.
 
 ## Acceptance criteria

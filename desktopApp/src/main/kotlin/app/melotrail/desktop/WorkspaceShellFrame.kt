@@ -200,7 +200,7 @@ private fun TopBar(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit,
             IconButton(onClick = {}, enabled = false, modifier = Modifier.semantics { contentDescription = "Help is unavailable in this local build." }) {
                 Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = null)
             }
-            IconButton(onClick = { onIntent(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.SETTINGS)) }, modifier = Modifier.semantics { contentDescription = "Open Settings" }) {
+            IconButton(onClick = { onIntent(WorkspaceIntent.OpenSettings) }, modifier = Modifier.semantics { contentDescription = "Open Settings" }) {
                 Icon(Icons.Default.Settings, contentDescription = null)
             }
         }

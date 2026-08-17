@@ -884,7 +884,7 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `sound library settings dialog contains chooser validation and local recovery details`() = runComposeUiTest {
+    fun `Settings destination contains real local controls readiness recovery and About information`() = runComposeUiTest {
         val unavailable = RuntimeReadiness.of(
             RuntimeDependency.WORKER to DependencyReadiness(DependencyStatus.READY, "ready"),
             RuntimeDependency.TRANSCRIPTION to DependencyReadiness(DependencyStatus.READY, "ready"),
@@ -893,13 +893,49 @@ class WorkspaceScreenTest {
             RuntimeDependency.RENDERER to DependencyReadiness(DependencyStatus.UNAVAILABLE, "Set SFZ_RENDERER_PATH.", RecoveryAction.CONFIGURE_RENDERER),
             RuntimeDependency.AUDIO_OUTPUT to DependencyReadiness(DependencyStatus.READY, "ready")
         )
-        setContent { MelotrailTheme { WorkspaceScreen(populatedState().copy(workspaceSection = WorkspaceSection.VIDEO_PREVIEW, dialog = WorkspaceDialog.SoundLibrarySettings, runtimeReadiness = unavailable), onIntent = {}) } }
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(populatedState().copy(
+            workspaceSection = WorkspaceSection.SETTINGS,
+            soundLibrary = SoundLibrarySettingsState(resolvedRoot = Path.of("/validated/local/sounds"), source = "configured"),
+            runtimeReadiness = unavailable
+        ), intents::add) } }
 
-        onNodeWithText("Local sound library").assertExists()
-        onNodeWithTag(WorkspaceTags.SOUND_LIBRARY_CHOOSE).assertIsEnabled()
-        onNodeWithTag(WorkspaceTags.SOUND_LIBRARY_CLEAR).assertIsEnabled()
-        onNodeWithText("Recovery: Copy the approved local samples into the existing selected-library folders.").assertExists()
-        onNodeWithText("Recovery: Set SFZ_RENDERER_PATH to the absolute executable path, then refresh readiness.").assertExists()
+        onNodeWithTag(WorkspacePageTags.SETTINGS_LIBRARY).assertExists()
+        onNodeWithTag(WorkspacePageTags.SETTINGS_CHOOSE).assertIsEnabled()
+        onNodeWithTag(WorkspacePageTags.SETTINGS_CLEAR).assertIsEnabled()
+        onNodeWithTag(WorkspacePageTags.SETTINGS_RUNTIME_PREFIX + "samples").assertExists()
+        onNodeWithTag(WorkspacePageTags.SETTINGS_ABOUT).assertExists()
+        onNodeWithText("Recovery: Copy the approved local starter samples into the selected library's existing sample folders.").assertExists()
+        onNodeWithText("Recovery: Set SFZ_RENDERER_PATH to an absolute executable sfizz_render path, then refresh readiness.").assertExists()
+        onNodeWithTag(WorkspacePageTags.SETTINGS_BACK).performClick()
+        assertEquals(WorkspaceIntent.BackFromSettings, intents.last())
+        listOf("Telemetry", "Check for updates", "Cloud sync", "Theme", "Audio device").forEach { text ->
+            onAllNodesWithText(text, substring = true).assertCountEquals(0)
+        }
+    }
+
+    @Test
+    fun `Settings wide fixture captures and overlays the approved reference while documenting omitted controls`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
+        val partial = RuntimeReadiness.of(
+            RuntimeDependency.WORKER to DependencyReadiness(DependencyStatus.UNAVAILABLE, "Start the Python worker with make worker.", RecoveryAction.START_WORKER),
+            RuntimeDependency.TRANSCRIPTION to DependencyReadiness(DependencyStatus.UNAVAILABLE, "Transcription needs the running Python worker.", RecoveryAction.START_WORKER),
+            RuntimeDependency.SOUND_LIBRARY to DependencyReadiness(DependencyStatus.READY, "Sound library registry ready"),
+            RuntimeDependency.SAMPLES to DependencyReadiness(DependencyStatus.UNAVAILABLE, "Copy the approved local starter samples.", RecoveryAction.INSTALL_SAMPLES),
+            RuntimeDependency.RENDERER to DependencyReadiness(DependencyStatus.UNAVAILABLE, "Set SFZ_RENDERER_PATH to an executable sfizz_render.", RecoveryAction.CONFIGURE_RENDERER),
+            RuntimeDependency.AUDIO_OUTPUT to DependencyReadiness(DependencyStatus.UNAVAILABLE, "No audio output device is available.", RecoveryAction.CHECK_AUDIO_OUTPUT)
+        )
+        val longRoot = Path.of("/validated/local/sounds/with/a/deliberately/long/path/that/remains/readable/without/creating/another/instrument/tree")
+        setContent { MelotrailTheme { WorkspaceScreen(populatedState().copy(
+            workspaceSection = WorkspaceSection.SETTINGS,
+            soundLibrary = SoundLibrarySettingsState(resolvedRoot = longRoot, source = "configured", restartRequired = true),
+            runtimeReadiness = partial
+        ), onIntent = {}) } }
+
+        val image = onRoot().captureToImage().toAwtImage()
+        assertEquals(1536, image.width)
+        assertEquals(1024, image.height)
+        writeTask100SettingsCapture(image)
+        writeTask100SettingsReferenceOverlay(image)
     }
 
     @Test
@@ -1359,6 +1395,34 @@ class WorkspaceScreenTest {
         }
         val target = repository.resolve("desktopApp/build/reports/task-099-$pageName-overlay.png")
         Files.createDirectories(target.parent)
+        assertTrue(ImageIO.write(overlay, "png", target.toFile()))
+    }
+
+    private fun writeTask100SettingsCapture(capture: BufferedImage) {
+        val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
+            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/10-settings.png")) }
+            ?: error("Could not locate the Task 100 Settings reference image.")
+        val target = repository.resolve("desktopApp/build/reports/task-100-settings-capture.png")
+        Files.createDirectories(target.parent)
+        assertTrue(ImageIO.write(capture, "png", target.toFile()))
+    }
+
+    /** The reference includes unsupported account/update/privacy controls; this overlay records their deliberate omission. */
+    private fun writeTask100SettingsReferenceOverlay(capture: BufferedImage) {
+        val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
+            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/10-settings.png")) }
+            ?: error("Could not locate the Task 100 Settings reference image.")
+        val reference = ImageIO.read(repository.resolve("plan/pictures/UI/10-settings.png").toFile())
+        val overlay = BufferedImage(capture.width, capture.height, BufferedImage.TYPE_INT_ARGB)
+        val graphics = overlay.createGraphics()
+        try {
+            graphics.drawImage(reference, 0, 0, overlay.width, overlay.height, null)
+            graphics.composite = AlphaComposite.SrcOver.derive(0.55f)
+            graphics.drawImage(capture, 0, 0, null)
+        } finally {
+            graphics.dispose()
+        }
+        val target = repository.resolve("desktopApp/build/reports/task-100-settings-overlay.png")
         assertTrue(ImageIO.write(overlay, "png", target.toFile()))
     }
 

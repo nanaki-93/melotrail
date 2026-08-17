@@ -178,6 +178,15 @@ internal object WorkspacePageTags {
     const val LIBRARY_RECOVERY = "library-recovery"
     const val LIBRARY_REFRESH = "library-refresh"
     const val LIBRARY_SETTINGS = "library-settings"
+    const val SETTINGS_LIBRARY = "settings-library"
+    const val SETTINGS_CHOOSE = "settings-choose-library"
+    const val SETTINGS_CLEAR = "settings-clear-library"
+    const val SETTINGS_REFRESH = "settings-refresh"
+    const val SETTINGS_RUNTIME = "settings-runtime"
+    const val SETTINGS_RUNTIME_PREFIX = "settings-runtime-"
+    const val SETTINGS_ABOUT = "settings-about"
+    const val SETTINGS_BACK = "settings-back"
+    const val SETTINGS_CLEAR_CONFIRM = "settings-clear-confirm"
     const val NAVIGATION_MENU = "workspace-navigation-menu"
 }
 
@@ -589,7 +598,7 @@ private fun LibraryRecovery(state: WorkspaceUiState, onIntent: (WorkspaceIntent)
     Text("No catalog data is shown until the registry, SFZ files, and samples validate locally.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
         OutlinedButton(
-            onClick = { onIntent(WorkspaceIntent.ShowSoundLibrarySettings) },
+            onClick = { onIntent(WorkspaceIntent.OpenSettings) },
             modifier = Modifier.semantics { testTag = WorkspacePageTags.LIBRARY_SETTINGS }
         ) { Text("Open Settings") }
         OutlinedButton(onClick = { onIntent(WorkspaceIntent.RefreshSoundLibrary) }) { Text("Refresh") }
@@ -696,13 +705,97 @@ private fun InterimDestinationPage(title: String, message: String) {
 
 @Composable
 private fun SettingsInterimPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
-        PageTitle("Settings", "Local preferences and dependency readiness")
-        OverviewCard("${WorkspacePageTags.ROOT_PREFIX}settings-body", "Sound library") {
-            Text(soundLibrarySummary(state.soundLibrary), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            OutlinedButton(onClick = { onIntent(WorkspaceIntent.ShowSoundLibrarySettings) }) { Text("Configure sound library") }
+    val settings = state.soundLibrary
+    val selectionDisabled = settings.selectionDisabledReason != null
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            PageTitle("Settings", "Local preferences, runtime readiness, and build information")
+            Spacer(Modifier.weight(1f))
+            OutlinedButton(
+                onClick = { onIntent(WorkspaceIntent.BackFromSettings) },
+                modifier = Modifier.semantics { testTag = WorkspacePageTags.SETTINGS_BACK; contentDescription = "Return to the previous workspace destination" }
+            ) { Text("Back") }
+        }
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            ResponsivePageColumns(narrow = maxWidth < MusicWorkspaceTokens.Reference.MediumBreakpoint, first = { columnModifier ->
+                Column(columnModifier, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
+                    OverviewCard(WorkspacePageTags.SETTINGS_LIBRARY, "Sound library") {
+                        Text(settings.resolvedRoot?.toString() ?: "No validated sound-library folder is configured.", maxLines = 3, overflow = TextOverflow.Ellipsis)
+                        Text("Source: ${settings.source ?: "none"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        settings.validationError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+                        settings.selectionDisabledReason?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.Warning) }
+                        if (settings.restartRequired) Text("Restart the desktop app before renderer services use this validated library.", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.Warning)
+                        Text("Choose the absolute folder containing instruments.json and LICENSES.json. Selection validates the full registry before the preference is saved; no project or audio data is stored here.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                            Button(
+                                enabled = !selectionDisabled && !state.operation.isMutating,
+                                onClick = { onIntent(WorkspaceIntent.ChooseSoundLibraryRoot) },
+                                modifier = Modifier.semantics { testTag = WorkspacePageTags.SETTINGS_CHOOSE; contentDescription = "Choose and validate a local sound-library folder" }
+                            ) { Text("Choose folder") }
+                            OutlinedButton(
+                                enabled = !selectionDisabled && settings.resolvedRoot != null && !state.operation.isMutating,
+                                onClick = { onIntent(WorkspaceIntent.RequestClearSoundLibraryRoot) },
+                                modifier = Modifier.semantics { testTag = WorkspacePageTags.SETTINGS_CLEAR; contentDescription = "Clear the saved sound-library preference" }
+                            ) { Text("Clear") }
+                        }
+                    }
+                    OverviewCard(WorkspacePageTags.SETTINGS_RUNTIME, "Local runtime readiness") {
+                        if (state.runtimeReadiness == null) {
+                            Text("Runtime readiness has not been checked yet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else {
+                            RuntimeDependency.entries.forEach { dependency -> SettingsDependencyRow(dependency, state.runtimeReadiness.dependency(dependency)) }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                            OutlinedButton(onClick = { onIntent(WorkspaceIntent.RefreshSoundLibrary) }, modifier = Modifier.semantics { testTag = WorkspacePageTags.SETTINGS_REFRESH }) { Text("Refresh library") }
+                            OutlinedButton(onClick = { onIntent(WorkspaceIntent.RefreshRuntimeReadiness) }) { Text("Refresh readiness") }
+                        }
+                    }
+                }
+            }, second = { columnModifier ->
+                Box(columnModifier) { OverviewCard(WorkspacePageTags.SETTINGS_ABOUT, "About this local build") {
+                    val about = desktopAboutInfo()
+                    Text("Melotrail", style = MaterialTheme.typography.titleMedium)
+                    Text("Version: ${about.version}", style = MaterialTheme.typography.bodySmall)
+                    Text("Platform: ${about.platform}", style = MaterialTheme.typography.bodySmall)
+                    Text("Runtime: ${about.runtime}", style = MaterialTheme.typography.bodySmall)
+                    HorizontalDivider(color = MusicWorkspaceTokens.Border)
+                    Text("Preferences retain only the last successfully opened project and validated sound-library root. Projects and audio remain in their selected canonical folders.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("No telemetry, cloud sync, update checks, themes, device selection, backups, or model downloads are available in this build.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } }
+            })
         }
     }
+}
+
+@Composable
+private fun SettingsDependencyRow(dependency: RuntimeDependency, readiness: DependencyReadiness) {
+    val title = dependency.name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)
+    Text("$title · ${readiness.status.name.lowercase()} — ${readiness.detail}", style = MaterialTheme.typography.bodySmall,
+        color = if (readiness.available) MusicWorkspaceTokens.Success else MaterialTheme.colorScheme.error,
+        modifier = Modifier.semantics { testTag = WorkspacePageTags.SETTINGS_RUNTIME_PREFIX + dependency.name.lowercase() })
+    readiness.recoveryAction?.let { action ->
+        Text("Recovery: ${settingsRecovery(action)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+private data class DesktopAboutInfo(val version: String, val platform: String, val runtime: String)
+
+private fun desktopAboutInfo(): DesktopAboutInfo = DesktopAboutInfo(
+    version = WorkspaceUiState::class.java.`package`?.implementationVersion ?: System.getProperty("melotrail.version") ?: "development build",
+    platform = "${System.getProperty("os.name")} ${System.getProperty("os.version")} (${System.getProperty("os.arch")})",
+    runtime = System.getProperty("java.runtime.version") ?: System.getProperty("java.version") ?: "unknown JVM"
+)
+
+private fun settingsRecovery(action: RecoveryAction): String = when (action) {
+    RecoveryAction.START_WORKER -> "Start the Python worker with make worker."
+    RecoveryAction.INSTALL_BASIC_PITCH -> "Install the optional Basic Pitch runtime with worker/requirements-transcription.txt in Python 3.11."
+    RecoveryAction.CHOOSE_SOUND_LIBRARY -> "Choose a validated local sound-library folder."
+    RecoveryAction.INSTALL_SAMPLES -> "Copy the approved local starter samples into the selected library's existing sample folders."
+    RecoveryAction.CONFIGURE_RENDERER -> "Set SFZ_RENDERER_PATH to an absolute executable sfizz_render path, then refresh readiness."
+    RecoveryAction.CHECK_AUDIO_OUTPUT -> "Connect or enable a local audio output device, then refresh readiness."
 }
 
 @Composable

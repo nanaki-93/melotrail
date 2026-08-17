@@ -50,6 +50,11 @@ export SFZ_RENDERER_PATH=/absolute/path/to/sfizz_render
 No renderer, model, or sample-library support is implied until its readiness
 check succeeds locally.
 
+The desktop **Settings** destination contains only the validated sound-library
+preference, local runtime readiness, and local build/platform information.
+Telemetry, cloud sync, update checks, themes, audio-device selection, autosave,
+backups, model downloads, and broad preference resets are intentionally absent.
+
 ## Worker and optional transcription
 
 Start the Python worker only when a selected operation needs it:

@@ -204,7 +204,12 @@ fun WorkspaceScreen(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit
     Box(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(MusicWorkspaceTokens.Reference.OuterPadding)
             .onPreviewKeyEvent { event: androidx.compose.ui.input.key.KeyEvent ->
-                transportShortcutIntent(event, state.playback)?.let(onIntent) != null
+                if (event.key == Key.Escape && event.type == KeyEventType.KeyDown && state.workspaceSection == WorkspaceSection.SETTINGS && state.dialog == null) {
+                    onIntent(WorkspaceIntent.BackFromSettings)
+                    true
+                } else {
+                    transportShortcutIntent(event, state.playback)?.let(onIntent) != null
+                }
             }
     ) {
         WorkspaceShellFrame(state, onIntent, partDetailsFocusTargets)
@@ -253,7 +258,7 @@ private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         WorkspaceBrand(Modifier.weight(1f))
                         HeaderIconControl("＋", "Create a new project", !mutationsDisabled, WorkspaceTags.CREATE_PROJECT) { onIntent(WorkspaceIntent.ShowCreateProject) }
-                        HeaderIconControl("⚙", "Configure the local sound library", !mutationsDisabled, WorkspaceTags.HEADER_SETTINGS) { onIntent(WorkspaceIntent.ShowSoundLibrarySettings) }
+                        HeaderIconControl("⚙", "Open Settings", !mutationsDisabled, WorkspaceTags.HEADER_SETTINGS) { onIntent(WorkspaceIntent.OpenSettings) }
                     }
                     SelectedProjectControl(state, mutationsDisabled, onIntent, Modifier.fillMaxWidth())
                     if (state.project?.version == 2) TextButton(onClick = { onIntent(WorkspaceIntent.MigrateProject) }, modifier = Modifier.semantics { testTag = WorkspaceTags.MIGRATE_PROJECT }) { Text("Migrate") }
@@ -307,7 +312,7 @@ private fun HeaderActions(state: WorkspaceUiState, mutationsDisabled: Boolean, o
         HeaderIconControl("＋", "Create a new project", !mutationsDisabled, WorkspaceTags.CREATE_PROJECT) { onIntent(WorkspaceIntent.ShowCreateProject) }
         HeaderIconControl("⌑", "Open an existing project", !mutationsDisabled, WorkspaceTags.OPEN_PROJECT) { onIntent(WorkspaceIntent.ChooseProject) }
         HeaderIconControl("▣", "Save is unavailable. Project changes are saved by their explicit workflow actions.", false, WorkspaceTags.HEADER_SAVE) {}
-        HeaderIconControl("⚙", "Configure the local sound library", !mutationsDisabled, WorkspaceTags.HEADER_SETTINGS) { onIntent(WorkspaceIntent.ShowSoundLibrarySettings) }
+        HeaderIconControl("⚙", "Open Settings", !mutationsDisabled, WorkspaceTags.HEADER_SETTINGS) { onIntent(WorkspaceIntent.OpenSettings) }
         HeaderIconControl("☼", "Theme selection is unavailable. Melotrail currently uses its fixed dark workspace theme.", false, WorkspaceTags.HEADER_THEME) {}
         HeaderIconControl("▶", "Build song release artifacts. ${buildSongPrerequisite(state)}", canBuild(state), WorkspaceTags.BUILD_SONG) { onIntent(WorkspaceIntent.BuildSong) }
     }
@@ -1063,7 +1068,7 @@ private fun CenterTimelineLane(instrument: String, sections: List<CenterTimeline
 internal fun LibraryPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Sound library", WorkspaceTags.LIBRARY_PANEL) {
     Text("Sound-library configuration and local dependency recovery are available from the shell Settings gear.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     OutlinedButton(
-        onClick = { onIntent(WorkspaceIntent.ShowSoundLibrarySettings) },
+        onClick = { onIntent(WorkspaceIntent.OpenSettings) },
         modifier = Modifier.semantics { testTag = WorkspaceTags.SOUND_LIBRARY_SETTINGS; contentDescription = "Open shell sound-library settings" }
     ) { Text("Open Settings") }
 }
@@ -1435,7 +1440,7 @@ private fun WorkspaceDialogs(state: WorkspaceUiState, onIntent: (WorkspaceIntent
         is WorkspaceDialog.ConfirmTightenTiming -> ConfirmTightenTimingDialog(dialog, onIntent)
         is WorkspaceDialog.ConfirmDiscardDraft -> ConfirmDiscardDraftDialog(dialog, onIntent)
         WorkspaceDialog.ConfirmClose -> ConfirmCloseDialog(onIntent, onExit)
-        WorkspaceDialog.SoundLibrarySettings -> SoundLibrarySettingsDialog(state.soundLibrary, state.runtimeReadiness, onIntent)
+        WorkspaceDialog.ConfirmClearSoundLibraryRoot -> ConfirmClearSoundLibraryRootDialog(onIntent)
         null -> Unit
     }
 }
@@ -1511,66 +1516,14 @@ private fun ConfirmTightenTimingDialog(dialog: WorkspaceDialog.ConfirmTightenTim
 }
 
 @Composable
-private fun SoundLibrarySettingsDialog(settings: SoundLibrarySettingsState, readiness: RuntimeReadiness?, onIntent: (WorkspaceIntent) -> Unit) {
-    val selectionDisabled = settings.selectionDisabledReason != null
+private fun ConfirmClearSoundLibraryRootDialog(onIntent: (WorkspaceIntent) -> Unit) {
     AlertDialog(
         onDismissRequest = { onIntent(WorkspaceIntent.DismissDialog) },
-        title = { Text("Local sound library") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(settings.resolvedRoot?.toString() ?: "No validated sound-library folder is available.")
-                Text("Discovery source: ${settings.source ?: "none"}", style = MaterialTheme.typography.bodySmall)
-                settings.validationError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-                settings.selectionDisabledReason?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
-                Text("Choose the folder containing instruments.json and LICENSES.json. If starter samples are missing, copy the approved 25 WAV files into the existing sounds subfolders; see sounds/README.md. No files are copied or changed here.", style = MaterialTheme.typography.bodySmall)
-                if (settings.restartRequired) Text("Restart the desktop app to apply this validated library to renderer services.", style = MaterialTheme.typography.bodySmall)
-                HorizontalDivider()
-                Text("Local dependencies", style = MaterialTheme.typography.labelMedium)
-                if (readiness == null) {
-                    Text("Checking local dependency readiness…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                } else {
-                    listOf(RuntimeDependency.SOUND_LIBRARY, RuntimeDependency.SAMPLES, RuntimeDependency.RENDERER).forEach { dependency ->
-                        val item = readiness.dependency(dependency)
-                        Text(
-                            "${dependency.name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)} · ${item.status.name.lowercase()} — ${item.detail}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (item.available) MusicWorkspaceTokens.Success else MaterialTheme.colorScheme.error
-                        )
-                        item.recoveryAction?.let { action ->
-                            Text("Recovery: ${soundLibraryRecovery(action)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
-                    enabled = !selectionDisabled,
-                    onClick = { onIntent(WorkspaceIntent.ClearSoundLibraryRoot) },
-                    modifier = Modifier.semantics { testTag = WorkspaceTags.SOUND_LIBRARY_CLEAR }
-                ) { Text("Clear") }
-                Button(
-                    enabled = !selectionDisabled,
-                    onClick = { onIntent(WorkspaceIntent.ChooseSoundLibraryRoot) },
-                    modifier = Modifier.semantics { testTag = WorkspaceTags.SOUND_LIBRARY_CHOOSE }
-                ) { Text("Choose folder") }
-            }
-        },
-        dismissButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = { onIntent(WorkspaceIntent.RefreshSoundLibrary) }) { Text("Refresh library") }
-                TextButton(onClick = { onIntent(WorkspaceIntent.RefreshRuntimeReadiness) }) { Text("Refresh readiness") }
-            }
-        }
+        title = { Text("Clear saved sound-library preference?") },
+        text = { Text("This removes only the locally saved library path. Project data, audio, samples, and the MUSIC_SOUNDS_ROOT override are unchanged.") },
+        confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.ConfirmClearSoundLibraryRoot) }, modifier = Modifier.semantics { testTag = WorkspacePageTags.SETTINGS_CLEAR_CONFIRM }) { Text("Clear preference") } },
+        dismissButton = { TextButton(onClick = { onIntent(WorkspaceIntent.DismissDialog) }) { Text("Keep preference") } }
     )
-}
-
-private fun soundLibraryRecovery(action: RecoveryAction): String = when (action) {
-    RecoveryAction.CHOOSE_SOUND_LIBRARY -> "Choose a validated local sound-library folder."
-    RecoveryAction.INSTALL_SAMPLES -> "Copy the approved local samples into the existing selected-library folders."
-    RecoveryAction.CONFIGURE_RENDERER -> "Set SFZ_RENDERER_PATH to the absolute executable path, then refresh readiness."
-    else -> "Resolve the listed local dependency, then refresh readiness."
 }
 
 @Composable
