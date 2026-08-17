@@ -9,7 +9,7 @@ repair review, MIDI analysis, audio preparation, and recovery actions.
 ## Dependencies
 
 - Task 090 accepted.
-- `../PLAN_UI.md` is the governing UI reconstruction plan.
+- `../../PLAN_UI.md` is the governing UI reconstruction plan.
 
 ## Problem statement
 

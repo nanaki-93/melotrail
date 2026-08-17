@@ -94,8 +94,6 @@ data class WorkspaceUiState(
     val selectedArtifact: CreationArtifactReference? = null,
     /** A feel choice is deliberately pending until the one apply/re-analysis action runs. */
     val pendingMidiFeel: MidiAnalysisInput? = null,
-    /** Advanced repair/report controls stay out of the normal import path. */
-    val partDetailsExpanded: Boolean = false,
     val midiQualityReview: MidiQualityReviewDraft = MidiQualityReviewDraft(),
     val audioPreparation: AudioPreparationUiState = AudioPreparationUiState(),
     val arrangementDraft: ArrangementDraft = ArrangementDraft(),
@@ -324,11 +322,18 @@ sealed interface WorkspaceDialog {
     ) : WorkspaceDialog
 
     data class EditRole(val partId: String, val role: String) : WorkspaceDialog
+    /** The selected canonical part and its return target travel together; no row-local selection is inferred. */
+    data class PartDetails(val partId: String, val focusReturn: PartDetailsFocusReturn) : WorkspaceDialog
     data class ConfirmSafeCleanup(val partId: String) : WorkspaceDialog
     data class ConfirmTightenTiming(val partId: String) : WorkspaceDialog
     data class ConfirmDiscardDraft(val root: Path? = null, val createProject: Boolean = false) : WorkspaceDialog
     data object ConfirmClose : WorkspaceDialog
     data object SoundLibrarySettings : WorkspaceDialog
+}
+
+sealed interface PartDetailsFocusReturn {
+    data class ImportedRow(val partId: String) : PartDetailsFocusReturn
+    data object ImportPrimaryAction : PartDetailsFocusReturn
 }
 
 enum class ImportPreference { ANY, MIDI, AUDIO }
@@ -346,6 +351,7 @@ sealed interface PartPrimaryAction {
     data class ReviewRepair(val partId: String) : PartPrimaryAction
     data class InspectOrTranscribeAudio(val partId: String, val inspected: Boolean) : PartPrimaryAction
     data class ApplyLoFiChange(val partId: String) : PartPrimaryAction
+    data class Analyze(val partId: String) : PartPrimaryAction
     /** The only canonical state permitted to enter the saved song structure. */
     data class AddToStructure(val partId: String) : PartPrimaryAction
     data class FixIssue(val partId: String) : PartPrimaryAction
@@ -358,6 +364,7 @@ internal fun primaryPartAction(part: app.melotrail.application.PartSummary, pend
     part.preparation.rawMidi && part.preparation.midiQuality.status == MidiQualityStatus.LEGACY_UNKNOWN -> PartPrimaryAction.FixIssue(part.id)
     part.preparation.warnings.isNotEmpty() -> PartPrimaryAction.FixIssue(part.id)
     part.sourceType == PartSourceType.AUDIO && !part.preparation.rawMidi && part.analysis?.status != PartAnalysisStatus.MIDI -> PartPrimaryAction.InspectOrTranscribeAudio(part.id, part.preparation.inspected)
+    part.preparation.midiQuality.status == MidiQualityStatus.CURRENT && (!part.preparation.analyzed || part.analysis?.status != PartAnalysisStatus.MIDI) -> PartPrimaryAction.Analyze(part.id)
     part.analysis?.status == PartAnalysisStatus.MIDI -> PartPrimaryAction.AddToStructure(part.id)
     else -> PartPrimaryAction.FixIssue(part.id)
 }
@@ -367,6 +374,7 @@ internal fun PartPrimaryAction.label(): String = when (this) {
     is PartPrimaryAction.ReviewRepair -> "Review repair"
     is PartPrimaryAction.InspectOrTranscribeAudio -> if (inspected) "Transcribe solo piano" else "Inspect audio"
     is PartPrimaryAction.ApplyLoFiChange -> "Apply Lo-fi change"
+    is PartPrimaryAction.Analyze -> "Analyze"
     is PartPrimaryAction.AddToStructure -> "Go to Structure"
     is PartPrimaryAction.FixIssue -> "Fix issue"
 }
@@ -415,8 +423,10 @@ sealed interface WorkspaceIntent {
     data class UpdateImportPart(val draft: WorkspaceDialog.ImportPart) : WorkspaceIntent
     data object ImportPart : WorkspaceIntent
     data class PrepareMidi(val partId: String) : WorkspaceIntent
-    data object TogglePartDetails : WorkspaceIntent
-    data class ShowPartDetails(val partId: String) : WorkspaceIntent
+    data class ShowPartDetails(
+        val partId: String,
+        val focusReturn: PartDetailsFocusReturn = PartDetailsFocusReturn.ImportedRow(partId)
+    ) : WorkspaceIntent
     data class AnalyzePart(val partId: String) : WorkspaceIntent
     data class SelectPart(val partId: String) : WorkspaceIntent
     data object InspectSelectedPart : WorkspaceIntent
@@ -549,8 +559,7 @@ class WorkspaceViewModel(
             is WorkspaceIntent.UpdateImportPart -> mutableState.update { it.copy(dialog = intent.draft) }
             WorkspaceIntent.ImportPart -> importPart()
             is WorkspaceIntent.PrepareMidi -> prepareMidi(intent.partId)
-            WorkspaceIntent.TogglePartDetails -> mutableState.update { it.copy(partDetailsExpanded = !it.partDetailsExpanded) }
-            is WorkspaceIntent.ShowPartDetails -> mutableState.update { it.copy(selectedPartId = intent.partId, partDetailsExpanded = true) }
+            is WorkspaceIntent.ShowPartDetails -> showPartDetails(intent)
             is WorkspaceIntent.AnalyzePart -> analyzePart(intent.partId)
             is WorkspaceIntent.SelectPart -> selectPart(intent.partId)
             WorkspaceIntent.InspectSelectedPart -> inspectSelectedPart()
@@ -842,6 +851,7 @@ class WorkspaceViewModel(
 
     private fun analyzePart(partId: String) {
         val project = state.value.project ?: return
+        if (state.value.operation.isMutating || project.parts.none { it.id == partId }) return
         val request = AnalyzePartRequest(project.root, partId)
         val feedbackId = beginFeedback(OperationKind.COHESION, OperationPhase.VALIDATING, "Analyzing ${partId}…")
         mutableState.update { it.copy(operation = WorkspaceOperation.AnalyzingPart(partId), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
@@ -890,14 +900,30 @@ class WorkspaceViewModel(
         }
     }
 
+    private fun showPartDetails(intent: WorkspaceIntent.ShowPartDetails) {
+        val project = state.value.project ?: return
+        val part = project.parts.find { it.id == intent.partId } ?: return
+        mutableState.update {
+            it.copy(
+                selectedPartId = part.id,
+                selectedArtifact = CreationArtifactReference(CreationArtifactKind.PART_SOURCE, part.id),
+                midiQualityReview = MidiQualityReviewDraft(),
+                audioPreparation = AudioPreparationUiState(partId = part.id),
+                dialog = WorkspaceDialog.PartDetails(part.id, intent.focusReturn),
+                notification = null
+            )
+        }
+        if (part.sourceType == PartSourceType.AUDIO) loadPreparation(project.root, part.id)
+    }
+
     private fun selectPart(partId: String) {
         val project = state.value.project ?: return
         val part = project.parts.find { it.id == partId } ?: return
         if (part.sourceType != PartSourceType.AUDIO) {
-            mutableState.update { it.copy(selectedPartId = partId, selectedArtifact = CreationArtifactReference(CreationArtifactKind.PART_SOURCE, partId), midiQualityReview = MidiQualityReviewDraft(), audioPreparation = AudioPreparationUiState(partId = partId), partDetailsExpanded = false, notification = "Audio preparation is available for WAV/MP3 parts only.") }
+            mutableState.update { it.copy(selectedPartId = partId, selectedArtifact = CreationArtifactReference(CreationArtifactKind.PART_SOURCE, partId), midiQualityReview = MidiQualityReviewDraft(), audioPreparation = AudioPreparationUiState(partId = partId), notification = "Audio preparation is available for WAV/MP3 parts only.") }
             return
         }
-        mutableState.update { it.copy(selectedPartId = partId, selectedArtifact = CreationArtifactReference(CreationArtifactKind.PART_SOURCE, partId), midiQualityReview = MidiQualityReviewDraft(), audioPreparation = AudioPreparationUiState(partId = partId), partDetailsExpanded = false, notification = null) }
+        mutableState.update { it.copy(selectedPartId = partId, selectedArtifact = CreationArtifactReference(CreationArtifactKind.PART_SOURCE, partId), midiQualityReview = MidiQualityReviewDraft(), audioPreparation = AudioPreparationUiState(partId = partId), notification = null) }
         loadPreparation(project.root, partId)
     }
 

@@ -35,6 +35,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,6 +44,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.DragData
@@ -135,13 +138,18 @@ internal object WorkspacePageTags {
 }
 
 @Composable
-internal fun WorkspacePageRouter(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier = Modifier) {
+internal fun WorkspacePageRouter(
+    state: WorkspaceUiState,
+    onIntent: (WorkspaceIntent) -> Unit,
+    modifier: Modifier = Modifier,
+    partDetailsFocusTargets: MutableMap<PartDetailsFocusReturn, FocusRequester> = mutableMapOf()
+) {
     BoxWithConstraints(modifier.fillMaxSize()) {
         val narrow = maxWidth < MusicWorkspaceTokens.Reference.MediumBreakpoint
         when {
             narrow -> Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
                 NarrowNavigation(state, onIntent)
-                PageForSection(state, onIntent, Modifier.weight(1f), narrow = true)
+                PageForSection(state, onIntent, Modifier.weight(1f), narrow = true, partDetailsFocusTargets)
             }
             state.workspaceSection == WorkspaceSection.OVERVIEW -> Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
                 OverviewNavigation(state, onIntent)
@@ -149,16 +157,22 @@ internal fun WorkspacePageRouter(state: WorkspaceUiState, onIntent: (WorkspaceIn
             }
             else -> Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
                 WorkflowNavigation(state, onIntent)
-                InterimWorkflowPage(state, onIntent, Modifier.weight(1f))
+                InterimWorkflowPage(state, onIntent, Modifier.weight(1f), partDetailsFocusTargets)
             }
         }
     }
 }
 
 @Composable
-private fun PageForSection(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier, narrow: Boolean) {
+private fun PageForSection(
+    state: WorkspaceUiState,
+    onIntent: (WorkspaceIntent) -> Unit,
+    modifier: Modifier,
+    narrow: Boolean,
+    partDetailsFocusTargets: MutableMap<PartDetailsFocusReturn, FocusRequester>
+) {
     if (state.workspaceSection == WorkspaceSection.OVERVIEW) OverviewPage(state, onIntent, modifier, narrow)
-    else InterimWorkflowPage(state, onIntent, modifier)
+    else InterimWorkflowPage(state, onIntent, modifier, partDetailsFocusTargets)
 }
 
 @Composable
@@ -390,9 +404,14 @@ private fun OverviewCard(tag: String, title: String, content: @Composable () -> 
 } }
 
 @Composable
-private fun InterimWorkflowPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier) = PageRoot(state.workspaceSection, modifier) {
+private fun InterimWorkflowPage(
+    state: WorkspaceUiState,
+    onIntent: (WorkspaceIntent) -> Unit,
+    modifier: Modifier,
+    partDetailsFocusTargets: MutableMap<PartDetailsFocusReturn, FocusRequester>
+) = PageRoot(state.workspaceSection, modifier) {
     if (state.workspaceSection == WorkspaceSection.IMPORT) {
-        ImportPage(state, onIntent)
+        ImportPage(state, onIntent, partDetailsFocusTargets)
         return@PageRoot
     }
     if (state.workspaceSection == WorkspaceSection.STRUCTURE) {
@@ -842,13 +861,17 @@ private fun StructureTable(state: WorkspaceUiState, onIntent: (WorkspaceIntent) 
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun ImportPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = Column(
+private fun ImportPage(
+    state: WorkspaceUiState,
+    onIntent: (WorkspaceIntent) -> Unit,
+    partDetailsFocusTargets: MutableMap<PartDetailsFocusReturn, FocusRequester>
+) = Column(
     Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)
 ) {
     PageTitle("Import", "Import MIDI or eligible solo-piano audio files")
     ImportDropSurface(state, onIntent)
-    ImportedFiles(state, onIntent)
-    ImportPrimaryAction(state, onIntent)
+    ImportedFiles(state, onIntent, partDetailsFocusTargets)
+    ImportPrimaryAction(state, onIntent, partDetailsFocusTargets)
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -902,7 +925,11 @@ private fun droppedPartSource(event: DragAndDropEvent): Path? = runCatching {
 }.getOrNull()
 
 @Composable
-private fun ImportedFiles(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = Card(
+private fun ImportedFiles(
+    state: WorkspaceUiState,
+    onIntent: (WorkspaceIntent) -> Unit,
+    partDetailsFocusTargets: MutableMap<PartDetailsFocusReturn, FocusRequester>
+) = Card(
     Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.IMPORTED_FILES },
     colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.Surface)
 ) {
@@ -913,6 +940,12 @@ private fun ImportedFiles(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
             Text("No files imported yet.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
             parts.forEachIndexed { index, part ->
+                val focusReturn = PartDetailsFocusReturn.ImportedRow(part.id)
+                val focusRequester = remember(part.id) { FocusRequester() }
+                DisposableEffect(focusReturn, focusRequester) {
+                    partDetailsFocusTargets[focusReturn] = focusRequester
+                    onDispose { partDetailsFocusTargets.remove(focusReturn, focusRequester) }
+                }
                 Row(
                     Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.IMPORTED_ROW_PREFIX + part.id },
                     verticalAlignment = Alignment.CenterVertically,
@@ -930,8 +963,8 @@ private fun ImportedFiles(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                         )
                     }
                     TextButton(
-                        onClick = { onIntent(WorkspaceIntent.ShowPartDetails(part.id)) },
-                        modifier = Modifier.semantics {
+                        onClick = { onIntent(WorkspaceIntent.ShowPartDetails(part.id, focusReturn)) },
+                        modifier = Modifier.focusRequester(focusRequester).semantics {
                             testTag = WorkspacePageTags.IMPORTED_DETAILS_PREFIX + part.id
                             contentDescription = "Details for ${part.sourceName}"
                         }
@@ -944,25 +977,39 @@ private fun ImportedFiles(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
 }
 
 @Composable
-private fun ImportPrimaryAction(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+private fun ImportPrimaryAction(
+    state: WorkspaceUiState,
+    onIntent: (WorkspaceIntent) -> Unit,
+    partDetailsFocusTargets: MutableMap<PartDetailsFocusReturn, FocusRequester>
+) {
     val part = state.project?.parts?.let { parts ->
         state.selectedPartId?.let { selected -> parts.firstOrNull { it.id == selected } }
             ?: parts.firstOrNull { primaryPartAction(it, null) !is PartPrimaryAction.AddToStructure }
             ?: parts.firstOrNull()
     }
     val action = part?.let { primaryPartAction(it, state.pendingMidiFeel) }
+    val focusReturn = PartDetailsFocusReturn.ImportPrimaryAction
+    val focusRequester = remember { FocusRequester() }
+    DisposableEffect(focusRequester) {
+        partDetailsFocusTargets[focusReturn] = focusRequester
+        onDispose { partDetailsFocusTargets.remove(focusReturn, focusRequester) }
+    }
     when {
         state.operation is WorkspaceOperation.Failed -> Unit // The one safe retry remains in the global feedback banner.
         action != null -> Button(
-            onClick = { dispatchImportPrimaryAction(action, onIntent) }, enabled = !state.operation.isMutating,
-            modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.IMPORT_PRIMARY_ACTION }
+            onClick = { dispatchImportPrimaryAction(action, onIntent, focusReturn) }, enabled = !state.operation.isMutating,
+            modifier = Modifier.fillMaxWidth().focusRequester(focusRequester).semantics { testTag = WorkspacePageTags.IMPORT_PRIMARY_ACTION }
         ) { Text(action.label()) }
     }
 }
 
-private fun dispatchImportPrimaryAction(action: PartPrimaryAction, onIntent: (WorkspaceIntent) -> Unit) = when (action) {
+private fun dispatchImportPrimaryAction(
+    action: PartPrimaryAction,
+    onIntent: (WorkspaceIntent) -> Unit,
+    focusReturn: PartDetailsFocusReturn = PartDetailsFocusReturn.ImportPrimaryAction
+) = when (action) {
     is PartPrimaryAction.PrepareMidi -> onIntent(WorkspaceIntent.PrepareMidi(action.partId))
-    is PartPrimaryAction.ReviewRepair -> onIntent(WorkspaceIntent.ShowPartDetails(action.partId))
+    is PartPrimaryAction.ReviewRepair -> onIntent(WorkspaceIntent.ShowPartDetails(action.partId, focusReturn))
     is PartPrimaryAction.InspectOrTranscribeAudio -> {
         onIntent(WorkspaceIntent.SelectPart(action.partId))
         onIntent(if (action.inspected) WorkspaceIntent.TranscribeSelectedPart else WorkspaceIntent.InspectSelectedPart)
@@ -971,8 +1018,9 @@ private fun dispatchImportPrimaryAction(action: PartPrimaryAction, onIntent: (Wo
         onIntent(WorkspaceIntent.SelectPart(action.partId))
         onIntent(WorkspaceIntent.ApplyMidiFeelAndReanalyze)
     }
+    is PartPrimaryAction.Analyze -> onIntent(WorkspaceIntent.AnalyzePart(action.partId))
     is PartPrimaryAction.AddToStructure -> onIntent(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.STRUCTURE))
-    is PartPrimaryAction.FixIssue -> onIntent(WorkspaceIntent.ShowPartDetails(action.partId))
+    is PartPrimaryAction.FixIssue -> onIntent(WorkspaceIntent.ShowPartDetails(action.partId, focusReturn))
 }
 
 private fun formatImportFileSize(bytes: Long?): String = when {

@@ -7,6 +7,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsNodeInteractionsProvider
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
@@ -21,6 +22,9 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.test.v2.runSkikoComposeUiTest
 import androidx.compose.ui.input.key.Key
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import app.melotrail.application.PartAnalysisStatus
 import app.melotrail.application.PartAnalysisSummary
 import app.melotrail.application.PartPreparationSummary
@@ -203,6 +207,46 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `import overflow opens the clicked part details surface and dismissal preserves Import`() = runComposeUiTest {
+        val midi = importPart("first.mid", rawMidi = true)
+        val audio = importPart("second.wav", audio = true).copy(id = "B")
+        var state by mutableStateOf(
+            importState(midi).copy(project = importState(midi).project!!.copy(parts = listOf(midi, audio)))
+        )
+        setContent {
+            MelotrailTheme {
+                WorkspaceScreen(state, onIntent = { intent ->
+                    state = when (intent) {
+                        is WorkspaceIntent.ShowPartDetails -> state.copy(
+                            selectedPartId = intent.partId,
+                            dialog = WorkspaceDialog.PartDetails(intent.partId, intent.focusReturn)
+                        )
+                        WorkspaceIntent.DismissDialog -> state.copy(dialog = null)
+                        else -> state
+                    }
+                })
+            }
+        }
+
+        onNodeWithTag(WorkspacePageTags.IMPORTED_DETAILS_PREFIX + "B").performClick()
+        onAllNodesWithTag(WorkspaceTags.PART_DETAILS_DIALOG).assertCountEquals(1)
+        onAllNodesWithTag(WorkspaceTags.PREPARATION_PANEL).assertCountEquals(1)
+        onNodeWithTag(WorkspaceTags.PART_DETAILS_DIALOG).assertIsFocused()
+        assertEquals("B", state.selectedPartId)
+
+        onNodeWithTag(WorkspaceTags.PART_DETAILS_DIALOG).performKeyInput { pressKey(Key.Escape) }
+        onAllNodesWithTag(WorkspaceTags.PART_DETAILS_DIALOG).assertCountEquals(0)
+        onNodeWithTag(WorkspacePageTags.IMPORTED_DETAILS_PREFIX + "B").assertIsFocused()
+
+        onNodeWithTag(WorkspacePageTags.IMPORTED_DETAILS_PREFIX + "B").performClick()
+        onNodeWithTag(WorkspaceTags.PART_DETAILS_CLOSE).performClick()
+        onAllNodesWithTag(WorkspaceTags.PART_DETAILS_DIALOG).assertCountEquals(0)
+        onAllNodesWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.IMPORT.name.lowercase()).assertCountEquals(1)
+        onNodeWithTag(WorkspacePageTags.IMPORTED_DETAILS_PREFIX + "B").assertIsFocused()
+        assertEquals(WorkspaceSection.IMPORT, state.workspaceSection)
+    }
+
+    @Test
     fun `Import browse action is keyboard reachable`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(importState(importPart("source.mid")), intents::add) } }
@@ -228,8 +272,10 @@ class WorkspaceScreenTest {
     fun `remaining Import primary actions dispatch review feel structure and transcription intents`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         val current = importPart("current.mid", rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT, analyzed = true)
+        val unanalyzed = importPart("needs-analysis.mid", rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT)
         val cases: List<Pair<WorkspaceUiState, List<WorkspaceIntent>>> = listOf(
-            importState(importPart("review.mid", rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.APPROVAL_REQUIRED)) to listOf(WorkspaceIntent.ShowPartDetails("A")),
+            importState(importPart("review.mid", rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.APPROVAL_REQUIRED)) to listOf(WorkspaceIntent.ShowPartDetails("A", PartDetailsFocusReturn.ImportPrimaryAction)),
+            importState(unanalyzed) to listOf(WorkspaceIntent.AnalyzePart("A")),
             importState(importPart("solo.wav", audio = true, inspected = true)) to listOf(WorkspaceIntent.SelectPart("A"), WorkspaceIntent.TranscribeSelectedPart),
             importState(current).copy(selectedPartId = "A", pendingMidiFeel = app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL) to listOf(WorkspaceIntent.SelectPart("A"), WorkspaceIntent.ApplyMidiFeelAndReanalyze),
             importState(current) to listOf(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.STRUCTURE))

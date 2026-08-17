@@ -3,6 +3,7 @@ package app.melotrail.desktop
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -39,9 +40,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -165,6 +172,8 @@ object WorkspaceTags {
     const val MIDI_FEEL_ORIGINAL = "midi-feel-original"
     const val MIDI_FEEL_LOFI = "midi-feel-lofi"
     const val MIDI_FEEL_APPLY = "midi-feel-apply"
+    const val PART_DETAILS_DIALOG = "part-details-dialog"
+    const val PART_DETAILS_CLOSE = "part-details-close"
     const val SOUND_LIBRARY_SETTINGS = "sound-library-settings"
     const val SOUND_LIBRARY_CHOOSE = "sound-library-choose"
     const val SOUND_LIBRARY_CLEAR = "sound-library-clear"
@@ -183,6 +192,15 @@ fun WorkspaceApp(viewModel: WorkspaceViewModel, onExit: () -> Unit = {}) {
 
 @Composable
 fun WorkspaceScreen(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, onExit: () -> Unit = {}) {
+    val partDetailsFocusTargets = remember { mutableStateMapOf<PartDetailsFocusReturn, FocusRequester>() }
+    var partDetailsFocusReturn by remember { mutableStateOf<PartDetailsFocusReturn?>(null) }
+    LaunchedEffect(state.dialog) {
+        (state.dialog as? WorkspaceDialog.PartDetails)?.let { partDetailsFocusReturn = it.focusReturn }
+        if (state.dialog == null) {
+            partDetailsFocusReturn?.let { target -> partDetailsFocusTargets[target]?.requestFocus() }
+            partDetailsFocusReturn = null
+        }
+    }
     Box(
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(MusicWorkspaceTokens.Reference.OuterPadding)
             .onPreviewKeyEvent { event: androidx.compose.ui.input.key.KeyEvent ->
@@ -191,7 +209,7 @@ fun WorkspaceScreen(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit
     ) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Reference.ColumnGap)) {
             ProjectHeader(state, onIntent)
-            WorkspacePageRouter(state, onIntent, Modifier.weight(1f))
+            WorkspacePageRouter(state, onIntent, Modifier.weight(1f), partDetailsFocusTargets)
         }
         OperationFeedbackBanner(state, onIntent, Modifier.align(Alignment.TopCenter).padding(top = MusicWorkspaceTokens.Reference.HeaderHeight + MusicWorkspaceTokens.Spacing.Sm))
     }
@@ -539,12 +557,6 @@ internal fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (Workspac
     val part = state.selectedPartId?.let { id -> state.project?.parts?.find { it.id == id } } ?: return@WorkspaceCard
     val quality = part.preparation.midiQuality
     Text("Part ${part.id}", fontWeight = FontWeight.Medium)
-    if (!state.partDetailsExpanded) {
-        Text("Repair reports and advanced profiles are available in Details.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        TextButton(onClick = { onIntent(WorkspaceIntent.TogglePartDetails) }) { Text("Details") }
-        return@WorkspaceCard
-    }
-    TextButton(onClick = { onIntent(WorkspaceIntent.TogglePartDetails) }) { Text("Hide details") }
     val midiPreviewReady = state.runtimeReadiness?.capability(RuntimeCapability.MIDI_PREVIEW)?.available == true
     if (part.preparation.rawMidi) {
         Text("Audition", style = MaterialTheme.typography.labelLarge)
@@ -608,6 +620,13 @@ internal fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (Workspac
                 else -> "This part is ready for structure and arrangement."
             }
             Text(next, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (!part.preparation.analyzed || part.analysis?.status != app.melotrail.application.PartAnalysisStatus.MIDI) {
+                Button(
+                    onClick = { onIntent(WorkspaceIntent.AnalyzePart(part.id)) },
+                    enabled = !state.operation.isMutating,
+                    modifier = Modifier.semantics { contentDescription = "Analyze repaired MIDI for ${part.id}" }
+                ) { Text("Analyze") }
+            }
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
             Text("MIDI Feel", style = MaterialTheme.typography.labelLarge)
             Text("Choose the canonical MIDI source. Lo-fi MIDI Feel is fixed at 80 BPM and 58% swing; it does not apply Lo-fi audio texture.", style = MaterialTheme.typography.bodySmall)
@@ -1412,6 +1431,7 @@ private fun WorkspaceDialogs(state: WorkspaceUiState, onIntent: (WorkspaceIntent
         is WorkspaceDialog.CreateProject -> CreateProjectDialog(dialog, onIntent)
         is WorkspaceDialog.ImportPart -> ImportPartDialog(dialog, onIntent)
         is WorkspaceDialog.EditRole -> EditRoleDialog(dialog, onIntent)
+        is WorkspaceDialog.PartDetails -> PartDetailsDialog(state, dialog, onIntent)
         is WorkspaceDialog.ConfirmSafeCleanup -> ConfirmSafeCleanupDialog(dialog, onIntent)
         is WorkspaceDialog.ConfirmTightenTiming -> ConfirmTightenTimingDialog(dialog, onIntent)
         is WorkspaceDialog.ConfirmDiscardDraft -> ConfirmDiscardDraftDialog(dialog, onIntent)
@@ -1419,6 +1439,54 @@ private fun WorkspaceDialogs(state: WorkspaceUiState, onIntent: (WorkspaceIntent
         WorkspaceDialog.SoundLibrarySettings -> SoundLibrarySettingsDialog(state.soundLibrary, state.runtimeReadiness, onIntent)
         null -> Unit
     }
+}
+
+@Composable
+private fun PartDetailsDialog(state: WorkspaceUiState, dialog: WorkspaceDialog.PartDetails, onIntent: (WorkspaceIntent) -> Unit) {
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(dialog.partId) { focusRequester.requestFocus() }
+    val part = state.project?.parts?.firstOrNull { it.id == dialog.partId }
+    AlertDialog(
+        onDismissRequest = { onIntent(WorkspaceIntent.DismissDialog) },
+        title = { Text("Part details · ${dialog.partId}") },
+        text = {
+            Column(
+                Modifier.heightIn(max = 560.dp).verticalScroll(rememberScrollState()).focusRequester(focusRequester).focusable()
+                    .onPreviewKeyEvent { event ->
+                        if (event.key == Key.Escape && event.type == KeyEventType.KeyDown) {
+                            onIntent(WorkspaceIntent.DismissDialog)
+                            true
+                        } else false
+                    }
+                    .semantics {
+                        testTag = WorkspaceTags.PART_DETAILS_DIALOG
+                        contentDescription = "Details for selected part ${dialog.partId}"
+                    },
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                when (part?.sourceType) {
+                    app.melotrail.application.PartSourceType.MIDI -> MidiQualityReviewPanel(state, onIntent)
+                    app.melotrail.application.PartSourceType.AUDIO -> AudioPreparationPanel(state, onIntent)
+                    else -> Text("This source is no longer supported. Re-import a validated MIDI, WAV, or MP3 source.", color = MaterialTheme.colorScheme.error)
+                }
+                val failed = state.operation as? WorkspaceOperation.Failed
+                if (failed != null) {
+                    Text("${failed.action}: ${failed.message}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    if (state.retry != null) Button(onClick = { onIntent(WorkspaceIntent.Retry) }) { Text("Retry safely") }
+                }
+                if (state.operation.isMutating) {
+                    Text("Controls are temporarily unavailable while ${statusText(state)}", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(
+                onClick = { onIntent(WorkspaceIntent.DismissDialog) },
+                modifier = Modifier.semantics { testTag = WorkspaceTags.PART_DETAILS_CLOSE }
+            ) { Text("Close") }
+        }
+    )
 }
 
 @Composable

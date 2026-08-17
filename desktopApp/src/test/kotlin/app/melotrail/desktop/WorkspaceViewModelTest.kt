@@ -149,12 +149,63 @@ class WorkspaceViewModelTest {
     fun `part primary actions are derived from canonical artifact state`() {
         val raw = part("raw").copy(preparation = preparation(rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.STALE_OR_INVALID))
         val review = raw.copy(id = "review", preparation = preparation(rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.APPROVAL_REQUIRED))
-        val ready = analyzedPart("ready")
+        val repaired = raw.copy(id = "repaired", preparation = preparation(rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT))
+        val ready = analyzedPart("ready").copy(preparation = preparation(rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT).copy(analyzed = true, ready = true))
+        val staleAnalysis = ready.copy(id = "stale-analysis", preparation = ready.preparation.copy(analyzed = false, ready = false))
+        val audioBeforeInspection = audioPart("audio").copy(preparation = preparation())
+        val audioInspected = audioBeforeInspection.copy(preparation = preparation().copy(inspected = true))
+        val warning = repaired.copy(id = "warning", preparation = repaired.preparation.copy(warnings = listOf("repair evidence needs review")))
+        val legacy = raw.copy(id = "legacy", preparation = preparation(rawMidi = true))
 
         assertIs<PartPrimaryAction.PrepareMidi>(primaryPartAction(raw))
         assertIs<PartPrimaryAction.ReviewRepair>(primaryPartAction(review))
+        assertIs<PartPrimaryAction.Analyze>(primaryPartAction(repaired))
+        assertIs<PartPrimaryAction.Analyze>(primaryPartAction(staleAnalysis))
         assertIs<PartPrimaryAction.AddToStructure>(primaryPartAction(ready))
         assertIs<PartPrimaryAction.ApplyLoFiChange>(primaryPartAction(ready, app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL))
+        assertIs<PartPrimaryAction.InspectOrTranscribeAudio>(primaryPartAction(audioBeforeInspection))
+        assertIs<PartPrimaryAction.InspectOrTranscribeAudio>(primaryPartAction(audioInspected))
+        assertIs<PartPrimaryAction.FixIssue>(primaryPartAction(warning))
+        assertIs<PartPrimaryAction.FixIssue>(primaryPartAction(legacy))
+    }
+
+    @Test
+    fun `part details retain the clicked part and dismiss without leaving Import`() = runTest {
+        val root = Path.of("build/part-details-project")
+        val snapshot = projectSnapshot(root).copy(parts = listOf(part("A"), audioPart("B")))
+        val viewModel = WorkspaceViewModel(FakeProjectService(result = snapshot), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.IMPORT))
+        viewModel.accept(WorkspaceIntent.ShowPartDetails("B", PartDetailsFocusReturn.ImportedRow("B")))
+
+        assertEquals(WorkspaceDialog.PartDetails("B", PartDetailsFocusReturn.ImportedRow("B")), viewModel.state.value.dialog)
+        assertEquals("B", viewModel.state.value.selectedPartId)
+        assertEquals(WorkspaceSection.IMPORT, viewModel.state.value.workspaceSection)
+
+        viewModel.accept(WorkspaceIntent.DismissDialog)
+
+        assertNull(viewModel.state.value.dialog)
+        assertEquals("B", viewModel.state.value.selectedPartId)
+        assertEquals(WorkspaceSection.IMPORT, viewModel.state.value.workspaceSection)
+        viewModel.close()
+    }
+
+    @Test
+    fun `current repaired MIDI without analysis analyzes the requested part only`() = runTest {
+        val root = Path.of("build/analyze-current-midi-project")
+        val current = part("B").copy(preparation = preparation(rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT))
+        val snapshot = projectSnapshot(root).copy(parts = listOf(part("A"), current))
+        val service = FakeProjectService(result = snapshot)
+        val viewModel = WorkspaceViewModel(service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        assertIs<PartPrimaryAction.Analyze>(primaryPartAction(checkNotNull(viewModel.state.value.project).parts.single { it.id == "B" }))
+
+        viewModel.accept(WorkspaceIntent.AnalyzePart("B")); advanceUntilIdle()
+
+        assertEquals(AnalyzePartRequest(root, "B"), service.analyzed)
+        viewModel.close()
     }
 
     @Test
@@ -318,7 +369,7 @@ class WorkspaceViewModelTest {
 
         viewModel.accept(WorkspaceIntent.AnalyzePart("A"))
         advanceUntilIdle()
-        assertEquals("A", service.analyzed?.partId)
+        assertEquals(AnalyzePartRequest(root, "A"), service.analyzed)
 
         viewModel.accept(WorkspaceIntent.ShowRoleEditor("A"))
         viewModel.accept(WorkspaceIntent.UpdateRole("chorus"))
