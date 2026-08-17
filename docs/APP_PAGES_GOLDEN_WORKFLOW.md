@@ -27,6 +27,26 @@ The focused Import, Structure, Arrange, Mix & Master, Video Preview, and Export
 fixtures also write 50%-opacity reference overlays in the same directory. They
 are review artifacts, not source-controlled release assets.
 
+Task 101 additionally records the complete window for every current destination
+against the numbered references in `plan/pictures/UI/`:
+
+```bash
+./gradlew :desktopApp:test --rerun-tasks --tests 'app.melotrail.desktop.WorkspaceScreenTest.Task 101 records a complete 1536 by 1024 window for every destination'
+```
+
+It writes these full-window 1536 × 1024 captures under
+`desktopApp/build/reports/`:
+
+- `task-101-overview-capture.png`
+- `task-101-import-capture.png`
+- `task-101-structure-capture.png`
+- `task-101-arrange-capture.png`
+- `task-101-mix_master-capture.png`
+- `task-101-library-capture.png`
+- `task-101-video_preview-capture.png`
+- `task-101-export-capture.png`
+- `task-101-settings-capture.png`
+
 ## Review procedure
 
 At the reference 100% viewport, overlay each capture on its matching region in

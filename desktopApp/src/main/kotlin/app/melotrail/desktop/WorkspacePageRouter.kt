@@ -547,10 +547,15 @@ private fun LibraryPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
     ) {
         PageTitle("Library", "Validated local instruments and samples only")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm), verticalAlignment = Alignment.CenterVertically) {
-            Button(
-                onClick = {}, enabled = false,
-                modifier = Modifier.semantics { testTag = WorkspacePageTags.LIBRARY_TYPE_TAB; contentDescription = "Instruments is the only supported local library type" }
-            ) { Text("Instruments") }
+            Text(
+                "Instruments",
+                modifier = Modifier.semantics {
+                    testTag = WorkspacePageTags.LIBRARY_TYPE_TAB
+                    contentDescription = "Instruments is the only supported local library type"
+                },
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Spacer(Modifier.weight(1f))
             OutlinedButton(
                 onClick = { onIntent(WorkspaceIntent.RefreshSoundLibrary) },

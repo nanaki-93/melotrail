@@ -4,7 +4,7 @@
 
 Complete the cross-page consistency, full workflow, accessibility,
 responsiveness, and deterministic visual-acceptance pass for Tasks 091–100 and
-all references under `../pictures/UI/`.
+all references under `../../pictures/UI`.
 
 ## Dependencies
 

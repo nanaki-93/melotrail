@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Settings
@@ -197,9 +196,6 @@ private fun TopBar(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit,
             BrandMark()
             if (navigationTag != null) DestinationNavigation(state, onIntent, navigationTag, compact = true, modifier = Modifier.weight(1f)) else Spacer(Modifier.weight(1f))
             Text("Local mode", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.TextSecondary)
-            IconButton(onClick = {}, enabled = false, modifier = Modifier.semantics { contentDescription = "Help is unavailable in this local build." }) {
-                Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = null)
-            }
             IconButton(onClick = { onIntent(WorkspaceIntent.OpenSettings) }, modifier = Modifier.semantics { contentDescription = "Open Settings" }) {
                 Icon(Icons.Default.Settings, contentDescription = null)
             }

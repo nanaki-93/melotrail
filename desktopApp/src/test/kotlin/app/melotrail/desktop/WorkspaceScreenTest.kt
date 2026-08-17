@@ -12,6 +12,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -149,6 +150,17 @@ class WorkspaceScreenTest {
         setContent { MelotrailTheme { WorkspaceScreen(WorkspaceUiState(workspaceSection = WorkspaceSection.LIBRARY), onIntent = {}) } }
         onNodeWithTag(WorkspacePageTags.LIBRARY_RECOVERY).assertExists()
         onNodeWithText("No catalog data is shown until the registry, SFZ files, and samples validate locally.").assertExists()
+    }
+
+    @Test
+    fun `unsupported library types and shell help are omitted rather than shown as disabled actions`() = runComposeUiTest {
+        setContent { MelotrailTheme { WorkspaceScreen(populatedState().copy(workspaceSection = WorkspaceSection.LIBRARY), onIntent = {}) } }
+
+        onNodeWithTag(WorkspacePageTags.LIBRARY_TYPE_TAB).assertExists()
+        onAllNodesWithContentDescription("Help is unavailable in this local build.").assertCountEquals(0)
+        listOf("Samples", "Loops", "Download", "Add Item").forEach { unsupported ->
+            onAllNodesWithText(unsupported).assertCountEquals(0)
+        }
     }
 
     @Test
@@ -939,6 +951,36 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `Task 101 records a complete 1536 by 1024 window for every destination`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
+        val library = LocalSoundLibraryInventory(
+            LocalSoundLibraryInventoryState.READY,
+            listOf(libraryInstrument("piano", "Piano"))
+        )
+        val fixtures = mapOf(
+            WorkspaceSection.OVERVIEW to overviewReadyState(),
+            WorkspaceSection.IMPORT to importState(importPart("piano_loop.mid", rawMidi = true)),
+            WorkspaceSection.STRUCTURE to populatedState().copy(workspaceSection = WorkspaceSection.STRUCTURE),
+            WorkspaceSection.ARRANGE to arrangeState(),
+            WorkspaceSection.MIX_MASTER to mixMasterState(),
+            WorkspaceSection.LIBRARY to populatedState().copy(
+                workspaceSection = WorkspaceSection.LIBRARY,
+                libraryBrowser = LibraryBrowserState(inventory = library, selectedId = "piano")
+            ),
+            WorkspaceSection.VIDEO_PREVIEW to populatedState().copy(workspaceSection = WorkspaceSection.VIDEO_PREVIEW),
+            WorkspaceSection.EXPORT to exportState(),
+            WorkspaceSection.SETTINGS to populatedState().copy(workspaceSection = WorkspaceSection.SETTINGS)
+        )
+
+        WorkspaceSection.entries.forEach { destination ->
+            setContent { MelotrailTheme { WorkspaceScreen(checkNotNull(fixtures[destination]), onIntent = {}) } }
+            val image = onRoot().captureToImage().toAwtImage()
+            assertEquals(1536, image.width, destination.label)
+            assertEquals(1024, image.height, destination.label)
+            writeTask101Capture(destination.name.lowercase(), image)
+        }
+    }
+
+    @Test
     fun `deterministic full-window overview fixture overlays the task reference`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
         val fixtureArrangement = arrangementSnapshot(approved = true, sections = listOf(
             arrangementSection(0, "A1", 32.0, "piano", "bass"),
@@ -1320,6 +1362,15 @@ class WorkspaceScreenTest {
             .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/App-pages.png")) }
             ?: error("Could not locate the App-pages reference image.")
         val target = repository.resolve("desktopApp/build/reports/task-090-$page-capture.png")
+        Files.createDirectories(target.parent)
+        assertTrue(ImageIO.write(capture, "png", target.toFile()))
+    }
+
+    private fun writeTask101Capture(destination: String, capture: BufferedImage) {
+        val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
+            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/01-dashboard-overview.png")) }
+            ?: error("Could not locate the Task 101 UI references.")
+        val target = repository.resolve("desktopApp/build/reports/task-101-$destination-capture.png")
         Files.createDirectories(target.parent)
         assertTrue(ImageIO.write(capture, "png", target.toFile()))
     }

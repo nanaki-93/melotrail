@@ -78,7 +78,6 @@ object WorkspaceTags {
     const val READINESS_RECOVERY = "readiness-recovery"
     const val PARTS_PANEL = "parts-panel"
     const val PRESENTATION_PANEL = "presentation-panel"
-    const val SCENE_CHANGE = "scene-change"
     const val SCENE_PLAY_PAUSE = "scene-play-pause"
     const val SCENE_STOP = "scene-stop"
     const val SCENE_PROGRESS = "scene-progress"
@@ -87,9 +86,7 @@ object WorkspaceTags {
     const val NEXT_DESTINATION_PANEL = "next-destination-panel"
     const val AI_PLAN_PANEL = "ai-plan-panel"
     const val AI_PLAN_SECTION_PREFIX = "ai-plan-section-"
-    const val AI_PLAN_PLAY_PREFIX = "ai-plan-play-"
     const val AI_PLAN_REGENERATE = "ai-plan-regenerate"
-    const val AI_PLAN_EXPORT = "ai-plan-export"
     const val MIXER = "mixer"
     const val FOOTER_WAVEFORM = "footer-waveform"
     const val MIX_CHANNEL_PREFIX = "mix-channel-"
@@ -98,8 +95,6 @@ object WorkspaceTags {
     const val MIX_SOLO_PREFIX = "mix-solo-"
     const val MASTER_OUTPUT = "master-output"
     const val MASTER_EFFECT_LOFI = "master-effect-lofi"
-    const val MASTER_EFFECT_GLUE = "master-effect-glue"
-    const val MASTER_EFFECT_LIMITER = "master-effect-limiter"
     const val PART_ROW_PREFIX = "part-row-"
     const val PART_PREVIEW_PREFIX = "part-preview-"
     const val STRUCTURE_PANEL = "structure-panel"
@@ -216,6 +211,21 @@ fun WorkspaceScreen(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit
         OperationFeedbackBanner(state, onIntent, Modifier.align(Alignment.TopCenter).padding(top = MusicWorkspaceTokens.Shell.TopBarHeight + MusicWorkspaceTokens.Spacing.Sm))
     }
     WorkspaceDialogs(state, onIntent, onExit)
+}
+
+@Composable
+internal fun OperationFeedbackBanner(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier = Modifier) {
+    val feedback = state.operationFeedback
+    if (feedback.phase == OperationPhase.IDLE) {
+        Box(modifier.semantics { testTag = WorkspaceTags.GLOBAL_FEEDBACK; contentDescription = "Global operation feedback: ready" })
+        return
+    }
+    Card(
+        modifier = modifier.widthIn(max = 620.dp).semantics { testTag = WorkspaceTags.GLOBAL_FEEDBACK; contentDescription = "Global operation feedback" },
+        colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface), border = BorderStroke(1.dp, MusicWorkspaceTokens.Border)
+    ) {
+        Box(Modifier.padding(MusicWorkspaceTokens.Spacing.Md)) { OperationStatusSurface(state, onIntent) }
+    }
 }
 
 internal fun transportShortcutIntent(
