@@ -93,7 +93,12 @@ private fun WideShell(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Un
         Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Reference.ColumnGap)) {
             ProjectRail(state, onIntent, Modifier.width(MusicWorkspaceTokens.Shell.ProjectRailWidth).fillMaxHeight(), includeNavigation = false)
             WorkspacePageRouter(state, onIntent, Modifier.weight(1f).fillMaxHeight(), focusTargets)
-            ContextRail(state, Modifier.width(MusicWorkspaceTokens.Shell.ContextRailWidth).fillMaxHeight())
+            // Overview already supplies the reference page's preview/context rail.
+            // Keeping the generic shell rail there would compress its canonical
+            // track overview and create a second, empty source of page context.
+            if (state.workspaceSection != WorkspaceSection.OVERVIEW) {
+                ContextRail(state, Modifier.width(MusicWorkspaceTokens.Shell.ContextRailWidth).fillMaxHeight())
+            }
         }
     }
 }

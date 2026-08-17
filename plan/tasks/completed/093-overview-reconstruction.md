@@ -3,7 +3,7 @@
 ## Goal
 
 Rebuild the Overview destination to follow
-`../pictures/UI/01-dashboard-overview.png` using truthful canonical project,
+`../../pictures/UI/01-dashboard-overview.png` using truthful canonical project,
 workflow, arrangement, playback, and release-readiness state.
 
 ## Dependencies
@@ -49,7 +49,7 @@ workflow, arrangement, playback, and release-readiness state.
 - Prove Overview and later Preview controls operate on the same playback state
   and intents.
 - Capture a deterministic full-window fixture at 1536 × 1024 and overlay it on
-  `../pictures/UI/01-dashboard-overview.png`. Check matching major edges within
+  `../../pictures/UI/01-dashboard-overview.png`. Check matching major edges within
   4 px and document truthful intentional differences.
 - Repeat layout checks at medium/narrow widths and 100%, 125%, and 150% scale.
 - Run `./gradlew :desktopApp:test :desktopApp:build`.

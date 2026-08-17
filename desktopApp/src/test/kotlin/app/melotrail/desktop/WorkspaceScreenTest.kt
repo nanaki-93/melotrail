@@ -12,6 +12,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -31,6 +32,8 @@ import app.melotrail.application.PartPreparationSummary
 import app.melotrail.application.PartSourceType
 import app.melotrail.application.PartSummary
 import app.melotrail.application.ArrangementPlannerKind
+import app.melotrail.application.ArrangementInstrumentSnapshot
+import app.melotrail.application.ArrangementSectionSnapshot
 import app.melotrail.application.ArrangementSnapshot
 import app.melotrail.application.LogicalMixSetting
 import app.melotrail.application.MixSnapshot
@@ -145,29 +148,102 @@ class WorkspaceScreenTest {
 
     @Test
     fun `overview exposes real-state regions one export route and one shared transport`() = runComposeUiTest {
-        val intents = mutableListOf<WorkspaceIntent>()
-        setContent { MelotrailTheme { WorkspaceScreen(populatedState(), intents::add) } }
+        setContent { MelotrailTheme { WorkspaceScreen(populatedState(), onIntent = {}) } }
 
         listOf(
+            WorkspacePageTags.OVERVIEW_SUMMARY,
             WorkspacePageTags.OVERVIEW_SECTION_STRIP,
             WorkspacePageTags.OVERVIEW_TRACKS,
             WorkspacePageTags.OVERVIEW_PREVIEW,
+            WorkspacePageTags.OVERVIEW_PROJECT_INFO,
             WorkspacePageTags.OVERVIEW_SECTION_INFO,
-            WorkspacePageTags.OVERVIEW_EXPORT,
+            WorkspacePageTags.OVERVIEW_ACTIVITY,
+            WorkspacePageTags.OVERVIEW_QUICK_ACTIONS,
             WorkspaceTags.COMPACT_TRANSPORT
         ).forEach { onAllNodesWithTag(it).assertCountEquals(1) }
         onAllNodesWithTag(WorkspaceTags.COMPACT_TRANSPORT).assertCountEquals(1)
-        onNodeWithTag(WorkspacePageTags.OVERVIEW_EXPORT).performClick()
-        assertEquals(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.EXPORT), intents.last())
     }
 
     @Test
-    fun `overview labels unavailable signal video and waveform state instead of inventing data`() = runComposeUiTest {
+    fun `overview labels unknown timing tempo key tracks and preview state instead of inventing data`() = runComposeUiTest {
         setContent { MelotrailTheme { WorkspaceScreen(WorkspaceUiState(), onIntent = {}) } }
 
         onAllNodesWithTag(WorkspacePageTags.OVERVIEW_TRACKS).assertCountEquals(1)
         onAllNodesWithTag(WorkspacePageTags.OVERVIEW_PREVIEW).assertCountEquals(1)
         onAllNodesWithTag(WorkspaceTags.FOOTER_WAVEFORM).assertCountEquals(1)
+        onAllNodesWithText("Track availability unavailable").assertCountEquals(2)
+        onNodeWithText("Tempo").assertExists()
+        onNodeWithText("No canonical song tempo").assertExists()
+        onNodeWithText("Key unavailable").assertExists()
+        onNodeWithText("Local video preview unavailable").assertExists()
+    }
+
+    @Test
+    fun `overview reports loading and failed playback from the shared session`() = runComposeUiTest {
+        val failed = WorkspaceUiState(
+            playbackSession = PlaybackSession(phase = PlaybackSessionPhase.FAILED, failureMessage = "Audio device unavailable"),
+            operation = WorkspaceOperation.ImportingPart("A"),
+            operationFeedback = OperationFeedback("task-093-loading", OperationKind.IMPORT, OperationPhase.LOCAL, message = "Inspecting source…")
+        )
+        setContent { MelotrailTheme { WorkspaceScreen(failed, onIntent = {}) } }
+
+        onNodeWithText("Playback unavailable: Audio device unavailable").assertExists()
+        onNodeWithText("Loading").assertExists()
+        onAllNodesWithText("Inspecting source…").assertCountEquals(2)
+    }
+
+    @Test
+    fun `overview quick actions route only through existing workspace destinations`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(overviewReadyState(), intents::add) } }
+
+        listOf(
+            "import" to WorkspaceSection.IMPORT,
+            "structure" to WorkspaceSection.STRUCTURE,
+            "arrange" to WorkspaceSection.ARRANGE,
+            "mix-master" to WorkspaceSection.MIX_MASTER,
+            "export" to WorkspaceSection.EXPORT
+        ).forEach { (id, destination) ->
+            onNodeWithTag(WorkspacePageTags.OVERVIEW_QUICK_ACTION_PREFIX + id).performScrollTo().performClick()
+            assertEquals(WorkspaceIntent.SelectWorkspaceSection(destination), intents.removeLast())
+        }
+    }
+
+    @Test
+    fun `overview selection uses occurrence identity and stale tracks never claim a measured waveform`() = runComposeUiTest {
+        val sections = listOf(
+            arrangementSection(0, "A1", 16.0, "piano"),
+            arrangementSection(1, "B1", 20.0, "bass"),
+            arrangementSection(2, "A2", 24.0, "piano", "drums"),
+            arrangementSection(3, "C1", 18.0, "pad"),
+            arrangementSection(4, "B2", 22.0, "strings")
+        )
+        val stale = overviewReadyState(arrangement = arrangementSnapshot(approved = true, sections = sections).copy(stale = true)).let { state ->
+            state.copy(project = state.project!!.copy(structure = sections.map { section ->
+                StructureSectionSummary(section.index, section.partId, section.index + 1, section.instanceId, section.durationSeconds)
+            }))
+        }
+        setContent { MelotrailTheme { WorkspaceScreen(stale, onIntent = {}) } }
+
+        onAllNodesWithTag(WorkspacePageTags.OVERVIEW_SECTION_PREFIX + "A2").assertCountEquals(1)
+        onNodeWithTag(WorkspacePageTags.OVERVIEW_SECTION_PREFIX + "A2").performClick()
+        onNodeWithText("Time: 0:24").assertExists()
+        onAllNodesWithText("Stale lane").assertCountEquals(5)
+        onAllNodesWithTag(WorkspaceTags.FOOTER_WAVEFORM).assertCountEquals(1)
+    }
+
+    @Test
+    fun `overview and video preview dispatch the same shared playback intent`() = runComposeUiTest {
+        val session = PlaybackSession(artifact = PlaybackArtifactIdentity(Path.of("build/task-093-project"), Path.of("build/task-093-project/mix/dry.wav")))
+        val overviewIntents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(overviewReadyState().copy(playbackSession = session), overviewIntents::add) } }
+        onNodeWithTag(WorkspaceTags.PLAYBACK_TOGGLE).performScrollTo().performClick()
+        assertEquals(WorkspaceIntent.PlayPause, overviewIntents.single())
+
+        val previewIntents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(overviewReadyState().copy(workspaceSection = WorkspaceSection.VIDEO_PREVIEW, playbackSession = session, runtimeReadiness = readyRuntime()), previewIntents::add) } }
+        onNodeWithTag(WorkspacePageTags.VIDEO_PREVIEW_PLAY_PAUSE).performScrollTo().performClick()
+        assertEquals(WorkspaceIntent.PlayPause, previewIntents.single())
     }
 
     @Test
@@ -566,14 +642,23 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `deterministic overview fixture uses reference page-shell geometry`() = runSkikoComposeUiTest(size = Size(1158f, 462f)) {
-        setContent { MelotrailTheme { WorkspaceScreen(populatedState(), onIntent = {}) } }
+    fun `deterministic full-window overview fixture overlays the task reference`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
+        val fixtureArrangement = arrangementSnapshot(approved = true, sections = listOf(
+            arrangementSection(0, "A1", 32.0, "piano", "bass"),
+            arrangementSection(1, "A2", 32.0, "piano", "pad"),
+            arrangementSection(2, "B1", 32.0, "piano", "bass", "drums"),
+            arrangementSection(3, "B2", 32.0, "piano", "drums", "strings"),
+            arrangementSection(4, "A3", 32.0, "piano", "bass", "pad")
+        ))
+        setContent { MelotrailTheme { WorkspaceScreen(overviewReadyState(fixtureArrangement), onIntent = {}) } }
 
-        val image = onNodeWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.OVERVIEW.name.lowercase()).captureToImage()
+        val image = onNodeWithTag(WorkspaceShellTags.ROOT).captureToImage()
         assertTrue(image.width > 0)
         assertTrue(image.height > 0)
-        writePageCapture("overview", image.toAwtImage())
-        // Major card edges are measured from the 1158 × 462 large Overview crop in App-pages.png.
+        writeTask093OverviewCapture(image.toAwtImage())
+        writeTask093OverviewReferenceOverlay(image.toAwtImage())
+        // The Task 092 shell owns the outer edges. This verifies the shared Overview
+        // preview edge within 4 px while the overlay is retained for visual review.
         val preview = onNodeWithTag(WorkspacePageTags.OVERVIEW_PREVIEW).getUnclippedBoundsInRoot()
         assertTrue(abs((preview.right - preview.left).value - MusicWorkspaceTokens.Pages.OverviewPreviewWidth.value) <= 4f, "preview width: ${preview.right - preview.left}")
     }
@@ -665,6 +750,38 @@ class WorkspaceScreenTest {
         structureDraft = listOf("A", "B")
     )
 
+    private fun overviewReadyState(arrangement: ArrangementSnapshot = arrangementSnapshot(approved = true, sections = listOf(
+        arrangementSection(0, "A1", 32.0, "piano", "bass"),
+        arrangementSection(1, "B1", 32.0, "piano", "drums", "pad")
+    ))): WorkspaceUiState {
+        val base = populatedState()
+        val project = base.project!!
+        return base.copy(
+            project = project.copy(readiness = project.readiness.copy(
+                songPlanAvailable = true,
+                arrangementAvailable = true,
+                generatedMidiAvailable = true,
+                stemsAvailable = true,
+                dryMixAvailable = true,
+                loFiMixAvailable = true,
+                masterAvailable = true,
+                releaseAvailable = true
+            )),
+            arrangement = arrangement
+        )
+    }
+
+    private fun arrangementSection(index: Int, instanceId: String, durationSeconds: Double, vararg instruments: String) = ArrangementSectionSnapshot(
+        index = index,
+        instanceId = instanceId,
+        partId = instanceId.take(1),
+        purpose = "section",
+        energy = 0.5,
+        instruments = instruments.map { ArrangementInstrumentSnapshot(it, "active", null, null) },
+        transition = "none",
+        durationSeconds = durationSeconds
+    )
+
     private fun arrangeState(): WorkspaceUiState = populatedState().copy(workspaceSection = WorkspaceSection.ARRANGE)
 
     private fun mixMasterState(): WorkspaceUiState = populatedState().copy(
@@ -701,10 +818,11 @@ class WorkspaceScreenTest {
     private fun arrangementSnapshot(
         approvalRequired: Boolean = false,
         approved: Boolean = false,
-        stale: Boolean = false
+        stale: Boolean = false,
+        sections: List<ArrangementSectionSnapshot> = emptyList()
     ) = ArrangementSnapshot(
         root = Path.of("build/task-086-project"),
-        sections = emptyList(),
+        sections = sections,
         approvalRequired = approvalRequired,
         approved = approved,
         stale = stale,
@@ -786,6 +904,33 @@ class WorkspaceScreenTest {
         val target = repository.resolve("desktopApp/build/reports/task-090-$page-capture.png")
         Files.createDirectories(target.parent)
         assertTrue(ImageIO.write(capture, "png", target.toFile()))
+    }
+
+    private fun writeTask093OverviewCapture(capture: BufferedImage) {
+        val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
+            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/01-dashboard-overview.png")) }
+            ?: error("Could not locate the Task 093 Overview reference image.")
+        val target = repository.resolve("desktopApp/build/reports/task-093-overview-capture.png")
+        Files.createDirectories(target.parent)
+        assertTrue(ImageIO.write(capture, "png", target.toFile()))
+    }
+
+    private fun writeTask093OverviewReferenceOverlay(capture: BufferedImage) {
+        val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
+            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/01-dashboard-overview.png")) }
+            ?: error("Could not locate the Task 093 Overview reference image.")
+        val reference = ImageIO.read(repository.resolve("plan/pictures/UI/01-dashboard-overview.png").toFile())
+        val overlay = BufferedImage(capture.width, capture.height, BufferedImage.TYPE_INT_ARGB)
+        val graphics = overlay.createGraphics()
+        try {
+            graphics.drawImage(reference, 0, 0, overlay.width, overlay.height, null)
+            graphics.composite = AlphaComposite.SrcOver.derive(0.55f)
+            graphics.drawImage(capture, 0, 0, null)
+        } finally {
+            graphics.dispose()
+        }
+        val target = repository.resolve("desktopApp/build/reports/task-093-overview-overlay.png")
+        assertTrue(ImageIO.write(overlay, "png", target.toFile()))
     }
 
     private fun writeShellCapture(layout: String, capture: BufferedImage) {

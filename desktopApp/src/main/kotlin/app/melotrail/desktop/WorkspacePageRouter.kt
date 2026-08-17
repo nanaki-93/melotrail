@@ -58,6 +58,7 @@ import app.melotrail.application.ArrangementSectionSnapshot
 import app.melotrail.application.ArrangementPlannerKind
 import app.melotrail.application.PartSourceType
 import app.melotrail.application.StructureSectionSummary
+import app.melotrail.application.WorkflowStage
 import app.melotrail.arrangement.LogicalInstrument
 import java.net.URI
 import java.nio.file.Path
@@ -68,7 +69,15 @@ internal object WorkspacePageTags {
     const val OVERVIEW_TRACKS = "overview-track-overview"
     const val OVERVIEW_PREVIEW = "overview-video-preview"
     const val OVERVIEW_SECTION_INFO = "overview-section-info"
-    const val OVERVIEW_EXPORT = "overview-export"
+    const val OVERVIEW_SUMMARY = "overview-summary"
+    const val OVERVIEW_SUMMARY_PREFIX = "overview-summary-"
+    const val OVERVIEW_SECTION_PREFIX = "overview-section-"
+    const val OVERVIEW_PROJECT_INFO = "overview-project-info"
+    const val OVERVIEW_ACTIVITY = "overview-current-activity"
+    const val OVERVIEW_QUICK_ACTIONS = "overview-quick-actions"
+    const val OVERVIEW_QUICK_ACTION_PREFIX = "overview-quick-action-"
+    /** Compatibility tag for the Overview export quick action. */
+    const val OVERVIEW_EXPORT = "overview-quick-action-export"
     const val VIDEO_PREVIEW_STAGE = "video-preview-stage"
     const val VIDEO_PREVIEW_TIMELINE = "video-preview-timeline"
     const val VIDEO_PREVIEW_PLAY_PAUSE = "video-preview-play-pause"
@@ -169,21 +178,25 @@ private fun PageForSection(
 private fun OverviewPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier, narrow: Boolean = false) = PageRoot(WorkspaceSection.OVERVIEW, modifier) {
     val project = state.project
     val sections = overviewSections(state)
+    // This selection is deliberately page-local.  An occurrence ID stays stable when
+    // two structure entries refer to the same part and never mutates project structure.
+    var selectedOccurrenceId by remember(sections.map(OverviewSection::id)) { mutableStateOf(sections.firstOrNull()?.id) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
         ResponsivePageColumns(narrow = narrow, first = { columnModifier ->
             Column(columnModifier, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
+                Text("CURRENT PROJECT", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 PageTitle(project?.name ?: "No project open", overviewMetadata(state))
-                OverviewSectionStrip(sections, state.selectedArrangementSection, onIntent)
+                OverviewSummaryCards(state, sections)
+                OverviewSectionStrip(sections, selectedOccurrenceId) { selectedOccurrenceId = it }
                 TrackOverview(state, sections)
             }
         }, second = { columnModifier ->
             Column(columnModifier.widthIn(min = 260.dp, max = MusicWorkspaceTokens.Pages.OverviewPreviewWidth), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
-                VideoPreviewPlaceholder()
-                SelectedSectionInfo(sections, state.selectedArrangementSection)
-                Button(
-                    onClick = { onIntent(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.EXPORT)) },
-                    modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.OVERVIEW_EXPORT; contentDescription = "Open Export" }
-                ) { Text("Export") }
+                VideoPreviewPlaceholder(state)
+                ProjectInfo(state)
+                SelectedSectionInfo(sections, selectedOccurrenceId)
+                OverviewActivity(state)
+                OverviewQuickActions(state, onIntent)
             }
         })
         CompactTransport(state, onIntent, Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Pages.OverviewTransportHeight))
@@ -213,13 +226,15 @@ private fun PageTitle(title: String, metadata: String) = Column(verticalArrangem
 
 private fun overviewMetadata(state: WorkspaceUiState): String {
     val project = state.project ?: return "Project metadata unavailable"
-    val format = project.renderFormat?.let { "${it.sampleRate} Hz · ${it.channels} ch" } ?: "Render format unavailable"
+    val format = project.renderFormat?.let { "${it.sampleRate} Hz · ${it.channels} ch · ${it.bitDepth}-bit" } ?: "Render format unavailable"
     val total = project.structure.mapNotNull(StructureSectionSummary::durationSeconds)
     val duration = if (project.structure.isNotEmpty() && total.size == project.structure.size) formatDuration(total.sum()) else "Duration unavailable"
     return "$format · $duration"
 }
 
 private data class OverviewSection(val index: Int, val id: String, val duration: Double?, val instruments: Set<String>?)
+
+private data class OverviewMetric(val id: String, val value: String, val label: String, val detail: String)
 
 private fun overviewSections(state: WorkspaceUiState): List<OverviewSection> {
     val arrangement = state.arrangement
@@ -230,16 +245,54 @@ private fun overviewSections(state: WorkspaceUiState): List<OverviewSection> {
 private fun ArrangementSectionSnapshot.toOverviewSection() = OverviewSection(index, instanceId, durationSeconds, instruments.map { it.name }.toSet())
 
 @Composable
-private fun OverviewSectionStrip(sections: List<OverviewSection>, selected: Int?, onIntent: (WorkspaceIntent) -> Unit) = OverviewCard(WorkspacePageTags.OVERVIEW_SECTION_STRIP, "Song sections") {
+private fun OverviewSummaryCards(state: WorkspaceUiState, sections: List<OverviewSection>) {
+    val metrics = overviewMetrics(state, sections)
+    Row(
+        Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.OVERVIEW_SUMMARY }.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)
+    ) {
+        metrics.forEach { metric ->
+            Card(
+                Modifier.width(132.dp).semantics { testTag = WorkspacePageTags.OVERVIEW_SUMMARY_PREFIX + metric.id },
+                colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.Surface)
+            ) {
+                Column(Modifier.padding(MusicWorkspaceTokens.Spacing.Md), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+                    Text(metric.value, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(metric.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(metric.detail, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+    }
+}
+
+private fun overviewMetrics(state: WorkspaceUiState, sections: List<OverviewSection>): List<OverviewMetric> {
+    val project = state.project
+    val completeTiming = sections.isNotEmpty() && sections.all { it.duration != null }
+    val keys = project?.parts.orEmpty().mapNotNull { it.analysis?.key?.takeIf(String::isNotBlank) }.distinct()
+    val arrangement = state.arrangement
+    val trackCount = overviewTrackNames(arrangement).size
+    return listOf(
+        OverviewMetric("sections", if (project == null) "Unavailable" else sections.size.toString(), "Sections", if (sections.isEmpty()) "No saved structure" else sections.joinToString(" ") { it.id }),
+        OverviewMetric("tracks", when { arrangement == null -> "Unavailable"; arrangement.stale -> "Stale"; else -> trackCount.toString() }, "Tracks", if (trackCount == 0) "Track availability unavailable" else "$trackCount logical tracks"),
+        OverviewMetric("duration", if (completeTiming) formatDuration(sections.sumOf { checkNotNull(it.duration) }) else "Unavailable", "Duration", if (completeTiming) "Saved structure length" else "Timing unavailable"),
+        OverviewMetric("tempo", "Unavailable", "Tempo", "No canonical song tempo"),
+        OverviewMetric("key", keys.singleOrNull() ?: "Unavailable", "Key", if (keys.size == 1) "From current MIDI analysis" else "Key unavailable")
+    )
+}
+
+@Composable
+private fun OverviewSectionStrip(sections: List<OverviewSection>, selectedOccurrenceId: String?, onSelected: (String) -> Unit) = OverviewCard(WorkspacePageTags.OVERVIEW_SECTION_STRIP, "Song structure") {
     if (sections.isEmpty()) {
         Text("Song sections unavailable", color = MaterialTheme.colorScheme.onSurfaceVariant)
     } else Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
         sections.forEach { section ->
-            val isSelected = section.index == selected
+            val isSelected = section.id == selectedOccurrenceId
             Column(
                 Modifier.width(84.dp).clip(MaterialTheme.shapes.small)
                     .background(if (isSelected) MusicWorkspaceTokens.OliveAccent.copy(alpha = 0.18f) else MusicWorkspaceTokens.ElevatedSurface)
-                    .clickable { onIntent(WorkspaceIntent.SelectArrangementSection(section.index)) }
+                    .clickable { onSelected(section.id) }
+                    .semantics { testTag = WorkspacePageTags.OVERVIEW_SECTION_PREFIX + section.id; contentDescription = "Select section ${section.id}" }
                     .padding(MusicWorkspaceTokens.Spacing.Sm),
                 verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)
             ) {
@@ -252,11 +305,16 @@ private fun OverviewSectionStrip(sections: List<OverviewSection>, selected: Int?
 
 @Composable
 private fun TrackOverview(state: WorkspaceUiState, sections: List<OverviewSection>) = OverviewCard(WorkspacePageTags.OVERVIEW_TRACKS, "Track overview") {
-    listOf("piano", "bass", "drums", "pad", "strings").forEach { lane ->
+    val tracks = overviewTrackNames(state.arrangement)
+    if (tracks.isEmpty()) {
+        Text("Track availability unavailable", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        return@OverviewCard
+    }
+    tracks.forEach { lane ->
         Row(Modifier.fillMaxWidth().height(MusicWorkspaceTokens.Pages.CompactRowHeight), verticalAlignment = Alignment.CenterVertically) {
             Text(lane.replaceFirstChar(Char::uppercase), modifier = Modifier.width(76.dp), style = MaterialTheme.typography.labelMedium)
-            if (state.arrangement == null || state.arrangement.stale || sections.isEmpty()) {
-                Text("Signal unavailable", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+            if (state.arrangement?.stale == true || sections.isEmpty()) {
+                Text(if (state.arrangement?.stale == true) "Stale lane" else "Signal unavailable", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
             } else Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 sections.forEach { section ->
                     val active = lane in section.instruments.orEmpty()
@@ -270,21 +328,102 @@ private fun TrackOverview(state: WorkspaceUiState, sections: List<OverviewSectio
     }
 }
 
-@Composable
-private fun VideoPreviewPlaceholder() = OverviewCard(WorkspacePageTags.OVERVIEW_PREVIEW, "Video preview") {
-    Box(Modifier.fillMaxWidth().height(190.dp).clip(MaterialTheme.shapes.small).background(MusicWorkspaceTokens.ScenePlaceholder), contentAlignment = Alignment.Center) {
-        Text("Local video preview unavailable", color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
+private fun overviewTrackNames(arrangement: app.melotrail.application.ArrangementSnapshot?): List<String> {
+    val available = arrangement?.sections.orEmpty().flatMap { section -> section.instruments.map { it.name } }.toSet()
+    return LogicalInstrument.entries.map(LogicalInstrument::wireName).filter(available::contains)
 }
 
 @Composable
-private fun SelectedSectionInfo(sections: List<OverviewSection>, selected: Int?) = OverviewCard(WorkspacePageTags.OVERVIEW_SECTION_INFO, "Section info") {
-    val section = sections.firstOrNull { it.index == selected } ?: sections.firstOrNull()
+private fun VideoPreviewPlaceholder(state: WorkspaceUiState) = OverviewCard(WorkspacePageTags.OVERVIEW_PREVIEW, "Video preview") {
+    val message = overviewPreviewMessage(state)
+    Box(Modifier.fillMaxWidth().height(190.dp).clip(MaterialTheme.shapes.small).background(MusicWorkspaceTokens.ScenePlaceholder), contentAlignment = Alignment.Center) {
+        Text(message, color = if (state.playbackSession.phase == PlaybackSessionPhase.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+private fun overviewPreviewMessage(state: WorkspaceUiState): String = when {
+    state.playbackSession.phase == PlaybackSessionPhase.FAILED -> "Playback unavailable: ${state.playbackSession.failureMessage ?: "local playback failed"}"
+    state.runtimeReadiness?.audioOutput?.available == false -> "Audio output unavailable: ${state.runtimeReadiness.audioOutput.detail}"
+    state.playbackSession.phase in setOf(PlaybackSessionPhase.RESOLVING, PlaybackSessionPhase.PREPARING, PlaybackSessionPhase.STARTING) -> "Preview loading…"
+    state.playbackSession.artifact != null -> "Local audio preview selected; video unavailable"
+    else -> "Local video preview unavailable"
+}
+
+@Composable
+private fun SelectedSectionInfo(sections: List<OverviewSection>, selectedOccurrenceId: String?) = OverviewCard(WorkspacePageTags.OVERVIEW_SECTION_INFO, "Selected section") {
+    val section = sections.firstOrNull { it.id == selectedOccurrenceId } ?: sections.firstOrNull()
     if (section == null) Text("Selected section unavailable", color = MaterialTheme.colorScheme.onSurfaceVariant)
     else {
         Text(section.id, style = MaterialTheme.typography.titleLarge)
         Text("Time: ${section.duration?.let(::formatDuration) ?: "unavailable"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text("Mood, energy, and density unavailable", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun ProjectInfo(state: WorkspaceUiState) = OverviewCard(WorkspacePageTags.OVERVIEW_PROJECT_INFO, "Project info") {
+    val format = state.project?.renderFormat
+    val arrangement = state.arrangement
+    val arrangementState = when {
+        arrangement == null -> "unavailable"
+        arrangement.stale -> "stale"
+        arrangement.approvalRequired -> "review required"
+        arrangement.approved -> "approved"
+        else -> "available"
+    }
+    val releaseState = when {
+        state.project?.readiness?.releaseAvailable == true -> "ready"
+        state.project?.readiness?.masterAvailable == true -> "not released"
+        else -> "unavailable"
+    }
+    Text("Sample rate: ${format?.sampleRate?.let { "$it Hz" } ?: "unavailable"}", style = MaterialTheme.typography.bodySmall)
+    Text("Channels: ${format?.channels?.let { "$it ch" } ?: "unavailable"}", style = MaterialTheme.typography.bodySmall)
+    Text("Bit depth: ${format?.bitDepth?.let { "$it-bit" } ?: "unavailable"}", style = MaterialTheme.typography.bodySmall)
+    Text("Time signature: unavailable", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text("Arrangement: $arrangementState", style = MaterialTheme.typography.bodySmall)
+    Text("Release: $releaseState", style = MaterialTheme.typography.bodySmall)
+}
+
+@Composable
+private fun OverviewActivity(state: WorkspaceUiState) = OverviewCard(WorkspacePageTags.OVERVIEW_ACTIVITY, "Current activity") {
+    if (state.operation.isMutating) {
+        Text("Loading", style = MaterialTheme.typography.titleMedium)
+        Text(state.operationFeedback.message ?: "A local operation is in progress.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        return@OverviewCard
+    }
+    val current = state.workflow.current
+    Text(current.stage.name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase), style = MaterialTheme.typography.titleMedium)
+    Text(current.context, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+private data class OverviewQuickAction(val id: String, val label: String, val section: WorkspaceSection, val stage: WorkflowStage)
+
+@Composable
+private fun OverviewQuickActions(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = OverviewCard(WorkspacePageTags.OVERVIEW_QUICK_ACTIONS, "Quick actions") {
+    listOf(
+        OverviewQuickAction("import", "Import Audio / MIDI", WorkspaceSection.IMPORT, WorkflowStage.IMPORT_AND_INSPECTION),
+        OverviewQuickAction("structure", "Build Structure", WorkspaceSection.STRUCTURE, WorkflowStage.STRUCTURE),
+        OverviewQuickAction("arrange", "Generate Arrangement", WorkspaceSection.ARRANGE, WorkflowStage.ARRANGEMENT),
+        OverviewQuickAction("mix-master", "Mix & Master", WorkspaceSection.MIX_MASTER, WorkflowStage.MIX),
+        OverviewQuickAction("export", "Export Song", WorkspaceSection.EXPORT, WorkflowStage.COMMERCIAL_EXPORT)
+    ).forEach { action ->
+        val workflow = state.workflow[action.stage]
+        // A blocked stage still routes to its focused page, where the same canonical
+        // prerequisite is explained and recovered.  Only a missing project has no
+        // project-scoped destination to open.
+        val enabled = state.project != null
+        OutlinedButton(
+            onClick = { onIntent(WorkspaceIntent.SelectWorkspaceSection(action.section)) }, enabled = enabled,
+            modifier = Modifier.fillMaxWidth().semantics {
+                testTag = WorkspacePageTags.OVERVIEW_QUICK_ACTION_PREFIX + action.id
+                contentDescription = if (enabled) action.label else workflow.context
+            }
+        ) {
+            Column(Modifier.fillMaxWidth()) {
+                Text(action.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(workflow.context, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+        }
     }
 }
 
