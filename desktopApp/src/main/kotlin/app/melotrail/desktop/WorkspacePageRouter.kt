@@ -25,8 +25,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -145,21 +143,13 @@ internal fun WorkspacePageRouter(
     partDetailsFocusTargets: MutableMap<PartDetailsFocusReturn, FocusRequester> = mutableMapOf()
 ) {
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val narrow = maxWidth < MusicWorkspaceTokens.Reference.MediumBreakpoint
-        when {
-            narrow -> Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
-                NarrowNavigation(state, onIntent)
-                PageForSection(state, onIntent, Modifier.weight(1f), narrow = true, partDetailsFocusTargets)
-            }
-            state.workspaceSection == WorkspaceSection.OVERVIEW -> Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
-                OverviewNavigation(state, onIntent)
-                OverviewPage(state, onIntent, Modifier.weight(1f))
-            }
-            else -> Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
-                WorkflowNavigation(state, onIntent)
-                InterimWorkflowPage(state, onIntent, Modifier.weight(1f), partDetailsFocusTargets)
-            }
-        }
+        PageForSection(
+            state = state,
+            onIntent = onIntent,
+            modifier = Modifier.fillMaxSize(),
+            narrow = maxWidth < MusicWorkspaceTokens.Reference.NarrowBreakpoint,
+            partDetailsFocusTargets = partDetailsFocusTargets
+        )
     }
 }
 
@@ -173,103 +163,6 @@ private fun PageForSection(
 ) {
     if (state.workspaceSection == WorkspaceSection.OVERVIEW) OverviewPage(state, onIntent, modifier, narrow)
     else InterimWorkflowPage(state, onIntent, modifier, partDetailsFocusTargets)
-}
-
-@Composable
-private fun NarrowNavigation(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    Box(Modifier.fillMaxWidth().semantics {
-        testTag = WorkspaceTags.WORKSPACE_NAV
-        contentDescription = "Workspace navigation. Current page: ${state.workspaceSection.label}."
-    }) {
-        OutlinedButton(
-            onClick = { expanded = true },
-            modifier = Modifier.fillMaxWidth().semantics {
-                testTag = WorkspacePageTags.NAVIGATION_MENU
-                contentDescription = "Choose workspace page. Current page: ${state.workspaceSection.label}."
-            }
-        ) { Text(state.workspaceSection.label) }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            WorkspaceSection.entries.forEach { destination ->
-                DropdownMenuItem(
-                    text = { Text(destination.label) },
-                    onClick = {
-                        expanded = false
-                        onIntent(WorkspaceIntent.SelectWorkspaceSection(destination))
-                    },
-                    modifier = Modifier.semantics {
-                        testTag = WorkspaceTags.WORKSPACE_SECTION_PREFIX + destination.name.lowercase()
-                        contentDescription = "Open ${destination.label}${if (destination == state.workspaceSection) ", selected" else ""}"
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun OverviewNavigation(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().height(MusicWorkspaceTokens.Pages.NavigationHeight)
-            .horizontalScroll(rememberScrollState()).semantics {
-                testTag = WorkspaceTags.WORKSPACE_NAV
-                contentDescription = "Overview navigation"
-            },
-        horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        WorkspaceSection.entries.forEach { destination ->
-            NavigationItem(destination, selected = destination == state.workspaceSection, onIntent, compact = true)
-        }
-    }
-}
-
-@Composable
-private fun WorkflowNavigation(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
-    Column(
-        Modifier.width(MusicWorkspaceTokens.Pages.SidebarWidth).fillMaxHeight().semantics {
-            testTag = WorkspaceTags.WORKSPACE_NAV
-            contentDescription = "Workflow navigation"
-        },
-        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)
-    ) {
-        Text("WORKSPACE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        WorkspaceSection.entries.forEach { destination ->
-            NavigationItem(destination, selected = destination == state.workspaceSection, onIntent, compact = false)
-        }
-    }
-}
-
-@Composable
-private fun NavigationItem(destination: WorkspaceSection, selected: Boolean, onIntent: (WorkspaceIntent) -> Unit, compact: Boolean) {
-    Row(
-        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small)
-            .background(if (selected) MusicWorkspaceTokens.OliveAccent.copy(alpha = 0.18f) else MusicWorkspaceTokens.ElevatedSurface)
-            .clickable { onIntent(WorkspaceIntent.SelectWorkspaceSection(destination)) }
-            .padding(horizontal = MusicWorkspaceTokens.Spacing.Sm, vertical = if (compact) MusicWorkspaceTokens.Spacing.Xs else MusicWorkspaceTokens.Spacing.Sm)
-            .semantics {
-                testTag = WorkspaceTags.WORKSPACE_SECTION_PREFIX + destination.name.lowercase()
-                contentDescription = "Open ${destination.label}${if (selected) ", selected" else ""}"
-            },
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(destination.navigationSymbol(), color = if (selected) MusicWorkspaceTokens.OliveAccent else MaterialTheme.colorScheme.onSurfaceVariant)
-        if (!compact || destination != WorkspaceSection.VIDEO_PREVIEW) {
-            Text(destination.label, modifier = Modifier.padding(start = MusicWorkspaceTokens.Spacing.Xs), maxLines = 1, overflow = TextOverflow.Ellipsis,
-                color = if (selected) MusicWorkspaceTokens.OliveAccent else MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.labelMedium)
-        }
-    }
-}
-
-private fun WorkspaceSection.navigationSymbol(): String = when (this) {
-    WorkspaceSection.OVERVIEW -> "⌂"
-    WorkspaceSection.IMPORT -> "⇩"
-    WorkspaceSection.STRUCTURE -> "▤"
-    WorkspaceSection.ARRANGE -> "◇"
-    WorkspaceSection.MIX_MASTER -> "▥"
-    WorkspaceSection.VIDEO_PREVIEW -> "▧"
-    WorkspaceSection.EXPORT -> "⇧"
 }
 
 @Composable
@@ -426,6 +319,10 @@ private fun InterimWorkflowPage(
         MixMasterPage(state, onIntent)
         return@PageRoot
     }
+    if (state.workspaceSection == WorkspaceSection.LIBRARY) {
+        InterimDestinationPage("Library", "Local sound-library inventory is available in the dedicated Library page.")
+        return@PageRoot
+    }
     if (state.workspaceSection == WorkspaceSection.VIDEO_PREVIEW) {
         VideoPreviewPage(state, onIntent)
         return@PageRoot
@@ -434,11 +331,36 @@ private fun InterimWorkflowPage(
         ExportPage(state, onIntent)
         return@PageRoot
     }
+    if (state.workspaceSection == WorkspaceSection.SETTINGS) {
+        SettingsInterimPage(state, onIntent)
+        return@PageRoot
+    }
     val title = state.workspaceSection.label
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
         PageTitle(title, workflowSubtitle(state))
         OverviewCard("${WorkspacePageTags.ROOT_PREFIX}${state.workspaceSection.name.lowercase()}-body", "${title} workspace") {
             Text(workflowBody(state), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun InterimDestinationPage(title: String, message: String) {
+    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
+        PageTitle(title, "Local-only workspace destination")
+        OverviewCard("${WorkspacePageTags.ROOT_PREFIX}${title.lowercase()}-body", "$title workspace") {
+            Text(message, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun SettingsInterimPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
+        PageTitle("Settings", "Local preferences and dependency readiness")
+        OverviewCard("${WorkspacePageTags.ROOT_PREFIX}settings-body", "Sound library") {
+            Text(soundLibrarySummary(state.soundLibrary), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            OutlinedButton(onClick = { onIntent(WorkspaceIntent.ShowSoundLibrarySettings) }) { Text("Configure sound library") }
         }
     }
 }
@@ -1035,8 +957,10 @@ private fun workflowSubtitle(state: WorkspaceUiState): String = when (state.work
     WorkspaceSection.STRUCTURE -> "Canonical structure has ${state.project?.structure?.size ?: 0} section(s)."
     WorkspaceSection.ARRANGE -> "Arrangement state is derived from canonical artifacts."
     WorkspaceSection.MIX_MASTER -> "Mix and master readiness is derived from validated artifacts."
+    WorkspaceSection.LIBRARY -> "Validated local instruments and samples only."
     WorkspaceSection.VIDEO_PREVIEW -> "Local visual preview only."
     WorkspaceSection.EXPORT -> "Release export is available only after a current master."
+    WorkspaceSection.SETTINGS -> "Settings never contain project or audio data."
     WorkspaceSection.OVERVIEW -> error("Overview has its own page")
 }
 
@@ -1177,7 +1101,10 @@ private fun mixMasterBuildMessage(state: WorkspaceUiState): String = when {
 private fun workflowBody(state: WorkspaceUiState): String = when (state.workspaceSection) {
     WorkspaceSection.IMPORT -> if (state.project == null) "Create or open a project before importing." else "Choose a source through the validated import dialog."
     WorkspaceSection.EXPORT -> if (state.project?.readiness?.releaseAvailable == true && !state.downstreamArtifactsStale) "A release is available for export." else "A current validated release is unavailable. Build the current project first."
-    else -> "This focused page is not implemented in Task 083."
+    WorkspaceSection.LIBRARY -> "Library inventory is limited to the configured local sound pack."
+    WorkspaceSection.SETTINGS -> "Settings are local preferences, not project data."
+    WorkspaceSection.STRUCTURE, WorkspaceSection.ARRANGE, WorkspaceSection.MIX_MASTER, WorkspaceSection.VIDEO_PREVIEW -> "This focused page is not implemented in Task 083."
+    WorkspaceSection.OVERVIEW -> error("Overview has its own page")
 }
 
 @Composable

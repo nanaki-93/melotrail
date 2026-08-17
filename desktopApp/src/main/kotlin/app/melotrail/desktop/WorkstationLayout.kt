@@ -94,7 +94,7 @@ private fun MediumWorkstation(state: WorkspaceUiState, onIntent: (WorkspaceInten
     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Reference.ColumnGap)) {
         WorkstationColumn(Modifier.widthIn(min = 240.dp, max = 300.dp), state, onIntent) {
             when (state.workspaceSection) {
-                WorkspaceSection.VIDEO_PREVIEW -> LibraryPanel(state, onIntent)
+                WorkspaceSection.LIBRARY, WorkspaceSection.VIDEO_PREVIEW, WorkspaceSection.SETTINGS -> LibraryPanel(state, onIntent)
                 else -> {
                     PartsPanel(state, onIntent)
                     if (state.selectedPartId != null) {
@@ -130,7 +130,7 @@ private fun NarrowWorkstation(state: WorkspaceUiState, onIntent: (WorkspaceInten
             WorkspaceSection.STRUCTURE -> StructurePanel(state, onIntent)
             WorkspaceSection.ARRANGE -> { ArrangementPanel(state, onIntent); TimelinePanel(state, onIntent); AiSongPlanPanel(state, onIntent) }
             WorkspaceSection.MIX_MASTER -> MixPanel(state, onIntent)
-            WorkspaceSection.VIDEO_PREVIEW, WorkspaceSection.EXPORT -> LibraryPanel(state, onIntent)
+            WorkspaceSection.LIBRARY, WorkspaceSection.VIDEO_PREVIEW, WorkspaceSection.EXPORT, WorkspaceSection.SETTINGS -> LibraryPanel(state, onIntent)
         }
     }
 

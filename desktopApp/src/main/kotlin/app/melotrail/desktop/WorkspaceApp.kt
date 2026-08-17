@@ -207,11 +207,8 @@ fun WorkspaceScreen(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit
                 transportShortcutIntent(event, state.playback)?.let(onIntent) != null
             }
     ) {
-        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Reference.ColumnGap)) {
-            ProjectHeader(state, onIntent)
-            WorkspacePageRouter(state, onIntent, Modifier.weight(1f), partDetailsFocusTargets)
-        }
-        OperationFeedbackBanner(state, onIntent, Modifier.align(Alignment.TopCenter).padding(top = MusicWorkspaceTokens.Reference.HeaderHeight + MusicWorkspaceTokens.Spacing.Sm))
+        WorkspaceShellFrame(state, onIntent, partDetailsFocusTargets)
+        OperationFeedbackBanner(state, onIntent, Modifier.align(Alignment.TopCenter).padding(top = MusicWorkspaceTokens.Shell.TopBarHeight + MusicWorkspaceTokens.Spacing.Sm))
     }
     WorkspaceDialogs(state, onIntent, onExit)
 }
@@ -329,7 +326,7 @@ private fun HeaderIconControl(symbol: String, description: String, enabled: Bool
     ) { Text(symbol, style = MaterialTheme.typography.titleMedium) }
 }
 
-private fun soundLibrarySummary(library: SoundLibrarySettingsState): String = when {
+internal fun soundLibrarySummary(library: SoundLibrarySettingsState): String = when {
     library.resolvedRoot != null && library.validationError == null -> "Library: ${library.source ?: "configured"} · validated locally"
     else -> "Library unavailable — ${library.validationError ?: "choose a valid folder"}"
 }
@@ -368,8 +365,10 @@ private fun WorkspaceSection.referenceIcon(): String = when (this) {
     WorkspaceSection.STRUCTURE -> "▤"
     WorkspaceSection.ARRANGE -> "◇"
     WorkspaceSection.MIX_MASTER -> "▥"
+    WorkspaceSection.LIBRARY -> "▤"
     WorkspaceSection.VIDEO_PREVIEW -> "▧"
     WorkspaceSection.EXPORT -> "⇧"
+    WorkspaceSection.SETTINGS -> "⚙"
 }
 
 @Composable
@@ -416,7 +415,7 @@ private fun WideWorkspace(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                     PanelColumn(Modifier.weight(1.2f), state, onIntent, listOf(Panel.Mix))
                     PanelColumn(Modifier.widthIn(min = 260.dp, max = 340.dp).weight(0.8f), state, onIntent, listOf(Panel.Status))
                 }
-                WorkspaceSection.VIDEO_PREVIEW, WorkspaceSection.EXPORT -> {
+                WorkspaceSection.LIBRARY, WorkspaceSection.VIDEO_PREVIEW, WorkspaceSection.EXPORT, WorkspaceSection.SETTINGS -> {
                     PanelColumn(Modifier.weight(1.8f), state, onIntent, listOf(Panel.Library))
                     PanelColumn(Modifier.weight(1f), state, onIntent, listOf(Panel.Status))
                 }
@@ -453,7 +452,7 @@ private fun panelsForSection(section: WorkspaceSection, state: WorkspaceUiState?
     WorkspaceSection.STRUCTURE -> SectionPanels(listOf(Panel.Parts), listOf(Panel.Structure, Panel.Timeline), listOf(Panel.Preparation, Panel.MidiQuality, Panel.Status))
     WorkspaceSection.ARRANGE -> SectionPanels(listOf(Panel.Structure), listOf(Panel.Arrangement, Panel.Timeline), listOf(Panel.Status))
     WorkspaceSection.MIX_MASTER -> SectionPanels(listOf(Panel.Timeline), listOf(Panel.Mix), listOf(Panel.Status))
-    WorkspaceSection.VIDEO_PREVIEW, WorkspaceSection.EXPORT -> SectionPanels(listOf(Panel.Library), emptyList(), listOf(Panel.Status))
+    WorkspaceSection.LIBRARY, WorkspaceSection.VIDEO_PREVIEW, WorkspaceSection.EXPORT, WorkspaceSection.SETTINGS -> SectionPanels(listOf(Panel.Library), emptyList(), listOf(Panel.Status))
 }
 
 private enum class Panel { Parts, MidiQuality, Preparation, Structure, Arrangement, Timeline, Mix, Status, Library }

@@ -802,6 +802,10 @@ class WorkspaceViewModelTest {
         viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
         viewModel.accept(WorkspaceIntent.SelectPlaybackSource(PlaybackSource.DRY))
         val selectedRequest = viewModel.state.value.playbackSession.request
+        viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.LIBRARY))
+        assertEquals(selectedRequest, viewModel.state.value.playbackSession.request)
+        viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.SETTINGS))
+        assertEquals(selectedRequest, viewModel.state.value.playbackSession.request)
         viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.VIDEO_PREVIEW))
         assertEquals(selectedRequest, viewModel.state.value.playbackSession.request)
         viewModel.accept(WorkspaceIntent.PlayPause); advanceUntilIdle()

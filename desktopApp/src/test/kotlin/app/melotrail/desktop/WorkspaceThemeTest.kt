@@ -22,7 +22,7 @@ class WorkspaceThemeTest {
         assertTrue(contrastRatio(MusicWorkspaceTokens.Information, MusicWorkspaceTokens.Surface) >= 4.5)
         assertTrue(contrastRatio(MusicWorkspaceTokens.Warning, MusicWorkspaceTokens.Surface) >= 4.5)
         assertTrue(contrastRatio(MusicWorkspaceTokens.Loading, MusicWorkspaceTokens.Surface) >= 4.5)
-        assertEquals(MusicWorkspaceTokens.Teal, MusicWorkspaceTokens.Success)
+        assertTrue(MusicWorkspaceTokens.Success != MusicWorkspaceTokens.Teal)
     }
 
     @Test

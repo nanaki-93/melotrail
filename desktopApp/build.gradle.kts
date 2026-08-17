@@ -12,6 +12,7 @@ dependencies {
     implementation(project(":"))
     implementation(platform("org.springframework.boot:spring-boot-dependencies:3.5.16"))
     implementation(compose.desktop.currentOs)
+    implementation(compose.materialIconsExtended)
     implementation("org.jetbrains.compose.material3:material3:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.8.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.0")

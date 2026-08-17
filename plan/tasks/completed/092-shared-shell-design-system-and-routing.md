@@ -3,13 +3,13 @@
 ## Goal
 
 Build the reusable dark-purple application shell and component system required
-by all nine references in `../pictures/UI/`, including distinct Library and
+by all nine references in `../../pictures/UI`, including distinct Library and
 Settings destinations and responsive one-page routing.
 
 ## Dependencies
 
 - Task 091 accepted.
-- `../PLAN_UI.md` is the governing UI reconstruction plan.
+- `../../PLAN_UI.md` is the governing UI reconstruction plan.
 
 ## Requirements
 

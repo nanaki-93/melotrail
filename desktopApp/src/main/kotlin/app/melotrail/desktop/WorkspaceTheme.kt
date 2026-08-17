@@ -38,11 +38,20 @@ object MusicWorkspaceTokens {
         val RightRailWidth = 533.dp
         val WideBreakpoint = 1180.dp
         val MediumBreakpoint = 760.dp
+        /** At this width a page and two rails no longer fit without page-level scrolling. */
+        val NarrowBreakpoint = 760.dp
         const val BorderAlpha = 0.78f
     }
 
     /** Shared measurements for the compact reference shell; avoid per-widget approximations. */
     object Shell {
+        val TopBarHeight = 64.dp
+        val ProjectRailWidth = 248.dp
+        val CompactProjectRailWidth = 184.dp
+        val ContextRailWidth = 288.dp
+        val CompactContextRailWidth = 240.dp
+        val PageHorizontalInset = 24.dp
+        val PageVerticalInset = 20.dp
         val HeaderBrandWidth = 224.dp
         val HeaderProjectWidth = 248.dp
         val HeaderIconSize = 48.dp
@@ -87,28 +96,30 @@ object MusicWorkspaceTokens {
         val PartMetadata = 11.sp
         val HeaderProjectLabel = 10.sp
     }
-    val Canvas = Color(0xFF071017)
-    val Surface = Color(0xFF0D1821)
-    val ElevatedSurface = Color(0xFF12212B)
-    val Border = Color(0xFF253845)
-    val Teal = Color(0xFF4BD7C3)
-    val OliveAccent = Color(0xFFB3B85A)
-    val TealFocus = Color(0xFF8EF4E4)
-    val TealPressed = Color(0xFF2AAE9E)
-    val TextPrimary = Color(0xFFE2EDF1)
-    val TextSecondary = Color(0xFFAEBDC5)
-    val Disabled = Color(0xFF60717B)
+    val Canvas = Color(0xFF110B1D)
+    val Surface = Color(0xFF1B1329)
+    val ElevatedSurface = Color(0xFF261A38)
+    val SelectedSurface = Color(0xFF35244E)
+    val Border = Color(0xFF4D3B66)
+    /** Compatibility name retained for existing components; the product accent is purple. */
+    val Teal = Color(0xFFC7A6FF)
+    val OliveAccent = Color(0xFFE3D7FF)
+    val TealFocus = Color(0xFFF0E9FF)
+    val TealPressed = Color(0xFF9E7CDF)
+    val TextPrimary = Color(0xFFF4EEFF)
+    val TextSecondary = Color(0xFFD6CAE5)
+    val Disabled = Color(0xFF978AA8)
     val Error = Color(0xFFFFB4AB)
     val Warning = Color(0xFFF0B356)
     val Information = Color(0xFF8AB4F8)
     val Loading = Color(0xFFC7A6FF)
-    val Success = Teal
+    val Success = Color(0xFF78D8B6)
     val Piano = Color(0xFF59CCC4)
     val Bass = Color(0xFF86C979)
     val Drums = Color(0xFFF0B356)
     val Pad = Color(0xFFAB91EB)
     val Strings = Color(0xFFF08262)
-    val ScenePlaceholder = Color(0xFF13232B)
+    val ScenePlaceholder = Color(0xFF31234A)
 
     object Spacing {
         val Xs = 4.dp
@@ -161,7 +172,17 @@ private val workspaceShapes = Shapes(
     large = RoundedCornerShape(MusicWorkspaceTokens.Radius.Panel)
 )
 
-private val workspaceTypography = Typography()
+private val workspaceTypography = Typography(
+    displayLarge = androidx.compose.ui.text.TextStyle(fontSize = 34.sp, lineHeight = 40.sp, fontWeight = FontWeight.SemiBold),
+    headlineLarge = androidx.compose.ui.text.TextStyle(fontSize = 26.sp, lineHeight = 32.sp, fontWeight = FontWeight.SemiBold),
+    titleLarge = androidx.compose.ui.text.TextStyle(fontSize = 19.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold),
+    titleMedium = androidx.compose.ui.text.TextStyle(fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.Medium),
+    bodyLarge = androidx.compose.ui.text.TextStyle(fontSize = 15.sp, lineHeight = 22.sp),
+    bodyMedium = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, lineHeight = 20.sp),
+    bodySmall = androidx.compose.ui.text.TextStyle(fontSize = 12.sp, lineHeight = 16.sp),
+    labelLarge = androidx.compose.ui.text.TextStyle(fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium),
+    labelSmall = androidx.compose.ui.text.TextStyle(fontSize = 11.sp, lineHeight = 14.sp, fontWeight = FontWeight.Medium)
+)
 
 @Composable
 internal fun workspacePrimaryButtonColors(): ButtonColors = ButtonDefaults.buttonColors(
@@ -187,12 +208,12 @@ internal fun MusicWorkspaceThemeShowcase() {
     ) {
         Text("Workspace visual tokens", color = MusicWorkspaceTokens.TextPrimary, fontWeight = FontWeight.SemiBold)
         Row(modifier = androidx.compose.ui.Modifier.semantics { testTag = ThemeShowcaseTags.PALETTE }, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-            listOf(MusicWorkspaceTokens.Canvas, MusicWorkspaceTokens.Surface, MusicWorkspaceTokens.ElevatedSurface, MusicWorkspaceTokens.Teal, MusicWorkspaceTokens.Error).forEach { color ->
+            listOf(MusicWorkspaceTokens.Canvas, MusicWorkspaceTokens.Surface, MusicWorkspaceTokens.SelectedSurface, MusicWorkspaceTokens.Teal, MusicWorkspaceTokens.Error).forEach { color ->
                 androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.width(MusicWorkspaceTokens.Interaction.MinimumHitTarget).height(MusicWorkspaceTokens.Interaction.MinimumHitTarget).background(color, RoundedCornerShape(MusicWorkspaceTokens.Radius.Control)))
             }
         }
         Text(
-            "Ready · teal primary · Error · text labels remain available when colour is not.",
+            "Ready · purple primary · Error · text labels remain available when colour is not.",
             modifier = androidx.compose.ui.Modifier.semantics { testTag = ThemeShowcaseTags.STATES },
             color = MusicWorkspaceTokens.TextSecondary,
             style = MaterialTheme.typography.bodySmall

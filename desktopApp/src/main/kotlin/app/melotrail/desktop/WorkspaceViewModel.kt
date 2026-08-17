@@ -124,8 +124,10 @@ enum class WorkspaceSection(val label: String) {
     STRUCTURE("Structure"),
     ARRANGE("Arrange"),
     MIX_MASTER("Mix & Master"),
+    LIBRARY("Library"),
     VIDEO_PREVIEW("Video Preview"),
-    EXPORT("Export")
+    EXPORT("Export"),
+    SETTINGS("Settings")
 }
 
 /** The UI exposes three named cleanup choices only; no worker parameters are editable here. */

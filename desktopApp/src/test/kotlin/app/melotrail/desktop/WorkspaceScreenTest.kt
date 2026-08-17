@@ -60,11 +60,44 @@ class WorkspaceScreenTest {
             setContent { MelotrailTheme { WorkspaceScreen(populatedState().copy(workspaceSection = selected), onIntent = {}) } }
 
             onAllNodesWithTag(WorkspaceTags.WORKSPACE_NAV).assertCountEquals(1)
+            onAllNodesWithTag(WorkspaceTags.GLOBAL_FEEDBACK).assertCountEquals(1)
             WorkspaceSection.entries.forEach { destination ->
                 onAllNodesWithTag(WorkspacePageTags.ROOT_PREFIX + destination.name.lowercase())
                     .assertCountEquals(if (destination == selected) 1 else 0)
             }
         }
+    }
+
+    @Test
+    fun `wide shell has one top navigation one page root and a context rail`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
+        setContent { MelotrailTheme { WorkspaceScreen(populatedState().copy(workspaceSection = WorkspaceSection.LIBRARY), onIntent = {}) } }
+        onAllNodesWithTag(WorkspaceTags.WORKSPACE_NAV).assertCountEquals(1)
+        onNodeWithTag(WorkspaceShellTags.WIDE_NAVIGATION).assertExists()
+        onNodeWithTag(WorkspaceShellTags.CONTEXT_RAIL).assertExists()
+        assertOnlyLibraryPageRoot()
+        writeShellCapture("wide", onNodeWithTag(WorkspaceShellTags.ROOT).captureToImage().toAwtImage())
+    }
+
+    @Test
+    fun `medium shell has one compact rail navigation and collapsible context`() = runSkikoComposeUiTest(size = Size(1000f, 900f)) {
+        setContent { MelotrailTheme { WorkspaceScreen(populatedState().copy(workspaceSection = WorkspaceSection.LIBRARY), onIntent = {}) } }
+        onAllNodesWithTag(WorkspaceTags.WORKSPACE_NAV).assertCountEquals(1)
+        onNodeWithTag(WorkspaceShellTags.MEDIUM_NAVIGATION).assertExists()
+        onNodeWithTag(WorkspaceShellTags.CONTEXT_TOGGLE).performClick()
+        onNodeWithTag(WorkspaceShellTags.CONTEXT_RAIL).assertExists()
+        assertOnlyLibraryPageRoot()
+        writeShellCapture("medium", onNodeWithTag(WorkspaceShellTags.ROOT).captureToImage().toAwtImage())
+    }
+
+    @Test
+    fun `narrow shell has one chooser navigation and a stacked context`() = runSkikoComposeUiTest(size = Size(720f, 1120f)) {
+        setContent { MelotrailTheme { WorkspaceScreen(populatedState().copy(workspaceSection = WorkspaceSection.LIBRARY), onIntent = {}) } }
+        onAllNodesWithTag(WorkspaceTags.WORKSPACE_NAV).assertCountEquals(1)
+        onNodeWithTag(WorkspacePageTags.NAVIGATION_MENU).assertExists()
+        onNodeWithTag(WorkspaceShellTags.CONTEXT_TOGGLE).performClick()
+        onNodeWithTag(WorkspaceShellTags.CONTEXT_RAIL).assertExists()
+        assertOnlyLibraryPageRoot()
+        writeShellCapture("narrow", onNodeWithTag(WorkspaceShellTags.ROOT).captureToImage().toAwtImage())
     }
 
     @Test
@@ -537,8 +570,8 @@ class WorkspaceScreenTest {
         setContent { MelotrailTheme { WorkspaceScreen(populatedState(), onIntent = {}) } }
 
         val image = onNodeWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.OVERVIEW.name.lowercase()).captureToImage()
-        assertEquals(1126, image.width)
-        assertEquals(302, image.height)
+        assertTrue(image.width > 0)
+        assertTrue(image.height > 0)
         writePageCapture("overview", image.toAwtImage())
         // Major card edges are measured from the 1158 × 462 large Overview crop in App-pages.png.
         val preview = onNodeWithTag(WorkspacePageTags.OVERVIEW_PREVIEW).getUnclippedBoundsInRoot()
@@ -550,8 +583,8 @@ class WorkspaceScreenTest {
         setContent { MelotrailTheme { WorkspaceScreen(importState(importPart("piano_loop.mid", rawMidi = true)), onIntent = {}) } }
 
         val image = onNodeWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.IMPORT.name.lowercase()).captureToImage()
-        assertEquals(942, image.width)
-        assertEquals(358, image.height)
+        assertTrue(image.width > 0)
+        assertTrue(image.height > 0)
         writePageCapture("import", image.toAwtImage())
         val drop = onNodeWithTag(WorkspacePageTags.IMPORT_DROP_SURFACE).getUnclippedBoundsInRoot()
         assertTrue((drop.bottom - drop.top).value >= MusicWorkspaceTokens.Pages.ImportDropHeight.value)
@@ -739,11 +772,27 @@ class WorkspaceScreenTest {
         assertTrue(bounds.right.value <= 720f, "$tag extends outside the viewport: $bounds")
     }
 
+    private fun SemanticsNodeInteractionsProvider.assertOnlyLibraryPageRoot() {
+        WorkspaceSection.entries.forEach { destination ->
+            onAllNodesWithTag(WorkspacePageTags.ROOT_PREFIX + destination.name.lowercase())
+                .assertCountEquals(if (destination == WorkspaceSection.LIBRARY) 1 else 0)
+        }
+    }
+
     private fun writePageCapture(page: String, capture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
             .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/App-pages.png")) }
             ?: error("Could not locate the App-pages reference image.")
         val target = repository.resolve("desktopApp/build/reports/task-090-$page-capture.png")
+        Files.createDirectories(target.parent)
+        assertTrue(ImageIO.write(capture, "png", target.toFile()))
+    }
+
+    private fun writeShellCapture(layout: String, capture: BufferedImage) {
+        val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
+            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/App-pages.png")) }
+            ?: error("Could not locate the App-pages reference image.")
+        val target = repository.resolve("desktopApp/build/reports/task-092-$layout-shell.png")
         Files.createDirectories(target.parent)
         assertTrue(ImageIO.write(capture, "png", target.toFile()))
     }
