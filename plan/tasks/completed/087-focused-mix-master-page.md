@@ -3,7 +3,7 @@
 ## Goal
 
 Rebuild Mix & Master as the focused mixer/mastering destination shown in
-`../pictures/App-pages.png` using existing validated mix and build behavior.
+`../../pictures/App-pages.png` using existing validated mix and build behavior.
 
 ## Dependencies
 
@@ -39,7 +39,7 @@ Rebuild Mix & Master as the focused mixer/mastering destination shown in
 - View-model tests verify one shared playback session and real Build Song
   completion/failure semantics through fakes.
 - Capture and overlay a deterministic Mix & Master golden against the numbered
-  Mix & Master region of `../pictures/App-pages.png`.
+  Mix & Master region of `../../pictures/App-pages.png`.
 - Run `./gradlew test :desktopApp:test :desktopApp:build`.
 - Real renderer/audio-device listening remains a recorded manual check; do not
   claim it from automated fakes.

@@ -666,6 +666,52 @@ class WorkspaceViewModelTest {
     }
 
     @Test
+    fun `Build Song reports completion only after the build service returns and preserves failure recovery`() = runTest {
+        val root = Path.of("build/task-087-build")
+        val project = projectSnapshot(root)
+        val build = FakeBuildService()
+        val viewModel = WorkspaceViewModel(
+            FakeProjectService(result = project), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
+            runtimeReadinessService = ReadyReadinessService, arrangementService = FakeArrangementService(loaded = arrangementSnapshot(root)), buildService = build
+        )
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.RefreshRuntimeReadiness); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.UpdateBuildOptions(BuildOptionsDraft(loFi = true, mp3 = true)))
+        viewModel.accept(WorkspaceIntent.BuildSong); advanceUntilIdle()
+
+        assertEquals(1, build.calls)
+        assertEquals(BuildSongRequest(root, enableLoFi = true, enableMp3 = true), build.request)
+        assertEquals(WorkspaceOperation.Idle, viewModel.state.value.operation)
+        assertTrue(viewModel.state.value.notification.orEmpty().startsWith("Build complete:"))
+        viewModel.close()
+
+        val failedBuild = FakeBuildService(failure = IllegalStateException("Worker disconnected"))
+        val failingViewModel = WorkspaceViewModel(
+            FakeProjectService(result = project), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
+            runtimeReadinessService = ReadyReadinessService, arrangementService = FakeArrangementService(loaded = arrangementSnapshot(root)), buildService = failedBuild
+        )
+        failingViewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        failingViewModel.accept(WorkspaceIntent.RefreshRuntimeReadiness); advanceUntilIdle()
+        failingViewModel.accept(WorkspaceIntent.BuildSong); advanceUntilIdle()
+        assertEquals("Worker disconnected", assertIs<WorkspaceOperation.Failed>(failingViewModel.state.value.operation).message)
+        assertEquals(OperationSeverity.ERROR, failingViewModel.state.value.operationFeedback.outcomeSeverity)
+        failingViewModel.close()
+    }
+
+    @Test
+    fun `master volume remains on the existing shared playback session`() = runTest {
+        val player = FakeArtifactAudioPlayer()
+        val viewModel = WorkspaceViewModel(FakeProjectService(), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)), player = player)
+
+        viewModel.accept(WorkspaceIntent.SetPlaybackVolume(0.4))
+
+        assertEquals(0.4, viewModel.state.value.playbackSession.volume)
+        assertEquals(0.4, player.getVolume())
+        assertEquals(0L, viewModel.state.value.playbackSession.id)
+        viewModel.close()
+    }
+
+    @Test
     fun `sound library selection updates settings state and cancellation keeps last valid root`() = runTest {
         val root = java.nio.file.Files.createTempDirectory("desktop-library")
         val preferences = object : DesktopPreferences {
@@ -1237,13 +1283,14 @@ private class FakeArrangementService(
     }
 }
 
-private class FakeBuildService : BuildApplicationService {
+private class FakeBuildService(private val failure: Throwable? = null) : BuildApplicationService {
     var calls = 0
     var request: BuildSongRequest? = null
 
     override suspend fun build(request: BuildSongRequest, progress: app.melotrail.application.ProgressSink): BuildResult {
         calls++
         this.request = request
+        failure?.let { throw it }
         progress.report(app.melotrail.application.OperationProgress("build", 3, 9, "Rendering or reusing stems", request.root.resolve("stems/piano.wav")))
         return BuildResult(request.root, request.root.resolve("mix/dry.wav"), null, request.root.resolve("output/master.wav"), null, reusedStems = true)
     }

@@ -88,6 +88,26 @@ internal object WorkspacePageTags {
     const val ARRANGE_DIAGNOSTICS = "arrange-diagnostics"
     const val ARRANGE_REVIEW = "arrange-review"
     const val ARRANGE_APPROVE = "arrange-approve"
+    const val MIX_CHANNEL_PREFIX = "mix-master-channel-"
+    const val MIX_GAIN_PREFIX = "mix-master-gain-"
+    const val MIX_PAN_PREFIX = "mix-master-pan-"
+    const val MIX_MUTE_PREFIX = "mix-master-mute-"
+    const val MIX_SOLO_PREFIX = "mix-master-solo-"
+    const val MIX_METER_PREFIX = "mix-master-meter-"
+    const val MIX_MODE_LISTEN = "mix-master-mode-listen"
+    const val MIX_MODE_MIX = "mix-master-mode-mix"
+    const val MIX_MODE_MASTER = "mix-master-mode-master"
+    const val MIX_PLAYBACK_DRY = "mix-master-playback-dry"
+    const val MIX_PLAYBACK_LOFI = "mix-master-playback-lofi"
+    const val MIX_PLAYBACK_MASTER = "mix-master-playback-master"
+    const val MIX_MASTER_VOLUME = "mix-master-volume"
+    const val MIX_LOFI = "mix-master-lofi"
+    const val MIX_MP3 = "mix-master-mp3"
+    const val MIX_RESET = "mix-master-reset"
+    const val MIX_UNSUPPORTED_DSP = "mix-master-unsupported-dsp"
+    const val MIX_PRIMARY_ACTION = "mix-master-primary-action"
+    const val MIX_BUILD_STATUS = "mix-master-build-status"
+    const val MIX_ZERO_SIGNAL = "mix-master-zero-signal"
 }
 
 @Composable
@@ -298,6 +318,10 @@ private fun InterimWorkflowPage(state: WorkspaceUiState, onIntent: (WorkspaceInt
     }
     if (state.workspaceSection == WorkspaceSection.ARRANGE) {
         ArrangePage(state, onIntent)
+        return@PageRoot
+    }
+    if (state.workspaceSection == WorkspaceSection.MIX_MASTER) {
+        MixMasterPage(state, onIntent)
         return@PageRoot
     }
     val title = state.workspaceSection.label
@@ -714,6 +738,139 @@ private fun workflowSubtitle(state: WorkspaceUiState): String = when (state.work
     WorkspaceSection.VIDEO_PREVIEW -> "Local visual preview only."
     WorkspaceSection.EXPORT -> "Release export is available only after a current master."
     WorkspaceSection.OVERVIEW -> error("Overview has its own page")
+}
+
+private enum class MixMasterMode { LISTEN, MIX, MASTER }
+
+/** Focused adapter over existing mix/build/playback intents; it owns no audio or file work. */
+@Composable
+private fun MixMasterPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    var mode by remember { mutableStateOf(MixMasterMode.LISTEN) }
+    val mix = state.mix
+    val mutating = state.operation.isMutating
+    val currentSource = (state.playbackSession.request as? PlaybackRequest.Mix)?.source ?: PlaybackSource.DRY
+    val buildReady = mixMasterCanBuild(state)
+    val buildMessage = mixMasterBuildMessage(state)
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
+        PageTitle("Mix & Master", "Adjust current rendered stems, audition one release artifact, then build the authoritative master WAV")
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
+            Column(Modifier.weight(1.45f), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                Text("CHANNELS", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                LogicalInstrument.entries.forEach { instrument ->
+                    val name = instrument.wireName
+                    val setting = mix?.settings?.tracks?.get(name) ?: app.melotrail.application.LogicalMixSetting()
+                    val available = name in mix?.availableStems.orEmpty()
+                    MixMasterChannel(name, setting, available, available && !mutating) { onIntent(WorkspaceIntent.UpdateMixSetting(name, it)) }
+                }
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.ResetMix) }, enabled = mix != null && !mutating, modifier = Modifier.semantics {
+                    testTag = WorkspacePageTags.MIX_RESET
+                    contentDescription = if (mix == null) "Reset mix unavailable. Render stems first." else "Reset all logical channel settings to engine defaults."
+                }) { Text("Reset engine defaults") }
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                MixMasterModeSelector(mode) { mode = it }
+                OverviewCard("mix-master-listen", "Listen") {
+                    Text("One shared playback session", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+                        MixPlaybackSourceButton("Dry", PlaybackSource.DRY, currentSource, state, WorkspacePageTags.MIX_PLAYBACK_DRY, onIntent, Modifier.weight(1f))
+                        MixPlaybackSourceButton("Lo-fi", PlaybackSource.LOFI, currentSource, state, WorkspacePageTags.MIX_PLAYBACK_LOFI, onIntent, Modifier.weight(1f))
+                        MixPlaybackSourceButton("Master", PlaybackSource.MASTER, currentSource, state, WorkspacePageTags.MIX_PLAYBACK_MASTER, onIntent, Modifier.weight(1f))
+                    }
+                    Text("Master volume · ${(state.playbackSession.volume * 100).toInt()}%", style = MaterialTheme.typography.labelMedium)
+                    Slider(value = state.playbackSession.volume.toFloat(), onValueChange = { onIntent(WorkspaceIntent.SetPlaybackVolume(it.toDouble())) }, valueRange = 0f..1f, enabled = !mutating,
+                        modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.MIX_MASTER_VOLUME; contentDescription = "Master playback volume ${(state.playbackSession.volume * 100).toInt()} percent" })
+                }
+                OverviewCard("mix-master-effects", if (mode == MixMasterMode.MIX) "Mix effects" else "Mastering") {
+                    Text("Lo-fi audio texture", style = MaterialTheme.typography.labelMedium)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = state.buildOptions.loFi, onCheckedChange = { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(loFi = it))) }, enabled = !mutating,
+                            modifier = Modifier.semantics { testTag = WorkspacePageTags.MIX_LOFI; contentDescription = "Apply the fixed supported Lo-fi audio texture during Build Song." })
+                        Text("Fixed Bedroom LoFi preset", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Text("Lossless mastering is fixed at -14 LUFS and -1 dB peak. Custom DSP values are not supported.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.semantics {
+                        testTag = WorkspacePageTags.MIX_UNSUPPORTED_DSP
+                        contentDescription = "Custom mastering DSP controls are unavailable because Melotrail accepts only the validated fixed mastering chain."
+                    }) { Text("Custom DSP unavailable") }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = state.buildOptions.mp3, onCheckedChange = { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(mp3 = it))) }, enabled = !mutating,
+                            modifier = Modifier.semantics { testTag = WorkspacePageTags.MIX_MP3; contentDescription = "Request optional final MP3 export after the authoritative master WAV." })
+                        Text("Optional final MP3 export", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                OverviewCard(WorkspacePageTags.MIX_BUILD_STATUS, "Render / Build") {
+                    Text(buildMessage, style = MaterialTheme.typography.bodySmall, color = if (buildReady) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error)
+                    (state.operation as? WorkspaceOperation.BuildingSong)?.progress?.let { Text("Stage ${it.stageIndex} of ${it.stageCount}: ${it.message}", style = MaterialTheme.typography.bodySmall) }
+                    Button(onClick = { onIntent(WorkspaceIntent.BuildSong) }, enabled = buildReady, modifier = Modifier.fillMaxWidth().semantics {
+                        testTag = WorkspacePageTags.MIX_PRIMARY_ACTION
+                        contentDescription = if (buildReady) "Build Song using validated current artifacts." else "Build Song unavailable. $buildMessage"
+                    }) { Text(if (state.operation is WorkspaceOperation.BuildingSong) "Building Song…" else "Build Song") }
+                }
+            }
+        }
+        ZeroSignalPlaceholder()
+    }
+}
+
+@Composable
+private fun MixMasterChannel(name: String, setting: app.melotrail.application.LogicalMixSetting, available: Boolean, enabled: Boolean, onSetting: (app.melotrail.application.LogicalMixSetting) -> Unit) =
+    OverviewCard(WorkspacePageTags.MIX_CHANNEL_PREFIX + name, name.replaceFirstChar(Char::uppercase)) {
+        val unavailableReason = "${name.replaceFirstChar(Char::uppercase)} stem is unavailable. Render the approved arrangement first."
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(if (available) "Rendered stem" else "Stem unavailable", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = if (available) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error)
+            Text("${"%.1f".format(setting.gainDb)} dB", style = MaterialTheme.typography.labelSmall)
+        }
+        Slider(value = setting.gainDb.toFloat(), onValueChange = { onSetting(setting.copy(gainDb = it.toDouble())) }, valueRange = -24f..12f, enabled = enabled,
+            modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.MIX_GAIN_PREFIX + name; contentDescription = if (enabled) "$name gain ${"%.1f".format(setting.gainDb)} decibels" else unavailableReason })
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedButton(onClick = { onSetting(setting.copy(muted = !setting.muted)) }, enabled = enabled, modifier = Modifier.semantics { testTag = WorkspacePageTags.MIX_MUTE_PREFIX + name; contentDescription = if (enabled) "${if (setting.muted) "Unmute" else "Mute"} $name" else unavailableReason }) { Text(if (setting.muted) "Unmute" else "Mute") }
+            OutlinedButton(onClick = { onSetting(setting.copy(solo = !setting.solo)) }, enabled = enabled, modifier = Modifier.semantics { testTag = WorkspacePageTags.MIX_SOLO_PREFIX + name; contentDescription = if (enabled) "${if (setting.solo) "Unsolo" else "Solo"} $name" else unavailableReason }) { Text(if (setting.solo) "Unsolo" else "Solo") }
+            Text("Pan ${"%.2f".format(setting.pan)}", style = MaterialTheme.typography.labelSmall)
+        }
+        Slider(value = setting.pan.toFloat(), onValueChange = { onSetting(setting.copy(pan = it.toDouble())) }, valueRange = -1f..1f, enabled = enabled,
+            modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.MIX_PAN_PREFIX + name; contentDescription = if (enabled) "$name pan ${"%.2f".format(setting.pan)}" else unavailableReason })
+        Text("0.0 dBFS · level unavailable", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Disabled, modifier = Modifier.semantics { testTag = WorkspacePageTags.MIX_METER_PREFIX + name; contentDescription = "Zero signal placeholder. No measured level is available for $name." })
+    }
+
+@Composable
+private fun MixMasterModeSelector(selected: MixMasterMode, onSelected: (MixMasterMode) -> Unit) = Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+    listOf(MixMasterMode.LISTEN, MixMasterMode.MIX, MixMasterMode.MASTER).forEach { mode ->
+        OutlinedButton(onClick = { onSelected(mode) }, modifier = Modifier.weight(1f).semantics {
+            testTag = when (mode) { MixMasterMode.LISTEN -> WorkspacePageTags.MIX_MODE_LISTEN; MixMasterMode.MIX -> WorkspacePageTags.MIX_MODE_MIX; MixMasterMode.MASTER -> WorkspacePageTags.MIX_MODE_MASTER }
+            contentDescription = "${mode.name.lowercase().replaceFirstChar(Char::uppercase)} mode${if (selected == mode) ", selected" else ""}"
+        }) { Text(mode.name.lowercase().replaceFirstChar(Char::uppercase)) }
+    }
+}
+
+@Composable
+private fun MixPlaybackSourceButton(label: String, source: PlaybackSource, selected: PlaybackSource, state: WorkspaceUiState, tag: String, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier) {
+    val available = !state.downstreamArtifactsStale && when (source) {
+        PlaybackSource.DRY -> state.project?.readiness?.dryMixAvailable == true
+        PlaybackSource.LOFI -> state.project?.readiness?.loFiMixAvailable == true
+        PlaybackSource.MASTER -> state.project?.readiness?.masterAvailable == true
+    }
+    OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectPlaybackSource(source)) }, enabled = available && !state.operation.isMutating, modifier = modifier.semantics {
+        testTag = tag
+        contentDescription = if (available) "$label playback source${if (selected == source) ", selected" else ""}" else "$label playback is unavailable or stale. Build a current artifact first."
+    }) { Text(label) }
+}
+
+@Composable
+private fun ZeroSignalPlaceholder() = OverviewCard(WorkspacePageTags.MIX_ZERO_SIGNAL, "Levels") {
+    Text("0.0 dBFS · No measured signal", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.Disabled)
+    Text("Waveform and meters remain zero until measured level data is available from the playback boundary.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+private fun mixMasterCanBuild(state: WorkspaceUiState): Boolean = state.project != null && !state.downstreamArtifactsStale && !state.operation.isMutating && state.arrangement?.approved == true && state.arrangement.approvalRequired == false && state.arrangement.stale == false && state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.available == true
+
+private fun mixMasterBuildMessage(state: WorkspaceUiState): String = when {
+    state.project == null -> "Open a project before building."
+    state.arrangement == null -> "Build Song needs a current approved arrangement."
+    state.arrangement.stale -> "The arrangement is stale; regenerate it before building."
+    state.downstreamArtifactsStale -> "Mix artifacts are stale; regenerate them from the current arrangement before building."
+    state.arrangement.approvalRequired || !state.arrangement.approved -> "Approve the reviewed arrangement before building."
+    state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.available != true -> state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.reason ?: "Checking local build readiness."
+    else -> "Build validates artifacts, publishes a lossless master WAV atomically, then optionally exports MP3."
 }
 
 private fun workflowBody(state: WorkspaceUiState): String = when (state.workspaceSection) {
