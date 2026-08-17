@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -135,6 +136,8 @@ internal object WorkspacePageTags {
     const val ARRANGE_CONTEXT = "arrange-context-rail"
     const val ARRANGE_SUMMARY = "arrange-summary"
     const val MIX_CHANNEL_PREFIX = "mix-master-channel-"
+    const val MIXER_VIEWPORT = "mix-master-viewport"
+    const val MIX_EMPTY_CHANNELS = "mix-master-empty-channels"
     const val MIX_GAIN_PREFIX = "mix-master-gain-"
     const val MIX_PAN_PREFIX = "mix-master-pan-"
     const val MIX_MUTE_PREFIX = "mix-master-mute-"
@@ -1585,22 +1588,36 @@ private fun MixMasterPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
     val currentSource = (state.playbackSession.request as? PlaybackRequest.Mix)?.source ?: PlaybackSource.DRY
     val buildReady = mixMasterCanBuild(state)
     val buildMessage = mixMasterBuildMessage(state)
+    val channelNames = LogicalInstrument.entries.map { it.wireName }.filter { it in mix?.availableStems.orEmpty() }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
         PageTitle("Mix & Master", "Adjust stems and build the master WAV")
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val narrow = maxWidth < MusicWorkspaceTokens.Reference.MediumBreakpoint
             ResponsivePageColumns(narrow = narrow, first = { columnModifier ->
             Column(columnModifier, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-                Text("CHANNELS", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                LogicalInstrument.entries.forEach { instrument ->
-                    val name = instrument.wireName
-                    val setting = mix?.settings?.tracks?.get(name) ?: app.melotrail.application.LogicalMixSetting()
-                    val available = name in mix?.availableStems.orEmpty()
-                    MixMasterChannel(name, setting, available, available && !mutating) { onIntent(WorkspaceIntent.UpdateMixSetting(name, it)) }
+                OverviewCard(WorkspacePageTags.MIXER_VIEWPORT, "Channels") {
+                    if (channelNames.isEmpty()) {
+                        Text(
+                            "No rendered stems are available. Render the approved arrangement to create real channel strips.",
+                            modifier = Modifier.semantics { testTag = WorkspacePageTags.MIX_EMPTY_CHANNELS },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Row(
+                            Modifier.fillMaxWidth().heightIn(max = 520.dp).horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)
+                        ) {
+                            channelNames.forEach { name ->
+                                val setting = mix?.settings?.tracks?.get(name) ?: app.melotrail.application.LogicalMixSetting()
+                                MixMasterChannel(name, setting, !mutating) { onIntent(WorkspaceIntent.UpdateMixSetting(name, it)) }
+                            }
+                        }
+                    }
                 }
-                OutlinedButton(onClick = { onIntent(WorkspaceIntent.ResetMix) }, enabled = mix != null && !mutating, modifier = Modifier.semantics {
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.ResetMix) }, enabled = channelNames.isNotEmpty() && !mutating, modifier = Modifier.semantics {
                     testTag = WorkspacePageTags.MIX_RESET
-                    contentDescription = if (mix == null) "Reset mix unavailable. Render stems first." else "Reset all logical channel settings to engine defaults."
+                    contentDescription = if (channelNames.isEmpty()) "Reset mix unavailable. Render stems first." else "Reset all rendered channel settings to engine defaults."
                 }) { Text("Reset engine defaults") }
             }
             }, second = { columnModifier ->
@@ -1616,17 +1633,13 @@ private fun MixMasterPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                     Slider(value = state.playbackSession.volume.toFloat(), onValueChange = { onIntent(WorkspaceIntent.SetPlaybackVolume(it.toDouble())) }, valueRange = 0f..1f, enabled = !mutating,
                         modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.MIX_MASTER_VOLUME; contentDescription = "Master playback volume ${(state.playbackSession.volume * 100).toInt()} percent" })
                 }
-                OverviewCard("mix-master-effects", if (mode == MixMasterMode.MIX) "Mix effects" else "Mastering") {
-                    Text("Lo-fi audio texture", style = MaterialTheme.typography.labelMedium)
+                OverviewCard("mix-master-options", "Build options") {
+                    Text(if (mode == MixMasterMode.LISTEN) "Build options" else "Supported build options", style = MaterialTheme.typography.labelMedium)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = state.buildOptions.loFi, onCheckedChange = { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(loFi = it))) }, enabled = !mutating,
                             modifier = Modifier.semantics { testTag = WorkspacePageTags.MIX_LOFI; contentDescription = "Apply the fixed supported Lo-fi audio texture during Build Song." })
                         Text("Fixed Bedroom LoFi preset", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.semantics {
-                        testTag = WorkspacePageTags.MIX_UNSUPPORTED_DSP
-                        contentDescription = "Custom mastering DSP controls are unavailable because Melotrail accepts only the validated fixed mastering chain."
-                    }) { Text("Custom DSP unavailable") }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = state.buildOptions.mp3, onCheckedChange = { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(mp3 = it))) }, enabled = !mutating,
                             modifier = Modifier.semantics { testTag = WorkspacePageTags.MIX_MP3; contentDescription = "Request optional final MP3 export after the authoritative master WAV." })
@@ -1649,29 +1662,35 @@ private fun MixMasterPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
 }
 
 @Composable
-private fun MixMasterChannel(name: String, setting: app.melotrail.application.LogicalMixSetting, available: Boolean, enabled: Boolean, onSetting: (app.melotrail.application.LogicalMixSetting) -> Unit) =
-    OverviewCard(WorkspacePageTags.MIX_CHANNEL_PREFIX + name, name.replaceFirstChar(Char::uppercase)) {
-        val unavailableReason = "${name.replaceFirstChar(Char::uppercase)} stem is unavailable. Render the approved arrangement first."
+private fun MixMasterChannel(name: String, setting: app.melotrail.application.LogicalMixSetting, enabled: Boolean, onSetting: (app.melotrail.application.LogicalMixSetting) -> Unit) =
+    Card(
+        Modifier.width(148.dp).heightIn(min = 404.dp).semantics { testTag = WorkspacePageTags.MIX_CHANNEL_PREFIX + name },
+        colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface),
+        border = BorderStroke(1.dp, instrumentLaneColors[name] ?: MusicWorkspaceTokens.Border)
+    ) {
+        Column(Modifier.padding(MusicWorkspaceTokens.Spacing.Sm), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(if (available) "Rendered stem" else "Stem unavailable", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = if (available) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error)
+            Text(name.replaceFirstChar(Char::uppercase), modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelLarge, color = instrumentLaneColors[name] ?: MaterialTheme.colorScheme.onSurface)
             Text("${"%.1f".format(setting.gainDb)} dB", style = MaterialTheme.typography.labelSmall)
         }
         Slider(value = setting.gainDb.toFloat(), onValueChange = { onSetting(setting.copy(gainDb = it.toDouble())) }, valueRange = -24f..12f, enabled = enabled,
-            modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.MIX_GAIN_PREFIX + name; contentDescription = if (enabled) "$name gain ${"%.1f".format(setting.gainDb)} decibels" else unavailableReason })
+            modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.MIX_GAIN_PREFIX + name; contentDescription = "$name gain ${"%.1f".format(setting.gainDb)} decibels" })
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedButton(onClick = { onSetting(setting.copy(muted = !setting.muted)) }, enabled = enabled, modifier = Modifier.semantics { testTag = WorkspacePageTags.MIX_MUTE_PREFIX + name; contentDescription = if (enabled) "${if (setting.muted) "Unmute" else "Mute"} $name" else unavailableReason }) { Text(if (setting.muted) "Unmute" else "Mute") }
-            OutlinedButton(onClick = { onSetting(setting.copy(solo = !setting.solo)) }, enabled = enabled, modifier = Modifier.semantics { testTag = WorkspacePageTags.MIX_SOLO_PREFIX + name; contentDescription = if (enabled) "${if (setting.solo) "Unsolo" else "Solo"} $name" else unavailableReason }) { Text(if (setting.solo) "Unsolo" else "Solo") }
-            Text("Pan ${"%.2f".format(setting.pan)}", style = MaterialTheme.typography.labelSmall)
+            OutlinedButton(onClick = { onSetting(setting.copy(muted = !setting.muted)) }, enabled = enabled, modifier = Modifier.width(52.dp).semantics { testTag = WorkspacePageTags.MIX_MUTE_PREFIX + name; contentDescription = "${if (setting.muted) "Unmute" else "Mute"} $name" }) { Text("M") }
+            OutlinedButton(onClick = { onSetting(setting.copy(solo = !setting.solo)) }, enabled = enabled, modifier = Modifier.width(52.dp).semantics { testTag = WorkspacePageTags.MIX_SOLO_PREFIX + name; contentDescription = "${if (setting.solo) "Unsolo" else "Solo"} $name" }) { Text("S") }
         }
+        Text("Pan ${"%.2f".format(setting.pan)}", style = MaterialTheme.typography.labelSmall)
         Slider(value = setting.pan.toFloat(), onValueChange = { onSetting(setting.copy(pan = it.toDouble())) }, valueRange = -1f..1f, enabled = enabled,
-            modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.MIX_PAN_PREFIX + name; contentDescription = if (enabled) "$name pan ${"%.2f".format(setting.pan)}" else unavailableReason })
-        Text("0.0 dBFS · level unavailable", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Disabled, modifier = Modifier.semantics { testTag = WorkspacePageTags.MIX_METER_PREFIX + name; contentDescription = "Zero signal placeholder. No measured level is available for $name." })
+            modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.MIX_PAN_PREFIX + name; contentDescription = "$name pan ${"%.2f".format(setting.pan)}" })
+        Spacer(Modifier.weight(1f))
+        Text("0.0 dBFS · Level unavailable", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Disabled, modifier = Modifier.semantics { testTag = WorkspacePageTags.MIX_METER_PREFIX + name; contentDescription = "Level unavailable for $name; zero signal is displayed because no measured level data is available." })
+        }
     }
 
 @Composable
 private fun MixMasterModeSelector(selected: MixMasterMode, onSelected: (MixMasterMode) -> Unit) = Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
     listOf(MixMasterMode.LISTEN, MixMasterMode.MIX, MixMasterMode.MASTER).forEach { mode ->
-        OutlinedButton(onClick = { onSelected(mode) }, modifier = Modifier.weight(1f).semantics {
+        OutlinedButton(onClick = { onSelected(mode) }, colors = ButtonDefaults.outlinedButtonColors(containerColor = if (selected == mode) MusicWorkspaceTokens.SelectedSurface else MusicWorkspaceTokens.ElevatedSurface), modifier = Modifier.weight(1f).semantics {
             testTag = when (mode) { MixMasterMode.LISTEN -> WorkspacePageTags.MIX_MODE_LISTEN; MixMasterMode.MIX -> WorkspacePageTags.MIX_MODE_MIX; MixMasterMode.MASTER -> WorkspacePageTags.MIX_MODE_MASTER }
             contentDescription = "${mode.name.lowercase().replaceFirstChar(Char::uppercase)} mode${if (selected == mode) ", selected" else ""}"
         }) { Text(mode.name.lowercase().replaceFirstChar(Char::uppercase)) }
@@ -1685,7 +1704,7 @@ private fun MixPlaybackSourceButton(label: String, source: PlaybackSource, selec
         PlaybackSource.LOFI -> state.project?.readiness?.loFiMixAvailable == true
         PlaybackSource.MASTER -> state.project?.readiness?.masterAvailable == true
     }
-    OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectPlaybackSource(source)) }, enabled = available && !state.operation.isMutating, modifier = modifier.semantics {
+    OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectPlaybackSource(source)) }, enabled = available && !state.operation.isMutating, colors = ButtonDefaults.outlinedButtonColors(containerColor = if (selected == source) MusicWorkspaceTokens.SelectedSurface else MusicWorkspaceTokens.ElevatedSurface), modifier = modifier.semantics {
         testTag = tag
         contentDescription = if (available) "$label playback source${if (selected == source) ", selected" else ""}" else "$label playback is unavailable or stale. Build a current artifact first."
     }) { Text(label) }

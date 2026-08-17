@@ -1,6 +1,7 @@
 package app.melotrail.desktop
 
 import app.melotrail.application.AnalyzePartRequest
+import app.melotrail.application.ApplyMixRequest
 import app.melotrail.application.ArrangementApplicationService
 import app.melotrail.application.ArrangementPlannerKind
 import app.melotrail.application.ArrangementSectionSnapshot
@@ -12,6 +13,10 @@ import app.melotrail.application.CreateProjectRequest
 import app.melotrail.application.GenerateArrangementRequest
 import app.melotrail.application.GeneratedMidiSnapshot
 import app.melotrail.application.ImportPartRequest
+import app.melotrail.application.LogicalMixSetting
+import app.melotrail.application.MixApplicationService
+import app.melotrail.application.MixSnapshot
+import app.melotrail.application.PersistedMixSettings
 import app.melotrail.application.ProjectApplicationService
 import app.melotrail.application.ProjectSnapshot
 import app.melotrail.application.PrepareMidiRequest
@@ -38,6 +43,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -836,6 +842,32 @@ class WorkspaceViewModelTest {
     }
 
     @Test
+    fun `rendered mix changes debounce persist reset and refresh canonical project state`() = runTest {
+        val root = Path.of("build/mix-persistence-project")
+        val projectService = FakeProjectService(result = projectSnapshot(root))
+        val mixService = FakeMixService(root)
+        val viewModel = WorkspaceViewModel(
+            projectService, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)), mixService = mixService
+        )
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.UpdateMixSetting("piano", LogicalMixSetting(gainDb = -3.0, pan = 0.25, muted = true, solo = true)))
+        advanceTimeBy(249)
+        assertEquals(0, mixService.requests.size)
+        advanceTimeBy(1); advanceUntilIdle()
+
+        assertEquals(1, mixService.requests.size)
+        assertEquals(LogicalMixSetting(gainDb = -3.0, pan = 0.25, muted = true, solo = true), mixService.requests.single().settings.tracks.getValue("piano"))
+        assertTrue(projectService.openCalls >= 2, "A successful mix must refresh the canonical project snapshot.")
+        assertEquals(WorkspaceOperation.Idle, viewModel.state.value.operation)
+
+        viewModel.accept(WorkspaceIntent.ResetMix); advanceUntilIdle()
+        assertEquals(2, mixService.requests.size)
+        assertEquals(LogicalMixSetting(), mixService.requests.last().settings.tracks.getValue("piano"))
+        viewModel.close()
+    }
+
+    @Test
     fun `Overview and Video Preview use one playback owner and preserve the selected session`() = runTest {
         val root = Path.of("build/task-088-shared-session")
         val player = FakeArtifactAudioPlayer()
@@ -1456,6 +1488,25 @@ private class FakeBuildService(private val failure: Throwable? = null) : BuildAp
         failure?.let { throw it }
         progress.report(app.melotrail.application.OperationProgress("build", 3, 9, "Rendering or reusing stems", request.root.resolve("stems/piano.wav")))
         return BuildResult(request.root, request.root.resolve("mix/dry.wav"), null, request.root.resolve("output/master.wav"), null, reusedStems = true)
+    }
+}
+
+private class FakeMixService(root: Path) : MixApplicationService {
+    var snapshot = MixSnapshot(
+        root = root,
+        settings = PersistedMixSettings(),
+        availableStems = listOf("piano"),
+        dryMix = root.resolve("mix/dry.wav"),
+        stale = false
+    )
+    val requests = mutableListOf<ApplyMixRequest>()
+
+    override fun load(root: Path): MixSnapshot = snapshot
+
+    override suspend fun apply(request: ApplyMixRequest, progress: app.melotrail.application.ProgressSink): MixSnapshot {
+        requests += request
+        snapshot = snapshot.copy(settings = request.settings)
+        return snapshot
     }
 }
 

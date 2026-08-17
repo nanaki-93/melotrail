@@ -2,7 +2,7 @@
 
 ## Goal
 
-Rebuild Mix & Master to follow `../pictures/UI/06-mix-master.png` using the
+Rebuild Mix & Master to follow `../../pictures/UI/06-mix-master.png` using the
 existing typed mix, playback, build, mastering, and release-readiness model.
 
 ## Dependencies
@@ -56,7 +56,7 @@ existing typed mix, playback, build, mastering, and release-readiness model.
 - Verify bounded mixer scrolling at medium/narrow widths and full access at
   100%, 125%, and 150% scale.
 - Capture and overlay a full 1536 × 1024 fixture against
-  `../pictures/UI/06-mix-master.png`; document intentional capability
+  `../../pictures/UI/06-mix-master.png`; document intentional capability
   differences.
 - Run `./gradlew test :desktopApp:test :desktopApp:build`.
 

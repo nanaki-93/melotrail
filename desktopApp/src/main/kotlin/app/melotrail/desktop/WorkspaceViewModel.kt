@@ -1624,6 +1624,8 @@ class WorkspaceViewModel(
 
     private fun updateMixSetting(instrument: String, setting: LogicalMixSetting) {
         val mix = state.value.mix ?: return
+        if (instrument !in mix.availableStems) return fail("apply mix", "Mix setting '$instrument' is unavailable because its rendered stem is missing.")
+        runCatching { setting.requireValid(instrument) }.onFailure { return fail("apply mix", it.message ?: "Invalid mix setting.") }
         val settings = mix.settings.copy(tracks = mix.settings.tracks + (instrument to setting))
         mutableState.update { it.copy(mix = mix.copy(settings = settings)) }
         mixCommit?.cancel()
@@ -1647,7 +1649,24 @@ class WorkspaceViewModel(
         mutableState.update { it.copy(operation = WorkspaceOperation.ApplyingMix(), notification = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
             runCatching { withContext(ioDispatcher) { mixService.apply(app.melotrail.application.ApplyMixRequest(projectRoot, settings)) { progress -> scope.launch { updateProgress(feedbackId, WorkspaceOperation.ApplyingMix(progress)) } } } }
-                .onSuccess { snapshot -> mutableState.update { it.copy(mix = snapshot, operation = WorkspaceOperation.Idle, notification = "Updated lossless dry mix from existing stems.", operationFeedback = feedbackTracker.complete(feedbackId, "Updated lossless dry mix from existing stems.") ?: it.operationFeedback) } }
+                .onSuccess { snapshot ->
+                    val refreshed = withContext(ioDispatcher) { runCatching { projectService.open(projectRoot) } }
+                    mutableState.update { current ->
+                        val refreshWarning = refreshed.exceptionOrNull()?.message
+                        current.copy(
+                            project = refreshed.getOrNull() ?: current.project,
+                            mix = snapshot,
+                            operation = WorkspaceOperation.Idle,
+                            notification = refreshWarning?.let { "Updated lossless dry mix. Reopen the project to refresh artifact readiness: $it" }
+                                ?: "Updated lossless dry mix from existing stems.",
+                            operationFeedback = feedbackTracker.complete(
+                                feedbackId,
+                                if (refreshWarning == null) "Updated lossless dry mix from existing stems." else "Mix updated; canonical readiness refresh needs recovery.",
+                                if (refreshWarning == null) OperationSeverity.SUCCESS else OperationSeverity.WARNING
+                            ) ?: current.operationFeedback
+                        )
+                    }
+                }
                 .onFailure { fail("apply mix", it.message ?: "Unable to apply mix settings.", sessionId = feedbackId) }
         }
     }

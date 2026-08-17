@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap
 @Serializable
 data class LogicalMixSetting(val gainDb: Double = 0.0, val pan: Double = 0.0, val muted: Boolean = false, val solo: Boolean = false) {
     fun requireValid(name: String) {
-        require(gainDb.isFinite()) { "Mix setting '$name' gain must be finite" }
+        require(gainDb.isFinite() && gainDb in -24.0..12.0) { "Mix setting '$name' gain must be between -24 and 12 dB" }
         require(pan.isFinite() && pan in -1.0..1.0) { "Mix setting '$name' pan must be between -1 and 1" }
     }
 }

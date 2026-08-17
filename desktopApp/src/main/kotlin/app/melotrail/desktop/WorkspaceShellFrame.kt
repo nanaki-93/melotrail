@@ -314,6 +314,21 @@ private fun ContextRail(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
                     Icon(Icons.Default.Tune, contentDescription = null, tint = MusicWorkspaceTokens.Teal)
                     ArrangeContextRail(state, onIntent)
                 }
+                WorkspaceSection.MIX_MASTER -> {
+                    Icon(Icons.Default.Tune, contentDescription = null, tint = MusicWorkspaceTokens.Teal)
+                    Text("PREVIEW & BUILD", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.TextSecondary)
+                    val source = (state.playbackSession.request as? PlaybackRequest.Mix)?.source ?: PlaybackSource.DRY
+                    Text("Shared source: ${source.name.lowercase().replaceFirstChar(Char::uppercase)}", style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        when {
+                            state.downstreamArtifactsStale -> "Mix artifacts are stale. Regenerate them from the current arrangement."
+                            state.project?.readiness?.masterAvailable == true -> "A validated master is available for shared playback."
+                            else -> "Build Song validates and publishes the lossless master before it is available."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MusicWorkspaceTokens.TextSecondary
+                    )
+                }
                 else -> {
                     Icon(Icons.Default.Tune, contentDescription = null, tint = MusicWorkspaceTokens.Teal)
                     Text("${state.workspaceSection.label} context", style = MaterialTheme.typography.titleMedium)

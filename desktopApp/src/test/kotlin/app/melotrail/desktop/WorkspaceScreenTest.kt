@@ -658,26 +658,32 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `Mix Master is focused with five logical channels, zero-signal state, and no other page root`() = runComposeUiTest {
-        val states = listOf(
-            WorkspaceUiState(workspaceSection = WorkspaceSection.MIX_MASTER),
-            mixMasterState(),
-            mixMasterState().copy(downstreamArtifactsStale = true),
-            mixMasterState().copy(operation = WorkspaceOperation.BuildingSong()),
-            mixMasterState().copy(operation = WorkspaceOperation.Failed("build song", "Worker unavailable"))
-        )
-        states.forEach { state ->
-            setContent { MelotrailTheme { WorkspaceScreen(state, onIntent = {}) } }
-            onAllNodesWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.MIX_MASTER.name.lowercase()).assertCountEquals(1)
-            listOf("piano", "bass", "drums", "pad", "strings").forEach { channel ->
-                onAllNodesWithTag(WorkspacePageTags.MIX_CHANNEL_PREFIX + channel).assertCountEquals(1)
-                onAllNodesWithTag(WorkspacePageTags.MIX_METER_PREFIX + channel).assertCountEquals(1)
-            }
-            onAllNodesWithTag(WorkspacePageTags.MIX_ZERO_SIGNAL).assertCountEquals(1)
-            onAllNodesWithTag(WorkspaceTags.TIMELINE_PANEL).assertCountEquals(0)
-            onAllNodesWithTag(WorkspaceTags.MIX_PANEL).assertCountEquals(0)
-            onAllNodesWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.ARRANGE.name.lowercase()).assertCountEquals(0)
+    fun `Mix Master derives no one and all channel strips from rendered stems with truthful unavailable meters`() = runComposeUiTest {
+        val noStems = WorkspaceUiState(workspaceSection = WorkspaceSection.MIX_MASTER)
+        setContent { MelotrailTheme { WorkspaceScreen(noStems, onIntent = {}) } }
+        onAllNodesWithTag(WorkspacePageTags.MIX_EMPTY_CHANNELS).assertCountEquals(1)
+        listOf("piano", "bass", "drums", "pad", "strings").forEach { channel ->
+            onAllNodesWithTag(WorkspacePageTags.MIX_CHANNEL_PREFIX + channel).assertCountEquals(0)
+            onAllNodesWithTag(WorkspacePageTags.MIX_METER_PREFIX + channel).assertCountEquals(0)
         }
+
+        val oneStem = mixMasterState().let { state -> state.copy(mix = state.mix!!.copy(availableStems = listOf("piano"))) }
+        setContent { MelotrailTheme { WorkspaceScreen(oneStem, onIntent = {}) } }
+        onAllNodesWithTag(WorkspacePageTags.MIX_CHANNEL_PREFIX + "piano").assertCountEquals(1)
+        onAllNodesWithTag(WorkspacePageTags.MIX_METER_PREFIX + "piano").assertCountEquals(1)
+        listOf("bass", "drums", "pad", "strings").forEach { channel -> onAllNodesWithTag(WorkspacePageTags.MIX_CHANNEL_PREFIX + channel).assertCountEquals(0) }
+
+        setContent { MelotrailTheme { WorkspaceScreen(mixMasterState(), onIntent = {}) } }
+        onAllNodesWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.MIX_MASTER.name.lowercase()).assertCountEquals(1)
+        listOf("piano", "bass", "drums", "pad", "strings").forEach { channel ->
+            onAllNodesWithTag(WorkspacePageTags.MIX_CHANNEL_PREFIX + channel).assertCountEquals(1)
+            onAllNodesWithTag(WorkspacePageTags.MIX_METER_PREFIX + channel).assertCountEquals(1)
+        }
+        onAllNodesWithText("0.0 dBFS · Level unavailable").assertCountEquals(5)
+        onAllNodesWithTag(WorkspacePageTags.MIX_ZERO_SIGNAL).assertCountEquals(1)
+        onAllNodesWithTag(WorkspaceTags.TIMELINE_PANEL).assertCountEquals(0)
+        onAllNodesWithTag(WorkspaceTags.MIX_PANEL).assertCountEquals(0)
+        onAllNodesWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.ARRANGE.name.lowercase()).assertCountEquals(0)
     }
 
     @Test
@@ -702,11 +708,27 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `Mix Master disables stale playback and unsupported mastering controls with recovery reasons`() = runComposeUiTest {
+    fun `Mix Master channel and playback controls remain keyboard reachable`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(mixMasterState(), intents::add) } }
+
+        val mute = onNodeWithTag(WorkspacePageTags.MIX_MUTE_PREFIX + "piano")
+        mute.performClick(); intents.clear(); mute.performKeyInput { pressKey(Key.Enter) }
+        assertTrue(intents.any { it is WorkspaceIntent.UpdateMixSetting && it.instrument == "piano" && it.setting.muted })
+
+        val master = onNodeWithTag(WorkspacePageTags.MIX_PLAYBACK_MASTER)
+        master.performClick(); intents.clear(); master.performKeyInput { pressKey(Key.Enter) }
+        assertTrue(intents.any { it == WorkspaceIntent.SelectPlaybackSource(PlaybackSource.MASTER) })
+
+    }
+
+    @Test
+    fun `Mix Master disables stale playback omits unsupported DSP and exposes recovery reasons`() = runComposeUiTest {
         setContent { MelotrailTheme { WorkspaceScreen(mixMasterState().copy(downstreamArtifactsStale = true), onIntent = {}) } }
 
         onNodeWithTag(WorkspacePageTags.MIX_PLAYBACK_DRY).assertIsNotEnabled()
-        onNodeWithTag(WorkspacePageTags.MIX_UNSUPPORTED_DSP).assertIsNotEnabled()
+        onAllNodesWithTag(WorkspacePageTags.MIX_UNSUPPORTED_DSP).assertCountEquals(0)
+        listOf("Equalizer", "Dynamics", "Sends", "Automation", "Reference Track", "LUFS", "True Peak", "Monitor Out").forEach { unsupported -> onAllNodesWithText(unsupported).assertCountEquals(0) }
         onNodeWithTag(WorkspacePageTags.MIX_PRIMARY_ACTION).assertIsNotEnabled()
         onNodeWithTag(WorkspacePageTags.MIX_MODE_MIX).performClick()
         onNodeWithTag(WorkspacePageTags.MIX_MODE_MASTER).performClick()
@@ -873,13 +895,18 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `deterministic Mix Master fixture captures the numbered reference region`() = runSkikoComposeUiTest(size = Size(1158f, 462f)) {
+    fun `deterministic Mix Master fixture captures and overlays the full task reference`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
         setContent { MelotrailTheme { WorkspaceScreen(mixMasterState(), onIntent = {}) } }
 
-        val image = onNodeWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.MIX_MASTER.name.lowercase()).captureToImage()
-        assertTrue(image.width > 0 && image.height > 0)
-        writePageCapture("mix-master", image.toAwtImage())
-        writeMixMasterReferenceOverlay(image.toAwtImage())
+        val image = onRoot().captureToImage()
+        assertEquals(1536, image.width)
+        assertEquals(1024, image.height)
+        onNodeWithTag(WorkspacePageTags.MIXER_VIEWPORT).assertExists()
+        // The reference's Lead/FX/Vocal/Master mock tracks, group buses, reference import,
+        // EQ/dynamics/sends/automation, loudness figures, and monitor routing are intentionally
+        // absent: this fixture renders only canonical stems and unavailable measured levels.
+        writeTask097MixMasterCapture(image.toAwtImage())
+        writeTask097MixMasterReferenceOverlay(image.toAwtImage())
     }
 
     @Test
@@ -1213,22 +1240,30 @@ class WorkspaceScreenTest {
         assertTrue(ImageIO.write(overlay, "png", target.toFile()))
     }
 
-    private fun writeMixMasterReferenceOverlay(mixMasterCapture: BufferedImage) {
+    private fun writeTask097MixMasterCapture(mixMasterCapture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/App-pages.png")) }
-            ?: error("Could not locate the App-pages reference image.")
-        val reference = ImageIO.read(repository.resolve("plan/pictures/App-pages.png").toFile())
-        val mixMasterRegion = reference.getSubimage(1144, 483, 380, 284)
+            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/06-mix-master.png")) }
+            ?: error("Could not locate the Task 097 reference image.")
+        val target = repository.resolve("desktopApp/build/reports/task-097-mix-master.png")
+        Files.createDirectories(target.parent)
+        assertTrue(ImageIO.write(mixMasterCapture, "png", target.toFile()))
+    }
+
+    private fun writeTask097MixMasterReferenceOverlay(mixMasterCapture: BufferedImage) {
+        val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
+            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/06-mix-master.png")) }
+            ?: error("Could not locate the Task 097 reference image.")
+        val reference = ImageIO.read(repository.resolve("plan/pictures/UI/06-mix-master.png").toFile())
         val overlay = BufferedImage(mixMasterCapture.width, mixMasterCapture.height, BufferedImage.TYPE_INT_ARGB)
         val graphics = overlay.createGraphics()
         try {
-            graphics.drawImage(mixMasterRegion, 0, 0, overlay.width, overlay.height, null)
+            graphics.drawImage(reference, 0, 0, overlay.width, overlay.height, null)
             graphics.composite = AlphaComposite.SrcOver.derive(0.55f)
             graphics.drawImage(mixMasterCapture, 0, 0, null)
         } finally {
             graphics.dispose()
         }
-        val target = repository.resolve("desktopApp/build/reports/task-087-mix-master-overlay.png")
+        val target = repository.resolve("desktopApp/build/reports/task-097-mix-master-overlay.png")
         Files.createDirectories(target.parent)
         assertTrue(ImageIO.write(overlay, "png", target.toFile()))
     }
