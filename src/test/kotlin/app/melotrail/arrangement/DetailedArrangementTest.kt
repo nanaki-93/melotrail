@@ -104,6 +104,30 @@ class DetailedArrangementTest {
     }
 
     @Test
+    fun `Qwen detailed arrangement restores upstream locked bass and drum fields`() {
+        val input = input()
+        val fixture = json.decodeFromString<DetailedArrangement>(fixture("valid-detailed-arrangement.json"))
+        val response = fixture.copy(sections = fixture.sections.mapIndexed { index, section ->
+            if (index == 0) section.copy(instruments = section.instruments.map { instrument ->
+                if (instrument is BassInstrumentPlan) instrument.copy(role = DetailedBassRole.OCTAVE, mode = InstrumentMode.SOURCE) else instrument
+            }) else section.copy(instruments = section.instruments.map { instrument ->
+                if (instrument is DrumsInstrumentPlan) instrument.copy(role = DrumsRole.SOFT_LOFI, mode = InstrumentMode.SOURCE) else instrument
+            })
+        })
+        val client = CapturingClient(json.encodeToString(response))
+
+        val arrangement = LocalQwenDetailedArrangementPlanner(client).plan(input)
+
+        val bass = arrangement.sections[0].instruments.filterIsInstance<BassInstrumentPlan>().single()
+        val drums = arrangement.sections[1].instruments.filterIsInstance<DrumsInstrumentPlan>().single()
+        assertEquals(DetailedBassRole.ROOT, bass.role)
+        assertEquals(InstrumentMode.GENERATED, bass.mode)
+        assertEquals(DrumsRole.STANDARD_GROOVE, drums.role)
+        assertEquals(InstrumentMode.GENERATED, drums.mode)
+        assertTrue(client.userPrompt.contains("Locked instrument values"))
+    }
+
+    @Test
     fun `draft approval is atomic and preserves approved arrangement after a failed validation`() {
         val input = input()
         val approved = tempDir.resolve(DetailedArrangementStore.APPROVED_FILE)

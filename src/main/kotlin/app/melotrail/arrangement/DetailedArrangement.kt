@@ -404,9 +404,13 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
         } catch (error: Exception) {
             throw IllegalArgumentException("Qwen returned invalid detailed-arrangement JSON: ${error.message}", error)
         }
-        val validation = arrangement.validate(input)
+        // Instrument identity, mode, and variation role are approved upstream. They
+        // are constants, not model choices, so restore them from the trusted
+        // variation plan before checking the model's bounded musical controls.
+        val canonical = arrangement.withLockedInstrumentFields(input)
+        val validation = canonical.validate(input)
         require(validation.isValid) { "Invalid Qwen detailed arrangement: ${validation.errors.joinToString("; ")}" }
-        return arrangement
+        return canonical
     }
 
     private fun createUserPrompt(input: DetailedArrangementInput): String = """
@@ -424,11 +428,47 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
         Response requirements:
         - Return exactly ${input.variations.sections.size} sections in the supplied order.
         - Copy every section index, instanceId, partId, role, and energy exactly.
-        - Keep the exact instrument order, names, modes, and variation roles supplied for each section.
+        - Keep the exact instrument order, names, modes, and variation roles supplied for each section. Do not choose or alter those locked values.
         - Fill only the instrument-specific fields required by the system response schema.
         - Map transitionIntent none to transitionOut type none, build to bridge, and release to crossfade.
+
+        Locked instrument values (copy these literal values exactly; they are not creative decisions):
+        ${lockedInstrumentFields(input)}
+
         Return the complete version 3 object described by the system response schema and no other text.
     """.trimIndent()
+
+    private fun lockedInstrumentFields(input: DetailedArrangementInput): String = input.variations.sections.joinToString("\n") { section ->
+        "- Section ${section.index + 1}: " + section.instruments.joinToString(", ") { instrument ->
+            "${instrument.name} { mode=${if (instrument.name == "piano") "source" else "generated"}, role=${instrument.role} }"
+        }
+    }
+
+    private fun DetailedArrangement.withLockedInstrumentFields(input: DetailedArrangementInput): DetailedArrangement = copy(
+        sections = sections.mapIndexed { index, section ->
+            val expected = input.variations.sections.getOrNull(index) ?: return@mapIndexed section
+            if (section.instruments.size != expected.instruments.size) return@mapIndexed section
+            section.copy(instruments = section.instruments.zip(expected.instruments).map { (instrument, variation) ->
+                instrument.withLockedFields(variation)
+            })
+        }
+    )
+
+    private fun DetailedInstrumentPlan.withLockedFields(variation: SectionVariationInstrument): DetailedInstrumentPlan = when (this) {
+        is PianoSourcePlan -> if (variation.name == "piano" && variation.role == "source") PianoSourcePlan() else this
+        is BassInstrumentPlan -> if (variation.name == "bass") copy(
+            name = variation.name,
+            mode = InstrumentMode.GENERATED,
+            role = DetailedBassRole.entries.first { it.name.lowercase() == variation.role }
+        ) else this
+        is DrumsInstrumentPlan -> if (variation.name == "drums") copy(
+            name = variation.name,
+            mode = InstrumentMode.GENERATED,
+            role = DrumsRole.entries.first { it.name.lowercase() == variation.role }
+        ) else this
+        is PadInstrumentPlan -> if (variation.name == "pad") copy(name = variation.name, mode = InstrumentMode.GENERATED) else this
+        is StringsInstrumentPlan -> if (variation.name == "strings") copy(name = variation.name, mode = InstrumentMode.GENERATED) else this
+    }
 
     @Serializable
     private data class DetailedPlanningAnalysis(

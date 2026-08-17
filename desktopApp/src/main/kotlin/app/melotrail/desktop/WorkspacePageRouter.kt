@@ -95,6 +95,8 @@ internal object WorkspacePageTags {
     const val IMPORT_SELECTION = "import-selected-part"
     const val IMPORT_CONTEXT = "import-context-rail"
     const val IMPORT_CONTEXT_ACTION = "import-context-action"
+    const val IMPORT_LOFI_MIDI_PROCESSOR = "import-lofi-midi-processor"
+    const val IMPORT_LOFI_AUDIO_PROCESSOR = "import-lofi-audio-processor"
     const val IMPORTED_FILES = "imported-files"
     const val IMPORTED_ROW_PREFIX = "imported-file-"
     const val IMPORTED_DETAILS_PREFIX = "imported-details-"
@@ -118,6 +120,7 @@ internal object WorkspacePageTags {
     const val ARRANGE_INTENSITY = "arrange-intensity"
     const val ARRANGE_PRIMARY_ACTION = "arrange-primary-action"
     const val ARRANGE_PREREQUISITE = "arrange-prerequisite"
+    const val ARRANGE_COHESION_ACTION = "arrange-cohesion-action"
     const val ARRANGE_DIAGNOSTICS_TOGGLE = "arrange-diagnostics-toggle"
     const val ARRANGE_DIAGNOSTICS = "arrange-diagnostics"
     const val ARRANGE_REVIEW = "arrange-review"
@@ -991,9 +994,15 @@ private fun videoPreviewStatus(state: WorkspaceUiState): String {
 
 private data class ArrangePrerequisites(
     val shortReason: String,
-    val diagnostics: List<String>
+    val diagnostics: List<String>,
+    val cohesionAction: CohesionArrangeAction? = null
 ) {
     val canGenerate: Boolean get() = diagnostics.none { it.startsWith("Missing:") }
+}
+
+private enum class CohesionArrangeAction(val label: String) {
+    GENERATE("Generate cohesion"),
+    APPROVE("Approve cohesion")
 }
 
 private fun arrangePrerequisites(state: WorkspaceUiState): ArrangePrerequisites {
@@ -1009,24 +1018,31 @@ private fun arrangePrerequisites(state: WorkspaceUiState): ArrangePrerequisites 
     val analysesReady = project.readiness.analysesReady && missingAnalyses.isEmpty()
     val cohesionRequired = project.version >= 3
     val cohesionReady = !cohesionRequired || project.readiness.cohesionReady
+    val cohesionAction = when {
+        cohesionReady || !cohesionRequired -> null
+        project.readiness.cohesionApprovalRequired && state.cohesion?.let { it.approvalRequired && !it.approved && !it.stale } == true -> CohesionArrangeAction.APPROVE
+        else -> CohesionArrangeAction.GENERATE
+    }
     val diagnostics = listOf(
         if (structureReady) "Canonical structure is current." else "Missing: save a current canonical structure.",
         if (analysesReady) "MIDI analyses are current for every structure part." else "Missing: analyze ${missingAnalyses.ifEmpty { state.structureDraft.toSet() }.joinToString(", ")}.",
         when {
             !cohesionRequired -> "Cohesion is not required for this legacy project."
             cohesionReady -> "Cohesion is current and approved."
+            cohesionAction == CohesionArrangeAction.APPROVE -> "Missing: approve current cohesion."
             else -> "Missing: generate and approve current cohesion."
         }
     )
     val shortReason = when {
         !structureReady -> "Save a current structure before arranging."
         !analysesReady -> "Analyze every structure part before arranging."
-        !cohesionReady -> "Approve current cohesion before arranging."
+        cohesionAction == CohesionArrangeAction.APPROVE -> "Approve current cohesion before arranging."
+        !cohesionReady -> "Generate and approve current cohesion before arranging."
         state.arrangement?.stale == true -> "The retained arrangement is stale; regenerate it."
         state.arrangement?.approvalRequired == true -> "Qwen draft needs explicit approval; generation can replace it."
         else -> "Structure, analyses, and cohesion are current."
     }
-    return ArrangePrerequisites(shortReason, diagnostics)
+    return ArrangePrerequisites(shortReason, diagnostics, cohesionAction)
 }
 
 @Composable
@@ -1044,6 +1060,21 @@ private fun ArrangePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
                     enabled = prerequisites.canGenerate && !mutating,
                     modifier = Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_PRIMARY_ACTION }
                 ) { Text(if (mutating) "Generating…" else if (state.arrangement?.stale == true) "Regenerate Arrangement" else "Generate Arrangement") }
+                prerequisites.cohesionAction?.let { action ->
+                    OutlinedButton(
+                        onClick = {
+                            onIntent(
+                                if (action == CohesionArrangeAction.APPROVE) WorkspaceIntent.ApproveCohesion
+                                else WorkspaceIntent.GenerateCohesion
+                            )
+                        },
+                        enabled = !mutating,
+                        modifier = Modifier.semantics {
+                            testTag = WorkspacePageTags.ARRANGE_COHESION_ACTION
+                            contentDescription = "${action.label} before arranging"
+                        }
+                    ) { Text(action.label) }
+                }
             }
             ArrangeTabs(state.arrangeTab, mutating, onIntent)
         ArrangeTimeline(state, onIntent)
@@ -1808,7 +1839,7 @@ internal fun ImportContextRail(state: WorkspaceUiState, onIntent: (WorkspaceInte
     val part = importPrimaryPart(state)
     val action = part?.let { primaryPartAction(it, state.pendingMidiFeel) }
     Column(Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.IMPORT_CONTEXT }, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-        Text("PREPARATION & CONTEXT", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("CLEANING & PROCESSING", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (part == null) {
             Text("Select or import a source to see its validated preparation state.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
@@ -1826,7 +1857,54 @@ internal fun ImportContextRail(state: WorkspaceUiState, onIntent: (WorkspaceInte
                 onClick = { onIntent(WorkspaceIntent.ShowPartDetails(part.id, PartDetailsFocusReturn.ImportPrimaryAction)) },
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Open preparation details") }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
+            ImportLoFiProcessorAccess(part, state, onIntent)
         }
+    }
+}
+
+/**
+ * Import preserves source files, so it never applies an audio effect in-place.  This
+ * keeps both supported Lo-fi paths discoverable without implying otherwise.
+ */
+@Composable
+private fun ImportLoFiProcessorAccess(
+    part: app.melotrail.application.PartSummary,
+    state: WorkspaceUiState,
+    onIntent: (WorkspaceIntent) -> Unit
+) {
+    if (part.sourceType == PartSourceType.MIDI) {
+        Text("LO-FI MIDI FEEL", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        val repaired = part.preparation.midiQuality.status == app.melotrail.application.MidiQualityStatus.CURRENT
+        Text(
+            if (repaired) "Create the separate 80 BPM, 58% swing MIDI Feel artifact. Your imported MIDI remains unchanged."
+            else "Repair and approve this MIDI first; then choose its separate 80 BPM, 58% swing Lo-fi Feel artifact.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        OutlinedButton(
+            onClick = { onIntent(WorkspaceIntent.ShowPartDetails(part.id, PartDetailsFocusReturn.ImportPrimaryAction)) },
+            enabled = !state.operation.isMutating,
+            modifier = Modifier.fillMaxWidth().semantics {
+                testTag = WorkspacePageTags.IMPORT_LOFI_MIDI_PROCESSOR
+                contentDescription = if (repaired) "Configure Lo-fi MIDI Feel for ${part.id}" else "Open MIDI repair details before configuring Lo-fi MIDI Feel for ${part.id}"
+            }
+        ) { Text(if (repaired) "Configure Lo-fi MIDI Feel" else "Prepare MIDI for Lo-fi Feel") }
+    } else {
+        Text("LO-FI AUDIO TEXTURE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            "The fixed Bedroom LoFi audio texture is applied during Build Song after mixing; imported audio remains unchanged.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        OutlinedButton(
+            onClick = { onIntent(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.MIX_MASTER)) },
+            enabled = !state.operation.isMutating,
+            modifier = Modifier.fillMaxWidth().semantics {
+                testTag = WorkspacePageTags.IMPORT_LOFI_AUDIO_PROCESSOR
+                contentDescription = "Open Mix and Master to enable the Lo-fi audio texture"
+            }
+        ) { Text("Open Lo-fi audio texture") }
     }
 }
 

@@ -38,6 +38,8 @@ import app.melotrail.application.ArrangementPlannerKind
 import app.melotrail.application.ArrangementInstrumentSnapshot
 import app.melotrail.application.ArrangementSectionSnapshot
 import app.melotrail.application.ArrangementSnapshot
+import app.melotrail.application.CohesionPlannerKind
+import app.melotrail.application.CohesionSnapshot
 import app.melotrail.application.LogicalMixSetting
 import app.melotrail.application.MixSnapshot
 import app.melotrail.application.PersistedMixSettings
@@ -532,6 +534,22 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `Import context makes both supported Lo-fi paths discoverable without processing the source`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
+        val midi = importPart("ready.mid", rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT)
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(importState(midi), intents::add) } }
+
+        onNodeWithTag(WorkspacePageTags.IMPORT_LOFI_MIDI_PROCESSOR).performClick()
+        assertEquals(WorkspaceIntent.ShowPartDetails("A", PartDetailsFocusReturn.ImportPrimaryAction), intents.single())
+
+        intents.clear()
+        val audio = importPart("solo.wav", audio = true, inspected = true)
+        setContent { MelotrailTheme { WorkspaceScreen(importState(audio), intents::add) } }
+        onNodeWithTag(WorkspacePageTags.IMPORT_LOFI_AUDIO_PROCESSOR).performClick()
+        assertEquals(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.MIX_MASTER), intents.single())
+    }
+
+    @Test
     fun `Import audio and ready actions keep orchestration in the view model boundary`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(importState(importPart("solo.wav", audio = true, inspected = false)), intents::add) } }
@@ -741,6 +759,36 @@ class WorkspaceScreenTest {
         onAllNodesWithTag(WorkspacePageTags.ARRANGE_PREREQUISITE).assertCountEquals(1)
         onNodeWithTag(WorkspacePageTags.ARRANGE_DIAGNOSTICS_TOGGLE).performScrollTo().performClick()
         onAllNodesWithTag(WorkspacePageTags.ARRANGE_DIAGNOSTICS).assertCountEquals(1)
+    }
+
+    @Test
+    fun `Arrange exposes the next actionable cohesion step before generation`() = runComposeUiTest {
+        val base = arrangeState()
+        val project = checkNotNull(base.project)
+        val draft = CohesionSnapshot(
+            root = project.root,
+            planner = CohesionPlannerKind.DETERMINISTIC,
+            inputHash = "0".repeat(64),
+            occurrences = emptyList(),
+            approvalRequired = true,
+            approved = false,
+            stale = false,
+            artifact = project.root.resolve("cohesion.draft.json")
+        )
+        val intents = mutableListOf<WorkspaceIntent>()
+        val reviewState = base.copy(
+            project = project.copy(readiness = project.readiness.copy(cohesionReady = false, cohesionApprovalRequired = true)),
+            cohesion = draft
+        )
+        setContent { MelotrailTheme { WorkspaceScreen(reviewState, intents::add) } }
+
+        onNodeWithTag(WorkspacePageTags.ARRANGE_COHESION_ACTION).performClick()
+        assertEquals(WorkspaceIntent.ApproveCohesion, intents.single())
+
+        intents.clear()
+        setContent { MelotrailTheme { WorkspaceScreen(reviewState.copy(cohesion = null), intents::add) } }
+        onNodeWithTag(WorkspacePageTags.ARRANGE_COHESION_ACTION).performClick()
+        assertEquals(WorkspaceIntent.GenerateCohesion, intents.single())
     }
 
     @Test
