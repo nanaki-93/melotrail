@@ -126,7 +126,7 @@ class WorkspaceViewModelTest {
 
         assertIs<PartPrimaryAction.PrepareMidi>(primaryPartAction(raw))
         assertIs<PartPrimaryAction.ReviewRepair>(primaryPartAction(review))
-        assertIs<PartPrimaryAction.ContinueToStructure>(primaryPartAction(ready))
+        assertIs<PartPrimaryAction.AddToStructure>(primaryPartAction(ready))
         assertIs<PartPrimaryAction.ApplyLoFiChange>(primaryPartAction(ready, app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL))
     }
 
@@ -271,7 +271,7 @@ class WorkspaceViewModelTest {
     @Test
     fun `creates imports analyzes edits and saves a reloaded structure through the service`() = runTest {
         val root = Path.of("build/test-project")
-        val snapshot = projectSnapshot(root).copy(parts = listOf(part("A"), part("B")))
+        val snapshot = projectSnapshot(root).copy(parts = listOf(analyzedPart("A"), analyzedPart("B")))
         val service = FakeProjectService(result = snapshot)
         val viewModel = WorkspaceViewModel(service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
 
@@ -310,6 +310,82 @@ class WorkspaceViewModelTest {
         assertEquals(listOf("A"), service.savedStructure?.partIds)
         assertEquals(listOf("A"), viewModel.state.value.structureDraft)
         assertTrue(service.openCalls >= 5, "successful mutations are refreshed from the canonical project")
+        viewModel.close()
+    }
+
+    @Test
+    fun `prepared MIDI and eligible transcribed audio enter structure only through canonical saves`() = runTest {
+        val root = Path.of("build/task-085-structure")
+        val rawMidi = part("M").copy(preparation = preparation(rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.STALE_OR_INVALID))
+        val preparedMidi = analyzedPart("M")
+        val audio = audioPart("P")
+        val transcribedAudio = audio.copy(analysis = app.melotrail.application.PartAnalysisSummary(app.melotrail.application.PartAnalysisStatus.MIDI, "analysis/P.midi.json", bars = 3))
+        val service = FakeProjectService(result = projectSnapshot(root).copy(parts = listOf(rawMidi, audio)))
+        service.preparedResult = projectSnapshot(root).copy(parts = listOf(preparedMidi, audio))
+        val preparation = FakeAudioPreparationService(
+            projectSnapshot(root).copy(
+                parts = listOf(preparedMidi, transcribedAudio),
+                structure = listOf(app.melotrail.application.StructureSectionSummary(0, "M", 1, "M1", null))
+            ),
+            availablePreparation("P", recommended = false)
+        )
+        val viewModel = WorkspaceViewModel(
+            service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
+            runtimeReadinessService = ReadyReadinessService, audioPreparationService = preparation
+        )
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.PrepareMidi("M")); advanceUntilIdle()
+        assertIs<PartPrimaryAction.AddToStructure>(primaryPartAction(checkNotNull(viewModel.state.value.project).parts.first { it.id == "M" }))
+        viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.STRUCTURE))
+        viewModel.accept(WorkspaceIntent.AddStructurePart("M")); advanceUntilIdle()
+        assertEquals(listOf("M"), checkNotNull(service.savedStructure).partIds)
+
+        viewModel.accept(WorkspaceIntent.RefreshRuntimeReadiness); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.SelectPart("P")); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.TranscribeSelectedPart); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.AddStructurePart("P")); advanceUntilIdle()
+
+        assertEquals(listOf("M", "P"), checkNotNull(service.savedStructure).partIds)
+        assertEquals(listOf("M1", "P1"), checkNotNull(viewModel.state.value.project).structure.map { it.instanceId })
+        assertEquals(WorkspaceSection.STRUCTURE, viewModel.state.value.workspaceSection)
+        viewModel.close()
+    }
+
+    @Test
+    fun `structure mutations preserve canonical identities reject ineligible parts and recover from save failure`() = runTest {
+        val root = Path.of("build/task-085-mutations")
+        val ready = analyzedPart("A")
+        val raw = part("raw").copy(preparation = preparation(rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.STALE_OR_INVALID))
+        val service = FakeProjectService(result = projectSnapshot(root).copy(
+            parts = listOf(ready, raw),
+            readiness = app.melotrail.application.ProjectReadiness(true, true, false, true, true, true, true, true, true, false)
+        ))
+        val viewModel = WorkspaceViewModel(service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.STRUCTURE))
+        viewModel.accept(WorkspaceIntent.AddStructurePart("raw")); advanceUntilIdle()
+        assertNull(service.savedStructure)
+        assertEquals(emptyList(), viewModel.state.value.structureDraft)
+
+        viewModel.accept(WorkspaceIntent.AddStructurePart("A")); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.AddStructurePart("A")); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.DuplicateStructurePart(0)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.MoveStructurePart(2, 0)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.RemoveStructurePart(1)); advanceUntilIdle()
+        assertEquals(listOf("A", "A"), viewModel.state.value.structureDraft)
+        assertEquals(listOf("A1", "A2"), checkNotNull(viewModel.state.value.project).structure.map { it.instanceId })
+        assertTrue(viewModel.state.value.downstreamArtifactsStale)
+
+        service.failureOnSave = IllegalStateException("disk full")
+        viewModel.accept(WorkspaceIntent.ClearStructure); advanceUntilIdle()
+        assertEquals(listOf("A", "A"), viewModel.state.value.structureDraft, "failed saves must retain the loaded canonical structure")
+        assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation)
+        service.failureOnSave = null
+        viewModel.accept(WorkspaceIntent.ClearStructure); advanceUntilIdle()
+        assertEquals(emptyList(), viewModel.state.value.structureDraft)
+        assertEquals(WorkspaceSection.STRUCTURE, viewModel.state.value.workspaceSection)
         viewModel.close()
     }
 
@@ -1052,6 +1128,8 @@ private class FakeProjectService(
     var analyzed: AnalyzePartRequest? = null
     var updatedRole: UpdatePartRoleRequest? = null
     var savedStructure: SaveStructureRequest? = null
+    var preparedResult: ProjectSnapshot? = null
+    var failureOnSave: Throwable? = null
     var openCalls = 0
 
     override fun open(root: Path): ProjectSnapshot {
@@ -1085,6 +1163,7 @@ private class FakeProjectService(
     override suspend fun prepareMidi(request: PrepareMidiRequest, progress: app.melotrail.application.ProgressSink): PrepareMidiResult {
         prepared = request
         progress.report(app.melotrail.application.OperationProgress("prepare-midi", 2, 2, "Analyzing selected MIDI"))
+        current = preparedResult ?: current
         return PrepareMidiResult(checkNotNull(current), PrepareMidiOutcome.READY_FOR_STRUCTURE)
     }
 
@@ -1112,6 +1191,7 @@ private class FakeProjectService(
 
     override fun saveStructure(request: SaveStructureRequest): ProjectSnapshot {
         savedStructure = request
+        failureOnSave?.let { throw it }
         current = checkNotNull(current).copy(structure = request.partIds.mapIndexed { index, id ->
             app.melotrail.application.StructureSectionSummary(index, id, request.partIds.take(index + 1).count { it == id }, "$id${request.partIds.take(index + 1).count { it == id }}", null)
         })

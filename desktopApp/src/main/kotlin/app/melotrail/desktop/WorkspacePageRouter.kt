@@ -61,6 +61,14 @@ internal object WorkspacePageTags {
     const val IMPORTED_ROW_PREFIX = "imported-file-"
     const val IMPORTED_DETAILS_PREFIX = "imported-details-"
     const val IMPORT_PRIMARY_ACTION = "import-primary-action"
+    const val STRUCTURE_PALETTE = "structure-palette"
+    const val STRUCTURE_ADD_PREFIX = "structure-add-"
+    const val STRUCTURE_STRIP = "structure-strip"
+    const val STRUCTURE_TABLE = "structure-table"
+    const val STRUCTURE_ROW_PREFIX = "structure-row-"
+    const val STRUCTURE_EDIT_PREFIX = "structure-edit-"
+    const val STRUCTURE_DUPLICATE_PREFIX = "structure-duplicate-"
+    const val STRUCTURE_REMOVE_PREFIX = "structure-remove-"
 }
 
 @Composable
@@ -265,6 +273,10 @@ private fun InterimWorkflowPage(state: WorkspaceUiState, onIntent: (WorkspaceInt
         ImportPage(state, onIntent)
         return@PageRoot
     }
+    if (state.workspaceSection == WorkspaceSection.STRUCTURE) {
+        StructurePage(state, onIntent)
+        return@PageRoot
+    }
     val title = state.workspaceSection.label
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
         PageTitle(title, workflowSubtitle(state))
@@ -276,6 +288,79 @@ private fun InterimWorkflowPage(state: WorkspaceUiState, onIntent: (WorkspaceInt
             }
         }
     }
+}
+
+@Composable
+private fun StructurePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = Column(
+    Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)
+) {
+    PageTitle("Structure", "Build the canonical order of your song")
+    StructurePalette(state, onIntent)
+    StructureStrip(state.project?.structure.orEmpty())
+    StructureTable(state, onIntent)
+}
+
+@Composable
+private fun StructurePalette(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = OverviewCard(WorkspacePageTags.STRUCTURE_PALETTE, "Prepared parts") {
+    val eligible = state.project?.parts.orEmpty().filter { primaryPartAction(it, state.pendingMidiFeel) is PartPrimaryAction.AddToStructure }
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+        eligible.forEach { part ->
+            OutlinedButton(
+                onClick = { onIntent(WorkspaceIntent.AddStructurePart(part.id)) },
+                enabled = !state.operation.isMutating,
+                modifier = Modifier.semantics {
+                    testTag = WorkspacePageTags.STRUCTURE_ADD_PREFIX + part.id
+                    contentDescription = "Add prepared part ${part.id} to structure"
+                }
+            ) { Text("Add ${part.id}") }
+        }
+    }
+}
+
+@Composable
+private fun StructureStrip(sections: List<StructureSectionSummary>) = OverviewCard(WorkspacePageTags.STRUCTURE_STRIP, "Order") {
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+        sections.forEach { section ->
+            Column(
+                Modifier.width(76.dp).clip(MaterialTheme.shapes.small).background(MusicWorkspaceTokens.ElevatedSurface)
+                    .padding(MusicWorkspaceTokens.Spacing.Sm).semantics {
+                        testTag = WorkspaceTags.STRUCTURE_OCCURRENCE_PREFIX + section.index
+                        contentDescription = "Structure occurrence ${section.instanceId}"
+                    }
+            ) {
+                Text(section.instanceId, fontWeight = FontWeight.SemiBold)
+                Text(section.durationSeconds?.let(::formatDuration) ?: "Time unavailable", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun StructureTable(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = OverviewCard(WorkspacePageTags.STRUCTURE_TABLE, "Sections") {
+    val sections = state.project?.structure.orEmpty()
+    if (sections.isEmpty()) {
+        Text("Choose a prepared part to start", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        return@OverviewCard
+    }
+    sections.forEachIndexed { index, section ->
+        val part = state.project?.parts?.firstOrNull { it.id == section.partId }
+        Row(
+            Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.STRUCTURE_ROW_PREFIX + index },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)
+        ) {
+            Text(section.instanceId, modifier = Modifier.width(44.dp), fontWeight = FontWeight.SemiBold)
+            Text(part?.role?.ifBlank { "Role unavailable" } ?: "Role unavailable", modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(part?.analysis?.bars?.let { "$it bars" } ?: "Bars unavailable", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TextButton(onClick = { onIntent(WorkspaceIntent.ShowRoleEditor(section.partId)) }, enabled = !state.operation.isMutating, modifier = Modifier.semantics { testTag = WorkspacePageTags.STRUCTURE_EDIT_PREFIX + index; contentDescription = "Edit role for ${section.instanceId}" }) { Text("✎") }
+            TextButton(onClick = { onIntent(WorkspaceIntent.DuplicateStructurePart(index)) }, enabled = !state.operation.isMutating, modifier = Modifier.semantics { testTag = WorkspacePageTags.STRUCTURE_DUPLICATE_PREFIX + index; contentDescription = "Duplicate ${section.instanceId}" }) { Text("⧉") }
+            TextButton(onClick = { onIntent(WorkspaceIntent.RemoveStructurePart(index)) }, enabled = !state.operation.isMutating, modifier = Modifier.semantics { testTag = WorkspacePageTags.STRUCTURE_REMOVE_PREFIX + index; contentDescription = "Remove ${section.instanceId}" }) { Text("×") }
+            TextButton(onClick = { onIntent(WorkspaceIntent.MoveStructurePart(index, index - 1)) }, enabled = !state.operation.isMutating && index > 0, modifier = Modifier.semantics { testTag = WorkspaceTags.STRUCTURE_MOVE_LEFT + index; contentDescription = "Move ${section.instanceId} earlier" }) { Text("↑") }
+            TextButton(onClick = { onIntent(WorkspaceIntent.MoveStructurePart(index, index + 1)) }, enabled = !state.operation.isMutating && index < sections.lastIndex, modifier = Modifier.semantics { testTag = WorkspaceTags.STRUCTURE_MOVE_RIGHT + index; contentDescription = "Move ${section.instanceId} later" }) { Text("↓") }
+        }
+        if (index < sections.lastIndex) HorizontalDivider()
+    }
+    TextButton(onClick = { onIntent(WorkspaceIntent.ClearStructure) }, enabled = !state.operation.isMutating, modifier = Modifier.semantics { testTag = WorkspaceTags.STRUCTURE_CLEAR }) { Text("Clear structure") }
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -388,7 +473,7 @@ private fun ImportedFiles(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
 private fun ImportPrimaryAction(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
     val part = state.project?.parts?.let { parts ->
         state.selectedPartId?.let { selected -> parts.firstOrNull { it.id == selected } }
-            ?: parts.firstOrNull { primaryPartAction(it, null) !is PartPrimaryAction.ContinueToStructure }
+            ?: parts.firstOrNull { primaryPartAction(it, null) !is PartPrimaryAction.AddToStructure }
             ?: parts.firstOrNull()
     }
     val action = part?.let { primaryPartAction(it, state.pendingMidiFeel) }
@@ -412,7 +497,7 @@ private fun dispatchImportPrimaryAction(action: PartPrimaryAction, onIntent: (Wo
         onIntent(WorkspaceIntent.SelectPart(action.partId))
         onIntent(WorkspaceIntent.ApplyMidiFeelAndReanalyze)
     }
-    is PartPrimaryAction.ContinueToStructure -> onIntent(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.STRUCTURE))
+    is PartPrimaryAction.AddToStructure -> onIntent(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.STRUCTURE))
     is PartPrimaryAction.FixIssue -> onIntent(WorkspaceIntent.ShowPartDetails(action.partId))
 }
 

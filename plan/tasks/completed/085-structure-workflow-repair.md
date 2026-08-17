@@ -43,7 +43,7 @@ MIDI/transcribed audio into the canonical song structure.
 - Compose tests assert the visible add control and its intent, one Structure
   page root, keyboard alternatives to reordering, and concise empty state.
 - Capture and overlay a deterministic Structure golden against the numbered
-  Structure region of `../pictures/App-pages.png`.
+  Structure region of `../../pictures/App-pages.png`.
 - Run `./gradlew test :desktopApp:test :desktopApp:build`.
 
 ## Out of scope

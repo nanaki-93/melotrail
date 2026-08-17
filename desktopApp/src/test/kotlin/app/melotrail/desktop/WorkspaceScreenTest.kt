@@ -9,6 +9,7 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
@@ -176,6 +177,39 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `Structure renders one focused root with eligible add control and keyboard reorder alternatives`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(populatedState().copy(workspaceSection = WorkspaceSection.STRUCTURE), intents::add) } }
+
+        onAllNodesWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.STRUCTURE.name.lowercase()).assertCountEquals(1)
+        listOf(WorkspacePageTags.STRUCTURE_PALETTE, WorkspacePageTags.STRUCTURE_STRIP, WorkspacePageTags.STRUCTURE_TABLE).forEach {
+            onAllNodesWithTag(it).assertCountEquals(1)
+        }
+        onNodeWithTag(WorkspacePageTags.STRUCTURE_ADD_PREFIX + "A").performClick()
+        assertEquals(WorkspaceIntent.AddStructurePart("A"), intents.last())
+        val earlier = onNodeWithTag(WorkspaceTags.STRUCTURE_MOVE_LEFT + "1")
+        earlier.performClick()
+        intents.clear()
+        earlier.performKeyInput { pressKey(Key.Enter) }
+        assertEquals(WorkspaceIntent.MoveStructurePart(1, 0), intents.last())
+    }
+
+    @Test
+    fun `Structure empty state stays concise and exposes only eligible prepared-part actions`() = runComposeUiTest {
+        val ready = populatedState().project!!.parts.first()
+        val raw = ready.copy(id = "raw", analysis = null, preparation = ready.preparation.copy(
+            analyzed = false, ready = false,
+            midiQuality = app.melotrail.application.MidiQualitySummary(app.melotrail.application.MidiQualityStatus.STALE_OR_INVALID)
+        ))
+        val state = populatedState().copy(project = populatedState().project!!.copy(parts = listOf(ready, raw), structure = emptyList()), workspaceSection = WorkspaceSection.STRUCTURE)
+        setContent { MelotrailTheme { WorkspaceScreen(state, onIntent = {}) } }
+
+        onNodeWithText("Choose a prepared part to start").assertExists()
+        onAllNodesWithTag(WorkspacePageTags.STRUCTURE_ADD_PREFIX + "A").assertCountEquals(1)
+        onAllNodesWithTag(WorkspacePageTags.STRUCTURE_ADD_PREFIX + "raw").assertCountEquals(0)
+    }
+
+    @Test
     fun `deterministic overview fixture uses reference page-shell geometry`() = runSkikoComposeUiTest(size = Size(1158f, 462f)) {
         setContent { MelotrailTheme { WorkspaceScreen(populatedState(), onIntent = {}) } }
 
@@ -197,6 +231,15 @@ class WorkspaceScreenTest {
         val drop = onNodeWithTag(WorkspacePageTags.IMPORT_DROP_SURFACE).getUnclippedBoundsInRoot()
         assertTrue((drop.bottom - drop.top).value >= MusicWorkspaceTokens.Pages.ImportDropHeight.value)
         writeImportReferenceOverlay(image.toAwtImage())
+    }
+
+    @Test
+    fun `deterministic Structure fixture captures the numbered reference region`() = runSkikoComposeUiTest(size = Size(1158f, 462f)) {
+        setContent { MelotrailTheme { WorkspaceScreen(populatedState().copy(workspaceSection = WorkspaceSection.STRUCTURE), onIntent = {}) } }
+
+        val image = onNodeWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.STRUCTURE.name.lowercase()).captureToImage()
+        assertTrue(image.width > 0 && image.height > 0)
+        writeStructureReferenceOverlay(image.toAwtImage())
     }
 
     private fun populatedState(): WorkspaceUiState = WorkspaceUiState(
@@ -222,7 +265,8 @@ class WorkspaceScreenTest {
 
     private fun readyPreparation() = PartPreparationSummary(
         sourcePreserved = true, inspected = true, preparedAudio = false, rawMidi = true,
-        cleanMidi = true, analyzed = true, ready = true, warnings = emptyList()
+        cleanMidi = true, analyzed = true, ready = true, warnings = emptyList(),
+        midiQuality = app.melotrail.application.MidiQualitySummary(app.melotrail.application.MidiQualityStatus.CURRENT)
     )
 
     private fun importState(part: PartSummary) = WorkspaceUiState(
@@ -270,6 +314,26 @@ class WorkspaceScreenTest {
             graphics.dispose()
         }
         val target = repository.resolve("desktopApp/build/reports/task-084-import-overlay.png")
+        Files.createDirectories(target.parent)
+        assertTrue(ImageIO.write(overlay, "png", target.toFile()))
+    }
+
+    private fun writeStructureReferenceOverlay(structureCapture: BufferedImage) {
+        val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
+            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/App-pages.png")) }
+            ?: error("Could not locate the App-pages reference image.")
+        val reference = ImageIO.read(repository.resolve("plan/pictures/App-pages.png").toFile())
+        val structureRegion = reference.getSubimage(401, 483, 365, 284)
+        val overlay = BufferedImage(structureCapture.width, structureCapture.height, BufferedImage.TYPE_INT_ARGB)
+        val graphics = overlay.createGraphics()
+        try {
+            graphics.drawImage(structureRegion, 0, 0, overlay.width, overlay.height, null)
+            graphics.composite = AlphaComposite.SrcOver.derive(0.55f)
+            graphics.drawImage(structureCapture, 0, 0, null)
+        } finally {
+            graphics.dispose()
+        }
+        val target = repository.resolve("desktopApp/build/reports/task-085-structure-overlay.png")
         Files.createDirectories(target.parent)
         assertTrue(ImageIO.write(overlay, "png", target.toFile()))
     }

@@ -329,7 +329,8 @@ sealed interface PartPrimaryAction {
     data class ReviewRepair(val partId: String) : PartPrimaryAction
     data class InspectOrTranscribeAudio(val partId: String, val inspected: Boolean) : PartPrimaryAction
     data class ApplyLoFiChange(val partId: String) : PartPrimaryAction
-    data class ContinueToStructure(val partId: String) : PartPrimaryAction
+    /** The only canonical state permitted to enter the saved song structure. */
+    data class AddToStructure(val partId: String) : PartPrimaryAction
     data class FixIssue(val partId: String) : PartPrimaryAction
 }
 
@@ -337,9 +338,10 @@ internal fun primaryPartAction(part: app.melotrail.application.PartSummary, pend
     pendingMidiFeel != null && pendingMidiFeel != part.preparation.midiFeel.selected -> PartPrimaryAction.ApplyLoFiChange(part.id)
     part.preparation.midiQuality.status == MidiQualityStatus.APPROVAL_REQUIRED -> PartPrimaryAction.ReviewRepair(part.id)
     part.preparation.rawMidi && part.preparation.midiQuality.status == MidiQualityStatus.STALE_OR_INVALID -> PartPrimaryAction.PrepareMidi(part.id)
+    part.preparation.rawMidi && part.preparation.midiQuality.status == MidiQualityStatus.LEGACY_UNKNOWN -> PartPrimaryAction.FixIssue(part.id)
     part.preparation.warnings.isNotEmpty() -> PartPrimaryAction.FixIssue(part.id)
-    part.sourceType == PartSourceType.AUDIO && !part.preparation.rawMidi -> PartPrimaryAction.InspectOrTranscribeAudio(part.id, part.preparation.inspected)
-    part.analysis?.status == PartAnalysisStatus.MIDI -> PartPrimaryAction.ContinueToStructure(part.id)
+    part.sourceType == PartSourceType.AUDIO && !part.preparation.rawMidi && part.analysis?.status != PartAnalysisStatus.MIDI -> PartPrimaryAction.InspectOrTranscribeAudio(part.id, part.preparation.inspected)
+    part.analysis?.status == PartAnalysisStatus.MIDI -> PartPrimaryAction.AddToStructure(part.id)
     else -> PartPrimaryAction.FixIssue(part.id)
 }
 
@@ -348,7 +350,7 @@ internal fun PartPrimaryAction.label(): String = when (this) {
     is PartPrimaryAction.ReviewRepair -> "Review repair"
     is PartPrimaryAction.InspectOrTranscribeAudio -> if (inspected) "Transcribe solo piano" else "Inspect audio"
     is PartPrimaryAction.ApplyLoFiChange -> "Apply Lo-fi change"
-    is PartPrimaryAction.ContinueToStructure -> "Continue to Structure"
+    is PartPrimaryAction.AddToStructure -> "Go to Structure"
     is PartPrimaryAction.FixIssue -> "Fix issue"
 }
 
@@ -552,7 +554,7 @@ class WorkspaceViewModel(
             is WorkspaceIntent.ShowRoleEditor -> showRoleEditor(intent.partId)
             is WorkspaceIntent.UpdateRole -> updateRole(intent.role)
             WorkspaceIntent.SaveRole -> saveRole()
-            is WorkspaceIntent.AddStructurePart -> saveStructure(state.value.structureDraft + intent.partId)
+            is WorkspaceIntent.AddStructurePart -> addStructurePart(intent.partId)
             is WorkspaceIntent.DuplicateStructurePart -> duplicateStructurePart(intent.index)
             is WorkspaceIntent.RemoveStructurePart -> removeStructurePart(intent.index)
             is WorkspaceIntent.MoveStructurePart -> moveStructurePart(intent.fromIndex, intent.toIndex)
@@ -1300,6 +1302,16 @@ class WorkspaceViewModel(
         val draft = state.value.structureDraft
         if (index !in draft.indices) return
         saveStructure(draft.toMutableList().apply { add(index + 1, draft[index]) })
+    }
+
+    private fun addStructurePart(partId: String) {
+        val project = state.value.project ?: return fail("add to structure", "Open a project before adding a structure section.")
+        val part = project.parts.find { it.id == partId }
+            ?: return fail("add to structure", "Part '$partId' is no longer available.")
+        if (primaryPartAction(part, state.value.pendingMidiFeel) !is PartPrimaryAction.AddToStructure) {
+            return fail("add to structure", "Part '$partId' must finish current MIDI analysis before it can be added to structure.")
+        }
+        saveStructure(state.value.structureDraft + partId)
     }
 
     private fun removeStructurePart(index: Int) {
