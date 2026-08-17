@@ -33,6 +33,16 @@ data class Project(
     }
 
     /** Boundary for MIDI-first stages introduced after the v1 source-audio format. */
+    fun requireSelectedMidi(projectRoot: Path): List<SelectedMidiArtifact> {
+        requireValid(projectRoot)
+        val resolver = SelectedMidiArtifactResolver()
+        return parts.map { resolver.resolve(projectRoot, this, it) }
+    }
+
+    /**
+     * Compatibility path-only guard for generators that consume already validated analysis.
+     * New source consumers must retain [SelectedMidiArtifact] through [requireSelectedMidi].
+     */
     fun requireCleanMidi(projectRoot: Path): List<Path> {
         require(version >= MIDI_FIRST_VERSION) {
             "Project uses legacy v1 source audio. Prepare clean MIDI for every part before running MIDI-first commands."
@@ -41,28 +51,15 @@ data class Project(
         return parts.map { part ->
             val midi = requireNotNull(part.midi)
             val clean = requireNotNull(midi.clean) { "Part '${part.id}' has not been repaired. Run Repair MIDI before continuing." }
-            // A raw reference marks Task 067's explicit repair flow. Old v2
-            // projects without raw evidence remain readable without migration.
             if (midi.raw != null) {
                 require(midi.cleanup != null && midi.quality != null) { "Part '${part.id}' has incomplete MIDI repair provenance." }
                 val report = MidiQualityReportStore.read(projectRoot, requireNotNull(midi.quality))
                 require(!report.approvalRequired || midi.approvedRepair) { "Part '${part.id}' needs explicit approval of its MIDI repair." }
-                MidiQualityReportStore.requireCurrent(
-                    projectRoot,
-                    part.id,
-                    midi.raw,
-                    clean,
-                    requireNotNull(midi.cleanup),
-                    requireNotNull(midi.quality)
-                )
+                MidiQualityReportStore.requireCurrent(projectRoot, part.id, midi.raw, clean, requireNotNull(midi.cleanup), requireNotNull(midi.quality))
             }
             when (midi.analysisInput) {
                 MidiAnalysisInput.REPAIRED -> projectRoot.resolve(clean).normalize()
-                MidiAnalysisInput.LOFI_FEEL -> {
-                    val feel = requireNotNull(midi.feel) { "Part '${part.id}' has no current Lo-fi Feel artifact." }
-                    MidiFeelReportStore.requireCurrent(projectRoot, part.id, clean, feel)
-                    projectRoot.resolve(feel.derived).normalize()
-                }
+                MidiAnalysisInput.LOFI_FEEL -> requireNotNull(midi.feel).also { MidiFeelReportStore.requireCurrent(projectRoot, part.id, clean, it) }.let { projectRoot.resolve(it.derived).normalize() }
             }
         }
     }

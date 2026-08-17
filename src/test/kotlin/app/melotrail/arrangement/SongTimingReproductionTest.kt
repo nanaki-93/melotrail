@@ -22,7 +22,7 @@ class SongTimingReproductionTest {
     @TempDir lateinit var root: Path
 
     @Test
-    fun `observed selected lofi analysis and repaired piano render mismatch is deterministic`() = runBlocking {
+    fun `selected lofi analysis and piano render use the same artifact identity`() = runBlocking {
         val clean = root.resolve("midi/clean/A.mid")
         writeStraightEighths(clean)
         Files.createDirectories(root.resolve("source"))
@@ -52,13 +52,13 @@ class SongTimingReproductionTest {
 
         val selectedNoteOns = noteOns(MidiSystem.getSequence(lofi.toFile()))
         val renderedNoteOns = noteOns(checkNotNull(renderer.piano))
-        println("Task 073 observed mismatch: clean=${sha256(Files.readAllBytes(clean))}, selected-lofi=${sha256(Files.readAllBytes(lofi))}, selectedTempo=${selectedAnalysis.tempoMap.single().bpm}, selectedPpq=${selectedAnalysis.ppq}, selectedNoteOns=$selectedNoteOns, renderedPianoNoteOns=$renderedNoteOns")
+        println("Task 074 selected source: clean=${sha256(Files.readAllBytes(clean))}, selected-lofi=${sha256(Files.readAllBytes(lofi))}, selectedTempo=${selectedAnalysis.tempoMap.single().bpm}, selectedPpq=${selectedAnalysis.ppq}, selectedNoteOns=$selectedNoteOns, renderedPianoNoteOns=$renderedNoteOns")
         assertNotEquals(sha256(Files.readAllBytes(clean)), sha256(Files.readAllBytes(lofi)))
         assertEquals(480, selectedAnalysis.ppq)
         assertEquals(80.0, selectedAnalysis.tempoMap.single().bpm)
-        assertEquals(listOf(0L, 240L, 480L, 720L), renderedNoteOns)
+        assertEquals(listOf(0L, 278L, 480L, 758L), renderedNoteOns)
         assertEquals(80.0, tempo(checkNotNull(renderer.piano)))
-        assertNotEquals(selectedNoteOns, renderedNoteOns)
+        assertEquals(selectedNoteOns, renderedNoteOns)
     }
 
     @Test

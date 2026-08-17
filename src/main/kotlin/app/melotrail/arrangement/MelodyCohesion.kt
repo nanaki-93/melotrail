@@ -462,14 +462,15 @@ fun ModelRegistry.approvesCommercialCohesion(model: CohesionModelIdentity): Bool
 object MelodyCohesionInputFactory {
     private val fingerprintJson = Json { encodeDefaults = true; explicitNulls = false }
     fun build(root: Path, project: Project, planning: SongPlanningInput): Pair<MelodyCohesionInput, Map<String, List<MidiNote>>> {
-        project.requireCleanMidi(root)
+        project.requireSelectedMidi(root)
+        val resolver = SelectedMidiArtifactResolver()
         val notesByPart = project.parts.associate { part ->
-            val selected = selectedMidi(root, part)
+            val selected = resolver.resolve(root, project, part).path
             part.id to readNotes(selected)
         }
         val occurrences = planning.sectionsWithIdentity().map { occurrence ->
             val part = project.parts.first { it.id == occurrence.partId }
-            val path = selectedMidi(root, part)
+            val path = resolver.resolve(root, project, part).path
             val notes = notesByPart.getValue(part.id)
             val analysis = planning.analyses.getValue(part.id)
             MelodyOccurrenceInput(occurrence.instanceId, part.id, sha256(Files.readAllBytes(path)), analysis.ppq, analysis.durationTicks, analysis.pitchRange, analysis.key, analysis.tempoMap, analysis.timeSignatures, analysis.chords, analysis.energy,
@@ -480,10 +481,6 @@ object MelodyCohesionInputFactory {
         return input to input.occurrences.associate { it.instanceId to notesByPart.getValue(it.partId) }
     }
 
-    private fun selectedMidi(root: Path, part: Part): Path = when (requireNotNull(part.midi).analysisInput) {
-        MidiAnalysisInput.REPAIRED -> root.resolve(requireNotNull(part.midi.clean))
-        MidiAnalysisInput.LOFI_FEEL -> root.resolve(requireNotNull(part.midi.feel).derived)
-    }
     private fun readNotes(path: Path): List<MidiNote> {
         val sequence = MidiSystem.getSequence(path.toFile())
         val events = sequence.tracks.flatMap { track -> (0 until track.size()).map(track::get) }.sortedBy { it.tick }

@@ -77,6 +77,8 @@ data class WorkspaceUiState(
     val selectedPartId: String? = null,
     /** UI-only selected canonical artifact; it is never written to project files. */
     val selectedArtifact: CreationArtifactReference? = null,
+    /** A feel choice is deliberately pending until the one apply/re-analysis action runs. */
+    val pendingMidiFeel: MidiAnalysisInput? = null,
     val midiQualityReview: MidiQualityReviewDraft = MidiQualityReviewDraft(),
     val audioPreparation: AudioPreparationUiState = AudioPreparationUiState(),
     val arrangementDraft: ArrangementDraft = ArrangementDraft(),
@@ -311,6 +313,7 @@ sealed interface WorkspaceRetry {
     data class Inspect(val root: Path, val partId: String) : WorkspaceRetry
     data class Cleanup(val root: Path, val partId: String, val mode: InputCleanupMode) : WorkspaceRetry
     data class MidiCleanup(val request: RetryMidiCleanupRequest) : WorkspaceRetry
+    data class ApplyMidiFeel(val root: Path, val partId: String, val input: MidiAnalysisInput) : WorkspaceRetry
     data class Transcribe(val root: Path, val partId: String, val selectedInput: TranscriptionInputArtifact) : WorkspaceRetry
     data class GenerateArrangement(val request: GenerateArrangementRequest) : WorkspaceRetry
 }
@@ -345,6 +348,7 @@ sealed interface WorkspaceIntent {
     data object RetryMidiCleanup : WorkspaceIntent
     data object ApproveMidiRepair : WorkspaceIntent
     data class SelectMidiFeel(val input: MidiAnalysisInput) : WorkspaceIntent
+    data object ApplyMidiFeelAndReanalyze : WorkspaceIntent
     data object ConfirmTightenTiming : WorkspaceIntent
     data class SelectTranscriptionInput(val input: TranscriptionInputArtifact) : WorkspaceIntent
     data object TranscribeSelectedPart : WorkspaceIntent
@@ -462,6 +466,7 @@ class WorkspaceViewModel(
             WorkspaceIntent.RetryMidiCleanup -> retryMidiCleanup()
             WorkspaceIntent.ApproveMidiRepair -> approveMidiRepair()
             is WorkspaceIntent.SelectMidiFeel -> selectMidiFeel(intent.input)
+            WorkspaceIntent.ApplyMidiFeelAndReanalyze -> applyMidiFeelAndReanalyze()
             WorkspaceIntent.ConfirmTightenTiming -> confirmTightenTiming()
             is WorkspaceIntent.SelectTranscriptionInput -> mutableState.update { it.copy(audioPreparation = it.audioPreparation.copy(transcriptionInput = intent.input)) }
             WorkspaceIntent.TranscribeSelectedPart -> transcribeSelectedPart()
@@ -816,21 +821,34 @@ class WorkspaceViewModel(
     }
 
     private fun selectMidiFeel(input: MidiAnalysisInput) {
-        val project = state.value.project ?: return fail("Lo-fi Feel", "Open a project before choosing MIDI feel.")
+        val project = state.value.project ?: return fail("Lo-fi MIDI Feel", "Open a project before choosing MIDI feel.")
         val partId = state.value.selectedPartId ?: return fail("Lo-fi Feel", "Select a repaired MIDI part first.")
         val part = project.parts.find { it.id == partId } ?: return fail("Lo-fi Feel", "Selected part is no longer available.")
         if (part.preparation.midiQuality.status != MidiQualityStatus.CURRENT) return fail("Lo-fi Feel", "Approve a current MIDI repair before choosing a MIDI feel.")
         if (state.value.operation.isMutating) return
-        val feedbackId = beginFeedback(OperationKind.MIDI_REPAIR, OperationPhase.VALIDATING, "Selecting ${if (input == MidiAnalysisInput.LOFI_FEEL) "Lo-fi Feel · 80 BPM + swing" else "Original feel"}…")
+        mutableState.update { it.copy(pendingMidiFeel = input, notification = null, retry = null) }
+    }
+
+    private fun applyMidiFeelAndReanalyze() {
+        val project = state.value.project ?: return fail("Lo-fi MIDI Feel", "Open a project before applying MIDI feel.")
+        val partId = state.value.selectedPartId ?: return fail("Lo-fi MIDI Feel", "Select a repaired MIDI part first.")
+        val input = state.value.pendingMidiFeel ?: return
+        if (state.value.operation.isMutating) return
+        val feedbackId = beginFeedback(OperationKind.MIDI_REPAIR, OperationPhase.VALIDATING, "Applying ${if (input == MidiAnalysisInput.LOFI_FEEL) "Lo-fi MIDI Feel · 80 BPM + 58% swing" else "Original MIDI"} and re-analyzing…")
         mutableState.update { it.copy(operation = WorkspaceOperation.SelectingMidiFeel(partId), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
-            runCatching { withContext(ioDispatcher) { projectService.selectMidiFeel(SelectMidiFeelRequest(project.root, partId, input)) } }
+            runCatching {
+                withContext(ioDispatcher) {
+                    projectService.selectMidiFeel(SelectMidiFeelRequest(project.root, partId, input))
+                    projectService.analyzePart(AnalyzePartRequest(project.root, partId))
+                }
+            }
                 .onSuccess { snapshot ->
                     cancelPlaybackSession(resetState = true)
-                    val message = if (input == MidiAnalysisInput.LOFI_FEEL) "Lo-fi Feel · 80 BPM + swing selected. Preview A/B, then analyze $partId again." else "Original feel selected. Analyze $partId again."
-                    mutableState.update { current -> current.copy(project = snapshot, arrangement = null, operation = WorkspaceOperation.Idle, notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message) ?: current.operationFeedback, downstreamArtifactsStale = true) }
+                    val message = if (input == MidiAnalysisInput.LOFI_FEEL) "Lo-fi MIDI Feel · 80 BPM + 58% swing applied and analyzed." else "Original MIDI applied and analyzed."
+                    mutableState.update { current -> current.copy(project = snapshot, pendingMidiFeel = null, arrangement = null, operation = WorkspaceOperation.Idle, notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message) ?: current.operationFeedback, downstreamArtifactsStale = true) }
                 }
-                .onFailure { fail("Lo-fi Feel", it.message ?: "Unable to select MIDI feel for $partId.", sessionId = feedbackId) }
+                .onFailure { fail("Lo-fi MIDI Feel", it.message ?: "Unable to apply MIDI feel for $partId.", WorkspaceRetry.ApplyMidiFeel(project.root, partId, input), feedbackId) }
         }
     }
 
@@ -1198,6 +1216,10 @@ class WorkspaceViewModel(
             if (action.request.cleanup.profile == MidiCleanupProfile.TIGHTEN_TIMING) {
                 mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmTightenTiming(action.request.partId)) }
             } else runMidiCleanupRetry(action.request)
+        }
+        is WorkspaceRetry.ApplyMidiFeel -> {
+            mutableState.update { it.copy(selectedPartId = action.partId, pendingMidiFeel = action.input) }
+            applyMidiFeelAndReanalyze()
         }
         is WorkspaceRetry.Transcribe -> {
             mutableState.update { it.copy(selectedPartId = action.partId, audioPreparation = it.audioPreparation.copy(partId = action.partId, transcriptionInput = action.selectedInput)) }

@@ -385,7 +385,16 @@ class WorkspaceScreenTest {
         onNodeWithTag(WorkspaceTags.MIDI_QUALITY_RETRY).assertExists()
         onNodeWithTag(WorkspaceTags.MIDI_FEEL_ORIGINAL).assertExists()
         onNodeWithTag(WorkspaceTags.MIDI_FEEL_LOFI).assertExists()
-        onNodeWithText("Lo-fi Feel is fixed at 80 BPM", substring = true).assertExists()
+        onNodeWithText("Lo-fi MIDI Feel is fixed at 80 BPM", substring = true).assertExists()
+    }
+
+    @Test
+    fun `pending MIDI Feel exposes one apply and re-analyze action`() = runComposeUiTest {
+        val project = projectState().project!!.copy(parts = listOf(qualityPart(app.melotrail.application.MidiQualityStatus.CURRENT)))
+        setContent { MelotrailTheme { WorkspaceScreen(WorkspaceUiState(project = project, selectedPartId = "A", pendingMidiFeel = app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL), onIntent = {}) } }
+
+        onNodeWithTag(WorkspaceTags.MIDI_FEEL_APPLY).assertExists()
+        onNodeWithText("Apply and re-analyze").assertExists()
     }
 
     @Test

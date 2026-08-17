@@ -318,11 +318,14 @@ class WorkspaceViewModelTest {
         viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
         viewModel.accept(WorkspaceIntent.SelectPart("A"))
         viewModel.accept(WorkspaceIntent.SelectMidiFeel(app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL)); advanceUntilIdle()
+        assertEquals(app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL, viewModel.state.value.pendingMidiFeel)
+        viewModel.accept(WorkspaceIntent.ApplyMidiFeelAndReanalyze); advanceUntilIdle()
 
         assertEquals(app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL, service.midiFeelSelection?.input)
         assertTrue(viewModel.state.value.downstreamArtifactsStale)
         assertNull(viewModel.state.value.arrangement)
         viewModel.accept(WorkspaceIntent.SelectMidiFeel(app.melotrail.arrangement.MidiAnalysisInput.REPAIRED)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.ApplyMidiFeelAndReanalyze); advanceUntilIdle()
         assertEquals(app.melotrail.arrangement.MidiAnalysisInput.REPAIRED, service.midiFeelSelection?.input)
         viewModel.close()
     }

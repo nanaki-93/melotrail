@@ -128,6 +128,7 @@ object WorkspaceTags {
     const val MIDI_QUALITY_PROFILE_PREFIX = "midi-quality-profile-"
     const val MIDI_FEEL_ORIGINAL = "midi-feel-original"
     const val MIDI_FEEL_LOFI = "midi-feel-lofi"
+    const val MIDI_FEEL_APPLY = "midi-feel-apply"
     const val SOUND_LIBRARY_SETTINGS = "sound-library-settings"
     const val SOUND_LIBRARY_CHOOSE = "sound-library-choose"
     const val SOUND_LIBRARY_CLEAR = "sound-library-clear"
@@ -529,19 +530,27 @@ private fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (Workspace
             }
             Text(next, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
-            Text("Lo-fi Feel", style = MaterialTheme.typography.labelLarge)
-            Text("Choose the canonical analysis input. Lo-fi Feel is fixed at 80 BPM with the documented 58% eighth-note swing; it does not apply audio texture.", style = MaterialTheme.typography.bodySmall)
+            Text("MIDI Feel", style = MaterialTheme.typography.labelLarge)
+            Text("Choose the canonical MIDI source. Lo-fi MIDI Feel is fixed at 80 BPM and 58% swing; it does not apply Lo-fi audio texture.", style = MaterialTheme.typography.bodySmall)
+            val selectedFeel = state.pendingMidiFeel ?: part.preparation.midiFeel.selected
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 OutlinedButton(
                     onClick = { onIntent(WorkspaceIntent.SelectMidiFeel(app.melotrail.arrangement.MidiAnalysisInput.REPAIRED)) },
                     enabled = !state.operation.isMutating,
                     modifier = Modifier.semantics { testTag = WorkspaceTags.MIDI_FEEL_ORIGINAL }
-                ) { Text(if (part.preparation.midiFeel.selected == app.melotrail.arrangement.MidiAnalysisInput.REPAIRED) "Original feel ✓" else "Original feel") }
+                ) { Text(if (selectedFeel == app.melotrail.arrangement.MidiAnalysisInput.REPAIRED) "Original ✓" else "Original") }
                 OutlinedButton(
                     onClick = { onIntent(WorkspaceIntent.SelectMidiFeel(app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL)) },
                     enabled = !state.operation.isMutating,
                     modifier = Modifier.semantics { testTag = WorkspaceTags.MIDI_FEEL_LOFI }
-                ) { Text(if (part.preparation.midiFeel.selected == app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL) "Lo-fi feel · 80 BPM + swing ✓" else "Lo-fi feel · 80 BPM + swing") }
+                ) { Text(if (selectedFeel == app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL) "Lo-fi MIDI Feel ✓" else "Lo-fi MIDI Feel") }
+            }
+            if (state.pendingMidiFeel != null && state.pendingMidiFeel != part.preparation.midiFeel.selected) {
+                Button(
+                    onClick = { onIntent(WorkspaceIntent.ApplyMidiFeelAndReanalyze) },
+                    enabled = !state.operation.isMutating,
+                    modifier = Modifier.semantics { testTag = WorkspaceTags.MIDI_FEEL_APPLY }
+                ) { Text("Apply and re-analyze") }
             }
             if (part.preparation.midiFeel.available) Text("A/B preview uses the same monitor-volume control for repaired MIDI and Lo-fi Feel.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }

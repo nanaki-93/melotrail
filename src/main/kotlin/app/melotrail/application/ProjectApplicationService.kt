@@ -458,21 +458,9 @@ class DefaultProjectApplicationService(
         val project = readValidProject(root)
         val part = project.parts.find { it.id == request.partId } ?: throw IllegalArgumentException("Part not found: ${request.partId}")
         val analysisPath = if (project.version >= Project.MIDI_FIRST_VERSION) {
-            val midi = requireNotNull(part.midi)
-            val cleanReference = requireNotNull(midi.clean) { "Part '${part.id}' has no repaired MIDI. Run Repair MIDI before analysis." }
-            if (midi.raw != null) MidiQualityReportStore.requireCurrent(
-                root, part.id, midi.raw, cleanReference, requireNotNull(midi.cleanup), requireNotNull(midi.quality)
-            )
-            if (midi.raw != null) {
-                val report = MidiQualityReportStore.read(root, requireNotNull(midi.quality))
-                require(!report.approvalRequired || midi.approvedRepair) { "Part '${part.id}' MIDI repair requires approval before analysis." }
-            }
-            val analysisReference = when (midi.analysisInput) {
-                MidiAnalysisInput.REPAIRED -> cleanReference
-                MidiAnalysisInput.LOFI_FEEL -> requireNotNull(midi.feel).also { MidiFeelReportStore.requireCurrent(root, part.id, cleanReference, it) }.derived
-            }
-            val analysisMidi = safeDestination(root, analysisReference)
-            progress.report(OperationProgress("analyze-part", 1, 2, "Analyzing ${if (midi.analysisInput == MidiAnalysisInput.LOFI_FEEL) "Lo-fi Feel" else "repaired"} MIDI", analysisMidi))
+            val selected = app.melotrail.arrangement.SelectedMidiArtifactResolver().resolve(root, project, part)
+            val analysisMidi = selected.path
+            progress.report(OperationProgress("analyze-part", 1, 2, "Analyzing ${if (selected.kind == app.melotrail.arrangement.SelectedMidiArtifactKind.LOFI_FEEL) "Lo-fi MIDI Feel" else "Original MIDI"}", analysisMidi))
             MidiAnalysisStore.write(root, project, request.partId, midiPartAnalyzer.analyze(analysisMidi, request.partId))
         } else {
             val source = root.resolve(part.file).normalize()

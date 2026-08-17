@@ -9,7 +9,7 @@ reports, and provenance.
 ## Dependencies
 
 - Task 073 accepted.
-- Read `../PLAN.md` and Task 073 completely before implementation.
+- Read `../../PLAN.md` and Task 073 completely before implementation.
 
 ## Scope
 
@@ -83,7 +83,7 @@ multi-instrument timeline refactor remain Task 075.
 - Verify source/raw/repaired hashes before and after every transform test.
 - Run focused tests, then `./gradlew test :desktopApp:test :desktopApp:build`.
   Worker tests are required only if worker behavior changes, using
-  `.venv/bin/python` per Future Task 059's environment contract.
+  `../../../.venv/bin/python` per Future Task 059's environment contract.
 
 ## Acceptance criteria
 

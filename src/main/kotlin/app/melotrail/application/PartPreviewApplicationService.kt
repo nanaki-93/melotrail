@@ -8,6 +8,7 @@ import app.melotrail.arrangement.MidiQualityReportStore
 import app.melotrail.arrangement.MidiFeelReportStore
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.RenderFormat
+import app.melotrail.arrangement.SelectedMidiArtifactResolver
 import app.melotrail.preparation.InputInspectionPaths
 import app.melotrail.preparation.InputInspectionReportStore
 import app.melotrail.preparation.PreparationStatus
@@ -120,7 +121,7 @@ class DefaultPartPreviewApplicationService(
             when (extension(source)) {
                 "wav", "wave" -> resolveWavSource(source, stages)
                 "mp3" -> resolveMp3(root, part.id, source, stages)
-                "mid", "midi" -> resolveMidi(root, part.id, part.midi?.clean, part.analysis, project.renderFormat, stages)
+                "mid", "midi" -> resolveMidi(root, project, part, stages)
                 else -> PreviewResult.Failed(PreviewStage.VALIDATE, "Part '${part.id}' has an unsupported preview source format.")
             }
         } catch (error: IllegalArgumentException) {
@@ -168,14 +169,19 @@ class DefaultPartPreviewApplicationService(
         }
     }
 
-    private suspend fun resolveMidi(root: Path, partId: String, cleanRef: String?, analysisRef: app.melotrail.arrangement.PartAnalysisReference?, format: RenderFormat?, stages: MutableList<PreviewStage>): PreviewResult {
-        if (cleanRef == null) return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Clean MIDI is required before previewing '$partId'.")
+    private suspend fun resolveMidi(root: Path, project: app.melotrail.arrangement.Project, part: app.melotrail.arrangement.Part, stages: MutableList<PreviewStage>): PreviewResult {
+        val selected = try { SelectedMidiArtifactResolver().resolve(root, project, part) } catch (error: IllegalArgumentException) {
+            return PreviewResult.Prerequisite(PreviewStage.VALIDATE, error.message ?: "Selected MIDI is unavailable for '${part.id}'.")
+        }
+        val partId = part.id
+        val analysisRef = part.analysis
+        val format = project.renderFormat
         if (format == null) return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Project render format is required before previewing MIDI.")
-        if (analysisRef == null || analysisRef.kind != AnalysisKind.MIDI) return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Analyze '$partId' before previewing its clean MIDI.")
-        val clean = root.resolve(cleanRef).normalize()
+        if (analysisRef == null || analysisRef.kind != AnalysisKind.MIDI) return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Analyze '$partId' before previewing its selected MIDI.")
+        val clean = selected.path
         val analysisPath = root.resolve(analysisRef.file).normalize()
         if (!clean.startsWith(root) || !analysisPath.startsWith(root) || !Files.isRegularFile(clean) || !Files.isRegularFile(analysisPath)) {
-            return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Clean MIDI analysis for '$partId' is missing.")
+            return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Selected MIDI analysis for '$partId' is missing.")
         }
         val duration = try { json.decodeFromString(MidiAnalysis.serializer(), Files.readString(analysisPath)).durationSeconds } catch (error: Exception) {
             return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "MIDI analysis for '$partId' is invalid: ${error.message ?: "unreadable"}")

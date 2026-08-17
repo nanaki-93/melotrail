@@ -6,6 +6,9 @@ import app.melotrail.arrangement.ProjectWorkflowStore
 import app.melotrail.arrangement.WorkflowArtifact
 import app.melotrail.arrangement.WorkflowArtifactReference
 import app.melotrail.arrangement.InstrumentRegistryLoader
+import app.melotrail.arrangement.Project
+import app.melotrail.arrangement.SelectedMidiArtifactKind
+import app.melotrail.arrangement.SelectedMidiArtifactResolver
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -102,11 +105,15 @@ data class CommercialProvenanceManifest(
     val commercialReady: Boolean,
     val reasons: List<String>,
     val attribution: List<String>,
+    /** Canonical selected MIDI identity used by MIDI-first analysis/rendering. */
+    val selectedMidi: List<SelectedMidiProvenance> = emptyList(),
     val disclaimer: String = COMMERCIAL_DISCLAIMER
 )
 
 @Serializable
 data class ManifestSource(val partId: String, val path: String, val sha256: String, val attestation: SourceRightsAttestation?)
+@Serializable
+data class SelectedMidiProvenance(val partId: String, val path: String, val sha256: String, val kind: SelectedMidiArtifactKind, val profile: String? = null)
 
 data class CommercialExportResult(val readiness: CommercialReadiness, val manifest: Path?, val report: Path?, val checklist: Path?)
 
@@ -125,6 +132,11 @@ class CommercialProvenanceService(private val soundLibraryRoot: Path? = null) {
             val path = safeProjectFile(projectRoot, part.file)
             CommercialSource(part.id, sha256(path), part.sourceAttestation)
         }
+        val selectedMidi = if (project.version >= Project.MIDI_FIRST_VERSION) {
+            runCatching { project.requireSelectedMidi(projectRoot) }.getOrDefault(emptyList()).sortedBy { it.partId }.map {
+                SelectedMidiProvenance(it.partId, it.projectRelativePath, it.sha256, it.kind, it.profile?.id)
+            }
+        } else emptyList()
         val usedDependencies = (dependencies + inferredDependencies(projectRoot)).distinctBy { Triple(it.kind, it.identity, it.version) }
         val readiness = CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(sources, usedDependencies))
         val artifacts = evidenceFiles(projectRoot).map { file -> ProvenanceArtifact(relative(projectRoot, file), sha256(file)) }
@@ -139,7 +151,8 @@ class CommercialProvenanceService(private val soundLibraryRoot: Path? = null) {
             dependencies = usedDependencies.sortedWith(compareBy(CommercialDependency::kind, CommercialDependency::identity, CommercialDependency::version)),
             commercialReady = readiness.ready,
             reasons = readiness.reasons,
-            attribution = readiness.attribution
+            attribution = readiness.attribution,
+            selectedMidi = selectedMidi
         )
         val output = projectRoot.resolve("output")
         require(Files.isRegularFile(output.resolve("release.json"))) { "Commercial report requires output/release.json release metadata." }
@@ -168,6 +181,9 @@ class CommercialProvenanceService(private val soundLibraryRoot: Path? = null) {
         }
         manifest.sources.forEach { source ->
             require(source.sha256 == sha256(safeProjectFile(projectRoot, source.path))) { "Commercial provenance is stale: ${source.path} hash changed." }
+        }
+        manifest.selectedMidi.forEach { selected ->
+            require(selected.sha256 == sha256(safeProjectFile(projectRoot, selected.path))) { "Commercial provenance is stale: selected MIDI ${selected.path} hash changed." }
         }
         return CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(
             manifest.sources.map { CommercialSource(it.partId, it.sha256, it.attestation) }, manifest.dependencies

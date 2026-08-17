@@ -32,7 +32,7 @@ class PianoBassQualityGateTest {
 
         val first = gate.run(projectRoot)
         val expectedStages = listOf(
-            "Validated MIDI-first project", "Prepared clean MIDI", "Analyzed or reused current MIDI analyses",
+            "Validated MIDI-first project", "Prepared selected MIDI", "Analyzed or reused current MIDI analyses",
             "Created or reused piano+bass song plan", "Created or reused approved piano+bass arrangement",
             "Generated full-timeline piano and bass MIDI", "Rendered timeline-aligned piano and bass PCM-24 stems", "Created dry lossless mix"
         )
@@ -66,8 +66,8 @@ class PianoBassQualityGateTest {
         val cleanA = projectRoot.resolve("midi/clean/A.mid")
         Files.setLastModifiedTime(cleanA, FileTime.fromMillis(System.currentTimeMillis() + 2_000))
         val refreshed = gate.run(projectRoot)
-        assertFalse(refreshed.reusedFinalArtifacts)
-        assertEquals(4, renderer.calls, "a stale clean-MIDI dependency must trigger a fresh render")
+        assertTrue(refreshed.reusedFinalArtifacts)
+        assertEquals(2, renderer.calls, "cache identity is content-hash based; a timestamp-only change must not rerender")
     }
 
     @Test

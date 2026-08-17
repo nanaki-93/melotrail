@@ -42,16 +42,17 @@ class PianoBassQualityGate(
         stage(1, "Validated MIDI-first project and ${structure.size} section instances")
 
         val sourceHashes = sourceHashes(root, project)
-        val cleanMidi = project.requireCleanMidi(root)
-        cleanMidi.forEach { validateMidi(it, "Clean MIDI") }
-        stage(2, "Prepared clean MIDI for ${cleanMidi.size} part(s)")
+        var selectedMidi = project.requireSelectedMidi(root).associateBy(SelectedMidiArtifact::partId)
+        selectedMidi.values.forEach { validateMidi(it.path, "Selected MIDI") }
+        stage(2, "Prepared selected MIDI for ${selectedMidi.size} part(s)")
 
         project.parts.forEach { part ->
-            val clean = root.resolve(requireNotNull(part.midi).clean)
+            val selected = selectedMidi.getValue(part.id).path
             val analysisPath = part.analysis?.takeIf { it.kind == AnalysisKind.MIDI }?.let { root.resolve(it.file) }
-            if (analysisPath == null || !Files.isRegularFile(analysisPath) || Files.getLastModifiedTime(analysisPath) < Files.getLastModifiedTime(clean)) {
-                MidiAnalysisStore.write(root, project, part.id, analyzer.analyze(clean, part.id))
+            if (analysisPath == null || !Files.isRegularFile(analysisPath) || Files.getLastModifiedTime(analysisPath) < Files.getLastModifiedTime(selected)) {
+                MidiAnalysisStore.write(root, project, part.id, analyzer.analyze(selected, part.id))
                 project = ProjectStore.read(root)
+                selectedMidi = project.requireSelectedMidi(root).associateBy(SelectedMidiArtifact::partId)
             }
         }
         val analyses = loadMidiAnalyses(root, project)
@@ -67,7 +68,7 @@ class PianoBassQualityGate(
             style = "piano and supporting bass quality gate"
         )
         val songPlanPath = root.resolve(SongPlanStore.FILE_NAME)
-        val songPlan = readOrCreateSongPlan(root, planningInput, songPlanPath, cleanMidi)
+        val songPlan = readOrCreateSongPlan(root, planningInput, songPlanPath, selectedMidi.values.map(SelectedMidiArtifact::path))
         val variationsPath = root.resolve(SectionVariationStore.FILE_NAME)
         val variations = readOrCreateVariations(root, planningInput, songPlan, variationsPath, songPlanPath)
         stage(4, "Created or reused piano+bass song plan and repeated-section variations")
@@ -78,7 +79,7 @@ class PianoBassQualityGate(
         requirePianoAndBassOnly(arrangement)
         stage(5, "Created or reused approved piano+bass arrangement")
 
-        val inputFingerprint = fingerprint(project, analyses, arrangementPath)
+        val inputFingerprint = fingerprint(project, selectedMidi, analyses, arrangementPath)
         val reportPath = root.resolve(REPORT_FILE)
         val existing = readReport(reportPath)
         val timelineFrames = arrangement.sections.sumOf { section ->
@@ -110,7 +111,7 @@ class PianoBassQualityGate(
             stage(7, "Reused validated piano and bass PCM-24 stems")
             stage(8, "Reused validated dry mix")
         } else {
-            pianoMidi = writePianoTimeline(root, project, arrangement, analyses)
+            pianoMidi = writePianoTimeline(root, project, selectedMidi, arrangement, analyses)
             bass = bassGenerator.generate(root, project, legacyBassArrangement(arrangement), analyses)
             validateMidi(pianoMidi, "Timeline piano MIDI")
             validateMidi(bass.path, "Generated bass MIDI")
@@ -203,7 +204,7 @@ class PianoBassQualityGate(
         }
     )
 
-    private fun writePianoTimeline(root: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): Path {
+    private fun writePianoTimeline(root: Path, project: Project, selectedMidi: Map<String, SelectedMidiArtifact>, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): Path {
         val output = root.resolve("midi/generated/piano.mid")
         val temporary = output.resolveSibling(".${output.fileName}.tmp")
         Files.createDirectories(requireNotNull(output.parent))
@@ -213,8 +214,8 @@ class PianoBassQualityGate(
         var startTick = 0L
         arrangement.sections.forEach { section ->
             val part = project.parts.first { it.id == section.partId }
-            val source = MidiSystem.getSequence(root.resolve(requireNotNull(part.midi).clean).toFile())
-            require(source.divisionType == Sequence.PPQ && source.resolution == ppq) { "Clean MIDI for '${part.id}' does not match project PPQ" }
+            val source = MidiSystem.getSequence(selectedMidi.getValue(part.id).path.toFile())
+            require(source.divisionType == Sequence.PPQ && source.resolution == ppq) { "Selected MIDI for '${part.id}' does not match project PPQ" }
             val track = sequence.createTrack()
             source.tracks.forEach { sourceTrack ->
                 (0 until sourceTrack.size()).map { sourceTrack[it] }.filterNot { it.message is MetaMessage && (it.message as MetaMessage).type == 0x2F }
@@ -264,12 +265,12 @@ class PianoBassQualityGate(
         return RenderResult(path, audio.format.sampleRate, audio.format.channels, audio.format.bitDepth, audio.length.toLong(), audio.length.toDouble() / audio.format.sampleRate, audio.samples.maxOf { kotlin.math.abs(it).toDouble() }, identity, "cached", "", "")
     }
 
-    private fun fingerprint(project: Project, analyses: Map<String, MidiAnalysis>, arrangement: Path): String = digest(
+    private fun fingerprint(project: Project, selectedMidi: Map<String, SelectedMidiArtifact>, analyses: Map<String, MidiAnalysis>, arrangement: Path): String = digest(
         buildString {
             append(project.version).append('|').append(project.renderFormat).append('|')
             project.parts.sortedBy { it.id }.forEach { part ->
-                val clean = arrangement.parent.resolve(requireNotNull(part.midi).clean)
-                append(part.id).append(':').append(digest(Files.readAllBytes(clean))).append(':').append(Files.getLastModifiedTime(clean).toMillis()).append('|')
+                val selected = selectedMidi.getValue(part.id)
+                append(part.id).append(':').append(selected.kind).append(':').append(selected.sha256).append('|')
             }
             append(digest(Files.readAllBytes(arrangement))).append('|')
             analyses.toSortedMap().forEach { (id, analysis) -> append(id).append(':').append(analysis.durationTicks).append(':').append(analysis.durationSeconds).append('|') }

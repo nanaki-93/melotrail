@@ -82,8 +82,7 @@ class MidiLoFiFeelTransformer {
             if (scheduled.any { it.start != it.desiredStart }) add("Some swing moves were bounded to preserve same-pitch note ordering.")
             if (scheduled.any { it.end != it.start + it.note.duration }) add("Some note ends were shortened to prevent new same-pitch collisions.")
         }
-        writeSequence(sequence, scheduled, output, profile)
-        validateOutput(output, sequence.resolution, profile, notes.map { it.signature }, signatures)
+        publishSequence(sequence, scheduled, output, profile, notes.map { it.signature }, signatures)
         return MidiFeelResult(MidiFeelReport(
             partId = partId,
             profile = profile,
@@ -152,7 +151,7 @@ class MidiLoFiFeelTransformer {
         return (quarterStart + targetOffset).coerceAtLeast(note.start)
     }
 
-    private fun writeSequence(source: Sequence, scheduled: List<ScheduledNote>, output: Path, profile: MidiFeelProfile) {
+    private fun publishSequence(source: Sequence, scheduled: List<ScheduledNote>, output: Path, profile: MidiFeelProfile, inputNotes: List<NoteSignature>, inputSignatures: List<MidiTimeSignature>) {
         val byEvent = scheduled.flatMap { listOf(it.note.startEvent to it.start, it.note.endEvent to it.end) }.toMap()
         val sequence = Sequence(Sequence.PPQ, source.resolution)
         source.tracks.forEachIndexed { trackIndex, track ->
@@ -167,7 +166,18 @@ class MidiLoFiFeelTransformer {
         val tempo = MetaMessage().apply { setMessage(0x51, byteArrayOf(0x0b, 0x71, 0xb0.toByte()), 3) } // 750000 µs/q = 80 BPM
         sequence.tracks.first().add(MidiEvent(tempo, 0L))
         Files.createDirectories(checkNotNull(output.parent))
-        MidiSystem.write(sequence, 1, output.toFile())
+        val temporary = output.resolveSibling(".${output.fileName}.tmp")
+        try {
+            require(MidiSystem.write(sequence, 1, temporary.toFile()) > 0) { "Could not write Lo-fi Feel MIDI" }
+            validateOutput(temporary, source.resolution, profile, inputNotes, inputSignatures)
+            try {
+                Files.move(temporary, output, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            } catch (error: AtomicMoveNotSupportedException) {
+                throw IllegalStateException("Atomic publication is not supported for Lo-fi Feel MIDI '$output'.", error)
+            }
+        } finally {
+            Files.deleteIfExists(temporary)
+        }
     }
 
     private fun validateOutput(output: Path, ppq: Int, profile: MidiFeelProfile, inputNotes: List<NoteSignature>, inputSignatures: List<MidiTimeSignature>) {
