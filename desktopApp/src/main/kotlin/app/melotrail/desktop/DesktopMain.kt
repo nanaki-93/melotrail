@@ -11,6 +11,8 @@ import app.melotrail.application.DefaultMixApplicationService
 import app.melotrail.application.DefaultBuildApplicationService
 import app.melotrail.application.BuildAudioWorker
 import app.melotrail.application.DefaultPartPreviewApplicationService
+import app.melotrail.application.DefaultReleaseExportApplicationService
+import app.melotrail.application.ReleaseMp3Exporter
 import app.melotrail.application.LegacyPartAnalysisService
 import app.melotrail.application.MidiPreparationService
 import app.melotrail.application.ProjectApplicationService
@@ -81,7 +83,8 @@ fun main() = application {
         ),
         preferences = preferences,
         soundLibrarySettings = SoundLibrarySettingsService(preferences, activeRoot = libraryRoot),
-        operationLogger = operationLogger
+        operationLogger = operationLogger,
+        releaseExportService = DefaultReleaseExportApplicationService(mp3Exporter = DesktopReleaseMp3Exporter(client))
     )
     Window(
         state = desktopWindowState,
@@ -227,6 +230,16 @@ private class DesktopBuildWorker(private val client: WorkerClient) : BuildAudioW
         require(response.status == WorkerStatus.COMPLETED) { "Mastering failed: ${response.error?.message ?: "Unknown worker error"}" }
     }
     override suspend fun exportMp3(input: Path, output: Path, bitrateKbps: Int): Boolean {
+        val response = client.execute(MP3ExportCommand(input.toString(), output.toString(), bitrateKbps))
+        if (response.status == WorkerStatus.COMPLETED) return true
+        if (response.error?.message?.contains("requires lameenc") == true) return false
+        throw IllegalStateException("MP3 export failed: ${response.error?.message ?: "Unknown worker error"}")
+    }
+}
+
+private class DesktopReleaseMp3Exporter(private val client: WorkerClient) : ReleaseMp3Exporter {
+    override suspend fun available(): Boolean = client.runtimeStatus().mp3ExportAvailable
+    override suspend fun export(input: Path, output: Path, bitrateKbps: Int): Boolean {
         val response = client.execute(MP3ExportCommand(input.toString(), output.toString(), bitrateKbps))
         if (response.status == WorkerStatus.COMPLETED) return true
         if (response.error?.message?.contains("requires lameenc") == true) return false

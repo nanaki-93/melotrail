@@ -41,6 +41,11 @@ import app.melotrail.application.SaveStructureRequest
 import app.melotrail.application.UpdatePartRoleRequest
 import app.melotrail.application.WorkflowReadModel
 import app.melotrail.application.WorkflowReadModelDeriver
+import app.melotrail.application.DefaultReleaseExportApplicationService
+import app.melotrail.application.ReleaseExportApplicationService
+import app.melotrail.application.ReleaseExportFormat
+import app.melotrail.application.ReleaseExportInspection
+import app.melotrail.application.ReleaseExportRequest
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.MidiCleanupOptions
 import app.melotrail.arrangement.MidiCleanupProfile
@@ -82,6 +87,7 @@ data class WorkspaceUiState(
     val arrangement: ArrangementSnapshot? = null,
     val mix: MixSnapshot? = null,
     val buildOptions: BuildOptionsDraft = BuildOptionsDraft(),
+    val export: ExportUiState = ExportUiState(),
     val playbackSession: PlaybackSession = PlaybackSession(),
     val selectedPartId: String? = null,
     /** UI-only selected canonical artifact; it is never written to project files. */
@@ -141,6 +147,16 @@ data class AudioPreparationUiState(
 )
 
 data class BuildOptionsDraft(val loFi: Boolean = false, val mp3: Boolean = false)
+data class ExportDraft(
+    val format: ReleaseExportFormat = ReleaseExportFormat.WAV,
+    val filename: String = "song.wav",
+    val destination: Path? = null
+)
+data class ExportUiState(
+    val inspection: ReleaseExportInspection? = null,
+    val draft: ExportDraft = ExportDraft(),
+    val inspecting: Boolean = false
+)
 data class PlaybackSnapshot(
     val source: PlaybackSource = PlaybackSource.DRY,
     val state: app.melotrail.audio.PlaybackState = app.melotrail.audio.PlaybackState.STOPPED,
@@ -267,6 +283,7 @@ sealed interface WorkspaceOperation {
     data class ApplyingMix(val progress: OperationProgress? = null) : WorkspaceOperation
     data class BuildingSong(val progress: OperationProgress? = null) : WorkspaceOperation
     data object ExportingCommercialProvenance : WorkspaceOperation
+    data object ExportingRelease : WorkspaceOperation
     data object ApprovingArrangement : WorkspaceOperation
     data class OpenFailed(val message: String) : WorkspaceOperation
     data class Failed(val action: String, val message: String) : WorkspaceOperation
@@ -282,7 +299,7 @@ val WorkspaceOperation.isMutating: Boolean
         this is WorkspaceOperation.UpdatingPartRole || this is WorkspaceOperation.SavingStructure ||
         this is WorkspaceOperation.GeneratingCohesion || this is WorkspaceOperation.ApprovingCohesion ||
         this is WorkspaceOperation.GeneratingArrangement || this is WorkspaceOperation.ApprovingArrangement
-        || this is WorkspaceOperation.ApplyingMix || this is WorkspaceOperation.BuildingSong || this is WorkspaceOperation.ExportingCommercialProvenance
+        || this is WorkspaceOperation.ApplyingMix || this is WorkspaceOperation.BuildingSong || this is WorkspaceOperation.ExportingCommercialProvenance || this is WorkspaceOperation.ExportingRelease
 
 sealed interface WorkspaceDialog {
     data class CreateProject(
@@ -439,6 +456,10 @@ sealed interface WorkspaceIntent {
     data class UpdateBuildOptions(val options: BuildOptionsDraft) : WorkspaceIntent
     data object BuildSong : WorkspaceIntent
     data object ExportCommercialProvenance : WorkspaceIntent
+    data object RefreshExport : WorkspaceIntent
+    data class UpdateExportDraft(val draft: ExportDraft) : WorkspaceIntent
+    data object ChooseExportDestination : WorkspaceIntent
+    data object ExportSong : WorkspaceIntent
     data object CancelOperation : WorkspaceIntent
     data class SelectPlaybackSource(val source: PlaybackSource) : WorkspaceIntent
     data object PlayPause : WorkspaceIntent
@@ -476,7 +497,8 @@ class WorkspaceViewModel(
     private val preferences: DesktopPreferences = NoOpDesktopPreferences,
     private val soundLibrarySettings: SoundLibrarySettingsService = SoundLibrarySettingsService(preferences),
     private val operationLogger: DesktopOperationLogger = NoOpDesktopOperationLogger,
-    private val commercialProvenanceService: CommercialProvenanceService = CommercialProvenanceService(libraryRoot)
+    private val commercialProvenanceService: CommercialProvenanceService = CommercialProvenanceService(libraryRoot),
+    private val releaseExportService: ReleaseExportApplicationService = DefaultReleaseExportApplicationService()
 ) : AutoCloseable {
     private val scope = CoroutineScope(SupervisorJob() + dispatchers.ui)
     private val ioDispatcher = dispatchers.io
@@ -568,6 +590,10 @@ class WorkspaceViewModel(
             is WorkspaceIntent.UpdateBuildOptions -> mutableState.update { it.copy(buildOptions = intent.options) }
             WorkspaceIntent.BuildSong -> buildSong()
             WorkspaceIntent.ExportCommercialProvenance -> exportCommercialProvenance()
+            WorkspaceIntent.RefreshExport -> refreshExport()
+            is WorkspaceIntent.UpdateExportDraft -> mutableState.update { it.copy(export = it.export.copy(draft = intent.draft)) }
+            WorkspaceIntent.ChooseExportDestination -> chooseExportDestination()
+            WorkspaceIntent.ExportSong -> exportSong()
             WorkspaceIntent.CancelOperation -> cancelOperation()
             is WorkspaceIntent.SelectPlaybackSource -> selectPlaybackSource(intent.source)
             WorkspaceIntent.PlayPause -> playPause()
@@ -595,6 +621,7 @@ class WorkspaceViewModel(
 
     private fun selectWorkspaceSection(section: WorkspaceSection) {
         mutableState.update { it.copy(workspaceSection = section) }
+        if (section == WorkspaceSection.EXPORT) refreshExport()
     }
 
     private fun chooseProject() = scope.launch {
@@ -1600,6 +1627,53 @@ class WorkspaceViewModel(
                     mutableState.update { current -> current.copy(operation = WorkspaceOperation.Idle, notification = message) }
                 }
                 .onFailure { failure -> fail("commercial provenance", failure.message ?: "Unable to create commercial evidence.") }
+        }
+    }
+
+    private fun refreshExport() {
+        val project = state.value.project ?: return
+        if (state.value.operation.isMutating) return
+        mutableState.update { it.copy(export = it.export.copy(inspecting = true)) }
+        scope.launch {
+            val inspection = withContext(ioDispatcher) { releaseExportService.inspect(project.root) }
+            mutableState.update { current ->
+                if (current.project?.root != project.root) current
+                else {
+                    val defaultName = project.name.ifBlank { "song" }.replace(Regex("[^A-Za-z0-9 _-]"), "_")
+                    val extension = current.export.draft.format.extension
+                    val filename = current.export.draft.filename.takeUnless { it == "song.wav" } ?: "$defaultName.$extension"
+                    current.copy(export = current.export.copy(inspection = inspection, inspecting = false,
+                        draft = current.export.draft.copy(filename = filename, destination = current.export.draft.destination ?: project.root.resolve("output"))))
+                }
+            }
+        }
+    }
+
+    private fun chooseExportDestination() = scope.launch {
+        runCatching { fileDialogs.chooseExportDirectory() }
+            .onSuccess { selected -> selected?.let { directory ->
+                mutableState.update { current -> current.copy(export = current.export.copy(draft = current.export.draft.copy(destination = directory))) }
+            } }
+            .onFailure { fail("export destination", it.message ?: "The export folder chooser could not be opened.") }
+    }
+
+    private fun exportSong() {
+        val project = state.value.project ?: return fail("export song", "Open a project before exporting.")
+        val draft = state.value.export.draft
+        val inspection = state.value.export.inspection
+        if (state.value.operation.isMutating) return
+        if (inspection?.summary == null || draft.format !in inspection.supportedFormats) return fail("export song", inspection?.blockedReason ?: "Build a current master and release metadata first.")
+        val destination = draft.destination ?: return fail("export song", "Choose the project output folder before exporting.")
+        val feedbackId = beginFeedback(OperationKind.EXPORT, OperationPhase.VALIDATING, "Validating release export…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.ExportingRelease, notification = null, retry = null, operationFeedback = feedbackTracker.current) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { releaseExportService.export(ReleaseExportRequest(project.root, draft.format, draft.filename, destination)) } }
+                .onSuccess { result ->
+                    mutableState.update { current -> current.copy(operation = WorkspaceOperation.Idle, notification = "Exported ${result.output.fileName}.",
+                        operationFeedback = feedbackTracker.complete(feedbackId, "Exported ${result.output.fileName}.", artifactLabel = result.output.fileName.toString()) ?: current.operationFeedback) }
+                    refreshExport()
+                }
+                .onFailure { failure -> fail("export song", failure.message ?: "Export Song failed.", sessionId = feedbackId) }
         }
     }
 

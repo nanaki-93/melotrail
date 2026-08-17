@@ -1376,6 +1376,7 @@ private fun statusText(state: WorkspaceUiState): String = when (val operation = 
     is WorkspaceOperation.GeneratingArrangement -> "Generating reviewed song plan and detailed arrangement…"
     is WorkspaceOperation.ApplyingMix -> "Applying persisted mix settings to existing stems…"
     WorkspaceOperation.ExportingCommercialProvenance -> "Writing hash-bound commercial provenance evidence…"
+    WorkspaceOperation.ExportingRelease -> "Validating and publishing release export…"
     is WorkspaceOperation.BuildingSong -> "Building song through the lossless release pipeline…"
     WorkspaceOperation.ApprovingArrangement -> "Approving validated arrangement…"
     is WorkspaceOperation.OpenFailed -> operation.message

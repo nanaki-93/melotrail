@@ -56,6 +56,7 @@ class WorkerHandler(BaseHTTPRequestHandler):
                 "available": True,
                 "commands": sorted(COMMANDS.keys()),
                 "transcriptionRuntime": importlib.util.find_spec("basic_pitch") is not None,
+                "mp3ExportRuntime": importlib.util.find_spec("lameenc") is not None,
             })
             return
         self._send_json(404, {"error": "Not found"})

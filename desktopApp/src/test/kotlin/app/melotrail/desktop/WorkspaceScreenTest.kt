@@ -33,6 +33,9 @@ import app.melotrail.application.PersistedMixSettings
 import app.melotrail.application.ProjectReadiness
 import app.melotrail.application.ProjectSnapshot
 import app.melotrail.application.StructureSectionSummary
+import app.melotrail.application.ReleaseExportFormat
+import app.melotrail.application.ReleaseExportInspection
+import app.melotrail.application.ReleaseExportSummary
 import app.melotrail.arrangement.RenderFormat
 import java.awt.AlphaComposite
 import java.awt.image.BufferedImage
@@ -108,6 +111,40 @@ class WorkspaceScreenTest {
         onAllNodesWithTag(WorkspacePageTags.OVERVIEW_TRACKS).assertCountEquals(1)
         onAllNodesWithTag(WorkspacePageTags.OVERVIEW_PREVIEW).assertCountEquals(1)
         onAllNodesWithTag(WorkspaceTags.FOOTER_WAVEFORM).assertCountEquals(1)
+    }
+
+    @Test
+    fun `Export page renders ready blocked exporting complete failed and optional MP3 unavailable states`() = runComposeUiTest {
+        val ready = exportState()
+        val blocked = ready.copy(export = ready.export.copy(inspection = ReleaseExportInspection(null, emptySet(), "Build a current master and release metadata first.")))
+        val exporting = ready.copy(operation = WorkspaceOperation.ExportingRelease)
+        val complete = ready.copy(operationFeedback = OperationFeedback("export-complete", OperationKind.EXPORT, OperationPhase.COMPLETE, message = "Exported Midnight Train.wav.", outcomeSeverity = OperationSeverity.SUCCESS))
+        val failed = ready.copy(operation = WorkspaceOperation.Failed("export song", "Output validation failed"))
+        listOf(ready, blocked, exporting, complete, failed).forEach { state ->
+            setContent { MelotrailTheme { WorkspaceScreen(state, onIntent = {}) } }
+            onAllNodesWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.EXPORT.name.lowercase()).assertCountEquals(1)
+            onAllNodesWithTag(WorkspacePageTags.EXPORT_SUMMARY).assertCountEquals(1)
+            onAllNodesWithTag(WorkspacePageTags.EXPORT_ACTION).assertCountEquals(1)
+        }
+        setContent { MelotrailTheme { WorkspaceScreen(ready, onIntent = {}) } }
+        onNodeWithTag(WorkspacePageTags.EXPORT_ACTION).assertIsEnabled()
+        onAllNodesWithTag(WorkspacePageTags.EXPORT_FORMAT_PREFIX + "wav").assertCountEquals(1)
+        onAllNodesWithTag(WorkspacePageTags.EXPORT_FORMAT_PREFIX + "mp3").assertCountEquals(0)
+        setContent { MelotrailTheme { WorkspaceScreen(blocked, onIntent = {}) } }
+        onNodeWithTag(WorkspacePageTags.EXPORT_ACTION).assertIsNotEnabled()
+    }
+
+    @Test
+    fun `Export page dispatches typed filename destination and export actions`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(exportState(), intents::add) } }
+        onNodeWithTag(WorkspacePageTags.EXPORT_BROWSE).performClick()
+        assertEquals(WorkspaceIntent.ChooseExportDestination, intents.single())
+        val export = onNodeWithTag(WorkspacePageTags.EXPORT_ACTION)
+        export.performClick()
+        intents.clear()
+        export.performKeyInput { pressKey(Key.Enter) }
+        assertEquals(WorkspaceIntent.ExportSong, intents.single())
     }
 
     @Test
@@ -490,6 +527,15 @@ class WorkspaceScreenTest {
         writeVideoPreviewReferenceOverlay(image.toAwtImage())
     }
 
+    @Test
+    fun `deterministic Export fixture captures and overlays the numbered reference region`() = runSkikoComposeUiTest(size = Size(1158f, 462f)) {
+        setContent { MelotrailTheme { WorkspaceScreen(exportState(), onIntent = {}) } }
+
+        val image = onNodeWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.EXPORT.name.lowercase()).captureToImage()
+        assertTrue(image.width > 0 && image.height > 0)
+        writeExportReferenceOverlay(image.toAwtImage())
+    }
+
     private fun populatedState(): WorkspaceUiState = WorkspaceUiState(
         project = ProjectSnapshot(
             root = Path.of("build/task-083-project"), version = 3, name = "Midnight Train",
@@ -529,6 +575,17 @@ class WorkspaceScreenTest {
         project = populatedState().project!!.copy(readiness = populatedState().project!!.readiness.copy(
             stemsAvailable = true, dryMixAvailable = true, loFiMixAvailable = true, masterAvailable = true
         ))
+    )
+
+    private fun exportState(): WorkspaceUiState = populatedState().copy(
+        workspaceSection = WorkspaceSection.EXPORT,
+        export = ExportUiState(
+            inspection = ReleaseExportInspection(
+                ReleaseExportSummary(Path.of("build/task-089-project/output/master.wav"), 252.0, 48_000, 2, 24, 6),
+                setOf(ReleaseExportFormat.WAV)
+            ),
+            draft = ExportDraft(ReleaseExportFormat.WAV, "Midnight Train.wav", Path.of("build/task-083-project/output"))
+        )
     )
 
     private fun readyRuntime() = RuntimeReadiness.of(*RuntimeDependency.entries.map { dependency ->
@@ -619,6 +676,26 @@ class WorkspaceScreenTest {
             graphics.dispose()
         }
         val target = repository.resolve("desktopApp/build/reports/task-085-structure-overlay.png")
+        Files.createDirectories(target.parent)
+        assertTrue(ImageIO.write(overlay, "png", target.toFile()))
+    }
+
+    private fun writeExportReferenceOverlay(exportCapture: BufferedImage) {
+        val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
+            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/App-pages.png")) }
+            ?: error("Could not locate the App-pages reference image.")
+        val reference = ImageIO.read(repository.resolve("plan/pictures/App-pages.png").toFile())
+        val exportRegion = reference.getSubimage(1142, 776, 384, 241)
+        val overlay = BufferedImage(exportCapture.width, exportCapture.height, BufferedImage.TYPE_INT_ARGB)
+        val graphics = overlay.createGraphics()
+        try {
+            graphics.drawImage(exportRegion, 0, 0, overlay.width, overlay.height, null)
+            graphics.composite = AlphaComposite.SrcOver.derive(0.55f)
+            graphics.drawImage(exportCapture, 0, 0, null)
+        } finally {
+            graphics.dispose()
+        }
+        val target = repository.resolve("desktopApp/build/reports/task-089-export-overlay.png")
         Files.createDirectories(target.parent)
         assertTrue(ImageIO.write(overlay, "png", target.toFile()))
     }

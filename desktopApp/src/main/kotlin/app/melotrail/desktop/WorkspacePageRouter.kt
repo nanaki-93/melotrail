@@ -119,6 +119,15 @@ internal object WorkspacePageTags {
     const val MIX_PRIMARY_ACTION = "mix-master-primary-action"
     const val MIX_BUILD_STATUS = "mix-master-build-status"
     const val MIX_ZERO_SIGNAL = "mix-master-zero-signal"
+    const val EXPORT_FORMAT_PREFIX = "export-format-"
+    const val EXPORT_QUALITY = "export-quality"
+    const val EXPORT_SAMPLE_RATE = "export-sample-rate"
+    const val EXPORT_FILENAME = "export-filename"
+    const val EXPORT_DESTINATION = "export-destination"
+    const val EXPORT_BROWSE = "export-browse"
+    const val EXPORT_SUMMARY = "export-summary"
+    const val EXPORT_ACTION = "export-action"
+    const val EXPORT_STATUS = "export-status"
 }
 
 @Composable
@@ -339,17 +348,91 @@ private fun InterimWorkflowPage(state: WorkspaceUiState, onIntent: (WorkspaceInt
         VideoPreviewPage(state, onIntent)
         return@PageRoot
     }
+    if (state.workspaceSection == WorkspaceSection.EXPORT) {
+        ExportPage(state, onIntent)
+        return@PageRoot
+    }
     val title = state.workspaceSection.label
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
         PageTitle(title, workflowSubtitle(state))
         OverviewCard("${WorkspacePageTags.ROOT_PREFIX}${state.workspaceSection.name.lowercase()}-body", "${title} workspace") {
             Text(workflowBody(state), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            when (state.workspaceSection) {
-                WorkspaceSection.EXPORT -> OutlinedButton(onClick = {}, enabled = false) { Text("Export Song") }
-                else -> Unit
+        }
+    }
+}
+
+@Composable
+private fun ExportPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    val export = state.export
+    val draft = export.draft
+    val inspection = export.inspection
+    val summary = inspection?.summary
+    val formats = inspection?.supportedFormats.orEmpty()
+    val destinationIsProjectOutput = state.project?.root?.resolve("output")?.toAbsolutePath()?.normalize() == draft.destination?.toAbsolutePath()?.normalize()
+    val canExport = summary != null && draft.format in formats && destinationIsProjectOutput && !state.operation.isMutating
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
+        PageTitle("Export", "Render and export your final track")
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
+                OverviewCard("export-settings", "Export settings") {
+                    Text("Format", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                        formats.forEach { format ->
+                            OutlinedButton(
+                                onClick = {
+                                    val base = draft.filename.substringBeforeLast('.', draft.filename).ifBlank { "song" }
+                                    onIntent(WorkspaceIntent.UpdateExportDraft(draft.copy(format = format, filename = "$base.${format.extension}")))
+                                },
+                                modifier = Modifier.weight(1f).semantics { testTag = WorkspacePageTags.EXPORT_FORMAT_PREFIX + format.name.lowercase(); contentDescription = "${format.name} export format${if (draft.format == format) ", selected" else ""}" }
+                            ) { Text(format.name) }
+                        }
+                    }
+                    Text("Quality", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedTextField("PCM ${summary?.pcmBitDepth ?: 24}-bit lossless", {}, readOnly = true, enabled = summary != null,
+                        modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.EXPORT_QUALITY })
+                    Text("Sample rate", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedTextField(summary?.sampleRate?.let { "$it Hz" } ?: "Unavailable", {}, readOnly = true, enabled = summary != null,
+                        modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.EXPORT_SAMPLE_RATE })
+                    Text("File name", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedTextField(draft.filename, { onIntent(WorkspaceIntent.UpdateExportDraft(draft.copy(filename = it))) }, singleLine = true,
+                        modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.EXPORT_FILENAME })
+                    Text("Destination", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm), verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(draft.destination?.toString() ?: "Project output folder", {}, readOnly = true, modifier = Modifier.weight(1f).semantics { testTag = WorkspacePageTags.EXPORT_DESTINATION })
+                        OutlinedButton(onClick = { onIntent(WorkspaceIntent.ChooseExportDestination) }, enabled = !state.operation.isMutating,
+                            modifier = Modifier.semantics { testTag = WorkspacePageTags.EXPORT_BROWSE; contentDescription = "Choose export destination" }) { Text("Browse") }
+                    }
+                    Button(onClick = { onIntent(WorkspaceIntent.ExportSong) }, enabled = canExport, colors = workspacePrimaryButtonColors(),
+                        modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.EXPORT_ACTION; contentDescription = if (canExport) "Export Song" else exportBlockedMessage(export, destinationIsProjectOutput) }) { Text(if (state.operation is WorkspaceOperation.ExportingRelease) "Exporting…" else "Export Song") }
+                    Text(exportBlockedMessage(export, destinationIsProjectOutput), style = MaterialTheme.typography.bodySmall,
+                        color = if (canExport) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
+                        modifier = Modifier.semantics { testTag = WorkspacePageTags.EXPORT_STATUS })
+                }
+            }
+            Column(Modifier.widthIn(min = 260.dp, max = MusicWorkspaceTokens.Pages.OverviewPreviewWidth), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
+                OverviewCard(WorkspacePageTags.EXPORT_SUMMARY, "Export summary") {
+                    Text("Duration", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(summary?.durationSeconds?.let(::formatDuration) ?: "Unavailable")
+                    Text("Format", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(summary?.let { "WAV · PCM ${it.pcmBitDepth}-bit" } ?: "Unavailable")
+                    Text("Quality", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(summary?.let { "PCM ${it.pcmBitDepth}-bit lossless" } ?: "Unavailable")
+                    Text("Sample rate", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(summary?.sampleRate?.let { "$it Hz" } ?: "Unavailable")
+                    Text("Channels / tracks", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(summary?.let { "${it.channels} ch · ${it.trackCount} source tracks" } ?: "Unavailable")
+                }
             }
         }
     }
+}
+
+private fun exportBlockedMessage(export: ExportUiState, destinationIsProjectOutput: Boolean = true): String = when {
+    export.inspecting -> "Checking current release artifacts…"
+    export.inspection?.summary == null -> export.inspection?.blockedReason ?: "Build a current master and release metadata first."
+    export.draft.format !in export.inspection.supportedFormats -> "That export format is unavailable. Use WAV or start the local worker with lameenc installed."
+    !destinationIsProjectOutput -> "Choose the project output folder; exports cannot escape the project."
+    else -> "WAV is the authoritative lossless master. Export validates the published output before reporting success."
 }
 
 /**

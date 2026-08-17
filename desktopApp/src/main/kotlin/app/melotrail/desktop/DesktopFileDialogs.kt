@@ -16,6 +16,8 @@ interface DesktopFileDialogs {
     /** Existing test/alternate dialogs may ignore the preference; it never replaces service validation. */
     suspend fun choosePartSource(preference: ImportPreference): Path? = choosePartSource()
     suspend fun chooseSoundLibraryDirectory(): Path?
+    /** Destination is still constrained by the application service to the project's output folder. */
+    suspend fun chooseExportDirectory(): Path? = null
 }
 
 class SwingDesktopFileDialogs : DesktopFileDialogs {
@@ -59,6 +61,10 @@ class SwingDesktopFileDialogs : DesktopFileDialogs {
 
     override suspend fun chooseSoundLibraryDirectory(): Path? = suspendCancellableCoroutine { continuation ->
         chooseDirectory("Choose sound-library folder", continuation)
+    }
+
+    override suspend fun chooseExportDirectory(): Path? = suspendCancellableCoroutine { continuation ->
+        chooseDirectory("Choose export folder", continuation)
     }
 
     private fun chooseDirectory(

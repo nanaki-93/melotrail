@@ -23,6 +23,12 @@ import app.melotrail.application.PartPreviewApplicationService
 import app.melotrail.application.PreviewRequest
 import app.melotrail.application.PreviewResult
 import app.melotrail.application.PreviewAudioSource
+import app.melotrail.application.ReleaseExportApplicationService
+import app.melotrail.application.ReleaseExportFormat
+import app.melotrail.application.ReleaseExportInspection
+import app.melotrail.application.ReleaseExportRequest
+import app.melotrail.application.ReleaseExportResult
+import app.melotrail.application.ReleaseExportSummary
 import app.melotrail.audio.AudioBuffer
 import app.melotrail.audio.PlaybackState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -77,6 +83,27 @@ class WorkspaceViewModelTest {
             viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(destination))
             assertEquals(destination, viewModel.state.value.workspaceSection)
         }
+        viewModel.close()
+    }
+
+    @Test
+    fun `Export selection inspects release then exports only through typed service`() = runTest {
+        val root = Path.of("build/task-089-project")
+        val exporter = FakeReleaseExportService(root)
+        val viewModel = WorkspaceViewModel(
+            FakeProjectService(result = projectSnapshot(root)), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
+            releaseExportService = exporter
+        )
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.EXPORT)); advanceUntilIdle()
+
+        assertEquals(WorkspaceSection.EXPORT, viewModel.state.value.workspaceSection)
+        assertTrue(viewModel.state.value.export.inspection?.ready == true)
+        viewModel.accept(WorkspaceIntent.ExportSong); advanceUntilIdle()
+
+        assertEquals(ReleaseExportFormat.WAV, exporter.request?.format)
+        assertEquals(WorkspaceOperation.Idle, viewModel.state.value.operation)
+        assertTrue(viewModel.state.value.notification!!.startsWith("Exported"))
         viewModel.close()
     }
 
@@ -1328,5 +1355,16 @@ private class FakeBuildService(private val failure: Throwable? = null) : BuildAp
         failure?.let { throw it }
         progress.report(app.melotrail.application.OperationProgress("build", 3, 9, "Rendering or reusing stems", request.root.resolve("stems/piano.wav")))
         return BuildResult(request.root, request.root.resolve("mix/dry.wav"), null, request.root.resolve("output/master.wav"), null, reusedStems = true)
+    }
+}
+
+private class FakeReleaseExportService(private val root: Path) : ReleaseExportApplicationService {
+    var request: ReleaseExportRequest? = null
+    override suspend fun inspect(root: Path): ReleaseExportInspection = ReleaseExportInspection(
+        ReleaseExportSummary(root.resolve("output/master.wav"), 60.0, 44_100, 2, 24, 1), setOf(ReleaseExportFormat.WAV)
+    )
+    override suspend fun export(request: ReleaseExportRequest): ReleaseExportResult {
+        this.request = request
+        return ReleaseExportResult(root.resolve("output/${request.filename}"), request.format)
     }
 }

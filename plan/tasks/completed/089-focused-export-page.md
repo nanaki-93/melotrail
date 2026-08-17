@@ -3,7 +3,7 @@
 ## Goal
 
 Build the supported Export destination shown in
-`../pictures/App-pages.png`, backed only by validated release artifacts and
+`../../pictures/App-pages.png`, backed only by validated release artifacts and
 safe typed export boundaries.
 
 ## Dependencies
@@ -40,7 +40,7 @@ safe typed export boundaries.
   MP3-unavailable states, plus correct Overview-to-Export routing.
 - Assert no source/master mutation and no success before output validation.
 - Capture and overlay a deterministic Export golden against the numbered Export
-  region of `../pictures/App-pages.png`.
+  region of `../../pictures/App-pages.png`.
 - Run `./gradlew test :desktopApp:test :desktopApp:build`.
 
 ## Out of scope

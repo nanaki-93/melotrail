@@ -11,7 +11,12 @@ import java.net.URI
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
-data class WorkerRuntimeStatus(val reachable: Boolean, val transcriptionAvailable: Boolean, val version: String? = null)
+data class WorkerRuntimeStatus(
+    val reachable: Boolean,
+    val transcriptionAvailable: Boolean,
+    val version: String? = null,
+    val mp3ExportAvailable: Boolean = false
+)
 
 /**
  * Small HTTP client for the standalone Python worker.
@@ -77,7 +82,10 @@ class WorkerClient(
             val body = json.parseToJsonElement(response.body).jsonObject
             val reachable = body["status"]?.jsonPrimitive?.content == "ok"
             val transcription = body["transcriptionRuntime"]?.jsonPrimitive?.booleanOrNull == true
-            WorkerRuntimeStatus(reachable, transcription, body["version"]?.jsonPrimitive?.contentOrNull)
+            WorkerRuntimeStatus(
+                reachable, transcription, body["version"]?.jsonPrimitive?.contentOrNull,
+                body["mp3ExportRuntime"]?.jsonPrimitive?.booleanOrNull == true
+            )
         } catch (_: Exception) {
             WorkerRuntimeStatus(false, false)
         }
