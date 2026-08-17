@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -29,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -72,7 +74,7 @@ private fun WideWorkstation(state: WorkspaceUiState, onIntent: (WorkspaceIntent)
             TimelinePanel(state, onIntent)
         }
         WorkstationColumn(Modifier.width(MusicWorkspaceTokens.Reference.RightRailWidth), state, onIntent) {
-            ScenePresentationPanel()
+            ScenePresentationPanel(state, onIntent)
             AiSongPlanPanel(state, onIntent)
             if (state.workspaceSection == WorkspaceSection.MIX_MASTER) MixPanel(state, onIntent)
             if (state.workspaceSection == WorkspaceSection.LIBRARY) LibraryPanel(state, onIntent)
@@ -104,7 +106,7 @@ private fun MediumWorkstation(state: WorkspaceUiState, onIntent: (WorkspaceInten
         }
         WorkstationColumn(Modifier.widthIn(min = 250.dp, max = 320.dp), state, onIntent) {
             AiSongPlanPanel(state, onIntent)
-            if (state.workspaceSection == WorkspaceSection.MIX_MASTER) MixPanel(state, onIntent) else ScenePresentationPanel(compact = true)
+            if (state.workspaceSection == WorkspaceSection.MIX_MASTER) MixPanel(state, onIntent) else ScenePresentationPanel(state, onIntent, compact = true)
         }
     }
 }
@@ -173,34 +175,137 @@ private fun CompactVisualPlaceholder(title: String, tag: String, headline: Strin
 }
 
 @Composable
-private fun ScenePresentationPanel(compact: Boolean = false) = WorkspaceCard("Scene", WorkspaceTags.PRESENTATION_PANEL) {
-    Box(Modifier.fillMaxWidth().height(if (compact) 80.dp else 190.dp).clip(MaterialTheme.shapes.medium).background(MusicWorkspaceTokens.ScenePlaceholder).semantics { contentDescription = "Presentation artwork placeholder; no scene artwork is available" }) {
-        Text("Artwork unavailable", modifier = Modifier.align(Alignment.Center), style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
+private fun ScenePresentationPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, compact: Boolean = false) {
+    val session = state.playbackSession
+    val playbackAvailable = session.request != null && session.artifact != null && session.phase !in setOf(
+        PlaybackSessionPhase.RESOLVING, PlaybackSessionPhase.PREPARING, PlaybackSessionPhase.STARTING, PlaybackSessionPhase.FAILED
+    )
+    val canStop = session.phase in setOf(
+        PlaybackSessionPhase.RESOLVING, PlaybackSessionPhase.PREPARING, PlaybackSessionPhase.READY,
+        PlaybackSessionPhase.STARTING, PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED
+    )
+    val canSeek = playbackAvailable && session.durationSeconds > 0.0
+    Card(
+        modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.PRESENTATION_PANEL },
+        colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface), border = BorderStroke(1.dp, MusicWorkspaceTokens.Border)
+    ) {
+        Column(Modifier.padding(MusicWorkspaceTokens.Spacing.Sm), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+            Box(
+                Modifier.fillMaxWidth().height(if (compact) 170.dp else 225.dp).clip(MaterialTheme.shapes.medium)
+                    .background(Brush.linearGradient(listOf(MusicWorkspaceTokens.ScenePlaceholder, MusicWorkspaceTokens.Pad.copy(alpha = 0.42f), MusicWorkspaceTokens.Canvas)))
+                    .semantics { contentDescription = "Placeholder scene artwork. Local deterministic illustration; no scene artwork is loaded." }
+            ) {
+                Text("LOCAL PLACEHOLDER", modifier = Modifier.align(Alignment.TopStart).padding(MusicWorkspaceTokens.Spacing.Sm), style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.TextSecondary)
+                Text("✦", modifier = Modifier.align(Alignment.Center), color = MusicWorkspaceTokens.Teal.copy(alpha = 0.7f), style = MaterialTheme.typography.displayMedium)
+                OutlinedButton(
+                    onClick = {}, enabled = false,
+                    modifier = Modifier.align(Alignment.TopEnd).padding(MusicWorkspaceTokens.Spacing.Sm).semantics {
+                        testTag = WorkspaceTags.SCENE_CHANGE
+                        contentDescription = "Change scene unavailable. Scene generation is not available in this local placeholder."
+                    }
+                ) { Text("Change scene") }
+            }
+            Text("Placeholder route · local visual-only location", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(scenePlayerTitle(session), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("Travel and weather are deterministic visual placeholders — no location or weather data is used.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                TextButton(
+                    onClick = { onIntent(WorkspaceIntent.PlayPause) }, enabled = playbackAvailable,
+                    modifier = Modifier.semantics {
+                        testTag = WorkspaceTags.SCENE_PLAY_PAUSE
+                        contentDescription = if (playbackAvailable) "Play or pause the persistent playback session" else "Playback unavailable. Select a ready preview or build a current mix first."
+                    }
+                ) { Text(if (session.phase == PlaybackSessionPhase.PLAYING) "Pause" else "Play") }
+                TextButton(
+                    onClick = { onIntent(WorkspaceIntent.StopPlayback) }, enabled = canStop,
+                    modifier = Modifier.semantics {
+                        testTag = WorkspaceTags.SCENE_STOP
+                        contentDescription = if (canStop) "Stop the persistent playback session" else "Stop unavailable because playback has not started."
+                    }
+                ) { Text("Stop") }
+                Text("${sceneDuration(session.positionSeconds)} / ${sceneDuration(session.durationSeconds)}", style = MaterialTheme.typography.labelSmall)
+                LinearProgressIndicator(
+                    progress = { if (session.durationSeconds > 0.0) (session.positionSeconds / session.durationSeconds).toFloat().coerceIn(0f, 1f) else 0f },
+                    modifier = Modifier.weight(1f).semantics {
+                        testTag = WorkspaceTags.SCENE_PROGRESS
+                        contentDescription = if (canSeek) "Playback progress for the persistent session" else "Playback progress unavailable until a local artifact is ready."
+                    },
+                    color = MusicWorkspaceTokens.Teal,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            }
+        }
     }
-    Text("Presentation metadata is visual-only and deterministic.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+private fun scenePlayerTitle(session: PlaybackSession): String = when (val request = session.request) {
+    is PlaybackRequest.Part -> "Now playing · Part ${request.partId} preview"
+    is PlaybackRequest.Mix -> "Now playing · ${request.source.name.lowercase().replaceFirstChar(Char::uppercase)} mix"
+    null -> "Now playing · No local playback selected"
+}
+
+private fun sceneDuration(seconds: Double): String {
+    val wholeSeconds = seconds.coerceAtLeast(0.0).toInt()
+    return "%d:%02d".format(java.util.Locale.ROOT, wholeSeconds / 60, wholeSeconds % 60)
 }
 
 @Composable
 private fun AiSongPlanPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("AI Song Plan", WorkspaceTags.AI_PLAN_PANEL) {
     val arrangement = state.arrangement
     when {
-        arrangement == null -> Text("Generate a validated arrangement to see the local song plan.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        state.operationFeedback.kind == OperationKind.ARRANGEMENT && state.operationFeedback.phase == OperationPhase.FAILED ->
+            Text("Song plan generation failed: ${state.operationFeedback.message}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        arrangement == null -> Text("No song plan yet. Generate a validated arrangement to see the local plan.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         arrangement.stale -> Text("Plan is stale. Regenerate from current structure and analyses.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         arrangement.sections.isEmpty() -> Text("No validated plan sections are available.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        else -> arrangement.sections.forEach { section ->
-            val selected = section.index == state.selectedArrangementSection
-            Row(
-                Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small)
-                    .background(if (selected) MusicWorkspaceTokens.Teal.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surface)
-                    .clickable { onIntent(WorkspaceIntent.SelectArrangementSection(section.index)) }.padding(MusicWorkspaceTokens.Spacing.Sm)
-                    .semantics { contentDescription = "${section.instanceId}, ${section.purpose}, ${(section.energy * 100).toInt()} percent energy" },
-                horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm), verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(section.instanceId, color = MusicWorkspaceTokens.Teal, fontWeight = FontWeight.SemiBold)
-                Text(section.purpose, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("${(section.energy * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
+        else -> {
+            Row(Modifier.fillMaxWidth().padding(horizontal = MusicWorkspaceTokens.Spacing.Sm), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+                Text("SECTION", modifier = Modifier.width(40.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("PURPOSE", modifier = Modifier.weight(0.8f), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("ENERGY", modifier = Modifier.width(42.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("INSTRUMENTS", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            arrangement.sections.forEach { section ->
+                val selected = section.index == state.selectedArrangementSection
+                Row(
+                    Modifier.fillMaxWidth().height(40.dp).clip(MaterialTheme.shapes.small)
+                        .background(if (selected) MusicWorkspaceTokens.Teal.copy(alpha = 0.16f) else MaterialTheme.colorScheme.surface)
+                        .clickable { onIntent(WorkspaceIntent.SelectArrangementSection(section.index)) }.padding(horizontal = MusicWorkspaceTokens.Spacing.Sm, vertical = MusicWorkspaceTokens.Spacing.Xs)
+                        .semantics {
+                            testTag = WorkspaceTags.AI_PLAN_SECTION_PREFIX + section.index
+                            contentDescription = "${section.instanceId}, ${section.purpose}, ${(section.energy * 100).toInt()} percent energy, ${section.instruments.joinToString { it.name }}${if (selected) ", selected" else ""}"
+                        },
+                    horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm), verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(Modifier.width(40.dp).background(MusicWorkspaceTokens.Teal.copy(alpha = 0.15f), MaterialTheme.shapes.extraSmall).padding(vertical = 3.dp), contentAlignment = Alignment.Center) {
+                        Text(section.instanceId, color = MusicWorkspaceTokens.Teal, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.labelSmall)
+                    }
+                    Text(section.purpose.replaceFirstChar(Char::uppercase), modifier = Modifier.weight(0.8f), style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("${(section.energy * 100).toInt()}%", modifier = Modifier.width(42.dp), style = MaterialTheme.typography.labelSmall)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                        Text(section.instruments.joinToString(" · ") { it.name.replaceFirstChar(Char::uppercase) }.ifBlank { "No instruments" }, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        PlanWaveform(section.index, section.energy)
+                    }
+                    TextButton(onClick = {}, enabled = false, modifier = Modifier.semantics {
+                            testTag = WorkspaceTags.AI_PLAN_PLAY_PREFIX + section.index
+                            contentDescription = "Play section ${section.instanceId} unavailable. Section playback is not a separate playback session."
+                        }) { Text("Play", style = MaterialTheme.typography.labelSmall) }
+                }
             }
         }
+    }
+    HorizontalDivider(thickness = MusicWorkspaceTokens.Shell.DividerThickness, color = MusicWorkspaceTokens.Border)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+        OutlinedButton(onClick = { onIntent(WorkspaceIntent.GenerateArrangement) }, enabled = state.project != null && !state.operation.isMutating, modifier = Modifier.weight(1f).semantics { testTag = WorkspaceTags.AI_PLAN_REGENERATE; contentDescription = "Regenerate the song plan from canonical project artifacts" }) { Text("Regenerate") }
+        OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.weight(1f).semantics { testTag = WorkspaceTags.AI_PLAN_EXPORT; contentDescription = "Export song plan unavailable. Export pipeline changes are outside this workspace." }) { Text("Export") }
+    }
+}
+
+@Composable
+private fun PlanWaveform(index: Int, energy: Double) {
+    val bars = List(12) { position -> ((index * 17 + position * 11) % 29 + 7) / 36f * energy.coerceIn(0.15, 1.0).toFloat() }
+    Row(Modifier.fillMaxWidth().height(8.dp), horizontalArrangement = Arrangement.spacedBy(1.dp), verticalAlignment = Alignment.CenterVertically) {
+        bars.forEach { amplitude -> Box(Modifier.weight(1f).height((1f + amplitude * 7f).dp).background(MusicWorkspaceTokens.Teal.copy(alpha = 0.55f), MaterialTheme.shapes.extraSmall)) }
     }
 }
 

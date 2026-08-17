@@ -352,6 +352,63 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `song plan selected row uses the shared arrangement selection`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(centerWorkstationState(selected = 1), intents::add) } }
+
+        onNodeWithTag(WorkspaceTags.AI_PLAN_SECTION_PREFIX + 1).assertExists()
+        onNodeWithTag(WorkspaceTags.AI_PLAN_SECTION_PREFIX + 3).performClick()
+        assertEquals(WorkspaceIntent.SelectArrangementSection(3), intents.last())
+        onNodeWithTag(WorkspaceTags.AI_PLAN_PLAY_PREFIX + 3).assertIsNotEnabled()
+    }
+
+    @Test
+    fun `scene player keeps unavailable playback disabled without inventing a session`() = runComposeUiTest {
+        setContent { MelotrailTheme { WorkspaceScreen(projectState(), onIntent = {}) } }
+
+        onNodeWithTag(WorkspaceTags.SCENE_PLAY_PAUSE).assertIsNotEnabled()
+        onNodeWithTag(WorkspaceTags.SCENE_STOP).assertIsNotEnabled()
+        onNodeWithTag(WorkspaceTags.SCENE_CHANGE).assertIsNotEnabled()
+        onNodeWithText("Now playing · No local playback selected").assertExists()
+    }
+
+    @Test
+    fun `scene player controls dispatch through the persistent playback session`() = runComposeUiTest {
+        val root = java.nio.file.Path.of("build/test-project")
+        val source = PreviewSourceIdentity(root, "A", root.resolve("previews/A.wav"))
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent {
+            MelotrailTheme {
+                WorkspaceScreen(projectState().copy(playbackSession = previewSession(source, PlaybackSessionPhase.READY, durationSeconds = 12.0)), intents::add)
+            }
+        }
+
+        onNodeWithTag(WorkspaceTags.SCENE_PLAY_PAUSE).assertIsEnabled().performClick()
+        assertEquals(WorkspaceIntent.PlayPause, intents.last())
+        onNodeWithTag(WorkspaceTags.SCENE_STOP).assertIsEnabled().performClick()
+        assertEquals(WorkspaceIntent.StopPlayback, intents.last())
+        onAllNodesWithTag(WorkspaceTags.COMPACT_TRANSPORT).assertCountEquals(1)
+    }
+
+    @Test
+    fun `song plan renders an explicit empty state`() = runComposeUiTest {
+        val root = java.nio.file.Path.of("build/test-project")
+        val emptyPlan = app.melotrail.application.ArrangementSnapshot(root, emptyList(), false, true, false, root.resolve("arrangement.json"))
+        setContent { MelotrailTheme { WorkspaceScreen(projectState().copy(arrangement = emptyPlan), onIntent = {}) } }
+
+        onNodeWithText("No validated plan sections are available.").assertExists()
+        onNodeWithTag(WorkspaceTags.AI_PLAN_REGENERATE).assertIsEnabled()
+        onNodeWithTag(WorkspaceTags.AI_PLAN_EXPORT).assertIsNotEnabled()
+    }
+
+    @Test
+    fun `song plan renders an explicit stale state`() = runComposeUiTest {
+        setContent { MelotrailTheme { WorkspaceScreen(centerWorkstationState(selected = 0).copy(arrangement = centerWorkstationState(selected = 0).arrangement!!.copy(stale = true)), onIntent = {}) } }
+
+        onNodeWithText("Plan is stale. Regenerate from current structure and analyses.").assertExists()
+    }
+
+    @Test
     fun `reference center fixture captures the deterministic workstation at 1536 by 1024`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
         setContent { MelotrailTheme { ReferenceWorkspaceFixture(centerWorkstationState(selected = 3)) } }
 

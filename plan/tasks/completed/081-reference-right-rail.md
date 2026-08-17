@@ -2,7 +2,7 @@
 
 ## Goal
 
-Restore the visual scene/player and AI Song Plan panels from `../UI.png` while
+Restore the visual scene/player and AI Song Plan panels from `../../UI.png` while
 keeping images as deterministic local placeholders for now.
 
 ## Dependencies
@@ -31,7 +31,7 @@ keeping images as deterministic local placeholders for now.
 - Add Compose tests for selected plan section, unavailable playback, empty
   plan, and stale plan.
 - Verify one and only one playback owner/transport remains present.
-- Capture a 1536 × 1024 right-rail overlay with `../UI.png` (4 px major-edge
+- Capture a 1536 × 1024 right-rail overlay with `../../UI.png` (4 px major-edge
   tolerance) and run `./gradlew :desktopApp:test :desktopApp:build`.
 
 ## Out of scope
