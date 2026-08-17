@@ -37,10 +37,10 @@ class StemRenderingMixer(
         analyses: Map<String, MidiAnalysis>
     ): StemRenderResult {
         val root = projectRoot.toAbsolutePath().normalize()
-        val selectedMidi = project.requireSelectedMidi(root).associateBy(SelectedMidiArtifact::partId)
         val format = requireNotNull(project.renderFormat)
         require(arrangement.sections.isNotEmpty()) { "Detailed arrangement has no sections to render" }
         val timeline = Timeline.create(arrangement, analyses)
+        val occurrenceMidi = resolveOccurrenceMidi(root, project, arrangement, analyses)
         val activeNames = arrangement.sections.flatMap { it.instruments }.map { LogicalInstrument.parse(it.name) }.toSet()
         val active = LogicalInstrument.entries.filter { it in activeNames }
         require(active.isNotEmpty()) { "Detailed arrangement has no active instruments" }
@@ -56,7 +56,7 @@ class StemRenderingMixer(
             "Transition insertions are planned but transition MIDI is missing: $transitions"
         }
 
-        val fingerprint = fingerprint(root, project, arrangement, analyses, selectedMidi, requiredInputs.values.toList(), transitions.takeIf(Files::isRegularFile))
+        val fingerprint = fingerprint(root, project, arrangement, analyses, occurrenceMidi, requiredInputs.values.toList(), transitions.takeIf(Files::isRegularFile))
         val reportPath = root.resolve(REPORT_FILE)
         readReport(reportPath)?.takeIf { it.inputFingerprint == fingerprint && it.timelineFrames == timeline.frames(format.sampleRate) }
             ?.takeIf { report -> report.stems.all { stem ->
@@ -69,7 +69,7 @@ class StemRenderingMixer(
         val expectedFrames = timeline.frames(format.sampleRate)
         val stems = mutableListOf<StemArtifact>()
         active.forEach { instrument ->
-            val assembled = assembleMidi(root, project, selectedMidi, instrument, timeline, requiredInputs[instrument], transitions.takeIf(Files::isRegularFile))
+            val assembled = assembleMidi(root, occurrenceMidi, instrument, timeline, requiredInputs[instrument], transitions.takeIf(Files::isRegularFile))
             val target = root.resolve("stems/${instrument.wireName}.wav")
             val temporary = target.resolveSibling(".${target.fileName}.${UUID.randomUUID()}.rendering.wav")
             try {
@@ -110,7 +110,25 @@ class StemRenderingMixer(
         return StemRenderResult(report, reused = false)
     }
 
-    private fun assembleMidi(root: Path, project: Project, selectedMidi: Map<String, SelectedMidiArtifact>, instrument: LogicalInstrument, timeline: Timeline, generated: Path?, transitions: Path?): Path {
+    private fun resolveOccurrenceMidi(root: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): Map<String, OccurrenceMidiArtifact> {
+        val planning = SongPlanningInput(
+            project.name,
+            project.version,
+            arrangement.sections.map { it.partId }.distinct().associateWith(analyses::getValue),
+            arrangement.sections.map { SectionInstance(it.index, it.partId) },
+            LogicalInstrument.entries.map(LogicalInstrument::wireName)
+        )
+        planning.requireValid()
+        val input = MelodyCohesionInputFactory.build(root, project, planning).first
+        val resolved = OccurrenceMidiArtifactResolver().resolve(root, project, input)
+        val arrangementIds = arrangement.sections.map(DetailedArrangementSection::instanceId)
+        if (project.workflow.cohesion?.approved == true) require(resolved.map(OccurrenceMidiArtifact::occurrenceId) == arrangementIds) {
+            "Resolved cohesion MIDI does not match the approved arrangement occurrences."
+        }
+        return arrangementIds.zip(resolved).toMap()
+    }
+
+    private fun assembleMidi(root: Path, occurrenceMidi: Map<String, OccurrenceMidiArtifact>, instrument: LogicalInstrument, timeline: Timeline, generated: Path?, transitions: Path?): Path {
         val output = root.resolve("midi/render-input/.${instrument.wireName}-${UUID.randomUUID()}.mid")
         Files.createDirectories(requireNotNull(output.parent))
         val sequence = Sequence(Sequence.PPQ, timeline.ppq)
@@ -118,10 +136,9 @@ class StemRenderingMixer(
         timeline.writeTimingMeta(meta)
         if (instrument == LogicalInstrument.PIANO) {
             timeline.segments.forEach { segment ->
-                val part = project.parts.first { it.id == segment.partId }
-                val selected = selectedMidi.getValue(part.id)
-                val source = MidiSystem.getSequence(selected.path.toFile())
-                require(source.divisionType == Sequence.PPQ && source.resolution == timeline.ppq) { "Selected MIDI for '${part.id}' does not match project PPQ" }
+                val occurrence = occurrenceMidi.getValue(segment.occurrenceId)
+                val source = MidiSystem.getSequence(occurrence.path.toFile())
+                require(source.divisionType == Sequence.PPQ && source.resolution == timeline.ppq) { "Occurrence MIDI for '${segment.occurrenceId}' does not match project PPQ" }
                 copySectionEvents(source, sequence, segment)
             }
         } else {
@@ -185,12 +202,15 @@ class StemRenderingMixer(
 
     private fun validWav(path: Path, format: RenderFormat, frames: Long): Boolean = runCatching { requireCompatibleStem(path, format, frames, path.fileName.toString()) }.isSuccess
 
-    private fun fingerprint(root: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>, selectedMidi: Map<String, SelectedMidiArtifact>, generated: List<Path>, transitions: Path?): String = digest(buildString {
+    private fun fingerprint(root: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>, occurrenceMidi: Map<String, OccurrenceMidiArtifact>, generated: List<Path>, transitions: Path?): String = digest(buildString {
         append(project.version).append('|').append(project.renderFormat).append('|').append(arrangement).append('|')
-        project.parts.sortedBy { it.id }.forEach { part ->
-            val selected = selectedMidi.getValue(part.id)
-            append(part.id).append(':').append(digest(Files.readAllBytes(root.resolve(part.file)))).append(':')
-                .append(selected.kind).append(':').append(selected.sha256).append('|')
+        project.parts.sortedBy(Part::id).forEach { part ->
+            append("source:").append(part.id).append(':').append(digest(Files.readAllBytes(root.resolve(part.file)))).append('|')
+        }
+        arrangement.sections.forEach { section ->
+            val occurrence = occurrenceMidi.getValue(section.instanceId)
+            append(section.instanceId).append(':').append(section.partId).append(':')
+                .append(occurrence.source).append(':').append(occurrence.projectRelativePath).append(':').append(occurrence.sha256).append('|')
         }
         analyses.toSortedMap().forEach { (id, analysis) -> append(id).append(':').append(analysis.durationTicks).append(':').append(analysis.durationSeconds).append(':').append(analysis.tempoMap).append('|') }
         generated.sorted().forEach { append(it.fileName).append(':').append(digest(Files.readAllBytes(it))).append('|') }
@@ -225,7 +245,7 @@ class StemRenderingMixer(
     }
 }
 
-private data class TimelineSegment(val partId: String, val analysis: MidiAnalysis, val originalStartTick: Long, val timelineStartTick: Long, val insertedTicksAfter: Long) {
+private data class TimelineSegment(val occurrenceId: String, val partId: String, val analysis: MidiAnalysis, val originalStartTick: Long, val timelineStartTick: Long, val insertedTicksAfter: Long) {
     val originalEndTick get() = originalStartTick + analysis.durationTicks
     val timelineEndTick get() = timelineStartTick + analysis.durationTicks
 }
@@ -296,7 +316,7 @@ private data class Timeline(val ppq: Int, val segments: List<TimelineSegment>) {
                     val signature = incoming.timeSignatures.first()
                     section.transitionOut.bars.toLong() * (ppq * 4L / signature.denominator) * signature.numerator
                 } else 0L
-                TimelineSegment(section.partId, analysis, original, shifted, inserted).also { original += analysis.durationTicks; shifted += analysis.durationTicks + inserted }
+                TimelineSegment(section.instanceId, section.partId, analysis, original, shifted, inserted).also { original += analysis.durationTicks; shifted += analysis.durationTicks + inserted }
             })
         }
     }

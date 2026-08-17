@@ -94,6 +94,52 @@ class StemRenderingMixerTest {
         assertEquals(90.0, tempos(bass).getValue(3_840L), 0.001)
     }
 
+    @Test
+    fun `approved repeated occurrence MIDI is the rendered piano source and leaves source evidence immutable`() = runBlocking {
+        val project = Project(
+            Project.CURRENT_VERSION,
+            "occurrence-render",
+            listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid"))),
+            listOf("A", "A"),
+            RenderFormat(8_000, 1, 24)
+        )
+        writeMidi(root.resolve("source/A.mid"), 0, 1_920)
+        Files.createDirectories(root.resolve("midi/clean"))
+        Files.copy(root.resolve("source/A.mid"), root.resolve("midi/clean/A.mid"))
+        ProjectStore.write(root, project)
+        val sourceHash = sha256(root.resolve("source/A.mid"))
+        val cleanHash = sha256(root.resolve("midi/clean/A.mid"))
+        val analysis = analysis("A")
+        val planning = SongPlanningInput(project.name, project.version, mapOf("A" to analysis), listOf(SectionInstance(0, "A"), SectionInstance(1, "A")), LogicalInstrument.entries.map { it.wireName })
+        val (input, sources) = MelodyCohesionInputFactory.build(root, project, planning)
+        val plan = DeterministicMelodyCohesionPlanner().plan(input).copy(
+            occurrences = input.occurrences.mapIndexed { index, occurrence ->
+                MelodyOccurrencePlan(
+                    occurrence.instanceId,
+                    occurrence.partId,
+                    occurrence.sourceHash,
+                    edits = if (index == 1) listOf(MelodyTranspose(semitones = 12)) else emptyList(),
+                    rationale = "Fixture occurrence ${index + 1}"
+                )
+            }
+        )
+        MelodyCohesionStore.writeDraft(root, input, plan)
+        MelodyCohesionStore.approve(root, input, sources)
+        val approved = ProjectStore.read(root)
+        val arrangement = DetailedArrangement(sections = listOf(
+            DetailedArrangementSection(0, "A1", "A", SongSectionPurpose.DEVELOPMENT, 0.3, listOf(PianoSourcePlan()), TransitionPlan()),
+            DetailedArrangementSection(1, "A2", "A", SongSectionPurpose.CLIMAX, 0.7, listOf(PianoSourcePlan()), TransitionPlan())
+        ))
+        val renderer = FakeRenderer()
+
+        StemRenderingMixer(renderer, Path.of("sounds")).render(root, approved, arrangement, mapOf("A" to analysis))
+
+        val piano = requireNotNull(renderer.sequences[LogicalInstrument.PIANO])
+        assertEquals(listOf(48, 60), noteOnPitches(piano))
+        assertEquals(sourceHash, sha256(root.resolve("source/A.mid")))
+        assertEquals(cleanHash, sha256(root.resolve("midi/clean/A.mid")))
+    }
+
     private fun project() = Project(Project.CURRENT_VERSION, "render", listOf(
         Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid")),
         Part("B", "source/B.mid", midi = MidiReferences(clean = "midi/clean/B.mid"))
@@ -116,6 +162,16 @@ class StemRenderingMixerTest {
         track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, 48, 0), end))
         MidiSystem.write(sequence, 1, path.toFile())
     }
+
+    private fun noteOnPitches(sequence: Sequence): List<Int> = sequence.tracks.flatMap { track ->
+        (0 until track.size()).mapNotNull { index ->
+            val message = track[index].message as? ShortMessage
+            message?.takeIf { it.command == ShortMessage.NOTE_ON && it.data2 > 0 }?.data1
+        }
+    }.sorted()
+
+    private fun sha256(path: Path): String = java.security.MessageDigest.getInstance("SHA-256")
+        .digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
 
     private class FakeRenderer : InstrumentRenderer {
         var calls = 0

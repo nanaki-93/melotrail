@@ -9,7 +9,7 @@ remains synchronized in generated MIDI and rendered audio.
 ## Dependencies
 
 - Task 077 accepted.
-- Read `../PLAN.md` and Tasks 073–077 completely before implementation.
+- Read `../../PLAN.md` and Tasks 073–077 completely before implementation.
 
 ## Scope
 
@@ -44,7 +44,7 @@ future tasks instead of broadening the milestone.
   but cannot appear current or be reused.
 - Verify the architecture guard rejects new downstream direct access to
   repaired MIDI where selected/occurrence MIDI is required.
-- Complete visual acceptance against `../UI.png` at 1536 × 1024 and agreed
+- Complete visual acceptance against `../../UI.png` at 1536 × 1024 and agreed
   responsive viewports. Record every intentional deviation and require explicit
   product approval rather than silently relaxing the reference.
 - Complete keyboard, focus, accessible-name, non-color-state, scaling, and
