@@ -82,7 +82,7 @@ private fun WideWorkstation(state: WorkspaceUiState, onIntent: (WorkspaceIntent)
             ScenePresentationPanel(state, onIntent)
             AiSongPlanPanel(state, onIntent)
             if (state.workspaceSection == WorkspaceSection.MIX_MASTER) MixPanel(state, onIntent)
-            if (state.workspaceSection == WorkspaceSection.LIBRARY) LibraryPanel(state, onIntent)
+            if (state.workspaceSection == WorkspaceSection.VIDEO_PREVIEW) LibraryPanel(state, onIntent)
         }
     }
 }
@@ -94,7 +94,7 @@ private fun MediumWorkstation(state: WorkspaceUiState, onIntent: (WorkspaceInten
     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Reference.ColumnGap)) {
         WorkstationColumn(Modifier.widthIn(min = 240.dp, max = 300.dp), state, onIntent) {
             when (state.workspaceSection) {
-                WorkspaceSection.LIBRARY -> LibraryPanel(state, onIntent)
+                WorkspaceSection.VIDEO_PREVIEW -> LibraryPanel(state, onIntent)
                 else -> {
                     PartsPanel(state, onIntent)
                     if (state.selectedPartId != null) {
@@ -120,7 +120,7 @@ private fun MediumWorkstation(state: WorkspaceUiState, onIntent: (WorkspaceInten
 private fun NarrowWorkstation(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) =
     WorkstationColumn(Modifier.fillMaxSize(), state, onIntent) {
         when (state.workspaceSection) {
-            WorkspaceSection.PROJECT -> {
+            WorkspaceSection.OVERVIEW, WorkspaceSection.IMPORT -> {
                 PartsPanel(state, onIntent)
                 if (state.selectedPartId != null) {
                     MidiQualityReviewPanel(state, onIntent)
@@ -130,7 +130,7 @@ private fun NarrowWorkstation(state: WorkspaceUiState, onIntent: (WorkspaceInten
             WorkspaceSection.STRUCTURE -> StructurePanel(state, onIntent)
             WorkspaceSection.ARRANGE -> { ArrangementPanel(state, onIntent); TimelinePanel(state, onIntent); AiSongPlanPanel(state, onIntent) }
             WorkspaceSection.MIX_MASTER -> MixPanel(state, onIntent)
-            WorkspaceSection.LIBRARY -> LibraryPanel(state, onIntent)
+            WorkspaceSection.VIDEO_PREVIEW, WorkspaceSection.EXPORT -> LibraryPanel(state, onIntent)
         }
     }
 

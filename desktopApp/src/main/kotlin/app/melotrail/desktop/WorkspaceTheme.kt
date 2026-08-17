@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 
 object MusicWorkspaceTokens {
-    /** Measurements taken from plan/UI.png at 1536 × 1024, 100% scale. */
+    /** Measurements taken from plan/pictures/App-pages.png at 1536 × 1024, 100% scale. */
     object Reference {
         val ViewportWidth = 1536.dp
         val ViewportHeight = 1024.dp
@@ -55,6 +55,19 @@ object MusicWorkspaceTokens {
         const val DividerAlpha = 0.45f
     }
 
+    /** Shared page-shell geometry measured from the focused page reference. */
+    object Pages {
+        val SidebarWidth = 168.dp
+        val NavigationHeight = 40.dp
+        val PageGap = 16.dp
+        val ContentInset = 20.dp
+        val OverviewTopHeight = 176.dp
+        val OverviewTrackHeight = 226.dp
+        val OverviewPreviewWidth = 420.dp
+        val OverviewTransportHeight = 86.dp
+        val CompactRowHeight = 38.dp
+    }
+
     /** Center workstation cards mirror the reference column without creating a second song clock. */
     object Center {
         val StructureHeight = 188.dp
@@ -77,6 +90,7 @@ object MusicWorkspaceTokens {
     val ElevatedSurface = Color(0xFF12212B)
     val Border = Color(0xFF253845)
     val Teal = Color(0xFF4BD7C3)
+    val OliveAccent = Color(0xFFB3B85A)
     val TealFocus = Color(0xFF8EF4E4)
     val TealPressed = Color(0xFF2AAE9E)
     val TextPrimary = Color(0xFFE2EDF1)

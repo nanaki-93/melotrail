@@ -3,12 +3,12 @@
 ## Goal
 
 Replace the multi-panel workstation composition with typed single-page routing
-and reproduce the Overview page in `../pictures/App-pages.png`.
+and reproduce the Overview page in `../../pictures/App-pages.png`.
 
 ## Dependencies
 
 - Task 082 accepted.
-- `../PLAN.md` is the governing UI/UX plan.
+- `../../PLAN.md` is the governing UI/UX plan.
 
 ## Requirements
 
@@ -29,7 +29,7 @@ and reproduce the Overview page in `../pictures/App-pages.png`.
 - Unknown timing, note, waveform, scene, or signal data must be visibly
   unavailable rather than synthesized as real state.
 - Add reusable page-shell/navigation tokens measured from
-  `../pictures/App-pages.png`; do not scatter page geometry constants.
+  `../../pictures/App-pages.png`; do not scatter page geometry constants.
 - Later destinations may use concise truthful interim page bodies, but may not
   render the former simultaneous workstation columns.
 
@@ -42,7 +42,7 @@ and reproduce the Overview page in `../pictures/App-pages.png`.
 - Overview tests assert section strip, track overview, preview, section info,
   Export action, one transport, and truthful empty/stale states.
 - Capture a deterministic Overview fixture and compare its major geometry with
-  the large Overview region in `../pictures/App-pages.png` (maximum 4 px
+  the large Overview region in `../../pictures/App-pages.png` (maximum 4 px
   major-edge variance).
 - Run `./gradlew :desktopApp:test :desktopApp:build`.
 

@@ -191,8 +191,7 @@ fun WorkspaceScreen(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit
     ) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Reference.ColumnGap)) {
             ProjectHeader(state, onIntent)
-            StableWorkspaceShell(state, onIntent, Modifier.weight(1f))
-            WorkstationFooter(state, onIntent)
+            WorkspacePageRouter(state, onIntent, Modifier.weight(1f))
         }
         OperationFeedbackBanner(state, onIntent, Modifier.align(Alignment.TopCenter).padding(top = MusicWorkspaceTokens.Reference.HeaderHeight + MusicWorkspaceTokens.Spacing.Sm))
     }
@@ -233,29 +232,16 @@ private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
         colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.Surface),
         border = BorderStroke(1.dp, MusicWorkspaceTokens.Border)
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = MusicWorkspaceTokens.Spacing.Lg, vertical = MusicWorkspaceTokens.Spacing.Xs)) {
-            BoxWithConstraints(Modifier.fillMaxWidth()) {
-                if (maxWidth >= 1300.dp) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-                        WorkspaceBrand(Modifier.width(MusicWorkspaceTokens.Shell.HeaderBrandWidth))
-                        WorkspaceNavigation(state, onIntent, Modifier.weight(1f))
-                        SelectedProjectControl(state, mutationsDisabled, onIntent)
-                        HeaderActions(state, mutationsDisabled, onIntent)
-                        if (state.project?.version == 2) TextButton(onClick = { onIntent(WorkspaceIntent.MigrateProject) }, modifier = Modifier.semantics { testTag = WorkspaceTags.MIGRATE_PROJECT }) { Text("Migrate") }
-                    }
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-                            WorkspaceBrand()
-                            SelectedProjectControl(state, mutationsDisabled, onIntent)
-                            Spacer(Modifier.weight(1f))
-                            HeaderActions(state, mutationsDisabled, onIntent)
-                        }
-                        WorkspaceNavigation(state, onIntent, Modifier.fillMaxWidth())
-                        if (state.project?.version == 2) TextButton(onClick = { onIntent(WorkspaceIntent.MigrateProject) }, modifier = Modifier.semantics { testTag = WorkspaceTags.MIGRATE_PROJECT }) { Text("Migrate") }
-                    }
-                }
-            }
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MusicWorkspaceTokens.Spacing.Lg, vertical = MusicWorkspaceTokens.Spacing.Xs),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)
+        ) {
+            WorkspaceBrand(Modifier.width(MusicWorkspaceTokens.Shell.HeaderBrandWidth))
+            Spacer(Modifier.weight(1f))
+            SelectedProjectControl(state, mutationsDisabled, onIntent)
+            HeaderActions(state, mutationsDisabled, onIntent)
+            if (state.project?.version == 2) TextButton(onClick = { onIntent(WorkspaceIntent.MigrateProject) }, modifier = Modifier.semantics { testTag = WorkspaceTags.MIGRATE_PROJECT }) { Text("Migrate") }
         }
     }
 }
@@ -347,11 +333,13 @@ private fun WorkspaceNavigation(state: WorkspaceUiState, onIntent: (WorkspaceInt
 }
 
 private fun WorkspaceSection.referenceIcon(): String = when (this) {
-    WorkspaceSection.PROJECT -> "▣"
+    WorkspaceSection.OVERVIEW -> "▣"
+    WorkspaceSection.IMPORT -> "⇩"
     WorkspaceSection.STRUCTURE -> "▤"
     WorkspaceSection.ARRANGE -> "◇"
     WorkspaceSection.MIX_MASTER -> "▥"
-    WorkspaceSection.LIBRARY -> "▧"
+    WorkspaceSection.VIDEO_PREVIEW -> "▧"
+    WorkspaceSection.EXPORT -> "⇧"
 }
 
 @Composable
@@ -378,7 +366,7 @@ private fun WideWorkspace(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
         Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
             when (state.workspaceSection) {
-                WorkspaceSection.PROJECT -> {
+                WorkspaceSection.OVERVIEW, WorkspaceSection.IMPORT -> {
                     PanelColumn(Modifier.widthIn(min = 235.dp, max = 300.dp).weight(0.95f), state, onIntent, projectLeftPanels(state))
                     PanelColumn(Modifier.weight(1.7f), state, onIntent, listOf(Panel.Structure, Panel.Arrangement, Panel.Timeline))
                     PanelColumn(Modifier.widthIn(min = 255.dp, max = 340.dp).weight(1f), state, onIntent, listOf(Panel.Status))
@@ -398,7 +386,7 @@ private fun WideWorkspace(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                     PanelColumn(Modifier.weight(1.2f), state, onIntent, listOf(Panel.Mix))
                     PanelColumn(Modifier.widthIn(min = 260.dp, max = 340.dp).weight(0.8f), state, onIntent, listOf(Panel.Status))
                 }
-                WorkspaceSection.LIBRARY -> {
+                WorkspaceSection.VIDEO_PREVIEW, WorkspaceSection.EXPORT -> {
                     PanelColumn(Modifier.weight(1.8f), state, onIntent, listOf(Panel.Library))
                     PanelColumn(Modifier.weight(1f), state, onIntent, listOf(Panel.Status))
                 }
@@ -431,11 +419,11 @@ private fun projectLeftPanels(state: WorkspaceUiState): List<Panel> =
     if (state.selectedPartId == null) listOf(Panel.Parts) else listOf(Panel.Preparation, Panel.MidiQuality, Panel.Parts)
 
 private fun panelsForSection(section: WorkspaceSection, state: WorkspaceUiState? = null): SectionPanels = when (section) {
-    WorkspaceSection.PROJECT -> SectionPanels(state?.let(::projectLeftPanels) ?: listOf(Panel.Parts), listOf(Panel.Structure, Panel.Arrangement, Panel.Timeline), listOf(Panel.Status))
+    WorkspaceSection.OVERVIEW, WorkspaceSection.IMPORT -> SectionPanels(state?.let(::projectLeftPanels) ?: listOf(Panel.Parts), listOf(Panel.Structure, Panel.Arrangement, Panel.Timeline), listOf(Panel.Status))
     WorkspaceSection.STRUCTURE -> SectionPanels(listOf(Panel.Parts), listOf(Panel.Structure, Panel.Timeline), listOf(Panel.Preparation, Panel.MidiQuality, Panel.Status))
     WorkspaceSection.ARRANGE -> SectionPanels(listOf(Panel.Structure), listOf(Panel.Arrangement, Panel.Timeline), listOf(Panel.Status))
     WorkspaceSection.MIX_MASTER -> SectionPanels(listOf(Panel.Timeline), listOf(Panel.Mix), listOf(Panel.Status))
-    WorkspaceSection.LIBRARY -> SectionPanels(listOf(Panel.Library), emptyList(), listOf(Panel.Status))
+    WorkspaceSection.VIDEO_PREVIEW, WorkspaceSection.EXPORT -> SectionPanels(listOf(Panel.Library), emptyList(), listOf(Panel.Status))
 }
 
 private enum class Panel { Parts, MidiQuality, Preparation, Structure, Arrangement, Timeline, Mix, Status, Library }
@@ -1136,33 +1124,15 @@ internal fun CompactTransport(state: WorkspaceUiState, onIntent: (WorkspaceInten
  */
 @Composable
 private fun FooterWaveform(session: PlaybackSession, modifier: Modifier = Modifier) {
-    val sourceKey = session.artifact?.path?.toString().orEmpty()
-    val hasSelectedArtifact = sourceKey.isNotBlank()
-    val bars = if (hasSelectedArtifact) List(36) { index ->
-        ((sourceKey.hashCode() * 31 + index * 17).ushr(1) % 13 + 3) / 18f
-    } else emptyList()
     Box(
         modifier.height(52.dp).clip(MaterialTheme.shapes.small).background(MusicWorkspaceTokens.Canvas.copy(alpha = 0.74f))
             .semantics {
                 testTag = WorkspaceTags.FOOTER_WAVEFORM
-                contentDescription = if (hasSelectedArtifact) "Decoded waveform unavailable for the selected playback artifact." else "Waveform unavailable because no playback artifact is selected."
+                contentDescription = if (session.artifact != null) "Decoded waveform unavailable for the selected playback artifact." else "Waveform unavailable because no playback artifact is selected."
             },
         contentAlignment = Alignment.Center
     ) {
-        if (bars.isEmpty()) {
-            Text("NO WAVEFORM", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Disabled)
-        } else {
-            Row(Modifier.fillMaxSize().padding(horizontal = 3.dp), horizontalArrangement = Arrangement.spacedBy(1.dp), verticalAlignment = Alignment.CenterVertically) {
-                bars.forEach { amplitude ->
-                    Box(Modifier.weight(1f).height((4f + amplitude * 24f).dp).background(MusicWorkspaceTokens.Teal.copy(alpha = 0.26f), MaterialTheme.shapes.extraSmall))
-                }
-            }
-            Text("WAVEFORM NOT DECODED", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.TextSecondary)
-            if (session.durationSeconds > 0.0) {
-                val progress = (session.positionSeconds / session.durationSeconds).toFloat().coerceIn(0f, 1f)
-                Box(Modifier.align(Alignment.CenterStart).fillMaxWidth(progress).height(2.dp).background(MusicWorkspaceTokens.Teal.copy(alpha = 0.65f)))
-            }
-        }
+        Text("WAVEFORM UNAVAILABLE", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Disabled)
     }
 }
 
@@ -1637,4 +1607,4 @@ private fun canBuild(state: WorkspaceUiState): Boolean = state.project != null &
 internal fun timelineSectionWeight(durationSeconds: Double?): Float =
     (durationSeconds?.takeIf { it > 0.0 } ?: 1.0).toFloat()
 
-private fun formatDuration(seconds: Double): String = "%d:%02d".format(seconds.toInt() / 60, seconds.toInt() % 60)
+internal fun formatDuration(seconds: Double): String = "%d:%02d".format(seconds.toInt() / 60, seconds.toInt() % 60)

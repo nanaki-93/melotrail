@@ -73,9 +73,37 @@ class WorkspaceViewModelTest {
     fun `workspace navigation updates one explicit selected destination`() = runTest {
         val viewModel = WorkspaceViewModel(FakeProjectService(), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
 
+        WorkspaceSection.entries.forEach { destination ->
+            viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(destination))
+            assertEquals(destination, viewModel.state.value.workspaceSection)
+        }
+        viewModel.close()
+    }
+
+    @Test
+    fun `open lands on overview while an ordinary mutation preserves focused page and selection`() = runTest {
+        val root = Path.of("build/task-083-navigation")
+        val project = projectSnapshot(root).copy(
+            version = 3,
+            parts = listOf(part("A")),
+            structure = listOf(app.melotrail.application.StructureSectionSummary(0, "A", 1, "A1", 4.0))
+        )
+        val viewModel = WorkspaceViewModel(FakeProjectService(result = project), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        assertEquals(WorkspaceSection.OVERVIEW, viewModel.state.value.workspaceSection)
         viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.ARRANGE))
+        viewModel.accept(WorkspaceIntent.SelectPart("A"))
+        viewModel.accept(WorkspaceIntent.SelectArrangementSection(0))
+        viewModel.accept(WorkspaceIntent.UpdateArrangementStyle("warm lo-fi"))
+        viewModel.accept(WorkspaceIntent.ShowRoleEditor("A"))
+        viewModel.accept(WorkspaceIntent.UpdateRole("intro"))
+        viewModel.accept(WorkspaceIntent.SaveRole); advanceUntilIdle()
 
         assertEquals(WorkspaceSection.ARRANGE, viewModel.state.value.workspaceSection)
+        assertEquals("A", viewModel.state.value.selectedPartId)
+        assertEquals(0, viewModel.state.value.selectedArrangementSection)
+        assertEquals("warm lo-fi", viewModel.state.value.arrangementDraft.style)
         viewModel.close()
     }
 
@@ -252,6 +280,7 @@ class WorkspaceViewModelTest {
         viewModel.accept(WorkspaceIntent.CreateProject)
         advanceUntilIdle()
         assertEquals(root, service.created?.root)
+        assertEquals(WorkspaceSection.OVERVIEW, viewModel.state.value.workspaceSection)
 
         viewModel.accept(WorkspaceIntent.ShowImportPart(audio = false))
         viewModel.accept(WorkspaceIntent.UpdateImportPart(WorkspaceDialog.ImportPart(false, Path.of("input.mid"), "C", "verse")))

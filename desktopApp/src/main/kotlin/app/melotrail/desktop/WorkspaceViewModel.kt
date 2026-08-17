@@ -105,7 +105,7 @@ data class WorkspaceUiState(
     val downstreamArtifactsStale: Boolean = false,
     val arrangementDraftDirty: Boolean = false,
     val retry: WorkspaceRetry? = null,
-    val workspaceSection: WorkspaceSection = WorkspaceSection.PROJECT
+    val workspaceSection: WorkspaceSection = WorkspaceSection.OVERVIEW
 ) {
     val creationSelection: CreationSelection
         get() = CreationSelection(selectedPartId, selectedArrangementSection, selectedArtifact)
@@ -115,11 +115,13 @@ data class WorkspaceUiState(
 }
 
 enum class WorkspaceSection(val label: String) {
-    PROJECT("Project"),
+    OVERVIEW("Overview"),
+    IMPORT("Import"),
     STRUCTURE("Structure"),
     ARRANGE("Arrange"),
     MIX_MASTER("Mix & Master"),
-    LIBRARY("Library")
+    VIDEO_PREVIEW("Video Preview"),
+    EXPORT("Export")
 }
 
 /** The UI exposes three named cleanup choices only; no worker parameters are editable here. */
@@ -586,7 +588,7 @@ class WorkspaceViewModel(
     }
 
     private fun selectWorkspaceSection(section: WorkspaceSection) {
-        mutableState.update { it.copy(workspaceSection = section, notification = null) }
+        mutableState.update { it.copy(workspaceSection = section) }
     }
 
     private fun chooseProject() = scope.launch {
@@ -631,7 +633,7 @@ class WorkspaceViewModel(
         mutableState.update { it.copy(operation = WorkspaceOperation.CreatingProject(root), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
             runCatching { withContext(ioDispatcher) { projectService.create(request).refreshed() } }
-                .onSuccess { opened(it, "Created ${it.name}", feedbackId) }
+                .onSuccess { opened(it, "Created ${it.name}", feedbackId, resetWorkspace = true) }
                 .onFailure { fail("create project", it.message ?: "Unable to create project.", sessionId = feedbackId) }
         }
     }
@@ -669,7 +671,7 @@ class WorkspaceViewModel(
         mutableState.update { it.copy(operation = WorkspaceOperation.OpeningProject(normalized), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
             runCatching { withContext(ioDispatcher) { projectService.open(normalized) } }
-            .onSuccess { opened(it, "Opened ${it.name}", feedbackId) }
+            .onSuccess { opened(it, "Opened ${it.name}", feedbackId, resetWorkspace = true) }
                 .onFailure { failure ->
                     if (restoring) preferences.clearLastOpenedProject()
                     operationLogger.event("open-project", "failed", normalized, failure)
@@ -1649,38 +1651,44 @@ class WorkspaceViewModel(
 
     private fun ProjectSnapshot.refreshed(): ProjectSnapshot = projectService.open(root)
 
-    private fun opened(project: ProjectSnapshot, message: String, feedbackId: String? = null, stale: Boolean = false) {
-        cancelPlaybackSession(resetState = true)
+    private fun opened(
+        project: ProjectSnapshot,
+        message: String,
+        feedbackId: String? = null,
+        stale: Boolean = false,
+        resetWorkspace: Boolean = false
+    ) {
+        if (resetWorkspace) cancelPlaybackSession(resetState = true)
         preferences.saveLastOpenedProject(project.root)
         operationLogger.event("project", "opened", project.root)
         val openedMessage = if (project.version == 1) {
             "$message · Legacy v1 project opened. Re-import parts as MIDI-first sources to unlock the current arrangement workflow."
         } else message
-        mutableState.update {
-            it.copy(
+        mutableState.update { current ->
+            current.copy(
                 project = project,
-                cohesion = null,
-                arrangement = null,
-                mix = null,
-                selectedPartId = null,
-                selectedArtifact = null,
-                midiQualityReview = MidiQualityReviewDraft(),
-                audioPreparation = AudioPreparationUiState(),
+                cohesion = if (resetWorkspace) null else current.cohesion,
+                arrangement = if (resetWorkspace) null else current.arrangement,
+                mix = if (resetWorkspace) null else current.mix,
+                selectedPartId = if (resetWorkspace) null else current.selectedPartId,
+                selectedArtifact = if (resetWorkspace) null else current.selectedArtifact,
+                midiQualityReview = if (resetWorkspace) MidiQualityReviewDraft() else current.midiQualityReview,
+                audioPreparation = if (resetWorkspace) AudioPreparationUiState() else current.audioPreparation,
                 operation = WorkspaceOperation.Idle,
                 notification = openedMessage,
-                operationFeedback = feedbackId?.let { feedbackTracker.complete(it, openedMessage) } ?: it.operationFeedback,
+                operationFeedback = feedbackId?.let { feedbackTracker.complete(it, openedMessage) } ?: current.operationFeedback,
                 dialog = null,
                 structureDraft = project.structure.map { section -> section.partId },
                 downstreamArtifactsStale = stale,
-                arrangementDraftDirty = false,
+                arrangementDraftDirty = if (resetWorkspace) false else current.arrangementDraftDirty,
                 retry = null,
-                workspaceSection = WorkspaceSection.PROJECT
+                workspaceSection = if (resetWorkspace) WorkspaceSection.OVERVIEW else current.workspaceSection
             )
         }
-        hydrateProject(project, openedMessage)
+        hydrateProject(project, openedMessage, resetWorkspace)
     }
 
-    private fun hydrateProject(project: ProjectSnapshot, openedMessage: String) = scope.launch {
+    private fun hydrateProject(project: ProjectSnapshot, openedMessage: String, resetWorkspace: Boolean) = scope.launch {
         val feedbackId = beginFeedback(OperationKind.PROJECT_HYDRATION, OperationPhase.LOCAL, "Loading project artifacts…")
         mutableState.update { current ->
             if (current.project?.root == project.root) current.copy(operationFeedback = feedbackTracker.current) else current
@@ -1708,7 +1716,7 @@ class WorkspaceViewModel(
                     mix = hydration.first.getOrNull(),
                     arrangement = arrangement,
                     cohesion = hydration.third.getOrNull(),
-                    selectedArrangementSection = arrangement?.sections?.firstOrNull()?.index,
+                    selectedArrangementSection = if (resetWorkspace) arrangement?.sections?.firstOrNull()?.index else current.selectedArrangementSection,
                     notification = if (warnings.isEmpty()) current.notification ?: openedMessage
                     else "$openedMessage Some optional artifacts need attention: ${warnings.joinToString("; ")}",
                     operationFeedback = feedbackTracker.complete(
