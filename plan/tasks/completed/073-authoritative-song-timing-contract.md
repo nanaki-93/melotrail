@@ -9,7 +9,7 @@ generation, rendering, and UI work must consume.
 ## Dependencies
 
 - Current repository baseline.
-- Read `../PLAN.md` completely before implementation.
+- Read `../../PLAN.md` completely before implementation.
 
 ## Scope
 
