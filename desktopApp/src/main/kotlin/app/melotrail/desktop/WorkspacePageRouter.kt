@@ -6,6 +6,7 @@ import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,6 +25,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -128,19 +131,64 @@ internal object WorkspacePageTags {
     const val EXPORT_SUMMARY = "export-summary"
     const val EXPORT_ACTION = "export-action"
     const val EXPORT_STATUS = "export-status"
+    const val NAVIGATION_MENU = "workspace-navigation-menu"
 }
 
 @Composable
 internal fun WorkspacePageRouter(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier = Modifier) {
-    if (state.workspaceSection == WorkspaceSection.OVERVIEW) {
-        Column(modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
-            OverviewNavigation(state, onIntent)
-            OverviewPage(state, onIntent, Modifier.weight(1f))
+    BoxWithConstraints(modifier.fillMaxSize()) {
+        val narrow = maxWidth < MusicWorkspaceTokens.Reference.MediumBreakpoint
+        when {
+            narrow -> Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
+                NarrowNavigation(state, onIntent)
+                PageForSection(state, onIntent, Modifier.weight(1f), narrow = true)
+            }
+            state.workspaceSection == WorkspaceSection.OVERVIEW -> Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
+                OverviewNavigation(state, onIntent)
+                OverviewPage(state, onIntent, Modifier.weight(1f))
+            }
+            else -> Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
+                WorkflowNavigation(state, onIntent)
+                InterimWorkflowPage(state, onIntent, Modifier.weight(1f))
+            }
         }
-    } else {
-        Row(modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
-            WorkflowNavigation(state, onIntent)
-            InterimWorkflowPage(state, onIntent, Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun PageForSection(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier, narrow: Boolean) {
+    if (state.workspaceSection == WorkspaceSection.OVERVIEW) OverviewPage(state, onIntent, modifier, narrow)
+    else InterimWorkflowPage(state, onIntent, modifier)
+}
+
+@Composable
+private fun NarrowNavigation(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxWidth().semantics {
+        testTag = WorkspaceTags.WORKSPACE_NAV
+        contentDescription = "Workspace navigation. Current page: ${state.workspaceSection.label}."
+    }) {
+        OutlinedButton(
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxWidth().semantics {
+                testTag = WorkspacePageTags.NAVIGATION_MENU
+                contentDescription = "Choose workspace page. Current page: ${state.workspaceSection.label}."
+            }
+        ) { Text(state.workspaceSection.label) }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            WorkspaceSection.entries.forEach { destination ->
+                DropdownMenuItem(
+                    text = { Text(destination.label) },
+                    onClick = {
+                        expanded = false
+                        onIntent(WorkspaceIntent.SelectWorkspaceSection(destination))
+                    },
+                    modifier = Modifier.semantics {
+                        testTag = WorkspaceTags.WORKSPACE_SECTION_PREFIX + destination.name.lowercase()
+                        contentDescription = "Open ${destination.label}${if (destination == state.workspaceSection) ", selected" else ""}"
+                    }
+                )
+            }
         }
     }
 }
@@ -211,17 +259,18 @@ private fun WorkspaceSection.navigationSymbol(): String = when (this) {
 }
 
 @Composable
-private fun OverviewPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier) = PageRoot(WorkspaceSection.OVERVIEW, modifier) {
+private fun OverviewPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier, narrow: Boolean = false) = PageRoot(WorkspaceSection.OVERVIEW, modifier) {
     val project = state.project
     val sections = overviewSections(state)
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
+        ResponsivePageColumns(narrow = narrow, first = { columnModifier ->
+            Column(columnModifier, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
                 PageTitle(project?.name ?: "No project open", overviewMetadata(state))
                 OverviewSectionStrip(sections, state.selectedArrangementSection, onIntent)
                 TrackOverview(state, sections)
             }
-            Column(Modifier.widthIn(min = 260.dp, max = MusicWorkspaceTokens.Pages.OverviewPreviewWidth), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
+        }, second = { columnModifier ->
+            Column(columnModifier.widthIn(min = 260.dp, max = MusicWorkspaceTokens.Pages.OverviewPreviewWidth), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
                 VideoPreviewPlaceholder()
                 SelectedSectionInfo(sections, state.selectedArrangementSection)
                 Button(
@@ -229,15 +278,29 @@ private fun OverviewPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) ->
                     modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.OVERVIEW_EXPORT; contentDescription = "Open Export" }
                 ) { Text("Export") }
             }
-        }
-        Spacer(Modifier.weight(1f))
+        })
         CompactTransport(state, onIntent, Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Pages.OverviewTransportHeight))
     }
 }
 
 @Composable
+private fun ResponsivePageColumns(
+    narrow: Boolean,
+    first: @Composable (Modifier) -> Unit,
+    second: @Composable (Modifier) -> Unit
+) {
+    if (narrow) Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
+        first(Modifier.fillMaxWidth())
+        second(Modifier.fillMaxWidth())
+    } else Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
+        first(Modifier.weight(1f))
+        second(Modifier.weight(1f, fill = false))
+    }
+}
+
+@Composable
 private fun PageTitle(title: String, metadata: String) = Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-    Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onBackground)
     Text(metadata, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
@@ -372,8 +435,10 @@ private fun ExportPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
     val canExport = summary != null && draft.format in formats && destinationIsProjectOutput && !state.operation.isMutating
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
         PageTitle("Export", "Render and export your final track")
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val narrow = maxWidth < MusicWorkspaceTokens.Reference.MediumBreakpoint
+            ResponsivePageColumns(narrow = narrow, first = { columnModifier ->
+            Column(columnModifier, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
                 OverviewCard("export-settings", "Export settings") {
                     Text("Format", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
@@ -409,7 +474,8 @@ private fun ExportPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
                         modifier = Modifier.semantics { testTag = WorkspacePageTags.EXPORT_STATUS })
                 }
             }
-            Column(Modifier.widthIn(min = 260.dp, max = MusicWorkspaceTokens.Pages.OverviewPreviewWidth), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
+            }, second = { columnModifier ->
+            Column(columnModifier.widthIn(min = 260.dp, max = MusicWorkspaceTokens.Pages.OverviewPreviewWidth), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
                 OverviewCard(WorkspacePageTags.EXPORT_SUMMARY, "Export summary") {
                     Text("Duration", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(summary?.durationSeconds?.let(::formatDuration) ?: "Unavailable")
@@ -423,6 +489,7 @@ private fun ExportPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
                     Text(summary?.let { "${it.channels} ch · ${it.trackCount} source tracks" } ?: "Unavailable")
                 }
             }
+            })
         }
     }
 }
@@ -460,7 +527,7 @@ private fun VideoPreviewPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
                     Text("LOCAL VISUAL PLACEHOLDER", style = MaterialTheme.typography.labelMedium, color = MusicWorkspaceTokens.TealFocus)
                     Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleLarge)
-                    Text("No generated video or remote scene is available.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("No local scene is available.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Column(Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.VIDEO_PREVIEW_TIMELINE }, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
@@ -618,7 +685,7 @@ private fun ArrangePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
                 onValueChange = { onIntent(WorkspaceIntent.UpdateArrangementStyle(it)) },
                 enabled = !mutating,
                 label = { Text("Style (optional)") },
-                supportingText = { Text("Up to 160 characters; it is validated before planning.") },
+                supportingText = { Text("Up to 160 characters.") },
                 modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.ARRANGE_STYLE }
             )
             Text("Intensity · planner-derived", style = MaterialTheme.typography.labelMedium)
@@ -675,7 +742,7 @@ private fun PlannerChoiceCard(
     Column(Modifier.padding(MusicWorkspaceTokens.Pages.ContentInset), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
         Text(if (planner == ArrangementPlannerKind.DETERMINISTIC) "Deterministic" else "AI (Qwen)", fontWeight = FontWeight.SemiBold)
         Text(
-            if (planner == ArrangementPlannerKind.DETERMINISTIC) "Uses bounded rules and approves a valid plan automatically." else "Creates a strict JSON draft that must be reviewed and approved.",
+            if (planner == ArrangementPlannerKind.DETERMINISTIC) "Bounded local rules." else "Draft requires approval.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -780,9 +847,6 @@ private fun ImportPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
 ) {
     PageTitle("Import", "Import MIDI or eligible solo-piano audio files")
     ImportDropSurface(state, onIntent)
-    Text("SUPPORTED FORMATS", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    Text("MIDI (.mid, .midi) · Audio (.wav, .wave, .mp3)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    Text("Audio is for solo-piano transcription only.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     ImportedFiles(state, onIntent)
     ImportPrimaryAction(state, onIntent)
 }
@@ -940,9 +1004,11 @@ private fun MixMasterPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
     val buildReady = mixMasterCanBuild(state)
     val buildMessage = mixMasterBuildMessage(state)
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
-        PageTitle("Mix & Master", "Adjust current rendered stems, audition one release artifact, then build the authoritative master WAV")
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
-            Column(Modifier.weight(1.45f), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+        PageTitle("Mix & Master", "Adjust stems and build the master WAV")
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val narrow = maxWidth < MusicWorkspaceTokens.Reference.MediumBreakpoint
+            ResponsivePageColumns(narrow = narrow, first = { columnModifier ->
+            Column(columnModifier, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
                 Text("CHANNELS", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 LogicalInstrument.entries.forEach { instrument ->
                     val name = instrument.wireName
@@ -955,10 +1021,10 @@ private fun MixMasterPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                     contentDescription = if (mix == null) "Reset mix unavailable. Render stems first." else "Reset all logical channel settings to engine defaults."
                 }) { Text("Reset engine defaults") }
             }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+            }, second = { columnModifier ->
+            Column(columnModifier, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
                 MixMasterModeSelector(mode) { mode = it }
                 OverviewCard("mix-master-listen", "Listen") {
-                    Text("One shared playback session", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
                         MixPlaybackSourceButton("Dry", PlaybackSource.DRY, currentSource, state, WorkspacePageTags.MIX_PLAYBACK_DRY, onIntent, Modifier.weight(1f))
                         MixPlaybackSourceButton("Lo-fi", PlaybackSource.LOFI, currentSource, state, WorkspacePageTags.MIX_PLAYBACK_LOFI, onIntent, Modifier.weight(1f))
@@ -975,7 +1041,6 @@ private fun MixMasterPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                             modifier = Modifier.semantics { testTag = WorkspacePageTags.MIX_LOFI; contentDescription = "Apply the fixed supported Lo-fi audio texture during Build Song." })
                         Text("Fixed Bedroom LoFi preset", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    Text("Lossless mastering is fixed at -14 LUFS and -1 dB peak. Custom DSP values are not supported.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.semantics {
                         testTag = WorkspacePageTags.MIX_UNSUPPORTED_DSP
                         contentDescription = "Custom mastering DSP controls are unavailable because Melotrail accepts only the validated fixed mastering chain."
@@ -995,6 +1060,7 @@ private fun MixMasterPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                     }) { Text(if (state.operation is WorkspaceOperation.BuildingSong) "Building Song…" else "Build Song") }
                 }
             }
+            })
         }
         ZeroSignalPlaceholder()
     }
@@ -1046,7 +1112,6 @@ private fun MixPlaybackSourceButton(label: String, source: PlaybackSource, selec
 @Composable
 private fun ZeroSignalPlaceholder() = OverviewCard(WorkspacePageTags.MIX_ZERO_SIGNAL, "Levels") {
     Text("0.0 dBFS · No measured signal", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.Disabled)
-    Text("Waveform and meters remain zero until measured level data is available from the playback boundary.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 private fun mixMasterCanBuild(state: WorkspaceUiState): Boolean = state.project != null && !state.downstreamArtifactsStale && !state.operation.isMutating && state.arrangement?.approved == true && state.arrangement.approvalRequired == false && state.arrangement.stale == false && state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.available == true

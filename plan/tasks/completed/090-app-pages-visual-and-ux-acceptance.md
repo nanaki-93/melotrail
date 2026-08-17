@@ -3,7 +3,7 @@
 ## Goal
 
 Complete the concise-copy, responsive, accessibility, and visual acceptance
-pass for every page in `../pictures/App-pages.png`.
+pass for every page in `../../pictures/App-pages.png`.
 
 ## Dependencies
 
@@ -41,7 +41,7 @@ pass for every page in `../pictures/App-pages.png`.
   structure editing, planner selection, mix controls, playback, settings, and
   export.
 - Capture every page and overlay it against its region in
-  `../pictures/App-pages.png`; major shell/card/list/form/preview/timeline/footer
+  `../../pictures/App-pages.png`; major shell/card/list/form/preview/timeline/footer
   edges must be within 4 px, followed by human review of type, icons, color,
   focus, hover, selected, disabled, error, and empty states.
 - Run `./gradlew test :desktopApp:test :desktopApp:build` and record exact

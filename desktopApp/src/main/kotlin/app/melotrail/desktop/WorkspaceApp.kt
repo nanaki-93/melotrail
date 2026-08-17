@@ -232,26 +232,38 @@ private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
         colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.Surface),
         border = BorderStroke(1.dp, MusicWorkspaceTokens.Border)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = MusicWorkspaceTokens.Spacing.Lg, vertical = MusicWorkspaceTokens.Spacing.Xs),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)
-        ) {
-            WorkspaceBrand(Modifier.width(MusicWorkspaceTokens.Shell.HeaderBrandWidth))
-            Spacer(Modifier.weight(1f))
-            SelectedProjectControl(state, mutationsDisabled, onIntent)
-            HeaderActions(state, mutationsDisabled, onIntent)
-            if (state.project?.version == 2) TextButton(onClick = { onIntent(WorkspaceIntent.MigrateProject) }, modifier = Modifier.semantics { testTag = WorkspaceTags.MIGRATE_PROJECT }) { Text("Migrate") }
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = MusicWorkspaceTokens.Spacing.Lg, vertical = MusicWorkspaceTokens.Spacing.Xs)) {
+            if (maxWidth < MusicWorkspaceTokens.Reference.MediumBreakpoint) {
+                Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        WorkspaceBrand(Modifier.weight(1f))
+                        HeaderIconControl("＋", "Create a new project", !mutationsDisabled, WorkspaceTags.CREATE_PROJECT) { onIntent(WorkspaceIntent.ShowCreateProject) }
+                        HeaderIconControl("⚙", "Configure the local sound library", !mutationsDisabled, WorkspaceTags.HEADER_SETTINGS) { onIntent(WorkspaceIntent.ShowSoundLibrarySettings) }
+                    }
+                    SelectedProjectControl(state, mutationsDisabled, onIntent, Modifier.fillMaxWidth())
+                    if (state.project?.version == 2) TextButton(onClick = { onIntent(WorkspaceIntent.MigrateProject) }, modifier = Modifier.semantics { testTag = WorkspaceTags.MIGRATE_PROJECT }) { Text("Migrate") }
+                }
+            } else Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)
+            ) {
+                WorkspaceBrand(Modifier.width(MusicWorkspaceTokens.Shell.HeaderBrandWidth))
+                Spacer(Modifier.weight(1f))
+                SelectedProjectControl(state, mutationsDisabled, onIntent)
+                HeaderActions(state, mutationsDisabled, onIntent)
+                if (state.project?.version == 2) TextButton(onClick = { onIntent(WorkspaceIntent.MigrateProject) }, modifier = Modifier.semantics { testTag = WorkspaceTags.MIGRATE_PROJECT }) { Text("Migrate") }
+            }
         }
     }
 }
 
 @Composable
-private fun SelectedProjectControl(state: WorkspaceUiState, mutationsDisabled: Boolean, onIntent: (WorkspaceIntent) -> Unit) {
+private fun SelectedProjectControl(state: WorkspaceUiState, mutationsDisabled: Boolean, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier = Modifier.width(MusicWorkspaceTokens.Shell.HeaderProjectWidth)) {
     val projectText = state.project?.name ?: "No project"
     OutlinedButton(
         onClick = { onIntent(WorkspaceIntent.ChooseProject) }, enabled = !mutationsDisabled,
-        modifier = Modifier.width(MusicWorkspaceTokens.Shell.HeaderProjectWidth).heightIn(min = MusicWorkspaceTokens.Shell.HeaderIconSize).semantics {
+        modifier = modifier.heightIn(min = MusicWorkspaceTokens.Shell.HeaderIconSize).semantics {
             testTag = WorkspaceTags.PROJECT_SELECTOR
             contentDescription = "Selected project: $projectText. Choose another project."
         }
@@ -1054,46 +1066,57 @@ internal fun CompactTransport(state: WorkspaceUiState, onIntent: (WorkspaceInten
         null -> "Dry mix"
     }
     Card(
-        modifier = modifier.fillMaxWidth().heightIn(min = 82.dp, max = 118.dp).semantics {
+        modifier = modifier.fillMaxWidth().heightIn(min = 82.dp).semantics {
             testTag = WorkspaceTags.COMPACT_TRANSPORT
             contentDescription = "Persistent song transport"
         },
         colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.Surface),
         border = BorderStroke(1.dp, MusicWorkspaceTokens.Border)
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = MusicWorkspaceTokens.Spacing.Lg, vertical = MusicWorkspaceTokens.Spacing.Sm),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)
-        ) {
-            Button(
-                onClick = { onIntent(WorkspaceIntent.PlayPause) }, enabled = hasPlayableSelection,
-                modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_TOGGLE; contentDescription = if (hasPlayableSelection) "Play or pause $label" else "Playback unavailable. Select a ready preview or build a current mix first." }
-            ) { Text(if (session.phase == PlaybackSessionPhase.PLAYING) "Pause" else "Play") }
-            OutlinedButton(onClick = { onIntent(WorkspaceIntent.StopPlayback) }, enabled = canStop) { Text("Stop") }
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Row(Modifier.fillMaxWidth()) {
-                    Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.weight(1f))
-                    Text("${formatDuration(session.positionSeconds)} / ${formatDuration(session.durationSeconds)}", style = MaterialTheme.typography.labelSmall)
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = MusicWorkspaceTokens.Spacing.Lg, vertical = MusicWorkspaceTokens.Spacing.Sm)) {
+            val narrow = maxWidth < MusicWorkspaceTokens.Reference.MediumBreakpoint
+            val controls: @Composable () -> Unit = {
+                Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md), verticalAlignment = Alignment.CenterVertically) {
+                    Button(
+                        onClick = { onIntent(WorkspaceIntent.PlayPause) }, enabled = hasPlayableSelection,
+                        modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_TOGGLE; contentDescription = if (hasPlayableSelection) "Play or pause $label" else "Playback unavailable. Select a ready preview or build a current mix first." }
+                    ) { Text(if (session.phase == PlaybackSessionPhase.PLAYING) "Pause" else "Play") }
+                    OutlinedButton(onClick = { onIntent(WorkspaceIntent.StopPlayback) }, enabled = canStop) { Text("Stop") }
+                    if (session.phase == PlaybackSessionPhase.FAILED && session.retryAction == PlaybackRetryAction.RETRY_SAME_SELECTION) {
+                        OutlinedButton(
+                            onClick = { onIntent(WorkspaceIntent.RetryPreview) },
+                            modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_RETRY; contentDescription = "Retry $label" }
+                        ) { Text("Retry") }
+                    }
                 }
-                if (session.request is PlaybackRequest.Part) {
-                    Text(previewStatusLabel(state.preview.phase), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    state.preview.reason?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                }
-                Slider(
-                    value = session.positionSeconds.toFloat(),
-                    onValueChange = { onIntent(WorkspaceIntent.SeekPlayback(it.toDouble())) },
-                    valueRange = 0f..session.durationSeconds.coerceAtLeast(0.01).toFloat(), enabled = canSeek,
-                    modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_SEEK; contentDescription = "Seek $label" }
-                )
             }
-            FooterWaveform(session, Modifier.weight(1.15f))
-            if (session.phase == PlaybackSessionPhase.FAILED && session.retryAction == PlaybackRetryAction.RETRY_SAME_SELECTION) {
-                OutlinedButton(
-                    onClick = { onIntent(WorkspaceIntent.RetryPreview) },
-                    modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_RETRY; contentDescription = "Retry $label" }
-                ) { Text("Retry") }
+            val progress: @Composable () -> Unit = {
+                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    Row(Modifier.fillMaxWidth()) {
+                        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Spacer(Modifier.weight(1f))
+                        Text("${formatDuration(session.positionSeconds)} / ${formatDuration(session.durationSeconds)}", style = MaterialTheme.typography.labelSmall)
+                    }
+                    if (session.request is PlaybackRequest.Part) {
+                        Text(previewStatusLabel(state.preview.phase), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        state.preview.reason?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    }
+                    Slider(
+                        value = session.positionSeconds.toFloat(),
+                        onValueChange = { onIntent(WorkspaceIntent.SeekPlayback(it.toDouble())) },
+                        valueRange = 0f..session.durationSeconds.coerceAtLeast(0.01).toFloat(), enabled = canSeek,
+                        modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_SEEK; contentDescription = "Seek $label" }
+                    )
+                }
+            }
+            if (narrow) Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                controls()
+                progress()
+                FooterWaveform(session, Modifier.fillMaxWidth())
+            } else Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
+                controls()
+                Column(Modifier.weight(1f)) { progress() }
+                FooterWaveform(session, Modifier.weight(1.15f))
             }
         }
     }

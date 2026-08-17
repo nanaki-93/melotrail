@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsNodeInteractionsProvider
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -84,6 +85,25 @@ class WorkspaceScreenTest {
         importNavigation.performKeyInput { pressKey(Key.Enter) }
 
         assertEquals(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.IMPORT), intents.single())
+    }
+
+    @Test
+    fun `narrow shells keep one reachable navigation and their primary page regions within the viewport`() = runSkikoComposeUiTest(size = Size(720f, 1_120f)) {
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(populatedState(), intents::add) } }
+
+        onAllNodesWithTag(WorkspaceTags.WORKSPACE_NAV).assertCountEquals(1)
+        onNodeWithTag(WorkspacePageTags.NAVIGATION_MENU).performClick()
+        onNodeWithTag(WorkspaceTags.WORKSPACE_SECTION_PREFIX + WorkspaceSection.EXPORT.name.lowercase()).performClick()
+        assertEquals(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.EXPORT), intents.single())
+
+        listOf(WorkspaceTags.PROJECT_HEADER, WorkspaceTags.PROJECT_SELECTOR, WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.OVERVIEW.name.lowercase(), WorkspacePageTags.OVERVIEW_PREVIEW, WorkspaceTags.COMPACT_TRANSPORT).forEach { assertFitsNarrowViewport(it) }
+
+        setContent { MelotrailTheme { WorkspaceScreen(exportState(), onIntent = {}) } }
+        listOf(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.EXPORT.name.lowercase(), WorkspacePageTags.EXPORT_SUMMARY, WorkspacePageTags.EXPORT_ACTION).forEach { assertFitsNarrowViewport(it) }
+
+        setContent { MelotrailTheme { WorkspaceScreen(mixMasterState(), onIntent = {}) } }
+        listOf(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.MIX_MASTER.name.lowercase(), WorkspacePageTags.MIX_CHANNEL_PREFIX + "piano", WorkspacePageTags.MIX_PRIMARY_ACTION).forEach { assertFitsNarrowViewport(it) }
     }
 
     @Test
@@ -473,6 +493,7 @@ class WorkspaceScreenTest {
         val image = onNodeWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.OVERVIEW.name.lowercase()).captureToImage()
         assertEquals(1126, image.width)
         assertEquals(302, image.height)
+        writePageCapture("overview", image.toAwtImage())
         // Major card edges are measured from the 1158 × 462 large Overview crop in App-pages.png.
         val preview = onNodeWithTag(WorkspacePageTags.OVERVIEW_PREVIEW).getUnclippedBoundsInRoot()
         assertTrue(abs((preview.right - preview.left).value - MusicWorkspaceTokens.Pages.OverviewPreviewWidth.value) <= 4f, "preview width: ${preview.right - preview.left}")
@@ -485,6 +506,7 @@ class WorkspaceScreenTest {
         val image = onNodeWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.IMPORT.name.lowercase()).captureToImage()
         assertEquals(942, image.width)
         assertEquals(358, image.height)
+        writePageCapture("import", image.toAwtImage())
         val drop = onNodeWithTag(WorkspacePageTags.IMPORT_DROP_SURFACE).getUnclippedBoundsInRoot()
         assertTrue((drop.bottom - drop.top).value >= MusicWorkspaceTokens.Pages.ImportDropHeight.value)
         writeImportReferenceOverlay(image.toAwtImage())
@@ -496,6 +518,7 @@ class WorkspaceScreenTest {
 
         val image = onNodeWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.STRUCTURE.name.lowercase()).captureToImage()
         assertTrue(image.width > 0 && image.height > 0)
+        writePageCapture("structure", image.toAwtImage())
         writeStructureReferenceOverlay(image.toAwtImage())
     }
 
@@ -505,6 +528,7 @@ class WorkspaceScreenTest {
 
         val image = onNodeWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.ARRANGE.name.lowercase()).captureToImage()
         assertTrue(image.width > 0 && image.height > 0)
+        writePageCapture("arrange", image.toAwtImage())
         writeArrangeReferenceOverlay(image.toAwtImage())
     }
 
@@ -514,6 +538,7 @@ class WorkspaceScreenTest {
 
         val image = onNodeWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.MIX_MASTER.name.lowercase()).captureToImage()
         assertTrue(image.width > 0 && image.height > 0)
+        writePageCapture("mix-master", image.toAwtImage())
         writeMixMasterReferenceOverlay(image.toAwtImage())
     }
 
@@ -524,6 +549,7 @@ class WorkspaceScreenTest {
 
         val image = onNodeWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.VIDEO_PREVIEW.name.lowercase()).captureToImage()
         assertTrue(image.width > 0 && image.height > 0)
+        writePageCapture("video-preview", image.toAwtImage())
         writeVideoPreviewReferenceOverlay(image.toAwtImage())
     }
 
@@ -533,6 +559,7 @@ class WorkspaceScreenTest {
 
         val image = onNodeWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.EXPORT.name.lowercase()).captureToImage()
         assertTrue(image.width > 0 && image.height > 0)
+        writePageCapture("export", image.toAwtImage())
         writeExportReferenceOverlay(image.toAwtImage())
     }
 
@@ -658,6 +685,21 @@ class WorkspaceScreenTest {
         val target = repository.resolve("desktopApp/build/reports/task-084-import-overlay.png")
         Files.createDirectories(target.parent)
         assertTrue(ImageIO.write(overlay, "png", target.toFile()))
+    }
+
+    private fun SemanticsNodeInteractionsProvider.assertFitsNarrowViewport(tag: String) {
+        val bounds = onNodeWithTag(tag).getUnclippedBoundsInRoot()
+        assertTrue(bounds.left.value >= 0f, "$tag starts outside the viewport: $bounds")
+        assertTrue(bounds.right.value <= 720f, "$tag extends outside the viewport: $bounds")
+    }
+
+    private fun writePageCapture(page: String, capture: BufferedImage) {
+        val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
+            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/App-pages.png")) }
+            ?: error("Could not locate the App-pages reference image.")
+        val target = repository.resolve("desktopApp/build/reports/task-090-$page-capture.png")
+        Files.createDirectories(target.parent)
+        assertTrue(ImageIO.write(capture, "png", target.toFile()))
     }
 
     private fun writeStructureReferenceOverlay(structureCapture: BufferedImage) {
