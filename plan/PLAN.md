@@ -1,514 +1,398 @@
-# Melotrail — UI and MIDI Workflow Recovery Plan
+# Melotrail — App Pages UI/UX Implementation Plan
 
 ## Goal
 
-Rebuild the Compose Desktop workspace to match `plan/UI.png`, reduce MIDI
-import to a guided workflow with one obvious next action, make the Lo-fi MIDI
-Feel transformation audible throughout the whole pipeline, and generate an
-arranged song whose piano, generated instruments, transitions, visual timeline,
-and rendered stems share one authoritative musical clock.
+Rebuild the Compose Desktop interface around the page designs in
+`plan/pictures/App-pages.png` so that navigation shows one focused destination
+at a time, prepared parts can always be added to the canonical song structure,
+and normal workflows use concise labels and actions instead of persistent
+instructional prose.
 
-This plan supersedes the completed UI/Lo-fi/arrangement assumptions where the
-current product behavior or this new direction conflicts with them. It does not
-silently promote unrelated deferred work. Future Task 059 is used only as the
-worker-test interpreter contract: worker checks run with `.venv/bin/python`,
-not an ambiguous system `python`.
+This plan changes presentation and desktop interaction only. Existing typed
+application services, canonical project artifacts, source immutability,
+playback ownership, worker validation, renderer validation, and atomic writes
+remain authoritative.
 
-## Product interpretation to confirm
+## Reference interpretation
 
-`plan/UI.png` is treated as the exact wide-screen composition target at
-1536 × 1024: its hierarchy, panel placement, proportions, density, typography,
-color language, borders, controls, selection states, transport, and mixer must
-be reproduced from real application state.
+`App-pages.png` is the visual source of truth for hierarchy, density, spacing,
+colors, typography, selected states, and control placement. It depicts these
+destinations:
 
-The mockup's travel-specific content—scene artwork, Video Concept, Current
-Location, weather, and destination—is not represented in the current project
-model. This plan assumes those regions become optional, local presentation
-metadata with deterministic placeholders and no network/weather integration.
-They must not pretend to be live data or block music creation. Confirm whether
-this assumption is correct before implementing Task 077.
+1. **Overview** — song sections, track overview, video preview, selected-section
+   summary, and the shared transport.
+2. **Import** — file drop/chooser surface and imported-file list.
+3. **Structure** — eligible section palette, ordered song sequence, and compact
+   editable section table.
+4. **Arrange** — deterministic/Qwen choice, instrument selection, style,
+   intensity, and one generation action.
+5. **Mix & Master** — compact channel mixer, master preset/effect controls,
+   audition mode, and render action.
+6. **Library / Video Preview** — the reference's focused local video-preview
+   page. Sound-library configuration moves to the settings action/drawer so it
+   remains available without competing with the music workflow.
+7. **Export** — output format, quality, sample rate, filename, destination, and
+   a truthful export summary.
+
+The Export page is opened by the Overview Export action and is shown as the
+selected sidebar destination while open. The reference artwork is treated as
+visual direction, not evidence of a live scene, location, weather feed, or
+exported video. Runtime artwork must be a bundled, approved local asset or an
+explicitly labelled deterministic placeholder.
 
 ## Repository findings
 
-- `WorkspaceApp.kt` is a 1,481-line composable containing navigation, parts,
-  preparation, MIDI repair, structure, arrangement, timeline, mixing, status,
-  dialogs, and transport. The current section-based layouts replace large parts
-  of the workspace instead of preserving the single-screen workstation shown
-  in `UI.png`.
-- Part rows currently expose overlapping actions such as Prepare, Edit role,
-  Preview, and Analyze, while repair, Lo-fi Feel, audio preparation, and retry
-  actions live in separate panels. The import dialog describes internal stages
-  and prerequisites before the user has a clear primary action.
-- Direct MIDI import correctly preserves `source/<part>.*` and
-  `midi/raw/<part>.mid`, but users must understand several internal artifacts
-  and buttons before the part becomes arrangement-ready.
-- `Project.requireCleanMidi()` correctly resolves the selected analysis input:
-  repaired MIDI or the derived Lo-fi Feel MIDI. Analysis and cohesion input use
-  that selection.
-- `StemRenderingMixer.assembleMidi()` nevertheless reads
-  `part.midi.clean` unconditionally for piano. With Lo-fi Feel selected, the
-  analysis and generated instruments can be based on 80 BPM swung MIDI while
-  the rendered piano still uses repaired MIDI. Its fingerprint also hashes the
-  repaired MIDI rather than the selected render source.
-- The per-occurrence cohesion engine and artifact store exist, but no desktop
-  intent or application service generates, reviews, approves, or consumes those
-  artifacts. The arrangement service currently creates the song plan and
-  detailed arrangement directly, and the renderer does not read approved
-  cohesion MIDI.
-- Bass, drums, pad, strings, transitions, piano assembly, and stem rendering
-  each reconstruct section offsets and tempo/meter metadata. Most adapters
-  require every part to have the same PPQ. This duplicates the timing contract
-  and leaves synchronization dependent on several implementations agreeing.
-- Current tests prove deterministic local units and exact output frame counts,
-  but no end-to-end fixture selects Lo-fi Feel, repeats multiple parts, inserts
-  transitions, generates all instruments, and then verifies note-on/frame
-  alignment across the rendered song.
-- The current baseline passed on 2026-08-17:
-  - `./gradlew test :desktopApp:test`
-  - `.venv/bin/python -m unittest discover -s worker/tests` (34 tests; warnings
-    from deliberately tiny audio fixtures)
-  These green checks do not invalidate the reported defects.
-- The worktree already contains user-owned staged deletions and additions under
-  `plan/`. Implementation must preserve them and stage only explicitly selected
-  files if a later task requests a commit.
+- `WorkspaceSection` currently has only Project, Structure, Arrange,
+  Mix & Master, and Library. Import and Export are dialogs/actions rather than
+  focused destinations, and Project currently acts as an overloaded catch-all.
+- `StableWorkspaceShell` renders parts, Structure, Arrangement, Timeline,
+  presentation, and song-plan panels together in wide and medium layouts.
+  Selecting a destination changes emphasis or adds a panel; it does not route
+  to a single page.
+- The structure domain path already exists:
+  `WorkspaceIntent.AddStructurePart` calls `saveStructure`, which delegates to
+  `ProjectApplicationService.saveStructure` and reloads the canonical project.
+  View-model tests cover add, duplicate, move, and remove operations.
+- No current composable dispatches `AddStructurePart`. After MIDI preparation
+  reports `READY_FOR_STRUCTURE`, the message tells the user to add the part,
+  but neither the part row nor Structure panel offers that action. This is the
+  reported workflow break.
+- `opened(...)` always returns navigation to `WorkspaceSection.PROJECT`, even
+  after ordinary mutations such as saving structure or editing a role. Page
+  selection must be preserved for in-page operations and reset only for an
+  explicit create/open flow.
+- Idle panels contain repeated explanations of artifact stages, unavailable
+  features, placeholder behavior, and build internals. Important safety and
+  recovery information is diluted by persistent instructional copy.
+- The worktree already contains unrelated user-owned changes under `plan/`.
+  Implementation must preserve them and stage explicit files only if a later
+  request asks for a commit.
 
-## Target user workflow
+## UX rules
+
+1. **One destination, one page.** The content area renders exactly one page
+   selected by `WorkspaceSection`. Dialogs, transient feedback, and the shared
+   playback session do not count as additional pages.
+2. **One playback owner.** Overview and Video Preview may expose transport
+   controls, but both adapt the same `PlaybackSession`; they never create a
+   second player or independent clock.
+3. **One primary action per state.** Import, preparation, structure,
+   arrangement, render, and export pages each emphasize one safe next action.
+4. **Canonical state decides availability.** Buttons are enabled only from
+   validated project/readiness snapshots. A disabled control has a concise
+   accessible reason, not a paragraph in the visible layout.
+5. **Short copy by default.** Use a heading, optional one-line subtitle, field
+   labels, status chips, and action labels. Put advanced explanations in a
+   Details/help surface. Keep errors and recovery actions visible.
+6. **No invented capabilities.** Unsupported video, location, weather,
+   mastering parameters, or export formats remain visibly unavailable or are
+   omitted. The mockup does not authorize new worker, renderer, or DSP APIs.
+7. **No page-level horizontal scrolling.** Each page adapts to wide, medium,
+   and narrow windows. Only bounded controls such as a timeline or chip row may
+   scroll internally when necessary.
+8. **Keyboard and accessibility parity.** Every page, list, reorder action,
+   slider, toggle, menu, and primary CTA remains keyboard reachable with a
+   useful accessible name and state.
+
+## Navigation and shell
+
+Replace the current stable three-column composition with a small router over
+typed page composables:
 
 ```text
-Open/Create project
-  -> Import MIDI
-  -> Prepare MIDI
-       preserve source/raw
-       standard repair
-       stop only when review is required
-       analyze selected MIDI
-  -> Optional Lo-fi MIDI Feel
-       create 80 BPM + 58% swing derivative
-       A/B preview through the same transport
-       re-analyze automatically after selection
-  -> Add prepared parts to Song Structure
-  -> Generate Cohesion + Arrangement
-       deterministic mode auto-approves safe cohesion
-       Qwen mode requires review/approval
-  -> Inspect synchronized plan and instrument timeline
-  -> Build song
-  -> Mix, master, and export
+WorkspaceScreen
+├── WorkspaceChrome
+│   ├── Overview: horizontal reference navigation
+│   └── Workflow pages: compact left sidebar navigation
+├── one WorkspacePage selected from WorkspaceSection
+├── one global operation-feedback surface
+└── dialogs/settings drawer
 ```
 
-At every point, the selected part exposes exactly one primary action. Advanced
-repair profiles, reports, raw/repaired A/B, rights metadata, and recovery remain
-available through a details surface, not as competing row actions.
+Use these typed destinations:
 
-## Architectural rules
+```text
+OVERVIEW
+IMPORT
+STRUCTURE
+ARRANGE
+MIX_MASTER
+VIDEO_PREVIEW
+EXPORT
+```
 
-1. **One selected-MIDI resolver.** Add a typed application/domain boundary that
-   resolves and validates the current MIDI for a part. Analysis, cohesion,
-   piano assembly, generated MIDI, preview, render fingerprints, and provenance
-   must use it. Direct reads of `midi.clean` outside repair/report code are a
-   regression.
-2. **One song clock.** Create one immutable `SongTimeline` from the saved
-   structure, selected/approved occurrence MIDI, PPQ conversion policy,
-   tempo/meter maps, section boundaries, and transition insertions. Every MIDI
-   generator, renderer, timeline view, and duration/frame calculation consumes
-   it.
-3. **Musical positions before wall-clock time.** Store section and event
-   placement in rational bar/beat/tick coordinates, convert to seconds through
-   the authoritative tempo map, and convert to frames once at the render
-   boundary. Never derive later start positions by summing rounded audio
-   durations.
-4. **Occurrence MIDI is authoritative after cohesion.** Before cohesion, an
-   occurrence resolves to the part's selected repaired/Lo-fi artifact. After
-   cohesion approval, it resolves to the validated per-occurrence MIDI. A
-   repeated source part may therefore have distinct safe edits without losing
-   its stable identity.
-5. **Immutable and atomic artifacts.** Source, raw, repaired, and prior approved
-   files stay unchanged. Lo-fi, cohesion, arrangement, generated MIDI, reports,
-   and audio are written to temporary files, validated, fingerprinted, then
-   atomically published.
-6. **A single UI command may orchestrate several explicit domain stages.** The
-   simplified `Prepare MIDI` action may run standard repair and analysis, but
-   each artifact, report, progress phase, approval threshold, cancellation
-   boundary, and failure recovery remains visible and testable.
-7. **One command, one home.** Contextual play buttons only select an artifact
-   for the persistent transport. Import, retry, readiness recovery, arrangement,
-   build, and export each have one primary location.
-8. **UI is an adapter.** Compose renders immutable UI models and emits intents;
-   file access, worker calls, MIDI transformation, orchestration, and timeline
-   calculations stay in application/domain services.
-9. **No false precision or success.** The UI may show a part as Lo-fi,
-   arranged, synchronized, or built only after current artifact fingerprints
-   and timing validation pass.
+Sound-library settings remain a typed settings surface reached from the gear
+control. Preserve a compatibility mapping from the existing `PROJECT` and
+`LIBRARY` values if saved UI state or tests depend on them; project artifacts
+must not be migrated for a navigation-only change.
+
+Navigation acceptance:
+
+- Exactly one navigation component is present for the active shell.
+- Exactly one page root is composed and exposed in semantics.
+- Clicking Structure removes Import, Arrange, Mix, Overview, Video Preview,
+  and Export page roots from the composition.
+- Back/forward page changes do not reset project, selected part, structure,
+  draft, playback, feedback, or validated readiness state.
+- Ordinary page mutations keep the current destination. Explicit project open
+  or create lands on Overview.
+
+## Page specifications
+
+### Overview
+
+- Reproduce the large top composition from the reference: project title and
+  compact metadata, section strip, five-lane track overview, right-side video
+  preview, selected-section summary, and bottom transport.
+- Derive every section, duration, lane, selected state, and transport value
+  from existing snapshots. Unknown duration or signal is shown as unavailable,
+  never fabricated.
+- Keep one Export CTA that routes to Export. The project selector/settings
+  actions stay in the shell and do not create duplicate page controls.
+- Remove the old simultaneous Parts, Structure, Arrangement, Timeline, Scene,
+  Song Plan, mixer, and master-bus card stack.
+
+### Import
+
+- Match the reference two-column content: one file drop/chooser card and one
+  imported-files card. Drag/drop and Browse use the same validated file-dialog
+  boundary and import contract.
+- Retain actual-format validation for MIDI, WAV/WAVE, and MP3. State the
+  solo-piano limitation once beside supported formats; move technical worker
+  details to an error/recovery surface.
+- Each imported item shows name, type/size, preparation status, and a compact
+  overflow/details action. It does not expose every internal artifact stage.
+- After a successful import, make the state-derived primary action visible:
+  Prepare MIDI, inspect/transcribe supported audio, review repair, or continue
+  to Structure.
+
+### Structure
+
+- Reproduce the reference hierarchy:
+  1. eligible prepared-part palette;
+  2. ordered structure row;
+  3. compact section table with role, bars, edit, duplicate/remove, and reorder
+     affordances.
+- A part is eligible when `primaryPartAction(part)` is `AddToStructure`, meaning
+  its selected MIDI and analysis are current. Ineligible parts remain visible
+  only when a concise status/action helps the user finish preparation.
+- Every eligible palette item has a visible keyboard-accessible action that
+  dispatches `WorkspaceIntent.AddStructurePart(part.id)`.
+- Adding, duplicating, removing, or moving an occurrence writes through the
+  existing typed `saveStructure` path. Never maintain a competing UI-only
+  structure as completion state.
+- Repeated parts are allowed and retain stable occurrence identities. Empty
+  structure shows the palette and one short instruction: “Choose a prepared
+  part to start.”
+- After successful MIDI preparation, expose both “Add to structure” and a
+  “Go to Structure” route. Do not rely on a notification as the only path.
+- Preserve Structure as the active page after every successful structure
+  mutation. Existing downstream artifacts become stale through the current
+  application rules and remain inspectable.
+
+### Arrange
+
+- Match the two planner cards, instrument toggle grid, and compact arrangement
+  settings row from the reference.
+- Deterministic and Qwen controls map only to existing bounded planner enums.
+  Qwen never bypasses draft approval.
+- Generate Arrangement is enabled only when canonical structure, analyses, and
+  cohesion prerequisites are current. Put the one-line missing prerequisite
+  near the disabled CTA; detailed diagnostics belong in help/details.
+- Show draft review/approval in the same page without composing Structure or
+  Timeline as separate editor pages underneath it.
+
+### Mix & Master
+
+- Match the reference split: five logical mix rows on the left and preset/
+  filter controls on the right, followed by Listen/Mix/Master mode controls and
+  the primary Render/Build action.
+- Existing gain, pan, mute, solo, Lo-Fi build option, playback source, and Build
+  Song intents remain authoritative. Unsupported effect knobs are omitted or
+  truthfully disabled with accessible reasons.
+- Meters show measured state only when the UI model contains measured levels;
+  otherwise render a clearly zero-signal placeholder.
+- Master remains a release operation backed by validated artifacts; page
+  navigation or preview never reports a successful render.
+
+### Library / Video Preview
+
+- Reproduce the large focused artwork/preview, timeline, and compact transport
+  shown in the reference. Use deterministic local visual state and the shared
+  playback session.
+- Camera/change/fullscreen controls are shown only if implemented; otherwise
+  they are disabled and accessible without persistent explanatory paragraphs.
+- Sound-library selection and readiness move to the settings drawer opened by
+  the gear control. Required recovery actions remain available there.
+
+### Export
+
+- Reproduce the form-and-summary layout from the reference.
+- Populate only supported choices. WAV is the authoritative lossless export;
+  MP3 appears only when the existing optional exporter is available. Do not
+  advertise unsupported video or codecs.
+- Validate filename and destination through typed application/file-dialog
+  boundaries and project-relative rules where applicable. Export publication
+  remains atomic and output is validated before success.
+- The summary is derived from the current master and release metadata. Missing
+  or stale artifacts disable Export Song with one concise recovery action.
+
+## Content reduction
+
+Apply this copy hierarchy consistently:
+
+| Surface | Visible copy | Deferred copy |
+| --- | --- | --- |
+| Page header | title plus one short subtitle at most | workflow explanation |
+| Empty state | one sentence plus one CTA | artifact graph and prerequisites |
+| Disabled action | short nearby reason or accessible description | technical diagnostics |
+| Success | outcome and resulting artifact name | internal stages already completed |
+| Failure | failed action, cause, and one recovery action | logs/details |
+| Advanced settings | current value and label | safety explanation in Details/help |
+
+Remove repeated sentences about local-only operation, immutable sources,
+placeholder visuals, build internals, stale-artifact theory, and unavailable
+features from normal idle layouts. Preserve those guarantees in code, tests,
+documentation, accessibility descriptions, contextual help, and error states.
+
+## Visual system
+
+- Measure page and crop geometry directly from the 1536 × 1024
+  `App-pages.png`; record reusable values in `MusicWorkspaceTokens` rather than
+  scattering local constants.
+- Add page-shell tokens for sidebar/header width, content margins, card radii,
+  row height, input height, navigation states, table density, and the muted
+  olive primary accent used by the new reference.
+- Reuse one component family for page headers, navigation items, cards,
+  segmented controls, field rows, status chips, compact icon buttons, and
+  primary/secondary actions.
+- Long project/file/role names use ellipsis with full accessible text. Controls
+  never overlap at 100%, 125%, or 150% scale.
+- Wide layout follows the reference. Medium uses the same single page with
+  reduced columns. Narrow stacks that page's regions and collapses the sidebar
+  into a single navigation control; it never composes other destinations.
 
 ## Delivery sequence
 
-| Task | Deliverable | Depends on |
-| --- | --- | --- |
-| [073](tasks/completed/073-authoritative-song-timing-contract.md) | Reproduction fixtures and authoritative timing contract | Current baseline |
-| [074](tasks/completed/074-selected-midi-and-lofi-source.md) | Canonical selected-MIDI resolution and Lo-fi Feel repair | 073 |
-| [075](tasks/completed/075-cohesion-and-synchronized-arrangement.md) | Cohesion integration and synchronized arrangement pipeline | 074 |
-| [076](tasks/completed/076-guided-midi-import.md) | Guided MIDI import and preparation workflow | 074 |
-| [077](tasks/completed/077-ui-reference-reconstruction.md) | Exact `UI.png` Compose workspace reconstruction | 075–076 and presentation-metadata decision |
-| [078](tasks/completed/078-ui-midi-release-acceptance.md) | End-to-end listening, visual, accessibility, and packaging acceptance | 077 |
-| [079](tasks/completed/079-reference-shell-and-left-rail.md) | Restore reference header and left rail | 078 |
-| [080](tasks/completed/080-reference-center-workstation.md) | Restore reference structure, arrangement, and timeline | 079 |
-| [081](tasks/completed/081-reference-right-rail.md) | Restore reference scene/player and AI Song Plan | 079–080 |
-| [082](tasks/completed/082-reference-footer-and-visual-acceptance.md) | Restore footer and complete visual acceptance | 079–081 |
+### Phase 1 — Page router and chrome
 
-Do not combine all six tasks into one change. Each task must leave the project
-buildable and include focused regression tests before the next task starts.
+- Introduce the destination model and one-page router.
+- Build Overview and workflow-page chrome from shared tokens.
+- Preserve state across navigation and ordinary mutations.
+- Add regression tests proving one navigation and one active page.
 
-## Task 073 — Reproduce the defects and define one timing contract
+### Phase 2 — Import and Structure workflow repair
 
-### Goal
+- Build focused Import and Structure pages.
+- Restore the missing visible `AddStructurePart` dispatch.
+- Add the post-prepare Continue/Add action.
+- Preserve Structure selection across save/duplicate/move/remove.
+- This phase must land before visual-only Arrange/Mix work because it fixes the
+  reported blocking workflow defect.
 
-Turn the reported Lo-fi and arrangement failures into deterministic failing
-tests, then introduce the data contract that all later stages will share.
+### Phase 3 — Arrange and Mix & Master
 
-### Requirements
+- Adapt existing planner, instrument, mix, build, and playback intents to the
+  reference pages.
+- Remove duplicate panels and technical idle copy.
+- Keep approval and artifact-readiness behavior unchanged.
 
-- Add MIDI fixtures covering:
-  - two parts with different PPQ values;
-  - multiple tempo changes and 4/4 plus 3/4 meter;
-  - straight eighth notes suitable for Lo-fi swing;
-  - repeated occurrences of one part;
-  - notes that end exactly at a section boundary;
-  - all generated instruments and a one-bar transition;
-  - enough bars to expose accumulated drift.
-- Add a reproduction proving that Lo-fi selection currently reaches analysis
-  but not the rendered piano source. Assert artifact identity/hashes as well as
-  notes and duration; do not depend on listening alone.
-- Add a reproduction for the reported arranged-MIDI drift. Compare absolute
-  note-on times for piano, bass, drums, pad, strings, and transitions at every
-  section boundary and selected internal beats.
-- Define a `SongTimeline`/`SongClock` domain model containing stable occurrence
-  IDs, canonical PPQ, section start/end ticks, local-to-song tick conversion,
-  tempo/meter events, inserted transition ranges, total seconds, and total
-  frames for a requested sample rate.
-- Define a bounded PPQ normalization policy. Prefer an exact common PPQ when it
-  is at most 9,600; otherwise use rational conversion with deterministic
-  rounding, record the maximum tick/time error, and reject input that exceeds
-  the documented tolerance.
-- Centralize half-open boundary semantics: note-ons belong to
-  `[sectionStart, sectionEnd)`, note-offs may occur at `sectionEnd`, and a
-  transition has its own explicit range and incoming tempo/meter ownership.
-- Add an inspectable synchronization report containing input hashes, occurrence
-  ranges, tempo/meter map, PPQ conversions, expected duration/frames, and the
-  maximum measured alignment error.
+### Phase 4 — Video Preview, settings, and Export
 
-### Tests and acceptance
+- Build the local deterministic Video Preview page.
+- Move sound-library configuration to settings without weakening recovery.
+- Build the supported Export page over existing release/export services.
 
-- Observe and record the hard-coded clean-MIDI failure with a red test before
-  implementation. Land the reusable fixture and green timing-contract tests in
-  this task; land the desired end-to-end regression assertion with Task 074 so
-  no task is handed off with a failing suite.
-- Timeline property tests cover conversion round trips, ordering, overflow,
-  meter changes, transition insertions, boundary note-offs, and deterministic
-  serialization.
-- No source or existing derived artifact is modified by diagnostic tests.
-- The task documents the measured reproduction in the test name/output; it
-  does not guess at an audio-device problem.
+### Phase 5 — Copy, responsiveness, and visual acceptance
 
-## Task 074 — Make Lo-fi Feel the actual selected track source
+- Complete the prose audit and advanced help/details surfaces.
+- Verify all pages at wide, medium, narrow, 100%, 125%, and 150% scale.
+- Capture deterministic page goldens and perform overlay/human review against
+  the corresponding regions of `App-pages.png`.
 
-### Goal
+Each phase must remain buildable and receive focused tests before the next
+phase begins. Do not combine the full redesign into one unreviewable change.
 
-Ensure selecting Lo-fi MIDI Feel changes the MIDI that is analyzed, previewed,
-cohesion-processed, arranged, rendered as piano, fingerprinted, and reported.
+## Test plan
 
-### Requirements
+### View-model and application tests
 
-- Introduce `SelectedMidiArtifactResolver` (name may vary) returning a validated
-  typed identity: project-relative path, kind, part ID, profile/version, hash,
-  PPQ, tempo/meter summary, and freshness evidence.
-- Replace downstream direct `midi.clean` reads with the resolver. Repair and
-  quality-report code may still address raw/repaired artifacts explicitly.
-- Fix piano timeline assembly and stem cache fingerprints to use the resolved
-  selected MIDI. If current cohesion exists for an occurrence, delegate to the
-  occurrence resolver defined in Task 075.
-- Verify that the fixed `lofi-80-swing-v1` transform:
-  - emits exactly one 80 BPM tempo at tick zero;
-  - applies 58% eighth-note swing only to eligible offbeats;
-  - preserves meter, note identity, legal order, and positive duration;
-  - handles program changes, controllers, sustain, multi-track input, and end
-    markers without losing relevant non-tempo events;
-  - produces a valid type-0 or type-1 output supported by the input contract;
-  - reports every bounded collision repair and cannot silently move a downbeat.
-- Replace the UI's two ambiguous selection buttons with a clear Original /
-  Lo-fi MIDI Feel segmented choice in the selected-part editor. Show the fixed
-  80 BPM and 58% swing values beside it.
-- Selecting either feel invalidates exactly analysis and downstream artifacts,
-  then offers one primary `Apply and re-analyze` action. The guided path may run
-  re-analysis automatically after confirmation; failure leaves the previous
-  selected artifact inspectable and gives one safe retry.
-- A/B buttons select repaired or Lo-fi MIDI in the shared playback session and
-  use the same position and monitor volume.
-- Keep the final DSP option named `Lo-fi audio texture`; it must never be
-  confused with this MIDI transformation.
+- Navigation changes preserve project, selection, drafts, readiness, feedback,
+  and playback session.
+- Explicit open/create selects Overview; mutation completion preserves the
+  current page.
+- Import -> Prepare MIDI -> Add to Structure saves the correct part ID through
+  the canonical service.
+- Audio import follows inspect/optional cleanup/transcribe/prepare before it is
+  eligible for Structure.
+- Add, repeated add, duplicate, reorder, remove, and clear remain deterministic
+  and invalidate only documented descendants.
+- Stale or unprepared parts cannot bypass eligibility through a UI intent.
 
-### Tests and acceptance
+### Compose tests
 
-- Resolver tests reject missing, escaped, malformed, stale, or hash-mismatched
-  references and preserve legacy readable projects.
-- End-to-end test: import -> repair -> select Lo-fi -> analyze -> arrange ->
-  build, then prove the piano render input hash is the Lo-fi artifact hash and
-  the rendered timing is 80 BPM with the expected swung offbeats.
-- Switching back to Original makes repaired MIDI authoritative everywhere and
-  invalidates only documented descendants.
-- Raw and repaired hashes are identical before and after every transform.
-- Manual A/B check confirms that Original and Lo-fi are audibly distinct and
-  that replay, pause, seek, and stop use the persistent transport.
+- Every destination renders exactly one matching page root and zero page roots
+  for all other destinations.
+- Overview contains section strip, track overview, preview, section info, and
+  one shared transport.
+- Import contains chooser/drop target, imported list, and one primary action.
+- Structure contains eligible palette, sequence, section table, and a working
+  Add to Structure control.
+- Arrange contains planner selection, instrument choices, settings, and one
+  generation CTA.
+- Mix contains five channels, master controls, playback mode, and one render
+  CTA.
+- Video Preview and Export expose only truthful supported actions.
+- Empty project, long names, operation failure, stale artifacts, missing
+  dependency, medium, and narrow fixtures retain navigation and feedback with
+  no duplicate page or page-level horizontal scrolling.
+- Keyboard tests cover navigation, file chooser, structure add/reorder/remove,
+  planner selection, sliders/toggles, playback, and export.
 
-## Task 075 — Integrate cohesion and synchronize arranged MIDI
+### Visual acceptance
 
-### Goal
+- Create deterministic fixtures independent of files, network, clock, audio
+  device, renderer, worker, and model availability.
+- Capture each destination at its reference viewport/crop.
+- Compare major page, sidebar, card, list, form, preview, timeline, and footer
+  edges to `App-pages.png` with a maximum 4 px variance.
+- Use a documented RGB tolerance for pixel differences, then review type,
+  icons, artwork treatment, focus, hover, selected, disabled, error, empty, and
+  long-content states by eye.
 
-Connect the existing per-occurrence cohesion work to the supported desktop
-workflow and make every arranged instrument consume the same song clock.
+### Commands
 
-### Requirements
+```bash
+./gradlew :desktopApp:test
+./gradlew test :desktopApp:test :desktopApp:build
+```
 
-- Add typed application-service operations to generate, load, approve, reject,
-  and regenerate cohesion. Expose deterministic and Qwen planners through the
-  same bounded request model.
-- Deterministic mode may publish an automatically approved no-op/safe cohesion
-  artifact. Qwen mode must remain a draft until explicit review and approval.
-- Make arrangement generation require current cohesion references for every
-  structure occurrence. It must not infer cohesion completion from the mere
-  presence of `song_plan.json`.
-- Use approved cohesion occurrence MIDI as the piano/source lane. Repeated
-  occurrences must resolve independently; falling back to a shared part file
-  after approval is an error.
-- Refactor bass, drums, pad, strings, transition generation, piano assembly,
-  visual timeline snapshots, and stem rendering to consume the single
-  `SongTimeline`. Remove their independent section-offset/tempo concatenation.
-- Convert each part/occurrence to the canonical PPQ once. Carry tempo and meter
-  changes through the timeline without duplicate conflicting meta events at
-  boundaries.
-- Generate a complete piano timeline artifact alongside bass/drums/pad/strings
-  rather than assembling an untracked temporary source that cannot be audited.
-- Validate each generated MIDI against the timeline:
-  - expected PPQ and total end tick;
-  - one authoritative tempo/meter map;
-  - no event outside its occurrence/transition range;
-  - no stuck notes or illegal same-pitch collisions;
-  - expected section boundary note-on times;
-  - stable occurrence identity and input hashes.
-- Convert the authoritative song duration to frames once and require every
-  rendered stem and mix to have that exact frame count. Padding/truncation may
-  follow the documented renderer tail policy but cannot conceal shifted
-  onsets.
-- Include the timeline and every selected/occurrence MIDI hash in cache keys,
-  reports, provenance, stale checks, and release evidence.
-- Add a desktop review surface matching the AI Song Plan panel in `UI.png`:
-  purpose, energy, instruments, transition, selected occurrence, draft/current
-  state, and one regenerate/review action.
+Run worker tests only if a later implementation phase changes worker code or
+its HTTP contract. Run packaging only when a phase explicitly changes package
+resources or launch behavior.
 
-### Tests and acceptance
+## Definition of done
 
-- Multi-part, mixed-PPQ tests verify onset alignment at all section boundaries
-  to at most one canonical tick and rendered click/impulse fixtures to at most
-  one audio frame after conversion.
-- Long repeated arrangements prove there is no cumulative drift.
-- Tests cover no transition, crossfade, bridge, tempo changes inside a section,
-  meter changes, boundary note-offs, silence at a section start, and all five
-  instruments.
-- Approved cohesion edits are audible in the piano stem and visible in its MIDI
-  hash; rejected/stale cohesion is never consumed.
-- All generated MIDI files share the same total musical timeline and all stems
-  share the same exact total frame count.
-- Manual listening uses at least one straight melody and one expressive melody;
-  the reviewer checks the first beat after every transition, not only the song
-  opening.
+- Selecting a destination composes only that page.
+- A successfully prepared/analyzed MIDI part has an obvious, working path into
+  the canonical structure; the same is true for eligible transcribed audio.
+- The UI matches the page hierarchy and graphic language of `App-pages.png` at
+  the reference viewport and remains usable at supported scales and widths.
+- Normal pages are concise; technical explanations are available on demand,
+  while failures and recovery remain explicit.
+- There is one project source of truth, one playback session, one navigation
+  surface, one active page, and one global feedback surface.
+- Focused and full desktop checks pass, with actual golden and manual-review
+  results recorded.
 
-## Task 076 — Simplify MIDI import and preparation
+## Out of scope
 
-### Goal
-
-Make adding a MIDI part understandable without requiring users to know the
-artifact graph or choose among technical maintenance buttons.
-
-### Requirements
-
-- Match the reference's left-panel entry points: `+ Add Part`, `Import MIDI`,
-  and `Import Audio`. `+ Add Part` opens the same source chooser and routes by
-  validated content; the explicit buttons preselect the intended type.
-- Use a compact two-step import sheet:
-  1. choose a file and validate its real format;
-  2. confirm an auto-derived part name/ID and optional musical role.
-- Move rights attestation and advanced metadata into an expandable Details
-  area. It remains required for commercial-ready export but must not obscure a
-  normal local import.
-- After import, show one state-derived primary action per part:
-  - `Prepare MIDI` for raw MIDI;
-  - `Review repair` only when thresholds require approval;
-  - `Apply Lo-fi change` when a feel selection is pending;
-  - `Add to structure` when analysis is current;
-  - `Fix issue` when an artifact/dependency is invalid.
-- `Prepare MIDI` orchestrates the standard transcription-safe repair followed
-  by analysis. It stops safely for explicit approval when thresholds are
-  exceeded. Advanced repair profiles move to a part Details menu and retain
-  their warnings/confirmations.
-- For audio, retain a visibly distinct supported path: solo-piano WAV/MP3 only,
-  inspect -> optional safe cleanup -> transcription -> standard MIDI prepare.
-  Never suggest that arbitrary full mixes or vocals are supported.
-- Replace internal-stage prose with short outcome language. Progress can reveal
-  technical phases while running, but the idle UI should say what the next
-  action accomplishes.
-- Keep one dismissible operation banner and one retry action. Remove duplicate
-  readiness, retry, and status text from part rows and secondary panels.
-- Preserve cancellation, atomic publication, source immutability, stale
-  evidence, and dependency recovery.
-
-### Tests and acceptance
-
-- Compose tests assert one primary CTA per part state and one retry surface.
-- View-model tests cover direct MIDI success, approval-required repair,
-  repair failure/retry, stale analysis, audio transcription prerequisites,
-  cancellation, and project switching during preparation.
-- A new user can import a valid MIDI and make it structure-ready through one
-  import confirmation plus one `Prepare MIDI` action in the normal case.
-- No normal MIDI import screen exposes worker names, paths, cleanup parameters,
-  schema versions, or more than one competing next action.
-- Source/raw hashes remain unchanged and each underlying artifact/report remains
-  independently inspectable.
-
-## Task 077 — Reconstruct the Compose UI from `UI.png`
-
-### Goal
-
-Replace the current card stack/section substitution with the exact wide-screen
-workstation composition shown in `plan/UI.png`, backed by real state and the
-simplified actions from Tasks 074–076.
-
-### Requirements
-
-- Establish a 1536 × 1024 reference viewport and derive measured design tokens
-  from the image: column widths, header/footer heights, gaps, padding, radii,
-  border opacity, typography scale, icon sizes, lane colors, selected states,
-  and control heights. Record them in a small immutable token layer.
-- Reproduce the wide layout regions:
-  - left rail: brand, Scenes/Parts, import actions, and optional presentation
-    metadata cards;
-  - top center: five navigation destinations and selected project control;
-  - center: Song Structure, selected Arrangement section, and instrument
-    Timeline;
-  - right: scene/presentation panel and AI Song Plan;
-  - footer: persistent transport/waveform, five channel strips, master strip,
-    and master-bus controls.
-- The wide layout remains one stable workstation. Navigation focuses/selects
-  the relevant region or editing mode; it must not replace the three columns
-  with unrelated panel sets.
-- Every music control visible in the target is functional or truthfully
-  disabled with one accessible reason. Do not show decorative fake transport,
-  meters, weather, status, waveform, or export success.
-- Use local vector icons or an approved bundled icon set rather than Unicode
-  glyphs. Provide accessible names and selected/pressed semantics.
-- Split `WorkspaceApp.kt` into bounded files/components such as shell/header,
-  parts, structure, arrangement, timeline, scene/plan, transport, mixer,
-  dialogs, and tokens. Keep state derivation outside composables.
-- Remove duplicated labels and actions, including the duplicate Role line in
-  the current part row. Remove the separate status card; operation feedback is
-  a single dismissible banner without changing the reference geometry.
-- Implement deterministic placeholders for unavailable optional presentation
-  metadata. No network calls are permitted for scenes, maps, weather, or time.
-- Provide explicit responsive compositions:
-  - wide: exact reference at 1536 × 1024 and proportional support down to the
-    wide breakpoint;
-  - medium: preserve center timeline and transport, with side rails reachable
-    through drawers/panes rather than horizontal page scrolling;
-  - narrow: one focused pane plus persistent compact transport and direct
-    navigation to all actions.
-- Preserve Ctrl/Cmd transport shortcuts, keyboard structure reordering, visible
-  focus, 48 dp hit targets, non-color status cues, screen-reader labels, and
-  logical focus order.
-
-### Visual verification and acceptance
-
-- Add deterministic populated, empty, loading, blocked, error, and selected
-  UI fixtures. No golden may depend on the user's project, machine paths,
-  clock, network, renderer, worker, or audio device.
-- Capture golden images at 1536 × 1024 and agreed medium/narrow sizes. Compare
-  the wide golden to `plan/UI.png` with a documented overlay/diff workflow.
-- Wide acceptance requires all major panel edges and heights within 4 px of the
-  measured reference, colors within the documented token tolerance, and no
-  clipped/overlapping text at 100% scale. Typography and icons are visually
-  reviewed because raw pixel thresholds alone are insufficient.
-- Test 100%, 125%, and 150% UI scaling, minimum supported window size, long
-  project/part names, empty states, and five-plus structure occurrences.
-- Compose semantics tests assert one navigation row, one project selector, one
-  import action for each advertised path, one timeline, one AI plan, one
-  persistent transport, one mixer, one master output, and one global feedback
-  surface.
-
-## Task 078 — End-to-end acceptance and release gate
-
-### Goal
-
-Verify that the redesigned workflow is not only visually faithful but produces
-audibly synchronized, current, reproducible project artifacts.
-
-### Automated checks
-
-- Run focused tests after each task, then:
-  - `./gradlew test`
-  - `./gradlew :desktopApp:test :desktopApp:build`
-  - `.venv/bin/python -m unittest discover -s worker/tests` only when worker
-    behavior or its contract is touched; keep the Task 059 interpreter explicit.
-- Run an offline end-to-end fixture through import, preparation, Original/Lo-fi
-  selection, analysis, repeated structure, cohesion, arrangement, generated
-  MIDI, stems, mix, master, and release metadata.
-- Validate every input/output fingerprint, selected artifact identity, PPQ,
-  tempo/meter map, section boundary, total tick, total seconds, sample rate,
-  channels, PCM depth, and total frame count.
-- Assert no mutation of source/raw/repaired MIDI and no false-current stale
-  artifact after switching feel, structure, cohesion, arrangement, or mix.
-- Add a regression rule/test that flags new downstream direct reads of
-  `MidiReferences.clean` outside the selected-artifact/repair boundaries.
-
-### Manual checks
-
-- Import a real direct MIDI using only the normal UI and record whether any
-  button or label is ambiguous.
-- A/B Original versus Lo-fi MIDI Feel at matched volume; confirm tempo and swing
-  change in preview and in the built piano stem.
-- Listen to a multi-section arrangement with all five instruments and at least
-  one transition. Check the opening, every boundary, the final bars, pause/
-  resume, seek, replay, and source switching on a real audio device.
-- Compare the running wide workspace side by side and by transparent overlay
-  with `plan/UI.png`; record intentional deviations and obtain explicit product
-  approval for each one.
-- Verify keyboard-only completion of import, part selection/preparation,
-  structure editing, arrangement review, transport, and build.
-- Build and launch the current-OS desktop package when release packaging is in
-  scope. Do not claim Windows/Linux or unavailable renderer/model/device
-  support.
-
-### Definition of done
-
-- A user sees the same wide workstation hierarchy as `UI.png`, not the current
-  stack of interchangeable card columns.
-- Normal direct MIDI import needs one confirmation and one obvious preparation
-  action; advanced controls do not compete with the primary flow.
-- Selecting Lo-fi MIDI Feel changes the source actually heard in preview and
-  used for cohesion, arrangement, piano rendering, caching, and provenance.
-- Approved occurrence MIDI—not repaired MIDI by accident—is the source piano
-  in arranged output.
-- Piano, bass, drums, pad, strings, transitions, visual timeline, and audio
-  stems use one timeline, remain aligned at every section boundary, and do not
-  accumulate drift.
-- Every success state is backed by a current validated artifact; every failure
-  has one clear recovery action; source evidence remains immutable.
-- Automated suites, visual goldens, real-device listening, keyboard checks, and
-  the relevant package build are recorded with their actual results.
-
-## Explicit non-goals
-
-- A full piano-roll/DAW editor or arbitrary note-by-note editing.
-- Variable Lo-fi tempo/swing controls unless separately approved; this plan
-  repairs the existing fixed 80 BPM/58% profile.
-- Cloud storage, telemetry, online weather/maps, live collaboration, or
-  automatic downloads.
-- Hiding worker, renderer, library, model, rights, or artifact failures behind
-  optimistic UI states.
-- Deleting stale artifacts automatically or modifying imported source/raw MIDI.
-- Implementing deferred Tasks 060–062 or broad unrelated refactors.
+- New music-generation algorithms, arbitrary MIDI editing, or a DAW piano roll.
+- Cloud services, telemetry, remote artwork, live location/weather, or external
+  presentation services.
+- A new project database/format, automatic source rewrites, or deletion of
+  stale artifacts.
+- New DSP controls, export codecs, video rendering, or sample/model downloads
+  added only because they appear in the mockup.
+- Deferred worker Tasks 059–062 unless a later user request explicitly promotes
+  one of them.
