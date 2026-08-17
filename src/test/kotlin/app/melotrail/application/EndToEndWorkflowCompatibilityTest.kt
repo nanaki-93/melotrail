@@ -187,7 +187,7 @@ class EndToEndWorkflowCompatibilityTest {
         when (fixture.extension) {
             "mid" -> writeMidi(path)
             "wav" -> writeWav(path)
-            "mp3" -> { Files.createDirectories(path.parent); Files.write(path, byteArrayOf(0x49, 0x44, 0x33, 4, 0, 0, 0, 0, 0, 0)) }
+            "mp3" -> { Files.createDirectories(path.parent); Files.write(path, byteArrayOf(0x49, 0x44, 0x33, 4, 0, 0, 0, 0, 0, 0, 0xFF.toByte(), 0xFB.toByte())) }
         }
         if (fixture.noisy) noisySourceHashes += hash(path)
     }

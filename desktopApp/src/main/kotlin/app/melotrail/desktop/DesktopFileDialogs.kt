@@ -13,6 +13,8 @@ interface DesktopFileDialogs {
     suspend fun chooseNewProjectDirectory(): Path?
     /** Filters are only selection hints; the application service validates the actual input. */
     suspend fun choosePartSource(): Path?
+    /** Existing test/alternate dialogs may ignore the preference; it never replaces service validation. */
+    suspend fun choosePartSource(preference: ImportPreference): Path? = choosePartSource()
     suspend fun chooseSoundLibraryDirectory(): Path?
 }
 
@@ -26,13 +28,30 @@ class SwingDesktopFileDialogs : DesktopFileDialogs {
     }
 
     override suspend fun choosePartSource(): Path? = suspendCancellableCoroutine { continuation ->
+        choosePartSource(ImportPreference.ANY, continuation)
+    }
+
+    override suspend fun choosePartSource(preference: ImportPreference): Path? = suspendCancellableCoroutine { continuation ->
+        choosePartSource(preference, continuation)
+    }
+
+    private fun choosePartSource(preference: ImportPreference, continuation: kotlinx.coroutines.CancellableContinuation<Path?>) {
         showChooser(continuation) {
+            val extensions = when (preference) {
+                ImportPreference.MIDI -> arrayOf("mid", "midi")
+                ImportPreference.AUDIO -> arrayOf("wav", "wave", "mp3")
+                ImportPreference.ANY -> arrayOf("mid", "midi", "wav", "wave", "mp3")
+            }
             JFileChooser().apply {
-                dialogTitle = "Choose MIDI, WAV, or MP3 source"
+                dialogTitle = when (preference) {
+                    ImportPreference.MIDI -> "Choose MIDI source"
+                    ImportPreference.AUDIO -> "Choose solo-piano WAV or MP3 source"
+                    ImportPreference.ANY -> "Choose MIDI, WAV, or MP3 source"
+                }
                 fileSelectionMode = JFileChooser.FILES_ONLY
                 isAcceptAllFileFilterUsed = false
                 fileFilter = javax.swing.filechooser.FileNameExtensionFilter(
-                    "Supported sources (MIDI, WAV, MP3)", "mid", "midi", "wav", "wave", "mp3"
+                    "Supported sources", *extensions
                 )
             }
         }

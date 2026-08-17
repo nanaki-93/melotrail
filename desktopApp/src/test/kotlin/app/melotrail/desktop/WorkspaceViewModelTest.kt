@@ -14,6 +14,9 @@ import app.melotrail.application.GeneratedMidiSnapshot
 import app.melotrail.application.ImportPartRequest
 import app.melotrail.application.ProjectApplicationService
 import app.melotrail.application.ProjectSnapshot
+import app.melotrail.application.PrepareMidiRequest
+import app.melotrail.application.PrepareMidiResult
+import app.melotrail.application.PrepareMidiOutcome
 import app.melotrail.application.SaveStructureRequest
 import app.melotrail.application.UpdatePartRoleRequest
 import app.melotrail.application.PartPreviewApplicationService
@@ -84,6 +87,35 @@ class WorkspaceViewModelTest {
 
         assertEquals("Create or open a project before adding a part.", viewModel.state.value.notification)
         assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation)
+        viewModel.close()
+    }
+
+    @Test
+    fun `part primary actions are derived from canonical artifact state`() {
+        val raw = part("raw").copy(preparation = preparation(rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.STALE_OR_INVALID))
+        val review = raw.copy(id = "review", preparation = preparation(rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.APPROVAL_REQUIRED))
+        val ready = analyzedPart("ready")
+
+        assertIs<PartPrimaryAction.PrepareMidi>(primaryPartAction(raw))
+        assertIs<PartPrimaryAction.ReviewRepair>(primaryPartAction(review))
+        assertIs<PartPrimaryAction.AddToStructure>(primaryPartAction(ready))
+        assertIs<PartPrimaryAction.ApplyLoFiChange>(primaryPartAction(ready, app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL))
+    }
+
+    @Test
+    fun `prepare MIDI uses one orchestration command and exposes its single result`() = runTest {
+        val root = Path.of("build/prepare-midi-project")
+        val snapshot = projectSnapshot(root).copy(parts = listOf(part("intro").copy(
+            preparation = preparation(rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.STALE_OR_INVALID)
+        )))
+        val service = FakeProjectService(result = snapshot)
+        val viewModel = WorkspaceViewModel(service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.PrepareMidi("intro")); advanceUntilIdle()
+
+        assertEquals(PrepareMidiRequest(root, "intro"), service.prepared)
+        assertEquals("MIDI prepared and analyzed. Add intro to structure when ready.", viewModel.state.value.notification)
         viewModel.close()
     }
 
@@ -811,6 +843,14 @@ class WorkspaceViewModelTest {
         analysis = null
     )
 
+    private fun preparation(
+        rawMidi: Boolean = false,
+        quality: app.melotrail.application.MidiQualityStatus = app.melotrail.application.MidiQualityStatus.LEGACY_UNKNOWN
+    ) = app.melotrail.application.PartPreparationSummary(
+        sourcePreserved = true, inspected = true, preparedAudio = false, rawMidi = rawMidi, cleanMidi = quality == app.melotrail.application.MidiQualityStatus.CURRENT,
+        analyzed = false, ready = false, warnings = emptyList(), midiQuality = app.melotrail.application.MidiQualitySummary(quality)
+    )
+
     private fun audioPart(id: String) = part(id).copy(sourceFile = "source/$id.wav", sourceName = "$id.wav", sourceType = app.melotrail.application.PartSourceType.AUDIO)
 
     private fun analyzedPart(id: String) = part(id).copy(analysis = app.melotrail.application.PartAnalysisSummary(
@@ -962,6 +1002,7 @@ private class FakeProjectService(
     var created: CreateProjectRequest? = null
     var imported: ImportPartRequest? = null
     var midiCleanupRetry: app.melotrail.application.RetryMidiCleanupRequest? = null
+    var prepared: PrepareMidiRequest? = null
     var midiFeelSelection: app.melotrail.application.SelectMidiFeelRequest? = null
     var analyzed: AnalyzePartRequest? = null
     var updatedRole: UpdatePartRoleRequest? = null
@@ -994,6 +1035,12 @@ private class FakeProjectService(
         failureOnMidiCleanup?.let { throw it }
         progress.report(app.melotrail.application.OperationProgress("retry-midi-cleanup", 2, 3, "Saving quality report"))
         return checkNotNull(current)
+    }
+
+    override suspend fun prepareMidi(request: PrepareMidiRequest, progress: app.melotrail.application.ProgressSink): PrepareMidiResult {
+        prepared = request
+        progress.report(app.melotrail.application.OperationProgress("prepare-midi", 2, 2, "Analyzing selected MIDI"))
+        return PrepareMidiResult(checkNotNull(current), PrepareMidiOutcome.READY_FOR_STRUCTURE)
     }
 
     override fun approveMidiRepair(root: Path, partId: String): ProjectSnapshot = checkNotNull(current)

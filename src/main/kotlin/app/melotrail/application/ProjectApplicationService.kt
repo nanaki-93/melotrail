@@ -4,6 +4,7 @@ import app.melotrail.arrangement.AnalysisKind
 import app.melotrail.arrangement.MidiAnalysis
 import app.melotrail.arrangement.MidiAnalysisStore
 import app.melotrail.arrangement.MidiCleanupOptions
+import app.melotrail.arrangement.MidiCleanupProfile
 import app.melotrail.arrangement.MidiPartAnalyzer
 import app.melotrail.arrangement.MidiQualityRecommendation
 import app.melotrail.arrangement.MidiQualityReport
@@ -60,6 +61,21 @@ interface ProjectApplicationService {
     fun create(request: CreateProjectRequest): ProjectSnapshot
     suspend fun importPart(request: ImportPartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
     suspend fun retryMidiCleanup(request: RetryMidiCleanupRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
+    /** The guided path has one bounded command: standard repair, then analysis when approval is not required. */
+    suspend fun prepareMidi(request: PrepareMidiRequest, progress: ProgressSink = ProgressSink.None): PrepareMidiResult {
+        val repaired = retryMidiCleanup(RetryMidiCleanupRequest(request.root, request.partId, MidiCleanupOptions(profile = MidiCleanupProfile.TRANSCRIPTION_SAFE)), progress)
+        val part = repaired.parts.firstOrNull { it.id == request.partId }
+            ?: throw IllegalStateException("Part '${request.partId}' disappeared while preparing MIDI.")
+        return if (part.preparation.midiQuality.status == MidiQualityStatus.APPROVAL_REQUIRED) {
+            PrepareMidiResult(repaired, PrepareMidiOutcome.APPROVAL_REQUIRED)
+        } else {
+            PrepareMidiResult(analyzePart(AnalyzePartRequest(request.root, request.partId), progress), PrepareMidiOutcome.READY_FOR_STRUCTURE)
+        }
+    }
+    suspend fun approveMidiRepairAndAnalyze(request: PrepareMidiRequest, progress: ProgressSink = ProgressSink.None): PrepareMidiResult {
+        approveMidiRepair(request.root, request.partId)
+        return PrepareMidiResult(analyzePart(AnalyzePartRequest(request.root, request.partId), progress), PrepareMidiOutcome.READY_FOR_STRUCTURE)
+    }
     fun approveMidiRepair(root: Path, partId: String): ProjectSnapshot
     fun selectMidiFeel(request: SelectMidiFeelRequest): ProjectSnapshot
     suspend fun inspectPart(request: InspectPartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
@@ -91,6 +107,10 @@ data class RetryMidiCleanupRequest(
     val partId: String,
     val cleanup: MidiCleanupOptions
 )
+
+data class PrepareMidiRequest(val root: Path, val partId: String)
+enum class PrepareMidiOutcome { APPROVAL_REQUIRED, READY_FOR_STRUCTURE }
+data class PrepareMidiResult(val project: ProjectSnapshot, val outcome: PrepareMidiOutcome)
 
 /** Fixed named profile only. This is deliberately not a tempo/swing control surface. */
 data class SelectMidiFeelRequest(val root: Path, val partId: String, val input: MidiAnalysisInput)
@@ -278,6 +298,7 @@ class DefaultProjectApplicationService(
         val extension = source.fileName.toString().substringAfterLast('.', "").lowercase()
         require(extension in SUPPORTED_EXTENSIONS) { "Unsupported input file extension: ${if (extension.isEmpty()) "(none)" else extension}" }
         val isMidi = extension in MIDI_EXTENSIONS
+        requireImportSourceFormat(source, extension, isMidi)
         require(!(isMidi && request.transcribe)) { "--transcribe is only valid for audio input" }
         val project = readValidProject(root)
         require(project.parts.none { it.id == request.id }) { "Part ID already exists: ${request.id}" }
@@ -738,6 +759,32 @@ class DefaultProjectApplicationService(
         require(Files.isRegularFile(path) && Files.size(path) >= 14) { "$stage did not create a MIDI file: $path" }
         val header = Files.newInputStream(path).use { it.readNBytes(4).decodeToString() }
         require(header == "MThd") { "$stage did not create a MIDI file: $path" }
+    }
+
+    /** Extension is only a chooser hint. Validate the container before publishing immutable source evidence. */
+    private fun requireImportSourceFormat(source: Path, extension: String, isMidi: Boolean) {
+        when {
+            isMidi -> requireMidiArtifact(source, "MIDI import")
+            extension in setOf("wav", "wave") -> require(isWaveArtifact(source)) {
+                "WAV import is not a RIFF/WAVE file: $source"
+            }
+            extension == "mp3" -> {
+                val header = Files.newInputStream(source).use { it.readNBytes(10) }
+                val startsWithFrame = header.size >= 2 && header[0] == 0xFF.toByte() && (header[1].toInt() and 0xE0) == 0xE0
+                val id3Size = if (header.size == 10 && header.copyOfRange(0, 3).decodeToString() == "ID3" && header.copyOfRange(6, 10).all { it.toInt() and 0x80 == 0 }) {
+                    header.copyOfRange(6, 10).fold(0L) { size, byte -> (size shl 7) or (byte.toLong() and 0x7F) }
+                } else null
+                val frameAfterId3 = id3Size?.let { size ->
+                    val offset = 10L + size
+                    if (offset + 2 > Files.size(source)) false else Files.newInputStream(source).use { input ->
+                        input.skipNBytes(offset)
+                        val frame = input.readNBytes(2)
+                        frame.size == 2 && frame[0] == 0xFF.toByte() && (frame[1].toInt() and 0xE0) == 0xE0
+                    }
+                } ?: false
+                require(startsWithFrame || frameAfterId3) { "MP3 import does not contain a valid MPEG frame sync: $source" }
+            }
+        }
     }
 
     private fun temporaryMidi(target: Path): Path = target.resolveSibling(".${target.fileName}.prepare-${UUID.randomUUID()}.mid")

@@ -62,7 +62,7 @@ class UnifiedInputAdapterTest {
     fun `audio WAV and MP3 imports use transcription without changing originals`() {
         listOf("wav", "mp3").forEachIndexed { index, extension ->
             val root = createProject("audio-$extension")
-            val input = tempDir.resolve("input-$extension.$extension").also { Files.write(it, "original-$extension".encodeToByteArray()) }
+            val input = tempDir.resolve("input-$extension.$extension").also { if (extension == "wav") writeWav(it) else writeMp3(it) }
             val before = Files.readAllBytes(input)
 
             ArrangementProjectCommands.executePartAddForTest(
@@ -82,7 +82,7 @@ class UnifiedInputAdapterTest {
     @Test
     fun `import does not invoke cleanup and registers raw artifacts`() {
         val root = createProject("failure")
-        val input = tempDir.resolve("verse.wav").also { Files.writeString(it, "source") }
+        val input = tempDir.resolve("verse.wav").also(::writeWav)
 
         ArrangementProjectCommands.executePartAddForTest(
                 arrayOf("part", "add", root.toString(), "--id", "A", "--file", input.toString(), "--transcribe"),
@@ -120,7 +120,7 @@ class UnifiedInputAdapterTest {
     @Test
     fun `v2 input validation rejects bad flags formats and render options before registration`() {
         val root = createProject("validation")
-        val audio = tempDir.resolve("verse.wav").also { Files.writeString(it, "audio") }
+        val audio = tempDir.resolve("verse.wav").also(::writeWav)
         val midi = midiFile("verse.mid")
 
         assertTrue(assertThrows(IllegalArgumentException::class.java) {
@@ -166,6 +166,14 @@ class UnifiedInputAdapterTest {
     private fun assertMidi(path: Path) = assertEquals("MThd", Files.readAllBytes(path).copyOfRange(0, 4).decodeToString())
 
     private companion object {
+        fun writeWav(path: Path) {
+            Files.write(path, byteArrayOf('R'.code.toByte(), 'I'.code.toByte(), 'F'.code.toByte(), 'F'.code.toByte(), 4, 0, 0, 0, 'W'.code.toByte(), 'A'.code.toByte(), 'V'.code.toByte(), 'E'.code.toByte()))
+        }
+
+        fun writeMp3(path: Path) {
+            Files.write(path, byteArrayOf('I'.code.toByte(), 'D'.code.toByte(), '3'.code.toByte(), 4, 0, 0, 0, 0, 0, 0, 0xFF.toByte(), 0xFB.toByte()))
+        }
+
         fun writeMidi(path: Path) {
             Files.createDirectories(checkNotNull(path.parent))
             val sequence = Sequence(Sequence.PPQ, 480)

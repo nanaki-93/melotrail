@@ -64,8 +64,8 @@ class ArrangementProjectCommandsTest {
     fun `part add copies supported audio preserves source and updates project json`() {
         val projectRoot = createProject("demo")
         val source = tempDir.resolve("piano.wav")
-        Files.writeString(source, "original source bytes")
-        val sourceBefore = Files.readString(source)
+        writeSourceWav(source, 44_100, 1, 1)
+        val sourceBefore = Files.readAllBytes(source)
 
         val result = ArrangementProjectCommands.execute(
             arrayOf(
@@ -77,8 +77,8 @@ class ArrangementProjectCommandsTest {
         val copied = projectRoot.resolve("parts/A.wav")
         val project = readProject(projectRoot)
         assertTrue(result.contains("Added legacy audio part 'A'"))
-        assertEquals(sourceBefore, Files.readString(source))
-        assertEquals(sourceBefore, Files.readString(copied))
+        assertTrue(sourceBefore.contentEquals(Files.readAllBytes(source)))
+        assertTrue(sourceBefore.contentEquals(Files.readAllBytes(copied)))
         assertEquals(listOf("A"), project.parts.map { it.id })
         assertEquals("parts/A.wav", project.parts.single().file)
         assertEquals("verse", project.parts.single().role)
@@ -89,17 +89,17 @@ class ArrangementProjectCommandsTest {
         val projectRoot = createProject("demo")
         val firstSource = tempDir.resolve("first.wav")
         val secondSource = tempDir.resolve("second.wav")
-        Files.writeString(firstSource, "first source")
-        Files.writeString(secondSource, "second source")
+        writeSourceWav(firstSource, 44_100, 1, 1)
+        writeSourceWav(secondSource, 44_100, 1, 1)
         addPart(projectRoot, "A", firstSource)
-        val copiedBefore = Files.readString(projectRoot.resolve("parts/A.wav"))
+        val copiedBefore = Files.readAllBytes(projectRoot.resolve("parts/A.wav"))
 
         val exception = assertThrows(IllegalArgumentException::class.java) {
             addPart(projectRoot, "A", secondSource)
         }
 
         assertTrue(exception.message.orEmpty().contains("Part ID already exists: A"))
-        assertEquals(copiedBefore, Files.readString(projectRoot.resolve("parts/A.wav")))
+        assertTrue(copiedBefore.contentEquals(Files.readAllBytes(projectRoot.resolve("parts/A.wav"))))
         assertEquals(1, readProject(projectRoot).parts.size)
     }
 

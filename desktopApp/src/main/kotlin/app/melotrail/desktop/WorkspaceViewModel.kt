@@ -26,6 +26,8 @@ import app.melotrail.application.PreviewResult
 import app.melotrail.application.OperationProgress
 import app.melotrail.application.PartSourceType
 import app.melotrail.application.PartAnalysisStatus
+import app.melotrail.application.PrepareMidiRequest
+import app.melotrail.application.PrepareMidiOutcome
 import app.melotrail.application.ProjectApplicationService
 import app.melotrail.application.ProjectSnapshot
 import app.melotrail.application.RetryMidiCleanupRequest
@@ -86,6 +88,8 @@ data class WorkspaceUiState(
     val selectedArtifact: CreationArtifactReference? = null,
     /** A feel choice is deliberately pending until the one apply/re-analysis action runs. */
     val pendingMidiFeel: MidiAnalysisInput? = null,
+    /** Advanced repair/report controls stay out of the normal import path. */
+    val partDetailsExpanded: Boolean = false,
     val midiQualityReview: MidiQualityReviewDraft = MidiQualityReviewDraft(),
     val audioPreparation: AudioPreparationUiState = AudioPreparationUiState(),
     val arrangementDraft: ArrangementDraft = ArrangementDraft(),
@@ -250,6 +254,7 @@ sealed interface WorkspaceOperation {
     data class InspectingPart(val id: String) : WorkspaceOperation
     data class ApplyingAudioCleanup(val id: String) : WorkspaceOperation
     data class RetryingMidiCleanup(val id: String, val progress: OperationProgress? = null) : WorkspaceOperation
+    data class PreparingMidi(val id: String, val progress: OperationProgress? = null) : WorkspaceOperation
     data class SelectingMidiFeel(val id: String) : WorkspaceOperation
     data class TranscribingPart(val id: String) : WorkspaceOperation
     data class UpdatingPartRole(val id: String) : WorkspaceOperation
@@ -270,6 +275,7 @@ val WorkspaceOperation.isMutating: Boolean
         this is WorkspaceOperation.ImportingPart || this is WorkspaceOperation.AnalyzingPart ||
         this is WorkspaceOperation.InspectingPart || this is WorkspaceOperation.ApplyingAudioCleanup || this is WorkspaceOperation.TranscribingPart ||
         this is WorkspaceOperation.RetryingMidiCleanup ||
+        this is WorkspaceOperation.PreparingMidi ||
         this is WorkspaceOperation.SelectingMidiFeel ||
         this is WorkspaceOperation.UpdatingPartRole || this is WorkspaceOperation.SavingStructure ||
         this is WorkspaceOperation.GeneratingCohesion || this is WorkspaceOperation.ApprovingCohesion ||
@@ -285,7 +291,7 @@ sealed interface WorkspaceDialog {
     ) : WorkspaceDialog
 
     data class ImportPart(
-        val audio: Boolean,
+        val audio: Boolean = false,
         val source: Path? = null,
         val id: String = "",
         val role: String = "",
@@ -293,7 +299,9 @@ sealed interface WorkspaceDialog {
         val sourceSizeBytes: Long? = null,
         val validationMessage: String? = null,
         /** An explicit conservative default; commercial export remains blocked until changed if applicable. */
-        val rightsClaim: SourceRightsClaim = SourceRightsClaim.NOT_ESTABLISHED
+        val rightsClaim: SourceRightsClaim = SourceRightsClaim.NOT_ESTABLISHED,
+        val preference: ImportPreference = ImportPreference.ANY,
+        val detailsExpanded: Boolean = false
     ) : WorkspaceDialog
 
     data class EditRole(val partId: String, val role: String) : WorkspaceDialog
@@ -304,11 +312,38 @@ sealed interface WorkspaceDialog {
     data object SoundLibrarySettings : WorkspaceDialog
 }
 
+enum class ImportPreference { ANY, MIDI, AUDIO }
+
 enum class ImportSourceKind(val label: String, val isAudio: Boolean) {
     MIDI("MIDI", false),
     WAV("WAV", true),
     MP3("MP3", true),
     UNSUPPORTED("Unsupported", false)
+}
+
+/** Exactly one next action is derived from canonical artifact state, never from a row-local flag. */
+sealed interface PartPrimaryAction {
+    data class PrepareMidi(val partId: String) : PartPrimaryAction
+    data class ReviewRepair(val partId: String) : PartPrimaryAction
+    data class ApplyLoFiChange(val partId: String) : PartPrimaryAction
+    data class AddToStructure(val partId: String) : PartPrimaryAction
+    data class FixIssue(val partId: String) : PartPrimaryAction
+}
+
+internal fun primaryPartAction(part: app.melotrail.application.PartSummary, pendingMidiFeel: MidiAnalysisInput? = null): PartPrimaryAction = when {
+    part.preparation.midiQuality.status == MidiQualityStatus.APPROVAL_REQUIRED -> PartPrimaryAction.ReviewRepair(part.id)
+    pendingMidiFeel != null && pendingMidiFeel != part.preparation.midiFeel.selected -> PartPrimaryAction.ApplyLoFiChange(part.id)
+    part.preparation.rawMidi && part.preparation.midiQuality.status == MidiQualityStatus.STALE_OR_INVALID -> PartPrimaryAction.PrepareMidi(part.id)
+    part.analysis?.status == PartAnalysisStatus.MIDI -> PartPrimaryAction.AddToStructure(part.id)
+    else -> PartPrimaryAction.FixIssue(part.id)
+}
+
+internal fun PartPrimaryAction.label(): String = when (this) {
+    is PartPrimaryAction.PrepareMidi -> "Prepare MIDI"
+    is PartPrimaryAction.ReviewRepair -> "Review repair"
+    is PartPrimaryAction.ApplyLoFiChange -> "Apply Lo-fi change"
+    is PartPrimaryAction.AddToStructure -> "Add to structure"
+    is PartPrimaryAction.FixIssue -> "Fix issue"
 }
 
 internal fun detectImportSourceKind(source: Path): ImportSourceKind = when (
@@ -326,6 +361,7 @@ sealed interface WorkspaceRetry {
     data class Inspect(val root: Path, val partId: String) : WorkspaceRetry
     data class Cleanup(val root: Path, val partId: String, val mode: InputCleanupMode) : WorkspaceRetry
     data class MidiCleanup(val request: RetryMidiCleanupRequest) : WorkspaceRetry
+    data class PrepareMidi(val request: PrepareMidiRequest) : WorkspaceRetry
     data class ApplyMidiFeel(val root: Path, val partId: String, val input: MidiAnalysisInput) : WorkspaceRetry
     data class Transcribe(val root: Path, val partId: String, val selectedInput: TranscriptionInputArtifact) : WorkspaceRetry
     data class GenerateArrangement(val request: GenerateArrangementRequest) : WorkspaceRetry
@@ -348,10 +384,14 @@ sealed interface WorkspaceIntent {
     data object ClearSoundLibraryRoot : WorkspaceIntent
     data object RefreshSoundLibrary : WorkspaceIntent
     data class ShowImportPart(val audio: Boolean) : WorkspaceIntent
+    data object ShowAddPart : WorkspaceIntent
     data object ChooseImportSource : WorkspaceIntent
     data class ImportSourceChosen(val source: Path?) : WorkspaceIntent
     data class UpdateImportPart(val draft: WorkspaceDialog.ImportPart) : WorkspaceIntent
     data object ImportPart : WorkspaceIntent
+    data class PrepareMidi(val partId: String) : WorkspaceIntent
+    data object TogglePartDetails : WorkspaceIntent
+    data class ShowPartDetails(val partId: String) : WorkspaceIntent
     data class AnalyzePart(val partId: String) : WorkspaceIntent
     data class SelectPart(val partId: String) : WorkspaceIntent
     data object InspectSelectedPart : WorkspaceIntent
@@ -435,6 +475,8 @@ class WorkspaceViewModel(
     private val mutableState = MutableStateFlow(WorkspaceUiState())
     private var mixCommit: Job? = null
     private var buildJob: Job? = null
+    /** Import and guided preparation are cancellable at their artifact-safe boundaries. */
+    private var importPreparationJob: Job? = null
     private var playbackJob: Job? = null
     private var playbackSessionId = 0L
     private var playbackFeedbackSessionId: Long? = null
@@ -471,10 +513,14 @@ class WorkspaceViewModel(
             WorkspaceIntent.ClearSoundLibraryRoot -> mutableState.update { it.copy(soundLibrary = soundLibrarySettings.clear()) }
             WorkspaceIntent.RefreshSoundLibrary -> mutableState.update { it.copy(soundLibrary = soundLibrarySettings.refresh()) }
             is WorkspaceIntent.ShowImportPart -> showImportPart(intent.audio)
+            WorkspaceIntent.ShowAddPart -> showAddPart()
             WorkspaceIntent.ChooseImportSource -> chooseImportSource()
             is WorkspaceIntent.ImportSourceChosen -> updateImportSource(intent.source)
             is WorkspaceIntent.UpdateImportPart -> mutableState.update { it.copy(dialog = intent.draft) }
             WorkspaceIntent.ImportPart -> importPart()
+            is WorkspaceIntent.PrepareMidi -> prepareMidi(intent.partId)
+            WorkspaceIntent.TogglePartDetails -> mutableState.update { it.copy(partDetailsExpanded = !it.partDetailsExpanded) }
+            is WorkspaceIntent.ShowPartDetails -> mutableState.update { it.copy(selectedPartId = intent.partId, partDetailsExpanded = true) }
             is WorkspaceIntent.AnalyzePart -> analyzePart(intent.partId)
             is WorkspaceIntent.SelectPart -> selectPart(intent.partId)
             WorkspaceIntent.InspectSelectedPart -> inspectSelectedPart()
@@ -591,7 +637,14 @@ class WorkspaceViewModel(
     }
 
     private fun requestOpenProject(root: Path) {
-        if (state.value.operation.isMutating) return busy("switch projects")
+        if (state.value.operation.isMutating) {
+            if (state.value.operation is WorkspaceOperation.ImportingPart || state.value.operation is WorkspaceOperation.PreparingMidi) {
+                importPreparationJob?.cancel()
+                mutableState.update { it.copy(operation = WorkspaceOperation.Idle, retry = null) }
+                openProject(root)
+            } else busy("switch projects")
+            return
+        }
         if (hasUnsavedDraft()) {
             mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmDiscardDraft(root = root)) }
         } else {
@@ -661,14 +714,20 @@ class WorkspaceViewModel(
     private fun showImportPart(audio: Boolean) {
         if (state.value.project == null) return fail("import part", "Create or open a project before adding a part.")
         if (state.value.operation.isMutating) return busy("add a part")
-        // The single dialog detects the source type after selection. Keep the former intent
-        // parameter only as a compile-safe adapter for existing callers.
-        mutableState.update { it.copy(dialog = WorkspaceDialog.ImportPart(audio = false), notification = null) }
+        mutableState.update {
+            it.copy(dialog = WorkspaceDialog.ImportPart(audio = audio, preference = if (audio) ImportPreference.AUDIO else ImportPreference.MIDI), notification = null)
+        }
+    }
+
+    private fun showAddPart() {
+        if (state.value.project == null) return fail("import part", "Create or open a project before adding a part.")
+        if (state.value.operation.isMutating) return busy("add a part")
+        mutableState.update { it.copy(dialog = WorkspaceDialog.ImportPart(), notification = null) }
     }
 
     private fun chooseImportSource() = scope.launch {
         val draft = state.value.dialog as? WorkspaceDialog.ImportPart ?: return@launch
-        runCatching { fileDialogs.choosePartSource() }
+        runCatching { fileDialogs.choosePartSource(draft.preference) }
             .onSuccess(::updateImportSource)
             .onFailure { failure ->
                 mutableState.update { it.copy(dialog = draft.copy(validationMessage = failure.message ?: "The source chooser could not be opened.")) }
@@ -689,11 +748,20 @@ class WorkspaceViewModel(
             it.copy(dialog = draft.copy(
                 audio = type.isAudio,
                 source = source,
+                id = autoPartId(source, it.project?.parts.orEmpty()),
                 detectedType = type,
                 sourceSizeBytes = size,
                 validationMessage = message
             ))
         }
+    }
+
+    private fun autoPartId(source: Path, parts: List<app.melotrail.application.PartSummary>): String {
+        val base = source.fileName.toString().substringBeforeLast('.').lowercase()
+            .replace(Regex("[^a-z0-9_-]+"), "-").trim('-').ifBlank { "part" }.take(48)
+        val existing = parts.map { it.id.lowercase() }.toSet()
+        return generateSequence(1) { it + 1 }.map { index -> if (index == 1) base else "$base-$index" }
+            .first { it.lowercase() !in existing }
     }
 
     private fun importPart() {
@@ -725,7 +793,7 @@ class WorkspaceViewModel(
     private fun runImport(request: ImportPartRequest) {
         val feedbackId = beginFeedback(OperationKind.IMPORT, OperationPhase.VALIDATING, "Validating import for ${request.id}…")
         mutableState.update { it.copy(operation = WorkspaceOperation.ImportingPart(request.id), notification = null, retry = null, dialog = null, operationFeedback = feedbackTracker.current) }
-        scope.launch {
+        importPreparationJob = scope.launch {
             runCatching {
                 withContext(ioDispatcher) {
                     projectService.importPart(request) { progress ->
@@ -733,7 +801,7 @@ class WorkspaceViewModel(
                     }.refreshed()
                 }
             }.onSuccess { opened(it, "Imported ${request.id}", feedbackId) }
-                .onFailure { fail("import part", it.message ?: "Unable to import ${request.id}.", WorkspaceRetry.Import(request), feedbackId) }
+                .onFailure { failure -> if (failure !is CancellationException) fail("import part", failure.message ?: "Unable to import ${request.id}.", WorkspaceRetry.Import(request), feedbackId) }
         }
     }
 
@@ -754,14 +822,47 @@ class WorkspaceViewModel(
         }
     }
 
+    private fun prepareMidi(partId: String) {
+        val project = state.value.project ?: return fail("Prepare MIDI", "Open a project before preparing MIDI.")
+        val part = project.parts.find { it.id == partId } ?: return fail("Prepare MIDI", "Part '$partId' is no longer available.")
+        if (!part.preparation.rawMidi) return fail("Prepare MIDI", "Part '$partId' has no immutable raw MIDI to prepare.")
+        if (state.value.operation.isMutating) return
+        val request = PrepareMidiRequest(project.root, partId)
+        val feedbackId = beginFeedback(OperationKind.MIDI_REPAIR, OperationPhase.WAITING_FOR_WORKER, "Preparing MIDI for $partId…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.PreparingMidi(partId), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
+        importPreparationJob = scope.launch {
+            runCatching {
+                withContext(ioDispatcher) {
+                    projectService.prepareMidi(request) { progress ->
+                        scope.launch { updateProgress(feedbackId, WorkspaceOperation.PreparingMidi(partId, progress)) }
+                    }
+                }
+            }.onSuccess { result ->
+                cancelPlaybackSession(resetState = true)
+                val message = when (result.outcome) {
+                    PrepareMidiOutcome.APPROVAL_REQUIRED -> "Repair is ready for review before analysis."
+                    PrepareMidiOutcome.READY_FOR_STRUCTURE -> "MIDI prepared and analyzed. Add $partId to structure when ready."
+                }
+                mutableState.update { current ->
+                    current.copy(project = result.project, selectedPartId = partId, operation = WorkspaceOperation.Idle,
+                        notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message) ?: current.operationFeedback,
+                        retry = null, downstreamArtifactsStale = true)
+                }
+            }.onFailure { failure ->
+                if (failure is CancellationException) return@onFailure
+                fail("Prepare MIDI", failure.message ?: "Unable to prepare MIDI for $partId.", WorkspaceRetry.PrepareMidi(request), feedbackId)
+            }
+        }
+    }
+
     private fun selectPart(partId: String) {
         val project = state.value.project ?: return
         val part = project.parts.find { it.id == partId } ?: return
         if (part.sourceType != PartSourceType.AUDIO) {
-            mutableState.update { it.copy(selectedPartId = partId, selectedArtifact = CreationArtifactReference(CreationArtifactKind.PART_SOURCE, partId), midiQualityReview = MidiQualityReviewDraft(), audioPreparation = AudioPreparationUiState(partId = partId), notification = "Audio preparation is available for WAV/MP3 parts only.") }
+            mutableState.update { it.copy(selectedPartId = partId, selectedArtifact = CreationArtifactReference(CreationArtifactKind.PART_SOURCE, partId), midiQualityReview = MidiQualityReviewDraft(), audioPreparation = AudioPreparationUiState(partId = partId), partDetailsExpanded = false, notification = "Audio preparation is available for WAV/MP3 parts only.") }
             return
         }
-        mutableState.update { it.copy(selectedPartId = partId, selectedArtifact = CreationArtifactReference(CreationArtifactKind.PART_SOURCE, partId), midiQualityReview = MidiQualityReviewDraft(), audioPreparation = AudioPreparationUiState(partId = partId), notification = null) }
+        mutableState.update { it.copy(selectedPartId = partId, selectedArtifact = CreationArtifactReference(CreationArtifactKind.PART_SOURCE, partId), midiQualityReview = MidiQualityReviewDraft(), audioPreparation = AudioPreparationUiState(partId = partId), partDetailsExpanded = false, notification = null) }
         loadPreparation(project.root, partId)
     }
 
@@ -835,11 +936,16 @@ class WorkspaceViewModel(
         val project = state.value.project ?: return fail("MIDI repair", "Open a project before approving MIDI repair.")
         val partId = state.value.selectedPartId ?: return fail("MIDI repair", "Select a part before approving MIDI repair.")
         if (state.value.operation.isMutating) return
-        mutableState.update { it.copy(operation = WorkspaceOperation.RetryingMidiCleanup(partId), notification = null, retry = null) }
+        val request = PrepareMidiRequest(project.root, partId)
+        val feedbackId = beginFeedback(OperationKind.MIDI_REPAIR, OperationPhase.VALIDATING, "Approving repair and analyzing $partId…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.PreparingMidi(partId), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
-            runCatching { withContext(ioDispatcher) { projectService.approveMidiRepair(project.root, partId) } }
-                .onSuccess { snapshot -> mutableState.update { it.copy(project = snapshot, operation = WorkspaceOperation.Idle, notification = "MIDI repair approved. Analyze $partId next.") } }
-                .onFailure { failure -> fail("MIDI repair", failure.message ?: "Unable to approve MIDI repair for $partId.") }
+            runCatching { withContext(ioDispatcher) { projectService.approveMidiRepairAndAnalyze(request) } }
+                .onSuccess { result ->
+                    val message = "Repair approved and MIDI analyzed. Add $partId to structure when ready."
+                    mutableState.update { current -> current.copy(project = result.project, operation = WorkspaceOperation.Idle, notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message) ?: current.operationFeedback, downstreamArtifactsStale = true) }
+                }
+                .onFailure { failure -> if (failure !is CancellationException) fail("MIDI repair", failure.message ?: "Unable to approve MIDI repair for $partId.", WorkspaceRetry.PrepareMidi(request), feedbackId) }
         }
     }
 
@@ -1239,6 +1345,10 @@ class WorkspaceViewModel(
             if (action.request.cleanup.profile == MidiCleanupProfile.TIGHTEN_TIMING) {
                 mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmTightenTiming(action.request.partId)) }
             } else runMidiCleanupRetry(action.request)
+        }
+        is WorkspaceRetry.PrepareMidi -> {
+            mutableState.update { it.copy(selectedPartId = action.request.partId) }
+            prepareMidi(action.request.partId)
         }
         is WorkspaceRetry.ApplyMidiFeel -> {
             mutableState.update { it.copy(selectedPartId = action.partId, pendingMidiFeel = action.input) }
@@ -1642,6 +1752,7 @@ class WorkspaceViewModel(
         val feedback = feedbackTracker.cancelAtBoundary(state.value.operationFeedback.sessionId, "Cancellation requested; finishing the current safe boundary…") ?: return
         mutableState.update { it.copy(operationFeedback = feedback) }
         operationLogger.operationEvent(feedback.sessionId, feedback.kind, feedback.phase)
+        importPreparationJob?.cancel()
         buildJob?.cancel()
     }
 
@@ -1664,7 +1775,7 @@ class WorkspaceViewModel(
         return true
     }
 
-    override fun close() { mixCommit?.cancel(); buildJob?.cancel(); cancelPlaybackSession(resetState = true); player?.close(); scope.cancel() }
+    override fun close() { mixCommit?.cancel(); importPreparationJob?.cancel(); buildJob?.cancel(); cancelPlaybackSession(resetState = true); player?.close(); scope.cancel() }
 
     private object UnavailableRuntimeReadinessService : RuntimeReadinessService {
         override suspend fun check(): RuntimeReadiness = RuntimeReadiness.checking()

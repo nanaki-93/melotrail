@@ -69,7 +69,7 @@ class ProjectApplicationServiceTest {
             override suspend fun clean(input: Path, output: Path) = error("cleanup must not run during import")
         })
         service.create(CreateProjectRequest(root))
-        val audio = tempDir.resolve("input.wav").also { Files.writeString(it, "original audio") }
+        val audio = wav("input.wav")
         val before = Files.readAllBytes(audio)
 
         blocking { service.importPart(ImportPartRequest(root, "A", audio, transcribe = true)) }
@@ -93,7 +93,7 @@ class ProjectApplicationServiceTest {
             }
         })
         service.create(CreateProjectRequest(root))
-        val audio = tempDir.resolve("retry.wav").also { Files.writeString(it, "original audio") }
+        val audio = wav("retry.wav")
         val sourceBefore = Files.readAllBytes(audio)
 
         blocking { service.importPart(ImportPartRequest(root, "A", audio, transcribe = true)) }
@@ -109,6 +109,38 @@ class ProjectApplicationServiceTest {
         assertTrue(sourceBefore.contentEquals(Files.readAllBytes(audio)))
         assertTrue(sourceBefore.contentEquals(Files.readAllBytes(root.resolve("source/A.wav"))))
         assertTrue(rawBefore.contentEquals(Files.readAllBytes(root.resolve("midi/raw/A.mid"))))
+    }
+
+    @Test
+    fun `Prepare MIDI atomically repairs then analyzes without mutating source or raw evidence`() {
+        val service = service()
+        val root = tempDir.resolve("prepare-midi")
+        val input = midi("prepare-source.mid")
+        val sourceBefore = Files.readAllBytes(input)
+        service.create(CreateProjectRequest(root))
+        blocking { service.importPart(ImportPartRequest(root, "A", input)) }
+        val rawBefore = Files.readAllBytes(root.resolve("midi/raw/A.mid"))
+
+        val result = blocking { service.prepareMidi(PrepareMidiRequest(root, "A")) }
+
+        assertEquals(PrepareMidiOutcome.READY_FOR_STRUCTURE, result.outcome)
+        assertEquals(PartAnalysisStatus.MIDI, result.project.parts.single().analysis?.status)
+        assertTrue(sourceBefore.contentEquals(Files.readAllBytes(input)))
+        assertTrue(sourceBefore.contentEquals(Files.readAllBytes(root.resolve("source/A.mid"))))
+        assertTrue(rawBefore.contentEquals(Files.readAllBytes(root.resolve("midi/raw/A.mid"))))
+    }
+
+    @Test
+    fun `import rejects an extension disguised as MIDI before publishing source evidence`() {
+        val service = service()
+        val root = tempDir.resolve("invalid-midi")
+        val invalid = tempDir.resolve("not-midi.mid").also { Files.writeString(it, "not a MIDI file") }
+        service.create(CreateProjectRequest(root))
+
+        assertTrue(assertThrows(IllegalArgumentException::class.java) {
+            blocking { service.importPart(ImportPartRequest(root, "A", invalid)) }
+        }.message.orEmpty().contains("MIDI import did not create a MIDI file"))
+        assertFalse(Files.exists(root.resolve("source/A.mid")))
     }
 
     @Test
@@ -253,5 +285,12 @@ class ProjectApplicationServiceTest {
         track.add(javax.sound.midi.MidiEvent(javax.sound.midi.ShortMessage(javax.sound.midi.ShortMessage.NOTE_ON, 0, 60, 100), 0))
         track.add(javax.sound.midi.MidiEvent(javax.sound.midi.ShortMessage(javax.sound.midi.ShortMessage.NOTE_OFF, 0, 60, 0), 480))
         return tempDir.resolve(name).also { MidiSystem.write(sequence, 1, it.toFile()) }
+    }
+
+    private fun wav(name: String): Path = tempDir.resolve(name).also { path ->
+        Files.write(path, byteArrayOf(
+            'R'.code.toByte(), 'I'.code.toByte(), 'F'.code.toByte(), 'F'.code.toByte(),
+            4, 0, 0, 0, 'W'.code.toByte(), 'A'.code.toByte(), 'V'.code.toByte(), 'E'.code.toByte()
+        ))
     }
 }

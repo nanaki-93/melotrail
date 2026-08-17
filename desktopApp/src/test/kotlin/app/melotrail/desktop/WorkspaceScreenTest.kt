@@ -135,19 +135,18 @@ class WorkspaceScreenTest {
 
         onNodeWithTag(WorkspaceTags.ADD_MIDI).assertIsDisplayed()
         onNodeWithTag(WorkspaceTags.ADD_MIDI).performClick()
-        assertEquals(WorkspaceIntent.ShowImportPart(audio = false), intents.last())
+        assertEquals(WorkspaceIntent.ShowAddPart, intents.last())
 
         setContent {
             MelotrailTheme {
                 WorkspaceScreen(projectState().copy(dialog = WorkspaceDialog.ImportPart(audio = true, source = java.nio.file.Path.of("build/solo.wav"), detectedType = ImportSourceKind.WAV, sourceSizeBytes = 1_536)), onIntent = {})
             }
         }
-        onNodeWithText("Import part").assertIsDisplayed()
-        onNodeWithText("Filename: solo.wav · Type: WAV · Size: 1 KiB").assertIsDisplayed()
-        onNodeWithText("WAV/MP3 transcription currently supports solo piano only—not full mixes, vocals, or arbitrary polyphonic sources.").assertIsDisplayed()
-        onNodeWithText("Rights attestation").assertExists()
-        onNodeWithText("I have not established rights").assertExists()
-        onNodeWithText("Transposition, timing changes, repair, arrangement, or AI patching do not automatically clear rights attached to an input melody.").assertExists()
+        onNodeWithText("Import part", substring = true).assertIsDisplayed()
+        onNodeWithText("solo.wav · WAV").assertIsDisplayed()
+        onNodeWithText("Audio import supports solo-piano WAV/MP3 only—not vocals, full mixes, or arbitrary polyphony.").assertIsDisplayed()
+        onNodeWithText("Details").assertExists()
+        onAllNodesWithText("Rights attestation").assertCountEquals(0)
         onNodeWithTag(WorkspaceTags.IMPORT_SOURCE).assertIsDisplayed()
         onNodeWithTag(WorkspaceTags.IMPORT_CONFIRM).assertIsEnabled()
     }
@@ -370,7 +369,7 @@ class WorkspaceScreenTest {
         val project = projectState().project!!.copy(parts = listOf(qualityPart(app.melotrail.application.MidiQualityStatus.CURRENT)))
         setContent {
             MelotrailTheme {
-                WorkspaceScreen(WorkspaceUiState(project = project, selectedPartId = "A"), onIntent = {})
+                WorkspaceScreen(WorkspaceUiState(project = project, selectedPartId = "A", partDetailsExpanded = true), onIntent = {})
             }
         }
 
@@ -391,7 +390,7 @@ class WorkspaceScreenTest {
     @Test
     fun `pending MIDI Feel exposes one apply and re-analyze action`() = runComposeUiTest {
         val project = projectState().project!!.copy(parts = listOf(qualityPart(app.melotrail.application.MidiQualityStatus.CURRENT)))
-        setContent { MelotrailTheme { WorkspaceScreen(WorkspaceUiState(project = project, selectedPartId = "A", pendingMidiFeel = app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL), onIntent = {}) } }
+        setContent { MelotrailTheme { WorkspaceScreen(WorkspaceUiState(project = project, selectedPartId = "A", partDetailsExpanded = true, pendingMidiFeel = app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL), onIntent = {}) } }
 
         onNodeWithTag(WorkspaceTags.MIDI_FEEL_APPLY).assertExists()
         onNodeWithText("Apply and re-analyze").assertExists()
@@ -404,7 +403,7 @@ class WorkspaceScreenTest {
             app.melotrail.application.MidiQualityStatus.STALE_OR_INVALID to "Raw MIDI is ready but repaired MIDI evidence is missing, stale, or invalid."
         ).forEach { (status, message) ->
             val project = projectState().project!!.copy(parts = listOf(qualityPart(status)))
-            setContent { MelotrailTheme { WorkspaceScreen(WorkspaceUiState(project = project, selectedPartId = "A"), onIntent = {}) } }
+            setContent { MelotrailTheme { WorkspaceScreen(WorkspaceUiState(project = project, selectedPartId = "A", partDetailsExpanded = true), onIntent = {}) } }
             onNodeWithText(message).assertIsDisplayed()
         }
         val project = projectState().project!!.copy(parts = listOf(qualityPart(app.melotrail.application.MidiQualityStatus.CURRENT)))
@@ -414,6 +413,7 @@ class WorkspaceScreenTest {
                     WorkspaceUiState(
                         project = project,
                         selectedPartId = "A",
+                        partDetailsExpanded = true,
                         midiQualityReview = MidiQualityReviewDraft(app.melotrail.arrangement.MidiCleanupProfile.TIGHTEN_TIMING),
                         operation = WorkspaceOperation.Failed("MIDI cleanup", "worker unavailable"),
                         dialog = WorkspaceDialog.ConfirmTightenTiming("A")

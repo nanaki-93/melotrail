@@ -146,7 +146,7 @@ available through a details surface, not as competing row actions.
 | [073](tasks/completed/073-authoritative-song-timing-contract.md) | Reproduction fixtures and authoritative timing contract | Current baseline |
 | [074](tasks/completed/074-selected-midi-and-lofi-source.md) | Canonical selected-MIDI resolution and Lo-fi Feel repair | 073 |
 | [075](tasks/completed/075-cohesion-and-synchronized-arrangement.md) | Cohesion integration and synchronized arrangement pipeline | 074 |
-| [076](tasks/076-guided-midi-import.md) | Guided MIDI import and preparation workflow | 074 |
+| [076](tasks/completed/076-guided-midi-import.md) | Guided MIDI import and preparation workflow | 074 |
 | [077](tasks/077-ui-reference-reconstruction.md) | Exact `UI.png` Compose workspace reconstruction | 075–076 and presentation-metadata decision |
 | [078](tasks/078-ui-midi-release-acceptance.md) | End-to-end listening, visual, accessibility, and packaging acceptance | 077 |
 

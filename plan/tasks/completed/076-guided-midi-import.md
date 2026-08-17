@@ -10,7 +10,7 @@ retaining safe artifact stages and advanced recovery.
 
 - Task 074 accepted.
 - Task 075 may proceed in parallel, but both must be accepted before Task 077.
-- Read `../PLAN.md` and Task 074 completely before implementation.
+- Read `../../PLAN.md` and Task 074 completely before implementation.
 
 ## Scope
 

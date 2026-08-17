@@ -407,13 +407,17 @@ private fun PanelColumn(modifier: Modifier, state: WorkspaceUiState, onIntent: (
 private fun PartsPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Parts", WorkspaceTags.PARTS_PANEL) {
     val disabled = state.project == null || state.operation.isMutating
     OutlinedButton(
-        onClick = { onIntent(WorkspaceIntent.ShowImportPart(audio = false)) },
+        onClick = { onIntent(WorkspaceIntent.ShowAddPart) },
         enabled = !disabled,
         modifier = Modifier.fillMaxWidth().semantics {
             testTag = WorkspaceTags.ADD_MIDI
             contentDescription = if (state.project == null) "Add part unavailable. Create or open a project first." else "Add a MIDI, WAV, or MP3 part"
         }
     ) { Text("＋ Add Part") }
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        TextButton(onClick = { onIntent(WorkspaceIntent.ShowImportPart(audio = false)) }, enabled = !disabled) { Text("Import MIDI") }
+        TextButton(onClick = { onIntent(WorkspaceIntent.ShowImportPart(audio = true)) }, enabled = !disabled) { Text("Import Audio") }
+    }
     if (state.project?.parts.isNullOrEmpty()) {
         Text("Import MIDI or solo-piano WAV/MP3 to prepare the first part.", color = MaterialTheme.colorScheme.onSurfaceVariant)
     } else {
@@ -440,13 +444,17 @@ private fun PartsPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
                 }
                 val previewCapability = if (part.sourceType == app.melotrail.application.PartSourceType.AUDIO) RuntimeCapability.SOURCE_PREVIEW else RuntimeCapability.MIDI_PREVIEW
                 val previewReadiness = state.runtimeReadiness?.capability(previewCapability)
+                val action = primaryPartAction(part, state.pendingMidiFeel.takeIf { state.selectedPartId == part.id })
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    TextButton(onClick = { onIntent(WorkspaceIntent.SelectPart(part.id)) }, enabled = !disabled) { Text(if (state.selectedPartId == part.id) "Selected" else "Prepare") }
-                    TextButton(onClick = { onIntent(WorkspaceIntent.ShowRoleEditor(part.id)) }, enabled = !disabled) { Text("Edit role") }
+                    Button(onClick = {
+                        when (action) {
+                            is PartPrimaryAction.PrepareMidi -> onIntent(WorkspaceIntent.PrepareMidi(part.id))
+                            is PartPrimaryAction.ReviewRepair, is PartPrimaryAction.FixIssue -> onIntent(WorkspaceIntent.ShowPartDetails(part.id))
+                            is PartPrimaryAction.ApplyLoFiChange -> onIntent(WorkspaceIntent.ApplyMidiFeelAndReanalyze)
+                            is PartPrimaryAction.AddToStructure -> onIntent(WorkspaceIntent.AddStructurePart(part.id))
+                        }
+                    }, enabled = !disabled) { Text(action.label()) }
                     TextButton(onClick = { onIntent(WorkspaceIntent.PreviewPart(part.id)) }, enabled = !disabled && previewReadiness?.available == true) { Text("Preview") }
-                    TextButton(onClick = { onIntent(WorkspaceIntent.AnalyzePart(part.id)) }, enabled = !disabled) {
-                        Text(if (analysis == null) "Analyze" else "Analyze again")
-                    }
                 }
                 if (!disabled && previewReadiness?.available != true) {
                     Text(
@@ -466,6 +474,12 @@ private fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (Workspace
     val part = state.selectedPartId?.let { id -> state.project?.parts?.find { it.id == id } } ?: return@WorkspaceCard
     val quality = part.preparation.midiQuality
     Text("Part ${part.id}", fontWeight = FontWeight.Medium)
+    if (!state.partDetailsExpanded) {
+        Text("Repair reports and advanced profiles are available in Details.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        TextButton(onClick = { onIntent(WorkspaceIntent.TogglePartDetails) }) { Text("Details") }
+        return@WorkspaceCard
+    }
+    TextButton(onClick = { onIntent(WorkspaceIntent.TogglePartDetails) }) { Text("Hide details") }
     val midiPreviewReady = state.runtimeReadiness?.capability(RuntimeCapability.MIDI_PREVIEW)?.available == true
     if (part.preparation.rawMidi) {
         Text("Audition", style = MaterialTheme.typography.labelLarge)
@@ -1261,6 +1275,7 @@ private fun statusText(state: WorkspaceUiState): String = when (val operation = 
     is WorkspaceOperation.InspectingPart -> "Inspecting preserved source for ${operation.id}…"
     is WorkspaceOperation.ApplyingAudioCleanup -> "Applying selected cleanup for ${operation.id}…"
     is WorkspaceOperation.RetryingMidiCleanup -> "Retrying MIDI cleanup for ${operation.id}…"
+    is WorkspaceOperation.PreparingMidi -> "Preparing MIDI for ${operation.id}…"
     is WorkspaceOperation.SelectingMidiFeel -> "Selecting Lo-fi Feel for ${operation.id}…"
     is WorkspaceOperation.TranscribingPart -> "Running transcription quality gate for ${operation.id}…"
     is WorkspaceOperation.UpdatingPartRole -> "Saving ${operation.id} role…"
@@ -1391,42 +1406,36 @@ private fun CreateProjectDialog(draft: WorkspaceDialog.CreateProject, onIntent: 
 @Composable
 private fun ImportPartDialog(draft: WorkspaceDialog.ImportPart, onIntent: (WorkspaceIntent) -> Unit) {
     val type = draft.detectedType
-    val audio = type?.isAudio == true
-    val readinessMessage = if (audio) "Prerequisites: local worker and optional Basic Pitch runtime are required for solo-piano transcription." else null
-    val stages = when (type) {
-        ImportSourceKind.MIDI -> "Stages: preserve original MIDI → clean MIDI → register part. Analysis is offered after import."
-        ImportSourceKind.WAV, ImportSourceKind.MP3 -> "Stages: preserve original audio → inspect it → transcribe solo piano → clean MIDI → register part."
-        ImportSourceKind.UNSUPPORTED -> "Choose a supported source to continue."
-        null -> "Choose a source to see the intended stages and prerequisites."
-    }
     AlertDialog(
         onDismissRequest = { onIntent(WorkspaceIntent.DismissDialog) },
-        title = { Text("Import part") },
+        title = { Text("Import part · 1 of 2") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Choose MIDI, WAV, or MP3. File filters are hints; the import service validates the actual format.")
-                Text("WAV/MP3 transcription currently supports solo piano only—not full mixes, vocals, or arbitrary polyphonic sources.", style = MaterialTheme.typography.bodySmall)
+                Text("Choose a source. Its actual format is validated before import.")
+                if (draft.preference != ImportPreference.MIDI) Text("Audio import supports solo-piano WAV/MP3 only—not vocals, full mixes, or arbitrary polyphony.", style = MaterialTheme.typography.bodySmall)
                 OutlinedButton(
                     onClick = { onIntent(WorkspaceIntent.ChooseImportSource) },
                     modifier = Modifier.semantics { testTag = WorkspaceTags.IMPORT_SOURCE }
                 ) { Text(draft.source?.fileName?.toString() ?: "Choose source") }
-                draft.source?.let { Text("Filename: ${it.fileName} · Type: ${type?.label ?: "unknown"} · Size: ${formatFileSize(draft.sourceSizeBytes)}", style = MaterialTheme.typography.bodySmall) }
-                Text(stages, style = MaterialTheme.typography.bodySmall)
-                readinessMessage?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                draft.source?.let { Text("${it.fileName} · ${type?.label ?: "unknown"}", style = MaterialTheme.typography.bodySmall) }
                 draft.validationMessage?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                HorizontalDivider()
+                Text("Confirm part · 2 of 2", style = MaterialTheme.typography.labelLarge)
                 OutlinedTextField(draft.id, { onIntent(WorkspaceIntent.UpdateImportPart(draft.copy(id = it))) }, label = { Text("Part ID (stable after import)") })
-                OutlinedTextField(draft.role, { onIntent(WorkspaceIntent.UpdateImportPart(draft.copy(role = it))) }, label = { Text("Role") })
-                Text("Rights attestation", style = MaterialTheme.typography.labelLarge)
-                Text("Transposition, timing changes, repair, arrangement, or AI patching do not automatically clear rights attached to an input melody.", style = MaterialTheme.typography.bodySmall)
-                app.melotrail.commercial.SourceRightsClaim.entries.forEach { claim ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(claim == draft.rightsClaim, { onIntent(WorkspaceIntent.UpdateImportPart(draft.copy(rightsClaim = claim))) })
-                        Text(when (claim) {
-                            app.melotrail.commercial.SourceRightsClaim.OWNED -> "I own this source"
-                            app.melotrail.commercial.SourceRightsClaim.COMMERCIAL_PERMISSION -> "I have commercial permission"
-                            app.melotrail.commercial.SourceRightsClaim.PUBLIC_DOMAIN -> "I believe it is public domain"
-                            app.melotrail.commercial.SourceRightsClaim.NOT_ESTABLISHED -> "I have not established rights"
-                        })
+                OutlinedTextField(draft.role, { onIntent(WorkspaceIntent.UpdateImportPart(draft.copy(role = it))) }, label = { Text("Musical role (optional)") })
+                TextButton(onClick = { onIntent(WorkspaceIntent.UpdateImportPart(draft.copy(detailsExpanded = !draft.detailsExpanded))) }) { Text(if (draft.detailsExpanded) "Hide details" else "Details") }
+                if (draft.detailsExpanded) {
+                    Text("Rights attestation is retained for commercial-ready export.", style = MaterialTheme.typography.bodySmall)
+                    app.melotrail.commercial.SourceRightsClaim.entries.forEach { claim ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(claim == draft.rightsClaim, { onIntent(WorkspaceIntent.UpdateImportPart(draft.copy(rightsClaim = claim))) })
+                            Text(when (claim) {
+                                app.melotrail.commercial.SourceRightsClaim.OWNED -> "I own this source"
+                                app.melotrail.commercial.SourceRightsClaim.COMMERCIAL_PERMISSION -> "I have commercial permission"
+                                app.melotrail.commercial.SourceRightsClaim.PUBLIC_DOMAIN -> "I believe it is public domain"
+                                app.melotrail.commercial.SourceRightsClaim.NOT_ESTABLISHED -> "I have not established rights"
+                            })
+                        }
                     }
                 }
             }
