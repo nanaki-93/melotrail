@@ -149,6 +149,10 @@ available through a details surface, not as competing row actions.
 | [076](tasks/completed/076-guided-midi-import.md) | Guided MIDI import and preparation workflow | 074 |
 | [077](tasks/completed/077-ui-reference-reconstruction.md) | Exact `UI.png` Compose workspace reconstruction | 075–076 and presentation-metadata decision |
 | [078](tasks/completed/078-ui-midi-release-acceptance.md) | End-to-end listening, visual, accessibility, and packaging acceptance | 077 |
+| [079](tasks/completed/079-reference-shell-and-left-rail.md) | Restore reference header and left rail | 078 |
+| [080](tasks/080-reference-center-workstation.md) | Restore reference structure, arrangement, and timeline | 079 |
+| [081](tasks/081-reference-right-rail.md) | Restore reference scene/player and AI Song Plan | 079–080 |
+| [082](tasks/082-reference-footer-and-visual-acceptance.md) | Restore footer and complete visual acceptance | 079–081 |
 
 Do not combine all six tasks into one change. Each task must leave the project
 buildable and include focused regression tests before the next task starts.

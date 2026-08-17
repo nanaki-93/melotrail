@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 
 object MusicWorkspaceTokens {
@@ -38,6 +39,27 @@ object MusicWorkspaceTokens {
         val WideBreakpoint = 1180.dp
         val MediumBreakpoint = 760.dp
         const val BorderAlpha = 0.78f
+    }
+
+    /** Shared measurements for the compact reference shell; avoid per-widget approximations. */
+    object Shell {
+        val HeaderBrandWidth = 224.dp
+        val HeaderProjectWidth = 248.dp
+        val HeaderIconSize = 48.dp
+        val NavigationIconGap = 6.dp
+        val RailHeaderHeight = 36.dp
+        val PartRowHeight = 56.dp
+        val PartRowVerticalPadding = 4.dp
+        val PartThumbnailSize = 48.dp
+        val DividerThickness = 1.dp
+        const val DividerAlpha = 0.45f
+    }
+
+    object Type {
+        val Eyebrow = 11.sp
+        val PartTitle = 13.sp
+        val PartMetadata = 11.sp
+        val HeaderProjectLabel = 10.sp
     }
     val Canvas = Color(0xFF071017)
     val Surface = Color(0xFF0D1821)

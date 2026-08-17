@@ -58,13 +58,15 @@ private fun WideWorkstation(state: WorkspaceUiState, onIntent: (WorkspaceIntent)
     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Reference.ColumnGap)) {
         WorkstationColumn(Modifier.width(MusicWorkspaceTokens.Reference.LeftRailWidth), state, onIntent) {
             PartsPanel(state, onIntent)
-            PresentationMetadataPanel()
+            VideoConceptPanel()
+            CurrentLocationPanel()
+            NextDestinationPanel()
             if (state.selectedPartId != null) {
                 MidiQualityReviewPanel(state, onIntent)
                 AudioPreparationPanel(state, onIntent)
             }
         }
-        WorkstationColumn(Modifier.weight(1f), state, onIntent) {
+        WorkstationColumn(Modifier.width(MusicWorkspaceTokens.Reference.CenterWidth), state, onIntent) {
             StructurePanel(state, onIntent)
             ArrangementPanel(state, onIntent)
             TimelinePanel(state, onIntent)
@@ -133,11 +135,41 @@ private fun WorkstationColumn(modifier: Modifier, state: WorkspaceUiState, onInt
     ) { content() }
 }
 
-/** Explicitly visual-only; it is not persisted and never contains a location, weather, or network result. */
+/** Visual-only reference regions. They deliberately never read project, clock, network, weather, or location data. */
 @Composable
-private fun PresentationMetadataPanel() = WorkspaceCard("Presentation", "presentation-metadata-panel") {
-    Text("Visual-only placeholders", fontWeight = FontWeight.Medium)
-    Text("Scene artwork, Video Concept, Current Location, weather, and destination are intentionally unavailable for this local music project.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun VideoConceptPanel() = WorkspaceCard("Video concept", WorkspaceTags.VIDEO_CONCEPT_PANEL) {
+    Text("No visual concept configured", fontWeight = FontWeight.Medium)
+    Text("This deterministic placeholder does not create or fetch scene artwork.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+@Composable
+private fun CurrentLocationPanel() = CompactVisualPlaceholder(
+    title = "Current location",
+    tag = WorkspaceTags.CURRENT_LOCATION_PANEL,
+    headline = "Location unavailable",
+    detail = "No local location data is collected."
+)
+
+@Composable
+private fun NextDestinationPanel() = CompactVisualPlaceholder(
+    title = "Next destination",
+    tag = WorkspaceTags.NEXT_DESTINATION_PANEL,
+    headline = "Destination unavailable",
+    detail = "No destination is configured."
+)
+
+@Composable
+private fun CompactVisualPlaceholder(title: String, tag: String, headline: String, detail: String) = Card(
+    modifier = Modifier.fillMaxWidth().semantics { testTag = tag },
+    colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface),
+    border = BorderStroke(1.dp, MusicWorkspaceTokens.Border)
+) {
+    Column(Modifier.padding(MusicWorkspaceTokens.Spacing.Md), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+        Text(title.uppercase(), style = MaterialTheme.typography.labelLarge, fontSize = MusicWorkspaceTokens.Type.Eyebrow, color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+        HorizontalDivider(thickness = MusicWorkspaceTokens.Shell.DividerThickness, color = MaterialTheme.colorScheme.outline.copy(alpha = MusicWorkspaceTokens.Shell.DividerAlpha))
+        Text(headline, fontWeight = FontWeight.Medium)
+        Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
 
 @Composable
@@ -176,7 +208,7 @@ private fun AiSongPlanPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent)
 internal fun WorkstationFooter(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         if (maxWidth >= MusicWorkspaceTokens.Reference.MediumBreakpoint) {
-            Row(Modifier.heightIn(min = MusicWorkspaceTokens.Reference.FooterHeight), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Reference.ColumnGap)) {
+            Row(Modifier.height(MusicWorkspaceTokens.Reference.FooterHeight), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Reference.ColumnGap)) {
                 CompactTransport(state, onIntent, Modifier.weight(1.35f))
                 MixerStrips(state, onIntent, Modifier.weight(1f))
                 MasterBusStrip(Modifier.width(210.dp))
@@ -187,7 +219,7 @@ internal fun WorkstationFooter(state: WorkspaceUiState, onIntent: (WorkspaceInte
 
 @Composable
 private fun MixerStrips(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier) = Card(
-    modifier = modifier.heightIn(min = MusicWorkspaceTokens.Reference.FooterHeight).semantics { testTag = WorkspaceTags.MIXER; contentDescription = "Five channel mixer strips" },
+    modifier = modifier.height(MusicWorkspaceTokens.Reference.FooterHeight).semantics { testTag = WorkspaceTags.MIXER; contentDescription = "Five channel mixer strips" },
     colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.Surface), border = BorderStroke(1.dp, MusicWorkspaceTokens.Border)
 ) {
     Row(Modifier.fillMaxSize().padding(MusicWorkspaceTokens.Spacing.Sm), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
@@ -205,7 +237,7 @@ private fun MixerStrips(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
 
 @Composable
 private fun MasterBusStrip(modifier: Modifier) = Card(
-    modifier = modifier.heightIn(min = MusicWorkspaceTokens.Reference.FooterHeight).semantics { testTag = WorkspaceTags.MASTER_OUTPUT; contentDescription = "Master output and bus controls" },
+    modifier = modifier.height(MusicWorkspaceTokens.Reference.FooterHeight).semantics { testTag = WorkspaceTags.MASTER_OUTPUT; contentDescription = "Master output and bus controls" },
     colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.Surface), border = BorderStroke(1.dp, MusicWorkspaceTokens.Border)
 ) {
     Column(Modifier.padding(MusicWorkspaceTokens.Spacing.Sm), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {

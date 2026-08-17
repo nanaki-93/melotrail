@@ -10,14 +10,32 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.v2.runComposeUiTest
+import androidx.compose.ui.test.v2.runSkikoComposeUiTest
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.toPixelMap
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.unit.dp
+import java.awt.image.BufferedImage
+import java.nio.file.Files
+import javax.imageio.ImageIO
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 @OptIn(ExperimentalTestApi::class)
 class WorkspaceScreenTest {
+    private companion object {
+        const val ReferenceFixtureTag = "reference-workspace-fixture"
+    }
     @Test
     fun `workspace layout breakpoints retain wide medium and narrow access paths`() {
         assertEquals(WorkspaceLayout.WIDE, workspaceLayoutForWidth(1440.dp))
@@ -173,6 +191,59 @@ class WorkspaceScreenTest {
         setContent { MelotrailTheme { WorkspaceScreen(projectState(), onIntent = {}) } }
 
         onAllNodesWithTag(WorkspaceTags.PROJECT_SELECTOR).assertCountEquals(1)
+    }
+
+    @Test
+    fun `reference shell fixtures cover empty populated selected and unavailable left rail states`() = runComposeUiTest {
+        // Empty fixture: no project must not imply that importing or playback is available.
+        setContent { MelotrailTheme { WorkspaceScreen(WorkspaceUiState(), onIntent = {}) } }
+        onAllNodesWithTag(WorkspaceTags.PART_ROW_PREFIX + "A").assertCountEquals(0)
+        onNodeWithTag(WorkspaceTags.ADD_MIDI).assertIsNotEnabled()
+
+        val project = projectState().project!!.copy(parts = referenceParts())
+        val selectedPlayback = PlaybackSession(
+            id = 11,
+            request = PlaybackRequest.Part(project.root, "B", app.melotrail.application.PreviewAudioSource.ORIGINAL),
+            sourceKind = PlaybackSourceKind.MIDI,
+            artifact = PlaybackArtifactIdentity(project.root, project.root.resolve("previews/B.wav"), "B"),
+            phase = PlaybackSessionPhase.PLAYING
+        )
+        // Populated and selected fixture: every row is supplied by the project snapshot, including playing B.
+        setContent {
+            MelotrailTheme {
+                ReferenceWorkspaceFixture(WorkspaceUiState(project = project, selectedPartId = "B", playbackSession = selectedPlayback, runtimeReadiness = runtimeReadiness(DependencyReadiness(DependencyStatus.READY, "ready"))))
+            }
+        }
+        listOf("A", "B", "C", "D", "E").forEach { onNodeWithTag(WorkspaceTags.PART_ROW_PREFIX + it).assertExists() }
+        onNodeWithTag(WorkspaceTags.PART_PREVIEW_PREFIX + "B").assertIsEnabled()
+        listOf(
+            WorkspaceTags.VIDEO_CONCEPT_PANEL,
+            WorkspaceTags.CURRENT_LOCATION_PANEL,
+            WorkspaceTags.NEXT_DESTINATION_PANEL,
+            WorkspaceTags.HEADER_SAVE,
+            WorkspaceTags.HEADER_SETTINGS,
+            WorkspaceTags.HEADER_THEME
+        ).forEach { onNodeWithTag(it).assertExists() }
+        onNodeWithTag(WorkspaceTags.HEADER_SAVE).assertIsNotEnabled()
+        onNodeWithTag(WorkspaceTags.HEADER_THEME).assertIsNotEnabled()
+
+        // Unavailable fixture: a missing local renderer keeps a row preview disabled rather than claiming playback.
+        setContent {
+            MelotrailTheme {
+                ReferenceWorkspaceFixture(WorkspaceUiState(project = project, selectedPartId = "B", runtimeReadiness = unavailableMidiPreviewReadiness()))
+            }
+        }
+        onNodeWithTag(WorkspaceTags.PART_PREVIEW_PREFIX + "B").assertIsNotEnabled()
+    }
+
+    @Test
+    fun `reference fixture captures the deterministic 1536 by 1024 shell`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
+        setContent { MelotrailTheme { ReferenceWorkspaceFixture(projectState().copy(project = projectState().project!!.copy(parts = referenceParts()))) } }
+
+        val image = onNodeWithTag(ReferenceFixtureTag).captureToImage()
+        assertEquals(1536, image.width)
+        assertEquals(1024, image.height)
+        image.writePng(java.nio.file.Path.of("build", "reports", "reference-shell-1536x1024.png"))
     }
 
     @Test
@@ -530,6 +601,15 @@ class WorkspaceScreenTest {
         RuntimeDependency.AUDIO_OUTPUT to DependencyReadiness(DependencyStatus.READY, "ready")
     )
 
+    private fun unavailableMidiPreviewReadiness(): RuntimeReadiness = RuntimeReadiness.of(
+        RuntimeDependency.WORKER to DependencyReadiness(DependencyStatus.READY, "ready"),
+        RuntimeDependency.TRANSCRIPTION to DependencyReadiness(DependencyStatus.READY, "ready"),
+        RuntimeDependency.SOUND_LIBRARY to DependencyReadiness(DependencyStatus.READY, "ready"),
+        RuntimeDependency.SAMPLES to DependencyReadiness(DependencyStatus.READY, "ready"),
+        RuntimeDependency.RENDERER to DependencyReadiness(DependencyStatus.UNAVAILABLE, "Renderer unavailable"),
+        RuntimeDependency.AUDIO_OUTPUT to DependencyReadiness(DependencyStatus.READY, "ready")
+    )
+
     private fun projectState(): WorkspaceUiState {
         val root = java.nio.file.Path.of("build/test-project")
         return WorkspaceUiState(project = app.melotrail.application.ProjectSnapshot(
@@ -541,6 +621,35 @@ class WorkspaceScreenTest {
             structure = emptyList(),
             readiness = app.melotrail.application.ProjectReadiness(false, false, false, false, false, false, false, false, false, false)
         ), runtimeReadiness = runtimeReadiness(DependencyReadiness(DependencyStatus.READY, "ready")))
+    }
+
+    private fun referenceParts(): List<app.melotrail.application.PartSummary> = listOf(
+        "A" to "Intro", "B" to "Train Ride", "C" to "Mountains", "D" to "City Lights", "E" to "Outro"
+    ).mapIndexed { index, (id, role) ->
+        app.melotrail.application.PartSummary(
+            id = id,
+            role = role,
+            sourceFile = "source/$id.mid",
+            sourceName = "$role.mid",
+            sourceType = app.melotrail.application.PartSourceType.MIDI,
+            analysis = app.melotrail.application.PartAnalysisSummary(app.melotrail.application.PartAnalysisStatus.MIDI, "analysis/$id.json", bars = 8 + index, durationSeconds = 20.0, key = "Am")
+        )
+    }
+
+    /** Fixed reference viewport used by shell fixtures and local screenshot review. */
+    @Composable
+    private fun ReferenceWorkspaceFixture(state: WorkspaceUiState) {
+        Box(Modifier.requiredSize(MusicWorkspaceTokens.Reference.ViewportWidth, MusicWorkspaceTokens.Reference.ViewportHeight).semantics { testTag = ReferenceFixtureTag }) {
+            WorkspaceScreen(state, onIntent = {})
+        }
+    }
+
+    private fun ImageBitmap.writePng(path: java.nio.file.Path) {
+        Files.createDirectories(path.parent)
+        val pixels = toPixelMap()
+        val output = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
+        for (y in 0 until height) for (x in 0 until width) output.setRGB(x, y, pixels[x, y].toArgb())
+        check(ImageIO.write(output, "png", path.toFile())) { "PNG writer unavailable" }
     }
 
     private fun previewSession(
