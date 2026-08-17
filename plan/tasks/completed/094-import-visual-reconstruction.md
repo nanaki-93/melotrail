@@ -3,7 +3,7 @@
 ## Goal
 
 Rebuild the focused Import destination to follow
-`../pictures/UI/02-import.png` while preserving the fully restored Task 091
+`../../pictures/UI/02-import.png` while preserving the fully restored Task 091
 workflow and all input/preparation safety boundaries.
 
 ## Dependencies
@@ -56,7 +56,7 @@ workflow and all input/preparation safety boundaries.
   surface, or routes to Structure. Assert unsupported mockup-only actions are
   absent.
 - Capture and overlay a deterministic 1536 × 1024 full-window fixture against
-  `../pictures/UI/02-import.png`; check shell, chooser, table, and context-rail
+  `../../pictures/UI/02-import.png`; check shell, chooser, table, and context-rail
   geometry and document capability-driven differences.
 - Run `./gradlew :desktopApp:test :desktopApp:build`.
 

@@ -15,6 +15,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollTo
@@ -101,6 +102,23 @@ class WorkspaceScreenTest {
         onNodeWithTag(WorkspaceShellTags.CONTEXT_RAIL).assertExists()
         assertOnlyLibraryPageRoot()
         writeShellCapture("narrow", onNodeWithTag(WorkspaceShellTags.ROOT).captureToImage().toAwtImage())
+    }
+
+    @Test
+    fun `narrow Import stacks chooser cards and opens a full-height preparation sheet with focus return`() = runSkikoComposeUiTest(size = Size(720f, 1120f)) {
+        setContent { MelotrailTheme { WorkspaceScreen(importState(importPart("piano.mid", rawMidi = true)), onIntent = {}) } }
+
+        val audio = onNodeWithTag(WorkspacePageTags.IMPORT_AUDIO_CHOOSER).getUnclippedBoundsInRoot()
+        val midi = onNodeWithTag(WorkspacePageTags.IMPORT_MIDI_CHOOSER).getUnclippedBoundsInRoot()
+        assertTrue(audio.bottom.value <= midi.top.value, "narrow chooser cards should stack")
+        onNodeWithTag(WorkspaceShellTags.CONTEXT_TOGGLE).performClick()
+        val sheet = onNodeWithTag(WorkspaceShellTags.CONTEXT_RAIL)
+        sheet.assertExists()
+        assertTrue((sheet.getUnclippedBoundsInRoot().bottom - sheet.getUnclippedBoundsInRoot().top).value >= 1_000f)
+        sheet.performKeyInput { pressKey(Key.Escape) }
+        onNodeWithTag(WorkspaceShellTags.CONTEXT_RAIL).assertDoesNotExist()
+        onNodeWithTag(WorkspaceShellTags.CONTEXT_TOGGLE).assertIsFocused()
+        onAllNodesWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.IMPORT.name.lowercase()).assertCountEquals(1)
     }
 
     @Test
@@ -308,7 +326,7 @@ class WorkspaceScreenTest {
         val longMidi = importPart("a-very-long-source-name-that-remains-readable-in-the-imported-files-list.mid", rawMidi = true)
         setContent { MelotrailTheme { WorkspaceScreen(importState(longMidi), intents::add) } }
 
-        onNodeWithTag(WorkspacePageTags.IMPORT_PRIMARY_ACTION).performClick()
+        onNodeWithTag(WorkspacePageTags.IMPORT_PRIMARY_ACTION).performScrollTo().performClick()
         assertEquals<List<WorkspaceIntent>>(listOf(WorkspaceIntent.PrepareMidi("A")), intents)
         onAllNodesWithTag(WorkspacePageTags.IMPORTED_ROW_PREFIX + "A").assertCountEquals(1)
         onNodeWithTag(WorkspacePageTags.IMPORTED_DETAILS_PREFIX + "A").performClick()
@@ -369,11 +387,69 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `Import reconstruction keeps distinct chooser preferences and a dense selected row`() = runComposeUiTest {
+        val midi = importPart("piano_loop.mid", rawMidi = true, analyzed = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT).copy(
+            analysis = PartAnalysisSummary(PartAnalysisStatus.MIDI, "analysis/A.json", bars = 16, durationSeconds = 32.0, key = "A minor"),
+            sourceSizeBytes = 2_097_152L
+        )
+        val audio = importPart("solo_piano.wav", audio = true, inspected = false).copy(id = "B", sourceSizeBytes = 12_582_912L)
+        var state by mutableStateOf(importState(midi).copy(project = importState(midi).project!!.copy(parts = listOf(midi, audio))))
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent {
+            MelotrailTheme {
+                WorkspaceScreen(state, onIntent = { intent ->
+                    intents += intent
+                    if (intent is WorkspaceIntent.SelectPart) state = state.copy(selectedPartId = intent.partId)
+                })
+            }
+        }
+
+        listOf(
+            WorkspacePageTags.IMPORT_AUDIO_CHOOSER,
+            WorkspacePageTags.IMPORT_MIDI_CHOOSER,
+            WorkspacePageTags.IMPORT_TABLE_HEADER,
+            WorkspacePageTags.IMPORTED_ROW_PREFIX + "A",
+            WorkspacePageTags.IMPORTED_ROW_PREFIX + "B"
+        ).forEach { onNodeWithTag(it).assertExists() }
+        onNodeWithText("Select audio file").performClick()
+        assertEquals(WorkspaceIntent.ShowImportPart(audio = true), intents.removeLast())
+        onNodeWithText("Select MIDI file").performClick()
+        assertEquals(WorkspaceIntent.ShowImportPart(audio = false), intents.removeLast())
+
+        onNodeWithTag(WorkspacePageTags.IMPORTED_ROW_PREFIX + "B").performClick()
+        assertEquals(WorkspaceIntent.SelectPart("B"), intents.removeLast())
+        onNodeWithTag(WorkspacePageTags.IMPORT_SELECTION).assertExists()
+        onNodeWithText("12.0 MiB").assertExists()
+        onNodeWithText("A minor").assertExists()
+        onNodeWithText("0:32").assertExists()
+        onNodeWithTag(WorkspacePageTags.IMPORTED_PREVIEW_PREFIX + "B").assertIsNotEnabled()
+        onAllNodesWithText("Process All").assertCountEquals(0)
+        onAllNodesWithText("Clear All").assertCountEquals(0)
+        onAllNodesWithText("Delete").assertCountEquals(0)
+    }
+
+    @Test
+    fun `Import primary action visibly identifies deterministic fallback and the context rail uses the same typed action`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
+        val current = importPart("ready.mid", rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT, analyzed = true)
+        val pending = importPart("needs-repair.mid", rawMidi = true).copy(id = "B")
+        val state = importState(current).copy(project = importState(current).project!!.copy(parts = listOf(current, pending)))
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(state, intents::add) } }
+
+        onNodeWithText("Next incomplete part · B").assertExists()
+        onNodeWithTag(WorkspacePageTags.IMPORT_PRIMARY_ACTION).performScrollTo().performClick()
+        assertEquals(WorkspaceIntent.PrepareMidi("B"), intents.removeLast())
+        onNodeWithTag(WorkspacePageTags.IMPORT_CONTEXT).assertExists()
+        onNodeWithTag(WorkspacePageTags.IMPORT_CONTEXT_ACTION).performClick()
+        assertEquals(WorkspaceIntent.PrepareMidi("B"), intents.removeLast())
+    }
+
+    @Test
     fun `Import audio and ready actions keep orchestration in the view model boundary`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(importState(importPart("solo.wav", audio = true, inspected = false)), intents::add) } }
 
-        onNodeWithTag(WorkspacePageTags.IMPORT_PRIMARY_ACTION).performClick()
+        onNodeWithTag(WorkspacePageTags.IMPORT_PRIMARY_ACTION).performScrollTo().performClick()
         assertEquals<List<WorkspaceIntent>>(listOf(WorkspaceIntent.SelectPart("A"), WorkspaceIntent.InspectSelectedPart), intents)
     }
 
@@ -392,7 +468,7 @@ class WorkspaceScreenTest {
         cases.forEach { (state, expected) ->
             intents.clear()
             setContent { MelotrailTheme { WorkspaceScreen(state, intents::add) } }
-            onNodeWithTag(WorkspacePageTags.IMPORT_PRIMARY_ACTION).performClick()
+            onNodeWithTag(WorkspacePageTags.IMPORT_PRIMARY_ACTION).performScrollTo().performClick()
             assertEquals(expected, intents)
         }
     }
@@ -664,15 +740,22 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `deterministic Import fixture captures the reference shell crop`() = runSkikoComposeUiTest(size = Size(1158f, 462f)) {
+    fun `deterministic Import fixture captures and overlays the full reference shell`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
         setContent { MelotrailTheme { WorkspaceScreen(importState(importPart("piano_loop.mid", rawMidi = true)), onIntent = {}) } }
 
-        val image = onNodeWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.IMPORT.name.lowercase()).captureToImage()
-        assertTrue(image.width > 0)
-        assertTrue(image.height > 0)
-        writePageCapture("import", image.toAwtImage())
+        val image = onRoot().captureToImage()
+        assertEquals(1536, image.width)
+        assertEquals(1024, image.height)
         val drop = onNodeWithTag(WorkspacePageTags.IMPORT_DROP_SURFACE).getUnclippedBoundsInRoot()
         assertTrue((drop.bottom - drop.top).value >= MusicWorkspaceTokens.Pages.ImportDropHeight.value)
+        val audioChooser = onNodeWithTag(WorkspacePageTags.IMPORT_AUDIO_CHOOSER).getUnclippedBoundsInRoot()
+        val midiChooser = onNodeWithTag(WorkspacePageTags.IMPORT_MIDI_CHOOSER).getUnclippedBoundsInRoot()
+        val table = onNodeWithTag(WorkspacePageTags.IMPORTED_FILES).getUnclippedBoundsInRoot()
+        val context = onNodeWithTag(WorkspacePageTags.IMPORT_CONTEXT).getUnclippedBoundsInRoot()
+        assertTrue(audioChooser.right.value <= midiChooser.left.value, "chooser cards should remain side-by-side at reference width")
+        assertTrue(table.top.value > drop.bottom.value, "table should follow the shared drop surface")
+        assertTrue(context.left.value > table.right.value, "context rail should remain outside the import page")
+        writeTask094ImportCapture(image.toAwtImage())
         writeImportReferenceOverlay(image.toAwtImage())
     }
 
@@ -866,22 +949,30 @@ class WorkspaceScreenTest {
 
     private fun writeImportReferenceOverlay(importCapture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/App-pages.png")) }
+            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/02-import.png")) }
             ?: error("Could not locate the App-pages reference image.")
-        val reference = ImageIO.read(repository.resolve("plan/pictures/App-pages.png").toFile())
-        val importRegion = reference.getSubimage(12, 483, 379, 284)
+        val reference = ImageIO.read(repository.resolve("plan/pictures/UI/02-import.png").toFile())
         val overlay = BufferedImage(importCapture.width, importCapture.height, BufferedImage.TYPE_INT_ARGB)
         val graphics = overlay.createGraphics()
         try {
-            graphics.drawImage(importRegion, 0, 0, overlay.width, overlay.height, null)
+            graphics.drawImage(reference, 0, 0, overlay.width, overlay.height, null)
             graphics.composite = AlphaComposite.SrcOver.derive(0.55f)
             graphics.drawImage(importCapture, 0, 0, null)
         } finally {
             graphics.dispose()
         }
-        val target = repository.resolve("desktopApp/build/reports/task-084-import-overlay.png")
+        val target = repository.resolve("desktopApp/build/reports/task-094-import-overlay.png")
         Files.createDirectories(target.parent)
         assertTrue(ImageIO.write(overlay, "png", target.toFile()))
+    }
+
+    private fun writeTask094ImportCapture(capture: BufferedImage) {
+        val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
+            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/02-import.png")) }
+            ?: error("Could not locate the Task 094 Import reference image.")
+        val target = repository.resolve("desktopApp/build/reports/task-094-import-capture.png")
+        Files.createDirectories(target.parent)
+        assertTrue(ImageIO.write(capture, "png", target.toFile()))
     }
 
     private fun SemanticsNodeInteractionsProvider.assertFitsNarrowViewport(tag: String) {

@@ -1,6 +1,7 @@
 package app.melotrail.desktop
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,7 +42,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -97,7 +105,7 @@ private fun WideShell(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Un
             // Keeping the generic shell rail there would compress its canonical
             // track overview and create a second, empty source of page context.
             if (state.workspaceSection != WorkspaceSection.OVERVIEW) {
-                ContextRail(state, Modifier.width(MusicWorkspaceTokens.Shell.ContextRailWidth).fillMaxHeight())
+                ContextRail(state, onIntent, Modifier.width(MusicWorkspaceTokens.Shell.ContextRailWidth).fillMaxHeight())
             }
         }
     }
@@ -113,7 +121,7 @@ private fun MediumShell(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
             Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
                 ContextToggle(contextExpanded) { contextExpanded = !contextExpanded }
                 WorkspacePageRouter(state, onIntent, Modifier.weight(1f), focusTargets)
-                if (contextExpanded) ContextRail(state, Modifier.fillMaxWidth().heightIn(max = 184.dp))
+                if (contextExpanded) ContextRail(state, onIntent, Modifier.fillMaxWidth().heightIn(max = 184.dp))
             }
         }
     }
@@ -122,22 +130,56 @@ private fun MediumShell(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
 @Composable
 private fun NarrowShell(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, focusTargets: MutableMap<PartDetailsFocusReturn, FocusRequester>) {
     var contextExpanded by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-        TopBar(state, onIntent, null)
-        DestinationChooser(state, onIntent)
-        ProjectRail(state, onIntent, Modifier.fillMaxWidth(), includeNavigation = false, compact = true)
-        ContextToggle(contextExpanded) { contextExpanded = !contextExpanded }
-        WorkspacePageRouter(state, onIntent, Modifier.weight(1f), focusTargets)
-        if (contextExpanded) ContextRail(state, Modifier.fillMaxWidth().heightIn(max = 160.dp))
+    val contextToggleFocus = remember { FocusRequester() }
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+            TopBar(state, onIntent, null)
+            DestinationChooser(state, onIntent)
+            ProjectRail(state, onIntent, Modifier.fillMaxWidth(), includeNavigation = false, compact = true)
+            ContextToggle(contextExpanded, Modifier.focusRequester(contextToggleFocus)) { contextExpanded = !contextExpanded }
+            WorkspacePageRouter(state, onIntent, Modifier.weight(1f), focusTargets)
+            if (contextExpanded && state.workspaceSection != WorkspaceSection.IMPORT) {
+                ContextRail(state, onIntent, Modifier.fillMaxWidth().heightIn(max = 160.dp))
+            }
+        }
+        if (contextExpanded && state.workspaceSection == WorkspaceSection.IMPORT) {
+            ImportContextSheet(state, onIntent) {
+                contextExpanded = false
+                contextToggleFocus.requestFocus()
+            }
+        }
     }
 }
 
 @Composable
-private fun ContextToggle(expanded: Boolean, onToggle: () -> Unit) {
-    OutlinedButton(onClick = onToggle, modifier = Modifier.semantics {
+private fun ContextToggle(expanded: Boolean, modifier: Modifier = Modifier, onToggle: () -> Unit) {
+    OutlinedButton(onClick = onToggle, modifier = modifier.semantics {
         testTag = WorkspaceShellTags.CONTEXT_TOGGLE
         contentDescription = if (expanded) "Collapse page context" else "Expand page context"
     }) { Text(if (expanded) "Hide context" else "Show context") }
+}
+
+/** Narrow Import keeps preparation in an overlay sheet and leaves the single page root intact underneath. */
+@Composable
+private fun ImportContextSheet(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, onDismiss: () -> Unit) {
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    Card(
+        Modifier.fillMaxSize().focusRequester(focusRequester).focusable()
+            .onPreviewKeyEvent { event ->
+                if (event.key == Key.Escape && event.type == KeyEventType.KeyDown) {
+                    onDismiss()
+                    true
+                } else false
+            }
+            .semantics { testTag = WorkspaceShellTags.CONTEXT_RAIL; contentDescription = "Import preparation sheet" },
+        colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface)
+    ) {
+        Column(Modifier.fillMaxSize().padding(MusicWorkspaceTokens.Spacing.Lg), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
+            ImportContextRail(state, onIntent)
+            OutlinedButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Return to Import") }
+        }
+    }
 }
 
 @Composable
@@ -262,12 +304,16 @@ private fun LocalArtworkSlot() = Box(
 ) { Text("LOCAL VISUAL\nPLACEHOLDER", style = MaterialTheme.typography.labelMedium, color = MusicWorkspaceTokens.TextSecondary) }
 
 @Composable
-private fun ContextRail(state: WorkspaceUiState, modifier: Modifier) {
+private fun ContextRail(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier) {
     Card(modifier.semantics { testTag = WorkspaceShellTags.CONTEXT_RAIL; contentDescription = "${state.workspaceSection.label} page context" }, colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface)) {
         Column(Modifier.padding(MusicWorkspaceTokens.Spacing.Md), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-            Icon(Icons.Default.Tune, contentDescription = null, tint = MusicWorkspaceTokens.Teal)
-            Text("${state.workspaceSection.label} context", style = MaterialTheme.typography.titleMedium)
-            Text(contextDescription(state), style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
+            if (state.workspaceSection == WorkspaceSection.IMPORT) {
+                ImportContextRail(state, onIntent)
+            } else {
+                Icon(Icons.Default.Tune, contentDescription = null, tint = MusicWorkspaceTokens.Teal)
+                Text("${state.workspaceSection.label} context", style = MaterialTheme.typography.titleMedium)
+                Text(contextDescription(state), style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
+            }
         }
     }
 }
