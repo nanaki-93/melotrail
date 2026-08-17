@@ -3,7 +3,7 @@
 ## Goal
 
 Complete the persistent footer workstation and prove that the assembled UI
-matches `../UI.png` at the reference viewport.
+matches `../../UI.png` at the reference viewport.
 
 ## Dependencies
 
@@ -28,7 +28,7 @@ matches `../UI.png` at the reference viewport.
 
 ## Verification
 
-- Full 1536 × 1024 overlay/diff against `../UI.png`: all major panel edges and
+- Full 1536 × 1024 overlay/diff against `../../UI.png`: all major panel edges and
   heights within 4 px, followed by human review of type/icons/colors.
 - Regression tests assert one navigation row, selector, import actions,
   timeline, song plan, transport, mixer, master output, and feedback surface.

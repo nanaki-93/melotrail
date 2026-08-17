@@ -84,7 +84,15 @@ object WorkspaceTags {
     const val AI_PLAN_REGENERATE = "ai-plan-regenerate"
     const val AI_PLAN_EXPORT = "ai-plan-export"
     const val MIXER = "mixer"
+    const val FOOTER_WAVEFORM = "footer-waveform"
+    const val MIX_CHANNEL_PREFIX = "mix-channel-"
+    const val MIX_GAIN_PREFIX = "mix-gain-"
+    const val MIX_MUTE_PREFIX = "mix-mute-"
+    const val MIX_SOLO_PREFIX = "mix-solo-"
     const val MASTER_OUTPUT = "master-output"
+    const val MASTER_EFFECT_LOFI = "master-effect-lofi"
+    const val MASTER_EFFECT_GLUE = "master-effect-glue"
+    const val MASTER_EFFECT_LIMITER = "master-effect-limiter"
     const val PART_ROW_PREFIX = "part-row-"
     const val PART_PREVIEW_PREFIX = "part-preview-"
     const val STRUCTURE_PANEL = "structure-panel"
@@ -1110,22 +1118,50 @@ internal fun CompactTransport(state: WorkspaceUiState, onIntent: (WorkspaceInten
                     modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_SEEK; contentDescription = "Seek $label" }
                 )
             }
-            Column(modifier = Modifier.widthIn(min = 150.dp, max = 210.dp)) {
-                Text("Master ${(session.volume * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
-                Slider(
-                    value = session.volume.toFloat(),
-                    onValueChange = { onIntent(WorkspaceIntent.SetPlaybackVolume(it.toDouble())) },
-                    enabled = session.request != null || state.project != null,
-                    modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_VOLUME; contentDescription = "Master output volume" }
-                )
-            }
+            FooterWaveform(session, Modifier.weight(1.15f))
             if (session.phase == PlaybackSessionPhase.FAILED && session.retryAction == PlaybackRetryAction.RETRY_SAME_SELECTION) {
                 OutlinedButton(
                     onClick = { onIntent(WorkspaceIntent.RetryPreview) },
                     modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_RETRY; contentDescription = "Retry $label" }
                 ) { Text("Retry") }
             }
-            OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.MIX_MASTER)) }) { Text("Mixer") }
+        }
+    }
+}
+
+/**
+ * The playback boundary exposes no decoded sample frames. This is therefore a
+ * deterministic timeline placeholder, visibly labelled so it never claims to
+ * be an audio waveform or a live signal meter.
+ */
+@Composable
+private fun FooterWaveform(session: PlaybackSession, modifier: Modifier = Modifier) {
+    val sourceKey = session.artifact?.path?.toString().orEmpty()
+    val hasSelectedArtifact = sourceKey.isNotBlank()
+    val bars = if (hasSelectedArtifact) List(36) { index ->
+        ((sourceKey.hashCode() * 31 + index * 17).ushr(1) % 13 + 3) / 18f
+    } else emptyList()
+    Box(
+        modifier.height(52.dp).clip(MaterialTheme.shapes.small).background(MusicWorkspaceTokens.Canvas.copy(alpha = 0.74f))
+            .semantics {
+                testTag = WorkspaceTags.FOOTER_WAVEFORM
+                contentDescription = if (hasSelectedArtifact) "Decoded waveform unavailable for the selected playback artifact." else "Waveform unavailable because no playback artifact is selected."
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        if (bars.isEmpty()) {
+            Text("NO WAVEFORM", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Disabled)
+        } else {
+            Row(Modifier.fillMaxSize().padding(horizontal = 3.dp), horizontalArrangement = Arrangement.spacedBy(1.dp), verticalAlignment = Alignment.CenterVertically) {
+                bars.forEach { amplitude ->
+                    Box(Modifier.weight(1f).height((4f + amplitude * 24f).dp).background(MusicWorkspaceTokens.Teal.copy(alpha = 0.26f), MaterialTheme.shapes.extraSmall))
+                }
+            }
+            Text("WAVEFORM NOT DECODED", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.TextSecondary)
+            if (session.durationSeconds > 0.0) {
+                val progress = (session.positionSeconds / session.durationSeconds).toFloat().coerceIn(0f, 1f)
+                Box(Modifier.align(Alignment.CenterStart).fillMaxWidth(progress).height(2.dp).background(MusicWorkspaceTokens.Teal.copy(alpha = 0.65f)))
+            }
         }
     }
 }

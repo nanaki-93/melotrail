@@ -30,6 +30,7 @@ import java.nio.file.Files
 import javax.imageio.ImageIO
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalTestApi::class)
 class WorkspaceScreenTest {
@@ -415,7 +416,7 @@ class WorkspaceScreenTest {
         val image = onNodeWithTag(ReferenceFixtureTag).captureToImage()
         assertEquals(1536, image.width)
         assertEquals(1024, image.height)
-        image.writePng(java.nio.file.Path.of("build", "reports", "reference-center-1536x1024.png"))
+        image.writePng(java.nio.file.Path.of("build", "reports", "task-082-reference-1536x1024.png"))
     }
 
     @Test
@@ -442,6 +443,71 @@ class WorkspaceScreenTest {
         onNodeWithTag(WorkspaceTags.COMMERCIAL_READINESS).assertExists()
         onNodeWithText("Commercial-ready is blocked").assertExists()
         onNodeWithTag(WorkspaceTags.COMMERCIAL_EXPORT).assertIsEnabled()
+    }
+
+    @Test
+    fun `reference footer exposes five functional channel strips and truthful master controls`() = runSkikoComposeUiTest(size = Size(1536f, 104f)) {
+        val intents = mutableListOf<WorkspaceIntent>()
+        val root = java.nio.file.Path.of("build/reference-footer-project")
+        val mix = app.melotrail.application.MixSnapshot(
+            root = root,
+            settings = app.melotrail.application.PersistedMixSettings(),
+            availableStems = workstationInstrumentNames(),
+            dryMix = root.resolve("mix/dry.wav"),
+            stale = false
+        )
+        setContent {
+            MelotrailTheme {
+                Box(Modifier.requiredSize(1536.dp, MusicWorkspaceTokens.Reference.FooterHeight)) {
+                    WorkstationFooter(projectState().copy(mix = mix), intents::add)
+                }
+            }
+        }
+
+        onNodeWithTag(WorkspaceTags.COMPACT_TRANSPORT).assertExists()
+        onNodeWithTag(WorkspaceTags.FOOTER_WAVEFORM).assertExists()
+        workstationInstrumentNames().forEach { instrument ->
+            onNodeWithTag(WorkspaceTags.MIX_CHANNEL_PREFIX + instrument).assertExists()
+            onNodeWithTag(WorkspaceTags.MIX_GAIN_PREFIX + instrument).assertIsEnabled()
+            onNodeWithTag(WorkspaceTags.MIX_MUTE_PREFIX + instrument).assertIsEnabled()
+            onNodeWithTag(WorkspaceTags.MIX_SOLO_PREFIX + instrument).assertIsEnabled()
+        }
+        onNodeWithTag(WorkspaceTags.MIX_GAIN_PREFIX + "piano").performClick()
+        assertTrue(intents.last() is WorkspaceIntent.UpdateMixSetting)
+        onNodeWithTag(WorkspaceTags.MIX_MUTE_PREFIX + "piano").performClick()
+        assertEquals(
+            WorkspaceIntent.UpdateMixSetting("piano", app.melotrail.application.LogicalMixSetting(muted = true)),
+            intents.last()
+        )
+        onNodeWithTag(WorkspaceTags.MIX_SOLO_PREFIX + "piano").performClick()
+        assertEquals(
+            WorkspaceIntent.UpdateMixSetting("piano", app.melotrail.application.LogicalMixSetting(solo = true)),
+            intents.last()
+        )
+        onNodeWithTag(WorkspaceTags.MASTER_EFFECT_LOFI).performClick()
+        assertEquals(WorkspaceIntent.UpdateBuildOptions(BuildOptionsDraft(loFi = true)), intents.last())
+        onNodeWithTag(WorkspaceTags.PLAYBACK_VOLUME).performClick()
+        assertTrue(intents.last() is WorkspaceIntent.SetPlaybackVolume)
+        onNodeWithTag(WorkspaceTags.MASTER_EFFECT_GLUE).assertIsNotEnabled()
+        onNodeWithTag(WorkspaceTags.MASTER_EFFECT_LIMITER).assertIsNotEnabled()
+    }
+
+    @Test
+    fun `reference footer does not claim signal or activate channels without current mix state`() = runComposeUiTest {
+        setContent {
+            MelotrailTheme {
+                Box(Modifier.requiredSize(1536.dp, MusicWorkspaceTokens.Reference.FooterHeight)) {
+                    WorkstationFooter(projectState(), onIntent = {})
+                }
+            }
+        }
+
+        onNodeWithText("NO WAVEFORM").assertExists()
+        workstationInstrumentNames().forEach { instrument ->
+            onNodeWithTag(WorkspaceTags.MIX_GAIN_PREFIX + instrument).assertIsNotEnabled()
+            onNodeWithTag(WorkspaceTags.MIX_MUTE_PREFIX + instrument).assertIsNotEnabled()
+            onNodeWithTag(WorkspaceTags.MIX_SOLO_PREFIX + instrument).assertIsNotEnabled()
+        }
     }
 
     @Test

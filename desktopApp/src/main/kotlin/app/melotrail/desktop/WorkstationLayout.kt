@@ -15,18 +15,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -312,11 +317,15 @@ private fun PlanWaveform(index: Int, energy: Double) {
 @Composable
 internal fun WorkstationFooter(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        if (maxWidth >= MusicWorkspaceTokens.Reference.MediumBreakpoint) {
+        // Below this the five channel strips would be visibly clipped.
+        // The full typed mixer remains reachable from Mix & Master instead.
+        if (maxWidth >= 900.dp) {
+            val referenceWide = maxWidth >= MusicWorkspaceTokens.Reference.WideBreakpoint
             Row(Modifier.height(MusicWorkspaceTokens.Reference.FooterHeight), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Reference.ColumnGap)) {
-                CompactTransport(state, onIntent, Modifier.weight(1.35f))
+                CompactTransport(state, onIntent, Modifier.weight(if (referenceWide) 1.62f else 1.2f))
                 MixerStrips(state, onIntent, Modifier.weight(1f))
-                MasterBusStrip(Modifier.width(210.dp))
+                MasterMeterStrip(state, onIntent, Modifier.width(if (referenceWide) 110.dp else 90.dp))
+                MasterBusStrip(state, onIntent, Modifier.width(if (referenceWide) 270.dp else 180.dp))
             }
         } else CompactTransport(state, onIntent)
     }
@@ -329,27 +338,115 @@ private fun MixerStrips(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
 ) {
     Row(Modifier.fillMaxSize().padding(MusicWorkspaceTokens.Spacing.Sm), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
         listOf("piano", "bass", "drums", "pad", "strings").forEach { name ->
-            val setting = state.mix?.settings?.tracks?.get(name)
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(name.replaceFirstChar(Char::uppercase), style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Box(Modifier.weight(1f).width(4.dp).background(instrumentLaneColors.getValue(name)))
-                Text("%.1f dB".format(java.util.Locale.ROOT, setting?.gainDb ?: 0.0), style = MaterialTheme.typography.labelSmall)
+            val setting = state.mix?.settings?.tracks?.get(name) ?: app.melotrail.application.LogicalMixSetting()
+            val enabled = state.mix != null && !state.mix.stale && !state.operation.isMutating
+            val unavailable = "${name.replaceFirstChar(Char::uppercase)} controls are unavailable until current rendered stems are loaded."
+            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+                Column(
+                    Modifier.weight(1f).semantics {
+                        testTag = WorkspaceTags.MIX_CHANNEL_PREFIX + name
+                        contentDescription = if (enabled) "${name.replaceFirstChar(Char::uppercase)} channel strip" else unavailable
+                    },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                ) {
+                    Text(name.replaceFirstChar(Char::uppercase), style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
+                        TextButton(
+                            onClick = { onIntent(WorkspaceIntent.UpdateMixSetting(name, setting.copy(solo = !setting.solo))) }, enabled = enabled,
+                            modifier = Modifier.height(16.dp).semantics {
+                                testTag = WorkspaceTags.MIX_SOLO_PREFIX + name
+                                contentDescription = if (enabled) "${if (setting.solo) "Disable" else "Enable"} solo for $name" else unavailable
+                            }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 3.dp, vertical = 0.dp)
+                        ) { Text("S", style = MaterialTheme.typography.labelSmall) }
+                        TextButton(
+                            onClick = { onIntent(WorkspaceIntent.UpdateMixSetting(name, setting.copy(muted = !setting.muted))) }, enabled = enabled,
+                            modifier = Modifier.height(16.dp).semantics {
+                                testTag = WorkspaceTags.MIX_MUTE_PREFIX + name
+                                contentDescription = if (enabled) "${if (setting.muted) "Unmute" else "Mute"} $name" else unavailable
+                            }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 3.dp, vertical = 0.dp)
+                        ) { Text("M", style = MaterialTheme.typography.labelSmall) }
+                    }
+                    FooterMeterPlaceholder(name, Modifier.fillMaxWidth().height(14.dp))
+                    Slider(
+                        value = setting.gainDb.toFloat(),
+                        onValueChange = { onIntent(WorkspaceIntent.UpdateMixSetting(name, setting.copy(gainDb = it.toDouble()))) },
+                        valueRange = -24f..12f, enabled = enabled,
+                        modifier = Modifier.fillMaxWidth().height(12.dp).semantics {
+                            testTag = WorkspaceTags.MIX_GAIN_PREFIX + name
+                            contentDescription = if (enabled) "${name.replaceFirstChar(Char::uppercase)} channel gain" else unavailable
+                        }
+                    )
+                    Text("%.1f dB".format(java.util.Locale.ROOT, setting.gainDb), style = MaterialTheme.typography.labelSmall)
+                }
             }
         }
-        TextButton(onClick = { onIntent(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.MIX_MASTER)) }, modifier = Modifier.sizeIn(minWidth = MusicWorkspaceTokens.Interaction.MinimumHitTarget, minHeight = MusicWorkspaceTokens.Interaction.MinimumHitTarget)) { Text("Mix") }
     }
 }
 
 @Composable
-private fun MasterBusStrip(modifier: Modifier) = Card(
-    modifier = modifier.height(MusicWorkspaceTokens.Reference.FooterHeight).semantics { testTag = WorkspaceTags.MASTER_OUTPUT; contentDescription = "Master output and bus controls" },
+private fun MasterMeterStrip(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier) = Card(
+    modifier = modifier.height(MusicWorkspaceTokens.Reference.FooterHeight).semantics { testTag = WorkspaceTags.MASTER_OUTPUT; contentDescription = "Master output meter and volume" },
     colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.Surface), border = BorderStroke(1.dp, MusicWorkspaceTokens.Border)
 ) {
-    Column(Modifier.padding(MusicWorkspaceTokens.Spacing.Sm), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-        Text("MASTER BUS", style = MaterialTheme.typography.labelSmall)
-        Text("Soft Lo-Fi · unavailable until Build Song", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("Glue Comp · unavailable until Build Song", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("Limiter · unavailable until Build Song", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    val session = state.playbackSession
+    val enabled = session.request != null || state.project != null
+    Column(Modifier.fillMaxSize().padding(MusicWorkspaceTokens.Spacing.Sm), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+        Text("MASTER", style = MaterialTheme.typography.labelSmall)
+        FooterMeterPlaceholder("master", Modifier.fillMaxWidth().weight(1f))
+        Slider(
+            value = session.volume.toFloat(),
+            onValueChange = { onIntent(WorkspaceIntent.SetPlaybackVolume(it.toDouble())) },
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth().semantics {
+                testTag = WorkspaceTags.PLAYBACK_VOLUME
+                contentDescription = if (enabled) "Master output volume" else "Master output volume is unavailable until a project is selected."
+            }
+        )
+    }
+}
+
+/** No peak data is held in WorkspaceUiState, so this deliberately renders a labelled zero-signal meter. */
+@Composable
+private fun FooterMeterPlaceholder(name: String, modifier: Modifier = Modifier) = Box(
+    modifier.clip(MaterialTheme.shapes.extraSmall).background(MusicWorkspaceTokens.Canvas.copy(alpha = 0.62f))
+        .semantics { contentDescription = "${name.replaceFirstChar(Char::uppercase)} meter: no signal data available" },
+    contentAlignment = Alignment.Center
+) {
+    Box(Modifier.fillMaxWidth(0.18f).height(2.dp).background(instrumentLaneColors[name]?.copy(alpha = 0.35f) ?: MusicWorkspaceTokens.Disabled))
+    Text("—", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Disabled)
+}
+
+@Composable
+private fun MasterBusStrip(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier) = Card(
+    modifier = modifier.height(MusicWorkspaceTokens.Reference.FooterHeight).semantics { contentDescription = "Master bus controls" },
+    colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.Surface), border = BorderStroke(1.dp, MusicWorkspaceTokens.Border)
+) {
+    val enabled = state.project != null && !state.operation.isMutating
+    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+        Column(Modifier.padding(MusicWorkspaceTokens.Spacing.Sm), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            Text("MASTER BUS", style = MaterialTheme.typography.labelSmall)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = state.buildOptions.loFi,
+                    onCheckedChange = { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(loFi = it))) },
+                    enabled = enabled,
+                    modifier = Modifier.size(18.dp).semantics {
+                        testTag = WorkspaceTags.MASTER_EFFECT_LOFI
+                        contentDescription = if (enabled) "Include Soft Lo-Fi audio texture in the next Build Song" else "Soft Lo-Fi is unavailable until a project is selected."
+                    }
+                )
+                Text("Soft Lo-Fi", modifier = Modifier.padding(start = 4.dp), style = MaterialTheme.typography.labelSmall)
+            }
+            TextButton(onClick = {}, enabled = false, modifier = Modifier.height(18.dp).semantics {
+                testTag = WorkspaceTags.MASTER_EFFECT_GLUE
+                contentDescription = "Glue compression control unavailable. Build Song owns the validated mastering chain."
+            }, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) { Text("Glue Comp · Build Song", style = MaterialTheme.typography.labelSmall) }
+            TextButton(onClick = {}, enabled = false, modifier = Modifier.height(18.dp).semantics {
+                testTag = WorkspaceTags.MASTER_EFFECT_LIMITER
+                contentDescription = "Limiter control unavailable. Build Song owns the validated mastering chain."
+            }, contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)) { Text("Limiter · Build Song", style = MaterialTheme.typography.labelSmall) }
+        }
     }
 }
 

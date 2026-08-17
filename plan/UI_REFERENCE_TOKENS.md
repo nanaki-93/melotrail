@@ -21,10 +21,20 @@ or destination data.
 
 ## Overlay/diff workflow
 
-1. Launch a deterministic workspace fixture at 1536 × 1024, 100% scaling.
-2. Capture a PNG without local project paths, dependency availability, device
-   data, or time-dependent content.
-3. Place the capture over `plan/UI.png` at 50% opacity. Check outer panel
+1. Generate the deterministic Task 082 fixture at 1536 × 1024 and 100% scale:
+
+   ```bash
+   ./gradlew :desktopApp:test --rerun-tasks --tests 'app.melotrail.desktop.WorkspaceScreenTest.reference center fixture captures the deterministic workstation at 1536 by 1024'
+   ```
+
+   The test writes `desktopApp/build/reports/task-082-reference-1536x1024.png`. Its state
+   is entirely in-memory and has no local project files, network, clock, audio
+   device, renderer, or worker dependency.
+2. Place that capture over `plan/UI.png` at 50% opacity. Check outer panel
    edges, header/footer height, and three-column boundaries against the table.
-4. Pixel-diff colors using a documented tolerance of 8 RGB values. Review text
+3. Pixel-diff colors using a documented tolerance of 8 RGB values. Review text
    and vector icons by eye; do not use the diff as evidence of typography.
+4. At 100%, 125%, and 150%, repeat the capture/review with long project and
+   part names, an empty project, and a failure banner. Also inspect medium and
+   narrow widths: there must be one navigation row, no duplicate transport,
+   and no page-level horizontal scrolling.
