@@ -460,9 +460,40 @@ class WorkspaceViewModelTest {
         viewModel.accept(WorkspaceIntent.ClearStructure); advanceUntilIdle()
         assertEquals(listOf("A", "A"), viewModel.state.value.structureDraft, "failed saves must retain the loaded canonical structure")
         assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation)
+        assertIs<WorkspaceRetry.SaveStructure>(viewModel.state.value.retry)
         service.failureOnSave = null
-        viewModel.accept(WorkspaceIntent.ClearStructure); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.Retry); advanceUntilIdle()
         assertEquals(emptyList(), viewModel.state.value.structureDraft)
+        assertEquals(WorkspaceSection.STRUCTURE, viewModel.state.value.workspaceSection)
+        viewModel.close()
+    }
+
+    @Test
+    fun `canonical occurrence actions select and mutate by instance identity`() = runTest {
+        val root = Path.of("build/task-095-occurrences")
+        val service = FakeProjectService(result = projectSnapshot(root).copy(
+            parts = listOf(analyzedPart("A"), analyzedPart("B")),
+            structure = listOf(
+                app.melotrail.application.StructureSectionSummary(0, "A", 1, "A1", 4.0),
+                app.melotrail.application.StructureSectionSummary(1, "B", 1, "B1", 4.0)
+            )
+        ))
+        val viewModel = WorkspaceViewModel(service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.STRUCTURE))
+        viewModel.accept(WorkspaceIntent.SelectStructureOccurrence("B1"))
+        assertEquals("B1", viewModel.state.value.selectedStructureOccurrenceId)
+
+        viewModel.accept(WorkspaceIntent.MoveStructureOccurrence("B1", earlier = true)); advanceUntilIdle()
+        assertEquals(listOf("B", "A"), checkNotNull(service.savedStructure).partIds)
+        assertEquals("B1", viewModel.state.value.selectedStructureOccurrenceId)
+
+        viewModel.accept(WorkspaceIntent.DuplicateStructureOccurrence("B1")); advanceUntilIdle()
+        assertEquals(listOf("B", "B", "A"), checkNotNull(service.savedStructure).partIds)
+        assertEquals("B2", viewModel.state.value.selectedStructureOccurrenceId)
+        viewModel.accept(WorkspaceIntent.RemoveStructureOccurrence("B2")); advanceUntilIdle()
+        assertEquals(listOf("B", "A"), checkNotNull(service.savedStructure).partIds)
         assertEquals(WorkspaceSection.STRUCTURE, viewModel.state.value.workspaceSection)
         viewModel.close()
     }

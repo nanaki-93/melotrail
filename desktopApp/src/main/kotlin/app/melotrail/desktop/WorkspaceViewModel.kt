@@ -106,6 +106,8 @@ data class WorkspaceUiState(
     val soundLibrary: SoundLibrarySettingsState = SoundLibrarySettingsState(),
     val dialog: WorkspaceDialog? = null,
     val structureDraft: List<String> = emptyList(),
+    /** A canonical occurrence ID, never a row position. It is UI selection only. */
+    val selectedStructureOccurrenceId: String? = null,
     val downstreamArtifactsStale: Boolean = false,
     val arrangementDraftDirty: Boolean = false,
     val retry: WorkspaceRetry? = null,
@@ -399,6 +401,7 @@ sealed interface WorkspaceRetry {
     data class PrepareMidi(val request: PrepareMidiRequest) : WorkspaceRetry
     data class ApplyMidiFeel(val root: Path, val partId: String, val input: MidiAnalysisInput) : WorkspaceRetry
     data class Transcribe(val root: Path, val partId: String, val selectedInput: TranscriptionInputArtifact) : WorkspaceRetry
+    data class SaveStructure(val root: Path, val partIds: List<String>, val selectedIndex: Int?) : WorkspaceRetry
     data class GenerateArrangement(val request: GenerateArrangementRequest) : WorkspaceRetry
     data class GenerateCohesion(val request: GenerateCohesionRequest) : WorkspaceRetry
 }
@@ -455,6 +458,11 @@ sealed interface WorkspaceIntent {
     data class UpdateRole(val role: String) : WorkspaceIntent
     data object SaveRole : WorkspaceIntent
     data class AddStructurePart(val partId: String) : WorkspaceIntent
+    data class SelectStructureOccurrence(val instanceId: String) : WorkspaceIntent
+    data class DuplicateStructureOccurrence(val instanceId: String) : WorkspaceIntent
+    data class RemoveStructureOccurrence(val instanceId: String) : WorkspaceIntent
+    data class MoveStructureOccurrence(val instanceId: String, val earlier: Boolean) : WorkspaceIntent
+    /** Index intents remain for existing adapters; new UI routes through canonical occurrence IDs. */
     data class DuplicateStructurePart(val index: Int) : WorkspaceIntent
     data class RemoveStructurePart(val index: Int) : WorkspaceIntent
     data class MoveStructurePart(val fromIndex: Int, val toIndex: Int) : WorkspaceIntent
@@ -588,6 +596,12 @@ class WorkspaceViewModel(
             is WorkspaceIntent.UpdateRole -> updateRole(intent.role)
             WorkspaceIntent.SaveRole -> saveRole()
             is WorkspaceIntent.AddStructurePart -> addStructurePart(intent.partId)
+            is WorkspaceIntent.SelectStructureOccurrence -> selectStructureOccurrence(intent.instanceId)
+            is WorkspaceIntent.DuplicateStructureOccurrence -> structureIndex(intent.instanceId)?.let(::duplicateStructurePart)
+            is WorkspaceIntent.RemoveStructureOccurrence -> structureIndex(intent.instanceId)?.let(::removeStructurePart)
+            is WorkspaceIntent.MoveStructureOccurrence -> structureIndex(intent.instanceId)?.let { index ->
+                moveStructurePart(index, index + if (intent.earlier) -1 else 1)
+            }
             is WorkspaceIntent.DuplicateStructurePart -> duplicateStructurePart(intent.index)
             is WorkspaceIntent.RemoveStructurePart -> removeStructurePart(intent.index)
             is WorkspaceIntent.MoveStructurePart -> moveStructurePart(intent.fromIndex, intent.toIndex)
@@ -1356,7 +1370,7 @@ class WorkspaceViewModel(
     private fun duplicateStructurePart(index: Int) {
         val draft = state.value.structureDraft
         if (index !in draft.indices) return
-        saveStructure(draft.toMutableList().apply { add(index + 1, draft[index]) })
+        saveStructure(draft.toMutableList().apply { add(index + 1, draft[index]) }, selectedIndex = index + 1)
     }
 
     private fun addStructurePart(partId: String) {
@@ -1366,22 +1380,31 @@ class WorkspaceViewModel(
         if (primaryPartAction(part, state.value.pendingMidiFeel) !is PartPrimaryAction.AddToStructure) {
             return fail("add to structure", "Part '$partId' must finish current MIDI analysis before it can be added to structure.")
         }
-        saveStructure(state.value.structureDraft + partId)
+        saveStructure(state.value.structureDraft + partId, selectedIndex = state.value.structureDraft.size)
     }
 
     private fun removeStructurePart(index: Int) {
         val draft = state.value.structureDraft
         if (index !in draft.indices) return
-        saveStructure(draft.filterIndexed { current, _ -> current != index })
+        saveStructure(draft.filterIndexed { current, _ -> current != index }, selectedIndex = (index - 1).coerceAtLeast(0))
     }
 
     private fun moveStructurePart(from: Int, to: Int) {
         val draft = state.value.structureDraft
         if (from !in draft.indices || to !in draft.indices || from == to) return
-        saveStructure(draft.toMutableList().apply { add(to, removeAt(from)) })
+        saveStructure(draft.toMutableList().apply { add(to, removeAt(from)) }, selectedIndex = to)
     }
 
-    private fun saveStructure(partIds: List<String>) {
+    private fun selectStructureOccurrence(instanceId: String) {
+        if (state.value.project?.structure?.any { it.instanceId == instanceId } == true) {
+            mutableState.update { it.copy(selectedStructureOccurrenceId = instanceId) }
+        }
+    }
+
+    private fun structureIndex(instanceId: String): Int? =
+        state.value.project?.structure?.indexOfFirst { it.instanceId == instanceId }?.takeIf { it >= 0 }
+
+    private fun saveStructure(partIds: List<String>, selectedIndex: Int? = null) {
         val project = state.value.project ?: return
         if (state.value.operation.isMutating) return
         val existing = state.value.structureDraft
@@ -1396,8 +1419,13 @@ class WorkspaceViewModel(
                     }
                     opened(snapshot, if (partIds.isEmpty()) "Cleared structure" else "Saved song structure", feedbackId, stale =
                         state.value.downstreamArtifactsStale || (existing != partIds && artifactsExist))
+                    mutableState.update { current ->
+                        current.copy(selectedStructureOccurrenceId = selectedIndex?.let(snapshot.structure::getOrNull)?.instanceId
+                            ?: current.selectedStructureOccurrenceId?.takeIf { id -> snapshot.structure.any { it.instanceId == id } }
+                            ?: snapshot.structure.firstOrNull()?.instanceId)
+                    }
                 }
-                .onFailure { fail("save structure", it.message ?: "Unable to save structure.", sessionId = feedbackId) }
+                .onFailure { fail("save structure", it.message ?: "Unable to save structure.", WorkspaceRetry.SaveStructure(project.root, partIds, selectedIndex), feedbackId) }
         }
     }
 
@@ -1431,6 +1459,7 @@ class WorkspaceViewModel(
             mutableState.update { it.copy(selectedPartId = action.partId, audioPreparation = it.audioPreparation.copy(partId = action.partId, transcriptionInput = action.selectedInput)) }
             transcribeSelectedPart()
         }
+        is WorkspaceRetry.SaveStructure -> saveStructure(action.partIds, action.selectedIndex)
         is WorkspaceRetry.GenerateArrangement -> runGenerateArrangement(action.request)
         is WorkspaceRetry.GenerateCohesion -> runGenerateCohesion(action.request)
         null -> Unit
@@ -1797,6 +1826,9 @@ class WorkspaceViewModel(
                 operationFeedback = feedbackId?.let { feedbackTracker.complete(it, openedMessage) } ?: current.operationFeedback,
                 dialog = null,
                 structureDraft = project.structure.map { section -> section.partId },
+                selectedStructureOccurrenceId = current.selectedStructureOccurrenceId
+                    ?.takeIf { selected -> project.structure.any { it.instanceId == selected } }
+                    ?: project.structure.firstOrNull()?.instanceId,
                 downstreamArtifactsStale = stale,
                 arrangementDraftDirty = if (resetWorkspace) false else current.arrangementDraftDirty,
                 retry = null,

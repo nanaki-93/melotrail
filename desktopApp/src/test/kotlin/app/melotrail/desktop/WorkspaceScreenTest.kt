@@ -18,6 +18,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
@@ -474,21 +475,28 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `Structure renders one focused root with eligible add control and keyboard reorder alternatives`() = runComposeUiTest {
+    fun `Structure renders one focused root with canonical occurrence selection and keyboard reorder alternatives`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(populatedState().copy(workspaceSection = WorkspaceSection.STRUCTURE), intents::add) } }
 
         onAllNodesWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.STRUCTURE.name.lowercase()).assertCountEquals(1)
-        listOf(WorkspacePageTags.STRUCTURE_PALETTE, WorkspacePageTags.STRUCTURE_STRIP, WorkspacePageTags.STRUCTURE_TABLE).forEach {
+        listOf(
+            WorkspacePageTags.STRUCTURE_PALETTE, WorkspacePageTags.STRUCTURE_STRIP, WorkspacePageTags.STRUCTURE_TABLE,
+            WorkspacePageTags.STRUCTURE_CONTEXT, WorkspacePageTags.STRUCTURE_SUMMARY, WorkspacePageTags.STRUCTURE_PREVIEW,
+            WorkspacePageTags.STRUCTURE_HELP
+        ).forEach {
             onAllNodesWithTag(it).assertCountEquals(1)
         }
         onNodeWithTag(WorkspacePageTags.STRUCTURE_ADD_PREFIX + "A").performClick()
+        waitForIdle()
         assertEquals(WorkspaceIntent.AddStructurePart("A"), intents.last())
-        val earlier = onNodeWithTag(WorkspaceTags.STRUCTURE_MOVE_LEFT + "1")
-        earlier.performClick()
-        intents.clear()
-        earlier.performKeyInput { pressKey(Key.Enter) }
-        assertEquals(WorkspaceIntent.MoveStructurePart(1, 0), intents.last())
+        val earlier = onNodeWithTag(WorkspaceTags.STRUCTURE_MOVE_LEFT + "B1")
+        earlier.performSemanticsAction(SemanticsActions.OnClick) { it.invoke() }
+        waitForIdle()
+        assertEquals(WorkspaceIntent.MoveStructureOccurrence("B1", earlier = true), intents.last())
+        earlier.assertIsEnabled()
+        onNodeWithTag(WorkspaceTags.STRUCTURE_OCCURRENCE_PREFIX + "B1").performClick()
+        assertEquals(WorkspaceIntent.SelectStructureOccurrence("B1"), intents.last())
     }
 
     @Test
@@ -504,6 +512,47 @@ class WorkspaceScreenTest {
         onNodeWithText("Choose a prepared part to start").assertExists()
         onAllNodesWithTag(WorkspacePageTags.STRUCTURE_ADD_PREFIX + "A").assertCountEquals(1)
         onAllNodesWithTag(WorkspacePageTags.STRUCTURE_ADD_PREFIX + "raw").assertCountEquals(0)
+        onAllNodesWithText("Unknown").assertCountEquals(4)
+    }
+
+    @Test
+    fun `Structure composes long repeated stale mutating and failed canonical states truthfully`() = runComposeUiTest {
+        val base = populatedState()
+        val project = checkNotNull(base.project)
+        val longRole = "A deliberately long section role that must remain readable without creating page-level horizontal scrolling"
+        val repeated = List(12) { index ->
+            val partId = if (index % 2 == 0) "A" else "B"
+            val occurrence = index / 2 + 1
+            StructureSectionSummary(index, partId, occurrence, "$partId$occurrence", if (index == 4) null else 32.0)
+        }
+        val mixed = base.copy(
+            project = project.copy(
+                parts = project.parts.map { part ->
+                    part.copy(
+                        role = if (part.id == "A") longRole else "chorus",
+                        analysis = part.analysis?.copy(key = if (part.id == "A") "A minor" else "C major")
+                    )
+                },
+                structure = repeated
+            ),
+            workspaceSection = WorkspaceSection.STRUCTURE,
+            selectedStructureOccurrenceId = "B4",
+            structureDraft = repeated.map(StructureSectionSummary::partId),
+            downstreamArtifactsStale = true,
+            operation = WorkspaceOperation.Failed("save structure", "disk full"),
+            retry = WorkspaceRetry.SaveStructure(project.root, repeated.map(StructureSectionSummary::partId), 7)
+        )
+        setContent { MelotrailTheme { WorkspaceScreen(mixed, onIntent = {}) } }
+
+        repeated.forEach { section -> onAllNodesWithTag(WorkspacePageTags.STRUCTURE_ROW_PREFIX + section.instanceId).assertCountEquals(1) }
+        onAllNodesWithTag(WorkspacePageTags.STRUCTURE_ROW_PREFIX + "B4").assertCountEquals(1)
+        onNodeWithText("Mixed").assertExists()
+        onAllNodesWithText("Unknown").assertCountEquals(5)
+        onNodeWithText("Structure save failed. Use the global Retry action; the last saved structure remains selected.").assertExists()
+
+        setContent { MelotrailTheme { WorkspaceScreen(mixed.copy(operation = WorkspaceOperation.SavingStructure), onIntent = {}) } }
+        onNodeWithTag(WorkspacePageTags.STRUCTURE_ADD_PREFIX + "A").assertIsNotEnabled()
+        onNodeWithText("Saving the canonical structure…").assertExists()
     }
 
     @Test
@@ -760,11 +809,17 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `deterministic Structure fixture captures the numbered reference region`() = runSkikoComposeUiTest(size = Size(1158f, 462f)) {
+    fun `deterministic Structure fixture captures and overlays the full task reference`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
         setContent { MelotrailTheme { WorkspaceScreen(populatedState().copy(workspaceSection = WorkspaceSection.STRUCTURE), onIntent = {}) } }
 
-        val image = onNodeWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.STRUCTURE.name.lowercase()).captureToImage()
-        assertTrue(image.width > 0 && image.height > 0)
+        val image = onRoot().captureToImage()
+        assertEquals(1536, image.width)
+        assertEquals(1024, image.height)
+        val page = onNodeWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.STRUCTURE.name.lowercase()).getUnclippedBoundsInRoot()
+        val table = onNodeWithTag(WorkspacePageTags.STRUCTURE_TABLE).getUnclippedBoundsInRoot()
+        val rail = onNodeWithTag(WorkspacePageTags.STRUCTURE_CONTEXT).getUnclippedBoundsInRoot()
+        assertTrue(table.right.value <= rail.left.value, "wide Structure table and context rail must not require page-level horizontal scrolling")
+        assertTrue(page.right.value <= 1536f && page.left.value >= 0f)
         writePageCapture("structure", image.toAwtImage())
         writeStructureReferenceOverlay(image.toAwtImage())
     }
@@ -1035,20 +1090,19 @@ class WorkspaceScreenTest {
 
     private fun writeStructureReferenceOverlay(structureCapture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/App-pages.png")) }
-            ?: error("Could not locate the App-pages reference image.")
-        val reference = ImageIO.read(repository.resolve("plan/pictures/App-pages.png").toFile())
-        val structureRegion = reference.getSubimage(401, 483, 365, 284)
+            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/03-structure.png")) }
+            ?: error("Could not locate the Task 095 Structure reference image.")
+        val reference = ImageIO.read(repository.resolve("plan/pictures/UI/03-structure.png").toFile())
         val overlay = BufferedImage(structureCapture.width, structureCapture.height, BufferedImage.TYPE_INT_ARGB)
         val graphics = overlay.createGraphics()
         try {
-            graphics.drawImage(structureRegion, 0, 0, overlay.width, overlay.height, null)
+            graphics.drawImage(reference, 0, 0, overlay.width, overlay.height, null)
             graphics.composite = AlphaComposite.SrcOver.derive(0.55f)
             graphics.drawImage(structureCapture, 0, 0, null)
         } finally {
             graphics.dispose()
         }
-        val target = repository.resolve("desktopApp/build/reports/task-085-structure-overlay.png")
+        val target = repository.resolve("desktopApp/build/reports/task-095-structure-overlay.png")
         Files.createDirectories(target.parent)
         assertTrue(ImageIO.write(overlay, "png", target.toFile()))
     }

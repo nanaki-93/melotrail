@@ -3,7 +3,7 @@
 ## Goal
 
 Rebuild the Structure destination to follow
-`../pictures/UI/03-structure.png` while retaining canonical structure saves,
+`../../pictures/UI/03-structure.png` while retaining canonical structure saves,
 stable occurrence identity, and complete keyboard editing.
 
 ## Dependencies
@@ -51,7 +51,7 @@ stable occurrence identity, and complete keyboard editing.
 - Assert one Structure page root and no page-level horizontal scrolling; only
   the bounded occurrence strip may scroll.
 - Capture and overlay the full 1536 × 1024 fixture against
-  `../pictures/UI/03-structure.png` and document intentional truthful
+  `../../pictures/UI/03-structure.png` and document intentional truthful
   differences.
 - Run `./gradlew test :desktopApp:test :desktopApp:build`.
 
