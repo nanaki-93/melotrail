@@ -3,7 +3,7 @@
 ## Goal
 
 Make Song Structure, Arrangement, and Timeline reproduce the center column of
-`../UI.png` using real structure, arrangement, mix, and timeline state.
+`../../UI.png` using real structure, arrangement, mix, and timeline state.
 
 ## Dependencies
 
@@ -34,7 +34,7 @@ Make Song Structure, Arrangement, and Timeline reproduce the center column of
   five-or-more structure occurrences.
 - Add semantics and interaction tests for section selection, reordering,
   arrangement selection, and visible timeline lanes.
-- Capture and overlay the center-column screenshot with `../UI.png`; major
+- Capture and overlay the center-column screenshot with `../../UI.png`; major
   geometry must be within 4 px at 1536 × 1024.
 - Run `./gradlew :desktopApp:test :desktopApp:build`.
 

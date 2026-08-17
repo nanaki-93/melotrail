@@ -55,6 +55,17 @@ object MusicWorkspaceTokens {
         const val DividerAlpha = 0.45f
     }
 
+    /** Center workstation cards mirror the reference column without creating a second song clock. */
+    object Center {
+        val StructureHeight = 188.dp
+        val ArrangementHeight = 268.dp
+        val TimelineHeight = 315.dp
+        val SectionBlockHeight = 74.dp
+        val TimelineLaneHeight = 34.dp
+        val LaneLabelWidth = 72.dp
+        val ControlHeight = 28.dp
+    }
+
     object Type {
         val Eyebrow = 11.sp
         val PartTitle = 13.sp

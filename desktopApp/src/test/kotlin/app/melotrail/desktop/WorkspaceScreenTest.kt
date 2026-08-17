@@ -321,6 +321,47 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `center workstation fixtures keep structure arrangement and timeline selection truthful`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        val state = centerWorkstationState(selected = 1)
+        setContent { MelotrailTheme { WorkspaceScreen(state, intents::add) } }
+
+        onNodeWithTag(WorkspaceTags.STRUCTURE_TOTAL).assertExists()
+        onNodeWithTag(WorkspaceTags.STRUCTURE_RULER).assertExists()
+        (0..5).forEach { onNodeWithTag(WorkspaceTags.STRUCTURE_OCCURRENCE_PREFIX + it).assertExists() }
+        workstationInstrumentNames().forEach {
+            onNodeWithTag(WorkspaceTags.ARRANGEMENT_INSTRUMENT_PREFIX + it).assertExists()
+            onNodeWithTag(WorkspaceTags.TIMELINE_LANE_PREFIX + it).assertExists()
+        }
+        onNodeWithTag(WorkspaceTags.TIMELINE_RULER).assertExists()
+        onNodeWithTag(WorkspaceTags.TIMELINE_CURSOR, useUnmergedTree = true).assertExists()
+
+        onNodeWithTag(WorkspaceTags.STRUCTURE_OCCURRENCE_PREFIX + 3).performClick()
+        assertEquals(WorkspaceIntent.SelectArrangementSection(3), intents.last())
+        onNodeWithTag(WorkspaceTags.STRUCTURE_MOVE_LEFT + 1).performClick()
+        assertEquals(WorkspaceIntent.MoveStructurePart(1, 0), intents.last())
+        onNodeWithTag(WorkspaceTags.ARRANGEMENT_EDIT_SECTION).performClick()
+        assertEquals(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.STRUCTURE), intents.last())
+
+        setContent { MelotrailTheme { WorkspaceScreen(state.copy(arrangement = state.arrangement!!.copy(stale = true)), onIntent = {}) } }
+        onNodeWithText("Arrangement is stale for the current structure or analyses.", substring = true).assertExists()
+        onNodeWithText("Timeline is unavailable because the arrangement is stale.", substring = true).assertExists()
+
+        setContent { MelotrailTheme { WorkspaceScreen(state.copy(structureDraft = emptyList(), project = state.project!!.copy(structure = emptyList()), arrangement = null), onIntent = {}) } }
+        onNodeWithText("Empty — add prepared parts in order.", substring = true).assertExists()
+    }
+
+    @Test
+    fun `reference center fixture captures the deterministic workstation at 1536 by 1024`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
+        setContent { MelotrailTheme { ReferenceWorkspaceFixture(centerWorkstationState(selected = 3)) } }
+
+        val image = onNodeWithTag(ReferenceFixtureTag).captureToImage()
+        assertEquals(1536, image.width)
+        assertEquals(1024, image.height)
+        image.writePng(java.nio.file.Path.of("build", "reports", "reference-center-1536x1024.png"))
+    }
+
+    @Test
     fun `mix and transport expose available artifact controls`() = runComposeUiTest {
         val root = java.nio.file.Path.of("build/test-project")
         val project = projectState().project!!.copy(
@@ -633,6 +674,38 @@ class WorkspaceScreenTest {
             sourceName = "$role.mid",
             sourceType = app.melotrail.application.PartSourceType.MIDI,
             analysis = app.melotrail.application.PartAnalysisSummary(app.melotrail.application.PartAnalysisStatus.MIDI, "analysis/$id.json", bars = 8 + index, durationSeconds = 20.0, key = "Am")
+        )
+    }
+
+    private fun workstationInstrumentNames() = listOf("piano", "bass", "drums", "pad", "strings")
+
+    private fun centerWorkstationState(selected: Int): WorkspaceUiState {
+        val root = java.nio.file.Path.of("build/reference-center-project")
+        val ids = listOf("A", "B", "B", "C", "D", "E")
+        val parts = referenceParts()
+        val structure = ids.mapIndexed { index, id ->
+            app.melotrail.application.StructureSectionSummary(index, id, ids.take(index + 1).count { it == id }, "$id${ids.take(index + 1).count { it == id }}", 20.0 + index)
+        }
+        val arrangements = structure.map { occurrence ->
+            app.melotrail.application.ArrangementSectionSnapshot(
+                occurrence.index, occurrence.instanceId, occurrence.partId,
+                if (occurrence.index == 3) "build" else "develop",
+                0.2 + occurrence.index * 0.1,
+                workstationInstrumentNames().filterIndexed { instrumentIndex, _ -> instrumentIndex == 0 || (occurrence.index + instrumentIndex) % 2 == 0 }.map { instrument ->
+                    app.melotrail.application.ArrangementInstrumentSnapshot(instrument, if (instrument == "piano") "source" else "generated", instrument, 0.6)
+                },
+                if (occurrence.index == 2) "build" else "none", occurrence.durationSeconds
+            )
+        }
+        val project = projectState().project!!.copy(root = root, parts = parts, structure = structure)
+        val mix = app.melotrail.application.MixSnapshot(root, app.melotrail.application.PersistedMixSettings(), workstationInstrumentNames(), root.resolve("mix/dry.wav"), stale = false)
+        return WorkspaceUiState(
+            project = project,
+            structureDraft = ids,
+            arrangement = app.melotrail.application.ArrangementSnapshot(root, arrangements, approvalRequired = false, approved = true, stale = false, artifact = root.resolve("arrangement.json")),
+            mix = mix,
+            selectedArrangementSection = selected,
+            runtimeReadiness = runtimeReadiness(DependencyReadiness(DependencyStatus.READY, "ready"))
         )
     }
 
