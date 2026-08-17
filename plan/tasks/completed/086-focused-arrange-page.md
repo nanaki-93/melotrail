@@ -3,7 +3,7 @@
 ## Goal
 
 Rebuild Arrange as the single focused planning destination shown in
-`../pictures/App-pages.png` while preserving bounded deterministic/Qwen rules.
+`../../pictures/App-pages.png` while preserving bounded deterministic/Qwen rules.
 
 ## Dependencies
 
@@ -36,7 +36,7 @@ Rebuild Arrange as the single focused planning destination shown in
 - Tests assert no other destination page root and no duplicate song-plan or
   feedback surface.
 - Capture and overlay a deterministic Arrange golden against the numbered
-  Arrange region of `../pictures/App-pages.png`.
+  Arrange region of `../../pictures/App-pages.png`.
 - Run `./gradlew test :desktopApp:test :desktopApp:build`.
 
 ## Out of scope

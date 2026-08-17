@@ -5,6 +5,8 @@ import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -12,6 +14,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.test.v2.runSkikoComposeUiTest
@@ -21,6 +25,8 @@ import app.melotrail.application.PartAnalysisSummary
 import app.melotrail.application.PartPreparationSummary
 import app.melotrail.application.PartSourceType
 import app.melotrail.application.PartSummary
+import app.melotrail.application.ArrangementPlannerKind
+import app.melotrail.application.ArrangementSnapshot
 import app.melotrail.application.ProjectReadiness
 import app.melotrail.application.ProjectSnapshot
 import app.melotrail.application.StructureSectionSummary
@@ -210,6 +216,84 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `Arrange stays focused across blocked generating draft approval stale and failed states`() = runComposeUiTest {
+        val ready = arrangeState()
+        val states = listOf(
+            WorkspaceUiState(workspaceSection = WorkspaceSection.ARRANGE),
+            ready.copy(operation = WorkspaceOperation.GeneratingArrangement()),
+            ready.copy(arrangement = arrangementSnapshot(approvalRequired = true, approved = false)),
+            ready.copy(arrangement = arrangementSnapshot(approved = true)),
+            ready.copy(arrangement = arrangementSnapshot(stale = true)),
+            ready.copy(operation = WorkspaceOperation.Failed("generate arrangement", "Qwen response rejected"), retry = WorkspaceRetry.GenerateArrangement(app.melotrail.application.GenerateArrangementRequest(Path.of("build/task-086-project"))))
+        )
+
+        states.forEach { state ->
+            setContent { MelotrailTheme { WorkspaceScreen(state, onIntent = {}) } }
+            onAllNodesWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.ARRANGE.name.lowercase()).assertCountEquals(1)
+            onAllNodesWithTag(WorkspacePageTags.ARRANGE_PLANNER_PREFIX + "deterministic").assertCountEquals(1)
+            onAllNodesWithTag(WorkspacePageTags.ARRANGE_PLANNER_PREFIX + "qwen").assertCountEquals(1)
+            onAllNodesWithTag(WorkspacePageTags.ARRANGE_PRIMARY_ACTION).assertCountEquals(1)
+            onAllNodesWithTag(WorkspacePageTags.ARRANGE_INSTRUMENT_PREFIX).assertCountEquals(0)
+            listOf("piano", "bass", "drums", "pad", "strings").forEach { instrument ->
+                onAllNodesWithTag(WorkspacePageTags.ARRANGE_INSTRUMENT_PREFIX + instrument).assertCountEquals(1)
+            }
+            onAllNodesWithTag(WorkspaceTags.STRUCTURE_PANEL).assertCountEquals(0)
+            onAllNodesWithTag(WorkspaceTags.TIMELINE_PANEL).assertCountEquals(0)
+            onAllNodesWithTag(WorkspaceTags.AI_PLAN_PANEL).assertCountEquals(0)
+        }
+    }
+
+    @Test
+    fun `Arrange dispatches existing typed planner instrument settings generate and approval intents`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(arrangeState(), intents::add) } }
+
+        onNodeWithTag(WorkspacePageTags.ARRANGE_PRIMARY_ACTION).assertIsEnabled()
+        onNodeWithTag(WorkspacePageTags.ARRANGE_PLANNER_PREFIX + "qwen").performClick()
+        onNodeWithTag(WorkspacePageTags.ARRANGE_INSTRUMENT_PREFIX + "bass").performClick()
+        onNodeWithTag(WorkspacePageTags.ARRANGE_STYLE).performTextInput("warm lo-fi")
+        onNodeWithTag(WorkspacePageTags.ARRANGE_PRIMARY_ACTION).performScrollTo().performClick()
+
+        assertEquals(
+            listOf(
+                WorkspaceIntent.UpdateArrangementPlanner(ArrangementPlannerKind.QWEN),
+                WorkspaceIntent.ToggleArrangementInstrument("bass"),
+                WorkspaceIntent.UpdateArrangementStyle("warm lo-fi"),
+                WorkspaceIntent.GenerateArrangement
+            ),
+            intents.filterNot { it == WorkspaceIntent.UpdateArrangementStyle("") }
+        )
+
+        intents.clear()
+        setContent { MelotrailTheme { WorkspaceScreen(arrangeState().copy(arrangement = arrangementSnapshot(approvalRequired = true, approved = false)), intents::add) } }
+        onNodeWithTag(WorkspacePageTags.ARRANGE_APPROVE).performScrollTo().performClick()
+        assertEquals(WorkspaceIntent.ApproveArrangement, intents.single())
+    }
+
+    @Test
+    fun `Arrange planner choice remains keyboard reachable`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(arrangeState(), intents::add) } }
+
+        val qwen = onNodeWithTag(WorkspacePageTags.ARRANGE_PLANNER_PREFIX + "qwen")
+        qwen.performClick()
+        intents.clear()
+        qwen.performKeyInput { pressKey(Key.Enter) }
+
+        assertEquals(WorkspaceIntent.UpdateArrangementPlanner(ArrangementPlannerKind.QWEN), intents.single())
+    }
+
+    @Test
+    fun `Arrange blocks its only generation action and exposes diagnostics when prerequisites are missing`() = runComposeUiTest {
+        setContent { MelotrailTheme { WorkspaceScreen(WorkspaceUiState(workspaceSection = WorkspaceSection.ARRANGE), onIntent = {}) } }
+
+        onNodeWithTag(WorkspacePageTags.ARRANGE_PRIMARY_ACTION).assertIsNotEnabled()
+        onAllNodesWithTag(WorkspacePageTags.ARRANGE_PREREQUISITE).assertCountEquals(1)
+        onNodeWithTag(WorkspacePageTags.ARRANGE_DIAGNOSTICS_TOGGLE).performScrollTo().performClick()
+        onAllNodesWithTag(WorkspacePageTags.ARRANGE_DIAGNOSTICS).assertCountEquals(1)
+    }
+
+    @Test
     fun `deterministic overview fixture uses reference page-shell geometry`() = runSkikoComposeUiTest(size = Size(1158f, 462f)) {
         setContent { MelotrailTheme { WorkspaceScreen(populatedState(), onIntent = {}) } }
 
@@ -242,6 +326,15 @@ class WorkspaceScreenTest {
         writeStructureReferenceOverlay(image.toAwtImage())
     }
 
+    @Test
+    fun `deterministic Arrange fixture captures the numbered reference region`() = runSkikoComposeUiTest(size = Size(1158f, 462f)) {
+        setContent { MelotrailTheme { WorkspaceScreen(arrangeState(), onIntent = {}) } }
+
+        val image = onNodeWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.ARRANGE.name.lowercase()).captureToImage()
+        assertTrue(image.width > 0 && image.height > 0)
+        writeArrangeReferenceOverlay(image.toAwtImage())
+    }
+
     private fun populatedState(): WorkspaceUiState = WorkspaceUiState(
         project = ProjectSnapshot(
             root = Path.of("build/task-083-project"), version = 3, name = "Midnight Train",
@@ -257,10 +350,27 @@ class WorkspaceScreenTest {
             readiness = ProjectReadiness(
                 cleanMidiReady = true, analysesReady = true, structureReady = true,
                 songPlanAvailable = false, arrangementAvailable = false, generatedMidiAvailable = false,
-                stemsAvailable = false, dryMixAvailable = false, loFiMixAvailable = false, masterAvailable = false
+                stemsAvailable = false, dryMixAvailable = false, loFiMixAvailable = false, masterAvailable = false,
+                cohesionReady = true
             )
         ),
-        selectedArrangementSection = 0
+        selectedArrangementSection = 0,
+        structureDraft = listOf("A", "B")
+    )
+
+    private fun arrangeState(): WorkspaceUiState = populatedState().copy(workspaceSection = WorkspaceSection.ARRANGE)
+
+    private fun arrangementSnapshot(
+        approvalRequired: Boolean = false,
+        approved: Boolean = false,
+        stale: Boolean = false
+    ) = ArrangementSnapshot(
+        root = Path.of("build/task-086-project"),
+        sections = emptyList(),
+        approvalRequired = approvalRequired,
+        approved = approved,
+        stale = stale,
+        artifact = Path.of("build/task-086-project/arrangement.json")
     )
 
     private fun readyPreparation() = PartPreparationSummary(
@@ -334,6 +444,26 @@ class WorkspaceScreenTest {
             graphics.dispose()
         }
         val target = repository.resolve("desktopApp/build/reports/task-085-structure-overlay.png")
+        Files.createDirectories(target.parent)
+        assertTrue(ImageIO.write(overlay, "png", target.toFile()))
+    }
+
+    private fun writeArrangeReferenceOverlay(arrangeCapture: BufferedImage) {
+        val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
+            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/App-pages.png")) }
+            ?: error("Could not locate the App-pages reference image.")
+        val reference = ImageIO.read(repository.resolve("plan/pictures/App-pages.png").toFile())
+        val arrangeRegion = reference.getSubimage(777, 483, 356, 284)
+        val overlay = BufferedImage(arrangeCapture.width, arrangeCapture.height, BufferedImage.TYPE_INT_ARGB)
+        val graphics = overlay.createGraphics()
+        try {
+            graphics.drawImage(arrangeRegion, 0, 0, overlay.width, overlay.height, null)
+            graphics.composite = AlphaComposite.SrcOver.derive(0.55f)
+            graphics.drawImage(arrangeCapture, 0, 0, null)
+        } finally {
+            graphics.dispose()
+        }
+        val target = repository.resolve("desktopApp/build/reports/task-086-arrange-overlay.png")
         Files.createDirectories(target.parent)
         assertTrue(ImageIO.write(overlay, "png", target.toFile()))
     }
