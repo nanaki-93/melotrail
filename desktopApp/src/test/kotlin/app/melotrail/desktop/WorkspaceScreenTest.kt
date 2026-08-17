@@ -46,6 +46,9 @@ import app.melotrail.application.StructureSectionSummary
 import app.melotrail.application.ReleaseExportFormat
 import app.melotrail.application.ReleaseExportInspection
 import app.melotrail.application.ReleaseExportSummary
+import app.melotrail.application.LocalSoundLibraryInstrument
+import app.melotrail.application.LocalSoundLibraryInventory
+import app.melotrail.application.LocalSoundLibraryInventoryState
 import app.melotrail.arrangement.RenderFormat
 import java.awt.AlphaComposite
 import java.awt.image.BufferedImage
@@ -103,6 +106,65 @@ class WorkspaceScreenTest {
         onNodeWithTag(WorkspaceShellTags.CONTEXT_RAIL).assertExists()
         assertOnlyLibraryPageRoot()
         writeShellCapture("narrow", onNodeWithTag(WorkspaceShellTags.ROOT).captureToImage().toAwtImage())
+    }
+
+    @Test
+    fun `Library projects only typed local inventory with filtering layout selection and truthful recovery`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        val inventory = LocalSoundLibraryInventory(
+            LocalSoundLibraryInventoryState.READY,
+            listOf(
+                libraryInstrument("bass", "Bass"),
+                libraryInstrument("piano", "A deliberately long local piano instrument name that must truncate safely")
+            ).sortedBy { it.id }
+        )
+        val state = populatedState().copy(
+            workspaceSection = WorkspaceSection.LIBRARY,
+            libraryBrowser = LibraryBrowserState(inventory = inventory, selectedId = "piano")
+        )
+        setContent { MelotrailTheme { WorkspaceScreen(state, intents::add) } }
+
+        listOf(
+            WorkspacePageTags.LIBRARY_TYPE_TAB,
+            WorkspacePageTags.LIBRARY_SEARCH,
+            WorkspacePageTags.LIBRARY_GRID,
+            WorkspacePageTags.LIBRARY_CARD_PREFIX + "piano",
+            WorkspacePageTags.LIBRARY_DETAIL
+        ).forEach { onNodeWithTag(it).assertExists() }
+        onNodeWithTag(WorkspacePageTags.LIBRARY_SEARCH).performTextInput("bass")
+        assertEquals(WorkspaceIntent.UpdateLibrarySearch("bass"), intents.last())
+        onNodeWithTag(WorkspacePageTags.LIBRARY_CATEGORY_PREFIX + "bass").performClick()
+        assertEquals(WorkspaceIntent.SelectLibraryCategory("Bass"), intents.last())
+        onNodeWithTag(WorkspacePageTags.LIBRARY_CARD_PREFIX + "bass").performClick()
+        assertEquals(WorkspaceIntent.SelectLibraryInstrument("bass"), intents.last())
+        onNodeWithTag(WorkspacePageTags.LIBRARY_LAYOUT_LIST).performClick()
+        assertEquals(WorkspaceIntent.SelectLibraryLayout(LibraryLayout.LIST), intents.last())
+        intents.clear()
+        onNodeWithTag(WorkspacePageTags.LIBRARY_LAYOUT_LIST).performKeyInput { pressKey(Key.Enter) }
+        assertEquals(WorkspaceIntent.SelectLibraryLayout(LibraryLayout.LIST), intents.single())
+        listOf("Add Item", "Download", "Favorite", "Insert to Project", "Storage", "Page 1").forEach { text ->
+            onAllNodesWithText(text).assertCountEquals(0)
+        }
+
+        setContent { MelotrailTheme { WorkspaceScreen(WorkspaceUiState(workspaceSection = WorkspaceSection.LIBRARY), onIntent = {}) } }
+        onNodeWithTag(WorkspacePageTags.LIBRARY_RECOVERY).assertExists()
+        onNodeWithText("No catalog data is shown until the registry, SFZ files, and samples validate locally.").assertExists()
+    }
+
+    @Test
+    fun `Library grid and empty fixtures capture the numbered reference without mock catalog claims`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
+        val inventory = LocalSoundLibraryInventory(
+            LocalSoundLibraryInventoryState.READY,
+            listOf("bass", "drums", "pad", "piano", "strings").map { libraryInstrument(it, it.replaceFirstChar(Char::uppercase)) }.sortedBy { it.id }
+        )
+        setContent { MelotrailTheme { WorkspaceScreen(populatedState().copy(workspaceSection = WorkspaceSection.LIBRARY, libraryBrowser = LibraryBrowserState(inventory = inventory, selectedId = "piano")), onIntent = {}) } }
+        val image = onRoot().captureToImage().toAwtImage()
+        assertEquals(1536, image.width)
+        assertEquals(1024, image.height)
+        writeTask098LibraryCapture(image)
+        writeTask098LibraryReferenceOverlay(image)
+        setContent { MelotrailTheme { WorkspaceScreen(WorkspaceUiState(workspaceSection = WorkspaceSection.LIBRARY), onIntent = {}) } }
+        writeTask098LibraryUnconfiguredCapture(onRoot().captureToImage().toAwtImage())
     }
 
     @Test
@@ -930,6 +992,18 @@ class WorkspaceScreenTest {
         writeExportReferenceOverlay(image.toAwtImage())
     }
 
+    private fun libraryInstrument(id: String, name: String) = LocalSoundLibraryInstrument(
+        id = id,
+        name = name,
+        category = id.replaceFirstChar(Char::uppercase),
+        sampleCount = if (id == "drums") 5 else 1,
+        licenseName = "Fixture Library",
+        license = "fixture-license",
+        source = "local-fixture",
+        commercialUse = true,
+        attributionRequired = false
+    )
+
     private fun populatedState(): WorkspaceUiState = WorkspaceUiState(
         project = ProjectSnapshot(
             root = Path.of("build/task-083-project"), version = 3, name = "Midnight Train",
@@ -1121,6 +1195,41 @@ class WorkspaceScreenTest {
         val target = repository.resolve("desktopApp/build/reports/task-096-arrange-overlay.png")
         Files.createDirectories(target.parent)
         assertTrue(ImageIO.write(overlay, "png", target.toFile()))
+    }
+
+    private fun writeTask098LibraryCapture(capture: BufferedImage) {
+        val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
+            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/07-library.png")) }
+            ?: error("Could not locate the Task 098 Library reference image.")
+        val target = repository.resolve("desktopApp/build/reports/task-098-library-capture.png")
+        Files.createDirectories(target.parent)
+        assertTrue(ImageIO.write(capture, "png", target.toFile()))
+    }
+
+    private fun writeTask098LibraryReferenceOverlay(capture: BufferedImage) {
+        val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
+            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/07-library.png")) }
+            ?: error("Could not locate the Task 098 Library reference image.")
+        val reference = ImageIO.read(repository.resolve("plan/pictures/UI/07-library.png").toFile())
+        val overlay = BufferedImage(capture.width, capture.height, BufferedImage.TYPE_INT_ARGB)
+        val graphics = overlay.createGraphics()
+        try {
+            graphics.drawImage(reference, 0, 0, overlay.width, overlay.height, null)
+            graphics.composite = AlphaComposite.SrcOver.derive(0.55f)
+            graphics.drawImage(capture, 0, 0, null)
+        } finally {
+            graphics.dispose()
+        }
+        val target = repository.resolve("desktopApp/build/reports/task-098-library-overlay.png")
+        assertTrue(ImageIO.write(overlay, "png", target.toFile()))
+    }
+
+    private fun writeTask098LibraryUnconfiguredCapture(capture: BufferedImage) {
+        val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
+            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/07-library.png")) }
+            ?: error("Could not locate the Task 098 Library reference image.")
+        val target = repository.resolve("desktopApp/build/reports/task-098-library-unconfigured.png")
+        assertTrue(ImageIO.write(capture, "png", target.toFile()))
     }
 
     private fun SemanticsNodeInteractionsProvider.assertFitsNarrowViewport(tag: String) {

@@ -3,7 +3,7 @@
 ## Goal
 
 Implement the distinct Library destination inspired by
-`../pictures/UI/07-library.png` as a truthful browser over the validated local
+`../../pictures/UI/07-library.png` as a truthful browser over the validated local
 sound-library locator, instrument registry, samples, and licenses.
 
 ## Dependencies
@@ -54,7 +54,7 @@ sound-library locator, instrument registry, samples, and licenses.
 - Assert mockup-only store/download/favorite/quota/pagination/insert controls are
   absent.
 - Capture and overlay a full 1536 × 1024 populated fixture against
-  `../pictures/UI/07-library.png`, plus an empty/unconfigured fixture; document
+  `../../pictures/UI/07-library.png`, plus an empty/unconfigured fixture; document
   truthful differences.
 - Run `./gradlew test :desktopApp:test :desktopApp:build`.
 

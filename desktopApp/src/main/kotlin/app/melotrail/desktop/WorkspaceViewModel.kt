@@ -46,6 +46,11 @@ import app.melotrail.application.ReleaseExportApplicationService
 import app.melotrail.application.ReleaseExportFormat
 import app.melotrail.application.ReleaseExportInspection
 import app.melotrail.application.ReleaseExportRequest
+import app.melotrail.application.LocalSoundLibraryInventory
+import app.melotrail.application.LocalSoundLibraryInventoryReader
+import app.melotrail.application.LocalSoundLibraryInventoryState
+import app.melotrail.application.RegistryLocalSoundLibraryInventoryReader
+import app.melotrail.application.filtered
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.MidiCleanupOptions
 import app.melotrail.arrangement.MidiCleanupProfile
@@ -106,6 +111,8 @@ data class WorkspaceUiState(
     val notification: String? = null,
     val runtimeReadiness: RuntimeReadiness? = null,
     val soundLibrary: SoundLibrarySettingsState = SoundLibrarySettingsState(),
+    /** Read-only inventory from the validated registry boundary; never project data. */
+    val libraryBrowser: LibraryBrowserState = LibraryBrowserState(),
     val dialog: WorkspaceDialog? = null,
     val structureDraft: List<String> = emptyList(),
     /** A canonical occurrence ID, never a row position. It is UI selection only. */
@@ -133,6 +140,17 @@ enum class WorkspaceSection(val label: String) {
     EXPORT("Export"),
     SETTINGS("Settings")
 }
+
+enum class LibraryLayout { GRID, LIST }
+
+data class LibraryBrowserState(
+    val inventory: LocalSoundLibraryInventory = LocalSoundLibraryInventory(LocalSoundLibraryInventoryState.UNCONFIGURED),
+    val query: String = "",
+    val category: String? = null,
+    val layout: LibraryLayout = LibraryLayout.GRID,
+    val selectedId: String? = null,
+    val refreshError: String? = null
+)
 
 /** The UI exposes three named cleanup choices only; no worker parameters are editable here. */
 data class MidiQualityReviewDraft(val profile: MidiCleanupProfile = MidiCleanupProfile.TRANSCRIPTION_SAFE)
@@ -431,6 +449,10 @@ sealed interface WorkspaceIntent {
     data object ChooseSoundLibraryRoot : WorkspaceIntent
     data object ClearSoundLibraryRoot : WorkspaceIntent
     data object RefreshSoundLibrary : WorkspaceIntent
+    data class UpdateLibrarySearch(val query: String) : WorkspaceIntent
+    data class SelectLibraryCategory(val category: String?) : WorkspaceIntent
+    data class SelectLibraryLayout(val layout: LibraryLayout) : WorkspaceIntent
+    data class SelectLibraryInstrument(val id: String?) : WorkspaceIntent
     data class ShowImportPart(val audio: Boolean) : WorkspaceIntent
     data object ShowAddPart : WorkspaceIntent
     data object ChooseImportSource : WorkspaceIntent
@@ -527,6 +549,7 @@ class WorkspaceViewModel(
     private val audioPreparationService: AudioPreparationApplicationService? = null,
     private val preferences: DesktopPreferences = NoOpDesktopPreferences,
     private val soundLibrarySettings: SoundLibrarySettingsService = SoundLibrarySettingsService(preferences),
+    private val soundLibraryInventory: LocalSoundLibraryInventoryReader = RegistryLocalSoundLibraryInventoryReader,
     private val operationLogger: DesktopOperationLogger = NoOpDesktopOperationLogger,
     private val commercialProvenanceService: CommercialProvenanceService = CommercialProvenanceService(libraryRoot),
     private val releaseExportService: ReleaseExportApplicationService = DefaultReleaseExportApplicationService()
@@ -569,10 +592,17 @@ class WorkspaceViewModel(
             is WorkspaceIntent.OpenProject -> requestOpenProject(intent.root)
             WorkspaceIntent.MigrateProject -> migrateProject()
             WorkspaceIntent.RefreshRuntimeReadiness -> refreshRuntimeReadiness()
-            WorkspaceIntent.ShowSoundLibrarySettings -> mutableState.update { it.copy(dialog = WorkspaceDialog.SoundLibrarySettings, soundLibrary = soundLibrarySettings.refresh()) }
+            WorkspaceIntent.ShowSoundLibrarySettings -> refreshSoundLibrary(showSettings = true)
             WorkspaceIntent.ChooseSoundLibraryRoot -> chooseSoundLibraryRoot()
-            WorkspaceIntent.ClearSoundLibraryRoot -> mutableState.update { it.copy(soundLibrary = soundLibrarySettings.clear()) }
-            WorkspaceIntent.RefreshSoundLibrary -> mutableState.update { it.copy(soundLibrary = soundLibrarySettings.refresh()) }
+            WorkspaceIntent.ClearSoundLibraryRoot -> updateSoundLibrary(soundLibrarySettings.clear())
+            WorkspaceIntent.RefreshSoundLibrary -> refreshSoundLibrary()
+            is WorkspaceIntent.UpdateLibrarySearch -> mutableState.update { it.copy(libraryBrowser = it.libraryBrowser.copy(query = intent.query, selectedId = selectedLibraryId(it.libraryBrowser, intent.query, it.libraryBrowser.category))) }
+            is WorkspaceIntent.SelectLibraryCategory -> mutableState.update { it.copy(libraryBrowser = it.libraryBrowser.copy(category = intent.category, selectedId = selectedLibraryId(it.libraryBrowser, it.libraryBrowser.query, intent.category))) }
+            is WorkspaceIntent.SelectLibraryLayout -> mutableState.update { it.copy(libraryBrowser = it.libraryBrowser.copy(layout = intent.layout)) }
+            is WorkspaceIntent.SelectLibraryInstrument -> mutableState.update { current ->
+                val valid = intent.id?.takeIf { id -> current.libraryBrowser.inventory.instruments.any { it.id == id } }
+                current.copy(libraryBrowser = current.libraryBrowser.copy(selectedId = valid))
+            }
             is WorkspaceIntent.ShowImportPart -> showImportPart(intent.audio)
             WorkspaceIntent.ShowAddPart -> showAddPart()
             WorkspaceIntent.ChooseImportSource -> chooseImportSource()
@@ -659,6 +689,7 @@ class WorkspaceViewModel(
     private fun selectWorkspaceSection(section: WorkspaceSection) {
         mutableState.update { it.copy(workspaceSection = section) }
         if (section == WorkspaceSection.EXPORT) refreshExport()
+        if (section == WorkspaceSection.LIBRARY) refreshSoundLibrary()
     }
 
     private fun chooseProject() = scope.launch {
@@ -777,9 +808,41 @@ class WorkspaceViewModel(
             .onFailure { failure -> if (generation == readinessGeneration) mutableState.update { it.copy(notification = "Could not check local readiness: ${failure.message}") } }
     }
 
+    private fun refreshSoundLibrary(showSettings: Boolean = false) {
+        val settings = soundLibrarySettings.refresh()
+        updateSoundLibrary(settings, showSettings)
+    }
+
+    private fun updateSoundLibrary(settings: SoundLibrarySettingsState, showSettings: Boolean = false) {
+        val inventoryResult = runCatching { soundLibraryInventory.read(settings.resolvedRoot) }
+        mutableState.update { current ->
+            val inventory = inventoryResult.getOrElse {
+                LocalSoundLibraryInventory(
+                    LocalSoundLibraryInventoryState.INVALID,
+                    recoveryMessage = it.message ?: "The local sound-library inventory could not be refreshed."
+                )
+            }
+            val browser = current.libraryBrowser.copy(
+                inventory = inventory,
+                selectedId = selectedLibraryId(current.libraryBrowser.copy(inventory = inventory), current.libraryBrowser.query, current.libraryBrowser.category),
+                refreshError = inventoryResult.exceptionOrNull()?.message
+            )
+            current.copy(
+                soundLibrary = settings,
+                libraryBrowser = browser,
+                dialog = if (showSettings) WorkspaceDialog.SoundLibrarySettings else current.dialog
+            )
+        }
+    }
+
+    private fun selectedLibraryId(browser: LibraryBrowserState, query: String, category: String?): String? {
+        val filtered = browser.inventory.filtered(query, category)
+        return browser.selectedId?.takeIf { selected -> filtered.any { it.id == selected } } ?: filtered.firstOrNull()?.id
+    }
+
     private fun chooseSoundLibraryRoot() = scope.launch {
         runCatching { fileDialogs.chooseSoundLibraryDirectory() }
-            .onSuccess { root -> root?.let { mutableState.update { current -> current.copy(soundLibrary = soundLibrarySettings.select(it)) } } }
+            .onSuccess { root -> root?.let { updateSoundLibrary(soundLibrarySettings.select(it)) } }
             .onFailure { fail("sound library", it.message ?: "The library chooser could not be opened.") }
     }
 

@@ -34,6 +34,8 @@ import app.melotrail.application.ReleaseExportInspection
 import app.melotrail.application.ReleaseExportRequest
 import app.melotrail.application.ReleaseExportResult
 import app.melotrail.application.ReleaseExportSummary
+import app.melotrail.application.LocalSoundLibraryInventoryReader
+import app.melotrail.application.LocalSoundLibraryInventoryState
 import app.melotrail.audio.AudioBuffer
 import app.melotrail.audio.PlaybackState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -931,6 +933,21 @@ class WorkspaceViewModelTest {
         viewModel.accept(WorkspaceIntent.DismissDialog)
         assertNull(viewModel.state.value.dialog)
         assertEquals(WorkspaceSection.VIDEO_PREVIEW, viewModel.state.value.workspaceSection)
+        viewModel.close()
+    }
+
+    @Test
+    fun `failed local library refresh exposes no inventory and preserves typed recovery state`() = runTest {
+        val viewModel = WorkspaceViewModel(
+            FakeProjectService(), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
+            soundLibraryInventory = LocalSoundLibraryInventoryReader { error("registry read failed") }
+        )
+
+        viewModel.accept(WorkspaceIntent.RefreshSoundLibrary)
+
+        assertEquals(LocalSoundLibraryInventoryState.INVALID, viewModel.state.value.libraryBrowser.inventory.state)
+        assertTrue(viewModel.state.value.libraryBrowser.inventory.instruments.isEmpty())
+        assertEquals("registry read failed", viewModel.state.value.libraryBrowser.refreshError)
         viewModel.close()
     }
 

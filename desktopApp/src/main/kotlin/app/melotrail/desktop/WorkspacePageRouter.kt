@@ -58,9 +58,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.melotrail.application.ArrangementSectionSnapshot
 import app.melotrail.application.ArrangementPlannerKind
+import app.melotrail.application.LocalSoundLibraryInstrument
 import app.melotrail.application.PartSourceType
 import app.melotrail.application.StructureSectionSummary
 import app.melotrail.application.WorkflowStage
+import app.melotrail.application.filtered
 import app.melotrail.arrangement.LogicalInstrument
 import java.net.URI
 import java.nio.file.Path
@@ -166,6 +168,18 @@ internal object WorkspacePageTags {
     const val EXPORT_SUMMARY = "export-summary"
     const val EXPORT_ACTION = "export-action"
     const val EXPORT_STATUS = "export-status"
+    const val LIBRARY_TYPE_TAB = "library-type-instruments"
+    const val LIBRARY_SEARCH = "library-search"
+    const val LIBRARY_CATEGORY_PREFIX = "library-category-"
+    const val LIBRARY_LAYOUT_GRID = "library-layout-grid"
+    const val LIBRARY_LAYOUT_LIST = "library-layout-list"
+    const val LIBRARY_GRID = "library-grid"
+    const val LIBRARY_LIST = "library-list"
+    const val LIBRARY_CARD_PREFIX = "library-card-"
+    const val LIBRARY_DETAIL = "library-detail"
+    const val LIBRARY_RECOVERY = "library-recovery"
+    const val LIBRARY_REFRESH = "library-refresh"
+    const val LIBRARY_SETTINGS = "library-settings"
     const val NAVIGATION_MENU = "workspace-navigation-menu"
 }
 
@@ -484,7 +498,7 @@ private fun InterimWorkflowPage(
         return@PageRoot
     }
     if (state.workspaceSection == WorkspaceSection.LIBRARY) {
-        InterimDestinationPage("Library", "Local sound-library inventory is available in the dedicated Library page.")
+        LibraryPage(state, onIntent)
         return@PageRoot
     }
     if (state.workspaceSection == WorkspaceSection.VIDEO_PREVIEW) {
@@ -504,6 +518,170 @@ private fun InterimWorkflowPage(
         PageTitle(title, workflowSubtitle(state))
         OverviewCard("${WorkspacePageTags.ROOT_PREFIX}${state.workspaceSection.name.lowercase()}-body", "${title} workspace") {
             Text(workflowBody(state), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/**
+ * Read-only projection of [WorkspaceUiState.libraryBrowser].  File and
+ * registry work is deliberately absent from this composable.
+ */
+@Composable
+private fun LibraryPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    val browser = state.libraryBrowser
+    val inventory = browser.inventory
+    val categories = inventory.instruments.map(LocalSoundLibraryInstrument::category).distinct().sorted()
+    val visible = inventory.filtered(browser.query, browser.category)
+    val selected = visible.firstOrNull { it.id == browser.selectedId }
+        ?: inventory.instruments.firstOrNull { it.id == browser.selectedId }
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)
+    ) {
+        PageTitle("Library", "Validated local instruments and samples only")
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm), verticalAlignment = Alignment.CenterVertically) {
+            Button(
+                onClick = {}, enabled = false,
+                modifier = Modifier.semantics { testTag = WorkspacePageTags.LIBRARY_TYPE_TAB; contentDescription = "Instruments is the only supported local library type" }
+            ) { Text("Instruments") }
+            Spacer(Modifier.weight(1f))
+            OutlinedButton(
+                onClick = { onIntent(WorkspaceIntent.RefreshSoundLibrary) },
+                modifier = Modifier.semantics { testTag = WorkspacePageTags.LIBRARY_REFRESH; contentDescription = "Refresh validated local library inventory" }
+            ) { Text("Refresh") }
+        }
+        OutlinedTextField(
+            value = browser.query,
+            onValueChange = { onIntent(WorkspaceIntent.UpdateLibrarySearch(it)) },
+            modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.LIBRARY_SEARCH },
+            label = { Text("Search local library") },
+            singleLine = true
+        )
+        if (inventory.instruments.isEmpty()) {
+            LibraryRecovery(state, onIntent)
+            return@Column
+        }
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val narrow = maxWidth < MusicWorkspaceTokens.Reference.MediumBreakpoint
+            val content: @Composable (Modifier) -> Unit = { modifier ->
+                LibraryResults(browser.layout, visible, browser.selectedId, onIntent, modifier)
+            }
+            if (narrow) {
+                Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
+                    LibraryCategoryRail(categories, browser.category, onIntent, Modifier.fillMaxWidth())
+                    content(Modifier.fillMaxWidth())
+                    LibraryDetail(selected, Modifier.fillMaxWidth())
+                }
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md), verticalAlignment = Alignment.Top) {
+                    LibraryCategoryRail(categories, browser.category, onIntent, Modifier.width(148.dp))
+                    content(Modifier.weight(1f))
+                    LibraryDetail(selected, Modifier.widthIn(min = 220.dp, max = 272.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LibraryRecovery(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = OverviewCard(WorkspacePageTags.LIBRARY_RECOVERY, "Library readiness") {
+    val message = state.libraryBrowser.refreshError ?: state.libraryBrowser.inventory.recoveryMessage
+        ?: state.soundLibrary.validationError ?: "Choose a validated local sound library."
+    Text(message, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text("No catalog data is shown until the registry, SFZ files, and samples validate locally.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+        OutlinedButton(
+            onClick = { onIntent(WorkspaceIntent.ShowSoundLibrarySettings) },
+            modifier = Modifier.semantics { testTag = WorkspacePageTags.LIBRARY_SETTINGS }
+        ) { Text("Open Settings") }
+        OutlinedButton(onClick = { onIntent(WorkspaceIntent.RefreshSoundLibrary) }) { Text("Refresh") }
+    }
+}
+
+@Composable
+private fun LibraryCategoryRail(categories: List<String>, selected: String?, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier) = Box(modifier) {
+    OverviewCard("library-categories", "Categories") {
+        LibraryCategoryButton("All", null, selected, onIntent)
+        categories.forEach { category -> LibraryCategoryButton(category, category, selected, onIntent) }
+    }
+}
+
+@Composable
+private fun LibraryCategoryButton(label: String, category: String?, selected: String?, onIntent: (WorkspaceIntent) -> Unit) = OutlinedButton(
+    onClick = { onIntent(WorkspaceIntent.SelectLibraryCategory(category)) },
+    colors = ButtonDefaults.outlinedButtonColors(containerColor = if (category == selected) MusicWorkspaceTokens.SelectedSurface else MusicWorkspaceTokens.ElevatedSurface),
+    modifier = Modifier.fillMaxWidth().semantics {
+        testTag = WorkspacePageTags.LIBRARY_CATEGORY_PREFIX + (category ?: "all").lowercase()
+        contentDescription = "$label instrument category${if (category == selected) ", selected" else ""}"
+    }
+) { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+
+@Composable
+private fun LibraryResults(layout: LibraryLayout, instruments: List<LocalSoundLibraryInstrument>, selectedId: String?, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier) = Column(modifier, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm), verticalAlignment = Alignment.CenterVertically) {
+        Text("${instruments.size} validated instrument${if (instruments.size == 1) "" else "s"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.weight(1f))
+        OutlinedButton(
+            onClick = { onIntent(WorkspaceIntent.SelectLibraryLayout(LibraryLayout.GRID)) },
+            colors = ButtonDefaults.outlinedButtonColors(containerColor = if (layout == LibraryLayout.GRID) MusicWorkspaceTokens.SelectedSurface else MusicWorkspaceTokens.ElevatedSurface),
+            modifier = Modifier.semantics { testTag = WorkspacePageTags.LIBRARY_LAYOUT_GRID }
+        ) { Text("Grid") }
+        OutlinedButton(
+            onClick = { onIntent(WorkspaceIntent.SelectLibraryLayout(LibraryLayout.LIST)) },
+            colors = ButtonDefaults.outlinedButtonColors(containerColor = if (layout == LibraryLayout.LIST) MusicWorkspaceTokens.SelectedSurface else MusicWorkspaceTokens.ElevatedSurface),
+            modifier = Modifier.semantics { testTag = WorkspacePageTags.LIBRARY_LAYOUT_LIST }
+        ) { Text("List") }
+    }
+    if (instruments.isEmpty()) {
+        OverviewCard("library-empty", "No matching instruments") {
+            Text("Adjust the local search or category filter. No remote catalog is available.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    } else if (layout == LibraryLayout.LIST) {
+        Column(Modifier.semantics { testTag = WorkspacePageTags.LIBRARY_LIST }, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+            instruments.forEach { LibraryInstrumentCard(it, it.id == selectedId, true, onIntent) }
+        }
+    } else {
+        BoxWithConstraints(Modifier.semantics { testTag = WorkspacePageTags.LIBRARY_GRID }) {
+            val columns = if (maxWidth >= 560.dp) 3 else 2
+            Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                instruments.chunked(columns).forEach { row ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                        row.forEach { instrument -> Box(Modifier.weight(1f)) { LibraryInstrumentCard(instrument, instrument.id == selectedId, false, onIntent) } }
+                        repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LibraryInstrumentCard(instrument: LocalSoundLibraryInstrument, selected: Boolean, compact: Boolean, onIntent: (WorkspaceIntent) -> Unit) = Card(
+    Modifier.fillMaxWidth().clickable { onIntent(WorkspaceIntent.SelectLibraryInstrument(instrument.id)) }
+        .semantics { testTag = WorkspacePageTags.LIBRARY_CARD_PREFIX + instrument.id; contentDescription = "${instrument.name}, ${instrument.category}, ${instrument.sampleCount} validated samples${if (selected) ", selected" else ""}" },
+    colors = CardDefaults.cardColors(containerColor = if (selected) MusicWorkspaceTokens.SelectedSurface else MusicWorkspaceTokens.Surface),
+    border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) MusicWorkspaceTokens.Teal else MusicWorkspaceTokens.Border)
+) {
+    Column(Modifier.padding(MusicWorkspaceTokens.Spacing.Md), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+        Text(instrument.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text("${instrument.category} · SFZ ready · ${instrument.sampleCount} validated sample${if (instrument.sampleCount == 1) "" else "s"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = if (compact) 1 else 2, overflow = TextOverflow.Ellipsis)
+        if (!compact) Text(instrument.licenseName, style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Teal, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun LibraryDetail(instrument: LocalSoundLibraryInstrument?, modifier: Modifier) = Box(modifier) {
+    OverviewCard(WorkspacePageTags.LIBRARY_DETAIL, "Details") {
+        if (instrument == null) {
+            Text("Select a validated instrument to inspect its registry and license metadata.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            Text(instrument.name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text("Category: ${instrument.category}\nSFZ: validated\nSamples: ${instrument.sampleCount} validated", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            HorizontalDivider(color = MusicWorkspaceTokens.Border)
+            Text("License: ${instrument.licenseName}\n${instrument.license}\nSource: ${instrument.source}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 5, overflow = TextOverflow.Ellipsis)
+            Text(if (instrument.commercialUse) "Commercial use recorded as permitted" else "Commercial use is not recorded as permitted", style = MaterialTheme.typography.bodySmall, color = if (instrument.commercialUse) MusicWorkspaceTokens.Success else MusicWorkspaceTokens.Warning)
+            if (instrument.attributionRequired) Text("Attribution is required; inspect the project provenance before release.", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.Warning)
+            Text("Preview is unavailable here. Configure a renderer and use a project MIDI preview when a validated artifact is available.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
