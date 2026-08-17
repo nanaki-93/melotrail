@@ -1031,29 +1031,11 @@ private fun CenterTimelineLane(instrument: String, sections: List<CenterTimeline
 
 @Composable
 internal fun LibraryPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Sound library", WorkspaceTags.LIBRARY_PANEL) {
-    Text(soundLibrarySummary(state.soundLibrary), color = MaterialTheme.colorScheme.onSurfaceVariant)
-    Text(
-        "The local sound library supplies validated SFZ instruments and samples for MIDI preview, arrangement rendering, and Build Song.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-    state.runtimeReadiness?.let { readiness ->
-        listOf(RuntimeDependency.SOUND_LIBRARY, RuntimeDependency.SAMPLES, RuntimeDependency.RENDERER).forEach { dependency ->
-            val item = readiness.dependency(dependency)
-            Text(
-                "${dependency.name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)} · ${item.status.name.lowercase()} — ${item.detail}",
-                style = MaterialTheme.typography.bodySmall,
-                color = if (item.available) MusicWorkspaceTokens.Success else MaterialTheme.colorScheme.error
-            )
-        }
-    }
-    Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-        Button(
-            onClick = { onIntent(WorkspaceIntent.ShowSoundLibrarySettings) },
-            modifier = Modifier.semantics { testTag = WorkspaceTags.SOUND_LIBRARY_SETTINGS; contentDescription = "Configure local sound library" }
-        ) { Text("Configure library") }
-    }
-    ReadinessRecovery(state.runtimeReadiness, onIntent)
+    Text("Sound-library configuration and local dependency recovery are available from the shell Settings gear.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    OutlinedButton(
+        onClick = { onIntent(WorkspaceIntent.ShowSoundLibrarySettings) },
+        modifier = Modifier.semantics { testTag = WorkspaceTags.SOUND_LIBRARY_SETTINGS; contentDescription = "Open shell sound-library settings" }
+    ) { Text("Open Settings") }
 }
 
 @Composable
@@ -1410,7 +1392,7 @@ private fun WorkspaceDialogs(state: WorkspaceUiState, onIntent: (WorkspaceIntent
         is WorkspaceDialog.ConfirmTightenTiming -> ConfirmTightenTimingDialog(dialog, onIntent)
         is WorkspaceDialog.ConfirmDiscardDraft -> ConfirmDiscardDraftDialog(dialog, onIntent)
         WorkspaceDialog.ConfirmClose -> ConfirmCloseDialog(onIntent, onExit)
-        WorkspaceDialog.SoundLibrarySettings -> SoundLibrarySettingsDialog(state.soundLibrary, onIntent)
+        WorkspaceDialog.SoundLibrarySettings -> SoundLibrarySettingsDialog(state.soundLibrary, state.runtimeReadiness, onIntent)
         null -> Unit
     }
 }
@@ -1438,7 +1420,7 @@ private fun ConfirmTightenTimingDialog(dialog: WorkspaceDialog.ConfirmTightenTim
 }
 
 @Composable
-private fun SoundLibrarySettingsDialog(settings: SoundLibrarySettingsState, onIntent: (WorkspaceIntent) -> Unit) {
+private fun SoundLibrarySettingsDialog(settings: SoundLibrarySettingsState, readiness: RuntimeReadiness?, onIntent: (WorkspaceIntent) -> Unit) {
     val selectionDisabled = settings.selectionDisabledReason != null
     AlertDialog(
         onDismissRequest = { onIntent(WorkspaceIntent.DismissDialog) },
@@ -1451,6 +1433,23 @@ private fun SoundLibrarySettingsDialog(settings: SoundLibrarySettingsState, onIn
                 settings.selectionDisabledReason?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                 Text("Choose the folder containing instruments.json and LICENSES.json. If starter samples are missing, copy the approved 25 WAV files into the existing sounds subfolders; see sounds/README.md. No files are copied or changed here.", style = MaterialTheme.typography.bodySmall)
                 if (settings.restartRequired) Text("Restart the desktop app to apply this validated library to renderer services.", style = MaterialTheme.typography.bodySmall)
+                HorizontalDivider()
+                Text("Local dependencies", style = MaterialTheme.typography.labelMedium)
+                if (readiness == null) {
+                    Text("Checking local dependency readiness…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    listOf(RuntimeDependency.SOUND_LIBRARY, RuntimeDependency.SAMPLES, RuntimeDependency.RENDERER).forEach { dependency ->
+                        val item = readiness.dependency(dependency)
+                        Text(
+                            "${dependency.name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)} · ${item.status.name.lowercase()} — ${item.detail}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (item.available) MusicWorkspaceTokens.Success else MaterialTheme.colorScheme.error
+                        )
+                        item.recoveryAction?.let { action ->
+                            Text("Recovery: ${soundLibraryRecovery(action)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
@@ -1467,8 +1466,20 @@ private fun SoundLibrarySettingsDialog(settings: SoundLibrarySettingsState, onIn
                 ) { Text("Choose folder") }
             }
         },
-        dismissButton = { TextButton(onClick = { onIntent(WorkspaceIntent.RefreshSoundLibrary) }) { Text("Refresh") } }
+        dismissButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = { onIntent(WorkspaceIntent.RefreshSoundLibrary) }) { Text("Refresh library") }
+                TextButton(onClick = { onIntent(WorkspaceIntent.RefreshRuntimeReadiness) }) { Text("Refresh readiness") }
+            }
+        }
     )
+}
+
+private fun soundLibraryRecovery(action: RecoveryAction): String = when (action) {
+    RecoveryAction.CHOOSE_SOUND_LIBRARY -> "Choose a validated local sound-library folder."
+    RecoveryAction.INSTALL_SAMPLES -> "Copy the approved local samples into the existing selected-library folders."
+    RecoveryAction.CONFIGURE_RENDERER -> "Set SFZ_RENDERER_PATH to the absolute executable path, then refresh readiness."
+    else -> "Resolve the listed local dependency, then refresh readiness."
 }
 
 @Composable

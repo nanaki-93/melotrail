@@ -24,8 +24,8 @@ successfully opened project and a validated sound-library location.
 ## Sound library or renderer unavailable
 
 The package intentionally does not bundle the starter samples or an SFZ
-renderer. In the app, choose **Library**, then select the absolute `sounds/`
-directory that contains `instruments.json` and `LICENSES.json`. A fresh checkout
+renderer. In the app, open the shell **Settings** gear, then select the absolute
+`sounds/` directory that contains `instruments.json` and `LICENSES.json`. A fresh checkout
 needs the approved local 25 sample WAV files copied back into the existing
 `*/samples/` paths first; see [`sounds/README.md`](../sounds/README.md).
 

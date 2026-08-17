@@ -2,7 +2,7 @@
 
 ## Goal
 
-Build the focused local Video Preview page from `../pictures/App-pages.png` and
+Build the focused local Video Preview page from `../../pictures/App-pages.png` and
 move sound-library configuration into the shell settings surface.
 
 ## Dependencies
@@ -36,7 +36,7 @@ move sound-library configuration into the shell settings surface.
 - Settings tests cover choose, clear, valid/invalid library, renderer/sample
   recovery, dismissal, and preservation of the active page.
 - Capture and overlay a deterministic Video Preview golden against the numbered
-  Video Preview region of `../pictures/App-pages.png`.
+  Video Preview region of `../../pictures/App-pages.png`.
 - Run `./gradlew :desktopApp:test :desktopApp:build`.
 
 ## Out of scope

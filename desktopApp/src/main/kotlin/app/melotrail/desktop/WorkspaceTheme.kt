@@ -67,6 +67,7 @@ object MusicWorkspaceTokens {
         val OverviewTransportHeight = 86.dp
         val CompactRowHeight = 38.dp
         val ImportDropHeight = 154.dp
+        val VideoPreviewSceneHeight = 240.dp
     }
 
     /** Center workstation cards mirror the reference column without creating a second song clock. */

@@ -352,6 +352,84 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `Video Preview stays focused across placeholder selected playing paused failed and unavailable states`() = runComposeUiTest {
+        val selected = PlaybackSession(
+            id = 7L,
+            request = PlaybackRequest.Mix(Path.of("build/task-088-project"), PlaybackSource.DRY),
+            sourceKind = PlaybackSourceKind.DRY_MIX,
+            artifact = PlaybackArtifactIdentity(Path.of("build/task-088-project"), Path.of("build/task-088-project/mix/dry.wav")),
+            phase = PlaybackSessionPhase.STOPPED,
+            durationSeconds = 252.0
+        )
+        val unavailable = RuntimeReadiness.of(*RuntimeDependency.entries.map { dependency ->
+            dependency to DependencyReadiness(if (dependency == RuntimeDependency.AUDIO_OUTPUT) DependencyStatus.UNAVAILABLE else DependencyStatus.READY, if (dependency == RuntimeDependency.AUDIO_OUTPUT) "Check the selected output device and retry." else "ready")
+        }.toTypedArray())
+        val states = listOf(
+            WorkspaceUiState(workspaceSection = WorkspaceSection.VIDEO_PREVIEW) to "No local playback artifact selected. The visual remains a placeholder.",
+            populatedState().copy(workspaceSection = WorkspaceSection.VIDEO_PREVIEW, playbackSession = selected, runtimeReadiness = readyRuntime()) to "A local audio artifact is selected; the visual remains a placeholder.",
+            populatedState().copy(workspaceSection = WorkspaceSection.VIDEO_PREVIEW, playbackSession = selected.copy(phase = PlaybackSessionPhase.PLAYING), runtimeReadiness = readyRuntime()) to "Local audio playback is playing; the visual remains a placeholder.",
+            populatedState().copy(workspaceSection = WorkspaceSection.VIDEO_PREVIEW, playbackSession = selected.copy(phase = PlaybackSessionPhase.PAUSED), runtimeReadiness = readyRuntime()) to "Local audio playback is paused; the visual remains a placeholder.",
+            populatedState().copy(workspaceSection = WorkspaceSection.VIDEO_PREVIEW, playbackSession = selected.copy(phase = PlaybackSessionPhase.FAILED, failureMessage = "Renderer unavailable"), runtimeReadiness = readyRuntime()) to "Playback unavailable: Renderer unavailable",
+            populatedState().copy(workspaceSection = WorkspaceSection.VIDEO_PREVIEW, playbackSession = selected, runtimeReadiness = unavailable, project = populatedState().project!!.copy(name = "A deliberately long project title that remains concise in the local preview header")) to "Audio output unavailable: Check the selected output device and retry."
+        )
+        states.forEach { (state, expectedStatus) ->
+            setContent { MelotrailTheme { WorkspaceScreen(state, onIntent = {}) } }
+            onAllNodesWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.VIDEO_PREVIEW.name.lowercase()).assertCountEquals(1)
+            listOf(WorkspacePageTags.VIDEO_PREVIEW_STAGE, WorkspacePageTags.VIDEO_PREVIEW_TIMELINE, WorkspacePageTags.VIDEO_PREVIEW_STATUS, WorkspaceTags.COMPACT_TRANSPORT).forEach {
+                onAllNodesWithTag(it).assertCountEquals(1)
+            }
+            listOf(WorkspacePageTags.VIDEO_PREVIEW_CAMERA, WorkspacePageTags.VIDEO_PREVIEW_CHANGE_SCENE, WorkspacePageTags.VIDEO_PREVIEW_FULLSCREEN).forEach {
+                onNodeWithTag(it).assertIsNotEnabled()
+            }
+            onNodeWithText(expectedStatus).assertExists()
+        }
+    }
+
+    @Test
+    fun `Video Preview transport dispatches only shared playback intents`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        val state = populatedState().copy(
+            workspaceSection = WorkspaceSection.VIDEO_PREVIEW,
+            runtimeReadiness = readyRuntime(),
+            playbackSession = PlaybackSession(
+                request = PlaybackRequest.Mix(Path.of("build/task-088-project"), PlaybackSource.DRY),
+                sourceKind = PlaybackSourceKind.DRY_MIX,
+                artifact = PlaybackArtifactIdentity(Path.of("build/task-088-project"), Path.of("build/task-088-project/mix/dry.wav")),
+                phase = PlaybackSessionPhase.PLAYING,
+                durationSeconds = 120.0
+            )
+        )
+        setContent { MelotrailTheme { WorkspaceScreen(state, intents::add) } }
+
+        val playPause = onNodeWithTag(WorkspacePageTags.VIDEO_PREVIEW_PLAY_PAUSE)
+        playPause.performClick()
+        intents.clear()
+        playPause.performKeyInput { pressKey(Key.Enter) }
+        onNodeWithTag(WorkspacePageTags.VIDEO_PREVIEW_STOP).performClick()
+
+        assertEquals(listOf(WorkspaceIntent.PlayPause, WorkspaceIntent.StopPlayback), intents)
+    }
+
+    @Test
+    fun `sound library settings dialog contains chooser validation and local recovery details`() = runComposeUiTest {
+        val unavailable = RuntimeReadiness.of(
+            RuntimeDependency.WORKER to DependencyReadiness(DependencyStatus.READY, "ready"),
+            RuntimeDependency.TRANSCRIPTION to DependencyReadiness(DependencyStatus.READY, "ready"),
+            RuntimeDependency.SOUND_LIBRARY to DependencyReadiness(DependencyStatus.READY, "Sound library registry ready"),
+            RuntimeDependency.SAMPLES to DependencyReadiness(DependencyStatus.UNAVAILABLE, "Copy approved local samples.", RecoveryAction.INSTALL_SAMPLES),
+            RuntimeDependency.RENDERER to DependencyReadiness(DependencyStatus.UNAVAILABLE, "Set SFZ_RENDERER_PATH.", RecoveryAction.CONFIGURE_RENDERER),
+            RuntimeDependency.AUDIO_OUTPUT to DependencyReadiness(DependencyStatus.READY, "ready")
+        )
+        setContent { MelotrailTheme { WorkspaceScreen(populatedState().copy(workspaceSection = WorkspaceSection.VIDEO_PREVIEW, dialog = WorkspaceDialog.SoundLibrarySettings, runtimeReadiness = unavailable), onIntent = {}) } }
+
+        onNodeWithText("Local sound library").assertExists()
+        onNodeWithTag(WorkspaceTags.SOUND_LIBRARY_CHOOSE).assertIsEnabled()
+        onNodeWithTag(WorkspaceTags.SOUND_LIBRARY_CLEAR).assertIsEnabled()
+        onNodeWithText("Recovery: Copy the approved local samples into the existing selected-library folders.").assertExists()
+        onNodeWithText("Recovery: Set SFZ_RENDERER_PATH to the absolute executable path, then refresh readiness.").assertExists()
+    }
+
+    @Test
     fun `deterministic overview fixture uses reference page-shell geometry`() = runSkikoComposeUiTest(size = Size(1158f, 462f)) {
         setContent { MelotrailTheme { WorkspaceScreen(populatedState(), onIntent = {}) } }
 
@@ -400,6 +478,16 @@ class WorkspaceScreenTest {
         val image = onNodeWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.MIX_MASTER.name.lowercase()).captureToImage()
         assertTrue(image.width > 0 && image.height > 0)
         writeMixMasterReferenceOverlay(image.toAwtImage())
+    }
+
+    @Test
+    fun `deterministic Video Preview fixture captures the numbered reference region`() = runSkikoComposeUiTest(size = Size(1158f, 462f)) {
+        val state = populatedState().copy(workspaceSection = WorkspaceSection.VIDEO_PREVIEW)
+        setContent { MelotrailTheme { WorkspaceScreen(state, onIntent = {}) } }
+
+        val image = onNodeWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.VIDEO_PREVIEW.name.lowercase()).captureToImage()
+        assertTrue(image.width > 0 && image.height > 0)
+        writeVideoPreviewReferenceOverlay(image.toAwtImage())
     }
 
     private fun populatedState(): WorkspaceUiState = WorkspaceUiState(
@@ -571,6 +659,26 @@ class WorkspaceScreenTest {
             graphics.dispose()
         }
         val target = repository.resolve("desktopApp/build/reports/task-087-mix-master-overlay.png")
+        Files.createDirectories(target.parent)
+        assertTrue(ImageIO.write(overlay, "png", target.toFile()))
+    }
+
+    private fun writeVideoPreviewReferenceOverlay(videoCapture: BufferedImage) {
+        val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
+            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/App-pages.png")) }
+            ?: error("Could not locate the App-pages reference image.")
+        val reference = ImageIO.read(repository.resolve("plan/pictures/App-pages.png").toFile())
+        val videoRegion = reference.getSubimage(12, 777, 379, 247)
+        val overlay = BufferedImage(videoCapture.width, videoCapture.height, BufferedImage.TYPE_INT_ARGB)
+        val graphics = overlay.createGraphics()
+        try {
+            graphics.drawImage(videoRegion, 0, 0, overlay.width, overlay.height, null)
+            graphics.composite = AlphaComposite.SrcOver.derive(0.55f)
+            graphics.drawImage(videoCapture, 0, 0, null)
+        } finally {
+            graphics.dispose()
+        }
+        val target = repository.resolve("desktopApp/build/reports/task-088-video-preview-overlay.png")
         Files.createDirectories(target.parent)
         assertTrue(ImageIO.write(overlay, "png", target.toFile()))
     }

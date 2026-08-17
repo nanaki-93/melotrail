@@ -712,6 +712,35 @@ class WorkspaceViewModelTest {
     }
 
     @Test
+    fun `Overview and Video Preview use one playback owner and preserve the selected session`() = runTest {
+        val root = Path.of("build/task-088-shared-session")
+        val player = FakeArtifactAudioPlayer()
+        val project = projectSnapshot(root).copy(readiness = projectSnapshot(root).readiness.copy(dryMixAvailable = true))
+        val viewModel = WorkspaceViewModel(
+            FakeProjectService(result = project), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
+            runtimeReadinessService = ReadyReadinessService, player = player
+        )
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.SelectPlaybackSource(PlaybackSource.DRY))
+        val selectedRequest = viewModel.state.value.playbackSession.request
+        viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.VIDEO_PREVIEW))
+        assertEquals(selectedRequest, viewModel.state.value.playbackSession.request)
+        viewModel.accept(WorkspaceIntent.PlayPause); advanceUntilIdle()
+        assertEquals(selectedRequest, viewModel.state.value.playbackSession.request)
+        assertEquals(PlaybackSessionPhase.PLAYING, viewModel.state.value.playbackSession.phase)
+        viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.OVERVIEW))
+        viewModel.accept(WorkspaceIntent.PlayPause)
+        viewModel.accept(WorkspaceIntent.SetPlaybackVolume(0.35))
+
+        assertEquals(PlaybackSessionPhase.PAUSED, viewModel.state.value.playbackSession.phase)
+        assertEquals(selectedRequest, viewModel.state.value.playbackSession.request)
+        assertEquals(0.35, viewModel.state.value.playbackSession.volume)
+        assertEquals(1, player.maxActive)
+        viewModel.close()
+    }
+
+    @Test
     fun `sound library selection updates settings state and cancellation keeps last valid root`() = runTest {
         val root = java.nio.file.Files.createTempDirectory("desktop-library")
         val preferences = object : DesktopPreferences {
@@ -729,6 +758,7 @@ class WorkspaceViewModelTest {
             preferences = preferences, soundLibrarySettings = settings
         )
 
+        viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.VIDEO_PREVIEW))
         viewModel.accept(WorkspaceIntent.ShowSoundLibrarySettings)
         viewModel.accept(WorkspaceIntent.ChooseSoundLibraryRoot)
         advanceUntilIdle()
@@ -736,6 +766,11 @@ class WorkspaceViewModelTest {
         viewModel.accept(WorkspaceIntent.ChooseSoundLibraryRoot) // chooser cancellation
         advanceUntilIdle()
         assertEquals(root, viewModel.state.value.soundLibrary.resolvedRoot)
+        viewModel.accept(WorkspaceIntent.ClearSoundLibraryRoot)
+        assertNull(viewModel.state.value.soundLibrary.resolvedRoot)
+        viewModel.accept(WorkspaceIntent.DismissDialog)
+        assertNull(viewModel.state.value.dialog)
+        assertEquals(WorkspaceSection.VIDEO_PREVIEW, viewModel.state.value.workspaceSection)
         viewModel.close()
     }
 

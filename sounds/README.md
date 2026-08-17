@@ -41,7 +41,7 @@ cymbal mapping in this starter pack.
 ### Selecting the pack in the desktop application
 
 The macOS package does not rely on its launch directory and does not bundle
-this local pack. In **Melotrail**, select **Library** and
+this local pack. In **Melotrail**, open the shell **Settings** gear and
 choose this `sounds/` directory after the sample-copy step. The app validates
 the registry and samples before retaining an absolute desktop preference; it
 does not copy, download, or modify the library. A terminal-launched desktop

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -64,6 +65,16 @@ internal object WorkspacePageTags {
     const val OVERVIEW_PREVIEW = "overview-video-preview"
     const val OVERVIEW_SECTION_INFO = "overview-section-info"
     const val OVERVIEW_EXPORT = "overview-export"
+    const val VIDEO_PREVIEW_STAGE = "video-preview-stage"
+    const val VIDEO_PREVIEW_TIMELINE = "video-preview-timeline"
+    const val VIDEO_PREVIEW_PLAY_PAUSE = "video-preview-play-pause"
+    const val VIDEO_PREVIEW_STOP = "video-preview-stop"
+    const val VIDEO_PREVIEW_SEEK = "video-preview-seek"
+    const val VIDEO_PREVIEW_VOLUME = "video-preview-volume"
+    const val VIDEO_PREVIEW_CAMERA = "video-preview-camera"
+    const val VIDEO_PREVIEW_CHANGE_SCENE = "video-preview-change-scene"
+    const val VIDEO_PREVIEW_FULLSCREEN = "video-preview-fullscreen"
+    const val VIDEO_PREVIEW_STATUS = "video-preview-status"
     const val IMPORT_DROP_SURFACE = "import-drop-surface"
     const val IMPORT_BROWSE = "import-browse"
     const val IMPORTED_FILES = "imported-files"
@@ -324,6 +335,10 @@ private fun InterimWorkflowPage(state: WorkspaceUiState, onIntent: (WorkspaceInt
         MixMasterPage(state, onIntent)
         return@PageRoot
     }
+    if (state.workspaceSection == WorkspaceSection.VIDEO_PREVIEW) {
+        VideoPreviewPage(state, onIntent)
+        return@PageRoot
+    }
     val title = state.workspaceSection.label
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
         PageTitle(title, workflowSubtitle(state))
@@ -334,6 +349,96 @@ private fun InterimWorkflowPage(state: WorkspaceUiState, onIntent: (WorkspaceInt
                 else -> Unit
             }
         }
+    }
+}
+
+/**
+ * Visual-only adapter over the shared playback session. It deliberately has
+ * no scene clock, video decoder, artwork provider, or export state.
+ */
+@Composable
+private fun VideoPreviewPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    val session = state.playbackSession
+    val audioOutput = state.runtimeReadiness?.audioOutput
+    val canControlPlayback = session.artifact != null && (audioOutput?.available == true || session.phase in setOf(PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED))
+    val canStop = session.phase in setOf(PlaybackSessionPhase.RESOLVING, PlaybackSessionPhase.PREPARING, PlaybackSessionPhase.READY, PlaybackSessionPhase.STARTING, PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED)
+    val canSeek = session.artifact != null && session.durationSeconds > 0.0 && session.phase in setOf(PlaybackSessionPhase.READY, PlaybackSessionPhase.STARTING, PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED, PlaybackSessionPhase.STOPPED)
+    val title = state.project?.name ?: "No project open"
+    val status = videoPreviewStatus(state)
+
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
+        PageTitle("Video Preview", "Local visual reference for $title")
+        OverviewCard(WorkspacePageTags.VIDEO_PREVIEW_STAGE, "Local scene placeholder") {
+            Box(
+                Modifier.fillMaxWidth().height(MusicWorkspaceTokens.Pages.VideoPreviewSceneHeight).clip(MaterialTheme.shapes.small)
+                    .background(MusicWorkspaceTokens.ScenePlaceholder),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+                    Text("LOCAL VISUAL PLACEHOLDER", style = MaterialTheme.typography.labelMedium, color = MusicWorkspaceTokens.TealFocus)
+                    Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleLarge)
+                    Text("No generated video or remote scene is available.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Column(Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.VIDEO_PREVIEW_TIMELINE }, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+                Row(Modifier.fillMaxWidth()) {
+                    Text(formatDuration(session.positionSeconds), style = MaterialTheme.typography.labelSmall)
+                    Spacer(Modifier.weight(1f))
+                    Text(formatDuration(session.durationSeconds), style = MaterialTheme.typography.labelSmall)
+                }
+                Slider(
+                    value = session.positionSeconds.toFloat(),
+                    onValueChange = { onIntent(WorkspaceIntent.SeekPlayback(it.toDouble())) },
+                    valueRange = 0f..session.durationSeconds.coerceAtLeast(0.01).toFloat(),
+                    enabled = canSeek,
+                    modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.VIDEO_PREVIEW_SEEK; contentDescription = "Seek shared local playback selection" }
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+                    VideoUnavailableControl("▣", "Camera selection is unavailable", WorkspacePageTags.VIDEO_PREVIEW_CAMERA)
+                    VideoUnavailableControl("↻", "Scene change is unavailable", WorkspacePageTags.VIDEO_PREVIEW_CHANGE_SCENE)
+                    Spacer(Modifier.weight(1f))
+                    VideoUnavailableControl("⛶", "Fullscreen video is unavailable", WorkspacePageTags.VIDEO_PREVIEW_FULLSCREEN)
+                }
+            }
+        }
+        Text(status, modifier = Modifier.semantics { testTag = WorkspacePageTags.VIDEO_PREVIEW_STATUS }, style = MaterialTheme.typography.bodySmall,
+            color = if (session.phase == PlaybackSessionPhase.FAILED || audioOutput?.available == false) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+        Card(
+            Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.COMPACT_TRANSPORT; contentDescription = "Shared local playback transport" },
+            colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.Surface)
+        ) {
+            Row(Modifier.fillMaxWidth().padding(MusicWorkspaceTokens.Spacing.Sm), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.StopPlayback) }, enabled = canStop,
+                    modifier = Modifier.semantics { testTag = WorkspacePageTags.VIDEO_PREVIEW_STOP; contentDescription = "Stop shared local playback" }) { Text("Stop") }
+                Button(onClick = { onIntent(WorkspaceIntent.PlayPause) }, enabled = canControlPlayback,
+                    modifier = Modifier.semantics { testTag = WorkspacePageTags.VIDEO_PREVIEW_PLAY_PAUSE; contentDescription = if (canControlPlayback) "Play or pause shared local playback" else status }) {
+                    Text(if (session.phase == PlaybackSessionPhase.PLAYING) "Pause" else "Play")
+                }
+                Column(Modifier.weight(1f)) {
+                    Text("Shared playback volume · ${(session.volume * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
+                    Slider(session.volume.toFloat(), { onIntent(WorkspaceIntent.SetPlaybackVolume(it.toDouble())) }, valueRange = 0f..1f,
+                        modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.VIDEO_PREVIEW_VOLUME; contentDescription = "Set shared playback volume" })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VideoUnavailableControl(symbol: String, description: String, tag: String) = OutlinedButton(
+    onClick = {}, enabled = false, modifier = Modifier.size(36.dp).semantics { testTag = tag; contentDescription = description },
+    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+) { Text(symbol) }
+
+private fun videoPreviewStatus(state: WorkspaceUiState): String {
+    val session = state.playbackSession
+    return when {
+        session.phase == PlaybackSessionPhase.FAILED -> "Playback unavailable: ${session.failureMessage ?: "local playback failed"}"
+        state.runtimeReadiness?.audioOutput?.available == false -> "Audio output unavailable: ${state.runtimeReadiness.audioOutput.detail}"
+        session.artifact == null -> "No local playback artifact selected. The visual remains a placeholder."
+        session.phase == PlaybackSessionPhase.PLAYING -> "Local audio playback is playing; the visual remains a placeholder."
+        session.phase == PlaybackSessionPhase.PAUSED -> "Local audio playback is paused; the visual remains a placeholder."
+        else -> "A local audio artifact is selected; the visual remains a placeholder."
     }
 }
 

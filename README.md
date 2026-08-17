@@ -75,7 +75,7 @@ and launch it there. The package includes its Java runtime: Gradle, Spring, and
 the repository working directory are not required to create or open a project.
 
 The package does not bundle the local SFZ samples, renderer, Python worker, or
-optional transcription runtime. Use the **Library** button to choose the
+optional transcription runtime. Use the shell **Settings** gear to choose the
 absolute folder containing the validated `sounds/` pack; that preference is
 stored separately from project data. For a terminal launch, a validated
 `MUSIC_SOUNDS_ROOT` is an alternative and takes precedence over the chooser.
