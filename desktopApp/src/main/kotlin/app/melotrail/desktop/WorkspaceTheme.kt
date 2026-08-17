@@ -24,6 +24,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 object MusicWorkspaceTokens {
+    /** Measurements taken from plan/UI.png at 1536 × 1024, 100% scale. */
+    object Reference {
+        val ViewportWidth = 1536.dp
+        val ViewportHeight = 1024.dp
+        val OuterPadding = 16.dp
+        val HeaderHeight = 56.dp
+        val FooterHeight = 104.dp
+        val ColumnGap = 12.dp
+        val LeftRailWidth = 254.dp
+        val CenterWidth = 698.dp
+        val RightRailWidth = 533.dp
+        val WideBreakpoint = 1180.dp
+        val MediumBreakpoint = 760.dp
+        const val BorderAlpha = 0.78f
+    }
     val Canvas = Color(0xFF071017)
     val Surface = Color(0xFF0D1821)
     val ElevatedSurface = Color(0xFF12212B)
@@ -44,6 +59,7 @@ object MusicWorkspaceTokens {
     val Drums = Color(0xFFF0B356)
     val Pad = Color(0xFFAB91EB)
     val Strings = Color(0xFFF08262)
+    val ScenePlaceholder = Color(0xFF13232B)
 
     object Spacing {
         val Xs = 4.dp

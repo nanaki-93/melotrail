@@ -68,12 +68,17 @@ import kotlin.math.roundToInt
 object WorkspaceTags {
     const val PROJECT_HEADER = "project-header"
     const val WORKSPACE_NAV = "workspace-nav"
+    const val PROJECT_SELECTOR = "project-selector"
     const val WORKSPACE_SECTION_PREFIX = "workspace-section-"
     const val GLOBAL_FEEDBACK = "global-feedback"
     const val GLOBAL_FEEDBACK_RETRY = "global-feedback-retry"
     const val GLOBAL_FEEDBACK_DISMISS = "global-feedback-dismiss"
     const val READINESS_RECOVERY = "readiness-recovery"
     const val PARTS_PANEL = "parts-panel"
+    const val PRESENTATION_PANEL = "presentation-panel"
+    const val AI_PLAN_PANEL = "ai-plan-panel"
+    const val MIXER = "mixer"
+    const val MASTER_OUTPUT = "master-output"
     const val PART_ROW_PREFIX = "part-row-"
     const val STRUCTURE_PANEL = "structure-panel"
     const val STRUCTURE_OCCURRENCE_PREFIX = "structure-occurrence-"
@@ -93,6 +98,8 @@ object WorkspaceTags {
     const val MIGRATE_PROJECT = "migrate-project"
     const val ADD_MIDI = "add-midi"
     const val ADD_AUDIO = "add-audio"
+    const val IMPORT_MIDI = "import-midi"
+    const val IMPORT_AUDIO = "import-audio"
     const val IMPORT_SOURCE = "import-source"
     const val IMPORT_CONFIRM = "import-confirm"
     const val IMPORT_PROGRESS = "import-progress"
@@ -147,16 +154,18 @@ fun WorkspaceApp(viewModel: WorkspaceViewModel, onExit: () -> Unit = {}) {
 
 @Composable
 fun WorkspaceScreen(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, onExit: () -> Unit = {}) {
-    Column(
-        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(MusicWorkspaceTokens.Spacing.Md)
+    Box(
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(MusicWorkspaceTokens.Reference.OuterPadding)
             .onPreviewKeyEvent { event: androidx.compose.ui.input.key.KeyEvent ->
                 transportShortcutIntent(event, state.playback)?.let(onIntent) != null
-            },
-        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)
+            }
     ) {
-        ProjectHeader(state, onIntent)
-        WorkspaceShell(state, onIntent, Modifier.weight(1f))
-        CompactTransport(state, onIntent)
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Reference.ColumnGap)) {
+            ProjectHeader(state, onIntent)
+            StableWorkspaceShell(state, onIntent, Modifier.weight(1f))
+            WorkstationFooter(state, onIntent)
+        }
+        OperationFeedbackBanner(state, onIntent, Modifier.align(Alignment.TopCenter).padding(top = MusicWorkspaceTokens.Reference.HeaderHeight + MusicWorkspaceTokens.Spacing.Sm))
     }
     WorkspaceDialogs(state, onIntent, onExit)
 }
@@ -191,17 +200,19 @@ internal fun transportShortcutIntent(
 private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
     val mutationsDisabled = state.operation.isMutating
     Card(
-        modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.PROJECT_HEADER },
+        modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Reference.HeaderHeight).semantics { testTag = WorkspaceTags.PROJECT_HEADER },
         colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.Surface),
         border = BorderStroke(1.dp, MusicWorkspaceTokens.Border)
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = MusicWorkspaceTokens.Spacing.Lg, vertical = MusicWorkspaceTokens.Spacing.Md), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = MusicWorkspaceTokens.Spacing.Lg, vertical = MusicWorkspaceTokens.Spacing.Xs)) {
             BoxWithConstraints(Modifier.fillMaxWidth()) {
-                if (maxWidth >= 1040.dp) {
+                if (maxWidth >= 900.dp) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
                         WorkspaceBrand()
                         WorkspaceNavigation(state, onIntent, Modifier.weight(1f))
+                        SelectedProjectControl(state, mutationsDisabled, onIntent)
                         HeaderActions(state, mutationsDisabled, onIntent)
+                        if (state.project?.version == 2) TextButton(onClick = { onIntent(WorkspaceIntent.MigrateProject) }, modifier = Modifier.semantics { testTag = WorkspaceTags.MIGRATE_PROJECT }) { Text("Migrate") }
                     }
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
@@ -214,33 +225,23 @@ private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                     }
                 }
             }
-            val projectText = state.project?.let { "Project · ${it.name} · v${it.version} · ${it.renderFormat?.sampleRate ?: "?"} Hz / ${it.renderFormat?.channels ?: "?"} ch / PCM-24" }
-                ?: "Start workspace · create or open an arranger project"
-            val workflow = state.workflow.current
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
-                Text(projectText, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (!canBuild(state)) Text(buildSongPrerequisite(state), modifier = Modifier.weight(0.8f), maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Text(
-                "Next safe action · ${workflow.context}",
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            if (state.project?.version == 2) {
-                TextButton(onClick = { onIntent(WorkspaceIntent.MigrateProject) }, modifier = Modifier.semantics { testTag = WorkspaceTags.MIGRATE_PROJECT }) {
-                    Text("Migrate project to v3")
-                }
-            }
         }
     }
 }
 
 @Composable
+private fun SelectedProjectControl(state: WorkspaceUiState, mutationsDisabled: Boolean, onIntent: (WorkspaceIntent) -> Unit) {
+    val projectText = state.project?.name ?: "No project"
+    OutlinedButton(
+        onClick = { onIntent(WorkspaceIntent.ChooseProject) }, enabled = !mutationsDisabled,
+        modifier = Modifier.semantics { testTag = WorkspaceTags.PROJECT_SELECTOR; contentDescription = "Selected project: $projectText. Choose another project." }
+    ) { Text(projectText, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+}
+
+@Composable
 private fun WorkspaceBrand() {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-        Text("♫", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.headlineMedium)
+        Text("M", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
             Text("Melotrail", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             Text("Compose · Arrange · Mix", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -267,7 +268,7 @@ private fun HeaderActions(state: WorkspaceUiState, mutationsDisabled: Boolean, o
 }
 
 private fun soundLibrarySummary(library: SoundLibrarySettingsState): String = when {
-    library.resolvedRoot != null && library.validationError == null -> "Library: ${library.source ?: "configured"} · ${library.resolvedRoot}"
+    library.resolvedRoot != null && library.validationError == null -> "Library: ${library.source ?: "configured"} · validated locally"
     else -> "Library unavailable — ${library.validationError ?: "choose a valid folder"}"
 }
 
@@ -312,8 +313,8 @@ private fun WorkspaceShell(state: WorkspaceUiState, onIntent: (WorkspaceIntent) 
 internal enum class WorkspaceLayout { WIDE, MEDIUM, NARROW }
 
 internal fun workspaceLayoutForWidth(width: androidx.compose.ui.unit.Dp): WorkspaceLayout = when {
-    width >= 1180.dp -> WorkspaceLayout.WIDE
-    width >= 760.dp -> WorkspaceLayout.MEDIUM
+    width >= MusicWorkspaceTokens.Reference.WideBreakpoint -> WorkspaceLayout.WIDE
+    width >= MusicWorkspaceTokens.Reference.MediumBreakpoint -> WorkspaceLayout.MEDIUM
     else -> WorkspaceLayout.NARROW
 }
 
@@ -404,7 +405,7 @@ private fun PanelColumn(modifier: Modifier, state: WorkspaceUiState, onIntent: (
 }
 
 @Composable
-private fun PartsPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Parts", WorkspaceTags.PARTS_PANEL) {
+internal fun PartsPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Scenes / Parts", WorkspaceTags.PARTS_PANEL) {
     val disabled = state.project == null || state.operation.isMutating
     OutlinedButton(
         onClick = { onIntent(WorkspaceIntent.ShowAddPart) },
@@ -413,10 +414,10 @@ private fun PartsPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
             testTag = WorkspaceTags.ADD_MIDI
             contentDescription = if (state.project == null) "Add part unavailable. Create or open a project first." else "Add a MIDI, WAV, or MP3 part"
         }
-    ) { Text("＋ Add Part") }
+    ) { Text("+ Add Part") }
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        TextButton(onClick = { onIntent(WorkspaceIntent.ShowImportPart(audio = false)) }, enabled = !disabled) { Text("Import MIDI") }
-        TextButton(onClick = { onIntent(WorkspaceIntent.ShowImportPart(audio = true)) }, enabled = !disabled) { Text("Import Audio") }
+        TextButton(onClick = { onIntent(WorkspaceIntent.ShowImportPart(audio = false)) }, enabled = !disabled, modifier = Modifier.semantics { testTag = WorkspaceTags.IMPORT_MIDI; contentDescription = "Import MIDI" }) { Text("Import MIDI") }
+        TextButton(onClick = { onIntent(WorkspaceIntent.ShowImportPart(audio = true)) }, enabled = !disabled, modifier = Modifier.semantics { testTag = WorkspaceTags.IMPORT_AUDIO; contentDescription = "Import Audio" }) { Text("Import Audio") }
     }
     if (state.project?.parts.isNullOrEmpty()) {
         Text("Import MIDI or solo-piano WAV/MP3 to prepare the first part.", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -470,7 +471,7 @@ private fun PartsPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
 }
 
 @Composable
-private fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Repair MIDI", WorkspaceTags.MIDI_QUALITY_PANEL) {
+internal fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Repair MIDI", WorkspaceTags.MIDI_QUALITY_PANEL) {
     val part = state.selectedPartId?.let { id -> state.project?.parts?.find { it.id == id } } ?: return@WorkspaceCard
     val quality = part.preparation.midiQuality
     Text("Part ${part.id}", fontWeight = FontWeight.Medium)
@@ -518,9 +519,9 @@ private fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (Workspace
             val report = quality.report
             Text("Current profile: ${quality.cleanup?.profile?.qualityProfileLabel() ?: "unknown"}", style = MaterialTheme.typography.bodySmall)
             if (report != null) {
-                Text("Raw → clean", style = MaterialTheme.typography.labelLarge)
+                Text("Raw to clean", style = MaterialTheme.typography.labelLarge)
                 Text(
-                    "Notes ${report.raw.noteCount} → ${report.clean.noteCount} · ${formatMetric(report.raw.notesPerSecond)} → ${formatMetric(report.clean.notesPerSecond)} notes/s · polyphony ${report.raw.maximumPolyphony} → ${report.clean.maximumPolyphony}",
+                    "Notes ${report.raw.noteCount} to ${report.clean.noteCount} · ${formatMetric(report.raw.notesPerSecond)} to ${formatMetric(report.clean.notesPerSecond)} notes/s · polyphony ${report.raw.maximumPolyphony} to ${report.clean.maximumPolyphony}",
                     style = MaterialTheme.typography.bodySmall
                 )
                 Text(
@@ -552,12 +553,12 @@ private fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (Workspace
                     onClick = { onIntent(WorkspaceIntent.SelectMidiFeel(app.melotrail.arrangement.MidiAnalysisInput.REPAIRED)) },
                     enabled = !state.operation.isMutating,
                     modifier = Modifier.semantics { testTag = WorkspaceTags.MIDI_FEEL_ORIGINAL }
-                ) { Text(if (selectedFeel == app.melotrail.arrangement.MidiAnalysisInput.REPAIRED) "Original ✓" else "Original") }
+                ) { Text(if (selectedFeel == app.melotrail.arrangement.MidiAnalysisInput.REPAIRED) "Original selected" else "Original") }
                 OutlinedButton(
                     onClick = { onIntent(WorkspaceIntent.SelectMidiFeel(app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL)) },
                     enabled = !state.operation.isMutating,
                     modifier = Modifier.semantics { testTag = WorkspaceTags.MIDI_FEEL_LOFI }
-                ) { Text(if (selectedFeel == app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL) "Lo-fi MIDI Feel ✓" else "Lo-fi MIDI Feel") }
+                ) { Text(if (selectedFeel == app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL) "Lo-fi MIDI Feel selected" else "Lo-fi MIDI Feel") }
             }
             if (state.pendingMidiFeel != null && state.pendingMidiFeel != part.preparation.midiFeel.selected) {
                 Button(
@@ -579,7 +580,7 @@ private fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (Workspace
                 onClick = { onIntent(WorkspaceIntent.SelectMidiCleanupProfile(profile)) },
                 enabled = !state.operation.isMutating,
                 modifier = Modifier.semantics { testTag = WorkspaceTags.MIDI_QUALITY_PROFILE_PREFIX + profile.name.lowercase() }
-            ) { Text(if (selected) "${profile.qualityProfileLabel()} ✓" else profile.qualityProfileLabel()) }
+            ) { Text(if (selected) "${profile.qualityProfileLabel()} selected" else profile.qualityProfileLabel()) }
         }
         if (state.midiQualityReview.profile == MidiCleanupProfile.TIGHTEN_TIMING) {
             Text("Timing warning: tighten timing uses a fixed 1/16 grid at 40% strength. It may shift expressive note starts and ends; confirmation is required.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
@@ -608,7 +609,7 @@ private fun midiQualityRecommendationText(recommendation: app.melotrail.arrangem
 }
 
 @Composable
-private fun AudioPreparationPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Selected-part preparation", WorkspaceTags.PREPARATION_PANEL) {
+internal fun AudioPreparationPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Selected-part preparation", WorkspaceTags.PREPARATION_PANEL) {
     val part = state.selectedPartId?.let { id -> state.project?.parts?.find { it.id == id } }
     if (part == null) {
         Text("Select a WAV or MP3 part to inspect its source, compare prepared audio, and choose transcription input.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
@@ -652,8 +653,8 @@ private fun AudioPreparationPanel(state: WorkspaceUiState, onIntent: (WorkspaceI
             }
             Text("Cleanup choice", style = MaterialTheme.typography.labelLarge)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectCleanupMode(app.melotrail.preparation.InputCleanupMode.INSPECT_ONLY)) }) { Text(if (preparation.cleanupMode == app.melotrail.preparation.InputCleanupMode.INSPECT_ONLY) "Inspect only ✓" else "Inspect only") }
-                OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectCleanupMode(app.melotrail.preparation.InputCleanupMode.SAFE_CLEANUP)) }, enabled = recommendation != null) { Text(if (preparation.cleanupMode == app.melotrail.preparation.InputCleanupMode.SAFE_CLEANUP) "Safe cleanup ✓" else "Safe cleanup") }
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectCleanupMode(app.melotrail.preparation.InputCleanupMode.INSPECT_ONLY)) }) { Text(if (preparation.cleanupMode == app.melotrail.preparation.InputCleanupMode.INSPECT_ONLY) "Inspect only selected" else "Inspect only") }
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectCleanupMode(app.melotrail.preparation.InputCleanupMode.SAFE_CLEANUP)) }, enabled = recommendation != null) { Text(if (preparation.cleanupMode == app.melotrail.preparation.InputCleanupMode.SAFE_CLEANUP) "Safe cleanup selected" else "Safe cleanup") }
             }
             Button(
                 onClick = { onIntent(WorkspaceIntent.ApplySelectedCleanup) },
@@ -673,9 +674,9 @@ private fun AudioPreparationPanel(state: WorkspaceUiState, onIntent: (WorkspaceI
             Text("Transcription input", style = MaterialTheme.typography.labelLarge)
             Text("Choose exactly which validated project artifact feeds solo-piano transcription.", style = MaterialTheme.typography.bodySmall)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectTranscriptionInput(app.melotrail.preparation.TranscriptionInputArtifact.SOURCE)) }) { Text(if (preparation.transcriptionInput == app.melotrail.preparation.TranscriptionInputArtifact.SOURCE) "Original ✓" else "Original") }
-                OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectTranscriptionInput(app.melotrail.preparation.TranscriptionInputArtifact.DECODED_WAV)) }, enabled = snapshot.decodedWavAvailable) { Text(if (preparation.transcriptionInput == app.melotrail.preparation.TranscriptionInputArtifact.DECODED_WAV) "Decoded ✓" else "Decoded WAV") }
-                OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectTranscriptionInput(app.melotrail.preparation.TranscriptionInputArtifact.CLEAN_WAV)) }, enabled = cleanAvailable) { Text(if (preparation.transcriptionInput == app.melotrail.preparation.TranscriptionInputArtifact.CLEAN_WAV) "Prepared ✓" else "Prepared") }
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectTranscriptionInput(app.melotrail.preparation.TranscriptionInputArtifact.SOURCE)) }) { Text(if (preparation.transcriptionInput == app.melotrail.preparation.TranscriptionInputArtifact.SOURCE) "Original selected" else "Original") }
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectTranscriptionInput(app.melotrail.preparation.TranscriptionInputArtifact.DECODED_WAV)) }, enabled = snapshot.decodedWavAvailable) { Text(if (preparation.transcriptionInput == app.melotrail.preparation.TranscriptionInputArtifact.DECODED_WAV) "Decoded selected" else "Decoded WAV") }
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectTranscriptionInput(app.melotrail.preparation.TranscriptionInputArtifact.CLEAN_WAV)) }, enabled = cleanAvailable) { Text(if (preparation.transcriptionInput == app.melotrail.preparation.TranscriptionInputArtifact.CLEAN_WAV) "Prepared selected" else "Prepared") }
             }
             Button(onClick = { onIntent(WorkspaceIntent.TranscribeSelectedPart) }, enabled = !state.operation.isMutating && (preparation.transcriptionInput != app.melotrail.preparation.TranscriptionInputArtifact.CLEAN_WAV || cleanAvailable), modifier = Modifier.semantics { testTag = WorkspaceTags.PREPARATION_TRANSCRIBE }) { Text("Run transcription quality gate") }
             report.transcription?.let { transcription ->
@@ -709,7 +710,7 @@ internal fun previewStatusLabel(phase: PreviewPhase): String = when (phase) {
 }
 
 @Composable
-private fun StructurePanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Song structure", WorkspaceTags.STRUCTURE_PANEL) {
+internal fun StructurePanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Song structure", WorkspaceTags.STRUCTURE_PANEL) {
     val disabled = state.project == null || state.operation.isMutating
     if (state.structureDraft.isEmpty()) {
         Text("Add parts in the intended order. Empty structure cannot be arranged or built.", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -815,9 +816,9 @@ private fun StructureRow(index: Int, partId: String, state: WorkspaceUiState, en
         Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
             Text("${partId}${occurrence} · $duration", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
             TextButton(onClick = { onIntent(WorkspaceIntent.MoveStructurePart(index, index - 1)) }, enabled = enabled && index > 0,
-                modifier = Modifier.sizeIn(minWidth = MusicWorkspaceTokens.Interaction.MinimumHitTarget, minHeight = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics { testTag = WorkspaceTags.STRUCTURE_MOVE_LEFT + index; contentDescription = "Move $partId$occurrence earlier" }) { Text("←") }
+                modifier = Modifier.sizeIn(minWidth = MusicWorkspaceTokens.Interaction.MinimumHitTarget, minHeight = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics { testTag = WorkspaceTags.STRUCTURE_MOVE_LEFT + index; contentDescription = "Move $partId$occurrence earlier" }) { Text("Earlier") }
             TextButton(onClick = { onIntent(WorkspaceIntent.MoveStructurePart(index, index + 1)) }, enabled = enabled && index < state.structureDraft.lastIndex,
-                modifier = Modifier.sizeIn(minWidth = MusicWorkspaceTokens.Interaction.MinimumHitTarget, minHeight = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics { testTag = WorkspaceTags.STRUCTURE_MOVE_RIGHT + index; contentDescription = "Move $partId$occurrence later" }) { Text("→") }
+                modifier = Modifier.sizeIn(minWidth = MusicWorkspaceTokens.Interaction.MinimumHitTarget, minHeight = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics { testTag = WorkspaceTags.STRUCTURE_MOVE_RIGHT + index; contentDescription = "Move $partId$occurrence later" }) { Text("Later") }
             TextButton(onClick = { onIntent(WorkspaceIntent.DuplicateStructurePart(index)) }, enabled = enabled) { Text("Duplicate") }
             TextButton(onClick = { onIntent(WorkspaceIntent.RemoveStructurePart(index)) }, enabled = enabled) { Text("Remove") }
         }
@@ -828,7 +829,7 @@ private fun StructureRow(index: Int, partId: String, state: WorkspaceUiState, en
 }
 
 @Composable
-private fun ArrangementPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("AI arrangement", WorkspaceTags.ARRANGEMENT_PANEL) {
+internal fun ArrangementPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("AI arrangement", WorkspaceTags.ARRANGEMENT_PANEL) {
     val project = state.project
     val draft = state.arrangementDraft
     val disabled = project == null || state.operation.isMutating
@@ -888,18 +889,13 @@ private fun ArrangementReview(state: WorkspaceUiState, onIntent: (WorkspaceInten
 }
 
 @Composable
-private fun TimelinePanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Song timeline", WorkspaceTags.TIMELINE_PANEL) {
+internal fun TimelinePanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Song timeline", WorkspaceTags.TIMELINE_PANEL) {
     val arrangement = state.arrangement
     when {
         arrangement == null -> Text("Generate an arrangement to view validated song-plan sections and instrument lanes.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         arrangement.stale -> Text("Timeline is unavailable because the arrangement artifact is stale. Regenerate it from the current project.", color = MaterialTheme.colorScheme.error)
         arrangement.sections.isEmpty() -> Text("No validated arrangement sections are available.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         else -> {
-            Text(if (arrangement.approvalRequired) "AI song plan · validated draft" else "AI song plan · approved", style = MaterialTheme.typography.labelLarge)
-            arrangement.sections.forEach { section ->
-                SongPlanRow(section, section.index == state.selectedArrangementSection) { onIntent(WorkspaceIntent.SelectArrangementSection(section.index)) }
-            }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
             Text("Instrument timeline", style = MaterialTheme.typography.labelLarge)
             TimelineLanes(arrangement, state.selectedArrangementSection, onIntent)
             state.selectedArrangementSection?.let { index -> arrangement.sections.find { it.index == index } }?.let { section ->
@@ -954,7 +950,7 @@ private fun TimelineLanes(arrangement: app.melotrail.application.ArrangementSnap
 }
 
 @Composable
-private fun LibraryPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Sound library", WorkspaceTags.LIBRARY_PANEL) {
+internal fun LibraryPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Sound library", WorkspaceTags.LIBRARY_PANEL) {
     Text(soundLibrarySummary(state.soundLibrary), color = MaterialTheme.colorScheme.onSurfaceVariant)
     Text(
         "The local sound library supplies validated SFZ instruments and samples for MIDI preview, arrangement rendering, and Build Song.",
@@ -977,10 +973,11 @@ private fun LibraryPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) ->
             modifier = Modifier.semantics { testTag = WorkspaceTags.SOUND_LIBRARY_SETTINGS; contentDescription = "Configure local sound library" }
         ) { Text("Configure library") }
     }
+    ReadinessRecovery(state.runtimeReadiness, onIntent)
 }
 
 @Composable
-private fun CompactTransport(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+internal fun CompactTransport(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier = Modifier) {
     val session = state.playbackSession
     val hasPlayableSelection = when (val request = session.request) {
         is PlaybackRequest.Part -> session.phase in setOf(PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED) || (session.phase == PlaybackSessionPhase.STOPPED && session.artifact != null)
@@ -995,7 +992,7 @@ private fun CompactTransport(state: WorkspaceUiState, onIntent: (WorkspaceIntent
         null -> "Dry mix"
     }
     Card(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 82.dp, max = 118.dp).semantics {
+        modifier = modifier.fillMaxWidth().heightIn(min = 82.dp, max = 118.dp).semantics {
             testTag = WorkspaceTags.COMPACT_TRANSPORT
             contentDescription = "Persistent song transport"
         },
@@ -1010,8 +1007,8 @@ private fun CompactTransport(state: WorkspaceUiState, onIntent: (WorkspaceIntent
             Button(
                 onClick = { onIntent(WorkspaceIntent.PlayPause) }, enabled = hasPlayableSelection,
                 modifier = Modifier.semantics { testTag = WorkspaceTags.PLAYBACK_TOGGLE; contentDescription = if (hasPlayableSelection) "Play or pause $label" else "Playback unavailable. Select a ready preview or build a current mix first." }
-            ) { Text(if (session.phase == PlaybackSessionPhase.PLAYING) "Ⅱ" else "▶") }
-            OutlinedButton(onClick = { onIntent(WorkspaceIntent.StopPlayback) }, enabled = canStop) { Text("■") }
+            ) { Text(if (session.phase == PlaybackSessionPhase.PLAYING) "Pause" else "Play") }
+            OutlinedButton(onClick = { onIntent(WorkspaceIntent.StopPlayback) }, enabled = canStop) { Text("Stop") }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Row(Modifier.fillMaxWidth()) {
                     Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
@@ -1050,7 +1047,7 @@ private fun CompactTransport(state: WorkspaceUiState, onIntent: (WorkspaceIntent
 }
 
 @Composable
-private fun MixPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Mix & transport", WorkspaceTags.MIX_PANEL) {
+internal fun MixPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Mix & transport", WorkspaceTags.MIX_PANEL) {
     val mix = state.mix
     val disabled = state.project == null || state.operation.isMutating
     if (mix == null || mix.availableStems.isEmpty()) {
@@ -1174,13 +1171,13 @@ private fun PlaceholderPanel(panel: Panel, state: WorkspaceUiState, onIntent: (W
 @Composable
 internal fun OperationStatusSurface(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
     val feedback = state.operationFeedback
-    val (label, icon, color) = when {
-        feedback.active -> Triple("Loading · ${feedback.phase.label()}", "↻", MusicWorkspaceTokens.Loading)
-        feedback.outcomeSeverity == OperationSeverity.ERROR -> Triple("Error", "✕", MusicWorkspaceTokens.Error)
-        feedback.outcomeSeverity == OperationSeverity.WARNING -> Triple("Warning", "⚠", MusicWorkspaceTokens.Warning)
-        feedback.outcomeSeverity == OperationSeverity.INFORMATION -> Triple("Information", "ℹ", MusicWorkspaceTokens.Information)
-        feedback.outcomeSeverity == OperationSeverity.SUCCESS -> Triple("Complete", "✓", MusicWorkspaceTokens.Teal)
-        else -> Triple("Ready", "✓", MusicWorkspaceTokens.Teal)
+    val (label, color) = when {
+        feedback.active -> "Loading · ${feedback.phase.label()}" to MusicWorkspaceTokens.Loading
+        feedback.outcomeSeverity == OperationSeverity.ERROR -> "Error" to MusicWorkspaceTokens.Error
+        feedback.outcomeSeverity == OperationSeverity.WARNING -> "Warning" to MusicWorkspaceTokens.Warning
+        feedback.outcomeSeverity == OperationSeverity.INFORMATION -> "Information" to MusicWorkspaceTokens.Information
+        feedback.outcomeSeverity == OperationSeverity.SUCCESS -> "Complete" to MusicWorkspaceTokens.Teal
+        else -> "Ready" to MusicWorkspaceTokens.Teal
     }
     Column(
         modifier = Modifier.semantics {
@@ -1190,7 +1187,7 @@ internal fun OperationStatusSurface(state: WorkspaceUiState, onIntent: (Workspac
         },
         verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)
     ) {
-        Text("$icon  $label", color = color, style = MaterialTheme.typography.labelLarge)
+        Text(label, color = color, style = MaterialTheme.typography.labelLarge)
         Text(if (feedback.phase == OperationPhase.IDLE) detailForIdle(state) else feedback.message, color = MaterialTheme.colorScheme.onSurface)
         feedback.artifactLabel?.let { Text("Artifact: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         if (feedback.active) {
@@ -1252,7 +1249,7 @@ private fun ReadinessRecovery(readiness: RuntimeReadiness?, onIntent: (Workspace
 }
 
 @Composable
-private fun WorkspaceCard(title: String, tag: String, content: @Composable () -> Unit) {
+internal fun WorkspaceCard(title: String, tag: String, content: @Composable () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().semantics { testTag = tag },
         colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface),

@@ -3,13 +3,13 @@
 ## Goal
 
 Replace the current section-dependent card stack with the stable workstation
-composition shown in `plan/UI.png`, backed by real application state and the
+composition shown in `../../UI.png`, backed by real application state and the
 simplified workflows from Tasks 074–076.
 
 ## Dependencies
 
 - Tasks 075 and 076 accepted.
-- Read `../PLAN.md` and Tasks 074–076 completely before implementation.
+- Read `../../PLAN.md` and Tasks 074–076 completely before implementation.
 - Before coding, confirm whether the mockup's scene artwork, Video Concept,
   Current Location, weather, and destination are functional local project
   metadata or visual-only deterministic placeholders. Do not infer live network
@@ -18,7 +18,7 @@ simplified workflows from Tasks 074–076.
 
 ## Reference contract
 
-- `../UI.png` is the exact wide-screen reference at 1536 × 1024 and 100% scale.
+- `../../UI.png` is the exact wide-screen reference at 1536 × 1024 and 100% scale.
 - Match hierarchy, panel geometry, proportions, density, typography, colors,
   borders, radii, icons, selection states, transport, and mixer.
 - Real data and truthful disabled/empty states take precedence over copying
@@ -78,7 +78,7 @@ simplified workflows from Tasks 074–076.
   must not depend on user files, machine paths, clock, network, worker,
   renderer, model, or audio device.
 - Add a documented overlay/diff workflow comparing the 1536 × 1024 golden to
-  `../UI.png`.
+  `../../UI.png`.
 - Wide visual acceptance requires major panel edges and heights within 4 px of
   measured reference coordinates and colors within documented token tolerance.
   Typography and icons require human review in addition to pixel diff.
