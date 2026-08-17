@@ -98,6 +98,8 @@ data class WorkspaceUiState(
     val audioPreparation: AudioPreparationUiState = AudioPreparationUiState(),
     val arrangementDraft: ArrangementDraft = ArrangementDraft(),
     val cohesionDraft: CohesionDraft = CohesionDraft(),
+    /** UI navigation only; planner fields remain in [arrangementDraft] until generation. */
+    val arrangeTab: ArrangeTab = ArrangeTab.ARRANGEMENT,
     val selectedArrangementSection: Int? = null,
     val operation: WorkspaceOperation = WorkspaceOperation.Idle,
     val operationFeedback: OperationFeedback = OperationFeedback.idle(),
@@ -262,6 +264,14 @@ data class ArrangementDraft(
     val style: String = "",
     val instruments: Set<String> = setOf("piano")
 )
+
+/** Supported Arrange views. They expose existing bounded controls and evidence only. */
+enum class ArrangeTab(val label: String) {
+    ARRANGEMENT("Arrangement"),
+    INSTRUMENTS("Instruments"),
+    TRANSITIONS("Transitions"),
+    PLANNER("Planner")
+}
 
 data class CohesionDraft(val planner: CohesionPlannerKind = CohesionPlannerKind.DETERMINISTIC)
 
@@ -467,6 +477,7 @@ sealed interface WorkspaceIntent {
     data class RemoveStructurePart(val index: Int) : WorkspaceIntent
     data class MoveStructurePart(val fromIndex: Int, val toIndex: Int) : WorkspaceIntent
     data object ClearStructure : WorkspaceIntent
+    data class SelectArrangeTab(val tab: ArrangeTab) : WorkspaceIntent
     data class UpdateArrangementPlanner(val planner: ArrangementPlannerKind) : WorkspaceIntent
     data class UpdateCohesionPlanner(val planner: CohesionPlannerKind) : WorkspaceIntent
     data class UpdateArrangementStyle(val style: String) : WorkspaceIntent
@@ -606,6 +617,7 @@ class WorkspaceViewModel(
             is WorkspaceIntent.RemoveStructurePart -> removeStructurePart(intent.index)
             is WorkspaceIntent.MoveStructurePart -> moveStructurePart(intent.fromIndex, intent.toIndex)
             WorkspaceIntent.ClearStructure -> saveStructure(emptyList())
+            is WorkspaceIntent.SelectArrangeTab -> mutableState.update { it.copy(arrangeTab = intent.tab) }
             is WorkspaceIntent.UpdateArrangementPlanner -> updateArrangementPlanner(intent.planner)
             is WorkspaceIntent.UpdateCohesionPlanner -> mutableState.update { it.copy(cohesionDraft = it.cohesionDraft.copy(planner = intent.planner), notification = null) }
             is WorkspaceIntent.UpdateArrangementStyle -> mutableState.update { it.copy(arrangementDraft = it.arrangementDraft.copy(style = intent.style), arrangementDraftDirty = true) }

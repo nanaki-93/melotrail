@@ -87,6 +87,21 @@ class WorkspaceViewModelTest {
     }
 
     @Test
+    fun `Arrange tab selection survives draft edits and failed generation state`() = runTest {
+        val viewModel = WorkspaceViewModel(FakeProjectService(), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+
+        viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.ARRANGE))
+        viewModel.accept(WorkspaceIntent.SelectArrangeTab(ArrangeTab.TRANSITIONS))
+        viewModel.accept(WorkspaceIntent.UpdateArrangementStyle("warm lo-fi"))
+        viewModel.accept(WorkspaceIntent.GenerateArrangement)
+
+        assertEquals(ArrangeTab.TRANSITIONS, viewModel.state.value.arrangeTab)
+        assertEquals("warm lo-fi", viewModel.state.value.arrangementDraft.style)
+        assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation)
+        viewModel.close()
+    }
+
+    @Test
     fun `Export selection inspects release then exports only through typed service`() = runTest {
         val root = Path.of("build/task-089-project")
         val exporter = FakeReleaseExportService(root)

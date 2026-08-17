@@ -3,6 +3,7 @@ package app.melotrail.desktop
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -306,13 +307,18 @@ private fun LocalArtworkSlot() = Box(
 @Composable
 private fun ContextRail(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier) {
     Card(modifier.semantics { testTag = WorkspaceShellTags.CONTEXT_RAIL; contentDescription = "${state.workspaceSection.label} page context" }, colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface)) {
-        Column(Modifier.padding(MusicWorkspaceTokens.Spacing.Md), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-            if (state.workspaceSection == WorkspaceSection.IMPORT) {
-                ImportContextRail(state, onIntent)
-            } else {
-                Icon(Icons.Default.Tune, contentDescription = null, tint = MusicWorkspaceTokens.Teal)
-                Text("${state.workspaceSection.label} context", style = MaterialTheme.typography.titleMedium)
-                Text(contextDescription(state), style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
+        Column(Modifier.padding(MusicWorkspaceTokens.Spacing.Md).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+            when (state.workspaceSection) {
+                WorkspaceSection.IMPORT -> ImportContextRail(state, onIntent)
+                WorkspaceSection.ARRANGE -> {
+                    Icon(Icons.Default.Tune, contentDescription = null, tint = MusicWorkspaceTokens.Teal)
+                    ArrangeContextRail(state, onIntent)
+                }
+                else -> {
+                    Icon(Icons.Default.Tune, contentDescription = null, tint = MusicWorkspaceTokens.Teal)
+                    Text("${state.workspaceSection.label} context", style = MaterialTheme.typography.titleMedium)
+                    Text(contextDescription(state), style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
+                }
             }
         }
     }

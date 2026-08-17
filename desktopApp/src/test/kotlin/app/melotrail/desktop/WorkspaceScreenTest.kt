@@ -570,13 +570,10 @@ class WorkspaceScreenTest {
         states.forEach { state ->
             setContent { MelotrailTheme { WorkspaceScreen(state, onIntent = {}) } }
             onAllNodesWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.ARRANGE.name.lowercase()).assertCountEquals(1)
-            onAllNodesWithTag(WorkspacePageTags.ARRANGE_PLANNER_PREFIX + "deterministic").assertCountEquals(1)
-            onAllNodesWithTag(WorkspacePageTags.ARRANGE_PLANNER_PREFIX + "qwen").assertCountEquals(1)
             onAllNodesWithTag(WorkspacePageTags.ARRANGE_PRIMARY_ACTION).assertCountEquals(1)
-            onAllNodesWithTag(WorkspacePageTags.ARRANGE_INSTRUMENT_PREFIX).assertCountEquals(0)
-            listOf("piano", "bass", "drums", "pad", "strings").forEach { instrument ->
-                onAllNodesWithTag(WorkspacePageTags.ARRANGE_INSTRUMENT_PREFIX + instrument).assertCountEquals(1)
-            }
+            onAllNodesWithTag(WorkspacePageTags.ARRANGE_TABS).assertCountEquals(1)
+            onAllNodesWithTag(WorkspacePageTags.ARRANGE_TIMELINE).assertCountEquals(1)
+            onAllNodesWithTag(WorkspacePageTags.ARRANGE_TRANSPORT).assertCountEquals(1)
             onAllNodesWithTag(WorkspaceTags.STRUCTURE_PANEL).assertCountEquals(0)
             onAllNodesWithTag(WorkspaceTags.TIMELINE_PANEL).assertCountEquals(0)
             onAllNodesWithTag(WorkspaceTags.AI_PLAN_PANEL).assertCountEquals(0)
@@ -589,8 +586,9 @@ class WorkspaceScreenTest {
         setContent { MelotrailTheme { WorkspaceScreen(arrangeState(), intents::add) } }
 
         onNodeWithTag(WorkspacePageTags.ARRANGE_PRIMARY_ACTION).assertIsEnabled()
+        onNodeWithTag(WorkspaceShellTags.CONTEXT_TOGGLE).performClick()
         onNodeWithTag(WorkspacePageTags.ARRANGE_PLANNER_PREFIX + "qwen").performClick()
-        onNodeWithTag(WorkspacePageTags.ARRANGE_INSTRUMENT_PREFIX + "bass").performClick()
+        onNodeWithTag(WorkspacePageTags.ARRANGE_INSTRUMENT_PREFIX + "bass").performScrollTo().performClick()
         onNodeWithTag(WorkspacePageTags.ARRANGE_STYLE).performTextInput("warm lo-fi")
         onNodeWithTag(WorkspacePageTags.ARRANGE_PRIMARY_ACTION).performScrollTo().performClick()
 
@@ -611,10 +609,35 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `Arrange timeline uses canonical placements and tabs without mock controls`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        val arrangement = arrangementSnapshot(approved = true, sections = listOf(
+            arrangementSection(0, "A1", 18.0, "piano", "bass"),
+            arrangementSection(1, "A2", 22.0, "piano", "pad"),
+            arrangementSection(2, "B1", 28.0, "piano", "bass", "drums")
+        ))
+        setContent { MelotrailTheme { WorkspaceScreen(arrangeState().copy(arrangement = arrangement, selectedArrangementSection = 1), intents::add) } }
+
+        listOf("piano", "bass", "drums", "pad").forEach { track -> onNodeWithTag(WorkspacePageTags.ARRANGE_TRACK_PREFIX + track).assertExists() }
+        onAllNodesWithTag(WorkspacePageTags.ARRANGE_TRACK_PREFIX + "strings").assertCountEquals(0)
+        onNodeWithTag(WorkspacePageTags.ARRANGE_SECTION_PREFIX + "1").performClick()
+        onNodeWithTag(WorkspacePageTags.ARRANGE_TAB_PREFIX + "transitions").performClick()
+
+        assertEquals(
+            listOf(WorkspaceIntent.SelectArrangementSection(1), WorkspaceIntent.SelectArrangeTab(ArrangeTab.TRANSITIONS)),
+            intents
+        )
+        onAllNodesWithTag(WorkspacePageTags.ARRANGE_INTENSITY).assertCountEquals(0)
+        onAllNodesWithText("AI Arrangement Suggestions").assertCountEquals(0)
+        onAllNodesWithText("Undo").assertCountEquals(0)
+    }
+
+    @Test
     fun `Arrange planner choice remains keyboard reachable`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(arrangeState(), intents::add) } }
 
+        onNodeWithTag(WorkspaceShellTags.CONTEXT_TOGGLE).performClick()
         val qwen = onNodeWithTag(WorkspacePageTags.ARRANGE_PLANNER_PREFIX + "qwen")
         qwen.performClick()
         intents.clear()
@@ -628,6 +651,7 @@ class WorkspaceScreenTest {
         setContent { MelotrailTheme { WorkspaceScreen(WorkspaceUiState(workspaceSection = WorkspaceSection.ARRANGE), onIntent = {}) } }
 
         onNodeWithTag(WorkspacePageTags.ARRANGE_PRIMARY_ACTION).assertIsNotEnabled()
+        onNodeWithTag(WorkspaceShellTags.CONTEXT_TOGGLE).performClick()
         onAllNodesWithTag(WorkspacePageTags.ARRANGE_PREREQUISITE).assertCountEquals(1)
         onNodeWithTag(WorkspacePageTags.ARRANGE_DIAGNOSTICS_TOGGLE).performScrollTo().performClick()
         onAllNodesWithTag(WorkspacePageTags.ARRANGE_DIAGNOSTICS).assertCountEquals(1)
@@ -825,13 +849,27 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `deterministic Arrange fixture captures the numbered reference region`() = runSkikoComposeUiTest(size = Size(1158f, 462f)) {
-        setContent { MelotrailTheme { WorkspaceScreen(arrangeState(), onIntent = {}) } }
+    fun `deterministic Arrange fixture captures and overlays the full task reference`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
+        val fixtureArrangement = arrangementSnapshot(approved = true, sections = listOf(
+            arrangementSection(0, "A1", 20.0, "piano", "bass"),
+            arrangementSection(1, "A2", 28.0, "piano", "pad"),
+            arrangementSection(2, "B1", 32.0, "piano", "bass", "drums"),
+            arrangementSection(3, "C1", 24.0, "piano", "pad", "strings"),
+            arrangementSection(4, "B2", 32.0, "piano", "bass", "drums")
+        ))
+        setContent { MelotrailTheme { WorkspaceScreen(arrangeState().copy(arrangement = fixtureArrangement), onIntent = {}) } }
 
-        val image = onNodeWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.ARRANGE.name.lowercase()).captureToImage()
-        assertTrue(image.width > 0 && image.height > 0)
-        writePageCapture("arrange", image.toAwtImage())
-        writeArrangeReferenceOverlay(image.toAwtImage())
+        val image = onRoot().captureToImage()
+        assertEquals(1536, image.width)
+        assertEquals(1024, image.height)
+        val timeline = onNodeWithTag(WorkspacePageTags.ARRANGE_TIMELINE).getUnclippedBoundsInRoot()
+        val rail = onNodeWithTag(WorkspacePageTags.ARRANGE_CONTEXT).getUnclippedBoundsInRoot()
+        assertTrue(timeline.right.value <= rail.left.value, "wide Arrange timeline and context rail must remain separate")
+        // The reference's waveform clips, preview art, AI suggestion, undo history, and
+        // unsupported tracks are intentionally absent: this fixture uses only canonical
+        // structure/arrangement evidence and reports unavailable rendered playback.
+        writeTask096ArrangeCapture(image.toAwtImage())
+        writeTask096ArrangeReferenceOverlay(image.toAwtImage())
     }
 
     @Test
@@ -1028,6 +1066,34 @@ class WorkspaceScreenTest {
         val target = repository.resolve("desktopApp/build/reports/task-094-import-capture.png")
         Files.createDirectories(target.parent)
         assertTrue(ImageIO.write(capture, "png", target.toFile()))
+    }
+
+    private fun writeTask096ArrangeCapture(capture: BufferedImage) {
+        val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
+            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/04-arrange.png")) }
+            ?: error("Could not locate the Task 096 Arrange reference image.")
+        val target = repository.resolve("desktopApp/build/reports/task-096-arrange-capture.png")
+        Files.createDirectories(target.parent)
+        assertTrue(ImageIO.write(capture, "png", target.toFile()))
+    }
+
+    private fun writeTask096ArrangeReferenceOverlay(capture: BufferedImage) {
+        val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
+            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/04-arrange.png")) }
+            ?: error("Could not locate the Task 096 Arrange reference image.")
+        val reference = ImageIO.read(repository.resolve("plan/pictures/UI/04-arrange.png").toFile())
+        val overlay = BufferedImage(capture.width, capture.height, BufferedImage.TYPE_INT_ARGB)
+        val graphics = overlay.createGraphics()
+        try {
+            graphics.drawImage(reference, 0, 0, overlay.width, overlay.height, null)
+            graphics.composite = AlphaComposite.SrcOver.derive(0.55f)
+            graphics.drawImage(capture, 0, 0, null)
+        } finally {
+            graphics.dispose()
+        }
+        val target = repository.resolve("desktopApp/build/reports/task-096-arrange-overlay.png")
+        Files.createDirectories(target.parent)
+        assertTrue(ImageIO.write(overlay, "png", target.toFile()))
     }
 
     private fun SemanticsNodeInteractionsProvider.assertFitsNarrowViewport(tag: String) {

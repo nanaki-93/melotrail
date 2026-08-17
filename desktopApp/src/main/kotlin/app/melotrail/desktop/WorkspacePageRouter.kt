@@ -124,6 +124,16 @@ internal object WorkspacePageTags {
     const val ARRANGE_DIAGNOSTICS = "arrange-diagnostics"
     const val ARRANGE_REVIEW = "arrange-review"
     const val ARRANGE_APPROVE = "arrange-approve"
+    const val ARRANGE_TABS = "arrange-tabs"
+    const val ARRANGE_TAB_PREFIX = "arrange-tab-"
+    const val ARRANGE_TIMELINE = "arrange-timeline"
+    const val ARRANGE_SECTION_PREFIX = "arrange-section-"
+    const val ARRANGE_TRACK_PREFIX = "arrange-track-"
+    const val ARRANGE_TRANSPORT = "arrange-transport"
+    const val ARRANGE_TRANSPORT_SELECT = "arrange-transport-select"
+    const val ARRANGE_TRANSPORT_PLAY = "arrange-transport-play"
+    const val ARRANGE_CONTEXT = "arrange-context-rail"
+    const val ARRANGE_SUMMARY = "arrange-summary"
     const val MIX_CHANNEL_PREFIX = "mix-master-channel-"
     const val MIX_GAIN_PREFIX = "mix-master-gain-"
     const val MIX_PAN_PREFIX = "mix-master-pan-"
@@ -727,94 +737,233 @@ private fun arrangePrerequisites(state: WorkspaceUiState): ArrangePrerequisites 
 @Composable
 private fun ArrangePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
     val prerequisites = arrangePrerequisites(state)
-    val draft = state.arrangementDraft
     val mutating = state.operation.isMutating
-    var diagnosticsExpanded by remember(state.project, state.structureDraft, state.arrangement, state.operation) { mutableStateOf(false) }
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)
     ) {
-        PageTitle("Arrange", "Choose how to create the arrangement")
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
-            ArrangementPlannerKind.entries.forEach { planner ->
-                PlannerChoiceCard(
-                    planner = planner,
-                    selected = draft.planner == planner,
-                    enabled = !mutating,
-                    onClick = { onIntent(WorkspaceIntent.UpdateArrangementPlanner(planner)) },
-                    modifier = Modifier.weight(1f)
-                )
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
+                Column(Modifier.weight(1f)) { PageTitle("Arrange", "Create a bounded arrangement from saved structure and MIDI analyses") }
+                Button(
+                    onClick = { onIntent(WorkspaceIntent.GenerateArrangement) },
+                    enabled = prerequisites.canGenerate && !mutating,
+                    modifier = Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_PRIMARY_ACTION }
+                ) { Text(if (mutating) "Generating…" else if (state.arrangement?.stale == true) "Regenerate Arrangement" else "Generate Arrangement") }
             }
-        }
-        OverviewCard("arrange-instruments", "Instruments") {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
-                LogicalInstrument.entries.chunked(3).forEach { column ->
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-                        column.forEach { instrument ->
-                            val selected = instrument.wireName in draft.instruments
-                            val required = instrument == LogicalInstrument.PIANO
-                            Row(
-                                Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small)
-                                    .clickable(enabled = !mutating && !required) { onIntent(WorkspaceIntent.ToggleArrangementInstrument(instrument.wireName)) }
-                                    .padding(vertical = MusicWorkspaceTokens.Spacing.Xs)
-                                    .semantics {
-                                        testTag = WorkspacePageTags.ARRANGE_INSTRUMENT_PREFIX + instrument.wireName
-                                        contentDescription = "${instrument.wireName} ${if (required) "is required" else if (selected) "is selected" else "is not selected"} for arrangement generation"
-                                    },
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Checkbox(checked = selected, onCheckedChange = if (required || mutating) null else { _: Boolean -> onIntent(WorkspaceIntent.ToggleArrangementInstrument(instrument.wireName)) })
-                                Text(instrument.wireName.replaceFirstChar(Char::uppercase), style = MaterialTheme.typography.bodySmall)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        OverviewCard("arrange-settings", "Arrangement settings") {
-            OutlinedTextField(
-                value = draft.style,
-                onValueChange = { onIntent(WorkspaceIntent.UpdateArrangementStyle(it)) },
-                enabled = !mutating,
-                label = { Text("Style (optional)") },
-                supportingText = { Text("Up to 160 characters.") },
-                modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.ARRANGE_STYLE }
-            )
-            Text("Intensity · planner-derived", style = MaterialTheme.typography.labelMedium)
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Slider(
-                    value = 0.72f,
-                    onValueChange = {},
-                    enabled = false,
-                    modifier = Modifier.weight(1f).semantics {
-                        testTag = WorkspacePageTags.ARRANGE_INTENSITY
-                        contentDescription = "Intensity is derived by the bounded planner and cannot be manually changed."
-                    }
-                )
-                Text("72%", modifier = Modifier.padding(start = MusicWorkspaceTokens.Spacing.Sm), style = MaterialTheme.typography.labelSmall)
-            }
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-            Text(
-                prerequisites.shortReason,
-                modifier = Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_PREREQUISITE },
-                style = MaterialTheme.typography.bodySmall,
-                color = if (prerequisites.canGenerate) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
-            )
-            TextButton(onClick = { diagnosticsExpanded = !diagnosticsExpanded }, modifier = Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_DIAGNOSTICS_TOGGLE }) { Text(if (diagnosticsExpanded) "Hide details" else "Show details") }
-            if (diagnosticsExpanded) {
-                Column(Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_DIAGNOSTICS }, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    prerequisites.diagnostics.forEach { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                }
-            }
-            Button(
-                onClick = { onIntent(WorkspaceIntent.GenerateArrangement) },
-                enabled = prerequisites.canGenerate && !mutating,
-                modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.ARRANGE_PRIMARY_ACTION }
-            ) { Text(if (mutating) "Generating arrangement…" else if (state.arrangement?.stale == true) "Regenerate Arrangement" else "Generate Arrangement") }
-        }
+            ArrangeTabs(state.arrangeTab, mutating, onIntent)
+        ArrangeTimeline(state, onIntent)
+        ArrangeTransport(state, onIntent)
         ArrangeReview(state, onIntent)
+        ArrangeSummary(state)
     }
+}
+
+@Composable
+private fun ArrangeTabs(selected: ArrangeTab, mutating: Boolean, onIntent: (WorkspaceIntent) -> Unit) = Row(
+    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).semantics { testTag = WorkspacePageTags.ARRANGE_TABS },
+    horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)
+) {
+    ArrangeTab.entries.forEach { tab ->
+        val modifier = Modifier.semantics {
+            testTag = WorkspacePageTags.ARRANGE_TAB_PREFIX + tab.name.lowercase()
+            contentDescription = "${tab.label} arrange tab${if (tab == selected) ", selected" else ""}"
+        }
+        if (tab == selected) Button(onClick = { onIntent(WorkspaceIntent.SelectArrangeTab(tab)) }, enabled = !mutating, modifier = modifier) { Text(tab.label) }
+        else OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectArrangeTab(tab)) }, enabled = !mutating, modifier = modifier) { Text(tab.label) }
+    }
+}
+
+private data class ArrangeTimelineSection(
+    val index: Int,
+    val instanceId: String,
+    val purpose: String?,
+    val durationSeconds: Double?,
+    val instruments: List<app.melotrail.application.ArrangementInstrumentSnapshot>,
+    val transition: String?
+)
+
+private fun arrangeTimelineSections(state: WorkspaceUiState): List<ArrangeTimelineSection> = state.arrangement?.sections?.map { section ->
+    ArrangeTimelineSection(section.index, section.instanceId, section.purpose, section.durationSeconds, section.instruments, section.transition)
+} ?: state.project?.structure.orEmpty().map { section ->
+    ArrangeTimelineSection(section.index, section.instanceId, null, section.durationSeconds, emptyList(), null)
+}
+
+private fun arrangeTimelineWidth(section: ArrangeTimelineSection) = ((section.durationSeconds?.coerceAtLeast(2.0) ?: 4.0) * 28.0).coerceIn(92.0, 210.0).dp
+
+private fun arrangeSectionStartTimes(sections: List<ArrangeTimelineSection>): List<Double?> {
+    var current = 0.0
+    var known = true
+    return sections.map { section ->
+        val start = current.takeIf { known }
+        val duration = section.durationSeconds
+        if (duration == null || duration < 0.0) known = false else current += duration
+        start
+    }
+}
+
+private fun arrangeTrackColor(name: String) = when (name) {
+    "piano" -> MusicWorkspaceTokens.Piano
+    "bass" -> MusicWorkspaceTokens.Bass
+    "drums" -> MusicWorkspaceTokens.Drums
+    "pad" -> MusicWorkspaceTokens.Pad
+    "strings" -> MusicWorkspaceTokens.Strings
+    else -> MusicWorkspaceTokens.Border
+}
+
+@Composable
+private fun ArrangeTimeline(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = OverviewCard(WorkspacePageTags.ARRANGE_TIMELINE, "Arrangement timeline") {
+    val sections = arrangeTimelineSections(state)
+    val startTimes = arrangeSectionStartTimes(sections)
+    val tracks = state.arrangement?.sections.orEmpty().flatMap { it.instruments }.map { it.name }.distinct()
+    if (sections.isEmpty()) {
+        Text("No saved structure is available. Timeline timing and track lanes appear only from canonical structure and arrangement snapshots.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        return@OverviewCard
+    }
+    Text(
+        if (state.arrangement?.stale == true) "Stale arrangement placements are shown as inspectable evidence." else if (state.arrangement == null) "Structure timing is shown; generate an arrangement to reveal logical tracks." else "Logical placements only — this view does not invent notes, waveforms, or MIDI blocks.",
+        style = MaterialTheme.typography.bodySmall,
+        color = if (state.arrangement?.stale == true) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    Column(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+        Column(Modifier.width(760.dp)) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text("SECTIONS", modifier = Modifier.width(112.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                sections.forEachIndexed { position, section ->
+                    val selected = section.index == state.selectedArrangementSection
+                    Column(
+                        Modifier.width(arrangeTimelineWidth(section)).padding(end = 2.dp).clip(MaterialTheme.shapes.small)
+                            .background(if (selected) structureOccurrenceColor(StructureSectionSummary(section.index, section.instanceId, 1, section.instanceId, section.durationSeconds)).copy(alpha = 0.46f) else MusicWorkspaceTokens.ElevatedSurface)
+                            .clickable { onIntent(WorkspaceIntent.SelectArrangementSection(section.index)) }
+                            .padding(MusicWorkspaceTokens.Spacing.Sm)
+                            .semantics {
+                                testTag = WorkspacePageTags.ARRANGE_SECTION_PREFIX + section.index
+                                contentDescription = "${section.instanceId}${section.purpose?.let { " · $it" }.orEmpty()}${startTimes[position]?.let { " · starts ${formatDuration(it)}" }.orEmpty()}${section.durationSeconds?.let { " · duration ${formatDuration(it)}" }.orEmpty()}${if (selected) ", selected" else ""}"
+                            },
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(section.instanceId, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(section.purpose ?: "Saved structure", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(startTimes[position]?.let { "Starts ${formatDuration(it)}" } ?: "Start unknown", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+            if (tracks.isEmpty()) Text("TRACKS  No canonical logical tracks are available yet.", modifier = Modifier.padding(top = MusicWorkspaceTokens.Spacing.Md), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            tracks.forEach { track ->
+                Row(Modifier.padding(top = MusicWorkspaceTokens.Spacing.Xs), verticalAlignment = Alignment.CenterVertically) {
+                    Text(track.replaceFirstChar(Char::uppercase), modifier = Modifier.width(112.dp).semantics { testTag = WorkspacePageTags.ARRANGE_TRACK_PREFIX + track }, style = MaterialTheme.typography.labelMedium, color = arrangeTrackColor(track))
+                    sections.forEach { section ->
+                        val placement = section.instruments.firstOrNull { it.name == track }
+                        val selected = section.index == state.selectedArrangementSection
+                        Box(
+                            Modifier.width(arrangeTimelineWidth(section)).padding(end = 2.dp).height(38.dp).clip(MaterialTheme.shapes.small)
+                                .background(if (placement == null) MusicWorkspaceTokens.ElevatedSurface else arrangeTrackColor(track).copy(alpha = if (selected) 0.55f else 0.30f))
+                                .clickable(enabled = placement != null) { onIntent(WorkspaceIntent.SelectArrangementSection(section.index)) }
+                                .padding(horizontal = MusicWorkspaceTokens.Spacing.Xs)
+                                .semantics {
+                                    contentDescription = placement?.let { "$track in ${section.instanceId}: ${it.role ?: it.mode}" } ?: "$track is not planned in ${section.instanceId}"
+                                },
+                            contentAlignment = Alignment.CenterStart
+                        ) { placement?.let { Text(it.role ?: it.mode, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis) } }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ArrangeTransport(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = OverviewCard(WorkspacePageTags.ARRANGE_TRANSPORT, "Shared transport") {
+    val session = state.playbackSession
+    val dryReady = state.project?.readiness?.dryMixAvailable == true && !state.downstreamArtifactsStale && state.arrangement?.stale != true
+    val selected = session.artifact != null
+    val playbackReady = selected && (state.runtimeReadiness?.audioOutput?.available == true || session.phase in setOf(PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED))
+    Text(
+        when {
+            session.phase == PlaybackSessionPhase.FAILED -> "Playback unavailable: ${session.failureMessage ?: "local playback failed"}"
+            selected -> "${formatDuration(session.positionSeconds)} / ${formatDuration(session.durationSeconds)} · shared local playback"
+            else -> "No rendered mix selected. Arrangement generation itself does not render audio."
+        },
+        style = MaterialTheme.typography.bodySmall,
+        color = if (session.phase == PlaybackSessionPhase.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+        OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectPlaybackSource(PlaybackSource.DRY)) }, enabled = dryReady && !state.operation.isMutating, modifier = Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_TRANSPORT_SELECT; contentDescription = if (dryReady) "Select current dry mix in the shared playback session" else "Render a current dry mix before playback" }) { Text("Select rendered mix") }
+        Button(onClick = { onIntent(WorkspaceIntent.PlayPause) }, enabled = playbackReady, modifier = Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_TRANSPORT_PLAY }) { Text(if (session.phase == PlaybackSessionPhase.PLAYING) "Pause" else "Play") }
+        TextButton(onClick = { onIntent(WorkspaceIntent.StopPlayback) }, enabled = selected) { Text("Stop") }
+    }
+}
+
+@Composable
+internal fun ArrangeContextRail(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = Column(
+    Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.ARRANGE_CONTEXT },
+    verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)
+) {
+    val prerequisites = arrangePrerequisites(state)
+    Text(state.arrangeTab.label, style = MaterialTheme.typography.titleMedium)
+    val mutating = state.operation.isMutating
+    when (state.arrangeTab) {
+        ArrangeTab.ARRANGEMENT -> {
+            Text("Select a canonical section in the timeline to inspect its actual purpose, instruments, and transition.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            ArrangePlannerControls(state, onIntent)
+            ArrangeInstrumentControls(state, onIntent)
+        }
+        ArrangeTab.INSTRUMENTS -> ArrangeInstrumentControls(state, onIntent)
+        ArrangeTab.TRANSITIONS -> ArrangeTransitionEvidence(state)
+        ArrangeTab.PLANNER -> ArrangePlannerControls(state, onIntent)
+    }
+    var diagnosticsExpanded by remember(state.project, state.structureDraft, state.arrangement, state.operation) { mutableStateOf(false) }
+    Text(prerequisites.shortReason, modifier = Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_PREREQUISITE }, style = MaterialTheme.typography.bodySmall, color = if (prerequisites.canGenerate) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error)
+    TextButton(onClick = { diagnosticsExpanded = !diagnosticsExpanded }, modifier = Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_DIAGNOSTICS_TOGGLE }) { Text(if (diagnosticsExpanded) "Hide details" else "Show details") }
+    if (diagnosticsExpanded) Column(Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_DIAGNOSTICS }, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        prerequisites.diagnostics.forEach { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+    }
+    if (mutating) Text("Generation is in progress. The current draft and selection are retained.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+@Composable
+private fun ArrangePlannerControls(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    val draft = state.arrangementDraft
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+        ArrangementPlannerKind.entries.forEach { planner -> PlannerChoiceCard(planner, draft.planner == planner, !state.operation.isMutating, { onIntent(WorkspaceIntent.UpdateArrangementPlanner(planner)) }, Modifier.weight(1f)) }
+    }
+    OutlinedTextField(value = draft.style, onValueChange = { onIntent(WorkspaceIntent.UpdateArrangementStyle(it)) }, enabled = !state.operation.isMutating, label = { Text("Style (optional)") }, supportingText = { Text("Up to 160 characters.") }, modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.ARRANGE_STYLE })
+    Text("Energy and density remain planner-derived from validated analyses; no manual intensity control is available.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+@Composable
+private fun ArrangeInstrumentControls(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    LogicalInstrument.entries.forEach { instrument ->
+        val selected = instrument.wireName in state.arrangementDraft.instruments
+        val required = instrument == LogicalInstrument.PIANO
+        Row(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small).clickable(enabled = !state.operation.isMutating && !required) { onIntent(WorkspaceIntent.ToggleArrangementInstrument(instrument.wireName)) }.padding(vertical = MusicWorkspaceTokens.Spacing.Xs), verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked = selected, onCheckedChange = if (required || state.operation.isMutating) null else { _: Boolean -> onIntent(WorkspaceIntent.ToggleArrangementInstrument(instrument.wireName)) }, modifier = Modifier.semantics {
+                testTag = WorkspacePageTags.ARRANGE_INSTRUMENT_PREFIX + instrument.wireName
+                contentDescription = "${instrument.wireName} ${if (required) "is required" else if (selected) "is selected" else "is not selected"} for arrangement generation"
+            })
+            Text(instrument.wireName.replaceFirstChar(Char::uppercase), style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+private fun ArrangeTransitionEvidence(state: WorkspaceUiState) {
+    val sections = state.arrangement?.sections.orEmpty()
+    if (sections.isEmpty()) Text("Transitions become inspectable after a canonical arrangement exists. This page has no free-form transition editor.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    else sections.filter { it.transition.isNotBlank() && it.transition.lowercase() != "none" }.ifEmpty { listOf() }.let { transitioned ->
+        if (transitioned.isEmpty()) Text("No planned transitions are recorded in the current arrangement.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        else transitioned.forEach { section -> Text("${section.instanceId} → ${section.transition}", style = MaterialTheme.typography.bodySmall) }
+    }
+}
+
+@Composable
+private fun ArrangeSummary(state: WorkspaceUiState) = OverviewCard(WorkspacePageTags.ARRANGE_SUMMARY, "Arrangement summary") {
+    val sections = arrangeTimelineSections(state)
+    val knownDurations = sections.mapNotNull(ArrangeTimelineSection::durationSeconds)
+    val trackCount = state.arrangement?.sections.orEmpty().flatMap { it.instruments }.map { it.name }.distinct().size
+    Text("${sections.size} section${if (sections.size == 1) "" else "s"} · ${if (knownDurations.size == sections.size && sections.isNotEmpty()) formatDuration(knownDurations.sum()) else "timing unavailable"}", style = MaterialTheme.typography.bodySmall)
+    Text(if (trackCount == 0) "No logical tracks generated" else "$trackCount logical track${if (trackCount == 1) "" else "s"} from arrangement evidence", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    val selection = state.selectedArrangementSection?.let { selected -> sections.firstOrNull { it.index == selected } }
+    selection?.let { Text("Selected: ${it.instanceId}${it.purpose?.let { " · $it" }.orEmpty()}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
 }
 
 @Composable

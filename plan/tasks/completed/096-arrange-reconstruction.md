@@ -3,7 +3,7 @@
 ## Goal
 
 Rebuild the Arrange destination to follow
-`../pictures/UI/04-arrange.png` using only validated structure, analysis,
+`../../pictures/UI/04-arrange.png` using only validated structure, analysis,
 planner, arrangement, transition, instrument, review, and playback state.
 
 ## Dependencies
@@ -59,7 +59,7 @@ planner, arrangement, transition, instrument, review, and playback state.
 - Verify timeline/track alignment with repeated sections and internal bounded
   scrolling at medium/narrow widths.
 - Capture and overlay a full 1536 × 1024 fixture against
-  `../pictures/UI/04-arrange.png`; document data/capability-driven differences.
+  `../../pictures/UI/04-arrange.png`; document data/capability-driven differences.
 - Run `./gradlew test :desktopApp:test :desktopApp:build`.
 
 ## Acceptance criteria
