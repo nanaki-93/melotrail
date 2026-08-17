@@ -131,6 +131,24 @@ class WorkspaceViewModelTest {
     }
 
     @Test
+    fun `Export destination cancellation retains the canonical output folder`() = runTest {
+        val root = Path.of("build/task-099-export-destination")
+        val viewModel = WorkspaceViewModel(
+            FakeProjectService(result = projectSnapshot(root)), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
+            releaseExportService = FakeReleaseExportService(root)
+        )
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.EXPORT)); advanceUntilIdle()
+        val destination = viewModel.state.value.export.draft.destination
+        viewModel.accept(WorkspaceIntent.ChooseExportDestination); advanceUntilIdle()
+
+        assertEquals(root.resolve("output"), destination)
+        assertEquals(destination, viewModel.state.value.export.draft.destination)
+        viewModel.close()
+    }
+
+    @Test
     fun `open lands on overview while an ordinary mutation preserves focused page and selection`() = runTest {
         val root = Path.of("build/task-083-navigation")
         val project = projectSnapshot(root).copy(
@@ -870,7 +888,7 @@ class WorkspaceViewModelTest {
     }
 
     @Test
-    fun `Overview and Video Preview use one playback owner and preserve the selected session`() = runTest {
+    fun `Overview Mix Video Preview and Export use one playback owner and preserve the selected session`() = runTest {
         val root = Path.of("build/task-088-shared-session")
         val player = FakeArtifactAudioPlayer()
         val project = projectSnapshot(root).copy(readiness = projectSnapshot(root).readiness.copy(dryMixAvailable = true))
@@ -886,11 +904,16 @@ class WorkspaceViewModelTest {
         assertEquals(selectedRequest, viewModel.state.value.playbackSession.request)
         viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.SETTINGS))
         assertEquals(selectedRequest, viewModel.state.value.playbackSession.request)
+        viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.MIX_MASTER))
+        assertEquals(selectedRequest, viewModel.state.value.playbackSession.request)
         viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.VIDEO_PREVIEW))
         assertEquals(selectedRequest, viewModel.state.value.playbackSession.request)
         viewModel.accept(WorkspaceIntent.PlayPause); advanceUntilIdle()
         assertEquals(selectedRequest, viewModel.state.value.playbackSession.request)
         assertEquals(PlaybackSessionPhase.PLAYING, viewModel.state.value.playbackSession.phase)
+        viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.OVERVIEW))
+        viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.EXPORT))
+        assertEquals(selectedRequest, viewModel.state.value.playbackSession.request)
         viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.OVERVIEW))
         viewModel.accept(WorkspaceIntent.PlayPause)
         viewModel.accept(WorkspaceIntent.SetPlaybackVolume(0.35))

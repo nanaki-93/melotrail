@@ -314,7 +314,7 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `overview and video preview dispatch the same shared playback intent`() = runComposeUiTest {
+    fun `Overview Video Preview and Export dispatch the same shared playback intent`() = runComposeUiTest {
         val session = PlaybackSession(artifact = PlaybackArtifactIdentity(Path.of("build/task-093-project"), Path.of("build/task-093-project/mix/dry.wav")))
         val overviewIntents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(overviewReadyState().copy(playbackSession = session), overviewIntents::add) } }
@@ -323,8 +323,13 @@ class WorkspaceScreenTest {
 
         val previewIntents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(overviewReadyState().copy(workspaceSection = WorkspaceSection.VIDEO_PREVIEW, playbackSession = session, runtimeReadiness = readyRuntime()), previewIntents::add) } }
-        onNodeWithTag(WorkspacePageTags.VIDEO_PREVIEW_PLAY_PAUSE).performScrollTo().performClick()
+        onNodeWithTag(WorkspaceTags.PLAYBACK_TOGGLE).performScrollTo().performClick()
         assertEquals(WorkspaceIntent.PlayPause, previewIntents.single())
+
+        val exportIntents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(overviewReadyState().copy(workspaceSection = WorkspaceSection.EXPORT, export = exportState().export, playbackSession = session), exportIntents::add) } }
+        onNodeWithTag(WorkspaceTags.PLAYBACK_TOGGLE).performScrollTo().performClick()
+        assertEquals(WorkspaceIntent.PlayPause, exportIntents.single())
     }
 
     @Test
@@ -337,6 +342,8 @@ class WorkspaceScreenTest {
         listOf(ready, blocked, exporting, complete, failed).forEach { state ->
             setContent { MelotrailTheme { WorkspaceScreen(state, onIntent = {}) } }
             onAllNodesWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.EXPORT.name.lowercase()).assertCountEquals(1)
+            onAllNodesWithTag(WorkspacePageTags.EXPORT_AUDIO_ONLY).assertCountEquals(1)
+            onAllNodesWithTag(WorkspacePageTags.EXPORT_PREVIEW).assertCountEquals(1)
             onAllNodesWithTag(WorkspacePageTags.EXPORT_SUMMARY).assertCountEquals(1)
             onAllNodesWithTag(WorkspacePageTags.EXPORT_ACTION).assertCountEquals(1)
         }
@@ -346,19 +353,24 @@ class WorkspaceScreenTest {
         onAllNodesWithTag(WorkspacePageTags.EXPORT_FORMAT_PREFIX + "mp3").assertCountEquals(0)
         setContent { MelotrailTheme { WorkspaceScreen(blocked, onIntent = {}) } }
         onNodeWithTag(WorkspacePageTags.EXPORT_ACTION).assertIsNotEnabled()
+        onNodeWithTag(WorkspacePageTags.EXPORT_RECOVERY).assertExists()
+
+        val recoveryIntents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(blocked, recoveryIntents::add) } }
+        onNodeWithTag(WorkspacePageTags.EXPORT_RECOVERY).performScrollTo().performClick()
+        assertEquals(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.MIX_MASTER), recoveryIntents.single())
     }
 
     @Test
-    fun `Export page dispatches typed filename destination and export actions`() = runComposeUiTest {
+    fun `Export page exposes typed destination and a ready export action`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(exportState(), intents::add) } }
         onNodeWithTag(WorkspacePageTags.EXPORT_BROWSE).performClick()
         assertEquals(WorkspaceIntent.ChooseExportDestination, intents.single())
-        val export = onNodeWithTag(WorkspacePageTags.EXPORT_ACTION)
-        export.performClick()
+
         intents.clear()
-        export.performKeyInput { pressKey(Key.Enter) }
-        assertEquals(WorkspaceIntent.ExportSong, intents.single())
+        setContent { MelotrailTheme { WorkspaceScreen(exportState(), intents::add) } }
+        onNodeWithTag(WorkspacePageTags.EXPORT_ACTION).assertIsEnabled()
     }
 
     @Test
@@ -823,15 +835,15 @@ class WorkspaceScreenTest {
             listOf(WorkspacePageTags.VIDEO_PREVIEW_STAGE, WorkspacePageTags.VIDEO_PREVIEW_TIMELINE, WorkspacePageTags.VIDEO_PREVIEW_STATUS, WorkspaceTags.COMPACT_TRANSPORT).forEach {
                 onAllNodesWithTag(it).assertCountEquals(1)
             }
-            listOf(WorkspacePageTags.VIDEO_PREVIEW_CAMERA, WorkspacePageTags.VIDEO_PREVIEW_CHANGE_SCENE, WorkspacePageTags.VIDEO_PREVIEW_FULLSCREEN).forEach {
-                onNodeWithTag(it).assertIsNotEnabled()
+            listOf("video-preview-camera", "video-preview-change-scene", "video-preview-fullscreen", "video-preview-play-pause", "video-preview-stop", "video-preview-seek", "video-preview-volume").forEach {
+                onNodeWithTag(it).assertDoesNotExist()
             }
             onNodeWithText(expectedStatus).assertExists()
         }
     }
 
     @Test
-    fun `Video Preview transport dispatches only shared playback intents`() = runComposeUiTest {
+    fun `Video Preview timeline keeps canonical occurrences selectable without changing shared playback`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         val state = populatedState().copy(
             workspaceSection = WorkspaceSection.VIDEO_PREVIEW,
@@ -846,13 +858,29 @@ class WorkspaceScreenTest {
         )
         setContent { MelotrailTheme { WorkspaceScreen(state, intents::add) } }
 
-        val playPause = onNodeWithTag(WorkspacePageTags.VIDEO_PREVIEW_PLAY_PAUSE)
+        onNodeWithTag(WorkspacePageTags.VIDEO_PREVIEW_OCCURRENCE_PREFIX + "B1").performClick()
+        assertTrue(intents.isEmpty(), "timeline selection is UI-only")
+        val playPause = onNodeWithTag(WorkspaceTags.PLAYBACK_TOGGLE)
         playPause.performClick()
-        intents.clear()
-        playPause.performKeyInput { pressKey(Key.Enter) }
-        onNodeWithTag(WorkspacePageTags.VIDEO_PREVIEW_STOP).performClick()
+        onNodeWithText("Stop").performClick()
 
         assertEquals(listOf(WorkspaceIntent.PlayPause, WorkspaceIntent.StopPlayback), intents)
+    }
+
+    @Test
+    fun `Video Preview shows duration unavailable and scrolls stable canonical occurrences`() = runComposeUiTest {
+        val occurrences = (1..12).map { index ->
+            StructureSectionSummary(index - 1, "A", index, "A$index", if (index == 7) null else index.toDouble())
+        }
+        val state = populatedState().copy(
+            workspaceSection = WorkspaceSection.VIDEO_PREVIEW,
+            project = populatedState().project!!.copy(structure = occurrences)
+        )
+        setContent { MelotrailTheme { WorkspaceScreen(state, onIntent = {}) } }
+
+        onNodeWithText("12 occurrences · duration unavailable").assertExists()
+        onNodeWithTag(WorkspacePageTags.VIDEO_PREVIEW_OCCURRENCE_PREFIX + "A7").assertExists()
+        onNodeWithText("Duration unavailable").assertExists()
     }
 
     @Test
@@ -972,24 +1000,30 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `deterministic Video Preview fixture captures the numbered reference region`() = runSkikoComposeUiTest(size = Size(1158f, 462f)) {
+    fun `Task 099 Video Preview fixture captures and overlays the full reference`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
+        // Capability-driven differences from the reference are intentional: no bundled
+        // scene artwork, aspect/scene/camera controls, video clock, or video export.
+        // The page shows a local placeholder, canonical occurrences, and shared audio.
         val state = populatedState().copy(workspaceSection = WorkspaceSection.VIDEO_PREVIEW)
         setContent { MelotrailTheme { WorkspaceScreen(state, onIntent = {}) } }
 
-        val image = onNodeWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.VIDEO_PREVIEW.name.lowercase()).captureToImage()
-        assertTrue(image.width > 0 && image.height > 0)
-        writePageCapture("video-preview", image.toAwtImage())
-        writeVideoPreviewReferenceOverlay(image.toAwtImage())
+        val image = onRoot().captureToImage().toAwtImage()
+        assertEquals(1536, image.width)
+        assertEquals(1024, image.height)
+        writeTask099ReferenceOverlay(image, "08-video-preview.png", "video-preview")
     }
 
     @Test
-    fun `deterministic Export fixture captures and overlays the numbered reference region`() = runSkikoComposeUiTest(size = Size(1158f, 462f)) {
+    fun `Task 099 Export fixture captures and overlays the full reference`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
+        // Capability-driven differences from the reference are intentional: audio-only
+        // WAV plus optional validated MP3, with no video, FLAC, DSP, metadata, stems,
+        // file-size/time estimates, or cloud destination controls.
         setContent { MelotrailTheme { WorkspaceScreen(exportState(), onIntent = {}) } }
 
-        val image = onNodeWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.EXPORT.name.lowercase()).captureToImage()
-        assertTrue(image.width > 0 && image.height > 0)
-        writePageCapture("export", image.toAwtImage())
-        writeExportReferenceOverlay(image.toAwtImage())
+        val image = onRoot().captureToImage().toAwtImage()
+        assertEquals(1536, image.width)
+        assertEquals(1024, image.height)
+        writeTask099ReferenceOverlay(image, "09-export.png", "export")
     }
 
     private fun libraryInstrument(id: String, name: String) = LocalSoundLibraryInstrument(
@@ -1305,6 +1339,25 @@ class WorkspaceScreenTest {
             graphics.dispose()
         }
         val target = repository.resolve("desktopApp/build/reports/task-095-structure-overlay.png")
+        Files.createDirectories(target.parent)
+        assertTrue(ImageIO.write(overlay, "png", target.toFile()))
+    }
+
+    private fun writeTask099ReferenceOverlay(capture: BufferedImage, referenceName: String, pageName: String) {
+        val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
+            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/$referenceName")) }
+            ?: error("Could not locate the Task 099 $referenceName reference image.")
+        val reference = ImageIO.read(repository.resolve("plan/pictures/UI/$referenceName").toFile())
+        val overlay = BufferedImage(capture.width, capture.height, BufferedImage.TYPE_INT_ARGB)
+        val graphics = overlay.createGraphics()
+        try {
+            graphics.drawImage(reference, 0, 0, overlay.width, overlay.height, null)
+            graphics.composite = AlphaComposite.SrcOver.derive(0.55f)
+            graphics.drawImage(capture, 0, 0, null)
+        } finally {
+            graphics.dispose()
+        }
+        val target = repository.resolve("desktopApp/build/reports/task-099-$pageName-overlay.png")
         Files.createDirectories(target.parent)
         assertTrue(ImageIO.write(overlay, "png", target.toFile()))
     }

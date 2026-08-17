@@ -1073,7 +1073,7 @@ internal fun CompactTransport(state: WorkspaceUiState, onIntent: (WorkspaceInten
     val session = state.playbackSession
     val hasPlayableSelection = when (val request = session.request) {
         is PlaybackRequest.Part -> session.phase in setOf(PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED) || (session.phase == PlaybackSessionPhase.STOPPED && session.artifact != null)
-        is PlaybackRequest.Mix -> playbackSourceAvailable(state, request.source)
+        is PlaybackRequest.Mix -> session.phase in setOf(PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED) || playbackSourceAvailable(state, request.source)
         null -> playbackSourceAvailable(state, PlaybackSource.DRY)
     }
     val canStop = session.phase in setOf(PlaybackSessionPhase.RESOLVING, PlaybackSessionPhase.PREPARING, PlaybackSessionPhase.READY, PlaybackSessionPhase.STARTING, PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED)

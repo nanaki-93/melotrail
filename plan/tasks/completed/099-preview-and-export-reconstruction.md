@@ -3,7 +3,7 @@
 ## Goal
 
 Rebuild the final-audition and release experience against
-`../pictures/UI/08-video-preview.png` and `../pictures/UI/09-export.png`, while
+`../../pictures/UI/08-video-preview.png` and `../../pictures/UI/09-export.png`, while
 remaining truthful that current support is a deterministic local visual with
 shared audio playback and validated audio-only export.
 

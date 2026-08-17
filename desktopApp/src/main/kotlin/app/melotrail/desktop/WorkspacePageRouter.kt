@@ -60,6 +60,7 @@ import app.melotrail.application.ArrangementSectionSnapshot
 import app.melotrail.application.ArrangementPlannerKind
 import app.melotrail.application.LocalSoundLibraryInstrument
 import app.melotrail.application.PartSourceType
+import app.melotrail.application.ReleaseExportFormat
 import app.melotrail.application.StructureSectionSummary
 import app.melotrail.application.WorkflowStage
 import app.melotrail.application.filtered
@@ -84,13 +85,7 @@ internal object WorkspacePageTags {
     const val OVERVIEW_EXPORT = "overview-quick-action-export"
     const val VIDEO_PREVIEW_STAGE = "video-preview-stage"
     const val VIDEO_PREVIEW_TIMELINE = "video-preview-timeline"
-    const val VIDEO_PREVIEW_PLAY_PAUSE = "video-preview-play-pause"
-    const val VIDEO_PREVIEW_STOP = "video-preview-stop"
-    const val VIDEO_PREVIEW_SEEK = "video-preview-seek"
-    const val VIDEO_PREVIEW_VOLUME = "video-preview-volume"
-    const val VIDEO_PREVIEW_CAMERA = "video-preview-camera"
-    const val VIDEO_PREVIEW_CHANGE_SCENE = "video-preview-change-scene"
-    const val VIDEO_PREVIEW_FULLSCREEN = "video-preview-fullscreen"
+    const val VIDEO_PREVIEW_OCCURRENCE_PREFIX = "video-preview-occurrence-"
     const val VIDEO_PREVIEW_STATUS = "video-preview-status"
     const val IMPORT_DROP_SURFACE = "import-drop-surface"
     const val IMPORT_BROWSE = "import-browse"
@@ -160,14 +155,17 @@ internal object WorkspacePageTags {
     const val MIX_BUILD_STATUS = "mix-master-build-status"
     const val MIX_ZERO_SIGNAL = "mix-master-zero-signal"
     const val EXPORT_FORMAT_PREFIX = "export-format-"
+    const val EXPORT_AUDIO_ONLY = "export-audio-only"
     const val EXPORT_QUALITY = "export-quality"
     const val EXPORT_SAMPLE_RATE = "export-sample-rate"
     const val EXPORT_FILENAME = "export-filename"
     const val EXPORT_DESTINATION = "export-destination"
     const val EXPORT_BROWSE = "export-browse"
     const val EXPORT_SUMMARY = "export-summary"
+    const val EXPORT_PREVIEW = "export-preview"
     const val EXPORT_ACTION = "export-action"
     const val EXPORT_STATUS = "export-status"
+    const val EXPORT_RECOVERY = "export-recovery"
     const val LIBRARY_TYPE_TAB = "library-type-instruments"
     const val LIBRARY_SEARCH = "library-search"
     const val LIBRARY_CATEGORY_PREFIX = "library-category-"
@@ -715,9 +713,13 @@ private fun ExportPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
     val summary = inspection?.summary
     val formats = inspection?.supportedFormats.orEmpty()
     val destinationIsProjectOutput = state.project?.root?.resolve("output")?.toAbsolutePath()?.normalize() == draft.destination?.toAbsolutePath()?.normalize()
-    val canExport = summary != null && draft.format in formats && destinationIsProjectOutput && !state.operation.isMutating
+    val canExport = inspection?.ready == true && draft.format in formats && destinationIsProjectOutput && !state.operation.isMutating
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
-        PageTitle("Export", "Render and export your final track")
+        PageTitle("Export", "Publish a validated audio release")
+        OverviewCard(WorkspacePageTags.EXPORT_AUDIO_ONLY, "Release mode") {
+            Text("Audio only", style = MaterialTheme.typography.titleMedium)
+            Text("Video, audio-and-video, FLAC, metadata editing, stems, and cloud destinations are not available in this local release flow.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val narrow = maxWidth < MusicWorkspaceTokens.Reference.MediumBreakpoint
             ResponsivePageColumns(narrow = narrow, first = { columnModifier ->
@@ -725,7 +727,7 @@ private fun ExportPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
                 OverviewCard("export-settings", "Export settings") {
                     Text("Format", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-                        formats.forEach { format ->
+                        formats.sortedBy(ReleaseExportFormat::name).forEach { format ->
                             OutlinedButton(
                                 onClick = {
                                     val base = draft.filename.substringBeforeLast('.', draft.filename).ifBlank { "song" }
@@ -735,8 +737,8 @@ private fun ExportPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
                             ) { Text(format.name) }
                         }
                     }
-                    Text("Quality", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    OutlinedTextField("PCM ${summary?.pcmBitDepth ?: 24}-bit lossless", {}, readOnly = true, enabled = summary != null,
+                    Text("Format and quality", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedTextField(summary?.let { "WAV · PCM ${it.pcmBitDepth}-bit · ${it.channels} ch" } ?: "Unavailable", {}, readOnly = true, enabled = summary != null,
                         modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.EXPORT_QUALITY })
                     Text("Sample rate", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     OutlinedTextField(summary?.sampleRate?.let { "$it Hz" } ?: "Unavailable", {}, readOnly = true, enabled = summary != null,
@@ -755,10 +757,26 @@ private fun ExportPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
                     Text(exportBlockedMessage(export, destinationIsProjectOutput), style = MaterialTheme.typography.bodySmall,
                         color = if (canExport) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
                         modifier = Modifier.semantics { testTag = WorkspacePageTags.EXPORT_STATUS })
+                    if (summary == null) {
+                        OutlinedButton(
+                            onClick = { onIntent(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.MIX_MASTER)) },
+                            modifier = Modifier.semantics { testTag = WorkspacePageTags.EXPORT_RECOVERY; contentDescription = "Open Mix & Master to build a current master" }
+                        ) { Text("Open Mix & Master") }
+                    }
                 }
             }
             }, second = { columnModifier ->
             Column(columnModifier.widthIn(min = 260.dp, max = MusicWorkspaceTokens.Pages.OverviewPreviewWidth), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
+                OverviewCard(WorkspacePageTags.EXPORT_PREVIEW, "Audio preview") {
+                    val selected = state.playbackSession.artifact != null
+                    Text(
+                        if (selected) "The shared transport below previews the selected local audio artifact."
+                        else "Select a current mix or master in Mix & Master to preview it here.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text("No video preview or export is available.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 OverviewCard(WorkspacePageTags.EXPORT_SUMMARY, "Export summary") {
                     Text("Duration", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(summary?.durationSeconds?.let(::formatDuration) ?: "Unavailable")
@@ -774,11 +792,13 @@ private fun ExportPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
             }
             })
         }
+        CompactTransport(state, onIntent, Modifier.fillMaxWidth())
     }
 }
 
 private fun exportBlockedMessage(export: ExportUiState, destinationIsProjectOutput: Boolean = true): String = when {
     export.inspecting -> "Checking current release artifacts…"
+    export.inspection?.blockedReason != null -> export.inspection.blockedReason ?: "Build a current master and release metadata first."
     export.inspection?.summary == null -> export.inspection?.blockedReason ?: "Build a current master and release metadata first."
     export.draft.format !in export.inspection.supportedFormats -> "That export format is unavailable. Use WAV or start the local worker with lameenc installed."
     !destinationIsProjectOutput -> "Choose the project output folder; exports cannot escape the project."
@@ -792,16 +812,16 @@ private fun exportBlockedMessage(export: ExportUiState, destinationIsProjectOutp
 @Composable
 private fun VideoPreviewPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
     val session = state.playbackSession
-    val audioOutput = state.runtimeReadiness?.audioOutput
-    val canControlPlayback = session.artifact != null && (audioOutput?.available == true || session.phase in setOf(PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED))
-    val canStop = session.phase in setOf(PlaybackSessionPhase.RESOLVING, PlaybackSessionPhase.PREPARING, PlaybackSessionPhase.READY, PlaybackSessionPhase.STARTING, PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED)
-    val canSeek = session.artifact != null && session.durationSeconds > 0.0 && session.phase in setOf(PlaybackSessionPhase.READY, PlaybackSessionPhase.STARTING, PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED, PlaybackSessionPhase.STOPPED)
     val title = state.project?.name ?: "No project open"
     val status = videoPreviewStatus(state)
+    val occurrences = overviewSections(state)
+    // This is deliberately visual state: occurrence selection never changes
+    // the canonical structure and playback remains owned by PlaybackSession.
+    var selectedOccurrenceId by remember(occurrences.map(OverviewSection::id)) { mutableStateOf(occurrences.firstOrNull()?.id) }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
-        PageTitle("Video Preview", "Local visual reference for $title")
-        OverviewCard(WorkspacePageTags.VIDEO_PREVIEW_STAGE, "Local scene placeholder") {
+        PageTitle("Video Preview", "Local visual audition for $title")
+        OverviewCard(WorkspacePageTags.VIDEO_PREVIEW_STAGE, "Local visual placeholder") {
             Box(
                 Modifier.fillMaxWidth().height(MusicWorkspaceTokens.Pages.VideoPreviewSceneHeight).clip(MaterialTheme.shapes.small)
                     .background(MusicWorkspaceTokens.ScenePlaceholder),
@@ -810,58 +830,54 @@ private fun VideoPreviewPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
                     Text("LOCAL VISUAL PLACEHOLDER", style = MaterialTheme.typography.labelMedium, color = MusicWorkspaceTokens.TealFocus)
                     Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleLarge)
-                    Text("No local scene is available.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            Column(Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.VIDEO_PREVIEW_TIMELINE }, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-                Row(Modifier.fillMaxWidth()) {
-                    Text(formatDuration(session.positionSeconds), style = MaterialTheme.typography.labelSmall)
-                    Spacer(Modifier.weight(1f))
-                    Text(formatDuration(session.durationSeconds), style = MaterialTheme.typography.labelSmall)
-                }
-                Slider(
-                    value = session.positionSeconds.toFloat(),
-                    onValueChange = { onIntent(WorkspaceIntent.SeekPlayback(it.toDouble())) },
-                    valueRange = 0f..session.durationSeconds.coerceAtLeast(0.01).toFloat(),
-                    enabled = canSeek,
-                    modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.VIDEO_PREVIEW_SEEK; contentDescription = "Seek shared local playback selection" }
-                )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-                    VideoUnavailableControl("▣", "Camera selection is unavailable", WorkspacePageTags.VIDEO_PREVIEW_CAMERA)
-                    VideoUnavailableControl("↻", "Scene change is unavailable", WorkspacePageTags.VIDEO_PREVIEW_CHANGE_SCENE)
-                    Spacer(Modifier.weight(1f))
-                    VideoUnavailableControl("⛶", "Fullscreen video is unavailable", WorkspacePageTags.VIDEO_PREVIEW_FULLSCREEN)
+                    Text("Artwork and video rendering are unavailable; shared audio can still audition a selected artifact.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
+        VideoPreviewTimeline(occurrences, selectedOccurrenceId) { selectedOccurrenceId = it }
         Text(status, modifier = Modifier.semantics { testTag = WorkspacePageTags.VIDEO_PREVIEW_STATUS }, style = MaterialTheme.typography.bodySmall,
-            color = if (session.phase == PlaybackSessionPhase.FAILED || audioOutput?.available == false) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
-        Card(
-            Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.COMPACT_TRANSPORT; contentDescription = "Shared local playback transport" },
-            colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.Surface)
-        ) {
-            Row(Modifier.fillMaxWidth().padding(MusicWorkspaceTokens.Spacing.Sm), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-                OutlinedButton(onClick = { onIntent(WorkspaceIntent.StopPlayback) }, enabled = canStop,
-                    modifier = Modifier.semantics { testTag = WorkspacePageTags.VIDEO_PREVIEW_STOP; contentDescription = "Stop shared local playback" }) { Text("Stop") }
-                Button(onClick = { onIntent(WorkspaceIntent.PlayPause) }, enabled = canControlPlayback,
-                    modifier = Modifier.semantics { testTag = WorkspacePageTags.VIDEO_PREVIEW_PLAY_PAUSE; contentDescription = if (canControlPlayback) "Play or pause shared local playback" else status }) {
-                    Text(if (session.phase == PlaybackSessionPhase.PLAYING) "Pause" else "Play")
+            color = if (session.phase == PlaybackSessionPhase.FAILED || state.runtimeReadiness?.audioOutput?.available == false) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+        CompactTransport(state, onIntent, Modifier.fillMaxWidth())
+    }
+}
+
+@Composable
+private fun VideoPreviewTimeline(
+    occurrences: List<OverviewSection>,
+    selectedOccurrenceId: String?,
+    onSelect: (String) -> Unit
+) = OverviewCard(WorkspacePageTags.VIDEO_PREVIEW_TIMELINE, "Canonical timeline") {
+    if (occurrences.isEmpty()) {
+        Text("No canonical section occurrences are available.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        return@OverviewCard
+    }
+    val knownDuration = occurrences.mapNotNull(OverviewSection::duration).sum()
+    val everyDurationKnown = occurrences.all { it.duration != null }
+    Text(
+        if (everyDurationKnown) "${occurrences.size} occurrence${if (occurrences.size == 1) "" else "s"} · ${formatDuration(knownDuration)} total"
+        else "${occurrences.size} occurrence${if (occurrences.size == 1) "" else "s"} · duration unavailable",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+        occurrences.forEach { occurrence ->
+            val selected = occurrence.id == selectedOccurrenceId
+            OutlinedButton(
+                onClick = { onSelect(occurrence.id) },
+                colors = ButtonDefaults.outlinedButtonColors(containerColor = if (selected) MusicWorkspaceTokens.SelectedSurface else MusicWorkspaceTokens.ElevatedSurface),
+                modifier = Modifier.widthIn(min = 112.dp, max = 180.dp).semantics {
+                    testTag = WorkspacePageTags.VIDEO_PREVIEW_OCCURRENCE_PREFIX + occurrence.id
+                    contentDescription = "Occurrence ${occurrence.id}, ${occurrence.duration?.let(::formatDuration) ?: "duration unavailable"}${if (selected) ", selected" else ""}"
                 }
-                Column(Modifier.weight(1f)) {
-                    Text("Shared playback volume · ${(session.volume * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
-                    Slider(session.volume.toFloat(), { onIntent(WorkspaceIntent.SetPlaybackVolume(it.toDouble())) }, valueRange = 0f..1f,
-                        modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.VIDEO_PREVIEW_VOLUME; contentDescription = "Set shared playback volume" })
+            ) {
+                Column(horizontalAlignment = Alignment.Start) {
+                    Text(occurrence.id, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(occurrence.duration?.let(::formatDuration) ?: "Duration unavailable", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
     }
 }
-
-@Composable
-private fun VideoUnavailableControl(symbol: String, description: String, tag: String) = OutlinedButton(
-    onClick = {}, enabled = false, modifier = Modifier.size(36.dp).semantics { testTag = tag; contentDescription = description },
-    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
-) { Text(symbol) }
 
 private fun videoPreviewStatus(state: WorkspaceUiState): String {
     val session = state.playbackSession
