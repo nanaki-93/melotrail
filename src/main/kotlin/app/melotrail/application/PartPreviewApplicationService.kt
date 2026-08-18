@@ -116,7 +116,7 @@ class DefaultPartPreviewApplicationService(
                 return@withContext resolvePreparedClean(root, part.id, source, stages)
             }
             request.midiSource?.let { midiSource ->
-                return@withContext resolveSelectedMidi(root, part, project.renderFormat, midiSource, stages)
+                return@withContext resolveSelectedMidi(root, project, part, project.renderFormat, midiSource, stages)
             }
             when (extension(source)) {
                 "wav", "wave" -> resolveWavSource(source, stages)
@@ -203,6 +203,7 @@ class DefaultPartPreviewApplicationService(
 
     private suspend fun resolveSelectedMidi(
         root: Path,
+        project: app.melotrail.arrangement.Project,
         part: app.melotrail.arrangement.Part,
         format: RenderFormat?,
         source: PreviewMidiSource,
@@ -221,9 +222,16 @@ class DefaultPartPreviewApplicationService(
             if (!current) return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Cleaned MIDI quality evidence is missing or stale. Run Clean MIDI again.")
         }
         if (source == PreviewMidiSource.LOFI_FEEL) {
-            val clean = midi.clean
             val feel = midi.feel
-            if (clean == null || feel == null || !MidiFeelReportStore.isCurrent(root, part.id, clean, feel)) {
+            val base = runCatching {
+                val baseProject = project.copy(parts = project.parts.map {
+                    if (it.id == part.id) it.copy(midi = midi.copy(analysisInput = app.melotrail.arrangement.MidiAnalysisInput.CURRENT)) else it
+                })
+                SelectedMidiArtifactResolver().resolve(root, baseProject, part.id)
+            }.getOrElse { error ->
+                return PreviewResult.Prerequisite(PreviewStage.VALIDATE, error.message ?: "Current MIDI base is unavailable for '${part.id}'.")
+            }
+            if (feel == null || !MidiFeelReportStore.isCurrent(root, part.id, base.projectRelativePath, feel)) {
                 return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Lo-fi Feel MIDI is unavailable or stale. Choose Original feel or regenerate the fixed profile.")
             }
         }

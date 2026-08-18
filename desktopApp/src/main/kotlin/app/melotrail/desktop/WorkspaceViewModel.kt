@@ -1115,10 +1115,10 @@ class WorkspaceViewModel(
         val project = state.value.project ?: return
         val part = project.parts.find { it.id == partId } ?: return
         if (part.sourceType != PartSourceType.AUDIO) {
-            mutableState.update { it.copy(selectedPartId = partId, selectedArtifact = CreationArtifactReference(CreationArtifactKind.PART_SOURCE, partId), midiQualityReview = MidiQualityReviewDraft(), audioPreparation = AudioPreparationUiState(partId = partId), notification = "Audio preparation is available for WAV/MP3 parts only.") }
+            mutableState.update { it.copy(selectedPartId = partId, selectedArtifact = CreationArtifactReference(CreationArtifactKind.PART_SOURCE, partId), pendingMidiFeel = null, midiQualityReview = MidiQualityReviewDraft(), audioPreparation = AudioPreparationUiState(partId = partId), notification = "Audio preparation is available for WAV/MP3 parts only.") }
             return
         }
-        mutableState.update { it.copy(selectedPartId = partId, selectedArtifact = CreationArtifactReference(CreationArtifactKind.PART_SOURCE, partId), midiQualityReview = MidiQualityReviewDraft(), audioPreparation = AudioPreparationUiState(partId = partId), notification = null) }
+        mutableState.update { it.copy(selectedPartId = partId, selectedArtifact = CreationArtifactReference(CreationArtifactKind.PART_SOURCE, partId), pendingMidiFeel = null, midiQualityReview = MidiQualityReviewDraft(), audioPreparation = AudioPreparationUiState(partId = partId), notification = null) }
         loadPreparation(project.root, partId)
     }
 

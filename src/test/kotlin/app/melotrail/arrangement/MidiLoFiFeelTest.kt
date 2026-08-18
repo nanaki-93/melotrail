@@ -59,6 +59,24 @@ class MidiLoFiFeelTest {
     }
 
     @Test
+    fun `odd PPQN keeps unrepresentable offbeats unchanged and round-trips meter`() {
+        val input = root.resolve("odd-ppq.mid")
+        val output = root.resolve("odd-ppq-output.mid")
+        midi(input, 95)
+        val sourceBefore = Files.readAllBytes(input)
+
+        val result = MidiLoFiFeelTransformer().transform(input, output, "A")
+        val sequence = MidiSystem.getSequence(output.toFile())
+
+        assertEquals(0, result.report.movedNoteCount)
+        assertTrue(result.report.warnings.any { it.contains("PPQN 95") })
+        assertEquals(listOf(0L, 47L, 95L, 142L), noteStarts(sequence))
+        assertEquals(listOf(0L, 380L), timeSignatureTicks(sequence))
+        assertEquals(listOf(80.0), tempos(sequence))
+        assertTrue(sourceBefore.contentEquals(Files.readAllBytes(input)), "source is read only")
+    }
+
+    @Test
     fun `report store rejects stale source hashes and preserves the prior report on invalid publication`() {
         val clean = root.resolve("midi/clean/A.mid"); Files.createDirectories(clean.parent); midi(clean, 480)
         val derived = MidiFeelReportStore.derivedPath(root, "A", MidiFeelProfile.LOFI_80_SWING_V1)

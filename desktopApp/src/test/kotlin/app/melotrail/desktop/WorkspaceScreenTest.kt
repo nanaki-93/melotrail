@@ -767,6 +767,42 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `Import offers per-track Lo-fi MIDI Feel with safe terminology and AI-base A B preview`() = runComposeUiTest {
+        val base = importPart("approved.mid", rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT)
+        val part = base.copy(preparation = base.preparation.copy(
+            midiAiFix = app.melotrail.application.MidiAiFixSummary(app.melotrail.arrangement.MidiAiFixSelection.APPROVED, approvedAvailable = true),
+            midiFeel = app.melotrail.application.MidiFeelSummary(app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL, available = true)
+        ))
+        val intents = mutableListOf<WorkspaceIntent>()
+        val state = importState(part).copy(selectedPartId = "A", runtimeReadiness = readyRuntime())
+        setContent { MelotrailTheme { WorkspaceScreen(state, intents::add) } }
+
+        onNodeWithTag(WorkspacePageTags.IMPORT_MIDI_FEEL).performScrollTo().assertExists()
+        onNodeWithText("Apply Lo-fi Feel").assertExists()
+        onNodeWithTag(WorkspacePageTags.IMPORT_MIDI_FEEL_KEEP).performScrollTo().performClick()
+        assertEquals(
+            listOf(
+                WorkspaceIntent.SelectMidiFeel(app.melotrail.arrangement.MidiAnalysisInput.CURRENT),
+                WorkspaceIntent.ApplyMidiFeelAndReanalyze
+            ),
+            intents
+        )
+        intents.clear()
+        onNodeWithTag(WorkspacePageTags.IMPORT_MIDI_FEEL_APPLY).performScrollTo().performClick()
+        assertEquals<List<WorkspaceIntent>>(listOf(WorkspaceIntent.SelectMidiFeel(app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL)), intents)
+        intents.clear()
+        onNodeWithTag(WorkspacePageTags.IMPORT_MIDI_FEEL_PREVIEW_BASE).performScrollTo().performClick()
+        onNodeWithTag(WorkspacePageTags.IMPORT_MIDI_FEEL_PREVIEW_LOFI).performScrollTo().performClick()
+        assertEquals<List<WorkspaceIntent>>(
+            listOf(
+                WorkspaceIntent.PreviewMidiPart("A", app.melotrail.application.PreviewMidiSource.AI_FIX_APPROVED),
+                WorkspaceIntent.PreviewMidiPart("A", app.melotrail.application.PreviewMidiSource.LOFI_FEEL)
+            ),
+            intents
+        )
+    }
+
+    @Test
     fun `Structure renders one focused root with canonical occurrence selection and keyboard reorder alternatives`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(populatedState().copy(workspaceSection = WorkspaceSection.STRUCTURE), intents::add) } }

@@ -2,15 +2,35 @@ package app.melotrail.application
 
 import app.melotrail.arrangement.InstrumentRenderer
 import app.melotrail.arrangement.LogicalInstrument
+import app.melotrail.arrangement.MidiAiFixReferences
+import app.melotrail.arrangement.MidiAiFixSelection
+import app.melotrail.arrangement.MidiAiFixArtifactPaths
+import app.melotrail.arrangement.MidiAnalysisInput
+import app.melotrail.arrangement.MidiCleanupOptions
+import app.melotrail.arrangement.MidiFeelProfile
+import app.melotrail.arrangement.MidiFeelReferences
+import app.melotrail.arrangement.MidiFeelReportStore
+import app.melotrail.arrangement.MidiLoFiFeelTransformer
+import app.melotrail.arrangement.MidiQualityReportStore
+import app.melotrail.arrangement.MidiQualityReporter
+import app.melotrail.arrangement.MidiReferences
+import app.melotrail.arrangement.Part
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.RenderResult
+import app.melotrail.arrangement.SelectedMidiArtifactResolver
+import app.melotrail.arrangement.WorkflowArtifactReference
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
+import java.security.MessageDigest
+import javax.sound.midi.MidiEvent
+import javax.sound.midi.MidiSystem
+import javax.sound.midi.Sequence
+import javax.sound.midi.ShortMessage
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
@@ -57,6 +77,51 @@ class PartPreviewApplicationServiceTest {
         assertIs<PreviewResult.Prerequisite>(result)
     }
 
+    @Test fun `Lo-fi A B preview validates the approved AI-fix base rather than cleaned MIDI`() = runTest {
+        val source = root.resolve("source/A.mid"); writeMidi(source, 60)
+        val raw = root.resolve("midi/raw/A.mid"); Files.createDirectories(raw.parent); Files.copy(source, raw)
+        val clean = root.resolve("midi/clean/A.mid"); Files.createDirectories(clean.parent); Files.copy(source, clean)
+        val approvedReference = MidiAiFixArtifactPaths.approved("A")
+        val approved = root.resolve(approvedReference); writeMidi(approved, 64)
+        val derived = MidiFeelReportStore.derivedPath(root, "A", MidiFeelProfile.LOFI_80_SWING_V1)
+        val feelReport = MidiLoFiFeelTransformer().transform(approved, derived, "A").report
+        val reportPath = MidiFeelReportStore.write(root, feelReport)
+        val cleanup = MidiCleanupOptions()
+        val quality = MidiQualityReporter().report("A", raw, clean, cleanup)
+        val qualityPath = MidiQualityReportStore.write(root, quality)
+        val feelReferences = MidiFeelReferences(MidiFeelProfile.LOFI_80_SWING_V1, root.relativize(derived).toString(), root.relativize(reportPath).toString())
+        assertTrue(MidiFeelReportStore.isCurrent(root, "A", approvedReference, feelReferences))
+        val originalArtifacts = listOf(source, raw, clean, approved).associateWith(Files::readAllBytes)
+        val project = Project(
+            version = Project.CURRENT_VERSION,
+            name = "preview",
+            parts = listOf(Part("A", "source/A.mid", midi = MidiReferences(
+                raw = "midi/raw/A.mid",
+                clean = "midi/clean/A.mid",
+                cleanup = cleanup,
+                quality = root.relativize(qualityPath).toString(),
+                cleanApproval = MidiQualityReportStore.approval(root, root.relativize(qualityPath).toString(), quality),
+                aiFixSelection = MidiAiFixSelection.APPROVED,
+                aiFix = MidiAiFixReferences(sha256(clean), approved = WorkflowArtifactReference(approvedReference, sha256(approved))),
+                analysisInput = MidiAnalysisInput.LOFI_FEEL,
+                feel = feelReferences
+            ))),
+            renderFormat = RenderFormat()
+        )
+        ProjectStore.write(root, project)
+        val resolvedBase = SelectedMidiArtifactResolver().resolve(root, project.copy(parts = project.parts.map { it.copy(midi = it.midi!!.copy(analysisInput = MidiAnalysisInput.CURRENT)) }), "A")
+        assertEquals(approvedReference, resolvedBase.projectRelativePath)
+        assertTrue(MidiFeelReportStore.isCurrent(root, "A", resolvedBase.projectRelativePath, feelReferences))
+        val renderer = CapturingRenderer()
+
+        val result = DefaultPartPreviewApplicationService(renderer).resolve(PreviewRequest(root, "A", midiSource = PreviewMidiSource.LOFI_FEEL))
+
+        val prerequisite = assertIs<PreviewResult.Prerequisite>(result)
+        assertTrue(prerequisite.message.contains("renderer"))
+        assertEquals(derived, renderer.input)
+        originalArtifacts.forEach { (path, bytes) -> assertTrue(bytes.contentEquals(Files.readAllBytes(path)), "$path must remain immutable") }
+    }
+
     private fun project(file: String) = ProjectStore.write(root, Project(name = "test", parts = listOf(app.melotrail.arrangement.Part("A", file))))
     private fun service(decoder: PreviewMp3Decoder = FakeMp3Decoder()) = DefaultPartPreviewApplicationService(FakeRenderer(), decoder)
 
@@ -68,6 +133,25 @@ class PartPreviewApplicationServiceTest {
     private class FakeRenderer : InstrumentRenderer {
         override suspend fun render(midi: Path, instrument: LogicalInstrument, output: Path, format: RenderFormat, expectedFrames: Long): RenderResult = error("not used")
     }
+
+    private class CapturingRenderer : InstrumentRenderer {
+        var input: Path? = null
+        override suspend fun render(midi: Path, instrument: LogicalInstrument, output: Path, format: RenderFormat, expectedFrames: Long): RenderResult {
+            input = midi
+            error("renderer unavailable")
+        }
+    }
+
+    private fun writeMidi(path: Path, pitch: Int) {
+        Files.createDirectories(path.parent)
+        val sequence = Sequence(Sequence.PPQ, 480); val track = sequence.createTrack()
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, pitch, 96), 0))
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, pitch, 0), 480))
+        MidiSystem.write(sequence, 1, path.toFile())
+    }
+
+    private fun sha256(path: Path): String = MessageDigest.getInstance("SHA-256")
+        .digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
 }
 
 private fun writeWav(path: Path, bits: Int): Path {

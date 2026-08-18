@@ -133,7 +133,7 @@ currentness from file existence alone.
 | 2 | [111 — Unified import and audio-to-MIDI normalization](tasks/completed/111-unified-import-and-audio-to-midi-normalization.md) | MIDI/audio routes converge at validated raw MIDI | 110 |
 | 3 | [112 — Deterministic MIDI cleaning boundary](tasks/completed/112-deterministic-midi-cleaning-boundary.md) | Mandatory clean MIDI and quality evidence | 110, 111 |
 | 4 | [113 — Optional AI-assisted track fix](tasks/completed/113-optional-ai-assisted-track-fix.md) | Bounded, previewable, explicitly approved musical fix | 112 |
-| 5 | [114 — Per-track Lo-fi Feel selection](tasks/114-per-track-lofi-feel-selection.md) | Tempo/rhythm variant before analysis and structure | 110, 112, 113 |
+| 5 | [114 — Per-track Lo-fi Feel selection](tasks/completed/114-per-track-lofi-feel-selection.md) | Tempo/rhythm variant before analysis and structure | 110, 112, 113 |
 | 6 | [115 — Existing Structure handoff](tasks/115-existing-structure-handoff.md) | Structure preserved over the final selected analyses | 110, 114 |
 | 7 | [116 — AI Cohesion transition bridges](tasks/116-ai-cohesion-transition-bridges.md) | One validated AI-planned bridge for every adjacent occurrence | 115 |
 | 8 | [117 — Arrangement compatibility and end-to-end rollout](tasks/117-arrangement-compatibility-and-end-to-end-rollout.md) | Existing arrangement consumes Cohesion and the full UI/docs match the new flow | 116 |

@@ -663,6 +663,27 @@ class WorkspaceViewModelTest {
     }
 
     @Test
+    fun `changing the selected track clears an unapplied Lo-fi Feel choice`() = runTest {
+        val root = Path.of("build/per-track-lofi-feel-project")
+        val quality = app.melotrail.application.MidiQualitySummary(app.melotrail.application.MidiQualityStatus.CURRENT, app.melotrail.arrangement.MidiCleanupOptions())
+        val snapshot = projectSnapshot(root).copy(parts = listOf(
+            part("A").copy(preparation = part("A").preparation.copy(midiQuality = quality)),
+            part("B").copy(preparation = part("B").preparation.copy(midiQuality = quality))
+        ))
+        val viewModel = WorkspaceViewModel(FakeProjectService(result = snapshot), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.SelectPart("A"))
+        viewModel.accept(WorkspaceIntent.SelectMidiFeel(app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL))
+        assertEquals(app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL, viewModel.state.value.pendingMidiFeel)
+
+        viewModel.accept(WorkspaceIntent.SelectPart("B"))
+
+        assertEquals("B", viewModel.state.value.selectedPartId)
+        assertNull(viewModel.state.value.pendingMidiFeel)
+        viewModel.close()
+    }
+
+    @Test
     fun `stale MIDI quality retry failure remains actionable`() = runTest {
         val root = Path.of("build/stale-quality-project")
         val stale = app.melotrail.application.MidiQualitySummary(app.melotrail.application.MidiQualityStatus.STALE_OR_INVALID)

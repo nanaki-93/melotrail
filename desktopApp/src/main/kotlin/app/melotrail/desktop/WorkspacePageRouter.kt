@@ -113,6 +113,11 @@ internal object WorkspacePageTags {
     const val IMPORT_AI_FIX_PREVIEW_CLEANED = "import-ai-fix-preview-cleaned"
     const val IMPORT_AI_FIX_PREVIEW_DRAFT = "import-ai-fix-preview-draft"
     const val IMPORT_AI_FIX_DIFF = "import-ai-fix-diff"
+    const val IMPORT_MIDI_FEEL = "import-midi-feel"
+    const val IMPORT_MIDI_FEEL_KEEP = "import-midi-feel-keep"
+    const val IMPORT_MIDI_FEEL_APPLY = "import-midi-feel-apply"
+    const val IMPORT_MIDI_FEEL_PREVIEW_BASE = "import-midi-feel-preview-base"
+    const val IMPORT_MIDI_FEEL_PREVIEW_LOFI = "import-midi-feel-preview-lofi"
     const val IMPORTED_FILES = "imported-files"
     const val IMPORTED_ROW_PREFIX = "imported-file-"
     const val IMPORTED_DETAILS_PREFIX = "imported-details-"
@@ -1652,6 +1657,7 @@ private fun ImportPage(
     ImportHelpLinks()
     ImportedFiles(state, onIntent, partDetailsFocusTargets)
     MidiAiFixReview(state, onIntent)
+    MidiLoFiFeelReview(state, onIntent)
     ImportPrimaryAction(state, onIntent, partDetailsFocusTargets)
 }
 
@@ -1688,6 +1694,57 @@ private fun MidiAiFixReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent)
                     modifier = Modifier.semantics { testTag = WorkspacePageTags.IMPORT_AI_FIX_REJECT }) { Text(if (fix.approved) "Return to cleaned" else "Reject draft") }
                 OutlinedButton(onClick = { onIntent(WorkspaceIntent.RegenerateMidiAiFix) }, enabled = !state.operation.isMutating,
                     modifier = Modifier.semantics { testTag = WorkspacePageTags.IMPORT_AI_FIX_REGENERATE }) { Text("Regenerate") }
+            }
+        }
+    }
+}
+
+/** Per-part MIDI timing choice; post-mix Lo-fi audio texture remains a separate Mix action. */
+@Composable
+private fun MidiLoFiFeelReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    val part = importPrimaryPart(state) ?: return
+    if (part.preparation.midiQuality.status != MidiQualityStatus.CURRENT || !part.preparation.midiAiFix.selectedAvailable) return
+    val available = state.runtimeReadiness?.capability(RuntimeCapability.MIDI_PREVIEW)?.available == true
+    val feel = part.preparation.midiFeel
+    val basePreview = if (part.preparation.midiAiFix.selected == app.melotrail.arrangement.MidiAiFixSelection.APPROVED) {
+        app.melotrail.application.PreviewMidiSource.AI_FIX_APPROVED
+    } else {
+        app.melotrail.application.PreviewMidiSource.CLEANED
+    }
+    OverviewCard(WorkspacePageTags.IMPORT_MIDI_FEEL, "Per-track Lo-fi MIDI Feel") {
+        Text("Part ${part.id} · timing-only MIDI transform (80 BPM, 58% swing). This is not the post-mix Lo-fi audio texture.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Current: ${if (feel.selected == app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL) "Lo-fi Feel" else "current feel"}", style = MaterialTheme.typography.bodySmall)
+        Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+            OutlinedButton(
+                onClick = {
+                    onIntent(WorkspaceIntent.SelectMidiFeel(app.melotrail.arrangement.MidiAnalysisInput.CURRENT))
+                    if (feel.selected != app.melotrail.arrangement.MidiAnalysisInput.CURRENT) onIntent(WorkspaceIntent.ApplyMidiFeelAndReanalyze)
+                },
+                enabled = !state.operation.isMutating,
+                modifier = Modifier.semantics { testTag = WorkspacePageTags.IMPORT_MIDI_FEEL_KEEP }
+            ) { Text("Keep current feel") }
+            Button(
+                onClick = {
+                    onIntent(WorkspaceIntent.SelectMidiFeel(app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL))
+                    if (feel.selected != app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL) onIntent(WorkspaceIntent.ApplyMidiFeelAndReanalyze)
+                },
+                enabled = !state.operation.isMutating,
+                modifier = Modifier.semantics { testTag = WorkspacePageTags.IMPORT_MIDI_FEEL_APPLY }
+            ) { Text("Apply Lo-fi Feel") }
+        }
+        if (feel.available) {
+            Text("A/B preview is monitor-only and does not change either MIDI artifact.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                OutlinedButton(
+                    onClick = { onIntent(WorkspaceIntent.PreviewMidiPart(part.id, basePreview)) },
+                    enabled = available && !state.operation.isMutating,
+                    modifier = Modifier.semantics { testTag = WorkspacePageTags.IMPORT_MIDI_FEEL_PREVIEW_BASE }
+                ) { Text("Preview current feel") }
+                OutlinedButton(
+                    onClick = { onIntent(WorkspaceIntent.PreviewMidiPart(part.id, app.melotrail.application.PreviewMidiSource.LOFI_FEEL)) },
+                    enabled = available && !state.operation.isMutating,
+                    modifier = Modifier.semantics { testTag = WorkspacePageTags.IMPORT_MIDI_FEEL_PREVIEW_LOFI }
+                ) { Text("Preview Lo-fi Feel") }
             }
         }
     }
