@@ -96,30 +96,30 @@ object MusicWorkspaceTokens {
         val PartMetadata = 11.sp
         val HeaderProjectLabel = 10.sp
     }
-    val Canvas = Color(0xFF110B1D)
-    val Surface = Color(0xFF1B1329)
-    val ElevatedSurface = Color(0xFF261A38)
-    val SelectedSurface = Color(0xFF35244E)
-    val Border = Color(0xFF4D3B66)
-    /** Compatibility name retained for existing components; the product accent is purple. */
-    val Teal = Color(0xFFC7A6FF)
-    val OliveAccent = Color(0xFFE3D7FF)
-    val TealFocus = Color(0xFFF0E9FF)
-    val TealPressed = Color(0xFF9E7CDF)
-    val TextPrimary = Color(0xFFF4EEFF)
-    val TextSecondary = Color(0xFFD6CAE5)
-    val Disabled = Color(0xFF978AA8)
+    /** Near-black navy base derived from the reference's cinematic hierarchy. */
+    val Canvas = Color(0xFF07111A)
+    val Surface = Color(0xFF0C1821)
+    val ElevatedSurface = Color(0xFF10232D)
+    val SelectedSurface = Color(0xFF123840)
+    val Border = Color(0xFF36515B)
+    val Primary = Color(0xFF66D7C8)
+    val Focus = Color(0xFF91F5E8)
+    val WarmAccent = Color(0xFFF4BC64)
+    val TextPrimary = Color(0xFFF0F8F8)
+    val TextSecondary = Color(0xFFB7C9CC)
+    val Disabled = Color(0xFF89A0A4)
+    val DisabledSurface = Color(0xFF17262D)
     val Error = Color(0xFFFFB4AB)
     val Warning = Color(0xFFF0B356)
     val Information = Color(0xFF8AB4F8)
-    val Loading = Color(0xFFC7A6FF)
-    val Success = Color(0xFF78D8B6)
+    val Success = Color(0xFF7BDBA5)
+    val Progress = Color(0xFF62CFE0)
     val Piano = Color(0xFF59CCC4)
     val Bass = Color(0xFF86C979)
     val Drums = Color(0xFFF0B356)
     val Pad = Color(0xFFAB91EB)
     val Strings = Color(0xFFF08262)
-    val ScenePlaceholder = Color(0xFF31234A)
+    val ScenePlaceholder = Color(0xFF122A33)
 
     object Spacing {
         val Xs = 4.dp
@@ -144,17 +144,57 @@ object MusicWorkspaceTokens {
     }
 }
 
-val instrumentLaneColors = mapOf(
-    "piano" to MusicWorkspaceTokens.Piano,
-    "bass" to MusicWorkspaceTokens.Bass,
-    "drums" to MusicWorkspaceTokens.Drums,
-    "pad" to MusicWorkspaceTokens.Pad,
-    "strings" to MusicWorkspaceTokens.Strings
+/** A colour is always paired with a readable text label and a compact icon. */
+internal data class InstrumentLaneStyle(val color: Color, val label: String, val icon: String)
+
+internal val instrumentLanes = mapOf(
+    "piano" to InstrumentLaneStyle(MusicWorkspaceTokens.Piano, "Piano", "♫"),
+    "bass" to InstrumentLaneStyle(MusicWorkspaceTokens.Bass, "Bass", "♩"),
+    "drums" to InstrumentLaneStyle(MusicWorkspaceTokens.Drums, "Drums", "▣"),
+    "pad" to InstrumentLaneStyle(MusicWorkspaceTokens.Pad, "Pad", "◇"),
+    "strings" to InstrumentLaneStyle(MusicWorkspaceTokens.Strings, "Strings", "♬")
 )
 
-private val musicColorScheme = darkColorScheme(
-    primary = MusicWorkspaceTokens.Teal,
+/** Use [instrumentLane] for new UI so lanes retain their text/icon equivalent. */
+internal val instrumentLaneColors = instrumentLanes.mapValues { it.value.color }
+
+internal fun instrumentLane(instrument: String): InstrumentLaneStyle? = instrumentLanes[instrument.lowercase()]
+
+internal enum class WorkspaceSemanticState(val label: String, val icon: String) {
+    READY("Ready", "✓"),
+    WARNING("Review", "!"),
+    ERROR("Blocked", "×"),
+    INFORMATION("Information", "i"),
+    DISABLED("Unavailable", "—"),
+    SELECTED("Selected", "●"),
+    PROGRESS("In progress", "…"),
+    FOCUS("Focused", "◌")
+}
+
+internal val semanticStateColors = mapOf(
+    WorkspaceSemanticState.READY to MusicWorkspaceTokens.Success,
+    WorkspaceSemanticState.WARNING to MusicWorkspaceTokens.Warning,
+    WorkspaceSemanticState.ERROR to MusicWorkspaceTokens.Error,
+    WorkspaceSemanticState.INFORMATION to MusicWorkspaceTokens.Information,
+    WorkspaceSemanticState.DISABLED to MusicWorkspaceTokens.Disabled,
+    WorkspaceSemanticState.SELECTED to MusicWorkspaceTokens.Primary,
+    WorkspaceSemanticState.PROGRESS to MusicWorkspaceTokens.Progress,
+    WorkspaceSemanticState.FOCUS to MusicWorkspaceTokens.Focus
+)
+
+internal fun semanticColor(state: WorkspaceSemanticState): Color = semanticStateColors.getValue(state)
+
+internal val musicColorScheme = darkColorScheme(
+    primary = MusicWorkspaceTokens.Primary,
     onPrimary = MusicWorkspaceTokens.Canvas,
+    primaryContainer = MusicWorkspaceTokens.SelectedSurface,
+    onPrimaryContainer = MusicWorkspaceTokens.TextPrimary,
+    secondary = MusicWorkspaceTokens.WarmAccent,
+    onSecondary = MusicWorkspaceTokens.Canvas,
+    secondaryContainer = Color(0xFF3A2D1B),
+    onSecondaryContainer = MusicWorkspaceTokens.TextPrimary,
+    tertiary = MusicWorkspaceTokens.Information,
+    onTertiary = MusicWorkspaceTokens.Canvas,
     background = MusicWorkspaceTokens.Canvas,
     onBackground = MusicWorkspaceTokens.TextPrimary,
     surface = MusicWorkspaceTokens.Surface,
@@ -162,7 +202,10 @@ private val musicColorScheme = darkColorScheme(
     surfaceVariant = MusicWorkspaceTokens.ElevatedSurface,
     outline = MusicWorkspaceTokens.Border,
     onSurfaceVariant = MusicWorkspaceTokens.TextSecondary,
-    error = MusicWorkspaceTokens.Error
+    error = MusicWorkspaceTokens.Error,
+    onError = MusicWorkspaceTokens.Canvas,
+    errorContainer = Color(0xFF482626),
+    onErrorContainer = MusicWorkspaceTokens.TextPrimary
 )
 
 private val workspaceShapes = Shapes(
@@ -186,10 +229,18 @@ private val workspaceTypography = Typography(
 
 @Composable
 internal fun workspacePrimaryButtonColors(): ButtonColors = ButtonDefaults.buttonColors(
-    containerColor = MusicWorkspaceTokens.Teal,
+    containerColor = MusicWorkspaceTokens.Primary,
     contentColor = MusicWorkspaceTokens.Canvas,
-    disabledContainerColor = MusicWorkspaceTokens.Disabled,
-    disabledContentColor = MusicWorkspaceTokens.TextSecondary
+    disabledContainerColor = MusicWorkspaceTokens.DisabledSurface,
+    disabledContentColor = MusicWorkspaceTokens.Disabled
+)
+
+@Composable
+internal fun workspaceSelectableButtonColors(selected: Boolean): ButtonColors = ButtonDefaults.outlinedButtonColors(
+    containerColor = if (selected) MusicWorkspaceTokens.SelectedSurface else MusicWorkspaceTokens.ElevatedSurface,
+    contentColor = if (selected) MusicWorkspaceTokens.TextPrimary else MusicWorkspaceTokens.TextSecondary,
+    disabledContainerColor = MusicWorkspaceTokens.DisabledSurface,
+    disabledContentColor = MusicWorkspaceTokens.Disabled
 )
 
 object ThemeShowcaseTags {
@@ -208,12 +259,12 @@ internal fun MusicWorkspaceThemeShowcase() {
     ) {
         Text("Workspace visual tokens", color = MusicWorkspaceTokens.TextPrimary, fontWeight = FontWeight.SemiBold)
         Row(modifier = androidx.compose.ui.Modifier.semantics { testTag = ThemeShowcaseTags.PALETTE }, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-            listOf(MusicWorkspaceTokens.Canvas, MusicWorkspaceTokens.Surface, MusicWorkspaceTokens.SelectedSurface, MusicWorkspaceTokens.Teal, MusicWorkspaceTokens.Error).forEach { color ->
+            listOf(MusicWorkspaceTokens.Canvas, MusicWorkspaceTokens.Surface, MusicWorkspaceTokens.SelectedSurface, MusicWorkspaceTokens.Primary, MusicWorkspaceTokens.Warning, MusicWorkspaceTokens.Error).forEach { color ->
                 androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.width(MusicWorkspaceTokens.Interaction.MinimumHitTarget).height(MusicWorkspaceTokens.Interaction.MinimumHitTarget).background(color, RoundedCornerShape(MusicWorkspaceTokens.Radius.Control)))
             }
         }
         Text(
-            "Ready · purple primary · Error · text labels remain available when colour is not.",
+            "Ready ✓ · Review ! · Blocked × · Selected ● · text and icons remain available when colour is not.",
             modifier = androidx.compose.ui.Modifier.semantics { testTag = ThemeShowcaseTags.STATES },
             color = MusicWorkspaceTokens.TextSecondary,
             style = MaterialTheme.typography.bodySmall

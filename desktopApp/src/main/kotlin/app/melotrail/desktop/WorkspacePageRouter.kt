@@ -340,7 +340,7 @@ private fun OverviewSectionStrip(sections: List<OverviewSection>, selectedOccurr
             val isSelected = section.id == selectedOccurrenceId
             Column(
                 Modifier.width(84.dp).clip(MaterialTheme.shapes.small)
-                    .background(if (isSelected) MusicWorkspaceTokens.OliveAccent.copy(alpha = 0.18f) else MusicWorkspaceTokens.ElevatedSurface)
+                    .background(if (isSelected) MusicWorkspaceTokens.SelectedSurface else MusicWorkspaceTokens.ElevatedSurface)
                     .clickable { onSelected(section.id) }
                     .semantics { testTag = WorkspacePageTags.OVERVIEW_SECTION_PREFIX + section.id; contentDescription = "Select section ${section.id}" }
                     .padding(MusicWorkspaceTokens.Spacing.Sm),
@@ -362,7 +362,8 @@ private fun TrackOverview(state: WorkspaceUiState, sections: List<OverviewSectio
     }
     tracks.forEach { lane ->
         Row(Modifier.fillMaxWidth().height(MusicWorkspaceTokens.Pages.CompactRowHeight), verticalAlignment = Alignment.CenterVertically) {
-            Text(lane.replaceFirstChar(Char::uppercase), modifier = Modifier.width(76.dp), style = MaterialTheme.typography.labelMedium)
+            val laneStyle = instrumentLane(lane)
+            Text("${laneStyle?.icon.orEmpty()} ${laneStyle?.label ?: lane.replaceFirstChar(Char::uppercase)}".trim(), modifier = Modifier.width(76.dp), color = laneStyle?.color ?: MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.labelMedium)
             if (state.arrangement?.stale == true || sections.isEmpty()) {
                 Text(if (state.arrangement?.stale == true) "Stale lane" else "Signal unavailable", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
             } else Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -625,7 +626,7 @@ private fun LibraryCategoryRail(categories: List<String>, selected: String?, onI
 @Composable
 private fun LibraryCategoryButton(label: String, category: String?, selected: String?, onIntent: (WorkspaceIntent) -> Unit) = OutlinedButton(
     onClick = { onIntent(WorkspaceIntent.SelectLibraryCategory(category)) },
-    colors = ButtonDefaults.outlinedButtonColors(containerColor = if (category == selected) MusicWorkspaceTokens.SelectedSurface else MusicWorkspaceTokens.ElevatedSurface),
+    colors = workspaceSelectableButtonColors(category == selected),
     modifier = Modifier.fillMaxWidth().semantics {
         testTag = WorkspacePageTags.LIBRARY_CATEGORY_PREFIX + (category ?: "all").lowercase()
         contentDescription = "$label instrument category${if (category == selected) ", selected" else ""}"
@@ -639,12 +640,12 @@ private fun LibraryResults(layout: LibraryLayout, instruments: List<LocalSoundLi
         Spacer(Modifier.weight(1f))
         OutlinedButton(
             onClick = { onIntent(WorkspaceIntent.SelectLibraryLayout(LibraryLayout.GRID)) },
-            colors = ButtonDefaults.outlinedButtonColors(containerColor = if (layout == LibraryLayout.GRID) MusicWorkspaceTokens.SelectedSurface else MusicWorkspaceTokens.ElevatedSurface),
+            colors = workspaceSelectableButtonColors(layout == LibraryLayout.GRID),
             modifier = Modifier.semantics { testTag = WorkspacePageTags.LIBRARY_LAYOUT_GRID }
         ) { Text("Grid") }
         OutlinedButton(
             onClick = { onIntent(WorkspaceIntent.SelectLibraryLayout(LibraryLayout.LIST)) },
-            colors = ButtonDefaults.outlinedButtonColors(containerColor = if (layout == LibraryLayout.LIST) MusicWorkspaceTokens.SelectedSurface else MusicWorkspaceTokens.ElevatedSurface),
+            colors = workspaceSelectableButtonColors(layout == LibraryLayout.LIST),
             modifier = Modifier.semantics { testTag = WorkspacePageTags.LIBRARY_LAYOUT_LIST }
         ) { Text("List") }
     }
@@ -676,12 +677,12 @@ private fun LibraryInstrumentCard(instrument: LocalSoundLibraryInstrument, selec
     Modifier.fillMaxWidth().clickable { onIntent(WorkspaceIntent.SelectLibraryInstrument(instrument.id)) }
         .semantics { testTag = WorkspacePageTags.LIBRARY_CARD_PREFIX + instrument.id; contentDescription = "${instrument.name}, ${instrument.category}, ${instrument.sampleCount} validated samples${if (selected) ", selected" else ""}" },
     colors = CardDefaults.cardColors(containerColor = if (selected) MusicWorkspaceTokens.SelectedSurface else MusicWorkspaceTokens.Surface),
-    border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) MusicWorkspaceTokens.Teal else MusicWorkspaceTokens.Border)
+    border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) semanticColor(WorkspaceSemanticState.SELECTED) else MusicWorkspaceTokens.Border)
 ) {
     Column(Modifier.padding(MusicWorkspaceTokens.Spacing.Md), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
         Text(instrument.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text("${instrument.category} · SFZ ready · ${instrument.sampleCount} validated sample${if (instrument.sampleCount == 1) "" else "s"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = if (compact) 1 else 2, overflow = TextOverflow.Ellipsis)
-        if (!compact) Text(instrument.licenseName, style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Teal, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (!compact) Text(instrument.licenseName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -695,8 +696,8 @@ private fun LibraryDetail(instrument: LocalSoundLibraryInstrument?, modifier: Mo
             Text("Category: ${instrument.category}\nSFZ: validated\nSamples: ${instrument.sampleCount} validated", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             HorizontalDivider(color = MusicWorkspaceTokens.Border)
             Text("License: ${instrument.licenseName}\n${instrument.license}\nSource: ${instrument.source}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 5, overflow = TextOverflow.Ellipsis)
-            Text(if (instrument.commercialUse) "Commercial use recorded as permitted" else "Commercial use is not recorded as permitted", style = MaterialTheme.typography.bodySmall, color = if (instrument.commercialUse) MusicWorkspaceTokens.Success else MusicWorkspaceTokens.Warning)
-            if (instrument.attributionRequired) Text("Attribution is required; inspect the project provenance before release.", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.Warning)
+            Text(if (instrument.commercialUse) "Commercial use recorded as permitted" else "Commercial use is not recorded as permitted", style = MaterialTheme.typography.bodySmall, color = if (instrument.commercialUse) semanticColor(WorkspaceSemanticState.READY) else semanticColor(WorkspaceSemanticState.WARNING))
+            if (instrument.attributionRequired) Text("Attribution is required; inspect the project provenance before release.", style = MaterialTheme.typography.bodySmall, color = semanticColor(WorkspaceSemanticState.WARNING))
             Text("Preview is unavailable here. Configure a renderer and use a project MIDI preview when a validated artifact is available.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -735,8 +736,8 @@ private fun SettingsInterimPage(state: WorkspaceUiState, onIntent: (WorkspaceInt
                         Text(settings.resolvedRoot?.toString() ?: "No validated sound-library folder is configured.", maxLines = 3, overflow = TextOverflow.Ellipsis)
                         Text("Source: ${settings.source ?: "none"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         settings.validationError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
-                        settings.selectionDisabledReason?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.Warning) }
-                        if (settings.restartRequired) Text("Restart the desktop app before renderer services use this validated library.", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.Warning)
+                        settings.selectionDisabledReason?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = semanticColor(WorkspaceSemanticState.WARNING)) }
+                        if (settings.restartRequired) Text("Restart the desktop app before renderer services use this validated library.", style = MaterialTheme.typography.bodySmall, color = semanticColor(WorkspaceSemanticState.WARNING))
                         Text("Choose the absolute folder containing instruments.json and LICENSES.json. Selection validates the full registry before the preference is saved; no project or audio data is stored here.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
                             Button(
@@ -783,7 +784,7 @@ private fun SettingsInterimPage(state: WorkspaceUiState, onIntent: (WorkspaceInt
 private fun SettingsDependencyRow(dependency: RuntimeDependency, readiness: DependencyReadiness) {
     val title = dependency.name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)
     Text("$title · ${readiness.status.name.lowercase()} — ${readiness.detail}", style = MaterialTheme.typography.bodySmall,
-        color = if (readiness.available) MusicWorkspaceTokens.Success else MaterialTheme.colorScheme.error,
+        color = if (readiness.available) semanticColor(WorkspaceSemanticState.READY) else semanticColor(WorkspaceSemanticState.ERROR),
         modifier = Modifier.semantics { testTag = WorkspacePageTags.SETTINGS_RUNTIME_PREFIX + dependency.name.lowercase() })
     readiness.recoveryAction?.let { action ->
         Text("Recovery: ${settingsRecovery(action)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -930,7 +931,7 @@ private fun VideoPreviewPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-                    Text("LOCAL VISUAL PLACEHOLDER", style = MaterialTheme.typography.labelMedium, color = MusicWorkspaceTokens.TealFocus)
+                    Text("LOCAL VISUAL PLACEHOLDER", style = MaterialTheme.typography.labelMedium, color = semanticColor(WorkspaceSemanticState.FOCUS))
                     Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleLarge)
                     Text("Artwork and video rendering are unavailable; shared audio can still audition a selected artifact.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -966,7 +967,7 @@ private fun VideoPreviewTimeline(
             val selected = occurrence.id == selectedOccurrenceId
             OutlinedButton(
                 onClick = { onSelect(occurrence.id) },
-                colors = ButtonDefaults.outlinedButtonColors(containerColor = if (selected) MusicWorkspaceTokens.SelectedSurface else MusicWorkspaceTokens.ElevatedSurface),
+                colors = workspaceSelectableButtonColors(selected),
                 modifier = Modifier.widthIn(min = 112.dp, max = 180.dp).semantics {
                     testTag = WorkspacePageTags.VIDEO_PREVIEW_OCCURRENCE_PREFIX + occurrence.id
                     contentDescription = "Occurrence ${occurrence.id}, ${occurrence.duration?.let(::formatDuration) ?: "duration unavailable"}${if (selected) ", selected" else ""}"
@@ -1128,14 +1129,7 @@ private fun arrangeSectionStartTimes(sections: List<ArrangeTimelineSection>): Li
     }
 }
 
-private fun arrangeTrackColor(name: String) = when (name) {
-    "piano" -> MusicWorkspaceTokens.Piano
-    "bass" -> MusicWorkspaceTokens.Bass
-    "drums" -> MusicWorkspaceTokens.Drums
-    "pad" -> MusicWorkspaceTokens.Pad
-    "strings" -> MusicWorkspaceTokens.Strings
-    else -> MusicWorkspaceTokens.Border
-}
+private fun arrangeTrackColor(name: String) = instrumentLane(name)?.color ?: MusicWorkspaceTokens.Border
 
 @Composable
 private fun ArrangeTimeline(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = OverviewCard(WorkspacePageTags.ARRANGE_TIMELINE, "Arrangement timeline") {
@@ -1177,7 +1171,8 @@ private fun ArrangeTimeline(state: WorkspaceUiState, onIntent: (WorkspaceIntent)
             if (tracks.isEmpty()) Text("TRACKS  No canonical logical tracks are available yet.", modifier = Modifier.padding(top = MusicWorkspaceTokens.Spacing.Md), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             tracks.forEach { track ->
                 Row(Modifier.padding(top = MusicWorkspaceTokens.Spacing.Xs), verticalAlignment = Alignment.CenterVertically) {
-                    Text(track.replaceFirstChar(Char::uppercase), modifier = Modifier.width(112.dp).semantics { testTag = WorkspacePageTags.ARRANGE_TRACK_PREFIX + track }, style = MaterialTheme.typography.labelMedium, color = arrangeTrackColor(track))
+                    val lane = instrumentLane(track)
+                    Text("${lane?.icon.orEmpty()} ${lane?.label ?: track.replaceFirstChar(Char::uppercase)}".trim(), modifier = Modifier.width(112.dp).semantics { testTag = WorkspacePageTags.ARRANGE_TRACK_PREFIX + track }, style = MaterialTheme.typography.labelMedium, color = arrangeTrackColor(track))
                     sections.forEach { section ->
                         val placement = section.instruments.firstOrNull { it.name == track }
                         val selected = section.index == state.selectedArrangementSection
@@ -1305,7 +1300,7 @@ private fun PlannerChoiceCard(
         testTag = WorkspacePageTags.ARRANGE_PLANNER_PREFIX + planner.name.lowercase()
         contentDescription = "${planner.name.lowercase()} planner${if (selected) ", selected" else ""}"
     },
-    colors = CardDefaults.cardColors(containerColor = if (selected) MusicWorkspaceTokens.OliveAccent.copy(alpha = 0.18f) else MusicWorkspaceTokens.ElevatedSurface)
+    colors = CardDefaults.cardColors(containerColor = if (selected) MusicWorkspaceTokens.SelectedSurface else MusicWorkspaceTokens.ElevatedSurface)
 ) {
     Column(Modifier.padding(MusicWorkspaceTokens.Pages.ContentInset), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
         Text(if (planner == ArrangementPlannerKind.DETERMINISTIC) "Deterministic" else "AI (Qwen)", fontWeight = FontWeight.SemiBold)
@@ -1547,10 +1542,9 @@ private fun structureStartTimes(sections: List<StructureSectionSummary>): List<D
     }
 }
 
-private fun structureOccurrenceColor(section: StructureSectionSummary) = listOf(
-    MusicWorkspaceTokens.Piano, MusicWorkspaceTokens.Bass, MusicWorkspaceTokens.Drums,
-    MusicWorkspaceTokens.Pad, MusicWorkspaceTokens.Strings
-)[kotlin.math.abs(section.partId.fold(0) { total, char -> total + char.code }) % 5]
+private fun structureOccurrenceColor(section: StructureSectionSummary) = instrumentLanes.values.elementAt(
+    kotlin.math.abs(section.partId.fold(0) { total, char -> total + char.code }) % instrumentLanes.size
+).color
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -1654,7 +1648,7 @@ private fun ImportChooserCard(
         Modifier.fillMaxWidth().padding(MusicWorkspaceTokens.Spacing.Md),
         horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md), verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(icon, style = MaterialTheme.typography.headlineMedium, color = MusicWorkspaceTokens.OliveAccent)
+        Text(icon, style = MaterialTheme.typography.headlineMedium, color = MusicWorkspaceTokens.WarmAccent)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
             Text(title, fontWeight = FontWeight.SemiBold)
             Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -1692,7 +1686,7 @@ private fun ImportDropSurface(state: WorkspaceUiState, onIntent: (WorkspaceInten
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)
         ) {
-            Text("⌑", style = MaterialTheme.typography.headlineMedium, color = MusicWorkspaceTokens.OliveAccent)
+            Text("⌑", style = MaterialTheme.typography.headlineMedium, color = MusicWorkspaceTokens.WarmAccent)
             Text("Drop one supported source here", fontWeight = FontWeight.Medium)
             Text("or", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Button(
@@ -1752,7 +1746,7 @@ private fun ImportedFiles(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)
                 ) {
-                    Text(if (part.sourceType == PartSourceType.MIDI) "♫" else "⌁", color = MusicWorkspaceTokens.OliveAccent)
+                    Text(if (part.sourceType == PartSourceType.MIDI) "♫" else "⌁", color = MusicWorkspaceTokens.WarmAccent)
                     Column(Modifier.weight(1.4f)) {
                         Text(part.sourceName, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(formatImportFileSize(part.sourceSizeBytes), style = MaterialTheme.typography.bodySmall,
@@ -2047,11 +2041,12 @@ private fun MixMasterChannel(name: String, setting: app.melotrail.application.Lo
     Card(
         Modifier.width(148.dp).heightIn(min = 404.dp).semantics { testTag = WorkspacePageTags.MIX_CHANNEL_PREFIX + name },
         colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface),
-        border = BorderStroke(1.dp, instrumentLaneColors[name] ?: MusicWorkspaceTokens.Border)
+        border = BorderStroke(1.dp, instrumentLane(name)?.color ?: MusicWorkspaceTokens.Border)
     ) {
         Column(Modifier.padding(MusicWorkspaceTokens.Spacing.Sm), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(name.replaceFirstChar(Char::uppercase), modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelLarge, color = instrumentLaneColors[name] ?: MaterialTheme.colorScheme.onSurface)
+            val lane = instrumentLane(name)
+            Text("${lane?.icon.orEmpty()} ${lane?.label ?: name.replaceFirstChar(Char::uppercase)}".trim(), modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelLarge, color = lane?.color ?: MaterialTheme.colorScheme.onSurface)
             Text("${"%.1f".format(setting.gainDb)} dB", style = MaterialTheme.typography.labelSmall)
         }
         Slider(value = setting.gainDb.toFloat(), onValueChange = { onSetting(setting.copy(gainDb = it.toDouble())) }, valueRange = -24f..12f, enabled = enabled,
@@ -2064,14 +2059,14 @@ private fun MixMasterChannel(name: String, setting: app.melotrail.application.Lo
         Slider(value = setting.pan.toFloat(), onValueChange = { onSetting(setting.copy(pan = it.toDouble())) }, valueRange = -1f..1f, enabled = enabled,
             modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.MIX_PAN_PREFIX + name; contentDescription = "$name pan ${"%.2f".format(setting.pan)}" })
         Spacer(Modifier.weight(1f))
-        Text("0.0 dBFS · Level unavailable", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Disabled, modifier = Modifier.semantics { testTag = WorkspacePageTags.MIX_METER_PREFIX + name; contentDescription = "Level unavailable for $name; zero signal is displayed because no measured level data is available." })
+        Text("0.0 dBFS · Level unavailable", style = MaterialTheme.typography.labelSmall, color = semanticColor(WorkspaceSemanticState.DISABLED), modifier = Modifier.semantics { testTag = WorkspacePageTags.MIX_METER_PREFIX + name; contentDescription = "Level unavailable for $name; zero signal is displayed because no measured level data is available." })
         }
     }
 
 @Composable
 private fun MixMasterModeSelector(selected: MixMasterMode, onSelected: (MixMasterMode) -> Unit) = Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
     listOf(MixMasterMode.LISTEN, MixMasterMode.MIX, MixMasterMode.MASTER).forEach { mode ->
-        OutlinedButton(onClick = { onSelected(mode) }, colors = ButtonDefaults.outlinedButtonColors(containerColor = if (selected == mode) MusicWorkspaceTokens.SelectedSurface else MusicWorkspaceTokens.ElevatedSurface), modifier = Modifier.weight(1f).semantics {
+        OutlinedButton(onClick = { onSelected(mode) }, colors = workspaceSelectableButtonColors(selected == mode), modifier = Modifier.weight(1f).semantics {
             testTag = when (mode) { MixMasterMode.LISTEN -> WorkspacePageTags.MIX_MODE_LISTEN; MixMasterMode.MIX -> WorkspacePageTags.MIX_MODE_MIX; MixMasterMode.MASTER -> WorkspacePageTags.MIX_MODE_MASTER }
             contentDescription = "${mode.name.lowercase().replaceFirstChar(Char::uppercase)} mode${if (selected == mode) ", selected" else ""}"
         }) { Text(mode.name.lowercase().replaceFirstChar(Char::uppercase)) }
@@ -2085,7 +2080,7 @@ private fun MixPlaybackSourceButton(label: String, source: PlaybackSource, selec
         PlaybackSource.LOFI -> state.project?.readiness?.loFiMixAvailable == true
         PlaybackSource.MASTER -> state.project?.readiness?.masterAvailable == true
     }
-    OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectPlaybackSource(source)) }, enabled = available && !state.operation.isMutating, colors = ButtonDefaults.outlinedButtonColors(containerColor = if (selected == source) MusicWorkspaceTokens.SelectedSurface else MusicWorkspaceTokens.ElevatedSurface), modifier = modifier.semantics {
+    OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectPlaybackSource(source)) }, enabled = available && !state.operation.isMutating, colors = workspaceSelectableButtonColors(selected == source), modifier = modifier.semantics {
         testTag = tag
         contentDescription = if (available) "$label playback source${if (selected == source) ", selected" else ""}" else "$label playback is unavailable or stale. Build a current artifact first."
     }) { Text(label) }
@@ -2093,7 +2088,7 @@ private fun MixPlaybackSourceButton(label: String, source: PlaybackSource, selec
 
 @Composable
 private fun ZeroSignalPlaceholder() = OverviewCard(WorkspacePageTags.MIX_ZERO_SIGNAL, "Levels") {
-    Text("0.0 dBFS · No measured signal", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.Disabled)
+    Text("0.0 dBFS · No measured signal", style = MaterialTheme.typography.bodySmall, color = semanticColor(WorkspaceSemanticState.DISABLED))
 }
 
 private fun mixMasterCanBuild(state: WorkspaceUiState): Boolean = state.project != null && !state.downstreamArtifactsStale && !state.operation.isMutating && state.arrangement?.approved == true && state.arrangement.approvalRequired == false && state.arrangement.stale == false && state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.available == true

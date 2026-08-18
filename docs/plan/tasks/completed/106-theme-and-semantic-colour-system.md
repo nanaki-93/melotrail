@@ -3,7 +3,7 @@
 ## Goal
 
 Replace the current purple-first workspace palette with an accessible dark
-cinematic theme derived from `docs/pictures/UI/example.png`, while giving
+cinematic theme derived from `../../../pictures/UI/example.png`, while giving
 different kinds of information distinct semantic colours.
 
 ## Dependencies
@@ -27,7 +27,7 @@ different kinds of information distinct semantic colours.
   without relying on hue alone.
 - Do not embed or reproduce screenshot-specific scene/travel artwork. Keep the
   deterministic local scene placeholder free of project metadata.
-- Update `docs/plan/UI_REFERENCE_TOKENS.md` and the palette fixture to match
+- Update `../../UI_REFERENCE_TOKENS.md` and the palette fixture to match
   the accepted values and describe the visual comparison process.
 
 ## Tests

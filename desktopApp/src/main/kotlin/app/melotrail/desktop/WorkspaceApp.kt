@@ -856,7 +856,7 @@ internal fun StructurePanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent)
                     val duration = timing[index]
                     Column(
                         Modifier.weight(timelineSectionWeight(duration)).fillMaxSize().clip(MaterialTheme.shapes.small)
-                            .background(if (isSelected) MusicWorkspaceTokens.Teal.copy(alpha = 0.18f) else instrumentLaneColors.values.elementAt(index % instrumentLaneColors.size).copy(alpha = 0.16f))
+                            .background(if (isSelected) MusicWorkspaceTokens.SelectedSurface else instrumentLaneColors.values.elementAt(index % instrumentLaneColors.size).copy(alpha = 0.16f))
                             .clickable(enabled = !disabled) { onIntent(WorkspaceIntent.SelectArrangementSection(index)) }
                             .padding(MusicWorkspaceTokens.Spacing.Sm)
                             .semantics {
@@ -865,7 +865,7 @@ internal fun StructurePanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent)
                             },
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text(partId, style = MaterialTheme.typography.titleMedium, color = if (isSelected) MusicWorkspaceTokens.TealFocus else MaterialTheme.colorScheme.onSurface)
+                        Text(partId, style = MaterialTheme.typography.titleMedium, color = if (isSelected) semanticColor(WorkspaceSemanticState.FOCUS) else MaterialTheme.colorScheme.onSurface)
                         Text(state.project.parts.firstOrNull { it.id == partId }?.role?.ifBlank { "Section" } ?: "Unknown part", style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
@@ -908,7 +908,7 @@ internal fun ArrangementPanel(state: WorkspaceUiState, onIntent: (WorkspaceInten
             val selectedIndex = selectedCenterIndex(state, arrangement.sections.map { it.index })
             val section = arrangement.sections.first { it.index == selectedIndex }
             CenterCardHeader("ARRANGEMENT — ${section.instanceId} · ${section.purpose}") {
-                Text("ϟ Energy ${(section.energy * 100).toInt()}%", color = MusicWorkspaceTokens.Teal, style = MaterialTheme.typography.labelSmall)
+                Text("ϟ Energy ${(section.energy * 100).toInt()}%", color = semanticColor(WorkspaceSemanticState.PROGRESS), style = MaterialTheme.typography.labelSmall)
                 TextButton(onClick = { onIntent(WorkspaceIntent.GenerateArrangement) }, enabled = state.project != null && !state.operation.isMutating, modifier = Modifier.semantics { testTag = WorkspaceTags.ARRANGEMENT_GENERATE; contentDescription = "Regenerate arrangement from the current canonical structure and analyses" }) { Text("Regenerate") }
                 TextButton(onClick = { onIntent(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.STRUCTURE)) }, modifier = Modifier.semantics { testTag = WorkspaceTags.ARRANGEMENT_EDIT_SECTION; contentDescription = "Edit selected section in Song Structure" }) { Text("Edit section") }
             }
@@ -1041,9 +1041,10 @@ private fun CenterBarRuler(sections: List<CenterTimelineSection>, onIntent: (Wor
 
 @Composable
 private fun CenterTimelineLane(instrument: String, sections: List<CenterTimelineSection>, selected: Int?, onIntent: (WorkspaceIntent) -> Unit) {
-    val color = instrumentLaneColors.getValue(instrument)
+    val lane = checkNotNull(instrumentLane(instrument))
+    val color = lane.color
     Row(Modifier.fillMaxWidth().height(MusicWorkspaceTokens.Center.TimelineLaneHeight).semantics { testTag = WorkspaceTags.TIMELINE_LANE_PREFIX + instrument; contentDescription = "$instrument visual timeline lane" }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(instrument.replaceFirstChar(Char::uppercase), modifier = Modifier.width(MusicWorkspaceTokens.Center.LaneLabelWidth), color = color, style = MaterialTheme.typography.labelMedium)
+        Text("${lane.icon} ${lane.label}", modifier = Modifier.width(MusicWorkspaceTokens.Center.LaneLabelWidth), color = color, style = MaterialTheme.typography.labelMedium)
         sections.forEachIndexed { sectionPosition, visual ->
             val active = visual.section.instruments.any { it.name == instrument }
             Box(
@@ -1068,7 +1069,7 @@ private fun CenterTimelineLane(instrument: String, sections: List<CenterTimeline
                         }
                     }
                 }
-                if (instrument == "piano" && visual.section.index == selected) Box(Modifier.width(2.dp).height(MusicWorkspaceTokens.Center.TimelineLaneHeight).background(MusicWorkspaceTokens.TealFocus).semantics { testTag = WorkspaceTags.TIMELINE_CURSOR; contentDescription = "Selected section cursor at ${visual.section.instanceId}" })
+                if (instrument == "piano" && visual.section.index == selected) Box(Modifier.width(2.dp).height(MusicWorkspaceTokens.Center.TimelineLaneHeight).background(semanticColor(WorkspaceSemanticState.FOCUS)).semantics { testTag = WorkspaceTags.TIMELINE_CURSOR; contentDescription = "Selected section cursor at ${visual.section.instanceId}" })
             }
         }
     }
@@ -1170,7 +1171,7 @@ private fun FooterWaveform(session: PlaybackSession, modifier: Modifier = Modifi
             },
         contentAlignment = Alignment.Center
     ) {
-        Text("WAVEFORM UNAVAILABLE", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Disabled)
+        Text("WAVEFORM UNAVAILABLE", style = MaterialTheme.typography.labelSmall, color = semanticColor(WorkspaceSemanticState.DISABLED))
     }
 }
 
@@ -1184,7 +1185,7 @@ internal fun MixPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Un
         mix.availableStems.forEach { instrument ->
             val setting = mix.settings.tracks[instrument] ?: app.melotrail.application.LogicalMixSetting()
             Column(modifier = Modifier.semantics { testTag = WorkspaceTags.MIX_TRACK_PREFIX + instrument; contentDescription = "$instrument mix track" }, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Row { Text(instrument.replaceFirstChar(Char::uppercase), modifier = Modifier.weight(1f), color = instrumentLaneColors[instrument] ?: MaterialTheme.colorScheme.onSurface); Text("%.1f dB".format(setting.gainDb)) }
+                Row { Text("${instrumentLane(instrument)?.icon.orEmpty()} ${instrumentLane(instrument)?.label ?: instrument.replaceFirstChar(Char::uppercase)}".trim(), modifier = Modifier.weight(1f), color = instrumentLane(instrument)?.color ?: MaterialTheme.colorScheme.onSurface); Text("%.1f dB".format(setting.gainDb)) }
                 Slider(value = setting.gainDb.toFloat(), onValueChange = { onIntent(WorkspaceIntent.UpdateMixSetting(instrument, setting.copy(gainDb = it.toDouble()))) }, valueRange = -24f..12f, enabled = !disabled)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     TextButton(onClick = { onIntent(WorkspaceIntent.UpdateMixSetting(instrument, setting.copy(muted = !setting.muted))) }, enabled = !disabled) { Text(if (setting.muted) "Unmute" else "Mute") }
@@ -1300,12 +1301,12 @@ private fun PlaceholderPanel(panel: Panel, state: WorkspaceUiState, onIntent: (W
 internal fun OperationStatusSurface(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
     val feedback = state.operationFeedback
     val (label, color) = when {
-        feedback.active -> "Loading · ${feedback.phase.label()}" to MusicWorkspaceTokens.Loading
-        feedback.outcomeSeverity == OperationSeverity.ERROR -> "Error" to MusicWorkspaceTokens.Error
-        feedback.outcomeSeverity == OperationSeverity.WARNING -> "Warning" to MusicWorkspaceTokens.Warning
-        feedback.outcomeSeverity == OperationSeverity.INFORMATION -> "Information" to MusicWorkspaceTokens.Information
-        feedback.outcomeSeverity == OperationSeverity.SUCCESS -> "Complete" to MusicWorkspaceTokens.Teal
-        else -> "Ready" to MusicWorkspaceTokens.Teal
+        feedback.active -> "Loading · ${feedback.phase.label()}" to semanticColor(WorkspaceSemanticState.PROGRESS)
+        feedback.outcomeSeverity == OperationSeverity.ERROR -> "Error" to semanticColor(WorkspaceSemanticState.ERROR)
+        feedback.outcomeSeverity == OperationSeverity.WARNING -> "Warning" to semanticColor(WorkspaceSemanticState.WARNING)
+        feedback.outcomeSeverity == OperationSeverity.INFORMATION -> "Information" to semanticColor(WorkspaceSemanticState.INFORMATION)
+        feedback.outcomeSeverity == OperationSeverity.SUCCESS -> "Complete" to semanticColor(WorkspaceSemanticState.READY)
+        else -> "Ready" to semanticColor(WorkspaceSemanticState.READY)
     }
     Column(
         modifier = Modifier.semantics {

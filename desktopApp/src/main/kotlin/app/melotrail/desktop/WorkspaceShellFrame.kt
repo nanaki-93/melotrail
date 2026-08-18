@@ -205,7 +205,7 @@ private fun TopBar(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit,
 
 @Composable
 private fun BrandMark() = Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-    Icon(Icons.Default.LibraryMusic, contentDescription = null, tint = MusicWorkspaceTokens.Teal)
+    Icon(Icons.Default.LibraryMusic, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
     Text("Melotrail", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
 }
 
@@ -281,7 +281,7 @@ private fun NavigationButton(destination: WorkspaceSection, state: WorkspaceUiSt
             this.selected = selected
             contentDescription = "Open ${destination.label}${if (selected) ", selected" else ""}"
         },
-        colors = ButtonDefaults.outlinedButtonColors(containerColor = if (selected) MusicWorkspaceTokens.SelectedSurface else MusicWorkspaceTokens.ElevatedSurface)
+        colors = workspaceSelectableButtonColors(selected)
     ) { Text(if (compact) destination.shortLabel else destination.label) }
 }
 
@@ -307,11 +307,11 @@ private fun ContextRail(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
             when (state.workspaceSection) {
                 WorkspaceSection.IMPORT -> ImportContextRail(state, onIntent)
                 WorkspaceSection.ARRANGE -> {
-                    Icon(Icons.Default.Tune, contentDescription = null, tint = MusicWorkspaceTokens.Teal)
+                    Icon(Icons.Default.Tune, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     ArrangeContextRail(state, onIntent)
                 }
                 WorkspaceSection.MIX_MASTER -> {
-                    Icon(Icons.Default.Tune, contentDescription = null, tint = MusicWorkspaceTokens.Teal)
+                    Icon(Icons.Default.Tune, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Text("PREVIEW & BUILD", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.TextSecondary)
                     val source = (state.playbackSession.request as? PlaybackRequest.Mix)?.source ?: PlaybackSource.DRY
                     Text("Shared source: ${source.name.lowercase().replaceFirstChar(Char::uppercase)}", style = MaterialTheme.typography.bodySmall)
@@ -326,7 +326,7 @@ private fun ContextRail(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
                     )
                 }
                 else -> {
-                    Icon(Icons.Default.Tune, contentDescription = null, tint = MusicWorkspaceTokens.Teal)
+                    Icon(Icons.Default.Tune, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Text("${state.workspaceSection.label} context", style = MaterialTheme.typography.titleMedium)
                     Text(contextDescription(state), style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
                 }
