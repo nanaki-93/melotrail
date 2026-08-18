@@ -41,7 +41,18 @@ class OccurrenceMidiArtifactResolver(
             return input.occurrences.map { occurrence -> fallback(normalized, project, occurrence) }
         }
         require(WorkflowArtifact.COHESION !in project.workflow.stale) { "Approved cohesion is stale; regenerate it before arranging." }
-        require(cohesion.inputSha256 == input.inputHash) { "Approved cohesion input is stale; regenerate it before arranging." }
+        val transitionInput = TransitionCohesionInputFactory.from(input)
+        require(cohesion.inputSha256 == input.inputHash || cohesion.inputSha256 == transitionInput.inputHash) { "Approved cohesion input is stale; regenerate it before arranging." }
+        // Task 116 stores transition MIDI at boundaries instead of rewriting whole
+        // occurrences.  The occurrence source remains immutable; a later timeline
+        // assembler consumes the separately fingerprinted bridge artifacts.
+        if (cohesion.boundaries.isNotEmpty() || input.boundaries.isEmpty()) {
+            require(cohesion.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId } == input.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId }) {
+                "Approved cohesion boundaries do not match the saved structure; regenerate cohesion."
+            }
+            require(cohesion.boundaries.all { it.approved != null }) { "Approved cohesion has an unreviewed boundary." }
+            return input.occurrences.map { occurrence -> fallback(normalized, project, occurrence) }
+        }
         require(cohesion.occurrences.map(CohesionOccurrenceReference::instanceId).sorted() == expectedIds.sorted()) {
             "Approved cohesion is incomplete for the saved structure; regenerate it before arranging."
         }

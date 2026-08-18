@@ -75,7 +75,7 @@ relative to the project folder.
 | 5. **Optional MIDI feel** — use **Configure Lo-fi MIDI Feel** and select Original feel or Lo-fi Feel | Current, approved cleaned MIDI. Original feel selects the cleaned MIDI. The optional profile is fixed at 80 BPM and 58% eighth-note swing. | For Lo-fi Feel: `midi/derived/<part>/lofi-80-swing-v1.mid` and `midi/feel/<part>/lofi-80-swing-v1.json`; otherwise the cleaned MIDI remains the analysis input. | No. Both raw and cleaned MIDI stay unchanged. | Cleaned-MIDI changes, or a missing/mismatched derived artifact, make this choice stale. Select **Original feel** to return to cleaned MIDI, or select Lo-fi Feel again to regenerate it; then re-analyze. |
 | 6. **Analysis** — use **Analyze** for every part | Current selected MIDI (cleaned or selected Lo-fi Feel) for every part. | `analysis/<part>.json` with the validated musical analysis. | No. | Changing raw/cleaned MIDI or selected feel invalidates analysis. Run **Analyze** again for every affected part before saving or regenerating later work. |
 | 7. **Structure** — edit the sequence and save it in **Structure** | Current analysis for every part referenced by the sequence; only known part IDs may be used. | The canonical structure in `project.json`, with stable occurrence identities such as `A1` and `A2`. | No source or MIDI changes. | Changing analysis or the saved structure invalidates cohesion and every later derived artifact. Save the intended structure, then regenerate downstream stages; do not reuse old plans or stems as current output. |
-| 8. **Cohesion** — use **Generate cohesion**, review it, then **Approve cohesion** | A current saved structure and current MIDI analysis for every part. | Reviewable cohesion files under `cohesion/`, including `cohesion/cohesion.draft.json`, approved `cohesion/cohesion.json`, occurrence results, and audit/provenance evidence. | No source or selected MIDI changes. | A selected-MIDI, analysis, or structure change makes cohesion stale; an unapproved draft is review-only. Generate it again, review every occurrence, and approve the current plan. |
+| 8. **Cohesion** — use **Generate cohesion**, review every boundary, then **Approve cohesion** | A current saved structure and current MIDI analysis for every part. | Reviewable, path-free AI plans under `cohesion/`, with one deterministic bridge MIDI/audit record per adjacent occurrence pair plus aggregate draft/approval records. A one-occurrence structure has an explicit empty result. | No source or selected MIDI changes. | A selected-MIDI, analysis, or structure change makes cohesion stale; an unreviewed boundary is review-only. Generate it again, audition each hard join against its bridge, review every current boundary, then approve the aggregate. |
 | 9. **Arrangement** — use **Generate arrangement**, then approve a draft when shown | Current approved cohesion, current analyses, saved structure, and allowed logical instruments (including piano). | `song_plan.json`, `section_variations.json`, and either approved `arrangement.json` or review-only `arrangement.draft.json`. | No source or MIDI changes. | A cohesion change or any earlier analysis/structure/MIDI change makes the arrangement stale. Regenerate it. A Qwen draft is not usable until you explicitly approve it; it is advice, not an executable action. |
 | 10. **MIDI and stem generation** — use **Build Song** in **Mix & Master** | A current approved arrangement, validated sound library with samples, and a configured local `sfizz_render` renderer. | Active generated tracks in `midi/generated/`; PCM-24 WAV files in `stems/`; `stem-render.json`; and a validated `mix/dry.wav`. | No. Library files, samples, source audio, and source MIDI are never outputs. | Arrangement/cohesion/structure/analysis/MIDI changes make generated MIDI and stems stale. Restore the listed readiness dependency if needed, then use **Build Song** to regenerate instead of copying an old stem. |
 | 11. **Mix** — adjust available channel controls and use **Build Song** | Current rendered stems and dry mix. The selected mix-only settings are part of the project workflow. | Current `mix/dry.wav`; **Build Song** also writes the repaired intermediate `mix/repaired.wav`. | No source changes. | A mix-only setting change makes the dry mix and later release artifacts stale. Adjust the intended controls, then run **Build Song** again. |
@@ -98,3 +98,20 @@ relative to the project folder.
 
 For local dependency setup and recovery details, see
 [Desktop troubleshooting](TROUBLESHOOTING.md).
+
+## Cohesion listening matrix
+
+This is a manual review record, not an automated smoothness claim. After the
+local renderer and an audio output device are configured, audition hard join and
+proposed bridge at the same monitor volume for each applicable case. Record the
+device, listener, date, boundary IDs, and either accept/reject/regenerate with a
+short reason in the boundary review notes.
+
+| Boundary evidence | Compare | Record |
+| --- | --- | --- |
+| Same key / same tempo | hard join vs bridge | Whether the handoff is clearer without an audible collision. |
+| Different key / same tempo | hard join vs bridge | Whether the bounded harmonic handoff is musically acceptable. |
+| Same key / different tempo | blocked/retry | The current bridge vocabulary preserves tempo; resolve the evidence before approving. |
+| Sparse / dense | hard join vs bridge | Whether the fill or sustain creates an unwanted jump. |
+| Repeated parts | each stable occurrence separately | That `A1→A2` and later repeated boundaries were independently reviewed. |
+| Selected Lo-fi Feel | hard join vs bridge | That the chosen MIDI-feel input, not raw or cleaned source, was auditioned. |

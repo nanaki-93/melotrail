@@ -20,6 +20,8 @@ import app.melotrail.arrangement.MidiFeelReport
 import app.melotrail.arrangement.MidiFeelReportStore
 import app.melotrail.arrangement.MidiLoFiFeelTransformer
 import app.melotrail.arrangement.MelodyCohesionInputFactory
+import app.melotrail.arrangement.TransitionCohesionInputFactory
+import app.melotrail.arrangement.TransitionCohesionStore
 import app.melotrail.arrangement.SelectedMidiArtifactResolver
 import app.melotrail.arrangement.LogicalInstrument
 import app.melotrail.arrangement.SectionInstance
@@ -728,6 +730,10 @@ class DefaultProjectApplicationService(
         }
         val input = SongPlanningInput(project.name, project.version, analyses, structure, LogicalInstrument.entries.map { it.wireName })
         val current = MelodyCohesionInputFactory.build(root, project, input, requireCurrentAnalyses = true).first
+        val transitionInput = TransitionCohesionInputFactory.from(current)
+        if (cohesion.boundaries.isNotEmpty() || current.boundaries.isEmpty()) {
+            return TransitionCohesionStore.isApprovedCurrent(root, transitionInput)
+        }
         val references = cohesion.occurrences.associateBy { it.instanceId }
         cohesion.inputSha256 == current.inputHash && cohesion.structureSha256 == current.structureSha256 &&
             references.keys == current.occurrences.map { it.instanceId }.toSet() &&

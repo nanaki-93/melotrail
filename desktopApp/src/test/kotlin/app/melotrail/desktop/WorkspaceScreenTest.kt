@@ -999,9 +999,10 @@ class WorkspaceScreenTest {
         val project = checkNotNull(base.project)
         val draft = CohesionSnapshot(
             root = project.root,
-            planner = CohesionPlannerKind.DETERMINISTIC,
+            planner = CohesionPlannerKind.QWEN,
             inputHash = "0".repeat(64),
-            occurrences = emptyList(),
+            structureSha256 = "0".repeat(64),
+            boundaries = emptyList(),
             approvalRequired = true,
             approved = false,
             stale = false,

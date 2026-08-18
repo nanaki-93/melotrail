@@ -135,7 +135,7 @@ currentness from file existence alone.
 | 4 | [113 — Optional AI-assisted track fix](tasks/completed/113-optional-ai-assisted-track-fix.md) | Bounded, previewable, explicitly approved musical fix | 112 |
 | 5 | [114 — Per-track Lo-fi Feel selection](tasks/completed/114-per-track-lofi-feel-selection.md) | Tempo/rhythm variant before analysis and structure | 110, 112, 113 |
 | 6 | [115 — Existing Structure handoff](tasks/completed/115-existing-structure-handoff.md) | Structure preserved over the final selected analyses | 110, 114 |
-| 7 | [116 — AI Cohesion transition bridges](tasks/116-ai-cohesion-transition-bridges.md) | One validated AI-planned bridge for every adjacent occurrence | 115 |
+| 7 | [116 — AI Cohesion transition bridges](tasks/completed/116-ai-cohesion-transition-bridges.md) | One validated AI-planned bridge for every adjacent occurrence | 115 |
 | 8 | [117 — Arrangement compatibility and end-to-end rollout](tasks/117-arrangement-compatibility-and-end-to-end-rollout.md) | Existing arrangement consumes Cohesion and the full UI/docs match the new flow | 116 |
 
 ## Cross-cutting rules

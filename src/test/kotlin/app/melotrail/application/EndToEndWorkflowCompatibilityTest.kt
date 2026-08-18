@@ -88,7 +88,7 @@ class EndToEndWorkflowCompatibilityTest {
 
             services.projects.analyzePart(AnalyzePartRequest(root, "A"))
             services.projects.saveStructure(SaveStructureRequest(root, listOf("A", "A")))
-            DefaultCohesionApplicationService().generate(GenerateCohesionRequest(root))
+            generateApprovedCohesion(root)
             val arrangement = services.arrangements.generate(GenerateArrangementRequest(root, instruments = listOf("piano")))
             assertTrue(arrangement.approved)
             val build = services.build.build(BuildSongRequest(root))
@@ -145,7 +145,7 @@ class EndToEndWorkflowCompatibilityTest {
         val current = tempDir.resolve("compat/current")
         val source = fixtureSource(Fixture("approved-v3", "mid", false))
         services.projects.create(CreateProjectRequest(current)); services.projects.importPart(ImportPartRequest(current, "A", source)); services.projects.cleanMidi(CleanMidiRequest(current, "A", app.melotrail.arrangement.MidiCleanupOptions())); services.projects.analyzePart(AnalyzePartRequest(current, "A")); services.projects.saveStructure(SaveStructureRequest(current, listOf("A")))
-        DefaultCohesionApplicationService().generate(GenerateCohesionRequest(current))
+        generateApprovedCohesion(current)
         assertTrue(services.arrangements.generate(GenerateArrangementRequest(current, instruments = listOf("piano"))).approved)
         assertTrue(Files.readString(current.resolve("arrangement.json")).contains("\"version\": 3"))
     }

@@ -257,7 +257,8 @@ class DefaultArrangementApplicationService(
             "Generate and approve current cohesion for every structure occurrence before detailed arrangement."
         }
         OccurrenceMidiArtifactResolver().resolve(root, project, cohesionInput).also { resolved ->
-            require(resolved.size == input.sectionsWithIdentity().size && resolved.all { it.source == app.melotrail.arrangement.OccurrenceMidiSource.APPROVED_COHESION }) {
+            val boundaryCohesion = project.workflow.cohesion?.boundaries?.isNotEmpty() == true || cohesionInput.boundaries.isEmpty()
+            require(resolved.size == input.sectionsWithIdentity().size && (boundaryCohesion || resolved.all { it.source == app.melotrail.arrangement.OccurrenceMidiSource.APPROVED_COHESION })) {
                 "Approved cohesion is incomplete; regenerate it before detailed arrangement."
             }
         }

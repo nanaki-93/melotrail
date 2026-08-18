@@ -1,48 +1,42 @@
 package app.melotrail.application
 
 import app.melotrail.arrangement.CohesionModelIdentity
-import app.melotrail.arrangement.DeterministicMelodyCohesionPlanner
-import app.melotrail.arrangement.LocalQwenMelodyCohesionPlanner
-import app.melotrail.arrangement.MelodyCohesionInput
+import app.melotrail.arrangement.LocalQwenTransitionCohesionPlanner
+import app.melotrail.arrangement.LogicalInstrument
 import app.melotrail.arrangement.MelodyCohesionInputFactory
-import app.melotrail.arrangement.MelodyCohesionPlan
-import app.melotrail.arrangement.MelodyCohesionStore
 import app.melotrail.arrangement.MidiAnalysis
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.SectionInstance
 import app.melotrail.arrangement.SongPlanningInput
+import app.melotrail.arrangement.TransitionCohesionInput
+import app.melotrail.arrangement.TransitionCohesionInputFactory
+import app.melotrail.arrangement.TransitionCohesionPlan
+import app.melotrail.arrangement.TransitionCohesionStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 
-/** Bounded planner choice. The UI never supplies model output, paths, or model configuration. */
-enum class CohesionPlannerKind { DETERMINISTIC, QWEN }
-
-data class GenerateCohesionRequest(val root: Path, val planner: CohesionPlannerKind = CohesionPlannerKind.DETERMINISTIC)
-
-data class CohesionOccurrenceSnapshot(
-    val instanceId: String,
-    val partId: String,
-    val sourceHash: String,
-    val hasDerivedMidi: Boolean,
-    val approved: Boolean,
-    val rationale: String
+/** Cohesion is AI bridge planning only. Deterministic no-op occurrence correction is retired. */
+enum class CohesionPlannerKind { QWEN }
+data class GenerateCohesionRequest(val root: Path, val planner: CohesionPlannerKind = CohesionPlannerKind.QWEN)
+data class CohesionBoundarySnapshot(
+    val outgoingInstanceId: String,
+    val incomingInstanceId: String,
+    val bridgeMidi: Path,
+    val rationale: String,
+    val reviewed: Boolean
 )
-
-/** One immutable adjacent Structure pair supplied to Cohesion in saved order. */
-data class CohesionBoundarySnapshot(val outgoingInstanceId: String, val incomingInstanceId: String)
-
 data class CohesionSnapshot(
     val root: Path,
     val planner: CohesionPlannerKind,
     val inputHash: String,
-    val structureSha256: String = "",
-    val occurrences: List<CohesionOccurrenceSnapshot>,
-    val boundaries: List<CohesionBoundarySnapshot> = emptyList(),
+    val structureSha256: String,
+    val boundaries: List<CohesionBoundarySnapshot>,
     val approvalRequired: Boolean,
     val approved: Boolean,
     val stale: Boolean,
@@ -52,100 +46,77 @@ data class CohesionSnapshot(
 interface CohesionApplicationService {
     suspend fun generate(request: GenerateCohesionRequest, progress: ProgressSink = ProgressSink.None): CohesionSnapshot
     fun load(root: Path): CohesionSnapshot
+    fun reviewBoundary(root: Path, outgoingInstanceId: String, incomingInstanceId: String): CohesionSnapshot
     fun approve(root: Path): CohesionSnapshot
     fun reject(root: Path): CohesionSnapshot
-    suspend fun regenerate(request: GenerateCohesionRequest, progress: ProgressSink = ProgressSink.None): CohesionSnapshot = generate(request, progress)
+    suspend fun regenerate(request: GenerateCohesionRequest, progress: ProgressSink = ProgressSink.None) = generate(request, progress)
 }
 
-/**
- * Application boundary for reviewable per-occurrence cohesion. It rebuilds the
- * path-free input from current canonical evidence on every command, so an old
- * draft cannot be approved after its source, analysis, or structure changed.
- */
+/** UI-neutral orchestration: rebuilds canonical input, calls one bounded planner, then publishes deterministic bridge MIDI. */
 class DefaultCohesionApplicationService(
-    private val qwenPlanner: ((MelodyCohesionInput) -> MelodyCohesionPlan) = { input ->
-        LocalQwenMelodyCohesionPlanner(
-            model = CohesionModelIdentity("qwen", "local", "0".repeat(64))
-        ).plan(input)
+    private val qwenPlanner: (TransitionCohesionInput) -> TransitionCohesionPlan = { input ->
+        LocalQwenTransitionCohesionPlanner(model = CohesionModelIdentity("qwen", "local", "0".repeat(64))).plan(input)
     }
 ) : CohesionApplicationService {
     override suspend fun generate(request: GenerateCohesionRequest, progress: ProgressSink): CohesionSnapshot = mutate(request.root) { root ->
-        progress.report(OperationProgress("cohesion", 1, 3, "Validating current selected MIDI"))
-        val (input, sources) = currentInput(root)
-        progress.report(OperationProgress("cohesion", 2, 3, "Creating bounded per-occurrence cohesion plan"))
-        val plan = when (request.planner) {
-            CohesionPlannerKind.DETERMINISTIC -> DeterministicMelodyCohesionPlanner().plan(input)
-            CohesionPlannerKind.QWEN -> qwenPlanner(input)
-        }
-        MelodyCohesionStore.writeDraft(root, input, plan)
-        return@mutate if (request.planner == CohesionPlannerKind.DETERMINISTIC) {
-            progress.report(OperationProgress("cohesion", 3, 3, "Publishing safe deterministic cohesion"))
-            MelodyCohesionStore.approve(root, input, sources)
-            snapshot(root, input, plan, CohesionPlannerKind.DETERMINISTIC, approved = true, stale = false)
-        } else {
-            progress.report(OperationProgress("cohesion", 3, 3, "Cohesion draft is ready for review"))
-            snapshot(root, input, plan, CohesionPlannerKind.QWEN, approved = false, stale = false)
-        }
+        progress.report(OperationProgress("cohesion", 1, 3, "Validating current boundary evidence"))
+        val input = currentInput(root)
+        progress.report(OperationProgress("cohesion", 2, 3, "Requesting bounded local AI bridge plan"))
+        val plan = qwenPlanner(input)
+        progress.report(OperationProgress("cohesion", 3, 3, "Publishing validated deterministic bridge MIDI"))
+        TransitionCohesionStore.writeDraft(root, input, plan)
+        snapshot(root, input, plan, false)
     }
 
     override fun load(root: Path): CohesionSnapshot = locked(root) { normalized ->
-        val (input, _) = currentInput(normalized)
-        val workflow = ProjectStore.read(normalized).workflow.cohesion
-        val approved = workflow?.approved == true && workflow.inputSha256 == input.inputHash
-        val artifact = if (approved) normalized.resolve(MelodyCohesionStore.APPROVED_FILE) else normalized.resolve(MelodyCohesionStore.DRAFT_FILE)
-        require(Files.isRegularFile(artifact)) { "No cohesion plan found. Generate cohesion first." }
-        val plan = if (approved) MelodyCohesionStore.readApproved(normalized, input) else MelodyCohesionStore.readDraft(normalized, input)
-        snapshot(normalized, input, plan, if (plan.model == CohesionModelIdentity.DETERMINISTIC) CohesionPlannerKind.DETERMINISTIC else CohesionPlannerKind.QWEN, approved, stale = false)
+        val input = currentInput(normalized)
+        val approved = TransitionCohesionStore.isApprovedCurrent(normalized, input)
+        val plan = if (approved) TransitionCohesionStore.readDraft(normalized, input) else TransitionCohesionStore.readDraft(normalized, input)
+        snapshot(normalized, input, plan, approved)
+    }
+
+    override fun reviewBoundary(root: Path, outgoingInstanceId: String, incomingInstanceId: String): CohesionSnapshot = locked(root) { normalized ->
+        val input = currentInput(normalized); val plan = TransitionCohesionStore.readDraft(normalized, input)
+        TransitionCohesionStore.markReviewed(normalized, input, outgoingInstanceId, incomingInstanceId)
+        snapshot(normalized, input, plan, false)
     }
 
     override fun approve(root: Path): CohesionSnapshot = locked(root) { normalized ->
-        val (input, sources) = currentInput(normalized)
-        val plan = MelodyCohesionStore.readDraft(normalized, input)
-        MelodyCohesionStore.approve(normalized, input, sources)
-        snapshot(normalized, input, plan, if (plan.model == CohesionModelIdentity.DETERMINISTIC) CohesionPlannerKind.DETERMINISTIC else CohesionPlannerKind.QWEN, approved = true, stale = false)
+        val input = currentInput(normalized); val plan = TransitionCohesionStore.readDraft(normalized, input)
+        TransitionCohesionStore.approve(normalized, input)
+        snapshot(normalized, input, plan, true)
     }
 
     override fun reject(root: Path): CohesionSnapshot = locked(root) { normalized ->
-        val (input, _) = currentInput(normalized)
-        val plan = MelodyCohesionStore.readDraft(normalized, input)
-        val artifact = MelodyCohesionStore.reject(normalized, input)
-        snapshot(normalized, input, plan, if (plan.model == CohesionModelIdentity.DETERMINISTIC) CohesionPlannerKind.DETERMINISTIC else CohesionPlannerKind.QWEN, approved = false, stale = false).copy(artifact = artifact)
+        val input = currentInput(normalized); val plan = TransitionCohesionStore.readDraft(normalized, input)
+        val artifact = TransitionCohesionStore.reject(normalized, input)
+        snapshot(normalized, input, plan, false).copy(artifact = artifact)
     }
 
-    private fun currentInput(root: Path): Pair<MelodyCohesionInput, Map<String, List<app.melotrail.arrangement.MidiNote>>> {
+    private fun currentInput(root: Path): TransitionCohesionInput {
         val project = ProjectStore.read(root).also { it.requireValid(root) }
         require(project.version == Project.CURRENT_VERSION) { "Cohesion requires a MIDI-first v3 project." }
+        require(project.structure.isNotEmpty()) { "Save a non-empty structure before generating cohesion." }
         val structure = project.structure.mapIndexed { index, partId -> SectionInstance(index, partId) }
-        require(structure.isNotEmpty()) { "Save a non-empty structure before generating cohesion." }
         val analyses = structure.map(SectionInstance::partId).distinct().associateWith { partId -> analysis(root, project, partId) }
-        val planning = SongPlanningInput(project.name, project.version, analyses, structure, app.melotrail.arrangement.LogicalInstrument.entries.map { it.wireName })
+        val planning = SongPlanningInput(project.name, project.version, analyses, structure, LogicalInstrument.entries.map { it.wireName })
         planning.requireValid()
-        return MelodyCohesionInputFactory.build(root, project, planning, requireCurrentAnalyses = true)
+        val legacyInput = MelodyCohesionInputFactory.build(root, project, planning, requireCurrentAnalyses = true).first
+        return TransitionCohesionInputFactory.from(legacyInput)
     }
-
     private fun analysis(root: Path, project: Project, partId: String): MidiAnalysis {
         val part = project.parts.firstOrNull { it.id == partId } ?: error("Structure references unknown part '$partId'.")
-        val reference = requireNotNull(part.analysis) { "Missing MIDI analysis for part '$partId'. Run part analyze first." }
-        require(reference.kind?.name == "MIDI") { "MIDI analysis is required for part '$partId'. Run part analyze first." }
-        return kotlinx.serialization.json.Json { ignoreUnknownKeys = false }.decodeFromString(MidiAnalysis.serializer(), Files.readString(root.resolve(reference.file)))
+        val ref = requireNotNull(part.analysis) { "Missing MIDI analysis for part '$partId'. Run part analyze first." }
+        require(ref.kind?.name == "MIDI") { "MIDI analysis is required for part '$partId'. Run part analyze first." }
+        return Json { ignoreUnknownKeys = false }.decodeFromString(MidiAnalysis.serializer(), Files.readString(root.resolve(ref.file)))
     }
-
-    private fun snapshot(root: Path, input: MelodyCohesionInput, plan: MelodyCohesionPlan, planner: CohesionPlannerKind, approved: Boolean, stale: Boolean): CohesionSnapshot =
-        CohesionSnapshot(root, planner, input.inputHash, input.structureSha256, plan.occurrences.map { occurrence ->
-            CohesionOccurrenceSnapshot(occurrence.instanceId, occurrence.partId, occurrence.sourceHash, Files.isRegularFile(MelodyCohesionStore.derivedMidi(root, occurrence.instanceId)), approved, occurrence.rationale)
-        }, input.boundaries.map { boundary ->
-            CohesionBoundarySnapshot(boundary.outgoingInstanceId, boundary.incomingInstanceId)
-        }, approvalRequired = !approved, approved = approved, stale = stale, artifact = root.resolve(if (approved) MelodyCohesionStore.APPROVED_FILE else MelodyCohesionStore.DRAFT_FILE))
-
-    private suspend fun <T> mutate(root: Path, block: suspend (Path) -> T): T {
-        val normalized = root.toAbsolutePath().normalize(); val lock = locks.computeIfAbsent(normalized) { Mutex() }
-        check(lock.tryLock()) { "Another cohesion operation is already running: $normalized" }
-        return try { withContext(Dispatchers.IO) { block(normalized) } } finally { lock.unlock() }
+    private fun snapshot(root: Path, input: TransitionCohesionInput, plan: TransitionCohesionPlan, approved: Boolean): CohesionSnapshot {
+        val reviewed = ProjectStore.read(root).workflow.cohesion?.boundaries.orEmpty().filter { it.approved != null }.map { it.outgoingInstanceId to it.incomingInstanceId }.toSet()
+        return CohesionSnapshot(root, CohesionPlannerKind.QWEN, input.inputHash, input.structureSha256,
+            plan.boundaries.map { bridge -> CohesionBoundarySnapshot(bridge.outgoingInstanceId, bridge.incomingInstanceId, root.resolve(TransitionCohesionStore.bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId)), bridge.rationale, bridge.outgoingInstanceId to bridge.incomingInstanceId in reviewed) },
+            approvalRequired = !approved, approved = approved, stale = false, artifact = root.resolve(if (approved) TransitionCohesionStore.APPROVED_FILE else TransitionCohesionStore.DRAFT_FILE))
     }
-    private fun <T> locked(root: Path, block: (Path) -> T): T {
-        val normalized = root.toAbsolutePath().normalize(); val lock = locks.computeIfAbsent(normalized) { Mutex() }
-        check(lock.tryLock()) { "Another cohesion operation is already running: $normalized" }
-        return try { block(normalized) } finally { lock.unlock() }
-    }
+    private suspend fun <T> mutate(root: Path, block: suspend (Path) -> T): T { val normalized = root.toAbsolutePath().normalize(); val lock = locks.computeIfAbsent(normalized) { Mutex() }; check(lock.tryLock()) { "Another cohesion operation is already running: $normalized" }; return try { withContext(Dispatchers.IO) { block(normalized) } } finally { lock.unlock() } }
+    private fun <T> locked(root: Path, block: (Path) -> T): T { val normalized = root.toAbsolutePath().normalize(); val lock = locks.computeIfAbsent(normalized) { Mutex() }; check(lock.tryLock()) { "Another cohesion operation is already running: $normalized" }; return try { block(normalized) } finally { lock.unlock() } }
     private companion object { val locks = ConcurrentHashMap<Path, Mutex>() }
 }

@@ -28,7 +28,7 @@ class ArrangementApplicationServiceTest {
     @Test
     fun `deterministic generation writes an approved inspectable arrangement snapshot`() = runBlocking {
         val root = project("approved")
-        DefaultCohesionApplicationService().generate(GenerateCohesionRequest(root))
+        generateApprovedCohesion(root)
         val result = DefaultArrangementApplicationService(libraryRoot = Path.of("sounds")).generate(GenerateArrangementRequest(root, instruments = listOf("piano", "bass")))
 
         assertTrue(Files.isRegularFile(root.resolve("song_plan.json")))
@@ -43,7 +43,7 @@ class ArrangementApplicationServiceTest {
     @Test
     fun `Qwen mode always creates a draft that requires explicit approval`() = runBlocking {
         val root = project("draft")
-        DefaultCohesionApplicationService().generate(GenerateCohesionRequest(root))
+        generateApprovedCohesion(root)
         val service = DefaultArrangementApplicationService(
             deterministicGlobalPlanner = app.melotrail.arrangement.DeterministicGlobalSongPlanner(),
             qwenGlobalPlanner = app.melotrail.arrangement.DeterministicGlobalSongPlanner(),

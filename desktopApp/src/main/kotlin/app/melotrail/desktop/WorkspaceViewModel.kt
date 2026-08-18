@@ -297,7 +297,7 @@ enum class ArrangeTab(val label: String) {
     PLANNER("Planner")
 }
 
-data class CohesionDraft(val planner: CohesionPlannerKind = CohesionPlannerKind.DETERMINISTIC)
+data class CohesionDraft(val planner: CohesionPlannerKind = CohesionPlannerKind.QWEN)
 
 sealed interface WorkspaceOperation {
     data object Idle : WorkspaceOperation
