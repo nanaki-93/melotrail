@@ -4,7 +4,6 @@ import app.melotrail.model.DSPSettings
 import kotlinx.serialization.Serializable
 
 sealed class WorkerCommand {
-    abstract val commandName: String
 }
 
 @Serializable
@@ -21,7 +20,6 @@ data class AnalyzeCommand(
     val path: String,
     val options: AnalyzeOptions = AnalyzeOptions()
 ) : WorkerCommand() {
-    override val commandName: String = "analyze"
 }
 
 data class ApplyDSPCommand(
@@ -29,7 +27,6 @@ data class ApplyDSPCommand(
     val settings: DSPSettings,
     val outputFormat: String? = null
 ) : WorkerCommand() {
-    override val commandName: String = "apply_dsp"
 }
 
 data class RepairCommand(
@@ -37,7 +34,6 @@ data class RepairCommand(
     val repairs: List<RepairSpec>,
     val outputPath: String? = null
 ) : WorkerCommand() {
-    override val commandName: String = "repair"
 }
 
 data class RepairSpec(
@@ -50,18 +46,12 @@ data class MasterCommand(
     val settings: Map<String, Any>,
     val outputPath: String? = null
 ) : WorkerCommand() {
-    override val commandName: String = "master"
-}
-
-object HealthCheck : WorkerCommand() {
-    override val commandName: String = "health"
 }
 
 data class MP3ConvertCommand(
     val path: String,
     val outputPath: String
 ) : WorkerCommand() {
-    override val commandName: String = "mp3_convert"
 }
 
 data class MP3ExportCommand(
@@ -69,7 +59,6 @@ data class MP3ExportCommand(
     val outputPath: String,
     val bitrateKbps: Int = 320
 ) : WorkerCommand() {
-    override val commandName: String = "mp3_export"
 }
 
 data class TranscribeCommand(
@@ -77,7 +66,6 @@ data class TranscribeCommand(
     val outputPath: String,
     val instrument: String
 ) : WorkerCommand() {
-    override val commandName: String = "transcribe"
 }
 
 data class MidiCleanCommand(
@@ -92,14 +80,12 @@ data class MidiCleanCommand(
     val normalizeVelocity: Boolean = false,
     val cleanSustain: Boolean = false
 ) : WorkerCommand() {
-    override val commandName: String = "midi-clean"
 }
 
 /** Read-only validation and measurement of one already project-confined input. */
 data class InputInspectionCommand(
     val path: String
 ) : WorkerCommand() {
-    override val commandName: String = "inspect-input"
 }
 
 /** Strict schema shared with the worker's conservative `/cleanup` endpoint. */
@@ -134,5 +120,4 @@ data class AudioCleanupCommand(
     val outputPath: String,
     val operations: List<AudioCleanupOperation>
 ) : WorkerCommand() {
-    override val commandName: String = "cleanup"
 }

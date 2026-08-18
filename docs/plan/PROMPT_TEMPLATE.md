@@ -16,7 +16,7 @@ requirements, tests, acceptance criteria, and exclusions are binding.
 Before coding:
 1. Read README.md completely.
 2. Find the selected contract with:
-   rg --files plan/tasks plan/future-tasks 2>/dev/null | sort | rg '/XXX-'
+   rg --files docs/plan/tasks docs/plan/future-tasks 2>/dev/null | sort | rg '/XXX-'
    Read the one matching file completely. If zero or multiple files match, stop
    and report the ambiguity. Do not implement a future contract unless the user
    has explicitly promoted it.

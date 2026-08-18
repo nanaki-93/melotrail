@@ -509,7 +509,10 @@ Python exposes one endpoint per operation:
 | POST | `/inspect-input` | Validate and measure one MIDI/WAV/MP3 input without changing it |
 | POST | `/cleanup` | Apply explicitly selected conservative WAV cleanup operations |
 
-The Kotlin worker client maps each `WorkerCommand` directly to its endpoint.
+The `app.melotrail.worker` boundary owns the Kotlin command schemas, direct
+endpoint/payload mapping, typed response/error mapping, health/readiness, and
+in-memory local job lifecycle. Spring only adapts its optional HTTP/SSE API to
+that boundary; Kotlin never starts or manages the Python process.
 There is no generic `/api/worker/command` request envelope between Kotlin and
 Python anymore.
 

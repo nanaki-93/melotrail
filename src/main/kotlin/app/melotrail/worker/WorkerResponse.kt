@@ -5,20 +5,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 
 @Serializable
-data class WorkerRequest(
-    @SerialName("version")
-    val version: Int = 1,
-    @SerialName("command")
-    val command: String,
-    @SerialName("jobId")
-    val jobId: String,
-    @SerialName("input")
-    val input: Map<String, JsonElement> = emptyMap(),
-    @SerialName("params")
-    val params: Map<String, JsonElement> = emptyMap()
-)
-
-@Serializable
 data class WorkerResponse(
     @SerialName("version")
     val version: Int = 1,

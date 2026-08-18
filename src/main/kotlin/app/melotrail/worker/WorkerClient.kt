@@ -4,10 +4,16 @@ import app.melotrail.errors.ErrorReporter
 import app.melotrail.logging.Logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.*
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.net.HttpURLConnection
 import java.net.URI
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
@@ -18,228 +24,117 @@ data class WorkerRuntimeStatus(
     val mp3ExportAvailable: Boolean = false
 )
 
+interface WorkerGateway {
+    val unavailableMessage: String get() = "Python worker is not running"
+    suspend fun execute(command: WorkerCommand): WorkerResponse
+    suspend fun healthCheck(): Boolean
+}
+
+data class WorkerHttpResponse(val code: Int, val body: String)
+
+interface WorkerHttpTransport {
+    fun request(method: String, path: String, body: String?, timeout: Duration): WorkerHttpResponse
+}
+
 /**
  * Small HTTP client for the standalone Python worker.
  *
  * There is no process management here: the Python worker is started separately
- * (for example with `make worker`). Each WorkerCommand maps directly to one
- * Python endpoint.
+ * (for example with `make worker`). Blocking HTTP is always dispatched to IO.
  */
 class WorkerClient(
     private val baseUrl: String = "http://127.0.0.1:8081",
     private val timeout: Duration = 10.minutes,
     private val logger: Logger,
-    private val errorReporter: ErrorReporter
-) : AutoCloseable {
+    private val errorReporter: ErrorReporter,
+    private val transport: WorkerHttpTransport = UrlConnectionWorkerTransport(baseUrl)
+) : WorkerGateway, AutoCloseable {
 
     private val json = Json { ignoreUnknownKeys = true }
-    private var lastJobId = 0L
+    private val nextJobId = AtomicLong()
 
-    suspend fun execute(command: WorkerCommand): WorkerResponse = withContext(Dispatchers.IO) {
-        val jobId = generateJobId()
+    override val unavailableMessage: String = "Python worker is not running at $baseUrl"
 
+    override suspend fun execute(command: WorkerCommand): WorkerResponse = withContext(Dispatchers.IO) {
+        val jobId = "job-${nextJobId.incrementAndGet()}"
         try {
-            val endpoint = endpointFor(command)
-            val body = buildRequest(command, jobId)
-            val response = post(endpoint, body)
-
-            if (response.code !in 200..299) {
-                return@withContext WorkerResponse(
-                    jobId = jobId,
-                    status = WorkerStatus.ERROR,
-                    error = errorFrom(response.body)
-                        ?: WorkerError("HttpError", "Worker request failed with HTTP ${response.code}")
-                )
-            }
-
-            json.decodeFromString<WorkerResponse>(response.body)
-        } catch (e: Exception) {
-            logger.error("WorkerClient", "Worker request failed: ${e.message}")
+            val response = transport.request(
+                method = "POST",
+                path = WorkerProtocol.endpointFor(command),
+                body = json.encodeToString(WorkerProtocol.requestFor(command, jobId)),
+                timeout = timeout
+            )
+            WorkerResponseMapper.fromHttp(jobId, response)
+        } catch (exception: Exception) {
+            logger.error("WorkerClient", "Worker request failed: ${exception.message}")
             WorkerResponse(
                 jobId = jobId,
                 status = WorkerStatus.ERROR,
-                error = WorkerError("WorkerError", e.message ?: "Unknown error")
+                error = WorkerError("WorkerError", exception.message ?: "Unknown error")
             )
         }
     }
 
-    suspend fun healthCheck(): Boolean = withContext(Dispatchers.IO) {
-        try {
-            val response = request("GET", "/health", null)
-            if (response.code !in 200..299) return@withContext false
-            json.parseToJsonElement(response.body)
+    override suspend fun healthCheck(): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            val response = transport.request("GET", "/health", null, timeout)
+            response.code in 200..299 && json.parseToJsonElement(response.body)
                 .jsonObject["status"]?.jsonPrimitive?.content == "ok"
-        } catch (_: Exception) {
-            false
-        }
+        }.getOrDefault(false)
     }
 
     /** Bounded health metadata for local readiness UI; it contains no paths or source content. */
     suspend fun runtimeStatus(): WorkerRuntimeStatus = withContext(Dispatchers.IO) {
-        try {
-            val response = request("GET", "/health", null)
-            if (response.code !in 200..299) return@withContext WorkerRuntimeStatus(false, false)
+        runCatching {
+            val response = transport.request("GET", "/health", null, timeout)
+            if (response.code !in 200..299) return@runCatching WorkerRuntimeStatus(false, false)
             val body = json.parseToJsonElement(response.body).jsonObject
-            val reachable = body["status"]?.jsonPrimitive?.content == "ok"
-            val transcription = body["transcriptionRuntime"]?.jsonPrimitive?.booleanOrNull == true
             WorkerRuntimeStatus(
-                reachable, transcription, body["version"]?.jsonPrimitive?.contentOrNull,
-                body["mp3ExportRuntime"]?.jsonPrimitive?.booleanOrNull == true
+                reachable = body["status"]?.jsonPrimitive?.content == "ok",
+                transcriptionAvailable = body["transcriptionRuntime"]?.jsonPrimitive?.booleanOrNull == true,
+                version = body["version"]?.jsonPrimitive?.contentOrNull,
+                mp3ExportAvailable = body["mp3ExportRuntime"]?.jsonPrimitive?.booleanOrNull == true
             )
-        } catch (_: Exception) {
-            WorkerRuntimeStatus(false, false)
-        }
+        }.getOrDefault(WorkerRuntimeStatus(false, false))
     }
-
-    /**
-     * Kept as a compatibility helper. Starting/stopping is intentionally
-     * outside the Kotlin process now.
-     */
-    suspend fun start(): Result<Unit> =
-        if (healthCheck()) Result.success(Unit)
-        else Result.failure(IllegalStateException("Python worker is not running at $baseUrl"))
-
-    suspend fun stop(): Result<Unit> = Result.success(Unit)
-
-    fun isRunning(): Boolean = false
 
     override fun close() = Unit
+}
 
-    internal fun endpointFor(command: WorkerCommand): String = when (command) {
-        is AnalyzeCommand -> "/analyze"
-        is ApplyDSPCommand -> "/apply_dsp"
-        is RepairCommand -> "/repair"
-        is MasterCommand -> "/master"
-        is MP3ConvertCommand -> "/mp3_convert"
-        is MP3ExportCommand -> "/mp3_export"
-        is TranscribeCommand -> "/transcribe"
-        is MidiCleanCommand -> "/midi-clean"
-        is InputInspectionCommand -> "/inspect-input"
-        is AudioCleanupCommand -> "/cleanup"
-        is HealthCheck -> "/health"
-    }
+internal object WorkerResponseMapper {
+    private val json = Json { ignoreUnknownKeys = true }
 
-    internal fun buildRequest(command: WorkerCommand, jobId: String): JsonObject =
-        buildJsonObject {
-            put("jobId", jobId)
-            when (command) {
-                is AnalyzeCommand -> {
-                    put("path", command.path)
-                    put("options", buildJsonObject {
-                        put("detectBPM", command.options.detectBPM)
-                        put("detectKey", command.options.detectKey)
-                        put("detectLoudness", command.options.detectLoudness)
-                        put("detectOnsets", command.options.detectOnsets)
-                        put("detectBeats", command.options.detectBeats)
-                        put("detectSections", command.options.detectSections)
-                    })
+    fun fromHttp(jobId: String, response: WorkerHttpResponse): WorkerResponse {
+        if (response.code in 200..299) {
+            return runCatching { json.decodeFromString<WorkerResponse>(response.body) }
+                .getOrElse { exception ->
+                    WorkerResponse(
+                        jobId = jobId,
+                        status = WorkerStatus.ERROR,
+                        error = WorkerError("ResponseMappingError", exception.message ?: "Invalid worker response")
+                    )
                 }
-                is ApplyDSPCommand -> {
-                    put("path", command.path)
-                    put("settings", json.encodeToJsonElement(command.settings))
-                    command.outputFormat?.let { put("outputFormat", it) }
-                }
-                is RepairCommand -> {
-                    put("path", command.path)
-                    command.outputPath?.let { put("outputPath", it) }
-                    put("repairs", buildJsonArray {
-                        command.repairs.forEach { repair ->
-                            add(buildJsonObject {
-                                put("type", repair.type)
-                                put("params", repair.params.toJson())
-                            })
-                        }
-                    })
-                }
-                is MasterCommand -> {
-                    put("path", command.path)
-                    command.outputPath?.let { put("outputPath", it) }
-                    put("settings", command.settings.toJson())
-                }
-                is MP3ConvertCommand -> {
-                    put("path", command.path)
-                    put("outputPath", command.outputPath)
-                }
-                is MP3ExportCommand -> {
-                    put("path", command.path)
-                    put("outputPath", command.outputPath)
-                    put("bitrateKbps", command.bitrateKbps)
-                }
-                is TranscribeCommand -> {
-                    put("path", command.path)
-                    put("outputPath", command.outputPath)
-                    put("instrument", command.instrument)
-                }
-                is MidiCleanCommand -> {
-                    put("path", command.path)
-                    put("outputPath", command.outputPath)
-                    put("version", command.version)
-                    put("profile", command.profile)
-                    command.quantize?.let { put("quantize", it) }
-                    put("strength", command.strength)
-                    put("minNoteMs", command.minNoteMs)
-                    put("minVelocity", command.minVelocity)
-                    put("normalizeVelocity", command.normalizeVelocity)
-                    put("cleanSustain", command.cleanSustain)
-                }
-                is InputInspectionCommand -> put("path", command.path)
-                is AudioCleanupCommand -> {
-                    put("path", command.path)
-                    put("outputPath", command.outputPath)
-                    put("operations", buildJsonArray {
-                        command.operations.forEach { operation ->
-                            add(buildJsonObject {
-                                put("type", operation.wireType)
-                                when (operation) {
-                                    AudioCleanupOperation.DcRemoval -> Unit
-                                    is AudioCleanupOperation.ClipRepair -> put("params", buildJsonObject { put("threshold", operation.threshold) })
-                                    is AudioCleanupOperation.Declick -> put("params", buildJsonObject { put("threshold", operation.threshold) })
-                                    is AudioCleanupOperation.HumRemoval -> put("params", buildJsonObject { put("frequencyHz", operation.frequencyHz) })
-                                    is AudioCleanupOperation.NoiseReduction -> put("params", buildJsonObject { put("strength", operation.strength) })
-                                }
-                            })
-                        }
-                    })
-                }
-                is HealthCheck -> Unit
-            }
         }
 
-    private fun Map<String, Any>.toJson(): JsonObject = buildJsonObject {
-        forEach { (key, value) ->
-            put(key, value.toJsonElement())
-        }
+        val error = runCatching {
+            val objectBody = json.parseToJsonElement(response.body).jsonObject
+            val errorBody = objectBody["error"]?.jsonObject ?: return@runCatching null
+            val type = errorBody["type"]?.jsonPrimitive?.contentOrNull ?: return@runCatching null
+            val message = errorBody["message"]?.jsonPrimitive?.contentOrNull ?: return@runCatching null
+            WorkerError(type, message)
+        }.getOrNull()
+
+        return WorkerResponse(
+            jobId = jobId,
+            status = WorkerStatus.ERROR,
+            error = error ?: WorkerError("HttpError", "Worker request failed with HTTP ${response.code}")
+        )
     }
+}
 
-    private fun Any?.toJsonElement(): JsonElement = when (this) {
-        null -> JsonNull
-        is Boolean -> JsonPrimitive(this)
-        is Number -> JsonPrimitive(this.toString())
-        is String -> JsonPrimitive(this)
-        is Map<*, *> -> buildJsonObject {
-            this@toJsonElement.forEach { (key, value) ->
-                if (key != null) put(key.toString(), value.toJsonElement())
-            }
-        }
-        is Iterable<*> -> buildJsonArray { forEach { add(it.toJsonElement()) } }
-        else -> JsonPrimitive(toString())
-    }
-
-    private data class HttpResponse(val code: Int, val body: String)
-
-    private fun post(path: String, body: JsonObject): HttpResponse =
-        request("POST", path, json.encodeToString(body))
-
-    private fun errorFrom(body: String): WorkerError? = runCatching {
-        val error = json.parseToJsonElement(body).jsonObject["error"]?.jsonObject ?: return null
-        val type = error["type"]?.jsonPrimitive?.contentOrNull ?: return null
-        val message = error["message"]?.jsonPrimitive?.contentOrNull ?: return null
-        WorkerError(type, message)
-    }.getOrNull()
-
-    private fun request(method: String, path: String, body: String?): HttpResponse {
-        val url = URI.create(baseUrl.trimEnd('/') + path).toURL()
-        val connection = url.openConnection() as HttpURLConnection
+private class UrlConnectionWorkerTransport(private val baseUrl: String) : WorkerHttpTransport {
+    override fun request(method: String, path: String, body: String?, timeout: Duration): WorkerHttpResponse {
+        val connection = URI.create(baseUrl.trimEnd('/') + path).toURL().openConnection() as HttpURLConnection
         connection.requestMethod = method
         connection.connectTimeout = timeout.inWholeMilliseconds.toInt()
         connection.readTimeout = timeout.inWholeMilliseconds.toInt()
@@ -255,9 +150,6 @@ class WorkerClient(
         val stream = if (code >= 400) connection.errorStream else connection.inputStream
         val responseBody = stream?.bufferedReader()?.use { it.readText() } ?: ""
         connection.disconnect()
-        return HttpResponse(code, responseBody)
+        return WorkerHttpResponse(code, responseBody)
     }
-
-    private fun generateJobId(): String =
-        "job-${System.currentTimeMillis()}-${lastJobId++}"
 }

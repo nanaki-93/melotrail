@@ -1,7 +1,7 @@
 package app.melotrail.server.dto
 
 import app.melotrail.model.DSPSettings
-import app.melotrail.queue.Job
+import app.melotrail.worker.WorkerJob
 
 data class WorkerCommandRequest(
     val type: String = "",
@@ -41,7 +41,7 @@ data class JobDTO(
     val completedAt: String? = null
 ) {
     companion object {
-        fun fromJob(job: Job) = JobDTO(
+        fun fromJob(job: WorkerJob) = JobDTO(
             id = job.id,
             type = job.type.name.lowercase(),
             status = job.status.name.lowercase(),

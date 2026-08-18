@@ -1,7 +1,5 @@
 package app.melotrail.worker
 
-import app.melotrail.errors.ErrorReporter
-import app.melotrail.logging.DefaultLogger
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -12,17 +10,15 @@ import org.junit.jupiter.api.Test
 class AudioCleanupCommandTest {
     @Test
     fun `cleanup command has a strict typed endpoint mapping`() {
-        val logger = DefaultLogger()
-        val client = WorkerClient(logger = logger, errorReporter = ErrorReporter(logger))
         val command = AudioCleanupCommand(
             path = "/project/source/intro.wav",
             outputPath = "/project/prepared/intro/clean.wav",
             operations = listOf(AudioCleanupOperation.DcRemoval, AudioCleanupOperation.HumRemoval(50), AudioCleanupOperation.NoiseReduction(0.35))
         )
 
-        val request = client.buildRequest(command, "job-cleanup")
+        val request = WorkerProtocol.requestFor(command, "job-cleanup")
 
-        assertEquals("/cleanup", client.endpointFor(command))
+        assertEquals("/cleanup", WorkerProtocol.endpointFor(command))
         assertEquals("job-cleanup", request["jobId"]?.jsonPrimitive?.content)
         assertEquals("/project/source/intro.wav", request["path"]?.jsonPrimitive?.content)
         assertEquals("/project/prepared/intro/clean.wav", request["outputPath"]?.jsonPrimitive?.content)

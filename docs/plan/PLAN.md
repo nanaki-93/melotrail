@@ -50,7 +50,7 @@ is needed.
 | Order | Task | Primary deliverable | Depends on |
 | ---: | --- | --- | --- |
 | 1 | [101 — Code hygiene audit and safe cleanup](tasks/completed/101-code-hygiene-audit-and-cleanup.md) | Verified removal/refactor of obsolete code | — |
-| 2 | [102 — Kotlin Python-worker package consolidation](tasks/102-kotlin-python-worker-package-consolidation.md) | One `worker` ownership boundary | 101 |
+| 2 | [102 — Kotlin Python-worker package consolidation](tasks/completed/102-kotlin-python-worker-package-consolidation.md) | One `worker` ownership boundary | 101 |
 | 3 | [103 — Track-process workflow documentation](tasks/103-track-process-workflow-documentation.md) | User-facing track workflow | 102 |
 | 4 | [104 — MIDI import-process documentation](tasks/104-midi-import-process-documentation.md) | Accurate direct-MIDI and audio-to-MIDI guide | 102 |
 | 5 | [105 — Function documentation coverage](tasks/105-function-documentation-coverage.md) | Documented Kotlin/Python callable code | 102 |

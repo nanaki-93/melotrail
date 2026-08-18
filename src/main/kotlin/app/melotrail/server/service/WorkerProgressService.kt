@@ -1,6 +1,8 @@
 package app.melotrail.server.service
 
-import app.melotrail.queue.JobStatus
+import app.melotrail.worker.WorkerJobProgress
+import app.melotrail.worker.WorkerJobService
+import app.melotrail.worker.WorkerJobStatus
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
@@ -8,7 +10,8 @@ import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 
 @Service
-class WorkerProgressService(private val processingQueue: ProcessingQueueSimple) {
+/** Spring SSE adapter over worker-owned job progress. */
+class WorkerProgressService(private val workerJobs: WorkerJobService) {
     private val emitters = ConcurrentHashMap<String, MutableSet<SseEmitter>>()
 
     fun subscribe(jobId: String, emitter: SseEmitter) {
@@ -22,7 +25,7 @@ class WorkerProgressService(private val processingQueue: ProcessingQueueSimple) 
     @Scheduled(fixedDelay = 500)
     fun poll() {
         emitters.keys.toList().forEach { jobId ->
-            val job = processingQueue.getJob(jobId) ?: run { cleanup(jobId); return@forEach }
+            val job = workerJobs.progress(jobId) ?: run { cleanup(jobId); return@forEach }
             val dead = mutableListOf<SseEmitter>()
             emitters[jobId]?.forEach { emitter ->
                 try {
@@ -32,24 +35,24 @@ class WorkerProgressService(private val processingQueue: ProcessingQueueSimple) 
                 }
             }
             dead.forEach { remove(jobId, it) }
-            if (job.status in setOf(JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED)) {
+            if (job.status in setOf(WorkerJobStatus.COMPLETED, WorkerJobStatus.FAILED, WorkerJobStatus.CANCELLED)) {
                 cleanup(jobId)
             }
         }
     }
 
     private fun send(jobId: String, emitter: SseEmitter) {
-        processingQueue.getJob(jobId)?.let {
+        workerJobs.progress(jobId)?.let {
             try { emitter.send(SseEmitter.event().name("progress").data(progress(it))) }
             catch (_: IOException) { remove(jobId, emitter) }
         }
     }
 
-    private fun progress(job: app.melotrail.queue.Job) = mapOf(
-        "jobId" to job.id,
+    private fun progress(job: WorkerJobProgress) = mapOf(
+        "jobId" to job.jobId,
         "status" to job.status.name.lowercase(),
         "progress" to job.progress.toFloat(),
-        "message" to job.error
+        "message" to job.message
     )
 
     private fun remove(jobId: String, emitter: SseEmitter) {
