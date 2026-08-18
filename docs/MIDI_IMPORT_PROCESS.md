@@ -87,6 +87,11 @@ do not copy an old artifact forward.
 
 ## Errors and recovery
 
+The **Import** page keeps its one current source/repair/analysis action visible.
+Use the selected part's labelled details or preparation disclosure for optional
+inspection, cleanup choice, transcription input, and evidence; those controls
+do not bypass the next required workflow stage.
+
 - **Unsupported or corrupt input:** choose one of the supported extensions,
   verify its real container, and re-import it. For MIDI, use a Standard MIDI
   file with playable events; for audio, use the narrow solo-piano route.

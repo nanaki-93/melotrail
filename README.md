@@ -50,6 +50,13 @@ validated artifacts; it does not add a workflow-status navigation row. Project
 open/import/build results are shown in a dismissible workspace banner so
 failures and recovery actions are never hidden in a panel.
 
+Each workspace page keeps one current workflow action and its blocked-state
+recovery visible. Labelled **More options** disclosures contain alternate
+workflow pages, planner/instrument choices, listening/build settings, release
+filename/format choices, library filters, timeline evidence, and runtime/build
+details. These disclosures do not change project data or hide inspectable
+evidence.
+
 The worker is required for audio import, repair, mastering, and optional MP3
 export. Start it with `make worker`. Rendering and MIDI preview additionally
 require a configured local SFZ renderer (`SFZ_RENDERER_PATH` or `sfizz_render`

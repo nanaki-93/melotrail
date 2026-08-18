@@ -52,6 +52,9 @@ check succeeds locally.
 
 The desktop **Settings** destination contains only the validated sound-library
 preference, local runtime readiness, and local build/platform information.
+The sound-library chooser and its validation error remain visible; use the
+labelled **Runtime details** and **Build information** disclosures for the
+infrequent readiness rows and local build metadata.
 Telemetry, cloud sync, update checks, themes, audio-device selection, autosave,
 backups, model downloads, and broad preference resets are intentionally absent.
 
@@ -103,6 +106,11 @@ downstream artifacts stale; regenerate rather than copying old outputs.
 optional final conversion. If a failure occurs, keep the source and inspect the
 project-local reports/artifacts plus the bounded diagnostic logs under
 `~/.melotrail/logs/`.
+
+On **Export**, the disabled or enabled **Export Song** action and its recovery
+route are always visible. Open **Release options** only to change the permitted
+format, filename, or project `output/` destination; it cannot make a stale or
+missing master exportable.
 
 ## Workflow migration and stale artifacts
 

@@ -128,6 +128,7 @@ class WorkspaceScreenTest {
         )
         setContent { MelotrailTheme { WorkspaceScreen(state, intents::add) } }
 
+        onNodeWithTag(WorkspacePageTags.LIBRARY_OPTIONS_TOGGLE).performClick()
         listOf(
             WorkspacePageTags.LIBRARY_TYPE_TAB,
             WorkspacePageTags.LIBRARY_SEARCH,
@@ -137,15 +138,12 @@ class WorkspaceScreenTest {
         ).forEach { onNodeWithTag(it).assertExists() }
         onNodeWithTag(WorkspacePageTags.LIBRARY_SEARCH).performTextInput("bass")
         assertEquals(WorkspaceIntent.UpdateLibrarySearch("bass"), intents.last())
+        onNodeWithTag(WorkspacePageTags.LIBRARY_OPTIONS_TOGGLE + "-categories").performClick()
+        waitForIdle()
         onNodeWithTag(WorkspacePageTags.LIBRARY_CATEGORY_PREFIX + "bass").performClick()
         assertEquals(WorkspaceIntent.SelectLibraryCategory("Bass"), intents.last())
-        onNodeWithTag(WorkspacePageTags.LIBRARY_CARD_PREFIX + "bass").performClick()
-        assertEquals(WorkspaceIntent.SelectLibraryInstrument("bass"), intents.last())
-        onNodeWithTag(WorkspacePageTags.LIBRARY_LAYOUT_LIST).performClick()
-        assertEquals(WorkspaceIntent.SelectLibraryLayout(LibraryLayout.LIST), intents.last())
-        intents.clear()
-        onNodeWithTag(WorkspacePageTags.LIBRARY_LAYOUT_LIST).performKeyInput { pressKey(Key.Enter) }
-        assertEquals(WorkspaceIntent.SelectLibraryLayout(LibraryLayout.LIST), intents.single())
+        onNodeWithTag(WorkspacePageTags.LIBRARY_CARD_PREFIX + "bass").assertExists()
+        onNodeWithTag(WorkspacePageTags.LIBRARY_OPTIONS_TOGGLE + "-layout").assertExists()
         listOf("Add Item", "Download", "Favorite", "Insert to Project", "Storage", "Page 1").forEach { text ->
             onAllNodesWithText(text).assertCountEquals(0)
         }
@@ -358,20 +356,14 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `overview quick actions route only through existing workspace destinations`() = runComposeUiTest {
+    fun `overview shows one current workflow action and a secondary workflow disclosure`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(overviewReadyState(), intents::add) } }
 
-        listOf(
-            "import" to WorkspaceSection.IMPORT,
-            "structure" to WorkspaceSection.STRUCTURE,
-            "arrange" to WorkspaceSection.ARRANGE,
-            "mix-master" to WorkspaceSection.MIX_MASTER,
-            "export" to WorkspaceSection.EXPORT
-        ).forEach { (id, destination) ->
-            onNodeWithTag(WorkspacePageTags.OVERVIEW_QUICK_ACTION_PREFIX + id).performScrollTo().performClick()
-            assertEquals(WorkspaceIntent.SelectWorkspaceSection(destination), intents.removeLast())
-        }
+        onNodeWithTag(WorkspacePageTags.OVERVIEW_PRIMARY_ACTION).assertExists()
+        onNodeWithTag(WorkspacePageTags.OVERVIEW_MORE_ACTIONS_TOGGLE).performScrollTo().performClick()
+        waitForIdle()
+        onNodeWithTag(WorkspacePageTags.OVERVIEW_MORE_ACTIONS).assertExists()
     }
 
     @Test
@@ -433,6 +425,7 @@ class WorkspaceScreenTest {
         }
         setContent { MelotrailTheme { WorkspaceScreen(ready, onIntent = {}) } }
         onNodeWithTag(WorkspacePageTags.EXPORT_ACTION).assertIsEnabled()
+        onNodeWithTag(WorkspacePageTags.EXPORT_OPTIONS_TOGGLE).performClick()
         onAllNodesWithTag(WorkspacePageTags.EXPORT_FORMAT_PREFIX + "wav").assertCountEquals(1)
         onAllNodesWithTag(WorkspacePageTags.EXPORT_FORMAT_PREFIX + "mp3").assertCountEquals(0)
         setContent { MelotrailTheme { WorkspaceScreen(blocked, onIntent = {}) } }
@@ -449,7 +442,9 @@ class WorkspaceScreenTest {
     fun `Export page exposes typed destination and a ready export action`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(exportState(), intents::add) } }
-        onNodeWithTag(WorkspacePageTags.EXPORT_BROWSE).performClick()
+        onNodeWithTag(WorkspacePageTags.EXPORT_OPTIONS_TOGGLE).performClick()
+        waitForIdle()
+        onNodeWithTag(WorkspacePageTags.EXPORT_BROWSE).performScrollTo().performClick()
         assertEquals(WorkspaceIntent.ChooseExportDestination, intents.single())
 
         intents.clear()
@@ -705,12 +700,14 @@ class WorkspaceScreenTest {
 
         onAllNodesWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.STRUCTURE.name.lowercase()).assertCountEquals(1)
         listOf(
-            WorkspacePageTags.STRUCTURE_PALETTE, WorkspacePageTags.STRUCTURE_STRIP, WorkspacePageTags.STRUCTURE_TABLE,
+            WorkspacePageTags.STRUCTURE_STRIP, WorkspacePageTags.STRUCTURE_TABLE,
             WorkspacePageTags.STRUCTURE_CONTEXT, WorkspacePageTags.STRUCTURE_SUMMARY, WorkspacePageTags.STRUCTURE_PREVIEW,
             WorkspacePageTags.STRUCTURE_HELP
         ).forEach {
             onAllNodesWithTag(it).assertCountEquals(1)
         }
+        onNodeWithTag(WorkspacePageTags.STRUCTURE_OPTIONS_TOGGLE).performClick()
+        onNodeWithTag(WorkspacePageTags.STRUCTURE_PALETTE).assertExists()
         onNodeWithTag(WorkspacePageTags.STRUCTURE_ADD_PREFIX + "A").performClick()
         waitForIdle()
         assertEquals(WorkspaceIntent.AddStructurePart("A"), intents.last())
@@ -733,6 +730,7 @@ class WorkspaceScreenTest {
         val state = populatedState().copy(project = populatedState().project!!.copy(parts = listOf(ready, raw), structure = emptyList()), workspaceSection = WorkspaceSection.STRUCTURE)
         setContent { MelotrailTheme { WorkspaceScreen(state, onIntent = {}) } }
 
+        onNodeWithTag(WorkspacePageTags.STRUCTURE_OPTIONS_TOGGLE).performClick()
         onNodeWithText("Choose a prepared part to start").assertExists()
         onAllNodesWithTag(WorkspacePageTags.STRUCTURE_ADD_PREFIX + "A").assertCountEquals(1)
         onAllNodesWithTag(WorkspacePageTags.STRUCTURE_ADD_PREFIX + "raw").assertCountEquals(0)
@@ -775,6 +773,7 @@ class WorkspaceScreenTest {
         onNodeWithText("Structure save failed. Use the global Retry action; the last saved structure remains selected.").assertExists()
 
         setContent { MelotrailTheme { WorkspaceScreen(mixed.copy(operation = WorkspaceOperation.SavingStructure), onIntent = {}) } }
+        onNodeWithTag(WorkspacePageTags.STRUCTURE_OPTIONS_TOGGLE).performClick()
         onNodeWithTag(WorkspacePageTags.STRUCTURE_ADD_PREFIX + "A").assertIsNotEnabled()
         onNodeWithText("Saving the canonical structure…").assertExists()
     }
@@ -795,7 +794,8 @@ class WorkspaceScreenTest {
             setContent { MelotrailTheme { WorkspaceScreen(state, onIntent = {}) } }
             onAllNodesWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.ARRANGE.name.lowercase()).assertCountEquals(1)
             onAllNodesWithTag(WorkspacePageTags.ARRANGE_PRIMARY_ACTION).assertCountEquals(1)
-            onAllNodesWithTag(WorkspacePageTags.ARRANGE_TABS).assertCountEquals(1)
+            onAllNodesWithTag(WorkspacePageTags.ARRANGE_OPTIONS_TOGGLE).assertCountEquals(1)
+            onAllNodesWithTag(WorkspacePageTags.ARRANGE_TABS).assertCountEquals(0)
             onAllNodesWithTag(WorkspacePageTags.ARRANGE_TIMELINE).assertCountEquals(1)
             onAllNodesWithTag(WorkspacePageTags.ARRANGE_TRANSPORT).assertCountEquals(1)
             onAllNodesWithTag(WorkspaceTags.STRUCTURE_PANEL).assertCountEquals(0)
@@ -811,6 +811,7 @@ class WorkspaceScreenTest {
 
         onNodeWithTag(WorkspacePageTags.ARRANGE_PRIMARY_ACTION).assertIsEnabled()
         onNodeWithTag(WorkspaceShellTags.CONTEXT_TOGGLE).performClick()
+        onNodeWithTag(WorkspacePageTags.ARRANGE_OPTIONS_TOGGLE + "-context").performClick()
         onNodeWithTag(WorkspacePageTags.ARRANGE_PLANNER_PREFIX + "qwen").performClick()
         onNodeWithTag(WorkspacePageTags.ARRANGE_INSTRUMENT_PREFIX + "bass").performScrollTo().performClick()
         onNodeWithTag(WorkspacePageTags.ARRANGE_STYLE).performTextInput("warm lo-fi")
@@ -845,6 +846,7 @@ class WorkspaceScreenTest {
         listOf("piano", "bass", "drums", "pad").forEach { track -> onNodeWithTag(WorkspacePageTags.ARRANGE_TRACK_PREFIX + track).assertExists() }
         onAllNodesWithTag(WorkspacePageTags.ARRANGE_TRACK_PREFIX + "strings").assertCountEquals(0)
         onNodeWithTag(WorkspacePageTags.ARRANGE_SECTION_PREFIX + "1").performClick()
+        onNodeWithTag(WorkspacePageTags.ARRANGE_OPTIONS_TOGGLE).performClick()
         onNodeWithTag(WorkspacePageTags.ARRANGE_TAB_PREFIX + "transitions").performClick()
 
         assertEquals(
@@ -862,6 +864,7 @@ class WorkspaceScreenTest {
         setContent { MelotrailTheme { WorkspaceScreen(arrangeState(), intents::add) } }
 
         onNodeWithTag(WorkspaceShellTags.CONTEXT_TOGGLE).performClick()
+        onNodeWithTag(WorkspacePageTags.ARRANGE_OPTIONS_TOGGLE + "-context").performClick()
         val qwen = onNodeWithTag(WorkspacePageTags.ARRANGE_PLANNER_PREFIX + "qwen")
         qwen.performClick()
         intents.clear()
@@ -947,6 +950,7 @@ class WorkspaceScreenTest {
 
         onNodeWithTag(WorkspacePageTags.MIX_MUTE_PREFIX + "piano").performClick()
         onNodeWithTag(WorkspacePageTags.MIX_SOLO_PREFIX + "piano").performClick()
+        onNodeWithTag(WorkspacePageTags.MIX_OPTIONS_TOGGLE).performClick()
         onNodeWithTag(WorkspacePageTags.MIX_LOFI).performClick()
         onNodeWithTag(WorkspacePageTags.MIX_MP3).performClick()
         onNodeWithTag(WorkspacePageTags.MIX_PLAYBACK_DRY).performClick()
@@ -970,6 +974,7 @@ class WorkspaceScreenTest {
         mute.performClick(); intents.clear(); mute.performKeyInput { pressKey(Key.Enter) }
         assertTrue(intents.any { it is WorkspaceIntent.UpdateMixSetting && it.instrument == "piano" && it.setting.muted })
 
+        onNodeWithTag(WorkspacePageTags.MIX_OPTIONS_TOGGLE).performClick()
         val master = onNodeWithTag(WorkspacePageTags.MIX_PLAYBACK_MASTER)
         master.performClick(); intents.clear(); master.performKeyInput { pressKey(Key.Enter) }
         assertTrue(intents.any { it == WorkspaceIntent.SelectPlaybackSource(PlaybackSource.MASTER) })
@@ -980,6 +985,7 @@ class WorkspaceScreenTest {
     fun `Mix Master disables stale playback omits unsupported DSP and exposes recovery reasons`() = runComposeUiTest {
         setContent { MelotrailTheme { WorkspaceScreen(mixMasterState().copy(downstreamArtifactsStale = true), onIntent = {}) } }
 
+        onNodeWithTag(WorkspacePageTags.MIX_OPTIONS_TOGGLE).performClick()
         onNodeWithTag(WorkspacePageTags.MIX_PLAYBACK_DRY).assertIsNotEnabled()
         onAllNodesWithTag(WorkspacePageTags.MIX_UNSUPPORTED_DSP).assertCountEquals(0)
         listOf("Equalizer", "Dynamics", "Sends", "Automation", "Reference Track", "LUFS", "True Peak", "Monitor Out").forEach { unsupported -> onAllNodesWithText(unsupported).assertCountEquals(0) }
@@ -1012,7 +1018,7 @@ class WorkspaceScreenTest {
         states.forEach { (state, expectedStatus) ->
             setContent { MelotrailTheme { WorkspaceScreen(state, onIntent = {}) } }
             onAllNodesWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.VIDEO_PREVIEW.name.lowercase()).assertCountEquals(1)
-            listOf(WorkspacePageTags.VIDEO_PREVIEW_STAGE, WorkspacePageTags.VIDEO_PREVIEW_TIMELINE, WorkspacePageTags.VIDEO_PREVIEW_STATUS, WorkspaceTags.COMPACT_TRANSPORT).forEach {
+            listOf(WorkspacePageTags.VIDEO_PREVIEW_STAGE, WorkspacePageTags.VIDEO_PREVIEW_STATUS, WorkspaceTags.COMPACT_TRANSPORT).forEach {
                 onAllNodesWithTag(it).assertCountEquals(1)
             }
             listOf("video-preview-camera", "video-preview-change-scene", "video-preview-fullscreen", "video-preview-play-pause", "video-preview-stop", "video-preview-seek", "video-preview-volume").forEach {
@@ -1038,6 +1044,7 @@ class WorkspaceScreenTest {
         )
         setContent { MelotrailTheme { WorkspaceScreen(state, intents::add) } }
 
+        onNodeWithTag(WorkspacePageTags.VIDEO_PREVIEW_OPTIONS_TOGGLE).performClick()
         onNodeWithTag(WorkspacePageTags.VIDEO_PREVIEW_OCCURRENCE_PREFIX + "B1").performClick()
         assertTrue(intents.isEmpty(), "timeline selection is UI-only")
         val playPause = onNodeWithTag(WorkspaceTags.PLAYBACK_TOGGLE)
@@ -1058,6 +1065,7 @@ class WorkspaceScreenTest {
         )
         setContent { MelotrailTheme { WorkspaceScreen(state, onIntent = {}) } }
 
+        onNodeWithTag(WorkspacePageTags.VIDEO_PREVIEW_OPTIONS_TOGGLE).performClick()
         onNodeWithText("12 occurrences · duration unavailable").assertExists()
         onNodeWithTag(WorkspacePageTags.VIDEO_PREVIEW_OCCURRENCE_PREFIX + "A7").assertExists()
         onNodeWithText("Duration unavailable").assertExists()
@@ -1083,6 +1091,8 @@ class WorkspaceScreenTest {
         onNodeWithTag(WorkspacePageTags.SETTINGS_LIBRARY).assertExists()
         onNodeWithTag(WorkspacePageTags.SETTINGS_CHOOSE).assertIsEnabled()
         onNodeWithTag(WorkspacePageTags.SETTINGS_CLEAR).assertIsEnabled()
+        onNodeWithTag(WorkspacePageTags.SETTINGS_DETAILS_TOGGLE).performClick()
+        onNodeWithTag(WorkspacePageTags.SETTINGS_DETAILS_TOGGLE + "-about").performClick()
         onNodeWithTag(WorkspacePageTags.SETTINGS_RUNTIME_PREFIX + "samples").assertExists()
         onNodeWithTag(WorkspacePageTags.SETTINGS_ABOUT).assertExists()
         onNodeWithText("Recovery: Copy the approved local starter samples into the selected library's existing sample folders.").assertExists()

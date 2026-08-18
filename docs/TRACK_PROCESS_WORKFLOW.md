@@ -57,6 +57,12 @@ current stage tells you what action is next. A stage can be:
   it from the stated recovery action.
 - **Complete** — its validated evidence is current.
 
+The desktop keeps that current action and any blocked-state recovery visible.
+Infrequent configuration and evidence are under labelled **More options**
+disclosures. Opening one does not change stage readiness, approve a draft, or
+make stale evidence current; it only exposes a retained control or artifact for
+inspection.
+
 `<part>` below is the part ID selected during import, and every listed path is
 relative to the project folder.
 

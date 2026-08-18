@@ -77,9 +77,9 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspacePageRouter.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspacePageRouter.kt has 92 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspacePageRouter.kt has 92 legacy callable declarations. Task 109 reviewed its workspace action/disclosure presentation helpers; the remaining declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before another behavioral or contract change.",
       "functionCount": 92,
-      "declarationDigest": "4cbceb9d616cf1eb27850b878a5b7c30be16d5e883a0370ccf88d1979183d700",
+      "declarationDigest": "e16bd1df57240413f1d18073bca51a10f80d7bc29430adc318a66eb2e333b9e9",
       "documentedFunctionCount": 5
     },
     {
@@ -1276,4 +1276,3 @@
     }
   ]
 }
-

@@ -30,6 +30,18 @@ with text/icon equivalents for ready, review, blocked, selected, and focus.
 name, and icon; badges, arrangement/timeline blocks, mix meters, and legends
 must use that shared mapping rather than inventing another lane colour.
 
+## Action reduction
+
+Each page exposes one visible current action and its semantic-state explanation:
+ready uses `ready`, review uses `review`, and blocked/stale recovery uses
+`blocked`. Optional configuration and inspectable evidence use a labelled
+**More options** disclosure with the normal control token and never replace the
+primary action. The retained disclosures are workflow pages on Overview,
+prepared-part choice on Structure, planner/instrument controls on Arrange,
+listening/build options on Mix & Master, release options on Export, local
+filters/layout on Library, timeline evidence on Video Preview, and runtime or
+build details on Settings.
+
 The local artwork slot is a deterministic navy placeholder. It
 contains no project metadata, clock, network request, weather, location, map,
 or destination data.

@@ -81,6 +81,9 @@ internal object WorkspacePageTags {
     const val OVERVIEW_ACTIVITY = "overview-current-activity"
     const val OVERVIEW_QUICK_ACTIONS = "overview-quick-actions"
     const val OVERVIEW_QUICK_ACTION_PREFIX = "overview-quick-action-"
+    const val OVERVIEW_PRIMARY_ACTION = "overview-primary-action"
+    const val OVERVIEW_MORE_ACTIONS_TOGGLE = "overview-more-actions-toggle"
+    const val OVERVIEW_MORE_ACTIONS = "overview-more-actions"
     /** Compatibility tag for the Overview export quick action. */
     const val OVERVIEW_EXPORT = "overview-quick-action-export"
     const val VIDEO_PREVIEW_STAGE = "video-preview-stage"
@@ -117,6 +120,8 @@ internal object WorkspacePageTags {
     const val STRUCTURE_SUMMARY = "structure-song-summary"
     const val STRUCTURE_PREVIEW = "structure-preview"
     const val STRUCTURE_HELP = "structure-help"
+    const val STRUCTURE_OPTIONS_TOGGLE = "structure-options-toggle"
+    const val STRUCTURE_OPTIONS = "structure-options"
     const val ARRANGE_PLANNER_PREFIX = "arrange-planner-"
     const val ARRANGE_INSTRUMENT_PREFIX = "arrange-instrument-"
     const val ARRANGE_STYLE = "arrange-style"
@@ -138,6 +143,8 @@ internal object WorkspacePageTags {
     const val ARRANGE_TRANSPORT_PLAY = "arrange-transport-play"
     const val ARRANGE_CONTEXT = "arrange-context-rail"
     const val ARRANGE_SUMMARY = "arrange-summary"
+    const val ARRANGE_OPTIONS_TOGGLE = "arrange-options-toggle"
+    const val ARRANGE_OPTIONS = "arrange-options"
     const val MIX_CHANNEL_PREFIX = "mix-master-channel-"
     const val MIXER_VIEWPORT = "mix-master-viewport"
     const val MIX_EMPTY_CHANNELS = "mix-master-empty-channels"
@@ -160,6 +167,8 @@ internal object WorkspacePageTags {
     const val MIX_PRIMARY_ACTION = "mix-master-primary-action"
     const val MIX_BUILD_STATUS = "mix-master-build-status"
     const val MIX_ZERO_SIGNAL = "mix-master-zero-signal"
+    const val MIX_OPTIONS_TOGGLE = "mix-master-options-toggle"
+    const val MIX_OPTIONS = "mix-master-options"
     const val EXPORT_FORMAT_PREFIX = "export-format-"
     const val EXPORT_AUDIO_ONLY = "export-audio-only"
     const val EXPORT_QUALITY = "export-quality"
@@ -172,6 +181,8 @@ internal object WorkspacePageTags {
     const val EXPORT_ACTION = "export-action"
     const val EXPORT_STATUS = "export-status"
     const val EXPORT_RECOVERY = "export-recovery"
+    const val EXPORT_OPTIONS_TOGGLE = "export-options-toggle"
+    const val EXPORT_OPTIONS = "export-options"
     const val LIBRARY_TYPE_TAB = "library-type-instruments"
     const val LIBRARY_SEARCH = "library-search"
     const val LIBRARY_CATEGORY_PREFIX = "library-category-"
@@ -184,6 +195,8 @@ internal object WorkspacePageTags {
     const val LIBRARY_RECOVERY = "library-recovery"
     const val LIBRARY_REFRESH = "library-refresh"
     const val LIBRARY_SETTINGS = "library-settings"
+    const val LIBRARY_OPTIONS_TOGGLE = "library-options-toggle"
+    const val LIBRARY_OPTIONS = "library-options"
     const val SETTINGS_LIBRARY = "settings-library"
     const val SETTINGS_CHOOSE = "settings-choose-library"
     const val SETTINGS_CLEAR = "settings-clear-library"
@@ -193,6 +206,10 @@ internal object WorkspacePageTags {
     const val SETTINGS_ABOUT = "settings-about"
     const val SETTINGS_BACK = "settings-back"
     const val SETTINGS_CLEAR_CONFIRM = "settings-clear-confirm"
+    const val SETTINGS_DETAILS_TOGGLE = "settings-details-toggle"
+    const val SETTINGS_DETAILS = "settings-details"
+    const val VIDEO_PREVIEW_OPTIONS_TOGGLE = "video-preview-options-toggle"
+    const val VIDEO_PREVIEW_OPTIONS = "video-preview-options"
     const val NAVIGATION_MENU = "workspace-navigation-menu"
 }
 
@@ -453,13 +470,38 @@ private data class OverviewQuickAction(val id: String, val label: String, val se
 
 @Composable
 private fun OverviewQuickActions(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = OverviewCard(WorkspacePageTags.OVERVIEW_QUICK_ACTIONS, "Quick actions") {
-    listOf(
+    val actions = listOf(
         OverviewQuickAction("import", "Import Audio / MIDI", WorkspaceSection.IMPORT, WorkflowStage.IMPORT_AND_INSPECTION),
         OverviewQuickAction("structure", "Build Structure", WorkspaceSection.STRUCTURE, WorkflowStage.STRUCTURE),
         OverviewQuickAction("arrange", "Generate Arrangement", WorkspaceSection.ARRANGE, WorkflowStage.ARRANGEMENT),
         OverviewQuickAction("mix-master", "Mix & Master", WorkspaceSection.MIX_MASTER, WorkflowStage.MIX),
         OverviewQuickAction("export", "Export Song", WorkspaceSection.EXPORT, WorkflowStage.COMMERCIAL_EXPORT)
-    ).forEach { action ->
+    )
+    val primary = actions.firstOrNull { it.stage == overviewPrimaryStage(state.workflow.current.stage) } ?: actions.first()
+    var alternativesExpanded by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.OVERVIEW_PRIMARY_ACTION }) {
+        OverviewQuickActionButton(primary, state, onIntent)
+    }
+    TextButton(onClick = { alternativesExpanded = !alternativesExpanded }, modifier = Modifier.semantics {
+        testTag = WorkspacePageTags.OVERVIEW_MORE_ACTIONS_TOGGLE
+        contentDescription = if (alternativesExpanded) "Hide workflow pages" else "Show more workflow pages"
+    }) { Text(if (alternativesExpanded) "Hide options" else "More workflow pages") }
+    if (alternativesExpanded) Column(Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.OVERVIEW_MORE_ACTIONS }, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+        actions.filterNot { it == primary }.forEach { action -> OverviewQuickActionButton(action, state, onIntent) }
+    }
+}
+
+private fun overviewPrimaryStage(stage: WorkflowStage): WorkflowStage = when (stage) {
+    WorkflowStage.PROJECT, WorkflowStage.IMPORT_AND_INSPECTION, WorkflowStage.TRANSCRIPTION,
+    WorkflowStage.MIDI_REPAIR, WorkflowStage.MIDI_FEEL, WorkflowStage.ANALYSIS -> WorkflowStage.IMPORT_AND_INSPECTION
+    WorkflowStage.STRUCTURE -> WorkflowStage.STRUCTURE
+    WorkflowStage.COHESION, WorkflowStage.ARRANGEMENT -> WorkflowStage.ARRANGEMENT
+    WorkflowStage.RENDER, WorkflowStage.MIX, WorkflowStage.MASTER -> WorkflowStage.MIX
+    WorkflowStage.COMMERCIAL_EXPORT -> WorkflowStage.COMMERCIAL_EXPORT
+}
+
+@Composable
+private fun OverviewQuickActionButton(action: OverviewQuickAction, state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
         val workflow = state.workflow[action.stage]
         // A blocked stage still routes to its focused page, where the same canonical
         // prerequisite is explained and recovered.  Only a missing project has no
@@ -477,7 +519,6 @@ private fun OverviewQuickActions(state: WorkspaceUiState, onIntent: (WorkspaceIn
                 Text(workflow.context, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
-    }
 }
 
 @Composable
@@ -487,6 +528,23 @@ private fun OverviewCard(tag: String, title: String, content: @Composable () -> 
     Text(title.uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     content()
 } }
+
+/** Keeps infrequent configuration and evidence available without competing with the next action. */
+@Composable
+private fun SecondaryOptions(toggleTag: String, panelTag: String, label: String = "More options", content: @Composable () -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    TextButton(
+        onClick = { expanded = !expanded },
+        modifier = Modifier.semantics {
+            testTag = toggleTag
+            contentDescription = if (expanded) "Hide $label" else "Show $label"
+        }
+    ) { Text(if (expanded) "Hide options" else label) }
+    if (expanded) Column(
+        Modifier.fillMaxWidth().semantics { testTag = panelTag },
+        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)
+    ) { content() }
+}
 
 @Composable
 private fun InterimWorkflowPage(
@@ -569,13 +627,15 @@ private fun LibraryPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
                 modifier = Modifier.semantics { testTag = WorkspacePageTags.LIBRARY_REFRESH; contentDescription = "Refresh validated local library inventory" }
             ) { Text("Refresh") }
         }
-        OutlinedTextField(
-            value = browser.query,
-            onValueChange = { onIntent(WorkspaceIntent.UpdateLibrarySearch(it)) },
-            modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.LIBRARY_SEARCH },
-            label = { Text("Search local library") },
-            singleLine = true
-        )
+        SecondaryOptions(WorkspacePageTags.LIBRARY_OPTIONS_TOGGLE, WorkspacePageTags.LIBRARY_OPTIONS, "Search and filters") {
+            OutlinedTextField(
+                value = browser.query,
+                onValueChange = { onIntent(WorkspaceIntent.UpdateLibrarySearch(it)) },
+                modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.LIBRARY_SEARCH },
+                label = { Text("Search local library") },
+                singleLine = true
+            )
+        }
         if (inventory.instruments.isEmpty()) {
             LibraryRecovery(state, onIntent)
             return@Column
@@ -587,13 +647,17 @@ private fun LibraryPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
             }
             if (narrow) {
                 Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
-                    LibraryCategoryRail(categories, browser.category, onIntent, Modifier.fillMaxWidth())
+                    SecondaryOptions(WorkspacePageTags.LIBRARY_OPTIONS_TOGGLE + "-categories", WorkspacePageTags.LIBRARY_OPTIONS + "-categories", "Category filter") {
+                        LibraryCategoryRail(categories, browser.category, onIntent, Modifier.fillMaxWidth())
+                    }
                     content(Modifier.fillMaxWidth())
                     LibraryDetail(selected, Modifier.fillMaxWidth())
                 }
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md), verticalAlignment = Alignment.Top) {
-                    LibraryCategoryRail(categories, browser.category, onIntent, Modifier.width(148.dp))
+                    SecondaryOptions(WorkspacePageTags.LIBRARY_OPTIONS_TOGGLE + "-categories", WorkspacePageTags.LIBRARY_OPTIONS + "-categories", "Category filter") {
+                        LibraryCategoryRail(categories, browser.category, onIntent, Modifier.width(148.dp))
+                    }
                     content(Modifier.weight(1f))
                     LibraryDetail(selected, Modifier.widthIn(min = 220.dp, max = 272.dp))
                 }
@@ -640,16 +704,20 @@ private fun LibraryResults(layout: LibraryLayout, instruments: List<LocalSoundLi
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm), verticalAlignment = Alignment.CenterVertically) {
         Text("${instruments.size} validated instrument${if (instruments.size == 1) "" else "s"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.weight(1f))
-        OutlinedButton(
-            onClick = { onIntent(WorkspaceIntent.SelectLibraryLayout(LibraryLayout.GRID)) },
-            colors = workspaceSelectableButtonColors(layout == LibraryLayout.GRID),
-            modifier = Modifier.semantics { testTag = WorkspacePageTags.LIBRARY_LAYOUT_GRID }
-        ) { Text("Grid") }
-        OutlinedButton(
-            onClick = { onIntent(WorkspaceIntent.SelectLibraryLayout(LibraryLayout.LIST)) },
-            colors = workspaceSelectableButtonColors(layout == LibraryLayout.LIST),
-            modifier = Modifier.semantics { testTag = WorkspacePageTags.LIBRARY_LAYOUT_LIST }
-        ) { Text("List") }
+        SecondaryOptions(WorkspacePageTags.LIBRARY_OPTIONS_TOGGLE + "-layout", WorkspacePageTags.LIBRARY_OPTIONS + "-layout", "Layout") {
+            Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                OutlinedButton(
+                    onClick = { onIntent(WorkspaceIntent.SelectLibraryLayout(LibraryLayout.GRID)) },
+                    colors = workspaceSelectableButtonColors(layout == LibraryLayout.GRID),
+                    modifier = Modifier.semantics { testTag = WorkspacePageTags.LIBRARY_LAYOUT_GRID }
+                ) { Text("Grid") }
+                OutlinedButton(
+                    onClick = { onIntent(WorkspaceIntent.SelectLibraryLayout(LibraryLayout.LIST)) },
+                    colors = workspaceSelectableButtonColors(layout == LibraryLayout.LIST),
+                    modifier = Modifier.semantics { testTag = WorkspacePageTags.LIBRARY_LAYOUT_LIST }
+                ) { Text("List") }
+            }
+        }
     }
     if (instruments.isEmpty()) {
         OverviewCard("library-empty", "No matching instruments") {
@@ -754,20 +822,22 @@ private fun SettingsInterimPage(state: WorkspaceUiState, onIntent: (WorkspaceInt
                             ) { Text("Clear") }
                         }
                     }
-                    OverviewCard(WorkspacePageTags.SETTINGS_RUNTIME, "Local runtime readiness") {
-                        if (state.runtimeReadiness == null) {
-                            Text("Runtime readiness has not been checked yet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        } else {
-                            RuntimeDependency.entries.forEach { dependency -> SettingsDependencyRow(dependency, state.runtimeReadiness.dependency(dependency)) }
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-                            OutlinedButton(onClick = { onIntent(WorkspaceIntent.RefreshSoundLibrary) }, modifier = Modifier.semantics { testTag = WorkspacePageTags.SETTINGS_REFRESH }) { Text("Refresh library") }
-                            OutlinedButton(onClick = { onIntent(WorkspaceIntent.RefreshRuntimeReadiness) }) { Text("Refresh readiness") }
+                    SecondaryOptions(WorkspacePageTags.SETTINGS_DETAILS_TOGGLE, WorkspacePageTags.SETTINGS_DETAILS, "Runtime details") {
+                        OverviewCard(WorkspacePageTags.SETTINGS_RUNTIME, "Local runtime readiness") {
+                            if (state.runtimeReadiness == null) {
+                                Text("Runtime readiness has not been checked yet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            } else {
+                                RuntimeDependency.entries.forEach { dependency -> SettingsDependencyRow(dependency, state.runtimeReadiness.dependency(dependency)) }
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                                OutlinedButton(onClick = { onIntent(WorkspaceIntent.RefreshSoundLibrary) }, modifier = Modifier.semantics { testTag = WorkspacePageTags.SETTINGS_REFRESH }) { Text("Refresh library") }
+                                OutlinedButton(onClick = { onIntent(WorkspaceIntent.RefreshRuntimeReadiness) }) { Text("Refresh readiness") }
+                            }
                         }
                     }
                 }
             }, second = { columnModifier ->
-                Box(columnModifier) { OverviewCard(WorkspacePageTags.SETTINGS_ABOUT, "About this local build") {
+                Box(columnModifier) { SecondaryOptions(WorkspacePageTags.SETTINGS_DETAILS_TOGGLE + "-about", WorkspacePageTags.SETTINGS_DETAILS + "-about", "Build information") { OverviewCard(WorkspacePageTags.SETTINGS_ABOUT, "About this local build") {
                     val about = desktopAboutInfo()
                     Text("Melotrail", style = MaterialTheme.typography.titleMedium)
                     Text("Version: ${about.version}", style = MaterialTheme.typography.bodySmall)
@@ -776,7 +846,7 @@ private fun SettingsInterimPage(state: WorkspaceUiState, onIntent: (WorkspaceInt
                     HorizontalDivider(color = MusicWorkspaceTokens.Border)
                     Text("Preferences retain only the last successfully opened project and validated sound-library root. Projects and audio remain in their selected canonical folders.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("No telemetry, cloud sync, update checks, themes, device selection, backups, or model downloads are available in this build.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                } }
+                } } }
             })
         }
     }
@@ -829,7 +899,19 @@ private fun ExportPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
             val narrow = maxWidth < MusicWorkspaceTokens.Reference.MediumBreakpoint
             ResponsivePageColumns(narrow = narrow, first = { columnModifier ->
             Column(columnModifier, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
-                OverviewCard("export-settings", "Export settings") {
+                OverviewCard("export-settings", "Release export") {
+                    Button(onClick = { onIntent(WorkspaceIntent.ExportSong) }, enabled = canExport, colors = workspacePrimaryButtonColors(),
+                        modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.EXPORT_ACTION; contentDescription = if (canExport) "Export Song" else exportBlockedMessage(export, destinationIsProjectOutput) }) { Text(if (state.operation is WorkspaceOperation.ExportingRelease) "Exporting…" else "Export Song") }
+                    Text(exportBlockedMessage(export, destinationIsProjectOutput), style = MaterialTheme.typography.bodySmall,
+                        color = if (canExport) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
+                        modifier = Modifier.semantics { testTag = WorkspacePageTags.EXPORT_STATUS })
+                    if (summary == null) {
+                        OutlinedButton(
+                            onClick = { onIntent(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.MIX_MASTER)) },
+                            modifier = Modifier.semantics { testTag = WorkspacePageTags.EXPORT_RECOVERY; contentDescription = "Open Mix & Master to build a current master" }
+                        ) { Text("Open Mix & Master") }
+                    }
+                    SecondaryOptions(WorkspacePageTags.EXPORT_OPTIONS_TOGGLE, WorkspacePageTags.EXPORT_OPTIONS, "Release options") {
                     Text("Format", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
                         formats.sortedBy(ReleaseExportFormat::name).forEach { format ->
@@ -857,19 +939,9 @@ private fun ExportPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
                         OutlinedButton(onClick = { onIntent(WorkspaceIntent.ChooseExportDestination) }, enabled = !state.operation.isMutating,
                             modifier = Modifier.semantics { testTag = WorkspacePageTags.EXPORT_BROWSE; contentDescription = "Choose export destination" }) { Text("Browse") }
                     }
-                    Button(onClick = { onIntent(WorkspaceIntent.ExportSong) }, enabled = canExport, colors = workspacePrimaryButtonColors(),
-                        modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.EXPORT_ACTION; contentDescription = if (canExport) "Export Song" else exportBlockedMessage(export, destinationIsProjectOutput) }) { Text(if (state.operation is WorkspaceOperation.ExportingRelease) "Exporting…" else "Export Song") }
-                    Text(exportBlockedMessage(export, destinationIsProjectOutput), style = MaterialTheme.typography.bodySmall,
-                        color = if (canExport) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
-                        modifier = Modifier.semantics { testTag = WorkspacePageTags.EXPORT_STATUS })
-                    if (summary == null) {
-                        OutlinedButton(
-                            onClick = { onIntent(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.MIX_MASTER)) },
-                            modifier = Modifier.semantics { testTag = WorkspacePageTags.EXPORT_RECOVERY; contentDescription = "Open Mix & Master to build a current master" }
-                        ) { Text("Open Mix & Master") }
+                    }
                     }
                 }
-            }
             }, second = { columnModifier ->
             Column(columnModifier.widthIn(min = 260.dp, max = MusicWorkspaceTokens.Pages.OverviewPreviewWidth), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
                 OverviewCard(WorkspacePageTags.EXPORT_PREVIEW, "Audio preview") {
@@ -939,10 +1011,12 @@ private fun VideoPreviewPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent
                 }
             }
         }
-        VideoPreviewTimeline(occurrences, selectedOccurrenceId) { selectedOccurrenceId = it }
         Text(status, modifier = Modifier.semantics { testTag = WorkspacePageTags.VIDEO_PREVIEW_STATUS }, style = MaterialTheme.typography.bodySmall,
             color = if (session.phase == PlaybackSessionPhase.FAILED || state.runtimeReadiness?.audioOutput?.available == false) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
         CompactTransport(state, onIntent, Modifier.fillMaxWidth())
+        SecondaryOptions(WorkspacePageTags.VIDEO_PREVIEW_OPTIONS_TOGGLE, WorkspacePageTags.VIDEO_PREVIEW_OPTIONS, "Timeline evidence") {
+            VideoPreviewTimeline(occurrences, selectedOccurrenceId) { selectedOccurrenceId = it }
+        }
     }
 }
 
@@ -1080,7 +1154,9 @@ private fun ArrangePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
                     ) { Text(action.label) }
                 }
             }
-            ArrangeTabs(state.arrangeTab, mutating, onIntent)
+            SecondaryOptions(WorkspacePageTags.ARRANGE_OPTIONS_TOGGLE, WorkspacePageTags.ARRANGE_OPTIONS, "Arrangement options") {
+                ArrangeTabs(state.arrangeTab, mutating, onIntent)
+            }
         ArrangeTimeline(state, onIntent)
         ArrangeTransport(state, onIntent)
         ArrangeReview(state, onIntent)
@@ -1225,15 +1301,17 @@ internal fun ArrangeContextRail(state: WorkspaceUiState, onIntent: (WorkspaceInt
     val prerequisites = arrangePrerequisites(state)
     Text(state.arrangeTab.label, style = MaterialTheme.typography.titleMedium)
     val mutating = state.operation.isMutating
-    when (state.arrangeTab) {
-        ArrangeTab.ARRANGEMENT -> {
-            Text("Select a canonical section in the timeline to inspect its actual purpose, instruments, and transition.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            ArrangePlannerControls(state, onIntent)
-            ArrangeInstrumentControls(state, onIntent)
+    SecondaryOptions(WorkspacePageTags.ARRANGE_OPTIONS_TOGGLE + "-context", WorkspacePageTags.ARRANGE_OPTIONS + "-context", "Planner and instrument options") {
+        when (state.arrangeTab) {
+            ArrangeTab.ARRANGEMENT -> {
+                Text("Select a canonical section in the timeline to inspect its actual purpose, instruments, and transition.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ArrangePlannerControls(state, onIntent)
+                ArrangeInstrumentControls(state, onIntent)
+            }
+            ArrangeTab.INSTRUMENTS -> ArrangeInstrumentControls(state, onIntent)
+            ArrangeTab.TRANSITIONS -> ArrangeTransitionEvidence(state)
+            ArrangeTab.PLANNER -> ArrangePlannerControls(state, onIntent)
         }
-        ArrangeTab.INSTRUMENTS -> ArrangeInstrumentControls(state, onIntent)
-        ArrangeTab.TRANSITIONS -> ArrangeTransitionEvidence(state)
-        ArrangeTab.PLANNER -> ArrangePlannerControls(state, onIntent)
     }
     var diagnosticsExpanded by remember(state.project, state.structureDraft, state.arrangement, state.operation) { mutableStateOf(false) }
     Text(prerequisites.shortReason, modifier = Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_PREREQUISITE }, style = MaterialTheme.typography.bodySmall, color = if (prerequisites.canGenerate) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error)
@@ -1321,13 +1399,13 @@ private fun ArrangeReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
         when {
             arrangement.stale -> Text("Stale arrangement retained as evidence. Regenerate from current canonical inputs before building.", color = MaterialTheme.colorScheme.error)
             arrangement.approvalRequired || !arrangement.approved -> {
-                Text("Validated Qwen draft — it is not approved or current.", color = MaterialTheme.colorScheme.primary)
+                Text("Validated Qwen draft — it is not approved or current.", color = semanticColor(WorkspaceSemanticState.WARNING))
                 Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
                     OutlinedButton(onClick = { onIntent(WorkspaceIntent.PreviewArrangement) }, enabled = !state.operation.isMutating) { Text("Preview draft") }
                     Button(onClick = { onIntent(WorkspaceIntent.ApproveArrangement) }, enabled = !state.operation.isMutating, modifier = Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_APPROVE }) { Text("Approve draft") }
                 }
             }
-            else -> Text("Approved deterministic arrangement is current.", color = MaterialTheme.colorScheme.primary)
+            else -> Text("Approved deterministic arrangement is current.", color = semanticColor(WorkspaceSemanticState.READY))
         }
     }
 }
@@ -1343,12 +1421,14 @@ private fun StructurePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
             verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)
         ) {
             PageTitle("Structure", "Build and save the canonical order of your song")
+            StructureAddArea(state, onIntent)
             StructureStrip(sections, selected?.instanceId, onIntent)
             ResponsivePageColumns(narrow = narrow, first = { columnModifier ->
                 Column(columnModifier, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
-                    StructurePalette(state, onIntent)
+                    SecondaryOptions(WorkspacePageTags.STRUCTURE_OPTIONS_TOGGLE, WorkspacePageTags.STRUCTURE_OPTIONS, "Choose a different prepared part") {
+                        StructurePalette(state, onIntent)
+                    }
                     StructureTable(state, selected?.instanceId, onIntent)
-                    StructureAddArea(state, onIntent)
                 }
             }, second = { columnModifier ->
                 Column(columnModifier.widthIn(min = 260.dp, max = MusicWorkspaceTokens.Pages.OverviewPreviewWidth), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
@@ -1873,35 +1953,39 @@ private fun MixMasterPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                         }
                     }
                 }
-                OutlinedButton(onClick = { onIntent(WorkspaceIntent.ResetMix) }, enabled = channelNames.isNotEmpty() && !mutating, modifier = Modifier.semantics {
-                    testTag = WorkspacePageTags.MIX_RESET
-                    contentDescription = if (channelNames.isEmpty()) "Reset mix unavailable. Render stems first." else "Reset all rendered channel settings to engine defaults."
-                }) { Text("Reset engine defaults") }
+                SecondaryOptions(WorkspacePageTags.MIX_OPTIONS_TOGGLE + "-channels", WorkspacePageTags.MIX_OPTIONS + "-channels", "Channel reset") {
+                    OutlinedButton(onClick = { onIntent(WorkspaceIntent.ResetMix) }, enabled = channelNames.isNotEmpty() && !mutating, modifier = Modifier.semantics {
+                        testTag = WorkspacePageTags.MIX_RESET
+                        contentDescription = if (channelNames.isEmpty()) "Reset mix unavailable. Render stems first." else "Reset all rendered channel settings to engine defaults."
+                    }) { Text("Reset engine defaults") }
+                }
             }
             }, second = { columnModifier ->
             Column(columnModifier, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-                MixMasterModeSelector(mode) { mode = it }
-                OverviewCard("mix-master-listen", "Listen") {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-                        MixPlaybackSourceButton("Dry", PlaybackSource.DRY, currentSource, state, WorkspacePageTags.MIX_PLAYBACK_DRY, onIntent, Modifier.weight(1f))
-                        MixPlaybackSourceButton("Lo-fi", PlaybackSource.LOFI, currentSource, state, WorkspacePageTags.MIX_PLAYBACK_LOFI, onIntent, Modifier.weight(1f))
-                        MixPlaybackSourceButton("Master", PlaybackSource.MASTER, currentSource, state, WorkspacePageTags.MIX_PLAYBACK_MASTER, onIntent, Modifier.weight(1f))
+                SecondaryOptions(WorkspacePageTags.MIX_OPTIONS_TOGGLE, WorkspacePageTags.MIX_OPTIONS, "Listening and build options") {
+                    MixMasterModeSelector(mode) { mode = it }
+                    OverviewCard("mix-master-listen", "Listen") {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+                            MixPlaybackSourceButton("Dry", PlaybackSource.DRY, currentSource, state, WorkspacePageTags.MIX_PLAYBACK_DRY, onIntent, Modifier.weight(1f))
+                            MixPlaybackSourceButton("Lo-fi", PlaybackSource.LOFI, currentSource, state, WorkspacePageTags.MIX_PLAYBACK_LOFI, onIntent, Modifier.weight(1f))
+                            MixPlaybackSourceButton("Master", PlaybackSource.MASTER, currentSource, state, WorkspacePageTags.MIX_PLAYBACK_MASTER, onIntent, Modifier.weight(1f))
+                        }
+                        Text("Master volume · ${(state.playbackSession.volume * 100).toInt()}%", style = MaterialTheme.typography.labelMedium)
+                        Slider(value = state.playbackSession.volume.toFloat(), onValueChange = { onIntent(WorkspaceIntent.SetPlaybackVolume(it.toDouble())) }, valueRange = 0f..1f, enabled = !mutating,
+                            modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.MIX_MASTER_VOLUME; contentDescription = "Master playback volume ${(state.playbackSession.volume * 100).toInt()} percent" })
                     }
-                    Text("Master volume · ${(state.playbackSession.volume * 100).toInt()}%", style = MaterialTheme.typography.labelMedium)
-                    Slider(value = state.playbackSession.volume.toFloat(), onValueChange = { onIntent(WorkspaceIntent.SetPlaybackVolume(it.toDouble())) }, valueRange = 0f..1f, enabled = !mutating,
-                        modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.MIX_MASTER_VOLUME; contentDescription = "Master playback volume ${(state.playbackSession.volume * 100).toInt()} percent" })
-                }
-                OverviewCard("mix-master-options", "Build options") {
-                    Text(if (mode == MixMasterMode.LISTEN) "Build options" else "Supported build options", style = MaterialTheme.typography.labelMedium)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = state.buildOptions.loFi, onCheckedChange = { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(loFi = it))) }, enabled = !mutating,
-                            modifier = Modifier.semantics { testTag = WorkspacePageTags.MIX_LOFI; contentDescription = "Apply the fixed supported Lo-fi audio texture during Build Song." })
-                        Text("Fixed Bedroom LoFi preset", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = state.buildOptions.mp3, onCheckedChange = { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(mp3 = it))) }, enabled = !mutating,
-                            modifier = Modifier.semantics { testTag = WorkspacePageTags.MIX_MP3; contentDescription = "Request optional final MP3 export after the authoritative master WAV." })
-                        Text("Optional final MP3 export", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    OverviewCard("mix-master-options", "Build options") {
+                        Text(if (mode == MixMasterMode.LISTEN) "Build options" else "Supported build options", style = MaterialTheme.typography.labelMedium)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = state.buildOptions.loFi, onCheckedChange = { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(loFi = it))) }, enabled = !mutating,
+                                modifier = Modifier.semantics { testTag = WorkspacePageTags.MIX_LOFI; contentDescription = "Apply the fixed supported Lo-fi audio texture during Build Song." })
+                            Text("Fixed Bedroom LoFi preset", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = state.buildOptions.mp3, onCheckedChange = { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(mp3 = it))) }, enabled = !mutating,
+                                modifier = Modifier.semantics { testTag = WorkspacePageTags.MIX_MP3; contentDescription = "Request optional final MP3 export after the authoritative master WAV." })
+                            Text("Optional final MP3 export", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                 }
                 OverviewCard(WorkspacePageTags.MIX_BUILD_STATUS, "Render / Build") {
