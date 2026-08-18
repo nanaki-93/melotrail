@@ -11,7 +11,7 @@ transcribed into MIDI and the review points that protect the original source.
 
 ## Requirements
 
-- Add a dedicated `docs/` guide and link it from the README, import UI help,
+- Add a dedicated `../../..` guide and link it from the README, import UI help,
   and the track-process guide.
 - State accepted direct-MIDI inputs (`.mid`/`.midi`) and validation: extension
   and actual Standard MIDI container, playable events, supported format, and
@@ -33,7 +33,7 @@ transcribed into MIDI and the review points that protect the original source.
 
 ## Tests
 
-- Verify links and examples against `worker/README.md`, `README.md`,
+- Verify links and examples against `../../../../worker/README.md`, `../../../../README.md`,
   `InputInspectionContract`, and `TranscriptionQualityGate`.
 - Review exact artifact names and paths against application-service tests.
 

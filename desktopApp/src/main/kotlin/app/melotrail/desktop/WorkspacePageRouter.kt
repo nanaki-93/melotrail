@@ -91,6 +91,7 @@ internal object WorkspacePageTags {
     const val IMPORT_BROWSE = "import-browse"
     const val IMPORT_AUDIO_CHOOSER = "import-audio-chooser"
     const val IMPORT_MIDI_CHOOSER = "import-midi-chooser"
+    const val IMPORT_HELP = "import-help"
     const val IMPORT_TABLE_HEADER = "imported-files-header"
     const val IMPORT_SELECTION = "import-selected-part"
     const val IMPORT_CONTEXT = "import-context-rail"
@@ -1573,7 +1574,17 @@ private fun ImportTabs() = Row(
     Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Lg)
 ) {
     Text("Import files", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
-    Text("One source at a time · local project artifacts", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+    Text(
+        "One source at a time · MIDI guide: docs/MIDI_IMPORT_PROCESS.md",
+        modifier = Modifier.weight(1f).semantics {
+            testTag = WorkspacePageTags.IMPORT_HELP
+            contentDescription = "MIDI import guide: docs/MIDI_IMPORT_PROCESS.md"
+        },
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.bodySmall,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+    )
 }
 
 @Composable

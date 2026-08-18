@@ -559,6 +559,14 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `Import exposes the MIDI import guide reference`() = runComposeUiTest {
+        setContent { MelotrailTheme { WorkspaceScreen(importState(importPart("ready.mid")), onIntent = {}) } }
+
+        onNodeWithTag(WorkspacePageTags.IMPORT_HELP).assertExists()
+        onNodeWithText("One source at a time · MIDI guide: docs/MIDI_IMPORT_PROCESS.md").assertExists()
+    }
+
+    @Test
     fun `remaining Import primary actions dispatch review feel structure and transcription intents`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         val current = importPart("current.mid", rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT, analyzed = true)

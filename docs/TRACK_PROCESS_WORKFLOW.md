@@ -10,6 +10,9 @@ remain readable; if the workspace asks to migrate a schema-v2 project, use its
 explicit migration action before continuing. Opening a project never rewrites
 it automatically.
 
+For the precise direct-MIDI and eligible solo-piano audio routes, see the
+[MIDI import process](MIDI_IMPORT_PROCESS.md).
+
 ## Route at a glance
 
 ```mermaid

@@ -117,6 +117,8 @@ plans and arrangements, generated MIDI, stems, `mix/`, and `output/`.
 `output/master.wav` is the authoritative lossless release; MP3 is an optional
 final conversion only. For worker, library, renderer, preview, and package
 troubleshooting, use [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
+For the direct-MIDI and eligible-audio routes, their validation, and the
+required repair review, see [MIDI import process](docs/MIDI_IMPORT_PROCESS.md).
 For the user-facing stage order, prerequisites, artifacts, and stale-artifact
 recovery, see [Track process workflow](docs/TRACK_PROCESS_WORKFLOW.md).
 
