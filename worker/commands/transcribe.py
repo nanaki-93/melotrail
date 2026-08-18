@@ -10,7 +10,7 @@ from typing import Protocol
 
 import soundfile as sf
 
-from tools.transcribe_piano_spike import MidiValidationError, parse_midi_notes
+from worker.tools.transcribe_piano_spike import MidiValidationError, parse_midi_notes
 from worker.commands.mp3_convert import mp3_convert_command
 from worker.errors import (
     TranscriptionDecodeError,

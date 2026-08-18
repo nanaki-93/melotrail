@@ -1,6 +1,5 @@
 package app.melotrail.analysis
 
-import kotlinx.datetime.Instant
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -147,7 +146,3 @@ enum class IssueSeverity {
     @SerialName("HIGH") HIGH
 }
 
-interface AudioAnalyzer {
-    suspend fun analyze(path: String): SongAnalysis
-    suspend fun cancel()
-}

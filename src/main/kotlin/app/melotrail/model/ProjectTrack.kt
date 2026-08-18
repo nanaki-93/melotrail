@@ -32,6 +32,5 @@ data class ProjectTrack(
 ) {
     fun withGain(gain: Double): ProjectTrack = copy(gain = gain)
     fun withMuted(muted: Boolean): ProjectTrack = copy(muted = muted)
-    fun withSolo(solo: Boolean): ProjectTrack = copy(solo = solo)
     fun withPan(pan: Double): ProjectTrack = copy(pan = pan)
 }

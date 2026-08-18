@@ -23,7 +23,6 @@ help:
 	@echo "  make check                         Run all verification tasks"
 	@echo "  make run                           Start the Kotlin/Spring server"
 	@echo "  make desktop                       Start the Compose Desktop application"
-	@echo "  make cli ARGS='...'                Run the Kotlin CLI"
 	@echo ""
 	@echo "Python services:"
 	@echo "  make worker                        Set up and start the complete Python 3.11 worker on :8081"
@@ -55,12 +54,6 @@ run:
 
 desktop:
 	$(GRADLE) :desktopApp:run
-
-cli:
-	$(GRADLE) cliRun --args='$(ARGS)'
-
-cli-help:
-	$(GRADLE) cliRun --args='--help'
 
 worker: $(WORKER_DEPS_STAMP)
 	$(VENV_PYTHON) -m worker.main --host $(WORKER_HOST) --port $(WORKER_PORT)
