@@ -11,7 +11,7 @@ project through import, preparation, arrangement, mixing, and release export.
 
 ## Requirements
 
-- Add a dedicated Markdown document under `docs/` and link it from `README.md`.
+- Add a dedicated Markdown document under `../../..` and link it from `../../../../README.md`.
 - Describe each workflow stage in the order derived by `WorkflowReadModel`:
   create/open, import and inspect, audio transcription when needed, MIDI repair
   and approval, optional MIDI feel, analysis, structure, cohesion, arrangement,
