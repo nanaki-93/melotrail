@@ -76,6 +76,21 @@ class MidiAiFixApplicationServiceTest {
         assertFalse(Files.exists(root.resolve("midi/ai-fix/A/draft.mid")))
     }
 
+    @Test
+    fun `model response omits code-owned provenance and uses the concrete edit schema`() = runBlocking {
+        val projectService = projectService(); projectService.create(CreateProjectRequest(root))
+        val source = writeMidi(root.resolveSibling("input.mid")); projectService.importPart(ImportPartRequest(root, "A", source)); projectService.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
+        val input = app.melotrail.arrangement.MidiAiFixInputFactory.build("A", root.resolve("midi/clean/A.mid"))
+        val trustedModel = MidiAiFixModelIdentity("qwen", "local", "a".repeat(64), "unknown")
+        val response = "{\"version\":1,\"partId\":\"${input.partId}\",\"cleanedSha256\":\"${input.cleanedSha256}\",\"inputHash\":\"${input.inputHash}\",\"edits\":[{\"kind\":\"timing\",\"noteId\":\"${input.notes.first().id}\",\"startTick\":1}]}"
+
+        val plan = LocalQwenMidiAiFixPlanner(LocalQwenClient { _, _ -> response }, trustedModel).plan(input)
+
+        assertEquals(trustedModel, plan.model)
+        assertEquals(MidiAiFixEditKind.TIMING, plan.edits.single().kind)
+        assertEquals(1, plan.edits.single().startTick)
+    }
+
     private fun projectService() = DefaultProjectApplicationService(
         object : MidiPreparationService {
             override suspend fun transcribe(input: Path, output: Path) = Files.copy(input, output).let { Unit }

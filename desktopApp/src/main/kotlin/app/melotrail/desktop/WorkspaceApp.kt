@@ -1444,6 +1444,7 @@ private fun statusText(state: WorkspaceUiState): String = when (val operation = 
     is WorkspaceOperation.UpdatingPartRole -> "Saving ${operation.id} role…"
     WorkspaceOperation.SavingStructure -> "Saving song structure…"
     is WorkspaceOperation.GeneratingCohesion -> "Generating bounded per-occurrence cohesion…"
+    is WorkspaceOperation.ReviewingCohesion -> "Recording review for cohesion boundary ${operation.outgoingInstanceId} → ${operation.incomingInstanceId}…"
     WorkspaceOperation.ApprovingCohesion -> "Approving validated cohesion…"
     is WorkspaceOperation.GeneratingArrangement -> "Generating reviewed song plan and detailed arrangement…"
     is WorkspaceOperation.ApplyingMix -> "Applying persisted mix settings to existing stems…"

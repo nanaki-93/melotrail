@@ -35,9 +35,10 @@ as part of this compatibility migration.
 
 Equivalent Gradle command: `./gradlew :desktopApp:run`.
 
-Use **New Project** or **Open Project**, prepare/analyze parts, save the structure,
-generate an arrangement, explicitly approve a Qwen draft, then use **Build
-song**. Project files remain canonical: `project.json`, plans and arrangements,
+Use **New Project** or **Open Project**, then follow the desktop happy path:
+**Import**, **Convert to MIDI** when needed, **Clean MIDI**, optional **AI Fix**,
+optional **Lo-fi Feel**, **Structure**, **Cohesion**, and **Arrangement** before
+using **Build song**. Project files remain canonical: `project.json`, plans and arrangements,
 generated MIDI, stems, mixes, and release artifacts are all kept under the
 chosen project directory. Desktop settings retain only the last successfully
 opened project path; they never store project or audio data.
@@ -102,11 +103,11 @@ then update a local checkout with `git remote set-url origin <new-url>`.
 
 ### Desktop workflow and local prerequisites
 
-Use the desktop app as a guided sequence: create/open a project, import MIDI
-or an eligible WAV/MP3 source, inspect/prepare it, clean MIDI, keep it or review
-an optional bounded AI-fix draft, analyze MIDI, then save the
-structure, generate/review an arrangement, then build and audition validated
-artifacts. The app never requires Spring.
+Use the desktop app as a guided sequence: import MIDI or an eligible WAV/MP3
+source, convert audio to MIDI when needed, clean MIDI, keep it or review an
+optional bounded AI-fix draft, select optional Lo-fi Feel, analyze MIDI, then
+save the structure, generate/review Cohesion, generate/review an arrangement,
+then build and audition validated artifacts. The app never requires Spring.
 
 - Direct MIDI is preserved under `source/` and copied as immutable evidence under `midi/raw/`. Use the explicit **Clean MIDI** stage before analysis.
 - WAV/WAVE and MP3 input is accepted only for the optional **solo-piano**
@@ -364,10 +365,11 @@ confidence- and source-space-gated simple countermelody; they never accept raw n
 ### Deterministic MIDI transitions
 
 Generate the inspectable `midi/generated/transitions.mid` boundary artifact
-after drums and pads. The current approved v3 `bridge` intent becomes a
-bounded MIDI `build`; legacy `crossfade` remains an audio-renderer behavior and
-adds no MIDI notes. The artifact records inserted bars in its timeline so later
-MIDI/stem assembly can apply the offset once.
+from the exact reviewed Cohesion bridge records. Each bridge is copied to its
+shifted timeline boundary once; Arrangement records only the approved boundary
+IDs and hashes and never replaces the bridge decision. Legacy arrangements keep
+their existing `bridge`/`crossfade` behavior. The artifact records inserted bars
+in its timeline so later MIDI/stem assembly can apply the offset once.
 
 ```bash
 make cli ARGS='generate transitions --project ./projects/song-001'
@@ -400,9 +402,9 @@ before repair, optional LoFi, mastering, and optional MP3 export.
 
 ### Render all approved stems and the dry reference mix
 
-After generating the active MIDI tracks (including transitions when a bridge
-inserts bars), render the approved detailed arrangement to project-format
-PCM-24 WAV stems and `mix/dry.wav`:
+After generating the active MIDI tracks (including the exact approved Cohesion
+bridges when they insert bars), render the approved detailed arrangement to
+project-format PCM-24 WAV stems and `mix/dry.wav`:
 
 ```bash
 make cli ARGS='render --project ./projects/song-001'
@@ -410,9 +412,9 @@ make cli ARGS='render --project ./projects/song-001'
 
 The command requires the configured local SFZ renderer and never invokes
 repair, LoFi, mastering, or MP3 export. It writes `stem-render.json` with
-input/artifact fingerprints and the one uniform peak-safety gain applied to
-the dry mix. A later `build` reuses these artifacts when their fingerprints
-still match.
+input/artifact fingerprints, the approved Cohesion boundary hashes, and the
+one uniform peak-safety gain applied to the dry mix. A later `build` reuses
+these artifacts when their fingerprints still match.
 
 ### Optional local Qwen planning
 

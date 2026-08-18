@@ -105,7 +105,13 @@ class StemRenderingMixer(
             predictedPeak = mixed.predictedPeak,
             appliedGain = mixed.appliedGain,
             appliedGainDb = mixed.appliedGainDb,
-            sourceHashes = sourceHashes
+            sourceHashes = sourceHashes,
+            cohesionBoundaryHashes = arrangement.cohesion?.boundaries.orEmpty().associate { boundary ->
+                "${boundary.outgoingInstanceId}--${boundary.incomingInstanceId}" to boundary.approvedSha256
+            },
+            cohesionBridgeHashes = arrangement.cohesion?.boundaries.orEmpty().associate { boundary ->
+                "${boundary.outgoingInstanceId}--${boundary.incomingInstanceId}" to boundary.bridgeSha256
+            }
         )
         writeReport(reportPath, report)
         return StemRenderResult(report, reused = false)
@@ -212,6 +218,13 @@ class StemRenderingMixer(
             val occurrence = occurrenceMidi.getValue(section.instanceId)
             append(section.instanceId).append(':').append(section.partId).append(':')
                 .append(occurrence.source).append(':').append(occurrence.projectRelativePath).append(':').append(occurrence.sha256).append('|')
+        }
+        arrangement.cohesion?.let { cohesion ->
+            append("cohesion-input:").append(cohesion.inputSha256).append('|')
+            cohesion.boundaries.forEach { boundary ->
+                append("cohesion-boundary:").append(boundary.outgoingInstanceId).append("->").append(boundary.incomingInstanceId)
+                    .append(':').append(boundary.approvedSha256).append(':').append(boundary.bridgeSha256).append('|')
+            }
         }
         analyses.toSortedMap().forEach { (id, analysis) -> append(id).append(':').append(analysis.durationTicks).append(':').append(analysis.durationSeconds).append(':').append(analysis.tempoMap).append('|') }
         generated.sorted().forEach { append(it.fileName).append(':').append(digest(Files.readAllBytes(it))).append('|') }
@@ -325,6 +338,10 @@ private data class Timeline(val ppq: Int, val segments: List<TimelineSegment>) {
 @Serializable data class StemArtifact(val name: String, val path: String, val frames: Long, val fingerprint: String)
 @Serializable data class StemRenderReport(
     val version: Int = 1, val inputFingerprint: String, val timelineFrames: Long, val sampleRate: Int, val channels: Int,
-    val stems: List<StemArtifact>, val dryMix: String, val dryMixFingerprint: String, val predictedPeak: Float, val appliedGain: Float, val appliedGainDb: Double, val sourceHashes: Map<String, String>
+    val stems: List<StemArtifact>, val dryMix: String, val dryMixFingerprint: String, val predictedPeak: Float, val appliedGain: Float, val appliedGainDb: Double, val sourceHashes: Map<String, String>,
+    /** Exact approved Cohesion decision hashes consumed by this render; empty for legacy arrangements. */
+    val cohesionBoundaryHashes: Map<String, String> = emptyMap(),
+    /** Exact approved Cohesion bridge-MIDI hashes consumed by this render; empty for legacy arrangements. */
+    val cohesionBridgeHashes: Map<String, String> = emptyMap()
 )
 data class StemRenderResult(val report: StemRenderReport, val reused: Boolean)

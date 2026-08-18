@@ -107,6 +107,20 @@ data class MidiAiFixPlan(
     companion object { const val CURRENT_VERSION = 1 }
 }
 
+/**
+ * The untrusted model is deliberately not allowed to select its own provenance.
+ * [LocalQwenMidiAiFixPlanner] attaches the configured identity after parsing this
+ * response shape.
+ */
+@Serializable
+private data class MidiAiFixModelResponse(
+    val version: Int = MidiAiFixPlan.CURRENT_VERSION,
+    val partId: String,
+    val cleanedSha256: String,
+    val inputHash: String,
+    val edits: List<MidiAiFixEdit>
+)
+
 /** Code-owned hard limits. The model is advisory; these checks decide every applied byte. */
 object MidiAiFixValidator {
     const val MAX_EDITS = 32
@@ -186,18 +200,45 @@ class LocalQwenMidiAiFixPlanner(
     fun plan(input: MidiAiFixInput): MidiAiFixPlan {
         input.requireValid()
         val response = client.complete(SYSTEM_PROMPT, json.encodeToString(input))
-        val parsed = try { json.decodeFromString(MidiAiFixPlan.serializer(), response) } catch (error: Exception) {
+        val parsed = try { json.decodeFromString(MidiAiFixModelResponse.serializer(), response) } catch (error: Exception) {
             throw IllegalArgumentException("Local model returned invalid AI-fix JSON: ${error.message}", error)
         }
-        val plan = parsed.copy(model = model)
-        plan.requireValid(input)
-        return plan
+        return MidiAiFixPlan(
+            version = parsed.version,
+            partId = parsed.partId,
+            cleanedSha256 = parsed.cleanedSha256,
+            inputHash = parsed.inputHash,
+            model = model,
+            edits = parsed.edits
+        ).also {
+            try { it.requireValid(input) } catch (error: IllegalArgumentException) {
+                throw IllegalArgumentException("Local model returned an invalid AI-fix plan: ${error.message}", error)
+            }
+        }
     }
 
     @OptIn(ExperimentalSerializationApi::class)
     private companion object {
         val json = Json { ignoreUnknownKeys = false; explicitNulls = false }
-        const val SYSTEM_PROMPT = "Return JSON only for MidiAiFixPlan version 1. Copy partId, cleanedSha256, and inputHash exactly. Use only the supplied note IDs and code-owned edit vocabulary. Never return paths, commands, prose, code, prompts, instruments, or new phrases."
+        val SYSTEM_PROMPT = """
+            Return one JSON object only: no markdown, prose, reasoning, or fields other than the exact response schema below.
+            {
+              "version": 1,
+              "partId": "copy the supplied value exactly",
+              "cleanedSha256": "copy the supplied value exactly",
+              "inputHash": "copy the supplied value exactly",
+              "edits": [{ "kind": "timing", "noteId": "a supplied note id", "startTick": 0 }]
+            }
+            The model field is code-owned: never include it. Return 1 to 32 edits only, and edit each note at most once.
+            Use only these edit objects, with exactly the fields stated for that kind:
+            - timing: {"kind":"timing","noteId":"supplied id","startTick":new non-negative integer}; startTick must differ from the note's supplied startTick and move it by no more than ppq / 4 ticks.
+            - duration: {"kind":"duration","noteId":"supplied id","durationTicks":new positive integer}.
+            - velocity: {"kind":"velocity","noteId":"supplied id","velocity":integer 1..127}.
+            - pitch: {"kind":"pitch","noteId":"supplied id","pitch":integer 0..127}.
+            - remove_collision_or_duplicate: {"kind":"remove_collision_or_duplicate","noteId":"supplied id"}; only for a supplied collision or duplicate region.
+            - add_local_gap_note: {"kind":"add_local_gap_note","gapId":"supplied local-gap id","startTick":integer,"endTick":integer,"pitch":integer,"velocity":integer}; at most two additions.
+            Do not use action, align, quantize, a model field, or any other keys. Prefer the smallest safe set of concrete edits. Never return paths, commands, code, prompts, instruments, or new phrases.
+        """.trimIndent()
     }
 }
 

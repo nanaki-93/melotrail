@@ -144,6 +144,8 @@ internal object WorkspacePageTags {
     const val ARRANGE_PRIMARY_ACTION = "arrange-primary-action"
     const val ARRANGE_PREREQUISITE = "arrange-prerequisite"
     const val ARRANGE_COHESION_ACTION = "arrange-cohesion-action"
+    const val ARRANGE_COHESION_REVIEW = "arrange-cohesion-review"
+    const val ARRANGE_COHESION_BOUNDARY_PREFIX = "arrange-cohesion-boundary-"
     const val ARRANGE_DIAGNOSTICS_TOGGLE = "arrange-diagnostics-toggle"
     const val ARRANGE_DIAGNOSTICS = "arrange-diagnostics"
     const val ARRANGE_REVIEW = "arrange-review"
@@ -1095,6 +1097,7 @@ private data class ArrangePrerequisites(
 
 private enum class CohesionArrangeAction(val label: String) {
     GENERATE("Generate cohesion"),
+    REVIEW("Review cohesion boundaries"),
     APPROVE("Approve cohesion")
 }
 
@@ -1111,8 +1114,12 @@ private fun arrangePrerequisites(state: WorkspaceUiState): ArrangePrerequisites 
     val analysesReady = project.readiness.analysesReady && missingAnalyses.isEmpty()
     val cohesionRequired = project.version >= 3
     val cohesionReady = !cohesionRequired || project.readiness.cohesionReady
+    val cohesionReviewRequired = state.cohesion?.let { snapshot ->
+        snapshot.approvalRequired && !snapshot.approved && !snapshot.stale && snapshot.boundaries.any { !it.reviewed }
+    } == true
     val cohesionAction = when {
         cohesionReady || !cohesionRequired -> null
+        cohesionReviewRequired -> CohesionArrangeAction.REVIEW
         project.readiness.cohesionApprovalRequired && state.cohesion?.let { it.approvalRequired && !it.approved && !it.stale } == true -> CohesionArrangeAction.APPROVE
         else -> CohesionArrangeAction.GENERATE
     }
@@ -1122,6 +1129,7 @@ private fun arrangePrerequisites(state: WorkspaceUiState): ArrangePrerequisites 
         when {
             !cohesionRequired -> "Cohesion is not required for this legacy project."
             cohesionReady -> "Cohesion is current and approved."
+            cohesionAction == CohesionArrangeAction.REVIEW -> "Missing: review every current cohesion boundary."
             cohesionAction == CohesionArrangeAction.APPROVE -> "Missing: approve current cohesion."
             else -> "Missing: generate and approve current cohesion."
         }
@@ -1129,6 +1137,7 @@ private fun arrangePrerequisites(state: WorkspaceUiState): ArrangePrerequisites 
     val shortReason = when {
         !structureReady -> "Save a current structure before arranging."
         !analysesReady -> "Analyze every structure part before arranging."
+        cohesionAction == CohesionArrangeAction.REVIEW -> "Review every current cohesion boundary before approval."
         cohesionAction == CohesionArrangeAction.APPROVE -> "Approve current cohesion before arranging."
         !cohesionReady -> "Generate and approve current cohesion before arranging."
         state.arrangement?.stale == true -> "The retained arrangement is stale; regenerate it."
@@ -1157,8 +1166,11 @@ private fun ArrangePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
                     OutlinedButton(
                         onClick = {
                             onIntent(
-                                if (action == CohesionArrangeAction.APPROVE) WorkspaceIntent.ApproveCohesion
-                                else WorkspaceIntent.GenerateCohesion
+                                when (action) {
+                                    CohesionArrangeAction.GENERATE -> WorkspaceIntent.GenerateCohesion
+                                    CohesionArrangeAction.REVIEW -> WorkspaceIntent.SelectArrangeTab(ArrangeTab.TRANSITIONS)
+                                    CohesionArrangeAction.APPROVE -> WorkspaceIntent.ApproveCohesion
+                                }
                             )
                         },
                         enabled = !mutating,
@@ -1173,9 +1185,45 @@ private fun ArrangePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
                 ArrangeTabs(state.arrangeTab, mutating, onIntent)
             }
         ArrangeTimeline(state, onIntent)
+        CohesionReview(state, onIntent)
         ArrangeTransport(state, onIntent)
         ArrangeReview(state, onIntent)
         ArrangeSummary(state)
+    }
+}
+
+@Composable
+private fun CohesionReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    val cohesion = state.cohesion ?: return
+    if (!cohesion.approvalRequired || cohesion.approved || cohesion.stale || cohesion.boundaries.isEmpty()) return
+    val mutating = state.operation.isMutating
+    val reviewed = cohesion.boundaries.count { it.reviewed }
+    OverviewCard(WorkspacePageTags.ARRANGE_COHESION_REVIEW, "Cohesion boundary review") {
+        Text(
+            "$reviewed of ${cohesion.boundaries.size} current boundaries reviewed. Review each boundary before aggregate approval.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        cohesion.boundaries.forEach { boundary ->
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                Column(Modifier.weight(1f)) {
+                    Text("${boundary.outgoingInstanceId} → ${boundary.incomingInstanceId}", style = MaterialTheme.typography.labelLarge)
+                    Text(boundary.rationale, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if (boundary.reviewed) {
+                    Text("Reviewed", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelMedium)
+                } else {
+                    OutlinedButton(
+                        onClick = { onIntent(WorkspaceIntent.ReviewCohesionBoundary(boundary.outgoingInstanceId, boundary.incomingInstanceId)) },
+                        enabled = !mutating,
+                        modifier = Modifier.semantics {
+                            testTag = WorkspacePageTags.ARRANGE_COHESION_BOUNDARY_PREFIX + boundary.outgoingInstanceId + "--" + boundary.incomingInstanceId
+                            contentDescription = "Review cohesion boundary ${boundary.outgoingInstanceId} to ${boundary.incomingInstanceId}"
+                        }
+                    ) { Text("Mark reviewed") }
+                }
+            }
+        }
     }
 }
 

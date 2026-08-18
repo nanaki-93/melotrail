@@ -85,6 +85,15 @@ Changing raw MIDI, cleanup evidence, or the selected feel makes later analysis
 stale. Keep stale files for inspection, then rerun the earliest affected stage;
 do not copy an old artifact forward.
 
+## Handoff after import
+
+The desktop keeps this exact happy-path order after a source is chosen:
+**Import**, **Convert to MIDI** when the source is audio, **Clean MIDI**,
+optional **AI Fix**, optional **Lo-fi Feel**, **Structure**, **Cohesion**, then
+**Arrangement**. AI Fix and Lo-fi Feel are independent reversible MIDI choices;
+they are not the post-mix Lo-fi audio texture. A selected MIDI change makes
+analysis, Cohesion, Arrangement, generated MIDI, stems, and releases stale.
+
 ## Errors and recovery
 
 The **Import** page keeps its one current source/repair/analysis action visible.

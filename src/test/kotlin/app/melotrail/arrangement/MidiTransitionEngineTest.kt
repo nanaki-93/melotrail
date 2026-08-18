@@ -7,7 +7,11 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
+import java.security.MessageDigest
 import javax.sound.midi.MidiSystem
+import javax.sound.midi.ShortMessage
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class MidiTransitionEngineTest {
     private val engine = DeterministicMidiTransitionEngine()
@@ -109,6 +113,55 @@ class MidiTransitionEngineTest {
         assertTrue(Files.readAllBytes(source).contentEquals(before))
         assertEquals(Files.readAllBytes(generated.path).toList(), Files.readAllBytes(MidiTransitionGenerationAdapter(libraryRoot = testLibrary).generate(projectRoot, project, arrangement, mapOf("A" to analysis())).path).toList())
     }
+
+    @Test
+    fun `adapter places the exact approved cohesion bridge at its shifted boundary`() {
+        val source = projectRoot.resolve("source/A.mid")
+        val clean = projectRoot.resolve("midi/clean/A.mid")
+        Files.createDirectories(source.parent)
+        Files.writeString(source, "immutable source evidence")
+        writeTestMidi(clean)
+        val project = Project(Project.CURRENT_VERSION, "approved-cohesion", listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid"))), listOf("A", "A"), RenderFormat())
+        val bridge = TransitionBridgePlan("A1", "A2", "1".repeat(64), "1".repeat(64), BridgeType.DRUM_FILL, 1, "drums", HarmonicHandoff.HOLD, RhythmicGesture.FILL, EnergyContour.RISE, rationale = "Approved drum handoff")
+        val approved = projectRoot.resolve(CohesionBoundaryArtifactPaths.approved("A1", "A2"))
+        Files.createDirectories(approved.parent)
+        Files.writeString(approved, Json.encodeToString(bridge))
+        writeTestMidi(projectRoot.resolve(TransitionCohesionStore.bridgeMidi("A1", "A2")), pitch = 71)
+        val arrangement = DetailedArrangement(
+            cohesion = ArrangementCohesionReferences(
+                "2".repeat(64),
+                listOf(
+                    ArrangementCohesionBoundaryReference(
+                        "A1", "A2", digest(approved),
+                        digest(projectRoot.resolve(TransitionCohesionStore.bridgeMidi("A1", "A2")))
+                    )
+                )
+            ),
+            sections = listOf(
+                detailedSection(0, TransitionPlan(TransitionType.BRIDGE, 1, bridge = BridgePlan(0.7, listOf(BridgeElement.DRUM_FILL)))),
+                detailedSection(1, TransitionPlan())
+            )
+        )
+
+        val generated = MidiTransitionGenerationAdapter(libraryRoot = createTestLibrary()).generate(projectRoot, project, arrangement, mapOf("A" to analysis()))
+        val notes = MidiSystem.getSequence(generated.path.toFile()).tracks.flatMap { track ->
+            (0 until track.size()).mapNotNull { index ->
+                val event = track[index]
+                val message = event.message as? ShortMessage
+                message?.takeIf { it.command == ShortMessage.NOTE_ON && it.data2 > 0 }?.let { event.tick to it.data1 }
+            }
+        }
+
+        assertEquals(listOf(1_920L to 71), notes)
+        assertEquals(listOf(1_920L), generated.result.events.map { it.startTick })
+
+        writeTestMidi(projectRoot.resolve(TransitionCohesionStore.bridgeMidi("A1", "A2")), pitch = 72)
+        assertThrows(IllegalArgumentException::class.java) {
+            MidiTransitionGenerationAdapter(libraryRoot = createTestLibrary()).generate(projectRoot, project, arrangement, mapOf("A" to analysis()))
+        }
+    }
+
+    private fun digest(path: Path): String = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
 
     private fun createTestLibrary(): Path {
         val library = projectRoot.resolve("test-library")

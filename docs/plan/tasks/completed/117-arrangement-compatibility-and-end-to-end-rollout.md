@@ -25,8 +25,8 @@ release checks with the cleaned process.
   when needed, Clean MIDI, optional AI Fix, optional Lo-fi Feel, Structure,
   Cohesion, Arrangement. Show one primary next action and keep previews,
   evidence, optional choices, and recovery in contextual details.
-- Update `README.md`, `docs/TRACK_PROCESS_WORKFLOW.md`,
-  `docs/MIDI_IMPORT_PROCESS.md`, troubleshooting, and relevant function
+- Update `../../../../README.md`, `../../../TRACK_PROCESS_WORKFLOW.md`,
+  `../../../MIDI_IMPORT_PROCESS.md`, troubleshooting, and relevant function
   documentation so terminology, artifacts, prerequisites, and stale recovery
   match shipped behavior.
 - Complete any explicit project migration introduced by Task 110 and verify old

@@ -39,6 +39,7 @@ import app.melotrail.application.ArrangementPlannerKind
 import app.melotrail.application.ArrangementInstrumentSnapshot
 import app.melotrail.application.ArrangementSectionSnapshot
 import app.melotrail.application.ArrangementSnapshot
+import app.melotrail.application.CohesionBoundarySnapshot
 import app.melotrail.application.CohesionPlannerKind
 import app.melotrail.application.CohesionSnapshot
 import app.melotrail.application.LogicalMixSetting
@@ -1022,6 +1023,33 @@ class WorkspaceScreenTest {
         setContent { MelotrailTheme { WorkspaceScreen(reviewState.copy(cohesion = null), intents::add) } }
         onNodeWithTag(WorkspacePageTags.ARRANGE_COHESION_ACTION).performClick()
         assertEquals(WorkspaceIntent.GenerateCohesion, intents.single())
+    }
+
+    @Test
+    fun `Arrange exposes a review action for every unreviewed cohesion boundary`() = runComposeUiTest {
+        val base = arrangeState()
+        val project = checkNotNull(base.project)
+        val draft = CohesionSnapshot(
+            root = project.root,
+            planner = CohesionPlannerKind.QWEN,
+            inputHash = "0".repeat(64),
+            structureSha256 = "0".repeat(64),
+            boundaries = listOf(CohesionBoundarySnapshot("A1", "A2", project.root.resolve("bridge.mid"), "Carry energy forward", reviewed = false)),
+            approvalRequired = true,
+            approved = false,
+            stale = false,
+            artifact = project.root.resolve("cohesion.draft.json")
+        )
+        val intents = mutableListOf<WorkspaceIntent>()
+        val reviewState = base.copy(
+            project = project.copy(readiness = project.readiness.copy(cohesionReady = false, cohesionApprovalRequired = true)),
+            cohesion = draft
+        )
+        setContent { MelotrailTheme { WorkspaceScreen(reviewState, intents::add) } }
+
+        onNodeWithTag(WorkspacePageTags.ARRANGE_COHESION_BOUNDARY_PREFIX + "A1--A2").performScrollTo().performClick()
+
+        assertEquals(WorkspaceIntent.ReviewCohesionBoundary("A1", "A2"), intents.single())
     }
 
     @Test

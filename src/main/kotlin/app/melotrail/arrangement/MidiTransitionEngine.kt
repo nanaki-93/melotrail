@@ -4,6 +4,7 @@ import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.security.MessageDigest
 import java.util.UUID
 import javax.sound.midi.MetaMessage
 import javax.sound.midi.MidiEvent
@@ -11,6 +12,7 @@ import javax.sound.midi.MidiSystem
 import javax.sound.midi.Sequence
 import javax.sound.midi.ShortMessage
 import kotlin.math.roundToInt
+import kotlinx.serialization.json.Json
 
 /** The MIDI-only transition vocabulary. Legacy audio fades are deliberately absent. */
 enum class MidiTransitionType { NONE, DRUM_FILL, BASS_WALK, PAD_SUSTAIN, BUILD, DROP, CYMBAL }
@@ -299,6 +301,9 @@ class MidiTransitionGenerationAdapter(
             TransitionSectionContext(index, section.partId, analysis.ppq, analysis.durationTicks, analysis.tempoMap, analysis.timeSignatures, analysis.key, analysis.chords,
                 section.instruments.filter { it.mode == InstrumentMode.GENERATED }.map { LogicalInstrument.parse(it.name) }.toSet(), section.energy)
         }
+        arrangement.cohesion?.let { cohesion ->
+            return generateApprovedCohesion(root, arrangement, cohesion, sections, available)
+        }
         val plans = arrangement.sections.mapIndexed { index, section ->
             if (index == arrangement.sections.lastIndex) MidiTransitionPlan() else section.transitionOut.toMidiPlan()
         }
@@ -307,6 +312,138 @@ class MidiTransitionGenerationAdapter(
         writeMidi(output, result, available, sections)
         return GeneratedTransitionMidi(output, result)
     }
+
+    /**
+     * Task 117 path: publish the already approved Cohesion bridge MIDI at its
+     * shifted boundary. This does not ask the legacy transition engine to
+     * compose a replacement gesture.
+     */
+    private fun generateApprovedCohesion(
+        root: Path,
+        arrangement: DetailedArrangement,
+        cohesion: ArrangementCohesionReferences,
+        sections: List<TransitionSectionContext>,
+        available: Map<LogicalInstrument, TransitionInstrument>
+    ): GeneratedTransitionMidi {
+        val expectedPairs = arrangement.sections.zipWithNext().map { (outgoing, incoming) -> outgoing.instanceId to incoming.instanceId }
+        require(cohesion.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId } == expectedPairs) {
+            "Arrangement Cohesion boundaries do not match the rendered section order."
+        }
+        require(sections.isNotEmpty()) { "Cohesion transition generation requires at least one section." }
+        val ppq = sections.first().ppq
+        require(sections.all { it.ppq == ppq }) { "Cohesion transition MIDI requires one project PPQ." }
+        val bridges = cohesion.boundaries.map { reference ->
+            val approved = root.resolve(CohesionBoundaryArtifactPaths.approved(reference.outgoingInstanceId, reference.incomingInstanceId))
+            require(Files.isRegularFile(approved) && digest(approved) == reference.approvedSha256) {
+                "Approved Cohesion boundary '${reference.outgoingInstanceId} -> ${reference.incomingInstanceId}' has changed; regenerate cohesion."
+            }
+            Json { ignoreUnknownKeys = false }.decodeFromString(TransitionBridgePlan.serializer(), Files.readString(approved)).also { bridge ->
+                require(bridge.outgoingInstanceId == reference.outgoingInstanceId && bridge.incomingInstanceId == reference.incomingInstanceId) {
+                    "Approved Cohesion boundary identity is inconsistent."
+                }
+                require(arrangement.sections[bridgesIndex(cohesion, reference)].transitionOut == bridge.toTransitionPlan()) {
+                    "Arrangement transition does not match its approved Cohesion boundary."
+                }
+            }
+        }
+        val placements = placements(sections, bridges)
+        val output = root.resolve("midi/generated/transitions.mid")
+        writeApprovedMidi(output, ppq, sections, placements, bridges, cohesion, available, root)
+        val events = bridges.flatMapIndexed { index, bridge ->
+            val sequence = MidiSystem.getSequence(root.resolve(TransitionCohesionStore.bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId)).toFile())
+            val logical = LogicalInstrument.parse(bridge.instrument)
+            sequence.tracks.flatMap { track -> (0 until track.size()).map(track::get) }.mapNotNull { event ->
+                val message = event.message as? ShortMessage
+                message?.takeIf { it.command == ShortMessage.NOTE_ON && it.data2 > 0 }?.let {
+                    TransitionMidiEvent(logical, placements[index].endTick + event.tick, placements[index].endTick + event.tick + 1, it.data1, it.data2)
+                }
+            }
+        }
+        return GeneratedTransitionMidi(output, TransitionGenerationResult(ppq, placements, events, emptyList()))
+    }
+
+    private fun bridgesIndex(cohesion: ArrangementCohesionReferences, reference: ArrangementCohesionBoundaryReference): Int =
+        cohesion.boundaries.indexOf(reference).also { require(it >= 0) }
+
+    private fun placements(sections: List<TransitionSectionContext>, bridges: List<TransitionBridgePlan>): List<TransitionSectionPlacement> {
+        var cursor = 0L
+        return sections.mapIndexed { index, section ->
+            val inserted = if (index == sections.lastIndex) 0L else {
+                val bridge = bridges[index]
+                val meter = sections[index + 1].timeSignatures.first()
+                bridge.bars.toLong() * (section.ppq * 4L / meter.denominator) * meter.numerator
+            }
+            TransitionSectionPlacement(index, cursor, cursor + section.durationTicks, inserted).also { cursor += section.durationTicks + inserted }
+        }
+    }
+
+    private fun writeApprovedMidi(
+        output: Path,
+        ppq: Int,
+        sections: List<TransitionSectionContext>,
+        placements: List<TransitionSectionPlacement>,
+        bridges: List<TransitionBridgePlan>,
+        cohesion: ArrangementCohesionReferences,
+        instruments: Map<LogicalInstrument, TransitionInstrument>,
+        root: Path
+    ) {
+        Files.createDirectories(requireNotNull(output.parent))
+        val temporary = output.resolveSibling(".${output.fileName}.${UUID.randomUUID()}.tmp")
+        try {
+            val sequence = Sequence(Sequence.PPQ, ppq)
+            val meta = sequence.createTrack()
+            placements.forEach { placement ->
+                val context = sections[placement.sectionIndex]
+                context.tempoMap.forEach { meta.add(MidiEvent(tempoMessage(it.bpm), placement.startTick + it.tick)) }
+                context.timeSignatures.forEach { meta.add(MidiEvent(signatureMessage(it), placement.startTick + it.tick)) }
+                if (placement.insertedTicksAfter > 0L) {
+                    val incoming = sections[placement.sectionIndex + 1]
+                    meta.add(MidiEvent(tempoMessage(incoming.tempoMap.first().bpm), placement.endTick))
+                    meta.add(MidiEvent(signatureMessage(incoming.timeSignatures.first()), placement.endTick))
+                }
+            }
+            bridges.forEachIndexed { index, bridge ->
+                val source = root.resolve(TransitionCohesionStore.bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId))
+                val reference = cohesion.boundaries[index]
+                require(Files.isRegularFile(source) && digest(source) == reference.bridgeSha256) {
+                    "Approved Cohesion bridge MIDI has changed for '${bridge.outgoingInstanceId} -> ${bridge.incomingInstanceId}'; regenerate cohesion."
+                }
+                val sourceSequence = MidiSystem.getSequence(source.toFile())
+                require(sourceSequence.divisionType == Sequence.PPQ && sourceSequence.resolution == ppq) { "Approved Cohesion bridge MIDI has incompatible timing." }
+                val logical = LogicalInstrument.parse(bridge.instrument)
+                val target = sequence.createTrack()
+                val instrument = requireNotNull(instruments[logical])
+                instrument.program?.let { target.add(MidiEvent(ShortMessage(ShortMessage.PROGRAM_CHANGE, instrument.channel, it, 0), placements[index].endTick)) }
+                val maximum = placements[index].insertedTicksAfter
+                sourceSequence.tracks.flatMap { track -> (0 until track.size()).map(track::get) }
+                    .mapNotNull { event -> (event.message as? ShortMessage)?.let { event to it } }
+                    .filter { (event, message) -> message.command in setOf(ShortMessage.NOTE_ON, ShortMessage.NOTE_OFF) && event.tick <= maximum }
+                    .forEach { (event, message) ->
+                        target.add(MidiEvent(ShortMessage(message.command, instrument.channel, message.data1, message.data2), placements[index].endTick + event.tick))
+                    }
+            }
+            meta.add(MidiEvent(MetaMessage(0x2F, byteArrayOf(), 0), placements.last().endTick))
+            require(MidiSystem.write(sequence, 1, temporary.toFile()) > 0) { "Could not write approved Cohesion transition MIDI" }
+            validateWrittenMidi(temporary, TransitionGenerationResult(ppq, placements, emptyList(), emptyList()))
+            try { Files.move(temporary, output, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING) }
+            catch (error: AtomicMoveNotSupportedException) { throw IllegalStateException("Atomic publish is not supported for generated transition MIDI '$output'", error) }
+        } finally { Files.deleteIfExists(temporary) }
+    }
+
+    private fun TransitionBridgePlan.toTransitionPlan(): TransitionPlan = TransitionPlan(
+        TransitionType.BRIDGE,
+        bars,
+        bridge = BridgePlan(
+            energy = when (energyContour) { EnergyContour.HOLD -> 0.5; EnergyContour.RISE -> 0.7; EnergyContour.FALL -> 0.3 },
+            elements = when (bridgeType) {
+                BridgeType.DRUM_FILL, BridgeType.BUILD -> listOf(BridgeElement.DRUM_FILL)
+                BridgeType.BASS_WALK -> listOf(BridgeElement.BASS_PICKUP)
+                BridgeType.PAD_SUSTAIN -> listOf(BridgeElement.PAD_SWELL)
+            }
+        )
+    )
+
+    private fun digest(path: Path): String = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
 
     private fun writeMidi(output: Path, result: TransitionGenerationResult, instruments: Map<LogicalInstrument, TransitionInstrument>, sections: List<TransitionSectionContext>) {
         Files.createDirectories(requireNotNull(output.parent))

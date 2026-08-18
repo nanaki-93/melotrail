@@ -11,7 +11,9 @@ import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.RenderFormat
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.decodeFromString
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -63,11 +65,31 @@ class ArrangementApplicationServiceTest {
         assertTrue(Files.isRegularFile(root.resolve("arrangement.json")))
     }
 
-    private fun project(name: String): Path {
+    @Test
+    fun `new arrangements persist and consume the exact approved cohesion boundary`() = runBlocking {
+        val root = project("cohesion-boundary", structure = listOf("A", "A"))
+        generateApprovedCohesion(root)
+
+        DefaultArrangementApplicationService(libraryRoot = Path.of("sounds"))
+            .generate(GenerateArrangementRequest(root, instruments = listOf("piano", "drums")))
+
+        val arrangement = kotlinx.serialization.json.Json { ignoreUnknownKeys = false }
+            .decodeFromString(app.melotrail.arrangement.DetailedArrangement.serializer(), Files.readString(root.resolve("arrangement.json")))
+        val cohesion = ProjectStore.read(root).workflow.cohesion!!
+        val approved = cohesion.boundaries.single().approved!!
+
+        assertEquals(cohesion.inputSha256, arrangement.cohesion!!.inputSha256)
+        assertEquals(listOf("A1" to "A2"), arrangement.cohesion!!.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId })
+        assertEquals(approved.sha256, arrangement.cohesion!!.boundaries.single().approvedSha256)
+        assertEquals(sha256(root.resolve("cohesion/boundaries/A1--A2/bridge.mid")), arrangement.cohesion!!.boundaries.single().bridgeSha256)
+        assertEquals(app.melotrail.arrangement.TransitionType.BRIDGE, arrangement.sections.first().transitionOut.type)
+    }
+
+    private fun project(name: String, structure: List<String> = listOf("A")): Path {
         val root = tempDir.resolve(name)
         Files.createDirectories(root.resolve("source")); Files.createDirectories(root.resolve("midi/clean"))
         writeMidi(root.resolve("source/A.mid")); writeMidi(root.resolve("midi/clean/A.mid"))
-        val project = Project(Project.CURRENT_VERSION, name, listOf(Part("A", "source/A.mid", "verse", midi = MidiReferences(clean = "midi/clean/A.mid"))), listOf("A"), RenderFormat())
+        val project = Project(Project.CURRENT_VERSION, name, listOf(Part("A", "source/A.mid", "verse", midi = MidiReferences(clean = "midi/clean/A.mid"))), structure, RenderFormat())
         ProjectStore.write(root, project)
         MidiAnalysisStore.write(root, project, "A", MidiPartAnalyzer().analyze(root.resolve("midi/clean/A.mid"), "A"))
         return root
@@ -79,4 +101,6 @@ class ArrangementApplicationServiceTest {
         track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, 60, 0), 1_920))
         MidiSystem.write(sequence, 1, path.toFile())
     }
+
+    private fun sha256(path: Path): String = java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
 }

@@ -315,6 +315,7 @@ sealed interface WorkspaceOperation {
     data class UpdatingPartRole(val id: String) : WorkspaceOperation
     data object SavingStructure : WorkspaceOperation
     data class GeneratingCohesion(val progress: OperationProgress? = null) : WorkspaceOperation
+    data class ReviewingCohesion(val outgoingInstanceId: String, val incomingInstanceId: String) : WorkspaceOperation
     data object ApprovingCohesion : WorkspaceOperation
     data class GeneratingArrangement(val progress: OperationProgress? = null) : WorkspaceOperation
     data class ApplyingMix(val progress: OperationProgress? = null) : WorkspaceOperation
@@ -334,7 +335,7 @@ val WorkspaceOperation.isMutating: Boolean
         this is WorkspaceOperation.SelectingMidiFeel ||
         this is WorkspaceOperation.CreatingMidiAiFix || this is WorkspaceOperation.ApprovingMidiAiFix ||
         this is WorkspaceOperation.UpdatingPartRole || this is WorkspaceOperation.SavingStructure ||
-        this is WorkspaceOperation.GeneratingCohesion || this is WorkspaceOperation.ApprovingCohesion ||
+        this is WorkspaceOperation.GeneratingCohesion || this is WorkspaceOperation.ReviewingCohesion || this is WorkspaceOperation.ApprovingCohesion ||
         this is WorkspaceOperation.GeneratingArrangement || this is WorkspaceOperation.ApprovingArrangement
         || this is WorkspaceOperation.ApplyingMix || this is WorkspaceOperation.BuildingSong || this is WorkspaceOperation.ExportingCommercialProvenance || this is WorkspaceOperation.ExportingRelease
 
@@ -561,6 +562,7 @@ sealed interface WorkspaceIntent {
     data class SetPlaybackVolume(val volume: Double) : WorkspaceIntent
     data object GenerateArrangement : WorkspaceIntent
     data object GenerateCohesion : WorkspaceIntent
+    data class ReviewCohesionBoundary(val outgoingInstanceId: String, val incomingInstanceId: String) : WorkspaceIntent
     data object ApproveCohesion : WorkspaceIntent
     data object RejectCohesion : WorkspaceIntent
     data object PreviewArrangement : WorkspaceIntent
@@ -717,6 +719,7 @@ class WorkspaceViewModel(
             is WorkspaceIntent.SetPlaybackVolume -> setPlaybackVolume(intent.volume)
             WorkspaceIntent.GenerateArrangement -> generateArrangement()
             WorkspaceIntent.GenerateCohesion -> generateCohesion()
+            is WorkspaceIntent.ReviewCohesionBoundary -> reviewCohesionBoundary(intent.outgoingInstanceId, intent.incomingInstanceId)
             WorkspaceIntent.ApproveCohesion -> approveCohesion()
             WorkspaceIntent.RejectCohesion -> rejectCohesion()
             WorkspaceIntent.PreviewArrangement -> previewArrangement()
@@ -1771,6 +1774,24 @@ class WorkspaceViewModel(
                     mutableState.update { it.copy(project = refreshed ?: it.project, cohesion = approved, operation = WorkspaceOperation.Idle, notification = "Cohesion approved for every occurrence.", operationFeedback = feedbackTracker.complete(feedbackId, "Cohesion approved for every occurrence.") ?: it.operationFeedback) }
                 }
                 .onFailure { fail("approve cohesion", it.message ?: "Unable to approve cohesion.", sessionId = feedbackId) }
+        }
+    }
+
+    private fun reviewCohesionBoundary(outgoingInstanceId: String, incomingInstanceId: String) {
+        val project = state.value.project ?: return
+        val cohesion = state.value.cohesion ?: return fail("review cohesion", "Generate a cohesion draft before reviewing its boundaries.")
+        val boundary = cohesion.boundaries.firstOrNull { it.outgoingInstanceId == outgoingInstanceId && it.incomingInstanceId == incomingInstanceId }
+            ?: return fail("review cohesion", "The selected cohesion boundary is no longer current. Regenerate cohesion.")
+        if (boundary.reviewed || cohesion.approved || cohesion.stale || state.value.operation.isMutating) return
+        mutableState.update { it.copy(operation = WorkspaceOperation.ReviewingCohesion(outgoingInstanceId, incomingInstanceId), notification = null) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { cohesionService.reviewBoundary(project.root, outgoingInstanceId, incomingInstanceId) } }
+                .onSuccess { reviewed ->
+                    val refreshed = runCatching { projectService.open(project.root) }.getOrNull()
+                    val message = "Reviewed cohesion boundary $outgoingInstanceId → $incomingInstanceId."
+                    mutableState.update { it.copy(project = refreshed ?: it.project, cohesion = reviewed, operation = WorkspaceOperation.Idle, notification = message) }
+                }
+                .onFailure { fail("review cohesion", it.message ?: "Unable to review cohesion boundary.") }
         }
     }
 

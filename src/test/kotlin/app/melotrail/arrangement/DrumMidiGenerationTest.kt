@@ -84,6 +84,17 @@ class DrumMidiGenerationTest {
     }
 
     @Test
+    fun `low PPQ swung fill closes a drum hit before the next same-pitch attack`() {
+        val hits = generator.generate(request(ppq = 24, length = 96, role = DrumsRole.BUILD, swing = 0.5, fillLastBar = true)).hits
+
+        hits.groupBy { it.pitch }.values.forEach { samePitch ->
+            samePitch.sortedBy { it.startTick }.zipWithNext().forEach { (first, second) ->
+                assertTrue(first.endTick <= second.startTick, "pitch ${first.pitch} overlaps at ${first.endTick} and ${second.startTick}")
+            }
+        }
+    }
+
+    @Test
     fun `adapter writes full timeline on registry channel without changing source or bass MIDI`() {
         val source = projectRoot.resolve("source/A.mid")
         val clean = projectRoot.resolve("midi/clean/A.mid")
@@ -117,11 +128,29 @@ class DrumMidiGenerationTest {
         assertTrue(Files.readAllBytes(bass).contentEquals(bassBefore))
     }
 
+    @Test
+    fun `adapter writes low PPQ fills without overlapping same-pitch MIDI events`() {
+        val source = projectRoot.resolve("source/A.mid")
+        val clean = projectRoot.resolve("midi/clean/A.mid")
+        Files.createDirectories(source.parent)
+        Files.createDirectories(clean.parent)
+        Files.writeString(source, "source MIDI remains untouched")
+        writeTestMidi(clean)
+        val project = Project(Project.CURRENT_VERSION, "low-ppq-drums", listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid"))), renderFormat = RenderFormat())
+        val arrangement = DetailedArrangement(sections = listOf(section(0, DrumsRole.BUILD, true)))
+
+        val generated = DrumMidiGenerationAdapter(libraryRoot = Path.of("sounds")).generate(projectRoot, project, arrangement, mapOf("A" to analysis(ppq = 24, durationTicks = 96)))
+
+        assertEquals(24, MidiSystem.getSequence(generated.path.toFile()).resolution)
+        assertTrue(generated.hits.isNotEmpty())
+    }
+
     private fun events(role: DrumsRole, snare: SnarePattern): List<String> = generator.generate(request(role = role, snarePattern = snare)).hits.map { "${it.name}@${it.startTick}" }
 
     private fun request(
         sectionIndex: Int = 0,
         start: Long = 0,
+        ppq: Int = 480,
         length: Long = 1920,
         signatures: List<MidiTimeSignature> = listOf(MidiTimeSignature(0, 4, 4)),
         density: Double = 1.0,
@@ -135,7 +164,7 @@ class DrumMidiGenerationTest {
         transitionIntent: SongTransitionIntent = SongTransitionIntent.NONE,
         noteMap: Map<String, Int> = this.noteMap
     ) = DrumGenerationRequest(
-        sectionIndex, start, 480, listOf(MidiTempoChange(0, 120.0)), signatures, length, energy, density, role,
+        sectionIndex, start, ppq, listOf(MidiTempoChange(0, 120.0)), signatures, length, energy, density, role,
         kickDensity, snarePattern, hiHatDensity, swing, fillLastBar, transitionIntent, 9, noteMap
     )
 
@@ -145,8 +174,8 @@ class DrumMidiGenerationTest {
         TransitionPlan()
     )
 
-    private fun analysis() = MidiAnalysis(
-        partId = "A", ppq = 480, durationTicks = 1920, durationSeconds = 2.0,
+    private fun analysis(ppq: Int = 480, durationTicks: Long = 1920) = MidiAnalysis(
+        partId = "A", ppq = ppq, durationTicks = durationTicks, durationSeconds = 2.0,
         tempoMap = listOf(MidiTempoChange(0, 120.0)), timeSignatures = listOf(MidiTimeSignature(0, 4, 4)),
         bars = 1, beats = 4.0, noteCount = 3, noteDensity = 0.1, rhythmicDensity = 0.1, energy = 0.7,
         key = MidiKey("C", "major", 0.8), chords = emptyList()

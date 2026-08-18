@@ -19,7 +19,9 @@ import java.nio.file.StandardOpenOption
 @Serializable
 data class DetailedArrangement(
     val version: Int = CURRENT_VERSION,
-    val sections: List<DetailedArrangementSection>
+    val sections: List<DetailedArrangementSection>,
+    /** Null keeps already-approved v3 arrangements readable with their original transition semantics. */
+    val cohesion: ArrangementCohesionReferences? = null
 ) {
     fun validate(input: DetailedArrangementInput): DetailedArrangementValidationResult =
         DetailedArrangementValidator.validate(this, input)
@@ -33,6 +35,80 @@ data class DetailedArrangement(
         const val CURRENT_VERSION = 3
     }
 }
+
+/**
+ * Immutable evidence that a newly generated arrangement consumes reviewed
+ * Cohesion boundary decisions.  The decision stays in Cohesion; Arrangement
+ * stores only its stable identity plus approved decision and bridge-MIDI digests.
+ */
+@Serializable
+data class ArrangementCohesionReferences(
+    val inputSha256: String,
+    val boundaries: List<ArrangementCohesionBoundaryReference>
+) {
+    init {
+        require(SHA_256.matches(inputSha256)) { "Arrangement cohesion input fingerprint is invalid" }
+        require(boundaries.map { it.outgoingInstanceId to it.incomingInstanceId }.distinct().size == boundaries.size) {
+            "Arrangement cohesion boundary identities must be unique"
+        }
+    }
+}
+
+@Serializable
+data class ArrangementCohesionBoundaryReference(
+    val outgoingInstanceId: String,
+    val incomingInstanceId: String,
+    val approvedSha256: String,
+    val bridgeSha256: String
+) {
+    init {
+        require(SAFE_ID.matches(outgoingInstanceId) && SAFE_ID.matches(incomingInstanceId) && outgoingInstanceId != incomingInstanceId) {
+            "Arrangement cohesion boundary identity is invalid"
+        }
+        require(SHA_256.matches(approvedSha256) && SHA_256.matches(bridgeSha256)) { "Arrangement cohesion boundary fingerprint is invalid" }
+    }
+}
+
+/** Trusted in-memory pairing of approved Cohesion data with its persisted references. */
+data class ApprovedArrangementCohesion(
+    val references: ArrangementCohesionReferences,
+    val plan: TransitionCohesionPlan
+) {
+    fun requireValid(input: SongPlanningInput) {
+        val expected = input.sectionsWithIdentity().zipWithNext().map { (outgoing, incoming) -> outgoing.instanceId to incoming.instanceId }
+        require(references.inputSha256 == plan.inputHash) { "Arrangement cohesion input fingerprint is stale" }
+        require(references.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId } == expected) {
+            "Arrangement cohesion boundaries do not match the saved Structure"
+        }
+        require(plan.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId } == expected) {
+            "Approved Cohesion plan does not match the saved Structure"
+        }
+    }
+
+    fun transitionOut(index: Int, isFinal: Boolean): TransitionPlan {
+        if (isFinal) return TransitionPlan()
+        val bridge = plan.boundaries.getOrNull(index) ?: error("Approved Cohesion is missing boundary ${index + 1}")
+        return TransitionPlan(
+            type = TransitionType.BRIDGE,
+            bars = bridge.bars,
+            bridge = BridgePlan(
+                energy = when (bridge.energyContour) {
+                    EnergyContour.HOLD -> 0.5
+                    EnergyContour.RISE -> 0.7
+                    EnergyContour.FALL -> 0.3
+                },
+                elements = when (bridge.bridgeType) {
+                    BridgeType.DRUM_FILL, BridgeType.BUILD -> listOf(BridgeElement.DRUM_FILL)
+                    BridgeType.BASS_WALK -> listOf(BridgeElement.BASS_PICKUP)
+                    BridgeType.PAD_SUSTAIN -> listOf(BridgeElement.PAD_SWELL)
+                }
+            )
+        )
+    }
+}
+
+private val SAFE_ID = Regex("[A-Za-z0-9_-]{1,80}")
+private val SHA_256 = Regex("[0-9a-f]{64}")
 
 @Serializable
 data class DetailedArrangementSection(
@@ -166,11 +242,14 @@ enum class MusicalRegister {
 data class DetailedArrangementInput(
     val planningInput: SongPlanningInput,
     val songPlan: SongPlan,
-    val variations: SectionVariationPlan
+    val variations: SectionVariationPlan,
+    /** Null is the compatibility mode for a pre-Task-117 arrangement. */
+    val cohesion: ApprovedArrangementCohesion? = null
 ) {
     fun requireValid() {
         songPlan.requireValid(planningInput)
         variations.requireValid(planningInput, songPlan)
+        cohesion?.requireValid(planningInput)
     }
 }
 
@@ -209,7 +288,14 @@ object DetailedArrangementValidator {
                 errors += "$label instruments must match the section variation exactly"
             }
             validateInstruments(label, section.role, section.instruments, expected.instruments, errors)
-            validateTransition(label, section.transitionOut, expected.transitionIntent, position == input.variations.sections.lastIndex, errors)
+            val expectedCohesionTransition = input.cohesion?.transitionOut(position, position == input.variations.sections.lastIndex)
+            if (expectedCohesionTransition != null) {
+                if (arrangement.cohesion != input.cohesion.references) errors += "$label must retain the exact approved Cohesion boundary IDs and hashes"
+                if (section.transitionOut != expectedCohesionTransition) errors += "$label transition must use its approved Cohesion boundary decision"
+            } else {
+                if (arrangement.cohesion != null) errors += "$label has unexpected Cohesion references"
+                validateTransition(label, section.transitionOut, expected.transitionIntent, position == input.variations.sections.lastIndex, errors)
+            }
         }
         return DetailedArrangementValidationResult(errors)
     }
@@ -312,7 +398,7 @@ interface DetailedArrangementPlanner {
 class DeterministicDetailedArrangementPlanner : DetailedArrangementPlanner {
     override fun plan(input: DetailedArrangementInput): DetailedArrangement {
         input.requireValid()
-        return DetailedArrangement(sections = input.variations.sections.mapIndexed { index, section ->
+        return DetailedArrangement(cohesion = input.cohesion?.references, sections = input.variations.sections.mapIndexed { index, section ->
             DetailedArrangementSection(
                 index = section.index,
                 instanceId = section.instanceId,
@@ -320,7 +406,7 @@ class DeterministicDetailedArrangementPlanner : DetailedArrangementPlanner {
                 role = section.purpose,
                 energy = section.energy,
                 instruments = section.instruments.map { instrument -> detail(instrument, section.energy, section.purpose) },
-                transitionOut = transition(
+                transitionOut = input.cohesion?.transitionOut(index, index == input.variations.sections.lastIndex) ?: transition(
                     section.transitionIntent,
                     section.energy,
                     section.instruments.map { it.name }.toSet(),
@@ -445,12 +531,14 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
     }
 
     private fun DetailedArrangement.withLockedInstrumentFields(input: DetailedArrangementInput): DetailedArrangement = copy(
+        cohesion = input.cohesion?.references,
         sections = sections.mapIndexed { index, section ->
             val expected = input.variations.sections.getOrNull(index) ?: return@mapIndexed section
             if (section.instruments.size != expected.instruments.size) return@mapIndexed section
-            section.copy(instruments = section.instruments.zip(expected.instruments).map { (instrument, variation) ->
-                instrument.withLockedFields(variation)
-            })
+            section.copy(
+                instruments = section.instruments.zip(expected.instruments).map { (instrument, variation) -> instrument.withLockedFields(variation) },
+                transitionOut = input.cohesion?.transitionOut(index, index == input.variations.sections.lastIndex) ?: section.transitionOut
+            )
         }
     )
 

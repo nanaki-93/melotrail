@@ -86,7 +86,11 @@ class DeterministicDrumMidiGenerator {
         val hits = linkedMapOf<Pair<Long, String>, DrumMidiHit>()
         bars.forEach { bar -> addPattern(request, bar, hits) }
         if (request.fillLastBar) addFill(request, bars.last(), hits)
-        val result = hits.values.sortedWith(compareBy<DrumMidiHit> { it.startTick }.thenBy { it.pitch })
+        // A short PPQ combined with swing or a final-bar fill can place a later
+        // same-pitch hit before the earlier hit's nominal end. Keep both hits,
+        // but close the first one at the next attack so the generated MIDI has
+        // one unambiguous active note per drum pitch.
+        val result = shortenSamePitchHits(hits.values)
         validateHits(result, request)
         return DrumGenerationResult(result, emptyList())
     }
@@ -183,6 +187,15 @@ class DeterministicDrumMidiGenerator {
         return windows
     }
 
+    private fun shortenSamePitchHits(hits: Collection<DrumMidiHit>): List<DrumMidiHit> =
+        hits.groupBy(DrumMidiHit::pitch).values.flatMap { samePitch ->
+            val ordered = samePitch.sortedBy(DrumMidiHit::startTick)
+            ordered.mapIndexed { index, hit ->
+                val nextStart = ordered.getOrNull(index + 1)?.startTick
+                hit.copy(endTick = minOf(hit.endTick, nextStart ?: hit.endTick))
+            }
+        }.sortedWith(compareBy<DrumMidiHit> { it.startTick }.thenBy { it.pitch })
+
     private fun velocity(energy: Double, lift: Int = 0): Int =
         (MIN_VELOCITY + (MAX_VELOCITY - MIN_VELOCITY) * energy).roundToInt().plus(lift).coerceIn(MIN_VELOCITY, MAX_VELOCITY)
 
@@ -193,6 +206,11 @@ class DeterministicDrumMidiGenerator {
             require(hit.pitch in 0..127 && hit.velocity in 1..127 && hit.endTick > hit.startTick) { "Generated drum hit has invalid MIDI values" }
             require(hit.startTick >= request.sectionStartTick && hit.endTick <= request.sectionStartTick + request.sectionLengthTicks) { "Generated drum hit escapes its section" }
             require(simultaneous.add(hit.startTick to hit.name)) { "Generated duplicate simultaneous drum hit '${hit.name}'" }
+        }
+        hits.groupBy(DrumMidiHit::pitch).values.forEach { samePitch ->
+            samePitch.sortedBy(DrumMidiHit::startTick).zipWithNext().forEach { (first, second) ->
+                require(first.endTick <= second.startTick) { "Generated drum hits overlap for MIDI pitch ${first.pitch}" }
+            }
         }
     }
 
@@ -266,9 +284,13 @@ class DrumMidiGenerationAdapter(
                 segment.tempoMap.forEach { meta.add(MidiEvent(tempoMessage(it.bpm), segment.startTick + it.tick)) }
                 segment.timeSignatures.forEach { meta.add(MidiEvent(signatureMessage(it), segment.startTick + it.tick)) }
             }
-            results.flatMap { it.second.hits }.sortedWith(compareBy<DrumMidiHit> { it.startTick }.thenBy { it.pitch }).forEach { hit ->
-                notes.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, channel, hit.pitch, hit.velocity), hit.startTick))
-                notes.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, channel, hit.pitch, 0), hit.endTick))
+            results.flatMap { it.second.hits }.flatMap { hit ->
+                listOf(DrumEvent(hit, noteOn = false), DrumEvent(hit, noteOn = true))
+            }.sortedWith(compareBy<DrumEvent> { it.tick }.thenBy { if (it.noteOn) 1 else 0 }.thenBy { it.hit.pitch }).forEach { event ->
+                val hit = event.hit
+                val message = if (event.noteOn) ShortMessage(ShortMessage.NOTE_ON, channel, hit.pitch, hit.velocity)
+                else ShortMessage(ShortMessage.NOTE_OFF, channel, hit.pitch, 0)
+                notes.add(MidiEvent(message, event.tick))
             }
             meta.add(MidiEvent(MetaMessage(0x2F, byteArrayOf(), 0), endTick))
             require(MidiSystem.write(sequence, 1, temporary.toFile()) > 0) { "Could not write drum MIDI" }
@@ -288,7 +310,8 @@ class DrumMidiGenerationAdapter(
         require(sequence.divisionType == Sequence.PPQ && sequence.resolution == ppq && sequence.tickLength >= endTick) { "Generated drum MIDI timing did not round-trip" }
         val parsed = mutableListOf<DrumMidiHit>()
         val active = mutableMapOf<Int, Pair<Long, Int>>()
-        sequence.tracks.flatMap { track -> (0 until track.size()).map(track::get) }.sortedBy { it.tick }.forEach { event ->
+        sequence.tracks.flatMap { track -> (0 until track.size()).map(track::get) }
+            .sortedWith(compareBy<MidiEvent> { it.tick }.thenBy { eventPriority(it.message as? ShortMessage) }).forEach { event ->
             val message = event.message as? ShortMessage ?: return@forEach
             if (message.channel != channel) return@forEach
             val on = message.command == ShortMessage.NOTE_ON && message.data2 > 0
@@ -320,6 +343,17 @@ class DrumMidiGenerationAdapter(
     private fun signatureMessage(signature: MidiTimeSignature): MetaMessage = MetaMessage(
         0x58, byteArrayOf(signature.numerator.toByte(), Integer.numberOfTrailingZeros(signature.denominator).toByte(), 24, 8), 4
     )
+
+    private fun eventPriority(message: ShortMessage?): Int = when {
+        message == null -> 2
+        message.command == ShortMessage.NOTE_OFF || message.command == ShortMessage.NOTE_ON && message.data2 == 0 -> 0
+        message.command == ShortMessage.NOTE_ON && message.data2 > 0 -> 1
+        else -> 2
+    }
+
+    private data class DrumEvent(val hit: DrumMidiHit, val noteOn: Boolean) {
+        val tick: Long get() = if (noteOn) hit.startTick else hit.endTick
+    }
 
     private data class TimelineSegment(val startTick: Long, val tempoMap: List<MidiTempoChange>, val timeSignatures: List<MidiTimeSignature>)
 }

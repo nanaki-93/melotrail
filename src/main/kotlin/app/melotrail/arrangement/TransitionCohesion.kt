@@ -57,6 +57,14 @@ data class TransitionCohesionPlan(
     val boundaries: List<TransitionBridgePlan>
 )
 
+/** The local runtime, rather than the untrusted response, owns model provenance. */
+@Serializable
+private data class TransitionCohesionModelResponse(
+    val version: Int = TransitionCohesionInput.VERSION,
+    val inputHash: String,
+    val boundaries: List<TransitionBridgePlan>
+)
+
 @Serializable
 data class TransitionBridgePlan(
     val outgoingInstanceId: String,
@@ -131,14 +139,44 @@ class LocalQwenTransitionCohesionPlanner(
 ) {
     fun plan(input: TransitionCohesionInput): TransitionCohesionPlan {
         val response = client.complete(PROMPT, Json { encodeDefaults = true; explicitNulls = false }.encodeToString(TransitionCohesionInput.serializer(), input))
-        val parsed = try { Json { ignoreUnknownKeys = false }.decodeFromString(TransitionCohesionPlan.serializer(), response) }
+        val parsed = try { Json { ignoreUnknownKeys = false }.decodeFromString(TransitionCohesionModelResponse.serializer(), response) }
         catch (error: Exception) { throw IllegalArgumentException("Qwen returned invalid transition-cohesion JSON: ${error.message}", error) }
-        return parsed.copy(model = model).also { TransitionCohesionValidator.requireValid(it, input) }
+        return TransitionCohesionPlan(parsed.version, parsed.inputHash, model, parsed.boundaries).also {
+            try { TransitionCohesionValidator.requireValid(it, input) } catch (error: IllegalArgumentException) {
+                throw IllegalArgumentException("Qwen returned an invalid transition-cohesion plan: ${error.message}", error)
+            }
+        }
     }
     private companion object { const val PROMPT = """
-        Return JSON only for version-1 TransitionCohesionPlan. Return exactly one ordered bridge for every supplied boundary.
-        Do not return paths, commands, plugins, code, MIDI notes, arbitrary instruments, fields not in the schema, or a no-op bridge.
-        Use only supplied IDs/hashes, supported instruments, one or two bars, and PRESERVE tempo/meter handoffs.
+        Return one JSON object only: no markdown, prose, reasoning, or fields other than this exact version-1 response schema:
+        {
+          "version": 1,
+          "inputHash": "copy the supplied inputHash exactly",
+          "boundaries": [{
+            "outgoingInstanceId": "copy the supplied boundary value exactly",
+            "incomingInstanceId": "copy the supplied boundary value exactly",
+            "outgoingHash": "copy the outgoing sourceHash exactly",
+            "incomingHash": "copy the incoming sourceHash exactly",
+            "bridgeType": "DRUM_FILL",
+            "bars": 1,
+            "instrument": "drums",
+            "harmonicHandoff": "HOLD",
+            "rhythmicGesture": "FILL",
+            "energyContour": "RISE",
+            "tempoHandoff": "PRESERVE",
+            "meterHandoff": "PRESERVE",
+            "rationale": "bounded plain musical rationale"
+          }]
+        }
+        The model field is code-owned: never include it. Return exactly one boundary object for every supplied boundary,
+        in the supplied order. Copy each outgoing/incoming ID and source hash exactly. bars is 1 or 2. Use exactly one
+        supplied instrument and keep it compatible with bridgeType: DRUM_FILL or BUILD uses drums; BASS_WALK uses bass;
+        PAD_SUSTAIN uses pad. Allowed bridgeType values are DRUM_FILL, BASS_WALK, PAD_SUSTAIN, BUILD. Allowed
+        harmonicHandoff values are HOLD, STEP_TO_INCOMING; rhythmicGesture values are FILL, PICKUP, SUSTAIN;
+        energyContour values are HOLD, RISE, FALL. tempoHandoff and meterHandoff must both be PRESERVE. rationale is
+        1 to 180 plain characters using only letters, digits, spaces, commas, periods, apostrophes, and hyphens.
+        Do not use bridgeId, bridges, instruments, durationBars, tempo, meter, any other key, paths, commands,
+        plugins, code, MIDI notes, or arbitrary instruments.
     """ }
 }
 
@@ -213,6 +251,7 @@ object TransitionCohesionStore {
         return atomicWrite(root.resolve(DRAFT_FILE), text).also { persist(root, input, plan, approved = false, reviewed = emptySet()) }
     }
     fun readDraft(root: Path, input: TransitionCohesionInput): TransitionCohesionPlan = read(root.resolve(DRAFT_FILE), input)
+    fun readApproved(root: Path, input: TransitionCohesionInput): TransitionCohesionPlan = read(root.resolve(APPROVED_FILE), input)
     fun markReviewed(root: Path, input: TransitionCohesionInput, outgoing: String, incoming: String): Set<Pair<String, String>> {
         val plan = readDraft(root, input); val pair = outgoing to incoming
         require(pair in plan.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId }) { "Unknown cohesion boundary $outgoing -> $incoming" }
