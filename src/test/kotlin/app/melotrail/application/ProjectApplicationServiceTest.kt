@@ -1,9 +1,7 @@
 package app.melotrail.application
 
-import app.melotrail.arrangement.PartAnalysis
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.RenderFormat
-import app.melotrail.cli.ArrangementProjectCommands
 import kotlinx.coroutines.async
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -247,25 +245,7 @@ class ProjectApplicationServiceTest {
         import.await()
     }
 
-    @Test
-    fun `CLI adapter and service import produce equivalent canonical artifacts`() {
-        val input = midi("verse.mid")
-        val serviceRoot = tempDir.resolve("service/parity")
-        val cliRoot = tempDir.resolve("cli/parity")
-        val service = service()
-        service.create(CreateProjectRequest(serviceRoot))
-        ArrangementProjectCommands.execute(arrayOf("project", "create", cliRoot.toString()))
 
-        blocking { service.importPart(ImportPartRequest(serviceRoot, "A", input, "verse")) }
-        ArrangementProjectCommands.executePartAddForTest(
-            arrayOf("part", "add", cliRoot.toString(), "--id", "A", "--file", input.toString(), "--role", "verse"),
-            copyingPreparation()
-        )
-
-        assertEquals(Files.readString(serviceRoot.resolve("project.json")), Files.readString(cliRoot.resolve("project.json")))
-        assertTrue(Files.readAllBytes(serviceRoot.resolve("source/A.mid")).contentEquals(Files.readAllBytes(cliRoot.resolve("source/A.mid"))))
-        assertTrue(Files.readAllBytes(serviceRoot.resolve("midi/raw/A.mid")).contentEquals(Files.readAllBytes(cliRoot.resolve("midi/raw/A.mid"))))
-    }
 
     private fun service(preparation: MidiPreparationService = copyingPreparation()) = DefaultProjectApplicationService(
         preparation,

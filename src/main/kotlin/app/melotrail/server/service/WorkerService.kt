@@ -24,10 +24,6 @@ class WorkerService(
         workerClient.start()
     }
 
-    fun stopWorker(): Result<Unit> = runBlocking {
-        workerClient.stop()
-    }
-
     fun isHealthy(): Boolean = runBlocking {
         workerClient.healthCheck()
     }

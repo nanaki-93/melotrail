@@ -16,8 +16,7 @@ class ConfigTest {
     }
 
     @Test
-    fun `renamed CLI and Spring entry points resolve`() {
-        assertNotNull(Class.forName("app.melotrail.cli.CliMainKt"))
+    fun `renamed Spring entry points resolve`() {
         assertNotNull(Class.forName("app.melotrail.server.ServerKt"))
     }
 

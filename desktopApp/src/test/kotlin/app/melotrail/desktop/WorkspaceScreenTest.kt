@@ -1303,9 +1303,9 @@ class WorkspaceScreenTest {
 
     private fun writeImportReferenceOverlay(importCapture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/02-import.png")) }
+            .firstOrNull { Files.isRegularFile(it.resolve("docs/plan/pictures/UI/02-import.png")) }
             ?: error("Could not locate the App-pages reference image.")
-        val reference = ImageIO.read(repository.resolve("plan/pictures/UI/02-import.png").toFile())
+        val reference = ImageIO.read(repository.resolve("docs/plan/pictures/UI/02-import.png").toFile())
         val overlay = BufferedImage(importCapture.width, importCapture.height, BufferedImage.TYPE_INT_ARGB)
         val graphics = overlay.createGraphics()
         try {
@@ -1322,7 +1322,7 @@ class WorkspaceScreenTest {
 
     private fun writeTask094ImportCapture(capture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/02-import.png")) }
+            .firstOrNull { Files.isRegularFile(it.resolve("docs/plan/pictures/UI/02-import.png")) }
             ?: error("Could not locate the Task 094 Import reference image.")
         val target = repository.resolve("desktopApp/build/reports/task-094-import-capture.png")
         Files.createDirectories(target.parent)
@@ -1331,7 +1331,7 @@ class WorkspaceScreenTest {
 
     private fun writeTask096ArrangeCapture(capture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/04-arrange.png")) }
+            .firstOrNull { Files.isRegularFile(it.resolve("docs/plan/pictures/UI/04-arrange.png")) }
             ?: error("Could not locate the Task 096 Arrange reference image.")
         val target = repository.resolve("desktopApp/build/reports/task-096-arrange-capture.png")
         Files.createDirectories(target.parent)
@@ -1340,9 +1340,9 @@ class WorkspaceScreenTest {
 
     private fun writeTask096ArrangeReferenceOverlay(capture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/04-arrange.png")) }
+            .firstOrNull { Files.isRegularFile(it.resolve("docs/plan/pictures/UI/04-arrange.png")) }
             ?: error("Could not locate the Task 096 Arrange reference image.")
-        val reference = ImageIO.read(repository.resolve("plan/pictures/UI/04-arrange.png").toFile())
+        val reference = ImageIO.read(repository.resolve("docs/plan/pictures/UI/04-arrange.png").toFile())
         val overlay = BufferedImage(capture.width, capture.height, BufferedImage.TYPE_INT_ARGB)
         val graphics = overlay.createGraphics()
         try {
@@ -1359,7 +1359,7 @@ class WorkspaceScreenTest {
 
     private fun writeTask098LibraryCapture(capture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/07-library.png")) }
+            .firstOrNull { Files.isRegularFile(it.resolve("docs/plan/pictures/UI/07-library.png")) }
             ?: error("Could not locate the Task 098 Library reference image.")
         val target = repository.resolve("desktopApp/build/reports/task-098-library-capture.png")
         Files.createDirectories(target.parent)
@@ -1368,9 +1368,9 @@ class WorkspaceScreenTest {
 
     private fun writeTask098LibraryReferenceOverlay(capture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/07-library.png")) }
+            .firstOrNull { Files.isRegularFile(it.resolve("docs/plan/pictures/UI/07-library.png")) }
             ?: error("Could not locate the Task 098 Library reference image.")
-        val reference = ImageIO.read(repository.resolve("plan/pictures/UI/07-library.png").toFile())
+        val reference = ImageIO.read(repository.resolve("docs/plan/pictures/UI/07-library.png").toFile())
         val overlay = BufferedImage(capture.width, capture.height, BufferedImage.TYPE_INT_ARGB)
         val graphics = overlay.createGraphics()
         try {
@@ -1386,7 +1386,7 @@ class WorkspaceScreenTest {
 
     private fun writeTask098LibraryUnconfiguredCapture(capture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/07-library.png")) }
+            .firstOrNull { Files.isRegularFile(it.resolve("docs/plan/pictures/UI/07-library.png")) }
             ?: error("Could not locate the Task 098 Library reference image.")
         val target = repository.resolve("desktopApp/build/reports/task-098-library-unconfigured.png")
         assertTrue(ImageIO.write(capture, "png", target.toFile()))
@@ -1407,7 +1407,7 @@ class WorkspaceScreenTest {
 
     private fun writePageCapture(page: String, capture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/App-pages.png")) }
+            .firstOrNull { Files.isRegularFile(it.resolve("docs/plan/pictures/App-pages.png")) }
             ?: error("Could not locate the App-pages reference image.")
         val target = repository.resolve("desktopApp/build/reports/task-090-$page-capture.png")
         Files.createDirectories(target.parent)
@@ -1416,7 +1416,7 @@ class WorkspaceScreenTest {
 
     private fun writeTask101Capture(destination: String, capture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/01-dashboard-overview.png")) }
+            .firstOrNull { Files.isRegularFile(it.resolve("docs/plan/pictures/UI/01-dashboard-overview.png")) }
             ?: error("Could not locate the Task 101 UI references.")
         val target = repository.resolve("desktopApp/build/reports/task-101-$destination-capture.png")
         Files.createDirectories(target.parent)
@@ -1425,7 +1425,7 @@ class WorkspaceScreenTest {
 
     private fun writeTask093OverviewCapture(capture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/01-dashboard-overview.png")) }
+            .firstOrNull { Files.isRegularFile(it.resolve("docs/plan/pictures/UI/01-dashboard-overview.png")) }
             ?: error("Could not locate the Task 093 Overview reference image.")
         val target = repository.resolve("desktopApp/build/reports/task-093-overview-capture.png")
         Files.createDirectories(target.parent)
@@ -1434,9 +1434,9 @@ class WorkspaceScreenTest {
 
     private fun writeTask093OverviewReferenceOverlay(capture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/01-dashboard-overview.png")) }
+            .firstOrNull { Files.isRegularFile(it.resolve("docs/plan/pictures/UI/01-dashboard-overview.png")) }
             ?: error("Could not locate the Task 093 Overview reference image.")
-        val reference = ImageIO.read(repository.resolve("plan/pictures/UI/01-dashboard-overview.png").toFile())
+        val reference = ImageIO.read(repository.resolve("docs/plan/pictures/UI/01-dashboard-overview.png").toFile())
         val overlay = BufferedImage(capture.width, capture.height, BufferedImage.TYPE_INT_ARGB)
         val graphics = overlay.createGraphics()
         try {
@@ -1452,7 +1452,7 @@ class WorkspaceScreenTest {
 
     private fun writeShellCapture(layout: String, capture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/App-pages.png")) }
+            .firstOrNull { Files.isRegularFile(it.resolve("docs/plan/pictures/App-pages.png")) }
             ?: error("Could not locate the App-pages reference image.")
         val target = repository.resolve("desktopApp/build/reports/task-092-$layout-shell.png")
         Files.createDirectories(target.parent)
@@ -1461,9 +1461,9 @@ class WorkspaceScreenTest {
 
     private fun writeStructureReferenceOverlay(structureCapture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/03-structure.png")) }
+            .firstOrNull { Files.isRegularFile(it.resolve("docs/plan/pictures/UI/03-structure.png")) }
             ?: error("Could not locate the Task 095 Structure reference image.")
-        val reference = ImageIO.read(repository.resolve("plan/pictures/UI/03-structure.png").toFile())
+        val reference = ImageIO.read(repository.resolve("docs/plan/pictures/UI/03-structure.png").toFile())
         val overlay = BufferedImage(structureCapture.width, structureCapture.height, BufferedImage.TYPE_INT_ARGB)
         val graphics = overlay.createGraphics()
         try {
@@ -1480,9 +1480,9 @@ class WorkspaceScreenTest {
 
     private fun writeTask099ReferenceOverlay(capture: BufferedImage, referenceName: String, pageName: String) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/$referenceName")) }
+            .firstOrNull { Files.isRegularFile(it.resolve("docs/plan/pictures/UI/$referenceName")) }
             ?: error("Could not locate the Task 099 $referenceName reference image.")
-        val reference = ImageIO.read(repository.resolve("plan/pictures/UI/$referenceName").toFile())
+        val reference = ImageIO.read(repository.resolve("docs/plan/pictures/UI/$referenceName").toFile())
         val overlay = BufferedImage(capture.width, capture.height, BufferedImage.TYPE_INT_ARGB)
         val graphics = overlay.createGraphics()
         try {
@@ -1499,7 +1499,7 @@ class WorkspaceScreenTest {
 
     private fun writeTask100SettingsCapture(capture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/10-settings.png")) }
+            .firstOrNull { Files.isRegularFile(it.resolve("docs/plan/pictures/UI/10-settings.png")) }
             ?: error("Could not locate the Task 100 Settings reference image.")
         val target = repository.resolve("desktopApp/build/reports/task-100-settings-capture.png")
         Files.createDirectories(target.parent)
@@ -1509,9 +1509,9 @@ class WorkspaceScreenTest {
     /** The reference includes unsupported account/update/privacy controls; this overlay records their deliberate omission. */
     private fun writeTask100SettingsReferenceOverlay(capture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/10-settings.png")) }
+            .firstOrNull { Files.isRegularFile(it.resolve("docs/plan/pictures/UI/10-settings.png")) }
             ?: error("Could not locate the Task 100 Settings reference image.")
-        val reference = ImageIO.read(repository.resolve("plan/pictures/UI/10-settings.png").toFile())
+        val reference = ImageIO.read(repository.resolve("docs/plan/pictures/UI/10-settings.png").toFile())
         val overlay = BufferedImage(capture.width, capture.height, BufferedImage.TYPE_INT_ARGB)
         val graphics = overlay.createGraphics()
         try {
@@ -1527,9 +1527,9 @@ class WorkspaceScreenTest {
 
     private fun writeExportReferenceOverlay(exportCapture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/App-pages.png")) }
+            .firstOrNull { Files.isRegularFile(it.resolve("docs/plan/pictures/App-pages.png")) }
             ?: error("Could not locate the App-pages reference image.")
-        val reference = ImageIO.read(repository.resolve("plan/pictures/App-pages.png").toFile())
+        val reference = ImageIO.read(repository.resolve("docs/plan/pictures/App-pages.png").toFile())
         val exportRegion = reference.getSubimage(1142, 776, 384, 241)
         val overlay = BufferedImage(exportCapture.width, exportCapture.height, BufferedImage.TYPE_INT_ARGB)
         val graphics = overlay.createGraphics()
@@ -1547,9 +1547,9 @@ class WorkspaceScreenTest {
 
     private fun writeArrangeReferenceOverlay(arrangeCapture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/App-pages.png")) }
+            .firstOrNull { Files.isRegularFile(it.resolve("docs/plan/pictures/App-pages.png")) }
             ?: error("Could not locate the App-pages reference image.")
-        val reference = ImageIO.read(repository.resolve("plan/pictures/App-pages.png").toFile())
+        val reference = ImageIO.read(repository.resolve("docs/plan/pictures/App-pages.png").toFile())
         val arrangeRegion = reference.getSubimage(777, 483, 356, 284)
         val overlay = BufferedImage(arrangeCapture.width, arrangeCapture.height, BufferedImage.TYPE_INT_ARGB)
         val graphics = overlay.createGraphics()
@@ -1567,7 +1567,7 @@ class WorkspaceScreenTest {
 
     private fun writeTask097MixMasterCapture(mixMasterCapture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/06-mix-master.png")) }
+            .firstOrNull { Files.isRegularFile(it.resolve("docs/plan/pictures/UI/06-mix-master.png")) }
             ?: error("Could not locate the Task 097 reference image.")
         val target = repository.resolve("desktopApp/build/reports/task-097-mix-master.png")
         Files.createDirectories(target.parent)
@@ -1576,9 +1576,9 @@ class WorkspaceScreenTest {
 
     private fun writeTask097MixMasterReferenceOverlay(mixMasterCapture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/UI/06-mix-master.png")) }
+            .firstOrNull { Files.isRegularFile(it.resolve("docs/plan/pictures/UI/06-mix-master.png")) }
             ?: error("Could not locate the Task 097 reference image.")
-        val reference = ImageIO.read(repository.resolve("plan/pictures/UI/06-mix-master.png").toFile())
+        val reference = ImageIO.read(repository.resolve("docs/plan/pictures/UI/06-mix-master.png").toFile())
         val overlay = BufferedImage(mixMasterCapture.width, mixMasterCapture.height, BufferedImage.TYPE_INT_ARGB)
         val graphics = overlay.createGraphics()
         try {
@@ -1595,9 +1595,9 @@ class WorkspaceScreenTest {
 
     private fun writeVideoPreviewReferenceOverlay(videoCapture: BufferedImage) {
         val repository = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath()) { it.parent }
-            .firstOrNull { Files.isRegularFile(it.resolve("plan/pictures/App-pages.png")) }
+            .firstOrNull { Files.isRegularFile(it.resolve("docs/plan/pictures/App-pages.png")) }
             ?: error("Could not locate the App-pages reference image.")
-        val reference = ImageIO.read(repository.resolve("plan/pictures/App-pages.png").toFile())
+        val reference = ImageIO.read(repository.resolve("docs/plan/pictures/App-pages.png").toFile())
         val videoRegion = reference.getSubimage(12, 777, 379, 247)
         val overlay = BufferedImage(videoCapture.width, videoCapture.height, BufferedImage.TYPE_INT_ARGB)
         val graphics = overlay.createGraphics()

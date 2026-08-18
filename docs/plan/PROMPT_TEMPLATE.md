@@ -2,7 +2,7 @@
 
 Use this prompt for one implementation task at a time. Replace `XXX` with the
 task number and make sure exactly one matching task contract exists under
-`plan/tasks/` or `plan/future-tasks/`. A deferred future task must be explicitly
+`s` or `/future-tasks/`. A deferred future task must be explicitly
 promoted before implementation.
 
 ```text

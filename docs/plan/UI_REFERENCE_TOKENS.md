@@ -1,6 +1,6 @@
 # Task 092 shared-shell reference tokens
 
-Measured from the 1536 × 1024 page references in `plan/pictures/UI/` at 100%
+Measured from the 1536 × 1024 page references in `ures/UI` at 100%
 scale. Values are held in `MusicWorkspaceTokens`; acceptance tolerates ±4 px
 on major edges. The shell uses a dark-purple interpretation while retaining the
 reference hierarchy; it does not reuse flattened screenshot artwork.

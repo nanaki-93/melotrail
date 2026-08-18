@@ -19,7 +19,7 @@ those environments until the listed manual gates are completed.
   on 2026-08-17. The former explicitly lists AI-generated music among examples
   that require disclosure when realistic; the latter evaluates channel-level
   originality/authenticity and does not guarantee monetization.
-- Reviewed `plan/UI.png`. It establishes the intended dark desktop workspace,
+- Reviewed `plan/pictures/UI/example.png`. It establishes the intended dark desktop workspace,
   five top-level destinations, hierarchy, and persistent transport reference.
   No application screenshots were captured in this non-interactive run, so no
   wide/medium/narrow visual comparison is signed off.
@@ -76,7 +76,7 @@ actual renderer/worker run.
 | Raw, repaired, and Lo-fi MIDI renders | Not run. Install/configure a validated local `sfizz_render`, then capture pre/post source/raw/repaired hashes. |
 | Cohesion boundary, dry mix, audio texture, and master playback | Not run. Run the renderer-backed full workflow and listen on a real output device using the one transport. |
 | Listening A/B environment | A built-in 44.1-kHz, two-channel MacBook Pro speaker output was detected, but no listening test was performed. Record device, OS, output level, listener, and pass/fail for each artifact. |
-| Wide, medium, narrow screenshots | Not run. Compare all three against `plan/UI.png`; record intentional visual differences and repair clipping, duplication, scrolling, spacing, hierarchy, or color regressions. |
+| Wide, medium, narrow screenshots | Not run. Compare all three against `plan/pictures/UI/example.png`; record intentional visual differences and repair clipping, duplication, scrolling, spacing, hierarchy, or color regressions. |
 | Keyboard, focus, screen-reader labels, contrast | Automated Compose tests cover semantic status text/icons, focusable structure controls, shortcuts, and layout breakpoints. A real keyboard-only and assistive-technology pass remains required. |
 | Installed-package new and legacy project open | Startup smoke passed only. In the installed app, create a new project and open a legacy v1/v2 fixture without rewriting it; record the result. |
 

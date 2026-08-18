@@ -1,11 +1,9 @@
 package app.melotrail.logging
 
 import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
-import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatterBuilder
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -26,27 +24,27 @@ class FileLogger(
         Files.createDirectories(path.parent)
     }
 
-    override fun debug(component: String, message: String) {
-        logIfEnabled(LogLevel.DEBUG, component, message)
+    override fun debug(tag: String, message: String) {
+        logIfEnabled(LogLevel.DEBUG, tag, message)
     }
 
-    override fun info(component: String, message: String) {
-        logIfEnabled(LogLevel.INFO, component, message)
+    override fun info(tag: String, message: String) {
+        logIfEnabled(LogLevel.INFO, tag, message)
     }
 
-    override fun warning(component: String, message: String) {
-        logIfEnabled(LogLevel.WARNING, component, message)
+    override fun warning(tag: String, message: String) {
+        logIfEnabled(LogLevel.WARNING, tag, message)
     }
 
-    override fun error(component: String, message: String) {
-        logIfEnabled(LogLevel.ERROR, component, message)
+    override fun error(tag: String, message: String) {
+        logIfEnabled(LogLevel.ERROR, tag, message)
     }
 
-    override fun error(component: String, message: String, exception: Throwable?) {
-        logIfEnabled(LogLevel.ERROR, component, message, exception)
+    override fun error(tag: String, message: String, throwable: Throwable?) {
+        logIfEnabled(LogLevel.ERROR, tag, message, throwable)
     }
 
-    override fun log(level: LogLevel, component: String, message: String, exception: Throwable?) {
+    override fun log(level: LogLevel, tag: String, message: String, throwable: Throwable?) {
         if (level.toInt() >= _level.toInt()) {
             lock.withLock {
                 val timestampStr = Clock.System.now().toEpochMilliseconds()
@@ -57,8 +55,8 @@ class FileLogger(
                         )
                     }
                 val line = buildString {
-                    append("[$timestampStr] [${level.name}] [$component] $message")
-                    exception?.let { append("\nException: $it") }
+                    append("[$timestampStr] [${level.name}] [$tag] $message")
+                    throwable?.let { append("\nException: $it") }
                     append("\n")
                 }
                 Files.writeString(path, line, StandardOpenOption.CREATE, StandardOpenOption.APPEND)

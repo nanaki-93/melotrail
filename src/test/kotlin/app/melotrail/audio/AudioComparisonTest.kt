@@ -1,7 +1,5 @@
 package app.melotrail.audio
 
-import app.melotrail.cli.AudioComparisonCommand
-import app.melotrail.cli.WAVExporterSimple
 import app.melotrail.dsp.DSPChain
 import app.melotrail.dsp.LOFIPresets
 import org.junit.jupiter.api.Assertions.assertArrayEquals
@@ -101,24 +99,6 @@ class AudioComparisonTest {
         val malformed = tempDir.resolve("malformed.wav")
         Files.writeString(malformed, "not a WAV")
         assertThrows(Exception::class.java) { AudioComparison.compareFiles(malformed, malformed) }
-    }
-
-    @Test
-    fun `JSON output is stable and compare never modifies inputs`() {
-        val a = tempDir.resolve("dry.wav")
-        val b = tempDir.resolve("lofi.wav")
-        val audio = fixture(sampleRate = 44_100, channels = 2)
-        WAVExporterSimple().export(audio, a)
-        WAVExporterSimple().export(audio.copy(samples = audio.samples.clone().also { it[0] *= 0.75f }), b)
-        val before = sha256(a)
-
-        val first = AudioComparisonCommand.execute(arrayOf("compare", a.toString(), b.toString(), "--json"))
-        val second = AudioComparisonCommand.execute(arrayOf("compare", a.toString(), b.toString(), "--json"))
-
-        assertEquals(first, second)
-        assertTrue(first.contains("\"changedFrameRatio\""))
-        assertEquals(before, sha256(a))
-        assertArrayEquals(Files.readAllBytes(a), Files.readAllBytes(a))
     }
 
     @Test

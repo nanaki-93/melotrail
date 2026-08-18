@@ -3,7 +3,6 @@ package app.melotrail.arrangement
 import app.melotrail.audio.AudioBuffer
 import app.melotrail.audio.AudioFormat
 import app.melotrail.audio.WAVDecoder
-import app.melotrail.cli.ArrangementProjectCommands
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -70,21 +69,6 @@ class PianoBassQualityGateTest {
         assertEquals(2, renderer.calls, "cache identity is content-hash based; a timestamp-only change must not rerender")
     }
 
-    @Test
-    fun `CLI routes the narrow quality gate without post production stages`() {
-        val projectRoot = root.resolve("cli-gate")
-        createProject(projectRoot)
-        val output = ArrangementProjectCommands.executeQualityGateForTest(
-            arrayOf("quality-gate", "--project", projectRoot.toString()),
-            FakeRenderer()
-        )
-
-        assertTrue(ArrangementProjectCommands.handles(arrayOf("quality-gate")))
-        assertTrue(output.contains("[8/8] Created dry lossless mix"))
-        assertTrue(output.contains("mix/dry.wav"))
-        assertFalse(output.contains("LoFi"))
-        assertFalse(output.contains("master"))
-    }
 
     private fun createProject(projectRoot: Path) {
         val sourceA = projectRoot.resolve("source/A.mid")
