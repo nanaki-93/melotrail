@@ -33,11 +33,16 @@ data class CohesionOccurrenceSnapshot(
     val rationale: String
 )
 
+/** One immutable adjacent Structure pair supplied to Cohesion in saved order. */
+data class CohesionBoundarySnapshot(val outgoingInstanceId: String, val incomingInstanceId: String)
+
 data class CohesionSnapshot(
     val root: Path,
     val planner: CohesionPlannerKind,
     val inputHash: String,
+    val structureSha256: String = "",
     val occurrences: List<CohesionOccurrenceSnapshot>,
+    val boundaries: List<CohesionBoundarySnapshot> = emptyList(),
     val approvalRequired: Boolean,
     val approved: Boolean,
     val stale: Boolean,
@@ -115,7 +120,7 @@ class DefaultCohesionApplicationService(
         val analyses = structure.map(SectionInstance::partId).distinct().associateWith { partId -> analysis(root, project, partId) }
         val planning = SongPlanningInput(project.name, project.version, analyses, structure, app.melotrail.arrangement.LogicalInstrument.entries.map { it.wireName })
         planning.requireValid()
-        return MelodyCohesionInputFactory.build(root, project, planning)
+        return MelodyCohesionInputFactory.build(root, project, planning, requireCurrentAnalyses = true)
     }
 
     private fun analysis(root: Path, project: Project, partId: String): MidiAnalysis {
@@ -126,8 +131,10 @@ class DefaultCohesionApplicationService(
     }
 
     private fun snapshot(root: Path, input: MelodyCohesionInput, plan: MelodyCohesionPlan, planner: CohesionPlannerKind, approved: Boolean, stale: Boolean): CohesionSnapshot =
-        CohesionSnapshot(root, planner, input.inputHash, plan.occurrences.map { occurrence ->
+        CohesionSnapshot(root, planner, input.inputHash, input.structureSha256, plan.occurrences.map { occurrence ->
             CohesionOccurrenceSnapshot(occurrence.instanceId, occurrence.partId, occurrence.sourceHash, Files.isRegularFile(MelodyCohesionStore.derivedMidi(root, occurrence.instanceId)), approved, occurrence.rationale)
+        }, input.boundaries.map { boundary ->
+            CohesionBoundarySnapshot(boundary.outgoingInstanceId, boundary.incomingInstanceId)
         }, approvalRequired = !approved, approved = approved, stale = stale, artifact = root.resolve(if (approved) MelodyCohesionStore.APPROVED_FILE else MelodyCohesionStore.DRAFT_FILE))
 
     private suspend fun <T> mutate(root: Path, block: suspend (Path) -> T): T {

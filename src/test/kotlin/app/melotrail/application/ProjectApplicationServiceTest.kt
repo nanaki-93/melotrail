@@ -2,6 +2,7 @@ package app.melotrail.application
 
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.RenderFormat
+import app.melotrail.arrangement.MidiPartAnalyzer
 import app.melotrail.preparation.AudioInspectionMeasurements
 import app.melotrail.preparation.DetectedAudioFormat
 import app.melotrail.preparation.DetectedInput
@@ -18,6 +19,8 @@ import app.melotrail.preparation.TranscriptionEngineMetadata
 import app.melotrail.preparation.TranscriptionFailureStage
 import app.melotrail.preparation.TranscriptionQualityGateService
 import kotlinx.coroutines.async
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -182,12 +185,17 @@ class ProjectApplicationServiceTest {
     }
 
     @Test
-    fun `role and complete structure updates are atomic and expose occurrence labels`() {
+    fun `Structure handoff is occurrence-stable idempotent and invalidates only downstream evidence`() {
         val service = service()
         val root = tempDir.resolve("song")
         service.create(CreateProjectRequest(root))
         blocking { service.importPart(ImportPartRequest(root, "A", midi("a.mid"))) }
         blocking { service.importPart(ImportPartRequest(root, "B", midi("b.mid"))) }
+        blocking { service.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions())) }
+        blocking { service.cleanMidi(CleanMidiRequest(root, "B", app.melotrail.arrangement.MidiCleanupOptions())) }
+        blocking { service.analyzePart(AnalyzePartRequest(root, "A")) }
+        blocking { service.analyzePart(AnalyzePartRequest(root, "B")) }
+        val sourceBefore = Files.readAllBytes(root.resolve("source/A.mid"))
 
         val saved = service.saveStructure(SaveStructureRequest(root, listOf("B", "A", "B")))
         val updated = service.updatePart(UpdatePartRoleRequest(root, "A", "chorus"))
@@ -199,7 +207,51 @@ class ProjectApplicationServiceTest {
             service.saveStructure(SaveStructureRequest(root, listOf("B", "missing")))
         }.message.orEmpty().contains("Unknown part ID"))
         assertEquals(listOf("B", "A", "B"), ProjectStore.read(root).structure)
+
+        val initialCohesion = blocking { DefaultCohesionApplicationService().generate(GenerateCohesionRequest(root)) }
+        Files.writeString(root.resolve("arrangement.json"), "retained arrangement evidence")
+        val beforeUnchangedSave = Files.readAllBytes(root.resolve(ProjectStore.FILE_NAME))
+        val unchanged = service.saveStructure(SaveStructureRequest(root, listOf("B", "A", "B")))
+        assertEquals(listOf("B1", "A1", "B2"), unchanged.structure.map { it.instanceId })
+        assertTrue(beforeUnchangedSave.contentEquals(Files.readAllBytes(root.resolve(ProjectStore.FILE_NAME))))
+
+        val reordered = service.saveStructure(SaveStructureRequest(root, listOf("B", "B", "A")))
+        assertEquals(listOf("B1", "B2", "A1"), reordered.structure.map { it.instanceId })
+        assertTrue(Files.isRegularFile(root.resolve("arrangement.json")), "old arrangement stays inspectable")
+        assertTrue(sourceBefore.contentEquals(Files.readAllBytes(root.resolve("source/A.mid"))))
+        assertTrue(app.melotrail.arrangement.WorkflowArtifact.COHESION in reordered.readiness.staleArtifacts)
+        assertTrue(app.melotrail.arrangement.WorkflowArtifact.ARRANGEMENT in reordered.readiness.staleArtifacts)
+        val reorderedCohesion = blocking { DefaultCohesionApplicationService().generate(GenerateCohesionRequest(root)) }
+        assertFalse(initialCohesion.structureSha256 == reorderedCohesion.structureSha256)
+        assertEquals(listOf("B1" to "B2", "B2" to "A1"), reorderedCohesion.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId })
+
+        assertEquals(listOf("B1", "A1", "B2", "A2"), service.saveStructure(SaveStructureRequest(root, listOf("B", "A", "B", "A"))).structure.map { it.instanceId })
+        assertEquals(listOf("A1"), service.saveStructure(SaveStructureRequest(root, listOf("A"))).structure.map { it.instanceId })
         assertTrue(service.saveStructure(SaveStructureRequest(root, emptyList())).structure.isEmpty())
+    }
+
+    @Test
+    fun `Structure handoff rejects missing and stale selected-MIDI analyses`() {
+        val service = service()
+        val root = tempDir.resolve("structure-analysis")
+        service.create(CreateProjectRequest(root))
+        blocking { service.importPart(ImportPartRequest(root, "A", midi("structure-analysis.mid"))) }
+        blocking { service.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions())) }
+        blocking { service.analyzePart(AnalyzePartRequest(root, "A")) }
+
+        val analyzed = ProjectStore.read(root)
+        ProjectStore.write(root, analyzed.copy(parts = analyzed.parts.map { it.copy(analysis = null) }))
+        assertTrue(assertThrows(IllegalArgumentException::class.java) {
+            service.saveStructure(SaveStructureRequest(root, listOf("A")))
+        }.message.orEmpty().contains("Missing MIDI analysis"))
+
+        blocking { service.analyzePart(AnalyzePartRequest(root, "A")) }
+        val current = ProjectStore.read(root)
+        val reference = requireNotNull(current.parts.single().analysis)
+        Files.writeString(root.resolve(reference.file), Json.encodeToString(MidiPartAnalyzer().analyze(midi("different-analysis.mid", 65), "A")))
+        assertTrue(assertThrows(IllegalArgumentException::class.java) {
+            service.saveStructure(SaveStructureRequest(root, listOf("A")))
+        }.message.orEmpty().contains("stale for the selected MIDI"))
     }
 
     @Test
@@ -350,11 +402,11 @@ class ProjectApplicationServiceTest {
 
     private fun <T> blocking(block: suspend () -> T): T = kotlinx.coroutines.runBlocking { block() }
 
-    private fun midi(name: String): Path {
+    private fun midi(name: String, pitch: Int = 60): Path {
         val sequence = Sequence(Sequence.PPQ, 480)
         val track = sequence.createTrack()
-        track.add(javax.sound.midi.MidiEvent(javax.sound.midi.ShortMessage(javax.sound.midi.ShortMessage.NOTE_ON, 0, 60, 100), 0))
-        track.add(javax.sound.midi.MidiEvent(javax.sound.midi.ShortMessage(javax.sound.midi.ShortMessage.NOTE_OFF, 0, 60, 0), 480))
+        track.add(javax.sound.midi.MidiEvent(javax.sound.midi.ShortMessage(javax.sound.midi.ShortMessage.NOTE_ON, 0, pitch, 100), 0))
+        track.add(javax.sound.midi.MidiEvent(javax.sound.midi.ShortMessage(javax.sound.midi.ShortMessage.NOTE_OFF, 0, pitch, 0), 480))
         return tempDir.resolve(name).also { MidiSystem.write(sequence, 1, it.toFile()) }
     }
 

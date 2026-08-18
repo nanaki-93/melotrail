@@ -20,6 +20,7 @@ import app.melotrail.arrangement.MidiFeelReport
 import app.melotrail.arrangement.MidiFeelReportStore
 import app.melotrail.arrangement.MidiLoFiFeelTransformer
 import app.melotrail.arrangement.MelodyCohesionInputFactory
+import app.melotrail.arrangement.SelectedMidiArtifactResolver
 import app.melotrail.arrangement.LogicalInstrument
 import app.melotrail.arrangement.SectionInstance
 import app.melotrail.arrangement.SongPlanningInput
@@ -626,12 +627,42 @@ class DefaultProjectApplicationService(
         val project = readValidProject(root)
         val knownIds = project.parts.map { it.id }.toSet()
         request.partIds.forEach { id -> require(id in knownIds) { "Unknown part ID in structure: $id" } }
+        request.partIds.distinct().forEach { partId -> requireCurrentStructureAnalysis(root, project, partId) }
+        if (project.structure == request.partIds) return@mutate snapshot(root, project)
         val updated = project.copy(
             structure = request.partIds.toList(),
             workflow = project.workflow.invalidate(WorkflowChange.STRUCTURE)
         )
         ProjectStore.write(root, updated)
         snapshot(root, updated)
+    }
+
+    /**
+     * Structure is only a handoff: it never selects a MIDI branch, repairs
+     * notes, or writes a transition. It verifies the selected branch and its
+     * exact analysis before atomically recording a changed occurrence sequence.
+     */
+    private fun requireCurrentStructureAnalysis(root: Path, project: Project, partId: String) {
+        require(project.version == Project.CURRENT_VERSION) {
+            "Structure handoff requires a MIDI-first v3 project."
+        }
+        val part = project.parts.first { it.id == partId }
+        val selected = SelectedMidiArtifactResolver().resolve(root, project, part)
+        val reference = requireNotNull(part.analysis) {
+            "Missing MIDI analysis for part '$partId'. Run part analyze first."
+        }
+        require(reference.kind == AnalysisKind.MIDI) {
+            "MIDI analysis is required for part '$partId'. Run part analyze first."
+        }
+        val analysisPath = safeDestination(root, reference.file)
+        val persisted = runCatching {
+            json.decodeFromString(MidiAnalysis.serializer(), Files.readString(analysisPath))
+        }.getOrElse {
+            throw IllegalArgumentException("MIDI analysis is malformed for part '$partId'. Run part analyze first.", it)
+        }
+        require(persisted.partId == partId && midiPartAnalyzer.analyze(selected.path, partId) == persisted) {
+            "MIDI analysis is stale for the selected MIDI of part '$partId'. Run part analyze first."
+        }
     }
 
     private fun readValidProject(root: Path): Project {
@@ -696,9 +727,10 @@ class DefaultProjectApplicationService(
             json.decodeFromString(MidiAnalysis.serializer(), Files.readString(root.resolve(reference.file)))
         }
         val input = SongPlanningInput(project.name, project.version, analyses, structure, LogicalInstrument.entries.map { it.wireName })
-        val current = MelodyCohesionInputFactory.build(root, project, input).first
+        val current = MelodyCohesionInputFactory.build(root, project, input, requireCurrentAnalyses = true).first
         val references = cohesion.occurrences.associateBy { it.instanceId }
-        cohesion.inputSha256 == current.inputHash && references.keys == current.occurrences.map { it.instanceId }.toSet() &&
+        cohesion.inputSha256 == current.inputHash && cohesion.structureSha256 == current.structureSha256 &&
+            references.keys == current.occurrences.map { it.instanceId }.toSet() &&
             current.occurrences.all { occurrence ->
                 val reference = references.getValue(occurrence.instanceId)
                 reference.approved && reference.sourceSha256 == occurrence.sourceHash && run {

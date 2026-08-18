@@ -5,6 +5,7 @@ import app.melotrail.licensing.ModelRegistry
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.nio.charset.StandardCharsets
@@ -30,7 +31,11 @@ import kotlin.math.roundToLong
 data class MelodyCohesionInput(
     val version: Int = CURRENT_VERSION,
     val inputHash: String,
-    val occurrences: List<MelodyOccurrenceInput>
+    /** Fingerprint of the saved, ordered Structure occurrence sequence. */
+    val structureSha256: String = "",
+    val occurrences: List<MelodyOccurrenceInput>,
+    /** The exact adjacent pairs from [occurrences], in saved Structure order. */
+    val boundaries: List<MelodyCohesionBoundaryInput> = emptyList()
 ) {
     companion object { const val CURRENT_VERSION = 1 }
 }
@@ -48,7 +53,16 @@ data class MelodyOccurrenceInput(
     val timeSignatures: List<MidiTimeSignature>,
     val chords: List<MidiChord>,
     val energy: Double,
-    val boundarySummary: MelodyBoundarySummary
+    val boundarySummary: MelodyBoundarySummary,
+    /** Fingerprint of the current analysis bound to the selected source MIDI. */
+    val analysisSha256: String = ""
+)
+
+/** One ordered Structure handoff edge. This has no model-controlled fields. */
+@Serializable
+data class MelodyCohesionBoundaryInput(
+    val outgoingInstanceId: String,
+    val incomingInstanceId: String
 )
 
 @Serializable
@@ -165,11 +179,13 @@ object MelodyCohesionValidator {
     const val MIN_NOTE_TICKS = 30L
     private const val MAX_RATIONALE_LENGTH = 180
     private val safeId = Regex("[A-Za-z0-9_-]{1,80}")
+    private val sha256 = Regex("[0-9a-f]{64}")
     private val safeRationale = Regex("[A-Za-z0-9 ,.-]{1,180}")
 
     fun validate(plan: MelodyCohesionPlan, input: MelodyCohesionInput): MelodyCohesionValidationResult {
         val errors = mutableListOf<String>()
         if (input.version != MelodyCohesionInput.CURRENT_VERSION) errors += "Unsupported cohesion input version"
+        validateInput(input, errors)
         if (plan.version != MelodyCohesionPlan.CURRENT_VERSION) errors += "Unsupported cohesion plan version"
         if (plan.inputHash != input.inputHash) errors += "Cohesion plan input hash is stale"
         if (plan.occurrences.size != input.occurrences.size) errors += "Cohesion plan must contain exactly one occurrence plan per structure occurrence"
@@ -188,6 +204,28 @@ object MelodyCohesionValidator {
             if (!occurrence.transition.energy.isFinite() || occurrence.transition.energy !in 0.0..1.0) errors += "$label transition energy must be finite and within 0..1"
         }
         return MelodyCohesionValidationResult(errors)
+    }
+
+    private fun validateInput(input: MelodyCohesionInput, errors: MutableList<String>) {
+        if (input.occurrences.map(MelodyOccurrenceInput::instanceId).distinct().size != input.occurrences.size) {
+            errors += "Cohesion input contains duplicate occurrence IDs"
+        }
+        val expectedBoundaries = input.occurrences.zipWithNext { outgoing, incoming ->
+            MelodyCohesionBoundaryInput(outgoing.instanceId, incoming.instanceId)
+        }
+        if (input.boundaries.isNotEmpty() && input.boundaries != expectedBoundaries) {
+            errors += "Cohesion input boundaries do not match the saved structure order"
+        }
+        // Inputs created before Structure handoff fingerprints remain readable as
+        // draft evidence, but the factory below always emits all three bindings.
+        if (input.structureSha256.isNotEmpty() && !sha256.matches(input.structureSha256)) {
+            errors += "Cohesion structure fingerprint is invalid"
+        }
+        input.occurrences.forEachIndexed { index, occurrence ->
+            if (occurrence.analysisSha256.isNotEmpty() && !sha256.matches(occurrence.analysisSha256)) {
+                errors += "Cohesion occurrence ${index + 1} analysis fingerprint is invalid"
+            }
+        }
     }
 
     private fun validateEdits(label: String, edits: List<MelodyEdit>, source: MelodyOccurrenceInput, errors: MutableList<String>) {
@@ -343,7 +381,8 @@ object MelodyCohesionStore {
                 inputSha256 = input.inputHash,
                 plan = WorkflowArtifactReference(DRAFT_FILE, sha256(text)),
                 occurrences = emptyList(),
-                approved = false
+                approved = false,
+                structureSha256 = input.structureSha256
             ))
         }
     }
@@ -383,7 +422,8 @@ object MelodyCohesionStore {
                     inputSha256 = input.inputHash,
                     plan = WorkflowArtifactReference(APPROVED_FILE, sha256(planText)),
                     occurrences = references,
-                    approved = true
+                    approved = true,
+                    structureSha256 = input.structureSha256
                 ))
             }
         } finally { Files.list(staging).use { stream -> stream.forEach { Files.deleteIfExists(it) } } }
@@ -461,24 +501,86 @@ fun ModelRegistry.approvesCommercialCohesion(model: CohesionModelIdentity): Bool
 @OptIn(ExperimentalSerializationApi::class)
 object MelodyCohesionInputFactory {
     private val fingerprintJson = Json { encodeDefaults = true; explicitNulls = false }
-    fun build(root: Path, project: Project, planning: SongPlanningInput): Pair<MelodyCohesionInput, Map<String, List<MidiNote>>> {
-        project.requireSelectedMidi(root)
+    /**
+     * [requireCurrentAnalyses] is used only at the Structure-to-Cohesion
+     * boundary. Other consumers reuse the immutable identity shape while
+     * validating their own explicitly supplied analysis inputs.
+     */
+    fun build(
+        root: Path,
+        project: Project,
+        planning: SongPlanningInput,
+        requireCurrentAnalyses: Boolean = false
+    ): Pair<MelodyCohesionInput, Map<String, List<MidiNote>>> {
+        project.requireValid(root)
         val resolver = SelectedMidiArtifactResolver()
-        val notesByPart = project.parts.associate { part ->
-            val selected = resolver.resolve(root, project, part).path
-            part.id to readNotes(selected)
+        val referencedPartIds = planning.structure.map(SectionInstance::partId).distinct()
+        val selectedByPart = referencedPartIds.associateWith { partId ->
+            val part = project.parts.singleOrNull { it.id == partId }
+                ?: throw IllegalArgumentException("Structure references unknown part '$partId'.")
+            resolver.resolve(root, project, part)
+        }
+        val notesByPart = selectedByPart.mapValues { (_, selected) -> readNotes(selected.path) }
+        val analysisHashes = planning.analyses.mapValues { (partId, analysis) ->
+            val part = project.parts.singleOrNull { it.id == partId }
+                ?: throw IllegalArgumentException("Structure references unknown part '$partId'.")
+            val reference = part.analysis
+            if (reference == null) {
+                require(!requireCurrentAnalyses) {
+                    "Missing MIDI analysis for part '$partId'. Run part analyze first."
+                }
+                sha256(fingerprintJson.encodeToString(MidiAnalysis.serializer(), analysis).toByteArray(StandardCharsets.UTF_8))
+            } else {
+                require(reference.kind == AnalysisKind.MIDI) {
+                    "MIDI analysis is required for part '$partId'. Run part analyze first."
+                }
+                val path = confinedAnalysis(root, reference.file, partId)
+                val persisted = fingerprintJson.decodeFromString(MidiAnalysis.serializer(), Files.readString(path, StandardCharsets.UTF_8))
+                require(persisted == analysis) { "MIDI analysis changed for part '$partId'. Run part analyze first." }
+                if (requireCurrentAnalyses) {
+                    val selected = selectedByPart.getValue(partId)
+                    require(MidiPartAnalyzer().analyze(selected.path, partId) == analysis) {
+                        "MIDI analysis is stale for the selected MIDI of part '$partId'. Run part analyze first."
+                    }
+                }
+                sha256(Files.readAllBytes(path))
+            }
         }
         val occurrences = planning.sectionsWithIdentity().map { occurrence ->
             val part = project.parts.first { it.id == occurrence.partId }
-            val path = resolver.resolve(root, project, part).path
+            val selected = selectedByPart.getValue(part.id)
+            val path = selected.path
             val notes = notesByPart.getValue(part.id)
             val analysis = planning.analyses.getValue(part.id)
-            MelodyOccurrenceInput(occurrence.instanceId, part.id, sha256(Files.readAllBytes(path)), analysis.ppq, analysis.durationTicks, analysis.pitchRange, analysis.key, analysis.tempoMap, analysis.timeSignatures, analysis.chords, analysis.energy,
-                MelodyBoundarySummary(notes.any { it.startTick == 0L }, notes.any { it.endTick >= analysis.durationTicks }, notes.minOfOrNull { it.startTick }, notes.maxOfOrNull { it.endTick }))
+            MelodyOccurrenceInput(
+                occurrence.instanceId, part.id, selected.sha256, analysis.ppq, analysis.durationTicks,
+                analysis.pitchRange, analysis.key, analysis.tempoMap, analysis.timeSignatures, analysis.chords,
+                analysis.energy,
+                MelodyBoundarySummary(notes.any { it.startTick == 0L }, notes.any { it.endTick >= analysis.durationTicks }, notes.minOfOrNull { it.startTick }, notes.maxOfOrNull { it.endTick }),
+                analysisHashes.getValue(part.id)
+            )
         }
-        val withoutHash = MelodyCohesionInput(inputHash = "", occurrences = occurrences)
+        val structureSha256 = sha256(fingerprintJson.encodeToString(planning.sectionsWithIdentity()).toByteArray(StandardCharsets.UTF_8))
+        val boundaries = occurrences.zipWithNext { outgoing, incoming ->
+            MelodyCohesionBoundaryInput(outgoing.instanceId, incoming.instanceId)
+        }
+        val withoutHash = MelodyCohesionInput(inputHash = "", structureSha256 = structureSha256, occurrences = occurrences, boundaries = boundaries)
         val input = withoutHash.copy(inputHash = sha256(fingerprintJson.encodeToString(withoutHash).toByteArray(StandardCharsets.UTF_8)))
         return input to input.occurrences.associate { it.instanceId to notesByPart.getValue(it.partId) }
+    }
+
+    private fun confinedAnalysis(root: Path, reference: String, partId: String): Path {
+        val relative = runCatching { Path.of(reference) }.getOrElse {
+            throw IllegalArgumentException("MIDI analysis path is invalid for part '$partId'.", it)
+        }
+        require(reference.isNotBlank() && !relative.isAbsolute && !reference.contains("..")) {
+            "MIDI analysis path must be project-relative for part '$partId'."
+        }
+        val path = root.toAbsolutePath().normalize().resolve(relative).normalize()
+        require(path.startsWith(root.toAbsolutePath().normalize()) && Files.isRegularFile(path)) {
+            "MIDI analysis is missing for part '$partId'. Run part analyze first."
+        }
+        return path
     }
 
     private fun readNotes(path: Path): List<MidiNote> {

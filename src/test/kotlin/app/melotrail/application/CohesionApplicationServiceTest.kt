@@ -43,8 +43,14 @@ class CohesionApplicationServiceTest {
         assertTrue(snapshot.approved)
         assertFalse(snapshot.approvalRequired)
         assertEquals(listOf("A1", "A2"), snapshot.occurrences.map { it.instanceId })
+        assertTrue(snapshot.structureSha256.matches(Regex("[0-9a-f]{64}")))
+        assertTrue(snapshot.occurrences.all { it.sourceHash.matches(Regex("[0-9a-f]{64}")) })
+        assertEquals(listOf("A1" to "A2"), snapshot.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId })
         val project = ProjectStore.read(root)
         val input = cohesionInput(project)
+        assertEquals(snapshot.structureSha256, input.structureSha256)
+        assertEquals(listOf("A1" to "A2"), input.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId })
+        assertTrue(input.occurrences.all { it.analysisSha256.matches(Regex("[0-9a-f]{64}")) })
         val resolved = OccurrenceMidiArtifactResolver().resolve(root, project, input)
         assertEquals(listOf("A1", "A2"), resolved.map { it.occurrenceId })
         assertTrue(resolved.all { it.source.name == "APPROVED_COHESION" })
@@ -61,6 +67,30 @@ class CohesionApplicationServiceTest {
         assertFalse(draft.approved)
         assertTrue(draft.approvalRequired)
         assertTrue(service.approve(root).approved)
+    }
+
+    @Test
+    fun `single and empty structures derive no cohesion boundaries`() {
+        project()
+        val project = ProjectStore.read(root)
+        val analysis = Json.decodeFromString(MidiAnalysis.serializer(), Files.readString(root.resolve("analysis/A.midi.json")))
+
+        val single = MelodyCohesionInputFactory.build(
+            root,
+            project.copy(structure = listOf("A")),
+            SongPlanningInput(project.name, project.version, mapOf("A" to analysis), listOf(SectionInstance(0, "A")), LogicalInstrument.entries.map { it.wireName })
+        ).first
+        val empty = MelodyCohesionInputFactory.build(
+            root,
+            project.copy(structure = emptyList()),
+            SongPlanningInput(project.name, project.version, emptyMap(), emptyList(), LogicalInstrument.entries.map { it.wireName })
+        ).first
+
+        assertEquals(listOf("A1"), single.occurrences.map { it.instanceId })
+        assertTrue(single.boundaries.isEmpty())
+        assertTrue(empty.occurrences.isEmpty())
+        assertTrue(empty.boundaries.isEmpty())
+        assertFalse(single.structureSha256 == empty.structureSha256)
     }
 
     private fun project() {

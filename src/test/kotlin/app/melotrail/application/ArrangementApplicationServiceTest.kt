@@ -2,6 +2,7 @@ package app.melotrail.application
 
 import app.melotrail.arrangement.MidiAnalysis
 import app.melotrail.arrangement.MidiAnalysisStore
+import app.melotrail.arrangement.MidiPartAnalyzer
 import app.melotrail.arrangement.MidiReferences
 import app.melotrail.arrangement.MidiTempoChange
 import app.melotrail.arrangement.MidiTimeSignature
@@ -68,7 +69,7 @@ class ArrangementApplicationServiceTest {
         writeMidi(root.resolve("source/A.mid")); writeMidi(root.resolve("midi/clean/A.mid"))
         val project = Project(Project.CURRENT_VERSION, name, listOf(Part("A", "source/A.mid", "verse", midi = MidiReferences(clean = "midi/clean/A.mid"))), listOf("A"), RenderFormat())
         ProjectStore.write(root, project)
-        MidiAnalysisStore.write(root, project, "A", MidiAnalysis(partId = "A", ppq = 480, durationTicks = 1920, durationSeconds = 2.0, tempoMap = listOf(MidiTempoChange(0, 120.0)), timeSignatures = listOf(MidiTimeSignature(0, 4, 4)), bars = 1, beats = 4.0, noteCount = 4, noteDensity = 0.25, rhythmicDensity = 0.5, energy = 0.5))
+        MidiAnalysisStore.write(root, project, "A", MidiPartAnalyzer().analyze(root.resolve("midi/clean/A.mid"), "A"))
         return root
     }
 

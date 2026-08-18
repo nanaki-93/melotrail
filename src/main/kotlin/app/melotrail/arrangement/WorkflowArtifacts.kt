@@ -189,10 +189,13 @@ data class CohesionWorkflowReferences(
     val occurrences: List<CohesionOccurrenceReference>,
     val approved: Boolean,
     /** Empty for the supported legacy per-occurrence Cohesion representation. */
-    val boundaries: List<CohesionBoundaryReference> = emptyList()
+    val boundaries: List<CohesionBoundaryReference> = emptyList(),
+    /** The saved Structure occurrence sequence that produced [inputSha256]. */
+    val structureSha256: String = ""
 ) {
     init {
         require(SHA_256.matches(inputSha256)) { "Cohesion input fingerprint is invalid" }
+        require(structureSha256.isEmpty() || SHA_256.matches(structureSha256)) { "Cohesion structure fingerprint is invalid" }
         require(occurrences.map(CohesionOccurrenceReference::instanceId).distinct().size == occurrences.size) {
             "Cohesion occurrence IDs must be unique"
         }

@@ -252,7 +252,7 @@ class DefaultArrangementApplicationService(
 
     /** A song plan is review evidence, never proof that occurrence cohesion is usable. */
     private fun requireApprovedCohesion(root: Path, project: Project, input: SongPlanningInput) {
-        val (cohesionInput, _) = MelodyCohesionInputFactory.build(root, project, input)
+        val (cohesionInput, _) = MelodyCohesionInputFactory.build(root, project, input, requireCurrentAnalyses = true)
         require(project.workflow.cohesion?.approved == true) {
             "Generate and approve current cohesion for every structure occurrence before detailed arrangement."
         }
