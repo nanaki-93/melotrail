@@ -463,7 +463,7 @@ private fun OverviewActivity(state: WorkspaceUiState) = OverviewCard(WorkspacePa
     }
     val current = state.workflow.current
     Text(current.stage.name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase), style = MaterialTheme.typography.titleMedium)
-    Text(current.context, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(workflowDescription(current), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 private data class OverviewQuickAction(val id: String, val label: String, val section: WorkspaceSection, val stage: WorkflowStage)
@@ -493,7 +493,7 @@ private fun OverviewQuickActions(state: WorkspaceUiState, onIntent: (WorkspaceIn
 
 private fun overviewPrimaryStage(stage: WorkflowStage): WorkflowStage = when (stage) {
     WorkflowStage.PROJECT, WorkflowStage.IMPORT_AND_INSPECTION, WorkflowStage.TRANSCRIPTION,
-    WorkflowStage.MIDI_REPAIR, WorkflowStage.MIDI_FEEL, WorkflowStage.ANALYSIS -> WorkflowStage.IMPORT_AND_INSPECTION
+    WorkflowStage.CLEAN_MIDI, WorkflowStage.AI_FIX, WorkflowStage.MIDI_FEEL, WorkflowStage.ANALYSIS -> WorkflowStage.IMPORT_AND_INSPECTION
     WorkflowStage.STRUCTURE -> WorkflowStage.STRUCTURE
     WorkflowStage.COHESION, WorkflowStage.ARRANGEMENT -> WorkflowStage.ARRANGEMENT
     WorkflowStage.RENDER, WorkflowStage.MIX, WorkflowStage.MASTER -> WorkflowStage.MIX
@@ -511,12 +511,12 @@ private fun OverviewQuickActionButton(action: OverviewQuickAction, state: Worksp
             onClick = { onIntent(WorkspaceIntent.SelectWorkspaceSection(action.section)) }, enabled = enabled,
             modifier = Modifier.fillMaxWidth().semantics {
                 testTag = WorkspacePageTags.OVERVIEW_QUICK_ACTION_PREFIX + action.id
-                contentDescription = if (enabled) action.label else workflow.context
+                contentDescription = if (enabled) action.label else workflowDescription(workflow)
             }
         ) {
             Column(Modifier.fillMaxWidth()) {
                 Text(action.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(workflow.context, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(workflowDescription(workflow), style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
 }

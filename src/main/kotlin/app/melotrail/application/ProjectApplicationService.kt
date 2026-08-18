@@ -13,6 +13,8 @@ import app.melotrail.arrangement.MidiQualityReporter
 import app.melotrail.arrangement.MidiQualityWarning
 import app.melotrail.arrangement.MidiReferences
 import app.melotrail.arrangement.MidiAnalysisInput
+import app.melotrail.arrangement.MidiAiFixArtifactPaths
+import app.melotrail.arrangement.MidiAiFixSelection
 import app.melotrail.arrangement.MidiFeelProfile
 import app.melotrail.arrangement.MidiFeelReferences
 import app.melotrail.arrangement.MidiFeelReport
@@ -191,11 +193,21 @@ data class PartPreparationSummary(
     val ready: Boolean,
     val warnings: List<String>,
     val midiQuality: MidiQualitySummary = MidiQualitySummary.legacyUnknown(),
-    val midiFeel: MidiFeelSummary = MidiFeelSummary()
+    val midiFeel: MidiFeelSummary = MidiFeelSummary(),
+    val midiAiFix: MidiAiFixSummary = MidiAiFixSummary()
 )
 
+/** Artifact-derived state for the optional cleaned-vs-approved-AI base branch. */
+data class MidiAiFixSummary(
+    val selected: MidiAiFixSelection = MidiAiFixSelection.SKIP,
+    val draftAvailable: Boolean = false,
+    val approvedAvailable: Boolean = false
+) {
+    val selectedAvailable: Boolean get() = selected == MidiAiFixSelection.SKIP || approvedAvailable
+}
+
 data class MidiFeelSummary(
-    val selected: MidiAnalysisInput = MidiAnalysisInput.REPAIRED,
+    val selected: MidiAnalysisInput = MidiAnalysisInput.CURRENT,
     val available: Boolean = false,
     val report: MidiFeelReport? = null
 )
@@ -412,11 +424,13 @@ class DefaultProjectApplicationService(
                         cleanup = request.cleanup,
                         quality = qualityReference,
                         approvedRepair = !report.approvalRequired,
-                        analysisInput = MidiAnalysisInput.REPAIRED,
+                        aiFixSelection = MidiAiFixSelection.SKIP,
+                        aiFix = null,
+                        analysisInput = MidiAnalysisInput.CURRENT,
                         feel = null
                     )
                 ) else it
-            }, workflow = project.workflow.invalidate(WorkflowChange.REPAIRED_MIDI).markCurrent(WorkflowArtifact.MIDI_REPAIR))
+            }, workflow = project.workflow.invalidate(WorkflowChange.CLEANED_MIDI).markCurrent(WorkflowArtifact.CLEAN_MIDI))
             ProjectStore.write(root, updated)
             progress.report(OperationProgress("repair-midi", 3, 3, "Saved MIDI repair report; analyze this part again", publishedReport))
             snapshot(root, updated)
@@ -464,13 +478,17 @@ class DefaultProjectApplicationService(
             require(!repair.approvalRequired || midi.approvedRepair) { "Part '${part.id}' MIDI repair requires approval before selecting Lo-fi Feel." }
         }
         val selectedMidi = when (request.input) {
-            MidiAnalysisInput.REPAIRED -> midi.copy(analysisInput = MidiAnalysisInput.REPAIRED)
+            MidiAnalysisInput.CURRENT -> midi.copy(analysisInput = MidiAnalysisInput.CURRENT)
             MidiAnalysisInput.LOFI_FEEL -> {
                 val profile = MidiFeelProfile.LOFI_80_SWING_V1
                 val derived = MidiFeelReportStore.derivedPath(root, part.id, profile)
                 val reportPath = MidiFeelReportStore.reportPath(root, part.id, profile)
-                val existing = midi.feel?.takeIf { it.profile == profile && MidiFeelReportStore.isCurrent(root, part.id, clean, it) }
-                val feel = existing ?: publishMidiFeel(root, part.id, clean, derived, reportPath, profile)
+                val baseProject = project.copy(parts = project.parts.map {
+                    if (it.id == part.id) it.copy(midi = midi.copy(analysisInput = MidiAnalysisInput.CURRENT)) else it
+                })
+                val base = app.melotrail.arrangement.SelectedMidiArtifactResolver().resolve(root, baseProject, part.id)
+                val existing = midi.feel?.takeIf { it.profile == profile && MidiFeelReportStore.isCurrent(root, part.id, base.projectRelativePath, it) }
+                val feel = existing ?: publishMidiFeel(root, part.id, base.projectRelativePath, derived, reportPath, profile)
                 midi.copy(analysisInput = MidiAnalysisInput.LOFI_FEEL, feel = feel)
             }
         }
@@ -562,7 +580,15 @@ class DefaultProjectApplicationService(
     }
 
     private fun snapshot(root: Path, project: Project): ProjectSnapshot {
-        val summaries = project.parts.map { part -> part.summary(root) }
+        fun current(artifact: WorkflowArtifact) = artifact !in project.workflow.stale
+        val summaries = project.parts.map { part ->
+            part.summary(
+                root,
+                analysisCurrent = current(WorkflowArtifact.ANALYSIS),
+                aiFixCurrent = current(WorkflowArtifact.AI_FIX),
+                midiFeelCurrent = current(WorkflowArtifact.MIDI_FEEL)
+            )
+        }
         val durationById = summaries.associate { it.id to it.analysis?.durationSeconds }
         val occurrences = mutableMapOf<String, Int>()
         val structure = project.structure.mapIndexed { index, partId ->
@@ -570,7 +596,6 @@ class DefaultProjectApplicationService(
             occurrences[partId] = occurrence
             StructureSectionSummary(index, partId, occurrence, "$partId$occurrence", durationById[partId])
         }
-        fun current(artifact: WorkflowArtifact) = artifact !in project.workflow.stale
         return ProjectSnapshot(
             root = root,
             version = project.version,
@@ -623,7 +648,7 @@ class DefaultProjectApplicationService(
             }
     }.getOrDefault(false)
 
-    private fun Part.summary(root: Path): PartSummary {
+    private fun Part.summary(root: Path, analysisCurrent: Boolean, aiFixCurrent: Boolean, midiFeelCurrent: Boolean): PartSummary {
         val sourcePath = Path.of(file)
         val sourceType = sourceType(file)
         val sourcePreserved = sourcePath.startsWith("source") && isProjectFile(root, file)
@@ -639,10 +664,12 @@ class DefaultProjectApplicationService(
         val rawMidi = midi?.raw?.let { isMidiArtifact(root, it) } ?: false
         val cleanMidi = midi?.clean?.let { isMidiArtifact(root, it) } ?: false
         val quality = midiQuality(root, this, cleanMidi)
-        val analyzed = analysis?.let { runCatching { it.summary(root) }.isSuccess } ?: false
+        val analyzed = analysisCurrent && (analysis?.let { runCatching { it.summary(root) }.isSuccess } ?: false)
         val preparedAudio = sourceType == PartSourceType.AUDIO && inspected &&
             report?.preparation == PreparationStatus.CLEANED && isWaveArtifact(InputInspectionPaths.cleanWav(root, id))
-        val feel = midiFeel(root, this, cleanMidi)
+        val aiFix = midiAiFix(root, this, cleanMidi, aiFixCurrent)
+        val feel = midiFeel(root, this, cleanMidi, midiFeelCurrent, aiFix)
+        val feelSelectedAvailable = midi?.analysisInput != MidiAnalysisInput.LOFI_FEEL || feel.available
         val preparation = PartPreparationSummary(
             sourcePreserved = sourcePreserved,
             inspected = inspected,
@@ -650,10 +677,12 @@ class DefaultProjectApplicationService(
             rawMidi = rawMidi,
             cleanMidi = cleanMidi,
             analyzed = analyzed,
-            ready = sourcePreserved && inspected && cleanMidi && analyzed && quality.status == MidiQualityStatus.CURRENT,
+            ready = sourcePreserved && inspected && cleanMidi && analyzed && quality.status == MidiQualityStatus.CURRENT &&
+                aiFix.selectedAvailable && feelSelectedAvailable,
             warnings = warnings + quality.warnings.map { it.message },
             midiQuality = quality,
-            midiFeel = feel
+            midiFeel = feel,
+            midiAiFix = aiFix
         )
         val sourceSize = root.resolve(file).takeIf { sourcePreserved }?.let { path ->
             runCatching { Files.size(path) }.getOrNull()
@@ -675,12 +704,35 @@ class DefaultProjectApplicationService(
         return MidiQualitySummary(status, report.cleanup, report.warnings, report.recommendations, report)
     }
 
-    private fun midiFeel(root: Path, part: Part, cleanMidi: Boolean): MidiFeelSummary {
+    private fun midiAiFix(root: Path, part: Part, cleanMidi: Boolean, workflowCurrent: Boolean): MidiAiFixSummary {
+        val midi = part.midi ?: return MidiAiFixSummary()
+        val references = midi.aiFix ?: return MidiAiFixSummary(midi.aiFixSelection)
+        val clean = midi.clean ?: return MidiAiFixSummary(midi.aiFixSelection)
+        val inputCurrent = cleanMidi && runCatching {
+            references.requireCanonical(part.id)
+            references.inputSha256 == sha256(safeDestination(root, clean))
+        }.getOrDefault(false)
+        fun current(reference: app.melotrail.arrangement.WorkflowArtifactReference?, canonical: String): Boolean =
+            workflowCurrent && inputCurrent && reference?.file == canonical && runCatching {
+                val path = safeDestination(root, reference.file)
+                isMidiArtifact(root, reference.file) && sha256(path) == reference.sha256
+            }.getOrDefault(false)
+        return MidiAiFixSummary(
+            selected = midi.aiFixSelection,
+            draftAvailable = current(references.draft, MidiAiFixArtifactPaths.draft(part.id)),
+            approvedAvailable = current(references.approved, MidiAiFixArtifactPaths.approved(part.id))
+        )
+    }
+
+    private fun midiFeel(root: Path, part: Part, cleanMidi: Boolean, workflowCurrent: Boolean, aiFix: MidiAiFixSummary): MidiFeelSummary {
         val midi = part.midi ?: return MidiFeelSummary()
         val references = midi.feel ?: return MidiFeelSummary(midi.analysisInput)
-        val clean = midi.clean ?: return MidiFeelSummary(midi.analysisInput)
+        val base = when (midi.aiFixSelection) {
+            MidiAiFixSelection.SKIP -> midi.clean
+            MidiAiFixSelection.APPROVED -> midi.aiFix?.approved?.file.takeIf { aiFix.approvedAvailable }
+        } ?: return MidiFeelSummary(midi.analysisInput)
         val report = runCatching { MidiFeelReportStore.read(root, references.report) }.getOrNull()
-        val current = cleanMidi && MidiFeelReportStore.isCurrent(root, part.id, clean, references)
+        val current = workflowCurrent && cleanMidi && MidiFeelReportStore.isCurrent(root, part.id, base, references)
         return MidiFeelSummary(midi.analysisInput, current, report?.takeIf { current })
     }
 
@@ -812,14 +864,14 @@ class DefaultProjectApplicationService(
         }
     }
 
-    private fun publishMidiFeel(root: Path, partId: String, cleanReference: String, derived: Path, reportPath: Path, profile: MidiFeelProfile): MidiFeelReferences {
+    private fun publishMidiFeel(root: Path, partId: String, inputReference: String, derived: Path, reportPath: Path, profile: MidiFeelProfile): MidiFeelReferences {
         val work = temporaryMidi(derived)
         val oldDerived = derived.takeIf(Files::isRegularFile)?.let { Files.readAllBytes(it) }
         val oldReport = reportPath.takeIf(Files::isRegularFile)?.let { Files.readAllBytes(it) }
         var derivedPublished = false
         var reportPublished = false
         try {
-            val result = midiFeelTransformer.transform(safeDestination(root, cleanReference), work, partId, profile)
+            val result = midiFeelTransformer.transform(safeDestination(root, inputReference), work, partId, profile)
             requireMidiArtifact(work, "Lo-fi Feel")
             atomicReplace(work, derived, "Lo-fi Feel MIDI")
             derivedPublished = true

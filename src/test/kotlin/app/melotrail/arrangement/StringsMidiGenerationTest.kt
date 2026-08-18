@@ -68,7 +68,7 @@ class StringsMidiGenerationTest {
         val clean = projectRoot.resolve("midi/clean/A.mid")
         val pad = projectRoot.resolve("midi/generated/pad.mid")
         Files.createDirectories(source.parent); Files.createDirectories(clean.parent); Files.createDirectories(pad.parent)
-        Files.writeString(source, "source remains untouched"); Files.writeString(clean, "clean reference"); Files.writeString(pad, "pad remains untouched")
+        Files.writeString(source, "source remains untouched"); writeTestMidi(clean); Files.writeString(pad, "pad remains untouched")
         val sourceBefore = Files.readAllBytes(source); val padBefore = Files.readAllBytes(pad)
         val project = Project(Project.CURRENT_VERSION, "strings", listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid"))), renderFormat = RenderFormat())
         val arrangement = DetailedArrangement(sections = listOf(

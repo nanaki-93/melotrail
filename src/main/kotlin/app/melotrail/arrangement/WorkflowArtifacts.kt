@@ -1,6 +1,7 @@
 package app.melotrail.arrangement
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
 import java.nio.file.Path
 
 /**
@@ -12,7 +13,8 @@ import java.nio.file.Path
 @Serializable
 enum class WorkflowArtifact {
     RAW_SOURCE,
-    MIDI_REPAIR,
+    @SerialName("MIDI_REPAIR") CLEAN_MIDI,
+    AI_FIX,
     MIDI_FEEL,
     ANALYSIS,
     COHESION,
@@ -29,7 +31,8 @@ enum class WorkflowArtifact {
 @Serializable
 enum class WorkflowChange {
     SOURCE_OR_RAW,
-    REPAIRED_MIDI,
+    @SerialName("REPAIRED_MIDI") CLEANED_MIDI,
+    AI_FIX_SELECTION,
     MIDI_FEEL,
     ANALYSIS,
     STRUCTURE,
@@ -41,20 +44,31 @@ enum class WorkflowChange {
 /** Centralized, deliberately non-destructive invalidation matrix. */
 object WorkflowArtifactGraph {
     private val allAfterRepair = setOf(
+        WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.COHESION,
+        WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
+        WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
+        WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
+    )
+
+    private val allAfterSelection = setOf(
         WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.COHESION,
         WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
         WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
         WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
     )
 
+    private val allAfterAnalysis = setOf(
+        WorkflowArtifact.COHESION, WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI,
+        WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE,
+        WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
+    )
+
     fun invalidatedBy(change: WorkflowChange): Set<WorkflowArtifact> = when (change) {
-        WorkflowChange.SOURCE_OR_RAW -> setOf(WorkflowArtifact.MIDI_REPAIR) + allAfterRepair
-        WorkflowChange.REPAIRED_MIDI -> allAfterRepair
-        WorkflowChange.MIDI_FEEL, WorkflowChange.ANALYSIS, WorkflowChange.STRUCTURE -> setOf(
-            WorkflowArtifact.COHESION, WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI,
-            WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE,
-            WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
-        )
+        WorkflowChange.SOURCE_OR_RAW -> setOf(WorkflowArtifact.CLEAN_MIDI) + allAfterRepair
+        WorkflowChange.CLEANED_MIDI -> allAfterRepair
+        WorkflowChange.AI_FIX_SELECTION -> allAfterSelection
+        WorkflowChange.MIDI_FEEL -> setOf(WorkflowArtifact.ANALYSIS) + allAfterAnalysis
+        WorkflowChange.ANALYSIS, WorkflowChange.STRUCTURE -> allAfterAnalysis
         WorkflowChange.COHESION -> setOf(
             WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
             WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
@@ -75,8 +89,78 @@ object WorkflowArtifactGraph {
 @Serializable
 data class WorkflowArtifactReference(val file: String, val sha256: String) {
     init {
-        require(file.isNotBlank() && !file.startsWith('/') && !file.contains("..")) { "Workflow artifact path must be project-relative" }
+        val relative = runCatching { Path.of(file) }.getOrElse { throw IllegalArgumentException("Workflow artifact path is invalid", it) }
+        val canonical = relative.normalize().toString().replace('\\', '/')
+        require(
+            file.isNotBlank() && !relative.isAbsolute && '\\' !in file && ':' !in file &&
+                relative.none { it.toString() == ".." } && canonical == file
+        ) { "Workflow artifact path must be canonical and project-relative" }
         require(SHA_256.matches(sha256)) { "Workflow artifact fingerprint is invalid" }
+    }
+}
+
+/** Stable project-relative locations reserved for the later bounded AI-fix processor. */
+object MidiAiFixArtifactPaths {
+    fun draft(partId: String): String = "midi/ai-fix/${safeId(partId, "AI-fix part")}/draft.mid"
+    fun approved(partId: String): String = "midi/ai-fix/${safeId(partId, "AI-fix part")}/approved.mid"
+}
+
+@Serializable
+enum class MidiAiFixSelection { SKIP, APPROVED }
+
+/**
+ * The draft is review evidence only. [approved] is selectable only when it is
+ * bound to the exact cleaned-MIDI fingerprint in [inputSha256].
+ */
+@Serializable
+data class MidiAiFixReferences(
+    val inputSha256: String,
+    val draft: WorkflowArtifactReference? = null,
+    val approved: WorkflowArtifactReference? = null
+) {
+    init { require(SHA_256.matches(inputSha256)) { "AI-fix input fingerprint is invalid" } }
+
+    fun requireCanonical(partId: String) {
+        draft?.let { require(it.file == MidiAiFixArtifactPaths.draft(partId)) { "AI-fix draft path is not canonical for '$partId'" } }
+        approved?.let { require(it.file == MidiAiFixArtifactPaths.approved(partId)) { "Approved AI-fix path is not canonical for '$partId'" } }
+    }
+}
+
+/** Stable project-relative locations reserved for adjacent Cohesion boundaries. */
+object CohesionBoundaryArtifactPaths {
+    private fun directory(outgoingInstanceId: String, incomingInstanceId: String): String =
+        "cohesion/boundaries/${safeId(outgoingInstanceId, "outgoing occurrence")}--${safeId(incomingInstanceId, "incoming occurrence")}"
+
+    fun draft(outgoingInstanceId: String, incomingInstanceId: String): String =
+        "${directory(outgoingInstanceId, incomingInstanceId)}/boundary.draft.json"
+
+    fun approved(outgoingInstanceId: String, incomingInstanceId: String): String =
+        "${directory(outgoingInstanceId, incomingInstanceId)}/boundary.json"
+}
+
+/** One fingerprinted boundary between adjacent, stable Structure occurrences. */
+@Serializable
+data class CohesionBoundaryReference(
+    val outgoingInstanceId: String,
+    val incomingInstanceId: String,
+    val inputSha256: String,
+    val draft: WorkflowArtifactReference? = null,
+    val approved: WorkflowArtifactReference? = null
+) {
+    init {
+        require(SAFE_ID.matches(outgoingInstanceId) && SAFE_ID.matches(incomingInstanceId)) { "Cohesion boundary occurrence ID is invalid" }
+        require(outgoingInstanceId != incomingInstanceId) { "Cohesion boundary occurrences must be distinct" }
+        require(SHA_256.matches(inputSha256)) { "Cohesion boundary input fingerprint is invalid" }
+        draft?.let {
+            require(it.file == CohesionBoundaryArtifactPaths.draft(outgoingInstanceId, incomingInstanceId)) {
+                "Cohesion boundary draft path is not canonical"
+            }
+        }
+        approved?.let {
+            require(it.file == CohesionBoundaryArtifactPaths.approved(outgoingInstanceId, incomingInstanceId)) {
+                "Approved Cohesion boundary path is not canonical"
+            }
+        }
     }
 }
 
@@ -99,7 +183,9 @@ data class CohesionWorkflowReferences(
     val inputSha256: String,
     val plan: WorkflowArtifactReference,
     val occurrences: List<CohesionOccurrenceReference>,
-    val approved: Boolean
+    val approved: Boolean,
+    /** Empty for the supported legacy per-occurrence Cohesion representation. */
+    val boundaries: List<CohesionBoundaryReference> = emptyList()
 ) {
     init {
         require(SHA_256.matches(inputSha256)) { "Cohesion input fingerprint is invalid" }
@@ -108,6 +194,12 @@ data class CohesionWorkflowReferences(
         }
         require(!approved || occurrences.all(CohesionOccurrenceReference::approved)) {
             "Approved cohesion requires approved results for every occurrence"
+        }
+        require(boundaries.map { it.outgoingInstanceId to it.incomingInstanceId }.distinct().size == boundaries.size) {
+            "Cohesion boundary identities must be unique"
+        }
+        require(!approved || boundaries.all { it.approved != null }) {
+            "Approved cohesion requires an approved artifact for every boundary"
         }
     }
 }
@@ -126,9 +218,7 @@ data class ProjectWorkflowReferences(
     val commercialProvenance: CommercialProvenanceReferences? = null
 ) {
     fun invalidate(change: WorkflowChange): ProjectWorkflowReferences = copy(
-        stale = stale + WorkflowArtifactGraph.invalidatedBy(change),
-        cohesion = if (WorkflowArtifact.COHESION in WorkflowArtifactGraph.invalidatedBy(change)) null else cohesion,
-        commercialProvenance = if (WorkflowArtifact.RELEASE in WorkflowArtifactGraph.invalidatedBy(change)) null else commercialProvenance
+        stale = stale + WorkflowArtifactGraph.invalidatedBy(change)
     )
 
     fun markCurrent(vararg artifacts: WorkflowArtifact): ProjectWorkflowReferences = copy(stale = stale - artifacts.toSet())
@@ -145,3 +235,7 @@ object ProjectWorkflowStore {
 
 private val SAFE_ID = Regex("[A-Za-z0-9_-]{1,80}")
 private val SHA_256 = Regex("[0-9a-f]{64}")
+private fun safeId(value: String, label: String): String {
+    require(SAFE_ID.matches(value)) { "$label ID is invalid" }
+    return value
+}

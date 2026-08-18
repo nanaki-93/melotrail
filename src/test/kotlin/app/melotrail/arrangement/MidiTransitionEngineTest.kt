@@ -89,7 +89,7 @@ class MidiTransitionEngineTest {
         Files.createDirectories(source.parent)
         Files.createDirectories(clean.parent)
         Files.writeString(source, "source MIDI remains untouched")
-        Files.writeString(clean, "clean MIDI reference")
+        writeTestMidi(clean)
         val project = Project(Project.CURRENT_VERSION, "transitions", listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid"))), renderFormat = RenderFormat(sampleRate = 32_000, channels = 3))
         val arrangement = DetailedArrangement(sections = listOf(
             detailedSection(0, TransitionPlan(TransitionType.BRIDGE, 1, bridge = BridgePlan(0.7, listOf(BridgeElement.DRUM_FILL)))),

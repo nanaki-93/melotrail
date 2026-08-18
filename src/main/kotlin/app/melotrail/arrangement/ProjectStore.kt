@@ -55,6 +55,10 @@ object ProjectStore {
      */
     fun migrateV2(root: Path): Project {
         val project = read(root)
+        if (project.version == Project.CURRENT_VERSION) {
+            project.requireValid(root)
+            return project
+        }
         require(project.version == 2) { "Only version 2 projects require this migration" }
         val migrated = project.copy(version = Project.CURRENT_VERSION)
         migrated.requireValid(root)
@@ -81,8 +85,10 @@ object ProjectStore {
         Files.writeString(temporary, text, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
         try {
             Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-        } catch (_: java.nio.file.AtomicMoveNotSupportedException) {
-            Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING)
+        } catch (error: java.nio.file.AtomicMoveNotSupportedException) {
+            throw IllegalStateException("Atomic project save is not supported for '$path'", error)
+        } finally {
+            Files.deleteIfExists(temporary)
         }
     }
 

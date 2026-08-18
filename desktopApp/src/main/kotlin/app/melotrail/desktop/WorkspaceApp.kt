@@ -655,10 +655,10 @@ internal fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (Workspac
             val selectedFeel = state.pendingMidiFeel ?: part.preparation.midiFeel.selected
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 OutlinedButton(
-                    onClick = { onIntent(WorkspaceIntent.SelectMidiFeel(app.melotrail.arrangement.MidiAnalysisInput.REPAIRED)) },
+                    onClick = { onIntent(WorkspaceIntent.SelectMidiFeel(app.melotrail.arrangement.MidiAnalysisInput.CURRENT)) },
                     enabled = !state.operation.isMutating,
                     modifier = Modifier.semantics { testTag = WorkspaceTags.MIDI_FEEL_ORIGINAL }
-                ) { Text(if (selectedFeel == app.melotrail.arrangement.MidiAnalysisInput.REPAIRED) "Original selected" else "Original") }
+                ) { Text(if (selectedFeel == app.melotrail.arrangement.MidiAnalysisInput.CURRENT) "Original selected" else "Original") }
                 OutlinedButton(
                     onClick = { onIntent(WorkspaceIntent.SelectMidiFeel(app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL)) },
                     enabled = !state.operation.isMutating,

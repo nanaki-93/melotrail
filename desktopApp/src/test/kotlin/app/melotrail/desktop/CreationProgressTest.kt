@@ -2,6 +2,7 @@ package app.melotrail.desktop
 
 import app.melotrail.application.ArrangementSectionSnapshot
 import app.melotrail.application.ArrangementSnapshot
+import app.melotrail.application.MidiAiFixSummary
 import app.melotrail.application.MidiQualityStatus
 import app.melotrail.application.MidiQualitySummary
 import app.melotrail.application.PartAnalysisStatus
@@ -12,6 +13,9 @@ import app.melotrail.application.PartSummary
 import app.melotrail.application.ProjectReadiness
 import app.melotrail.application.ProjectSnapshot
 import app.melotrail.application.StructureSectionSummary
+import app.melotrail.arrangement.MidiAiFixSelection
+import app.melotrail.arrangement.RenderFormat
+import app.melotrail.arrangement.WorkflowArtifact
 import kotlin.io.path.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -19,100 +23,160 @@ import kotlin.test.assertFailsWith
 
 class CreationProgressTest {
     @Test
-    fun `derives every creation stage deterministically from canonical snapshots`() {
+    fun `creation progress follows the complete canonical sequence`() {
         val ready = readyProject()
         val approved = arrangement(ready)
         val cases = listOf(
-            Case("no project", CreationProgressInput(null), mapOf(
-                CreationStage.PROJECT to CreationStageStatus.CURRENT,
-                CreationStage.PREPARE to CreationStageStatus.NOT_STARTED,
-                CreationStage.STRUCTURE to CreationStageStatus.NOT_STARTED,
-                CreationStage.ARRANGE to CreationStageStatus.NOT_STARTED,
-                CreationStage.MIX_AND_MASTER to CreationStageStatus.NOT_STARTED
-            ), CreationIntent.CREATE_OR_OPEN_PROJECT),
-            Case("empty project", CreationProgressInput(emptyProject()), mapOf(
-                CreationStage.PROJECT to CreationStageStatus.COMPLETE,
-                CreationStage.PREPARE to CreationStageStatus.CURRENT,
-                CreationStage.STRUCTURE to CreationStageStatus.BLOCKED,
-                CreationStage.ARRANGE to CreationStageStatus.BLOCKED,
-                CreationStage.MIX_AND_MASTER to CreationStageStatus.BLOCKED
-            ), CreationIntent.IMPORT_PART),
-            Case("partial preparation", CreationProgressInput(ready.copy(parts = listOf(ready.parts.first().copy(preparation = ready.parts.first().preparation.copy(analyzed = false, ready = false))))), mapOf(
-                CreationStage.PREPARE to CreationStageStatus.CURRENT,
-                CreationStage.STRUCTURE to CreationStageStatus.BLOCKED,
-                CreationStage.ARRANGE to CreationStageStatus.BLOCKED
-            ), CreationIntent.ANALYZE_PART),
-            Case("stale MIDI quality", CreationProgressInput(ready.copy(parts = listOf(ready.parts.first().copy(preparation = ready.parts.first().preparation.copy(ready = false, midiQuality = MidiQualitySummary(MidiQualityStatus.STALE_OR_INVALID)))))), mapOf(
-                CreationStage.PREPARE to CreationStageStatus.STALE
-            ), CreationIntent.RETRY_MIDI_CLEANUP),
-            Case("structure needs saving", CreationProgressInput(ready.copy(structure = emptyList(), readiness = ready.readiness.copy(structureReady = false))), mapOf(
-                CreationStage.PREPARE to CreationStageStatus.COMPLETE,
-                CreationStage.STRUCTURE to CreationStageStatus.CURRENT,
-                CreationStage.ARRANGE to CreationStageStatus.BLOCKED
-            ), CreationIntent.SAVE_STRUCTURE),
-            Case("stale structure arrangement", CreationProgressInput(ready.copy(structure = listOf(StructureSectionSummary(0, "A", 2, "A2", 4.0))), approved), mapOf(
-                CreationStage.STRUCTURE to CreationStageStatus.STALE,
-                CreationStage.ARRANGE to CreationStageStatus.STALE
-            ), CreationIntent.GENERATE_ARRANGEMENT),
-            Case("Qwen draft", CreationProgressInput(ready, arrangement(ready, approvalRequired = true, approved = false)), mapOf(
-                CreationStage.ARRANGE to CreationStageStatus.CURRENT,
-                CreationStage.MIX_AND_MASTER to CreationStageStatus.BLOCKED
-            ), CreationIntent.APPROVE_ARRANGEMENT),
-            Case("missing build dependency", CreationProgressInput(ready, approved, runtimeReadiness = unavailableBuildReadiness()), mapOf(
-                CreationStage.ARRANGE to CreationStageStatus.COMPLETE,
-                CreationStage.MIX_AND_MASTER to CreationStageStatus.BLOCKED
-            ), CreationIntent.CONFIGURE_BUILD_DEPENDENCY),
-            Case("build failure retries build", CreationProgressInput(ready, approved, runtimeReadiness = readyBuildReadiness(), buildEvidence = BuildEvidence.Failed("renderer exited with code 1")), mapOf(
-                CreationStage.MIX_AND_MASTER to CreationStageStatus.BLOCKED
-            ), CreationIntent.RETRY_BUILD),
-            Case("completed release", CreationProgressInput(ready.copy(readiness = ready.readiness.copy(masterAvailable = true, releaseAvailable = true)), approved), mapOf(
-                CreationStage.MIX_AND_MASTER to CreationStageStatus.COMPLETE
-            ), CreationIntent.BUILD_SONG)
+            Case("no project", CreationProgressInput(null), CreationStage.PROJECT, CreationStageStatus.CURRENT, CreationIntent.CREATE_OR_OPEN_PROJECT),
+            Case("empty project", CreationProgressInput(emptyProject()), CreationStage.IMPORT_AND_INSPECTION, CreationStageStatus.CURRENT, CreationIntent.IMPORT_PART),
+            Case(
+                "analysis needed",
+                CreationProgressInput(ready.copy(parts = listOf(ready.parts.single().copy(preparation = ready.parts.single().preparation.copy(analyzed = false, ready = false))))),
+                CreationStage.ANALYSIS,
+                CreationStageStatus.CURRENT,
+                CreationIntent.ANALYZE_PART
+            ),
+            Case(
+                "stale cleaned MIDI",
+                CreationProgressInput(ready.copy(
+                    parts = listOf(ready.parts.single().copy(preparation = ready.parts.single().preparation.copy(ready = false, midiQuality = MidiQualitySummary(MidiQualityStatus.STALE_OR_INVALID)))),
+                    readiness = ready.readiness.copy(staleArtifacts = setOf(WorkflowArtifact.CLEAN_MIDI))
+                )),
+                CreationStage.CLEAN_MIDI,
+                CreationStageStatus.STALE,
+                CreationIntent.RETRY_MIDI_CLEANUP
+            ),
+            Case(
+                "structure needs saving",
+                CreationProgressInput(ready.copy(structure = emptyList(), readiness = ready.readiness.copy(structureReady = false))),
+                CreationStage.STRUCTURE,
+                CreationStageStatus.CURRENT,
+                CreationIntent.SAVE_STRUCTURE
+            ),
+            Case(
+                "stale arrangement structure",
+                CreationProgressInput(ready.copy(structure = listOf(StructureSectionSummary(0, "A", 2, "A2", 4.0))), approved),
+                CreationStage.ARRANGEMENT,
+                CreationStageStatus.STALE,
+                CreationIntent.GENERATE_ARRANGEMENT
+            ),
+            Case(
+                "arrangement draft",
+                CreationProgressInput(ready, arrangement(ready, approvalRequired = true, approved = false)),
+                CreationStage.ARRANGEMENT,
+                CreationStageStatus.CURRENT,
+                CreationIntent.APPROVE_ARRANGEMENT
+            ),
+            Case(
+                "missing build dependency",
+                CreationProgressInput(ready, approved, runtimeReadiness = unavailableBuildReadiness()),
+                CreationStage.MIX_AND_MASTER,
+                CreationStageStatus.BLOCKED,
+                CreationIntent.CONFIGURE_BUILD_DEPENDENCY
+            ),
+            Case(
+                "build failure",
+                CreationProgressInput(ready, approved, runtimeReadiness = readyBuildReadiness(), buildEvidence = BuildEvidence.Failed("renderer exited with code 1")),
+                CreationStage.MIX_AND_MASTER,
+                CreationStageStatus.BLOCKED,
+                CreationIntent.RETRY_BUILD
+            ),
+            Case(
+                "completed release",
+                CreationProgressInput(ready.copy(readiness = ready.readiness.copy(masterAvailable = true, releaseAvailable = true)), approved),
+                CreationStage.MIX_AND_MASTER,
+                CreationStageStatus.COMPLETE,
+                CreationIntent.BUILD_SONG
+            )
         )
 
         cases.forEach { case ->
             val first = CreationProgressDeriver.derive(case.input)
             val second = CreationProgressDeriver.derive(case.input)
             assertEquals(first, second, case.name)
-            case.statuses.forEach { (stage, status) -> assertEquals(status, first[stage].status, "${case.name}: $stage") }
+            assertEquals(CreationStage.entries, first.stages.map(CreationStageProgress::stage), case.name)
+            assertEquals(case.stage, first.stages.firstOrNull { it.status != CreationStageStatus.COMPLETE }?.stage ?: first.stages.last().stage, case.name)
+            assertEquals(case.status, first[case.stage].status, case.name)
             assertEquals(case.next, first.nextAction.intent, case.name)
-            val nextStage = first.stages.firstOrNull { it.status != CreationStageStatus.COMPLETE } ?: first.stages.last()
-            assertEquals(first.nextAction.artifact, nextStage.expectedArtifact, case.name)
+            assertEquals(first.nextAction.artifact, first[case.stage].expectedArtifact, case.name)
         }
     }
 
     @Test
-    fun `blocks impossible structure and approval combinations with a safe recovery target`() {
-        val project = readyProject().copy(structure = listOf(StructureSectionSummary(0, "missing", 1, "missing1", 4.0)))
-        val invalidStructure = CreationProgressDeriver.derive(CreationProgressInput(project))
-        assertEquals(CreationStageStatus.BLOCKED, invalidStructure[CreationStage.STRUCTURE].status)
-        assertEquals(CreationIntent.SAVE_STRUCTURE, invalidStructure[CreationStage.STRUCTURE].nextAction.intent)
+    fun `skipped optional stages do not block later creation steps`() {
+        val ready = readyProject()
+        val skipped = ready.parts.single().copy(preparation = ready.parts.single().preparation.copy(
+            midiAiFix = MidiAiFixSummary(MidiAiFixSelection.SKIP, draftAvailable = false, approvedAvailable = false)
+        ))
+        val progress = CreationProgressDeriver.derive(CreationProgressInput(ready.copy(
+            parts = listOf(skipped),
+            readiness = ready.readiness.copy(staleArtifacts = setOf(WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL))
+        )))
 
-        val impossibleApproval = CreationProgressDeriver.derive(CreationProgressInput(readyProject(), arrangement(readyProject(), approvalRequired = true, approved = true)))
-        assertEquals(CreationStageStatus.BLOCKED, impossibleApproval[CreationStage.ARRANGE].status)
-        assertEquals(CreationIntent.GENERATE_ARRANGEMENT, impossibleApproval[CreationStage.ARRANGE].nextAction.intent)
+        assertEquals(CreationStageStatus.COMPLETE, progress[CreationStage.AI_FIX].status)
+        assertEquals(CreationStageStatus.COMPLETE, progress[CreationStage.MIDI_FEEL].status)
+        assertEquals(CreationStage.ARRANGEMENT, progress.stages.first { it.status != CreationStageStatus.COMPLETE }.stage)
     }
 
     @Test
-    fun `selection remains immutable UI state and never accepts unsafe identifiers`() {
+    fun `selection remains immutable UI state and rejects unsafe identifiers`() {
         val state = WorkspaceUiState(selectedPartId = "A", selectedArrangementSection = 1, selectedArtifact = CreationArtifactReference(CreationArtifactKind.ANALYSIS, "A"))
         assertEquals(CreationSelection("A", 1, CreationArtifactReference(CreationArtifactKind.ANALYSIS, "A")), state.creationSelection)
         assertFailsWith<IllegalArgumentException> { CreationArtifactReference(CreationArtifactKind.PART_SOURCE, " ") }
     }
 
-    private data class Case(val name: String, val input: CreationProgressInput, val statuses: Map<CreationStage, CreationStageStatus>, val next: CreationIntent)
+    private data class Case(
+        val name: String,
+        val input: CreationProgressInput,
+        val stage: CreationStage,
+        val status: CreationStageStatus,
+        val next: CreationIntent
+    )
 
-    private fun emptyProject() = ProjectSnapshot(Path("build/creation-progress"), 2, "progress", null, emptyList(), emptyList(), readiness())
+    private fun emptyProject() = ProjectSnapshot(
+        Path("build/creation-progress"),
+        3,
+        "progress",
+        RenderFormat(),
+        emptyList(),
+        emptyList(),
+        readiness()
+    )
 
     private fun readyProject(): ProjectSnapshot {
-        val part = PartSummary("A", "verse", "source/A.mid", "A.mid", PartSourceType.MIDI,
+        val part = PartSummary(
+            "A",
+            "verse",
+            "source/A.mid",
+            "A.mid",
+            PartSourceType.MIDI,
             PartAnalysisSummary(PartAnalysisStatus.MIDI, "analysis/A.json", 4, 4.0, "C major"),
-            PartPreparationSummary(true, true, false, true, true, true, true, emptyList(), MidiQualitySummary(MidiQualityStatus.CURRENT)))
-        return emptyProject().copy(parts = listOf(part), structure = listOf(StructureSectionSummary(0, "A", 1, "A1", 4.0)), readiness = readiness(cleanMidiReady = true, analysesReady = true, structureReady = true))
+            PartPreparationSummary(
+                true,
+                true,
+                false,
+                true,
+                true,
+                true,
+                true,
+                emptyList(),
+                MidiQualitySummary(MidiQualityStatus.CURRENT),
+                midiAiFix = MidiAiFixSummary(MidiAiFixSelection.SKIP)
+            )
+        )
+        return emptyProject().copy(
+            parts = listOf(part),
+            structure = listOf(StructureSectionSummary(0, "A", 1, "A1", 4.0)),
+            readiness = readiness(cleanMidiReady = true, analysesReady = true, structureReady = true).copy(cohesionReady = true)
+        )
     }
 
     private fun arrangement(project: ProjectSnapshot, approvalRequired: Boolean = false, approved: Boolean = true) = ArrangementSnapshot(
-        project.root, project.structure.map { ArrangementSectionSnapshot(it.index, it.instanceId, it.partId, "verse", 0.5, emptyList(), "none", it.durationSeconds) }, approvalRequired, approved, false,
+        project.root,
+        project.structure.map { ArrangementSectionSnapshot(it.index, it.instanceId, it.partId, "verse", 0.5, emptyList(), "none", it.durationSeconds) },
+        approvalRequired,
+        approved,
+        false,
         project.root.resolve(if (approvalRequired) "arrangement.draft.json" else "arrangement.json")
     )
 

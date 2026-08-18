@@ -32,15 +32,45 @@ class SelectedMidiArtifactResolver {
         }
         val repaired = resolveFile(root, rootReal, repairedReference, "repaired MIDI")
         val repairFreshness = repairFreshness(root, part, midi, repairedReference)
+        val repairedSha256 = sha256(repaired)
+        val base = when (midi.aiFixSelection) {
+            MidiAiFixSelection.SKIP -> BaseCandidate(
+                repairedReference,
+                repaired,
+                repairedSha256,
+                SelectedMidiBaseKind.CLEANED
+            )
+            MidiAiFixSelection.APPROVED -> {
+                val references = requireNotNull(midi.aiFix) { "Part '${part.id}' has no approved AI-fix references." }
+                references.requireCanonical(part.id)
+                require(references.inputSha256 == repairedSha256) {
+                    "Approved AI fix is stale for part '${part.id}'; keep cleaned MIDI or regenerate the AI fix."
+                }
+                val approved = requireNotNull(references.approved) { "Part '${part.id}' has no approved AI-fix artifact." }
+                val path = resolveFile(root, rootReal, approved.file, "approved AI-fix MIDI")
+                val hash = sha256(path)
+                require(hash == approved.sha256) {
+                    "Approved AI fix is stale for part '${part.id}'; keep cleaned MIDI or regenerate the AI fix."
+                }
+                readMidi(path, part.id)
+                BaseCandidate(approved.file, path, hash, SelectedMidiBaseKind.APPROVED_AI_FIX)
+            }
+        }
         val selected = when (midi.analysisInput) {
-            MidiAnalysisInput.REPAIRED -> Candidate(repairedReference, repaired, SelectedMidiArtifactKind.REPAIRED, null, null)
+            MidiAnalysisInput.CURRENT -> Candidate(
+                base.reference,
+                base.path,
+                if (base.kind == SelectedMidiBaseKind.CLEANED) SelectedMidiArtifactKind.CLEANED else SelectedMidiArtifactKind.APPROVED_AI_FIX,
+                null,
+                null
+            )
             MidiAnalysisInput.LOFI_FEEL -> {
                 require(repairFreshness != MidiRepairFreshness.STALE) {
                     "Part '${part.id}' has stale repaired MIDI evidence. Run Repair MIDI again."
                 }
                 val feel = requireNotNull(midi.feel) { "Part '${part.id}' has no current Lo-fi MIDI Feel artifact." }
                 val derived = resolveFile(root, rootReal, feel.derived, "Lo-fi MIDI Feel")
-                require(MidiFeelReportStore.isCurrent(root, part.id, repairedReference, feel)) {
+                require(MidiFeelReportStore.isCurrent(root, part.id, base.reference, feel)) {
                     "Lo-fi MIDI Feel artifact is missing, malformed, or stale for part '${part.id}'. Choose Original or regenerate Lo-fi MIDI Feel."
                 }
                 Candidate(feel.derived, derived, SelectedMidiArtifactKind.LOFI_FEEL, feel.profile, MidiFeelReportStore.read(root, feel.report).version)
@@ -58,6 +88,7 @@ class SelectedMidiArtifactResolver {
             ppq = sequence.resolution,
             timing = MidiTimingSummary(tempoMap(sequence), timeSignatures(sequence)),
             repairFreshness = repairFreshness,
+            baseKind = base.kind,
             loFiFreshness = if (selected.kind == SelectedMidiArtifactKind.LOFI_FEEL) MidiLoFiFreshness.CURRENT else MidiLoFiFreshness.NOT_SELECTED
         )
     }
@@ -120,11 +151,24 @@ class SelectedMidiArtifactResolver {
     }.sortedBy { it.tick }.distinctBy { it.tick }.toList().let { map -> if (map.firstOrNull()?.tick == 0L) map else listOf(MidiTimeSignature(0, 4, 4, true)) + map }
 
     private fun Sequence.events(): kotlin.sequences.Sequence<MidiEvent> = tracks.asSequence().flatMap { track -> (0 until track.size()).asSequence().map(track::get) }
-    private fun sha256(path: Path): String = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
+    private fun sha256(path: Path): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        Files.newInputStream(path).use { input ->
+            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                digest.update(buffer, 0, count)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+    private data class BaseCandidate(val reference: String, val path: Path, val sha256: String, val kind: SelectedMidiBaseKind)
     private data class Candidate(val reference: String, val path: Path, val kind: SelectedMidiArtifactKind, val profile: MidiFeelProfile?, val profileVersion: Int?)
 }
 
-enum class SelectedMidiArtifactKind { REPAIRED, LOFI_FEEL }
+enum class SelectedMidiBaseKind { CLEANED, APPROVED_AI_FIX }
+enum class SelectedMidiArtifactKind { CLEANED, APPROVED_AI_FIX, LOFI_FEEL }
 enum class MidiRepairFreshness { CURRENT, LEGACY_UNKNOWN, STALE }
 enum class MidiLoFiFreshness { CURRENT, NOT_SELECTED }
 data class MidiTimingSummary(val tempoMap: List<MidiTempoChange>, val timeSignatures: List<MidiTimeSignature>)
@@ -139,5 +183,6 @@ data class SelectedMidiArtifact(
     val ppq: Int,
     val timing: MidiTimingSummary,
     val repairFreshness: MidiRepairFreshness,
+    val baseKind: SelectedMidiBaseKind,
     val loFiFreshness: MidiLoFiFreshness
 )

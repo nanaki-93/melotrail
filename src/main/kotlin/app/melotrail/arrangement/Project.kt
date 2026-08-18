@@ -44,24 +44,7 @@ data class Project(
      * New source consumers must retain [SelectedMidiArtifact] through [requireSelectedMidi].
      */
     fun requireCleanMidi(projectRoot: Path): List<Path> {
-        require(version >= MIDI_FIRST_VERSION) {
-            "Project uses legacy v1 source audio. Prepare clean MIDI for every part before running MIDI-first commands."
-        }
-        requireValid(projectRoot)
-        return parts.map { part ->
-            val midi = requireNotNull(part.midi)
-            val clean = requireNotNull(midi.clean) { "Part '${part.id}' has not been repaired. Run Repair MIDI before continuing." }
-            if (midi.raw != null) {
-                require(midi.cleanup != null && midi.quality != null) { "Part '${part.id}' has incomplete MIDI repair provenance." }
-                val report = MidiQualityReportStore.read(projectRoot, requireNotNull(midi.quality))
-                require(!report.approvalRequired || midi.approvedRepair) { "Part '${part.id}' needs explicit approval of its MIDI repair." }
-                MidiQualityReportStore.requireCurrent(projectRoot, part.id, midi.raw, clean, requireNotNull(midi.cleanup), requireNotNull(midi.quality))
-            }
-            when (midi.analysisInput) {
-                MidiAnalysisInput.REPAIRED -> projectRoot.resolve(clean).normalize()
-                MidiAnalysisInput.LOFI_FEEL -> requireNotNull(midi.feel).also { MidiFeelReportStore.requireCurrent(projectRoot, part.id, clean, it) }.let { projectRoot.resolve(it.derived).normalize() }
-            }
-        }
+        return requireSelectedMidi(projectRoot).map(SelectedMidiArtifact::path)
     }
 
     companion object {
@@ -100,8 +83,12 @@ data class MidiReferences(
     val quality: String? = null,
     /** True automatically for conservative repairs; explicit only above report thresholds. */
     val approvedRepair: Boolean = false,
+    /** Explicit optional base branch; a draft is never selected. */
+    val aiFixSelection: MidiAiFixSelection = MidiAiFixSelection.SKIP,
+    /** Optional retained draft/approval evidence, fingerprinted against [clean]. */
+    val aiFix: MidiAiFixReferences? = null,
     /** The sole MIDI artifact used by analysis and all downstream MIDI-first stages. */
-    val analysisInput: MidiAnalysisInput = MidiAnalysisInput.REPAIRED,
+    val analysisInput: MidiAnalysisInput = MidiAnalysisInput.CURRENT,
     /** Optional derived MIDI; repaired MIDI remains immutable evidence. */
     val feel: MidiFeelReferences? = null
 )
@@ -182,6 +169,17 @@ object ProjectValidator {
                     }
                     if (midi.approvedRepair && (midi.cleanup == null || midi.quality == null)) {
                         errors += "Part '${part.id}' cannot approve a missing MIDI repair"
+                    }
+                    runCatching { midi.aiFix?.requireCanonical(part.id) }.exceptionOrNull()?.let { error ->
+                        errors += "Part '${part.id}' AI-fix references are invalid: ${error.message}"
+                    }
+                    if (midi.aiFixSelection == MidiAiFixSelection.APPROVED && midi.aiFix?.approved == null) {
+                        errors += "Part '${part.id}' selects an approved AI fix without an approved artifact"
+                    }
+                    if (midi.aiFixSelection == MidiAiFixSelection.APPROVED) {
+                        midi.aiFix?.approved?.let {
+                            validateFileReference(root, it.file, "Part '${part.id}' approved AI-fix MIDI", errors)
+                        }
                     }
                     midi.cleanup?.let {
                         runCatching(it::requireValid).exceptionOrNull()?.let { error ->

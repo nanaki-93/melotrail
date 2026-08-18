@@ -3,23 +3,44 @@ package app.melotrail.desktop
 import app.melotrail.application.ArrangementSnapshot
 import app.melotrail.application.MixSnapshot
 import app.melotrail.application.ProjectSnapshot
+import app.melotrail.application.WorkflowAction
+import app.melotrail.application.WorkflowReadModelDeriver
+import app.melotrail.application.WorkflowStage
+import app.melotrail.application.WorkflowState
+import app.melotrail.application.WorkflowStep
 
-/**
- * A UI-neutral view of the canonical creation artifacts. It deliberately does
- * not persist workflow flags: callers refresh the source snapshots after each
- * operation and derive this model again.
- */
-enum class CreationStage { PROJECT, PREPARE, STRUCTURE, ARRANGE, MIX_AND_MASTER }
+/** Desktop adapter over the canonical ordered workflow. */
+enum class CreationStage {
+    PROJECT,
+    IMPORT_AND_INSPECTION,
+    TRANSCRIPTION,
+    CLEAN_MIDI,
+    AI_FIX,
+    MIDI_FEEL,
+    ANALYSIS,
+    STRUCTURE,
+    COHESION,
+    ARRANGEMENT,
+    MIX_AND_MASTER
+}
 
 enum class CreationStageStatus { NOT_STARTED, CURRENT, COMPLETE, BLOCKED, STALE }
 
 enum class CreationIntent {
     CREATE_OR_OPEN_PROJECT,
+    MIGRATE_PROJECT,
     IMPORT_PART,
     INSPECT_PART,
+    TRANSCRIBE_PART,
     RETRY_MIDI_CLEANUP,
+    APPROVE_MIDI_CLEANUP,
+    CREATE_AI_FIX,
+    APPROVE_AI_FIX,
+    SELECT_MIDI_FEEL,
     ANALYZE_PART,
     SAVE_STRUCTURE,
+    GENERATE_COHESION,
+    APPROVE_COHESION,
     GENERATE_ARRANGEMENT,
     APPROVE_ARRANGEMENT,
     CONFIGURE_BUILD_DEPENDENCY,
@@ -32,9 +53,14 @@ enum class CreationArtifactKind {
     PROJECT_FILE,
     PART_SOURCE,
     PREPARATION_REPORT,
+    RAW_MIDI,
     CLEAN_MIDI,
+    AI_FIX_DRAFT,
+    AI_FIX_APPROVED,
+    LOFI_FEEL_MIDI,
     ANALYSIS,
     STRUCTURE,
+    COHESION,
     ARRANGEMENT_DRAFT,
     ARRANGEMENT,
     DRY_MIX,
@@ -102,89 +128,132 @@ data class CreationSelection(
 )
 
 object CreationProgressDeriver {
-    fun derive(input: CreationProgressInput): CreationProgress {
-        val project = input.project
-        if (project == null) return CreationProgress(
-            listOf(
-                stage(CreationStage.PROJECT, CreationStageStatus.CURRENT, "Create or open a project first.", projectFile(), CreationIntent.CREATE_OR_OPEN_PROJECT, "A project root is required."),
-                stage(CreationStage.PREPARE, CreationStageStatus.NOT_STARTED, "Project artifact is missing.", CreationArtifactReference(CreationArtifactKind.PART_SOURCE), CreationIntent.CREATE_OR_OPEN_PROJECT, "Create or open a project first."),
-                stage(CreationStage.STRUCTURE, CreationStageStatus.NOT_STARTED, "Project artifact is missing.", structureArtifact(), CreationIntent.CREATE_OR_OPEN_PROJECT, "Create or open a project first."),
-                stage(CreationStage.ARRANGE, CreationStageStatus.NOT_STARTED, "Project artifact is missing.", arrangementArtifact(), CreationIntent.CREATE_OR_OPEN_PROJECT, "Create or open a project first."),
-                stage(CreationStage.MIX_AND_MASTER, CreationStageStatus.NOT_STARTED, "Project artifact is missing.", releaseArtifact(), CreationIntent.CREATE_OR_OPEN_PROJECT, "Create or open a project first.")
-            )
-        )
-
-        val preparation = preparation(project)
-        val structure = structure(project, preparation, input.arrangement)
-        val arrangement = arrangement(project, preparation, structure, input.arrangement)
-        val mixAndMaster = mixAndMaster(project, arrangement, input.mix, input.runtimeReadiness, input.buildEvidence)
-        return CreationProgress(listOf(projectStage(project), preparation, structure, arrangement, mixAndMaster))
-    }
-
-    private fun projectStage(project: ProjectSnapshot) = stage(
-        CreationStage.PROJECT, CreationStageStatus.COMPLETE, null, projectFile(), CreationIntent.IMPORT_PART, "The canonical project is open."
+    private val orderedWorkflowStages = listOf(
+        WorkflowStage.PROJECT,
+        WorkflowStage.IMPORT_AND_INSPECTION,
+        WorkflowStage.TRANSCRIPTION,
+        WorkflowStage.CLEAN_MIDI,
+        WorkflowStage.AI_FIX,
+        WorkflowStage.MIDI_FEEL,
+        WorkflowStage.ANALYSIS,
+        WorkflowStage.STRUCTURE,
+        WorkflowStage.COHESION,
+        WorkflowStage.ARRANGEMENT
     )
 
-    private fun preparation(project: ProjectSnapshot): CreationStageProgress {
-        if (project.parts.isEmpty()) return stage(
-            CreationStage.PREPARE, CreationStageStatus.CURRENT, "No source parts have been imported.", CreationArtifactReference(CreationArtifactKind.PART_SOURCE), CreationIntent.IMPORT_PART, "Import a MIDI, WAV, or MP3 source."
+    fun derive(input: CreationProgressInput): CreationProgress {
+        val workflow = WorkflowReadModelDeriver.derive(input.project, input.arrangement)
+        val stages = orderedWorkflowStages.map { stage -> fromWorkflow(workflow[stage], input.project == null) }
+        val arrangement = stages.last()
+        return CreationProgress(stages + mixAndMaster(input, arrangement))
+    }
+
+    private fun fromWorkflow(step: WorkflowStep, noProject: Boolean): CreationStageProgress {
+        val stage = when (step.stage) {
+            WorkflowStage.PROJECT -> CreationStage.PROJECT
+            WorkflowStage.IMPORT_AND_INSPECTION -> CreationStage.IMPORT_AND_INSPECTION
+            WorkflowStage.TRANSCRIPTION -> CreationStage.TRANSCRIPTION
+            WorkflowStage.CLEAN_MIDI -> CreationStage.CLEAN_MIDI
+            WorkflowStage.AI_FIX -> CreationStage.AI_FIX
+            WorkflowStage.MIDI_FEEL -> CreationStage.MIDI_FEEL
+            WorkflowStage.ANALYSIS -> CreationStage.ANALYSIS
+            WorkflowStage.STRUCTURE -> CreationStage.STRUCTURE
+            WorkflowStage.COHESION -> CreationStage.COHESION
+            WorkflowStage.ARRANGEMENT -> CreationStage.ARRANGEMENT
+            else -> error("Unsupported creation workflow stage: ${step.stage}")
+        }
+        val status = when (step.state) {
+            WorkflowState.COMPLETE -> CreationStageStatus.COMPLETE
+            WorkflowState.STALE -> CreationStageStatus.STALE
+            WorkflowState.BLOCKED -> if (noProject) CreationStageStatus.NOT_STARTED else CreationStageStatus.BLOCKED
+            WorkflowState.CURRENT, WorkflowState.REVIEW -> CreationStageStatus.CURRENT
+        }
+        val artifact = artifact(step)
+        val reason = workflowDescription(step).takeUnless { step.state == WorkflowState.COMPLETE }
+        return CreationStageProgress(
+            stage,
+            status,
+            reason,
+            artifact,
+            CreationNextAction(intent(step.nextAction), workflowDescription(step), artifact)
         )
-        val incomplete = project.parts.firstOrNull { !it.preparation.ready }
-        if (incomplete == null) return stage(CreationStage.PREPARE, CreationStageStatus.COMPLETE, null, CreationArtifactReference(CreationArtifactKind.ANALYSIS), CreationIntent.SAVE_STRUCTURE, "Prepared analyses are available for every part.")
-        val preparation = incomplete.preparation
-        return when {
-            preparation.midiQuality.status.name == "STALE_OR_INVALID" -> stage(CreationStage.PREPARE, CreationStageStatus.STALE, "${incomplete.id} has stale or invalid clean-MIDI quality evidence.", cleanMidi(incomplete.id), CreationIntent.RETRY_MIDI_CLEANUP, "Regenerate clean MIDI quality evidence for ${incomplete.id}.")
-            !preparation.sourcePreserved -> stage(CreationStage.PREPARE, CreationStageStatus.STALE, "${incomplete.id} no longer has a preserved project source.", CreationArtifactReference(CreationArtifactKind.PART_SOURCE, incomplete.id), CreationIntent.IMPORT_PART, "Import ${incomplete.id} again to preserve its source.")
-            !preparation.inspected -> stage(CreationStage.PREPARE, CreationStageStatus.CURRENT, "${incomplete.id} has not been inspected.", CreationArtifactReference(CreationArtifactKind.PREPARATION_REPORT, incomplete.id), CreationIntent.INSPECT_PART, "Inspect the preserved source for ${incomplete.id}.")
-            !preparation.cleanMidi -> stage(CreationStage.PREPARE, CreationStageStatus.CURRENT, "${incomplete.id} has no validated clean MIDI.", cleanMidi(incomplete.id), CreationIntent.RETRY_MIDI_CLEANUP, "Create clean MIDI for ${incomplete.id}.")
-            else -> stage(CreationStage.PREPARE, CreationStageStatus.CURRENT, "${incomplete.id} still needs musical analysis.", analysis(incomplete.id), CreationIntent.ANALYZE_PART, "Analyze ${incomplete.id} after preparation.")
+    }
+
+    private fun mixAndMaster(input: CreationProgressInput, arrangement: CreationStageProgress): CreationStageProgress {
+        val release = CreationArtifactReference(CreationArtifactKind.RELEASE)
+        if (arrangement.status != CreationStageStatus.COMPLETE) return CreationStageProgress(
+            CreationStage.MIX_AND_MASTER,
+            if (input.project == null) CreationStageStatus.NOT_STARTED else CreationStageStatus.BLOCKED,
+            "Build requires a current approved arrangement.",
+            release,
+            arrangement.nextAction.copy(artifact = release)
+        )
+        val project = requireNotNull(input.project)
+        if (project.readiness.masterAvailable && project.readiness.releaseAvailable) return stage(
+            CreationStageStatus.COMPLETE, null, CreationIntent.BUILD_SONG, "The final master and release metadata are current."
+        )
+        val capability = input.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)
+        if (capability == null || !capability.available) return stage(
+            CreationStageStatus.BLOCKED,
+            capability?.reason ?: "Local build readiness is still being checked.",
+            CreationIntent.CONFIGURE_BUILD_DEPENDENCY,
+            "Make the local build dependencies ready."
+        )
+        if (input.buildEvidence is BuildEvidence.Failed) return stage(
+            CreationStageStatus.BLOCKED,
+            "Build failed: ${input.buildEvidence.reason}",
+            CreationIntent.RETRY_BUILD,
+            "Retry Build Song after resolving the reported failure."
+        )
+        if (project.readiness.masterAvailable || input.mix?.stale == true) return stage(
+            CreationStageStatus.STALE,
+            "Rendered release artifacts are stale or incomplete.",
+            CreationIntent.BUILD_SONG,
+            "Run Build Song to publish a current release."
+        )
+        return stage(CreationStageStatus.CURRENT, "No final master has been built.", CreationIntent.BUILD_SONG, "Build the approved arrangement into a validated master.")
+    }
+
+    private fun stage(status: CreationStageStatus, reason: String?, intent: CreationIntent, prerequisite: String): CreationStageProgress {
+        val artifact = CreationArtifactReference(CreationArtifactKind.RELEASE)
+        return CreationStageProgress(CreationStage.MIX_AND_MASTER, status, reason, artifact, CreationNextAction(intent, prerequisite, artifact))
+    }
+
+    private fun artifact(step: WorkflowStep): CreationArtifactReference {
+        val kind = when (step.stage) {
+            WorkflowStage.PROJECT -> CreationArtifactKind.PROJECT_FILE
+            WorkflowStage.IMPORT_AND_INSPECTION -> if (step.nextAction == WorkflowAction.INSPECT) CreationArtifactKind.PREPARATION_REPORT else CreationArtifactKind.PART_SOURCE
+            WorkflowStage.TRANSCRIPTION -> CreationArtifactKind.RAW_MIDI
+            WorkflowStage.CLEAN_MIDI -> CreationArtifactKind.CLEAN_MIDI
+            WorkflowStage.AI_FIX -> if (step.nextAction == WorkflowAction.APPROVE_AI_FIX) CreationArtifactKind.AI_FIX_DRAFT else CreationArtifactKind.AI_FIX_APPROVED
+            WorkflowStage.MIDI_FEEL -> CreationArtifactKind.LOFI_FEEL_MIDI
+            WorkflowStage.ANALYSIS -> CreationArtifactKind.ANALYSIS
+            WorkflowStage.STRUCTURE -> CreationArtifactKind.STRUCTURE
+            WorkflowStage.COHESION -> CreationArtifactKind.COHESION
+            WorkflowStage.ARRANGEMENT -> if (step.nextAction == WorkflowAction.APPROVE_ARRANGEMENT) CreationArtifactKind.ARRANGEMENT_DRAFT else CreationArtifactKind.ARRANGEMENT
+            else -> error("Unsupported creation artifact stage: ${step.stage}")
         }
+        return CreationArtifactReference(kind, step.partId)
     }
 
-    private fun structure(project: ProjectSnapshot, preparation: CreationStageProgress, arrangement: ArrangementSnapshot?): CreationStageProgress {
-        val unknown = project.structure.firstOrNull { section -> project.parts.none { it.id == section.partId } }
-        if (unknown != null) return stage(CreationStage.STRUCTURE, CreationStageStatus.BLOCKED, "Structure references unknown part ${unknown.partId}.", structureArtifact(), CreationIntent.SAVE_STRUCTURE, "Save a structure containing only imported parts.")
-        if (preparation.status != CreationStageStatus.COMPLETE) return stage(CreationStage.STRUCTURE, CreationStageStatus.BLOCKED, "Every part must be prepared before the structure can be arranged.", structureArtifact(), preparation.nextAction.intent, preparation.nextAction.prerequisite)
-        if (project.structure.isEmpty() || !project.readiness.structureReady) return stage(CreationStage.STRUCTURE, CreationStageStatus.CURRENT, "No saved song structure is available.", structureArtifact(), CreationIntent.SAVE_STRUCTURE, "Save at least one section.")
-        if (arrangement != null && !matchesStructure(project, arrangement)) return stage(CreationStage.STRUCTURE, CreationStageStatus.STALE, "The saved structure no longer matches the arrangement artifact.", arrangementArtifact(), CreationIntent.GENERATE_ARRANGEMENT, "Regenerate the arrangement from the saved structure.")
-        return stage(CreationStage.STRUCTURE, CreationStageStatus.COMPLETE, null, structureArtifact(), CreationIntent.GENERATE_ARRANGEMENT, "The saved structure is ready for arrangement.")
+    private fun intent(action: WorkflowAction): CreationIntent = when (action) {
+        WorkflowAction.CREATE_OR_OPEN -> CreationIntent.CREATE_OR_OPEN_PROJECT
+        WorkflowAction.MIGRATE_PROJECT -> CreationIntent.MIGRATE_PROJECT
+        WorkflowAction.IMPORT -> CreationIntent.IMPORT_PART
+        WorkflowAction.INSPECT -> CreationIntent.INSPECT_PART
+        WorkflowAction.TRANSCRIBE -> CreationIntent.TRANSCRIBE_PART
+        WorkflowAction.CLEAN_MIDI -> CreationIntent.RETRY_MIDI_CLEANUP
+        WorkflowAction.APPROVE_CLEAN_MIDI -> CreationIntent.APPROVE_MIDI_CLEANUP
+        WorkflowAction.CREATE_AI_FIX -> CreationIntent.CREATE_AI_FIX
+        WorkflowAction.APPROVE_AI_FIX -> CreationIntent.APPROVE_AI_FIX
+        WorkflowAction.SELECT_MIDI_FEEL -> CreationIntent.SELECT_MIDI_FEEL
+        WorkflowAction.ANALYZE -> CreationIntent.ANALYZE_PART
+        WorkflowAction.SAVE_STRUCTURE -> CreationIntent.SAVE_STRUCTURE
+        WorkflowAction.GENERATE_COHESION -> CreationIntent.GENERATE_COHESION
+        WorkflowAction.APPROVE_COHESION -> CreationIntent.APPROVE_COHESION
+        WorkflowAction.GENERATE_ARRANGEMENT -> CreationIntent.GENERATE_ARRANGEMENT
+        WorkflowAction.APPROVE_ARRANGEMENT -> CreationIntent.APPROVE_ARRANGEMENT
+        WorkflowAction.RENDER, WorkflowAction.MIX, WorkflowAction.MASTER,
+        WorkflowAction.REVIEW_COMMERCIAL_PROVENANCE -> CreationIntent.BUILD_SONG
     }
-
-    private fun arrangement(project: ProjectSnapshot, preparation: CreationStageProgress, structure: CreationStageProgress, snapshot: ArrangementSnapshot?): CreationStageProgress {
-        if (preparation.status != CreationStageStatus.COMPLETE) return stage(CreationStage.ARRANGE, CreationStageStatus.BLOCKED, "Arrangement requires prepared analyses for every part.", arrangementArtifact(), preparation.nextAction.intent, preparation.nextAction.prerequisite)
-        if (structure.status == CreationStageStatus.STALE) return stage(CreationStage.ARRANGE, CreationStageStatus.STALE, "Arrangement artifact is stale for the saved structure.", arrangementArtifact(), CreationIntent.GENERATE_ARRANGEMENT, "Regenerate the arrangement from the saved structure.")
-        if (structure.status != CreationStageStatus.COMPLETE) return stage(CreationStage.ARRANGE, CreationStageStatus.BLOCKED, "Arrangement requires a current saved structure.", arrangementArtifact(), structure.nextAction.intent, structure.nextAction.prerequisite)
-        if (snapshot == null) {
-            val status = if (project.readiness.arrangementAvailable || project.readiness.songPlanAvailable) CreationStageStatus.STALE else CreationStageStatus.CURRENT
-            val reason = if (status == CreationStageStatus.STALE) "Arrangement artifacts could not be loaded or are stale." else "No approved arrangement has been generated."
-            return stage(CreationStage.ARRANGE, status, reason, arrangementArtifact(), CreationIntent.GENERATE_ARRANGEMENT, "Generate a validated arrangement.")
-        }
-        if (snapshot.root != project.root || snapshot.stale || !matchesStructure(project, snapshot)) return stage(CreationStage.ARRANGE, CreationStageStatus.STALE, "Arrangement artifact is stale for the current project structure.", arrangementArtifact(), CreationIntent.GENERATE_ARRANGEMENT, "Regenerate the arrangement from canonical analyses and structure.")
-        if (snapshot.approvalRequired && snapshot.approved) return stage(CreationStage.ARRANGE, CreationStageStatus.BLOCKED, "Arrangement snapshot cannot be both approved and awaiting approval.", arrangementArtifact(), CreationIntent.GENERATE_ARRANGEMENT, "Regenerate a valid arrangement artifact.")
-        if (snapshot.approvalRequired || !snapshot.approved) return stage(CreationStage.ARRANGE, CreationStageStatus.CURRENT, "The Qwen arrangement draft requires explicit approval.", CreationArtifactReference(CreationArtifactKind.ARRANGEMENT_DRAFT), CreationIntent.APPROVE_ARRANGEMENT, "Review and explicitly approve the draft.")
-        return stage(CreationStage.ARRANGE, CreationStageStatus.COMPLETE, null, arrangementArtifact(), CreationIntent.BUILD_SONG, "The approved arrangement can be built.")
-    }
-
-    private fun mixAndMaster(project: ProjectSnapshot, arrangement: CreationStageProgress, mix: MixSnapshot?, readiness: RuntimeReadiness?, evidence: BuildEvidence): CreationStageProgress {
-        if (arrangement.status != CreationStageStatus.COMPLETE) return stage(CreationStage.MIX_AND_MASTER, CreationStageStatus.BLOCKED, "Build requires a current approved arrangement.", releaseArtifact(), arrangement.nextAction.intent, arrangement.nextAction.prerequisite)
-        if (project.readiness.masterAvailable && project.readiness.releaseAvailable) return stage(CreationStage.MIX_AND_MASTER, CreationStageStatus.COMPLETE, null, releaseArtifact(), CreationIntent.BUILD_SONG, "The final master and release metadata are available.")
-        val capability = readiness?.capability(RuntimeCapability.BUILD_SONG)
-        if (capability == null || !capability.available) return stage(CreationStage.MIX_AND_MASTER, CreationStageStatus.BLOCKED, capability?.reason ?: "Local build readiness is still being checked.", releaseArtifact(), CreationIntent.CONFIGURE_BUILD_DEPENDENCY, "Make the local build dependencies ready.")
-        if (evidence is BuildEvidence.Failed) return stage(CreationStage.MIX_AND_MASTER, CreationStageStatus.BLOCKED, "Build failed: ${evidence.reason}", releaseArtifact(), CreationIntent.RETRY_BUILD, "Retry Build Song after resolving the reported failure.")
-        if (project.readiness.masterAvailable || (mix != null && mix.stale)) return stage(CreationStage.MIX_AND_MASTER, CreationStageStatus.STALE, if (project.readiness.masterAvailable) "Master exists without current release metadata." else "Rendered mix artifacts are stale.", releaseArtifact(), CreationIntent.BUILD_SONG, "Run Build Song to publish a current release.")
-        return stage(CreationStage.MIX_AND_MASTER, CreationStageStatus.CURRENT, "No final master has been built.", releaseArtifact(), CreationIntent.BUILD_SONG, "Build the approved arrangement into a validated master.")
-    }
-
-    private fun matchesStructure(project: ProjectSnapshot, arrangement: ArrangementSnapshot): Boolean =
-        project.structure.map { it.instanceId to it.partId } == arrangement.sections.map { it.instanceId to it.partId }
-
-    private fun stage(stage: CreationStage, status: CreationStageStatus, reason: String?, artifact: CreationArtifactReference, intent: CreationIntent, prerequisite: String) =
-        CreationStageProgress(stage, status, reason, artifact, CreationNextAction(intent, prerequisite, artifact))
-
-    private fun projectFile() = CreationArtifactReference(CreationArtifactKind.PROJECT_FILE)
-    private fun structureArtifact() = CreationArtifactReference(CreationArtifactKind.STRUCTURE)
-    private fun arrangementArtifact() = CreationArtifactReference(CreationArtifactKind.ARRANGEMENT)
-    private fun releaseArtifact() = CreationArtifactReference(CreationArtifactKind.RELEASE)
-    private fun cleanMidi(partId: String) = CreationArtifactReference(CreationArtifactKind.CLEAN_MIDI, partId)
-    private fun analysis(partId: String) = CreationArtifactReference(CreationArtifactKind.ANALYSIS, partId)
 }

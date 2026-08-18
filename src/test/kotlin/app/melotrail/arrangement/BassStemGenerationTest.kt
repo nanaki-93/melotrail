@@ -92,7 +92,7 @@ class BassStemGenerationTest {
         Files.createDirectories(source.parent)
         Files.createDirectories(clean.parent)
         Files.writeString(source, "source MIDI remains untouched")
-        Files.writeString(clean, "clean MIDI reference")
+        writeTestMidi(clean)
         val project = Project(Project.CURRENT_VERSION, "bass", listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid"))), renderFormat = RenderFormat())
         val arrangement = Arrangement(sections = listOf(
             ArrangementSection(0, "A", listOf(InstrumentPlan("source", InstrumentMode.SOURCE), InstrumentPlan("bass", InstrumentMode.GENERATED, "root_fifth", 1.0))),
@@ -123,7 +123,7 @@ class BassStemGenerationTest {
         Files.createDirectories(source.parent)
         Files.createDirectories(clean.parent)
         Files.writeString(source, "source MIDI remains untouched")
-        Files.writeString(clean, "clean MIDI reference")
+        writeTestMidi(clean)
         val project = Project(Project.CURRENT_VERSION, "bass-v3", listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid"))), renderFormat = RenderFormat())
         val arrangement = DetailedArrangement(sections = listOf(
             DetailedArrangementSection(

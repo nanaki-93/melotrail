@@ -626,9 +626,9 @@ class WorkspaceViewModelTest {
         assertEquals(app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL, service.midiFeelSelection?.input)
         assertTrue(viewModel.state.value.downstreamArtifactsStale)
         assertNull(viewModel.state.value.arrangement)
-        viewModel.accept(WorkspaceIntent.SelectMidiFeel(app.melotrail.arrangement.MidiAnalysisInput.REPAIRED)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.SelectMidiFeel(app.melotrail.arrangement.MidiAnalysisInput.CURRENT)); advanceUntilIdle()
         viewModel.accept(WorkspaceIntent.ApplyMidiFeelAndReanalyze); advanceUntilIdle()
-        assertEquals(app.melotrail.arrangement.MidiAnalysisInput.REPAIRED, service.midiFeelSelection?.input)
+        assertEquals(app.melotrail.arrangement.MidiAnalysisInput.CURRENT, service.midiFeelSelection?.input)
         viewModel.close()
     }
 

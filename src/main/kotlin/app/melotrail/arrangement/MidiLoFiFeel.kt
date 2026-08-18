@@ -2,6 +2,7 @@ package app.melotrail.arrangement
 
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.nio.charset.StandardCharsets
@@ -25,7 +26,7 @@ enum class MidiFeelProfile(val id: String, val targetBpm: Int, val swingPercent:
 }
 
 @Serializable
-enum class MidiAnalysisInput { REPAIRED, LOFI_FEEL }
+enum class MidiAnalysisInput { @SerialName("REPAIRED") CURRENT, LOFI_FEEL }
 
 @Serializable
 data class MidiFeelReferences(

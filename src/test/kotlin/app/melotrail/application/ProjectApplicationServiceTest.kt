@@ -215,8 +215,30 @@ class ProjectApplicationServiceTest {
         assertTrue(app.melotrail.arrangement.WorkflowArtifact.ANALYSIS in selected.readiness.staleArtifacts)
         assertFalse(selected.parts.single().preparation.analyzed)
 
-        service.selectMidiFeel(SelectMidiFeelRequest(root, "A", app.melotrail.arrangement.MidiAnalysisInput.REPAIRED))
-        assertEquals(app.melotrail.arrangement.MidiAnalysisInput.REPAIRED, checkNotNull(ProjectStore.read(root).parts.single().midi).analysisInput)
+        service.selectMidiFeel(SelectMidiFeelRequest(root, "A", app.melotrail.arrangement.MidiAnalysisInput.CURRENT))
+        assertEquals(app.melotrail.arrangement.MidiAnalysisInput.CURRENT, checkNotNull(ProjectStore.read(root).parts.single().midi).analysisInput)
+    }
+
+    @Test
+    fun `existing analysis file remains inspectable but cannot make stale analysis ready`() {
+        val service = service()
+        val root = tempDir.resolve("stale-analysis")
+        service.create(CreateProjectRequest(root))
+        blocking { service.importPart(ImportPartRequest(root, "A", midi("stale-analysis.mid"))) }
+        blocking { service.retryMidiCleanup(RetryMidiCleanupRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions())) }
+        blocking { service.analyzePart(AnalyzePartRequest(root, "A")) }
+        val project = ProjectStore.read(root)
+        val analysis = root.resolve(requireNotNull(project.parts.single().analysis).file)
+        val analysisBefore = Files.readAllBytes(analysis)
+        ProjectStore.write(root, project.copy(workflow = project.workflow.invalidate(app.melotrail.arrangement.WorkflowChange.MIDI_FEEL)))
+
+        val opened = service.open(root)
+
+        assertTrue(Files.isRegularFile(analysis))
+        assertTrue(analysisBefore.contentEquals(Files.readAllBytes(analysis)))
+        assertFalse(opened.parts.single().preparation.analyzed)
+        assertFalse(opened.readiness.analysesReady)
+        assertTrue(app.melotrail.arrangement.WorkflowArtifact.ANALYSIS in opened.readiness.staleArtifacts)
     }
 
     @Test

@@ -6,6 +6,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class ProjectStoreWorkflowMigrationTest {
@@ -28,6 +29,12 @@ class ProjectStoreWorkflowMigrationTest {
         ProjectStore.migrateV2(root)
         assertEquals(Project.CURRENT_VERSION, ProjectStore.read(root).version)
         assertTrue(Files.readString(root.resolve(ProjectStore.FILE_NAME)).contains("\"workflow\""))
+        val migrated = Files.readString(root.resolve(ProjectStore.FILE_NAME))
+        assertTrue(migrated.contains("\"analysisInput\": \"REPAIRED\""))
+        assertEquals(MidiAiFixSelection.SKIP, ProjectStore.read(root).parts.single().midi?.aiFixSelection)
+
+        assertEquals(Project.CURRENT_VERSION, ProjectStore.migrateV2(root).version)
+        assertEquals(migrated, Files.readString(root.resolve(ProjectStore.FILE_NAME)))
     }
 
     @Test
@@ -47,6 +54,29 @@ class ProjectStoreWorkflowMigrationTest {
         assertEquals(stale, opened.workflow.stale)
         assertTrue(opened.validate(root).isValid)
         assertFalse(Files.exists(root.resolve("cohesion/cohesion.json")))
+    }
+
+    @Test
+    fun `failed explicit migration leaves the complete v2 file unchanged`() {
+        val projectFile = root.resolve(ProjectStore.FILE_NAME)
+        val invalidV2 = """
+            {
+              "version": 2,
+              "name": "invalid",
+              "renderFormat": {"sampleRate": 44100, "channels": 2, "bitDepth": 24},
+              "parts": [{
+                "id": "A",
+                "role": "verse",
+                "sourceFile": "source/missing.mid",
+                "midi": {"clean": "midi/clean/missing.mid"}
+              }],
+              "structure": []
+            }
+        """.trimIndent()
+        Files.writeString(projectFile, invalidV2)
+
+        assertFailsWith<IllegalArgumentException> { ProjectStore.migrateV2(root) }
+        assertEquals(invalidV2, Files.readString(projectFile))
     }
 
     private fun write(relative: String) {
