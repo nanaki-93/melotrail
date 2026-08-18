@@ -69,6 +69,21 @@ class WorkspaceViewModelTest {
     }
 
     @Test
+    fun `no-project creation and opening remain distinct view-model actions`() = runTest {
+        val viewModel = WorkspaceViewModel(FakeProjectService(), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+
+        viewModel.accept(WorkspaceIntent.ShowCreateProject)
+        assertIs<WorkspaceDialog.CreateProject>(viewModel.state.value.dialog)
+        viewModel.accept(WorkspaceIntent.DismissDialog)
+        viewModel.accept(WorkspaceIntent.ChooseProject)
+        advanceUntilIdle()
+
+        assertNull(viewModel.state.value.project)
+        assertEquals(WorkspaceOperation.Idle, viewModel.state.value.operation)
+        viewModel.close()
+    }
+
+    @Test
     fun `reports loading while opening then exposes the project`() = runTest {
         val root = Path.of("build/test-project")
         val project = projectSnapshot(root)

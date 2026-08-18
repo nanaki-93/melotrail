@@ -16,7 +16,7 @@ copy the app to Applications (or another local folder), and launch it. The
 package includes a Java runtime but is unsigned and not notarized. It has only
 been packaged and smoke-tested on macOS; do not infer Windows or Linux support.
 
-Use **New** to select an empty/new project folder, or **Open** to select a
+Use **New Project** to select an empty/new project folder, or **Open Project** to select a
 directory containing a valid `project.json`. Project audio and metadata stay in
 that selected project directory; desktop preferences retain only the last
 successfully opened project and a validated sound-library location.
@@ -24,7 +24,7 @@ successfully opened project and a validated sound-library location.
 ## Sound library or renderer unavailable
 
 The package intentionally does not bundle the starter samples or an SFZ
-renderer. In the app, open the shell **Settings** gear, then select the absolute
+renderer. In the app, open the shell **More** menu, then **Settings**, and select the absolute
 `sounds/` directory that contains `instruments.json` and `LICENSES.json`. A fresh checkout
 needs the approved local 25 sample WAV files copied back into the existing
 `*/samples/` paths first; see [`sounds/README.md`](../sounds/README.md).

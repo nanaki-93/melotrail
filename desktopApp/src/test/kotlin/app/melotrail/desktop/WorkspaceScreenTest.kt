@@ -14,6 +14,7 @@ import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -223,16 +224,85 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `no-project header makes labelled project actions primary accessible and ordered`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(WorkspaceUiState(), intents::add) } }
+
+        onNodeWithText("New Project").assertExists()
+        onNodeWithText("Open Project").assertExists()
+        onNodeWithContentDescription("New Project").assertIsEnabled()
+        onNodeWithContentDescription("Open Project").assertIsEnabled()
+        onAllNodesWithTag(WorkspaceTags.CREATE_PROJECT).assertCountEquals(1)
+        onAllNodesWithTag(WorkspaceTags.OPEN_PROJECT).assertCountEquals(1)
+        onAllNodesWithTag(WorkspaceTags.HEADER_SAVE).assertCountEquals(0)
+        onAllNodesWithTag(WorkspaceTags.HEADER_THEME).assertCountEquals(0)
+        onNodeWithText("Start with New Project, or Open Project to continue an existing project.").assertExists()
+
+        onNodeWithTag(WorkspaceTags.CREATE_PROJECT).performClick()
+        onNodeWithTag(WorkspaceTags.CREATE_PROJECT).assertIsFocused()
+        intents.clear()
+        onNodeWithTag(WorkspaceTags.CREATE_PROJECT).performKeyInput { pressKey(Key.Tab) }
+        onNodeWithTag(WorkspaceTags.OPEN_PROJECT).assertIsFocused()
+        onNodeWithTag(WorkspaceTags.OPEN_PROJECT).performKeyInput { pressKey(Key.Enter) }
+        assertEquals(WorkspaceIntent.ChooseProject, intents.single())
+    }
+
+    @Test
+    fun `project-open navigation keeps guided stages visible and secondary destinations in More`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(populatedState(), intents::add) } }
+
+        listOf(WorkspaceSection.OVERVIEW, WorkspaceSection.IMPORT, WorkspaceSection.STRUCTURE, WorkspaceSection.ARRANGE, WorkspaceSection.MIX_MASTER).forEach { section ->
+            onNodeWithTag(WorkspaceTags.WORKSPACE_SECTION_PREFIX + section.name.lowercase()).assertExists()
+        }
+        listOf(WorkspaceSection.LIBRARY, WorkspaceSection.VIDEO_PREVIEW, WorkspaceSection.EXPORT, WorkspaceSection.SETTINGS).forEach { section ->
+            onNodeWithTag(WorkspaceTags.WORKSPACE_SECTION_PREFIX + section.name.lowercase()).assertDoesNotExist()
+        }
+
+        onNodeWithTag(WorkspaceShellTags.OVERFLOW_MENU).performClick()
+        onNodeWithTag(WorkspaceTags.WORKSPACE_SECTION_PREFIX + WorkspaceSection.LIBRARY.name.lowercase()).performClick()
+        assertEquals(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.LIBRARY), intents.single())
+    }
+
+    @Test
+    fun `project actions disable only while a mutation is in flight`() = runComposeUiTest {
+        setContent {
+            MelotrailTheme {
+                WorkspaceScreen(WorkspaceUiState(operation = WorkspaceOperation.OpeningProject(Path.of("build", "opening"))), onIntent = {})
+            }
+        }
+
+        onNodeWithTag(WorkspaceTags.CREATE_PROJECT).assertIsNotEnabled()
+        onNodeWithTag(WorkspaceTags.OPEN_PROJECT).assertIsNotEnabled()
+        onNodeWithTag(WorkspaceShellTags.OVERFLOW_MENU).assertIsEnabled()
+    }
+
+    @Test
+    fun `New Project remains visible in wide medium and narrow shells`() {
+        listOf(Size(1536f, 1024f), Size(1000f, 900f), Size(720f, 1120f)).forEach { size ->
+            runSkikoComposeUiTest(size = size) {
+                setContent { MelotrailTheme { WorkspaceScreen(WorkspaceUiState(), onIntent = {}) } }
+                val bounds = onNodeWithTag(WorkspaceTags.CREATE_PROJECT).getUnclippedBoundsInRoot()
+                assertTrue(
+                    bounds.left.value >= 0f && bounds.right.value <= size.width && bounds.top.value >= 0f && bounds.bottom.value <= size.height,
+                    "New Project must remain visible at ${size.width} by ${size.height}px"
+                )
+                onNodeWithText("New Project").assertExists()
+            }
+        }
+    }
+
+    @Test
     fun `narrow shells keep one reachable navigation and their primary page regions within the viewport`() = runSkikoComposeUiTest(size = Size(720f, 1_120f)) {
         val intents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(populatedState(), intents::add) } }
 
         onAllNodesWithTag(WorkspaceTags.WORKSPACE_NAV).assertCountEquals(1)
-        onNodeWithTag(WorkspacePageTags.NAVIGATION_MENU).performClick()
+        onNodeWithTag(WorkspaceShellTags.OVERFLOW_MENU).performClick()
         onNodeWithTag(WorkspaceTags.WORKSPACE_SECTION_PREFIX + WorkspaceSection.EXPORT.name.lowercase()).performClick()
         assertEquals(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.EXPORT), intents.single())
 
-        listOf(WorkspaceTags.PROJECT_HEADER, WorkspaceTags.PROJECT_SELECTOR, WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.OVERVIEW.name.lowercase(), WorkspacePageTags.OVERVIEW_PREVIEW, WorkspaceTags.COMPACT_TRANSPORT).forEach { assertFitsNarrowViewport(it) }
+        listOf(WorkspaceTags.PROJECT_HEADER, WorkspaceTags.CREATE_PROJECT, WorkspaceTags.OPEN_PROJECT, WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.OVERVIEW.name.lowercase(), WorkspacePageTags.OVERVIEW_PREVIEW, WorkspaceTags.COMPACT_TRANSPORT).forEach { assertFitsNarrowViewport(it) }
 
         setContent { MelotrailTheme { WorkspaceScreen(exportState(), onIntent = {}) } }
         listOf(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.EXPORT.name.lowercase(), WorkspacePageTags.EXPORT_SUMMARY, WorkspacePageTags.EXPORT_ACTION).forEach { assertFitsNarrowViewport(it) }

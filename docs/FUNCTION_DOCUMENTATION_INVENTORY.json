@@ -85,10 +85,10 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspaceShellFrame.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspaceShellFrame.kt has 17 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 17,
-      "declarationDigest": "2296932fdd4b7265c8d19e398b628cb0f96c0284e1490fc14cddad93a1f720a1",
-      "documentedFunctionCount": 2
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspaceShellFrame.kt retains 15 legacy callable declarations without focused KDoc. Task 107's new project-action and overflow helpers are directly documented; the remaining declaration-digest-pinned exemption must be replaced as those helpers are changed.",
+      "functionCount": 19,
+      "declarationDigest": "5a12534c4ff35b0c727101340304d629c6c184ed571fc911f349b658331c0213",
+      "documentedFunctionCount": 4
     },
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspaceTheme.kt",
@@ -1276,5 +1276,4 @@
     }
   ]
 }
-
 

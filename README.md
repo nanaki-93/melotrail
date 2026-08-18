@@ -35,19 +35,20 @@ as part of this compatibility migration.
 
 Equivalent Gradle command: `./gradlew :desktopApp:run`.
 
-Use **Create** or **Open project**, prepare/analyze parts, save the structure,
+Use **New Project** or **Open Project**, prepare/analyze parts, save the structure,
 generate an arrangement, explicitly approve a Qwen draft, then use **Build
 song**. Project files remain canonical: `project.json`, plans and arrangements,
 generated MIDI, stems, mixes, and release artifacts are all kept under the
 chosen project directory. Desktop settings retain only the last successfully
 opened project path; they never store project or audio data.
 
-The top navigation has five explicit destinations: **Project**, **Structure**,
-**Arrange**, **Mix & Master**, and **Library**. The workspace derives the
-current stage, prerequisites, and next safe action from validated artifacts; it
-does not add a workflow-status navigation row. **Add Part** remains at the top of the
-Parts panel, and project open/import/build results are shown in a dismissible
-workspace banner so failures and recovery actions are never hidden in a panel.
+The top navigation keeps the guided stages visible: **Project**, **Import**,
+**Structure**, **Arrange**, and **Mix & Master**. **Library**, **Video Preview**,
+**Export**, and **Settings** are available from the labelled **More** menu. The
+workspace derives the current stage, prerequisites, and next safe action from
+validated artifacts; it does not add a workflow-status navigation row. Project
+open/import/build results are shown in a dismissible workspace banner so
+failures and recovery actions are never hidden in a panel.
 
 The worker is required for audio import, repair, mastering, and optional MP3
 export. Start it with `make worker`. Rendering and MIDI preview additionally
@@ -75,7 +76,7 @@ and launch it there. The package includes its Java runtime: Gradle, Spring, and
 the repository working directory are not required to create or open a project.
 
 The package does not bundle the local SFZ samples, renderer, Python worker, or
-optional transcription runtime. Use the shell **Settings** gear to choose the
+optional transcription runtime. Use the shell **More** menu, then **Settings**, to choose the
 absolute folder containing the validated `sounds/` pack; that preference is
 stored separately from project data. For a terminal launch, a validated
 `MUSIC_SOUNDS_ROOT` is an alternative and takes precedence over the chooser.

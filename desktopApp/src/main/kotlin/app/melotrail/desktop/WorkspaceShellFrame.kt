@@ -18,17 +18,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.LibraryMusic
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -66,6 +64,7 @@ internal object WorkspaceShellTags {
     const val PROJECT_RAIL = "workspace-project-rail"
     const val CONTEXT_RAIL = "workspace-context-rail"
     const val CONTEXT_TOGGLE = "workspace-context-toggle"
+    const val OVERFLOW_MENU = "workspace-overflow-menu"
     const val ARTWORK = "workspace-local-artwork"
 }
 
@@ -134,7 +133,7 @@ private fun NarrowShell(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
             TopBar(state, onIntent, null)
-            DestinationChooser(state, onIntent)
+            if (state.project != null) DestinationChooser(state, onIntent)
             ProjectRail(state, onIntent, Modifier.fillMaxWidth(), includeNavigation = false, compact = true)
             ContextToggle(contextExpanded, Modifier.focusRequester(contextToggleFocus)) { contextExpanded = !contextExpanded }
             WorkspacePageRouter(state, onIntent, Modifier.weight(1f), focusTargets)
@@ -194,11 +193,78 @@ private fun TopBar(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit,
             horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)
         ) {
             BrandMark()
-            if (navigationTag != null) DestinationNavigation(state, onIntent, navigationTag, compact = true, modifier = Modifier.weight(1f)) else Spacer(Modifier.weight(1f))
-            Text("Local mode", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.TextSecondary)
-            IconButton(onClick = { onIntent(WorkspaceIntent.OpenSettings) }, modifier = Modifier.semantics { contentDescription = "Open Settings" }) {
-                Icon(Icons.Default.Settings, contentDescription = null)
+            if (navigationTag != null && state.project != null) {
+                DestinationNavigation(state, onIntent, navigationTag, compact = true, modifier = Modifier.weight(1f))
+            } else {
+                Spacer(Modifier.weight(1f))
             }
+            HeaderProjectActions(state, onIntent)
+            HeaderOverflow(onIntent)
+        }
+    }
+}
+
+/** Keeps first-project actions visible while secondary destinations remain keyboard reachable. */
+@Composable
+private fun HeaderProjectActions(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    val enabled = !state.operation.isMutating
+    Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+        Button(
+            onClick = { onIntent(WorkspaceIntent.ShowCreateProject) },
+            enabled = enabled,
+            modifier = Modifier.semantics {
+                testTag = WorkspaceTags.CREATE_PROJECT
+                contentDescription = "New Project"
+            }
+        ) { Text("New Project") }
+        OutlinedButton(
+            onClick = { onIntent(WorkspaceIntent.ChooseProject) },
+            enabled = enabled,
+            modifier = Modifier.semantics {
+                testTag = WorkspaceTags.OPEN_PROJECT
+                contentDescription = "Open Project"
+            }
+        ) { Text("Open Project") }
+    }
+}
+
+/** Offers secondary destinations without presenting them as primary workflow navigation. */
+@Composable
+private fun HeaderOverflow(onIntent: (WorkspaceIntent) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        OutlinedButton(
+            onClick = { expanded = true },
+            modifier = Modifier.semantics {
+                testTag = WorkspaceShellTags.OVERFLOW_MENU
+                contentDescription = "More workspace destinations"
+            }
+        ) { Text("More") }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            listOf(WorkspaceSection.LIBRARY, WorkspaceSection.VIDEO_PREVIEW, WorkspaceSection.EXPORT).forEach { destination ->
+                DropdownMenuItem(
+                    text = { Text(destination.label) },
+                    onClick = {
+                        expanded = false
+                        onIntent(WorkspaceIntent.SelectWorkspaceSection(destination))
+                    },
+                    modifier = Modifier.semantics {
+                        testTag = WorkspaceTags.WORKSPACE_SECTION_PREFIX + destination.name.lowercase()
+                        contentDescription = "Open ${destination.label}"
+                    }
+                )
+            }
+            DropdownMenuItem(
+                text = { Text("Settings") },
+                onClick = {
+                    expanded = false
+                    onIntent(WorkspaceIntent.OpenSettings)
+                },
+                modifier = Modifier.semantics {
+                    testTag = WorkspaceTags.WORKSPACE_SECTION_PREFIX + WorkspaceSection.SETTINGS.name.lowercase()
+                    contentDescription = "Open Settings"
+                }
+            )
         }
     }
 }
@@ -239,21 +305,14 @@ private fun ProjectRail(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
             Text("PROJECT", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.TextSecondary)
             Text(state.project?.name ?: "No project open", style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(projectRailStatus(state), style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
-            OutlinedButton(onClick = { onIntent(WorkspaceIntent.ChooseProject) }, modifier = Modifier.fillMaxWidth().semantics {
-                testTag = WorkspaceTags.PROJECT_SELECTOR
-                contentDescription = "Selected project: ${state.project?.name ?: "No project"}. Choose another project."
-            }) {
-                Icon(Icons.Default.FolderOpen, contentDescription = null)
-                Text(" Open project")
-            }
-            if (includeNavigation) DestinationNavigation(state, onIntent, WorkspaceShellTags.MEDIUM_NAVIGATION, compact = false)
-            if (!compact) LocalArtworkSlot()
+            if (includeNavigation && state.project != null) DestinationNavigation(state, onIntent, WorkspaceShellTags.MEDIUM_NAVIGATION, compact = false)
+            if (!compact && state.project != null) LocalArtworkSlot()
         }
     }
 }
 
 private fun projectRailStatus(state: WorkspaceUiState): String = when {
-    state.project == null -> "Create or open a project to begin."
+    state.project == null -> "Start with New Project, or Open Project to continue an existing project."
     state.downstreamArtifactsStale -> "Some derived artifacts are stale."
     state.project.readiness.releaseAvailable -> "Validated release available."
     else -> "Stage: ${state.workspaceSection.label}"
@@ -264,9 +323,11 @@ private fun DestinationNavigation(state: WorkspaceUiState, onIntent: (WorkspaceI
     Box(modifier.semantics { testTag = tag }) {
         val navigationModifier = Modifier.semantics { testTag = WorkspaceTags.WORKSPACE_NAV; contentDescription = "Workspace navigation" }
         if (compact) Row(navigationModifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-            WorkspaceSection.entries.forEach { destination -> NavigationButton(destination, state, onIntent, compact = true) }
+            listOf(WorkspaceSection.OVERVIEW, WorkspaceSection.IMPORT, WorkspaceSection.STRUCTURE, WorkspaceSection.ARRANGE, WorkspaceSection.MIX_MASTER)
+                .forEach { destination -> NavigationButton(destination, state, onIntent, compact = true) }
         } else Column(navigationModifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-            WorkspaceSection.entries.forEach { destination -> NavigationButton(destination, state, onIntent, compact = false) }
+            listOf(WorkspaceSection.OVERVIEW, WorkspaceSection.IMPORT, WorkspaceSection.STRUCTURE, WorkspaceSection.ARRANGE, WorkspaceSection.MIX_MASTER)
+                .forEach { destination -> NavigationButton(destination, state, onIntent, compact = false) }
         }
     }
 }
@@ -282,13 +343,20 @@ private fun NavigationButton(destination: WorkspaceSection, state: WorkspaceUiSt
             contentDescription = "Open ${destination.label}${if (selected) ", selected" else ""}"
         },
         colors = workspaceSelectableButtonColors(selected)
-    ) { Text(if (compact) destination.shortLabel else destination.label) }
+    ) { Text(if (compact) destination.shortLabel else destination.navigationLabel) }
 }
 
 private val WorkspaceSection.shortLabel: String
     get() = when (this) {
+        WorkspaceSection.OVERVIEW -> "Project"
         WorkspaceSection.MIX_MASTER -> "Mix"
         WorkspaceSection.VIDEO_PREVIEW -> "Preview"
+        else -> label
+    }
+
+private val WorkspaceSection.navigationLabel: String
+    get() = when (this) {
+        WorkspaceSection.OVERVIEW -> "Project"
         else -> label
     }
 
