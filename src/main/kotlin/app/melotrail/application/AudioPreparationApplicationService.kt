@@ -10,10 +10,7 @@ import app.melotrail.preparation.InputInspectionPaths
 import app.melotrail.preparation.InputInspectionReport
 import app.melotrail.preparation.InputInspectionReportStore
 import app.melotrail.preparation.InputContainer
-import app.melotrail.preparation.RunTranscriptionQualityGateRequest
 import app.melotrail.preparation.TranscriptionInputArtifact
-import app.melotrail.preparation.TranscriptionQualityGateResult
-import app.melotrail.preparation.TranscriptionQualityGateService
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
@@ -49,8 +46,7 @@ data class AudioPreparationOperation(
 
 class DefaultAudioPreparationApplicationService(
     private val projects: ProjectApplicationService,
-    private val cleanup: InputCleanupApplicationService,
-    private val transcription: TranscriptionQualityGateService
+    private val cleanup: InputCleanupApplicationService
 ) : AudioPreparationApplicationService {
     override fun load(projectRoot: Path, partId: String): AudioPreparationSnapshot {
         val root = projectRoot.toAbsolutePath().normalize()
@@ -101,11 +97,7 @@ class DefaultAudioPreparationApplicationService(
         partId: String,
         selectedInput: TranscriptionInputArtifact
     ): AudioPreparationOperation {
-        val result = transcription.run(RunTranscriptionQualityGateRequest(projectRoot, partId, selectedInput))
-        if (result is TranscriptionQualityGateResult.Failed) {
-            throw IllegalStateException("Transcription stopped during ${result.stage.name.lowercase().replace('_', ' ')}.")
-        }
-        val project = projects.open(projectRoot)
+        val project = projects.transcribeAudioPart(TranscribeAudioPartRequest(projectRoot, partId, selectedInput))
         return AudioPreparationOperation(project, load(project.root, partId))
     }
 

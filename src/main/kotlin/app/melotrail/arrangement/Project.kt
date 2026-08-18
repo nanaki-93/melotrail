@@ -62,8 +62,25 @@ data class Part(
     val analysis: PartAnalysisReference? = null,
     val midi: MidiReferences? = null,
     /** Null is a legacy/unattested source; it can never be commercial-ready. */
-    val sourceAttestation: SourceRightsAttestation? = null
+    val sourceAttestation: SourceRightsAttestation? = null,
+    /** Optional only for compatible reads; every new unified import records both immutable boundaries. */
+    val importEvidence: ImportEvidence? = null
 )
+
+@Serializable
+data class ImportEvidence(
+    val sourceSha256: String,
+    val rawMidiSha256: String
+) {
+    fun requireValid() {
+        require(SHA_256.matches(sourceSha256)) { "Source fingerprint must be a lowercase SHA-256 digest" }
+        require(SHA_256.matches(rawMidiSha256)) { "Raw MIDI fingerprint must be a lowercase SHA-256 digest" }
+    }
+
+    private companion object {
+        val SHA_256 = Regex("[0-9a-f]{64}")
+    }
+}
 
 @Serializable
 data class RenderFormat(
@@ -148,6 +165,11 @@ object ProjectValidator {
                 errors += "Part ID must not be blank"
             }
             validateFileReference(root, part.file, "Part '${part.id}' source", errors)
+            part.importEvidence?.let { evidence ->
+                runCatching(evidence::requireValid).exceptionOrNull()?.let { error ->
+                    errors += "Part '${part.id}' import evidence is invalid: ${error.message}"
+                }
+            }
             if (project.version >= Project.MIDI_FIRST_VERSION) {
                 val midi = part.midi
                 if (midi == null) {

@@ -130,7 +130,7 @@ currentness from file existence alone.
 | Order | Task | Primary deliverable | Depends on |
 | ---: | --- | --- | --- |
 | 1 | [110 — Canonical track-processing workflow model](tasks/completed/110-canonical-track-processing-workflow-model.md) | One artifact graph, selection chain, and stale-state contract | — |
-| 2 | [111 — Unified import and audio-to-MIDI normalization](tasks/111-unified-import-and-audio-to-midi-normalization.md) | MIDI/audio routes converge at validated raw MIDI | 110 |
+| 2 | [111 — Unified import and audio-to-MIDI normalization](tasks/completed/111-unified-import-and-audio-to-midi-normalization.md) | MIDI/audio routes converge at validated raw MIDI | 110 |
 | 3 | [112 — Deterministic MIDI cleaning boundary](tasks/112-deterministic-midi-cleaning-boundary.md) | Mandatory clean MIDI and quality evidence | 110, 111 |
 | 4 | [113 — Optional AI-assisted track fix](tasks/113-optional-ai-assisted-track-fix.md) | Bounded, previewable, explicitly approved musical fix | 112 |
 | 5 | [114 — Per-track Lo-fi Feel selection](tasks/114-per-track-lofi-feel-selection.md) | Tempo/rhythm variant before analysis and structure | 110, 112, 113 |

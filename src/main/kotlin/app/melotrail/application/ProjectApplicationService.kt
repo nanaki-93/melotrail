@@ -33,6 +33,7 @@ import app.melotrail.arrangement.PartAnalysisStore
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.RenderFormat
+import app.melotrail.arrangement.ImportEvidence
 import app.melotrail.commercial.SourceRightsAttestation
 import app.melotrail.preparation.InputInspectionBoundary
 import app.melotrail.preparation.InputInspectionError
@@ -41,8 +42,13 @@ import app.melotrail.preparation.InputInspectionPaths
 import app.melotrail.preparation.InputInspectionReportStore
 import app.melotrail.preparation.InputInspectionRequest
 import app.melotrail.preparation.InputInspectionResult
+import app.melotrail.preparation.InputContainer
 import app.melotrail.preparation.InspectionSourceIdentity
 import app.melotrail.preparation.PreparationStatus
+import app.melotrail.preparation.RunTranscriptionQualityGateRequest
+import app.melotrail.preparation.TranscriptionInputArtifact
+import app.melotrail.preparation.TranscriptionQualityGateResult
+import app.melotrail.preparation.TranscriptionQualityGateService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
@@ -54,6 +60,7 @@ import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import javax.sound.midi.MidiSystem
 
 /** UI- and CLI-neutral boundary for the local, file-backed arranger project. */
 interface ProjectApplicationService {
@@ -81,6 +88,8 @@ interface ProjectApplicationService {
     fun approveMidiRepair(root: Path, partId: String): ProjectSnapshot
     fun selectMidiFeel(request: SelectMidiFeelRequest): ProjectSnapshot
     suspend fun inspectPart(request: InspectPartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
+    suspend fun transcribeAudioPart(request: TranscribeAudioPartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot =
+        throw UnsupportedOperationException("This project service does not support audio transcription.")
     suspend fun analyzePart(request: AnalyzePartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
     fun updatePart(request: UpdatePartRoleRequest): ProjectSnapshot
     fun saveStructure(request: SaveStructureRequest): ProjectSnapshot
@@ -119,6 +128,7 @@ data class SelectMidiFeelRequest(val root: Path, val partId: String, val input: 
 
 data class AnalyzePartRequest(val root: Path, val partId: String)
 data class InspectPartRequest(val root: Path, val partId: String)
+data class TranscribeAudioPartRequest(val root: Path, val partId: String, val selectedInput: TranscriptionInputArtifact)
 data class UpdatePartRoleRequest(val root: Path, val partId: String, val role: String)
 data class SaveStructureRequest(val root: Path, val partIds: List<String>)
 
@@ -281,7 +291,8 @@ class DefaultProjectApplicationService(
                 InputInspectionErrorCode.MEASUREMENT_FAILED,
                 "Input inspection is not configured."
             ))
-    }
+    },
+    private val transcriptionQualityGate: TranscriptionQualityGateService? = null
 ) : ProjectApplicationService {
     override fun open(root: Path): ProjectSnapshot {
         val normalizedRoot = root.normalizeRoot()
@@ -315,7 +326,19 @@ class DefaultProjectApplicationService(
         requireImportSourceFormat(source, extension, isMidi)
         require(!(isMidi && request.transcribe)) { "--transcribe is only valid for audio input" }
         val project = readValidProject(root)
-        require(project.parts.none { it.id == request.id }) { "Part ID already exists: ${request.id}" }
+        if (project.version >= Project.MIDI_FIRST_VERSION) {
+            require(isMidi || request.transcribe) { "Audio input requires --transcribe so immutable raw MIDI can be prepared" }
+        }
+        val sourceSha256 = sha256(source)
+        val existingPart = project.parts.firstOrNull { it.id.equals(request.id, ignoreCase = true) }
+        if (existingPart != null) {
+            require(existingPart.id == request.id) { "Part ID collides with existing part '${existingPart.id}': ${request.id}" }
+            require(currentImportMatches(root, existingPart, sourceSha256, extension)) {
+                "Part ID already exists with different or stale import evidence: ${request.id}"
+            }
+            progress.report(OperationProgress("import-part", 1, 1, "Reusing current unified import", root.resolve(ProjectStore.FILE_NAME)))
+            return@mutateSuspend snapshot(root, project)
+        }
         if (project.version == 1 && !isMidi && !request.transcribe) {
             val relativeFile = "parts/${request.id}.$extension"
             val destination = safeDestination(root, relativeFile)
@@ -336,35 +359,34 @@ class DefaultProjectApplicationService(
         require(source != destination && !(Files.exists(destination) && Files.isSameFile(source, destination))) {
             "Input and destination paths must differ"
         }
-        if (Files.exists(destination)) {
-            require(Files.isRegularFile(destination) && Files.mismatch(source, destination) == -1L) {
-                "Part destination already exists with different source content: $destination"
-            }
-            progress.report(OperationProgress("import-part", 1, 4, "Reusing preserved source", destination))
-        } else {
-            progress.report(OperationProgress("import-part", 1, 4, "Copying source", destination))
-            Files.createDirectories(checkNotNull(destination.parent))
-            Files.copy(source, destination)
-        }
+        progress.report(OperationProgress("import-part", 1, if (isMidi) 3 else 4, if (Files.exists(destination)) "Reusing preserved source" else "Copying source", destination))
+        publishImmutableSource(source, destination, sourceSha256)
+        requireImportSourceFormat(destination, extension, isMidi)
+        require(sha256(destination) == sourceSha256) { "Preserved source changed during import: $destination" }
 
         val raw = "midi/raw/${request.id}.mid"
         val rawPath = safeDestination(root, raw)
         val rawWork = temporaryMidi(rawPath)
         try {
-            if (Files.isRegularFile(rawPath)) {
+            if (isMidi && Files.isRegularFile(rawPath) && sha256(rawPath) == sourceSha256) {
                 requireMidiArtifact(rawPath, "Existing raw MIDI")
+                require(Files.mismatch(destination, rawPath) == -1L) { "Existing raw MIDI is not byte-identical to its preserved source" }
                 progress.report(OperationProgress("import-part", 2, 3, "Reusing immutable raw MIDI", rawPath))
             } else {
                 if (isMidi) {
                     progress.report(OperationProgress("import-part", 2, 3, "Publishing immutable raw MIDI", rawPath))
                     Files.copy(destination, rawWork)
+                    requireMidiArtifact(rawWork, "MIDI import")
+                    require(sha256(rawWork) == sourceSha256) { "Direct MIDI publication changed the imported bytes" }
+                    atomicReplace(rawWork, rawPath, "raw MIDI import")
                 } else {
-                    progress.report(OperationProgress("import-part", 2, 3, "Transcribing audio to raw MIDI", rawPath))
-                    midiPreparation.transcribe(destination, rawWork)
+                    progress.report(OperationProgress("import-part", 2, 4, "Validating eligible solo-piano audio", destination))
+                    inspectAudioImport(root, request.id, relativeFile, destination, extension)
+                    progress.report(OperationProgress("import-part", 3, 4, "Transcribing eligible solo-piano audio", rawPath))
+                    runTranscriptionGate(root, request.id, TranscriptionInputArtifact.SOURCE)
                 }
-                requireMidiArtifact(rawWork, if (isMidi) "MIDI import" else "Transcription")
-                atomicReplace(rawWork, rawPath, if (isMidi) "raw MIDI import" else "transcription")
             }
+            requireMidiArtifact(rawPath, if (isMidi) "MIDI import" else "Transcription")
         } catch (exception: Exception) {
             throw IllegalStateException(
                 "Part '${request.id}' was not registered. Source preserved at $destination; raw MIDI publication failed: ${exception.message}",
@@ -373,13 +395,23 @@ class DefaultProjectApplicationService(
         } finally {
             Files.deleteIfExists(rawWork)
         }
+        val rawSha256 = sha256(rawPath)
+        require(sha256(destination) == sourceSha256) { "Preserved source changed before project registration" }
 
         val updated = project.copy(
-            parts = project.parts + Part(request.id, relativeFile, request.role, midi = MidiReferences(raw = raw), sourceAttestation = request.sourceAttestation),
+            parts = project.parts + Part(
+                request.id,
+                relativeFile,
+                request.role,
+                midi = MidiReferences(raw = raw),
+                sourceAttestation = request.sourceAttestation,
+                importEvidence = ImportEvidence(sourceSha256, rawSha256)
+            ),
             workflow = project.workflow.invalidate(WorkflowChange.SOURCE_OR_RAW)
         )
         val saved = if (project.version == 1) ProjectStore.upgrade(root, project, updated.parts) else updated.also { ProjectStore.write(root, it) }
-        progress.report(OperationProgress("import-part", 3, 3, "Registered raw MIDI; run Repair MIDI before analysis", root.resolve(ProjectStore.FILE_NAME)))
+        val finalStage = if (isMidi) 3 else 4
+        progress.report(OperationProgress("import-part", finalStage, finalStage, "Registered raw MIDI; Clean MIDI is next", root.resolve(ProjectStore.FILE_NAME)))
         snapshot(root, saved)
     }
 
@@ -398,6 +430,7 @@ class DefaultProjectApplicationService(
         val rawPath = safeDestination(root, rawReference)
         val cleanPath = safeDestination(root, "midi/clean/${request.partId}.mid")
         requireMidiArtifact(rawPath, "Raw MIDI")
+        requireCurrentImportEvidence(root, part)
 
         val cleanWork = temporaryMidi(cleanPath)
         val cleanBackup = cleanPath.takeIf(Files::isRegularFile)?.let(::temporaryMidi)
@@ -527,6 +560,7 @@ class DefaultProjectApplicationService(
         }
         val sourcePath = safeDestination(root, part.file)
         require(Files.isRegularFile(sourcePath)) { "Part source is missing: ${part.file}" }
+        requireCurrentImportEvidence(root, part)
         val source = InspectionSourceIdentity(part.file, sha256(sourcePath))
         val inspectionRequest = InputInspectionRequest(root, part.id, source).also { it.requireValid() }
 
@@ -552,6 +586,38 @@ class DefaultProjectApplicationService(
         InputInspectionReportStore.write(root, report)
         progress.report(OperationProgress("inspect-part", 2, 2, "Saved inspection report", InputInspectionPaths.report(root, part.id)))
         snapshot(root, project)
+    }
+
+    override suspend fun transcribeAudioPart(
+        request: TranscribeAudioPartRequest,
+        progress: ProgressSink
+    ): ProjectSnapshot = mutateSuspend(request.root) { root ->
+        val project = readValidProject(root)
+        val part = project.parts.find { it.id == request.partId }
+            ?: throw IllegalArgumentException("Part not found: ${request.partId}")
+        require(sourceType(part.file) == PartSourceType.AUDIO) { "Part '${part.id}' is not an eligible audio source." }
+        requireCurrentImportEvidence(root, part)
+        val rawReference = requireNotNull(part.midi?.raw) { "Part '${part.id}' has no canonical raw MIDI reference." }
+        require(rawReference == "midi/raw/${part.id}.mid") { "Part '${part.id}' raw MIDI reference is not canonical." }
+
+        progress.report(OperationProgress("transcribe-audio", 1, 2, "Running transcription quality gate", safeDestination(root, rawReference)))
+        val rawPath = runTranscriptionGate(root, part.id, request.selectedInput)
+        requireMidiArtifact(rawPath, "Transcription")
+        val sourcePath = safeDestination(root, part.file)
+        val sourceSha256 = sha256(sourcePath)
+        require(sourceSha256 == part.importEvidence?.sourceSha256) { "Preserved source changed during transcription." }
+        val refreshed = part.copy(
+            analysis = null,
+            midi = MidiReferences(raw = rawReference),
+            importEvidence = ImportEvidence(sourceSha256, sha256(rawPath))
+        )
+        val updated = project.copy(
+            parts = project.parts.map { if (it.id == part.id) refreshed else it },
+            workflow = project.workflow.invalidate(WorkflowChange.SOURCE_OR_RAW)
+        )
+        ProjectStore.write(root, updated)
+        progress.report(OperationProgress("transcribe-audio", 2, 2, "Registered validated raw MIDI; Clean MIDI is next", root.resolve(ProjectStore.FILE_NAME)))
+        snapshot(root, updated)
     }
 
     override fun updatePart(request: UpdatePartRoleRequest): ProjectSnapshot = mutate(request.root) { root ->
@@ -651,8 +717,11 @@ class DefaultProjectApplicationService(
     private fun Part.summary(root: Path, analysisCurrent: Boolean, aiFixCurrent: Boolean, midiFeelCurrent: Boolean): PartSummary {
         val sourcePath = Path.of(file)
         val sourceType = sourceType(file)
-        val sourcePreserved = sourcePath.startsWith("source") && isProjectFile(root, file)
-        val source = if (sourcePreserved) InspectionSourceIdentity(file, sha256(root.resolve(file))) else null
+        val evidence = importEvidence
+        val sourceFileCurrent = sourcePath.startsWith("source") && isProjectFile(root, file)
+        val sourcePreserved = sourceFileCurrent &&
+            (evidence == null || runCatching { sha256(root.resolve(file)) == evidence.sourceSha256 }.getOrDefault(false))
+        val source = if (sourceFileCurrent) InspectionSourceIdentity(file, sha256(root.resolve(file))) else null
         val report = runCatching { InputInspectionReportStore.read(root, id) }.getOrNull()
         val inspected = source != null && report?.source == source
         val warnings = when {
@@ -661,7 +730,11 @@ class DefaultProjectApplicationService(
             inspected -> report.warnings
             else -> emptyList()
         }
-        val rawMidi = midi?.raw?.let { isMidiArtifact(root, it) } ?: false
+        val rawMidi = midi?.raw?.let { reference ->
+            isMidiArtifact(root, reference) && (evidence == null || runCatching {
+                sha256(safeDestination(root, reference)) == evidence.rawMidiSha256
+            }.getOrDefault(false))
+        } ?: false
         val cleanMidi = midi?.clean?.let { isMidiArtifact(root, it) } ?: false
         val quality = midiQuality(root, this, cleanMidi)
         val analyzed = analysisCurrent && (analysis?.let { runCatching { it.summary(root) }.isSuccess } ?: false)
@@ -804,7 +877,7 @@ class DefaultProjectApplicationService(
         val destination = projectRoot.resolve(relative).normalize()
         require(destination.startsWith(projectRoot)) { "Project destination escapes the project root: $reference" }
         val realRoot = projectRoot.toRealPath()
-        var existing = destination.parent
+        var existing: Path? = destination
         while (existing != null && !Files.exists(existing)) existing = existing.parent
         if (existing != null) require(existing.toRealPath().startsWith(realRoot)) {
             "Project destination escapes the project root through a symlink: $reference"
@@ -816,7 +889,88 @@ class DefaultProjectApplicationService(
         require(Files.isRegularFile(path) && Files.size(path) >= 14) { "$stage did not create a MIDI file: $path" }
         val header = Files.newInputStream(path).use { it.readNBytes(4).decodeToString() }
         require(header == "MThd") { "$stage did not create a MIDI file: $path" }
+        runCatching { MidiSystem.getSequence(path.toFile()) }.getOrElse {
+            throw IllegalArgumentException("$stage is not a valid Standard MIDI file: $path", it)
+        }
     }
+
+    private fun publishImmutableSource(source: Path, destination: Path, expectedSha256: String) {
+        if (Files.exists(destination)) {
+            require(Files.isRegularFile(destination) && sha256(destination) == expectedSha256 && Files.mismatch(source, destination) == -1L) {
+                "Part destination already exists with different source content: $destination"
+            }
+            return
+        }
+        Files.createDirectories(checkNotNull(destination.parent))
+        val temporary = destination.resolveSibling(".${destination.fileName}.import-${UUID.randomUUID()}.tmp")
+        try {
+            Files.copy(source, temporary)
+            require(sha256(temporary) == expectedSha256) { "Source changed while it was being preserved: $source" }
+            try {
+                Files.move(temporary, destination, StandardCopyOption.ATOMIC_MOVE)
+            } catch (error: AtomicMoveNotSupportedException) {
+                throw IllegalStateException("Atomic source publication is not supported for '$destination'", error)
+            }
+        } finally {
+            Files.deleteIfExists(temporary)
+        }
+    }
+
+    private suspend fun inspectAudioImport(root: Path, partId: String, relativeFile: String, source: Path, extension: String) {
+        val identity = InspectionSourceIdentity(relativeFile, sha256(source))
+        val expectedContainer = if (extension == "mp3") InputContainer.MPEG_AUDIO else InputContainer.RIFF_WAVE
+        val existing = runCatching { InputInspectionReportStore.read(root, partId) }.getOrNull()
+        val report = if (existing?.source == identity && existing.detectedInput.container == expectedContainer && existing.detectedInput.extension == extension) {
+            existing
+        } else {
+            val request = InputInspectionRequest(root, partId, identity).also { it.requireValid() }
+            when (val result = inputInspection.inspect(request)) {
+                is InputInspectionResult.Inspected -> result.report
+                is InputInspectionResult.Rejected -> {
+                    result.error.requireValid()
+                    throw IllegalStateException("Input validation failed (${result.error.code}): ${result.error.message}")
+                }
+            }
+        }
+        require(report.partId == partId && report.source == identity) { "Input validation returned evidence for a different project source." }
+        require(report.detectedInput.container == expectedContainer && report.detectedInput.extension == extension) {
+            "Input extension '$extension' does not match the detected ${report.detectedInput.container.name} container."
+        }
+        report.requireValid()
+        InputInspectionReportStore.write(root, report)
+    }
+
+    private suspend fun runTranscriptionGate(root: Path, partId: String, selectedInput: TranscriptionInputArtifact): Path {
+        val gate = requireNotNull(transcriptionQualityGate) { "The transcription quality gate is not configured." }
+        return when (val result = gate.run(RunTranscriptionQualityGateRequest(root, partId, selectedInput))) {
+            is TranscriptionQualityGateResult.Succeeded -> result.rawMidi
+            is TranscriptionQualityGateResult.Failed -> throw IllegalStateException(
+                "Transcription stopped during ${result.stage.name.lowercase().replace('_', ' ')}."
+            )
+        }
+    }
+
+    private fun requireCurrentImportEvidence(root: Path, part: Part) {
+        val evidence = part.importEvidence ?: return
+        evidence.requireValid()
+        val sourcePath = safeDestination(root, part.file)
+        val rawReference = checkNotNull(part.midi?.raw) { "Part '${part.id}' import evidence has no raw MIDI reference." }
+        val rawPath = safeDestination(root, rawReference)
+        check(Files.isRegularFile(sourcePath) && sha256(sourcePath) == evidence.sourceSha256) {
+            "Part '${part.id}' preserved source is stale or changed."
+        }
+        requireMidiArtifact(rawPath, "Part '${part.id}' raw MIDI")
+        check(sha256(rawPath) == evidence.rawMidiSha256) { "Part '${part.id}' raw MIDI is stale or changed." }
+    }
+
+    private fun currentImportMatches(root: Path, part: Part, sourceSha256: String, extension: String): Boolean = runCatching {
+        val evidence = requireNotNull(part.importEvidence)
+        evidence.requireValid()
+        require(part.file == "source/${part.id}.$extension")
+        require(evidence.sourceSha256 == sourceSha256)
+        requireCurrentImportEvidence(root, part)
+        true
+    }.getOrDefault(false)
 
     /** Extension is only a chooser hint. Validate the container before publishing immutable source evidence. */
     private fun requireImportSourceFormat(source: Path, extension: String, isMidi: Boolean) {

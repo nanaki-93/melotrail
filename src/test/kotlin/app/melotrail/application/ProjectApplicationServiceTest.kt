@@ -2,6 +2,21 @@ package app.melotrail.application
 
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.RenderFormat
+import app.melotrail.preparation.AudioInspectionMeasurements
+import app.melotrail.preparation.DetectedAudioFormat
+import app.melotrail.preparation.DetectedInput
+import app.melotrail.preparation.EvidenceLevel
+import app.melotrail.preparation.InputContainer
+import app.melotrail.preparation.InputInspectionBoundary
+import app.melotrail.preparation.InputInspectionReport
+import app.melotrail.preparation.InputInspectionResult
+import app.melotrail.preparation.SignalIndicator
+import app.melotrail.preparation.SilenceEvidence
+import app.melotrail.preparation.TranscriptionBoundary
+import app.melotrail.preparation.TranscriptionBoundaryResult
+import app.melotrail.preparation.TranscriptionEngineMetadata
+import app.melotrail.preparation.TranscriptionFailureStage
+import app.melotrail.preparation.TranscriptionQualityGateService
 import kotlinx.coroutines.async
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -271,7 +286,30 @@ class ProjectApplicationServiceTest {
 
     private fun service(preparation: MidiPreparationService = copyingPreparation()) = DefaultProjectApplicationService(
         preparation,
-        LegacyPartAnalysisService { error("legacy worker should not be used") }
+        LegacyPartAnalysisService { error("legacy worker should not be used") },
+        inputInspection = InputInspectionBoundary { request ->
+            val extension = request.source.relativePath.substringAfterLast('.')
+            val container = if (extension == "mp3") InputContainer.MPEG_AUDIO else InputContainer.RIFF_WAVE
+            InputInspectionResult.Inspected(InputInspectionReport(
+                partId = request.partId,
+                source = request.source,
+                detectedInput = DetectedInput(container, if (container == InputContainer.MPEG_AUDIO) "MPEG" else "PCM", extension),
+                durationSeconds = 0.5,
+                audioFormat = DetectedAudioFormat(44_100, 2, 24),
+                measurements = AudioInspectionMeasurements(
+                    0.1, 0.05, 0.0, 0, 0,
+                    SilenceEvidence(0, 0), SignalIndicator(EvidenceLevel.NONE, 0.0), SignalIndicator(EvidenceLevel.NONE, 0.0)
+                )
+            ))
+        },
+        transcriptionQualityGate = TranscriptionQualityGateService(TranscriptionBoundary { input, output ->
+            try {
+                preparation.transcribe(input, output)
+                TranscriptionBoundaryResult.Completed(TranscriptionEngineMetadata("fake", "1"))
+            } catch (_: Exception) {
+                TranscriptionBoundaryResult.Failed(TranscriptionFailureStage.INFERENCE)
+            }
+        })
     )
 
     private fun copyingPreparation() = object : MidiPreparationService {

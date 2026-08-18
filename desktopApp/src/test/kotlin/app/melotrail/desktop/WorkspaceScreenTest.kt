@@ -664,6 +664,25 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `successful direct and audio imports expose the same Clean MIDI action`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        listOf(
+            importPart("direct.mid", rawMidi = true),
+            importPart("solo.wav", audio = true, rawMidi = true)
+        ).forEach { part ->
+            intents.clear()
+            setContent { MelotrailTheme { WorkspaceScreen(importState(part), intents::add) } }
+            onNodeWithText("Clean MIDI").assertExists()
+            val action = onNodeWithTag(WorkspacePageTags.IMPORT_PRIMARY_ACTION).performScrollTo()
+            action.performClick()
+            assertEquals<List<WorkspaceIntent>>(listOf(WorkspaceIntent.PrepareMidi("A")), intents)
+            intents.clear()
+            action.performKeyInput { pressKey(Key.Enter) }
+            assertEquals<List<WorkspaceIntent>>(listOf(WorkspaceIntent.PrepareMidi("A")), intents)
+        }
+    }
+
+    @Test
     fun `Import exposes workflow and MIDI guide references`() = runComposeUiTest {
         setContent { MelotrailTheme { WorkspaceScreen(importState(importPart("ready.mid")), onIntent = {}) } }
 

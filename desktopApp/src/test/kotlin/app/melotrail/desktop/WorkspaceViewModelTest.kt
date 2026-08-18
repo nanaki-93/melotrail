@@ -214,6 +214,7 @@ class WorkspaceViewModelTest {
         val legacy = raw.copy(id = "legacy", preparation = preparation(rawMidi = true))
 
         assertIs<PartPrimaryAction.PrepareMidi>(primaryPartAction(raw))
+        assertEquals("Clean MIDI", primaryPartAction(raw).label())
         assertIs<PartPrimaryAction.ReviewRepair>(primaryPartAction(review))
         assertIs<PartPrimaryAction.Analyze>(primaryPartAction(repaired))
         assertIs<PartPrimaryAction.Analyze>(primaryPartAction(staleAnalysis))

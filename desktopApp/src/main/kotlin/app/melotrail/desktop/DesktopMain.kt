@@ -78,8 +78,7 @@ fun main() = application {
         partPreviewService = DefaultPartPreviewApplicationService(sfizzRenderer),
         audioPreparationService = DefaultAudioPreparationApplicationService(
             projectService,
-            InputCleanupApplicationService(WorkerAudioCleanupBoundary(client)),
-            TranscriptionQualityGateService(WorkerTranscriptionBoundary(client))
+            InputCleanupApplicationService(WorkerAudioCleanupBoundary(client))
         ),
         preferences = preferences,
         soundLibrarySettings = SoundLibrarySettingsService(preferences, activeRoot = libraryRoot),
@@ -128,7 +127,8 @@ object DesktopServiceComposition {
         return DefaultProjectApplicationService(
             midiPreparation = DesktopMidiPreparationService(client),
             legacyPartAnalysis = DesktopLegacyPartAnalysisService(client),
-            inputInspection = WorkerInputInspectionBoundary(client)
+            inputInspection = WorkerInputInspectionBoundary(client),
+            transcriptionQualityGate = TranscriptionQualityGateService(WorkerTranscriptionBoundary(client))
         )
     }
 

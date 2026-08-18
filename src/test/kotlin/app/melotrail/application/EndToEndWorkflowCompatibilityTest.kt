@@ -44,6 +44,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /** Task 054's offline compatibility proof: canonical artifacts, not UI strings, are the oracle. */
@@ -80,6 +81,10 @@ class EndToEndWorkflowCompatibilityTest {
             } else {
                 services.projects.retryMidiCleanup(RetryMidiCleanupRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
             }
+
+            val importEvidence = assertNotNull(ProjectStore.read(root).parts.single().importEvidence)
+            assertEquals(hash(root.resolve("source/A.${fixture.extension}")), importEvidence.sourceSha256)
+            assertEquals(hash(root.resolve("midi/raw/A.mid")), importEvidence.rawMidiSha256)
 
             services.projects.analyzePart(AnalyzePartRequest(root, "A"))
             services.projects.saveStructure(SaveStructureRequest(root, listOf("A", "A")))
@@ -149,12 +154,11 @@ class EndToEndWorkflowCompatibilityTest {
         val projects = DefaultProjectApplicationService(
             midiPreparation = FakeMidiPreparation(failCleanup),
             legacyPartAnalysis = LegacyPartAnalysisService { error("legacy analysis is not used by this v2 fixture") },
-            inputInspection = InputInspectionBoundary { request -> InputInspectionResult.Inspected(report(request)) }
+            inputInspection = InputInspectionBoundary { request -> InputInspectionResult.Inspected(report(request)) },
+            transcriptionQualityGate = TranscriptionQualityGateService(FakeGateTranscriber())
         )
         val cleanup = InputCleanupApplicationService(FakeAudioCleanup())
-        val preparation = DefaultAudioPreparationApplicationService(
-            projects, cleanup, TranscriptionQualityGateService(FakeGateTranscriber())
-        )
+        val preparation = DefaultAudioPreparationApplicationService(projects, cleanup)
         val library = fixtureLibrary()
         val arrangements = DefaultArrangementApplicationService(libraryRoot = library)
         val renderer = FakeRenderer()

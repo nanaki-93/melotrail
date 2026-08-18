@@ -429,7 +429,7 @@ internal fun primaryPartAction(part: app.melotrail.application.PartSummary, pend
 }
 
 internal fun PartPrimaryAction.label(): String = when (this) {
-    is PartPrimaryAction.PrepareMidi -> "Prepare MIDI"
+    is PartPrimaryAction.PrepareMidi -> "Clean MIDI"
     is PartPrimaryAction.ReviewRepair -> "Review repair"
     is PartPrimaryAction.InspectOrTranscribeAudio -> if (inspected) "Transcribe solo piano" else "Inspect audio"
     is PartPrimaryAction.ApplyLoFiChange -> "Apply Lo-fi change"
@@ -1044,7 +1044,7 @@ class WorkspaceViewModel(
                         scope.launch { updateProgress(feedbackId, WorkspaceOperation.ImportingPart(request.id, progress)) }
                     }.refreshed()
                 }
-            }.onSuccess { opened(it, "Imported ${request.id}", feedbackId) }
+            }.onSuccess { opened(it, "Imported ${request.id}. Clean MIDI is next.", feedbackId) }
                 .onFailure { failure -> if (failure !is CancellationException) failImportFromService(draft, request, failure.message ?: "Unable to import ${request.id}.", feedbackId) }
         }
     }
@@ -1319,7 +1319,7 @@ class WorkspaceViewModel(
         mutableState.update { it.copy(operation = WorkspaceOperation.TranscribingPart(partId), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
             runCatching { withContext(ioDispatcher) { service.transcribe(project.root, partId, input) } }
-                .onSuccess { completedPreparation(it, "Transcription quality gate passed. Analyze $partId next.", feedbackId) }
+                .onSuccess { completedPreparation(it, "Transcription quality gate passed. Clean MIDI is next for $partId.", feedbackId) }
                 .onFailure { fail("transcribe", it.message ?: "Transcription failed for $partId.", WorkspaceRetry.Transcribe(project.root, partId, input), feedbackId) }
         }
     }
