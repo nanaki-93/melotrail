@@ -103,6 +103,10 @@ data class WorkflowArtifactReference(val file: String, val sha256: String) {
 object MidiAiFixArtifactPaths {
     fun draft(partId: String): String = "midi/ai-fix/${safeId(partId, "AI-fix part")}/draft.mid"
     fun approved(partId: String): String = "midi/ai-fix/${safeId(partId, "AI-fix part")}/approved.mid"
+    fun plan(partId: String): String = "midi/ai-fix/${safeId(partId, "AI-fix part")}/plan.json"
+    fun diff(partId: String): String = "midi/ai-fix/${safeId(partId, "AI-fix part")}/diff.json"
+    fun audit(partId: String): String = "midi/ai-fix/${safeId(partId, "AI-fix part")}/audit.json"
+    fun provenance(partId: String): String = "midi/ai-fix/${safeId(partId, "AI-fix part")}/provenance.json"
 }
 
 @Serializable

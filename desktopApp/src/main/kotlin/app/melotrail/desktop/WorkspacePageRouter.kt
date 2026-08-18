@@ -60,6 +60,7 @@ import app.melotrail.application.ArrangementSectionSnapshot
 import app.melotrail.application.ArrangementPlannerKind
 import app.melotrail.application.LocalSoundLibraryInstrument
 import app.melotrail.application.PartSourceType
+import app.melotrail.application.MidiQualityStatus
 import app.melotrail.application.ReleaseExportFormat
 import app.melotrail.application.StructureSectionSummary
 import app.melotrail.application.WorkflowStage
@@ -103,6 +104,15 @@ internal object WorkspacePageTags {
     const val IMPORT_CONTEXT_ACTION = "import-context-action"
     const val IMPORT_LOFI_MIDI_PROCESSOR = "import-lofi-midi-processor"
     const val IMPORT_LOFI_AUDIO_PROCESSOR = "import-lofi-audio-processor"
+    const val IMPORT_AI_FIX = "import-ai-fix"
+    const val IMPORT_AI_FIX_CREATE = "import-ai-fix-create"
+    const val IMPORT_AI_FIX_KEEP = "import-ai-fix-keep-cleaned"
+    const val IMPORT_AI_FIX_APPROVE = "import-ai-fix-approve"
+    const val IMPORT_AI_FIX_REJECT = "import-ai-fix-reject"
+    const val IMPORT_AI_FIX_REGENERATE = "import-ai-fix-regenerate"
+    const val IMPORT_AI_FIX_PREVIEW_CLEANED = "import-ai-fix-preview-cleaned"
+    const val IMPORT_AI_FIX_PREVIEW_DRAFT = "import-ai-fix-preview-draft"
+    const val IMPORT_AI_FIX_DIFF = "import-ai-fix-diff"
     const val IMPORTED_FILES = "imported-files"
     const val IMPORTED_ROW_PREFIX = "imported-file-"
     const val IMPORTED_DETAILS_PREFIX = "imported-details-"
@@ -1641,7 +1651,46 @@ private fun ImportPage(
     ImportDropSurface(state, onIntent)
     ImportHelpLinks()
     ImportedFiles(state, onIntent, partDetailsFocusTargets)
+    MidiAiFixReview(state, onIntent)
     ImportPrimaryAction(state, onIntent, partDetailsFocusTargets)
+}
+
+@Composable
+private fun MidiAiFixReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    val part = importPrimaryPart(state) ?: return
+    if (part.preparation.midiQuality.status != MidiQualityStatus.CURRENT) return
+    val fix = state.midiAiFix?.takeIf { it.partId == part.id }
+    val available = state.runtimeReadiness?.capability(RuntimeCapability.MIDI_PREVIEW)?.available == true
+    OverviewCard(WorkspacePageTags.IMPORT_AI_FIX, "Optional AI-assisted track fix") {
+        Text("Choose a base after Clean MIDI. The local model may propose only bounded note corrections; it cannot change the selected input until you approve its draft.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (fix == null) {
+            Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.ReturnToCleanedMidi) }, enabled = !state.operation.isMutating,
+                    modifier = Modifier.semantics { testTag = WorkspacePageTags.IMPORT_AI_FIX_KEEP }) { Text("Keep cleaned MIDI") }
+                Button(onClick = { onIntent(WorkspaceIntent.CreateMidiAiFix) }, enabled = !state.operation.isMutating,
+                    modifier = Modifier.semantics { testTag = WorkspacePageTags.IMPORT_AI_FIX_CREATE }) { Text("Create AI fix") }
+            }
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.PreviewMidiPart(part.id, app.melotrail.application.PreviewMidiSource.CLEANED)) }, enabled = available,
+                    modifier = Modifier.semantics { testTag = WorkspacePageTags.IMPORT_AI_FIX_PREVIEW_CLEANED }) { Text("Preview cleaned") }
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.PreviewMidiPart(part.id, if (fix.approved) app.melotrail.application.PreviewMidiSource.AI_FIX_APPROVED else app.melotrail.application.PreviewMidiSource.AI_FIX_DRAFT)) }, enabled = available && (if (fix.approved) fix.approvedAvailable else fix.draftAvailable),
+                    modifier = Modifier.semantics { testTag = WorkspacePageTags.IMPORT_AI_FIX_PREVIEW_DRAFT }) { Text("Preview AI fix") }
+            }
+            Text("${fix.edits.size} bounded edit${if (fix.edits.size == 1) "" else "s"} · ${if (fix.approved) "approved" else "review required"}", style = MaterialTheme.typography.bodySmall, color = if (fix.approved) semanticColor(WorkspaceSemanticState.READY) else semanticColor(WorkspaceSemanticState.WARNING))
+            Column(Modifier.semantics { testTag = WorkspacePageTags.IMPORT_AI_FIX_DIFF }, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+                fix.edits.forEachIndexed { index, edit -> Text("${index + 1}. ${edit.kind.name.lowercase().replace('_', ' ')}", style = MaterialTheme.typography.bodySmall) }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                if (!fix.approved) Button(onClick = { onIntent(WorkspaceIntent.ApproveMidiAiFix) }, enabled = !state.operation.isMutating,
+                    modifier = Modifier.semantics { testTag = WorkspacePageTags.IMPORT_AI_FIX_APPROVE }) { Text("Approve AI fix") }
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.RejectMidiAiFix) }, enabled = !state.operation.isMutating,
+                    modifier = Modifier.semantics { testTag = WorkspacePageTags.IMPORT_AI_FIX_REJECT }) { Text(if (fix.approved) "Return to cleaned" else "Reject draft") }
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.RegenerateMidiAiFix) }, enabled = !state.operation.isMutating,
+                    modifier = Modifier.semantics { testTag = WorkspacePageTags.IMPORT_AI_FIX_REGENERATE }) { Text("Regenerate") }
+            }
+        }
+    }
 }
 
 @Composable

@@ -103,7 +103,8 @@ then update a local checkout with `git remote set-url origin <new-url>`.
 ### Desktop workflow and local prerequisites
 
 Use the desktop app as a guided sequence: create/open a project, import MIDI
-or an eligible WAV/MP3 source, inspect/prepare it, clean/analyze MIDI, save the
+or an eligible WAV/MP3 source, inspect/prepare it, clean MIDI, keep it or review
+an optional bounded AI-fix draft, analyze MIDI, then save the
 structure, generate/review an arrangement, then build and audition validated
 artifacts. The app never requires Spring.
 
@@ -243,7 +244,11 @@ counts, and each applied-change count.
 
 ### Fixed Lo-fi MIDI Feel
 
-After approved Clean MIDI, the desktop can retain **Original feel** or create
+After approved Clean MIDI, the desktop can explicitly keep that cleaned MIDI or
+request a local bounded AI-fix draft. The draft receives only path-free musical
+facts, is inspectable and A/B previewable, and cannot become the selected input
+until explicit approval. It never changes raw or cleaned MIDI. After that choice,
+the desktop can retain **Original feel** or create
 the separate `lofi-80-swing-v1` derived MIDI artifact and select it as the
 canonical analysis input. Version 1 is fixed at exactly **80 BPM** with a
 code-owned **58% eighth-note swing**. It is an opt-in MIDI timing transform,

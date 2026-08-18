@@ -1438,6 +1438,8 @@ private fun statusText(state: WorkspaceUiState): String = when (val operation = 
     is WorkspaceOperation.ApplyingAudioCleanup -> "Applying selected cleanup for ${operation.id}…"
     is WorkspaceOperation.CleaningMidi -> "Cleaning MIDI for ${operation.id}…"
     is WorkspaceOperation.SelectingMidiFeel -> "Selecting Lo-fi Feel for ${operation.id}…"
+    is WorkspaceOperation.CreatingMidiAiFix -> "Creating a bounded AI-fix draft for ${operation.id}…"
+    is WorkspaceOperation.ApprovingMidiAiFix -> "Approving AI-fix draft for ${operation.id}…"
     is WorkspaceOperation.TranscribingPart -> "Running transcription quality gate for ${operation.id}…"
     is WorkspaceOperation.UpdatingPartRole -> "Saving ${operation.id} role…"
     WorkspaceOperation.SavingStructure -> "Saving song structure…"

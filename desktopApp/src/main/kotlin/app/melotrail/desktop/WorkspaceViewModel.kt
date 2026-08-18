@@ -10,6 +10,10 @@ import app.melotrail.application.CohesionPlannerKind
 import app.melotrail.application.CohesionSnapshot
 import app.melotrail.application.DefaultCohesionApplicationService
 import app.melotrail.application.GenerateCohesionRequest
+import app.melotrail.application.CreateMidiAiFixRequest
+import app.melotrail.application.DefaultMidiAiFixApplicationService
+import app.melotrail.application.MidiAiFixApplicationService
+import app.melotrail.application.MidiAiFixSnapshot
 import app.melotrail.application.DefaultArrangementApplicationService
 import app.melotrail.application.GenerateArrangementRequest
 import app.melotrail.application.ImportPartRequest
@@ -87,6 +91,8 @@ data class WorkspaceUiState(
     val project: ProjectSnapshot? = null,
     /** Immutable review model; composables never inspect cohesion files. */
     val cohesion: CohesionSnapshot? = null,
+    /** Immutable AI-fix review evidence; composables never read draft files. */
+    val midiAiFix: MidiAiFixSnapshot? = null,
     val arrangement: ArrangementSnapshot? = null,
     val mix: MixSnapshot? = null,
     val buildOptions: BuildOptionsDraft = BuildOptionsDraft(),
@@ -303,6 +309,8 @@ sealed interface WorkspaceOperation {
     data class ApplyingAudioCleanup(val id: String) : WorkspaceOperation
     data class CleaningMidi(val id: String, val progress: OperationProgress? = null) : WorkspaceOperation
     data class SelectingMidiFeel(val id: String) : WorkspaceOperation
+    data class CreatingMidiAiFix(val id: String, val progress: OperationProgress? = null) : WorkspaceOperation
+    data class ApprovingMidiAiFix(val id: String) : WorkspaceOperation
     data class TranscribingPart(val id: String) : WorkspaceOperation
     data class UpdatingPartRole(val id: String) : WorkspaceOperation
     data object SavingStructure : WorkspaceOperation
@@ -324,6 +332,7 @@ val WorkspaceOperation.isMutating: Boolean
         this is WorkspaceOperation.InspectingPart || this is WorkspaceOperation.ApplyingAudioCleanup || this is WorkspaceOperation.TranscribingPart ||
         this is WorkspaceOperation.CleaningMidi ||
         this is WorkspaceOperation.SelectingMidiFeel ||
+        this is WorkspaceOperation.CreatingMidiAiFix || this is WorkspaceOperation.ApprovingMidiAiFix ||
         this is WorkspaceOperation.UpdatingPartRole || this is WorkspaceOperation.SavingStructure ||
         this is WorkspaceOperation.GeneratingCohesion || this is WorkspaceOperation.ApprovingCohesion ||
         this is WorkspaceOperation.GeneratingArrangement || this is WorkspaceOperation.ApprovingArrangement
@@ -450,6 +459,7 @@ sealed interface WorkspaceRetry {
     data class Cleanup(val root: Path, val partId: String, val mode: InputCleanupMode) : WorkspaceRetry
     data class CleanMidi(val request: CleanMidiRequest) : WorkspaceRetry
     data class ApplyMidiFeel(val root: Path, val partId: String, val input: MidiAnalysisInput) : WorkspaceRetry
+    data class CreateMidiAiFix(val request: CreateMidiAiFixRequest) : WorkspaceRetry
     data class Transcribe(val root: Path, val partId: String, val selectedInput: TranscriptionInputArtifact) : WorkspaceRetry
     data class SaveStructure(val root: Path, val partIds: List<String>, val selectedIndex: Int?) : WorkspaceRetry
     data class GenerateArrangement(val request: GenerateArrangementRequest) : WorkspaceRetry
@@ -498,6 +508,11 @@ sealed interface WorkspaceIntent {
     data object ConfirmSafeCleanup : WorkspaceIntent
     data class SelectMidiCleanupProfile(val profile: MidiCleanupProfile) : WorkspaceIntent
     data object ApproveCleanMidi : WorkspaceIntent
+    data object CreateMidiAiFix : WorkspaceIntent
+    data object ApproveMidiAiFix : WorkspaceIntent
+    data object RejectMidiAiFix : WorkspaceIntent
+    data object ReturnToCleanedMidi : WorkspaceIntent
+    data object RegenerateMidiAiFix : WorkspaceIntent
     data class SelectMidiFeel(val input: MidiAnalysisInput) : WorkspaceIntent
     data object ApplyMidiFeelAndReanalyze : WorkspaceIntent
     data object ConfirmTightenTiming : WorkspaceIntent
@@ -567,6 +582,7 @@ class WorkspaceViewModel(
     private val libraryRoot: Path = Path.of(System.getProperty("java.io.tmpdir"), "melotrail", "missing-sound-library"),
     private val arrangementService: ArrangementApplicationService = DefaultArrangementApplicationService(libraryRoot = libraryRoot),
     private val cohesionService: CohesionApplicationService = DefaultCohesionApplicationService(),
+    private val midiAiFixService: MidiAiFixApplicationService = DefaultMidiAiFixApplicationService(),
     private val mixService: MixApplicationService = DefaultMixApplicationService(),
     private val buildService: BuildApplicationService? = null,
     private val player: ArtifactAudioPlayer? = null,
@@ -647,6 +663,11 @@ class WorkspaceViewModel(
             WorkspaceIntent.ConfirmSafeCleanup -> confirmSafeCleanup()
             is WorkspaceIntent.SelectMidiCleanupProfile -> mutableState.update { it.copy(midiQualityReview = it.midiQualityReview.copy(profile = intent.profile)) }
             WorkspaceIntent.ApproveCleanMidi -> approveCleanMidi()
+            WorkspaceIntent.CreateMidiAiFix -> createMidiAiFix()
+            WorkspaceIntent.ApproveMidiAiFix -> approveMidiAiFix()
+            WorkspaceIntent.RejectMidiAiFix -> rejectMidiAiFix()
+            WorkspaceIntent.ReturnToCleanedMidi -> returnToCleanedMidi()
+            WorkspaceIntent.RegenerateMidiAiFix -> regenerateMidiAiFix()
             is WorkspaceIntent.SelectMidiFeel -> selectMidiFeel(intent.input)
             WorkspaceIntent.ApplyMidiFeelAndReanalyze -> applyMidiFeelAndReanalyze()
             WorkspaceIntent.ConfirmTightenTiming -> confirmTightenTiming()
@@ -1183,6 +1204,73 @@ class WorkspaceViewModel(
         }
     }
 
+    private fun createMidiAiFix() {
+        val project = state.value.project ?: return fail("AI fix", "Open a project before creating an AI fix.")
+        val partId = state.value.selectedPartId ?: return fail("AI fix", "Select a cleaned MIDI part before creating an AI fix.")
+        val part = project.parts.find { it.id == partId } ?: return fail("AI fix", "Selected part is no longer available.")
+        if (part.preparation.midiQuality.status != MidiQualityStatus.CURRENT) return fail("AI fix", "Approve current Clean MIDI before creating an AI fix.")
+        if (state.value.operation.isMutating) return
+        runCreateMidiAiFix(CreateMidiAiFixRequest(project.root, partId))
+    }
+
+    private fun regenerateMidiAiFix() {
+        val project = state.value.project ?: return fail("AI fix", "Open a project before regenerating an AI fix.")
+        val partId = state.value.selectedPartId ?: return fail("AI fix", "Select a cleaned MIDI part before regenerating an AI fix.")
+        if (state.value.operation.isMutating) return
+        runCreateMidiAiFix(CreateMidiAiFixRequest(project.root, partId))
+    }
+
+    private fun runCreateMidiAiFix(request: CreateMidiAiFixRequest) {
+        val feedbackId = beginFeedback(OperationKind.AI_FIX, OperationPhase.WAITING_FOR_MODEL, "Preparing a bounded AI-fix draft…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.CreatingMidiAiFix(request.partId), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
+        scope.launch {
+            runCatching {
+                withContext(ioDispatcher) {
+                    midiAiFixService.create(request) { progress -> scope.launch { updateProgress(feedbackId, WorkspaceOperation.CreatingMidiAiFix(request.partId, progress)) } }
+                }
+            }.onSuccess { fix ->
+                val refreshed = runCatching { projectService.open(request.root) }.getOrNull()
+                val message = "AI-fix draft is ready for A/B preview and per-edit review. Approve it to use it downstream."
+                mutableState.update { current -> current.copy(project = refreshed ?: current.project, midiAiFix = fix, arrangement = null, operation = WorkspaceOperation.Idle, notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message, OperationSeverity.WARNING) ?: current.operationFeedback, downstreamArtifactsStale = current.downstreamArtifactsStale) }
+            }.onFailure { fail("AI fix", it.message ?: "Unable to create an AI-fix draft. Keep cleaned MIDI and retry after recovering the local model.", WorkspaceRetry.CreateMidiAiFix(request), feedbackId) }
+        }
+    }
+
+    private fun approveMidiAiFix() {
+        val project = state.value.project ?: return fail("AI fix", "Open a project before approving an AI fix.")
+        val partId = state.value.selectedPartId ?: return fail("AI fix", "Select an AI-fix draft before approving it.")
+        val fix = state.value.midiAiFix ?: return fail("AI fix", "Create and review an AI-fix draft before approving it.")
+        if (fix.partId != partId || fix.approved || state.value.operation.isMutating) return
+        val feedbackId = beginFeedback(OperationKind.APPROVAL, OperationPhase.VALIDATING, "Approving validated AI-fix draft…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.ApprovingMidiAiFix(partId), notification = null, operationFeedback = feedbackTracker.current) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { midiAiFixService.approve(project.root, partId) } }
+                .onSuccess { approved ->
+                    val refreshed = runCatching { projectService.open(project.root) }.getOrNull()
+                    val message = "AI fix approved. Re-analyze $partId before continuing."
+                    mutableState.update { current -> current.copy(project = refreshed ?: current.project, midiAiFix = approved, arrangement = null, operation = WorkspaceOperation.Idle, notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message) ?: current.operationFeedback, downstreamArtifactsStale = true) }
+                }
+                .onFailure { fail("AI fix", it.message ?: "Unable to approve this AI-fix draft.", sessionId = feedbackId) }
+        }
+    }
+
+    private fun rejectMidiAiFix() = returnToCleanedMidi(rejected = true)
+
+    private fun returnToCleanedMidi(rejected: Boolean = false) {
+        val project = state.value.project ?: return fail("AI fix", "Open a project before returning to cleaned MIDI.")
+        val partId = state.value.selectedPartId ?: return fail("AI fix", "Select a part before returning to cleaned MIDI.")
+        if (state.value.operation.isMutating) return
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { if (rejected) midiAiFixService.reject(project.root, partId) else midiAiFixService.returnToCleaned(project.root, partId) } }
+                .onSuccess { retained ->
+                    val refreshed = runCatching { projectService.open(project.root) }.getOrNull()
+                    val message = if (rejected) "AI-fix draft rejected. Cleaned MIDI remains selected." else "Cleaned MIDI is selected."
+                    mutableState.update { current -> current.copy(project = refreshed ?: current.project, midiAiFix = retained, arrangement = null, notification = message, downstreamArtifactsStale = current.downstreamArtifactsStale || refreshed?.readiness?.staleArtifacts?.isNotEmpty() == true) }
+                }
+                .onFailure { fail("AI fix", it.message ?: "Unable to return to cleaned MIDI.") }
+        }
+    }
+
     private fun selectMidiFeel(input: MidiAnalysisInput) {
         val project = state.value.project ?: return fail("Lo-fi MIDI Feel", "Open a project before choosing MIDI feel.")
         val partId = state.value.selectedPartId ?: return fail("Lo-fi Feel", "Select a cleaned MIDI part first.")
@@ -1621,6 +1709,7 @@ class WorkspaceViewModel(
             mutableState.update { it.copy(selectedPartId = action.partId, pendingMidiFeel = action.input) }
             applyMidiFeelAndReanalyze()
         }
+        is WorkspaceRetry.CreateMidiAiFix -> runCreateMidiAiFix(action.request)
         is WorkspaceRetry.Transcribe -> {
             mutableState.update { it.copy(selectedPartId = action.partId, audioPreparation = it.audioPreparation.copy(partId = action.partId, transcriptionInput = action.selectedInput)) }
             transcribeSelectedPart()
@@ -2000,6 +2089,7 @@ class WorkspaceViewModel(
             current.copy(
                 project = project,
                 cohesion = if (resetWorkspace) null else current.cohesion,
+                midiAiFix = if (resetWorkspace) null else current.midiAiFix,
                 arrangement = if (resetWorkspace) null else current.arrangement,
                 mix = if (resetWorkspace) null else current.mix,
                 selectedPartId = if (resetWorkspace) null else current.selectedPartId,
@@ -2032,25 +2122,28 @@ class WorkspaceViewModel(
             val mix = runCatching { mixService.load(project.root) }
             val arrangement = runCatching { arrangementService.load(project.root) }
             val cohesion = runCatching { cohesionService.load(project.root) }
-            Triple(mix, arrangement, cohesion)
+            val aiFix = project.parts.firstOrNull { it.preparation.midiAiFix.draftAvailable || it.preparation.midiAiFix.approvedAvailable }
+                ?.let { part -> runCatching { midiAiFixService.load(project.root, part.id) } }
+            listOf(mix, arrangement, cohesion, aiFix)
         }
         val warnings = buildList {
-            hydration.first.exceptionOrNull()?.message?.let { add("mix settings could not be loaded: $it") }
+            hydration[0]?.exceptionOrNull()?.message?.let { add("mix settings could not be loaded: $it") }
             if (project.readiness.arrangementAvailable || project.readiness.songPlanAvailable) {
-                hydration.second.exceptionOrNull()?.message?.let { add("arrangement artifacts could not be loaded: $it") }
+                hydration[1]?.exceptionOrNull()?.message?.let { add("arrangement artifacts could not be loaded: $it") }
             }
             if (project.readiness.cohesionReady || project.readiness.cohesionApprovalRequired) {
-                hydration.third.exceptionOrNull()?.message?.let { add("cohesion artifacts could not be loaded: $it") }
+                hydration[2]?.exceptionOrNull()?.message?.let { add("cohesion artifacts could not be loaded: $it") }
             }
         }
         mutableState.update { current ->
             if (current.project?.root != project.root) current
             else {
-                val arrangement = hydration.second.getOrNull()
+                val arrangement = hydration[1]?.getOrNull() as? ArrangementSnapshot
                 current.copy(
-                    mix = hydration.first.getOrNull(),
+                    mix = hydration[0]?.getOrNull() as? MixSnapshot,
                     arrangement = arrangement,
-                    cohesion = hydration.third.getOrNull(),
+                    cohesion = hydration[2]?.getOrNull() as? CohesionSnapshot,
+                    midiAiFix = hydration[3]?.getOrNull() as? MidiAiFixSnapshot,
                     selectedArrangementSection = if (resetWorkspace) arrangement?.sections?.firstOrNull()?.index else current.selectedArrangementSection,
                     notification = if (warnings.isEmpty()) current.notification ?: openedMessage
                     else "$openedMessage Some optional artifacts need attention: ${warnings.joinToString("; ")}",

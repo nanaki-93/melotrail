@@ -35,7 +35,7 @@ data class PreviewRequest(
 
 /** Bounded monitor choices for a selected audio part; neither changes project release artifacts. */
 enum class PreviewAudioSource { ORIGINAL, PREPARED_CLEAN }
-enum class PreviewMidiSource { RAW, CLEANED, LOFI_FEEL }
+enum class PreviewMidiSource { RAW, CLEANED, AI_FIX_DRAFT, AI_FIX_APPROVED, LOFI_FEEL }
 
 enum class PreviewStage { VALIDATE, DECODE_OR_RENDER, VALIDATE_ARTIFACT, REUSE_OR_PUBLISH }
 
@@ -212,6 +212,8 @@ class DefaultPartPreviewApplicationService(
         val reference = when (source) {
             PreviewMidiSource.RAW -> midi.raw
             PreviewMidiSource.CLEANED -> midi.clean
+            PreviewMidiSource.AI_FIX_DRAFT -> midi.aiFix?.draft?.file
+            PreviewMidiSource.AI_FIX_APPROVED -> midi.aiFix?.approved?.file
             PreviewMidiSource.LOFI_FEEL -> midi.feel?.derived
         } ?: return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "${source.name.lowercase().replaceFirstChar(Char::uppercase)} MIDI is not available for '${part.id}'.")
         if (source == PreviewMidiSource.CLEANED && midi.raw != null) {
@@ -223,6 +225,14 @@ class DefaultPartPreviewApplicationService(
             val feel = midi.feel
             if (clean == null || feel == null || !MidiFeelReportStore.isCurrent(root, part.id, clean, feel)) {
                 return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Lo-fi Feel MIDI is unavailable or stale. Choose Original feel or regenerate the fixed profile.")
+            }
+        }
+        if (source == PreviewMidiSource.AI_FIX_DRAFT || source == PreviewMidiSource.AI_FIX_APPROVED) {
+            val fix = midi.aiFix
+            val clean = midi.clean
+            val artifact = if (source == PreviewMidiSource.AI_FIX_DRAFT) fix?.draft else fix?.approved
+            if (clean == null || fix == null || artifact == null || fix.inputSha256 != digest(Files.readAllBytes(root.resolve(clean))) || artifact.sha256 != digest(Files.readAllBytes(root.resolve(artifact.file)))) {
+                return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "AI-fix MIDI is unavailable or stale. Keep cleaned MIDI or regenerate the AI fix.")
             }
         }
         if (format == null) return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Project render format is required before previewing MIDI.")

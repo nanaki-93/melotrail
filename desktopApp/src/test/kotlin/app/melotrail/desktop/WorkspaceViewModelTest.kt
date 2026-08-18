@@ -107,6 +107,33 @@ class WorkspaceViewModelTest {
     }
 
     @Test
+    fun `AI fix draft is reviewable and approval is explicit in the view model`() = runTest {
+        val root = Path.of("build/ai-fix-project")
+        val project = projectSnapshot(root).copy(
+            version = 3,
+            renderFormat = app.melotrail.arrangement.RenderFormat(),
+            parts = listOf(part("A").copy(preparation = preparation(rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT)))
+        )
+        val fixes = FakeMidiAiFixService()
+        val viewModel = WorkspaceViewModel(
+            FakeProjectService(result = project), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
+            midiAiFixService = fixes
+        )
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.SelectPart("A"))
+        viewModel.accept(WorkspaceIntent.CreateMidiAiFix); advanceUntilIdle()
+
+        assertEquals("A", fixes.created?.partId)
+        assertTrue(viewModel.state.value.midiAiFix?.draftAvailable == true)
+        assertTrue(viewModel.state.value.notification.orEmpty().contains("A/B preview"))
+        viewModel.accept(WorkspaceIntent.ApproveMidiAiFix); advanceUntilIdle()
+        assertEquals("A", fixes.approvedPartId)
+        assertTrue(viewModel.state.value.midiAiFix?.approved == true)
+        viewModel.close()
+    }
+
+    @Test
     fun `Arrange tab selection survives draft edits and failed generation state`() = runTest {
         val viewModel = WorkspaceViewModel(FakeProjectService(), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
 
@@ -1541,6 +1568,22 @@ private class FakeProjectService(
         })
         return checkNotNull(current)
     }
+}
+
+private class FakeMidiAiFixService : app.melotrail.application.MidiAiFixApplicationService {
+    var created: app.melotrail.application.CreateMidiAiFixRequest? = null
+    var approvedPartId: String? = null
+    private val draft = app.melotrail.application.MidiAiFixSnapshot(
+        partId = "A", inputHash = "0".repeat(64), inputSha256 = "1".repeat(64), outputSha256 = "2".repeat(64),
+        edits = listOf(app.melotrail.arrangement.MidiAiFixEdit(app.melotrail.arrangement.MidiAiFixEditKind.VELOCITY, noteId = "n-00000", velocity = 90)),
+        approved = false, draftAvailable = true, approvedAvailable = false
+    )
+    override suspend fun create(request: app.melotrail.application.CreateMidiAiFixRequest, progress: app.melotrail.application.ProgressSink): app.melotrail.application.MidiAiFixSnapshot {
+        created = request; progress.report(app.melotrail.application.OperationProgress("ai-fix", 2, 3, "Validating draft")); return draft
+    }
+    override fun load(root: Path, partId: String): app.melotrail.application.MidiAiFixSnapshot = draft
+    override fun approve(root: Path, partId: String): app.melotrail.application.MidiAiFixSnapshot { approvedPartId = partId; return draft.copy(approved = true, approvedAvailable = true) }
+    override fun returnToCleaned(root: Path, partId: String): app.melotrail.application.MidiAiFixSnapshot = draft
 }
 
 private class FakeArrangementService(
