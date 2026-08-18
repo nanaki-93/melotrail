@@ -11,9 +11,6 @@ those environments until the listed manual gates are completed.
 
 ## Repository and policy review
 
-- Reviewed from the renamed local `melotrail` checkout at Task 071's commit,
-  with no unrelated worktree changes altered. The staged Task 031/032 additions
-  were preserved.
 - Re-read the official YouTube [AI-use disclosure guidance](https://support.google.com/youtube/answer/14328491)
   and [channel monetization policies](https://support.google.com/youtube/answer/1311392?hl=en)
   on 2026-08-17. The former explicitly lists AI-generated music among examples
