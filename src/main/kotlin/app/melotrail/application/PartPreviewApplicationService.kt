@@ -29,13 +29,13 @@ data class PreviewRequest(
     val projectRoot: Path,
     val partId: String,
     val audioSource: PreviewAudioSource = PreviewAudioSource.ORIGINAL,
-    /** Explicit A/B selection for the immutable raw and repaired MIDI artifacts. */
+    /** Explicit A/B selection for the immutable raw and cleaned MIDI artifacts. */
     val midiSource: PreviewMidiSource? = null
 )
 
 /** Bounded monitor choices for a selected audio part; neither changes project release artifacts. */
 enum class PreviewAudioSource { ORIGINAL, PREPARED_CLEAN }
-enum class PreviewMidiSource { RAW, REPAIRED, LOFI_FEEL }
+enum class PreviewMidiSource { RAW, CLEANED, LOFI_FEEL }
 
 enum class PreviewStage { VALIDATE, DECODE_OR_RENDER, VALIDATE_ARTIFACT, REUSE_OR_PUBLISH }
 
@@ -211,12 +211,12 @@ class DefaultPartPreviewApplicationService(
         val midi = part.midi ?: return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Raw MIDI is not available for '${part.id}'.")
         val reference = when (source) {
             PreviewMidiSource.RAW -> midi.raw
-            PreviewMidiSource.REPAIRED -> midi.clean
+            PreviewMidiSource.CLEANED -> midi.clean
             PreviewMidiSource.LOFI_FEEL -> midi.feel?.derived
         } ?: return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "${source.name.lowercase().replaceFirstChar(Char::uppercase)} MIDI is not available for '${part.id}'.")
-        if (source == PreviewMidiSource.REPAIRED && midi.raw != null) {
+        if (source == PreviewMidiSource.CLEANED && midi.raw != null) {
             val current = midi.cleanup != null && midi.quality != null && MidiQualityReportStore.isCurrent(root, part.id, midi.raw, reference, midi.cleanup, midi.quality)
-            if (!current) return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Repaired MIDI quality evidence is missing or stale. Run Repair MIDI again.")
+            if (!current) return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Cleaned MIDI quality evidence is missing or stale. Run Clean MIDI again.")
         }
         if (source == PreviewMidiSource.LOFI_FEEL) {
             val clean = midi.clean

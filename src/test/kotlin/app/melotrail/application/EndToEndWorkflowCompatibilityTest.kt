@@ -74,12 +74,12 @@ class EndToEndWorkflowCompatibilityTest {
                 services.preparation.applyCleanup(root, "A", InputCleanupMode.SAFE_CLEANUP, confirmedSafeCleanup = true)
                 assertTrue(Files.isRegularFile(root.resolve("prepared/A/clean.wav")))
                 services.preparation.transcribe(root, "A", TranscriptionInputArtifact.CLEAN_WAV)
-                services.projects.retryMidiCleanup(RetryMidiCleanupRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
+                services.projects.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
             } else if (fixture.extension != "mid") {
                 services.preparation.transcribe(root, "A", TranscriptionInputArtifact.SOURCE)
-                services.projects.retryMidiCleanup(RetryMidiCleanupRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
+                services.projects.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
             } else {
-                services.projects.retryMidiCleanup(RetryMidiCleanupRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
+                services.projects.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
             }
 
             val importEvidence = assertNotNull(ProjectStore.read(root).parts.single().importEvidence)
@@ -112,7 +112,7 @@ class EndToEndWorkflowCompatibilityTest {
         services.projects.create(CreateProjectRequest(root))
 
         services.projects.importPart(ImportPartRequest(root, "A", source, transcribe = true))
-        val failure = runCatching { services.projects.retryMidiCleanup(RetryMidiCleanupRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions())) }.exceptionOrNull()
+        val failure = runCatching { services.projects.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions())) }.exceptionOrNull()
         assertTrue(failure?.message.orEmpty().contains("cleanup failure"))
         assertTrue(Files.isRegularFile(root.resolve("source/A.wav")))
         assertFalse(Files.exists(root.resolve("midi/clean/A.mid")))
@@ -144,7 +144,7 @@ class EndToEndWorkflowCompatibilityTest {
 
         val current = tempDir.resolve("compat/current")
         val source = fixtureSource(Fixture("approved-v3", "mid", false))
-        services.projects.create(CreateProjectRequest(current)); services.projects.importPart(ImportPartRequest(current, "A", source)); services.projects.retryMidiCleanup(RetryMidiCleanupRequest(current, "A", app.melotrail.arrangement.MidiCleanupOptions())); services.projects.analyzePart(AnalyzePartRequest(current, "A")); services.projects.saveStructure(SaveStructureRequest(current, listOf("A")))
+        services.projects.create(CreateProjectRequest(current)); services.projects.importPart(ImportPartRequest(current, "A", source)); services.projects.cleanMidi(CleanMidiRequest(current, "A", app.melotrail.arrangement.MidiCleanupOptions())); services.projects.analyzePart(AnalyzePartRequest(current, "A")); services.projects.saveStructure(SaveStructureRequest(current, listOf("A")))
         DefaultCohesionApplicationService().generate(GenerateCohesionRequest(current))
         assertTrue(services.arrangements.generate(GenerateArrangementRequest(current, instruments = listOf("piano"))).approved)
         assertTrue(Files.readString(current.resolve("arrangement.json")).contains("\"version\": 3"))

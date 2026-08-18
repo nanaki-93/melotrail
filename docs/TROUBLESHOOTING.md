@@ -86,6 +86,10 @@ actual format. Source files are immutable under `source/`.
   stems, or overwrites the source.
 - Select original or prepared audio explicitly before transcription. Raw and
   clean MIDI, analysis, and preview artifacts stay under the project.
+- After raw MIDI exists, use the single **Clean MIDI** action. It publishes a
+  new `midi/clean/<part>.mid` plus `midi/quality/<part>.json`, keeps source/raw
+  MIDI unchanged, and offers raw-versus-cleaned preview. If review is required,
+  **Approve Clean MIDI** binds approval to the exact cleanup evidence.
 
 Audio-source monitoring can be available without an SFZ renderer. MIDI preview
 needs the selected validated library, all samples, a verified renderer, and an
@@ -119,7 +123,7 @@ without being rewritten during open. A v2 migration is an explicit atomic save;
 if a migration or artifact is incomplete, leave the last known-good files in
 place and follow the workspace's next safe action.
 
-Changing source/raw MIDI, repaired MIDI, the selected Lo-fi Feel, analysis,
+Changing source/raw MIDI, cleaned MIDI, the selected Lo-fi Feel, analysis,
 structure, cohesion, mix-only settings, or audio texture can mark downstream
 artifacts stale. Retained stems, mixes, and masters are inspectable but not
 build-ready until their prerequisites and fingerprints are current again. Do

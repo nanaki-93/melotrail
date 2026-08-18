@@ -27,6 +27,13 @@ class SongTimingReproductionTest {
         writeStraightEighths(clean)
         Files.createDirectories(root.resolve("source"))
         Files.copy(clean, root.resolve("source/A.mid"))
+        val raw = root.resolve("midi/raw/A.mid")
+        Files.createDirectories(raw.parent)
+        Files.copy(clean, raw)
+        val cleanup = MidiCleanupOptions()
+        val quality = MidiQualityReporter().report("A", raw, clean, cleanup)
+        val qualityPath = MidiQualityReportStore.write(root, quality)
+        val qualityReference = root.relativize(qualityPath).toString()
         val lofi = root.resolve("midi/feel/A-lofi.mid")
         Files.createDirectories(lofi.parent)
         val feelReport = MidiLoFiFeelTransformer().transform(clean, lofi, "A").report
@@ -37,7 +44,8 @@ class SongTimingReproductionTest {
             Project.CURRENT_VERSION,
             "timing-reproduction",
             listOf(Part("A", "source/A.mid", midi = MidiReferences(
-                clean = "midi/clean/A.mid",
+                raw = "midi/raw/A.mid", clean = "midi/clean/A.mid", cleanup = cleanup,
+                quality = qualityReference, cleanApproval = MidiQualityReportStore.approval(root, qualityReference, quality),
                 analysisInput = MidiAnalysisInput.LOFI_FEEL,
                 feel = MidiFeelReferences(MidiFeelProfile.LOFI_80_SWING_V1, "midi/feel/A-lofi.mid", root.relativize(feelReportPath).toString())
             ))),

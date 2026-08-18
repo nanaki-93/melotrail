@@ -7,7 +7,7 @@ package app.melotrail.desktop
  */
 enum class OperationKind {
     PROJECT_OPEN, PROJECT_HYDRATION, IMPORT, INSPECTION, AUDIO_CLEANUP,
-    TRANSCRIPTION, MIDI_REPAIR, MIDI_RENDER, PREVIEW_DECODE_RENDER,
+    TRANSCRIPTION, MIDI_CLEANUP, MIDI_RENDER, PREVIEW_DECODE_RENDER,
     COHESION, ARRANGEMENT, APPROVAL, STEM_RENDER, MIXING, AUDIO_LOFI,
     MASTERING, EXPORT
 }
@@ -135,7 +135,7 @@ class OperationFeedbackTracker {
 }
 
 internal fun OperationProgressFeedbackPhase(progress: app.melotrail.application.OperationProgress): OperationPhase = when (progress.operation) {
-    "import-part", "inspect-part", "retry-midi-cleanup" -> OperationPhase.WAITING_FOR_WORKER
+    "import-part", "inspect-part", "clean-midi" -> OperationPhase.WAITING_FOR_WORKER
     "arrange" -> OperationPhase.WAITING_FOR_MODEL
     "render", "generate-midi" -> OperationPhase.WAITING_FOR_RENDERER
     "analyze-part", "mix" -> OperationPhase.VALIDATING
@@ -154,7 +154,7 @@ internal fun OperationProgressFeedbackPhase(progress: app.melotrail.application.
 internal fun OperationProgressFeedbackKind(progress: app.melotrail.application.OperationProgress): OperationKind = when (progress.operation) {
     "import-part" -> OperationKind.IMPORT
     "inspect-part" -> OperationKind.INSPECTION
-    "retry-midi-cleanup" -> OperationKind.MIDI_REPAIR
+    "clean-midi" -> OperationKind.MIDI_CLEANUP
     "analyze-part" -> OperationKind.COHESION
     "arrange" -> OperationKind.ARRANGEMENT
     "generate-midi" -> OperationKind.MIDI_RENDER

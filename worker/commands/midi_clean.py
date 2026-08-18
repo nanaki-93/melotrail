@@ -31,6 +31,10 @@ SUPPORTED_PROFILES = {
     TRANSCRIPTION_SAFE_PROFILE,
     TIGHTEN_TIMING_PROFILE,
 }
+ALLOWED_REQUEST_FIELDS = {
+    "jobId", "path", "outputPath", "version", "profile", "quantize", "strength",
+    "minNoteMs", "minVelocity", "normalizeVelocity", "cleanSustain",
+}
 TRANSCRIPTION_SAFE_VELOCITY_MIN = 12
 TRANSCRIPTION_SAFE_VELOCITY_MAX = 120
 
@@ -75,6 +79,9 @@ def _require_value(request: dict, field: str, expected_type: type, default: obje
 
 
 def _parse_request(request: dict) -> tuple[Path, Path, CleanupOptions]:
+    unknown = sorted(set(request) - ALLOWED_REQUEST_FIELDS)
+    if unknown:
+        raise MidiCleanupValidationError("Unknown MIDI cleanup fields: " + ", ".join(unknown))
     raw_input = request.get("path")
     raw_output = request.get("outputPath")
     if not isinstance(raw_input, str) or not raw_input.strip():
@@ -100,7 +107,7 @@ def _parse_request(request: dict) -> tuple[Path, Path, CleanupOptions]:
         raise MidiCleanupValidationError(
             f"version must be {CLEANUP_REQUEST_VERSION}"
         )
-    # The documented standard repair is the existing transcription-safe profile.
+    # The documented Clean MIDI standard is the transcription-safe profile.
     profile = request.get("profile", TRANSCRIPTION_SAFE_PROFILE)
     if not isinstance(profile, str) or profile not in SUPPORTED_PROFILES:
         raise MidiCleanupValidationError(
@@ -396,12 +403,13 @@ def _validate_output(path: Path) -> list[MidiNote]:
 def midi_clean_command(request: dict) -> dict:
     """Clean a MIDI file, preserve tracks/metadata, then atomically publish it."""
     input_path, output_path, options = _parse_request(request)
+    input_sha256 = _sha256(input_path)
     source = _load_midi(input_path)
     timed_tracks = _timed_tracks(source)
     removed_events: set[tuple[int, int]] = set()
     notes = _extract_notes(
         timed_tracks,
-        orphan_events=removed_events if options.profile != CONSERVATIVE_PROFILE else None,
+        orphan_events=removed_events,
     )
     original_ticks = {id(note): (note.start_tick, note.end_tick) for note in notes}
     input_note_count = len(notes)
@@ -478,6 +486,8 @@ def midi_clean_command(request: dict) -> dict:
             temporary_path = Path(temporary.name)
         _render_midi(source, timed_tracks, notes, removed_events).save(temporary_path)
         output_notes = _validate_output(temporary_path)
+        if _sha256(input_path) != input_sha256:
+            raise MidiCleanupOutputValidationError("Raw MIDI changed during cleanup")
         os.replace(temporary_path, output_path)
     except MidiCleanupOutputValidationError:
         raise
@@ -512,7 +522,7 @@ def midi_clean_command(request: dict) -> dict:
             if event.message.is_meta and event.message.type == "time_signature"
         ),
         "tempoAndTimeSignaturesPreserved": True,
-        "inputSha256": _sha256(input_path),
+        "inputSha256": input_sha256,
         "outputSha256": _sha256(output_path),
         "maximumTimingShiftTicks": maximum_timing_shift,
     }

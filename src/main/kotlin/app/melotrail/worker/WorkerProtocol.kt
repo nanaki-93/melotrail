@@ -23,7 +23,7 @@ object WorkerProtocol {
         is MP3ConvertCommand -> "/mp3_convert"
         is MP3ExportCommand -> "/mp3_export"
         is TranscribeCommand -> "/transcribe"
-        is MidiCleanCommand -> "/midi-clean"
+        is CleanMidiCommand -> "/midi-clean"
         is InputInspectionCommand -> "/inspect-input"
         is AudioCleanupCommand -> "/cleanup"
     }
@@ -78,7 +78,7 @@ object WorkerProtocol {
                 put("outputPath", command.outputPath)
                 put("instrument", command.instrument)
             }
-            is MidiCleanCommand -> {
+            is CleanMidiCommand -> {
                 put("path", command.path)
                 put("outputPath", command.outputPath)
                 put("version", command.version)

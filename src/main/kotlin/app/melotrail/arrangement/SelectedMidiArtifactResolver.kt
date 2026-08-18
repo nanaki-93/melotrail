@@ -11,9 +11,9 @@ import javax.sound.midi.Sequence
 /**
  * The only boundary for the MIDI artifact selected by a MIDI-first part.
  *
- * Repair/report code intentionally addresses raw and repaired evidence directly. Every
+ * Cleanup/report code intentionally addresses raw and cleaned evidence directly. Every
  * semantic consumer of the user's current source must use this type instead, so a Lo-fi
- * selection cannot silently fall back to repaired MIDI.
+ * selection cannot silently fall back to cleaned MIDI.
  */
 class SelectedMidiArtifactResolver {
     fun resolve(projectRoot: Path, project: Project, partId: String): SelectedMidiArtifact =
@@ -27,23 +27,28 @@ class SelectedMidiArtifactResolver {
         val root = projectRoot.toAbsolutePath().normalize()
         val rootReal = root.toRealPath()
         val midi = requireNotNull(part.midi) { "Part '${part.id}' has no MIDI references." }
-        val repairedReference = requireNotNull(midi.clean) {
-            "Part '${part.id}' has not been repaired. Run Repair MIDI before continuing."
+        val cleanedReference = requireNotNull(midi.clean) {
+            "Part '${part.id}' has not been cleaned. Run Clean MIDI before continuing."
         }
-        val repaired = resolveFile(root, rootReal, repairedReference, "repaired MIDI")
-        val repairFreshness = repairFreshness(root, part, midi, repairedReference)
-        val repairedSha256 = sha256(repaired)
+        val cleaned = resolveFile(root, rootReal, cleanedReference, "cleaned MIDI")
+        val cleanupFreshness = cleanupFreshness(root, part, midi, cleanedReference)
+        if (cleanupFreshness == MidiCleanupFreshness.LEGACY_UNKNOWN) {
+            require(midi.aiFixSelection == MidiAiFixSelection.SKIP && midi.analysisInput == MidiAnalysisInput.CURRENT) {
+                "Part '${part.id}' has legacy cleaned MIDI without current approval; re-import and run Clean MIDI before choosing an AI fix or Lo-fi Feel."
+            }
+        }
+        val cleanedSha256 = sha256(cleaned)
         val base = when (midi.aiFixSelection) {
             MidiAiFixSelection.SKIP -> BaseCandidate(
-                repairedReference,
-                repaired,
-                repairedSha256,
+                cleanedReference,
+                cleaned,
+                cleanedSha256,
                 SelectedMidiBaseKind.CLEANED
             )
             MidiAiFixSelection.APPROVED -> {
                 val references = requireNotNull(midi.aiFix) { "Part '${part.id}' has no approved AI-fix references." }
                 references.requireCanonical(part.id)
-                require(references.inputSha256 == repairedSha256) {
+                require(references.inputSha256 == cleanedSha256) {
                     "Approved AI fix is stale for part '${part.id}'; keep cleaned MIDI or regenerate the AI fix."
                 }
                 val approved = requireNotNull(references.approved) { "Part '${part.id}' has no approved AI-fix artifact." }
@@ -65,8 +70,8 @@ class SelectedMidiArtifactResolver {
                 null
             )
             MidiAnalysisInput.LOFI_FEEL -> {
-                require(repairFreshness != MidiRepairFreshness.STALE) {
-                    "Part '${part.id}' has stale repaired MIDI evidence. Run Repair MIDI again."
+                require(cleanupFreshness != MidiCleanupFreshness.STALE) {
+                    "Part '${part.id}' has stale cleaned MIDI evidence. Run Clean MIDI again."
                 }
                 val feel = requireNotNull(midi.feel) { "Part '${part.id}' has no current Lo-fi MIDI Feel artifact." }
                 val derived = resolveFile(root, rootReal, feel.derived, "Lo-fi MIDI Feel")
@@ -87,27 +92,26 @@ class SelectedMidiArtifactResolver {
             sha256 = sha256(selected.path),
             ppq = sequence.resolution,
             timing = MidiTimingSummary(tempoMap(sequence), timeSignatures(sequence)),
-            repairFreshness = repairFreshness,
+            cleanupFreshness = cleanupFreshness,
             baseKind = base.kind,
             loFiFreshness = if (selected.kind == SelectedMidiArtifactKind.LOFI_FEEL) MidiLoFiFreshness.CURRENT else MidiLoFiFreshness.NOT_SELECTED
         )
     }
 
-    private fun repairFreshness(root: Path, part: Part, midi: MidiReferences, repairedReference: String): MidiRepairFreshness {
-        // V2 projects predating explicit repair evidence remain readable. They are never
+    private fun cleanupFreshness(root: Path, part: Part, midi: MidiReferences, cleanedReference: String): MidiCleanupFreshness {
+        // V2 projects predating explicit cleanup evidence remain readable. They are never
         // accepted as current Lo-fi input because that branch requires a current report.
-        if (midi.raw == null && midi.cleanup == null && midi.quality == null) return MidiRepairFreshness.LEGACY_UNKNOWN
+        if (midi.raw == null && midi.cleanup == null && midi.quality == null) return MidiCleanupFreshness.LEGACY_UNKNOWN
         require(midi.raw != null && midi.cleanup != null && midi.quality != null) {
-            "Part '${part.id}' has incomplete MIDI repair provenance."
+            "Part '${part.id}' has incomplete MIDI cleanup provenance."
         }
-        val report = MidiQualityReportStore.read(root, midi.quality)
-        require(!report.approvalRequired || midi.approvedRepair) {
-            "Part '${part.id}' needs explicit approval of its MIDI repair."
+        require(MidiQualityReportStore.isCurrent(root, part.id, midi.raw, cleanedReference, midi.cleanup, midi.quality)) {
+            "Part '${part.id}' has stale cleaned MIDI evidence. Run Clean MIDI again."
         }
-        require(MidiQualityReportStore.isCurrent(root, part.id, midi.raw, repairedReference, midi.cleanup, midi.quality)) {
-            "Part '${part.id}' has stale repaired MIDI evidence. Run Repair MIDI again."
+        require(MidiQualityReportStore.isApproved(root, midi.quality, midi.cleanApproval)) {
+            "Part '${part.id}' needs current approval of its Clean MIDI evidence."
         }
-        return MidiRepairFreshness.CURRENT
+        return MidiCleanupFreshness.CURRENT
     }
 
     private fun resolveFile(root: Path, rootReal: Path, reference: String, label: String): Path {
@@ -169,7 +173,7 @@ class SelectedMidiArtifactResolver {
 
 enum class SelectedMidiBaseKind { CLEANED, APPROVED_AI_FIX }
 enum class SelectedMidiArtifactKind { CLEANED, APPROVED_AI_FIX, LOFI_FEEL }
-enum class MidiRepairFreshness { CURRENT, LEGACY_UNKNOWN, STALE }
+enum class MidiCleanupFreshness { CURRENT, LEGACY_UNKNOWN, STALE }
 enum class MidiLoFiFreshness { CURRENT, NOT_SELECTED }
 data class MidiTimingSummary(val tempoMap: List<MidiTempoChange>, val timeSignatures: List<MidiTimeSignature>)
 data class SelectedMidiArtifact(
@@ -182,7 +186,7 @@ data class SelectedMidiArtifact(
     val sha256: String,
     val ppq: Int,
     val timing: MidiTimingSummary,
-    val repairFreshness: MidiRepairFreshness,
+    val cleanupFreshness: MidiCleanupFreshness,
     val baseKind: SelectedMidiBaseKind,
     val loFiFreshness: MidiLoFiFreshness
 )

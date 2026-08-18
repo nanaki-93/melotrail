@@ -19,9 +19,6 @@ import app.melotrail.application.MixSnapshot
 import app.melotrail.application.PersistedMixSettings
 import app.melotrail.application.ProjectApplicationService
 import app.melotrail.application.ProjectSnapshot
-import app.melotrail.application.PrepareMidiRequest
-import app.melotrail.application.PrepareMidiResult
-import app.melotrail.application.PrepareMidiOutcome
 import app.melotrail.application.SaveStructureRequest
 import app.melotrail.application.UpdatePartRoleRequest
 import app.melotrail.application.PartPreviewApplicationService
@@ -213,9 +210,9 @@ class WorkspaceViewModelTest {
         val warning = repaired.copy(id = "warning", preparation = repaired.preparation.copy(warnings = listOf("repair evidence needs review")))
         val legacy = raw.copy(id = "legacy", preparation = preparation(rawMidi = true))
 
-        assertIs<PartPrimaryAction.PrepareMidi>(primaryPartAction(raw))
+        assertIs<PartPrimaryAction.CleanMidi>(primaryPartAction(raw))
         assertEquals("Clean MIDI", primaryPartAction(raw).label())
-        assertIs<PartPrimaryAction.ReviewRepair>(primaryPartAction(review))
+        assertIs<PartPrimaryAction.ReviewCleanMidi>(primaryPartAction(review))
         assertIs<PartPrimaryAction.Analyze>(primaryPartAction(repaired))
         assertIs<PartPrimaryAction.Analyze>(primaryPartAction(staleAnalysis))
         assertIs<PartPrimaryAction.AddToStructure>(primaryPartAction(ready))
@@ -249,7 +246,7 @@ class WorkspaceViewModelTest {
     }
 
     @Test
-    fun `current repaired MIDI without analysis analyzes the requested part only`() = runTest {
+    fun `current cleaned MIDI without analysis analyzes the requested part only`() = runTest {
         val root = Path.of("build/analyze-current-midi-project")
         val current = part("B").copy(preparation = preparation(rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT))
         val snapshot = projectSnapshot(root).copy(parts = listOf(part("A"), current))
@@ -266,7 +263,7 @@ class WorkspaceViewModelTest {
     }
 
     @Test
-    fun `prepare MIDI uses one orchestration command and exposes its single result`() = runTest {
+    fun `Clean MIDI uses one application command and leaves analysis separate`() = runTest {
         val root = Path.of("build/prepare-midi-project")
         val snapshot = projectSnapshot(root).copy(parts = listOf(part("intro").copy(
             preparation = preparation(rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.STALE_OR_INVALID)
@@ -275,10 +272,11 @@ class WorkspaceViewModelTest {
         val viewModel = WorkspaceViewModel(service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
 
         viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
-        viewModel.accept(WorkspaceIntent.PrepareMidi("intro")); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.CleanMidi("intro")); advanceUntilIdle()
 
-        assertEquals(PrepareMidiRequest(root, "intro"), service.prepared)
-        assertEquals("MIDI prepared and analyzed. Add intro to structure when ready.", viewModel.state.value.notification)
+        assertEquals(app.melotrail.application.CleanMidiRequest(root, "intro", app.melotrail.arrangement.MidiCleanupOptions()), service.cleanMidiRequest)
+        assertEquals(null, service.analyzed)
+        assertEquals("Clean MIDI is current. Analyze intro when ready.", viewModel.state.value.notification)
         viewModel.close()
     }
 
@@ -452,14 +450,16 @@ class WorkspaceViewModelTest {
     fun `prepared MIDI and eligible transcribed audio enter structure only through canonical saves`() = runTest {
         val root = Path.of("build/task-085-structure")
         val rawMidi = part("M").copy(preparation = preparation(rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.STALE_OR_INVALID))
-        val preparedMidi = analyzedPart("M")
+        val cleanedMidi = part("M").copy(preparation = preparation(rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT))
+        val analyzedMidi = analyzedPart("M")
         val audio = audioPart("P")
         val transcribedAudio = audio.copy(analysis = app.melotrail.application.PartAnalysisSummary(app.melotrail.application.PartAnalysisStatus.MIDI, "analysis/P.midi.json", bars = 3))
         val service = FakeProjectService(result = projectSnapshot(root).copy(parts = listOf(rawMidi, audio)))
-        service.preparedResult = projectSnapshot(root).copy(parts = listOf(preparedMidi, audio))
+        service.cleanedResult = projectSnapshot(root).copy(parts = listOf(cleanedMidi, audio))
+        service.analyzedResult = projectSnapshot(root).copy(parts = listOf(analyzedMidi, audio))
         val preparation = FakeAudioPreparationService(
             projectSnapshot(root).copy(
-                parts = listOf(preparedMidi, transcribedAudio),
+                parts = listOf(analyzedMidi, transcribedAudio),
                 structure = listOf(app.melotrail.application.StructureSectionSummary(0, "M", 1, "M1", null))
             ),
             availablePreparation("P", recommended = false)
@@ -470,7 +470,9 @@ class WorkspaceViewModelTest {
         )
 
         viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
-        viewModel.accept(WorkspaceIntent.PrepareMidi("M")); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.CleanMidi("M")); advanceUntilIdle()
+        assertIs<PartPrimaryAction.Analyze>(primaryPartAction(checkNotNull(viewModel.state.value.project).parts.first { it.id == "M" }))
+        viewModel.accept(WorkspaceIntent.AnalyzePart("M")); advanceUntilIdle()
         assertIs<PartPrimaryAction.AddToStructure>(primaryPartAction(checkNotNull(viewModel.state.value.project).parts.first { it.id == "M" }))
         viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.STRUCTURE))
         viewModel.accept(WorkspaceIntent.AddStructurePart("M")); advanceUntilIdle()
@@ -582,7 +584,7 @@ class WorkspaceViewModelTest {
             app.melotrail.arrangement.MidiCleanupOptions()
         )
         val snapshot = projectSnapshot(root).copy(
-            parts = listOf(part("A").copy(preparation = part("A").preparation.copy(midiQuality = currentQuality))),
+            parts = listOf(part("A").copy(preparation = preparation(rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT).copy(midiQuality = currentQuality))),
             readiness = app.melotrail.application.ProjectReadiness(true, true, true, true, true, false, false, false, false, false, true)
         )
         val service = FakeProjectService(result = snapshot)
@@ -591,20 +593,20 @@ class WorkspaceViewModelTest {
         viewModel.accept(WorkspaceIntent.SelectPart("A"))
 
         assertEquals(app.melotrail.arrangement.MidiCleanupProfile.TRANSCRIPTION_SAFE, viewModel.state.value.midiQualityReview.profile)
-        viewModel.accept(WorkspaceIntent.RetryMidiCleanup); advanceUntilIdle()
-        assertEquals(app.melotrail.arrangement.MidiCleanupProfile.TRANSCRIPTION_SAFE, service.midiCleanupRetry?.cleanup?.profile)
+        viewModel.accept(WorkspaceIntent.CleanMidi("A")); advanceUntilIdle()
+        assertEquals(app.melotrail.arrangement.MidiCleanupProfile.TRANSCRIPTION_SAFE, service.cleanMidiRequest?.cleanup?.profile)
         viewModel.accept(WorkspaceIntent.SelectMidiCleanupProfile(app.melotrail.arrangement.MidiCleanupProfile.TRANSCRIPTION_SAFE))
-        viewModel.accept(WorkspaceIntent.RetryMidiCleanup); advanceUntilIdle()
-        assertEquals(app.melotrail.arrangement.MidiCleanupProfile.TRANSCRIPTION_SAFE, service.midiCleanupRetry?.cleanup?.profile)
+        viewModel.accept(WorkspaceIntent.CleanMidi("A")); advanceUntilIdle()
+        assertEquals(app.melotrail.arrangement.MidiCleanupProfile.TRANSCRIPTION_SAFE, service.cleanMidiRequest?.cleanup?.profile)
         assertTrue(viewModel.state.value.downstreamArtifactsStale)
         assertNull(viewModel.state.value.arrangement)
 
         viewModel.accept(WorkspaceIntent.SelectMidiCleanupProfile(app.melotrail.arrangement.MidiCleanupProfile.TIGHTEN_TIMING))
-        viewModel.accept(WorkspaceIntent.RetryMidiCleanup)
+        viewModel.accept(WorkspaceIntent.CleanMidi("A"))
         assertEquals(WorkspaceDialog.ConfirmTightenTiming("A"), viewModel.state.value.dialog)
-        assertEquals(app.melotrail.arrangement.MidiCleanupProfile.TRANSCRIPTION_SAFE, service.midiCleanupRetry?.cleanup?.profile)
+        assertEquals(app.melotrail.arrangement.MidiCleanupProfile.TRANSCRIPTION_SAFE, service.cleanMidiRequest?.cleanup?.profile)
         viewModel.accept(WorkspaceIntent.ConfirmTightenTiming); advanceUntilIdle()
-        val options = checkNotNull(service.midiCleanupRetry).cleanup
+        val options = checkNotNull(service.cleanMidiRequest).cleanup
         assertEquals(app.melotrail.arrangement.MidiCleanupProfile.TIGHTEN_TIMING, options.profile)
         assertEquals("1/16", options.quantize)
         assertEquals(0.4, options.strength)
@@ -637,15 +639,15 @@ class WorkspaceViewModelTest {
     fun `stale MIDI quality retry failure remains actionable`() = runTest {
         val root = Path.of("build/stale-quality-project")
         val stale = app.melotrail.application.MidiQualitySummary(app.melotrail.application.MidiQualityStatus.STALE_OR_INVALID)
-        val snapshot = projectSnapshot(root).copy(parts = listOf(part("A").copy(preparation = part("A").preparation.copy(midiQuality = stale))))
+        val snapshot = projectSnapshot(root).copy(parts = listOf(part("A").copy(preparation = preparation(rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.STALE_OR_INVALID).copy(midiQuality = stale))))
         val service = FakeProjectService(result = snapshot, failureOnMidiCleanup = IllegalStateException("worker unavailable"))
         val viewModel = WorkspaceViewModel(service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
         viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
         viewModel.accept(WorkspaceIntent.SelectPart("A"))
-        viewModel.accept(WorkspaceIntent.RetryMidiCleanup); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.CleanMidi("A")); advanceUntilIdle()
 
         assertEquals("worker unavailable", assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation).message)
-        assertIs<WorkspaceRetry.MidiCleanup>(viewModel.state.value.retry)
+        assertIs<WorkspaceRetry.CleanMidi>(viewModel.state.value.retry)
         viewModel.close()
     }
 
@@ -1469,13 +1471,13 @@ private class FakeProjectService(
     private var current: ProjectSnapshot? = result
     var created: CreateProjectRequest? = null
     var imported: ImportPartRequest? = null
-    var midiCleanupRetry: app.melotrail.application.RetryMidiCleanupRequest? = null
-    var prepared: PrepareMidiRequest? = null
+    var cleanMidiRequest: app.melotrail.application.CleanMidiRequest? = null
     var midiFeelSelection: app.melotrail.application.SelectMidiFeelRequest? = null
     var analyzed: AnalyzePartRequest? = null
     var updatedRole: UpdatePartRoleRequest? = null
     var savedStructure: SaveStructureRequest? = null
-    var preparedResult: ProjectSnapshot? = null
+    var cleanedResult: ProjectSnapshot? = null
+    var analyzedResult: ProjectSnapshot? = null
     var failureOnSave: Throwable? = null
     var openCalls = 0
 
@@ -1497,24 +1499,18 @@ private class FakeProjectService(
         return checkNotNull(current)
     }
 
-    override suspend fun retryMidiCleanup(
-        request: app.melotrail.application.RetryMidiCleanupRequest,
+    override suspend fun cleanMidi(
+        request: app.melotrail.application.CleanMidiRequest,
         progress: app.melotrail.application.ProgressSink
     ): ProjectSnapshot {
-        midiCleanupRetry = request
+        cleanMidiRequest = request
         failureOnMidiCleanup?.let { throw it }
-        progress.report(app.melotrail.application.OperationProgress("retry-midi-cleanup", 2, 3, "Saving quality report"))
+        progress.report(app.melotrail.application.OperationProgress("clean-midi", 2, 3, "Saving quality report"))
+        current = cleanedResult ?: current
         return checkNotNull(current)
     }
 
-    override suspend fun prepareMidi(request: PrepareMidiRequest, progress: app.melotrail.application.ProgressSink): PrepareMidiResult {
-        prepared = request
-        progress.report(app.melotrail.application.OperationProgress("prepare-midi", 2, 2, "Analyzing selected MIDI"))
-        current = preparedResult ?: current
-        return PrepareMidiResult(checkNotNull(current), PrepareMidiOutcome.READY_FOR_STRUCTURE)
-    }
-
-    override fun approveMidiRepair(root: Path, partId: String): ProjectSnapshot = checkNotNull(current)
+    override fun approveCleanMidi(root: Path, partId: String): ProjectSnapshot = checkNotNull(current)
 
     override fun selectMidiFeel(request: app.melotrail.application.SelectMidiFeelRequest): ProjectSnapshot {
         midiFeelSelection = request
@@ -1528,6 +1524,7 @@ private class FakeProjectService(
 
     override suspend fun analyzePart(request: AnalyzePartRequest, progress: app.melotrail.application.ProgressSink): ProjectSnapshot {
         analyzed = request
+        current = analyzedResult ?: current
         return checkNotNull(current)
     }
 

@@ -99,7 +99,7 @@ object WorkflowReadModelDeriver {
 
         val approvalRequired = project.parts.firstOrNull { it.preparation.midiQuality.status == MidiQualityStatus.APPROVAL_REQUIRED }
         val needsCleaning = project.parts.firstOrNull {
-            !it.preparation.cleanMidi || it.preparation.midiQuality.status == MidiQualityStatus.STALE_OR_INVALID
+            !it.preparation.cleanMidi || it.preparation.midiQuality.status in setOf(MidiQualityStatus.STALE_OR_INVALID, MidiQualityStatus.LEGACY_UNKNOWN)
         }
         val clean = when {
             transcription.state != WorkflowState.COMPLETE -> blocked(WorkflowStage.CLEAN_MIDI, transcription)

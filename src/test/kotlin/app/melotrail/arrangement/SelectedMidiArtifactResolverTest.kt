@@ -53,7 +53,7 @@ class SelectedMidiArtifactResolverTest {
         assertTrue(Files.readAllBytes(clean).contentEquals(originalBytes))
 
         // A valid replacement file is still rejected: report fingerprints, not names,
-        // bind the selected Lo-fi artifact to the repaired input and derived output.
+        // bind the selected Lo-fi artifact to the cleaned input and derived output.
         writeMidi(lofi)
         assertFailsWith<IllegalArgumentException> { resolver.resolve(root, lofiProject, "A") }
 
@@ -97,12 +97,28 @@ class SelectedMidiArtifactResolverTest {
         feel: MidiFeelReferences?,
         aiSelection: MidiAiFixSelection = MidiAiFixSelection.SKIP,
         aiFix: MidiAiFixReferences? = null
-    ) = Project(
-        Project.CURRENT_VERSION,
-        "resolver",
-        listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid", aiFixSelection = aiSelection, aiFix = aiFix, analysisInput = input, feel = feel))),
-        renderFormat = RenderFormat()
-    )
+    ): Project {
+        val clean = root.resolve("midi/clean/A.mid")
+        val raw = root.resolve("midi/raw/A.mid")
+        if (!Files.exists(raw)) {
+            Files.createDirectories(raw.parent)
+            Files.copy(clean, raw)
+        }
+        val options = MidiCleanupOptions()
+        val quality = MidiQualityReporter().report("A", raw, clean, options)
+        val qualityPath = MidiQualityReportStore.write(root, quality)
+        val qualityReference = root.relativize(qualityPath).toString()
+        return Project(
+            Project.CURRENT_VERSION,
+            "resolver",
+            listOf(Part("A", "source/A.mid", midi = MidiReferences(
+                raw = "midi/raw/A.mid", clean = "midi/clean/A.mid", cleanup = options,
+                quality = qualityReference, cleanApproval = MidiQualityReportStore.approval(root, qualityReference, quality),
+                aiFixSelection = aiSelection, aiFix = aiFix, analysisInput = input, feel = feel
+            ))),
+            renderFormat = RenderFormat()
+        )
+    }
 
     private fun writeMidi(path: Path, pitch: Int = 60) {
         Files.createDirectories(requireNotNull(path.parent))

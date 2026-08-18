@@ -93,20 +93,22 @@ data class RenderFormat(
 data class MidiReferences(
     /** Immutable project-confined evidence produced by import or transcription. */
     val raw: String? = null,
-    /** Absent until the user explicitly runs Repair MIDI. */
+    /** Absent until the user explicitly runs Clean MIDI. */
     val clean: String? = null,
     /** Null only for pre-quality-report projects, which remain readable as legacy/unknown. */
     val cleanup: MidiCleanupOptions? = null,
     val quality: String? = null,
-    /** True automatically for conservative repairs; explicit only above report thresholds. */
+    /** Legacy read adapter only. New approval is always fingerprint-bound in [cleanApproval]. */
     val approvedRepair: Boolean = false,
+    /** Exact automatic or explicit approval of raw, clean, options, and report evidence. */
+    val cleanApproval: MidiCleanupApproval? = null,
     /** Explicit optional base branch; a draft is never selected. */
     val aiFixSelection: MidiAiFixSelection = MidiAiFixSelection.SKIP,
     /** Optional retained draft/approval evidence, fingerprinted against [clean]. */
     val aiFix: MidiAiFixReferences? = null,
     /** The sole MIDI artifact used by analysis and all downstream MIDI-first stages. */
     val analysisInput: MidiAnalysisInput = MidiAnalysisInput.CURRENT,
-    /** Optional derived MIDI; repaired MIDI remains immutable evidence. */
+    /** Optional derived MIDI; cleaned MIDI remains immutable evidence. */
     val feel: MidiFeelReferences? = null
 )
 
@@ -173,24 +175,32 @@ object ProjectValidator {
             if (project.version >= Project.MIDI_FIRST_VERSION) {
                 val midi = part.midi
                 if (midi == null) {
-                    errors += "Part '${part.id}' requires raw MIDI; import it before Repair MIDI"
+                    errors += "Part '${part.id}' requires raw MIDI; import it before Clean MIDI"
                 } else {
                     midi.raw?.let { validateFileReference(root, it, "Part '${part.id}' raw MIDI", errors) }
-                    midi.clean?.let { validateFileReference(root, it, "Part '${part.id}' repaired MIDI", errors) }
+                    midi.clean?.let { validateFileReference(root, it, "Part '${part.id}' cleaned MIDI", errors) }
                     if (midi.raw != null && midi.clean == null && (midi.cleanup != null || midi.quality != null)) {
-                        errors += "Part '${part.id}' has repair evidence without repaired MIDI"
+                        errors += "Part '${part.id}' has cleanup evidence without cleaned MIDI"
                     }
                     if (midi.raw != null && midi.clean != null && (midi.cleanup == null || midi.quality == null)) {
-                        errors += "Part '${part.id}' repaired MIDI requires a quality report"
+                        errors += "Part '${part.id}' cleaned MIDI requires a quality report"
                     }
                     if (midi.raw == null && midi.clean == null) {
-                        errors += "Part '${part.id}' requires a repaired MIDI reference"
+                        errors += "Part '${part.id}' requires a cleaned MIDI reference"
                     }
                     if ((midi.cleanup == null) != (midi.quality == null)) {
                         errors += "Part '${part.id}' MIDI cleanup provenance and quality report must be present together"
                     }
                     if (midi.approvedRepair && (midi.cleanup == null || midi.quality == null)) {
-                        errors += "Part '${part.id}' cannot approve a missing MIDI repair"
+                        errors += "Part '${part.id}' has an invalid legacy MIDI cleanup approval flag"
+                    }
+                    midi.cleanApproval?.let { approval ->
+                        runCatching(approval::requireValid).exceptionOrNull()?.let { error ->
+                            errors += "Part '${part.id}' MIDI cleanup approval is invalid: ${error.message}"
+                        }
+                        if (midi.cleanup == null || midi.quality == null || midi.clean == null || midi.raw == null) {
+                            errors += "Part '${part.id}' cannot approve missing MIDI cleanup evidence"
+                        }
                     }
                     runCatching { midi.aiFix?.requireCanonical(part.id) }.exceptionOrNull()?.let { error ->
                         errors += "Part '${part.id}' AI-fix references are invalid: ${error.message}"

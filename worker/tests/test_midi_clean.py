@@ -26,7 +26,7 @@ def completed_notes(path: Path) -> list[tuple[int, int, int, int, int]]:
     return notes
 
 
-class MidiCleanCommandTest(unittest.TestCase):
+class CleanMidiCommandTest(unittest.TestCase):
     def write_artifact_fixture(self, path: Path) -> None:
         midi = mido.MidiFile(type=1, ticks_per_beat=480)
         metadata = mido.MidiTrack()
@@ -162,7 +162,7 @@ class MidiCleanCommandTest(unittest.TestCase):
             self.assertIn(mido.Message("program_change", channel=2, program=48, time=0), cleaned.tracks[1])
             self.assertEqual({0, 2}, {note[1] for note in completed_notes(output)})
 
-    def test_conservative_preserves_orphan_note_offs_and_transcription_safe_removes_them(self) -> None:
+    def test_every_profile_removes_orphan_note_offs_for_structural_safety(self) -> None:
         with tempfile.TemporaryDirectory() as directory_name:
             directory = Path(directory_name)
             source = directory / "orphan.mid"
@@ -181,11 +181,11 @@ class MidiCleanCommandTest(unittest.TestCase):
                 "path": str(source), "outputPath": str(safe), "profile": "transcription-safe",
             })
 
-            self.assertEqual(0, conservative_result["orphanNoteOffsRemoved"])
+            self.assertEqual(1, conservative_result["orphanNoteOffsRemoved"])
             self.assertEqual(1, result["orphanNoteOffsRemoved"])
             self.assertEqual(1, result["outputNoteCount"])
             self.assertEqual(1, len(completed_notes(safe)))
-            self.assertEqual(2, sum(
+            self.assertEqual(1, sum(
                 1 for message in mido.MidiFile(conservative).tracks[0]
                 if message.type in {"note_on", "note_off"} and not (message.type == "note_on" and message.velocity > 0)
             ))
@@ -252,7 +252,7 @@ class MidiCleanCommandTest(unittest.TestCase):
             partial_request = {"path": str(source), "outputPath": str(partial_a), "profile": "tighten-timing", "quantize": "1/16", "strength": 0.5, "minNoteMs": 0, "minVelocity": 0}
             partial_result = midi_clean_command(partial_request)
             partial_request["outputPath"] = str(partial_b)
-            midi_clean_command(partial_request)
+            partial_b_result = midi_clean_command(partial_request)
             full_result = midi_clean_command({"path": str(source), "outputPath": str(full), "profile": "tighten-timing", "quantize": "1/16", "strength": 1.0, "minNoteMs": 0, "minVelocity": 0})
 
             self.assertEqual([(0, 1, 67, 90, 111, 380)], completed_notes(partial_a))
@@ -260,6 +260,25 @@ class MidiCleanCommandTest(unittest.TestCase):
             self.assertEqual(1, partial_result["quantizedNotes"])
             self.assertEqual(1, full_result["quantizedNotes"])
             self.assertEqual(partial_a.read_bytes(), partial_b.read_bytes())
+            comparable_a = {key: value for key, value in partial_result.items() if key != "output"}
+            comparable_b = {key: value for key, value in partial_b_result.items() if key != "output"}
+            self.assertEqual(comparable_a, comparable_b)
+
+    def test_every_allowed_grid_and_bounded_filter_option_is_accepted(self) -> None:
+        with tempfile.TemporaryDirectory() as directory_name:
+            directory = Path(directory_name)
+            source = directory / "raw.mid"
+            self.write_quantize_fixture(source)
+            for grid in ("1/4", "1/8", "1/16", "1/32"):
+                with self.subTest(grid=grid):
+                    result = midi_clean_command({
+                        "version": 2, "profile": "tighten-timing", "path": str(source),
+                        "outputPath": str(directory / f"clean-{grid.replace('/', '-')}.mid"),
+                        "quantize": grid, "strength": 0.25, "minNoteMs": 1,
+                        "minVelocity": 0, "normalizeVelocity": True, "cleanSustain": True,
+                    })
+                    self.assertEqual("tighten-timing", result["profile"])
+                    self.assertEqual(1, result["outputNoteCount"])
 
     def test_rejects_invalid_paths_options_and_corrupt_midi_without_creating_output_parent(self) -> None:
         with tempfile.TemporaryDirectory() as directory_name:
@@ -277,6 +296,7 @@ class MidiCleanCommandTest(unittest.TestCase):
                 ({"path": str(source), "outputPath": str(output), "profile": "tighten-timing", "quantize": "1/16"}, "requires strength"),
                 ({"path": str(source), "outputPath": str(output), "profile": "conservative", "cleanSustain": True}, "require transcription-safe"),
                 ({"path": str(source), "outputPath": str(output), "minNoteMs": -1}, "minNoteMs must"),
+                ({"path": str(source), "outputPath": str(output), "unexpected": True}, "Unknown MIDI cleanup fields"),
                 ({"path": str(source), "outputPath": str(output)}, "Could not parse MIDI input"),
             )
             for request, message in cases:

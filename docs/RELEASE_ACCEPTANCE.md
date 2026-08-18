@@ -36,7 +36,7 @@ flows; all collaborators are fake or deterministic and make no network calls:
 
 | Required representative case | Evidence |
 | --- | --- |
-| Direct MIDI / Original Feel; direct MIDI / fixed 80-BPM Lo-fi Feel | `ProjectApplicationServiceTest` verifies immutable source/raw/clean MIDI, separate Lo-fi derived MIDI, and restoring repaired MIDI. |
+| Direct MIDI / Original Feel; direct MIDI / fixed 80-BPM Lo-fi Feel | `ProjectApplicationServiceTest` verifies immutable source/raw/clean MIDI, separate Lo-fi derived MIDI, and restoring cleaned MIDI. |
 | WAV inspection, explicit cleanup, transcription | `EndToEndWorkflowCompatibilityTest` exercises clean and noisy WAV fixtures through the application services. |
 | MP3 decode/transcription path | The same compatibility test covers an MP3 fixture; worker input-inspection and transcription tests cover the Python boundary. Live optional decoder/model inference was not run. |
 | Repeated occurrences with distinct cohesion edits | `MelodyCohesionTest` verifies distinct bounded results for `A1` and `A2`, source preservation, atomic approval, and unsafe-plan rejection. |
@@ -44,7 +44,7 @@ flows; all collaborators are fake or deterministic and make no network calls:
 | Commercial-ready and blocked cases | `CommercialProvenanceTest`, `ModelLicenseTest`, and cohesion commercial tests cover deterministic evidence and unresolved/blocked dependency cases. |
 
 The tests verify canonical-artifact validation, stale-state handling, atomic
-publication, and source/raw/repaired immutability at their boundaries. They do
+publication, and source/raw/cleaned immutability at their boundaries. They do
 not substitute for a live full-project hash manifest taken before and after an
 actual renderer/worker run.
 
@@ -70,7 +70,7 @@ actual renderer/worker run.
 | Gate | Result / recovery action |
 | --- | --- |
 | Source and prepared WAV playback | Not run. Configure the worker and complete explicit inspection/cleanup on a solo-piano fixture. |
-| Raw, repaired, and Lo-fi MIDI renders | Not run. Install/configure a validated local `sfizz_render`, then capture pre/post source/raw/repaired hashes. |
+| Raw, cleaned, and Lo-fi MIDI renders | Not run. Install/configure a validated local `sfizz_render`, then capture pre/post source/raw/cleaned hashes. |
 | Cohesion boundary, dry mix, audio texture, and master playback | Not run. Run the renderer-backed full workflow and listen on a real output device using the one transport. |
 | Listening A/B environment | A built-in 44.1-kHz, two-channel MacBook Pro speaker output was detected, but no listening test was performed. Record device, OS, output level, listener, and pass/fail for each artifact. |
 | Wide, medium, narrow screenshots | Not run. Compare all three against `pictures/UI/example.png`; record intentional visual differences and repair clipping, duplication, scrolling, spacing, hierarchy, or color regressions. |

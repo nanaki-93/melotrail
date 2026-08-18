@@ -71,7 +71,7 @@ existing `.mid`/`.midi` file. It keeps the MIDI tracks and safe metadata in
 place, writes through a temporary file, reparses it, and atomically publishes
 only a valid result. It never changes the raw input.
 
-Repair requests use version `2` and a named profile. The default documented
+Clean MIDI requests use version `2` and a named profile. The default documented
 standard is `transcription-safe`; it removes exact duplicate notes, notes
 shorter than 50 ms, quiet noise, orphan note-offs, and redundant sustain values,
 ends same-pitch retriggers at their next start, and bounds retained velocities.

@@ -32,8 +32,8 @@ enum class CreationIntent {
     IMPORT_PART,
     INSPECT_PART,
     TRANSCRIBE_PART,
-    RETRY_MIDI_CLEANUP,
-    APPROVE_MIDI_CLEANUP,
+    CLEAN_MIDI,
+    APPROVE_CLEAN_MIDI,
     CREATE_AI_FIX,
     APPROVE_AI_FIX,
     SELECT_MIDI_FEEL,
@@ -242,8 +242,8 @@ object CreationProgressDeriver {
         WorkflowAction.IMPORT -> CreationIntent.IMPORT_PART
         WorkflowAction.INSPECT -> CreationIntent.INSPECT_PART
         WorkflowAction.TRANSCRIBE -> CreationIntent.TRANSCRIBE_PART
-        WorkflowAction.CLEAN_MIDI -> CreationIntent.RETRY_MIDI_CLEANUP
-        WorkflowAction.APPROVE_CLEAN_MIDI -> CreationIntent.APPROVE_MIDI_CLEANUP
+        WorkflowAction.CLEAN_MIDI -> CreationIntent.CLEAN_MIDI
+        WorkflowAction.APPROVE_CLEAN_MIDI -> CreationIntent.APPROVE_CLEAN_MIDI
         WorkflowAction.CREATE_AI_FIX -> CreationIntent.CREATE_AI_FIX
         WorkflowAction.APPROVE_AI_FIX -> CreationIntent.APPROVE_AI_FIX
         WorkflowAction.SELECT_MIDI_FEEL -> CreationIntent.SELECT_MIDI_FEEL

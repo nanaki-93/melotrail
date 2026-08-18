@@ -58,7 +58,7 @@ class InputInspectionApplicationServiceTest {
         })
         val root = project(service)
         service.inspectPart(InspectPartRequest(root, "A"))
-        service.retryMidiCleanup(RetryMidiCleanupRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
+        service.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
         val oldReport = Files.readString(root.resolve("prepared/A/report.json"))
 
         writeMidi(root.resolve("source/A.mid"), 64)
@@ -90,7 +90,7 @@ class InputInspectionApplicationServiceTest {
         val root = project(service)
         service.inspectPart(InspectPartRequest(root, "A"))
         val inspected = service.open(root).parts.single().preparation
-        service.retryMidiCleanup(RetryMidiCleanupRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
+        service.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
         val repaired = service.open(root).parts.single().preparation
         assertTrue(inspected.sourcePreserved && inspected.inspected && inspected.rawMidi)
         assertFalse(inspected.cleanMidi || inspected.analyzed || inspected.ready)

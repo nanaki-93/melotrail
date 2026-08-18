@@ -26,11 +26,9 @@ import app.melotrail.application.PreviewResult
 import app.melotrail.application.OperationProgress
 import app.melotrail.application.PartSourceType
 import app.melotrail.application.PartAnalysisStatus
-import app.melotrail.application.PrepareMidiRequest
-import app.melotrail.application.PrepareMidiOutcome
 import app.melotrail.application.ProjectApplicationService
 import app.melotrail.application.ProjectSnapshot
-import app.melotrail.application.RetryMidiCleanupRequest
+import app.melotrail.application.CleanMidiRequest
 import app.melotrail.application.SelectMidiFeelRequest
 import app.melotrail.application.AudioPreparationApplicationService
 import app.melotrail.application.AudioPreparationAvailability
@@ -303,8 +301,7 @@ sealed interface WorkspaceOperation {
     data class AnalyzingPart(val id: String, val progress: OperationProgress? = null) : WorkspaceOperation
     data class InspectingPart(val id: String) : WorkspaceOperation
     data class ApplyingAudioCleanup(val id: String) : WorkspaceOperation
-    data class RetryingMidiCleanup(val id: String, val progress: OperationProgress? = null) : WorkspaceOperation
-    data class PreparingMidi(val id: String, val progress: OperationProgress? = null) : WorkspaceOperation
+    data class CleaningMidi(val id: String, val progress: OperationProgress? = null) : WorkspaceOperation
     data class SelectingMidiFeel(val id: String) : WorkspaceOperation
     data class TranscribingPart(val id: String) : WorkspaceOperation
     data class UpdatingPartRole(val id: String) : WorkspaceOperation
@@ -325,8 +322,7 @@ val WorkspaceOperation.isMutating: Boolean
     get() = this is WorkspaceOperation.OpeningProject || this is WorkspaceOperation.CreatingProject ||
         this is WorkspaceOperation.ImportingPart || this is WorkspaceOperation.AnalyzingPart ||
         this is WorkspaceOperation.InspectingPart || this is WorkspaceOperation.ApplyingAudioCleanup || this is WorkspaceOperation.TranscribingPart ||
-        this is WorkspaceOperation.RetryingMidiCleanup ||
-        this is WorkspaceOperation.PreparingMidi ||
+        this is WorkspaceOperation.CleaningMidi ||
         this is WorkspaceOperation.SelectingMidiFeel ||
         this is WorkspaceOperation.UpdatingPartRole || this is WorkspaceOperation.SavingStructure ||
         this is WorkspaceOperation.GeneratingCohesion || this is WorkspaceOperation.ApprovingCohesion ||
@@ -406,8 +402,8 @@ internal fun importRoute(kind: ImportSourceKind?): String = when (kind) {
 
 /** Exactly one next action is derived from canonical artifact state, never from a row-local flag. */
 sealed interface PartPrimaryAction {
-    data class PrepareMidi(val partId: String) : PartPrimaryAction
-    data class ReviewRepair(val partId: String) : PartPrimaryAction
+    data class CleanMidi(val partId: String) : PartPrimaryAction
+    data class ReviewCleanMidi(val partId: String) : PartPrimaryAction
     data class InspectOrTranscribeAudio(val partId: String, val inspected: Boolean) : PartPrimaryAction
     data class ApplyLoFiChange(val partId: String) : PartPrimaryAction
     data class Analyze(val partId: String) : PartPrimaryAction
@@ -418,8 +414,8 @@ sealed interface PartPrimaryAction {
 
 internal fun primaryPartAction(part: app.melotrail.application.PartSummary, pendingMidiFeel: MidiAnalysisInput? = null): PartPrimaryAction = when {
     pendingMidiFeel != null && pendingMidiFeel != part.preparation.midiFeel.selected -> PartPrimaryAction.ApplyLoFiChange(part.id)
-    part.preparation.midiQuality.status == MidiQualityStatus.APPROVAL_REQUIRED -> PartPrimaryAction.ReviewRepair(part.id)
-    part.preparation.rawMidi && part.preparation.midiQuality.status == MidiQualityStatus.STALE_OR_INVALID -> PartPrimaryAction.PrepareMidi(part.id)
+    part.preparation.midiQuality.status == MidiQualityStatus.APPROVAL_REQUIRED -> PartPrimaryAction.ReviewCleanMidi(part.id)
+    part.preparation.rawMidi && part.preparation.midiQuality.status == MidiQualityStatus.STALE_OR_INVALID -> PartPrimaryAction.CleanMidi(part.id)
     part.preparation.rawMidi && part.preparation.midiQuality.status == MidiQualityStatus.LEGACY_UNKNOWN -> PartPrimaryAction.FixIssue(part.id)
     part.preparation.warnings.isNotEmpty() -> PartPrimaryAction.FixIssue(part.id)
     part.sourceType == PartSourceType.AUDIO && !part.preparation.rawMidi && part.analysis?.status != PartAnalysisStatus.MIDI -> PartPrimaryAction.InspectOrTranscribeAudio(part.id, part.preparation.inspected)
@@ -429,8 +425,8 @@ internal fun primaryPartAction(part: app.melotrail.application.PartSummary, pend
 }
 
 internal fun PartPrimaryAction.label(): String = when (this) {
-    is PartPrimaryAction.PrepareMidi -> "Clean MIDI"
-    is PartPrimaryAction.ReviewRepair -> "Review repair"
+    is PartPrimaryAction.CleanMidi -> "Clean MIDI"
+    is PartPrimaryAction.ReviewCleanMidi -> "Review Clean MIDI"
     is PartPrimaryAction.InspectOrTranscribeAudio -> if (inspected) "Transcribe solo piano" else "Inspect audio"
     is PartPrimaryAction.ApplyLoFiChange -> "Apply Lo-fi change"
     is PartPrimaryAction.Analyze -> "Analyze"
@@ -452,8 +448,7 @@ sealed interface WorkspaceRetry {
     data class Analyze(val root: Path, val partId: String) : WorkspaceRetry
     data class Inspect(val root: Path, val partId: String) : WorkspaceRetry
     data class Cleanup(val root: Path, val partId: String, val mode: InputCleanupMode) : WorkspaceRetry
-    data class MidiCleanup(val request: RetryMidiCleanupRequest) : WorkspaceRetry
-    data class PrepareMidi(val request: PrepareMidiRequest) : WorkspaceRetry
+    data class CleanMidi(val request: CleanMidiRequest) : WorkspaceRetry
     data class ApplyMidiFeel(val root: Path, val partId: String, val input: MidiAnalysisInput) : WorkspaceRetry
     data class Transcribe(val root: Path, val partId: String, val selectedInput: TranscriptionInputArtifact) : WorkspaceRetry
     data class SaveStructure(val root: Path, val partIds: List<String>, val selectedIndex: Int?) : WorkspaceRetry
@@ -490,7 +485,7 @@ sealed interface WorkspaceIntent {
     data class UpdateImportPart(val draft: WorkspaceDialog.ImportPart) : WorkspaceIntent
     data object ConfirmImportProvenance : WorkspaceIntent
     data object ImportPart : WorkspaceIntent
-    data class PrepareMidi(val partId: String) : WorkspaceIntent
+    data class CleanMidi(val partId: String) : WorkspaceIntent
     data class ShowPartDetails(
         val partId: String,
         val focusReturn: PartDetailsFocusReturn = PartDetailsFocusReturn.ImportedRow(partId)
@@ -502,8 +497,7 @@ sealed interface WorkspaceIntent {
     data object ApplySelectedCleanup : WorkspaceIntent
     data object ConfirmSafeCleanup : WorkspaceIntent
     data class SelectMidiCleanupProfile(val profile: MidiCleanupProfile) : WorkspaceIntent
-    data object RetryMidiCleanup : WorkspaceIntent
-    data object ApproveMidiRepair : WorkspaceIntent
+    data object ApproveCleanMidi : WorkspaceIntent
     data class SelectMidiFeel(val input: MidiAnalysisInput) : WorkspaceIntent
     data object ApplyMidiFeelAndReanalyze : WorkspaceIntent
     data object ConfirmTightenTiming : WorkspaceIntent
@@ -643,7 +637,7 @@ class WorkspaceViewModel(
             is WorkspaceIntent.UpdateImportPart -> mutableState.update { it.copy(dialog = intent.draft) }
             WorkspaceIntent.ConfirmImportProvenance -> confirmImportProvenance()
             WorkspaceIntent.ImportPart -> importPart()
-            is WorkspaceIntent.PrepareMidi -> prepareMidi(intent.partId)
+            is WorkspaceIntent.CleanMidi -> cleanMidi(intent.partId)
             is WorkspaceIntent.ShowPartDetails -> showPartDetails(intent)
             is WorkspaceIntent.AnalyzePart -> analyzePart(intent.partId)
             is WorkspaceIntent.SelectPart -> selectPart(intent.partId)
@@ -652,8 +646,7 @@ class WorkspaceViewModel(
             WorkspaceIntent.ApplySelectedCleanup -> applySelectedCleanup()
             WorkspaceIntent.ConfirmSafeCleanup -> confirmSafeCleanup()
             is WorkspaceIntent.SelectMidiCleanupProfile -> mutableState.update { it.copy(midiQualityReview = it.midiQualityReview.copy(profile = intent.profile)) }
-            WorkspaceIntent.RetryMidiCleanup -> retryMidiCleanup()
-            WorkspaceIntent.ApproveMidiRepair -> approveMidiRepair()
+            WorkspaceIntent.ApproveCleanMidi -> approveCleanMidi()
             is WorkspaceIntent.SelectMidiFeel -> selectMidiFeel(intent.input)
             WorkspaceIntent.ApplyMidiFeelAndReanalyze -> applyMidiFeelAndReanalyze()
             WorkspaceIntent.ConfirmTightenTiming -> confirmTightenTiming()
@@ -797,7 +790,7 @@ class WorkspaceViewModel(
 
     private fun requestOpenProject(root: Path) {
         if (state.value.operation.isMutating) {
-            if (state.value.operation is WorkspaceOperation.ImportingPart || state.value.operation is WorkspaceOperation.PreparingMidi) {
+            if (state.value.operation is WorkspaceOperation.ImportingPart || state.value.operation is WorkspaceOperation.CleaningMidi) {
                 importPreparationJob?.cancel()
                 mutableState.update { it.copy(operation = WorkspaceOperation.Idle, retry = null) }
                 openProject(root)
@@ -1081,39 +1074,6 @@ class WorkspaceViewModel(
         }
     }
 
-    private fun prepareMidi(partId: String) {
-        val project = state.value.project ?: return fail("Prepare MIDI", "Open a project before preparing MIDI.")
-        val part = project.parts.find { it.id == partId } ?: return fail("Prepare MIDI", "Part '$partId' is no longer available.")
-        if (!part.preparation.rawMidi) return fail("Prepare MIDI", "Part '$partId' has no immutable raw MIDI to prepare.")
-        if (state.value.operation.isMutating) return
-        val request = PrepareMidiRequest(project.root, partId)
-        val feedbackId = beginFeedback(OperationKind.MIDI_REPAIR, OperationPhase.WAITING_FOR_WORKER, "Preparing MIDI for $partId…")
-        mutableState.update { it.copy(operation = WorkspaceOperation.PreparingMidi(partId), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
-        importPreparationJob = scope.launch {
-            runCatching {
-                withContext(ioDispatcher) {
-                    projectService.prepareMidi(request) { progress ->
-                        scope.launch { updateProgress(feedbackId, WorkspaceOperation.PreparingMidi(partId, progress)) }
-                    }
-                }
-            }.onSuccess { result ->
-                cancelPlaybackSession(resetState = true)
-                val message = when (result.outcome) {
-                    PrepareMidiOutcome.APPROVAL_REQUIRED -> "Repair is ready for review before analysis."
-                    PrepareMidiOutcome.READY_FOR_STRUCTURE -> "MIDI prepared and analyzed. Add $partId to structure when ready."
-                }
-                mutableState.update { current ->
-                    current.copy(project = result.project, selectedPartId = partId, operation = WorkspaceOperation.Idle,
-                        notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message) ?: current.operationFeedback,
-                        retry = null, downstreamArtifactsStale = true)
-                }
-            }.onFailure { failure ->
-                if (failure is CancellationException) return@onFailure
-                fail("Prepare MIDI", failure.message ?: "Unable to prepare MIDI for $partId.", WorkspaceRetry.PrepareMidi(request), feedbackId)
-            }
-        }
-    }
-
     private fun showPartDetails(intent: WorkspaceIntent.ShowPartDetails) {
         val project = state.value.project ?: return
         val part = project.parts.find { it.id == intent.partId } ?: return
@@ -1190,55 +1150,54 @@ class WorkspaceViewModel(
         runCleanup(dialog.partId, InputCleanupMode.SAFE_CLEANUP, confirmed = true)
     }
 
-    private fun retryMidiCleanup() {
-        val project = state.value.project ?: return fail("MIDI cleanup", "Open a project before retrying MIDI cleanup.")
-        val partId = state.value.selectedPartId ?: return fail("MIDI cleanup", "Select a part before retrying MIDI cleanup.")
-        val part = project.parts.find { it.id == partId } ?: return fail("MIDI cleanup", "Selected part is no longer available.")
+    private fun cleanMidi(partId: String) {
+        val project = state.value.project ?: return fail("Clean MIDI", "Open a project before cleaning MIDI.")
+        val part = project.parts.find { it.id == partId } ?: return fail("Clean MIDI", "Part '$partId' is no longer available.")
+        if (!part.preparation.rawMidi) return fail("Clean MIDI", "Part '$partId' has no immutable raw MIDI to clean.")
         when (part.preparation.midiQuality.status) {
-            MidiQualityStatus.LEGACY_UNKNOWN -> return fail("MIDI cleanup", "This legacy part has no cleanup provenance. Re-import it to create a reviewable raw-to-clean MIDI record.")
-            MidiQualityStatus.CURRENT, MidiQualityStatus.STALE_OR_INVALID -> Unit
-            MidiQualityStatus.APPROVAL_REQUIRED -> return fail("MIDI repair", "Review the repair report and explicitly approve it before analysis.")
+            MidiQualityStatus.LEGACY_UNKNOWN -> return fail("Clean MIDI", "This legacy part has no raw-to-clean provenance. Re-import it to create current quality evidence.")
+            MidiQualityStatus.CURRENT, MidiQualityStatus.STALE_OR_INVALID, MidiQualityStatus.APPROVAL_REQUIRED -> Unit
         }
         val profile = state.value.midiQualityReview.profile
+        mutableState.update { it.copy(selectedPartId = partId) }
         if (profile == MidiCleanupProfile.TIGHTEN_TIMING) {
             mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmTightenTiming(partId)) }
         } else {
-            runMidiCleanupRetry(RetryMidiCleanupRequest(project.root, partId, namedMidiCleanupOptions(profile)))
+            runCleanMidi(CleanMidiRequest(project.root, partId, namedMidiCleanupOptions(profile)))
         }
     }
 
-    private fun approveMidiRepair() {
-        val project = state.value.project ?: return fail("MIDI repair", "Open a project before approving MIDI repair.")
-        val partId = state.value.selectedPartId ?: return fail("MIDI repair", "Select a part before approving MIDI repair.")
+    private fun approveCleanMidi() {
+        val project = state.value.project ?: return fail("Clean MIDI", "Open a project before approving Clean MIDI.")
+        val partId = state.value.selectedPartId ?: return fail("Clean MIDI", "Select a part before approving Clean MIDI.")
         if (state.value.operation.isMutating) return
-        val request = PrepareMidiRequest(project.root, partId)
-        val feedbackId = beginFeedback(OperationKind.MIDI_REPAIR, OperationPhase.VALIDATING, "Approving repair and analyzing $partId…")
-        mutableState.update { it.copy(operation = WorkspaceOperation.PreparingMidi(partId), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
+        val feedbackId = beginFeedback(OperationKind.MIDI_CLEANUP, OperationPhase.VALIDATING, "Approving Clean MIDI for $partId…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.CleaningMidi(partId), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
-            runCatching { withContext(ioDispatcher) { projectService.approveMidiRepairAndAnalyze(request) } }
-                .onSuccess { result ->
-                    val message = "Repair approved and MIDI analyzed. Add $partId to structure when ready."
-                    mutableState.update { current -> current.copy(project = result.project, operation = WorkspaceOperation.Idle, notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message) ?: current.operationFeedback, downstreamArtifactsStale = true) }
+            runCatching { withContext(ioDispatcher) { projectService.approveCleanMidi(project.root, partId) } }
+                .onSuccess { snapshot ->
+                    val message = "Clean MIDI approved. Analyze $partId when ready."
+                    mutableState.update { current -> current.copy(project = snapshot, operation = WorkspaceOperation.Idle, notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message) ?: current.operationFeedback, downstreamArtifactsStale = true) }
                 }
-                .onFailure { failure -> if (failure !is CancellationException) fail("MIDI repair", failure.message ?: "Unable to approve MIDI repair for $partId.", WorkspaceRetry.PrepareMidi(request), feedbackId) }
+                .onFailure { failure -> if (failure !is CancellationException) fail("Clean MIDI", failure.message ?: "Unable to approve Clean MIDI for $partId.", sessionId = feedbackId) }
         }
     }
 
     private fun selectMidiFeel(input: MidiAnalysisInput) {
         val project = state.value.project ?: return fail("Lo-fi MIDI Feel", "Open a project before choosing MIDI feel.")
-        val partId = state.value.selectedPartId ?: return fail("Lo-fi Feel", "Select a repaired MIDI part first.")
+        val partId = state.value.selectedPartId ?: return fail("Lo-fi Feel", "Select a cleaned MIDI part first.")
         val part = project.parts.find { it.id == partId } ?: return fail("Lo-fi Feel", "Selected part is no longer available.")
-        if (part.preparation.midiQuality.status != MidiQualityStatus.CURRENT) return fail("Lo-fi Feel", "Approve a current MIDI repair before choosing a MIDI feel.")
+        if (part.preparation.midiQuality.status != MidiQualityStatus.CURRENT) return fail("Lo-fi Feel", "Approve current Clean MIDI before choosing a MIDI feel.")
         if (state.value.operation.isMutating) return
         mutableState.update { it.copy(pendingMidiFeel = input, notification = null, retry = null) }
     }
 
     private fun applyMidiFeelAndReanalyze() {
         val project = state.value.project ?: return fail("Lo-fi MIDI Feel", "Open a project before applying MIDI feel.")
-        val partId = state.value.selectedPartId ?: return fail("Lo-fi MIDI Feel", "Select a repaired MIDI part first.")
+        val partId = state.value.selectedPartId ?: return fail("Lo-fi MIDI Feel", "Select a cleaned MIDI part first.")
         val input = state.value.pendingMidiFeel ?: return
         if (state.value.operation.isMutating) return
-        val feedbackId = beginFeedback(OperationKind.MIDI_REPAIR, OperationPhase.VALIDATING, "Applying ${if (input == MidiAnalysisInput.LOFI_FEEL) "Lo-fi MIDI Feel · 80 BPM + 58% swing" else "Original MIDI"} and re-analyzing…")
+        val feedbackId = beginFeedback(OperationKind.MIDI_CLEANUP, OperationPhase.VALIDATING, "Applying ${if (input == MidiAnalysisInput.LOFI_FEEL) "Lo-fi MIDI Feel · 80 BPM + 58% swing" else "Original MIDI"} and re-analyzing…")
         mutableState.update { it.copy(operation = WorkspaceOperation.SelectingMidiFeel(partId), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
             runCatching {
@@ -1260,38 +1219,40 @@ class WorkspaceViewModel(
         val dialog = state.value.dialog as? WorkspaceDialog.ConfirmTightenTiming ?: return
         val project = state.value.project ?: return
         mutableState.update { it.copy(dialog = null) }
-        runMidiCleanupRetry(
-            RetryMidiCleanupRequest(project.root, dialog.partId, namedMidiCleanupOptions(MidiCleanupProfile.TIGHTEN_TIMING))
+        runCleanMidi(
+            CleanMidiRequest(project.root, dialog.partId, namedMidiCleanupOptions(MidiCleanupProfile.TIGHTEN_TIMING))
         )
     }
 
-    private fun runMidiCleanupRetry(request: RetryMidiCleanupRequest) {
+    private fun runCleanMidi(request: CleanMidiRequest) {
         if (state.value.operation.isMutating) return
-        val feedbackId = beginFeedback(OperationKind.MIDI_REPAIR, OperationPhase.WAITING_FOR_WORKER, "Repairing MIDI for ${request.partId}…")
-        mutableState.update { it.copy(operation = WorkspaceOperation.RetryingMidiCleanup(request.partId), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
+        val feedbackId = beginFeedback(OperationKind.MIDI_CLEANUP, OperationPhase.WAITING_FOR_WORKER, "Cleaning MIDI for ${request.partId}…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.CleaningMidi(request.partId), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
             runCatching {
                 withContext(ioDispatcher) {
-                    projectService.retryMidiCleanup(request) { progress ->
-                        scope.launch { updateProgress(feedbackId, WorkspaceOperation.RetryingMidiCleanup(request.partId, progress)) }
+                    projectService.cleanMidi(request) { progress ->
+                        scope.launch { updateProgress(feedbackId, WorkspaceOperation.CleaningMidi(request.partId, progress)) }
                     }
                 }
             }.onSuccess { snapshot ->
-                // A MIDI retry changes the clean-MIDI digest. Do not leave the old monitor artifact selected.
+                // A Clean MIDI run changes the digest. Do not leave the old monitor artifact selected.
                 cancelPlaybackSession(resetState = true)
+                val reviewRequired = snapshot.parts.firstOrNull { it.id == request.partId }?.preparation?.midiQuality?.status == MidiQualityStatus.APPROVAL_REQUIRED
+                val message = if (reviewRequired) "Clean MIDI is ready for A/B review and approval." else "Clean MIDI is current. Analyze ${request.partId} when ready."
                 mutableState.update {
                     it.copy(
                         project = snapshot,
                         arrangement = null,
                         operation = WorkspaceOperation.Idle,
-                        notification = "MIDI cleanup retried with ${request.cleanup.profile.name.lowercase().replace('_', '-')}. Preview will resolve a fresh fingerprint; analyze ${request.partId} before arranging.",
-                        operationFeedback = feedbackTracker.complete(feedbackId, "MIDI repair complete for ${request.partId}.", OperationSeverity.SUCCESS) ?: it.operationFeedback,
+                        notification = message,
+                        operationFeedback = feedbackTracker.complete(feedbackId, message, if (reviewRequired) OperationSeverity.WARNING else OperationSeverity.SUCCESS) ?: it.operationFeedback,
                         downstreamArtifactsStale = true,
                         retry = null
                     )
                 }
             }.onFailure { failure ->
-                fail("MIDI cleanup", failure.message ?: "Unable to retry MIDI cleanup for ${request.partId}.", WorkspaceRetry.MidiCleanup(request), feedbackId)
+                fail("Clean MIDI", failure.message ?: "Unable to clean MIDI for ${request.partId}.", WorkspaceRetry.CleanMidi(request), feedbackId)
             }
         }
     }
@@ -1650,15 +1611,11 @@ class WorkspaceViewModel(
             if (action.mode == InputCleanupMode.SAFE_CLEANUP) mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmSafeCleanup(action.partId)) }
             else runCleanup(action.partId, action.mode, confirmed = false)
         }
-        is WorkspaceRetry.MidiCleanup -> {
+        is WorkspaceRetry.CleanMidi -> {
             mutableState.update { it.copy(selectedPartId = action.request.partId, midiQualityReview = MidiQualityReviewDraft(action.request.cleanup.profile)) }
             if (action.request.cleanup.profile == MidiCleanupProfile.TIGHTEN_TIMING) {
                 mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmTightenTiming(action.request.partId)) }
-            } else runMidiCleanupRetry(action.request)
-        }
-        is WorkspaceRetry.PrepareMidi -> {
-            mutableState.update { it.copy(selectedPartId = action.request.partId) }
-            prepareMidi(action.request.partId)
+            } else runCleanMidi(action.request)
         }
         is WorkspaceRetry.ApplyMidiFeel -> {
             mutableState.update { it.copy(selectedPartId = action.partId, pendingMidiFeel = action.input) }
@@ -1800,7 +1757,7 @@ class WorkspaceViewModel(
         val progress = when (operation) {
             is WorkspaceOperation.ImportingPart -> operation.progress
             is WorkspaceOperation.AnalyzingPart -> operation.progress
-            is WorkspaceOperation.RetryingMidiCleanup -> operation.progress
+            is WorkspaceOperation.CleaningMidi -> operation.progress
             is WorkspaceOperation.GeneratingCohesion -> operation.progress
             is WorkspaceOperation.GeneratingArrangement -> operation.progress
             is WorkspaceOperation.ApplyingMix -> operation.progress

@@ -99,9 +99,9 @@ class MidiLoFiFeelTransformer {
     }
 
     private fun readSequence(path: Path): Sequence {
-        require(Files.isRegularFile(path) && Files.size(path) >= 14) { "Repaired MIDI is missing or invalid: $path" }
-        Files.newInputStream(path).use { require(it.readNBytes(4).decodeToString() == "MThd") { "Repaired MIDI is missing or invalid: $path" } }
-        val sequence = try { MidiSystem.getSequence(path.toFile()) } catch (error: Exception) { throw IllegalArgumentException("Invalid repaired MIDI '$path': ${error.message}", error) }
+        require(Files.isRegularFile(path) && Files.size(path) >= 14) { "Cleaned MIDI is missing or invalid: $path" }
+        Files.newInputStream(path).use { require(it.readNBytes(4).decodeToString() == "MThd") { "Cleaned MIDI is missing or invalid: $path" } }
+        val sequence = try { MidiSystem.getSequence(path.toFile()) } catch (error: Exception) { throw IllegalArgumentException("Invalid cleaned MIDI '$path': ${error.message}", error) }
         require(sequence.divisionType == Sequence.PPQ && sequence.resolution > 0) { "Lo-fi Feel supports PPQ MIDI only." }
         return sequence
     }
@@ -116,12 +116,12 @@ class MidiLoFiFeelTransformer {
             if (on) active.getOrPut(message.channel to message.data1) { ArrayDeque() }.addLast(indexed)
             if (off) {
                 val start = active[message.channel to message.data1]?.removeFirstOrNull()
-                    ?: throw IllegalArgumentException("Invalid repaired MIDI '$path': unmatched note-off at ${indexed.event.tick}")
-                require(indexed.event.tick > start.event.tick) { "Invalid repaired MIDI '$path': non-positive note duration" }
+                    ?: throw IllegalArgumentException("Invalid cleaned MIDI '$path': unmatched note-off at ${indexed.event.tick}")
+                require(indexed.event.tick > start.event.tick) { "Invalid cleaned MIDI '$path': non-positive note duration" }
                 pairs += NotePair(start, indexed, message.channel, message.data1, start.event.tick, indexed.event.tick)
             }
         }
-        require(active.values.all { it.isEmpty() }) { "Invalid repaired MIDI '$path': unclosed note-on event" }
+        require(active.values.all { it.isEmpty() }) { "Invalid cleaned MIDI '$path': unclosed note-on event" }
         return pairs.sortedWith(compareBy<NotePair> { it.channel }.thenBy { it.pitch }.thenBy { it.start }.thenBy { it.startEvent.track }.thenBy { it.startEvent.index })
     }
 

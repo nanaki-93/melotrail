@@ -21,7 +21,7 @@ class WorkerClientContractTest {
             MP3ConvertCommand("/input.mp3", "/output.wav"),
             MP3ExportCommand("/master.wav", "/song.mp3"),
             TranscribeCommand("/input.wav", "/raw.mid", "piano"),
-            MidiCleanCommand("/raw.mid", "/clean.mid"),
+            CleanMidiCommand("/raw.mid", "/clean.mid"),
             InputInspectionCommand("/input.wav"),
             AudioCleanupCommand("/input.wav", "/clean.wav", listOf(AudioCleanupOperation.DcRemoval))
         )

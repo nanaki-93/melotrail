@@ -44,7 +44,7 @@ class CreationProgressTest {
                 )),
                 CreationStage.CLEAN_MIDI,
                 CreationStageStatus.STALE,
-                CreationIntent.RETRY_MIDI_CLEANUP
+                CreationIntent.CLEAN_MIDI
             ),
             Case(
                 "structure needs saving",

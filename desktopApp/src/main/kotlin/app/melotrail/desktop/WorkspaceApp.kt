@@ -166,7 +166,7 @@ object WorkspaceTags {
     const val PREPARATION_ORIGINAL = "preparation-original"
     const val PREPARATION_CLEAN = "preparation-clean"
     const val MIDI_QUALITY_PANEL = "midi-quality-panel"
-    const val MIDI_QUALITY_RETRY = "midi-quality-retry"
+    const val MIDI_QUALITY_CLEAN = "midi-quality-clean"
     const val MIDI_QUALITY_PROFILE_PREFIX = "midi-quality-profile-"
     const val MIDI_FEEL_ORIGINAL = "midi-feel-original"
     const val MIDI_FEEL_LOFI = "midi-feel-lofi"
@@ -575,7 +575,7 @@ internal fun PartsPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
 }
 
 @Composable
-internal fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Repair MIDI", WorkspaceTags.MIDI_QUALITY_PANEL) {
+internal fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Clean MIDI", WorkspaceTags.MIDI_QUALITY_PANEL) {
     val part = state.selectedPartId?.let { id -> state.project?.parts?.find { it.id == id } } ?: return@WorkspaceCard
     val quality = part.preparation.midiQuality
     Text("Part ${part.id}", fontWeight = FontWeight.Medium)
@@ -588,9 +588,9 @@ internal fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (Workspac
                 enabled = !state.operation.isMutating && midiPreviewReady
             ) { Text("Preview raw MIDI") }
             OutlinedButton(
-                onClick = { onIntent(WorkspaceIntent.PreviewMidiPart(part.id, app.melotrail.application.PreviewMidiSource.REPAIRED)) },
+                onClick = { onIntent(WorkspaceIntent.PreviewMidiPart(part.id, app.melotrail.application.PreviewMidiSource.CLEANED)) },
                 enabled = !state.operation.isMutating && midiPreviewReady && part.preparation.cleanMidi
-            ) { Text("Preview repaired MIDI") }
+            ) { Text("Preview cleaned MIDI") }
             if (part.preparation.midiFeel.available) {
                 OutlinedButton(
                     onClick = { onIntent(WorkspaceIntent.PreviewMidiPart(part.id, app.melotrail.application.PreviewMidiSource.LOFI_FEEL)) },
@@ -605,33 +605,21 @@ internal fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (Workspac
             Text("Analysis and arrangement are blocked until this part is re-imported with MIDI cleanup. Structure may still be edited.", style = MaterialTheme.typography.bodySmall)
         }
         app.melotrail.application.MidiQualityStatus.STALE_OR_INVALID -> {
-            Text("Raw MIDI is ready but repaired MIDI evidence is missing, stale, or invalid.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-            Text("Analysis and arrangement are blocked. Run Repair MIDI, review its report, then analyze ${part.id}; structure may still be edited.", style = MaterialTheme.typography.bodySmall)
+            Text("Raw MIDI is ready but cleaned MIDI evidence is missing, stale, or invalid.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            Text("Analysis and arrangement are blocked. Run Clean MIDI, review its report, then analyze ${part.id}; structure may still be edited.", style = MaterialTheme.typography.bodySmall)
         }
         app.melotrail.application.MidiQualityStatus.APPROVAL_REQUIRED -> {
-            Text("Repair changed more notes or timing than the automatic threshold allows.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-            Text("Review the raw/repaired previews and report, then explicitly approve before analysis.", style = MaterialTheme.typography.bodySmall)
-            Button(onClick = { onIntent(WorkspaceIntent.ApproveMidiRepair) }, enabled = !state.operation.isMutating) { Text("Approve MIDI repair") }
+            Text("Cleaning changed more notes or timing than the automatic threshold allows.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            Text("Review the raw/cleaned previews and report, then explicitly approve before analysis.", style = MaterialTheme.typography.bodySmall)
+            quality.report?.let { MidiQualityDiffSummary(it) }
+            quality.warnings.forEach { Text("Warning: ${it.message}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+            quality.recommendations.forEach { Text(midiQualityRecommendationText(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            Button(onClick = { onIntent(WorkspaceIntent.ApproveCleanMidi) }, enabled = !state.operation.isMutating) { Text("Approve Clean MIDI") }
         }
         app.melotrail.application.MidiQualityStatus.CURRENT -> {
             val report = quality.report
             Text("Current profile: ${quality.cleanup?.profile?.qualityProfileLabel() ?: "unknown"}", style = MaterialTheme.typography.bodySmall)
-            if (report != null) {
-                Text("Raw to clean", style = MaterialTheme.typography.labelLarge)
-                Text(
-                    "Notes ${report.raw.noteCount} to ${report.clean.noteCount} · ${formatMetric(report.raw.notesPerSecond)} to ${formatMetric(report.clean.notesPerSecond)} notes/s · polyphony ${report.raw.maximumPolyphony} to ${report.clean.maximumPolyphony}",
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Text(
-                    "Timing: ${report.timing.changedStarts} starts, ${report.timing.changedEnds} ends changed; ${report.timing.removedNotes} removed, ${report.timing.addedNotes} added; max shift ${maxOf(report.timing.maxStartShiftTicks, report.timing.maxEndShiftTicks)} ticks.",
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Text(
-                    if (report.tempoAndTimeSignaturesPreserved) "Tempo and time signatures preserved." else "Tempo or time signatures changed; review before arranging.",
-                    color = if (report.tempoAndTimeSignaturesPreserved) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
+            if (report != null) MidiQualityDiffSummary(report)
             if (quality.warnings.isEmpty()) Text("No quality warnings.", style = MaterialTheme.typography.bodySmall)
             quality.warnings.forEach { Text("Warning: ${it.message}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
             quality.recommendations.forEach { Text(midiQualityRecommendationText(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -646,7 +634,7 @@ internal fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (Workspac
                 Button(
                     onClick = { onIntent(WorkspaceIntent.AnalyzePart(part.id)) },
                     enabled = !state.operation.isMutating,
-                    modifier = Modifier.semantics { contentDescription = "Analyze repaired MIDI for ${part.id}" }
+                    modifier = Modifier.semantics { contentDescription = "Analyze cleaned MIDI for ${part.id}" }
                 ) { Text("Analyze") }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
@@ -672,12 +660,12 @@ internal fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (Workspac
                     modifier = Modifier.semantics { testTag = WorkspaceTags.MIDI_FEEL_APPLY }
                 ) { Text("Apply and re-analyze") }
             }
-            if (part.preparation.midiFeel.available) Text("A/B preview uses the same monitor-volume control for repaired MIDI and Lo-fi Feel.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (part.preparation.midiFeel.available) Text("A/B preview uses the same monitor-volume control for cleaned MIDI and Lo-fi Feel.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 
     if (quality.status != app.melotrail.application.MidiQualityStatus.LEGACY_UNKNOWN) {
-        Text("Repair profile", style = MaterialTheme.typography.labelLarge)
+        Text("Cleaning profile", style = MaterialTheme.typography.labelLarge)
         Text("Choose a named profile. This never edits source MIDI or exposes worker parameters.", style = MaterialTheme.typography.bodySmall)
         MidiCleanupProfile.entries.forEach { profile ->
             val selected = state.midiQualityReview.profile == profile
@@ -691,14 +679,32 @@ internal fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (Workspac
             Text("Timing warning: tighten timing uses a fixed 1/16 grid at 40% strength. It may shift expressive note starts and ends; confirmation is required.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         }
         Button(
-            onClick = { onIntent(WorkspaceIntent.RetryMidiCleanup) },
+            onClick = { onIntent(WorkspaceIntent.CleanMidi(part.id)) },
             enabled = !state.operation.isMutating,
-            modifier = Modifier.semantics { testTag = WorkspaceTags.MIDI_QUALITY_RETRY }
-        ) { Text("Repair MIDI") }
+            modifier = Modifier.semantics { testTag = WorkspaceTags.MIDI_QUALITY_CLEAN }
+        ) { Text("Clean MIDI") }
     }
-    if ((state.operation as? WorkspaceOperation.Failed)?.action == "MIDI cleanup") {
-        Text("Retry failed: ${(state.operation as WorkspaceOperation.Failed).message}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+    if ((state.operation as? WorkspaceOperation.Failed)?.action == "Clean MIDI") {
+        Text("Clean MIDI failed: ${(state.operation as WorkspaceOperation.Failed).message}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
     }
+}
+
+@Composable
+private fun MidiQualityDiffSummary(report: app.melotrail.arrangement.MidiQualityReport) {
+    Text("Raw to clean", style = MaterialTheme.typography.labelLarge)
+    Text(
+        "Notes ${report.raw.noteCount} to ${report.clean.noteCount} · ${formatMetric(report.raw.notesPerSecond)} to ${formatMetric(report.clean.notesPerSecond)} notes/s · polyphony ${report.raw.maximumPolyphony} to ${report.clean.maximumPolyphony}",
+        style = MaterialTheme.typography.bodySmall
+    )
+    Text(
+        "Timing: ${report.timing.changedStarts} starts, ${report.timing.changedEnds} ends changed; ${report.timing.removedNotes} removed, ${report.timing.addedNotes} added; max shift ${maxOf(report.timing.maxStartShiftTicks, report.timing.maxEndShiftTicks)} ticks.",
+        style = MaterialTheme.typography.bodySmall
+    )
+    Text(
+        if (report.tempoAndTimeSignaturesPreserved) "Tempo and time signatures preserved." else "Tempo or time signatures changed; review before arranging.",
+        color = if (report.tempoAndTimeSignaturesPreserved) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodySmall
+    )
 }
 
 private fun MidiCleanupProfile.qualityProfileLabel(): String = when (this) {
@@ -1430,8 +1436,7 @@ private fun statusText(state: WorkspaceUiState): String = when (val operation = 
     is WorkspaceOperation.AnalyzingPart -> "Analyzing ${operation.id}…"
     is WorkspaceOperation.InspectingPart -> "Inspecting preserved source for ${operation.id}…"
     is WorkspaceOperation.ApplyingAudioCleanup -> "Applying selected cleanup for ${operation.id}…"
-    is WorkspaceOperation.RetryingMidiCleanup -> "Retrying MIDI cleanup for ${operation.id}…"
-    is WorkspaceOperation.PreparingMidi -> "Preparing MIDI for ${operation.id}…"
+    is WorkspaceOperation.CleaningMidi -> "Cleaning MIDI for ${operation.id}…"
     is WorkspaceOperation.SelectingMidiFeel -> "Selecting Lo-fi Feel for ${operation.id}…"
     is WorkspaceOperation.TranscribingPart -> "Running transcription quality gate for ${operation.id}…"
     is WorkspaceOperation.UpdatingPartRole -> "Saving ${operation.id} role…"
@@ -1528,8 +1533,8 @@ private fun ConfirmTightenTimingDialog(dialog: WorkspaceDialog.ConfirmTightenTim
     AlertDialog(
         onDismissRequest = { onIntent(WorkspaceIntent.DismissDialog) },
         title = { Text("Tighten timing for ${dialog.partId}?") },
-        text = { Text("This retry uses the fixed 1/16 grid at 40% strength. It can move expressive note timing. The raw source MIDI remains unchanged; clean MIDI, its quality report, analysis, and preview fingerprint will be replaced or refreshed only after validation.") },
-        confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.ConfirmTightenTiming) }) { Text("Retry with timing changes") } },
+        text = { Text("This Clean MIDI run uses the fixed 1/16 grid at 40% strength. It can move expressive note timing. The raw source MIDI remains unchanged; cleaned MIDI, its quality report, analysis, and preview fingerprint will be replaced or refreshed only after validation.") },
+        confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.ConfirmTightenTiming) }) { Text("Clean with timing changes") } },
         dismissButton = { TextButton(onClick = { onIntent(WorkspaceIntent.DismissDialog) }) { Text("Keep current cleanup") } }
     )
 }
@@ -1615,7 +1620,7 @@ private fun ImportPartDialog(draft: WorkspaceDialog.ImportPart, onIntent: (Works
                     ) { Text(if (draft.detailsExpanded) "Hide details" else "Details") }
                     if (draft.detailsExpanded) {
                         Text("The initial part ID is safely inferred as ${draft.id}; the default role is ${draft.role}. You can edit the role after import.", style = MaterialTheme.typography.bodySmall)
-                        Text("Cleanup, Repair MIDI, and Lo-fi MIDI Feel are available from Details only when their workflow stage is current.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Audio cleanup, Clean MIDI, and Lo-fi MIDI Feel are available from Details only when their workflow stage is current.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 if (draft.source != null && type != ImportSourceKind.UNSUPPORTED && draft.validationMessage == null) {
@@ -1640,7 +1645,7 @@ private fun ImportPartDialog(draft: WorkspaceDialog.ImportPart, onIntent: (Works
                     Text("4. Next action", fontWeight = FontWeight.SemiBold)
                     draft.confirmationMessage?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                     Text(
-                        if (draft.audio) "Import the immutable source and begin the bounded solo-piano transcription route." else "Import the immutable source and publish raw MIDI for the Repair MIDI stage.",
+                        if (draft.audio) "Import the immutable source and begin the bounded solo-piano transcription route." else "Import the immutable source and publish raw MIDI for the Clean MIDI stage.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

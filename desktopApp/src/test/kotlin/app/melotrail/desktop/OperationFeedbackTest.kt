@@ -52,7 +52,7 @@ class OperationFeedbackTest {
     fun `service progress exposes every long backend boundary without message inference`() {
         val kinds = listOf(
             OperationKind.PROJECT_OPEN, OperationKind.PROJECT_HYDRATION, OperationKind.IMPORT, OperationKind.INSPECTION,
-            OperationKind.AUDIO_CLEANUP, OperationKind.TRANSCRIPTION, OperationKind.MIDI_REPAIR, OperationKind.MIDI_RENDER,
+            OperationKind.AUDIO_CLEANUP, OperationKind.TRANSCRIPTION, OperationKind.MIDI_CLEANUP, OperationKind.MIDI_RENDER,
             OperationKind.PREVIEW_DECODE_RENDER, OperationKind.COHESION, OperationKind.ARRANGEMENT, OperationKind.APPROVAL,
             OperationKind.STEM_RENDER, OperationKind.MIXING, OperationKind.AUDIO_LOFI, OperationKind.MASTERING, OperationKind.EXPORT
         )

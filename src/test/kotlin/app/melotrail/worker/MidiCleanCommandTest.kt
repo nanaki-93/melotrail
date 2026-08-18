@@ -4,10 +4,17 @@ import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
-class MidiCleanCommandTest {
+class CleanMidiCommandTest {
+    @Test
+    fun `canonical command defaults to the documented transcription safe profile`() {
+        val request = WorkerProtocol.requestFor(CleanMidiCommand("/raw.mid", "/clean.mid"), "job-1")
+
+        assertEquals("transcription-safe", request["profile"]?.jsonPrimitive?.content)
+    }
+
     @Test
     fun `midi cleanup command maps only to its endpoint with exact request fields`() {
-        val command = MidiCleanCommand(
+        val command = CleanMidiCommand(
             path = "/raw.mid",
             outputPath = "/clean.mid",
             quantize = "1/16",

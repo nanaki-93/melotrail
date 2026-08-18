@@ -1881,8 +1881,8 @@ private fun dispatchImportPrimaryAction(
     onIntent: (WorkspaceIntent) -> Unit,
     focusReturn: PartDetailsFocusReturn = PartDetailsFocusReturn.ImportPrimaryAction
 ) = when (action) {
-    is PartPrimaryAction.PrepareMidi -> onIntent(WorkspaceIntent.PrepareMidi(action.partId))
-    is PartPrimaryAction.ReviewRepair -> onIntent(WorkspaceIntent.ShowPartDetails(action.partId, focusReturn))
+    is PartPrimaryAction.CleanMidi -> onIntent(WorkspaceIntent.CleanMidi(action.partId))
+    is PartPrimaryAction.ReviewCleanMidi -> onIntent(WorkspaceIntent.ShowPartDetails(action.partId, focusReturn))
     is PartPrimaryAction.InspectOrTranscribeAudio -> {
         onIntent(WorkspaceIntent.SelectPart(action.partId))
         onIntent(if (action.inspected) WorkspaceIntent.TranscribeSelectedPart else WorkspaceIntent.InspectSelectedPart)

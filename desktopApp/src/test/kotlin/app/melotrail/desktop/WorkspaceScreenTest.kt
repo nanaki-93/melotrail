@@ -481,7 +481,7 @@ class WorkspaceScreenTest {
         setContent { MelotrailTheme { WorkspaceScreen(importState(longMidi), intents::add) } }
 
         onNodeWithTag(WorkspacePageTags.IMPORT_PRIMARY_ACTION).performScrollTo().performClick()
-        assertEquals<List<WorkspaceIntent>>(listOf(WorkspaceIntent.PrepareMidi("A")), intents)
+        assertEquals<List<WorkspaceIntent>>(listOf(WorkspaceIntent.CleanMidi("A")), intents)
         onAllNodesWithTag(WorkspacePageTags.IMPORTED_ROW_PREFIX + "A").assertCountEquals(1)
         onNodeWithTag(WorkspacePageTags.IMPORTED_DETAILS_PREFIX + "A").performClick()
         assertEquals(WorkspaceIntent.ShowPartDetails("A"), intents.last())
@@ -639,7 +639,7 @@ class WorkspaceScreenTest {
 
         onNodeWithText("Next incomplete part · B").assertExists()
         onNodeWithTag(WorkspacePageTags.IMPORT_PRIMARY_ACTION).performScrollTo().performClick()
-        assertEquals(WorkspaceIntent.PrepareMidi("B"), intents.removeLast())
+        assertEquals(WorkspaceIntent.CleanMidi("B"), intents.removeLast())
         onNodeWithTag(WorkspacePageTags.IMPORT_CONTEXT).assertExists()
         onNodeWithText("Details").performClick()
         assertEquals(WorkspaceIntent.ShowPartDetails("B", PartDetailsFocusReturn.ImportPrimaryAction), intents.removeLast())
@@ -675,11 +675,65 @@ class WorkspaceScreenTest {
             onNodeWithText("Clean MIDI").assertExists()
             val action = onNodeWithTag(WorkspacePageTags.IMPORT_PRIMARY_ACTION).performScrollTo()
             action.performClick()
-            assertEquals<List<WorkspaceIntent>>(listOf(WorkspaceIntent.PrepareMidi("A")), intents)
+            assertEquals<List<WorkspaceIntent>>(listOf(WorkspaceIntent.CleanMidi("A")), intents)
             intents.clear()
             action.performKeyInput { pressKey(Key.Enter) }
-            assertEquals<List<WorkspaceIntent>>(listOf(WorkspaceIntent.PrepareMidi("A")), intents)
+            assertEquals<List<WorkspaceIntent>>(listOf(WorkspaceIntent.CleanMidi("A")), intents)
         }
+    }
+
+    @Test
+    fun `Clean MIDI details use one keyboard reachable action and raw cleaned terminology`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
+        val part = importPart("current.mid", rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT)
+        val intents = mutableListOf<WorkspaceIntent>()
+        val state = importState(part).copy(
+            selectedPartId = "A",
+            dialog = WorkspaceDialog.PartDetails("A", PartDetailsFocusReturn.ImportedRow("A"))
+        )
+        setContent { MelotrailTheme { WorkspaceScreen(state, intents::add) } }
+
+        onNodeWithText("Preview raw MIDI").assertExists()
+        onNodeWithText("Preview cleaned MIDI").assertExists()
+        onAllNodesWithText("Repair MIDI").assertCountEquals(0)
+        val clean = onNodeWithTag(WorkspaceTags.MIDI_QUALITY_CLEAN).performScrollTo()
+        clean.performClick()
+        assertEquals(WorkspaceIntent.CleanMidi("A"), intents.single())
+        intents.clear()
+        clean.performKeyInput { pressKey(Key.Enter) }
+        assertEquals(WorkspaceIntent.CleanMidi("A"), intents.single())
+    }
+
+    @Test
+    fun `Clean MIDI review keeps concise diff evidence beside explicit approval`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
+        val tempo = listOf(app.melotrail.arrangement.MidiTempoChange(0, 120.0, true))
+        val signature = listOf(app.melotrail.arrangement.MidiTimeSignature(0, 4, 4, true))
+        fun artifact(hash: Char, notes: Int) = app.melotrail.arrangement.MidiQualityArtifact(
+            hash.toString().repeat(64), notes, notes.toDouble(), app.melotrail.arrangement.MidiIntRange(60, 72),
+            2, 480, 0.5, app.melotrail.arrangement.MidiVelocityDistribution(80, 90, 85.0, 85.0), tempo, signature
+        )
+        val report = app.melotrail.arrangement.MidiQualityReport(
+            partId = "A", raw = artifact('a', 10), clean = artifact('b', 1),
+            cleanup = app.melotrail.arrangement.MidiCleanupOptions(),
+            timing = app.melotrail.arrangement.MidiTimingChangeSummary(1, 9, 0, 0, 0, 0, 0),
+            tempoAndTimeSignaturesPreserved = true, approvalRequired = true
+        )
+        val base = importPart("review.mid", rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.APPROVAL_REQUIRED)
+        val part = base.copy(preparation = base.preparation.copy(
+            cleanMidi = true,
+            midiQuality = app.melotrail.application.MidiQualitySummary(
+                app.melotrail.application.MidiQualityStatus.APPROVAL_REQUIRED,
+                report.cleanup,
+                report = report
+            )
+        ))
+        val intents = mutableListOf<WorkspaceIntent>()
+        val state = importState(part).copy(selectedPartId = "A", dialog = WorkspaceDialog.PartDetails("A", PartDetailsFocusReturn.ImportedRow("A")))
+        setContent { MelotrailTheme { WorkspaceScreen(state, intents::add) } }
+
+        onNodeWithText("Notes 10 to 1 · 10.000 to 1.000 notes/s · polyphony 2 to 2").assertExists()
+        onNodeWithText("Timing: 0 starts, 0 ends changed; 9 removed, 0 added; max shift 0 ticks.").assertExists()
+        onNodeWithText("Approve Clean MIDI").performScrollTo().performClick()
+        assertEquals(WorkspaceIntent.ApproveCleanMidi, intents.single())
     }
 
     @Test

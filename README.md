@@ -107,7 +107,7 @@ or an eligible WAV/MP3 source, inspect/prepare it, clean/analyze MIDI, save the
 structure, generate/review an arrangement, then build and audition validated
 artifacts. The app never requires Spring.
 
-- Direct MIDI is preserved under `source/` and copied as immutable evidence under `midi/raw/`. Use the explicit **Repair MIDI** stage before analysis.
+- Direct MIDI is preserved under `source/` and copied as immutable evidence under `midi/raw/`. Use the explicit **Clean MIDI** stage before analysis.
 - WAV/WAVE and MP3 input is accepted only for the optional **solo-piano**
   transcription workflow. Do not use it to claim reliable editable MIDI from
   vocals, full mixes, or arbitrary polyphonic material.
@@ -126,7 +126,7 @@ plans and arrangements, generated MIDI, stems, `mix/`, and `output/`.
 final conversion only. For worker, library, renderer, preview, and package
 troubleshooting, use [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
 For the direct-MIDI and eligible-audio routes, their validation, and the
-required repair review, see [MIDI import process](docs/MIDI_IMPORT_PROCESS.md).
+required cleanup review, see [MIDI import process](docs/MIDI_IMPORT_PROCESS.md).
 For the user-facing stage order, prerequisites, artifacts, and stale-artifact
 recovery, see [Track process workflow](docs/TRACK_PROCESS_WORKFLOW.md).
 
@@ -136,7 +136,7 @@ New MIDI-first projects use project schema v3. Schema v1 and v2 projects stay
 readable without an open-time rewrite; a v2 project can be explicitly and
 atomically saved as v3 once normal project validation succeeds. Readiness comes
 from validated files and available fingerprints, never a completion flag alone.
-Changes to source/raw MIDI, repair, Lo-fi Feel, analysis, structure, cohesion,
+Changes to source/raw MIDI, cleaned MIDI, Lo-fi Feel, analysis, structure, cohesion,
 mix-only settings, or audio texture mark only their documented descendants
 stale. Stale artifacts remain inspectable evidence; regenerate them instead of
 deleting, copying, or treating them as release-ready.
@@ -227,7 +227,7 @@ make cli ARGS='transcribe --input ./recordings/verse.wav --output ./projects/son
 
 ### Deterministic MIDI cleanup
 
-Repair raw piano transcription before later MIDI analysis. Requests use repair
+Clean raw piano transcription before later MIDI analysis. Requests use cleanup
 contract version 2. The default documented standard is `transcription-safe`:
 it removes exact duplicates, notes shorter than 50 ms, quiet noise, orphan
 note-offs, and redundant sustain controls; it fixes retrigger overlaps and
@@ -235,7 +235,7 @@ bounds retained velocities while preserving tempo and time signatures.
 
 `transcription-safe` additionally removes orphan note-offs and redundant CC64
 pedal values, ends same-channel/pitch retriggers at the next start, and limits
-retained velocity outliers to 12–120. `tighten-timing` includes those repairs
+retained velocity outliers to 12–120. `tighten-timing` includes those corrections
 and requires an explicit `1/4`, `1/8`, `1/16`, or `1/32` grid plus a strength
 strictly greater than 0.0 and at most 1.0. It is the only profile that can
 quantize. Every response reports the profile, before/after note and event
@@ -243,16 +243,15 @@ counts, and each applied-change count.
 
 ### Fixed Lo-fi MIDI Feel
 
-After approved MIDI repair, the desktop can retain **Original feel** or create
+After approved Clean MIDI, the desktop can retain **Original feel** or create
 the separate `lofi-80-swing-v1` derived MIDI artifact and select it as the
 canonical analysis input. Version 1 is fixed at exactly **80 BPM** with a
 code-owned **58% eighth-note swing**. It is an opt-in MIDI timing transform,
-not the final **Lo-fi audio texture** effect; raw and repaired MIDI remain
+not the final **Lo-fi audio texture** effect; raw and cleaned MIDI remain
 unchanged, and switching either choice invalidates analysis and later derived
 artifacts.
 
 ```bash
-make cli ARGS='part repair ./projects/song-001 --id A'
 make cli ARGS='midi-clean --input ./projects/song-001/midi/raw/A.mid --output ./projects/song-001/midi/clean/A.mid --profile transcription-safe'
 make cli ARGS='midi-clean --input ./projects/song-001/midi/raw/A.mid --output ./projects/song-001/midi/clean/A.mid --profile tighten-timing --quantize 1/16 --strength 0.4'
 ```
@@ -261,8 +260,8 @@ make cli ARGS='midi-clean --input ./projects/song-001/midi/raw/A.mid --output ./
 
 New arranger projects store an explicit PCM-24 render format and preserve each
 original import under `source/`. Direct MIDI and audio transcription publish
-immutable raw MIDI first; Repair MIDI explicitly publishes the canonical
-repaired MIDI and its quality report before analysis.
+immutable raw MIDI first; Clean MIDI explicitly publishes the canonical
+cleaned MIDI and its quality report before analysis.
 
 ```bash
 make cli ARGS='project create ./projects/song-001 --sample-rate 44100 --channels 2'

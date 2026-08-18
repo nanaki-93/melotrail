@@ -13,7 +13,7 @@ flowchart LR
     I --> C{Explicit cleanup approval?}
     C -->|No| T[Transcribe original audio]
     C -->|Yes| P[Create prepared copy, then transcribe selected audio]
-    T --> R[Review and repair MIDI]
+    T --> R[Clean MIDI and review when requested]
     P --> R
     D --> R
     R --> A[Approve required quality evidence, then analyze]
@@ -47,7 +47,7 @@ an arbitrary external path.
 2. Melotrail copies it as immutable source evidence at
    `source/<part>.<ext>` and atomically publishes the same MIDI as
    `midi/raw/<part>.mid`.
-3. Run **Repair MIDI**. Import does not clean, analyze, or silently alter the
+3. Run **Clean MIDI**. Import does not clean, analyze, or silently alter the
    MIDI.
 
 ### Solo-piano audio to MIDI
@@ -62,7 +62,7 @@ an arbitrary external path.
 4. Select the original or validated prepared input and transcribe it with the
    local worker's optional Basic Pitch runtime. Only a validated output is
    atomically published as immutable `midi/raw/<part>.mid`.
-5. Continue with **Repair MIDI**, just as for direct MIDI.
+5. Continue with **Clean MIDI**, just as for direct MIDI.
 
 The worker accepts only the `piano` transcription instrument. It checks the
 published result is MIDI with notes in the piano range, a bounded note rate,
@@ -77,11 +77,11 @@ remain as project-local diagnostic evidence.
 | Source evidence | `source/<part>.<ext>` | The immutable imported MIDI or audio file. |
 | Inspection report | `prepared/<part>/report.json` | Versioned, measured evidence for an imported source; audio cleanup/transcription selection is recorded here. |
 | Raw MIDI | `midi/raw/<part>.mid` | Immutable direct-MIDI evidence or a validated transcription output. It is not yet analysis-ready. |
-| Repaired MIDI and quality evidence | `midi/clean/<part>.mid` and `midi/quality/<part>.json` | A separately published repair output plus its current quality report. Review it and explicitly approve it whenever the report requires approval before analysis. |
-| Optional Lo-fi Feel | `midi/derived/<part>/lofi-80-swing-v1.mid` and `midi/feel/<part>/lofi-80-swing-v1.json` | An opt-in derived analysis input (fixed 80 BPM, 58% eighth-note swing). **Original feel** keeps the repaired MIDI selected. |
+| Cleaned MIDI and quality evidence | `midi/clean/<part>.mid` and `midi/quality/<part>.json` | A separately published cleanup output plus its current quality report. Review it and explicitly approve it whenever the report requires approval before analysis. Approval is bound to the exact raw, cleaned, options, and report fingerprints. |
+| Optional Lo-fi Feel | `midi/derived/<part>/lofi-80-swing-v1.mid` and `midi/feel/<part>/lofi-80-swing-v1.json` | An opt-in derived analysis input (fixed 80 BPM, 58% eighth-note swing). **Original feel** keeps the cleaned MIDI selected. |
 
-Repair and Lo-fi Feel never overwrite the source, raw MIDI, or repaired MIDI.
-Changing raw MIDI, repair evidence, or the selected feel makes later analysis
+Clean MIDI and Lo-fi Feel never overwrite the source, raw MIDI, or cleaned MIDI.
+Changing raw MIDI, cleanup evidence, or the selected feel makes later analysis
 stale. Keep stale files for inspection, then rerun the earliest affected stage;
 do not copy an old artifact forward.
 
@@ -103,7 +103,7 @@ do not bypass the next required workflow stage.
   Inspect the report and any project-local diagnostic MIDI, correct the input
   or runtime, then transcribe again. This is a validation failure, not a
   statement about the musical quality of a different recording.
-- **Stale quality evidence:** run **Repair MIDI** again, inspect the repaired
+- **Stale quality evidence:** run **Clean MIDI** again, inspect the cleaned
   MIDI and `midi/quality/<part>.json`, then approve the current report when the
   workspace asks for it before analysis.
 - **Preview renderer unavailable:** audio-source monitoring may still work,

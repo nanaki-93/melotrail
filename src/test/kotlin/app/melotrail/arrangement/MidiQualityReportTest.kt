@@ -73,6 +73,39 @@ class MidiQualityReportTest {
     }
 
     @Test
+    fun `approval binds exact raw cleaned options and report fingerprints`() = runBlocking {
+        val root = tempDir.resolve("approval-project")
+        val input = midi("approval-input.mid", List(MidiQualityReport.MAX_AUTOMATIC_REMOVED_NOTES + 1) { Note(60 + it, 0, 480, 80) })
+        val inputBefore = Files.readAllBytes(input)
+        val service = service(object : MidiPreparationService {
+            override suspend fun transcribe(input: Path, output: Path) = Unit
+            override suspend fun clean(input: Path, output: Path) { midi(output, emptyList()) }
+        })
+        service.create(CreateProjectRequest(root))
+        service.importPart(ImportPartRequest(root, "A", input))
+        val rawBefore = Files.readAllBytes(root.resolve("midi/raw/A.mid"))
+
+        val cleaned = service.cleanMidi(app.melotrail.application.CleanMidiRequest(root, "A", MidiCleanupOptions()))
+        assertEquals(MidiQualityStatus.APPROVAL_REQUIRED, cleaned.parts.single().preparation.midiQuality.status)
+        assertEquals(null, ProjectStore.read(root).parts.single().midi?.cleanApproval)
+
+        val approved = service.approveCleanMidi(root, "A")
+        val references = requireNotNull(ProjectStore.read(root).parts.single().midi)
+        val approval = requireNotNull(references.cleanApproval)
+        val reportReference = requireNotNull(references.quality)
+        assertEquals(MidiQualityStatus.CURRENT, approved.parts.single().preparation.midiQuality.status)
+        assertEquals(MidiQualityReportStore.read(root, reportReference).raw.sha256, approval.rawSha256)
+        assertEquals(MidiQualityReportStore.read(root, reportReference).clean.sha256, approval.cleanSha256)
+        assertTrue(inputBefore.contentEquals(Files.readAllBytes(input)))
+        assertTrue(rawBefore.contentEquals(Files.readAllBytes(root.resolve("midi/raw/A.mid"))))
+
+        val reportPath = root.resolve(reportReference)
+        Files.writeString(reportPath, Files.readString(reportPath) + "\n")
+        assertEquals(MidiQualityStatus.STALE_OR_INVALID, service.open(root).parts.single().preparation.midiQuality.status)
+        assertThrows(IllegalArgumentException::class.java) { ProjectStore.read(root).requireSelectedMidi(root) }
+    }
+
+    @Test
     fun `quality store detects malformed and stale fingerprints`() {
         val root = tempDir.resolve("project")
         Files.createDirectories(root.resolve("midi/raw"))
@@ -85,14 +118,18 @@ class MidiQualityReportTest {
 
         assertTrue(MidiQualityReportStore.isCurrent(root, "A", "midi/raw/A.mid", "midi/clean/A.mid", options, reference))
         assertFalse(MidiQualityReportStore.isCurrent(root, "A", "midi/raw/A.mid", "midi/clean/A.mid", MidiCleanupOptions(profile = MidiCleanupProfile.CONSERVATIVE), reference))
+        val reportPath = root.resolve(reference)
+        Files.writeString(reportPath, Files.readString(reportPath).replaceFirst("\"noteCount\": 1", "\"noteCount\": 2"))
+        assertFalse(MidiQualityReportStore.isCurrent(root, "A", "midi/raw/A.mid", "midi/clean/A.mid", options, reference))
+        MidiQualityReportStore.write(root, report)
         midi(clean, listOf(Note(61, 0, 480, 90)))
         assertFalse(MidiQualityReportStore.isCurrent(root, "A", "midi/raw/A.mid", "midi/clean/A.mid", options, reference))
-        Files.writeString(root.resolve(reference), "not-json")
+        Files.writeString(reportPath, "not-json")
         assertFalse(MidiQualityReportStore.isCurrent(root, "A", "midi/raw/A.mid", "midi/clean/A.mid", options, reference))
     }
 
     @Test
-    fun `repair publishes quality provenance and rejects stale clean MIDI for arrangement readiness`() = runBlocking {
+    fun `Clean MIDI publishes quality provenance and rejects stale clean MIDI for arrangement readiness`() = runBlocking {
         val root = tempDir.resolve("project")
         val input = midi("input.mid", listOf(Note(60, 0, 480, 90)))
         val used = mutableListOf<MidiCleanupOptions>()
@@ -110,15 +147,18 @@ class MidiQualityReportTest {
         val imported = service.importPart(ImportPartRequest(root, "A", input))
         assertTrue(imported.parts.single().preparation.rawMidi)
         assertFalse(imported.parts.single().preparation.cleanMidi)
-        val repaired = service.retryMidiCleanup(app.melotrail.application.RetryMidiCleanupRequest(root, "A", options))
+        val cleaned = service.cleanMidi(app.melotrail.application.CleanMidiRequest(root, "A", options))
         val stored = ProjectStore.read(root).parts.single().midi!!
 
         assertEquals(listOf(options), used)
         assertEquals(options, stored.cleanup)
         assertEquals("midi/quality/A.json", stored.quality)
-        assertEquals(MidiQualityStatus.CURRENT, repaired.parts.single().preparation.midiQuality.status)
-        assertTrue(repaired.readiness.midiQualityReportsReady)
+        assertTrue(stored.cleanApproval != null)
+        assertFalse(stored.approvedRepair)
+        assertEquals(MidiQualityStatus.CURRENT, cleaned.parts.single().preparation.midiQuality.status)
+        assertTrue(cleaned.readiness.midiQualityReportsReady)
         assertEquals(MidiQualityStatus.CURRENT, service.open(root).parts.single().preparation.midiQuality.status)
+        assertThrows(IllegalArgumentException::class.java) { service.approveCleanMidi(root, "A") }
 
         midi(root.resolve(requireNotNull(stored.clean)), listOf(Note(61, 0, 480, 90)))
         assertThrows(IllegalArgumentException::class.java) { ProjectStore.read(root).requireCleanMidi(root) }
@@ -142,7 +182,7 @@ class MidiQualityReportTest {
     }
 
     @Test
-    fun `quality publish failure rolls back repaired MIDI but preserves raw import`() = runBlocking {
+    fun `quality publish failure rolls back cleaned MIDI but preserves raw import`() = runBlocking {
         val root = tempDir.resolve("publish-failure")
         val input = midi("input.mid", listOf(Note(60, 0, 480, 90)))
         val service = service()
@@ -150,7 +190,7 @@ class MidiQualityReportTest {
         Files.createDirectories(root.resolve("midi/quality/A.json"))
 
         service.importPart(ImportPartRequest(root, "A", input))
-        assertThrows(Exception::class.java) { runBlocking { service.retryMidiCleanup(app.melotrail.application.RetryMidiCleanupRequest(root, "A", MidiCleanupOptions())) } }
+        assertThrows(Exception::class.java) { runBlocking { service.cleanMidi(app.melotrail.application.CleanMidiRequest(root, "A", MidiCleanupOptions())) } }
 
         assertEquals(listOf("A"), ProjectStore.read(root).parts.map { it.id })
         assertFalse(Files.exists(root.resolve("midi/clean/A.mid")))

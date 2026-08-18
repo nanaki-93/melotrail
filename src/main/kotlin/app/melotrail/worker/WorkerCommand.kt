@@ -68,11 +68,11 @@ data class TranscribeCommand(
 ) : WorkerCommand() {
 }
 
-data class MidiCleanCommand(
+data class CleanMidiCommand(
     val path: String,
     val outputPath: String,
     val version: Int = 2,
-    val profile: String = "conservative",
+    val profile: String = "transcription-safe",
     val quantize: String? = null,
     val strength: Double = 0.0,
     val minNoteMs: Int = 50,

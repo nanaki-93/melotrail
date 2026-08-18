@@ -174,7 +174,7 @@ class WorkerJobService internal constructor(
         is MP3ConvertCommand -> WorkerJobType.MP3_CONVERT
         is MP3ExportCommand -> WorkerJobType.MP3_EXPORT
         is TranscribeCommand -> WorkerJobType.TRANSCRIBE
-        is MidiCleanCommand -> WorkerJobType.MIDI_CLEAN
+        is CleanMidiCommand -> WorkerJobType.MIDI_CLEAN
         is InputInspectionCommand -> WorkerJobType.INSPECT_INPUT
         is AudioCleanupCommand -> WorkerJobType.AUDIO_CLEANUP
     }

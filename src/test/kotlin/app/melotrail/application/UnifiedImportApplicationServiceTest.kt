@@ -183,7 +183,7 @@ class UnifiedImportApplicationServiceTest {
 
         assertFalse(harness.service.open(root).parts.single().preparation.rawMidi)
         assertFailsWith<IllegalStateException> {
-            harness.service.retryMidiCleanup(RetryMidiCleanupRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
+            harness.service.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
         }
     }
 

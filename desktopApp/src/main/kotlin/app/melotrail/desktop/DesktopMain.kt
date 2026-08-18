@@ -31,7 +31,7 @@ import app.melotrail.errors.ErrorReporter
 import app.melotrail.logging.DefaultLogger
 import app.melotrail.worker.AnalyzeCommand
 import app.melotrail.worker.AnalyzeOptions
-import app.melotrail.worker.MidiCleanCommand
+import app.melotrail.worker.CleanMidiCommand
 import app.melotrail.worker.MasterCommand
 import app.melotrail.worker.MP3ExportCommand
 import app.melotrail.worker.RepairCommand
@@ -49,6 +49,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import java.nio.file.Files
 import java.nio.file.Path
+import java.security.MessageDigest
 
 fun main() = application {
     val desktopWindowState = rememberWindowState(placement = WindowPlacement.Maximized)
@@ -146,13 +147,18 @@ object DesktopServiceComposition {
 
         override suspend fun clean(input: Path, output: Path, options: MidiCleanupOptions) {
             Files.createDirectories(checkNotNull(output.parent))
-            val response = client.execute(MidiCleanCommand(
+            val response = client.execute(CleanMidiCommand(
                 input.toString(), output.toString(), options.requestVersion,
                 options.profile.name.lowercase().replace('_', '-'), options.quantize, options.strength,
                 options.minNoteMs, options.minVelocity, options.normalizeVelocity, options.cleanSustain
             ))
             require(response.status == WorkerStatus.COMPLETED) { cleanupFailureMessage(response.error) }
             requireMidi(output, "MIDI cleanup")
+            val evidence = requireNotNull(response.output) { "MIDI cleanup worker returned no evidence" }
+            require(evidence["version"]?.jsonPrimitive?.longOrNull == options.requestVersion.toLong()) { "MIDI cleanup worker returned the wrong contract version" }
+            require(evidence["profile"]?.jsonPrimitive?.contentOrNull == options.profile.name.lowercase().replace('_', '-')) { "MIDI cleanup worker returned the wrong profile" }
+            require(evidence["inputSha256"]?.jsonPrimitive?.contentOrNull == sha256(input)) { "MIDI cleanup worker input fingerprint did not match raw MIDI" }
+            require(evidence["outputSha256"]?.jsonPrimitive?.contentOrNull == sha256(output)) { "MIDI cleanup worker output fingerprint did not match cleaned MIDI" }
         }
     }
 
@@ -190,6 +196,9 @@ object DesktopServiceComposition {
             "$stage did not create a MIDI file: $path"
         }
     }
+
+    private fun sha256(path: Path): String = MessageDigest.getInstance("SHA-256")
+        .digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
 
     private fun transcriptionFailureMessage(error: WorkerError?): String {
         val stage = when (error?.type) {

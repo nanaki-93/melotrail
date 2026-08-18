@@ -18,7 +18,7 @@ class WorkerProtocolTest {
             MP3ConvertCommand("/input.mp3", "/output.wav") to "/mp3_convert",
             MP3ExportCommand("/master.wav", "/song.mp3", 320) to "/mp3_export",
             TranscribeCommand("/input.wav", "/raw.mid", "piano") to "/transcribe",
-            MidiCleanCommand("/raw.mid", "/clean.mid") to "/midi-clean",
+            CleanMidiCommand("/raw.mid", "/clean.mid") to "/midi-clean",
             InputInspectionCommand("/input.wav") to "/inspect-input",
             AudioCleanupCommand("/input.wav", "/clean.wav", listOf(AudioCleanupOperation.DcRemoval)) to "/cleanup"
         )
@@ -53,7 +53,7 @@ class WorkerProtocolTest {
         val transcribe = WorkerProtocol.requestFor(TranscribeCommand("/input.wav", "/raw.mid", "piano"), "job-1")
         assertEquals(setOf("jobId", "path", "outputPath", "instrument"), transcribe.keys)
 
-        val clean = WorkerProtocol.requestFor(MidiCleanCommand("/raw.mid", "/clean.mid", quantize = "1/16", strength = 0.4), "job-1")
+        val clean = WorkerProtocol.requestFor(CleanMidiCommand("/raw.mid", "/clean.mid", quantize = "1/16", strength = 0.4), "job-1")
         assertEquals(setOf("jobId", "path", "outputPath", "version", "profile", "quantize", "strength", "minNoteMs", "minVelocity", "normalizeVelocity", "cleanSustain"), clean.keys)
 
         val inspect = WorkerProtocol.requestFor(InputInspectionCommand("/input.wav"), "job-1")

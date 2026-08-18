@@ -51,6 +51,28 @@ data class MidiCleanupOptions(
     }
 }
 
+/** Exact evidence accepted by automatic or explicit Clean MIDI approval. */
+@Serializable
+data class MidiCleanupApproval(
+    val version: Int = CURRENT_VERSION,
+    val rawSha256: String,
+    val cleanSha256: String,
+    val optionsSha256: String,
+    val reportSha256: String
+) {
+    fun requireValid() {
+        require(version == CURRENT_VERSION) { "Unsupported MIDI cleanup approval version: $version" }
+        listOf(rawSha256, cleanSha256, optionsSha256, reportSha256).forEach {
+            require(SHA_256.matches(it)) { "MIDI cleanup approval fingerprints must be lowercase SHA-256 digests" }
+        }
+    }
+
+    companion object {
+        const val CURRENT_VERSION = 1
+        private val SHA_256 = Regex("[0-9a-f]{64}")
+    }
+}
+
 @Serializable
 enum class MidiCleanupProfile { CONSERVATIVE, TRANSCRIPTION_SAFE, TIGHTEN_TIMING }
 
@@ -337,9 +359,11 @@ object MidiQualityReportStore {
     fun isCurrent(projectRoot: Path, partId: String, rawReference: String, cleanReference: String, cleanup: MidiCleanupOptions, reportReference: String): Boolean = runCatching {
         val root = projectRoot.toAbsolutePath().normalize()
         val report = read(root, reportReference)
+        val raw = resolveReference(root, rawReference, "Raw MIDI")
+        val clean = resolveReference(root, cleanReference, "Clean MIDI")
         report.partId == partId && report.cleanup == cleanup &&
-            report.raw.sha256 == fingerprint(resolveReference(root, rawReference, "Raw MIDI")) &&
-            report.clean.sha256 == fingerprint(resolveReference(root, cleanReference, "Clean MIDI"))
+            report.raw.sha256 == fingerprint(raw) && report.clean.sha256 == fingerprint(clean) &&
+            report == MidiQualityReporter().report(partId, raw, clean, cleanup)
     }.getOrDefault(false)
 
     fun requireCurrent(projectRoot: Path, partId: String, rawReference: String, cleanReference: String, cleanup: MidiCleanupOptions, reportReference: String) {
@@ -348,10 +372,27 @@ object MidiQualityReportStore {
         }
     }
 
+    fun approval(projectRoot: Path, reportReference: String, report: MidiQualityReport = read(projectRoot, reportReference)): MidiCleanupApproval {
+        val root = projectRoot.toAbsolutePath().normalize()
+        require(read(root, reportReference) == report) { "MIDI cleanup approval report does not match its published evidence" }
+        return MidiCleanupApproval(
+            rawSha256 = report.raw.sha256,
+            cleanSha256 = report.clean.sha256,
+            optionsSha256 = fingerprint(json.encodeToString(report.cleanup).toByteArray(StandardCharsets.UTF_8)),
+            reportSha256 = fingerprint(resolveReference(root, reportReference, "MIDI quality report"))
+        ).also(MidiCleanupApproval::requireValid)
+    }
+
+    fun isApproved(projectRoot: Path, reportReference: String, approval: MidiCleanupApproval?): Boolean = runCatching {
+        approval?.also(MidiCleanupApproval::requireValid) == approval(projectRoot, reportReference)
+    }.getOrDefault(false)
+
     private fun fingerprint(path: Path): String {
         require(Files.isRegularFile(path)) { "MIDI quality source is missing: $path" }
-        return MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
+        return fingerprint(Files.readAllBytes(path))
     }
+
+    private fun fingerprint(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 
     private fun resolveReference(root: Path, reference: String, label: String): Path {
         val relative = try { Path.of(reference) } catch (error: Exception) {
