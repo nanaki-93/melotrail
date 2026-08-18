@@ -417,7 +417,7 @@ class WorkspaceViewModelTest {
         assertEquals(WorkspaceSection.OVERVIEW, viewModel.state.value.workspaceSection)
 
         viewModel.accept(WorkspaceIntent.ShowImportPart(audio = false))
-        viewModel.accept(WorkspaceIntent.UpdateImportPart(WorkspaceDialog.ImportPart(false, Path.of("input.mid"), "C", "verse")))
+        viewModel.accept(WorkspaceIntent.UpdateImportPart(WorkspaceDialog.ImportPart(false, Path.of("input.mid"), "C", "verse", ImportSourceKind.MIDI, provenanceConfirmed = true)))
         viewModel.accept(WorkspaceIntent.ImportPart)
         assertIs<WorkspaceOperation.ImportingPart>(viewModel.state.value.operation)
         advanceUntilIdle()
@@ -561,14 +561,14 @@ class WorkspaceViewModelTest {
         val viewModel = WorkspaceViewModel(service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
         viewModel.accept(WorkspaceIntent.OpenProject(root))
         advanceUntilIdle()
-        viewModel.accept(WorkspaceIntent.ShowImportPart(audio = true))
-        viewModel.accept(WorkspaceIntent.UpdateImportPart(WorkspaceDialog.ImportPart(true, Path.of("input.wav"), "A", "verse")))
+        viewModel.accept(WorkspaceIntent.ShowImportPart(audio = false))
+        viewModel.accept(WorkspaceIntent.UpdateImportPart(WorkspaceDialog.ImportPart(false, Path.of("input.mid"), "A", "verse", ImportSourceKind.MIDI, provenanceConfirmed = true)))
         viewModel.accept(WorkspaceIntent.ImportPart)
         advanceUntilIdle()
 
         assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation)
         assertIs<WorkspaceRetry.Import>(viewModel.state.value.retry)
-        assertNull(viewModel.state.value.dialog, "the import modal must not hide progress or retryable failures")
+        assertEquals(Path.of("input.mid"), assertIs<WorkspaceDialog.ImportPart>(viewModel.state.value.dialog).source, "the selected source must remain recoverable after a retryable failure")
         assertEquals("worker unavailable", viewModel.state.value.notification)
         viewModel.close()
     }
@@ -649,7 +649,7 @@ class WorkspaceViewModelTest {
     }
 
     @Test
-    fun `guided import detects supported types and cancellation preserves the draft`() = runTest {
+    fun `guided import detects supported types derives defaults and cancellation preserves the draft`() = runTest {
         val root = Path.of("build/import-project")
         val viewModel = WorkspaceViewModel(FakeProjectService(result = projectSnapshot(root)), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
         viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
@@ -659,6 +659,8 @@ class WorkspaceViewModelTest {
         val selected = assertIs<WorkspaceDialog.ImportPart>(viewModel.state.value.dialog)
         assertEquals(ImportSourceKind.MP3, selected.detectedType)
         assertTrue(selected.audio)
+        assertEquals("verse", selected.role)
+        assertEquals(ImportFlowStep.CONFIRM_PROVENANCE, importFlowStep(selected))
         viewModel.accept(WorkspaceIntent.ImportSourceChosen(null))
         assertEquals(selected, viewModel.state.value.dialog)
         assertEquals(ImportSourceKind.MIDI, detectImportSourceKind(Path.of("intro.midi")))
@@ -678,7 +680,46 @@ class WorkspaceViewModelTest {
         val draft = assertIs<WorkspaceDialog.ImportPart>(viewModel.state.value.dialog)
         assertEquals(ImportSourceKind.WAV, draft.detectedType)
         assertEquals("dropped-song", draft.id)
+        assertEquals(ImportFlowStep.CONFIRM_PROVENANCE, importFlowStep(draft))
         assertNull(service.imported)
+        viewModel.close()
+    }
+
+    @Test
+    fun `guided import infers a collision-safe id and requires provenance before its one next action`() = runTest {
+        val root = Path.of("build/import-collision-project")
+        val service = FakeProjectService(result = projectSnapshot(root).copy(parts = listOf(part("intro"))))
+        val viewModel = WorkspaceViewModel(service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+
+        viewModel.accept(WorkspaceIntent.ImportSourceChosen(Path.of("Intro.mid")))
+        val selected = assertIs<WorkspaceDialog.ImportPart>(viewModel.state.value.dialog)
+        assertEquals("intro-2", selected.id)
+        assertEquals("intro", selected.role)
+        assertEquals(ImportFlowStep.CONFIRM_PROVENANCE, importFlowStep(selected))
+        viewModel.accept(WorkspaceIntent.ImportPart)
+        assertTrue(assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation).message.contains("Confirm the source-rights"))
+
+        viewModel.accept(WorkspaceIntent.ConfirmImportProvenance)
+        val confirmed = assertIs<WorkspaceDialog.ImportPart>(viewModel.state.value.dialog)
+        assertEquals(ImportFlowStep.NEXT_ACTION, importFlowStep(confirmed))
+        viewModel.close()
+    }
+
+    @Test
+    fun `guided import preserves its selected source after canonical validation fails`() = runTest {
+        val root = Path.of("build/import-validation-project")
+        val service = FakeProjectService(result = projectSnapshot(root), failureOnImport = IllegalArgumentException("MIDI import is not a valid file"))
+        val viewModel = WorkspaceViewModel(service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.ImportSourceChosen(Path.of("broken.mid")))
+        viewModel.accept(WorkspaceIntent.ConfirmImportProvenance)
+        viewModel.accept(WorkspaceIntent.ImportPart); advanceUntilIdle()
+
+        val failed = assertIs<WorkspaceDialog.ImportPart>(viewModel.state.value.dialog)
+        assertEquals(Path.of("broken.mid"), failed.source)
+        assertTrue(failed.validationMessage!!.contains("not a valid file"))
+        assertEquals(ImportFlowStep.INSPECT_AND_VALIDATE, importFlowStep(failed))
         viewModel.close()
     }
 
@@ -690,13 +731,13 @@ class WorkspaceViewModelTest {
         viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
         viewModel.accept(WorkspaceIntent.ShowImportPart(audio = false))
         viewModel.accept(WorkspaceIntent.ImportSourceChosen(Path.of("intro.txt")))
-        viewModel.accept(WorkspaceIntent.UpdateImportPart(assertIs<WorkspaceDialog.ImportPart>(viewModel.state.value.dialog).copy(id = "A")))
+        viewModel.accept(WorkspaceIntent.UpdateImportPart(assertIs<WorkspaceDialog.ImportPart>(viewModel.state.value.dialog).copy(id = "A", provenanceConfirmed = true)))
         viewModel.accept(WorkspaceIntent.ImportPart)
         assertTrue(assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation).message.contains("Unsupported source type"))
         assertTrue(assertIs<WorkspaceDialog.ImportPart>(viewModel.state.value.dialog).validationMessage!!.contains("Unsupported source type"))
         assertNull(service.imported)
 
-        viewModel.accept(WorkspaceIntent.UpdateImportPart(WorkspaceDialog.ImportPart(false, Path.of("intro.mid"), "A", "verse", ImportSourceKind.MIDI)))
+        viewModel.accept(WorkspaceIntent.UpdateImportPart(WorkspaceDialog.ImportPart(false, Path.of("intro.mid"), "A", "verse", ImportSourceKind.MIDI, provenanceConfirmed = true)))
         viewModel.accept(WorkspaceIntent.ImportPart)
         assertTrue(assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation).message.contains("Part ID already exists: A"))
         assertNull(service.imported)
@@ -720,7 +761,7 @@ class WorkspaceViewModelTest {
         viewModel.accept(WorkspaceIntent.RefreshRuntimeReadiness); advanceUntilIdle()
         viewModel.accept(WorkspaceIntent.ShowImportPart(audio = false))
         viewModel.accept(WorkspaceIntent.ImportSourceChosen(Path.of("solo.wav")))
-        viewModel.accept(WorkspaceIntent.UpdateImportPart(assertIs<WorkspaceDialog.ImportPart>(viewModel.state.value.dialog).copy(id = "A")))
+        viewModel.accept(WorkspaceIntent.UpdateImportPart(assertIs<WorkspaceDialog.ImportPart>(viewModel.state.value.dialog).copy(id = "A", provenanceConfirmed = true)))
         viewModel.accept(WorkspaceIntent.ImportPart)
 
         assertEquals("Start the Python worker with make worker.", assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation).message)

@@ -124,8 +124,12 @@ object WorkspaceTags {
     const val ADD_AUDIO = "add-audio"
     const val IMPORT_MIDI = "import-midi"
     const val IMPORT_AUDIO = "import-audio"
+    const val IMPORT_ENTRY = "import-source-entry"
     const val IMPORT_SOURCE = "import-source"
     const val IMPORT_CONFIRM = "import-confirm"
+    const val IMPORT_STEPS = "import-steps"
+    const val IMPORT_PROVENANCE = "import-provenance"
+    const val IMPORT_DETAILS = "import-details"
     const val IMPORT_PROGRESS = "import-progress"
     const val STRUCTURE_CLEAR = "structure-clear"
     const val STRUCTURE_MOVE_LEFT = "structure-move-left-"
@@ -559,10 +563,14 @@ internal fun PartsPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
             }
         }
     }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-        TextButton(onClick = { onIntent(WorkspaceIntent.ShowImportPart(audio = false)) }, enabled = !disabled, modifier = Modifier.weight(1f).semantics { testTag = WorkspaceTags.IMPORT_MIDI; contentDescription = "Import MIDI" }) { Text("♫  MIDI", style = MaterialTheme.typography.labelMedium) }
-        TextButton(onClick = { onIntent(WorkspaceIntent.ShowImportPart(audio = true)) }, enabled = !disabled, modifier = Modifier.weight(1f).semantics { testTag = WorkspaceTags.IMPORT_AUDIO; contentDescription = "Import audio for the solo-piano transcription workflow" }) { Text("⌁  Audio", style = MaterialTheme.typography.labelMedium) }
-    }
+    OutlinedButton(
+        onClick = { onIntent(WorkspaceIntent.ShowAddPart) },
+        enabled = !disabled,
+        modifier = Modifier.fillMaxWidth().semantics {
+            testTag = WorkspaceTags.IMPORT_ENTRY
+            contentDescription = "Import one MIDI, WAV, WAVE, or MP3 source"
+        }
+    ) { Text("Import source", style = MaterialTheme.typography.labelMedium) }
     }
 }
 
@@ -1581,26 +1589,40 @@ private fun CreateProjectDialog(draft: WorkspaceDialog.CreateProject, onIntent: 
 @Composable
 private fun ImportPartDialog(draft: WorkspaceDialog.ImportPart, onIntent: (WorkspaceIntent) -> Unit) {
     val type = draft.detectedType
+    val currentStep = importFlowStep(draft)
     AlertDialog(
         onDismissRequest = { onIntent(WorkspaceIntent.DismissDialog) },
-        title = { Text("Import part · 1 of 2") },
+        title = { Text("Import source") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Choose a source. Its actual format is validated before import.")
-                if (draft.preference != ImportPreference.MIDI) Text("Audio import supports solo-piano WAV/MP3 only—not vocals, full mixes, or arbitrary polyphony.", style = MaterialTheme.typography.bodySmall)
+            Column(Modifier.heightIn(max = 560.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                ImportStepIndicator(currentStep)
+                Text("1. Select one MIDI or eligible solo-piano audio source.", fontWeight = FontWeight.SemiBold)
                 OutlinedButton(
                     onClick = { onIntent(WorkspaceIntent.ChooseImportSource) },
                     modifier = Modifier.semantics { testTag = WorkspaceTags.IMPORT_SOURCE }
-                ) { Text(draft.source?.fileName?.toString() ?: "Choose source") }
-                draft.source?.let { Text("${it.fileName} · ${type?.label ?: "unknown"}", style = MaterialTheme.typography.bodySmall) }
-                draft.validationMessage?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-                HorizontalDivider()
-                Text("Confirm part · 2 of 2", style = MaterialTheme.typography.labelLarge)
-                OutlinedTextField(draft.id, { onIntent(WorkspaceIntent.UpdateImportPart(draft.copy(id = it))) }, label = { Text("Part ID (stable after import)") })
-                OutlinedTextField(draft.role, { onIntent(WorkspaceIntent.UpdateImportPart(draft.copy(role = it))) }, label = { Text("Musical role (optional)") })
-                TextButton(onClick = { onIntent(WorkspaceIntent.UpdateImportPart(draft.copy(detailsExpanded = !draft.detailsExpanded))) }) { Text(if (draft.detailsExpanded) "Hide details" else "Details") }
-                if (draft.detailsExpanded) {
-                    Text("Rights attestation is retained for commercial-ready export.", style = MaterialTheme.typography.bodySmall)
+                ) { Text(draft.source?.fileName?.toString() ?: "Browse source") }
+                if (draft.source == null) {
+                    Text("MIDI, WAV, WAVE, and MP3 are accepted. Audio is limited to the solo-piano transcription route.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    HorizontalDivider()
+                    Text("2. Inspect and validate", fontWeight = FontWeight.SemiBold)
+                    Text("${draft.source.fileName} · ${type?.label ?: "unknown"} · ${formatFileSize(draft.sourceSizeBytes)}", style = MaterialTheme.typography.bodySmall)
+                    Text("Route: ${importRoute(type)}. The canonical importer validates the actual file container before immutable publication.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    draft.validationMessage?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                    TextButton(
+                        onClick = { onIntent(WorkspaceIntent.UpdateImportPart(draft.copy(detailsExpanded = !draft.detailsExpanded))) },
+                        modifier = Modifier.semantics { testTag = WorkspaceTags.IMPORT_DETAILS }
+                    ) { Text(if (draft.detailsExpanded) "Hide details" else "Details") }
+                    if (draft.detailsExpanded) {
+                        Text("The initial part ID is safely inferred as ${draft.id}; the default role is ${draft.role}. You can edit the role after import.", style = MaterialTheme.typography.bodySmall)
+                        Text("Cleanup, Repair MIDI, and Lo-fi MIDI Feel are available from Details only when their workflow stage is current.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                if (draft.source != null && type != ImportSourceKind.UNSUPPORTED && draft.validationMessage == null) {
+                    HorizontalDivider()
+                    Text("3. Confirm source rights", fontWeight = FontWeight.SemiBold)
+                    Text("This source-rights record is retained with the import. “Not established” keeps local work available but blocks commercial-ready export.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    draft.confirmationMessage?.takeIf { !draft.provenanceConfirmed }?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                     app.melotrail.commercial.SourceRightsClaim.entries.forEach { claim ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             RadioButton(claim == draft.rightsClaim, { onIntent(WorkspaceIntent.UpdateImportPart(draft.copy(rightsClaim = claim))) })
@@ -1613,11 +1635,55 @@ private fun ImportPartDialog(draft: WorkspaceDialog.ImportPart, onIntent: (Works
                         }
                     }
                 }
+                if (draft.provenanceConfirmed && draft.validationMessage == null) {
+                    HorizontalDivider()
+                    Text("4. Next action", fontWeight = FontWeight.SemiBold)
+                    draft.confirmationMessage?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                    Text(
+                        if (draft.audio) "Import the immutable source and begin the bounded solo-piano transcription route." else "Import the immutable source and publish raw MIDI for the Repair MIDI stage.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         },
-        confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.ImportPart) }, enabled = draft.source != null && type != ImportSourceKind.UNSUPPORTED, modifier = Modifier.semantics { testTag = WorkspaceTags.IMPORT_CONFIRM }) { Text("Confirm import") } },
+        confirmButton = {
+            when (currentStep) {
+                ImportFlowStep.CONFIRM_PROVENANCE -> Button(
+                    onClick = { onIntent(WorkspaceIntent.ConfirmImportProvenance) },
+                    modifier = Modifier.semantics { testTag = WorkspaceTags.IMPORT_PROVENANCE }
+                ) { Text("Confirm source rights") }
+                ImportFlowStep.NEXT_ACTION -> Button(
+                    onClick = { onIntent(WorkspaceIntent.ImportPart) },
+                    modifier = Modifier.semantics { testTag = WorkspaceTags.IMPORT_CONFIRM }
+                ) { Text(if (draft.audio) "Import and transcribe" else "Import MIDI") }
+                else -> Unit
+            }
+        },
         dismissButton = { TextButton(onClick = { onIntent(WorkspaceIntent.DismissDialog) }) { Text("Cancel") } }
     )
+}
+
+@Composable
+private fun ImportStepIndicator(current: ImportFlowStep) = Row(
+    Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.IMPORT_STEPS },
+    horizontalArrangement = Arrangement.spacedBy(6.dp)
+) {
+    ImportFlowStep.entries.forEach { step ->
+        val status = when {
+            step.number < current.number -> "complete"
+            step == current -> "current"
+            else -> "upcoming"
+        }
+        Text(
+            "${step.number}. ${step.label}",
+            modifier = Modifier.weight(1f).semantics { contentDescription = "Step ${step.number}: ${step.label}, $status" },
+            style = MaterialTheme.typography.labelSmall,
+            color = if (step == current) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
 }
 
 private fun formatFileSize(bytes: Long?): String = when {

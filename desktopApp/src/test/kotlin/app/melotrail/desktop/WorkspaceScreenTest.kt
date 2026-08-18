@@ -183,12 +183,12 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `narrow Import stacks chooser cards and opens a full-height preparation sheet with focus return`() = runSkikoComposeUiTest(size = Size(720f, 1120f)) {
+    fun `narrow Import keeps one responsive entry surface and opens a full-height preparation sheet with focus return`() = runSkikoComposeUiTest(size = Size(720f, 1120f)) {
         setContent { MelotrailTheme { WorkspaceScreen(importState(importPart("piano.mid", rawMidi = true)), onIntent = {}) } }
 
-        val audio = onNodeWithTag(WorkspacePageTags.IMPORT_AUDIO_CHOOSER).getUnclippedBoundsInRoot()
-        val midi = onNodeWithTag(WorkspacePageTags.IMPORT_MIDI_CHOOSER).getUnclippedBoundsInRoot()
-        assertTrue(audio.bottom.value <= midi.top.value, "narrow chooser cards should stack")
+        onNodeWithTag(WorkspacePageTags.IMPORT_DROP_SURFACE).assertExists()
+        onAllNodesWithTag(WorkspacePageTags.IMPORT_AUDIO_CHOOSER).assertCountEquals(0)
+        onAllNodesWithTag(WorkspacePageTags.IMPORT_MIDI_CHOOSER).assertCountEquals(0)
         onNodeWithTag(WorkspaceShellTags.CONTEXT_TOGGLE).performClick()
         val sheet = onNodeWithTag(WorkspaceShellTags.CONTEXT_RAIL)
         sheet.assertExists()
@@ -546,7 +546,57 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `Import reconstruction keeps distinct chooser preferences and a dense selected row`() = runComposeUiTest {
+    fun `guided import dialog exposes one accessible route at a time`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        var state by mutableStateOf(importState(importPart("existing.mid")).copy(
+            dialog = WorkspaceDialog.ImportPart(
+                source = Path.of("verse.mid"),
+                id = "verse",
+                role = "verse",
+                detectedType = ImportSourceKind.MIDI
+            )
+        ))
+        setContent {
+            MelotrailTheme {
+                WorkspaceScreen(state, onIntent = { intent ->
+                    intents += intent
+                    state = when (intent) {
+                        is WorkspaceIntent.UpdateImportPart -> state.copy(dialog = intent.draft)
+                        WorkspaceIntent.ConfirmImportProvenance -> state.copy(dialog = (state.dialog as WorkspaceDialog.ImportPart).copy(provenanceConfirmed = true))
+                        else -> state
+                    }
+                })
+            }
+        }
+
+        onNodeWithTag(WorkspaceTags.IMPORT_STEPS).assertExists()
+        onNodeWithText("Route: Direct MIDI import. The canonical importer validates the actual file container before immutable publication.").assertExists()
+        onAllNodesWithText("Part ID (stable after import)").assertCountEquals(0)
+        onNodeWithTag(WorkspaceTags.IMPORT_SOURCE).performClick()
+        assertEquals(WorkspaceIntent.ChooseImportSource, intents.removeLast())
+        onNodeWithTag(WorkspaceTags.IMPORT_DETAILS).performClick()
+        onNodeWithText("The initial part ID is safely inferred as verse; the default role is verse. You can edit the role after import.").assertExists()
+        state = state.copy(dialog = (state.dialog as WorkspaceDialog.ImportPart).copy(provenanceConfirmed = true))
+        onNodeWithTag(WorkspaceTags.IMPORT_CONFIRM).assertIsEnabled()
+
+        state = state.copy(dialog = WorkspaceDialog.ImportPart(
+            source = Path.of("solo.wav"), id = "solo", role = "verse", audio = true, detectedType = ImportSourceKind.WAV
+        ))
+        onNodeWithText("Route: Solo-piano transcription. The canonical importer validates the actual file container before immutable publication.").assertExists()
+        onNodeWithText("Import the immutable source and begin the bounded solo-piano transcription route.").assertDoesNotExist()
+    }
+
+    @Test
+    fun `Import no-project state keeps the one browse entry disabled`() = runComposeUiTest {
+        setContent { MelotrailTheme { WorkspaceScreen(WorkspaceUiState(workspaceSection = WorkspaceSection.IMPORT), onIntent = {}) } }
+
+        onNodeWithTag(WorkspacePageTags.IMPORT_BROWSE).assertIsNotEnabled()
+        onAllNodesWithTag(WorkspacePageTags.IMPORT_AUDIO_CHOOSER).assertCountEquals(0)
+        onAllNodesWithTag(WorkspacePageTags.IMPORT_MIDI_CHOOSER).assertCountEquals(0)
+    }
+
+    @Test
+    fun `Import reconstruction keeps one entry action and a dense selected row`() = runComposeUiTest {
         val midi = importPart("piano_loop.mid", rawMidi = true, analyzed = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT).copy(
             analysis = PartAnalysisSummary(PartAnalysisStatus.MIDI, "analysis/A.json", bars = 16, durationSeconds = 32.0, key = "A minor"),
             sourceSizeBytes = 2_097_152L
@@ -564,16 +614,13 @@ class WorkspaceScreenTest {
         }
 
         listOf(
-            WorkspacePageTags.IMPORT_AUDIO_CHOOSER,
-            WorkspacePageTags.IMPORT_MIDI_CHOOSER,
+            WorkspacePageTags.IMPORT_BROWSE,
             WorkspacePageTags.IMPORT_TABLE_HEADER,
             WorkspacePageTags.IMPORTED_ROW_PREFIX + "A",
             WorkspacePageTags.IMPORTED_ROW_PREFIX + "B"
         ).forEach { onNodeWithTag(it).assertExists() }
-        onNodeWithText("Select audio file").performClick()
-        assertEquals(WorkspaceIntent.ShowImportPart(audio = true), intents.removeLast())
-        onNodeWithText("Select MIDI file").performClick()
-        assertEquals(WorkspaceIntent.ShowImportPart(audio = false), intents.removeLast())
+        onNodeWithTag(WorkspacePageTags.IMPORT_BROWSE).performClick()
+        assertEquals(WorkspaceIntent.ShowAddPart, intents.removeLast())
 
         onNodeWithTag(WorkspacePageTags.IMPORTED_ROW_PREFIX + "B").performClick()
         assertEquals(WorkspaceIntent.SelectPart("B"), intents.removeLast())
@@ -588,7 +635,7 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `Import primary action visibly identifies deterministic fallback and the context rail uses the same typed action`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
+    fun `Import primary action visibly identifies deterministic fallback while context exposes Details only`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
         val current = importPart("ready.mid", rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT, analyzed = true)
         val pending = importPart("needs-repair.mid", rawMidi = true).copy(id = "B")
         val state = importState(current).copy(project = importState(current).project!!.copy(parts = listOf(current, pending)))
@@ -599,24 +646,17 @@ class WorkspaceScreenTest {
         onNodeWithTag(WorkspacePageTags.IMPORT_PRIMARY_ACTION).performScrollTo().performClick()
         assertEquals(WorkspaceIntent.PrepareMidi("B"), intents.removeLast())
         onNodeWithTag(WorkspacePageTags.IMPORT_CONTEXT).assertExists()
-        onNodeWithTag(WorkspacePageTags.IMPORT_CONTEXT_ACTION).performClick()
-        assertEquals(WorkspaceIntent.PrepareMidi("B"), intents.removeLast())
+        onNodeWithText("Details").performClick()
+        assertEquals(WorkspaceIntent.ShowPartDetails("B", PartDetailsFocusReturn.ImportPrimaryAction), intents.removeLast())
     }
 
     @Test
-    fun `Import context makes both supported Lo-fi paths discoverable without processing the source`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
+    fun `Import context keeps advanced processing out of the initial surface`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
         val midi = importPart("ready.mid", rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT)
-        val intents = mutableListOf<WorkspaceIntent>()
-        setContent { MelotrailTheme { WorkspaceScreen(importState(midi), intents::add) } }
+        setContent { MelotrailTheme { WorkspaceScreen(importState(midi), onIntent = {}) } }
 
-        onNodeWithTag(WorkspacePageTags.IMPORT_LOFI_MIDI_PROCESSOR).performClick()
-        assertEquals(WorkspaceIntent.ShowPartDetails("A", PartDetailsFocusReturn.ImportPrimaryAction), intents.single())
-
-        intents.clear()
-        val audio = importPart("solo.wav", audio = true, inspected = true)
-        setContent { MelotrailTheme { WorkspaceScreen(importState(audio), intents::add) } }
-        onNodeWithTag(WorkspacePageTags.IMPORT_LOFI_AUDIO_PROCESSOR).performClick()
-        assertEquals(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.MIX_MASTER), intents.single())
+        onAllNodesWithTag(WorkspacePageTags.IMPORT_LOFI_MIDI_PROCESSOR).assertCountEquals(0)
+        onAllNodesWithTag(WorkspacePageTags.IMPORT_LOFI_AUDIO_PROCESSOR).assertCountEquals(0)
     }
 
     @Test
@@ -629,11 +669,13 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `Import exposes the MIDI import guide reference`() = runComposeUiTest {
+    fun `Import exposes workflow and MIDI guide references`() = runComposeUiTest {
         setContent { MelotrailTheme { WorkspaceScreen(importState(importPart("ready.mid")), onIntent = {}) } }
 
-        onNodeWithTag(WorkspacePageTags.IMPORT_HELP).assertExists()
-        onNodeWithText("One source at a time · MIDI guide: docs/MIDI_IMPORT_PROCESS.md").assertExists()
+        onNodeWithTag(WorkspacePageTags.IMPORT_WORKFLOW_HELP).assertExists()
+        onNodeWithTag(WorkspacePageTags.IMPORT_MIDI_HELP).assertExists()
+        onNodeWithText("Workflow guide · docs/TRACK_PROCESS_WORKFLOW.md").assertExists()
+        onNodeWithText("MIDI guide · docs/MIDI_IMPORT_PROCESS.md").assertExists()
     }
 
     @Test
@@ -1137,11 +1179,8 @@ class WorkspaceScreenTest {
         assertEquals(1024, image.height)
         val drop = onNodeWithTag(WorkspacePageTags.IMPORT_DROP_SURFACE).getUnclippedBoundsInRoot()
         assertTrue((drop.bottom - drop.top).value >= MusicWorkspaceTokens.Pages.ImportDropHeight.value)
-        val audioChooser = onNodeWithTag(WorkspacePageTags.IMPORT_AUDIO_CHOOSER).getUnclippedBoundsInRoot()
-        val midiChooser = onNodeWithTag(WorkspacePageTags.IMPORT_MIDI_CHOOSER).getUnclippedBoundsInRoot()
         val table = onNodeWithTag(WorkspacePageTags.IMPORTED_FILES).getUnclippedBoundsInRoot()
         val context = onNodeWithTag(WorkspacePageTags.IMPORT_CONTEXT).getUnclippedBoundsInRoot()
-        assertTrue(audioChooser.right.value <= midiChooser.left.value, "chooser cards should remain side-by-side at reference width")
         assertTrue(table.top.value > drop.bottom.value, "table should follow the shared drop surface")
         assertTrue(context.left.value > table.right.value, "context rail should remain outside the import page")
         writeTask094ImportCapture(image.toAwtImage())

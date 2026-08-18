@@ -89,6 +89,8 @@ internal object WorkspacePageTags {
     const val VIDEO_PREVIEW_STATUS = "video-preview-status"
     const val IMPORT_DROP_SURFACE = "import-drop-surface"
     const val IMPORT_BROWSE = "import-browse"
+    const val IMPORT_WORKFLOW_HELP = "import-workflow-help"
+    const val IMPORT_MIDI_HELP = "import-midi-help"
     const val IMPORT_AUDIO_CHOOSER = "import-audio-chooser"
     const val IMPORT_MIDI_CHOOSER = "import-midi-chooser"
     const val IMPORT_HELP = "import-help"
@@ -1556,22 +1558,32 @@ private fun ImportPage(
     Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)
 ) {
     PageTitle("Import", "Import MIDI or eligible solo-piano audio files")
-    ImportTabs()
-    ImportChooserCards(state, onIntent)
     ImportDropSurface(state, onIntent)
+    ImportHelpLinks()
     ImportedFiles(state, onIntent, partDetailsFocusTargets)
     ImportPrimaryAction(state, onIntent, partDetailsFocusTargets)
 }
 
 @Composable
-private fun ImportTabs() = Row(
-    Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Lg)
+private fun ImportHelpLinks() = Row(
+    Modifier.fillMaxWidth(),
+    horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Lg)
 ) {
-    Text("Import files", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
     Text(
-        "One source at a time · MIDI guide: docs/MIDI_IMPORT_PROCESS.md",
+        "Workflow guide · docs/TRACK_PROCESS_WORKFLOW.md",
         modifier = Modifier.weight(1f).semantics {
-            testTag = WorkspacePageTags.IMPORT_HELP
+            testTag = WorkspacePageTags.IMPORT_WORKFLOW_HELP
+            contentDescription = "Workflow guide: docs/TRACK_PROCESS_WORKFLOW.md"
+        },
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.bodySmall,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis
+    )
+    Text(
+        "MIDI guide · docs/MIDI_IMPORT_PROCESS.md",
+        modifier = Modifier.weight(1f).semantics {
+            testTag = WorkspacePageTags.IMPORT_MIDI_HELP
             contentDescription = "MIDI import guide: docs/MIDI_IMPORT_PROCESS.md"
         },
         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1581,99 +1593,24 @@ private fun ImportTabs() = Row(
     )
 }
 
-@Composable
-private fun ImportChooserCards(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = BoxWithConstraints(Modifier.fillMaxWidth()) {
-    val narrow = maxWidth < MusicWorkspaceTokens.Reference.MediumBreakpoint
-    val content: @Composable () -> Unit = {
-        ImportChooserCard(
-            tag = WorkspacePageTags.IMPORT_AUDIO_CHOOSER,
-            icon = "♫",
-            title = "Import audio",
-            detail = "Solo-piano WAV, WAVE, or MP3",
-            buttonLabel = "Select audio file",
-            enabled = state.project != null && !state.operation.isMutating,
-            onClick = { onIntent(WorkspaceIntent.ShowImportPart(audio = true)) }
-        )
-        ImportChooserCard(
-            tag = WorkspacePageTags.IMPORT_MIDI_CHOOSER,
-            icon = "▥",
-            title = "Import MIDI",
-            detail = "Validated MID or MIDI source",
-            buttonLabel = "Select MIDI file",
-            enabled = state.project != null && !state.operation.isMutating,
-            onClick = { onIntent(WorkspaceIntent.ShowImportPart(audio = false)) }
-        )
-    }
-    if (narrow) Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) { content() }
-    else Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-        ImportChooserCard(
-            tag = WorkspacePageTags.IMPORT_AUDIO_CHOOSER,
-            icon = "♫",
-            title = "Import audio",
-            detail = "Solo-piano WAV, WAVE, or MP3",
-            buttonLabel = "Select audio file",
-            enabled = state.project != null && !state.operation.isMutating,
-            onClick = { onIntent(WorkspaceIntent.ShowImportPart(audio = true)) },
-            modifier = Modifier.weight(1f)
-        )
-        ImportChooserCard(
-            tag = WorkspacePageTags.IMPORT_MIDI_CHOOSER,
-            icon = "▥",
-            title = "Import MIDI",
-            detail = "Validated MID or MIDI source",
-            buttonLabel = "Select MIDI file",
-            enabled = state.project != null && !state.operation.isMutating,
-            onClick = { onIntent(WorkspaceIntent.ShowImportPart(audio = false)) },
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-@Composable
-private fun ImportChooserCard(
-    tag: String,
-    icon: String,
-    title: String,
-    detail: String,
-    buttonLabel: String,
-    enabled: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) = Card(
-    modifier.semantics { testTag = tag; contentDescription = "$title chooser. $detail" },
-    colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface),
-    border = BorderStroke(1.dp, MusicWorkspaceTokens.Border)
-) {
-    Row(
-        Modifier.fillMaxWidth().padding(MusicWorkspaceTokens.Spacing.Md),
-        horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md), verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(icon, style = MaterialTheme.typography.headlineMedium, color = MusicWorkspaceTokens.WarmAccent)
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-            Text(title, fontWeight = FontWeight.SemiBold)
-            Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Button(onClick = onClick, enabled = enabled, colors = workspacePrimaryButtonColors()) { Text(buttonLabel) }
-        }
-    }
-}
-
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun ImportDropSurface(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
-    val dropTarget = remember(onIntent) {
+    val enabled = state.project != null && !state.operation.isMutating
+    val dropTarget = remember(onIntent, enabled) {
         object : DragAndDropTarget {
             override fun onDrop(event: DragAndDropEvent): Boolean {
+                if (!enabled) return false
                 val path = droppedPartSource(event) ?: return false
                 onIntent(WorkspaceIntent.ImportSourceChosen(path))
                 return true
             }
         }
     }
-    val enabled = state.project != null && !state.operation.isMutating
     Card(
         Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Pages.ImportDropHeight)
             .dragAndDropTarget(
-                shouldStartDragAndDrop = { event -> droppedPartSource(event) != null },
+                shouldStartDragAndDrop = { event -> enabled && droppedPartSource(event) != null },
                 target = dropTarget
             ).semantics {
                 testTag = WorkspacePageTags.IMPORT_DROP_SURFACE
@@ -1687,15 +1624,15 @@ private fun ImportDropSurface(state: WorkspaceUiState, onIntent: (WorkspaceInten
             verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)
         ) {
             Text("⌑", style = MaterialTheme.typography.headlineMedium, color = MusicWorkspaceTokens.WarmAccent)
-            Text("Drop one supported source here", fontWeight = FontWeight.Medium)
-            Text("or", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("1. Select one source", fontWeight = FontWeight.Medium)
+            Text("Drop one MIDI, WAV, WAVE, or MP3 file. Audio continues only through the eligible solo-piano transcription route.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Button(
                 onClick = { onIntent(WorkspaceIntent.ShowAddPart) }, enabled = enabled,
                 modifier = Modifier.semantics {
                     testTag = WorkspacePageTags.IMPORT_BROWSE
                     contentDescription = "Browse supported source files"
                 }
-            ) { Text("Browse all supported files") }
+            ) { Text("Browse source") }
         }
     }
 }
@@ -1842,9 +1779,8 @@ internal fun importPrimaryPart(state: WorkspaceUiState): app.melotrail.applicati
 @Composable
 internal fun ImportContextRail(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
     val part = importPrimaryPart(state)
-    val action = part?.let { primaryPartAction(it, state.pendingMidiFeel) }
     Column(Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.IMPORT_CONTEXT }, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-        Text("CLEANING & PROCESSING", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("SELECTED SOURCE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (part == null) {
             Text("Select or import a source to see its validated preparation state.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
@@ -1852,64 +1788,11 @@ internal fun ImportContextRail(state: WorkspaceUiState, onIntent: (WorkspaceInte
             Text(part.sourceName, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
             Text("${part.sourceType.name} · ${state.partPreparationLabel(part.id)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(part.preparation.warnings.firstOrNull() ?: "Source remains immutable; derived preparation is inspectable.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (action != null) Button(
-                onClick = { dispatchImportPrimaryAction(action, onIntent, PartDetailsFocusReturn.ImportPrimaryAction) },
-                enabled = !state.operation.isMutating,
-                modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.IMPORT_CONTEXT_ACTION; contentDescription = "${action.label()} for selected part ${part.id}" },
-                colors = workspacePrimaryButtonColors()
-            ) { Text(action.label()) }
             TextButton(
                 onClick = { onIntent(WorkspaceIntent.ShowPartDetails(part.id, PartDetailsFocusReturn.ImportPrimaryAction)) },
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("Open preparation details") }
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
-            ImportLoFiProcessorAccess(part, state, onIntent)
+            ) { Text("Details") }
         }
-    }
-}
-
-/**
- * Import preserves source files, so it never applies an audio effect in-place.  This
- * keeps both supported Lo-fi paths discoverable without implying otherwise.
- */
-@Composable
-private fun ImportLoFiProcessorAccess(
-    part: app.melotrail.application.PartSummary,
-    state: WorkspaceUiState,
-    onIntent: (WorkspaceIntent) -> Unit
-) {
-    if (part.sourceType == PartSourceType.MIDI) {
-        Text("LO-FI MIDI FEEL", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        val repaired = part.preparation.midiQuality.status == app.melotrail.application.MidiQualityStatus.CURRENT
-        Text(
-            if (repaired) "Create the separate 80 BPM, 58% swing MIDI Feel artifact. Your imported MIDI remains unchanged."
-            else "Repair and approve this MIDI first; then choose its separate 80 BPM, 58% swing Lo-fi Feel artifact.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        OutlinedButton(
-            onClick = { onIntent(WorkspaceIntent.ShowPartDetails(part.id, PartDetailsFocusReturn.ImportPrimaryAction)) },
-            enabled = !state.operation.isMutating,
-            modifier = Modifier.fillMaxWidth().semantics {
-                testTag = WorkspacePageTags.IMPORT_LOFI_MIDI_PROCESSOR
-                contentDescription = if (repaired) "Configure Lo-fi MIDI Feel for ${part.id}" else "Open MIDI repair details before configuring Lo-fi MIDI Feel for ${part.id}"
-            }
-        ) { Text(if (repaired) "Configure Lo-fi MIDI Feel" else "Prepare MIDI for Lo-fi Feel") }
-    } else {
-        Text("LO-FI AUDIO TEXTURE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(
-            "The fixed Bedroom LoFi audio texture is applied during Build Song after mixing; imported audio remains unchanged.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        OutlinedButton(
-            onClick = { onIntent(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.MIX_MASTER)) },
-            enabled = !state.operation.isMutating,
-            modifier = Modifier.fillMaxWidth().semantics {
-                testTag = WorkspacePageTags.IMPORT_LOFI_AUDIO_PROCESSOR
-                contentDescription = "Open Mix and Master to enable the Lo-fi audio texture"
-            }
-        ) { Text("Open Lo-fi audio texture") }
     }
 }
 

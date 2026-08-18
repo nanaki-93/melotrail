@@ -352,7 +352,11 @@ sealed interface WorkspaceDialog {
         /** An explicit conservative default; commercial export remains blocked until changed if applicable. */
         val rightsClaim: SourceRightsClaim = SourceRightsClaim.NOT_ESTABLISHED,
         val preference: ImportPreference = ImportPreference.ANY,
-        val detailsExpanded: Boolean = false
+        val detailsExpanded: Boolean = false,
+        /** Rights are recorded explicitly before the immutable source is published. */
+        val provenanceConfirmed: Boolean = false,
+        /** A confirmation/readiness error is kept separate from source-format inspection evidence. */
+        val confirmationMessage: String? = null
     ) : WorkspaceDialog
 
     data class EditRole(val partId: String, val role: String) : WorkspaceDialog
@@ -377,6 +381,27 @@ enum class ImportSourceKind(val label: String, val isAudio: Boolean) {
     WAV("WAV", true),
     MP3("MP3", true),
     UNSUPPORTED("Unsupported", false)
+}
+
+/** The short import flow is presentation state only; the typed import service remains authoritative. */
+enum class ImportFlowStep(val number: Int, val label: String) {
+    SELECT_SOURCE(1, "Select source"),
+    INSPECT_AND_VALIDATE(2, "Inspect and validate"),
+    CONFIRM_PROVENANCE(3, "Confirm source rights"),
+    NEXT_ACTION(4, "Next action")
+}
+
+internal fun importFlowStep(draft: WorkspaceDialog.ImportPart): ImportFlowStep = when {
+    draft.source == null -> ImportFlowStep.SELECT_SOURCE
+    draft.detectedType == ImportSourceKind.UNSUPPORTED || draft.validationMessage != null -> ImportFlowStep.INSPECT_AND_VALIDATE
+    !draft.provenanceConfirmed -> ImportFlowStep.CONFIRM_PROVENANCE
+    else -> ImportFlowStep.NEXT_ACTION
+}
+
+internal fun importRoute(kind: ImportSourceKind?): String = when (kind) {
+    ImportSourceKind.MIDI -> "Direct MIDI import"
+    ImportSourceKind.WAV, ImportSourceKind.MP3 -> "Solo-piano transcription"
+    else -> "Choose a supported source"
 }
 
 /** Exactly one next action is derived from canonical artifact state, never from a row-local flag. */
@@ -463,6 +488,7 @@ sealed interface WorkspaceIntent {
     data object ChooseImportSource : WorkspaceIntent
     data class ImportSourceChosen(val source: Path?) : WorkspaceIntent
     data class UpdateImportPart(val draft: WorkspaceDialog.ImportPart) : WorkspaceIntent
+    data object ConfirmImportProvenance : WorkspaceIntent
     data object ImportPart : WorkspaceIntent
     data class PrepareMidi(val partId: String) : WorkspaceIntent
     data class ShowPartDetails(
@@ -615,6 +641,7 @@ class WorkspaceViewModel(
             WorkspaceIntent.ChooseImportSource -> chooseImportSource()
             is WorkspaceIntent.ImportSourceChosen -> updateImportSource(intent.source)
             is WorkspaceIntent.UpdateImportPart -> mutableState.update { it.copy(dialog = intent.draft) }
+            WorkspaceIntent.ConfirmImportProvenance -> confirmImportProvenance()
             WorkspaceIntent.ImportPart -> importPart()
             is WorkspaceIntent.PrepareMidi -> prepareMidi(intent.partId)
             is WorkspaceIntent.ShowPartDetails -> showPartDetails(intent)
@@ -898,7 +925,7 @@ class WorkspaceViewModel(
         if (state.value.project == null) return fail("import part", "Create or open a project before adding a part.")
         if (state.value.operation.isMutating) return busy("add a part")
         mutableState.update {
-            it.copy(dialog = WorkspaceDialog.ImportPart(audio = audio, preference = if (audio) ImportPreference.AUDIO else ImportPreference.MIDI), notification = null)
+            it.copy(dialog = WorkspaceDialog.ImportPart(), notification = null)
         }
     }
 
@@ -932,9 +959,13 @@ class WorkspaceViewModel(
                 audio = type.isAudio,
                 source = source,
                 id = autoPartId(source, it.project?.parts.orEmpty()),
+                role = defaultPartRole(source),
                 detectedType = type,
                 sourceSizeBytes = size,
-                validationMessage = message
+                validationMessage = message,
+                preference = ImportPreference.ANY,
+                provenanceConfirmed = false,
+                confirmationMessage = null
             ))
         }
     }
@@ -947,33 +978,63 @@ class WorkspaceViewModel(
             .first { it.lowercase() !in existing }
     }
 
+    private fun defaultPartRole(source: Path): String {
+        val name = source.fileName.toString().substringBeforeLast('.').lowercase()
+        return when {
+            "intro" in name -> "intro"
+            "chorus" in name || "hook" in name -> "chorus"
+            "bridge" in name -> "bridge"
+            "outro" in name -> "outro"
+            else -> "verse"
+        }
+    }
+
+    private fun confirmImportProvenance() {
+        val draft = state.value.dialog as? WorkspaceDialog.ImportPart ?: return
+        if (draft.source == null || draft.detectedType == ImportSourceKind.UNSUPPORTED || draft.validationMessage != null) {
+            return failImportDraft(draft, "Choose a supported source before confirming source rights.")
+        }
+        mutableState.update { it.copy(dialog = draft.copy(provenanceConfirmed = true, confirmationMessage = null), notification = null) }
+    }
+
     private fun importPart() {
         val project = state.value.project ?: return
         val draft = state.value.dialog as? WorkspaceDialog.ImportPart ?: return
         val source = draft.source ?: return failImportDraft(draft, "Choose a MIDI, WAV, or MP3 source first.")
         if (draft.detectedType == ImportSourceKind.UNSUPPORTED) return failImportDraft(draft, draft.validationMessage ?: "Unsupported source type.")
-        if (draft.id.isBlank()) return failImportDraft(draft, "Part ID is required and remains stable after import.")
-        if (project.parts.any { it.id == draft.id }) return failImportDraft(draft, "Part ID already exists: ${draft.id}")
-        if (draft.detectedType?.isAudio == true) state.value.runtimeReadiness.capabilityFailure(RuntimeCapability.AUDIO_IMPORT)?.let { return failImportDraft(draft, it, "import audio") }
+        if (!draft.provenanceConfirmed) return failImportDraft(draft, "Confirm the source-rights record before importing.", ImportFlowStep.CONFIRM_PROVENANCE)
+        if (draft.id.isBlank()) return failImportDraft(draft, "Part ID is required and remains stable after import.", ImportFlowStep.NEXT_ACTION)
+        if (project.parts.any { it.id.equals(draft.id, ignoreCase = true) }) return failImportDraft(draft, "Part ID already exists: ${draft.id}", ImportFlowStep.NEXT_ACTION)
+        if (draft.detectedType?.isAudio == true) state.value.runtimeReadiness.capabilityFailure(RuntimeCapability.AUDIO_IMPORT)?.let {
+            return failImportDraft(draft, it, ImportFlowStep.NEXT_ACTION, action = "import audio")
+        }
         val request = ImportPartRequest(
             project.root, draft.id, source, draft.role, transcribe = draft.audio,
             sourceAttestation = SourceRightsAttestation(draft.rightsClaim, Instant.now().toString())
         )
-        runImport(request)
+        runImport(request, draft)
     }
 
-    private fun failImportDraft(draft: WorkspaceDialog.ImportPart, message: String, action: String = "import part") {
+    private fun failImportDraft(
+        draft: WorkspaceDialog.ImportPart,
+        message: String,
+        step: ImportFlowStep = if (draft.source == null || draft.detectedType == ImportSourceKind.UNSUPPORTED) ImportFlowStep.INSPECT_AND_VALIDATE else ImportFlowStep.NEXT_ACTION,
+        action: String = "import part"
+    ) {
         operationLogger.event(action, "validation-failed", draft.source, IllegalArgumentException(message))
         mutableState.update {
             it.copy(
                 operation = WorkspaceOperation.Failed(action, message),
                 notification = message,
-                dialog = draft.copy(validationMessage = message)
+                dialog = draft.copy(
+                    validationMessage = if (step == ImportFlowStep.INSPECT_AND_VALIDATE) message else draft.validationMessage,
+                    confirmationMessage = if (step == ImportFlowStep.INSPECT_AND_VALIDATE) null else message
+                )
             )
         }
     }
 
-    private fun runImport(request: ImportPartRequest) {
+    private fun runImport(request: ImportPartRequest, draft: WorkspaceDialog.ImportPart) {
         val feedbackId = beginFeedback(OperationKind.IMPORT, OperationPhase.VALIDATING, "Validating import for ${request.id}…")
         mutableState.update { it.copy(operation = WorkspaceOperation.ImportingPart(request.id), notification = null, retry = null, dialog = null, operationFeedback = feedbackTracker.current) }
         importPreparationJob = scope.launch {
@@ -984,7 +1045,21 @@ class WorkspaceViewModel(
                     }.refreshed()
                 }
             }.onSuccess { opened(it, "Imported ${request.id}", feedbackId) }
-                .onFailure { failure -> if (failure !is CancellationException) fail("import part", failure.message ?: "Unable to import ${request.id}.", WorkspaceRetry.Import(request), feedbackId) }
+                .onFailure { failure -> if (failure !is CancellationException) failImportFromService(draft, request, failure.message ?: "Unable to import ${request.id}.", feedbackId) }
+        }
+    }
+
+    private fun failImportFromService(draft: WorkspaceDialog.ImportPart, request: ImportPartRequest, message: String, feedbackId: String) {
+        val feedback = feedbackTracker.fail(feedbackId, message, OperationRetryAction.RETRY_SAFE_OPERATION) ?: state.value.operationFeedback
+        operationLogger.operationEvent(feedback.sessionId, feedback.kind, feedback.phase, failure = IllegalStateException(message))
+        mutableState.update { current ->
+            current.copy(
+                operation = WorkspaceOperation.Failed("import part", message),
+                notification = message,
+                retry = WorkspaceRetry.Import(request),
+                dialog = draft.copy(validationMessage = message, confirmationMessage = null),
+                operationFeedback = feedback
+            )
         }
     }
 
@@ -1553,7 +1628,18 @@ class WorkspaceViewModel(
     }
 
     private fun retry() = when (val action = state.value.retry) {
-        is WorkspaceRetry.Import -> runImport(action.request)
+        is WorkspaceRetry.Import -> {
+            val draft = (state.value.dialog as? WorkspaceDialog.ImportPart) ?: WorkspaceDialog.ImportPart(
+                audio = action.request.transcribe,
+                source = action.request.source,
+                id = action.request.id,
+                role = action.request.role,
+                detectedType = detectImportSourceKind(action.request.source),
+                rightsClaim = action.request.sourceAttestation?.claim ?: SourceRightsClaim.NOT_ESTABLISHED,
+                provenanceConfirmed = true
+            )
+            runImport(action.request, draft)
+        }
         is WorkspaceRetry.Analyze -> analyzePart(action.partId)
         is WorkspaceRetry.Inspect -> {
             mutableState.update { it.copy(selectedPartId = action.partId, audioPreparation = AudioPreparationUiState(partId = action.partId)) }
