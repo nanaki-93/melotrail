@@ -26,10 +26,6 @@ object AudioComparison {
     const val FFT_HOP_SIZE = 1024
     private const val DB_FLOOR = -240.0
 
-    private val noOpReporter = object : ErrorReporter {
-        override fun report(message: String) = Unit
-        override fun report(message: String, cause: Throwable) = Unit
-    }
     private val json = Json {
         prettyPrint = true
         encodeDefaults = true
@@ -38,7 +34,7 @@ object AudioComparison {
     fun compareFiles(aPath: Path, bPath: Path, allowAlignment: Boolean = false): AudioComparisonReport {
         validateFile(aPath, "A")
         validateFile(bPath, "B")
-        val decoder = WAVDecoder(noOpReporter)
+        val decoder = WAVDecoder(ErrorReporter.NoOp)
         return compare(decoder.decode(aPath), decoder.decode(bPath), allowAlignment)
     }
 

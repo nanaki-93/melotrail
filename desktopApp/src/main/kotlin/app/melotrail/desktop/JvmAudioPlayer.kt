@@ -69,13 +69,13 @@ internal fun interface AudioOutputDevice {
 
 /** Local monitor-only player. It accepts canonical WAV artifacts and never writes project files. */
 class JvmAudioPlayer internal constructor(
-    private val decoder: AudioArtifactDecoder = AudioArtifactDecoder { WAVDecoder(noOpReporter).decode(it) },
+    private val decoder: AudioArtifactDecoder = AudioArtifactDecoder { WAVDecoder(ErrorReporter.NoOp).decode(it) },
     private val outputDevice: AudioOutputDevice = AudioOutputDevice { format -> JavaxAudioOutputLine(AudioSystem.getSourceDataLine(format).also { it.open(format) }) },
     private val workDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val failureReporter: (PlaybackFailure) -> Unit = {}
 ) : ArtifactAudioPlayer {
     constructor() : this(
-        decoder = AudioArtifactDecoder { WAVDecoder(noOpReporter).decode(it) },
+        decoder = AudioArtifactDecoder { WAVDecoder(ErrorReporter.NoOp).decode(it) },
         outputDevice = AudioOutputDevice { format -> JavaxAudioOutputLine(AudioSystem.getSourceDataLine(format).also { it.open(format) }) }
     )
 
@@ -342,6 +342,5 @@ class JvmAudioPlayer internal constructor(
 
     private companion object {
         const val CHUNK_FRAMES = 1024
-        val noOpReporter = object : ErrorReporter { override fun report(message: String) = Unit; override fun report(message: String, cause: Throwable) = Unit }
     }
 }

@@ -1,6 +1,7 @@
 package app.melotrail.arrangement
 
 import app.melotrail.audio.WAVDecoder
+import app.melotrail.model.ErrorReporter
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -124,8 +125,8 @@ class PianoBassQualityGate(
             requireRenderedStem(bassResult.output, format, timelineFrames, "Bass render")
             stage(7, "Rendered timeline-aligned piano and bass PCM-24 stems")
 
-            val piano = WAVDecoder(NoOpErrorReporter).decode(pianoResult.output)
-            val bassAudio = WAVDecoder(NoOpErrorReporter).decode(bassResult.output)
+            val piano = WAVDecoder(ErrorReporter.NoOp).decode(pianoResult.output)
+            val bassAudio = WAVDecoder(ErrorReporter.NoOp).decode(bassResult.output)
             val mix = mixer.mix(
                 listOf(MixTrack("piano", piano), MixTrack("bass", bassAudio, gainDb = -6.0, generated = true)),
                 MixSettings(targetSampleRate = format.sampleRate, peakCeiling = MIX_PEAK_CEILING.toDouble())
@@ -136,7 +137,7 @@ class PianoBassQualityGate(
         }
 
         val dryMix = root.resolve(expectedArtifacts.getValue("dryMix"))
-        val mixBuffer = WAVDecoder(NoOpErrorReporter).decode(dryMix)
+        val mixBuffer = WAVDecoder(ErrorReporter.NoOp).decode(dryMix)
         require(mixBuffer.length.toLong() == timelineFrames) { "Dry mix frame count does not match arrangement timeline" }
         require(mixBuffer.samples.all { it.isFinite() }) { "Dry mix contains non-finite samples" }
         val mixPeak = mixBuffer.samples.maxOf { kotlin.math.abs(it) }
@@ -244,7 +245,7 @@ class PianoBassQualityGate(
         validateMidi(root.resolve(artifacts.getValue("pianoMidi")), "Timeline piano MIDI")
         validateMidi(root.resolve(artifacts.getValue("bassMidi")), "Generated bass MIDI")
         listOf("pianoStem", "bassStem", "dryMix").forEach { key ->
-            val audio = WAVDecoder(NoOpErrorReporter).decode(root.resolve(artifacts.getValue(key)))
+            val audio = WAVDecoder(ErrorReporter.NoOp).decode(root.resolve(artifacts.getValue(key)))
             require(audio.format.sampleRate == format.sampleRate && audio.format.channels == format.channels && audio.format.bitDepth == 24 && audio.length.toLong() == frames)
             require(audio.samples.all { it.isFinite() })
             if (key == "dryMix") require(audio.samples.maxOf { kotlin.math.abs(it) } <= MIX_PEAK_CEILING + 0.0001f)
@@ -252,7 +253,7 @@ class PianoBassQualityGate(
     }.isSuccess
 
     private fun requireRenderedStem(path: Path, format: RenderFormat, frames: Long, stage: String) {
-        val audio = WAVDecoder(NoOpErrorReporter).decode(path)
+        val audio = WAVDecoder(ErrorReporter.NoOp).decode(path)
         require(audio.format.sampleRate == format.sampleRate && audio.format.channels == format.channels && audio.format.bitDepth == 24) {
             "$stage wrote the wrong WAV format; expected ${format.sampleRate} Hz, ${format.channels} channels, PCM-24"
         }
@@ -261,7 +262,7 @@ class PianoBassQualityGate(
     }
 
     private fun renderedFrom(path: Path, identity: String): RenderResult {
-        val audio = WAVDecoder(NoOpErrorReporter).decode(path)
+        val audio = WAVDecoder(ErrorReporter.NoOp).decode(path)
         return RenderResult(path, audio.format.sampleRate, audio.format.channels, audio.format.bitDepth, audio.length.toLong(), audio.length.toDouble() / audio.format.sampleRate, audio.samples.maxOf { kotlin.math.abs(it).toDouble() }, identity, "cached", "", "")
     }
 
@@ -291,10 +292,6 @@ class PianoBassQualityGate(
         const val REPORT_FILE = "quality-gate.json"
         const val MIX_PEAK_CEILING = 0.95f
         val json = Json { prettyPrint = true; encodeDefaults = true; ignoreUnknownKeys = false }
-        object NoOpErrorReporter : app.melotrail.model.ErrorReporter {
-            override fun report(message: String) = Unit
-            override fun report(message: String, cause: Throwable) = Unit
-        }
     }
 }
 

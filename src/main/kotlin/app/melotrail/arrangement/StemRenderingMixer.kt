@@ -2,6 +2,7 @@ package app.melotrail.arrangement
 
 import app.melotrail.audio.AudioBuffer
 import app.melotrail.audio.WAVDecoder
+import app.melotrail.model.ErrorReporter
 import java.nio.charset.StandardCharsets
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
@@ -191,7 +192,7 @@ class StemRenderingMixer(
     }
 
     private fun requireCompatibleStem(path: Path, format: RenderFormat, frames: Long, label: String): AudioBuffer {
-        val audio = WAVDecoder(NoOpErrorReporter).decode(path)
+        val audio = WAVDecoder(ErrorReporter.NoOp).decode(path)
         require(audio.format.sampleRate == format.sampleRate && audio.format.channels == format.channels && audio.format.bitDepth == 24) {
             "$label has wrong WAV format; expected ${format.sampleRate} Hz, ${format.channels} channels, PCM-24"
         }
@@ -241,7 +242,6 @@ class StemRenderingMixer(
         const val DRY_PEAK_CEILING = 0.95
         val DEFAULT_GAINS_DB = mapOf("piano" to 0.0, "bass" to -6.0, "drums" to -8.0, "pad" to -10.0, "strings" to -10.0)
         val json = Json { prettyPrint = true; encodeDefaults = true; ignoreUnknownKeys = false }
-        object NoOpErrorReporter : app.melotrail.model.ErrorReporter { override fun report(message: String) = Unit; override fun report(message: String, cause: Throwable) = Unit }
     }
 }
 

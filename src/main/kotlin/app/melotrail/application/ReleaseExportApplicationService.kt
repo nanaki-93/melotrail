@@ -165,7 +165,7 @@ class NioReleaseExportFilesystem : ReleaseExportFilesystem {
         fun double(name: String) = metadata[name]?.jsonPrimitive?.doubleOrNull ?: throw IllegalArgumentException("Release metadata is missing $name.")
         require(string("master").equals("master.wav", ignoreCase = true)) { "Release metadata does not identify the canonical master.wav." }
         require(string("masterFingerprint") == digest(master)) { "Master WAV does not match current release metadata. Build Song again." }
-        val audio = WAVDecoder(NoOpErrorReporter).decode(master)
+        val audio = WAVDecoder(ErrorReporter.NoOp).decode(master)
         require(audio.format.bitDepth == 24 && audio.samples.isNotEmpty() && audio.samples.all { it.isFinite() }) { "Master WAV is not a valid PCM-24 release artifact." }
         val sampleRate = int("sampleRate")
         val channels = int("channels")
@@ -193,7 +193,7 @@ class NioReleaseExportFilesystem : ReleaseExportFilesystem {
         require(Files.isRegularFile(path) && Files.size(path) > 0) { "Export did not produce an output file." }
         when (format) {
             ReleaseExportFormat.WAV -> {
-                val audio = WAVDecoder(NoOpErrorReporter).decode(path)
+                val audio = WAVDecoder(ErrorReporter.NoOp).decode(path)
                 require(audio.format.bitDepth == 24 && audio.samples.isNotEmpty() && audio.samples.all { it.isFinite() }) { "Export did not produce a valid PCM-24 WAV." }
             }
             ReleaseExportFormat.MP3 -> {
@@ -205,6 +205,4 @@ class NioReleaseExportFilesystem : ReleaseExportFilesystem {
         }
     }
     override fun digest(path: Path): String = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
-
-    private object NoOpErrorReporter : ErrorReporter { override fun report(message: String) = Unit; override fun report(message: String, cause: Throwable) = Unit }
 }

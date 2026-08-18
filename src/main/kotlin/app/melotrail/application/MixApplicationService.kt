@@ -135,9 +135,6 @@ class DefaultMixApplicationService(private val mixer: DeterministicStemMixer = D
         const val SETTINGS_FILE = "mix/settings.json"
         val json = Json { prettyPrint = true; encodeDefaults = true; ignoreUnknownKeys = false }
         val locks = ConcurrentHashMap<Path, Mutex>()
-        val noOpErrorReporter = object : ErrorReporter {
-            override fun report(message: String) = Unit
-            override fun report(message: String, cause: Throwable) = Unit
-        }
+        val noOpErrorReporter = ErrorReporter.NoOp
     }
 }

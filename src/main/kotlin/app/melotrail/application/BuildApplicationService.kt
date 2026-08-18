@@ -154,7 +154,7 @@ class DefaultBuildApplicationService(
     }
 
     private fun applyLoFi(input: Path, output: Path) {
-        val audio = WAVDecoder(noOpReporter).decode(input)
+        val audio = WAVDecoder(ErrorReporter.NoOp).decode(input)
         val preset = checkNotNull(LOFIPresets.getByName("Bedroom LoFi"))
         val processed = DSPChain.createDefaultChain(preset.settings, audio.format.sampleRate, audio.format.channels).process(audio)
         DeterministicStemMixer().writeWav(MixedStem(processed, listOf("lofi")), output)
@@ -173,7 +173,7 @@ class DefaultBuildApplicationService(
 
     private fun validate(path: Path, label: String): AudioDescriptor {
         require(Files.isRegularFile(path)) { "$label did not create an audio artifact: $path" }
-        val audio = WAVDecoder(noOpReporter).decode(path)
+        val audio = WAVDecoder(ErrorReporter.NoOp).decode(path)
         require(audio.format.bitDepth == 24 && audio.samples.isNotEmpty() && audio.samples.all { it.isFinite() }) {
             "$label did not create a valid PCM-24 WAV artifact: $path"
         }
@@ -231,6 +231,5 @@ class DefaultBuildApplicationService(
         val MP3_BITRATES = setOf(128, 160, 192, 256, 320)
         val locks = ConcurrentHashMap<Path, Mutex>()
         val json = Json { prettyPrint = true; encodeDefaults = true }
-        val noOpReporter = object : ErrorReporter { override fun report(message: String) = Unit; override fun report(message: String, cause: Throwable) = Unit }
     }
 }
