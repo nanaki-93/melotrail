@@ -53,7 +53,7 @@ is needed.
 | 2 | [102 — Kotlin Python-worker package consolidation](tasks/completed/102-kotlin-python-worker-package-consolidation.md) | One `worker` ownership boundary | 101 |
 | 3 | [103 — Track-process workflow documentation](tasks/completed/103-track-process-workflow-documentation.md) | User-facing track workflow | 102 |
 | 4 | [104 — MIDI import-process documentation](tasks/completed/104-midi-import-process-documentation.md) | Accurate direct-MIDI and audio-to-MIDI guide | 102 |
-| 5 | [105 — Function documentation coverage](tasks/105-function-documentation-coverage.md) | Documented Kotlin/Python callable code | 102 |
+| 5 | [105 — Function documentation coverage](tasks/completed/105-function-documentation-coverage.md) | Documented Kotlin/Python callable code | 102 |
 | 6 | [106 — Theme and semantic colour system](tasks/106-theme-and-semantic-colour-system.md) | Reference-derived accessible design tokens | 101 |
 | 7 | [107 — Visible project actions and simpler navigation](tasks/107-visible-project-actions-and-simpler-navigation.md) | Labeled New Project and reduced shell actions | 106 |
 | 8 | [108 — Guided import experience](tasks/108-guided-import-experience.md) | Step-by-step import and minimal initial detail | 103, 104, 106, 107 |

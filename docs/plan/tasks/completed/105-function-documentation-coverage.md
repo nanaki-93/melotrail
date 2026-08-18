@@ -12,8 +12,8 @@ keep that coverage current.
 
 ## Requirements
 
-- Create a checked-in documentation inventory covering `src/main/kotlin`,
-  `desktopApp/src/main/kotlin`, and `worker/`. For each source file, record
+- Create a checked-in documentation inventory covering `../../../../src/main/kotlin`,
+  `../../../../desktopApp/src/main/kotlin`, and `../../../../worker`. For each source file, record
   documented, inherited-contract, trivial/generated, or deferred-with-reason.
 - Add KDoc/docstrings to all non-trivial functions and methods. Explain intent,
   important invariants, side effects/artifact ownership, inputs and outputs,

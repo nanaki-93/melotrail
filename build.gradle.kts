@@ -32,6 +32,16 @@ tasks.test {
     useJUnitPlatform()
 }
 
+tasks.register<Exec>("checkDocumentationCoverage") {
+    group = "verification"
+    description = "Validate the checked-in Kotlin/Python function documentation inventory"
+    commandLine("python3", "tools/check_documentation_coverage.py", "--repository", projectDir)
+}
+
+tasks.check {
+    dependsOn("checkDocumentationCoverage")
+}
+
 springBoot {
     mainClass.set("app.melotrail.server.ServerKt")
 }
