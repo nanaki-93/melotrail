@@ -20,7 +20,7 @@ import app.melotrail.application.PersistedMixSettings
 import app.melotrail.application.ProjectApplicationService
 import app.melotrail.application.ProjectSnapshot
 import app.melotrail.application.SaveStructureRequest
-import app.melotrail.application.UpdatePartRoleRequest
+import app.melotrail.application.UpdateSongPartSectionRequest
 import app.melotrail.application.PartPreviewApplicationService
 import app.melotrail.application.PreviewRequest
 import app.melotrail.application.PreviewResult
@@ -546,7 +546,7 @@ class WorkspaceViewModelTest {
         viewModel.accept(WorkspaceIntent.UpdateRole("chorus"))
         viewModel.accept(WorkspaceIntent.SaveRole)
         advanceUntilIdle()
-        assertEquals("chorus", service.updatedRole?.role)
+        assertEquals(app.melotrail.arrangement.SectionTypeId.CHORUS, service.updatedSection?.sectionType)
 
         viewModel.accept(WorkspaceIntent.AddStructurePart("A"))
         advanceUntilIdle()
@@ -1643,7 +1643,7 @@ private class FakeProjectService(
     var cleanMidiRequest: app.melotrail.application.CleanMidiRequest? = null
     var midiFeelSelection: app.melotrail.application.SelectMidiFeelRequest? = null
     var analyzed: AnalyzePartRequest? = null
-    var updatedRole: UpdatePartRoleRequest? = null
+    var updatedSection: UpdateSongPartSectionRequest? = null
     var savedStructure: SaveStructureRequest? = null
     var cleanedResult: ProjectSnapshot? = null
     var analyzedResult: ProjectSnapshot? = null
@@ -1746,8 +1746,8 @@ private class FakeProjectService(
         return checkNotNull(current)
     }
 
-    override fun updatePart(request: UpdatePartRoleRequest): ProjectSnapshot {
-        updatedRole = request
+    override fun updateSongPartSection(request: UpdateSongPartSectionRequest): ProjectSnapshot {
+        updatedSection = request
         return checkNotNull(current)
     }
 

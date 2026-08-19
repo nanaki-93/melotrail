@@ -48,7 +48,7 @@ import app.melotrail.application.AudioPreparationSnapshot
 import app.melotrail.application.PreviewAudioSource
 import app.melotrail.application.PreviewMidiSource
 import app.melotrail.application.SaveStructureRequest
-import app.melotrail.application.UpdatePartRoleRequest
+import app.melotrail.application.UpdateSongPartSectionRequest
 import app.melotrail.application.WorkflowReadModel
 import app.melotrail.application.WorkflowReadModelDeriver
 import app.melotrail.application.DefaultReleaseExportApplicationService
@@ -1265,7 +1265,12 @@ class WorkspaceViewModel(
             return failImportDraft(draft, it, ImportFlowStep.NEXT_ACTION, action = "import audio")
         }
         val request = ImportPartRequest(
-            project.root, draft.id, source, draft.role, transcribe = draft.audio,
+            root = project.root,
+            id = draft.id,
+            source = source,
+            name = draft.id,
+            sectionType = app.melotrail.arrangement.SectionTypeCatalog.fromLegacyRole(draft.role),
+            transcribe = draft.audio,
             sourceAttestation = SourceRightsAttestation(draft.rightsClaim, Instant.now().toString())
         )
         runImport(request, draft)
@@ -1849,7 +1854,15 @@ class WorkspaceViewModel(
         scope.launch {
             runCatching {
                 withContext(ioDispatcher) {
-                    projectService.updatePart(UpdatePartRoleRequest(project.root, draft.partId, draft.role)).refreshed()
+                    val part = project.parts.first { it.id == draft.partId }
+                    projectService.updateSongPartSection(
+                        UpdateSongPartSectionRequest(
+                            project.root,
+                            draft.partId,
+                            app.melotrail.arrangement.SectionTypeCatalog.fromLegacyRole(draft.role),
+                            part.revision
+                        )
+                    ).refreshed()
                 }
             }.onSuccess { opened(it, "Updated ${draft.partId} role", feedbackId) }
                 .onFailure { fail("update role", it.message ?: "Unable to update role.", sessionId = feedbackId) }

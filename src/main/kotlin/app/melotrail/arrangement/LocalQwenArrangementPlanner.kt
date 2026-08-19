@@ -146,7 +146,7 @@ class LocalQwenArrangementPlanner(
         val projectMetadata = QwenProjectMetadata(
             version = input.project.version,
             name = input.project.name,
-            parts = input.project.parts.map { QwenPartMetadata(it.id, it.role) }
+            parts = input.project.parts.map { QwenPartMetadata(it.id, it.name, it.sectionType.value) }
         )
         val analyses = input.analyses.map { (partId, analysis) ->
             QwenAnalysis(partId, analysis)
@@ -182,7 +182,8 @@ class LocalQwenArrangementPlanner(
     @Serializable
     private data class QwenPartMetadata(
         val id: String,
-        val role: String
+        val name: String,
+        val sectionType: String
     )
 
     @Serializable

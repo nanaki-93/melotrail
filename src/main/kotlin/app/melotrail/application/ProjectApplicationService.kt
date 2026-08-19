@@ -28,7 +28,9 @@ import app.melotrail.arrangement.SectionInstance
 import app.melotrail.arrangement.SongPlanningInput
 import app.melotrail.arrangement.WorkflowArtifact
 import app.melotrail.arrangement.WorkflowChange
-import app.melotrail.arrangement.Part
+import app.melotrail.arrangement.SongPart
+import app.melotrail.arrangement.SectionTypeCatalog
+import app.melotrail.arrangement.SectionTypeId
 import app.melotrail.arrangement.PartAnalysis
 import app.melotrail.arrangement.PartAnalysisReference
 import app.melotrail.arrangement.PartAnalysisStore
@@ -101,7 +103,10 @@ interface ProjectApplicationService {
     suspend fun transcribeAudioPart(request: TranscribeAudioPartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot =
         throw UnsupportedOperationException("This project service does not support audio transcription.")
     suspend fun analyzePart(request: AnalyzePartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
-    fun updatePart(request: UpdatePartRoleRequest): ProjectSnapshot
+    fun updateSongPartName(request: UpdateSongPartNameRequest): ProjectSnapshot =
+        throw UnsupportedOperationException("This project service does not support song-part names.")
+    fun updateSongPartSection(request: UpdateSongPartSectionRequest): ProjectSnapshot =
+        throw UnsupportedOperationException("This project service does not support song-part sections.")
     fun saveStructure(request: SaveStructureRequest): ProjectSnapshot
 }
 
@@ -116,6 +121,9 @@ data class ImportPartRequest(
     val id: String,
     val source: Path,
     val role: String = "",
+    /** New callers use an explicit name and catalog section; role remains input-only compatibility. */
+    val name: String = id,
+    val sectionType: SectionTypeId = SectionTypeCatalog.fromLegacyRole(role),
     val transcribe: Boolean = false,
     val cleanup: MidiCleanupOptions = MidiCleanupOptions(),
     /** Required by the desktop confirmation UI; null is retained only for legacy CLI compatibility. */
@@ -135,7 +143,8 @@ data class SelectMidiFeelRequest(val root: Path, val partId: String, val input: 
 data class AnalyzePartRequest(val root: Path, val partId: String)
 data class InspectPartRequest(val root: Path, val partId: String)
 data class TranscribeAudioPartRequest(val root: Path, val partId: String, val selectedInput: TranscriptionInputArtifact)
-data class UpdatePartRoleRequest(val root: Path, val partId: String, val role: String)
+data class UpdateSongPartNameRequest(val root: Path, val partId: String, val name: String, val expectedRevision: Long)
+data class UpdateSongPartSectionRequest(val root: Path, val partId: String, val sectionType: SectionTypeId, val expectedRevision: Long)
 data class SaveStructureRequest(val root: Path, val partIds: List<String>)
 
 data class OperationProgress(
@@ -188,7 +197,7 @@ data class ProjectMigrationStatus(
 
 data class PartSummary(
     val id: String,
-    val role: String,
+    @Deprecated("Use sectionType or name") val role: String,
     val sourceFile: String,
     val sourceName: String,
     val sourceType: PartSourceType,
@@ -204,7 +213,13 @@ data class PartSummary(
         warnings = emptyList()
     ),
     /** Read by the application service from the canonical immutable source; UI never touches files. */
-    val sourceSizeBytes: Long? = null
+    val sourceSizeBytes: Long? = null,
+    val name: String = id,
+    val sectionType: SectionTypeId = SectionTypeCatalog.fromLegacyRole(role),
+    val sourceSha256: String? = null,
+    val sourceKeyConfirmed: Boolean = false,
+    val revision: Long = 1,
+    val warnings: List<String> = emptyList()
 )
 
 /** Truthful, artifact-derived input state for one canonical project part. */
@@ -463,10 +478,11 @@ class DefaultProjectApplicationService(
         require(sha256(destination) == sourceSha256) { "Preserved source changed before project registration" }
 
         val updated = project.copy(
-            parts = project.parts + Part(
-                request.id,
-                relativeFile,
-                request.role,
+            parts = project.parts + SongPart(
+                id = request.id,
+                file = relativeFile,
+                name = request.name,
+                sectionType = request.sectionType,
                 midi = MidiReferences(raw = raw),
                 sourceAttestation = request.sourceAttestation,
                 importEvidence = ImportEvidence(sourceSha256, rawSha256)
@@ -697,10 +713,30 @@ class DefaultProjectApplicationService(
         snapshot(root, updated)
     }
 
-    override fun updatePart(request: UpdatePartRoleRequest): ProjectSnapshot = mutate(request.root) { root ->
+    override fun updateSongPartName(request: UpdateSongPartNameRequest): ProjectSnapshot = mutate(request.root) { root ->
         val project = readValidProject(root)
-        require(project.parts.any { it.id == request.partId }) { "Part not found: ${request.partId}" }
-        val updated = project.copy(parts = project.parts.map { if (it.id == request.partId) it.copy(role = request.role) else it })
+        val part = project.parts.find { it.id == request.partId } ?: throw IllegalArgumentException("Part not found: ${request.partId}")
+        require(part.revision == request.expectedRevision) { "Part '${part.id}' changed; refresh before updating its name." }
+        require(request.name.isNotBlank() && request.name.length <= 120 && request.name.none { it.isISOControl() }) { "Part name is invalid" }
+        if (part.name == request.name) return@mutate snapshot(root, project)
+        val updated = project.copy(parts = project.parts.map {
+            if (it.id == request.partId) it.copy(name = request.name, revision = it.revision + 1) else it
+        })
+        ProjectStore.write(root, updated)
+        snapshot(root, updated)
+    }
+
+    override fun updateSongPartSection(request: UpdateSongPartSectionRequest): ProjectSnapshot = mutate(request.root) { root ->
+        val project = readValidProject(root)
+        val part = project.parts.find { it.id == request.partId } ?: throw IllegalArgumentException("Part not found: ${request.partId}")
+        require(part.revision == request.expectedRevision) { "Part '${part.id}' changed; refresh before updating its section." }
+        if (part.sectionType == request.sectionType) return@mutate snapshot(root, project)
+        val updated = project.copy(
+            parts = project.parts.map {
+                if (it.id == request.partId) it.copy(sectionType = request.sectionType, revision = it.revision + 1) else it
+            },
+            workflow = project.workflow.invalidate(WorkflowChange.PART_SECTION)
+        )
         ProjectStore.write(root, updated)
         snapshot(root, updated)
     }
@@ -836,7 +872,7 @@ class DefaultProjectApplicationService(
             }
     }.getOrDefault(false)
 
-    private fun Part.summary(root: Path, analysisCurrent: Boolean, aiFixCurrent: Boolean, midiFeelCurrent: Boolean): PartSummary {
+    private fun SongPart.summary(root: Path, analysisCurrent: Boolean, aiFixCurrent: Boolean, midiFeelCurrent: Boolean): PartSummary {
         val sourcePath = Path.of(file)
         val sourceType = sourceType(file)
         val evidence = importEvidence
@@ -852,6 +888,7 @@ class DefaultProjectApplicationService(
             inspected -> report.warnings
             else -> emptyList()
         }
+        val safeWarnings = warnings + listOfNotNull(unsupportedSectionWarning)
         val rawMidi = midi?.raw?.let { reference ->
             isMidiArtifact(root, reference) && (evidence == null || runCatching {
                 sha256(safeDestination(root, reference)) == evidence.rawMidiSha256
@@ -874,7 +911,7 @@ class DefaultProjectApplicationService(
             analyzed = analyzed,
             ready = sourcePreserved && inspected && cleanMidi && analyzed && quality.status == MidiQualityStatus.CURRENT &&
                 aiFix.selectedAvailable && feelSelectedAvailable,
-            warnings = warnings + quality.warnings.map { it.message },
+            warnings = safeWarnings + quality.warnings.map { it.message },
             midiQuality = quality,
             midiFeel = feel,
             midiAiFix = aiFix
@@ -882,10 +919,25 @@ class DefaultProjectApplicationService(
         val sourceSize = root.resolve(file).takeIf { sourcePreserved }?.let { path ->
             runCatching { Files.size(path) }.getOrNull()
         }
-        return PartSummary(id, role, file, sourcePath.fileName.toString(), sourceType, analysis?.summary(root), preparation, sourceSize)
+        return PartSummary(
+            id = id,
+            role = sectionType.value,
+            name = name,
+            sectionType = sectionType,
+            sourceFile = file,
+            sourceName = sourcePath.fileName.toString(),
+            sourceType = sourceType,
+            analysis = analysis?.summary(root),
+            preparation = preparation,
+            sourceSizeBytes = sourceSize,
+            sourceSha256 = importEvidence?.sourceSha256,
+            sourceKeyConfirmed = sourceKeyEvidence?.confirmed == true,
+            revision = revision,
+            warnings = safeWarnings
+        )
     }
 
-    private fun midiQuality(root: Path, part: Part, cleanMidi: Boolean): MidiQualitySummary {
+    private fun midiQuality(root: Path, part: SongPart, cleanMidi: Boolean): MidiQualitySummary {
         val midi = part.midi ?: return MidiQualitySummary.legacyUnknown()
         if (midi.raw == null && midi.cleanup == null && midi.quality == null) return MidiQualitySummary.legacyUnknown()
         if (midi.cleanup == null || midi.quality == null || !cleanMidi) return MidiQualitySummary(MidiQualityStatus.STALE_OR_INVALID)
@@ -904,7 +956,7 @@ class DefaultProjectApplicationService(
         return MidiQualitySummary(status, report.cleanup, report.warnings, report.recommendations, report)
     }
 
-    private fun midiAiFix(root: Path, part: Part, cleanMidi: Boolean, workflowCurrent: Boolean): MidiAiFixSummary {
+    private fun midiAiFix(root: Path, part: SongPart, cleanMidi: Boolean, workflowCurrent: Boolean): MidiAiFixSummary {
         val midi = part.midi ?: return MidiAiFixSummary()
         val references = midi.aiFix ?: return MidiAiFixSummary(midi.aiFixSelection)
         val clean = midi.clean ?: return MidiAiFixSummary(midi.aiFixSelection)
@@ -924,7 +976,7 @@ class DefaultProjectApplicationService(
         )
     }
 
-    private fun midiFeel(root: Path, part: Part, cleanMidi: Boolean, workflowCurrent: Boolean, aiFix: MidiAiFixSummary): MidiFeelSummary {
+    private fun midiFeel(root: Path, part: SongPart, cleanMidi: Boolean, workflowCurrent: Boolean, aiFix: MidiAiFixSummary): MidiFeelSummary {
         val midi = part.midi ?: return MidiFeelSummary()
         val references = midi.feel ?: return MidiFeelSummary(midi.analysisInput)
         val base = when (midi.aiFixSelection) {
@@ -1077,7 +1129,7 @@ class DefaultProjectApplicationService(
         }
     }
 
-    private fun requireCurrentImportEvidence(root: Path, part: Part) {
+    private fun requireCurrentImportEvidence(root: Path, part: SongPart) {
         val evidence = part.importEvidence ?: return
         evidence.requireValid()
         val sourcePath = safeDestination(root, part.file)
@@ -1090,7 +1142,7 @@ class DefaultProjectApplicationService(
         check(sha256(rawPath) == evidence.rawMidiSha256) { "Part '${part.id}' raw MIDI is stale or changed." }
     }
 
-    private fun currentImportMatches(root: Path, part: Part, sourceSha256: String, extension: String): Boolean = runCatching {
+    private fun currentImportMatches(root: Path, part: SongPart, sourceSha256: String, extension: String): Boolean = runCatching {
         val evidence = requireNotNull(part.importEvidence)
         evidence.requireValid()
         require(part.file == "source/${part.id}.$extension")

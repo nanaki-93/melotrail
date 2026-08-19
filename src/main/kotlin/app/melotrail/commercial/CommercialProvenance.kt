@@ -1,6 +1,6 @@
 package app.melotrail.commercial
 
-import app.melotrail.arrangement.Part
+import app.melotrail.arrangement.SongPart
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.ProjectWorkflowStore
 import app.melotrail.arrangement.WorkflowArtifact
@@ -128,7 +128,7 @@ class CommercialProvenanceService(private val soundLibraryRoot: Path? = null) {
         val master = projectRoot.resolve("output/master.wav")
         require(Files.isRegularFile(master)) { "Commercial report requires the validated output/master.wav artifact." }
 
-        val sources = project.parts.sortedBy(Part::id).map { part ->
+        val sources = project.parts.sortedBy(SongPart::id).map { part ->
             val path = safeProjectFile(projectRoot, part.file)
             CommercialSource(part.id, sha256(path), part.sourceAttestation)
         }

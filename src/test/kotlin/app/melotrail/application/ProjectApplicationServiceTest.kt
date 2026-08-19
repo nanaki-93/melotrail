@@ -230,7 +230,7 @@ class ProjectApplicationServiceTest {
         val sourceBefore = Files.readAllBytes(root.resolve("source/A.mid"))
 
         val saved = service.saveStructure(SaveStructureRequest(root, listOf("B", "A", "B")))
-        val updated = service.updatePart(UpdatePartRoleRequest(root, "A", "chorus"))
+        val updated = service.updateSongPartSection(UpdateSongPartSectionRequest(root, "A", app.melotrail.arrangement.SectionTypeId.CHORUS, 1))
 
         assertEquals(listOf("B1", "A1", "B2"), saved.structure.map { it.instanceId })
         assertEquals("chorus", updated.parts.single { it.id == "A" }.role)
@@ -260,6 +260,33 @@ class ProjectApplicationServiceTest {
         assertEquals(listOf("B1", "A1", "B2", "A2"), service.saveStructure(SaveStructureRequest(root, listOf("B", "A", "B", "A"))).structure.map { it.instanceId })
         assertEquals(listOf("A1"), service.saveStructure(SaveStructureRequest(root, listOf("A"))).structure.map { it.instanceId })
         assertTrue(service.saveStructure(SaveStructureRequest(root, emptyList())).structure.isEmpty())
+    }
+
+    @Test
+    fun `song part name and section commands are revision checked and preserve source evidence`() {
+        val service = service()
+        val root = tempDir.resolve("song-part-commands")
+        service.create(CreateProjectRequest(root))
+        blocking { service.importPart(ImportPartRequest(root, "A", midi("song-part.mid"), name = "Opening", sectionType = app.melotrail.arrangement.SectionTypeId.INTRO)) }
+        val sourceBefore = Files.readAllBytes(root.resolve("source/A.mid"))
+        val imported = service.open(root).parts.single()
+
+        val renamed = service.updateSongPartName(UpdateSongPartNameRequest(root, "A", "First verse", imported.revision))
+        val named = renamed.parts.single()
+        assertEquals("First verse", named.name)
+        assertEquals(app.melotrail.arrangement.SectionTypeId.INTRO, named.sectionType)
+        assertEquals(2, named.revision)
+        assertEquals("source/A.mid", named.sourceFile)
+        assertFalse(named.sourceFile.startsWith(root.toString()))
+        assertTrue(named.sourceSha256?.matches(Regex("[0-9a-f]{64}")) == true)
+
+        val sectioned = service.updateSongPartSection(UpdateSongPartSectionRequest(root, "A", app.melotrail.arrangement.SectionTypeId.VERSE, named.revision))
+        assertEquals(app.melotrail.arrangement.SectionTypeId.VERSE, sectioned.parts.single().sectionType)
+        assertTrue(app.melotrail.arrangement.WorkflowArtifact.COHESION in sectioned.readiness.staleArtifacts)
+        assertTrue(sourceBefore.contentEquals(Files.readAllBytes(root.resolve("source/A.mid"))))
+        assertTrue(assertThrows(IllegalArgumentException::class.java) {
+            service.updateSongPartName(UpdateSongPartNameRequest(root, "A", "Stale", named.revision))
+        }.message.orEmpty().contains("refresh"))
     }
 
     @Test

@@ -36,6 +36,8 @@ enum class WorkflowChange {
     MIDI_FEEL,
     ANALYSIS,
     STRUCTURE,
+    /** Section context changes planning/arrangement, but not immutable MIDI or its analysis. */
+    PART_SECTION,
     COHESION,
     COMPOSITION_KEY,
     COMPOSITION_TEMPO_OR_METER,
@@ -72,7 +74,7 @@ object WorkflowArtifactGraph {
         WorkflowChange.CLEANED_MIDI -> allAfterRepair
         WorkflowChange.AI_FIX_SELECTION -> allAfterSelection
         WorkflowChange.MIDI_FEEL -> setOf(WorkflowArtifact.ANALYSIS) + allAfterAnalysis
-        WorkflowChange.ANALYSIS, WorkflowChange.STRUCTURE -> allAfterAnalysis
+        WorkflowChange.ANALYSIS, WorkflowChange.STRUCTURE, WorkflowChange.PART_SECTION -> allAfterAnalysis
         WorkflowChange.COHESION -> setOf(
             WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
             WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,

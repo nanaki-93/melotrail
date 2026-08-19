@@ -33,7 +33,9 @@ class ProjectTest {
 
         val decoded = json.decodeFromString<Project>(json.encodeToString(project))
 
-        assertEquals(project, decoded)
+        assertEquals(project.parts.map { it.id to it.file }, decoded.parts.map { it.id to it.file })
+        assertEquals(listOf(SectionTypeId.VERSE, SectionTypeId.CHORUS), decoded.parts.map { it.sectionType })
+        assertEquals(listOf("A", "B"), decoded.parts.map { it.name })
         assertTrue(decoded.validate(projectRoot).isValid)
     }
 

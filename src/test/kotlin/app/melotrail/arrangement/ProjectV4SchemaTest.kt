@@ -58,6 +58,50 @@ class ProjectV4SchemaTest {
     }
 
     @Test
+    fun `canonical song parts persist names sections and evidence without legacy roles`() {
+        write("source/A.mid", "source")
+        write("midi/raw/A.mid", "raw")
+        val sourceHash = sha256(root.resolve("source/A.mid"))
+        val rawHash = sha256(root.resolve("midi/raw/A.mid"))
+        val project = Project(
+            version = Project.CURRENT_VERSION,
+            name = "song-parts",
+            renderFormat = RenderFormat(),
+            parts = listOf(SongPart(
+                id = "A",
+                file = "source/A.mid",
+                name = "Main chorus",
+                sectionType = SectionTypeId.CHORUS,
+                midi = MidiReferences(raw = "midi/raw/A.mid"),
+                importEvidence = ImportEvidence(sourceHash, rawHash),
+                stageManifestRef = "import-a"
+            ))
+        )
+
+        ProjectStore.write(root, project)
+
+        val text = Files.readString(root.resolve(ProjectStore.FILE_NAME))
+        val restored = ProjectStore.read(root).parts.single()
+        assertFalse(text.contains("\"role\""))
+        assertEquals("Main chorus", restored.name)
+        assertEquals(SectionTypeId.CHORUS, restored.sectionType)
+        assertEquals(sourceHash, restored.importEvidence?.sourceSha256)
+        assertEquals("import-a", restored.stageManifestRef)
+    }
+
+    @Test
+    fun `legacy roles map known sections and retain unknown normalized identifiers`() {
+        val known = SectionTypeCatalog.fromLegacyRole("Hook")
+        val unknown = SectionTypeCatalog.fromLegacyRole("Pre Chorus!")
+
+        assertEquals(SectionTypeId.CHORUS, known)
+        assertEquals(SectionTypeId("pre-chorus"), unknown)
+        assertFalse(SectionTypeCatalog.isSupported(unknown))
+        assertEquals("Unsupported section type 'pre-chorus' was preserved from legacy project data.",
+            SongPart("A", "source/A.mid", role = "Pre Chorus!").unsupportedSectionWarning)
+    }
+
+    @Test
     fun `legacy v3 migration is pure until explicit v4 save and preserves source evidence`() {
         write("source/A.mid", "source")
         write("midi/raw/A.mid", "raw-midi")

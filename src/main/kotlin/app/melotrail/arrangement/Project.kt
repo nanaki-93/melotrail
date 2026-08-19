@@ -26,7 +26,7 @@ import java.security.MessageDigest
 data class Project(
     val version: Int = 1,
     val name: String,
-    val parts: List<Part> = emptyList(),
+    val parts: List<SongPart> = emptyList(),
     val structure: List<String> = emptyList(),
     val renderFormat: RenderFormat? = null,
     /** v3 durable stale evidence and bounded cross-stage references. */
@@ -218,21 +218,54 @@ data class ArrangementAssignmentReference(
     }
 }
 
+/** Canonical melody/performance part persisted by schema-v4 projects. */
 @Serializable
-data class Part(
+data class SongPart(
     val id: String,
     /** Source file for v1 and v2 projects. It is always relative to project.json. */
     val file: String,
-    val role: String = "",
+    /** Read-only source compatibility input. New writes always use [sectionType]. */
+    @Transient val role: String = "",
     val analysis: PartAnalysisReference? = null,
     val midi: MidiReferences? = null,
     /** Null is a legacy/unattested source; it can never be commercial-ready. */
     val sourceAttestation: SourceRightsAttestation? = null,
     /** Optional only for compatible reads; every new unified import records both immutable boundaries. */
     val importEvidence: ImportEvidence? = null,
+    /** User-facing display name; unlike [id], it can change. */
+    val name: String = id,
+    val sectionType: SectionTypeId = SectionTypeCatalog.fromLegacyRole(role),
+    /** Optional analysis/user confirmation of the source key; this never changes project key. */
+    val sourceKeyEvidence: SourceKeyEvidence? = null,
+    /** Reserved stable run reference for Task 011's stage manifests; never a filesystem path. */
+    val stageManifestRef: String? = null,
+    /** Optimistic revision for explicit name/section decisions. */
+    val revision: Long = 1,
     /** Typed v1 compatibility data. It preserves a legacy source without pretending it is MIDI. */
     val legacySourceOnly: Boolean = false
+) {
+    init {
+        require(id.isNotBlank() && SAFE_PROJECT_ID.matches(id)) { "Song part ID is invalid" }
+        require(name.isNotBlank() && name.length <= 120 && name.none { it.isISOControl() }) { "Song part name is invalid" }
+        require(revision > 0) { "Song part revision must be positive" }
+        stageManifestRef?.let { require(SAFE_PROJECT_ID.matches(it)) { "Stage manifest reference is invalid" } }
+    }
+
+    val unsupportedSectionWarning: String?
+        get() = if (SectionTypeCatalog.isSupported(sectionType)) null
+        else "Unsupported section type '${sectionType.value}' was preserved from legacy project data."
+
+}
+
+@Serializable
+data class SourceKeyEvidence(
+    val key: MusicalKey,
+    val confirmed: Boolean = false
 )
+
+/** Source compatibility alias. Runtime code uses [SongPart]. */
+@Deprecated("Use SongPart")
+typealias Part = SongPart
 
 @Serializable
 data class ImportEvidence(
@@ -345,6 +378,11 @@ object ProjectValidator {
             if (part.id.isBlank()) {
                 errors += "Part ID must not be blank"
             }
+            if (part.name.isBlank() || part.name.length > 120 || part.name.any { it.isISOControl() }) {
+                errors += "Part '${part.id}' name is invalid"
+            }
+            if (part.revision <= 0) errors += "Part '${part.id}' revision must be positive"
+            part.stageManifestRef?.let { if (!SAFE_PROJECT_ID.matches(it)) errors += "Part '${part.id}' stage manifest reference is invalid" }
             validateFileReference(root, part.file, "Part '${part.id}' source", errors)
             part.importEvidence?.let { evidence ->
                 runCatching(evidence::requireValid).exceptionOrNull()?.let { error ->

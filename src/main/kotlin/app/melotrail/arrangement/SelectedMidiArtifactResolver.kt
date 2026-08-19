@@ -20,7 +20,7 @@ class SelectedMidiArtifactResolver {
         resolve(projectRoot, project, project.parts.singleOrNull { it.id == partId }
             ?: throw IllegalArgumentException("Unknown MIDI part '$partId'."))
 
-    fun resolve(projectRoot: Path, project: Project, part: Part): SelectedMidiArtifact {
+    fun resolve(projectRoot: Path, project: Project, part: SongPart): SelectedMidiArtifact {
         require(project.version >= Project.MIDI_FIRST_VERSION) {
             "Project uses legacy v1 source audio; it has no selected MIDI artifact."
         }
@@ -98,7 +98,7 @@ class SelectedMidiArtifactResolver {
         )
     }
 
-    private fun cleanupFreshness(root: Path, part: Part, midi: MidiReferences, cleanedReference: String): MidiCleanupFreshness {
+    private fun cleanupFreshness(root: Path, part: SongPart, midi: MidiReferences, cleanedReference: String): MidiCleanupFreshness {
         // V2 projects predating explicit cleanup evidence remain readable. They are never
         // accepted as current Lo-fi input because that branch requires a current report.
         if (midi.raw == null && midi.cleanup == null && midi.quality == null) return MidiCleanupFreshness.LEGACY_UNKNOWN

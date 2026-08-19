@@ -169,7 +169,7 @@ class DefaultPartPreviewApplicationService(
         }
     }
 
-    private suspend fun resolveMidi(root: Path, project: app.melotrail.arrangement.Project, part: app.melotrail.arrangement.Part, stages: MutableList<PreviewStage>): PreviewResult {
+    private suspend fun resolveMidi(root: Path, project: app.melotrail.arrangement.Project, part: app.melotrail.arrangement.SongPart, stages: MutableList<PreviewStage>): PreviewResult {
         val selected = try { SelectedMidiArtifactResolver().resolve(root, project, part) } catch (error: IllegalArgumentException) {
             return PreviewResult.Prerequisite(PreviewStage.VALIDATE, error.message ?: "Selected MIDI is unavailable for '${part.id}'.")
         }
@@ -204,7 +204,7 @@ class DefaultPartPreviewApplicationService(
     private suspend fun resolveSelectedMidi(
         root: Path,
         project: app.melotrail.arrangement.Project,
-        part: app.melotrail.arrangement.Part,
+        part: app.melotrail.arrangement.SongPart,
         format: RenderFormat?,
         source: PreviewMidiSource,
         stages: MutableList<PreviewStage>

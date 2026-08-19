@@ -2,6 +2,8 @@ package app.melotrail.arrangement
 
 import app.melotrail.harmony.HarmonySettingsDto
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -133,22 +135,39 @@ object ProjectStore {
         val manifests: ProjectManifestReferences = ProjectManifestReferences(),
         val arrangementAssignments: List<ArrangementAssignmentReference> = emptyList()
     )
+    @OptIn(ExperimentalSerializationApi::class)
     @Serializable private data class PartV4Dto(
         val id: String,
-        val role: String = "",
         val sourceFile: String,
+        val name: String? = null,
+        val sectionType: SectionTypeId? = null,
+        /** Compatibility read slot for Task 010; canonical writes never emit it. */
+        @EncodeDefault(EncodeDefault.Mode.NEVER) val role: String? = null,
         val midi: MidiReferences? = null,
         val analysis: PartAnalysisReference? = null,
         val sourceAttestation: app.melotrail.commercial.SourceRightsAttestation? = null,
         val importEvidence: ImportEvidence? = null,
+        val sourceKeyEvidence: SourceKeyEvidence? = null,
+        val stageManifestRef: String? = null,
+        val revision: Long = 1,
         val legacySourceOnly: Boolean = false
     )
 
-    private fun ProjectV1Dto.toProject(compatibility: ProjectCompatibility) = Project(1, name, parts.map { Part(it.id, it.file, it.role, it.analysis, legacySourceOnly = true) }, structure, compatibility = compatibility)
-    private fun ProjectV2Dto.toProject(compatibility: ProjectCompatibility) = Project(2, name, parts.map { Part(it.id, it.sourceFile, it.role, it.analysis, it.midi, it.sourceAttestation, it.importEvidence) }, structure, renderFormat, compatibility = compatibility)
-    private fun ProjectV3Dto.toProject(compatibility: ProjectCompatibility) = Project(3, name, parts.map { Part(it.id, it.sourceFile, it.role, it.analysis, it.midi, it.sourceAttestation, it.importEvidence) }, structure, renderFormat, workflow, compatibility = compatibility)
-    private fun ProjectV4Dto.toProject() = Project(4, name, parts.map { Part(it.id, it.sourceFile, it.role, it.analysis, it.midi, it.sourceAttestation, it.importEvidence, it.legacySourceOnly) }, structure, renderFormat, workflow, envelope.toDomain())
-    private fun Project.toV4Dto() = ProjectV4Dto(name = name, renderFormat = requireNotNull(renderFormat), parts = parts.map { PartV4Dto(it.id, it.role, it.file, it.midi, it.analysis, it.sourceAttestation, it.importEvidence, it.legacySourceOnly) }, structure = structure, workflow = workflow, envelope = envelope.toDto())
+    private fun ProjectV1Dto.toProject(compatibility: ProjectCompatibility) = Project(1, name, parts.map {
+        SongPart(id = it.id, file = it.file, role = it.role, name = it.id, sectionType = SectionTypeCatalog.fromLegacyRole(it.role), analysis = it.analysis, legacySourceOnly = true)
+    }, structure, compatibility = compatibility)
+    private fun ProjectV2Dto.toProject(compatibility: ProjectCompatibility) = Project(2, name, parts.map {
+        SongPart(id = it.id, file = it.sourceFile, role = it.role, name = it.id, sectionType = SectionTypeCatalog.fromLegacyRole(it.role), analysis = it.analysis, midi = it.midi, sourceAttestation = it.sourceAttestation, importEvidence = it.importEvidence)
+    }, structure, renderFormat, compatibility = compatibility)
+    private fun ProjectV3Dto.toProject(compatibility: ProjectCompatibility) = Project(3, name, parts.map {
+        SongPart(id = it.id, file = it.sourceFile, role = it.role, name = it.id, sectionType = SectionTypeCatalog.fromLegacyRole(it.role), analysis = it.analysis, midi = it.midi, sourceAttestation = it.sourceAttestation, importEvidence = it.importEvidence)
+    }, structure, renderFormat, workflow, compatibility = compatibility)
+    private fun ProjectV4Dto.toProject() = Project(4, name, parts.map {
+        SongPart(id = it.id, file = it.sourceFile, role = (it.sectionType ?: SectionTypeCatalog.fromLegacyRole(it.role.orEmpty())).value, name = it.name ?: it.id, sectionType = it.sectionType ?: SectionTypeCatalog.fromLegacyRole(it.role.orEmpty()), analysis = it.analysis, midi = it.midi, sourceAttestation = it.sourceAttestation, importEvidence = it.importEvidence, sourceKeyEvidence = it.sourceKeyEvidence, stageManifestRef = it.stageManifestRef, revision = it.revision, legacySourceOnly = it.legacySourceOnly)
+    }, structure, renderFormat, workflow, envelope.toDomain())
+    private fun Project.toV4Dto() = ProjectV4Dto(name = name, renderFormat = requireNotNull(renderFormat), parts = parts.map {
+        PartV4Dto(id = it.id, sourceFile = it.file, name = it.name, sectionType = it.sectionType, midi = it.midi, analysis = it.analysis, sourceAttestation = it.sourceAttestation, importEvidence = it.importEvidence, sourceKeyEvidence = it.sourceKeyEvidence, stageManifestRef = it.stageManifestRef, revision = it.revision, legacySourceOnly = it.legacySourceOnly)
+    }, structure = structure, workflow = workflow, envelope = envelope.toDto())
     private fun ProjectV4EnvelopeDto.toDomain() = ProjectV4Envelope(
         compositionSettings, harmony?.toDomain(), evolvedParts, structureOccurrences, manifests, arrangementAssignments
     )

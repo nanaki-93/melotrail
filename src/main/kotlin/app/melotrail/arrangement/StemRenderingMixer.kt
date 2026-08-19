@@ -211,7 +211,7 @@ class StemRenderingMixer(
 
     private fun fingerprint(root: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>, occurrenceMidi: Map<String, OccurrenceMidiArtifact>, generated: List<Path>, transitions: Path?): String = digest(buildString {
         append(project.version).append('|').append(project.renderFormat).append('|').append(arrangement).append('|')
-        project.parts.sortedBy(Part::id).forEach { part ->
+        project.parts.sortedBy(SongPart::id).forEach { part ->
             append("source:").append(part.id).append(':').append(digest(Files.readAllBytes(root.resolve(part.file)))).append('|')
         }
         arrangement.sections.forEach { section ->
