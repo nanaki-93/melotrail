@@ -53,6 +53,8 @@ import app.melotrail.preparation.RunTranscriptionQualityGateRequest
 import app.melotrail.preparation.TranscriptionInputArtifact
 import app.melotrail.preparation.TranscriptionQualityGateResult
 import app.melotrail.preparation.TranscriptionQualityGateService
+import app.melotrail.profile.BundledCompositionProfileCatalog
+import app.melotrail.profile.CompositionProfileCatalog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
@@ -69,6 +71,12 @@ import javax.sound.midi.MidiSystem
 /** UI- and CLI-neutral boundary for the local, file-backed arranger project. */
 interface ProjectApplicationService {
     fun open(root: Path): ProjectSnapshot
+    fun getCompositionSettings(command: GetCompositionSettings): GetCompositionSettingsResult =
+        throw UnsupportedOperationException("This project service does not support composition settings.")
+    fun previewSettingsChange(command: PreviewSettingsChange): PreviewSettingsChangeResult =
+        throw UnsupportedOperationException("This project service does not support composition settings.")
+    fun updateCompositionSettings(command: UpdateCompositionSettings): UpdateCompositionSettingsResult =
+        throw UnsupportedOperationException("This project service does not support composition settings.")
     /** Optional explicit migration boundary; older adapters remain read-only. */
     fun migrateProject(root: Path): ProjectSnapshot = throw UnsupportedOperationException("This project service does not support schema migration.")
     fun create(request: CreateProjectRequest): ProjectSnapshot
@@ -271,7 +279,9 @@ data class ProjectReadiness(
     /** True only for a complete, approved, non-stale per-occurrence cohesion result. */
     val cohesionReady: Boolean = false,
     /** Creator attestation is evidence only; absence always blocks commercial-ready status. */
-    val commercialSourceAttestationsComplete: Boolean = false
+    val commercialSourceAttestationsComplete: Boolean = false,
+    /** Missing or catalog-incompatible settings block creative derivation, not source inspection or historical export. */
+    val compositionSettingsReady: Boolean = true
 )
 
 class DefaultProjectApplicationService(
@@ -287,8 +297,11 @@ class DefaultProjectApplicationService(
                 "Input inspection is not configured."
             ))
     },
-    private val transcriptionQualityGate: TranscriptionQualityGateService? = null
+    private val transcriptionQualityGate: TranscriptionQualityGateService? = null,
+    compositionProfiles: CompositionProfileCatalog = BundledCompositionProfileCatalog.load()
 ) : ProjectApplicationService {
+    private val compositionSettings = CompositionSettingsApplicationService(compositionProfiles)
+
     override fun open(root: Path): ProjectSnapshot {
         val normalizedRoot = root.normalizeRoot()
         require(Files.isRegularFile(normalizedRoot.resolve(ProjectStore.FILE_NAME))) {
@@ -296,6 +309,22 @@ class DefaultProjectApplicationService(
         }
         val project = readValidProject(normalizedRoot)
         return snapshot(normalizedRoot, project, migrationStatus(ProjectStore.readMigration(normalizedRoot)))
+    }
+
+    override fun getCompositionSettings(command: GetCompositionSettings): GetCompositionSettingsResult {
+        val root = command.root.normalizeRoot()
+        return compositionSettings.query(readValidProject(root))
+    }
+
+    override fun previewSettingsChange(command: PreviewSettingsChange): PreviewSettingsChangeResult {
+        val root = command.root.normalizeRoot()
+        return compositionSettings.preview(readValidProject(root), command.expectedRevision, command.settings)
+    }
+
+    override fun updateCompositionSettings(command: UpdateCompositionSettings): UpdateCompositionSettingsResult = mutate(command.root) { root ->
+        val prepared = compositionSettings.update(readValidProject(root), command.expectedRevision, command.settings)
+        ProjectStore.write(root, prepared.project)
+        UpdateCompositionSettingsResult(snapshot(root, prepared.project), prepared.preview.candidate, prepared.preview.invalidation)
     }
 
     override fun migrateProject(root: Path): ProjectSnapshot = mutate(root) { normalizedRoot ->
@@ -714,7 +743,8 @@ class DefaultProjectApplicationService(
                 staleArtifacts = project.workflow.stale,
                 cohesionApprovalRequired = project.workflow.cohesion?.let { !it.approved && WorkflowArtifact.COHESION !in project.workflow.stale } == true,
                 cohesionReady = currentCohesion(root, project),
-                commercialSourceAttestationsComplete = project.parts.isNotEmpty() && project.parts.all { it.sourceAttestation?.supportsCommercialUse == true }
+                commercialSourceAttestationsComplete = project.parts.isNotEmpty() && project.parts.all { it.sourceAttestation?.supportsCommercialUse == true },
+                compositionSettingsReady = compositionSettings.isReady(project)
             ),
             migration = migration
         )
@@ -902,7 +932,7 @@ class DefaultProjectApplicationService(
         }
     }
 
-    private fun mutate(root: Path, action: (Path) -> ProjectSnapshot): ProjectSnapshot {
+    private fun <T> mutate(root: Path, action: (Path) -> T): T {
         val normalizedRoot = root.normalizeRoot()
         val lock = locks.computeIfAbsent(normalizedRoot) { Mutex() }
         require(lock.tryLock()) { "Another project mutation is already running: $normalizedRoot" }

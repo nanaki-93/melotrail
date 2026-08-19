@@ -37,6 +37,9 @@ enum class WorkflowChange {
     ANALYSIS,
     STRUCTURE,
     COHESION,
+    COMPOSITION_KEY,
+    COMPOSITION_TEMPO_OR_METER,
+    COMPOSITION_PROFILE_OR_MOOD,
     MIX_ONLY,
     AUDIO_TEXTURE
 }
@@ -73,6 +76,24 @@ object WorkflowArtifactGraph {
             WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
             WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
             WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
+        )
+        /** A key decision changes generated transposition, never immutable input or MIDI analysis evidence. */
+        WorkflowChange.COMPOSITION_KEY -> setOf(
+            WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX,
+            WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE,
+            WorkflowArtifact.COMMERCIAL_EXPORT
+        )
+        /** Tempo/meter are declared arrangement-normalization inputs. */
+        WorkflowChange.COMPOSITION_TEMPO_OR_METER -> setOf(
+            WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
+            WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
+            WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
+        )
+        /** Profile and mood can change MIDI-feel policy, then every artifact derived from that selected input. */
+        WorkflowChange.COMPOSITION_PROFILE_OR_MOOD -> setOf(
+            WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.COHESION, WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI,
+            WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE,
+            WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
         )
         WorkflowChange.MIX_ONLY -> setOf(
             WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,

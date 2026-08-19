@@ -4,6 +4,8 @@ import app.melotrail.commercial.SourceRightsAttestation
 import app.melotrail.music.MusicalKey
 import app.melotrail.music.Tempo
 import app.melotrail.music.TimeSignature
+import app.melotrail.profile.CompositionProfileRef
+import app.melotrail.profile.MoodRef
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import java.nio.file.Files
@@ -87,7 +89,7 @@ data class ProjectV4Envelope(
     val arrangementAssignments: List<ArrangementAssignmentReference> = emptyList()
 ) {
     fun setupRequirements(): Set<ProjectSetupRequirement> = buildSet {
-        if (compositionSettings == null) add(ProjectSetupRequirement.COMPOSITION_SETTINGS)
+        if (compositionSettings?.complete != true) add(ProjectSetupRequirement.COMPOSITION_SETTINGS)
         if (harmony == null) add(ProjectSetupRequirement.HARMONY)
     }
 
@@ -112,12 +114,40 @@ data class ProjectV4Envelope(
 /** Explicit composition context. Null at the envelope boundary still means setup is required. */
 @Serializable
 data class CompositionSettings(
+    /** Schema revision for this persisted record, not the user's optimistic revision. */
     val revision: Int = 1,
     val key: MusicalKey,
     val tempo: Tempo,
-    val timeSignature: TimeSignature
+    val timeSignature: TimeSignature,
+    /** Absent only on projects written before the typed settings service. */
+    val profile: CompositionProfileRef? = null,
+    /** Absent only on projects written before the typed settings service. */
+    val mood: MoodRef? = null,
+    /** Increments for every accepted settings decision. Zero denotes the compatible incomplete form. */
+    val decisionRevision: Long = 0,
+    /** Fingerprint of the catalog resolution that informed this decision. */
+    val resolvedProfileSha256: String = "",
+    /** Fingerprint of the complete user decision, including the project name. */
+    val decisionSha256: String = ""
 ) {
     init { require(revision == 1) { "Unsupported composition settings revision: $revision" } }
+
+    val complete: Boolean
+        get() = profile != null && mood != null && decisionRevision > 0 &&
+            SHA_256_DIGEST.matches(resolvedProfileSha256) && SHA_256_DIGEST.matches(decisionSha256)
+
+    fun requireWellFormed() {
+        profile?.requireValid()
+        mood?.requireValid()
+        require((profile == null) == (mood == null)) { "Composition profile and mood must be present together" }
+        if (profile != null) {
+            require(complete) { "Complete composition settings require decision fingerprints and a positive revision" }
+        } else {
+            require(decisionRevision == 0L && resolvedProfileSha256.isEmpty() && decisionSha256.isEmpty()) {
+                "Incomplete composition settings cannot carry decision evidence"
+            }
+        }
+    }
 }
 
 /** Placeholder owned by the future harmony contract. */
@@ -294,6 +324,12 @@ object ProjectValidator {
         }
         if (project.name.isBlank()) {
             errors += "Project name must not be blank"
+        }
+
+        project.envelope.compositionSettings?.let { settings ->
+            runCatching(settings::requireWellFormed).exceptionOrNull()?.let { error ->
+                errors += "Composition settings are invalid: ${error.message}"
+            }
         }
 
         val duplicateIds = project.parts

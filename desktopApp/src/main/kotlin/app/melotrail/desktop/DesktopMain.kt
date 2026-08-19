@@ -137,7 +137,8 @@ object DesktopServiceComposition {
             midiPreparation = DesktopMidiPreparationService(client),
             legacyPartAnalysis = DesktopLegacyPartAnalysisService(client),
             inputInspection = WorkerInputInspectionBoundary(client),
-            transcriptionQualityGate = TranscriptionQualityGateService(WorkerTranscriptionBoundary(client))
+            transcriptionQualityGate = TranscriptionQualityGateService(WorkerTranscriptionBoundary(client)),
+            compositionProfiles = compositionProfiles()
         )
     }
 

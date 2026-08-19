@@ -19,7 +19,7 @@ enum class WorkflowStage {
 enum class WorkflowState { BLOCKED, CURRENT, REVIEW, STALE, COMPLETE }
 
 enum class WorkflowAction {
-    CREATE_OR_OPEN, MIGRATE_PROJECT, IMPORT, INSPECT, TRANSCRIBE, CLEAN_MIDI, APPROVE_CLEAN_MIDI,
+    CREATE_OR_OPEN, MIGRATE_PROJECT, UPDATE_COMPOSITION_SETTINGS, IMPORT, INSPECT, TRANSCRIBE, CLEAN_MIDI, APPROVE_CLEAN_MIDI,
     CREATE_AI_FIX, APPROVE_AI_FIX, SELECT_MIDI_FEEL, ANALYZE, SAVE_STRUCTURE, GENERATE_COHESION,
     APPROVE_COHESION, GENERATE_ARRANGEMENT, APPROVE_ARRANGEMENT, RENDER,
     MIX, MASTER, REVIEW_COMMERCIAL_PROVENANCE
@@ -30,6 +30,7 @@ enum class WorkflowPrerequisite {
     NONE,
     PROJECT_ROOT,
     SCHEMA_V4,
+    COMPOSITION_SETTINGS,
     IMPORTED_SOURCE,
     SOURCE_INSPECTION,
     RAW_MIDI,
@@ -129,8 +130,14 @@ object WorkflowReadModelDeriver {
         }
 
         val unanalyzed = project.parts.firstOrNull { !it.preparation.analyzed }
+        val composition = if (project.readiness.compositionSettingsReady) {
+            complete(WorkflowStage.PROJECT, WorkflowAction.UPDATE_COMPOSITION_SETTINGS)
+        } else {
+            step(WorkflowStage.PROJECT, WorkflowState.CURRENT, WorkflowAction.UPDATE_COMPOSITION_SETTINGS, WorkflowPrerequisite.COMPOSITION_SETTINGS)
+        }
         val analysis = when {
             feel.state != WorkflowState.COMPLETE -> blocked(WorkflowStage.ANALYSIS, feel)
+            composition.state != WorkflowState.COMPLETE -> blocked(WorkflowStage.ANALYSIS, composition)
             WorkflowArtifact.ANALYSIS in stale -> step(WorkflowStage.ANALYSIS, WorkflowState.STALE, WorkflowAction.ANALYZE, WorkflowPrerequisite.CURRENT_ANALYSIS, unanalyzed?.id ?: project.parts.firstOrNull()?.id)
             unanalyzed != null -> step(WorkflowStage.ANALYSIS, WorkflowState.CURRENT, WorkflowAction.ANALYZE, WorkflowPrerequisite.CURRENT_ANALYSIS, unanalyzed.id)
             else -> complete(WorkflowStage.ANALYSIS, WorkflowAction.ANALYZE)
@@ -166,7 +173,7 @@ object WorkflowReadModelDeriver {
             else -> step(WorkflowStage.COMMERCIAL_EXPORT, WorkflowState.CURRENT, WorkflowAction.REVIEW_COMMERCIAL_PROVENANCE, WorkflowPrerequisite.NONE)
         }
         return WorkflowReadModel(listOf(
-            complete(WorkflowStage.PROJECT, WorkflowAction.IMPORT), imported, transcription, clean, aiFix,
+            composition, imported, transcription, clean, aiFix,
             feel, analysis, structure, cohesion, arrangementStep, render, mix, master, commercial
         ))
     }

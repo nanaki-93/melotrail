@@ -29,6 +29,7 @@ enum class CreationStageStatus { NOT_STARTED, CURRENT, COMPLETE, BLOCKED, STALE 
 enum class CreationIntent {
     CREATE_OR_OPEN_PROJECT,
     MIGRATE_PROJECT,
+    CONFIGURE_COMPOSITION_SETTINGS,
     IMPORT_PART,
     INSPECT_PART,
     TRANSCRIBE_PART,
@@ -239,6 +240,7 @@ object CreationProgressDeriver {
     private fun intent(action: WorkflowAction): CreationIntent = when (action) {
         WorkflowAction.CREATE_OR_OPEN -> CreationIntent.CREATE_OR_OPEN_PROJECT
         WorkflowAction.MIGRATE_PROJECT -> CreationIntent.MIGRATE_PROJECT
+        WorkflowAction.UPDATE_COMPOSITION_SETTINGS -> CreationIntent.CONFIGURE_COMPOSITION_SETTINGS
         WorkflowAction.IMPORT -> CreationIntent.IMPORT_PART
         WorkflowAction.INSPECT -> CreationIntent.INSPECT_PART
         WorkflowAction.TRANSCRIBE -> CreationIntent.TRANSCRIBE_PART
