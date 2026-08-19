@@ -64,6 +64,7 @@ import app.melotrail.application.MidiQualityStatus
 import app.melotrail.application.ReleaseExportFormat
 import app.melotrail.application.StructureSectionSummary
 import app.melotrail.application.WorkflowStage
+import app.melotrail.application.WorkflowAction
 import app.melotrail.application.filtered
 import app.melotrail.arrangement.LogicalInstrument
 import java.net.URI
@@ -103,6 +104,7 @@ internal object WorkspacePageTags {
     const val SETUP_INVALIDATION = "setup-invalidation"
     const val SETUP_SAVE = "setup-save"
     const val SETUP_CONFIRM = "setup-confirm"
+    const val HARMONY_ROOT = "harmony-root"
     const val VIDEO_PREVIEW_STAGE = "video-preview-stage"
     const val VIDEO_PREVIEW_TIMELINE = "video-preview-timeline"
     const val VIDEO_PREVIEW_OCCURRENCE_PREFIX = "video-preview-occurrence-"
@@ -507,11 +509,14 @@ private fun OverviewQuickActions(state: WorkspaceUiState, onIntent: (WorkspaceIn
         OverviewQuickAction("setup", "Set up project", WorkspaceSection.SETUP, WorkflowStage.PROJECT),
         OverviewQuickAction("import", "Import Audio / MIDI", WorkspaceSection.IMPORT, WorkflowStage.IMPORT_AND_INSPECTION),
         OverviewQuickAction("structure", "Build Structure", WorkspaceSection.STRUCTURE, WorkflowStage.STRUCTURE),
+        OverviewQuickAction("harmony", "Author Harmony", WorkspaceSection.HARMONY, WorkflowStage.ARRANGEMENT),
         OverviewQuickAction("arrange", "Generate Arrangement", WorkspaceSection.ARRANGE, WorkflowStage.ARRANGEMENT),
         OverviewQuickAction("mix-master", "Mix & Master", WorkspaceSection.MIX_MASTER, WorkflowStage.MIX),
         OverviewQuickAction("export", "Export Song", WorkspaceSection.EXPORT, WorkflowStage.COMMERCIAL_EXPORT)
     )
-    val primary = actions.firstOrNull { it.stage == overviewPrimaryStage(state.workflow.current.stage) } ?: actions.first()
+    val primary = if (state.workflow.current.nextAction == WorkflowAction.UPDATE_HARMONY) {
+        actions.first { it.id == "harmony" }
+    } else actions.firstOrNull { it.stage == overviewPrimaryStage(state.workflow.current.stage) && it.id != "harmony" } ?: actions.first()
     var alternativesExpanded by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.OVERVIEW_PRIMARY_ACTION }) {
         OverviewQuickActionButton(primary, state, onIntent)
@@ -590,6 +595,10 @@ private fun InterimWorkflowPage(
 ) = PageRoot(state.workspaceSection, modifier) {
     if (state.workspaceSection == WorkspaceSection.SETUP) {
         ProjectSetupContent(state, onIntent)
+        return@PageRoot
+    }
+    if (state.workspaceSection == WorkspaceSection.HARMONY) {
+        HarmonyPage(state, onIntent)
         return@PageRoot
     }
     if (state.workspaceSection == WorkspaceSection.IMPORT) {
@@ -2081,6 +2090,7 @@ private fun formatImportFileSize(bytes: Long?): String = when {
 
 private fun workflowSubtitle(state: WorkspaceUiState): String = when (state.workspaceSection) {
     WorkspaceSection.SETUP -> "Set the explicit musical context before downstream analysis."
+    WorkspaceSection.HARMONY -> "Author structured Verse, Chorus, and Bridge chord progressions."
     WorkspaceSection.IMPORT -> "Import a MIDI or eligible solo-piano audio source."
     WorkspaceSection.STRUCTURE -> "Canonical structure has ${state.project?.structure?.size ?: 0} section(s)."
     WorkspaceSection.ARRANGE -> "Arrangement state is derived from canonical artifacts."
@@ -2249,6 +2259,7 @@ private fun mixMasterBuildMessage(state: WorkspaceUiState): String = when {
 
 private fun workflowBody(state: WorkspaceUiState): String = when (state.workspaceSection) {
     WorkspaceSection.SETUP -> "Choose and save the explicit musical context for this project."
+    WorkspaceSection.HARMONY -> "Save Setup, then add at least one executable chord to each required progression."
     WorkspaceSection.IMPORT -> if (state.project == null) "Create or open a project before importing." else "Choose a source through the validated import dialog."
     WorkspaceSection.EXPORT -> if (state.project?.readiness?.releaseAvailable == true && !state.downstreamArtifactsStale) "A release is available for export." else "A current validated release is unavailable. Build the current project first."
     WorkspaceSection.LIBRARY -> "Library inventory is limited to the configured local sound pack."

@@ -107,6 +107,48 @@ class WorkspaceViewModelTest {
     }
 
     @Test
+    fun `Harmony add edit reorder and remove preserve event ids through the project service`() = runTest {
+        val root = Path.of("build/harmony-project")
+        val service = FakeProjectService(result = projectSnapshot(root), harmony = harmonyView())
+        val viewModel = WorkspaceViewModel(service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.HARMONY)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.AddHarmonyEvent); advanceUntilIdle()
+        val first = checkNotNull(viewModel.state.value.harmony.selectedEventId)
+        assertEquals("h-verse-1", first.value)
+
+        viewModel.accept(WorkspaceIntent.SetHarmonyRoot(app.melotrail.music.PitchClass.canonical(7)))
+        viewModel.accept(WorkspaceIntent.SetHarmonyQuality(app.melotrail.harmony.ChordQuality.MINOR))
+        viewModel.accept(WorkspaceIntent.SaveHarmonyEvent); advanceUntilIdle()
+        assertEquals("Gm", app.melotrail.desktop.chordSymbol(checkNotNull(service.harmony.progressions.single().events.single())))
+
+        viewModel.accept(WorkspaceIntent.AddHarmonyEvent); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.MoveHarmonyEvent(earlier = true)); advanceUntilIdle()
+        assertEquals(first, service.harmony.progressions.single().events.last().id)
+        viewModel.accept(WorkspaceIntent.DeleteHarmonyEvent); advanceUntilIdle()
+        assertEquals(1, service.harmony.progressions.single().events.size)
+        viewModel.close()
+    }
+
+    @Test
+    fun `Harmony confirms downstream invalidation and refreshes a revision conflict`() = runTest {
+        val root = Path.of("build/harmony-conflict")
+        val project = projectSnapshot(root).copy(readiness = projectSnapshot(root).readiness.copy(cohesionReady = true))
+        val service = FakeProjectService(result = project, harmony = harmonyView(), harmonyFailure = IllegalArgumentException("Harmony changed from revision 1 to 2; reload before saving."))
+        val viewModel = WorkspaceViewModel(service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.HARMONY)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.AddHarmonyEvent)
+        assertEquals(HarmonyMutation.Add, viewModel.state.value.harmony.pendingMutation)
+        viewModel.accept(WorkspaceIntent.ConfirmHarmonyMutation); advanceUntilIdle()
+        assertTrue(viewModel.state.value.harmony.error.orEmpty().contains("refreshed"))
+        assertEquals(WorkspaceOperation.Idle, viewModel.state.value.operation)
+        viewModel.close()
+    }
+
+    @Test
     fun `Setup loads typed defaults saves valid context and rejects invalid BPM before writing`() = runTest {
         val root = Path.of("build/test-project")
         val service = FakeProjectService(result = projectSnapshot(root).let { snapshot ->
@@ -1575,12 +1617,25 @@ private fun setupView(
     input.name, input.key, input.tempo, input.timeSignature, input.profile, input.mood, revision, "0".repeat(64), "1".repeat(64)
 )
 
+private fun harmonyView(vararg progressions: app.melotrail.harmony.ChordProgression) = app.melotrail.application.HarmonyView(
+    projectRevision = 1,
+    revision = 1,
+    progressions = progressions.toList(),
+    validationErrors = emptyList(),
+    completeness = app.melotrail.application.HarmonyCompleteness(
+        listOf(app.melotrail.harmony.SectionTypeId.VERSE, app.melotrail.harmony.SectionTypeId.CHORUS, app.melotrail.harmony.SectionTypeId.BRIDGE),
+        emptyList(), emptyList()
+    )
+)
+
 private class FakeProjectService(
     private val result: ProjectSnapshot? = null,
     private val failure: Throwable? = null,
     private val failureOnImport: Throwable? = null,
     private val failureOnMidiCleanup: Throwable? = null,
-    var setupSettings: app.melotrail.application.CompositionSettingsView? = null
+    var setupSettings: app.melotrail.application.CompositionSettingsView? = null,
+    var harmony: app.melotrail.application.HarmonyView = harmonyView(),
+    var harmonyFailure: Throwable? = null
 ) : ProjectApplicationService {
     private var current: ProjectSnapshot? = result
     var created: CreateProjectRequest? = null
@@ -1600,6 +1655,37 @@ private class FakeProjectService(
     override fun getCompositionSettings(command: app.melotrail.application.GetCompositionSettings) = app.melotrail.application.GetCompositionSettingsResult(
         setupSettings, setupOptions(), setupSettings == null
     )
+
+    override fun getHarmony(command: app.melotrail.application.GetHarmony) = harmony
+
+    override fun createHarmonyEvent(command: app.melotrail.application.CreateHarmonyEvent): app.melotrail.application.HarmonyMutationResult = mutateHarmony {
+        val progression = harmony.progressions.firstOrNull { it.sectionType == command.sectionType } ?: app.melotrail.harmony.ChordProgression(command.sectionType)
+        harmony.copy(progressions = harmony.progressions.filterNot { it.sectionType == command.sectionType } + progression.add(command.event, command.atIndex ?: progression.events.size))
+    }
+
+    override fun updateHarmonyEvent(command: app.melotrail.application.UpdateHarmonyEvent): app.melotrail.application.HarmonyMutationResult = mutateHarmony {
+        harmony.copy(progressions = harmony.progressions.map { if (it.sectionType == command.sectionType) it.edit(command.event) else it })
+    }
+
+    override fun deleteHarmonyEvent(command: app.melotrail.application.DeleteHarmonyEvent): app.melotrail.application.HarmonyMutationResult = mutateHarmony {
+        harmony.copy(progressions = harmony.progressions.map { if (it.sectionType == command.sectionType) it.remove(command.eventId) else it })
+    }
+
+    override fun reorderHarmonyEvent(command: app.melotrail.application.ReorderHarmonyEvent): app.melotrail.application.HarmonyMutationResult = mutateHarmony {
+        harmony.copy(progressions = harmony.progressions.map { if (it.sectionType == command.sectionType) it.move(command.eventId, command.toIndex) else it })
+    }
+
+    private fun mutateHarmony(change: () -> app.melotrail.application.HarmonyView): app.melotrail.application.HarmonyMutationResult {
+        harmonyFailure?.let { throw it }
+        harmony = change().copy(revision = checkNotNull(harmony.revision) + 1)
+        return app.melotrail.application.HarmonyMutationResult(
+            checkNotNull(current), harmony,
+            app.melotrail.application.HarmonyInvalidationPreview(
+                setOf(app.melotrail.arrangement.WorkflowChange.HARMONY),
+                setOf(app.melotrail.arrangement.WorkflowArtifact.COHESION), setOf(app.melotrail.application.WorkflowStage.COHESION)
+            )
+        )
+    }
 
     override fun previewSettingsChange(command: app.melotrail.application.PreviewSettingsChange): app.melotrail.application.PreviewSettingsChangeResult {
         val candidate = setupView(command.settings, command.expectedRevision + 1)

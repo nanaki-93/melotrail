@@ -32,6 +32,11 @@ import app.melotrail.application.PartSourceType
 import app.melotrail.application.PartAnalysisStatus
 import app.melotrail.application.ProjectApplicationService
 import app.melotrail.application.ProjectSnapshot
+import app.melotrail.application.GetHarmony
+import app.melotrail.application.CreateHarmonyEvent
+import app.melotrail.application.UpdateHarmonyEvent
+import app.melotrail.application.DeleteHarmonyEvent
+import app.melotrail.application.ReorderHarmonyEvent
 import app.melotrail.application.GetCompositionSettings
 import app.melotrail.application.PreviewSettingsChange
 import app.melotrail.application.UpdateCompositionSettings
@@ -66,6 +71,11 @@ import app.melotrail.preparation.TranscriptionInputArtifact
 import app.melotrail.commercial.SourceRightsAttestation
 import app.melotrail.commercial.SourceRightsClaim
 import app.melotrail.commercial.CommercialProvenanceService
+import app.melotrail.harmony.ChordEvent
+import app.melotrail.harmony.ChordEventId
+import app.melotrail.harmony.ChordQuality
+import app.melotrail.harmony.SectionTypeId
+import app.melotrail.music.PitchClass
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -120,6 +130,8 @@ data class WorkspaceUiState(
     val soundLibrary: SoundLibrarySettingsState = SoundLibrarySettingsState(),
     /** Typed setup query and its UI-only draft; persistence remains in the application service. */
     val projectSetup: ProjectSetupUiState = ProjectSetupUiState.Empty,
+    /** Harmony command/query data is owned by the typed application service. */
+    val harmony: HarmonyEditorUiState = HarmonyEditorUiState(),
     /** Settings navigation is ephemeral; it never changes a project or playback session. */
     val settingsReturnSection: WorkspaceSection? = null,
     /** Read-only inventory from the validated registry boundary; never project data. */
@@ -144,6 +156,7 @@ enum class WorkspaceSection(val label: String) {
     SETUP("Setup"),
     OVERVIEW("Overview"),
     IMPORT("Import"),
+    HARMONY("Harmony"),
     STRUCTURE("Structure"),
     ARRANGE("Arrange"),
     MIX_MASTER("Mix & Master"),
@@ -309,6 +322,7 @@ sealed interface WorkspaceOperation {
     data object Idle : WorkspaceOperation
     data class OpeningProject(val root: Path) : WorkspaceOperation
     data object SavingProjectSetup : WorkspaceOperation
+    data object SavingHarmony : WorkspaceOperation
     data class CreatingProject(val root: Path) : WorkspaceOperation
     data class ImportingPart(val id: String, val progress: OperationProgress? = null) : WorkspaceOperation
     data class AnalyzingPart(val id: String, val progress: OperationProgress? = null) : WorkspaceOperation
@@ -336,7 +350,7 @@ sealed interface WorkspaceOperation {
 
 val WorkspaceOperation.isMutating: Boolean
     get() = this is WorkspaceOperation.OpeningProject || this is WorkspaceOperation.CreatingProject ||
-        this is WorkspaceOperation.SavingProjectSetup ||
+        this is WorkspaceOperation.SavingProjectSetup || this is WorkspaceOperation.SavingHarmony ||
         this is WorkspaceOperation.ImportingPart || this is WorkspaceOperation.AnalyzingPart ||
         this is WorkspaceOperation.InspectingPart || this is WorkspaceOperation.ApplyingAudioCleanup || this is WorkspaceOperation.TranscribingPart ||
         this is WorkspaceOperation.CleaningMidi ||
@@ -491,6 +505,16 @@ sealed interface WorkspaceIntent {
     data class UpdateProjectSetup(val draft: ProjectSetupDraft) : WorkspaceIntent
     data object SaveProjectSetup : WorkspaceIntent
     data object ConfirmProjectSetupSave : WorkspaceIntent
+    data class SelectHarmonySection(val section: SectionTypeId) : WorkspaceIntent
+    data class SelectHarmonyEvent(val eventId: ChordEventId?) : WorkspaceIntent
+    data class SetHarmonyRoot(val root: PitchClass) : WorkspaceIntent
+    data class SetHarmonyQuality(val quality: ChordQuality) : WorkspaceIntent
+    data object AddHarmonyEvent : WorkspaceIntent
+    data object SaveHarmonyEvent : WorkspaceIntent
+    data object DeleteHarmonyEvent : WorkspaceIntent
+    data class MoveHarmonyEvent(val earlier: Boolean) : WorkspaceIntent
+    data object ConfirmHarmonyMutation : WorkspaceIntent
+    data object CancelHarmonyMutation : WorkspaceIntent
     data object RefreshRuntimeReadiness : WorkspaceIntent
     data object ChooseSoundLibraryRoot : WorkspaceIntent
     data object RequestClearSoundLibraryRoot : WorkspaceIntent
@@ -652,6 +676,16 @@ class WorkspaceViewModel(
             }
             WorkspaceIntent.SaveProjectSetup -> saveProjectSetup()
             WorkspaceIntent.ConfirmProjectSetupSave -> confirmProjectSetupSave()
+            is WorkspaceIntent.SelectHarmonySection -> selectHarmonySection(intent.section)
+            is WorkspaceIntent.SelectHarmonyEvent -> selectHarmonyEvent(intent.eventId)
+            is WorkspaceIntent.SetHarmonyRoot -> mutableState.update { it.copy(harmony = it.harmony.copy(draftRoot = intent.root, dirty = it.harmony.selectedEventId != null, error = null)) }
+            is WorkspaceIntent.SetHarmonyQuality -> mutableState.update { it.copy(harmony = it.harmony.copy(draftQuality = intent.quality, dirty = it.harmony.selectedEventId != null, error = null)) }
+            WorkspaceIntent.AddHarmonyEvent -> requestHarmonyMutation(HarmonyMutation.Add)
+            WorkspaceIntent.SaveHarmonyEvent -> requestHarmonyMutation(HarmonyMutation.Save)
+            WorkspaceIntent.DeleteHarmonyEvent -> requestHarmonyMutation(HarmonyMutation.Delete)
+            is WorkspaceIntent.MoveHarmonyEvent -> requestHarmonyMutation(HarmonyMutation.Move(intent.earlier))
+            WorkspaceIntent.ConfirmHarmonyMutation -> state.value.harmony.pendingMutation?.let(::performHarmonyMutation)
+            WorkspaceIntent.CancelHarmonyMutation -> mutableState.update { it.copy(harmony = it.harmony.copy(pendingMutation = null)) }
             WorkspaceIntent.RefreshRuntimeReadiness -> refreshRuntimeReadiness()
             WorkspaceIntent.ChooseSoundLibraryRoot -> chooseSoundLibraryRoot()
             WorkspaceIntent.RequestClearSoundLibraryRoot -> requestClearSoundLibraryRoot()
@@ -771,6 +805,127 @@ class WorkspaceViewModel(
             refreshRuntimeReadiness()
         }
         if (section == WorkspaceSection.SETUP) loadProjectSetup(state.value.project)
+        if (section == WorkspaceSection.HARMONY) loadHarmony()
+    }
+
+    private fun loadHarmony(conflictMessage: String? = null) {
+        val project = state.value.project ?: return mutableState.update {
+            it.copy(harmony = it.harmony.copy(loading = false, error = "Open a project and save Setup before editing harmony."))
+        }
+        if (project.migration.requiresMigration || !project.readiness.compositionSettingsReady) {
+            mutableState.update { it.copy(harmony = it.harmony.copy(loading = false, error = "Save Setup before adding structured harmony.")) }
+            return
+        }
+        mutableState.update { it.copy(harmony = it.harmony.copy(loading = true, error = null, pendingMutation = null)) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { projectService.getHarmony(GetHarmony(project.root)) } }
+                .onSuccess { view -> mutableState.update { current ->
+                    if (current.project?.root != project.root) current else {
+                        val section = current.harmony.selectedSection.takeIf { selected ->
+                            view.progressions.any { it.sectionType == selected } || view.completeness.requiredSections.contains(selected)
+                        } ?: view.completeness.requiredSections.firstOrNull() ?: SectionTypeId.VERSE
+                        val event = view.progressions.firstOrNull { it.sectionType == section }?.events?.firstOrNull()
+                        current.copy(harmony = current.harmony.copy(
+                            view = view, selectedSection = section, selectedEventId = event?.id,
+                            draftRoot = event?.root ?: PitchClass.canonical(0), draftQuality = event?.quality ?: ChordQuality.MAJOR,
+                            dirty = false, loading = false, error = conflictMessage, pendingMutation = null
+                        ))
+                    }
+                } }
+                .onFailure { failure -> mutableState.update { current ->
+                    if (current.project?.root != project.root) current else current.copy(harmony = current.harmony.copy(loading = false, error = failure.message ?: "Unable to load harmony."))
+                } }
+        }
+    }
+
+    private fun selectHarmonySection(section: SectionTypeId) {
+        val event = state.value.harmony.view?.progressions?.firstOrNull { it.sectionType == section }?.events?.firstOrNull()
+        mutableState.update { current -> current.copy(harmony = current.harmony.copy(
+            selectedSection = section, selectedEventId = event?.id,
+            draftRoot = event?.root ?: PitchClass.canonical(0), draftQuality = event?.quality ?: ChordQuality.MAJOR,
+            dirty = false, error = null, pendingMutation = null
+        )) }
+    }
+
+    private fun selectHarmonyEvent(eventId: ChordEventId?) {
+        val event = state.value.harmony.view?.progressions?.firstOrNull { it.sectionType == state.value.harmony.selectedSection }
+            ?.events?.firstOrNull { it.id == eventId }
+        mutableState.update { current -> current.copy(harmony = current.harmony.copy(
+            selectedEventId = event?.id, draftRoot = event?.root ?: current.harmony.draftRoot,
+            draftQuality = event?.quality ?: current.harmony.draftQuality, dirty = false, error = null, pendingMutation = null
+        )) }
+    }
+
+    private fun requestHarmonyMutation(mutation: HarmonyMutation) {
+        val project = state.value.project ?: return fail("harmony", "Open a project before editing harmony.")
+        val editor = state.value.harmony
+        val view = editor.view ?: return loadHarmony()
+        if (editor.loading || state.value.operation.isMutating) return busy("edit harmony")
+        if (view.revision == null) return mutableState.update { it.copy(harmony = it.harmony.copy(error = "Save Setup before adding structured harmony.")) }
+        val selected = view.progressions.firstOrNull { it.sectionType == editor.selectedSection }
+            ?.events?.firstOrNull { it.id == editor.selectedEventId }
+        if (mutation !is HarmonyMutation.Add && selected == null) return mutableState.update { it.copy(harmony = it.harmony.copy(error = "Select a chord first.")) }
+        if (mutation is HarmonyMutation.Save && !editor.dirty) return
+        val processed = project.parts.any { it.preparation.midiAiFix.draftAvailable || it.preparation.midiAiFix.approvedAvailable || it.preparation.midiFeel.available } ||
+            project.readiness.songPlanAvailable || project.readiness.cohesionReady || project.readiness.arrangementAvailable || project.readiness.generatedMidiAvailable || project.readiness.stemsAvailable || project.readiness.dryMixAvailable || project.readiness.masterAvailable || project.readiness.releaseAvailable
+        if (processed) mutableState.update { it.copy(harmony = it.harmony.copy(pendingMutation = mutation, error = null)) }
+        else performHarmonyMutation(mutation)
+    }
+
+    private fun performHarmonyMutation(mutation: HarmonyMutation) {
+        val project = state.value.project ?: return
+        val editor = state.value.harmony
+        val view = editor.view ?: return loadHarmony()
+        val revision = view.revision ?: return
+        val progression = view.progressions.firstOrNull { it.sectionType == editor.selectedSection }
+        val selected = progression?.events?.firstOrNull { it.id == editor.selectedEventId }
+        val event = selected?.copy(root = editor.draftRoot, quality = editor.draftQuality)
+        mutableState.update { it.copy(operation = WorkspaceOperation.SavingHarmony, harmony = it.harmony.copy(loading = true, pendingMutation = null, error = null)) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) {
+                when (mutation) {
+                    HarmonyMutation.Add -> {
+                        val nextId = nextHarmonyEventId(editor.selectedSection, progression?.events.orEmpty())
+                        projectService.createHarmonyEvent(CreateHarmonyEvent(project.root, view.projectRevision, revision, editor.selectedSection, ChordEvent(nextId, editor.draftRoot, editor.draftQuality, 0)))
+                    }
+                    HarmonyMutation.Save -> projectService.updateHarmonyEvent(UpdateHarmonyEvent(project.root, view.projectRevision, revision, editor.selectedSection, requireNotNull(event)))
+                    HarmonyMutation.Delete -> projectService.deleteHarmonyEvent(DeleteHarmonyEvent(project.root, view.projectRevision, revision, editor.selectedSection, requireNotNull(selected).id))
+                    is HarmonyMutation.Move -> {
+                        val currentIndex = requireNotNull(progression).events.indexOf(requireNotNull(selected))
+                        projectService.reorderHarmonyEvent(ReorderHarmonyEvent(project.root, view.projectRevision, revision, editor.selectedSection, selected.id, currentIndex + if (mutation.earlier) -1 else 1))
+                    }
+                }
+            } }.onSuccess { result -> mutableState.update { current ->
+                if (current.project?.root != project.root) current else {
+                    val selectedId = when (mutation) {
+                        HarmonyMutation.Add -> result.harmony.progressions.firstOrNull { it.sectionType == editor.selectedSection }?.events?.lastOrNull()?.id
+                        HarmonyMutation.Delete -> null
+                        else -> editor.selectedEventId
+                    }
+                    val selectedEvent = result.harmony.progressions.firstOrNull { it.sectionType == editor.selectedSection }?.events?.firstOrNull { it.id == selectedId }
+                    current.copy(
+                        project = result.snapshot, operation = WorkspaceOperation.Idle,
+                        downstreamArtifactsStale = result.snapshot.readiness.staleArtifacts.isNotEmpty(),
+                        notification = "Harmony saved. ${result.invalidation.artifacts.size} downstream artifact type(s) are stale evidence.",
+                        harmony = current.harmony.copy(view = result.harmony, selectedEventId = selectedEvent?.id,
+                            draftRoot = selectedEvent?.root ?: PitchClass.canonical(0), draftQuality = selectedEvent?.quality ?: ChordQuality.MAJOR,
+                            dirty = false, loading = false, error = null)
+                    )
+                }
+            } }.onFailure { failure ->
+                val message = failure.message ?: "Unable to save harmony."
+                if (message.contains("reload harmony", ignoreCase = true) || message.contains("Harmony changed", ignoreCase = true)) {
+                    mutableState.update { it.copy(operation = WorkspaceOperation.Idle) }
+                    loadHarmony("Harmony changed elsewhere. The current revision was refreshed; review it before saving again.")
+                } else mutableState.update { current -> current.copy(operation = WorkspaceOperation.Failed("harmony", message), harmony = current.harmony.copy(loading = false, error = message)) }
+            }
+        }
+    }
+
+    private fun nextHarmonyEventId(section: SectionTypeId, events: List<ChordEvent>): ChordEventId {
+        var index = 1
+        while (events.any { it.id.value == "h-${section.value}-$index" }) index++
+        return ChordEventId("h-${section.value}-$index")
     }
 
     private fun openSettings() = selectWorkspaceSection(WorkspaceSection.SETTINGS)

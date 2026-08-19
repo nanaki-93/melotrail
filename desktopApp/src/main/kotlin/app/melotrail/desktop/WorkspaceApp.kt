@@ -380,6 +380,7 @@ private fun WorkspaceNavigation(state: WorkspaceUiState, onIntent: (WorkspaceInt
 
 private fun WorkspaceSection.referenceIcon(): String = when (this) {
     WorkspaceSection.SETUP -> "⚙"
+    WorkspaceSection.HARMONY -> "♬"
     WorkspaceSection.OVERVIEW -> "▣"
     WorkspaceSection.IMPORT -> "⇩"
     WorkspaceSection.STRUCTURE -> "▤"
@@ -416,6 +417,7 @@ private fun WideWorkspace(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
         Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
             when (state.workspaceSection) {
                 WorkspaceSection.SETUP,
+                WorkspaceSection.HARMONY,
                 WorkspaceSection.OVERVIEW, WorkspaceSection.IMPORT -> {
                     PanelColumn(Modifier.widthIn(min = 235.dp, max = 300.dp).weight(0.95f), state, onIntent, projectLeftPanels(state))
                     PanelColumn(Modifier.weight(1.7f), state, onIntent, listOf(Panel.Structure, Panel.Arrangement, Panel.Timeline))
@@ -470,6 +472,7 @@ private fun projectLeftPanels(state: WorkspaceUiState): List<Panel> =
 
 private fun panelsForSection(section: WorkspaceSection, state: WorkspaceUiState? = null): SectionPanels = when (section) {
     WorkspaceSection.SETUP,
+    WorkspaceSection.HARMONY,
     WorkspaceSection.OVERVIEW, WorkspaceSection.IMPORT -> SectionPanels(state?.let(::projectLeftPanels) ?: listOf(Panel.Parts), listOf(Panel.Structure, Panel.Arrangement, Panel.Timeline), listOf(Panel.Status))
     WorkspaceSection.STRUCTURE -> SectionPanels(listOf(Panel.Parts), listOf(Panel.Structure, Panel.Timeline), listOf(Panel.Preparation, Panel.MidiQuality, Panel.Status))
     WorkspaceSection.ARRANGE -> SectionPanels(listOf(Panel.Structure), listOf(Panel.Arrangement, Panel.Timeline), listOf(Panel.Status))
@@ -1435,6 +1438,7 @@ private fun statusText(state: WorkspaceUiState): String = when (val operation = 
     WorkspaceOperation.Idle -> state.project?.let { "Ready · ${it.name} is open." } ?: "Ready. Create or open a project to begin."
     is WorkspaceOperation.OpeningProject -> "Opening ${operation.root.fileName}…"
     WorkspaceOperation.SavingProjectSetup -> "Saving project setup…"
+    WorkspaceOperation.SavingHarmony -> "Saving structured harmony…"
     is WorkspaceOperation.CreatingProject -> "Creating ${operation.root.fileName}…"
     is WorkspaceOperation.ImportingPart -> "Preparing ${operation.id}…"
     is WorkspaceOperation.AnalyzingPart -> "Analyzing ${operation.id}…"

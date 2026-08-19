@@ -47,6 +47,8 @@ import app.melotrail.application.MixSnapshot
 import app.melotrail.application.PersistedMixSettings
 import app.melotrail.application.ProjectReadiness
 import app.melotrail.application.ProjectSnapshot
+import app.melotrail.application.HarmonyCompleteness
+import app.melotrail.application.HarmonyView
 import app.melotrail.application.StructureSectionSummary
 import app.melotrail.application.ReleaseExportFormat
 import app.melotrail.application.ReleaseExportInspection
@@ -55,6 +57,12 @@ import app.melotrail.application.LocalSoundLibraryInstrument
 import app.melotrail.application.LocalSoundLibraryInventory
 import app.melotrail.application.LocalSoundLibraryInventoryState
 import app.melotrail.arrangement.RenderFormat
+import app.melotrail.harmony.ChordEvent
+import app.melotrail.harmony.ChordEventId
+import app.melotrail.harmony.ChordProgression
+import app.melotrail.harmony.ChordQuality
+import app.melotrail.harmony.SectionTypeId
+import app.melotrail.music.PitchClass
 import java.awt.AlphaComposite
 import java.awt.image.BufferedImage
 import java.nio.file.Files
@@ -207,6 +215,37 @@ class WorkspaceScreenTest {
 
         assertEquals(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.STRUCTURE), intents.single())
         onAllNodesWithTag(WorkspaceTags.WORKSPACE_NAV).assertCountEquals(1)
+    }
+
+    @Test
+    fun `Harmony offers structured section chord and keyboard reachable reorder controls`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        val harmony = harmonyView(
+            ChordProgression(SectionTypeId.VERSE, listOf(
+                ChordEvent(ChordEventId("v1"), PitchClass.canonical(0), ChordQuality.MAJOR, 0),
+                ChordEvent(ChordEventId("v2"), PitchClass.canonical(5), ChordQuality.MAJOR, 1)
+            )),
+            ChordProgression(SectionTypeId.CHORUS), ChordProgression(SectionTypeId.BRIDGE)
+        )
+        setContent { MelotrailTheme { WorkspaceScreen(populatedState().copy(
+            workspaceSection = WorkspaceSection.HARMONY,
+            harmony = HarmonyEditorUiState(view = harmony, selectedEventId = ChordEventId("v2"), draftRoot = PitchClass.canonical(5))
+        ), intents::add) } }
+
+        listOf(
+            HarmonyPageTags.TABS, HarmonyPageTags.TAB_PREFIX + "verse", HarmonyPageTags.TAB_PREFIX + "chorus",
+            HarmonyPageTags.SELECT_PREFIX + "v1", HarmonyPageTags.ROOT_PREFIX + "C",
+            HarmonyPageTags.QUALITY_PREFIX + "minor", HarmonyPageTags.MOVE_EARLIER + "-v2"
+        ).forEach { onNodeWithTag(it).assertExists() }
+        ChordQuality.entries.forEach { quality ->
+            onNodeWithTag(HarmonyPageTags.QUALITY_PREFIX + quality.name.lowercase()).assertExists()
+        }
+        onNodeWithTag(HarmonyPageTags.TAB_PREFIX + "chorus").performClick()
+        assertEquals(WorkspaceIntent.SelectHarmonySection(SectionTypeId.CHORUS), intents.last())
+        onNodeWithTag(HarmonyPageTags.MOVE_EARLIER + "-v2").performSemanticsAction(SemanticsActions.RequestFocus)
+        onNodeWithTag(HarmonyPageTags.MOVE_EARLIER + "-v2").performKeyInput { pressKey(Key.Enter) }
+        assertEquals(WorkspaceIntent.MoveHarmonyEvent(earlier = true), intents.last())
+        onNodeWithContentDescription("Select chord C, Major").assertExists()
     }
 
     @Test
@@ -1308,6 +1347,7 @@ class WorkspaceScreenTest {
         )
         val fixtures = mapOf(
             WorkspaceSection.SETUP to setupState(),
+            WorkspaceSection.HARMONY to populatedState().copy(workspaceSection = WorkspaceSection.HARMONY, harmony = HarmonyEditorUiState(view = harmonyView(ChordProgression(SectionTypeId.VERSE), ChordProgression(SectionTypeId.CHORUS), ChordProgression(SectionTypeId.BRIDGE)))),
             WorkspaceSection.OVERVIEW to overviewReadyState(),
             WorkspaceSection.IMPORT to importState(importPart("piano_loop.mid", rawMidi = true)),
             WorkspaceSection.STRUCTURE to populatedState().copy(workspaceSection = WorkspaceSection.STRUCTURE),
@@ -1492,6 +1532,18 @@ class WorkspaceScreenTest {
             workspaceSection = WorkspaceSection.SETUP
         )
     }
+
+    private fun harmonyView(vararg progressions: ChordProgression) = HarmonyView(
+        projectRevision = 1,
+        revision = 1,
+        progressions = progressions.toList(),
+        validationErrors = emptyList(),
+        completeness = HarmonyCompleteness(
+            listOf(SectionTypeId.VERSE, SectionTypeId.CHORUS, SectionTypeId.BRIDGE),
+            emptyList(),
+            progressions.filter { it.events.isEmpty() }.map { it.sectionType }
+        )
+    )
 
     private fun populatedState(): WorkspaceUiState = WorkspaceUiState(
         project = ProjectSnapshot(

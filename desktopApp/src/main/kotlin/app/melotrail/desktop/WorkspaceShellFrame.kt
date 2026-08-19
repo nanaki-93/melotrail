@@ -323,10 +323,10 @@ private fun DestinationNavigation(state: WorkspaceUiState, onIntent: (WorkspaceI
     Box(modifier.semantics { testTag = tag }) {
         val navigationModifier = Modifier.semantics { testTag = WorkspaceTags.WORKSPACE_NAV; contentDescription = "Workspace navigation" }
         if (compact) Row(navigationModifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-            listOf(WorkspaceSection.SETUP, WorkspaceSection.OVERVIEW, WorkspaceSection.IMPORT, WorkspaceSection.STRUCTURE, WorkspaceSection.ARRANGE, WorkspaceSection.MIX_MASTER)
+            listOf(WorkspaceSection.SETUP, WorkspaceSection.HARMONY, WorkspaceSection.OVERVIEW, WorkspaceSection.IMPORT, WorkspaceSection.STRUCTURE, WorkspaceSection.ARRANGE, WorkspaceSection.MIX_MASTER)
                 .forEach { destination -> NavigationButton(destination, state, onIntent, compact = true) }
         } else Column(navigationModifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-            listOf(WorkspaceSection.SETUP, WorkspaceSection.OVERVIEW, WorkspaceSection.IMPORT, WorkspaceSection.STRUCTURE, WorkspaceSection.ARRANGE, WorkspaceSection.MIX_MASTER)
+            listOf(WorkspaceSection.SETUP, WorkspaceSection.HARMONY, WorkspaceSection.OVERVIEW, WorkspaceSection.IMPORT, WorkspaceSection.STRUCTURE, WorkspaceSection.ARRANGE, WorkspaceSection.MIX_MASTER)
                 .forEach { destination -> NavigationButton(destination, state, onIntent, compact = false) }
         }
     }
@@ -349,6 +349,7 @@ private fun NavigationButton(destination: WorkspaceSection, state: WorkspaceUiSt
 private val WorkspaceSection.shortLabel: String
     get() = when (this) {
         WorkspaceSection.SETUP -> "Setup"
+        WorkspaceSection.HARMONY -> "Harmony"
         WorkspaceSection.OVERVIEW -> "Project"
         WorkspaceSection.MIX_MASTER -> "Mix"
         WorkspaceSection.VIDEO_PREVIEW -> "Preview"
@@ -375,6 +376,11 @@ private fun ContextRail(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
         Column(Modifier.padding(MusicWorkspaceTokens.Spacing.Md).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
             when (state.workspaceSection) {
                 WorkspaceSection.IMPORT -> ImportContextRail(state, onIntent)
+                WorkspaceSection.HARMONY -> {
+                    Icon(Icons.Default.Tune, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Text("HARMONY READINESS", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.TextSecondary)
+                    Text(if (state.harmony.view?.ready == true) "Verse, Chorus, and Bridge are complete. Continue to Melody Parts." else "Complete Setup, then add a chord to every required progression.", style = MaterialTheme.typography.bodySmall)
+                }
                 WorkspaceSection.ARRANGE -> {
                     Icon(Icons.Default.Tune, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     ArrangeContextRail(state, onIntent)
