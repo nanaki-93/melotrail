@@ -3,7 +3,7 @@
 ## Audit scope and baseline
 
 This audit covers README/build/configuration, Compose Desktop, Spring services,
-the Python worker, the removed CLI surface, audio/MIDI processing, structure,
+the Python worker, audio/MIDI processing, structure,
 arrangement, cohesion, rendering, mix/master/export, provenance, tests, and the
 existing completed planning work.
 
@@ -24,15 +24,14 @@ in `docs/RELEASE_ACCEPTANCE.md`.
 | Canonical project | `arrangement/Project.kt`, `ProjectStore.kt`, `WorkflowArtifacts.kt` | v3 file-backed project, migration, references, hashes, invalidation | Extend to v4; retain compatibility |
 | Project application | `application/ProjectApplicationService.kt`, `WorkflowReadModel.kt` | import, cleanup, selection, analysis, structure, readiness | Keep facade; extract capabilities as added |
 | Desktop UI | `desktopApp/.../WorkspaceViewModel.kt`, `WorkspacePageRouter.kt`, `DesktopMain.kt` | supported responsive product UI | Adapt, do not replace shell/transport |
-| Spring API | `server/api/*`, `service/ProjectServiceAdapter.kt`, `model/Project.kt` | optional API with separate old project store | Adapt later or deprecate; never dual-write |
+| Spring API | `server/api/*`, `service/ProjectServiceAdapter.kt`, `model/Project.kt` | optional API with separate old project store | Retain only as canonical adapter with users; otherwise migrate/export data and delete |
 | Worker | `worker/main.py`, `registry.py`, `commands/*`, Kotlin `WorkerClient`/`WorkerProtocol` | synchronous local Python operations | Keep stateless and specialized |
 | MIDI | `MidiAnalysis.kt`, `MidiAiFix.kt`, `MidiLoFiFeel.kt`, worker MIDI clean | analysis, cleanup, bounded AI edits, fixed lo-fi groove | Reuse primitives; split responsibilities |
 | Structure | project structure list, desktop editor, `SectionVariation.kt` | repeated part ordering and derived occurrences | Persist occurrence identity in v4 |
-| Arrangement | `GlobalSongPlanner.kt`, `DetailedArrangement.kt`, generators, registry, `ArrangementApplicationService.kt` | plans, roles/instruments, generated MIDI, render handoff | Generalize roles/profile context |
+| Arrangement | `GlobalSongPlanner.kt`, `DetailedArrangement.kt`, generators, registry, `ArrangementApplicationService.kt` | plans, fixed logical instruments, generated MIDI, render handoff | Generalize roles and metadata-driven instrument resolution |
 | Cohesion | `CohesionApplicationService.kt`, `TransitionCohesion.kt` | reviewed boundary plans and bridges | Move after arrangement; preserve melody |
 | Render/mix/build | `StemRenderingMixer.kt`, `MixApplicationService.kt`, `BuildApplicationService.kt` | stems, settings, dry mix, DSP, master, export | Reuse; insert humanization/profile policy |
 | Provenance | `CommercialProvenanceService.kt`, `provenance/*` | commercial evidence plus older generic log | Expand commercial service into lineage |
-| CLI | Gradle/README references; source deleted in recent history | no current executable implementation | Reconcile claims; optional thin adapter later |
 
 ## Current canonical flow
 
@@ -74,16 +73,23 @@ foundations and should be evolved rather than bypassed.
 ## Obsolete or compatibility-only components
 
 - `model.Project` and `ProjectServiceAdapter` are an independent track CRUD
-  product model. Freeze writes once the canonical API adapter exists; migrate
-  stored data only when a real user/project inventory proves it is needed.
-- README and Gradle CLI claims are stale. Old CLI behavior may inform command
-  design but is not current supported code.
+  product model. If the API has supported users, migrate callers/data and delete
+  the separate model/store as the canonical adapter lands. If it has no supported
+  users, export any required data and delete the entire product surface in Task
+  028. A frozen/deprecated copy is not an accepted state.
 - Whole-occurrence `MelodyCohesion` edit behavior is superseded by reviewed
-  transition-boundary cohesion. Keep only as a legacy reader until migration.
+  transition-boundary cohesion. Map supported evidence, then delete its executable
+  implementation/wiring/tests in Task 024; historical data does not require code.
 - Duplicate/older workspace UI components should be removed only after router
   coverage demonstrates they are unreachable.
 - The generic provenance log should not compete with commercial provenance and
-  the new stage ledger. Migrate useful fields, then retire it.
+  the new stage ledger. Task 027 migrates useful fields and deletes the old log,
+  store, wiring, configuration, and exclusive tests in the same cutover.
+
+Every compatibility component in this section is temporary only while it serves
+a declared supported schema/caller. Its owning task must delete superseded runtime
+code after migration; Git history, not dormant source, preserves implementation
+history.
 
 ## Blocking technical debt
 
@@ -96,6 +102,8 @@ foundations and should be evolved rather than bypassed.
 4. AI fix combines technical correction with musical enhancement and sees
    isolated MIDI-inferred context rather than user harmony.
 5. Arrangement uses fixed logical instruments and lo-fi prompt/default leakage.
+   Registry v1 is secure/validated but requires exactly one engine entry for each
+   logical name, so role, instrument identity, and SFZ selection are conflated.
 6. Cohesion is an arrangement prerequisite, opposite the target pipeline.
 7. Lo-fi MIDI feel is a fixed enum and build-time lo-fi audio processing is a
    fixed option rather than profile/mood policy.
@@ -117,6 +125,8 @@ foundations and should be evolved rather than bypassed.
 | Application services | commands/queries, validation, permissions, orchestration facade | UI rendering, Python algorithms |
 | Stage runner | dependency/cache key, lock, status, retry, artifact publication | musical policy or user selection |
 | Profile catalog | versioned defaults/constraints and policy parameters | arbitrary executable rules |
+| Instrument catalog | stable IDs, roles/affinities/traits, engine/capability metadata, embedded license/library provenance, and admission validation | project creative decisions, legal guarantees, or silent substitution |
+| Instrument resolver | deterministic filtering/scoring and explainable selection decisions | filesystem paths, rendering, or changing approved assignments |
 | Deterministic MIDI processors | transforms and reports | silent selection/approval |
 | AI planner ports | bounded proposal generation | file writing, shell/path control |
 | Python worker | audio/model computation for a single command | durable workflow/project state |
@@ -163,15 +173,27 @@ definitions should be application resources with stable versioned IDs. Stage
 manifests should snapshot resolved processing configuration. Secrets and machine
 paths must not enter portable project/release provenance.
 
+The configured sound-library root remains a machine-local preference. The
+portable project stores stable selected instrument IDs plus registry/asset hashes;
+the renderer resolves engine files locally. Library differences across machines
+must produce explicit availability/hash diagnostics, never implicit substitution.
+
+Registry v2 embeds the commercial-license/attribution and source-library version
+snapshot in each instrument entry. The current separate `LICENSES.json` remains a
+v1 migration/evidence input, not the v2 runtime authority. A versioned admission
+policy rejects recognized NC terms, requires complete attribution for admitted
+CC BY entries, prefers CC0 only after musical fit, and sends unknown/custom terms
+to explicit review. Export credits are derived from the final used-stem release
+manifest rather than scanning the configured library.
+
 ## Documentation and build assessment
 
-- README's architecture/module and CLI descriptions must be aligned to shipped
+- README's architecture/module descriptions must be aligned to shipped
   code during rollout.
-- `Makefile` declarations and Gradle CLI task configuration must not imply a
-  missing entry point.
+- `Makefile` declarations and Gradle task configuration must not imply a missing
+  or unsupported entry point.
 - `docs/MIDI_IMPORT_PROCESS.md`, `TRACK_PROCESS_WORKFLOW.md`, commercial
   provenance docs, function inventory, troubleshooting, and release acceptance
   must be updated with the task that changes their behavior.
 - The completed 110–117 plan is valuable historical context but its
   cohesion-before-arrangement pipeline is superseded by this roadmap.
-

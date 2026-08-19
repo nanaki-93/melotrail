@@ -30,7 +30,10 @@ Every derived artifact records:
 
 Record revisions/hashes for project settings, structured harmony, part section
 assignment/source-key confirmation, structure occurrences, arrangement roles and
-instrument choices, enhancement intensity/selection, cohesion approvals,
+instrument-selection requests/decisions, candidate scores/reasons, selected IDs,
+registry/resolver versions/hashes, embedded license/source-library snapshots,
+license-admission policy decisions, and explicit substitutions, enhancement
+intensity/selection, cohesion approvals,
 humanization configuration/seed, mix settings, master/export configuration.
 
 ### Processor evidence
@@ -99,12 +102,31 @@ The release manifest closes over the exact selected lineage:
 - current settings/harmony/structure/arrangement decision revisions;
 - selected per-part and project-stage artifacts/runs;
 - sound-library/sample/model dependencies and known licenses;
+- selected stable instrument IDs, engine/capability snapshots, registry and
+  resolver versions, asset hashes, and substitution history;
+- exact final used-stem/instrument set, normalized required-attribution entries,
+  license-policy version, and credits text hash/path;
 - master/export hashes/configuration;
 - unresolved warnings and readiness result.
 
 Generated reports use relative identifiers and redacted source categories where
 needed. They state evidence and unresolved dependencies; they do not promise
 copyright ownership or platform monetization.
+
+## Instrument credits artifact
+
+`ReleaseCreditsService` consumes only the immutable release manifest. It selects
+instrument assignments whose stems contribute to the resolved final mix, excludes
+unused candidates/roles and no-attribution licenses, deduplicates ready-to-publish
+attribution blocks, sorts deterministically, and atomically writes
+`<export-base>-credits.txt`. The release manifest records contributing instrument
+IDs/license snapshots and the credits hash.
+
+A CC0-only release emits a stable no-attribution-required statement without
+listing CC0 dependencies. A required-attribution instrument with missing or
+contradictory attribution prevents commercial-ready export. Private audition and
+project recovery remain available. Credits are regenerated from frozen snapshots,
+not a changed live sound library.
 
 ## Retention and privacy
 
@@ -122,4 +144,3 @@ absolute paths, credentials, source names marked sensitive, or raw model data.
 - upstream selection changes create new release lineage and stale old readiness;
 - redaction tests for logs/reports/API DTOs;
 - legacy provenance/source attestation migration fixtures.
-

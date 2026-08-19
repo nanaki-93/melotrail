@@ -39,7 +39,7 @@ Architecture and safety rules:
 - Compose Desktop is the product UI. Spring is an optional local JSON API and
   must not regain a browser frontend or static fallback.
 - Keep Compose as an adapter over typed Kotlin application services. Do not put
-  file writes, worker calls, rendering, CLI parsing, or business orchestration
+  file writes, worker calls, rendering, transport parsing, or business orchestration
   in composables.
 - Canonical project artifacts are the source of truth. Do not add a competing
   database or project format. Preserve supported legacy project reads unless

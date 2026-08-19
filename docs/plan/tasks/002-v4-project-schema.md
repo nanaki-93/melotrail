@@ -25,6 +25,10 @@ Task 001.
 - Introduce v4 DTO/envelope fields for composition settings, harmony, evolved
   parts, structure occurrences, and stage/provenance manifest refs. Fields may
   initially be incomplete/empty until their owning tasks land.
+- Reserve arrangement assignment/decision references that persist stable
+  instrument IDs, embedded license/library-provenance snapshot refs, and hashes
+  only. Engine filenames and machine-local sound-library paths must never enter
+  the portable project schema.
 - Implement pure v1/v2/v3-to-v4 mappings. Missing creative settings become a
   typed `setupRequired`/validation state, never inferred defaults on open.
 - Keep open read-only; add/extend an explicit migrate/save command that writes
@@ -33,6 +37,10 @@ Task 001.
   completed artifact refs remain strictly validated.
 - Preserve unknown legacy data where practical through typed compatibility data
   or explicit warnings, not silent discard.
+- Keep only pure legacy DTO/read mappers required by the declared supported input
+  versions. Do not keep duplicate legacy runtime services or write paths. Record
+  the schema-support removal condition so a future support-window change deletes
+  the reader, fixtures, and docs together.
 
 ## Files
 
@@ -72,4 +80,3 @@ unknown fields/roles, missing files, failed-stage refs, atomic failure recovery.
 ## Out of Scope
 
 Implementing musical primitives, profile rules, UI, or processing manifests.
-

@@ -87,11 +87,24 @@ replace a user's structure without explicit acceptance.
 
 - Show arrangement roles separately from concrete instruments.
 - Select/disable roles supported by the profile, then assign an available
-  instrument or accept a profile suggestion.
+  instrument, pin a favorite, or accept a resolver suggestion based on profile,
+  mood, section, role, and controlled desired character.
+- Show why an instrument was suggested (for example Bass + Nostalgic + Soft),
+  its verified capabilities and license status, without exposing SFZ/sample paths.
+- A user override is authoritative and persists in the arrangement revision.
+  Missing/incompatible pinned IDs require an explicit substitution; the UI must
+  not silently switch sounds when the library changes.
 - Keep energy, density, section variation, AI draft/review, licensing, and
   generation readiness where useful.
 - Label profile-derived defaults as suggestions. User overrides persist.
 - Arrangement completion no longer depends on cohesion approval.
+
+The secondary Library page becomes the read-only catalog view for stable ID/name,
+roles, characteristics, profile/mood affinities, engine readiness, verified
+capabilities, samples, embedded license/provenance, commercial-admission status,
+and required attribution. Filters operate on safe metadata. It shows
+entry-specific diagnostics and project role coverage rather than requiring one
+fixed piano/bass/drums/pad/strings file layout.
 
 ## Build
 
@@ -112,6 +125,11 @@ Preserve the current per-stem controls and master/export flow. Rename or regroup
 fixed “Bedroom Lo-fi” processing as optional Profile Texture/Style Processing,
 defaulting to the profile policy and remaining bypassable. Surface exact input
 build, mix revision, master config, and commercial evidence status.
+
+Export previews the exact required instrument attribution text and the planned
+`<export-base>-credits.txt` filename. CC0 instruments appear in provenance details
+but not the required-attribution list. Missing/invalid attribution links directly
+to the offending Library/Arrangement item and blocks only commercial-ready export.
 
 ## Readiness and navigation
 
@@ -158,4 +176,3 @@ with deterministic or mock correction/enhancement implementations. Advanced AI,
 audition polish, arbitrary meters/modes, profile editors, and profile downloads
 are Later/Future. UI labels must not promise quality/capability that is only a
 placeholder.
-

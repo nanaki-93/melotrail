@@ -24,14 +24,22 @@ Task 003.
 
 - Define stable profile/mood refs and resolver/catalog interfaces.
 - Bundle versioned `lofi` data: UI defaults/constraints, supported meters/moods,
-  role/instrument suggestions, groove/humanization bounds, correction/enhancement
-  tolerance, cohesion vocabulary, and optional style-processing policy.
+  roles and controlled instrument-selection criteria/weights (not filenames),
+  groove/humanization bounds, correction/enhancement tolerance, cohesion
+  vocabulary, and optional style-processing policy.
 - Add Warm, Nostalgic, Melancholic, Dreamy, Relaxed, and Dark typed mood modifier
   definitions; missing values are neutral.
 - Implement deterministic profile-plus-mood resolution and clamping; expose a
   normalized resolved snapshot/hash.
 - Reject duplicate IDs/versions, invalid ranges, unsupported references, and
   unavailable capability claims. Do not include future genres.
+- Define how profile and mood parameters contribute weighted affinity/desired
+  characteristic criteria to the later instrument resolver. Catalog definitions
+  must not contain SFZ/sample paths or assume one instrument per role.
+- Add the Lo-fi default license preference `PREFER_NO_ATTRIBUTION`. It influences
+  ranking only after commercial admission and hard musical/capability fit; it
+  must not turn legal metadata into a prompt or reject an explicit eligible CC BY
+  user choice.
 
 ## Files
 
@@ -60,15 +68,17 @@ future command needs them.
 ## Tests
 
 Catalog validation, resolution/clamping, deterministic hash, unknown version,
-neutral modifiers, one-profile inventory, and no core `style == lofi` branch.
+neutral modifiers, controlled instrument criteria, one-profile inventory, no
+engine filenames in profiles, no-attribution preference ordering/user override,
+and no core `style == lofi` branch.
 
 ## Acceptance
 
 - Lo-fi is selected by ID/version and resolves typed policies.
 - Mood changes at least a minimal set of testable parameters.
+- Profile/mood resolve musical sound criteria without selecting local files.
 - Adding a fixture profile requires catalog data/strategies, not schema changes.
 
 ## Out of Scope
 
 Profile authoring/downloads, additional real profiles, or processor rewrites.
-

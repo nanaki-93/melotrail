@@ -31,7 +31,9 @@ Tasks 002, 007–008.
 - Add optional source-key evidence/confirmation and stage-manifest ref slots.
 - Map recognized legacy roles; preserve unknown normalized IDs and surface an
   explicit unsupported-section warning rather than guessing.
-- Keep `MidiReferences` dual-readable until stage-manifest migration is complete.
+- Keep `MidiReferences` readable only through the supported-project migration
+  mapper until Task 011 completes. New runtime writes/selections use the canonical
+  part model; Task 011 must delete the superseded runtime branches and fields.
 - Add typed create/update-name/update-section commands and precise invalidation.
 
 ## Files
@@ -66,8 +68,8 @@ immutability, persistence/reopen, invalidation, safe DTO path redaction.
 - Every new part has stable ID, name, section, immutable source metadata.
 - Verse/Chorus/Bridge context lookup no longer depends on arbitrary display text.
 - Legacy projects still open and retain artifacts.
+- No duplicate new/legacy part mutation path remains after explicit migration.
 
 ## Out of Scope
 
 Stage execution, structure occurrence migration, or audio algorithm changes.
-

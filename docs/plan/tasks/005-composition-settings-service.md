@@ -68,5 +68,4 @@ compatibility, exact stale propagation, and no invalidation for display name.
 
 ## Out of Scope
 
-Setup UI, harmony, processor execution, REST/CLI adapters.
-
+Setup UI, harmony, processor execution, or REST adapters.

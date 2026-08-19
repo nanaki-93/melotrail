@@ -90,7 +90,7 @@ with the app. The resolved typed definition may include:
 - tempo/meter defaults and UI constraints;
 - supported mood IDs and default mood;
 - chord-quality preferences (suggestions, never arbitrary replacement);
-- arrangement role definitions and suggested instrument IDs;
+- arrangement role definitions and instrument-selection criteria/weights;
 - density, swing, velocity, timing, and humanization bounds;
 - enhancement tolerance/change-budget defaults;
 - cohesion transition vocabulary/bounds;
@@ -105,7 +105,7 @@ profile capabilities, not `if (style == "lofi")`.
 Persist `MoodRef(id, definitionVersion)` and resolve a `MoodDefinition` with
 typed modifiers such as density, rhythmic looseness, swing, velocity center,
 humanization, chord-extension preference, tension, phrase complexity,
-instrument suggestions, accompaniment/transition behavior, and correction/
+sound-character preferences, accompaniment/transition behavior, and correction/
 enhancement tolerance.
 
 Initial IDs may be warm, nostalgic, melancholic, dreamy, relaxed, and dark.
@@ -120,6 +120,69 @@ resolved parameter = profile base + mood modifier, clamped to profile bounds
 
 Store the resolved parameter snapshot/hash in each processing run so later
 profile updates do not make past outputs irreproducible.
+
+## Instrument registry and selection
+
+An arrangement role is not an instrument and an instrument is not an engine
+file. The target sound-library domain uses:
+
+- `InstrumentId`: stable registry identity such as `karoryfer-fashionbass`;
+- `InstrumentDefinition`: display name, eligible role IDs, weighted profile/mood
+  affinities, controlled sonic characteristics, engine descriptor, embedded
+  `InstrumentLicenseMetadata`, `InstrumentLibraryProvenance`, and declared/
+  verified capabilities;
+- `InstrumentSelectionRequest`: role plus profile, mood, section/purpose, desired
+  characteristics, hard capability/license requirements, and optional user pin;
+- `InstrumentSelectionDecision`: resolver/policy version, registry hash,
+  normalized request, candidate scores/reasons, selected ID, and selection actor;
+- `RoleInstrumentAssignment`: arrangement role/occurrence scope, selected stable
+  ID, approval state, and decision reference.
+
+The registry may contain multiple instruments per role and instruments may serve
+multiple roles. Profile/mood tags are affinities, not a rule that an instrument
+can only be used in those styles. Characteristic/capability values use versioned
+controlled IDs/fields, not arbitrary model prose.
+
+Engine descriptors are a tagged type. MVP implements `sfz` with a project-external,
+registry-relative file that only the validated loader/renderer may resolve.
+Capabilities include playable range, supported articulations/note map, velocity
+layers, round-robin count, and release samples; loaders mark which claims were
+verified from assets versus merely declared.
+
+`InstrumentLicenseMetadata` embeds normalized license ID, commercial-use and
+attribution requirements, ready-to-publish attribution text when required,
+source name/URL, license URL, and optional reviewed-policy/legal-text evidence.
+`InstrumentLibraryProvenance` embeds library ID/name/version and source-release
+evidence. Registry v2 instrument entries are self-describing; v1 `LICENSES.json`
+records are materialized by the compatibility adapter and retained by hash.
+
+`InstrumentLicenseAdmission` is a versioned decision:
+
+- `ALLOWED_NO_ATTRIBUTION` for known CC0/verified owned assets;
+- `ALLOWED_WITH_ATTRIBUTION` for supported CC BY with complete metadata;
+- `REJECTED_NONCOMMERCIAL` for any recognized NC license;
+- `REVIEW_REQUIRED` for unknown/custom terms.
+
+Declared booleans cannot override known license semantics. Contradictory license
+ID/commercial/attribution metadata makes the instrument unavailable. The default
+resolver preference favors no-attribution candidates after hard musical fit; a
+user may explicitly choose an admitted CC BY instrument.
+
+Unknown well-formed future profile/mood affinity IDs round-trip but are inactive
+until the corresponding catalog definition exists. Unknown sonic characteristic
+vocabulary IDs cannot be scored and therefore make that entry unavailable until
+supported.
+
+Approved projects persist stable instrument IDs and decision/registry hashes,
+never filenames or absolute library paths. A missing/mismatched selected ID is a
+render-readiness error requiring explicit substitution, not permission to
+silently re-run selection. See
+[instrument-registry.md](instrument-registry.md) for resolution/migration.
+
+A release stores `ReleaseInstrumentUsage` derived from the exact stems included
+in its final mix lineage. Required attribution blocks are normalized/deduplicated
+into an immutable `ReleaseCreditsArtifact` with export-relative path/hash. Unused
+candidates/roles and no-attribution instruments do not create credit entries.
 
 ## Song parts and structure
 
@@ -219,6 +282,7 @@ input/context hashes change.
 | `structure: List<String>` | stable occurrences assigned deterministically during explicit migration |
 | cohesion refs | legacy pre-arrangement cohesion; mark for reapproval if target dependency changes |
 | arrangement/mix/master refs | retain and validate; invalidate only when v4 input hash/context differs |
+| registry v1 logical keys/licenses | preserve as legacy instrument IDs; derive role/neutral affinities and materialize embedded license/provenance snapshots from hashed v1 license records |
 
 Legacy projects without composition settings open in a migration/setup-required
 state. The user supplies missing creative decisions before new v4 stages run.
@@ -236,4 +300,3 @@ state. The user supplies missing creative decisions before new v4 stages run.
 9. Unknown profile/mood/section versions are preserved and surfaced, not
    replaced with current defaults.
 10. Commercial-ready output requires complete selected-lineage provenance.
-

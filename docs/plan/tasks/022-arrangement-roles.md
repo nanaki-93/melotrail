@@ -1,14 +1,15 @@
-# Task 022 — Profile-independent arrangement roles
+# Task 022 — Profile-independent arrangement roles and sound intent
 
 ## Goal
 
-Separate musical arrangement roles from concrete instruments and replace free
-style strings/fixed lo-fi assumptions with resolved profile/mood context.
+Separate musical arrangement roles and desired sound character from concrete
+instrument identities, engine files, and free style strings.
 
 ## Why
 
-Fixed PIANO/BASS/DRUMS/PAD/STRINGS naming and lo-fi prompts make future genres
-and alternate instrumentation expensive to add.
+Current PIANO/BASS/DRUMS/PAD/STRINGS names simultaneously act as roles,
+instruments, registry keys, generators, and stems. A reusable arranger must first
+describe what a layer does and how it should sound.
 
 ## Dependencies
 
@@ -17,43 +18,55 @@ Tasks 004, 008, 018, and 021.
 ## Existing Code
 
 - `GlobalSongPlanner.kt`, `SectionVariation.kt`, `DetailedArrangement.kt`
-- `ArrangementApplicationService.kt`, `InstrumentRegistry.kt`
-- bass/drum/pad/string generators and sound-library/license validation
+- `ArrangementApplicationService.kt`, `Arrangement.kt`
+- bass/drum/pad/string generators
 - desktop arrangement draft/instrument selection
 
 ## Changes
 
-- Define roles Melody, Harmony, Bass, Drums, CounterMelody, Texture, Ambience
-  with stable IDs/capabilities.
-- Model role-to-instrument assignments separately; instrument entries retain
-  playable range, renderer data, asset hash/license, and supported roles.
-- Map current logical instruments/stems through compatibility aliases so existing
-  arrangement/mix projects remain readable.
-- Replace new `style: String` planner/draft inputs with profile/mood refs/resolved
-  context. Move lo-fi density, drum-role, prompt, and instrument suggestions into
-  the Lo-fi profile.
+- Define stable roles Melody, Harmony, Bass, Drums, CounterMelody, Texture, and
+  Ambience with musical/generator capabilities independent of engine assets.
+- Define a controlled `InstrumentIntent`/selection-request input containing role,
+  profile/mood refs, section/purpose, desired attack/tone/articulation traits,
+  hard performance capabilities/license policy, and optional user-pinned stable
+  instrument ID. Trait IDs are versioned vocabulary, not arbitrary prose.
+- Replace new `style: String` planner/draft inputs with structured profile/mood
+  context and resolved sound-selection criteria from Task 004.
+- AI/deterministic planners may propose only roles and controlled sound intents;
+  their schemas reject paths, SFZ/sample filenames, engine arguments, and unknown
+  traits.
 - Feed structured harmony/meter/key and stable occurrences to planners/generators.
-- Update Arrange UI to select roles and instruments distinctly and mark profile
-  suggestions versus user choices.
+- Make generators accept role plans and capability requirements; actual verified
+  instrument capabilities are supplied after Task 022B resolves an instrument.
+- Map current logical PIANO/BASS/DRUMS/PAD/STRINGS to role compatibility aliases
+  so existing plans/stems remain readable.
+- Update Arrange UI contract to distinguish Role, Desired Character, Suggested/
+  Pinned Instrument, and user ownership, without implementing catalog resolution.
+- Mark the fixed logical-instrument runtime enum/branches for deletion in Task
+  022B after v1 IDs are mapped to role/stable-instrument data. Do not maintain both
+  planner vocabularies after registry cutover.
 
 ## Files
 
-Arrangement domain/services/planners/generators/registry, profile definitions,
-desktop Arrange UI/state, migration adapters, docs/tests.
+Arrangement domain/services/planners/generators, profile sound-intent definitions,
+desktop Arrange state/contracts, compatibility adapters, docs/tests.
 
 ## API / Contracts
 
-Arrangement request/result uses context hash, occurrence IDs, role definitions,
-instrument assignment IDs, user constraints, and plan schema version.
+Arrangement plan uses context/occurrence hashes, role IDs, controlled sound
+intents, optional pinned stable IDs, user constraints, and schema version. It
+never contains an engine path.
 
 ## UI
 
-Role enablement and instrument assignment controls; retain licensing/readiness,
-energy/density/variation review and responsive behavior.
+Role enablement and controlled desired-character controls; show that instrument
+resolution is a separate suggestion/user-choice step. Retain energy/density/
+variation review and responsive behavior.
 
 ## Backend
 
-Application service remains authority. Deterministic/AI planners are injected.
+Application service remains authority. Deterministic/AI planners are injected and
+validated before any registry lookup.
 
 ## Python Worker
 
@@ -61,17 +74,19 @@ No change.
 
 ## Tests
 
-Legacy mapping/mix aliases, role/instrument validation, profile suggestions,
-user override persistence, structured harmony/meter inputs, no lo-fi core branch.
+Role validation, structured profile/mood/section context, controlled trait schema,
+path/filename/unknown-trait rejection, user-pinned ID preservation, legacy logical
+role mapping, structured harmony/meter inputs, and no core lo-fi string branch.
 
 ## Acceptance
 
-- A fixture profile can recommend different roles/instruments without schema/UI
-  redesign.
-- Existing logical stems/mix settings migrate or show explicit review.
-- Arrangement honors musician-selected roles/instruments.
+- `Lo-fi + Nostalgic + Verse + Bass + Soft` is a structured sound request, not a
+  filename or prompt-only string.
+- A fixture profile can request different roles/traits without project schema or
+  planner redesign.
+- Existing logical plans/stems remain readable through role aliases.
 
 ## Out of Scope
 
-New instrument assets/profiles, plugin hosting, generator quality rewrite.
-
+Registry v2 loading/ranking, sound assets, rendering, plugin engines, or generator
+quality rewrite.

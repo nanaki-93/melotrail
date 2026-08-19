@@ -34,7 +34,8 @@ approval, timeline assembly, and deterministic generators. Adapt inputs to use:
 - stable occurrence IDs;
 - profile ID/version and resolved policies instead of a free style string;
 - arrangement roles instead of fixed instrument names;
-- explicit role-to-instrument assignments from the registry;
+- controlled instrument-selection requests and approved stable-ID assignments
+  from the registry resolver;
 - user-selected roles/instruments as authoritative constraints.
 
 ### Roles and instruments
@@ -50,27 +51,52 @@ MVP role vocabulary:
 - ambience
 
 A role defines musical responsibility and generation constraints. An instrument
-definition identifies a sound/rendering resource, playable range, articulation,
-license, and supported roles. The Lo-fi profile recommends felt piano, Rhodes,
-electric piano, muted guitar, bass, drums, pad, vibraphone, and atmospheric
-layers where resources exist; it cannot make unavailable/unlicensed instruments
-appear selectable.
+definition has a stable ID/name, eligible roles, weighted profile/mood affinities,
+controlled attack/tone/articulation traits, tagged engine descriptor, license
+and source-library provenance snapshot, and declared/verified capabilities such
+as range, velocity layers,
+round robin, release samples, and drum map. Multiple instruments may serve Bass;
+one instrument may support multiple roles.
+
+The Lo-fi profile recommends selection criteria for felt piano, Rhodes, electric
+piano, muted guitar, bass, drums, pad, vibraphone, and atmospheric layers where
+validated resources exist; it cannot make unavailable/unlicensed instruments
+appear selectable. Profile/mood metadata are affinities rather than exclusive
+style gates.
+
+The deterministic resolver first applies role, engine, capability, playable-range,
+and commercial-license admission constraints. Recognized NC entries are rejected;
+supported CC BY requires complete attribution; CC0 is the default preference
+after musical fit. It then scores profile affinity, mood affinity,
+section/purpose, requested characteristics, and profile recommendations. Stable
+instrument ID breaks ties. User-pinned compatible IDs win; unavailable pins and
+no-candidate results block with actionable diagnostics instead of falling back.
+Any optional diversity selection uses a persisted seed and resolver version.
+
+AI planners may request `Role: Bass`, `Profile: Lo-fi`, `Mood: Nostalgic`, and
+`Attack: Soft` through controlled IDs. They never see/return SFZ or sample paths.
+Code persists the normalized request, candidates/scores/reasons, selected stable
+ID, registry hash/version, resolver version, and selection actor. After arrangement
+approval, rendering resolves that exact ID and never ranks candidates again.
 
 Compatibility adapters map current PIANO/BASS/DRUMS/PAD/STRINGS logical stems to
 new roles. Stem IDs remain stable through migration where possible so existing
-mix settings survive.
+mix settings survive. Registry v1 keys remain legacy instrument IDs with neutral
+affinities; migration does not rename or move their SFZ/sample files.
 
 ### Planner boundaries
 
 The deterministic or AI global planner may propose section purpose, energy,
 density, role entry/exit, and variation. It must echo input/context hashes,
-respect chosen roles/instruments, and use a profile-supplied vocabulary. It does
+respect chosen roles and user-pinned instruments, and use a profile-supplied
+controlled characteristic vocabulary. It does
 not alter core melody/harmony or create transition artifacts.
 
 Detailed arrangement then produces validated occurrence role plans. MIDI
 generators use structured section chords and meter rather than only inferred
-major/minor triad strings. Existing generators are generalized one role at a
-time; no wholesale rewrite is required.
+major/minor triad strings. They consume verified selected-instrument capabilities
+(range, articulation/note map) rather than engine paths. Existing generators are
+generalized one role at a time; no wholesale rewrite is required.
 
 ## Cohesion
 
@@ -164,4 +190,3 @@ current hashes feed the next stage.
   drift anchors or corrupt MIDI.
 - End-to-end fixtures compare old/new ordering and assert the intentional
   invalidation/reapproval boundary.
-

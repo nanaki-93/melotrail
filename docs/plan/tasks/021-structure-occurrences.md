@@ -29,6 +29,10 @@ Tasks 002, 010, and 020.
   ID plus expected revision; reorder retains identity.
 - Adapt read model, arrangement/cohesion inputs, preview labels, invalidation, and
   project validator through compatibility adapters.
+- After all supported fixtures migrate and callers use persisted occurrence IDs,
+  delete position-derived occurrence identity, duplicate structure commands,
+  compatibility runtime adapters, UI state, and exclusive tests. Retain only the
+  pure old-schema-to-occurrence mapper required on project open.
 - Invalidate only affected occurrence/boundary/project dependents, never part
   source processing.
 - Update Structure UI semantics and keyboard reorder without a wholesale rewrite.
@@ -64,8 +68,8 @@ variation retention, exact boundary invalidation, missing part validation, UI.
 - Reordering does not rename/reidentify existing occurrences.
 - Repeats reuse one selected part melody non-destructively.
 - Legacy projects preserve visible order and can explicitly migrate.
+- No runtime component derives occurrence identity from list position after cutover.
 
 ## Out of Scope
 
 Arrangement role redesign, AI structure generation, or section-duration editing.
-

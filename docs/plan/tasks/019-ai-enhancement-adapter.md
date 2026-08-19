@@ -34,6 +34,10 @@ Task 018. This task is Later and does not block the UI/domain MVP.
 - Require preview and user approval before Enhanced becomes selected; rejection
   keeps evidence and Corrected selection.
 - Record provider/model/version/license/template/schema and accepted plan hash.
+- Complete the Task 017 cutover: delete the obsolete combined `MidiAiFix` runtime
+  implementation, prompt/configuration, dependency wiring, UI actions, selection
+  branches, and exclusive tests after legacy artifact metadata is mapped into the
+  canonical correction/enhancement evidence model.
 
 ## Files
 
@@ -68,8 +72,9 @@ identity change, harmony/range/timing violations, rejection/approval, provenance
 - AI cannot modify files or exceed code-owned bounds.
 - Original/Corrected remain selectable and recognizable anchors are protected.
 - Unknown model/license prevents commercial-ready status.
+- Repository/build searches find no callable combined AI-fix path or obsolete
+  configuration/action label.
 
 ## Out of Scope
 
 Cloud AI, model training, complete melody generation, harmony/structure changes.
-

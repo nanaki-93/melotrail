@@ -35,6 +35,10 @@ Tasks 012, 015–016, and harmony/context availability from 008.
   explicit approval or remain unchanged by policy.
 - Map legacy approved AI-fix to inspectable compatibility evidence without
   claiming it met the new correction contract.
+- Move reusable strict-plan validation/application primitives into canonical
+  correction/enhancement components. Once Task 019 cuts over enhancement, delete
+  the old combined AI-fix service, prompt, registrations, selection branches, and
+  tests that exist only for that superseded runtime behavior.
 
 ## Files
 
@@ -73,4 +77,3 @@ mismatch, source preservation, legacy mapping, deterministic result, failure.
 ## Out of Scope
 
 Creative phrase edits, passing notes, contour/repetition improvements.
-

@@ -12,7 +12,7 @@ and occurrence variations it is connecting.
 
 ## Dependencies
 
-Task 022.
+Tasks 022 and 022B.
 
 ## Existing Code
 
@@ -34,6 +34,11 @@ Task 022.
   onward once and require regeneration/reapproval; retain files/evidence.
 - Add compatibility path for opening/exporting a previously completed historical
   build without silently rebuilding it.
+- After supported projects migrate and historical exports resolve through their
+  immutable release manifests, delete the cohesion-before-arrangement prerequisite,
+  old dependency graph/readiness branches, duplicate build route, configuration,
+  and exclusive tests. Historical artifact data remains; obsolete orchestration
+  code does not.
 
 ## Files
 
@@ -68,8 +73,9 @@ once, arrangement rerun invalidates cohesion, no circular dependency, UI readine
 - Arrangement can complete with no cohesion record.
 - Cohesion cannot run against an unapproved/stale arrangement.
 - Historical artifacts remain inspectable/exportable under their recorded lineage.
+- Repository search and dependency tests prove there is no callable old-order
+  arrangement/cohesion path.
 
 ## Out of Scope
 
 Cohesion musical improvements or humanization algorithm.
-

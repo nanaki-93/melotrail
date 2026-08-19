@@ -32,6 +32,10 @@ Tasks 022–024.
   “new variation” that creates/stores a new seed and artifact.
 - Map existing Lo-fi Feel as a legacy groove preset/evidence; do not rewrite old
   files or automatically double-apply swing.
+- Once supported projects map selected Lo-fi Feel artifacts/configuration into
+  humanization evidence, delete the old `MidiLoFiFeel` runtime transform, enum,
+  UI action, wiring, and exclusive tests. Preserve immutable output artifacts and
+  a pure schema mapper only while the support window requires it.
 - Invalidate Render onward on selected seed/config/input change.
 
 ## Files
@@ -67,8 +71,8 @@ change, collision/min-duration, bypass, Lo-fi Feel compatibility, invalidation.
 - Same input/config/seed/version produces identical output/report/hash.
 - Humanization cannot silently mutate melody identity.
 - No double swing occurs for migrated Lo-fi Feel projects.
+- No callable second groove/humanization implementation remains.
 
 ## Out of Scope
 
 Machine-learned performance generation or nondeterministic live variation.
-

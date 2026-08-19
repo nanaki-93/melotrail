@@ -34,7 +34,11 @@ Tasks 002 and 010.
   selectable output. Validate hashes and project-relative paths.
 - Add compatibility mapper from v3 raw/clean/AI-fix/feel references without
   renaming/deleting artifacts.
-- Extend dependency graph to subject/config inputs while retaining legacy reads.
+- Extend dependency graph to subject/config inputs. After supported v3 fixtures
+  map into canonical run records, delete old runtime selection/storage branches,
+  duplicate resolver logic, obsolete fields/write paths, registrations, and tests
+  that protect only the replaced behavior. Keep only the pure v3 input mapper
+  required by the declared support window.
 
 ## Files
 
@@ -68,8 +72,9 @@ v3 mapping, unknown stages/versions, cache-key normalization, subject dependenci
 - Failed Enhancement can coexist with valid Corrected output.
 - Every selectable artifact has a completed validated producing record.
 - Existing v3 artifact selection remains behaviorally identical.
+- Repository search shows one runtime artifact-selection/run path; no superseded
+  workflow writer/resolver remains registered or callable.
 
 ## Out of Scope
 
 Executing stages, retry orchestration, UI, or provenance reports.
-

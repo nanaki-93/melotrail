@@ -34,7 +34,10 @@ Task 023.
 - Validate exact `n - 1` boundary identity, timing/meter compatibility, collisions,
   range, harmony evidence, input/context/arrangement hashes.
 - Update boundary/whole-sequence preview, approve/reject/retry, and provenance.
-- Retire whole-occurrence cohesion only after legacy read/tests prove it unused.
+- Map any supported whole-occurrence evidence needed for project/release history,
+  then delete `MelodyCohesion.kt`, its runtime wiring/prompts/UI/configuration, and
+  tests that exist only for the superseded implementation in this task. Do not
+  leave a dormant alternative after boundary cohesion is accepted.
 
 ## Files
 
@@ -69,8 +72,9 @@ unsafe/malformed plan, hash mismatch, melody preservation, `n - 1`, failure retr
 - Cohesion uses approved arrangement context and never assumes C/4/4.
 - Core melody hashes are unchanged unless a separately approved bounded exception.
 - Every current boundary is reviewable and lineage-complete.
+- Whole-occurrence cohesion has no source, registration, route, action, or stale
+  documentation remaining; historical evidence is readable as data.
 
 ## Out of Scope
 
 Audio spectral crossfades, arbitrary automation DAW editing, full-song rewrite.
-

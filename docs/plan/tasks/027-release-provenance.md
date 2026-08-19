@@ -12,7 +12,7 @@ unresolved-dependency reporting without a complex rights platform.
 
 ## Dependencies
 
-Tasks 011 and 026; integrate earlier decision/run records throughout.
+Tasks 011, 022B, and 026; integrate earlier decision/run records throughout.
 
 ## Existing Code
 
@@ -26,19 +26,31 @@ Tasks 011 and 026; integrate earlier decision/run records throughout.
   migrate useful generic-log fields and avoid a third log.
 - Record settings/harmony/part/structure/arrangement/selection/approval/mix
   decision revisions plus processor/model/version/license/template/schema/seed.
+- Record instrument selection request/decision, candidates/scores/reasons,
+  resolver/catalog version and hash, selected stable ID, engine and verified
+  capability snapshot, asset hashes, embedded license/source-library snapshot,
+  license-admission policy/version, selection actor, and substitution history.
 - Build release manifest closing over exact selected source-to-export artifact
   graph and dependency hashes.
+- Add `ReleaseInstrumentUsage` from Task 026's exact final used-stem set. Preserve
+  used instrument IDs, stem/mix linkage, license snapshots, normalized required
+  attribution blocks, and whether absence from audio was provable.
 - Add lineage/hash/tamper validator, replay metadata, unresolved evidence list,
   and truthful commercial-ready result.
 - Preserve rejected/failed/stale history without including it in selected lineage.
 - Redact absolute paths/secrets/private raw model data in portable reports/logs.
 - Unknown/fake model identity or license blocks commercial-ready status; never
   fabricate a zero hash/known license.
+- Migrate useful generic provenance records into the canonical stage/release
+  manifest, then delete the old generic provenance log/store/wiring/configuration
+  and exclusive tests in this task. Historical evidence files remain immutable
+  inputs; there must not be two active provenance writers/read models.
 
 ## Files
 
 Commercial provenance/stage manifest/project refs/report rendering/redaction,
-Export UI/readiness, docs/fixtures/tests; retire generic log only after migration.
+Export UI/readiness, docs/fixtures/tests; migrate then delete the generic log in
+this task.
 
 ## API / Contracts
 
@@ -60,16 +72,20 @@ Worker/command/library versions from results/capabilities enter run evidence.
 
 ## Tests
 
-Lineage closure, source/decision/run dependencies, tampering, unknown model/
-license, seed replay metadata, failure/retry, redaction, legacy provenance mapping.
+Lineage closure, source/decision/run dependencies, instrument registry/selection/
+asset/license tampering, CC0/CC BY/NC/unknown policy, final used-stem closure,
+missing attribution, unknown model/license, missing selected instrument,
+substitution, seed replay metadata, failure/retry, redaction, legacy mapping.
 
 ## Acceptance
 
 - Every claimed commercial-ready export has hash-validated selected lineage.
 - Missing evidence blocks the claim but never deletes/locks the project.
 - Reports contain no secrets or unrestricted absolute paths.
+- Release manifest contains the exact immutable inputs Task 027B needs without
+  rereading the live registry.
+- Only the canonical stage/release provenance implementation remains registered.
 
 ## Out of Scope
 
 DRM, copyright adjudication, platform monetization prediction, blockchain.
-

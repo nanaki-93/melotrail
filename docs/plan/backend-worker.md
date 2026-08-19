@@ -1,8 +1,8 @@
-# Application services, optional backend, worker, and CLI
+# Application services, optional backend, and worker
 
 ## Canonical application boundary
 
-Compose is the current supported frontend, but its commands/queries must remain
+Compose is the supported frontend, but its commands/queries must remain
 UI-neutral. Add capability services behind `ProjectApplicationService` facade as
 the relevant task lands:
 
@@ -53,8 +53,9 @@ independent data store. Target options, decided with usage evidence:
 
 1. Retain: controllers translate versioned REST DTOs into canonical application
    commands/queries and a configured registry resolves project handles.
-2. Deprecate: make the unsupported status explicit, freeze mutation endpoints,
-   provide any necessary data export, then remove in a later release.
+2. Delete: migrate/export any required data, verify recovery, then remove the
+   controllers, separate model/store, routes, configuration, dependencies, tests,
+   and documentation in Task 028. Do not leave a deprecated/frozen service.
 
 Never dual-write canonical and legacy project JSON. Do not auto-import a legacy
 REST store without inventory, mapping, backup, and tests. If REST remains local,
@@ -62,22 +63,6 @@ review CORS/binding/path exposure before claiming multi-user or remote support.
 
 SSE may expose persisted stage snapshots if REST is retained. The REST layer
 does not own jobs and restart recovery remains the stage runner's responsibility.
-
-## CLI
-
-The current repository has stale README/Gradle references but no CLI source.
-First make support claims truthful. Then decide whether automation has a real
-consumer.
-
-If retained/reintroduced, the CLI is a thin adapter over the same application
-commands/queries and supports machine-readable results plus stage-run polling.
-It must not reconstruct the removed monolithic file/audio pipeline, infer
-current artifacts independently, or write project JSON directly.
-
-Potential later commands are project inspect/migrate, settings/harmony/part
-commands, stage run/status/retry/select, structure/arrange/build, mix/master,
-export, and provenance verify. Exact command compatibility is not promised until
-historical usage and tests justify it.
 
 ## Configuration ownership
 
@@ -92,4 +77,3 @@ historical usage and tests justify it.
 Consolidate parallel config classes opportunistically as adapters move onto the
 canonical boundary; do not make configuration refactoring a prerequisite for
 the first UI milestone.
-

@@ -29,13 +29,16 @@ The renderer receives an immutable build manifest with:
 
 - project/structure/occurrence IDs and hashes;
 - exact approved arrangement, cohesion, and humanization run IDs;
-- resolved role-to-instrument assignments and library asset hashes/licenses;
+- approved role-to-stable-instrument assignments, selection decision/registry
+  hashes, engine type, verified capability snapshot, and asset/license hashes;
 - tempo, meter, sample rate, bit depth, channel layout;
 - expected role/stem IDs and timeline length.
 
 Each stem artifact records role and instrument separately. Compatibility aliases
 map existing piano/bass/drums/pad/strings mix settings. Missing required renderers
-or assets fail Render without invalidating upstream MIDI.
+or assets fail Render without invalidating upstream MIDI. The renderer resolves
+the exact approved stable instrument ID to its private engine descriptor; it must
+not invoke the selection resolver or substitute a newly available candidate.
 
 ## Mix
 
@@ -78,6 +81,19 @@ format, codec/version, bitrate/sample settings, hash, timestamp, and selected
 release lineage. WAV and MP3 remain initial outputs. Video preview remains an
 adapter over an exact audio artifact.
 
+Each audio export has a deterministic sibling `<export-base>-credits.txt` derived
+from the immutable release manifest's final used-stem set. The generator maps
+included stems to approved instrument license snapshots, excludes installed
+candidates/unused roles/CC0 instruments, deduplicates identical attribution
+blocks, sorts them deterministically, and atomically publishes/hash-records the
+file. A CC0-only export contains only a no-instrument-attribution-required
+statement. Missing required attribution blocks commercial-ready export.
+
+“Used” means a rendered instrument stem included by the final resolved mix
+(including solo/mute behavior). If zero contribution cannot be proven reliably,
+include its attribution conservatively. Re-reading a changed live registry is
+forbidden; credits use the frozen release license/provenance snapshots.
+
 Commercial-ready is a validation result, not a legal guarantee. It requires
 source attestations, known selected artifact lineage, sound/model dependency
 evidence, and no stale required stage. Missing evidence blocks the label but
@@ -90,6 +106,8 @@ does not block private audition/export where current policy permits.
 - Style policy change reruns style processing/master/export.
 - Master parameter change reruns master/export.
 - Codec/export change reruns only export.
+- Credits-policy/license-usage change reruns credits/release verification, not
+  audio, unless the selected instrument or mix also changed.
 - All outputs are atomically published; partial audio is not selected.
 
 ## Acceptance
@@ -100,3 +118,6 @@ acceptance must still render and listen to representative Original/Corrected/
 Enhanced, cohesion, humanized, stem, dry, style-processed, and mastered artifacts
 on documented equipment, then test the packaged app.
 
+Every commercial-ready acceptance case also verifies that its credits artifact
+is hash-paired to the audio, contains every and only required used-instrument
+attribution, and remains reproducible after live registry changes.
