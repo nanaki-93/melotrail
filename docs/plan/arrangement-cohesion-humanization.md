@@ -1,0 +1,167 @@
+# Structure, arrangement, cohesion, and humanization
+
+## Target ownership and order
+
+```text
+selected part melodies + harmony + structure occurrences
+  -> arrangement plan and occurrence variations
+  -> generated role MIDI
+  -> cohesion boundary/continuity plan and artifacts
+  -> seeded humanization
+  -> renderable occurrence timeline/stems
+```
+
+This deliberately changes the current dependency, where arrangement requires
+approved cohesion. The requested target needs cohesion to understand actual
+instrumentation, density, drums, bass, dynamics, and repeated-section variation.
+
+## Structure
+
+Persist `StructureOccurrence` IDs instead of deriving A1/A2 identity from list
+position. An occurrence references a part and may hold a label and approved
+variation override. Reordering changes position only. Removing an occurrence
+invalidates only its downstream occurrence/boundary artifacts.
+
+The same selected part melody is resolved once and reused. Occurrence variation
+is an overlay/plan and never writes into the source/corrected/enhanced part MIDI.
+
+## Arrangement model
+
+Retain `GlobalSongPlanner`, `SectionVariation`, `DetailedArrangement`, generation
+approval, timeline assembly, and deterministic generators. Adapt inputs to use:
+
+- full musical context and structured harmony;
+- stable occurrence IDs;
+- profile ID/version and resolved policies instead of a free style string;
+- arrangement roles instead of fixed instrument names;
+- explicit role-to-instrument assignments from the registry;
+- user-selected roles/instruments as authoritative constraints.
+
+### Roles and instruments
+
+MVP role vocabulary:
+
+- melody
+- harmony
+- bass
+- drums
+- counter-melody
+- texture
+- ambience
+
+A role defines musical responsibility and generation constraints. An instrument
+definition identifies a sound/rendering resource, playable range, articulation,
+license, and supported roles. The Lo-fi profile recommends felt piano, Rhodes,
+electric piano, muted guitar, bass, drums, pad, vibraphone, and atmospheric
+layers where resources exist; it cannot make unavailable/unlicensed instruments
+appear selectable.
+
+Compatibility adapters map current PIANO/BASS/DRUMS/PAD/STRINGS logical stems to
+new roles. Stem IDs remain stable through migration where possible so existing
+mix settings survive.
+
+### Planner boundaries
+
+The deterministic or AI global planner may propose section purpose, energy,
+density, role entry/exit, and variation. It must echo input/context hashes,
+respect chosen roles/instruments, and use a profile-supplied vocabulary. It does
+not alter core melody/harmony or create transition artifacts.
+
+Detailed arrangement then produces validated occurrence role plans. MIDI
+generators use structured section chords and meter rather than only inferred
+major/minor triad strings. Existing generators are generalized one role at a
+time; no wholesale rewrite is required.
+
+## Cohesion
+
+Cohesion consumes the approved arrangement and ordered occurrences. For every
+adjacent pair it considers:
+
+- outgoing/incoming melody phrase evidence;
+- exact section harmony/key/meter/tempo;
+- role/instrument activity and density;
+- dynamics/energy and variation plans;
+- available transition vocabulary from profile/mood;
+- upstream hashes and boundary ID.
+
+It may propose/render pickups, drum fills, bass/chord movements, sustained
+textures, dynamics/automation, instrument continuity, and phrase connections.
+The core melody remains unchanged by default. Any rare melody-boundary edit must
+be separately identified, bounded, previewable, and approved.
+
+Reuse the current path-free strict transition plan, deterministic bridge render,
+hash validation, per-boundary review, aggregate approval, and preview model.
+Replace simplistic natural-note key mapping and isolated chord summaries with
+the structured context. Meter/tempo mismatch should have an explicit adaptation
+policy or block; never silently pretend all input is C/4/4.
+
+### Dependency migration
+
+1. Teach arrangement to run without `requireApprovedCohesion` while retaining a
+   reader for legacy approved boundaries.
+2. Persist v4 arrangement and occurrence hashes.
+3. Regenerate cohesion against arrangement context; legacy pre-arrangement
+   cohesion becomes stale evidence, not deleted data.
+4. Make render require approved target-order cohesion or an explicit cohesion
+   bypass policy.
+5. Remove transition ownership from arrangement prompts/plans after fixtures
+   prove parity.
+
+Because input identity changes, this migration requires explicit reapproval; it
+must not relabel old cohesion as arrangement-aware.
+
+## Humanization
+
+Humanization is a first-class deterministic transform after cohesion. It receives
+the resolved profile/mood parameters, role/occurrence plan, tempo/meter, and a
+stored seed. It can control:
+
+- note start offsets;
+- velocity variation;
+- note-duration variation;
+- chord-note staggering;
+- drum timing and velocity;
+- bass timing relationship;
+- swing/groove templates;
+- boundary-sensitive amount and role-specific bounds.
+
+Algorithm requirements:
+
+- deterministic for identical input/config/seed/version;
+- role-aware bounds and collision/minimum-duration checks;
+- bar/section anchors protected from drift;
+- no note creation/deletion or pitch change in MVP;
+- output report with per-role aggregate and exact edits;
+- bypass produces a selection of cohesive input, not a copied fake artifact;
+- regenerate chooses and stores a new seed explicitly.
+
+The existing `MidiLoFiFeel` artifact maps to a legacy groove transform. Its fixed
+80-BPM/swing behavior can be offered as a compatibility preset, then subsumed by
+profile/mood humanization without rewriting historical artifacts.
+
+## Approvals and invalidation
+
+- Changing a part's selected melody invalidates its arrangement usage,
+  neighboring cohesion boundaries, humanization, render, and later artifacts.
+- Reordering occurrences invalidates affected arrangement sequence/boundaries,
+  not source part processing.
+- Changing a role/instrument/density invalidates arrangement approval and its
+  cohesion/humanization/render dependents.
+- Changing only mix gain/pan does not invalidate arrangement or rendered stems.
+- Humanization seed/config changes invalidate render onward.
+
+Draft, rejected, legacy, and stale artifacts remain evidence. Only approved and
+current hashes feed the next stage.
+
+## Test approach
+
+- Repeated occurrence identity survives insert/reorder/delete and project reload.
+- Arrangement plans honor user constraints and are independent of cohesion.
+- Current v3 projects read and old boundaries remain inspectable.
+- Cohesion produces exactly `n - 1` boundary records, includes arrangement
+  context, preserves melody, and rejects mismatched hashes/unsafe plans.
+- Humanization is seed-reproducible, bounded by role/mood/profile, and does not
+  drift anchors or corrupt MIDI.
+- End-to-end fixtures compare old/new ordering and assert the intentional
+  invalidation/reapproval boundary.
+

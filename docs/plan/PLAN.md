@@ -1,4 +1,10 @@
-# Melotrail — Track Processing Pipeline Cleanup Plan
+# Completed predecessor plan — Track Processing Pipeline Cleanup
+
+> This 110–117 plan records the pipeline cleanup completed before the composition
+> builder roadmap. The current plan is [`/PLAN.md`](../../PLAN.md), with detailed
+> design documents in this directory and implementation tasks under `tasks/`.
+> In particular, the new target moves Cohesion after Arrangement; the sequence
+> below remains historical evidence and a compatibility baseline.
 
 ## Outcome
 
