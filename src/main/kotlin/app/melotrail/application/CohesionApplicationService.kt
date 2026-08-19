@@ -8,6 +8,8 @@ import app.melotrail.arrangement.MidiAnalysis
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.SectionInstance
+import app.melotrail.arrangement.SongPlan
+import app.melotrail.arrangement.SongPlanStore
 import app.melotrail.arrangement.SongPlanningInput
 import app.melotrail.arrangement.TransitionCohesionInput
 import app.melotrail.arrangement.TransitionCohesionInputFactory
@@ -20,6 +22,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.nio.file.Files
 import java.nio.file.Path
+import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 
 /** Cohesion is AI bridge planning only. Deterministic no-op occurrence correction is retired. */
@@ -102,8 +105,31 @@ class DefaultCohesionApplicationService(
         val analyses = structure.map(SectionInstance::partId).distinct().associateWith { partId -> analysis(root, project, partId) }
         val planning = SongPlanningInput(project.name, project.version, analyses, structure, LogicalInstrument.entries.map { it.wireName })
         planning.requireValid()
+        val approval = requireNotNull(project.workflow.arrangement) {
+            "Cohesion requires a current approved arrangement. Generate and approve Arrangement first."
+        }
+        require(app.melotrail.arrangement.WorkflowArtifact.ARRANGEMENT !in project.workflow.stale) {
+            "Cohesion requires a current approved arrangement. Regenerate and approve Arrangement first."
+        }
+        val arrangement = root.resolve(approval.arrangement.file).normalize()
+        require(arrangement.startsWith(root) && Files.isRegularFile(arrangement) && digest(arrangement) == approval.arrangement.sha256) {
+            "Approved arrangement evidence has changed. Regenerate and approve Arrangement first."
+        }
+        val structureEvidence = project.envelope.structureOccurrences.joinToString("|") { "${it.id}:${it.partId}:${it.revision}" }
+        val occurrences = planning.sectionsWithIdentity().joinToString("|") { "${it.index}:${it.instanceId}:${it.occurrenceHash}" }
+        require(digest(structureEvidence) == approval.structureSha256 && digest(occurrences) == approval.occurrenceSha256) {
+            "Approved arrangement does not match the current Structure. Regenerate and approve Arrangement first."
+        }
+        val planPath = root.resolve(SongPlanStore.FILE_NAME)
+        require(Files.isRegularFile(planPath) && digest(planPath) == approval.planSha256) {
+            "Approved arrangement plan has changed. Regenerate and approve Arrangement first."
+        }
+        val plan = Json { ignoreUnknownKeys = false }.decodeFromString(SongPlan.serializer(), Files.readString(planPath))
+        require(plan.contextHash == null || plan.contextHash == approval.contextSha256) {
+            "Approved arrangement context has changed. Regenerate and approve Arrangement first."
+        }
         val legacyInput = MelodyCohesionInputFactory.build(root, project, planning, requireCurrentAnalyses = true).first
-        return TransitionCohesionInputFactory.from(legacyInput)
+        return TransitionCohesionInputFactory.from(legacyInput, approval.arrangement.sha256)
     }
     private fun analysis(root: Path, project: Project, partId: String): MidiAnalysis {
         val part = project.parts.firstOrNull { it.id == partId } ?: error("Structure references unknown part '$partId'.")
@@ -117,6 +143,9 @@ class DefaultCohesionApplicationService(
             plan.boundaries.map { bridge -> CohesionBoundarySnapshot(bridge.outgoingInstanceId, bridge.incomingInstanceId, root.resolve(TransitionCohesionStore.bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId)), bridge.rationale, bridge.outgoingInstanceId to bridge.incomingInstanceId in reviewed) },
             approvalRequired = !approved, approved = approved, stale = false, artifact = root.resolve(if (approved) TransitionCohesionStore.APPROVED_FILE else TransitionCohesionStore.DRAFT_FILE))
     }
+    private fun digest(path: Path): String = digest(Files.readAllBytes(path))
+    private fun digest(value: String): String = digest(value.toByteArray())
+    private fun digest(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private suspend fun <T> mutate(root: Path, block: suspend (Path) -> T): T { val normalized = root.toAbsolutePath().normalize(); val lock = locks.computeIfAbsent(normalized) { Mutex() }; check(lock.tryLock()) { "Another cohesion operation is already running: $normalized" }; return try { withContext(Dispatchers.IO) { block(normalized) } } finally { lock.unlock() } }
     private fun <T> locked(root: Path, block: (Path) -> T): T { val normalized = root.toAbsolutePath().normalize(); val lock = locks.computeIfAbsent(normalized) { Mutex() }; check(lock.tryLock()) { "Another cohesion operation is already running: $normalized" }; return try { block(normalized) } finally { lock.unlock() } }
     private companion object { val locks = ConcurrentHashMap<Path, Mutex>() }

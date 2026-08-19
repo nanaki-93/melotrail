@@ -14,7 +14,7 @@ import app.melotrail.arrangement.WorkflowArtifact
  */
 enum class WorkflowStage {
     PROJECT, IMPORT_AND_INSPECTION, TRANSCRIPTION, CLEAN_MIDI, AI_FIX, MIDI_FEEL,
-    ANALYSIS, STRUCTURE, COHESION, ARRANGEMENT, RENDER, MIX, MASTER,
+    ANALYSIS, STRUCTURE, ARRANGEMENT, COHESION, RENDER, MIX, MASTER,
     COMMERCIAL_EXPORT
 }
 
@@ -153,15 +153,8 @@ object WorkflowReadModelDeriver {
             project.structure.isEmpty() || !project.readiness.structureReady -> step(WorkflowStage.STRUCTURE, WorkflowState.CURRENT, WorkflowAction.SAVE_STRUCTURE, WorkflowPrerequisite.SAVED_STRUCTURE)
             else -> complete(WorkflowStage.STRUCTURE, WorkflowAction.SAVE_STRUCTURE)
         }
-        val cohesion = when {
-            structure.state != WorkflowState.COMPLETE -> blocked(WorkflowStage.COHESION, structure)
-            WorkflowArtifact.COHESION in stale -> step(WorkflowStage.COHESION, WorkflowState.STALE, WorkflowAction.GENERATE_COHESION, WorkflowPrerequisite.APPROVED_COHESION)
-            project.readiness.cohesionApprovalRequired -> step(WorkflowStage.COHESION, WorkflowState.REVIEW, WorkflowAction.APPROVE_COHESION, WorkflowPrerequisite.APPROVED_COHESION)
-            !project.readiness.cohesionReady -> step(WorkflowStage.COHESION, WorkflowState.CURRENT, WorkflowAction.GENERATE_COHESION, WorkflowPrerequisite.APPROVED_COHESION)
-            else -> complete(WorkflowStage.COHESION, WorkflowAction.GENERATE_COHESION)
-        }
         val arrangementStep = when {
-            cohesion.state != WorkflowState.COMPLETE -> blocked(WorkflowStage.ARRANGEMENT, cohesion)
+            structure.state != WorkflowState.COMPLETE -> blocked(WorkflowStage.ARRANGEMENT, structure)
             !project.readiness.harmonyReady -> step(WorkflowStage.ARRANGEMENT, WorkflowState.CURRENT, WorkflowAction.UPDATE_HARMONY, WorkflowPrerequisite.COMPLETE_HARMONY)
             WorkflowArtifact.ARRANGEMENT in stale || arrangement?.stale == true ||
                 (arrangement != null && project.structure.map { it.instanceId to it.partId } != arrangement.sections.map { it.instanceId to it.partId }) ->
@@ -170,7 +163,14 @@ object WorkflowReadModelDeriver {
             arrangement.approvalRequired || !arrangement.approved -> step(WorkflowStage.ARRANGEMENT, WorkflowState.REVIEW, WorkflowAction.APPROVE_ARRANGEMENT, WorkflowPrerequisite.APPROVED_ARRANGEMENT)
             else -> complete(WorkflowStage.ARRANGEMENT, WorkflowAction.GENERATE_ARRANGEMENT)
         }
-        val render = downstream(WorkflowStage.RENDER, arrangementStep, WorkflowArtifact.STEMS, stale, project.readiness.stemsAvailable, WorkflowAction.RENDER, WorkflowPrerequisite.RENDERED_STEMS)
+        val cohesion = when {
+            arrangementStep.state != WorkflowState.COMPLETE -> blocked(WorkflowStage.COHESION, arrangementStep)
+            WorkflowArtifact.COHESION in stale -> step(WorkflowStage.COHESION, WorkflowState.STALE, WorkflowAction.GENERATE_COHESION, WorkflowPrerequisite.APPROVED_COHESION)
+            project.readiness.cohesionApprovalRequired -> step(WorkflowStage.COHESION, WorkflowState.REVIEW, WorkflowAction.APPROVE_COHESION, WorkflowPrerequisite.APPROVED_COHESION)
+            !project.readiness.cohesionReady -> step(WorkflowStage.COHESION, WorkflowState.CURRENT, WorkflowAction.GENERATE_COHESION, WorkflowPrerequisite.APPROVED_COHESION)
+            else -> complete(WorkflowStage.COHESION, WorkflowAction.GENERATE_COHESION)
+        }
+        val render = downstream(WorkflowStage.RENDER, cohesion, WorkflowArtifact.STEMS, stale, project.readiness.stemsAvailable, WorkflowAction.RENDER, WorkflowPrerequisite.RENDERED_STEMS)
         val mix = downstream(WorkflowStage.MIX, render, WorkflowArtifact.DRY_MIX, stale, project.readiness.dryMixAvailable, WorkflowAction.MIX, WorkflowPrerequisite.DRY_MIX)
         val master = downstream(WorkflowStage.MASTER, mix, WorkflowArtifact.MASTER, stale, project.readiness.masterAvailable && project.readiness.releaseAvailable, WorkflowAction.MASTER, WorkflowPrerequisite.MASTER)
         val commercial = when {
@@ -180,7 +180,7 @@ object WorkflowReadModelDeriver {
         }
         val steps = listOf(
             composition, imported, transcription, clean, aiFix,
-            feel, analysis, structure, cohesion, arrangementStep, render, mix, master, commercial
+            feel, analysis, structure, arrangementStep, cohesion, render, mix, master, commercial
         )
         return WorkflowReadModel(steps.map { step -> step.copy(stageRun = project.readiness.stageRuns.lastOrNull { run ->
             workflowStage(run.stage) == step.stage && run.status in setOf(StageRunStatus.PROCESSING, StageRunStatus.FAILED)

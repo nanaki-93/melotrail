@@ -22,9 +22,11 @@ data class TransitionCohesionInput(
     val version: Int = VERSION,
     val inputHash: String,
     val structureSha256: String,
+    /** Exact approved arrangement identity; Cohesion cannot be planned without it. */
+    val arrangementSha256: String = "",
     val supportedInstruments: List<String>,
     val boundaries: List<TransitionBoundaryInput>
-) { companion object { const val VERSION = 1 } }
+) { companion object { const val VERSION = 2 } }
 
 @Serializable
 data class TransitionBoundaryInput(
@@ -99,6 +101,7 @@ object TransitionCohesionValidator {
     fun validate(plan: TransitionCohesionPlan, input: TransitionCohesionInput): TransitionCohesionValidationResult {
         val errors = mutableListOf<String>()
         if (input.version != TransitionCohesionInput.VERSION || plan.version != TransitionCohesionInput.VERSION) errors += "Unsupported transition cohesion version"
+        if (!hash.matches(input.arrangementSha256)) errors += "Transition cohesion requires an approved arrangement identity"
         if (plan.inputHash != input.inputHash) errors += "Transition cohesion plan input hash is stale"
         val expected = input.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId }
         val actual = plan.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId }
@@ -148,9 +151,9 @@ class LocalQwenTransitionCohesionPlanner(
         }
     }
     private companion object { const val PROMPT = """
-        Return one JSON object only: no markdown, prose, reasoning, or fields other than this exact version-1 response schema:
+        Return one JSON object only: no markdown, prose, reasoning, or fields other than this exact version-2 response schema:
         {
-          "version": 1,
+          "version": 2,
           "inputHash": "copy the supplied inputHash exactly",
           "boundaries": [{
             "outgoingInstanceId": "copy the supplied boundary value exactly",
@@ -283,7 +286,8 @@ object TransitionCohesionStore {
             if (pair in reviewed) atomicWrite(root.resolve(approvedFile), json.encodeToString(TransitionBridgePlan.serializer(), bridge))
             CohesionBoundaryReference(bridge.outgoingInstanceId, bridge.incomingInstanceId, input.inputHash,
                 WorkflowArtifactReference(draft, digest(root.resolve(draft))),
-                if (pair in reviewed) WorkflowArtifactReference(approvedFile, digest(root.resolve(approvedFile))) else null)
+                if (pair in reviewed) WorkflowArtifactReference(approvedFile, digest(root.resolve(approvedFile))) else null,
+                digest(root.resolve(bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId))))
         }
         val project = ProjectStore.read(root); if (project.version != Project.CURRENT_VERSION) return
         val workflow = project.workflow.invalidate(WorkflowChange.COHESION).markCurrent(WorkflowArtifact.COHESION).copy(
@@ -297,10 +301,11 @@ object TransitionCohesionStore {
 }
 
 object TransitionCohesionInputFactory {
-    fun from(input: MelodyCohesionInput, supportedInstruments: List<String> = listOf("drums", "bass", "pad")): TransitionCohesionInput {
+    fun from(input: MelodyCohesionInput, arrangementSha256: String, supportedInstruments: List<String> = listOf("drums", "bass", "pad")): TransitionCohesionInput {
+        require(Regex("[0-9a-f]{64}").matches(arrangementSha256)) { "Cohesion requires an approved arrangement identity" }
         val byId = input.occurrences.associateBy { it.instanceId }
         val boundaries = input.boundaries.map { pair -> TransitionBoundaryInput(pair.outgoingInstanceId, pair.incomingInstanceId, evidence(byId.getValue(pair.outgoingInstanceId)), evidence(byId.getValue(pair.incomingInstanceId))) }
-        val seed = TransitionCohesionInput(inputHash = "", structureSha256 = input.structureSha256, supportedInstruments = supportedInstruments.sorted(), boundaries = boundaries)
+        val seed = TransitionCohesionInput(inputHash = "", structureSha256 = input.structureSha256, arrangementSha256 = arrangementSha256, supportedInstruments = supportedInstruments.sorted(), boundaries = boundaries)
         val hash = MessageDigest.getInstance("SHA-256").digest(Json { encodeDefaults = true; explicitNulls = false }.encodeToString(TransitionCohesionInput.serializer(), seed).toByteArray(StandardCharsets.UTF_8)).joinToString("") { "%02x".format(it) }
         return seed.copy(inputHash = hash)
     }

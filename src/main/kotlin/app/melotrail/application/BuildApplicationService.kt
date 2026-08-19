@@ -65,7 +65,8 @@ class DefaultBuildApplicationService(
     private val arrangementService: ArrangementApplicationService,
     private val mixService: MixApplicationService,
     private val renderer: InstrumentRenderer,
-    private val worker: BuildAudioWorker
+    private val worker: BuildAudioWorker,
+    private val cohesionService: CohesionApplicationService = DefaultCohesionApplicationService()
 ) : BuildApplicationService {
     override suspend fun build(request: BuildSongRequest, progress: ProgressSink): BuildResult {
         require(request.mp3BitrateKbps in MP3_BITRATES) { "MP3 bitrate must be one of ${MP3_BITRATES.sorted().joinToString()} kbps" }
@@ -75,9 +76,17 @@ class DefaultBuildApplicationService(
         return try {
             withContext(Dispatchers.IO) {
                 stage(progress, 1, "Validating project readiness") {
+                    val migrated = ProjectWorkflowStore.migrateCohesionOrderForBuild(root)
+                    require(!migrated) {
+                        "This historical target-order build was migrated. Regenerate and approve Arrangement, then regenerate and approve Cohesion before building; existing release files remain exportable as historical evidence."
+                    }
                     val arrangement = arrangementService.load(root)
                     require(arrangement.approved && !arrangement.approvalRequired && !arrangement.stale) {
                         "Build Song requires a current approved arrangement. Review and approve the Qwen draft or regenerate it."
+                    }
+                    val cohesion = cohesionService.load(root)
+                    require(cohesion.approved && !cohesion.approvalRequired && !cohesion.stale) {
+                        "Build Song requires current approved arrangement-aware Cohesion. Regenerate and approve Cohesion."
                     }
                     if (!worker.healthCheck()) throw ApplicationServiceException(ApplicationErrorCategory.WORKER, "Python worker is not running. Start it with `make worker`.")
                 }

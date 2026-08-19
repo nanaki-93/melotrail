@@ -112,9 +112,9 @@ that audio started.
 
 Build Song stops until its precise prerequisites are ready: worker, sound
 library, samples, and renderer. It does not implicitly approve a Qwen draft.
-After a valid approved arrangement, the build creates or reuses inspectable
+After valid approved arrangement-aware Cohesion, the build creates or reuses inspectable
 generated MIDI, stems, dry mix, repair/optional LoFi output, `output/master.wav`,
-and optional MP3/release metadata. For a new arrangement, the transition track
+and optional MP3/release metadata. The transition track
 uses the exact approved Cohesion bridge at its shifted boundary and
 `stem-render.json` records the boundary hashes. A changed structure, Cohesion
 approval, or source can make downstream artifacts stale; regenerate rather than

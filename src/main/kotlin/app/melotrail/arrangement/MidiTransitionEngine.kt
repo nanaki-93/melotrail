@@ -301,7 +301,7 @@ class MidiTransitionGenerationAdapter(
             TransitionSectionContext(index, section.partId, analysis.ppq, analysis.durationTicks, analysis.tempoMap, analysis.timeSignatures, analysis.key, analysis.chords,
                 section.instruments.filter { it.mode == InstrumentMode.GENERATED }.map { LogicalInstrument.parse(it.name) }.toSet(), section.energy)
         }
-        arrangement.cohesion?.let { cohesion ->
+        approvedCohesionReferences(root, project)?.let { cohesion ->
             return generateApprovedCohesion(root, arrangement, cohesion, sections, available)
         }
         val plans = arrangement.sections.mapIndexed { index, section ->
@@ -341,9 +341,6 @@ class MidiTransitionGenerationAdapter(
                 require(bridge.outgoingInstanceId == reference.outgoingInstanceId && bridge.incomingInstanceId == reference.incomingInstanceId) {
                     "Approved Cohesion boundary identity is inconsistent."
                 }
-                require(arrangement.sections[bridgesIndex(cohesion, reference)].transitionOut == bridge.toTransitionPlan()) {
-                    "Arrangement transition does not match its approved Cohesion boundary."
-                }
             }
         }
         val placements = placements(sections, bridges)
@@ -364,6 +361,19 @@ class MidiTransitionGenerationAdapter(
 
     private fun bridgesIndex(cohesion: ArrangementCohesionReferences, reference: ArrangementCohesionBoundaryReference): Int =
         cohesion.boundaries.indexOf(reference).also { require(it >= 0) }
+
+    private fun approvedCohesionReferences(root: Path, project: Project): ArrangementCohesionReferences? {
+        val workflow = project.workflow.cohesion ?: return null
+        if (!workflow.approved || WorkflowArtifact.COHESION in project.workflow.stale) return null
+        val boundaries = workflow.boundaries.map { boundary ->
+            val approved = requireNotNull(boundary.approved) { "Approved Cohesion boundary evidence is missing." }
+            val bridge = root.resolve(TransitionCohesionStore.bridgeMidi(boundary.outgoingInstanceId, boundary.incomingInstanceId))
+            val bridgeHash = requireNotNull(boundary.bridgeSha256) { "Historical Cohesion bridge evidence cannot be used for a new build; regenerate Cohesion." }
+            require(Files.isRegularFile(bridge) && digest(bridge) == bridgeHash) { "Approved Cohesion bridge MIDI has changed; regenerate Cohesion." }
+            ArrangementCohesionBoundaryReference(boundary.outgoingInstanceId, boundary.incomingInstanceId, approved.sha256, bridgeHash)
+        }
+        return ArrangementCohesionReferences(workflow.inputSha256, boundaries)
+    }
 
     private fun placements(sections: List<TransitionSectionContext>, bridges: List<TransitionBridgePlan>): List<TransitionSectionPlacement> {
         var cursor = 0L

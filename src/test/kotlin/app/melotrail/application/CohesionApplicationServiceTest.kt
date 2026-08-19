@@ -45,6 +45,7 @@ class CohesionApplicationServiceTest {
 
     @Test fun `each adjacent boundary needs current explicit review before aggregate approval`() = runBlocking {
         project(listOf("A", "A", "A"))
+        arrange()
         val service = DefaultCohesionApplicationService(::plan)
         val draft = service.generate(GenerateCohesionRequest(root, CohesionPlannerKind.QWEN))
         assertFalse(draft.approved)
@@ -56,10 +57,27 @@ class CohesionApplicationServiceTest {
         assertTrue(service.approve(root).approved)
     }
 
+    @Test fun `Cohesion rejects an absent or rerun arrangement`() = runBlocking {
+        project(listOf("A", "A"))
+        val service = DefaultCohesionApplicationService(::plan)
+        assertThrows(IllegalArgumentException::class.java) { runBlocking { service.generate(GenerateCohesionRequest(root)) } }
+
+        arrange()
+        service.generate(GenerateCohesionRequest(root)).boundaries.forEach { boundary ->
+            service.reviewBoundary(root, boundary.outgoingInstanceId, boundary.incomingInstanceId)
+        }
+        service.approve(root)
+        arrange()
+
+        assertTrue(app.melotrail.arrangement.WorkflowArtifact.COHESION in ProjectStore.read(root).workflow.stale)
+        assertFalse(service.generate(GenerateCohesionRequest(root)).approved)
+    }
+
     @Test fun `reordered structure invalidates draft identity and one occurrence needs no model plan`() = runBlocking {
-        project(listOf("A", "A")); val service = DefaultCohesionApplicationService(::plan)
+        project(listOf("A", "A")); arrange(); val service = DefaultCohesionApplicationService(::plan)
         val first = service.generate(GenerateCohesionRequest(root))
         val project = ProjectStore.read(root); ProjectStore.write(root, project.copy(envelope = project.envelope.copy(structureOccurrences = project.envelope.structureOccurrences.take(1))))
+        arrange()
         val single = service.generate(GenerateCohesionRequest(root))
         assertFalse(first.inputHash == single.inputHash)
         assertTrue(single.boundaries.isEmpty())
@@ -77,6 +95,11 @@ class CohesionApplicationServiceTest {
         val analysis = MidiPartAnalyzer().analyze(root.resolve("midi/clean/A.mid"), "A")
         Files.writeString(root.resolve("analysis/A.midi.json"), Json.encodeToString(MidiAnalysis.serializer(), analysis))
         ProjectStore.write(root, Project(Project.CURRENT_VERSION, "cohesion", listOf(Part("A", "source/A.mid", analysis = PartAnalysisReference("analysis/A.midi.json", AnalysisKind.MIDI), midi = MidiReferences(clean = "midi/clean/A.mid"))), structure, RenderFormat()))
+    }
+    private suspend fun arrange() {
+        DefaultArrangementApplicationService(libraryRoot = root).generate(
+            GenerateArrangementRequest(root, instruments = listOf("piano", "drums"))
+        )
     }
     private fun writeMidi(path: Path) { val sequence = Sequence(Sequence.PPQ, 480); val track = sequence.createTrack(); track.add(MidiEvent(MetaMessage(0x51, byteArrayOf(7, -95, 32), 3), 0)); track.add(MidiEvent(MetaMessage(0x58, byteArrayOf(4, 2, 24, 8), 4), 0)); track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, 60, 90), 0)); track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, 60, 0), 1_920)); MidiSystem.write(sequence, 1, path.toFile()) }
 }

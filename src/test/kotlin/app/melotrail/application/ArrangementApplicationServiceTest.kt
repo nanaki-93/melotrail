@@ -30,7 +30,6 @@ class ArrangementApplicationServiceTest {
     @Test
     fun `deterministic generation writes an approved inspectable arrangement snapshot`() = runBlocking {
         val root = project("approved")
-        generateApprovedCohesion(root)
         val result = DefaultArrangementApplicationService(libraryRoot = Path.of("sounds")).generate(GenerateArrangementRequest(root, instruments = listOf("piano", "bass")))
 
         assertTrue(Files.isRegularFile(root.resolve("song_plan.json")))
@@ -45,7 +44,6 @@ class ArrangementApplicationServiceTest {
     @Test
     fun `Qwen mode always creates a draft that requires explicit approval`() = runBlocking {
         val root = project("draft")
-        generateApprovedCohesion(root)
         val service = DefaultArrangementApplicationService(
             deterministicGlobalPlanner = app.melotrail.arrangement.DeterministicGlobalSongPlanner(),
             qwenGlobalPlanner = app.melotrail.arrangement.DeterministicGlobalSongPlanner(),
@@ -66,23 +64,23 @@ class ArrangementApplicationServiceTest {
     }
 
     @Test
-    fun `new arrangements persist and consume the exact approved cohesion boundary`() = runBlocking {
+    fun `arrangements complete without Cohesion and publish exact approval context`() = runBlocking {
         val root = project("cohesion-boundary", structure = listOf("A", "A"))
-        generateApprovedCohesion(root)
 
         DefaultArrangementApplicationService(libraryRoot = Path.of("sounds"))
             .generate(GenerateArrangementRequest(root, instruments = listOf("piano", "drums")))
 
         val arrangement = kotlinx.serialization.json.Json { ignoreUnknownKeys = false }
             .decodeFromString(app.melotrail.arrangement.DetailedArrangement.serializer(), Files.readString(root.resolve("arrangement.json")))
-        val cohesion = ProjectStore.read(root).workflow.cohesion!!
-        val approved = cohesion.boundaries.single().approved!!
+        val approval = ProjectStore.read(root).workflow.arrangement!!
 
-        assertEquals(cohesion.inputSha256, arrangement.cohesion!!.inputSha256)
-        assertEquals(listOf("occ-A-1" to "occ-A-2"), arrangement.cohesion!!.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId })
-        assertEquals(approved.sha256, arrangement.cohesion!!.boundaries.single().approvedSha256)
-        assertEquals(sha256(root.resolve("cohesion/boundaries/occ-A-1--occ-A-2/bridge.mid")), arrangement.cohesion!!.boundaries.single().bridgeSha256)
-        assertEquals(app.melotrail.arrangement.TransitionType.BRIDGE, arrangement.sections.first().transitionOut.type)
+        assertEquals(null, arrangement.cohesion)
+        assertEquals(sha256(root.resolve("arrangement.json")), approval.arrangement.sha256)
+        assertTrue(approval.structureSha256.matches(Regex("[0-9a-f]{64}")))
+        assertTrue(approval.occurrenceSha256.matches(Regex("[0-9a-f]{64}")))
+        assertTrue(approval.contextSha256.matches(Regex("[0-9a-f]{64}")))
+        assertTrue(approval.planSha256.matches(Regex("[0-9a-f]{64}")))
+        assertTrue(arrangement.sections.first().transitionOut.type in setOf(app.melotrail.arrangement.TransitionType.BRIDGE, app.melotrail.arrangement.TransitionType.CROSSFADE))
     }
 
     private fun project(name: String, structure: List<String> = listOf("A")): Path {

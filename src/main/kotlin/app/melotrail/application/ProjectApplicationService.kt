@@ -1218,7 +1218,7 @@ class DefaultProjectApplicationService(
                 cleanMidiReady = summaries.isNotEmpty() && summaries.all { it.preparation.cleanMidi },
                 analysesReady = summaries.isNotEmpty() && summaries.all { it.preparation.analyzed },
                 structureReady = project.envelope.structureOccurrences.isNotEmpty(),
-                songPlanAvailable = Files.isRegularFile(root.resolve("song_plan.json")) && current(WorkflowArtifact.COHESION),
+                songPlanAvailable = Files.isRegularFile(root.resolve("song_plan.json")) && current(WorkflowArtifact.ARRANGEMENT),
                 arrangementAvailable = Files.isRegularFile(root.resolve("arrangement.json")) && current(WorkflowArtifact.ARRANGEMENT),
                 generatedMidiAvailable = Files.isDirectory(root.resolve("midi/generated")) && current(WorkflowArtifact.GENERATED_MIDI) && Files.list(root.resolve("midi/generated")).use { it.anyMatch { Files.isRegularFile(it) } },
                 stemsAvailable = Files.isDirectory(root.resolve("stems")) && current(WorkflowArtifact.STEMS) && Files.list(root.resolve("stems")).use { it.anyMatch { Files.isRegularFile(it) } },
@@ -1268,7 +1268,9 @@ class DefaultProjectApplicationService(
         }
         val input = SongPlanningInput(project.name, project.version, analyses, structure, LogicalInstrument.entries.map { it.wireName })
         val current = MelodyCohesionInputFactory.build(root, project, input, requireCurrentAnalyses = true).first
-        val transitionInput = TransitionCohesionInputFactory.from(current)
+        val arrangement = project.workflow.arrangement ?: return false
+        if (WorkflowArtifact.ARRANGEMENT in project.workflow.stale) return false
+        val transitionInput = TransitionCohesionInputFactory.from(current, arrangement.arrangement.sha256)
         if (cohesion.boundaries.isNotEmpty() || current.boundaries.isEmpty()) {
             return TransitionCohesionStore.isApprovedCurrent(root, transitionInput)
         }

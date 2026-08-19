@@ -19,7 +19,8 @@ class WorkflowArtifactsTest {
             WorkflowChange.MIDI_FEEL to setOf(WorkflowArtifact.ANALYSIS, WorkflowArtifact.COHESION, WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT),
             WorkflowChange.ANALYSIS to setOf(WorkflowArtifact.COHESION, WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT),
             WorkflowChange.STRUCTURE to setOf(WorkflowArtifact.COHESION, WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT),
-            WorkflowChange.COHESION to setOf(WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT),
+            WorkflowChange.ARRANGEMENT to setOf(WorkflowArtifact.COHESION, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT),
+            WorkflowChange.COHESION to setOf(WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT),
             WorkflowChange.MIX_ONLY to setOf(WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT),
             WorkflowChange.AUDIO_TEXTURE to setOf(WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT)
         )
@@ -55,6 +56,21 @@ class WorkflowArtifactsTest {
         assertTrue(WorkflowArtifact.COHESION in retained.stale)
         assertFailsWith<IllegalArgumentException> { WorkflowArtifactReference("cohesion/../outside.json", hash) }
         assertFailsWith<IllegalArgumentException> { WorkflowArtifactReference("/outside.json", hash) }
+    }
+
+    @Test
+    fun `target order migration invalidates Cohesion onward exactly once and retains references`() {
+        val hash = "c".repeat(64)
+        val historical = CohesionWorkflowReferences(hash, WorkflowArtifactReference("cohesion/cohesion.json", hash), emptyList(), approved = true)
+        val first = ProjectWorkflowReferences(cohesion = historical).migrateCohesionOrderIfNeeded()
+        val second = first.migrateCohesionOrderIfNeeded()
+
+        assertEquals(1, first.cohesionOrderMigration)
+        assertEquals(first, second)
+        assertEquals(historical, first.cohesion)
+        assertTrue(WorkflowArtifact.COHESION in first.stale)
+        assertTrue(WorkflowArtifact.MASTER in first.stale)
+        assertFalse(WorkflowArtifact.ARRANGEMENT in first.stale)
     }
 
     @Test

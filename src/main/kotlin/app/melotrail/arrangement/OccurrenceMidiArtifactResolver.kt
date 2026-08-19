@@ -35,42 +35,9 @@ class OccurrenceMidiArtifactResolver(
     ): List<OccurrenceMidiArtifact> {
         val normalized = root.toAbsolutePath().normalize()
         require(project.version == Project.CURRENT_VERSION) { "Occurrence MIDI requires a MIDI-first v3 project." }
-        val expectedIds = input.occurrences.map(MelodyOccurrenceInput::instanceId)
-        val cohesion = project.workflow.cohesion
-        if (cohesion?.approved != true) {
-            return input.occurrences.map { occurrence -> fallback(normalized, project, occurrence) }
-        }
-        require(WorkflowArtifact.COHESION !in project.workflow.stale) { "Approved cohesion is stale; regenerate it before arranging." }
-        val transitionInput = TransitionCohesionInputFactory.from(input)
-        require(cohesion.inputSha256 == input.inputHash || cohesion.inputSha256 == transitionInput.inputHash) { "Approved cohesion input is stale; regenerate it before arranging." }
-        // Task 116 stores transition MIDI at boundaries instead of rewriting whole
-        // occurrences.  The occurrence source remains immutable; a later timeline
-        // assembler consumes the separately fingerprinted bridge artifacts.
-        if (cohesion.boundaries.isNotEmpty() || input.boundaries.isEmpty()) {
-            require(cohesion.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId } == input.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId }) {
-                "Approved cohesion boundaries do not match the saved structure; regenerate cohesion."
-            }
-            require(cohesion.boundaries.all { it.approved != null }) { "Approved cohesion has an unreviewed boundary." }
-            return input.occurrences.map { occurrence -> fallback(normalized, project, occurrence) }
-        }
-        require(cohesion.occurrences.map(CohesionOccurrenceReference::instanceId).sorted() == expectedIds.sorted()) {
-            "Approved cohesion is incomplete for the saved structure; regenerate it before arranging."
-        }
-        return input.occurrences.map { occurrence ->
-            val reference = cohesion.occurrences.singleOrNull { it.instanceId == occurrence.instanceId }
-                ?: error("Approved cohesion is missing occurrence '${occurrence.instanceId}'.")
-            require(reference.approved && reference.sourceSha256 == occurrence.sourceHash) {
-                "Approved cohesion occurrence '${occurrence.instanceId}' is stale or unapproved."
-            }
-            val path = confinedFile(normalized, reference.result.file, occurrence.instanceId)
-            val hash = digest(path)
-            require(hash == reference.result.sha256) { "Approved cohesion MIDI for '${occurrence.instanceId}' has changed; regenerate cohesion." }
-            val sequence = readMidi(path, occurrence.instanceId)
-            OccurrenceMidiArtifact(
-                occurrence.instanceId, occurrence.partId, path, reference.result.file, hash, sequence.resolution,
-                timing(sequence), OccurrenceMidiSource.APPROVED_COHESION
-            )
-        }
+        // Cohesion is now downstream of Arrangement and contributes boundary MIDI
+        // at render time. Source occurrences remain immutable planning evidence.
+        return input.occurrences.map { occurrence -> fallback(normalized, project, occurrence) }
     }
 
     private fun fallback(root: Path, project: Project, occurrence: MelodyOccurrenceInput): OccurrenceMidiArtifact {

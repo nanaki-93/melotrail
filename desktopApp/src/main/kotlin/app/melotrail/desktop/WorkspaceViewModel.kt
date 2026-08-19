@@ -2403,7 +2403,6 @@ class WorkspaceViewModel(
         when {
             state.value.structureDraft.isEmpty() -> fail("generate arrangement", "Add at least one section to the song structure before arranging.")
             missing.isNotEmpty() -> fail("generate arrangement", "Analyze every structure part before arranging: ${missing.joinToString(", ")}.")
-            project.version >= 3 && !project.readiness.cohesionReady -> fail("generate arrangement", "Generate and approve current cohesion for every structure occurrence before arranging.")
             else -> runGenerateArrangement(
                 GenerateArrangementRequest(
                     root = project.root,

@@ -95,7 +95,7 @@ class StemRenderingMixerTest {
     }
 
     @Test
-    fun `approved repeated occurrence MIDI is the rendered piano source and leaves source evidence immutable`() = runBlocking {
+    fun `historical occurrence Cohesion is not used as a piano source and leaves source evidence immutable`() = runBlocking {
         val project = Project(
             Project.CURRENT_VERSION,
             "occurrence-render",
@@ -135,7 +135,7 @@ class StemRenderingMixerTest {
         StemRenderingMixer(renderer, Path.of("sounds")).render(root, approved, arrangement, mapOf("A" to analysis))
 
         val piano = requireNotNull(renderer.sequences[LogicalInstrument.PIANO])
-        assertEquals(listOf(48, 60), noteOnPitches(piano))
+        assertEquals(listOf(48, 48), noteOnPitches(piano))
         assertEquals(sourceHash, sha256(root.resolve("source/A.mid")))
         assertEquals(cleanHash, sha256(root.resolve("midi/clean/A.mid")))
     }

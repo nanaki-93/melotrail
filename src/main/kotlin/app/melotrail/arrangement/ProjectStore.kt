@@ -76,7 +76,7 @@ object ProjectStore {
             else project.copy(envelope = project.envelope.copy(stageRuns = publishLegacyStageRuns(
                 root, LegacyV3StageRunMapper.map(project), project.envelope.stageRuns.legacyRuns
             )))
-        }
+        }.copy(workflow = migration.project.workflow.migrateCohesionOrderIfNeeded())
         migrated.requireValid(root)
         write(root, migrated)
         return ProjectMigrationSaveResult(migration.copy(project = migrated), root.resolve(FILE_NAME))

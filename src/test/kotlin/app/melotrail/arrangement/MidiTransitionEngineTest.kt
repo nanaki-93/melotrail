@@ -143,7 +143,12 @@ class MidiTransitionEngineTest {
             )
         )
 
-        val generated = MidiTransitionGenerationAdapter(libraryRoot = createTestLibrary()).generate(projectRoot, project, arrangement, mapOf("A" to analysis()))
+        val workflow = CohesionWorkflowReferences(
+            "2".repeat(64), WorkflowArtifactReference("cohesion/cohesion.json", "2".repeat(64)), emptyList(), approved = true,
+            boundaries = listOf(CohesionBoundaryReference("A1", "A2", "2".repeat(64), approved = WorkflowArtifactReference("cohesion/boundaries/A1--A2/boundary.json", digest(approved)), bridgeSha256 = digest(projectRoot.resolve(TransitionCohesionStore.bridgeMidi("A1", "A2")))))
+        )
+        val currentProject = project.copy(workflow = ProjectWorkflowReferences(cohesion = workflow))
+        val generated = MidiTransitionGenerationAdapter(libraryRoot = createTestLibrary()).generate(projectRoot, currentProject, arrangement, mapOf("A" to analysis()))
         val notes = MidiSystem.getSequence(generated.path.toFile()).tracks.flatMap { track ->
             (0 until track.size()).mapNotNull { index ->
                 val event = track[index]
@@ -157,7 +162,7 @@ class MidiTransitionEngineTest {
 
         writeTestMidi(projectRoot.resolve(TransitionCohesionStore.bridgeMidi("A1", "A2")), pitch = 72)
         assertThrows(IllegalArgumentException::class.java) {
-            MidiTransitionGenerationAdapter(libraryRoot = createTestLibrary()).generate(projectRoot, project, arrangement, mapOf("A" to analysis()))
+            MidiTransitionGenerationAdapter(libraryRoot = createTestLibrary()).generate(projectRoot, currentProject, arrangement, mapOf("A" to analysis()))
         }
     }
 

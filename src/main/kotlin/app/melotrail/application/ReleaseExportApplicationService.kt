@@ -154,9 +154,9 @@ class NioReleaseExportFilesystem : ReleaseExportFilesystem {
         val release = root.resolve("output/release.json").normalize()
         require(Files.isRegularFile(project)) { "Project metadata is unavailable." }
         val canonicalProject = ProjectStore.read(root)
-        require(WorkflowArtifact.MASTER !in canonicalProject.workflow.stale && WorkflowArtifact.RELEASE !in canonicalProject.workflow.stale) {
-            "Master artifacts are stale. Build Song again."
-        }
+        // A validated release manifest is immutable historical evidence.  A Task
+        // 023 migration may stale the live build lineage, but must not force a
+        // silent rebuild before the recorded master can be exported.
         require(Files.isRegularFile(master) && Files.isRegularFile(release)) { "Build a current master and release metadata first." }
         val metadata = Json.parseToJsonElement(Files.readString(release)).jsonObject
         fun string(name: String) = metadata[name]?.jsonPrimitive?.contentOrNull ?: throw IllegalArgumentException("Release metadata is missing $name.")

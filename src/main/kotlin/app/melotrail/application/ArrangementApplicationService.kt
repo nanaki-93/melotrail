@@ -1,9 +1,7 @@
 package app.melotrail.application
 
 import app.melotrail.arrangement.BassMidiGenerationAdapter
-import app.melotrail.arrangement.ApprovedArrangementCohesion
-import app.melotrail.arrangement.ArrangementCohesionBoundaryReference
-import app.melotrail.arrangement.ArrangementCohesionReferences
+import app.melotrail.arrangement.ArrangementApprovalReferences
 import app.melotrail.arrangement.ArrangementRoleSelection
 import app.melotrail.arrangement.ArrangementSoundContext
 import app.melotrail.arrangement.DetailedArrangement
@@ -20,7 +18,6 @@ import app.melotrail.arrangement.LocalQwenDetailedArrangementPlanner
 import app.melotrail.arrangement.LocalQwenGlobalSongPlanner
 import app.melotrail.arrangement.LogicalInstrument
 import app.melotrail.arrangement.LegacyLogicalInstrumentRoles
-import app.melotrail.arrangement.MelodyCohesionInputFactory
 import app.melotrail.arrangement.MidiAnalysis
 import app.melotrail.arrangement.MidiTransitionGenerationAdapter
 import app.melotrail.arrangement.OccurrenceMidiArtifactResolver
@@ -38,9 +35,7 @@ import app.melotrail.arrangement.StemRenderResult
 import app.melotrail.arrangement.StemRenderingMixer
 import app.melotrail.arrangement.InstrumentRenderer
 import app.melotrail.arrangement.StringsMidiGenerationAdapter
-import app.melotrail.arrangement.TransitionCohesionInputFactory
 import app.melotrail.arrangement.toSectionInstance
-import app.melotrail.arrangement.TransitionCohesionStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
@@ -146,7 +141,6 @@ class DefaultArrangementApplicationService(
         val analyses = midiAnalyses(root, project, structure.map(SectionInstance::partId).toSet())
         val input = SongPlanningInput(project.name, project.version, analyses, structure, allowed, request.style, soundContext = context, requestedIntents = intents)
         input.requireValid()
-        requireApprovedCohesion(root, project, input)
         coroutineContext.ensureActive()
 
         progress.report(OperationProgress("arrange", 2, 3, "Creating reviewed song plan"))
@@ -165,7 +159,11 @@ class DefaultArrangementApplicationService(
         } else {
             DetailedArrangementStore.writeApproved(root, detailedInput, arrangement)
         }
-        ProjectWorkflowStore.update(root) { it.markCurrent(WorkflowArtifact.ARRANGEMENT) }
+        ProjectWorkflowStore.update(root) { workflow ->
+            workflow.invalidate(app.melotrail.arrangement.WorkflowChange.ARRANGEMENT)
+                .markCurrent(WorkflowArtifact.ARRANGEMENT)
+                .copy(arrangement = if (request.planner == ArrangementPlannerKind.QWEN) workflow.arrangement else approvalReferences(root, project, input))
+        }
         snapshot(root, project, arrangement, artifact, request.planner == ArrangementPlannerKind.QWEN)
     }
 
@@ -240,7 +238,11 @@ class DefaultArrangementApplicationService(
         val project = readProject(normalized)
         val input = detailedInput(normalized, project)
         val approved = DetailedArrangementStore.approve(normalized, input)
-        ProjectWorkflowStore.update(normalized) { it.markCurrent(WorkflowArtifact.ARRANGEMENT) }
+        ProjectWorkflowStore.update(normalized) { workflow ->
+            workflow.invalidate(app.melotrail.arrangement.WorkflowChange.ARRANGEMENT)
+                .markCurrent(WorkflowArtifact.ARRANGEMENT)
+                .copy(arrangement = approvalReferences(normalized, project, input.planningInput))
+        }
         snapshot(normalized, project, readApproved(normalized, input), approved, false)
     }
 
@@ -256,9 +258,8 @@ class DefaultArrangementApplicationService(
             soundContext = rawPlan.contextHash?.let { structuredContext(project) },
             requestedIntents = rawPlan.sections.flatMap { it.soundIntents }.distinctBy { it.role }
         )
-        val cohesion = requireApprovedCohesion(root, project, planningInput)
         val plan = SongPlanStore.read(root, planningInput)
-        return DetailedArrangementInput(planningInput, plan, SectionVariationStore.read(root, planningInput, plan), cohesion)
+        return DetailedArrangementInput(planningInput, plan, SectionVariationStore.read(root, planningInput, plan))
     }
 
     private fun midiAnalyses(root: Path, project: Project, ids: Set<String>): Map<String, MidiAnalysis> = ids.associateWith { id ->
@@ -271,37 +272,17 @@ class DefaultArrangementApplicationService(
         json.decodeFromString(MidiAnalysis.serializer(), Files.readString(root.resolve(reference.file), StandardCharsets.UTF_8))
     }
 
-    /** A song plan is review evidence, never proof that occurrence cohesion is usable. */
-    private fun requireApprovedCohesion(root: Path, project: Project, input: SongPlanningInput): ApprovedArrangementCohesion {
-        val (cohesionInput, _) = MelodyCohesionInputFactory.build(root, project, input, requireCurrentAnalyses = true)
-        val transitionInput = TransitionCohesionInputFactory.from(cohesionInput)
-        require(project.workflow.cohesion?.approved == true) {
-            "Generate and approve current cohesion for every structure occurrence before detailed arrangement."
-        }
-        OccurrenceMidiArtifactResolver().resolve(root, project, cohesionInput).also { resolved ->
-            val boundaryCohesion = project.workflow.cohesion?.boundaries?.isNotEmpty() == true || cohesionInput.boundaries.isEmpty()
-            require(resolved.size == input.sectionsWithIdentity().size && (boundaryCohesion || resolved.all { it.source == app.melotrail.arrangement.OccurrenceMidiSource.APPROVED_COHESION })) {
-                "Approved cohesion is incomplete; regenerate it before detailed arrangement."
-            }
-        }
-        require(TransitionCohesionStore.isApprovedCurrent(root, transitionInput)) {
-            "Approved cohesion is stale or incomplete; regenerate it before detailed arrangement."
-        }
-        val workflow = requireNotNull(project.workflow.cohesion)
-        val references = workflow.boundaries.map { boundary ->
-            val approved = requireNotNull(boundary.approved) { "Approved cohesion is missing boundary evidence." }
-            val path = root.resolve(approved.file)
-            require(Files.isRegularFile(path) && sha256(path) == approved.sha256) {
-                "Approved cohesion boundary '${boundary.outgoingInstanceId} -> ${boundary.incomingInstanceId}' has changed; regenerate cohesion."
-            }
-            val bridge = root.resolve(TransitionCohesionStore.bridgeMidi(boundary.outgoingInstanceId, boundary.incomingInstanceId))
-            require(Files.isRegularFile(bridge)) { "Approved cohesion bridge MIDI is missing; regenerate cohesion." }
-            ArrangementCohesionBoundaryReference(boundary.outgoingInstanceId, boundary.incomingInstanceId, approved.sha256, sha256(bridge))
-        }
-        return ApprovedArrangementCohesion(
-            ArrangementCohesionReferences(transitionInput.inputHash, references),
-            TransitionCohesionStore.readApproved(root, transitionInput)
-        ).also { it.requireValid(input) }
+    private fun approvalReferences(root: Path, project: Project, input: SongPlanningInput): ArrangementApprovalReferences {
+        val plan = root.resolve(SongPlanStore.FILE_NAME)
+        val arrangement = root.resolve(DetailedArrangementStore.APPROVED_FILE)
+        require(Files.isRegularFile(plan) && Files.isRegularFile(arrangement)) { "Approved arrangement evidence is incomplete." }
+        val structure = project.envelope.structureOccurrences.joinToString("|") { "${it.id}:${it.partId}:${it.revision}" }
+        val occurrences = input.sectionsWithIdentity().joinToString("|") { "${it.index}:${it.instanceId}:${it.occurrenceHash}" }
+        val context = input.contextHash() ?: sha256("${input.resolvedStyle}|${input.allowedInstruments.joinToString(",")}".toByteArray(StandardCharsets.UTF_8))
+        return ArrangementApprovalReferences(
+            app.melotrail.arrangement.WorkflowArtifactReference(DetailedArrangementStore.APPROVED_FILE, sha256(arrangement)),
+            sha256(structure.toByteArray(StandardCharsets.UTF_8)), sha256(occurrences.toByteArray(StandardCharsets.UTF_8)), context, sha256(plan)
+        )
     }
 
     private fun snapshot(root: Path, project: Project, arrangement: DetailedArrangement, artifact: Path, approvalRequired: Boolean): ArrangementSnapshot {
@@ -371,7 +352,8 @@ class DefaultArrangementApplicationService(
         ).also(ArrangementSoundContext::requireValid)
     }
     private fun Path.normalizeRoot(): Path = toAbsolutePath().normalize()
-    private fun sha256(path: Path): String = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
+    private fun sha256(path: Path): String = sha256(Files.readAllBytes(path))
+    private fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun categoryFor(error: Throwable) = when (error) {
         is java.io.IOException -> ApplicationErrorCategory.IO
         is IllegalArgumentException -> ApplicationErrorCategory.VALIDATION

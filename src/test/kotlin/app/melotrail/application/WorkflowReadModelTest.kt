@@ -16,10 +16,10 @@ class WorkflowReadModelTest {
         val current = WorkflowReadModelDeriver.derive(base)
 
         assertEquals(WorkflowStage.entries, current.steps.map(WorkflowStep::stage))
-        assertEquals(WorkflowState.CURRENT, current[WorkflowStage.COHESION].state)
-        assertEquals(WorkflowState.BLOCKED, current[WorkflowStage.ARRANGEMENT].state)
-        assertEquals(WorkflowAction.GENERATE_COHESION, current.current.nextAction)
-        assertEquals(WorkflowPrerequisite.APPROVED_COHESION, current.current.prerequisite)
+        assertEquals(WorkflowState.CURRENT, current[WorkflowStage.ARRANGEMENT].state)
+        assertEquals(WorkflowState.BLOCKED, current[WorkflowStage.COHESION].state)
+        assertEquals(WorkflowAction.GENERATE_ARRANGEMENT, current.current.nextAction)
+        assertEquals(WorkflowPrerequisite.APPROVED_ARRANGEMENT, current.current.prerequisite)
 
         val review = WorkflowReadModelDeriver.derive(
             base.copy(readiness = base.readiness.copy(songPlanAvailable = true, cohesionReady = true)),
@@ -46,7 +46,7 @@ class WorkflowReadModelTest {
 
         assertEquals(WorkflowState.COMPLETE, workflow[WorkflowStage.AI_FIX].state)
         assertEquals(WorkflowState.COMPLETE, workflow[WorkflowStage.MIDI_FEEL].state)
-        assertEquals(WorkflowStage.COHESION, workflow.current.stage)
+        assertEquals(WorkflowStage.ARRANGEMENT, workflow.current.stage)
     }
 
     @Test

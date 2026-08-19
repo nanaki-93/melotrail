@@ -44,6 +44,8 @@ enum class WorkflowChange {
     STRUCTURE,
     /** Section context changes planning/arrangement, but not immutable MIDI or its analysis. */
     PART_SECTION,
+    /** A newly approved arrangement changes the only supported Cohesion input. */
+    ARRANGEMENT,
     COHESION,
     COMPOSITION_KEY,
     COMPOSITION_TEMPO_OR_METER,
@@ -84,8 +86,13 @@ object WorkflowArtifactGraph {
         WorkflowChange.AI_FIX_SELECTION -> allAfterSelection
         WorkflowChange.MIDI_FEEL -> setOf(WorkflowArtifact.ANALYSIS) + allAfterAnalysis
         WorkflowChange.ANALYSIS, WorkflowChange.STRUCTURE, WorkflowChange.PART_SECTION -> allAfterAnalysis
+        WorkflowChange.ARRANGEMENT -> setOf(
+            WorkflowArtifact.COHESION, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
+            WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
+            WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
+        )
         WorkflowChange.COHESION -> setOf(
-            WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
+            WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
             WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
             WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
         )
@@ -98,7 +105,7 @@ object WorkflowArtifactGraph {
         )
         /** Tempo/meter are declared arrangement-normalization inputs. */
         WorkflowChange.COMPOSITION_TEMPO_OR_METER -> setOf(
-            WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
+            WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.COHESION, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
             WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
             WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
         )
@@ -258,7 +265,9 @@ data class CohesionBoundaryReference(
     val incomingInstanceId: String,
     val inputSha256: String,
     val draft: WorkflowArtifactReference? = null,
-    val approved: WorkflowArtifactReference? = null
+    val approved: WorkflowArtifactReference? = null,
+    /** Digest of code-owned bridge MIDI; absent only for historical target-order evidence. */
+    val bridgeSha256: String? = null
 ) {
     init {
         require(SAFE_ID.matches(outgoingInstanceId) && SAFE_ID.matches(incomingInstanceId)) { "Cohesion boundary occurrence ID is invalid" }
@@ -274,6 +283,7 @@ data class CohesionBoundaryReference(
                 "Approved Cohesion boundary path is not canonical"
             }
         }
+        bridgeSha256?.let { require(SHA_256.matches(it)) { "Approved Cohesion bridge fingerprint is invalid" } }
     }
 }
 
@@ -320,6 +330,28 @@ data class CohesionWorkflowReferences(
     }
 }
 
+/**
+ * Approval evidence that Cohesion may consume. These hashes bind an approved
+ * arrangement to the exact Structure, occurrence identities, planning context,
+ * and song plan from which it was made.
+ */
+@Serializable
+data class ArrangementApprovalReferences(
+    val arrangement: WorkflowArtifactReference,
+    val structureSha256: String,
+    val occurrenceSha256: String,
+    val contextSha256: String,
+    val planSha256: String
+) {
+    init {
+        require(SHA_256.matches(structureSha256) && SHA_256.matches(occurrenceSha256) &&
+            SHA_256.matches(contextSha256) && SHA_256.matches(planSha256)) {
+            "Arrangement approval fingerprints are invalid"
+        }
+        require(arrangement.file == "arrangement.json") { "Approved arrangement path is not canonical" }
+    }
+}
+
 /** References only; Task 071 owns commercial decisions and manifest UI. */
 @Serializable
 data class CommercialProvenanceReferences(
@@ -331,6 +363,9 @@ data class CommercialProvenanceReferences(
 data class ProjectWorkflowReferences(
     val stale: Set<WorkflowArtifact> = emptySet(),
     val cohesion: CohesionWorkflowReferences? = null,
+    val arrangement: ArrangementApprovalReferences? = null,
+    /** One-way marker for the Task 023 dependency migration. */
+    val cohesionOrderMigration: Int = 0,
     val commercialProvenance: CommercialProvenanceReferences? = null
 ) {
     fun invalidate(change: WorkflowChange): ProjectWorkflowReferences = copy(
@@ -338,6 +373,18 @@ data class ProjectWorkflowReferences(
     )
 
     fun markCurrent(vararg artifacts: WorkflowArtifact): ProjectWorkflowReferences = copy(stale = stale - artifacts.toSet())
+
+    /** Retains old files as evidence while requiring Arrange → Cohesion lineage exactly once. */
+    fun migrateCohesionOrderIfNeeded(): ProjectWorkflowReferences =
+        if (cohesionOrderMigration >= 1 || cohesion == null || arrangement != null) this
+        else copy(
+            stale = stale + setOf(
+                WorkflowArtifact.COHESION, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
+                WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
+                WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
+            ),
+            cohesionOrderMigration = 1
+        )
 }
 
 /** Small atomic metadata boundary used after a stage has actually published output. */
@@ -346,6 +393,17 @@ object ProjectWorkflowStore {
         val project = ProjectStore.read(root)
         if (project.version != Project.CURRENT_VERSION) return
         ProjectStore.write(root, project.copy(workflow = transform(project.workflow)))
+    }
+
+    /** A build request is explicit authority to migrate old target-order lineage, never project open. */
+    fun migrateCohesionOrderForBuild(root: Path): Boolean {
+        if (!java.nio.file.Files.isRegularFile(root.resolve(ProjectStore.FILE_NAME))) return false
+        val project = ProjectStore.read(root)
+        if (project.version != Project.CURRENT_VERSION) return false
+        val migrated = project.workflow.migrateCohesionOrderIfNeeded()
+        if (migrated == project.workflow) return false
+        ProjectStore.write(root, project.copy(workflow = migrated))
+        return true
     }
 }
 

@@ -20,7 +20,7 @@ import java.nio.file.StandardOpenOption
 data class DetailedArrangement(
     val version: Int = CURRENT_VERSION,
     val sections: List<DetailedArrangementSection>,
-    /** Null keeps already-approved v3 arrangements readable with their original transition semantics. */
+    /** Historical target-order evidence only; new arrangement planners never populate it. */
     val cohesion: ArrangementCohesionReferences? = null
 ) {
     fun validate(input: DetailedArrangementInput): DetailedArrangementValidationResult =
@@ -242,14 +242,11 @@ enum class MusicalRegister {
 data class DetailedArrangementInput(
     val planningInput: SongPlanningInput,
     val songPlan: SongPlan,
-    val variations: SectionVariationPlan,
-    /** Null is the compatibility mode for a pre-Task-117 arrangement. */
-    val cohesion: ApprovedArrangementCohesion? = null
+    val variations: SectionVariationPlan
 ) {
     fun requireValid() {
         songPlan.requireValid(planningInput)
         variations.requireValid(planningInput, songPlan)
-        cohesion?.requireValid(planningInput)
     }
 }
 
@@ -288,14 +285,8 @@ object DetailedArrangementValidator {
                 errors += "$label instruments must match the section variation exactly"
             }
             validateInstruments(label, section.role, section.instruments, expected.instruments, errors)
-            val expectedCohesionTransition = input.cohesion?.transitionOut(position, position == input.variations.sections.lastIndex)
-            if (expectedCohesionTransition != null) {
-                if (arrangement.cohesion != input.cohesion.references) errors += "$label must retain the exact approved Cohesion boundary IDs and hashes"
-                if (section.transitionOut != expectedCohesionTransition) errors += "$label transition must use its approved Cohesion boundary decision"
-            } else {
-                if (arrangement.cohesion != null) errors += "$label has unexpected Cohesion references"
-                validateTransition(label, section.transitionOut, expected.transitionIntent, position == input.variations.sections.lastIndex, errors)
-            }
+            if (arrangement.cohesion != null) errors += "$label has historical target-order Cohesion references; regenerate this arrangement."
+            validateTransition(label, section.transitionOut, expected.transitionIntent, position == input.variations.sections.lastIndex, errors)
         }
         return DetailedArrangementValidationResult(errors)
     }
@@ -398,7 +389,7 @@ interface DetailedArrangementPlanner {
 class DeterministicDetailedArrangementPlanner : DetailedArrangementPlanner {
     override fun plan(input: DetailedArrangementInput): DetailedArrangement {
         input.requireValid()
-        return DetailedArrangement(cohesion = input.cohesion?.references, sections = input.variations.sections.mapIndexed { index, section ->
+        return DetailedArrangement(sections = input.variations.sections.mapIndexed { index, section ->
             DetailedArrangementSection(
                 index = section.index,
                 instanceId = section.instanceId,
@@ -406,7 +397,7 @@ class DeterministicDetailedArrangementPlanner : DetailedArrangementPlanner {
                 role = section.purpose,
                 energy = section.energy,
                 instruments = section.instruments.map { instrument -> detail(instrument, section.energy, section.purpose) },
-                transitionOut = input.cohesion?.transitionOut(index, index == input.variations.sections.lastIndex) ?: transition(
+                transitionOut = transition(
                     section.transitionIntent,
                     section.energy,
                     section.instruments.map { it.name }.toSet(),
@@ -531,13 +522,13 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
     }
 
     private fun DetailedArrangement.withLockedInstrumentFields(input: DetailedArrangementInput): DetailedArrangement = copy(
-        cohesion = input.cohesion?.references,
+        cohesion = null,
         sections = sections.mapIndexed { index, section ->
             val expected = input.variations.sections.getOrNull(index) ?: return@mapIndexed section
             if (section.instruments.size != expected.instruments.size) return@mapIndexed section
             section.copy(
                 instruments = section.instruments.zip(expected.instruments).map { (instrument, variation) -> instrument.withLockedFields(variation) },
-                transitionOut = input.cohesion?.transitionOut(index, index == input.variations.sections.lastIndex) ?: section.transitionOut
+                transitionOut = section.transitionOut
             )
         }
     )

@@ -37,7 +37,7 @@ schema window actively requires it and must have a named removal condition.
 | 021 | [Persistent structure occurrence identity](completed/021-structure-occurrences.md) | MVP |
 | 022 | [Profile-independent arrangement roles and sound intent](completed/022-arrangement-roles.md) | Later |
 | 022B | [Metadata-driven Instrument Registry and resolver](completed/022b-instrument-registry-resolution.md) | Later |
-| 023 | [Arrangement-before-cohesion dependency migration](023-arrangement-cohesion-order.md) | Later |
+| 023 | [Arrangement-before-cohesion dependency migration](completed/023-arrangement-cohesion-order.md) | Later |
 | 024 | [Arrangement-aware cohesion](024-arrangement-aware-cohesion.md) | Later |
 | 025 | [Seeded humanization stage](025-seeded-humanization.md) | Later |
 | 026 | [Render, mix, profile processing, and master handoff](026-production-handoff.md) | Later |

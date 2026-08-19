@@ -19,8 +19,8 @@ enum class CreationStage {
     MIDI_FEEL,
     ANALYSIS,
     STRUCTURE,
-    COHESION,
     ARRANGEMENT,
+    COHESION,
     MIX_AND_MASTER
 }
 
@@ -139,15 +139,15 @@ object CreationProgressDeriver {
         WorkflowStage.MIDI_FEEL,
         WorkflowStage.ANALYSIS,
         WorkflowStage.STRUCTURE,
-        WorkflowStage.COHESION,
-        WorkflowStage.ARRANGEMENT
+        WorkflowStage.ARRANGEMENT,
+        WorkflowStage.COHESION
     )
 
     fun derive(input: CreationProgressInput): CreationProgress {
         val workflow = WorkflowReadModelDeriver.derive(input.project, input.arrangement)
         val stages = orderedWorkflowStages.map { stage -> fromWorkflow(workflow[stage], input.project == null) }
-        val arrangement = stages.last()
-        return CreationProgress(stages + mixAndMaster(input, arrangement))
+        val cohesion = stages.last()
+        return CreationProgress(stages + mixAndMaster(input, cohesion))
     }
 
     private fun fromWorkflow(step: WorkflowStep, noProject: Boolean): CreationStageProgress {
@@ -181,14 +181,14 @@ object CreationProgressDeriver {
         )
     }
 
-    private fun mixAndMaster(input: CreationProgressInput, arrangement: CreationStageProgress): CreationStageProgress {
+    private fun mixAndMaster(input: CreationProgressInput, cohesion: CreationStageProgress): CreationStageProgress {
         val release = CreationArtifactReference(CreationArtifactKind.RELEASE)
-        if (arrangement.status != CreationStageStatus.COMPLETE) return CreationStageProgress(
+        if (cohesion.status != CreationStageStatus.COMPLETE) return CreationStageProgress(
             CreationStage.MIX_AND_MASTER,
             if (input.project == null) CreationStageStatus.NOT_STARTED else CreationStageStatus.BLOCKED,
-            "Build requires a current approved arrangement.",
+            "Build requires current approved arrangement-aware Cohesion.",
             release,
-            arrangement.nextAction.copy(artifact = release)
+            cohesion.nextAction.copy(artifact = release)
         )
         val project = requireNotNull(input.project)
         if (project.readiness.masterAvailable && project.readiness.releaseAvailable) return stage(
