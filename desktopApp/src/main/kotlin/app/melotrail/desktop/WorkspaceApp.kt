@@ -667,6 +667,18 @@ internal fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (Workspac
                 ) { Text("Apply and re-analyze") }
             }
             if (part.preparation.midiFeel.available) Text("A/B preview uses the same monitor-volume control for cleaned MIDI and Lo-fi Feel.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val correction = part.preparation.technicalCorrection
+            if (correction.available) {
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
+                Text("Technical correction", style = MaterialTheme.typography.labelLarge)
+                Text(
+                    if (correction.selected == app.melotrail.arrangement.TechnicalCorrectionSelection.CORRECTED) "Corrected baseline selected. ${if (correction.approvalRequired) "Review is required before it can be used." else "It remains separate from creative enhancement."}"
+                    else "A corrected baseline is available but not selected.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (correction.approvalRequired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                correction.warnings.forEach { warning -> Text("Warning: $warning", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+            }
         }
     }
 

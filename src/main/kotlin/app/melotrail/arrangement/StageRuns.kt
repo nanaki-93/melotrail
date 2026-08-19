@@ -236,9 +236,9 @@ object LegacyV3StageRunMapper {
                 add(LegacyStageRunInput(StageId.NORMALIZED, subject, it,
                     selected = midi.aiFixSelection == MidiAiFixSelection.SKIP && midi.analysisInput == MidiAnalysisInput.CURRENT))
             }
-            midi?.aiFix?.approved?.file?.let {
+            midi?.technicalCorrection?.output?.file?.let {
                 add(LegacyStageRunInput(StageId.CORRECTED, subject, it,
-                    selected = midi.aiFixSelection == MidiAiFixSelection.APPROVED && midi.analysisInput == MidiAnalysisInput.CURRENT))
+                    selected = midi.technicalCorrectionSelection == TechnicalCorrectionSelection.CORRECTED && midi.analysisInput == MidiAnalysisInput.CURRENT))
             }
             midi?.feel?.derived?.let {
                 add(LegacyStageRunInput(StageId.ENHANCED, subject, it,

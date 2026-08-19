@@ -15,6 +15,7 @@ enum class WorkflowArtifact {
     RAW_SOURCE,
     @SerialName("MIDI_REPAIR") CLEAN_MIDI,
     TRANSPOSED_MIDI,
+    CORRECTED_MIDI,
     AI_FIX,
     MIDI_FEEL,
     ANALYSIS,
@@ -34,6 +35,7 @@ enum class WorkflowChange {
     SOURCE_OR_RAW,
     @SerialName("REPAIRED_MIDI") CLEANED_MIDI,
     SOURCE_KEY,
+    CORRECTION_SELECTION,
     AI_FIX_SELECTION,
     MIDI_FEEL,
     ANALYSIS,
@@ -52,7 +54,7 @@ enum class WorkflowChange {
 /** Centralized, deliberately non-destructive invalidation matrix. */
 object WorkflowArtifactGraph {
     private val allAfterRepair = setOf(
-        WorkflowArtifact.TRANSPOSED_MIDI, WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.COHESION,
+        WorkflowArtifact.TRANSPOSED_MIDI, WorkflowArtifact.CORRECTED_MIDI, WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.COHESION,
         WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
         WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
         WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
@@ -75,6 +77,7 @@ object WorkflowArtifactGraph {
         WorkflowChange.SOURCE_OR_RAW -> setOf(WorkflowArtifact.CLEAN_MIDI) + allAfterRepair
         WorkflowChange.CLEANED_MIDI -> allAfterRepair
         WorkflowChange.SOURCE_KEY -> allAfterRepair
+        WorkflowChange.CORRECTION_SELECTION -> allAfterSelection
         WorkflowChange.AI_FIX_SELECTION -> allAfterSelection
         WorkflowChange.MIDI_FEEL -> setOf(WorkflowArtifact.ANALYSIS) + allAfterAnalysis
         WorkflowChange.ANALYSIS, WorkflowChange.STRUCTURE, WorkflowChange.PART_SECTION -> allAfterAnalysis
@@ -85,7 +88,7 @@ object WorkflowArtifactGraph {
         )
         /** A project-key decision invalidates its derived transposition and every dependent artifact. */
         WorkflowChange.COMPOSITION_KEY -> setOf(
-            WorkflowArtifact.TRANSPOSED_MIDI, WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS,
+            WorkflowArtifact.TRANSPOSED_MIDI, WorkflowArtifact.CORRECTED_MIDI, WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS,
             WorkflowArtifact.COHESION, WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX,
             WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE,
             WorkflowArtifact.COMMERCIAL_EXPORT
@@ -104,7 +107,7 @@ object WorkflowArtifactGraph {
         )
         /** Harmony is planner context, never source, extraction, cleanup, or analysis evidence. */
         WorkflowChange.HARMONY -> setOf(
-            WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.COHESION,
+            WorkflowArtifact.CORRECTED_MIDI, WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.COHESION,
             WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
             WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
             WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
@@ -142,6 +145,35 @@ object MidiAiFixArtifactPaths {
     fun diff(partId: String): String = "midi/ai-fix/${safeId(partId, "AI-fix part")}/diff.json"
     fun audit(partId: String): String = "midi/ai-fix/${safeId(partId, "AI-fix part")}/audit.json"
     fun provenance(partId: String): String = "midi/ai-fix/${safeId(partId, "AI-fix part")}/provenance.json"
+}
+
+/** Canonical immutable output/report locations for Task 017 technical correction. */
+object TechnicalCorrectionArtifactPaths {
+    private fun directory(partId: String, inputSha256: String): String {
+        require(SHA_256.matches(inputSha256)) { "Technical-correction input fingerprint is invalid" }
+        return "midi/corrected/${safeId(partId, "technical-correction part")}/$inputSha256"
+    }
+    fun output(partId: String, inputSha256: String): String = "${directory(partId, inputSha256)}/corrected.mid"
+    fun report(partId: String, inputSha256: String): String = "${directory(partId, inputSha256)}/report.json"
+    fun plan(partId: String, inputSha256: String): String = "${directory(partId, inputSha256)}/plan.json"
+}
+
+@Serializable
+enum class TechnicalCorrectionSelection { BASE, CORRECTED }
+
+/** A corrected artifact is valid only for the exact selected-base fingerprint and structured context. */
+@Serializable
+data class TechnicalCorrectionReferences(
+    val input: WorkflowArtifactReference,
+    val output: WorkflowArtifactReference,
+    val report: WorkflowArtifactReference,
+    val contextSha256: String
+) {
+    init { require(SHA_256.matches(contextSha256)) { "Technical-correction context fingerprint is invalid" } }
+    fun requireCanonical(partId: String) {
+        require(output.file == TechnicalCorrectionArtifactPaths.output(partId, input.sha256)) { "Technical-correction output path is not canonical" }
+        require(report.file == TechnicalCorrectionArtifactPaths.report(partId, input.sha256)) { "Technical-correction report path is not canonical" }
+    }
 }
 
 @Serializable

@@ -71,7 +71,7 @@ class SelectedMidiArtifactResolver(
             normalized != null -> SelectedMidiBaseKind.NORMALIZED
             else -> SelectedMidiBaseKind.CLEANED
         }
-        val base = when (midi.aiFixSelection) {
+        val uncorrectedBase = when (midi.aiFixSelection) {
             MidiAiFixSelection.SKIP -> BaseCandidate(
                 baseReference,
                 basePath,
@@ -94,6 +94,23 @@ class SelectedMidiArtifactResolver(
                 BaseCandidate(approved.file, path, hash, SelectedMidiBaseKind.APPROVED_AI_FIX)
             }
         }
+        val base = when (midi.technicalCorrectionSelection) {
+            TechnicalCorrectionSelection.BASE -> uncorrectedBase
+            TechnicalCorrectionSelection.CORRECTED -> {
+                require(midi.aiFixSelection == MidiAiFixSelection.SKIP) {
+                    "Legacy AI-fix evidence cannot be selected with the technical corrected baseline. Select one baseline."
+                }
+                val correction = requireNotNull(midi.technicalCorrection) { "Part '${part.id}' has no technical-correction evidence." }
+                correction.requireCanonical(part.id)
+                require(correction.input.file == baseReference && correction.input.sha256 == baseSha256) {
+                    "Corrected MIDI is stale for part '${part.id}'; recreate correction from the current baseline."
+                }
+                val output = resolveFile(root, rootReal, correction.output.file, "corrected MIDI")
+                require(sha256(output) == correction.output.sha256) { "Corrected MIDI is stale for part '${part.id}'; recreate correction." }
+                readMidi(output, part.id)
+                BaseCandidate(correction.output.file, output, correction.output.sha256, SelectedMidiBaseKind.CORRECTED)
+            }
+        }
         val selected = manifestSelection?.let { selected ->
             when (selected.record.stage) {
                 StageId.CLEANED -> Candidate(selected.artifact.path, resolveFile(root, rootReal, selected.artifact.path, "selected cleaned MIDI"),
@@ -103,7 +120,7 @@ class SelectedMidiArtifactResolver(
                 StageId.TRANSPOSED -> Candidate(selected.artifact.path, resolveFile(root, rootReal, selected.artifact.path, "selected transposed MIDI"),
                     SelectedMidiArtifactKind.TRANSPOSED, null, null)
                 StageId.CORRECTED -> Candidate(selected.artifact.path, resolveFile(root, rootReal, selected.artifact.path, "selected corrected MIDI"),
-                    SelectedMidiArtifactKind.APPROVED_AI_FIX, null, null)
+                    SelectedMidiArtifactKind.CORRECTED, null, null)
                 StageId.ENHANCED -> Candidate(selected.artifact.path, resolveFile(root, rootReal, selected.artifact.path, "selected enhanced MIDI"),
                     SelectedMidiArtifactKind.LOFI_FEEL, midi.feel?.profile, null)
                 else -> throw IllegalArgumentException("Selected stage '${selected.record.stage}' cannot provide MIDI for part '${part.id}'.")
@@ -116,6 +133,7 @@ class SelectedMidiArtifactResolver(
                     SelectedMidiBaseKind.CLEANED -> SelectedMidiArtifactKind.CLEANED
                     SelectedMidiBaseKind.NORMALIZED -> SelectedMidiArtifactKind.NORMALIZED
                     SelectedMidiBaseKind.TRANSPOSED -> SelectedMidiArtifactKind.TRANSPOSED
+                    SelectedMidiBaseKind.CORRECTED -> SelectedMidiArtifactKind.CORRECTED
                     SelectedMidiBaseKind.APPROVED_AI_FIX -> SelectedMidiArtifactKind.APPROVED_AI_FIX
                 },
                 null,
@@ -223,8 +241,8 @@ class SelectedMidiArtifactResolver(
     private data class Candidate(val reference: String, val path: Path, val kind: SelectedMidiArtifactKind, val profile: MidiFeelProfile?, val profileVersion: Int?)
 }
 
-enum class SelectedMidiBaseKind { CLEANED, NORMALIZED, TRANSPOSED, APPROVED_AI_FIX }
-enum class SelectedMidiArtifactKind { CLEANED, NORMALIZED, TRANSPOSED, APPROVED_AI_FIX, LOFI_FEEL }
+enum class SelectedMidiBaseKind { CLEANED, NORMALIZED, TRANSPOSED, CORRECTED, APPROVED_AI_FIX }
+enum class SelectedMidiArtifactKind { CLEANED, NORMALIZED, TRANSPOSED, CORRECTED, APPROVED_AI_FIX, LOFI_FEEL }
 enum class MidiCleanupFreshness { CURRENT, LEGACY_UNKNOWN, STALE }
 enum class MidiLoFiFreshness { CURRENT, NOT_SELECTED }
 data class MidiTimingSummary(val tempoMap: List<MidiTempoChange>, val timeSignatures: List<MidiTimeSignature>)

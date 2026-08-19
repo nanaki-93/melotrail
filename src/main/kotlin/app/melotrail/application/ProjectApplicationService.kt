@@ -289,6 +289,7 @@ data class PartPreparationSummary(
     val ready: Boolean,
     val warnings: List<String>,
     val midiQuality: MidiQualitySummary = MidiQualitySummary.legacyUnknown(),
+    val technicalCorrection: TechnicalCorrectionSummary = TechnicalCorrectionSummary(),
     val midiFeel: MidiFeelSummary = MidiFeelSummary(),
     val midiAiFix: MidiAiFixSummary = MidiAiFixSummary(),
     val transposedMidi: Boolean = false
@@ -301,6 +302,16 @@ data class MidiAiFixSummary(
     val approvedAvailable: Boolean = false
 ) {
     val selectedAvailable: Boolean get() = selected == MidiAiFixSelection.SKIP || approvedAvailable
+}
+
+/** Artifact-derived Task 017 status. Legacy AI-fix state remains separate and is never relabelled as correction. */
+data class TechnicalCorrectionSummary(
+    val selected: app.melotrail.arrangement.TechnicalCorrectionSelection = app.melotrail.arrangement.TechnicalCorrectionSelection.BASE,
+    val available: Boolean = false,
+    val warnings: List<String> = emptyList(),
+    val approvalRequired: Boolean = false
+) {
+    val selectedAvailable: Boolean get() = selected == app.melotrail.arrangement.TechnicalCorrectionSelection.BASE || (available && !approvalRequired)
 }
 
 data class MidiFeelSummary(
@@ -1125,6 +1136,7 @@ class DefaultProjectApplicationService(
                 requireNotNull(projectKey), reportReference)
         }.getOrDefault(false)
         val quality = midiQuality(root, this, cleanMidi)
+        val correction = technicalCorrection(root, this)
         val analyzed = analysisCurrent && (analysis?.let { runCatching { it.summary(root) }.isSuccess } ?: false)
         val preparedAudio = sourceType == PartSourceType.AUDIO && inspected &&
             report?.preparation == PreparationStatus.CLEANED && isWaveArtifact(InputInspectionPaths.cleanWav(root, id))
@@ -1140,9 +1152,10 @@ class DefaultProjectApplicationService(
             transposedMidi = transposedMidi,
             analyzed = analyzed,
             ready = sourcePreserved && inspected && cleanMidi && transposedMidi && analyzed && quality.status == MidiQualityStatus.CURRENT &&
-                aiFix.selectedAvailable && feelSelectedAvailable,
+                correction.selectedAvailable && aiFix.selectedAvailable && feelSelectedAvailable,
             warnings = safeWarnings + quality.warnings.map { it.message },
             midiQuality = quality,
+            technicalCorrection = correction,
             midiFeel = feel,
             midiAiFix = aiFix
         )
@@ -1207,6 +1220,24 @@ class DefaultProjectApplicationService(
             draftAvailable = current(references.draft, MidiAiFixArtifactPaths.draft(part.id)),
             approvedAvailable = current(references.approved, MidiAiFixArtifactPaths.approved(part.id))
         )
+    }
+
+    private fun technicalCorrection(root: Path, part: SongPart): TechnicalCorrectionSummary {
+        val midi = part.midi ?: return TechnicalCorrectionSummary()
+        val refs = midi.technicalCorrection ?: return TechnicalCorrectionSummary(midi.technicalCorrectionSelection)
+        val available = runCatching {
+            refs.requireCanonical(part.id)
+            val input = safeDestination(root, refs.input.file)
+            val output = safeDestination(root, refs.output.file)
+            val report = safeDestination(root, refs.report.file)
+            sha256(input) == refs.input.sha256 && sha256(output) == refs.output.sha256 && sha256(report) == refs.report.sha256
+        }.getOrDefault(false)
+        val report = if (available) runCatching {
+            kotlinx.serialization.json.Json { ignoreUnknownKeys = false }.decodeFromString(
+                app.melotrail.arrangement.TechnicalCorrectionReport.serializer(), Files.readString(safeDestination(root, refs.report.file))
+            )
+        }.getOrNull() else null
+        return TechnicalCorrectionSummary(midi.technicalCorrectionSelection, available, report?.warnings.orEmpty(), report?.approvalRequired == true)
     }
 
     private fun midiFeel(root: Path, part: SongPart, cleanMidi: Boolean, workflowCurrent: Boolean, aiFix: MidiAiFixSummary): MidiFeelSummary {

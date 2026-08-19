@@ -319,6 +319,9 @@ data class MidiReferences(
     val approvedRepair: Boolean = false,
     /** Exact automatic or explicit approval of raw, clean, options, and report evidence. */
     val cleanApproval: MidiCleanupApproval? = null,
+    /** Task 017 technical baseline. Legacy AI-fix remains separate compatibility evidence. */
+    val technicalCorrectionSelection: TechnicalCorrectionSelection = TechnicalCorrectionSelection.BASE,
+    val technicalCorrection: TechnicalCorrectionReferences? = null,
     /** Explicit optional base branch; a draft is never selected. */
     val aiFixSelection: MidiAiFixSelection = MidiAiFixSelection.SKIP,
     /** Optional retained draft/approval evidence, fingerprinted against [clean]. */
@@ -453,6 +456,17 @@ object ProjectValidator {
                         if (midi.cleanup == null || midi.quality == null || midi.clean == null || midi.raw == null) {
                             errors += "Part '${part.id}' cannot approve missing MIDI cleanup evidence"
                         }
+                    }
+                    runCatching { midi.technicalCorrection?.requireCanonical(part.id) }.exceptionOrNull()?.let { error ->
+                        errors += "Part '${part.id}' technical-correction references are invalid: ${error.message}"
+                    }
+                    if (midi.technicalCorrectionSelection == TechnicalCorrectionSelection.CORRECTED && midi.technicalCorrection == null) {
+                        errors += "Part '${part.id}' selects corrected MIDI without correction evidence"
+                    }
+                    midi.technicalCorrection?.let { correction ->
+                        validateArtifactReference(root, correction.input, "Part '${part.id}' technical-correction input", errors)
+                        validateArtifactReference(root, correction.output, "Part '${part.id}' corrected MIDI", errors)
+                        validateArtifactReference(root, correction.report, "Part '${part.id}' technical-correction report", errors)
                     }
                     runCatching { midi.aiFix?.requireCanonical(part.id) }.exceptionOrNull()?.let { error ->
                         errors += "Part '${part.id}' AI-fix references are invalid: ${error.message}"

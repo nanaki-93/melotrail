@@ -82,11 +82,18 @@ class StageRunStoreTest {
     }
 
     @Test
-    fun `v3 mapper preserves raw clean correction and feel selections deterministically`() {
+    fun `v3 mapper preserves raw clean technical-correction and feel selections deterministically`() {
         val hash = "a".repeat(64)
         val project = Project(version = 3, name = "legacy", renderFormat = RenderFormat(), parts = listOf(Part("A", "source/A.mid", midi = MidiReferences(
             raw = "midi/raw/A.mid",
             clean = "midi/clean/A.mid",
+            technicalCorrectionSelection = TechnicalCorrectionSelection.CORRECTED,
+            technicalCorrection = TechnicalCorrectionReferences(
+                WorkflowArtifactReference("midi/clean/A.mid", hash),
+                WorkflowArtifactReference(TechnicalCorrectionArtifactPaths.output("A", hash), hash),
+                WorkflowArtifactReference(TechnicalCorrectionArtifactPaths.report("A", hash), hash),
+                hash
+            ),
             aiFixSelection = MidiAiFixSelection.APPROVED,
             aiFix = MidiAiFixReferences(hash, approved = WorkflowArtifactReference(MidiAiFixArtifactPaths.approved("A"), hash)),
             analysisInput = MidiAnalysisInput.LOFI_FEEL,
