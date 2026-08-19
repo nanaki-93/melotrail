@@ -3,6 +3,9 @@ package app.melotrail.application
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.MidiPartAnalyzer
+import app.melotrail.arrangement.MidiReferences
+import app.melotrail.arrangement.Part
+import app.melotrail.arrangement.Project
 import app.melotrail.preparation.AudioInspectionMeasurements
 import app.melotrail.preparation.DetectedAudioFormat
 import app.melotrail.preparation.DetectedInput
@@ -51,6 +54,34 @@ class ProjectApplicationServiceTest {
         Files.createDirectories(invalidRoot)
         Files.writeString(invalidRoot.resolve("project.json"), "{\"version\":99}")
         assertTrue(assertThrows(IllegalArgumentException::class.java) { service.open(invalidRoot) }.message.orEmpty().contains("Unsupported project version"))
+    }
+
+    @Test
+    fun `opens v1 v2 and v3 project files without rewriting their canonical JSON`() {
+        val service = service()
+        val input = midi("open-read-only.mid")
+        val fixtures = listOf(
+            "v1" to Project(version = 1, name = "v1", parts = listOf(Part("A", "parts/A.mid"))),
+            "v2" to Project(version = 2, name = "v2", renderFormat = RenderFormat(), parts = listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid")))),
+            "v3" to Project(version = Project.CURRENT_VERSION, name = "v3", renderFormat = RenderFormat(), parts = listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid"))))
+        )
+
+        fixtures.forEach { (name, project) ->
+            val root = tempDir.resolve(name)
+            val sourcePath = if (project.version == 1) root.resolve("parts/A.mid") else root.resolve("source/A.mid")
+            Files.createDirectories(sourcePath.parent)
+            Files.copy(input, sourcePath)
+            if (project.version >= 2) {
+                val cleanPath = root.resolve("midi/clean/A.mid")
+                Files.createDirectories(cleanPath.parent)
+                Files.copy(input, cleanPath)
+            }
+            ProjectStore.write(root, project)
+            val before = Files.readAllBytes(root.resolve(ProjectStore.FILE_NAME))
+
+            assertEquals(project.version, service.open(root).version)
+            assertTrue(before.contentEquals(Files.readAllBytes(root.resolve(ProjectStore.FILE_NAME))), "$name open must not rewrite project.json")
+        }
     }
 
     @Test

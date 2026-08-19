@@ -49,11 +49,3 @@ springBoot {
 tasks.named<JavaExec>("bootRun") {
     jvmArgs("-Xmx4g")
 }
-
-tasks.register<JavaExec>("cliRun") {
-    group = "application"
-    description = "Run the Melotrail CLI"
-    classpath = sourceSets["main"].runtimeClasspath
-    mainClass.set("app.melotrail.cli.CliMainKt")
-    jvmArgs("-Xmx4g")
-}

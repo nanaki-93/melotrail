@@ -1,5 +1,18 @@
 # Worker directory for Python-based AI processing services
 
+## Baseline HTTP capability surface
+
+The worker is a local HTTP process, not a browser or cloud service. Its
+supported command-specific endpoints are `GET /health` and `POST /analyze`,
+`/apply_dsp`, `/repair`, `/master`, `/mp3_export`, `/mp3_convert`,
+`/transcribe`, `/midi-clean`, `/inspect-input`, and `/cleanup`. Every POST
+response uses the version-1 job envelope; Kotlin validates the resulting
+artifact before a later stage treats it as ready.
+
+`/transcribe` is intentionally limited to the eligible solo-piano route. A
+successful endpoint response is not a claim of reliable editable MIDI for
+vocals, full mixes, or arbitrary polyphonic audio.
+
 ## Read-only input inspection
 
 `POST /inspect-input` accepts one existing `.mid`, `.midi`, `.wav`, `.wave`,

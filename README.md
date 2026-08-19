@@ -1,7 +1,9 @@
 # Melotrail
 
-Kotlin 2.0 / Spring Boot application for AI-powered music creation and production.
-The project is intentionally kept as **one Gradle module**. The Python worker remains a separate process.
+Kotlin 2.0 music workstation with an optional Spring Boot JSON API.
+The root Kotlin module contains shared application services; the Compose
+Desktop product lives in the `:desktopApp` Gradle subproject. The Python worker
+remains a separate process.
 
 ## Prerequisites
 
@@ -143,295 +145,6 @@ mix-only settings, or audio texture mark only their documented descendants
 stale. Stale artifacts remain inspectable evidence; regenerate them instead of
 deleting, copying, or treating them as release-ready.
 
-## CLI
-
-Show CLI help:
-
-```bash
-make cli-help
-```
-
-Run the CLI with arguments:
-
-```bash
-make cli ARGS="--help"
-make cli ARGS="<your CLI arguments>"
-```
-
-Equivalent Gradle command:
-
-```bash
-./gradlew cliRun --args="<your CLI arguments>"
-```
-
-Build a complete local arranger project (requires the Python worker):
-
-```bash
-./gradlew cliRun --args="build --project ./projects/demo --no-ai"
-```
-
-This keeps `analysis/`, `arrangement.json`, `stems/bass.wav`, and the lossless
-`mix/dry.wav` and `mix/repaired.wav` intermediates inside the project, then
-writes the PCM-24 `master.wav` and `release.json` under `output/`. Add `--lofi`
-to create `mix/lofi.wav` and master that explicit input; otherwise the repaired
-dry mix is mastered. Use `--output-dir <directory>` to choose another output
-directory, or `--dry-run` to validate without changing files. Master validation
-requires the same sample rate and channel count and permits at most 50 ms of
-worker latency or tail difference.
-
-The build command is deterministic and local. `--no-ai` makes that choice
-explicit; no model output is executed as code, commands, or paths.
-
-### Optional final MP3 export
-
-`output/master.wav` is always the authoritative lossless release artifact. MP3
-is an explicit final conversion only; no repair, mixing, or mastering stage
-writes MP3. With the optional local `lameenc` dependency installed, either
-request it during a build or export an already validated master:
-
-```bash
-make cli ARGS='build --project ./projects/song-001 --no-ai --mp3 --mp3-bitrate 320'
-make cli ARGS='export-mp3 --input ./projects/song-001/output/master.wav --output ./projects/song-001/output/song.mp3 --bitrate 320'
-```
-
-Supported bitrates are 128, 160, 192, 256, and 320 kbps. The exporter checks
-that the input is `master.wav` in a RIFF/WAVE container, writes `song.mp3`
-atomically, and rejects WAV data disguised as MP3. If `lameenc` is absent, a
-`build --mp3` still completes with its valid master WAV; the standalone export
-command reports that the explicitly requested MP3 could not be produced.
-
-### LoFi A/B measurement
-
-Compare two WAV files without changing either input. The default requires equal
-sample rate, channel count, PCM format, and timeline. `--align` is diagnostic
-only: it compares the shared frame range and never resamples.
-
-```bash
-make cli ARGS='compare ./projects/song-001/mix/dry.wav ./projects/song-001/mix/lofi.wav'
-make cli ARGS='compare ./projects/song-001/mix/dry.wav ./projects/song-001/mix/lofi.wav --json'
-```
-
-The report uses a changed-frame tolerance of `1e-6` and Hann-windowed 2048-point
-FFTs with a 1024-frame hop for deterministic spectral centroid and band-energy
-metrics.
-
-### Optional solo-piano transcription
-
-The worker exposes local Basic Pitch transcription through its unified Python
-3.11 environment. After selecting Python 3.11 (for example, with `pyenv local
-3.11`), `make worker` installs and starts every worker capability. See
-[`worker/README.md`](worker/README.md) for setup and runtime verification.
-
-```bash
-make worker
-make cli ARGS='transcribe --input ./recordings/verse.wav --output ./projects/song-001/midi/raw/A.mid --instrument piano'
-```
-
-### Deterministic MIDI cleanup
-
-Clean raw piano transcription before later MIDI analysis. Requests use cleanup
-contract version 2. The default documented standard is `transcription-safe`:
-it removes exact duplicates, notes shorter than 50 ms, quiet noise, orphan
-note-offs, and redundant sustain controls; it fixes retrigger overlaps and
-bounds retained velocities while preserving tempo and time signatures.
-
-`transcription-safe` additionally removes orphan note-offs and redundant CC64
-pedal values, ends same-channel/pitch retriggers at the next start, and limits
-retained velocity outliers to 12–120. `tighten-timing` includes those corrections
-and requires an explicit `1/4`, `1/8`, `1/16`, or `1/32` grid plus a strength
-strictly greater than 0.0 and at most 1.0. It is the only profile that can
-quantize. Every response reports the profile, before/after note and event
-counts, and each applied-change count.
-
-### Fixed Lo-fi MIDI Feel
-
-After approved Clean MIDI, the desktop can explicitly keep that cleaned MIDI or
-request a local bounded AI-fix draft. The draft receives only path-free musical
-facts, is inspectable and A/B previewable, and cannot become the selected input
-until explicit approval. It never changes raw or cleaned MIDI. After that choice,
-the desktop can retain **Original feel** or create
-the separate `lofi-80-swing-v1` derived MIDI artifact and select it as the
-canonical analysis input. Version 1 is fixed at exactly **80 BPM** with a
-code-owned **58% eighth-note swing**. It is an opt-in MIDI timing transform,
-not the final **Lo-fi audio texture** effect; raw and cleaned MIDI remain
-unchanged, and switching either choice invalidates analysis and later derived
-artifacts.
-
-```bash
-make cli ARGS='midi-clean --input ./projects/song-001/midi/raw/A.mid --output ./projects/song-001/midi/clean/A.mid --profile transcription-safe'
-make cli ARGS='midi-clean --input ./projects/song-001/midi/raw/A.mid --output ./projects/song-001/midi/clean/A.mid --profile tighten-timing --quantize 1/16 --strength 0.4'
-```
-
-### MIDI-first project input
-
-New arranger projects store an explicit PCM-24 render format and preserve each
-original import under `source/`. Direct MIDI and audio transcription publish
-immutable raw MIDI first; Clean MIDI explicitly publishes the canonical
-cleaned MIDI and its quality report before analysis.
-
-```bash
-make cli ARGS='project create ./projects/song-001 --sample-rate 44100 --channels 2'
-make cli ARGS='part add ./projects/song-001 --id A --file ./inputs/verse.mid --role verse'
-make cli ARGS='part add ./projects/song-001 --id B --file ./inputs/chorus.wav --role chorus --transcribe'
-```
-
-Version-1 projects remain readable. Their original `parts/` files are not
-moved during migration; a MIDI-first v3 project is written only after every registered
-part has a valid clean-MIDI reference.
-
-### MIDI analysis and sound-library licenses
-
-For MIDI-first v3 projects, `part analyze` reads the registered clean MIDI locally and
-writes a distinct versioned musical analysis under `analysis/`; v1 projects
-continue to use the existing audio worker analysis.
-
-```bash
-make cli ARGS='part analyze ./projects/song-001 --id A'
-make cli ARGS='licenses ./projects/song-001 --commercial'
-```
-
-The starter library is rooted at `sounds/` (override only with
-`MUSIC_SOUNDS_ROOT`). Its MIDI channels are human-readable one-based values:
-drum channel 10 becomes MIDI API channel 9. See [`sounds/README.md`](sounds/README.md)
-for the required local sample-copy setup after a fresh checkout.
-
-### Global song-planning workflow
-
-`arrange` first creates standalone, reviewable `song_plan.json` and
-`section_variations.json` artifacts for the whole user-controlled structure.
-It requires a MIDI-first v3 project with a versioned MIDI analysis for every
-part. The plan contains only section purpose, energy, logical instrument
-progression, transition intent, and ending behavior; the variation artifact
-adds stable repeated-section identities plus bounded roles/densities. Neither
-artifact contains notes, paths, renderer settings, or executable behavior.
-
-```bash
-# Every MIDI-first part must have musical metadata first.
-make cli ARGS='part analyze ./projects/song-001 --id A'
-
-make cli ARGS='arrange --project ./projects/song-001 --planner deterministic --instruments piano,bass,pad --style "warm lo-fi"'
-# Inspect song_plan.json and section_variations.json before a later detailed-arrangement stage.
-```
-
-Expand those reviewed artifacts into the MIDI-first version 3 `arrangement.json`.
-The deterministic planner writes an approved document directly; Qwen writes only
-`arrangement.draft.json`, which must be approved explicitly. Version 3 contains
-bounded instrument roles and pattern controls, never MIDI notes or render paths.
-
-```bash
-make cli ARGS='arrange-detail --project ./projects/song-001 --planner deterministic'
-make cli ARGS='arrange-detail --project ./projects/song-001 --planner qwen'
-make cli ARGS='approve --project ./projects/song-001'
-```
-
-### Optional structured arrangement critique
-
-Critique an approved version-3 arrangement once before rendering. The deterministic
-critic is the default and creates an unchanged review draft without LM Studio.
-It preserves the exact pre-critic approved JSON as `arrangement_v1.json`, writes
-only `arrangement.draft.json`, and still requires explicit approval. A Qwen critic
-may modify at most four sections and only complete existing instrument plans or
-transition plans; any replacement still has to satisfy the reviewed
-song plan and the complete normal v3 validator.
-
-```bash
-make cli ARGS='critic --project ./projects/song-001 --planner deterministic'
-make cli ARGS='preview --project ./projects/song-001'
-make cli ARGS='approve --project ./projects/song-001'
-```
-
-The critic receives only reviewed plan metadata, path-free MIDI analyses, the
-validated arrangement, logical allow-lists, and compact section metrics. It never
-receives source audio, file paths, renderer settings, commands, or executable data.
-
-Existing version 1/2 arrangements remain available to the legacy audio
-renderer. Version-3 generation supports bass, drums, pad, strings, and
-transitions before full stem rendering.
-
-Generate bounded, registry-mapped drum MIDI from an approved version-3
-arrangement. The current generator supports 4/4 and 3/4 only and writes an
-inspectable full-timeline artifact before any drum rendering.
-
-```bash
-make cli ARGS='generate drums --project ./projects/song-001'
-make cli ARGS='generate pad --project ./projects/song-001'
-make cli ARGS='generate strings --project ./projects/song-001'
-```
-
-Strings are written separately to `midi/generated/strings.mid`. Their roles are
-bounded deterministic harmony, long notes, climax reinforcement, or a strictly
-confidence- and source-space-gated simple countermelody; they never accept raw notes.
-
-### Deterministic MIDI transitions
-
-Generate the inspectable `midi/generated/transitions.mid` boundary artifact
-from the exact reviewed Cohesion bridge records. Each bridge is copied to its
-shifted timeline boundary once; Arrangement records only the approved boundary
-IDs and hashes and never replaces the bridge decision. Legacy arrangements keep
-their existing `bridge`/`crossfade` behavior. The artifact records inserted bars
-in its timeline so later MIDI/stem assembly can apply the offset once.
-
-```bash
-make cli ARGS='generate transitions --project ./projects/song-001'
-```
-
-The engine only uses deterministic drum-fill, bass-walk, and pad-sustain
-gestures. It rejects cymbal transitions: the starter `sounds/` drum map has no
-licensed cymbal sample, and it will never substitute a clap or hi-hat.
-
-### Piano + bass quality gate
-
-The narrow quality gate renders only source piano and generated bass from an
-approved MIDI-first version-3 arrangement. It creates/reuses inspectable
-`midi/generated/piano.mid`, `midi/generated/bass.mid`, `stems/piano.wav`,
-`stems/bass.wav`, `mix/dry.wav`, and `quality-gate.json`. It intentionally does
-not invoke transitions, repair, LoFi, mastering, or MP3 export.
-
-```bash
-make cli ARGS='quality-gate --project ./projects/song-001'
-```
-
-It requires the configured local SFZ renderer (for example
-`SFZ_RENDERER_PATH=/path/to/sfizz_render`). The checked-in automated test uses
-a fake renderer; the real command remains a manual listening gate.
-
-The `mix` command preserves its legacy arrangement behavior. For a version-3
-arrangement it publishes the already rendered `mix/dry.wav` as `mix/mix.wav`;
-run `render` first. `build` renders or reuses version-3 stems automatically
-before repair, optional LoFi, mastering, and optional MP3 export.
-
-### Render all approved stems and the dry reference mix
-
-After generating the active MIDI tracks (including the exact approved Cohesion
-bridges when they insert bars), render the approved detailed arrangement to
-project-format PCM-24 WAV stems and `mix/dry.wav`:
-
-```bash
-make cli ARGS='render --project ./projects/song-001'
-```
-
-The command requires the configured local SFZ renderer and never invokes
-repair, LoFi, mastering, or MP3 export. It writes `stem-render.json` with
-input/artifact fingerprints, the approved Cohesion boundary hashes, and the
-one uniform peak-safety gain applied to the dry mix. A later `build` reuses
-these artifacts when their fingerprints still match.
-
-### Optional local Qwen planning
-
-Qwen is optional and makes exactly one strict JSON-only request for the global
-song plan. Start an OpenAI-compatible LM Studio server, then configure its
-endpoint and model:
-
-```bash
-export LM_STUDIO_CHAT_COMPLETIONS_URL=http://127.0.0.1:1234/v1/chat/completions
-export QWEN_MODEL=qwen
-./gradlew cliRun --args="arrange --project ./projects/demo --planner qwen --structure 'A A B B' --instruments piano,bass"
-```
-
-For repeatable local runs, use `--planner deterministic`. Qwen responses are
-parsed as strict JSON and validated against the exact structure, generated
-instance identities, MIDI analysis bounds, and instrument/enum allow-lists.
-
 ## Testing
 
 ```bash
@@ -440,9 +153,9 @@ make test                              # Kotlin unit/integration tests
 make build                             # Full Gradle build
 ```
 
-The end-to-end smoke path is `build --project … --no-ai`; it requires the
-worker running in another terminal (`make worker`). All processing stages use
-WAV/PCM-24 intermediates and preserve the source sample rate and channels.
+The automated tests use fakes or fixtures for worker, renderer, model, and
+audio-device boundaries. All processing stages use WAV/PCM-24 intermediates
+and preserve the source sample rate and channels.
 
 ## Make targets
 
@@ -451,11 +164,8 @@ WAV/PCM-24 intermediates and preserve the source sample rate and channels.
 | `make build` | Build the application |
 | `make test` | Run tests |
 | `make check` | Run Gradle verification |
-| `make check-legacy-frontend` | Reject reintroduced browser-frontend files/references |
 | `make run` | Start Spring Boot |
 | `make desktop` | Start the Compose Desktop application |
-| `make cli-help` | Show CLI help |
-| `make cli ARGS="..."` | Run CLI |
 | `make worker` | Start standalone Python worker on `:8081` |
 | `make python-install` | Install Python dependencies |
 | `make clean` | Clean Gradle outputs |
@@ -466,17 +176,16 @@ WAV/PCM-24 intermediates and preserve the source sample rate and channels.
 melotrail/
 ├── src/
 │   ├── main/
-│   │   ├── kotlin/ai/music/workstation/
-│   │   │   ├── audio/          # Audio processing
-│   │   │   ├── cli/            # CLI
-│   │   │   ├── dsp/            # DSP effects
-│   │   │   ├── model/          # Domain model
-│   │   │   ├── queue/          # Worker queue/client
+│   │   ├── kotlin/app/melotrail/
+│   │   │   ├── application/    # Typed local use cases
+│   │   │   ├── arrangement/    # Canonical project artifacts
+│   │   │   ├── preparation/    # Safe import/cleanup boundaries
 │   │   │   ├── worker/         # Worker integration
-│   │   │   └── server/         # Spring Boot API
+│   │   │   └── server/         # Optional JSON API
 │   │   └── resources/
 │   │       └── application.properties
 │   └── test/                    # All Kotlin tests
+├── desktopApp/                  # Compose Desktop product UI
 ├── worker/                      # Python worker (separate process)
 ├── Makefile
 ├── build.gradle.kts
@@ -528,11 +237,10 @@ Python exposes one endpoint per operation:
 | POST | `/cleanup` | Apply explicitly selected conservative WAV cleanup operations |
 
 The `app.melotrail.worker` boundary owns the Kotlin command schemas, direct
-endpoint/payload mapping, typed response/error mapping, health/readiness, and
-in-memory local job lifecycle. Spring only adapts its optional HTTP/SSE API to
-that boundary; Kotlin never starts or manages the Python process.
-There is no generic `/api/worker/command` request envelope between Kotlin and
-Python anymore.
+endpoint/payload mapping, typed response/error mapping, and health/readiness.
+Kotlin never starts or manages the Python process. The separate legacy Spring
+worker job/control routes are inventory-only; see
+[`docs/BASELINE_SUPPORT_MATRIX.md`](docs/BASELINE_SUPPORT_MATRIX.md).
 
 Install Python dependencies with:
 

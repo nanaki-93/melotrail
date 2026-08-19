@@ -17,14 +17,14 @@ None.
 
 ## Existing Code
 
-- `README.md`, `Makefile`, `build.gradle.kts`, `settings.gradle.kts`
+- `../../../../README.md`, `../../../../Makefile`, `../../../../build.gradle.kts`, `../../../../settings.gradle.kts`
 - `arrangement/ProjectStore.kt`, `SelectedMidiArtifactResolver.kt`
 - `application/ProjectApplicationService.kt`, especially `importPart`
 - `server/api/*`, `service/ProjectServiceAdapter.kt`, `model/Project.kt`
-- `InstrumentRegistry.kt`, `sounds/instruments.json`, `sounds/LICENSES.json`,
+- `InstrumentRegistry.kt`, `../../../../sounds/instruments.json`, `../../../../sounds/LICENSES.json`,
   `LocalSoundLibraryInventory.kt`, render/provenance registry consumers
-- `worker/README.md`, `worker/main.py`, Kotlin worker protocol/client
-- existing root, desktop, and worker tests; `docs/RELEASE_ACCEPTANCE.md`
+- `../../../../worker/README.md`, `../../../../worker/main.py`, Kotlin worker protocol/client
+- existing root, desktop, and worker tests; `../../../RELEASE_ACCEPTANCE.md`
 
 ## Changes
 
@@ -51,7 +51,7 @@ None.
 
 ## Files
 
-Likely modify `README.md`, `Makefile`, `build.gradle.kts`, relevant application
+Likely modify `../../../../README.md`, `../../../../Makefile`, `../../../../build.gradle.kts`, relevant application
 tests, worker docs/tests, and documentation inventory. Production changes are
 limited to a test-proven import defect or removal of a broken build task.
 
