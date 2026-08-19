@@ -35,7 +35,7 @@ schema window actively requires it and must have a named removal condition.
 | 019 | [Context-aware AI enhancement adapter](completed/019-ai-enhancement-adapter.md) | Later |
 | 020 | [Artifact comparison, bypass, and retry UX](completed/020-artifact-comparison-ui.md) | MVP |
 | 021 | [Persistent structure occurrence identity](completed/021-structure-occurrences.md) | MVP |
-| 022 | [Profile-independent arrangement roles and sound intent](022-arrangement-roles.md) | Later |
+| 022 | [Profile-independent arrangement roles and sound intent](completed/022-arrangement-roles.md) | Later |
 | 022B | [Metadata-driven Instrument Registry and resolver](022b-instrument-registry-resolution.md) | Later |
 | 023 | [Arrangement-before-cohesion dependency migration](023-arrangement-cohesion-order.md) | Later |
 | 024 | [Arrangement-aware cohesion](024-arrangement-aware-cohesion.md) | Later |

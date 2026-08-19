@@ -1006,7 +1006,7 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `Arrange dispatches existing typed planner instrument settings generate and approval intents`() = runComposeUiTest {
+    fun `Arrange dispatches typed role and desired-character settings generate and approval intents`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(arrangeState(), intents::add) } }
 
@@ -1014,18 +1014,18 @@ class WorkspaceScreenTest {
         onNodeWithTag(WorkspaceShellTags.CONTEXT_TOGGLE).performClick()
         onNodeWithTag(WorkspacePageTags.ARRANGE_OPTIONS_TOGGLE + "-context").performClick()
         onNodeWithTag(WorkspacePageTags.ARRANGE_PLANNER_PREFIX + "qwen").performClick()
-        onNodeWithTag(WorkspacePageTags.ARRANGE_INSTRUMENT_PREFIX + "bass").performScrollTo().performClick()
-        onNodeWithTag(WorkspacePageTags.ARRANGE_STYLE).performTextInput("warm lo-fi")
+        onNodeWithTag(WorkspacePageTags.ARRANGE_ROLE_PREFIX + "bass").performScrollTo().performClick()
+        onNodeWithTag(WorkspacePageTags.ARRANGE_TRAIT_PREFIX + "muted").performScrollTo().performClick()
         onNodeWithTag(WorkspacePageTags.ARRANGE_PRIMARY_ACTION).performScrollTo().performClick()
 
         assertEquals(
             listOf(
                 WorkspaceIntent.UpdateArrangementPlanner(ArrangementPlannerKind.QWEN),
-                WorkspaceIntent.ToggleArrangementInstrument("bass"),
-                WorkspaceIntent.UpdateArrangementStyle("warm lo-fi"),
+                WorkspaceIntent.ToggleArrangementRole(app.melotrail.arrangement.ArrangementRole.BASS),
+                WorkspaceIntent.ToggleArrangementTrait(app.melotrail.arrangement.SoundTrait.MUTED),
                 WorkspaceIntent.GenerateArrangement
             ),
-            intents.filterNot { it == WorkspaceIntent.UpdateArrangementStyle("") }
+            intents
         )
 
         intents.clear()

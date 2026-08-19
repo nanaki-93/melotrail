@@ -923,22 +923,19 @@ class WorkspaceViewModelTest {
 
         viewModel.accept(WorkspaceIntent.OpenProject(root))
         advanceUntilIdle()
-        viewModel.accept(WorkspaceIntent.ToggleArrangementInstrument("bass"))
-        viewModel.accept(WorkspaceIntent.UpdateArrangementStyle("warm lo-fi"))
+        viewModel.accept(WorkspaceIntent.ToggleArrangementRole(app.melotrail.arrangement.ArrangementRole.BASS))
+        viewModel.accept(WorkspaceIntent.ToggleArrangementTrait(app.melotrail.arrangement.SoundTrait.MUTED))
         viewModel.accept(WorkspaceIntent.GenerateArrangement)
         advanceUntilIdle()
 
         assertEquals(ArrangementPlannerKind.DETERMINISTIC, service.generatedRequest?.planner)
-        assertEquals(listOf("piano", "bass"), service.generatedRequest?.instruments)
-        assertEquals("warm lo-fi", service.generatedRequest?.style)
+        assertEquals(setOf(app.melotrail.arrangement.ArrangementRole.MELODY, app.melotrail.arrangement.ArrangementRole.BASS), service.generatedRequest?.roleSelections?.map { it.role }?.toSet())
+        assertTrue(app.melotrail.arrangement.SoundTrait.MUTED in service.generatedRequest!!.roleSelections.flatMap { it.toneTraits })
         assertEquals(arrangement, viewModel.state.value.arrangement)
         assertEquals(0, viewModel.state.value.selectedArrangementSection)
         viewModel.accept(WorkspaceIntent.SelectArrangementSection(null))
         assertNull(viewModel.state.value.selectedArrangementSection)
 
-        viewModel.accept(WorkspaceIntent.UpdateArrangementStyle("x".repeat(161)))
-        viewModel.accept(WorkspaceIntent.GenerateArrangement)
-        assertEquals("Style must be at most 160 characters.", assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation).message)
         viewModel.close()
     }
 

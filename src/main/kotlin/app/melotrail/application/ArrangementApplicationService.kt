@@ -4,6 +4,8 @@ import app.melotrail.arrangement.BassMidiGenerationAdapter
 import app.melotrail.arrangement.ApprovedArrangementCohesion
 import app.melotrail.arrangement.ArrangementCohesionBoundaryReference
 import app.melotrail.arrangement.ArrangementCohesionReferences
+import app.melotrail.arrangement.ArrangementRoleSelection
+import app.melotrail.arrangement.ArrangementSoundContext
 import app.melotrail.arrangement.DetailedArrangement
 import app.melotrail.arrangement.DetailedArrangementInput
 import app.melotrail.arrangement.DetailedArrangementPlanner
@@ -17,6 +19,7 @@ import app.melotrail.arrangement.InstrumentMode
 import app.melotrail.arrangement.LocalQwenDetailedArrangementPlanner
 import app.melotrail.arrangement.LocalQwenGlobalSongPlanner
 import app.melotrail.arrangement.LogicalInstrument
+import app.melotrail.arrangement.LegacyLogicalInstrumentRoles
 import app.melotrail.arrangement.MelodyCohesionInputFactory
 import app.melotrail.arrangement.MidiAnalysis
 import app.melotrail.arrangement.MidiTransitionGenerationAdapter
@@ -56,8 +59,12 @@ enum class ArrangementPlannerKind { DETERMINISTIC, QWEN }
 data class GenerateArrangementRequest(
     val root: Path,
     val planner: ArrangementPlannerKind = ArrangementPlannerKind.DETERMINISTIC,
+    /** Compatibility-only input for legacy callers and persisted v1 plans. */
+    @Deprecated("Use roleSelections")
     val style: String? = null,
-    val instruments: List<String> = LogicalInstrument.entries.map { it.wireName }
+    @Deprecated("Use roleSelections")
+    val instruments: List<String> = LogicalInstrument.entries.map { it.wireName },
+    val roleSelections: List<ArrangementRoleSelection> = emptyList()
 )
 
 data class ArrangementSectionSnapshot(
@@ -124,13 +131,20 @@ class DefaultArrangementApplicationService(
         val project = readProject(root)
         val structure = project.envelope.structureOccurrences.mapIndexed { index, occurrence -> occurrence.toSectionInstance(index) }
         require(structure.isNotEmpty()) { "Song structure must not be empty" }
-        val allowed = request.instruments.distinct()
-        require(allowed == request.instruments) { "Arrangement instruments must not contain duplicates" }
+        val context = request.roleSelections.takeIf { it.isNotEmpty() }?.let { structuredContext(project) }
+        val intents = request.roleSelections.map { it.bind(requireNotNull(context)) }
+        require(request.roleSelections.map(ArrangementRoleSelection::role).distinct().size == request.roleSelections.size) {
+            "Arrangement role selections must not contain duplicates"
+        }
+        val requestedInstruments = if (intents.isEmpty()) request.instruments else intents
+            .map { LegacyLogicalInstrumentRoles.logicalFor(it.role) }.distinct().sortedBy { if (it == "piano") 0 else 1 }
+        val allowed = requestedInstruments.distinct()
+        if (intents.isEmpty()) require(allowed == request.instruments) { "Arrangement instruments must not contain duplicates" }
         require("piano" in allowed && allowed.all { it in LogicalInstrument.entries.map(LogicalInstrument::wireName) }) {
             "Arrangement instruments must be selected from piano, bass, drums, pad, and strings and include piano"
         }
         val analyses = midiAnalyses(root, project, structure.map(SectionInstance::partId).toSet())
-        val input = SongPlanningInput(project.name, project.version, analyses, structure, allowed, request.style)
+        val input = SongPlanningInput(project.name, project.version, analyses, structure, allowed, request.style, soundContext = context, requestedIntents = intents)
         input.requireValid()
         requireApprovedCohesion(root, project, input)
         coroutineContext.ensureActive()
@@ -238,7 +252,9 @@ class DefaultArrangementApplicationService(
         val analyses = midiAnalyses(root, project, structure.map(SectionInstance::partId).toSet())
         val planningInput = SongPlanningInput(
             project.name, project.version, analyses, structure,
-            rawPlan.sections.flatMap { it.instrumentProgression }.distinct(), rawPlan.style
+            rawPlan.sections.flatMap { it.instrumentProgression }.distinct(), rawPlan.style,
+            soundContext = rawPlan.contextHash?.let { structuredContext(project) },
+            requestedIntents = rawPlan.sections.flatMap { it.soundIntents }.distinctBy { it.role }
         )
         val cohesion = requireApprovedCohesion(root, project, planningInput)
         val plan = SongPlanStore.read(root, planningInput)
@@ -343,6 +359,17 @@ class DefaultArrangementApplicationService(
     }
 
     private fun readProject(root: Path): Project = ProjectStore.read(root).also { it.requireValid(root) }
+    private fun structuredContext(project: Project): ArrangementSoundContext {
+        val settings = requireNotNull(project.envelope.compositionSettings?.takeIf { it.complete }) {
+            "Save complete project setup with profile, mood, key, and meter before arranging by role."
+        }
+        return ArrangementSoundContext(
+            profile = requireNotNull(settings.profile), mood = requireNotNull(settings.mood),
+            keyId = "${settings.key.tonic}-${settings.key.modeId.value}",
+            meterNumerator = settings.timeSignature.numerator, meterDenominator = settings.timeSignature.denominator,
+            resolvedProfileSha256 = settings.resolvedProfileSha256
+        ).also(ArrangementSoundContext::requireValid)
+    }
     private fun Path.normalizeRoot(): Path = toAbsolutePath().normalize()
     private fun sha256(path: Path): String = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
     private fun categoryFor(error: Throwable) = when (error) {

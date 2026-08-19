@@ -66,6 +66,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.melotrail.arrangement.MidiCleanupProfile
+import app.melotrail.arrangement.ArrangementRole
+import app.melotrail.arrangement.SoundTrait
 
 object WorkspaceTags {
     const val PROJECT_HEADER = "project-header"
@@ -971,17 +973,27 @@ private fun ArrangementPlanningControls(state: WorkspaceUiState, onIntent: (Work
         PlannerButton("Deterministic", draft.planner.name == "DETERMINISTIC", !disabled) { onIntent(WorkspaceIntent.UpdateArrangementPlanner(app.melotrail.application.ArrangementPlannerKind.DETERMINISTIC)) }
         PlannerButton("Qwen", draft.planner.name == "QWEN", !disabled) { onIntent(WorkspaceIntent.UpdateArrangementPlanner(app.melotrail.application.ArrangementPlannerKind.QWEN)) }
     }
-    OutlinedTextField(draft.style, { onIntent(WorkspaceIntent.UpdateArrangementStyle(it)) }, enabled = !disabled, label = { Text("Style (optional)") }, modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.ARRANGEMENT_STYLE })
+    Text("Role", style = MaterialTheme.typography.labelMedium)
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-        workstationInstruments.forEach { instrument ->
-            val required = instrument == "piano"
+        ArrangementRole.entries.forEach { role ->
+            val required = role == ArrangementRole.MELODY
             TextButton(
-                onClick = { onIntent(WorkspaceIntent.ToggleArrangementInstrument(instrument)) },
+                onClick = { onIntent(WorkspaceIntent.ToggleArrangementRole(role)) },
                 enabled = !disabled && !required,
-                modifier = Modifier.semantics { contentDescription = "$instrument ${if (required) "is required" else if (instrument in draft.instruments) "is selected" else "is not selected"} for arrangement generation" }
-            ) { Text(if (instrument in draft.instruments) "✓ ${instrument.replaceFirstChar(Char::uppercase)}" else instrument.replaceFirstChar(Char::uppercase)) }
+                modifier = Modifier.semantics { contentDescription = "$role ${if (required) "is required" else if (role in draft.roles) "is selected" else "is not selected"} for arrangement generation" }
+            ) { Text(if (role in draft.roles) "✓ ${role.name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)}" else role.name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)) }
         }
     }
+    Text("Desired Character", style = MaterialTheme.typography.labelMedium)
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+        listOf(SoundTrait.SOFT, SoundTrait.WARM, SoundTrait.MUTED, SoundTrait.SUSTAINED, SoundTrait.BRUSHED).forEach { trait ->
+            val selected = trait in draft.attackTraits || trait in draft.toneTraits || trait in draft.articulationTraits
+            TextButton(onClick = { onIntent(WorkspaceIntent.ToggleArrangementTrait(trait)) }, enabled = !disabled) {
+                Text(if (selected) "✓ ${trait.name.lowercase()}" else trait.name.lowercase())
+            }
+        }
+    }
+    Text("Suggested / Pinned Instrument — resolved separately; user ownership applies only to a pinned stable ID.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     Button(onClick = { onIntent(WorkspaceIntent.GenerateArrangement) }, enabled = !disabled, modifier = Modifier.semantics { testTag = WorkspaceTags.ARRANGEMENT_GENERATE }) { Text("Generate arrangement") }
 }
 

@@ -67,6 +67,8 @@ import app.melotrail.application.WorkflowStage
 import app.melotrail.application.WorkflowAction
 import app.melotrail.application.filtered
 import app.melotrail.arrangement.LogicalInstrument
+import app.melotrail.arrangement.ArrangementRole
+import app.melotrail.arrangement.SoundTrait
 import java.net.URI
 import java.nio.file.Path
 
@@ -157,6 +159,8 @@ internal object WorkspacePageTags {
     const val STRUCTURE_OPTIONS = "structure-options"
     const val ARRANGE_PLANNER_PREFIX = "arrange-planner-"
     const val ARRANGE_INSTRUMENT_PREFIX = "arrange-instrument-"
+    const val ARRANGE_ROLE_PREFIX = "arrange-role-"
+    const val ARRANGE_TRAIT_PREFIX = "arrange-trait-"
     const val ARRANGE_STYLE = "arrange-style"
     const val ARRANGE_INTENSITY = "arrange-intensity"
     const val ARRANGE_PRIMARY_ACTION = "arrange-primary-action"
@@ -1422,23 +1426,35 @@ private fun ArrangePlannerControls(state: WorkspaceUiState, onIntent: (Workspace
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
         ArrangementPlannerKind.entries.forEach { planner -> PlannerChoiceCard(planner, draft.planner == planner, !state.operation.isMutating, { onIntent(WorkspaceIntent.UpdateArrangementPlanner(planner)) }, Modifier.weight(1f)) }
     }
-    OutlinedTextField(value = draft.style, onValueChange = { onIntent(WorkspaceIntent.UpdateArrangementStyle(it)) }, enabled = !state.operation.isMutating, label = { Text("Style (optional)") }, supportingText = { Text("Up to 160 characters.") }, modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.ARRANGE_STYLE })
+    Text("Profile, mood, key, and meter come from saved Setup. The planner receives only controlled role and character requests.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     Text("Energy and density remain planner-derived from validated analyses; no manual intensity control is available.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable
 private fun ArrangeInstrumentControls(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
-    LogicalInstrument.entries.forEach { instrument ->
-        val selected = instrument.wireName in state.arrangementDraft.instruments
-        val required = instrument == LogicalInstrument.PIANO
-        Row(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small).clickable(enabled = !state.operation.isMutating && !required) { onIntent(WorkspaceIntent.ToggleArrangementInstrument(instrument.wireName)) }.padding(vertical = MusicWorkspaceTokens.Spacing.Xs), verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = selected, onCheckedChange = if (required || state.operation.isMutating) null else { _: Boolean -> onIntent(WorkspaceIntent.ToggleArrangementInstrument(instrument.wireName)) }, modifier = Modifier.semantics {
-                testTag = WorkspacePageTags.ARRANGE_INSTRUMENT_PREFIX + instrument.wireName
-                contentDescription = "${instrument.wireName} ${if (required) "is required" else if (selected) "is selected" else "is not selected"} for arrangement generation"
+    Text("Role", style = MaterialTheme.typography.labelMedium)
+    ArrangementRole.entries.forEach { role ->
+        val selected = role in state.arrangementDraft.roles
+        val required = role == ArrangementRole.MELODY
+        Row(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small).clickable(enabled = !state.operation.isMutating && !required) { onIntent(WorkspaceIntent.ToggleArrangementRole(role)) }.padding(vertical = MusicWorkspaceTokens.Spacing.Xs), verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked = selected, onCheckedChange = if (required || state.operation.isMutating) null else { _: Boolean -> onIntent(WorkspaceIntent.ToggleArrangementRole(role)) }, modifier = Modifier.semantics {
+                testTag = WorkspacePageTags.ARRANGE_ROLE_PREFIX + role.name.lowercase()
+                contentDescription = "${role.name.lowercase()} role ${if (required) "is required" else if (selected) "is selected" else "is not selected"} for arrangement generation"
             })
-            Text(instrument.wireName.replaceFirstChar(Char::uppercase), style = MaterialTheme.typography.bodySmall)
+            Text(role.name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase), style = MaterialTheme.typography.bodySmall)
         }
     }
+    Text("Desired Character", style = MaterialTheme.typography.labelMedium)
+    listOf(SoundTrait.SOFT, SoundTrait.WARM, SoundTrait.MUTED, SoundTrait.SUSTAINED, SoundTrait.BRUSHED).forEach { trait ->
+        val selected = trait in state.arrangementDraft.attackTraits || trait in state.arrangementDraft.toneTraits || trait in state.arrangementDraft.articulationTraits
+        Row(Modifier.fillMaxWidth().clickable(enabled = !state.operation.isMutating) { onIntent(WorkspaceIntent.ToggleArrangementTrait(trait)) }.padding(vertical = MusicWorkspaceTokens.Spacing.Xs), verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked = selected, onCheckedChange = if (state.operation.isMutating) null else { _: Boolean -> onIntent(WorkspaceIntent.ToggleArrangementTrait(trait)) }, modifier = Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_TRAIT_PREFIX + trait.name.lowercase() })
+            Text(trait.name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase), style = MaterialTheme.typography.bodySmall)
+        }
+    }
+    Text("Suggested / Pinned Instrument", style = MaterialTheme.typography.labelMedium)
+    Text("Instrument resolution is a separate suggestion and user-choice step; this arrangement does not select files or engine settings.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text("User ownership is retained only for a pinned stable instrument ID.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable

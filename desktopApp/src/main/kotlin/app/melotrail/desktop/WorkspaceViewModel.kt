@@ -78,6 +78,9 @@ import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.MidiCleanupOptions
 import app.melotrail.arrangement.MidiCleanupProfile
 import app.melotrail.arrangement.MidiAnalysisInput
+import app.melotrail.arrangement.ArrangementRole
+import app.melotrail.arrangement.ArrangementRoleSelection
+import app.melotrail.arrangement.SoundTrait
 import app.melotrail.arrangement.StageId
 import app.melotrail.arrangement.StageRunStatus
 import app.melotrail.application.MidiQualityStatus
@@ -325,8 +328,15 @@ val WorkspaceUiState.preview: PreviewUiState
 
 data class ArrangementDraft(
     val planner: ArrangementPlannerKind = ArrangementPlannerKind.DETERMINISTIC,
+    /** Compatibility-only: the Arrange UI no longer sends free-form style to planners. */
     val style: String = "",
-    val instruments: Set<String> = setOf("piano")
+    /** Compatibility-only: resolved logical instruments remain readable until Task 022B. */
+    val instruments: Set<String> = setOf("piano"),
+    val roles: Set<ArrangementRole> = setOf(ArrangementRole.MELODY),
+    val attackTraits: Set<SoundTrait> = setOf(SoundTrait.SOFT),
+    val toneTraits: Set<SoundTrait> = setOf(SoundTrait.WARM),
+    val articulationTraits: Set<SoundTrait> = emptySet(),
+    val pinnedInstrumentIds: Map<ArrangementRole, String> = emptyMap()
 )
 
 /** Supported Arrange views. They expose existing bounded controls and evidence only. */
@@ -624,6 +634,8 @@ sealed interface WorkspaceIntent {
     data class UpdateCohesionPlanner(val planner: CohesionPlannerKind) : WorkspaceIntent
     data class UpdateArrangementStyle(val style: String) : WorkspaceIntent
     data class ToggleArrangementInstrument(val instrument: String) : WorkspaceIntent
+    data class ToggleArrangementRole(val role: ArrangementRole) : WorkspaceIntent
+    data class ToggleArrangementTrait(val trait: SoundTrait) : WorkspaceIntent
     data class UpdateMixSetting(val instrument: String, val setting: LogicalMixSetting) : WorkspaceIntent
     data object ResetMix : WorkspaceIntent
     data class UpdateBuildOptions(val options: BuildOptionsDraft) : WorkspaceIntent
@@ -807,6 +819,8 @@ class WorkspaceViewModel(
             is WorkspaceIntent.UpdateCohesionPlanner -> mutableState.update { it.copy(cohesionDraft = it.cohesionDraft.copy(planner = intent.planner), notification = null) }
             is WorkspaceIntent.UpdateArrangementStyle -> mutableState.update { it.copy(arrangementDraft = it.arrangementDraft.copy(style = intent.style), arrangementDraftDirty = true) }
             is WorkspaceIntent.ToggleArrangementInstrument -> toggleArrangementInstrument(intent.instrument)
+            is WorkspaceIntent.ToggleArrangementRole -> toggleArrangementRole(intent.role)
+            is WorkspaceIntent.ToggleArrangementTrait -> toggleArrangementTrait(intent.trait)
             is WorkspaceIntent.UpdateMixSetting -> updateMixSetting(intent.instrument, intent.setting)
             WorkspaceIntent.ResetMix -> resetMix()
             is WorkspaceIntent.UpdateBuildOptions -> mutableState.update { it.copy(buildOptions = intent.options) }
@@ -2282,6 +2296,33 @@ class WorkspaceViewModel(
         }
     }
 
+    private fun toggleArrangementRole(role: ArrangementRole) {
+        if (state.value.operation.isMutating || role == ArrangementRole.MELODY) return
+        mutableState.update { current ->
+            val selected = current.arrangementDraft.roles
+            current.copy(arrangementDraft = current.arrangementDraft.copy(roles = if (role in selected) selected - role else selected + role), arrangementDraftDirty = true)
+        }
+    }
+
+    private fun toggleArrangementTrait(trait: SoundTrait) {
+        if (state.value.operation.isMutating) return
+        mutableState.update { current ->
+            val draft = current.arrangementDraft
+            val selected = when (trait) {
+                SoundTrait.SOFT, SoundTrait.HARD, SoundTrait.BRUSHED -> draft.attackTraits
+                SoundTrait.WARM, SoundTrait.DARK, SoundTrait.BRIGHT, SoundTrait.MUTED, SoundTrait.AIRY -> draft.toneTraits
+                else -> draft.articulationTraits
+            }
+            val changed = if (trait in selected) selected - trait else selected + trait
+            val updated = when (trait) {
+                SoundTrait.SOFT, SoundTrait.HARD, SoundTrait.BRUSHED -> draft.copy(attackTraits = changed)
+                SoundTrait.WARM, SoundTrait.DARK, SoundTrait.BRIGHT, SoundTrait.MUTED, SoundTrait.AIRY -> draft.copy(toneTraits = changed)
+                else -> draft.copy(articulationTraits = changed)
+            }
+            current.copy(arrangementDraft = updated, arrangementDraftDirty = true)
+        }
+    }
+
     private fun generateCohesion() {
         val project = state.value.project ?: return fail("generate cohesion", "Open a project before generating cohesion.")
         if (state.value.operation.isMutating) return
@@ -2363,9 +2404,18 @@ class WorkspaceViewModel(
             state.value.structureDraft.isEmpty() -> fail("generate arrangement", "Add at least one section to the song structure before arranging.")
             missing.isNotEmpty() -> fail("generate arrangement", "Analyze every structure part before arranging: ${missing.joinToString(", ")}.")
             project.version >= 3 && !project.readiness.cohesionReady -> fail("generate arrangement", "Generate and approve current cohesion for every structure occurrence before arranging.")
-            state.value.arrangementDraft.style.trim().length > MAX_STYLE_LENGTH -> fail("generate arrangement", "Style must be at most $MAX_STYLE_LENGTH characters.")
             else -> runGenerateArrangement(
-                GenerateArrangementRequest(project.root, state.value.arrangementDraft.planner, state.value.arrangementDraft.style.trim().ifBlank { null }, arrangementInstruments.filter { it in state.value.arrangementDraft.instruments })
+                GenerateArrangementRequest(
+                    root = project.root,
+                    planner = state.value.arrangementDraft.planner,
+                    roleSelections = state.value.arrangementDraft.roles.sortedBy { it.name }.map { role ->
+                        ArrangementRoleSelection(
+                            role, state.value.arrangementDraft.attackTraits, state.value.arrangementDraft.toneTraits,
+                            state.value.arrangementDraft.articulationTraits,
+                            pinnedInstrumentId = state.value.arrangementDraft.pinnedInstrumentIds[role]
+                        )
+                    }
+                )
             )
         }
     }
