@@ -6,7 +6,6 @@ import app.melotrail.arrangement.CohesionModelIdentity
 import app.melotrail.arrangement.EnergyContour
 import app.melotrail.arrangement.HarmonicHandoff
 import app.melotrail.arrangement.LogicalInstrument
-import app.melotrail.arrangement.MelodyCohesionInputFactory
 import app.melotrail.arrangement.MidiAnalysis
 import app.melotrail.arrangement.MidiPartAnalyzer
 import app.melotrail.arrangement.MidiReferences
@@ -19,6 +18,7 @@ import app.melotrail.arrangement.RhythmicGesture
 import app.melotrail.arrangement.SectionInstance
 import app.melotrail.arrangement.SongPlanningInput
 import app.melotrail.arrangement.TimingHandoff
+import app.melotrail.arrangement.TransitionRoleAction
 import app.melotrail.arrangement.TransitionBridgePlan
 import app.melotrail.arrangement.TransitionCohesionInput
 import app.melotrail.arrangement.TransitionCohesionInputFactory
@@ -47,6 +47,7 @@ class CohesionApplicationServiceTest {
         project(listOf("A", "A", "A"))
         arrange()
         val service = DefaultCohesionApplicationService(::plan)
+        val sourceBefore = java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(root.resolve("midi/clean/A.mid"))).joinToString("") { "%02x".format(it) }
         val draft = service.generate(GenerateCohesionRequest(root, CohesionPlannerKind.QWEN))
         assertFalse(draft.approved)
         assertEquals(listOf("occ-A-1" to "occ-A-2", "occ-A-2" to "occ-A-3"), draft.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId })
@@ -55,6 +56,7 @@ class CohesionApplicationServiceTest {
         assertThrows(IllegalArgumentException::class.java) { service.approve(root) }
         service.reviewBoundary(root, "occ-A-2", "occ-A-3")
         assertTrue(service.approve(root).approved)
+        assertEquals(sourceBefore, java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(root.resolve("midi/clean/A.mid"))).joinToString("") { "%02x".format(it) })
     }
 
     @Test fun `Cohesion rejects an absent or rerun arrangement`() = runBlocking {
@@ -84,9 +86,19 @@ class CohesionApplicationServiceTest {
         assertTrue(service.approve(root).approved)
     }
 
+    @Test fun `rejected cohesion is stale evidence and generation retries from current input`() = runBlocking {
+        project(listOf("A", "A")); arrange()
+        val service = DefaultCohesionApplicationService(::plan)
+        service.generate(GenerateCohesionRequest(root))
+        service.reject(root)
+        assertTrue(app.melotrail.arrangement.WorkflowArtifact.COHESION in ProjectStore.read(root).workflow.stale)
+        assertFalse(service.regenerate(GenerateCohesionRequest(root)).approved)
+    }
+
     private fun plan(input: TransitionCohesionInput): TransitionCohesionPlan = TransitionCohesionPlan(
-        inputHash = input.inputHash, model = CohesionModelIdentity("qwen", "1", "1".repeat(64)),
-        boundaries = input.boundaries.map { b -> TransitionBridgePlan(b.outgoingInstanceId, b.incomingInstanceId, b.outgoing.sourceHash, b.incoming.sourceHash, BridgeType.DRUM_FILL, 1, "drums", HarmonicHandoff.HOLD, RhythmicGesture.FILL, EnergyContour.RISE, TimingHandoff.PRESERVE, TimingHandoff.PRESERVE, "Carry energy into the next section") }
+        inputHash = input.inputHash, arrangementSha256 = input.arrangementSha256, contextSha256 = input.contextSha256,
+        model = CohesionModelIdentity("qwen", "1", "1".repeat(64)),
+        boundaries = input.boundaries.map { b -> TransitionBridgePlan(b.outgoingInstanceId, b.incomingInstanceId, b.outgoing.sourceHash, b.incoming.sourceHash, input.arrangementSha256, input.contextSha256, TransitionRoleAction.DRUM_FILL, BridgeType.DRUM_FILL, 1, "drums", HarmonicHandoff.HOLD, RhythmicGesture.FILL, EnergyContour.RISE, TimingHandoff.PRESERVE, TimingHandoff.PRESERVE, "Carry energy into the next section") }
     )
 
     private fun project(structure: List<String>) {

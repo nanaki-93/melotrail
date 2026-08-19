@@ -38,6 +38,7 @@
         "enhancementAmountPercent": { "minimum": 0, "maximum": 35, "default": 15 }
       },
       "cohesionVocabulary": [ "gentle", "looping", "spacious", "understated" ],
+      "transitionActions": [ "drum-fill", "bass-motion", "sustained-texture", "continuity" ],
       "styleProcessing": { "capability": "style-processing", "permittedEffects": [ "tape-texture", "vinyl-texture", "warmth" ] },
       "licensePreference": "prefer-no-attribution"
     }

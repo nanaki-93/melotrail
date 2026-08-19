@@ -118,19 +118,11 @@ class StemRenderingMixer(
     }
 
     private fun resolveOccurrenceMidi(root: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): Map<String, OccurrenceMidiArtifact> {
-        val planning = SongPlanningInput(
-            project.name,
-            project.version,
-            arrangement.sections.map { it.partId }.distinct().associateWith(analyses::getValue),
-            arrangement.sections.map { SectionInstance(it.index, it.partId, it.instanceId) },
-            LogicalInstrument.entries.map(LogicalInstrument::wireName)
-        )
-        planning.requireValid()
-        val input = MelodyCohesionInputFactory.build(root, project, planning).first
-        val resolved = OccurrenceMidiArtifactResolver().resolve(root, project, input)
+        val occurrences = arrangement.sections.map { SectionInstance(it.index, it.partId, it.instanceId) }
+        val resolved = OccurrenceMidiArtifactResolver().resolve(root, project, occurrences)
         val arrangementIds = arrangement.sections.map(DetailedArrangementSection::instanceId)
         if (project.workflow.cohesion?.approved == true) require(resolved.map(OccurrenceMidiArtifact::occurrenceId) == arrangementIds) {
-            "Resolved cohesion MIDI does not match the approved arrangement occurrences."
+            "Resolved selected MIDI does not match the approved arrangement occurrences."
         }
         return arrangementIds.zip(resolved).toMap()
     }

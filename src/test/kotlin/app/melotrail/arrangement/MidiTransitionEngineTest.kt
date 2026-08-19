@@ -122,7 +122,7 @@ class MidiTransitionEngineTest {
         Files.writeString(source, "immutable source evidence")
         writeTestMidi(clean)
         val project = Project(Project.CURRENT_VERSION, "approved-cohesion", listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid"))), listOf("A", "A"), RenderFormat())
-        val bridge = TransitionBridgePlan("A1", "A2", "1".repeat(64), "1".repeat(64), BridgeType.DRUM_FILL, 1, "drums", HarmonicHandoff.HOLD, RhythmicGesture.FILL, EnergyContour.RISE, rationale = "Approved drum handoff")
+        val bridge = TransitionBridgePlan("A1", "A2", "1".repeat(64), "1".repeat(64), "2".repeat(64), "3".repeat(64), TransitionRoleAction.DRUM_FILL, BridgeType.DRUM_FILL, 1, "drums", HarmonicHandoff.HOLD, RhythmicGesture.FILL, EnergyContour.RISE, rationale = "Approved drum handoff")
         val approved = projectRoot.resolve(CohesionBoundaryArtifactPaths.approved("A1", "A2"))
         Files.createDirectories(approved.parent)
         Files.writeString(approved, Json.encodeToString(bridge))

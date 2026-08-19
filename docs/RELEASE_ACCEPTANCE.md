@@ -39,7 +39,7 @@ flows; all collaborators are fake or deterministic and make no network calls:
 | Direct MIDI / Original Feel; direct MIDI / fixed 80-BPM Lo-fi Feel | `ProjectApplicationServiceTest` verifies immutable source/raw/clean MIDI, separate Lo-fi derived MIDI, and restoring cleaned MIDI. |
 | WAV inspection, explicit cleanup, transcription | `EndToEndWorkflowCompatibilityTest` exercises clean and noisy WAV fixtures through the application services. |
 | MP3 decode/transcription path | The same compatibility test covers an MP3 fixture; worker input-inspection and transcription tests cover the Python boundary. Live optional decoder/model inference was not run. |
-| Repeated occurrences with distinct cohesion edits | `MelodyCohesionTest` verifies distinct bounded results for `A1` and `A2`, source preservation, atomic approval, and unsafe-plan rejection. |
+| Repeated occurrences and reviewed boundaries | `CohesionApplicationServiceTest` and `TransitionCohesionPlannerTest` verify exact adjacent-boundary coverage, source preservation, hash binding, and unsafe-plan rejection. |
 | Deterministic and Qwen arrangement paths | `ArrangementApplicationServiceTest`, `GlobalSongPlannerTest`, and `DetailedArrangementTest` cover deterministic approval, explicit Qwen drafts, strict JSON, and unsafe-field rejection. |
 | Commercial-ready and blocked cases | `CommercialProvenanceTest`, `ModelLicenseTest`, and cohesion commercial tests cover deterministic evidence and unresolved/blocked dependency cases. |
 

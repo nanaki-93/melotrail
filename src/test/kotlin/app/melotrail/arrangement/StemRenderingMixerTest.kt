@@ -94,52 +94,6 @@ class StemRenderingMixerTest {
         assertEquals(90.0, tempos(bass).getValue(3_840L), 0.001)
     }
 
-    @Test
-    fun `historical occurrence Cohesion is not used as a piano source and leaves source evidence immutable`() = runBlocking {
-        val project = Project(
-            Project.CURRENT_VERSION,
-            "occurrence-render",
-            listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid"))),
-            listOf("A", "A"),
-            RenderFormat(8_000, 1, 24)
-        )
-        writeMidi(root.resolve("source/A.mid"), 0, 1_920)
-        Files.createDirectories(root.resolve("midi/clean"))
-        Files.copy(root.resolve("source/A.mid"), root.resolve("midi/clean/A.mid"))
-        ProjectStore.write(root, project)
-        val sourceHash = sha256(root.resolve("source/A.mid"))
-        val cleanHash = sha256(root.resolve("midi/clean/A.mid"))
-        val analysis = analysis("A")
-        val planning = SongPlanningInput(project.name, project.version, mapOf("A" to analysis), listOf(SectionInstance(0, "A", "A1"), SectionInstance(1, "A", "A2")), LogicalInstrument.entries.map { it.wireName })
-        val (input, sources) = MelodyCohesionInputFactory.build(root, project, planning)
-        val plan = DeterministicMelodyCohesionPlanner().plan(input).copy(
-            occurrences = input.occurrences.mapIndexed { index, occurrence ->
-                MelodyOccurrencePlan(
-                    occurrence.instanceId,
-                    occurrence.partId,
-                    occurrence.sourceHash,
-                    edits = if (index == 1) listOf(MelodyTranspose(semitones = 12)) else emptyList(),
-                    rationale = "Fixture occurrence ${index + 1}"
-                )
-            }
-        )
-        MelodyCohesionStore.writeDraft(root, input, plan)
-        MelodyCohesionStore.approve(root, input, sources)
-        val approved = ProjectStore.read(root)
-        val arrangement = DetailedArrangement(sections = listOf(
-            DetailedArrangementSection(0, "A1", "A", SongSectionPurpose.DEVELOPMENT, 0.3, listOf(PianoSourcePlan()), TransitionPlan()),
-            DetailedArrangementSection(1, "A2", "A", SongSectionPurpose.CLIMAX, 0.7, listOf(PianoSourcePlan()), TransitionPlan())
-        ))
-        val renderer = FakeRenderer()
-
-        StemRenderingMixer(renderer, Path.of("sounds")).render(root, approved, arrangement, mapOf("A" to analysis))
-
-        val piano = requireNotNull(renderer.sequences[LogicalInstrument.PIANO])
-        assertEquals(listOf(48, 48), noteOnPitches(piano))
-        assertEquals(sourceHash, sha256(root.resolve("source/A.mid")))
-        assertEquals(cleanHash, sha256(root.resolve("midi/clean/A.mid")))
-    }
-
     private fun project() = Project(Project.CURRENT_VERSION, "render", listOf(
         Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid")),
         Part("B", "source/B.mid", midi = MidiReferences(clean = "midi/clean/B.mid"))

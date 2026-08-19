@@ -30,6 +30,7 @@ data class ResolvedCompositionProfile(
     val enhancementAmountPercent: Int,
     val instrumentAffinity: List<ResolvedRoleAffinity>,
     val cohesionVocabulary: List<String>,
+    val transitionActions: List<String>,
     val styleProcessing: StyleProcessingPolicy?,
     val licensePreference: LicensePreference,
     val resolvedHash: String
@@ -115,6 +116,7 @@ class ValidatedCompositionProfileCatalog(
             enhancementAmountPercent = definition.tolerance.enhancementAmountPercent.clamp(definition.tolerance.enhancementAmountPercent.default + (modifier.enhancementAmountPercentDelta ?: 0)),
             instrumentAffinity = affinity,
             cohesionVocabulary = definition.cohesionVocabulary.sorted(),
+            transitionActions = definition.transitionActions.sorted(),
             styleProcessing = definition.styleProcessing,
             licensePreference = definition.licensePreference,
             resolvedHash = ""

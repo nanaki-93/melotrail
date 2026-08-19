@@ -105,10 +105,8 @@ ends, its removal is part of the same policy change.
 - Configuration is split across desktop preferences, root config classes, and
   the optional Spring service. Consolidation should follow ownership boundaries
   instead of preceding the UI milestone.
-- Some older whole-melody cohesion and legacy UI code remains alongside the
-  active boundary-cohesion/router path. Migration tasks must move supported data/
-  callers and then delete those superseded implementations and exclusive tests;
-  they are not allowed to survive as dormant alternatives.
+- Cohesion uses only reviewed, arrangement-aware transition boundaries. Historical
+  whole-occurrence records are readable project evidence, not executable workflow.
 
 See [the architecture audit](docs/plan/architecture.md) for file-level findings
 and reuse/retirement decisions.

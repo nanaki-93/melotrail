@@ -77,9 +77,8 @@ foundations and should be evolved rather than bypassed.
   the separate model/store as the canonical adapter lands. If it has no supported
   users, export any required data and delete the entire product surface in Task
   028. A frozen/deprecated copy is not an accepted state.
-- Whole-occurrence `MelodyCohesion` edit behavior is superseded by reviewed
-  transition-boundary cohesion. Map supported evidence, then delete its executable
-  implementation/wiring/tests in Task 024; historical data does not require code.
+- Historical whole-occurrence cohesion records remain readable evidence only.
+  Reviewed arrangement-aware transition boundaries are the sole executable path.
 - Duplicate/older workspace UI components should be removed only after router
   coverage demonstrates they are unreachable.
 - The generic provenance log should not compete with commercial provenance and

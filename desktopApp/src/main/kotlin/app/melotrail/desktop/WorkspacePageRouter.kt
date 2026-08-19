@@ -1160,6 +1160,7 @@ private fun ArrangePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
     val mutating = state.operation.isMutating
     val arrangementApproved = state.arrangement?.let { it.approved && !it.approvalRequired && !it.stale } == true
     val cohesionAction = if (!arrangementApproved || state.project?.readiness?.cohesionReady == true) null else when {
+        state.cohesion?.stale == true -> "Retry Cohesion"
         state.cohesion?.approvalRequired == true && state.cohesion.boundaries.any { !it.reviewed } -> "Review Cohesion"
         state.cohesion?.approvalRequired == true -> "Approve Cohesion"
         else -> "Generate Cohesion"
@@ -1179,7 +1180,7 @@ private fun ArrangePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
                     OutlinedButton(
                         onClick = {
                             when (label) {
-                                "Generate Cohesion" -> onIntent(WorkspaceIntent.GenerateCohesion)
+                                "Generate Cohesion", "Retry Cohesion" -> onIntent(WorkspaceIntent.GenerateCohesion)
                                 "Approve Cohesion" -> onIntent(WorkspaceIntent.ApproveCohesion)
                                 else -> onIntent(WorkspaceIntent.SelectArrangeTab(ArrangeTab.TRANSITIONS))
                             }
@@ -1211,6 +1212,7 @@ private fun CohesionReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent) 
     OverviewCard(WorkspacePageTags.ARRANGE_COHESION_REVIEW, "Cohesion boundary review") {
         Text("Review every current boundary before aggregate approval.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         cohesion.boundaries.filterNot { it.reviewed }.forEach { boundary ->
+            Text("${boundary.outgoingInstanceId} → ${boundary.incomingInstanceId}: ${boundary.rationale}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             OutlinedButton(
                 onClick = { onIntent(WorkspaceIntent.ReviewCohesionBoundary(boundary.outgoingInstanceId, boundary.incomingInstanceId)) },
                 enabled = !state.operation.isMutating,

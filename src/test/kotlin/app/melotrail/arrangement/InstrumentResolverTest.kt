@@ -4,9 +4,12 @@ import app.melotrail.profile.CompositionProfileRef
 import app.melotrail.profile.MoodRef
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
 import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.BasicFileAttributes
 import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -73,9 +76,19 @@ class InstrumentResolverTest {
     }
 
     private fun copyLibrary() {
-        Files.walk(Path.of("sounds")).use { paths -> paths.forEach { source ->
-            val target = root.resolve(Path.of("sounds").relativize(source).toString())
-            if (Files.isDirectory(source)) Files.createDirectories(target) else Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING)
-        } }
+        val sourceRoot = Path.of("sounds").toAbsolutePath().normalize()
+        val productionRoot = sourceRoot.resolve("production")
+        Files.walkFileTree(sourceRoot, object : SimpleFileVisitor<Path>() {
+            override fun preVisitDirectory(directory: Path, attributes: BasicFileAttributes): FileVisitResult {
+                if (directory == productionRoot) return FileVisitResult.SKIP_SUBTREE
+                Files.createDirectories(root.resolve(sourceRoot.relativize(directory).toString()))
+                return FileVisitResult.CONTINUE
+            }
+
+            override fun visitFile(file: Path, attributes: BasicFileAttributes): FileVisitResult {
+                Files.copy(file, root.resolve(sourceRoot.relativize(file).toString()), StandardCopyOption.REPLACE_EXISTING)
+                return FileVisitResult.CONTINUE
+            }
+        })
     }
 }

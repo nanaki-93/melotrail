@@ -151,6 +151,8 @@ data class CompositionProfile(
     val groove: GrooveHumanizationBounds,
     val tolerance: CorrectionEnhancementTolerance,
     val cohesionVocabulary: List<String>,
+    /** Bounded, advisory continuity actions; never renderer parameters or paths. */
+    val transitionActions: List<String> = listOf("drum-fill", "bass-motion", "sustained-texture", "continuity"),
     val styleProcessing: StyleProcessingPolicy? = null,
     val licensePreference: LicensePreference = LicensePreference.PREFER_NO_ATTRIBUTION
 ) {
@@ -170,6 +172,8 @@ data class CompositionProfile(
             "Cohesion vocabulary is invalid"
         }
         cohesionVocabulary.forEach { require(CATALOG_ID.matches(it)) { "Cohesion vocabulary contains an invalid term" } }
+        require(transitionActions.isNotEmpty() && transitionActions.distinct().size == transitionActions.size) { "Transition action policy is invalid" }
+        transitionActions.forEach { require(it in setOf("drum-fill", "bass-motion", "chord-motion", "sustained-texture", "dynamics-automation", "continuity")) { "Transition action policy contains an unsupported action" } }
         styleProcessing?.requireValid()
         styleProcessing?.let { require(it.capability in capabilities) { "Style processing policy claims an undeclared capability" } }
     }

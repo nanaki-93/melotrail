@@ -446,9 +446,9 @@ class MidiTransitionGenerationAdapter(
         bridge = BridgePlan(
             energy = when (energyContour) { EnergyContour.HOLD -> 0.5; EnergyContour.RISE -> 0.7; EnergyContour.FALL -> 0.3 },
             elements = when (bridgeType) {
-                BridgeType.DRUM_FILL, BridgeType.BUILD -> listOf(BridgeElement.DRUM_FILL)
+                BridgeType.DRUM_FILL, BridgeType.BUILD, BridgeType.CONTINUITY -> listOf(BridgeElement.DRUM_FILL)
                 BridgeType.BASS_WALK -> listOf(BridgeElement.BASS_PICKUP)
-                BridgeType.PAD_SUSTAIN -> listOf(BridgeElement.PAD_SWELL)
+                BridgeType.PAD_SUSTAIN, BridgeType.CHORD_MOTION -> listOf(BridgeElement.PAD_SWELL)
             }
         )
     )

@@ -307,7 +307,7 @@ data class CohesionWorkflowReferences(
     val plan: WorkflowArtifactReference,
     val occurrences: List<CohesionOccurrenceReference>,
     val approved: Boolean,
-    /** Empty for the supported legacy per-occurrence Cohesion representation. */
+    /** Historical whole-occurrence evidence only; new Cohesion writes this empty. */
     val boundaries: List<CohesionBoundaryReference> = emptyList(),
     /** The saved Structure occurrence sequence that produced [inputSha256]. */
     val structureSha256: String = ""

@@ -20,7 +20,7 @@ import app.melotrail.arrangement.MidiFeelReport
 import app.melotrail.arrangement.MidiFeelReportStore
 import app.melotrail.arrangement.MidiLoFiFeelTransformer
 import app.melotrail.arrangement.MidiTranspositionReportStore
-import app.melotrail.arrangement.MelodyCohesionInputFactory
+import app.melotrail.arrangement.DetailedArrangement
 import app.melotrail.arrangement.TransitionCohesionInputFactory
 import app.melotrail.arrangement.TransitionCohesionStore
 import app.melotrail.arrangement.SelectedMidiArtifactResolver
@@ -413,7 +413,7 @@ data class ProjectReadiness(
     /** Durable invalidation evidence; availability above remains file-derived. */
     val staleArtifacts: Set<app.melotrail.arrangement.WorkflowArtifact> = emptySet(),
     val cohesionApprovalRequired: Boolean = false,
-    /** True only for a complete, approved, non-stale per-occurrence cohesion result. */
+    /** True only for a complete, approved, non-stale arrangement-aware boundary result. */
     val cohesionReady: Boolean = false,
     /** Creator attestation is evidence only; absence always blocks commercial-ready status. */
     val commercialSourceAttestationsComplete: Boolean = false,
@@ -1267,23 +1267,13 @@ class DefaultProjectApplicationService(
             json.decodeFromString(MidiAnalysis.serializer(), Files.readString(root.resolve(reference.file)))
         }
         val input = SongPlanningInput(project.name, project.version, analyses, structure, LogicalInstrument.entries.map { it.wireName })
-        val current = MelodyCohesionInputFactory.build(root, project, input, requireCurrentAnalyses = true).first
         val arrangement = project.workflow.arrangement ?: return false
         if (WorkflowArtifact.ARRANGEMENT in project.workflow.stale) return false
-        val transitionInput = TransitionCohesionInputFactory.from(current, arrangement.arrangement.sha256)
-        if (cohesion.boundaries.isNotEmpty() || current.boundaries.isEmpty()) {
-            return TransitionCohesionStore.isApprovedCurrent(root, transitionInput)
-        }
-        val references = cohesion.occurrences.associateBy { it.instanceId }
-        cohesion.inputSha256 == current.inputHash && cohesion.structureSha256 == current.structureSha256 &&
-            references.keys == current.occurrences.map { it.instanceId }.toSet() &&
-            current.occurrences.all { occurrence ->
-                val reference = references.getValue(occurrence.instanceId)
-                reference.approved && reference.sourceSha256 == occurrence.sourceHash && run {
-                    val file = root.resolve(reference.result.file).normalize()
-                    file.startsWith(root) && Files.isRegularFile(file) && sha256(file) == reference.result.sha256
-                }
-            }
+        val arrangementPath = root.resolve(arrangement.arrangement.file).normalize()
+        require(arrangementPath.startsWith(root) && Files.isRegularFile(arrangementPath) && sha256(arrangementPath) == arrangement.arrangement.sha256)
+        val detailed = json.decodeFromString(DetailedArrangement.serializer(), Files.readString(arrangementPath))
+        val transitionInput = TransitionCohesionInputFactory.build(root, project, input, detailed, arrangement.arrangement.sha256, arrangement.contextSha256)
+        return TransitionCohesionStore.isApprovedCurrent(root, transitionInput)
     }.getOrDefault(false)
 
     private fun SongPart.summary(root: Path, analysisCurrent: Boolean, aiFixCurrent: Boolean, midiFeelCurrent: Boolean, projectKey: MusicalKey?): PartSummary {

@@ -1,5 +1,6 @@
 package app.melotrail.arrangement
 
+import app.melotrail.profile.BundledCompositionProfileCatalog
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.nio.charset.StandardCharsets
@@ -16,29 +17,35 @@ import javax.sound.midi.Sequence
 import javax.sound.midi.ShortMessage
 import kotlin.math.roundToLong
 
-/** Task 116's path-free, boundary-only model contract. */
 @Serializable
-data class TransitionCohesionInput(
+data class CohesionModelIdentity(val provider: String, val model: String, val sha256: String) {
+    init { require(provider.matches(Regex("[a-z0-9_-]{1,40}")) && model.length in 1..80 && sha256.matches(Regex("[0-9a-f]{64}"))) { "Cohesion model identity is invalid" } }
+    companion object { val DETERMINISTIC = CohesionModelIdentity("deterministic", "transition-cohesion-v3", "0".repeat(64)) }
+}
+
+/** Path-free, arrangement-aware evidence for every adjacent saved occurrence. */
+@Serializable data class TransitionCohesionInput(
     val version: Int = VERSION,
     val inputHash: String,
     val structureSha256: String,
-    /** Exact approved arrangement identity; Cohesion cannot be planned without it. */
-    val arrangementSha256: String = "",
+    val arrangementSha256: String,
+    val contextSha256: String,
     val supportedInstruments: List<String>,
     val boundaries: List<TransitionBoundaryInput>
-) { companion object { const val VERSION = 2 } }
+) { companion object { const val VERSION = 3 } }
 
-@Serializable
-data class TransitionBoundaryInput(
+@Serializable data class TransitionBoundaryInput(
     val outgoingInstanceId: String,
     val incomingInstanceId: String,
     val outgoing: TransitionMusicalEvidence,
-    val incoming: TransitionMusicalEvidence
+    val incoming: TransitionMusicalEvidence,
+    val allowedRoleActions: List<TransitionRoleAction>,
+    val transitionPolicy: TransitionPolicyEvidence
 )
 
-@Serializable
-data class TransitionMusicalEvidence(
+@Serializable data class TransitionMusicalEvidence(
     val partId: String,
+    /** Hash of selected immutable MIDI; Cohesion never supplies a melody replacement. */
     val sourceHash: String,
     val analysisHash: String,
     val ppq: Int,
@@ -48,31 +55,39 @@ data class TransitionMusicalEvidence(
     val tempo: MidiTempoChange,
     val meter: MidiTimeSignature,
     val energy: Double,
-    val boundary: MelodyBoundarySummary
+    val boundary: TransitionBoundarySummary,
+    val arrangement: TransitionArrangementEvidence
 )
 
-@Serializable
-data class TransitionCohesionPlan(
+@Serializable data class TransitionBoundarySummary(val startsWithSound: Boolean, val endsWithSound: Boolean, val firstNoteTick: Long?, val lastNoteEndTick: Long?)
+@Serializable data class TransitionArrangementEvidence(val occurrenceHash: String, val purpose: SongSectionPurpose, val instruments: List<TransitionInstrumentEvidence>, val variationFingerprint: String)
+@Serializable data class TransitionInstrumentEvidence(val instrument: String, val role: String, val density: Double?)
+@Serializable data class TransitionPolicyEvidence(val profileId: String, val moodId: String, val policySha256: String, val allowedActions: List<TransitionRoleAction>)
+
+@Serializable data class TransitionCohesionPlan(
     val version: Int = TransitionCohesionInput.VERSION,
     val inputHash: String,
+    val arrangementSha256: String,
+    val contextSha256: String,
     val model: CohesionModelIdentity,
-    val boundaries: List<TransitionBridgePlan>
+    val boundaries: List<TransitionBridgePlan>,
+    /** Code-owned result; untrusted planners cannot report their own validation. */
+    val validation: TransitionCohesionValidationReport = TransitionCohesionValidationReport(),
+    /** Aggregate approval is code-owned and published only after every review. */
+    val approval: TransitionCohesionApproval = TransitionCohesionApproval.DRAFT
 )
+@Serializable data class TransitionCohesionValidationReport(val errors: List<String> = emptyList()) { val valid: Boolean get() = errors.isEmpty() }
+@Serializable enum class TransitionCohesionApproval { DRAFT, APPROVED }
+@Serializable private data class TransitionCohesionModelResponse(val version: Int, val inputHash: String, val arrangementSha256: String, val contextSha256: String, val boundaries: List<TransitionBridgePlan>)
 
-/** The local runtime, rather than the untrusted response, owns model provenance. */
-@Serializable
-private data class TransitionCohesionModelResponse(
-    val version: Int = TransitionCohesionInput.VERSION,
-    val inputHash: String,
-    val boundaries: List<TransitionBridgePlan>
-)
-
-@Serializable
-data class TransitionBridgePlan(
+@Serializable data class TransitionBridgePlan(
     val outgoingInstanceId: String,
     val incomingInstanceId: String,
     val outgoingHash: String,
     val incomingHash: String,
+    val arrangementSha256: String,
+    val contextSha256: String,
+    val roleAction: TransitionRoleAction,
     val bridgeType: BridgeType,
     val bars: Int,
     val instrument: String,
@@ -83,231 +98,182 @@ data class TransitionBridgePlan(
     val meterHandoff: TimingHandoff = TimingHandoff.PRESERVE,
     val rationale: String
 )
-
-@Serializable enum class BridgeType { DRUM_FILL, BASS_WALK, PAD_SUSTAIN, BUILD }
+@Serializable enum class TransitionRoleAction { DRUM_FILL, BASS_MOTION, CHORD_MOTION, SUSTAINED_TEXTURE, DYNAMICS_AUTOMATION, CONTINUITY }
+@Serializable enum class BridgeType { DRUM_FILL, BASS_WALK, CHORD_MOTION, PAD_SUSTAIN, BUILD, CONTINUITY }
 @Serializable enum class HarmonicHandoff { HOLD, STEP_TO_INCOMING }
 @Serializable enum class RhythmicGesture { FILL, PICKUP, SUSTAIN }
 @Serializable enum class EnergyContour { HOLD, RISE, FALL }
 @Serializable enum class TimingHandoff { PRESERVE }
-
 data class TransitionCohesionValidationResult(val errors: List<String>) { val isValid get() = errors.isEmpty() }
 
-/** Rejects unknown coverage, stale identities, unbounded values, and unsupported musical handoffs before rendering. */
 object TransitionCohesionValidator {
     private val id = Regex("[A-Za-z0-9_-]{1,80}")
     private val hash = Regex("[0-9a-f]{64}")
     private val rationale = Regex("[A-Za-z0-9 ,.'-]{1,180}")
-
     fun validate(plan: TransitionCohesionPlan, input: TransitionCohesionInput): TransitionCohesionValidationResult {
         val errors = mutableListOf<String>()
         if (input.version != TransitionCohesionInput.VERSION || plan.version != TransitionCohesionInput.VERSION) errors += "Unsupported transition cohesion version"
-        if (!hash.matches(input.arrangementSha256)) errors += "Transition cohesion requires an approved arrangement identity"
-        if (plan.inputHash != input.inputHash) errors += "Transition cohesion plan input hash is stale"
+        if (!hash.matches(input.arrangementSha256) || !hash.matches(input.contextSha256)) errors += "Transition cohesion requires approved arrangement and context identities"
+        if (plan.inputHash != input.inputHash || plan.arrangementSha256 != input.arrangementSha256 || plan.contextSha256 != input.contextSha256) errors += "Transition cohesion plan hashes are stale"
         val expected = input.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId }
         val actual = plan.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId }
-        if (actual != expected) errors += "Transition cohesion plan must contain exactly one boundary in saved Structure order"
+        if (actual != expected || actual.size != input.boundaries.size) errors += "Transition cohesion plan must contain exactly n - 1 boundaries in saved Structure order"
         if (actual.distinct().size != actual.size) errors += "Transition cohesion plan contains duplicate boundaries"
-        if (input.supportedInstruments.distinct().size != input.supportedInstruments.size) errors += "Transition cohesion input has duplicate instruments"
+        if (input.supportedInstruments != input.supportedInstruments.distinct().sorted()) errors += "Transition cohesion supported instruments must be sorted and unique"
         input.boundaries.zip(plan.boundaries).forEachIndexed { index, (source, bridge) ->
             val label = "Boundary ${index + 1}"
             if (!id.matches(bridge.outgoingInstanceId) || !id.matches(bridge.incomingInstanceId)) errors += "$label has an invalid occurrence ID"
             if (!hash.matches(bridge.outgoingHash) || !hash.matches(bridge.incomingHash)) errors += "$label has an invalid source hash"
             if (bridge.outgoingHash != source.outgoing.sourceHash || bridge.incomingHash != source.incoming.sourceHash) errors += "$label source hash is stale"
+            if (bridge.arrangementSha256 != input.arrangementSha256 || bridge.contextSha256 != input.contextSha256) errors += "$label arrangement or context hash is stale"
             if (bridge.bars !in 1..2) errors += "$label bridge length must be one or two bars"
             if (bridge.instrument !in input.supportedInstruments) errors += "$label uses unsupported instrument '${bridge.instrument}'"
+            if (bridge.roleAction !in source.allowedRoleActions || bridge.roleAction !in source.transitionPolicy.allowedActions) errors += "$label uses a disallowed role action"
             if (!rationale.matches(bridge.rationale)) errors += "$label rationale must be bounded musical text"
-            if (source.outgoing.ppq != source.incoming.ppq) errors += "$label has unsupported PPQ handoff"
-            if (source.outgoing.tempo.bpm != source.incoming.tempo.bpm) errors += "$label has unsupported tempo handoff"
-            if (source.outgoing.meter.numerator != source.incoming.meter.numerator || source.outgoing.meter.denominator != source.incoming.meter.denominator) errors += "$label has unsupported meter handoff"
-            if (bridge.instrument != requiredInstrument(bridge.bridgeType)) errors += "$label bridge type and instrument do not match"
+            if (source.outgoing.ppq != source.incoming.ppq || source.outgoing.ppq !in 1..9600) errors += "$label has incompatible PPQ timing"
+            if (!tempoValid(source.outgoing.tempo) || !tempoValid(source.incoming.tempo) || !meterValid(source.outgoing.meter) || !meterValid(source.incoming.meter)) errors += "$label has invalid timing evidence"
+            if (!bridgeCompatible(bridge)) errors += "$label bridge type, role action, and instrument do not match"
         }
         return TransitionCohesionValidationResult(errors)
     }
-
-    fun requireValid(plan: TransitionCohesionPlan, input: TransitionCohesionInput) {
-        val result = validate(plan, input); require(result.isValid) { result.errors.joinToString("; ") }
-    }
-
-    private fun requiredInstrument(type: BridgeType) = when (type) {
-        BridgeType.DRUM_FILL, BridgeType.BUILD -> "drums"
-        BridgeType.BASS_WALK -> "bass"
-        BridgeType.PAD_SUSTAIN -> "pad"
+    fun requireValid(plan: TransitionCohesionPlan, input: TransitionCohesionInput) { val result = validate(plan, input); require(result.isValid) { result.errors.joinToString("; ") } }
+    private fun tempoValid(tempo: MidiTempoChange) = tempo.tick >= 0 && tempo.bpm.isFinite() && tempo.bpm in 20.0..300.0
+    private fun meterValid(meter: MidiTimeSignature) = meter.tick >= 0 && meter.numerator in 1..12 && meter.denominator in setOf(1, 2, 4, 8, 16)
+    private fun bridgeCompatible(bridge: TransitionBridgePlan): Boolean = when (bridge.roleAction) {
+        TransitionRoleAction.DRUM_FILL, TransitionRoleAction.DYNAMICS_AUTOMATION -> bridge.instrument == "drums" && bridge.bridgeType in setOf(BridgeType.DRUM_FILL, BridgeType.BUILD)
+        TransitionRoleAction.BASS_MOTION -> bridge.instrument == "bass" && bridge.bridgeType == BridgeType.BASS_WALK
+        TransitionRoleAction.CHORD_MOTION -> bridge.instrument in setOf("pad", "strings") && bridge.bridgeType == BridgeType.CHORD_MOTION
+        TransitionRoleAction.SUSTAINED_TEXTURE -> bridge.instrument in setOf("pad", "strings") && bridge.bridgeType == BridgeType.PAD_SUSTAIN
+        TransitionRoleAction.CONTINUITY -> bridge.instrument in setOf("drums", "bass", "pad", "strings") && bridge.bridgeType == BridgeType.CONTINUITY
     }
 }
 
-/** The model may advise only through this strict JSON seam; it cannot control paths or MIDI events. */
-class LocalQwenTransitionCohesionPlanner(
-    private val client: LocalQwenClient = LmStudioQwenClient(),
-    private val model: CohesionModelIdentity
-) {
+class LocalQwenTransitionCohesionPlanner(private val client: LocalQwenClient = LmStudioQwenClient(), private val model: CohesionModelIdentity) {
     fun plan(input: TransitionCohesionInput): TransitionCohesionPlan {
         val response = client.complete(PROMPT, Json { encodeDefaults = true; explicitNulls = false }.encodeToString(TransitionCohesionInput.serializer(), input))
-        val parsed = try { Json { ignoreUnknownKeys = false }.decodeFromString(TransitionCohesionModelResponse.serializer(), response) }
-        catch (error: Exception) { throw IllegalArgumentException("Qwen returned invalid transition-cohesion JSON: ${error.message}", error) }
-        return TransitionCohesionPlan(parsed.version, parsed.inputHash, model, parsed.boundaries).also {
-            try { TransitionCohesionValidator.requireValid(it, input) } catch (error: IllegalArgumentException) {
-                throw IllegalArgumentException("Qwen returned an invalid transition-cohesion plan: ${error.message}", error)
-            }
-        }
+        val parsed = try { Json { ignoreUnknownKeys = false }.decodeFromString(TransitionCohesionModelResponse.serializer(), response) } catch (error: Exception) { throw IllegalArgumentException("Qwen returned invalid transition-cohesion JSON: ${error.message}", error) }
+        val plan = TransitionCohesionPlan(parsed.version, parsed.inputHash, parsed.arrangementSha256, parsed.contextSha256, model, parsed.boundaries)
+        val validation = TransitionCohesionValidator.validate(plan, input)
+        require(validation.isValid) { "Qwen returned an invalid transition-cohesion plan: ${validation.errors.joinToString("; ")}" }
+        return plan.copy(validation = TransitionCohesionValidationReport())
     }
     private companion object { const val PROMPT = """
-        Return one JSON object only: no markdown, prose, reasoning, or fields other than this exact version-2 response schema:
-        {
-          "version": 2,
-          "inputHash": "copy the supplied inputHash exactly",
-          "boundaries": [{
-            "outgoingInstanceId": "copy the supplied boundary value exactly",
-            "incomingInstanceId": "copy the supplied boundary value exactly",
-            "outgoingHash": "copy the outgoing sourceHash exactly",
-            "incomingHash": "copy the incoming sourceHash exactly",
-            "bridgeType": "DRUM_FILL",
-            "bars": 1,
-            "instrument": "drums",
-            "harmonicHandoff": "HOLD",
-            "rhythmicGesture": "FILL",
-            "energyContour": "RISE",
-            "tempoHandoff": "PRESERVE",
-            "meterHandoff": "PRESERVE",
-            "rationale": "bounded plain musical rationale"
-          }]
-        }
-        The model field is code-owned: never include it. Return exactly one boundary object for every supplied boundary,
-        in the supplied order. Copy each outgoing/incoming ID and source hash exactly. bars is 1 or 2. Use exactly one
-        supplied instrument and keep it compatible with bridgeType: DRUM_FILL or BUILD uses drums; BASS_WALK uses bass;
-        PAD_SUSTAIN uses pad. Allowed bridgeType values are DRUM_FILL, BASS_WALK, PAD_SUSTAIN, BUILD. Allowed
-        harmonicHandoff values are HOLD, STEP_TO_INCOMING; rhythmicGesture values are FILL, PICKUP, SUSTAIN;
-        energyContour values are HOLD, RISE, FALL. tempoHandoff and meterHandoff must both be PRESERVE. rationale is
-        1 to 180 plain characters using only letters, digits, spaces, commas, periods, apostrophes, and hyphens.
-        Do not use bridgeId, bridges, instruments, durationBars, tempo, meter, any other key, paths, commands,
-        plugins, code, MIDI notes, or arbitrary instruments.
+        Return one JSON object only with version, inputHash, arrangementSha256, contextSha256, and boundaries.
+        Return exactly one boundary per supplied boundary, in order; copy every hash and occurrence ID exactly.
+        Choose only allowedRoleActions, compatible bridgeType, and a supplied instrument. bars is 1 or 2.
+        Preserve tempo and meter. Never return paths, commands, code, MIDI events, DSP values, samples,
+        plugins, model fields, validation, approval, or keys outside this schema.
     """ }
 }
 
-/** Code-owned bridge generator. It has no model-defined notes, paths, or timing values. */
+/** Deterministic renderer consumes only validated vocabulary; melody source is never read or changed. */
 object DeterministicTransitionBridgeEngine {
     fun write(path: Path, input: TransitionBoundaryInput, plan: TransitionBridgePlan) {
-        val ppq = input.incoming.ppq
-        val meter = input.incoming.meter
-        val bar = ppq * 4L / meter.denominator * meter.numerator
-        val length = bar * plan.bars
-        val sequence = Sequence(Sequence.PPQ, ppq)
-        val track = sequence.createTrack()
-        addTempo(track, input.incoming.tempo, 0)
-        addMeter(track, meter, 0)
+        val ppq = input.incoming.ppq; val meter = input.incoming.meter
+        val length = (ppq * 4L / meter.denominator * meter.numerator) * plan.bars
+        val sequence = Sequence(Sequence.PPQ, ppq); val track = sequence.createTrack()
+        addTempo(track, input.incoming.tempo, 0); addMeter(track, meter, 0)
         val root = keyPitch(input.incoming.key)
         when (plan.bridgeType) {
-            BridgeType.DRUM_FILL, BridgeType.BUILD -> {
-                val step = (ppq / 2).toLong().coerceAtLeast(1)
-                generateSequence(0L) { it + step }.takeWhile { it < length }.forEachIndexed { index, tick ->
-                    val pitch = if (index % 2 == 0) 36 else 38; note(track, 9, pitch, 72 + (index % 4) * 10, tick, (tick + step / 2).coerceAtMost(length))
-                }
-            }
-            BridgeType.BASS_WALK -> {
-                val step = ppq.toLong(); listOf(0, 2, 4, 5).forEachIndexed { index, interval ->
-                    val start = index * step; if (start < length) note(track, 0, 36 + root + interval, 82, start, (start + step).coerceAtMost(length))
-                }
-            }
+            BridgeType.DRUM_FILL, BridgeType.BUILD, BridgeType.CONTINUITY -> { val step = (ppq / 2).toLong().coerceAtLeast(1); generateSequence(0L) { it + step }.takeWhile { it < length }.forEachIndexed { index, tick -> note(track, 9, if (index % 2 == 0) 36 else 38, 72 + (index % 4) * 10, tick, (tick + step / 2).coerceAtMost(length)) } }
+            BridgeType.BASS_WALK -> listOf(0, 2, 4, 5).forEachIndexed { index, interval -> val start = index * ppq.toLong(); if (start < length) note(track, 0, 36 + root + interval, 82, start, (start + ppq).coerceAtMost(length)) }
+            BridgeType.CHORD_MOTION -> listOf(0, 4, 7).forEach { interval -> note(track, 0, 60 + root + interval, 62, 0, length) }
             BridgeType.PAD_SUSTAIN -> note(track, 0, 60 + root, 68, 0, length)
         }
-        track.add(MidiEvent(MetaMessage(0x2F, byteArrayOf(), 0), length))
-        publishMidi(path, sequence, input, length)
+        track.add(MidiEvent(MetaMessage(0x2F, byteArrayOf(), 0), length)); publishMidi(path, sequence, ppq, length)
     }
-
-    private fun publishMidi(path: Path, sequence: Sequence, input: TransitionBoundaryInput, length: Long) {
-        Files.createDirectories(path.parent)
-        val temporary = path.resolveSibling(".${path.fileName}.tmp")
+    private fun publishMidi(path: Path, sequence: Sequence, ppq: Int, length: Long) {
+        Files.createDirectories(path.parent); val temporary = path.resolveSibling(".${path.fileName}.tmp")
         try {
             require(MidiSystem.write(sequence, 1, temporary.toFile()) > 0) { "Could not write transition MIDI" }
             val reread = MidiSystem.getSequence(temporary.toFile())
-            require(reread.divisionType == Sequence.PPQ && reread.resolution == input.incoming.ppq) { "Transition MIDI round-trip timing mismatch" }
-            val notes = reread.tracks.flatMap { track -> (0 until track.size()).map(track::get) }.filter { it.message is ShortMessage }
-            val on = notes.count { (it.message as ShortMessage).command == ShortMessage.NOTE_ON && (it.message as ShortMessage).data2 > 0 }
-            val off = notes.count { val m = it.message as ShortMessage; m.command == ShortMessage.NOTE_OFF || (m.command == ShortMessage.NOTE_ON && m.data2 == 0) }
-            require(on > 0 && on == off && reread.tickLength >= length) { "Transition MIDI has invalid note pairs or timing" }
-            move(temporary, path)
+            require(reread.divisionType == Sequence.PPQ && reread.resolution == ppq && reread.tickLength >= length) { "Transition MIDI round-trip timing mismatch" }
+            val messages = reread.tracks.flatMap { track -> (0 until track.size()).map { track[it].message as? ShortMessage } }.filterNotNull()
+            val on = messages.count { it.command == ShortMessage.NOTE_ON && it.data2 > 0 }; val off = messages.count { it.command == ShortMessage.NOTE_OFF || it.command == ShortMessage.NOTE_ON && it.data2 == 0 }
+            require(on > 0 && on == off) { "Transition MIDI has invalid note pairs" }; move(temporary, path)
         } finally { Files.deleteIfExists(temporary) }
     }
-    private fun note(track: javax.sound.midi.Track, channel: Int, pitch: Int, velocity: Int, start: Long, end: Long) { track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, channel, pitch, velocity), start)); track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, channel, pitch, 0), end)) }
+    private fun note(track: javax.sound.midi.Track, channel: Int, pitch: Int, velocity: Int, start: Long, end: Long) { track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, channel, pitch.coerceIn(0, 127), velocity), start)); track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, channel, pitch.coerceIn(0, 127), 0), end)) }
     private fun addTempo(track: javax.sound.midi.Track, tempo: MidiTempoChange, tick: Long) { val micros = (60_000_000.0 / tempo.bpm).roundToLong().toInt(); track.add(MidiEvent(MetaMessage(0x51, byteArrayOf((micros ushr 16).toByte(), (micros ushr 8).toByte(), micros.toByte()), 3), tick)) }
     private fun addMeter(track: javax.sound.midi.Track, meter: MidiTimeSignature, tick: Long) { track.add(MidiEvent(MetaMessage(0x58, byteArrayOf(meter.numerator.toByte(), Integer.numberOfTrailingZeros(meter.denominator).toByte(), 24, 8), 4), tick)) }
     private fun keyPitch(key: MidiKey?): Int = key?.toMusicalKeyOrNull()?.tonic?.chromatic ?: 0
     private fun move(from: Path, to: Path) { try { Files.move(from, to, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE) } catch (_: AtomicMoveNotSupportedException) { Files.move(from, to, StandardCopyOption.REPLACE_EXISTING) } }
 }
 
-/** Atomic, project-confined bridge records. Preview audio is deliberately a separate renderer boundary. */
 object TransitionCohesionStore {
-    const val DRAFT_FILE = "cohesion/cohesion.draft.json"
-    const val APPROVED_FILE = "cohesion/cohesion.json"
+    const val DRAFT_FILE = "cohesion/cohesion.draft.json"; const val APPROVED_FILE = "cohesion/cohesion.json"
     private val json = Json { prettyPrint = true; encodeDefaults = true; explicitNulls = false; ignoreUnknownKeys = false }
     fun bridgeMidi(outgoing: String, incoming: String) = "cohesion/boundaries/$outgoing--$incoming/bridge.mid"
     fun audit(outgoing: String, incoming: String) = "cohesion/boundaries/$outgoing--$incoming/audit.json"
-
     fun writeDraft(root: Path, input: TransitionCohesionInput, plan: TransitionCohesionPlan): Path {
         TransitionCohesionValidator.requireValid(plan, input)
-        plan.boundaries.forEachIndexed { index, bridge ->
-            val boundary = input.boundaries[index]
-            val midi = root.resolve(bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId))
-            DeterministicTransitionBridgeEngine.write(midi, boundary, bridge)
-            atomicWrite(root.resolve(audit(bridge.outgoingInstanceId, bridge.incomingInstanceId)), json.encodeToString(TransitionBridgePlan.serializer(), bridge))
-        }
+        plan.boundaries.forEachIndexed { index, bridge -> DeterministicTransitionBridgeEngine.write(root.resolve(bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId)), input.boundaries[index], bridge); atomicWrite(root.resolve(audit(bridge.outgoingInstanceId, bridge.incomingInstanceId)), json.encodeToString(TransitionBridgePlan.serializer(), bridge)) }
         val text = json.encodeToString(TransitionCohesionPlan.serializer(), plan)
-        return atomicWrite(root.resolve(DRAFT_FILE), text).also { persist(root, input, plan, approved = false, reviewed = emptySet()) }
+        return atomicWrite(root.resolve(DRAFT_FILE), text).also { persist(root, input, plan, false, emptySet()) }
     }
-    fun readDraft(root: Path, input: TransitionCohesionInput): TransitionCohesionPlan = read(root.resolve(DRAFT_FILE), input)
-    fun readApproved(root: Path, input: TransitionCohesionInput): TransitionCohesionPlan = read(root.resolve(APPROVED_FILE), input)
-    fun markReviewed(root: Path, input: TransitionCohesionInput, outgoing: String, incoming: String): Set<Pair<String, String>> {
-        val plan = readDraft(root, input); val pair = outgoing to incoming
-        require(pair in plan.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId }) { "Unknown cohesion boundary $outgoing -> $incoming" }
-        val existing = reviewed(root, input); val updated = existing + pair
-        persist(root, input, plan, false, updated); return updated
-    }
-    fun approve(root: Path, input: TransitionCohesionInput): Path {
-        val plan = readDraft(root, input); val expected = plan.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId }.toSet()
-        require(reviewed(root, input) == expected) { "Review every current cohesion boundary before aggregate approval." }
-        val text = json.encodeToString(TransitionCohesionPlan.serializer(), plan)
-        return atomicWrite(root.resolve(APPROVED_FILE), text).also { persist(root, input, plan, true, expected) }
-    }
-    fun reject(root: Path, input: TransitionCohesionInput): Path = atomicWrite(root.resolve("cohesion/rejected-${input.inputHash}.json"), Files.readString(root.resolve(DRAFT_FILE)))
-    fun isApprovedCurrent(root: Path, input: TransitionCohesionInput): Boolean = runCatching {
-        val workflow = ProjectStore.read(root).workflow.cohesion ?: return false
-        workflow.approved && workflow.inputSha256 == input.inputHash && workflow.structureSha256 == input.structureSha256 &&
-            workflow.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId } == input.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId } &&
-            workflow.boundaries.all { it.approved != null && Files.isRegularFile(root.resolve(bridgeMidi(it.outgoingInstanceId, it.incomingInstanceId))) }
-    }.getOrDefault(false)
-    private fun reviewed(root: Path, input: TransitionCohesionInput): Set<Pair<String, String>> = ProjectStore.read(root).workflow.cohesion?.boundaries.orEmpty().filter { it.approved != null }.map { it.outgoingInstanceId to it.incomingInstanceId }.toSet()
+    fun readDraft(root: Path, input: TransitionCohesionInput) = read(root.resolve(DRAFT_FILE), input)
+    fun readApproved(root: Path, input: TransitionCohesionInput) = read(root.resolve(APPROVED_FILE), input)
+    fun markReviewed(root: Path, input: TransitionCohesionInput, outgoing: String, incoming: String): Set<Pair<String, String>> { val plan = readDraft(root, input); val pair = outgoing to incoming; require(pair in plan.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId }) { "Unknown cohesion boundary $outgoing -> $incoming" }; return (reviewed(root) + pair).also { persist(root, input, plan, false, it) } }
+    fun approve(root: Path, input: TransitionCohesionInput): Path { val plan = readDraft(root, input); val expected = plan.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId }.toSet(); require(reviewed(root) == expected) { "Review every current cohesion boundary before aggregate approval." }; val approved = plan.copy(approval = TransitionCohesionApproval.APPROVED); val text = json.encodeToString(TransitionCohesionPlan.serializer(), approved); return atomicWrite(root.resolve(APPROVED_FILE), text).also { persist(root, input, approved, true, expected) } }
+    fun reject(root: Path, input: TransitionCohesionInput): Path { val rejected = atomicWrite(root.resolve("cohesion/rejected-${input.inputHash}.json"), Files.readString(root.resolve(DRAFT_FILE))); ProjectStore.read(root).takeIf { it.version == Project.CURRENT_VERSION }?.let { project -> ProjectStore.write(root, project.copy(workflow = project.workflow.invalidate(WorkflowChange.COHESION).copy(stale = project.workflow.stale + WorkflowArtifact.COHESION))) }; return rejected }
+    fun isApprovedCurrent(root: Path, input: TransitionCohesionInput): Boolean = runCatching { val workflow = ProjectStore.read(root).workflow.cohesion ?: return false; workflow.approved && workflow.inputSha256 == input.inputHash && workflow.structureSha256 == input.structureSha256 && workflow.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId } == input.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId } && workflow.boundaries.all { it.approved != null && it.bridgeSha256 != null && Files.isRegularFile(root.resolve(bridgeMidi(it.outgoingInstanceId, it.incomingInstanceId))) && digest(root.resolve(bridgeMidi(it.outgoingInstanceId, it.incomingInstanceId))) == it.bridgeSha256 } }.getOrDefault(false)
+    private fun reviewed(root: Path) = ProjectStore.read(root).workflow.cohesion?.boundaries.orEmpty().filter { it.approved != null }.map { it.outgoingInstanceId to it.incomingInstanceId }.toSet()
     private fun read(path: Path, input: TransitionCohesionInput) = json.decodeFromString(TransitionCohesionPlan.serializer(), Files.readString(path, StandardCharsets.UTF_8)).also { TransitionCohesionValidator.requireValid(it, input) }
     private fun persist(root: Path, input: TransitionCohesionInput, plan: TransitionCohesionPlan, approved: Boolean, reviewed: Set<Pair<String, String>>) {
         val text = json.encodeToString(TransitionCohesionPlan.serializer(), plan)
-        val boundaries = plan.boundaries.map { bridge ->
-            val pair = bridge.outgoingInstanceId to bridge.incomingInstanceId
-            val draft = CohesionBoundaryArtifactPaths.draft(bridge.outgoingInstanceId, bridge.incomingInstanceId)
-            atomicWrite(root.resolve(draft), json.encodeToString(TransitionBridgePlan.serializer(), bridge))
-            val approvedFile = CohesionBoundaryArtifactPaths.approved(bridge.outgoingInstanceId, bridge.incomingInstanceId)
-            if (pair in reviewed) atomicWrite(root.resolve(approvedFile), json.encodeToString(TransitionBridgePlan.serializer(), bridge))
-            CohesionBoundaryReference(bridge.outgoingInstanceId, bridge.incomingInstanceId, input.inputHash,
-                WorkflowArtifactReference(draft, digest(root.resolve(draft))),
-                if (pair in reviewed) WorkflowArtifactReference(approvedFile, digest(root.resolve(approvedFile))) else null,
-                digest(root.resolve(bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId))))
-        }
+        val boundaries = plan.boundaries.map { bridge -> val pair = bridge.outgoingInstanceId to bridge.incomingInstanceId; val draft = CohesionBoundaryArtifactPaths.draft(bridge.outgoingInstanceId, bridge.incomingInstanceId); atomicWrite(root.resolve(draft), json.encodeToString(TransitionBridgePlan.serializer(), bridge)); val approvedFile = CohesionBoundaryArtifactPaths.approved(bridge.outgoingInstanceId, bridge.incomingInstanceId); if (pair in reviewed) atomicWrite(root.resolve(approvedFile), json.encodeToString(TransitionBridgePlan.serializer(), bridge)); CohesionBoundaryReference(bridge.outgoingInstanceId, bridge.incomingInstanceId, input.inputHash, WorkflowArtifactReference(draft, digest(root.resolve(draft))), if (pair in reviewed) WorkflowArtifactReference(approvedFile, digest(root.resolve(approvedFile))) else null, digest(root.resolve(bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId)))) }
         val project = ProjectStore.read(root); if (project.version != Project.CURRENT_VERSION) return
-        val workflow = project.workflow.invalidate(WorkflowChange.COHESION).markCurrent(WorkflowArtifact.COHESION).copy(
-            cohesion = CohesionWorkflowReferences(input.inputHash, WorkflowArtifactReference(if (approved) APPROVED_FILE else DRAFT_FILE, digestText(text)), emptyList(), approved, boundaries, input.structureSha256)
-        )
+        val workflow = project.workflow.invalidate(WorkflowChange.COHESION).markCurrent(WorkflowArtifact.COHESION).copy(cohesion = CohesionWorkflowReferences(input.inputHash, WorkflowArtifactReference(if (approved) APPROVED_FILE else DRAFT_FILE, digestText(text)), emptyList(), approved, boundaries, input.structureSha256))
         ProjectStore.write(root, project.copy(workflow = workflow))
     }
     private fun atomicWrite(path: Path, text: String): Path { Files.createDirectories(path.parent); val tmp = path.resolveSibling(".${path.fileName}.tmp"); try { Files.writeString(tmp, text, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING); try { Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE) } catch (_: AtomicMoveNotSupportedException) { Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING) }; return path } finally { Files.deleteIfExists(tmp) } }
-    private fun digest(path: Path) = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
-    private fun digestText(text: String) = MessageDigest.getInstance("SHA-256").digest(text.toByteArray(StandardCharsets.UTF_8)).joinToString("") { "%02x".format(it) }
+    private fun digest(path: Path) = sha256(Files.readAllBytes(path)); private fun digestText(text: String) = sha256(text.toByteArray(StandardCharsets.UTF_8))
 }
 
+/** Builds evidence from selected MIDI, saved Structure, approved arrangement, and profile/mood settings. */
 object TransitionCohesionInputFactory {
-    fun from(input: MelodyCohesionInput, arrangementSha256: String, supportedInstruments: List<String> = listOf("drums", "bass", "pad")): TransitionCohesionInput {
-        require(Regex("[0-9a-f]{64}").matches(arrangementSha256)) { "Cohesion requires an approved arrangement identity" }
-        val byId = input.occurrences.associateBy { it.instanceId }
-        val boundaries = input.boundaries.map { pair -> TransitionBoundaryInput(pair.outgoingInstanceId, pair.incomingInstanceId, evidence(byId.getValue(pair.outgoingInstanceId)), evidence(byId.getValue(pair.incomingInstanceId))) }
-        val seed = TransitionCohesionInput(inputHash = "", structureSha256 = input.structureSha256, arrangementSha256 = arrangementSha256, supportedInstruments = supportedInstruments.sorted(), boundaries = boundaries)
-        val hash = MessageDigest.getInstance("SHA-256").digest(Json { encodeDefaults = true; explicitNulls = false }.encodeToString(TransitionCohesionInput.serializer(), seed).toByteArray(StandardCharsets.UTF_8)).joinToString("") { "%02x".format(it) }
-        return seed.copy(inputHash = hash)
+    fun build(root: Path, project: Project, planning: SongPlanningInput, arrangement: DetailedArrangement, arrangementSha256: String, contextSha256: String): TransitionCohesionInput {
+        require(HASH.matches(arrangementSha256) && HASH.matches(contextSha256)) { "Cohesion requires approved arrangement and context identities" }
+        val sections = planning.sectionsWithIdentity(); require(arrangement.sections.map { it.instanceId } == sections.map { it.instanceId }) { "Approved arrangement does not match saved Structure" }
+        val selected = SelectedMidiArtifactResolver(); val evidence = sections.associate { section ->
+            val artifact = selected.resolve(root, project, section.partId); val analysis = planning.analyses.getValue(section.partId); val arranged = arrangement.sections.first { it.instanceId == section.instanceId }; val reference = requireNotNull(project.parts.first { it.id == section.partId }.analysis)
+            section.instanceId to TransitionMusicalEvidence(section.partId, artifact.sha256, sha256(Files.readAllBytes(root.resolve(reference.file))), analysis.ppq, analysis.durationTicks, analysis.key, analysis.chords, analysis.tempoMap.first(), analysis.timeSignatures.first(), analysis.energy, boundary(artifact.path, analysis.durationTicks), arrangementEvidence(section, arranged))
+        }
+        val approvedRoles = arrangement.sections.flatMap { it.instruments }.map { it.name }.filter { it != "piano" }.distinct()
+        // Older deterministic arrangement evidence may omit low-density generated
+        // roles. Its saved allowed vocabulary remains bounded compatibility evidence.
+        val supported = approvedRoles.ifEmpty { planning.allowedInstruments.filter { it != "piano" } }.sorted()
+        require(supported.isNotEmpty()) { "Approved arrangement has no generated role available for cohesion" }
+        val policy = policy(project, contextSha256, supported)
+        val boundaries = sections.zipWithNext().map { (outgoing, incoming) -> TransitionBoundaryInput(outgoing.instanceId, incoming.instanceId, evidence.getValue(outgoing.instanceId), evidence.getValue(incoming.instanceId), policy.allowedActions, policy) }
+        val seed = TransitionCohesionInput(inputHash = "", structureSha256 = sha256(project.envelope.structureOccurrences.joinToString("|") { "${it.id}:${it.partId}:${it.revision}" }.toByteArray()), arrangementSha256 = arrangementSha256, contextSha256 = contextSha256, supportedInstruments = supported, boundaries = boundaries)
+        return seed.copy(inputHash = sha256(Json { encodeDefaults = true; explicitNulls = false }.encodeToString(TransitionCohesionInput.serializer(), seed).toByteArray()))
     }
-    private fun evidence(source: MelodyOccurrenceInput) = TransitionMusicalEvidence(source.partId, source.sourceHash, source.analysisSha256, source.ppq, source.durationTicks, source.key, source.chords, source.tempoMap.first(), source.timeSignatures.first(), source.energy, source.boundarySummary)
+    private fun policy(project: Project, contextHash: String, instruments: List<String>): TransitionPolicyEvidence {
+        val settings = project.envelope.compositionSettings
+        val profile = settings?.profile
+        val mood = settings?.mood
+        val profileActions = if (profile != null && mood != null) BundledCompositionProfileCatalog.load().resolve(profile, mood).transitionActions.mapNotNull(::policyAction) else TransitionRoleAction.entries
+        val actions = profileActions.filter { action -> when (action) {
+            TransitionRoleAction.DRUM_FILL, TransitionRoleAction.DYNAMICS_AUTOMATION -> "drums" in instruments
+            TransitionRoleAction.BASS_MOTION -> "bass" in instruments
+            TransitionRoleAction.CHORD_MOTION, TransitionRoleAction.SUSTAINED_TEXTURE -> "pad" in instruments || "strings" in instruments
+            TransitionRoleAction.CONTINUITY -> true
+        } }
+        return TransitionPolicyEvidence(profile?.id ?: "legacy", mood?.id ?: "legacy", contextHash, actions.distinct())
+    }
+    private fun policyAction(value: String): TransitionRoleAction? = when (value) {
+        "drum-fill" -> TransitionRoleAction.DRUM_FILL
+        "bass-motion" -> TransitionRoleAction.BASS_MOTION
+        "chord-motion" -> TransitionRoleAction.CHORD_MOTION
+        "sustained-texture" -> TransitionRoleAction.SUSTAINED_TEXTURE
+        "dynamics-automation" -> TransitionRoleAction.DYNAMICS_AUTOMATION
+        "continuity" -> TransitionRoleAction.CONTINUITY
+        else -> null
+    }
+    private fun arrangementEvidence(section: SongPlanningSectionInstance, arrangement: DetailedArrangementSection) = TransitionArrangementEvidence(section.occurrenceHash, arrangement.role, arrangement.instruments.map { TransitionInstrumentEvidence(it.name, it::class.simpleName.orEmpty(), density(it)) }.sortedBy { it.instrument }, sha256(Json { encodeDefaults = true }.encodeToString(StructureVariationOverrides.serializer(), section.variationOverrides).toByteArray()))
+    private fun density(instrument: DetailedInstrumentPlan): Double? = when (instrument) { is BassInstrumentPlan -> instrument.density; is DrumsInstrumentPlan -> instrument.density; is PadInstrumentPlan -> instrument.density; is StringsInstrumentPlan -> instrument.density; else -> null }
+    private fun boundary(path: Path, duration: Long): TransitionBoundarySummary { val sequence = MidiSystem.getSequence(path.toFile()); val notes = sequence.tracks.flatMap { track -> (0 until track.size()).map { track[it] } }.mapNotNull { event -> (event.message as? ShortMessage)?.takeIf { it.command == ShortMessage.NOTE_ON && it.data2 > 0 }?.let { event.tick } }; return TransitionBoundarySummary(notes.any { it == 0L }, notes.any { it >= duration }, notes.minOrNull(), notes.maxOrNull()) }
+    private val HASH = Regex("[0-9a-f]{64}")
 }
+private fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }

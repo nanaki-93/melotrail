@@ -3,7 +3,7 @@ package app.melotrail.application
 import app.melotrail.arrangement.CohesionModelIdentity
 import app.melotrail.arrangement.LocalQwenTransitionCohesionPlanner
 import app.melotrail.arrangement.LogicalInstrument
-import app.melotrail.arrangement.MelodyCohesionInputFactory
+import app.melotrail.arrangement.DetailedArrangement
 import app.melotrail.arrangement.MidiAnalysis
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
@@ -12,7 +12,6 @@ import app.melotrail.arrangement.SongPlan
 import app.melotrail.arrangement.SongPlanStore
 import app.melotrail.arrangement.SongPlanningInput
 import app.melotrail.arrangement.TransitionCohesionInput
-import app.melotrail.arrangement.TransitionCohesionInputFactory
 import app.melotrail.arrangement.TransitionCohesionPlan
 import app.melotrail.arrangement.TransitionCohesionStore
 import app.melotrail.arrangement.toSectionInstance
@@ -128,8 +127,11 @@ class DefaultCohesionApplicationService(
         require(plan.contextHash == null || plan.contextHash == approval.contextSha256) {
             "Approved arrangement context has changed. Regenerate and approve Arrangement first."
         }
-        val legacyInput = MelodyCohesionInputFactory.build(root, project, planning, requireCurrentAnalyses = true).first
-        return TransitionCohesionInputFactory.from(legacyInput, approval.arrangement.sha256)
+        val detailed = Json { ignoreUnknownKeys = false }
+            .decodeFromString(DetailedArrangement.serializer(), Files.readString(arrangement))
+        return app.melotrail.arrangement.TransitionCohesionInputFactory.build(
+            root, project, planning, detailed, approval.arrangement.sha256, approval.contextSha256
+        )
     }
     private fun analysis(root: Path, project: Project, partId: String): MidiAnalysis {
         val part = project.parts.firstOrNull { it.id == partId } ?: error("Structure references unknown part '$partId'.")
@@ -140,7 +142,7 @@ class DefaultCohesionApplicationService(
     private fun snapshot(root: Path, input: TransitionCohesionInput, plan: TransitionCohesionPlan, approved: Boolean): CohesionSnapshot {
         val reviewed = ProjectStore.read(root).workflow.cohesion?.boundaries.orEmpty().filter { it.approved != null }.map { it.outgoingInstanceId to it.incomingInstanceId }.toSet()
         return CohesionSnapshot(root, CohesionPlannerKind.QWEN, input.inputHash, input.structureSha256,
-            plan.boundaries.map { bridge -> CohesionBoundarySnapshot(bridge.outgoingInstanceId, bridge.incomingInstanceId, root.resolve(TransitionCohesionStore.bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId)), bridge.rationale, bridge.outgoingInstanceId to bridge.incomingInstanceId in reviewed) },
+            plan.boundaries.map { bridge -> CohesionBoundarySnapshot(bridge.outgoingInstanceId, bridge.incomingInstanceId, root.resolve(TransitionCohesionStore.bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId)), "${bridge.roleAction.name.lowercase().replace('_', ' ')}: ${bridge.rationale}", bridge.outgoingInstanceId to bridge.incomingInstanceId in reviewed) },
             approvalRequired = !approved, approved = approved, stale = false, artifact = root.resolve(if (approved) TransitionCohesionStore.APPROVED_FILE else TransitionCohesionStore.DRAFT_FILE))
     }
     private fun digest(path: Path): String = digest(Files.readAllBytes(path))
