@@ -208,13 +208,14 @@ class CommercialProvenanceService(private val soundLibraryRoot: Path? = null) {
             if (library == null) {
                 add(CommercialDependency(CommercialDependencyKind.SOUND_LIBRARY, "unresolved-sound-library", "unknown", null, CommercialTerm.UNKNOWN, false, "unknown", "not recorded"))
             } else {
-                val descriptors = InstrumentRegistryLoader(library).load().all()
+                val registry = InstrumentRegistryLoader(library).load()
+                val descriptors = registry.all()
                 descriptors.groupBy { it.license }.toSortedMap(compareBy { it.displayName }).forEach { (license, instruments) ->
                     val files = instruments.flatMap { listOf(it.sfzPath) + it.samplePaths }.distinct().sortedBy(Path::toString)
                     val content = sha256(library, files)
                     add(CommercialDependency(
-                        CommercialDependencyKind.SOUND_LIBRARY, license.displayName.replace(Regex("[^A-Za-z0-9._:-]"), "-"), "registry-v1", content,
-                        if (license.commercialUse) CommercialTerm.PERMITTED else CommercialTerm.BLOCKED,
+                        CommercialDependencyKind.SOUND_LIBRARY, license.displayName.replace(Regex("[^A-Za-z0-9._:-]"), "-"), "registry-v${registry.version}", content,
+                        if (instruments.all { it.licenseAdmission.admission.name == "ADMITTED" }) CommercialTerm.PERMITTED else CommercialTerm.BLOCKED,
                         license.date != null, license.license, license.source,
                         license.attributionText?.takeIf { license.attributionRequired }
                     ))

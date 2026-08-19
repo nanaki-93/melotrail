@@ -17,8 +17,8 @@ Task 022.
 
 ## Existing Code
 
-- `InstrumentRegistry.kt`, `sounds/instruments.json`, `sounds/LICENSES.json`
-- `sounds/README.md`, registry/security/license tests
+- `InstrumentRegistry.kt`, `../../../../sounds/instruments.json`, `../../../../sounds/LICENSES.json`
+- `../../../../sounds/README.md`, registry/security/license tests
 - `LocalSoundLibraryInventory.kt`, Library UI and runtime readiness
 - `SfizzInstrumentRenderer.kt`, `StemRenderingMixer.kt`
 - `CommercialProvenanceService`

@@ -33,6 +33,17 @@ never downloads samples. Run `music-cli licenses <project>` (or load the
 registry before rendering) to verify the complete pack. Do not create an
 `instruments/` tree or substitute third-party files under `starter-generated`.
 
+The checked-in starter registry is registry v1 compatibility input. Melotrail
+also accepts registry v2 catalogs: each entry has a stable ID, display name,
+one or more musical roles, bounded affinity/trait metadata, an SFZ engine
+descriptor, embedded license and source-library provenance, and declared
+capabilities. A v2 catalog may include more than one instrument for a role.
+The resolver validates assets locally, filters unavailable entries, and records
+the selected stable ID and decision hash; it never exposes an SFZ path or sample
+filename to planning or portable project data. Registry v1 remains readable:
+its five keys are preserved as the stable IDs and its `LICENSES.json` record is
+materialized as compatibility metadata.
+
 `instruments.json` uses human-readable, one-based MIDI channels: drums value
 `10` is converted to zero-based MIDI API channel `9`. The supported drum map
 contains kick, snare, clap, closed hat, and open hat only; there is no crash or
@@ -63,12 +74,16 @@ weaken the registry checks; correct the selected library instead.
 
 ## Recommended production upgrade
 
-For better acoustic sounds, replace individual instruments with CC0 libraries from:
+For better acoustic sounds, use a separately approved local catalog with CC0 libraries from:
 - Versilian Community Sample Library (VCSL)
 - VSCO 2 Community Edition
 - VCSL Keys
 
-Keep the same logical instrument names in instruments.json, so no arrangement code has to change.
+Do not replace or mutate this starter pack in place. A new v2 catalog can use
+its own stable IDs and roles; it must embed complete license evidence. CC0 and
+verified owned entries are admitted without attribution, CC BY entries need
+ready-to-publish attribution, and NC entries are unavailable even if a boolean
+claims commercial use. Unknown/custom terms require an explicit reviewed policy.
 
 ## Renderer
 

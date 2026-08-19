@@ -112,10 +112,19 @@ class SfizzInstrumentRenderer(
         output: Path,
         format: RenderFormat,
         expectedFrames: Long
+    ): RenderResult = render(midi, instrument.wireName, output, format, expectedFrames)
+
+    /** Stable-ID renderer entry point used by the catalog path. */
+    suspend fun render(
+        midi: Path,
+        instrumentId: String,
+        output: Path,
+        format: RenderFormat,
+        expectedFrames: Long
     ): RenderResult {
         validateFormat(format, expectedFrames)
         val normalizedMidi = validateMidi(midi)
-        val descriptor = registryLoader.load().resolve(instrument.wireName)
+        val descriptor = registryLoader.load().resolve(instrumentId)
         val target = output.toAbsolutePath().normalize()
         validateOutput(target, normalizedMidi, descriptor)
         Files.createDirectories(requireNotNull(target.parent))

@@ -29,7 +29,7 @@ data class LocalSoundLibraryInventory(
 enum class LocalSoundLibraryInventoryState { UNCONFIGURED, INVALID, READY }
 
 data class LocalSoundLibraryInstrument(
-    /** Stable logical registry name, not a filesystem path. */
+    /** Stable registry ID, never a filesystem path or SFZ filename. */
     val id: String,
     val name: String,
     val category: String,
@@ -38,7 +38,11 @@ data class LocalSoundLibraryInstrument(
     val license: String,
     val source: String,
     val commercialUse: Boolean,
-    val attributionRequired: Boolean
+    val attributionRequired: Boolean,
+    val roles: Set<String> = emptySet(),
+    val verifiedCapabilities: Set<String> = emptySet(),
+    val available: Boolean = true,
+    val diagnostics: List<String> = emptyList()
 )
 
 fun interface LocalSoundLibraryInventoryReader {
@@ -61,15 +65,19 @@ object RegistryLocalSoundLibraryInventoryReader : LocalSoundLibraryInventoryRead
                         LocalSoundLibraryInventoryState.READY,
                         registry.all().map { descriptor ->
                             LocalSoundLibraryInstrument(
-                                id = descriptor.instrument.wireName,
-                                name = descriptor.instrument.wireName.replaceFirstChar(Char::uppercase),
-                                category = descriptor.instrument.wireName.replaceFirstChar(Char::uppercase),
+                                id = descriptor.id,
+                                name = descriptor.name,
+                                category = descriptor.id.replaceFirstChar(Char::uppercase),
                                 sampleCount = descriptor.samplePaths.size,
                                 licenseName = descriptor.license.displayName,
                                 license = descriptor.license.license,
                                 source = descriptor.license.source,
                                 commercialUse = descriptor.license.commercialUse,
-                                attributionRequired = descriptor.license.attributionRequired
+                                attributionRequired = descriptor.license.attributionRequired,
+                                roles = descriptor.roles.map { it.name.lowercase().replace('_', '-') }.toSortedSet(),
+                                verifiedCapabilities = descriptor.verifiedCapabilities.performance.map { it.name.lowercase().replace('_', '-') }.toSortedSet(),
+                                available = descriptor.licenseAdmission.admission.name == "ADMITTED",
+                                diagnostics = descriptor.licenseAdmission.reasons
                             )
                         }.sortedBy(LocalSoundLibraryInstrument::id)
                     )
@@ -89,7 +97,7 @@ fun LocalSoundLibraryInventory.filtered(query: String, category: String?): List<
     val normalizedQuery = query.trim().lowercase(Locale.ROOT)
     return instruments.filter { instrument ->
         (category == null || instrument.category == category) &&
-            (normalizedQuery.isEmpty() || listOf(instrument.name, instrument.category, instrument.licenseName, instrument.source)
+            (normalizedQuery.isEmpty() || (listOf(instrument.name, instrument.category, instrument.licenseName, instrument.source) + instrument.roles + instrument.verifiedCapabilities + instrument.diagnostics)
                 .any { it.lowercase(Locale.ROOT).contains(normalizedQuery) })
     }
 }
