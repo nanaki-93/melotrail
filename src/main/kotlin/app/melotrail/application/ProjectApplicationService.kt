@@ -33,6 +33,8 @@ import app.melotrail.arrangement.PartAnalysis
 import app.melotrail.arrangement.PartAnalysisReference
 import app.melotrail.arrangement.PartAnalysisStore
 import app.melotrail.arrangement.Project
+import app.melotrail.arrangement.ProjectMigrationResult
+import app.melotrail.arrangement.ProjectSetupRequirement
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.ImportEvidence
@@ -68,7 +70,7 @@ import javax.sound.midi.MidiSystem
 interface ProjectApplicationService {
     fun open(root: Path): ProjectSnapshot
     /** Optional explicit migration boundary; older adapters remain read-only. */
-    fun migrateV2(root: Path): ProjectSnapshot = throw UnsupportedOperationException("This project service does not support schema-v2 migration.")
+    fun migrateProject(root: Path): ProjectSnapshot = throw UnsupportedOperationException("This project service does not support schema migration.")
     fun create(request: CreateProjectRequest): ProjectSnapshot
     suspend fun importPart(request: ImportPartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
     /** The one code-owned technical correction boundary. Analysis remains a separate stage. */
@@ -152,7 +154,16 @@ data class ProjectSnapshot(
     val renderFormat: RenderFormat?,
     val parts: List<PartSummary>,
     val structure: List<StructureSectionSummary>,
-    val readiness: ProjectReadiness
+    val readiness: ProjectReadiness,
+    /** Queryable state only; editing Setup belongs to Task 006. */
+    val migration: ProjectMigrationStatus = ProjectMigrationStatus()
+)
+
+data class ProjectMigrationStatus(
+    val requiresMigration: Boolean = false,
+    val sourceVersion: Int = Project.CURRENT_VERSION,
+    val warnings: List<String> = emptyList(),
+    val setupRequirements: Set<ProjectSetupRequirement> = emptySet()
 )
 
 data class PartSummary(
@@ -283,11 +294,13 @@ class DefaultProjectApplicationService(
         require(Files.isRegularFile(normalizedRoot.resolve(ProjectStore.FILE_NAME))) {
             "Project file not found: ${normalizedRoot.resolve(ProjectStore.FILE_NAME)}"
         }
-        return snapshot(normalizedRoot, readValidProject(normalizedRoot))
+        val project = readValidProject(normalizedRoot)
+        return snapshot(normalizedRoot, project, migrationStatus(ProjectStore.readMigration(normalizedRoot)))
     }
 
-    override fun migrateV2(root: Path): ProjectSnapshot = mutate(root) { normalizedRoot ->
-        snapshot(normalizedRoot, ProjectStore.migrateV2(normalizedRoot))
+    override fun migrateProject(root: Path): ProjectSnapshot = mutate(root) { normalizedRoot ->
+        val saved = ProjectStore.migrateAndSave(normalizedRoot)
+        snapshot(normalizedRoot, saved.migration.project, migrationStatus(saved.migration, migrated = true))
     }
 
     override fun create(request: CreateProjectRequest): ProjectSnapshot = mutate(request.root) { root ->
@@ -310,6 +323,9 @@ class DefaultProjectApplicationService(
         requireImportSourceFormat(source, extension, isMidi)
         require(!(isMidi && request.transcribe)) { "--transcribe is only valid for audio input" }
         val project = readValidProject(root)
+        require(project.version == Project.CURRENT_VERSION) {
+            "Project schema v${project.version} is read-only. Explicitly migrate it to v${Project.CURRENT_VERSION} before importing."
+        }
         if (project.version >= Project.MIDI_FIRST_VERSION) {
             require(isMidi || request.transcribe) { "Audio input requires --transcribe so immutable raw MIDI can be prepared" }
         }
@@ -323,20 +339,6 @@ class DefaultProjectApplicationService(
             progress.report(OperationProgress("import-part", 1, 1, "Reusing current unified import", root.resolve(ProjectStore.FILE_NAME)))
             return@mutateSuspend snapshot(root, project)
         }
-        if (project.version == 1 && !isMidi && !request.transcribe) {
-            val relativeFile = "parts/${request.id}.$extension"
-            val destination = safeDestination(root, relativeFile)
-            require(source != destination) { "Input and destination paths must differ" }
-            require(!Files.exists(destination)) { "Part destination already exists: $destination" }
-            progress.report(OperationProgress("import-part", 1, 2, "Copying source", destination))
-            Files.createDirectories(checkNotNull(destination.parent))
-            Files.copy(source, destination)
-            val updated = project.copy(parts = project.parts + Part(request.id, relativeFile, request.role))
-            ProjectStore.write(root, updated)
-            progress.report(OperationProgress("import-part", 2, 2, "Registered legacy audio part", destination))
-            return@mutateSuspend snapshot(root, updated)
-        }
-
         require(isMidi || request.transcribe) { "Audio input requires --transcribe so immutable raw MIDI can be prepared" }
         val relativeFile = "source/${request.id}.$extension"
         val destination = safeDestination(root, relativeFile)
@@ -393,7 +395,7 @@ class DefaultProjectApplicationService(
             ),
             workflow = project.workflow.invalidate(WorkflowChange.SOURCE_OR_RAW)
         )
-        val saved = if (project.version == 1) ProjectStore.upgrade(root, project, updated.parts) else updated.also { ProjectStore.write(root, it) }
+        val saved = updated.also { ProjectStore.write(root, it) }
         val finalStage = if (isMidi) 3 else 4
         progress.report(OperationProgress("import-part", finalStage, finalStage, "Registered raw MIDI; Clean MIDI is next", root.resolve(ProjectStore.FILE_NAME)))
         snapshot(root, saved)
@@ -672,7 +674,7 @@ class DefaultProjectApplicationService(
         return ProjectStore.read(root).also { it.requireValid(root) }
     }
 
-    private fun snapshot(root: Path, project: Project): ProjectSnapshot {
+    private fun snapshot(root: Path, project: Project, migration: ProjectMigrationStatus = migrationStatus(ProjectStore.migrate(project))): ProjectSnapshot {
         fun current(artifact: WorkflowArtifact) = artifact !in project.workflow.stale
         val summaries = project.parts.map { part ->
             part.summary(
@@ -713,9 +715,17 @@ class DefaultProjectApplicationService(
                 cohesionApprovalRequired = project.workflow.cohesion?.let { !it.approved && WorkflowArtifact.COHESION !in project.workflow.stale } == true,
                 cohesionReady = currentCohesion(root, project),
                 commercialSourceAttestationsComplete = project.parts.isNotEmpty() && project.parts.all { it.sourceAttestation?.supportsCommercialUse == true }
-            )
+            ),
+            migration = migration
         )
     }
+
+    private fun migrationStatus(result: ProjectMigrationResult, migrated: Boolean = false) = ProjectMigrationStatus(
+        requiresMigration = !migrated && result.sourceVersion < Project.CURRENT_VERSION,
+        sourceVersion = result.sourceVersion,
+        warnings = result.warnings,
+        setupRequirements = result.setupRequirements
+    )
 
     /** Rebuilds the bounded cohesion input so readiness cannot be inferred from a plan file. */
     private fun currentCohesion(root: Path, project: Project): Boolean = runCatching {

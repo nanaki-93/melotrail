@@ -2,11 +2,13 @@ package app.melotrail.arrangement
 
 import app.melotrail.commercial.SourceRightsAttestation
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import java.nio.file.Files
 import java.nio.file.Path
+import java.security.MessageDigest
 
 /**
- * In-memory local arranger project. ProjectStore owns the v1/v2/v3 JSON format
+ * In-memory local arranger project. ProjectStore owns the versioned JSON format
  * boundary; this model deliberately keeps source references uniform for the
  * existing arranger code.
  *
@@ -22,7 +24,11 @@ data class Project(
     val structure: List<String> = emptyList(),
     val renderFormat: RenderFormat? = null,
     /** v3 durable stale evidence and bounded cross-stage references. */
-    val workflow: ProjectWorkflowReferences = ProjectWorkflowReferences()
+    val workflow: ProjectWorkflowReferences = ProjectWorkflowReferences(),
+    /** V4-only canonical persistence scaffold. Null creative choices mean setup is required. */
+    val envelope: ProjectV4Envelope = ProjectV4Envelope(),
+    /** Read-time compatibility evidence; it is never silently persisted as canonical project data. */
+    @Transient val compatibility: ProjectCompatibility = ProjectCompatibility()
 ) {
     fun validate(projectRoot: Path): ProjectValidationResult =
         ProjectValidator.validate(this, projectRoot)
@@ -49,7 +55,133 @@ data class Project(
 
     companion object {
         const val MIDI_FIRST_VERSION = 2
-        const val CURRENT_VERSION = 3
+        const val CURRENT_VERSION = 4
+    }
+}
+
+/** Typed, queryable state produced while reading a supported legacy document. */
+data class ProjectCompatibility(
+    val sourceVersion: Int = Project.CURRENT_VERSION,
+    val warnings: List<String> = emptyList()
+)
+
+/** Setup is deliberately not inferred while opening or migrating a project. */
+@Serializable
+enum class ProjectSetupRequirement { COMPOSITION_SETTINGS, HARMONY }
+
+/**
+ * V4's durable aggregate scaffold. Musical values are intentionally absent until
+ * their owning setup/harmony contracts land; a null value is an explicit setup
+ * requirement, never an implicit default.
+ */
+@Serializable
+data class ProjectV4Envelope(
+    val compositionSettings: CompositionSettings? = null,
+    val harmony: HarmonySettings? = null,
+    val evolvedParts: List<EvolvedPartReference> = emptyList(),
+    val structureOccurrences: List<StructureOccurrence> = emptyList(),
+    val manifests: ProjectManifestReferences = ProjectManifestReferences(),
+    val arrangementAssignments: List<ArrangementAssignmentReference> = emptyList()
+) {
+    fun setupRequirements(): Set<ProjectSetupRequirement> = buildSet {
+        if (compositionSettings == null) add(ProjectSetupRequirement.COMPOSITION_SETTINGS)
+        if (harmony == null) add(ProjectSetupRequirement.HARMONY)
+    }
+
+    fun requireWellFormed(partIds: Set<String>) {
+        require(evolvedParts.map(EvolvedPartReference::partId).distinct().size == evolvedParts.size) {
+            "V4 evolved part references must be unique"
+        }
+        require(evolvedParts.all { it.partId in partIds }) { "V4 evolved part references an unknown part" }
+        require(structureOccurrences.map(StructureOccurrence::instanceId).distinct().size == structureOccurrences.size) {
+            "V4 structure occurrence IDs must be unique"
+        }
+        require(structureOccurrences.all { it.partId in partIds }) { "V4 structure occurrence references an unknown part" }
+        require(arrangementAssignments.map { it.occurrenceId to it.instrumentId }.distinct().size == arrangementAssignments.size) {
+            "V4 arrangement assignments must be unique"
+        }
+        require(arrangementAssignments.all { assignment -> structureOccurrences.any { it.instanceId == assignment.occurrenceId } }) {
+            "V4 arrangement assignment references an unknown occurrence"
+        }
+    }
+}
+
+/** Placeholder owned by Task 006; its presence records an explicit user setup, not defaults. */
+@Serializable
+data class CompositionSettings(val revision: Int = 1) {
+    init { require(revision == 1) { "Unsupported composition settings revision: $revision" } }
+}
+
+/** Placeholder owned by the future harmony contract. */
+@Serializable
+data class HarmonySettings(val revision: Int = 1) {
+    init { require(revision == 1) { "Unsupported harmony settings revision: $revision" } }
+}
+
+@Serializable
+data class EvolvedPartReference(val partId: String) {
+    init { require(SAFE_PROJECT_ID.matches(partId)) { "V4 part ID is invalid" } }
+}
+
+@Serializable
+data class StructureOccurrence(val instanceId: String, val partId: String) {
+    init {
+        require(SAFE_PROJECT_ID.matches(instanceId)) { "V4 structure occurrence ID is invalid" }
+        require(SAFE_PROJECT_ID.matches(partId)) { "V4 structure occurrence part ID is invalid" }
+    }
+}
+
+@Serializable
+enum class ManifestRunStatus { PENDING, FAILED, COMPLETED }
+
+/** Pending and failed runs intentionally may have no output; completed references are file-validated. */
+@Serializable
+data class ManifestRunReference(
+    val stage: String,
+    val status: ManifestRunStatus,
+    val artifacts: List<WorkflowArtifactReference> = emptyList()
+) {
+    init {
+        require(SAFE_PROJECT_ID.matches(stage)) { "Manifest stage ID is invalid" }
+        require(status != ManifestRunStatus.COMPLETED || artifacts.isNotEmpty()) {
+            "Completed manifest runs require at least one artifact reference"
+        }
+    }
+}
+
+@Serializable
+data class ProjectManifestReferences(val runs: List<ManifestRunReference> = emptyList()) {
+    init { require(runs.map(ManifestRunReference::stage).distinct().size == runs.size) { "Manifest stages must be unique" } }
+}
+
+/** Portable provenance snapshot: identifiers and hashes only, never renderer filenames or local library paths. */
+@Serializable
+data class LibraryProvenanceSnapshot(
+    val libraryId: String,
+    val licenseSha256: String,
+    val provenanceSha256: String
+) {
+    init {
+        require(SAFE_PROJECT_ID.matches(libraryId)) { "Library ID is invalid" }
+        require(SHA_256_DIGEST.matches(licenseSha256) && SHA_256_DIGEST.matches(provenanceSha256)) {
+            "Library provenance fingerprints are invalid"
+        }
+    }
+}
+
+/** Stable arrangement decision evidence; it intentionally has no engine filename or filesystem path field. */
+@Serializable
+data class ArrangementAssignmentReference(
+    val occurrenceId: String,
+    val instrumentId: String,
+    val decisionSha256: String,
+    val libraryProvenance: LibraryProvenanceSnapshot
+) {
+    init {
+        require(SAFE_PROJECT_ID.matches(occurrenceId) && SAFE_PROJECT_ID.matches(instrumentId)) {
+            "Arrangement assignment identity is invalid"
+        }
+        require(SHA_256_DIGEST.matches(decisionSha256)) { "Arrangement decision fingerprint is invalid" }
     }
 }
 
@@ -64,7 +196,9 @@ data class Part(
     /** Null is a legacy/unattested source; it can never be commercial-ready. */
     val sourceAttestation: SourceRightsAttestation? = null,
     /** Optional only for compatible reads; every new unified import records both immutable boundaries. */
-    val importEvidence: ImportEvidence? = null
+    val importEvidence: ImportEvidence? = null,
+    /** Typed v1 compatibility data. It preserves a legacy source without pretending it is MIDI. */
+    val legacySourceOnly: Boolean = false
 )
 
 @Serializable
@@ -124,7 +258,8 @@ data class PartAnalysisReference(
 enum class AnalysisKind { AUDIO, MIDI }
 
 data class ProjectValidationResult(
-    val errors: List<String>
+    val errors: List<String>,
+    val setupRequirements: Set<ProjectSetupRequirement> = emptySet()
 ) {
     val isValid: Boolean
         get() = errors.isEmpty()
@@ -136,7 +271,7 @@ object ProjectValidator {
         val errors = mutableListOf<String>()
         val root = projectRoot.toAbsolutePath().normalize()
 
-        if (project.version !in setOf(1, 2, Project.CURRENT_VERSION)) {
+        if (project.version !in setOf(1, 2, 3, Project.CURRENT_VERSION)) {
             errors += "Unsupported project version: ${project.version}"
         }
         if (project.version >= Project.MIDI_FIRST_VERSION) {
@@ -175,8 +310,11 @@ object ProjectValidator {
             if (project.version >= Project.MIDI_FIRST_VERSION) {
                 val midi = part.midi
                 if (midi == null) {
-                    errors += "Part '${part.id}' requires raw MIDI; import it before Clean MIDI"
+                    if (!(project.version == Project.CURRENT_VERSION && part.legacySourceOnly)) {
+                        errors += "Part '${part.id}' requires raw MIDI; import it before Clean MIDI"
+                    }
                 } else {
+                    if (part.legacySourceOnly) errors += "Part '${part.id}' cannot be both MIDI-first and legacy-source-only"
                     midi.raw?.let { validateFileReference(root, it, "Part '${part.id}' raw MIDI", errors) }
                     midi.clean?.let { validateFileReference(root, it, "Part '${part.id}' cleaned MIDI", errors) }
                     if (midi.raw != null && midi.clean == null && (midi.cleanup != null || midi.quality != null)) {
@@ -242,7 +380,20 @@ object ProjectValidator {
             }
         }
 
-        return ProjectValidationResult(errors)
+        if (project.version == Project.CURRENT_VERSION) {
+            runCatching { project.envelope.requireWellFormed(knownPartIds) }.exceptionOrNull()?.let { error ->
+                errors += "V4 envelope is invalid: ${error.message}"
+            }
+            project.envelope.manifests.runs
+                .filter { it.status == ManifestRunStatus.COMPLETED }
+                .flatMap { it.artifacts }
+                .forEach { reference -> validateArtifactReference(root, reference, "Completed manifest artifact", errors) }
+        }
+
+        return ProjectValidationResult(
+            errors,
+            if (project.version == Project.CURRENT_VERSION) project.envelope.setupRequirements() else emptySet()
+        )
     }
 
     private fun validateFileReference(
@@ -286,4 +437,34 @@ object ProjectValidator {
             errors += "$label file cannot be resolved: $reference"
         }
     }
+
+    private fun validateArtifactReference(
+        projectRoot: Path,
+        reference: WorkflowArtifactReference,
+        label: String,
+        errors: MutableList<String>
+    ) {
+        val before = errors.size
+        validateFileReference(projectRoot, reference.file, label, errors)
+        if (errors.size != before) return
+        val actual = runCatching {
+            val digest = MessageDigest.getInstance("SHA-256")
+            Files.newInputStream(projectRoot.resolve(reference.file)).use { input ->
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    digest.update(buffer, 0, count)
+                }
+            }
+            digest.digest().joinToString("") { "%02x".format(it) }
+        }.getOrElse {
+            errors += "$label fingerprint cannot be read: ${reference.file}"
+            return
+        }
+        if (actual != reference.sha256) errors += "$label fingerprint does not match: ${reference.file}"
+    }
 }
+
+private val SAFE_PROJECT_ID = Regex("[A-Za-z0-9_-]{1,80}")
+private val SHA_256_DIGEST = Regex("[0-9a-f]{64}")

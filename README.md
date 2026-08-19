@@ -136,9 +136,12 @@ recovery, see [Track process workflow](docs/TRACK_PROCESS_WORKFLOW.md).
 
 ### Workflow state and migration
 
-New MIDI-first projects use project schema v3. Schema v1 and v2 projects stay
-readable without an open-time rewrite; a v2 project can be explicitly and
-atomically saved as v3 once normal project validation succeeds. Readiness comes
+New projects use project schema v4. Schema v1, v2, and v3 projects stay
+readable without an open-time rewrite; a legacy project can be explicitly and
+atomically saved as v4 once normal project validation succeeds. Missing creative
+setup is surfaced as a typed setup requirement and is never inferred on open.
+The v1-v3 readers, fixtures, and this compatibility note must be removed together
+only after the declared project-format support window ends. Readiness comes
 from validated files and available fingerprints, never a completion flag alone.
 Changes to source/raw MIDI, cleaned MIDI, Lo-fi Feel, analysis, structure, cohesion,
 mix-only settings, or audio texture mark only their documented descendants

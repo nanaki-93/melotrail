@@ -3,6 +3,7 @@ package app.melotrail.application
 import app.melotrail.arrangement.Part
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
+import app.melotrail.arrangement.writeLegacyProjectFixture
 import app.melotrail.preparation.DetectedInput
 import app.melotrail.preparation.InputContainer
 import app.melotrail.preparation.InputInspectionBoundary
@@ -105,7 +106,7 @@ class InputInspectionApplicationServiceTest {
         val root = tempDir.resolve("legacy")
         Files.createDirectories(root.resolve("parts"))
         writeMidi(root.resolve("parts/A.mid"), 60)
-        ProjectStore.write(root, Project(name = "legacy", parts = listOf(Part("A", "parts/A.mid"))))
+        writeLegacyProjectFixture(root, Project(name = "legacy", parts = listOf(Part("A", "parts/A.mid"))))
         val service = service(InputInspectionBoundary { error("not called") })
 
         val preparation = service.open(root).parts.single().preparation

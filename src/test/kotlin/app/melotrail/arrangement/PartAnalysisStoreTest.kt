@@ -22,8 +22,13 @@ class PartAnalysisStoreTest {
         Files.createDirectories(source.parent)
         Files.writeString(source, "source audio bytes")
         val sourceBefore = Files.readString(source)
-        val project = Project(name = "demo", parts = listOf(Part("A", "parts/A.wav")))
-        Files.writeString(projectRoot.resolve("project.json"), json.encodeToString(project))
+        val project = Project(
+            version = Project.CURRENT_VERSION,
+            name = "demo",
+            parts = listOf(Part("A", "parts/A.wav", midi = MidiReferences(raw = "parts/A.wav"))),
+            renderFormat = RenderFormat()
+        )
+        ProjectStore.write(projectRoot, project)
         val analysis = PartAnalysis(
             duration = 2.0,
             sampleRate = 48_000,
@@ -37,9 +42,7 @@ class PartAnalysisStoreTest {
         val analysisPath = PartAnalysisStore.write(projectRoot, project, "A", analysis)
 
         val storedAnalysis = json.decodeFromString<PartAnalysis>(Files.readString(analysisPath))
-        val updatedProject = json.decodeFromString<Project>(
-            Files.readString(projectRoot.resolve("project.json"))
-        )
+        val updatedProject = ProjectStore.read(projectRoot)
         assertEquals(sourceBefore, Files.readString(source))
         assertEquals(analysis, storedAnalysis)
         assertEquals("analysis/A.json", updatedProject.parts.single().analysis?.file)

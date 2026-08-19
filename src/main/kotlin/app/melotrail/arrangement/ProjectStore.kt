@@ -10,16 +10,20 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
+import java.util.UUID
 
 /**
- * Versioned project-file boundary. V1 remains readable without changing its
- * metadata or files; v2 remains readable in memory and newly created or
- * explicitly saved MIDI-first projects use v3.
+ * Versioned project-file boundary. V1-v3 remain readable without changing
+ * metadata or files. V4 is the only explicit migration/save target.
+ *
+ * Remove the v1-v3 readers, fixtures, and README support note together only
+ * after the declared project-format support window has ended.
  */
 object ProjectStore {
     const val FILE_NAME = "project.json"
 
     private val json = Json { prettyPrint = true; encodeDefaults = true; ignoreUnknownKeys = false }
+    private val legacyJson = Json { ignoreUnknownKeys = true }
 
     fun create(root: Path, name: String, renderFormat: RenderFormat): Project {
         val project = Project(version = Project.CURRENT_VERSION, name = name, renderFormat = renderFormat)
@@ -31,64 +35,70 @@ object ProjectStore {
         val text = Files.readString(root.resolve(FILE_NAME), StandardCharsets.UTF_8)
         val element = json.parseToJsonElement(text).jsonObject
         return when (element["version"]?.jsonPrimitive?.content?.toIntOrNull() ?: 1) {
-            1 -> json.decodeFromString<ProjectV1Dto>(text).toProject()
-            2 -> json.decodeFromString<ProjectV2Dto>(text).toProject()
-            3 -> json.decodeFromString<ProjectV3Dto>(text).toProject()
+            1 -> legacyJson.decodeFromString<ProjectV1Dto>(text).toProject(compatibility(element, V1_FIELDS, 1))
+            2 -> legacyJson.decodeFromString<ProjectV2Dto>(text).toProject(compatibility(element, V2_FIELDS, 2))
+            3 -> legacyJson.decodeFromString<ProjectV3Dto>(text).toProject(compatibility(element, V3_FIELDS, 3))
+            4 -> json.decodeFromString<ProjectV4Dto>(text).toProject()
             else -> throw IllegalArgumentException("Unsupported project version: ${element["version"]?.jsonPrimitive?.content}")
         }
     }
 
+    /** Pure mapping: it does not touch the filesystem or infer creative settings. */
+    fun migrate(project: Project): ProjectMigrationResult {
+        val sourceVersion = project.version
+        require(sourceVersion in 1..Project.CURRENT_VERSION) { "Unsupported project version: $sourceVersion" }
+        val migrated = project.copy(
+            version = Project.CURRENT_VERSION,
+            renderFormat = project.renderFormat ?: RenderFormat(),
+            compatibility = ProjectCompatibility(Project.CURRENT_VERSION)
+        )
+        val warnings = project.compatibility.warnings + buildList {
+            if (sourceVersion < Project.CURRENT_VERSION) add("Project schema v$sourceVersion is readable legacy data; save explicitly to publish v4.")
+            if (sourceVersion == 1) add("Legacy source-only parts are preserved without being treated as MIDI; import validated MIDI before MIDI-first processing.")
+        }
+        return ProjectMigrationResult(migrated, sourceVersion, warnings, migrated.envelope.setupRequirements())
+    }
+
+    fun readMigration(root: Path): ProjectMigrationResult = migrate(read(root))
+
+    /** Explicit, validated publication. Opening a project never invokes this method. */
+    fun migrateAndSave(root: Path): ProjectMigrationSaveResult {
+        val migration = readMigration(root)
+        val migrated = migration.project
+        migrated.requireValid(root)
+        write(root, migrated)
+        return ProjectMigrationSaveResult(migration, root.resolve(FILE_NAME))
+    }
+
     fun write(root: Path, project: Project) {
         project.requireValid(root)
-        val serialized = when (project.version) {
-            1 -> json.encodeToString(project.toV1Dto())
-            2 -> json.encodeToString(project.toV2Dto())
-            3 -> json.encodeToString(project.toV3Dto())
-            else -> throw IllegalArgumentException("Unsupported project version: ${project.version}")
+        require(project.version == Project.CURRENT_VERSION) {
+            "Only schema v${Project.CURRENT_VERSION} projects can be saved; explicitly migrate readable legacy data first."
         }
+        val serialized = json.encodeToString(project.toV4Dto())
+        json.decodeFromString<ProjectV4Dto>(serialized).toProject().requireValid(root)
         atomicWrite(root.resolve(FILE_NAME), serialized)
     }
 
     /**
      * Opens never rewrite metadata. Call this explicit atomic boundary only
-     * after the caller has presented the v2 migration state to the user.
+     * after the caller has presented the legacy migration state to the user.
      */
-    fun migrateV2(root: Path): Project {
-        val project = read(root)
-        if (project.version == Project.CURRENT_VERSION) {
-            project.requireValid(root)
-            return project
-        }
-        require(project.version == 2) { "Only version 2 projects require this migration" }
-        val migrated = project.copy(version = Project.CURRENT_VERSION)
-        migrated.requireValid(root)
-        write(root, migrated)
-        return migrated
-    }
-
-    /** Upgrades metadata only. Source files remain exactly where v1 stored them. */
-    fun upgrade(root: Path, project: Project, parts: List<Part>): Project {
-        require(project.version == 1) { "Only version 1 projects can be upgraded" }
-        val upgraded = project.copy(
-            version = Project.CURRENT_VERSION,
-            parts = parts,
-            renderFormat = project.renderFormat ?: RenderFormat()
-        )
-        upgraded.requireValid(root)
-        write(root, upgraded)
-        return upgraded
-    }
-
     private fun atomicWrite(path: Path, text: String) {
         Files.createDirectories(checkNotNull(path.parent))
-        val temporary = path.resolveSibling(".${path.fileName}.tmp")
+        val temporary = path.resolveSibling(".${path.fileName}.save-${UUID.randomUUID()}.tmp")
+        var published = false
         Files.writeString(temporary, text, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
         try {
             Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-        } catch (error: java.nio.file.AtomicMoveNotSupportedException) {
-            throw IllegalStateException("Atomic project save is not supported for '$path'", error)
+            published = true
+        } catch (error: Exception) {
+            val recovery = path.resolveSibling(".${path.fileName}.recovery-${UUID.randomUUID()}.json")
+            val evidence = runCatching { Files.move(temporary, recovery, StandardCopyOption.ATOMIC_MOVE); recovery }
+                .getOrElse { temporary }
+            throw ProjectSaveException(path, evidence, error)
         } finally {
-            Files.deleteIfExists(temporary)
+            if (published) Files.deleteIfExists(temporary)
         }
     }
 
@@ -105,11 +115,51 @@ object ProjectStore {
         val importEvidence: ImportEvidence? = null
     )
     @Serializable private data class ProjectV3Dto(val version: Int = 3, val name: String, val renderFormat: RenderFormat, val parts: List<PartV2Dto> = emptyList(), val structure: List<String> = emptyList(), val workflow: ProjectWorkflowReferences = ProjectWorkflowReferences())
+    @Serializable private data class ProjectV4Dto(
+        val version: Int = 4,
+        val name: String,
+        val renderFormat: RenderFormat,
+        val parts: List<PartV4Dto> = emptyList(),
+        val structure: List<String> = emptyList(),
+        val workflow: ProjectWorkflowReferences = ProjectWorkflowReferences(),
+        val envelope: ProjectV4Envelope = ProjectV4Envelope()
+    )
+    @Serializable private data class PartV4Dto(
+        val id: String,
+        val role: String = "",
+        val sourceFile: String,
+        val midi: MidiReferences? = null,
+        val analysis: PartAnalysisReference? = null,
+        val sourceAttestation: app.melotrail.commercial.SourceRightsAttestation? = null,
+        val importEvidence: ImportEvidence? = null,
+        val legacySourceOnly: Boolean = false
+    )
 
-    private fun ProjectV1Dto.toProject() = Project(1, name, parts.map { Part(it.id, it.file, it.role, it.analysis) }, structure)
-    private fun ProjectV2Dto.toProject() = Project(2, name, parts.map { Part(it.id, it.sourceFile, it.role, it.analysis, it.midi, it.sourceAttestation, it.importEvidence) }, structure, renderFormat)
-    private fun ProjectV3Dto.toProject() = Project(3, name, parts.map { Part(it.id, it.sourceFile, it.role, it.analysis, it.midi, it.sourceAttestation, it.importEvidence) }, structure, renderFormat, workflow)
-    private fun Project.toV1Dto() = ProjectV1Dto(name = name, parts = parts.map { PartV1Dto(it.id, it.file, it.role, it.analysis) }, structure = structure)
-    private fun Project.toV2Dto() = ProjectV2Dto(name = name, renderFormat = requireNotNull(renderFormat), parts = parts.map { PartV2Dto(it.id, it.role, it.file, requireNotNull(it.midi), it.analysis, it.sourceAttestation, it.importEvidence) }, structure = structure)
-    private fun Project.toV3Dto() = ProjectV3Dto(name = name, renderFormat = requireNotNull(renderFormat), parts = parts.map { PartV2Dto(it.id, it.role, it.file, requireNotNull(it.midi), it.analysis, it.sourceAttestation, it.importEvidence) }, structure = structure, workflow = workflow)
+    private fun ProjectV1Dto.toProject(compatibility: ProjectCompatibility) = Project(1, name, parts.map { Part(it.id, it.file, it.role, it.analysis, legacySourceOnly = true) }, structure, compatibility = compatibility)
+    private fun ProjectV2Dto.toProject(compatibility: ProjectCompatibility) = Project(2, name, parts.map { Part(it.id, it.sourceFile, it.role, it.analysis, it.midi, it.sourceAttestation, it.importEvidence) }, structure, renderFormat, compatibility = compatibility)
+    private fun ProjectV3Dto.toProject(compatibility: ProjectCompatibility) = Project(3, name, parts.map { Part(it.id, it.sourceFile, it.role, it.analysis, it.midi, it.sourceAttestation, it.importEvidence) }, structure, renderFormat, workflow, compatibility = compatibility)
+    private fun ProjectV4Dto.toProject() = Project(4, name, parts.map { Part(it.id, it.sourceFile, it.role, it.analysis, it.midi, it.sourceAttestation, it.importEvidence, it.legacySourceOnly) }, structure, renderFormat, workflow, envelope)
+    private fun Project.toV4Dto() = ProjectV4Dto(name = name, renderFormat = requireNotNull(renderFormat), parts = parts.map { PartV4Dto(it.id, it.role, it.file, it.midi, it.analysis, it.sourceAttestation, it.importEvidence, it.legacySourceOnly) }, structure = structure, workflow = workflow, envelope = envelope)
+
+    private fun compatibility(element: kotlinx.serialization.json.JsonObject, known: Set<String>, sourceVersion: Int): ProjectCompatibility {
+        val unknown = element.keys - known
+        return ProjectCompatibility(sourceVersion, unknown.sorted().map { "Legacy v$sourceVersion field '$it' was not understood and was retained only as a migration warning." })
+    }
+
+    private val V1_FIELDS = setOf("version", "name", "parts", "structure")
+    private val V2_FIELDS = V1_FIELDS + setOf("renderFormat")
+    private val V3_FIELDS = V2_FIELDS + setOf("workflow")
 }
+
+data class ProjectMigrationResult(
+    val project: Project,
+    val sourceVersion: Int,
+    val warnings: List<String>,
+    val setupRequirements: Set<ProjectSetupRequirement>
+)
+
+data class ProjectMigrationSaveResult(val migration: ProjectMigrationResult, val projectFile: Path)
+
+class ProjectSaveException(val projectFile: Path, val recoveryEvidence: Path, cause: Throwable) : IllegalStateException(
+    "Atomic project save is not supported for '$projectFile'. Recovery evidence was retained at '$recoveryEvidence'.", cause
+)

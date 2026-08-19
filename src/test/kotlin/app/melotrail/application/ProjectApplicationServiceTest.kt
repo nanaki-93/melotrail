@@ -6,6 +6,7 @@ import app.melotrail.arrangement.MidiPartAnalyzer
 import app.melotrail.arrangement.MidiReferences
 import app.melotrail.arrangement.Part
 import app.melotrail.arrangement.Project
+import app.melotrail.arrangement.writeLegacyProjectFixture
 import app.melotrail.preparation.AudioInspectionMeasurements
 import app.melotrail.preparation.DetectedAudioFormat
 import app.melotrail.preparation.DetectedInput
@@ -63,7 +64,7 @@ class ProjectApplicationServiceTest {
         val fixtures = listOf(
             "v1" to Project(version = 1, name = "v1", parts = listOf(Part("A", "parts/A.mid"))),
             "v2" to Project(version = 2, name = "v2", renderFormat = RenderFormat(), parts = listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid")))),
-            "v3" to Project(version = Project.CURRENT_VERSION, name = "v3", renderFormat = RenderFormat(), parts = listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid"))))
+            "v3" to Project(version = 3, name = "v3", renderFormat = RenderFormat(), parts = listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid"))))
         )
 
         fixtures.forEach { (name, project) ->
@@ -76,7 +77,7 @@ class ProjectApplicationServiceTest {
                 Files.createDirectories(cleanPath.parent)
                 Files.copy(input, cleanPath)
             }
-            ProjectStore.write(root, project)
+            if (project.version < Project.CURRENT_VERSION) writeLegacyProjectFixture(root, project) else ProjectStore.write(root, project)
             val before = Files.readAllBytes(root.resolve(ProjectStore.FILE_NAME))
 
             assertEquals(project.version, service.open(root).version)

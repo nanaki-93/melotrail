@@ -17,6 +17,7 @@ import app.melotrail.arrangement.MidiReferences
 import app.melotrail.arrangement.Part
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
+import app.melotrail.arrangement.writeLegacyProjectFixture
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.RenderResult
 import app.melotrail.arrangement.SelectedMidiArtifactResolver
@@ -70,7 +71,7 @@ class PartPreviewApplicationServiceTest {
 
     @Test fun `missing clean MIDI analysis is a typed prerequisite`() = runTest {
         val midi = root.resolve("parts/A.mid").also { Files.createDirectories(it.parent); Files.write(it, byteArrayOf()) }
-        ProjectStore.write(root, Project(name = "test", parts = listOf(app.melotrail.arrangement.Part("A", "parts/A.mid"))))
+        writeLegacyProjectFixture(root, Project(name = "test", parts = listOf(app.melotrail.arrangement.Part("A", "parts/A.mid"))))
 
         val result = service().resolve(PreviewRequest(root, "A"))
 
@@ -122,7 +123,7 @@ class PartPreviewApplicationServiceTest {
         originalArtifacts.forEach { (path, bytes) -> assertTrue(bytes.contentEquals(Files.readAllBytes(path)), "$path must remain immutable") }
     }
 
-    private fun project(file: String) = ProjectStore.write(root, Project(name = "test", parts = listOf(app.melotrail.arrangement.Part("A", file))))
+    private fun project(file: String) = writeLegacyProjectFixture(root, Project(name = "test", parts = listOf(app.melotrail.arrangement.Part("A", file))))
     private fun service(decoder: PreviewMp3Decoder = FakeMp3Decoder()) = DefaultPartPreviewApplicationService(FakeRenderer(), decoder)
 
     private class FakeMp3Decoder : PreviewMp3Decoder {

@@ -864,11 +864,11 @@ class WorkspaceViewModel(
         val project = state.value.project ?: return fail("project migration", "Open a v2 project first.")
         if (project.version != 2) return fail("project migration", "Only readable v2 projects require migration.")
         if (state.value.operation.isMutating) return busy("migrate project")
-        val feedbackId = beginFeedback(OperationKind.PROJECT_OPEN, OperationPhase.LOCAL, "Migrating ${project.name} to schema v3…")
+        val feedbackId = beginFeedback(OperationKind.PROJECT_OPEN, OperationPhase.LOCAL, "Migrating ${project.name} to schema v4…")
         mutableState.update { it.copy(operation = WorkspaceOperation.OpeningProject(project.root), operationFeedback = feedbackTracker.current, notification = null) }
         scope.launch {
-            runCatching { withContext(ioDispatcher) { projectService.migrateV2(project.root) } }
-                .onSuccess { opened(it, "Migrated ${it.name} to project schema v3", feedbackId) }
+            runCatching { withContext(ioDispatcher) { projectService.migrateProject(project.root) } }
+                .onSuccess { opened(it, "Migrated ${it.name} to project schema v4", feedbackId) }
                 .onFailure { fail("project migration", it.message ?: "Unable to migrate project.", sessionId = feedbackId) }
         }
     }

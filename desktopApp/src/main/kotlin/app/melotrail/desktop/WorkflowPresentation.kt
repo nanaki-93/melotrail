@@ -11,7 +11,7 @@ internal fun workflowDescription(step: WorkflowStep): String {
     return when (step.prerequisite) {
         WorkflowPrerequisite.NONE -> "This optional review is available."
         WorkflowPrerequisite.PROJECT_ROOT -> "Create or open a project."
-        WorkflowPrerequisite.SCHEMA_V3 -> "Explicitly migrate the readable v2 project before continuing."
+        WorkflowPrerequisite.SCHEMA_V4 -> "Explicitly migrate the readable legacy project before continuing."
         WorkflowPrerequisite.IMPORTED_SOURCE -> "Import a MIDI or eligible solo-piano audio source$target."
         WorkflowPrerequisite.SOURCE_INSPECTION -> "Inspect the preserved source$target."
         WorkflowPrerequisite.RAW_MIDI -> "Publish immutable raw MIDI$target."

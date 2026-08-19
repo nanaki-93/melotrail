@@ -219,7 +219,7 @@ data class ArrangementInput(
     fun requireValid() {
         val errors = mutableListOf<String>()
         val knownPartIds = project.parts.map { it.id }.toSet()
-        if (project.version !in setOf(1, 2, Project.CURRENT_VERSION)) {
+        if (project.version !in setOf(1, 2, 3, Project.CURRENT_VERSION)) {
             errors += "Unsupported project version: ${project.version}"
         }
         if (knownPartIds.isEmpty()) {

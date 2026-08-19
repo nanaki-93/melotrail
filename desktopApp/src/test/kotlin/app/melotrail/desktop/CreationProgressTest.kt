@@ -14,6 +14,7 @@ import app.melotrail.application.ProjectReadiness
 import app.melotrail.application.ProjectSnapshot
 import app.melotrail.application.StructureSectionSummary
 import app.melotrail.arrangement.MidiAiFixSelection
+import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.WorkflowArtifact
 import kotlin.io.path.Path
@@ -135,7 +136,7 @@ class CreationProgressTest {
 
     private fun emptyProject() = ProjectSnapshot(
         Path("build/creation-progress"),
-        3,
+        Project.CURRENT_VERSION,
         "progress",
         RenderFormat(),
         emptyList(),

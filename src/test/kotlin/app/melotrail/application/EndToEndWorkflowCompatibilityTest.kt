@@ -7,6 +7,7 @@ import app.melotrail.arrangement.MixedStem
 import app.melotrail.arrangement.Part
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
+import app.melotrail.arrangement.writeLegacyProjectFixture
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.RenderResult
 import app.melotrail.preparation.AudioCleanupBoundary
@@ -131,13 +132,13 @@ class EndToEndWorkflowCompatibilityTest {
     fun `legacy v1 and pre-provenance v2 projects remain readable beside approved v3 arrangements`() = runBlocking {
         val v1 = tempDir.resolve("compat/v1")
         writeMidi(v1.resolve("parts/A.mid"))
-        ProjectStore.write(v1, Project(version = 1, name = "v1", parts = listOf(Part("A", "parts/A.mid")), structure = listOf("A")))
+        writeLegacyProjectFixture(v1, Project(version = 1, name = "v1", parts = listOf(Part("A", "parts/A.mid")), structure = listOf("A")))
         val services = services()
         assertEquals(1, services.projects.open(v1).version)
 
         val v2 = tempDir.resolve("compat/v2")
         writeMidi(v2.resolve("source/A.mid")); writeMidi(v2.resolve("midi/clean/A.mid"))
-        ProjectStore.write(v2, Project(version = 2, name = "v2", parts = listOf(Part("A", "source/A.mid", midi = app.melotrail.arrangement.MidiReferences(clean = "midi/clean/A.mid"))), structure = listOf("A"), renderFormat = RenderFormat()))
+        writeLegacyProjectFixture(v2, Project(version = 2, name = "v2", parts = listOf(Part("A", "source/A.mid", midi = app.melotrail.arrangement.MidiReferences(clean = "midi/clean/A.mid"))), structure = listOf("A"), renderFormat = RenderFormat()))
         val snapshot = services.projects.open(v2)
         assertEquals(2, snapshot.version)
         assertEquals(MidiQualityStatus.LEGACY_UNKNOWN, snapshot.parts.single().preparation.midiQuality.status)

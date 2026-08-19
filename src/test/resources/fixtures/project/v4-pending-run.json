@@ -1,0 +1,32 @@
+{
+  "version": 4,
+  "name": "v4-pending-run",
+  "renderFormat": {
+    "sampleRate": 44100,
+    "channels": 2,
+    "bitDepth": 24
+  },
+  "parts": [],
+  "structure": [],
+  "workflow": {
+    "stale": [],
+    "cohesion": null,
+    "commercialProvenance": null
+  },
+  "envelope": {
+    "compositionSettings": null,
+    "harmony": null,
+    "evolvedParts": [],
+    "structureOccurrences": [],
+    "manifests": {
+      "runs": [
+        {
+          "stage": "render",
+          "status": "PENDING",
+          "artifacts": []
+        }
+      ]
+    },
+    "arrangementAssignments": []
+  }
+}

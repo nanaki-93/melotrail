@@ -2,6 +2,7 @@ package app.melotrail.application
 
 import app.melotrail.arrangement.MidiAiFixSelection
 import app.melotrail.arrangement.MidiAnalysisInput
+import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.WorkflowArtifact
 import java.nio.file.Path
@@ -84,7 +85,7 @@ class WorkflowReadModelTest {
 
         assertEquals(WorkflowState.REVIEW, workflow[WorkflowStage.PROJECT].state)
         assertEquals(WorkflowAction.MIGRATE_PROJECT, workflow.current.nextAction)
-        assertEquals(WorkflowPrerequisite.SCHEMA_V3, workflow.current.prerequisite)
+        assertEquals(WorkflowPrerequisite.SCHEMA_V4, workflow.current.prerequisite)
     }
 
     private fun project(): ProjectSnapshot {
@@ -112,7 +113,7 @@ class WorkflowReadModelTest {
         )
         return ProjectSnapshot(
             Path.of("workflow"),
-            3,
+            Project.CURRENT_VERSION,
             "workflow",
             RenderFormat(),
             listOf(part),

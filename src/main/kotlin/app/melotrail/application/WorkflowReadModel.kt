@@ -2,6 +2,7 @@ package app.melotrail.application
 
 import app.melotrail.arrangement.MidiAiFixSelection
 import app.melotrail.arrangement.MidiAnalysisInput
+import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.WorkflowArtifact
 
 /**
@@ -28,7 +29,7 @@ enum class WorkflowAction {
 enum class WorkflowPrerequisite {
     NONE,
     PROJECT_ROOT,
-    SCHEMA_V3,
+    SCHEMA_V4,
     IMPORTED_SOURCE,
     SOURCE_INSPECTION,
     RAW_MIDI,
@@ -71,12 +72,12 @@ object WorkflowReadModelDeriver {
                 WorkflowPrerequisite.PROJECT_ROOT
             )
         })
-        if (project.version == 2) return WorkflowReadModel(WorkflowStage.entries.map { stage ->
+        if (project.migration.requiresMigration || project.version < Project.CURRENT_VERSION) return WorkflowReadModel(WorkflowStage.entries.map { stage ->
             step(
                 stage,
                 if (stage == WorkflowStage.PROJECT) WorkflowState.REVIEW else WorkflowState.BLOCKED,
                 WorkflowAction.MIGRATE_PROJECT,
-                WorkflowPrerequisite.SCHEMA_V3
+                WorkflowPrerequisite.SCHEMA_V4
             )
         })
 

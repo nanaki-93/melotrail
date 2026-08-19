@@ -275,7 +275,7 @@ private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                         HeaderIconControl("⚙", "Open Settings", !mutationsDisabled, WorkspaceTags.HEADER_SETTINGS) { onIntent(WorkspaceIntent.OpenSettings) }
                     }
                     SelectedProjectControl(state, mutationsDisabled, onIntent, Modifier.fillMaxWidth())
-                    if (state.project?.version == 2) TextButton(onClick = { onIntent(WorkspaceIntent.MigrateProject) }, modifier = Modifier.semantics { testTag = WorkspaceTags.MIGRATE_PROJECT }) { Text("Migrate") }
+                    if (state.project?.migration?.requiresMigration == true) TextButton(onClick = { onIntent(WorkspaceIntent.MigrateProject) }, modifier = Modifier.semantics { testTag = WorkspaceTags.MIGRATE_PROJECT }) { Text("Migrate") }
                 }
             } else Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -286,7 +286,7 @@ private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                 Spacer(Modifier.weight(1f))
                 SelectedProjectControl(state, mutationsDisabled, onIntent)
                 HeaderActions(state, mutationsDisabled, onIntent)
-                if (state.project?.version == 2) TextButton(onClick = { onIntent(WorkspaceIntent.MigrateProject) }, modifier = Modifier.semantics { testTag = WorkspaceTags.MIGRATE_PROJECT }) { Text("Migrate") }
+                if (state.project?.migration?.requiresMigration == true) TextButton(onClick = { onIntent(WorkspaceIntent.MigrateProject) }, modifier = Modifier.semantics { testTag = WorkspaceTags.MIGRATE_PROJECT }) { Text("Migrate") }
             }
         }
     }

@@ -15,25 +15,29 @@ class ProjectStoreWorkflowMigrationTest {
     @Test
     fun `v1 v2 and v3 fixtures open without rewriting project json`() {
         write("parts/A.mid")
-        ProjectStore.write(root, Project(version = 1, name = "v1", parts = listOf(Part("A", "parts/A.mid"))))
+        writeLegacyProjectFixture(root, Project(version = 1, name = "v1", parts = listOf(Part("A", "parts/A.mid"))))
         val v1Before = Files.readString(root.resolve(ProjectStore.FILE_NAME))
         assertEquals(1, ProjectStore.read(root).version)
         assertEquals(v1Before, Files.readString(root.resolve(ProjectStore.FILE_NAME)))
+        val v1Migration = ProjectStore.readMigration(root)
+        assertEquals(Project.CURRENT_VERSION, v1Migration.project.version)
+        assertTrue(v1Migration.project.parts.single().legacySourceOnly)
+        assertEquals(v1Before, Files.readString(root.resolve(ProjectStore.FILE_NAME)))
 
         write("source/A.mid"); write("midi/clean/A.mid")
-        ProjectStore.write(root, Project(version = 2, name = "v2", renderFormat = RenderFormat(), parts = listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid")))))
+        writeLegacyProjectFixture(root, Project(version = 2, name = "v2", renderFormat = RenderFormat(), parts = listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid")))))
         val v2Before = Files.readString(root.resolve(ProjectStore.FILE_NAME))
         assertEquals(2, ProjectStore.read(root).version)
         assertEquals(v2Before, Files.readString(root.resolve(ProjectStore.FILE_NAME)))
 
-        ProjectStore.migrateV2(root)
+        ProjectStore.migrateAndSave(root)
         assertEquals(Project.CURRENT_VERSION, ProjectStore.read(root).version)
         assertTrue(Files.readString(root.resolve(ProjectStore.FILE_NAME)).contains("\"workflow\""))
         val migrated = Files.readString(root.resolve(ProjectStore.FILE_NAME))
         assertTrue(migrated.contains("\"analysisInput\": \"REPAIRED\""))
         assertEquals(MidiAiFixSelection.SKIP, ProjectStore.read(root).parts.single().midi?.aiFixSelection)
 
-        assertEquals(Project.CURRENT_VERSION, ProjectStore.migrateV2(root).version)
+        assertEquals(Project.CURRENT_VERSION, ProjectStore.migrateAndSave(root).migration.project.version)
         assertEquals(migrated, Files.readString(root.resolve(ProjectStore.FILE_NAME)))
     }
 
@@ -75,7 +79,7 @@ class ProjectStoreWorkflowMigrationTest {
         """.trimIndent()
         Files.writeString(projectFile, invalidV2)
 
-        assertFailsWith<IllegalArgumentException> { ProjectStore.migrateV2(root) }
+        assertFailsWith<IllegalArgumentException> { ProjectStore.migrateAndSave(root) }
         assertEquals(invalidV2, Files.readString(projectFile))
     }
 
