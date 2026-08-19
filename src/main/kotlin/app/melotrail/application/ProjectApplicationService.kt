@@ -866,6 +866,9 @@ class DefaultProjectApplicationService(
         val project = readValidProject(root)
         val part = project.parts.singleOrNull { it.id == request.partId } ?: throw IllegalArgumentException("Part not found: ${request.partId}")
         val midi = requireNotNull(part.midi) { "Part '${part.id}' has no MIDI." }
+        require(request.intensity == app.melotrail.arrangement.EnhancementIntensity.OFF) {
+            "Create a reviewable enhancement draft through EnhancementApplicationService; selection never invokes a model."
+        }
         require(midi.technicalCorrectionSelection == app.melotrail.arrangement.TechnicalCorrectionSelection.CORRECTED) {
             "Select the corrected MIDI baseline before enhancement."
         }

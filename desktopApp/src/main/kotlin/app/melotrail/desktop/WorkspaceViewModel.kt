@@ -14,6 +14,11 @@ import app.melotrail.application.CreateMidiAiFixRequest
 import app.melotrail.application.DefaultMidiAiFixApplicationService
 import app.melotrail.application.MidiAiFixApplicationService
 import app.melotrail.application.MidiAiFixSnapshot
+import app.melotrail.application.EnhancementApplicationService
+import app.melotrail.application.DefaultEnhancementApplicationService
+import app.melotrail.application.EnhancementSnapshot
+import app.melotrail.application.CreateEnhancementRequest
+import app.melotrail.application.ApproveEnhancementRequest
 import app.melotrail.application.DefaultArrangementApplicationService
 import app.melotrail.application.GenerateArrangementRequest
 import app.melotrail.application.ImportPartRequest
@@ -113,6 +118,8 @@ data class WorkspaceUiState(
     val cohesion: CohesionSnapshot? = null,
     /** Immutable AI-fix review evidence; composables never read draft files. */
     val midiAiFix: MidiAiFixSnapshot? = null,
+    /** Task 019 review evidence; no composable reads enhancement files. */
+    val enhancementReview: EnhancementSnapshot? = null,
     val arrangement: ArrangementSnapshot? = null,
     val mix: MixSnapshot? = null,
     val buildOptions: BuildOptionsDraft = BuildOptionsDraft(),
@@ -572,6 +579,8 @@ sealed interface WorkspaceIntent {
     data object RegenerateMidiAiFix : WorkspaceIntent
     data class SelectMidiFeel(val input: MidiAnalysisInput) : WorkspaceIntent
     data class SelectEnhancement(val intensity: app.melotrail.arrangement.EnhancementIntensity) : WorkspaceIntent
+    data object ApproveEnhancement : WorkspaceIntent
+    data object RejectEnhancement : WorkspaceIntent
     data object ApplyMidiFeelAndReanalyze : WorkspaceIntent
     data object ConfirmTightenTiming : WorkspaceIntent
     data class SelectTranscriptionInput(val input: TranscriptionInputArtifact) : WorkspaceIntent
@@ -646,6 +655,7 @@ class WorkspaceViewModel(
     private val arrangementService: ArrangementApplicationService = DefaultArrangementApplicationService(libraryRoot = libraryRoot),
     private val cohesionService: CohesionApplicationService = DefaultCohesionApplicationService(),
     private val midiAiFixService: MidiAiFixApplicationService = DefaultMidiAiFixApplicationService(),
+    private val enhancementService: EnhancementApplicationService = DefaultEnhancementApplicationService(),
     private val mixService: MixApplicationService = DefaultMixApplicationService(),
     private val buildService: BuildApplicationService? = null,
     private val player: ArtifactAudioPlayer? = null,
@@ -752,6 +762,8 @@ class WorkspaceViewModel(
             WorkspaceIntent.RegenerateMidiAiFix -> regenerateMidiAiFix()
             is WorkspaceIntent.SelectMidiFeel -> selectMidiFeel(intent.input)
             is WorkspaceIntent.SelectEnhancement -> selectEnhancement(intent.intensity)
+            WorkspaceIntent.ApproveEnhancement -> approveEnhancement()
+            WorkspaceIntent.RejectEnhancement -> rejectEnhancement()
             WorkspaceIntent.ApplyMidiFeelAndReanalyze -> applyMidiFeelAndReanalyze()
             WorkspaceIntent.ConfirmTightenTiming -> confirmTightenTiming()
             is WorkspaceIntent.SelectTranscriptionInput -> mutableState.update { it.copy(audioPreparation = it.audioPreparation.copy(transcriptionInput = intent.input)) }
@@ -1673,14 +1685,43 @@ class WorkspaceViewModel(
         mutableState.update { it.copy(operation = WorkspaceOperation.SelectingEnhancement(partId), notification = null, retry = null) }
         scope.launch {
             runCatching { withContext(ioDispatcher) {
-                projectService.selectEnhancement(app.melotrail.application.SelectEnhancementRequest(project.root, partId, intensity))
-                projectService.analyzePart(AnalyzePartRequest(project.root, partId))
-            } }.onSuccess { snapshot ->
-                val label = intensity.name.lowercase().replaceFirstChar(Char::uppercase)
-                val message = if (intensity == app.melotrail.arrangement.EnhancementIntensity.OFF) "Corrected MIDI selected; previous enhancement evidence was retained." else "$label enhancement selected. MVP placeholder applied no musical edits."
-                mutableState.update { current -> current.copy(project = snapshot, arrangement = null, operation = WorkspaceOperation.Idle, notification = message, downstreamArtifactsStale = true) }
+                if (intensity == app.melotrail.arrangement.EnhancementIntensity.OFF) {
+                    projectService.selectEnhancement(app.melotrail.application.SelectEnhancementRequest(project.root, partId, intensity)) to null
+                } else {
+                    val review = enhancementService.create(CreateEnhancementRequest(project.root, partId, intensity))
+                    projectService.open(project.root) to review
+                }
+            } }.onSuccess { (snapshot, review) ->
+                val message = if (intensity == app.melotrail.arrangement.EnhancementIntensity.OFF) "Corrected MIDI selected; previous enhancement evidence was retained." else "Enhancement draft generated. Preview it, then approve or reject it."
+                mutableState.update { current -> current.copy(project = snapshot, enhancementReview = review ?: current.enhancementReview, arrangement = null, operation = WorkspaceOperation.Idle, notification = message, downstreamArtifactsStale = review != null) }
             }.onFailure { fail("Enhancement", it.message ?: "Unable to select enhancement for $partId.") }
         }
+    }
+
+    private fun approveEnhancement() {
+        val project = state.value.project ?: return fail("Enhancement", "Open a project first.")
+        val review = state.value.enhancementReview ?: return fail("Enhancement", "Generate and preview an enhancement draft first.")
+        if (state.value.operation.isMutating) return
+        mutableState.update { it.copy(operation = WorkspaceOperation.SelectingEnhancement(review.partId), notification = null) }
+        scope.launch { runCatching { withContext(ioDispatcher) {
+            val approved = enhancementService.approve(ApproveEnhancementRequest(project.root, review.partId, review.draftSha256, review.inputSha256, review.contextSha256))
+            projectService.open(project.root) to approved
+        } }.onSuccess { (snapshot, approved) ->
+            mutableState.update { it.copy(project = snapshot, enhancementReview = approved, operation = WorkspaceOperation.Idle, notification = "Enhancement approved and selected.", downstreamArtifactsStale = true) }
+        }.onFailure { fail("Enhancement approval", it.message ?: "Unable to approve enhancement.") } }
+    }
+
+    private fun rejectEnhancement() {
+        val project = state.value.project ?: return fail("Enhancement", "Open a project first.")
+        val review = state.value.enhancementReview ?: return fail("Enhancement", "No enhancement draft is available.")
+        if (state.value.operation.isMutating) return
+        mutableState.update { it.copy(operation = WorkspaceOperation.SelectingEnhancement(review.partId), notification = null) }
+        scope.launch { runCatching { withContext(ioDispatcher) {
+            val rejected = enhancementService.reject(project.root, review.partId)
+            projectService.open(project.root) to rejected
+        } }.onSuccess { (snapshot, rejected) ->
+            mutableState.update { it.copy(project = snapshot, enhancementReview = rejected, operation = WorkspaceOperation.Idle, notification = "Enhancement rejected; corrected MIDI remains selected.") }
+        }.onFailure { fail("Enhancement rejection", it.message ?: "Unable to reject enhancement.") } }
     }
 
     private fun confirmTightenTiming() {

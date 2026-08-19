@@ -7,7 +7,11 @@ import app.melotrail.arrangement.MusicalProcessingContextFactory
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.StageId
 import app.melotrail.arrangement.StageSubject
-import app.melotrail.arrangement.TransparentNoOpEnhancementProcessor
+import app.melotrail.arrangement.EnhancementPlanner
+import app.melotrail.arrangement.EnhancementPlanApplier
+import app.melotrail.arrangement.LocalQwenEnhancementPlanner
+import app.melotrail.arrangement.EnhancementModelIdentity
+import app.melotrail.arrangement.ValidatedEnhancementMidiApplier
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -27,7 +31,10 @@ class EnhancementStageProcessor(
             MusicalProcessingContextFactory.build(ProjectStore.read(root), partId, input, selectedIntensity, selectedSeed,
                 profiles = app.melotrail.profile.BundledCompositionProfileCatalog.load())
         },
-    private val processor: TransparentNoOpEnhancementProcessor = TransparentNoOpEnhancementProcessor()
+    private val planner: EnhancementPlanner = LocalQwenEnhancementPlanner(
+        identity = EnhancementModelIdentity("qwen", "local", System.getenv("QWEN_ENHANCEMENT_VERSION") ?: "1", System.getenv("QWEN_ENHANCEMENT_LICENSE") ?: "unknown")
+    ),
+    private val applier: EnhancementPlanApplier = ValidatedEnhancementMidiApplier()
 ) : StageProcessor {
     override val definition = StageDefinition(StageId.ENHANCED, StageSubjectKind.PART, dependencies = setOf(StageId.CORRECTED))
 
@@ -41,7 +48,7 @@ class EnhancementStageProcessor(
         val reportDestination = EnhancementArtifactPaths.report(partId, context.contextSha256)
         val output = request.temporaryRoot.resolve("enhanced.mid")
         val report = request.temporaryRoot.resolve("report.json")
-        val result = EnhancementExecutionService(processor, processor).enhance(input, output, context)
+        val result = EnhancementExecutionService(planner, applier).enhance(input, output, context)
         Files.writeString(report, JSON.encodeToString(result))
         request.reportProgress(100)
         return StageProcessorResult(listOf(TemporaryStageArtifact(output, outputDestination)), listOf(TemporaryStageArtifact(report, reportDestination)))

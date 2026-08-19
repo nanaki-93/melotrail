@@ -169,7 +169,13 @@ object EnhancementArtifactPaths {
     }
     fun output(partId: String, contextSha256: String): String = "${directory(partId, contextSha256)}/enhanced.mid"
     fun report(partId: String, contextSha256: String): String = "${directory(partId, contextSha256)}/report.json"
+    fun plan(partId: String, contextSha256: String): String = "${directory(partId, contextSha256)}/plan.json"
+    fun provenance(partId: String, contextSha256: String): String = "${directory(partId, contextSha256)}/provenance.json"
 }
+
+/** Draft evidence is inspectable but cannot become the selected MIDI until approved. */
+@Serializable
+enum class EnhancementApproval { DRAFT, APPROVED, REJECTED }
 
 /** A completed enhancement is valid only for the exact corrected artifact and context. */
 @Serializable
@@ -178,7 +184,10 @@ data class EnhancementReferences(
     val input: WorkflowArtifactReference,
     val output: WorkflowArtifactReference,
     val report: WorkflowArtifactReference,
-    val contextSha256: String
+    val contextSha256: String,
+    val approval: EnhancementApproval = EnhancementApproval.APPROVED,
+    val plan: WorkflowArtifactReference? = null,
+    val provenance: WorkflowArtifactReference? = null
 ) {
     init { require(SHA_256.matches(contextSha256)) { "Enhancement context fingerprint is invalid" } }
     fun requireCanonical(partId: String) {
@@ -186,6 +195,8 @@ data class EnhancementReferences(
         require(output.file == EnhancementArtifactPaths.output(partId, contextSha256) && report.file == EnhancementArtifactPaths.report(partId, contextSha256)) {
             "Enhancement artifact paths are not canonical"
         }
+        plan?.let { require(it.file == EnhancementArtifactPaths.plan(partId, contextSha256)) { "Enhancement plan path is not canonical" } }
+        provenance?.let { require(it.file == EnhancementArtifactPaths.provenance(partId, contextSha256)) { "Enhancement provenance path is not canonical" } }
     }
 }
 

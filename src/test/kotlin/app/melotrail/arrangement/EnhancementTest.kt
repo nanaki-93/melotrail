@@ -115,6 +115,52 @@ class EnhancementTest {
         }
     }
 
+    @Test
+    fun `local enhancement adapter accepts only echoed bounded plans with a known license`() {
+        val input = root.resolve("corrected.mid").also { Files.write(it, byteArrayOf(4, 5, 6)) }
+        val context = context(input)
+        val valid = """{"version":${context.version},"subjectHash":"${sha256Subject(context)}","inputSha256":"${context.correctedInputSha256}","contextSha256":"${context.contextSha256}","goals":[],"edits":[]}"""
+        val planner = LocalQwenEnhancementPlanner(LocalQwenClient { _, _ -> valid }, EnhancementModelIdentity("qwen", "fixture", "1", "apache-2.0"))
+        assertEquals(emptyList<EnhancementEdit>(), planner.plan(context).edits)
+        val bad = LocalQwenEnhancementPlanner(LocalQwenClient { _, _ -> valid.replace(context.contextSha256, "0".repeat(64)) }, EnhancementModelIdentity("qwen", "fixture", "1", "apache-2.0"))
+        assertThrows(IllegalArgumentException::class.java) { bad.plan(context) }
+        val unknown = LocalQwenEnhancementPlanner(LocalQwenClient { _, _ -> valid }, EnhancementModelIdentity("qwen", "fixture", "1", "unknown"))
+        assertThrows(IllegalArgumentException::class.java) { unknown.plan(context) }
+    }
+
+    @Test
+    fun `validated applier publishes only a bounded MIDI draft and reports its plan hash`() {
+        val input = root.resolve("corrected.mid")
+        writeMidi(input)
+        val context = context(input)
+        val plan = EnhancementPlan(
+            subjectHash = sha256Subject(context), inputSha256 = context.correctedInputSha256, contextSha256 = context.contextSha256,
+            processorId = "fixture", processorVersion = "1", placeholder = false,
+            model = EnhancementModelIdentity("qwen", "fixture", "1", "apache-2.0"),
+            goals = setOf(EnhancementGoal.FLOW_CONTOUR), edits = listOf(EnhancementEdit(EnhancementEditKind.VELOCITY, "n-00001", 2, EnhancementGoal.FLOW_CONTOUR, "smooth contour"))
+        )
+        val output = root.resolve("enhanced.mid")
+        val report = ValidatedEnhancementMidiApplier().apply(input, output, context, plan)
+        assertTrue(Files.isRegularFile(output))
+        assertEquals(1, report.appliedEdits.size)
+        assertTrue(report.anchorsRetained)
+        assertTrue(report.acceptedPlanSha256 != null)
+    }
+
+    private fun writeMidi(path: Path) {
+        val sequence = javax.sound.midi.Sequence(javax.sound.midi.Sequence.PPQ, 480)
+        val track = sequence.createTrack()
+        repeat(20) { index ->
+            val start = index * 480L
+            track.add(javax.sound.midi.MidiEvent(javax.sound.midi.ShortMessage(javax.sound.midi.ShortMessage.NOTE_ON, 0, 60, 70), start))
+            track.add(javax.sound.midi.MidiEvent(javax.sound.midi.ShortMessage(javax.sound.midi.ShortMessage.NOTE_OFF, 0, 60, 0), start + 240))
+        }
+        javax.sound.midi.MidiSystem.write(sequence, 1, path.toFile())
+    }
+
+    private fun sha256Subject(context: MusicalProcessingContext): String = java.security.MessageDigest.getInstance("SHA-256")
+        .digest("${context.partId}|${context.sectionId}".toByteArray()).joinToString("") { "%02x".format(it) }
+
     private fun context(
         input: Path,
         key: MusicalKey = MusicalKey(PitchClass.of(PitchSpelling.C), ScaleModeId.MAJOR),

@@ -15,6 +15,8 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
+import javax.sound.midi.MidiSystem
+import javax.sound.midi.ShortMessage
 
 /** The only persisted choices for the bounded creative-enhancement boundary. */
 @Serializable
@@ -26,17 +28,24 @@ enum class EnhancementSelection { CORRECTED, ENHANCED }
 
 /** Code-owned edit vocabulary. It deliberately excludes generated notes, harmony, tempo and paths. */
 @Serializable
-enum class EnhancementEditKind { VELOCITY, TIMING }
+enum class EnhancementEditKind { VELOCITY, TIMING, PITCH }
+
+/** The model may select only these bounded musical intentions; Kotlin owns the edit mechanics. */
+@Serializable
+enum class EnhancementGoal { PHRASE_ENDING, FLOW_CONTOUR, CHORD_CLASH, PASSING_NOTE, REPETITION_REDUCTION }
 
 @Serializable
 data class EnhancementEdit(
     val kind: EnhancementEditKind,
     val noteId: String,
-    val value: Long
+    val value: Long,
+    val goal: EnhancementGoal = EnhancementGoal.FLOW_CONTOUR,
+    val reason: String = "bounded musical adjustment"
 ) {
     init {
         require(ENHANCEMENT_NOTE_ID.matches(noteId)) { "Enhancement note ID is invalid" }
         require(value in -127L..127L) { "Enhancement edit value is outside the hard safety range" }
+        require(reason.isNotBlank() && reason.length <= 160 && reason.none { it.isISOControl() }) { "Enhancement edit reason is invalid" }
     }
 }
 
@@ -99,6 +108,23 @@ data class EnhancementProfileContext(
     }
 }
 
+/** A bounded, path-free description of one note. It is the only note-level model input. */
+@Serializable
+data class EnhancementNoteSummary(
+    val id: String,
+    val channel: Int,
+    val pitch: Int,
+    val velocity: Int,
+    val startTick: Long,
+    val endTick: Long,
+    val phrase: Int
+) {
+    init {
+        require(ENHANCEMENT_NOTE_ID.matches(id) && channel in 0..15 && pitch in 0..127 && velocity in 1..127 &&
+            startTick >= 0 && endTick > startTick && phrase in 0..255) { "Enhancement note summary is invalid" }
+    }
+}
+
 /**
  * Complete, path-free, deterministic planner context.  [contextSha256] is a
  * hash of this value with that one field blank, so every input below affects
@@ -120,6 +146,7 @@ data class MusicalProcessingContext(
     val intensity: EnhancementIntensity,
     val seed: Long,
     val pipelineVersion: String,
+    val notes: List<EnhancementNoteSummary> = emptyList(),
     val contextSha256: String
 ) {
     fun requireValid() {
@@ -130,13 +157,14 @@ data class MusicalProcessingContext(
         require(bpm in 30..240 && meterNumerator in 1..12 && meterDenominator in setOf(1, 2, 4, 8, 16)) { "Enhancement tempo or meter is invalid" }
         require(ENHANCEMENT_ID.matches(sectionId) && ENHANCEMENT_ID.matches(partId) && ENHANCEMENT_HASH.matches(correctedInputSha256) &&
             ENHANCEMENT_VERSION.matches(pipelineVersion) && ENHANCEMENT_HASH.matches(contextSha256)) { "Enhancement identity is invalid" }
+        require(notes.size <= 512 && notes.map(EnhancementNoteSummary::id).distinct().size == notes.size) { "Enhancement note context is invalid" }
         require(contextSha256 == MusicalProcessingContextHasher.hash(this)) { "Enhancement context hash does not match its contents" }
         profile.let { /* constructor validates it */ }
     }
 
     fun cacheKey(): String = contextSha256
 
-    companion object { const val VERSION = 1 }
+    companion object { const val VERSION = 2 }
 }
 
 /** Strict wire plan. A non-placeholder run must identify its licensed model. */
@@ -159,6 +187,8 @@ data class EnhancementPlan(
     val processorVersion: String,
     val placeholder: Boolean,
     val model: EnhancementModelIdentity? = null,
+    val goals: Set<EnhancementGoal> = emptySet(),
+    val templateVersion: String = "enhancement-v1",
     val edits: List<EnhancementEdit> = emptyList()
 ) {
     fun requireValid(context: MusicalProcessingContext, policy: EnhancementPolicy) = EnhancementPlanValidator.requireValid(this, context, policy)
@@ -177,6 +207,9 @@ data class EnhancementEditReport(
     val placeholder: Boolean,
     val model: EnhancementModelIdentity? = null,
     val appliedEdits: List<EnhancementEdit> = emptyList(),
+    val acceptedPlanSha256: String? = null,
+    val identityDistancePercent: Int = 0,
+    val anchorsRetained: Boolean = true,
     val message: String
 ) {
     fun requireValid() {
@@ -186,6 +219,8 @@ data class EnhancementEditReport(
             "Enhancement report is invalid"
         }
         require(placeholder || model != null) { "Non-placeholder enhancement reports require model identity, version, and license" }
+        require(acceptedPlanSha256 == null || ENHANCEMENT_HASH.matches(acceptedPlanSha256)) { "Enhancement accepted-plan hash is invalid" }
+        require(identityDistancePercent in 0..100 && anchorsRetained) { "Enhancement identity evidence is invalid" }
     }
 }
 
@@ -226,12 +261,15 @@ object EnhancementPlanValidator {
         }
         require(ENHANCEMENT_ID.matches(plan.processorId) && ENHANCEMENT_VERSION.matches(plan.processorVersion)) { "Enhancement processor identity is invalid" }
         require(plan.placeholder || plan.model != null) { "Non-placeholder enhancement plans require model identity, version, and license" }
+        require(ENHANCEMENT_VERSION.matches(plan.templateVersion)) { "Enhancement prompt-template version is invalid" }
+        require(plan.goals.size <= policy.maximumOperations) { "Enhancement plan exceeds its goal budget" }
         require(plan.edits.size <= policy.maximumEdits && plan.edits.map(EnhancementEdit::noteId).distinct().size == plan.edits.size) { "Enhancement plan exceeds its edit budget" }
         require(plan.edits.map(EnhancementEdit::kind).distinct().size <= policy.maximumOperations) { "Enhancement plan exceeds its operation budget" }
         plan.edits.forEach { edit ->
             when (edit.kind) {
                 EnhancementEditKind.VELOCITY -> require(kotlin.math.abs(edit.value) <= policy.maximumVelocityDelta) { "Enhancement velocity edit exceeds policy" }
                 EnhancementEditKind.TIMING -> require(kotlin.math.abs(edit.value) <= policy.maximumTimingShiftMs) { "Enhancement timing edit exceeds policy" }
+                EnhancementEditKind.PITCH -> require(kotlin.math.abs(edit.value) <= 2) { "Enhancement pitch edit exceeds the bounded range" }
             }
         }
         require(policy.intensity != EnhancementIntensity.OFF || plan.edits.isEmpty()) { "Off enhancement cannot contain edits" }
@@ -318,6 +356,9 @@ object MusicalProcessingContextFactory {
             intensity = intensity,
             seed = seed,
             pipelineVersion = pipelineVersion,
+            // The stage boundary separately validates MIDI before model use. Keeping a
+            // path-free empty summary here preserves legacy context inspection tests.
+            notes = runCatching { enhancementNoteSummaries(correctedInput) }.getOrElse { emptyList() },
             contextSha256 = "0".repeat(64)
         )
         return bare.copy(contextSha256 = MusicalProcessingContextHasher.hash(bare)).also(MusicalProcessingContext::requireValid)
@@ -339,6 +380,28 @@ object MusicalProcessingContextHasher {
 }
 
 private fun subjectHash(context: MusicalProcessingContext): String = enhancementSha256("${context.partId}|${context.sectionId}".toByteArray(StandardCharsets.UTF_8))
+private fun enhancementNoteSummaries(path: Path): List<EnhancementNoteSummary> {
+    val active = mutableMapOf<Pair<Int, Int>, ArrayDeque<Pair<Long, Int>>>()
+    val notes = mutableListOf<EnhancementNoteSummary>()
+    MidiSystem.getSequence(path.toFile()).tracks.forEach { track ->
+        (0 until track.size()).forEach { index ->
+            val event = track[index]
+            val message = event.message as? ShortMessage ?: return@forEach
+            val key = message.channel to message.data1
+            if (message.command == ShortMessage.NOTE_ON && message.data2 > 0) {
+                active.getOrPut(key) { ArrayDeque() }.addLast(event.tick to message.data2)
+            } else if (message.command == ShortMessage.NOTE_OFF || (message.command == ShortMessage.NOTE_ON && message.data2 == 0)) {
+                val start = active[key]?.removeFirstOrNull() ?: throw IllegalArgumentException("Corrected MIDI contains an unmatched note-off")
+                require(event.tick > start.first) { "Corrected MIDI contains a non-positive note" }
+                val phrase = (start.first / (MidiSystem.getSequence(path.toFile()).resolution.coerceAtLeast(1) * 4L)).toInt().coerceAtMost(255)
+                notes += EnhancementNoteSummary("n-${notes.size.toString().padStart(5, '0')}", message.channel, message.data1, start.second, start.first, event.tick, phrase)
+            }
+        }
+    }
+    require(active.values.all { it.isEmpty() }) { "Corrected MIDI contains unclosed notes" }
+    require(notes.size <= 512) { "Corrected MIDI exceeds the bounded enhancement note limit" }
+    return notes
+}
 private fun enhancementSha256(path: Path): String = Files.newInputStream(path).use { input ->
     val digest = MessageDigest.getInstance("SHA-256"); val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
     while (true) { val count = input.read(buffer); if (count < 0) break; digest.update(buffer, 0, count) }

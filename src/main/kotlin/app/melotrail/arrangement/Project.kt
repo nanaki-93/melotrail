@@ -478,6 +478,9 @@ object ProjectValidator {
                     if (midi.enhancementSelection == EnhancementSelection.ENHANCED && midi.enhancement == null) {
                         errors += "Part '${part.id}' selects enhanced MIDI without enhancement evidence"
                     }
+                    if (midi.enhancementSelection == EnhancementSelection.ENHANCED && midi.enhancement?.approval != EnhancementApproval.APPROVED) {
+                        errors += "Part '${part.id}' selects enhancement without user approval"
+                    }
                     midi.enhancement?.let { enhancement ->
                         validateArtifactReference(root, enhancement.input, "Part '${part.id}' enhancement input", errors)
                         validateArtifactReference(root, enhancement.output, "Part '${part.id}' enhanced MIDI", errors)

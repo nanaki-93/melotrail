@@ -1838,6 +1838,16 @@ private fun MidiLoFiFeelReview(state: WorkspaceUiState, onIntent: (WorkspaceInte
                 }
             }
         }
+        state.enhancementReview?.takeIf { it.partId == part.id }?.let { review ->
+            Text("${review.edits} validated edit${if (review.edits == 1) "" else "s"} · ${review.approval.name.lowercase()}", style = MaterialTheme.typography.bodySmall)
+            review.reasons.forEach { reason -> Text(reason, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            if (review.approval == app.melotrail.arrangement.EnhancementApproval.DRAFT) {
+                Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+                    Button(onClick = { onIntent(WorkspaceIntent.ApproveEnhancement) }, enabled = !state.operation.isMutating) { Text("Approve enhancement") }
+                    OutlinedButton(onClick = { onIntent(WorkspaceIntent.RejectEnhancement) }, enabled = !state.operation.isMutating) { Text("Reject draft") }
+                }
+            }
+        }
     }
 }
 

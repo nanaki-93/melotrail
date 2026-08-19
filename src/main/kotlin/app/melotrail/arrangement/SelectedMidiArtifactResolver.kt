@@ -115,6 +115,9 @@ class SelectedMidiArtifactResolver(
             require(base.kind == SelectedMidiBaseKind.CORRECTED) { "Enhancement requires the selected corrected MIDI baseline for part '${part.id}'." }
             val enhancement = requireNotNull(midi.enhancement) { "Part '${part.id}' has no enhancement evidence." }
             enhancement.requireCanonical(part.id)
+            require(enhancement.approval == EnhancementApproval.APPROVED) {
+                "Enhanced MIDI is a draft or was rejected; preview it and approve it before selecting it."
+            }
             require(enhancement.input.file == base.reference && enhancement.input.sha256 == base.sha256) {
                 "Enhanced MIDI is stale for part '${part.id}'; select Corrected or run enhancement again."
             }
