@@ -19,6 +19,7 @@ import app.melotrail.application.DefaultEnhancementApplicationService
 import app.melotrail.application.EnhancementSnapshot
 import app.melotrail.application.CreateEnhancementRequest
 import app.melotrail.application.ApproveEnhancementRequest
+import app.melotrail.application.SelectApprovedEnhancementRequest
 import app.melotrail.application.DefaultArrangementApplicationService
 import app.melotrail.application.GenerateArrangementRequest
 import app.melotrail.application.ImportPartRequest
@@ -252,7 +253,9 @@ data class PlaybackArtifactIdentity(
     val projectRoot: Path,
     val path: Path,
     val partId: String? = null,
-    val audioSource: PreviewAudioSource? = null
+    val audioSource: PreviewAudioSource? = null,
+    /** The validated representation identity, not the disposable preview-cache filename. */
+    val source: app.melotrail.application.PreviewArtifactIdentity? = null
 )
 
 enum class PlaybackSourceKind { SOURCE_AUDIO, PREPARED_AUDIO, MIDI, DRY_MIX, LOFI_MIX, MASTER }
@@ -506,6 +509,7 @@ sealed interface WorkspaceRetry {
     data class Cleanup(val root: Path, val partId: String, val mode: InputCleanupMode) : WorkspaceRetry
     data class CleanMidi(val request: CleanMidiRequest) : WorkspaceRetry
     data class ApplyMidiFeel(val root: Path, val partId: String, val input: MidiAnalysisInput) : WorkspaceRetry
+    data class Enhancement(val root: Path, val partId: String, val intensity: app.melotrail.arrangement.EnhancementIntensity) : WorkspaceRetry
     data class CreateMidiAiFix(val request: CreateMidiAiFixRequest) : WorkspaceRetry
     data class Transcribe(val root: Path, val partId: String, val selectedInput: TranscriptionInputArtifact) : WorkspaceRetry
     data class SaveStructure(val root: Path, val partIds: List<String>, val selectedIndex: Int?) : WorkspaceRetry
@@ -581,6 +585,7 @@ sealed interface WorkspaceIntent {
     data class SelectEnhancement(val intensity: app.melotrail.arrangement.EnhancementIntensity) : WorkspaceIntent
     data object ApproveEnhancement : WorkspaceIntent
     data object RejectEnhancement : WorkspaceIntent
+    data object SelectApprovedEnhancement : WorkspaceIntent
     data object ApplyMidiFeelAndReanalyze : WorkspaceIntent
     data object ConfirmTightenTiming : WorkspaceIntent
     data class SelectTranscriptionInput(val input: TranscriptionInputArtifact) : WorkspaceIntent
@@ -764,6 +769,7 @@ class WorkspaceViewModel(
             is WorkspaceIntent.SelectEnhancement -> selectEnhancement(intent.intensity)
             WorkspaceIntent.ApproveEnhancement -> approveEnhancement()
             WorkspaceIntent.RejectEnhancement -> rejectEnhancement()
+            WorkspaceIntent.SelectApprovedEnhancement -> selectApprovedEnhancement()
             WorkspaceIntent.ApplyMidiFeelAndReanalyze -> applyMidiFeelAndReanalyze()
             WorkspaceIntent.ConfirmTightenTiming -> confirmTightenTiming()
             is WorkspaceIntent.SelectTranscriptionInput -> mutableState.update { it.copy(audioPreparation = it.audioPreparation.copy(transcriptionInput = intent.input)) }
@@ -1484,6 +1490,19 @@ class WorkspaceViewModel(
             )
         }
         if (part.sourceType == PartSourceType.AUDIO) loadPreparation(project.root, part.id)
+        loadEnhancementReview(project.root, part.id)
+    }
+
+    /** Retained draft/rejected evidence is loaded for review, never promoted to a selectable artifact. */
+    private fun loadEnhancementReview(root: Path, partId: String) {
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { enhancementService.load(root, partId) } }
+                .onSuccess { review ->
+                    mutableState.update { current ->
+                        if (current.project?.root == root && current.selectedPartId == partId) current.copy(enhancementReview = review) else current
+                    }
+                }
+        }
     }
 
     private fun selectPart(partId: String) {
@@ -1694,7 +1713,7 @@ class WorkspaceViewModel(
             } }.onSuccess { (snapshot, review) ->
                 val message = if (intensity == app.melotrail.arrangement.EnhancementIntensity.OFF) "Corrected MIDI selected; previous enhancement evidence was retained." else "Enhancement draft generated. Preview it, then approve or reject it."
                 mutableState.update { current -> current.copy(project = snapshot, enhancementReview = review ?: current.enhancementReview, arrangement = null, operation = WorkspaceOperation.Idle, notification = message, downstreamArtifactsStale = review != null) }
-            }.onFailure { fail("Enhancement", it.message ?: "Unable to select enhancement for $partId.") }
+            }.onFailure { fail("Enhancement", it.message ?: "Unable to select enhancement for $partId.", WorkspaceRetry.Enhancement(project.root, partId, intensity)) }
         }
     }
 
@@ -1722,6 +1741,21 @@ class WorkspaceViewModel(
         } }.onSuccess { (snapshot, rejected) ->
             mutableState.update { it.copy(project = snapshot, enhancementReview = rejected, operation = WorkspaceOperation.Idle, notification = "Enhancement rejected; corrected MIDI remains selected.") }
         }.onFailure { fail("Enhancement rejection", it.message ?: "Unable to reject enhancement.") } }
+    }
+
+    private fun selectApprovedEnhancement() {
+        val project = state.value.project ?: return fail("Enhancement", "Open a project first.")
+        val part = project.parts.singleOrNull { it.id == state.value.selectedPartId } ?: return fail("Enhancement", "Select a part before selecting retained enhancement evidence.")
+        val review = state.value.enhancementReview?.takeIf { it.partId == part.id && it.approval == app.melotrail.arrangement.EnhancementApproval.APPROVED }
+            ?: return fail("Enhancement", "Load approved enhancement evidence before selecting it.")
+        if (state.value.operation.isMutating) return
+        mutableState.update { it.copy(operation = WorkspaceOperation.SelectingEnhancement(part.id), notification = null, retry = null) }
+        scope.launch { runCatching { withContext(ioDispatcher) {
+            val selected = enhancementService.selectApproved(SelectApprovedEnhancementRequest(project.root, part.id, review.draftSha256, review.inputSha256, review.contextSha256, part.revision))
+            projectService.open(project.root) to selected
+        } }.onSuccess { (snapshot, selected) ->
+            mutableState.update { it.copy(project = snapshot, enhancementReview = selected, arrangement = null, operation = WorkspaceOperation.Idle, notification = "Approved Enhanced MIDI selected; downstream artifacts need regeneration.", downstreamArtifactsStale = true) }
+        }.onFailure { fail("Enhancement selection", it.message ?: "Unable to select retained enhancement.") } }
     }
 
     private fun confirmTightenTiming() {
@@ -1892,7 +1926,7 @@ class WorkspaceViewModel(
             return null
         }
         return when (val resolved = withContext(ioDispatcher) { previews.resolve(PreviewRequest(request.projectRoot, request.partId, request.audioSource, request.midiSource)) }) {
-            is PreviewResult.Resolved -> PlaybackArtifactIdentity(request.projectRoot, resolved.artifact, request.partId, request.audioSource)
+            is PreviewResult.Resolved -> PlaybackArtifactIdentity(request.projectRoot, resolved.artifact, request.partId, request.audioSource, resolved.source)
             is PreviewResult.Prerequisite -> {
                 val stage = if (resolved.stage == app.melotrail.application.PreviewStage.DECODE_OR_RENDER) PlaybackFailureStage.RUNTIME else PlaybackFailureStage.RESOLUTION
                 failPlaybackSession(id, stage, resolved.message)
@@ -2169,6 +2203,10 @@ class WorkspaceViewModel(
         is WorkspaceRetry.ApplyMidiFeel -> {
             mutableState.update { it.copy(selectedPartId = action.partId, pendingMidiFeel = action.input) }
             applyMidiFeelAndReanalyze()
+        }
+        is WorkspaceRetry.Enhancement -> {
+            mutableState.update { it.copy(selectedPartId = action.partId) }
+            selectEnhancement(action.intensity)
         }
         is WorkspaceRetry.CreateMidiAiFix -> runCreateMidiAiFix(action.request)
         is WorkspaceRetry.Transcribe -> {

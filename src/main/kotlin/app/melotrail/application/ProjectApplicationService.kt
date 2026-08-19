@@ -324,9 +324,12 @@ data class EnhancementSummary(
     val intensity: app.melotrail.arrangement.EnhancementIntensity = app.melotrail.arrangement.EnhancementIntensity.OFF,
     val selected: app.melotrail.arrangement.EnhancementSelection = app.melotrail.arrangement.EnhancementSelection.CORRECTED,
     val available: Boolean = false,
+    /** Rejected and draft evidence remains inspectable but is never a ready choice. */
+    val approval: app.melotrail.arrangement.EnhancementApproval? = null,
     val capabilityLabel: String = "MVP placeholder — no musical edits"
 ) {
-    val selectedAvailable: Boolean get() = selected == app.melotrail.arrangement.EnhancementSelection.CORRECTED || available
+    val approvedAvailable: Boolean get() = available && approval == app.melotrail.arrangement.EnhancementApproval.APPROVED
+    val selectedAvailable: Boolean get() = selected == app.melotrail.arrangement.EnhancementSelection.CORRECTED || approvedAvailable
 }
 
 data class MidiFeelSummary(
@@ -1318,7 +1321,7 @@ class DefaultProjectApplicationService(
                 sha256(safeDestination(root, refs.output.file)) == refs.output.sha256 &&
                 sha256(safeDestination(root, refs.report.file)) == refs.report.sha256
         }.getOrDefault(false)
-        return EnhancementSummary(refs.intensity, midi.enhancementSelection, available)
+        return EnhancementSummary(refs.intensity, midi.enhancementSelection, available, refs.approval)
     }
 
     private fun midiFeel(root: Path, part: SongPart, cleanMidi: Boolean, workflowCurrent: Boolean, aiFix: MidiAiFixSummary): MidiFeelSummary {

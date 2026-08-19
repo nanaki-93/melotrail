@@ -3,9 +3,16 @@ package app.melotrail.desktop
 import app.melotrail.application.PartPreparationSummary
 import app.melotrail.application.PartSourceType
 import app.melotrail.application.PartSummary
+import app.melotrail.application.EnhancementSummary
+import app.melotrail.application.MidiQualityStatus
+import app.melotrail.application.MidiQualitySummary
 import app.melotrail.application.ProjectReadiness
 import app.melotrail.application.ProjectSnapshot
 import app.melotrail.application.StageRunSnapshot
+import app.melotrail.application.TechnicalCorrectionSummary
+import app.melotrail.arrangement.EnhancementApproval
+import app.melotrail.arrangement.EnhancementSelection
+import app.melotrail.arrangement.TechnicalCorrectionSelection
 import app.melotrail.arrangement.StageId
 import app.melotrail.arrangement.StageRunStatus
 import app.melotrail.arrangement.StageSubject
@@ -43,6 +50,39 @@ class MelodyPartsPresentationTest {
         assertTrue(card.processing)
     }
 
+    @Test
+    fun `comparison exposes only current validated representations with exact completed run labels`() {
+        val preparation = PartPreparationSummary(
+            sourcePreserved = true, inspected = true, preparedAudio = false, rawMidi = true, cleanMidi = true, analyzed = true, ready = true, warnings = emptyList(),
+            midiQuality = MidiQualitySummary(MidiQualityStatus.CURRENT),
+            technicalCorrection = TechnicalCorrectionSummary(TechnicalCorrectionSelection.CORRECTED, available = true),
+            enhancement = EnhancementSummary(selected = EnhancementSelection.ENHANCED, available = true, approval = EnhancementApproval.APPROVED)
+        )
+        val choices = availablePartArtifactComparisons(project(part(preparation = preparation), listOf(
+            run(StageId.SOURCE, StageRunStatus.COMPLETED), run(StageId.CLEANED, StageRunStatus.COMPLETED),
+            run(StageId.CORRECTED, StageRunStatus.COMPLETED), run(StageId.ENHANCED, StageRunStatus.COMPLETED)
+        )), part(preparation = preparation))
+
+        assertEquals(listOf(PartArtifactKind.ORIGINAL, PartArtifactKind.CLEANED, PartArtifactKind.CORRECTED, PartArtifactKind.ENHANCED), choices.map { it.kind })
+        assertEquals("Enhanced · run-ENHANCED", choices.last().runLabel)
+        assertEquals(PartArtifactKind.ENHANCED, choices.single { it.current }.kind)
+    }
+
+    @Test
+    fun `comparison omits rejected enhancement and labels audio versus derived MIDI honestly`() {
+        val preparation = PartPreparationSummary(
+            sourcePreserved = true, inspected = true, preparedAudio = true, rawMidi = true, cleanMidi = true, analyzed = true, ready = true, warnings = emptyList(),
+            midiQuality = MidiQualitySummary(MidiQualityStatus.CURRENT),
+            enhancement = EnhancementSummary(selected = EnhancementSelection.CORRECTED, available = true, approval = EnhancementApproval.REJECTED)
+        )
+        val audio = part(preparation = preparation).copy(sourceType = PartSourceType.AUDIO, sourceFile = "source/verse.wav", sourceName = "verse.wav")
+        val choices = availablePartArtifactComparisons(project(audio, emptyList()), audio)
+
+        assertEquals("Original audio", choices.first().label)
+        assertTrue(choices.single { it.kind == PartArtifactKind.CLEANED }.detail.contains("Derived MIDI"))
+        assertFalse(choices.any { it.kind == PartArtifactKind.ENHANCED })
+    }
+
     private fun project(part: PartSummary, runs: List<StageRunSnapshot>) = ProjectSnapshot(
         root = Path.of("build/melody-parts"), version = 4, name = "Melody Parts", renderFormat = null, parts = listOf(part), structure = emptyList(),
         readiness = ProjectReadiness(
@@ -52,10 +92,10 @@ class MelodyPartsPresentationTest {
         )
     )
 
-    private fun part(sourceKeyConfirmed: Boolean = true) = PartSummary(
+    private fun part(sourceKeyConfirmed: Boolean = true, preparation: PartPreparationSummary = PartPreparationSummary(sourcePreserved = true, inspected = true, preparedAudio = false,
+        rawMidi = true, cleanMidi = false, analyzed = false, ready = false, warnings = emptyList())) = PartSummary(
         id = "verse", role = "verse", sourceFile = "source/verse.mid", sourceName = "verse.mid", sourceType = PartSourceType.MIDI,
-        analysis = null, preparation = PartPreparationSummary(sourcePreserved = true, inspected = true, preparedAudio = false,
-            rawMidi = true, cleanMidi = false, analyzed = false, ready = false, warnings = emptyList()),
+        analysis = null, preparation = preparation,
         name = "Verse melody", sectionType = app.melotrail.arrangement.SectionTypeId.VERSE, sourceKeyConfirmed = sourceKeyConfirmed
     )
 

@@ -50,6 +50,8 @@ class PartPreviewApplicationServiceTest {
         val resolved = assertIs<PreviewResult.Resolved>(result)
         assertEquals(source, resolved.artifact)
         assertTrue(resolved.reused)
+        assertEquals("Original audio", resolved.source?.label)
+        assertEquals(sha256(source), resolved.source?.sha256)
         assertTrue(before.contentEquals(Files.readAllBytes(source)))
     }
 
@@ -78,10 +80,11 @@ class PartPreviewApplicationServiceTest {
         assertIs<PreviewResult.Prerequisite>(result)
     }
 
-    @Test fun `Lo-fi A B preview validates the approved AI-fix base rather than cleaned MIDI`() = runTest {
-        val source = root.resolve("source/A.mid"); writeMidi(source, 60)
-        val raw = root.resolve("midi/raw/A.mid"); Files.createDirectories(raw.parent); Files.copy(source, raw)
-        val clean = root.resolve("midi/clean/A.mid"); Files.createDirectories(clean.parent); Files.copy(source, clean)
+    @Test fun `audio-origin MIDI comparison renders the requested derived representation rather than source audio`() = runTest {
+        val sourceMidi = root.resolve("source/input.mid"); writeMidi(sourceMidi, 60)
+        val sourceAudio = writeWav(root.resolve("source/A.wav"), 16)
+        val raw = root.resolve("midi/raw/A.mid"); Files.createDirectories(raw.parent); Files.copy(sourceMidi, raw)
+        val clean = root.resolve("midi/clean/A.mid"); Files.createDirectories(clean.parent); Files.copy(sourceMidi, clean)
         val approvedReference = MidiAiFixArtifactPaths.approved("A")
         val approved = root.resolve(approvedReference); writeMidi(approved, 64)
         val derived = MidiFeelReportStore.derivedPath(root, "A", MidiFeelProfile.LOFI_80_SWING_V1)
@@ -92,11 +95,11 @@ class PartPreviewApplicationServiceTest {
         val qualityPath = MidiQualityReportStore.write(root, quality)
         val feelReferences = MidiFeelReferences(MidiFeelProfile.LOFI_80_SWING_V1, root.relativize(derived).toString(), root.relativize(reportPath).toString())
         assertTrue(MidiFeelReportStore.isCurrent(root, "A", approvedReference, feelReferences))
-        val originalArtifacts = listOf(source, raw, clean, approved).associateWith(Files::readAllBytes)
+        val originalArtifacts = listOf(sourceMidi, sourceAudio, raw, clean, approved).associateWith(Files::readAllBytes)
         val project = Project(
             version = Project.CURRENT_VERSION,
             name = "preview",
-            parts = listOf(Part("A", "source/A.mid", midi = MidiReferences(
+            parts = listOf(Part("A", "source/A.wav", midi = MidiReferences(
                 raw = "midi/raw/A.mid",
                 clean = "midi/clean/A.mid",
                 cleanup = cleanup,

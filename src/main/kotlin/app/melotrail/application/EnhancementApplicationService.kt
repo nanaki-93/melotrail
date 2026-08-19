@@ -35,6 +35,8 @@ import java.nio.file.StandardOpenOption
 
 data class CreateEnhancementRequest(val root: Path, val partId: String, val intensity: EnhancementIntensity = EnhancementIntensity.SUBTLE, val seed: Long = 0)
 data class ApproveEnhancementRequest(val root: Path, val partId: String, val draftSha256: String, val inputSha256: String, val contextSha256: String)
+/** Re-selects retained approved evidence; revision and hashes prevent approval/selection races. */
+data class SelectApprovedEnhancementRequest(val root: Path, val partId: String, val draftSha256: String, val inputSha256: String, val contextSha256: String, val expectedRevision: Long)
 
 data class EnhancementSnapshot(
     val partId: String, val intensity: EnhancementIntensity, val inputSha256: String, val draftSha256: String,
@@ -46,6 +48,7 @@ interface EnhancementApplicationService {
     fun load(root: Path, partId: String): EnhancementSnapshot
     fun approve(request: ApproveEnhancementRequest): EnhancementSnapshot
     fun reject(root: Path, partId: String): EnhancementSnapshot
+    fun selectApproved(request: SelectApprovedEnhancementRequest): EnhancementSnapshot
 }
 
 /** File-owning enhancement boundary. The model returns a plan only; this service owns all publication and selection. */
@@ -98,6 +101,24 @@ class DefaultEnhancementApplicationService(
         val refs = requireNotNull(ProjectStore.read(normalized).parts.singleOrNull { it.id == partId }?.midi?.enhancement) { "No enhancement draft exists." }
         val rejected = refs.copy(approval = EnhancementApproval.REJECTED); update(normalized, partId, rejected, EnhancementSelection.CORRECTED)
         snapshot(partId, rejected, readReport(normalized.resolve(refs.report.file)))
+    }
+
+    override fun selectApproved(request: SelectApprovedEnhancementRequest): EnhancementSnapshot = locked(request.root) { root ->
+        val project = ProjectStore.read(root).also { it.requireValid(root) }
+        val part = project.parts.singleOrNull { it.id == request.partId } ?: error("Part not found: ${request.partId}")
+        require(part.revision == request.expectedRevision) { "Part '${request.partId}' changed; refresh before selecting retained enhancement evidence." }
+        val midi = requireNotNull(part.midi)
+        val refs = requireNotNull(midi.enhancement) { "No enhancement evidence exists." }
+        require(refs.approval == EnhancementApproval.APPROVED && refs.output.sha256 == request.draftSha256 && refs.input.sha256 == request.inputSha256 && refs.contextSha256 == request.contextSha256) {
+            "Retained enhancement selection does not match the reviewed approved evidence."
+        }
+        val report = readReport(root.resolve(refs.report.file))
+        require(report.acceptedPlanSha256 != null && report.anchorsRetained && report.outputSha256 == refs.output.sha256) { "Retained enhancement evidence is invalid." }
+        require(sha256(root.resolve(refs.input.file)) == refs.input.sha256 && sha256(root.resolve(refs.output.file)) == refs.output.sha256) { "Retained enhancement evidence is stale." }
+        ProjectStore.write(root, project.copy(parts = project.parts.map {
+            if (it.id == part.id) it.copy(revision = it.revision + 1, analysis = null, midi = midi.copy(enhancementSelection = EnhancementSelection.ENHANCED, analysisInput = app.melotrail.arrangement.MidiAnalysisInput.CURRENT, feel = null)) else it
+        }, workflow = project.workflow.invalidate(WorkflowChange.ENHANCEMENT_SELECTION).markCurrent(WorkflowArtifact.ENHANCED_MIDI)))
+        snapshot(part.id, refs, report)
     }
 
     private data class Current(val project: app.melotrail.arrangement.Project, val midi: app.melotrail.arrangement.MidiReferences, val input: Path, val inputRef: WorkflowArtifactReference)

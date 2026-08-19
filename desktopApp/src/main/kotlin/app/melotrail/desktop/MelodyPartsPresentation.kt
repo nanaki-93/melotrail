@@ -34,6 +34,9 @@ import app.melotrail.application.PartSourceType
 import app.melotrail.application.PartSummary
 import app.melotrail.application.ProjectSnapshot
 import app.melotrail.application.StageRunSnapshot
+import app.melotrail.application.PreviewAudioSource
+import app.melotrail.application.PreviewMidiSource
+import app.melotrail.arrangement.EnhancementSelection
 import app.melotrail.arrangement.SectionTypeCatalog
 import app.melotrail.arrangement.StageId
 import app.melotrail.arrangement.StageRunStatus
@@ -55,6 +58,60 @@ internal data class MelodyPartStageState(
 )
 
 internal enum class MelodyPartStageStatus { COMPLETE, PROCESSING, FAILED, WAITING }
+
+/** A presentation-only choice. Persisted selection remains owned by the application services. */
+internal data class PartArtifactComparison(
+    val kind: PartArtifactKind,
+    val label: String,
+    val runLabel: String,
+    val detail: String,
+    val current: Boolean,
+    val preview: PartArtifactPreview
+)
+
+internal enum class PartArtifactKind { ORIGINAL, CLEANED, CORRECTED, ENHANCED }
+
+internal sealed interface PartArtifactPreview {
+    data class Audio(val source: PreviewAudioSource) : PartArtifactPreview
+    data class Midi(val source: PreviewMidiSource) : PartArtifactPreview
+}
+
+/**
+ * The desktop never discovers files itself: availability is the already
+ * validated application snapshot. Draft, rejected, and stale enhancement
+ * evidence is deliberately omitted from this current-ready list.
+ */
+internal fun availablePartArtifactComparisons(project: ProjectSnapshot, part: PartSummary): List<PartArtifactComparison> {
+    if (!part.preparation.sourcePreserved || (part.sourceType == PartSourceType.MIDI && !part.preparation.rawMidi)) return emptyList()
+    val runs = project.readiness.stageRuns.filter { (it.subject as? StageSubject.Part)?.partId == part.id }
+    fun run(stage: StageId) = runs.lastOrNull { it.stage == stage && it.status == StageRunStatus.COMPLETED }
+        ?.let { "${stage.name.lowercase().replaceFirstChar(Char::uppercase)} · ${it.runId}" }
+        ?: "${stage.name.lowercase().replaceFirstChar(Char::uppercase)} · canonical artifact"
+    val preparation = part.preparation
+    val current = when {
+        preparation.enhancement.selected == EnhancementSelection.ENHANCED && preparation.enhancement.approvedAvailable -> PartArtifactKind.ENHANCED
+        preparation.technicalCorrection.selected == app.melotrail.arrangement.TechnicalCorrectionSelection.CORRECTED && preparation.technicalCorrection.available && !preparation.technicalCorrection.approvalRequired -> PartArtifactKind.CORRECTED
+        preparation.cleanMidi && preparation.midiQuality.status == MidiQualityStatus.CURRENT -> PartArtifactKind.CLEANED
+        else -> PartArtifactKind.ORIGINAL
+    }
+    val original = if (part.sourceType == PartSourceType.AUDIO) {
+        PartArtifactComparison(PartArtifactKind.ORIGINAL, "Original audio", run(StageId.SOURCE), "Immutable source audio monitor; it is not a MIDI representation.", current == PartArtifactKind.ORIGINAL, PartArtifactPreview.Audio(PreviewAudioSource.ORIGINAL))
+    } else {
+        PartArtifactComparison(PartArtifactKind.ORIGINAL, "Original MIDI", run(StageId.SOURCE), "Immutable raw MIDI representation.", current == PartArtifactKind.ORIGINAL, PartArtifactPreview.Midi(PreviewMidiSource.RAW))
+    }
+    return buildList {
+        add(original)
+        if (preparation.cleanMidi && preparation.midiQuality.status == MidiQualityStatus.CURRENT) {
+            add(PartArtifactComparison(PartArtifactKind.CLEANED, "Cleaned MIDI", run(StageId.CLEANED), if (part.sourceType == PartSourceType.AUDIO) "Derived MIDI render from source audio; compare it with audio as different representations." else "Validated derived MIDI.", current == PartArtifactKind.CLEANED, PartArtifactPreview.Midi(PreviewMidiSource.CLEANED)))
+        }
+        if (preparation.technicalCorrection.available && !preparation.technicalCorrection.approvalRequired) {
+            add(PartArtifactComparison(PartArtifactKind.CORRECTED, "Corrected MIDI", run(StageId.CORRECTED), "Validated conservative correction; downstream selection can bypass Enhanced.", current == PartArtifactKind.CORRECTED, PartArtifactPreview.Midi(PreviewMidiSource.CORRECTED)))
+        }
+        if (preparation.enhancement.approvedAvailable) {
+            add(PartArtifactComparison(PartArtifactKind.ENHANCED, "Enhanced MIDI", run(StageId.ENHANCED), "Approved enhanced MIDI; its corrected input and context were hash-validated.", current == PartArtifactKind.ENHANCED, PartArtifactPreview.Midi(PreviewMidiSource.ENHANCED)))
+        }
+    }
+}
 
 private data class MelodyPartStageDefinition(val label: String, val stage: StageId?)
 
@@ -231,7 +288,9 @@ private fun MelodyStageRail(stages: List<MelodyPartStageState>) = Row(Modifier.f
 private fun playingArtifactLabel(state: WorkspaceUiState, partId: String): String {
     val session = state.playbackSession
     val playingPart = (session.request as? PlaybackRequest.Part)?.partId
-    return if (playingPart == partId && session.artifact != null) session.artifact.path.fileName.toString() else "No artifact playing"
+    return if (playingPart == partId && session.artifact != null) {
+        session.artifact.source?.let { "${it.label} · ${it.sha256.take(12)}" } ?: "Validated preview artifact"
+    } else "No artifact playing"
 }
 
 private fun melodyPartFileSize(bytes: Long?): String = when {

@@ -218,6 +218,24 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `part comparison exposes labeled keyboard reachable A B preview actions`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        val state = importState(importPart("A.mid", rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT)).copy(
+            selectedPartId = "A",
+            dialog = WorkspaceDialog.PartDetails("A", PartDetailsFocusReturn.ImportedRow("A"))
+        )
+        setContent { MelotrailTheme { WorkspaceScreen(state, intents::add) } }
+
+        onNodeWithTag(WorkspaceTags.PART_COMPARISON).assertExists()
+        val original = onNodeWithTag(WorkspaceTags.PART_COMPARISON_PLAY_PREFIX + "original")
+        original.performSemanticsAction(SemanticsActions.RequestFocus)
+        original.performKeyInput { pressKey(Key.Enter) }
+
+        assertEquals(WorkspaceIntent.PreviewMidiPart("A", app.melotrail.application.PreviewMidiSource.RAW), intents.single())
+        onNodeWithContentDescription("Play Original MIDI for A/B comparison").assertExists()
+    }
+
+    @Test
     fun `Harmony offers structured section chord and keyboard reachable reorder controls`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         val harmony = harmonyView(

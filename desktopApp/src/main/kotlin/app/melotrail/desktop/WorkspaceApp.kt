@@ -173,6 +173,8 @@ object WorkspaceTags {
     const val MIDI_FEEL_APPLY = "midi-feel-apply"
     const val PART_DETAILS_DIALOG = "part-details-dialog"
     const val PART_DETAILS_CLOSE = "part-details-close"
+    const val PART_COMPARISON = "part-artifact-comparison"
+    const val PART_COMPARISON_PLAY_PREFIX = "part-artifact-comparison-play-"
     const val SOUND_LIBRARY_SETTINGS = "sound-library-settings"
     const val SOUND_LIBRARY_CHOOSE = "sound-library-choose"
     const val SOUND_LIBRARY_CLEAR = "sound-library-clear"
@@ -1524,6 +1526,7 @@ private fun PartDetailsDialog(state: WorkspaceUiState, dialog: WorkspaceDialog.P
                     app.melotrail.application.PartSourceType.AUDIO -> AudioPreparationPanel(state, onIntent)
                     else -> Text("This source is no longer supported. Re-import a validated MIDI, WAV, or MP3 source.", color = MaterialTheme.colorScheme.error)
                 }
+                part?.let { PartArtifactComparisonPanel(state, it, onIntent) }
                 val failed = state.operation as? WorkspaceOperation.Failed
                 if (failed != null) {
                     Text("${failed.action}: ${failed.message}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
@@ -1542,6 +1545,61 @@ private fun PartDetailsDialog(state: WorkspaceUiState, dialog: WorkspaceDialog.P
             ) { Text("Close") }
         }
     )
+}
+
+@Composable
+private fun PartArtifactComparisonPanel(state: WorkspaceUiState, part: app.melotrail.application.PartSummary, onIntent: (WorkspaceIntent) -> Unit) {
+    val project = state.project ?: return
+    val choices = availablePartArtifactComparisons(project, part)
+    Card(Modifier.fillMaxWidth().semantics { testTag = WorkspaceTags.PART_COMPARISON }, colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface)) {
+        Column(Modifier.padding(MusicWorkspaceTokens.Spacing.Sm), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+            Text("Compare representations", fontWeight = FontWeight.SemiBold)
+            Text("Play controls prepare the named, hash-validated source. They do not replace project artifacts.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            choices.forEach { choice ->
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                    Column(Modifier.weight(1f)) {
+                        Text(if (choice.current) "${choice.label} · Current" else choice.label, style = MaterialTheme.typography.bodyMedium)
+                        Text("${choice.runLabel} — ${choice.detail}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    TextButton(
+                        onClick = {
+                            when (val preview = choice.preview) {
+                                is PartArtifactPreview.Audio -> onIntent(WorkspaceIntent.PreviewPreparation(preview.source))
+                                is PartArtifactPreview.Midi -> onIntent(WorkspaceIntent.PreviewMidiPart(part.id, preview.source))
+                            }
+                        },
+                        modifier = Modifier.semantics { testTag = WorkspaceTags.PART_COMPARISON_PLAY_PREFIX + choice.kind.name.lowercase(); contentDescription = "Play ${choice.label} for A/B comparison" }
+                    ) { Text("Play") }
+                }
+            }
+            val review = state.enhancementReview?.takeIf { it.partId == part.id }
+            if (part.preparation.technicalCorrection.available && !part.preparation.technicalCorrection.approvalRequired &&
+                part.preparation.technicalCorrection.selected == app.melotrail.arrangement.TechnicalCorrectionSelection.CORRECTED) {
+                Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                    TextButton(onClick = { onIntent(WorkspaceIntent.SelectEnhancement(app.melotrail.arrangement.EnhancementIntensity.OFF)) }, enabled = !state.operation.isMutating) { Text("Use Corrected (AI Off)") }
+                    app.melotrail.arrangement.EnhancementIntensity.entries.filter { it != app.melotrail.arrangement.EnhancementIntensity.OFF }.forEach { intensity ->
+                        TextButton(onClick = { onIntent(WorkspaceIntent.SelectEnhancement(intensity)) }, enabled = !state.operation.isMutating) { Text(if (review == null) "Generate ${intensity.name.lowercase()}" else "Rerun ${intensity.name.lowercase()}") }
+                    }
+                }
+            }
+            if (review != null && review.approval == app.melotrail.arrangement.EnhancementApproval.DRAFT) {
+                Text("Draft edit report: ${review.edits} edits${review.reasons.takeIf { it.isNotEmpty() }?.joinToString(prefix = " — ") ?: ""}", style = MaterialTheme.typography.labelSmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                    Button(onClick = { onIntent(WorkspaceIntent.ApproveEnhancement) }, enabled = !state.operation.isMutating) { Text("Approve Enhanced") }
+                    TextButton(onClick = { onIntent(WorkspaceIntent.RejectEnhancement) }, enabled = !state.operation.isMutating) { Text("Reject draft") }
+                }
+            }
+            if (review?.approval == app.melotrail.arrangement.EnhancementApproval.APPROVED && choices.any { it.kind == PartArtifactKind.ENHANCED && !it.current }) {
+                TextButton(onClick = { onIntent(WorkspaceIntent.SelectApprovedEnhancement) }, enabled = !state.operation.isMutating) { Text("Use Enhanced") }
+            }
+            if (state.downstreamArtifactsStale || project.readiness.staleArtifacts.isNotEmpty()) {
+                Text("Changing the selected representation requires downstream analysis and build artifacts to be regenerated; retained artifacts remain inspectable.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+            }
+            (state.playbackSession.artifact?.source)?.takeIf { state.playbackSession.artifact.partId == part.id }?.let { identity ->
+                Text("Playing ${identity.label} · ${identity.sha256.take(12)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
 }
 
 @Composable

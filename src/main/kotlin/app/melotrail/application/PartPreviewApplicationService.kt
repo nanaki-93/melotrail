@@ -35,14 +35,31 @@ data class PreviewRequest(
 
 /** Bounded monitor choices for a selected audio part; neither changes project release artifacts. */
 enum class PreviewAudioSource { ORIGINAL, PREPARED_CLEAN }
-enum class PreviewMidiSource { RAW, CLEANED, AI_FIX_DRAFT, AI_FIX_APPROVED, LOFI_FEEL }
+/**
+ * A bounded representation selector for monitor rendering.  These are not
+ * paths and do not alter the project's selected downstream artifact.
+ */
+enum class PreviewMidiSource { RAW, CLEANED, CORRECTED, ENHANCED, AI_FIX_DRAFT, AI_FIX_APPROVED, LOFI_FEEL }
 
 enum class PreviewStage { VALIDATE, DECODE_OR_RENDER, VALIDATE_ARTIFACT, REUSE_OR_PUBLISH }
 
 sealed interface PreviewResult {
-    data class Resolved(val artifact: Path, val stages: List<PreviewStage>, val reused: Boolean) : PreviewResult
+    data class Resolved(
+        val artifact: Path,
+        val stages: List<PreviewStage>,
+        val reused: Boolean,
+        /** Identity of the validated source representation, never a cache filename. */
+        val source: PreviewArtifactIdentity? = null
+    ) : PreviewResult
     data class Prerequisite(val stage: PreviewStage, val message: String) : PreviewResult
     data class Failed(val stage: PreviewStage, val message: String, val cause: Throwable? = null) : PreviewResult
+}
+
+data class PreviewArtifactIdentity(val label: String, val sha256: String) {
+    init {
+        require(label.isNotBlank() && '/' !in label && '\\' !in label) { "Preview artifact label is unsafe." }
+        require(sha256.matches(Regex("[0-9a-f]{64}"))) { "Preview artifact fingerprint is invalid." }
+    }
 }
 
 /** MP3 is deliberately a replaceable local decoder boundary so normal tests stay offline. */
@@ -135,7 +152,7 @@ class DefaultPartPreviewApplicationService(
         val info = inspectWav(source) ?: return PreviewResult.Failed(PreviewStage.VALIDATE, "WAV source is not a supported RIFF PCM/float WAV.")
         if (info.frames <= 0) return PreviewResult.Failed(PreviewStage.VALIDATE, "WAV source contains no audio frames.")
         stages += PreviewStage.VALIDATE_ARTIFACT
-        return PreviewResult.Resolved(source, stages + PreviewStage.REUSE_OR_PUBLISH, reused = true)
+        return PreviewResult.Resolved(source, stages + PreviewStage.REUSE_OR_PUBLISH, reused = true, source = identity("Original audio", source))
     }
 
     private fun resolvePreparedClean(root: Path, partId: String, source: Path, stages: MutableList<PreviewStage>): PreviewResult {
@@ -152,18 +169,18 @@ class DefaultPartPreviewApplicationService(
         val info = inspectWav(clean) ?: return PreviewResult.Failed(PreviewStage.VALIDATE, "Prepared audio is not a supported RIFF PCM WAV.")
         if (info.frames <= 0) return PreviewResult.Failed(PreviewStage.VALIDATE, "Prepared audio contains no audio frames.")
         stages += PreviewStage.VALIDATE_ARTIFACT
-        return PreviewResult.Resolved(clean, stages + PreviewStage.REUSE_OR_PUBLISH, reused = true)
+        return PreviewResult.Resolved(clean, stages + PreviewStage.REUSE_OR_PUBLISH, reused = true, source = identity("Prepared clean audio", clean))
     }
 
     private suspend fun resolveMp3(root: Path, partId: String, source: Path, stages: MutableList<PreviewStage>): PreviewResult {
         val target = previewTarget(root, "audio", partId, fingerprint(source, mp3Decoder.configurationFingerprint))
         stages += PreviewStage.DECODE_OR_RENDER
-        if (validMonitorWav(target, null, null, null)) return PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, true)
+        if (validMonitorWav(target, null, null, null)) return PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, true, identity("Original audio", source))
         return try {
             val published = publish(target, { temporary -> mp3Decoder.decode(source, temporary) }) { temporary -> validMonitorWav(temporary, null, null, 24) }
             if (!published) {
                 PreviewResult.Failed(PreviewStage.VALIDATE_ARTIFACT, "MP3 decoder did not produce a valid PCM-24 WAV monitor artifact.")
-            } else PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, false)
+            } else PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, false, identity("Original audio", source))
         } catch (error: Exception) {
             PreviewResult.Prerequisite(PreviewStage.DECODE_OR_RENDER, error.message ?: "MP3 decoding is unavailable.")
         }
@@ -190,12 +207,12 @@ class DefaultPartPreviewApplicationService(
         val frames = (duration * format.sampleRate).roundToLong()
         val target = previewTarget(root, "piano", partId, fingerprint(clean, "${format.sampleRate}|${format.channels}|$frames|${rendererConfigurationFingerprint()}"))
         stages += PreviewStage.DECODE_OR_RENDER
-        if (validMonitorWav(target, format.sampleRate, format.channels, 24, frames)) return PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, true)
+        if (validMonitorWav(target, format.sampleRate, format.channels, 24, frames)) return PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, true, identity("Current selected MIDI", clean))
         return try {
             val published = publish(target, { temporary -> renderer.render(clean, LogicalInstrument.PIANO, temporary, format, frames) }) { temporary -> validMonitorWav(temporary, format.sampleRate, format.channels, 24, frames) }
             if (!published) {
                 PreviewResult.Failed(PreviewStage.VALIDATE_ARTIFACT, "Piano renderer did not produce a valid project-format WAV monitor artifact.")
-            } else PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, false)
+            } else PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, false, identity("Current selected MIDI", clean))
         } catch (error: Exception) {
             PreviewResult.Prerequisite(PreviewStage.DECODE_OR_RENDER, "Piano preview renderer or sound library is unavailable: ${error.message ?: "unknown failure"}")
         }
@@ -213,6 +230,8 @@ class DefaultPartPreviewApplicationService(
         val reference = when (source) {
             PreviewMidiSource.RAW -> midi.raw
             PreviewMidiSource.CLEANED -> midi.clean
+            PreviewMidiSource.CORRECTED -> midi.technicalCorrection?.output?.file
+            PreviewMidiSource.ENHANCED -> midi.enhancement?.output?.file
             PreviewMidiSource.AI_FIX_DRAFT -> midi.aiFix?.draft?.file
             PreviewMidiSource.AI_FIX_APPROVED -> midi.aiFix?.approved?.file
             PreviewMidiSource.LOFI_FEEL -> midi.feel?.derived
@@ -235,6 +254,29 @@ class DefaultPartPreviewApplicationService(
                 return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Lo-fi Feel MIDI is unavailable or stale. Choose Original feel or regenerate the fixed profile.")
             }
         }
+        if (source == PreviewMidiSource.CORRECTED) {
+            val correction = midi.technicalCorrection
+                ?: return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Corrected MIDI is not available for '${part.id}'.")
+            if (runCatching {
+                    correction.requireCanonical(part.id)
+                    digest(Files.readAllBytes(root.resolve(correction.input.file))) == correction.input.sha256 &&
+                        digest(Files.readAllBytes(root.resolve(correction.output.file))) == correction.output.sha256
+                }.getOrDefault(false).not()) {
+                return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Corrected MIDI is unavailable or stale. Recreate correction before previewing it.")
+            }
+        }
+        if (source == PreviewMidiSource.ENHANCED) {
+            val enhancement = midi.enhancement
+                ?: return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Enhanced MIDI is not available for '${part.id}'.")
+            if (runCatching {
+                    enhancement.requireCanonical(part.id)
+                    enhancement.approval == app.melotrail.arrangement.EnhancementApproval.APPROVED &&
+                        digest(Files.readAllBytes(root.resolve(enhancement.input.file))) == enhancement.input.sha256 &&
+                        digest(Files.readAllBytes(root.resolve(enhancement.output.file))) == enhancement.output.sha256
+                }.getOrDefault(false).not()) {
+                return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Enhanced MIDI is unavailable, unapproved, or stale. Select Corrected or generate a current enhancement draft.")
+            }
+        }
         if (source == PreviewMidiSource.AI_FIX_DRAFT || source == PreviewMidiSource.AI_FIX_APPROVED) {
             val fix = midi.aiFix
             val clean = midi.clean
@@ -251,11 +293,11 @@ class DefaultPartPreviewApplicationService(
         val frames = (duration * format.sampleRate).roundToLong()
         val target = previewTarget(root, "piano-${source.name.lowercase()}", part.id, fingerprint(midiPath, "${format.sampleRate}|${format.channels}|$frames|${rendererConfigurationFingerprint()}"))
         stages += PreviewStage.DECODE_OR_RENDER
-        if (validMonitorWav(target, format.sampleRate, format.channels, 24, frames)) return PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, true)
+        if (validMonitorWav(target, format.sampleRate, format.channels, 24, frames)) return PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, true, identity(source.label(), midiPath))
         return try {
             val published = publish(target, { temporary -> renderer.render(midiPath, LogicalInstrument.PIANO, temporary, format, frames) }) { temporary -> validMonitorWav(temporary, format.sampleRate, format.channels, 24, frames) }
             if (!published) PreviewResult.Failed(PreviewStage.VALIDATE_ARTIFACT, "Piano renderer did not produce a valid project-format WAV monitor artifact.")
-            else PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, false)
+            else PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, false, identity(source.label(), midiPath))
         } catch (error: Exception) {
             PreviewResult.Prerequisite(PreviewStage.DECODE_OR_RENDER, "Piano preview renderer or sound library is unavailable: ${error.message ?: "unknown failure"}")
         }
@@ -282,6 +324,7 @@ class DefaultPartPreviewApplicationService(
     }
 
     private fun fingerprint(source: Path, configuration: String): String = digest(Files.readAllBytes(source) + configuration.toByteArray())
+    private fun identity(label: String, source: Path) = PreviewArtifactIdentity(label, digest(Files.readAllBytes(source)))
     private fun validMonitorWav(path: Path, rate: Int?, channels: Int?, bitDepth: Int?, frames: Long? = null): Boolean {
         val info = inspectWav(path) ?: return false
         return info.frames > 0 && (rate == null || info.sampleRate == rate) && (channels == null || info.channels == channels) &&
@@ -311,6 +354,16 @@ class DefaultPartPreviewApplicationService(
     } catch (_: Exception) { null }
 
     private companion object { val json = Json { ignoreUnknownKeys = false }; val PART_ID = Regex("[A-Za-z0-9_-]+") }
+}
+
+private fun PreviewMidiSource.label(): String = when (this) {
+    PreviewMidiSource.RAW -> "Original MIDI"
+    PreviewMidiSource.CLEANED -> "Cleaned MIDI"
+    PreviewMidiSource.CORRECTED -> "Corrected MIDI"
+    PreviewMidiSource.ENHANCED -> "Enhanced MIDI"
+    PreviewMidiSource.AI_FIX_DRAFT -> "AI-fix draft MIDI"
+    PreviewMidiSource.AI_FIX_APPROVED -> "Approved AI-fix MIDI"
+    PreviewMidiSource.LOFI_FEEL -> "Lo-fi Feel MIDI"
 }
 
 private fun java.io.RandomAccessFile.readFourCc(): String = ByteArray(4).also { readFully(it) }.toString(Charsets.US_ASCII)

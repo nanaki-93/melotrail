@@ -33,7 +33,7 @@ schema window actively requires it and must have a named removal condition.
 | 017 | [Technical correction stage](completed/017-technical-correction.md) | MVP |
 | 018 | [Enhancement context and intensity contracts](completed/018-enhancement-contracts.md) | MVP |
 | 019 | [Context-aware AI enhancement adapter](completed/019-ai-enhancement-adapter.md) | Later |
-| 020 | [Artifact comparison, bypass, and retry UX](020-artifact-comparison-ui.md) | MVP |
+| 020 | [Artifact comparison, bypass, and retry UX](completed/020-artifact-comparison-ui.md) | MVP |
 | 021 | [Persistent structure occurrence identity](021-structure-occurrences.md) | MVP |
 | 022 | [Profile-independent arrangement roles and sound intent](022-arrangement-roles.md) | Later |
 | 022B | [Metadata-driven Instrument Registry and resolver](022b-instrument-registry-resolution.md) | Later |
