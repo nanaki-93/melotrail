@@ -67,8 +67,7 @@ fun main() {
     val arrangementService = DefaultArrangementApplicationService(libraryRoot = libraryRoot)
     val mixService = DefaultMixApplicationService()
     val client = DesktopServiceComposition.workerClient()
-    val stageRunner = DesktopServiceComposition.stageRunner()
-    val projectService = DesktopServiceComposition.projectService(stageRunner)
+    val projectService = DesktopServiceComposition.projectService()
     val operationLogger = LocalDesktopOperationLogger()
     val player = JvmAudioPlayer(failureReporter = { failure ->
         operationLogger.event("playback", failure.stage.name.lowercase(), failure = failure.cause)
@@ -168,9 +167,13 @@ object DesktopServiceComposition {
 
         override suspend fun clean(input: Path, output: Path, options: MidiCleanupOptions) {
             Files.createDirectories(checkNotNull(output.parent))
+            val profile = options.profile.name.lowercase().replace('_', '-')
+            require(client.supportsMidiCleanup(options.requestVersion, profile)) {
+                "Python worker does not support the required Clean MIDI profile version. Start the current local worker and retry."
+            }
             val response = client.execute(CleanMidiCommand(
                 input.toString(), output.toString(), options.requestVersion,
-                options.profile.name.lowercase().replace('_', '-'), options.quantize, options.strength,
+                profile, options.quantize, options.strength,
                 options.minNoteMs, options.minVelocity, options.normalizeVelocity, options.cleanSustain
             ))
             require(response.status == WorkerStatus.COMPLETED) { cleanupFailureMessage(response.error) }

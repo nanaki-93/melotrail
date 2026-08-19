@@ -28,7 +28,7 @@ class AutomaticImportApplicationServiceTest {
     @TempDir lateinit var tempDir: Path
 
     @Test
-    fun `source-first import records durable stages and automatically cleans immutable direct MIDI`() = runBlocking {
+    fun `source-first import cleans then normalizes immutable direct MIDI`() = runBlocking {
         val input = tempDir.resolve("source.mid").also { writeMidi(it, 60) }
         val service = service()
         val root = tempDir.resolve("project")
@@ -43,7 +43,7 @@ class AutomaticImportApplicationServiceTest {
         ))
 
         repeat(50) {
-            if (StageRunStore().read(root, ProjectStore.read(root).envelope.stageRuns).any { run -> run.stage == StageId.CLEANED && run.status == StageRunStatus.COMPLETED }) return@repeat
+            if (StageRunStore().read(root, ProjectStore.read(root).envelope.stageRuns).any { run -> run.stage == StageId.NORMALIZED && run.status == StageRunStatus.COMPLETED }) return@repeat
             delay(10)
         }
         val project = ProjectStore.read(root)
@@ -56,11 +56,13 @@ class AutomaticImportApplicationServiceTest {
         assertFalse(part.importPending)
         assertEquals("midi/raw/intro.mid", part.midi?.raw)
         assertTrue(Files.isRegularFile(root.resolve(requireNotNull(part.midi?.clean))))
-        assertEquals(listOf(StageId.SOURCE, StageId.EXTRACTED, StageId.CLEANED), runs.map { it.stage })
+        assertTrue(Files.isRegularFile(root.resolve(requireNotNull(part.midi?.normalized))))
+        assertTrue(Files.isRegularFile(root.resolve(requireNotNull(part.midi?.normalization))))
+        assertEquals(listOf(StageId.SOURCE, StageId.EXTRACTED, StageId.CLEANED, StageId.NORMALIZED), runs.map { it.stage })
 
         val retry = service.importSongPart(ImportSongPart(root, "intro", input, "Intro piano", SectionTypeId("intro"), expectedRevision = 1))
         assertTrue(retry.firstRun.cacheHit)
-        assertEquals(3, StageRunStore().read(root, ProjectStore.read(root).envelope.stageRuns).size)
+        assertEquals(4, StageRunStore().read(root, ProjectStore.read(root).envelope.stageRuns).size)
     }
 
     private fun service(): DefaultProjectApplicationService {

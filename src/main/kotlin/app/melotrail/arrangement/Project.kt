@@ -278,6 +278,10 @@ data class MidiReferences(
     /** Null only for pre-quality-report projects, which remain readable as legacy/unknown. */
     val cleanup: MidiCleanupOptions? = null,
     val quality: String? = null,
+    /** Absent for legacy/manual Clean MIDI until Normalize is explicitly executed. */
+    val normalized: String? = null,
+    /** Hash-bound report for [normalized]; it is never fabricated during legacy reads. */
+    val normalization: String? = null,
     /** Legacy read adapter only. New approval is always fingerprint-bound in [cleanApproval]. */
     val approvedRepair: Boolean = false,
     /** Exact automatic or explicit approval of raw, clean, options, and report evidence. */
@@ -379,6 +383,7 @@ object ProjectValidator {
                     if (part.legacySourceOnly || part.importPending) errors += "Part '${part.id}' cannot be both MIDI-first and source-only"
                     midi.raw?.let { validateFileReference(root, it, "Part '${part.id}' raw MIDI", errors) }
                     midi.clean?.let { validateFileReference(root, it, "Part '${part.id}' cleaned MIDI", errors) }
+                    midi.normalized?.let { validateFileReference(root, it, "Part '${part.id}' normalized MIDI", errors) }
                     if (midi.raw != null && midi.clean == null && (midi.cleanup != null || midi.quality != null)) {
                         errors += "Part '${part.id}' has cleanup evidence without cleaned MIDI"
                     }
@@ -390,6 +395,12 @@ object ProjectValidator {
                     }
                     if ((midi.cleanup == null) != (midi.quality == null)) {
                         errors += "Part '${part.id}' MIDI cleanup provenance and quality report must be present together"
+                    }
+                    if ((midi.normalized == null) != (midi.normalization == null)) {
+                        errors += "Part '${part.id}' MIDI normalization output and report must be present together"
+                    }
+                    if (midi.normalized != null && midi.clean == null) {
+                        errors += "Part '${part.id}' normalized MIDI requires cleaned MIDI evidence"
                     }
                     if (midi.approvedRepair && (midi.cleanup == null || midi.quality == null)) {
                         errors += "Part '${part.id}' has an invalid legacy MIDI cleanup approval flag"
@@ -419,6 +430,7 @@ object ProjectValidator {
                         }
                     }
                     midi.quality?.let { validateFileReference(root, it, "Part '${part.id}' MIDI quality report", errors) }
+                    midi.normalization?.let { validateFileReference(root, it, "Part '${part.id}' MIDI normalization report", errors) }
                     midi.feel?.let { feel ->
                         validateFileReference(root, feel.derived, "Part '${part.id}' Lo-fi Feel MIDI", errors)
                         validateFileReference(root, feel.report, "Part '${part.id}' Lo-fi Feel report", errors)

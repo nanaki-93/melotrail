@@ -28,7 +28,7 @@ schema window actively requires it and must have a named removal condition.
 | 012 | [Persistent stage runner and recovery](completed/012-stage-runner.md) | MVP |
 | 013 | [Automatic import orchestration](completed/013-automatic-import-orchestration.md) | MVP |
 | 014 | [Melody Parts progress and recovery UI](completed/014-melody-parts-ui.md) | MVP |
-| 015 | [Deterministic MIDI normalization](015-midi-normalization.md) | MVP |
+| 015 | [Deterministic MIDI normalization](completed/015-midi-normalization.md) | MVP |
 | 016 | [Project-key transposition](016-project-key-transposition.md) | MVP |
 | 017 | [Technical correction stage](017-technical-correction.md) | MVP |
 | 018 | [Enhancement context and intensity contracts](018-enhancement-contracts.md) | MVP |

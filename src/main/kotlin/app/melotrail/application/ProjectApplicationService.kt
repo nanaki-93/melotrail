@@ -442,7 +442,7 @@ class DefaultProjectApplicationService(
         require(!Files.exists(root.resolve(ProjectStore.FILE_NAME))) { "Project already exists: ${root.resolve(ProjectStore.FILE_NAME)}" }
         val name = request.name ?: root.fileName?.toString().orEmpty()
         require(name.isNotBlank()) { "Project directory must have a name" }
-        listOf("source", "midi/raw", "midi/clean", "midi/quality", "midi/derived", "midi/feel", "midi/generated").forEach { Files.createDirectories(root.resolve(it)) }
+        listOf("source", "midi/raw", "midi/clean", "midi/quality", "midi/normalized", "midi/normalization", "midi/derived", "midi/feel", "midi/generated").forEach { Files.createDirectories(root.resolve(it)) }
         val project = ProjectStore.create(root, name, request.renderFormat)
         snapshot(root, project)
     }
@@ -682,6 +682,8 @@ class DefaultProjectApplicationService(
                         clean = root.relativize(cleanPath).toString().replace('\\', '/'),
                         cleanup = request.cleanup,
                         quality = qualityReference,
+                        normalized = null,
+                        normalization = null,
                         approvedRepair = false,
                         cleanApproval = approval,
                         aiFixSelection = MidiAiFixSelection.SKIP,

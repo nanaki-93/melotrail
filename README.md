@@ -107,12 +107,12 @@ then update a local checkout with `git remote set-url origin <new-url>`.
 
 Use the desktop app as a guided sequence: create or open a project, explicitly save its
 musical Setup (name, key, tempo, meter, Lo-fi profile, and mood), then import MIDI or an eligible WAV/MP3
-source, convert audio to MIDI when needed, clean MIDI, keep it or review an
+source, convert audio to MIDI when needed, clean then deterministically normalize MIDI, keep it or review an
 optional bounded AI-fix draft, select optional Lo-fi Feel, analyze MIDI, then
 save the structure, generate/review Cohesion, generate/review an arrangement,
 then build and audition validated artifacts. The app never requires Spring.
 
-- Direct MIDI is preserved under `source/` and copied as immutable evidence under `midi/raw/`. Use the explicit **Clean MIDI** stage before analysis.
+- Direct MIDI is preserved under `source/` and copied as immutable evidence under `midi/raw/`. Worker **Clean MIDI** repairs invalid events; Kotlin **Normalize MIDI** then publishes deterministic `midi/normalized/` evidence and a hash-bound report before analysis. Legacy clean-only projects remain readable until normalization is explicitly run.
 - WAV/WAVE and MP3 input is accepted only for the optional **solo-piano**
   transcription workflow. Do not use it to claim reliable editable MIDI from
   vocals, full mixes, or arbitrary polyphonic material.
@@ -125,7 +125,7 @@ then build and audition validated artifacts. The app never requires Spring.
   The readiness panel names the missing dependency and its recovery action.
 
 The project directory remains canonical. Its inspectable artifacts include
-`source/`, `prepared/`, `midi/raw/`, `midi/clean/`, `analysis/`, `previews/`,
+`source/`, `prepared/`, `midi/raw/`, `midi/clean/`, `midi/normalized/`, `midi/normalization/`, `analysis/`, `previews/`,
 plans and arrangements, generated MIDI, stems, `mix/`, and `output/`.
 `output/master.wav` is the authoritative lossless release; MP3 is an optional
 final conversion only. For worker, library, renderer, preview, and package

@@ -114,3 +114,9 @@ Worker responses and outputs are stage evidence, not workflow completion flags.
 The Kotlin project boundary validates published files and their fingerprints
 before later analysis or rendering is ready; a worker failure leaves prior
 artifacts available for inspection.
+
+`GET /health` also advertises the pinned `midiCleanup.requestVersion` and its
+allow-listed profiles. Kotlin checks that capability before sending a Clean MIDI
+request; it does not negotiate arbitrary worker options. Normalization is a
+separate deterministic Kotlin stage after worker cleanup, so this worker does
+not perform swing, creative quantization, pitch correction, or humanization.

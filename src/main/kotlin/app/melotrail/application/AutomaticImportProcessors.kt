@@ -8,6 +8,9 @@ import app.melotrail.arrangement.MidiQualityReport
 import app.melotrail.arrangement.MidiQualityReportStore
 import app.melotrail.arrangement.MidiQualityReporter
 import app.melotrail.arrangement.MidiReferences
+import app.melotrail.arrangement.MidiNormalizationPolicy
+import app.melotrail.arrangement.MidiNormalizationReport
+import app.melotrail.arrangement.MidiNormalizer
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.StageId
 import app.melotrail.arrangement.StageSubject
@@ -17,6 +20,8 @@ import app.melotrail.preparation.InputInspectionReport
 import app.melotrail.preparation.InputInspectionRequest
 import app.melotrail.preparation.InputInspectionResult
 import app.melotrail.preparation.InspectionSourceIdentity
+import app.melotrail.profile.BundledCompositionProfileCatalog
+import app.melotrail.profile.CompositionProfileCatalog
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.sound.midi.MidiSystem
@@ -32,9 +37,11 @@ class AutomaticImportProcessors(
     private val inspection: InputInspectionBoundary,
     private val midiPreparation: MidiPreparationService,
     private val qualityReporter: MidiQualityReporter = MidiQualityReporter(),
-    private val defaultCleanup: MidiCleanupOptions = MidiCleanupOptions()
+    private val defaultCleanup: MidiCleanupOptions = MidiCleanupOptions(),
+    private val compositionProfiles: CompositionProfileCatalog = BundledCompositionProfileCatalog.load(),
+    private val normalizer: MidiNormalizer = MidiNormalizer()
 ) {
-    fun registry(): StageProcessorRegistry = StageProcessorRegistry(listOf(extracted, cleaned))
+    fun registry(): StageProcessorRegistry = StageProcessorRegistry(listOf(extracted, cleaned, normalized))
 
     private val extracted = object : StageProcessor {
         override val definition = StageDefinition(
@@ -82,7 +89,8 @@ class AutomaticImportProcessors(
         override val definition = StageDefinition(
             stage = StageId.CLEANED,
             subjectKind = StageSubjectKind.PART,
-            dependencies = setOf(StageId.EXTRACTED)
+            dependencies = setOf(StageId.EXTRACTED),
+            automaticallyChainsTo = StageId.NORMALIZED
         )
 
         override suspend fun process(request: StageProcessingRequest): StageProcessorResult {
@@ -115,12 +123,52 @@ class AutomaticImportProcessors(
                 clean = clean.path,
                 cleanup = defaultCleanup,
                 quality = quality.path,
+                normalized = null,
+                normalization = null,
                 approvedRepair = false,
                 cleanApproval = approval,
                 analysisInput = MidiAnalysisInput.CURRENT
             )
             ProjectStore.write(request.root, project.copy(parts = project.parts.map {
                 if (it.id == part.id) it.copy(midi = updatedMidi) else it
+            }))
+        }
+    }
+
+    private val normalized = object : StageProcessor {
+        override val definition = StageDefinition(
+            stage = StageId.NORMALIZED,
+            subjectKind = StageSubjectKind.PART,
+            dependencies = setOf(StageId.CLEANED)
+        )
+
+        override suspend fun process(request: StageProcessingRequest): StageProcessorResult {
+            val project = ProjectStore.read(request.root)
+            val part = project.parts.singleOrNull { it.id == partId(request) } ?: throw IllegalArgumentException("Stage part is not registered")
+            val clean = requireNotNull(part.midi?.clean) { "Clean MIDI is required before normalization" }
+            val input = source(request, clean)
+            val output = request.temporaryRoot.resolve("normalized.mid")
+            val config = MidiNormalizationPolicy.resolve(project, compositionProfiles)
+            val report = normalizer.normalize(part.id, input, output, config)
+            return StageProcessorResult(
+                outputs = listOf(TemporaryStageArtifact(output, "midi/normalized/${part.id}-${request.runId}.mid")),
+                reports = listOf(TemporaryStageArtifact(writeJson(request.temporaryRoot.resolve("normalization.json"), report), "midi/normalization/${part.id}-${request.runId}.json"))
+            )
+        }
+
+        override fun onPublished(request: StageProcessingRequest, outputs: List<ArtifactRef>, reports: List<ArtifactRef>) {
+            val output = outputs.singleOrNull() ?: error("Normalization must publish exactly one MIDI artifact")
+            val reportRef = reports.singleOrNull() ?: error("Normalization must publish exactly one report")
+            val project = ProjectStore.read(request.root)
+            val part = project.parts.singleOrNull { it.id == partId(request) } ?: error("Imported part disappeared before normalization completed")
+            val midi = requireNotNull(part.midi)
+            val clean = requireNotNull(midi.clean)
+            val report = readNormalization(request.root.resolve(reportRef.path))
+            require(report.partId == part.id && report.input.sha256 == sha256(request.root.resolve(clean)) && report.output.sha256 == output.sha256) {
+                "Normalization report does not match published MIDI"
+            }
+            ProjectStore.write(request.root, project.copy(parts = project.parts.map {
+                if (it.id == part.id) it.copy(midi = midi.copy(normalized = output.path, normalization = reportRef.path)) else it
             }))
         }
     }
@@ -175,6 +223,7 @@ class AutomaticImportProcessors(
         val text = when (value) {
             is InputInspectionReport -> JSON.encodeToString(value)
             is MidiQualityReport -> JSON.encodeToString(value)
+            is MidiNormalizationReport -> JSON.encodeToString(value)
             else -> error("Unsupported stage report")
         }
         Files.writeString(path, text)
@@ -182,6 +231,7 @@ class AutomaticImportProcessors(
     }
 
     private fun readQuality(path: Path): MidiQualityReport = JSON.decodeFromString(MidiQualityReport.serializer(), Files.readString(path))
+    private fun readNormalization(path: Path): MidiNormalizationReport = JSON.decodeFromString(MidiNormalizationReport.serializer(), Files.readString(path)).also(MidiNormalizationReport::requireValid)
 
     private companion object {
         val JSON = Json { prettyPrint = true; encodeDefaults = true; ignoreUnknownKeys = false }

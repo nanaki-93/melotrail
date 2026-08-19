@@ -230,6 +230,10 @@ object LegacyV3StageRunMapper {
             midi?.raw?.let { add(LegacyStageRunInput(StageId.EXTRACTED, subject, it, selected = false)) }
             midi?.clean?.let {
                 add(LegacyStageRunInput(StageId.CLEANED, subject, it,
+                    selected = midi.normalized == null && midi.aiFixSelection == MidiAiFixSelection.SKIP && midi.analysisInput == MidiAnalysisInput.CURRENT))
+            }
+            midi?.normalized?.let {
+                add(LegacyStageRunInput(StageId.NORMALIZED, subject, it,
                     selected = midi.aiFixSelection == MidiAiFixSelection.SKIP && midi.analysisInput == MidiAnalysisInput.CURRENT))
             }
             midi?.aiFix?.approved?.file?.let {

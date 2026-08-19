@@ -10,7 +10,9 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import java.net.HttpURLConnection
 import java.net.URI
 import java.util.concurrent.atomic.AtomicLong
@@ -96,6 +98,17 @@ class WorkerClient(
                 mp3ExportAvailable = body["mp3ExportRuntime"]?.jsonPrimitive?.booleanOrNull == true
             )
         }.getOrDefault(WorkerRuntimeStatus(false, false))
+    }
+
+    /** Capability negotiation is deliberately limited to the pinned Clean MIDI contract. */
+    suspend fun supportsMidiCleanup(requestVersion: Int, profile: String): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            val response = transport.request("GET", "/health", null, timeout)
+            if (response.code !in 200..299) return@runCatching false
+            val capability = json.parseToJsonElement(response.body).jsonObject["midiCleanup"]?.jsonObject ?: return@runCatching false
+            capability["requestVersion"]?.jsonPrimitive?.longOrNull == requestVersion.toLong() &&
+                capability["profiles"]?.jsonArray?.any { it.jsonPrimitive.contentOrNull == profile } == true
+        }.getOrDefault(false)
     }
 
     override fun close() = Unit

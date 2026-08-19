@@ -57,6 +57,12 @@ class WorkerHandler(BaseHTTPRequestHandler):
                 "commands": sorted(COMMANDS.keys()),
                 "transcriptionRuntime": importlib.util.find_spec("basic_pitch") is not None,
                 "mp3ExportRuntime": importlib.util.find_spec("lameenc") is not None,
+                # Kotlin checks this bounded capability before using the versioned
+                # Clean MIDI request contract; it never negotiates arbitrary options.
+                "midiCleanup": {
+                    "requestVersion": 2,
+                    "profiles": ["conservative", "transcription-safe", "tighten-timing"],
+                },
             })
             return
         self._send_json(404, {"error": "Not found"})

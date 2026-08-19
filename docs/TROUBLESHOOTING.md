@@ -91,9 +91,11 @@ actual format. Source files are immutable under `source/`.
   stems, or overwrites the source.
 - Select original or prepared audio explicitly before transcription. Raw and
   clean MIDI, analysis, and preview artifacts stay under the project.
-- After raw MIDI exists, use the single **Clean MIDI** action. It publishes a
-  new `midi/clean/<part>.mid` plus `midi/quality/<part>.json`, keeps source/raw
-  MIDI unchanged, and offers raw-versus-cleaned preview. If review is required,
+- After raw MIDI exists, **Clean MIDI** repairs invalid events and then the deterministic
+  **Normalize MIDI** stage publishes `midi/normalized/<part>-<run>.mid` plus a
+  hash-bound `midi/normalization/<part>-<run>.json`. Both retain source/raw/clean
+  MIDI unchanged; no pitch correction, swing, creative quantization, or humanization occurs.
+  If clean review is required,
   **Approve Clean MIDI** binds approval to the exact cleanup evidence.
 
 Audio-source monitoring can be available without an SFZ renderer. MIDI preview
