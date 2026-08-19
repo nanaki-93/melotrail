@@ -21,7 +21,7 @@ schema window actively requires it and must have a named removal condition.
 | 005 | [Composition settings application contract](completed/005-composition-settings-service.md) | MVP |
 | 006 | [Project Setup UI](completed/006-project-setup-ui.md) | MVP |
 | 007 | [Structured chord and progression domain](completed/007-chord-progression-domain.md) | MVP |
-| 008 | [Harmony application service](008-harmony-service.md) | MVP |
+| 008 | [Harmony application service](completed/008-harmony-service.md) | MVP |
 | 009 | [Harmony editor UI](009-harmony-editor-ui.md) | MVP |
 | 010 | [Structured song parts and section types](010-song-part-model.md) | MVP |
 | 011 | [Processing artifact and stage-run manifest](011-stage-run-manifest.md) | MVP |

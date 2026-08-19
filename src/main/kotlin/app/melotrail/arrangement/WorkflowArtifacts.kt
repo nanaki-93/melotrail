@@ -40,6 +40,7 @@ enum class WorkflowChange {
     COMPOSITION_KEY,
     COMPOSITION_TEMPO_OR_METER,
     COMPOSITION_PROFILE_OR_MOOD,
+    HARMONY,
     MIX_ONLY,
     AUDIO_TEXTURE
 }
@@ -94,6 +95,13 @@ object WorkflowArtifactGraph {
             WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.COHESION, WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI,
             WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE,
             WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
+        )
+        /** Harmony is planner context, never source, extraction, cleanup, or analysis evidence. */
+        WorkflowChange.HARMONY -> setOf(
+            WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.COHESION,
+            WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
+            WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
+            WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
         )
         WorkflowChange.MIX_ONLY -> setOf(
             WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,

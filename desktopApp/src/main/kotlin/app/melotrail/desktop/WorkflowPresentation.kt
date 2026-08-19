@@ -13,6 +13,7 @@ internal fun workflowDescription(step: WorkflowStep): String {
         WorkflowPrerequisite.PROJECT_ROOT -> "Create or open a project."
         WorkflowPrerequisite.SCHEMA_V4 -> "Explicitly migrate the readable legacy project before continuing."
         WorkflowPrerequisite.COMPOSITION_SETTINGS -> "Choose and save the project's key, tempo, meter, profile, and mood before creative derivation."
+        WorkflowPrerequisite.COMPLETE_HARMONY -> "Add at least one executable chord to each required harmony progression before arranging."
         WorkflowPrerequisite.IMPORTED_SOURCE -> "Import a MIDI or eligible solo-piano audio source$target."
         WorkflowPrerequisite.SOURCE_INSPECTION -> "Inspect the preserved source$target."
         WorkflowPrerequisite.RAW_MIDI -> "Publish immutable raw MIDI$target."

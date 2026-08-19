@@ -21,7 +21,7 @@ enum class WorkflowState { BLOCKED, CURRENT, REVIEW, STALE, COMPLETE }
 enum class WorkflowAction {
     CREATE_OR_OPEN, MIGRATE_PROJECT, UPDATE_COMPOSITION_SETTINGS, IMPORT, INSPECT, TRANSCRIBE, CLEAN_MIDI, APPROVE_CLEAN_MIDI,
     CREATE_AI_FIX, APPROVE_AI_FIX, SELECT_MIDI_FEEL, ANALYZE, SAVE_STRUCTURE, GENERATE_COHESION,
-    APPROVE_COHESION, GENERATE_ARRANGEMENT, APPROVE_ARRANGEMENT, RENDER,
+    APPROVE_COHESION, UPDATE_HARMONY, GENERATE_ARRANGEMENT, APPROVE_ARRANGEMENT, RENDER,
     MIX, MASTER, REVIEW_COMMERCIAL_PROVENANCE
 }
 
@@ -31,6 +31,7 @@ enum class WorkflowPrerequisite {
     PROJECT_ROOT,
     SCHEMA_V4,
     COMPOSITION_SETTINGS,
+    COMPLETE_HARMONY,
     IMPORTED_SOURCE,
     SOURCE_INSPECTION,
     RAW_MIDI,
@@ -157,6 +158,7 @@ object WorkflowReadModelDeriver {
         }
         val arrangementStep = when {
             cohesion.state != WorkflowState.COMPLETE -> blocked(WorkflowStage.ARRANGEMENT, cohesion)
+            !project.readiness.harmonyReady -> step(WorkflowStage.ARRANGEMENT, WorkflowState.CURRENT, WorkflowAction.UPDATE_HARMONY, WorkflowPrerequisite.COMPLETE_HARMONY)
             WorkflowArtifact.ARRANGEMENT in stale || arrangement?.stale == true ||
                 (arrangement != null && project.structure.map { it.instanceId to it.partId } != arrangement.sections.map { it.instanceId to it.partId }) ->
                 step(WorkflowStage.ARRANGEMENT, WorkflowState.STALE, WorkflowAction.GENERATE_ARRANGEMENT, WorkflowPrerequisite.APPROVED_ARRANGEMENT)

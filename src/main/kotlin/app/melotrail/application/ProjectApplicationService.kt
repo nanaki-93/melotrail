@@ -71,6 +71,18 @@ import javax.sound.midi.MidiSystem
 /** UI- and CLI-neutral boundary for the local, file-backed arranger project. */
 interface ProjectApplicationService {
     fun open(root: Path): ProjectSnapshot
+    fun getHarmony(command: GetHarmony): HarmonyView =
+        throw UnsupportedOperationException("This project service does not support harmony.")
+    fun createHarmonyEvent(command: CreateHarmonyEvent): HarmonyMutationResult =
+        throw UnsupportedOperationException("This project service does not support harmony.")
+    fun updateHarmonyEvent(command: UpdateHarmonyEvent): HarmonyMutationResult =
+        throw UnsupportedOperationException("This project service does not support harmony.")
+    fun deleteHarmonyEvent(command: DeleteHarmonyEvent): HarmonyMutationResult =
+        throw UnsupportedOperationException("This project service does not support harmony.")
+    fun reorderHarmonyEvent(command: ReorderHarmonyEvent): HarmonyMutationResult =
+        throw UnsupportedOperationException("This project service does not support harmony.")
+    fun getHarmonySectionContext(command: GetHarmonySectionContext): HarmonySectionContext =
+        throw UnsupportedOperationException("This project service does not support harmony.")
     fun getCompositionSettings(command: GetCompositionSettings): GetCompositionSettingsResult =
         throw UnsupportedOperationException("This project service does not support composition settings.")
     fun previewSettingsChange(command: PreviewSettingsChange): PreviewSettingsChangeResult =
@@ -281,7 +293,9 @@ data class ProjectReadiness(
     /** Creator attestation is evidence only; absence always blocks commercial-ready status. */
     val commercialSourceAttestationsComplete: Boolean = false,
     /** Missing or catalog-incompatible settings block creative derivation, not source inspection or historical export. */
-    val compositionSettingsReady: Boolean = true
+    val compositionSettingsReady: Boolean = true,
+    /** Required progression completeness is independent from setup persistence. */
+    val harmonyReady: Boolean = true
 )
 
 class DefaultProjectApplicationService(
@@ -301,6 +315,7 @@ class DefaultProjectApplicationService(
     compositionProfiles: CompositionProfileCatalog = BundledCompositionProfileCatalog.load()
 ) : ProjectApplicationService {
     private val compositionSettings = CompositionSettingsApplicationService(compositionProfiles)
+    private val harmony = HarmonyApplicationService()
 
     override fun open(root: Path): ProjectSnapshot {
         val normalizedRoot = root.normalizeRoot()
@@ -314,6 +329,40 @@ class DefaultProjectApplicationService(
     override fun getCompositionSettings(command: GetCompositionSettings): GetCompositionSettingsResult {
         val root = command.root.normalizeRoot()
         return compositionSettings.query(readValidProject(root))
+    }
+
+    override fun getHarmony(command: GetHarmony): HarmonyView {
+        val root = command.root.normalizeRoot()
+        return harmony.query(readValidProject(root))
+    }
+
+    override fun createHarmonyEvent(command: CreateHarmonyEvent): HarmonyMutationResult = mutate(command.root) { root ->
+        val prepared = harmony.create(readValidProject(root), command)
+        ProjectStore.write(root, prepared.project)
+        HarmonyMutationResult(snapshot(root, prepared.project), prepared.harmony, prepared.invalidation)
+    }
+
+    override fun updateHarmonyEvent(command: UpdateHarmonyEvent): HarmonyMutationResult = mutate(command.root) { root ->
+        val prepared = harmony.update(readValidProject(root), command)
+        ProjectStore.write(root, prepared.project)
+        HarmonyMutationResult(snapshot(root, prepared.project), prepared.harmony, prepared.invalidation)
+    }
+
+    override fun deleteHarmonyEvent(command: DeleteHarmonyEvent): HarmonyMutationResult = mutate(command.root) { root ->
+        val prepared = harmony.delete(readValidProject(root), command)
+        ProjectStore.write(root, prepared.project)
+        HarmonyMutationResult(snapshot(root, prepared.project), prepared.harmony, prepared.invalidation)
+    }
+
+    override fun reorderHarmonyEvent(command: ReorderHarmonyEvent): HarmonyMutationResult = mutate(command.root) { root ->
+        val prepared = harmony.reorder(readValidProject(root), command)
+        ProjectStore.write(root, prepared.project)
+        HarmonyMutationResult(snapshot(root, prepared.project), prepared.harmony, prepared.invalidation)
+    }
+
+    override fun getHarmonySectionContext(command: GetHarmonySectionContext): HarmonySectionContext {
+        val root = command.root.normalizeRoot()
+        return harmony.context(readValidProject(root), command.sectionType)
     }
 
     override fun previewSettingsChange(command: PreviewSettingsChange): PreviewSettingsChangeResult {
@@ -744,7 +793,8 @@ class DefaultProjectApplicationService(
                 cohesionApprovalRequired = project.workflow.cohesion?.let { !it.approved && WorkflowArtifact.COHESION !in project.workflow.stale } == true,
                 cohesionReady = currentCohesion(root, project),
                 commercialSourceAttestationsComplete = project.parts.isNotEmpty() && project.parts.all { it.sourceAttestation?.supportsCommercialUse == true },
-                compositionSettingsReady = compositionSettings.isReady(project)
+                compositionSettingsReady = compositionSettings.isReady(project),
+                harmonyReady = harmony.query(project).ready
             ),
             migration = migration
         )

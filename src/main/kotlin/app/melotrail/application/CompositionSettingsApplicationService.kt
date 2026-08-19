@@ -140,7 +140,11 @@ class CompositionSettingsApplicationService(private val catalog: CompositionProf
         return PreparedCompositionSettingsUpdate(
             project.copy(
                 name = input.name,
-                envelope = project.envelope.copy(compositionSettings = stored),
+                envelope = project.envelope.copy(
+                    compositionSettings = stored,
+                    // Initial Lo-fi setup exposes editable empty slots without inventing a progression.
+                    harmony = project.envelope.harmony ?: HarmonySectionPolicy.emptySeed(input.profile)
+                ),
                 workflow = preview.invalidation.changes.fold(project.workflow) { workflow, change -> workflow.invalidate(change) }
             ),
             preview

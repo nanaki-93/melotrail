@@ -142,7 +142,11 @@ data class HarmonySettings(
     val revision: Int = 1,
     val progressions: List<ChordProgression> = emptyList()
 ) {
-    init { require(revision == 1) { "Unsupported harmony settings revision: $revision" } }
+    /**
+     * Monotonically increasing aggregate revision used by the harmony command
+     * boundary. The v4 JSON shape is fixed independently of this value.
+     */
+    init { require(revision >= 1) { "Harmony revision must be positive" } }
 
     fun requireWellFormed(projectKey: MusicalKey?) {
         require(progressions.map(ChordProgression::sectionType).distinct().size == progressions.size) {
