@@ -67,10 +67,15 @@ object ProjectStore {
     /** Explicit, validated publication. Opening a project never invokes this method. */
     fun migrateAndSave(root: Path): ProjectMigrationSaveResult {
         val migration = readMigration(root)
-        val migrated = migration.project
+        val migrated = migration.project.let { project ->
+            if (project.envelope.stageRuns.index != null) project
+            else project.copy(envelope = project.envelope.copy(stageRuns = publishLegacyStageRuns(
+                root, LegacyV3StageRunMapper.map(project), project.envelope.stageRuns.legacyRuns
+            )))
+        }
         migrated.requireValid(root)
         write(root, migrated)
-        return ProjectMigrationSaveResult(migration, root.resolve(FILE_NAME))
+        return ProjectMigrationSaveResult(migration.copy(project = migrated), root.resolve(FILE_NAME))
     }
 
     fun write(root: Path, project: Project) {
@@ -127,13 +132,22 @@ object ProjectStore {
         val workflow: ProjectWorkflowReferences = ProjectWorkflowReferences(),
         val envelope: ProjectV4EnvelopeDto = ProjectV4EnvelopeDto()
     )
+    @OptIn(ExperimentalSerializationApi::class)
     @Serializable private data class ProjectV4EnvelopeDto(
         val compositionSettings: CompositionSettings? = null,
         val harmony: HarmonySettingsDto? = null,
         val evolvedParts: List<EvolvedPartReference> = emptyList(),
         val structureOccurrences: List<StructureOccurrence> = emptyList(),
-        val manifests: ProjectManifestReferences = ProjectManifestReferences(),
+        val stageRuns: ProjectStageRunManifestReference = ProjectStageRunManifestReference(),
+        /** Compatibility read slot for the provisional Task 002 manifest scaffold. */
+        @EncodeDefault(EncodeDefault.Mode.NEVER) val manifests: LegacyProjectManifestReferences? = null,
         val arrangementAssignments: List<ArrangementAssignmentReference> = emptyList()
+    )
+    @Serializable private data class LegacyProjectManifestReferences(val runs: List<LegacyManifestRunReference> = emptyList())
+    @Serializable private data class LegacyManifestRunReference(
+        val stage: String,
+        val status: String,
+        val artifacts: List<WorkflowArtifactReference> = emptyList()
     )
     @OptIn(ExperimentalSerializationApi::class)
     @Serializable private data class PartV4Dto(
@@ -169,12 +183,77 @@ object ProjectStore {
         PartV4Dto(id = it.id, sourceFile = it.file, name = it.name, sectionType = it.sectionType, midi = it.midi, analysis = it.analysis, sourceAttestation = it.sourceAttestation, importEvidence = it.importEvidence, sourceKeyEvidence = it.sourceKeyEvidence, stageManifestRef = it.stageManifestRef, revision = it.revision, legacySourceOnly = it.legacySourceOnly)
     }, structure = structure, workflow = workflow, envelope = envelope.toDto())
     private fun ProjectV4EnvelopeDto.toDomain() = ProjectV4Envelope(
-        compositionSettings, harmony?.toDomain(), evolvedParts, structureOccurrences, manifests, arrangementAssignments
+        compositionSettings, harmony?.toDomain(), evolvedParts, structureOccurrences,
+        stageRuns.copy(legacyRuns = manifests?.runs.orEmpty().map { LegacyManifestRunInput(it.stage, it.status, it.artifacts) }), arrangementAssignments
     )
     private fun ProjectV4Envelope.toDto() = ProjectV4EnvelopeDto(
         compositionSettings, harmony?.let(HarmonySettingsDto::fromDomain), evolvedParts,
-        structureOccurrences, manifests, arrangementAssignments
+        structureOccurrences, stageRuns, arrangementAssignments = arrangementAssignments
     )
+
+    private fun publishLegacyStageRuns(
+        root: Path,
+        inputs: List<LegacyStageRunInput>,
+        provisionalRuns: List<LegacyManifestRunInput>
+    ): ProjectStageRunManifestReference {
+        val store = StageRunStore()
+        var reference = store.initialize(root)
+        inputs.forEach { input ->
+            val path = runCatching { root.resolve(input.artifactPath).normalize() }.getOrNull() ?: return@forEach
+            if (!path.startsWith(root.toAbsolutePath().normalize()) || !Files.isRegularFile(path)) return@forEach
+            val artifact = runCatching { artifactRef(root.toAbsolutePath().normalize(), input.artifactPath) }.getOrNull() ?: return@forEach
+            val runId = "legacy-${sha256Hex("${input.stage.name}:${input.subject.key()}:${input.artifactPath}").take(24)}"
+            val record = StageRunRecord(
+                runId = runId,
+                stage = input.stage,
+                subject = input.subject,
+                status = StageRunStatus.COMPLETED,
+                processor = ProcessorIdentity("legacy-v3", "1"),
+                createdAt = LEGACY_RUN_TIMESTAMP,
+                finishedAt = LEGACY_RUN_TIMESTAMP,
+                outputArtifacts = listOf(artifact),
+                selections = if (input.selected) listOf(StageOutputSelection(artifact, LEGACY_RUN_TIMESTAMP)) else emptyList()
+            )
+            reference = store.append(root, record)
+        }
+        provisionalRuns.forEachIndexed { index, input ->
+            val stage = legacyStage(input.stage) ?: return@forEachIndexed
+            val status = legacyStatus(input.status) ?: return@forEachIndexed
+            val artifacts = if (status == StageRunStatus.COMPLETED) input.artifacts.mapNotNull { legacy ->
+                runCatching { artifactRef(root.toAbsolutePath().normalize(), legacy.file) }.getOrNull()
+            } else emptyList()
+            if (status == StageRunStatus.COMPLETED && (artifacts.isEmpty() || artifacts.size != input.artifacts.size)) return@forEachIndexed
+            val runId = "legacy-manifest-${index}-${sha256Hex("${input.stage}:${input.status}").take(16)}"
+            val record = StageRunRecord(
+                runId = runId,
+                stage = stage,
+                subject = StageSubject.Project,
+                status = status,
+                processor = ProcessorIdentity("legacy-v4", "1"),
+                createdAt = LEGACY_RUN_TIMESTAMP,
+                startedAt = if (status == StageRunStatus.PROCESSING) LEGACY_RUN_TIMESTAMP else null,
+                finishedAt = if (status == StageRunStatus.PENDING || status == StageRunStatus.PROCESSING) null else LEGACY_RUN_TIMESTAMP,
+                outputArtifacts = artifacts,
+                failure = if (status == StageRunStatus.FAILED) SafeFailure(SafeFailureCode.INTERRUPTED, "Review historical run evidence and retry.") else null
+            )
+            reference = store.append(root, record)
+        }
+        return reference
+    }
+
+    private fun legacyStage(value: String): StageId? = when (value.lowercase()) {
+        "structure", "structured" -> StageId.STRUCTURED
+        "cohesion" -> StageId.COHESION
+        "arrangement", "arranged" -> StageId.ARRANGED
+        "generate", "generated" -> StageId.GENERATED
+        "render", "rendered" -> StageId.RENDERED
+        "mix", "mixed" -> StageId.MIXED
+        "master", "mastered" -> StageId.MASTERED
+        "export", "exported" -> StageId.EXPORTED
+        else -> null
+    }
+
+    private fun legacyStatus(value: String): StageRunStatus? = runCatching { StageRunStatus.valueOf(value.uppercase()) }.getOrNull()
 
     private fun compatibility(element: kotlinx.serialization.json.JsonObject, known: Set<String>, sourceVersion: Int): ProjectCompatibility {
         val unknown = element.keys - known
@@ -184,6 +263,7 @@ object ProjectStore {
     private val V1_FIELDS = setOf("version", "name", "parts", "structure")
     private val V2_FIELDS = V1_FIELDS + setOf("renderFormat")
     private val V3_FIELDS = V2_FIELDS + setOf("workflow")
+    private const val LEGACY_RUN_TIMESTAMP = "1970-01-01T00:00:00Z"
 }
 
 data class ProjectMigrationResult(

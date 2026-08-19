@@ -18,14 +18,8 @@
     "harmony": null,
     "evolvedParts": [],
     "structureOccurrences": [],
-    "manifests": {
-      "runs": [
-        {
-          "stage": "render",
-          "status": "PENDING",
-          "artifacts": []
-        }
-      ]
+    "stageRuns": {
+      "index": null
     },
     "arrangementAssignments": []
   }

@@ -86,7 +86,8 @@ data class ProjectV4Envelope(
     val harmony: HarmonySettings? = null,
     val evolvedParts: List<EvolvedPartReference> = emptyList(),
     val structureOccurrences: List<StructureOccurrence> = emptyList(),
-    val manifests: ProjectManifestReferences = ProjectManifestReferences(),
+    /** Hash-bound index for immutable per-run records; no run output lives in project.json. */
+    val stageRuns: ProjectStageRunManifestReference = ProjectStageRunManifestReference(),
     val arrangementAssignments: List<ArrangementAssignmentReference> = emptyList()
 ) {
     fun setupRequirements(): Set<ProjectSetupRequirement> = buildSet {
@@ -162,29 +163,6 @@ data class StructureOccurrence(val instanceId: String, val partId: String) {
         require(SAFE_PROJECT_ID.matches(instanceId)) { "V4 structure occurrence ID is invalid" }
         require(SAFE_PROJECT_ID.matches(partId)) { "V4 structure occurrence part ID is invalid" }
     }
-}
-
-@Serializable
-enum class ManifestRunStatus { PENDING, FAILED, COMPLETED }
-
-/** Pending and failed runs intentionally may have no output; completed references are file-validated. */
-@Serializable
-data class ManifestRunReference(
-    val stage: String,
-    val status: ManifestRunStatus,
-    val artifacts: List<WorkflowArtifactReference> = emptyList()
-) {
-    init {
-        require(SAFE_PROJECT_ID.matches(stage)) { "Manifest stage ID is invalid" }
-        require(status != ManifestRunStatus.COMPLETED || artifacts.isNotEmpty()) {
-            "Completed manifest runs require at least one artifact reference"
-        }
-    }
-}
-
-@Serializable
-data class ProjectManifestReferences(val runs: List<ManifestRunReference> = emptyList()) {
-    init { require(runs.map(ManifestRunReference::stage).distinct().size == runs.size) { "Manifest stages must be unique" } }
 }
 
 /** Portable provenance snapshot: identifiers and hashes only, never renderer filenames or local library paths. */
@@ -466,10 +444,12 @@ object ProjectValidator {
             runCatching { project.envelope.requireWellFormed(knownPartIds) }.exceptionOrNull()?.let { error ->
                 errors += "V4 envelope is invalid: ${error.message}"
             }
-            project.envelope.manifests.runs
-                .filter { it.status == ManifestRunStatus.COMPLETED }
-                .flatMap { it.artifacts }
-                .forEach { reference -> validateArtifactReference(root, reference, "Completed manifest artifact", errors) }
+            runCatching { project.envelope.stageRuns.requireCanonical() }.exceptionOrNull()?.let { error ->
+                errors += "Stage-run manifest reference is invalid: ${error.message}"
+            }
+            project.envelope.stageRuns.index?.let { reference ->
+                validateArtifactReference(root, reference, "Stage-run index", errors)
+            }
         }
 
         return ProjectValidationResult(
@@ -546,6 +526,13 @@ object ProjectValidator {
         }
         if (actual != reference.sha256) errors += "$label fingerprint does not match: ${reference.file}"
     }
+
+    private fun validateArtifactReference(
+        projectRoot: Path,
+        reference: ArtifactRef,
+        label: String,
+        errors: MutableList<String>
+    ) = validateArtifactReference(projectRoot, WorkflowArtifactReference(reference.path, reference.sha256), label, errors)
 }
 
 private val SAFE_PROJECT_ID = Regex("[A-Za-z0-9_-]{1,80}")

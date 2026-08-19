@@ -19,14 +19,14 @@ class ProjectV4SchemaTest {
     @TempDir lateinit var root: Path
 
     @Test
-    fun `v4 fixture reads as a portable pending-run envelope`() {
+    fun `v4 fixture reads as a portable empty stage-run envelope`() {
         val fixture = requireNotNull(javaClass.getResourceAsStream("/fixtures/project/v4-pending-run.json")) { "Missing v4 fixture" }
         Files.copy(fixture, root.resolve(ProjectStore.FILE_NAME))
 
         val project = ProjectStore.read(root)
 
         assertEquals(Project.CURRENT_VERSION, project.version)
-        assertEquals(ManifestRunStatus.PENDING, project.envelope.manifests.runs.single().status)
+        assertEquals(null, project.envelope.stageRuns.index)
         assertTrue(project.validate(root).isValid)
     }
 
@@ -146,25 +146,19 @@ class ProjectV4SchemaTest {
     }
 
     @Test
-    fun `pending and failed runs allow absent output while completed output is hash validated`() {
-        write("source/A.mid", "source")
-        val pending = ManifestRunReference("render", ManifestRunStatus.PENDING, listOf(WorkflowArtifactReference("output/not-yet.wav", "0".repeat(64))))
-        val failed = ManifestRunReference("mix", ManifestRunStatus.FAILED)
+    fun `stage-run index is hash validated by the project manifest`() {
+        write("workflow-runs/index.json", "{}")
         val project = Project(
             version = Project.CURRENT_VERSION,
             name = "runs",
             renderFormat = RenderFormat(),
-            parts = listOf(Part("A", "source/A.mid", midi = MidiReferences(raw = "source/A.mid"))),
-            envelope = ProjectV4Envelope(manifests = ProjectManifestReferences(listOf(pending, failed)))
+            envelope = ProjectV4Envelope(stageRuns = ProjectStageRunManifestReference(
+                ArtifactRef(StageRunStore.INDEX_FILE, sha256(root.resolve("workflow-runs/index.json")))
+            ))
         )
         assertTrue(project.validate(root).isValid)
-
-        write("output/master.wav", "final")
-        val completed = ManifestRunReference("master", ManifestRunStatus.COMPLETED, listOf(WorkflowArtifactReference("output/master.wav", sha256(root.resolve("output/master.wav")))))
-        assertTrue(project.copy(envelope = project.envelope.copy(manifests = ProjectManifestReferences(listOf(completed)))).validate(root).isValid)
-        assertFalse(project.copy(envelope = project.envelope.copy(manifests = ProjectManifestReferences(listOf(
-            completed.copy(artifacts = listOf(WorkflowArtifactReference("output/master.wav", "f".repeat(64))))
-        )))).validate(root).isValid)
+        write("workflow-runs/index.json", "tampered")
+        assertFalse(project.validate(root).isValid)
     }
 
     private fun write(relative: String, content: String) {

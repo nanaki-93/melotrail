@@ -31,8 +31,11 @@ class ProjectStoreWorkflowMigrationTest {
         assertEquals(v2Before, Files.readString(root.resolve(ProjectStore.FILE_NAME)))
 
         ProjectStore.migrateAndSave(root)
-        assertEquals(Project.CURRENT_VERSION, ProjectStore.read(root).version)
+        val v4 = ProjectStore.read(root)
+        assertEquals(Project.CURRENT_VERSION, v4.version)
         assertTrue(Files.readString(root.resolve(ProjectStore.FILE_NAME)).contains("\"workflow\""))
+        assertTrue(v4.envelope.stageRuns.index != null)
+        assertEquals(setOf(StageId.SOURCE, StageId.CLEANED), StageRunStore().read(root, v4.envelope.stageRuns).map(StageRunRecord::stage).toSet())
         val migrated = Files.readString(root.resolve(ProjectStore.FILE_NAME))
         assertTrue(migrated.contains("\"analysisInput\": \"REPAIRED\""))
         assertEquals(MidiAiFixSelection.SKIP, ProjectStore.read(root).parts.single().midi?.aiFixSelection)

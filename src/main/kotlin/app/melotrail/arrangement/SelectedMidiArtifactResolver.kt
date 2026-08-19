@@ -32,6 +32,9 @@ class SelectedMidiArtifactResolver {
         }
         val cleaned = resolveFile(root, rootReal, cleanedReference, "cleaned MIDI")
         val cleanupFreshness = cleanupFreshness(root, part, midi, cleanedReference)
+        val manifestSelection = project.envelope.stageRuns.index?.let {
+            StageRunStore().selectedOutput(root, project.envelope.stageRuns, StageSubject.Part(part.id))
+        }
         if (cleanupFreshness == MidiCleanupFreshness.LEGACY_UNKNOWN) {
             require(midi.aiFixSelection == MidiAiFixSelection.SKIP && midi.analysisInput == MidiAnalysisInput.CURRENT) {
                 "Part '${part.id}' has legacy cleaned MIDI without current approval; re-import and run Clean MIDI before choosing an AI fix or Lo-fi Feel."
@@ -61,7 +64,17 @@ class SelectedMidiArtifactResolver {
                 BaseCandidate(approved.file, path, hash, SelectedMidiBaseKind.APPROVED_AI_FIX)
             }
         }
-        val selected = when (midi.analysisInput) {
+        val selected = manifestSelection?.let { selected ->
+            when (selected.record.stage) {
+                StageId.CLEANED -> Candidate(selected.artifact.path, resolveFile(root, rootReal, selected.artifact.path, "selected cleaned MIDI"),
+                    SelectedMidiArtifactKind.CLEANED, null, null)
+                StageId.CORRECTED -> Candidate(selected.artifact.path, resolveFile(root, rootReal, selected.artifact.path, "selected corrected MIDI"),
+                    SelectedMidiArtifactKind.APPROVED_AI_FIX, null, null)
+                StageId.ENHANCED -> Candidate(selected.artifact.path, resolveFile(root, rootReal, selected.artifact.path, "selected enhanced MIDI"),
+                    SelectedMidiArtifactKind.LOFI_FEEL, midi.feel?.profile, null)
+                else -> throw IllegalArgumentException("Selected stage '${selected.record.stage}' cannot provide MIDI for part '${part.id}'.")
+            }
+        } ?: when (midi.analysisInput) {
             MidiAnalysisInput.CURRENT -> Candidate(
                 base.reference,
                 base.path,
