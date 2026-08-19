@@ -77,6 +77,10 @@ object DeterministicSectionVariationPlanner {
                 energy = songPlan.energyCurve[position],
                 instruments = section.instrumentProgression.map { instrument ->
                     instrumentDetail(instrument, section, songPlan.energyCurve[position], fallingEnergy)
+                }.map { generated ->
+                    input.sectionsWithIdentity()[position].variationOverrides.instruments.firstOrNull { it.instrument == generated.name }?.let { override ->
+                        generated.copy(role = override.role ?: generated.role, density = override.density ?: generated.density)
+                    } ?: generated
                 },
                 transitionIntent = section.transitionIntent
             )

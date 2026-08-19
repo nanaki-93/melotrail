@@ -1777,6 +1777,41 @@ private class FakeProjectService(
         })
         return checkNotNull(current)
     }
+
+    override fun insertStructureOccurrence(request: app.melotrail.application.InsertStructureOccurrenceRequest): ProjectSnapshot {
+        val sections = checkNotNull(current).structure.toMutableList()
+        val ordinal = sections.count { it.partId == request.partId } + 1
+        val id = "${request.partId}$ordinal"
+        val at = request.afterOccurrenceId?.let { sections.indexOfFirst { section -> section.instanceId == it } + 1 } ?: sections.size
+        sections.add(at, app.melotrail.application.StructureSectionSummary(at, request.partId, ordinal, id, null))
+        return replaceStructure(sections)
+    }
+
+    override fun duplicateStructureOccurrence(request: app.melotrail.application.DuplicateStructureOccurrenceRequest): ProjectSnapshot {
+        val sections = checkNotNull(current).structure.toMutableList()
+        val source = sections.first { it.instanceId == request.occurrenceId }
+        val ordinal = sections.count { it.partId == source.partId } + 1
+        sections.add(sections.indexOf(source) + 1, source.copy(instanceId = "${source.partId}$ordinal", occurrence = ordinal, label = "${source.partId}$ordinal", revision = 1))
+        return replaceStructure(sections)
+    }
+
+    override fun removeStructureOccurrence(request: app.melotrail.application.RemoveStructureOccurrenceRequest): ProjectSnapshot =
+        replaceStructure(checkNotNull(current).structure.filterNot { it.instanceId == request.occurrenceId })
+
+    override fun moveStructureOccurrence(request: app.melotrail.application.MoveStructureOccurrenceRequest): ProjectSnapshot {
+        val sections = checkNotNull(current).structure.toMutableList()
+        val source = sections.first { it.instanceId == request.occurrenceId }
+        sections.remove(source)
+        val at = request.afterOccurrenceId?.let { afterId -> sections.indexOfFirst { section -> section.instanceId == afterId } + 1 } ?: 0
+        sections.add(at, source)
+        return replaceStructure(sections)
+    }
+
+    private fun replaceStructure(sections: List<app.melotrail.application.StructureSectionSummary>): ProjectSnapshot {
+        savedStructure = SaveStructureRequest(checkNotNull(current).root, sections.map { it.partId })
+        current = checkNotNull(current).copy(structure = sections.mapIndexed { index, section -> section.copy(index = index) })
+        return checkNotNull(current)
+    }
 }
 
 private class FakeMidiAiFixService : app.melotrail.application.MidiAiFixApplicationService {

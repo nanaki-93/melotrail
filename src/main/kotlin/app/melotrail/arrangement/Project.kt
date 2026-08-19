@@ -100,7 +100,7 @@ data class ProjectV4Envelope(
             "V4 evolved part references must be unique"
         }
         require(evolvedParts.all { it.partId in partIds }) { "V4 evolved part references an unknown part" }
-        require(structureOccurrences.map(StructureOccurrence::instanceId).distinct().size == structureOccurrences.size) {
+        require(structureOccurrences.map(StructureOccurrence::id).distinct().size == structureOccurrences.size) {
             "V4 structure occurrence IDs must be unique"
         }
         require(structureOccurrences.all { it.partId in partIds }) { "V4 structure occurrence references an unknown part" }
@@ -157,11 +157,54 @@ data class EvolvedPartReference(val partId: String) {
     init { require(SAFE_PROJECT_ID.matches(partId)) { "V4 part ID is invalid" } }
 }
 
+/** A saved song occurrence whose identity is independent of its order. */
 @Serializable
-data class StructureOccurrence(val instanceId: String, val partId: String) {
+data class StructureOccurrence(
+    val id: String,
+    val partId: String,
+    val label: String = id,
+    val variationOverrides: StructureVariationOverrides = StructureVariationOverrides(),
+    val revision: Long = 1
+) {
     init {
-        require(SAFE_PROJECT_ID.matches(instanceId)) { "V4 structure occurrence ID is invalid" }
+        require(SAFE_PROJECT_ID.matches(id)) { "V4 structure occurrence ID is invalid" }
         require(SAFE_PROJECT_ID.matches(partId)) { "V4 structure occurrence part ID is invalid" }
+        require(label.isNotBlank() && label.length <= 120 && label.none { it.isISOControl() }) { "V4 structure occurrence label is invalid" }
+        require(revision > 0) { "V4 structure occurrence revision must be positive" }
+    }
+
+    /** Established downstream artifacts use this term; it is always [id]. */
+    val instanceId: String get() = id
+}
+
+/** Typed and bounded per-occurrence variation overlay. */
+@Serializable
+data class StructureVariationOverrides(
+    val instruments: List<StructureVariationInstrumentOverride> = emptyList()
+) {
+    init {
+        require(instruments.map(StructureVariationInstrumentOverride::instrument).distinct().size == instruments.size) {
+            "Structure variation overrides must not repeat an instrument"
+        }
+    }
+}
+
+@Serializable
+data class StructureVariationInstrumentOverride(
+    val instrument: String,
+    val role: String? = null,
+    val density: Double? = null
+) {
+    init {
+        require(instrument in LogicalInstrument.entries.map(LogicalInstrument::wireName) - "piano") {
+            "Structure variation override instrument is unsupported"
+        }
+        require(role == null || role.length <= 40 && role.matches(Regex("[a-z_]+"))) {
+            "Structure variation override role is invalid"
+        }
+        require(density == null || density.isFinite() && density in 0.0..1.0) {
+            "Structure variation override density is invalid"
+        }
     }
 }
 
@@ -522,11 +565,10 @@ object ProjectValidator {
         }
 
         val knownPartIds = project.parts.map { it.id }.toSet()
-        project.structure.forEachIndexed { index, partId ->
+        project.envelope.structureOccurrences.forEachIndexed { index, occurrence ->
             when {
-                partId.isBlank() -> errors += "Structure entry ${index + 1} must not be blank"
-                partId !in knownPartIds ->
-                    errors += "Structure entry ${index + 1} references unknown part ID '$partId'"
+                occurrence.partId !in knownPartIds ->
+                    errors += "Structure entry ${index + 1} references unknown part ID '${occurrence.partId}'"
             }
         }
 

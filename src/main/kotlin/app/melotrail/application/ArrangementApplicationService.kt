@@ -36,6 +36,7 @@ import app.melotrail.arrangement.StemRenderingMixer
 import app.melotrail.arrangement.InstrumentRenderer
 import app.melotrail.arrangement.StringsMidiGenerationAdapter
 import app.melotrail.arrangement.TransitionCohesionInputFactory
+import app.melotrail.arrangement.toSectionInstance
 import app.melotrail.arrangement.TransitionCohesionStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -56,8 +57,7 @@ data class GenerateArrangementRequest(
     val root: Path,
     val planner: ArrangementPlannerKind = ArrangementPlannerKind.DETERMINISTIC,
     val style: String? = null,
-    val instruments: List<String> = LogicalInstrument.entries.map { it.wireName },
-    val structure: List<String>? = null
+    val instruments: List<String> = LogicalInstrument.entries.map { it.wireName }
 )
 
 data class ArrangementSectionSnapshot(
@@ -122,8 +122,7 @@ class DefaultArrangementApplicationService(
     override suspend fun generate(request: GenerateArrangementRequest, progress: ProgressSink): ArrangementSnapshot = mutate(request.root) { root ->
         progress.report(OperationProgress("arrange", 1, 3, "Validating MIDI analyses"))
         val project = readProject(root)
-        val structure = request.structure?.mapIndexed { index, id -> SectionInstance(index, id) }
-            ?: project.structure.mapIndexed { index, id -> SectionInstance(index, id) }
+        val structure = project.envelope.structureOccurrences.mapIndexed { index, occurrence -> occurrence.toSectionInstance(index) }
         require(structure.isNotEmpty()) { "Song structure must not be empty" }
         val allowed = request.instruments.distinct()
         require(allowed == request.instruments) { "Arrangement instruments must not contain duplicates" }
@@ -235,7 +234,7 @@ class DefaultArrangementApplicationService(
         val planPath = root.resolve(SongPlanStore.FILE_NAME)
         require(Files.isRegularFile(planPath)) { "Song plan not found: $planPath. Generate an arrangement first." }
         val rawPlan = json.decodeFromString(SongPlan.serializer(), Files.readString(planPath, StandardCharsets.UTF_8))
-        val structure = rawPlan.sections.map { SectionInstance(it.index, it.partId) }
+        val structure = rawPlan.sections.map { SectionInstance(it.index, it.partId, it.instanceId) }
         val analyses = midiAnalyses(root, project, structure.map(SectionInstance::partId).toSet())
         val planningInput = SongPlanningInput(
             project.name, project.version, analyses, structure,

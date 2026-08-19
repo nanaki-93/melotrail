@@ -55,7 +55,7 @@ class PianoBassQualityGateTest {
         }
         assertTrue(report.dryMixPeak <= report.peakCeiling)
         assertBassStartsOnBoundaries(projectRoot.resolve("midi/generated/bass.mid"))
-        assertEquals(listOf("A1", "A2", "B1", "B2", "A3"), firstArrangementInstanceIds(projectRoot))
+        assertEquals(listOf("occ-A-1", "occ-A-2", "occ-B-1", "occ-B-2", "occ-A-3"), firstArrangementInstanceIds(projectRoot))
 
         val resumed = gate.run(projectRoot)
         assertTrue(resumed.reusedFinalArtifacts)

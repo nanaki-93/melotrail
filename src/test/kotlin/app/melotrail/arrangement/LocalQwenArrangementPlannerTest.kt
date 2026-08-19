@@ -53,7 +53,7 @@ class LocalQwenArrangementPlannerTest {
             "A" to PartAnalysis(1.0, 44_100, 1, 44_100, 0.5, 0.2, false),
             "B" to PartAnalysis(2.0, 48_000, 2, 96_000, 0.6, 0.3, false)
         ),
-        structure = listOf(SectionInstance(0, "A"), SectionInstance(1, "B")),
+        structure = listOf(SectionInstance(0, "A", "A1"), SectionInstance(1, "B", "B1")),
         requestedInstruments = listOf("piano", "bass"),
         style = "warm"
     )

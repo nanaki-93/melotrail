@@ -26,6 +26,7 @@ import app.melotrail.arrangement.TransitionCohesionStore
 import app.melotrail.arrangement.SelectedMidiArtifactResolver
 import app.melotrail.arrangement.LogicalInstrument
 import app.melotrail.arrangement.SectionInstance
+import app.melotrail.arrangement.toSectionInstance
 import app.melotrail.arrangement.SongPlanningInput
 import app.melotrail.arrangement.WorkflowArtifact
 import app.melotrail.arrangement.WorkflowChange
@@ -51,6 +52,8 @@ import app.melotrail.arrangement.sha256Hex
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.ImportEvidence
 import app.melotrail.arrangement.SourceKeyEvidence
+import app.melotrail.arrangement.StructureOccurrence
+import app.melotrail.arrangement.StructureVariationOverrides
 import app.melotrail.commercial.SourceRightsAttestation
 import app.melotrail.music.MusicalKey
 import app.melotrail.preparation.InputInspectionBoundary
@@ -128,6 +131,18 @@ interface ProjectApplicationService {
         throw UnsupportedOperationException("This project service does not support song-part names.")
     fun updateSongPartSection(request: UpdateSongPartSectionRequest): ProjectSnapshot =
         throw UnsupportedOperationException("This project service does not support song-part sections.")
+    fun insertStructureOccurrence(request: InsertStructureOccurrenceRequest): ProjectSnapshot =
+        throw UnsupportedOperationException("This project service does not support structure occurrences.")
+    fun duplicateStructureOccurrence(request: DuplicateStructureOccurrenceRequest): ProjectSnapshot =
+        throw UnsupportedOperationException("This project service does not support structure occurrences.")
+    fun removeStructureOccurrence(request: RemoveStructureOccurrenceRequest): ProjectSnapshot =
+        throw UnsupportedOperationException("This project service does not support structure occurrences.")
+    fun moveStructureOccurrence(request: MoveStructureOccurrenceRequest): ProjectSnapshot =
+        throw UnsupportedOperationException("This project service does not support structure occurrences.")
+    fun updateStructureOccurrenceLabel(request: UpdateStructureOccurrenceLabelRequest): ProjectSnapshot =
+        throw UnsupportedOperationException("This project service does not support structure occurrences.")
+    fun updateStructureOccurrenceVariation(request: UpdateStructureOccurrenceVariationRequest): ProjectSnapshot =
+        throw UnsupportedOperationException("This project service does not support structure occurrences.")
     fun saveStructure(request: SaveStructureRequest): ProjectSnapshot
 }
 
@@ -196,6 +211,12 @@ data class InspectPartRequest(val root: Path, val partId: String)
 data class TranscribeAudioPartRequest(val root: Path, val partId: String, val selectedInput: TranscriptionInputArtifact)
 data class UpdateSongPartNameRequest(val root: Path, val partId: String, val name: String, val expectedRevision: Long)
 data class UpdateSongPartSectionRequest(val root: Path, val partId: String, val sectionType: SectionTypeId, val expectedRevision: Long)
+data class InsertStructureOccurrenceRequest(val root: Path, val partId: String, val afterOccurrenceId: String? = null, val expectedRevision: Long? = null)
+data class DuplicateStructureOccurrenceRequest(val root: Path, val occurrenceId: String, val expectedRevision: Long)
+data class RemoveStructureOccurrenceRequest(val root: Path, val occurrenceId: String, val expectedRevision: Long)
+data class MoveStructureOccurrenceRequest(val root: Path, val occurrenceId: String, val afterOccurrenceId: String?, val expectedRevision: Long)
+data class UpdateStructureOccurrenceLabelRequest(val root: Path, val occurrenceId: String, val label: String, val expectedRevision: Long)
+data class UpdateStructureOccurrenceVariationRequest(val root: Path, val occurrenceId: String, val variationOverrides: StructureVariationOverrides, val expectedRevision: Long)
 data class SaveStructureRequest(val root: Path, val partIds: List<String>)
 
 data class OperationProgress(
@@ -369,7 +390,10 @@ data class StructureSectionSummary(
     val partId: String,
     val occurrence: Int,
     val instanceId: String,
-    val durationSeconds: Double?
+    val durationSeconds: Double?,
+    val label: String = instanceId,
+    val revision: Long = 1,
+    val variationOverrides: StructureVariationOverrides = StructureVariationOverrides()
 )
 
 data class ProjectReadiness(
@@ -1030,18 +1054,105 @@ class DefaultProjectApplicationService(
         snapshot(root, updated)
     }
 
+    override fun insertStructureOccurrence(request: InsertStructureOccurrenceRequest): ProjectSnapshot = mutate(request.root) { root ->
+        val project = readValidProject(root)
+        require(project.parts.any { it.id == request.partId }) { "Unknown part ID in structure: ${request.partId}" }
+        request.afterOccurrenceId?.let { afterId ->
+            val after = project.envelope.structureOccurrences.firstOrNull { it.id == afterId }
+                ?: throw IllegalArgumentException("Structure occurrence '$afterId' no longer exists; refresh before inserting.")
+            request.expectedRevision?.let { require(after.revision == it) { "Structure occurrence '$afterId' changed; refresh before inserting." } }
+        }
+        requireCurrentStructureAnalysis(root, project, request.partId)
+        val id = nextOccurrenceId(project)
+        val ordinal = project.envelope.structureOccurrences.count { it.partId == request.partId } + 1
+        val occurrence = StructureOccurrence(id, request.partId, label = "${request.partId}$ordinal")
+        val occurrences = project.envelope.structureOccurrences.toMutableList()
+        val insertAt = request.afterOccurrenceId?.let { after -> occurrences.indexOfFirst { it.id == after } + 1 } ?: occurrences.size
+        occurrences.add(insertAt, occurrence)
+        writeStructure(root, project, occurrences)
+    }
+
+    override fun duplicateStructureOccurrence(request: DuplicateStructureOccurrenceRequest): ProjectSnapshot = mutate(request.root) { root ->
+        val project = readValidProject(root)
+        val source = currentOccurrence(project, request.occurrenceId, request.expectedRevision)
+        requireCurrentStructureAnalysis(root, project, source.partId)
+        val occurrences = project.envelope.structureOccurrences.toMutableList()
+        val copy = source.copy(id = nextOccurrenceId(project), label = "${source.label} copy", revision = 1)
+        occurrences.add(occurrences.indexOfFirst { it.id == source.id } + 1, copy)
+        writeStructure(root, project, occurrences)
+    }
+
+    override fun removeStructureOccurrence(request: RemoveStructureOccurrenceRequest): ProjectSnapshot = mutate(request.root) { root ->
+        val project = readValidProject(root)
+        currentOccurrence(project, request.occurrenceId, request.expectedRevision)
+        writeStructure(root, project, project.envelope.structureOccurrences.filterNot { it.id == request.occurrenceId })
+    }
+
+    override fun moveStructureOccurrence(request: MoveStructureOccurrenceRequest): ProjectSnapshot = mutate(request.root) { root ->
+        val project = readValidProject(root)
+        val occurrence = currentOccurrence(project, request.occurrenceId, request.expectedRevision)
+        val occurrences = project.envelope.structureOccurrences.toMutableList()
+        occurrences.remove(occurrence)
+        val destination = request.afterOccurrenceId?.let { afterId ->
+            require(afterId != occurrence.id) { "A structure occurrence cannot be moved after itself." }
+            occurrences.indexOfFirst { it.id == afterId }.also { require(it >= 0) { "Structure occurrence '$afterId' no longer exists; refresh before moving." } } + 1
+        } ?: 0
+        occurrences.add(destination, occurrence)
+        if (occurrences == project.envelope.structureOccurrences) snapshot(root, project) else writeStructure(root, project, occurrences)
+    }
+
+    override fun updateStructureOccurrenceLabel(request: UpdateStructureOccurrenceLabelRequest): ProjectSnapshot = mutate(request.root) { root ->
+        val project = readValidProject(root)
+        val occurrence = currentOccurrence(project, request.occurrenceId, request.expectedRevision)
+        if (occurrence.label == request.label) snapshot(root, project)
+        else writeStructure(root, project, project.envelope.structureOccurrences.map {
+            if (it.id == occurrence.id) it.copy(label = request.label, revision = it.revision + 1) else it
+        })
+    }
+
+    override fun updateStructureOccurrenceVariation(request: UpdateStructureOccurrenceVariationRequest): ProjectSnapshot = mutate(request.root) { root ->
+        val project = readValidProject(root)
+        val occurrence = currentOccurrence(project, request.occurrenceId, request.expectedRevision)
+        if (occurrence.variationOverrides == request.variationOverrides) snapshot(root, project)
+        else writeStructure(root, project, project.envelope.structureOccurrences.map {
+            if (it.id == occurrence.id) it.copy(variationOverrides = request.variationOverrides, revision = it.revision + 1) else it
+        })
+    }
+
     override fun saveStructure(request: SaveStructureRequest): ProjectSnapshot = mutate(request.root) { root ->
         val project = readValidProject(root)
         val knownIds = project.parts.map { it.id }.toSet()
         request.partIds.forEach { id -> require(id in knownIds) { "Unknown part ID in structure: $id" } }
         request.partIds.distinct().forEach { partId -> requireCurrentStructureAnalysis(root, project, partId) }
-        if (project.structure == request.partIds) return@mutate snapshot(root, project)
+        if (project.envelope.structureOccurrences.map(StructureOccurrence::partId) == request.partIds) return@mutate snapshot(root, project)
+        val available = project.envelope.structureOccurrences.groupBy(StructureOccurrence::partId).mapValues { (_, values) -> values.toMutableList() }.toMutableMap()
+        val occurrences = request.partIds.mapIndexed { index, partId ->
+            available[partId]?.removeFirstOrNull() ?: StructureOccurrence(nextOccurrenceId(project, index), partId, "$partId${index + 1}")
+        }
+        writeStructure(root, project, occurrences)
+    }
+
+    private fun currentOccurrence(project: Project, id: String, expectedRevision: Long): StructureOccurrence =
+        project.envelope.structureOccurrences.firstOrNull { it.id == id }
+            ?.also { require(it.revision == expectedRevision) { "Structure occurrence '$id' changed; refresh before editing." } }
+            ?: throw IllegalArgumentException("Structure occurrence '$id' no longer exists; refresh before editing.")
+
+    private fun nextOccurrenceId(project: Project, salt: Int = 0): String {
+        val existing = project.envelope.structureOccurrences.map(StructureOccurrence::id).toSet()
+        var candidate: String
+        do candidate = "occ-${UUID.randomUUID().toString().replace("-", "").take(24)}${if (salt == 0) "" else "-$salt"}"
+        while (candidate in existing)
+        return candidate
+    }
+
+    private fun writeStructure(root: Path, project: Project, occurrences: List<StructureOccurrence>): ProjectSnapshot {
         val updated = project.copy(
-            structure = request.partIds.toList(),
+            structure = emptyList(),
+            envelope = project.envelope.copy(structureOccurrences = occurrences),
             workflow = project.workflow.invalidate(WorkflowChange.STRUCTURE)
         )
         ProjectStore.write(root, updated)
-        snapshot(root, updated)
+        return snapshot(root, updated)
     }
 
     /**
@@ -1090,11 +1201,11 @@ class DefaultProjectApplicationService(
             )
         }
         val durationById = summaries.associate { it.id to it.analysis?.durationSeconds }
-        val occurrences = mutableMapOf<String, Int>()
-        val structure = project.structure.mapIndexed { index, partId ->
-            val occurrence = (occurrences[partId] ?: 0) + 1
-            occurrences[partId] = occurrence
-            StructureSectionSummary(index, partId, occurrence, "$partId$occurrence", durationById[partId])
+        val occurrenceCounts = mutableMapOf<String, Int>()
+        val structure = project.envelope.structureOccurrences.mapIndexed { index, occurrence ->
+            val number = (occurrenceCounts[occurrence.partId] ?: 0) + 1
+            occurrenceCounts[occurrence.partId] = number
+            StructureSectionSummary(index, occurrence.partId, number, occurrence.id, durationById[occurrence.partId], occurrence.label, occurrence.revision, occurrence.variationOverrides)
         }
         return ProjectSnapshot(
             root = root,
@@ -1106,7 +1217,7 @@ class DefaultProjectApplicationService(
             readiness = ProjectReadiness(
                 cleanMidiReady = summaries.isNotEmpty() && summaries.all { it.preparation.cleanMidi },
                 analysesReady = summaries.isNotEmpty() && summaries.all { it.preparation.analyzed },
-                structureReady = project.structure.isNotEmpty(),
+                structureReady = project.envelope.structureOccurrences.isNotEmpty(),
                 songPlanAvailable = Files.isRegularFile(root.resolve("song_plan.json")) && current(WorkflowArtifact.COHESION),
                 arrangementAvailable = Files.isRegularFile(root.resolve("arrangement.json")) && current(WorkflowArtifact.ARRANGEMENT),
                 generatedMidiAvailable = Files.isDirectory(root.resolve("midi/generated")) && current(WorkflowArtifact.GENERATED_MIDI) && Files.list(root.resolve("midi/generated")).use { it.anyMatch { Files.isRegularFile(it) } },
@@ -1147,8 +1258,8 @@ class DefaultProjectApplicationService(
     /** Rebuilds the bounded cohesion input so readiness cannot be inferred from a plan file. */
     private fun currentCohesion(root: Path, project: Project): Boolean = runCatching {
         val cohesion = project.workflow.cohesion ?: return false
-        if (!cohesion.approved || WorkflowArtifact.COHESION in project.workflow.stale || project.structure.isEmpty()) return false
-        val structure = project.structure.mapIndexed { index, partId -> SectionInstance(index, partId) }
+        if (!cohesion.approved || WorkflowArtifact.COHESION in project.workflow.stale || project.envelope.structureOccurrences.isEmpty()) return false
+        val structure = project.envelope.structureOccurrences.mapIndexed { index, occurrence -> occurrence.toSectionInstance(index) }
         val analyses = structure.map(SectionInstance::partId).distinct().associateWith { partId ->
             val part = project.parts.first { it.id == partId }
             val reference = requireNotNull(part.analysis)

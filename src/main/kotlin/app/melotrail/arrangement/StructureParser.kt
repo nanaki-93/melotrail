@@ -2,16 +2,24 @@ package app.melotrail.arrangement
 
 import kotlinx.serialization.Serializable
 
-/** A resolved entry in the arranger timeline. */
+/** A resolved entry in the arranger timeline.  Canonical callers supply [instanceId]. */
 @Serializable
 data class SectionInstance(
     val index: Int,
-    val partId: String
+    val partId: String,
+    /** Persisted structure occurrence ID; planning rejects the blank parser-only form. */
+    val instanceId: String = "",
+    val label: String = instanceId,
+    val variationOverrides: StructureVariationOverrides = StructureVariationOverrides()
 )
+
+fun StructureOccurrence.toSectionInstance(index: Int): SectionInstance =
+    SectionInstance(index, partId, id, label, variationOverrides)
 
 /**
  * Converts a small whitespace-separated structure string into an explicit
- * timeline. The only shorthand supported is `partId*count`.
+ * timeline. The only shorthand supported is `partId*count`. This legacy parser
+ * intentionally has no occurrence-ID allocation; canonical Structure owns it.
  */
 object StructureParser {
     fun parse(input: String, validPartIds: Collection<String>): List<SectionInstance> {

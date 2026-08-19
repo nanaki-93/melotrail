@@ -149,7 +149,7 @@ class DetailedArrangementTest {
             projectName = "demo",
             projectVersion = Project.CURRENT_VERSION,
             analyses = mapOf("A" to analysis("A", 0.3), "B" to analysis("B", 0.9)),
-            structure = listOf(SectionInstance(0, "A"), SectionInstance(1, "B")),
+            structure = listOf(SectionInstance(0, "A", "A1"), SectionInstance(1, "B", "B1")),
             allowedInstruments = listOf("piano", "bass", "drums", "pad", "strings"),
             style = "warm",
             constraints = SongPlanningConstraints(maxInstrumentsPerSection = 5, maxNewInstrumentsPerSection = 1)

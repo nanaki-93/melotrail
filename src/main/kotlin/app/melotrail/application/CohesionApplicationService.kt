@@ -13,6 +13,7 @@ import app.melotrail.arrangement.TransitionCohesionInput
 import app.melotrail.arrangement.TransitionCohesionInputFactory
 import app.melotrail.arrangement.TransitionCohesionPlan
 import app.melotrail.arrangement.TransitionCohesionStore
+import app.melotrail.arrangement.toSectionInstance
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
@@ -96,8 +97,8 @@ class DefaultCohesionApplicationService(
     private fun currentInput(root: Path): TransitionCohesionInput {
         val project = ProjectStore.read(root).also { it.requireValid(root) }
         require(project.version == Project.CURRENT_VERSION) { "Cohesion requires a MIDI-first v3 project." }
-        require(project.structure.isNotEmpty()) { "Save a non-empty structure before generating cohesion." }
-        val structure = project.structure.mapIndexed { index, partId -> SectionInstance(index, partId) }
+        require(project.envelope.structureOccurrences.isNotEmpty()) { "Save a non-empty structure before generating cohesion." }
+        val structure = project.envelope.structureOccurrences.mapIndexed { index, occurrence -> occurrence.toSectionInstance(index) }
         val analyses = structure.map(SectionInstance::partId).distinct().associateWith { partId -> analysis(root, project, partId) }
         val planning = SongPlanningInput(project.name, project.version, analyses, structure, LogicalInstrument.entries.map { it.wireName })
         planning.requireValid()

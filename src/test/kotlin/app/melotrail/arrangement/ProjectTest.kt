@@ -92,14 +92,16 @@ class ProjectTest {
         val project = Project(
             name = "demo",
             parts = listOf(Part("A", "parts/A.wav")),
-            structure = listOf("A", "B", "")
+            envelope = ProjectV4Envelope(structureOccurrences = listOf(
+                StructureOccurrence("occ-A-1", "A"),
+                StructureOccurrence("occ-B-1", "B")
+            ))
         )
 
         val validation = project.validate(projectRoot)
 
         assertFalse(validation.isValid)
         assertTrue(validation.errors.any { it.contains("unknown part ID 'B'") })
-        assertTrue(validation.errors.any { it.contains("must not be blank") })
     }
 
     @Test

@@ -48,18 +48,18 @@ class CohesionApplicationServiceTest {
         val service = DefaultCohesionApplicationService(::plan)
         val draft = service.generate(GenerateCohesionRequest(root, CohesionPlannerKind.QWEN))
         assertFalse(draft.approved)
-        assertEquals(listOf("A1" to "A2", "A2" to "A3"), draft.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId })
+        assertEquals(listOf("occ-A-1" to "occ-A-2", "occ-A-2" to "occ-A-3"), draft.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId })
         assertTrue(draft.boundaries.all { Files.isRegularFile(it.bridgeMidi) && !it.reviewed })
-        service.reviewBoundary(root, "A1", "A2")
+        service.reviewBoundary(root, "occ-A-1", "occ-A-2")
         assertThrows(IllegalArgumentException::class.java) { service.approve(root) }
-        service.reviewBoundary(root, "A2", "A3")
+        service.reviewBoundary(root, "occ-A-2", "occ-A-3")
         assertTrue(service.approve(root).approved)
     }
 
     @Test fun `reordered structure invalidates draft identity and one occurrence needs no model plan`() = runBlocking {
         project(listOf("A", "A")); val service = DefaultCohesionApplicationService(::plan)
         val first = service.generate(GenerateCohesionRequest(root))
-        val project = ProjectStore.read(root); ProjectStore.write(root, project.copy(structure = listOf("A")))
+        val project = ProjectStore.read(root); ProjectStore.write(root, project.copy(envelope = project.envelope.copy(structureOccurrences = project.envelope.structureOccurrences.take(1))))
         val single = service.generate(GenerateCohesionRequest(root))
         assertFalse(first.inputHash == single.inputHash)
         assertTrue(single.boundaries.isEmpty())

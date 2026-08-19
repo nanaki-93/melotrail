@@ -111,7 +111,8 @@ class ProjectV4SchemaTest {
             version = 3,
             name = "legacy",
             renderFormat = RenderFormat(),
-            parts = listOf(Part("A", "source/A.mid", midi = MidiReferences(raw = "midi/raw/A.mid"), importEvidence = ImportEvidence(sourceHash, rawHash)))
+            parts = listOf(Part("A", "source/A.mid", midi = MidiReferences(raw = "midi/raw/A.mid"), importEvidence = ImportEvidence(sourceHash, rawHash))),
+            structure = listOf("A", "A")
         ))
         val before = Files.readAllBytes(root.resolve(ProjectStore.FILE_NAME))
 
@@ -119,6 +120,8 @@ class ProjectV4SchemaTest {
 
         assertEquals(3, migration.sourceVersion)
         assertEquals(Project.CURRENT_VERSION, migration.project.version)
+        assertEquals(listOf("occ-A-1", "occ-A-2"), migration.project.envelope.structureOccurrences.map(StructureOccurrence::id))
+        assertEquals(listOf("A1", "A2"), migration.project.envelope.structureOccurrences.map(StructureOccurrence::label))
         assertEquals(setOf(ProjectSetupRequirement.COMPOSITION_SETTINGS, ProjectSetupRequirement.HARMONY), migration.setupRequirements)
         assertTrue(before.contentEquals(Files.readAllBytes(root.resolve(ProjectStore.FILE_NAME))), "migration planning must not write")
 
@@ -127,6 +130,7 @@ class ProjectV4SchemaTest {
         assertEquals(Project.CURRENT_VERSION, ProjectStore.read(root).version)
         assertEquals(sourceHash, saved.migration.project.parts.single().importEvidence?.sourceSha256)
         assertEquals(rawHash, saved.migration.project.parts.single().importEvidence?.rawMidiSha256)
+        assertTrue(Files.readString(root.resolve(ProjectStore.FILE_NAME)).contains("\"id\": \"occ-A-1\""))
         assertTrue(ProjectStore.read(root).validate(root).isValid)
     }
 

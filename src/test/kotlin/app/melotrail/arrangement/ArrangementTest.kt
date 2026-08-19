@@ -21,9 +21,9 @@ class ArrangementTest {
     fun `deterministic planner preserves every source section and emits fixed generated plans`() {
         val project = project("A", "B")
         val structure = listOf(
-            SectionInstance(0, "A"),
-            SectionInstance(1, "A"),
-            SectionInstance(2, "B")
+            SectionInstance(0, "A", "A1"),
+            SectionInstance(1, "A", "A2"),
+            SectionInstance(2, "B", "B1")
         )
 
         val planner: ArrangementPlanner = DeterministicArrangementPlanner()
@@ -53,7 +53,7 @@ class ArrangementTest {
     fun `planner uses an explicit source marker when no instruments are requested`() {
         val project = project("A")
         val arrangement = DeterministicArrangementPlanner().plan(
-            ArrangementInput(project = project, structure = listOf(SectionInstance(0, "A")))
+            ArrangementInput(project = project, structure = listOf(SectionInstance(0, "A", "A1")))
         )
 
         assertEquals(listOf(InstrumentPlan("source", InstrumentMode.SOURCE)), arrangement.sections.single().instruments)
@@ -90,7 +90,7 @@ class ArrangementTest {
             DeterministicArrangementPlanner().plan(
                 ArrangementInput(
                     project = project("A"),
-                    structure = listOf(SectionInstance(0, "missing")),
+                    structure = listOf(SectionInstance(0, "missing", "missing1")),
                     requestedInstruments = listOf("bass", "Bass")
                 )
             )
@@ -108,7 +108,7 @@ class ArrangementTest {
         val sourceBefore = Files.readString(source)
         val project = Project(name = "demo", parts = listOf(Part("A", "parts/A.wav")))
         val arrangement = DeterministicArrangementPlanner().plan(
-            ArrangementInput(project = project, structure = listOf(SectionInstance(0, "A")))
+            ArrangementInput(project = project, structure = listOf(SectionInstance(0, "A", "A1")))
         )
 
         val arrangementPath = ArrangementStore.write(projectRoot, project, arrangement)

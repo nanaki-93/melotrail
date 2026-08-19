@@ -153,17 +153,22 @@ data class SongPlanningSectionInstance(
     val index: Int,
     val instanceId: String,
     val partId: String,
-    val occurrence: Int
+    val occurrence: Int,
+    val variationOverrides: StructureVariationOverrides = StructureVariationOverrides()
 )
 
-/** Derives stable occurrence identities; neither a model nor a user supplies these values. */
+/**
+ * Adapts persisted occurrence identity to planning.  Planning never creates
+ * occurrence IDs: they must already have been saved by Structure.
+ */
 object SongPlanningSectionInstances {
     fun create(structure: List<SectionInstance>): List<SongPlanningSectionInstance> {
         val occurrences = mutableMapOf<String, Int>()
         return structure.map { section ->
             val occurrence = (occurrences[section.partId] ?: 0) + 1
             occurrences[section.partId] = occurrence
-            SongPlanningSectionInstance(section.index, "${section.partId}$occurrence", section.partId, occurrence)
+            require(section.instanceId.isNotBlank()) { "Structure occurrence ${section.index + 1} is missing its persisted ID" }
+            SongPlanningSectionInstance(section.index, section.instanceId, section.partId, occurrence, section.variationOverrides)
         }
     }
 }

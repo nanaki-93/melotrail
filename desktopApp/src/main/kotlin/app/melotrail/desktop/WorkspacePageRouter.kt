@@ -1568,10 +1568,10 @@ private fun StructureStrip(sections: List<StructureSectionSummary>, selectedId: 
                     .clickable { onIntent(WorkspaceIntent.SelectStructureOccurrence(section.instanceId)) }
                     .padding(MusicWorkspaceTokens.Spacing.Sm).semantics {
                         testTag = WorkspaceTags.STRUCTURE_OCCURRENCE_PREFIX + section.instanceId
-                        contentDescription = "Select canonical occurrence ${section.instanceId}${if (selected) ", selected" else ""}"
+                        contentDescription = "Select canonical occurrence ${section.label} (${section.instanceId})${if (selected) ", selected" else ""}"
                     }
             ) {
-                Text(section.instanceId, fontWeight = FontWeight.SemiBold)
+                Text(section.label, fontWeight = FontWeight.SemiBold)
                 Text("${section.partId} · ${section.durationSeconds?.let(::formatDuration) ?: "time unknown"}", style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
@@ -1604,12 +1604,12 @@ private fun StructureTable(state: WorkspaceUiState, selectedId: String?, onInten
         Column(
             Modifier.fillMaxWidth().clip(MaterialTheme.shapes.small)
                 .background(if (selected) MusicWorkspaceTokens.SelectedSurface.copy(alpha = 0.72f) else MaterialTheme.colorScheme.surface)
-                .semantics { testTag = WorkspacePageTags.STRUCTURE_ROW_PREFIX + section.instanceId; contentDescription = "${section.instanceId}, ${part?.role?.ifBlank { "role unknown" } ?: "part unavailable"}${if (selected) ", selected" else ""}" }
+                .semantics { testTag = WorkspacePageTags.STRUCTURE_ROW_PREFIX + section.instanceId; contentDescription = "${section.label} (${section.instanceId}), ${part?.role?.ifBlank { "role unknown" } ?: "part unavailable"}${if (selected) ", selected" else ""}" }
                 .padding(horizontal = MusicWorkspaceTokens.Spacing.Sm, vertical = MusicWorkspaceTokens.Spacing.Xs)
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
                 Text("${index + 1}", modifier = Modifier.width(20.dp), style = MaterialTheme.typography.labelSmall)
-                Text(section.instanceId, modifier = Modifier.width(42.dp), fontWeight = FontWeight.SemiBold)
+                Text(section.label, modifier = Modifier.width(42.dp), fontWeight = FontWeight.SemiBold)
                 Text(starts[index]?.let(::formatDuration) ?: "—", modifier = Modifier.weight(0.62f), style = MaterialTheme.typography.bodySmall)
                 Text(section.durationSeconds?.let(::formatDuration) ?: "—", modifier = Modifier.weight(0.62f), style = MaterialTheme.typography.bodySmall)
                 Text(part?.analysis?.key ?: "Key unknown", modifier = Modifier.weight(0.9f), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1653,7 +1653,7 @@ private fun StructureAddArea(state: WorkspaceUiState, onIntent: (WorkspaceIntent
 @Composable
 private fun StructurePreview(state: WorkspaceUiState, selected: StructureSectionSummary?, onIntent: (WorkspaceIntent) -> Unit) = OverviewCard(WorkspacePageTags.STRUCTURE_PREVIEW, "Preview") {
     Box(Modifier.fillMaxWidth().height(110.dp).clip(MaterialTheme.shapes.small).background(MusicWorkspaceTokens.ScenePlaceholder), contentAlignment = Alignment.Center) {
-        Text(if (selected == null) "Select a section to preview" else "${selected.instanceId} · local part preview", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(if (selected == null) "Select a section to preview" else "${selected.label} · local part preview", color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     val session = state.playbackSession
     val isSelectedPreview = (session.request as? PlaybackRequest.Part)?.partId == selected?.partId
@@ -1669,7 +1669,7 @@ private fun StructureContextRail(state: WorkspaceUiState, selected: StructureSec
     val part = selected?.let { section -> state.project?.parts?.firstOrNull { it.id == section.partId } }
     if (selected == null) Text("No canonical occurrence selected", color = MaterialTheme.colorScheme.onSurfaceVariant)
     else {
-        Text(selected.instanceId, style = MaterialTheme.typography.titleLarge)
+        Text(selected.label, style = MaterialTheme.typography.titleLarge)
         Text(part?.role?.ifBlank { "Role unknown" } ?: "Part unavailable", fontWeight = FontWeight.Medium)
         StructureFact("Duration", selected.durationSeconds?.let(::formatDuration) ?: "Unknown")
         StructureFact("Bars", part?.analysis?.bars?.takeIf { it > 0 }?.toString() ?: "Unknown")

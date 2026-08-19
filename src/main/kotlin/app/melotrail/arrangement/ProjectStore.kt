@@ -8,6 +8,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.JsonPrimitive
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -41,7 +43,9 @@ object ProjectStore {
             1 -> legacyJson.decodeFromString<ProjectV1Dto>(text).toProject(compatibility(element, V1_FIELDS, 1))
             2 -> legacyJson.decodeFromString<ProjectV2Dto>(text).toProject(compatibility(element, V2_FIELDS, 2))
             3 -> legacyJson.decodeFromString<ProjectV3Dto>(text).toProject(compatibility(element, V3_FIELDS, 3))
-            4 -> json.decodeFromString<ProjectV4Dto>(text).toProject()
+            4 -> if (element["structure"]?.jsonArray?.firstOrNull() is JsonPrimitive) {
+                json.decodeFromString<LegacyProjectV4Dto>(text).toProject()
+            } else json.decodeFromString<ProjectV4Dto>(text).toProject()
             else -> throw IllegalArgumentException("Unsupported project version: ${element["version"]?.jsonPrimitive?.content}")
         }
     }
@@ -50,7 +54,7 @@ object ProjectStore {
     fun migrate(project: Project): ProjectMigrationResult {
         val sourceVersion = project.version
         require(sourceVersion in 1..Project.CURRENT_VERSION) { "Unsupported project version: $sourceVersion" }
-        val migrated = project.copy(
+        val migrated = canonicalizeStructure(project).copy(
             version = Project.CURRENT_VERSION,
             renderFormat = project.renderFormat ?: RenderFormat(),
             compatibility = ProjectCompatibility(Project.CURRENT_VERSION)
@@ -79,11 +83,12 @@ object ProjectStore {
     }
 
     fun write(root: Path, project: Project) {
-        project.requireValid(root)
-        require(project.version == Project.CURRENT_VERSION) {
+        val canonical = canonicalizeStructure(project)
+        canonical.requireValid(root)
+        require(canonical.version == Project.CURRENT_VERSION) {
             "Only schema v${Project.CURRENT_VERSION} projects can be saved; explicitly migrate readable legacy data first."
         }
-        val serialized = json.encodeToString(project.toV4Dto())
+        val serialized = json.encodeToString(canonical.toV4Dto())
         json.decodeFromString<ProjectV4Dto>(serialized).toProject().requireValid(root)
         atomicWrite(root.resolve(FILE_NAME), serialized)
     }
@@ -128,6 +133,16 @@ object ProjectStore {
         val name: String,
         val renderFormat: RenderFormat,
         val parts: List<PartV4Dto> = emptyList(),
+        val structure: List<StructureOccurrence> = emptyList(),
+        val workflow: ProjectWorkflowReferences = ProjectWorkflowReferences(),
+        val envelope: ProjectV4EnvelopeDto = ProjectV4EnvelopeDto()
+    )
+    /** Read-only compatibility for v4 documents written before Structure owned persisted occurrences. */
+    @Serializable private data class LegacyProjectV4Dto(
+        val version: Int = 4,
+        val name: String,
+        val renderFormat: RenderFormat,
+        val parts: List<PartV4Dto> = emptyList(),
         val structure: List<String> = emptyList(),
         val workflow: ProjectWorkflowReferences = ProjectWorkflowReferences(),
         val envelope: ProjectV4EnvelopeDto = ProjectV4EnvelopeDto()
@@ -137,7 +152,8 @@ object ProjectStore {
         val compositionSettings: CompositionSettings? = null,
         val harmony: HarmonySettingsDto? = null,
         val evolvedParts: List<EvolvedPartReference> = emptyList(),
-        val structureOccurrences: List<StructureOccurrence> = emptyList(),
+        /** Read-only slot for v4 files written before structure moved to its canonical root field. */
+        @EncodeDefault(EncodeDefault.Mode.NEVER) val structureOccurrences: List<StructureOccurrence> = emptyList(),
         val stageRuns: ProjectStageRunManifestReference = ProjectStageRunManifestReference(),
         /** Compatibility read slot for the provisional Task 002 manifest scaffold. */
         @EncodeDefault(EncodeDefault.Mode.NEVER) val manifests: LegacyProjectManifestReferences? = null,
@@ -170,27 +186,63 @@ object ProjectStore {
 
     private fun ProjectV1Dto.toProject(compatibility: ProjectCompatibility) = Project(1, name, parts.map {
         SongPart(id = it.id, file = it.file, role = it.role, name = it.id, sectionType = SectionTypeCatalog.fromLegacyRole(it.role), analysis = it.analysis, legacySourceOnly = true)
-    }, structure, compatibility = compatibility)
+    }, envelope = ProjectV4Envelope(structureOccurrences = legacyOccurrences(structure)), compatibility = compatibility)
     private fun ProjectV2Dto.toProject(compatibility: ProjectCompatibility) = Project(2, name, parts.map {
         SongPart(id = it.id, file = it.sourceFile, role = it.role, name = it.id, sectionType = SectionTypeCatalog.fromLegacyRole(it.role), analysis = it.analysis, midi = it.midi, sourceAttestation = it.sourceAttestation, importEvidence = it.importEvidence)
-    }, structure, renderFormat, compatibility = compatibility)
+    }, renderFormat = renderFormat, envelope = ProjectV4Envelope(structureOccurrences = legacyOccurrences(structure)), compatibility = compatibility)
     private fun ProjectV3Dto.toProject(compatibility: ProjectCompatibility) = Project(3, name, parts.map {
         SongPart(id = it.id, file = it.sourceFile, role = it.role, name = it.id, sectionType = SectionTypeCatalog.fromLegacyRole(it.role), analysis = it.analysis, midi = it.midi, sourceAttestation = it.sourceAttestation, importEvidence = it.importEvidence)
-    }, structure, renderFormat, workflow, compatibility = compatibility)
+    }, renderFormat = renderFormat, workflow = workflow, envelope = ProjectV4Envelope(structureOccurrences = legacyOccurrences(structure)), compatibility = compatibility)
     private fun ProjectV4Dto.toProject() = Project(4, name, parts.map {
         SongPart(id = it.id, file = it.sourceFile, role = (it.sectionType ?: SectionTypeCatalog.fromLegacyRole(it.role.orEmpty())).value, name = it.name ?: it.id, sectionType = it.sectionType ?: SectionTypeCatalog.fromLegacyRole(it.role.orEmpty()), analysis = it.analysis, midi = it.midi, sourceAttestation = it.sourceAttestation, importEvidence = it.importEvidence, sourceKeyEvidence = it.sourceKeyEvidence, stageManifestRef = it.stageManifestRef, revision = it.revision, importPending = it.importPending, legacySourceOnly = it.legacySourceOnly)
-    }, structure, renderFormat, workflow, envelope.toDomain())
+    }, renderFormat = renderFormat, workflow = workflow, envelope = envelope.toDomain().copy(
+        structureOccurrences = structure.ifEmpty { envelope.structureOccurrences }
+    ))
+    private fun LegacyProjectV4Dto.toProject() = Project(4, name, parts.map {
+        SongPart(id = it.id, file = it.sourceFile, role = (it.sectionType ?: SectionTypeCatalog.fromLegacyRole(it.role.orEmpty())).value, name = it.name ?: it.id, sectionType = it.sectionType ?: SectionTypeCatalog.fromLegacyRole(it.role.orEmpty()), analysis = it.analysis, midi = it.midi, sourceAttestation = it.sourceAttestation, importEvidence = it.importEvidence, sourceKeyEvidence = it.sourceKeyEvidence, stageManifestRef = it.stageManifestRef, revision = it.revision, importPending = it.importPending, legacySourceOnly = it.legacySourceOnly)
+    }, renderFormat = renderFormat, workflow = workflow, envelope = envelope.toDomain().copy(
+        structureOccurrences = envelope.structureOccurrences.ifEmpty { legacyOccurrences(structure) }
+    ))
     private fun Project.toV4Dto() = ProjectV4Dto(name = name, renderFormat = requireNotNull(renderFormat), parts = parts.map {
         PartV4Dto(id = it.id, sourceFile = it.file, name = it.name, sectionType = it.sectionType, midi = it.midi, analysis = it.analysis, sourceAttestation = it.sourceAttestation, importEvidence = it.importEvidence, sourceKeyEvidence = it.sourceKeyEvidence, stageManifestRef = it.stageManifestRef, revision = it.revision, importPending = it.importPending, legacySourceOnly = it.legacySourceOnly)
-    }, structure = structure, workflow = workflow, envelope = envelope.toDto())
+    }, structure = envelope.structureOccurrences, workflow = workflow, envelope = envelope.toDto())
     private fun ProjectV4EnvelopeDto.toDomain() = ProjectV4Envelope(
-        compositionSettings, harmony?.toDomain(), evolvedParts, structureOccurrences,
-        stageRuns.copy(legacyRuns = manifests?.runs.orEmpty().map { LegacyManifestRunInput(it.stage, it.status, it.artifacts) }), arrangementAssignments
+        compositionSettings = compositionSettings,
+        harmony = harmony?.toDomain(),
+        evolvedParts = evolvedParts,
+        structureOccurrences = structureOccurrences,
+        stageRuns = stageRuns.copy(legacyRuns = manifests?.runs.orEmpty().map { LegacyManifestRunInput(it.stage, it.status, it.artifacts) }),
+        arrangementAssignments = arrangementAssignments
     )
     private fun ProjectV4Envelope.toDto() = ProjectV4EnvelopeDto(
-        compositionSettings, harmony?.let(HarmonySettingsDto::fromDomain), evolvedParts,
-        structureOccurrences, stageRuns, arrangementAssignments = arrangementAssignments
+        compositionSettings = compositionSettings,
+        harmony = harmony?.let(HarmonySettingsDto::fromDomain),
+        evolvedParts = evolvedParts,
+        stageRuns = stageRuns,
+        arrangementAssignments = arrangementAssignments
     )
+
+    /** The only old-list adapter.  It runs while reading/migrating a legacy document, never in planning. */
+    private fun legacyOccurrences(partIds: List<String>): List<StructureOccurrence> {
+        val counts = mutableMapOf<String, Int>()
+        return partIds.map { partId ->
+            val ordinal = (counts[partId] ?: 0) + 1
+            counts[partId] = ordinal
+            StructureOccurrence(id = legacyOccurrenceId(partId, ordinal), partId = partId, label = "$partId$ordinal")
+        }
+    }
+
+    private fun legacyOccurrenceId(partId: String, ordinal: Int): String {
+        val direct = "occ-$partId-$ordinal"
+        return if (SAFE_OCCURRENCE_ID.matches(direct)) direct
+        else "occ-${sha256Hex("$partId:$ordinal").take(32)}"
+    }
+
+    private fun canonicalizeStructure(project: Project): Project =
+        if (project.envelope.structureOccurrences.isNotEmpty() || project.structure.isEmpty()) project
+        else project.copy(envelope = project.envelope.copy(structureOccurrences = legacyOccurrences(project.structure)), structure = emptyList())
+
+    private val SAFE_OCCURRENCE_ID = Regex("[A-Za-z0-9_-]{1,80}")
 
     private fun publishLegacyStageRuns(
         root: Path,

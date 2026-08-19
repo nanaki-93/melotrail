@@ -232,33 +232,35 @@ class ProjectApplicationServiceTest {
         val saved = service.saveStructure(SaveStructureRequest(root, listOf("B", "A", "B")))
         val updated = service.updateSongPartSection(UpdateSongPartSectionRequest(root, "A", app.melotrail.arrangement.SectionTypeId.CHORUS, 1))
 
-        assertEquals(listOf("B1", "A1", "B2"), saved.structure.map { it.instanceId })
+        val (firstB, firstA, secondB) = saved.structure
+        assertEquals(listOf("B", "A", "B"), saved.structure.map { it.partId })
+        assertEquals(3, saved.structure.map { it.instanceId }.toSet().size)
         assertEquals("chorus", updated.parts.single { it.id == "A" }.role)
-        assertEquals(listOf("B", "A", "B"), ProjectStore.read(root).structure)
+        assertEquals(listOf("B", "A", "B"), ProjectStore.read(root).envelope.structureOccurrences.map { it.partId })
         assertTrue(assertThrows(IllegalArgumentException::class.java) {
             service.saveStructure(SaveStructureRequest(root, listOf("B", "missing")))
         }.message.orEmpty().contains("Unknown part ID"))
-        assertEquals(listOf("B", "A", "B"), ProjectStore.read(root).structure)
+        assertEquals(listOf("B", "A", "B"), ProjectStore.read(root).envelope.structureOccurrences.map { it.partId })
 
         val initialCohesion = blocking { generateApprovedCohesion(root); DefaultCohesionApplicationService { error("not used") }.load(root) }
         Files.writeString(root.resolve("arrangement.json"), "retained arrangement evidence")
         val beforeUnchangedSave = Files.readAllBytes(root.resolve(ProjectStore.FILE_NAME))
         val unchanged = service.saveStructure(SaveStructureRequest(root, listOf("B", "A", "B")))
-        assertEquals(listOf("B1", "A1", "B2"), unchanged.structure.map { it.instanceId })
+        assertEquals(saved.structure.map { it.instanceId }, unchanged.structure.map { it.instanceId })
         assertTrue(beforeUnchangedSave.contentEquals(Files.readAllBytes(root.resolve(ProjectStore.FILE_NAME))))
 
         val reordered = service.saveStructure(SaveStructureRequest(root, listOf("B", "B", "A")))
-        assertEquals(listOf("B1", "B2", "A1"), reordered.structure.map { it.instanceId })
+        assertEquals(listOf(firstB.instanceId, secondB.instanceId, firstA.instanceId), reordered.structure.map { it.instanceId })
         assertTrue(Files.isRegularFile(root.resolve("arrangement.json")), "old arrangement stays inspectable")
         assertTrue(sourceBefore.contentEquals(Files.readAllBytes(root.resolve("source/A.mid"))))
         assertTrue(app.melotrail.arrangement.WorkflowArtifact.COHESION in reordered.readiness.staleArtifacts)
         assertTrue(app.melotrail.arrangement.WorkflowArtifact.ARRANGEMENT in reordered.readiness.staleArtifacts)
         val reorderedCohesion = blocking { generateApprovedCohesion(root); DefaultCohesionApplicationService { error("not used") }.load(root) }
         assertFalse(initialCohesion.structureSha256 == reorderedCohesion.structureSha256)
-        assertEquals(listOf("B1" to "B2", "B2" to "A1"), reorderedCohesion.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId })
+        assertEquals(listOf(firstB.instanceId to secondB.instanceId, secondB.instanceId to firstA.instanceId), reorderedCohesion.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId })
 
-        assertEquals(listOf("B1", "A1", "B2", "A2"), service.saveStructure(SaveStructureRequest(root, listOf("B", "A", "B", "A"))).structure.map { it.instanceId })
-        assertEquals(listOf("A1"), service.saveStructure(SaveStructureRequest(root, listOf("A"))).structure.map { it.instanceId })
+        assertEquals(4, service.saveStructure(SaveStructureRequest(root, listOf("B", "A", "B", "A"))).structure.map { it.instanceId }.toSet().size)
+        assertEquals(listOf(firstA.instanceId), service.saveStructure(SaveStructureRequest(root, listOf("A"))).structure.map { it.instanceId })
         assertTrue(service.saveStructure(SaveStructureRequest(root, emptyList())).structure.isEmpty())
     }
 

@@ -79,9 +79,9 @@ class ArrangementApplicationServiceTest {
         val approved = cohesion.boundaries.single().approved!!
 
         assertEquals(cohesion.inputSha256, arrangement.cohesion!!.inputSha256)
-        assertEquals(listOf("A1" to "A2"), arrangement.cohesion!!.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId })
+        assertEquals(listOf("occ-A-1" to "occ-A-2"), arrangement.cohesion!!.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId })
         assertEquals(approved.sha256, arrangement.cohesion!!.boundaries.single().approvedSha256)
-        assertEquals(sha256(root.resolve("cohesion/boundaries/A1--A2/bridge.mid")), arrangement.cohesion!!.boundaries.single().bridgeSha256)
+        assertEquals(sha256(root.resolve("cohesion/boundaries/occ-A-1--occ-A-2/bridge.mid")), arrangement.cohesion!!.boundaries.single().bridgeSha256)
         assertEquals(app.melotrail.arrangement.TransitionType.BRIDGE, arrangement.sections.first().transitionOut.type)
     }
 

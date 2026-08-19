@@ -110,7 +110,7 @@ class StemRenderingMixerTest {
         val sourceHash = sha256(root.resolve("source/A.mid"))
         val cleanHash = sha256(root.resolve("midi/clean/A.mid"))
         val analysis = analysis("A")
-        val planning = SongPlanningInput(project.name, project.version, mapOf("A" to analysis), listOf(SectionInstance(0, "A"), SectionInstance(1, "A")), LogicalInstrument.entries.map { it.wireName })
+        val planning = SongPlanningInput(project.name, project.version, mapOf("A" to analysis), listOf(SectionInstance(0, "A", "A1"), SectionInstance(1, "A", "A2")), LogicalInstrument.entries.map { it.wireName })
         val (input, sources) = MelodyCohesionInputFactory.build(root, project, planning)
         val plan = DeterministicMelodyCohesionPlanner().plan(input).copy(
             occurrences = input.occurrences.mapIndexed { index, occurrence ->

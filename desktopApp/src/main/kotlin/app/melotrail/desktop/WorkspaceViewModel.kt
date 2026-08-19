@@ -57,6 +57,10 @@ import app.melotrail.application.AudioPreparationSnapshot
 import app.melotrail.application.PreviewAudioSource
 import app.melotrail.application.PreviewMidiSource
 import app.melotrail.application.SaveStructureRequest
+import app.melotrail.application.InsertStructureOccurrenceRequest
+import app.melotrail.application.DuplicateStructureOccurrenceRequest
+import app.melotrail.application.RemoveStructureOccurrenceRequest
+import app.melotrail.application.MoveStructureOccurrenceRequest
 import app.melotrail.application.UpdateSongPartSectionRequest
 import app.melotrail.application.WorkflowReadModel
 import app.melotrail.application.WorkflowReadModelDeriver
@@ -791,11 +795,9 @@ class WorkspaceViewModel(
             WorkspaceIntent.ConfirmPartStructureChange -> confirmPartStructureChange()
             is WorkspaceIntent.AddStructurePart -> addStructurePart(intent.partId)
             is WorkspaceIntent.SelectStructureOccurrence -> selectStructureOccurrence(intent.instanceId)
-            is WorkspaceIntent.DuplicateStructureOccurrence -> structureIndex(intent.instanceId)?.let(::duplicateStructurePart)
-            is WorkspaceIntent.RemoveStructureOccurrence -> structureIndex(intent.instanceId)?.let(::removeStructurePart)
-            is WorkspaceIntent.MoveStructureOccurrence -> structureIndex(intent.instanceId)?.let { index ->
-                moveStructurePart(index, index + if (intent.earlier) -1 else 1)
-            }
+            is WorkspaceIntent.DuplicateStructureOccurrence -> duplicateStructureOccurrence(intent.instanceId)
+            is WorkspaceIntent.RemoveStructureOccurrence -> removeStructureOccurrence(intent.instanceId)
+            is WorkspaceIntent.MoveStructureOccurrence -> moveStructureOccurrence(intent.instanceId, intent.earlier)
             is WorkspaceIntent.DuplicateStructurePart -> duplicateStructurePart(intent.index)
             is WorkspaceIntent.RemoveStructurePart -> removeStructurePart(intent.index)
             is WorkspaceIntent.MoveStructurePart -> moveStructurePart(intent.fromIndex, intent.toIndex)
@@ -2100,7 +2102,7 @@ class WorkspaceViewModel(
     private fun confirmPartStructureChange() {
         val draft = state.value.dialog as? WorkspaceDialog.ConfirmPartStructureChange ?: return
         if (draft.instanceId == null) addStructurePart(draft.partId)
-        else structureIndex(draft.instanceId)?.let(::removeStructurePart)
+        else removeStructureOccurrence(draft.instanceId)
     }
 
     private fun duplicateStructurePart(index: Int) {
@@ -2116,7 +2118,55 @@ class WorkspaceViewModel(
         if (primaryPartAction(part, state.value.pendingMidiFeel) !is PartPrimaryAction.AddToStructure) {
             return fail("add to structure", "Part '$partId' must finish current MIDI analysis before it can be added to structure.")
         }
-        saveStructure(state.value.structureDraft + partId, selectedIndex = state.value.structureDraft.size)
+        val after = state.value.project?.structure?.lastOrNull()
+        mutateStructure("add to structure", partId) {
+            projectService.insertStructureOccurrence(InsertStructureOccurrenceRequest(project.root, partId, after?.instanceId, after?.revision)).refreshed()
+        }
+    }
+
+    private fun duplicateStructureOccurrence(instanceId: String) {
+        val occurrence = state.value.project?.structure?.firstOrNull { it.instanceId == instanceId } ?: return
+        mutateStructure("duplicate structure", instanceId, selectInsertedAfter = instanceId) {
+            projectService.duplicateStructureOccurrence(DuplicateStructureOccurrenceRequest(occurrenceRoot(), instanceId, occurrence.revision)).refreshed()
+        }
+    }
+
+    private fun removeStructureOccurrence(instanceId: String) {
+        val occurrence = state.value.project?.structure?.firstOrNull { it.instanceId == instanceId } ?: return
+        mutateStructure("remove structure", instanceId) {
+            projectService.removeStructureOccurrence(RemoveStructureOccurrenceRequest(occurrenceRoot(), instanceId, occurrence.revision)).refreshed()
+        }
+    }
+
+    private fun moveStructureOccurrence(instanceId: String, earlier: Boolean) {
+        val sections = state.value.project?.structure.orEmpty()
+        val index = sections.indexOfFirst { it.instanceId == instanceId }
+        val occurrence = sections.getOrNull(index) ?: return
+        val target = index + if (earlier) -1 else 1
+        if (target !in sections.indices) return
+        val after = if (earlier) sections.getOrNull(target - 1)?.instanceId else sections[target].instanceId
+        mutateStructure("reorder structure", instanceId) {
+            projectService.moveStructureOccurrence(MoveStructureOccurrenceRequest(occurrenceRoot(), instanceId, after, occurrence.revision)).refreshed()
+        }
+    }
+
+    private fun occurrenceRoot(): Path = requireNotNull(state.value.project).root
+
+    private fun mutateStructure(action: String, selectedId: String, selectInsertedAfter: String? = null, operation: () -> ProjectSnapshot) {
+        if (state.value.operation.isMutating) return
+        val feedbackId = beginFeedback(OperationKind.PROJECT_HYDRATION, OperationPhase.LOCAL, "Saving song structure…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.SavingStructure, notification = null, retry = null, operationFeedback = feedbackTracker.current) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { operation() } }
+                .onSuccess { snapshot ->
+                    opened(snapshot, "Updated song structure", feedbackId, stale = state.value.downstreamArtifactsStale)
+                    mutableState.update { current -> current.copy(selectedStructureOccurrenceId =
+                        selectInsertedAfter?.let { source -> snapshot.structure.getOrNull(snapshot.structure.indexOfFirst { it.instanceId == source } + 1)?.instanceId }
+                            ?: snapshot.structure.firstOrNull { it.instanceId == selectedId }?.instanceId
+                            ?: snapshot.structure.firstOrNull()?.instanceId) }
+                }
+                .onFailure { fail(action, it.message ?: "Unable to update song structure.", sessionId = feedbackId) }
+        }
     }
 
     private fun removeStructurePart(index: Int) {

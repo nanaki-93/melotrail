@@ -122,7 +122,7 @@ class StemRenderingMixer(
             project.name,
             project.version,
             arrangement.sections.map { it.partId }.distinct().associateWith(analyses::getValue),
-            arrangement.sections.map { SectionInstance(it.index, it.partId) },
+            arrangement.sections.map { SectionInstance(it.index, it.partId, it.instanceId) },
             LogicalInstrument.entries.map(LogicalInstrument::wireName)
         )
         planning.requireValid()

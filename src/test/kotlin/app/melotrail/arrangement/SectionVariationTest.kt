@@ -15,12 +15,12 @@ class SectionVariationTest {
 
     @Test
     fun `identities preserve order occurrences and multi digit repetitions`() {
-        val repeated = List(12) { index -> SectionInstance(index, "A") }
+        val repeated = List(12) { index -> SectionInstance(index, "A", "A${index + 1}") }
         val identities = SongPlanningSectionInstances.create(repeated)
 
         assertEquals((1..12).toList(), identities.map { it.occurrence })
         assertEquals(listOf("A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9", "A10", "A11", "A12"), identities.map { it.instanceId })
-        assertEquals(listOf("A1", "B1"), SongPlanningSectionInstances.create(listOf(SectionInstance(0, "A"), SectionInstance(1, "B"))).map { it.instanceId })
+        assertEquals(listOf("A1", "B1"), SongPlanningSectionInstances.create(listOf(SectionInstance(0, "A", "A1"), SectionInstance(1, "B", "B1"))).map { it.instanceId })
     }
 
     @Test
@@ -92,8 +92,8 @@ class SectionVariationTest {
         projectVersion = Project.CURRENT_VERSION,
         analyses = mapOf("A" to analysis("A", 0.25), "B" to analysis("B", 0.85)),
         structure = listOf(
-            SectionInstance(0, "A"), SectionInstance(1, "A"), SectionInstance(2, "B"),
-            SectionInstance(3, "B"), SectionInstance(4, "A")
+            SectionInstance(0, "A", "A1"), SectionInstance(1, "A", "A2"), SectionInstance(2, "B", "B1"),
+            SectionInstance(3, "B", "B2"), SectionInstance(4, "A", "A3")
         ),
         allowedInstruments = listOf("piano", "bass", "pad"),
         style = "warm"

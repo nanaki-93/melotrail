@@ -15,7 +15,7 @@ class GlobalSongPlannerTest {
 
     @Test
     fun `deterministic planner handles one section and preserves repeated structure with bounded energy`() {
-        val oneSection = DeterministicGlobalSongPlanner().plan(input(structure = listOf(SectionInstance(0, "A"))))
+        val oneSection = DeterministicGlobalSongPlanner().plan(input(structure = listOf(SectionInstance(0, "A", "A1"))))
         assertEquals(listOf("A1"), oneSection.sections.map { it.instanceId })
         assertEquals(0, oneSection.climaxIndex)
         assertEquals(SongSectionPurpose.CLIMAX, oneSection.sections.single().purpose)
@@ -102,8 +102,8 @@ class GlobalSongPlannerTest {
 
     private fun input(
         structure: List<SectionInstance> = listOf(
-            SectionInstance(0, "A"), SectionInstance(1, "A"), SectionInstance(2, "B"),
-            SectionInstance(3, "B"), SectionInstance(4, "A")
+            SectionInstance(0, "A", "A1"), SectionInstance(1, "A", "A2"), SectionInstance(2, "B", "B1"),
+            SectionInstance(3, "B", "B2"), SectionInstance(4, "A", "A3")
         )
     ) = SongPlanningInput(
         projectName = "demo",
