@@ -1,6 +1,7 @@
 package app.melotrail.arrangement
 
 import app.melotrail.commercial.SourceRightsAttestation
+import app.melotrail.harmony.HarmonySettings
 import app.melotrail.music.MusicalKey
 import app.melotrail.music.Tempo
 import app.melotrail.music.TimeSignature
@@ -148,12 +149,6 @@ data class CompositionSettings(
             }
         }
     }
-}
-
-/** Placeholder owned by the future harmony contract. */
-@Serializable
-data class HarmonySettings(val revision: Int = 1) {
-    init { require(revision == 1) { "Unsupported harmony settings revision: $revision" } }
 }
 
 @Serializable
@@ -329,6 +324,11 @@ object ProjectValidator {
         project.envelope.compositionSettings?.let { settings ->
             runCatching(settings::requireWellFormed).exceptionOrNull()?.let { error ->
                 errors += "Composition settings are invalid: ${error.message}"
+            }
+        }
+        project.envelope.harmony?.let { harmony ->
+            runCatching { harmony.requireWellFormed(project.envelope.compositionSettings?.key) }.exceptionOrNull()?.let { error ->
+                errors += "Harmony settings are invalid: ${error.message}"
             }
         }
 

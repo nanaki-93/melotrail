@@ -1,5 +1,6 @@
 package app.melotrail.arrangement
 
+import app.melotrail.harmony.HarmonySettingsDto
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -122,7 +123,15 @@ object ProjectStore {
         val parts: List<PartV4Dto> = emptyList(),
         val structure: List<String> = emptyList(),
         val workflow: ProjectWorkflowReferences = ProjectWorkflowReferences(),
-        val envelope: ProjectV4Envelope = ProjectV4Envelope()
+        val envelope: ProjectV4EnvelopeDto = ProjectV4EnvelopeDto()
+    )
+    @Serializable private data class ProjectV4EnvelopeDto(
+        val compositionSettings: CompositionSettings? = null,
+        val harmony: HarmonySettingsDto? = null,
+        val evolvedParts: List<EvolvedPartReference> = emptyList(),
+        val structureOccurrences: List<StructureOccurrence> = emptyList(),
+        val manifests: ProjectManifestReferences = ProjectManifestReferences(),
+        val arrangementAssignments: List<ArrangementAssignmentReference> = emptyList()
     )
     @Serializable private data class PartV4Dto(
         val id: String,
@@ -138,8 +147,15 @@ object ProjectStore {
     private fun ProjectV1Dto.toProject(compatibility: ProjectCompatibility) = Project(1, name, parts.map { Part(it.id, it.file, it.role, it.analysis, legacySourceOnly = true) }, structure, compatibility = compatibility)
     private fun ProjectV2Dto.toProject(compatibility: ProjectCompatibility) = Project(2, name, parts.map { Part(it.id, it.sourceFile, it.role, it.analysis, it.midi, it.sourceAttestation, it.importEvidence) }, structure, renderFormat, compatibility = compatibility)
     private fun ProjectV3Dto.toProject(compatibility: ProjectCompatibility) = Project(3, name, parts.map { Part(it.id, it.sourceFile, it.role, it.analysis, it.midi, it.sourceAttestation, it.importEvidence) }, structure, renderFormat, workflow, compatibility = compatibility)
-    private fun ProjectV4Dto.toProject() = Project(4, name, parts.map { Part(it.id, it.sourceFile, it.role, it.analysis, it.midi, it.sourceAttestation, it.importEvidence, it.legacySourceOnly) }, structure, renderFormat, workflow, envelope)
-    private fun Project.toV4Dto() = ProjectV4Dto(name = name, renderFormat = requireNotNull(renderFormat), parts = parts.map { PartV4Dto(it.id, it.role, it.file, it.midi, it.analysis, it.sourceAttestation, it.importEvidence, it.legacySourceOnly) }, structure = structure, workflow = workflow, envelope = envelope)
+    private fun ProjectV4Dto.toProject() = Project(4, name, parts.map { Part(it.id, it.sourceFile, it.role, it.analysis, it.midi, it.sourceAttestation, it.importEvidence, it.legacySourceOnly) }, structure, renderFormat, workflow, envelope.toDomain())
+    private fun Project.toV4Dto() = ProjectV4Dto(name = name, renderFormat = requireNotNull(renderFormat), parts = parts.map { PartV4Dto(it.id, it.role, it.file, it.midi, it.analysis, it.sourceAttestation, it.importEvidence, it.legacySourceOnly) }, structure = structure, workflow = workflow, envelope = envelope.toDto())
+    private fun ProjectV4EnvelopeDto.toDomain() = ProjectV4Envelope(
+        compositionSettings, harmony?.toDomain(), evolvedParts, structureOccurrences, manifests, arrangementAssignments
+    )
+    private fun ProjectV4Envelope.toDto() = ProjectV4EnvelopeDto(
+        compositionSettings, harmony?.let(HarmonySettingsDto::fromDomain), evolvedParts,
+        structureOccurrences, manifests, arrangementAssignments
+    )
 
     private fun compatibility(element: kotlinx.serialization.json.JsonObject, known: Set<String>, sourceVersion: Int): ProjectCompatibility {
         val unknown = element.keys - known
