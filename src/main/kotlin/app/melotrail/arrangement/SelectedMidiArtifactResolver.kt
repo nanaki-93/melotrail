@@ -111,7 +111,17 @@ class SelectedMidiArtifactResolver(
                 BaseCandidate(correction.output.file, output, correction.output.sha256, SelectedMidiBaseKind.CORRECTED)
             }
         }
-        val selected = manifestSelection?.let { selected ->
+        val selected = if (midi.enhancementSelection == EnhancementSelection.ENHANCED) {
+            require(base.kind == SelectedMidiBaseKind.CORRECTED) { "Enhancement requires the selected corrected MIDI baseline for part '${part.id}'." }
+            val enhancement = requireNotNull(midi.enhancement) { "Part '${part.id}' has no enhancement evidence." }
+            enhancement.requireCanonical(part.id)
+            require(enhancement.input.file == base.reference && enhancement.input.sha256 == base.sha256) {
+                "Enhanced MIDI is stale for part '${part.id}'; select Corrected or run enhancement again."
+            }
+            val output = resolveFile(root, rootReal, enhancement.output.file, "enhanced MIDI")
+            require(sha256(output) == enhancement.output.sha256) { "Enhanced MIDI is stale for part '${part.id}'; select Corrected or run enhancement again." }
+            Candidate(enhancement.output.file, output, SelectedMidiArtifactKind.ENHANCED, null, MusicalProcessingContext.VERSION)
+        } else manifestSelection?.let { selected ->
             when (selected.record.stage) {
                 StageId.CLEANED -> Candidate(selected.artifact.path, resolveFile(root, rootReal, selected.artifact.path, "selected cleaned MIDI"),
                     SelectedMidiArtifactKind.CLEANED, null, null)
@@ -242,7 +252,7 @@ class SelectedMidiArtifactResolver(
 }
 
 enum class SelectedMidiBaseKind { CLEANED, NORMALIZED, TRANSPOSED, CORRECTED, APPROVED_AI_FIX }
-enum class SelectedMidiArtifactKind { CLEANED, NORMALIZED, TRANSPOSED, CORRECTED, APPROVED_AI_FIX, LOFI_FEEL }
+enum class SelectedMidiArtifactKind { CLEANED, NORMALIZED, TRANSPOSED, CORRECTED, APPROVED_AI_FIX, ENHANCED, LOFI_FEEL }
 enum class MidiCleanupFreshness { CURRENT, LEGACY_UNKNOWN, STALE }
 enum class MidiLoFiFreshness { CURRENT, NOT_SELECTED }
 data class MidiTimingSummary(val tempoMap: List<MidiTempoChange>, val timeSignatures: List<MidiTimeSignature>)

@@ -1827,6 +1827,18 @@ private fun MidiLoFiFeelReview(state: WorkspaceUiState, onIntent: (WorkspaceInte
             }
         }
     }
+    val enhancement = part.preparation.enhancement
+    OverviewCard("enhancement-intensity", "Enhancement") {
+        Text("${enhancement.capabilityLabel}. It requires the corrected baseline; comparison UX arrives in a later task.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Current: ${if (enhancement.selected == app.melotrail.arrangement.EnhancementSelection.CORRECTED) "Corrected" else enhancement.intensity.name.lowercase().replaceFirstChar(Char::uppercase)}", style = MaterialTheme.typography.bodySmall)
+        Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+            app.melotrail.arrangement.EnhancementIntensity.entries.forEach { intensity ->
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectEnhancement(intensity)) }, enabled = !state.operation.isMutating) {
+                    Text(if (intensity == app.melotrail.arrangement.EnhancementIntensity.OFF) "Off" else intensity.name.lowercase().replaceFirstChar(Char::uppercase))
+                }
+            }
+        }
+    }
 }
 
 @Composable

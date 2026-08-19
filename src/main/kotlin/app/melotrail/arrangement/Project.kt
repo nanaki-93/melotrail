@@ -322,6 +322,10 @@ data class MidiReferences(
     /** Task 017 technical baseline. Legacy AI-fix remains separate compatibility evidence. */
     val technicalCorrectionSelection: TechnicalCorrectionSelection = TechnicalCorrectionSelection.BASE,
     val technicalCorrection: TechnicalCorrectionReferences? = null,
+    /** Task 018 selection. Off always returns this branch to the corrected evidence. */
+    val enhancementSelection: EnhancementSelection = EnhancementSelection.CORRECTED,
+    /** Retained derived evidence; selecting Off never clears it. */
+    val enhancement: EnhancementReferences? = null,
     /** Explicit optional base branch; a draft is never selected. */
     val aiFixSelection: MidiAiFixSelection = MidiAiFixSelection.SKIP,
     /** Optional retained draft/approval evidence, fingerprinted against [clean]. */
@@ -467,6 +471,17 @@ object ProjectValidator {
                         validateArtifactReference(root, correction.input, "Part '${part.id}' technical-correction input", errors)
                         validateArtifactReference(root, correction.output, "Part '${part.id}' corrected MIDI", errors)
                         validateArtifactReference(root, correction.report, "Part '${part.id}' technical-correction report", errors)
+                    }
+                    runCatching { midi.enhancement?.requireCanonical(part.id) }.exceptionOrNull()?.let { error ->
+                        errors += "Part '${part.id}' enhancement references are invalid: ${error.message}"
+                    }
+                    if (midi.enhancementSelection == EnhancementSelection.ENHANCED && midi.enhancement == null) {
+                        errors += "Part '${part.id}' selects enhanced MIDI without enhancement evidence"
+                    }
+                    midi.enhancement?.let { enhancement ->
+                        validateArtifactReference(root, enhancement.input, "Part '${part.id}' enhancement input", errors)
+                        validateArtifactReference(root, enhancement.output, "Part '${part.id}' enhanced MIDI", errors)
+                        validateArtifactReference(root, enhancement.report, "Part '${part.id}' enhancement report", errors)
                     }
                     runCatching { midi.aiFix?.requireCanonical(part.id) }.exceptionOrNull()?.let { error ->
                         errors += "Part '${part.id}' AI-fix references are invalid: ${error.message}"

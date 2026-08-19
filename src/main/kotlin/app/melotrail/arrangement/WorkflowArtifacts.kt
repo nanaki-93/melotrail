@@ -16,6 +16,7 @@ enum class WorkflowArtifact {
     @SerialName("MIDI_REPAIR") CLEAN_MIDI,
     TRANSPOSED_MIDI,
     CORRECTED_MIDI,
+    ENHANCED_MIDI,
     AI_FIX,
     MIDI_FEEL,
     ANALYSIS,
@@ -36,6 +37,7 @@ enum class WorkflowChange {
     @SerialName("REPAIRED_MIDI") CLEANED_MIDI,
     SOURCE_KEY,
     CORRECTION_SELECTION,
+    ENHANCEMENT_SELECTION,
     AI_FIX_SELECTION,
     MIDI_FEEL,
     ANALYSIS,
@@ -54,14 +56,14 @@ enum class WorkflowChange {
 /** Centralized, deliberately non-destructive invalidation matrix. */
 object WorkflowArtifactGraph {
     private val allAfterRepair = setOf(
-        WorkflowArtifact.TRANSPOSED_MIDI, WorkflowArtifact.CORRECTED_MIDI, WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.COHESION,
+        WorkflowArtifact.TRANSPOSED_MIDI, WorkflowArtifact.CORRECTED_MIDI, WorkflowArtifact.ENHANCED_MIDI, WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.COHESION,
         WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
         WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
         WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
     )
 
     private val allAfterSelection = setOf(
-        WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.COHESION,
+        WorkflowArtifact.ENHANCED_MIDI, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.COHESION,
         WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
         WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
         WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
@@ -78,6 +80,7 @@ object WorkflowArtifactGraph {
         WorkflowChange.CLEANED_MIDI -> allAfterRepair
         WorkflowChange.SOURCE_KEY -> allAfterRepair
         WorkflowChange.CORRECTION_SELECTION -> allAfterSelection
+        WorkflowChange.ENHANCEMENT_SELECTION -> allAfterSelection
         WorkflowChange.AI_FIX_SELECTION -> allAfterSelection
         WorkflowChange.MIDI_FEEL -> setOf(WorkflowArtifact.ANALYSIS) + allAfterAnalysis
         WorkflowChange.ANALYSIS, WorkflowChange.STRUCTURE, WorkflowChange.PART_SECTION -> allAfterAnalysis
@@ -88,7 +91,7 @@ object WorkflowArtifactGraph {
         )
         /** A project-key decision invalidates its derived transposition and every dependent artifact. */
         WorkflowChange.COMPOSITION_KEY -> setOf(
-            WorkflowArtifact.TRANSPOSED_MIDI, WorkflowArtifact.CORRECTED_MIDI, WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS,
+            WorkflowArtifact.TRANSPOSED_MIDI, WorkflowArtifact.CORRECTED_MIDI, WorkflowArtifact.ENHANCED_MIDI, WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS,
             WorkflowArtifact.COHESION, WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX,
             WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE,
             WorkflowArtifact.COMMERCIAL_EXPORT
@@ -101,13 +104,13 @@ object WorkflowArtifactGraph {
         )
         /** Profile and mood can change MIDI-feel policy, then every artifact derived from that selected input. */
         WorkflowChange.COMPOSITION_PROFILE_OR_MOOD -> setOf(
-            WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.COHESION, WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI,
+            WorkflowArtifact.ENHANCED_MIDI, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.COHESION, WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI,
             WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE,
             WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
         )
         /** Harmony is planner context, never source, extraction, cleanup, or analysis evidence. */
         WorkflowChange.HARMONY -> setOf(
-            WorkflowArtifact.CORRECTED_MIDI, WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.COHESION,
+            WorkflowArtifact.CORRECTED_MIDI, WorkflowArtifact.ENHANCED_MIDI, WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.COHESION,
             WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
             WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
             WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
@@ -156,6 +159,34 @@ object TechnicalCorrectionArtifactPaths {
     fun output(partId: String, inputSha256: String): String = "${directory(partId, inputSha256)}/corrected.mid"
     fun report(partId: String, inputSha256: String): String = "${directory(partId, inputSha256)}/report.json"
     fun plan(partId: String, inputSha256: String): String = "${directory(partId, inputSha256)}/plan.json"
+}
+
+/** Immutable, context-hash-bound locations for a bounded enhancement run. */
+object EnhancementArtifactPaths {
+    private fun directory(partId: String, contextSha256: String): String {
+        require(SHA_256.matches(contextSha256)) { "Enhancement context fingerprint is invalid" }
+        return "midi/enhancement/${safeId(partId, "enhancement part")}/$contextSha256"
+    }
+    fun output(partId: String, contextSha256: String): String = "${directory(partId, contextSha256)}/enhanced.mid"
+    fun report(partId: String, contextSha256: String): String = "${directory(partId, contextSha256)}/report.json"
+}
+
+/** A completed enhancement is valid only for the exact corrected artifact and context. */
+@Serializable
+data class EnhancementReferences(
+    val intensity: EnhancementIntensity,
+    val input: WorkflowArtifactReference,
+    val output: WorkflowArtifactReference,
+    val report: WorkflowArtifactReference,
+    val contextSha256: String
+) {
+    init { require(SHA_256.matches(contextSha256)) { "Enhancement context fingerprint is invalid" } }
+    fun requireCanonical(partId: String) {
+        require(intensity != EnhancementIntensity.OFF) { "Off enhancement has no derived artifact" }
+        require(output.file == EnhancementArtifactPaths.output(partId, contextSha256) && report.file == EnhancementArtifactPaths.report(partId, contextSha256)) {
+            "Enhancement artifact paths are not canonical"
+        }
+    }
 }
 
 @Serializable

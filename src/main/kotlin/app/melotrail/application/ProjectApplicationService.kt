@@ -72,6 +72,7 @@ import app.melotrail.profile.CompositionProfileCatalog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -117,6 +118,8 @@ interface ProjectApplicationService {
     suspend fun transposePart(request: TransposePartRequest): ProjectSnapshot =
         throw UnsupportedOperationException("This project service does not support project-key transposition.")
     fun selectMidiFeel(request: SelectMidiFeelRequest): ProjectSnapshot
+    fun selectEnhancement(request: SelectEnhancementRequest): ProjectSnapshot =
+        throw UnsupportedOperationException("This project service does not support enhancement.")
     suspend fun inspectPart(request: InspectPartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
     suspend fun transcribeAudioPart(request: TranscribeAudioPartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot =
         throw UnsupportedOperationException("This project service does not support audio transcription.")
@@ -186,6 +189,7 @@ data class TransposePartRequest(val root: Path, val partId: String)
 
 /** Fixed named profile only. This is deliberately not a tempo/swing control surface. */
 data class SelectMidiFeelRequest(val root: Path, val partId: String, val input: MidiAnalysisInput)
+data class SelectEnhancementRequest(val root: Path, val partId: String, val intensity: app.melotrail.arrangement.EnhancementIntensity = app.melotrail.arrangement.EnhancementIntensity.SUBTLE, val seed: Long = 0L)
 
 data class AnalyzePartRequest(val root: Path, val partId: String)
 data class InspectPartRequest(val root: Path, val partId: String)
@@ -290,6 +294,7 @@ data class PartPreparationSummary(
     val warnings: List<String>,
     val midiQuality: MidiQualitySummary = MidiQualitySummary.legacyUnknown(),
     val technicalCorrection: TechnicalCorrectionSummary = TechnicalCorrectionSummary(),
+    val enhancement: EnhancementSummary = EnhancementSummary(),
     val midiFeel: MidiFeelSummary = MidiFeelSummary(),
     val midiAiFix: MidiAiFixSummary = MidiAiFixSummary(),
     val transposedMidi: Boolean = false
@@ -312,6 +317,16 @@ data class TechnicalCorrectionSummary(
     val approvalRequired: Boolean = false
 ) {
     val selectedAvailable: Boolean get() = selected == app.melotrail.arrangement.TechnicalCorrectionSelection.BASE || (available && !approvalRequired)
+}
+
+/** Honest task-018 DTO: current selection and capability, never a quality claim. */
+data class EnhancementSummary(
+    val intensity: app.melotrail.arrangement.EnhancementIntensity = app.melotrail.arrangement.EnhancementIntensity.OFF,
+    val selected: app.melotrail.arrangement.EnhancementSelection = app.melotrail.arrangement.EnhancementSelection.CORRECTED,
+    val available: Boolean = false,
+    val capabilityLabel: String = "MVP placeholder — no musical edits"
+) {
+    val selectedAvailable: Boolean get() = selected == app.melotrail.arrangement.EnhancementSelection.CORRECTED || available
 }
 
 data class MidiFeelSummary(
@@ -397,7 +412,7 @@ class DefaultProjectApplicationService(
             ))
     },
     private val transcriptionQualityGate: TranscriptionQualityGateService? = null,
-    compositionProfiles: CompositionProfileCatalog = BundledCompositionProfileCatalog.load(),
+    private val compositionProfiles: CompositionProfileCatalog = BundledCompositionProfileCatalog.load(),
     private val stageRunRecovery: ProjectOpenStageRunRecovery = StageRunner(StageProcessorRegistry(emptyList())),
     private val automaticImportRunner: StageRunner? = null
 ) : ProjectApplicationService {
@@ -846,6 +861,55 @@ class DefaultProjectApplicationService(
         snapshot(root, updated)
     }
 
+    /** Bounded Task 018 enhancement: Off never calls a planner/processor; the MVP other modes are explicitly no-op. */
+    override fun selectEnhancement(request: SelectEnhancementRequest): ProjectSnapshot = mutate(request.root) { root ->
+        val project = readValidProject(root)
+        val part = project.parts.singleOrNull { it.id == request.partId } ?: throw IllegalArgumentException("Part not found: ${request.partId}")
+        val midi = requireNotNull(part.midi) { "Part '${part.id}' has no MIDI." }
+        require(midi.technicalCorrectionSelection == app.melotrail.arrangement.TechnicalCorrectionSelection.CORRECTED) {
+            "Select the corrected MIDI baseline before enhancement."
+        }
+        val correction = requireNotNull(midi.technicalCorrection) { "Part '${part.id}' has no corrected MIDI evidence." }
+        correction.requireCanonical(part.id)
+        val corrected = safeDestination(root, correction.output.file)
+        require(sha256(corrected) == correction.output.sha256) { "Corrected MIDI is stale; recreate correction before enhancement." }
+        if (request.intensity == app.melotrail.arrangement.EnhancementIntensity.OFF) {
+            if (midi.enhancementSelection == app.melotrail.arrangement.EnhancementSelection.CORRECTED && midi.analysisInput == MidiAnalysisInput.CURRENT) return@mutate snapshot(root, project)
+            val updated = project.copy(parts = project.parts.map {
+                if (it.id == part.id) it.copy(analysis = null, midi = midi.copy(enhancementSelection = app.melotrail.arrangement.EnhancementSelection.CORRECTED, analysisInput = MidiAnalysisInput.CURRENT)) else it
+            }, workflow = project.workflow.invalidate(WorkflowChange.ENHANCEMENT_SELECTION))
+            ProjectStore.write(root, updated)
+            return@mutate snapshot(root, updated)
+        }
+        val context = app.melotrail.arrangement.MusicalProcessingContextFactory.build(project, part.id, corrected, request.intensity, request.seed, profiles = compositionProfiles)
+        val destination = root.resolve(app.melotrail.arrangement.EnhancementArtifactPaths.output(part.id, context.contextSha256))
+        val reportPath = root.resolve(app.melotrail.arrangement.EnhancementArtifactPaths.report(part.id, context.contextSha256))
+        val existing = midi.enhancement?.takeIf { refs ->
+            refs.intensity == request.intensity && refs.contextSha256 == context.contextSha256 && refs.input == correction.output &&
+                runCatching { sha256(safeDestination(root, refs.output.file)) == refs.output.sha256 && sha256(safeDestination(root, refs.report.file)) == refs.report.sha256 }.getOrDefault(false)
+        }
+        val references = existing ?: run {
+            val outputTemp = destination.resolveSibling(".${destination.fileName}.tmp")
+            val reportTemp = reportPath.resolveSibling(".${reportPath.fileName}.tmp")
+            try {
+                val processor = app.melotrail.arrangement.TransparentNoOpEnhancementProcessor()
+                val report = app.melotrail.arrangement.EnhancementExecutionService(processor, processor).enhance(corrected, outputTemp, context)
+                Files.createDirectories(requireNotNull(reportTemp.parent))
+                Files.writeString(reportTemp, kotlinx.serialization.json.Json { encodeDefaults = true }.encodeToString(app.melotrail.arrangement.EnhancementEditReport.serializer(), report))
+                atomicReplace(outputTemp, destination, "enhanced MIDI")
+                atomicReplace(reportTemp, reportPath, "enhancement report")
+                app.melotrail.arrangement.EnhancementReferences(request.intensity, correction.output,
+                    app.melotrail.arrangement.WorkflowArtifactReference(root.relativize(destination).toString().replace('\\', '/'), sha256(destination)),
+                    app.melotrail.arrangement.WorkflowArtifactReference(root.relativize(reportPath).toString().replace('\\', '/'), sha256(reportPath)), context.contextSha256)
+            } finally { Files.deleteIfExists(outputTemp); Files.deleteIfExists(reportTemp) }
+        }
+        val updated = project.copy(parts = project.parts.map {
+            if (it.id == part.id) it.copy(analysis = null, midi = midi.copy(enhancementSelection = app.melotrail.arrangement.EnhancementSelection.ENHANCED, enhancement = references, analysisInput = MidiAnalysisInput.CURRENT)) else it
+        }, workflow = project.workflow.invalidate(WorkflowChange.ENHANCEMENT_SELECTION).markCurrent(WorkflowArtifact.ENHANCED_MIDI))
+        ProjectStore.write(root, updated)
+        snapshot(root, updated)
+    }
+
     override suspend fun analyzePart(request: AnalyzePartRequest, progress: ProgressSink): ProjectSnapshot = mutateSuspend(request.root) { root ->
         val project = readValidProject(root)
         val part = project.parts.find { it.id == request.partId } ?: throw IllegalArgumentException("Part not found: ${request.partId}")
@@ -1137,6 +1201,7 @@ class DefaultProjectApplicationService(
         }.getOrDefault(false)
         val quality = midiQuality(root, this, cleanMidi)
         val correction = technicalCorrection(root, this)
+        val enhancement = enhancement(root, this)
         val analyzed = analysisCurrent && (analysis?.let { runCatching { it.summary(root) }.isSuccess } ?: false)
         val preparedAudio = sourceType == PartSourceType.AUDIO && inspected &&
             report?.preparation == PreparationStatus.CLEANED && isWaveArtifact(InputInspectionPaths.cleanWav(root, id))
@@ -1152,10 +1217,11 @@ class DefaultProjectApplicationService(
             transposedMidi = transposedMidi,
             analyzed = analyzed,
             ready = sourcePreserved && inspected && cleanMidi && transposedMidi && analyzed && quality.status == MidiQualityStatus.CURRENT &&
-                correction.selectedAvailable && aiFix.selectedAvailable && feelSelectedAvailable,
+                correction.selectedAvailable && enhancement.selectedAvailable && aiFix.selectedAvailable && feelSelectedAvailable,
             warnings = safeWarnings + quality.warnings.map { it.message },
             midiQuality = quality,
             technicalCorrection = correction,
+            enhancement = enhancement,
             midiFeel = feel,
             midiAiFix = aiFix
         )
@@ -1238,6 +1304,18 @@ class DefaultProjectApplicationService(
             )
         }.getOrNull() else null
         return TechnicalCorrectionSummary(midi.technicalCorrectionSelection, available, report?.warnings.orEmpty(), report?.approvalRequired == true)
+    }
+
+    private fun enhancement(root: Path, part: SongPart): EnhancementSummary {
+        val midi = part.midi ?: return EnhancementSummary()
+        val refs = midi.enhancement ?: return EnhancementSummary(selected = midi.enhancementSelection)
+        val available = runCatching {
+            refs.requireCanonical(part.id)
+            sha256(safeDestination(root, refs.input.file)) == refs.input.sha256 &&
+                sha256(safeDestination(root, refs.output.file)) == refs.output.sha256 &&
+                sha256(safeDestination(root, refs.report.file)) == refs.report.sha256
+        }.getOrDefault(false)
+        return EnhancementSummary(refs.intensity, midi.enhancementSelection, available)
     }
 
     private fun midiFeel(root: Path, part: SongPart, cleanMidi: Boolean, workflowCurrent: Boolean, aiFix: MidiAiFixSummary): MidiFeelSummary {

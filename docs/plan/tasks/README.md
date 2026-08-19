@@ -31,7 +31,7 @@ schema window actively requires it and must have a named removal condition.
 | 015 | [Deterministic MIDI normalization](completed/015-midi-normalization.md) | MVP |
 | 016 | [Project-key transposition](completed/016-project-key-transposition.md) | MVP |
 | 017 | [Technical correction stage](completed/017-technical-correction.md) | MVP |
-| 018 | [Enhancement context and intensity contracts](018-enhancement-contracts.md) | MVP |
+| 018 | [Enhancement context and intensity contracts](completed/018-enhancement-contracts.md) | MVP |
 | 019 | [Context-aware AI enhancement adapter](019-ai-enhancement-adapter.md) | Later |
 | 020 | [Artifact comparison, bypass, and retry UX](020-artifact-comparison-ui.md) | MVP |
 | 021 | [Persistent structure occurrence identity](021-structure-occurrences.md) | MVP |

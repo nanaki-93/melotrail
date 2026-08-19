@@ -337,6 +337,7 @@ sealed interface WorkspaceOperation {
     data class ApplyingAudioCleanup(val id: String) : WorkspaceOperation
     data class CleaningMidi(val id: String, val progress: OperationProgress? = null) : WorkspaceOperation
     data class SelectingMidiFeel(val id: String) : WorkspaceOperation
+    data class SelectingEnhancement(val id: String) : WorkspaceOperation
     data class CreatingMidiAiFix(val id: String, val progress: OperationProgress? = null) : WorkspaceOperation
     data class ApprovingMidiAiFix(val id: String) : WorkspaceOperation
     data class TranscribingPart(val id: String) : WorkspaceOperation
@@ -362,6 +363,7 @@ val WorkspaceOperation.isMutating: Boolean
         this is WorkspaceOperation.InspectingPart || this is WorkspaceOperation.ApplyingAudioCleanup || this is WorkspaceOperation.TranscribingPart ||
         this is WorkspaceOperation.CleaningMidi ||
         this is WorkspaceOperation.SelectingMidiFeel ||
+        this is WorkspaceOperation.SelectingEnhancement ||
         this is WorkspaceOperation.CreatingMidiAiFix || this is WorkspaceOperation.ApprovingMidiAiFix ||
         this is WorkspaceOperation.UpdatingPartRole || this is WorkspaceOperation.SavingStructure ||
         this is WorkspaceOperation.GeneratingCohesion || this is WorkspaceOperation.ReviewingCohesion || this is WorkspaceOperation.ApprovingCohesion ||
@@ -569,6 +571,7 @@ sealed interface WorkspaceIntent {
     data object ReturnToCleanedMidi : WorkspaceIntent
     data object RegenerateMidiAiFix : WorkspaceIntent
     data class SelectMidiFeel(val input: MidiAnalysisInput) : WorkspaceIntent
+    data class SelectEnhancement(val intensity: app.melotrail.arrangement.EnhancementIntensity) : WorkspaceIntent
     data object ApplyMidiFeelAndReanalyze : WorkspaceIntent
     data object ConfirmTightenTiming : WorkspaceIntent
     data class SelectTranscriptionInput(val input: TranscriptionInputArtifact) : WorkspaceIntent
@@ -748,6 +751,7 @@ class WorkspaceViewModel(
             WorkspaceIntent.ReturnToCleanedMidi -> returnToCleanedMidi()
             WorkspaceIntent.RegenerateMidiAiFix -> regenerateMidiAiFix()
             is WorkspaceIntent.SelectMidiFeel -> selectMidiFeel(intent.input)
+            is WorkspaceIntent.SelectEnhancement -> selectEnhancement(intent.intensity)
             WorkspaceIntent.ApplyMidiFeelAndReanalyze -> applyMidiFeelAndReanalyze()
             WorkspaceIntent.ConfirmTightenTiming -> confirmTightenTiming()
             is WorkspaceIntent.SelectTranscriptionInput -> mutableState.update { it.copy(audioPreparation = it.audioPreparation.copy(transcriptionInput = intent.input)) }
@@ -1659,6 +1663,23 @@ class WorkspaceViewModel(
                     mutableState.update { current -> current.copy(project = snapshot, pendingMidiFeel = null, arrangement = null, operation = WorkspaceOperation.Idle, notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message) ?: current.operationFeedback, downstreamArtifactsStale = true) }
                 }
                 .onFailure { fail("Lo-fi MIDI Feel", it.message ?: "Unable to apply MIDI feel for $partId.", WorkspaceRetry.ApplyMidiFeel(project.root, partId, input), feedbackId) }
+        }
+    }
+
+    private fun selectEnhancement(intensity: app.melotrail.arrangement.EnhancementIntensity) {
+        val project = state.value.project ?: return fail("Enhancement", "Open a project before choosing enhancement.")
+        val partId = state.value.selectedPartId ?: return fail("Enhancement", "Select a corrected MIDI part first.")
+        if (state.value.operation.isMutating) return
+        mutableState.update { it.copy(operation = WorkspaceOperation.SelectingEnhancement(partId), notification = null, retry = null) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) {
+                projectService.selectEnhancement(app.melotrail.application.SelectEnhancementRequest(project.root, partId, intensity))
+                projectService.analyzePart(AnalyzePartRequest(project.root, partId))
+            } }.onSuccess { snapshot ->
+                val label = intensity.name.lowercase().replaceFirstChar(Char::uppercase)
+                val message = if (intensity == app.melotrail.arrangement.EnhancementIntensity.OFF) "Corrected MIDI selected; previous enhancement evidence was retained." else "$label enhancement selected. MVP placeholder applied no musical edits."
+                mutableState.update { current -> current.copy(project = snapshot, arrangement = null, operation = WorkspaceOperation.Idle, notification = message, downstreamArtifactsStale = true) }
+            }.onFailure { fail("Enhancement", it.message ?: "Unable to select enhancement for $partId.") }
         }
     }
 
