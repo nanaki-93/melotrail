@@ -46,6 +46,15 @@ class StemRenderingMixer(
         val active = LogicalInstrument.entries.filter { it in activeNames }
         require(active.isNotEmpty()) { "Detailed arrangement has no active instruments" }
         require(LogicalInstrument.PIANO in active) { "Detailed arrangement must retain the source piano" }
+        val registry = InstrumentRegistryLoader(libraryRoot).load()
+        val reportPath = root.resolve(REPORT_FILE)
+        val existingReport = readReport(reportPath)
+        existingReport?.takeIf { it.version >= 2 }?.let { previous ->
+            require(previous.registrySha256 == registry.registrySha256 && previous.registryVersion == registry.version) {
+                "The validated instrument registry changed after Render. Restore the approved registry or explicitly choose and approve replacement instruments before rendering."
+            }
+        }
+        val bindings = approvedBindings(project, active, registry)
 
         val requiredInputs = active.filter { it != LogicalInstrument.PIANO }.associateWith { instrument ->
             humanizedInput(root, project, instrument.wireName, root.resolve("midi/generated/${instrument.wireName}.mid"))
@@ -60,9 +69,9 @@ class StemRenderingMixer(
             "Transition insertions are planned but transition MIDI is missing: $transitions"
         }
 
-        val fingerprint = fingerprint(root, project, arrangement, analyses, occurrenceMidi, requiredInputs.values.toList(), transitions.takeIf(Files::isRegularFile))
-        val reportPath = root.resolve(REPORT_FILE)
-        readReport(reportPath)?.takeIf { it.inputFingerprint == fingerprint && it.timelineFrames == timeline.frames(format.sampleRate) }
+        val fingerprint = fingerprint(root, project, arrangement, analyses, occurrenceMidi, requiredInputs.values.toList(), transitions.takeIf(Files::isRegularFile), bindings, registry)
+        existingReport?.let { existing -> assertApprovedLibraryIsUnchanged(existing, bindings, registry) }
+        existingReport?.takeIf { it.inputFingerprint == fingerprint && it.timelineFrames == timeline.frames(format.sampleRate) }
             ?.takeIf { report -> report.stems.all { stem ->
                 val path = root.resolve(stem.path)
                 validWav(path, format, timeline.frames(format.sampleRate)) && digest(Files.readAllBytes(path)) == stem.fingerprint
@@ -73,14 +82,15 @@ class StemRenderingMixer(
         val expectedFrames = timeline.frames(format.sampleRate)
         val stems = mutableListOf<StemArtifact>()
         active.forEach { instrument ->
-            val assembled = assembleMidi(root, occurrenceMidi, instrument, timeline, requiredInputs[instrument], transitions.takeIf(Files::isRegularFile))
+            val binding = bindings.getValue(instrument)
+            val assembled = assembleMidi(root, occurrenceMidi, instrument, binding.stableInstrumentId, timeline, requiredInputs[instrument], transitions.takeIf(Files::isRegularFile))
             val target = root.resolve("stems/${instrument.wireName}.wav")
             val temporary = target.resolveSibling(".${target.fileName}.${UUID.randomUUID()}.rendering.wav")
             try {
-                renderer.render(assembled, instrument, temporary, format, expectedFrames)
+                renderer.render(assembled, binding.stableInstrumentId, temporary, format, expectedFrames)
                 val audio = requireCompatibleStem(temporary, format, expectedFrames, "${instrument.wireName} render")
                 atomicReplace(temporary, target)
-                stems += StemArtifact(instrument.wireName, "stems/${instrument.wireName}.wav", audio.length.toLong(), digest(Files.readAllBytes(target)))
+                stems += StemArtifact(instrument.wireName, "stems/${instrument.wireName}.wav", audio.length.toLong(), digest(Files.readAllBytes(target)), binding.stableInstrumentId)
             } finally {
                 Files.deleteIfExists(assembled)
                 Files.deleteIfExists(temporary)
@@ -114,7 +124,15 @@ class StemRenderingMixer(
             },
             cohesionBridgeHashes = arrangement.cohesion?.boundaries.orEmpty().associate { boundary ->
                 "${boundary.outgoingInstanceId}--${boundary.incomingInstanceId}" to boundary.bridgeSha256
-            }
+            },
+            arrangementSha256 = digest(json.encodeToString(DetailedArrangement.serializer(), arrangement).toByteArray(StandardCharsets.UTF_8)),
+            cohesionSha256 = project.workflow.cohesion?.inputSha256,
+            humanizationSelection = project.workflow.humanizationSelection,
+            humanizationSha256 = project.workflow.humanization?.inputsSha256,
+            humanizationOutputSha256 = project.workflow.humanization?.artifacts?.map { it.output.sha256 }?.sorted().orEmpty(),
+            registrySha256 = registry.registrySha256,
+            registryVersion = registry.version,
+            instruments = bindings.values.sortedBy { it.role }.map(RenderInstrumentBinding::manifest)
         )
         writeReport(reportPath, report)
         return StemRenderResult(report, reused = false)
@@ -151,7 +169,7 @@ class StemRenderingMixer(
         return output
     }
 
-    private fun assembleMidi(root: Path, occurrenceMidi: Map<String, OccurrenceMidiArtifact>, instrument: LogicalInstrument, timeline: Timeline, generated: Path?, transitions: Path?): Path {
+    private fun assembleMidi(root: Path, occurrenceMidi: Map<String, OccurrenceMidiArtifact>, instrument: LogicalInstrument, stableInstrumentId: String, timeline: Timeline, generated: Path?, transitions: Path?): Path {
         val output = root.resolve("midi/render-input/.${instrument.wireName}-${UUID.randomUUID()}.mid")
         Files.createDirectories(requireNotNull(output.parent))
         val sequence = Sequence(Sequence.PPQ, timeline.ppq)
@@ -166,7 +184,7 @@ class StemRenderingMixer(
             }
         } else {
             copyGeneratedEvents(MidiSystem.getSequence(checkNotNull(generated).toFile()), sequence, timeline)
-            transitions?.let { copyTransitionEvents(MidiSystem.getSequence(it.toFile()), sequence, instrument) }
+            transitions?.let { copyTransitionEvents(MidiSystem.getSequence(it.toFile()), sequence, instrument, stableInstrumentId) }
         }
         meta.add(MidiEvent(MetaMessage(0x2F, byteArrayOf(), 0), timeline.endTick))
         require(MidiSystem.write(sequence, 1, output.toFile()) > 0) { "Could not assemble ${instrument.wireName} timeline MIDI" }
@@ -194,8 +212,8 @@ class StemRenderingMixer(
         }
     }
 
-    private fun copyTransitionEvents(source: Sequence, destination: Sequence, instrument: LogicalInstrument) {
-        val descriptor = InstrumentRegistryLoader(libraryRoot).load().resolve(instrument.wireName)
+    private fun copyTransitionEvents(source: Sequence, destination: Sequence, instrument: LogicalInstrument, stableInstrumentId: String) {
+        val descriptor = InstrumentRegistryLoader(libraryRoot).load().resolve(stableInstrumentId)
         source.tracks.drop(1).filter { track -> belongsTo(track, instrument, descriptor) }.forEach { sourceTrack ->
             val target = destination.createTrack()
             (0 until sourceTrack.size()).map(sourceTrack::get)
@@ -225,7 +243,117 @@ class StemRenderingMixer(
 
     private fun validWav(path: Path, format: RenderFormat, frames: Long): Boolean = runCatching { requireCompatibleStem(path, format, frames, path.fileName.toString()) }.isSuccess
 
-    private fun fingerprint(root: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>, occurrenceMidi: Map<String, OccurrenceMidiArtifact>, generated: List<Path>, transitions: Path?): String = digest(buildString {
+    /**
+     * A v2 catalog must be replayed from the approved assignment evidence.  The
+     * legacy v1 pack has one stable ID per logical role, so its aliases are the
+     * explicit compatibility assignment rather than a new resolver decision.
+     */
+    private fun approvedBindings(
+        project: Project,
+        active: List<LogicalInstrument>,
+        registry: ValidatedInstrumentRegistry
+    ): Map<LogicalInstrument, RenderInstrumentBinding> {
+        if (registry.version == 1) return active.associateWith { logical ->
+            binding(logical, registry.resolve(logical.wireName), setOf(registry.registrySha256), legacyAlias = true)
+        }
+
+        val assignments = project.envelope.arrangementAssignments
+        require(assignments.isNotEmpty()) {
+            "Render requires approved stable instrument assignments for this v2 library. Choose instruments in Arrange, approve the arrangement, then render again."
+        }
+        return active.associateWith { logical ->
+            val role = LegacyLogicalInstrumentRoles.roleFor(logical.wireName)
+            val candidates = assignments.map { assignment -> assignment to registry.resolve(assignment.instrumentId) }
+                .filter { (_, descriptor) -> role in descriptor.roles }
+            require(candidates.isNotEmpty()) {
+                "Render has no approved stable instrument assignment for role '${logical.wireName}'. Choose one in Arrange and approve the arrangement."
+            }
+            val stableIds = candidates.map { it.second.id }.distinct()
+            require(stableIds.size == 1) {
+                "Render supports one approved stable instrument per role stem; '${logical.wireName}' has ${stableIds.joinToString()}. Choose one approved instrument and regenerate the arrangement."
+            }
+            val descriptor = candidates.first().second
+            require(descriptor.licenseAdmission.admission == LicenseAdmission.ADMITTED) {
+                "Approved instrument '${descriptor.id}' is unavailable: ${descriptor.licenseAdmission.reasons.joinToString("; ")}. Choose a permitted replacement in Arrange and approve it."
+            }
+            candidates.forEach { (assignment, actual) ->
+                require(assignment.libraryProvenance == libraryProvenance(actual)) {
+                    "Approved instrument '${actual.id}' no longer matches its library/license snapshot. Restore the approved library or explicitly choose and approve a replacement."
+                }
+            }
+            binding(logical, descriptor, candidates.map { it.first.decisionSha256 }.toSet(), legacyAlias = false)
+        }
+    }
+
+    private fun binding(logical: LogicalInstrument, descriptor: ValidatedInstrumentDescriptor, decisions: Set<String>, legacyAlias: Boolean): RenderInstrumentBinding {
+        require(legacyAlias || descriptor.licenseAdmission.admission == LicenseAdmission.ADMITTED) {
+            "Instrument '${descriptor.id}' is unavailable: ${descriptor.licenseAdmission.reasons.joinToString("; ")}. Restore its verified assets or choose an approved replacement."
+        }
+        val assets = (listOf("sfz" to descriptor.sfzPath) + descriptor.samplePaths.distinct().map { "sample" to it })
+            .map { (kind, path) ->
+                require(Files.isRegularFile(path)) { "Approved instrument '${descriptor.id}' has a missing $kind asset. Restore the approved library or choose and approve a replacement." }
+                RenderAssetSnapshot(kind, digest(Files.readAllBytes(path)))
+            }
+            .sortedWith(compareBy(RenderAssetSnapshot::kind, RenderAssetSnapshot::sha256))
+        return RenderInstrumentBinding(
+            role = logical.wireName,
+            stableInstrumentId = descriptor.id,
+            decisionSha256 = decisions,
+            legacyAlias = legacyAlias,
+            assetSha256 = assets.map(RenderAssetSnapshot::sha256),
+            manifest = RenderInstrumentManifest(
+                role = logical.wireName,
+                stableInstrumentId = descriptor.id,
+                decisionSha256 = decisions.sorted(),
+                legacyAlias = legacyAlias,
+                assets = assets,
+                verifiedCapabilities = RenderCapabilitySnapshot(
+                    playableRangeLow = descriptor.verifiedCapabilities.playableRange.low,
+                    playableRangeHigh = descriptor.verifiedCapabilities.playableRange.high,
+                    velocityLayers = descriptor.verifiedCapabilities.velocityLayers,
+                    roundRobin = descriptor.verifiedCapabilities.roundRobin,
+                    releaseSamples = descriptor.verifiedCapabilities.releaseSamples,
+                    performance = descriptor.verifiedCapabilities.performance.sortedBy { it.name }
+                ),
+                license = RenderLicenseSnapshot(
+                    displayName = descriptor.license.displayName,
+                    source = descriptor.license.source,
+                    provenance = descriptor.license.provenance,
+                    license = descriptor.license.license,
+                    commercialUse = descriptor.license.commercialUse,
+                    attributionRequired = descriptor.license.attributionRequired,
+                    attributionText = descriptor.license.attributionText,
+                    redistribution = descriptor.license.redistribution
+                ),
+                sourceLibrary = descriptor.sourceLibrary
+            )
+        )
+    }
+
+    private fun libraryProvenance(descriptor: ValidatedInstrumentDescriptor): LibraryProvenanceSnapshot = LibraryProvenanceSnapshot(
+        libraryId = descriptor.sourceLibrary.id,
+        licenseSha256 = digest(listOf(
+            descriptor.license.displayName, descriptor.license.source, descriptor.license.provenance, descriptor.license.license,
+            descriptor.license.commercialUse, descriptor.license.attributionRequired, descriptor.license.attributionText.orEmpty(), descriptor.license.redistribution
+        ).joinToString("|").toByteArray(StandardCharsets.UTF_8)),
+        provenanceSha256 = digest(listOf(
+            descriptor.sourceLibrary.id, descriptor.sourceLibrary.name, descriptor.sourceLibrary.version, descriptor.sourceLibrary.source
+        ).joinToString("|").toByteArray(StandardCharsets.UTF_8))
+    )
+
+    /** A published v2 manifest freezes the exact catalog/asset handoff until an explicit re-approval changes it. */
+    private fun assertApprovedLibraryIsUnchanged(existing: StemRenderReport, bindings: Map<LogicalInstrument, RenderInstrumentBinding>, registry: ValidatedInstrumentRegistry) {
+        if (existing.version < 2) return
+        require(existing.registrySha256 == registry.registrySha256 && existing.registryVersion == registry.version) {
+            "The validated instrument registry changed after Render. Restore the approved registry or explicitly choose and approve replacement instruments before rendering."
+        }
+        val current = bindings.values.map(RenderInstrumentBinding::manifest).sortedBy(RenderInstrumentManifest::role)
+        require(existing.instruments == current) {
+            "Approved instrument assets, capabilities, or license evidence changed after Render. Restore the approved library or explicitly choose and approve replacements before rendering."
+        }
+    }
+
+    private fun fingerprint(root: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>, occurrenceMidi: Map<String, OccurrenceMidiArtifact>, generated: List<Path>, transitions: Path?, bindings: Map<LogicalInstrument, RenderInstrumentBinding>, registry: ValidatedInstrumentRegistry): String = digest(buildString {
         append(project.version).append('|').append(project.renderFormat).append('|').append(arrangement).append('|')
         project.parts.sortedBy(SongPart::id).forEach { part ->
             append("source:").append(part.id).append(':').append(digest(Files.readAllBytes(root.resolve(part.file)))).append('|')
@@ -245,8 +373,12 @@ class StemRenderingMixer(
         analyses.toSortedMap().forEach { (id, analysis) -> append(id).append(':').append(analysis.durationTicks).append(':').append(analysis.durationSeconds).append(':').append(analysis.tempoMap).append('|') }
         generated.sorted().forEach { append(it.fileName).append(':').append(digest(Files.readAllBytes(it))).append('|') }
         transitions?.let { append("transitions:").append(digest(Files.readAllBytes(it))).append('|') }
-        val registry = libraryRoot.resolve("instruments.json")
-        append("registry:").append(digest(Files.readAllBytes(registry))).append('|')
+        append("registry:").append(registry.registrySha256).append('|')
+        bindings.values.sortedBy { it.role }.forEach { binding ->
+            append("instrument:").append(binding.role).append(':').append(binding.stableInstrumentId).append(':')
+                .append(binding.decisionSha256.sorted().joinToString(",")).append(':')
+                .append(binding.assetSha256.sorted().joinToString(",")).append('|')
+        }
         append("renderer:").append(renderer.javaClass.name).append(':').append(System.getenv("SFZ_RENDERER_PATH").orEmpty()).append(':').append(System.getenv("SFZ_RENDERER_VERSION").orEmpty())
     }.toByteArray(StandardCharsets.UTF_8))
 
@@ -273,6 +405,15 @@ class StemRenderingMixer(
         val json = Json { prettyPrint = true; encodeDefaults = true; ignoreUnknownKeys = false }
     }
 }
+
+private data class RenderInstrumentBinding(
+    val role: String,
+    val stableInstrumentId: String,
+    val decisionSha256: Set<String>,
+    val legacyAlias: Boolean,
+    val assetSha256: List<String>,
+    val manifest: RenderInstrumentManifest
+)
 
 private data class TimelineSegment(val occurrenceId: String, val partId: String, val analysis: MidiAnalysis, val originalStartTick: Long, val timelineStartTick: Long, val insertedTicksAfter: Long) {
     val originalEndTick get() = originalStartTick + analysis.durationTicks
@@ -351,13 +492,84 @@ private data class Timeline(val ppq: Int, val segments: List<TimelineSegment>) {
     }
 }
 
-@Serializable data class StemArtifact(val name: String, val path: String, val frames: Long, val fingerprint: String)
+@Serializable data class StemArtifact(val name: String, val path: String, val frames: Long, val fingerprint: String, val stableInstrumentId: String = "")
+@Serializable data class RenderAssetSnapshot(val kind: String, val sha256: String) {
+    init {
+        require(kind in setOf("sfz", "sample") && RENDER_SHA256.matches(sha256)) { "Render asset snapshot is invalid" }
+    }
+}
+@Serializable data class RenderCapabilitySnapshot(
+    val playableRangeLow: Int,
+    val playableRangeHigh: Int,
+    val velocityLayers: Int,
+    val roundRobin: Boolean,
+    val releaseSamples: Boolean,
+    val performance: List<PerformanceCapability>
+) {
+    init {
+        require(playableRangeLow in 0..127 && playableRangeHigh in playableRangeLow..127 && velocityLayers in 0..127) {
+            "Render capability snapshot is invalid"
+        }
+        require(performance.distinct().size == performance.size) { "Render capability snapshot repeats a capability" }
+    }
+}
+@Serializable data class RenderLicenseSnapshot(
+    val displayName: String,
+    val source: String,
+    val provenance: String,
+    val license: String,
+    val commercialUse: Boolean,
+    val attributionRequired: Boolean,
+    val attributionText: String? = null,
+    val redistribution: String
+) {
+    init {
+        require(displayName.isNotBlank() && source.isNotBlank() && provenance.isNotBlank() && license.isNotBlank() && redistribution.isNotBlank()) {
+            "Render license snapshot is incomplete"
+        }
+        require(!attributionRequired || !attributionText.isNullOrBlank()) { "Render attribution snapshot is incomplete" }
+    }
+}
+/** Immutable render handoff: values are snapshots, never mutable local paths. */
+@Serializable data class RenderInstrumentManifest(
+    val role: String,
+    val stableInstrumentId: String,
+    val decisionSha256: List<String>,
+    val legacyAlias: Boolean,
+    val assets: List<RenderAssetSnapshot>,
+    val verifiedCapabilities: RenderCapabilitySnapshot,
+    val license: RenderLicenseSnapshot,
+    val sourceLibrary: SourceLibraryProvenance
+) {
+    init {
+        require(role in LogicalInstrument.entries.map(LogicalInstrument::wireName) && RENDER_STABLE_ID.matches(stableInstrumentId)) {
+            "Render instrument identity is invalid"
+        }
+        require(decisionSha256.isNotEmpty() && decisionSha256 == decisionSha256.sorted() && decisionSha256.distinct().size == decisionSha256.size && decisionSha256.all(RENDER_SHA256::matches)) {
+            "Render instrument decision snapshots are invalid"
+        }
+        require(assets.isNotEmpty() && assets == assets.sortedWith(compareBy(RenderAssetSnapshot::kind, RenderAssetSnapshot::sha256))) {
+            "Render instrument assets are invalid"
+        }
+    }
+}
 @Serializable data class StemRenderReport(
-    val version: Int = 1, val inputFingerprint: String, val timelineFrames: Long, val sampleRate: Int, val channels: Int,
+    val version: Int = 2, val inputFingerprint: String, val timelineFrames: Long, val sampleRate: Int, val channels: Int,
     val stems: List<StemArtifact>, val dryMix: String, val dryMixFingerprint: String, val predictedPeak: Float, val appliedGain: Float, val appliedGainDb: Double, val sourceHashes: Map<String, String>,
     /** Exact approved Cohesion decision hashes consumed by this render; empty for legacy arrangements. */
     val cohesionBoundaryHashes: Map<String, String> = emptyMap(),
     /** Exact approved Cohesion bridge-MIDI hashes consumed by this render; empty for legacy arrangements. */
-    val cohesionBridgeHashes: Map<String, String> = emptyMap()
+    val cohesionBridgeHashes: Map<String, String> = emptyMap(),
+    val arrangementSha256: String = "",
+    val cohesionSha256: String? = null,
+    val humanizationSelection: HumanizationSelection = HumanizationSelection.BYPASS,
+    val humanizationSha256: String? = null,
+    val humanizationOutputSha256: List<String> = emptyList(),
+    val registrySha256: String = "",
+    val registryVersion: Int = 0,
+    val instruments: List<RenderInstrumentManifest> = emptyList()
 )
 data class StemRenderResult(val report: StemRenderReport, val reused: Boolean)
+
+private val RENDER_SHA256 = Regex("[0-9a-f]{64}")
+private val RENDER_STABLE_ID = Regex("[a-z][a-z0-9-]{0,47}")

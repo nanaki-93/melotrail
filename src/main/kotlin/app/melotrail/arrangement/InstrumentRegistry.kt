@@ -162,7 +162,14 @@ data class ValidatedInstrumentDescriptor(
     val midiProgram: Int?,
     /** MIDI API channel (zero based); the JSON value is explicitly one based. */
     val midiChannelZeroBased: Int?,
-    val noteMap: Map<String, Int>
+    val noteMap: Map<String, Int>,
+    /** Snapshot-safe source-library identity; never exposes a local library path. */
+    val sourceLibrary: SourceLibraryProvenance = SourceLibraryProvenance(
+        id = "legacy-library",
+        name = "Legacy sound library",
+        version = "v1",
+        source = "legacy registry compatibility"
+    )
 )
 
 class ValidatedInstrumentRegistry internal constructor(
@@ -225,7 +232,13 @@ class InstrumentRegistryLoader(val libraryRoot: Path) {
                 sfzPath = sfz, samplePaths = regions.map { it.sample }, license = license,
                 licenseAdmission = license.admissionResult(),
                 verifiedCapabilities = regions.verifiedCapabilities(entry.noteMap.orEmpty(), logical == LogicalInstrument.DRUMS),
-                midiProgram = entry.midiProgram, midiChannelZeroBased = entry.midiChannel?.minus(1), noteMap = entry.noteMap ?: emptyMap()
+                midiProgram = entry.midiProgram, midiChannelZeroBased = entry.midiChannel?.minus(1), noteMap = entry.noteMap ?: emptyMap(),
+                sourceLibrary = SourceLibraryProvenance(
+                    id = "starter-generated",
+                    name = license.displayName,
+                    version = "registry-v1",
+                    source = license.source
+                )
             )
         }.toMap()
         return ValidatedInstrumentRegistry(descriptors, 1, sha256(registryContents + licensesContents))
@@ -283,7 +296,8 @@ class InstrumentRegistryLoader(val libraryRoot: Path) {
                 profileAffinities = definition.profileAffinities.toSortedMap(), moodAffinities = definition.moodAffinities.toSortedMap(),
                 sectionAffinities = definition.sectionAffinities.toSortedMap(), attackTraits = normalizedTraits.attack,
                 toneTraits = normalizedTraits.tone, articulationTraits = normalizedTraits.articulation,
-                midiProgram = definition.midiProgram, midiChannelZeroBased = definition.midiChannel?.minus(1), noteMap = definition.capabilities.noteMap.toSortedMap()
+                midiProgram = definition.midiProgram, midiChannelZeroBased = definition.midiChannel?.minus(1), noteMap = definition.capabilities.noteMap.toSortedMap(),
+                sourceLibrary = definition.library
             )
         } catch (error: IllegalArgumentException) {
             unavailable(error.message ?: "Instrument '${definition.id}' is invalid")

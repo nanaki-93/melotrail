@@ -43,6 +43,19 @@ interface InstrumentRenderer {
         format: RenderFormat,
         expectedFrames: Long
     ): RenderResult
+
+    /**
+     * Production handoff uses the approved registry stable ID.  Legacy test and
+     * compatibility renderers can support only the five v1 aliases through this
+     * default; they cannot accidentally render an arbitrary v2 catalog entry.
+     */
+    suspend fun render(
+        midi: Path,
+        instrumentId: String,
+        output: Path,
+        format: RenderFormat,
+        expectedFrames: Long
+    ): RenderResult = render(midi, LogicalInstrument.parse(instrumentId), output, format, expectedFrames)
 }
 
 data class RendererProcessResult(
@@ -115,7 +128,7 @@ class SfizzInstrumentRenderer(
     ): RenderResult = render(midi, instrument.wireName, output, format, expectedFrames)
 
     /** Stable-ID renderer entry point used by the catalog path. */
-    suspend fun render(
+    override suspend fun render(
         midi: Path,
         instrumentId: String,
         output: Path,

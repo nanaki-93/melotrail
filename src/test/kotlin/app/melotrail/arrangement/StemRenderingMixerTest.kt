@@ -11,6 +11,10 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.FileVisitResult
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.BasicFileAttributes
 import javax.sound.midi.MidiEvent
 import javax.sound.midi.MidiSystem
 import javax.sound.midi.Sequence
@@ -40,6 +44,10 @@ class StemRenderingMixerTest {
         assertEquals(2, renderer.calls)
         assertEquals(48_000, first.report.timelineFrames) // two 2-second sections plus one 2-second inserted 4/4 bar
         assertEquals(listOf("piano", "bass"), first.report.stems.map { it.name })
+        assertEquals(2, first.report.version)
+        assertEquals(listOf("bass", "piano"), first.report.instruments.map { it.role })
+        assertTrue(first.report.instruments.all { it.legacyAlias && it.stableInstrumentId == it.role && it.assets.isNotEmpty() })
+        assertEquals(first.report.stems.map { it.name }, first.report.stems.map { it.stableInstrumentId })
         listOf("stems/piano.wav", "stems/bass.wav", "mix/dry.wav").forEach { relative ->
             val audio = WAVDecoder(QuietReporter).decode(root.resolve(relative))
             assertEquals(8_000, audio.format.sampleRate)
@@ -94,6 +102,38 @@ class StemRenderingMixerTest {
         assertEquals(90.0, tempos(bass).getValue(3_840L), 0.001)
     }
 
+    @Test
+    fun `v2 render manifest uses approved stable IDs and blocks a changed registry instead of substituting`() = runBlocking {
+        val library = root.resolve("library")
+        copyLibrary(library)
+        writeV2Catalog(library)
+        val project = project().copy(envelope = ProjectV4Envelope(arrangementAssignments = listOf(
+            assignment("A1", "fixture-piano"), assignment("A1", "fixture-bass"),
+            assignment("B1", "fixture-piano"), assignment("B1", "fixture-bass")
+        )))
+        val analyses = mapOf("A" to analysis("A"), "B" to analysis("B"))
+        writeMidi(root.resolve("source/A.mid"), 0, 1_920)
+        writeMidi(root.resolve("source/B.mid"), 0, 1_920)
+        Files.createDirectories(root.resolve("midi/clean"))
+        Files.copy(root.resolve("source/A.mid"), root.resolve("midi/clean/A.mid"))
+        Files.copy(root.resolve("source/B.mid"), root.resolve("midi/clean/B.mid"))
+        writeMidi(root.resolve("midi/generated/bass.mid"), 0, 3_840)
+
+        val renderer = StableIdRenderer()
+        val service = StemRenderingMixer(renderer, library)
+        val first = service.render(root, project, flatArrangement(), analyses)
+
+        assertEquals(listOf("fixture-bass", "fixture-piano"), first.report.instruments.map { it.stableInstrumentId })
+        assertEquals(setOf("fixture-piano", "fixture-bass"), renderer.stableIds.toSet())
+        assertTrue(first.report.instruments.all { !it.legacyAlias && it.decisionSha256.size == 2 })
+
+        Files.writeString(library.resolve("instruments.json"), Files.readString(library.resolve("instruments.json")).replace("Fixture pack", "Changed pack"))
+        val error = org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException::class.java) {
+            runBlocking { service.render(root, project, flatArrangement(), analyses) }
+        }
+        assertTrue(error.message.orEmpty().contains("registry changed"))
+    }
+
     private fun project() = Project(Project.CURRENT_VERSION, "render", listOf(
         Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid")),
         Part("B", "source/B.mid", midi = MidiReferences(clean = "midi/clean/B.mid"))
@@ -103,6 +143,44 @@ class StemRenderingMixerTest {
         DetailedArrangementSection(0, "A1", "A", SongSectionPurpose.DEVELOPMENT, 0.3, listOf(PianoSourcePlan(), BassInstrumentPlan(role = DetailedBassRole.ROOT, density = 0.4, movement = DetailedBassMovement.STATIC, register = MusicalRegister.LOW, syncopation = 0.0)), TransitionPlan(TransitionType.BRIDGE, 1)),
         DetailedArrangementSection(1, "B1", "B", SongSectionPurpose.CLIMAX, 0.7, listOf(PianoSourcePlan(), BassInstrumentPlan(role = DetailedBassRole.ROOT, density = 0.6, movement = DetailedBassMovement.ROOT_MOTION, register = MusicalRegister.LOW, syncopation = 0.0)), TransitionPlan())
     ))
+
+    private fun flatArrangement() = DetailedArrangement(sections = listOf(
+        DetailedArrangementSection(0, "A1", "A", SongSectionPurpose.DEVELOPMENT, 0.3, listOf(PianoSourcePlan(), BassInstrumentPlan(role = DetailedBassRole.ROOT, density = 0.4, movement = DetailedBassMovement.STATIC, register = MusicalRegister.LOW, syncopation = 0.0)), TransitionPlan()),
+        DetailedArrangementSection(1, "B1", "B", SongSectionPurpose.CLIMAX, 0.7, listOf(PianoSourcePlan(), BassInstrumentPlan(role = DetailedBassRole.ROOT, density = 0.6, movement = DetailedBassMovement.ROOT_MOTION, register = MusicalRegister.LOW, syncopation = 0.0)), TransitionPlan())
+    ))
+
+    private fun assignment(occurrenceId: String, instrumentId: String): ArrangementAssignmentReference = ArrangementAssignmentReference(
+        occurrenceId = occurrenceId,
+        instrumentId = instrumentId,
+        decisionSha256 = sha256("$occurrenceId|$instrumentId".toByteArray()),
+        libraryProvenance = LibraryProvenanceSnapshot(
+            libraryId = "fixture-pack",
+            licenseSha256 = sha256("Fixture|Fixture|third-party|CC0-1.0|true|false||unknown".toByteArray()),
+            provenanceSha256 = sha256("fixture-pack|Fixture pack|1|fixture source".toByteArray())
+        )
+    )
+
+    private fun writeV2Catalog(library: Path) {
+        val license = """"license":{"id":"CC0-1.0","commercialUse":true,"attributionRequired":false,"sourceName":"Fixture","licenseText":"CC0 evidence"}"""
+        val provenance = """"library":{"id":"fixture-pack","name":"Fixture pack","version":"1","source":"fixture source"}"""
+        fun entry(id: String, name: String, role: String, path: String) = """{"id":"$id","name":"$name","roles":["$role"],"engine":{"type":"sfz","path":"$path"},$license,$provenance}"""
+        Files.writeString(library.resolve("instruments.json"), """{"version":2,"workingSampleRate":44100,"instruments":[${entry("fixture-piano", "Fixture Piano", "melody", "piano/piano.sfz")},${entry("fixture-bass", "Fixture Bass", "bass", "bass/bass.sfz")}] }""")
+    }
+
+    private fun copyLibrary(destination: Path) {
+        val source = Path.of("sounds").toAbsolutePath().normalize()
+        Files.walkFileTree(source, object : SimpleFileVisitor<Path>() {
+            override fun preVisitDirectory(directory: Path, attributes: BasicFileAttributes): FileVisitResult {
+                Files.createDirectories(destination.resolve(source.relativize(directory).toString()))
+                return FileVisitResult.CONTINUE
+            }
+
+            override fun visitFile(file: Path, attributes: BasicFileAttributes): FileVisitResult {
+                Files.copy(file, destination.resolve(source.relativize(file).toString()), StandardCopyOption.REPLACE_EXISTING)
+                return FileVisitResult.CONTINUE
+            }
+        })
+    }
 
     private fun analysis(id: String, bpm: Double = 120.0) = MidiAnalysis(partId = id, ppq = 480, durationTicks = 1_920, durationSeconds = 240.0 / bpm,
         tempoMap = listOf(MidiTempoChange(0, bpm)), timeSignatures = listOf(MidiTimeSignature(0, 4, 4)), bars = 1, beats = 4.0,
@@ -127,6 +205,9 @@ class StemRenderingMixerTest {
     private fun sha256(path: Path): String = java.security.MessageDigest.getInstance("SHA-256")
         .digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
 
+    private fun sha256(value: ByteArray): String = java.security.MessageDigest.getInstance("SHA-256")
+        .digest(value).joinToString("") { "%02x".format(it) }
+
     private class FakeRenderer : InstrumentRenderer {
         var calls = 0
         val sequences = mutableMapOf<LogicalInstrument, Sequence>()
@@ -137,6 +218,19 @@ class StemRenderingMixerTest {
             val audio = AudioBuffer(FloatArray(expectedFrames.toInt() * format.channels) { sample }, AudioFormat(format.sampleRate, format.channels, 24, false, false, "WAV"), expectedFrames.toDouble() / format.sampleRate)
             DeterministicStemMixer().writeWav(MixedStem(audio, listOf(instrument.wireName)), output)
             return RenderResult(output, format.sampleRate, format.channels, 24, expectedFrames, audio.duration, sample.toDouble(), "fake", "test", "", "")
+        }
+    }
+
+    private class StableIdRenderer : InstrumentRenderer {
+        val stableIds = mutableListOf<String>()
+
+        override suspend fun render(midi: Path, instrument: LogicalInstrument, output: Path, format: RenderFormat, expectedFrames: Long): RenderResult = error("Stable IDs are required")
+
+        override suspend fun render(midi: Path, instrumentId: String, output: Path, format: RenderFormat, expectedFrames: Long): RenderResult {
+            stableIds += instrumentId
+            val audio = AudioBuffer(FloatArray(expectedFrames.toInt() * format.channels) { 0.2f }, AudioFormat(format.sampleRate, format.channels, 24, false, false, "WAV"), expectedFrames.toDouble() / format.sampleRate)
+            DeterministicStemMixer().writeWav(MixedStem(audio, listOf(instrumentId)), output)
+            return RenderResult(output, format.sampleRate, format.channels, 24, expectedFrames, audio.duration, 0.2, "fake", "test", "", "")
         }
     }
 

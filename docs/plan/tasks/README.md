@@ -40,7 +40,7 @@ schema window actively requires it and must have a named removal condition.
 | 023 | [Arrangement-before-cohesion dependency migration](completed/023-arrangement-cohesion-order.md) | Later |
 | 024 | [Arrangement-aware cohesion](completed/024-arrangement-aware-cohesion.md) | Later |
 | 025 | [Seeded humanization stage](completed/025-seeded-humanization.md) | Later |
-| 026 | [Render, mix, profile processing, and master handoff](026-production-handoff.md) | Later |
+| 026 | [Render, mix, profile processing, and master handoff](completed/026-production-handoff.md) | Later |
 | 027 | [Stage lineage and commercial release provenance](027-release-provenance.md) | Later |
 | 027B | [Usage-based instrument credits export](027b-instrument-credits-export.md) | Later |
 | 028 | [Spring API retain-or-delete migration](028-spring-api-adapter.md) | Later |
