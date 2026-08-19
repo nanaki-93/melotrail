@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "profiles": [
+    {
+      "ref": { "id": "lofi", "version": 1 },
+      "label": "Lo-fi",
+      "description": "Warm, restrained instrumental production with gentle rhythmic movement.",
+      "defaultMood": { "id": "warm", "version": 1 },
+      "capabilities": [ "midi-feel", "style-processing" ],
+      "supportedMeters": [
+        { "numerator": 4, "denominator": 4 },
+        { "numerator": 3, "denominator": 4 },
+        { "numerator": 6, "denominator": 8 }
+      ],
+      "supportedMoods": [
+        { "id": "warm", "version": 1 },
+        { "id": "nostalgic", "version": 1 },
+        { "id": "melancholic", "version": 1 },
+        { "id": "dreamy", "version": 1 },
+        { "id": "relaxed", "version": 1 },
+        { "id": "dark", "version": 1 }
+      ],
+      "roles": [
+        { "role": "harmonic-bed", "desiredCharacteristics": [ { "characteristic": "warm", "weight": 0.85 }, { "characteristic": "acoustic", "weight": 0.70 }, { "characteristic": "soft-attack", "weight": 0.55 } ] },
+        { "role": "low-end", "desiredCharacteristics": [ { "characteristic": "rounded-low-end", "weight": 0.85 }, { "characteristic": "muted", "weight": 0.45 } ] },
+        { "role": "rhythm", "desiredCharacteristics": [ { "characteristic": "brushed-rhythm", "weight": 0.70 }, { "characteristic": "muted", "weight": 0.40 } ] },
+        { "role": "atmosphere", "desiredCharacteristics": [ { "characteristic": "airy", "weight": 0.60 }, { "characteristic": "sustained", "weight": 0.50 } ] },
+        { "role": "melody-support", "desiredCharacteristics": [ { "characteristic": "warm", "weight": 0.65 }, { "characteristic": "soft-attack", "weight": 0.45 } ] }
+      ],
+      "groove": {
+        "tempoBpm": { "minimum": 68, "maximum": 92, "default": 80 },
+        "swingPercent": { "minimum": 52, "maximum": 64, "default": 58 },
+        "humanizationMs": { "minimum": 4, "maximum": 24, "default": 12 }
+      },
+      "tolerance": {
+        "timingShiftMs": { "minimum": 0, "maximum": 24, "default": 12 },
+        "velocityChange": { "minimum": 0, "maximum": 28, "default": 12 },
+        "enhancementAmountPercent": { "minimum": 0, "maximum": 35, "default": 15 }
+      },
+      "cohesionVocabulary": [ "gentle", "looping", "spacious", "understated" ],
+      "styleProcessing": { "capability": "style-processing", "permittedEffects": [ "tape-texture", "vinyl-texture", "warmth" ] },
+      "licensePreference": "prefer-no-attribution"
+    }
+  ],
+  "moods": [
+    { "ref": { "id": "warm", "version": 1 }, "profile": { "id": "lofi", "version": 1 }, "label": "Warm", "description": "Rounded and inviting.", "modifier": { "tempoBpmDelta": -2, "humanizationMsDelta": 2, "affinityAdjustments": [ { "role": "harmonic-bed", "characteristic": "warm", "delta": 0.15 } ] } },
+    { "ref": { "id": "nostalgic", "version": 1 }, "profile": { "id": "lofi", "version": 1 }, "label": "Nostalgic", "description": "Gently worn and memory-led.", "modifier": { "swingPercentDelta": 2, "affinityAdjustments": [ { "role": "harmonic-bed", "characteristic": "muted", "delta": 0.15 } ] } },
+    { "ref": { "id": "melancholic", "version": 1 }, "profile": { "id": "lofi", "version": 1 }, "label": "Melancholic", "description": "Slower and more reflective.", "modifier": { "tempoBpmDelta": -6, "timingToleranceMsDelta": 3, "affinityAdjustments": [ { "role": "atmosphere", "characteristic": "sustained", "delta": 0.20 } ] } },
+    { "ref": { "id": "dreamy", "version": 1 }, "profile": { "id": "lofi", "version": 1 }, "label": "Dreamy", "description": "Airy with relaxed motion.", "modifier": { "humanizationMsDelta": 5, "affinityAdjustments": [ { "role": "atmosphere", "characteristic": "airy", "delta": 0.25 } ] } },
+    { "ref": { "id": "relaxed", "version": 1 }, "profile": { "id": "lofi", "version": 1 }, "label": "Relaxed", "description": "Unhurried and softly swung.", "modifier": { "tempoBpmDelta": -4, "swingPercentDelta": 1 } },
+    { "ref": { "id": "dark", "version": 1 }, "profile": { "id": "lofi", "version": 1 }, "label": "Dark", "description": "Muted with a deeper tone.", "modifier": { "tempoBpmDelta": -5, "enhancementAmountPercentDelta": 5, "affinityAdjustments": [ { "role": "low-end", "characteristic": "dark", "delta": 0.30 } ] } }
+  ]
+}

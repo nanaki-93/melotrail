@@ -27,6 +27,8 @@ import app.melotrail.arrangement.MidiCleanupOptions
 import app.melotrail.arrangement.InstrumentRegistryLoader
 import app.melotrail.arrangement.SoundLibraryLocator
 import app.melotrail.arrangement.SoundLibraryLocation
+import app.melotrail.profile.BundledCompositionProfileCatalog
+import app.melotrail.profile.CompositionProfileCatalog
 import app.melotrail.errors.ErrorReporter
 import app.melotrail.logging.DefaultLogger
 import app.melotrail.worker.AnalyzeCommand
@@ -51,7 +53,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
 
-fun main() = application {
+fun main() {
+    // The catalog is application-owned data, loaded here so desktop and future adapters share one validated source.
+    DesktopServiceComposition.compositionProfiles()
+    application {
     val desktopWindowState = rememberWindowState(placement = WindowPlacement.Maximized)
     val preferences = JvmDesktopPreferences()
     val librarySettings = SoundLibrarySettingsService(preferences)
@@ -103,6 +108,7 @@ fun main() = application {
             }
         }
     }
+    }
 }
 
 /**
@@ -111,6 +117,8 @@ fun main() = application {
  * cleanup, analysis, registration, and atomic project writes.
  */
 object DesktopServiceComposition {
+    fun compositionProfiles(): CompositionProfileCatalog = BundledCompositionProfileCatalog.load()
+
     /** An inert, non-CWD fallback lets the settings screen recover a missing library. */
     fun unavailableLibraryRoot(): Path = Path.of(System.getProperty("java.io.tmpdir"), "melotrail", "missing-sound-library")
 
