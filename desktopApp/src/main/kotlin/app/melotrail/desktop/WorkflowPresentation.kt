@@ -25,6 +25,7 @@ internal fun workflowDescription(step: WorkflowStep): String {
         WorkflowPrerequisite.SAVED_STRUCTURE -> "Save a structure using current part IDs."
         WorkflowPrerequisite.APPROVED_COHESION -> "Generate and approve current Cohesion."
         WorkflowPrerequisite.APPROVED_ARRANGEMENT -> "Generate and approve a current arrangement."
+        WorkflowPrerequisite.HUMANIZATION_SELECTION -> "Select bypass or create a deterministic humanization variation before rendering."
         WorkflowPrerequisite.RENDERED_STEMS -> "Render current stems from the approved arrangement."
         WorkflowPrerequisite.DRY_MIX -> "Create the current dry mix."
         WorkflowPrerequisite.MASTER -> "Create and validate the current master and release metadata."

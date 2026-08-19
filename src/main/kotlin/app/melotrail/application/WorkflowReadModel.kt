@@ -14,7 +14,7 @@ import app.melotrail.arrangement.WorkflowArtifact
  */
 enum class WorkflowStage {
     PROJECT, IMPORT_AND_INSPECTION, TRANSCRIPTION, CLEAN_MIDI, AI_FIX, MIDI_FEEL,
-    ANALYSIS, STRUCTURE, ARRANGEMENT, COHESION, RENDER, MIX, MASTER,
+    ANALYSIS, STRUCTURE, ARRANGEMENT, COHESION, HUMANIZATION, RENDER, MIX, MASTER,
     COMMERCIAL_EXPORT
 }
 
@@ -23,7 +23,7 @@ enum class WorkflowState { BLOCKED, CURRENT, REVIEW, STALE, COMPLETE }
 enum class WorkflowAction {
     CREATE_OR_OPEN, MIGRATE_PROJECT, UPDATE_COMPOSITION_SETTINGS, IMPORT, INSPECT, TRANSCRIBE, CLEAN_MIDI, APPROVE_CLEAN_MIDI,
     CREATE_AI_FIX, APPROVE_AI_FIX, SELECT_MIDI_FEEL, ANALYZE, SAVE_STRUCTURE, GENERATE_COHESION,
-    APPROVE_COHESION, UPDATE_HARMONY, GENERATE_ARRANGEMENT, APPROVE_ARRANGEMENT, RENDER,
+    APPROVE_COHESION, UPDATE_HARMONY, GENERATE_ARRANGEMENT, APPROVE_ARRANGEMENT, GENERATE_HUMANIZATION, RENDER,
     MIX, MASTER, REVIEW_COMMERCIAL_PROVENANCE
 }
 
@@ -45,6 +45,7 @@ enum class WorkflowPrerequisite {
     SAVED_STRUCTURE,
     APPROVED_COHESION,
     APPROVED_ARRANGEMENT,
+    HUMANIZATION_SELECTION,
     RENDERED_STEMS,
     DRY_MIX,
     MASTER,
@@ -170,7 +171,13 @@ object WorkflowReadModelDeriver {
             !project.readiness.cohesionReady -> step(WorkflowStage.COHESION, WorkflowState.CURRENT, WorkflowAction.GENERATE_COHESION, WorkflowPrerequisite.APPROVED_COHESION)
             else -> complete(WorkflowStage.COHESION, WorkflowAction.GENERATE_COHESION)
         }
-        val render = downstream(WorkflowStage.RENDER, cohesion, WorkflowArtifact.STEMS, stale, project.readiness.stemsAvailable, WorkflowAction.RENDER, WorkflowPrerequisite.RENDERED_STEMS)
+        val humanization = when {
+            cohesion.state != WorkflowState.COMPLETE -> blocked(WorkflowStage.HUMANIZATION, cohesion)
+            project.readiness.humanizationSelection == app.melotrail.arrangement.HumanizationSelection.BYPASS -> complete(WorkflowStage.HUMANIZATION, WorkflowAction.GENERATE_HUMANIZATION)
+            WorkflowArtifact.HUMANIZATION in stale || !project.readiness.humanizationAvailable -> step(WorkflowStage.HUMANIZATION, WorkflowState.CURRENT, WorkflowAction.GENERATE_HUMANIZATION, WorkflowPrerequisite.HUMANIZATION_SELECTION)
+            else -> complete(WorkflowStage.HUMANIZATION, WorkflowAction.GENERATE_HUMANIZATION)
+        }
+        val render = downstream(WorkflowStage.RENDER, humanization, WorkflowArtifact.STEMS, stale, project.readiness.stemsAvailable, WorkflowAction.RENDER, WorkflowPrerequisite.RENDERED_STEMS)
         val mix = downstream(WorkflowStage.MIX, render, WorkflowArtifact.DRY_MIX, stale, project.readiness.dryMixAvailable, WorkflowAction.MIX, WorkflowPrerequisite.DRY_MIX)
         val master = downstream(WorkflowStage.MASTER, mix, WorkflowArtifact.MASTER, stale, project.readiness.masterAvailable && project.readiness.releaseAvailable, WorkflowAction.MASTER, WorkflowPrerequisite.MASTER)
         val commercial = when {
@@ -180,7 +187,7 @@ object WorkflowReadModelDeriver {
         }
         val steps = listOf(
             composition, imported, transcription, clean, aiFix,
-            feel, analysis, structure, arrangementStep, cohesion, render, mix, master, commercial
+            feel, analysis, structure, arrangementStep, cohesion, humanization, render, mix, master, commercial
         )
         return WorkflowReadModel(steps.map { step -> step.copy(stageRun = project.readiness.stageRuns.lastOrNull { run ->
             workflowStage(run.stage) == step.stage && run.status in setOf(StageRunStatus.PROCESSING, StageRunStatus.FAILED)

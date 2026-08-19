@@ -47,12 +47,15 @@ class StemRenderingMixer(
         require(active.isNotEmpty()) { "Detailed arrangement has no active instruments" }
         require(LogicalInstrument.PIANO in active) { "Detailed arrangement must retain the source piano" }
 
-        val requiredInputs = active.filter { it != LogicalInstrument.PIANO }.associateWith { root.resolve("midi/generated/${it.wireName}.mid") }
+        val requiredInputs = active.filter { it != LogicalInstrument.PIANO }.associateWith { instrument ->
+            humanizedInput(root, project, instrument.wireName, root.resolve("midi/generated/${instrument.wireName}.mid"))
+        }
         requiredInputs.forEach { (instrument, path) ->
             require(Files.isRegularFile(path)) { "Missing generated ${instrument.wireName} MIDI: $path" }
         }
         val needsTransitions = timeline.segments.any { it.insertedTicksAfter > 0L }
-        val transitions = root.resolve("midi/generated/transitions.mid")
+        val transitionBase = root.resolve("midi/generated/transitions.mid")
+        val transitions = if (Files.isRegularFile(transitionBase)) humanizedInput(root, project, "transitions", transitionBase) else transitionBase
         if (needsTransitions) require(Files.isRegularFile(transitions)) {
             "Transition insertions are planned but transition MIDI is missing: $transitions"
         }
@@ -124,7 +127,28 @@ class StemRenderingMixer(
         if (project.workflow.cohesion?.approved == true) require(resolved.map(OccurrenceMidiArtifact::occurrenceId) == arrangementIds) {
             "Resolved selected MIDI does not match the approved arrangement occurrences."
         }
-        return arrangementIds.zip(resolved).toMap()
+        return arrangementIds.zip(resolved.map { occurrence ->
+            val selected = humanizedInput(root, project, "piano-${occurrence.partId}", occurrence.path)
+            if (selected == occurrence.path) occurrence else occurrence.copy(
+                path = selected,
+                projectRelativePath = root.relativize(selected).toString().replace('\\', '/'),
+                sha256 = digest(Files.readAllBytes(selected))
+            )
+        }).toMap()
+    }
+
+    /** Uses only a current, hash-bound selected run; bypass intentionally returns cohesive input unchanged. */
+    private fun humanizedInput(root: Path, project: Project, id: String, original: Path): Path {
+        if (project.workflow.humanizationSelection != HumanizationSelection.HUMANIZED) return original
+        require(WorkflowArtifact.HUMANIZATION !in project.workflow.stale) { "Humanization selection is stale. Regenerate it or select Bypass." }
+        val run = requireNotNull(project.workflow.humanization) { "Humanization selection has no run evidence." }
+        val artifact = requireNotNull(run.artifacts.singleOrNull { it.id == id }) { "Humanization is missing MIDI for '$id'. Regenerate it." }
+        require(Files.isRegularFile(original) && digest(Files.readAllBytes(original)) == artifact.input.sha256) { "Humanization input '$id' changed. Regenerate it or select Bypass." }
+        val output = root.resolve(artifact.output.file).normalize()
+        require(output.startsWith(root) && Files.isRegularFile(output) && output.toRealPath().startsWith(root.toRealPath()) && digest(Files.readAllBytes(output)) == artifact.output.sha256) {
+            "Humanized MIDI '$id' is missing or stale. Regenerate it or select Bypass."
+        }
+        return output
     }
 
     private fun assembleMidi(root: Path, occurrenceMidi: Map<String, OccurrenceMidiArtifact>, instrument: LogicalInstrument, timeline: Timeline, generated: Path?, transitions: Path?): Path {

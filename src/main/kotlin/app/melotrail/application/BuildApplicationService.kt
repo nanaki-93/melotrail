@@ -66,7 +66,8 @@ class DefaultBuildApplicationService(
     private val mixService: MixApplicationService,
     private val renderer: InstrumentRenderer,
     private val worker: BuildAudioWorker,
-    private val cohesionService: CohesionApplicationService = DefaultCohesionApplicationService()
+    private val cohesionService: CohesionApplicationService = DefaultCohesionApplicationService(),
+    private val humanizationService: HumanizationApplicationService = DefaultHumanizationApplicationService()
 ) : BuildApplicationService {
     override suspend fun build(request: BuildSongRequest, progress: ProgressSink): BuildResult {
         require(request.mp3BitrateKbps in MP3_BITRATES) { "MP3 bitrate must be one of ${MP3_BITRATES.sorted().joinToString()} kbps" }
@@ -93,34 +94,42 @@ class DefaultBuildApplicationService(
                 coroutineContext.ensureActive()
                 stage(progress, 2, "Generating required MIDI") { arrangementService.generateRequiredMidi(root, progress) }
                 coroutineContext.ensureActive()
-                val render = stage(progress, 3, "Rendering or reusing stems") { arrangementService.renderApprovedStems(root, renderer, progress) }
+                stage(progress, 3, "Preparing selected humanization") {
+                    if (app.melotrail.arrangement.ProjectStore.read(root).workflow.humanizationSelection == app.melotrail.arrangement.HumanizationSelection.HUMANIZED) {
+                        humanizationService.generate(GenerateHumanizationRequest(root))
+                    } else {
+                        progress.report(OperationProgress("build", 3, STAGE_COUNT, "Bypassing humanization; rendering cohesive MIDI input"))
+                    }
+                }
                 coroutineContext.ensureActive()
-                val mixed = stage(progress, 4, "Applying persisted mix settings") {
+                val render = stage(progress, 4, "Rendering or reusing stems") { arrangementService.renderApprovedStems(root, renderer, progress) }
+                coroutineContext.ensureActive()
+                val mixed = stage(progress, 5, "Applying persisted mix settings") {
                     mixService.apply(ApplyMixRequest(root, mixService.load(root).settings), progress)
                 }
                 val dry = requireNotNull(mixed.dryMix) { "Mixing did not create mix/dry.wav" }
                 val dryAudio = validate(dry, "Dry mix")
                 coroutineContext.ensureActive()
                 val repaired = root.resolve("mix/repaired.wav")
-                stage(progress, 5, "Repairing dry mix", repaired) {
+                stage(progress, 6, "Repairing dry mix", repaired) {
                     publishWav(repaired, "repair") { temporary -> worker.repair(dry, temporary) }
                     requireCompatible(dryAudio, validate(repaired, "Repair"), "Repair")
                 }
                 coroutineContext.ensureActive()
                 val masteringInput = if (request.enableLoFi) {
                     val lofi = root.resolve("mix/lofi.wav")
-                    stage(progress, 6, "Applying Lo-fi audio texture", lofi) {
+                    stage(progress, 7, "Applying Lo-fi audio texture", lofi) {
                         publishWav(lofi, "lofi") { temporary -> applyLoFi(repaired, temporary) }
                         requireCompatible(validate(repaired, "Repair"), validate(lofi, "Lo-fi audio texture"), "Lo-fi audio texture")
                     }
                     lofi
                 } else {
-                    progress.report(OperationProgress("build", 6, STAGE_COUNT, "Skipping Lo-fi audio texture; mastering repaired dry mix", repaired))
+                    progress.report(OperationProgress("build", 7, STAGE_COUNT, "Skipping Lo-fi audio texture; mastering repaired dry mix", repaired))
                     repaired
                 }
                 coroutineContext.ensureActive()
                 val master = root.resolve("output/master.wav")
-                stage(progress, 7, "Mastering lossless WAV", master) {
+                stage(progress, 8, "Mastering lossless WAV", master) {
                     publishWav(master, "master") { temporary -> worker.master(masteringInput, temporary) }
                     val masterAudio = validate(master, "Master")
                     requireCompatible(validate(masteringInput, "Master input"), masterAudio, "Master")
@@ -129,15 +138,15 @@ class DefaultBuildApplicationService(
                 coroutineContext.ensureActive()
                 val mp3 = if (request.enableMp3) {
                     val target = root.resolve("output/song.mp3")
-                    val available = stage(progress, 8, "Exporting optional MP3", target) {
+                    val available = stage(progress, 9, "Exporting optional MP3", target) {
                         worker.exportMp3(master, target, request.mp3BitrateKbps)
                     }
                     target.takeIf { available && Files.isRegularFile(it) && Files.size(it) > 0L }
                 } else {
-                    progress.report(OperationProgress("build", 8, STAGE_COUNT, "MP3 export not requested"))
+                    progress.report(OperationProgress("build", 9, STAGE_COUNT, "MP3 export not requested"))
                     null
                 }
-                stage(progress, 9, "Writing release metadata", master) { writeRelease(root, masteringInput, master, mp3, request) }
+                stage(progress, 10, "Writing release metadata", master) { writeRelease(root, masteringInput, master, mp3, request) }
                 ProjectWorkflowStore.update(root) { workflow ->
                     workflow.markCurrent(WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE).let {
                         if (request.enableLoFi) it.markCurrent(WorkflowArtifact.AUDIO_TEXTURE) else it
@@ -235,7 +244,7 @@ class DefaultBuildApplicationService(
     @Serializable private data class DesktopMp3Metadata(val name: String, val fingerprint: String, val bitrateKbps: Int, val format: String = "MP3")
 
     private companion object {
-        const val STAGE_COUNT = 9
+        const val STAGE_COUNT = 10
         const val PCM_24_TOLERANCE = 1.0 / 8_388_608.0
         val MP3_BITRATES = setOf(128, 160, 192, 256, 320)
         val locks = ConcurrentHashMap<Path, Mutex>()

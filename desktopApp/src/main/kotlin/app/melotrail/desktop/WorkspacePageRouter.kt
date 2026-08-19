@@ -540,6 +540,7 @@ private fun overviewPrimaryStage(stage: WorkflowStage): WorkflowStage = when (st
     WorkflowStage.CLEAN_MIDI, WorkflowStage.AI_FIX, WorkflowStage.MIDI_FEEL, WorkflowStage.ANALYSIS -> WorkflowStage.IMPORT_AND_INSPECTION
     WorkflowStage.STRUCTURE -> WorkflowStage.STRUCTURE
     WorkflowStage.COHESION, WorkflowStage.ARRANGEMENT -> WorkflowStage.ARRANGEMENT
+    WorkflowStage.HUMANIZATION -> WorkflowStage.MIX
     WorkflowStage.RENDER, WorkflowStage.MIX, WorkflowStage.MASTER -> WorkflowStage.MIX
     WorkflowStage.COMMERCIAL_EXPORT -> WorkflowStage.COMMERCIAL_EXPORT
 }
@@ -2173,6 +2174,26 @@ private fun MixMasterPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                             Checkbox(checked = state.buildOptions.mp3, onCheckedChange = { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(mp3 = it))) }, enabled = !mutating,
                                 modifier = Modifier.semantics { testTag = WorkspacePageTags.MIX_MP3; contentDescription = "Request optional final MP3 export after the authoritative master WAV." })
                             Text("Optional final MP3 export", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    OverviewCard("mix-master-humanization", "Humanization") {
+                        val humanization = state.humanization
+                        Text(
+                            humanization?.let { snapshot ->
+                                if (snapshot.selection == app.melotrail.arrangement.HumanizationSelection.HUMANIZED)
+                                    "Selected variation seed ${snapshot.seed} · ${snapshot.changedNotes} recorded edits"
+                                else "Bypass selected · cohesive MIDI will be rendered unchanged"
+                            } ?: "Profile default is available after approved Cohesion. Select bypass or create a deterministic variation.",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        humanization?.warnings?.forEach { warning -> Text(warning, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary) }
+                        Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+                            OutlinedButton(onClick = { onIntent(WorkspaceIntent.BypassHumanization) }, enabled = !mutating,
+                                modifier = Modifier.semantics { testTag = "mix-master-humanization-bypass"; contentDescription = "Bypass humanization and use cohesive MIDI input." }) { Text("Bypass") }
+                            Button(onClick = { onIntent(WorkspaceIntent.GenerateHumanization) }, enabled = !mutating,
+                                modifier = Modifier.semantics { testTag = "mix-master-humanization-regenerate"; contentDescription = "Create and select a new deterministic humanization variation." }) {
+                                Text(if (humanization?.selection == app.melotrail.arrangement.HumanizationSelection.HUMANIZED) "New variation" else "Use profile default")
+                            }
                         }
                     }
                 }

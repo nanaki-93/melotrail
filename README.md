@@ -39,7 +39,7 @@ Equivalent Gradle command: `./gradlew :desktopApp:run`.
 
 Use **New Project** or **Open Project**, then follow the desktop happy path:
 **Melody Parts**, which automatically prepares its supported stages, optional **AI Fix**,
-optional **Lo-fi Feel**, **Structure**, **Arrangement**, and **Cohesion** before
+**Structure**, **Arrangement**, and **Cohesion**, then deterministic **Humanization** before
 using **Build song**. Project files remain canonical: `project.json`, plans and arrangements,
 generated MIDI, stems, mixes, and release artifacts are all kept under the
 chosen project directory. Desktop settings retain only the last successfully
@@ -110,7 +110,7 @@ musical Setup (name, key, tempo, meter, Lo-fi profile, and mood), then import MI
 source, convert audio to MIDI when needed, clean then deterministically normalize MIDI, keep it or review an
 optional bounded AI-fix draft, select optional Lo-fi Feel, analyze MIDI, then
 save the structure, generate/review an arrangement, then generate/review Cohesion,
-then build and audition validated artifacts. The app never requires Spring.
+then explicitly select deterministic Humanization or bypass before building and auditioning validated artifacts. The app never requires Spring.
 
 - Direct MIDI is preserved under `source/` and copied as immutable evidence under `midi/raw/`. Worker **Clean MIDI** repairs invalid events; Kotlin **Normalize MIDI** then publishes deterministic `midi/normalized/` evidence and a hash-bound report. Melotrail records detected source-key confidence; below its fixed gate, confirm the source key explicitly before **Transpose to project key** publishes a separate `midi/transposed/` artifact and report. Legacy clean-only projects remain readable until normalization is explicitly run.
 - WAV/WAVE and MP3 input is accepted only for the optional **solo-piano**
@@ -126,7 +126,7 @@ then build and audition validated artifacts. The app never requires Spring.
 
 The project directory remains canonical. Its inspectable artifacts include
 `source/`, `prepared/`, `midi/raw/`, `midi/clean/`, `midi/normalized/`, `midi/normalization/`, `analysis/`, `previews/`,
-plans and arrangements, generated MIDI, stems, `mix/`, and `output/`.
+plans and arrangements, generated MIDI, `midi/humanized/` edit evidence, stems, `mix/`, and `output/`.
 `output/master.wav` is the authoritative lossless release; MP3 is an optional
 final conversion only. For worker, library, renderer, preview, and package
 troubleshooting, use [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
@@ -144,7 +144,7 @@ setup is surfaced as a typed setup requirement and is never inferred on open.
 The v1-v3 readers, fixtures, and this compatibility note must be removed together
 only after the declared project-format support window ends. Readiness comes
 from validated files and available fingerprints, never a completion flag alone.
-Changes to source/raw MIDI, cleaned MIDI, Lo-fi Feel, analysis, structure, arrangement, cohesion,
+Changes to source/raw MIDI, cleaned MIDI, analysis, structure, arrangement, cohesion, or selected Humanization seed/config,
 mix-only settings, or audio texture mark only their documented descendants
 stale. Stale artifacts remain inspectable evidence; regenerate them instead of
 deleting, copying, or treating them as release-ready.

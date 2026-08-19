@@ -257,6 +257,7 @@ object CreationProgressDeriver {
         WorkflowAction.APPROVE_COHESION -> CreationIntent.APPROVE_COHESION
         WorkflowAction.GENERATE_ARRANGEMENT -> CreationIntent.GENERATE_ARRANGEMENT
         WorkflowAction.APPROVE_ARRANGEMENT -> CreationIntent.APPROVE_ARRANGEMENT
+        WorkflowAction.GENERATE_HUMANIZATION -> CreationIntent.CONFIGURE_BUILD_DEPENDENCY
         WorkflowAction.RENDER, WorkflowAction.MIX, WorkflowAction.MASTER,
         WorkflowAction.REVIEW_COMMERCIAL_PROVENANCE -> CreationIntent.BUILD_SONG
     }

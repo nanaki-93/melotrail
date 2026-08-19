@@ -422,7 +422,9 @@ data class ProjectReadiness(
     /** Required progression completeness is independent from setup persistence. */
     val harmonyReady: Boolean = true,
     /** Durable application state; UI observes this rather than polling files. */
-    val stageRuns: List<StageRunSnapshot> = emptyList()
+    val stageRuns: List<StageRunSnapshot> = emptyList(),
+    val humanizationSelection: app.melotrail.arrangement.HumanizationSelection = app.melotrail.arrangement.HumanizationSelection.BYPASS,
+    val humanizationAvailable: Boolean = false
 )
 
 class DefaultProjectApplicationService(
@@ -1221,6 +1223,8 @@ class DefaultProjectApplicationService(
                 songPlanAvailable = Files.isRegularFile(root.resolve("song_plan.json")) && current(WorkflowArtifact.ARRANGEMENT),
                 arrangementAvailable = Files.isRegularFile(root.resolve("arrangement.json")) && current(WorkflowArtifact.ARRANGEMENT),
                 generatedMidiAvailable = Files.isDirectory(root.resolve("midi/generated")) && current(WorkflowArtifact.GENERATED_MIDI) && Files.list(root.resolve("midi/generated")).use { it.anyMatch { Files.isRegularFile(it) } },
+                humanizationSelection = project.workflow.humanizationSelection,
+                humanizationAvailable = project.workflow.humanization != null && current(WorkflowArtifact.HUMANIZATION),
                 stemsAvailable = Files.isDirectory(root.resolve("stems")) && current(WorkflowArtifact.STEMS) && Files.list(root.resolve("stems")).use { it.anyMatch { Files.isRegularFile(it) } },
                 dryMixAvailable = Files.isRegularFile(root.resolve("mix/dry.wav")) && current(WorkflowArtifact.DRY_MIX),
                 loFiMixAvailable = Files.isRegularFile(root.resolve("mix/lofi.wav")) && current(WorkflowArtifact.AUDIO_TEXTURE),

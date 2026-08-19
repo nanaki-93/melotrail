@@ -1483,6 +1483,7 @@ private fun statusText(state: WorkspaceUiState): String = when (val operation = 
     WorkspaceOperation.ApprovingCohesion -> "Approving validated cohesion…"
     is WorkspaceOperation.GeneratingArrangement -> "Generating reviewed song plan and detailed arrangement…"
     is WorkspaceOperation.ApplyingMix -> "Applying persisted mix settings to existing stems…"
+    WorkspaceOperation.Humanizing -> "Creating deterministic humanization evidence…"
     WorkspaceOperation.ExportingCommercialProvenance -> "Writing hash-bound commercial provenance evidence…"
     WorkspaceOperation.ExportingRelease -> "Validating and publishing release export…"
     is WorkspaceOperation.BuildingSong -> "Building song through the lossless release pipeline…"

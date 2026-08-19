@@ -31,6 +31,10 @@ import app.melotrail.application.LogicalMixSetting
 import app.melotrail.application.DefaultMixApplicationService
 import app.melotrail.application.BuildApplicationService
 import app.melotrail.application.BuildSongRequest
+import app.melotrail.application.HumanizationApplicationService
+import app.melotrail.application.DefaultHumanizationApplicationService
+import app.melotrail.application.HumanizationSnapshot
+import app.melotrail.application.GenerateHumanizationRequest
 import app.melotrail.application.PartPreviewApplicationService
 import app.melotrail.application.PreviewRequest
 import app.melotrail.application.PreviewResult
@@ -130,6 +134,7 @@ data class WorkspaceUiState(
     val enhancementReview: EnhancementSnapshot? = null,
     val arrangement: ArrangementSnapshot? = null,
     val mix: MixSnapshot? = null,
+    val humanization: HumanizationSnapshot? = null,
     val buildOptions: BuildOptionsDraft = BuildOptionsDraft(),
     val export: ExportUiState = ExportUiState(),
     val playbackSession: PlaybackSession = PlaybackSession(),
@@ -372,6 +377,7 @@ sealed interface WorkspaceOperation {
     data object ApprovingCohesion : WorkspaceOperation
     data class GeneratingArrangement(val progress: OperationProgress? = null) : WorkspaceOperation
     data class ApplyingMix(val progress: OperationProgress? = null) : WorkspaceOperation
+    data object Humanizing : WorkspaceOperation
     data class BuildingSong(val progress: OperationProgress? = null) : WorkspaceOperation
     data object ExportingCommercialProvenance : WorkspaceOperation
     data object ExportingRelease : WorkspaceOperation
@@ -392,7 +398,7 @@ val WorkspaceOperation.isMutating: Boolean
         this is WorkspaceOperation.UpdatingPartRole || this is WorkspaceOperation.SavingStructure ||
         this is WorkspaceOperation.GeneratingCohesion || this is WorkspaceOperation.ReviewingCohesion || this is WorkspaceOperation.ApprovingCohesion ||
         this is WorkspaceOperation.GeneratingArrangement || this is WorkspaceOperation.ApprovingArrangement
-        || this is WorkspaceOperation.ApplyingMix || this is WorkspaceOperation.BuildingSong || this is WorkspaceOperation.ExportingCommercialProvenance || this is WorkspaceOperation.ExportingRelease
+        || this is WorkspaceOperation.ApplyingMix || this is WorkspaceOperation.Humanizing || this is WorkspaceOperation.BuildingSong || this is WorkspaceOperation.ExportingCommercialProvenance || this is WorkspaceOperation.ExportingRelease
 
 sealed interface WorkspaceDialog {
     data class CreateProject(
@@ -638,6 +644,8 @@ sealed interface WorkspaceIntent {
     data class ToggleArrangementTrait(val trait: SoundTrait) : WorkspaceIntent
     data class UpdateMixSetting(val instrument: String, val setting: LogicalMixSetting) : WorkspaceIntent
     data object ResetMix : WorkspaceIntent
+    data object GenerateHumanization : WorkspaceIntent
+    data object BypassHumanization : WorkspaceIntent
     data class UpdateBuildOptions(val options: BuildOptionsDraft) : WorkspaceIntent
     data object BuildSong : WorkspaceIntent
     data object ExportCommercialProvenance : WorkspaceIntent
@@ -678,6 +686,7 @@ class WorkspaceViewModel(
     private val midiAiFixService: MidiAiFixApplicationService = DefaultMidiAiFixApplicationService(),
     private val enhancementService: EnhancementApplicationService = DefaultEnhancementApplicationService(),
     private val mixService: MixApplicationService = DefaultMixApplicationService(),
+    private val humanizationService: HumanizationApplicationService = DefaultHumanizationApplicationService(),
     private val buildService: BuildApplicationService? = null,
     private val player: ArtifactAudioPlayer? = null,
     private val partPreviewService: PartPreviewApplicationService? = null,
@@ -823,6 +832,8 @@ class WorkspaceViewModel(
             is WorkspaceIntent.ToggleArrangementTrait -> toggleArrangementTrait(intent.trait)
             is WorkspaceIntent.UpdateMixSetting -> updateMixSetting(intent.instrument, intent.setting)
             WorkspaceIntent.ResetMix -> resetMix()
+            WorkspaceIntent.GenerateHumanization -> generateHumanization()
+            WorkspaceIntent.BypassHumanization -> bypassHumanization()
             is WorkspaceIntent.UpdateBuildOptions -> mutableState.update { it.copy(buildOptions = intent.options) }
             WorkspaceIntent.BuildSong -> buildSong()
             WorkspaceIntent.ExportCommercialProvenance -> exportCommercialProvenance()
@@ -2562,6 +2573,31 @@ class WorkspaceViewModel(
         }
     }
 
+    private fun generateHumanization() {
+        val project = state.value.project ?: return fail("humanization", "Open a project before creating a variation.")
+        mutableState.update { it.copy(operation = WorkspaceOperation.Humanizing, notification = null, retry = null) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { humanizationService.generate(GenerateHumanizationRequest(project.root)) } }
+                .onSuccess { snapshot ->
+                    val refreshed = withContext(ioDispatcher) { projectService.open(project.root) }
+                    mutableState.update { current -> current.copy(project = refreshed, humanization = snapshot, operation = WorkspaceOperation.Idle,
+                        notification = "Humanization variation ${snapshot.seed} selected; ${snapshot.changedNotes} exact edits recorded.") }
+                }
+                .onFailure { fail("humanization", it.message ?: "Unable to create humanization evidence.") }
+        }
+    }
+
+    private fun bypassHumanization() {
+        val project = state.value.project ?: return fail("humanization", "Open a project before selecting bypass.")
+        runCatching { humanizationService.selectBypass(project.root) }
+            .onSuccess { snapshot ->
+                val refreshed = runCatching { projectService.open(project.root) }.getOrNull()
+                mutableState.update { current -> current.copy(project = refreshed ?: current.project, humanization = snapshot,
+                    notification = "Humanization bypass selected; rendering will use cohesive MIDI input.") }
+            }
+            .onFailure { fail("humanization", it.message ?: "Unable to select humanization bypass.") }
+    }
+
     private fun exportCommercialProvenance() {
         val project = state.value.project ?: return fail("commercial provenance", "Open a project before creating commercial evidence.")
         if (!project.readiness.releaseAvailable || state.value.operation.isMutating) return fail("commercial provenance", "Build a current master and release metadata before creating commercial evidence.")
@@ -2706,6 +2742,7 @@ class WorkspaceViewModel(
                 project = project,
                 cohesion = if (resetWorkspace) null else current.cohesion,
                 midiAiFix = if (resetWorkspace) null else current.midiAiFix,
+                humanization = if (resetWorkspace) null else current.humanization,
                 arrangement = if (resetWorkspace) null else current.arrangement,
                 mix = if (resetWorkspace) null else current.mix,
                 selectedPartId = if (resetWorkspace) null else current.selectedPartId,
@@ -2742,7 +2779,8 @@ class WorkspaceViewModel(
             val cohesion = runCatching { cohesionService.load(project.root) }
             val aiFix = project.parts.firstOrNull { it.preparation.midiAiFix.draftAvailable || it.preparation.midiAiFix.approvedAvailable }
                 ?.let { part -> runCatching { midiAiFixService.load(project.root, part.id) } }
-            listOf(mix, arrangement, cohesion, aiFix)
+            val humanization = runCatching { humanizationService.load(project.root) }
+            listOf(mix, arrangement, cohesion, aiFix, humanization)
         }
         val warnings = buildList {
             hydration[0]?.exceptionOrNull()?.message?.let { add("mix settings could not be loaded: $it") }
@@ -2762,6 +2800,7 @@ class WorkspaceViewModel(
                     arrangement = arrangement,
                     cohesion = hydration[2]?.getOrNull() as? CohesionSnapshot,
                     midiAiFix = hydration[3]?.getOrNull() as? MidiAiFixSnapshot,
+                    humanization = hydration[4]?.getOrNull() as? HumanizationSnapshot,
                     selectedArrangementSection = if (resetWorkspace) arrangement?.sections?.firstOrNull()?.index else current.selectedArrangementSection,
                     notification = if (warnings.isEmpty()) current.notification ?: openedMessage
                     else "$openedMessage Some optional artifacts need attention: ${warnings.joinToString("; ")}",

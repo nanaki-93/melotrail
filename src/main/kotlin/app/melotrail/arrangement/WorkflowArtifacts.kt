@@ -23,6 +23,7 @@ enum class WorkflowArtifact {
     COHESION,
     ARRANGEMENT,
     GENERATED_MIDI,
+    HUMANIZATION,
     STEMS,
     DRY_MIX,
     AUDIO_TEXTURE,
@@ -47,6 +48,7 @@ enum class WorkflowChange {
     /** A newly approved arrangement changes the only supported Cohesion input. */
     ARRANGEMENT,
     COHESION,
+    HUMANIZATION,
     COMPOSITION_KEY,
     COMPOSITION_TEMPO_OR_METER,
     COMPOSITION_PROFILE_OR_MOOD,
@@ -59,20 +61,20 @@ enum class WorkflowChange {
 object WorkflowArtifactGraph {
     private val allAfterRepair = setOf(
         WorkflowArtifact.TRANSPOSED_MIDI, WorkflowArtifact.CORRECTED_MIDI, WorkflowArtifact.ENHANCED_MIDI, WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.COHESION,
-        WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
+        WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.HUMANIZATION, WorkflowArtifact.STEMS,
         WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
         WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
     )
 
     private val allAfterSelection = setOf(
         WorkflowArtifact.ENHANCED_MIDI, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.COHESION,
-        WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
+        WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.HUMANIZATION, WorkflowArtifact.STEMS,
         WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
         WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
     )
 
     private val allAfterAnalysis = setOf(
-        WorkflowArtifact.COHESION, WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI,
+        WorkflowArtifact.COHESION, WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.HUMANIZATION,
         WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE,
         WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
     )
@@ -87,38 +89,43 @@ object WorkflowArtifactGraph {
         WorkflowChange.MIDI_FEEL -> setOf(WorkflowArtifact.ANALYSIS) + allAfterAnalysis
         WorkflowChange.ANALYSIS, WorkflowChange.STRUCTURE, WorkflowChange.PART_SECTION -> allAfterAnalysis
         WorkflowChange.ARRANGEMENT -> setOf(
-            WorkflowArtifact.COHESION, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
+            WorkflowArtifact.COHESION, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.HUMANIZATION, WorkflowArtifact.STEMS,
             WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
             WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
         )
         WorkflowChange.COHESION -> setOf(
-            WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
+            WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.HUMANIZATION, WorkflowArtifact.STEMS,
             WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
             WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
+        )
+        WorkflowChange.HUMANIZATION -> setOf(
+            WorkflowArtifact.HUMANIZATION, WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX,
+            WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE,
+            WorkflowArtifact.COMMERCIAL_EXPORT
         )
         /** A project-key decision invalidates its derived transposition and every dependent artifact. */
         WorkflowChange.COMPOSITION_KEY -> setOf(
             WorkflowArtifact.TRANSPOSED_MIDI, WorkflowArtifact.CORRECTED_MIDI, WorkflowArtifact.ENHANCED_MIDI, WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS,
-            WorkflowArtifact.COHESION, WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX,
+            WorkflowArtifact.COHESION, WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.HUMANIZATION, WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX,
             WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE,
             WorkflowArtifact.COMMERCIAL_EXPORT
         )
         /** Tempo/meter are declared arrangement-normalization inputs. */
         WorkflowChange.COMPOSITION_TEMPO_OR_METER -> setOf(
-            WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.COHESION, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
+            WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.COHESION, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.HUMANIZATION, WorkflowArtifact.STEMS,
             WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
             WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
         )
         /** Profile and mood can change MIDI-feel policy, then every artifact derived from that selected input. */
         WorkflowChange.COMPOSITION_PROFILE_OR_MOOD -> setOf(
-            WorkflowArtifact.ENHANCED_MIDI, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.COHESION, WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI,
+            WorkflowArtifact.ENHANCED_MIDI, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.COHESION, WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.HUMANIZATION,
             WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE,
             WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
         )
         /** Harmony is planner context, never source, extraction, cleanup, or analysis evidence. */
         WorkflowChange.HARMONY -> setOf(
             WorkflowArtifact.CORRECTED_MIDI, WorkflowArtifact.ENHANCED_MIDI, WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.COHESION,
-            WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
+            WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.HUMANIZATION, WorkflowArtifact.STEMS,
             WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
             WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
         )
@@ -360,10 +367,49 @@ data class CommercialProvenanceReferences(
 )
 
 @Serializable
+enum class HumanizationSelection { BYPASS, HUMANIZED }
+
+/** A single input/output pair in a humanization run; both are canonical evidence. */
+@Serializable
+data class HumanizationArtifactReference(
+    val id: String,
+    val role: HumanizationRole,
+    val input: WorkflowArtifactReference,
+    val output: WorkflowArtifactReference
+) {
+    init { require(SAFE_ID.matches(id)) { "Humanization artifact ID is invalid" } }
+}
+
+/**
+ * Selected, immutable run evidence. The configuration and seed are persisted
+ * with the exact input/output hashes, so a later render cannot reinterpret a
+ * variation from ambient preferences or a process working directory.
+ */
+@Serializable
+data class HumanizationWorkflowReferences(
+    val config: HumanizationConfig,
+    val seed: Long,
+    val processorVersion: String,
+    val inputsSha256: String,
+    val artifacts: List<HumanizationArtifactReference>,
+    val report: WorkflowArtifactReference,
+    val legacyGrooveInputs: Set<String> = emptySet()
+) {
+    init {
+        config.requireValid()
+        require(SHA_256.matches(inputsSha256) && processorVersion == "seeded-humanization-v1") { "Humanization run identity is invalid" }
+        require(artifacts.isNotEmpty() && artifacts.map(HumanizationArtifactReference::id).distinct().size == artifacts.size) { "Humanization artifacts are invalid" }
+        require(legacyGrooveInputs.all(SAFE_ID::matches) && legacyGrooveInputs.all { it in artifacts.map(HumanizationArtifactReference::id) }) { "Humanization legacy-groove evidence is invalid" }
+    }
+}
+
+@Serializable
 data class ProjectWorkflowReferences(
     val stale: Set<WorkflowArtifact> = emptySet(),
     val cohesion: CohesionWorkflowReferences? = null,
     val arrangement: ArrangementApprovalReferences? = null,
+    val humanizationSelection: HumanizationSelection = HumanizationSelection.BYPASS,
+    val humanization: HumanizationWorkflowReferences? = null,
     /** One-way marker for the Task 023 dependency migration. */
     val cohesionOrderMigration: Int = 0,
     val commercialProvenance: CommercialProvenanceReferences? = null

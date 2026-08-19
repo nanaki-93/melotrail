@@ -582,6 +582,16 @@ object ProjectValidator {
             project.envelope.stageRuns.index?.let { reference ->
                 validateArtifactReference(root, reference, "Stage-run index", errors)
             }
+            project.workflow.humanization?.let { humanization ->
+                runCatching { humanization.artifacts.forEach { artifact ->
+                    validateArtifactReference(root, artifact.input, "Humanization input '${artifact.id}'", errors)
+                    validateArtifactReference(root, artifact.output, "Humanized MIDI '${artifact.id}'", errors)
+                } }.exceptionOrNull()?.let { error -> errors += "Humanization references are invalid: ${error.message}" }
+                validateArtifactReference(root, humanization.report, "Humanization report", errors)
+            }
+            if (project.workflow.humanizationSelection == HumanizationSelection.HUMANIZED && project.workflow.humanization == null) {
+                errors += "Project selects humanization without a humanization run"
+            }
         }
 
         return ProjectValidationResult(

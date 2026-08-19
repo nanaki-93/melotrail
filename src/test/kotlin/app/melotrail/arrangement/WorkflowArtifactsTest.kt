@@ -26,9 +26,14 @@ class WorkflowArtifactsTest {
         )
 
         expected.forEach { (change, stale) ->
-            assertEquals(stale, WorkflowArtifactGraph.invalidatedBy(change), change.name)
-            assertFalse(WorkflowArtifact.RAW_SOURCE in stale, change.name)
+            val expectedWithHumanization = stale + if (change in setOf(WorkflowChange.MIX_ONLY, WorkflowChange.AUDIO_TEXTURE)) emptySet() else setOf(WorkflowArtifact.HUMANIZATION)
+            assertEquals(expectedWithHumanization, WorkflowArtifactGraph.invalidatedBy(change), change.name)
+            assertFalse(WorkflowArtifact.RAW_SOURCE in expectedWithHumanization, change.name)
         }
+        assertEquals(
+            setOf(WorkflowArtifact.HUMANIZATION, WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT),
+            WorkflowArtifactGraph.invalidatedBy(WorkflowChange.HUMANIZATION)
+        )
     }
 
     @Test
