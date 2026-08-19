@@ -5,10 +5,10 @@ the next safe action from the files it can validate: a later stage is blocked
 until the preceding evidence is current. A retained artifact is useful for
 inspection, but is not proof that a stage is ready.
 
-This guide describes the MIDI-first schema-v3 desktop workflow. Older projects
-remain readable; if the workspace asks to migrate a schema-v2 project, use its
-explicit migration action before continuing. Opening a project never rewrites
-it automatically.
+This guide describes the MIDI-first schema-v4 desktop workflow. Schema v1, v2,
+and v3 projects remain readable; when the workspace asks to migrate one, use
+its explicit migration action before continuing. Opening a project never
+rewrites it automatically.
 
 For the precise direct-MIDI and eligible solo-piano audio routes, see the
 [MIDI import process](MIDI_IMPORT_PROCESS.md).
@@ -69,7 +69,7 @@ relative to the project folder.
 
 | Stage and desktop action | Inputs and prerequisites | Canonical result | Source changes? | What makes it stale; safe recovery |
 | --- | --- | --- | --- | --- |
-| 1. **Project** — use **New** or **Open** | **New** needs an empty or new project folder and its name/render format. **Open** needs a valid `project.json`. | `project.json`; a new project also has its canonical `source/` and `midi/` folders. | No existing source is changed. | A readable schema-v2 project blocks later stages until its explicit atomic migration. Open it, choose the migration action, then continue; never hand-edit or partially rewrite it. |
+| 1. **Project** — use **New** or **Open** | **New** needs an empty or new project folder and its name/render format. **Open** needs a valid `project.json`. | `project.json`; a new project also has its canonical `source/` and `midi/` folders. | No existing source is changed. | A readable schema-v1, v2, or v3 project blocks later stages until its explicit atomic migration. Open it, choose the migration action, then continue; never hand-edit or partially rewrite it. |
 | 2. **Import and inspection** — use **Import MIDI** or **Import audio**, then **Inspect only** | An open project; one valid MIDI file, or WAV/WAVE/MP3 for the eligible solo-piano route. The app validates the extension and actual format. **Import audio** also needs the running worker and optional local Basic Pitch runtime. Inspection requires the preserved source and the local worker. | `source/<part>.<ext>` is the immutable imported evidence. Import publishes `midi/raw/<part>.mid` directly for MIDI and, on a successful audio import, through transcription. Inspection writes `prepared/<part>/report.json`. Optional confirmed cleanup may add `prepared/<part>/decoded.wav` and `prepared/<part>/clean.wav`. | No. Import copies the input into `source/`; inspection only measures it. Cleanup is an opt-in derived copy and never overwrites it. | Missing/changed source or a report whose fingerprint no longer matches blocks the route. Re-import the valid source or run **Inspect only** again. For audio, choose **Review and apply safe cleanup** only after inspection recommends it; otherwise keep the original selected. |
 | 3. **Audio transcription** — if raw MIDI is missing, select Original or Prepared audio, then transcribe | A current inspected **audio** part without valid raw MIDI, an original or validated prepared WAV input, the running worker, and the optional local Basic Pitch runtime. A normal successful **Import audio** has already satisfied this stage. | Immutable `midi/raw/<part>.mid`. | No. The audio source and optional prepared copies remain unchanged. | A changed source, inspection, or selected prepared input invalidates the raw-MIDI route. Restore/reinspect the intended source, select the intended input, and transcribe again. If readiness reports a missing worker or Basic Pitch, fix that dependency first. |
 | 4. **Clean MIDI and approval** — use **Clean MIDI**, then **Approve Clean MIDI** when shown | Current raw MIDI for every part. Cleaning uses one bounded code-owned profile; approval is required only when the quality report says so. | `midi/clean/<part>.mid` and `midi/quality/<part>.json`, recorded as the selected cleaned MIDI with fingerprint-bound approval. | No. `source/` and `midi/raw/` are immutable. | A changed source/raw MIDI, missing/invalid cleanup evidence, or an unapproved required review blocks analysis. Run **Clean MIDI** again, inspect the raw/cleaned previews and report, then approve when requested. |

@@ -19,7 +19,7 @@ Tasks 001–027B and the chosen outcome of optional Task 028.
 ## Existing Code
 
 - root/desktop/worker test suites and end-to-end fake collaborators
-- `docs/RELEASE_ACCEPTANCE.md`, MIDI/workflow/troubleshooting/commercial docs
+- `../../../RELEASE_ACCEPTANCE.md`, MIDI/workflow/troubleshooting/commercial docs
 - function documentation inventory/checks, packaging tasks, UI reference image
 
 ## Changes
@@ -117,4 +117,4 @@ replacement and supported-schema migration coverage remains.
 ## Out of Scope
 
 Additional genres, cloud publication, DRM, collaboration, or deferred Future
-features from root `PLAN.md`. Dead-code deletion is explicitly in scope.
+features from root `../../../../PLAN.md`. Dead-code deletion is explicitly in scope.

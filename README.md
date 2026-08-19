@@ -138,6 +138,12 @@ mix-only settings, or audio texture mark only their documented descendants
 stale. Stale artifacts remain inspectable evidence; regenerate them instead of
 deleting, copying, or treating them as release-ready.
 
+The complete list of retained persisted and external compatibility readers,
+their callers, owners, fixtures, and removal conditions is in
+[`docs/COMPATIBILITY_READERS.md`](docs/COMPATIBILITY_READERS.md). It is a
+release gate: a compatibility adapter that is not listed there is not a
+supported contract.
+
 ## Testing
 
 ```bash

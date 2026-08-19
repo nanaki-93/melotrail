@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
+import java.security.MessageDigest
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertFailsWith
@@ -13,35 +14,56 @@ class ProjectStoreWorkflowMigrationTest {
     @TempDir lateinit var root: Path
 
     @Test
-    fun `v1 v2 and v3 fixtures open without rewriting project json`() {
-        write("parts/A.mid")
-        writeLegacyProjectFixture(root, Project(version = 1, name = "v1", parts = listOf(Part("A", "parts/A.mid"))))
-        val v1Before = Files.readString(root.resolve(ProjectStore.FILE_NAME))
-        assertEquals(1, ProjectStore.read(root).version)
-        assertEquals(v1Before, Files.readString(root.resolve(ProjectStore.FILE_NAME)))
-        val v1Migration = ProjectStore.readMigration(root)
-        assertEquals(Project.CURRENT_VERSION, v1Migration.project.version)
-        assertTrue(v1Migration.project.parts.single().legacySourceOnly)
-        assertEquals(v1Before, Files.readString(root.resolve(ProjectStore.FILE_NAME)))
+    fun `v1 v2 and v3 migrate explicitly without mutating existing artifact bytes`() {
+        val cases = listOf(
+            LegacyCase(1, "parts/A.mid", null),
+            LegacyCase(2, "source/A.mid", "midi/clean/A.mid"),
+            LegacyCase(3, "source/A.mid", "midi/raw/A.mid")
+        )
 
-        write("source/A.mid"); write("midi/clean/A.mid")
-        writeLegacyProjectFixture(root, Project(version = 2, name = "v2", renderFormat = RenderFormat(), parts = listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid")))))
-        val v2Before = Files.readString(root.resolve(ProjectStore.FILE_NAME))
-        assertEquals(2, ProjectStore.read(root).version)
-        assertEquals(v2Before, Files.readString(root.resolve(ProjectStore.FILE_NAME)))
+        cases.forEach { fixture ->
+            val projectRoot = root.resolve("v${fixture.version}")
+            write(projectRoot, fixture.source)
+            fixture.midi?.let { write(projectRoot, it) }
+            val references = fixture.midi?.let { path ->
+                if (fixture.version == 3) MidiReferences(raw = path) else MidiReferences(clean = path)
+            }
+            writeLegacyProjectFixture(projectRoot, Project(
+                version = fixture.version,
+                name = "v${fixture.version}",
+                renderFormat = RenderFormat().takeIf { fixture.version >= 2 },
+                parts = listOf(Part("A", fixture.source, midi = references))
+            ))
+            val projectBefore = Files.readAllBytes(projectRoot.resolve(ProjectStore.FILE_NAME))
+            val artifactHashes = (listOf(fixture.source) + listOfNotNull(fixture.midi))
+                .associateWith { sha256(projectRoot.resolve(it)) }
 
-        ProjectStore.migrateAndSave(root)
-        val v4 = ProjectStore.read(root)
-        assertEquals(Project.CURRENT_VERSION, v4.version)
-        assertTrue(Files.readString(root.resolve(ProjectStore.FILE_NAME)).contains("\"workflow\""))
-        assertTrue(v4.envelope.stageRuns.index != null)
-        assertEquals(setOf(StageId.SOURCE, StageId.CLEANED), StageRunStore().read(root, v4.envelope.stageRuns).map(StageRunRecord::stage).toSet())
-        val migrated = Files.readString(root.resolve(ProjectStore.FILE_NAME))
-        assertTrue(migrated.contains("\"analysisInput\": \"REPAIRED\""))
-        assertEquals(MidiAiFixSelection.SKIP, ProjectStore.read(root).parts.single().midi?.aiFixSelection)
+            assertEquals(fixture.version, ProjectStore.read(projectRoot).version)
+            assertTrue(projectBefore.contentEquals(Files.readAllBytes(projectRoot.resolve(ProjectStore.FILE_NAME))), "open must not rewrite v${fixture.version}")
+            val planned = ProjectStore.readMigration(projectRoot)
 
-        assertEquals(Project.CURRENT_VERSION, ProjectStore.migrateAndSave(root).migration.project.version)
-        assertEquals(migrated, Files.readString(root.resolve(ProjectStore.FILE_NAME)))
+            assertEquals(fixture.version, planned.sourceVersion)
+            assertEquals(Project.CURRENT_VERSION, planned.project.version)
+            assertTrue(projectBefore.contentEquals(Files.readAllBytes(projectRoot.resolve(ProjectStore.FILE_NAME))), "open/migration planning must not rewrite v${fixture.version}")
+
+            val saved = ProjectStore.migrateAndSave(projectRoot)
+
+            assertEquals(Project.CURRENT_VERSION, saved.migration.project.version)
+            assertEquals(Project.CURRENT_VERSION, ProjectStore.read(projectRoot).version)
+            artifactHashes.forEach { (path, expectedHash) ->
+                assertEquals(expectedHash, sha256(projectRoot.resolve(path)), "migration must preserve $path from v${fixture.version}")
+            }
+            if (fixture.version == 2) {
+                val migrated = Files.readString(projectRoot.resolve(ProjectStore.FILE_NAME))
+                val v4 = ProjectStore.read(projectRoot)
+                assertTrue(v4.envelope.stageRuns.index != null)
+                assertEquals(setOf(StageId.SOURCE, StageId.CLEANED), StageRunStore().read(projectRoot, v4.envelope.stageRuns).map(StageRunRecord::stage).toSet())
+                assertTrue(migrated.contains("\"analysisInput\": \"REPAIRED\""))
+                assertEquals(MidiAiFixSelection.SKIP, v4.parts.single().midi?.aiFixSelection)
+                assertEquals(Project.CURRENT_VERSION, ProjectStore.migrateAndSave(projectRoot).migration.project.version)
+                assertEquals(migrated, Files.readString(projectRoot.resolve(ProjectStore.FILE_NAME)))
+            }
+        }
     }
 
     @Test
@@ -86,9 +108,16 @@ class ProjectStoreWorkflowMigrationTest {
         assertEquals(invalidV2, Files.readString(projectFile))
     }
 
-    private fun write(relative: String) {
-        val path = root.resolve(relative)
+    private fun write(relative: String) = write(root, relative)
+
+    private fun write(projectRoot: Path, relative: String) {
+        val path = projectRoot.resolve(relative)
         Files.createDirectories(path.parent)
         Files.writeString(path, "fixture")
     }
+
+    private fun sha256(path: Path): String = MessageDigest.getInstance("SHA-256")
+        .digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
+
+    private data class LegacyCase(val version: Int, val source: String, val midi: String?)
 }

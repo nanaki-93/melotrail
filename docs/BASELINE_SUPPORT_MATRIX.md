@@ -14,8 +14,9 @@ installed or that every endpoint is a product workflow.
 ## Baseline artifact guarantees
 
 `ProjectStore.read` and the file-backed application-service `open` path read
-v1, v2, and v3 project files without rewriting `project.json`. V2-to-v3 is an
-explicit atomic migration. Direct MIDI preserves immutable `source/` and
+v1, v2, and v3 project files without rewriting `project.json`. Any supported
+legacy version migrates only through an explicit atomic save to schema v4.
+Direct MIDI preserves immutable `source/` and
 `midi/raw/` evidence; WAV/WAVE/MP3 enters the guarded transcription route and
 does not create cleaned MIDI implicitly. Selected MIDI resolves from cleaned
 evidence, optionally through an approved AI-fix base and then the separate
