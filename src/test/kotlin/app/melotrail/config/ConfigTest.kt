@@ -16,11 +16,6 @@ class ConfigTest {
     }
 
     @Test
-    fun `renamed Spring entry points resolve`() {
-        assertNotNull(Class.forName("app.melotrail.server.ServerKt"))
-    }
-
-    @Test
     fun `should create config manager`() {
         val tempDir = Files.createTempDirectory("test-config")
         val configPath = tempDir.resolve("config.json")

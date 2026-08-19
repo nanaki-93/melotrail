@@ -38,31 +38,21 @@ request/result, accept unique output paths prepared by Kotlin, and never decide
 which artifact is selected.
 
 Retain synchronous HTTP initially: the Kotlin stage runner supplies durability
-and runs calls off the UI thread. Do not combine this with the Spring-only
-in-memory job store. If cancellation/resumable model execution becomes necessary,
+and runs calls off the UI thread. Do not add an in-memory job store. If
+cancellation/resumable model execution becomes necessary,
 design a real worker job protocol later and prove process/request cancellation.
 
 Every new/changed command requires matching Kotlin `WorkerProtocol`, Python
 schema validation, success/error fixtures, timeout behavior, and versioned
 capability checks.
 
-## Optional Spring API
+## Retired Spring API
 
-Current REST project CRUD uses `model.Project` and `ProjectServiceAdapter`, an
-independent data store. Target options, decided with usage evidence:
-
-1. Retain: controllers translate versioned REST DTOs into canonical application
-   commands/queries and a configured registry resolves project handles.
-2. Delete: migrate/export any required data, verify recovery, then remove the
-   controllers, separate model/store, routes, configuration, dependencies, tests,
-   and documentation in Task 028. Do not leave a deprecated/frozen service.
-
-Never dual-write canonical and legacy project JSON. Do not auto-import a legacy
-REST store without inventory, mapping, backup, and tests. If REST remains local,
-review CORS/binding/path exposure before claiming multi-user or remote support.
-
-SSE may expose persisted stage snapshots if REST is retained. The REST layer
-does not own jobs and restart recovery remains the stage runner's responsibility.
+Task 001 found no supported REST caller, so Task 028 deleted the Spring product
+surface rather than preserve a second project authority. The data recovery
+procedure is recorded in [`../SPRING_API_RETIREMENT.md`](../SPRING_API_RETIREMENT.md).
+Canonical application services and their file-backed project artifacts are the
+only product boundary; no REST store, job queue, CORS policy, or SSE layer remains.
 
 ## Configuration ownership
 

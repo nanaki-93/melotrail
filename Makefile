@@ -12,26 +12,21 @@ WORKER_DEPS_STAMP := $(VENV)/.worker-deps-installed
 WORKER_HOST ?= 127.0.0.1
 WORKER_PORT ?= 8081
 
-.PHONY: help build test check run desktop worker python-install verify-worker-python clean
+.PHONY: help build test check desktop worker python-install verify-worker-python clean
 
 help:
 	@echo "Melotrail"
 	@echo ""
-	@echo "Kotlin/Spring:"
+	@echo "Kotlin/Compose:"
 	@echo "  make build                         Build the application"
 	@echo "  make test                          Run tests"
 	@echo "  make check                         Run all verification tasks"
-	@echo "  make run                           Start the Kotlin/Spring server"
 	@echo "  make desktop                       Start the Compose Desktop application"
 	@echo ""
 	@echo "Python services:"
 	@echo "  make worker                        Set up and start the complete Python 3.11 worker on :8081"
 	@echo "  make python-install                Install all worker dependencies, including Basic Pitch"
 	@echo ""
-	@echo "Typical API development setup (2 terminals):"
-	@echo "  make worker"
-	@echo "  make run"
-
 build:
 	$(GRADLE) build
 
@@ -40,9 +35,6 @@ test:
 
 check:
 	$(GRADLE) check
-
-run:
-	$(GRADLE) bootRun
 
 desktop:
 	$(GRADLE) :desktopApp:run

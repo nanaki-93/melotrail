@@ -29,7 +29,7 @@ those environments until the listed manual gates are completed.
 | `.venv-worker/bin/python -m unittest discover -s worker/tests` | Passed: 34 tests under Python 3.11.16. Fixture/dependency warnings only. |
 | `./gradlew :desktopApp:test --tests app.melotrail.desktop.LocalDesktopOperationLoggerTest` | Passed. Regression test for diagnostic path/source-name redaction. |
 | `./gradlew :desktopApp:test :desktopApp:build :desktopApp:packageDistributionForCurrentOS` | Passed. Native macOS DMG built with its runtime. |
-| `make check-legacy-frontend` | Passed. The optional Spring service has no browser frontend fallback. |
+| Browser frontend fallback | Not applicable. Melotrail has no Spring or browser product surface. |
 
 Existing offline fixture coverage is the evidence for the following bounded
 flows; all collaborators are fake or deterministic and make no network calls:

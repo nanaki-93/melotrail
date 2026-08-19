@@ -43,7 +43,7 @@ schema window actively requires it and must have a named removal condition.
 | 026 | [Render, mix, profile processing, and master handoff](completed/026-production-handoff.md) | Later |
 | 027 | [Stage lineage and commercial release provenance](completed/027-release-provenance.md) | Later |
 | 027B | [Usage-based instrument credits export](completed/027b-instrument-credits-export.md) | Later |
-| 028 | [Spring API retain-or-delete migration](028-spring-api-adapter.md) | Later |
+| 028 | [Spring API retain-or-delete migration](completed/028-spring-api-adapter.md) | Completed |
 | 030 | [End-to-end rollout, documentation, and release acceptance](030-rollout-acceptance.md) | Later |
 
 Tasks 002–021 establish the UI/domain-first milestone. Task 019 can follow the

@@ -515,14 +515,6 @@
       "documentedFunctionCount": 0
     },
     {
-      "path": "src/main/kotlin/app/melotrail/audio/PlaybackController.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/audio/PlaybackController.kt has 19 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 19,
-      "declarationDigest": "d054427b43f72b7464fa825bf073274c1e9bf7870f97da57a2fa738ceb52e66f",
-      "documentedFunctionCount": 0
-    },
-    {
       "path": "src/main/kotlin/app/melotrail/audio/WAVDecoder.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/audio/WAVDecoder.kt has 10 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
@@ -811,14 +803,6 @@
       "documentedFunctionCount": 0
     },
     {
-      "path": "src/main/kotlin/app/melotrail/model/Enums.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/model/Enums.kt has 1 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 1,
-      "declarationDigest": "257b703a4cfaf36e01b4d3c0635d824acb35d9be89d58996874315cea81d82fd",
-      "documentedFunctionCount": 0
-    },
-    {
       "path": "src/main/kotlin/app/melotrail/model/ErrorReporter.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/model/ErrorReporter.kt has 4 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
@@ -840,30 +824,6 @@
       "reason": "Contains declarations, constants, or generated-style wiring only; it has no callable declarations to document.",
       "functionCount": 0,
       "declarationDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/model/Project.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/model/Project.kt has 8 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 8,
-      "declarationDigest": "f84421d4d11e6639f46cfa27eb45bf9c9f9df439d90ef4bbf1211ed7b38f16bb",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/model/ProjectServiceImpl.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/model/ProjectServiceImpl.kt has 5 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 5,
-      "declarationDigest": "72d42cea16d6ea788d91dbebf0490693cb0427fa01849ce81832b049a57152bb",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/model/ProjectTrack.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/model/ProjectTrack.kt has 3 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 3,
-      "declarationDigest": "115c8017fdf706e99e4f3b005d2413a7254b42a4d03efad80209ab9f89e1fd6a",
       "documentedFunctionCount": 0
     },
     {
@@ -907,158 +867,6 @@
       "documentedFunctionCount": 0
     },
     {
-      "path": "src/main/kotlin/app/melotrail/server/Server.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/server/Server.kt has 1 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 1,
-      "declarationDigest": "7f04ec2fd1c377ab96d098d488958af059f858f259ac63e57801467412e71fde",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/server/api/AudioController.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/server/api/AudioController.kt has 3 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 3,
-      "declarationDigest": "c6e24bb9ecb7d80d1cb0d3c8380ad93a8fb98b40bd447bb06d2c7e7c9cb43590",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/server/api/ConfigController.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/server/api/ConfigController.kt has 2 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 2,
-      "declarationDigest": "3bd665d446df136c6528dd652f20588e381e3a3b5ba8f706364a09950b960c4b",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/server/api/HealthController.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/server/api/HealthController.kt has 1 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 1,
-      "declarationDigest": "06df88423497c42ec91648b9575140f1c866da2deb408d41fc4cba0562b70027",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/server/api/ProjectController.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/server/api/ProjectController.kt has 10 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 10,
-      "declarationDigest": "a32d3f6b606d97e5e0d923f168e246e2ca1b6139a1e6c17635da7869783f1849",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/server/api/WorkerController.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/server/api/WorkerController.kt has 14 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 14,
-      "declarationDigest": "f2e5e4956fe4925cffec7c8ce288805ca02fc2fd111834067c165b9df8dd9f7a",
-      "documentedFunctionCount": 1
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/server/config/ApiExceptionHandler.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/server/config/ApiExceptionHandler.kt has 3 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 3,
-      "declarationDigest": "863fb0ef3065c380198ea29caab7f601ac2410dea5c7deb29bd41e0e7f2a10c4",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/server/config/ServerConfig.kt",
-      "classification": "trivial/generated",
-      "reason": "Contains declarations, constants, or generated-style wiring only; it has no callable declarations to document.",
-      "functionCount": 0,
-      "declarationDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/server/config/SpringConfig.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/server/config/SpringConfig.kt has 1 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 1,
-      "declarationDigest": "9848c50108a56e3d5a0f53a9e61b8ce8681dbee75ba87badfddb1c783a3622c7",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/server/dto/AudioDTO.kt",
-      "classification": "trivial/generated",
-      "reason": "Contains declarations, constants, or generated-style wiring only; it has no callable declarations to document.",
-      "functionCount": 0,
-      "declarationDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/server/dto/ProjectDTO.kt",
-      "classification": "trivial/generated",
-      "reason": "Contains declarations, constants, or generated-style wiring only; it has no callable declarations to document.",
-      "functionCount": 0,
-      "declarationDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/server/dto/ProjectTrackDTO.kt",
-      "classification": "trivial/generated",
-      "reason": "Contains declarations, constants, or generated-style wiring only; it has no callable declarations to document.",
-      "functionCount": 0,
-      "declarationDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/server/dto/WorkerRequestDTO.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/server/dto/WorkerRequestDTO.kt has 1 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 1,
-      "declarationDigest": "fca012e99d2dcee253f1d06c61dd0b90f58ae430d80473f90cb283a467132233",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/server/service/AudioService.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/server/service/AudioService.kt has 5 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 5,
-      "declarationDigest": "5ad550f08bf1a81e55b67347b745b457db8ef50b46b1f60a4fc6e60911ae9d38",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/server/service/AudioServiceConfig.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/server/service/AudioServiceConfig.kt has 1 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 1,
-      "declarationDigest": "8ff4cea336a17b38d90e2a3bb3de9949a834dfe06c969e7ccd5ffffa43931443",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/server/service/ConfigService.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/server/service/ConfigService.kt has 5 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 5,
-      "declarationDigest": "5a3657ad07c89f9246441973015bdb430deff1f4c496fc5882837528bfffbe7b",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/server/service/ProjectServiceAdapter.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/server/service/ProjectServiceAdapter.kt has 8 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 8,
-      "declarationDigest": "bec44e443b4a05d29f4001eb2a39ee5bba1248bb878a373de76e38fca22d5704",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/server/service/ProjectServiceConfig.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/server/service/ProjectServiceConfig.kt has 1 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 1,
-      "declarationDigest": "d0b77d6807407969f39315901d55b70ee1aa19b7417d8e3e1a9cdaa127b772a5",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/server/service/WorkerProgressService.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/server/service/WorkerProgressService.kt has 6 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 6,
-      "declarationDigest": "3d71ccc9554ca503784ff7cb08cc05a4a18342c0949707ce67112e836af8ec7f",
-      "documentedFunctionCount": 0
-    },
-    {
       "path": "src/main/kotlin/app/melotrail/worker/WorkerClient.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/worker/WorkerClient.kt has 9 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
@@ -1072,14 +880,6 @@
       "reason": "Contains declarations, constants, or generated-style wiring only; it has no callable declarations to document.",
       "functionCount": 0,
       "declarationDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/worker/WorkerJobService.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/worker/WorkerJobService.kt has 14 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 14,
-      "declarationDigest": "ea2b24919cf47bd00e6dcc66af0595144a8445e87d03912dd1292ca838f56342",
       "documentedFunctionCount": 0
     },
     {

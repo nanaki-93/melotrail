@@ -6,13 +6,10 @@ installed or that every endpoint is a product workflow.
 
 | Surface | Status | Evidence and boundary |
 | --- | --- | --- |
-| Compose Desktop (`:desktopApp`) | Supported product UI | `DesktopMain` adapts typed Kotlin application services. It opens canonical file-backed `project.json` projects and does not start Spring. |
+| Compose Desktop (`:desktopApp`) | Supported product UI | `DesktopMain` adapts typed Kotlin application services. It opens canonical file-backed `project.json` projects. |
 | Root Kotlin application services | Supported local boundary | `DefaultProjectApplicationService` and `ProjectStore` own canonical project artifacts. Compose adapts these typed services directly. |
 | Python worker | Supported optional local dependency | A separately started HTTP worker provides `/health`, `/analyze`, `/apply_dsp`, `/repair`, `/master`, `/mp3_export`, `/mp3_convert`, `/transcribe`, `/midi-clean`, `/inspect-input`, and `/cleanup`. Transcription is only the eligible solo-piano route. |
-| Spring `/health` | Retained optional local JSON API | A process-health response only; Compose does not require it. |
-| Spring `/api/config` | Obsolete duplicate configuration surface | `ConfigService` writes `data/config/server-config.json`, which is separate from desktop preferences and does not configure the running `ServerConfig`. Do not add callers; Task 028 owns removal/migration. |
-| Spring `/api/projects` and `/api/audio` | Obsolete duplicate storage surfaces | Their model and files under `data/projects`/`data/audio` are not canonical Melotrail projects or artifacts. Do not migrate product data into them; Task 028 owns removal/migration. |
-| Spring `/api/worker` jobs, control, and SSE | Obsolete compatibility surface | It wraps the legacy in-memory worker job queue rather than the current typed desktop worker boundary. The Python worker lifecycle remains external. Task 028 owns removal/migration. |
+| Spring API | Retired in Task 028 | Task 001 found no supported caller. The obsolete routes, separate project store/configuration, and in-memory worker jobs were deleted; see [`SPRING_API_RETIREMENT.md`](SPRING_API_RETIREMENT.md) for the recoverable data disposition. |
 
 ## Baseline artifact guarantees
 

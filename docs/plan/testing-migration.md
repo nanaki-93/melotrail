@@ -132,9 +132,9 @@ approval where hashes change.
 
 ### Phase E: production/adapters
 
-Update mix/style/master/provenance and release gates. Retain Spring only through a
-canonical adapter with demonstrated callers; otherwise migrate/export required
-data and delete its product surface. Delete every superseded runtime path as soon
+Update mix/style/master/provenance and release gates. Task 028 found no
+demonstrated Spring callers and deleted its product surface after recording the
+recoverable legacy-data disposition. Delete every superseded runtime path as soon
 as usage evidence and migration tests prove the cutover.
 
 ## Documentation gates

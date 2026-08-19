@@ -2,7 +2,7 @@
 
 ## Audit scope and baseline
 
-This audit covers README/build/configuration, Compose Desktop, Spring services,
+This audit covers README/build/configuration, Compose Desktop, the retired Spring surface,
 the Python worker, audio/MIDI processing, structure,
 arrangement, cohesion, rendering, mix/master/export, provenance, tests, and the
 existing completed planning work.
@@ -24,7 +24,7 @@ in `docs/RELEASE_ACCEPTANCE.md`.
 | Canonical project | `arrangement/Project.kt`, `ProjectStore.kt`, `WorkflowArtifacts.kt` | v3 file-backed project, migration, references, hashes, invalidation | Extend to v4; retain compatibility |
 | Project application | `application/ProjectApplicationService.kt`, `WorkflowReadModel.kt` | import, cleanup, selection, analysis, structure, readiness | Keep facade; extract capabilities as added |
 | Desktop UI | `desktopApp/.../WorkspaceViewModel.kt`, `WorkspacePageRouter.kt`, `DesktopMain.kt` | supported responsive product UI | Adapt, do not replace shell/transport |
-| Spring API | `server/api/*`, `service/ProjectServiceAdapter.kt`, `model/Project.kt` | optional API with separate old project store | Retain only as canonical adapter with users; otherwise migrate/export data and delete |
+| Spring API | Task 028 retirement record | no supported caller or canonical project authority | Deleted with the separate store, configuration, and in-memory worker jobs |
 | Worker | `worker/main.py`, `registry.py`, `commands/*`, Kotlin `WorkerClient`/`WorkerProtocol` | synchronous local Python operations | Keep stateless and specialized |
 | MIDI | `MidiAnalysis.kt`, `MidiAiFix.kt`, `MidiLoFiFeel.kt`, worker MIDI clean | analysis, cleanup, bounded AI edits, fixed lo-fi groove | Reuse primitives; split responsibilities |
 | Structure | project structure list, desktop editor, `SectionVariation.kt` | repeated part ordering and derived occurrences | Persist occurrence identity in v4 |
@@ -72,11 +72,10 @@ foundations and should be evolved rather than bypassed.
 
 ## Obsolete or compatibility-only components
 
-- `model.Project` and `ProjectServiceAdapter` are an independent track CRUD
-  product model. If the API has supported users, migrate callers/data and delete
-  the separate model/store as the canonical adapter lands. If it has no supported
-  users, export any required data and delete the entire product surface in Task
-  028. A frozen/deprecated copy is not an accepted state.
+- The independent track CRUD model and Spring API were retired in Task 028 after
+  Task 001 found no supported caller. The recovery disposition is documented in
+  [`SPRING_API_RETIREMENT.md`](SPRING_API_RETIREMENT.md); Git history preserves
+  the removed implementation, not a dormant runtime surface.
 - Historical whole-occurrence cohesion records remain readable evidence only.
   Reviewed arrangement-aware transition boundaries are the sole executable path.
 - Duplicate/older workspace UI components should be removed only after router
@@ -106,8 +105,8 @@ history.
 6. Cohesion is an arrangement prerequisite, opposite the target pipeline.
 7. Lo-fi MIDI feel is a fixed enum and build-time lo-fi audio processing is a
    fixed option rather than profile/mood policy.
-8. Durable long-running state is absent. Spring's in-memory worker jobs are not
-   used by Compose and cancellation does not stop the underlying worker request.
+8. Durable long-running state is absent. The desktop does not expose request
+   cancellation for the underlying worker process.
 9. Application/UI classes are large. Extract seams only around new ownership;
    a broad refactor would increase migration risk.
 10. `ProjectApplicationService.importPart` currently warrants a focused

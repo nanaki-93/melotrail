@@ -1,9 +1,8 @@
 # Melotrail
 
-Kotlin 2.0 music workstation with an optional Spring Boot JSON API.
-The root Kotlin module contains shared application services; the Compose
-Desktop product lives in the `:desktopApp` Gradle subproject. The Python worker
-remains a separate process.
+Kotlin 2.0 music workstation. The root Kotlin module contains shared
+application services; the Compose Desktop product lives in the `:desktopApp`
+Gradle subproject. The Python worker remains a separate process.
 
 ## Prerequisites
 
@@ -11,20 +10,10 @@ remains a separate process.
 - Python 3.10+ (only needed for the worker)
 - `make` (optional; you can use Gradle directly)
 
-## Local API service
-
-The Compose Desktop application is the supported product UI. The Spring process
-is an optional local JSON API service; it does not serve a browser interface.
-You can run it without Make:
-
-```bash
-./gradlew bootRun
-```
-
 ## Compose Desktop workspace
 
 The local desktop workspace uses the same typed Kotlin application services as
-the CLI. It launches in-process and does not start Spring:
+the CLI. It launches in-process:
 
 ```bash
 make desktop
@@ -82,8 +71,8 @@ On this development OS, produce a DMG with its bundled runtime using:
 
 The DMG is written under `desktopApp/build/compose/binaries/main/dmg/`. Open it,
 drag **Melotrail** to Applications (or another local folder),
-and launch it there. The package includes its Java runtime: Gradle, Spring, and
-the repository working directory are not required to create or open a project.
+and launch it there. The package includes its Java runtime: Gradle and the
+repository working directory are not required to create or open a project.
 
 The package does not bundle the local SFZ samples, renderer, Python worker, or
 optional transcription runtime. Use the shell **More** menu, then **Settings**, to choose the
@@ -110,7 +99,7 @@ musical Setup (name, key, tempo, meter, Lo-fi profile, and mood), then import MI
 source, convert audio to MIDI when needed, clean then deterministically normalize MIDI, keep it or review an
 optional bounded AI-fix draft, select optional Lo-fi Feel, analyze MIDI, then
 save the structure, generate/review an arrangement, then generate/review Cohesion,
-then explicitly select deterministic Humanization or bypass before building and auditioning validated artifacts. The app never requires Spring.
+then explicitly select deterministic Humanization or bypass before building and auditioning validated artifacts.
 
 - Direct MIDI is preserved under `source/` and copied as immutable evidence under `midi/raw/`. Worker **Clean MIDI** repairs invalid events; Kotlin **Normalize MIDI** then publishes deterministic `midi/normalized/` evidence and a hash-bound report. Melotrail records detected source-key confidence; below its fixed gate, confirm the source key explicitly before **Transpose to project key** publishes a separate `midi/transposed/` artifact and report. Legacy clean-only projects remain readable until normalization is explicitly run.
 - WAV/WAVE and MP3 input is accepted only for the optional **solo-piano**
@@ -168,7 +157,6 @@ and preserve the source sample rate and channels.
 | `make build` | Build the application |
 | `make test` | Run tests |
 | `make check` | Run Gradle verification |
-| `make run` | Start Spring Boot |
 | `make desktop` | Start the Compose Desktop application |
 | `make worker` | Start standalone Python worker on `:8081` |
 | `make python-install` | Install Python dependencies |
@@ -184,10 +172,7 @@ melotrail/
 │   │   │   ├── application/    # Typed local use cases
 │   │   │   ├── arrangement/    # Canonical project artifacts
 │   │   │   ├── preparation/    # Safe import/cleanup boundaries
-│   │   │   ├── worker/         # Worker integration
-│   │   │   └── server/         # Optional JSON API
-│   │   └── resources/
-│   │       └── application.properties
+│   │   │   └── worker/         # Worker integration
 │   └── test/                    # All Kotlin tests
 ├── desktopApp/                  # Compose Desktop product UI
 ├── worker/                      # Python worker (separate process)
@@ -197,20 +182,9 @@ melotrail/
 └── gradlew
 ```
 
-## Configuration
-
-Environment variables supported by the server include:
-
-- `SERVER_PORT` (default `8080`)
-- `SERVER_HOST` (default `localhost`)
-- `WORKER_BASE_URL` (default `http://localhost:8081`)
-- `PROJECT_STORAGE_PATH` (default `data/projects`)
-- `AUDIO_STORAGE_PATH` (default `data/audio`)
-
 ## Technology
 
 - Kotlin 2.0.x / JVM 21
-- Spring Boot 3.5.x
 - Kotlinx Serialization and Coroutines
 - Python worker
 
@@ -242,9 +216,7 @@ Python exposes one endpoint per operation:
 
 The `app.melotrail.worker` boundary owns the Kotlin command schemas, direct
 endpoint/payload mapping, typed response/error mapping, and health/readiness.
-Kotlin never starts or manages the Python process. The separate legacy Spring
-worker job/control routes are inventory-only; see
-[`docs/BASELINE_SUPPORT_MATRIX.md`](docs/BASELINE_SUPPORT_MATRIX.md).
+Kotlin never starts or manages the Python process.
 
 Install Python dependencies with:
 

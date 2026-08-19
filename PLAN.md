@@ -77,8 +77,8 @@ ends, its removal is part of the same policy change.
 
 ### Supported product path
 
-- Kotlin 2.2/JVM 21 and Spring Boot form the root Gradle module; Compose Desktop
-  is a second Gradle module and is the supported user interface.
+- Kotlin 2.2/JVM 21 form the root Gradle module; Compose Desktop is a second
+  Gradle module and is the supported user interface.
 - `ProjectApplicationService` and the v3 file-backed `arrangement.Project` are
   the canonical desktop project boundary. Project-relative artifacts, hashes,
   validation, atomic writes, and downstream invalidation already exist.
@@ -99,12 +99,13 @@ ends, its removal is part of the same policy change.
 
 ### Parallel or stale surfaces
 
-- The Spring `model.Project`/`ProjectServiceAdapter` and REST controllers use a
-  separate track-centric project model and store. They are not the canonical
-  Compose project path and must not become a second composition implementation.
-- Configuration is split across desktop preferences, root config classes, and
-  the optional Spring service. Consolidation should follow ownership boundaries
-  instead of preceding the UI milestone.
+- The former Spring `model.Project`/`ProjectServiceAdapter` and REST controllers
+  were retired in Task 028 because they had no supported caller and would have
+  formed a second composition authority. See
+  [`docs/SPRING_API_RETIREMENT.md`](docs/SPRING_API_RETIREMENT.md).
+- Configuration is split across desktop preferences and root config classes.
+  Consolidation should follow ownership boundaries instead of preceding the UI
+  milestone.
 - Cohesion uses only reviewed, arrangement-aware transition boundaries. Historical
   whole-occurrence records are readable project evidence, not executable workflow.
 
@@ -123,8 +124,6 @@ Compose UI
         -> Python worker for audio/model workloads
         -> renderer, mix, master, and export services
 
-Optional Spring API
-  -> the same application services and DTO contracts
 ```
 
 The v4 project remains the authoritative, portable aggregate. Large evidence
@@ -251,10 +250,10 @@ readiness understandable before advanced AI is added.
 - Make arrangement planning independent of approved cohesion. Cohesion will
   consume the approved arrangement/occurrence context and produce continuity
   artifacts before humanization/render.
-- Adapt the optional Spring API later as a transport adapter over canonical
-  services if it has supported users. Otherwise migrate/export required data and
-  delete the separate controllers/model/store/configuration/tests in Task 028.
-  Do not dual-write or leave a frozen deprecated service in the repository.
+- Task 028 found no supported Spring caller, recorded a recoverable legacy-data
+  disposition, and deleted the separate controllers/model/store/configuration/
+  tests. Do not reintroduce a second project authority or a frozen deprecated
+  service.
 
 ## Python worker changes
 
@@ -466,7 +465,6 @@ action with recovery backup/atomic publication.
 - Arrangement-aware cohesion and seeded humanization.
 - Updated rendering, profile style processing, mix/master, release provenance.
 - Commercial-license admission and usage-based `*-credits.txt` export.
-- Canonical Spring transport only if still valuable.
 
 ### Future — intentionally deferred
 
@@ -512,7 +510,7 @@ action with recovery backup/atomic publication.
 | 3. Resumable part pipeline | Stage ledger, orchestration, clean/normalize/transpose/correct/enhance contracts and comparison UX | 011–020 |
 | 4. Form and musical build | Persistent occurrences, role/sound intent, registry resolution, arrangement-aware cohesion, humanization | 021–025, including 022B |
 | 5. Production and evidence | Render/mix/master handoff, provenance, usage-based credits, release verification | 026–027B, 030 |
-| 6. Optional adapter | Spring API consolidation decision/adapter | 028 |
+| 6. API retirement | Spring API retain-or-delete decision | 028 |
 
 The ordered, implementation-ready specifications are indexed in
 [docs/plan/tasks/README.md](docs/plan/tasks/README.md).
