@@ -545,6 +545,7 @@ class WorkspaceViewModelTest {
         viewModel.accept(WorkspaceIntent.ShowRoleEditor("A"))
         viewModel.accept(WorkspaceIntent.UpdateRole("chorus"))
         viewModel.accept(WorkspaceIntent.SaveRole)
+        viewModel.accept(WorkspaceIntent.ConfirmSectionChange)
         advanceUntilIdle()
         assertEquals(app.melotrail.arrangement.SectionTypeId.CHORUS, service.updatedSection?.sectionType)
 
@@ -686,7 +687,7 @@ class WorkspaceViewModelTest {
         advanceUntilIdle()
 
         assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation)
-        assertIs<WorkspaceRetry.Import>(viewModel.state.value.retry)
+        assertIs<WorkspaceRetry.AutomaticImport>(viewModel.state.value.retry)
         assertEquals(Path.of("input.mid"), assertIs<WorkspaceDialog.ImportPart>(viewModel.state.value.dialog).source, "the selected source must remain recoverable after a retryable failure")
         assertEquals("worker unavailable", viewModel.state.value.notification)
         viewModel.close()
@@ -1715,6 +1716,23 @@ private class FakeProjectService(
         failureOnImport?.let { throw it }
         progress.report(app.melotrail.application.OperationProgress("import-part", 2, 4, "Cleaning MIDI"))
         return checkNotNull(current)
+    }
+
+    override suspend fun importSongPart(command: app.melotrail.application.ImportSongPart): app.melotrail.application.ImportSongPartResult {
+        imported = ImportPartRequest(command.root, command.id, command.file, name = command.name, sectionType = command.sectionType,
+            sourceAttestation = command.sourceAttestation)
+        failureOnImport?.let { throw it }
+        val run = app.melotrail.application.StageRunSnapshot(
+            "import-${command.id}", app.melotrail.arrangement.StageId.EXTRACTED,
+            app.melotrail.arrangement.StageSubject.Part(command.id), app.melotrail.arrangement.StageRunStatus.COMPLETED, false
+        )
+        current = checkNotNull(current).copy(parts = checkNotNull(current).parts + app.melotrail.application.PartSummary(
+            id = command.id, role = command.sectionType.value, sourceFile = "source/${command.id}.mid", sourceName = command.file.fileName.toString(),
+            sourceType = app.melotrail.application.PartSourceType.MIDI, analysis = null,
+            preparation = app.melotrail.application.PartPreparationSummary(true, true, false, true, false, false, false, emptyList()),
+            name = command.name, sectionType = command.sectionType, sourceKeyConfirmed = true
+        ))
+        return app.melotrail.application.ImportSongPartResult(command.id, app.melotrail.application.StageRunResult(run.runId, run, false), checkNotNull(current))
     }
 
     override suspend fun cleanMidi(

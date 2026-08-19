@@ -644,7 +644,7 @@ class WorkspaceScreenTest {
         onNodeWithTag(WorkspaceTags.IMPORT_SOURCE).performClick()
         assertEquals(WorkspaceIntent.ChooseImportSource, intents.removeLast())
         onNodeWithTag(WorkspaceTags.IMPORT_DETAILS).performClick()
-        onNodeWithText("The initial part ID is safely inferred as verse; the default role is verse. You can edit the role after import.").assertExists()
+        onNodeWithText("The stable part ID is verse; its initial section is Verse. You can change the section with downstream-impact confirmation after import.").assertExists()
         state = state.copy(dialog = (state.dialog as WorkspaceDialog.ImportPart).copy(provenanceConfirmed = true))
         onNodeWithTag(WorkspaceTags.IMPORT_CONFIRM).assertIsEnabled()
 

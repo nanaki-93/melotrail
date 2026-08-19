@@ -1470,6 +1470,8 @@ private fun WorkspaceDialogs(state: WorkspaceUiState, onIntent: (WorkspaceIntent
         is WorkspaceDialog.CreateProject -> CreateProjectDialog(dialog, onIntent)
         is WorkspaceDialog.ImportPart -> ImportPartDialog(dialog, onIntent)
         is WorkspaceDialog.EditRole -> EditRoleDialog(dialog, onIntent)
+        is WorkspaceDialog.ConfirmSectionChange -> ConfirmSectionChangeDialog(dialog, onIntent)
+        is WorkspaceDialog.ConfirmPartStructureChange -> ConfirmPartStructureChangeDialog(dialog, onIntent)
         is WorkspaceDialog.PartDetails -> PartDetailsDialog(state, dialog, onIntent)
         is WorkspaceDialog.ConfirmSafeCleanup -> ConfirmSafeCleanupDialog(dialog, onIntent)
         is WorkspaceDialog.ConfirmTightenTiming -> ConfirmTightenTimingDialog(dialog, onIntent)
@@ -1624,13 +1626,36 @@ private fun ImportPartDialog(draft: WorkspaceDialog.ImportPart, onIntent: (Works
                     Text("2. Inspect and validate", fontWeight = FontWeight.SemiBold)
                     Text("${draft.source.fileName} · ${type?.label ?: "unknown"} · ${formatFileSize(draft.sourceSizeBytes)}", style = MaterialTheme.typography.bodySmall)
                     Text("Route: ${importRoute(type)}. The canonical importer validates the actual file container before immutable publication.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedTextField(
+                        value = draft.name,
+                        onValueChange = { onIntent(WorkspaceIntent.UpdateImportPart(draft.copy(name = it))) },
+                        label = { Text("Melody part name") },
+                        supportingText = { Text("The stable ID is ${draft.id}; this display name can be changed later.") }
+                    )
+                    Text("Section", style = MaterialTheme.typography.labelLarge)
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        listOf(
+                            app.melotrail.arrangement.SectionTypeId.INTRO,
+                            app.melotrail.arrangement.SectionTypeId.VERSE,
+                            app.melotrail.arrangement.SectionTypeId.CHORUS,
+                            app.melotrail.arrangement.SectionTypeId.BRIDGE,
+                            app.melotrail.arrangement.SectionTypeId.OUTRO
+                        ).forEach { section ->
+                            val selected = draft.sectionType == section
+                            if (selected) Button(onClick = { }, modifier = Modifier.semantics { contentDescription = "${app.melotrail.arrangement.SectionTypeCatalog.label(section)} section selected" }) {
+                                Text(app.melotrail.arrangement.SectionTypeCatalog.label(section))
+                            } else OutlinedButton(onClick = { onIntent(WorkspaceIntent.UpdateImportPart(draft.copy(sectionType = section, role = section.value))) }) {
+                                Text(app.melotrail.arrangement.SectionTypeCatalog.label(section))
+                            }
+                        }
+                    }
                     draft.validationMessage?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                     TextButton(
                         onClick = { onIntent(WorkspaceIntent.UpdateImportPart(draft.copy(detailsExpanded = !draft.detailsExpanded))) },
                         modifier = Modifier.semantics { testTag = WorkspaceTags.IMPORT_DETAILS }
                     ) { Text(if (draft.detailsExpanded) "Hide details" else "Details") }
                     if (draft.detailsExpanded) {
-                        Text("The initial part ID is safely inferred as ${draft.id}; the default role is ${draft.role}. You can edit the role after import.", style = MaterialTheme.typography.bodySmall)
+                        Text("The stable part ID is ${draft.id}; its initial section is ${app.melotrail.arrangement.SectionTypeCatalog.label(draft.sectionType)}. You can change the section with downstream-impact confirmation after import.", style = MaterialTheme.typography.bodySmall)
                         Text("Audio cleanup, Clean MIDI, and Lo-fi MIDI Feel are available from Details only when their workflow stage is current.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -1656,7 +1681,7 @@ private fun ImportPartDialog(draft: WorkspaceDialog.ImportPart, onIntent: (Works
                     Text("4. Next action", fontWeight = FontWeight.SemiBold)
                     draft.confirmationMessage?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                     Text(
-                        if (draft.audio) "Import the immutable source and begin the bounded solo-piano transcription route." else "Import the immutable source and publish raw MIDI for the Clean MIDI stage.",
+                        if (draft.audio) "Import once to preserve the immutable source and begin the bounded automatic solo-piano route." else "Import once to preserve the immutable source and begin the automatic MIDI preparation route.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1672,7 +1697,7 @@ private fun ImportPartDialog(draft: WorkspaceDialog.ImportPart, onIntent: (Works
                 ImportFlowStep.NEXT_ACTION -> Button(
                     onClick = { onIntent(WorkspaceIntent.ImportPart) },
                     modifier = Modifier.semantics { testTag = WorkspaceTags.IMPORT_CONFIRM }
-                ) { Text(if (draft.audio) "Import and transcribe" else "Import MIDI") }
+                ) { Text("Import melody part") }
                 else -> Unit
             }
         },
@@ -1713,17 +1738,35 @@ private fun formatFileSize(bytes: Long?): String = when {
 private fun EditRoleDialog(draft: WorkspaceDialog.EditRole, onIntent: (WorkspaceIntent) -> Unit) {
     AlertDialog(
         onDismissRequest = { onIntent(WorkspaceIntent.DismissDialog) },
-        title = { Text("Edit ${draft.partId} role") },
+        title = { Text("Change ${draft.partId} section") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Part IDs are stable in this MVP. Rename and removal are intentionally deferred.")
-                OutlinedTextField(draft.role, { onIntent(WorkspaceIntent.UpdateRole(it)) }, label = { Text("Role") })
+                Text("Choose Intro, Verse, Chorus, Bridge, or Outro. This retains the source and marks dependent structure and arrangement evidence stale for review.")
+                OutlinedTextField(draft.role, { onIntent(WorkspaceIntent.UpdateRole(it)) }, label = { Text("Section") })
             }
         },
-        confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.SaveRole) }) { Text("Save role") } },
+        confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.SaveRole) }) { Text("Review change") } },
         dismissButton = { TextButton(onClick = { onIntent(WorkspaceIntent.DismissDialog) }) { Text("Cancel") } }
     )
 }
+
+@Composable
+private fun ConfirmSectionChangeDialog(draft: WorkspaceDialog.ConfirmSectionChange, onIntent: (WorkspaceIntent) -> Unit) = AlertDialog(
+    onDismissRequest = { onIntent(WorkspaceIntent.DismissDialog) },
+    title = { Text("Change section for ${draft.partId}?") },
+    text = { Text("This changes the part's section to ${app.melotrail.arrangement.SectionTypeCatalog.label(draft.sectionType)}. The source stays immutable; downstream structure, cohesion, and arrangement evidence may need regeneration.") },
+    confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.ConfirmSectionChange) }) { Text("Change section") } },
+    dismissButton = { TextButton(onClick = { onIntent(WorkspaceIntent.DismissDialog) }) { Text("Keep current section") } }
+)
+
+@Composable
+private fun ConfirmPartStructureChangeDialog(draft: WorkspaceDialog.ConfirmPartStructureChange, onIntent: (WorkspaceIntent) -> Unit) = AlertDialog(
+    onDismissRequest = { onIntent(WorkspaceIntent.DismissDialog) },
+    title = { Text(if (draft.instanceId == null) "Add ${draft.partId} to structure?" else "Remove ${draft.partId} from structure?") },
+    text = { Text("The source and melody part are retained. This changes canonical structure, so downstream cohesion, arrangement, and build artifacts may become stale and remain inspectable until regenerated.") },
+    confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.ConfirmPartStructureChange) }) { Text(if (draft.instanceId == null) "Add to structure" else "Remove occurrence") } },
+    dismissButton = { TextButton(onClick = { onIntent(WorkspaceIntent.DismissDialog) }) { Text("Cancel") } }
+)
 
 private fun buildSongPrerequisite(state: WorkspaceUiState): String = when {
     state.project == null -> "Build Song needs an open project."

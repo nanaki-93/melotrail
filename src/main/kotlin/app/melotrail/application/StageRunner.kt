@@ -37,6 +37,13 @@ interface StageProcessor {
     val definition: StageDefinition
     suspend fun process(request: StageProcessingRequest): StageProcessorResult
 
+    /**
+     * Runs only after every processor artifact is atomically published, while
+     * the project mutation lock is still held. It may update canonical
+     * references, but must not publish another artifact.
+     */
+    fun onPublished(request: StageProcessingRequest, outputs: List<ArtifactRef>, reports: List<ArtifactRef>) = Unit
+
     /** Stage-specific processors override this for MIME/container validation. */
     fun validate(result: StageProcessorResult) {
         result.outputs.forEach { artifact ->
@@ -110,6 +117,9 @@ data class StageRunSnapshot(
 
 enum class StageCancellation { UNSUPPORTED, STOP_AFTER_CURRENT }
 data class StageRunResult(val runId: String, val snapshot: StageRunSnapshot, val cacheHit: Boolean)
+
+/** A processor uses this instead of exception text when a user decision is the next safe action. */
+class InputRequiredException(message: String) : IllegalStateException(message)
 
 data class StageProcessingRequest(
     val root: Path,
@@ -236,9 +246,11 @@ class StageRunner(
                 validateTemporary(root, temporaryRoot, result)
                 processor.validate(result)
                 publish(root, result)
+                val outputArtifacts = result.outputs.map { artifactRef(root, it.destination) }
+                val reportArtifacts = result.reports.map { artifactRef(root, it.destination) }
+                processor.onPublished(request, outputArtifacts, reportArtifacts)
                 val completed = processing.copy(status = StageRunStatus.COMPLETED, finishedAt = now(),
-                    outputArtifacts = result.outputs.map { artifactRef(root, it.destination) },
-                    reportArtifacts = result.reports.map { artifactRef(root, it.destination) })
+                    outputArtifacts = outputArtifacts, reportArtifacts = reportArtifacts)
                 persist(root, completed)
                 refresh(root, progress = 100)
                 StageRunResult(runId, snapshot(completed, 100), cacheHit = false)
@@ -308,7 +320,7 @@ class StageRunner(
             inputArtifacts = command.inputArtifacts, subjectDependencies = command.subjectDependencies,
             configurationSha256 = command.configurationSha256, contextSha256 = command.contextSha256,
             processor = ProcessorIdentity("stage-${command.stage.name.lowercase()}", "1"),
-            model = command.model, seed = command.seed, createdAt = now(), startedAt = startedAt)
+            model = command.model, seed = command.seed, createdAt = startedAt ?: now(), startedAt = startedAt)
 
     private fun records(root: Path): List<StageRunRecord> = runCatching {
         val project = ProjectStore.read(root)
@@ -328,6 +340,7 @@ class StageRunner(
 
     private fun failureFor(error: Throwable): SafeFailure = when (error) {
         is kotlinx.coroutines.TimeoutCancellationException -> SafeFailure(SafeFailureCode.DEPENDENCY_UNAVAILABLE, "Check the local dependency and retry.")
+        is InputRequiredException -> SafeFailure(SafeFailureCode.INPUT_INVALID, "Provide the required input, then retry.")
         is IllegalArgumentException -> SafeFailure(SafeFailureCode.OUTPUT_INVALID, "Review the stage output and retry.")
         else -> SafeFailure(SafeFailureCode.PROCESSOR_REJECTED, "Review the stage input and retry.")
     }

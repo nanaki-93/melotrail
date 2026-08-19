@@ -164,6 +164,7 @@ object ProjectStore {
         val sourceKeyEvidence: SourceKeyEvidence? = null,
         val stageManifestRef: String? = null,
         val revision: Long = 1,
+        val importPending: Boolean = false,
         val legacySourceOnly: Boolean = false
     )
 
@@ -177,10 +178,10 @@ object ProjectStore {
         SongPart(id = it.id, file = it.sourceFile, role = it.role, name = it.id, sectionType = SectionTypeCatalog.fromLegacyRole(it.role), analysis = it.analysis, midi = it.midi, sourceAttestation = it.sourceAttestation, importEvidence = it.importEvidence)
     }, structure, renderFormat, workflow, compatibility = compatibility)
     private fun ProjectV4Dto.toProject() = Project(4, name, parts.map {
-        SongPart(id = it.id, file = it.sourceFile, role = (it.sectionType ?: SectionTypeCatalog.fromLegacyRole(it.role.orEmpty())).value, name = it.name ?: it.id, sectionType = it.sectionType ?: SectionTypeCatalog.fromLegacyRole(it.role.orEmpty()), analysis = it.analysis, midi = it.midi, sourceAttestation = it.sourceAttestation, importEvidence = it.importEvidence, sourceKeyEvidence = it.sourceKeyEvidence, stageManifestRef = it.stageManifestRef, revision = it.revision, legacySourceOnly = it.legacySourceOnly)
+        SongPart(id = it.id, file = it.sourceFile, role = (it.sectionType ?: SectionTypeCatalog.fromLegacyRole(it.role.orEmpty())).value, name = it.name ?: it.id, sectionType = it.sectionType ?: SectionTypeCatalog.fromLegacyRole(it.role.orEmpty()), analysis = it.analysis, midi = it.midi, sourceAttestation = it.sourceAttestation, importEvidence = it.importEvidence, sourceKeyEvidence = it.sourceKeyEvidence, stageManifestRef = it.stageManifestRef, revision = it.revision, importPending = it.importPending, legacySourceOnly = it.legacySourceOnly)
     }, structure, renderFormat, workflow, envelope.toDomain())
     private fun Project.toV4Dto() = ProjectV4Dto(name = name, renderFormat = requireNotNull(renderFormat), parts = parts.map {
-        PartV4Dto(id = it.id, sourceFile = it.file, name = it.name, sectionType = it.sectionType, midi = it.midi, analysis = it.analysis, sourceAttestation = it.sourceAttestation, importEvidence = it.importEvidence, sourceKeyEvidence = it.sourceKeyEvidence, stageManifestRef = it.stageManifestRef, revision = it.revision, legacySourceOnly = it.legacySourceOnly)
+        PartV4Dto(id = it.id, sourceFile = it.file, name = it.name, sectionType = it.sectionType, midi = it.midi, analysis = it.analysis, sourceAttestation = it.sourceAttestation, importEvidence = it.importEvidence, sourceKeyEvidence = it.sourceKeyEvidence, stageManifestRef = it.stageManifestRef, revision = it.revision, importPending = it.importPending, legacySourceOnly = it.legacySourceOnly)
     }, structure = structure, workflow = workflow, envelope = envelope.toDto())
     private fun ProjectV4EnvelopeDto.toDomain() = ProjectV4Envelope(
         compositionSettings, harmony?.toDomain(), evolvedParts, structureOccurrences,

@@ -17,6 +17,7 @@ import app.melotrail.application.MidiAiFixSnapshot
 import app.melotrail.application.DefaultArrangementApplicationService
 import app.melotrail.application.GenerateArrangementRequest
 import app.melotrail.application.ImportPartRequest
+import app.melotrail.application.ImportSongPart
 import app.melotrail.application.MixApplicationService
 import app.melotrail.application.MixSnapshot
 import app.melotrail.application.PersistedMixSettings
@@ -65,6 +66,8 @@ import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.MidiCleanupOptions
 import app.melotrail.arrangement.MidiCleanupProfile
 import app.melotrail.arrangement.MidiAnalysisInput
+import app.melotrail.arrangement.StageId
+import app.melotrail.arrangement.StageRunStatus
 import app.melotrail.application.MidiQualityStatus
 import app.melotrail.preparation.InputCleanupMode
 import app.melotrail.preparation.TranscriptionInputArtifact
@@ -155,7 +158,7 @@ data class WorkspaceUiState(
 enum class WorkspaceSection(val label: String) {
     SETUP("Setup"),
     OVERVIEW("Overview"),
-    IMPORT("Import"),
+    IMPORT("Melody Parts"),
     HARMONY("Harmony"),
     STRUCTURE("Structure"),
     ARRANGE("Arrange"),
@@ -384,10 +387,15 @@ sealed interface WorkspaceDialog {
         /** Rights are recorded explicitly before the immutable source is published. */
         val provenanceConfirmed: Boolean = false,
         /** A confirmation/readiness error is kept separate from source-format inspection evidence. */
-        val confirmationMessage: String? = null
+        val confirmationMessage: String? = null,
+        val name: String = "",
+        val sectionType: app.melotrail.arrangement.SectionTypeId = app.melotrail.arrangement.SectionTypeId.VERSE
     ) : WorkspaceDialog
 
+    /** Legacy name retained for intent compatibility; this edits the catalog section, not a free-form role. */
     data class EditRole(val partId: String, val role: String) : WorkspaceDialog
+    data class ConfirmSectionChange(val partId: String, val sectionType: app.melotrail.arrangement.SectionTypeId) : WorkspaceDialog
+    data class ConfirmPartStructureChange(val partId: String, val instanceId: String? = null) : WorkspaceDialog
     /** The selected canonical part and its return target travel together; no row-local selection is inferred. */
     data class PartDetails(val partId: String, val focusReturn: PartDetailsFocusReturn) : WorkspaceDialog
     data class ConfirmSafeCleanup(val partId: String) : WorkspaceDialog
@@ -477,6 +485,7 @@ internal fun detectImportSourceKind(source: Path): ImportSourceKind = when (
 
 sealed interface WorkspaceRetry {
     data class Import(val request: ImportPartRequest) : WorkspaceRetry
+    data class AutomaticImport(val command: app.melotrail.application.ImportSongPart, val draft: WorkspaceDialog.ImportPart) : WorkspaceRetry
     data class Analyze(val root: Path, val partId: String) : WorkspaceRetry
     data class Inspect(val root: Path, val partId: String) : WorkspaceRetry
     data class Cleanup(val root: Path, val partId: String, val mode: InputCleanupMode) : WorkspaceRetry
@@ -565,6 +574,10 @@ sealed interface WorkspaceIntent {
     data class ShowRoleEditor(val partId: String) : WorkspaceIntent
     data class UpdateRole(val role: String) : WorkspaceIntent
     data object SaveRole : WorkspaceIntent
+    data object ConfirmSectionChange : WorkspaceIntent
+    data class RequestAddPartToStructure(val partId: String) : WorkspaceIntent
+    data class RequestRemovePartFromStructure(val partId: String, val instanceId: String) : WorkspaceIntent
+    data object ConfirmPartStructureChange : WorkspaceIntent
     data class AddStructurePart(val partId: String) : WorkspaceIntent
     data class SelectStructureOccurrence(val instanceId: String) : WorkspaceIntent
     data class DuplicateStructureOccurrence(val instanceId: String) : WorkspaceIntent
@@ -736,6 +749,10 @@ class WorkspaceViewModel(
             is WorkspaceIntent.ShowRoleEditor -> showRoleEditor(intent.partId)
             is WorkspaceIntent.UpdateRole -> updateRole(intent.role)
             WorkspaceIntent.SaveRole -> saveRole()
+            WorkspaceIntent.ConfirmSectionChange -> confirmSectionChange()
+            is WorkspaceIntent.RequestAddPartToStructure -> requestAddPartToStructure(intent.partId)
+            is WorkspaceIntent.RequestRemovePartFromStructure -> requestRemovePartFromStructure(intent.partId, intent.instanceId)
+            WorkspaceIntent.ConfirmPartStructureChange -> confirmPartStructureChange()
             is WorkspaceIntent.AddStructurePart -> addStructurePart(intent.partId)
             is WorkspaceIntent.SelectStructureOccurrence -> selectStructureOccurrence(intent.instanceId)
             is WorkspaceIntent.DuplicateStructureOccurrence -> structureIndex(intent.instanceId)?.let(::duplicateStructurePart)
@@ -1216,6 +1233,8 @@ class WorkspaceViewModel(
                 source = source,
                 id = autoPartId(source, it.project?.parts.orEmpty()),
                 role = defaultPartRole(source),
+                name = source.fileName.toString().substringBeforeLast('.').ifBlank { "Melody part" },
+                sectionType = app.melotrail.arrangement.SectionTypeCatalog.fromLegacyRole(defaultPartRole(source)),
                 detectedType = type,
                 sourceSizeBytes = size,
                 validationMessage = message,
@@ -1264,16 +1283,15 @@ class WorkspaceViewModel(
         if (draft.detectedType?.isAudio == true) state.value.runtimeReadiness.capabilityFailure(RuntimeCapability.AUDIO_IMPORT)?.let {
             return failImportDraft(draft, it, ImportFlowStep.NEXT_ACTION, action = "import audio")
         }
-        val request = ImportPartRequest(
+        val command = ImportSongPart(
             root = project.root,
             id = draft.id,
-            source = source,
-            name = draft.id,
-            sectionType = app.melotrail.arrangement.SectionTypeCatalog.fromLegacyRole(draft.role),
-            transcribe = draft.audio,
+            file = source,
+            name = draft.name.ifBlank { draft.id },
+            sectionType = draft.sectionType,
             sourceAttestation = SourceRightsAttestation(draft.rightsClaim, Instant.now().toString())
         )
-        runImport(request, draft)
+        runAutomaticImport(command, draft)
     }
 
     private fun failImportDraft(
@@ -1295,18 +1313,61 @@ class WorkspaceViewModel(
         }
     }
 
-    private fun runImport(request: ImportPartRequest, draft: WorkspaceDialog.ImportPart) {
-        val feedbackId = beginFeedback(OperationKind.IMPORT, OperationPhase.VALIDATING, "Validating import for ${request.id}…")
-        mutableState.update { it.copy(operation = WorkspaceOperation.ImportingPart(request.id), notification = null, retry = null, dialog = null, operationFeedback = feedbackTracker.current) }
+    private fun runAutomaticImport(command: ImportSongPart, draft: WorkspaceDialog.ImportPart) {
+        val feedbackId = beginFeedback(OperationKind.IMPORT, OperationPhase.VALIDATING, "Validating import for ${command.id}…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.ImportingPart(command.id), notification = null, retry = null, dialog = null, operationFeedback = feedbackTracker.current) }
         importPreparationJob = scope.launch {
-            runCatching {
-                withContext(ioDispatcher) {
-                    projectService.importPart(request) { progress ->
-                        scope.launch { updateProgress(feedbackId, WorkspaceOperation.ImportingPart(request.id, progress)) }
-                    }.refreshed()
-                }
-            }.onSuccess { opened(it, "Imported ${request.id}. Clean MIDI is next.", feedbackId) }
-                .onFailure { failure -> if (failure !is CancellationException) failImportFromService(draft, request, failure.message ?: "Unable to import ${request.id}.", feedbackId) }
+            try {
+                val initial = withContext(ioDispatcher) { projectService.importSongPart(command).snapshot.refreshed() }
+                val snapshot = awaitAutomaticImport(command, initial, feedbackId)
+                if (reduceMelodyPartCard(snapshot, snapshot.parts.first { it.id == command.id }).retryable) {
+                    failAutomaticImport(draft, command, snapshot, feedbackId)
+                } else opened(snapshot, "Imported ${command.name}. Melody Parts progress is saved with the project.", feedbackId)
+            } catch (failure: Throwable) {
+                if (failure !is CancellationException) failAutomaticImport(draft, command, null, feedbackId, failure.message ?: "Unable to import ${command.id}.")
+            }
+        }
+    }
+
+    /** Refreshes only the typed project snapshot while Task 013's chained cleanup is durable and active. */
+    private suspend fun awaitAutomaticImport(command: ImportSongPart, initial: ProjectSnapshot, feedbackId: String): ProjectSnapshot {
+        var snapshot = initial
+        repeat(600) {
+            if (!automaticCleanupPending(snapshot, command.id)) return snapshot
+            delay(100)
+            if (state.value.project?.root != command.root) throw CancellationException("Project changed during import")
+            snapshot = withContext(ioDispatcher) { projectService.open(command.root) }
+            val stage = reduceMelodyPartCard(snapshot, snapshot.parts.firstOrNull { it.id == command.id }
+                ?: throw IllegalStateException("Imported part is no longer available"))
+            feedbackTracker.progress(feedbackId, OperationPhase.LOCAL, "${stage.stages.firstOrNull { it.status == MelodyPartStageStatus.PROCESSING }?.label ?: "Preparing"} ${command.name}…")?.let { feedback ->
+                mutableState.update { current -> if (current.project?.root == command.root) current.copy(project = snapshot, operationFeedback = feedback) else current }
+            }
+        }
+        throw IllegalStateException("Automatic cleanup is still running. Keep this project open and retry only after the reported stage finishes.")
+    }
+
+    private fun automaticCleanupPending(snapshot: ProjectSnapshot, partId: String): Boolean {
+        val runs = snapshot.readiness.stageRuns.filter { (it.subject as? app.melotrail.arrangement.StageSubject.Part)?.partId == partId }
+        val extracted = runs.lastOrNull { it.stage == StageId.EXTRACTED }
+        val cleaned = runs.lastOrNull { it.stage == StageId.CLEANED }
+        return extracted?.status == StageRunStatus.COMPLETED && cleaned?.status !in setOf(StageRunStatus.COMPLETED, StageRunStatus.FAILED)
+    }
+
+    private fun failAutomaticImport(
+        draft: WorkspaceDialog.ImportPart,
+        command: ImportSongPart,
+        snapshot: ProjectSnapshot?,
+        feedbackId: String,
+        fallback: String = "The automatic import stage did not complete. Review the required input and retry."
+    ) {
+        val message = snapshot?.parts?.firstOrNull { it.id == command.id }?.let { part ->
+            reduceMelodyPartCard(snapshot, part).stages.firstOrNull { it.status == MelodyPartStageStatus.FAILED }?.detail
+        } ?: fallback
+        val feedback = feedbackTracker.fail(feedbackId, message, OperationRetryAction.RETRY_SAFE_OPERATION) ?: state.value.operationFeedback
+        mutableState.update { current ->
+            current.copy(project = snapshot ?: current.project, operation = WorkspaceOperation.Failed("import part", message), notification = message,
+                retry = WorkspaceRetry.AutomaticImport(command.copy(expectedRevision = snapshot?.parts?.firstOrNull { it.id == command.id }?.revision ?: command.expectedRevision), draft),
+                dialog = draft.copy(validationMessage = message), operationFeedback = feedback)
         }
     }
 
@@ -1838,7 +1899,8 @@ class WorkspaceViewModel(
     }
     private fun showRoleEditor(partId: String) {
         val part = state.value.project?.parts?.find { it.id == partId } ?: return
-        mutableState.update { it.copy(dialog = WorkspaceDialog.EditRole(part.id, part.role)) }
+        if (state.value.operation.isMutating || reduceMelodyPartCard(state.value.project ?: return, part).processing) return busy("change a part section")
+        mutableState.update { it.copy(dialog = WorkspaceDialog.EditRole(part.id, part.sectionType.value)) }
     }
 
     private fun updateRole(role: String) {
@@ -1847,8 +1909,15 @@ class WorkspaceViewModel(
     }
 
     private fun saveRole() {
-        val project = state.value.project ?: return
         val draft = state.value.dialog as? WorkspaceDialog.EditRole ?: return
+        val section = runCatching { app.melotrail.arrangement.SectionTypeCatalog.fromLegacyRole(draft.role) }.getOrNull()
+            ?: return fail("update section", "Choose a valid section.")
+        mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmSectionChange(draft.partId, section)) }
+    }
+
+    private fun confirmSectionChange() {
+        val project = state.value.project ?: return
+        val draft = state.value.dialog as? WorkspaceDialog.ConfirmSectionChange ?: return
         val feedbackId = beginFeedback(OperationKind.PROJECT_HYDRATION, OperationPhase.LOCAL, "Saving ${draft.partId} role…")
         mutableState.update { it.copy(operation = WorkspaceOperation.UpdatingPartRole(draft.partId), notification = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
@@ -1859,14 +1928,32 @@ class WorkspaceViewModel(
                         UpdateSongPartSectionRequest(
                             project.root,
                             draft.partId,
-                            app.melotrail.arrangement.SectionTypeCatalog.fromLegacyRole(draft.role),
+                            draft.sectionType,
                             part.revision
                         )
                     ).refreshed()
                 }
-            }.onSuccess { opened(it, "Updated ${draft.partId} role", feedbackId) }
-                .onFailure { fail("update role", it.message ?: "Unable to update role.", sessionId = feedbackId) }
+            }.onSuccess { opened(it, "Updated ${draft.partId} section", feedbackId) }
+                .onFailure { fail("update section", it.message ?: "Unable to update section.", sessionId = feedbackId) }
         }
+    }
+
+    private fun requestAddPartToStructure(partId: String) {
+        val project = state.value.project ?: return
+        val part = project.parts.firstOrNull { it.id == partId } ?: return
+        if (state.value.operation.isMutating || reduceMelodyPartCard(project, part).processing) return busy("add a part to structure")
+        mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmPartStructureChange(partId)) }
+    }
+
+    private fun requestRemovePartFromStructure(partId: String, instanceId: String) {
+        if (state.value.operation.isMutating) return busy("remove a part from structure")
+        mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmPartStructureChange(partId, instanceId)) }
+    }
+
+    private fun confirmPartStructureChange() {
+        val draft = state.value.dialog as? WorkspaceDialog.ConfirmPartStructureChange ?: return
+        if (draft.instanceId == null) addStructurePart(draft.partId)
+        else structureIndex(draft.instanceId)?.let(::removeStructurePart)
     }
 
     private fun duplicateStructurePart(index: Int) {
@@ -1932,6 +2019,7 @@ class WorkspaceViewModel(
     }
 
     private fun retry() = when (val action = state.value.retry) {
+        is WorkspaceRetry.AutomaticImport -> runAutomaticImport(action.command, action.draft)
         is WorkspaceRetry.Import -> {
             val draft = (state.value.dialog as? WorkspaceDialog.ImportPart) ?: WorkspaceDialog.ImportPart(
                 audio = action.request.transcribe,
@@ -1942,7 +2030,11 @@ class WorkspaceViewModel(
                 rightsClaim = action.request.sourceAttestation?.claim ?: SourceRightsClaim.NOT_ESTABLISHED,
                 provenanceConfirmed = true
             )
-            runImport(action.request, draft)
+            runAutomaticImport(
+                ImportSongPart(action.request.root, action.request.id, action.request.source, action.request.name,
+                    action.request.sectionType, action.request.sourceAttestation),
+                draft
+            )
         }
         is WorkspaceRetry.Analyze -> analyzePart(action.partId)
         is WorkspaceRetry.Inspect -> {

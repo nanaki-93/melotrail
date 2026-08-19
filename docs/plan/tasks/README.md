@@ -26,8 +26,8 @@ schema window actively requires it and must have a named removal condition.
 | 010 | [Structured song parts and section types](completed/010-song-part-model.md) | MVP |
 | 011 | [Processing artifact and stage-run manifest](completed/011-stage-run-manifest.md) | MVP |
 | 012 | [Persistent stage runner and recovery](completed/012-stage-runner.md) | MVP |
-| 013 | [Automatic import orchestration](013-automatic-import-orchestration.md) | MVP |
-| 014 | [Melody Parts progress and recovery UI](014-melody-parts-ui.md) | MVP |
+| 013 | [Automatic import orchestration](completed/013-automatic-import-orchestration.md) | MVP |
+| 014 | [Melody Parts progress and recovery UI](completed/014-melody-parts-ui.md) | MVP |
 | 015 | [Deterministic MIDI normalization](015-midi-normalization.md) | MVP |
 | 016 | [Project-key transposition](016-project-key-transposition.md) | MVP |
 | 017 | [Technical correction stage](017-technical-correction.md) | MVP |

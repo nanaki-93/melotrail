@@ -38,14 +38,14 @@ as part of this compatibility migration.
 Equivalent Gradle command: `./gradlew :desktopApp:run`.
 
 Use **New Project** or **Open Project**, then follow the desktop happy path:
-**Import**, **Convert to MIDI** when needed, **Clean MIDI**, optional **AI Fix**,
+**Melody Parts**, which automatically prepares its supported stages, optional **AI Fix**,
 optional **Lo-fi Feel**, **Structure**, **Cohesion**, and **Arrangement** before
 using **Build song**. Project files remain canonical: `project.json`, plans and arrangements,
 generated MIDI, stems, mixes, and release artifacts are all kept under the
 chosen project directory. Desktop settings retain only the last successfully
 opened project path; they never store project or audio data.
 
-The top navigation keeps the guided stages visible: **Setup**, **Project**, **Import**,
+The top navigation keeps the guided stages visible: **Setup**, **Project**, **Melody Parts**,
 **Structure**, **Arrange**, and **Mix & Master**. **Library**, **Video Preview**,
 **Export**, and **Settings** are available from the labelled **More** menu. The
 workspace derives the current stage, prerequisites, and next safe action from

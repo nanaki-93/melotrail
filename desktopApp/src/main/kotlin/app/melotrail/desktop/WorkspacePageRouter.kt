@@ -1731,10 +1731,10 @@ private fun ImportPage(
 ) = Column(
     Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)
 ) {
-    PageTitle("Import", "Import MIDI or eligible solo-piano audio files")
+    PageTitle("Melody Parts", "Add and recover section-aware MIDI or eligible solo-piano audio parts")
     ImportDropSurface(state, onIntent)
     ImportHelpLinks()
-    ImportedFiles(state, onIntent, partDetailsFocusTargets)
+    MelodyPartsCards(state, onIntent, partDetailsFocusTargets)
     MidiAiFixReview(state, onIntent)
     MidiLoFiFeelReview(state, onIntent)
     ImportPrimaryAction(state, onIntent, partDetailsFocusTargets)

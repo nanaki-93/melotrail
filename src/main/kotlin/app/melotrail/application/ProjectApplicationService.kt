@@ -35,10 +35,18 @@ import app.melotrail.arrangement.PartAnalysis
 import app.melotrail.arrangement.PartAnalysisReference
 import app.melotrail.arrangement.PartAnalysisStore
 import app.melotrail.arrangement.Project
+import app.melotrail.arrangement.ArtifactRef
+import app.melotrail.arrangement.ProcessorIdentity
 import app.melotrail.arrangement.ProjectMigrationResult
 import app.melotrail.arrangement.ProjectSetupRequirement
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.StageRunStore
+import app.melotrail.arrangement.StageRunRecord
+import app.melotrail.arrangement.StageRunStatus
+import app.melotrail.arrangement.StageId
+import app.melotrail.arrangement.StageSubject
+import app.melotrail.arrangement.artifactRef
+import app.melotrail.arrangement.sha256Hex
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.ImportEvidence
 import app.melotrail.commercial.SourceRightsAttestation
@@ -66,6 +74,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
+import java.time.Instant
 import java.util.UUID
 import javax.sound.midi.MidiSystem
 
@@ -93,6 +102,9 @@ interface ProjectApplicationService {
     /** Optional explicit migration boundary; older adapters remain read-only. */
     fun migrateProject(root: Path): ProjectSnapshot = throw UnsupportedOperationException("This project service does not support schema migration.")
     fun create(request: CreateProjectRequest): ProjectSnapshot
+    /** Source-first automatic import. Its result describes the first durable run, never a final media promise. */
+    suspend fun importSongPart(command: ImportSongPart): ImportSongPartResult =
+        throw UnsupportedOperationException("This project service does not support automatic import.")
     suspend fun importPart(request: ImportPartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
     /** The one code-owned technical correction boundary. Analysis remains a separate stage. */
     suspend fun cleanMidi(request: CleanMidiRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
@@ -127,6 +139,31 @@ data class ImportPartRequest(
     val cleanup: MidiCleanupOptions = MidiCleanupOptions(),
     /** Required by the desktop confirmation UI; null is retained only for legacy CLI compatibility. */
     val sourceAttestation: SourceRightsAttestation? = null
+)
+
+/** The fixed, allow-listed default for transparent enhancement processors. */
+enum class DefaultEnhancementIntensity { NONE, SUBTLE, STANDARD }
+
+/**
+ * One idempotent import intent. [expectedRevision] is zero for a new part; a
+ * retry supplies the existing part revision so an outdated client cannot
+ * silently overwrite its identity or source evidence.
+ */
+data class ImportSongPart(
+    val root: Path,
+    val id: String,
+    val file: Path,
+    val name: String,
+    val sectionType: SectionTypeId,
+    val sourceAttestation: SourceRightsAttestation? = null,
+    val expectedRevision: Long = 0,
+    val defaultEnhancementIntensity: DefaultEnhancementIntensity = DefaultEnhancementIntensity.SUBTLE
+)
+
+data class ImportSongPartResult(
+    val partId: String,
+    val firstRun: StageRunResult,
+    val snapshot: ProjectSnapshot
 )
 
 /** One Clean MIDI run may choose only an already validated named cleanup profile. */
@@ -329,7 +366,8 @@ class DefaultProjectApplicationService(
     },
     private val transcriptionQualityGate: TranscriptionQualityGateService? = null,
     compositionProfiles: CompositionProfileCatalog = BundledCompositionProfileCatalog.load(),
-    private val stageRunRecovery: ProjectOpenStageRunRecovery = StageRunner(StageProcessorRegistry(emptyList()))
+    private val stageRunRecovery: ProjectOpenStageRunRecovery = StageRunner(StageProcessorRegistry(emptyList())),
+    private val automaticImportRunner: StageRunner? = null
 ) : ProjectApplicationService {
     private val compositionSettings = CompositionSettingsApplicationService(compositionProfiles)
     private val harmony = HarmonyApplicationService()
@@ -409,7 +447,103 @@ class DefaultProjectApplicationService(
         snapshot(root, project)
     }
 
-    override suspend fun importPart(request: ImportPartRequest, progress: ProgressSink): ProjectSnapshot = mutateSuspend(request.root) { root ->
+    override suspend fun importSongPart(command: ImportSongPart): ImportSongPartResult {
+        val runner = requireNotNull(automaticImportRunner) { "Automatic import is not configured." }
+        require(PART_ID.matches(command.id)) { "Part ID must contain only letters, numbers, underscores, or hyphens: ${command.id}" }
+        require(command.name.isNotBlank() && command.name.length <= 120 && command.name.none { it.isISOControl() }) { "Part name is invalid" }
+        require(command.expectedRevision >= 0) { "Expected part revision must not be negative" }
+        val root = command.root.normalizeRoot()
+        val file = command.file.toAbsolutePath().normalize()
+        require(Files.isRegularFile(file)) { "Input file not found: $file" }
+        val extension = file.fileName.toString().substringAfterLast('.', "").lowercase()
+        require(extension in SUPPORTED_EXTENSIONS) { "Unsupported input file extension: ${if (extension.isEmpty()) "(none)" else extension}" }
+        requireImportSourceFormat(file, extension, extension in MIDI_EXTENSIONS)
+        val sourceSha256 = sha256(file)
+        val registration = withContext(Dispatchers.IO) {
+            val lock = ProjectMutationCoordinator.lock(root)
+            require(lock.tryLock()) { "Another project mutation is already running: $root" }
+            try {
+                val project = readValidProject(root)
+                require(project.version == Project.CURRENT_VERSION) { "Explicitly migrate the project before importing." }
+                val existing = project.parts.firstOrNull { it.id.equals(command.id, ignoreCase = true) }
+                if (existing != null) {
+                    require(existing.id == command.id && existing.revision == command.expectedRevision) {
+                        "Part '${existing.id}' changed; refresh before retrying import."
+                    }
+                    require(existing.file == "source/${command.id}.$extension" && Files.isRegularFile(root.resolve(existing.file)) &&
+                        sha256(root.resolve(existing.file)) == sourceSha256) { "Part '${command.id}' already has different import evidence." }
+                    val sourceRecord = StageRunStore().read(root, project.envelope.stageRuns).lastOrNull {
+                        it.stage == StageId.SOURCE && it.subject == StageSubject.Part(command.id) && it.status == StageRunStatus.COMPLETED
+                    } ?: throw IllegalArgumentException("Part '${command.id}' has no durable source stage; re-import with a new part ID.")
+                    return@withContext SourceRegistration(artifactRef(root, existing.file))
+                }
+                require(command.expectedRevision == 0L) { "New parts require expected revision 0." }
+                val relative = "source/${command.id}.$extension"
+                val destination = safeDestination(root, relative)
+                require(file != destination && !(Files.exists(destination) && Files.isSameFile(file, destination))) { "Input and destination paths must differ" }
+                publishImmutableSource(file, destination, sourceSha256)
+                requireImportSourceFormat(destination, extension, extension in MIDI_EXTENSIONS)
+                require(sha256(destination) == sourceSha256) { "Preserved source changed during import" }
+
+                val store = StageRunStore()
+                val initialReference = project.envelope.stageRuns.takeIf { it.index != null } ?: store.initialize(root)
+                val sourceArtifact = artifactRef(root, relative)
+                val sourceRunId = "import-${command.id}-${sourceSha256.take(16)}"
+                val sourceRecordedAt = Instant.now().toString()
+                val sourceRecord = StageRunRecord(
+                    runId = sourceRunId,
+                    stage = StageId.SOURCE,
+                    subject = StageSubject.Part(command.id),
+                    status = StageRunStatus.COMPLETED,
+                    processor = ProcessorIdentity("source-import", "1"),
+                    createdAt = sourceRecordedAt,
+                    finishedAt = sourceRecordedAt,
+                    outputArtifacts = listOf(sourceArtifact)
+                )
+                val reference = store.transition(root, initialReference, sourceRecord)
+                val pending = SongPart(
+                    id = command.id,
+                    file = relative,
+                    name = command.name,
+                    sectionType = command.sectionType,
+                    sourceAttestation = command.sourceAttestation,
+                    importPending = true
+                )
+                val saved = project.copy(
+                    parts = project.parts + pending,
+                    workflow = project.workflow.invalidate(WorkflowChange.SOURCE_OR_RAW),
+                    envelope = project.envelope.copy(stageRuns = reference)
+                )
+                ProjectStore.write(root, saved)
+                SourceRegistration(sourceArtifact)
+            } finally { lock.unlock() }
+        }
+        val configuration = sha256Hex("automatic-import|${command.defaultEnhancementIntensity.name}")
+        val firstRun = runner.run(RunStage(
+            root = root,
+            stage = StageId.EXTRACTED,
+            subject = StageSubject.Part(command.id),
+            inputArtifacts = listOf(registration.source),
+            configurationSha256 = configuration
+        ))
+        return ImportSongPartResult(command.id, firstRun, open(root))
+    }
+
+    override suspend fun importPart(request: ImportPartRequest, progress: ProgressSink): ProjectSnapshot {
+        if (automaticImportRunner != null) {
+            val extension = request.source.fileName.toString().substringAfterLast('.', "").lowercase()
+            if (extension !in MIDI_EXTENSIONS) require(request.transcribe) { "Audio input requires --transcribe so immutable raw MIDI can be prepared" }
+            progress.report(OperationProgress("import-part", 1, 1, "Starting automatic import", request.source))
+            return importSongPart(ImportSongPart(
+                root = request.root,
+                id = request.id,
+                file = request.source,
+                name = request.name,
+                sectionType = request.sectionType,
+                sourceAttestation = request.sourceAttestation
+            )).snapshot
+        }
+        return mutateSuspend(request.root) { root ->
         require(PART_ID.matches(request.id)) { "Part ID must contain only letters, numbers, underscores, or hyphens: ${request.id}" }
         val source = request.source.toAbsolutePath().normalize()
         require(Files.isRegularFile(source)) { "Input file not found: $source" }
@@ -496,6 +630,7 @@ class DefaultProjectApplicationService(
         val finalStage = if (isMidi) 3 else 4
         progress.report(OperationProgress("import-part", finalStage, finalStage, "Registered raw MIDI; Clean MIDI is next", root.resolve(ProjectStore.FILE_NAME)))
         snapshot(root, saved)
+    }
     }
 
     override suspend fun cleanMidi(request: CleanMidiRequest, progress: ProgressSink): ProjectSnapshot = mutateSuspend(request.root) { root ->
@@ -1243,6 +1378,8 @@ class DefaultProjectApplicationService(
         "wav", "wave", "mp3" -> PartSourceType.AUDIO
         else -> PartSourceType.UNKNOWN
     }
+
+    private data class SourceRegistration(val source: ArtifactRef)
 
     private companion object {
         val json = Json { ignoreUnknownKeys = false }

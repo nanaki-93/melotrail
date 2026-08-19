@@ -15,6 +15,7 @@ import app.melotrail.application.DefaultReleaseExportApplicationService
 import app.melotrail.application.ReleaseMp3Exporter
 import app.melotrail.application.LegacyPartAnalysisService
 import app.melotrail.application.MidiPreparationService
+import app.melotrail.application.AutomaticImportProcessors
 import app.melotrail.application.ProjectApplicationService
 import app.melotrail.application.StageProcessorRegistry
 import app.melotrail.application.StageRunner
@@ -134,18 +135,22 @@ object DesktopServiceComposition {
         )
     }
 
-    /** The empty registry is intentional until individual stage algorithms adopt the runner ports. */
+    /** Compatibility helper for callers that need recovery without import processors. */
     fun stageRunner(): StageRunner = StageRunner(StageProcessorRegistry(emptyList()))
 
-    fun projectService(stageRunner: StageRunner = stageRunner()): ProjectApplicationService {
+    fun projectService(stageRunner: StageRunner? = null): ProjectApplicationService {
         val client = workerClient()
+        val preparation = DesktopMidiPreparationService(client)
+        val inspection = WorkerInputInspectionBoundary(client)
+        val importRunner = stageRunner ?: StageRunner(AutomaticImportProcessors(inspection, preparation).registry())
         return DefaultProjectApplicationService(
-            midiPreparation = DesktopMidiPreparationService(client),
+            midiPreparation = preparation,
             legacyPartAnalysis = DesktopLegacyPartAnalysisService(client),
-            inputInspection = WorkerInputInspectionBoundary(client),
+            inputInspection = inspection,
             transcriptionQualityGate = TranscriptionQualityGateService(WorkerTranscriptionBoundary(client)),
             compositionProfiles = compositionProfiles(),
-            stageRunRecovery = stageRunner
+            stageRunRecovery = importRunner,
+            automaticImportRunner = importRunner
         )
     }
 

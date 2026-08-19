@@ -219,6 +219,8 @@ data class SongPart(
     val stageManifestRef: String? = null,
     /** Optimistic revision for explicit name/section decisions. */
     val revision: Long = 1,
+    /** A source-first Task 013 import has durable source evidence but no extracted MIDI yet. */
+    val importPending: Boolean = false,
     /** Typed v1 compatibility data. It preserves a legacy source without pretending it is MIDI. */
     val legacySourceOnly: Boolean = false
 ) {
@@ -370,11 +372,11 @@ object ProjectValidator {
             if (project.version >= Project.MIDI_FIRST_VERSION) {
                 val midi = part.midi
                 if (midi == null) {
-                    if (!(project.version == Project.CURRENT_VERSION && part.legacySourceOnly)) {
+                    if (!(project.version == Project.CURRENT_VERSION && (part.legacySourceOnly || part.importPending))) {
                         errors += "Part '${part.id}' requires raw MIDI; import it before Clean MIDI"
                     }
                 } else {
-                    if (part.legacySourceOnly) errors += "Part '${part.id}' cannot be both MIDI-first and legacy-source-only"
+                    if (part.legacySourceOnly || part.importPending) errors += "Part '${part.id}' cannot be both MIDI-first and source-only"
                     midi.raw?.let { validateFileReference(root, it, "Part '${part.id}' raw MIDI", errors) }
                     midi.clean?.let { validateFileReference(root, it, "Part '${part.id}' cleaned MIDI", errors) }
                     if (midi.raw != null && midi.clean == null && (midi.cleanup != null || midi.quality != null)) {
@@ -425,6 +427,9 @@ object ProjectValidator {
                         errors += "Part '${part.id}' selects Lo-fi Feel without a derived MIDI artifact"
                     }
                 }
+            }
+            if (part.importPending && (part.midi != null || part.importEvidence != null || part.analysis != null || part.legacySourceOnly)) {
+                errors += "Part '${part.id}' has invalid pending-import state"
             }
             part.analysis?.let {
                 validateFileReference(root, it.file, "Part '${part.id}' analysis", errors)
