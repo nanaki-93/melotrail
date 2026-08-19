@@ -3,6 +3,8 @@ package app.melotrail.application
 import app.melotrail.arrangement.MidiAiFixSelection
 import app.melotrail.arrangement.MidiAnalysisInput
 import app.melotrail.arrangement.Project
+import app.melotrail.arrangement.StageId
+import app.melotrail.arrangement.StageRunStatus
 import app.melotrail.arrangement.WorkflowArtifact
 
 /**
@@ -55,7 +57,9 @@ data class WorkflowStep(
     val nextAction: WorkflowAction,
     val prerequisite: WorkflowPrerequisite,
     /** Present when one exact part is the next safe target. */
-    val partId: String? = null
+    val partId: String? = null,
+    /** Runner-owned durable status; the UI never infers it from files. */
+    val stageRun: StageRunSnapshot? = null
 )
 
 data class WorkflowReadModel(val steps: List<WorkflowStep>) {
@@ -174,10 +178,13 @@ object WorkflowReadModelDeriver {
             !project.readiness.commercialSourceAttestationsComplete -> step(WorkflowStage.COMMERCIAL_EXPORT, WorkflowState.REVIEW, WorkflowAction.REVIEW_COMMERCIAL_PROVENANCE, WorkflowPrerequisite.SOURCE_RIGHTS_ATTESTATION)
             else -> step(WorkflowStage.COMMERCIAL_EXPORT, WorkflowState.CURRENT, WorkflowAction.REVIEW_COMMERCIAL_PROVENANCE, WorkflowPrerequisite.NONE)
         }
-        return WorkflowReadModel(listOf(
+        val steps = listOf(
             composition, imported, transcription, clean, aiFix,
             feel, analysis, structure, cohesion, arrangementStep, render, mix, master, commercial
-        ))
+        )
+        return WorkflowReadModel(steps.map { step -> step.copy(stageRun = project.readiness.stageRuns.lastOrNull { run ->
+            workflowStage(run.stage) == step.stage && run.status in setOf(StageRunStatus.PROCESSING, StageRunStatus.FAILED)
+        }) })
     }
 
     private fun downstream(
@@ -200,6 +207,22 @@ object WorkflowReadModelDeriver {
 
     private fun complete(stage: WorkflowStage, action: WorkflowAction) =
         step(stage, WorkflowState.COMPLETE, action, WorkflowPrerequisite.NONE)
+
+    private fun workflowStage(stage: StageId): WorkflowStage? = when (stage) {
+        StageId.SOURCE -> WorkflowStage.IMPORT_AND_INSPECTION
+        StageId.EXTRACTED -> WorkflowStage.TRANSCRIPTION
+        StageId.CLEANED -> WorkflowStage.CLEAN_MIDI
+        StageId.NORMALIZED, StageId.TRANSPOSED, StageId.CORRECTED -> WorkflowStage.AI_FIX
+        StageId.ENHANCED -> WorkflowStage.MIDI_FEEL
+        StageId.ANALYZED -> WorkflowStage.ANALYSIS
+        StageId.STRUCTURED -> WorkflowStage.STRUCTURE
+        StageId.COHESION -> WorkflowStage.COHESION
+        StageId.ARRANGED, StageId.GENERATED -> WorkflowStage.ARRANGEMENT
+        StageId.RENDERED -> WorkflowStage.RENDER
+        StageId.MIXED -> WorkflowStage.MIX
+        StageId.MASTERED -> WorkflowStage.MASTER
+        StageId.EXPORTED -> WorkflowStage.COMMERCIAL_EXPORT
+    }
 
     private fun step(
         stage: WorkflowStage,

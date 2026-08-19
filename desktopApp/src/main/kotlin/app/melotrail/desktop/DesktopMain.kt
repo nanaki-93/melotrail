@@ -16,6 +16,8 @@ import app.melotrail.application.ReleaseMp3Exporter
 import app.melotrail.application.LegacyPartAnalysisService
 import app.melotrail.application.MidiPreparationService
 import app.melotrail.application.ProjectApplicationService
+import app.melotrail.application.StageProcessorRegistry
+import app.melotrail.application.StageRunner
 import app.melotrail.application.DefaultAudioPreparationApplicationService
 import app.melotrail.preparation.WorkerInputInspectionBoundary
 import app.melotrail.preparation.InputCleanupApplicationService
@@ -64,7 +66,8 @@ fun main() {
     val arrangementService = DefaultArrangementApplicationService(libraryRoot = libraryRoot)
     val mixService = DefaultMixApplicationService()
     val client = DesktopServiceComposition.workerClient()
-    val projectService = DesktopServiceComposition.projectService()
+    val stageRunner = DesktopServiceComposition.stageRunner()
+    val projectService = DesktopServiceComposition.projectService(stageRunner)
     val operationLogger = LocalDesktopOperationLogger()
     val player = JvmAudioPlayer(failureReporter = { failure ->
         operationLogger.event("playback", failure.stage.name.lowercase(), failure = failure.cause)
@@ -131,14 +134,18 @@ object DesktopServiceComposition {
         )
     }
 
-    fun projectService(): ProjectApplicationService {
+    /** The empty registry is intentional until individual stage algorithms adopt the runner ports. */
+    fun stageRunner(): StageRunner = StageRunner(StageProcessorRegistry(emptyList()))
+
+    fun projectService(stageRunner: StageRunner = stageRunner()): ProjectApplicationService {
         val client = workerClient()
         return DefaultProjectApplicationService(
             midiPreparation = DesktopMidiPreparationService(client),
             legacyPartAnalysis = DesktopLegacyPartAnalysisService(client),
             inputInspection = WorkerInputInspectionBoundary(client),
             transcriptionQualityGate = TranscriptionQualityGateService(WorkerTranscriptionBoundary(client)),
-            compositionProfiles = compositionProfiles()
+            compositionProfiles = compositionProfiles(),
+            stageRunRecovery = stageRunner
         )
     }
 

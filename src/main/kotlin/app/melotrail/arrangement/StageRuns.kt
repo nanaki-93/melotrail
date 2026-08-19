@@ -206,7 +206,7 @@ data class ProjectStageRunManifestReference(
     @Transient val legacyRuns: List<LegacyManifestRunInput> = emptyList()
 ) {
     fun requireCanonical() {
-        index?.let { require(it.path == StageRunStore.INDEX_FILE) { "Stage-run index path is not canonical" } }
+        index?.let { require(StageRunStore.isIndexPath(it.path)) { "Stage-run index path is not canonical" } }
     }
 }
 

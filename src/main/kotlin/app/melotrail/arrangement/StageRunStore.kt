@@ -52,7 +52,7 @@ class StageRunStore(private val publisher: AtomicStageRunPublisher = FileAtomicS
         StageRunValidator.requireArtifact(root, indexReference, "Stage-run index")
         val index = decodeIndex(root.resolve(indexReference.path))
         return index.runs.map { entry ->
-            require(entry.record.path == runPath(entry.runId)) { "Stage-run record path is not canonical" }
+            require(isRecordPath(entry.runId, entry.record.path)) { "Stage-run record path is not canonical" }
             StageRunValidator.requireArtifact(root, entry.record, "Stage-run record")
             val record = decodeRecord(root.resolve(entry.record.path))
             require(record.runId == entry.runId) { "Stage-run index does not match its record" }
@@ -93,10 +93,13 @@ class StageRunStore(private val publisher: AtomicStageRunPublisher = FileAtomicS
     /** Returns ignored immutable records that were published before an index write failed. */
     fun recoverableOrphans(projectRoot: Path, reference: ProjectStageRunManifestReference): List<ArtifactRef> {
         val root = normalizedRoot(projectRoot)
-        val indexed = read(projectRoot, reference).mapTo(mutableSetOf()) { runPath(it.runId) }
+        read(projectRoot, reference) // validate the manifest before treating anything as orphaned evidence
+        val indexed = reference.index?.let { index ->
+            decodeIndex(root.resolve(index.path)).runs.mapTo(mutableSetOf()) { it.record.path }
+        }.orEmpty()
         val directory = root.resolve(RUNS_DIRECTORY)
         if (!Files.isDirectory(directory)) return emptyList()
-        Files.list(directory).use { stream ->
+        Files.walk(directory).use { stream ->
             return stream.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".json") }
                 .map { root.relativize(it).toString().replace('\\', '/') }
                 .filter { it !in indexed }
@@ -104,6 +107,36 @@ class StageRunStore(private val publisher: AtomicStageRunPublisher = FileAtomicS
                 .map { artifactRef(root, it) }
                 .toList()
         }
+    }
+
+    /**
+     * Publishes an immutable revision of one run and an immutable replacement
+     * index. The caller atomically updates project.json to point at the
+     * returned index, so a failed project save leaves the prior manifest valid
+     * and these files as inspectable, unreachable evidence.
+     */
+    fun transition(
+        projectRoot: Path,
+        reference: ProjectStageRunManifestReference,
+        record: StageRunRecord
+    ): ProjectStageRunManifestReference {
+        val root = normalizedRoot(projectRoot)
+        val existing = if (reference.index == null) emptyList() else read(root, reference)
+        val existingEntries = reference.index?.let { indexReference ->
+            decodeIndex(root.resolve(indexReference.path)).runs
+        }.orEmpty()
+        val previous = existing.lastOrNull { it.runId == record.runId }
+        require(previous == null || validTransition(previous.status, record.status)) {
+            "Invalid stage-run transition from ${previous?.status} to ${record.status}"
+        }
+        StageRunValidator.requireValid(root, record)
+        val recordPath = revisionPath(record.runId)
+        publisher.writeNew(root.resolve(recordPath), STAGE_RUN_JSON.encodeToString(record))
+        val entry = StageRunIndexEntry(record.runId, artifactRef(root, recordPath))
+        val nextEntries = existingEntries.filterNot { it.runId == record.runId } + entry
+        val indexPath = revisionIndexPath()
+        publisher.writeNew(root.resolve(indexPath), STAGE_RUN_JSON.encodeToString(StageRunIndex(runs = nextEntries)))
+        return ProjectStageRunManifestReference(artifactRef(root, indexPath))
     }
 
     private fun readIndex(root: Path): StageRunIndex {
@@ -138,7 +171,25 @@ class StageRunStore(private val publisher: AtomicStageRunPublisher = FileAtomicS
             require(Regex("[A-Za-z0-9][A-Za-z0-9_-]{0,79}").matches(runId)) { "Stage run ID is invalid" }
             return "$RUNS_DIRECTORY/$runId.json"
         }
+
+        fun isIndexPath(path: String): Boolean = path == INDEX_FILE ||
+            Regex("$DIRECTORY/index/[0-9a-f-]{36}\\.json").matches(path)
+
+        private fun revisionPath(runId: String): String =
+            "$RUNS_DIRECTORY/$runId/${UUID.randomUUID()}.json"
+
+        private fun revisionIndexPath(): String = "$DIRECTORY/index/${UUID.randomUUID()}.json"
+
+        private fun isRecordPath(runId: String, path: String): Boolean =
+            path == runPath(runId) || Regex("$RUNS_DIRECTORY/${Regex.escape(runId)}/[0-9a-f-]{36}\\.json").matches(path)
+
+        private fun validTransition(from: StageRunStatus, to: StageRunStatus): Boolean = when (from) {
+            StageRunStatus.PENDING -> to == StageRunStatus.PROCESSING || to == StageRunStatus.FAILED
+            StageRunStatus.PROCESSING -> to == StageRunStatus.COMPLETED || to == StageRunStatus.FAILED
+            StageRunStatus.COMPLETED, StageRunStatus.FAILED -> false
+        }
     }
+
 }
 
 data class StageRunSelectedOutput(val record: StageRunRecord, val artifact: ArtifactRef)

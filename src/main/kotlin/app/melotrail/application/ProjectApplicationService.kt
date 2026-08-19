@@ -38,6 +38,7 @@ import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectMigrationResult
 import app.melotrail.arrangement.ProjectSetupRequirement
 import app.melotrail.arrangement.ProjectStore
+import app.melotrail.arrangement.StageRunStore
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.ImportEvidence
 import app.melotrail.commercial.SourceRightsAttestation
@@ -58,7 +59,6 @@ import app.melotrail.preparation.TranscriptionQualityGateService
 import app.melotrail.profile.BundledCompositionProfileCatalog
 import app.melotrail.profile.CompositionProfileCatalog
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.nio.file.AtomicMoveNotSupportedException
@@ -67,7 +67,6 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
 import javax.sound.midi.MidiSystem
 
 /** UI- and CLI-neutral boundary for the local, file-backed arranger project. */
@@ -310,7 +309,9 @@ data class ProjectReadiness(
     /** Missing or catalog-incompatible settings block creative derivation, not source inspection or historical export. */
     val compositionSettingsReady: Boolean = true,
     /** Required progression completeness is independent from setup persistence. */
-    val harmonyReady: Boolean = true
+    val harmonyReady: Boolean = true,
+    /** Durable application state; UI observes this rather than polling files. */
+    val stageRuns: List<StageRunSnapshot> = emptyList()
 )
 
 class DefaultProjectApplicationService(
@@ -327,7 +328,8 @@ class DefaultProjectApplicationService(
             ))
     },
     private val transcriptionQualityGate: TranscriptionQualityGateService? = null,
-    compositionProfiles: CompositionProfileCatalog = BundledCompositionProfileCatalog.load()
+    compositionProfiles: CompositionProfileCatalog = BundledCompositionProfileCatalog.load(),
+    private val stageRunRecovery: ProjectOpenStageRunRecovery = StageRunner(StageProcessorRegistry(emptyList()))
 ) : ProjectApplicationService {
     private val compositionSettings = CompositionSettingsApplicationService(compositionProfiles)
     private val harmony = HarmonyApplicationService()
@@ -337,6 +339,7 @@ class DefaultProjectApplicationService(
         require(Files.isRegularFile(normalizedRoot.resolve(ProjectStore.FILE_NAME))) {
             "Project file not found: ${normalizedRoot.resolve(ProjectStore.FILE_NAME)}"
         }
+        stageRunRecovery.recover(normalizedRoot)
         val project = readValidProject(normalizedRoot)
         return snapshot(normalizedRoot, project, migrationStatus(ProjectStore.readMigration(normalizedRoot)))
     }
@@ -830,11 +833,21 @@ class DefaultProjectApplicationService(
                 cohesionReady = currentCohesion(root, project),
                 commercialSourceAttestationsComplete = project.parts.isNotEmpty() && project.parts.all { it.sourceAttestation?.supportsCommercialUse == true },
                 compositionSettingsReady = compositionSettings.isReady(project),
-                harmonyReady = harmony.query(project).ready
+                harmonyReady = harmony.query(project).ready,
+                stageRuns = stageRunSnapshots(root, project)
             ),
             migration = migration
         )
     }
+
+    private fun stageRunSnapshots(root: Path, project: Project): List<StageRunSnapshot> = runCatching {
+        val reference = project.envelope.stageRuns
+        if (reference.index == null) emptyList() else StageRunStore().read(root, reference).map { record ->
+            StageRunSnapshot(record.runId, record.stage, record.subject, record.status,
+                retryable = record.status == app.melotrail.arrangement.StageRunStatus.FAILED,
+                failure = record.failure?.code)
+        }
+    }.getOrDefault(emptyList())
 
     private fun migrationStatus(result: ProjectMigrationResult, migrated: Boolean = false) = ProjectMigrationStatus(
         requiresMigration = !migrated && result.sourceVersion < Project.CURRENT_VERSION,
@@ -1036,14 +1049,14 @@ class DefaultProjectApplicationService(
 
     private fun <T> mutate(root: Path, action: (Path) -> T): T {
         val normalizedRoot = root.normalizeRoot()
-        val lock = locks.computeIfAbsent(normalizedRoot) { Mutex() }
+        val lock = ProjectMutationCoordinator.lock(normalizedRoot)
         require(lock.tryLock()) { "Another project mutation is already running: $normalizedRoot" }
         return try { action(normalizedRoot) } finally { lock.unlock() }
     }
 
     private suspend fun mutateSuspend(root: Path, action: suspend (Path) -> ProjectSnapshot): ProjectSnapshot {
         val normalizedRoot = root.normalizeRoot()
-        val lock = locks.computeIfAbsent(normalizedRoot) { Mutex() }
+        val lock = ProjectMutationCoordinator.lock(normalizedRoot)
         require(lock.tryLock()) { "Another project mutation is already running: $normalizedRoot" }
         return try { withContext(Dispatchers.IO) { action(normalizedRoot) } } finally { lock.unlock() }
     }
@@ -1232,7 +1245,6 @@ class DefaultProjectApplicationService(
     }
 
     private companion object {
-        val locks = ConcurrentHashMap<Path, Mutex>()
         val json = Json { ignoreUnknownKeys = false }
         val PART_ID = Regex("[A-Za-z0-9_-]+")
         val MIDI_EXTENSIONS = setOf("mid", "midi")
