@@ -166,12 +166,12 @@ class DeterministicBassMidiGenerator {
     private fun harmonyRoot(request: BassGenerationRequest, tick: Long): Int? {
         val chord = request.chords.firstOrNull { tick >= it.startTick && tick < it.endTick }
         chord?.takeIf { it.confidence >= CHORD_CONFIDENCE }?.symbol?.let(::pitchClass)?.let { return it }
-        return request.key?.takeIf { it.confidence >= KEY_CONFIDENCE }?.tonic?.let(::pitchClass)
+        return request.key?.takeIf { it.confidence >= KEY_CONFIDENCE }?.toMusicalKeyOrNull()?.tonic?.chromatic
     }
 
     private fun nextRoot(request: BassGenerationRequest, tick: Long): Int? =
         request.chords.firstOrNull { it.startTick >= tick && it.confidence >= CHORD_CONFIDENCE }?.symbol?.let(::pitchClass)
-            ?: request.key?.takeIf { it.confidence >= KEY_CONFIDENCE }?.tonic?.let(::pitchClass)
+            ?: request.key?.takeIf { it.confidence >= KEY_CONFIDENCE }?.toMusicalKeyOrNull()?.tonic?.chromatic
 
     private fun pitchClass(symbol: String): Int? {
         val value = symbol.trim()

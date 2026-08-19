@@ -1,6 +1,9 @@
 package app.melotrail.arrangement
 
 import app.melotrail.commercial.SourceRightsAttestation
+import app.melotrail.music.MusicalKey
+import app.melotrail.music.Tempo
+import app.melotrail.music.TimeSignature
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import java.nio.file.Files
@@ -106,9 +109,14 @@ data class ProjectV4Envelope(
     }
 }
 
-/** Placeholder owned by Task 006; its presence records an explicit user setup, not defaults. */
+/** Explicit composition context. Null at the envelope boundary still means setup is required. */
 @Serializable
-data class CompositionSettings(val revision: Int = 1) {
+data class CompositionSettings(
+    val revision: Int = 1,
+    val key: MusicalKey,
+    val tempo: Tempo,
+    val timeSignature: TimeSignature
+) {
     init { require(revision == 1) { "Unsupported composition settings revision: $revision" } }
 }
 

@@ -121,14 +121,16 @@ class DeterministicPadMidiGenerator {
             diagnostics += "Unsupported or unknown confident chord '${chord.symbol ?: "unknown"}' in section ${request.sectionIndex + 1} at tick ${chord.startTick}; left silent."
             return null
         }
-        val key = request.key?.takeIf { it.confidence >= KEY_CONFIDENCE }
-        val tonic = key?.tonic?.let(::pitchClass)
-        if (tonic == null || key.mode !in setOf("major", "minor")) {
+        val evidence = request.key?.takeIf { it.confidence >= KEY_CONFIDENCE }
+        val key = evidence?.toMusicalKeyOrNull()
+        val mode = key?.modeId?.executable
+        val tonic = key?.tonic?.chromatic
+        if (tonic == null || mode == null) {
             diagnostics += "No confident harmony for section ${request.sectionIndex + 1} at tick ${chord.startTick}; left silent."
             return null
         }
-        diagnostics += "Used ${key.tonic} ${key.mode} tonic fallback for weak chord in section ${request.sectionIndex + 1} at tick ${chord.startTick}."
-        return ChordHarmony(tonic, if (key.mode == "major") intArrayOf(0, 4, 7) else intArrayOf(0, 3, 7))
+        diagnostics += "Used ${key.displayName} tonic fallback for weak chord in section ${request.sectionIndex + 1} at tick ${chord.startTick}."
+        return ChordHarmony(tonic, if (mode == app.melotrail.music.ExecutableScaleMode.MAJOR) intArrayOf(0, 4, 7) else intArrayOf(0, 3, 7))
     }
 
     private fun parseChord(symbol: String?): ChordHarmony? {

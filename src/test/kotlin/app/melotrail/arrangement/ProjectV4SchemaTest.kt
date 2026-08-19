@@ -1,5 +1,11 @@
 package app.melotrail.arrangement
 
+import app.melotrail.music.MusicalKey
+import app.melotrail.music.PitchClass
+import app.melotrail.music.PitchSpelling
+import app.melotrail.music.ScaleModeId
+import app.melotrail.music.Tempo
+import app.melotrail.music.TimeSignature
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
@@ -22,6 +28,33 @@ class ProjectV4SchemaTest {
         assertEquals(Project.CURRENT_VERSION, project.version)
         assertEquals(ManifestRunStatus.PENDING, project.envelope.manifests.runs.single().status)
         assertTrue(project.validate(root).isValid)
+    }
+
+    @Test
+    fun `v4 composition context round trips typed musical primitives including an unknown future mode`() {
+        val settings = CompositionSettings(
+            key = MusicalKey(PitchClass.of(PitchSpelling.E_FLAT), ScaleModeId("future-mode-v2")),
+            tempo = Tempo(117.5),
+            timeSignature = TimeSignature(7, 8)
+        )
+        val project = Project(
+            version = Project.CURRENT_VERSION,
+            name = "musical-context",
+            renderFormat = RenderFormat(),
+            envelope = ProjectV4Envelope(compositionSettings = settings)
+        )
+
+        ProjectStore.write(root, project)
+
+        val text = Files.readString(root.resolve(ProjectStore.FILE_NAME))
+        val restored = requireNotNull(ProjectStore.read(root).envelope.compositionSettings)
+        assertEquals(settings, restored)
+        assertTrue(text.contains("\"chromatic\": 3"))
+        assertTrue(text.contains("\"spelling\": \"Eb\""))
+        assertTrue(text.contains("\"modeId\": \"future-mode-v2\""))
+        assertTrue(text.contains("\"bpm\": 117.5"))
+        assertTrue(text.contains("\"numerator\": 7"))
+        assertFalse(restored.key.isExecutable)
     }
 
     @Test

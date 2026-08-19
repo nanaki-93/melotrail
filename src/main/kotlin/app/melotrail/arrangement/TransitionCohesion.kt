@@ -227,7 +227,7 @@ object DeterministicTransitionBridgeEngine {
     private fun note(track: javax.sound.midi.Track, channel: Int, pitch: Int, velocity: Int, start: Long, end: Long) { track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, channel, pitch, velocity), start)); track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, channel, pitch, 0), end)) }
     private fun addTempo(track: javax.sound.midi.Track, tempo: MidiTempoChange, tick: Long) { val micros = (60_000_000.0 / tempo.bpm).roundToLong().toInt(); track.add(MidiEvent(MetaMessage(0x51, byteArrayOf((micros ushr 16).toByte(), (micros ushr 8).toByte(), micros.toByte()), 3), tick)) }
     private fun addMeter(track: javax.sound.midi.Track, meter: MidiTimeSignature, tick: Long) { track.add(MidiEvent(MetaMessage(0x58, byteArrayOf(meter.numerator.toByte(), Integer.numberOfTrailingZeros(meter.denominator).toByte(), 24, 8), 4), tick)) }
-    private fun keyPitch(key: MidiKey?) = when (key?.tonic?.uppercase()) { "D" -> 2; "E" -> 4; "F" -> 5; "G" -> 7; "A" -> 9; "B" -> 11; else -> 0 }
+    private fun keyPitch(key: MidiKey?): Int = key?.toMusicalKeyOrNull()?.tonic?.chromatic ?: 0
     private fun move(from: Path, to: Path) { try { Files.move(from, to, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE) } catch (_: AtomicMoveNotSupportedException) { Files.move(from, to, StandardCopyOption.REPLACE_EXISTING) } }
 }
 

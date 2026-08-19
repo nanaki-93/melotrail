@@ -16,7 +16,7 @@ schema window actively requires it and must have a named removal condition.
 | ---: | --- | --- |
 | 001 | [Baseline characterization and support-contract reconciliation](completed/001-baseline-characterization.md) | MVP |
 | 002 | [v4 project schema and migration scaffold](completed/002-v4-project-schema.md) | MVP |
-| 003 | [Structured musical primitives](003-musical-primitives.md) | MVP |
+| 003 | [Structured musical primitives](completed/003-musical-primitives.md) | MVP |
 | 004 | [Composition profile and mood catalog](004-profile-mood-catalog.md) | MVP |
 | 005 | [Composition settings application contract](005-composition-settings-service.md) | MVP |
 | 006 | [Project Setup UI](006-project-setup-ui.md) | MVP |
