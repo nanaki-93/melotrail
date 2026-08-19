@@ -210,6 +210,40 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `Setup exposes typed controls recommendation confirmation and legacy migration without navigation writes`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(setupState(), intents::add) } }
+
+        listOf(
+            WorkspacePageTags.SETUP_FORM, WorkspacePageTags.SETUP_NAME, WorkspacePageTags.SETUP_TONIC,
+            WorkspacePageTags.SETUP_MODE, WorkspacePageTags.SETUP_TEMPO, WorkspacePageTags.SETUP_METER,
+            WorkspacePageTags.SETUP_PROFILE, WorkspacePageTags.SETUP_MOOD, WorkspacePageTags.SETUP_RECOMMENDATION,
+            WorkspacePageTags.SETUP_INVALIDATION, WorkspacePageTags.SETUP_CONFIRM
+        ).forEach { onNodeWithTag(it).assertExists() }
+        onNodeWithTag(WorkspacePageTags.SETUP_CONFIRM).performScrollTo().performClick()
+        assertEquals(WorkspaceIntent.ConfirmProjectSetupSave, intents.single())
+
+        setContent { MelotrailTheme { WorkspaceScreen(setupState(legacy = true), intents::add) } }
+        onNodeWithTag(WorkspacePageTags.SETUP_LEGACY).assertExists()
+        onNodeWithTag(WorkspacePageTags.SETUP_MIGRATE).assertExists()
+        // Merely rendering or navigating to Setup never issues a migration command.
+        assertEquals(WorkspaceIntent.ConfirmProjectSetupSave, intents.single())
+    }
+
+    @Test
+    fun `Setup remains one keyboard reachable page at wide medium and narrow breakpoints`() {
+        listOf(Size(1536f, 1024f), Size(1000f, 900f), Size(720f, 1120f)).forEach { size ->
+            runSkikoComposeUiTest(size = size) {
+                setContent { MelotrailTheme { WorkspaceScreen(setupState(), onIntent = {}) } }
+                onAllNodesWithTag(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.SETUP.name.lowercase()).assertCountEquals(1)
+                onNodeWithTag(WorkspacePageTags.SETUP_NAME).performClick()
+                onNodeWithTag(WorkspacePageTags.SETUP_NAME).assertIsFocused()
+                onNodeWithTag(WorkspacePageTags.SETUP_SAVE).assertDoesNotExist()
+            }
+        }
+    }
+
+    @Test
     fun `overview navigation remains keyboard reachable`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(populatedState(), intents::add) } }
@@ -1273,6 +1307,7 @@ class WorkspaceScreenTest {
             listOf(libraryInstrument("piano", "Piano"))
         )
         val fixtures = mapOf(
+            WorkspaceSection.SETUP to setupState(),
             WorkspaceSection.OVERVIEW to overviewReadyState(),
             WorkspaceSection.IMPORT to importState(importPart("piano_loop.mid", rawMidi = true)),
             WorkspaceSection.STRUCTURE to populatedState().copy(workspaceSection = WorkspaceSection.STRUCTURE),
@@ -1428,6 +1463,35 @@ class WorkspaceScreenTest {
         commercialUse = true,
         attributionRequired = false
     )
+
+    private fun setupState(legacy: Boolean = false): WorkspaceUiState {
+        val profile = app.melotrail.profile.CompositionProfileRef("lofi", 1)
+        val mood = app.melotrail.profile.MoodRef("warm", 1)
+        val options = app.melotrail.application.CompositionSettingsOptions(
+            tonics = listOf(app.melotrail.music.TonicOption(app.melotrail.music.PitchClass.canonical(0))),
+            modes = listOf(app.melotrail.music.ScaleModeOption(app.melotrail.music.ScaleModeId.MAJOR)),
+            commonMeters = listOf(app.melotrail.music.TimeSignatureOption(app.melotrail.music.TimeSignature(4, 4)), app.melotrail.music.TimeSignatureOption(app.melotrail.music.TimeSignature(7, 8))),
+            profiles = listOf(app.melotrail.profile.CompositionProfileSummary(profile, "Lo-fi", "Warm, restrained texture", mood)),
+            moods = listOf(app.melotrail.profile.MoodSummary(mood, "Warm", "Soft and familiar")),
+            profileMeters = listOf(app.melotrail.music.TimeSignature(4, 4))
+        )
+        val saved = app.melotrail.application.CompositionSettingsView(
+            "Midnight Train", app.melotrail.music.MusicalKey(app.melotrail.music.PitchClass.canonical(0), app.melotrail.music.ScaleModeId.MAJOR), app.melotrail.music.Tempo(80.0), app.melotrail.music.TimeSignature(4, 4), profile, mood, 1, "0".repeat(64), "1".repeat(64)
+        )
+        val setup = ProjectSetupUiState.from(app.melotrail.application.GetCompositionSettingsResult(saved, options, false), "Midnight Train").copy(
+            draft = ProjectSetupDraft("Midnight Train", app.melotrail.music.PitchClass.canonical(0), app.melotrail.music.ScaleModeId.MAJOR, "80", app.melotrail.music.TimeSignature(7, 8), profile, mood),
+            invalidationPreview = app.melotrail.application.SettingsInvalidationPreview(emptySet(), setOf(app.melotrail.arrangement.WorkflowArtifact.ANALYSIS), setOf(app.melotrail.application.WorkflowStage.ANALYSIS))
+        )
+        val base = populatedState()
+        return base.copy(
+            project = base.project!!.copy(
+                version = if (legacy) 3 else 4,
+                migration = app.melotrail.application.ProjectMigrationStatus(legacy, if (legacy) 3 else 4, if (legacy) listOf("Save explicitly to publish v4.") else emptyList())
+            ),
+            projectSetup = setup,
+            workspaceSection = WorkspaceSection.SETUP
+        )
+    }
 
     private fun populatedState(): WorkspaceUiState = WorkspaceUiState(
         project = ProjectSnapshot(

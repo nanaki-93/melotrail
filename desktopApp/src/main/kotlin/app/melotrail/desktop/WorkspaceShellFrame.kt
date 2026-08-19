@@ -323,10 +323,10 @@ private fun DestinationNavigation(state: WorkspaceUiState, onIntent: (WorkspaceI
     Box(modifier.semantics { testTag = tag }) {
         val navigationModifier = Modifier.semantics { testTag = WorkspaceTags.WORKSPACE_NAV; contentDescription = "Workspace navigation" }
         if (compact) Row(navigationModifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-            listOf(WorkspaceSection.OVERVIEW, WorkspaceSection.IMPORT, WorkspaceSection.STRUCTURE, WorkspaceSection.ARRANGE, WorkspaceSection.MIX_MASTER)
+            listOf(WorkspaceSection.SETUP, WorkspaceSection.OVERVIEW, WorkspaceSection.IMPORT, WorkspaceSection.STRUCTURE, WorkspaceSection.ARRANGE, WorkspaceSection.MIX_MASTER)
                 .forEach { destination -> NavigationButton(destination, state, onIntent, compact = true) }
         } else Column(navigationModifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-            listOf(WorkspaceSection.OVERVIEW, WorkspaceSection.IMPORT, WorkspaceSection.STRUCTURE, WorkspaceSection.ARRANGE, WorkspaceSection.MIX_MASTER)
+            listOf(WorkspaceSection.SETUP, WorkspaceSection.OVERVIEW, WorkspaceSection.IMPORT, WorkspaceSection.STRUCTURE, WorkspaceSection.ARRANGE, WorkspaceSection.MIX_MASTER)
                 .forEach { destination -> NavigationButton(destination, state, onIntent, compact = false) }
         }
     }
@@ -348,6 +348,7 @@ private fun NavigationButton(destination: WorkspaceSection, state: WorkspaceUiSt
 
 private val WorkspaceSection.shortLabel: String
     get() = when (this) {
+        WorkspaceSection.SETUP -> "Setup"
         WorkspaceSection.OVERVIEW -> "Project"
         WorkspaceSection.MIX_MASTER -> "Mix"
         WorkspaceSection.VIDEO_PREVIEW -> "Preview"

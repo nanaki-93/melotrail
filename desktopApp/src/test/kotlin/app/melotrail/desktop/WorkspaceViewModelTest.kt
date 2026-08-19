@@ -107,6 +107,53 @@ class WorkspaceViewModelTest {
     }
 
     @Test
+    fun `Setup loads typed defaults saves valid context and rejects invalid BPM before writing`() = runTest {
+        val root = Path.of("build/test-project")
+        val service = FakeProjectService(result = projectSnapshot(root).let { snapshot ->
+            snapshot.copy(readiness = snapshot.readiness.copy(compositionSettingsReady = false))
+        })
+        val viewModel = WorkspaceViewModel(service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        assertEquals(WorkspaceSection.SETUP, viewModel.state.value.workspaceSection)
+        val initial = checkNotNull(viewModel.state.value.projectSetup.draft)
+        assertEquals("test-project", initial.name)
+        assertEquals(80, initial.tempo.toInt())
+
+        viewModel.accept(WorkspaceIntent.UpdateProjectSetup(initial.copy(timeSignature = app.melotrail.music.TimeSignature(7, 8))))
+        viewModel.accept(WorkspaceIntent.SaveProjectSetup); advanceUntilIdle()
+        assertEquals(app.melotrail.music.TimeSignature(7, 8), service.updatedSetup?.settings?.timeSignature)
+        assertTrue(viewModel.state.value.projectSetup.saved != null)
+
+        viewModel.accept(WorkspaceIntent.UpdateProjectSetup(checkNotNull(viewModel.state.value.projectSetup.draft).copy(tempo = "not-a-number")))
+        viewModel.accept(WorkspaceIntent.SaveProjectSetup)
+        assertEquals("Tempo must be a number of BPM.", viewModel.state.value.projectSetup.validationError)
+        viewModel.close()
+    }
+
+    @Test
+    fun `existing setup previews downstream invalidation before its explicit save`() = runTest {
+        val root = Path.of("build/test-project")
+        val service = FakeProjectService(result = projectSnapshot(root), setupSettings = setupView())
+        service.setupInvalidation = app.melotrail.application.SettingsInvalidationPreview(
+            emptySet(), setOf(app.melotrail.arrangement.WorkflowArtifact.ANALYSIS), setOf(app.melotrail.application.WorkflowStage.ANALYSIS)
+        )
+        val viewModel = WorkspaceViewModel(service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        val changed = checkNotNull(viewModel.state.value.projectSetup.draft).copy(tempo = "92")
+        viewModel.accept(WorkspaceIntent.UpdateProjectSetup(changed))
+        viewModel.accept(WorkspaceIntent.SaveProjectSetup); advanceUntilIdle()
+        assertTrue(viewModel.state.value.projectSetup.invalidationPreview != null)
+        assertNull(service.updatedSetup)
+
+        viewModel.accept(WorkspaceIntent.ConfirmProjectSetupSave); advanceUntilIdle()
+        assertEquals(92.0, service.updatedSetup?.settings?.tempo?.bpm)
+        assertTrue(viewModel.state.value.downstreamArtifactsStale)
+        viewModel.close()
+    }
+
+    @Test
     fun `AI fix draft is reviewable and approval is explicit in the view model`() = runTest {
         val root = Path.of("build/ai-fix-project")
         val project = projectSnapshot(root).copy(
@@ -1510,11 +1557,30 @@ private class FakeDesktopPreferences(private val last: Path?) : DesktopPreferenc
     override fun clearSoundLibraryRoot() = Unit
 }
 
+private fun setupOptions() = app.melotrail.application.CompositionSettingsOptions(
+    tonics = listOf(app.melotrail.music.TonicOption(app.melotrail.music.PitchClass.canonical(0))),
+    modes = listOf(app.melotrail.music.ScaleModeOption(app.melotrail.music.ScaleModeId.MAJOR)),
+    commonMeters = listOf(app.melotrail.music.TimeSignatureOption(app.melotrail.music.TimeSignature(4, 4)), app.melotrail.music.TimeSignatureOption(app.melotrail.music.TimeSignature(7, 8))),
+    profiles = listOf(app.melotrail.profile.CompositionProfileSummary(app.melotrail.profile.CompositionProfileRef("lofi", 1), "Lo-fi", "Warm and restrained", app.melotrail.profile.MoodRef("warm", 1))),
+    moods = listOf(app.melotrail.profile.MoodSummary(app.melotrail.profile.MoodRef("warm", 1), "Warm", "Soft and familiar")),
+    profileMeters = listOf(app.melotrail.music.TimeSignature(4, 4))
+)
+
+private fun setupView(
+    input: app.melotrail.application.CompositionSettingsInput = app.melotrail.application.CompositionSettingsInput(
+        "test-project", app.melotrail.music.MusicalKey(app.melotrail.music.PitchClass.canonical(0), app.melotrail.music.ScaleModeId.MAJOR), app.melotrail.music.Tempo(80.0), app.melotrail.music.TimeSignature(4, 4), app.melotrail.profile.CompositionProfileRef("lofi", 1), app.melotrail.profile.MoodRef("warm", 1)
+    ),
+    revision: Long = 1
+) = app.melotrail.application.CompositionSettingsView(
+    input.name, input.key, input.tempo, input.timeSignature, input.profile, input.mood, revision, "0".repeat(64), "1".repeat(64)
+)
+
 private class FakeProjectService(
     private val result: ProjectSnapshot? = null,
     private val failure: Throwable? = null,
     private val failureOnImport: Throwable? = null,
-    private val failureOnMidiCleanup: Throwable? = null
+    private val failureOnMidiCleanup: Throwable? = null,
+    var setupSettings: app.melotrail.application.CompositionSettingsView? = null
 ) : ProjectApplicationService {
     private var current: ProjectSnapshot? = result
     var created: CreateProjectRequest? = null
@@ -1528,6 +1594,24 @@ private class FakeProjectService(
     var analyzedResult: ProjectSnapshot? = null
     var failureOnSave: Throwable? = null
     var openCalls = 0
+    var updatedSetup: app.melotrail.application.UpdateCompositionSettings? = null
+    var setupInvalidation = app.melotrail.application.SettingsInvalidationPreview(emptySet(), emptySet(), emptySet())
+
+    override fun getCompositionSettings(command: app.melotrail.application.GetCompositionSettings) = app.melotrail.application.GetCompositionSettingsResult(
+        setupSettings, setupOptions(), setupSettings == null
+    )
+
+    override fun previewSettingsChange(command: app.melotrail.application.PreviewSettingsChange): app.melotrail.application.PreviewSettingsChangeResult {
+        val candidate = setupView(command.settings, command.expectedRevision + 1)
+        return app.melotrail.application.PreviewSettingsChangeResult(command.expectedRevision, candidate, setupInvalidation)
+    }
+
+    override fun updateCompositionSettings(command: app.melotrail.application.UpdateCompositionSettings): app.melotrail.application.UpdateCompositionSettingsResult {
+        updatedSetup = command
+        val settings = setupView(command.settings, command.expectedRevision + 1)
+        setupSettings = settings
+        return app.melotrail.application.UpdateCompositionSettingsResult(checkNotNull(current), settings, setupInvalidation)
+    }
 
     override fun open(root: Path): ProjectSnapshot {
         openCalls++

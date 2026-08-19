@@ -21,6 +21,11 @@ directory containing a valid `project.json`. Project audio and metadata stay in
 that selected project directory; desktop preferences retain only the last
 successfully opened project and a validated sound-library location.
 
+For a current v4 project, open **Setup** and explicitly save the project name,
+key, BPM, time signature, Lo-fi profile, and mood before analysis. A readable
+legacy project stays unchanged when opened; its Setup page explains the required
+settings and provides the separate **Save as v4** action.
+
 ## Sound library or renderer unavailable
 
 The package intentionally does not bundle the starter samples or an SFZ

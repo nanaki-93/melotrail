@@ -32,6 +32,9 @@ import app.melotrail.application.PartSourceType
 import app.melotrail.application.PartAnalysisStatus
 import app.melotrail.application.ProjectApplicationService
 import app.melotrail.application.ProjectSnapshot
+import app.melotrail.application.GetCompositionSettings
+import app.melotrail.application.PreviewSettingsChange
+import app.melotrail.application.UpdateCompositionSettings
 import app.melotrail.application.CleanMidiRequest
 import app.melotrail.application.SelectMidiFeelRequest
 import app.melotrail.application.AudioPreparationApplicationService
@@ -115,6 +118,8 @@ data class WorkspaceUiState(
     val notification: String? = null,
     val runtimeReadiness: RuntimeReadiness? = null,
     val soundLibrary: SoundLibrarySettingsState = SoundLibrarySettingsState(),
+    /** Typed setup query and its UI-only draft; persistence remains in the application service. */
+    val projectSetup: ProjectSetupUiState = ProjectSetupUiState.Empty,
     /** Settings navigation is ephemeral; it never changes a project or playback session. */
     val settingsReturnSection: WorkspaceSection? = null,
     /** Read-only inventory from the validated registry boundary; never project data. */
@@ -136,6 +141,7 @@ data class WorkspaceUiState(
 }
 
 enum class WorkspaceSection(val label: String) {
+    SETUP("Setup"),
     OVERVIEW("Overview"),
     IMPORT("Import"),
     STRUCTURE("Structure"),
@@ -302,6 +308,7 @@ data class CohesionDraft(val planner: CohesionPlannerKind = CohesionPlannerKind.
 sealed interface WorkspaceOperation {
     data object Idle : WorkspaceOperation
     data class OpeningProject(val root: Path) : WorkspaceOperation
+    data object SavingProjectSetup : WorkspaceOperation
     data class CreatingProject(val root: Path) : WorkspaceOperation
     data class ImportingPart(val id: String, val progress: OperationProgress? = null) : WorkspaceOperation
     data class AnalyzingPart(val id: String, val progress: OperationProgress? = null) : WorkspaceOperation
@@ -329,6 +336,7 @@ sealed interface WorkspaceOperation {
 
 val WorkspaceOperation.isMutating: Boolean
     get() = this is WorkspaceOperation.OpeningProject || this is WorkspaceOperation.CreatingProject ||
+        this is WorkspaceOperation.SavingProjectSetup ||
         this is WorkspaceOperation.ImportingPart || this is WorkspaceOperation.AnalyzingPart ||
         this is WorkspaceOperation.InspectingPart || this is WorkspaceOperation.ApplyingAudioCleanup || this is WorkspaceOperation.TranscribingPart ||
         this is WorkspaceOperation.CleaningMidi ||
@@ -480,6 +488,9 @@ sealed interface WorkspaceIntent {
     data object CreateProject : WorkspaceIntent
     data class OpenProject(val root: Path) : WorkspaceIntent
     data object MigrateProject : WorkspaceIntent
+    data class UpdateProjectSetup(val draft: ProjectSetupDraft) : WorkspaceIntent
+    data object SaveProjectSetup : WorkspaceIntent
+    data object ConfirmProjectSetupSave : WorkspaceIntent
     data object RefreshRuntimeReadiness : WorkspaceIntent
     data object ChooseSoundLibraryRoot : WorkspaceIntent
     data object RequestClearSoundLibraryRoot : WorkspaceIntent
@@ -636,6 +647,11 @@ class WorkspaceViewModel(
             WorkspaceIntent.CreateProject -> createProject()
             is WorkspaceIntent.OpenProject -> requestOpenProject(intent.root)
             WorkspaceIntent.MigrateProject -> migrateProject()
+            is WorkspaceIntent.UpdateProjectSetup -> mutableState.update { current ->
+                current.copy(projectSetup = current.projectSetup.copy(draft = intent.draft, validationError = null, invalidationPreview = null))
+            }
+            WorkspaceIntent.SaveProjectSetup -> saveProjectSetup()
+            WorkspaceIntent.ConfirmProjectSetupSave -> confirmProjectSetupSave()
             WorkspaceIntent.RefreshRuntimeReadiness -> refreshRuntimeReadiness()
             WorkspaceIntent.ChooseSoundLibraryRoot -> chooseSoundLibraryRoot()
             WorkspaceIntent.RequestClearSoundLibraryRoot -> requestClearSoundLibraryRoot()
@@ -754,6 +770,7 @@ class WorkspaceViewModel(
             refreshSoundLibrary()
             refreshRuntimeReadiness()
         }
+        if (section == WorkspaceSection.SETUP) loadProjectSetup(state.value.project)
     }
 
     private fun openSettings() = selectWorkspaceSection(WorkspaceSection.SETTINGS)
@@ -861,8 +878,8 @@ class WorkspaceViewModel(
     }
 
     private fun migrateProject() {
-        val project = state.value.project ?: return fail("project migration", "Open a v2 project first.")
-        if (project.version != 2) return fail("project migration", "Only readable v2 projects require migration.")
+        val project = state.value.project ?: return fail("project migration", "Open a legacy project first.")
+        if (!project.migration.requiresMigration && project.version >= 4) return fail("project migration", "This project is already schema v4.")
         if (state.value.operation.isMutating) return busy("migrate project")
         val feedbackId = beginFeedback(OperationKind.PROJECT_OPEN, OperationPhase.LOCAL, "Migrating ${project.name} to schema v4…")
         mutableState.update { it.copy(operation = WorkspaceOperation.OpeningProject(project.root), operationFeedback = feedbackTracker.current, notification = null) }
@@ -871,6 +888,73 @@ class WorkspaceViewModel(
                 .onSuccess { opened(it, "Migrated ${it.name} to project schema v4", feedbackId) }
                 .onFailure { fail("project migration", it.message ?: "Unable to migrate project.", sessionId = feedbackId) }
         }
+    }
+
+    private fun loadProjectSetup(project: ProjectSnapshot?) {
+        project ?: return
+        if (project.migration.requiresMigration) return
+        mutableState.update { current ->
+            if (current.project?.root == project.root) current.copy(projectSetup = current.projectSetup.copy(loading = true, validationError = null)) else current
+        }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { projectService.getCompositionSettings(GetCompositionSettings(project.root)) } }
+                .onSuccess { result -> mutableState.update { current ->
+                    if (current.project?.root == project.root) current.copy(projectSetup = ProjectSetupUiState.from(result, project.name)) else current
+                } }
+                .onFailure { failure -> mutableState.update { current ->
+                    if (current.project?.root == project.root) current.copy(projectSetup = ProjectSetupUiState(validationError = failure.message ?: "Unable to load setup choices.")) else current
+                } }
+        }
+    }
+
+    private fun saveProjectSetup() {
+        val project = state.value.project ?: return fail("project setup", "Open a project before saving setup.")
+        if (project.migration.requiresMigration) return fail("project setup", "Save this legacy project as v4 before changing setup.")
+        val setup = state.value.projectSetup
+        val input = setup.draft?.inputOrError()?.getOrElse { return updateSetupError(it.message ?: "Setup is invalid.") }
+            ?: return updateSetupError("Setup choices are still loading.")
+        if (state.value.operation.isMutating) return busy("save project setup")
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { projectService.previewSettingsChange(PreviewSettingsChange(project.root, setup.saved?.decisionRevision ?: 0, input)) } }
+                .onSuccess { preview ->
+                    if (setup.saved != null && preview.invalidation.artifacts.isNotEmpty()) {
+                        mutableState.update { current -> current.copy(projectSetup = current.projectSetup.copy(invalidationPreview = preview.invalidation, validationError = null)) }
+                    } else updateProjectSetup(project, input)
+                }
+                .onFailure { updateSetupError(it.message ?: "Unable to validate setup.") }
+        }
+    }
+
+    private fun confirmProjectSetupSave() {
+        val project = state.value.project ?: return
+        val input = state.value.projectSetup.draft?.inputOrError()?.getOrNull() ?: return
+        if (state.value.projectSetup.invalidationPreview == null || state.value.operation.isMutating) return
+        updateProjectSetup(project, input)
+    }
+
+    private fun updateProjectSetup(project: ProjectSnapshot, input: app.melotrail.application.CompositionSettingsInput) {
+        val revision = state.value.projectSetup.saved?.decisionRevision ?: 0
+        mutableState.update { it.copy(operation = WorkspaceOperation.SavingProjectSetup, notification = null, projectSetup = it.projectSetup.copy(validationError = null)) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { projectService.updateCompositionSettings(UpdateCompositionSettings(project.root, revision, input)) } }
+                .onSuccess { result ->
+                    mutableState.update { current ->
+                        current.copy(
+                            project = result.snapshot,
+                            projectSetup = current.projectSetup.copy(saved = result.settings, draft = ProjectSetupDraft(result.settings.name, result.settings.key.tonic, result.settings.key.modeId, result.settings.tempo.bpm.toString(), result.settings.timeSignature, result.settings.profile, result.settings.mood), invalidationPreview = null),
+                            operation = WorkspaceOperation.Idle,
+                            notification = "Project setup saved.",
+                            downstreamArtifactsStale = current.downstreamArtifactsStale || result.invalidation.artifacts.isNotEmpty()
+                        )
+                    }
+                    hydrateProject(result.snapshot, "Project setup saved.", resetWorkspace = false)
+                }
+                .onFailure { updateSetupError(it.message ?: "Unable to save setup.") }
+        }
+    }
+
+    private fun updateSetupError(message: String) = mutableState.update { current ->
+        current.copy(operation = WorkspaceOperation.Idle, projectSetup = current.projectSetup.copy(validationError = message, invalidationPreview = null), notification = message)
     }
 
     private fun refreshRuntimeReadiness() = scope.launch {
@@ -2128,9 +2212,11 @@ class WorkspaceViewModel(
                 downstreamArtifactsStale = stale,
                 arrangementDraftDirty = if (resetWorkspace) false else current.arrangementDraftDirty,
                 retry = null,
-                workspaceSection = if (resetWorkspace) WorkspaceSection.OVERVIEW else current.workspaceSection
+                projectSetup = if (resetWorkspace) ProjectSetupUiState.Empty else current.projectSetup,
+                workspaceSection = if (resetWorkspace && (!project.readiness.compositionSettingsReady || project.migration.requiresMigration)) WorkspaceSection.SETUP else if (resetWorkspace) WorkspaceSection.OVERVIEW else current.workspaceSection
             )
         }
+        loadProjectSetup(project)
         hydrateProject(project, openedMessage, resetWorkspace)
     }
 

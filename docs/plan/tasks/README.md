@@ -18,8 +18,8 @@ schema window actively requires it and must have a named removal condition.
 | 002 | [v4 project schema and migration scaffold](completed/002-v4-project-schema.md) | MVP |
 | 003 | [Structured musical primitives](completed/003-musical-primitives.md) | MVP |
 | 004 | [Composition profile and mood catalog](completed/004-profile-mood-catalog.md) | MVP |
-| 005 | [Composition settings application contract](005-composition-settings-service.md) | MVP |
-| 006 | [Project Setup UI](006-project-setup-ui.md) | MVP |
+| 005 | [Composition settings application contract](completed/005-composition-settings-service.md) | MVP |
+| 006 | [Project Setup UI](completed/006-project-setup-ui.md) | MVP |
 | 007 | [Structured chord and progression domain](007-chord-progression-domain.md) | MVP |
 | 008 | [Harmony application service](008-harmony-service.md) | MVP |
 | 009 | [Harmony editor UI](009-harmony-editor-ui.md) | MVP |

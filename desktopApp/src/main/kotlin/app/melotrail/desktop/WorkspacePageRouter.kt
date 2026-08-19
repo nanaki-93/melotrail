@@ -87,6 +87,22 @@ internal object WorkspacePageTags {
     const val OVERVIEW_MORE_ACTIONS = "overview-more-actions"
     /** Compatibility tag for the Overview export quick action. */
     const val OVERVIEW_EXPORT = "overview-quick-action-export"
+    const val SETUP_FORM = "setup-form"
+    const val SETUP_LOADING = "setup-loading"
+    const val SETUP_ERROR = "setup-error"
+    const val SETUP_LEGACY = "setup-legacy"
+    const val SETUP_MIGRATE = "setup-migrate"
+    const val SETUP_NAME = "setup-name"
+    const val SETUP_TONIC = "setup-tonic"
+    const val SETUP_MODE = "setup-mode"
+    const val SETUP_TEMPO = "setup-tempo"
+    const val SETUP_METER = "setup-meter"
+    const val SETUP_PROFILE = "setup-profile"
+    const val SETUP_MOOD = "setup-mood"
+    const val SETUP_RECOMMENDATION = "setup-recommendation"
+    const val SETUP_INVALIDATION = "setup-invalidation"
+    const val SETUP_SAVE = "setup-save"
+    const val SETUP_CONFIRM = "setup-confirm"
     const val VIDEO_PREVIEW_STAGE = "video-preview-stage"
     const val VIDEO_PREVIEW_TIMELINE = "video-preview-timeline"
     const val VIDEO_PREVIEW_OCCURRENCE_PREFIX = "video-preview-occurrence-"
@@ -488,6 +504,7 @@ private data class OverviewQuickAction(val id: String, val label: String, val se
 @Composable
 private fun OverviewQuickActions(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = OverviewCard(WorkspacePageTags.OVERVIEW_QUICK_ACTIONS, "Quick actions") {
     val actions = listOf(
+        OverviewQuickAction("setup", "Set up project", WorkspaceSection.SETUP, WorkflowStage.PROJECT),
         OverviewQuickAction("import", "Import Audio / MIDI", WorkspaceSection.IMPORT, WorkflowStage.IMPORT_AND_INSPECTION),
         OverviewQuickAction("structure", "Build Structure", WorkspaceSection.STRUCTURE, WorkflowStage.STRUCTURE),
         OverviewQuickAction("arrange", "Generate Arrangement", WorkspaceSection.ARRANGE, WorkflowStage.ARRANGEMENT),
@@ -509,7 +526,8 @@ private fun OverviewQuickActions(state: WorkspaceUiState, onIntent: (WorkspaceIn
 }
 
 private fun overviewPrimaryStage(stage: WorkflowStage): WorkflowStage = when (stage) {
-    WorkflowStage.PROJECT, WorkflowStage.IMPORT_AND_INSPECTION, WorkflowStage.TRANSCRIPTION,
+    WorkflowStage.PROJECT -> WorkflowStage.PROJECT
+    WorkflowStage.IMPORT_AND_INSPECTION, WorkflowStage.TRANSCRIPTION,
     WorkflowStage.CLEAN_MIDI, WorkflowStage.AI_FIX, WorkflowStage.MIDI_FEEL, WorkflowStage.ANALYSIS -> WorkflowStage.IMPORT_AND_INSPECTION
     WorkflowStage.STRUCTURE -> WorkflowStage.STRUCTURE
     WorkflowStage.COHESION, WorkflowStage.ARRANGEMENT -> WorkflowStage.ARRANGEMENT
@@ -570,6 +588,10 @@ private fun InterimWorkflowPage(
     modifier: Modifier,
     partDetailsFocusTargets: MutableMap<PartDetailsFocusReturn, FocusRequester>
 ) = PageRoot(state.workspaceSection, modifier) {
+    if (state.workspaceSection == WorkspaceSection.SETUP) {
+        ProjectSetupContent(state, onIntent)
+        return@PageRoot
+    }
     if (state.workspaceSection == WorkspaceSection.IMPORT) {
         ImportPage(state, onIntent, partDetailsFocusTargets)
         return@PageRoot
@@ -2058,6 +2080,7 @@ private fun formatImportFileSize(bytes: Long?): String = when {
 }
 
 private fun workflowSubtitle(state: WorkspaceUiState): String = when (state.workspaceSection) {
+    WorkspaceSection.SETUP -> "Set the explicit musical context before downstream analysis."
     WorkspaceSection.IMPORT -> "Import a MIDI or eligible solo-piano audio source."
     WorkspaceSection.STRUCTURE -> "Canonical structure has ${state.project?.structure?.size ?: 0} section(s)."
     WorkspaceSection.ARRANGE -> "Arrangement state is derived from canonical artifacts."
@@ -2225,6 +2248,7 @@ private fun mixMasterBuildMessage(state: WorkspaceUiState): String = when {
 }
 
 private fun workflowBody(state: WorkspaceUiState): String = when (state.workspaceSection) {
+    WorkspaceSection.SETUP -> "Choose and save the explicit musical context for this project."
     WorkspaceSection.IMPORT -> if (state.project == null) "Create or open a project before importing." else "Choose a source through the validated import dialog."
     WorkspaceSection.EXPORT -> if (state.project?.readiness?.releaseAvailable == true && !state.downstreamArtifactsStale) "A release is available for export." else "A current validated release is unavailable. Build the current project first."
     WorkspaceSection.LIBRARY -> "Library inventory is limited to the configured local sound pack."

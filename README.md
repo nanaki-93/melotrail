@@ -45,7 +45,7 @@ generated MIDI, stems, mixes, and release artifacts are all kept under the
 chosen project directory. Desktop settings retain only the last successfully
 opened project path; they never store project or audio data.
 
-The top navigation keeps the guided stages visible: **Project**, **Import**,
+The top navigation keeps the guided stages visible: **Setup**, **Project**, **Import**,
 **Structure**, **Arrange**, and **Mix & Master**. **Library**, **Video Preview**,
 **Export**, and **Settings** are available from the labelled **More** menu. The
 workspace derives the current stage, prerequisites, and next safe action from
@@ -105,7 +105,8 @@ then update a local checkout with `git remote set-url origin <new-url>`.
 
 ### Desktop workflow and local prerequisites
 
-Use the desktop app as a guided sequence: import MIDI or an eligible WAV/MP3
+Use the desktop app as a guided sequence: create or open a project, explicitly save its
+musical Setup (name, key, tempo, meter, Lo-fi profile, and mood), then import MIDI or an eligible WAV/MP3
 source, convert audio to MIDI when needed, clean MIDI, keep it or review an
 optional bounded AI-fix draft, select optional Lo-fi Feel, analyze MIDI, then
 save the structure, generate/review Cohesion, generate/review an arrangement,
