@@ -1274,6 +1274,12 @@ private fun CommercialReadinessPanel(state: WorkspaceUiState, onIntent: (Workspa
         }
         Text("Report: ${current.reportReference}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text("Manifest: ${current.manifestReference}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (current.requiredAttribution.isEmpty()) Text("No instrument attribution required.", style = MaterialTheme.typography.bodySmall)
+        else {
+            Text("Required instrument attribution", style = MaterialTheme.typography.labelMedium)
+            current.requiredAttribution.sorted().forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
+        }
+        current.creditsReference?.let { Text("Credits: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
     }
     Text("For AI-generated music, use the YouTube Studio AI-use disclosure when the policy applies; disclosure is not a monetization guarantee.", style = MaterialTheme.typography.bodySmall)
     Text("Add required attribution and original, non-mass-produced video/channel value. This is evidence and workflow assistance—not legal advice, copyright clearance, Content ID clearance, or a monetization guarantee.", style = MaterialTheme.typography.bodySmall)

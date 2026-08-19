@@ -79,6 +79,14 @@ class ReleaseExportApplicationServiceTest {
         assertEquals(0, altered.moves)
     }
 
+    @Test fun `commercial export is blocked before audio publication when no frozen credits service is available`() = runTest {
+        val files = FakeFilesystem()
+        assertFailsWith<IllegalArgumentException> {
+            DefaultReleaseExportApplicationService(files).export(wavRequest().copy(commercialReleaseId = "release-" + "a".repeat(32)))
+        }
+        assertEquals(0, files.moves)
+    }
+
     private fun service(mp3Available: Boolean = false) = DefaultReleaseExportApplicationService(FakeFilesystem(), FakeMp3Exporter(mp3Available))
     private fun wavRequest(
         format: ReleaseExportFormat = ReleaseExportFormat.WAV,

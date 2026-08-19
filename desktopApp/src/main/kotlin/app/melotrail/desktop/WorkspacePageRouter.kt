@@ -53,6 +53,8 @@ import androidx.compose.ui.draganddrop.dragData
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -218,6 +220,9 @@ internal object WorkspacePageTags {
     const val EXPORT_SUMMARY = "export-summary"
     const val EXPORT_PREVIEW = "export-preview"
     const val EXPORT_ACTION = "export-action"
+    const val EXPORT_COMMERCIAL_ACTION = "export-commercial-action"
+    const val EXPORT_CREDITS_PREVIEW = "export-credits-preview"
+    const val EXPORT_CREDITS_COPY = "export-credits-copy"
     const val EXPORT_STATUS = "export-status"
     const val EXPORT_RECOVERY = "export-recovery"
     const val EXPORT_OPTIONS_TOGGLE = "export-options-toggle"
@@ -942,6 +947,7 @@ private fun ExportPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
     val formats = inspection?.supportedFormats.orEmpty()
     val destinationIsProjectOutput = state.project?.root?.resolve("output")?.toAbsolutePath()?.normalize() == draft.destination?.toAbsolutePath()?.normalize()
     val canExport = inspection?.ready == true && draft.format in formats && destinationIsProjectOutput && !state.operation.isMutating
+    val clipboard = LocalClipboardManager.current
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
         PageTitle("Export", "Publish a validated audio release")
         OverviewCard(WorkspacePageTags.EXPORT_AUDIO_ONLY, "Release mode") {
@@ -958,6 +964,28 @@ private fun ExportPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
                     Text(exportBlockedMessage(export, destinationIsProjectOutput), style = MaterialTheme.typography.bodySmall,
                         color = if (canExport) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
                         modifier = Modifier.semantics { testTag = WorkspacePageTags.EXPORT_STATUS })
+                    val evidence = state.commercialEvidence
+                    val commercialReady = evidence?.commercialReady == true
+                    OverviewCard(WorkspacePageTags.EXPORT_CREDITS_PREVIEW, "Commercial credits preview") {
+                        val creditsName = draft.filename.substringBeforeLast('.', draft.filename).trim()
+                            .replace(Regex("[^A-Za-z0-9_-]"), "-").replace(Regex("-+"), "-").trim('-')
+                            .ifBlank { "song" } + "-credits.txt"
+                        Text("$creditsName", style = MaterialTheme.typography.labelMedium)
+                        if (evidence == null) Text("Create commercial evidence to validate and preview frozen instrument attribution.", style = MaterialTheme.typography.bodySmall)
+                        else if (evidence.requiredAttribution.isEmpty()) Text("No instrument attribution required.", style = MaterialTheme.typography.bodySmall)
+                        else evidence.requiredAttribution.sorted().forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
+                        evidence?.creditsReference?.let { Text("Generated: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        if (evidence?.creditsReference != null) {
+                            OutlinedButton(onClick = {
+                                clipboard.setText(AnnotatedString(evidence.requiredAttribution.sorted().joinToString("\n\n").ifBlank { "No instrument attribution required." }))
+                            }, modifier = Modifier.semantics { testTag = WorkspacePageTags.EXPORT_CREDITS_COPY }) { Text("Copy credits") }
+                        }
+                    }
+                    OutlinedButton(onClick = { onIntent(WorkspaceIntent.ExportCommercialSong) }, enabled = canExport && commercialReady,
+                        modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.EXPORT_COMMERCIAL_ACTION;
+                            contentDescription = if (commercialReady) "Export commercially with hash-paired credits" else "Create commercial-ready evidence before commercial export" }) {
+                        Text(if (state.operation is WorkspaceOperation.ExportingRelease) "Exporting…" else "Export commercially with credits")
+                    }
                     if (summary == null) {
                         OutlinedButton(
                             onClick = { onIntent(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.MIX_MASTER)) },

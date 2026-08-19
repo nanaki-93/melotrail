@@ -3,6 +3,9 @@ package app.melotrail.application
 import app.melotrail.audio.WAVDecoder
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.WorkflowArtifact
+import app.melotrail.commercial.GenerateReleaseCredits
+import app.melotrail.commercial.ReleaseCreditsArtifact
+import app.melotrail.commercial.ReleaseCreditsService
 import app.melotrail.model.ErrorReporter
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
@@ -45,10 +48,12 @@ data class ReleaseExportRequest(
     val filename: String,
     /** A user-facing destination is constrained to the canonical project output directory. */
     val destination: Path,
-    val mp3BitrateKbps: Int = 320
+    val mp3BitrateKbps: Int = 320,
+    /** Null is a private export. A non-null ID requests a hash-paired commercial credits revision. */
+    val commercialReleaseId: String? = null
 )
 
-data class ReleaseExportResult(val output: Path, val format: ReleaseExportFormat)
+data class ReleaseExportResult(val output: Path, val format: ReleaseExportFormat, val credits: ReleaseCreditsArtifact? = null)
 
 /** Adapter boundary for the optional local encoder. It must never receive an unchecked path. */
 interface ReleaseMp3Exporter {
@@ -80,7 +85,8 @@ interface ReleaseExportApplicationService {
  */
 class DefaultReleaseExportApplicationService(
     private val filesystem: ReleaseExportFilesystem = NioReleaseExportFilesystem(),
-    private val mp3Exporter: ReleaseMp3Exporter? = null
+    private val mp3Exporter: ReleaseMp3Exporter? = null,
+    private val creditsService: ReleaseCreditsService? = null
 ) : ReleaseExportApplicationService {
     override suspend fun inspect(root: Path): ReleaseExportInspection = try {
         val summary = filesystem.loadValidatedRelease(normalizeRoot(root))
@@ -104,6 +110,8 @@ class DefaultReleaseExportApplicationService(
         require(!filesystem.exists(target)) { "Export target already exists; choose a new filename." }
         val masterDigest = filesystem.digest(summary.master)
         val temporary = filesystem.temporarySibling(target)
+        var publishedTarget = false
+        var commercialCompleted = request.commercialReleaseId == null
         try {
             filesystem.createDirectories(target.parent)
             when (request.format) {
@@ -116,12 +124,22 @@ class DefaultReleaseExportApplicationService(
             }
             filesystem.validateOutput(temporary, request.format)
             require(filesystem.digest(summary.master) == masterDigest) { "Export changed the authoritative master; the result was discarded." }
+            val creditsRequest = request.commercialReleaseId?.let { releaseId ->
+                val service = requireNotNull(creditsService) { "Commercial credits are unavailable. Create commercial evidence again." }
+                service.prepare(root, releaseId, target, filesystem.digest(temporary), request.format.name)
+            }
             filesystem.moveAtomically(temporary, target)
+            publishedTarget = true
             filesystem.validateOutput(target, request.format)
             require(filesystem.digest(summary.master) == masterDigest) { "Export changed the authoritative master; the result was discarded." }
-            return ReleaseExportResult(target, request.format)
+            val credits = creditsRequest?.let { requireNotNull(creditsService).selectGeneratedRevision(root, it) }
+            commercialCompleted = true
+            return ReleaseExportResult(target, request.format, credits)
         } finally {
             filesystem.deleteIfExists(temporary)
+            // A failed commercial credits publication must not be reported as a commercial audio export.
+            // The audio copy is safe to remove because this call already rejected pre-existing targets.
+            if (publishedTarget && !commercialCompleted) filesystem.deleteIfExists(target)
         }
     }
 

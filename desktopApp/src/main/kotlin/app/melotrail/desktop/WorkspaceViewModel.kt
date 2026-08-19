@@ -93,6 +93,7 @@ import app.melotrail.preparation.TranscriptionInputArtifact
 import app.melotrail.commercial.SourceRightsAttestation
 import app.melotrail.commercial.SourceRightsClaim
 import app.melotrail.commercial.CommercialProvenanceService
+import app.melotrail.commercial.ReleaseCreditsService
 import app.melotrail.harmony.ChordEvent
 import app.melotrail.harmony.ChordEventId
 import app.melotrail.harmony.ChordQuality
@@ -236,6 +237,9 @@ data class ExportUiState(
 data class CommercialEvidenceUiState(
     val commercialReady: Boolean,
     val unresolvedActions: List<String>,
+    val releaseId: String,
+    val requiredAttribution: List<String>,
+    val creditsReference: String? = null,
     /** Project-relative files only; no local absolute path is exposed. */
     val reportReference: String,
     val manifestReference: String
@@ -662,6 +666,7 @@ sealed interface WorkspaceIntent {
     data class UpdateExportDraft(val draft: ExportDraft) : WorkspaceIntent
     data object ChooseExportDestination : WorkspaceIntent
     data object ExportSong : WorkspaceIntent
+    data object ExportCommercialSong : WorkspaceIntent
     data object CancelOperation : WorkspaceIntent
     data class SelectPlaybackSource(val source: PlaybackSource) : WorkspaceIntent
     data object PlayPause : WorkspaceIntent
@@ -705,7 +710,7 @@ class WorkspaceViewModel(
     private val soundLibraryInventory: LocalSoundLibraryInventoryReader = RegistryLocalSoundLibraryInventoryReader,
     private val operationLogger: DesktopOperationLogger = NoOpDesktopOperationLogger,
     private val commercialProvenanceService: CommercialProvenanceService = CommercialProvenanceService(libraryRoot),
-    private val releaseExportService: ReleaseExportApplicationService = DefaultReleaseExportApplicationService()
+    private val releaseExportService: ReleaseExportApplicationService = DefaultReleaseExportApplicationService(creditsService = ReleaseCreditsService())
 ) : AutoCloseable {
     private val scope = CoroutineScope(SupervisorJob() + dispatchers.ui)
     private val ioDispatcher = dispatchers.io
@@ -850,6 +855,7 @@ class WorkspaceViewModel(
             is WorkspaceIntent.UpdateExportDraft -> mutableState.update { it.copy(export = it.export.copy(draft = intent.draft)) }
             WorkspaceIntent.ChooseExportDestination -> chooseExportDestination()
             WorkspaceIntent.ExportSong -> exportSong()
+            WorkspaceIntent.ExportCommercialSong -> exportSong(commercial = true)
             WorkspaceIntent.CancelOperation -> cancelOperation()
             is WorkspaceIntent.SelectPlaybackSource -> selectPlaybackSource(intent.source)
             WorkspaceIntent.PlayPause -> playPause()
@@ -2617,6 +2623,8 @@ class WorkspaceViewModel(
                     val evidence = CommercialEvidenceUiState(
                         commercialReady = result.readiness.ready,
                         unresolvedActions = result.readiness.reasons,
+                        releaseId = checkNotNull(result.releaseId),
+                        requiredAttribution = result.readiness.attribution,
                         reportReference = project.root.relativize(checkNotNull(result.report)).toString().replace('\\', '/'),
                         manifestReference = project.root.relativize(checkNotNull(result.manifest)).toString().replace('\\', '/')
                     )
@@ -2655,19 +2663,25 @@ class WorkspaceViewModel(
             .onFailure { fail("export destination", it.message ?: "The export folder chooser could not be opened.") }
     }
 
-    private fun exportSong() {
+    private fun exportSong(commercial: Boolean = false) {
         val project = state.value.project ?: return fail("export song", "Open a project before exporting.")
         val draft = state.value.export.draft
         val inspection = state.value.export.inspection
         if (state.value.operation.isMutating) return
         if (inspection?.summary == null || draft.format !in inspection.supportedFormats) return fail("export song", inspection?.blockedReason ?: "Build a current master and release metadata first.")
         val destination = draft.destination ?: return fail("export song", "Choose the project output folder before exporting.")
+        val commercialReleaseId = if (commercial) state.value.commercialEvidence?.takeIf { it.commercialReady }?.releaseId
+            ?: return fail("commercial export", "Create commercial-ready evidence and resolve its missing attribution before exporting commercially.") else null
         val feedbackId = beginFeedback(OperationKind.EXPORT, OperationPhase.VALIDATING, "Validating release export…")
         mutableState.update { it.copy(operation = WorkspaceOperation.ExportingRelease, notification = null, retry = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
-            runCatching { withContext(ioDispatcher) { releaseExportService.export(ReleaseExportRequest(project.root, draft.format, draft.filename, destination)) } }
+            runCatching { withContext(ioDispatcher) { releaseExportService.export(ReleaseExportRequest(project.root, draft.format, draft.filename, destination, commercialReleaseId = commercialReleaseId)) } }
                 .onSuccess { result ->
-                    mutableState.update { current -> current.copy(operation = WorkspaceOperation.Idle, notification = "Exported ${result.output.fileName}.",
+                    val credits = result.credits
+                    val creditsPath = credits?.relativePath
+                    mutableState.update { current -> current.copy(operation = WorkspaceOperation.Idle,
+                        notification = if (creditsPath == null) "Exported ${result.output.fileName}." else "Exported ${result.output.fileName} with ${creditsPath.substringAfterLast('/')}.",
+                        commercialEvidence = result.credits?.let { artifact -> current.commercialEvidence?.copy(creditsReference = artifact.relativePath) } ?: current.commercialEvidence,
                         operationFeedback = feedbackTracker.complete(feedbackId, "Exported ${result.output.fileName}.", artifactLabel = result.output.fileName.toString()) ?: current.operationFeedback) }
                     refreshExport()
                 }

@@ -514,6 +514,8 @@ class WorkspaceScreenTest {
             onAllNodesWithTag(WorkspacePageTags.EXPORT_PREVIEW).assertCountEquals(1)
             onAllNodesWithTag(WorkspacePageTags.EXPORT_SUMMARY).assertCountEquals(1)
             onAllNodesWithTag(WorkspacePageTags.EXPORT_ACTION).assertCountEquals(1)
+            onAllNodesWithTag(WorkspacePageTags.EXPORT_CREDITS_PREVIEW).assertCountEquals(1)
+            onAllNodesWithTag(WorkspacePageTags.EXPORT_COMMERCIAL_ACTION).assertCountEquals(1)
         }
         setContent { MelotrailTheme { WorkspaceScreen(ready, onIntent = {}) } }
         onNodeWithTag(WorkspacePageTags.EXPORT_ACTION).assertIsEnabled()

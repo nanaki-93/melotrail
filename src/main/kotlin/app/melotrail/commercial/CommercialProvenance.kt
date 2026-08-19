@@ -190,12 +190,58 @@ data class ReleaseLicenseSnapshot(
     }
 }
 
+/** A hash-bound user-facing audio copy, never a mutable renderer or registry artifact. */
+@Serializable
+data class ReleaseAudioExport(
+    val id: String,
+    val relativePath: String,
+    val sha256: String,
+    val format: String
+) {
+    init {
+        require(SAFE_AUDIO_EXPORT_ID.matches(id) && SAFE_RELATIVE_PATH.matches(relativePath) && SHA_256.matches(sha256)) {
+            "Release audio export is invalid"
+        }
+        require(format in setOf("WAV", "MP3")) { "Release audio export format is invalid" }
+    }
+}
+
+/** The immutable, copy-ready credits artifact paired to one final audio export. */
+@Serializable
+data class ReleaseCreditsArtifact(
+    val id: String,
+    val relativePath: String,
+    val sha256: String,
+    val usedInstrumentIds: List<String>,
+    val attributionEntryHashes: List<String>,
+    val policyVersion: String,
+    val templateVersion: String,
+    val audioExportId: String,
+    val audioExportSha256: String
+) {
+    init {
+        require(SAFE_CREDITS_ID.matches(id) && SAFE_RELATIVE_PATH.matches(relativePath) && SHA_256.matches(sha256)) {
+            "Release credits artifact is invalid"
+        }
+        require(usedInstrumentIds == usedInstrumentIds.distinct().sorted() && usedInstrumentIds.all(SAFE_ID::matches)) {
+            "Release credits instrument IDs are invalid"
+        }
+        require(attributionEntryHashes == attributionEntryHashes.distinct().sorted() && attributionEntryHashes.all(SHA_256::matches)) {
+            "Release credits attribution hashes are invalid"
+        }
+        require(policyVersion == RELEASE_CREDITS_POLICY_VERSION && templateVersion == RELEASE_CREDITS_TEMPLATE_VERSION &&
+            SAFE_AUDIO_EXPORT_ID.matches(audioExportId) && SHA_256.matches(audioExportSha256)) {
+            "Release credits policy or audio pairing is invalid"
+        }
+    }
+}
+
 @Serializable
 data class ReleaseReportReferences(val manifest: String, val report: String, val checklist: String) {
     init { require(listOf(manifest, report, checklist).all(SAFE_RELATIVE_PATH::matches)) { "Release report path is invalid" } }
 }
 
-/** Immutable v2 selected-lineage closure. Version 1 files stay historical inputs and are never rewritten. */
+/** Immutable selected-lineage closure. Older v2 closures remain readable evidence. */
 @Serializable
 data class CommercialProvenanceManifest(
     val version: Int = VERSION,
@@ -213,15 +259,20 @@ data class CommercialProvenanceManifest(
     val reasons: List<String>,
     val attribution: List<String>,
     val reports: ReleaseReportReferences,
+    val audioExports: List<ReleaseAudioExport> = emptyList(),
+    val credits: List<ReleaseCreditsArtifact> = emptyList(),
     val disclaimer: String = COMMERCIAL_DISCLAIMER
 ) {
     init {
-        require(version == VERSION && SAFE_RELEASE_ID.matches(releaseId) && SHA_256.matches(releaseHash)) { "Release manifest identity is invalid" }
+        require(version in 2..VERSION && SAFE_RELEASE_ID.matches(releaseId) && SHA_256.matches(releaseHash)) { "Release manifest identity is invalid" }
         require(artifacts.map(ProvenanceArtifact::path).distinct().size == artifacts.size) { "Release manifest repeats an artifact" }
         require(unresolvedEvidence.all { it.length <= 240 && it.none(Char::isISOControl) }) { "Release manifest unresolved evidence is invalid" }
+        require(audioExports.map(ReleaseAudioExport::id).distinct().size == audioExports.size && credits.map(ReleaseCreditsArtifact::id).distinct().size == credits.size) {
+            "Release manifest repeats an export or credits artifact"
+        }
     }
 
-    companion object { const val VERSION = 2 }
+    companion object { const val VERSION = 3 }
 }
 
 data class CommercialExportResult(val readiness: CommercialReadiness, val manifest: Path?, val report: Path?, val checklist: Path?, val releaseId: String? = null)
@@ -334,6 +385,22 @@ class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soun
             when {
                 file == null -> missing += artifact.path
                 sha256(file) != artifact.sha256 -> tampered += artifact.path
+            }
+        }
+        manifest.audioExports.forEach { audio ->
+            val file = safeProjectFileOrNull(projectRoot, audio.relativePath)
+            when {
+                file == null -> missing += audio.relativePath
+                sha256(file) != audio.sha256 -> tampered += audio.relativePath
+            }
+        }
+        manifest.credits.forEach { credits ->
+            val audio = manifest.audioExports.singleOrNull { it.id == credits.audioExportId }
+            if (audio == null || audio.sha256 != credits.audioExportSha256) tampered += "credits audio pairing ${credits.id}"
+            val file = safeProjectFileOrNull(projectRoot, credits.relativePath)
+            when {
+                file == null -> missing += credits.relativePath
+                sha256(file) != credits.sha256 -> tampered += credits.relativePath
             }
         }
         val project = runCatching { ProjectStore.read(projectRoot) }.getOrNull()
@@ -544,12 +611,212 @@ class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soun
     }
 }
 
+/** Command deliberately contains no caller-supplied credits text or filesystem path. */
+data class GenerateReleaseCredits(val releaseId: String, val audioExportId: String)
+
+data class ReleaseCreditsPreview(
+    val filename: String,
+    val text: String,
+    val usedInstrumentIds: List<String>,
+    val attributionEntryHashes: List<String>
+)
+
+/**
+ * Derives copy-ready instrument credits exclusively from a frozen release manifest.
+ * It never consults the current instrument registry or candidate list.
+ */
+class ReleaseCreditsService {
+    fun preview(root: Path, releaseId: String, audioFilename: String): ReleaseCreditsPreview =
+        derive(loadSelectedManifest(root, releaseId), creditsFilename(audioFilename))
+
+    /** Pure preview for an already decoded immutable manifest; useful to UI and tests. */
+    fun preview(manifest: CommercialProvenanceManifest, audioFilename: String): ReleaseCreditsPreview =
+        derive(manifest, creditsFilename(audioFilename))
+
+    /** Publishes the credits file specified by an already frozen release revision. */
+    fun generate(root: Path, request: GenerateReleaseCredits): ReleaseCreditsArtifact {
+        require(SAFE_RELEASE_ID.matches(request.releaseId) && SAFE_AUDIO_EXPORT_ID.matches(request.audioExportId)) { "Release credits request is invalid" }
+        val projectRoot = root.toAbsolutePath().normalize()
+        val manifest = read(projectRoot, request.releaseId)
+        validateFrozenLineage(projectRoot, manifest)
+        val audio = manifest.audioExports.singleOrNull { it.id == request.audioExportId }
+            ?: throw IllegalArgumentException("Release audio export is not part of the frozen release manifest.")
+        val artifact = manifest.credits.singleOrNull { it.audioExportId == audio.id }
+            ?: throw IllegalArgumentException("Frozen release manifest has no credits artifact for this audio export.")
+        val audioPath = safeFile(projectRoot, audio.relativePath)
+        require(digest(audioPath) == audio.sha256 && artifact.audioExportSha256 == audio.sha256) { "Release audio export no longer matches frozen lineage." }
+        val preview = derive(manifest, Path.of(artifact.relativePath).fileName.toString())
+        require(digestText(preview.text) == artifact.sha256 && preview.usedInstrumentIds == artifact.usedInstrumentIds &&
+            preview.attributionEntryHashes == artifact.attributionEntryHashes) { "Frozen release credits metadata is inconsistent." }
+        publishImmutable(projectRoot.resolve(artifact.relativePath), preview.text)
+        return artifact
+    }
+
+    /** Creates a new immutable revision after the final audio output has been validated. */
+    fun prepare(root: Path, parentReleaseId: String, audioPath: Path, audioSha256: String, format: String): GenerateReleaseCredits {
+        val projectRoot = root.toAbsolutePath().normalize()
+        require(SAFE_RELEASE_ID.matches(parentReleaseId) && SHA_256.matches(audioSha256)) { "Commercial export lineage is invalid" }
+        val parent = loadSelectedManifest(projectRoot, parentReleaseId)
+        require(parent.commercialReady) { "Commercial export is blocked: ${parent.reasons.joinToString(" ")}" }
+        require(format in setOf("WAV", "MP3")) { "Commercial export format is invalid" }
+        val normalizedAudio = audioPath.toAbsolutePath().normalize()
+        val output = projectRoot.resolve("output").normalize()
+        require(normalizedAudio.parent == output && normalizedAudio.startsWith(projectRoot)) { "Commercial export must be in the project output folder." }
+        val relativeAudio = projectRoot.relativize(normalizedAudio).toString().replace('\\', '/')
+        require(SAFE_RELATIVE_PATH.matches(relativeAudio)) { "Commercial export path is invalid" }
+        val audioId = "audio-" + digestText("$relativeAudio|$audioSha256").take(32)
+        val audio = ReleaseAudioExport(audioId, relativeAudio, audioSha256, format)
+        val preview = derive(parent, creditsFilename(normalizedAudio.fileName.toString()))
+        val relativeCredits = "output/${preview.filename}"
+        val creditsHash = digestText(preview.text)
+        val credits = ReleaseCreditsArtifact(
+            id = "credits-" + digestText("$audioId|$creditsHash").take(32), relativePath = relativeCredits, sha256 = creditsHash,
+            usedInstrumentIds = preview.usedInstrumentIds, attributionEntryHashes = preview.attributionEntryHashes,
+            policyVersion = RELEASE_CREDITS_POLICY_VERSION, templateVersion = RELEASE_CREDITS_TEMPLATE_VERSION,
+            audioExportId = audio.id, audioExportSha256 = audio.sha256
+        )
+        require(!Files.exists(projectRoot.resolve(relativeCredits))) { "Credits target already exists; choose a different export filename." }
+        val revisionId = "release-" + digestText("${parent.releaseId}|${audio.id}|${credits.sha256}").take(32)
+        val reports = ReleaseReportReferences(
+            "output/releases/$revisionId/release-manifest.json", "output/releases/$revisionId/commercial-report.md",
+            "output/releases/$revisionId/youtube-upload-checklist.md"
+        )
+        val revision = parent.copy(
+            version = CommercialProvenanceManifest.VERSION, releaseId = revisionId, reports = reports,
+            audioExports = (parent.audioExports + audio).distinctBy(ReleaseAudioExport::id).sortedBy(ReleaseAudioExport::id),
+            credits = (parent.credits + credits).distinctBy(ReleaseCreditsArtifact::id).sortedBy(ReleaseCreditsArtifact::id)
+        )
+        publishImmutable(projectRoot.resolve(reports.manifest), json.encodeToString(revision))
+        publishImmutable(projectRoot.resolve(reports.report), report(revision))
+        publishImmutable(projectRoot.resolve(reports.checklist), checklist(revision))
+        return GenerateReleaseCredits(revisionId, audioId)
+    }
+
+    /** Selects the revision only after its audio and credits files both exist. */
+    fun selectGeneratedRevision(root: Path, request: GenerateReleaseCredits): ReleaseCreditsArtifact {
+        val projectRoot = root.toAbsolutePath().normalize()
+        val credits = generate(projectRoot, request)
+        val manifest = read(projectRoot, request.releaseId)
+        val manifestPath = projectRoot.resolve(manifest.reports.manifest)
+        ProjectWorkflowStore.update(projectRoot) { workflow ->
+            workflow.copy(commercialProvenance = app.melotrail.arrangement.CommercialProvenanceReferences(
+                WorkflowArtifactReference(manifest.reports.manifest, digest(manifestPath)),
+                WorkflowArtifactReference("output/release.json", digest(safeFile(projectRoot, "output/release.json")))
+            )).markCurrent(WorkflowArtifact.COMMERCIAL_EXPORT)
+        }
+        return credits
+    }
+
+    private fun loadSelectedManifest(root: Path, releaseId: String): CommercialProvenanceManifest {
+        val projectRoot = root.toAbsolutePath().normalize()
+        val project = ProjectStore.read(projectRoot)
+        val selected = project.workflow.commercialProvenance?.manifest
+            ?: throw IllegalArgumentException("No selected release evidence exists. Create commercial evidence from Export.")
+        val manifest = read(projectRoot, releaseId)
+        require(selected.file == manifest.reports.manifest && selected.sha256 == digest(projectRoot.resolve(selected.file))) {
+            "Selected release evidence is stale or tampered. Create commercial evidence again."
+        }
+        val verification = CommercialProvenanceService().verifyReleaseLineage(projectRoot, releaseId)
+        require(verification.closed) { "Selected release lineage is incomplete or tampered. Create commercial evidence again." }
+        return manifest
+    }
+
+    private fun read(root: Path, releaseId: String): CommercialProvenanceManifest {
+        val path = root.resolve("output/releases/$releaseId/release-manifest.json").normalize()
+        require(path.startsWith(root) && Files.isRegularFile(path) && !Files.isSymbolicLink(path)) { "Release manifest is missing." }
+        return json.decodeFromString(Files.readString(path, StandardCharsets.UTF_8))
+    }
+
+    private fun derive(manifest: CommercialProvenanceManifest, filename: String): ReleaseCreditsPreview {
+        val used = manifest.instrumentUsage.filter { it.usedInFinalMix || !it.absenceFromAudioProvable }
+            .sortedWith(compareBy(ReleaseInstrumentUsage::stableInstrumentId, ReleaseInstrumentUsage::role))
+        val blocks = used.map { usage ->
+            val license = usage.license
+            val dependency = manifest.dependencies.singleOrNull { it.kind == CommercialDependencyKind.SAMPLE && it.identity == usage.stableInstrumentId }
+            require(dependency != null && dependency.commercialTerm == CommercialTerm.PERMITTED && dependency.reviewed) {
+                "Instrument '${usage.stableInstrumentId}' is not admitted for commercial release."
+            }
+            val attribution = license.attributionText?.let(::normalizeAttribution)
+            require(!license.attributionRequired || !attribution.isNullOrBlank()) {
+                "Instrument '${usage.stableInstrumentId}' requires complete attribution."
+            }
+            if (license.attributionRequired) {
+                require(normalizeAttribution(requireNotNull(dependency.attribution)) == attribution) {
+                    "Instrument '${usage.stableInstrumentId}' has contradictory attribution evidence."
+                }
+                usage.stableInstrumentId to requireNotNull(attribution)
+            } else null
+        }.filterNotNull()
+        val distinct = blocks.groupBy({ it.second }, { it.first }).map { (text, ids) -> ids.min() to text }
+            .sortedWith(compareBy<Pair<String, String>>({ it.second }, { it.first }))
+        val text = if (distinct.isEmpty()) NO_ATTRIBUTION_TEXT + "\n" else distinct.joinToString("\n\n", postfix = "\n") { it.second }
+        return ReleaseCreditsPreview(filename, text, used.map(ReleaseInstrumentUsage::stableInstrumentId).distinct().sorted(),
+            distinct.map { digestText(it.second) }.distinct().sorted())
+    }
+
+    private fun creditsFilename(audioFilename: String): String {
+        val base = audioFilename.substringBeforeLast('.', audioFilename).trim()
+        require(base.isNotBlank()) { "Export filename has no usable base." }
+        val sanitized = base.map { if (it.isLetterOrDigit() || it == '-' || it == '_') it else '-' }.joinToString("")
+            .replace(Regex("-+"), "-").trim('-').take(120)
+        require(sanitized.isNotBlank()) { "Export filename has no safe credits base." }
+        return "$sanitized-credits.txt"
+    }
+
+    private fun normalizeAttribution(value: String): String {
+        require(value.length <= 8_000 && value.none { it.isISOControl() && it != '\n' && it != '\r' && it != '\t' }) { "Attribution text is invalid." }
+        return value.replace("\r\n", "\n").replace('\r', '\n').lineSequence().joinToString("\n") { it.trimEnd() }.trim()
+    }
+
+    private fun safeFile(root: Path, relative: String): Path {
+        require(SAFE_RELATIVE_PATH.matches(relative)) { "Release artifact path is invalid." }
+        val file = root.resolve(relative).normalize()
+        require(file.startsWith(root) && Files.isRegularFile(file) && !Files.isSymbolicLink(file)) { "Release artifact is missing or unsafe: $relative" }
+        return file
+    }
+
+    private fun validateFrozenLineage(root: Path, manifest: CommercialProvenanceManifest) {
+        manifest.artifacts.forEach { artifact ->
+            val file = safeFile(root, artifact.path)
+            require(digest(file) == artifact.sha256) { "Frozen release lineage is stale or tampered: ${artifact.path}" }
+        }
+        require(manifest.releaseHash == digest(safeFile(root, "output/master.wav"))) {
+            "Frozen release master is stale or tampered."
+        }
+    }
+
+    private fun publishImmutable(path: Path, text: String) {
+        Files.createDirectories(requireNotNull(path.parent))
+        if (Files.exists(path)) { require(Files.readString(path, StandardCharsets.UTF_8) == text) { "Release evidence '$path' is immutable; create a new release lineage." }; return }
+        val temporary = path.resolveSibling(".${path.fileName}.${java.util.UUID.randomUUID()}.tmp")
+        try {
+            Files.writeString(temporary, text, StandardCharsets.UTF_8)
+            try { Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE) }
+            catch (_: AtomicMoveNotSupportedException) { Files.move(temporary, path) }
+        } finally { Files.deleteIfExists(temporary) }
+    }
+
+    private fun report(manifest: CommercialProvenanceManifest) = "# Melotrail commercial-readiness report\n\n**Status: Commercial-ready evidence complete**\n\n$COMMERCIAL_DISCLAIMER\n\nRelease ID: `${manifest.releaseId}`\n\nCredits are paired to ${manifest.credits.size} audio export(s).\n"
+    private fun checklist(manifest: CommercialProvenanceManifest) = "# YouTube upload checklist\n\n- [ ] Copy the required instrument attribution from the hash-paired credits text.\n- [ ] Review release `${manifest.releaseId}`; it is not legal advice or a monetization guarantee.\n"
+    private fun digest(path: Path): String = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
+    private fun digestText(text: String): String = MessageDigest.getInstance("SHA-256").digest(text.toByteArray(StandardCharsets.UTF_8)).joinToString("") { "%02x".format(it) }
+
+    private companion object {
+        val json = Json { prettyPrint = true; encodeDefaults = true; ignoreUnknownKeys = false }
+        const val NO_ATTRIBUTION_TEXT = "No instrument attribution required."
+    }
+}
+
 private fun redactPortable(value: String): String = value.replace(ABSOLUTE_PATH, "[redacted-path]").replace(SECRET, "[redacted]")
 private val SHA_256 = Regex("[0-9a-f]{64}")
 private val SAFE_ID = Regex("[A-Za-z0-9._:-]{1,160}")
 private val SAFE_RELEASE_ID = Regex("release-[0-9a-f]{32}")
+private val SAFE_AUDIO_EXPORT_ID = Regex("audio-[0-9a-f]{32}")
+private val SAFE_CREDITS_ID = Regex("credits-[0-9a-f]{32}")
 private val SAFE_RELATIVE_PATH = Regex("(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]{1,240}")
 private val ISO_INSTANT = Regex("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z")
 private val ABSOLUTE_PATH = Regex("(?:[A-Za-z]:\\\\|/)(?:Users|home|private|var|tmp|opt)(?:[/\\\\][^\\s]*)?", RegexOption.IGNORE_CASE)
 private val SECRET = Regex("(?i)(?:api[_-]?key|token|secret|password)\\s*[:=]\\s*[^\\s,;]+")
 private const val COMMERCIAL_DISCLAIMER = "This report is workflow evidence and assistance, not legal advice, copyright clearance, Content ID clearance, or a YouTube monetization guarantee."
+private const val RELEASE_CREDITS_POLICY_VERSION = "instrument-credits-policy-v1"
+private const val RELEASE_CREDITS_TEMPLATE_VERSION = "instrument-credits-template-v1"

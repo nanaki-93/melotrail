@@ -30,3 +30,20 @@ inspect missing, tampered, and unresolved evidence plus safe report references.
 Unknown model identity/license, missing attribution, stale artifact hashes, or
 missing decision evidence block a commercial-ready claim without changing the
 project. The report redacts secrets and unrestricted absolute paths.
+
+## Instrument credits
+
+After commercial evidence is ready, **Export commercially with credits** creates
+the selected WAV or MP3 plus its deterministic sibling
+`<sanitized-export-base>-credits.txt`. The text is generated only from the
+frozen release manifest's final used-stem license snapshots—not the current
+library, candidate list, or unused arrangement roles. CC0/owned instruments
+are omitted; an all-no-attribution release contains only `No instrument
+attribution required.`
+
+The immutable export revision records the audio hash, credits path/hash, used
+instrument IDs, attribution-entry hashes, and policy/template versions. If a
+required attribution is missing, contradictory, NC, or not admitted, commercial
+export remains blocked while private project and audition/export work remains
+available. Changing the selected mix or instrument creates a new release
+revision; changing the local library cannot rewrite an existing credits file.
