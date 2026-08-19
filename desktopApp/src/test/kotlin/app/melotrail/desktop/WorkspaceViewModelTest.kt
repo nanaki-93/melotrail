@@ -114,6 +114,13 @@ class WorkspaceViewModelTest {
 
         viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
         viewModel.accept(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.HARMONY)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.SelectHarmonySection(app.melotrail.harmony.SectionTypeId.CHORUS))
+        assertEquals(app.melotrail.harmony.SectionTypeId.CHORUS, viewModel.state.value.harmony.selectedSection)
+        viewModel.accept(WorkspaceIntent.SetHarmonyRoot(app.melotrail.music.PitchClass.canonical(2)))
+        viewModel.accept(WorkspaceIntent.SetHarmonyQuality(app.melotrail.harmony.ChordQuality.MINOR))
+        assertEquals(app.melotrail.music.PitchClass.canonical(2), viewModel.state.value.harmony.draftRoot)
+        assertEquals(app.melotrail.harmony.ChordQuality.MINOR, viewModel.state.value.harmony.draftQuality)
+        viewModel.accept(WorkspaceIntent.SelectHarmonySection(app.melotrail.harmony.SectionTypeId.VERSE))
         viewModel.accept(WorkspaceIntent.AddHarmonyEvent); advanceUntilIdle()
         val first = checkNotNull(viewModel.state.value.harmony.selectedEventId)
         assertEquals("h-verse-1", first.value)

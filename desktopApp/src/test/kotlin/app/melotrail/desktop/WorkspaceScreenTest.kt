@@ -260,6 +260,10 @@ class WorkspaceScreenTest {
         }
         onNodeWithTag(HarmonyPageTags.TAB_PREFIX + "chorus").performClick()
         assertEquals(WorkspaceIntent.SelectHarmonySection(SectionTypeId.CHORUS), intents.last())
+        onNodeWithTag(HarmonyPageTags.ROOT_PREFIX + "C").performClick()
+        assertEquals(WorkspaceIntent.SetHarmonyRoot(PitchClass.canonical(0)), intents.last())
+        onNodeWithTag(HarmonyPageTags.QUALITY_PREFIX + "minor").performClick()
+        assertEquals(WorkspaceIntent.SetHarmonyQuality(ChordQuality.MINOR), intents.last())
         onNodeWithTag(HarmonyPageTags.MOVE_EARLIER + "-v2").performSemanticsAction(SemanticsActions.RequestFocus)
         onNodeWithTag(HarmonyPageTags.MOVE_EARLIER + "-v2").performKeyInput { pressKey(Key.Enter) }
         assertEquals(WorkspaceIntent.MoveHarmonyEvent(earlier = true), intents.last())
