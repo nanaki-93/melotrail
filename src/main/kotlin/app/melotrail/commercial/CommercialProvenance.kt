@@ -1,17 +1,26 @@
 package app.melotrail.commercial
 
-import app.melotrail.arrangement.SongPart
+import app.melotrail.application.PersistedMixSettings
+import app.melotrail.arrangement.ArtifactRef
+import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.ProjectWorkflowStore
+import app.melotrail.arrangement.RenderInstrumentManifest
+import app.melotrail.arrangement.SelectedMidiArtifactKind
+import app.melotrail.arrangement.SourceLibraryProvenance
+import app.melotrail.arrangement.StageRunRecord
+import app.melotrail.arrangement.StageRunStatus
+import app.melotrail.arrangement.StageRunStore
+import app.melotrail.arrangement.StemArtifact
+import app.melotrail.arrangement.StemRenderReport
 import app.melotrail.arrangement.WorkflowArtifact
 import app.melotrail.arrangement.WorkflowArtifactReference
-import app.melotrail.arrangement.InstrumentRegistryLoader
-import app.melotrail.arrangement.Project
-import app.melotrail.arrangement.SelectedMidiArtifactKind
-import app.melotrail.arrangement.SelectedMidiArtifactResolver
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.nio.charset.StandardCharsets
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
@@ -24,11 +33,7 @@ import java.security.MessageDigest
 enum class SourceRightsClaim { OWNED, COMMERCIAL_PERMISSION, PUBLIC_DOMAIN, NOT_ESTABLISHED }
 
 @Serializable
-data class SourceRightsAttestation(
-    val claim: SourceRightsClaim,
-    /** ISO-8601 instant supplied by the user-facing boundary at confirmation time. */
-    val attestedAt: String
-) {
+data class SourceRightsAttestation(val claim: SourceRightsClaim, val attestedAt: String) {
     init { require(attestedAt.matches(ISO_INSTANT)) { "Source attestation date must be an ISO-8601 instant" } }
     val supportsCommercialUse get() = claim != SourceRightsClaim.NOT_ESTABLISHED
 }
@@ -37,9 +42,9 @@ data class SourceRightsAttestation(
 enum class CommercialTerm { PERMITTED, CONDITIONAL, UNKNOWN, BLOCKED }
 
 @Serializable
-enum class CommercialDependencyKind { MODEL, SOUND_LIBRARY, SAMPLE }
+enum class CommercialDependencyKind { MODEL, PROCESSOR, SOUND_LIBRARY, SAMPLE }
 
-/** Snapshot of an actually used dependency. It is intentionally data-only. */
+/** Snapshot of an actually used dependency. It is intentionally data-only and portable. */
 @Serializable
 data class CommercialDependency(
     val kind: CommercialDependencyKind,
@@ -60,9 +65,16 @@ data class CommercialDependency(
         require(contentHash == null || SHA_256.matches(contentHash)) { "Commercial dependency hash is invalid" }
         require(license.isNotBlank() && source.isNotBlank()) { "Commercial dependency requires license and source" }
     }
+
+    fun portable() = copy(source = redactPortable(source), attribution = attribution?.let(::redactPortable),
+        outputRightsNote = outputRightsNote?.let(::redactPortable), promptContract = promptContract?.let(::redactPortable))
 }
 
-data class CommercialReadinessInput(val sources: List<CommercialSource>, val dependencies: List<CommercialDependency>)
+data class CommercialReadinessInput(
+    val sources: List<CommercialSource>,
+    val dependencies: List<CommercialDependency>,
+    val unresolvedEvidence: List<String> = emptyList()
+)
 data class CommercialSource(val partId: String, val sourceHash: String, val attestation: SourceRightsAttestation?)
 data class CommercialReadiness(val ready: Boolean, val reasons: List<String>, val attribution: List<String>)
 
@@ -70,6 +82,7 @@ data class CommercialReadiness(val ready: Boolean, val reasons: List<String>, va
 object CommercialReadinessEvaluator {
     fun evaluate(input: CommercialReadinessInput): CommercialReadiness {
         val reasons = buildList {
+            input.unresolvedEvidence.sorted().forEach { add("Evidence is unresolved: $it") }
             input.sources.sortedBy { it.partId }.forEach { source ->
                 when (source.attestation?.claim) {
                     SourceRightsClaim.OWNED, SourceRightsClaim.COMMERCIAL_PERMISSION, SourceRightsClaim.PUBLIC_DOMAIN -> Unit
@@ -79,6 +92,10 @@ object CommercialReadinessEvaluator {
             }
             input.dependencies.sortedWith(compareBy(CommercialDependency::kind, CommercialDependency::identity)).forEach { dependency ->
                 if (dependency.contentHash == null) add("${dependency.kind.name.lowercase()} '${dependency.identity}' has no content hash.")
+                if (dependency.kind == CommercialDependencyKind.MODEL &&
+                    (dependency.identity.contains("unknown", ignoreCase = true) || dependency.identity.contains("fake", ignoreCase = true) || dependency.version.equals("unknown", ignoreCase = true))) {
+                    add("model '${dependency.identity}' has an unknown or fake identity.")
+                }
                 when (dependency.commercialTerm) {
                     CommercialTerm.PERMITTED -> if (!dependency.reviewed) add("${dependency.kind.name.lowercase()} '${dependency.identity}' has unreviewed commercial terms.")
                     CommercialTerm.CONDITIONAL -> add("${dependency.kind.name.lowercase()} '${dependency.identity}' has conditional commercial terms.")
@@ -92,193 +109,447 @@ object CommercialReadinessEvaluator {
 }
 
 @Serializable
-data class ProvenanceArtifact(val path: String, val sha256: String)
-
-@Serializable
-data class CommercialProvenanceManifest(
-    val version: Int = 1,
-    val releaseHash: String,
-    val sources: List<ManifestSource>,
-    val artifacts: List<ProvenanceArtifact>,
-    val deterministicOperations: List<String>,
-    val dependencies: List<CommercialDependency>,
-    val commercialReady: Boolean,
-    val reasons: List<String>,
-    val attribution: List<String>,
-    /** Canonical selected MIDI identity used by MIDI-first analysis/rendering. */
-    val selectedMidi: List<SelectedMidiProvenance> = emptyList(),
-    val disclaimer: String = COMMERCIAL_DISCLAIMER
-)
+data class ProvenanceArtifact(val path: String, val sha256: String) {
+    init { require(SAFE_RELATIVE_PATH.matches(path) && SHA_256.matches(sha256)) { "Release artifact reference is invalid" } }
+}
 
 @Serializable
 data class ManifestSource(val partId: String, val path: String, val sha256: String, val attestation: SourceRightsAttestation?)
+
 @Serializable
 data class SelectedMidiProvenance(val partId: String, val path: String, val sha256: String, val kind: SelectedMidiArtifactKind, val profile: String? = null)
 
-data class CommercialExportResult(val readiness: CommercialReadiness, val manifest: Path?, val report: Path?, val checklist: Path?)
+/** A portable revision marker. The underlying project decision remains canonical evidence. */
+@Serializable
+data class ReleaseDecisionRevision(val kind: String, val revision: Long, val sha256: String) {
+    init { require(SAFE_ID.matches(kind) && revision >= 0 && SHA_256.matches(sha256)) { "Release decision revision is invalid" } }
+}
+
+/** A selected completed run only; retries and failures remain in the stage manifest, not this closure. */
+@Serializable
+data class ReleaseStageRun(
+    val runId: String,
+    val stage: String,
+    val subject: String,
+    val inputs: List<ProvenanceArtifact>,
+    val outputs: List<ProvenanceArtifact>,
+    val reports: List<ProvenanceArtifact>,
+    val processorId: String? = null,
+    val processorVersion: String? = null,
+    val modelProvider: String? = null,
+    val modelName: String? = null,
+    val modelVersion: String? = null,
+    val configurationSha256: String? = null,
+    val contextSha256: String? = null,
+    val seed: Long? = null,
+    val schemaVersion: Int
+)
+
+/** The exact instrument/stem contribution to the final mix; never reconstructed from a live registry. */
+@Serializable
+data class ReleaseInstrumentUsage(
+    val role: String,
+    val stableInstrumentId: String,
+    val stem: ProvenanceArtifact,
+    val usedInFinalMix: Boolean,
+    val absenceFromAudioProvable: Boolean,
+    val decisionSha256: List<String>,
+    val registryVersion: Int,
+    val registrySha256: String,
+    val assets: List<ProvenanceArtifact>,
+    val license: ReleaseLicenseSnapshot,
+    val sourceLibrary: SourceLibraryProvenance
+) {
+    init {
+        require(SAFE_ID.matches(role) && SAFE_ID.matches(stableInstrumentId) && registryVersion > 0 && SHA_256.matches(registrySha256)) {
+            "Release instrument usage identity is invalid"
+        }
+        require(decisionSha256.isNotEmpty() && decisionSha256 == decisionSha256.sorted() && decisionSha256.distinct().size == decisionSha256.size && decisionSha256.all(SHA_256::matches)) {
+            "Release instrument decision evidence is invalid"
+        }
+        require(assets.isNotEmpty()) { "Release instrument assets are missing" }
+    }
+}
+
+@Serializable
+data class ReleaseLicenseSnapshot(
+    val displayName: String,
+    val source: String,
+    val provenance: String,
+    val license: String,
+    val commercialUse: Boolean,
+    val attributionRequired: Boolean,
+    val attributionText: String? = null,
+    val redistribution: String
+) {
+    init {
+        require(displayName.isNotBlank() && source.isNotBlank() && provenance.isNotBlank() && license.isNotBlank() && redistribution.isNotBlank()) {
+            "Release license snapshot is incomplete"
+        }
+        require(!attributionRequired || !attributionText.isNullOrBlank()) { "Release attribution snapshot is incomplete" }
+    }
+}
+
+@Serializable
+data class ReleaseReportReferences(val manifest: String, val report: String, val checklist: String) {
+    init { require(listOf(manifest, report, checklist).all(SAFE_RELATIVE_PATH::matches)) { "Release report path is invalid" } }
+}
+
+/** Immutable v2 selected-lineage closure. Version 1 files stay historical inputs and are never rewritten. */
+@Serializable
+data class CommercialProvenanceManifest(
+    val version: Int = VERSION,
+    val releaseId: String,
+    val releaseHash: String,
+    val sources: List<ManifestSource>,
+    val artifacts: List<ProvenanceArtifact>,
+    val decisions: List<ReleaseDecisionRevision>,
+    val stageRuns: List<ReleaseStageRun>,
+    val selectedMidi: List<SelectedMidiProvenance>,
+    val instrumentUsage: List<ReleaseInstrumentUsage>,
+    val dependencies: List<CommercialDependency>,
+    val unresolvedEvidence: List<String>,
+    val commercialReady: Boolean,
+    val reasons: List<String>,
+    val attribution: List<String>,
+    val reports: ReleaseReportReferences,
+    val disclaimer: String = COMMERCIAL_DISCLAIMER
+) {
+    init {
+        require(version == VERSION && SAFE_RELEASE_ID.matches(releaseId) && SHA_256.matches(releaseHash)) { "Release manifest identity is invalid" }
+        require(artifacts.map(ProvenanceArtifact::path).distinct().size == artifacts.size) { "Release manifest repeats an artifact" }
+        require(unresolvedEvidence.all { it.length <= 240 && it.none(Char::isISOControl) }) { "Release manifest unresolved evidence is invalid" }
+    }
+
+    companion object { const val VERSION = 2 }
+}
+
+data class CommercialExportResult(val readiness: CommercialReadiness, val manifest: Path?, val report: Path?, val checklist: Path?, val releaseId: String? = null)
+
+/** Result of VerifyReleaseLineage(releaseId). All paths are project-relative report references. */
+data class ReleaseLineageVerification(
+    val releaseId: String,
+    val closed: Boolean,
+    val missingDependencies: List<String>,
+    val tamperedDependencies: List<String>,
+    val unresolvedEvidence: List<String>,
+    val commercialReady: Boolean,
+    val reportReferences: ReleaseReportReferences?
+)
 
 /**
- * Project-confined evidence writer. Existing output is replaced only after all
- * inputs are validated and a complete temporary file has been written.
+ * Project-confined release evidence writer. It closes only selected artifacts,
+ * never scans stale directories or consults a live library during verification.
  */
-class CommercialProvenanceService(private val soundLibraryRoot: Path? = null) {
+class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soundLibraryRoot: Path? = null) {
     fun export(root: Path, dependencies: List<CommercialDependency> = emptyList()): CommercialExportResult {
         val projectRoot = root.toAbsolutePath().normalize()
         val project = ProjectStore.read(projectRoot).also { it.requireValid(projectRoot) }
-        val master = projectRoot.resolve("output/master.wav")
-        require(Files.isRegularFile(master)) { "Commercial report requires the validated output/master.wav artifact." }
-
-        val sources = project.parts.sortedBy(SongPart::id).map { part ->
-            val path = safeProjectFile(projectRoot, part.file)
-            CommercialSource(part.id, sha256(path), part.sourceAttestation)
+        require(WorkflowArtifact.MASTER !in project.workflow.stale && WorkflowArtifact.RELEASE !in project.workflow.stale) {
+            "Commercial evidence requires a current master and release metadata. Rebuild the selected release first."
         }
-        val selectedMidi = if (project.version >= Project.MIDI_FIRST_VERSION) {
-            runCatching { project.requireSelectedMidi(projectRoot) }.getOrDefault(emptyList()).sortedBy { it.partId }.map {
-                SelectedMidiProvenance(it.partId, it.projectRelativePath, it.sha256, it.kind, it.profile?.id)
-            }
-        } else emptyList()
-        val usedDependencies = (dependencies + inferredDependencies(projectRoot)).distinctBy { Triple(it.kind, it.identity, it.version) }
-        val readiness = CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(sources, usedDependencies))
-        val artifacts = evidenceFiles(projectRoot).map { file -> ProvenanceArtifact(relative(projectRoot, file), sha256(file)) }
-        val manifest = CommercialProvenanceManifest(
-            releaseHash = sha256(master),
-            sources = sources.map { source ->
-                val part = project.parts.first { it.id == source.partId }
-                ManifestSource(source.partId, part.file, source.sourceHash, source.attestation)
-            },
-            artifacts = artifacts,
-            deterministicOperations = project.parts.mapNotNull { it.midi?.cleanup?.profile?.name }.distinct().sorted() + "commercial-provenance-v1",
-            dependencies = usedDependencies.sortedWith(compareBy(CommercialDependency::kind, CommercialDependency::identity, CommercialDependency::version)),
-            commercialReady = readiness.ready,
-            reasons = readiness.reasons,
-            attribution = readiness.attribution,
-            selectedMidi = selectedMidi
+        val master = safeProjectFile(projectRoot, "output/master.wav")
+        val release = safeProjectFile(projectRoot, "output/release.json")
+        val sources = project.parts.sortedBy { it.id }.map { part ->
+            ManifestSource(part.id, part.file, sha256(safeProjectFile(projectRoot, part.file)), part.sourceAttestation)
+        }
+        val unresolved = mutableListOf<String>()
+        val selectedMidi = selectedMidi(projectRoot, project, unresolved)
+        val artifacts = linkedMapOf<String, ProvenanceArtifact>()
+        fun include(path: String) {
+            val file = safeProjectFile(projectRoot, path)
+            artifacts[path] = ProvenanceArtifact(path, sha256(file))
+        }
+        include("output/master.wav"); include("output/release.json")
+        sources.forEach { include(it.path) }
+        selectedMidi.forEach { include(it.path) }
+        releaseInput(projectRoot, release, unresolved)?.let(::include)
+        selectedWorkflowArtifacts(project).forEach { reference -> include(reference.file) }
+        val instrumentUsage = usedInstruments(projectRoot, artifacts, unresolved)
+        val selectedRuns = selectedRuns(projectRoot, project, artifacts.values.toList(), unresolved)
+        selectedRuns.flatMap { it.inputs + it.outputs + it.reports }.forEach { artifact -> artifacts[artifact.path] = artifact }
+        val decisions = decisions(project, projectRoot, unresolved)
+        val usedDependencies = dependencies.map(CommercialDependency::portable) +
+            instrumentUsage.filter(ReleaseInstrumentUsage::usedInFinalMix).map(::instrumentDependency) + selectedRuns.flatMap(::runDependencies)
+        val normalizedDependencies = usedDependencies.distinctBy { listOf(it.kind.name, it.identity, it.version, it.contentHash) }
+            .sortedWith(compareBy(CommercialDependency::kind, CommercialDependency::identity, CommercialDependency::version))
+        val releaseId = releaseId(master, release, artifacts.values, decisions, selectedRuns, instrumentUsage)
+        val reports = ReleaseReportReferences(
+            "$RELEASES_DIRECTORY/$releaseId/$MANIFEST_FILE",
+            "$RELEASES_DIRECTORY/$releaseId/$REPORT_FILE",
+            "$RELEASES_DIRECTORY/$releaseId/$CHECKLIST_FILE"
         )
-        val output = projectRoot.resolve("output")
-        require(Files.isRegularFile(output.resolve("release.json"))) { "Commercial report requires output/release.json release metadata." }
-        val manifestPath = output.resolve(MANIFEST_FILE)
-        val reportPath = output.resolve(REPORT_FILE)
-        val checklistPath = output.resolve(CHECKLIST_FILE)
-        atomicWrite(manifestPath, json.encodeToString(manifest))
-        atomicWrite(reportPath, report(manifest))
-        atomicWrite(checklistPath, checklist(manifest))
+        val readiness = CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(
+            sources.map { CommercialSource(it.partId, it.sha256, it.attestation) }, normalizedDependencies, unresolved.distinct().sorted()
+        ))
+        val manifest = CommercialProvenanceManifest(
+            releaseId = releaseId, releaseHash = sha256(master), sources = sources,
+            artifacts = artifacts.values.sortedBy(ProvenanceArtifact::path), decisions = decisions,
+            stageRuns = selectedRuns, selectedMidi = selectedMidi, instrumentUsage = instrumentUsage,
+            dependencies = normalizedDependencies, unresolvedEvidence = unresolved.distinct().sorted(),
+            commercialReady = readiness.ready, reasons = readiness.reasons, attribution = readiness.attribution, reports = reports
+        )
+        val manifestPath = projectRoot.resolve(reports.manifest)
+        val reportPath = projectRoot.resolve(reports.report)
+        val checklistPath = projectRoot.resolve(reports.checklist)
+        publishImmutable(manifestPath, json.encodeToString(manifest))
+        publishImmutable(reportPath, report(manifest))
+        publishImmutable(checklistPath, checklist(manifest))
         ProjectWorkflowStore.update(projectRoot) { workflow ->
             workflow.copy(commercialProvenance = app.melotrail.arrangement.CommercialProvenanceReferences(
-                WorkflowArtifactReference(relative(projectRoot, manifestPath), sha256(manifestPath)),
-                WorkflowArtifactReference("output/release.json", sha256(projectRoot.resolve("output/release.json")))
+                WorkflowArtifactReference(reports.manifest, sha256(manifestPath)),
+                WorkflowArtifactReference("output/release.json", sha256(release))
             )).markCurrent(WorkflowArtifact.COMMERCIAL_EXPORT)
         }
-        return CommercialExportResult(readiness, manifestPath, reportPath, checklistPath)
+        return CommercialExportResult(readiness, manifestPath, reportPath, checklistPath, releaseId)
     }
 
     fun verify(root: Path): CommercialReadiness {
         val projectRoot = root.toAbsolutePath().normalize()
-        val manifestPath = projectRoot.resolve("output/$MANIFEST_FILE")
-        val manifest = json.decodeFromString<CommercialProvenanceManifest>(Files.readString(manifestPath, StandardCharsets.UTF_8))
-        require(manifest.releaseHash == sha256(safeProjectFile(projectRoot, "output/master.wav"))) { "Commercial provenance is stale: master hash changed." }
+        val project = ProjectStore.read(projectRoot)
+        val manifest = project.workflow.commercialProvenance?.manifest
+            ?: throw IllegalArgumentException("No selected release evidence exists. Create commercial evidence from Export.")
+        val releaseId = readManifest(projectRoot.resolve(manifest.file)).releaseId
+        val result = verifyReleaseLineage(projectRoot, releaseId)
+        require(result.closed) { "Release lineage is not closed: ${(result.missingDependencies + result.tamperedDependencies).joinToString()}." }
+        val selected = readManifest(projectRoot.resolve(manifest.file))
+        return CommercialReadiness(selected.commercialReady && result.commercialReady, selected.reasons, selected.attribution)
+    }
+
+    /** Typed VerifyReleaseLineage(releaseId) contract. It never mutates project evidence. */
+    fun verifyReleaseLineage(root: Path, releaseId: String): ReleaseLineageVerification {
+        val projectRoot = root.toAbsolutePath().normalize()
+        if (!SAFE_RELEASE_ID.matches(releaseId)) return ReleaseLineageVerification(releaseId, false, listOf("release id"), emptyList(), emptyList(), false, null)
+        val path = projectRoot.resolve("$RELEASES_DIRECTORY/$releaseId/$MANIFEST_FILE").normalize()
+        if (!path.startsWith(projectRoot) || !Files.isRegularFile(path)) {
+            return ReleaseLineageVerification(releaseId, false, listOf("release manifest"), emptyList(), emptyList(), false, null)
+        }
+        val manifest = runCatching { readManifest(path) }.getOrElse {
+            return ReleaseLineageVerification(releaseId, false, emptyList(), listOf("release manifest"), emptyList(), false, null)
+        }
+        val missing = mutableListOf<String>()
+        val tampered = mutableListOf<String>()
         manifest.artifacts.forEach { artifact ->
-            require(artifact.sha256 == sha256(safeProjectFile(projectRoot, artifact.path))) { "Commercial provenance is stale: ${artifact.path} hash changed." }
+            val file = safeProjectFileOrNull(projectRoot, artifact.path)
+            when {
+                file == null -> missing += artifact.path
+                sha256(file) != artifact.sha256 -> tampered += artifact.path
+            }
         }
-        manifest.sources.forEach { source ->
-            require(source.sha256 == sha256(safeProjectFile(projectRoot, source.path))) { "Commercial provenance is stale: ${source.path} hash changed." }
+        val project = runCatching { ProjectStore.read(projectRoot) }.getOrNull()
+        val stored = project?.workflow?.commercialProvenance?.manifest
+        if (stored == null || stored.file != manifest.reports.manifest) missing += "selected release reference"
+        else if (stored.sha256 != sha256(path)) tampered += "selected release manifest"
+        val readiness = CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(
+            manifest.sources.map { CommercialSource(it.partId, it.sha256, it.attestation) }, manifest.dependencies, manifest.unresolvedEvidence
+        ))
+        if (readiness.ready != manifest.commercialReady) tampered += "commercial readiness result"
+        return ReleaseLineageVerification(
+            manifest.releaseId, missing.isEmpty() && tampered.isEmpty(), missing.distinct().sorted(), tampered.distinct().sorted(),
+            manifest.unresolvedEvidence, readiness.ready, manifest.reports
+        )
+    }
+
+    private fun selectedMidi(root: Path, project: Project, unresolved: MutableList<String>): List<SelectedMidiProvenance> =
+        if (project.version < Project.MIDI_FIRST_VERSION) emptyList() else runCatching {
+            project.requireSelectedMidi(root).sortedBy { it.partId }.map {
+                SelectedMidiProvenance(it.partId, it.projectRelativePath, it.sha256, it.kind, it.profile?.id)
+            }
+        }.getOrElse { unresolved += "selected MIDI evidence is unavailable"; emptyList() }
+
+    private fun releaseInput(root: Path, release: Path, unresolved: MutableList<String>): String? = runCatching {
+        val input = json.parseToJsonElement(Files.readString(release, StandardCharsets.UTF_8)).jsonObject["inputArtifact"]?.jsonPrimitive?.content
+        require(!input.isNullOrBlank() && safeProjectFileOrNull(root, input) != null) { "release input is invalid" }
+        input
+    }.getOrElse { unresolved += "release metadata has no validated mastering input"; null }
+
+    private fun selectedWorkflowArtifacts(project: Project): List<WorkflowArtifactReference> = buildList {
+        if (WorkflowArtifact.ARRANGEMENT !in project.workflow.stale) project.workflow.arrangement?.arrangement?.let(::add)
+        if (WorkflowArtifact.COHESION !in project.workflow.stale) project.workflow.cohesion?.let { refs ->
+            add(refs.plan); refs.occurrences.filter { it.approved }.forEach { add(it.result) }; refs.boundaries.mapNotNull { it.approved }.forEach(::add)
         }
-        manifest.selectedMidi.forEach { selected ->
-            require(selected.sha256 == sha256(safeProjectFile(projectRoot, selected.path))) { "Commercial provenance is stale: selected MIDI ${selected.path} hash changed." }
+        if (WorkflowArtifact.HUMANIZATION !in project.workflow.stale) project.workflow.humanization?.let { refs -> add(refs.report); refs.artifacts.forEach { add(it.input); add(it.output) } }
+    }.distinctBy(WorkflowArtifactReference::file)
+
+    private fun usedInstruments(root: Path, artifacts: MutableMap<String, ProvenanceArtifact>, unresolved: MutableList<String>): List<ReleaseInstrumentUsage> {
+        val reportPath = root.resolve(STEM_RENDER_REPORT)
+        if (!Files.exists(reportPath) && !Files.isDirectory(root.resolve("stems"))) return emptyList()
+        if (!Files.isRegularFile(reportPath)) { unresolved += "final stem render report is missing"; return emptyList() }
+        val report = runCatching { json.decodeFromString<StemRenderReport>(Files.readString(reportPath, StandardCharsets.UTF_8)) }.getOrElse {
+            unresolved += "final stem render report is invalid"; return emptyList()
         }
-        return CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(
-            manifest.sources.map { CommercialSource(it.partId, it.sha256, it.attestation) }, manifest.dependencies
+        artifacts[STEM_RENDER_REPORT] = ProvenanceArtifact(STEM_RENDER_REPORT, sha256(reportPath))
+        val settings = runCatching {
+            val settingsPath = root.resolve(MIX_SETTINGS)
+            if (Files.isRegularFile(settingsPath)) json.decodeFromString<PersistedMixSettings>(Files.readString(settingsPath, StandardCharsets.UTF_8)).also { it.requireValid() }
+            else PersistedMixSettings()
+        }.getOrElse { unresolved += "persisted mix settings are invalid"; PersistedMixSettings() }
+        if (Files.isRegularFile(root.resolve(MIX_SETTINGS))) artifacts[MIX_SETTINGS] = ProvenanceArtifact(MIX_SETTINGS, sha256(root.resolve(MIX_SETTINGS)))
+        val soloed = report.stems.any { settings.tracks[it.name]?.solo == true }
+        return report.stems.sortedBy(StemArtifact::name).mapNotNull { stem ->
+            val manifest = report.instruments.singleOrNull { it.role == stem.name && it.stableInstrumentId == stem.stableInstrumentId }
+            if (manifest == null) { unresolved += "instrument snapshot for stem '${stem.name}' is missing"; return@mapNotNull null }
+            if (stem.stableInstrumentId.isBlank()) { unresolved += "stable instrument ID for stem '${stem.name}' is missing"; return@mapNotNull null }
+            val stemPath = safeProjectFileOrNull(root, stem.path)
+            if (stemPath == null || sha256(stemPath) != stem.fingerprint) { unresolved += "stem '${stem.name}' no longer matches render evidence"; return@mapNotNull null }
+            artifacts[stem.path] = ProvenanceArtifact(stem.path, stem.fingerprint)
+            val used = settings.tracks[stem.name]?.let { !it.muted && (!soloed || it.solo) } ?: !soloed
+            usage(stem, manifest, report, used)
+        }
+    }
+
+    private fun usage(stem: StemArtifact, instrument: RenderInstrumentManifest, report: StemRenderReport, used: Boolean): ReleaseInstrumentUsage =
+        ReleaseInstrumentUsage(
+            role = stem.name, stableInstrumentId = stem.stableInstrumentId, stem = ProvenanceArtifact(stem.path, stem.fingerprint),
+            usedInFinalMix = used, absenceFromAudioProvable = !used,
+            decisionSha256 = instrument.decisionSha256, registryVersion = report.registryVersion, registrySha256 = report.registrySha256,
+            assets = instrument.assets.map { ProvenanceArtifact("asset-${it.kind}-${it.sha256}", it.sha256) },
+            license = ReleaseLicenseSnapshot(instrument.license.displayName, redactPortable(instrument.license.source), instrument.license.provenance,
+                instrument.license.license, instrument.license.commercialUse, instrument.license.attributionRequired,
+                instrument.license.attributionText?.let(::redactPortable), instrument.license.redistribution),
+            sourceLibrary = SourceLibraryProvenance(instrument.sourceLibrary.id, instrument.sourceLibrary.name, instrument.sourceLibrary.version, redactPortable(instrument.sourceLibrary.source))
+        )
+
+    private fun selectedRuns(root: Path, project: Project, anchors: List<ProvenanceArtifact>, unresolved: MutableList<String>): List<ReleaseStageRun> {
+        if (project.envelope.stageRuns.index == null) return emptyList()
+        val records = runCatching { StageRunStore().read(root, project.envelope.stageRuns) }.getOrElse {
+            unresolved += "stage manifest is invalid"; return emptyList()
+        }
+        val byOutput = records.filter { it.status == StageRunStatus.COMPLETED }.flatMap { run -> run.outputArtifacts.map { it.path to run } }.toMap()
+        val selected = linkedSetOf<String>()
+        fun visit(path: String) {
+            val run = byOutput[path] ?: return
+            if (!selected.add(run.runId)) return
+            run.inputArtifacts.forEach { visit(it.path) }
+        }
+        anchors.forEach { visit(it.path) }
+        return records.filter { it.runId in selected && it.status == StageRunStatus.COMPLETED }.map(::stageRun).sortedBy(ReleaseStageRun::runId)
+    }
+
+    private fun stageRun(record: StageRunRecord) = ReleaseStageRun(
+        record.runId, record.stage.name.lowercase(), record.subject.toString(), record.inputArtifacts.map(::artifact),
+        record.outputArtifacts.map(::artifact), record.reportArtifacts.map(::artifact), record.processor?.id, record.processor?.version,
+        record.model?.provider, record.model?.model, record.model?.version, record.configurationSha256, record.contextSha256, record.seed, record.schemaVersion
+    )
+
+    private fun artifact(reference: ArtifactRef) = ProvenanceArtifact(reference.path, reference.sha256)
+
+    private fun decisions(project: Project, root: Path, unresolved: MutableList<String>): List<ReleaseDecisionRevision> = buildList {
+        project.envelope.compositionSettings?.let { settings ->
+            if (settings.complete) add(ReleaseDecisionRevision("settings", settings.decisionRevision, settings.decisionSha256))
+            else unresolved += "composition settings decision is incomplete"
+        } ?: run { unresolved += "composition settings decision is missing" }
+        project.envelope.harmony?.let { add(ReleaseDecisionRevision("harmony", it.revision.toLong(), sha256Utf8(it.toString()))) }
+            ?: run { unresolved += "harmony decision is missing" }
+        project.parts.sortedBy { it.id }.forEach { part -> add(ReleaseDecisionRevision("part-${part.id}", part.revision, sha256Utf8("${part.id}|${part.file}|${part.name}|${part.sectionType.value}"))) }
+        project.envelope.structureOccurrences.sortedBy { it.id }.forEach { occurrence ->
+            add(ReleaseDecisionRevision("structure-${occurrence.id}", occurrence.revision, sha256Utf8(occurrence.toString())))
+        }
+        project.envelope.arrangementAssignments.sortedWith(compareBy({ it.occurrenceId }, { it.instrumentId })).forEach { assignment ->
+            add(ReleaseDecisionRevision("assignment-${assignment.occurrenceId}-${assignment.instrumentId}", 1, assignment.decisionSha256))
+        }
+        project.workflow.arrangement?.let { add(ReleaseDecisionRevision("arrangement-approval", 1, it.arrangement.sha256)) }
+        project.workflow.cohesion?.let { refs -> if (refs.approved) add(ReleaseDecisionRevision("cohesion-approval", 1, refs.inputSha256)) }
+        project.workflow.humanization?.let { refs -> add(ReleaseDecisionRevision("humanization", 1, refs.inputsSha256)) }
+        val mix = root.resolve(MIX_SETTINGS)
+        if (Files.isRegularFile(mix)) add(ReleaseDecisionRevision("mix", 1, sha256(mix)))
+    }.sortedBy(ReleaseDecisionRevision::kind)
+
+    private fun runDependencies(run: ReleaseStageRun): List<CommercialDependency> = buildList {
+        if (run.processorId != null && run.processorVersion != null) add(CommercialDependency(
+            CommercialDependencyKind.PROCESSOR, run.processorId, run.processorVersion,
+            run.configurationSha256, CommercialTerm.PERMITTED, true, "MIT", "Melotrail local processor"
+        ))
+        if (run.modelProvider != null && run.modelName != null) add(CommercialDependency(
+            CommercialDependencyKind.MODEL, "${run.modelProvider}-${run.modelName}", run.modelVersion ?: "unknown", null,
+            CommercialTerm.UNKNOWN, false, "unknown", "model identity recorded without reviewed license"
         ))
     }
 
-    private fun evidenceFiles(root: Path): List<Path> = EVIDENCE_DIRECTORIES.flatMap { directory ->
-        val base = root.resolve(directory)
-        if (!Files.isDirectory(base)) emptyList() else Files.walk(base).use { files ->
-            files.filter { file ->
-                Files.isRegularFile(file) && !Files.isSymbolicLink(file) && relative(root, file) !in setOf(
-                    "output/$MANIFEST_FILE", "output/$REPORT_FILE", "output/$CHECKLIST_FILE"
-                )
-            }.toList()
+    private fun instrumentDependency(usage: ReleaseInstrumentUsage): CommercialDependency {
+        val license = usage.license
+        val term = when {
+            !license.commercialUse || license.license.contains("NC", ignoreCase = true) -> CommercialTerm.BLOCKED
+            license.license.contains("CC0", ignoreCase = true) || license.provenance == "generated-original" -> CommercialTerm.PERMITTED
+            license.license.contains("CC BY", ignoreCase = true) && !license.attributionText.isNullOrBlank() -> CommercialTerm.PERMITTED
+            license.license.contains("CC BY", ignoreCase = true) -> CommercialTerm.CONDITIONAL
+            else -> CommercialTerm.UNKNOWN
         }
-    }.sortedBy { relative(root, it) }
+        return CommercialDependency(
+            CommercialDependencyKind.SAMPLE, usage.stableInstrumentId, usage.sourceLibrary.version,
+            sha256Utf8(usage.assets.joinToString("|") { it.sha256 }), term, term == CommercialTerm.PERMITTED,
+            license.license, license.source, license.attributionText?.takeIf { license.attributionRequired }
+        )
+    }
 
-    /** Never assume a rendered sample pack is approved when its validated root was not supplied. */
-    private fun inferredDependencies(projectRoot: Path): List<CommercialDependency> = buildList {
-        if (Files.isDirectory(projectRoot.resolve("stems"))) {
-            val library = soundLibraryRoot?.toAbsolutePath()?.normalize()
-            if (library == null) {
-                add(CommercialDependency(CommercialDependencyKind.SOUND_LIBRARY, "unresolved-sound-library", "unknown", null, CommercialTerm.UNKNOWN, false, "unknown", "not recorded"))
-            } else {
-                val registry = InstrumentRegistryLoader(library).load()
-                val descriptors = registry.all()
-                descriptors.groupBy { it.license }.toSortedMap(compareBy { it.displayName }).forEach { (license, instruments) ->
-                    val files = instruments.flatMap { listOf(it.sfzPath) + it.samplePaths }.distinct().sortedBy(Path::toString)
-                    val content = sha256(library, files)
-                    add(CommercialDependency(
-                        CommercialDependencyKind.SOUND_LIBRARY, license.displayName.replace(Regex("[^A-Za-z0-9._:-]"), "-"), "registry-v${registry.version}", content,
-                        if (instruments.all { it.licenseAdmission.admission.name == "ADMITTED" }) CommercialTerm.PERMITTED else CommercialTerm.BLOCKED,
-                        license.date != null, license.license, license.source,
-                        license.attributionText?.takeIf { license.attributionRequired }
-                    ))
-                }
-            }
+    private fun releaseId(master: Path, release: Path, artifacts: Collection<ProvenanceArtifact>, decisions: List<ReleaseDecisionRevision>, runs: List<ReleaseStageRun>, instruments: List<ReleaseInstrumentUsage>): String {
+        val seed = buildString {
+            append(sha256(master)).append('|').append(sha256(release)).append('|')
+            artifacts.sortedBy(ProvenanceArtifact::path).forEach { append(it.path).append(':').append(it.sha256).append(';') }
+            decisions.forEach { append(it.kind).append(':').append(it.sha256).append(';') }
+            runs.forEach { append(it.runId).append(';') }
+            instruments.forEach { append(it.role).append(':').append(it.stem.sha256).append(';') }
         }
-        if (Files.isRegularFile(projectRoot.resolve("cohesion/provenance.json"))) {
-            add(CommercialDependency(CommercialDependencyKind.MODEL, "cohesion-model-unregistered", "unknown", null, CommercialTerm.UNKNOWN, false, "unknown", "cohesion/provenance.json"))
-        }
+        return "release-${sha256Utf8(seed).take(32)}"
     }
 
     private fun report(manifest: CommercialProvenanceManifest): String = buildString {
         appendLine("# Melotrail commercial-readiness report")
-        appendLine()
-        appendLine("**Status: ${if (manifest.commercialReady) "Commercial-ready" else "Not commercial-ready"}**")
-        appendLine()
-        appendLine(COMMERCIAL_DISCLAIMER)
-        appendLine()
-        appendLine("AI transformations—including transposition, timing changes, repair, arrangement, and AI patching—do not automatically clear rights attached to an input melody.")
-        appendLine()
-        if (manifest.reasons.isNotEmpty()) { appendLine("## Blocking reasons"); manifest.reasons.forEach { appendLine("- $it") }; appendLine() }
-        appendLine("## Required attribution")
+        appendLine(); appendLine("**Status: ${if (manifest.commercialReady) "Commercial-ready evidence complete" else "Commercial-ready blocked"}**")
+        appendLine(); appendLine(COMMERCIAL_DISCLAIMER); appendLine()
+        appendLine("Release ID: `${manifest.releaseId}`")
+        if (manifest.reasons.isNotEmpty()) { appendLine(); appendLine("## Unresolved actions"); manifest.reasons.forEach { appendLine("- $it") } }
+        appendLine(); appendLine("## Required attribution")
         if (manifest.attribution.isEmpty()) appendLine("None recorded.") else manifest.attribution.forEach { appendLine("- $it") }
-        appendLine(); appendLine("The machine-readable hash-bound evidence is in $MANIFEST_FILE.")
+        appendLine(); appendLine("This immutable, hash-bound selected lineage is in `${MANIFEST_FILE}`.")
     }
 
     private fun checklist(manifest: CommercialProvenanceManifest): String = buildString {
-        appendLine("# YouTube upload checklist")
-        appendLine()
-        appendLine("- [ ] Review this report; it is not legal advice, copyright clearance, Content ID clearance, or a monetization guarantee.")
-        appendLine("- [ ] For AI-generated music, consider/select the YouTube Studio AI-use disclosure when the policy applies.")
+        appendLine("# YouTube upload checklist"); appendLine()
+        appendLine("- [ ] Review the selected-lineage report; it is not legal advice, copyright clearance, Content ID clearance, or a monetization guarantee.")
+        appendLine("- [ ] Resolve every listed evidence action before calling this release commercial-ready.")
         appendLine("- [ ] Add every required attribution: ${manifest.attribution.ifEmpty { listOf("none recorded") }.joinToString("; ")}.")
-        appendLine("- [ ] Add original, non-mass-produced video/channel value; YouTube reviews channel-level originality and authenticity.")
         appendLine("- [ ] Re-check the official YouTube AI disclosure and monetization policies before uploading; policies can change.")
-        appendLine("- [ ] Do not describe this work as copyright free solely because Melotrail processed it.")
     }
 
-    private fun safeProjectFile(root: Path, reference: String): Path {
-        val relative = Path.of(reference)
-        require(!relative.isAbsolute && !reference.split('/', '\\').contains("..")) { "Commercial provenance path must be project-relative: $reference" }
-        val resolved = root.resolve(relative).normalize()
-        require(resolved.startsWith(root) && Files.isRegularFile(resolved) && !Files.isSymbolicLink(resolved)) { "Commercial provenance artifact is missing or unsafe: $reference" }
-        return resolved
+    private fun readManifest(path: Path): CommercialProvenanceManifest = json.decodeFromString(Files.readString(path, StandardCharsets.UTF_8))
+    private fun safeProjectFile(root: Path, reference: String): Path = requireNotNull(safeProjectFileOrNull(root, reference)) { "Release artifact is missing or unsafe: $reference" }
+    private fun safeProjectFileOrNull(root: Path, reference: String): Path? = runCatching {
+        require(SAFE_RELATIVE_PATH.matches(reference))
+        val resolved = root.resolve(reference).normalize()
+        require(resolved.startsWith(root) && Files.isRegularFile(resolved) && !Files.isSymbolicLink(resolved))
+        resolved
+    }.getOrNull()
+    private fun sha256(path: Path): String = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
+    private fun sha256Utf8(value: String): String = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(StandardCharsets.UTF_8)).joinToString("") { "%02x".format(it) }
+    private fun publishImmutable(path: Path, text: String) {
+        Files.createDirectories(checkNotNull(path.parent))
+        if (Files.exists(path)) { require(Files.readString(path, StandardCharsets.UTF_8) == text) { "Release evidence '$path' is immutable; create a new release lineage." }; return }
+        val temporary = path.resolveSibling(".${path.fileName}.tmp")
+        try {
+            Files.writeString(temporary, text, StandardCharsets.UTF_8)
+            try { Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE) }
+            catch (_: AtomicMoveNotSupportedException) { Files.move(temporary, path) }
+        } finally { Files.deleteIfExists(temporary) }
     }
-    private fun relative(root: Path, path: Path) = root.relativize(path).toString().replace('\\', '/')
-    private fun sha256(path: Path) = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
-    private fun sha256(base: Path, paths: List<Path>): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        paths.forEach { path -> digest.update(base.relativize(path).toString().replace('\\', '/').toByteArray(StandardCharsets.UTF_8)); digest.update(Files.readAllBytes(path)) }
-        return digest.digest().joinToString("") { "%02x".format(it) }
-    }
-    private fun atomicWrite(path: Path, text: String) {
-        Files.createDirectories(checkNotNull(path.parent)); val temporary = path.resolveSibling(".${path.fileName}.tmp")
-        try { Files.writeString(temporary, text, StandardCharsets.UTF_8); try { Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING) } catch (_: AtomicMoveNotSupportedException) { Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING) } } finally { Files.deleteIfExists(temporary) }
-    }
+
     private companion object {
-        const val MANIFEST_FILE = "provenance-manifest.json"; const val REPORT_FILE = "commercial-report.md"; const val CHECKLIST_FILE = "youtube-upload-checklist.md"
-        val EVIDENCE_DIRECTORIES = listOf("source", "midi/raw", "midi/clean", "midi/derived", "midi/feel", "analysis", "cohesion", "midi/generated", "stems", "mix", "output")
+        const val RELEASES_DIRECTORY = "output/releases"
+        const val MANIFEST_FILE = "release-manifest.json"
+        const val REPORT_FILE = "commercial-report.md"
+        const val CHECKLIST_FILE = "youtube-upload-checklist.md"
+        const val STEM_RENDER_REPORT = "stems/stem-render.json"
+        const val MIX_SETTINGS = "mix/settings.json"
         val json = Json { prettyPrint = true; encodeDefaults = true; ignoreUnknownKeys = false }
     }
 }
 
+private fun redactPortable(value: String): String = value.replace(ABSOLUTE_PATH, "[redacted-path]").replace(SECRET, "[redacted]")
 private val SHA_256 = Regex("[0-9a-f]{64}")
 private val SAFE_ID = Regex("[A-Za-z0-9._:-]{1,160}")
+private val SAFE_RELEASE_ID = Regex("release-[0-9a-f]{32}")
+private val SAFE_RELATIVE_PATH = Regex("(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]{1,240}")
 private val ISO_INSTANT = Regex("\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d+)?Z")
+private val ABSOLUTE_PATH = Regex("(?:[A-Za-z]:\\\\|/)(?:Users|home|private|var|tmp|opt)(?:[/\\\\][^\\s]*)?", RegexOption.IGNORE_CASE)
+private val SECRET = Regex("(?i)(?:api[_-]?key|token|secret|password)\\s*[:=]\\s*[^\\s,;]+")
 private const val COMMERCIAL_DISCLAIMER = "This report is workflow evidence and assistance, not legal advice, copyright clearance, Content ID clearance, or a YouTube monetization guarantee."

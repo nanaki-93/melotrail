@@ -137,6 +137,7 @@ data class WorkspaceUiState(
     val humanization: HumanizationSnapshot? = null,
     val buildOptions: BuildOptionsDraft = BuildOptionsDraft(),
     val export: ExportUiState = ExportUiState(),
+    val commercialEvidence: CommercialEvidenceUiState? = null,
     val playbackSession: PlaybackSession = PlaybackSession(),
     val selectedPartId: String? = null,
     /** UI-only selected canonical artifact; it is never written to project files. */
@@ -230,6 +231,14 @@ data class ExportUiState(
     val inspection: ReleaseExportInspection? = null,
     val draft: ExportDraft = ExportDraft(),
     val inspecting: Boolean = false
+)
+/** Presentation-safe outcome from the typed release-lineage application service. */
+data class CommercialEvidenceUiState(
+    val commercialReady: Boolean,
+    val unresolvedActions: List<String>,
+    /** Project-relative files only; no local absolute path is exposed. */
+    val reportReference: String,
+    val manifestReference: String
 )
 data class PlaybackSnapshot(
     val source: PlaybackSource = PlaybackSource.DRY,
@@ -2605,9 +2614,15 @@ class WorkspaceViewModel(
         scope.launch {
             runCatching { withContext(ioDispatcher) { commercialProvenanceService.export(project.root) } }
                 .onSuccess { result ->
-                    val message = if (result.readiness.ready) "Commercial provenance exported. Review the report and YouTube checklist before release."
-                    else "Commercial evidence exported with blocking warnings. It is not labeled Commercial-ready."
-                    mutableState.update { current -> current.copy(operation = WorkspaceOperation.Idle, notification = message) }
+                    val evidence = CommercialEvidenceUiState(
+                        commercialReady = result.readiness.ready,
+                        unresolvedActions = result.readiness.reasons,
+                        reportReference = project.root.relativize(checkNotNull(result.report)).toString().replace('\\', '/'),
+                        manifestReference = project.root.relativize(checkNotNull(result.manifest)).toString().replace('\\', '/')
+                    )
+                    val message = if (result.readiness.ready) "Commercial evidence is hash-verified. Review the report and YouTube checklist before release."
+                    else "Commercial evidence was saved with unresolved actions; it is not Commercial-ready."
+                    mutableState.update { current -> current.copy(operation = WorkspaceOperation.Idle, notification = message, commercialEvidence = evidence) }
                 }
                 .onFailure { failure -> fail("commercial provenance", failure.message ?: "Unable to create commercial evidence.") }
         }

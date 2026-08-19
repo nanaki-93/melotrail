@@ -1,16 +1,18 @@
 package app.melotrail.commercial
 
 import app.melotrail.arrangement.MidiReferences
-import app.melotrail.arrangement.Part
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.RenderFormat
+import app.melotrail.arrangement.SongPart
 import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertContains
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import java.nio.file.Path
 
 class CommercialProvenanceTest {
     private val hash = "a".repeat(64)
@@ -24,43 +26,82 @@ class CommercialProvenanceTest {
             assertFalse(CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, attested)), listOf(approved.copy(commercialTerm = term)))).ready)
         }
         assertFalse(CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, null)), listOf(approved))).ready)
-        assertFalse(CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, SourceRightsAttestation(SourceRightsClaim.NOT_ESTABLISHED, "2026-08-17T00:00:00Z"))), listOf(approved))).ready)
+        assertFalse(CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, attested)), listOf(approved), listOf("missing attribution"))).ready)
+        assertFalse(CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, attested)), listOf(approved.copy(identity = "fake-model")))).ready)
     }
 
     @Test
-    fun `manifest is deterministic hash bound and detects tampering`() {
-        val root = Files.createTempDirectory("commercial-provenance")
+    fun `release manifest is immutable hash bound and reports source tampering`() {
+        val root = projectRoot()
         try {
-            Files.createDirectories(root.resolve("source")); Files.createDirectories(root.resolve("midi/raw")); Files.createDirectories(root.resolve("output"))
-            Files.writeString(root.resolve("source/A.mid"), "source")
-            Files.writeString(root.resolve("midi/raw/A.mid"), "raw")
-            Files.writeString(root.resolve("output/master.wav"), "master")
-            Files.writeString(root.resolve("output/release.json"), "{}")
-            ProjectStore.write(root, Project(Project.CURRENT_VERSION, "Evidence", listOf(Part("A", "source/A.mid", midi = MidiReferences(raw = "midi/raw/A.mid"), sourceAttestation = attested)), renderFormat = RenderFormat()))
-            val dependency = CommercialDependency(CommercialDependencyKind.SOUND_LIBRARY, "starter", "1", hash, CommercialTerm.PERMITTED, true, "generated-original", "local", attribution = "Credit starter")
+            val dependency = CommercialDependency(CommercialDependencyKind.SOUND_LIBRARY, "starter", "1", hash, CommercialTerm.PERMITTED, true, "CC0", "local", attribution = "Credit starter")
             val service = CommercialProvenanceService()
             val first = service.export(root, listOf(dependency))
-            val firstText = Files.readString(checkNotNull(first.manifest))
+            val manifest = assertNotNull(first.manifest)
             val second = service.export(root, listOf(dependency))
-            assertTrue(first.readiness.ready)
-            assertTrue(firstText == Files.readString(checkNotNull(second.manifest)))
-            assertTrue(service.verify(root).ready)
-            assertContains(Files.readString(checkNotNull(second.report)), "not legal advice")
-            assertContains(Files.readString(checkNotNull(second.checklist)), "AI-use disclosure")
-            val manifest = checkNotNull(second.manifest)
-            Files.writeString(manifest, Files.readString(manifest).replace("source/A.mid", "../outside.mid"))
-            assertFalse(runCatching { service.verify(root) }.isSuccess)
-            service.export(root, listOf(dependency))
+
+            assertEquals(manifest, second.manifest)
+            assertTrue(manifest.toString().contains("output/releases/release-"))
+            assertFalse(first.readiness.ready, "missing settings and selected MIDI must remain explicit evidence gaps")
+            assertTrue(service.verifyReleaseLineage(root, assertNotNull(first.releaseId)).closed)
+            assertContains(Files.readString(assertNotNull(second.report)), "not legal advice")
+            assertContains(Files.readString(assertNotNull(second.checklist)), "Resolve every listed evidence action")
+
             Files.writeString(root.resolve("source/A.mid"), "tampered")
-            assertFalse(runCatching { service.verify(root) }.isSuccess)
+            val verification = service.verifyReleaseLineage(root, assertNotNull(first.releaseId))
+            assertFalse(verification.closed)
+            assertTrue("source/A.mid" in verification.tamperedDependencies)
         } finally {
-            Files.walk(root).sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists)
+            delete(root)
         }
+    }
+
+    @Test
+    fun `manifest tampering is detected through selected project reference`() {
+        val root = projectRoot()
+        try {
+            val result = CommercialProvenanceService().export(root)
+            val manifest = assertNotNull(result.manifest)
+            Files.writeString(manifest, Files.readString(manifest).replace("source/A.mid", "source/B.mid"))
+
+            val verification = CommercialProvenanceService().verifyReleaseLineage(root, assertNotNull(result.releaseId))
+
+            assertFalse(verification.closed)
+            assertTrue("selected release manifest" in verification.tamperedDependencies)
+        } finally {
+            delete(root)
+        }
+    }
+
+    @Test
+    fun `portable dependency details redact absolute paths and secrets`() {
+        val dependency = CommercialDependency(CommercialDependencyKind.MODEL, "local-model", "1", hash, CommercialTerm.PERMITTED, true, "MIT", "/Users/name/model api_key=private")
+
+        val portable = dependency.portable()
+
+        assertFalse(portable.source.contains("/Users/name"))
+        assertFalse(portable.source.contains("private"))
     }
 
     @Test
     fun `release documentation retains official links and dated review gate`() {
         YoutubePolicyDocumentation.requireReviewed(Path.of("docs/COMMERCIAL_PROVENANCE.md"), "2026-08-17")
         assertFalse(runCatching { YoutubePolicyDocumentation.requireReviewed(Path.of("docs/COMMERCIAL_PROVENANCE.md"), "2026-08-18") }.isSuccess)
+    }
+
+    private fun projectRoot(): Path {
+        val root = Files.createTempDirectory("commercial-provenance")
+        Files.createDirectories(root.resolve("source")); Files.createDirectories(root.resolve("midi/raw")); Files.createDirectories(root.resolve("mix")); Files.createDirectories(root.resolve("output"))
+        Files.writeString(root.resolve("source/A.mid"), "source")
+        Files.writeString(root.resolve("midi/raw/A.mid"), "raw")
+        Files.writeString(root.resolve("mix/repaired.wav"), "repair")
+        Files.writeString(root.resolve("output/master.wav"), "master")
+        Files.writeString(root.resolve("output/release.json"), "{\"inputArtifact\":\"mix/repaired.wav\"}")
+        ProjectStore.write(root, Project(Project.CURRENT_VERSION, "Evidence", listOf(SongPart("A", "source/A.mid", midi = MidiReferences(raw = "midi/raw/A.mid"), sourceAttestation = attested)), renderFormat = RenderFormat()))
+        return root
+    }
+
+    private fun delete(root: Path) {
+        Files.walk(root).sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists)
     }
 }

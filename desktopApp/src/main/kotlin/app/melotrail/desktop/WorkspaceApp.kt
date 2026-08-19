@@ -1258,13 +1258,23 @@ internal fun MixPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Un
 @Composable
 private fun CommercialReadinessPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = WorkspaceCard("Commercial & YouTube", WorkspaceTags.COMMERCIAL_READINESS) {
     val readiness = state.project?.readiness
-    val ready = readiness?.releaseAvailable == true && readiness.commercialSourceAttestationsComplete && !state.downstreamArtifactsStale
-    Text(if (ready) "Commercial-ready review still required" else "Commercial-ready is blocked", style = MaterialTheme.typography.labelLarge)
+    val evidence = state.commercialEvidence
+    val ready = evidence?.commercialReady == true
+    Text(if (ready) "Commercial-ready evidence complete" else "Commercial-ready requires evidence review", style = MaterialTheme.typography.labelLarge)
     Text(
-        if (ready) "Verify the hash-bound provenance manifest and every reviewed model/sample term before release."
-        else "Every imported source needs an ownership/permission/public-domain attestation, and every used model/sample needs reviewed permitted commercial terms.",
+        if (evidence == null) "Create evidence to verify the exact selected source-to-export lineage."
+        else if (ready) "The selected lineage is hash-verified. Review the report before release; this is not a legal ownership claim."
+        else "Resolve the listed source, model, license, attribution, or lineage evidence before calling this release Commercial-ready.",
         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
     )
+    evidence?.let { current ->
+        if (current.unresolvedActions.isNotEmpty()) {
+            Text("Unresolved actions", style = MaterialTheme.typography.labelMedium)
+            current.unresolvedActions.forEach { action -> Text("• $action", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+        }
+        Text("Report: ${current.reportReference}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Manifest: ${current.manifestReference}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
     Text("For AI-generated music, use the YouTube Studio AI-use disclosure when the policy applies; disclosure is not a monetization guarantee.", style = MaterialTheme.typography.bodySmall)
     Text("Add required attribution and original, non-mass-produced video/channel value. This is evidence and workflow assistance—not legal advice, copyright clearance, Content ID clearance, or a monetization guarantee.", style = MaterialTheme.typography.bodySmall)
     OutlinedButton(onClick = { onIntent(WorkspaceIntent.ExportCommercialProvenance) }, enabled = readiness?.releaseAvailable == true && !state.operation.isMutating, modifier = Modifier.semantics { testTag = WorkspaceTags.COMMERCIAL_EXPORT }) { Text("Create commercial evidence") }

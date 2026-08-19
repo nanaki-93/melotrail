@@ -359,7 +359,7 @@ data class ArrangementApprovalReferences(
     }
 }
 
-/** References only; Task 071 owns commercial decisions and manifest UI. */
+/** Pointer to the selected immutable Task 027 release-lineage manifest. */
 @Serializable
 data class CommercialProvenanceReferences(
     val manifest: WorkflowArtifactReference? = null,

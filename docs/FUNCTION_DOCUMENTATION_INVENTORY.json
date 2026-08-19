@@ -907,30 +907,6 @@
       "documentedFunctionCount": 0
     },
     {
-      "path": "src/main/kotlin/app/melotrail/provenance/ProvenanceEntry.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/provenance/ProvenanceEntry.kt has 2 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 2,
-      "declarationDigest": "b1175b1c89ee76d0601fd4ff2859763d191b744f66dd66c94abcb1403dcad702",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/provenance/ProvenanceLog.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/provenance/ProvenanceLog.kt has 16 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 16,
-      "declarationDigest": "257113f56e4c29b5880ce4d78a3406b64eb17adf45a56d7b20b007812e166ab6",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/provenance/ProvenanceRecord.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/provenance/ProvenanceRecord.kt has 3 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 3,
-      "declarationDigest": "d9ded20471f1dcc82f0d78e9ff1822252540359b30f3b39bf0785318416edaa2",
-      "documentedFunctionCount": 0
-    },
-    {
       "path": "src/main/kotlin/app/melotrail/server/Server.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/server/Server.kt has 1 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
