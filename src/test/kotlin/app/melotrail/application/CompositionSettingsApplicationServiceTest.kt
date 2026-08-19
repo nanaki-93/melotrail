@@ -90,7 +90,8 @@ class CompositionSettingsApplicationServiceTest {
 
         val key = service.previewSettingsChange(PreviewSettingsChange(root, 3, original.copy(name = "Renamed", tempo = Tempo(104.0), key = MusicalKey(PitchClass.of(PitchSpelling.D), ScaleModeId.MAJOR))))
         assertTrue(WorkflowArtifact.GENERATED_MIDI in key.invalidation.artifacts)
-        assertFalse(WorkflowArtifact.ANALYSIS in key.invalidation.artifacts)
+        assertTrue(WorkflowArtifact.TRANSPOSED_MIDI in key.invalidation.artifacts)
+        assertTrue(WorkflowArtifact.ANALYSIS in key.invalidation.artifacts)
 
         val mood = service.previewSettingsChange(PreviewSettingsChange(root, 3, original.copy(name = "Renamed", tempo = Tempo(104.0), mood = MoodRef("dark", 1))))
         assertTrue(WorkflowArtifact.MIDI_FEEL in mood.invalidation.artifacts)

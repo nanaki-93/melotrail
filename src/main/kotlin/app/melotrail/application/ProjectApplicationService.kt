@@ -19,6 +19,7 @@ import app.melotrail.arrangement.MidiFeelReferences
 import app.melotrail.arrangement.MidiFeelReport
 import app.melotrail.arrangement.MidiFeelReportStore
 import app.melotrail.arrangement.MidiLoFiFeelTransformer
+import app.melotrail.arrangement.MidiTranspositionReportStore
 import app.melotrail.arrangement.MelodyCohesionInputFactory
 import app.melotrail.arrangement.TransitionCohesionInputFactory
 import app.melotrail.arrangement.TransitionCohesionStore
@@ -49,7 +50,9 @@ import app.melotrail.arrangement.artifactRef
 import app.melotrail.arrangement.sha256Hex
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.ImportEvidence
+import app.melotrail.arrangement.SourceKeyEvidence
 import app.melotrail.commercial.SourceRightsAttestation
+import app.melotrail.music.MusicalKey
 import app.melotrail.preparation.InputInspectionBoundary
 import app.melotrail.preparation.InputInspectionError
 import app.melotrail.preparation.InputInspectionErrorCode
@@ -109,6 +112,10 @@ interface ProjectApplicationService {
     /** The one code-owned technical correction boundary. Analysis remains a separate stage. */
     suspend fun cleanMidi(request: CleanMidiRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
     fun approveCleanMidi(root: Path, partId: String): ProjectSnapshot
+    fun confirmSourceKey(command: ConfirmSourceKey): ProjectSnapshot =
+        throw UnsupportedOperationException("This project service does not support source-key confirmation.")
+    suspend fun transposePart(request: TransposePartRequest): ProjectSnapshot =
+        throw UnsupportedOperationException("This project service does not support project-key transposition.")
     fun selectMidiFeel(request: SelectMidiFeelRequest): ProjectSnapshot
     suspend fun inspectPart(request: InspectPartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
     suspend fun transcribeAudioPart(request: TranscribeAudioPartRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot =
@@ -172,6 +179,10 @@ data class CleanMidiRequest(
     val partId: String,
     val cleanup: MidiCleanupOptions
 )
+
+/** Explicit musician decision used whenever detected key evidence is not trusted automatically. */
+data class ConfirmSourceKey(val root: Path, val partId: String, val key: MusicalKey, val expectedRevision: Long)
+data class TransposePartRequest(val root: Path, val partId: String)
 
 /** Fixed named profile only. This is deliberately not a tempo/swing control surface. */
 data class SelectMidiFeelRequest(val root: Path, val partId: String, val input: MidiAnalysisInput)
@@ -254,8 +265,17 @@ data class PartSummary(
     val sectionType: SectionTypeId = SectionTypeCatalog.fromLegacyRole(role),
     val sourceSha256: String? = null,
     val sourceKeyConfirmed: Boolean = false,
+    val sourceKey: SourceKeySummary? = null,
     val revision: Long = 1,
     val warnings: List<String> = emptyList()
+)
+
+data class SourceKeySummary(
+    val detectedKey: MusicalKey?,
+    val confidence: Double,
+    val algorithmVersion: String?,
+    val confirmedOverride: MusicalKey?,
+    val confirmationRequired: Boolean
 )
 
 /** Truthful, artifact-derived input state for one canonical project part. */
@@ -270,7 +290,8 @@ data class PartPreparationSummary(
     val warnings: List<String>,
     val midiQuality: MidiQualitySummary = MidiQualitySummary.legacyUnknown(),
     val midiFeel: MidiFeelSummary = MidiFeelSummary(),
-    val midiAiFix: MidiAiFixSummary = MidiAiFixSummary()
+    val midiAiFix: MidiAiFixSummary = MidiAiFixSummary(),
+    val transposedMidi: Boolean = false
 )
 
 /** Artifact-derived state for the optional cleaned-vs-approved-AI base branch. */
@@ -442,7 +463,7 @@ class DefaultProjectApplicationService(
         require(!Files.exists(root.resolve(ProjectStore.FILE_NAME))) { "Project already exists: ${root.resolve(ProjectStore.FILE_NAME)}" }
         val name = request.name ?: root.fileName?.toString().orEmpty()
         require(name.isNotBlank()) { "Project directory must have a name" }
-        listOf("source", "midi/raw", "midi/clean", "midi/quality", "midi/normalized", "midi/normalization", "midi/derived", "midi/feel", "midi/generated").forEach { Files.createDirectories(root.resolve(it)) }
+        listOf("source", "midi/raw", "midi/clean", "midi/quality", "midi/normalized", "midi/normalization", "midi/transposed", "midi/transposition", "midi/derived", "midi/feel", "midi/generated").forEach { Files.createDirectories(root.resolve(it)) }
         val project = ProjectStore.create(root, name, request.renderFormat)
         snapshot(root, project)
     }
@@ -678,12 +699,15 @@ class DefaultProjectApplicationService(
             val updated = project.copy(parts = project.parts.map {
                 if (it.id == request.partId) it.copy(
                     analysis = null,
+                    sourceKeyEvidence = null,
                     midi = midi.copy(
                         clean = root.relativize(cleanPath).toString().replace('\\', '/'),
                         cleanup = request.cleanup,
                         quality = qualityReference,
                         normalized = null,
                         normalization = null,
+                        transposed = null,
+                        transposition = null,
                         approvedRepair = false,
                         cleanApproval = approval,
                         aiFixSelection = MidiAiFixSelection.SKIP,
@@ -730,6 +754,50 @@ class DefaultProjectApplicationService(
         })
         ProjectStore.write(projectRoot, updated)
         snapshot(projectRoot, updated)
+    }
+
+    override fun confirmSourceKey(command: ConfirmSourceKey): ProjectSnapshot = mutate(command.root) { root ->
+        require(command.key.isExecutable) { "Confirmed source key is not executable." }
+        val project = readValidProject(root)
+        val part = project.parts.singleOrNull { it.id == command.partId } ?: throw IllegalArgumentException("Part not found: ${command.partId}")
+        require(part.revision == command.expectedRevision) { "Part '${part.id}' changed; refresh before confirming its source key." }
+        val midi = requireNotNull(part.midi) { "Part '${part.id}' has no MIDI evidence." }
+        val normalized = requireNotNull(midi.normalized) { "Normalize MIDI before confirming its source key." }
+        val evidence = part.sourceKeyEvidence ?: SourceKeyEvidence()
+        require(evidence.inputSha256 == null || evidence.inputSha256 == sha256(safeDestination(root, normalized))) {
+            "Detected source-key evidence is stale; normalize MIDI again."
+        }
+        val updated = project.copy(
+            parts = project.parts.map {
+                if (it.id == part.id) it.copy(
+                    sourceKeyEvidence = evidence.copy(confirmedOverride = command.key, key = null, confirmed = false),
+                    analysis = null,
+                    revision = it.revision + 1,
+                    midi = midi.copy(transposed = null, transposition = null, aiFixSelection = MidiAiFixSelection.SKIP, aiFix = null,
+                        analysisInput = MidiAnalysisInput.CURRENT, feel = null)
+                ) else it
+            },
+            workflow = project.workflow.invalidate(WorkflowChange.SOURCE_KEY)
+        )
+        ProjectStore.write(root, updated)
+        snapshot(root, updated)
+    }
+
+    override suspend fun transposePart(request: TransposePartRequest): ProjectSnapshot {
+        val runner = requireNotNull(automaticImportRunner) { "Project-key transposition is not configured." }
+        val root = request.root.normalizeRoot()
+        val project = readValidProject(root)
+        val part = project.parts.singleOrNull { it.id == request.partId } ?: throw IllegalArgumentException("Part not found: ${request.partId}")
+        val midi = requireNotNull(part.midi)
+        val normalized = requireNotNull(midi.normalized) { "Normalize MIDI before transposition." }
+        val source = part.sourceKeyEvidence?.effectiveKey
+            ?: throw IllegalStateException("Confirm the detected source key before transposition.")
+        val target = project.envelope.compositionSettings?.takeIf { it.complete }?.key
+            ?: throw IllegalStateException("Complete project Setup before transposition.")
+        val input = artifactRef(root, normalized)
+        val configuration = sha256Hex("${source.tonic.chromatic}|${source.modeId.value}|${target.tonic.chromatic}|${target.modeId.value}|${SourceKeyEvidence.CONFIDENCE_THRESHOLD}")
+        runner.run(RunStage(root, StageId.TRANSPOSED, StageSubject.Part(part.id), inputArtifacts = listOf(input), configurationSha256 = configuration))
+        return open(root)
     }
 
     override fun selectMidiFeel(request: SelectMidiFeelRequest): ProjectSnapshot = mutate(request.root) { root ->
@@ -930,12 +998,14 @@ class DefaultProjectApplicationService(
 
     private fun snapshot(root: Path, project: Project, migration: ProjectMigrationStatus = migrationStatus(ProjectStore.migrate(project))): ProjectSnapshot {
         fun current(artifact: WorkflowArtifact) = artifact !in project.workflow.stale
+        val projectKey = project.envelope.compositionSettings?.takeIf { it.complete }?.key
         val summaries = project.parts.map { part ->
             part.summary(
                 root,
                 analysisCurrent = current(WorkflowArtifact.ANALYSIS),
                 aiFixCurrent = current(WorkflowArtifact.AI_FIX),
-                midiFeelCurrent = current(WorkflowArtifact.MIDI_FEEL)
+                midiFeelCurrent = current(WorkflowArtifact.MIDI_FEEL),
+                projectKey = projectKey
             )
         }
         val durationById = summaries.associate { it.id to it.analysis?.durationSeconds }
@@ -1022,7 +1092,7 @@ class DefaultProjectApplicationService(
             }
     }.getOrDefault(false)
 
-    private fun SongPart.summary(root: Path, analysisCurrent: Boolean, aiFixCurrent: Boolean, midiFeelCurrent: Boolean): PartSummary {
+    private fun SongPart.summary(root: Path, analysisCurrent: Boolean, aiFixCurrent: Boolean, midiFeelCurrent: Boolean, projectKey: MusicalKey?): PartSummary {
         val sourcePath = Path.of(file)
         val sourceType = sourceType(file)
         val evidence = importEvidence
@@ -1045,6 +1115,15 @@ class DefaultProjectApplicationService(
             }.getOrDefault(false))
         } ?: false
         val cleanMidi = midi?.clean?.let { isMidiArtifact(root, it) } ?: false
+        val sourceEvidence = sourceKeyEvidence
+        val transposedMidi = if (sourceEvidence == null) true else runCatching {
+            val sourceKey = requireNotNull(sourceEvidence.effectiveKey)
+            val normalized = requireNotNull(midi?.normalized)
+            val transposed = requireNotNull(midi.transposed)
+            val reportReference = requireNotNull(midi.transposition)
+            MidiTranspositionReportStore.isCurrent(root, id, safeDestination(root, normalized), safeDestination(root, transposed), sourceKey,
+                requireNotNull(projectKey), reportReference)
+        }.getOrDefault(false)
         val quality = midiQuality(root, this, cleanMidi)
         val analyzed = analysisCurrent && (analysis?.let { runCatching { it.summary(root) }.isSuccess } ?: false)
         val preparedAudio = sourceType == PartSourceType.AUDIO && inspected &&
@@ -1058,8 +1137,9 @@ class DefaultProjectApplicationService(
             preparedAudio = preparedAudio,
             rawMidi = rawMidi,
             cleanMidi = cleanMidi,
+            transposedMidi = transposedMidi,
             analyzed = analyzed,
-            ready = sourcePreserved && inspected && cleanMidi && analyzed && quality.status == MidiQualityStatus.CURRENT &&
+            ready = sourcePreserved && inspected && cleanMidi && transposedMidi && analyzed && quality.status == MidiQualityStatus.CURRENT &&
                 aiFix.selectedAvailable && feelSelectedAvailable,
             warnings = safeWarnings + quality.warnings.map { it.message },
             midiQuality = quality,
@@ -1081,7 +1161,10 @@ class DefaultProjectApplicationService(
             preparation = preparation,
             sourceSizeBytes = sourceSize,
             sourceSha256 = importEvidence?.sourceSha256,
-            sourceKeyConfirmed = sourceKeyEvidence?.confirmed == true,
+            sourceKeyConfirmed = sourceKeyEvidence?.effectiveKey != null,
+            sourceKey = sourceKeyEvidence?.let { evidence ->
+                SourceKeySummary(evidence.detectedKey, evidence.confidence, evidence.algorithmVersion, evidence.confirmedOverride, evidence.confirmationRequired)
+            },
             revision = revision,
             warnings = safeWarnings
         )

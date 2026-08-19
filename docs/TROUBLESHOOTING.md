@@ -95,6 +95,10 @@ actual format. Source files are immutable under `source/`.
   **Normalize MIDI** stage publishes `midi/normalized/<part>-<run>.mid` plus a
   hash-bound `midi/normalization/<part>-<run>.json`. Both retain source/raw/clean
   MIDI unchanged; no pitch correction, swing, creative quantization, or humanization occurs.
+  The detected source key and confidence are shown on the Melody Parts card. If confidence
+  is low, choose the source tonic/mode before **Transpose to project key** can publish
+  `midi/transposed/<part>-<run>.mid` and its hash-bound report; original and normalized
+  MIDI remain unchanged.
   If clean review is required,
   **Approve Clean MIDI** binds approval to the exact cleanup evidence.
 

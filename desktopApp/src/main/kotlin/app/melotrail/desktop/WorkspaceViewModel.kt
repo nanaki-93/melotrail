@@ -42,6 +42,8 @@ import app.melotrail.application.GetCompositionSettings
 import app.melotrail.application.PreviewSettingsChange
 import app.melotrail.application.UpdateCompositionSettings
 import app.melotrail.application.CleanMidiRequest
+import app.melotrail.application.ConfirmSourceKey
+import app.melotrail.application.TransposePartRequest
 import app.melotrail.application.SelectMidiFeelRequest
 import app.melotrail.application.AudioPreparationApplicationService
 import app.melotrail.application.AudioPreparationAvailability
@@ -79,6 +81,8 @@ import app.melotrail.harmony.ChordEventId
 import app.melotrail.harmony.ChordQuality
 import app.melotrail.harmony.SectionTypeId
 import app.melotrail.music.PitchClass
+import app.melotrail.music.MusicalKey
+import app.melotrail.music.ScaleModeId
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -400,6 +404,7 @@ sealed interface WorkspaceDialog {
     data class PartDetails(val partId: String, val focusReturn: PartDetailsFocusReturn) : WorkspaceDialog
     data class ConfirmSafeCleanup(val partId: String) : WorkspaceDialog
     data class ConfirmTightenTiming(val partId: String) : WorkspaceDialog
+    data class ConfirmSourceKey(val partId: String, val selected: MusicalKey) : WorkspaceDialog
     data class ConfirmDiscardDraft(val root: Path? = null, val createProject: Boolean = false) : WorkspaceDialog
     data object ConfirmClearSoundLibraryRoot : WorkspaceDialog
     data object ConfirmClose : WorkspaceDialog
@@ -487,6 +492,7 @@ sealed interface WorkspaceRetry {
     data class Import(val request: ImportPartRequest) : WorkspaceRetry
     data class AutomaticImport(val command: app.melotrail.application.ImportSongPart, val draft: WorkspaceDialog.ImportPart) : WorkspaceRetry
     data class Analyze(val root: Path, val partId: String) : WorkspaceRetry
+    data class Transpose(val root: Path, val partId: String) : WorkspaceRetry
     data class Inspect(val root: Path, val partId: String) : WorkspaceRetry
     data class Cleanup(val root: Path, val partId: String, val mode: InputCleanupMode) : WorkspaceRetry
     data class CleanMidi(val request: CleanMidiRequest) : WorkspaceRetry
@@ -546,6 +552,10 @@ sealed interface WorkspaceIntent {
         val focusReturn: PartDetailsFocusReturn = PartDetailsFocusReturn.ImportedRow(partId)
     ) : WorkspaceIntent
     data class AnalyzePart(val partId: String) : WorkspaceIntent
+    data class ShowSourceKeyConfirmation(val partId: String) : WorkspaceIntent
+    data class SelectConfirmedSourceKey(val key: MusicalKey) : WorkspaceIntent
+    data object ConfirmSourceKey : WorkspaceIntent
+    data class TransposePart(val partId: String) : WorkspaceIntent
     data class SelectPart(val partId: String) : WorkspaceIntent
     data object InspectSelectedPart : WorkspaceIntent
     data class SelectCleanupMode(val mode: InputCleanupMode) : WorkspaceIntent
@@ -721,6 +731,10 @@ class WorkspaceViewModel(
             is WorkspaceIntent.CleanMidi -> cleanMidi(intent.partId)
             is WorkspaceIntent.ShowPartDetails -> showPartDetails(intent)
             is WorkspaceIntent.AnalyzePart -> analyzePart(intent.partId)
+            is WorkspaceIntent.ShowSourceKeyConfirmation -> showSourceKeyConfirmation(intent.partId)
+            is WorkspaceIntent.SelectConfirmedSourceKey -> selectConfirmedSourceKey(intent.key)
+            WorkspaceIntent.ConfirmSourceKey -> confirmSourceKey()
+            is WorkspaceIntent.TransposePart -> transposePart(intent.partId)
             is WorkspaceIntent.SelectPart -> selectPart(intent.partId)
             WorkspaceIntent.InspectSelectedPart -> inspectSelectedPart()
             is WorkspaceIntent.SelectCleanupMode -> mutableState.update { it.copy(audioPreparation = it.audioPreparation.copy(cleanupMode = intent.mode)) }
@@ -1403,6 +1417,43 @@ class WorkspaceViewModel(
         }
     }
 
+    private fun showSourceKeyConfirmation(partId: String) {
+        val part = state.value.project?.parts?.singleOrNull { it.id == partId } ?: return
+        if (state.value.operation.isMutating) return
+        val selected = part.sourceKey?.detectedKey ?: MusicalKey(PitchClass.canonical(0), ScaleModeId.MAJOR)
+        mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmSourceKey(partId, selected), notification = null) }
+    }
+
+    private fun selectConfirmedSourceKey(key: MusicalKey) {
+        val dialog = state.value.dialog as? WorkspaceDialog.ConfirmSourceKey ?: return
+        mutableState.update { it.copy(dialog = dialog.copy(selected = key)) }
+    }
+
+    private fun confirmSourceKey() {
+        val dialog = state.value.dialog as? WorkspaceDialog.ConfirmSourceKey ?: return
+        val project = state.value.project ?: return
+        val part = project.parts.singleOrNull { it.id == dialog.partId } ?: return
+        val feedbackId = beginFeedback(OperationKind.PROJECT_HYDRATION, OperationPhase.VALIDATING, "Confirming source key…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.AnalyzingPart(part.id), dialog = null, notification = null, operationFeedback = feedbackTracker.current) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { projectService.confirmSourceKey(ConfirmSourceKey(project.root, part.id, dialog.selected, part.revision)).refreshed() } }
+                .onSuccess { opened(it, "Confirmed source key for ${part.name}", feedbackId) }
+                .onFailure { fail("confirm source key", it.message ?: "Unable to confirm the source key.", sessionId = feedbackId) }
+        }
+    }
+
+    private fun transposePart(partId: String) {
+        val project = state.value.project ?: return
+        if (state.value.operation.isMutating) return
+        val feedbackId = beginFeedback(OperationKind.PROJECT_HYDRATION, OperationPhase.VALIDATING, "Transposing $partId to the project key…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.AnalyzingPart(partId), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { projectService.transposePart(TransposePartRequest(project.root, partId)).refreshed() } }
+                .onSuccess { opened(it, "Transposed $partId to the project key", feedbackId) }
+                .onFailure { fail("transpose part", it.message ?: "Unable to transpose the part.", WorkspaceRetry.Transpose(project.root, partId), feedbackId) }
+        }
+    }
+
     private fun showPartDetails(intent: WorkspaceIntent.ShowPartDetails) {
         val project = state.value.project ?: return
         val part = project.parts.find { it.id == intent.partId } ?: return
@@ -2037,6 +2088,7 @@ class WorkspaceViewModel(
             )
         }
         is WorkspaceRetry.Analyze -> analyzePart(action.partId)
+        is WorkspaceRetry.Transpose -> transposePart(action.partId)
         is WorkspaceRetry.Inspect -> {
             mutableState.update { it.copy(selectedPartId = action.partId, audioPreparation = AudioPreparationUiState(partId = action.partId)) }
             inspectSelectedPart()

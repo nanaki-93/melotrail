@@ -239,9 +239,38 @@ data class SongPart(
 
 @Serializable
 data class SourceKeyEvidence(
-    val key: MusicalKey,
-    val confirmed: Boolean = false
-)
+    /** Detected from the exact normalized MIDI selected as transposition input. */
+    val detectedKey: MusicalKey? = null,
+    val confidence: Double = 0.0,
+    val algorithmVersion: String? = null,
+    val inputSha256: String? = null,
+    /** Explicit musician decision, retained even when it differs from detection. */
+    val confirmedOverride: MusicalKey? = null,
+    /** Read-only compatibility fields from the earlier, incomplete source-key scaffold. */
+    @Deprecated("Use detectedKey and confirmedOverride") val key: MusicalKey? = null,
+    @Deprecated("Use confirmedOverride") val confirmed: Boolean = false
+) {
+    init {
+        require(confidence.isFinite() && confidence in 0.0..1.0) { "Source-key confidence is invalid" }
+        require((detectedKey == null) == (algorithmVersion == null)) { "Source-key algorithm evidence is incomplete" }
+        require((detectedKey == null) == (inputSha256 == null)) { "Source-key input evidence is incomplete" }
+        inputSha256?.let { require(SHA_256_DIGEST.matches(it)) { "Source-key input fingerprint is invalid" } }
+        detectedKey?.let { require(it.isExecutable) { "Detected source key is not executable" } }
+        confirmedOverride?.let { require(it.isExecutable) { "Confirmed source key is not executable" } }
+        require(!confirmed || key != null) { "Legacy source-key confirmation has no key" }
+    }
+
+    /** The selected key is explicit for low confidence and automatic only above the fixed gate. */
+    val effectiveKey: MusicalKey?
+        get() = confirmedOverride ?: key?.takeIf { confirmed } ?: detectedKey?.takeIf { confidence >= CONFIDENCE_THRESHOLD }
+
+    val confirmationRequired: Boolean get() = effectiveKey == null
+
+    companion object {
+        const val CONFIDENCE_THRESHOLD = 0.70
+        const val ALGORITHM_VERSION = "midi-key-profile-v1"
+    }
+}
 
 /** Source compatibility alias. Runtime code uses [SongPart]. */
 @Deprecated("Use SongPart")
@@ -282,6 +311,10 @@ data class MidiReferences(
     val normalized: String? = null,
     /** Hash-bound report for [normalized]; it is never fabricated during legacy reads. */
     val normalization: String? = null,
+    /** Derived only from normalized MIDI; raw, clean and normalized evidence remain immutable. */
+    val transposed: String? = null,
+    /** Hash-bound report for [transposed]. */
+    val transposition: String? = null,
     /** Legacy read adapter only. New approval is always fingerprint-bound in [cleanApproval]. */
     val approvedRepair: Boolean = false,
     /** Exact automatic or explicit approval of raw, clean, options, and report evidence. */
@@ -384,6 +417,8 @@ object ProjectValidator {
                     midi.raw?.let { validateFileReference(root, it, "Part '${part.id}' raw MIDI", errors) }
                     midi.clean?.let { validateFileReference(root, it, "Part '${part.id}' cleaned MIDI", errors) }
                     midi.normalized?.let { validateFileReference(root, it, "Part '${part.id}' normalized MIDI", errors) }
+                    midi.transposed?.let { validateFileReference(root, it, "Part '${part.id}' transposed MIDI", errors) }
+                    midi.transposition?.let { validateFileReference(root, it, "Part '${part.id}' transposition report", errors) }
                     if (midi.raw != null && midi.clean == null && (midi.cleanup != null || midi.quality != null)) {
                         errors += "Part '${part.id}' has cleanup evidence without cleaned MIDI"
                     }
@@ -401,6 +436,12 @@ object ProjectValidator {
                     }
                     if (midi.normalized != null && midi.clean == null) {
                         errors += "Part '${part.id}' normalized MIDI requires cleaned MIDI evidence"
+                    }
+                    if ((midi.transposed == null) != (midi.transposition == null)) {
+                        errors += "Part '${part.id}' transposed MIDI and report must be present together"
+                    }
+                    if (midi.transposed != null && midi.normalized == null) {
+                        errors += "Part '${part.id}' transposed MIDI requires normalized MIDI evidence"
                     }
                     if (midi.approvedRepair && (midi.cleanup == null || midi.quality == null)) {
                         errors += "Part '${part.id}' has an invalid legacy MIDI cleanup approval flag"

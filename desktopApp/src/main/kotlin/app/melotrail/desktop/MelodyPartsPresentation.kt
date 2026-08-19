@@ -180,7 +180,10 @@ private fun MelodyPartCard(
         }
         Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
             Text(melodyPartFileSize(part.sourceSizeBytes), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(part.analysis?.key ?: "Key unavailable", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(part.sourceKey?.let { key ->
+                val detected = key.detectedKey?.displayName ?: "Key unavailable"
+                "Source key: $detected (${String.format(java.util.Locale.ROOT, "%.0f%%", key.confidence * 100)})"
+            } ?: part.analysis?.key ?: "Key unavailable", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(part.analysis?.durationSeconds?.let(::formatDuration) ?: "Duration unavailable", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             val previewCapability = if (part.sourceType == PartSourceType.AUDIO) RuntimeCapability.SOURCE_PREVIEW else RuntimeCapability.MIDI_PREVIEW
             val preview = state.runtimeReadiness?.capability(previewCapability)
@@ -191,6 +194,11 @@ private fun MelodyPartCard(
         card.requiredAction?.let { Text("Required: $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
         Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
             if (card.retryable && state.retry != null) TextButton(onClick = { onIntent(WorkspaceIntent.Retry) }) { Text("Retry") }
+            if (part.sourceKey?.confirmationRequired == true) {
+                TextButton(onClick = { onIntent(WorkspaceIntent.ShowSourceKeyConfirmation(part.id)) }, enabled = !locked) { Text("Confirm source key") }
+            } else if (part.sourceKey != null && !part.preparation.transposedMidi) {
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.TransposePart(part.id)) }, enabled = !locked) { Text("Transpose to project key") }
+            }
             if (primaryPartAction(part, state.pendingMidiFeel) is PartPrimaryAction.AddToStructure) {
                 OutlinedButton(onClick = { onIntent(WorkspaceIntent.RequestAddPartToStructure(part.id)) }, enabled = !locked) { Text("Add to structure") }
             }

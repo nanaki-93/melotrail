@@ -112,7 +112,7 @@ optional bounded AI-fix draft, select optional Lo-fi Feel, analyze MIDI, then
 save the structure, generate/review Cohesion, generate/review an arrangement,
 then build and audition validated artifacts. The app never requires Spring.
 
-- Direct MIDI is preserved under `source/` and copied as immutable evidence under `midi/raw/`. Worker **Clean MIDI** repairs invalid events; Kotlin **Normalize MIDI** then publishes deterministic `midi/normalized/` evidence and a hash-bound report before analysis. Legacy clean-only projects remain readable until normalization is explicitly run.
+- Direct MIDI is preserved under `source/` and copied as immutable evidence under `midi/raw/`. Worker **Clean MIDI** repairs invalid events; Kotlin **Normalize MIDI** then publishes deterministic `midi/normalized/` evidence and a hash-bound report. Melotrail records detected source-key confidence; below its fixed gate, confirm the source key explicitly before **Transpose to project key** publishes a separate `midi/transposed/` artifact and report. Legacy clean-only projects remain readable until normalization is explicitly run.
 - WAV/WAVE and MP3 input is accepted only for the optional **solo-piano**
   transcription workflow. Do not use it to claim reliable editable MIDI from
   vocals, full mixes, or arbitrary polyphonic material.

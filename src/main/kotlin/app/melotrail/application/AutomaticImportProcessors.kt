@@ -11,7 +11,13 @@ import app.melotrail.arrangement.MidiReferences
 import app.melotrail.arrangement.MidiNormalizationPolicy
 import app.melotrail.arrangement.MidiNormalizationReport
 import app.melotrail.arrangement.MidiNormalizer
+import app.melotrail.arrangement.MidiPartAnalyzer
+import app.melotrail.arrangement.MidiProjectKeyTransposer
+import app.melotrail.arrangement.MidiTranspositionReport
+import app.melotrail.arrangement.MidiTranspositionReportStore
 import app.melotrail.arrangement.ProjectStore
+import app.melotrail.arrangement.SourceKeyEvidence
+import app.melotrail.arrangement.toMusicalKeyOrNull
 import app.melotrail.arrangement.StageId
 import app.melotrail.arrangement.StageSubject
 import app.melotrail.preparation.InputContainer
@@ -39,9 +45,10 @@ class AutomaticImportProcessors(
     private val qualityReporter: MidiQualityReporter = MidiQualityReporter(),
     private val defaultCleanup: MidiCleanupOptions = MidiCleanupOptions(),
     private val compositionProfiles: CompositionProfileCatalog = BundledCompositionProfileCatalog.load(),
-    private val normalizer: MidiNormalizer = MidiNormalizer()
+    private val normalizer: MidiNormalizer = MidiNormalizer(),
+    private val transposer: MidiProjectKeyTransposer = MidiProjectKeyTransposer()
 ) {
-    fun registry(): StageProcessorRegistry = StageProcessorRegistry(listOf(extracted, cleaned, normalized))
+    fun registry(): StageProcessorRegistry = StageProcessorRegistry(listOf(extracted, cleaned, normalized, transposed))
 
     private val extracted = object : StageProcessor {
         override val definition = StageDefinition(
@@ -125,6 +132,8 @@ class AutomaticImportProcessors(
                 quality = quality.path,
                 normalized = null,
                 normalization = null,
+                transposed = null,
+                transposition = null,
                 approvedRepair = false,
                 cleanApproval = approval,
                 analysisInput = MidiAnalysisInput.CURRENT
@@ -167,9 +176,60 @@ class AutomaticImportProcessors(
             require(report.partId == part.id && report.input.sha256 == sha256(request.root.resolve(clean)) && report.output.sha256 == output.sha256) {
                 "Normalization report does not match published MIDI"
             }
+            val detected = MidiPartAnalyzer().analyze(request.root.resolve(output.path), part.id).key
+            val detectedKey = detected?.toMusicalKeyOrNull()
+            val evidence = SourceKeyEvidence(
+                detectedKey = detectedKey,
+                confidence = detected?.confidence ?: 0.0,
+                algorithmVersion = detectedKey?.let { SourceKeyEvidence.ALGORITHM_VERSION },
+                inputSha256 = detectedKey?.let { output.sha256 }
+            )
             ProjectStore.write(request.root, project.copy(parts = project.parts.map {
-                if (it.id == part.id) it.copy(midi = midi.copy(normalized = output.path, normalization = reportRef.path)) else it
+                if (it.id == part.id) it.copy(sourceKeyEvidence = evidence, midi = midi.copy(
+                    normalized = output.path, normalization = reportRef.path, transposed = null, transposition = null
+                )) else it
             }))
+        }
+    }
+
+    private val transposed = object : StageProcessor {
+        override val definition = StageDefinition(StageId.TRANSPOSED, StageSubjectKind.PART, dependencies = setOf(StageId.NORMALIZED))
+
+        override suspend fun process(request: StageProcessingRequest): StageProcessorResult {
+            val project = ProjectStore.read(request.root)
+            val part = project.parts.singleOrNull { it.id == partId(request) } ?: throw IllegalArgumentException("Stage part is not registered")
+            val midi = requireNotNull(part.midi) { "Normalized MIDI is required before transposition" }
+            val normalized = requireNotNull(midi.normalized) { "Normalize MIDI before transposition" }
+            val sourceKey = part.sourceKeyEvidence?.effectiveKey
+                ?: throw InputRequiredException("Confirm the detected source key before transposition.")
+            val projectKey = project.envelope.compositionSettings?.takeIf { it.complete }?.key
+                ?: throw InputRequiredException("Complete project Setup before transposition.")
+            val output = request.temporaryRoot.resolve("transposed.mid")
+            val report = transposer.transpose(part.id, source(request, normalized), output, sourceKey, projectKey)
+            return StageProcessorResult(
+                outputs = listOf(TemporaryStageArtifact(output, "midi/transposed/${part.id}-${request.runId}.mid")),
+                reports = listOf(TemporaryStageArtifact(
+                    MidiTranspositionReportStore.write(request.temporaryRoot.resolve("transposition.json"), report),
+                    "midi/transposition/${part.id}-${request.runId}.json"
+                ))
+            )
+        }
+
+        override fun onPublished(request: StageProcessingRequest, outputs: List<ArtifactRef>, reports: List<ArtifactRef>) {
+            val output = outputs.singleOrNull() ?: error("Transposition must publish exactly one MIDI artifact")
+            val reportRef = reports.singleOrNull() ?: error("Transposition must publish exactly one report")
+            val project = ProjectStore.read(request.root)
+            val part = project.parts.singleOrNull { it.id == partId(request) } ?: error("Imported part disappeared before transposition completed")
+            val midi = requireNotNull(part.midi)
+            val normalized = requireNotNull(midi.normalized)
+            val sourceKey = requireNotNull(part.sourceKeyEvidence?.effectiveKey)
+            val projectKey = requireNotNull(project.envelope.compositionSettings?.takeIf { it.complete }?.key)
+            require(MidiTranspositionReportStore.isCurrent(request.root, part.id, request.root.resolve(normalized), request.root.resolve(output.path), sourceKey, projectKey, reportRef.path)) {
+                "Transposition report does not match the published MIDI"
+            }
+            ProjectStore.write(request.root, project.copy(parts = project.parts.map {
+                if (it.id == part.id) it.copy(analysis = null, midi = midi.copy(transposed = output.path, transposition = reportRef.path)) else it
+            }, workflow = project.workflow.markCurrent(app.melotrail.arrangement.WorkflowArtifact.TRANSPOSED_MIDI)))
         }
     }
 

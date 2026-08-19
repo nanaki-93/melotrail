@@ -1475,6 +1475,7 @@ private fun WorkspaceDialogs(state: WorkspaceUiState, onIntent: (WorkspaceIntent
         is WorkspaceDialog.PartDetails -> PartDetailsDialog(state, dialog, onIntent)
         is WorkspaceDialog.ConfirmSafeCleanup -> ConfirmSafeCleanupDialog(dialog, onIntent)
         is WorkspaceDialog.ConfirmTightenTiming -> ConfirmTightenTimingDialog(dialog, onIntent)
+        is WorkspaceDialog.ConfirmSourceKey -> ConfirmSourceKeyDialog(dialog, onIntent)
         is WorkspaceDialog.ConfirmDiscardDraft -> ConfirmDiscardDraftDialog(dialog, onIntent)
         WorkspaceDialog.ConfirmClose -> ConfirmCloseDialog(onIntent, onExit)
         WorkspaceDialog.ConfirmClearSoundLibraryRoot -> ConfirmClearSoundLibraryRootDialog(onIntent)
@@ -1549,6 +1550,31 @@ private fun ConfirmTightenTimingDialog(dialog: WorkspaceDialog.ConfirmTightenTim
         text = { Text("This Clean MIDI run uses the fixed 1/16 grid at 40% strength. It can move expressive note timing. The raw source MIDI remains unchanged; cleaned MIDI, its quality report, analysis, and preview fingerprint will be replaced or refreshed only after validation.") },
         confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.ConfirmTightenTiming) }) { Text("Clean with timing changes") } },
         dismissButton = { TextButton(onClick = { onIntent(WorkspaceIntent.DismissDialog) }) { Text("Keep current cleanup") } }
+    )
+}
+
+@Composable
+private fun ConfirmSourceKeyDialog(dialog: WorkspaceDialog.ConfirmSourceKey, onIntent: (WorkspaceIntent) -> Unit) {
+    AlertDialog(
+        onDismissRequest = { onIntent(WorkspaceIntent.DismissDialog) },
+        title = { Text("Confirm source key") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+                Text("Choose the source tonic and mode. This does not change the original or normalized MIDI; it authorizes a separate project-key transpose artifact.")
+                Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+                    app.melotrail.music.MusicalOptionModels.tonics.forEach { option ->
+                        TextButton(onClick = { onIntent(WorkspaceIntent.SelectConfirmedSourceKey(dialog.selected.copy(tonic = option.value))) }) { Text(option.label) }
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                    TextButton(onClick = { onIntent(WorkspaceIntent.SelectConfirmedSourceKey(dialog.selected.copy(modeId = app.melotrail.music.ScaleModeId.MAJOR))) }) { Text("Major") }
+                    TextButton(onClick = { onIntent(WorkspaceIntent.SelectConfirmedSourceKey(dialog.selected.copy(modeId = app.melotrail.music.ScaleModeId.NATURAL_MINOR))) }) { Text("Natural minor") }
+                }
+                Text("Selected: ${dialog.selected.displayName}", style = MaterialTheme.typography.bodySmall)
+            }
+        },
+        confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.ConfirmSourceKey) }) { Text("Confirm source key") } },
+        dismissButton = { TextButton(onClick = { onIntent(WorkspaceIntent.DismissDialog) }) { Text("Cancel") } }
     )
 }
 

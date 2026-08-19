@@ -14,6 +14,7 @@ import java.nio.file.Path
 enum class WorkflowArtifact {
     RAW_SOURCE,
     @SerialName("MIDI_REPAIR") CLEAN_MIDI,
+    TRANSPOSED_MIDI,
     AI_FIX,
     MIDI_FEEL,
     ANALYSIS,
@@ -32,6 +33,7 @@ enum class WorkflowArtifact {
 enum class WorkflowChange {
     SOURCE_OR_RAW,
     @SerialName("REPAIRED_MIDI") CLEANED_MIDI,
+    SOURCE_KEY,
     AI_FIX_SELECTION,
     MIDI_FEEL,
     ANALYSIS,
@@ -50,7 +52,7 @@ enum class WorkflowChange {
 /** Centralized, deliberately non-destructive invalidation matrix. */
 object WorkflowArtifactGraph {
     private val allAfterRepair = setOf(
-        WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.COHESION,
+        WorkflowArtifact.TRANSPOSED_MIDI, WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.COHESION,
         WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
         WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
         WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
@@ -72,6 +74,7 @@ object WorkflowArtifactGraph {
     fun invalidatedBy(change: WorkflowChange): Set<WorkflowArtifact> = when (change) {
         WorkflowChange.SOURCE_OR_RAW -> setOf(WorkflowArtifact.CLEAN_MIDI) + allAfterRepair
         WorkflowChange.CLEANED_MIDI -> allAfterRepair
+        WorkflowChange.SOURCE_KEY -> allAfterRepair
         WorkflowChange.AI_FIX_SELECTION -> allAfterSelection
         WorkflowChange.MIDI_FEEL -> setOf(WorkflowArtifact.ANALYSIS) + allAfterAnalysis
         WorkflowChange.ANALYSIS, WorkflowChange.STRUCTURE, WorkflowChange.PART_SECTION -> allAfterAnalysis
@@ -80,9 +83,10 @@ object WorkflowArtifactGraph {
             WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
             WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
         )
-        /** A key decision changes generated transposition, never immutable input or MIDI analysis evidence. */
+        /** A project-key decision invalidates its derived transposition and every dependent artifact. */
         WorkflowChange.COMPOSITION_KEY -> setOf(
-            WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX,
+            WorkflowArtifact.TRANSPOSED_MIDI, WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS,
+            WorkflowArtifact.COHESION, WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX,
             WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE,
             WorkflowArtifact.COMMERCIAL_EXPORT
         )
