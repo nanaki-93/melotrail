@@ -292,8 +292,16 @@ class MidiTransitionGenerationAdapter(
         val root = projectRoot.toAbsolutePath().normalize()
         project.requireCleanMidi(root)
         val registry = InstrumentRegistryLoader(libraryRoot).load()
-        val available = LogicalInstrument.entries.associateWith { logical ->
-            val descriptor = registry.resolve(logical.wireName)
+        val active = arrangement.sections.flatMap { section ->
+            section.instruments.filter { it.mode == InstrumentMode.GENERATED }.map { LogicalInstrument.parse(it.name) }
+        }.toSet()
+        // Legacy v1 projects may have a piano-only arrangement with historical
+        // Cohesion evidence that names a logical bridge role. Its registry has
+        // a descriptor for every logical role, so retain that compatibility
+        // surface. Versioned catalogs may only use explicitly approved roles.
+        val availableRoles = if (registry.version == 1) LogicalInstrument.entries.toSet() else active
+        val available = availableRoles.associateWith { logical ->
+            val descriptor = registry.resolveApprovedRole(project, logical)
             TransitionInstrument(descriptor.midiChannelZeroBased ?: 0, descriptor.midiProgram)
         }
         val sections = arrangement.sections.mapIndexed { index, section ->
@@ -307,7 +315,10 @@ class MidiTransitionGenerationAdapter(
         val plans = arrangement.sections.mapIndexed { index, section ->
             if (index == arrangement.sections.lastIndex) MidiTransitionPlan() else section.transitionOut.toMidiPlan()
         }
-        val result = engine.generate(sections, plans, available, registry.resolve(LogicalInstrument.DRUMS.wireName).noteMap)
+        val drumMap = availableRoles.takeIf { LogicalInstrument.DRUMS in it }
+            ?.let { registry.resolveApprovedRole(project, LogicalInstrument.DRUMS).noteMap }
+            .orEmpty()
+        val result = engine.generate(sections, plans, available, drumMap)
         val output = root.resolve("midi/generated/transitions.mid")
         writeMidi(output, result, available, sections)
         return GeneratedTransitionMidi(output, result)

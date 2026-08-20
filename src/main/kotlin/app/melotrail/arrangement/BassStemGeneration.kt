@@ -246,7 +246,7 @@ class BassMidiGenerationAdapter(
         val root = projectRoot.toAbsolutePath().normalize()
         project.requireCleanMidi(root)
         arrangement.requireValid(project.parts.map { it.id })
-        val bass = InstrumentRegistryLoader(libraryRoot).load().resolve(LogicalInstrument.BASS.wireName)
+        val bass = InstrumentRegistryLoader(libraryRoot).load().resolveApprovedRole(project, LogicalInstrument.BASS)
         val requests = mutableListOf<BassGenerationRequest>()
         var start = 0L
         var ppq: Int? = null
@@ -283,7 +283,7 @@ class BassMidiGenerationAdapter(
     fun generate(projectRoot: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): GeneratedBassMidi {
         val root = projectRoot.toAbsolutePath().normalize()
         project.requireCleanMidi(root)
-        val bass = InstrumentRegistryLoader(libraryRoot).load().resolve(LogicalInstrument.BASS.wireName)
+        val bass = InstrumentRegistryLoader(libraryRoot).load().resolveApprovedRole(project, LogicalInstrument.BASS)
         val requests = mutableListOf<BassGenerationRequest>()
         var start = 0L
         var ppq: Int? = null

@@ -229,13 +229,18 @@ data class ArrangementAssignmentReference(
     val occurrenceId: String,
     val instrumentId: String,
     val decisionSha256: String,
-    val libraryProvenance: LibraryProvenanceSnapshot
+    val libraryProvenance: LibraryProvenanceSnapshot,
+    /** The logical rendered stem this choice supplies; blank is legacy evidence. */
+    val logicalInstrument: String = ""
 ) {
     init {
         require(SAFE_PROJECT_ID.matches(occurrenceId) && SAFE_PROJECT_ID.matches(instrumentId)) {
             "Arrangement assignment identity is invalid"
         }
         require(SHA_256_DIGEST.matches(decisionSha256)) { "Arrangement decision fingerprint is invalid" }
+        require(logicalInstrument.isEmpty() || logicalInstrument in LogicalInstrument.entries.map(LogicalInstrument::wireName)) {
+            "Arrangement assignment logical instrument is invalid"
+        }
     }
 }
 

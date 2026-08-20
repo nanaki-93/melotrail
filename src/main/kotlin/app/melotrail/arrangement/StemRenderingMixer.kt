@@ -263,8 +263,10 @@ class StemRenderingMixer(
         }
         return active.associateWith { logical ->
             val role = LegacyLogicalInstrumentRoles.roleFor(logical.wireName)
-            val candidates = assignments.map { assignment -> assignment to registry.resolve(assignment.instrumentId) }
-                .filter { (_, descriptor) -> role in descriptor.roles }
+            val candidates = assignments
+                .filter { assignment -> assignment.logicalInstrument.isEmpty() || assignment.logicalInstrument == logical.wireName }
+                .map { assignment -> assignment to registry.resolve(assignment.instrumentId) }
+                .filter { (assignment, descriptor) -> assignment.logicalInstrument == logical.wireName || role in descriptor.roles }
             require(candidates.isNotEmpty()) {
                 "Render has no approved stable instrument assignment for role '${logical.wireName}'. Choose one in Arrange and approve the arrangement."
             }
@@ -272,7 +274,7 @@ class StemRenderingMixer(
             require(stableIds.size == 1) {
                 "Render supports one approved stable instrument per role stem; '${logical.wireName}' has ${stableIds.joinToString()}. Choose one approved instrument and regenerate the arrangement."
             }
-            val descriptor = candidates.first().second
+            val descriptor = registry.resolveApprovedRole(project, logical)
             require(descriptor.licenseAdmission.admission == LicenseAdmission.ADMITTED) {
                 "Approved instrument '${descriptor.id}' is unavailable: ${descriptor.licenseAdmission.reasons.joinToString("; ")}. Choose a permitted replacement in Arrange and approve it."
             }

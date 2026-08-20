@@ -252,7 +252,7 @@ class StringsMidiGenerationAdapter(
     fun generate(projectRoot: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): GeneratedStringsMidi {
         val root = projectRoot.toAbsolutePath().normalize()
         project.requireCleanMidi(root)
-        val strings = InstrumentRegistryLoader(libraryRoot).load().resolve(LogicalInstrument.STRINGS.wireName)
+        val strings = InstrumentRegistryLoader(libraryRoot).load().resolveApprovedRole(project, LogicalInstrument.STRINGS)
         val requests = mutableListOf<StringsGenerationRequest>()
         val timeline = mutableListOf<TimelineSegment>()
         var start = 0L

@@ -197,19 +197,34 @@ class DefaultArrangementApplicationService(
         var stage = 0
         val artifacts = mutableListOf<GeneratedMidiArtifact>()
         fun emit(name: String, path: Path, events: Int) {
-            stage++
-            progress.report(OperationProgress("generate-midi", stage, total, "Generated $name MIDI", path))
             artifacts += GeneratedMidiArtifact(name, path, events)
         }
-        if ("bass" in active) BassMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("bass", it.path, it.notes.size) }
+        fun generating(name: String, path: Path) {
+            stage++
+            progress.report(OperationProgress("generate-midi", stage, total, "Generating $name MIDI", path))
+        }
+        if ("bass" in active) {
+            val path = normalized.resolve("midi/generated/bass.mid"); generating("bass", path)
+            BassMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("bass", it.path, it.notes.size) }
+        }
         coroutineContext.ensureActive()
-        if ("drums" in active) DrumMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("drums", it.path, it.hits.size) }
+        if ("drums" in active) {
+            val path = normalized.resolve("midi/generated/drums.mid"); generating("drums", path)
+            DrumMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("drums", it.path, it.hits.size) }
+        }
         coroutineContext.ensureActive()
-        if ("pad" in active) PadMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("pad", it.path, it.notes.size) }
+        if ("pad" in active) {
+            val path = normalized.resolve("midi/generated/pad.mid"); generating("pad", path)
+            PadMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("pad", it.path, it.notes.size) }
+        }
         coroutineContext.ensureActive()
-        if ("strings" in active) StringsMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("strings", it.path, it.notes.size) }
+        if ("strings" in active) {
+            val path = normalized.resolve("midi/generated/strings.mid"); generating("strings", path)
+            StringsMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("strings", it.path, it.notes.size) }
+        }
         if (arrangement.sections.any { it.transitionOut.type.name != "NONE" }) {
             coroutineContext.ensureActive()
+            val path = normalized.resolve("midi/generated/transitions.mid"); generating("transitions", path)
             MidiTransitionGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("transitions", it.path, it.result.events.size) }
         }
         ProjectWorkflowStore.update(normalized) { it.markCurrent(WorkflowArtifact.GENERATED_MIDI) }
@@ -326,13 +341,14 @@ class DefaultArrangementApplicationService(
         val byLogicalStem = decisions.groupBy { LegacyLogicalInstrumentRoles.logicalFor(it.normalizedRequest.role) }
             .mapValues { (_, choices) -> choices.minBy { it.normalizedRequest.role.name } }
         val assignments = project.envelope.structureOccurrences.sortedBy { it.instanceId }.flatMap { occurrence ->
-            byLogicalStem.toSortedMap().values.map { decision ->
+            byLogicalStem.toSortedMap().map { (logicalInstrument, decision) ->
                 val descriptor = registry.resolve(requireNotNull(decision.selectedId))
                 ArrangementAssignmentReference(
                     occurrenceId = occurrence.instanceId,
                     instrumentId = descriptor.id,
                     decisionSha256 = decisionFingerprint(decision),
-                    libraryProvenance = libraryProvenance(descriptor)
+                    libraryProvenance = libraryProvenance(descriptor),
+                    logicalInstrument = logicalInstrument
                 )
             }
         }

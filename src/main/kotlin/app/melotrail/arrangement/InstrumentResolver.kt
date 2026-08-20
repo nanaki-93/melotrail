@@ -70,6 +70,7 @@ class VersionedInstrumentResolver(private val registry: ValidatedInstrumentRegis
             intent.role !in descriptor.roles -> "does not support role '${intent.role.name.lowercase()}'"
             descriptor.selectionMode == InstrumentSelectionMode.MANUAL_ONLY && intent.pinnedInstrumentId != descriptor.id -> "manual-only catalog entry"
             !intent.requiredCapabilities.all { it in descriptor.verifiedCapabilities.performance } -> "missing verified required capability"
+            intent.role == ArrangementRole.DRUMS && !descriptor.noteMap.keys.containsAll(REQUIRED_DRUM_HITS) -> "missing verified kick, snare, closed-hat, or open-hat mapping"
             else -> null
         }
         if (rejection != null) return InstrumentCandidateDecision(descriptor.id, null, emptyList(), rejection)
@@ -117,5 +118,6 @@ class VersionedInstrumentResolver(private val registry: ValidatedInstrumentRegis
     companion object {
         const val VERSION = 1
         private const val TRAIT_POINTS = 10
+        private val REQUIRED_DRUM_HITS = setOf("kick", "snare", "closedHat", "openHat")
     }
 }

@@ -24,6 +24,47 @@ class InstrumentRegistryTest {
     }
 
     @Test
+    fun `v2 drum kit derives a verified standard map from its playable SFZ notes`() {
+        copyLibrary()
+        Files.writeString(root.resolve("instruments.json"), """{
+            "version":2,"workingSampleRate":44100,"midiChannelConvention":"one-based",
+            "instruments":[{
+                "id":"fixture-drum-kit","name":"Fixture drum kit","roles":["drums"],
+                "engine":{"type":"sfz","path":"drums/drums.sfz"},"midiChannel":10,
+                "license":{"id":"CC0-1.0","commercialUse":true,"attributionRequired":false,"sourceName":"Fixture","licenseText":"CC0 evidence"},
+                "library":{"id":"fixture-pack","name":"Fixture pack","version":"1","source":"fixture source"}
+            }]
+        }""".trimIndent())
+
+        assertEquals(
+            mapOf("closedHat" to 42, "kick" to 36, "openHat" to 46, "snare" to 38),
+            InstrumentRegistryLoader(root).load().resolve("fixture-drum-kit").noteMap
+        )
+    }
+
+    @Test
+    fun `approved logical stem binding excludes multi-role instruments assigned to another stem`() {
+        copyLibrary()
+        val license = """"license":{"id":"CC0-1.0","commercialUse":true,"attributionRequired":false,"sourceName":"Fixture","licenseText":"CC0 evidence"}"""
+        val library = """"library":{"id":"fixture-pack","name":"Fixture pack","version":"1","source":"fixture source"}"""
+        fun entry(id: String, roles: String, path: String) = """{"id":"$id","name":"$id","roles":$roles,"engine":{"type":"sfz","path":"$path"},$license,$library}"""
+        Files.writeString(root.resolve("instruments.json"), """{"version":2,"workingSampleRate":44100,"midiChannelConvention":"one-based","instruments":[${entry("fixture-pad", "[\"texture\"]", "pad/pad.sfz")},${entry("fixture-strings", "[\"counter-melody\",\"texture\"]", "strings/strings.sfz")}] }""")
+        val provenance = LibraryProvenanceSnapshot("fixture-pack", "0".repeat(64), "1".repeat(64))
+        val project = Project(
+            name = "bindings",
+            envelope = ProjectV4Envelope(
+                structureOccurrences = listOf(StructureOccurrence("A1", "A")),
+                arrangementAssignments = listOf(
+                    ArrangementAssignmentReference("A1", "fixture-pad", "2".repeat(64), provenance, "pad"),
+                    ArrangementAssignmentReference("A1", "fixture-strings", "3".repeat(64), provenance, "strings")
+                )
+            )
+        )
+
+        assertEquals("fixture-pad", InstrumentRegistryLoader(root).load().resolveApprovedRole(project, LogicalInstrument.PAD).id)
+    }
+
+    @Test
     fun `rejects path traversal missing license invalid channel and drum mapping`() {
         copyLibrary()
         replace("\"piano/piano.sfz\"", "\"../piano.sfz\"")

@@ -234,7 +234,7 @@ class DrumMidiGenerationAdapter(
     fun generate(projectRoot: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): GeneratedDrumMidi {
         val root = projectRoot.toAbsolutePath().normalize()
         project.requireCleanMidi(root)
-        val drums = InstrumentRegistryLoader(libraryRoot).load().resolve(LogicalInstrument.DRUMS.wireName)
+        val drums = InstrumentRegistryLoader(libraryRoot).load().resolveApprovedRole(project, LogicalInstrument.DRUMS)
         val requests = mutableListOf<DrumGenerationRequest>()
         val timeline = mutableListOf<TimelineSegment>()
         var start = 0L

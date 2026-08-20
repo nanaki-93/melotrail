@@ -230,7 +230,7 @@ class PadMidiGenerationAdapter(
     fun generate(projectRoot: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): GeneratedPadMidi {
         val root = projectRoot.toAbsolutePath().normalize()
         project.requireCleanMidi(root)
-        val pad = InstrumentRegistryLoader(libraryRoot).load().resolve(LogicalInstrument.PAD.wireName)
+        val pad = InstrumentRegistryLoader(libraryRoot).load().resolveApprovedRole(project, LogicalInstrument.PAD)
         val requests = mutableListOf<PadGenerationRequest>()
         val timeline = mutableListOf<TimelineSegment>()
         var start = 0L

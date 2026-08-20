@@ -48,6 +48,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.Ignore
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -947,16 +948,19 @@ class WorkspaceViewModelTest {
         val root = Path.of("build/arrangement-project")
         val project = projectSnapshot(root).copy(
             parts = listOf(analyzedPart("A")),
-            structure = listOf(app.melotrail.application.StructureSectionSummary(0, "A", 1, "A1", 4.0))
+            structure = listOf(app.melotrail.application.StructureSectionSummary(0, "A", 1, "A1", 4.0)),
+            readiness = projectSnapshot(root).readiness.copy(cohesionReady = true)
         )
         val arrangement = arrangementSnapshot(root)
         val service = FakeArrangementService(generated = arrangement)
-        val viewModel = WorkspaceViewModel(FakeProjectService(result = project), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)), arrangementService = service)
+        val projects = FakeProjectService(result = project)
+        val viewModel = WorkspaceViewModel(projects, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)), arrangementService = service)
 
         viewModel.accept(WorkspaceIntent.OpenProject(root))
         advanceUntilIdle()
         viewModel.accept(WorkspaceIntent.ToggleArrangementRole(app.melotrail.arrangement.ArrangementRole.BASS))
         viewModel.accept(WorkspaceIntent.ToggleArrangementTrait(app.melotrail.arrangement.SoundTrait.MUTED))
+        projects.current = project.copy(readiness = project.readiness.copy(cohesionReady = false))
         viewModel.accept(WorkspaceIntent.GenerateArrangement)
         advanceUntilIdle()
 
@@ -964,6 +968,8 @@ class WorkspaceViewModelTest {
         assertEquals(setOf(app.melotrail.arrangement.ArrangementRole.MELODY, app.melotrail.arrangement.ArrangementRole.BASS), service.generatedRequest?.roleSelections?.map { it.role }?.toSet())
         assertTrue(app.melotrail.arrangement.SoundTrait.MUTED in service.generatedRequest!!.roleSelections.flatMap { it.toneTraits })
         assertEquals(arrangement, viewModel.state.value.arrangement)
+        assertFalse(viewModel.state.value.project?.readiness?.cohesionReady ?: true)
+        assertEquals(2, projects.openCalls)
         assertEquals(0, viewModel.state.value.selectedArrangementSection)
         viewModel.accept(WorkspaceIntent.SelectArrangementSection(null))
         assertNull(viewModel.state.value.selectedArrangementSection)
@@ -1690,7 +1696,7 @@ private class FakeProjectService(
     var harmony: app.melotrail.application.HarmonyView = harmonyView(),
     var harmonyFailure: Throwable? = null
 ) : ProjectApplicationService {
-    private var current: ProjectSnapshot? = result
+    var current: ProjectSnapshot? = result
     var created: CreateProjectRequest? = null
     var imported: ImportPartRequest? = null
     var cleanMidiRequest: app.melotrail.application.CleanMidiRequest? = null

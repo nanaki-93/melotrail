@@ -2521,11 +2521,15 @@ class WorkspaceViewModel(
                     }
                 }
             }.onSuccess { arrangement ->
+                // Arrangement invalidates Cohesion in the project workflow.
+                // Refresh the canonical snapshot before rendering controls so
+                // the next required action is visible immediately.
+                val refreshedProject = runCatching { projectService.open(request.root) }.getOrNull()
                 val message = when (request.planner) {
                     ArrangementPlannerKind.QWEN -> "Qwen arrangement draft is ready for review and explicit approval."
                     ArrangementPlannerKind.DETERMINISTIC -> "Approved deterministic arrangement generated."
                 }
-                mutableState.update { it.copy(arrangement = arrangement, selectedArrangementSection = arrangement.sections.firstOrNull()?.index, arrangementDraftDirty = false, operation = WorkspaceOperation.Idle, notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message, if (arrangement.approvalRequired) OperationSeverity.WARNING else OperationSeverity.SUCCESS) ?: it.operationFeedback, retry = null) }
+                mutableState.update { it.copy(project = refreshedProject ?: it.project, arrangement = arrangement, selectedArrangementSection = arrangement.sections.firstOrNull()?.index, arrangementDraftDirty = false, operation = WorkspaceOperation.Idle, notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message, if (arrangement.approvalRequired) OperationSeverity.WARNING else OperationSeverity.SUCCESS) ?: it.operationFeedback, retry = null) }
             }.onFailure { fail("generate arrangement", it.message ?: "Unable to generate arrangement.", WorkspaceRetry.GenerateArrangement(request), feedbackId) }
         }
     }

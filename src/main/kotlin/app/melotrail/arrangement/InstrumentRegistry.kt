@@ -198,6 +198,35 @@ class ValidatedInstrumentRegistry internal constructor(
     fun plannerNames(): List<String> = descriptors.keys.sorted()
     fun resolve(name: String): ValidatedInstrumentDescriptor = descriptors[name]
         ?: throw IllegalArgumentException("Instrument is not validated: $name")
+
+    /**
+     * Resolves the concrete sound selected for a logical arrangement role.
+     *
+     * Registry v1 deliberately uses the logical names as its stable IDs. Newer
+     * catalogs do not: their IDs identify a particular installed instrument,
+     * and the approved arrangement assignments bind those IDs to a role.
+     */
+    fun resolveApprovedRole(project: Project, logical: LogicalInstrument): ValidatedInstrumentDescriptor {
+        if (version == 1) return resolve(logical.wireName)
+
+        val candidates = project.envelope.arrangementAssignments
+            .filter { assignment -> assignment.logicalInstrument.isEmpty() || assignment.logicalInstrument == logical.wireName }
+            .map { assignment -> assignment to resolve(assignment.instrumentId) }
+            .filter { (assignment, descriptor) -> assignment.logicalInstrument == logical.wireName || LegacyLogicalInstrumentRoles.roleFor(logical.wireName) in descriptor.roles }
+            .map { (_, descriptor) -> descriptor }
+            .distinctBy(ValidatedInstrumentDescriptor::id)
+        require(candidates.isNotEmpty()) {
+            "MIDI generation has no approved stable instrument assignment for role '${logical.wireName}'. Choose one in Arrange and approve the arrangement."
+        }
+        require(candidates.size == 1) {
+            "MIDI generation supports one approved stable instrument per role; '${logical.wireName}' has ${candidates.joinToString { it.id }}. Choose one approved instrument and regenerate the arrangement."
+        }
+        return candidates.single().also { descriptor ->
+            require(descriptor.licenseAdmission.admission == LicenseAdmission.ADMITTED) {
+                "Approved instrument '${descriptor.id}' is unavailable: ${descriptor.licenseAdmission.reasons.joinToString("; ")}. Choose a permitted replacement in Arrange and approve it."
+            }
+        }
+    }
     /** Immutable validated descriptors for evidence export; callers never receive registry paths as outputs. */
     fun all(): List<ValidatedInstrumentDescriptor> = descriptors.values.sortedBy { it.id }
     fun availableFor(role: ArrangementRole): List<ValidatedInstrumentDescriptor> = all().filter { role in it.roles && it.licenseAdmission.admission == LicenseAdmission.ADMITTED }
@@ -324,7 +353,19 @@ class InstrumentRegistryLoader(val libraryRoot: Path) {
             require(sfz.fileName.toString().endsWith(".sfz", ignoreCase = true)) { "Instrument '${definition.id}' path must be an .sfz file" }
             requireSafeMetadata(definition.category, "Instrument '${definition.id}' category")
             val regions = parseSfz(sfz, root, realRoot, definition.id, supportedSampleRates)
-            val verified = regions.verifiedCapabilities(definition.capabilities.noteMap, ArrangementRole.DRUMS in definition.roles, definition.capabilities)
+            val drums = ArrangementRole.DRUMS in definition.roles
+            val noteMap = when {
+                !drums -> definition.capabilities.noteMap
+                definition.capabilities.noteMap.isNotEmpty() -> definition.capabilities.noteMap
+                else -> standardDrumNoteMap.takeIf { map -> map.values.all { note -> regions.any { note in it.lowKey..it.highKey } } }.orEmpty()
+            }
+            if (drums) {
+                require(definition.midiChannel != null) { "Drum instrument '${definition.id}' requires a MIDI channel" }
+                require(noteMap.keys.containsAll(REQUIRED_DRUM_HITS)) {
+                    "Drum instrument '${definition.id}' requires verified kick, snare, closedHat, and openHat mappings"
+                }
+            }
+            val verified = regions.verifiedCapabilities(noteMap, drums, definition.capabilities)
             val license = definition.license.toLegacyLicense()
             ValidatedInstrumentDescriptor(
                 id = definition.id, name = definition.name, category = definition.category, selectionMode = definition.selectionMode, roles = definition.roles, sfzPath = sfz,
@@ -333,7 +374,7 @@ class InstrumentRegistryLoader(val libraryRoot: Path) {
                 profileAffinities = definition.profileAffinities.toSortedMap(), moodAffinities = definition.moodAffinities.toSortedMap(),
                 sectionAffinities = definition.sectionAffinities.toSortedMap(), attackTraits = normalizedTraits.attack,
                 toneTraits = normalizedTraits.tone, articulationTraits = normalizedTraits.articulation,
-                midiProgram = definition.midiProgram, midiChannelZeroBased = definition.midiChannel?.minus(1), noteMap = definition.capabilities.noteMap.toSortedMap(),
+                midiProgram = definition.midiProgram, midiChannelZeroBased = definition.midiChannel?.minus(1), noteMap = noteMap.toSortedMap(),
                 sourceLibrary = definition.library
             )
         } catch (error: IllegalArgumentException) {
@@ -342,6 +383,10 @@ class InstrumentRegistryLoader(val libraryRoot: Path) {
     }
 
     private data class NormalizedTraits(val attack: Set<SoundTrait>, val tone: Set<SoundTrait>, val articulation: Set<SoundTrait>)
+
+    /** General MIDI pitches, admitted only after the parsed SFZ proves each is playable. */
+    private val standardDrumNoteMap = mapOf("kick" to 36, "snare" to 38, "closedHat" to 42, "openHat" to 46)
+    private val REQUIRED_DRUM_HITS = standardDrumNoteMap.keys
     private fun normalizeTraits(definition: InstrumentDefinition): NormalizedTraits {
         fun parse(values: Set<String>, allowed: Set<SoundTrait>, label: String): Set<SoundTrait> = values.map { raw ->
             val trait = SoundTrait.entries.firstOrNull { it.name.lowercase().replace('_', '-') == raw }
