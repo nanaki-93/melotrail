@@ -52,6 +52,23 @@ class HarmonyDomainTest {
     }
 
     @Test
+    fun `catalog progressions contain only chord tones from their selected key`() {
+        listOf(
+            MusicalKey(PitchClass.of(PitchSpelling.C), ScaleModeId.MAJOR),
+            MusicalKey(PitchClass.of(PitchSpelling.A), ScaleModeId.NATURAL_MINOR)
+        ).forEach { key ->
+            HarmonyTemplateCatalog.options(key).forEach { template ->
+                val progression = HarmonyTemplateCatalog.resolve(template.id, key, SectionTypeId.VERSE)
+                progression.events.forEach { event ->
+                    event.quality.intervals.forEach { interval ->
+                        assertTrue(key.contains(PitchClass.canonical(event.root.chromatic + interval)))
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun `ordered operations preserve event identity while normalizing presentation order`() {
         val first = event("first", PitchClass.of(PitchSpelling.C), ChordQuality.MAJOR, 0)
         val second = event("second", PitchClass.of(PitchSpelling.G), ChordQuality.DOMINANT_7, 1)

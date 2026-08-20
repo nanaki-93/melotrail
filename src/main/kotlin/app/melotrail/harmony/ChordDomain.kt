@@ -33,6 +33,15 @@ value class ChordEventId(val value: String) {
     }
 }
 
+/** Stable identity for a catalog progression. A missing value denotes legacy manual harmony. */
+@Serializable
+@JvmInline
+value class HarmonyTemplateId(val value: String) {
+    init { require(ID.matches(value)) { "Harmony template ID is invalid: $value" } }
+
+    companion object { private val ID = Regex("[a-z][a-z0-9-]{0,80}") }
+}
+
 /** The MVP qualities that local processors can eventually execute. */
 @Serializable
 enum class ChordQuality(val intervals: List<Int>, val symbolSuffix: String, val displayName: String) {
@@ -95,7 +104,9 @@ data class ChordEvent(
 @Serializable
 data class ChordProgression(
     val sectionType: SectionTypeId,
-    val events: List<ChordEvent> = emptyList()
+    val events: List<ChordEvent> = emptyList(),
+    /** Null means a progression authored before key-aware templates existed. */
+    val templateId: HarmonyTemplateId? = null
 ) {
     init { requireWellFormed() }
 

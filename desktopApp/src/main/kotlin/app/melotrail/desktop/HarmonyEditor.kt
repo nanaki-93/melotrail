@@ -29,6 +29,8 @@ import app.melotrail.harmony.ChordEvent
 import app.melotrail.harmony.ChordEventId
 import app.melotrail.harmony.ChordQuality
 import app.melotrail.harmony.HarmonyOptionModels
+import app.melotrail.harmony.HarmonyTemplateId
+import app.melotrail.harmony.HarmonyTemplateOption
 import app.melotrail.harmony.SectionTypeId
 import app.melotrail.music.PitchClass
 
@@ -46,6 +48,7 @@ data class HarmonyEditorUiState(
 )
 
 sealed interface HarmonyMutation {
+    data class ApplyTemplate(val templateId: HarmonyTemplateId) : HarmonyMutation
     data object Add : HarmonyMutation
     data object Save : HarmonyMutation
     data object Delete : HarmonyMutation
@@ -56,6 +59,7 @@ internal object HarmonyPageTags {
     const val TABS = "harmony-section-tabs"
     const val TAB_PREFIX = "harmony-section-tab-"
     const val PROGRESSION = "harmony-progression"
+    const val TEMPLATE_PREFIX = "harmony-template-"
     const val CHORD_PREFIX = "harmony-chord-"
     const val SELECT_PREFIX = "harmony-select-"
     const val ROOT_PREFIX = "harmony-root-"
@@ -86,7 +90,7 @@ internal fun HarmonyPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) ->
             verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)
         ) {
             Text("Harmony", style = MaterialTheme.typography.headlineMedium)
-            Text("Complete Setup, choose Verse, Chorus, and Bridge harmony, then continue with Melody Parts.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Choose a key-aware progression for Verse, Chorus, and Bridge, then continue with Melody Parts.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (editor.loading) Text("Loading canonical harmony…", modifier = Modifier.semantics { testTag = HarmonyPageTags.STATUS })
             if (view == null && !editor.loading) {
                 Text(editor.error ?: "Save Setup before adding structured harmony.", modifier = Modifier.semantics { testTag = HarmonyPageTags.STATUS })
@@ -115,12 +119,12 @@ internal fun HarmonyPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) ->
             HarmonyCompleteness(harmonyView, editor, onIntent)
             if (narrow) {
                 Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
-                    HarmonyProgression(progression?.events.orEmpty(), editor, onIntent)
-                    HarmonyChordEditor(selected, editor, onIntent)
+                    HarmonyProgression(progression?.events.orEmpty(), progression?.templateId, editor)
+                    HarmonyTemplatePicker(harmonyView.templateOptions, progression?.templateId, editor, onIntent)
                 }
             } else Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md), verticalAlignment = Alignment.Top) {
-                HarmonyProgression(progression?.events.orEmpty(), editor, onIntent, Modifier.weight(1.2f))
-                HarmonyChordEditor(selected, editor, onIntent, Modifier.weight(0.8f))
+                HarmonyProgression(progression?.events.orEmpty(), progression?.templateId, editor, Modifier.weight(1.2f))
+                HarmonyTemplatePicker(harmonyView.templateOptions, progression?.templateId, editor, onIntent, Modifier.weight(0.8f))
             }
         }
     }
@@ -129,7 +133,10 @@ internal fun HarmonyPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) ->
 @Composable
 private fun HarmonyCompleteness(view: HarmonyView, editor: HarmonyEditorUiState, onIntent: (WorkspaceIntent) -> Unit) = HarmonyCard(HarmonyPageTags.STATUS, "Readiness") {
     val missing = (view.completeness.missingSections + view.completeness.emptySections).distinct()
-    Text(if (view.ready) "Harmony is complete. Melody Parts can use this authored context." else "Add at least one chord to: ${missing.joinToString { it.value.replaceFirstChar(Char::uppercase) }}.")
+    Text(if (view.ready) "Harmony is complete. Melody Parts can use this authored context." else "Choose a progression for: ${missing.joinToString { it.value.replaceFirstChar(Char::uppercase) }}.")
+    if (view.replacementRequiredSections.isNotEmpty()) {
+        Text("Choose new ${view.key?.displayName ?: ""} progressions for: ${view.replacementRequiredSections.joinToString { it.value.replaceFirstChar(Char::uppercase) }}.", color = MaterialTheme.colorScheme.error)
+    }
     editor.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
     view.validationErrors.forEach { Text(it.message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
     editor.pendingMutation?.let {
@@ -142,69 +149,29 @@ private fun HarmonyCompleteness(view: HarmonyView, editor: HarmonyEditorUiState,
 }
 
 @Composable
-private fun HarmonyProgression(events: List<ChordEvent>, editor: HarmonyEditorUiState, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier = Modifier) = HarmonyCard(HarmonyPageTags.PROGRESSION, "${editor.selectedSection.value.replaceFirstChar(Char::uppercase)} progression", modifier) {
-    if (events.isEmpty()) Text("No chords yet. Add the first structured chord.")
-    events.forEachIndexed { index, event ->
-        val selected = event.id == editor.selectedEventId
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-            if (selected) Button(onClick = { onIntent(WorkspaceIntent.SelectHarmonyEvent(event.id)) }, modifier = Modifier.weight(1f).semantics {
-                testTag = HarmonyPageTags.SELECT_PREFIX + event.id.value
-                contentDescription = "Select chord ${chordSymbol(event)}, ${event.quality.displayName}, selected"
-            }) { Text(chordSymbol(event)) }
-            else OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectHarmonyEvent(event.id)) }, modifier = Modifier.weight(1f).semantics {
-                testTag = HarmonyPageTags.SELECT_PREFIX + event.id.value
-                contentDescription = "Select chord ${chordSymbol(event)}, ${event.quality.displayName}"
-            }) { Text(chordSymbol(event)) }
-            TextButton(onClick = { onIntent(WorkspaceIntent.MoveHarmonyEvent(earlier = true)) }, enabled = selected && index > 0 && !editor.loading,
-                modifier = Modifier.semantics { testTag = HarmonyPageTags.MOVE_EARLIER + "-" + event.id.value; contentDescription = "Move ${chordSymbol(event)} earlier" }) { Text("↑") }
-            TextButton(onClick = { onIntent(WorkspaceIntent.MoveHarmonyEvent(earlier = false)) }, enabled = selected && index < events.lastIndex && !editor.loading,
-                modifier = Modifier.semantics { testTag = HarmonyPageTags.MOVE_LATER + "-" + event.id.value; contentDescription = "Move ${chordSymbol(event)} later" }) { Text("↓") }
+private fun HarmonyProgression(events: List<ChordEvent>, templateId: HarmonyTemplateId?, editor: HarmonyEditorUiState, modifier: Modifier = Modifier) = HarmonyCard(HarmonyPageTags.PROGRESSION, "${editor.selectedSection.value.replaceFirstChar(Char::uppercase)} progression", modifier) {
+    when {
+        events.isEmpty() -> Text("No progression selected yet.")
+        templateId == null -> {
+            Text("Legacy authored harmony", style = MaterialTheme.typography.labelLarge)
+            Text(events.joinToString("  •  ") { chordSymbol(it) })
+            Text("Replace it with a key-aware progression to transpose it later.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        else -> Text(events.joinToString("  •  ") { chordSymbol(it) }, style = MaterialTheme.typography.titleMedium)
     }
 }
 
 @Composable
-private fun HarmonyChordEditor(selected: ChordEvent?, editor: HarmonyEditorUiState, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier = Modifier) = HarmonyCard("harmony-editor", if (selected == null) "Add chord" else "Edit ${chordSymbol(selected)}", modifier) {
-    Text(if (selected == null) "Choose tonic and quality, then add a chord." else "Edit tonic and quality. Duration, bass, inversion, and extensions are intentionally not part of this MVP.", style = MaterialTheme.typography.bodySmall)
-    Text("Draft chord: ${editor.draftRoot}${editor.draftQuality.symbolSuffix} · ${editor.draftQuality.displayName}", style = MaterialTheme.typography.titleSmall)
-    Text("Tonic", style = MaterialTheme.typography.labelLarge)
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-        HarmonyOptionModels.roots.forEach { option ->
-            val selectedRoot = option.value == editor.draftRoot
-            if (selectedRoot) Button(onClick = { onIntent(WorkspaceIntent.SetHarmonyRoot(option.value)) }, modifier = Modifier.semantics {
-                    testTag = HarmonyPageTags.ROOT_PREFIX + option.label
-                    contentDescription = "Use tonic ${option.label}, selected"
-                }) { Text(option.label) }
-            else OutlinedButton(onClick = { onIntent(WorkspaceIntent.SetHarmonyRoot(option.value)) }, modifier = Modifier.semantics {
-                    testTag = HarmonyPageTags.ROOT_PREFIX + option.label
-                    contentDescription = "Use tonic ${option.label}"
-                }) { Text(option.label) }
+private fun HarmonyTemplatePicker(options: List<HarmonyTemplateOption>, selectedId: HarmonyTemplateId?, editor: HarmonyEditorUiState, onIntent: (WorkspaceIntent) -> Unit, modifier: Modifier = Modifier) = HarmonyCard("harmony-editor", "Choose progression", modifier) {
+    Text("Each option is transposed from the Setup key and uses only diatonic chord tones.", style = MaterialTheme.typography.bodySmall)
+    options.forEach { option ->
+        val selected = option.id == selectedId
+        val action = { onIntent(WorkspaceIntent.SelectHarmonyTemplate(option.id)) }
+        if (selected) Button(onClick = action, enabled = false, modifier = Modifier.fillMaxWidth().semantics { testTag = HarmonyPageTags.TEMPLATE_PREFIX + option.id.value; contentDescription = "${option.label}, selected" }) {
+            Column { Text(option.label); Text("${option.romanNumerals}  ·  ${option.chordSymbols.joinToString(" ")}", style = MaterialTheme.typography.bodySmall) }
+        } else OutlinedButton(onClick = action, enabled = !editor.loading, modifier = Modifier.fillMaxWidth().semantics { testTag = HarmonyPageTags.TEMPLATE_PREFIX + option.id.value; contentDescription = "Use ${option.label}: ${option.romanNumerals}" }) {
+            Column { Text(option.label); Text("${option.romanNumerals}  ·  ${option.chordSymbols.joinToString(" ")}", style = MaterialTheme.typography.bodySmall) }
         }
-    }
-    Text("Quality", style = MaterialTheme.typography.labelLarge)
-    Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-        HarmonyOptionModels.qualities.chunked(2).forEach { row -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-            row.forEach { option ->
-                val selectedQuality = option.value == editor.draftQuality
-                if (selectedQuality) Button(onClick = { onIntent(WorkspaceIntent.SetHarmonyQuality(option.value)) }, modifier = Modifier.weight(1f).semantics {
-                    testTag = HarmonyPageTags.QUALITY_PREFIX + option.value.name.lowercase()
-                    contentDescription = "Use ${option.label} quality, selected"
-                }) { Text(option.label) }
-                else OutlinedButton(onClick = { onIntent(WorkspaceIntent.SetHarmonyQuality(option.value)) }, modifier = Modifier.weight(1f).semantics {
-                    testTag = HarmonyPageTags.QUALITY_PREFIX + option.value.name.lowercase()
-                    contentDescription = "Use ${option.label} quality"
-                }) { Text(option.label) }
-            }
-            if (row.size == 1) Spacer(Modifier.weight(1f))
-        } }
-    }
-    if (selected == null) Button(onClick = { onIntent(WorkspaceIntent.AddHarmonyEvent) }, enabled = !editor.loading,
-        modifier = Modifier.fillMaxWidth().semantics { testTag = HarmonyPageTags.ADD; contentDescription = "Add ${editor.draftRoot}${editor.draftQuality.symbolSuffix} to ${editor.selectedSection.value}" }) { Text("Add chord") }
-    else {
-        Button(onClick = { onIntent(WorkspaceIntent.SaveHarmonyEvent) }, enabled = editor.dirty && !editor.loading,
-            modifier = Modifier.fillMaxWidth().semantics { testTag = HarmonyPageTags.SAVE; contentDescription = "Save ${editor.draftRoot}${editor.draftQuality.symbolSuffix}" }) { Text("Save chord") }
-        TextButton(onClick = { onIntent(WorkspaceIntent.DeleteHarmonyEvent) }, enabled = !editor.loading,
-            modifier = Modifier.semantics { testTag = HarmonyPageTags.DELETE; contentDescription = "Delete ${chordSymbol(selected)}" }) { Text("Remove chord") }
     }
 }
 

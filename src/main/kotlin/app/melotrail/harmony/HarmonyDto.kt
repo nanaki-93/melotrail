@@ -21,12 +21,16 @@ data class HarmonySettingsDto(
 }
 
 @Serializable
-data class ChordProgressionDto(val sectionType: SectionTypeId, val events: List<ChordEventDto> = emptyList()) {
-    fun toDomain(): ChordProgression = ChordProgression(sectionType, events.map(ChordEventDto::toDomain))
+data class ChordProgressionDto(
+    val sectionType: SectionTypeId,
+    val events: List<ChordEventDto> = emptyList(),
+    val templateId: HarmonyTemplateId? = null
+) {
+    fun toDomain(): ChordProgression = ChordProgression(sectionType, events.map(ChordEventDto::toDomain), templateId)
 
     companion object {
         fun fromDomain(value: ChordProgression): ChordProgressionDto = ChordProgressionDto(
-            value.sectionType, value.events.map(ChordEventDto::fromDomain)
+            value.sectionType, value.events.map(ChordEventDto::fromDomain), value.templateId
         )
     }
 }

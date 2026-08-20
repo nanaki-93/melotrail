@@ -82,7 +82,11 @@ data class GetCompositionSettingsResult(
 data class SettingsInvalidationPreview(
     val changes: Set<WorkflowChange>,
     val artifacts: Set<WorkflowArtifact>,
-    val affectedStages: Set<WorkflowStage>
+    val affectedStages: Set<WorkflowStage>,
+    /** Template progressions which will be regenerated in the new tonic. */
+    val transposedHarmonySections: List<app.melotrail.harmony.SectionTypeId> = emptyList(),
+    /** Existing events are retained but require replacement after a mode change. */
+    val harmonyReplacementRequired: List<app.melotrail.harmony.SectionTypeId> = emptyList()
 )
 
 data class PreviewSettingsChangeResult(
@@ -102,6 +106,7 @@ data class UpdateCompositionSettingsResult(
  * supplies the canonical aggregate under its project mutex and publishes it atomically.
  */
 class CompositionSettingsApplicationService(private val catalog: CompositionProfileCatalog) {
+    private val harmonyService = HarmonyApplicationService()
     fun query(project: Project): GetCompositionSettingsResult {
         val stored = project.envelope.compositionSettings
         val validation = stored?.let { validateStored(project.name, it) }
@@ -122,6 +127,7 @@ class CompositionSettingsApplicationService(private val catalog: CompositionProf
             "Composition settings changed from revision $expectedRevision to $currentRevision; reload before saving."
         }
         val candidate = candidate(currentRevision + 1, input)
+        requireNoLegacyHarmonyKeyChange(project, input)
         return PreviewSettingsChangeResult(currentRevision, candidate.toView(input.name), invalidation(project, input))
     }
 
@@ -137,13 +143,18 @@ class CompositionSettingsApplicationService(private val catalog: CompositionProf
             resolvedProfileSha256 = preview.candidate.resolvedProfileSha256,
             decisionSha256 = preview.candidate.decisionSha256
         )
+        val settingsChanged = project.envelope.compositionSettings?.key != input.key
+        val oldKey = project.envelope.compositionSettings?.key
+        val transposed = if (settingsChanged && oldKey?.modeId == input.key.modeId) {
+            harmonyService.transposeTemplateProgressions(project, input.key)
+        } else project.envelope.harmony
         return PreparedCompositionSettingsUpdate(
             project.copy(
                 name = input.name,
                 envelope = project.envelope.copy(
                     compositionSettings = stored,
                     // Initial Lo-fi setup exposes editable empty slots without inventing a progression.
-                    harmony = project.envelope.harmony ?: HarmonySectionPolicy.emptySeed(input.profile)
+                    harmony = transposed ?: HarmonySectionPolicy.emptySeed(input.profile)
                 ),
                 workflow = preview.invalidation.changes.fold(project.workflow) { workflow, change -> workflow.invalidate(change) }
             ),
@@ -180,7 +191,26 @@ class CompositionSettingsApplicationService(private val catalog: CompositionProf
             if (current.profile != candidate.profile || current.mood != candidate.mood) add(WorkflowChange.COMPOSITION_PROFILE_OR_MOOD)
         }
         val artifacts = changes.flatMapTo(linkedSetOf()) { WorkflowArtifactGraph.invalidatedBy(it) }
-        return SettingsInvalidationPreview(changes, artifacts, artifacts.mapTo(linkedSetOf(), ::stageFor))
+        val oldKey = project.envelope.compositionSettings?.key
+        val sections = project.envelope.harmony?.progressions.orEmpty()
+        val transposed = if (oldKey != null && oldKey != candidate.key && oldKey.modeId == candidate.key.modeId) {
+            sections.filter { it.templateId != null }.map { it.sectionType }
+        } else emptyList()
+        val replacement = if (oldKey != null && oldKey.modeId != candidate.key.modeId) {
+            sections.filter { it.templateId != null }.map { it.sectionType }
+        } else emptyList()
+        return SettingsInvalidationPreview(changes, artifacts, artifacts.mapTo(linkedSetOf(), ::stageFor), transposed, replacement)
+    }
+
+    private fun requireNoLegacyHarmonyKeyChange(project: Project, input: CompositionSettingsInput) {
+        val oldKey = project.envelope.compositionSettings?.key ?: return
+        if (oldKey == input.key) return
+        val legacy = project.envelope.harmony?.progressions.orEmpty()
+            .filter { it.events.isNotEmpty() && it.templateId == null }
+            .map { it.sectionType.value }
+        require(legacy.isEmpty()) {
+            "Replace legacy harmony in ${legacy.joinToString()} with a key-aware progression before changing the project key."
+        }
     }
 
     private fun options(selectedProfile: CompositionProfileRef?): CompositionSettingsOptions {

@@ -236,7 +236,7 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `Harmony offers structured section chord and keyboard reachable reorder controls`() = runComposeUiTest {
+    fun `Harmony offers key-aware progression choices per section`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         val harmony = harmonyView(
             ChordProgression(SectionTypeId.VERSE, listOf(
@@ -250,24 +250,17 @@ class WorkspaceScreenTest {
             harmony = HarmonyEditorUiState(view = harmony, selectedEventId = ChordEventId("v2"), draftRoot = PitchClass.canonical(5))
         ), intents::add) } }
 
-        listOf(
-            HarmonyPageTags.TABS, HarmonyPageTags.TAB_PREFIX + "verse", HarmonyPageTags.TAB_PREFIX + "chorus",
-            HarmonyPageTags.SELECT_PREFIX + "v1", HarmonyPageTags.ROOT_PREFIX + "C",
-            HarmonyPageTags.QUALITY_PREFIX + "minor", HarmonyPageTags.MOVE_EARLIER + "-v2"
-        ).forEach { onNodeWithTag(it).assertExists() }
-        ChordQuality.entries.forEach { quality ->
-            onNodeWithTag(HarmonyPageTags.QUALITY_PREFIX + quality.name.lowercase()).assertExists()
-        }
+        val template = app.melotrail.harmony.HarmonyTemplateCatalog.options(
+            app.melotrail.music.MusicalKey(PitchClass.canonical(0), app.melotrail.music.ScaleModeId.MAJOR)
+        ).first()
+        listOf(HarmonyPageTags.TABS, HarmonyPageTags.TAB_PREFIX + "verse", HarmonyPageTags.TAB_PREFIX + "chorus", HarmonyPageTags.TEMPLATE_PREFIX + template.id.value)
+            .forEach { onNodeWithTag(it).assertExists() }
         onNodeWithTag(HarmonyPageTags.TAB_PREFIX + "chorus").performClick()
         assertEquals(WorkspaceIntent.SelectHarmonySection(SectionTypeId.CHORUS), intents.last())
-        onNodeWithTag(HarmonyPageTags.ROOT_PREFIX + "C").performClick()
-        assertEquals(WorkspaceIntent.SetHarmonyRoot(PitchClass.canonical(0)), intents.last())
-        onNodeWithTag(HarmonyPageTags.QUALITY_PREFIX + "minor").performClick()
-        assertEquals(WorkspaceIntent.SetHarmonyQuality(ChordQuality.MINOR), intents.last())
-        onNodeWithTag(HarmonyPageTags.MOVE_EARLIER + "-v2").performSemanticsAction(SemanticsActions.RequestFocus)
-        onNodeWithTag(HarmonyPageTags.MOVE_EARLIER + "-v2").performKeyInput { pressKey(Key.Enter) }
-        assertEquals(WorkspaceIntent.MoveHarmonyEvent(earlier = true), intents.last())
-        onNodeWithContentDescription("Select chord C, Major").assertExists()
+        onNodeWithTag(HarmonyPageTags.TEMPLATE_PREFIX + template.id.value).performSemanticsAction(SemanticsActions.RequestFocus)
+        onNodeWithTag(HarmonyPageTags.TEMPLATE_PREFIX + template.id.value).performKeyInput { pressKey(Key.Enter) }
+        assertEquals(WorkspaceIntent.SelectHarmonyTemplate(template.id), intents.last())
+        onNodeWithContentDescription("Use ${template.label}: ${template.romanNumerals}").assertExists()
     }
 
     @Test
@@ -1533,6 +1526,10 @@ class WorkspaceScreenTest {
             listOf(SectionTypeId.VERSE, SectionTypeId.CHORUS, SectionTypeId.BRIDGE),
             emptyList(),
             progressions.filter { it.events.isEmpty() }.map { it.sectionType }
+        ),
+        key = app.melotrail.music.MusicalKey(PitchClass.canonical(0), app.melotrail.music.ScaleModeId.MAJOR),
+        templateOptions = app.melotrail.harmony.HarmonyTemplateCatalog.options(
+            app.melotrail.music.MusicalKey(PitchClass.canonical(0), app.melotrail.music.ScaleModeId.MAJOR)
         )
     )
 

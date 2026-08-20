@@ -48,6 +48,7 @@ import app.melotrail.application.CreateHarmonyEvent
 import app.melotrail.application.UpdateHarmonyEvent
 import app.melotrail.application.DeleteHarmonyEvent
 import app.melotrail.application.ReorderHarmonyEvent
+import app.melotrail.application.SetHarmonyProgression
 import app.melotrail.application.GetCompositionSettings
 import app.melotrail.application.PreviewSettingsChange
 import app.melotrail.application.UpdateCompositionSettings
@@ -97,6 +98,7 @@ import app.melotrail.commercial.ReleaseCreditsService
 import app.melotrail.harmony.ChordEvent
 import app.melotrail.harmony.ChordEventId
 import app.melotrail.harmony.ChordQuality
+import app.melotrail.harmony.HarmonyTemplateId
 import app.melotrail.harmony.SectionTypeId
 import app.melotrail.music.PitchClass
 import app.melotrail.music.MusicalKey
@@ -567,6 +569,7 @@ sealed interface WorkspaceIntent {
     data object SaveProjectSetup : WorkspaceIntent
     data object ConfirmProjectSetupSave : WorkspaceIntent
     data class SelectHarmonySection(val section: SectionTypeId) : WorkspaceIntent
+    data class SelectHarmonyTemplate(val templateId: HarmonyTemplateId) : WorkspaceIntent
     data class SelectHarmonyEvent(val eventId: ChordEventId?) : WorkspaceIntent
     data class SetHarmonyRoot(val root: PitchClass) : WorkspaceIntent
     data class SetHarmonyQuality(val quality: ChordQuality) : WorkspaceIntent
@@ -757,6 +760,7 @@ class WorkspaceViewModel(
             WorkspaceIntent.SaveProjectSetup -> saveProjectSetup()
             WorkspaceIntent.ConfirmProjectSetupSave -> confirmProjectSetupSave()
             is WorkspaceIntent.SelectHarmonySection -> selectHarmonySection(intent.section)
+            is WorkspaceIntent.SelectHarmonyTemplate -> requestHarmonyMutation(HarmonyMutation.ApplyTemplate(intent.templateId))
             is WorkspaceIntent.SelectHarmonyEvent -> selectHarmonyEvent(intent.eventId)
             is WorkspaceIntent.SetHarmonyRoot -> mutableState.update { it.copy(harmony = it.harmony.copy(draftRoot = intent.root, dirty = it.harmony.selectedEventId != null, error = null)) }
             is WorkspaceIntent.SetHarmonyQuality -> mutableState.update { it.copy(harmony = it.harmony.copy(draftQuality = intent.quality, dirty = it.harmony.selectedEventId != null, error = null)) }
@@ -959,7 +963,7 @@ class WorkspaceViewModel(
         if (view.revision == null) return mutableState.update { it.copy(harmony = it.harmony.copy(error = "Save Setup before adding structured harmony.")) }
         val selected = view.progressions.firstOrNull { it.sectionType == editor.selectedSection }
             ?.events?.firstOrNull { it.id == editor.selectedEventId }
-        if (mutation !is HarmonyMutation.Add && selected == null) return mutableState.update { it.copy(harmony = it.harmony.copy(error = "Select a chord first.")) }
+        if (mutation !is HarmonyMutation.Add && mutation !is HarmonyMutation.ApplyTemplate && selected == null) return mutableState.update { it.copy(harmony = it.harmony.copy(error = "Select a chord first.")) }
         if (mutation is HarmonyMutation.Save && !editor.dirty) return
         val processed = project.parts.any { it.preparation.midiAiFix.draftAvailable || it.preparation.midiAiFix.approvedAvailable || it.preparation.midiFeel.available } ||
             project.readiness.songPlanAvailable || project.readiness.cohesionReady || project.readiness.arrangementAvailable || project.readiness.generatedMidiAvailable || project.readiness.stemsAvailable || project.readiness.dryMixAvailable || project.readiness.masterAvailable || project.readiness.releaseAvailable
@@ -979,6 +983,7 @@ class WorkspaceViewModel(
         scope.launch {
             runCatching { withContext(ioDispatcher) {
                 when (mutation) {
+                    is HarmonyMutation.ApplyTemplate -> projectService.setHarmonyProgression(SetHarmonyProgression(project.root, view.projectRevision, revision, editor.selectedSection, mutation.templateId))
                     HarmonyMutation.Add -> {
                         val nextId = nextHarmonyEventId(editor.selectedSection, progression?.events.orEmpty())
                         projectService.createHarmonyEvent(CreateHarmonyEvent(project.root, view.projectRevision, revision, editor.selectedSection, ChordEvent(nextId, editor.draftRoot, editor.draftQuality, 0)))
@@ -993,6 +998,7 @@ class WorkspaceViewModel(
             } }.onSuccess { result -> mutableState.update { current ->
                 if (current.project?.root != project.root) current else {
                     val selectedId = when (mutation) {
+                        is HarmonyMutation.ApplyTemplate -> result.harmony.progressions.firstOrNull { it.sectionType == editor.selectedSection }?.events?.firstOrNull()?.id
                         HarmonyMutation.Add -> result.harmony.progressions.firstOrNull { it.sectionType == editor.selectedSection }?.events?.lastOrNull()?.id
                         HarmonyMutation.Delete -> null
                         else -> editor.selectedEventId

@@ -1680,6 +1680,13 @@ private class FakeProjectService(
         harmony.copy(progressions = harmony.progressions.map { if (it.sectionType == command.sectionType) it.move(command.eventId, command.toIndex) else it })
     }
 
+    override fun setHarmonyProgression(command: app.melotrail.application.SetHarmonyProgression): app.melotrail.application.HarmonyMutationResult = mutateHarmony {
+        val key = checkNotNull(harmony.key)
+        val prior = harmony.progressions.firstOrNull { it.sectionType == command.sectionType }
+        val progression = app.melotrail.harmony.HarmonyTemplateCatalog.resolve(command.templateId, key, command.sectionType, prior?.events.orEmpty())
+        harmony.copy(progressions = harmony.progressions.filterNot { it.sectionType == command.sectionType } + progression)
+    }
+
     private fun mutateHarmony(change: () -> app.melotrail.application.HarmonyView): app.melotrail.application.HarmonyMutationResult {
         harmonyFailure?.let { throw it }
         harmony = change().copy(revision = checkNotNull(harmony.revision) + 1)

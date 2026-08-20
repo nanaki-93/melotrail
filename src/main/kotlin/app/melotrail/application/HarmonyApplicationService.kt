@@ -8,7 +8,11 @@ import app.melotrail.harmony.ChordEvent
 import app.melotrail.harmony.ChordEventId
 import app.melotrail.harmony.ChordProgression
 import app.melotrail.harmony.HarmonySettings
+import app.melotrail.harmony.HarmonyTemplateCatalog
+import app.melotrail.harmony.HarmonyTemplateId
+import app.melotrail.harmony.HarmonyTemplateOption
 import app.melotrail.harmony.SectionTypeId
+import app.melotrail.music.MusicalKey
 import app.melotrail.profile.CompositionProfileRef
 
 /** Read the complete, ordered harmony aggregate for one canonical project. */
@@ -49,10 +53,20 @@ data class ReorderHarmonyEvent(
     val toIndex: Int
 )
 
+/** Replaces one section with a catalog progression resolved in the saved project key. */
+data class SetHarmonyProgression(
+    val root: java.nio.file.Path,
+    val expectedProjectRevision: Long,
+    val expectedHarmonyRevision: Int,
+    val sectionType: SectionTypeId,
+    val templateId: HarmonyTemplateId
+)
+
 enum class HarmonyValidationCode {
     MISSING_PROJECT_CONTEXT,
     MISSING_REQUIRED_PROGRESSION,
     EMPTY_REQUIRED_PROGRESSION,
+    TEMPLATE_MODE_MISMATCH,
     UNSUPPORTED_EXECUTION_FIELD
 }
 
@@ -77,10 +91,13 @@ data class HarmonyView(
     val revision: Int?,
     val progressions: List<ChordProgression>,
     val validationErrors: List<HarmonyValidationError>,
-    val completeness: HarmonyCompleteness
+    val completeness: HarmonyCompleteness,
+    val key: MusicalKey? = null,
+    val templateOptions: List<HarmonyTemplateOption> = emptyList(),
+    val replacementRequiredSections: List<SectionTypeId> = emptyList()
 ) {
     val valid: Boolean get() = validationErrors.none { it.code != HarmonyValidationCode.MISSING_PROJECT_CONTEXT }
-    val ready: Boolean get() = valid && completeness.complete
+    val ready: Boolean get() = valid && completeness.complete && replacementRequiredSections.isEmpty()
 }
 
 data class HarmonyInvalidationPreview(
@@ -123,11 +140,15 @@ object HarmonySectionPolicy {
 class HarmonyApplicationService {
     fun query(project: Project): HarmonyView {
         val harmony = project.envelope.harmony
+        val key = project.envelope.compositionSettings?.key
         val required = HarmonySectionPolicy.requiredSections(project.envelope.compositionSettings?.profile)
         val progressions = harmony?.progressions.orEmpty()
         val bySection = progressions.associateBy(ChordProgression::sectionType)
         val missing = required.filterNot(bySection::containsKey)
         val empty = required.filter { bySection[it]?.events?.isEmpty() == true }
+        val replacementRequired = progressions.filter { progression ->
+            progression.templateId?.let { !HarmonyTemplateCatalog.isAvailable(it, key ?: return@let true) } ?: false
+        }.map(ChordProgression::sectionType)
         val errors = buildList {
             if (harmony != null && progressions.isNotEmpty() && project.envelope.compositionSettings == null) {
                 add(HarmonyValidationError(HarmonyValidationCode.MISSING_PROJECT_CONTEXT, message = "Harmony needs saved composition settings with an executable key."))
@@ -137,6 +158,13 @@ class HarmonyApplicationService {
             }
             empty.forEach { section ->
                 add(HarmonyValidationError(HarmonyValidationCode.EMPTY_REQUIRED_PROGRESSION, section, message = "Required ${section.value} progression needs at least one chord."))
+            }
+            replacementRequired.forEach { section ->
+                add(HarmonyValidationError(
+                    HarmonyValidationCode.TEMPLATE_MODE_MISMATCH,
+                    section,
+                    message = "The ${section.value} progression was chosen for a different mode; choose a new progression."
+                ))
             }
             progressions.forEach { progression -> progression.events.forEach { event ->
                 event.unsupportedExecutionFields().forEach { field ->
@@ -149,7 +177,10 @@ class HarmonyApplicationService {
             revision = harmony?.revision,
             progressions = progressions,
             validationErrors = errors,
-            completeness = HarmonyCompleteness(required, missing, empty)
+            completeness = HarmonyCompleteness(required, missing, empty),
+            key = key,
+            templateOptions = key?.takeIf(MusicalKey::isExecutable)?.let(HarmonyTemplateCatalog::options).orEmpty(),
+            replacementRequiredSections = replacementRequired
         )
     }
 
@@ -172,6 +203,24 @@ class HarmonyApplicationService {
     fun reorder(project: Project, command: ReorderHarmonyEvent): PreparedHarmonyUpdate = mutate(project, command.expectedProjectRevision, command.expectedHarmonyRevision) { harmony ->
         val progression = harmony.requireProgression(command.sectionType)
         harmony.copy(progressions = harmony.progressions.replace(command.sectionType, progression.move(command.eventId, command.toIndex)))
+    }
+
+    fun setProgression(project: Project, command: SetHarmonyProgression): PreparedHarmonyUpdate = mutate(project, command.expectedProjectRevision, command.expectedHarmonyRevision) { harmony ->
+        val key = requireNotNull(project.envelope.compositionSettings?.key) { "Save Setup before choosing a progression." }
+        val current = harmony.progressions.firstOrNull { it.sectionType == command.sectionType }
+        val replacement = HarmonyTemplateCatalog.resolve(command.templateId, key, command.sectionType, current?.events.orEmpty())
+        harmony.copy(progressions = harmony.progressions.replace(command.sectionType, replacement))
+    }
+
+    /** Re-resolve template-backed progressions after a same-mode tonic change. */
+    fun transposeTemplateProgressions(project: Project, newKey: MusicalKey): HarmonySettings? {
+        val current = project.envelope.harmony ?: return null
+        val changed = current.progressions.map { progression ->
+            progression.templateId?.takeIf { HarmonyTemplateCatalog.isAvailable(it, newKey) }
+                ?.let { HarmonyTemplateCatalog.resolve(it, newKey, progression.sectionType, progression.events) }
+                ?: progression
+        }
+        return current.copy(revision = current.revision + 1, progressions = changed)
     }
 
     fun context(project: Project, sectionType: SectionTypeId): HarmonySectionContext {

@@ -138,6 +138,12 @@ private fun SetupForm(state: WorkspaceUiState, setup: ProjectSetupUiState, onInt
         setup.validationError?.let { Text(it, modifier = Modifier.semantics { testTag = WorkspacePageTags.SETUP_ERROR }, color = MaterialTheme.colorScheme.error) }
         setup.invalidationPreview?.let { preview ->
             Text("Saving will mark these downstream stages stale: ${preview.affectedStages.joinToString { it.name.lowercase().replace('_', ' ') }}.", modifier = Modifier.semantics { testTag = WorkspacePageTags.SETUP_INVALIDATION })
+            if (preview.transposedHarmonySections.isNotEmpty()) {
+                Text("The selected progressions will transpose to the new key: ${preview.transposedHarmonySections.joinToString { it.value.replaceFirstChar(Char::uppercase) }}.", style = MaterialTheme.typography.bodySmall)
+            }
+            if (preview.harmonyReplacementRequired.isNotEmpty()) {
+                Text("Changing mode keeps the existing chords for review. Choose new progressions in Harmony for: ${preview.harmonyReplacementRequired.joinToString { it.value.replaceFirstChar(Char::uppercase) }}.", style = MaterialTheme.typography.bodySmall)
+            }
             Button(onClick = { onIntent(WorkspaceIntent.ConfirmProjectSetupSave) }, enabled = !state.operation.isMutating, modifier = Modifier.semantics { testTag = WorkspacePageTags.SETUP_CONFIRM }) { Text("Save and mark stale") }
         } ?: Button(onClick = { onIntent(WorkspaceIntent.SaveProjectSetup) }, enabled = !state.operation.isMutating, modifier = Modifier.semantics { testTag = WorkspacePageTags.SETUP_SAVE }) { Text(if (setup.requiresSetup) "Save setup" else "Save changes") }
     }

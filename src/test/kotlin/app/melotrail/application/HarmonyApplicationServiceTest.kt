@@ -7,6 +7,7 @@ import app.melotrail.arrangement.WorkflowArtifact
 import app.melotrail.harmony.ChordEvent
 import app.melotrail.harmony.ChordEventId
 import app.melotrail.harmony.ChordQuality
+import app.melotrail.harmony.HarmonyTemplateCatalog
 import app.melotrail.harmony.SectionTypeId
 import app.melotrail.music.MusicalKey
 import app.melotrail.music.PitchClass
@@ -50,6 +51,39 @@ class HarmonyApplicationServiceTest {
         assertEquals(ChordQuality.MAJOR_7, updated.harmony.progressions.first { it.sectionType == SectionTypeId.VERSE }.events.first().quality)
         assertEquals(listOf("verse-two"), deleted.harmony.progressions.first { it.sectionType == SectionTypeId.VERSE }.events.map { it.id.value })
         assertTrue(future.harmony.progressions.any { it.sectionType == SectionTypeId("outro") })
+    }
+
+    @Test
+    fun `template progression resolves in setup key and transposes with a tonic change`() {
+        val service = configuredService()
+        val template = HarmonyTemplateCatalog.options(MusicalKey(PitchClass.of(PitchSpelling.C), ScaleModeId.MAJOR)).first()
+
+        service.setHarmonyProgression(SetHarmonyProgression(root, 1, 1, SectionTypeId.VERSE, template.id))
+        assertEquals(listOf("Cmaj7", "G7", "Am7", "Fmaj7"), service.getHarmony(GetHarmony(root))
+            .progressions.first { it.sectionType == SectionTypeId.VERSE }.events.map { "${it.root}${it.quality.symbolSuffix}" })
+
+        service.updateCompositionSettings(UpdateCompositionSettings(root, 1, CompositionSettingsInput(
+            "Draft", MusicalKey(PitchClass.of(PitchSpelling.D), ScaleModeId.MAJOR), Tempo(90.0), TimeSignature(4, 4),
+            CompositionProfileRef("lofi", 1), MoodRef("warm", 1)
+        )))
+        val transposed = service.getHarmony(GetHarmony(root)).progressions.first { it.sectionType == SectionTypeId.VERSE }
+        assertEquals(template.id, transposed.templateId)
+        assertEquals(listOf("Dmaj7", "A7", "Bm7", "Gmaj7"), transposed.events.map { "${it.root}${it.quality.symbolSuffix}" })
+    }
+
+    @Test
+    fun `mode change keeps template harmony for replacement review`() {
+        val service = configuredService()
+        val template = HarmonyTemplateCatalog.options(MusicalKey(PitchClass.of(PitchSpelling.C), ScaleModeId.MAJOR)).first()
+        service.setHarmonyProgression(SetHarmonyProgression(root, 1, 1, SectionTypeId.VERSE, template.id))
+
+        service.updateCompositionSettings(UpdateCompositionSettings(root, 1, CompositionSettingsInput(
+            "Draft", MusicalKey(PitchClass.of(PitchSpelling.A), ScaleModeId.NATURAL_MINOR), Tempo(90.0), TimeSignature(4, 4),
+            CompositionProfileRef("lofi", 1), MoodRef("warm", 1)
+        )))
+        val harmony = service.getHarmony(GetHarmony(root))
+        assertEquals(listOf(SectionTypeId.VERSE), harmony.replacementRequiredSections)
+        assertFalse(harmony.ready)
     }
 
     @Test

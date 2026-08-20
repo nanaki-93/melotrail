@@ -98,6 +98,8 @@ interface ProjectApplicationService {
         throw UnsupportedOperationException("This project service does not support harmony.")
     fun reorderHarmonyEvent(command: ReorderHarmonyEvent): HarmonyMutationResult =
         throw UnsupportedOperationException("This project service does not support harmony.")
+    fun setHarmonyProgression(command: SetHarmonyProgression): HarmonyMutationResult =
+        throw UnsupportedOperationException("This project service does not support harmony.")
     fun getHarmonySectionContext(command: GetHarmonySectionContext): HarmonySectionContext =
         throw UnsupportedOperationException("This project service does not support harmony.")
     fun getCompositionSettings(command: GetCompositionSettings): GetCompositionSettingsResult =
@@ -488,6 +490,12 @@ class DefaultProjectApplicationService(
 
     override fun reorderHarmonyEvent(command: ReorderHarmonyEvent): HarmonyMutationResult = mutate(command.root) { root ->
         val prepared = harmony.reorder(readValidProject(root), command)
+        ProjectStore.write(root, prepared.project)
+        HarmonyMutationResult(snapshot(root, prepared.project), prepared.harmony, prepared.invalidation)
+    }
+
+    override fun setHarmonyProgression(command: SetHarmonyProgression): HarmonyMutationResult = mutate(command.root) { root ->
+        val prepared = harmony.setProgression(readValidProject(root), command)
         ProjectStore.write(root, prepared.project)
         HarmonyMutationResult(snapshot(root, prepared.project), prepared.harmony, prepared.invalidation)
     }
