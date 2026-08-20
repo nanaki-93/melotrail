@@ -5,19 +5,18 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import java.nio.file.FileVisitResult
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.SimpleFileVisitor
-import java.nio.file.StandardCopyOption
-import java.nio.file.attribute.BasicFileAttributes
 
 class InstrumentRegistryTest {
     @TempDir lateinit var root: Path
 
     @Test
-    fun `validates the current five-instrument starter library and normalizes drum channel`() {
-        val registry = InstrumentRegistryLoader(Path.of("sounds")).load()
+    fun `validates the v1 compatibility fixture and normalizes drum channel`() {
+        copyLibrary()
+        val registry = InstrumentRegistryLoader(root).load()
         assertEquals(setOf("piano", "bass", "drums", "pad", "strings"), registry.logicalNames())
         assertEquals(9, registry.resolve("drums").midiChannelZeroBased)
         assertEquals(5, registry.resolve("drums").samplePaths.size)
@@ -30,22 +29,22 @@ class InstrumentRegistryTest {
         replace("\"piano/piano.sfz\"", "\"../piano.sfz\"")
         assertTrue(failure().contains("must be relative"))
 
-        copyLibrary(); replace("\"licenseId\": \"starter-generated\"", "\"licenseId\": \"missing\"")
+        copyLibrary(); replace("\"licenseId\":\"starter-generated\"", "\"licenseId\":\"missing\"")
         assertTrue(failure().contains("missing license"))
 
-        copyLibrary(); replace("\"midiChannel\": 10", "\"midiChannel\": 17")
+        copyLibrary(); replace("\"midiChannel\":10", "\"midiChannel\":17")
         assertTrue(failure().contains("one-based 1..16"))
 
-        copyLibrary(); replace("\"kick\": 36", "\"kick\": 35")
+        copyLibrary(); replace("\"kick\":36", "\"kick\":35")
         assertTrue(failure().contains("disagrees"))
     }
 
     @Test
     fun `rejects duplicate names unknown engines and absolute registry paths`() {
-        copyLibrary(); replace("\"bass\": {", "\"piano\": {")
+        copyLibrary(); replace("\"bass\":{", "\"piano\":{")
         assertTrue(failure().contains("duplicate logical instrument name 'piano'"))
 
-        copyLibrary(); replace("\"engine\": \"sfz\"", "\"engine\": \"vst\"")
+        copyLibrary(); replace("\"engine\":\"sfz\"", "\"engine\":\"vst\"")
         assertTrue(failure().contains("unsupported engine"))
 
         copyLibrary(); replace("\"piano/piano.sfz\"", "\"/tmp/piano.sfz\"")
@@ -78,9 +77,9 @@ class InstrumentRegistryTest {
     fun `rejects unsupported WAV encoding channels frame layout and empty audio`() {
         copyLibrary()
         val wave = root.resolve("piano/samples/C2.wav")
-        val bytes = Files.readAllBytes(wave); bytes[20] = 3; bytes[21] = 0
+        val bytes = Files.readAllBytes(wave); bytes[20] = 2; bytes[21] = 0
         Files.write(wave, bytes)
-        assertTrue(failure().contains("must use PCM encoding"))
+        assertTrue(failure().contains("PCM or IEEE-float"))
 
         copyLibrary()
         val noChannels = Files.readAllBytes(wave); noChannels[22] = 0; noChannels[23] = 0
@@ -104,19 +103,27 @@ class InstrumentRegistryTest {
         Files.writeString(file, Files.readString(file).replace(old, new))
     }
     private fun copyLibrary() {
-        val sourceRoot = Path.of("sounds").toAbsolutePath().normalize()
-        val productionRoot = sourceRoot.resolve("production")
-        Files.walkFileTree(sourceRoot, object : SimpleFileVisitor<Path>() {
-            override fun preVisitDirectory(directory: Path, attributes: BasicFileAttributes): FileVisitResult {
-                if (directory == productionRoot) return FileVisitResult.SKIP_SUBTREE
-                Files.createDirectories(root.resolve(sourceRoot.relativize(directory).toString()))
-                return FileVisitResult.CONTINUE
-            }
+        val pitched = listOf("piano" to "C2", "bass" to "E1", "pad" to "C3", "strings" to "G3")
+        pitched.forEachIndexed { index, (name, sample) ->
+            writeWav(root.resolve("$name/samples/$sample.wav"))
+            Files.createDirectories(root.resolve(name))
+            Files.writeString(root.resolve("$name/$name.sfz"), "<region> sample=samples/$sample.wav key=${36 + index * 12}")
+        }
+        val drums = listOf("kick" to 36, "snare" to 38, "clap" to 39, "hat_closed" to 42, "hat_open" to 46)
+        drums.forEach { (name, _) -> writeWav(root.resolve("drums/samples/$name.wav")) }
+        Files.createDirectories(root.resolve("drums"))
+        Files.writeString(root.resolve("drums/drums.sfz"), drums.joinToString("\n") { (name, key) -> "<region> sample=samples/$name.wav key=$key" })
+        Files.writeString(root.resolve("LICENSES.json"), """{"version":1,"libraries":{"starter-generated":{"displayName":"Fixture","source":"local","provenance":"generated-original","license":"CC0-1.0","commercialUse":true,"attributionRequired":false,"redistribution":"allowed"}}}""")
+        Files.writeString(root.resolve("instruments.json"), """{"version":1,"workingSampleRate":44100,"midiChannelConvention":"one-based","instruments":{"piano":{"engine":"sfz","path":"piano/piano.sfz","licenseId":"starter-generated","midiProgram":0},"bass":{"engine":"sfz","path":"bass/bass.sfz","licenseId":"starter-generated","midiProgram":32},"drums":{"engine":"sfz","path":"drums/drums.sfz","licenseId":"starter-generated","midiChannel":10,"noteMap":{"kick":36,"snare":38,"clap":39,"closedHat":42,"openHat":46}},"pad":{"engine":"sfz","path":"pad/pad.sfz","licenseId":"starter-generated","midiProgram":89},"strings":{"engine":"sfz","path":"strings/strings.sfz","licenseId":"starter-generated","midiProgram":48}}}""")
+    }
 
-            override fun visitFile(file: Path, attributes: BasicFileAttributes): FileVisitResult {
-                Files.copy(file, root.resolve(sourceRoot.relativize(file).toString()), StandardCopyOption.REPLACE_EXISTING)
-                return FileVisitResult.CONTINUE
-            }
-        })
+    private fun writeWav(path: Path) {
+        Files.createDirectories(requireNotNull(path.parent))
+        val data = byteArrayOf(0, 0)
+        val bytes = ByteBuffer.allocate(44 + data.size).order(ByteOrder.LITTLE_ENDIAN)
+        bytes.put("RIFF".toByteArray()); bytes.putInt(36 + data.size); bytes.put("WAVEfmt ".toByteArray())
+        bytes.putInt(16); bytes.putShort(1); bytes.putShort(1); bytes.putInt(44_100); bytes.putInt(88_200)
+        bytes.putShort(2); bytes.putShort(16); bytes.put("data".toByteArray()); bytes.putInt(data.size); bytes.put(data)
+        Files.write(path, bytes.array())
     }
 }

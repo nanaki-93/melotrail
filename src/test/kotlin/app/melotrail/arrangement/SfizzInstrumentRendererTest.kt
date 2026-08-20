@@ -133,12 +133,12 @@ class SfizzInstrumentRendererTest {
             assumeTrue(false, "sfizz_render unavailable; set SFZ_RENDERER_PATH or install sfizz_render to run starter-library integration")
             return@runBlocking
         }
-        val samples = Path.of("sounds/piano/samples/C2.wav")
-        assertTrue(Files.isRegularFile(samples), "starter-library asset is missing; this is not a renderer-availability skip")
+        val samples = TestSoundLibrary.root().resolve("piano/samples/C2.wav")
+        assertTrue(Files.isRegularFile(samples), "test-library asset is missing; this is not a renderer-availability skip")
         val midi = midiFile()
         listOf(LogicalInstrument.PIANO, LogicalInstrument.BASS).forEach { instrument ->
             val output = root.resolve("${instrument.wireName}.wav")
-            val result = SfizzInstrumentRenderer(InstrumentRegistryLoader(Path.of("sounds")), executable = executable).render(midi, instrument, output, RenderFormat(44_100, 2, 24), 44_100)
+            val result = SfizzInstrumentRenderer(InstrumentRegistryLoader(TestSoundLibrary.root()), executable = executable).render(midi, instrument, output, RenderFormat(44_100, 2, 24), 44_100)
             assertEquals(44_100, result.sampleRate)
             assertEquals(2, result.channels)
             assertEquals(24, result.bitDepth)
@@ -155,8 +155,8 @@ class SfizzInstrumentRendererTest {
     private fun createLibrary(): Path {
         val library = root.resolve("library")
         Files.createDirectories(library)
-        Files.copy(Path.of("sounds/instruments.json"), library.resolve("instruments.json"))
-        Files.copy(Path.of("sounds/LICENSES.json"), library.resolve("LICENSES.json"))
+        Files.copy(TestSoundLibrary.root().resolve("instruments.json"), library.resolve("instruments.json"))
+        Files.copy(TestSoundLibrary.root().resolve("LICENSES.json"), library.resolve("LICENSES.json"))
         val instrumentSamples = mapOf(
             "piano" to listOf("C2.wav"), "bass" to listOf("E1.wav"), "pad" to listOf("C2.wav"), "strings" to listOf("C2.wav"),
             "drums" to listOf("kick.wav", "snare.wav", "clap.wav", "hat_closed.wav", "hat_open.wav")

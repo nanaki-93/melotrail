@@ -4,12 +4,10 @@ import app.melotrail.profile.CompositionProfileRef
 import app.melotrail.profile.MoodRef
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import java.nio.file.FileVisitResult
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.SimpleFileVisitor
-import java.nio.file.StandardCopyOption
-import java.nio.file.attribute.BasicFileAttributes
 import java.time.Instant
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -76,19 +74,18 @@ class InstrumentResolverTest {
     }
 
     private fun copyLibrary() {
-        val sourceRoot = Path.of("sounds").toAbsolutePath().normalize()
-        val productionRoot = sourceRoot.resolve("production")
-        Files.walkFileTree(sourceRoot, object : SimpleFileVisitor<Path>() {
-            override fun preVisitDirectory(directory: Path, attributes: BasicFileAttributes): FileVisitResult {
-                if (directory == productionRoot) return FileVisitResult.SKIP_SUBTREE
-                Files.createDirectories(root.resolve(sourceRoot.relativize(directory).toString()))
-                return FileVisitResult.CONTINUE
-            }
+        writeSample(root.resolve("bass/samples/bass.wav"))
+        Files.createDirectories(root.resolve("bass"))
+        Files.writeString(root.resolve("bass/bass.sfz"), "<region> sample=samples/bass.wav key=48")
+    }
 
-            override fun visitFile(file: Path, attributes: BasicFileAttributes): FileVisitResult {
-                Files.copy(file, root.resolve(sourceRoot.relativize(file).toString()), StandardCopyOption.REPLACE_EXISTING)
-                return FileVisitResult.CONTINUE
-            }
-        })
+    private fun writeSample(path: Path) {
+        Files.createDirectories(requireNotNull(path.parent))
+        val data = byteArrayOf(0, 0)
+        val bytes = ByteBuffer.allocate(44 + data.size).order(ByteOrder.LITTLE_ENDIAN)
+        bytes.put("RIFF".toByteArray()).putInt(36 + data.size).put("WAVEfmt ".toByteArray()).putInt(16)
+        bytes.putShort(1).putShort(1).putInt(44_100).putInt(88_200).putShort(2).putShort(16)
+        bytes.put("data".toByteArray()).putInt(data.size).put(data)
+        Files.write(path, bytes.array())
     }
 }

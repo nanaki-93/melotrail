@@ -815,7 +815,7 @@ private fun SettingsInterimPage(state: WorkspaceUiState, onIntent: (WorkspaceInt
                         settings.validationError?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
                         settings.selectionDisabledReason?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = semanticColor(WorkspaceSemanticState.WARNING)) }
                         if (settings.restartRequired) Text("Restart the desktop app before renderer services use this validated library.", style = MaterialTheme.typography.bodySmall, color = semanticColor(WorkspaceSemanticState.WARNING))
-                        Text("Choose the absolute folder containing instruments.json and LICENSES.json. Selection validates the full registry before the preference is saved; no project or audio data is stored here.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Choose the absolute folder containing instruments.json. Selection validates the full registry before the preference is saved; no project or audio data is stored here.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
                             Button(
                                 enabled = !selectionDisabled && !state.operation.isMutating,
@@ -882,7 +882,7 @@ private fun settingsRecovery(action: RecoveryAction): String = when (action) {
     RecoveryAction.START_WORKER -> "Start the Python worker with make worker."
     RecoveryAction.INSTALL_BASIC_PITCH -> "Install the optional Basic Pitch runtime with worker/requirements-transcription.txt in Python 3.11."
     RecoveryAction.CHOOSE_SOUND_LIBRARY -> "Choose a validated local sound-library folder."
-    RecoveryAction.INSTALL_SAMPLES -> "Copy the approved local starter samples into the selected library's existing sample folders."
+    RecoveryAction.INSTALL_SAMPLES -> "Restore the missing catalog samples in the selected library."
     RecoveryAction.CONFIGURE_RENDERER -> "Set SFZ_RENDERER_PATH to an absolute executable sfizz_render path, then refresh readiness."
     RecoveryAction.CHECK_AUDIO_OUTPUT -> "Connect or enable a local audio output device, then refresh readiness."
 }

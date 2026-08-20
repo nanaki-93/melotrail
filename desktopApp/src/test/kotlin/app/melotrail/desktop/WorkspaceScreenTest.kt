@@ -1304,7 +1304,7 @@ class WorkspaceScreenTest {
         onNodeWithTag(WorkspacePageTags.SETTINGS_DETAILS_TOGGLE + "-about").performClick()
         onNodeWithTag(WorkspacePageTags.SETTINGS_RUNTIME_PREFIX + "samples").assertExists()
         onNodeWithTag(WorkspacePageTags.SETTINGS_ABOUT).assertExists()
-        onNodeWithText("Recovery: Copy the approved local starter samples into the selected library's existing sample folders.").assertExists()
+        onNodeWithText("Recovery: Restore the missing catalog samples in the selected library.").assertExists()
         onNodeWithText("Recovery: Set SFZ_RENDERER_PATH to an absolute executable sfizz_render path, then refresh readiness.").assertExists()
         onNodeWithTag(WorkspacePageTags.SETTINGS_BACK).performClick()
         assertEquals(WorkspaceIntent.BackFromSettings, intents.last())

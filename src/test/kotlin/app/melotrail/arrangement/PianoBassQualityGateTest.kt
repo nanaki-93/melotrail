@@ -27,7 +27,7 @@ class PianoBassQualityGateTest {
         val sourceA = Files.readAllBytes(projectRoot.resolve("source/A.mid"))
         val sourceB = Files.readAllBytes(projectRoot.resolve("source/B.mid"))
         val renderer = FakeRenderer()
-        val gate = PianoBassQualityGate(renderer, bassGenerator = BassMidiGenerationAdapter(libraryRoot = Path.of("sounds")))
+        val gate = PianoBassQualityGate(renderer, bassGenerator = BassMidiGenerationAdapter(libraryRoot = TestSoundLibrary.root()))
 
         val first = gate.run(projectRoot)
         val expectedStages = listOf(

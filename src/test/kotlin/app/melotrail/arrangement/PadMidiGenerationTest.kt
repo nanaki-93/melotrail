@@ -99,7 +99,7 @@ class PadMidiGenerationTest {
         val sourceBefore = Files.readAllBytes(source)
         val drumsBefore = Files.readAllBytes(drums)
 
-        val generated = PadMidiGenerationAdapter(libraryRoot = Path.of("sounds")).generate(projectRoot, project, arrangement, mapOf("A" to analysis))
+        val generated = PadMidiGenerationAdapter(libraryRoot = TestSoundLibrary.root()).generate(projectRoot, project, arrangement, mapOf("A" to analysis))
         val sequence = MidiSystem.getSequence(generated.path.toFile())
         val channels = sequence.tracks.flatMap { track -> (0 until track.size()).map(track::get) }
             .mapNotNull { it.message as? ShortMessage }

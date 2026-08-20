@@ -2,6 +2,7 @@ package app.melotrail.application
 
 import app.melotrail.arrangement.BassMidiGenerationAdapter
 import app.melotrail.arrangement.ArrangementApprovalReferences
+import app.melotrail.arrangement.ArrangementAssignmentReference
 import app.melotrail.arrangement.ArrangementRoleSelection
 import app.melotrail.arrangement.ArrangementSoundContext
 import app.melotrail.arrangement.DetailedArrangement
@@ -34,7 +35,12 @@ import app.melotrail.arrangement.SongPlanningInput
 import app.melotrail.arrangement.StemRenderResult
 import app.melotrail.arrangement.StemRenderingMixer
 import app.melotrail.arrangement.InstrumentRenderer
+import app.melotrail.arrangement.InstrumentRegistryLoader
+import app.melotrail.arrangement.LibraryProvenanceSnapshot
+import app.melotrail.arrangement.ResolveInstrumentRequest
 import app.melotrail.arrangement.StringsMidiGenerationAdapter
+import app.melotrail.arrangement.ValidatedInstrumentDescriptor
+import app.melotrail.arrangement.VersionedInstrumentResolver
 import app.melotrail.arrangement.toSectionInstance
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -159,12 +165,14 @@ class DefaultArrangementApplicationService(
         } else {
             DetailedArrangementStore.writeApproved(root, detailedInput, arrangement)
         }
+        val approvedProject = if (request.planner == ArrangementPlannerKind.QWEN) project else projectWithResolvedAssignments(project, input)
+        if (approvedProject != project) ProjectStore.write(root, approvedProject)
         ProjectWorkflowStore.update(root) { workflow ->
             workflow.invalidate(app.melotrail.arrangement.WorkflowChange.ARRANGEMENT)
                 .markCurrent(WorkflowArtifact.ARRANGEMENT)
-                .copy(arrangement = if (request.planner == ArrangementPlannerKind.QWEN) workflow.arrangement else approvalReferences(root, project, input))
+                .copy(arrangement = if (request.planner == ArrangementPlannerKind.QWEN) workflow.arrangement else approvalReferences(root, approvedProject, input))
         }
-        snapshot(root, project, arrangement, artifact, request.planner == ArrangementPlannerKind.QWEN)
+        snapshot(root, approvedProject, arrangement, artifact, request.planner == ArrangementPlannerKind.QWEN)
     }
 
     override suspend fun generateRequiredMidi(root: Path, progress: ProgressSink): GeneratedMidiSnapshot = mutate(root) { normalized ->
@@ -238,12 +246,14 @@ class DefaultArrangementApplicationService(
         val project = readProject(normalized)
         val input = detailedInput(normalized, project)
         val approved = DetailedArrangementStore.approve(normalized, input)
+        val approvedProject = projectWithResolvedAssignments(project, input.planningInput)
+        if (approvedProject != project) ProjectStore.write(normalized, approvedProject)
         ProjectWorkflowStore.update(normalized) { workflow ->
             workflow.invalidate(app.melotrail.arrangement.WorkflowChange.ARRANGEMENT)
                 .markCurrent(WorkflowArtifact.ARRANGEMENT)
-                .copy(arrangement = approvalReferences(normalized, project, input.planningInput))
+                .copy(arrangement = approvalReferences(normalized, approvedProject, input.planningInput))
         }
-        snapshot(normalized, project, readApproved(normalized, input), approved, false)
+        snapshot(normalized, approvedProject, readApproved(normalized, input), approved, false)
     }
 
     private fun detailedInput(root: Path, project: Project): DetailedArrangementInput {
@@ -284,6 +294,51 @@ class DefaultArrangementApplicationService(
             sha256(structure.toByteArray(StandardCharsets.UTF_8)), sha256(occurrences.toByteArray(StandardCharsets.UTF_8)), context, sha256(plan)
         )
     }
+
+    /** Freezes a resolved stable ID for every canonical occurrence at approval time. */
+    private fun projectWithResolvedAssignments(project: Project, input: SongPlanningInput): Project {
+        if (input.requestedIntents.isEmpty()) return project
+        val registry = InstrumentRegistryLoader(libraryRoot).load()
+        if (registry.version == 1) return project
+        val decisions = input.requestedIntents.sortedBy { it.role.name }.map { intent ->
+            VersionedInstrumentResolver(registry).invoke(ResolveInstrumentRequest(intent, actor = "arranger"))
+        }
+        require(decisions.all { it.selectedId != null }) {
+            "No approved local instrument matches: " + decisions.filter { it.selectedId == null }
+                .joinToString { it.normalizedRequest.role.name.lowercase() }
+        }
+        val byLogicalStem = decisions.groupBy { LegacyLogicalInstrumentRoles.logicalFor(it.normalizedRequest.role) }
+            .mapValues { (_, choices) -> choices.minBy { it.normalizedRequest.role.name } }
+        val assignments = project.envelope.structureOccurrences.sortedBy { it.instanceId }.flatMap { occurrence ->
+            byLogicalStem.toSortedMap().values.map { decision ->
+                val descriptor = registry.resolve(requireNotNull(decision.selectedId))
+                ArrangementAssignmentReference(
+                    occurrenceId = occurrence.instanceId,
+                    instrumentId = descriptor.id,
+                    decisionSha256 = decisionFingerprint(decision),
+                    libraryProvenance = libraryProvenance(descriptor)
+                )
+            }
+        }
+        return project.copy(envelope = project.envelope.copy(arrangementAssignments = assignments))
+    }
+
+    private fun decisionFingerprint(decision: app.melotrail.arrangement.InstrumentSelectionDecision): String = sha256(buildString {
+        append(decision.registryVersion).append('|').append(decision.registrySha256).append('|').append(decision.resolverVersion).append('|')
+        append(decision.normalizedRequest.role.name).append('|').append(decision.selectedId.orEmpty()).append('|').append(decision.actor).append('|').append(decision.timestamp)
+        decision.candidates.forEach { candidate -> append('|').append(candidate.id).append(':').append(candidate.score).append(':').append(candidate.rejection.orEmpty()) }
+    }.toByteArray(StandardCharsets.UTF_8))
+
+    private fun libraryProvenance(descriptor: ValidatedInstrumentDescriptor): LibraryProvenanceSnapshot = LibraryProvenanceSnapshot(
+        libraryId = descriptor.sourceLibrary.id,
+        licenseSha256 = sha256(listOf(
+            descriptor.license.displayName, descriptor.license.source, descriptor.license.provenance, descriptor.license.license,
+            descriptor.license.commercialUse, descriptor.license.attributionRequired, descriptor.license.attributionText.orEmpty(), descriptor.license.redistribution
+        ).joinToString("|").toByteArray(StandardCharsets.UTF_8)),
+        provenanceSha256 = sha256(listOf(
+            descriptor.sourceLibrary.id, descriptor.sourceLibrary.name, descriptor.sourceLibrary.version, descriptor.sourceLibrary.source
+        ).joinToString("|").toByteArray(StandardCharsets.UTF_8))
+    )
 
     private fun snapshot(root: Path, project: Project, arrangement: DetailedArrangement, artifact: Path, approvalRequired: Boolean): ArrangementSnapshot {
         val analyses = midiAnalyses(root, project, arrangement.sections.map { it.partId }.toSet())

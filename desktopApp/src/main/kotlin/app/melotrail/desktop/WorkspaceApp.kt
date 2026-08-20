@@ -1008,7 +1008,26 @@ private fun ArrangementPlanningControls(state: WorkspaceUiState, onIntent: (Work
             }
         }
     }
-    Text("Suggested / Pinned Instrument — resolved separately; user ownership applies only to a pinned stable ID.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    val selectedLibraryInstrument = state.libraryBrowser.inventory.instruments.singleOrNull { it.id == state.libraryBrowser.selectedId }
+    if (selectedLibraryInstrument == null) {
+        Text("Browse the Library, select a validated preset, then return here to pin it to a selected role.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    } else {
+        val supportedRoles = draft.roles.filter { role -> role.name.lowercase().replace('_', '-') in selectedLibraryInstrument.roles }
+        Text("Selected library preset: ${selectedLibraryInstrument.name}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (supportedRoles.isEmpty()) {
+            Text("This preset does not support the currently selected arrangement roles.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+        } else {
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+                supportedRoles.forEach { role ->
+                    val pinned = draft.pinnedInstrumentIds[role] == selectedLibraryInstrument.id
+                    OutlinedButton(
+                        onClick = { onIntent(WorkspaceIntent.PinArrangementInstrument(role, if (pinned) null else selectedLibraryInstrument.id)) },
+                        enabled = !disabled
+                    ) { Text(if (pinned) "Unpin ${role.name.lowercase()}" else "Pin ${role.name.lowercase()}") }
+                }
+            }
+        }
+    }
     Button(onClick = { onIntent(WorkspaceIntent.GenerateArrangement) }, enabled = !disabled, modifier = Modifier.semantics { testTag = WorkspaceTags.ARRANGEMENT_GENERATE }) { Text("Generate arrangement") }
 }
 

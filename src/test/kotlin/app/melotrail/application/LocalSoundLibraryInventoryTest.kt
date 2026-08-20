@@ -26,7 +26,7 @@ class LocalSoundLibraryInventoryTest {
         assertEquals("Fixture Library", piano.licenseName)
         assertEquals("fixture-source", piano.source)
         assertTrue(piano.attributionRequired)
-        assertEquals(listOf("piano"), inventory.filtered("fixture-source", "Piano").map { it.id })
+        assertEquals(listOf("bass", "drums", "pad", "piano", "strings"), inventory.filtered("fixture-source", "instrument").map { it.id })
         assertEquals(listOf("bass"), inventory.filtered("  BASS ", null).map { it.id })
     }
 

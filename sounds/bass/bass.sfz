@@ -1,5 +1,0 @@
-<region> sample=samples/E1.wav key=28 lokey=24 hikey=30 pitch_keycenter=28
-<region> sample=samples/A1.wav key=33 lokey=31 hikey=35 pitch_keycenter=33
-<region> sample=samples/D2.wav key=38 lokey=36 hikey=40 pitch_keycenter=38
-<region> sample=samples/G2.wav key=43 lokey=41 hikey=45 pitch_keycenter=43
-<region> sample=samples/C3.wav key=48 lokey=46 hikey=60 pitch_keycenter=48

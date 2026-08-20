@@ -3,6 +3,7 @@ package app.melotrail.arrangement
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonToken
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
@@ -12,6 +13,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
+import java.util.ArrayDeque
 import app.melotrail.commercial.CommercialDependency
 import app.melotrail.commercial.CommercialDependencyKind
 import app.melotrail.commercial.CommercialTerm
@@ -54,10 +56,23 @@ data class InstrumentRegistryV2File(
     val instruments: List<InstrumentDefinition>
 )
 
+/** Registry-v3 keeps native sample rates so a production catalog can combine 44.1 and 48 kHz packs. */
+@Serializable
+data class InstrumentRegistryV3File(
+    val version: Int,
+    val supportedSampleRates: Set<Int>,
+    val midiChannelConvention: String = "one-based",
+    val instruments: List<InstrumentDefinition>
+)
+
+@Serializable enum class InstrumentSelectionMode { @SerialName("automatic") AUTOMATIC, @SerialName("manual-only") MANUAL_ONLY }
+
 @Serializable
 data class InstrumentDefinition(
     val id: String,
     val name: String,
+    val category: String = "instrument",
+    val selectionMode: InstrumentSelectionMode = InstrumentSelectionMode.AUTOMATIC,
     val roles: Set<ArrangementRole>,
     val profileAffinities: Map<String, Double> = emptyMap(),
     val moodAffinities: Map<String, Double> = emptyMap(),
@@ -147,6 +162,8 @@ data class ValidatedInstrumentDescriptor(
     /** The only instrument identifier that leaves the registry boundary. */
     val id: String,
     val name: String,
+    val category: String = "instrument",
+    val selectionMode: InstrumentSelectionMode = InstrumentSelectionMode.AUTOMATIC,
     val roles: Set<ArrangementRole>,
     val sfzPath: Path,
     val samplePaths: List<Path>,
@@ -184,11 +201,14 @@ class ValidatedInstrumentRegistry internal constructor(
     /** Immutable validated descriptors for evidence export; callers never receive registry paths as outputs. */
     fun all(): List<ValidatedInstrumentDescriptor> = descriptors.values.sortedBy { it.id }
     fun availableFor(role: ArrangementRole): List<ValidatedInstrumentDescriptor> = all().filter { role in it.roles && it.licenseAdmission.admission == LicenseAdmission.ADMITTED }
+    fun automaticFor(role: ArrangementRole): List<ValidatedInstrumentDescriptor> = availableFor(role).filter { it.selectionMode == InstrumentSelectionMode.AUTOMATIC }
     fun hasRoleCoverage(required: Set<ArrangementRole>): Boolean = required.all { role -> availableFor(role).isNotEmpty() }
 }
 
 /** Local-only registry loader. Accepts a validated [SoundLibraryLocation.Success] from [SoundLibraryLocator]. */
 class InstrumentRegistryLoader(val libraryRoot: Path) {
+    private val validatedSamples = mutableSetOf<Path>()
+
     fun load(): ValidatedInstrumentRegistry {
         val root = libraryRoot.toAbsolutePath().normalize()
         require(Files.isDirectory(root)) { "Sound library root does not exist: $root. See sounds/README.md for the local asset setup." }
@@ -200,6 +220,7 @@ class InstrumentRegistryLoader(val libraryRoot: Path) {
         return when (version) {
             1 -> loadV1(root, realRoot, registryContents)
             2 -> loadV2(root, realRoot, registryContents)
+            3 -> loadV3(root, realRoot, registryContents)
             else -> throw IllegalArgumentException("Unsupported instrument registry version: $version")
         }
     }
@@ -225,7 +246,7 @@ class InstrumentRegistryLoader(val libraryRoot: Path) {
             validateMidi(entry, name)
             val sfz = safeFile(root, root, realRoot, entry.path, "Instrument '$name' SFZ")
             require(sfz.fileName.toString().endsWith(".sfz")) { "Instrument '$name' path must be an .sfz file" }
-            val regions = parseSfz(sfz, root, realRoot, name, registry.workingSampleRate)
+            val regions = parseSfz(sfz, root, realRoot, name, setOf(registry.workingSampleRate))
             if (logical == LogicalInstrument.DRUMS) validateDrumMap(entry.noteMap, regions)
             logical.wireName to ValidatedInstrumentDescriptor(
                 id = logical.wireName, name = logical.wireName.replaceFirstChar(Char::uppercase), roles = setOf(LegacyLogicalInstrumentRoles.roleFor(logical.wireName)),
@@ -257,12 +278,27 @@ class InstrumentRegistryLoader(val libraryRoot: Path) {
         require(registry.instruments.map(InstrumentDefinition::id).distinct().size == registry.instruments.size) { "Instrument registry contains duplicate stable IDs" }
         require(registry.instruments.groupingBy { it.id.lowercase() }.eachCount().values.all { it == 1 }) { "Instrument registry contains case-conflicting stable IDs" }
         val descriptors = registry.instruments.associate { definition ->
-            definition.id to validateV2Entry(root, realRoot, registry.workingSampleRate, definition)
+            definition.id to validateV2Entry(root, realRoot, setOf(registry.workingSampleRate), definition)
         }
         return ValidatedInstrumentRegistry(descriptors, 2, sha256(registryContents))
     }
 
-    private fun validateV2Entry(root: Path, realRoot: Path, workingSampleRate: Int, definition: InstrumentDefinition): ValidatedInstrumentDescriptor {
+    private fun loadV3(root: Path, realRoot: Path, registryContents: String): ValidatedInstrumentRegistry {
+        val registry = json.decodeFromString<InstrumentRegistryV3File>(registryContents)
+        require(registry.midiChannelConvention == "one-based") { "Instrument registry midiChannelConvention must be 'one-based'" }
+        require(registry.supportedSampleRates.isNotEmpty() && registry.supportedSampleRates.all { it in 8_000..384_000 }) {
+            "Instrument registry v3 requires supported sample rates from 8000 to 384000"
+        }
+        require(registry.instruments.isNotEmpty()) { "Instrument registry v3 must contain instruments" }
+        require(registry.instruments.map(InstrumentDefinition::id).distinct().size == registry.instruments.size) { "Instrument registry contains duplicate stable IDs" }
+        require(registry.instruments.groupingBy { it.id.lowercase() }.eachCount().values.all { it == 1 }) { "Instrument registry contains case-conflicting stable IDs" }
+        val descriptors = registry.instruments.associate { definition ->
+            definition.id to validateV2Entry(root, realRoot, registry.supportedSampleRates, definition)
+        }
+        return ValidatedInstrumentRegistry(descriptors, 3, sha256(registryContents))
+    }
+
+    private fun validateV2Entry(root: Path, realRoot: Path, supportedSampleRates: Set<Int>, definition: InstrumentDefinition): ValidatedInstrumentDescriptor {
         fun unavailable(reason: String): ValidatedInstrumentDescriptor = ValidatedInstrumentDescriptor(
             id = definition.id.ifBlank { "invalid-entry" }, name = definition.name.ifBlank { "Unavailable instrument" }, roles = emptySet(),
             sfzPath = root.resolve("instruments.json"), samplePaths = emptyList(),
@@ -286,11 +322,12 @@ class InstrumentRegistryLoader(val libraryRoot: Path) {
             val normalizedTraits = normalizeTraits(definition)
             val sfz = safeFile(root, root, realRoot, definition.engine.path, "Instrument '${definition.id}' SFZ")
             require(sfz.fileName.toString().endsWith(".sfz", ignoreCase = true)) { "Instrument '${definition.id}' path must be an .sfz file" }
-            val regions = parseSfz(sfz, root, realRoot, definition.id, workingSampleRate)
+            requireSafeMetadata(definition.category, "Instrument '${definition.id}' category")
+            val regions = parseSfz(sfz, root, realRoot, definition.id, supportedSampleRates)
             val verified = regions.verifiedCapabilities(definition.capabilities.noteMap, ArrangementRole.DRUMS in definition.roles, definition.capabilities)
             val license = definition.license.toLegacyLicense()
             ValidatedInstrumentDescriptor(
-                id = definition.id, name = definition.name, roles = definition.roles, sfzPath = sfz,
+                id = definition.id, name = definition.name, category = definition.category, selectionMode = definition.selectionMode, roles = definition.roles, sfzPath = sfz,
                 samplePaths = regions.map { it.sample }.distinct(), license = license,
                 licenseAdmission = definition.license.admissionResult(), verifiedCapabilities = verified,
                 profileAffinities = definition.profileAffinities.toSortedMap(), moodAffinities = definition.moodAffinities.toSortedMap(),
@@ -355,30 +392,92 @@ class InstrumentRegistryLoader(val libraryRoot: Path) {
         }
     }
 
-    private fun parseSfz(sfz: Path, root: Path, realRoot: Path, name: String, workingSampleRate: Int): List<SfzRegion> {
-        val regions = Files.readAllLines(sfz, StandardCharsets.UTF_8).mapNotNull { raw ->
-            val line = raw.substringBefore("//").trim()
-            if (!line.contains("<region>")) return@mapNotNull null
-            val values = TOKEN.findAll(line.substringAfter("<region>")).associate { it.groupValues[1] to it.groupValues[2].trim('"') }
-            val sampleRef = values["sample"] ?: throw IllegalArgumentException("Instrument '$name' SFZ has a region without sample=: $sfz")
-            val key = values["key"]?.toIntOrNull() ?: throw IllegalArgumentException("Instrument '$name' SFZ has a region without valid key=: $sfz")
-            require(key in 0..127) { "Instrument '$name' SFZ key must be 0..127: $key" }
-            val sample = safeFile(sfz.parent, root, realRoot, sampleRef, "Instrument '$name' SFZ sample")
-            validateWav(sample, name, workingSampleRate)
-            SfzRegion(
-                key = key,
-                sample = sample,
-                lowVelocity = values["lovel"]?.toIntOrNull() ?: 0,
-                highVelocity = values["hivel"]?.toIntOrNull() ?: 127,
-                roundRobin = (values["seq_length"]?.toIntOrNull() ?: 1) > 1,
-                release = values["trigger"] == "release"
-            ).also {
-                require(it.lowVelocity in 0..127 && it.highVelocity in it.lowVelocity..127) {
-                    "Instrument '$name' SFZ has invalid velocity range"
-                }
+    /**
+     * A deliberately bounded SFZ reader for local library validation.  sfizz
+     * remains the playback authority; this reader resolves enough standard SFZ
+     * syntax to prove that every referenced local asset is safe and present.
+     */
+    private fun parseSfz(sfz: Path, root: Path, realRoot: Path, name: String, supportedSampleRates: Set<Int>): List<SfzRegion> {
+        data class State(
+            val variables: MutableMap<String, String> = mutableMapOf(),
+            var control: Map<String, String> = emptyMap(), var global: Map<String, String> = emptyMap(),
+            var master: Map<String, String> = emptyMap(), var group: Map<String, String> = emptyMap()
+        )
+        val regions = mutableListOf<SfzRegion>()
+        val active = ArrayDeque<Path>()
+        val state = State()
+        fun expand(value: String): String {
+            var result = value
+            repeat(16) {
+                val changed = VARIABLE.replace(result) { match -> state.variables[match.groupValues[1]] ?: match.value }
+                if (changed == result) return result
+                result = changed
             }
+            throw IllegalArgumentException("Instrument '$name' SFZ variable expansion is recursive")
         }
-        require(regions.isNotEmpty()) { "Instrument '$name' SFZ contains no <region> sample definitions" }
+        fun values(body: String): Map<String, String> = TOKEN.findAll(body).associate { token ->
+            token.groupValues[1] to expand(token.groupValues[2].trim().trim('"'))
+        }
+        fun parse(file: Path, sampleBase: Path) {
+            require(active.size < MAX_SFZ_INCLUDE_DEPTH) { "Instrument '$name' SFZ include nesting is too deep" }
+            require(!active.contains(file)) { "Instrument '$name' SFZ has a cyclic include: $file" }
+            active.addLast(file)
+            try {
+                val contents = Files.readAllLines(file, StandardCharsets.UTF_8).joinToString("\n") { it.substringBefore("//") }
+                val events = SFZ_EVENT.findAll(contents).toList()
+                events.forEachIndexed { index, event ->
+                    val header = event.groupValues[1].trim()
+                    val body = contents.substring(event.range.last + 1, events.getOrNull(index + 1)?.range?.first ?: contents.length)
+                    when {
+                        header.startsWith("#include") -> {
+                            val reference = header.substringAfter('"', "").substringBeforeLast('"', "")
+                            require(reference.isNotBlank()) { "Instrument '$name' has an invalid SFZ include in $file" }
+                            val expanded = expand(reference)
+                            val current = file.parent.resolve(expanded.replace('\\', '/')).normalize()
+                            val includeBase = if (Files.isRegularFile(current)) file.parent else sampleBase
+                            parse(safeAssetFile(includeBase, root, realRoot, expanded, "Instrument '$name' SFZ include"), sampleBase)
+                        }
+                        header.startsWith("#define") -> {
+                            val parts = header.removePrefix("#define").trim().split(Regex("\\s+"), limit = 2)
+                            require(parts.size == 2 && parts[0].startsWith('$')) { "Instrument '$name' has an invalid SFZ define in $file" }
+                            state.variables[parts[0].removePrefix("$")] = expand(parts[1].trim('"'))
+                        }
+                        else -> {
+                            val tag = header.removePrefix("<").removeSuffix(">").lowercase()
+                            val current = values(body)
+                            when (tag) {
+                                "control" -> state.control = current
+                                "global" -> { state.global = current; state.master = emptyMap(); state.group = emptyMap() }
+                                "master" -> { state.master = current; state.group = emptyMap() }
+                                "group" -> state.group = current
+                                "region" -> {
+                                    val effective = state.control + state.global + state.master + state.group + current
+                                    val sampleRef = effective["sample"] ?: throw IllegalArgumentException("Instrument '$name' SFZ has a region without sample=: $file")
+                                    if (sampleRef != "*silence") {
+                                        val key = effective["key"]?.toIntOrNull()
+                                        val lowKey = key ?: effective["lokey"]?.toIntOrNull() ?: 0
+                                        val highKey = key ?: effective["hikey"]?.toIntOrNull() ?: 127
+                                        if (lowKey !in 0..127 || highKey !in lowKey..127) return@forEachIndexed
+                                        val defaultPath = effective["default_path"].orEmpty()
+                                        require(!defaultPath.contains('$')) { "Instrument '$name' has an unresolved default_path variable: $file" }
+                                        val sample = safeAssetFile(sampleBase, root, realRoot, defaultPath + sampleRef.replace('\\', '/'), "Instrument '$name' SFZ sample")
+                                        validateSample(sample, name, supportedSampleRates)
+                                        regions += SfzRegion(
+                                            lowKey, highKey, sample, effective["lovel"]?.toIntOrNull() ?: 0,
+                                            effective["hivel"]?.toIntOrNull() ?: 127,
+                                            (effective["seq_length"]?.toIntOrNull() ?: 1) > 1 || effective.containsKey("lorand"),
+                                            effective["trigger"] in setOf("release", "release_key")
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } finally { active.removeLast() }
+        }
+        parse(sfz, sfz.parent)
+        require(regions.isNotEmpty()) { "Instrument '$name' SFZ contains no playable <region> sample definitions" }
         return regions
     }
 
@@ -388,7 +487,7 @@ class InstrumentRegistryLoader(val libraryRoot: Path) {
         required.forEach { (name, file) ->
             val note = requireNotNull(map)[name]
             require(note in 0..127) { "Drum noteMap '$name' must be 0..127" }
-            require(regions.any { it.key == note && it.sample.fileName.toString() == file }) { "Drum noteMap '$name'=$note disagrees with drums.sfz" }
+            require(regions.any { note in it.lowKey..it.highKey && it.sample.fileName.toString() == file }) { "Drum noteMap '$name'=$note disagrees with drums.sfz" }
         }
     }
 
@@ -401,9 +500,9 @@ class InstrumentRegistryLoader(val libraryRoot: Path) {
             if (drums) add(PerformanceCapability.PERCUSSIVE) else add(PerformanceCapability.PITCHED)
             if (!drums) add(PerformanceCapability.POLYPHONIC)
             if (this@verifiedCapabilities.any { region -> region.release }) add(PerformanceCapability.SUSTAIN)
-            if (!drums && this@verifiedCapabilities.maxOf { region -> region.key } - this@verifiedCapabilities.minOf { region -> region.key } >= 12) add(PerformanceCapability.COUNTER_MELODY)
+            if (!drums && this@verifiedCapabilities.maxOf { region -> region.highKey } - this@verifiedCapabilities.minOf { region -> region.lowKey } >= 12) add(PerformanceCapability.COUNTER_MELODY)
         }
-        val range = MidiPlayableRange(minOf { it.key }, maxOf { it.key })
+        val range = MidiPlayableRange(minOf { it.lowKey }, maxOf { it.highKey })
         val layers = map { it.lowVelocity to it.highVelocity }.distinct().size
         val declaredOnly = buildSet {
             declared.playableRange?.takeIf { it != range }?.let { add("playableRange") }
@@ -411,43 +510,83 @@ class InstrumentRegistryLoader(val libraryRoot: Path) {
             declared.roundRobin?.takeIf { it != this@verifiedCapabilities.any { region -> region.roundRobin } }?.let { add("roundRobin") }
             declared.releaseSamples?.takeIf { it != this@verifiedCapabilities.any { region -> region.release } }?.let { add("releaseSamples") }
             declared.performance.filterNot { it in verifiedPerformance }.forEach { add("performance:${it.name.lowercase()}") }
-            if (noteMap.isNotEmpty() && noteMap.values.any { note -> this@verifiedCapabilities.none { region -> region.key == note } }) add("noteMap")
+            if (noteMap.isNotEmpty() && noteMap.values.any { note -> this@verifiedCapabilities.none { region -> note in region.lowKey..region.highKey } }) add("noteMap")
         }
         return VerifiedInstrumentCapabilities(range, layers, any { it.roundRobin }, any { it.release }, verifiedPerformance, declaredOnly)
     }
 
-    private fun validateWav(path: Path, instrument: String, workingSampleRate: Int) {
-        val bytes = Files.readAllBytes(path)
-        require(bytes.size >= 44 && bytes.copyOfRange(0, 4).decodeToString() == "RIFF" && bytes.copyOfRange(8, 12).decodeToString() == "WAVE") {
-            "Instrument '$instrument' sample is not a RIFF/WAVE file: $path"
+    private fun validateSample(path: Path, instrument: String, supportedSampleRates: Set<Int>) {
+        if (!validatedSamples.add(path)) return
+        when (path.fileName.toString().substringAfterLast('.', "").lowercase()) {
+            "wav", "wave" -> validateWav(path, instrument, supportedSampleRates)
+            "flac" -> validateFlac(path, instrument, supportedSampleRates)
+            "ogg" -> require(Files.newInputStream(path).use { it.readNBytes(4).decodeToString() } == "OggS") { "Instrument '$instrument' sample is not Ogg: $path" }
+            "mp3" -> require(Files.newInputStream(path).use { it.readNBytes(2) }.let { it.size == 2 && (it.decodeToString().startsWith("ID") || (it[0].toInt() and 0xff) == 0xff) }) { "Instrument '$instrument' sample is not MP3: $path" }
+            else -> throw IllegalArgumentException("Instrument '$instrument' sample has unsupported format: $path")
         }
-        var offset = 12
+    }
+
+    private fun validateWav(path: Path, instrument: String, supportedSampleRates: Set<Int>) {
         var format: Int? = null; var channels: Int? = null; var rate: Int? = null
         var byteRate: Int? = null; var blockAlign: Int? = null; var bitsPerSample: Int? = null; var dataSize: Int? = null
-        while (offset + 8 <= bytes.size) {
-            val id = bytes.copyOfRange(offset, offset + 4).decodeToString()
-            val size = ByteBuffer.wrap(bytes, offset + 4, 4).order(ByteOrder.LITTLE_ENDIAN).int
-            require(size >= 0 && offset + 8L + size <= bytes.size.toLong()) { "Instrument '$instrument' sample has malformed WAV chunk: $path" }
-            if (id == "fmt ") {
-                require(size >= 16) { "Instrument '$instrument' sample has short fmt chunk: $path" }
-                val fmt = ByteBuffer.wrap(bytes, offset + 8, size).order(ByteOrder.LITTLE_ENDIAN)
-                format = fmt.short.toInt() and 0xffff
-                channels = fmt.short.toInt() and 0xffff
-                rate = fmt.int
-                byteRate = fmt.int
-                blockAlign = fmt.short.toInt() and 0xffff
-                bitsPerSample = fmt.short.toInt() and 0xffff
-            } else if (id == "data") dataSize = size
-            offset += 8 + size + (size and 1)
+        val size = Files.size(path)
+        Files.newInputStream(path).use { input ->
+            val header = input.readNBytes(12)
+            require(header.size == 12 && header.copyOfRange(0, 4).decodeToString() == "RIFF" && header.copyOfRange(8, 12).decodeToString() == "WAVE") {
+                "Instrument '$instrument' sample is not a RIFF/WAVE file: $path"
+            }
+            var offset = 12L
+            while (offset + 8 <= size) {
+                val chunk = input.readNBytes(8)
+                require(chunk.size == 8) { "Instrument '$instrument' sample has malformed WAV chunk: $path" }
+                val id = chunk.copyOfRange(0, 4).decodeToString()
+                val chunkSize = ByteBuffer.wrap(chunk, 4, 4).order(ByteOrder.LITTLE_ENDIAN).int
+                require(chunkSize >= 0 && offset + 8L + chunkSize <= size) { "Instrument '$instrument' sample has malformed WAV chunk: $path" }
+                if (id == "fmt ") {
+                    require(chunkSize >= 16) { "Instrument '$instrument' sample has short fmt chunk: $path" }
+                    val fmtBytes = input.readNBytes(chunkSize)
+                    require(fmtBytes.size == chunkSize) { "Instrument '$instrument' sample has malformed WAV chunk: $path" }
+                    val fmt = ByteBuffer.wrap(fmtBytes).order(ByteOrder.LITTLE_ENDIAN)
+                    format = fmt.short.toInt() and 0xffff
+                    channels = fmt.short.toInt() and 0xffff
+                    rate = fmt.int
+                    byteRate = fmt.int
+                    blockAlign = fmt.short.toInt() and 0xffff
+                    bitsPerSample = fmt.short.toInt() and 0xffff
+                } else {
+                    input.skipNBytes(chunkSize.toLong())
+                    if (id == "data") dataSize = chunkSize
+                }
+                // Some otherwise-valid vendor WAVs omit the final RIFF padding byte.
+                if (chunkSize and 1 == 1 && offset + 8L + chunkSize < size) input.skipNBytes(1)
+                offset += 8L + chunkSize + (chunkSize and 1)
+                if (id == "data") break
+            }
         }
-        require(format == 1) { "Instrument '$instrument' sample must use PCM encoding: $path" }
+        if (format == 0xfffe) {
+            val extensible = Files.newInputStream(path).use { it.readNBytes(60) }
+            format = if (extensible.size >= 46) ByteBuffer.wrap(extensible, 44, 2).order(ByteOrder.LITTLE_ENDIAN).short.toInt() and 0xffff else null
+        }
+        require(format in setOf(1, 3)) { "Instrument '$instrument' sample must use PCM or IEEE-float encoding: $path" }
         require(channels in 1..32 && rate != null && rate!! > 0 && blockAlign != null && blockAlign!! > 0) { "Instrument '$instrument' sample has invalid WAV format: $path" }
-        require(bitsPerSample in setOf(8, 16, 24, 32)) { "Instrument '$instrument' sample has unsupported PCM bit depth: $path" }
+        require(bitsPerSample in if (format == 1) setOf(8, 16, 24, 32) else setOf(32, 64)) { "Instrument '$instrument' sample has unsupported WAV bit depth: $path" }
         val expectedBlockAlign = channels!! * (bitsPerSample!! / 8)
         require(blockAlign == expectedBlockAlign && byteRate == rate!! * expectedBlockAlign) { "Instrument '$instrument' sample has inconsistent PCM frame layout: $path" }
-        require(dataSize != null && dataSize!! > 0 && dataSize!! % blockAlign!! == 0) { "Instrument '$instrument' sample has no complete frames: $path" }
-        // Integer PCM has no NaN or infinite sample values. Floating-point WAV is rejected above.
-        require(rate == workingSampleRate) { "Instrument '$instrument' sample rate $rate does not match registry workingSampleRate $workingSampleRate: $path" }
+        require(dataSize != null && dataSize!! > 0) { "Instrument '$instrument' sample has no complete frames: $path" }
+        require(rate in supportedSampleRates) { "Instrument '$instrument' sample rate $rate is not supported by this registry: $path" }
+    }
+
+    private fun validateFlac(path: Path, instrument: String, supportedSampleRates: Set<Int>) {
+        val bytes = Files.newInputStream(path).use { it.readNBytes(42) }
+        require(bytes.size >= 42 && bytes.copyOfRange(0, 4).decodeToString() == "fLaC") { "Instrument '$instrument' sample is not FLAC: $path" }
+        val firstBlockType = bytes[4].toInt() and 0x7f
+        val firstBlockSize = ((bytes[5].toInt() and 0xff) shl 16) or ((bytes[6].toInt() and 0xff) shl 8) or (bytes[7].toInt() and 0xff)
+        require(firstBlockType == 0 && firstBlockSize == 34) { "Instrument '$instrument' FLAC lacks STREAMINFO: $path" }
+        val offset = 8
+        val rate = ((bytes[offset + 10].toInt() and 0xff) shl 12) or ((bytes[offset + 11].toInt() and 0xff) shl 4) or ((bytes[offset + 12].toInt() and 0xff) ushr 4)
+        val channels = ((bytes[offset + 12].toInt() ushr 1) and 0x7) + 1
+        val bits = (((bytes[offset + 12].toInt() and 0x1) shl 4) or ((bytes[offset + 13].toInt() and 0xff) ushr 4)) + 1
+        require(rate in supportedSampleRates && channels in 1..8 && bits in 4..32) { "Instrument '$instrument' FLAC has unsupported stream metadata: $path" }
     }
 
     /** JSON maps normally discard duplicate keys, so reject them before a registry can look valid by accident. */
@@ -478,8 +617,20 @@ class InstrumentRegistryLoader(val libraryRoot: Path) {
         return resolved
     }
 
+    /** SFZ sample/include references may legitimately use ../ within a vendor pack. */
+    private fun safeAssetFile(base: Path, libraryRoot: Path, realRoot: Path, reference: String, label: String): Path {
+        val normalizedReference = reference.replace('\\', '/')
+        val relative = try { Path.of(normalizedReference) } catch (_: Exception) { throw IllegalArgumentException("$label path is invalid: $reference") }
+        require(reference.isNotBlank() && !relative.isAbsolute) { "$label path must be relative: $reference" }
+        val resolved = base.resolve(relative).normalize()
+        require(resolved.startsWith(libraryRoot) && Files.isRegularFile(resolved)) { "$label file does not exist inside the sound library: $reference" }
+        require(resolved.toRealPath().startsWith(realRoot)) { "$label path escapes the sound library through a symlink: $reference" }
+        return resolved
+    }
+
     private data class SfzRegion(
-        val key: Int,
+        val lowKey: Int,
+        val highKey: Int,
         val sample: Path,
         val lowVelocity: Int,
         val highVelocity: Int,
@@ -488,8 +639,11 @@ class InstrumentRegistryLoader(val libraryRoot: Path) {
     )
     private companion object {
         val json = Json { ignoreUnknownKeys = false }
-        val TOKEN = Regex("([A-Za-z_]+)=([^\\s]+)")
+        val TOKEN = Regex("([A-Za-z_][A-Za-z0-9_]*)=(.*?)(?=\\s+[A-Za-z_][A-Za-z0-9_]*=|$)")
+        val SFZ_EVENT = Regex("(?m)^\\s*(#(?:include|define)\\b[^\\n]*|<[A-Za-z]+>)")
+        val VARIABLE = Regex("\\$([A-Za-z_][A-Za-z0-9_]*)")
         val STABLE_ID = Regex("[a-z][a-z0-9-]{0,47}")
+        const val MAX_SFZ_INCLUDE_DEPTH = 64
     }
 }
 

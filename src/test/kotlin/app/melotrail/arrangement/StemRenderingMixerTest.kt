@@ -37,7 +37,7 @@ class StemRenderingMixerTest {
         ProjectStore.write(root, project)
 
         val renderer = FakeRenderer()
-        val service = StemRenderingMixer(renderer, libraryRoot = Path.of("sounds"))
+        val service = StemRenderingMixer(renderer, libraryRoot = TestSoundLibrary.root())
         val first = service.render(root, project, arrangement(), analyses)
 
         assertFalse(first.reused)
@@ -95,7 +95,7 @@ class StemRenderingMixerTest {
         writeMidi(root.resolve("midi/generated/transitions.mid"), 1_920, 2_040)
 
         val renderer = FakeRenderer()
-        StemRenderingMixer(renderer, libraryRoot = Path.of("sounds")).render(root, project, arrangement(), analyses)
+        StemRenderingMixer(renderer, libraryRoot = TestSoundLibrary.root()).render(root, project, arrangement(), analyses)
 
         val bass = requireNotNull(renderer.sequences[LogicalInstrument.BASS])
         assertEquals(90.0, tempos(bass).getValue(1_920L), 0.001)
@@ -168,7 +168,7 @@ class StemRenderingMixerTest {
     }
 
     private fun copyLibrary(destination: Path) {
-        val source = Path.of("sounds").toAbsolutePath().normalize()
+        val source = TestSoundLibrary.root()
         Files.walkFileTree(source, object : SimpleFileVisitor<Path>() {
             override fun preVisitDirectory(directory: Path, attributes: BasicFileAttributes): FileVisitResult {
                 Files.createDirectories(destination.resolve(source.relativize(directory).toString()))

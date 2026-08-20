@@ -106,7 +106,7 @@ class BassStemGenerationTest {
         )
         val sourceBefore = Files.readString(source)
 
-        val generated = BassMidiGenerationAdapter(libraryRoot = Path.of("sounds")).generate(projectRoot, project, arrangement, mapOf("A" to analysis))
+        val generated = BassMidiGenerationAdapter(libraryRoot = TestSoundLibrary.root()).generate(projectRoot, project, arrangement, mapOf("A" to analysis))
         val sequence = MidiSystem.getSequence(generated.path.toFile())
 
         assertEquals(projectRoot.resolve("midi/generated/bass.mid"), generated.path)
@@ -146,7 +146,7 @@ class BassStemGenerationTest {
             key = MidiKey("C", "major", 0.8), chords = listOf(chord(0, 1920, "C"))
         )
 
-        val generated = BassMidiGenerationAdapter(libraryRoot = Path.of("sounds")).generate(projectRoot, project, arrangement, mapOf("A" to analysis))
+        val generated = BassMidiGenerationAdapter(libraryRoot = TestSoundLibrary.root()).generate(projectRoot, project, arrangement, mapOf("A" to analysis))
 
         assertEquals(listOf(36, 43, 36, 43, 36, 36, 36, 36), generated.notes.map { it.pitch })
         assertEquals(listOf(0L, 528L, 1008L, 1488L, 1920L, 2400L, 2880L, 3360L), generated.notes.map { it.startTick })

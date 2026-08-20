@@ -76,7 +76,7 @@ class StringsMidiGenerationTest {
             section(1, SongSectionPurpose.CLIMAX, StringsRole.CLIMAX_REINFORCEMENT)
         ))
 
-        val generated = StringsMidiGenerationAdapter(libraryRoot = Path.of("sounds")).generate(projectRoot, project, arrangement, mapOf("A" to analysis()))
+        val generated = StringsMidiGenerationAdapter(libraryRoot = TestSoundLibrary.root()).generate(projectRoot, project, arrangement, mapOf("A" to analysis()))
         val sequence = MidiSystem.getSequence(generated.path.toFile())
         val channels = sequence.tracks.flatMap { track -> (0 until track.size()).map(track::get) }.mapNotNull { it.message as? ShortMessage }
             .filter { it.command == ShortMessage.NOTE_ON && it.data2 > 0 }.map { it.channel }.toSet()

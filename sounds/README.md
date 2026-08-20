@@ -1,117 +1,26 @@
-# AI Music Starter Instruments
+# Melotrail production sound library
 
-This is a lightweight development pack for your MIDI-first arranger.
+`instruments.json` is the checked-in registry-v3 catalog for the local production library. It contains 249 stable, user-facing SFZ presets from the imported CC0 packs, organized beneath `libraries/` by source pack:
 
-Included:
-- piano.sfz
-- bass.sfz
-- drums.sfz
-- pad.sfz
-- strings.sfz
-- WAV samples
-- instruments.json
-- LICENSES.json
+- Karoryfer: Emily Guitar, Fashion Bass, Gogodze Phu II, Bigcat Cello, Pasta Bass, Shiny Guitar, and Sneaky Bass
+- Versilian: VCSL 1.2.2 RC, VCSL Keys, and Virtuosity Drums 0.925
 
-## Purpose
+The samples and vendor source files remain local, are excluded from Git, and are never downloaded, copied, or changed by the application. The catalog supports native 44.1 kHz and 48 kHz WAV/FLAC assets. SFZ includes, macros, inherited regions, and vendor-relative sample paths are validated before a preset becomes available to the app.
 
-These sounds are intentionally small and lightweight. They are suitable for:
-- testing MIDI -> SFZ -> WAV rendering;
-- validating your arrangement engine;
-- generating early demos;
-- testing bass/drums/pad/string generation.
+## Selection and rendering
 
-They are not intended to replace a high-quality production sample library.
+Every preset has a stable ID, musical roles, category, source-library provenance, and license metadata. A small curated automatic pool is used for default role resolution; the remaining presets are `manual-only` and become eligible when their stable ID is pinned in Arrange. The desktop Library page exposes all validated entries for browsing and filtering.
 
-## Local asset setup and portability
+Arrangement approval records stable IDs and provenance for every structure occurrence. Rendering revalidates the registry and uses those approved assignments, never a filesystem path from project data.
 
-The starter WAV files are intentionally local assets and are excluded by the
-repository-wide audio-artifact ignore rule. A fresh checkout is render-ready
-only after you copy the approved 25 WAV files into the existing `sounds/`
-subdirectories, preserving the SFZ-relative `samples/*.wav` paths. Copy them
-from an approved local checkout or archive of this project; the application
-never downloads samples. Run `music-cli licenses <project>` (or load the
-registry before rendering) to verify the complete pack. Do not create an
-`instruments/` tree or substitute third-party files under `starter-generated`.
+## Maintaining the import
 
-The checked-in starter registry is registry v1 compatibility input. Melotrail
-also accepts registry v2 catalogs: each entry has a stable ID, display name,
-one or more musical roles, bounded affinity/trait metadata, an SFZ engine
-descriptor, embedded license and source-library provenance, and declared
-capabilities. A v2 catalog may include more than one instrument for a role.
-The resolver validates assets locally, filters unavailable entries, and records
-the selected stable ID and decision hash; it never exposes an SFZ path or sample
-filename to planning or portable project data. Registry v1 remains readable:
-its five keys are preserved as the stable IDs and its `LICENSES.json` record is
-materialized as compatibility metadata.
-
-`instruments.json` uses human-readable, one-based MIDI channels: drums value
-`10` is converted to zero-based MIDI API channel `9`. The supported drum map
-contains kick, snare, clap, closed hat, and open hat only; there is no crash or
-cymbal mapping in this starter pack.
-
-### Selecting the pack in the desktop application
-
-The macOS package does not rely on its launch directory and does not bundle
-this local pack. In **Melotrail**, open the shell **Settings** gear and
-choose this `sounds/` directory after the sample-copy step. The app validates
-the registry and samples before retaining an absolute desktop preference; it
-does not copy, download, or modify the library. A terminal-launched desktop
-app may instead use `MUSIC_SOUNDS_ROOT=/absolute/path/to/sounds`, which is
-authoritative for that launch and disables folder selection until it is unset.
-
-If the app reports missing samples, restore only the approved 25 files at the
-existing SFZ-relative `*/samples/*.wav` locations and refresh readiness. If it
-reports an invalid registry, do not substitute a different directory layout or
-weaken the registry checks; correct the selected library instead.
-
-## MIDI drum mapping
-
-- 36: Kick
-- 38: Snare
-- 39: Clap
-- 42: Closed hi-hat
-- 46: Open hi-hat
-
-## Recommended production upgrade
-
-For better acoustic sounds, use a separately approved local catalog with CC0 libraries from:
-- Versilian Community Sample Library (VCSL)
-- VSCO 2 Community Edition
-- VCSL Keys
-
-Do not replace or mutate this starter pack in place. A new v2 catalog can use
-its own stable IDs and roles; it must embed complete license evidence. CC0 and
-verified owned entries are admitted without attribution, CC BY entries need
-ready-to-publish attribution, and NC entries are unavailable even if a boolean
-claims commercial use. Unknown/custom terms require an explicit reviewed policy.
-
-## Renderer
-
-The application uses the offline `sfizz_render` executable from sfizz, tested
-against the documented sfizz 1.2.3 command-line interface and licensed
-BSD-2-Clause.
-It is a local prerequisite, not an application dependency and not an automatic
-download. Install/build it yourself, then point the application at its absolute
-path when it is not on `PATH`:
+Run this local-only command after adding the ten source folders to `sounds/production/`:
 
 ```bash
-export SFZ_RENDERER_PATH=/absolute/path/to/sfizz_render
-export SFZ_RENDERER_VERSION=1.2.3   # recorded in render metadata
+python3 tools/curate_sound_library.py --apply
 ```
 
-The adapter calls it with structured arguments equivalent to:
+It moves the known pack roots into `sounds/libraries/`, removes Finder metadata, creates the Shiny Guitar compatibility wrapper, and regenerates `instruments.json`. It refuses to overwrite an already normalized pack.
 
-```text
-sfizz_render --sfz <registry-selected.sfz> --midi <validated.mid> --wav <temporary.wav> --samplerate <project-rate> --use-eot
-```
-
-`sfizz_render` renders stereo; the application then validates that temporary
-WAV and writes the requested project channel layout as PCM-24 WAV. It accepts
-at most a two-second renderer tail, pads short output with trailing silence,
-and atomically publishes only the verified `expectedFrames` result. MIDI, SFZ,
-samples, registry files, and other sound-library paths are never valid outputs.
-
-Rendered stems are workflow-derived artifacts. If the selected MIDI, analysis,
-structure, cohesion, or mix prerequisites change, Melotrail marks affected
-renders stale and retains them only for inspection; it never mutates the
-library, samples, or source MIDI to refresh them.
+Select this `sounds/` directory in the desktop Settings panel, or set `MUSIC_SOUNDS_ROOT` to its absolute path. The renderer requires a locally installed `sfizz_render`; Melotrail validates its output and publishes PCM-24 stems without mutating the library.

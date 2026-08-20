@@ -10,6 +10,7 @@ import app.melotrail.arrangement.Part
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.RenderFormat
+import app.melotrail.arrangement.TestSoundLibrary
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.decodeFromString
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -30,7 +31,7 @@ class ArrangementApplicationServiceTest {
     @Test
     fun `deterministic generation writes an approved inspectable arrangement snapshot`() = runBlocking {
         val root = project("approved")
-        val result = DefaultArrangementApplicationService(libraryRoot = Path.of("sounds")).generate(GenerateArrangementRequest(root, instruments = listOf("piano", "bass")))
+        val result = DefaultArrangementApplicationService(libraryRoot = TestSoundLibrary.root()).generate(GenerateArrangementRequest(root, instruments = listOf("piano", "bass")))
 
         assertTrue(Files.isRegularFile(root.resolve("song_plan.json")))
         assertTrue(Files.isRegularFile(root.resolve("section_variations.json")))
@@ -49,7 +50,7 @@ class ArrangementApplicationServiceTest {
             qwenGlobalPlanner = app.melotrail.arrangement.DeterministicGlobalSongPlanner(),
             deterministicDetailedPlanner = app.melotrail.arrangement.DeterministicDetailedArrangementPlanner(),
             qwenDetailedPlanner = app.melotrail.arrangement.DeterministicDetailedArrangementPlanner(),
-            libraryRoot = Path.of("sounds")
+            libraryRoot = TestSoundLibrary.root()
         )
 
         val draft = service.generate(GenerateArrangementRequest(root, ArrangementPlannerKind.QWEN, instruments = listOf("piano")))
@@ -67,7 +68,7 @@ class ArrangementApplicationServiceTest {
     fun `arrangements complete without Cohesion and publish exact approval context`() = runBlocking {
         val root = project("cohesion-boundary", structure = listOf("A", "A"))
 
-        DefaultArrangementApplicationService(libraryRoot = Path.of("sounds"))
+        DefaultArrangementApplicationService(libraryRoot = TestSoundLibrary.root())
             .generate(GenerateArrangementRequest(root, instruments = listOf("piano", "drums")))
 
         val arrangement = kotlinx.serialization.json.Json { ignoreUnknownKeys = false }

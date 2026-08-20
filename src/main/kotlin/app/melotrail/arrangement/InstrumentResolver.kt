@@ -68,6 +68,7 @@ class VersionedInstrumentResolver(private val registry: ValidatedInstrumentRegis
         val rejection = when {
             descriptor.licenseAdmission.admission != LicenseAdmission.ADMITTED -> descriptor.licenseAdmission.reasons.joinToString("; ")
             intent.role !in descriptor.roles -> "does not support role '${intent.role.name.lowercase()}'"
+            descriptor.selectionMode == InstrumentSelectionMode.MANUAL_ONLY && intent.pinnedInstrumentId != descriptor.id -> "manual-only catalog entry"
             !intent.requiredCapabilities.all { it in descriptor.verifiedCapabilities.performance } -> "missing verified required capability"
             else -> null
         }

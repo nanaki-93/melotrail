@@ -56,7 +56,7 @@ class SongTimingReproductionTest {
             DetailedArrangementSection(0, "A-1", "A", SongSectionPurpose.DEVELOPMENT, 0.3, listOf(PianoSourcePlan()), TransitionPlan())
         ))
 
-        StemRenderingMixer(renderer, Path.of("sounds")).render(root, project, arrangement, mapOf("A" to selectedAnalysis))
+        StemRenderingMixer(renderer, TestSoundLibrary.root()).render(root, project, arrangement, mapOf("A" to selectedAnalysis))
 
         val selectedNoteOns = noteOns(MidiSystem.getSequence(lofi.toFile()))
         val renderedNoteOns = noteOns(checkNotNull(renderer.piano))

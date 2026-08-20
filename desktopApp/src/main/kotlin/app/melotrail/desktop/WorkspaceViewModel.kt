@@ -659,6 +659,7 @@ sealed interface WorkspaceIntent {
     data class ToggleArrangementInstrument(val instrument: String) : WorkspaceIntent
     data class ToggleArrangementRole(val role: ArrangementRole) : WorkspaceIntent
     data class ToggleArrangementTrait(val trait: SoundTrait) : WorkspaceIntent
+    data class PinArrangementInstrument(val role: ArrangementRole, val instrumentId: String?) : WorkspaceIntent
     data class UpdateMixSetting(val instrument: String, val setting: LogicalMixSetting) : WorkspaceIntent
     data object ResetMix : WorkspaceIntent
     data object GenerateHumanization : WorkspaceIntent
@@ -849,6 +850,7 @@ class WorkspaceViewModel(
             is WorkspaceIntent.ToggleArrangementInstrument -> toggleArrangementInstrument(intent.instrument)
             is WorkspaceIntent.ToggleArrangementRole -> toggleArrangementRole(intent.role)
             is WorkspaceIntent.ToggleArrangementTrait -> toggleArrangementTrait(intent.trait)
+            is WorkspaceIntent.PinArrangementInstrument -> pinArrangementInstrument(intent.role, intent.instrumentId)
             is WorkspaceIntent.UpdateMixSetting -> updateMixSetting(intent.instrument, intent.setting)
             WorkspaceIntent.ResetMix -> resetMix()
             WorkspaceIntent.GenerateHumanization -> generateHumanization()
@@ -2353,6 +2355,15 @@ class WorkspaceViewModel(
                 else -> draft.copy(articulationTraits = changed)
             }
             current.copy(arrangementDraft = updated, arrangementDraftDirty = true)
+        }
+    }
+
+    private fun pinArrangementInstrument(role: ArrangementRole, instrumentId: String?) {
+        if (state.value.operation.isMutating || role !in state.value.arrangementDraft.roles) return
+        val updated = state.value.arrangementDraft.pinnedInstrumentIds.toMutableMap()
+        if (instrumentId == null) updated.remove(role) else updated[role] = instrumentId
+        mutableState.update { current ->
+            current.copy(arrangementDraft = current.arrangementDraft.copy(pinnedInstrumentIds = updated), arrangementDraftDirty = true, notification = null)
         }
     }
 

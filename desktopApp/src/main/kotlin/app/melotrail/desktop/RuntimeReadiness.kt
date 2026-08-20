@@ -91,7 +91,7 @@ class LocalRuntimeReadinessService(
         if (result.isSuccess) return DependencyReadiness(DependencyStatus.READY, "Sound library registry ready") to DependencyReadiness(DependencyStatus.READY, "All registry samples are present")
         val message = result.exceptionOrNull()?.message.orEmpty()
         return if (message.contains("sample", ignoreCase = true) || message.contains("WAV", ignoreCase = true)) {
-            DependencyReadiness(DependencyStatus.READY, "Sound library registry ready") to DependencyReadiness(DependencyStatus.UNAVAILABLE, "Copy the approved local starter samples into the selected sound library.", RecoveryAction.INSTALL_SAMPLES)
+            DependencyReadiness(DependencyStatus.READY, "Sound library registry ready") to DependencyReadiness(DependencyStatus.UNAVAILABLE, "Restore the missing catalog samples in the selected sound library.", RecoveryAction.INSTALL_SAMPLES)
         } else DependencyReadiness(DependencyStatus.FAILED, "Sound-library registry is invalid. Choose a validated folder.", RecoveryAction.CHOOSE_SOUND_LIBRARY) to DependencyReadiness(DependencyStatus.UNAVAILABLE, "Samples cannot be checked until the registry is valid.", RecoveryAction.CHOOSE_SOUND_LIBRARY)
     }
 

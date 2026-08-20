@@ -113,7 +113,7 @@ class DrumMidiGenerationTest {
         val sourceBefore = Files.readAllBytes(source)
         val bassBefore = Files.readAllBytes(bass)
 
-        val generated = DrumMidiGenerationAdapter(libraryRoot = Path.of("sounds")).generate(projectRoot, project, arrangement, mapOf("A" to analysis))
+        val generated = DrumMidiGenerationAdapter(libraryRoot = TestSoundLibrary.root()).generate(projectRoot, project, arrangement, mapOf("A" to analysis))
         val sequence = MidiSystem.getSequence(generated.path.toFile())
         val channels = sequence.tracks.flatMap { track -> (0 until track.size()).map(track::get) }
             .mapNotNull { it.message as? javax.sound.midi.ShortMessage }
@@ -139,7 +139,7 @@ class DrumMidiGenerationTest {
         val project = Project(Project.CURRENT_VERSION, "low-ppq-drums", listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid"))), renderFormat = RenderFormat())
         val arrangement = DetailedArrangement(sections = listOf(section(0, DrumsRole.BUILD, true)))
 
-        val generated = DrumMidiGenerationAdapter(libraryRoot = Path.of("sounds")).generate(projectRoot, project, arrangement, mapOf("A" to analysis(ppq = 24, durationTicks = 96)))
+        val generated = DrumMidiGenerationAdapter(libraryRoot = TestSoundLibrary.root()).generate(projectRoot, project, arrangement, mapOf("A" to analysis(ppq = 24, durationTicks = 96)))
 
         assertEquals(24, MidiSystem.getSequence(generated.path.toFile()).resolution)
         assertTrue(generated.hits.isNotEmpty())

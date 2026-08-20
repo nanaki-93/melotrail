@@ -1,6 +1,7 @@
 package app.melotrail.application
 
 import app.melotrail.arrangement.InstrumentRegistryLoader
+import app.melotrail.arrangement.InstrumentSelectionMode
 import java.nio.file.Path
 import java.util.Locale
 
@@ -33,6 +34,7 @@ data class LocalSoundLibraryInstrument(
     val id: String,
     val name: String,
     val category: String,
+    val selectionMode: InstrumentSelectionMode = InstrumentSelectionMode.AUTOMATIC,
     val sampleCount: Int,
     val licenseName: String,
     val license: String,
@@ -55,7 +57,7 @@ object RegistryLocalSoundLibraryInventoryReader : LocalSoundLibraryInventoryRead
         if (validatedRoot == null) {
             return LocalSoundLibraryInventory(
                 LocalSoundLibraryInventoryState.UNCONFIGURED,
-                recoveryMessage = "Choose the local sounds folder containing instruments.json and LICENSES.json."
+                recoveryMessage = "Choose the local sounds folder containing instruments.json."
             )
         }
         return runCatching { InstrumentRegistryLoader(validatedRoot).load() }
@@ -67,7 +69,8 @@ object RegistryLocalSoundLibraryInventoryReader : LocalSoundLibraryInventoryRead
                             LocalSoundLibraryInstrument(
                                 id = descriptor.id,
                                 name = descriptor.name,
-                                category = descriptor.id.replaceFirstChar(Char::uppercase),
+                                category = descriptor.category,
+                                selectionMode = descriptor.selectionMode,
                                 sampleCount = descriptor.samplePaths.size,
                                 licenseName = descriptor.license.displayName,
                                 license = descriptor.license.license,
