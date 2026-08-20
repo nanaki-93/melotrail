@@ -349,6 +349,21 @@ private fun HeaderIconControl(symbol: String, description: String, enabled: Bool
     ) { Text(symbol, style = MaterialTheme.typography.titleMedium) }
 }
 
+/** Presentation order only; [WorkspaceSection.OVERVIEW] retains its persisted route identity. */
+internal val workspaceNavigationOrder = listOf(
+    WorkspaceSection.OVERVIEW,
+    WorkspaceSection.SETUP,
+    WorkspaceSection.HARMONY,
+    WorkspaceSection.IMPORT,
+    WorkspaceSection.STRUCTURE,
+    WorkspaceSection.ARRANGE,
+    WorkspaceSection.MIX_MASTER,
+    WorkspaceSection.LIBRARY,
+    WorkspaceSection.VIDEO_PREVIEW,
+    WorkspaceSection.EXPORT,
+    WorkspaceSection.SETTINGS
+)
+
 internal fun soundLibrarySummary(library: SoundLibrarySettingsState): String = when {
     library.resolvedRoot != null && library.validationError == null -> "Library: ${library.source ?: "configured"} · validated locally"
     else -> "Library unavailable — ${library.validationError ?: "choose a valid folder"}"
@@ -361,7 +376,7 @@ private fun WorkspaceNavigation(state: WorkspaceUiState, onIntent: (WorkspaceInt
             .semantics { testTag = WorkspaceTags.WORKSPACE_NAV; contentDescription = "Workspace sections" },
         horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)
     ) {
-        WorkspaceSection.entries.forEach { section ->
+        workspaceNavigationOrder.forEach { section ->
             val selected = state.workspaceSection == section
             Row(
                 modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(MusicWorkspaceTokens.Radius.Control))

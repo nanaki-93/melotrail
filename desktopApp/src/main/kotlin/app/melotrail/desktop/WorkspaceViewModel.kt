@@ -185,7 +185,8 @@ data class WorkspaceUiState(
 
 enum class WorkspaceSection(val label: String) {
     SETUP("Setup"),
-    OVERVIEW("Overview"),
+    /** Read-only project snapshot; the legacy identifier preserves route compatibility. */
+    OVERVIEW("Info"),
     IMPORT("Melody Parts"),
     HARMONY("Harmony"),
     STRUCTURE("Structure"),

@@ -352,6 +352,17 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `Info is the first primary destination and keeps the Overview route`() = runComposeUiTest {
+        assertEquals(WorkspaceSection.OVERVIEW, primaryWorkspaceDestinations.first())
+        assertEquals("Info", WorkspaceSection.OVERVIEW.label)
+
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(populatedState(), intents::add) } }
+        onNodeWithTag(WorkspaceTags.WORKSPACE_SECTION_PREFIX + WorkspaceSection.OVERVIEW.name.lowercase()).assertExists()
+        onNodeWithContentDescription("Open Info, selected").assertExists()
+    }
+
+    @Test
     fun `project actions disable only while a mutation is in flight`() = runComposeUiTest {
         setContent {
             MelotrailTheme {
@@ -389,7 +400,7 @@ class WorkspaceScreenTest {
         onNodeWithTag(WorkspaceTags.WORKSPACE_SECTION_PREFIX + WorkspaceSection.EXPORT.name.lowercase()).performClick()
         assertEquals(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.EXPORT), intents.single())
 
-        listOf(WorkspaceTags.PROJECT_HEADER, WorkspaceTags.CREATE_PROJECT, WorkspaceTags.OPEN_PROJECT, WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.OVERVIEW.name.lowercase(), WorkspacePageTags.OVERVIEW_PREVIEW, WorkspaceTags.COMPACT_TRANSPORT).forEach { assertFitsNarrowViewport(it) }
+        listOf(WorkspaceTags.PROJECT_HEADER, WorkspaceTags.CREATE_PROJECT, WorkspaceTags.OPEN_PROJECT, WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.OVERVIEW.name.lowercase(), WorkspacePageTags.OVERVIEW_PREVIEW, WorkspacePageTags.OVERVIEW_ARTIFACTS).forEach { assertFitsNarrowViewport(it) }
 
         setContent { MelotrailTheme { WorkspaceScreen(exportState(), onIntent = {}) } }
         listOf(WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.EXPORT.name.lowercase(), WorkspacePageTags.EXPORT_SUMMARY, WorkspacePageTags.EXPORT_ACTION).forEach { assertFitsNarrowViewport(it) }
@@ -399,7 +410,7 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `overview exposes real-state regions one export route and one shared transport`() = runComposeUiTest {
+    fun `Info exposes a read-only project snapshot`() = runComposeUiTest {
         setContent { MelotrailTheme { WorkspaceScreen(populatedState(), onIntent = {}) } }
 
         listOf(
@@ -408,25 +419,28 @@ class WorkspaceScreenTest {
             WorkspacePageTags.OVERVIEW_TRACKS,
             WorkspacePageTags.OVERVIEW_PREVIEW,
             WorkspacePageTags.OVERVIEW_PROJECT_INFO,
-            WorkspacePageTags.OVERVIEW_SECTION_INFO,
+            WorkspacePageTags.OVERVIEW_ARTIFACTS,
             WorkspacePageTags.OVERVIEW_ACTIVITY,
-            WorkspacePageTags.OVERVIEW_QUICK_ACTIONS,
-            WorkspaceTags.COMPACT_TRANSPORT
         ).forEach { onAllNodesWithTag(it).assertCountEquals(1) }
-        onAllNodesWithTag(WorkspaceTags.COMPACT_TRANSPORT).assertCountEquals(1)
+        listOf(
+            WorkspacePageTags.OVERVIEW_QUICK_ACTIONS,
+            WorkspacePageTags.OVERVIEW_PRIMARY_ACTION,
+            WorkspacePageTags.OVERVIEW_MORE_ACTIONS_TOGGLE,
+            WorkspaceTags.COMPACT_TRANSPORT,
+            WorkspaceTags.PLAYBACK_TOGGLE
+        ).forEach { onNodeWithTag(it).assertDoesNotExist() }
     }
 
     @Test
-    fun `overview labels unknown timing tempo key tracks and preview state instead of inventing data`() = runComposeUiTest {
+    fun `Info labels unavailable metadata and artifact state instead of inventing data`() = runComposeUiTest {
         setContent { MelotrailTheme { WorkspaceScreen(WorkspaceUiState(), onIntent = {}) } }
 
         onAllNodesWithTag(WorkspacePageTags.OVERVIEW_TRACKS).assertCountEquals(1)
         onAllNodesWithTag(WorkspacePageTags.OVERVIEW_PREVIEW).assertCountEquals(1)
-        onAllNodesWithTag(WorkspaceTags.FOOTER_WAVEFORM).assertCountEquals(1)
         onAllNodesWithText("Track availability unavailable").assertCountEquals(2)
-        onNodeWithText("Tempo").assertExists()
-        onNodeWithText("No canonical song tempo").assertExists()
-        onNodeWithText("Key unavailable").assertExists()
+        onNodeWithText("Tempo: unavailable").assertExists()
+        onNodeWithText("Key: unavailable").assertExists()
+        onNodeWithText("Project artifacts unavailable").assertExists()
         onNodeWithText("Local video preview unavailable").assertExists()
     }
 
@@ -445,18 +459,20 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `overview shows one current workflow action and a secondary workflow disclosure`() = runComposeUiTest {
+    fun `Info does not expose workflow shortcuts`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(overviewReadyState(), intents::add) } }
 
-        onNodeWithTag(WorkspacePageTags.OVERVIEW_PRIMARY_ACTION).assertExists()
-        onNodeWithTag(WorkspacePageTags.OVERVIEW_MORE_ACTIONS_TOGGLE).performScrollTo().performClick()
-        waitForIdle()
-        onNodeWithTag(WorkspacePageTags.OVERVIEW_MORE_ACTIONS).assertExists()
+        listOf(
+            WorkspacePageTags.OVERVIEW_PRIMARY_ACTION,
+            WorkspacePageTags.OVERVIEW_MORE_ACTIONS_TOGGLE,
+            WorkspacePageTags.OVERVIEW_MORE_ACTIONS
+        ).forEach { onNodeWithTag(it).assertDoesNotExist() }
+        assertTrue(intents.isEmpty())
     }
 
     @Test
-    fun `overview selection uses occurrence identity and stale tracks never claim a measured waveform`() = runComposeUiTest {
+    fun `Info shows static occurrence identities and stale track state`() = runComposeUiTest {
         val sections = listOf(
             arrangementSection(0, "A1", 16.0, "piano"),
             arrangementSection(1, "B1", 20.0, "bass"),
@@ -472,19 +488,17 @@ class WorkspaceScreenTest {
         setContent { MelotrailTheme { WorkspaceScreen(stale, onIntent = {}) } }
 
         onAllNodesWithTag(WorkspacePageTags.OVERVIEW_SECTION_PREFIX + "A2").assertCountEquals(1)
-        onNodeWithTag(WorkspacePageTags.OVERVIEW_SECTION_PREFIX + "A2").performClick()
-        onNodeWithText("Time: 0:24").assertExists()
+        onNodeWithContentDescription("Section A2").assertExists()
         onAllNodesWithText("Stale lane").assertCountEquals(5)
-        onAllNodesWithTag(WorkspaceTags.FOOTER_WAVEFORM).assertCountEquals(1)
     }
 
     @Test
-    fun `Overview Video Preview and Export dispatch the same shared playback intent`() = runComposeUiTest {
+    fun `Info has no playback action while Video Preview and Export share playback`() = runComposeUiTest {
         val session = PlaybackSession(artifact = PlaybackArtifactIdentity(Path.of("build/task-093-project"), Path.of("build/task-093-project/mix/dry.wav")))
         val overviewIntents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(overviewReadyState().copy(playbackSession = session), overviewIntents::add) } }
-        onNodeWithTag(WorkspaceTags.PLAYBACK_TOGGLE).performScrollTo().performClick()
-        assertEquals(WorkspaceIntent.PlayPause, overviewIntents.single())
+        onNodeWithTag(WorkspaceTags.PLAYBACK_TOGGLE).assertDoesNotExist()
+        assertTrue(overviewIntents.isEmpty())
 
         val previewIntents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(overviewReadyState().copy(workspaceSection = WorkspaceSection.VIDEO_PREVIEW, playbackSession = session, runtimeReadiness = readyRuntime()), previewIntents::add) } }

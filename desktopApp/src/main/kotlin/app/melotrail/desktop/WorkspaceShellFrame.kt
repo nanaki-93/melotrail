@@ -70,6 +70,16 @@ internal object WorkspaceShellTags {
 
 private enum class SharedShellLayout { WIDE, MEDIUM, NARROW }
 
+internal val primaryWorkspaceDestinations = listOf(
+    WorkspaceSection.OVERVIEW,
+    WorkspaceSection.SETUP,
+    WorkspaceSection.HARMONY,
+    WorkspaceSection.IMPORT,
+    WorkspaceSection.STRUCTURE,
+    WorkspaceSection.ARRANGE,
+    WorkspaceSection.MIX_MASTER
+)
+
 private fun sharedShellLayout(width: Dp): SharedShellLayout = when {
     width >= MusicWorkspaceTokens.Reference.WideBreakpoint -> SharedShellLayout.WIDE
     width >= MusicWorkspaceTokens.Reference.NarrowBreakpoint -> SharedShellLayout.MEDIUM
@@ -284,7 +294,7 @@ private fun DestinationChooser(state: WorkspaceUiState, onIntent: (WorkspaceInte
             contentDescription = "Choose workspace page. Current page: ${state.workspaceSection.label}."
         }) { Text(state.workspaceSection.label) }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            WorkspaceSection.entries.forEach { destination ->
+            workspaceNavigationOrder.forEach { destination ->
                 DropdownMenuItem(text = { Text(destination.label) }, onClick = {
                     expanded = false
                     onIntent(WorkspaceIntent.SelectWorkspaceSection(destination))
@@ -323,11 +333,9 @@ private fun DestinationNavigation(state: WorkspaceUiState, onIntent: (WorkspaceI
     Box(modifier.semantics { testTag = tag }) {
         val navigationModifier = Modifier.semantics { testTag = WorkspaceTags.WORKSPACE_NAV; contentDescription = "Workspace navigation" }
         if (compact) Row(navigationModifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-            listOf(WorkspaceSection.SETUP, WorkspaceSection.HARMONY, WorkspaceSection.OVERVIEW, WorkspaceSection.IMPORT, WorkspaceSection.STRUCTURE, WorkspaceSection.ARRANGE, WorkspaceSection.MIX_MASTER)
-                .forEach { destination -> NavigationButton(destination, state, onIntent, compact = true) }
+            primaryWorkspaceDestinations.forEach { destination -> NavigationButton(destination, state, onIntent, compact = true) }
         } else Column(navigationModifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-            listOf(WorkspaceSection.SETUP, WorkspaceSection.HARMONY, WorkspaceSection.OVERVIEW, WorkspaceSection.IMPORT, WorkspaceSection.STRUCTURE, WorkspaceSection.ARRANGE, WorkspaceSection.MIX_MASTER)
-                .forEach { destination -> NavigationButton(destination, state, onIntent, compact = false) }
+            primaryWorkspaceDestinations.forEach { destination -> NavigationButton(destination, state, onIntent, compact = false) }
         }
     }
 }
@@ -350,7 +358,7 @@ private val WorkspaceSection.shortLabel: String
     get() = when (this) {
         WorkspaceSection.SETUP -> "Setup"
         WorkspaceSection.HARMONY -> "Harmony"
-        WorkspaceSection.OVERVIEW -> "Project"
+        WorkspaceSection.OVERVIEW -> "Info"
         WorkspaceSection.MIX_MASTER -> "Mix"
         WorkspaceSection.VIDEO_PREVIEW -> "Preview"
         else -> label
@@ -358,7 +366,7 @@ private val WorkspaceSection.shortLabel: String
 
 private val WorkspaceSection.navigationLabel: String
     get() = when (this) {
-        WorkspaceSection.OVERVIEW -> "Project"
+        WorkspaceSection.OVERVIEW -> "Info"
         else -> label
     }
 
