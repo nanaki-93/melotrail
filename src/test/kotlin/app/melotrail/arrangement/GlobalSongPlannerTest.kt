@@ -1,5 +1,9 @@
 package app.melotrail.arrangement
 
+import app.melotrail.profile.CompositionProfileRef
+import app.melotrail.profile.MoodRef
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -53,6 +57,36 @@ class GlobalSongPlannerTest {
     }
 
     @Test
+    fun `Qwen structured plan restores application-owned identity and intents`() {
+        val input = structuredInput()
+        val expected = DeterministicGlobalSongPlanner().plan(input)
+        val modelPlan = expected.copy(
+            version = 1,
+            style = "model text must not persist",
+            contextHash = null,
+            sections = expected.sections.map { section ->
+                section.copy(
+                    index = 99,
+                    instanceId = "model-id",
+                    partId = "model-part",
+                    occurrence = 99,
+                    purpose = SongSectionPurpose.INTRODUCTION,
+                    occurrenceHash = null,
+                    soundIntents = emptyList()
+                )
+            }
+        )
+        val client = CapturingFixtureClient(Json { encodeDefaults = true }.encodeToString(modelPlan))
+
+        assertEquals(expected, LocalQwenGlobalSongPlanner(client).plan(input))
+        assertTrue(client.userPrompt.contains(input.contextHash().orEmpty()))
+        assertTrue(client.userPrompt.contains("melody and harmony = piano"))
+        assertTrue(client.userPrompt.contains("texture and ambience = pad"))
+        assertTrue(client.userPrompt.contains("empty soundIntents array"))
+        assertTrue(client.userPrompt.contains("counter-melody = strings"))
+    }
+
+    @Test
     fun `Qwen rejects malformed prose extra fields unsafe note data and invalid structure values`() {
         listOf(
             "not JSON",
@@ -62,8 +96,7 @@ class GlobalSongPlannerTest {
             fixture("valid-song-plan.json").replace("\"bass\"", "\"synth\""),
             fixture("valid-song-plan.json").replace("\"development\"", "\"freeform\""),
             fixture("valid-song-plan.json").replace("0.20", "1e309"),
-            fixture("valid-song-plan.json").replace("\"index\": 1", "\"index\": 9"),
-            fixture("valid-song-plan.json").replace("\"instanceId\": \"A2\", \"partId\": \"A\"", "\"instanceId\": \"A2\", \"partId\": \"B\""),
+            fixture("valid-song-plan.json").replace("\"climaxIndex\": 3", "\"climaxIndex\": 9"),
             "{\"version\":1,\"style\":\"warm melancholic lo-fi piano\",\"energyCurve\":[],\"sections\":[],\"climaxIndex\":0,\"ending\":\"resolved\"}"
         ).forEach { response ->
             assertThrows(IllegalArgumentException::class.java) {
@@ -115,6 +148,22 @@ class GlobalSongPlannerTest {
         allowedInstruments = listOf("piano", "bass", "pad"),
         style = "warm melancholic lo-fi piano"
     )
+
+    private fun structuredInput(): SongPlanningInput {
+        val profile = CompositionProfileRef("lofi", 1)
+        val mood = MoodRef("nostalgic", 1)
+        return input().copy(
+            allowedInstruments = listOf("piano", "bass", "pad", "strings"),
+            style = null,
+            soundContext = ArrangementSoundContext(profile, mood, "C-major-v1", 4, 4, "a".repeat(64)),
+            requestedIntents = listOf(
+                InstrumentIntent(role = ArrangementRole.MELODY, profile = profile, mood = mood),
+                InstrumentIntent(role = ArrangementRole.BASS, profile = profile, mood = mood),
+                InstrumentIntent(role = ArrangementRole.COUNTER_MELODY, profile = profile, mood = mood),
+                InstrumentIntent(role = ArrangementRole.AMBIENCE, profile = profile, mood = mood)
+            )
+        )
+    }
 
     private fun analysis(partId: String, energy: Double) = MidiAnalysis(
         partId = partId,

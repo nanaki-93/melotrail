@@ -412,9 +412,52 @@ class LocalQwenGlobalSongPlanner(
         } catch (error: Exception) {
             throw IllegalArgumentException("Qwen returned invalid song-plan JSON: ${error.message}", error)
         }
-        val validation = plan.validate(input)
+        val canonical = plan.withApplicationOwnedFields(input)
+        val validation = canonical.validate(input)
         require(validation.isValid) { "Invalid Qwen song plan: ${validation.errors.joinToString("; ")}" }
-        return plan
+        return canonical
+    }
+
+    /**
+     * Qwen chooses the musical arc only. Stable occurrence identity, context
+     * binding, and profile-bound intents are application-owned data; asking the
+     * model to reproduce them adds thousands of tokens and is error-prone.
+     */
+    private fun SongPlan.withApplicationOwnedFields(input: SongPlanningInput): SongPlan {
+        val expectedSections = input.sectionsWithIdentity()
+        val purposes = climaxIndex.takeIf { it in expectedSections.indices }?.let { climax ->
+            expectedSections.indices.map { index ->
+                when {
+                    index == climax -> SongSectionPurpose.CLIMAX
+                    index == 0 -> SongSectionPurpose.INTRODUCTION
+                    index == expectedSections.lastIndex -> SongSectionPurpose.CONCLUSION
+                    index > climax -> SongSectionPurpose.RELEASE
+                    else -> SongSectionPurpose.DEVELOPMENT
+                }
+            }
+        }
+        return copy(
+            version = if (input.soundContext == null) 1 else SongPlan.CURRENT_VERSION,
+            style = input.resolvedStyle,
+            contextHash = input.contextHash(),
+            sections = sections.mapIndexed { position, section ->
+                val expected = expectedSections.getOrNull(position) ?: return@mapIndexed section
+                val purpose = purposes?.getOrNull(position) ?: section.purpose
+                section.copy(
+                    index = expected.index,
+                    instanceId = expected.instanceId,
+                    partId = expected.partId,
+                    occurrence = expected.occurrence,
+                    purpose = purpose,
+                    occurrenceHash = input.soundContext?.let { input.occurrenceHash(expected) },
+                    soundIntents = input.soundContext?.let {
+                        input.intentsFor(purpose).filter { intent ->
+                            LegacyLogicalInstrumentRoles.logicalFor(intent.role) in section.instrumentProgression
+                        }
+                    }.orEmpty()
+                )
+            }
+        )
     }
 
     private fun createUserPrompt(input: SongPlanningInput): String = """
@@ -436,8 +479,14 @@ class LocalQwenGlobalSongPlanner(
         Structured planning context (present only for role-based requests):
         ${promptJson.encodeToString(input.soundContext)}
 
+        Required context hash (present only for role-based requests; copy it verbatim, never calculate it):
+        ${promptJson.encodeToString(input.contextHash())}
+
         Controlled requested sound intents (present only for role-based requests):
         ${promptJson.encodeToString(input.requestedIntents)}
+
+        Compatibility aliases for controlled roles (use these to decide which intents belong in a section):
+        melody and harmony = piano; bass = bass; drums = drums; counter-melody = strings; texture and ambience = pad.
 
         Bounded constraints:
         ${promptJson.encodeToString(input.constraints)}
@@ -446,11 +495,13 @@ class LocalQwenGlobalSongPlanner(
         - version must be 1.
         - style must equal the supplied Style string exactly.
         - energyCurve and sections must each contain exactly ${input.structure.size} entries in the supplied order.
-        - Copy index, instanceId, partId, and occurrence from each Requested sections entry exactly.
+        - Include index, instanceId, partId, and occurrence for every section. The application restores these stable identities.
         - instrumentProgression must start with piano and contain only Allowed instruments.
-        - If Structured planning context is present, return version 2, copy its context hash exactly, and put only
-          supplied controlled sound intents into each section. Set each returned intent's sectionPurpose to that section's purpose.
+        - If Structured planning context is present, return version 2. Use null for contextHash and occurrenceHash and an
+          empty soundIntents array in every section; the application restores those bound fields after validation.
           Do not invent traits, stable IDs, paths, filenames, engine settings, or free-form sound text.
+        - Choose climaxIndex. Section purposes are derived from it: first is introduction, its index is climax, final is
+          conclusion, positions before it are development, and positions after it are release.
         - When the section count and per-section limits permit it, use every Allowed instrument in at least one section.
         - climaxIndex must point to the one section whose purpose is climax.
         Return the complete object described by the system response schema and no other text.
@@ -487,11 +538,13 @@ class LocalQwenGlobalSongPlanner(
               "ending": "resolved",
               "contextHash": null
             }
-            All shown fields are required. Do not add fields. `soundIntents`, `contextHash`, and `occurrenceHash` are required for a structured
-            role request and otherwise may be their shown empty/null compatibility values. energyCurve and sections must have one entry per supplied
+            All shown fields are required. Do not add fields. Use empty/null values for `soundIntents`, `contextHash`, and `occurrenceHash`;
+            the application binds them to its trusted request after parsing. energyCurve and sections must have one entry per supplied
             requested section, not merely the single illustrative entry above. Each section has exactly index, instanceId,
             partId, occurrence, purpose, instrumentProgression, and transitionIntent.
-            Preserve every supplied section index, instanceId, partId, and occurrence exactly, and calculate no hashes: copy every supplied occurrenceHash exactly. Use only supplied logical instruments,
+            Include every supplied section index, instanceId, partId, and occurrence. Do not calculate hashes: use null for
+            occurrenceHash and contextHash, and an empty soundIntents list. Choose one climaxIndex; the app derives section purposes.
+            Use only supplied logical instruments,
             start each progression with piano, and use every supplied logical instrument somewhere in the song when the supplied
             section count and limits permit it. Use one climax, and make the final transitionIntent none. Allowed purpose
             values: introduction, development, climax, release, conclusion. Allowed transitionIntent values: none, build,

@@ -145,7 +145,19 @@ class DefaultArrangementApplicationService(
             "Arrangement instruments must be selected from piano, bass, drums, pad, and strings and include piano"
         }
         val analyses = midiAnalyses(root, project, structure.map(SectionInstance::partId).toSet())
-        val input = SongPlanningInput(project.name, project.version, analyses, structure, allowed, request.style, soundContext = context, requestedIntents = intents)
+        // Role selections activate the structured planning protocol, which has
+        // no legacy style-string field. Ignore a stale compatibility value from
+        // callers rather than constructing an invalid mixed-mode request.
+        val input = SongPlanningInput(
+            projectName = project.name,
+            projectVersion = project.version,
+            analyses = analyses,
+            structure = structure,
+            allowedInstruments = allowed,
+            style = request.style?.takeIf { intents.isEmpty() },
+            soundContext = context,
+            requestedIntents = intents
+        )
         input.requireValid()
         coroutineContext.ensureActive()
 
@@ -263,8 +275,12 @@ class DefaultArrangementApplicationService(
         val structure = rawPlan.sections.map { SectionInstance(it.index, it.partId, it.instanceId) }
         val analyses = midiAnalyses(root, project, structure.map(SectionInstance::partId).toSet())
         val planningInput = SongPlanningInput(
-            project.name, project.version, analyses, structure,
-            rawPlan.sections.flatMap { it.instrumentProgression }.distinct(), rawPlan.style,
+            projectName = project.name,
+            projectVersion = project.version,
+            analyses = analyses,
+            structure = structure,
+            allowedInstruments = rawPlan.sections.flatMap { it.instrumentProgression }.distinct(),
+            style = rawPlan.style.takeIf { rawPlan.contextHash == null },
             soundContext = rawPlan.contextHash?.let { structuredContext(project) },
             requestedIntents = rawPlan.sections.flatMap { it.soundIntents }.distinctBy { it.role }
         )

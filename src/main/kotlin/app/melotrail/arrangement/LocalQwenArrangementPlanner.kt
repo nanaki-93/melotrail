@@ -1,6 +1,7 @@
 package app.melotrail.arrangement
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -28,6 +29,10 @@ class LmStudioQwenClient(
     private val model: String = System.getenv("QWEN_MODEL")
         ?.takeIf { it.isNotBlank() }
         ?: DEFAULT_MODEL,
+    private val maximumCompletionTokens: Int = System.getenv("QWEN_MAX_TOKENS")
+        ?.toIntOrNull()
+        ?.coerceIn(MIN_COMPLETION_TOKENS, MAX_COMPLETION_TOKENS)
+        ?: DEFAULT_COMPLETION_TOKENS,
     private val httpClient: OkHttpClient = OkHttpClient.Builder()
         .callTimeout(600, java.util.concurrent.TimeUnit.SECONDS)
         .readTimeout(600, java.util.concurrent.TimeUnit.SECONDS)
@@ -38,10 +43,15 @@ class LmStudioQwenClient(
             ChatCompletionRequest(
                 model = model,
                 messages = listOf(
-                    ChatMessage("system", systemPrompt),
+                    // Qwen defaults to thinking mode. These planners need a small,
+                    // strict JSON document, so let the model answer directly instead
+                    // of exhausting the completion budget in reasoning_content.
+                    ChatMessage("system", "$systemPrompt\n/no_think"),
                     ChatMessage("user", userPrompt)
                 ),
-                temperature = 0.0
+                temperature = 0.0,
+                maximumCompletionTokens = maximumCompletionTokens,
+                enableThinking = false
             )
         )
         val request = Request.Builder()
@@ -73,15 +83,23 @@ class LmStudioQwenClient(
         }
         val choices = response["choices"] as? JsonArray
             ?: throw IllegalArgumentException("LM Studio response did not contain choices")
-        val content = choices.firstOrNull()
+        val choice = choices.firstOrNull()?.jsonObject
+            ?: throw IllegalArgumentException("LM Studio response did not contain a choice")
+        val message = choice
+            .get("message")
             ?.jsonObject
-            ?.get("message")
-            ?.jsonObject
-            ?.get("content")
+            ?: throw IllegalArgumentException("LM Studio response choice did not contain a message")
+        val content = message
+            .get("content")
             ?.jsonPrimitive
             ?.content
             ?.trim()
-        require(!content.isNullOrEmpty()) { "LM Studio response did not contain arrangement content" }
+        if (content.isNullOrEmpty()) {
+            val finishReason = choice["finish_reason"]?.jsonPrimitive?.content.orEmpty()
+            val hasReasoning = !message["reasoning_content"]?.jsonPrimitive?.content.isNullOrBlank()
+            val detail = if (hasReasoning) " It produced reasoning but no final content." else ""
+            throw IllegalArgumentException("LM Studio response did not contain planner content (finish_reason=${finishReason.ifBlank { "unknown" }}).$detail")
+        }
         return content
     }
 
@@ -89,7 +107,9 @@ class LmStudioQwenClient(
     private data class ChatCompletionRequest(
         val model: String,
         val messages: List<ChatMessage>,
-        val temperature: Double
+        val temperature: Double,
+        @SerialName("max_tokens") val maximumCompletionTokens: Int,
+        @SerialName("enable_thinking") val enableThinking: Boolean
     )
 
     @Serializable
@@ -101,6 +121,9 @@ class LmStudioQwenClient(
     private companion object {
         const val DEFAULT_ENDPOINT = "http://127.0.0.1:1234/v1/chat/completions"
         const val DEFAULT_MODEL = "qwen"
+        const val MIN_COMPLETION_TOKENS = 256
+        const val MAX_COMPLETION_TOKENS = 8_192
+        const val DEFAULT_COMPLETION_TOKENS = 6_144
         const val MAX_ERROR_BODY_LENGTH = 500
         val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
         val json = Json { ignoreUnknownKeys = false }
