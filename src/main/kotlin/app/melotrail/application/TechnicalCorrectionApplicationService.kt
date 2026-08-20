@@ -12,6 +12,9 @@ import app.melotrail.arrangement.TechnicalCorrectionProcessor
 import app.melotrail.arrangement.TechnicalCorrectionReferences
 import app.melotrail.arrangement.TechnicalCorrectionReport
 import app.melotrail.arrangement.TechnicalCorrectionSelection
+import app.melotrail.arrangement.MidiAiFixSelection
+import app.melotrail.arrangement.EnhancementSelection
+import app.melotrail.arrangement.MidiAnalysisInput
 import app.melotrail.arrangement.DeterministicTechnicalCorrectionPlanner
 import app.melotrail.arrangement.WorkflowArtifact
 import app.melotrail.arrangement.WorkflowArtifactReference
@@ -83,9 +86,18 @@ class DefaultTechnicalCorrectionApplicationService(
                 )
                 val project = ProjectStore.read(root)
                 ProjectStore.write(root, project.copy(parts = project.parts.map { part ->
-                    if (part.id == request.partId) part.copy(midi = requireNotNull(part.midi).copy(technicalCorrection = refs)) else part
-                }, workflow = project.workflow.markCurrent(WorkflowArtifact.CORRECTED_MIDI)))
-                snapshot(root, request.partId, refs, report, selected = false)
+                    if (part.id == request.partId) part.copy(analysis = null, midi = requireNotNull(part.midi).copy(
+                        technicalCorrection = refs,
+                        technicalCorrectionSelection = TechnicalCorrectionSelection.CORRECTED,
+                        aiFixSelection = MidiAiFixSelection.PENDING,
+                        aiFix = null,
+                        enhancementSelection = EnhancementSelection.PENDING,
+                        enhancement = null,
+                        analysisInput = MidiAnalysisInput.CURRENT,
+                        feel = null
+                    )) else part
+                }, workflow = project.workflow.invalidate(WorkflowChange.CORRECTION_SELECTION).markCurrent(WorkflowArtifact.CORRECTED_MIDI)))
+                snapshot(root, request.partId, refs, report, selected = true)
         }
     }
 
@@ -99,11 +111,10 @@ class DefaultTechnicalCorrectionApplicationService(
     override fun selectCorrected(root: Path, partId: String): TechnicalCorrectionSnapshot {
         val loaded = load(root, partId)
         return locked(root) { normalized ->
-        require(!loaded.approvalRequired) { "Technical correction has low-confidence warnings and remains unchanged until reviewed." }
         val project = ProjectStore.read(normalized); val part = project.parts.single { it.id == partId }; val midi = requireNotNull(part.midi)
         ProjectStore.write(normalized, project.copy(parts = project.parts.map {
             if (it.id == partId) it.copy(analysis = null, midi = midi.copy(technicalCorrectionSelection = TechnicalCorrectionSelection.CORRECTED,
-                aiFixSelection = app.melotrail.arrangement.MidiAiFixSelection.SKIP, analysisInput = app.melotrail.arrangement.MidiAnalysisInput.CURRENT, feel = null)) else it
+                aiFixSelection = MidiAiFixSelection.PENDING, analysisInput = MidiAnalysisInput.CURRENT, feel = null)) else it
         }, workflow = project.workflow.invalidate(WorkflowChange.CORRECTION_SELECTION).markCurrent(WorkflowArtifact.CORRECTED_MIDI)))
             loaded.copy(selected = true)
         }

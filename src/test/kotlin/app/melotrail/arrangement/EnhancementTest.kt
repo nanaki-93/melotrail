@@ -116,14 +116,25 @@ class EnhancementTest {
     }
 
     @Test
-    fun `local enhancement adapter accepts only echoed bounded plans with a known license`() {
+    fun `local enhancement adapter stamps application-owned identity onto bounded model plans`() {
         val input = root.resolve("corrected.mid").also { Files.write(it, byteArrayOf(4, 5, 6)) }
         val context = context(input)
-        val valid = """{"version":${context.version},"subjectHash":"${sha256Subject(context)}","inputSha256":"${context.correctedInputSha256}","contextSha256":"${context.contextSha256}","goals":[],"edits":[]}"""
+        val valid = """{"goals":[],"edits":[]}"""
         val planner = LocalQwenEnhancementPlanner(LocalQwenClient { _, _ -> valid }, EnhancementModelIdentity("qwen", "fixture", "1", "apache-2.0"))
-        assertEquals(emptyList<EnhancementEdit>(), planner.plan(context).edits)
-        val bad = LocalQwenEnhancementPlanner(LocalQwenClient { _, _ -> valid.replace(context.contextSha256, "0".repeat(64)) }, EnhancementModelIdentity("qwen", "fixture", "1", "apache-2.0"))
-        assertThrows(IllegalArgumentException::class.java) { bad.plan(context) }
+        val accepted = planner.plan(context)
+        assertEquals(emptyList<EnhancementEdit>(), accepted.edits)
+        assertEquals(context.version, accepted.version)
+        assertEquals(sha256Subject(context), accepted.subjectHash)
+        assertEquals(context.correctedInputSha256, accepted.inputSha256)
+        assertEquals(context.contextSha256, accepted.contextSha256)
+        val lowercaseWirePlan = LocalQwenEnhancementPlanner(LocalQwenClient { _, _ -> """{"goals":["flow_contour","passing_note"],"edits":[{"kind":"velocity","noteId":"n-00001","value":2,"goal":"flow_contour","reason":"smooth contour"},{"kind":"velocity","noteId":"n-00002","value":9,"goal":"flow_contour","reason":"outside subtle policy"}]}""" }, EnhancementModelIdentity("qwen", "fixture", "1", "apache-2.0"))
+            .plan(context)
+        assertEquals(setOf(EnhancementGoal.FLOW_CONTOUR, EnhancementGoal.PASSING_NOTE), lowercaseWirePlan.goals)
+        assertEquals(EnhancementEdit(EnhancementEditKind.VELOCITY, "n-00001", 2, EnhancementGoal.FLOW_CONTOUR, "smooth contour"), lowercaseWirePlan.edits.single())
+        val legacyWrongIdentity = LocalQwenEnhancementPlanner(LocalQwenClient { _, _ -> """{"version":999,"subjectHash":"${"0".repeat(64)}","inputSha256":"${"0".repeat(64)}","contextSha256":"${"0".repeat(64)}","goals":[],"edits":[]}""" }, EnhancementModelIdentity("qwen", "fixture", "1", "apache-2.0"))
+        assertEquals(accepted, legacyWrongIdentity.plan(context))
+        val unsupportedGoal = LocalQwenEnhancementPlanner(LocalQwenClient { _, _ -> """{"goals":["outside_the_contract"],"edits":[]}""" }, EnhancementModelIdentity("qwen", "fixture", "1", "apache-2.0"))
+        assertThrows(IllegalArgumentException::class.java) { unsupportedGoal.plan(context) }
         val unknown = LocalQwenEnhancementPlanner(LocalQwenClient { _, _ -> valid }, EnhancementModelIdentity("qwen", "fixture", "1", "unknown"))
         assertThrows(IllegalArgumentException::class.java) { unknown.plan(context) }
     }

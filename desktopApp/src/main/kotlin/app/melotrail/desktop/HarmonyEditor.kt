@@ -91,12 +91,14 @@ internal fun HarmonyPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) ->
         ) {
             Text("Harmony", style = MaterialTheme.typography.headlineMedium)
             Text("Choose a key-aware progression for Verse, Chorus, and Bridge, then continue with Melody Parts.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (editor.loading) Text("Loading canonical harmony…", modifier = Modifier.semantics { testTag = HarmonyPageTags.STATUS })
-            if (view == null && !editor.loading) {
-                Text(editor.error ?: "Save Setup before adding structured harmony.", modifier = Modifier.semantics { testTag = HarmonyPageTags.STATUS })
+            if (view == null) {
+                Text(
+                    if (editor.loading) "Loading canonical harmony…" else editor.error ?: "Save Setup before adding structured harmony.",
+                    modifier = Modifier.semantics { testTag = HarmonyPageTags.STATUS }
+                )
                 return@Column
             }
-            val harmonyView = requireNotNull(view)
+            val harmonyView = view
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).semantics { testTag = HarmonyPageTags.TABS }, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
                 sections.forEach { section ->
                     val selectedTab = section == editor.selectedSection

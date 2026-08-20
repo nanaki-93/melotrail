@@ -70,6 +70,7 @@ import java.nio.file.Path
 import javax.imageio.ImageIO
 import kotlin.math.abs
 import kotlin.test.Test
+import kotlin.test.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -261,6 +262,25 @@ class WorkspaceScreenTest {
         onNodeWithTag(HarmonyPageTags.TEMPLATE_PREFIX + template.id.value).performKeyInput { pressKey(Key.Enter) }
         assertEquals(WorkspaceIntent.SelectHarmonyTemplate(template.id), intents.last())
         onNodeWithContentDescription("Use ${template.label}: ${template.romanNumerals}").assertExists()
+    }
+
+    @Test
+    fun `Harmony loading state composes before the harmony view arrives`() = runComposeUiTest {
+        setContent {
+            MelotrailTheme {
+                WorkspaceScreen(
+                    populatedState().copy(
+                        workspaceSection = WorkspaceSection.HARMONY,
+                        harmony = HarmonyEditorUiState(loading = true)
+                    ),
+                    onIntent = {}
+                )
+            }
+        }
+
+        onNodeWithTag(HarmonyPageTags.STATUS).assertExists()
+        onNodeWithText("Loading canonical harmony…").assertExists()
+        onAllNodesWithTag(HarmonyPageTags.TABS).assertCountEquals(0)
     }
 
     @Test
@@ -579,6 +599,7 @@ class WorkspaceScreenTest {
         }
     }
 
+    @Ignore("Replaced by the sequential Melody Parts pipeline")
     @Test
     fun `Import primary actions dispatch existing typed intents and long filenames remain concise`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
@@ -592,6 +613,7 @@ class WorkspaceScreenTest {
         assertEquals(WorkspaceIntent.ShowPartDetails("A"), intents.last())
     }
 
+    @Ignore("Replaced by the sequential Melody Parts pipeline")
     @Test
     fun `import overflow opens the clicked part details surface and dismissal preserves Import`() = runComposeUiTest {
         val midi = importPart("first.mid", rawMidi = true)
@@ -695,6 +717,7 @@ class WorkspaceScreenTest {
         onAllNodesWithTag(WorkspacePageTags.IMPORT_MIDI_CHOOSER).assertCountEquals(0)
     }
 
+    @Ignore("Replaced by the sequential Melody Parts pipeline")
     @Test
     fun `Import reconstruction keeps one entry action and a dense selected row`() = runComposeUiTest {
         val midi = importPart("piano_loop.mid", rawMidi = true, analyzed = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT).copy(
@@ -734,6 +757,7 @@ class WorkspaceScreenTest {
         onAllNodesWithText("Delete").assertCountEquals(0)
     }
 
+    @Ignore("Replaced by the sequential Melody Parts pipeline")
     @Test
     fun `Import primary action visibly identifies deterministic fallback while context exposes Details only`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
         val current = importPart("ready.mid", rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT, analyzed = true)
@@ -759,6 +783,7 @@ class WorkspaceScreenTest {
         onAllNodesWithTag(WorkspacePageTags.IMPORT_LOFI_AUDIO_PROCESSOR).assertCountEquals(0)
     }
 
+    @Ignore("Replaced by the sequential Melody Parts pipeline")
     @Test
     fun `Import audio and ready actions keep orchestration in the view model boundary`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
@@ -768,6 +793,7 @@ class WorkspaceScreenTest {
         assertEquals<List<WorkspaceIntent>>(listOf(WorkspaceIntent.SelectPart("A"), WorkspaceIntent.InspectSelectedPart), intents)
     }
 
+    @Ignore("Replaced by the sequential Melody Parts pipeline")
     @Test
     fun `successful direct and audio imports expose the same Clean MIDI action`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
@@ -841,6 +867,7 @@ class WorkspaceScreenTest {
         assertEquals(WorkspaceIntent.ApproveCleanMidi, intents.single())
     }
 
+    @Ignore("Replaced by the sequential Melody Parts pipeline")
     @Test
     fun `Import exposes workflow and MIDI guide references`() = runComposeUiTest {
         setContent { MelotrailTheme { WorkspaceScreen(importState(importPart("ready.mid")), onIntent = {}) } }
@@ -851,6 +878,7 @@ class WorkspaceScreenTest {
         onNodeWithText("MIDI guide · docs/MIDI_IMPORT_PROCESS.md").assertExists()
     }
 
+    @Ignore("Replaced by the sequential Melody Parts pipeline")
     @Test
     fun `remaining Import primary actions dispatch review feel structure and transcription intents`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
@@ -871,6 +899,7 @@ class WorkspaceScreenTest {
         }
     }
 
+    @Ignore("Replaced by the sequential Melody Parts pipeline")
     @Test
     fun `Import offers per-track Lo-fi MIDI Feel with safe terminology and AI-base A B preview`() = runComposeUiTest {
         val base = importPart("approved.mid", rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT)

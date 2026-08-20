@@ -25,11 +25,15 @@ data class MidiAiFixSnapshot(
     val partId: String,
     val inputHash: String,
     val inputSha256: String,
-    val outputSha256: String,
+    val outputSha256: String?,
     val edits: List<app.melotrail.arrangement.MidiAiFixEdit>,
     val approved: Boolean,
     val draftAvailable: Boolean,
-    val approvedAvailable: Boolean
+    val approvedAvailable: Boolean,
+    /** The local model could not produce a safe bounded change after retries. */
+    val noSafeFix: Boolean = false,
+    /** A concise, UI-safe explanation of why no draft was published. */
+    val noSafeFixReason: String? = null
 )
 
 interface MidiAiFixApplicationService {
@@ -38,6 +42,8 @@ interface MidiAiFixApplicationService {
     fun approve(root: Path, partId: String): MidiAiFixSnapshot
     /** Rejecting or returning to cleaned MIDI never changes the cleaned source. */
     fun reject(root: Path, partId: String): MidiAiFixSnapshot? = returnToCleaned(root, partId)
+    /** Records an explicit bypass even when no draft has been created. */
+    fun skip(root: Path, partId: String): MidiAiFixSnapshot? = returnToCleaned(root, partId)
     fun returnToCleaned(root: Path, partId: String): MidiAiFixSnapshot?
     suspend fun regenerate(request: CreateMidiAiFixRequest, progress: ProgressSink = ProgressSink.None): MidiAiFixSnapshot = create(request, progress)
 }
@@ -57,6 +63,22 @@ class DefaultMidiAiFixApplicationService(
         progress.report(OperationProgress("ai-fix", 2, 3, "Requesting a bounded local musical-fix plan"))
         val plan = planner(current.input)
         plan.requireValid(current.input)
+        if (plan.edits.isEmpty()) {
+            progress.report(OperationProgress("ai-fix", 3, 3, "No safe AI-fix change was available"))
+            MidiAiFixStore.recordNoSafeFix(root, request.partId)
+            return@mutate MidiAiFixSnapshot(
+                partId = request.partId,
+                inputHash = current.input.inputHash,
+                inputSha256 = current.input.cleanedSha256,
+                outputSha256 = null,
+                edits = emptyList(),
+                approved = false,
+                draftAvailable = false,
+                approvedAvailable = false,
+                noSafeFix = true,
+                noSafeFixReason = noSafeFixReason(current.input)
+            )
+        }
         progress.report(OperationProgress("ai-fix", 3, 3, "Applying and validating the AI-fix draft"))
         val draft = root.resolve(app.melotrail.arrangement.MidiAiFixArtifactPaths.draft(request.partId))
         val diff = transformer.apply(current.cleaned, draft, plan, current.input)
@@ -90,6 +112,21 @@ class DefaultMidiAiFixApplicationService(
         snapshot(normalized, partId, current.input, diff, approved = false)
     }
 
+    override fun skip(root: Path, partId: String): MidiAiFixSnapshot? = locked(root) { normalized ->
+        val current = currentInput(normalized, partId)
+        val project = ProjectStore.read(normalized); val part = project.parts.single { it.id == partId }; val midi = requireNotNull(part.midi)
+        val refs = MidiAiFixStore.selectCleaned(normalized, partId)
+        if (refs == null) {
+            ProjectStore.write(normalized, project.copy(parts = project.parts.map {
+                if (it.id == partId) it.copy(analysis = null, midi = midi.copy(aiFixSelection = app.melotrail.arrangement.MidiAiFixSelection.SKIP,
+                    analysisInput = app.melotrail.arrangement.MidiAnalysisInput.CURRENT, feel = null)) else it
+            }))
+            return@locked null
+        }
+        val diff = MidiAiFixStore.readDiff(normalized, partId)
+        snapshot(normalized, partId, current.input, diff, approved = false)
+    }
+
     private fun currentInput(root: Path, partId: String): CurrentInput {
         val project = ProjectStore.read(root).also { it.requireValid(root) }
         require(project.version >= Project.MIDI_FIRST_VERSION) { "AI fix requires a MIDI-first project." }
@@ -101,9 +138,18 @@ class DefaultMidiAiFixApplicationService(
         val quality = requireNotNull(midi.quality) { "Part '$partId' has no current Clean MIDI evidence." }
         MidiQualityReportStore.requireCurrent(root, partId, raw, cleanRef, cleanup, quality)
         require(MidiQualityReportStore.isApproved(root, quality, midi.cleanApproval)) { "Approve Clean MIDI before creating an AI fix." }
-        val cleaned = safeCleaned(root, cleanRef)
-        val input = MidiAiFixInputFactory.build(partId, cleaned)
-        return CurrentInput(cleaned, input)
+        val correction = requireNotNull(midi.technicalCorrection) { "Part '$partId' has no technical correction. Run Technical Correction before AI Fix." }
+        require(midi.technicalCorrectionSelection == app.melotrail.arrangement.TechnicalCorrectionSelection.CORRECTED) {
+            "Select corrected MIDI before creating an AI fix."
+        }
+        val correctionInput = midi.transposed ?: midi.normalized ?: cleanRef
+        val correctionInputPath = safeTechnicalCorrectionInput(root, correctionInput)
+        require(correction.input.file == correctionInput && correction.input.sha256 == app.melotrail.arrangement.sha256(correctionInputPath)) {
+            "Technical correction is stale. Run Technical Correction again."
+        }
+        val corrected = safeCorrected(root, correction.output)
+        val input = MidiAiFixInputFactory.build(partId, corrected)
+        return CurrentInput(corrected, input)
     }
 
     private fun safeCleaned(root: Path, reference: String): Path {
@@ -114,11 +160,42 @@ class DefaultMidiAiFixApplicationService(
         return path
     }
 
+    /** Technical Correction may use the clean, normalized, or transposed baseline. */
+    private fun safeTechnicalCorrectionInput(root: Path, reference: String): Path {
+        val normalized = root.toAbsolutePath().normalize(); val relative = Path.of(reference)
+        require(!relative.isAbsolute && relative.none { it.toString() == ".." } &&
+            (reference.startsWith("midi/clean/") || reference.startsWith("midi/normalized/") || reference.startsWith("midi/transposed/"))) {
+            "Technical-correction input reference is unsafe"
+        }
+        val path = normalized.resolve(relative).normalize()
+        require(path.startsWith(normalized) && Files.isRegularFile(path) && path.toRealPath().startsWith(normalized.toRealPath())) {
+            "Technical-correction input is missing"
+        }
+        return path
+    }
+
+    private fun safeCorrected(root: Path, reference: app.melotrail.arrangement.WorkflowArtifactReference): Path {
+        val relative = Path.of(reference.file)
+        require(!relative.isAbsolute && reference.file.startsWith("midi/corrected/") && relative.none { it.toString() == ".." }) { "Corrected MIDI reference is unsafe" }
+        val path = root.toAbsolutePath().normalize().resolve(relative).normalize()
+        require(path.startsWith(root.toAbsolutePath().normalize()) && Files.isRegularFile(path) && path.toRealPath().startsWith(root.toRealPath())) { "Corrected MIDI is missing" }
+        require(app.melotrail.arrangement.sha256(path) == reference.sha256) { "Corrected MIDI is stale" }
+        return path
+    }
+
     private fun snapshot(root: Path, partId: String, input: MidiAiFixInput, diff: MidiAiFixDiff, approved: Boolean): MidiAiFixSnapshot {
         val project = ProjectStore.read(root); val midi = project.parts.single { it.id == partId }.midi!!; val refs = midi.aiFix
         val draftAvailable = refs?.draft?.let { ref -> runCatching { Files.isRegularFile(root.resolve(ref.file)) && ref.sha256 == diff.outputSha256 }.getOrDefault(false) } == true
         val approvedAvailable = refs?.approved?.let { ref -> runCatching { Files.isRegularFile(root.resolve(ref.file)) && ref.sha256 == diff.outputSha256 }.getOrDefault(false) } == true
         return MidiAiFixSnapshot(partId, input.inputHash, input.cleanedSha256, diff.outputSha256, diff.edits, approved, draftAvailable, approvedAvailable)
+    }
+
+    private fun noSafeFixReason(input: MidiAiFixInput): String = if (input.problemRegions.any {
+            it.kind == app.melotrail.arrangement.MidiAiFixProblemKind.COLLISION || it.kind == app.melotrail.arrangement.MidiAiFixProblemKind.DUPLICATE
+        }) {
+        "Existing same-pitch collisions in corrected MIDI could not be resolved safely."
+    } else {
+        "The model proposals would have created a same-pitch collision."
     }
 
     private suspend fun <T> mutate(root: Path, block: suspend (Path) -> T): T {

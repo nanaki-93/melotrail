@@ -1688,13 +1688,9 @@ private fun ImportPage(
 ) = Column(
     Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)
 ) {
-    PageTitle("Melody Parts", "Add and recover section-aware MIDI or eligible solo-piano audio parts")
+    PageTitle("Melody Parts", "Import and process each melody through a simple MIDI pipeline")
     ImportDropSurface(state, onIntent)
-    ImportHelpLinks()
     MelodyPartsCards(state, onIntent, partDetailsFocusTargets)
-    MidiAiFixReview(state, onIntent)
-    MidiLoFiFeelReview(state, onIntent)
-    ImportPrimaryAction(state, onIntent, partDetailsFocusTargets)
 }
 
 @Composable
@@ -1712,6 +1708,10 @@ private fun MidiAiFixReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent)
                 Button(onClick = { onIntent(WorkspaceIntent.CreateMidiAiFix) }, enabled = !state.operation.isMutating,
                     modifier = Modifier.semantics { testTag = WorkspacePageTags.IMPORT_AI_FIX_CREATE }) { Text("Create AI fix") }
             }
+        } else if (fix.noSafeFix) {
+            Text("No safe AI correction was available. ${fix.noSafeFixReason ?: "Corrected MIDI remains selected."}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Button(onClick = { onIntent(WorkspaceIntent.RegenerateMidiAiFix) }, enabled = !state.operation.isMutating,
+                modifier = Modifier.semantics { testTag = WorkspacePageTags.IMPORT_AI_FIX_REGENERATE }) { Text("Try AI Fix again") }
         } else {
             Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
                 OutlinedButton(onClick = { onIntent(WorkspaceIntent.PreviewMidiPart(part.id, app.melotrail.application.PreviewMidiSource.CLEANED)) }, enabled = available,

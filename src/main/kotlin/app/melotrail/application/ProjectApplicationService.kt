@@ -133,6 +133,9 @@ interface ProjectApplicationService {
         throw UnsupportedOperationException("This project service does not support song-part names.")
     fun updateSongPartSection(request: UpdateSongPartSectionRequest): ProjectSnapshot =
         throw UnsupportedOperationException("This project service does not support song-part sections.")
+    /** Removes one Melody Parts entry and all of its structural uses. Source and derived files are retained. */
+    fun removeSongPart(request: RemoveSongPartRequest): ProjectSnapshot =
+        throw UnsupportedOperationException("This project service does not support removing song parts.")
     fun insertStructureOccurrence(request: InsertStructureOccurrenceRequest): ProjectSnapshot =
         throw UnsupportedOperationException("This project service does not support structure occurrences.")
     fun duplicateStructureOccurrence(request: DuplicateStructureOccurrenceRequest): ProjectSnapshot =
@@ -213,6 +216,7 @@ data class InspectPartRequest(val root: Path, val partId: String)
 data class TranscribeAudioPartRequest(val root: Path, val partId: String, val selectedInput: TranscriptionInputArtifact)
 data class UpdateSongPartNameRequest(val root: Path, val partId: String, val name: String, val expectedRevision: Long)
 data class UpdateSongPartSectionRequest(val root: Path, val partId: String, val sectionType: SectionTypeId, val expectedRevision: Long)
+data class RemoveSongPartRequest(val root: Path, val partId: String)
 data class InsertStructureOccurrenceRequest(val root: Path, val partId: String, val afterOccurrenceId: String? = null, val expectedRevision: Long? = null)
 data class DuplicateStructureOccurrenceRequest(val root: Path, val occurrenceId: String, val expectedRevision: Long)
 data class RemoveStructureOccurrenceRequest(val root: Path, val occurrenceId: String, val expectedRevision: Long)
@@ -329,7 +333,7 @@ data class MidiAiFixSummary(
     val draftAvailable: Boolean = false,
     val approvedAvailable: Boolean = false
 ) {
-    val selectedAvailable: Boolean get() = selected == MidiAiFixSelection.SKIP || approvedAvailable
+    val selectedAvailable: Boolean get() = selected == MidiAiFixSelection.SKIP || (selected == MidiAiFixSelection.APPROVED && approvedAvailable)
 }
 
 /** Artifact-derived Task 017 status. Legacy AI-fix state remains separate and is never relabelled as correction. */
@@ -339,7 +343,7 @@ data class TechnicalCorrectionSummary(
     val warnings: List<String> = emptyList(),
     val approvalRequired: Boolean = false
 ) {
-    val selectedAvailable: Boolean get() = selected == app.melotrail.arrangement.TechnicalCorrectionSelection.BASE || (available && !approvalRequired)
+    val selectedAvailable: Boolean get() = selected == app.melotrail.arrangement.TechnicalCorrectionSelection.BASE || available
 }
 
 /** Honest task-018 DTO: current selection and capability, never a quality claim. */
@@ -352,7 +356,7 @@ data class EnhancementSummary(
     val capabilityLabel: String = "MVP placeholder — no musical edits"
 ) {
     val approvedAvailable: Boolean get() = available && approval == app.melotrail.arrangement.EnhancementApproval.APPROVED
-    val selectedAvailable: Boolean get() = selected == app.melotrail.arrangement.EnhancementSelection.CORRECTED || approvedAvailable
+    val selectedAvailable: Boolean get() = selected == app.melotrail.arrangement.EnhancementSelection.CORRECTED || (selected == app.melotrail.arrangement.EnhancementSelection.ENHANCED && approvedAvailable)
 }
 
 data class MidiFeelSummary(
@@ -758,7 +762,9 @@ class DefaultProjectApplicationService(
             val publishedReport = MidiQualityReportStore.write(root, report)
             reportPublished = true
             val qualityReference = root.relativize(publishedReport).toString().replace('\\', '/')
-            val approval = if (report.approvalRequired) null else MidiQualityReportStore.approval(root, qualityReference, report)
+            // Melody Parts is a single-action pipeline: validated cleanup evidence is
+            // recorded as approved here rather than exposing a second review control.
+            val approval = MidiQualityReportStore.approval(root, qualityReference, report)
             val updated = project.copy(parts = project.parts.map {
                 if (it.id == request.partId) it.copy(
                     analysis = null,
@@ -773,8 +779,10 @@ class DefaultProjectApplicationService(
                         transposition = null,
                         approvedRepair = false,
                         cleanApproval = approval,
-                        aiFixSelection = MidiAiFixSelection.SKIP,
+                        aiFixSelection = MidiAiFixSelection.PENDING,
                         aiFix = null,
+                        enhancementSelection = app.melotrail.arrangement.EnhancementSelection.PENDING,
+                        enhancement = null,
                         analysisInput = MidiAnalysisInput.CURRENT,
                         feel = null
                     )
@@ -836,7 +844,7 @@ class DefaultProjectApplicationService(
                     sourceKeyEvidence = evidence.copy(confirmedOverride = command.key, key = null, confirmed = false),
                     analysis = null,
                     revision = it.revision + 1,
-                    midi = midi.copy(transposed = null, transposition = null, aiFixSelection = MidiAiFixSelection.SKIP, aiFix = null,
+                    midi = midi.copy(transposed = null, transposition = null, aiFixSelection = MidiAiFixSelection.PENDING, aiFix = null,
                         analysisInput = MidiAnalysisInput.CURRENT, feel = null)
                 ) else it
             },
@@ -1064,6 +1072,25 @@ class DefaultProjectApplicationService(
         snapshot(root, updated)
     }
 
+    override fun removeSongPart(request: RemoveSongPartRequest): ProjectSnapshot = mutate(request.root) { root ->
+        val project = readValidProject(root)
+        require(project.parts.any { it.id == request.partId }) { "Part not found: ${request.partId}" }
+        val retainedOccurrences = project.envelope.structureOccurrences.filterNot { it.partId == request.partId }
+        val retainedOccurrenceIds = retainedOccurrences.map(StructureOccurrence::id).toSet()
+        val updated = project.copy(
+            parts = project.parts.filterNot { it.id == request.partId },
+            structure = project.structure.filterNot { it == request.partId },
+            envelope = project.envelope.copy(
+                evolvedParts = project.envelope.evolvedParts.filterNot { it.partId == request.partId },
+                structureOccurrences = retainedOccurrences,
+                arrangementAssignments = project.envelope.arrangementAssignments.filter { it.occurrenceId in retainedOccurrenceIds }
+            ),
+            workflow = project.workflow.invalidate(WorkflowChange.STRUCTURE)
+        )
+        ProjectStore.write(root, updated)
+        snapshot(root, updated)
+    }
+
     override fun insertStructureOccurrence(request: InsertStructureOccurrenceRequest): ProjectSnapshot = mutate(request.root) { root ->
         val project = readValidProject(root)
         require(project.parts.any { it.id == request.partId }) { "Unknown part ID in structure: ${request.partId}" }
@@ -1205,8 +1232,6 @@ class DefaultProjectApplicationService(
             part.summary(
                 root,
                 analysisCurrent = current(WorkflowArtifact.ANALYSIS),
-                aiFixCurrent = current(WorkflowArtifact.AI_FIX),
-                midiFeelCurrent = current(WorkflowArtifact.MIDI_FEEL),
                 projectKey = projectKey
             )
         }
@@ -1288,7 +1313,7 @@ class DefaultProjectApplicationService(
         return TransitionCohesionStore.isApprovedCurrent(root, transitionInput)
     }.getOrDefault(false)
 
-    private fun SongPart.summary(root: Path, analysisCurrent: Boolean, aiFixCurrent: Boolean, midiFeelCurrent: Boolean, projectKey: MusicalKey?): PartSummary {
+    private fun SongPart.summary(root: Path, analysisCurrent: Boolean, projectKey: MusicalKey?): PartSummary {
         val sourcePath = Path.of(file)
         val sourceType = sourceType(file)
         val evidence = importEvidence
@@ -1326,8 +1351,8 @@ class DefaultProjectApplicationService(
         val analyzed = analysisCurrent && (analysis?.let { runCatching { it.summary(root) }.isSuccess } ?: false)
         val preparedAudio = sourceType == PartSourceType.AUDIO && inspected &&
             report?.preparation == PreparationStatus.CLEANED && isWaveArtifact(InputInspectionPaths.cleanWav(root, id))
-        val aiFix = midiAiFix(root, this, cleanMidi, aiFixCurrent)
-        val feel = midiFeel(root, this, cleanMidi, midiFeelCurrent, aiFix)
+        val aiFix = midiAiFix(root, this, cleanMidi)
+        val feel = midiFeel(root, this, cleanMidi, aiFix)
         val feelSelectedAvailable = midi?.analysisInput != MidiAnalysisInput.LOFI_FEEL || feel.available
         val preparation = PartPreparationSummary(
             sourcePreserved = sourcePreserved,
@@ -1389,16 +1414,28 @@ class DefaultProjectApplicationService(
         return MidiQualitySummary(status, report.cleanup, report.warnings, report.recommendations, report)
     }
 
-    private fun midiAiFix(root: Path, part: SongPart, cleanMidi: Boolean, workflowCurrent: Boolean): MidiAiFixSummary {
+    private fun midiAiFix(root: Path, part: SongPart, cleanMidi: Boolean): MidiAiFixSummary {
         val midi = part.midi ?: return MidiAiFixSummary()
         val references = midi.aiFix ?: return MidiAiFixSummary(midi.aiFixSelection)
         val clean = midi.clean ?: return MidiAiFixSummary(midi.aiFixSelection)
+        val correction = midi.technicalCorrection ?: return MidiAiFixSummary(midi.aiFixSelection)
+        // Technical Correction operates on the selected pre-correction
+        // baseline, which may be normalized or transposed rather than clean.
+        // Do not mislabel that valid lineage as stale when reopening a project.
+        val correctionInput = midi.transposed ?: midi.normalized ?: clean
         val inputCurrent = cleanMidi && runCatching {
             references.requireCanonical(part.id)
-            references.inputSha256 == sha256(safeDestination(root, clean))
+            midi.technicalCorrectionSelection == app.melotrail.arrangement.TechnicalCorrectionSelection.CORRECTED &&
+                correction.input.file == correctionInput &&
+                correction.input.sha256 == sha256(safeDestination(root, correctionInput)) &&
+                references.inputSha256 == correction.output.sha256 &&
+                sha256(safeDestination(root, correction.output.file)) == correction.output.sha256
         }.getOrDefault(false)
+        // AI-fix validity is part-local. A project-wide stale marker can be
+        // introduced by importing another part, which must not make this
+        // part's independently fingerprinted approved output unavailable.
         fun current(reference: app.melotrail.arrangement.WorkflowArtifactReference?, canonical: String): Boolean =
-            workflowCurrent && inputCurrent && reference?.file == canonical && runCatching {
+            inputCurrent && reference?.file == canonical && runCatching {
                 val path = safeDestination(root, reference.file)
                 isMidiArtifact(root, reference.file) && sha256(path) == reference.sha256
             }.getOrDefault(false)
@@ -1439,15 +1476,24 @@ class DefaultProjectApplicationService(
         return EnhancementSummary(refs.intensity, midi.enhancementSelection, available, refs.approval)
     }
 
-    private fun midiFeel(root: Path, part: SongPart, cleanMidi: Boolean, workflowCurrent: Boolean, aiFix: MidiAiFixSummary): MidiFeelSummary {
+    private fun midiFeel(root: Path, part: SongPart, cleanMidi: Boolean, aiFix: MidiAiFixSummary): MidiFeelSummary {
         val midi = part.midi ?: return MidiFeelSummary()
         val references = midi.feel ?: return MidiFeelSummary(midi.analysisInput)
         val base = when (midi.aiFixSelection) {
-            MidiAiFixSelection.SKIP -> midi.clean
+            MidiAiFixSelection.PENDING -> null
+            MidiAiFixSelection.SKIP -> midi.technicalCorrection?.output?.file
             MidiAiFixSelection.APPROVED -> midi.aiFix?.approved?.file.takeIf { aiFix.approvedAvailable }
-        } ?: return MidiFeelSummary(midi.analysisInput)
+        } ?: midi.clean ?: return MidiFeelSummary(midi.analysisInput)
+        val enhancement = midi.enhancement?.takeIf {
+            midi.enhancementSelection == app.melotrail.arrangement.EnhancementSelection.ENHANCED &&
+                it.approval == app.melotrail.arrangement.EnhancementApproval.APPROVED &&
+                it.input.file == base && runCatching { sha256(safeDestination(root, it.output.file)) == it.output.sha256 }.getOrDefault(false)
+        }
+        val selectedBase = enhancement?.output?.file ?: base
         val report = runCatching { MidiFeelReportStore.read(root, references.report) }.getOrNull()
-        val current = workflowCurrent && cleanMidi && MidiFeelReportStore.isCurrent(root, part.id, base, references)
+        // Like AI-fix, this artifact is tied to the part's selected base, not
+        // to the aggregate project workflow marker.
+        val current = cleanMidi && MidiFeelReportStore.isCurrent(root, part.id, selectedBase, references)
         return MidiFeelSummary(midi.analysisInput, current, report?.takeIf { current })
     }
 

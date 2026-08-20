@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -190,13 +191,110 @@ internal fun MelodyPartsCards(
 ) {
     val project = state.project
     Column(Modifier.padding(MusicWorkspaceTokens.Pages.ContentInset), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-        Text("MELODY PARTS (${project?.parts?.size ?: 0})", modifier = Modifier.semantics { testTag = WorkspacePageTags.IMPORT_TABLE_HEADER }, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("MELODY PIPELINE (${project?.parts?.size ?: 0})", modifier = Modifier.semantics { testTag = WorkspacePageTags.IMPORT_TABLE_HEADER }, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (project == null || project.parts.isEmpty()) {
-            Text("No melody parts yet. Add one MIDI or eligible solo-piano audio source.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Import a MIDI file or solo-piano audio source to begin.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else project.parts.forEachIndexed { index, part ->
-            MelodyPartCard(state, reduceMelodyPartCard(project, part), onIntent, partDetailsFocusTargets)
+            SimplifiedMelodyPartCard(state, part, onIntent)
             if (index < project.parts.lastIndex) HorizontalDivider()
         }
+    }
+}
+
+private enum class PipelineStepStatus { COMPLETE, CURRENT, REVIEW, WAITING, FAILED }
+private data class PipelineStep(val label: String, val status: PipelineStepStatus)
+
+@Composable
+private fun SimplifiedMelodyPartCard(state: WorkspaceUiState, part: PartSummary, onIntent: (WorkspaceIntent) -> Unit) {
+    val locked = state.operation.isMutating
+    val correctionReady = part.preparation.technicalCorrection.selected == app.melotrail.arrangement.TechnicalCorrectionSelection.CORRECTED &&
+        part.preparation.technicalCorrection.available
+    val aiFix = part.preparation.midiAiFix
+    val aiFixComplete = aiFix.selected == app.melotrail.arrangement.MidiAiFixSelection.SKIP ||
+        (aiFix.selected == app.melotrail.arrangement.MidiAiFixSelection.APPROVED && aiFix.approvedAvailable)
+    val enhancement = part.preparation.enhancement
+    val enhancementComplete = enhancement.selected == EnhancementSelection.CORRECTED ||
+        (enhancement.selected == EnhancementSelection.ENHANCED && enhancement.approvedAvailable)
+    val steps = listOf(
+        PipelineStep("Import audio/MIDI", if (part.preparation.rawMidi) PipelineStepStatus.COMPLETE else PipelineStepStatus.WAITING),
+        PipelineStep("Clean MIDI", when {
+            !part.preparation.rawMidi -> PipelineStepStatus.WAITING
+            part.preparation.midiQuality.status == MidiQualityStatus.CURRENT -> PipelineStepStatus.COMPLETE
+            else -> PipelineStepStatus.CURRENT
+        }),
+        PipelineStep("Technical Correction", when {
+            part.preparation.midiQuality.status != MidiQualityStatus.CURRENT -> PipelineStepStatus.WAITING
+            correctionReady -> PipelineStepStatus.COMPLETE
+            else -> PipelineStepStatus.CURRENT
+        }),
+        PipelineStep("AI Fix", when {
+            !correctionReady -> PipelineStepStatus.WAITING
+            aiFixComplete -> PipelineStepStatus.COMPLETE
+            aiFix.draftAvailable -> PipelineStepStatus.REVIEW
+            else -> PipelineStepStatus.CURRENT
+        }),
+        PipelineStep("AI Enhance", when {
+            !aiFixComplete -> PipelineStepStatus.WAITING
+            enhancementComplete -> PipelineStepStatus.COMPLETE
+            enhancement.available && enhancement.approval == app.melotrail.arrangement.EnhancementApproval.DRAFT -> PipelineStepStatus.REVIEW
+            else -> PipelineStepStatus.CURRENT
+        }),
+        PipelineStep("Apply Lo-fi Feel", when {
+            !enhancementComplete -> PipelineStepStatus.WAITING
+            part.preparation.midiFeel.selected == app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL && part.preparation.midiFeel.available -> PipelineStepStatus.COMPLETE
+            else -> PipelineStepStatus.CURRENT
+        })
+    )
+    val active = steps.firstOrNull { it.status == PipelineStepStatus.CURRENT || it.status == PipelineStepStatus.REVIEW }
+    Column(
+        Modifier.fillMaxWidth().padding(MusicWorkspaceTokens.Spacing.Sm).semantics { testTag = WorkspacePageTags.IMPORTED_ROW_PREFIX + part.id },
+        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)
+    ) {
+        Text(part.name, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        steps.forEach { step ->
+            Text("${step.label}: ${step.status.name.lowercase().replaceFirstChar(Char::uppercase)}", style = MaterialTheme.typography.bodySmall,
+                color = if (step == active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        when (active?.label) {
+            "Clean MIDI" -> Button(onClick = { onIntent(WorkspaceIntent.CleanMidi(part.id)) }, enabled = !locked) { Text("Clean MIDI") }
+            "Technical Correction" -> Button(onClick = { onIntent(WorkspaceIntent.SelectPart(part.id)); onIntent(WorkspaceIntent.CreateTechnicalCorrection) }, enabled = !locked) { Text("Apply Technical Correction") }
+            "AI Fix" -> AiFixActions(part.id, aiFix.draftAvailable, locked, onIntent)
+            "AI Enhance" -> EnhancementActions(part.id, enhancement.approval == app.melotrail.arrangement.EnhancementApproval.DRAFT, locked, onIntent)
+            "Apply Lo-fi Feel" -> Button(onClick = {
+                onIntent(WorkspaceIntent.SelectPart(part.id))
+                onIntent(WorkspaceIntent.SelectMidiFeel(app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL))
+                onIntent(WorkspaceIntent.ApplyMidiFeelAndReanalyze)
+            }, enabled = !locked) { Text("Apply Lo-fi Feel") }
+        }
+        TextButton(
+            onClick = { onIntent(WorkspaceIntent.RequestRemoveSongPart(part.id)) },
+            enabled = !locked
+        ) { Text("Remove Melody track") }
+        if (state.operation is WorkspaceOperation.Failed && state.retry != null) TextButton(onClick = { onIntent(WorkspaceIntent.Retry) }) { Text("Retry") }
+    }
+}
+
+@Composable
+private fun AiFixActions(partId: String, hasDraft: Boolean, locked: Boolean, onIntent: (WorkspaceIntent) -> Unit) = Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+    if (hasDraft) {
+        Button(onClick = { onIntent(WorkspaceIntent.SelectPart(partId)); onIntent(WorkspaceIntent.ApproveMidiAiFix) }, enabled = !locked) { Text("Accept") }
+        OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectPart(partId)); onIntent(WorkspaceIntent.RejectMidiAiFix) }, enabled = !locked) { Text("Refuse") }
+        TextButton(onClick = { onIntent(WorkspaceIntent.SelectPart(partId)); onIntent(WorkspaceIntent.RegenerateMidiAiFix) }, enabled = !locked) { Text("Regenerate") }
+    } else {
+        Button(onClick = { onIntent(WorkspaceIntent.SelectPart(partId)); onIntent(WorkspaceIntent.CreateMidiAiFix) }, enabled = !locked) { Text("Run AI Fix") }
+        OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectPart(partId)); onIntent(WorkspaceIntent.ReturnToCleanedMidi) }, enabled = !locked) { Text("Skip") }
+    }
+}
+
+@Composable
+private fun EnhancementActions(partId: String, hasDraft: Boolean, locked: Boolean, onIntent: (WorkspaceIntent) -> Unit) = Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+    if (hasDraft) {
+        Button(onClick = { onIntent(WorkspaceIntent.SelectPart(partId)); onIntent(WorkspaceIntent.ApproveEnhancement) }, enabled = !locked) { Text("Accept") }
+        OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectPart(partId)); onIntent(WorkspaceIntent.RejectEnhancement) }, enabled = !locked) { Text("Refuse") }
+        TextButton(onClick = { onIntent(WorkspaceIntent.SelectPart(partId)); onIntent(WorkspaceIntent.SelectEnhancement(app.melotrail.arrangement.EnhancementIntensity.SUBTLE)) }, enabled = !locked) { Text("Regenerate") }
+    } else {
+        Button(onClick = { onIntent(WorkspaceIntent.SelectPart(partId)); onIntent(WorkspaceIntent.SelectEnhancement(app.melotrail.arrangement.EnhancementIntensity.SUBTLE)) }, enabled = !locked) { Text("Run AI Enhance") }
+        OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectPart(partId)); onIntent(WorkspaceIntent.SelectEnhancement(app.melotrail.arrangement.EnhancementIntensity.OFF)) }, enabled = !locked) { Text("Skip") }
     }
 }
 

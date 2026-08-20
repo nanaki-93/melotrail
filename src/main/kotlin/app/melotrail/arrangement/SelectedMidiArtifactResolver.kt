@@ -71,35 +71,9 @@ class SelectedMidiArtifactResolver(
             normalized != null -> SelectedMidiBaseKind.NORMALIZED
             else -> SelectedMidiBaseKind.CLEANED
         }
-        val uncorrectedBase = when (midi.aiFixSelection) {
-            MidiAiFixSelection.SKIP -> BaseCandidate(
-                baseReference,
-                basePath,
-                baseSha256,
-                baseKind
-            )
-            MidiAiFixSelection.APPROVED -> {
-                val references = requireNotNull(midi.aiFix) { "Part '${part.id}' has no approved AI-fix references." }
-                references.requireCanonical(part.id)
-                require(references.inputSha256 == baseSha256) {
-                    "Approved AI fix is stale for part '${part.id}'; keep normalized MIDI or regenerate the AI fix."
-                }
-                val approved = requireNotNull(references.approved) { "Part '${part.id}' has no approved AI-fix artifact." }
-                val path = resolveFile(root, rootReal, approved.file, "approved AI-fix MIDI")
-                val hash = sha256(path)
-                require(hash == approved.sha256) {
-                    "Approved AI fix is stale for part '${part.id}'; keep normalized MIDI or regenerate the AI fix."
-                }
-                readMidi(path, part.id)
-                BaseCandidate(approved.file, path, hash, SelectedMidiBaseKind.APPROVED_AI_FIX)
-            }
-        }
-        val base = when (midi.technicalCorrectionSelection) {
-            TechnicalCorrectionSelection.BASE -> uncorrectedBase
+        val correctedBase = when (midi.technicalCorrectionSelection) {
+            TechnicalCorrectionSelection.BASE -> BaseCandidate(baseReference, basePath, baseSha256, baseKind)
             TechnicalCorrectionSelection.CORRECTED -> {
-                require(midi.aiFixSelection == MidiAiFixSelection.SKIP) {
-                    "Legacy AI-fix evidence cannot be selected with the technical corrected baseline. Select one baseline."
-                }
                 val correction = requireNotNull(midi.technicalCorrection) { "Part '${part.id}' has no technical-correction evidence." }
                 correction.requireCanonical(part.id)
                 require(correction.input.file == baseReference && correction.input.sha256 == baseSha256) {
@@ -111,15 +85,36 @@ class SelectedMidiArtifactResolver(
                 BaseCandidate(correction.output.file, output, correction.output.sha256, SelectedMidiBaseKind.CORRECTED)
             }
         }
+        val aiFixBase = when (midi.aiFixSelection) {
+            // The Melody Parts presentation keeps this stage ordered.  The
+            // resolver remains readable for pre-existing callers and treats a
+            // pending decision as its corrected baseline.
+            MidiAiFixSelection.PENDING -> correctedBase
+            MidiAiFixSelection.SKIP -> correctedBase
+            MidiAiFixSelection.APPROVED -> {
+                val references = requireNotNull(midi.aiFix) { "Part '${part.id}' has no approved AI-fix references." }
+                references.requireCanonical(part.id)
+                require(references.inputSha256 == correctedBase.sha256) {
+                    "Approved AI fix is stale for part '${part.id}'; keep corrected MIDI or regenerate the AI fix."
+                }
+                val approved = requireNotNull(references.approved) { "Part '${part.id}' has no approved AI-fix artifact." }
+                val path = resolveFile(root, rootReal, approved.file, "approved AI-fix MIDI")
+                val hash = sha256(path)
+                require(hash == approved.sha256) {
+                    "Approved AI fix is stale for part '${part.id}'; keep corrected MIDI or regenerate the AI fix."
+                }
+                readMidi(path, part.id)
+                BaseCandidate(approved.file, path, hash, SelectedMidiBaseKind.APPROVED_AI_FIX)
+            }
+        }
         val selected = if (midi.enhancementSelection == EnhancementSelection.ENHANCED) {
-            require(base.kind == SelectedMidiBaseKind.CORRECTED) { "Enhancement requires the selected corrected MIDI baseline for part '${part.id}'." }
             val enhancement = requireNotNull(midi.enhancement) { "Part '${part.id}' has no enhancement evidence." }
             enhancement.requireCanonical(part.id)
             require(enhancement.approval == EnhancementApproval.APPROVED) {
                 "Enhanced MIDI is a draft or was rejected; preview it and approve it before selecting it."
             }
-            require(enhancement.input.file == base.reference && enhancement.input.sha256 == base.sha256) {
-                "Enhanced MIDI is stale for part '${part.id}'; select Corrected or run enhancement again."
+            require(enhancement.input.file == aiFixBase.reference && enhancement.input.sha256 == aiFixBase.sha256) {
+                "Enhanced MIDI is stale for part '${part.id}'; select the prior MIDI or run enhancement again."
             }
             val output = resolveFile(root, rootReal, enhancement.output.file, "enhanced MIDI")
             require(sha256(output) == enhancement.output.sha256) { "Enhanced MIDI is stale for part '${part.id}'; select Corrected or run enhancement again." }
@@ -140,9 +135,9 @@ class SelectedMidiArtifactResolver(
             }
         } ?: when (midi.analysisInput) {
             MidiAnalysisInput.CURRENT -> Candidate(
-                base.reference,
-                base.path,
-                when (base.kind) {
+                aiFixBase.reference,
+                aiFixBase.path,
+                when (aiFixBase.kind) {
                     SelectedMidiBaseKind.CLEANED -> SelectedMidiArtifactKind.CLEANED
                     SelectedMidiBaseKind.NORMALIZED -> SelectedMidiArtifactKind.NORMALIZED
                     SelectedMidiBaseKind.TRANSPOSED -> SelectedMidiArtifactKind.TRANSPOSED
@@ -158,7 +153,7 @@ class SelectedMidiArtifactResolver(
                 }
                 val feel = requireNotNull(midi.feel) { "Part '${part.id}' has no current Lo-fi MIDI Feel artifact." }
                 val derived = resolveFile(root, rootReal, feel.derived, "Lo-fi MIDI Feel")
-                require(MidiFeelReportStore.isCurrent(root, part.id, base.reference, feel)) {
+                require(MidiFeelReportStore.isCurrent(root, part.id, aiFixBase.reference, feel)) {
                     "Lo-fi MIDI Feel artifact is missing, malformed, or stale for part '${part.id}'. Choose Original or regenerate Lo-fi MIDI Feel."
                 }
                 Candidate(feel.derived, derived, SelectedMidiArtifactKind.LOFI_FEEL, feel.profile, MidiFeelReportStore.read(root, feel.report).version)
@@ -176,7 +171,7 @@ class SelectedMidiArtifactResolver(
             ppq = sequence.resolution,
             timing = MidiTimingSummary(tempoMap(sequence), timeSignatures(sequence)),
             cleanupFreshness = cleanupFreshness,
-            baseKind = base.kind,
+            baseKind = aiFixBase.kind,
             loFiFreshness = if (selected.kind == SelectedMidiArtifactKind.LOFI_FEEL) MidiLoFiFreshness.CURRENT else MidiLoFiFreshness.NOT_SELECTED
         )
     }

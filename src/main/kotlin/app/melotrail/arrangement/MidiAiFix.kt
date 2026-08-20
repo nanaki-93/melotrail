@@ -134,7 +134,11 @@ object MidiAiFixValidator {
         input.requireValid()
         require(plan.version == MidiAiFixPlan.CURRENT_VERSION && plan.partId == input.partId && plan.cleanedSha256 == input.cleanedSha256 && plan.inputHash == input.inputHash) { "AI-fix plan identity is stale or invalid" }
         plan.model.requireValid()
-        require(plan.edits.isNotEmpty() && plan.edits.size <= MAX_EDITS) { "AI-fix plan must contain 1 to $MAX_EDITS edits" }
+        require(plan.edits.size <= MAX_EDITS) { "AI-fix plan exceeds the $MAX_EDITS-edit limit" }
+        // An empty plan is a code-owned, safe fallback after bounded replanning.
+        // It deliberately bypasses output simulation because no draft MIDI will be
+        // published for it.
+        if (plan.edits.isEmpty()) return
         val notes = input.notes.associateBy(MidiAiFixNote::id)
         val regions = input.problemRegions.associateBy(MidiAiFixProblemRegion::id)
         val edited = mutableSetOf<String>(); var additions = 0
@@ -181,7 +185,53 @@ object MidiAiFixValidator {
                 }
             }
         }
+        validateResultingNotes(plan, input)
     }
+
+    /**
+     * An edit can be individually bounded while its combination with the rest of
+     * the part is not playable (for example, moving a note onto a same-pitch
+     * neighbour). Validate the complete proposed result before the transformer
+     * is allowed to write a draft.
+     */
+    private fun validateResultingNotes(plan: MidiAiFixPlan, input: MidiAiFixInput) {
+        val resulting = input.notes.map {
+            ResultingNote(it.id, it.channel, it.pitch, it.velocity, it.startTick, it.endTick)
+        }.toMutableList()
+        val byId = input.notes.mapIndexed { index, note -> note.id to resulting[index] }.toMap()
+        var additionIndex = 0
+
+        plan.edits.forEach { edit -> when (edit.kind) {
+            MidiAiFixEditKind.TIMING -> byId.getValue(edit.noteId!!).start = edit.startTick!!
+            MidiAiFixEditKind.DURATION -> byId.getValue(edit.noteId!!).let { it.end = it.start + edit.durationTicks!! }
+            MidiAiFixEditKind.VELOCITY -> byId.getValue(edit.noteId!!).velocity = edit.velocity!!
+            MidiAiFixEditKind.PITCH -> byId.getValue(edit.noteId!!).pitch = edit.pitch!!
+            MidiAiFixEditKind.REMOVE_COLLISION_OR_DUPLICATE -> byId.getValue(edit.noteId!!).removed = true
+            MidiAiFixEditKind.ADD_LOCAL_GAP_NOTE -> resulting += ResultingNote("added-${++additionIndex}", 0, edit.pitch!!, edit.velocity!!, edit.startTick!!, edit.endTick!!)
+        } }
+
+        val kept = resulting.filterNot(ResultingNote::removed)
+        require(kept.all { it.start >= 0 && it.end > it.start && it.pitch in 0..127 && it.velocity in 1..127 }) {
+            "AI-fix plan produces an invalid note"
+        }
+        val collision = kept.groupBy { it.channel to it.pitch }.values
+            .asSequence()
+            .flatMap { it.sortedBy { note -> note.start }.zipWithNext().asSequence() }
+            .firstOrNull { (a, b) -> a.end > b.start }
+        collision?.let {
+            throw IllegalArgumentException("AI-fix plan produces a note collision between ${it.first.id} and ${it.second.id}")
+        }
+    }
+
+    private data class ResultingNote(
+        val id: String,
+        val channel: Int,
+        var pitch: Int,
+        var velocity: Int,
+        var start: Long,
+        var end: Long,
+        var removed: Boolean = false
+    )
 }
 
 @Serializable
@@ -199,23 +249,52 @@ class LocalQwenMidiAiFixPlanner(
 ) {
     fun plan(input: MidiAiFixInput): MidiAiFixPlan {
         input.requireValid()
-        val response = client.complete(SYSTEM_PROMPT, json.encodeToString(input))
-        val parsed = try { json.decodeFromString(MidiAiFixModelResponse.serializer(), response) } catch (error: Exception) {
-            throw IllegalArgumentException("Local model returned invalid AI-fix JSON: ${error.message}", error)
-        }
-        return MidiAiFixPlan(
-            version = parsed.version,
-            partId = parsed.partId,
-            cleanedSha256 = parsed.cleanedSha256,
-            inputHash = parsed.inputHash,
-            model = model,
-            edits = parsed.edits
-        ).also {
-            try { it.requireValid(input) } catch (error: IllegalArgumentException) {
-                throw IllegalArgumentException("Local model returned an invalid AI-fix plan: ${error.message}", error)
+        var safetyFeedback: String? = null
+        repeat(MAX_SAFETY_ATTEMPTS) {
+            val response = client.complete(SYSTEM_PROMPT, request(input, safetyFeedback))
+            val parsed = try { json.decodeFromString(MidiAiFixModelResponse.serializer(), response) } catch (error: Exception) {
+                throw IllegalArgumentException("Local model returned invalid AI-fix JSON: ${error.message}", error)
+            }
+            val candidate = MidiAiFixPlan(
+                version = parsed.version,
+                partId = parsed.partId,
+                cleanedSha256 = parsed.cleanedSha256,
+                inputHash = parsed.inputHash,
+                model = model,
+                edits = parsed.edits
+            )
+            try {
+                candidate.requireValid(input)
+                return candidate
+            } catch (error: IllegalArgumentException) {
+                if (!isRetryableSafetyRejection(error)) {
+                    throw IllegalArgumentException("Local model returned an invalid AI-fix plan: ${error.message}", error)
+                }
+                safetyFeedback = error.message
             }
         }
+        // Never apply an unsafe proposal. The service interprets this empty,
+        // validated plan as a successful no-safe-change outcome.
+        return MidiAiFixPlan(
+            partId = input.partId,
+            cleanedSha256 = input.cleanedSha256,
+            inputHash = input.inputHash,
+            model = model,
+            edits = emptyList()
+        ).also { it.requireValid(input) }
     }
+
+    private fun request(input: MidiAiFixInput, safetyFeedback: String?): String = buildString {
+        append(json.encodeToString(input))
+        if (safetyFeedback != null) {
+            append("\n\nA previous candidate was rejected: ")
+            append(safetyFeedback)
+            append(". Return a different plan that leaves no overlapping notes with the same MIDI channel and pitch.")
+        }
+    }
+
+    private fun isRetryableSafetyRejection(error: IllegalArgumentException): Boolean =
+        error.message?.startsWith("AI-fix plan produces a note collision") == true || error.message == "AI-fix plan produces an invalid note"
 
     @OptIn(ExperimentalSerializationApi::class)
     private companion object {
@@ -230,6 +309,7 @@ class LocalQwenMidiAiFixPlanner(
               "edits": [{ "kind": "timing", "noteId": "a supplied note id", "startTick": 0 }]
             }
             The model field is code-owned: never include it. Return 1 to 32 edits only, and edit each note at most once.
+            The complete resulting MIDI must have no overlapping notes sharing the same MIDI channel and pitch. Check every timing, duration, pitch, and added-note edit against all supplied notes before responding.
             Use only these edit objects, with exactly the fields stated for that kind:
             - timing: {"kind":"timing","noteId":"supplied id","startTick":new non-negative integer}; startTick must differ from the note's supplied startTick and move it by no more than ppq / 4 ticks.
             - duration: {"kind":"duration","noteId":"supplied id","durationTicks":new positive integer}.
@@ -239,6 +319,7 @@ class LocalQwenMidiAiFixPlanner(
             - add_local_gap_note: {"kind":"add_local_gap_note","gapId":"supplied local-gap id","startTick":integer,"endTick":integer,"pitch":integer,"velocity":integer}; at most two additions.
             Do not use action, align, quantize, a model field, or any other keys. Prefer the smallest safe set of concrete edits. Never return paths, commands, code, prompts, instruments, or new phrases.
         """.trimIndent()
+        const val MAX_SAFETY_ATTEMPTS = 3
     }
 }
 
@@ -353,8 +434,12 @@ object MidiAiFixStore {
         val references = MidiAiFixReferences(input.cleanedSha256, WorkflowArtifactReference(MidiAiFixArtifactPaths.draft(partId), diff.outputSha256))
         val project = ProjectStore.read(normalized); val part = project.parts.singleOrNull { it.id == partId } ?: error("Part not found: $partId")
         val midi = requireNotNull(part.midi) { "Part '$partId' has no cleaned MIDI" }
-        require(sha256(normalized.resolve(requireNotNull(midi.clean))) == input.cleanedSha256) { "Cleaned MIDI changed before AI-fix draft publication" }
-        ProjectStore.write(normalized, project.copy(parts = project.parts.map { if (it.id == partId) it.copy(midi = midi.copy(aiFixSelection = MidiAiFixSelection.SKIP, aiFix = references)) else it }, workflow = project.workflow.markCurrent(WorkflowArtifact.AI_FIX)))
+        val selectedInput = when (midi.technicalCorrectionSelection) {
+            TechnicalCorrectionSelection.CORRECTED -> requireNotNull(midi.technicalCorrection).output.file
+            TechnicalCorrectionSelection.BASE -> requireNotNull(midi.clean)
+        }
+        require(sha256(normalized.resolve(selectedInput)) == input.cleanedSha256) { "Selected MIDI changed before AI-fix draft publication" }
+        ProjectStore.write(normalized, project.copy(parts = project.parts.map { if (it.id == partId) it.copy(midi = midi.copy(aiFixSelection = MidiAiFixSelection.PENDING, aiFix = references)) else it }, workflow = project.workflow.markCurrent(WorkflowArtifact.AI_FIX)))
         return references
     }
 
@@ -378,6 +463,28 @@ object MidiAiFixStore {
         val changed = midi.aiFixSelection != MidiAiFixSelection.SKIP
         val updated = project.copy(parts = project.parts.map { if (it.id == partId) it.copy(analysis = if (changed) null else it.analysis, midi = midi.copy(aiFixSelection = MidiAiFixSelection.SKIP, analysisInput = MidiAnalysisInput.CURRENT, feel = null)) else it }, workflow = if (changed) project.workflow.invalidate(WorkflowChange.AI_FIX_SELECTION).markCurrent(WorkflowArtifact.AI_FIX) else project.workflow)
         ProjectStore.write(normalized, updated); return midi.aiFix
+    }
+
+    /** Records a completed AI-fix stage when the model cannot produce a safe change. */
+    fun recordNoSafeFix(root: Path, partId: String) {
+        val normalized = root.toAbsolutePath().normalize()
+        val project = ProjectStore.read(normalized)
+        val part = project.parts.singleOrNull { it.id == partId } ?: error("Part not found: $partId")
+        val midi = requireNotNull(part.midi) { "Part '$partId' has no cleaned MIDI" }
+        ProjectStore.write(normalized, project.copy(
+            parts = project.parts.map {
+                if (it.id == partId) it.copy(
+                    analysis = null,
+                    midi = midi.copy(
+                        aiFixSelection = MidiAiFixSelection.SKIP,
+                        aiFix = null,
+                        analysisInput = MidiAnalysisInput.CURRENT,
+                        feel = null
+                    )
+                ) else it
+            },
+            workflow = project.workflow.invalidate(WorkflowChange.AI_FIX_SELECTION).markCurrent(WorkflowArtifact.AI_FIX)
+        ))
     }
 
     fun readPlan(root: Path, partId: String): MidiAiFixPlan = read(root.resolve(MidiAiFixArtifactPaths.plan(partId)), MidiAiFixPlan.serializer())

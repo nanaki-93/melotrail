@@ -73,7 +73,7 @@ class TechnicalCorrectionTest {
 
         val created = correction.create(CreateTechnicalCorrectionRequest(root, "A"))
         assertTrue(created.available)
-        assertFalse(created.selected)
+        assertTrue(created.selected)
         val selected = correction.selectCorrected(root, "A")
 
         assertTrue(selected.selected)

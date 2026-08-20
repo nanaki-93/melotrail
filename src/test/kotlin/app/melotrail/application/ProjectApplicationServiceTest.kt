@@ -110,6 +110,29 @@ class ProjectApplicationServiceTest {
     }
 
     @Test
+    fun `removing a Melody track removes its structure uses but retains its files`() {
+        val service = service()
+        val root = tempDir.resolve("remove-track")
+        service.create(CreateProjectRequest(root))
+        val first = midi("first.mid")
+        val second = midi("second.mid")
+        blocking { service.importPart(ImportPartRequest(root, "A", first)) }
+        blocking { service.importPart(ImportPartRequest(root, "B", second)) }
+        val retainedSource = root.resolve("source/A.mid")
+        val beforeRemoval = ProjectStore.read(root)
+        ProjectStore.write(root, beforeRemoval.copy(envelope = beforeRemoval.envelope.copy(
+            structureOccurrences = listOf(app.melotrail.arrangement.StructureOccurrence("occ-a", "A"))
+        )))
+
+        val removed = service.removeSongPart(RemoveSongPartRequest(root, "A"))
+
+        assertEquals(listOf("B"), removed.parts.map { it.id })
+        assertTrue(Files.isRegularFile(retainedSource))
+        assertEquals(listOf("B"), ProjectStore.read(root).parts.map { it.id })
+        assertTrue(ProjectStore.read(root).envelope.structureOccurrences.none { it.partId == "A" })
+    }
+
+    @Test
     fun `audio transcription publishes raw MIDI without implicitly invoking Clean MIDI`() {
         val root = tempDir.resolve("failure")
         val service = service(object : MidiPreparationService {
@@ -332,7 +355,7 @@ class ProjectApplicationServiceTest {
         assertTrue(rawBefore.contentEquals(Files.readAllBytes(root.resolve("midi/raw/A.mid"))))
         assertTrue(Files.isRegularFile(root.resolve("midi/clean/A.mid")))
         val selectedMidi = requireNotNull(ProjectStore.read(root).parts.single().midi)
-        assertEquals(app.melotrail.arrangement.MidiAiFixSelection.SKIP, selectedMidi.aiFixSelection)
+        assertEquals(app.melotrail.arrangement.MidiAiFixSelection.PENDING, selectedMidi.aiFixSelection)
         assertEquals(null, selectedMidi.aiFix)
         assertEquals(app.melotrail.arrangement.MidiAnalysisInput.CURRENT, selectedMidi.analysisInput)
         assertEquals(null, selectedMidi.feel)

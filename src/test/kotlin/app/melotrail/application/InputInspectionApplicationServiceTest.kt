@@ -98,7 +98,8 @@ class InputInspectionApplicationServiceTest {
         assertTrue(repaired.cleanMidi)
 
         val analyzed = service.analyzePart(AnalyzePartRequest(root, "A")).parts.single().preparation
-        assertTrue(analyzed.analyzed && analyzed.ready)
+        assertTrue(analyzed.analyzed)
+        assertFalse(analyzed.ready)
     }
 
     @Test

@@ -233,7 +233,7 @@ data class TechnicalCorrectionReferences(
 }
 
 @Serializable
-enum class MidiAiFixSelection { SKIP, APPROVED }
+enum class MidiAiFixSelection { PENDING, SKIP, APPROVED }
 
 /**
  * The draft is review evidence only. [approved] is selectable only when it is

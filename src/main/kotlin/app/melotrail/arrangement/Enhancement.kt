@@ -24,7 +24,7 @@ enum class EnhancementIntensity { OFF, SUBTLE, BALANCED, CREATIVE }
 
 /** The selected musical representation is never inferred from an artifact's presence. */
 @Serializable
-enum class EnhancementSelection { CORRECTED, ENHANCED }
+enum class EnhancementSelection { PENDING, CORRECTED, ENHANCED }
 
 /** Code-owned edit vocabulary. It deliberately excludes generated notes, harmony, tempo and paths. */
 @Serializable
@@ -379,7 +379,7 @@ object MusicalProcessingContextHasher {
     )
 }
 
-private fun subjectHash(context: MusicalProcessingContext): String = enhancementSha256("${context.partId}|${context.sectionId}".toByteArray(StandardCharsets.UTF_8))
+internal fun subjectHash(context: MusicalProcessingContext): String = enhancementSha256("${context.partId}|${context.sectionId}".toByteArray(StandardCharsets.UTF_8))
 private fun enhancementNoteSummaries(path: Path): List<EnhancementNoteSummary> {
     val active = mutableMapOf<Pair<Int, Int>, ArrayDeque<Pair<Long, Int>>>()
     val notes = mutableListOf<EnhancementNoteSummary>()

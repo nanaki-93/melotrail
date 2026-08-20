@@ -20,6 +20,9 @@ import app.melotrail.application.EnhancementSnapshot
 import app.melotrail.application.CreateEnhancementRequest
 import app.melotrail.application.ApproveEnhancementRequest
 import app.melotrail.application.SelectApprovedEnhancementRequest
+import app.melotrail.application.CreateTechnicalCorrectionRequest
+import app.melotrail.application.DefaultTechnicalCorrectionApplicationService
+import app.melotrail.application.TechnicalCorrectionApplicationService
 import app.melotrail.application.DefaultArrangementApplicationService
 import app.melotrail.application.GenerateArrangementRequest
 import app.melotrail.application.ImportPartRequest
@@ -67,6 +70,7 @@ import app.melotrail.application.DuplicateStructureOccurrenceRequest
 import app.melotrail.application.RemoveStructureOccurrenceRequest
 import app.melotrail.application.MoveStructureOccurrenceRequest
 import app.melotrail.application.UpdateSongPartSectionRequest
+import app.melotrail.application.RemoveSongPartRequest
 import app.melotrail.application.WorkflowReadModel
 import app.melotrail.application.WorkflowReadModelDeriver
 import app.melotrail.application.DefaultReleaseExportApplicationService
@@ -86,8 +90,6 @@ import app.melotrail.arrangement.MidiAnalysisInput
 import app.melotrail.arrangement.ArrangementRole
 import app.melotrail.arrangement.ArrangementRoleSelection
 import app.melotrail.arrangement.SoundTrait
-import app.melotrail.arrangement.StageId
-import app.melotrail.arrangement.StageRunStatus
 import app.melotrail.application.MidiQualityStatus
 import app.melotrail.preparation.InputCleanupMode
 import app.melotrail.preparation.TranscriptionInputArtifact
@@ -381,6 +383,8 @@ sealed interface WorkspaceOperation {
     data class InspectingPart(val id: String) : WorkspaceOperation
     data class ApplyingAudioCleanup(val id: String) : WorkspaceOperation
     data class CleaningMidi(val id: String, val progress: OperationProgress? = null) : WorkspaceOperation
+    data class CorrectingMidi(val id: String) : WorkspaceOperation
+    data class RemovingSongPart(val id: String) : WorkspaceOperation
     data class SelectingMidiFeel(val id: String) : WorkspaceOperation
     data class SelectingEnhancement(val id: String) : WorkspaceOperation
     data class CreatingMidiAiFix(val id: String, val progress: OperationProgress? = null) : WorkspaceOperation
@@ -408,6 +412,8 @@ val WorkspaceOperation.isMutating: Boolean
         this is WorkspaceOperation.ImportingPart || this is WorkspaceOperation.AnalyzingPart ||
         this is WorkspaceOperation.InspectingPart || this is WorkspaceOperation.ApplyingAudioCleanup || this is WorkspaceOperation.TranscribingPart ||
         this is WorkspaceOperation.CleaningMidi ||
+        this is WorkspaceOperation.CorrectingMidi ||
+        this is WorkspaceOperation.RemovingSongPart ||
         this is WorkspaceOperation.SelectingMidiFeel ||
         this is WorkspaceOperation.SelectingEnhancement ||
         this is WorkspaceOperation.CreatingMidiAiFix || this is WorkspaceOperation.ApprovingMidiAiFix ||
@@ -448,6 +454,7 @@ sealed interface WorkspaceDialog {
     data class EditRole(val partId: String, val role: String) : WorkspaceDialog
     data class ConfirmSectionChange(val partId: String, val sectionType: app.melotrail.arrangement.SectionTypeId) : WorkspaceDialog
     data class ConfirmPartStructureChange(val partId: String, val instanceId: String? = null) : WorkspaceDialog
+    data class ConfirmRemoveSongPart(val partId: String) : WorkspaceDialog
     /** The selected canonical part and its return target travel together; no row-local selection is inferred. */
     data class PartDetails(val partId: String, val focusReturn: PartDetailsFocusReturn) : WorkspaceDialog
     data class ConfirmSafeCleanup(val partId: String) : WorkspaceDialog
@@ -544,6 +551,7 @@ sealed interface WorkspaceRetry {
     data class Inspect(val root: Path, val partId: String) : WorkspaceRetry
     data class Cleanup(val root: Path, val partId: String, val mode: InputCleanupMode) : WorkspaceRetry
     data class CleanMidi(val request: CleanMidiRequest) : WorkspaceRetry
+    data class TechnicalCorrection(val request: CreateTechnicalCorrectionRequest) : WorkspaceRetry
     data class ApplyMidiFeel(val root: Path, val partId: String, val input: MidiAnalysisInput) : WorkspaceRetry
     data class Enhancement(val root: Path, val partId: String, val intensity: app.melotrail.arrangement.EnhancementIntensity) : WorkspaceRetry
     data class CreateMidiAiFix(val request: CreateMidiAiFixRequest) : WorkspaceRetry
@@ -613,6 +621,9 @@ sealed interface WorkspaceIntent {
     data object ConfirmSafeCleanup : WorkspaceIntent
     data class SelectMidiCleanupProfile(val profile: MidiCleanupProfile) : WorkspaceIntent
     data object ApproveCleanMidi : WorkspaceIntent
+    data object CreateTechnicalCorrection : WorkspaceIntent
+    data class RequestRemoveSongPart(val partId: String) : WorkspaceIntent
+    data object ConfirmRemoveSongPart : WorkspaceIntent
     data object CreateMidiAiFix : WorkspaceIntent
     data object ApproveMidiAiFix : WorkspaceIntent
     data object RejectMidiAiFix : WorkspaceIntent
@@ -703,6 +714,7 @@ class WorkspaceViewModel(
     private val arrangementService: ArrangementApplicationService = DefaultArrangementApplicationService(libraryRoot = libraryRoot),
     private val cohesionService: CohesionApplicationService = DefaultCohesionApplicationService(),
     private val midiAiFixService: MidiAiFixApplicationService = DefaultMidiAiFixApplicationService(),
+    private val technicalCorrectionService: TechnicalCorrectionApplicationService = DefaultTechnicalCorrectionApplicationService(),
     private val enhancementService: EnhancementApplicationService = DefaultEnhancementApplicationService(),
     private val mixService: MixApplicationService = DefaultMixApplicationService(),
     private val humanizationService: HumanizationApplicationService = DefaultHumanizationApplicationService(),
@@ -805,6 +817,9 @@ class WorkspaceViewModel(
             WorkspaceIntent.ConfirmSafeCleanup -> confirmSafeCleanup()
             is WorkspaceIntent.SelectMidiCleanupProfile -> mutableState.update { it.copy(midiQualityReview = it.midiQualityReview.copy(profile = intent.profile)) }
             WorkspaceIntent.ApproveCleanMidi -> approveCleanMidi()
+            WorkspaceIntent.CreateTechnicalCorrection -> createTechnicalCorrection()
+            is WorkspaceIntent.RequestRemoveSongPart -> requestRemoveSongPart(intent.partId)
+            WorkspaceIntent.ConfirmRemoveSongPart -> removeSongPart()
             WorkspaceIntent.CreateMidiAiFix -> createMidiAiFix()
             WorkspaceIntent.ApproveMidiAiFix -> approveMidiAiFix()
             WorkspaceIntent.RejectMidiAiFix -> rejectMidiAiFix()
@@ -1405,39 +1420,14 @@ class WorkspaceViewModel(
         mutableState.update { it.copy(operation = WorkspaceOperation.ImportingPart(command.id), notification = null, retry = null, dialog = null, operationFeedback = feedbackTracker.current) }
         importPreparationJob = scope.launch {
             try {
-                val initial = withContext(ioDispatcher) { projectService.importSongPart(command).snapshot.refreshed() }
-                val snapshot = awaitAutomaticImport(command, initial, feedbackId)
+                val snapshot = withContext(ioDispatcher) { projectService.importSongPart(command).snapshot.refreshed() }
                 if (reduceMelodyPartCard(snapshot, snapshot.parts.first { it.id == command.id }).retryable) {
                     failAutomaticImport(draft, command, snapshot, feedbackId)
-                } else opened(snapshot, "Imported ${command.name}. Melody Parts progress is saved with the project.", feedbackId)
+                } else opened(snapshot, "Imported ${command.name}. Raw MIDI is ready; run Clean MIDI when you are ready to continue.", feedbackId)
             } catch (failure: Throwable) {
                 if (failure !is CancellationException) failAutomaticImport(draft, command, null, feedbackId, failure.message ?: "Unable to import ${command.id}.")
             }
         }
-    }
-
-    /** Refreshes only the typed project snapshot while Task 013's chained cleanup is durable and active. */
-    private suspend fun awaitAutomaticImport(command: ImportSongPart, initial: ProjectSnapshot, feedbackId: String): ProjectSnapshot {
-        var snapshot = initial
-        repeat(600) {
-            if (!automaticCleanupPending(snapshot, command.id)) return snapshot
-            delay(100)
-            if (state.value.project?.root != command.root) throw CancellationException("Project changed during import")
-            snapshot = withContext(ioDispatcher) { projectService.open(command.root) }
-            val stage = reduceMelodyPartCard(snapshot, snapshot.parts.firstOrNull { it.id == command.id }
-                ?: throw IllegalStateException("Imported part is no longer available"))
-            feedbackTracker.progress(feedbackId, OperationPhase.LOCAL, "${stage.stages.firstOrNull { it.status == MelodyPartStageStatus.PROCESSING }?.label ?: "Preparing"} ${command.name}…")?.let { feedback ->
-                mutableState.update { current -> if (current.project?.root == command.root) current.copy(project = snapshot, operationFeedback = feedback) else current }
-            }
-        }
-        throw IllegalStateException("Automatic cleanup is still running. Keep this project open and retry only after the reported stage finishes.")
-    }
-
-    private fun automaticCleanupPending(snapshot: ProjectSnapshot, partId: String): Boolean {
-        val runs = snapshot.readiness.stageRuns.filter { (it.subject as? app.melotrail.arrangement.StageSubject.Part)?.partId == partId }
-        val extracted = runs.lastOrNull { it.stage == StageId.EXTRACTED }
-        val cleaned = runs.lastOrNull { it.stage == StageId.CLEANED }
-        return extracted?.status == StageRunStatus.COMPLETED && cleaned?.status !in setOf(StageRunStatus.COMPLETED, StageRunStatus.FAILED)
     }
 
     private fun failAutomaticImport(
@@ -1649,6 +1639,59 @@ class WorkspaceViewModel(
         }
     }
 
+    private fun createTechnicalCorrection() {
+        val project = state.value.project ?: return fail("Technical Correction", "Open a project before correcting MIDI.")
+        val partId = state.value.selectedPartId ?: return fail("Technical Correction", "Select a cleaned MIDI part before correcting it.")
+        val part = project.parts.find { it.id == partId } ?: return fail("Technical Correction", "Selected part is no longer available.")
+        if (part.preparation.midiQuality.status != MidiQualityStatus.CURRENT) return fail("Technical Correction", "Clean MIDI before technical correction.")
+        if (state.value.operation.isMutating) return
+        val request = CreateTechnicalCorrectionRequest(project.root, partId)
+        val feedbackId = beginFeedback(OperationKind.MIDI_CLEANUP, OperationPhase.LOCAL, "Correcting technical MIDI issues for $partId…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.CorrectingMidi(partId), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { technicalCorrectionService.create(request); projectService.open(project.root) } }
+                .onSuccess { snapshot ->
+                    val message = "Technical Correction applied. AI Fix is ready."
+                    mutableState.update { current -> current.copy(project = snapshot, operation = WorkspaceOperation.Idle, notification = message,
+                        operationFeedback = feedbackTracker.complete(feedbackId, message) ?: current.operationFeedback, downstreamArtifactsStale = true) }
+                }
+                .onFailure { fail("Technical Correction", it.message ?: "Unable to correct $partId.", WorkspaceRetry.TechnicalCorrection(request), feedbackId) }
+        }
+    }
+
+    private fun requestRemoveSongPart(partId: String) {
+        val project = state.value.project ?: return
+        if (state.value.operation.isMutating) return busy("remove a Melody track")
+        if (project.parts.none { it.id == partId }) return
+        mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmRemoveSongPart(partId)) }
+    }
+
+    private fun removeSongPart() {
+        val dialog = state.value.dialog as? WorkspaceDialog.ConfirmRemoveSongPart ?: return
+        val project = state.value.project ?: return
+        val part = project.parts.firstOrNull { it.id == dialog.partId } ?: run {
+            mutableState.update { it.copy(dialog = null) }
+            return
+        }
+        if (state.value.operation.isMutating) return
+        cancelPlaybackSession(resetState = true)
+        mutableState.update { it.copy(operation = WorkspaceOperation.RemovingSongPart(part.id), dialog = null, notification = null, retry = null) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { projectService.removeSongPart(RemoveSongPartRequest(project.root, part.id)) } }
+                .onSuccess { snapshot ->
+                    val message = "Removed ${part.name} from Melody Parts. Its source and derived files were retained."
+                    opened(snapshot, message, stale = snapshot.readiness.staleArtifacts.isNotEmpty())
+                    mutableState.update { current -> current.copy(
+                        selectedPartId = snapshot.parts.firstOrNull()?.id,
+                        midiAiFix = current.midiAiFix?.takeIf { it.partId != part.id },
+                        enhancementReview = current.enhancementReview?.takeIf { it.partId != part.id },
+                        pendingMidiFeel = null
+                    ) }
+                }
+                .onFailure { fail("remove Melody track", it.message ?: "Unable to remove ${part.name}.") }
+        }
+    }
+
     private fun createMidiAiFix() {
         val project = state.value.project ?: return fail("AI fix", "Open a project before creating an AI fix.")
         val partId = state.value.selectedPartId ?: return fail("AI fix", "Select a cleaned MIDI part before creating an AI fix.")
@@ -1675,7 +1718,7 @@ class WorkspaceViewModel(
                 }
             }.onSuccess { fix ->
                 val refreshed = runCatching { projectService.open(request.root) }.getOrNull()
-                val message = "AI-fix draft is ready for A/B preview and per-edit review. Approve it to use it downstream."
+                val message = if (fix.noSafeFix) "AI Fix found no safe change. ${fix.noSafeFixReason ?: "Corrected MIDI remains selected."}" else "AI Fix is ready. Accept it, refuse it, or regenerate it."
                 mutableState.update { current -> current.copy(project = refreshed ?: current.project, midiAiFix = fix, arrangement = null, operation = WorkspaceOperation.Idle, notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message, OperationSeverity.WARNING) ?: current.operationFeedback, downstreamArtifactsStale = current.downstreamArtifactsStale) }
             }.onFailure { fail("AI fix", it.message ?: "Unable to create an AI-fix draft. Keep cleaned MIDI and retry after recovering the local model.", WorkspaceRetry.CreateMidiAiFix(request), feedbackId) }
         }
@@ -1692,7 +1735,7 @@ class WorkspaceViewModel(
             runCatching { withContext(ioDispatcher) { midiAiFixService.approve(project.root, partId) } }
                 .onSuccess { approved ->
                     val refreshed = runCatching { projectService.open(project.root) }.getOrNull()
-                    val message = "AI fix approved. Re-analyze $partId before continuing."
+                    val message = "AI Fix accepted. AI Enhance is ready."
                     mutableState.update { current -> current.copy(project = refreshed ?: current.project, midiAiFix = approved, arrangement = null, operation = WorkspaceOperation.Idle, notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message) ?: current.operationFeedback, downstreamArtifactsStale = true) }
                 }
                 .onFailure { fail("AI fix", it.message ?: "Unable to approve this AI-fix draft.", sessionId = feedbackId) }
@@ -1706,10 +1749,10 @@ class WorkspaceViewModel(
         val partId = state.value.selectedPartId ?: return fail("AI fix", "Select a part before returning to cleaned MIDI.")
         if (state.value.operation.isMutating) return
         scope.launch {
-            runCatching { withContext(ioDispatcher) { if (rejected) midiAiFixService.reject(project.root, partId) else midiAiFixService.returnToCleaned(project.root, partId) } }
+            runCatching { withContext(ioDispatcher) { if (rejected) midiAiFixService.reject(project.root, partId) else midiAiFixService.skip(project.root, partId) } }
                 .onSuccess { retained ->
                     val refreshed = runCatching { projectService.open(project.root) }.getOrNull()
-                    val message = if (rejected) "AI-fix draft rejected. Cleaned MIDI remains selected." else "Cleaned MIDI is selected."
+                    val message = if (rejected) "AI Fix refused. Corrected MIDI remains selected." else "AI Fix skipped. Corrected MIDI remains selected."
                     mutableState.update { current -> current.copy(project = refreshed ?: current.project, midiAiFix = retained, arrangement = null, notification = message, downstreamArtifactsStale = current.downstreamArtifactsStale || refreshed?.readiness?.staleArtifacts?.isNotEmpty() == true) }
                 }
                 .onFailure { fail("AI fix", it.message ?: "Unable to return to cleaned MIDI.") }
@@ -2298,6 +2341,10 @@ class WorkspaceViewModel(
             if (action.request.cleanup.profile == MidiCleanupProfile.TIGHTEN_TIMING) {
                 mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmTightenTiming(action.request.partId)) }
             } else runCleanMidi(action.request)
+        }
+        is WorkspaceRetry.TechnicalCorrection -> {
+            mutableState.update { it.copy(selectedPartId = action.request.partId) }
+            createTechnicalCorrection()
         }
         is WorkspaceRetry.ApplyMidiFeel -> {
             mutableState.update { it.copy(selectedPartId = action.partId, pendingMidiFeel = action.input) }

@@ -54,8 +54,7 @@ class AutomaticImportProcessors(
         override val definition = StageDefinition(
             stage = StageId.EXTRACTED,
             subjectKind = StageSubjectKind.PART,
-            dependencies = setOf(StageId.SOURCE),
-            automaticallyChainsTo = StageId.CLEANED
+            dependencies = setOf(StageId.SOURCE)
         )
 
         override suspend fun process(request: StageProcessingRequest): StageProcessorResult {
@@ -96,8 +95,7 @@ class AutomaticImportProcessors(
         override val definition = StageDefinition(
             stage = StageId.CLEANED,
             subjectKind = StageSubjectKind.PART,
-            dependencies = setOf(StageId.EXTRACTED),
-            automaticallyChainsTo = StageId.NORMALIZED
+            dependencies = setOf(StageId.EXTRACTED)
         )
 
         override suspend fun process(request: StageProcessingRequest): StageProcessorResult {

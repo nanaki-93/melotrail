@@ -19,13 +19,13 @@ For the precise direct-MIDI and eligible solo-piano audio routes, see the
 flowchart LR
     P[Create or open project] --> M[Import MIDI]
     P --> A[Import eligible solo-piano WAV/WAVE/MP3]
-    M --> I[Inspect preserved source]
+    M --> I[Prepare raw MIDI]
     A --> I
-    I --> T{Audio source?}
-    T -- yes --> X[Choose original or prepared audio and transcribe]
-    T -- no --> R[Clean MIDI and approve when requested]
-    X --> R
-    R --> F[Select Original feel or optional Lo-fi Feel]
+    I --> R[Clean MIDI]
+    R --> C1[Technical Correction]
+    C1 --> F1[AI Fix: accept, refuse, skip, or regenerate]
+    F1 --> E1[AI Enhance: accept, refuse, skip, or regenerate]
+    E1 --> F[Apply Lo-fi MIDI Feel]
     F --> N[Analyze selected MIDI]
     N --> S[Save structure]
     S --> C[Generate and approve cohesion]
@@ -39,11 +39,13 @@ Audio import is deliberately narrow: use it only for solo-piano transcription.
 For a MIDI file, Melotrail preserves the imported source and makes immutable raw
 MIDI evidence directly; it does not transcribe the MIDI route.
 
-In the normal desktop route, **Import audio** starts the required local
+In the normal desktop route, **Import audio** performs the required local
 transcription as part of importing and only registers the part after valid raw
-MIDI is published. The separate transcription stage below is the safe recovery
-path when a current inspected audio part has no raw MIDI evidence; this keeps
-the workflow model explicit about what must exist before MIDI cleanup.
+MIDI is published. Melody Parts then exposes one ordered action at a time:
+Clean MIDI, Technical Correction, AI Fix, AI Enhance, and the fixed Lo-fi MIDI
+Feel (80 BPM, 58% swing). The two AI stages retain their explicit accept,
+refuse, skip, and regenerate choices; the detailed artifact controls are not
+part of the Melody Parts page.
 
 ## How to read the workspace
 

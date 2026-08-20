@@ -124,10 +124,16 @@ class DefaultEnhancementApplicationService(
     private data class Current(val project: app.melotrail.arrangement.Project, val midi: app.melotrail.arrangement.MidiReferences, val input: Path, val inputRef: WorkflowArtifactReference)
     private fun current(root: Path, partId: String): Current {
         val project = ProjectStore.read(root).also { it.requireValid(root) }; val part = project.parts.singleOrNull { it.id == partId } ?: error("Part not found: $partId")
-        val midi = requireNotNull(part.midi); require(midi.technicalCorrectionSelection == app.melotrail.arrangement.TechnicalCorrectionSelection.CORRECTED) { "Select corrected MIDI before enhancement." }
-        val correction = requireNotNull(midi.technicalCorrection); val path = root.resolve(correction.output.file).normalize()
-        require(path.startsWith(root) && Files.isRegularFile(path) && sha256(path) == correction.output.sha256) { "Corrected MIDI is missing or stale." }
-        return Current(project, midi, path, correction.output)
+        val midi = requireNotNull(part.midi); require(midi.technicalCorrectionSelection == app.melotrail.arrangement.TechnicalCorrectionSelection.CORRECTED) { "Run Technical Correction before enhancement." }
+        val correction = requireNotNull(midi.technicalCorrection)
+        val input = when (midi.aiFixSelection) {
+            app.melotrail.arrangement.MidiAiFixSelection.PENDING -> throw IllegalStateException("Complete AI Fix before enhancement.")
+            app.melotrail.arrangement.MidiAiFixSelection.APPROVED -> requireNotNull(midi.aiFix?.approved) { "Approved AI Fix MIDI is missing." }
+            app.melotrail.arrangement.MidiAiFixSelection.SKIP -> correction.output
+        }
+        val path = root.resolve(input.file).normalize()
+        require(path.startsWith(root) && Files.isRegularFile(path) && sha256(path) == input.sha256) { "Enhancement input MIDI is missing or stale." }
+        return Current(project, midi, path, input)
     }
     private fun update(root: Path, partId: String, refs: EnhancementReferences, selection: EnhancementSelection) {
         val project = ProjectStore.read(root); ProjectStore.write(root, project.copy(parts = project.parts.map { part -> if (part.id == partId) part.copy(analysis = null, midi = requireNotNull(part.midi).copy(enhancement = refs, enhancementSelection = selection, analysisInput = app.melotrail.arrangement.MidiAnalysisInput.CURRENT, feel = null)) else part }, workflow = project.workflow.invalidate(WorkflowChange.ENHANCEMENT_SELECTION).markCurrent(WorkflowArtifact.ENHANCED_MIDI)))

@@ -323,6 +323,8 @@ private fun ProjectRail(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
 
 private fun projectRailStatus(state: WorkspaceUiState): String = when {
     state.project == null -> "Start with New Project, or Open Project to continue an existing project."
+    state.downstreamArtifactsStale && state.workspaceSection == WorkspaceSection.IMPORT ->
+        "Melody changes are current; later song artifacts need regeneration."
     state.downstreamArtifactsStale -> "Some derived artifacts are stale."
     state.project.readiness.releaseAvailable -> "Validated release available."
     else -> "Stage: ${state.workspaceSection.label}"

@@ -28,7 +28,7 @@ class AutomaticImportApplicationServiceTest {
     @TempDir lateinit var tempDir: Path
 
     @Test
-    fun `source-first import cleans then normalizes immutable direct MIDI`() = runBlocking {
+    fun `source-first import preserves raw MIDI until the explicit Clean MIDI step`() = runBlocking {
         val input = tempDir.resolve("source.mid").also { writeMidi(it, 60) }
         val service = service()
         val root = tempDir.resolve("project")
@@ -42,10 +42,6 @@ class AutomaticImportApplicationServiceTest {
             sectionType = SectionTypeId("intro")
         ))
 
-        repeat(50) {
-            if (StageRunStore().read(root, ProjectStore.read(root).envelope.stageRuns).any { run -> run.stage == StageId.NORMALIZED && run.status == StageRunStatus.COMPLETED }) return@repeat
-            delay(10)
-        }
         val project = ProjectStore.read(root)
         val part = project.parts.single()
         val runs = StageRunStore().read(root, project.envelope.stageRuns)
@@ -55,14 +51,13 @@ class AutomaticImportApplicationServiceTest {
         assertTrue(Files.readAllBytes(input).contentEquals(Files.readAllBytes(root.resolve("source/intro.mid"))))
         assertFalse(part.importPending)
         assertEquals("midi/raw/intro.mid", part.midi?.raw)
-        assertTrue(Files.isRegularFile(root.resolve(requireNotNull(part.midi?.clean))))
-        assertTrue(Files.isRegularFile(root.resolve(requireNotNull(part.midi?.normalized))))
-        assertTrue(Files.isRegularFile(root.resolve(requireNotNull(part.midi?.normalization))))
-        assertEquals(listOf(StageId.SOURCE, StageId.EXTRACTED, StageId.CLEANED, StageId.NORMALIZED), runs.map { it.stage })
+        assertEquals(null, part.midi?.clean)
+        assertEquals(null, part.midi?.normalized)
+        assertEquals(listOf(StageId.SOURCE, StageId.EXTRACTED), runs.map { it.stage })
 
         val retry = service.importSongPart(ImportSongPart(root, "intro", input, "Intro piano", SectionTypeId("intro"), expectedRevision = 1))
         assertTrue(retry.firstRun.cacheHit)
-        assertEquals(4, StageRunStore().read(root, ProjectStore.read(root).envelope.stageRuns).size)
+        assertEquals(2, StageRunStore().read(root, ProjectStore.read(root).envelope.stageRuns).size)
     }
 
     private fun service(): DefaultProjectApplicationService {

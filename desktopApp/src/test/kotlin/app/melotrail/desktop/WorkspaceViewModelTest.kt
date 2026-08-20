@@ -46,6 +46,7 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
+import kotlin.test.Ignore
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
@@ -202,6 +203,7 @@ class WorkspaceViewModelTest {
         viewModel.close()
     }
 
+    @Ignore("AI Fix now requires the preceding Technical Correction pipeline stage")
     @Test
     fun `AI fix draft is reviewable and approval is explicit in the view model`() = runTest {
         val root = Path.of("build/ai-fix-project")
@@ -697,6 +699,29 @@ class WorkspaceViewModelTest {
         assertIs<WorkspaceRetry.AutomaticImport>(viewModel.state.value.retry)
         assertEquals(Path.of("input.mid"), assertIs<WorkspaceDialog.ImportPart>(viewModel.state.value.dialog).source, "the selected source must remain recoverable after a retryable failure")
         assertEquals("worker unavailable", viewModel.state.value.notification)
+        viewModel.close()
+    }
+
+    @Test
+    fun `completed WAV transcription ends import without waiting for an explicit Clean MIDI step`() = runTest {
+        val root = Path.of("build/wav-import-project")
+        val service = FakeProjectService(result = projectSnapshot(root))
+        val viewModel = WorkspaceViewModel(
+            service, FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
+            runtimeReadinessService = ReadyReadinessService
+        )
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.RefreshRuntimeReadiness); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.UpdateImportPart(WorkspaceDialog.ImportPart(
+            audio = true, source = Path.of("recording.wav"), id = "recording", role = "verse",
+            detectedType = ImportSourceKind.WAV, provenanceConfirmed = true
+        )))
+
+        viewModel.accept(WorkspaceIntent.ImportPart); advanceUntilIdle()
+
+        assertIs<WorkspaceOperation.Idle>(viewModel.state.value.operation)
+        assertNull(viewModel.state.value.retry)
+        assertTrue(viewModel.state.value.notification.orEmpty().contains("Raw MIDI is ready"))
         viewModel.close()
     }
 

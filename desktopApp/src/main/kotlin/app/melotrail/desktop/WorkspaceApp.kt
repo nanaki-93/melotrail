@@ -1521,6 +1521,8 @@ private fun statusText(state: WorkspaceUiState): String = when (val operation = 
     is WorkspaceOperation.InspectingPart -> "Inspecting preserved source for ${operation.id}…"
     is WorkspaceOperation.ApplyingAudioCleanup -> "Applying selected cleanup for ${operation.id}…"
     is WorkspaceOperation.CleaningMidi -> "Cleaning MIDI for ${operation.id}…"
+    is WorkspaceOperation.CorrectingMidi -> "Correcting technical MIDI issues for ${operation.id}…"
+    is WorkspaceOperation.RemovingSongPart -> "Removing Melody track ${operation.id}…"
     is WorkspaceOperation.SelectingMidiFeel -> "Selecting Lo-fi Feel for ${operation.id}…"
     is WorkspaceOperation.SelectingEnhancement -> "Selecting enhancement for ${operation.id}…"
     is WorkspaceOperation.CreatingMidiAiFix -> "Creating a bounded AI-fix draft for ${operation.id}…"
@@ -1550,6 +1552,7 @@ private fun WorkspaceDialogs(state: WorkspaceUiState, onIntent: (WorkspaceIntent
         is WorkspaceDialog.EditRole -> EditRoleDialog(dialog, onIntent)
         is WorkspaceDialog.ConfirmSectionChange -> ConfirmSectionChangeDialog(dialog, onIntent)
         is WorkspaceDialog.ConfirmPartStructureChange -> ConfirmPartStructureChangeDialog(dialog, onIntent)
+        is WorkspaceDialog.ConfirmRemoveSongPart -> ConfirmRemoveSongPartDialog(state, dialog, onIntent)
         is WorkspaceDialog.PartDetails -> PartDetailsDialog(state, dialog, onIntent)
         is WorkspaceDialog.ConfirmSafeCleanup -> ConfirmSafeCleanupDialog(dialog, onIntent)
         is WorkspaceDialog.ConfirmTightenTiming -> ConfirmTightenTimingDialog(dialog, onIntent)
@@ -1927,6 +1930,18 @@ private fun ConfirmPartStructureChangeDialog(draft: WorkspaceDialog.ConfirmPartS
     confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.ConfirmPartStructureChange) }) { Text(if (draft.instanceId == null) "Add to structure" else "Remove occurrence") } },
     dismissButton = { TextButton(onClick = { onIntent(WorkspaceIntent.DismissDialog) }) { Text("Cancel") } }
 )
+
+@Composable
+private fun ConfirmRemoveSongPartDialog(state: WorkspaceUiState, draft: WorkspaceDialog.ConfirmRemoveSongPart, onIntent: (WorkspaceIntent) -> Unit) {
+    val part = state.project?.parts?.firstOrNull { it.id == draft.partId }
+    AlertDialog(
+        onDismissRequest = { onIntent(WorkspaceIntent.DismissDialog) },
+        title = { Text("Remove Melody track?") },
+        text = { Text("${part?.name ?: draft.partId} and all of its structure occurrences will be removed from this project. Imported and generated files will remain on disk as recoverable evidence. Downstream song artifacts may need regeneration.") },
+        confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.ConfirmRemoveSongPart) }) { Text("Remove track") } },
+        dismissButton = { TextButton(onClick = { onIntent(WorkspaceIntent.DismissDialog) }) { Text("Cancel") } }
+    )
+}
 
 private fun buildSongPrerequisite(state: WorkspaceUiState): String = when {
     state.project == null -> "Build Song needs an open project."
