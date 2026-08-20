@@ -1948,6 +1948,8 @@ private fun buildSongPrerequisite(state: WorkspaceUiState): String = when {
     state.arrangement == null -> "Build Song needs an approved arrangement."
     state.arrangement.stale -> "Build Song is blocked: regenerate the stale arrangement."
     state.arrangement.approvalRequired -> "Build Song is blocked: approve the Qwen draft."
+    state.project.readiness.cohesionApprovalRequired -> "Build Song is blocked: review and approve Cohesion."
+    !state.project.readiness.cohesionReady -> "Build Song is blocked: generate and approve Cohesion."
     state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.available != true -> state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.reason ?: "Build Song is checking local readiness."
     else -> "Build Song will generate/reuse MIDI and stems, then mix, repair, master, and write release metadata."
 }
@@ -1968,7 +1970,13 @@ private fun arrangementPrerequisite(state: WorkspaceUiState): String = when {
     }
 }
 
-private fun canBuild(state: WorkspaceUiState): Boolean = state.project != null && !state.operation.isMutating && state.arrangement?.approved == true && state.arrangement?.approvalRequired == false && state.arrangement?.stale == false && state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.available == true
+private fun canBuild(state: WorkspaceUiState): Boolean = state.project != null &&
+    !state.operation.isMutating &&
+    state.arrangement?.approved == true &&
+    state.arrangement?.approvalRequired == false &&
+    state.arrangement?.stale == false &&
+    state.project.readiness.cohesionReady &&
+    state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.available == true
 
 internal fun timelineSectionWeight(durationSeconds: Double?): Float =
     (durationSeconds?.takeIf { it > 0.0 } ?: 1.0).toFloat()

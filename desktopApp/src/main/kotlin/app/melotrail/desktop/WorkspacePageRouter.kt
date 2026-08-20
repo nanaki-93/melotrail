@@ -1456,7 +1456,7 @@ private fun ArrangeReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                     Button(onClick = { onIntent(WorkspaceIntent.ApproveArrangement) }, enabled = !state.operation.isMutating, modifier = Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_APPROVE }) { Text("Approve draft") }
                 }
             }
-            else -> Text("Approved deterministic arrangement is current.", color = semanticColor(WorkspaceSemanticState.READY))
+            else -> Text("Approved arrangement is current.", color = semanticColor(WorkspaceSemanticState.READY))
         }
     }
 }
@@ -2244,7 +2244,14 @@ private fun ZeroSignalPlaceholder() = OverviewCard(WorkspacePageTags.MIX_ZERO_SI
     Text("0.0 dBFS · No measured signal", style = MaterialTheme.typography.bodySmall, color = semanticColor(WorkspaceSemanticState.DISABLED))
 }
 
-private fun mixMasterCanBuild(state: WorkspaceUiState): Boolean = state.project != null && !state.downstreamArtifactsStale && !state.operation.isMutating && state.arrangement?.approved == true && state.arrangement.approvalRequired == false && state.arrangement.stale == false && state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.available == true
+private fun mixMasterCanBuild(state: WorkspaceUiState): Boolean = state.project != null &&
+    !state.downstreamArtifactsStale &&
+    !state.operation.isMutating &&
+    state.arrangement?.approved == true &&
+    state.arrangement.approvalRequired == false &&
+    state.arrangement.stale == false &&
+    state.project.readiness.cohesionReady &&
+    state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.available == true
 
 private fun mixMasterBuildMessage(state: WorkspaceUiState): String = when {
     state.project == null -> "Open a project before building."
@@ -2252,6 +2259,8 @@ private fun mixMasterBuildMessage(state: WorkspaceUiState): String = when {
     state.arrangement.stale -> "The arrangement is stale; regenerate it before building."
     state.downstreamArtifactsStale -> "Mix artifacts are stale; regenerate them from the current arrangement before building."
     state.arrangement.approvalRequired || !state.arrangement.approved -> "Approve the reviewed arrangement before building."
+    state.project.readiness.cohesionApprovalRequired -> "Review and approve Cohesion before building."
+    !state.project.readiness.cohesionReady -> "Generate and approve Cohesion before building."
     state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.available != true -> state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.reason ?: "Checking local build readiness."
     else -> "Build validates artifacts, publishes a lossless master WAV atomically, then optionally exports MP3."
 }

@@ -2521,7 +2521,10 @@ class WorkspaceViewModel(
                     }
                 }
             }.onSuccess { arrangement ->
-                val message = if (arrangement.approvalRequired) "Arrangement draft is ready for review and explicit approval." else "Approved deterministic arrangement generated."
+                val message = when (request.planner) {
+                    ArrangementPlannerKind.QWEN -> "Qwen arrangement draft is ready for review and explicit approval."
+                    ArrangementPlannerKind.DETERMINISTIC -> "Approved deterministic arrangement generated."
+                }
                 mutableState.update { it.copy(arrangement = arrangement, selectedArrangementSection = arrangement.sections.firstOrNull()?.index, arrangementDraftDirty = false, operation = WorkspaceOperation.Idle, notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message, if (arrangement.approvalRequired) OperationSeverity.WARNING else OperationSeverity.SUCCESS) ?: it.operationFeedback, retry = null) }
             }.onFailure { fail("generate arrangement", it.message ?: "Unable to generate arrangement.", WorkspaceRetry.GenerateArrangement(request), feedbackId) }
         }
@@ -2626,6 +2629,11 @@ class WorkspaceViewModel(
         val service = buildService ?: return fail("build song", "Build service is not configured for this desktop session.")
         val arrangement = state.value.arrangement
         if (arrangement == null || arrangement.stale || arrangement.approvalRequired || !arrangement.approved) return fail("build song", "Build Song requires a current approved arrangement.")
+        val readiness = project.readiness
+        if (!readiness.cohesionReady) {
+            val action = if (readiness.cohesionApprovalRequired) "Review and approve Cohesion." else "Generate and approve Cohesion."
+            return fail("build song", "Build Song requires current approved arrangement-aware Cohesion. $action")
+        }
         state.value.runtimeReadiness.capabilityFailure(RuntimeCapability.BUILD_SONG)?.let { return fail("build song", it) }
         val options = state.value.buildOptions
         val feedbackId = beginFeedback(OperationKind.MASTERING, OperationPhase.VALIDATING, "Validating release pipeline…", cancellableAtBoundary = true)

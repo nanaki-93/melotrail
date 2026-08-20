@@ -2,6 +2,7 @@ package app.melotrail.arrangement
 
 import app.melotrail.profile.BundledCompositionProfileCatalog
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import java.nio.charset.StandardCharsets
 import java.nio.file.AtomicMoveNotSupportedException
@@ -78,7 +79,42 @@ data class CohesionModelIdentity(val provider: String, val model: String, val sh
 )
 @Serializable data class TransitionCohesionValidationReport(val errors: List<String> = emptyList()) { val valid: Boolean get() = errors.isEmpty() }
 @Serializable enum class TransitionCohesionApproval { DRAFT, APPROVED }
-@Serializable private data class TransitionCohesionModelResponse(val version: Int, val inputHash: String, val arrangementSha256: String, val contextSha256: String, val boundaries: List<TransitionBridgePlan>)
+
+/**
+ * Compact, path-free evidence supplied to the model. Identity values are
+ * intentionally absent: they are application-owned and bound after parsing.
+ */
+@Serializable private data class TransitionCohesionModelInput(
+    val supportedInstruments: List<String>,
+    val boundaries: List<TransitionCohesionBoundaryEvidence>
+)
+@Serializable private data class TransitionCohesionBoundaryEvidence(
+    val outgoing: TransitionCohesionMusicalSummary,
+    val incoming: TransitionCohesionMusicalSummary,
+    val allowedRoleActions: List<TransitionRoleAction>
+)
+@Serializable private data class TransitionCohesionMusicalSummary(
+    val key: MidiKey?,
+    val boundaryChord: String?,
+    val tempoBpm: Double,
+    val meterNumerator: Int,
+    val meterDenominator: Int,
+    val energy: Double,
+    val startsWithSound: Boolean,
+    val endsWithSound: Boolean,
+    val purpose: SongSectionPurpose,
+    val instruments: List<String>
+)
+
+/** The only decisions a model is allowed to make for one boundary. */
+@Serializable private data class TransitionCohesionModelDecision(
+    val roleAction: TransitionRoleAction,
+    val bars: Int,
+    val harmonicHandoff: HarmonicHandoff,
+    val rhythmicGesture: RhythmicGesture,
+    val energyContour: EnergyContour,
+    val rationale: String
+)
 
 @Serializable data class TransitionBridgePlan(
     val outgoingInstanceId: String,
@@ -150,20 +186,102 @@ object TransitionCohesionValidator {
 
 class LocalQwenTransitionCohesionPlanner(private val client: LocalQwenClient = LmStudioQwenClient(), private val model: CohesionModelIdentity) {
     fun plan(input: TransitionCohesionInput): TransitionCohesionPlan {
-        val response = client.complete(PROMPT, Json { encodeDefaults = true; explicitNulls = false }.encodeToString(TransitionCohesionInput.serializer(), input))
-        val parsed = try { Json { ignoreUnknownKeys = false }.decodeFromString(TransitionCohesionModelResponse.serializer(), response) } catch (error: Exception) { throw IllegalArgumentException("Qwen returned invalid transition-cohesion JSON: ${error.message}", error) }
-        val plan = TransitionCohesionPlan(parsed.version, parsed.inputHash, parsed.arrangementSha256, parsed.contextSha256, model, parsed.boundaries)
+        val response = client.complete(PROMPT, json.encodeToString(TransitionCohesionModelInput.serializer(), modelInput(input)))
+        val decisions = try {
+            json.decodeFromString(ListSerializer(TransitionCohesionModelDecision.serializer()), response)
+        } catch (error: Exception) {
+            throw IllegalArgumentException("Qwen returned invalid transition-cohesion JSON: ${error.message}", error)
+        }
+        require(decisions.size == input.boundaries.size) {
+            "Qwen returned ${decisions.size} cohesion decisions for ${input.boundaries.size} boundaries"
+        }
+        val boundaries = input.boundaries.zip(decisions).map { (source, decision) ->
+            val details = bridgeDetails(decision.roleAction, input.supportedInstruments)
+            TransitionBridgePlan(
+                outgoingInstanceId = source.outgoingInstanceId,
+                incomingInstanceId = source.incomingInstanceId,
+                outgoingHash = source.outgoing.sourceHash,
+                incomingHash = source.incoming.sourceHash,
+                arrangementSha256 = input.arrangementSha256,
+                contextSha256 = input.contextSha256,
+                roleAction = decision.roleAction,
+                bridgeType = details.bridgeType,
+                bars = decision.bars,
+                instrument = details.instrument,
+                harmonicHandoff = decision.harmonicHandoff,
+                rhythmicGesture = decision.rhythmicGesture,
+                energyContour = decision.energyContour,
+                rationale = decision.rationale
+            )
+        }
+        val plan = TransitionCohesionPlan(inputHash = input.inputHash, arrangementSha256 = input.arrangementSha256, contextSha256 = input.contextSha256, model = model, boundaries = boundaries)
         val validation = TransitionCohesionValidator.validate(plan, input)
         require(validation.isValid) { "Qwen returned an invalid transition-cohesion plan: ${validation.errors.joinToString("; ")}" }
         return plan.copy(validation = TransitionCohesionValidationReport())
     }
-    private companion object { const val PROMPT = """
-        Return one JSON object only with version, inputHash, arrangementSha256, contextSha256, and boundaries.
-        Return exactly one boundary per supplied boundary, in order; copy every hash and occurrence ID exactly.
-        Choose only allowedRoleActions, compatible bridgeType, and a supplied instrument. bars is 1 or 2.
-        Preserve tempo and meter. Never return paths, commands, code, MIDI events, DSP values, samples,
-        plugins, model fields, validation, approval, or keys outside this schema.
-    """ }
+
+    /** These are mechanical compatibility rules, not musical choices for the model. */
+    private fun bridgeDetails(action: TransitionRoleAction, supported: List<String>): BridgeDetails = when (action) {
+        TransitionRoleAction.DRUM_FILL, TransitionRoleAction.DYNAMICS_AUTOMATION -> BridgeDetails("drums", BridgeType.DRUM_FILL)
+        TransitionRoleAction.BASS_MOTION -> BridgeDetails("bass", BridgeType.BASS_WALK)
+        TransitionRoleAction.CHORD_MOTION -> BridgeDetails(textureInstrument(supported), BridgeType.CHORD_MOTION)
+        TransitionRoleAction.SUSTAINED_TEXTURE -> BridgeDetails(textureInstrument(supported), BridgeType.PAD_SUSTAIN)
+        TransitionRoleAction.CONTINUITY -> BridgeDetails(
+            listOf("drums", "bass", "pad", "strings").firstOrNull { it in supported }
+                ?: throw IllegalArgumentException("No supported instrument can perform a continuity bridge"),
+            BridgeType.CONTINUITY
+        )
+    }.also { details -> require(details.instrument in supported) { "Qwen selected $action, but ${details.instrument} is not supported" } }
+
+    private fun textureInstrument(supported: List<String>) = when {
+        "pad" in supported -> "pad"
+        "strings" in supported -> "strings"
+        else -> throw IllegalArgumentException("Qwen selected a texture action without a supported texture instrument")
+    }
+
+    private data class BridgeDetails(val instrument: String, val bridgeType: BridgeType)
+
+    private fun modelInput(input: TransitionCohesionInput) = TransitionCohesionModelInput(
+        supportedInstruments = input.supportedInstruments,
+        boundaries = input.boundaries.map { boundary ->
+            TransitionCohesionBoundaryEvidence(
+                outgoing = summary(boundary.outgoing, useLastChord = true),
+                incoming = summary(boundary.incoming, useLastChord = false),
+                allowedRoleActions = boundary.allowedRoleActions
+            )
+        }
+    )
+
+    private fun summary(evidence: TransitionMusicalEvidence, useLastChord: Boolean): TransitionCohesionMusicalSummary {
+        val chords = if (useLastChord) evidence.chords.asReversed() else evidence.chords
+        return TransitionCohesionMusicalSummary(
+            key = evidence.key,
+            boundaryChord = chords.firstOrNull { it.symbol != null }?.symbol,
+            tempoBpm = evidence.tempo.bpm,
+            meterNumerator = evidence.meter.numerator,
+            meterDenominator = evidence.meter.denominator,
+            energy = evidence.energy,
+            startsWithSound = evidence.boundary.startsWithSound,
+            endsWithSound = evidence.boundary.endsWithSound,
+            purpose = evidence.arrangement.purpose,
+            instruments = evidence.arrangement.instruments.map { it.instrument }.distinct().sorted()
+        )
+    }
+
+    private companion object {
+        val json = Json { encodeDefaults = true; explicitNulls = false; ignoreUnknownKeys = false }
+        const val PROMPT = """
+            Return exactly one JSON array and no markdown or prose. The array must contain exactly one object per
+            supplied boundary, in the same order. Do not repeat any input, IDs, hashes, sections, or evidence.
+            Every object has exactly these keys: roleAction, bars, harmonicHandoff, rhythmicGesture,
+            energyContour, rationale. Choose roleAction only from that boundary's allowedRoleActions.
+            The application selects the compatible instrument and bridge type. bars is 1 or 2. Preserve tempo and meter.
+            harmonicHandoff is HOLD or STEP_TO_INCOMING; rhythmicGesture is FILL, PICKUP, or SUSTAIN;
+            energyContour is HOLD, RISE, or FALL. rationale is brief plain musical text.
+            Never return instrument, bridgeType, paths, commands, code, MIDI events, DSP values, samples, plugins,
+            hashes, model fields, validation, approval, or any key outside this decision schema.
+        """
+    }
 }
 
 /** Deterministic renderer consumes only validated vocabulary; melody source is never read or changed. */

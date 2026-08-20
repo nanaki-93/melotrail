@@ -6,14 +6,16 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class TransitionCohesionPlannerTest {
-    @Test fun `model response is path-free and carries arrangement context identity`() {
+    @Test fun `model returns compact decisions while application binds arrangement context identity`() {
         val outgoingHash = "a".repeat(64); val incomingHash = "b".repeat(64)
         val arrangementHash = "e".repeat(64); val contextHash = "f".repeat(64)
         val input = TransitionCohesionInput(inputHash = "c".repeat(64), structureSha256 = "d".repeat(64), arrangementSha256 = arrangementHash, contextSha256 = contextHash, supportedInstruments = listOf("drums"), boundaries = listOf(TransitionBoundaryInput("phrase11", "phrase12", evidence("phrase1", outgoingHash), evidence("phrase1", incomingHash), listOf(TransitionRoleAction.DRUM_FILL), policy(contextHash))))
         val trustedModel = CohesionModelIdentity("qwen", "local", arrangementHash)
-        val response = """{"version":3,"inputHash":"${input.inputHash}","arrangementSha256":"$arrangementHash","contextSha256":"$contextHash","boundaries":[{"outgoingInstanceId":"phrase11","incomingInstanceId":"phrase12","outgoingHash":"$outgoingHash","incomingHash":"$incomingHash","arrangementSha256":"$arrangementHash","contextSha256":"$contextHash","roleAction":"DRUM_FILL","bridgeType":"DRUM_FILL","bars":1,"instrument":"drums","harmonicHandoff":"HOLD","rhythmicGesture":"FILL","energyContour":"RISE","tempoHandoff":"PRESERVE","meterHandoff":"PRESERVE","rationale":"Carry energy forward"}]}"""
-        val plan = LocalQwenTransitionCohesionPlanner(LocalQwenClient { _, _ -> response }, trustedModel).plan(input)
+        val response = """[{"roleAction":"DRUM_FILL","bars":1,"harmonicHandoff":"HOLD","rhythmicGesture":"FILL","energyContour":"RISE","rationale":"Carry energy forward"}]"""
+        var prompt = ""
+        val plan = LocalQwenTransitionCohesionPlanner(LocalQwenClient { _, userPrompt -> prompt = userPrompt; response }, trustedModel).plan(input)
         assertEquals(trustedModel, plan.model); assertEquals(BridgeType.DRUM_FILL, plan.boundaries.single().bridgeType); assertEquals(outgoingHash, plan.boundaries.single().outgoingHash)
+        assertFalse(prompt.contains(outgoingHash)); assertFalse(prompt.contains(input.inputHash)); assertFalse(prompt.contains(arrangementHash)); assertFalse(prompt.contains(contextHash))
     }
 
     @Test fun `mixed meter minor flat-key evidence is valid when PPQ matches`() {

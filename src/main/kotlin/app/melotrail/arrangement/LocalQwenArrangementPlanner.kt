@@ -89,13 +89,22 @@ class LmStudioQwenClient(
             .get("message")
             ?.jsonObject
             ?: throw IllegalArgumentException("LM Studio response choice did not contain a message")
+        val finishReason = choice["finish_reason"]?.jsonPrimitive?.content.orEmpty()
+        // A response stopped by the token limit can end halfway through JSON. Do
+        // not let each planner misdiagnose that transport-level condition as a
+        // malformed model document.
+        if (finishReason == "length") {
+            throw IllegalArgumentException(
+                "LM Studio truncated the planner response (finish_reason=length, max_tokens=$maximumCompletionTokens). " +
+                    "The partial response was discarded; reduce the planner payload or increase QWEN_MAX_TOKENS."
+            )
+        }
         val content = message
             .get("content")
             ?.jsonPrimitive
             ?.content
             ?.trim()
         if (content.isNullOrEmpty()) {
-            val finishReason = choice["finish_reason"]?.jsonPrimitive?.content.orEmpty()
             val hasReasoning = !message["reasoning_content"]?.jsonPrimitive?.content.isNullOrBlank()
             val detail = if (hasReasoning) " It produced reasoning but no final content." else ""
             throw IllegalArgumentException("LM Studio response did not contain planner content (finish_reason=${finishReason.ifBlank { "unknown" }}).$detail")

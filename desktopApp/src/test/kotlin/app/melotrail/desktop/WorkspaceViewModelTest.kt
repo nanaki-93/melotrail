@@ -990,6 +990,7 @@ class WorkspaceViewModelTest {
         viewModel.accept(WorkspaceIntent.GenerateArrangement)
         advanceUntilIdle()
         assertTrue(viewModel.state.value.arrangement!!.approvalRequired)
+        assertEquals("Qwen arrangement draft is ready for review and explicit approval.", viewModel.state.value.notification)
         viewModel.accept(WorkspaceIntent.PreviewArrangement)
         advanceUntilIdle()
         assertEquals(1, service.previewCalls)
@@ -1042,9 +1043,31 @@ class WorkspaceViewModelTest {
     }
 
     @Test
+    fun `build dispatch is gated until Cohesion is current and approved`() = runTest {
+        val root = Path.of("build/cohesion-required-project")
+        val build = FakeBuildService()
+        val viewModel = WorkspaceViewModel(
+            FakeProjectService(result = projectSnapshot(root)), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
+            runtimeReadinessService = ReadyReadinessService, arrangementService = FakeArrangementService(loaded = arrangementSnapshot(root)), buildService = build
+        )
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.RefreshRuntimeReadiness); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.BuildSong)
+
+        assertEquals(0, build.calls)
+        assertEquals(
+            "Build Song requires current approved arrangement-aware Cohesion. Generate and approve Cohesion.",
+            assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation).message
+        )
+        viewModel.close()
+    }
+
+    @Test
     fun `Build Song reports completion only after the build service returns and preserves failure recovery`() = runTest {
         val root = Path.of("build/task-087-build")
-        val project = projectSnapshot(root)
+        val baseProject = projectSnapshot(root)
+        val project = baseProject.copy(readiness = baseProject.readiness.copy(cohesionReady = true))
         val build = FakeBuildService()
         val viewModel = WorkspaceViewModel(
             FakeProjectService(result = project), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
