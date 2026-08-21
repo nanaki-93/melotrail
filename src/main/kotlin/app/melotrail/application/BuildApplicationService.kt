@@ -94,6 +94,7 @@ class DefaultBuildApplicationService(
                         "Build Song requires current approved full-song Cohesion & Enhance. Regenerate, compare, and approve it."
                     }
                     if (!worker.healthCheck()) throw ApplicationServiceException(ApplicationErrorCategory.WORKER, "Python worker is not running. Start it with `make worker`.")
+                    requireCurrentFullSongEnhancement(root)
                 }
                 coroutineContext.ensureActive()
                 stage(progress, 2, "Validating approved ensemble MIDI") { requireCurrentGeneratedMidi(root) }
@@ -183,6 +184,25 @@ class DefaultBuildApplicationService(
             val path = root.resolve(reference.artifact.file).normalize()
             require(path.startsWith(root) && Files.isRegularFile(path) && digest(path) == reference.artifact.sha256) {
                 "Generated ensemble MIDI '${reference.id}' is missing or changed. Regenerate Cohesion & Enhance."
+            }
+        }
+    }
+
+    private fun requireCurrentFullSongEnhancement(root: Path) {
+        val project = ProjectStore.read(root)
+        val critic = requireNotNull(project.workflow.critic) {
+            "Build Song requires a current Critic report. Run Critic after Cohesion."
+        }
+        val report = root.resolve(critic.report.file).normalize()
+        require(WorkflowArtifact.CRITIC !in project.workflow.stale && report.startsWith(root) && Files.isRegularFile(report) && digest(report) == critic.report.sha256) {
+            "Build Song requires a current Critic report. Rerun Critic after Cohesion."
+        }
+        require(project.workflow.fullSongEnhancementSelection !in setOf(app.melotrail.arrangement.FullSongEnhancementSelection.PENDING, app.melotrail.arrangement.FullSongEnhancementSelection.DRAFT)) {
+            "Build Song requires an approved Full-Song Enhance candidate, recorded no-op, or explicit bypass."
+        }
+        if (project.workflow.fullSongEnhancementSelection == app.melotrail.arrangement.FullSongEnhancementSelection.APPROVED) {
+            require(WorkflowArtifact.FULL_SONG_ENHANCEMENT !in project.workflow.stale && project.workflow.fullSongEnhancement != null) {
+                "Build Song requires a current approved Full-Song Enhance candidate."
             }
         }
     }

@@ -68,6 +68,16 @@ class DefaultHumanizationApplicationService(
             require(project.workflow.cohesion?.approved == true && WorkflowArtifact.COHESION !in project.workflow.stale) {
                 "Humanization requires current approved Cohesion."
             }
+            require(project.workflow.critic != null && WorkflowArtifact.CRITIC !in project.workflow.stale) {
+                "Humanization requires a current Critic report after Cohesion."
+            }
+            require(project.workflow.fullSongEnhancementSelection !in setOf(app.melotrail.arrangement.FullSongEnhancementSelection.PENDING, app.melotrail.arrangement.FullSongEnhancementSelection.DRAFT)) {
+                "Humanization requires an approved Full-Song Enhance candidate, recorded no-op, or explicit bypass."
+            }
+            require(project.workflow.fullSongEnhancementSelection != app.melotrail.arrangement.FullSongEnhancementSelection.APPROVED ||
+                (project.workflow.fullSongEnhancement != null && WorkflowArtifact.FULL_SONG_ENHANCEMENT !in project.workflow.stale)) {
+                "Humanization requires current Full-Song Enhance candidate evidence."
+            }
             val config = profileDefault(project).let { default ->
                 request.amountPercent?.let { default.copy(amountPercent = it) } ?: default
             }.also(HumanizationConfig::requireValid)

@@ -14,6 +14,7 @@ import app.melotrail.application.ProjectReadiness
 import app.melotrail.application.ProjectSnapshot
 import app.melotrail.application.StructureSectionSummary
 import app.melotrail.arrangement.MidiAiFixSelection
+import app.melotrail.arrangement.FullSongEnhancementSelection
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.WorkflowArtifact
@@ -168,7 +169,12 @@ class CreationProgressTest {
         return emptyProject().copy(
             parts = listOf(part),
             structure = listOf(StructureSectionSummary(0, "A", 1, "A1", 4.0)),
-            readiness = readiness(cleanMidiReady = true, analysesReady = true, structureReady = true).copy(cohesionReady = true)
+            readiness = readiness(cleanMidiReady = true, analysesReady = true, structureReady = true).copy(
+                generatedMidiAvailable = true,
+                cohesionReady = true,
+                criticAvailable = true,
+                fullSongEnhancementSelection = FullSongEnhancementSelection.BYPASS
+            )
         )
     }
 

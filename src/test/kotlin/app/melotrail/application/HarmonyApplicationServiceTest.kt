@@ -103,15 +103,15 @@ class HarmonyApplicationServiceTest {
 
         assertEquals(
             setOf(
-                WorkflowArtifact.CORRECTED_MIDI, WorkflowArtifact.ENHANCED_MIDI, WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.COHESION,
-                WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.HUMANIZATION, WorkflowArtifact.STEMS,
+                WorkflowArtifact.CORRECTED_MIDI, WorkflowArtifact.ENHANCED_MIDI, WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.COHESION,
+                WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.CRITIC, WorkflowArtifact.FULL_SONG_ENHANCEMENT, WorkflowArtifact.HUMANIZATION, WorkflowArtifact.STEMS,
                 WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
                 WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
             ),
             result.invalidation.artifacts
         )
         assertFalse(WorkflowArtifact.CLEAN_MIDI in result.invalidation.artifacts)
-        assertFalse(WorkflowArtifact.ANALYSIS in result.invalidation.artifacts)
+        assertTrue(WorkflowArtifact.ANALYSIS in result.invalidation.artifacts)
     }
 
     @Test

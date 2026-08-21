@@ -89,6 +89,7 @@ class EndToEndWorkflowCompatibilityTest {
             val arrangement = services.arrangements.generate(GenerateArrangementRequest(root, instruments = listOf("piano", "drums")))
             assertTrue(arrangement.approved)
             generateApprovedCohesion(root, services.arrangements)
+            recordCriticNoOp(root)
             val build = services.build.build(BuildSongRequest(root))
             val preview = services.preview.resolve(PreviewRequest(root, "A"))
 
@@ -100,6 +101,21 @@ class EndToEndWorkflowCompatibilityTest {
             assertEquals(sourceHash, hash(root.resolve("source/A.${fixture.extension}")))
             assertFalse(Files.readString(root.resolve("prepared/A/report.json")).contains(source.toAbsolutePath().toString()))
         }
+    }
+
+    private fun recordCriticNoOp(root: Path) {
+        val inputHash = "c".repeat(64)
+        val relative = app.melotrail.arrangement.CriticArtifactPaths.report(inputHash)
+        val report = root.resolve(relative)
+        Files.createDirectories(requireNotNull(report.parent))
+        Files.writeString(report, "no actionable issues")
+        val project = ProjectStore.read(root)
+        ProjectStore.write(root, project.copy(workflow = project.workflow
+            .markCurrent(app.melotrail.arrangement.WorkflowArtifact.CRITIC)
+            .copy(
+                critic = app.melotrail.arrangement.CriticWorkflowReferences(inputHash, app.melotrail.arrangement.WorkflowArtifactReference(relative, hash(report))),
+                fullSongEnhancementSelection = app.melotrail.arrangement.FullSongEnhancementSelection.NO_OP
+            )))
     }
 
     @Test

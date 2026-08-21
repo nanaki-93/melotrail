@@ -9,6 +9,7 @@
   "parts": [],
   "structure": [],
   "workflow": {
+    "fullSongEnhancementSelection": "PENDING",
     "stale": [],
     "cohesion": null,
     "commercialProvenance": null

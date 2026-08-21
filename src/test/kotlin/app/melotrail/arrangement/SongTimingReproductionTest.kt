@@ -50,6 +50,7 @@ class SongTimingReproductionTest {
                 feel = MidiFeelReferences(MidiFeelProfile.LOFI_80_SWING_V1, "midi/feel/A-lofi.mid", root.relativize(feelReportPath).toString())
             ))),
             renderFormat = RenderFormat(8_000, 1, 24),
+            workflow = criticBypassWorkflow(),
             envelope = ProjectV4Envelope(structureOccurrences = listOf(StructureOccurrence("A-1", "A")))
         )
         val arrangement = DetailedArrangement(sections = listOf(
@@ -67,6 +68,16 @@ class SongTimingReproductionTest {
         assertEquals(listOf(0L, 278L, 480L, 758L), renderedNoteOns)
         assertEquals(80.0, tempo(checkNotNull(renderer.piano)))
         assertEquals(selectedNoteOns, renderedNoteOns)
+    }
+
+    private fun criticBypassWorkflow(): ProjectWorkflowReferences {
+        val inputHash = "c".repeat(64)
+        val relative = CriticArtifactPaths.report(inputHash)
+        val report = root.resolve(relative)
+        Files.createDirectories(requireNotNull(report.parent))
+        Files.writeString(report, "critic")
+        return ProjectWorkflowReferences(FullSongEnhancementSelection.BYPASS,
+            critic = CriticWorkflowReferences(inputHash, WorkflowArtifactReference(relative, sha256(Files.readAllBytes(report)))))
     }
 
     @Test

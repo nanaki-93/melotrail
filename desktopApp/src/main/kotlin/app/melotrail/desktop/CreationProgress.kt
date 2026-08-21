@@ -20,7 +20,10 @@ enum class CreationStage {
     ANALYSIS,
     STRUCTURE,
     ARRANGEMENT,
+    GENERATED_MIDI,
     COHESION,
+    CRITIC,
+    FULL_SONG_ENHANCE,
     MIX_AND_MASTER
 }
 
@@ -44,6 +47,9 @@ enum class CreationIntent {
     APPROVE_COHESION,
     GENERATE_ARRANGEMENT,
     APPROVE_ARRANGEMENT,
+    GENERATE_MIDI,
+    GENERATE_CRITIC,
+    SELECT_FULL_SONG_ENHANCEMENT,
     CONFIGURE_BUILD_DEPENDENCY,
     BUILD_SONG,
     RETRY_BUILD
@@ -62,6 +68,9 @@ enum class CreationArtifactKind {
     ANALYSIS,
     STRUCTURE,
     COHESION,
+    GENERATED_MIDI,
+    CRITIC_REPORT,
+    FULL_SONG_ENHANCEMENT,
     ARRANGEMENT_DRAFT,
     ARRANGEMENT,
     DRY_MIX,
@@ -139,14 +148,17 @@ object CreationProgressDeriver {
         WorkflowStage.ANALYSIS,
         WorkflowStage.STRUCTURE,
         WorkflowStage.ARRANGEMENT,
-        WorkflowStage.COHESION
+        WorkflowStage.GENERATED_MIDI,
+        WorkflowStage.COHESION,
+        WorkflowStage.CRITIC,
+        WorkflowStage.FULL_SONG_ENHANCE
     )
 
     fun derive(input: CreationProgressInput): CreationProgress {
         val workflow = WorkflowReadModelDeriver.derive(input.project, input.arrangement)
         val stages = orderedWorkflowStages.map { stage -> fromWorkflow(workflow[stage], input.project == null) }
-        val cohesion = stages.last()
-        return CreationProgress(stages + mixAndMaster(input, cohesion))
+        val enhancement = stages.last()
+        return CreationProgress(stages + mixAndMaster(input, enhancement))
     }
 
     private fun fromWorkflow(step: WorkflowStep, noProject: Boolean): CreationStageProgress {
@@ -159,8 +171,11 @@ object CreationProgressDeriver {
             WorkflowStage.MIDI_FEEL -> CreationStage.MIDI_FEEL
             WorkflowStage.ANALYSIS -> CreationStage.ANALYSIS
             WorkflowStage.STRUCTURE -> CreationStage.STRUCTURE
-            WorkflowStage.COHESION -> CreationStage.COHESION
             WorkflowStage.ARRANGEMENT -> CreationStage.ARRANGEMENT
+            WorkflowStage.GENERATED_MIDI -> CreationStage.GENERATED_MIDI
+            WorkflowStage.COHESION -> CreationStage.COHESION
+            WorkflowStage.CRITIC -> CreationStage.CRITIC
+            WorkflowStage.FULL_SONG_ENHANCE -> CreationStage.FULL_SONG_ENHANCE
             else -> error("Unsupported creation workflow stage: ${step.stage}")
         }
         val status = when (step.state) {
@@ -180,14 +195,14 @@ object CreationProgressDeriver {
         )
     }
 
-    private fun mixAndMaster(input: CreationProgressInput, cohesion: CreationStageProgress): CreationStageProgress {
+    private fun mixAndMaster(input: CreationProgressInput, enhancement: CreationStageProgress): CreationStageProgress {
         val release = CreationArtifactReference(CreationArtifactKind.RELEASE)
-        if (cohesion.status != CreationStageStatus.COMPLETE) return CreationStageProgress(
+        if (enhancement.status != CreationStageStatus.COMPLETE) return CreationStageProgress(
             CreationStage.MIX_AND_MASTER,
             if (input.project == null) CreationStageStatus.NOT_STARTED else CreationStageStatus.BLOCKED,
-            "Build requires current approved full-song Cohesion & Enhance.",
+            "Build requires a current Critic report and an approved Full-Song Enhance candidate, no-op, or bypass.",
             release,
-            cohesion.nextAction.copy(artifact = release)
+            enhancement.nextAction.copy(artifact = release)
         )
         val project = requireNotNull(input.project)
         if (project.readiness.masterAvailable && project.readiness.releaseAvailable) return stage(
@@ -230,8 +245,11 @@ object CreationProgressDeriver {
             WorkflowStage.MIDI_FEEL -> CreationArtifactKind.LOFI_FEEL_MIDI
             WorkflowStage.ANALYSIS -> CreationArtifactKind.ANALYSIS
             WorkflowStage.STRUCTURE -> CreationArtifactKind.STRUCTURE
-            WorkflowStage.COHESION -> CreationArtifactKind.COHESION
             WorkflowStage.ARRANGEMENT -> if (step.nextAction == WorkflowAction.APPROVE_ARRANGEMENT) CreationArtifactKind.ARRANGEMENT_DRAFT else CreationArtifactKind.ARRANGEMENT
+            WorkflowStage.GENERATED_MIDI -> CreationArtifactKind.GENERATED_MIDI
+            WorkflowStage.COHESION -> CreationArtifactKind.COHESION
+            WorkflowStage.CRITIC -> CreationArtifactKind.CRITIC_REPORT
+            WorkflowStage.FULL_SONG_ENHANCE -> CreationArtifactKind.FULL_SONG_ENHANCEMENT
             else -> error("Unsupported creation artifact stage: ${step.stage}")
         }
         return CreationArtifactReference(kind, step.partId)
@@ -255,6 +273,9 @@ object CreationProgressDeriver {
         WorkflowAction.APPROVE_COHESION -> CreationIntent.APPROVE_COHESION
         WorkflowAction.GENERATE_ARRANGEMENT -> CreationIntent.GENERATE_ARRANGEMENT
         WorkflowAction.APPROVE_ARRANGEMENT -> CreationIntent.APPROVE_ARRANGEMENT
+        WorkflowAction.GENERATE_MIDI -> CreationIntent.GENERATE_MIDI
+        WorkflowAction.GENERATE_CRITIC -> CreationIntent.GENERATE_CRITIC
+        WorkflowAction.SELECT_FULL_SONG_ENHANCEMENT -> CreationIntent.SELECT_FULL_SONG_ENHANCEMENT
         WorkflowAction.GENERATE_HUMANIZATION -> CreationIntent.CONFIGURE_BUILD_DEPENDENCY
         WorkflowAction.RENDER, WorkflowAction.MIX, WorkflowAction.MASTER,
         WorkflowAction.REVIEW_COMMERCIAL_PROVENANCE -> CreationIntent.BUILD_SONG

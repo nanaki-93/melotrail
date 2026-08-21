@@ -14,8 +14,21 @@ import app.melotrail.arrangement.WorkflowArtifact
  */
 enum class WorkflowStage {
     PROJECT, IMPORT_AND_INSPECTION, TRANSCRIPTION, CLEAN_MIDI, AI_FIX, MIDI_FEEL,
-    ANALYSIS, STRUCTURE, ARRANGEMENT, COHESION, HUMANIZATION, RENDER, MIX, MASTER,
+    ANALYSIS, STRUCTURE, ARRANGEMENT, GENERATED_MIDI, COHESION, CRITIC, FULL_SONG_ENHANCE,
+    HUMANIZATION, RENDER, MIX, MASTER,
     COMMERCIAL_EXPORT
+}
+
+/** The only workflow presentation order; enum declaration order is not workflow truth. */
+object WorkflowStageOrder {
+    val ordered = listOf(
+        WorkflowStage.PROJECT, WorkflowStage.IMPORT_AND_INSPECTION, WorkflowStage.TRANSCRIPTION,
+        WorkflowStage.CLEAN_MIDI, WorkflowStage.AI_FIX, WorkflowStage.MIDI_FEEL, WorkflowStage.ANALYSIS,
+        WorkflowStage.STRUCTURE, WorkflowStage.ARRANGEMENT, WorkflowStage.GENERATED_MIDI,
+        WorkflowStage.COHESION, WorkflowStage.CRITIC, WorkflowStage.FULL_SONG_ENHANCE,
+        WorkflowStage.HUMANIZATION, WorkflowStage.RENDER, WorkflowStage.MIX, WorkflowStage.MASTER,
+        WorkflowStage.COMMERCIAL_EXPORT
+    )
 }
 
 enum class WorkflowState { BLOCKED, CURRENT, REVIEW, STALE, COMPLETE }
@@ -23,7 +36,8 @@ enum class WorkflowState { BLOCKED, CURRENT, REVIEW, STALE, COMPLETE }
 enum class WorkflowAction {
     CREATE_OR_OPEN, UPDATE_COMPOSITION_SETTINGS, IMPORT, INSPECT, TRANSCRIBE, CLEAN_MIDI, APPROVE_CLEAN_MIDI,
     CREATE_AI_FIX, APPROVE_AI_FIX, SELECT_MIDI_FEEL, ANALYZE, SAVE_STRUCTURE, GENERATE_COHESION,
-    APPROVE_COHESION, UPDATE_HARMONY, GENERATE_ARRANGEMENT, APPROVE_ARRANGEMENT, GENERATE_HUMANIZATION, RENDER,
+    APPROVE_COHESION, UPDATE_HARMONY, GENERATE_ARRANGEMENT, APPROVE_ARRANGEMENT, GENERATE_MIDI,
+    GENERATE_CRITIC, SELECT_FULL_SONG_ENHANCEMENT, GENERATE_HUMANIZATION, RENDER,
     MIX, MASTER, REVIEW_COMMERCIAL_PROVENANCE
 }
 
@@ -44,6 +58,9 @@ enum class WorkflowPrerequisite {
     SAVED_STRUCTURE,
     APPROVED_COHESION,
     APPROVED_ARRANGEMENT,
+    GENERATED_MIDI,
+    CURRENT_CRITIC,
+    FULL_SONG_ENHANCEMENT_SELECTION,
     HUMANIZATION_SELECTION,
     RENDERED_STEMS,
     DRY_MIX,
@@ -63,14 +80,14 @@ data class WorkflowStep(
 )
 
 data class WorkflowReadModel(val steps: List<WorkflowStep>) {
-    init { require(steps.map(WorkflowStep::stage) == WorkflowStage.entries) }
+    init { require(steps.map(WorkflowStep::stage) == WorkflowStageOrder.ordered) }
     operator fun get(stage: WorkflowStage): WorkflowStep = steps.first { it.stage == stage }
     val current: WorkflowStep get() = steps.firstOrNull { it.state != WorkflowState.COMPLETE } ?: steps.last()
 }
 
 object WorkflowReadModelDeriver {
     fun derive(project: ProjectSnapshot?, arrangement: ArrangementSnapshot? = null): WorkflowReadModel {
-        if (project == null) return WorkflowReadModel(WorkflowStage.entries.mapIndexed { index, stage ->
+        if (project == null) return WorkflowReadModel(WorkflowStageOrder.ordered.mapIndexed { index, stage ->
             step(
                 stage,
                 if (index == 0) WorkflowState.CURRENT else WorkflowState.BLOCKED,
@@ -154,15 +171,41 @@ object WorkflowReadModelDeriver {
             arrangement.approvalRequired || !arrangement.approved -> step(WorkflowStage.ARRANGEMENT, WorkflowState.REVIEW, WorkflowAction.APPROVE_ARRANGEMENT, WorkflowPrerequisite.APPROVED_ARRANGEMENT)
             else -> complete(WorkflowStage.ARRANGEMENT, WorkflowAction.GENERATE_ARRANGEMENT)
         }
+        val generated = downstream(
+            WorkflowStage.GENERATED_MIDI,
+            arrangementStep,
+            WorkflowArtifact.GENERATED_MIDI,
+            stale,
+            project.readiness.generatedMidiAvailable,
+            WorkflowAction.GENERATE_MIDI,
+            WorkflowPrerequisite.GENERATED_MIDI
+        )
         val cohesion = when {
-            arrangementStep.state != WorkflowState.COMPLETE -> blocked(WorkflowStage.COHESION, arrangementStep)
+            generated.state != WorkflowState.COMPLETE -> blocked(WorkflowStage.COHESION, generated)
             WorkflowArtifact.COHESION in stale -> step(WorkflowStage.COHESION, WorkflowState.STALE, WorkflowAction.GENERATE_COHESION, WorkflowPrerequisite.APPROVED_COHESION)
             project.readiness.cohesionApprovalRequired -> step(WorkflowStage.COHESION, WorkflowState.REVIEW, WorkflowAction.APPROVE_COHESION, WorkflowPrerequisite.APPROVED_COHESION)
             !project.readiness.cohesionReady -> step(WorkflowStage.COHESION, WorkflowState.CURRENT, WorkflowAction.GENERATE_COHESION, WorkflowPrerequisite.APPROVED_COHESION)
             else -> complete(WorkflowStage.COHESION, WorkflowAction.GENERATE_COHESION)
         }
+        val critic = when {
+            cohesion.state != WorkflowState.COMPLETE -> blocked(WorkflowStage.CRITIC, cohesion)
+            WorkflowArtifact.CRITIC in stale -> step(WorkflowStage.CRITIC, WorkflowState.STALE, WorkflowAction.GENERATE_CRITIC, WorkflowPrerequisite.CURRENT_CRITIC)
+            !project.readiness.criticAvailable -> step(WorkflowStage.CRITIC, WorkflowState.CURRENT, WorkflowAction.GENERATE_CRITIC, WorkflowPrerequisite.CURRENT_CRITIC)
+            else -> complete(WorkflowStage.CRITIC, WorkflowAction.GENERATE_CRITIC)
+        }
+        val fullSongEnhancement = when {
+            critic.state != WorkflowState.COMPLETE -> blocked(WorkflowStage.FULL_SONG_ENHANCE, critic)
+            WorkflowArtifact.FULL_SONG_ENHANCEMENT in stale -> step(WorkflowStage.FULL_SONG_ENHANCE, WorkflowState.STALE, WorkflowAction.SELECT_FULL_SONG_ENHANCEMENT, WorkflowPrerequisite.FULL_SONG_ENHANCEMENT_SELECTION)
+            project.readiness.fullSongEnhancementSelection == app.melotrail.arrangement.FullSongEnhancementSelection.PENDING ->
+                step(WorkflowStage.FULL_SONG_ENHANCE, WorkflowState.CURRENT, WorkflowAction.SELECT_FULL_SONG_ENHANCEMENT, WorkflowPrerequisite.FULL_SONG_ENHANCEMENT_SELECTION)
+            project.readiness.fullSongEnhancementSelection in setOf(app.melotrail.arrangement.FullSongEnhancementSelection.DRAFT, app.melotrail.arrangement.FullSongEnhancementSelection.APPROVED) && !project.readiness.fullSongEnhancementAvailable ->
+                step(WorkflowStage.FULL_SONG_ENHANCE, WorkflowState.STALE, WorkflowAction.SELECT_FULL_SONG_ENHANCEMENT, WorkflowPrerequisite.FULL_SONG_ENHANCEMENT_SELECTION)
+            project.readiness.fullSongEnhancementSelection == app.melotrail.arrangement.FullSongEnhancementSelection.DRAFT ->
+                step(WorkflowStage.FULL_SONG_ENHANCE, WorkflowState.REVIEW, WorkflowAction.SELECT_FULL_SONG_ENHANCEMENT, WorkflowPrerequisite.FULL_SONG_ENHANCEMENT_SELECTION)
+            else -> complete(WorkflowStage.FULL_SONG_ENHANCE, WorkflowAction.SELECT_FULL_SONG_ENHANCEMENT)
+        }
         val humanization = when {
-            cohesion.state != WorkflowState.COMPLETE -> blocked(WorkflowStage.HUMANIZATION, cohesion)
+            fullSongEnhancement.state != WorkflowState.COMPLETE -> blocked(WorkflowStage.HUMANIZATION, fullSongEnhancement)
             project.readiness.humanizationSelection == app.melotrail.arrangement.HumanizationSelection.BYPASS -> complete(WorkflowStage.HUMANIZATION, WorkflowAction.GENERATE_HUMANIZATION)
             WorkflowArtifact.HUMANIZATION in stale || !project.readiness.humanizationAvailable -> step(WorkflowStage.HUMANIZATION, WorkflowState.CURRENT, WorkflowAction.GENERATE_HUMANIZATION, WorkflowPrerequisite.HUMANIZATION_SELECTION)
             else -> complete(WorkflowStage.HUMANIZATION, WorkflowAction.GENERATE_HUMANIZATION)
@@ -177,7 +220,7 @@ object WorkflowReadModelDeriver {
         }
         val steps = listOf(
             composition, imported, transcription, clean, aiFix,
-            feel, analysis, structure, arrangementStep, cohesion, humanization, render, mix, master, commercial
+            feel, analysis, structure, arrangementStep, generated, cohesion, critic, fullSongEnhancement, humanization, render, mix, master, commercial
         )
         return WorkflowReadModel(steps.map { step -> step.copy(stageRun = project.readiness.stageRuns.lastOrNull { run ->
             workflowStage(run.stage) == step.stage && run.status in setOf(StageRunStatus.PROCESSING, StageRunStatus.FAILED)
@@ -209,14 +252,19 @@ object WorkflowReadModelDeriver {
         StageId.SOURCE -> WorkflowStage.IMPORT_AND_INSPECTION
         StageId.EXTRACTED -> WorkflowStage.TRANSCRIPTION
         StageId.CLEANED -> WorkflowStage.CLEAN_MIDI
-        StageId.NORMALIZED, StageId.TRANSPOSED, StageId.CORRECTED -> WorkflowStage.AI_FIX
-        StageId.ENHANCED -> WorkflowStage.MIDI_FEEL
+        StageId.NORMALIZED, StageId.TRANSPOSED, StageId.CORRECTED, StageId.AI_FIXED -> WorkflowStage.AI_FIX
+        StageId.ENHANCED, StageId.MIDI_FEEL -> WorkflowStage.MIDI_FEEL
         StageId.ANALYZED -> WorkflowStage.ANALYSIS
         StageId.STRUCTURED -> WorkflowStage.STRUCTURE
+        StageId.ARRANGED -> WorkflowStage.ARRANGEMENT
+        StageId.GENERATED -> WorkflowStage.GENERATED_MIDI
         StageId.COHESION -> WorkflowStage.COHESION
-        StageId.ARRANGED, StageId.GENERATED -> WorkflowStage.ARRANGEMENT
+        StageId.CRITIQUED -> WorkflowStage.CRITIC
+        StageId.FULL_SONG_ENHANCED -> WorkflowStage.FULL_SONG_ENHANCE
+        StageId.HUMANIZED -> WorkflowStage.HUMANIZATION
         StageId.RENDERED -> WorkflowStage.RENDER
         StageId.MIXED -> WorkflowStage.MIX
+        StageId.AUDIO_TEXTURED -> WorkflowStage.MASTER
         StageId.MASTERED -> WorkflowStage.MASTER
         StageId.EXPORTED -> WorkflowStage.COMMERCIAL_EXPORT
     }

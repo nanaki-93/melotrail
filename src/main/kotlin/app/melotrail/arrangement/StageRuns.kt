@@ -28,18 +28,29 @@ enum class StageId {
     @SerialName("normalized") NORMALIZED,
     @SerialName("transposed") TRANSPOSED,
     @SerialName("corrected") CORRECTED,
+    @SerialName("ai-fixed") AI_FIXED,
     @SerialName("enhanced") ENHANCED,
+    @SerialName("midi-feel") MIDI_FEEL,
     @SerialName("analyzed") ANALYZED,
     @SerialName("structured") STRUCTURED,
-    @SerialName("cohesion") COHESION,
     @SerialName("arranged") ARRANGED,
     @SerialName("generated") GENERATED,
+    @SerialName("cohesion") COHESION,
+    @SerialName("critiqued") CRITIQUED,
+    @SerialName("full-song-enhanced") FULL_SONG_ENHANCED,
+    @SerialName("humanized") HUMANIZED,
     @SerialName("rendered") RENDERED,
     @SerialName("mixed") MIXED,
+    @SerialName("audio-textured") AUDIO_TEXTURED,
     @SerialName("mastered") MASTERED,
     @SerialName("exported") EXPORTED;
 
-    val isPartStage: Boolean get() = ordinal <= ANALYZED.ordinal
+    val isPartStage: Boolean get() = this in PART_STAGES
+
+    companion object {
+        /** Named so enum declaration order can never become workflow truth. */
+        val PART_STAGES = setOf(SOURCE, EXTRACTED, CLEANED, NORMALIZED, TRANSPOSED, CORRECTED, AI_FIXED, ENHANCED, MIDI_FEEL, ANALYZED)
+    }
 }
 
 @Serializable
@@ -218,9 +229,10 @@ data class StageRunSummary(
 
 object StageRunDependencyGraph {
     private val partStages = listOf(StageId.SOURCE, StageId.EXTRACTED, StageId.CLEANED, StageId.NORMALIZED,
-        StageId.TRANSPOSED, StageId.CORRECTED, StageId.ENHANCED, StageId.ANALYZED)
-    private val projectStages = listOf(StageId.STRUCTURED, StageId.COHESION, StageId.ARRANGED, StageId.GENERATED,
-        StageId.RENDERED, StageId.MIXED, StageId.MASTERED, StageId.EXPORTED)
+        StageId.TRANSPOSED, StageId.CORRECTED, StageId.AI_FIXED, StageId.ENHANCED, StageId.MIDI_FEEL, StageId.ANALYZED)
+    private val projectStages = listOf(StageId.STRUCTURED, StageId.ARRANGED, StageId.GENERATED, StageId.COHESION,
+        StageId.CRITIQUED, StageId.FULL_SONG_ENHANCED, StageId.HUMANIZED, StageId.RENDERED, StageId.MIXED,
+        StageId.AUDIO_TEXTURED, StageId.MASTERED, StageId.EXPORTED)
 
     fun downstreamOf(stage: StageId, subject: StageSubject): Set<StageId> = when (subject) {
         is StageSubject.Part -> partStages.drop(partStages.indexOf(stage).takeIf { it >= 0 }?.plus(1) ?: partStages.size).toSet() + projectStages

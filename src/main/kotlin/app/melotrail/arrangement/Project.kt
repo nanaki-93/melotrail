@@ -29,7 +29,7 @@ data class Project(
     val parts: List<SongPart> = emptyList(),
     val renderFormat: RenderFormat? = null,
     /** Durable stale evidence and bounded cross-stage references. */
-    val workflow: ProjectWorkflowReferences = ProjectWorkflowReferences(),
+    val workflow: ProjectWorkflowReferences = ProjectWorkflowReferences.initial(),
     /** Canonical persistence scaffold. Null creative choices mean setup is required. */
     val envelope: ProjectV4Envelope = ProjectV4Envelope()
 ) {
@@ -559,6 +559,18 @@ object ProjectValidator {
         }
         project.envelope.stageRuns.index?.let { reference ->
             validateArtifactReference(root, reference, "Stage-run index", errors)
+        }
+        project.workflow.critic?.let { critic ->
+            runCatching { CriticWorkflowReferences(critic.inputSha256, critic.report) }.exceptionOrNull()?.let { error ->
+                errors += "Critic references are invalid: ${error.message}"
+            }
+            validateArtifactReference(root, critic.report, "Critic report", errors)
+        }
+        project.workflow.fullSongEnhancement?.let { enhancement ->
+            enhancement.artifacts.forEach { artifact ->
+                validateArtifactReference(root, artifact.input, "Full-song enhancement input '${artifact.id}'", errors)
+                validateArtifactReference(root, artifact.output, "Full-song enhancement output '${artifact.id}'", errors)
+            }
         }
         project.workflow.humanization?.let { humanization ->
             runCatching { humanization.artifacts.forEach { artifact ->

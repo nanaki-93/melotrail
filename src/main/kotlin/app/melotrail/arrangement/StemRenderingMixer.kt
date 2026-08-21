@@ -40,6 +40,7 @@ class StemRenderingMixer(
         val root = projectRoot.toAbsolutePath().normalize()
         val format = requireNotNull(project.renderFormat)
         require(arrangement.sections.isNotEmpty()) { "Detailed arrangement has no sections to render" }
+        requireCurrentFullSongEnhancement(root, project)
         val cohesiveOverlay = project.workflow.cohesion?.approved == true && WorkflowArtifact.COHESION !in project.workflow.stale
         val timeline = Timeline.create(arrangement, analyses, cohesiveOverlay)
         val occurrenceMidi = resolveOccurrenceMidi(root, project, arrangement, analyses)
@@ -61,7 +62,7 @@ class StemRenderingMixer(
         val requiredInputs = active.filter { it != LogicalInstrument.PIANO }.associateWith { instrument ->
             val original = if (cohesiveRoles.isEmpty()) root.resolve("midi/generated/${instrument.wireName}.mid")
             else resolveCohesiveRole(root, project, instrument.wireName)
-            humanizedInput(root, project, instrument.wireName, original)
+            humanizedInput(root, project, instrument.wireName, fullSongEnhancedInput(root, project, instrument.wireName, original))
         }
         requiredInputs.forEach { (instrument, path) ->
             require(Files.isRegularFile(path)) { "Missing generated ${instrument.wireName} MIDI: $path" }
@@ -70,7 +71,8 @@ class StemRenderingMixer(
         val hasCohesionBridges = project.workflow.cohesion?.boundaries?.isNotEmpty() == true
         val needsTransitions = !bridgesMergedIntoRoles && (hasCohesionBridges || timeline.segments.any { it.insertedTicksAfter > 0L })
         val transitionBase = root.resolve("midi/generated/transitions.mid")
-        val transitions = if (bridgesMergedIntoRoles) null else if (Files.isRegularFile(transitionBase)) humanizedInput(root, project, "transitions", transitionBase) else transitionBase
+        val transitions = if (bridgesMergedIntoRoles) null else if (Files.isRegularFile(transitionBase))
+            humanizedInput(root, project, "transitions", fullSongEnhancedInput(root, project, "transitions", transitionBase)) else transitionBase
         if (needsTransitions) require(transitions != null && Files.isRegularFile(transitions)) {
             "Transition insertions are planned but transition MIDI is missing: $transitions"
         }
@@ -157,7 +159,7 @@ class StemRenderingMixer(
             } else {
                 "piano-${occurrence.occurrenceId}"
             }
-            val selected = humanizedInput(root, project, pianoId, occurrence.path)
+            val selected = humanizedInput(root, project, pianoId, fullSongEnhancedInput(root, project, pianoId, occurrence.path))
             if (selected == occurrence.path) occurrence else occurrence.copy(
                 path = selected,
                 projectRelativePath = root.relativize(selected).toString().replace('\\', '/'),
@@ -178,6 +180,35 @@ class StemRenderingMixer(
             "Humanized MIDI '$id' is missing or stale. Regenerate it or select Bypass."
         }
         return output
+    }
+
+    /** The approved candidate is the only replacement path; bypass/no-op retain the exact cohesive input. */
+    private fun fullSongEnhancedInput(root: Path, project: Project, id: String, original: Path): Path = when (project.workflow.fullSongEnhancementSelection) {
+        FullSongEnhancementSelection.BYPASS, FullSongEnhancementSelection.NO_OP -> original
+        FullSongEnhancementSelection.PENDING -> error("Full-Song Enhance selection is unresolved. Run Critic, then approve, record no-op, or bypass it.")
+        FullSongEnhancementSelection.DRAFT -> error("Full-Song Enhance candidate needs approval, recorded no-op, or explicit bypass.")
+        FullSongEnhancementSelection.APPROVED -> {
+            require(WorkflowArtifact.FULL_SONG_ENHANCEMENT !in project.workflow.stale) { "Full-Song Enhance selection is stale. Regenerate it, record no-op, or bypass it." }
+            val run = requireNotNull(project.workflow.fullSongEnhancement) { "Full-Song Enhance selection has no candidate evidence." }
+            val artifact = requireNotNull(run.artifacts.singleOrNull { it.id == id }) { "Full-Song Enhance is missing MIDI for '$id'." }
+            require(Files.isRegularFile(original) && digest(Files.readAllBytes(original)) == artifact.input.sha256) { "Full-Song Enhance input '$id' changed." }
+            val output = root.resolve(artifact.output.file).normalize()
+            require(output.startsWith(root) && Files.isRegularFile(output) && output.toRealPath().startsWith(root.toRealPath()) && digest(Files.readAllBytes(output)) == artifact.output.sha256) {
+                "Full-Song Enhance MIDI '$id' is missing or stale."
+            }
+            output
+        }
+    }
+
+    private fun requireCurrentFullSongEnhancement(root: Path, project: Project) {
+        val critic = requireNotNull(project.workflow.critic) { "Render requires a current Critic report before Full-Song Enhance selection." }
+        val report = root.resolve(critic.report.file).normalize()
+        require(WorkflowArtifact.CRITIC !in project.workflow.stale && report.startsWith(root) && Files.isRegularFile(report) && digest(Files.readAllBytes(report)) == critic.report.sha256) {
+            "Critic report is missing or stale. Rerun Critic before rendering."
+        }
+        require(project.workflow.fullSongEnhancementSelection !in setOf(FullSongEnhancementSelection.PENDING, FullSongEnhancementSelection.DRAFT)) {
+            "Render requires an approved Full-Song Enhance candidate, recorded no-op, or explicit bypass."
+        }
     }
 
     private fun resolveCohesiveRole(root: Path, project: Project, role: String): Path {

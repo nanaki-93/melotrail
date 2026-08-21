@@ -24,6 +24,23 @@ class StemRenderingMixerTest {
     @TempDir lateinit var root: Path
 
     @Test
+    fun `render refuses a pending full-song enhancement selection`() = runBlocking {
+        val analyses = mapOf("A" to analysis("A"), "B" to analysis("B"))
+        writeMidi(root.resolve("source/A.mid"), 0, 1_920)
+        writeMidi(root.resolve("source/B.mid"), 0, 1_920)
+        Files.createDirectories(root.resolve("midi/clean"))
+        Files.copy(root.resolve("source/A.mid"), root.resolve("midi/clean/A.mid"))
+        Files.copy(root.resolve("source/B.mid"), root.resolve("midi/clean/B.mid"))
+        writeMidi(root.resolve("midi/generated/bass.mid"), 0, 3_840)
+        val project = project().copy(workflow = criticBypassWorkflow().copy(fullSongEnhancementSelection = FullSongEnhancementSelection.PENDING))
+
+        val error = org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException::class.java) {
+            runBlocking { StemRenderingMixer(FakeRenderer(), TestSoundLibrary.root()).render(root, project, flatArrangement(), analyses) }
+        }
+        assertTrue(error.message.orEmpty().contains("approved Full-Song Enhance candidate"))
+    }
+
+    @Test
     fun `renders aligned project-format stems including a transition and reuses only current artifacts`() = runBlocking {
         val analyses = mapOf("A" to analysis("A"), "B" to analysis("B"))
         writeMidi(root.resolve("source/A.mid"), 0, 1_920)
@@ -141,8 +158,21 @@ class StemRenderingMixerTest {
             Part("B", "source/B.mid", midi = canonicalMidiReferences(root, "B"))
         ),
         renderFormat = RenderFormat(8_000, 1, 24),
+        workflow = criticBypassWorkflow(),
         envelope = ProjectV4Envelope(structureOccurrences = listOf(StructureOccurrence("A1", "A"), StructureOccurrence("B1", "B")))
     )
+
+    private fun criticBypassWorkflow(): ProjectWorkflowReferences {
+        val inputHash = "c".repeat(64)
+        val relative = CriticArtifactPaths.report(inputHash)
+        val report = root.resolve(relative)
+        Files.createDirectories(requireNotNull(report.parent))
+        Files.writeString(report, "critic")
+        return ProjectWorkflowReferences(
+            FullSongEnhancementSelection.BYPASS,
+            critic = CriticWorkflowReferences(inputHash, WorkflowArtifactReference(relative, sha256(report)))
+        )
+    }
 
     private fun arrangement() = DetailedArrangement(sections = listOf(
         DetailedArrangementSection(0, "A1", "A", SongSectionPurpose.DEVELOPMENT, 0.3, listOf(PianoSourcePlan(), BassInstrumentPlan(role = DetailedBassRole.ROOT, density = 0.4, movement = DetailedBassMovement.STATIC, register = MusicalRegister.LOW, syncopation = 0.0)), TransitionPlan(TransitionType.BRIDGE, 1)),

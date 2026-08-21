@@ -409,6 +409,11 @@ data class ProjectReadiness(
     val harmonyReady: Boolean = true,
     /** Durable application state; UI observes this rather than polling files. */
     val stageRuns: List<StageRunSnapshot> = emptyList(),
+    /** A current critic report is required before an enhancement selection is meaningful. */
+    val criticAvailable: Boolean = false,
+    val fullSongEnhancementSelection: app.melotrail.arrangement.FullSongEnhancementSelection = app.melotrail.arrangement.FullSongEnhancementSelection.PENDING,
+    /** True only when the approved candidate's exact inputs and outputs are current. */
+    val fullSongEnhancementAvailable: Boolean = false,
     val humanizationSelection: app.melotrail.arrangement.HumanizationSelection = app.melotrail.arrangement.HumanizationSelection.BYPASS,
     val humanizationAvailable: Boolean = false
 )
@@ -1215,6 +1220,20 @@ class DefaultProjectApplicationService(
                     generated.artifacts.all { reference ->
                         val path = root.resolve(reference.artifact.file).normalize()
                         path.startsWith(root) && Files.isRegularFile(path) && sha256(path) == reference.artifact.sha256
+                    }
+                } == true,
+                criticAvailable = project.workflow.critic?.let { critic ->
+                    current(WorkflowArtifact.CRITIC) && root.resolve(critic.report.file).normalize().let { path ->
+                        path.startsWith(root) && Files.isRegularFile(path) && sha256(path) == critic.report.sha256
+                    }
+                } == true,
+                fullSongEnhancementSelection = project.workflow.fullSongEnhancementSelection,
+                fullSongEnhancementAvailable = project.workflow.fullSongEnhancement?.let { enhancement ->
+                    current(WorkflowArtifact.FULL_SONG_ENHANCEMENT) && enhancement.artifacts.all { artifact ->
+                        val input = root.resolve(artifact.input.file).normalize()
+                        val output = root.resolve(artifact.output.file).normalize()
+                        input.startsWith(root) && output.startsWith(root) && Files.isRegularFile(input) && Files.isRegularFile(output) &&
+                            sha256(input) == artifact.input.sha256 && sha256(output) == artifact.output.sha256
                     }
                 } == true,
                 humanizationSelection = project.workflow.humanizationSelection,

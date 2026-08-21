@@ -138,6 +138,7 @@ class ProjectV4SchemaTest {
         listOf(
             canonical.replace("\"evolvedParts\": [],", "\"evolvedParts\": [], \"structureOccurrences\": [],"),
             canonical.replace("\"stageRuns\": {", "\"manifests\": {\"runs\": []}, \"stageRuns\": {"),
+            canonical.replace("\"fullSongEnhancementSelection\": \"PENDING\",", ""),
             canonical.replace("\"version\": 4", "\"version\": 4, \"machinePath\": \"/tmp/not-portable\"")
         ).forEach { unsupported ->
             Files.writeString(root.resolve(ProjectStore.FILE_NAME), unsupported)

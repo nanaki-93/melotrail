@@ -71,7 +71,8 @@ object ProjectStore {
         val renderFormat: RenderFormat,
         val parts: List<PartV4Dto> = emptyList(),
         val structure: List<StructureOccurrence> = emptyList(),
-        val workflow: ProjectWorkflowReferences = ProjectWorkflowReferences(),
+        /** Required so the superseded v4 workflow shape cannot be opened by defaulting it. */
+        val workflow: ProjectWorkflowReferences,
         val envelope: ProjectV4EnvelopeDto = ProjectV4EnvelopeDto()
     )
 
