@@ -1,6 +1,7 @@
 package app.melotrail.application
 
 import app.melotrail.arrangement.CohesionModelIdentity
+import app.melotrail.arrangement.ArrangementHarmonyContext
 import app.melotrail.arrangement.LocalQwenTransitionCohesionPlanner
 import app.melotrail.arrangement.LogicalInstrument
 import app.melotrail.arrangement.DetailedArrangement
@@ -137,7 +138,8 @@ class DefaultCohesionApplicationService(
         val part = project.parts.firstOrNull { it.id == partId } ?: error("Structure references unknown part '$partId'.")
         val ref = requireNotNull(part.analysis) { "Missing MIDI analysis for part '$partId'. Run part analyze first." }
         require(ref.kind?.name == "MIDI") { "MIDI analysis is required for part '$partId'. Run part analyze first." }
-        return Json { ignoreUnknownKeys = false }.decodeFromString(MidiAnalysis.serializer(), Files.readString(root.resolve(ref.file)))
+        val analysis = Json { ignoreUnknownKeys = false }.decodeFromString(MidiAnalysis.serializer(), Files.readString(root.resolve(ref.file)))
+        return ArrangementHarmonyContext.apply(analysis, part.sectionType, project.envelope.harmony)
     }
     private fun snapshot(root: Path, input: TransitionCohesionInput, plan: TransitionCohesionPlan, approved: Boolean): CohesionSnapshot {
         val reviewed = ProjectStore.read(root).workflow.cohesion?.boundaries.orEmpty().filter { it.approved != null }.map { it.outgoingInstanceId to it.incomingInstanceId }.toSet()

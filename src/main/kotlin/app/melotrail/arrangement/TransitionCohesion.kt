@@ -21,7 +21,7 @@ import kotlin.math.roundToLong
 @Serializable
 data class CohesionModelIdentity(val provider: String, val model: String, val sha256: String) {
     init { require(provider.matches(Regex("[a-z0-9_-]{1,40}")) && model.length in 1..80 && sha256.matches(Regex("[0-9a-f]{64}"))) { "Cohesion model identity is invalid" } }
-    companion object { val DETERMINISTIC = CohesionModelIdentity("deterministic", "transition-cohesion-v3", "0".repeat(64)) }
+    companion object { val DETERMINISTIC = CohesionModelIdentity("deterministic", "transition-cohesion-v4", "0".repeat(64)) }
 }
 
 /** Path-free, arrangement-aware evidence for every adjacent saved occurrence. */
@@ -33,7 +33,7 @@ data class CohesionModelIdentity(val provider: String, val model: String, val sh
     val contextSha256: String,
     val supportedInstruments: List<String>,
     val boundaries: List<TransitionBoundaryInput>
-) { companion object { const val VERSION = 3 } }
+) { companion object { const val VERSION = 4 } }
 
 @Serializable data class TransitionBoundaryInput(
     val outgoingInstanceId: String,
@@ -46,7 +46,7 @@ data class CohesionModelIdentity(val provider: String, val model: String, val sh
 
 @Serializable data class TransitionMusicalEvidence(
     val partId: String,
-    /** Hash of selected immutable MIDI; Cohesion never supplies a melody replacement. */
+    /** Hash of selected immutable MIDI; Cohesion publishes only derived occurrence MIDI. */
     val sourceHash: String,
     val analysisHash: String,
     val ppq: Int,
@@ -57,8 +57,11 @@ data class CohesionModelIdentity(val provider: String, val model: String, val sh
     val meter: MidiTimeSignature,
     val energy: Double,
     val boundary: TransitionBoundarySummary,
-    val arrangement: TransitionArrangementEvidence
+    val arrangement: TransitionArrangementEvidence,
+    val melodyNotes: List<CohesionMelodyNote> = emptyList()
 )
+
+@Serializable data class CohesionMelodyNote(val id: String, val channel: Int, val pitch: Int, val velocity: Int, val startTick: Long, val endTick: Long)
 
 @Serializable data class TransitionBoundarySummary(val startsWithSound: Boolean, val endsWithSound: Boolean, val firstNoteTick: Long?, val lastNoteEndTick: Long?)
 @Serializable data class TransitionArrangementEvidence(val occurrenceHash: String, val purpose: SongSectionPurpose, val instruments: List<TransitionInstrumentEvidence>, val variationFingerprint: String)
@@ -103,7 +106,38 @@ data class CohesionModelIdentity(val provider: String, val model: String, val sh
     val startsWithSound: Boolean,
     val endsWithSound: Boolean,
     val purpose: SongSectionPurpose,
-    val instruments: List<String>
+    val instruments: List<String>,
+    val editableNotes: List<CohesionMelodyNote>
+)
+
+@Serializable private enum class CohesionMelodySide { OUTGOING, INCOMING }
+@Serializable enum class CohesionMelodyEditKind { ADD_NOTE, REMOVE_NOTE, SET_PITCH, SET_START, SET_DURATION, SET_VELOCITY }
+@Serializable private data class CohesionMelodyModelEdit(
+    val side: CohesionMelodySide,
+    val kind: CohesionMelodyEditKind,
+    val noteId: String,
+    val value: Long = 0,
+    val pitch: Int? = null,
+    val velocity: Int? = null,
+    val startTick: Long? = null,
+    val durationTicks: Long? = null,
+    val channel: Int? = null,
+    val anchorNoteId: String? = null,
+    val reason: String
+)
+
+@Serializable data class CohesionMelodyEdit(
+    val occurrenceInstanceId: String,
+    val kind: CohesionMelodyEditKind,
+    val noteId: String,
+    val value: Long = 0,
+    val pitch: Int? = null,
+    val velocity: Int? = null,
+    val startTick: Long? = null,
+    val durationTicks: Long? = null,
+    val channel: Int? = null,
+    val anchorNoteId: String? = null,
+    val reason: String
 )
 
 /** The only decisions a model is allowed to make for one boundary. */
@@ -113,7 +147,10 @@ data class CohesionModelIdentity(val provider: String, val model: String, val sh
     val harmonicHandoff: HarmonicHandoff,
     val rhythmicGesture: RhythmicGesture,
     val energyContour: EnergyContour,
-    val rationale: String
+    val rationale: String,
+    val leadBeats: Int? = null,
+    val tailBeats: Int = 0,
+    val melodyEdits: List<CohesionMelodyModelEdit> = emptyList()
 )
 
 @Serializable data class TransitionBridgePlan(
@@ -132,7 +169,11 @@ data class CohesionModelIdentity(val provider: String, val model: String, val sh
     val energyContour: EnergyContour,
     val tempoHandoff: TimingHandoff = TimingHandoff.PRESERVE,
     val meterHandoff: TimingHandoff = TimingHandoff.PRESERVE,
-    val rationale: String
+    val rationale: String,
+    val melodyEdits: List<CohesionMelodyEdit> = emptyList(),
+    val placement: TransitionPlacement = TransitionPlacement.OVERLAY_BOUNDARY,
+    val leadBeats: Int = 1,
+    val tailBeats: Int = 0
 )
 @Serializable enum class TransitionRoleAction { DRUM_FILL, BASS_MOTION, CHORD_MOTION, SUSTAINED_TEXTURE, DYNAMICS_AUTOMATION, CONTINUITY }
 @Serializable enum class BridgeType { DRUM_FILL, BASS_WALK, CHORD_MOTION, PAD_SUSTAIN, BUILD, CONTINUITY }
@@ -140,6 +181,7 @@ data class CohesionModelIdentity(val provider: String, val model: String, val sh
 @Serializable enum class RhythmicGesture { FILL, PICKUP, SUSTAIN }
 @Serializable enum class EnergyContour { HOLD, RISE, FALL }
 @Serializable enum class TimingHandoff { PRESERVE }
+@Serializable enum class TransitionPlacement { OVERLAY_BOUNDARY }
 data class TransitionCohesionValidationResult(val errors: List<String>) { val isValid get() = errors.isEmpty() }
 
 object TransitionCohesionValidator {
@@ -156,6 +198,8 @@ object TransitionCohesionValidator {
         if (actual != expected || actual.size != input.boundaries.size) errors += "Transition cohesion plan must contain exactly n - 1 boundaries in saved Structure order"
         if (actual.distinct().size != actual.size) errors += "Transition cohesion plan contains duplicate boundaries"
         if (input.supportedInstruments != input.supportedInstruments.distinct().sorted()) errors += "Transition cohesion supported instruments must be sorted and unique"
+        val editedTargets = mutableSetOf<Pair<String, String>>()
+        val editCounts = mutableMapOf<String, Int>()
         input.boundaries.zip(plan.boundaries).forEachIndexed { index, (source, bridge) ->
             val label = "Boundary ${index + 1}"
             if (!id.matches(bridge.outgoingInstanceId) || !id.matches(bridge.incomingInstanceId)) errors += "$label has an invalid occurrence ID"
@@ -163,18 +207,79 @@ object TransitionCohesionValidator {
             if (bridge.outgoingHash != source.outgoing.sourceHash || bridge.incomingHash != source.incoming.sourceHash) errors += "$label source hash is stale"
             if (bridge.arrangementSha256 != input.arrangementSha256 || bridge.contextSha256 != input.contextSha256) errors += "$label arrangement or context hash is stale"
             if (bridge.bars !in 1..2) errors += "$label bridge length must be one or two bars"
+            if (bridge.placement != TransitionPlacement.OVERLAY_BOUNDARY || bridge.leadBeats !in 1..source.outgoing.meter.numerator || bridge.tailBeats !in 0..1) {
+                errors += "$label has an invalid boundary overlay window"
+            }
             if (bridge.instrument !in input.supportedInstruments) errors += "$label uses unsupported instrument '${bridge.instrument}'"
             if (bridge.roleAction !in source.allowedRoleActions || bridge.roleAction !in source.transitionPolicy.allowedActions) errors += "$label uses a disallowed role action"
             if (!rationale.matches(bridge.rationale)) errors += "$label rationale must be bounded musical text"
             if (source.outgoing.ppq != source.incoming.ppq || source.outgoing.ppq !in 1..9600) errors += "$label has incompatible PPQ timing"
             if (!tempoValid(source.outgoing.tempo) || !tempoValid(source.incoming.tempo) || !meterValid(source.outgoing.meter) || !meterValid(source.incoming.meter)) errors += "$label has invalid timing evidence"
             if (!bridgeCompatible(bridge)) errors += "$label bridge type, role action, and instrument do not match"
+            if (bridge.melodyEdits.size > 8) errors += "$label exceeds the melody edit budget"
+            bridge.melodyEdits.forEach { edit ->
+                validateMelodyEdit(label, edit, source, errors)
+                if (!editedTargets.add(edit.occurrenceInstanceId to edit.noteId)) errors += "$label conflicts with another boundary edit for '${edit.noteId}'"
+                editCounts[edit.occurrenceInstanceId] = editCounts.getOrDefault(edit.occurrenceInstanceId, 0) + 1
+            }
+        }
+        val occurrenceEvidence = input.boundaries.flatMap {
+            listOf(it.outgoingInstanceId to it.outgoing, it.incomingInstanceId to it.incoming)
+        }.toMap()
+        editCounts.forEach { (occurrenceId, count) ->
+            val noteCount = occurrenceEvidence[occurrenceId]?.melodyNotes?.size ?: 0
+            if (count * 100 / noteCount.coerceAtLeast(1) > 25) {
+                errors += "Cohesion melody edits for '$occurrenceId' exceed the recognizable identity budget"
+            }
         }
         return TransitionCohesionValidationResult(errors)
     }
     fun requireValid(plan: TransitionCohesionPlan, input: TransitionCohesionInput) { val result = validate(plan, input); require(result.isValid) { result.errors.joinToString("; ") } }
     private fun tempoValid(tempo: MidiTempoChange) = tempo.tick >= 0 && tempo.bpm.isFinite() && tempo.bpm in 20.0..300.0
     private fun meterValid(meter: MidiTimeSignature) = meter.tick >= 0 && meter.numerator in 1..12 && meter.denominator in setOf(1, 2, 4, 8, 16)
+    private fun validateMelodyEdit(label: String, edit: CohesionMelodyEdit, source: TransitionBoundaryInput, errors: MutableList<String>) {
+        val evidence = when (edit.occurrenceInstanceId) {
+            source.outgoingInstanceId -> source.outgoing
+            source.incomingInstanceId -> source.incoming
+            else -> { errors += "$label melody edit references an unrelated occurrence"; return }
+        }
+        val outgoing = edit.occurrenceInstanceId == source.outgoingInstanceId
+        val barTicks = evidence.ppq * 4L / evidence.meter.denominator * evidence.meter.numerator
+        val windowStart = if (outgoing) (evidence.durationTicks - barTicks).coerceAtLeast(0) else 0L
+        val windowEnd = if (outgoing) evidence.durationTicks else minOf(barTicks, evidence.durationTicks)
+        val notes = evidence.melodyNotes.associateBy(CohesionMelodyNote::id)
+        if (!rationale.matches(edit.reason)) errors += "$label melody edit reason is invalid"
+        when (edit.kind) {
+            CohesionMelodyEditKind.ADD_NOTE -> {
+                val anchor = notes[edit.anchorNoteId]
+                val scale = evidence.key?.toMusicalKeyOrNull()?.scalePitchClasses()?.map { it.chromatic }
+                if (!edit.noteId.matches(Regex("add-[0-9]{5}")) || edit.pitch !in 0..127 || edit.velocity !in 1..127 || edit.channel !in 0..15 ||
+                    edit.startTick == null || edit.durationTicks == null || edit.durationTicks <= 0 || edit.anchorNoteId !in notes ||
+                    edit.startTick !in windowStart until windowEnd || edit.startTick + edit.durationTicks > windowEnd ||
+                    anchor != null && edit.pitch != null && kotlin.math.abs(edit.pitch - anchor.pitch) > 12 ||
+                    scale != null && edit.pitch != null && edit.pitch.mod(12) !in scale) {
+                    errors += "$label contains an invalid melody-note addition"
+                }
+            }
+            else -> {
+                val note = notes[edit.noteId]
+                if (note == null || note.startTick !in windowStart until windowEnd) errors += "$label melody edit targets a note outside its boundary window"
+                if (edit.kind == CohesionMelodyEditKind.REMOVE_NOTE && note != null && note.id in setOf(evidence.melodyNotes.firstOrNull()?.id, evidence.melodyNotes.lastOrNull()?.id)) {
+                    errors += "$label cannot remove a recognizable melody anchor"
+                }
+                if (edit.kind == CohesionMelodyEditKind.SET_PITCH && (edit.value !in 0..127 || note != null && kotlin.math.abs(edit.value - note.pitch) > 2 ||
+                        evidence.key?.toMusicalKeyOrNull()?.scalePitchClasses()?.none { it.chromatic == edit.value.toInt().mod(12) } == true)) {
+                    errors += "$label replacement pitch is invalid"
+                }
+                if (edit.kind == CohesionMelodyEditKind.SET_VELOCITY && edit.value !in 1..127) errors += "$label replacement velocity is invalid"
+                if (edit.kind == CohesionMelodyEditKind.SET_START && (edit.value !in windowStart until windowEnd ||
+                        note != null && edit.value + (note.endTick - note.startTick) > windowEnd)) {
+                    errors += "$label replacement start is outside its boundary window"
+                }
+                if (edit.kind == CohesionMelodyEditKind.SET_DURATION && (edit.value <= 0 || note != null && note.startTick + edit.value > windowEnd)) errors += "$label replacement duration is invalid"
+            }
+        }
+    }
     private fun bridgeCompatible(bridge: TransitionBridgePlan): Boolean = when (bridge.roleAction) {
         TransitionRoleAction.DRUM_FILL, TransitionRoleAction.DYNAMICS_AUTOMATION -> bridge.instrument == "drums" && bridge.bridgeType in setOf(BridgeType.DRUM_FILL, BridgeType.BUILD)
         TransitionRoleAction.BASS_MOTION -> bridge.instrument == "bass" && bridge.bridgeType == BridgeType.BASS_WALK
@@ -211,7 +316,18 @@ class LocalQwenTransitionCohesionPlanner(private val client: LocalQwenClient = L
                 harmonicHandoff = decision.harmonicHandoff,
                 rhythmicGesture = decision.rhythmicGesture,
                 energyContour = decision.energyContour,
-                rationale = decision.rationale
+                rationale = decision.rationale,
+                melodyEdits = decision.melodyEdits.map { edit ->
+                    CohesionMelodyEdit(
+                        occurrenceInstanceId = if (edit.side == CohesionMelodySide.OUTGOING) source.outgoingInstanceId else source.incomingInstanceId,
+                        kind = edit.kind, noteId = edit.noteId, value = edit.value, pitch = edit.pitch, velocity = edit.velocity,
+                        startTick = edit.startTick, durationTicks = edit.durationTicks, channel = edit.channel,
+                        anchorNoteId = edit.anchorNoteId, reason = edit.reason
+                    )
+                },
+                placement = TransitionPlacement.OVERLAY_BOUNDARY,
+                leadBeats = decision.leadBeats ?: (decision.bars * source.outgoing.meter.numerator).coerceAtMost(source.outgoing.meter.numerator),
+                tailBeats = decision.tailBeats
             )
         }
         val plan = TransitionCohesionPlan(inputHash = input.inputHash, arrangementSha256 = input.arrangementSha256, contextSha256 = input.contextSha256, model = model, boundaries = boundaries)
@@ -264,7 +380,11 @@ class LocalQwenTransitionCohesionPlanner(private val client: LocalQwenClient = L
             startsWithSound = evidence.boundary.startsWithSound,
             endsWithSound = evidence.boundary.endsWithSound,
             purpose = evidence.arrangement.purpose,
-            instruments = evidence.arrangement.instruments.map { it.instrument }.distinct().sorted()
+            instruments = evidence.arrangement.instruments.map { it.instrument }.distinct().sorted(),
+            editableNotes = evidence.melodyNotes.filter { note ->
+                val bar = evidence.ppq * 4L / evidence.meter.denominator * evidence.meter.numerator
+                if (useLastChord) note.startTick >= (evidence.durationTicks - bar).coerceAtLeast(0) else note.startTick < minOf(bar, evidence.durationTicks)
+            }
         )
     }
 
@@ -274,10 +394,17 @@ class LocalQwenTransitionCohesionPlanner(private val client: LocalQwenClient = L
             Return exactly one JSON array and no markdown or prose. The array must contain exactly one object per
             supplied boundary, in the same order. Do not repeat any input, IDs, hashes, sections, or evidence.
             Every object has exactly these keys: roleAction, bars, harmonicHandoff, rhythmicGesture,
-            energyContour, rationale. Choose roleAction only from that boundary's allowedRoleActions.
-            The application selects the compatible instrument and bridge type. bars is 1 or 2. Preserve tempo and meter.
+            energyContour, rationale, leadBeats, tailBeats, melodyEdits. Choose roleAction only from that boundary's allowedRoleActions.
+            The application selects the compatible instrument and bridge type. bars is the compatibility value 1.
+            leadBeats is 1 through the outgoing meter numerator and tailBeats is 0 or 1. The window overlays the
+            existing boundary and never extends the song. Preserve tempo and meter.
             harmonicHandoff is HOLD or STEP_TO_INCOMING; rhythmicGesture is FILL, PICKUP, or SUSTAIN;
             energyContour is HOLD, RISE, or FALL. rationale is brief plain musical text.
+            melodyEdits is an array of at most 8 optional boundary repairs. Existing-note edits use side OUTGOING or
+            INCOMING, kind REMOVE_NOTE, SET_PITCH, SET_START, SET_DURATION, or SET_VELOCITY, a supplied noteId, value,
+            reason, and null addition fields. ADD_NOTE uses noteId add-00000, value 0, pitch, velocity, startTick,
+            durationTicks, channel, anchorNoteId, and reason. Add or remove notes only when it improves the handoff;
+            keep phrase anchors, recognizable contour, tempo, meter, section length, and structure unchanged.
             Never return instrument, bridgeType, paths, commands, code, MIDI events, DSP values, samples, plugins,
             hashes, model fields, validation, approval, or any key outside this decision schema.
         """
@@ -288,15 +415,44 @@ class LocalQwenTransitionCohesionPlanner(private val client: LocalQwenClient = L
 object DeterministicTransitionBridgeEngine {
     fun write(path: Path, input: TransitionBoundaryInput, plan: TransitionBridgePlan) {
         val ppq = input.incoming.ppq; val meter = input.incoming.meter
-        val length = (ppq * 4L / meter.denominator * meter.numerator) * plan.bars
+        val beat = ppq * 4L / input.outgoing.meter.denominator
+        val incomingBeat = ppq * 4L / meter.denominator
+        val boundary = beat * plan.leadBeats
+        val length = boundary + incomingBeat * plan.tailBeats
         val sequence = Sequence(Sequence.PPQ, ppq); val track = sequence.createTrack()
-        addTempo(track, input.incoming.tempo, 0); addMeter(track, meter, 0)
-        val root = keyPitch(input.incoming.key)
+        addTempo(track, input.outgoing.tempo, 0); addMeter(track, input.outgoing.meter, 0)
+        if (plan.tailBeats > 0) { addTempo(track, input.incoming.tempo, boundary); addMeter(track, meter, boundary) }
+        val outgoing = harmony(input.outgoing.chords.lastOrNull { it.symbol != null }?.symbol, input.outgoing.key)
+        val incoming = harmony(input.incoming.chords.firstOrNull { it.symbol != null }?.symbol, input.incoming.key)
+        val velocityBase = when (plan.energyContour) { EnergyContour.FALL -> 58; EnergyContour.HOLD -> 70; EnergyContour.RISE -> 82 }
         when (plan.bridgeType) {
-            BridgeType.DRUM_FILL, BridgeType.BUILD, BridgeType.CONTINUITY -> { val step = (ppq / 2).toLong().coerceAtLeast(1); generateSequence(0L) { it + step }.takeWhile { it < length }.forEachIndexed { index, tick -> note(track, 9, if (index % 2 == 0) 36 else 38, 72 + (index % 4) * 10, tick, (tick + step / 2).coerceAtMost(length)) } }
-            BridgeType.BASS_WALK -> listOf(0, 2, 4, 5).forEachIndexed { index, interval -> val start = index * ppq.toLong(); if (start < length) note(track, 0, 36 + root + interval, 82, start, (start + ppq).coerceAtMost(length)) }
-            BridgeType.CHORD_MOTION -> listOf(0, 4, 7).forEach { interval -> note(track, 0, 60 + root + interval, 62, 0, length) }
-            BridgeType.PAD_SUSTAIN -> note(track, 0, 60 + root, 68, 0, length)
+            BridgeType.DRUM_FILL, BridgeType.BUILD, BridgeType.CONTINUITY -> {
+                val step = (beat / 4).coerceAtLeast(1); val start = (boundary - beat).coerceAtLeast(0)
+                generateSequence(start) { it + step }.takeWhile { it < boundary }.forEachIndexed { index, tick ->
+                    note(track, 9, if (index < 2) 38 else 36, (velocityBase + index * 7).coerceAtMost(112), tick, (tick + step / 2).coerceAtMost(boundary))
+                }
+                if (plan.tailBeats > 0) note(track, 9, 36, (velocityBase + 10).coerceAtMost(115), boundary, minOf(length, boundary + step))
+            }
+            BridgeType.BASS_WALK -> {
+                val from = requireNotNull(outgoing) { "Bass Cohesion requires outgoing harmony or key evidence" }
+                val to = requireNotNull(incoming) { "Bass Cohesion requires incoming harmony or key evidence" }
+                val delta = ((to.root - from.root + 18) % 12) - 6
+                repeat(plan.leadBeats) { index ->
+                    val ratio = if (plan.leadBeats == 1) 1.0 else index.toDouble() / (plan.leadBeats - 1)
+                    val root = (from.root + (delta * ratio).roundToLong().toInt()).mod(12)
+                    val start = index * beat
+                    note(track, 0, 36 + root, velocityBase, start, minOf(boundary, start + beat * 3 / 4))
+                }
+            }
+            BridgeType.CHORD_MOTION -> {
+                val target = requireNotNull(incoming) { "Chord-motion Cohesion requires incoming harmony or key evidence" }
+                target.intervals.forEach { interval -> note(track, 0, 60 + target.root + interval, velocityBase - 10, 0, length) }
+            }
+            BridgeType.PAD_SUSTAIN -> {
+                val from = requireNotNull(outgoing ?: incoming) { "Sustained Cohesion requires harmony or key evidence" }
+                val common = incoming?.let { next -> from.intervals.map { (from.root + it).mod(12) }.firstOrNull { pc -> pc in next.intervals.map { (next.root + it).mod(12) } } }
+                note(track, 0, 60 + (common ?: from.root), velocityBase - 12, 0, length)
+            }
         }
         track.add(MidiEvent(MetaMessage(0x2F, byteArrayOf(), 0), length)); publishMidi(path, sequence, ppq, length)
     }
@@ -314,8 +470,105 @@ object DeterministicTransitionBridgeEngine {
     private fun note(track: javax.sound.midi.Track, channel: Int, pitch: Int, velocity: Int, start: Long, end: Long) { track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, channel, pitch.coerceIn(0, 127), velocity), start)); track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, channel, pitch.coerceIn(0, 127), 0), end)) }
     private fun addTempo(track: javax.sound.midi.Track, tempo: MidiTempoChange, tick: Long) { val micros = (60_000_000.0 / tempo.bpm).roundToLong().toInt(); track.add(MidiEvent(MetaMessage(0x51, byteArrayOf((micros ushr 16).toByte(), (micros ushr 8).toByte(), micros.toByte()), 3), tick)) }
     private fun addMeter(track: javax.sound.midi.Track, meter: MidiTimeSignature, tick: Long) { track.add(MidiEvent(MetaMessage(0x58, byteArrayOf(meter.numerator.toByte(), Integer.numberOfTrailingZeros(meter.denominator).toByte(), 24, 8), 4), tick)) }
-    private fun keyPitch(key: MidiKey?): Int = key?.toMusicalKeyOrNull()?.tonic?.chromatic ?: 0
+    private fun harmony(symbol: String?, key: MidiKey?): Harmony? {
+        val match = Regex("^([A-G](?:#|b)?)(|m|min|7|maj7|m7|min7|maj9|m9|min9|add9|sus2|sus4|sus)$", RegexOption.IGNORE_CASE).matchEntire(symbol.orEmpty())
+        val root = match?.groupValues?.get(1)?.let(::pitchClass) ?: key?.toMusicalKeyOrNull()?.tonic?.chromatic ?: return null
+        val intervals = when (match?.groupValues?.get(2)?.lowercase()) {
+            "m", "min" -> listOf(0, 3, 7)
+            "7" -> listOf(0, 4, 7, 10)
+            "maj7" -> listOf(0, 4, 7, 11)
+            "m7", "min7" -> listOf(0, 3, 7, 10)
+            "maj9" -> listOf(0, 4, 7, 11, 14)
+            "m9", "min9" -> listOf(0, 3, 7, 10, 14)
+            "add9" -> listOf(0, 4, 7, 14)
+            "sus2" -> listOf(0, 2, 7)
+            "sus4", "sus" -> listOf(0, 5, 7)
+            else -> listOf(0, 4, 7)
+        }
+        return Harmony(root, intervals)
+    }
+    private fun pitchClass(value: String): Int? { val base = when (value.firstOrNull()?.uppercaseChar()) { 'C' -> 0; 'D' -> 2; 'E' -> 4; 'F' -> 5; 'G' -> 7; 'A' -> 9; 'B' -> 11; else -> return null }; return when (value.getOrNull(1)) { '#' -> (base + 1) % 12; 'b' -> (base + 11) % 12; else -> base } }
+    private data class Harmony(val root: Int, val intervals: List<Int>)
     private fun move(from: Path, to: Path) { try { Files.move(from, to, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE) } catch (_: AtomicMoveNotSupportedException) { Files.move(from, to, StandardCopyOption.REPLACE_EXISTING) } }
+}
+
+/** Applies reviewed, occurrence-local melody edits without ever overwriting the selected part MIDI. */
+object CohesionMelodyApplier {
+    fun write(source: Path, target: Path, evidence: TransitionMusicalEvidence, edits: List<CohesionMelodyEdit>) {
+        val before = sha256(Files.readAllBytes(source))
+        require(before == evidence.sourceHash) { "Cohesion melody source changed before application" }
+        val sequence = MidiSystem.getSequence(source.toFile())
+        require(sequence.divisionType == Sequence.PPQ && sequence.resolution == evidence.ppq) { "Cohesion melody timing is incompatible" }
+        val notes = notes(sequence)
+        require(notes.keys == evidence.melodyNotes.map(CohesionMelodyNote::id).toSet()) { "Cohesion melody note IDs are stale" }
+        val orderedEntries = notes.entries.sortedWith(compareBy<Map.Entry<String, EditableNote>> { it.value.start }.thenBy { it.value.pitch })
+        val protectedAnchorIds = setOf(orderedEntries.first().key, orderedEntries.last().key)
+        require(edits.none { it.kind == CohesionMelodyEditKind.REMOVE_NOTE && it.noteId in protectedAnchorIds }) {
+            "Cohesion would remove a recognizable melody anchor"
+        }
+        val anchors = orderedEntries.let { it.first().value.pitch to it.last().value.pitch }
+        require(edits.size * 100 / notes.size.coerceAtLeast(1) <= 25) { "Cohesion melody edits exceed the recognizable identity budget" }
+        edits.filter { it.kind !in setOf(CohesionMelodyEditKind.ADD_NOTE, CohesionMelodyEditKind.REMOVE_NOTE) }.forEach { edit ->
+            val note = notes.getValue(edit.noteId)
+            when (edit.kind) {
+                CohesionMelodyEditKind.SET_PITCH -> note.pitch = edit.value.toInt()
+                CohesionMelodyEditKind.SET_START -> { val duration = note.end - note.start; note.start = edit.value; note.end = edit.value + duration }
+                CohesionMelodyEditKind.SET_DURATION -> note.end = note.start + edit.value
+                CohesionMelodyEditKind.SET_VELOCITY -> note.velocity = edit.value.toInt()
+                else -> error("unreachable")
+            }
+        }
+        edits.filter { it.kind == CohesionMelodyEditKind.REMOVE_NOTE }.forEach { notes.getValue(it.noteId).remove() }
+        edits.filter { it.kind == CohesionMelodyEditKind.ADD_NOTE }.forEach { edit ->
+            val anchor = notes.getValue(requireNotNull(edit.anchorNoteId))
+            val start = requireNotNull(edit.startTick); val duration = requireNotNull(edit.durationTicks)
+            anchor.track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, requireNotNull(edit.channel), requireNotNull(edit.pitch), requireNotNull(edit.velocity)), start))
+            anchor.track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, edit.channel, edit.pitch, 0), start + duration))
+        }
+        val after = notes(sequence).values.sortedWith(compareBy<EditableNote> { it.start }.thenBy { it.pitch })
+        require(after.isNotEmpty() && (after.first().pitch to after.last().pitch) == anchors) { "Cohesion would alter recognizable melody anchors" }
+        after.groupBy { it.channel to it.pitch }.values.forEach { samePitch ->
+            samePitch.sortedBy(EditableNote::start).zipWithNext().forEach { (left, right) -> require(left.end <= right.start) { "Cohesion created overlapping melody notes" } }
+        }
+        require(after.all { it.start >= 0 && it.end > it.start && it.end <= evidence.durationTicks && it.pitch in 0..127 && it.velocity in 1..127 }) {
+            "Cohesion created invalid melody events"
+        }
+        Files.createDirectories(requireNotNull(target.parent)); val temporary = target.resolveSibling(".${target.fileName}.tmp")
+        try {
+            require(MidiSystem.write(sequence, 1, temporary.toFile()) > 0) { "Could not write cohesive occurrence MIDI" }
+            require(sha256(Files.readAllBytes(source)) == before) { "Cohesion changed its selected melody input" }
+            try { Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE) }
+            catch (_: AtomicMoveNotSupportedException) { Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING) }
+        } finally { Files.deleteIfExists(temporary) }
+    }
+
+    private fun notes(sequence: Sequence): LinkedHashMap<String, EditableNote> {
+        val found = mutableListOf<EditableNote>()
+        sequence.tracks.forEach { track ->
+            val active = mutableMapOf<Pair<Int, Int>, ArrayDeque<Pair<MidiEvent, ShortMessage>>>()
+            (0 until track.size()).forEach { index ->
+                val event = track[index]; val message = event.message as? ShortMessage ?: return@forEach; val key = message.channel to message.data1
+                if (message.command == ShortMessage.NOTE_ON && message.data2 > 0) active.getOrPut(key) { ArrayDeque() }.addLast(event to message)
+                else if (message.command == ShortMessage.NOTE_OFF || message.command == ShortMessage.NOTE_ON && message.data2 == 0) {
+                    val start = active[key]?.removeFirstOrNull() ?: throw IllegalArgumentException("Cohesion melody has unmatched note-off")
+                    found += EditableNote(track, start.first, event, start.second, message)
+                }
+            }
+            require(active.values.all { it.isEmpty() }) { "Cohesion melody has hanging notes" }
+        }
+        return linkedMapOf<String, EditableNote>().also { result ->
+            found.sortedWith(compareBy<EditableNote> { it.start }.thenBy { it.pitch }).forEachIndexed { index, note -> result["n-${index.toString().padStart(5, '0')}"] = note }
+        }
+    }
+
+    private class EditableNote(val track: javax.sound.midi.Track, val onEvent: MidiEvent, val offEvent: MidiEvent, val on: ShortMessage, val off: ShortMessage) {
+        val channel get() = on.channel
+        var pitch: Int get() = on.data1; set(value) { on.setMessage(on.command, on.channel, value, on.data2); off.setMessage(off.command, off.channel, value, off.data2) }
+        var velocity: Int get() = on.data2; set(value) { on.setMessage(on.command, on.channel, on.data1, value) }
+        var start: Long get() = onEvent.tick; set(value) { onEvent.tick = value }
+        var end: Long get() = offEvent.tick; set(value) { offEvent.tick = value }
+        fun remove() { track.remove(onEvent); track.remove(offEvent) }
+    }
 }
 
 object TransitionCohesionStore {
@@ -334,14 +587,36 @@ object TransitionCohesionStore {
     fun markReviewed(root: Path, input: TransitionCohesionInput, outgoing: String, incoming: String): Set<Pair<String, String>> { val plan = readDraft(root, input); val pair = outgoing to incoming; require(pair in plan.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId }) { "Unknown cohesion boundary $outgoing -> $incoming" }; return (reviewed(root) + pair).also { persist(root, input, plan, false, it) } }
     fun approve(root: Path, input: TransitionCohesionInput): Path { val plan = readDraft(root, input); val expected = plan.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId }.toSet(); require(reviewed(root) == expected) { "Review every current cohesion boundary before aggregate approval." }; val approved = plan.copy(approval = TransitionCohesionApproval.APPROVED); val text = json.encodeToString(TransitionCohesionPlan.serializer(), approved); return atomicWrite(root.resolve(APPROVED_FILE), text).also { persist(root, input, approved, true, expected) } }
     fun reject(root: Path, input: TransitionCohesionInput): Path { val rejected = atomicWrite(root.resolve("cohesion/rejected-${input.inputHash}.json"), Files.readString(root.resolve(DRAFT_FILE))); ProjectStore.read(root).takeIf { it.version == Project.CURRENT_VERSION }?.let { project -> ProjectStore.write(root, project.copy(workflow = project.workflow.invalidate(WorkflowChange.COHESION).copy(stale = project.workflow.stale + WorkflowArtifact.COHESION))) }; return rejected }
-    fun isApprovedCurrent(root: Path, input: TransitionCohesionInput): Boolean = runCatching { val workflow = ProjectStore.read(root).workflow.cohesion ?: return false; workflow.approved && workflow.inputSha256 == input.inputHash && workflow.structureSha256 == input.structureSha256 && workflow.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId } == input.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId } && workflow.boundaries.all { it.approved != null && it.bridgeSha256 != null && Files.isRegularFile(root.resolve(bridgeMidi(it.outgoingInstanceId, it.incomingInstanceId))) && digest(root.resolve(bridgeMidi(it.outgoingInstanceId, it.incomingInstanceId))) == it.bridgeSha256 } }.getOrDefault(false)
+    fun isApprovedCurrent(root: Path, input: TransitionCohesionInput): Boolean = runCatching {
+        val workflow = ProjectStore.read(root).workflow.cohesion ?: return false
+        workflow.approved && workflow.inputSha256 == input.inputHash && workflow.structureSha256 == input.structureSha256 &&
+            workflow.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId } == input.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId } &&
+            workflow.boundaries.all { it.approved != null && it.bridgeSha256 != null && Files.isRegularFile(root.resolve(bridgeMidi(it.outgoingInstanceId, it.incomingInstanceId))) && digest(root.resolve(bridgeMidi(it.outgoingInstanceId, it.incomingInstanceId))) == it.bridgeSha256 } &&
+            workflow.occurrences.isNotEmpty() && workflow.occurrences.all { occurrence -> occurrence.approved && Files.isRegularFile(root.resolve(occurrence.result.file)) && digest(root.resolve(occurrence.result.file)) == occurrence.result.sha256 }
+    }.getOrDefault(false)
     private fun reviewed(root: Path) = ProjectStore.read(root).workflow.cohesion?.boundaries.orEmpty().filter { it.approved != null }.map { it.outgoingInstanceId to it.incomingInstanceId }.toSet()
     private fun read(path: Path, input: TransitionCohesionInput) = json.decodeFromString(TransitionCohesionPlan.serializer(), Files.readString(path, StandardCharsets.UTF_8)).also { TransitionCohesionValidator.requireValid(it, input) }
     private fun persist(root: Path, input: TransitionCohesionInput, plan: TransitionCohesionPlan, approved: Boolean, reviewed: Set<Pair<String, String>>) {
         val text = json.encodeToString(TransitionCohesionPlan.serializer(), plan)
         val boundaries = plan.boundaries.map { bridge -> val pair = bridge.outgoingInstanceId to bridge.incomingInstanceId; val draft = CohesionBoundaryArtifactPaths.draft(bridge.outgoingInstanceId, bridge.incomingInstanceId); atomicWrite(root.resolve(draft), json.encodeToString(TransitionBridgePlan.serializer(), bridge)); val approvedFile = CohesionBoundaryArtifactPaths.approved(bridge.outgoingInstanceId, bridge.incomingInstanceId); if (pair in reviewed) atomicWrite(root.resolve(approvedFile), json.encodeToString(TransitionBridgePlan.serializer(), bridge)); CohesionBoundaryReference(bridge.outgoingInstanceId, bridge.incomingInstanceId, input.inputHash, WorkflowArtifactReference(draft, digest(root.resolve(draft))), if (pair in reviewed) WorkflowArtifactReference(approvedFile, digest(root.resolve(approvedFile))) else null, digest(root.resolve(bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId)))) }
         val project = ProjectStore.read(root); if (project.version != Project.CURRENT_VERSION) return
-        val workflow = project.workflow.invalidate(WorkflowChange.COHESION).markCurrent(WorkflowArtifact.COHESION).copy(cohesion = CohesionWorkflowReferences(input.inputHash, WorkflowArtifactReference(if (approved) APPROVED_FILE else DRAFT_FILE, digestText(text)), emptyList(), approved, boundaries, input.structureSha256))
+        val occurrenceEvidence = input.boundaries.flatMap { listOf(it.outgoingInstanceId to it.outgoing, it.incomingInstanceId to it.incoming) }.toMap()
+        val selected = SelectedMidiArtifactResolver()
+        val occurrences = project.envelope.structureOccurrences.map { occurrence ->
+            val source = selected.resolve(root, project, occurrence.partId)
+            val relative = CohesionOccurrenceArtifactPaths.output(occurrence.id, source.sha256)
+            val evidence = occurrenceEvidence[occurrence.id]
+            if (evidence == null) {
+                require(plan.boundaries.isEmpty()) { "Cohesion is missing melody evidence for occurrence '${occurrence.id}'" }
+                Files.createDirectories(root.resolve(relative).parent)
+                Files.copy(source.path, root.resolve(relative), StandardCopyOption.REPLACE_EXISTING)
+            } else {
+                require(source.sha256 == evidence.sourceHash) { "Cohesion occurrence source is stale" }
+                CohesionMelodyApplier.write(source.path, root.resolve(relative), evidence, plan.boundaries.flatMap(TransitionBridgePlan::melodyEdits).filter { it.occurrenceInstanceId == occurrence.id })
+            }
+            CohesionOccurrenceReference(occurrence.id, source.sha256, WorkflowArtifactReference(relative, digest(root.resolve(relative))), approved)
+        }
+        val workflow = project.workflow.invalidate(WorkflowChange.COHESION).markCurrent(WorkflowArtifact.COHESION).copy(cohesion = CohesionWorkflowReferences(input.inputHash, WorkflowArtifactReference(if (approved) APPROVED_FILE else DRAFT_FILE, digestText(text)), occurrences, approved, boundaries, input.structureSha256))
         ProjectStore.write(root, project.copy(workflow = workflow))
     }
     private fun atomicWrite(path: Path, text: String): Path { Files.createDirectories(path.parent); val tmp = path.resolveSibling(".${path.fileName}.tmp"); try { Files.writeString(tmp, text, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING); try { Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE) } catch (_: AtomicMoveNotSupportedException) { Files.move(tmp, path, StandardCopyOption.REPLACE_EXISTING) }; return path } finally { Files.deleteIfExists(tmp) } }
@@ -355,7 +630,11 @@ object TransitionCohesionInputFactory {
         val sections = planning.sectionsWithIdentity(); require(arrangement.sections.map { it.instanceId } == sections.map { it.instanceId }) { "Approved arrangement does not match saved Structure" }
         val selected = SelectedMidiArtifactResolver(); val evidence = sections.associate { section ->
             val artifact = selected.resolve(root, project, section.partId); val analysis = planning.analyses.getValue(section.partId); val arranged = arrangement.sections.first { it.instanceId == section.instanceId }; val reference = requireNotNull(project.parts.first { it.id == section.partId }.analysis)
-            section.instanceId to TransitionMusicalEvidence(section.partId, artifact.sha256, sha256(Files.readAllBytes(root.resolve(reference.file))), analysis.ppq, analysis.durationTicks, analysis.key, analysis.chords, analysis.tempoMap.first(), analysis.timeSignatures.first(), analysis.energy, boundary(artifact.path, analysis.durationTicks), arrangementEvidence(section, arranged))
+            section.instanceId to TransitionMusicalEvidence(
+                section.partId, artifact.sha256, sha256(Files.readAllBytes(root.resolve(reference.file))), analysis.ppq,
+                analysis.durationTicks, analysis.key, analysis.chords, analysis.tempoMap.first(), analysis.timeSignatures.first(),
+                analysis.energy, boundary(artifact.path, analysis.durationTicks), arrangementEvidence(section, arranged), melody(artifact.path)
+            )
         }
         val approvedRoles = arrangement.sections.flatMap { it.instruments }.map { it.name }.filter { it != "piano" }.distinct()
         // Older deterministic arrangement evidence may omit low-density generated
@@ -392,6 +671,25 @@ object TransitionCohesionInputFactory {
     private fun arrangementEvidence(section: SongPlanningSectionInstance, arrangement: DetailedArrangementSection) = TransitionArrangementEvidence(section.occurrenceHash, arrangement.role, arrangement.instruments.map { TransitionInstrumentEvidence(it.name, it::class.simpleName.orEmpty(), density(it)) }.sortedBy { it.instrument }, sha256(Json { encodeDefaults = true }.encodeToString(StructureVariationOverrides.serializer(), section.variationOverrides).toByteArray()))
     private fun density(instrument: DetailedInstrumentPlan): Double? = when (instrument) { is BassInstrumentPlan -> instrument.density; is DrumsInstrumentPlan -> instrument.density; is PadInstrumentPlan -> instrument.density; is StringsInstrumentPlan -> instrument.density; else -> null }
     private fun boundary(path: Path, duration: Long): TransitionBoundarySummary { val sequence = MidiSystem.getSequence(path.toFile()); val notes = sequence.tracks.flatMap { track -> (0 until track.size()).map { track[it] } }.mapNotNull { event -> (event.message as? ShortMessage)?.takeIf { it.command == ShortMessage.NOTE_ON && it.data2 > 0 }?.let { event.tick } }; return TransitionBoundarySummary(notes.any { it == 0L }, notes.any { it >= duration }, notes.minOrNull(), notes.maxOrNull()) }
+    private fun melody(path: Path): List<CohesionMelodyNote> {
+        val active = mutableMapOf<Pair<Int, Int>, ArrayDeque<Pair<Long, Int>>>()
+        val result = mutableListOf<CohesionMelodyNote>()
+        MidiSystem.getSequence(path.toFile()).tracks.forEach { track ->
+            (0 until track.size()).forEach { index ->
+                val event = track[index]; val message = event.message as? ShortMessage ?: return@forEach
+                val key = message.channel to message.data1
+                if (message.command == ShortMessage.NOTE_ON && message.data2 > 0) {
+                    active.getOrPut(key) { ArrayDeque() }.addLast(event.tick to message.data2)
+                } else if (message.command == ShortMessage.NOTE_OFF || message.command == ShortMessage.NOTE_ON && message.data2 == 0) {
+                    val start = active[key]?.removeFirstOrNull() ?: throw IllegalArgumentException("Selected melody has an unmatched note-off")
+                    require(event.tick > start.first) { "Selected melody has a non-positive note" }
+                    result += CohesionMelodyNote("n-${result.size.toString().padStart(5, '0')}", message.channel, message.data1, start.second, start.first, event.tick)
+                }
+            }
+        }
+        require(active.values.all { it.isEmpty() } && result.size <= 4_000) { "Selected melody cannot be represented by Cohesion" }
+        return result.sortedWith(compareBy<CohesionMelodyNote> { it.startTick }.thenBy { it.pitch }).mapIndexed { index, note -> note.copy(id = "n-${index.toString().padStart(5, '0')}") }
+    }
     private val HASH = Regex("[0-9a-f]{64}")
 }
 private fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }

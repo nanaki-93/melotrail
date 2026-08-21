@@ -16,6 +16,7 @@ import app.melotrail.profile.BundledCompositionProfileCatalog
 import app.melotrail.profile.CompositionProfileRef
 import app.melotrail.profile.MoodRef
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -158,15 +159,65 @@ class EnhancementTest {
         assertTrue(report.acceptedPlanSha256 != null)
     }
 
-    private fun writeMidi(path: Path) {
+    @Test
+    fun `validated applier may add remove and resize notes without changing melody anchors or source`() {
+        val input = root.resolve("corrected.mid")
+        writeMidi(input, noteCount = 40)
+        val sourceBytes = Files.readAllBytes(input)
+        val context = context(input, intensity = EnhancementIntensity.CREATIVE)
+        val plan = EnhancementPlan(
+            subjectHash = sha256Subject(context), inputSha256 = context.correctedInputSha256, contextSha256 = context.contextSha256,
+            processorId = "fixture", processorVersion = "1", placeholder = false,
+            model = EnhancementModelIdentity("qwen", "fixture", "1", "apache-2.0"),
+            goals = setOf(EnhancementGoal.PASSING_NOTE, EnhancementGoal.PHRASE_ENDING),
+            edits = listOf(
+                EnhancementEdit(EnhancementEditKind.REMOVE_NOTE, "n-00005", goal = EnhancementGoal.REPETITION_REDUCTION, reason = "remove repeated middle note"),
+                EnhancementEdit(EnhancementEditKind.ADD_NOTE, "add-00000", goal = EnhancementGoal.PASSING_NOTE, reason = "connect the middle phrase", pitch = 62,
+                    velocity = 68, startTick = 2_400, durationTicks = 120, channel = 0, anchorNoteId = "n-00004"),
+                EnhancementEdit(EnhancementEditKind.DURATION, "n-00010", 360, EnhancementGoal.PHRASE_ENDING, "shape the phrase ending")
+            )
+        )
+
+        val output = root.resolve("enhanced-structural.mid")
+        val report = ValidatedEnhancementMidiApplier().apply(input, output, context, plan)
+        val notes = midiNotes(output)
+
+        assertArrayEquals(sourceBytes, Files.readAllBytes(input))
+        assertEquals(40, notes.size)
+        assertEquals(60 to 60, notes.first().second to notes.last().second)
+        assertTrue(notes.any { (start, pitch, end) -> start == 2_400L && pitch == 62 && end == 2_520L })
+        assertTrue(notes.any { (start, _, end) -> start == 4_800L && end == 5_160L })
+        assertEquals(7, report.identityDistancePercent)
+    }
+
+    private fun writeMidi(path: Path, noteCount: Int = 20) {
         val sequence = javax.sound.midi.Sequence(javax.sound.midi.Sequence.PPQ, 480)
         val track = sequence.createTrack()
-        repeat(20) { index ->
+        repeat(noteCount) { index ->
             val start = index * 480L
             track.add(javax.sound.midi.MidiEvent(javax.sound.midi.ShortMessage(javax.sound.midi.ShortMessage.NOTE_ON, 0, 60, 70), start))
             track.add(javax.sound.midi.MidiEvent(javax.sound.midi.ShortMessage(javax.sound.midi.ShortMessage.NOTE_OFF, 0, 60, 0), start + 240))
         }
         javax.sound.midi.MidiSystem.write(sequence, 1, path.toFile())
+    }
+
+    private fun midiNotes(path: Path): List<Triple<Long, Int, Long>> {
+        val active = mutableMapOf<Pair<Int, Int>, ArrayDeque<Long>>()
+        val notes = mutableListOf<Triple<Long, Int, Long>>()
+        javax.sound.midi.MidiSystem.getSequence(path.toFile()).tracks.forEach { track ->
+            (0 until track.size()).forEach { index ->
+                val event = track[index]
+                val message = event.message as? javax.sound.midi.ShortMessage ?: return@forEach
+                val key = message.channel to message.data1
+                if (message.command == javax.sound.midi.ShortMessage.NOTE_ON && message.data2 > 0) {
+                    active.getOrPut(key) { ArrayDeque() }.addLast(event.tick)
+                } else if (message.command == javax.sound.midi.ShortMessage.NOTE_OFF ||
+                    message.command == javax.sound.midi.ShortMessage.NOTE_ON && message.data2 == 0) {
+                    notes += Triple(active.getValue(key).removeFirst(), message.data1, event.tick)
+                }
+            }
+        }
+        return notes.sortedWith(compareBy<Triple<Long, Int, Long>> { it.first }.thenBy { it.second })
     }
 
     private fun sha256Subject(context: MusicalProcessingContext): String = java.security.MessageDigest.getInstance("SHA-256")

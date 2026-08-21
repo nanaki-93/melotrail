@@ -5,6 +5,7 @@ import app.melotrail.arrangement.ArrangementApprovalReferences
 import app.melotrail.arrangement.ArrangementAssignmentReference
 import app.melotrail.arrangement.ArrangementRoleSelection
 import app.melotrail.arrangement.ArrangementSoundContext
+import app.melotrail.arrangement.ArrangementHarmonyContext
 import app.melotrail.arrangement.DetailedArrangement
 import app.melotrail.arrangement.DetailedArrangementInput
 import app.melotrail.arrangement.DetailedArrangementPlanner
@@ -193,7 +194,9 @@ class DefaultArrangementApplicationService(
         val arrangement = readApproved(normalized, input)
         val analyses = midiAnalyses(normalized, project, project.parts.map { it.id }.toSet())
         val active = arrangement.sections.flatMap { it.instruments }.filter { it.mode == InstrumentMode.GENERATED }.map { it.name }.toSet()
-        val total = active.size + if (arrangement.sections.any { it.transitionOut.type.name != "NONE" }) 1 else 0
+        val approvedCohesion = project.workflow.cohesion?.approved == true && WorkflowArtifact.COHESION !in project.workflow.stale
+        val needsTransitionMidi = approvedCohesion || arrangement.sections.any { it.transitionOut.type.name != "NONE" }
+        val total = active.size + if (needsTransitionMidi) 1 else 0
         var stage = 0
         val artifacts = mutableListOf<GeneratedMidiArtifact>()
         fun emit(name: String, path: Path, events: Int) {
@@ -222,7 +225,7 @@ class DefaultArrangementApplicationService(
             val path = normalized.resolve("midi/generated/strings.mid"); generating("strings", path)
             StringsMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("strings", it.path, it.notes.size) }
         }
-        if (arrangement.sections.any { it.transitionOut.type.name != "NONE" }) {
+        if (needsTransitionMidi) {
             coroutineContext.ensureActive()
             val path = normalized.resolve("midi/generated/transitions.mid"); generating("transitions", path)
             MidiTransitionGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("transitions", it.path, it.result.events.size) }
@@ -310,7 +313,8 @@ class DefaultArrangementApplicationService(
         val part = project.parts.find { it.id == id } ?: throw IllegalArgumentException("Structure references unknown part '$id'")
         val reference = requireNotNull(part.analysis) { "Missing MIDI analysis for part '$id'. Run part analyze first." }
         require(reference.kind?.name == "MIDI") { "MIDI analysis is required for part '$id'. Run part analyze first." }
-        json.decodeFromString(MidiAnalysis.serializer(), Files.readString(root.resolve(reference.file), StandardCharsets.UTF_8))
+        val analysis = json.decodeFromString(MidiAnalysis.serializer(), Files.readString(root.resolve(reference.file), StandardCharsets.UTF_8))
+        ArrangementHarmonyContext.apply(analysis, part.sectionType, project.envelope.harmony)
     }
 
     private fun approvalReferences(root: Path, project: Project, input: SongPlanningInput): ArrangementApprovalReferences {

@@ -265,6 +265,14 @@ object CohesionBoundaryArtifactPaths {
         "${directory(outgoingInstanceId, incomingInstanceId)}/boundary.json"
 }
 
+/** One derived melody per stable occurrence; the selected part MIDI remains immutable. */
+object CohesionOccurrenceArtifactPaths {
+    fun output(instanceId: String, inputSha256: String): String {
+        require(SHA_256.matches(inputSha256)) { "Cohesion occurrence input fingerprint is invalid" }
+        return "cohesion/occurrences/${safeId(instanceId, "cohesion occurrence")}/$inputSha256/cohesive.mid"
+    }
+}
+
 /** One fingerprinted boundary between adjacent, stable Structure occurrences. */
 @Serializable
 data class CohesionBoundaryReference(
@@ -305,6 +313,7 @@ data class CohesionOccurrenceReference(
     init {
         require(SAFE_ID.matches(instanceId)) { "Cohesion occurrence ID is invalid" }
         require(SHA_256.matches(sourceSha256)) { "Cohesion source fingerprint is invalid" }
+        require(result.file == CohesionOccurrenceArtifactPaths.output(instanceId, sourceSha256)) { "Cohesion occurrence artifact path is not canonical" }
     }
 }
 
@@ -314,7 +323,7 @@ data class CohesionWorkflowReferences(
     val plan: WorkflowArtifactReference,
     val occurrences: List<CohesionOccurrenceReference>,
     val approved: Boolean,
-    /** Historical whole-occurrence evidence only; new Cohesion writes this empty. */
+    /** Per-boundary plan and bridge evidence used to derive [occurrences]. */
     val boundaries: List<CohesionBoundaryReference> = emptyList(),
     /** The saved Structure occurrence sequence that produced [inputSha256]. */
     val structureSha256: String = ""

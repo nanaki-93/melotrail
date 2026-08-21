@@ -26,9 +26,9 @@ enum class EnhancementIntensity { OFF, SUBTLE, BALANCED, CREATIVE }
 @Serializable
 enum class EnhancementSelection { PENDING, CORRECTED, ENHANCED }
 
-/** Code-owned edit vocabulary. It deliberately excludes generated notes, harmony, tempo and paths. */
+/** Code-owned melody edit vocabulary. Tempo, meter, structure and paths remain outside the model contract. */
 @Serializable
-enum class EnhancementEditKind { VELOCITY, TIMING, PITCH }
+enum class EnhancementEditKind { VELOCITY, TIMING, PITCH, DURATION, ADD_NOTE, REMOVE_NOTE }
 
 /** The model may select only these bounded musical intentions; Kotlin owns the edit mechanics. */
 @Serializable
@@ -38,13 +38,26 @@ enum class EnhancementGoal { PHRASE_ENDING, FLOW_CONTOUR, CHORD_CLASH, PASSING_N
 data class EnhancementEdit(
     val kind: EnhancementEditKind,
     val noteId: String,
-    val value: Long,
+    val value: Long = 0,
     val goal: EnhancementGoal = EnhancementGoal.FLOW_CONTOUR,
-    val reason: String = "bounded musical adjustment"
+    val reason: String = "bounded musical adjustment",
+    /** ADD_NOTE payload. Existing-note edits must leave these fields null. */
+    val pitch: Int? = null,
+    val velocity: Int? = null,
+    val startTick: Long? = null,
+    val durationTicks: Long? = null,
+    val channel: Int? = null,
+    val anchorNoteId: String? = null
 ) {
     init {
-        require(ENHANCEMENT_NOTE_ID.matches(noteId)) { "Enhancement note ID is invalid" }
-        require(value in -127L..127L) { "Enhancement edit value is outside the hard safety range" }
+        require(ENHANCEMENT_EDIT_ID.matches(noteId)) { "Enhancement note ID is invalid" }
+        require(anchorNoteId == null || ENHANCEMENT_NOTE_ID.matches(anchorNoteId)) { "Enhancement anchor note ID is invalid" }
+        require(value in -9_600L..9_600L) { "Enhancement edit value is outside the hard safety range" }
+        pitch?.let { require(it in 0..127) { "Enhancement pitch is invalid" } }
+        velocity?.let { require(it in 1..127) { "Enhancement velocity is invalid" } }
+        startTick?.let { require(it >= 0) { "Enhancement start tick is invalid" } }
+        durationTicks?.let { require(it > 0) { "Enhancement duration is invalid" } }
+        channel?.let { require(it in 0..15) { "Enhancement channel is invalid" } }
         require(reason.isNotBlank() && reason.length <= 160 && reason.none { it.isISOControl() }) { "Enhancement edit reason is invalid" }
     }
 }
@@ -137,6 +150,7 @@ data class MusicalProcessingContext(
     val scalePitchClasses: List<Int>,
     val sectionChords: List<EnhancementChordContext>,
     val bpm: Int,
+    val ppq: Int = 480,
     val meterNumerator: Int,
     val meterDenominator: Int,
     val profile: EnhancementProfileContext,
@@ -154,7 +168,7 @@ data class MusicalProcessingContext(
             "Enhancement key/scale context is invalid"
         }
         require(sectionChords.map(EnhancementChordContext::sectionId).distinct().size == sectionChords.size) { "Enhancement sections are duplicated" }
-        require(bpm in 30..240 && meterNumerator in 1..12 && meterDenominator in setOf(1, 2, 4, 8, 16)) { "Enhancement tempo or meter is invalid" }
+        require(bpm in 30..240 && ppq in 24..9_600 && meterNumerator in 1..12 && meterDenominator in setOf(1, 2, 4, 8, 16)) { "Enhancement tempo or meter is invalid" }
         require(ENHANCEMENT_ID.matches(sectionId) && ENHANCEMENT_ID.matches(partId) && ENHANCEMENT_HASH.matches(correctedInputSha256) &&
             ENHANCEMENT_VERSION.matches(pipelineVersion) && ENHANCEMENT_HASH.matches(contextSha256)) { "Enhancement identity is invalid" }
         require(notes.size <= 512 && notes.map(EnhancementNoteSummary::id).distinct().size == notes.size) { "Enhancement note context is invalid" }
@@ -164,7 +178,7 @@ data class MusicalProcessingContext(
 
     fun cacheKey(): String = contextSha256
 
-    companion object { const val VERSION = 2 }
+    companion object { const val VERSION = 3 }
 }
 
 /** Strict wire plan. A non-placeholder run must identify its licensed model. */
@@ -270,6 +284,12 @@ object EnhancementPlanValidator {
                 EnhancementEditKind.VELOCITY -> require(kotlin.math.abs(edit.value) <= policy.maximumVelocityDelta) { "Enhancement velocity edit exceeds policy" }
                 EnhancementEditKind.TIMING -> require(kotlin.math.abs(edit.value) <= policy.maximumTimingShiftMs) { "Enhancement timing edit exceeds policy" }
                 EnhancementEditKind.PITCH -> require(kotlin.math.abs(edit.value) <= 2) { "Enhancement pitch edit exceeds the bounded range" }
+                EnhancementEditKind.DURATION -> require(edit.value > 0) { "Enhancement duration must be positive" }
+                EnhancementEditKind.REMOVE_NOTE -> require(ENHANCEMENT_NOTE_ID.matches(edit.noteId) && edit.value == 0L) { "Enhancement removal must reference an existing note" }
+                EnhancementEditKind.ADD_NOTE -> require(
+                    ENHANCEMENT_ADDED_NOTE_ID.matches(edit.noteId) && edit.value == 0L && edit.pitch != null && edit.velocity != null &&
+                        edit.startTick != null && edit.durationTicks != null && edit.channel != null && edit.anchorNoteId != null
+                ) { "Enhancement addition is incomplete" }
             }
         }
         require(policy.intensity != EnhancementIntensity.OFF || plan.edits.isEmpty()) { "Off enhancement cannot contain edits" }
@@ -347,6 +367,8 @@ object MusicalProcessingContextFactory {
             scalePitchClasses = settings.key.scalePitchClasses().map { it.chromatic },
             sectionChords = project.envelope.harmony?.progressions.orEmpty().sortedBy { it.sectionType.value }.map(::chords),
             bpm = settings.tempo.bpm.toInt(),
+            ppq = runCatching { MidiSystem.getSequence(correctedInput.toFile()).resolution }
+                .getOrDefault(480),
             meterNumerator = settings.timeSignature.numerator,
             meterDenominator = settings.timeSignature.denominator,
             profile = profileContext(resolved),
@@ -413,6 +435,8 @@ private fun enhancementSha256(bytes: ByteArray): String = MessageDigest.getInsta
 private val JSON = Json { encodeDefaults = true; explicitNulls = false; ignoreUnknownKeys = false }
 private val ENHANCEMENT_ID = Regex("[A-Za-z0-9_-]{1,80}")
 private val ENHANCEMENT_NOTE_ID = Regex("n-[0-9]{5}")
+private val ENHANCEMENT_ADDED_NOTE_ID = Regex("add-[0-9]{5}")
+private val ENHANCEMENT_EDIT_ID = Regex("(?:n|add)-[0-9]{5}")
 private val ENHANCEMENT_VERSION = Regex("[A-Za-z0-9._-]{1,80}")
 private val ENHANCEMENT_LICENSE = Regex("[A-Za-z0-9._+-]{1,80}")
 private val ENHANCEMENT_HASH = Regex("[0-9a-f]{64}")

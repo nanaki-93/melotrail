@@ -1283,6 +1283,15 @@ internal fun MixPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Un
         Checkbox(state.buildOptions.loFi, { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(loFi = it))) }, enabled = !disabled); Text("Lo-fi audio texture", modifier = Modifier.padding(top = 12.dp))
         Checkbox(state.buildOptions.mp3, { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(mp3 = it))) }, enabled = !disabled); Text("MP3", modifier = Modifier.padding(top = 12.dp))
     }
+    if (state.buildOptions.loFi) {
+        val presets = app.melotrail.application.LoFiPresetId.entries
+        TextButton(onClick = {
+            val next = presets[(presets.indexOf(state.buildOptions.loFiPreset) + 1) % presets.size]
+            onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(loFiPreset = next)))
+        }, enabled = !disabled) { Text("Preset: ${state.buildOptions.loFiPreset.name.lowercase().replaceFirstChar(Char::uppercase)}") }
+        Text("Lo-fi strength ${(state.buildOptions.loFiStrength * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
+        Slider(value = state.buildOptions.loFiStrength.toFloat(), onValueChange = { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(loFiStrength = it.toDouble()))) }, valueRange = 0f..1f, enabled = !disabled)
+    }
     BuildLifecycle(state, onIntent)
     CommercialReadinessPanel(state, onIntent)
     PlaybackSourceSelector(state, onIntent)

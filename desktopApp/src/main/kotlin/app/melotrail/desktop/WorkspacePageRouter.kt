@@ -2145,7 +2145,16 @@ private fun MixMasterPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(checked = state.buildOptions.loFi, onCheckedChange = { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(loFi = it))) }, enabled = !mutating,
                                 modifier = Modifier.semantics { testTag = WorkspacePageTags.MIX_LOFI; contentDescription = "Apply the fixed supported Lo-fi audio texture during Build Song." })
-                            Text("Fixed Bedroom LoFi preset", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Lo-fi texture", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        if (state.buildOptions.loFi) {
+                            val presets = app.melotrail.application.LoFiPresetId.entries
+                            TextButton(onClick = {
+                                val next = presets[(presets.indexOf(state.buildOptions.loFiPreset) + 1) % presets.size]
+                                onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(loFiPreset = next)))
+                            }, enabled = !mutating) { Text("Preset: ${state.buildOptions.loFiPreset.name.lowercase().replaceFirstChar(Char::uppercase)}") }
+                            Text("Strength ${(state.buildOptions.loFiStrength * 100).toInt()}%", style = MaterialTheme.typography.labelMedium)
+                            Slider(value = state.buildOptions.loFiStrength.toFloat(), onValueChange = { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(loFiStrength = it.toDouble()))) }, valueRange = 0f..1f, enabled = !mutating)
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(checked = state.buildOptions.mp3, onCheckedChange = { onIntent(WorkspaceIntent.UpdateBuildOptions(state.buildOptions.copy(mp3 = it))) }, enabled = !mutating,

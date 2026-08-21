@@ -81,7 +81,7 @@ data class PadGenerationResult(val notes: List<PadMidiNote>, val diagnostics: Li
 
 /**
  * Deterministic sustained harmony. Supported symbols are major/minor triads,
- * dominant/major/minor sevenths, and sus2/sus4 chords, with an optional sharp
+ * dominant/major/minor sevenths, ninths, add9, and sus2/sus4 chords, with an optional sharp
  * or flat root. Chords need >= 0.75 confidence. A weak chord may use only the
  * analyzed key tonic at >= 0.70 confidence; unsupported confident symbols and
  * missing chord segments remain silent rather than being guessed.
@@ -144,6 +144,9 @@ class DeterministicPadMidiGenerator {
             "7" -> intArrayOf(0, 4, 7, 10)
             "maj7" -> intArrayOf(0, 4, 7, 11)
             "m7", "min7" -> intArrayOf(0, 3, 7, 10)
+            "maj9" -> intArrayOf(0, 4, 7, 11, 14)
+            "m9", "min9" -> intArrayOf(0, 3, 7, 10, 14)
+            "add9" -> intArrayOf(0, 4, 7, 14)
             "sus2" -> intArrayOf(0, 2, 7)
             "sus4", "sus" -> intArrayOf(0, 5, 7)
             else -> return null
@@ -216,7 +219,7 @@ class DeterministicPadMidiGenerator {
         const val MIN_VELOCITY = 34
         const val MAX_VELOCITY = 76
         const val RELEASE_GAP_DIVISOR = 24
-        val CHORD_SYMBOL = Regex("^([A-G](?:#|b)?)(|m|min|7|maj7|m7|min7|sus2|sus4|sus)$", RegexOption.IGNORE_CASE)
+        val CHORD_SYMBOL = Regex("^([A-G](?:#|b)?)(|m|min|7|maj7|m7|min7|maj9|m9|min9|add9|sus2|sus4|sus)$", RegexOption.IGNORE_CASE)
     }
 }
 

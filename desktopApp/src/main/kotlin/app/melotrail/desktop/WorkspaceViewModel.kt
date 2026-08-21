@@ -34,6 +34,7 @@ import app.melotrail.application.LogicalMixSetting
 import app.melotrail.application.DefaultMixApplicationService
 import app.melotrail.application.BuildApplicationService
 import app.melotrail.application.BuildSongRequest
+import app.melotrail.application.LoFiPresetId
 import app.melotrail.application.HumanizationApplicationService
 import app.melotrail.application.DefaultHumanizationApplicationService
 import app.melotrail.application.HumanizationSnapshot
@@ -227,7 +228,12 @@ data class AudioPreparationUiState(
     val transcriptionInput: TranscriptionInputArtifact = TranscriptionInputArtifact.SOURCE
 )
 
-data class BuildOptionsDraft(val loFi: Boolean = false, val mp3: Boolean = false)
+data class BuildOptionsDraft(
+    val loFi: Boolean = false,
+    val mp3: Boolean = false,
+    val loFiPreset: LoFiPresetId = LoFiPresetId.MEDIUM,
+    val loFiStrength: Double = 1.0
+)
 data class ExportDraft(
     val format: ReleaseExportFormat = ReleaseExportFormat.WAV,
     val filename: String = "song.wav",
@@ -2643,7 +2649,11 @@ class WorkspaceViewModel(
         val feedbackId = beginFeedback(OperationKind.MASTERING, OperationPhase.VALIDATING, "Validating release pipeline…", cancellableAtBoundary = true)
         mutableState.update { it.copy(operation = WorkspaceOperation.BuildingSong(), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
         buildJob = scope.launch {
-            runCatching { withContext(ioDispatcher) { service.build(BuildSongRequest(project.root, options.loFi, options.mp3)) { progress -> scope.launch { updateProgress(feedbackId, WorkspaceOperation.BuildingSong(progress)) } } } }
+            runCatching { withContext(ioDispatcher) {
+                service.build(BuildSongRequest(project.root, options.loFi, options.mp3, loFiPreset = options.loFiPreset, loFiStrength = options.loFiStrength)) {
+                    progress -> scope.launch { updateProgress(feedbackId, WorkspaceOperation.BuildingSong(progress)) }
+                }
+            } }
                 .onSuccess { result ->
                     val (refreshed, loadedMix) = withContext(ioDispatcher) {
                         projectService.open(project.root) to runCatching { mixService.load(project.root) }

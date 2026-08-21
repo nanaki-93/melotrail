@@ -5,6 +5,7 @@ import app.melotrail.arrangement.DeterministicStemMixer
 import app.melotrail.arrangement.MixedStem
 import app.melotrail.arrangement.ProjectWorkflowStore
 import app.melotrail.arrangement.WorkflowArtifact
+import app.melotrail.audio.AudioBuffer
 import app.melotrail.audio.WAVDecoder
 import app.melotrail.dsp.DSPChain
 import app.melotrail.dsp.LOFIPresets
@@ -27,12 +28,17 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.coroutineContext
 import kotlin.math.abs
+import kotlin.math.sqrt
+
+enum class LoFiPresetId { SUBTLE, MEDIUM, PRONOUNCED }
 
 data class BuildSongRequest(
     val root: Path,
     val enableLoFi: Boolean = false,
     val enableMp3: Boolean = false,
-    val mp3BitrateKbps: Int = 320
+    val mp3BitrateKbps: Int = 320,
+    val loFiPreset: LoFiPresetId = LoFiPresetId.MEDIUM,
+    val loFiStrength: Double = 1.0
 )
 
 data class BuildResult(
@@ -71,6 +77,7 @@ class DefaultBuildApplicationService(
 ) : BuildApplicationService {
     override suspend fun build(request: BuildSongRequest, progress: ProgressSink): BuildResult {
         require(request.mp3BitrateKbps in MP3_BITRATES) { "MP3 bitrate must be one of ${MP3_BITRATES.sorted().joinToString()} kbps" }
+        require(request.loFiStrength.isFinite() && request.loFiStrength in 0.0..1.0) { "Lo-fi strength must be from 0.0 to 1.0" }
         val root = request.root.toAbsolutePath().normalize()
         val lock = locks.computeIfAbsent(root) { Mutex() }
         if (!lock.tryLock()) throw ApplicationServiceException(ApplicationErrorCategory.PREREQUISITE, "Another project mutation is already running: $root")
@@ -119,7 +126,7 @@ class DefaultBuildApplicationService(
                 val masteringInput = if (request.enableLoFi) {
                     val lofi = root.resolve("mix/lofi.wav")
                     stage(progress, 7, "Applying Lo-fi audio texture", lofi) {
-                        publishWav(lofi, "lofi") { temporary -> applyLoFi(repaired, temporary) }
+                        publishWav(lofi, "lofi") { temporary -> applyLoFi(repaired, temporary, request.loFiPreset, request.loFiStrength) }
                         requireCompatible(validate(repaired, "Repair"), validate(lofi, "Lo-fi audio texture"), "Lo-fi audio texture")
                     }
                     lofi
@@ -171,11 +178,28 @@ class DefaultBuildApplicationService(
         return action()
     }
 
-    private fun applyLoFi(input: Path, output: Path) {
+    private fun applyLoFi(input: Path, output: Path, presetId: LoFiPresetId, strength: Double) {
         val audio = WAVDecoder(ErrorReporter.NoOp).decode(input)
-        val preset = checkNotNull(LOFIPresets.getByName("Bedroom LoFi"))
-        val processed = DSPChain.createDefaultChain(preset.settings, audio.format.sampleRate, audio.format.channels).process(audio)
-        DeterministicStemMixer().writeWav(MixedStem(processed, listOf("lofi")), output)
+        val name = when (presetId) {
+            LoFiPresetId.SUBTLE -> "Warm Cassette"
+            LoFiPresetId.MEDIUM -> "Bedroom LoFi"
+            LoFiPresetId.PRONOUNCED -> "Old Sampler"
+        }
+        val preset = checkNotNull(LOFIPresets.getByName(name))
+        val settings = preset.settings.copy(amount = (preset.settings.amount * strength).coerceIn(0.0, 1.0))
+        val processed = DSPChain.createDefaultChain(settings, audio.format.sampleRate, audio.format.channels).process(audio)
+        DeterministicStemMixer().writeWav(MixedStem(loudnessMatch(audio, processed), listOf("lofi", presetId.name.lowercase())), output)
+    }
+
+    /** Whole-file RMS matching keeps A/B judgments about character rather than gain. */
+    private fun loudnessMatch(reference: AudioBuffer, processed: AudioBuffer): AudioBuffer {
+        fun rms(samples: FloatArray) = sqrt(samples.sumOf { value -> value.toDouble() * value } / samples.size.coerceAtLeast(1))
+        val target = rms(reference.samples); val current = rms(processed.samples)
+        if (target <= 1e-9 || current <= 1e-9) return processed
+        val gain = (target / current).coerceIn(0.5, 2.0)
+        val peak = processed.samples.maxOfOrNull { abs(it) }?.toDouble()?.times(gain) ?: 0.0
+        val safeGain = if (peak > 0.98) gain * 0.98 / peak else gain
+        return processed.copy(samples = FloatArray(processed.samples.size) { index -> (processed.samples[index] * safeGain).toFloat() })
     }
 
     private suspend fun publishWav(target: Path, label: String, action: suspend (Path) -> Unit) {
@@ -213,6 +237,9 @@ class DefaultBuildApplicationService(
             frameCount = audio.frames, durationSeconds = audio.frames.toDouble() / audio.sampleRate, peak = audio.peak,
             peakDb = if (audio.peak == 0.0) Double.NEGATIVE_INFINITY else 20.0 * kotlin.math.log10(audio.peak),
             repairEnabled = true, loFiAudioTextureEnabled = request.enableLoFi,
+            loFiPreset = request.loFiPreset.takeIf { request.enableLoFi }?.name?.lowercase(),
+            loFiStrength = request.loFiStrength.takeIf { request.enableLoFi },
+            loFiMeanAbsoluteDelta = if (request.enableLoFi) audioDelta(root.resolve("mix/repaired.wav"), root.resolve("mix/lofi.wav")) else null,
             mp3 = mp3?.let { DesktopMp3Metadata("song.mp3", digest(it), request.mp3BitrateKbps) }
         )
         val target = root.resolve("output/release.json")
@@ -226,6 +253,11 @@ class DefaultBuildApplicationService(
     }
 
     private fun digest(path: Path): String = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
+    private fun audioDelta(left: Path, right: Path): Double {
+        val a = WAVDecoder(ErrorReporter.NoOp).decode(left).samples; val b = WAVDecoder(ErrorReporter.NoOp).decode(right).samples
+        require(a.size == b.size) { "Lo-fi comparison length mismatch" }
+        return a.indices.sumOf { abs(a[it] - b[it]).toDouble() } / a.size.coerceAtLeast(1)
+    }
     private fun category(error: Throwable) = when (error) {
         is java.io.IOException -> ApplicationErrorCategory.IO
         is IllegalArgumentException -> ApplicationErrorCategory.VALIDATION
@@ -239,7 +271,9 @@ class DefaultBuildApplicationService(
         val inputFingerprint: String, val inputSampleRate: Int, val inputChannels: Int, val inputPcmBitDepth: Int,
         val sampleRate: Int, val channels: Int, val pcmBitDepth: Int, val frameCount: Long, val durationSeconds: Double,
         val peak: Double, val peakDb: Double, val targetLufs: Double = -14.0, val truePeakCeilingDb: Double = -1.0,
-        val repairEnabled: Boolean, val loFiAudioTextureEnabled: Boolean, val mp3: DesktopMp3Metadata? = null
+        val repairEnabled: Boolean, val loFiAudioTextureEnabled: Boolean,
+        val loFiPreset: String? = null, val loFiStrength: Double? = null, val loFiMeanAbsoluteDelta: Double? = null,
+        val mp3: DesktopMp3Metadata? = null
     )
     @Serializable private data class DesktopMp3Metadata(val name: String, val fingerprint: String, val bitrateKbps: Int, val format: String = "MP3")
 

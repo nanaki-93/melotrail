@@ -77,6 +77,20 @@ class DSPChainTest {
     }
 
     @Test
+    fun `amount is a real dry wet control`() {
+        val input = floatArrayOf(0.1f, -0.1f, 0.8f, -0.8f, -0.2f, 0.2f)
+        val dry = DSPChain.createDefaultChain(DSPSettings(amount = 0.0, sampleRateReduction = 4)).process(input)
+        val medium = DSPChain.createDefaultChain(DSPSettings(amount = 0.5, sampleRateReduction = 4)).process(input)
+        val wet = DSPChain.createDefaultChain(DSPSettings(amount = 1.0, sampleRateReduction = 4)).process(input)
+
+        assertArrayEquals(input, dry)
+        val mediumDelta = input.indices.sumOf { kotlin.math.abs(input[it] - medium[it]).toDouble() }
+        val wetDelta = input.indices.sumOf { kotlin.math.abs(input[it] - wet[it]).toDouble() }
+        assertTrue(mediumDelta > 0.0)
+        assertTrue(wetDelta > mediumDelta)
+    }
+
+    @Test
     fun `sample rate reduction should reduce resolution`() {
         val effect = SampleRateReduction(factor = 2)
         val input = FloatArray(100) { i -> (Math.sin(i.toDouble() * 0.1) * 0.5).toFloat() }

@@ -157,8 +157,10 @@ class MidiTransitionEngineTest {
             }
         }
 
-        assertEquals(listOf(1_920L to 71), notes)
-        assertEquals(listOf(1_920L), generated.result.events.map { it.startTick })
+        // Cohesion is an overlay around the existing boundary, not a new bar
+        // inserted after it. The default one-beat lead starts at tick 1440.
+        assertEquals(listOf(1_440L to 71), notes)
+        assertEquals(listOf(1_440L), generated.result.events.map { it.startTick })
 
         writeTestMidi(projectRoot.resolve(TransitionCohesionStore.bridgeMidi("A1", "A2")), pitch = 72)
         assertThrows(IllegalArgumentException::class.java) {

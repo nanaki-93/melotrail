@@ -354,7 +354,7 @@ class MidiTransitionGenerationAdapter(
                 }
             }
         }
-        val placements = placements(sections, bridges)
+        val placements = placements(sections)
         val output = root.resolve("midi/generated/transitions.mid")
         writeApprovedMidi(output, ppq, sections, placements, bridges, cohesion, available, root)
         val events = bridges.flatMapIndexed { index, bridge ->
@@ -363,7 +363,8 @@ class MidiTransitionGenerationAdapter(
             sequence.tracks.flatMap { track -> (0 until track.size()).map(track::get) }.mapNotNull { event ->
                 val message = event.message as? ShortMessage
                 message?.takeIf { it.command == ShortMessage.NOTE_ON && it.data2 > 0 }?.let {
-                    TransitionMidiEvent(logical, placements[index].endTick + event.tick, placements[index].endTick + event.tick + 1, it.data1, it.data2)
+                    val offset = bridgeOverlayStart(placements[index], sections[index], bridge)
+                    TransitionMidiEvent(logical, offset + event.tick, offset + event.tick + 1, it.data1, it.data2)
                 }
             }
         }
@@ -386,16 +387,18 @@ class MidiTransitionGenerationAdapter(
         return ArrangementCohesionReferences(workflow.inputSha256, boundaries)
     }
 
-    private fun placements(sections: List<TransitionSectionContext>, bridges: List<TransitionBridgePlan>): List<TransitionSectionPlacement> {
+    private fun placements(sections: List<TransitionSectionContext>): List<TransitionSectionPlacement> {
         var cursor = 0L
         return sections.mapIndexed { index, section ->
-            val inserted = if (index == sections.lastIndex) 0L else {
-                val bridge = bridges[index]
-                val meter = sections[index + 1].timeSignatures.first()
-                bridge.bars.toLong() * (section.ppq * 4L / meter.denominator) * meter.numerator
-            }
+            val inserted = 0L
             TransitionSectionPlacement(index, cursor, cursor + section.durationTicks, inserted).also { cursor += section.durationTicks + inserted }
         }
+    }
+
+    private fun bridgeOverlayStart(placement: TransitionSectionPlacement, outgoing: TransitionSectionContext, bridge: TransitionBridgePlan): Long {
+        val meter = outgoing.timeSignatures.first()
+        val beat = outgoing.ppq * 4L / meter.denominator
+        return (placement.endTick - beat * bridge.leadBeats).coerceAtLeast(placement.startTick)
     }
 
     private fun writeApprovedMidi(
@@ -434,13 +437,16 @@ class MidiTransitionGenerationAdapter(
                 val logical = LogicalInstrument.parse(bridge.instrument)
                 val target = sequence.createTrack()
                 val instrument = requireNotNull(instruments[logical])
-                instrument.program?.let { target.add(MidiEvent(ShortMessage(ShortMessage.PROGRAM_CHANGE, instrument.channel, it, 0), placements[index].endTick)) }
-                val maximum = placements[index].insertedTicksAfter
+                val offset = bridgeOverlayStart(placements[index], sections[index], bridge)
+                instrument.program?.let { target.add(MidiEvent(ShortMessage(ShortMessage.PROGRAM_CHANGE, instrument.channel, it, 0), offset)) }
+                val outgoingBeat = ppq * 4L / sections[index].timeSignatures.first().denominator
+                val incomingBeat = ppq * 4L / sections[index + 1].timeSignatures.first().denominator
+                val maximum = outgoingBeat * bridge.leadBeats + incomingBeat * bridge.tailBeats
                 sourceSequence.tracks.flatMap { track -> (0 until track.size()).map(track::get) }
                     .mapNotNull { event -> (event.message as? ShortMessage)?.let { event to it } }
                     .filter { (event, message) -> message.command in setOf(ShortMessage.NOTE_ON, ShortMessage.NOTE_OFF) && event.tick <= maximum }
                     .forEach { (event, message) ->
-                        target.add(MidiEvent(ShortMessage(message.command, instrument.channel, message.data1, message.data2), placements[index].endTick + event.tick))
+                        target.add(MidiEvent(ShortMessage(message.command, instrument.channel, message.data1, message.data2), offset + event.tick))
                     }
             }
             meta.add(MidiEvent(MetaMessage(0x2F, byteArrayOf(), 0), placements.last().endTick))

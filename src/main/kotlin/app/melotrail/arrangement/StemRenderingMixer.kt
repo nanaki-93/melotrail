@@ -40,7 +40,8 @@ class StemRenderingMixer(
         val root = projectRoot.toAbsolutePath().normalize()
         val format = requireNotNull(project.renderFormat)
         require(arrangement.sections.isNotEmpty()) { "Detailed arrangement has no sections to render" }
-        val timeline = Timeline.create(arrangement, analyses)
+        val cohesiveOverlay = project.workflow.cohesion?.approved == true && WorkflowArtifact.COHESION !in project.workflow.stale
+        val timeline = Timeline.create(arrangement, analyses, cohesiveOverlay)
         val occurrenceMidi = resolveOccurrenceMidi(root, project, arrangement, analyses)
         val activeNames = arrangement.sections.flatMap { it.instruments }.map { LogicalInstrument.parse(it.name) }.toSet()
         val active = LogicalInstrument.entries.filter { it in activeNames }
@@ -62,7 +63,7 @@ class StemRenderingMixer(
         requiredInputs.forEach { (instrument, path) ->
             require(Files.isRegularFile(path)) { "Missing generated ${instrument.wireName} MIDI: $path" }
         }
-        val needsTransitions = timeline.segments.any { it.insertedTicksAfter > 0L }
+        val needsTransitions = cohesiveOverlay || timeline.segments.any { it.insertedTicksAfter > 0L }
         val transitionBase = root.resolve("midi/generated/transitions.mid")
         val transitions = if (Files.isRegularFile(transitionBase)) humanizedInput(root, project, "transitions", transitionBase) else transitionBase
         if (needsTransitions) require(Files.isRegularFile(transitions)) {
@@ -426,18 +427,18 @@ private data class Timeline(val ppq: Int, val segments: List<TimelineSegment>) {
     val originalEndTick get() = segments.last().originalEndTick
     val endTick get() = segments.last().timelineEndTick
     fun map(tick: Long, isNoteOff: Boolean): Long {
-        val segment = segments.firstOrNull { tick < it.originalEndTick } ?: segments.last()
+        val segment = segments.firstOrNull { tick < it.originalEndTick || isNoteOff && tick == it.originalEndTick } ?: segments.last()
         if (tick == segment.originalStartTick && segment != segments.first() && !isNoteOff) return segment.timelineStartTick
         if (tick == segment.originalEndTick && isNoteOff) return segment.timelineEndTick
         return segment.timelineStartTick + (tick - segment.originalStartTick).coerceIn(0, segment.analysis.durationTicks)
     }
-    fun frames(sampleRate: Int): Long = segments.sumOf { segment ->
-        (segment.analysis.durationSeconds * sampleRate).roundToLong() + if (segment.insertedTicksAfter == 0L) 0L else {
-            val incoming = segments.getOrNull(segment.index + 1)?.analysis ?: return@sumOf 0L
+    fun frames(sampleRate: Int): Long = (segments.sumOf { segment ->
+        segment.analysis.durationSeconds + if (segment.insertedTicksAfter == 0L) 0.0 else {
+            val incoming = segments.getOrNull(segment.index + 1)?.analysis ?: return@sumOf 0.0
             val bpm = incoming.tempoMap.first().bpm
-            (segment.insertedTicksAfter.toDouble() / ppq * 60.0 / bpm * sampleRate).roundToLong()
+            segment.insertedTicksAfter.toDouble() / ppq * 60.0 / bpm
         }
-    }
+    } * sampleRate).roundToLong()
 
     /**
      * Writes one authoritative tempo/meter map for the rendered timeline.
@@ -477,13 +478,13 @@ private data class Timeline(val ppq: Int, val segments: List<TimelineSegment>) {
     )
     private val TimelineSegment.index get() = segments.indexOf(this)
     companion object {
-        fun create(arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): Timeline {
+        fun create(arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>, cohesiveOverlay: Boolean = false): Timeline {
             val ppq = analyses.getValue(arrangement.sections.first().partId).ppq
             var original = 0L; var shifted = 0L
             return Timeline(ppq, arrangement.sections.mapIndexed { index, section ->
                 val analysis = analyses[section.partId] ?: throw IllegalArgumentException("Missing MIDI analysis for arranged part '${section.partId}'")
                 require(analysis.ppq == ppq && analysis.durationTicks > 0 && analysis.durationSeconds > 0.0) { "MIDI analysis for '${section.partId}' has incompatible timing" }
-                val inserted = if (section.transitionOut.type == TransitionType.BRIDGE && index < arrangement.sections.lastIndex) {
+                val inserted = if (!cohesiveOverlay && section.transitionOut.type == TransitionType.BRIDGE && index < arrangement.sections.lastIndex) {
                     val incoming = analyses.getValue(arrangement.sections[index + 1].partId)
                     val signature = incoming.timeSignatures.first()
                     section.transitionOut.bars.toLong() * (ppq * 4L / signature.denominator) * signature.numerator

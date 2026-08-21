@@ -41,7 +41,7 @@ class LocalQwenEnhancementPlanner(
             model = identity,
             goals = modelPlan.goals.map(::goalFromWire).toSet(),
             templateVersion = templateVersion,
-            edits = modelPlan.edits.mapNotNull { editFromWire(it, policy) }
+            edits = modelPlan.edits.mapNotNull { editFromWire(it, policy, context) }
         ).also { it.requireValid(context, policy) }
     }
 
@@ -49,16 +49,23 @@ class LocalQwenEnhancementPlanner(
         ?: throw IllegalArgumentException("Local model returned an unsupported enhancement goal")
 
     /** Invalid model proposals are omitted rather than clamped or applied. */
-    private fun editFromWire(edit: ModelEdit, policy: EnhancementPolicy): EnhancementEdit? {
+    private fun editFromWire(edit: ModelEdit, policy: EnhancementPolicy, context: MusicalProcessingContext): EnhancementEdit? {
         val kind = MODEL_EDIT_KINDS[edit.kind]
             ?: throw IllegalArgumentException("Local model returned an unsupported enhancement edit kind")
         val withinPolicy = when (kind) {
             EnhancementEditKind.VELOCITY -> kotlin.math.abs(edit.value) <= policy.maximumVelocityDelta
             EnhancementEditKind.TIMING -> kotlin.math.abs(edit.value) <= policy.maximumTimingShiftMs
             EnhancementEditKind.PITCH -> kotlin.math.abs(edit.value) <= 2
+            EnhancementEditKind.DURATION -> edit.value in 1..(context.ppq * context.meterNumerator).toLong()
+            EnhancementEditKind.ADD_NOTE -> edit.pitch != null && edit.velocity != null && edit.startTick != null &&
+                edit.durationTicks != null && edit.channel != null && edit.anchorNoteId != null
+            EnhancementEditKind.REMOVE_NOTE -> true
         }
         if (!withinPolicy) return null
-        return EnhancementEdit(kind, edit.noteId, edit.value, goalFromWire(edit.goal), edit.reason)
+        return EnhancementEdit(
+            kind, edit.noteId, edit.value, goalFromWire(edit.goal), edit.reason,
+            edit.pitch, edit.velocity, edit.startTick, edit.durationTicks, edit.channel, edit.anchorNoteId
+        )
     }
 
     @Serializable private data class EnhancementModelInput(
@@ -85,9 +92,15 @@ class LocalQwenEnhancementPlanner(
     @Serializable private data class ModelEdit(
         val kind: String,
         val noteId: String,
-        val value: Long,
+        val value: Long = 0,
         val goal: String = "flow_contour",
-        val reason: String = "bounded musical adjustment"
+        val reason: String = "bounded musical adjustment",
+        val pitch: Int? = null,
+        val velocity: Int? = null,
+        val startTick: Long? = null,
+        val durationTicks: Long? = null,
+        val channel: Int? = null,
+        val anchorNoteId: String? = null
     )
 
     @OptIn(ExperimentalSerializationApi::class)
@@ -98,11 +111,14 @@ class LocalQwenEnhancementPlanner(
             Return only goals and edits. Do not return version, subjectHash, inputSha256, or contextSha256.
             Select only these goals:
             phrase_ending, flow_contour, chord_clash, passing_note, repetition_reduction.
-            Each edit must be {"kind":"velocity|timing|pitch","noteId":"n-00000","value":signed integer,
-            "goal":"one allowed goal","reason":"brief bounded rationale"}. Edits may target only supplied note IDs.
+            Existing-note edits use {"kind":"velocity|timing|pitch|duration|remove_note","noteId":"n-00000","value":integer,
+            "goal":"one allowed goal","reason":"brief bounded rationale"}. duration value is the new positive duration in ticks.
+            An addition uses {"kind":"add_note","noteId":"add-00000","value":0,"pitch":60,"velocity":72,
+            "startTick":480,"durationTicks":240,"channel":0,"anchorNoteId":"n-00001","goal":"passing_note","reason":"brief rationale"}.
+            Existing-note edits may target only supplied note IDs. Additions must be anchored to a supplied note and fit a real gap.
             For every edit, abs(value) must be at most maximumVelocityDelta for velocity, maximumTimingShiftMs for timing,
             or 2 for pitch. Omit an edit that cannot meet its limit.
-            Do not add or remove notes, alter harmony, tempo, meter, duration, channels, files, or instruments.
+            Do not alter harmony, tempo, meter, channels of existing notes, files, instruments, or song structure.
             Respect the supplied policy. Prefer zero edits when no bounded improvement is justified.
         """
         val MODEL_GOALS = mapOf(
@@ -115,7 +131,10 @@ class LocalQwenEnhancementPlanner(
         val MODEL_EDIT_KINDS = mapOf(
             "velocity" to EnhancementEditKind.VELOCITY,
             "timing" to EnhancementEditKind.TIMING,
-            "pitch" to EnhancementEditKind.PITCH
+            "pitch" to EnhancementEditKind.PITCH,
+            "duration" to EnhancementEditKind.DURATION,
+            "add_note" to EnhancementEditKind.ADD_NOTE,
+            "remove_note" to EnhancementEditKind.REMOVE_NOTE
         )
     }
 }

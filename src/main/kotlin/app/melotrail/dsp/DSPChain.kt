@@ -4,7 +4,8 @@ import app.melotrail.audio.AudioBuffer
 import app.melotrail.model.DSPSettings
 
 class DSPChain(
-    private val effects: List<DSPEffect> = emptyList()
+    private val effects: List<DSPEffect> = emptyList(),
+    private val wetMix: Double = 1.0
 ) {
     fun process(input: AudioBuffer): AudioBuffer {
         var output = input.samples.clone()
@@ -12,6 +13,8 @@ class DSPChain(
         for (effect in effects) {
             output = effect.process(output)
         }
+
+        output = blend(input.samples, output)
 
         return AudioBuffer(
             samples = output,
@@ -26,8 +29,14 @@ class DSPChain(
         for (effect in effects) {
             output = effect.process(output)
         }
+        return blend(input, output)
+    }
 
-        return output
+    private fun blend(dry: FloatArray, wet: FloatArray): FloatArray {
+        val mix = wetMix.coerceIn(0.0, 1.0).toFloat()
+        if (mix >= 1f) return wet
+        if (mix <= 0f) return dry.clone()
+        return FloatArray(dry.size) { index -> (dry[index] * (1f - mix) + wet[index] * mix).coerceIn(-1f, 1f) }
     }
 
     companion object {
@@ -149,7 +158,7 @@ class DSPChain(
                 )
             }
 
-            return DSPChain(effects)
+            return DSPChain(effects, settings.amount)
         }
     }
 }

@@ -52,7 +52,7 @@ object LOFIPresets {
             name = "Bedroom LoFi",
             description = "Audible low-fidelity character while keeping the melody intact",
             settings = DSPSettings(
-                amount = 0.35,
+                amount = 0.65,
                 tape = 0.12,
                 vinyl = 0.04,
                 noise = 0.015,
@@ -70,7 +70,7 @@ object LOFIPresets {
             name = "Old Sampler",
             description = "Clearly degraded sampler character with controlled noise",
             settings = DSPSettings(
-                amount = 0.50,
+                amount = 0.90,
                 tape = 0.08,
                 vinyl = 0.03,
                 noise = 0.01,

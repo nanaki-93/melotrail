@@ -186,6 +186,8 @@ class DeterministicStringsMidiGenerator {
         val intervals = when (match.groupValues[2].lowercase()) {
             "" -> intArrayOf(0, 4, 7); "m", "min" -> intArrayOf(0, 3, 7); "7" -> intArrayOf(0, 4, 7, 10)
             "maj7" -> intArrayOf(0, 4, 7, 11); "m7", "min7" -> intArrayOf(0, 3, 7, 10)
+            "maj9" -> intArrayOf(0, 4, 7, 11, 14); "m9", "min9" -> intArrayOf(0, 3, 7, 10, 14)
+            "add9" -> intArrayOf(0, 4, 7, 14)
             "sus2" -> intArrayOf(0, 2, 7); "sus4", "sus" -> intArrayOf(0, 5, 7)
             else -> return null
         }
@@ -238,7 +240,7 @@ class DeterministicStringsMidiGenerator {
         const val CHORD_CONFIDENCE = 0.75; const val KEY_CONFIDENCE = 0.70; const val COUNTER_KEY_CONFIDENCE = 0.85; const val COUNTER_CHORD_CONFIDENCE = 0.85
         const val COUNTER_SOURCE_MAX_PITCH = 72; const val COUNTER_SOURCE_MAX_RANGE = 18; const val COUNTER_SOURCE_MAX_DENSITY = 0.35; const val COUNTER_SOURCE_MAX_RHYTHMIC_DENSITY = 0.50; const val COUNTER_MAX_STEP = 5
         const val SOURCE_CLEARANCE_SEMITONES = 2; const val MIN_VELOCITY = 42; const val MAX_VELOCITY = 82; const val CLIMAX_VELOCITY_BOOST = 6; const val RELEASE_GAP_DIVISOR = 24
-        val CHORD_SYMBOL = Regex("^([A-G](?:#|b)?)(|m|min|7|maj7|m7|min7|sus2|sus4|sus)$", RegexOption.IGNORE_CASE)
+        val CHORD_SYMBOL = Regex("^([A-G](?:#|b)?)(|m|min|7|maj7|m7|min7|maj9|m9|min9|add9|sus2|sus4|sus)$", RegexOption.IGNORE_CASE)
     }
 }
 
