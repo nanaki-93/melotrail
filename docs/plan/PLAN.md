@@ -11,6 +11,10 @@ product.
 The implementation contracts for this plan are Tasks 118–130 in
 `docs/plan/tasks/`.
 
+Task 118's code-verified starting evidence is maintained in
+[`music-context-audit.md`](music-context-audit.md). It is the durable baseline
+for the subsequent alignment tasks, not a replacement design document.
+
 ## 2. Verified baseline and alignment verdict
 
 The repository is a Kotlin/JVM 21 Compose Desktop application with a separate,

@@ -28,6 +28,8 @@ named removal condition.
 | 129 | [Stage comparison and diagnostic reports](129-stage-comparison-and-diagnostic-reports.md) | Persisted service/UI evidence |
 | 130 | [Reference-song integration, migration, and rollout](130-reference-song-integration-and-rollout.md) | End-to-end acceptance and cleanup |
 
+The code-verified Task 118 audit is [`../music-context-audit.md`](../music-context-audit.md).
+
 ## Ordering notes
 
 - Tasks 118–121 establish evidence and shared contracts used by every cutover.
