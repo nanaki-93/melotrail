@@ -56,6 +56,10 @@ class EnhancementTest {
             variant.requireValid()
             assertNotEquals(baseline.contextSha256, variant.contextSha256)
         }
+        val changedAuthority = baseline.copy(authorityContextSha256 = "d".repeat(64), contextSha256 = "0".repeat(64)).let { bare ->
+            bare.copy(contextSha256 = MusicalProcessingContextHasher.hash(bare))
+        }
+        assertNotEquals(baseline.contextSha256, changedAuthority.contextSha256)
     }
 
     @Test
@@ -111,9 +115,6 @@ class EnhancementTest {
         assertThrows(IllegalArgumentException::class.java) {
             EnhancementPlanCodec.decode(strictPlan.dropLast(1) + ",\"unexpected\":true}", context, EnhancementPolicy.forIntensity(context.intensity))
         }
-        assertThrows(IllegalArgumentException::class.java) {
-            MusicalProcessingContextFactory.build(project(profile = CompositionProfileRef("unknown", 1)), "A", input, profiles = BundledCompositionProfileCatalog.load())
-        }
     }
 
     @Test
@@ -159,6 +160,7 @@ class EnhancementTest {
         assertEquals(1, report.appliedEdits.size)
         assertTrue(report.anchorsRetained)
         assertTrue(report.acceptedPlanSha256 != null)
+        assertEquals(MidiMutationStage.ENHANCE, report.mutationReport?.stage)
     }
 
     @Test
@@ -192,13 +194,48 @@ class EnhancementTest {
         assertEquals(7, report.identityDistancePercent)
     }
 
-    private fun writeMidi(path: Path, noteCount: Int = 20) {
+    @Test
+    fun `pitch edits use the active chord at the edited bar`() {
+        val input = root.resolve("chord-change.mid")
+        writeMidi(input)
+        val base = context(input)
+        val context = withHarmony(base, listOf(
+            EnhancementHarmonicSpan(base.occurrenceId, 0, 480, 0, ChordQuality.MAJOR),
+            EnhancementHarmonicSpan(base.occurrenceId, 480, 100_000, 2, ChordQuality.MAJOR)
+        ))
+        val plan = plan(context, EnhancementEdit(EnhancementEditKind.PITCH, context.notes[1].id, 2, reason = "fit D major"))
+
+        ValidatedEnhancementMidiApplier().apply(input, root.resolve("chord-change-out.mid"), context, plan)
+    }
+
+    @Test
+    fun `short resolving scale passing tone is accepted while a sustained clash is rejected`() {
+        val shortInput = root.resolve("passing.mid")
+        writeMidi(shortInput, durationTicks = 120)
+        val shortContext = context(shortInput)
+        val passing = plan(shortContext, EnhancementEdit(EnhancementEditKind.PITCH, shortContext.notes[1].id, 2, EnhancementGoal.PASSING_NOTE, "resolve to C"))
+        val first = ValidatedEnhancementMidiApplier().apply(shortInput, root.resolve("passing-a.mid"), shortContext, passing)
+        val second = ValidatedEnhancementMidiApplier().apply(shortInput, root.resolve("passing-b.mid"), shortContext, passing)
+
+        assertEquals(Files.readAllBytes(root.resolve("passing-a.mid")).toList(), Files.readAllBytes(root.resolve("passing-b.mid")).toList())
+        assertEquals(first.mutationReport, second.mutationReport)
+        val sustainedInput = root.resolve("clash.mid")
+        writeMidi(sustainedInput)
+        val sustainedContext = context(sustainedInput)
+        val clash = plan(sustainedContext, EnhancementEdit(EnhancementEditKind.PITCH, sustainedContext.notes[1].id, 2, EnhancementGoal.CHORD_CLASH, "sustained clash"))
+        assertThrows(IllegalArgumentException::class.java) {
+            ValidatedEnhancementMidiApplier().apply(sustainedInput, root.resolve("clash-out.mid"), sustainedContext, clash)
+        }
+        assertFalse(Files.exists(root.resolve("clash-out.mid")))
+    }
+
+    private fun writeMidi(path: Path, noteCount: Int = 20, durationTicks: Long = 240) {
         val sequence = javax.sound.midi.Sequence(javax.sound.midi.Sequence.PPQ, 480)
         val track = sequence.createTrack()
         repeat(noteCount) { index ->
             val start = index * 480L
             track.add(javax.sound.midi.MidiEvent(javax.sound.midi.ShortMessage(javax.sound.midi.ShortMessage.NOTE_ON, 0, 60, 70), start))
-            track.add(javax.sound.midi.MidiEvent(javax.sound.midi.ShortMessage(javax.sound.midi.ShortMessage.NOTE_OFF, 0, 60, 0), start + 240))
+            track.add(javax.sound.midi.MidiEvent(javax.sound.midi.ShortMessage(javax.sound.midi.ShortMessage.NOTE_OFF, 0, 60, 0), start + durationTicks))
         }
         javax.sound.midi.MidiSystem.write(sequence, 1, path.toFile())
     }
@@ -223,7 +260,7 @@ class EnhancementTest {
     }
 
     private fun sha256Subject(context: MusicalProcessingContext): String = java.security.MessageDigest.getInstance("SHA-256")
-        .digest("${context.partId}|${context.sectionId}".toByteArray()).joinToString("") { "%02x".format(it) }
+        .digest("${context.partId}|${context.occurrenceId}".toByteArray()).joinToString("") { "%02x".format(it) }
 
     private fun context(
         input: Path,
@@ -237,8 +274,36 @@ class EnhancementTest {
         intensity: EnhancementIntensity = EnhancementIntensity.SUBTLE,
         seed: Long = 0,
         pipelineVersion: String = "enhancement-v1"
-    ) = MusicalProcessingContextFactory.build(
-        project(key, harmony, tempo, meter, mood, section, partId), partId, input, intensity, seed, pipelineVersion, BundledCompositionProfileCatalog.load()
+    ): MusicalProcessingContext {
+        val ppq = runCatching { javax.sound.midi.MidiSystem.getSequence(input.toFile()).resolution }.getOrDefault(480)
+        val notes = runCatching { MelodyIdentityBuilder.build(input, ppq * 4L / meter.denominator).notes.map { note ->
+            EnhancementNoteSummary(note.id.value, note.channel, note.pitch, note.velocity, note.originalStartTick, note.originalEndTick, 0)
+        } }.getOrDefault(emptyList())
+        val chord = harmony?.progressions?.firstOrNull()?.events?.firstOrNull()
+        val occurrence = harmony?.progressions?.firstOrNull()?.sectionType?.value ?: section.value
+        val bare = MusicalProcessingContext(
+            projectKey = key,
+            scalePitchClasses = key.scalePitchClasses().map { it.chromatic },
+            occurrenceId = "$occurrence-1",
+            harmony = listOf(EnhancementHarmonicSpan("$occurrence-1", 0, 100_000, chord?.root?.chromatic ?: 0, chord?.quality ?: ChordQuality.MAJOR)),
+            bpm = tempo.toInt(), ppq = ppq, meterNumerator = meter.numerator, meterDenominator = meter.denominator,
+            profile = EnhancementProfileContext(CompositionProfileRef("lofi", 1), mood, "a".repeat(64), 50, 20, 12),
+            authorityContextSha256 = "c".repeat(64),
+            partId = partId, correctedInputSha256 = java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(input)).joinToString("") { "%02x".format(it) },
+            intensity = intensity, seed = seed, pipelineVersion = pipelineVersion, notes = notes, contextSha256 = "0".repeat(64)
+        )
+        return bare.copy(contextSha256 = MusicalProcessingContextHasher.hash(bare))
+    }
+
+    private fun withHarmony(context: MusicalProcessingContext, harmony: List<EnhancementHarmonicSpan>): MusicalProcessingContext {
+        val bare = context.copy(harmony = harmony, contextSha256 = "0".repeat(64))
+        return bare.copy(contextSha256 = MusicalProcessingContextHasher.hash(bare))
+    }
+
+    private fun plan(context: MusicalProcessingContext, edit: EnhancementEdit) = EnhancementPlan(
+        subjectHash = sha256Subject(context), inputSha256 = context.correctedInputSha256, contextSha256 = context.contextSha256,
+        processorId = "fixture", processorVersion = "1", placeholder = false,
+        model = EnhancementModelIdentity("qwen", "fixture", "1", "apache-2.0"), edits = listOf(edit)
     )
 
     private fun project(

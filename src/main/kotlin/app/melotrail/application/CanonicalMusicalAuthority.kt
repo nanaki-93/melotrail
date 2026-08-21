@@ -20,6 +20,8 @@ import app.melotrail.harmony.ChordQuality
 import app.melotrail.music.MusicalKey
 import app.melotrail.music.Tempo
 import app.melotrail.music.TimeSignature
+import app.melotrail.profile.CompositionProfileRef
+import app.melotrail.profile.MoodRef
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -186,8 +188,11 @@ data class PartEnhancementProjection(
     val projectKey: MusicalKey,
     val tempo: Tempo,
     val meter: TimeSignature,
+    val profile: CompositionProfileRef,
+    val mood: MoodRef,
     val occurrences: List<MusicalOccurrence>,
     val harmony: List<HarmonicTimelineEntry>,
+    val harmonyPpq: Int,
     val analysis: CanonicalAnalyzedPartFacts,
     val melodyEvidence: List<MelodyEvidenceReference>
 )
@@ -290,13 +295,21 @@ class MusicalAuthorityBuilder(
 
     fun partEnhancement(projectRoot: Path, partId: String): PartEnhancementProjection {
         val authority = build(projectRoot)
+        val project = ProjectStore.read(projectRoot.toAbsolutePath().normalize())
+        val settings = requireNotNull(project.envelope.compositionSettings) {
+            "Project Setup must be complete before enhancement."
+        }
         val part = authority.selectedPartArtifacts.singleOrNull { it.partId == partId }
             ?: throw IllegalArgumentException("Unknown MIDI part '$partId'.")
         val occurrences = authority.occurrenceTimeline.filter { it.partId == partId }
         return PartEnhancementProjection(
             contextSha256 = authority.contextSha256, part = part, projectKey = authority.projectKey,
-            tempo = authority.tempo, meter = authority.meter, occurrences = occurrences,
+            tempo = authority.tempo, meter = authority.meter,
+            profile = requireNotNull(settings.profile) { "Project profile is required before enhancement." },
+            mood = requireNotNull(settings.mood) { "Project mood is required before enhancement." },
+            occurrences = occurrences,
             harmony = occurrences.flatMap { authority.harmonicTimeline.forOccurrence(it.occurrenceId) },
+            harmonyPpq = authority.harmonicTimeline.ppq,
             analysis = authority.analyzedFacts.single { it.partId == partId },
             melodyEvidence = authority.melodyEvidenceReferences.filter { it.partId == partId }
         )

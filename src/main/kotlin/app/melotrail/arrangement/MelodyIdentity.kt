@@ -268,6 +268,7 @@ data class MidiMutationReport(
 object MidiMutationInvariants {
     fun requireAnchorPreservation(identity: MelodyIdentity, mutations: List<MidiMutation>) {
         mutations.forEach { mutation ->
+            if (mutation.operation == MidiMutationOperation.ADD) return@forEach
             val original = requireNotNull(identity.notes.singleOrNull { it.id == mutation.noteId }) { "MIDI mutation references an unknown note" }
             if (identity.isAnchor(original.id)) require(mutation.operation != MidiMutationOperation.REMOVE && mutation.after?.pitch == original.pitch) {
                 "A melody anchor cannot be deleted or repitched"
@@ -278,6 +279,7 @@ object MidiMutationInvariants {
     fun requireAllowedPitchDelta(identity: MelodyIdentity, mutations: List<MidiMutation>, maximumSemitones: Int) {
         require(maximumSemitones >= 0)
         mutations.forEach { mutation ->
+            if (mutation.operation == MidiMutationOperation.ADD) return@forEach
             val original = requireNotNull(identity.notes.singleOrNull { it.id == mutation.noteId }) { "MIDI mutation references an unknown note" }
             mutation.after?.let { require(kotlin.math.abs(it.pitch - original.pitch) <= maximumSemitones) { "MIDI pitch edit exceeds its allowed delta" } }
         }

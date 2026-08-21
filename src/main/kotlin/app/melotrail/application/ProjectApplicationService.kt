@@ -898,7 +898,10 @@ class DefaultProjectApplicationService(
             ProjectStore.write(root, updated)
             return@mutate snapshot(root, updated)
         }
-        val context = app.melotrail.arrangement.MusicalProcessingContextFactory.build(project, part.id, corrected, request.intensity, request.seed, profiles = compositionProfiles)
+        val context = app.melotrail.arrangement.MusicalProcessingContextFactory.build(
+            MusicalAuthorityBuilder().partEnhancement(root, part.id), corrected, request.intensity, request.seed,
+            profiles = compositionProfiles
+        )
         val destination = root.resolve(app.melotrail.arrangement.EnhancementArtifactPaths.output(part.id, context.contextSha256))
         val reportPath = root.resolve(app.melotrail.arrangement.EnhancementArtifactPaths.report(part.id, context.contextSha256))
         val existing = midi.enhancement?.takeIf { refs ->

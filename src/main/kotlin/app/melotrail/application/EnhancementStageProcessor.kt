@@ -3,8 +3,6 @@ package app.melotrail.application
 import app.melotrail.arrangement.EnhancementArtifactPaths
 import app.melotrail.arrangement.EnhancementExecutionService
 import app.melotrail.arrangement.EnhancementIntensity
-import app.melotrail.arrangement.MusicalProcessingContextFactory
-import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.StageId
 import app.melotrail.arrangement.StageSubject
 import app.melotrail.arrangement.EnhancementPlanner
@@ -28,8 +26,10 @@ class EnhancementStageProcessor(
     private val seed: Long = 0L,
     private val contextFactory: (java.nio.file.Path, String, java.nio.file.Path, EnhancementIntensity, Long) -> app.melotrail.arrangement.MusicalProcessingContext =
         { root, partId, input, selectedIntensity, selectedSeed ->
-            MusicalProcessingContextFactory.build(ProjectStore.read(root), partId, input, selectedIntensity, selectedSeed,
-                profiles = app.melotrail.profile.BundledCompositionProfileCatalog.load())
+            app.melotrail.arrangement.MusicalProcessingContextFactory.build(
+                MusicalAuthorityBuilder().partEnhancement(root, partId), input, selectedIntensity, selectedSeed,
+                profiles = app.melotrail.profile.BundledCompositionProfileCatalog.load()
+            )
         },
     private val planner: EnhancementPlanner = LocalQwenEnhancementPlanner(
         identity = EnhancementModelIdentity("qwen", "local", System.getenv("QWEN_ENHANCEMENT_VERSION") ?: "1", System.getenv("QWEN_ENHANCEMENT_LICENSE") ?: "unknown")

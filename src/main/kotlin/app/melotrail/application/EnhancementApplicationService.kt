@@ -12,14 +12,12 @@ import app.melotrail.arrangement.EnhancementPlanner
 import app.melotrail.arrangement.EnhancementReferences
 import app.melotrail.arrangement.EnhancementSelection
 import app.melotrail.arrangement.LocalQwenEnhancementPlanner
-import app.melotrail.arrangement.MusicalProcessingContextFactory
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.ValidatedEnhancementMidiApplier
 import app.melotrail.arrangement.WorkflowArtifact
 import app.melotrail.arrangement.WorkflowArtifactReference
 import app.melotrail.arrangement.WorkflowChange
 import app.melotrail.arrangement.sha256
-import app.melotrail.profile.BundledCompositionProfileCatalog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -56,13 +54,17 @@ class DefaultEnhancementApplicationService(
     private val planner: EnhancementPlanner = LocalQwenEnhancementPlanner(
         identity = EnhancementModelIdentity("qwen", "local", System.getenv("QWEN_ENHANCEMENT_VERSION") ?: "1", System.getenv("QWEN_ENHANCEMENT_LICENSE") ?: "unknown")
     ),
-    private val applier: app.melotrail.arrangement.EnhancementPlanApplier = ValidatedEnhancementMidiApplier()
+    private val applier: app.melotrail.arrangement.EnhancementPlanApplier = ValidatedEnhancementMidiApplier(),
+    private val musicalAuthorityBuilder: MusicalAuthorityBuilder = MusicalAuthorityBuilder()
 ) : EnhancementApplicationService {
     override suspend fun create(request: CreateEnhancementRequest): EnhancementSnapshot = withContext(Dispatchers.IO) {
         ProjectMutationCoordinator.lock(request.root.toAbsolutePath().normalize()).withLock {
             require(request.intensity != EnhancementIntensity.OFF) { "Use rejection to select Corrected MIDI." }
             val root = request.root.toAbsolutePath().normalize(); val current = current(root, request.partId)
-            val context = MusicalProcessingContextFactory.build(current.project, request.partId, current.input, request.intensity, request.seed, profiles = BundledCompositionProfileCatalog.load())
+            val context = app.melotrail.arrangement.MusicalProcessingContextFactory.build(
+                musicalAuthorityBuilder.partEnhancement(root, request.partId), current.input, request.intensity, request.seed,
+                profiles = app.melotrail.profile.BundledCompositionProfileCatalog.load()
+            )
             val plan = planner.plan(context)
             val outputRelative = EnhancementArtifactPaths.output(request.partId, context.contextSha256)
             val reportRelative = EnhancementArtifactPaths.report(request.partId, context.contextSha256)
@@ -74,7 +76,15 @@ class DefaultEnhancementApplicationService(
             publish(temporary, root.resolve(outputRelative), "enhanced MIDI")
             write(root.resolve(reportRelative), json.encodeToString(report))
             write(root.resolve(planRelative), json.encodeToString(plan))
-            write(root.resolve(provenanceRelative), json.encodeToString(EnhancementProvenance(context.contextSha256, report.acceptedPlanSha256 ?: sha256(root.resolve(planRelative)), plan.model, plan.templateVersion)))
+            write(root.resolve(provenanceRelative), json.encodeToString(EnhancementProvenance(
+                inputSha256 = context.correctedInputSha256,
+                contextSha256 = context.contextSha256,
+                planSha256 = sha256(root.resolve(planRelative)),
+                outputSha256 = requireNotNull(report.outputSha256),
+                reportSha256 = sha256(root.resolve(reportRelative)),
+                model = plan.model,
+                templateVersion = plan.templateVersion
+            )))
             val refs = EnhancementReferences(request.intensity, current.inputRef, WorkflowArtifactReference(outputRelative, report.outputSha256!!),
                 WorkflowArtifactReference(reportRelative, sha256(root.resolve(reportRelative))), context.contextSha256, EnhancementApproval.DRAFT,
                 WorkflowArtifactReference(planRelative, sha256(root.resolve(planRelative))), WorkflowArtifactReference(provenanceRelative, sha256(root.resolve(provenanceRelative))))
@@ -86,6 +96,8 @@ class DefaultEnhancementApplicationService(
     override fun load(root: Path, partId: String): EnhancementSnapshot = locked(root) { normalized ->
         val refs = requireNotNull(ProjectStore.read(normalized).parts.singleOrNull { it.id == partId }?.midi?.enhancement) { "No enhancement draft exists." }
         val report = readReport(normalized.resolve(refs.report.file)); require(report.contextSha256 == refs.contextSha256 && report.outputSha256 == refs.output.sha256) { "Enhancement evidence is stale." }
+        requireBoundEvidence(normalized, refs, report)
+        requireCurrentAuthority(normalized, partId, refs)
         snapshot(partId, refs, report)
     }
 
@@ -93,6 +105,8 @@ class DefaultEnhancementApplicationService(
         val current = current(root, request.partId); val refs = requireNotNull(current.midi.enhancement) { "No enhancement draft exists." }
         require(refs.approval == EnhancementApproval.DRAFT && refs.output.sha256 == request.draftSha256 && refs.input.sha256 == request.inputSha256 && refs.contextSha256 == request.contextSha256) { "Enhancement approval does not match the reviewed draft." }
         val report = readReport(root.resolve(refs.report.file)); require(report.acceptedPlanSha256 != null && report.anchorsRetained) { "Enhancement draft is missing validated plan evidence." }
+        requireBoundEvidence(root, refs, report)
+        requireCurrentAuthority(root, request.partId, refs)
         val approved = refs.copy(approval = EnhancementApproval.APPROVED); update(root, request.partId, approved, EnhancementSelection.ENHANCED)
         snapshot(request.partId, approved, report)
     }
@@ -114,6 +128,8 @@ class DefaultEnhancementApplicationService(
         }
         val report = readReport(root.resolve(refs.report.file))
         require(report.acceptedPlanSha256 != null && report.anchorsRetained && report.outputSha256 == refs.output.sha256) { "Retained enhancement evidence is invalid." }
+        requireBoundEvidence(root, refs, report)
+        requireCurrentAuthority(root, request.partId, refs)
         require(sha256(root.resolve(refs.input.file)) == refs.input.sha256 && sha256(root.resolve(refs.output.file)) == refs.output.sha256) { "Retained enhancement evidence is stale." }
         ProjectStore.write(root, project.copy(parts = project.parts.map {
             if (it.id == part.id) it.copy(revision = it.revision + 1, analysis = null, midi = midi.copy(enhancementSelection = EnhancementSelection.ENHANCED, analysisInput = app.melotrail.arrangement.MidiAnalysisInput.CURRENT, feel = null)) else it
@@ -138,6 +154,28 @@ class DefaultEnhancementApplicationService(
     private fun update(root: Path, partId: String, refs: EnhancementReferences, selection: EnhancementSelection) {
         val project = ProjectStore.read(root); ProjectStore.write(root, project.copy(parts = project.parts.map { part -> if (part.id == partId) part.copy(analysis = null, midi = requireNotNull(part.midi).copy(enhancement = refs, enhancementSelection = selection, analysisInput = app.melotrail.arrangement.MidiAnalysisInput.CURRENT, feel = null)) else part }, workflow = project.workflow.invalidate(WorkflowChange.ENHANCEMENT_SELECTION).markCurrent(WorkflowArtifact.ENHANCED_MIDI)))
     }
+    private fun requireCurrentAuthority(root: Path, partId: String, refs: EnhancementReferences) {
+        val current = current(root, partId)
+        val context = app.melotrail.arrangement.MusicalProcessingContextFactory.build(
+            musicalAuthorityBuilder.partEnhancement(root, partId), current.input, refs.intensity,
+            profiles = app.melotrail.profile.BundledCompositionProfileCatalog.load()
+        )
+        require(context.correctedInputSha256 == refs.input.sha256 && context.contextSha256 == refs.contextSha256) {
+            "Enhancement draft is stale for the current selected MIDI or musical authority."
+        }
+    }
+    private fun requireBoundEvidence(root: Path, refs: EnhancementReferences, report: EnhancementEditReport) {
+        val provenanceRef = requireNotNull(refs.provenance) { "Enhancement draft is missing provenance evidence." }
+        val planRef = requireNotNull(refs.plan) { "Enhancement draft is missing plan evidence." }
+        val provenance = try { json.decodeFromString(EnhancementProvenance.serializer(), Files.readString(root.resolve(provenanceRef.file))) }
+        catch (error: Exception) { throw IllegalArgumentException("Enhancement provenance is malformed.", error) }
+        require(sha256(root.resolve(provenanceRef.file)) == provenanceRef.sha256 &&
+            provenance.inputSha256 == refs.input.sha256 && provenance.contextSha256 == refs.contextSha256 &&
+            provenance.outputSha256 == refs.output.sha256 && provenance.reportSha256 == refs.report.sha256 &&
+            provenance.planSha256 == planRef.sha256 && sha256(root.resolve(planRef.file)) == planRef.sha256) {
+            "Enhancement draft provenance is stale."
+        }
+    }
     private fun snapshot(partId: String, refs: EnhancementReferences, report: EnhancementEditReport) = EnhancementSnapshot(partId, refs.intensity, refs.input.sha256, refs.output.sha256, refs.contextSha256, refs.approval, report.appliedEdits.size, report.appliedEdits.map(EnhancementEdit::reason), report.placeholder)
     private fun locked(root: Path, block: (Path) -> EnhancementSnapshot): EnhancementSnapshot { val normalized = root.toAbsolutePath().normalize(); val lock = ProjectMutationCoordinator.lock(normalized); check(lock.tryLock()) { "Another enhancement operation is already running." }; return try { block(normalized) } finally { lock.unlock() } }
     private fun publish(source: Path, target: Path, label: String) { Files.createDirectories(requireNotNull(target.parent)); val staged = target.resolveSibling(".${target.fileName}.save"); try { Files.copy(source, staged, StandardCopyOption.REPLACE_EXISTING); try { Files.move(staged, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING) } catch (error: AtomicMoveNotSupportedException) { throw IllegalStateException("Atomic publication is unavailable for $label.", error) } } finally { Files.deleteIfExists(staged); Files.deleteIfExists(source) } }
@@ -147,4 +185,19 @@ class DefaultEnhancementApplicationService(
 }
 
 @kotlinx.serialization.Serializable
-data class EnhancementProvenance(val contextSha256: String, val acceptedPlanSha256: String, val model: EnhancementModelIdentity?, val templateVersion: String)
+data class EnhancementProvenance(
+    val inputSha256: String,
+    val contextSha256: String,
+    val planSha256: String,
+    val outputSha256: String,
+    val reportSha256: String,
+    val model: EnhancementModelIdentity?,
+    val templateVersion: String
+) {
+    init {
+        val hash = Regex("[0-9a-f]{64}")
+        require(listOf(inputSha256, contextSha256, planSha256, outputSha256, reportSha256).all(hash::matches)) {
+            "Enhancement provenance hashes are invalid"
+        }
+    }
+}
