@@ -2,11 +2,10 @@
 
 Use this prompt for one implementation task at a time. Replace `XXX` with the
 task number and make sure exactly one matching task contract exists under
-`s` or `/future-tasks/`. A deferred future task must be explicitly
-promoted before implementation.
+`docs/plan/tasks/`.
 
 ```text
-You are implementing exactly Task XXX for the Melotrail.
+You are implementing exactly Task XXX for Melotrail.
 
 This is a local Kotlin/Compose Desktop music workstation with a separate Python
 HTTP worker. Keep the implementation small, deterministic, safe, and testable.
@@ -15,11 +14,10 @@ requirements, tests, acceptance criteria, and exclusions are binding.
 
 Before coding:
 1. Read README.md completely.
-2. Find the selected contract with:
-   rg --files docs/plan/tasks docs/plan/future-tasks 2>/dev/null | sort | rg '/XXX-'
+2. Read docs/plan/PLAN.md, then find the selected contract with:
+   rg --files docs/plan/tasks | sort | rg '/XXX-'
    Read the one matching file completely. If zero or multiple files match, stop
-   and report the ambiguity. Do not implement a future contract unless the user
-   has explicitly promoted it.
+   and report the ambiguity.
 3. Read only the current operational docs relevant to the task:
    - docs/TROUBLESHOOTING.md for desktop setup, readiness, import, or packaging;
    - worker/README.md for Python worker, inspection, cleanup, or transcription;
@@ -36,8 +34,9 @@ Before coding:
    then implement one primary concern plus its direct tests.
 
 Architecture and safety rules:
-- Compose Desktop is the product UI. Spring is an optional local JSON API and
-  must not regain a browser frontend or static fallback.
+- Compose Desktop is the product UI. The separate Python HTTP worker is stateless
+  and does not own projects or workflow truth. Do not recreate the retired Spring
+  or browser product surfaces.
 - Keep Compose as an adapter over typed Kotlin application services. Do not put
   file writes, worker calls, rendering, transport parsing, or business orchestration
   in composables.
