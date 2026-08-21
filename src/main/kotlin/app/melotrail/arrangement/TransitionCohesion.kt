@@ -637,16 +637,16 @@ object CohesionMelodyApplier {
         require(before == evidence.sourceHash) { "Cohesion melody source changed before application" }
         val sequence = MidiSystem.getSequence(source.toFile())
         require(sequence.divisionType == Sequence.PPQ && sequence.resolution == evidence.ppq) { "Cohesion melody timing is incompatible" }
-        val notes = notes(sequence)
+        val identity = MelodyIdentityBuilder.build(source, evidence.ppq * 4L / evidence.meter.denominator)
+        val notes = notes(sequence, evidence.sourceHash)
         require(notes.keys == evidence.melodyNotes.map(CohesionMelodyNote::id).toSet()) { "Cohesion melody note IDs are stale" }
-        val orderedEntries = notes.entries.sortedWith(compareBy<Map.Entry<String, EditableNote>> { it.value.start }.thenBy { it.value.pitch })
-        val protectedAnchorIds = setOf(orderedEntries.first().key, orderedEntries.last().key)
+        val protectedAnchorIds = identity.anchorIds.map(MelodyNoteId::value).toSet()
         require(!protectAnchors || edits.none {
             it.noteId in protectedAnchorIds && it.kind in setOf(CohesionMelodyEditKind.REMOVE_NOTE, CohesionMelodyEditKind.SET_PITCH, CohesionMelodyEditKind.SET_START)
         }) {
             "Cohesion would remove, retime, or repitch a recognizable melody anchor"
         }
-        val anchors = orderedEntries.let { it.first().value.pitch to it.last().value.pitch }
+        val anchors = protectedAnchorIds.associateWith { notes.getValue(it).pitch }
         require(edits.size * 100 / notes.size.coerceAtLeast(1) <= maximumIdentityPercent) { "Cohesion melody edits exceed the recognizable identity budget" }
         edits.filter { it.kind !in setOf(CohesionMelodyEditKind.ADD_NOTE, CohesionMelodyEditKind.REMOVE_NOTE) }.forEach { edit ->
             val note = notes.getValue(edit.noteId)
@@ -658,15 +658,15 @@ object CohesionMelodyApplier {
                 else -> error("unreachable")
             }
         }
-        edits.filter { it.kind == CohesionMelodyEditKind.REMOVE_NOTE }.forEach { notes.getValue(it.noteId).remove() }
+        edits.filter { it.kind == CohesionMelodyEditKind.REMOVE_NOTE }.forEach { notes.remove(it.noteId)?.remove() }
         edits.filter { it.kind == CohesionMelodyEditKind.ADD_NOTE }.forEach { edit ->
             val anchor = notes.getValue(requireNotNull(edit.anchorNoteId))
             val start = requireNotNull(edit.startTick); val duration = requireNotNull(edit.durationTicks)
             anchor.track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, requireNotNull(edit.channel), requireNotNull(edit.pitch), requireNotNull(edit.velocity)), start))
             anchor.track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, edit.channel, edit.pitch, 0), start + duration))
         }
-        val after = notes(sequence).values.sortedWith(compareBy<EditableNote> { it.start }.thenBy { it.pitch })
-        require(after.isNotEmpty() && (!protectAnchors || (after.first().pitch to after.last().pitch) == anchors)) { "Cohesion would alter recognizable melody anchors" }
+        val after = notes(sequence, evidence.sourceHash).values.sortedWith(compareBy<EditableNote> { it.start }.thenBy { it.pitch })
+        require(after.isNotEmpty() && (!protectAnchors || anchors.all { (id, pitch) -> notes[id]?.pitch == pitch })) { "Cohesion would alter recognizable melody anchors" }
         after.groupBy { it.channel to it.pitch }.values.forEach { samePitch ->
             samePitch.sortedBy(EditableNote::start).zipWithNext().forEach { (left, right) -> require(left.end <= right.start) { "Cohesion created overlapping melody notes" } }
         }
@@ -682,23 +682,25 @@ object CohesionMelodyApplier {
         } finally { Files.deleteIfExists(temporary) }
     }
 
-    private fun notes(sequence: Sequence): LinkedHashMap<String, EditableNote> {
-        val found = mutableListOf<EditableNote>()
-        sequence.tracks.forEach { track ->
-            val active = mutableMapOf<Pair<Int, Int>, ArrayDeque<Pair<MidiEvent, ShortMessage>>>()
+    private fun notes(sequence: Sequence, sourceSha256: String): LinkedHashMap<String, EditableNote> {
+        val found = linkedMapOf<String, EditableNote>()
+        sequence.tracks.forEachIndexed { trackIndex, track ->
+            val active = mutableMapOf<Pair<Int, Int>, ArrayDeque<Triple<MidiEvent, ShortMessage, Int>>>()
+            val ordinal = mutableMapOf<Int, Int>()
             (0 until track.size()).forEach { index ->
                 val event = track[index]; val message = event.message as? ShortMessage ?: return@forEach; val key = message.channel to message.data1
-                if (message.command == ShortMessage.NOTE_ON && message.data2 > 0) active.getOrPut(key) { ArrayDeque() }.addLast(event to message)
+                if (message.command == ShortMessage.NOTE_ON && message.data2 > 0) {
+                    val noteOnOrdinal = ordinal.getOrDefault(message.channel, 0); ordinal[message.channel] = noteOnOrdinal + 1
+                    active.getOrPut(key) { ArrayDeque() }.addLast(Triple(event, message, noteOnOrdinal))
+                }
                 else if (message.command == ShortMessage.NOTE_OFF || message.command == ShortMessage.NOTE_ON && message.data2 == 0) {
                     val start = active[key]?.removeFirstOrNull() ?: throw IllegalArgumentException("Cohesion melody has unmatched note-off")
-                    found += EditableNote(track, start.first, event, start.second, message)
+                    found[MelodyNoteId.derive(sourceSha256, trackIndex, message.channel, start.third, message.data1, start.first.tick, event.tick).value] = EditableNote(track, start.first, event, start.second, message)
                 }
             }
             require(active.values.all { it.isEmpty() }) { "Cohesion melody has hanging notes" }
         }
-        return linkedMapOf<String, EditableNote>().also { result ->
-            found.sortedWith(compareBy<EditableNote> { it.start }.thenBy { it.pitch }).forEachIndexed { index, note -> result["n-${index.toString().padStart(5, '0')}"] = note }
-        }
+        return found
     }
 
     private class EditableNote(val track: javax.sound.midi.Track, val onEvent: MidiEvent, val offEvent: MidiEvent, val on: ShortMessage, val off: ShortMessage) {
@@ -944,23 +946,10 @@ object TransitionCohesionInputFactory {
     private fun density(instrument: DetailedInstrumentPlan): Double? = when (instrument) { is BassInstrumentPlan -> instrument.density; is DrumsInstrumentPlan -> instrument.density; is PadInstrumentPlan -> instrument.density; is StringsInstrumentPlan -> instrument.density; else -> null }
     private fun boundary(path: Path, duration: Long): TransitionBoundarySummary { val sequence = MidiSystem.getSequence(path.toFile()); val notes = sequence.tracks.flatMap { track -> (0 until track.size()).map { track[it] } }.mapNotNull { event -> (event.message as? ShortMessage)?.takeIf { it.command == ShortMessage.NOTE_ON && it.data2 > 0 }?.let { event.tick } }; return TransitionBoundarySummary(notes.any { it == 0L }, notes.any { it >= duration }, notes.minOrNull(), notes.maxOrNull()) }
     private fun melody(path: Path): List<CohesionMelodyNote> {
-        val active = mutableMapOf<Pair<Int, Int>, ArrayDeque<Pair<Long, Int>>>()
-        val result = mutableListOf<CohesionMelodyNote>()
-        MidiSystem.getSequence(path.toFile()).tracks.forEach { track ->
-            (0 until track.size()).forEach { index ->
-                val event = track[index]; val message = event.message as? ShortMessage ?: return@forEach
-                val key = message.channel to message.data1
-                if (message.command == ShortMessage.NOTE_ON && message.data2 > 0) {
-                    active.getOrPut(key) { ArrayDeque() }.addLast(event.tick to message.data2)
-                } else if (message.command == ShortMessage.NOTE_OFF || message.command == ShortMessage.NOTE_ON && message.data2 == 0) {
-                    val start = active[key]?.removeFirstOrNull() ?: throw IllegalArgumentException("Selected melody has an unmatched note-off")
-                    require(event.tick > start.first) { "Selected melody has a non-positive note" }
-                    result += CohesionMelodyNote("n-${result.size.toString().padStart(5, '0')}", message.channel, message.data1, start.second, start.first, event.tick)
-                }
-            }
+        val sequence = MidiSystem.getSequence(path.toFile())
+        return MelodyIdentityBuilder.build(path, sequence.resolution * 4L).notes.map { note ->
+            CohesionMelodyNote(note.id.value, note.channel, note.pitch, note.velocity, note.originalStartTick, note.originalEndTick)
         }
-        require(active.values.all { it.isEmpty() } && result.size <= 4_000) { "Selected melody cannot be represented by Cohesion" }
-        return result.sortedWith(compareBy<CohesionMelodyNote> { it.startTick }.thenBy { it.pitch }).mapIndexed { index, note -> note.copy(id = "n-${index.toString().padStart(5, '0')}") }
     }
     private val HASH = Regex("[0-9a-f]{64}")
 }

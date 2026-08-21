@@ -16,34 +16,61 @@ class ValidatedEnhancementMidiApplier : EnhancementPlanApplier {
         plan.requireValid(context, policy)
         require(hash(input) == context.correctedInputSha256) { "Corrected MIDI changed before enhancement" }
         val sequence = MidiSystem.getSequence(input.toFile())
-        val notes = locateNotes(sequence)
+        val identity = MelodyIdentityBuilder.build(input, sequence.resolution * 4L / context.meterDenominator)
+        val notes = locateNotes(sequence, context.correctedInputSha256)
+        val inputNoteCount = notes.size
         require(notes.keys == context.notes.map { it.id }.toSet()) { "Enhancement note summary no longer matches corrected MIDI" }
         val byId = notes.mapValues { it.value.toImmutable() }
         plan.edits.forEach { edit -> validateEdit(edit, byId, context, policy, sequence.resolution) }
-        val beforeAnchors = anchors(byId.values)
-        val protected = protectedAnchorIds(notes)
-        require(plan.edits.none { it.kind == EnhancementEditKind.REMOVE_NOTE && it.noteId in protected }) {
-            "Enhancement would remove a recognizable melody anchor"
-        }
+        val protected = identity.anchorIds.map(MelodyNoteId::value).toSet()
+        val beforeAnchors = protected.associateWith { notes.getValue(it).pitch }
+        val evidence = plan.edits.mapNotNull { edit -> notes[edit.noteId]?.let { note ->
+            MidiMutation(
+                operation = when (edit.kind) {
+                    EnhancementEditKind.PITCH -> MidiMutationOperation.PITCH
+                    EnhancementEditKind.TIMING -> MidiMutationOperation.TIMING
+                    EnhancementEditKind.DURATION -> MidiMutationOperation.DURATION
+                    EnhancementEditKind.VELOCITY -> MidiMutationOperation.VELOCITY
+                    EnhancementEditKind.REMOVE_NOTE -> MidiMutationOperation.REMOVE
+                    EnhancementEditKind.ADD_NOTE -> return@mapNotNull null
+                },
+                noteId = MelodyNoteId(edit.noteId),
+                before = MidiMutationValues(note.channel, note.pitch, note.velocity, note.startTick, note.endTick),
+                after = if (edit.kind == EnhancementEditKind.REMOVE_NOTE) null else MidiMutationValues(
+                    note.channel,
+                    if (edit.kind == EnhancementEditKind.PITCH) (note.pitch + edit.value).toInt() else note.pitch,
+                    if (edit.kind == EnhancementEditKind.VELOCITY) (note.velocity + edit.value).toInt() else note.velocity,
+                    if (edit.kind == EnhancementEditKind.TIMING) note.startTick + timingTicks(edit.value, context, sequence.resolution) else note.startTick,
+                    when (edit.kind) {
+                        EnhancementEditKind.TIMING -> note.endTick + timingTicks(edit.value, context, sequence.resolution)
+                        EnhancementEditKind.DURATION -> note.startTick + edit.value
+                        else -> note.endTick
+                    },
+                ),
+                reasonCode = MidiMutationReasonCode.PHRASE_SHAPING
+            )
+        } }
+        MidiMutationInvariants.requireAnchorPreservation(identity, evidence)
         plan.edits.filter { it.kind !in setOf(EnhancementEditKind.ADD_NOTE, EnhancementEditKind.REMOVE_NOTE) }
             .forEach { edit -> applyExisting(edit, notes.getValue(edit.noteId), context, sequence.resolution) }
         plan.edits.filter { it.kind == EnhancementEditKind.REMOVE_NOTE }.forEach { edit ->
             notes.getValue(edit.noteId).remove()
+            notes.remove(edit.noteId)
         }
         plan.edits.filter { it.kind == EnhancementEditKind.ADD_NOTE }.forEach { edit ->
             val anchor = notes.getValue(requireNotNull(edit.anchorNoteId))
             add(edit, anchor)
         }
-        val after = locateNotes(sequence)
         val additions = plan.edits.count { it.kind == EnhancementEditKind.ADD_NOTE }
         val removals = plan.edits.count { it.kind == EnhancementEditKind.REMOVE_NOTE }
-        require(after.size == notes.size - removals + additions && anchors(after.values.map { it.toImmutable() }) == beforeAnchors) {
+        val after = noteValues(sequence)
+        require(after.size == byId.size - removals + additions && beforeAnchors.all { (id, pitch) -> notes[id]?.pitch == pitch }) {
             "Enhancement would alter recognizable melody anchors"
         }
-        require(after.values.all { it.endTick > it.startTick }) { "Enhancement created an invalid duration" }
-        require(after.values.none { it.pitch !in 0..127 || it.velocity !in 1..127 }) { "Enhancement created an invalid MIDI range" }
-        requireNoCollisions(after.values.map { it.toImmutable() })
-        val distance = ((plan.edits.size * 100) / notes.size.coerceAtLeast(1))
+        require(after.all { it.endTick > it.startTick }) { "Enhancement created an invalid duration" }
+        require(after.none { it.pitch !in 0..127 || it.velocity !in 1..127 }) { "Enhancement created an invalid MIDI range" }
+        requireNoCollisions(after)
+        val distance = ((plan.edits.size * 100) / inputNoteCount.coerceAtLeast(1))
         require(distance <= policy.maximumIdentityDistancePercent) { "Enhancement exceeds identity-distance budget" }
         val temp = destination.resolveSibling(".${destination.fileName}.enhancement.tmp")
         try {
@@ -110,27 +137,41 @@ class ValidatedEnhancementMidiApplier : EnhancementPlanApplier {
     }
     private fun timingTicks(milliseconds: Long, context: MusicalProcessingContext, ppq: Int): Long =
         (milliseconds * context.bpm * ppq / 60_000L)
-    private fun locateNotes(sequence: javax.sound.midi.Sequence): MutableMap<String, MutableNote> {
-        val active = mutableMapOf<Pair<Int, Int>, ArrayDeque<Pair<javax.sound.midi.MidiEvent, ShortMessage>>>()
+    private fun locateNotes(sequence: javax.sound.midi.Sequence, sourceSha256: String): MutableMap<String, MutableNote> {
+        val active = mutableMapOf<Triple<Int, Int, Int>, ArrayDeque<Triple<javax.sound.midi.MidiEvent, ShortMessage, Int>>>()
+        val ordinal = mutableMapOf<Pair<Int, Int>, Int>()
         val result = linkedMapOf<String, MutableNote>()
-        sequence.tracks.forEach { track -> (0 until track.size()).forEach { i ->
-            val event = track[i]; val message = event.message as? ShortMessage ?: return@forEach; val key = message.channel to message.data1
-            if (message.command == ShortMessage.NOTE_ON && message.data2 > 0) active.getOrPut(key) { ArrayDeque() }.addLast(event to message)
+        sequence.tracks.forEachIndexed { trackIndex, track -> (0 until track.size()).forEach { i ->
+            val event = track[i]; val message = event.message as? ShortMessage ?: return@forEach; val key = Triple(trackIndex, message.channel, message.data1)
+            if (message.command == ShortMessage.NOTE_ON && message.data2 > 0) {
+                val ordinalKey = trackIndex to message.channel
+                val noteOnOrdinal = ordinal.getOrDefault(ordinalKey, 0)
+                ordinal[ordinalKey] = noteOnOrdinal + 1
+                active.getOrPut(key) { ArrayDeque() }.addLast(Triple(event, message, noteOnOrdinal))
+            }
             else if (message.command == ShortMessage.NOTE_OFF || (message.command == ShortMessage.NOTE_ON && message.data2 == 0)) {
                 val start = active[key]?.removeFirstOrNull() ?: throw IllegalArgumentException("MIDI contains unmatched note-off")
                 require(event.tick > start.first.tick) { "MIDI contains a non-positive note" }
-                result["n-${result.size.toString().padStart(5, '0')}"] = MutableNote(track, start.first, event, start.second, message)
+                result[MelodyNoteId.derive(sourceSha256, trackIndex, message.channel, start.third, message.data1, start.first.tick, event.tick).value] = MutableNote(track, start.first, event, start.second, message)
             }
         } }
         require(active.values.all { it.isEmpty() }) { "MIDI contains unclosed notes" }
         return result
     }
-    private fun anchors(notes: Collection<Note>): Pair<Int, Int> {
-        val ordered = notes.sortedBy { it.startTick }; return ordered.first().pitch to ordered.last().pitch
-    }
-    private fun protectedAnchorIds(notes: Map<String, MutableNote>): Set<String> {
-        val ordered = notes.entries.sortedWith(compareBy<Map.Entry<String, MutableNote>> { it.value.startTick }.thenBy { it.value.pitch })
-        return setOfNotNull(ordered.firstOrNull()?.key, ordered.lastOrNull()?.key)
+    private fun noteValues(sequence: javax.sound.midi.Sequence): List<ImmutableNote> {
+        val active = mutableMapOf<Pair<Int, Int>, ArrayDeque<Pair<Long, Int>>>()
+        val notes = mutableListOf<ImmutableNote>()
+        sequence.tracks.forEach { track -> (0 until track.size()).forEach { index ->
+            val event = track[index]; val message = event.message as? ShortMessage ?: return@forEach
+            val key = message.channel to message.data1
+            if (message.command == ShortMessage.NOTE_ON && message.data2 > 0) active.getOrPut(key) { ArrayDeque() }.addLast(event.tick to message.data2)
+            else if (message.command == ShortMessage.NOTE_OFF || (message.command == ShortMessage.NOTE_ON && message.data2 == 0)) {
+                val start = active[key]?.removeFirstOrNull() ?: throw IllegalArgumentException("MIDI contains unmatched note-off")
+                notes += ImmutableNote(message.channel, message.data1, start.second, start.first, event.tick)
+            }
+        } }
+        require(active.values.all { it.isEmpty() }) { "MIDI contains unclosed notes" }
+        return notes
     }
     private fun requireNoCollisions(notes: Collection<Note>) {
         notes.groupBy { it.channel to it.pitch }.values.forEach { samePitch ->

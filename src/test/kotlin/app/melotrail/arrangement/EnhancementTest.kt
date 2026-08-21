@@ -128,10 +128,12 @@ class EnhancementTest {
         assertEquals(sha256Subject(context), accepted.subjectHash)
         assertEquals(context.correctedInputSha256, accepted.inputSha256)
         assertEquals(context.contextSha256, accepted.contextSha256)
-        val lowercaseWirePlan = LocalQwenEnhancementPlanner(LocalQwenClient { _, _ -> """{"goals":["flow_contour","passing_note"],"edits":[{"kind":"velocity","noteId":"n-00001","value":2,"goal":"flow_contour","reason":"smooth contour"},{"kind":"velocity","noteId":"n-00002","value":9,"goal":"flow_contour","reason":"outside subtle policy"}]}""" }, EnhancementModelIdentity("qwen", "fixture", "1", "apache-2.0"))
+        val firstId = "m-" + "1".repeat(64)
+        val secondId = "m-" + "2".repeat(64)
+        val lowercaseWirePlan = LocalQwenEnhancementPlanner(LocalQwenClient { _, _ -> """{"goals":["flow_contour","passing_note"],"edits":[{"kind":"velocity","noteId":"$firstId","value":2,"goal":"flow_contour","reason":"smooth contour"},{"kind":"velocity","noteId":"$secondId","value":9,"goal":"flow_contour","reason":"outside subtle policy"}]}""" }, EnhancementModelIdentity("qwen", "fixture", "1", "apache-2.0"))
             .plan(context)
         assertEquals(setOf(EnhancementGoal.FLOW_CONTOUR, EnhancementGoal.PASSING_NOTE), lowercaseWirePlan.goals)
-        assertEquals(EnhancementEdit(EnhancementEditKind.VELOCITY, "n-00001", 2, EnhancementGoal.FLOW_CONTOUR, "smooth contour"), lowercaseWirePlan.edits.single())
+        assertEquals(EnhancementEdit(EnhancementEditKind.VELOCITY, firstId, 2, EnhancementGoal.FLOW_CONTOUR, "smooth contour"), lowercaseWirePlan.edits.single())
         val legacyWrongIdentity = LocalQwenEnhancementPlanner(LocalQwenClient { _, _ -> """{"version":999,"subjectHash":"${"0".repeat(64)}","inputSha256":"${"0".repeat(64)}","contextSha256":"${"0".repeat(64)}","goals":[],"edits":[]}""" }, EnhancementModelIdentity("qwen", "fixture", "1", "apache-2.0"))
         assertEquals(accepted, legacyWrongIdentity.plan(context))
         val unsupportedGoal = LocalQwenEnhancementPlanner(LocalQwenClient { _, _ -> """{"goals":["outside_the_contract"],"edits":[]}""" }, EnhancementModelIdentity("qwen", "fixture", "1", "apache-2.0"))
@@ -149,7 +151,7 @@ class EnhancementTest {
             subjectHash = sha256Subject(context), inputSha256 = context.correctedInputSha256, contextSha256 = context.contextSha256,
             processorId = "fixture", processorVersion = "1", placeholder = false,
             model = EnhancementModelIdentity("qwen", "fixture", "1", "apache-2.0"),
-            goals = setOf(EnhancementGoal.FLOW_CONTOUR), edits = listOf(EnhancementEdit(EnhancementEditKind.VELOCITY, "n-00001", 2, EnhancementGoal.FLOW_CONTOUR, "smooth contour"))
+            goals = setOf(EnhancementGoal.FLOW_CONTOUR), edits = listOf(EnhancementEdit(EnhancementEditKind.VELOCITY, context.notes[1].id, 2, EnhancementGoal.FLOW_CONTOUR, "smooth contour"))
         )
         val output = root.resolve("enhanced.mid")
         val report = ValidatedEnhancementMidiApplier().apply(input, output, context, plan)
@@ -171,10 +173,10 @@ class EnhancementTest {
             model = EnhancementModelIdentity("qwen", "fixture", "1", "apache-2.0"),
             goals = setOf(EnhancementGoal.PASSING_NOTE, EnhancementGoal.PHRASE_ENDING),
             edits = listOf(
-                EnhancementEdit(EnhancementEditKind.REMOVE_NOTE, "n-00005", goal = EnhancementGoal.REPETITION_REDUCTION, reason = "remove repeated middle note"),
+                EnhancementEdit(EnhancementEditKind.REMOVE_NOTE, context.notes[5].id, goal = EnhancementGoal.REPETITION_REDUCTION, reason = "remove repeated middle note"),
                 EnhancementEdit(EnhancementEditKind.ADD_NOTE, "add-00000", goal = EnhancementGoal.PASSING_NOTE, reason = "connect the middle phrase", pitch = 62,
-                    velocity = 68, startTick = 2_400, durationTicks = 120, channel = 0, anchorNoteId = "n-00004"),
-                EnhancementEdit(EnhancementEditKind.DURATION, "n-00010", 360, EnhancementGoal.PHRASE_ENDING, "shape the phrase ending")
+                    velocity = 68, startTick = 2_400, durationTicks = 120, channel = 0, anchorNoteId = context.notes[4].id),
+                EnhancementEdit(EnhancementEditKind.DURATION, context.notes[10].id, 360, EnhancementGoal.PHRASE_ENDING, "shape the phrase ending")
             )
         )
 

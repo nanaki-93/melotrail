@@ -26,11 +26,11 @@ class CohesionMelodyApplierTest {
         val evidence = evidence(source)
         val target = root.resolve("cohesion/occurrences/A1/cohesive.mid")
         val edits = listOf(
-            CohesionMelodyEdit("A1", CohesionMelodyEditKind.REMOVE_NOTE, "n-00017", reason = "remove repeated boundary note"),
+            CohesionMelodyEdit("A1", CohesionMelodyEditKind.REMOVE_NOTE, evidence.melodyNotes[17].id, reason = "remove repeated boundary note"),
             CohesionMelodyEdit(
                 occurrenceInstanceId = "A1", kind = CohesionMelodyEditKind.ADD_NOTE, noteId = "add-00000",
                 pitch = 62, velocity = 68, startTick = 8_160, durationTicks = 120, channel = 0,
-                anchorNoteId = "n-00016", reason = "connect into the next phrase"
+                anchorNoteId = evidence.melodyNotes[16].id, reason = "connect into the next phrase"
             )
         )
 
@@ -52,7 +52,7 @@ class CohesionMelodyApplierTest {
         assertThrows(IllegalArgumentException::class.java) {
             CohesionMelodyApplier.write(
                 source, target, evidence(source),
-                listOf(CohesionMelodyEdit("A1", CohesionMelodyEditKind.REMOVE_NOTE, "n-00000", reason = "unsafe endpoint removal"))
+                listOf(CohesionMelodyEdit("A1", CohesionMelodyEditKind.REMOVE_NOTE, evidence(source).melodyNotes.first().id, reason = "unsafe endpoint removal"))
             )
         }
         assertFalse(Files.exists(target))
@@ -62,8 +62,8 @@ class CohesionMelodyApplierTest {
     fun `cohesion refuses to retime or repitch melody endpoints`() {
         val source = root.resolve("selected.mid"); writeMidi(source)
         listOf(
-            CohesionMelodyEdit("A1", CohesionMelodyEditKind.SET_PITCH, "n-00000", value = 62, reason = "unsafe endpoint pitch"),
-            CohesionMelodyEdit("A1", CohesionMelodyEditKind.SET_START, "n-00019", value = 9_000, reason = "unsafe endpoint timing")
+            CohesionMelodyEdit("A1", CohesionMelodyEditKind.SET_PITCH, evidence(source).melodyNotes.first().id, value = 62, reason = "unsafe endpoint pitch"),
+            CohesionMelodyEdit("A1", CohesionMelodyEditKind.SET_START, evidence(source).melodyNotes.last().id, value = 9_000, reason = "unsafe endpoint timing")
         ).forEachIndexed { index, edit ->
             val target = root.resolve("cohesion/rejected-$index.mid")
             assertThrows(IllegalArgumentException::class.java) { CohesionMelodyApplier.write(source, target, evidence(source), listOf(edit)) }
@@ -77,9 +77,8 @@ class CohesionMelodyApplierTest {
         meter = MidiTimeSignature(0, 4, 4), energy = 0.5,
         boundary = TransitionBoundarySummary(true, false, 0, 9_120),
         arrangement = TransitionArrangementEvidence("b".repeat(64), SongSectionPurpose.DEVELOPMENT, emptyList(), "c".repeat(64)),
-        melodyNotes = List(20) { index ->
-            val start = index * 480L
-            CohesionMelodyNote("n-${index.toString().padStart(5, '0')}", 0, 60, 70, start, start + 240)
+        melodyNotes = MelodyIdentityBuilder.build(source, 480).notes.map { note ->
+            CohesionMelodyNote(note.id.value, note.channel, note.pitch, note.velocity, note.originalStartTick, note.originalEndTick)
         }
     )
 

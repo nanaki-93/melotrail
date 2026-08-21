@@ -275,17 +275,26 @@ class SeededHumanizationProcessor {
     }.sortedWith(compareBy<IndexedEvent> { it.event.tick }.thenBy { it.track }.thenBy { it.index })
 
     private fun pair(events: List<IndexedEvent>, path: Path?): List<Note> {
-        val active = mutableMapOf<Pair<Int, Int>, ArrayDeque<IndexedEvent>>(); val notes = mutableListOf<Note>()
+        val active = mutableMapOf<Triple<Int, Int, Int>, ArrayDeque<Pair<IndexedEvent, Int>>>(); val notes = mutableListOf<Note>()
+        val ordinal = mutableMapOf<Pair<Int, Int>, Int>(); val sourceSha256 = path?.let(::digest)
         events.forEach { indexed ->
             val message = indexed.event.message as? ShortMessage ?: return@forEach
             val on = message.command == ShortMessage.NOTE_ON && message.data2 > 0
             val off = message.command == ShortMessage.NOTE_OFF || (message.command == ShortMessage.NOTE_ON && message.data2 == 0)
-            if (on) active.getOrPut(message.channel to message.data1) { ArrayDeque() }.addLast(indexed)
+            val key = Triple(indexed.track, message.channel, message.data1)
+            if (on) {
+                val ordinalKey = indexed.track to message.channel
+                val noteOnOrdinal = ordinal.getOrDefault(ordinalKey, 0)
+                ordinal[ordinalKey] = noteOnOrdinal + 1
+                active.getOrPut(key) { ArrayDeque() }.addLast(indexed to noteOnOrdinal)
+            }
             if (off) {
-                val start = active[message.channel to message.data1]?.removeFirstOrNull()
+                val start = active[key]?.removeFirstOrNull()
                     ?: throw IllegalArgumentException("Invalid MIDI${path?.let { " '$it'" }.orEmpty()}: unmatched note-off")
-                require(indexed.event.tick > start.event.tick) { "Invalid MIDI: non-positive note duration" }
-                notes += Note("n-${start.track}-${start.index}", start, indexed, message.channel, message.data1, (start.event.message as ShortMessage).data2, start.event.tick, indexed.event.tick)
+                require(indexed.event.tick > start.first.event.tick) { "Invalid MIDI: non-positive note duration" }
+                val id = sourceSha256?.let { MelodyNoteId.derive(it, indexed.track, message.channel, start.second, message.data1, start.first.event.tick, indexed.event.tick).value }
+                    ?: "n-${start.first.track}-${start.first.index}"
+                notes += Note(id, start.first, indexed, message.channel, message.data1, (start.first.event.message as ShortMessage).data2, start.first.event.tick, indexed.event.tick)
             }
         }
         require(active.values.all { it.isEmpty() }) { "Invalid MIDI: unclosed note-on event" }
@@ -335,5 +344,5 @@ private class SplitMix64(seed: Long) {
 private const val VERSION = 1
 private const val PROCESSOR_VERSION = "seeded-humanization-v1"
 private val HUMANIZATION_HASH = Regex("[0-9a-f]{64}")
-private val HUMANIZATION_ID = Regex("n-[0-9]+-[0-9]+")
+private val HUMANIZATION_ID = Regex("m-[0-9a-f]{64}")
 private val HUMANIZATION_REASONS = setOf("timing", "swing", "duration", "velocity", "chord-stagger", "collision-repair")

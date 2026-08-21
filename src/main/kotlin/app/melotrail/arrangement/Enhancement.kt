@@ -378,9 +378,10 @@ object MusicalProcessingContextFactory {
             intensity = intensity,
             seed = seed,
             pipelineVersion = pipelineVersion,
-            // The stage boundary separately validates MIDI before model use. Keeping a
-            // path-free empty summary here preserves legacy context inspection tests.
-            notes = runCatching { enhancementNoteSummaries(correctedInput) }.getOrElse { emptyList() },
+            notes = runCatching {
+                val ppq = MidiSystem.getSequence(correctedInput.toFile()).resolution
+                enhancementNoteSummaries(correctedInput, ppq * 4L / settings.timeSignature.denominator)
+            }.getOrElse { emptyList() },
             contextSha256 = "0".repeat(64)
         )
         return bare.copy(contextSha256 = MusicalProcessingContextHasher.hash(bare)).also(MusicalProcessingContext::requireValid)
@@ -402,27 +403,13 @@ object MusicalProcessingContextHasher {
 }
 
 internal fun subjectHash(context: MusicalProcessingContext): String = enhancementSha256("${context.partId}|${context.sectionId}".toByteArray(StandardCharsets.UTF_8))
-private fun enhancementNoteSummaries(path: Path): List<EnhancementNoteSummary> {
-    val active = mutableMapOf<Pair<Int, Int>, ArrayDeque<Pair<Long, Int>>>()
-    val notes = mutableListOf<EnhancementNoteSummary>()
-    MidiSystem.getSequence(path.toFile()).tracks.forEach { track ->
-        (0 until track.size()).forEach { index ->
-            val event = track[index]
-            val message = event.message as? ShortMessage ?: return@forEach
-            val key = message.channel to message.data1
-            if (message.command == ShortMessage.NOTE_ON && message.data2 > 0) {
-                active.getOrPut(key) { ArrayDeque() }.addLast(event.tick to message.data2)
-            } else if (message.command == ShortMessage.NOTE_OFF || (message.command == ShortMessage.NOTE_ON && message.data2 == 0)) {
-                val start = active[key]?.removeFirstOrNull() ?: throw IllegalArgumentException("Corrected MIDI contains an unmatched note-off")
-                require(event.tick > start.first) { "Corrected MIDI contains a non-positive note" }
-                val phrase = (start.first / (MidiSystem.getSequence(path.toFile()).resolution.coerceAtLeast(1) * 4L)).toInt().coerceAtMost(255)
-                notes += EnhancementNoteSummary("n-${notes.size.toString().padStart(5, '0')}", message.channel, message.data1, start.second, start.first, event.tick, phrase)
-            }
-        }
+private fun enhancementNoteSummaries(path: Path, canonicalBeatTicks: Long): List<EnhancementNoteSummary> {
+    val identity = MelodyIdentityBuilder.build(path, canonicalBeatTicks)
+    require(identity.notes.size <= 512) { "Corrected MIDI exceeds the bounded enhancement note limit" }
+    return identity.notes.map { note ->
+        EnhancementNoteSummary(note.id.value, note.channel, note.pitch, note.velocity, note.originalStartTick, note.originalEndTick,
+            note.phraseId.removePrefix("p-").toInt().coerceAtMost(255))
     }
-    require(active.values.all { it.isEmpty() }) { "Corrected MIDI contains unclosed notes" }
-    require(notes.size <= 512) { "Corrected MIDI exceeds the bounded enhancement note limit" }
-    return notes
 }
 private fun enhancementSha256(path: Path): String = Files.newInputStream(path).use { input ->
     val digest = MessageDigest.getInstance("SHA-256"); val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
@@ -434,9 +421,9 @@ private fun enhancementSha256(bytes: ByteArray): String = MessageDigest.getInsta
 @OptIn(ExperimentalSerializationApi::class)
 private val JSON = Json { encodeDefaults = true; explicitNulls = false; ignoreUnknownKeys = false }
 private val ENHANCEMENT_ID = Regex("[A-Za-z0-9_-]{1,80}")
-private val ENHANCEMENT_NOTE_ID = Regex("n-[0-9]{5}")
+private val ENHANCEMENT_NOTE_ID = Regex("m-[0-9a-f]{64}")
 private val ENHANCEMENT_ADDED_NOTE_ID = Regex("add-[0-9]{5}")
-private val ENHANCEMENT_EDIT_ID = Regex("(?:n|add)-[0-9]{5}")
+private val ENHANCEMENT_EDIT_ID = Regex("(?:m-[0-9a-f]{64}|add-[0-9]{5})")
 private val ENHANCEMENT_VERSION = Regex("[A-Za-z0-9._-]{1,80}")
 private val ENHANCEMENT_LICENSE = Regex("[A-Za-z0-9._+-]{1,80}")
 private val ENHANCEMENT_HASH = Regex("[0-9a-f]{64}")

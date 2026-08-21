@@ -35,7 +35,7 @@ class MidiAiFixValidatorTest {
 
         val error = assertThrows(IllegalArgumentException::class.java) { plan.requireValid(input) }
 
-        assertEquals("AI-fix plan produces a note collision between n-00000 and n-00001", error.message)
+        assertEquals("AI-fix plan produces a note collision between ${input.notes[0].id} and ${input.notes[1].id}", error.message)
     }
 
     @Test
@@ -60,6 +60,6 @@ class MidiAiFixValidatorTest {
         assertTrue(plan.edits.isEmpty())
         assertEquals(3, prompts.size)
         assertTrue(prompts.drop(1).all { it.contains("previous candidate was rejected") })
-        assertTrue(prompts.drop(1).all { it.contains("n-00000") && it.contains("n-00001") })
+        assertTrue(prompts.drop(1).all { it.contains(input.notes[0].id) && it.contains(input.notes[1].id) })
     }
 }

@@ -387,16 +387,23 @@ class MidiAiFixTransformer {
     }
 
     private fun notes(sequence: Sequence, path: Path): List<Note> {
-        val active = mutableMapOf<Pair<Int, Int>, ArrayDeque<Pair<EventRef, MidiEvent>>>()
+        val active = mutableMapOf<Triple<Int, Int, Int>, ArrayDeque<Triple<EventRef, MidiEvent, Int>>>()
+        val ordinal = mutableMapOf<Pair<Int, Int>, Int>()
+        val sourceSha256 = sha256(path)
         val result = mutableListOf<Note>()
         sequence.tracks.forEachIndexed { trackIndex, track -> (0 until track.size()).forEach { index ->
             val event = track[index]; val message = event.message as? ShortMessage ?: return@forEach
-            val key = message.channel to message.data1
-            if (message.command == ShortMessage.NOTE_ON && message.data2 > 0) active.getOrPut(key) { ArrayDeque() }.addLast(EventRef(trackIndex, index) to event)
+            val key = Triple(trackIndex, message.channel, message.data1)
+            if (message.command == ShortMessage.NOTE_ON && message.data2 > 0) {
+                val ordinalKey = trackIndex to message.channel
+                val noteOnOrdinal = ordinal.getOrDefault(ordinalKey, 0)
+                ordinal[ordinalKey] = noteOnOrdinal + 1
+                active.getOrPut(key) { ArrayDeque() }.addLast(Triple(EventRef(trackIndex, index), event, noteOnOrdinal))
+            }
             else if (message.command == ShortMessage.NOTE_OFF || message.command == ShortMessage.NOTE_ON && message.data2 == 0) {
                 val start = active[key]?.removeFirstOrNull() ?: throw IllegalArgumentException("Invalid cleaned MIDI '$path': unmatched note-off")
                 require(event.tick > start.second.tick) { "Invalid cleaned MIDI '$path': non-positive note duration" }
-                result += Note("n-${result.size.toString().padStart(5, '0')}", start.first, EventRef(trackIndex, index), message.channel, message.data1, (start.second.message as ShortMessage).data2, start.second.tick, event.tick)
+                result += Note(MelodyNoteId.derive(sourceSha256, trackIndex, message.channel, start.third, message.data1, start.second.tick, event.tick).value, start.first, EventRef(trackIndex, index), message.channel, message.data1, (start.second.message as ShortMessage).data2, start.second.tick, event.tick)
             }
         } }
         require(active.values.all { it.isEmpty() }) { "Invalid cleaned MIDI '$path': unclosed note-on" }
@@ -499,17 +506,16 @@ object MidiAiFixStore {
 object MidiAiFixInputFactory {
     fun build(partId: String, cleaned: Path): MidiAiFixInput {
         val analysis = MidiPartAnalyzer().analyze(cleaned, partId)
-        val sequence = MidiSystem.getSequence(cleaned.toFile()); val notes = collectNotes(sequence)
+        val notes = collectNotes(cleaned, analysis.ppq * 4L / analysis.timeSignatures.first().denominator)
         require(notes.size == analysis.noteCount && notes.size <= MidiAiFixInput.MAX_NOTES) { "Cleaned MIDI is too large or inconsistent for bounded AI fix" }
         val regions = problems(notes, analysis.ppq)
         val withoutHash = MidiAiFixInput(partId = partId, cleanedSha256 = sha256(cleaned), inputHash = "0".repeat(64), ppq = analysis.ppq, tempoMap = analysis.tempoMap, timeSignatures = analysis.timeSignatures, key = analysis.key, chords = analysis.chords, pitchRange = analysis.pitchRange, noteDensity = analysis.noteDensity, rhythmicDensity = analysis.rhythmicDensity, noteCount = notes.size, notes = notes, problemRegions = regions)
         return withoutHash.copy(inputHash = sha256(json.encodeToString(withoutHash.copy(inputHash = "")))) .also(MidiAiFixInput::requireValid)
     }
-    private fun collectNotes(sequence: Sequence): List<MidiAiFixNote> {
-        val active = mutableMapOf<Pair<Int, Int>, ArrayDeque<Pair<Long, Int>>>() ; val result = mutableListOf<MidiAiFixNote>()
-        sequence.tracks.forEach { track -> (0 until track.size()).forEach { index -> val event = track[index]; val message = event.message as? ShortMessage ?: return@forEach; val key = message.channel to message.data1; if (message.command == ShortMessage.NOTE_ON && message.data2 > 0) active.getOrPut(key) { ArrayDeque() }.addLast(event.tick to message.data2) else if (message.command == ShortMessage.NOTE_OFF || message.command == ShortMessage.NOTE_ON && message.data2 == 0) { val start = active[key]?.removeFirstOrNull() ?: throw IllegalArgumentException("Cleaned MIDI contains unmatched note-off"); require(event.tick > start.first) { "Cleaned MIDI contains a non-positive note" }; result += MidiAiFixNote("n-${result.size.toString().padStart(5, '0')}", message.channel, message.data1, start.second, start.first, event.tick) } } }
-        require(active.values.all { it.isEmpty() }) { "Cleaned MIDI contains unclosed notes" }; return result
-    }
+    private fun collectNotes(path: Path, canonicalBeatTicks: Long): List<MidiAiFixNote> =
+        MelodyIdentityBuilder.build(path, canonicalBeatTicks).notes.map { note ->
+            MidiAiFixNote(note.id.value, note.channel, note.pitch, note.velocity, note.originalStartTick, note.originalEndTick)
+        }
     private fun problems(notes: List<MidiAiFixNote>, ppq: Int): List<MidiAiFixProblemRegion> {
         val regions = mutableListOf<MidiAiFixProblemRegion>(); var index = 0
         fun add(kind: MidiAiFixProblemKind, start: Long, end: Long, ids: List<String> = emptyList()) { if (regions.size < MidiAiFixInput.MAX_REGIONS) regions += MidiAiFixProblemRegion("r-${index++.toString().padStart(3, '0')}", kind, start, end, ids) }
@@ -525,7 +531,7 @@ object MidiAiFixInputFactory {
 }
 
 private val SAFE_ID = Regex("[A-Za-z0-9_-]{1,80}")
-private val SAFE_NOTE_ID = Regex("n-[0-9]{5}")
+private val SAFE_NOTE_ID = Regex("m-[0-9a-f]{64}")
 private val SAFE_REGION_ID = Regex("r-[0-9]{3}")
 private val SAFE_LICENSE = Regex("[A-Za-z0-9._+-]{1,80}")
 private val HASH = Regex("[0-9a-f]{64}")
