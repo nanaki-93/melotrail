@@ -101,7 +101,7 @@ class MidiPartAnalyzerTest {
             version = Project.CURRENT_VERSION,
             name = "test",
             renderFormat = RenderFormat(),
-            parts = listOf(Part(id, "source/$id.mid", midi = MidiReferences(clean = "midi/clean/$id.mid")))
+            parts = listOf(Part(id, "source/$id.mid", midi = canonicalMidiReferences(root, id)))
         )
         ProjectStore.write(root, project)
         return project

@@ -40,7 +40,8 @@ Tasks 119–123.
 - Canonical harmony cannot be overridden by model output.
 - Same projection, generator version, and seed yields byte-identical MIDI.
 - Arrangement or registry changes invalidate generated roles and descendants.
-- Compatibility tests cover retained serialized arrangement evidence.
+- Canonical serialization tests cover current arrangement evidence; no legacy
+  arrangement reader or fixture is retained.
 
 Run `./gradlew test :desktopApp:test :desktopApp:build`.
 

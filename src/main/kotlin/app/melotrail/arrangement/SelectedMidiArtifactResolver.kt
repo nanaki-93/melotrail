@@ -23,9 +23,6 @@ class SelectedMidiArtifactResolver(
             ?: throw IllegalArgumentException("Unknown MIDI part '$partId'."))
 
     fun resolve(projectRoot: Path, project: Project, part: SongPart): SelectedMidiArtifact {
-        require(project.version >= Project.MIDI_FIRST_VERSION) {
-            "Project uses legacy v1 source audio; it has no selected MIDI artifact."
-        }
         val root = projectRoot.toAbsolutePath().normalize()
         val rootReal = root.toRealPath()
         val midi = requireNotNull(part.midi) { "Part '${part.id}' has no MIDI references." }
@@ -36,11 +33,6 @@ class SelectedMidiArtifactResolver(
         val cleanupFreshness = cleanupFreshness(root, part, midi, cleanedReference)
         val manifestSelection = project.envelope.stageRuns.index?.let {
             StageRunStore().selectedOutput(root, project.envelope.stageRuns, StageSubject.Part(part.id))
-        }
-        if (cleanupFreshness == MidiCleanupFreshness.LEGACY_UNKNOWN) {
-            require(midi.aiFixSelection == MidiAiFixSelection.SKIP && midi.analysisInput == MidiAnalysisInput.CURRENT) {
-                "Part '${part.id}' has legacy cleaned MIDI without current approval; re-import and run Clean MIDI before choosing an AI fix or Lo-fi Feel."
-            }
         }
         val normalizedReference = midi.normalized
         val normalized = normalizedReference?.let { resolveFile(root, rootReal, it, "normalized MIDI") }
@@ -86,9 +78,8 @@ class SelectedMidiArtifactResolver(
             }
         }
         val aiFixBase = when (midi.aiFixSelection) {
-            // The Melody Parts presentation keeps this stage ordered.  The
-            // resolver remains readable for pre-existing callers and treats a
-            // pending decision as its corrected baseline.
+            // The Melody Parts presentation keeps this stage ordered. A pending
+            // current decision uses its corrected baseline.
             MidiAiFixSelection.PENDING -> correctedBase
             MidiAiFixSelection.SKIP -> correctedBase
             MidiAiFixSelection.APPROVED -> {
@@ -177,9 +168,6 @@ class SelectedMidiArtifactResolver(
     }
 
     private fun cleanupFreshness(root: Path, part: SongPart, midi: MidiReferences, cleanedReference: String): MidiCleanupFreshness {
-        // V2 projects predating explicit cleanup evidence remain readable. They are never
-        // accepted as current Lo-fi input because that branch requires a current report.
-        if (midi.raw == null && midi.cleanup == null && midi.quality == null) return MidiCleanupFreshness.LEGACY_UNKNOWN
         require(midi.raw != null && midi.cleanup != null && midi.quality != null) {
             "Part '${part.id}' has incomplete MIDI cleanup provenance."
         }
@@ -251,7 +239,7 @@ class SelectedMidiArtifactResolver(
 
 enum class SelectedMidiBaseKind { CLEANED, NORMALIZED, TRANSPOSED, CORRECTED, APPROVED_AI_FIX }
 enum class SelectedMidiArtifactKind { CLEANED, NORMALIZED, TRANSPOSED, CORRECTED, APPROVED_AI_FIX, ENHANCED, LOFI_FEEL }
-enum class MidiCleanupFreshness { CURRENT, LEGACY_UNKNOWN, STALE }
+enum class MidiCleanupFreshness { CURRENT, STALE }
 enum class MidiLoFiFreshness { CURRENT, NOT_SELECTED }
 data class MidiTimingSummary(val tempoMap: List<MidiTempoChange>, val timeSignatures: List<MidiTimeSignature>)
 data class SelectedMidiArtifact(

@@ -105,7 +105,7 @@ class StageRunnerTest {
         val runner = runner(WritingProcessor(StageId.CLEANED))
         val service = DefaultProjectApplicationService(
             midiPreparation = object : MidiPreparationService { override suspend fun transcribe(input: Path, output: Path) = Unit; override suspend fun clean(input: Path, output: Path) = Unit },
-            legacyPartAnalysis = LegacyPartAnalysisService { error("not used") }, stageRunRecovery = runner
+            stageRunRecovery = runner
         )
 
         val snapshot = service.open(root)

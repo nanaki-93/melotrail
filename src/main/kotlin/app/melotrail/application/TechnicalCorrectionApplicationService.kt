@@ -134,7 +134,6 @@ class DefaultTechnicalCorrectionApplicationService(
     private data class Current(val input: Path, val reference: String, val context: TechnicalCorrectionContext)
     private fun current(root: Path, partId: String): Current {
         val project = ProjectStore.read(root).also { it.requireValid(root) }
-        require(project.version >= Project.MIDI_FIRST_VERSION) { "Technical correction requires a MIDI-first project." }
         val part = project.parts.singleOrNull { it.id == partId } ?: throw IllegalArgumentException("Part not found: $partId")
         val midi = requireNotNull(part.midi) { "Part '$partId' has no MIDI evidence." }
         val reference = midi.transposed ?: midi.normalized ?: midi.clean ?: throw IllegalArgumentException("Part '$partId' has no cleaned MIDI.")

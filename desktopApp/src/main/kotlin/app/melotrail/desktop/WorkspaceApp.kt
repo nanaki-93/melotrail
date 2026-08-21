@@ -121,7 +121,6 @@ object WorkspaceTags {
     const val OPERATION_FEEDBACK = "operation-feedback"
     const val CREATE_PROJECT = "create-project"
     const val OPEN_PROJECT = "open-project"
-    const val MIGRATE_PROJECT = "migrate-project"
     const val ADD_MIDI = "add-midi"
     const val ADD_AUDIO = "add-audio"
     const val IMPORT_MIDI = "import-midi"
@@ -279,7 +278,6 @@ private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                         HeaderIconControl("⚙", "Open Settings", !mutationsDisabled, WorkspaceTags.HEADER_SETTINGS) { onIntent(WorkspaceIntent.OpenSettings) }
                     }
                     SelectedProjectControl(state, mutationsDisabled, onIntent, Modifier.fillMaxWidth())
-                    if (state.project?.migration?.requiresMigration == true) TextButton(onClick = { onIntent(WorkspaceIntent.MigrateProject) }, modifier = Modifier.semantics { testTag = WorkspaceTags.MIGRATE_PROJECT }) { Text("Migrate") }
                 }
             } else Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -290,7 +288,6 @@ private fun ProjectHeader(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                 Spacer(Modifier.weight(1f))
                 SelectedProjectControl(state, mutationsDisabled, onIntent)
                 HeaderActions(state, mutationsDisabled, onIntent)
-                if (state.project?.migration?.requiresMigration == true) TextButton(onClick = { onIntent(WorkspaceIntent.MigrateProject) }, modifier = Modifier.semantics { testTag = WorkspaceTags.MIGRATE_PROJECT }) { Text("Migrate") }
             }
         }
     }
@@ -625,10 +622,6 @@ internal fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (Workspac
         }
     }
     when (quality.status) {
-        app.melotrail.application.MidiQualityStatus.LEGACY_UNKNOWN -> {
-            Text("Legacy MIDI has no raw-to-clean quality record.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-            Text("Analysis and arrangement are blocked until this part is re-imported with MIDI cleanup. Structure may still be edited.", style = MaterialTheme.typography.bodySmall)
-        }
         app.melotrail.application.MidiQualityStatus.STALE_OR_INVALID -> {
             Text("Raw MIDI is ready but cleaned MIDI evidence is missing, stale, or invalid.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             Text("Analysis and arrangement are blocked. Run Clean MIDI, review its report, then analyze ${part.id}; structure may still be edited.", style = MaterialTheme.typography.bodySmall)
@@ -701,26 +694,24 @@ internal fun MidiQualityReviewPanel(state: WorkspaceUiState, onIntent: (Workspac
         }
     }
 
-    if (quality.status != app.melotrail.application.MidiQualityStatus.LEGACY_UNKNOWN) {
-        Text("Cleaning profile", style = MaterialTheme.typography.labelLarge)
-        Text("Choose a named profile. This never edits source MIDI or exposes worker parameters.", style = MaterialTheme.typography.bodySmall)
-        MidiCleanupProfile.entries.forEach { profile ->
-            val selected = state.midiQualityReview.profile == profile
-            OutlinedButton(
-                onClick = { onIntent(WorkspaceIntent.SelectMidiCleanupProfile(profile)) },
-                enabled = !state.operation.isMutating,
-                modifier = Modifier.semantics { testTag = WorkspaceTags.MIDI_QUALITY_PROFILE_PREFIX + profile.name.lowercase() }
-            ) { Text(if (selected) "${profile.qualityProfileLabel()} selected" else profile.qualityProfileLabel()) }
-        }
-        if (state.midiQualityReview.profile == MidiCleanupProfile.TIGHTEN_TIMING) {
-            Text("Timing warning: tighten timing uses a fixed 1/16 grid at 40% strength. It may shift expressive note starts and ends; confirmation is required.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-        }
-        Button(
-            onClick = { onIntent(WorkspaceIntent.CleanMidi(part.id)) },
+    Text("Cleaning profile", style = MaterialTheme.typography.labelLarge)
+    Text("Choose a named profile. This never edits source MIDI or exposes worker parameters.", style = MaterialTheme.typography.bodySmall)
+    MidiCleanupProfile.entries.forEach { profile ->
+        val selected = state.midiQualityReview.profile == profile
+        OutlinedButton(
+            onClick = { onIntent(WorkspaceIntent.SelectMidiCleanupProfile(profile)) },
             enabled = !state.operation.isMutating,
-            modifier = Modifier.semantics { testTag = WorkspaceTags.MIDI_QUALITY_CLEAN }
-        ) { Text("Clean MIDI") }
+            modifier = Modifier.semantics { testTag = WorkspaceTags.MIDI_QUALITY_PROFILE_PREFIX + profile.name.lowercase() }
+        ) { Text(if (selected) "${profile.qualityProfileLabel()} selected" else profile.qualityProfileLabel()) }
     }
+    if (state.midiQualityReview.profile == MidiCleanupProfile.TIGHTEN_TIMING) {
+        Text("Timing warning: tighten timing uses a fixed 1/16 grid at 40% strength. It may shift expressive note starts and ends; confirmation is required.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+    }
+    Button(
+        onClick = { onIntent(WorkspaceIntent.CleanMidi(part.id)) },
+        enabled = !state.operation.isMutating,
+        modifier = Modifier.semantics { testTag = WorkspaceTags.MIDI_QUALITY_CLEAN }
+    ) { Text("Clean MIDI") }
     if ((state.operation as? WorkspaceOperation.Failed)?.action == "Clean MIDI") {
         Text("Clean MIDI failed: ${(state.operation as WorkspaceOperation.Failed).message}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
     }

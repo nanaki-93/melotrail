@@ -21,7 +21,7 @@ in `docs/RELEASE_ACCEPTANCE.md`.
 
 | Area | Primary files | Current responsibility | Decision |
 | --- | --- | --- | --- |
-| Canonical project | `arrangement/Project.kt`, `ProjectStore.kt`, `WorkflowArtifacts.kt` | v3 file-backed project, migration, references, hashes, invalidation | Extend to v4; retain compatibility |
+| Canonical project | `arrangement/Project.kt`, `ProjectStore.kt`, `WorkflowArtifacts.kt` | schema-v4 file-backed project, references, hashes, invalidation, strict admission | Keep v4 only; reject unsupported documents without conversion |
 | Project application | `application/ProjectApplicationService.kt`, `WorkflowReadModel.kt` | import, cleanup, selection, analysis, structure, readiness | Keep facade; extract capabilities as added |
 | Desktop UI | `desktopApp/.../WorkspaceViewModel.kt`, `WorkspacePageRouter.kt`, `DesktopMain.kt` | supported responsive product UI | Adapt, do not replace shell/transport |
 | Spring API | Task 028 retirement record | no supported caller or canonical project authority | Deleted with the separate store, configuration, and in-memory worker jobs |
@@ -54,8 +54,8 @@ foundations and should be evolved rather than bypassed.
 
 ## Reusable components
 
-- Atomic project writes, project-root path confinement, fingerprints, and v1/v2
-  migration patterns.
+- Atomic canonical project writes, project-root path confinement, fingerprints,
+  and strict project admission.
 - Immutable source/raw/clean/AI-fix/feel artifacts and approval references.
 - MIDI parsing, PPQ/tempo/meter analysis, validation, quality reporting, and
   deterministic cleanup.
@@ -76,18 +76,17 @@ foundations and should be evolved rather than bypassed.
   Task 001 found no supported caller. The recovery disposition is documented in
   [`SPRING_API_RETIREMENT.md`](SPRING_API_RETIREMENT.md); Git history preserves
   the removed implementation, not a dormant runtime surface.
-- Historical whole-occurrence cohesion records remain readable evidence only.
-  Reviewed arrangement-aware transition boundaries are the sole executable path.
+- Historical whole-occurrence Cohesion DTOs/readers are removed. Reviewed
+  arrangement-aware transition boundaries are the sole executable path.
 - Duplicate/older workspace UI components should be removed only after router
   coverage demonstrates they are unreachable.
 - The generic provenance log should not compete with commercial provenance and
   the new stage ledger. Task 027 migrates useful fields and deletes the old log,
   store, wiring, configuration, and exclusive tests in the same cutover.
 
-Every compatibility component in this section is temporary only while it serves
-a declared supported schema/caller. Its owning task must delete superseded runtime
-code after migration; Git history, not dormant source, preserves implementation
-history.
+No project-schema compatibility component is permitted. An owning task deletes
+superseded runtime code and exclusive evidence with its cutover; Git history,
+not dormant source, preserves implementation history.
 
 ## Blocking technical debt
 

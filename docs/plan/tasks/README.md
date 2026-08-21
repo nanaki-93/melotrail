@@ -5,12 +5,12 @@ time unless a contract explicitly permits parallel implementation. Task numbers
 118–130 continue the repository's historical sequence; missing older task files
 are Git-history evidence and are not live dependencies.
 
-Cross-cutting completion rule: replacement is not complete while its superseded
-project-owned runtime path remains. After supported data/callers migrate, remove
-obsolete source, exclusive tests/fixtures, registrations, configuration,
-dependencies, resources, UI copy, and stale documentation. A compatibility
-reader may remain only for the declared supported schema window and must have a
-named removal condition.
+Cross-cutting completion rule: schema v4 is the only supported project format,
+and replacement is not complete while any superseded project-owned runtime path
+remains. Do not add or retain backward/retro-compatibility, dual reads, migration
+commands, migration UI, old-schema DTOs/mappers, or exclusive legacy fixtures.
+Remove obsolete source, tests, registrations, configuration, dependencies,
+resources, UI copy, and stale documentation in the task that replaces them.
 
 | Order | Task | Primary result |
 | ---: | --- | --- |
@@ -26,7 +26,7 @@ named removal condition.
 | 127 | [Deterministic full-song critic](127-deterministic-full-song-critic.md) | Reproducible whole-song issues |
 | 128 | [AI Full-Song Enhance](128-ai-full-song-enhance.md) | Separate targeted AI stage |
 | 129 | [Stage comparison and diagnostic reports](129-stage-comparison-and-diagnostic-reports.md) | Persisted service/UI evidence |
-| 130 | [Reference-song integration, migration, and rollout](130-reference-song-integration-and-rollout.md) | End-to-end acceptance and cleanup |
+| 130 | [Reference-song integration and rollout](130-reference-song-integration-and-rollout.md) | End-to-end acceptance and cleanup |
 
 The code-verified Task 118 audit is [`../music-context-audit.md`](../music-context-audit.md).
 
@@ -38,5 +38,5 @@ The code-verified Task 118 audit is [`../music-context-audit.md`](../music-conte
   full-song AI mutation stage.
 - Humanization remains after Task 128 and consumes approved, bypassed, or no-op
   Full-Song Enhance selection according to Task 128.
-- Tasks 129–130 close diagnostics, compatibility, and rollout after runtime
+- Tasks 129–130 close diagnostics, cleanup, and rollout after runtime
   contracts are stable.

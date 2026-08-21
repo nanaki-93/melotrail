@@ -418,7 +418,7 @@ class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soun
     }
 
     private fun selectedMidi(root: Path, project: Project, unresolved: MutableList<String>): List<SelectedMidiProvenance> =
-        if (project.version < Project.MIDI_FIRST_VERSION) emptyList() else runCatching {
+        runCatching {
             project.requireSelectedMidi(root).sortedBy { it.partId }.map {
                 SelectedMidiProvenance(it.partId, it.projectRelativePath, it.sha256, it.kind, it.profile?.id)
             }

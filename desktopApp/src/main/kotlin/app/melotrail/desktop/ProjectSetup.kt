@@ -91,17 +91,6 @@ internal fun ProjectSetupContent(state: WorkspaceUiState, onIntent: (WorkspaceIn
         Text("Project setup", style = MaterialTheme.typography.headlineMedium)
         Text(if (project == null) "Open or create a project to set its musical context." else "Choose the explicit musical context used by downstream analysis and arrangement.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (project == null) return@Column
-        if (project.migration.requiresMigration) {
-            WorkspaceCard("Legacy project", WorkspacePageTags.SETUP_LEGACY) {
-                Text("This v${project.migration.sourceVersion} project is readable but must be explicitly saved as v4 before its setup can change.")
-                project.migration.warnings.forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
-                project.migration.setupRequirements.takeIf { it.isNotEmpty() }?.let { requirements ->
-                    Text("Required after migration: ${requirements.joinToString { it.name.lowercase().replace('_', ' ') }}.", style = MaterialTheme.typography.bodySmall)
-                }
-                Button(onClick = { onIntent(WorkspaceIntent.MigrateProject) }, enabled = !state.operation.isMutating, modifier = Modifier.semantics { testTag = WorkspacePageTags.SETUP_MIGRATE; contentDescription = "Save legacy project as schema v4" }) { Text("Save as v4") }
-            }
-            return@Column
-        }
         when {
             setup.loading -> Text("Loading setup choices…", modifier = Modifier.semantics { testTag = WorkspacePageTags.SETUP_LOADING })
             setup.draft == null || setup.options == null -> WorkspaceCard("Setup unavailable", WorkspacePageTags.SETUP_ERROR) { Text(setup.validationError ?: "Setup choices are unavailable. Reopen the project and try again.") }

@@ -221,7 +221,7 @@ enum class SustainedRole {
     @SerialName("texture") TEXTURE
 }
 
-/** Bounded composition choices; legacy roles keep existing approved v3 plans readable. */
+/** Bounded composition choices supported by the active detailed-arrangement protocol. */
 @Serializable
 enum class StringsRole {
     @SerialName("sustained_harmony") SUSTAINED_HARMONY,
@@ -597,7 +597,7 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
     }
 }
 
-/** V3 persistence is isolated from legacy v1/v2 readers until MIDI generators consume it. */
+/** Strict canonical detailed-arrangement persistence. */
 object DetailedArrangementStore {
     const val APPROVED_FILE = "arrangement.json"
     const val DRAFT_FILE = "arrangement.draft.json"

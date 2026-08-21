@@ -21,7 +21,7 @@ enum class WorkflowStage {
 enum class WorkflowState { BLOCKED, CURRENT, REVIEW, STALE, COMPLETE }
 
 enum class WorkflowAction {
-    CREATE_OR_OPEN, MIGRATE_PROJECT, UPDATE_COMPOSITION_SETTINGS, IMPORT, INSPECT, TRANSCRIBE, CLEAN_MIDI, APPROVE_CLEAN_MIDI,
+    CREATE_OR_OPEN, UPDATE_COMPOSITION_SETTINGS, IMPORT, INSPECT, TRANSCRIBE, CLEAN_MIDI, APPROVE_CLEAN_MIDI,
     CREATE_AI_FIX, APPROVE_AI_FIX, SELECT_MIDI_FEEL, ANALYZE, SAVE_STRUCTURE, GENERATE_COHESION,
     APPROVE_COHESION, UPDATE_HARMONY, GENERATE_ARRANGEMENT, APPROVE_ARRANGEMENT, GENERATE_HUMANIZATION, RENDER,
     MIX, MASTER, REVIEW_COMMERCIAL_PROVENANCE
@@ -31,7 +31,6 @@ enum class WorkflowAction {
 enum class WorkflowPrerequisite {
     NONE,
     PROJECT_ROOT,
-    SCHEMA_V4,
     COMPOSITION_SETTINGS,
     COMPLETE_HARMONY,
     IMPORTED_SOURCE,
@@ -79,15 +78,6 @@ object WorkflowReadModelDeriver {
                 WorkflowPrerequisite.PROJECT_ROOT
             )
         })
-        if (project.migration.requiresMigration || project.version < Project.CURRENT_VERSION) return WorkflowReadModel(WorkflowStage.entries.map { stage ->
-            step(
-                stage,
-                if (stage == WorkflowStage.PROJECT) WorkflowState.REVIEW else WorkflowState.BLOCKED,
-                WorkflowAction.MIGRATE_PROJECT,
-                WorkflowPrerequisite.SCHEMA_V4
-            )
-        })
-
         val stale = project.readiness.staleArtifacts
         val missingSource = project.parts.firstOrNull { !it.preparation.sourcePreserved }
         val uninspected = project.parts.firstOrNull { !it.preparation.inspected }
@@ -107,7 +97,7 @@ object WorkflowReadModelDeriver {
 
         val approvalRequired = project.parts.firstOrNull { it.preparation.midiQuality.status == MidiQualityStatus.APPROVAL_REQUIRED }
         val needsCleaning = project.parts.firstOrNull {
-            !it.preparation.cleanMidi || it.preparation.midiQuality.status in setOf(MidiQualityStatus.STALE_OR_INVALID, MidiQualityStatus.LEGACY_UNKNOWN)
+            !it.preparation.cleanMidi || it.preparation.midiQuality.status == MidiQualityStatus.STALE_OR_INVALID
         }
         val clean = when {
             transcription.state != WorkflowState.COMPLETE -> blocked(WorkflowStage.CLEAN_MIDI, transcription)

@@ -21,10 +21,9 @@ directory containing a valid `project.json`. Project audio and metadata stay in
 that selected project directory; desktop preferences retain only the last
 successfully opened project and a validated sound-library location.
 
-For a current v4 project, open **Setup** and explicitly save the project name,
-key, BPM, time signature, Lo-fi profile, and mood before analysis. A readable
-legacy project stays unchanged when opened; its Setup page explains the required
-settings and provides the separate **Save as v4** action.
+For a canonical v4 project, open **Setup** and explicitly save the project name,
+key, BPM, time signature, Lo-fi profile, and mood before analysis. Older or
+non-canonical project files are rejected without conversion or writes.
 
 ## Sound library or renderer unavailable
 
@@ -130,14 +129,12 @@ route are always visible. Open **Release options** only to change the permitted
 format, filename, or project `output/` destination; it cannot make a stale or
 missing master exportable.
 
-## Workflow migration and stale artifacts
+## Unsupported projects and stale artifacts
 
-New projects are schema v4. Existing v1, v2, and v3 project files are read
-without being rewritten during open. A legacy migration is an explicit atomic
-save; if a migration or artifact is incomplete, leave the last known-good files
-in place and follow the workspace's next safe action. The supported legacy
-readers and their removal conditions are recorded in
-[`COMPATIBILITY_READERS.md`](COMPATIBILITY_READERS.md).
+New projects are schema v4, and only the current canonical v4 shape can open.
+If an older or superseded document is rejected, the application will not rewrite
+or convert it. Use Git history or an external archival checkout if its data must
+be inspected; do not copy old serialized fields back into a current project.
 
 Changing source/raw MIDI, cleaned MIDI, the selected Lo-fi Feel, analysis,
 structure, cohesion, mix-only settings, or audio texture can mark downstream

@@ -1,9 +1,6 @@
 package app.melotrail.application
 
-import app.melotrail.arrangement.Part
-import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
-import app.melotrail.arrangement.writeLegacyProjectFixture
 import app.melotrail.preparation.DetectedInput
 import app.melotrail.preparation.InputContainer
 import app.melotrail.preparation.InputInspectionBoundary
@@ -103,20 +100,6 @@ class InputInspectionApplicationServiceTest {
     }
 
     @Test
-    fun `legacy project with no report has a truthful uninspected snapshot`() {
-        val root = tempDir.resolve("legacy")
-        Files.createDirectories(root.resolve("parts"))
-        writeMidi(root.resolve("parts/A.mid"), 60)
-        writeLegacyProjectFixture(root, Project(name = "legacy", parts = listOf(Part("A", "parts/A.mid"))))
-        val service = service(InputInspectionBoundary { error("not called") })
-
-        val preparation = service.open(root).parts.single().preparation
-
-        assertFalse(preparation.sourcePreserved || preparation.inspected || preparation.ready)
-        assertTrue(preparation.warnings.isEmpty())
-    }
-
-    @Test
     fun `inspection participates in the per project mutation mutex`() = runBlocking {
         val started = CompletableDeferred<Unit>()
         val release = CompletableDeferred<Unit>()
@@ -148,7 +131,6 @@ class InputInspectionApplicationServiceTest {
             override suspend fun transcribe(input: Path, output: Path) = error("not used")
             override suspend fun clean(input: Path, output: Path) { Files.copy(input, output) }
         },
-        legacyPartAnalysis = LegacyPartAnalysisService { error("not used") },
         inputInspection = inspector
     )
 

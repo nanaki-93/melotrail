@@ -85,10 +85,6 @@ class DefaultBuildApplicationService(
         return try {
             withContext(Dispatchers.IO) {
                 stage(progress, 1, "Validating project readiness") {
-                    val migrated = ProjectWorkflowStore.migrateCohesionOrderForBuild(root)
-                    require(!migrated) {
-                        "This historical target-order build was migrated. Regenerate and approve Arrangement, then regenerate and approve Cohesion before building; existing release files remain exportable as historical evidence."
-                    }
                     val arrangement = arrangementService.load(root)
                     require(arrangement.approved && !arrangement.approvalRequired && !arrangement.stale) {
                         "Build Song requires a current approved arrangement. Review and approve the Qwen draft or regenerate it."

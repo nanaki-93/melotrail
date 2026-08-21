@@ -185,8 +185,7 @@ class MidiAiFixApplicationServiceTest {
         object : MidiPreparationService {
             override suspend fun transcribe(input: Path, output: Path) = Files.copy(input, output).let { Unit }
             override suspend fun clean(input: Path, output: Path) = Files.copy(input, output).let { Unit }
-        },
-        LegacyPartAnalysisService { error("legacy analysis is not used") }
+        }
     )
 
     private fun writeMidi(path: Path): Path {

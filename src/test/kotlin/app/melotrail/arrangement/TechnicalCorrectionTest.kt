@@ -5,7 +5,6 @@ import app.melotrail.application.CreateProjectRequest
 import app.melotrail.application.DefaultProjectApplicationService
 import app.melotrail.application.DefaultTechnicalCorrectionApplicationService
 import app.melotrail.application.ImportPartRequest
-import app.melotrail.application.LegacyPartAnalysisService
 import app.melotrail.application.MidiPreparationService
 import app.melotrail.application.CreateTechnicalCorrectionRequest
 import kotlinx.coroutines.runBlocking
@@ -63,7 +62,7 @@ class TechnicalCorrectionTest {
     }
 
     @Test
-    fun `corrected artifact is selectable while legacy approved AI fix remains compatibility evidence`() = runBlocking {
+    fun `corrected artifact is selectable`() = runBlocking {
         val projects = projectService()
         projects.create(CreateProjectRequest(root))
         val source = writeProblemMidi(root.resolveSibling("source.mid"))
@@ -79,20 +78,13 @@ class TechnicalCorrectionTest {
         assertTrue(selected.selected)
         assertEquals(TechnicalCorrectionSelection.CORRECTED, ProjectStore.read(root).parts.single().midi!!.technicalCorrectionSelection)
         assertEquals(SelectedMidiArtifactKind.CORRECTED, SelectedMidiArtifactResolver().resolve(root, ProjectStore.read(root), "A").kind)
-
-        val legacy = ProjectStore.read(root).copy(parts = ProjectStore.read(root).parts.map { part ->
-            part.copy(midi = part.midi!!.copy(aiFixSelection = MidiAiFixSelection.APPROVED,
-                aiFix = MidiAiFixReferences(part.midi!!.technicalCorrection!!.input.sha256, approved = WorkflowArtifactReference("midi/ai-fix/A/approved.mid", part.midi!!.technicalCorrection!!.output.sha256))))
-        })
-        assertFalse(LegacyV3StageRunMapper.map(legacy).any { it.stage == StageId.CORRECTED && it.artifactPath.contains("ai-fix") })
     }
 
     private fun projectService() = DefaultProjectApplicationService(
         object : MidiPreparationService {
             override suspend fun transcribe(input: Path, output: Path) = Files.copy(input, output).let { Unit }
             override suspend fun clean(input: Path, output: Path) = Files.copy(input, output).let { Unit }
-        },
-        LegacyPartAnalysisService { error("unused") }
+        }
     )
 
     private fun writeProblemMidi(path: Path): Path {

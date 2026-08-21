@@ -221,19 +221,14 @@ sample count. It supports filtering without exposing paths. Diagnostics distingu
 Do not require every library to contain exactly the starter five entries. Project
 readiness instead checks required arrangement roles against valid entries.
 
-## v1 compatibility
+## Registry cutover
 
-- Continue reading registry v1.
-- Preserve current keys `piano`, `bass`, `drums`, `pad`, and `strings` as stable
-  legacy instrument IDs so approved arrangements and mix/stem aliases remain valid.
-- Derive each legacy role from its key and mark profile/mood/character metadata as
-  neutral/unspecified rather than inventing claims.
-- Retain existing SFZ/WAV/license/path validation.
-- Materialize the referenced v1 `LICENSES.json` entry into an embedded legacy
-  license/provenance snapshot and preserve both source-file hashes.
-- A v2 registry migration is explicit and does not rename/move sound files.
-- Older approved arrangements render through the compatibility lookup. New
-  arrangements use v2 selection decisions when available.
+- Accept only the canonical registry schema and stable instrument IDs.
+- Do not retain a v1 reader, role alias lookup, migration command, or fallback
+  for approved arrangements or mix/stem references.
+- Retain SFZ/WAV/license/path validation for canonical entries.
+- Reject projects whose arrangement or render evidence references superseded
+  registry keys; do not rewrite those references during open.
 
 ## Provenance and portability
 

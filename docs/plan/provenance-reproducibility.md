@@ -143,4 +143,4 @@ absolute paths, credentials, source names marked sensitive, or raw model data.
 - failure/retry links survive reopen;
 - upstream selection changes create new release lineage and stale old readiness;
 - redaction tests for logs/reports/API DTOs;
-- legacy provenance/source attestation migration fixtures.
+- strict rejection fixtures for superseded provenance/source-attestation shapes.

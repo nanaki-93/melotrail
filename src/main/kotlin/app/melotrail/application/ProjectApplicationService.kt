@@ -33,14 +33,10 @@ import app.melotrail.arrangement.WorkflowChange
 import app.melotrail.arrangement.SongPart
 import app.melotrail.arrangement.SectionTypeCatalog
 import app.melotrail.arrangement.SectionTypeId
-import app.melotrail.arrangement.PartAnalysis
 import app.melotrail.arrangement.PartAnalysisReference
-import app.melotrail.arrangement.PartAnalysisStore
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ArtifactRef
 import app.melotrail.arrangement.ProcessorIdentity
-import app.melotrail.arrangement.ProjectMigrationResult
-import app.melotrail.arrangement.ProjectSetupRequirement
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.StageRunStore
 import app.melotrail.arrangement.StageRunRecord
@@ -108,8 +104,6 @@ interface ProjectApplicationService {
         throw UnsupportedOperationException("This project service does not support composition settings.")
     fun updateCompositionSettings(command: UpdateCompositionSettings): UpdateCompositionSettingsResult =
         throw UnsupportedOperationException("This project service does not support composition settings.")
-    /** Optional explicit migration boundary; older adapters remain read-only. */
-    fun migrateProject(root: Path): ProjectSnapshot = throw UnsupportedOperationException("This project service does not support schema migration.")
     fun create(request: CreateProjectRequest): ProjectSnapshot
     /** Source-first automatic import. Its result describes the first durable run, never a final media promise. */
     suspend fun importSongPart(command: ImportSongPart): ImportSongPartResult =
@@ -249,11 +243,6 @@ interface MidiPreparationService {
     suspend fun clean(input: Path, output: Path, options: MidiCleanupOptions) = clean(input, output)
 }
 
-/** Worker boundary retained for readable legacy v1 projects. */
-fun interface LegacyPartAnalysisService {
-    suspend fun analyze(source: Path): PartAnalysis
-}
-
 data class ProjectSnapshot(
     val root: Path,
     val version: Int,
@@ -261,16 +250,7 @@ data class ProjectSnapshot(
     val renderFormat: RenderFormat?,
     val parts: List<PartSummary>,
     val structure: List<StructureSectionSummary>,
-    val readiness: ProjectReadiness,
-    /** Queryable state only; editing Setup belongs to Task 006. */
-    val migration: ProjectMigrationStatus = ProjectMigrationStatus()
-)
-
-data class ProjectMigrationStatus(
-    val requiresMigration: Boolean = false,
-    val sourceVersion: Int = Project.CURRENT_VERSION,
-    val warnings: List<String> = emptyList(),
-    val setupRequirements: Set<ProjectSetupRequirement> = emptySet()
+    val readiness: ProjectReadiness
 )
 
 data class PartSummary(
@@ -319,7 +299,7 @@ data class PartPreparationSummary(
     val analyzed: Boolean,
     val ready: Boolean,
     val warnings: List<String>,
-    val midiQuality: MidiQualitySummary = MidiQualitySummary.legacyUnknown(),
+    val midiQuality: MidiQualitySummary = MidiQualitySummary.invalid(),
     val technicalCorrection: TechnicalCorrectionSummary = TechnicalCorrectionSummary(),
     val enhancement: EnhancementSummary = EnhancementSummary(),
     val midiFeel: MidiFeelSummary = MidiFeelSummary(),
@@ -365,7 +345,7 @@ data class MidiFeelSummary(
     val report: MidiFeelReport? = null
 )
 
-enum class MidiQualityStatus { CURRENT, APPROVAL_REQUIRED, LEGACY_UNKNOWN, STALE_OR_INVALID }
+enum class MidiQualityStatus { CURRENT, APPROVAL_REQUIRED, STALE_OR_INVALID }
 
 data class MidiQualitySummary(
     val status: MidiQualityStatus,
@@ -376,12 +356,12 @@ data class MidiQualitySummary(
     val report: MidiQualityReport? = null
 ) {
     companion object {
-        fun legacyUnknown() = MidiQualitySummary(MidiQualityStatus.LEGACY_UNKNOWN)
+        fun invalid() = MidiQualitySummary(MidiQualityStatus.STALE_OR_INVALID)
     }
 }
 
 enum class PartSourceType { MIDI, AUDIO, UNKNOWN }
-enum class PartAnalysisStatus { NONE, LEGACY_AUDIO, MIDI }
+enum class PartAnalysisStatus { NONE, MIDI }
 
 data class PartAnalysisSummary(
     val status: PartAnalysisStatus,
@@ -435,7 +415,6 @@ data class ProjectReadiness(
 
 class DefaultProjectApplicationService(
     private val midiPreparation: MidiPreparationService,
-    private val legacyPartAnalysis: LegacyPartAnalysisService,
     private val midiPartAnalyzer: MidiPartAnalyzer = MidiPartAnalyzer(),
     private val midiQualityReporter: MidiQualityReporter = MidiQualityReporter(),
     private val midiFeelTransformer: MidiLoFiFeelTransformer = MidiLoFiFeelTransformer(),
@@ -461,7 +440,7 @@ class DefaultProjectApplicationService(
         }
         stageRunRecovery.recover(normalizedRoot)
         val project = readValidProject(normalizedRoot)
-        return snapshot(normalizedRoot, project, migrationStatus(ProjectStore.readMigration(normalizedRoot)))
+        return snapshot(normalizedRoot, project)
     }
 
     override fun getCompositionSettings(command: GetCompositionSettings): GetCompositionSettingsResult {
@@ -520,11 +499,6 @@ class DefaultProjectApplicationService(
         UpdateCompositionSettingsResult(snapshot(root, prepared.project), prepared.preview.candidate, prepared.preview.invalidation)
     }
 
-    override fun migrateProject(root: Path): ProjectSnapshot = mutate(root) { normalizedRoot ->
-        val saved = ProjectStore.migrateAndSave(normalizedRoot)
-        snapshot(normalizedRoot, saved.migration.project, migrationStatus(saved.migration, migrated = true))
-    }
-
     override fun create(request: CreateProjectRequest): ProjectSnapshot = mutate(request.root) { root ->
         require(!Files.exists(root) || Files.isDirectory(root)) { "Project path is not a directory: $root" }
         require(!Files.exists(root.resolve(ProjectStore.FILE_NAME))) { "Project already exists: ${root.resolve(ProjectStore.FILE_NAME)}" }
@@ -552,7 +526,7 @@ class DefaultProjectApplicationService(
             require(lock.tryLock()) { "Another project mutation is already running: $root" }
             try {
                 val project = readValidProject(root)
-                require(project.version == Project.CURRENT_VERSION) { "Explicitly migrate the project before importing." }
+                require(project.version == Project.CURRENT_VERSION) { "Unsupported project version: ${project.version}." }
                 val existing = project.parts.firstOrNull { it.id.equals(command.id, ignoreCase = true) }
                 if (existing != null) {
                     require(existing.id == command.id && existing.revision == command.expectedRevision) {
@@ -641,12 +615,7 @@ class DefaultProjectApplicationService(
         requireImportSourceFormat(source, extension, isMidi)
         require(!(isMidi && request.transcribe)) { "--transcribe is only valid for audio input" }
         val project = readValidProject(root)
-        require(project.version == Project.CURRENT_VERSION) {
-            "Project schema v${project.version} is read-only. Explicitly migrate it to v${Project.CURRENT_VERSION} before importing."
-        }
-        if (project.version >= Project.MIDI_FIRST_VERSION) {
-            require(isMidi || request.transcribe) { "Audio input requires --transcribe so immutable raw MIDI can be prepared" }
-        }
+        require(isMidi || request.transcribe) { "Audio input requires --transcribe so immutable raw MIDI can be prepared" }
         val sourceSha256 = sha256(source)
         val existingPart = project.parts.firstOrNull { it.id.equals(request.id, ignoreCase = true) }
         if (existingPart != null) {
@@ -724,9 +693,6 @@ class DefaultProjectApplicationService(
     override suspend fun cleanMidi(request: CleanMidiRequest, progress: ProgressSink): ProjectSnapshot = mutateSuspend(request.root) { root ->
         request.cleanup.requireValid()
         val project = readValidProject(root)
-        require(project.version >= Project.MIDI_FIRST_VERSION) {
-            "Part '${request.partId}' is legacy and has no current MIDI cleanup provenance. Re-import it to establish MIDI quality review."
-        }
         val part = project.parts.find { it.id == request.partId }
             ?: throw IllegalArgumentException("Part not found: ${request.partId}")
         val midi = requireNotNull(part.midi) { "Part '${request.partId}' has no raw MIDI artifact to clean." }
@@ -777,7 +743,6 @@ class DefaultProjectApplicationService(
                         normalization = null,
                         transposed = null,
                         transposition = null,
-                        approvedRepair = false,
                         cleanApproval = approval,
                         aiFixSelection = MidiAiFixSelection.PENDING,
                         aiFix = null,
@@ -821,7 +786,7 @@ class DefaultProjectApplicationService(
         require(report.approvalRequired) { "Part '$partId' does not require Clean MIDI approval." }
         val approval = MidiQualityReportStore.approval(projectRoot, quality, report)
         val updated = project.copy(parts = project.parts.map {
-            if (it.id == partId) it.copy(midi = midi.copy(approvedRepair = false, cleanApproval = approval)) else it
+            if (it.id == partId) it.copy(midi = midi.copy(cleanApproval = approval)) else it
         })
         ProjectStore.write(projectRoot, updated)
         snapshot(projectRoot, updated)
@@ -841,7 +806,7 @@ class DefaultProjectApplicationService(
         val updated = project.copy(
             parts = project.parts.map {
                 if (it.id == part.id) it.copy(
-                    sourceKeyEvidence = evidence.copy(confirmedOverride = command.key, key = null, confirmed = false),
+                    sourceKeyEvidence = evidence.copy(confirmedOverride = command.key),
                     analysis = null,
                     revision = it.revision + 1,
                     midi = midi.copy(transposed = null, transposition = null, aiFixSelection = MidiAiFixSelection.PENDING, aiFix = null,
@@ -873,11 +838,10 @@ class DefaultProjectApplicationService(
 
     override fun selectMidiFeel(request: SelectMidiFeelRequest): ProjectSnapshot = mutate(request.root) { root ->
         val project = readValidProject(root)
-        require(project.version >= Project.MIDI_FIRST_VERSION) { "Lo-fi Feel requires a MIDI-first project." }
         val part = project.parts.find { it.id == request.partId } ?: throw IllegalArgumentException("Part not found: ${request.partId}")
         val midi = requireNotNull(part.midi) { "Part '${part.id}' has no cleaned MIDI." }
         val clean = requireNotNull(midi.clean) { "Part '${part.id}' has no cleaned MIDI. Run Clean MIDI first." }
-        val raw = requireNotNull(midi.raw) { "Part '${part.id}' has legacy cleaned MIDI without raw evidence. Re-import it before selecting Lo-fi Feel." }
+        val raw = requireNotNull(midi.raw) { "Part '${part.id}' has incomplete cleanup provenance. Re-import it before selecting Lo-fi Feel." }
         MidiQualityReportStore.requireCurrent(root, part.id, raw, clean, requireNotNull(midi.cleanup), requireNotNull(midi.quality))
         require(MidiQualityReportStore.isApproved(root, requireNotNull(midi.quality), midi.cleanApproval)) {
             "Part '${part.id}' Clean MIDI requires current approval before selecting Lo-fi Feel."
@@ -961,16 +925,10 @@ class DefaultProjectApplicationService(
     override suspend fun analyzePart(request: AnalyzePartRequest, progress: ProgressSink): ProjectSnapshot = mutateSuspend(request.root) { root ->
         val project = readValidProject(root)
         val part = project.parts.find { it.id == request.partId } ?: throw IllegalArgumentException("Part not found: ${request.partId}")
-        val analysisPath = if (project.version >= Project.MIDI_FIRST_VERSION) {
-            val selected = app.melotrail.arrangement.SelectedMidiArtifactResolver().resolve(root, project, part)
-            val analysisMidi = selected.path
-            progress.report(OperationProgress("analyze-part", 1, 2, "Analyzing ${if (selected.kind == app.melotrail.arrangement.SelectedMidiArtifactKind.LOFI_FEEL) "Lo-fi MIDI Feel" else "Original MIDI"}", analysisMidi))
-            MidiAnalysisStore.write(root, project, request.partId, midiPartAnalyzer.analyze(analysisMidi, request.partId))
-        } else {
-            val source = root.resolve(part.file).normalize()
-            progress.report(OperationProgress("analyze-part", 1, 2, "Analyzing source audio", source))
-            PartAnalysisStore.write(root, project, request.partId, legacyPartAnalysis.analyze(source))
-        }
+        val selected = app.melotrail.arrangement.SelectedMidiArtifactResolver().resolve(root, project, part)
+        val analysisMidi = selected.path
+        progress.report(OperationProgress("analyze-part", 1, 2, "Analyzing ${if (selected.kind == app.melotrail.arrangement.SelectedMidiArtifactKind.LOFI_FEEL) "Lo-fi MIDI Feel" else "Original MIDI"}", analysisMidi))
+        val analysisPath = MidiAnalysisStore.write(root, project, request.partId, midiPartAnalyzer.analyze(analysisMidi, request.partId))
         progress.report(OperationProgress("analyze-part", 2, 2, "Saved analysis", analysisPath))
         snapshot(root, readValidProject(root))
     }
@@ -1079,7 +1037,6 @@ class DefaultProjectApplicationService(
         val retainedOccurrenceIds = retainedOccurrences.map(StructureOccurrence::id).toSet()
         val updated = project.copy(
             parts = project.parts.filterNot { it.id == request.partId },
-            structure = project.structure.filterNot { it == request.partId },
             envelope = project.envelope.copy(
                 evolvedParts = project.envelope.evolvedParts.filterNot { it.partId == request.partId },
                 structureOccurrences = retainedOccurrences,
@@ -1184,7 +1141,6 @@ class DefaultProjectApplicationService(
 
     private fun writeStructure(root: Path, project: Project, occurrences: List<StructureOccurrence>): ProjectSnapshot {
         val updated = project.copy(
-            structure = emptyList(),
             envelope = project.envelope.copy(structureOccurrences = occurrences),
             workflow = project.workflow.invalidate(WorkflowChange.STRUCTURE)
         )
@@ -1225,7 +1181,7 @@ class DefaultProjectApplicationService(
         return ProjectStore.read(root).also { it.requireValid(root) }
     }
 
-    private fun snapshot(root: Path, project: Project, migration: ProjectMigrationStatus = migrationStatus(ProjectStore.migrate(project))): ProjectSnapshot {
+    private fun snapshot(root: Path, project: Project): ProjectSnapshot {
         fun current(artifact: WorkflowArtifact) = artifact !in project.workflow.stale
         val projectKey = project.envelope.compositionSettings?.takeIf { it.complete }?.key
         val summaries = project.parts.map { part ->
@@ -1276,8 +1232,7 @@ class DefaultProjectApplicationService(
                 compositionSettingsReady = compositionSettings.isReady(project),
                 harmonyReady = harmony.query(project).ready,
                 stageRuns = stageRunSnapshots(root, project)
-            ),
-            migration = migration
+            )
         )
     }
 
@@ -1289,13 +1244,6 @@ class DefaultProjectApplicationService(
                 failure = record.failure?.code)
         }
     }.getOrDefault(emptyList())
-
-    private fun migrationStatus(result: ProjectMigrationResult, migrated: Boolean = false) = ProjectMigrationStatus(
-        requiresMigration = !migrated && result.sourceVersion < Project.CURRENT_VERSION,
-        sourceVersion = result.sourceVersion,
-        warnings = result.warnings,
-        setupRequirements = result.setupRequirements
-    )
 
     /** Rebuilds the bounded cohesion input so readiness cannot be inferred from a plan file. */
     private fun currentCohesion(root: Path, project: Project): Boolean = runCatching {
@@ -1401,8 +1349,7 @@ class DefaultProjectApplicationService(
     }
 
     private fun midiQuality(root: Path, part: SongPart, cleanMidi: Boolean): MidiQualitySummary {
-        val midi = part.midi ?: return MidiQualitySummary.legacyUnknown()
-        if (midi.raw == null && midi.cleanup == null && midi.quality == null) return MidiQualitySummary.legacyUnknown()
+        val midi = part.midi ?: return MidiQualitySummary.invalid()
         if (midi.cleanup == null || midi.quality == null || !cleanMidi) return MidiQualitySummary(MidiQualityStatus.STALE_OR_INVALID)
         val rawReference = requireNotNull(midi.raw)
         val report = runCatching { MidiQualityReportStore.read(root, midi.quality) }.getOrNull()
@@ -1536,16 +1483,8 @@ class DefaultProjectApplicationService(
 
     private fun PartAnalysisReference.summary(root: Path): PartAnalysisSummary {
         val path = root.resolve(file).normalize()
-        return when (kind) {
-            AnalysisKind.MIDI -> {
-                val analysis = json.decodeFromString(MidiAnalysis.serializer(), Files.readString(path))
-                PartAnalysisSummary(PartAnalysisStatus.MIDI, file, analysis.bars, analysis.durationSeconds, analysis.key?.let { "${it.tonic} ${it.mode}" })
-            }
-            AnalysisKind.AUDIO, null -> {
-                val analysis = json.decodeFromString(PartAnalysis.serializer(), Files.readString(path))
-                PartAnalysisSummary(PartAnalysisStatus.LEGACY_AUDIO, file, null, analysis.duration, listOfNotNull(analysis.keyRoot, analysis.keyMode).takeIf { it.isNotEmpty() }?.joinToString(" "))
-            }
-        }
+        val analysis = json.decodeFromString(MidiAnalysis.serializer(), Files.readString(path))
+        return PartAnalysisSummary(PartAnalysisStatus.MIDI, file, analysis.bars, analysis.durationSeconds, analysis.key?.let { "${it.tonic} ${it.mode}" })
     }
 
     private fun <T> mutate(root: Path, action: (Path) -> T): T {

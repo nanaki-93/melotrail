@@ -25,13 +25,13 @@ class StemRenderingMixerTest {
 
     @Test
     fun `renders aligned project-format stems including a transition and reuses only current artifacts`() = runBlocking {
-        val project = project()
         val analyses = mapOf("A" to analysis("A"), "B" to analysis("B"))
         writeMidi(root.resolve("source/A.mid"), 0, 1_920)
         writeMidi(root.resolve("source/B.mid"), 0, 1_920)
         Files.createDirectories(root.resolve("midi/clean"))
         Files.copy(root.resolve("source/A.mid"), root.resolve("midi/clean/A.mid"))
         Files.copy(root.resolve("source/B.mid"), root.resolve("midi/clean/B.mid"))
+        val project = project()
         writeMidi(root.resolve("midi/generated/bass.mid"), 0, 3_840)
         writeMidi(root.resolve("midi/generated/transitions.mid"), 1_920, 2_040)
         ProjectStore.write(root, project)
@@ -84,13 +84,13 @@ class StemRenderingMixerTest {
 
     @Test
     fun `bridge uses the incoming tempo before generated MIDI resumes`() = runBlocking {
-        val project = project()
         val analyses = mapOf("A" to analysis("A", bpm = 120.0), "B" to analysis("B", bpm = 90.0))
         writeMidi(root.resolve("source/A.mid"), 0, 1_920)
         writeMidi(root.resolve("source/B.mid"), 0, 1_920)
         Files.createDirectories(root.resolve("midi/clean"))
         Files.copy(root.resolve("source/A.mid"), root.resolve("midi/clean/A.mid"))
         Files.copy(root.resolve("source/B.mid"), root.resolve("midi/clean/B.mid"))
+        val project = project()
         writeMidi(root.resolve("midi/generated/bass.mid"), 0, 3_840)
         writeMidi(root.resolve("midi/generated/transitions.mid"), 1_920, 2_040)
 
@@ -107,16 +107,16 @@ class StemRenderingMixerTest {
         val library = root.resolve("library")
         copyLibrary(library)
         writeV2Catalog(library)
-        val project = project().copy(envelope = ProjectV4Envelope(arrangementAssignments = listOf(
-            assignment("A1", "fixture-piano"), assignment("A1", "fixture-bass"),
-            assignment("B1", "fixture-piano"), assignment("B1", "fixture-bass")
-        )))
         val analyses = mapOf("A" to analysis("A"), "B" to analysis("B"))
         writeMidi(root.resolve("source/A.mid"), 0, 1_920)
         writeMidi(root.resolve("source/B.mid"), 0, 1_920)
         Files.createDirectories(root.resolve("midi/clean"))
         Files.copy(root.resolve("source/A.mid"), root.resolve("midi/clean/A.mid"))
         Files.copy(root.resolve("source/B.mid"), root.resolve("midi/clean/B.mid"))
+        val project = project().copy(envelope = ProjectV4Envelope(arrangementAssignments = listOf(
+            assignment("A1", "fixture-piano"), assignment("A1", "fixture-bass"),
+            assignment("B1", "fixture-piano"), assignment("B1", "fixture-bass")
+        )))
         writeMidi(root.resolve("midi/generated/bass.mid"), 0, 3_840)
 
         val renderer = StableIdRenderer()
@@ -134,10 +134,15 @@ class StemRenderingMixerTest {
         assertTrue(error.message.orEmpty().contains("registry changed"))
     }
 
-    private fun project() = Project(Project.CURRENT_VERSION, "render", listOf(
-        Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid")),
-        Part("B", "source/B.mid", midi = MidiReferences(clean = "midi/clean/B.mid"))
-    ), listOf("A", "B"), RenderFormat(8_000, 1, 24))
+    private fun project() = Project(
+        name = "render",
+        parts = listOf(
+            Part("A", "source/A.mid", midi = canonicalMidiReferences(root, "A")),
+            Part("B", "source/B.mid", midi = canonicalMidiReferences(root, "B"))
+        ),
+        renderFormat = RenderFormat(8_000, 1, 24),
+        envelope = ProjectV4Envelope(structureOccurrences = listOf(StructureOccurrence("A1", "A"), StructureOccurrence("B1", "B")))
+    )
 
     private fun arrangement() = DetailedArrangement(sections = listOf(
         DetailedArrangementSection(0, "A1", "A", SongSectionPurpose.DEVELOPMENT, 0.3, listOf(PianoSourcePlan(), BassInstrumentPlan(role = DetailedBassRole.ROOT, density = 0.4, movement = DetailedBassMovement.STATIC, register = MusicalRegister.LOW, syncopation = 0.0)), TransitionPlan(TransitionType.BRIDGE, 1)),

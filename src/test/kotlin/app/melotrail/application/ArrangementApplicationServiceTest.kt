@@ -4,12 +4,15 @@ import app.melotrail.arrangement.MidiAnalysis
 import app.melotrail.arrangement.MidiAnalysisStore
 import app.melotrail.arrangement.MidiPartAnalyzer
 import app.melotrail.arrangement.MidiReferences
+import app.melotrail.arrangement.canonicalMidiReferences
 import app.melotrail.arrangement.MidiTempoChange
 import app.melotrail.arrangement.MidiTimeSignature
 import app.melotrail.arrangement.Part
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
+import app.melotrail.arrangement.ProjectV4Envelope
 import app.melotrail.arrangement.RenderFormat
+import app.melotrail.arrangement.StructureOccurrence
 import app.melotrail.arrangement.TestSoundLibrary
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.decodeFromString
@@ -88,7 +91,12 @@ class ArrangementApplicationServiceTest {
         val root = tempDir.resolve(name)
         Files.createDirectories(root.resolve("source")); Files.createDirectories(root.resolve("midi/clean"))
         writeMidi(root.resolve("source/A.mid")); writeMidi(root.resolve("midi/clean/A.mid"))
-        val project = Project(Project.CURRENT_VERSION, name, listOf(Part("A", "source/A.mid", "verse", midi = MidiReferences(clean = "midi/clean/A.mid"))), structure, RenderFormat())
+        val project = Project(
+            name = name,
+            parts = listOf(Part("A", "source/A.mid", "verse", midi = canonicalMidiReferences(root, "A"))),
+            renderFormat = RenderFormat(),
+            envelope = ProjectV4Envelope(structureOccurrences = structure.mapIndexed { index, partId -> StructureOccurrence("occ-$index", partId) })
+        )
         ProjectStore.write(root, project)
         MidiAnalysisStore.write(root, project, "A", MidiPartAnalyzer().analyze(root.resolve("midi/clean/A.mid"), "A"))
         return root

@@ -8,6 +8,12 @@ approval flow. This plan corrects the currently implemented pipeline; it does
 not introduce a second project format, artifact store, UI, or command-line
 product.
 
+Schema v4 is the only supported project format. This roadmap provides no
+backward/retro-compatibility for earlier project schemas or provisional legacy
+v4 shapes: they must fail clearly at open. Do not retain or add legacy readers,
+mappers, migration commands, migration UI, aliases used only by old serialized
+projects, or exclusive legacy fixtures/tests. Git history is the archive.
+
 The implementation contracts for this plan are Tasks 118–130 in
 `docs/plan/tasks/`.
 
@@ -132,8 +138,8 @@ roles are validated consistently before publication.
 Cohesion operates only in configured windows around adjacent occurrence
 boundaries. Its plan may bridge, overlap, thin, lead into, or smooth those
 transitions, but may not apply whole-song edits. The current `songEdits` contract
-is removed in a new schema version. Old outputs remain inspectable evidence but
-cannot satisfy the new approval contract.
+is removed in a new schema version. No reader or adapter for its superseded
+serialized shape remains.
 
 ### Deterministic Full-Song Critic
 
@@ -212,6 +218,8 @@ the selected artifact.
 
 Completion requires:
 
+- schema v4 as the only accepted project format, with all legacy-project code,
+  UI, migration paths, and exclusive evidence removed;
 - one canonical authority and timeline used by all relevant stages;
 - exact workflow ordering and dependency invalidation across MIDI stages;
 - boundary-only Cohesion with no whole-song edit path;
@@ -227,12 +235,14 @@ changed. Model boundaries are tested offline with fakes and fixtures.
 
 ## 8. Delivery sequence
 
-Tasks 118–130 are ordered contracts. Tasks 118–121 establish evidence and shared
-authority. Tasks 122–126 align existing stages. Tasks 127–128 add the separate
+Tasks 118–130 are ordered contracts. Task 118 removes legacy-project support and
+establishes the executable baseline; Tasks 119–121 establish shared authority.
+Tasks 122–126 align existing stages. Tasks 127–128 add the separate
 critic and full-song enhancement stages. Tasks 129–130 complete diagnostics,
-integration evidence, compatibility cleanup, and release acceptance.
+integration evidence, cleanup, and release acceptance.
 
 Do not implement a later task early unless its contract explicitly permits
 parallel work. A task that replaces a runtime path must remove its superseded
-project-owned implementation and exclusive tests after supported reads and
-callers have migrated; Git history is the archive.
+project-owned implementation, readers, and exclusive tests in the same task.
+Callers move directly to the canonical contract. No compatibility window or
+dual-read period is permitted; Git history is the archive.

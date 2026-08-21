@@ -6,7 +6,7 @@ Status: **NOT APPROVED FOR RELEASE**
 This is an evidence record, not a release declaration. The automated and
 packaging checks below passed, but the required live renderer/model workflow,
 listening matrix, visual comparison, accessibility review, and interactive
-new/legacy-project package smoke remain incomplete. Do not claim support for
+canonical-project package smoke remain incomplete. Do not claim support for
 those environments until the listed manual gates are completed.
 
 ## Repository and policy review
@@ -29,7 +29,7 @@ those environments until the listed manual gates are completed.
 | `.venv-worker/bin/python -m unittest discover -s worker/tests` | Passed: 34 tests under Python 3.11.16. Fixture/dependency warnings only. |
 | `./gradlew :desktopApp:test --tests app.melotrail.desktop.LocalDesktopOperationLoggerTest` | Passed. Regression test for diagnostic path/source-name redaction. |
 | `./gradlew :desktopApp:test :desktopApp:build :desktopApp:packageDistributionForCurrentOS` | Passed. Native macOS DMG built with its runtime. |
-| `./gradlew :test --tests app.melotrail.arrangement.ProjectStoreWorkflowMigrationTest` | Passed on 2026-08-20. v1/v2/v3 read-only migration planning and explicit v4 publication preserve fixture artifact hashes. |
+| `./gradlew :test --tests app.melotrail.arrangement.ProjectV4SchemaTest` | Superseded by Task 118 rerun. The current contract accepts canonical v4 only and rejects older/non-canonical documents without writes. |
 | `python3 tools/check_documentation_coverage.py --repository .` | **Failed on 2026-08-20.** The checked-in function inventory is stale against existing production sources; release remains withheld until it is reviewed and refreshed. |
 | Browser frontend fallback | Not applicable. Melotrail has no Spring or browser product surface. |
 
@@ -77,7 +77,7 @@ actual renderer/worker run.
 | Listening A/B environment | A built-in 44.1-kHz, two-channel MacBook Pro speaker output was detected, but no listening test was performed. Record device, OS, output level, listener, and pass/fail for each artifact. |
 | Wide, medium, narrow screenshots | Not run. Compare all three against `pictures/UI/example.png`; record intentional visual differences and repair clipping, duplication, scrolling, spacing, hierarchy, or color regressions. |
 | Keyboard, focus, screen-reader labels, contrast | Automated Compose tests cover semantic status text/icons, focusable structure controls, shortcuts, and layout breakpoints. A real keyboard-only and assistive-technology pass remains required. |
-| Installed-package new and legacy project open | Startup smoke passed only. In the installed app, create a new project and open a legacy v1/v2 fixture without rewriting it; record the result. |
+| Installed-package canonical project open and unsupported-project rejection | Startup smoke passed only. In the installed app, create/reopen a canonical v4 project and verify an unsupported fixture is rejected without rewriting it. |
 
 ## Unavailable or unverified dependencies
 
@@ -106,10 +106,9 @@ telemetry, sample download, or unrelated refactor is authorized by this task.
 
 ## Compatibility-reader audit
 
-The retained persisted and external compatibility readers are reviewed in
+The retained non-project external compatibility readers are reviewed in
 [`COMPATIBILITY_READERS.md`](COMPATIBILITY_READERS.md). The audit identifies
 their active callers, owners, removal conditions, and executable fixtures.
-The Task 030 focused migration test confirms that explicit v1, v2, and v3
-migration preserves existing artifact hashes and that open remains read-only.
-No unlisted disabled adapter, duplicate writer, route, or runtime fallback is
-accepted as release-ready.
+Project formats are excluded from that inventory: only canonical schema v4 is
+accepted. No converter, migration UI, unlisted disabled adapter, duplicate
+writer, route, or runtime fallback is accepted as release-ready.

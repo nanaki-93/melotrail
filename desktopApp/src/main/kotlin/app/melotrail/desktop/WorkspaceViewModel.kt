@@ -527,7 +527,6 @@ internal fun primaryPartAction(part: app.melotrail.application.PartSummary, pend
     pendingMidiFeel != null && pendingMidiFeel != part.preparation.midiFeel.selected -> PartPrimaryAction.ApplyLoFiChange(part.id)
     part.preparation.midiQuality.status == MidiQualityStatus.APPROVAL_REQUIRED -> PartPrimaryAction.ReviewCleanMidi(part.id)
     part.preparation.rawMidi && part.preparation.midiQuality.status == MidiQualityStatus.STALE_OR_INVALID -> PartPrimaryAction.CleanMidi(part.id)
-    part.preparation.rawMidi && part.preparation.midiQuality.status == MidiQualityStatus.LEGACY_UNKNOWN -> PartPrimaryAction.FixIssue(part.id)
     part.preparation.warnings.isNotEmpty() -> PartPrimaryAction.FixIssue(part.id)
     part.sourceType == PartSourceType.AUDIO && !part.preparation.rawMidi && part.analysis?.status != PartAnalysisStatus.MIDI -> PartPrimaryAction.InspectOrTranscribeAudio(part.id, part.preparation.inspected)
     part.preparation.midiQuality.status == MidiQualityStatus.CURRENT && (!part.preparation.analyzed || part.analysis?.status != PartAnalysisStatus.MIDI) -> PartPrimaryAction.Analyze(part.id)
@@ -584,7 +583,6 @@ sealed interface WorkspaceIntent {
     data class UpdateCreateProject(val draft: WorkspaceDialog.CreateProject) : WorkspaceIntent
     data object CreateProject : WorkspaceIntent
     data class OpenProject(val root: Path) : WorkspaceIntent
-    data object MigrateProject : WorkspaceIntent
     data class UpdateProjectSetup(val draft: ProjectSetupDraft) : WorkspaceIntent
     data object SaveProjectSetup : WorkspaceIntent
     data object ConfirmProjectSetupSave : WorkspaceIntent
@@ -780,7 +778,6 @@ class WorkspaceViewModel(
             is WorkspaceIntent.UpdateCreateProject -> mutableState.update { it.copy(dialog = intent.draft) }
             WorkspaceIntent.CreateProject -> createProject()
             is WorkspaceIntent.OpenProject -> requestOpenProject(intent.root)
-            WorkspaceIntent.MigrateProject -> migrateProject()
             is WorkspaceIntent.UpdateProjectSetup -> mutableState.update { current ->
                 current.copy(projectSetup = current.projectSetup.copy(draft = intent.draft, validationError = null, invalidationPreview = null))
             }
@@ -944,7 +941,7 @@ class WorkspaceViewModel(
         val project = state.value.project ?: return mutableState.update {
             it.copy(harmony = it.harmony.copy(loading = false, error = "Open a project and save Setup before editing harmony."))
         }
-        if (project.migration.requiresMigration || !project.readiness.compositionSettingsReady) {
+        if (!project.readiness.compositionSettingsReady) {
             mutableState.update { it.copy(harmony = it.harmony.copy(loading = false, error = "Save Setup before adding structured harmony.")) }
             return
         }
@@ -1166,22 +1163,8 @@ class WorkspaceViewModel(
         }
     }
 
-    private fun migrateProject() {
-        val project = state.value.project ?: return fail("project migration", "Open a legacy project first.")
-        if (!project.migration.requiresMigration && project.version >= 4) return fail("project migration", "This project is already schema v4.")
-        if (state.value.operation.isMutating) return busy("migrate project")
-        val feedbackId = beginFeedback(OperationKind.PROJECT_OPEN, OperationPhase.LOCAL, "Migrating ${project.name} to schema v4…")
-        mutableState.update { it.copy(operation = WorkspaceOperation.OpeningProject(project.root), operationFeedback = feedbackTracker.current, notification = null) }
-        scope.launch {
-            runCatching { withContext(ioDispatcher) { projectService.migrateProject(project.root) } }
-                .onSuccess { opened(it, "Migrated ${it.name} to project schema v4", feedbackId) }
-                .onFailure { fail("project migration", it.message ?: "Unable to migrate project.", sessionId = feedbackId) }
-        }
-    }
-
     private fun loadProjectSetup(project: ProjectSnapshot?) {
         project ?: return
-        if (project.migration.requiresMigration) return
         mutableState.update { current ->
             if (current.project?.root == project.root) current.copy(projectSetup = current.projectSetup.copy(loading = true, validationError = null)) else current
         }
@@ -1198,7 +1181,6 @@ class WorkspaceViewModel(
 
     private fun saveProjectSetup() {
         val project = state.value.project ?: return fail("project setup", "Open a project before saving setup.")
-        if (project.migration.requiresMigration) return fail("project setup", "Save this legacy project as v4 before changing setup.")
         val setup = state.value.projectSetup
         val input = setup.draft?.inputOrError()?.getOrElse { return updateSetupError(it.message ?: "Setup is invalid.") }
             ?: return updateSetupError("Setup choices are still loading.")
@@ -1626,7 +1608,6 @@ class WorkspaceViewModel(
         val part = project.parts.find { it.id == partId } ?: return fail("Clean MIDI", "Part '$partId' is no longer available.")
         if (!part.preparation.rawMidi) return fail("Clean MIDI", "Part '$partId' has no immutable raw MIDI to clean.")
         when (part.preparation.midiQuality.status) {
-            MidiQualityStatus.LEGACY_UNKNOWN -> return fail("Clean MIDI", "This legacy part has no raw-to-clean provenance. Re-import it to create current quality evidence.")
             MidiQualityStatus.CURRENT, MidiQualityStatus.STALE_OR_INVALID, MidiQualityStatus.APPROVAL_REQUIRED -> Unit
         }
         val profile = state.value.midiQualityReview.profile
@@ -2880,9 +2861,7 @@ class WorkspaceViewModel(
         if (resetWorkspace) cancelPlaybackSession(resetState = true)
         preferences.saveLastOpenedProject(project.root)
         operationLogger.event("project", "opened", project.root)
-        val openedMessage = if (project.version == 1) {
-            "$message · Legacy v1 project opened. Re-import parts as MIDI-first sources to unlock the current arrangement workflow."
-        } else message
+        val openedMessage = message
         mutableState.update { current ->
             current.copy(
                 project = project,
@@ -2907,7 +2886,7 @@ class WorkspaceViewModel(
                 arrangementDraftDirty = if (resetWorkspace) false else current.arrangementDraftDirty,
                 retry = null,
                 projectSetup = if (resetWorkspace) ProjectSetupUiState.Empty else current.projectSetup,
-                workspaceSection = if (resetWorkspace && (!project.readiness.compositionSettingsReady || project.migration.requiresMigration)) WorkspaceSection.SETUP else if (resetWorkspace) WorkspaceSection.OVERVIEW else current.workspaceSection
+                workspaceSection = if (resetWorkspace && !project.readiness.compositionSettingsReady) WorkspaceSection.SETUP else if (resetWorkspace) WorkspaceSection.OVERVIEW else current.workspaceSection
             )
         }
         loadProjectSetup(project)

@@ -9,11 +9,14 @@ import app.melotrail.arrangement.LogicalInstrument
 import app.melotrail.arrangement.MidiAnalysis
 import app.melotrail.arrangement.MidiPartAnalyzer
 import app.melotrail.arrangement.MidiReferences
+import app.melotrail.arrangement.canonicalMidiReferences
 import app.melotrail.arrangement.Part
 import app.melotrail.arrangement.PartAnalysisReference
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
+import app.melotrail.arrangement.ProjectV4Envelope
 import app.melotrail.arrangement.RenderFormat
+import app.melotrail.arrangement.StructureOccurrence
 import app.melotrail.arrangement.RhythmicGesture
 import app.melotrail.arrangement.SectionInstance
 import app.melotrail.arrangement.SongPlanningInput
@@ -55,7 +58,7 @@ class CohesionApplicationServiceTest {
         val sourceBefore = java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(root.resolve("midi/clean/A.mid"))).joinToString("") { "%02x".format(it) }
         val draft = service.generate(GenerateCohesionRequest(root, CohesionPlannerKind.QWEN))
         assertFalse(draft.approved)
-        assertEquals(listOf("occ-A-1" to "occ-A-2", "occ-A-2" to "occ-A-3"), draft.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId })
+        assertEquals(listOf("occ-0" to "occ-1", "occ-1" to "occ-2"), draft.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId })
         assertTrue(draft.boundaries.all { Files.isRegularFile(it.bridgeMidi) && !it.reviewed })
         val reviewedHashes = ProjectStore.read(root).workflow.cohesion!!.let { workflow ->
             (workflow.occurrences.map { it.result } + workflow.roles.map { it.result }).associate { it.file to it.sha256 }
@@ -114,7 +117,12 @@ class CohesionApplicationServiceTest {
         writeMidi(root.resolve("source/A.mid")); Files.copy(root.resolve("source/A.mid"), root.resolve("midi/clean/A.mid"))
         val analysis = MidiPartAnalyzer().analyze(root.resolve("midi/clean/A.mid"), "A")
         Files.writeString(root.resolve("analysis/A.midi.json"), Json.encodeToString(MidiAnalysis.serializer(), analysis))
-        ProjectStore.write(root, Project(Project.CURRENT_VERSION, "cohesion", listOf(Part("A", "source/A.mid", analysis = PartAnalysisReference("analysis/A.midi.json", AnalysisKind.MIDI), midi = MidiReferences(clean = "midi/clean/A.mid"))), structure, RenderFormat()))
+        ProjectStore.write(root, Project(
+            name = "cohesion",
+            parts = listOf(Part("A", "source/A.mid", analysis = PartAnalysisReference("analysis/A.midi.json", AnalysisKind.MIDI), midi = canonicalMidiReferences(root, "A"))),
+            renderFormat = RenderFormat(),
+            envelope = ProjectV4Envelope(structureOccurrences = structure.mapIndexed { index, partId -> StructureOccurrence("occ-$index", partId) })
+        ))
     }
     private suspend fun arrange() {
         val service = DefaultArrangementApplicationService(libraryRoot = root)

@@ -24,17 +24,14 @@ import java.security.MessageDigest
  */
 @Serializable
 data class Project(
-    val version: Int = 1,
+    val version: Int = CURRENT_VERSION,
     val name: String,
     val parts: List<SongPart> = emptyList(),
-    val structure: List<String> = emptyList(),
     val renderFormat: RenderFormat? = null,
-    /** v3 durable stale evidence and bounded cross-stage references. */
+    /** Durable stale evidence and bounded cross-stage references. */
     val workflow: ProjectWorkflowReferences = ProjectWorkflowReferences(),
-    /** V4-only canonical persistence scaffold. Null creative choices mean setup is required. */
-    val envelope: ProjectV4Envelope = ProjectV4Envelope(),
-    /** Read-time compatibility evidence; it is never silently persisted as canonical project data. */
-    @Transient val compatibility: ProjectCompatibility = ProjectCompatibility()
+    /** Canonical persistence scaffold. Null creative choices mean setup is required. */
+    val envelope: ProjectV4Envelope = ProjectV4Envelope()
 ) {
     fun validate(projectRoot: Path): ProjectValidationResult =
         ProjectValidator.validate(this, projectRoot)
@@ -60,16 +57,9 @@ data class Project(
     }
 
     companion object {
-        const val MIDI_FIRST_VERSION = 2
         const val CURRENT_VERSION = 4
     }
 }
-
-/** Typed, queryable state produced while reading a supported legacy document. */
-data class ProjectCompatibility(
-    val sourceVersion: Int = Project.CURRENT_VERSION,
-    val warnings: List<String> = emptyList()
-)
 
 /** Setup is deliberately not inferred while opening or migrating a project. */
 @Serializable
@@ -248,15 +238,15 @@ data class ArrangementAssignmentReference(
 @Serializable
 data class SongPart(
     val id: String,
-    /** Source file for v1 and v2 projects. It is always relative to project.json. */
+    /** Canonical source file, always relative to project.json. */
     val file: String,
     /** Read-only source compatibility input. New writes always use [sectionType]. */
     @Transient val role: String = "",
     val analysis: PartAnalysisReference? = null,
     val midi: MidiReferences? = null,
-    /** Null is a legacy/unattested source; it can never be commercial-ready. */
+    /** Null is an unattested source; it can never be commercial-ready. */
     val sourceAttestation: SourceRightsAttestation? = null,
-    /** Optional only for compatible reads; every new unified import records both immutable boundaries. */
+    /** A completed unified import records both immutable boundaries. */
     val importEvidence: ImportEvidence? = null,
     /** User-facing display name; unlike [id], it can change. */
     val name: String = id,
@@ -267,10 +257,8 @@ data class SongPart(
     val stageManifestRef: String? = null,
     /** Optimistic revision for explicit name/section decisions. */
     val revision: Long = 1,
-    /** A source-first Task 013 import has durable source evidence but no extracted MIDI yet. */
-    val importPending: Boolean = false,
-    /** Typed v1 compatibility data. It preserves a legacy source without pretending it is MIDI. */
-    val legacySourceOnly: Boolean = false
+    /** A source-first import has durable source evidence but no extracted MIDI yet. */
+    val importPending: Boolean = false
 ) {
     init {
         require(id.isNotBlank() && SAFE_PROJECT_ID.matches(id)) { "Song part ID is invalid" }
@@ -281,7 +269,7 @@ data class SongPart(
 
     val unsupportedSectionWarning: String?
         get() = if (SectionTypeCatalog.isSupported(sectionType)) null
-        else "Unsupported section type '${sectionType.value}' was preserved from legacy project data."
+        else "Unsupported section type '${sectionType.value}'."
 
 }
 
@@ -293,10 +281,7 @@ data class SourceKeyEvidence(
     val algorithmVersion: String? = null,
     val inputSha256: String? = null,
     /** Explicit musician decision, retained even when it differs from detection. */
-    val confirmedOverride: MusicalKey? = null,
-    /** Read-only compatibility fields from the earlier, incomplete source-key scaffold. */
-    @Deprecated("Use detectedKey and confirmedOverride") val key: MusicalKey? = null,
-    @Deprecated("Use confirmedOverride") val confirmed: Boolean = false
+    val confirmedOverride: MusicalKey? = null
 ) {
     init {
         require(confidence.isFinite() && confidence in 0.0..1.0) { "Source-key confidence is invalid" }
@@ -305,12 +290,11 @@ data class SourceKeyEvidence(
         inputSha256?.let { require(SHA_256_DIGEST.matches(it)) { "Source-key input fingerprint is invalid" } }
         detectedKey?.let { require(it.isExecutable) { "Detected source key is not executable" } }
         confirmedOverride?.let { require(it.isExecutable) { "Confirmed source key is not executable" } }
-        require(!confirmed || key != null) { "Legacy source-key confirmation has no key" }
     }
 
     /** The selected key is explicit for low confidence and automatic only above the fixed gate. */
     val effectiveKey: MusicalKey?
-        get() = confirmedOverride ?: key?.takeIf { confirmed } ?: detectedKey?.takeIf { confidence >= CONFIDENCE_THRESHOLD }
+        get() = confirmedOverride ?: detectedKey?.takeIf { confidence >= CONFIDENCE_THRESHOLD }
 
     val confirmationRequired: Boolean get() = effectiveKey == null
 
@@ -352,19 +336,17 @@ data class MidiReferences(
     val raw: String? = null,
     /** Absent until the user explicitly runs Clean MIDI. */
     val clean: String? = null,
-    /** Null only for pre-quality-report projects, which remain readable as legacy/unknown. */
+    /** Present whenever cleaned MIDI exists. */
     val cleanup: MidiCleanupOptions? = null,
     val quality: String? = null,
-    /** Absent for legacy/manual Clean MIDI until Normalize is explicitly executed. */
+    /** Absent until Normalize MIDI is explicitly executed. */
     val normalized: String? = null,
-    /** Hash-bound report for [normalized]; it is never fabricated during legacy reads. */
+    /** Hash-bound report for [normalized]. */
     val normalization: String? = null,
     /** Derived only from normalized MIDI; raw, clean and normalized evidence remain immutable. */
     val transposed: String? = null,
     /** Hash-bound report for [transposed]. */
     val transposition: String? = null,
-    /** Legacy read adapter only. New approval is always fingerprint-bound in [cleanApproval]. */
-    val approvedRepair: Boolean = false,
     /** Exact automatic or explicit approval of raw, clean, options, and report evidence. */
     val cleanApproval: MidiCleanupApproval? = null,
     /** Task 017 technical baseline. Legacy AI-fix remains separate compatibility evidence. */
@@ -388,12 +370,11 @@ data class MidiReferences(
 @Serializable
 data class PartAnalysisReference(
     val file: String,
-    /** Null means legacy audio analysis; MIDI is deliberately a distinct JSON contract. */
-    val kind: AnalysisKind? = null
+    val kind: AnalysisKind
 )
 
 @Serializable
-enum class AnalysisKind { AUDIO, MIDI }
+enum class AnalysisKind { MIDI }
 
 data class ProjectValidationResult(
     val errors: List<String>,
@@ -409,18 +390,16 @@ object ProjectValidator {
         val errors = mutableListOf<String>()
         val root = projectRoot.toAbsolutePath().normalize()
 
-        if (project.version !in setOf(1, 2, 3, Project.CURRENT_VERSION)) {
+        if (project.version != Project.CURRENT_VERSION) {
             errors += "Unsupported project version: ${project.version}"
         }
-        if (project.version >= Project.MIDI_FIRST_VERSION) {
-            val format = project.renderFormat
-            if (format == null) {
-                errors += "MIDI-first projects require an explicit render format"
-            } else {
-                if (format.sampleRate !in 8_000..384_000) errors += "Render sample rate must be from 8000 to 384000"
-                if (format.channels !in 1..32) errors += "Render channels must be from 1 to 32"
-                if (format.bitDepth != 24) errors += "Render bit depth must be PCM-24"
-            }
+        val format = project.renderFormat
+        if (format == null) {
+            errors += "Projects require an explicit render format"
+        } else {
+            if (format.sampleRate !in 8_000..384_000) errors += "Render sample rate must be from 8000 to 384000"
+            if (format.channels !in 1..32) errors += "Render channels must be from 1 to 32"
+            if (format.bitDepth != 24) errors += "Render bit depth must be PCM-24"
         }
         if (project.name.isBlank()) {
             errors += "Project name must not be blank"
@@ -461,14 +440,13 @@ object ProjectValidator {
                     errors += "Part '${part.id}' import evidence is invalid: ${error.message}"
                 }
             }
-            if (project.version >= Project.MIDI_FIRST_VERSION) {
-                val midi = part.midi
-                if (midi == null) {
-                    if (!(project.version == Project.CURRENT_VERSION && (part.legacySourceOnly || part.importPending))) {
-                        errors += "Part '${part.id}' requires raw MIDI; import it before Clean MIDI"
-                    }
-                } else {
-                    if (part.legacySourceOnly || part.importPending) errors += "Part '${part.id}' cannot be both MIDI-first and source-only"
+            val midi = part.midi
+            if (midi == null) {
+                if (!part.importPending) {
+                    errors += "Part '${part.id}' requires raw MIDI; import it before Clean MIDI"
+                }
+            } else {
+                    if (part.importPending) errors += "Part '${part.id}' cannot be both MIDI-first and import-pending"
                     midi.raw?.let { validateFileReference(root, it, "Part '${part.id}' raw MIDI", errors) }
                     midi.clean?.let { validateFileReference(root, it, "Part '${part.id}' cleaned MIDI", errors) }
                     midi.normalized?.let { validateFileReference(root, it, "Part '${part.id}' normalized MIDI", errors) }
@@ -480,8 +458,8 @@ object ProjectValidator {
                     if (midi.raw != null && midi.clean != null && (midi.cleanup == null || midi.quality == null)) {
                         errors += "Part '${part.id}' cleaned MIDI requires a quality report"
                     }
-                    if (midi.raw == null && midi.clean == null) {
-                        errors += "Part '${part.id}' requires a cleaned MIDI reference"
+                    if (midi.raw == null) {
+                        errors += "Part '${part.id}' requires raw MIDI provenance"
                     }
                     if ((midi.cleanup == null) != (midi.quality == null)) {
                         errors += "Part '${part.id}' MIDI cleanup provenance and quality report must be present together"
@@ -497,9 +475,6 @@ object ProjectValidator {
                     }
                     if (midi.transposed != null && midi.normalized == null) {
                         errors += "Part '${part.id}' transposed MIDI requires normalized MIDI evidence"
-                    }
-                    if (midi.approvedRepair && (midi.cleanup == null || midi.quality == null)) {
-                        errors += "Part '${part.id}' has an invalid legacy MIDI cleanup approval flag"
                     }
                     midi.cleanApproval?.let { approval ->
                         runCatching(approval::requireValid).exceptionOrNull()?.let { error ->
@@ -559,9 +534,8 @@ object ProjectValidator {
                     if (midi.analysisInput == MidiAnalysisInput.LOFI_FEEL && midi.feel == null) {
                         errors += "Part '${part.id}' selects Lo-fi Feel without a derived MIDI artifact"
                     }
-                }
             }
-            if (part.importPending && (part.midi != null || part.importEvidence != null || part.analysis != null || part.legacySourceOnly)) {
+            if (part.importPending && (part.midi != null || part.importEvidence != null || part.analysis != null)) {
                 errors += "Part '${part.id}' has invalid pending-import state"
             }
             part.analysis?.let {
@@ -577,31 +551,29 @@ object ProjectValidator {
             }
         }
 
-        if (project.version == Project.CURRENT_VERSION) {
-            runCatching { project.envelope.requireWellFormed(knownPartIds) }.exceptionOrNull()?.let { error ->
-                errors += "V4 envelope is invalid: ${error.message}"
-            }
-            runCatching { project.envelope.stageRuns.requireCanonical() }.exceptionOrNull()?.let { error ->
-                errors += "Stage-run manifest reference is invalid: ${error.message}"
-            }
-            project.envelope.stageRuns.index?.let { reference ->
-                validateArtifactReference(root, reference, "Stage-run index", errors)
-            }
-            project.workflow.humanization?.let { humanization ->
-                runCatching { humanization.artifacts.forEach { artifact ->
-                    validateArtifactReference(root, artifact.input, "Humanization input '${artifact.id}'", errors)
-                    validateArtifactReference(root, artifact.output, "Humanized MIDI '${artifact.id}'", errors)
-                } }.exceptionOrNull()?.let { error -> errors += "Humanization references are invalid: ${error.message}" }
-                validateArtifactReference(root, humanization.report, "Humanization report", errors)
-            }
-            if (project.workflow.humanizationSelection == HumanizationSelection.HUMANIZED && project.workflow.humanization == null) {
-                errors += "Project selects humanization without a humanization run"
-            }
+        runCatching { project.envelope.requireWellFormed(knownPartIds) }.exceptionOrNull()?.let { error ->
+            errors += "V4 envelope is invalid: ${error.message}"
+        }
+        runCatching { project.envelope.stageRuns.requireCanonical() }.exceptionOrNull()?.let { error ->
+            errors += "Stage-run manifest reference is invalid: ${error.message}"
+        }
+        project.envelope.stageRuns.index?.let { reference ->
+            validateArtifactReference(root, reference, "Stage-run index", errors)
+        }
+        project.workflow.humanization?.let { humanization ->
+            runCatching { humanization.artifacts.forEach { artifact ->
+                validateArtifactReference(root, artifact.input, "Humanization input '${artifact.id}'", errors)
+                validateArtifactReference(root, artifact.output, "Humanized MIDI '${artifact.id}'", errors)
+            } }.exceptionOrNull()?.let { error -> errors += "Humanization references are invalid: ${error.message}" }
+            validateArtifactReference(root, humanization.report, "Humanization report", errors)
+        }
+        if (project.workflow.humanizationSelection == HumanizationSelection.HUMANIZED && project.workflow.humanization == null) {
+            errors += "Project selects humanization without a humanization run"
         }
 
         return ProjectValidationResult(
             errors,
-            if (project.version == Project.CURRENT_VERSION) project.envelope.setupRequirements() else emptySet()
+            project.envelope.setupRequirements()
         )
     }
 

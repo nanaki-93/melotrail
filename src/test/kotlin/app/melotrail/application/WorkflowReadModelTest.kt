@@ -79,15 +79,6 @@ class WorkflowReadModelTest {
         assertEquals(WorkflowPrerequisite.CURRENT_ANALYSIS, stale.current.prerequisite)
     }
 
-    @Test
-    fun `legacy v2 stays readable but requires explicit migration`() {
-        val workflow = WorkflowReadModelDeriver.derive(project().copy(version = 2))
-
-        assertEquals(WorkflowState.REVIEW, workflow[WorkflowStage.PROJECT].state)
-        assertEquals(WorkflowAction.MIGRATE_PROJECT, workflow.current.nextAction)
-        assertEquals(WorkflowPrerequisite.SCHEMA_V4, workflow.current.prerequisite)
-    }
-
     private fun project(): ProjectSnapshot {
         val preparation = PartPreparationSummary(
             sourcePreserved = true,

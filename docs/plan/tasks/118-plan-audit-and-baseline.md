@@ -3,8 +3,8 @@
 ## Goal
 
 Turn the verified repository findings in `docs/plan/PLAN.md` into a durable
-implementation baseline. This task is documentation and characterization only;
-it must not change production behavior.
+implementation baseline and make schema v4 the sole project format. This task
+intentionally changes project-open behavior by deleting legacy-project support.
 
 ## Dependencies
 
@@ -29,6 +29,14 @@ None. This is the first task in the alignment sequence.
   Record pre-existing failures without changing unrelated code.
 - Link the audit from `docs/plan/PLAN.md` and the task index. Do not rewrite
   older completed-task evidence to make it appear current.
+- Remove v1–v3 and provisional legacy-v4 project readers, DTOs, warning state,
+  migration/save APIs, stage-run/cohesion-order migration mappers, desktop
+  migration actions/copy, and code used only to process legacy projects.
+- Delete exclusive legacy-project fixtures/tests. Replace them with strict tests
+  proving missing, v1, v2, v3, and non-canonical v4 documents are rejected and
+  canonical v4 create/read/write behavior still works.
+- Do not provide an import, converter, hidden flag, fallback parser, or dual-read
+  window for an unsupported project.
 
 ## Tests and evidence
 
@@ -37,6 +45,8 @@ None. This is the first task in the alignment sequence.
 - Check every audit row has at least one evidence path or is explicitly marked
   absent.
 - Verify the documented order matches application services and not just UI copy.
+- Verify `rg` finds no production legacy-project reader, mapper, migration
+  service/action, or legacy-project UI path.
 
 ## Acceptance criteria
 
@@ -45,9 +55,11 @@ None. This is the first task in the alignment sequence.
 - Every current MIDI mutation has an owner and its approval, budget, report, and
   validation status are documented.
 - All known plan/implementation mismatches have an owner in Tasks 119–130.
-- No production source, serialized schema, or runtime behavior changes.
+- Only canonical schema-v4 projects can be opened or written; unsupported
+  projects fail before application/UI state is created.
+- No legacy-project compatibility or migration production code remains.
 
 ## Exclusions
 
-Do not create the canonical context, alter stage identifiers, or fix any audited
-defect in this task.
+Do not create the canonical context, alter stage identifiers, or fix unrelated
+audited defects in this task.

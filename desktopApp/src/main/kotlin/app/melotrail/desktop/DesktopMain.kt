@@ -16,7 +16,6 @@ import app.melotrail.application.BuildAudioWorker
 import app.melotrail.application.DefaultPartPreviewApplicationService
 import app.melotrail.application.DefaultReleaseExportApplicationService
 import app.melotrail.application.ReleaseMp3Exporter
-import app.melotrail.application.LegacyPartAnalysisService
 import app.melotrail.application.MidiPreparationService
 import app.melotrail.application.AutomaticImportProcessors
 import app.melotrail.application.ProjectApplicationService
@@ -28,7 +27,6 @@ import app.melotrail.preparation.InputCleanupApplicationService
 import app.melotrail.preparation.WorkerAudioCleanupBoundary
 import app.melotrail.preparation.TranscriptionQualityGateService
 import app.melotrail.preparation.WorkerTranscriptionBoundary
-import app.melotrail.arrangement.PartAnalysis
 import app.melotrail.arrangement.MidiCleanupOptions
 import app.melotrail.arrangement.InstrumentRegistryLoader
 import app.melotrail.arrangement.SoundLibraryLocator
@@ -37,8 +35,6 @@ import app.melotrail.profile.BundledCompositionProfileCatalog
 import app.melotrail.profile.CompositionProfileCatalog
 import app.melotrail.errors.ErrorReporter
 import app.melotrail.logging.DefaultLogger
-import app.melotrail.worker.AnalyzeCommand
-import app.melotrail.worker.AnalyzeOptions
 import app.melotrail.worker.CleanMidiCommand
 import app.melotrail.worker.MasterCommand
 import app.melotrail.worker.MP3ExportCommand
@@ -48,11 +44,7 @@ import app.melotrail.worker.TranscribeCommand
 import app.melotrail.worker.WorkerClient
 import app.melotrail.worker.WorkerError
 import app.melotrail.worker.WorkerStatus
-import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.doubleOrNull
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import java.nio.file.Files
@@ -154,7 +146,6 @@ object DesktopServiceComposition {
         val importRunner = stageRunner ?: StageRunner(AutomaticImportProcessors(inspection, preparation).registry())
         return DefaultProjectApplicationService(
             midiPreparation = preparation,
-            legacyPartAnalysis = DesktopLegacyPartAnalysisService(client),
             inputInspection = inspection,
             transcriptionQualityGate = TranscriptionQualityGateService(WorkerTranscriptionBoundary(client)),
             compositionProfiles = compositionProfiles(),
@@ -193,34 +184,6 @@ object DesktopServiceComposition {
             require(evidence["profile"]?.jsonPrimitive?.contentOrNull == options.profile.name.lowercase().replace('_', '-')) { "MIDI cleanup worker returned the wrong profile" }
             require(evidence["inputSha256"]?.jsonPrimitive?.contentOrNull == sha256(input)) { "MIDI cleanup worker input fingerprint did not match raw MIDI" }
             require(evidence["outputSha256"]?.jsonPrimitive?.contentOrNull == sha256(output)) { "MIDI cleanup worker output fingerprint did not match cleaned MIDI" }
-        }
-    }
-
-    private class DesktopLegacyPartAnalysisService(private val client: WorkerClient) : LegacyPartAnalysisService {
-        override suspend fun analyze(source: Path): PartAnalysis {
-            val response = client.execute(AnalyzeCommand(source.toString(), AnalyzeOptions(detectSections = false)))
-            require(response.status == WorkerStatus.COMPLETED) {
-                "Part analysis failed: ${response.error?.message ?: "Unknown worker error"}"
-            }
-            val output = response.output.orEmpty()
-            fun double(name: String) = output[name]?.jsonPrimitive?.doubleOrNull
-                ?: throw IllegalArgumentException("Worker analysis did not return $name")
-            fun long(name: String) = output[name]?.jsonPrimitive?.longOrNull
-                ?: throw IllegalArgumentException("Worker analysis did not return $name")
-            val key = output["key"]?.jsonObject
-            return PartAnalysis(
-                duration = double("duration"), sampleRate = long("sampleRate").toInt(), channels = long("channels").toInt(),
-                frameCount = long("frameCount"), peak = double("peak"), rms = double("rms"),
-                nearSilence = output["nearSilence"]?.jsonPrimitive?.booleanOrNull
-                    ?: throw IllegalArgumentException("Worker analysis did not return nearSilence"),
-                bpm = output["bpm"]?.jsonPrimitive?.doubleOrNull,
-                keyRoot = key?.get("root")?.jsonPrimitive?.contentOrNull,
-                keyMode = key?.get("mode")?.jsonPrimitive?.contentOrNull,
-                keyConfidence = output["keyConfidence"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
-                leadingSilenceSeconds = output["leadingSilenceSeconds"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
-                trailingSilenceSeconds = output["trailingSilenceSeconds"]?.jsonPrimitive?.doubleOrNull ?: 0.0,
-                onsetsSeconds = output["onsets"]?.jsonArray?.mapNotNull { it.jsonPrimitive.doubleOrNull } ?: emptyList()
-            )
         }
     }
 

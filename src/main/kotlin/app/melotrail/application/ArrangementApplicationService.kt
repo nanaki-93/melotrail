@@ -321,8 +321,8 @@ class DefaultArrangementApplicationService(
     }
 
     private fun midiAnalyses(root: Path, project: Project, ids: Set<String>): Map<String, MidiAnalysis> = ids.associateWith { id ->
-        // New projects persist a quality report; validating it here rejects a changed clean MIDI
-        // before it can be used for arrangement. Older projects remain legacy/unknown.
+        // Canonical projects persist a quality report; validating it here rejects a changed
+        // clean MIDI before it can be used for arrangement.
         project.requireCleanMidi(root)
         val part = project.parts.find { it.id == id } ?: throw IllegalArgumentException("Structure references unknown part '$id'")
         val reference = requireNotNull(part.analysis) { "Missing MIDI analysis for part '$id'. Run part analyze first." }

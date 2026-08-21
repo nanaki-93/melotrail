@@ -94,7 +94,7 @@ class MidiTransitionEngineTest {
         Files.createDirectories(clean.parent)
         Files.writeString(source, "source MIDI remains untouched")
         writeTestMidi(clean)
-        val project = Project(Project.CURRENT_VERSION, "transitions", listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid"))), renderFormat = RenderFormat(sampleRate = 32_000, channels = 3))
+        val project = Project(Project.CURRENT_VERSION, "transitions", listOf(Part("A", "source/A.mid", midi = canonicalMidiReferences(projectRoot, "A"))), renderFormat = RenderFormat(sampleRate = 32_000, channels = 3))
         val arrangement = DetailedArrangement(sections = listOf(
             detailedSection(0, TransitionPlan(TransitionType.BRIDGE, 1, bridge = BridgePlan(0.7, listOf(BridgeElement.DRUM_FILL)))),
             detailedSection(1, TransitionPlan())
@@ -121,7 +121,12 @@ class MidiTransitionEngineTest {
         Files.createDirectories(source.parent)
         Files.writeString(source, "immutable source evidence")
         writeTestMidi(clean)
-        val project = Project(Project.CURRENT_VERSION, "approved-cohesion", listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid"))), listOf("A", "A"), RenderFormat())
+        val project = Project(
+            name = "approved-cohesion",
+            parts = listOf(Part("A", "source/A.mid", midi = canonicalMidiReferences(projectRoot, "A"))),
+            renderFormat = RenderFormat(),
+            envelope = ProjectV4Envelope(structureOccurrences = listOf(StructureOccurrence("A1", "A"), StructureOccurrence("A2", "A")))
+        )
         val bridge = TransitionBridgePlan("A1", "A2", "1".repeat(64), "1".repeat(64), "2".repeat(64), "3".repeat(64), TransitionRoleAction.DRUM_FILL, BridgeType.DRUM_FILL, 1, "drums", HarmonicHandoff.HOLD, RhythmicGesture.FILL, EnergyContour.RISE, rationale = "Approved drum handoff")
         val approved = projectRoot.resolve(CohesionBoundaryArtifactPaths.approved("A1", "A2"))
         Files.createDirectories(approved.parent)

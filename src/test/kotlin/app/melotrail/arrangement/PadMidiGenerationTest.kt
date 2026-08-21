@@ -93,7 +93,7 @@ class PadMidiGenerationTest {
         Files.writeString(source, "source MIDI remains untouched")
         writeTestMidi(clean)
         Files.writeString(drums, "existing drums MIDI remains untouched")
-        val project = Project(Project.CURRENT_VERSION, "pad", listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid"))), renderFormat = RenderFormat())
+        val project = Project(Project.CURRENT_VERSION, "pad", listOf(Part("A", "source/A.mid", midi = canonicalMidiReferences(projectRoot, "A"))), renderFormat = RenderFormat())
         val arrangement = DetailedArrangement(sections = listOf(section(0, MusicalRegister.LOW), section(1, MusicalRegister.HIGH)))
         val analysis = analysis()
         val sourceBefore = Files.readAllBytes(source)

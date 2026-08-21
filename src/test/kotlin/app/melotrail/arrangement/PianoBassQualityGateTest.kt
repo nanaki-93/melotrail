@@ -55,7 +55,7 @@ class PianoBassQualityGateTest {
         }
         assertTrue(report.dryMixPeak <= report.peakCeiling)
         assertBassStartsOnBoundaries(projectRoot.resolve("midi/generated/bass.mid"))
-        assertEquals(listOf("occ-A-1", "occ-A-2", "occ-B-1", "occ-B-2", "occ-A-3"), firstArrangementInstanceIds(projectRoot))
+        assertEquals(listOf("occ-0", "occ-1", "occ-2", "occ-3", "occ-4"), firstArrangementInstanceIds(projectRoot))
 
         val resumed = gate.run(projectRoot)
         assertTrue(resumed.reusedFinalArtifacts)
@@ -84,11 +84,11 @@ class PianoBassQualityGateTest {
             version = Project.CURRENT_VERSION,
             name = "gate",
             parts = listOf(
-                Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid")),
-                Part("B", "source/B.mid", midi = MidiReferences(clean = "midi/clean/B.mid"))
+                Part("A", "source/A.mid", midi = canonicalMidiReferences(projectRoot, "A")),
+                Part("B", "source/B.mid", midi = canonicalMidiReferences(projectRoot, "B"))
             ),
-            structure = listOf("A", "A", "B", "B", "A"),
-            renderFormat = RenderFormat(32_000, 3, 24)
+            renderFormat = RenderFormat(32_000, 3, 24),
+            envelope = ProjectV4Envelope(structureOccurrences = listOf("A", "A", "B", "B", "A").mapIndexed { index, partId -> StructureOccurrence("occ-$index", partId) })
         ))
     }
 

@@ -12,6 +12,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -90,63 +91,59 @@ class ProjectV4SchemaTest {
     }
 
     @Test
-    fun `legacy roles map known sections and retain unknown normalized identifiers`() {
-        val known = SectionTypeCatalog.fromLegacyRole("Hook")
-        val unknown = SectionTypeCatalog.fromLegacyRole("Pre Chorus!")
-
-        assertEquals(SectionTypeId.CHORUS, known)
-        assertEquals(SectionTypeId("pre-chorus"), unknown)
+    fun `future canonical section identifiers remain explicit`() {
+        val unknown = SectionTypeId("pre-chorus")
         assertFalse(SectionTypeCatalog.isSupported(unknown))
-        assertEquals("Unsupported section type 'pre-chorus' was preserved from legacy project data.",
-            SongPart("A", "source/A.mid", role = "Pre Chorus!").unsupportedSectionWarning)
+        assertEquals("Unsupported section type 'pre-chorus'.",
+            SongPart("A", "source/A.mid", sectionType = unknown).unsupportedSectionWarning)
     }
 
     @Test
-    fun `legacy v3 migration is pure until explicit v4 save and preserves source evidence`() {
+    fun `clean-only MIDI from superseded projects cannot be written`() {
         write("source/A.mid", "source")
-        write("midi/raw/A.mid", "raw-midi")
-        val sourceHash = sha256(root.resolve("source/A.mid"))
-        val rawHash = sha256(root.resolve("midi/raw/A.mid"))
-        writeLegacyProjectFixture(root, Project(
-            version = 3,
-            name = "legacy",
+        write("midi/clean/A.mid", "clean")
+        val project = Project(
+            name = "clean-only",
             renderFormat = RenderFormat(),
-            parts = listOf(Part("A", "source/A.mid", midi = MidiReferences(raw = "midi/raw/A.mid"), importEvidence = ImportEvidence(sourceHash, rawHash))),
-            structure = listOf("A", "A")
-        ))
-        val before = Files.readAllBytes(root.resolve(ProjectStore.FILE_NAME))
+            parts = listOf(SongPart(
+                id = "A",
+                file = "source/A.mid",
+                name = "Verse",
+                sectionType = SectionTypeId.VERSE,
+                midi = MidiReferences(clean = "midi/clean/A.mid")
+            ))
+        )
 
-        val migration = ProjectStore.readMigration(root)
-
-        assertEquals(3, migration.sourceVersion)
-        assertEquals(Project.CURRENT_VERSION, migration.project.version)
-        assertEquals(listOf("occ-A-1", "occ-A-2"), migration.project.envelope.structureOccurrences.map(StructureOccurrence::id))
-        assertEquals(listOf("A1", "A2"), migration.project.envelope.structureOccurrences.map(StructureOccurrence::label))
-        assertEquals(setOf(ProjectSetupRequirement.COMPOSITION_SETTINGS, ProjectSetupRequirement.HARMONY), migration.setupRequirements)
-        assertTrue(before.contentEquals(Files.readAllBytes(root.resolve(ProjectStore.FILE_NAME))), "migration planning must not write")
-
-        val saved = ProjectStore.migrateAndSave(root)
-
-        assertEquals(Project.CURRENT_VERSION, ProjectStore.read(root).version)
-        assertEquals(sourceHash, saved.migration.project.parts.single().importEvidence?.sourceSha256)
-        assertEquals(rawHash, saved.migration.project.parts.single().importEvidence?.rawMidiSha256)
-        assertTrue(Files.readString(root.resolve(ProjectStore.FILE_NAME)).contains("\"id\": \"occ-A-1\""))
-        assertTrue(ProjectStore.read(root).validate(root).isValid)
+        val error = assertFailsWith<IllegalArgumentException> { ProjectStore.write(root, project) }
+        assertTrue(error.message.orEmpty().contains("requires raw MIDI provenance"))
+        assertFalse(Files.exists(root.resolve(ProjectStore.FILE_NAME)))
     }
 
     @Test
-    fun `legacy unknown fields become explicit migration warnings and v4 rejects unknown fields`() {
-        Files.writeString(root.resolve(ProjectStore.FILE_NAME), """
-            {"version":3,"name":"legacy","renderFormat":{"sampleRate":44100,"channels":2,"bitDepth":24},"parts":[],"structure":[],"legacyFlag":"keep-visible"}
-        """.trimIndent())
+    fun `project schemas v1 through v3 and missing versions are rejected without rewriting`() {
+        listOf(null, 1, 2, 3).forEach { version ->
+            val versionField = version?.let { "\"version\":$it," }.orEmpty()
+            val text = "{$versionField\"name\":\"unsupported\",\"parts\":[],\"structure\":[]}"
+            Files.writeString(root.resolve(ProjectStore.FILE_NAME), text)
 
-        val migration = ProjectStore.readMigration(root)
+            assertFailsWith<IllegalArgumentException> { ProjectStore.read(root) }
+            assertEquals(text, Files.readString(root.resolve(ProjectStore.FILE_NAME)))
+        }
+    }
 
-        assertTrue(migration.warnings.any { "legacyFlag" in it })
-        ProjectStore.migrateAndSave(root)
-        val v4 = Files.readString(root.resolve(ProjectStore.FILE_NAME)).replace("\"version\": 4", "\"version\": 4, \"machinePath\": \"/tmp/not-portable\"")
-        Files.writeString(root.resolve(ProjectStore.FILE_NAME), v4)
-        assertFalse(runCatching { ProjectStore.read(root) }.isSuccess, "v4 must not silently accept an unknown machine-local field")
+    @Test
+    fun `superseded and unknown v4 fields are rejected`() {
+        ProjectStore.write(root, Project(name = "strict-v4", renderFormat = RenderFormat()))
+        val canonical = Files.readString(root.resolve(ProjectStore.FILE_NAME))
+        listOf(
+            canonical.replace("\"evolvedParts\": [],", "\"evolvedParts\": [], \"structureOccurrences\": [],"),
+            canonical.replace("\"stageRuns\": {", "\"manifests\": {\"runs\": []}, \"stageRuns\": {"),
+            canonical.replace("\"version\": 4", "\"version\": 4, \"machinePath\": \"/tmp/not-portable\"")
+        ).forEach { unsupported ->
+            Files.writeString(root.resolve(ProjectStore.FILE_NAME), unsupported)
+            assertFalse(runCatching { ProjectStore.read(root) }.isSuccess)
+            assertEquals(unsupported, Files.readString(root.resolve(ProjectStore.FILE_NAME)))
+        }
     }
 
     @Test

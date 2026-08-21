@@ -132,7 +132,6 @@ class AutomaticImportProcessors(
                 normalization = null,
                 transposed = null,
                 transposition = null,
-                approvedRepair = false,
                 cleanApproval = approval,
                 analysisInput = MidiAnalysisInput.CURRENT
             )

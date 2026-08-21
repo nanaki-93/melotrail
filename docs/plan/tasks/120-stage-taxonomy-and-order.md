@@ -32,25 +32,25 @@ Task 119.
 - Replace ordering logic based on enum ordinals with named ordered lists or
   dependency edges.
 
-## Compatibility and migration
+## Persistence cutover
 
-- Existing enum wire names remain readable.
-- New nullable/defaulted workflow references must preserve supported v4 reads.
-- Old projects default Full-Song Enhance to an unresolved selection, not an
-  implicit approval. They become ready only after a current critic report and an
-  approved candidate, recorded no-op, or explicit bypass.
-- Project open remains read-only; write migration occurs only through the
-  existing explicit/atomic save or stage operation boundary.
+- Canonical schema-v4 enum wire names remain stable.
+- Update the canonical schema directly; do not add defaults, aliases, readers,
+  migration code, or UI states for superseded project shapes.
+- A canonical project without a resolved Full-Song Enhance selection becomes
+  ready only after a current critic report and an approved candidate, recorded
+  no-op, or explicit bypass.
 
 ## Tests
 
-- Serialization round trips old and new `StageId` values.
+- Serialization round trips all canonical `StageId` values.
 - Table-test every `WorkflowChange` against exact invalidated descendants.
 - Read-model tests cover blocked, current, review, stale, complete, bypass, and
   no-op states for the two new stages.
 - Rendering refuses stale/missing enhancement selection and resolves approved or
   bypass inputs exactly.
-- Legacy fixtures open without partial rewrite.
+- Unsupported project schemas and superseded v4 shapes fail to open; canonical
+  fixtures round-trip without rewrite.
 
 Run `./gradlew test :desktopApp:test :desktopApp:build`.
 

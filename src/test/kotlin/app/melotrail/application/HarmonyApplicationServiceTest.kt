@@ -165,7 +165,6 @@ class HarmonyApplicationServiceTest {
                 override suspend fun transcribe(input: Path, output: Path) = Unit
                 override suspend fun clean(input: Path, output: Path) = Unit
             },
-            legacyPartAnalysis = LegacyPartAnalysisService { PartAnalysis(0.0, 44_100, 2, 0, 0.0, 0.0, true) }
         )
         if (!java.nio.file.Files.exists(root.resolve(ProjectStore.FILE_NAME))) {
             service.create(CreateProjectRequest(root, "Draft", RenderFormat()))

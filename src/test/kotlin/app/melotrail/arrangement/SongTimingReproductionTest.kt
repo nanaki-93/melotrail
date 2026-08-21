@@ -49,8 +49,8 @@ class SongTimingReproductionTest {
                 analysisInput = MidiAnalysisInput.LOFI_FEEL,
                 feel = MidiFeelReferences(MidiFeelProfile.LOFI_80_SWING_V1, "midi/feel/A-lofi.mid", root.relativize(feelReportPath).toString())
             ))),
-            listOf("A"),
-            RenderFormat(8_000, 1, 24)
+            renderFormat = RenderFormat(8_000, 1, 24),
+            envelope = ProjectV4Envelope(structureOccurrences = listOf(StructureOccurrence("A-1", "A")))
         )
         val arrangement = DetailedArrangement(sections = listOf(
             DetailedArrangementSection(0, "A-1", "A", SongSectionPurpose.DEVELOPMENT, 0.3, listOf(PianoSourcePlan()), TransitionPlan())

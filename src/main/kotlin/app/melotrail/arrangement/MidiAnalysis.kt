@@ -256,7 +256,6 @@ object MidiAnalysisStore {
 
     fun write(projectRoot: Path, project: Project, partId: String, analysis: MidiAnalysis): Path {
         val root = projectRoot.toAbsolutePath().normalize()
-        require(project.version >= Project.MIDI_FIRST_VERSION) { "MIDI analysis requires a MIDI-first project" }
         project.requireValid(root)
         require(project.parts.any { it.id == partId }) { "Part not found: $partId" }
         require(analysis.partId == partId) { "MIDI analysis part ID does not match: $partId" }

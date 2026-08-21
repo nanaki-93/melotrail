@@ -334,7 +334,6 @@ class WorkspaceViewModelTest {
         val audioBeforeInspection = audioPart("audio").copy(preparation = preparation())
         val audioInspected = audioBeforeInspection.copy(preparation = preparation().copy(inspected = true))
         val warning = repaired.copy(id = "warning", preparation = repaired.preparation.copy(warnings = listOf("repair evidence needs review")))
-        val legacy = raw.copy(id = "legacy", preparation = preparation(rawMidi = true))
 
         assertIs<PartPrimaryAction.CleanMidi>(primaryPartAction(raw))
         assertEquals("Clean MIDI", primaryPartAction(raw).label())
@@ -346,7 +345,6 @@ class WorkspaceViewModelTest {
         assertIs<PartPrimaryAction.InspectOrTranscribeAudio>(primaryPartAction(audioBeforeInspection))
         assertIs<PartPrimaryAction.InspectOrTranscribeAudio>(primaryPartAction(audioInspected))
         assertIs<PartPrimaryAction.FixIssue>(primaryPartAction(warning))
-        assertIs<PartPrimaryAction.FixIssue>(primaryPartAction(legacy))
     }
 
     @Test
@@ -403,21 +401,6 @@ class WorkspaceViewModelTest {
         assertEquals(app.melotrail.application.CleanMidiRequest(root, "intro", app.melotrail.arrangement.MidiCleanupOptions()), service.cleanMidiRequest)
         assertEquals(null, service.analyzed)
         assertEquals("Clean MIDI is current. Analyze intro when ready.", viewModel.state.value.notification)
-        viewModel.close()
-    }
-
-    @Test
-    fun `opening a legacy project is successful and visibly explains its limitations`() = runTest {
-        val root = Path.of("build/legacy-project")
-        val legacy = projectSnapshot(root).copy(version = 1, name = "legacy-song")
-        val viewModel = WorkspaceViewModel(FakeProjectService(result = legacy), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)))
-
-        viewModel.accept(WorkspaceIntent.OpenProject(root))
-        advanceUntilIdle()
-
-        assertEquals(legacy, viewModel.state.value.project)
-        assertTrue(viewModel.state.value.notification!!.contains("Legacy v1 project opened"))
-        assertEquals(WorkspaceOperation.Idle, viewModel.state.value.operation)
         viewModel.close()
     }
 
@@ -1511,7 +1494,7 @@ class WorkspaceViewModelTest {
 
     private fun preparation(
         rawMidi: Boolean = false,
-        quality: app.melotrail.application.MidiQualityStatus = app.melotrail.application.MidiQualityStatus.LEGACY_UNKNOWN
+        quality: app.melotrail.application.MidiQualityStatus = app.melotrail.application.MidiQualityStatus.STALE_OR_INVALID
     ) = app.melotrail.application.PartPreparationSummary(
         sourcePreserved = true, inspected = true, preparedAudio = false, rawMidi = rawMidi, cleanMidi = quality == app.melotrail.application.MidiQualityStatus.CURRENT,
         analyzed = false, ready = false, warnings = emptyList(), midiQuality = app.melotrail.application.MidiQualitySummary(quality)

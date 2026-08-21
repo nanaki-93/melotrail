@@ -4,10 +4,7 @@ import app.melotrail.arrangement.DeterministicStemMixer
 import app.melotrail.arrangement.InstrumentRenderer
 import app.melotrail.arrangement.LogicalInstrument
 import app.melotrail.arrangement.MixedStem
-import app.melotrail.arrangement.Part
-import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
-import app.melotrail.arrangement.writeLegacyProjectFixture
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.RenderResult
 import app.melotrail.preparation.AudioCleanupBoundary
@@ -48,7 +45,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/** Task 054's offline compatibility proof: canonical artifacts, not UI strings, are the oracle. */
+/** Task 054's offline workflow proof: canonical artifacts, not UI strings, are the oracle. */
 class EndToEndWorkflowCompatibilityTest {
     @TempDir lateinit var tempDir: Path
 
@@ -128,33 +125,9 @@ class EndToEndWorkflowCompatibilityTest {
         assertEquals(AudioPreparationAvailability.STALE, current.preparation.load(currentRoot, "A").availability)
     }
 
-    @Test
-    fun `legacy v1 and pre-provenance v2 projects remain readable beside approved v3 arrangements`() = runBlocking {
-        val v1 = tempDir.resolve("compat/v1")
-        writeMidi(v1.resolve("parts/A.mid"))
-        writeLegacyProjectFixture(v1, Project(version = 1, name = "v1", parts = listOf(Part("A", "parts/A.mid")), structure = listOf("A")))
-        val services = services()
-        assertEquals(1, services.projects.open(v1).version)
-
-        val v2 = tempDir.resolve("compat/v2")
-        writeMidi(v2.resolve("source/A.mid")); writeMidi(v2.resolve("midi/clean/A.mid"))
-        writeLegacyProjectFixture(v2, Project(version = 2, name = "v2", parts = listOf(Part("A", "source/A.mid", midi = app.melotrail.arrangement.MidiReferences(clean = "midi/clean/A.mid"))), structure = listOf("A"), renderFormat = RenderFormat()))
-        val snapshot = services.projects.open(v2)
-        assertEquals(2, snapshot.version)
-        assertEquals(MidiQualityStatus.LEGACY_UNKNOWN, snapshot.parts.single().preparation.midiQuality.status)
-
-        val current = tempDir.resolve("compat/current")
-        val source = fixtureSource(Fixture("approved-v3", "mid", false))
-        services.projects.create(CreateProjectRequest(current)); services.projects.importPart(ImportPartRequest(current, "A", source)); services.projects.cleanMidi(CleanMidiRequest(current, "A", app.melotrail.arrangement.MidiCleanupOptions())); services.projects.analyzePart(AnalyzePartRequest(current, "A")); services.projects.saveStructure(SaveStructureRequest(current, listOf("A")))
-        assertTrue(services.arrangements.generate(GenerateArrangementRequest(current, instruments = listOf("piano", "drums"))).approved)
-        generateApprovedCohesion(current, services.arrangements)
-        assertTrue(Files.readString(current.resolve("arrangement.json")).contains("\"version\": 3"))
-    }
-
     private fun services(failCleanup: Boolean = false): Services {
         val projects = DefaultProjectApplicationService(
             midiPreparation = FakeMidiPreparation(failCleanup),
-            legacyPartAnalysis = LegacyPartAnalysisService { error("legacy analysis is not used by this v2 fixture") },
             inputInspection = InputInspectionBoundary { request -> InputInspectionResult.Inspected(report(request)) },
             transcriptionQualityGate = TranscriptionQualityGateService(FakeGateTranscriber())
         )

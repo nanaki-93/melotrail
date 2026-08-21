@@ -13,9 +13,10 @@ installed or that every endpoint is a product workflow.
 
 ## Baseline artifact guarantees
 
-`ProjectStore.read` and the file-backed application-service `open` path read
-v1, v2, and v3 project files without rewriting `project.json`. Any supported
-legacy version migrates only through an explicit atomic save to schema v4.
+`ProjectStore.read` and the file-backed application-service `open` path accept
+only canonical schema-v4 projects. Missing versions, v1–v3 documents, and
+superseded v4 shapes are rejected without rewriting `project.json`; there is no
+project converter or migration action.
 Direct MIDI preserves immutable `source/` and
 `midi/raw/` evidence; WAV/WAVE/MP3 enters the guarded transcription route and
 does not create cleaned MIDI implicitly. Selected MIDI resolves from cleaned
@@ -31,8 +32,8 @@ metadata; commercial provenance uses the loaded registry and license evidence.
 
 ## Verification evidence
 
-- `ProjectStoreWorkflowMigrationTest` and `ProjectApplicationServiceTest` cover
-  read-only v1/v2/v3 opens and failed migration preservation.
+- `ProjectV4SchemaTest` and `ProjectApplicationServiceTest` cover canonical v4
+  round trips plus read-only rejection of unsupported project documents.
 - `UnifiedImportApplicationServiceTest` covers direct MIDI, WAV/WAVE/MP3
   transcription publication, source/raw immutability, output validation, and
   retry behavior with offline fakes.

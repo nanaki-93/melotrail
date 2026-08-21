@@ -279,7 +279,7 @@ class BassMidiGenerationAdapter(
         return GeneratedBassMidi(output, checkNotNull(ppq), result.flatMap { it.second.notes }, result.flatMap { it.second.diagnostics })
     }
 
-    /** Consumes the approved v3 controls while retaining the legacy adapter for older projects. */
+    /** Consumes the approved canonical detailed-arrangement controls. */
     fun generate(projectRoot: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): GeneratedBassMidi {
         val root = projectRoot.toAbsolutePath().normalize()
         project.requireCleanMidi(root)

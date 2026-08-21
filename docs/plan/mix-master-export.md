@@ -34,9 +34,9 @@ The renderer receives an immutable build manifest with:
 - tempo, meter, sample rate, bit depth, channel layout;
 - expected role/stem IDs and timeline length.
 
-Each stem artifact records role and instrument separately. Compatibility aliases
-map existing piano/bass/drums/pad/strings mix settings. Missing required renderers
-or assets fail Render without invalidating upstream MIDI. The renderer resolves
+Each stem artifact records role and instrument separately. Canonical role and
+instrument IDs are used directly; old mix-setting aliases are not read. Missing
+required renderers or assets fail Render without invalidating upstream MIDI. The renderer resolves
 the exact approved stable instrument ID to its private engine descriptor; it must
 not invoke the selection resolver or substitute a newly available candidate.
 
@@ -47,8 +47,8 @@ levels/pan, but a later profile update never overwrites saved user settings.
 
 - Gain, pan, mute, and solo continue to operate on available stems.
 - A mix revision records input stem hashes and normalized settings hash.
-- Re-rendered unchanged stem IDs may reuse settings; changed/removed roles show
-  an explicit migration review.
+- Re-rendered unchanged stem IDs may reuse settings; changed/removed current
+  roles require explicit review.
 - The dry mix is reproducible from exact stems/settings/engine version.
 - Mix processing must not be called AI correction or melody enhancement.
 
@@ -112,7 +112,7 @@ does not block private audition/export where current policy permits.
 
 ## Acceptance
 
-Automated tests validate hashes, caching, settings persistence/migration,
+Automated tests validate hashes, caching, canonical settings persistence,
 clipping/silence bounds, worker protocols, and failure recovery. Manual release
 acceptance must still render and listen to representative Original/Corrected/
 Enhanced, cohesion, humanized, stem, dry, style-processed, and mastered artifacts

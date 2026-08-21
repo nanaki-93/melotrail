@@ -18,13 +18,13 @@ import kotlin.math.roundToInt
 @Serializable
 data class SongPlan(
     val version: Int,
-    /** Retained only so v1 plan files remain inspectable and readable. */
+    /** Retained by the active planner protocol; structured planning writes an empty value. */
     val style: String,
     val energyCurve: List<Double>,
     val sections: List<SongPlanSection>,
     val climaxIndex: Int,
     val ending: SongEnding,
-    /** v2 binds the plan to typed profile/mood/key/meter context, never a style prompt. */
+    /** Binds the plan to typed profile/mood/key/meter context, never a style prompt. */
     val contextHash: String? = null
 ) {
     fun validate(input: SongPlanningInput): SongPlanValidationResult = SongPlanValidator.validate(this, input)
@@ -49,9 +49,9 @@ data class SongPlanSection(
     val purpose: SongSectionPurpose,
     val instrumentProgression: List<String>,
     val transitionIntent: SongTransitionIntent,
-    /** v2 fingerprint of this stable Structure occurrence; v1 plans leave it absent. */
+    /** Fingerprint of this stable Structure occurrence. */
     val occurrenceHash: String? = null,
-    /** Controlled sound requests; old plans use the compatibility aliases above. */
+    /** Controlled sound requests. */
     val soundIntents: List<InstrumentIntent> = emptyList()
 )
 
@@ -236,7 +236,7 @@ object SongPlanValidator {
         if (input.soundContext != null) {
             if (plan.version != SongPlan.CURRENT_VERSION) errors += "Structured song plan must use version ${SongPlan.CURRENT_VERSION}"
             if (plan.contextHash != input.contextHash()) errors += "Song-plan context hash does not match the requested context"
-        } else if (plan.version == 1 && plan.contextHash != null) errors += "Legacy song plan must not contain a context hash"
+        } else if (plan.version == 1 && plan.contextHash != null) errors += "Planner-protocol v1 must not contain a context hash"
         if (plan.style != input.resolvedStyle) errors += "Song-plan style must match the requested style"
         if (plan.energyCurve.size != input.structure.size) errors += "Song-plan energy curve count does not match requested structure"
         plan.energyCurve.forEachIndexed { index, energy ->

@@ -494,8 +494,6 @@ data class ProjectWorkflowReferences(
     val humanizationSelection: HumanizationSelection = HumanizationSelection.BYPASS,
     val humanization: HumanizationWorkflowReferences? = null,
     val generatedMidi: GeneratedMidiWorkflowReferences? = null,
-    /** One-way marker for the Task 023 dependency migration. */
-    val cohesionOrderMigration: Int = 0,
     val commercialProvenance: CommercialProvenanceReferences? = null
 ) {
     fun invalidate(change: WorkflowChange): ProjectWorkflowReferences = copy(
@@ -503,37 +501,13 @@ data class ProjectWorkflowReferences(
     )
 
     fun markCurrent(vararg artifacts: WorkflowArtifact): ProjectWorkflowReferences = copy(stale = stale - artifacts.toSet())
-
-    /** Retains old files as evidence while requiring Arrange → Cohesion lineage exactly once. */
-    fun migrateCohesionOrderIfNeeded(): ProjectWorkflowReferences =
-        if (cohesionOrderMigration >= 1 || cohesion == null || arrangement != null) this
-        else copy(
-            stale = stale + setOf(
-                WorkflowArtifact.COHESION, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.STEMS,
-                WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
-                WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
-            ),
-            cohesionOrderMigration = 1
-        )
 }
 
 /** Small atomic metadata boundary used after a stage has actually published output. */
 object ProjectWorkflowStore {
     fun update(root: Path, transform: (ProjectWorkflowReferences) -> ProjectWorkflowReferences) {
         val project = ProjectStore.read(root)
-        if (project.version != Project.CURRENT_VERSION) return
         ProjectStore.write(root, project.copy(workflow = transform(project.workflow)))
-    }
-
-    /** A build request is explicit authority to migrate old target-order lineage, never project open. */
-    fun migrateCohesionOrderForBuild(root: Path): Boolean {
-        if (!java.nio.file.Files.isRegularFile(root.resolve(ProjectStore.FILE_NAME))) return false
-        val project = ProjectStore.read(root)
-        if (project.version != Project.CURRENT_VERSION) return false
-        val migrated = project.workflow.migrateCohesionOrderIfNeeded()
-        if (migrated == project.workflow) return false
-        ProjectStore.write(root, project.copy(workflow = migrated))
-        return true
     }
 }
 

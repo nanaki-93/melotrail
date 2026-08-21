@@ -43,7 +43,8 @@ current selection unchanged.
 - Prompt/input snapshots include canonical context and stable hashes.
 - Stale-hash, chord-clash, anchor, range, and budget violations are rejected.
 - Bypass and approved-selection precedence remain unchanged.
-- Existing project fixtures retain readable AI Fix evidence.
+- Canonical v4 fixtures retain current AI Fix evidence; no superseded AI Fix
+  project shape remains readable.
 
 Run `./gradlew test :desktopApp:test :desktopApp:build`.
 

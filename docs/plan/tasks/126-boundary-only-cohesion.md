@@ -27,17 +27,16 @@ Tasks 120, 121, 124, and 125.
 - Persist input/context/arrangement/generated-artifact hashes, exact edits,
   validation evidence, model/processor identity, output hashes, and approval.
 
-## Compatibility and invalidation
+## Cutover and invalidation
 
-- Legacy plans/reports with `songEdits` remain readable as historical evidence
-  if required by the supported schema window, but they are always stale under
-  the boundary-only contract and cannot be re-approved.
+- Delete readers, DTO branches, mappers, and fixtures for plans/reports containing
+  `songEdits`; those superseded serialized shapes are unsupported.
 - Regeneration writes new canonical derived paths atomically and never overwrites
-  source, arranged, generated, or legacy Cohesion evidence.
+  source, arranged, or generated evidence.
 - Any structure, harmony, arrangement, generated-role, boundary-policy, or
   selected-input change invalidates Cohesion and all descendants.
 - Delete `SongEnhancementTarget`, `SongEnhancementEdit`, whole-song applier paths,
-  and exclusive tests once no supported reader needs their runtime behavior.
+  and exclusive tests in this task.
 
 ## Tests
 
@@ -45,7 +44,7 @@ Tasks 120, 121, 124, and 125.
 - First/last tick and one-tick-outside window cases.
 - Whole-song edit JSON is rejected by the new strict schema.
 - Anchor, harmony, role, budget, and stale-hash failures are atomic.
-- Single-occurrence no-op and legacy stale-read behavior.
+- Single-occurrence no-op and rejection of superseded `songEdits` payloads.
 - Approved output contains no changed note outside boundary windows.
 
 Run `./gradlew test :desktopApp:test :desktopApp:build`.

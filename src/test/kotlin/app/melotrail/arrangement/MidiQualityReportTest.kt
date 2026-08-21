@@ -3,7 +3,6 @@ package app.melotrail.arrangement
 import app.melotrail.application.CreateProjectRequest
 import app.melotrail.application.DefaultProjectApplicationService
 import app.melotrail.application.ImportPartRequest
-import app.melotrail.application.LegacyPartAnalysisService
 import app.melotrail.application.MidiPreparationService
 import app.melotrail.application.MidiQualityStatus
 import kotlinx.coroutines.runBlocking
@@ -154,7 +153,6 @@ class MidiQualityReportTest {
         assertEquals(options, stored.cleanup)
         assertEquals("midi/quality/A.json", stored.quality)
         assertTrue(stored.cleanApproval != null)
-        assertFalse(stored.approvedRepair)
         assertEquals(MidiQualityStatus.CURRENT, cleaned.parts.single().preparation.midiQuality.status)
         assertTrue(cleaned.readiness.midiQualityReportsReady)
         assertEquals(MidiQualityStatus.CURRENT, service.open(root).parts.single().preparation.midiQuality.status)
@@ -163,22 +161,6 @@ class MidiQualityReportTest {
         midi(root.resolve(requireNotNull(stored.clean)), listOf(Note(61, 0, 480, 90)))
         assertThrows(IllegalArgumentException::class.java) { ProjectStore.read(root).requireCleanMidi(root) }
         assertEquals(MidiQualityStatus.STALE_OR_INVALID, service.open(root).parts.single().preparation.midiQuality.status)
-    }
-
-    @Test
-    fun `legacy project without a report is unknown rather than corrupt`() {
-        val root = tempDir.resolve("legacy")
-        Files.createDirectories(root.resolve("source"))
-        Files.createDirectories(root.resolve("midi/clean"))
-        midi(root.resolve("source/A.mid"), listOf(Note(60, 0, 480, 90)))
-        midi(root.resolve("midi/clean/A.mid"), listOf(Note(60, 0, 480, 90)))
-        ProjectStore.write(root, Project(Project.CURRENT_VERSION, "legacy", listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid"))), renderFormat = RenderFormat()))
-
-        val snapshot = service().open(root)
-
-        assertEquals(MidiQualityStatus.LEGACY_UNKNOWN, snapshot.parts.single().preparation.midiQuality.status)
-        assertFalse(snapshot.readiness.midiQualityReportsReady)
-        assertEquals(1, ProjectStore.read(root).requireCleanMidi(root).size)
     }
 
     @Test
@@ -200,7 +182,7 @@ class MidiQualityReportTest {
     private fun service(preparation: MidiPreparationService = object : MidiPreparationService {
         override suspend fun transcribe(input: Path, output: Path) = Unit
         override suspend fun clean(input: Path, output: Path) { Files.copy(input, output) }
-    }) = DefaultProjectApplicationService(preparation, LegacyPartAnalysisService { error("legacy analysis unused") })
+    }) = DefaultProjectApplicationService(preparation)
 
     private fun midi(name: String, notes: List<Note>): Path = midi(tempDir.resolve(name), notes)
 

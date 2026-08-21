@@ -105,7 +105,7 @@ class DrumMidiGenerationTest {
         Files.writeString(source, "source MIDI remains untouched")
         writeTestMidi(clean)
         Files.writeString(bass, "existing bass MIDI remains untouched")
-        val project = Project(Project.CURRENT_VERSION, "drums", listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid"))), renderFormat = RenderFormat())
+        val project = Project(Project.CURRENT_VERSION, "drums", listOf(Part("A", "source/A.mid", midi = canonicalMidiReferences(projectRoot, "A"))), renderFormat = RenderFormat())
         val arrangement = DetailedArrangement(sections = listOf(
             section(0, DrumsRole.MINIMAL, false), section(1, DrumsRole.BUILD, true)
         ))
@@ -136,7 +136,7 @@ class DrumMidiGenerationTest {
         Files.createDirectories(clean.parent)
         Files.writeString(source, "source MIDI remains untouched")
         writeTestMidi(clean)
-        val project = Project(Project.CURRENT_VERSION, "low-ppq-drums", listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid"))), renderFormat = RenderFormat())
+        val project = Project(Project.CURRENT_VERSION, "low-ppq-drums", listOf(Part("A", "source/A.mid", midi = canonicalMidiReferences(projectRoot, "A"))), renderFormat = RenderFormat())
         val arrangement = DetailedArrangement(sections = listOf(section(0, DrumsRole.BUILD, true)))
 
         val generated = DrumMidiGenerationAdapter(libraryRoot = TestSoundLibrary.root()).generate(projectRoot, project, arrangement, mapOf("A" to analysis(ppq = 24, durationTicks = 96)))

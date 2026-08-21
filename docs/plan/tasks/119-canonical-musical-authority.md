@@ -60,9 +60,10 @@ Run `./gradlew test :desktopApp:test :desktopApp:build`.
 - Relevant consumers can obtain canonical context without independently reading
   or inferring project harmony.
 - Equivalent projects produce byte-equivalent projections and hashes.
-- No existing selected-artifact precedence or supported v4 read changes.
+- No existing selected-artifact precedence or canonical v4 read changes, and no
+  legacy-project adapter is introduced.
 
 ## Exclusions
 
-Do not migrate consumers in this task beyond minimal compilation adapters; Tasks
-122–128 own their cutovers.
+Do not cut over consumers in this task; Tasks 122–128 own those changes. Do not
+introduce temporary compatibility adapters for old project data.

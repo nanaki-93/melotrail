@@ -76,7 +76,6 @@ class AutomaticImportApplicationServiceTest {
         val runner = StageRunner(AutomaticImportProcessors(inspection, preparation).registry())
         return DefaultProjectApplicationService(
             midiPreparation = preparation,
-            legacyPartAnalysis = LegacyPartAnalysisService { error("not used") },
             inputInspection = inspection,
             stageRunRecovery = runner,
             automaticImportRunner = runner

@@ -129,7 +129,6 @@ class DefaultMidiAiFixApplicationService(
 
     private fun currentInput(root: Path, partId: String): CurrentInput {
         val project = ProjectStore.read(root).also { it.requireValid(root) }
-        require(project.version >= Project.MIDI_FIRST_VERSION) { "AI fix requires a MIDI-first project." }
         val part = project.parts.singleOrNull { it.id == partId } ?: throw IllegalArgumentException("Part not found: $partId")
         val midi = requireNotNull(part.midi) { "Part '$partId' has no cleaned MIDI." }
         val raw = requireNotNull(midi.raw) { "Part '$partId' predates current Clean MIDI evidence. Re-import it first." }

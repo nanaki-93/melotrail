@@ -65,21 +65,6 @@ class WorkflowArtifactsTest {
     }
 
     @Test
-    fun `target order migration invalidates Cohesion onward exactly once and retains references`() {
-        val hash = "c".repeat(64)
-        val historical = CohesionWorkflowReferences(hash, WorkflowArtifactReference("cohesion/cohesion.json", hash), emptyList(), approved = true)
-        val first = ProjectWorkflowReferences(cohesion = historical).migrateCohesionOrderIfNeeded()
-        val second = first.migrateCohesionOrderIfNeeded()
-
-        assertEquals(1, first.cohesionOrderMigration)
-        assertEquals(first, second)
-        assertEquals(historical, first.cohesion)
-        assertTrue(WorkflowArtifact.COHESION in first.stale)
-        assertTrue(WorkflowArtifact.MASTER in first.stale)
-        assertFalse(WorkflowArtifact.ARRANGEMENT in first.stale)
-    }
-
-    @Test
     fun `AI fix and cohesion boundary references use one canonical project layout`() {
         val hash = "b".repeat(64)
         val ai = MidiAiFixReferences(

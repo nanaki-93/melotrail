@@ -82,32 +82,6 @@ class StageRunStoreTest {
     }
 
     @Test
-    fun `v3 mapper preserves raw clean technical-correction and feel selections deterministically`() {
-        val hash = "a".repeat(64)
-        val project = Project(version = 3, name = "legacy", renderFormat = RenderFormat(), parts = listOf(Part("A", "source/A.mid", midi = MidiReferences(
-            raw = "midi/raw/A.mid",
-            clean = "midi/clean/A.mid",
-            technicalCorrectionSelection = TechnicalCorrectionSelection.CORRECTED,
-            technicalCorrection = TechnicalCorrectionReferences(
-                WorkflowArtifactReference("midi/clean/A.mid", hash),
-                WorkflowArtifactReference(TechnicalCorrectionArtifactPaths.output("A", hash), hash),
-                WorkflowArtifactReference(TechnicalCorrectionArtifactPaths.report("A", hash), hash),
-                hash
-            ),
-            aiFixSelection = MidiAiFixSelection.APPROVED,
-            aiFix = MidiAiFixReferences(hash, approved = WorkflowArtifactReference(MidiAiFixArtifactPaths.approved("A"), hash)),
-            analysisInput = MidiAnalysisInput.LOFI_FEEL,
-            feel = MidiFeelReferences(MidiFeelProfile.LOFI_80_SWING_V1, "midi/derived/A/lofi-80-swing-v1.mid", "midi/derived/A/report.json")
-        ))))
-
-        val mapped = LegacyV3StageRunMapper.map(project)
-
-        assertEquals(listOf(StageId.SOURCE, StageId.EXTRACTED, StageId.CLEANED, StageId.CORRECTED, StageId.ENHANCED), mapped.map(LegacyStageRunInput::stage))
-        assertEquals(StageId.ENHANCED, mapped.single { it.selected }.stage)
-        assertEquals(mapped, LegacyV3StageRunMapper.map(project))
-    }
-
-    @Test
     fun `cache key normalizes input and subject dependency order and graph is subject aware`() {
         val now = "2026-08-19T00:00:00Z"
         val first = ArtifactRef("midi/clean/A.mid", "a".repeat(64))

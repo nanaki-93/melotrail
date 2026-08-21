@@ -196,7 +196,6 @@ class UnifiedImportApplicationServiceTest {
         }
         val service = DefaultProjectApplicationService(
             midiPreparation = preparation,
-            legacyPartAnalysis = LegacyPartAnalysisService { error("legacy analysis is not used") },
             inputInspection = InputInspectionBoundary { request ->
                 val extension = request.source.relativePath.substringAfterLast('.')
                 val container = if (extension == "mp3") InputContainer.MPEG_AUDIO else InputContainer.RIFF_WAVE

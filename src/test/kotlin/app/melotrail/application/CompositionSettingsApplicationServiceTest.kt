@@ -137,6 +137,5 @@ class CompositionSettingsApplicationServiceTest {
             override suspend fun transcribe(input: Path, output: Path) = Unit
             override suspend fun clean(input: Path, output: Path) = Unit
         },
-        legacyPartAnalysis = LegacyPartAnalysisService { PartAnalysis(0.0, 44_100, 2, 0, 0.0, 0.0, true) }
     )
 }

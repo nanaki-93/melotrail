@@ -2,9 +2,9 @@
 
 ## Aggregate boundary
 
-Keep one portable, file-backed `Project` aggregate. The next explicit schema is
-v4. `ProjectStore.open` continues to read legacy versions without rewriting;
-explicit save/migration writes v4 atomically.
+Keep one portable, file-backed `Project` aggregate. Schema v4 is the only
+supported format. `ProjectStore.open` rejects missing-version, v1–v3, and
+superseded v4 documents without rewriting; canonical saves remain atomic.
 
 ```text
 Project
@@ -76,8 +76,9 @@ name. Display strings such as `Dm9 | Bbmaj7 | Fmaj7 | Cadd9` are formatting only
 Use a validated `SectionTypeId` rather than a closed enum. Built-ins include
 `intro`, `verse`, `chorus`, `bridge`, and `outro`; profiles may contribute labels
 and defaults later. MVP requires editable progressions for verse, chorus, and
-bridge. A part may use any known section type. Unknown legacy IDs remain visible
-and block unsupported processing instead of being rewritten.
+bridge. A normalized future section ID remains explicit and blocks unsupported
+processing rather than being guessed into a built-in type; this is forward
+extensibility, not a reader for an old project shape.
 
 ## Composition profile and mood
 
@@ -188,7 +189,7 @@ candidates/roles and no-attribution instruments do not create credit entries.
 
 ### Song part
 
-Evolve current `Part` compatibly:
+Replace the current `Part` shape at the canonical cutover:
 
 - persistent ID and user-facing name;
 - `SectionTypeId` instead of free role;
@@ -199,8 +200,8 @@ Evolve current `Part` compatibly:
 - current analysis derived from the selected downstream MIDI.
 
 The source is not “a complete song”; it is the musician's melody/performance.
-The existing `MidiReferences` fields remain readable and map into initial stage
-records during v3 migration.
+Only the canonical `MidiReferences` shape is readable. Superseded fields and
+initial-stage mappings are deleted rather than migrated.
 
 ### Structure occurrence
 
@@ -267,25 +268,14 @@ corrected artifact. `SUBTLE`, `BALANCED`, and `CREATIVE` point to validated
 enhancement artifacts. Changing a selection invalidates only dependents whose
 input/context hashes change.
 
-## v3 to v4 mapping
+## Unsupported project disposition
 
-| v3 field/concept | v4 mapping |
-| --- | --- |
-| project name | composition settings name |
-| missing key/scale/BPM/meter | explicit incomplete setup; do not invent silently |
-| `Part.role` | recognized built-in `SectionTypeId`; preserve unknown custom ID |
-| source/raw MIDI | source/extracted artifact records |
-| clean MIDI + approval | cleaned/normalized completed run and approval evidence |
-| approved AI fix | legacy corrected/enhanced branch with original hashes retained |
-| Lo-fi Feel | legacy humanization/groove artifact; keep selected behavior until rerun |
-| analysis | derived record bound to selected artifact hash |
-| `structure: List<String>` | stable occurrences assigned deterministically during explicit migration |
-| cohesion refs | legacy pre-arrangement cohesion; mark for reapproval if target dependency changes |
-| arrangement/mix/master refs | retain and validate; invalidate only when v4 input hash/context differs |
-| registry v1 logical keys/licenses | preserve as legacy instrument IDs; derive role/neutral affinities and materialize embedded license/provenance snapshots from hashed v1 license records |
-
-Legacy projects without composition settings open in a migration/setup-required
-state. The user supplies missing creative decisions before new v4 stages run.
+No v3-to-v4 mapper exists. Missing-version, v1–v3, early scalar-structure v4,
+provisional manifest v4, and other superseded project shapes fail admission.
+The application does not infer creative settings, assign migrated occurrence
+IDs, publish stage-run records, or expose a migration action for them. Current
+schema-v4 projects may still have incomplete Setup/Harmony and must collect those
+explicit user decisions through the normal canonical workflow.
 
 ## Core invariants
 

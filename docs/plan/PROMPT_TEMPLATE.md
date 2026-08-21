@@ -40,11 +40,11 @@ Architecture and safety rules:
 - Keep Compose as an adapter over typed Kotlin application services. Do not put
   file writes, worker calls, rendering, transport parsing, or business orchestration
   in composables.
-- Canonical project artifacts are the source of truth. Do not add a competing
-  database or project format. Preserve supported legacy project reads unless
-  the contract explicitly changes them. Project migration must be in memory or
-  an explicit atomic save; open must not partially rewrite a project. Treat
-  stale artifacts as inspectable evidence, never completion.
+- Canonical schema-v4 project artifacts are the source of truth. Do not add a
+  competing database or project format, and do not add or retain legacy-project
+  readers, migration code/UI, aliases, dual reads, or fallback parsing.
+  Unsupported projects must fail at open without being rewritten. Treat stale
+  artifacts from canonical projects as inspectable evidence, never completion.
 - Resolve the sound library through the validated locator/settings boundary.
   Do not depend on process CWD or create a second instrument tree.
 - Validate all external input: extensions and actual formats, identifiers,

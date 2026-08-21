@@ -2,7 +2,6 @@ package app.melotrail.arrangement
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.time.Instant
@@ -201,50 +200,10 @@ data class StageRunIndex(val schemaVersion: Int = 1, val runs: List<StageRunInde
 
 @Serializable
 data class ProjectStageRunManifestReference(
-    val index: ArtifactRef? = null,
-    /** Task 002 compatibility payload; it is never written and is materialized only by explicit migration. */
-    @Transient val legacyRuns: List<LegacyManifestRunInput> = emptyList()
+    val index: ArtifactRef? = null
 ) {
     fun requireCanonical() {
         index?.let { require(StageRunStore.isIndexPath(it.path)) { "Stage-run index path is not canonical" } }
-    }
-}
-
-data class LegacyManifestRunInput(val stage: String, val status: String, val artifacts: List<WorkflowArtifactReference>)
-
-/** Read-only compatibility input retained only until an explicit project migration publishes run files. */
-data class LegacyStageRunInput(
-    val stage: StageId,
-    val subject: StageSubject.Part,
-    val artifactPath: String,
-    val selected: Boolean
-)
-
-/** Pure mapper for supported v3 references; hashing and filesystem publication stay in [StageRunStore]. */
-object LegacyV3StageRunMapper {
-    fun map(project: Project): List<LegacyStageRunInput> = project.parts.flatMap { part ->
-        val subject = StageSubject.Part(part.id)
-        val midi = part.midi
-        buildList {
-            add(LegacyStageRunInput(StageId.SOURCE, subject, part.file, selected = false))
-            midi?.raw?.let { add(LegacyStageRunInput(StageId.EXTRACTED, subject, it, selected = false)) }
-            midi?.clean?.let {
-                add(LegacyStageRunInput(StageId.CLEANED, subject, it,
-                    selected = midi.normalized == null && midi.aiFixSelection == MidiAiFixSelection.SKIP && midi.analysisInput == MidiAnalysisInput.CURRENT))
-            }
-            midi?.normalized?.let {
-                add(LegacyStageRunInput(StageId.NORMALIZED, subject, it,
-                    selected = midi.aiFixSelection == MidiAiFixSelection.SKIP && midi.analysisInput == MidiAnalysisInput.CURRENT))
-            }
-            midi?.technicalCorrection?.output?.file?.let {
-                add(LegacyStageRunInput(StageId.CORRECTED, subject, it,
-                    selected = midi.technicalCorrectionSelection == TechnicalCorrectionSelection.CORRECTED && midi.analysisInput == MidiAnalysisInput.CURRENT))
-            }
-            midi?.feel?.derived?.let {
-                add(LegacyStageRunInput(StageId.ENHANCED, subject, it,
-                    selected = midi.analysisInput == MidiAnalysisInput.LOFI_FEEL))
-            }
-        }
     }
 }
 

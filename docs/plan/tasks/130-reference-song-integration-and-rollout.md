@@ -1,8 +1,8 @@
-# Task 130 — Reference-song integration, migration, and rollout
+# Task 130 — Reference-song integration and rollout
 
 ## Goal
 
-Prove the aligned pipeline end to end, finish compatibility cleanup, and make
+Prove the aligned pipeline end to end, finish superseded-path cleanup, and make
 operational documentation match the supported product.
 
 ## Dependencies
@@ -31,16 +31,16 @@ Tasks 118–129.
 - Rejection of a stale enhancement plan after harmony, structure, selected MIDI,
   arrangement, or generated-role change.
 - Recovery after an interrupted/failed run without selecting partial output.
-- Supported legacy project read with old Cohesion evidence marked stale and
-  explicit atomic migration/regeneration.
+- Rejection of v1–v3 and superseded v4 project documents without conversion,
+  fallback parsing, partial writes, or mutation of their files.
 - Reproducibility: same project, fake responses, policies, versions, and seeds
   produce identical selected MIDI/report hashes after project relocation.
 
 ## Cleanup and documentation
 
 - Remove superseded runtime paths, exclusive tests/fixtures, dead DTOs, prompts,
-  readiness branches, and UI copy identified by Tasks 118–129 once supported
-  compatibility readers no longer need them.
+  readiness branches, and UI copy identified by Tasks 118–129. No compatibility
+  reader may defer that deletion.
 - Update `README.md` and relevant files under `docs/plan/` to the canonical order,
   shared authority, boundary-only Cohesion, explicit Full-Song Enhance, and
   deterministic Humanization behavior.
@@ -63,8 +63,8 @@ Tasks 118–129.
 
 - The deterministic integration suite proves the canonical stage order and
   artifact lineage through Humanization/render selection.
-- Supported legacy reads are preserved and obsolete artifacts cannot satisfy new
-  completion rules.
+- Unsupported project formats are rejected and obsolete artifacts cannot satisfy
+  new completion rules.
 - Operational docs, task contracts, UI terminology, and runtime behavior agree.
 - No unrelated product surface or infrastructure is introduced.
 

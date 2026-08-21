@@ -156,7 +156,7 @@ spelling, artifact precedence, cache keys, worker paths, or AI prompts.
 Because `WorkspaceViewModel` and `WorkspacePageRouter` are already large, new
 screens/components should be split by destination while preserving the one
 workspace state owner. Do not mix an unrelated whole-UI rewrite into the domain
-migration.
+cutover.
 
 ## Accessibility and responsive behavior
 

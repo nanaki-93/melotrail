@@ -79,10 +79,10 @@ Code persists the normalized request, candidates/scores/reasons, selected stable
 ID, registry hash/version, resolver version, and selection actor. After arrangement
 approval, rendering resolves that exact ID and never ranks candidates again.
 
-Compatibility adapters map current PIANO/BASS/DRUMS/PAD/STRINGS logical stems to
-new roles. Stem IDs remain stable through migration where possible so existing
-mix settings survive. Registry v1 keys remain legacy instrument IDs with neutral
-affinities; migration does not rename or move their SFZ/sample files.
+The implementation maps the current PIANO/BASS/DRUMS/PAD/STRINGS logical stems to
+new roles as part of the canonical model change. No legacy project adapter or
+reader is retained. Registry keys describe installed instruments rather than a
+project-file compatibility contract.
 
 ### Planner boundaries
 
@@ -121,20 +121,20 @@ Replace simplistic natural-note key mapping and isolated chord summaries with
 the structured context. Meter/tempo mismatch should have an explicit adaptation
 policy or block; never silently pretend all input is C/4/4.
 
-### Dependency migration
+### Dependency cutover
 
-1. Teach arrangement to run without `requireApprovedCohesion` while retaining a
-   reader for legacy approved boundaries.
+1. Teach arrangement to run without `requireApprovedCohesion` and remove readers
+   for old approved-boundary project data.
 2. Persist v4 arrangement and occurrence hashes.
-3. Regenerate cohesion against arrangement context; legacy pre-arrangement
-   cohesion becomes stale evidence, not deleted data.
+3. Generate cohesion only against arrangement context; old pre-arrangement
+   cohesion project data is unsupported and is not loaded.
 4. Make render require approved target-order cohesion or an explicit cohesion
    bypass policy.
 5. Remove transition ownership from arrangement prompts/plans after fixtures
    prove parity.
 
-Because input identity changes, this migration requires explicit reapproval; it
-must not relabel old cohesion as arrangement-aware.
+Because input identity changes, current projects require explicit approval of
+new cohesion evidence.
 
 ## Humanization
 
@@ -161,9 +161,9 @@ Algorithm requirements:
 - bypass produces a selection of cohesive input, not a copied fake artifact;
 - regenerate chooses and stores a new seed explicitly.
 
-The existing `MidiLoFiFeel` artifact maps to a legacy groove transform. Its fixed
-80-BPM/swing behavior can be offered as a compatibility preset, then subsumed by
-profile/mood humanization without rewriting historical artifacts.
+The existing `MidiLoFiFeel` transform may be replaced by profile/mood
+humanization. The canonical implementation does not retain a legacy-project
+preset or read historical project artifacts.
 
 ## Approvals and invalidation
 
@@ -176,17 +176,17 @@ profile/mood humanization without rewriting historical artifacts.
 - Changing only mix gain/pan does not invalidate arrangement or rendered stems.
 - Humanization seed/config changes invalidate render onward.
 
-Draft, rejected, legacy, and stale artifacts remain evidence. Only approved and
-current hashes feed the next stage.
+Draft, rejected, and stale artifacts from the current schema remain evidence.
+Only approved and current hashes feed the next stage.
 
 ## Test approach
 
 - Repeated occurrence identity survives insert/reorder/delete and project reload.
 - Arrangement plans honor user constraints and are independent of cohesion.
-- Current v3 projects read and old boundaries remain inspectable.
+- Project files below v4 and old boundary shapes are rejected without mutation.
 - Cohesion produces exactly `n - 1` boundary records, includes arrangement
   context, preserves melody, and rejects mismatched hashes/unsafe plans.
 - Humanization is seed-reproducible, bounded by role/mood/profile, and does not
   drift anchors or corrupt MIDI.
-- End-to-end fixtures compare old/new ordering and assert the intentional
+- End-to-end fixtures cover only canonical ordering and the intentional
   invalidation/reapproval boundary.

@@ -284,7 +284,7 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `Setup exposes typed controls recommendation confirmation and legacy migration without navigation writes`() = runComposeUiTest {
+    fun `Setup exposes typed controls recommendation and confirmation without navigation writes`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(setupState(), intents::add) } }
 
@@ -297,10 +297,6 @@ class WorkspaceScreenTest {
         onNodeWithTag(WorkspacePageTags.SETUP_CONFIRM).performScrollTo().performClick()
         assertEquals(WorkspaceIntent.ConfirmProjectSetupSave, intents.single())
 
-        setContent { MelotrailTheme { WorkspaceScreen(setupState(legacy = true), intents::add) } }
-        onNodeWithTag(WorkspacePageTags.SETUP_LEGACY).assertExists()
-        onNodeWithTag(WorkspacePageTags.SETUP_MIGRATE).assertExists()
-        // Merely rendering or navigating to Setup never issues a migration command.
         assertEquals(WorkspaceIntent.ConfirmProjectSetupSave, intents.single())
     }
 
@@ -1531,7 +1527,7 @@ class WorkspaceScreenTest {
         attributionRequired = false
     )
 
-    private fun setupState(legacy: Boolean = false): WorkspaceUiState {
+    private fun setupState(): WorkspaceUiState {
         val profile = app.melotrail.profile.CompositionProfileRef("lofi", 1)
         val mood = app.melotrail.profile.MoodRef("warm", 1)
         val options = app.melotrail.application.CompositionSettingsOptions(
@@ -1551,10 +1547,7 @@ class WorkspaceScreenTest {
         )
         val base = populatedState()
         return base.copy(
-            project = base.project!!.copy(
-                version = if (legacy) 3 else 4,
-                migration = app.melotrail.application.ProjectMigrationStatus(legacy, if (legacy) 3 else 4, if (legacy) listOf("Save explicitly to publish v4.") else emptyList())
-            ),
+            project = base.project,
             projectSetup = setup,
             workspaceSection = WorkspaceSection.SETUP
         )

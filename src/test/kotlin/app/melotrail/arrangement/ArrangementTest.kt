@@ -106,7 +106,7 @@ class ArrangementTest {
         Files.createDirectories(source.parent)
         Files.writeString(source, "source audio bytes")
         val sourceBefore = Files.readString(source)
-        val project = Project(name = "demo", parts = listOf(Part("A", "parts/A.wav")))
+        val project = Project(name = "demo", parts = listOf(Part("A", "parts/A.wav", importPending = true)), renderFormat = RenderFormat())
         val arrangement = DeterministicArrangementPlanner().plan(
             ArrangementInput(project = project, structure = listOf(SectionInstance(0, "A", "A1")))
         )

@@ -95,8 +95,6 @@ internal object WorkspacePageTags {
     const val SETUP_FORM = "setup-form"
     const val SETUP_LOADING = "setup-loading"
     const val SETUP_ERROR = "setup-error"
-    const val SETUP_LEGACY = "setup-legacy"
-    const val SETUP_MIGRATE = "setup-migrate"
     const val SETUP_NAME = "setup-name"
     const val SETUP_TONIC = "setup-tonic"
     const val SETUP_MODE = "setup-mode"

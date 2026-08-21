@@ -6,7 +6,6 @@ import app.melotrail.arrangement.MidiPartAnalyzer
 import app.melotrail.arrangement.MidiReferences
 import app.melotrail.arrangement.Part
 import app.melotrail.arrangement.Project
-import app.melotrail.arrangement.writeLegacyProjectFixture
 import app.melotrail.preparation.AudioInspectionMeasurements
 import app.melotrail.preparation.DetectedAudioFormat
 import app.melotrail.preparation.DetectedInput
@@ -58,30 +57,17 @@ class ProjectApplicationServiceTest {
     }
 
     @Test
-    fun `opens v1 v2 and v3 project files without rewriting their canonical JSON`() {
+    fun `rejects v1 v2 and v3 project files without rewriting them`() {
         val service = service()
-        val input = midi("open-read-only.mid")
-        val fixtures = listOf(
-            "v1" to Project(version = 1, name = "v1", parts = listOf(Part("A", "parts/A.mid"))),
-            "v2" to Project(version = 2, name = "v2", renderFormat = RenderFormat(), parts = listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid")))),
-            "v3" to Project(version = 3, name = "v3", renderFormat = RenderFormat(), parts = listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid"))))
-        )
-
-        fixtures.forEach { (name, project) ->
-            val root = tempDir.resolve(name)
-            val sourcePath = if (project.version == 1) root.resolve("parts/A.mid") else root.resolve("source/A.mid")
-            Files.createDirectories(sourcePath.parent)
-            Files.copy(input, sourcePath)
-            if (project.version >= 2) {
-                val cleanPath = root.resolve("midi/clean/A.mid")
-                Files.createDirectories(cleanPath.parent)
-                Files.copy(input, cleanPath)
-            }
-            if (project.version < Project.CURRENT_VERSION) writeLegacyProjectFixture(root, project) else ProjectStore.write(root, project)
+        (1..3).forEach { version ->
+            val root = tempDir.resolve("v$version")
+            Files.createDirectories(root)
+            val text = "{\"version\":$version,\"name\":\"v$version\",\"parts\":[],\"structure\":[]}"
+            Files.writeString(root.resolve(ProjectStore.FILE_NAME), text)
             val before = Files.readAllBytes(root.resolve(ProjectStore.FILE_NAME))
 
-            assertEquals(project.version, service.open(root).version)
-            assertTrue(before.contentEquals(Files.readAllBytes(root.resolve(ProjectStore.FILE_NAME))), "$name open must not rewrite project.json")
+            assertThrows(IllegalArgumentException::class.java) { service.open(root) }
+            assertTrue(before.contentEquals(Files.readAllBytes(root.resolve(ProjectStore.FILE_NAME))), "v$version rejection must not rewrite project.json")
         }
     }
 
@@ -448,7 +434,6 @@ class ProjectApplicationServiceTest {
 
     private fun service(preparation: MidiPreparationService = copyingPreparation()) = DefaultProjectApplicationService(
         preparation,
-        LegacyPartAnalysisService { error("legacy worker should not be used") },
         inputInspection = InputInspectionBoundary { request ->
             val extension = request.source.relativePath.substringAfterLast('.')
             val container = if (extension == "mp3") InputContainer.MPEG_AUDIO else InputContainer.RIFF_WAVE

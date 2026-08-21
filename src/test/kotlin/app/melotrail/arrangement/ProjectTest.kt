@@ -19,16 +19,19 @@ class ProjectTest {
 
     @Test
     fun `project JSON round trips with parts analysis reference and ordered structure`() {
-        createFile("parts/A.wav", "source-a")
-        createFile("parts/B.wav", "source-b")
-        createFile("analysis/A.json", "{\"frames\": 100}")
+        createFile("source/A.mid", "source-a")
+        createFile("source/B.mid", "source-b")
+        createFile("midi/raw/A.mid", "raw-a")
+        createFile("midi/raw/B.mid", "raw-b")
+        createFile("analysis/A.midi.json", "{}")
         val project = Project(
             name = "demo",
+            renderFormat = RenderFormat(),
             parts = listOf(
-                Part("A", "parts/A.wav", "verse", PartAnalysisReference("analysis/A.json")),
-                Part("B", "parts/B.wav", "chorus")
+                Part("A", "source/A.mid", "verse", PartAnalysisReference("analysis/A.midi.json", AnalysisKind.MIDI), midi = MidiReferences(raw = "midi/raw/A.mid")),
+                Part("B", "source/B.mid", "chorus", midi = MidiReferences(raw = "midi/raw/B.mid"))
             ),
-            structure = listOf("A", "A", "B", "B", "A")
+            envelope = ProjectV4Envelope(structureOccurrences = listOf("A", "A", "B", "B", "A").mapIndexed { index, partId -> StructureOccurrence("occ-$index", partId) })
         )
 
         val decoded = json.decodeFromString<Project>(json.encodeToString(project))
@@ -43,7 +46,7 @@ class ProjectTest {
     fun `validation accepts existing relative files without modifying source audio`() {
         val source = createFile("parts/A.wav", "original source bytes")
         val before = Files.readString(source)
-        val project = Project(name = "demo", parts = listOf(Part("A", "parts/A.wav")))
+        val project = Project(name = "demo", renderFormat = RenderFormat(), parts = listOf(Part("A", "parts/A.wav", importPending = true)))
 
         project.requireValid(projectRoot)
 
@@ -56,7 +59,8 @@ class ProjectTest {
         createFile("parts/B.wav", "source-b")
         val project = Project(
             name = "demo",
-            parts = listOf(Part("A", "parts/A.wav"), Part("A", "parts/B.wav"))
+            renderFormat = RenderFormat(),
+            parts = listOf(Part("A", "parts/A.wav", importPending = true), Part("A", "parts/B.wav", importPending = true))
         )
 
         val validation = project.validate(projectRoot)
@@ -71,10 +75,11 @@ class ProjectTest {
         createFile("parts/A.wav", "source-a")
         val project = Project(
             name = "demo",
+            renderFormat = RenderFormat(),
             parts = listOf(
-                Part("missing", "parts/missing.wav"),
-                Part("absolute", projectRoot.resolve("parts/A.wav").toString()),
-                Part("escape", "../outside.wav")
+                Part("missing", "parts/missing.wav", importPending = true),
+                Part("absolute", projectRoot.resolve("parts/A.wav").toString(), importPending = true),
+                Part("escape", "../outside.wav", importPending = true)
             )
         )
 
@@ -91,7 +96,8 @@ class ProjectTest {
         createFile("parts/A.wav", "source-a")
         val project = Project(
             name = "demo",
-            parts = listOf(Part("A", "parts/A.wav")),
+            renderFormat = RenderFormat(),
+            parts = listOf(Part("A", "parts/A.wav", importPending = true)),
             envelope = ProjectV4Envelope(structureOccurrences = listOf(
                 StructureOccurrence("occ-A-1", "A"),
                 StructureOccurrence("occ-B-1", "B")
@@ -105,14 +111,13 @@ class ProjectTest {
     }
 
     @Test
-    fun `v2 validation rejects a source symlink that escapes the project root`() {
+    fun `canonical validation rejects a source symlink that escapes the project root`() {
         val outside = projectRoot.resolveSibling("outside")
         Files.createDirectories(outside)
         Files.writeString(outside.resolve("A.mid"), "outside")
         Files.createSymbolicLink(projectRoot.resolve("source"), outside)
         createFile("midi/clean/A.mid", "clean")
         val project = Project(
-            version = 2,
             name = "demo",
             renderFormat = RenderFormat(),
             parts = listOf(Part("A", "source/A.mid", midi = MidiReferences(clean = "midi/clean/A.mid")))
