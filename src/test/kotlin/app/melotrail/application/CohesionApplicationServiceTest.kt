@@ -15,12 +15,14 @@ import app.melotrail.arrangement.PartAnalysisReference
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.ProjectV4Envelope
+import app.melotrail.arrangement.CompositionSettings
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.StructureOccurrence
 import app.melotrail.arrangement.RhythmicGesture
 import app.melotrail.arrangement.SectionInstance
 import app.melotrail.arrangement.SongPlanningInput
 import app.melotrail.arrangement.TimingHandoff
+import app.melotrail.arrangement.TestSoundLibrary
 import app.melotrail.arrangement.TransitionRoleAction
 import app.melotrail.arrangement.GeneratedMidiArtifactReference
 import app.melotrail.arrangement.GeneratedMidiWorkflowReferences
@@ -31,6 +33,19 @@ import app.melotrail.arrangement.TransitionBridgePlan
 import app.melotrail.arrangement.TransitionCohesionInput
 import app.melotrail.arrangement.TransitionCohesionInputFactory
 import app.melotrail.arrangement.TransitionCohesionPlan
+import app.melotrail.harmony.ChordEvent
+import app.melotrail.harmony.ChordEventId
+import app.melotrail.harmony.ChordProgression
+import app.melotrail.harmony.ChordQuality
+import app.melotrail.harmony.HarmonySettings
+import app.melotrail.music.MusicalKey
+import app.melotrail.music.PitchClass
+import app.melotrail.music.PitchSpelling
+import app.melotrail.music.ScaleModeId
+import app.melotrail.music.Tempo
+import app.melotrail.music.TimeSignature
+import app.melotrail.profile.CompositionProfileRef
+import app.melotrail.profile.MoodRef
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -114,6 +129,7 @@ class CohesionApplicationServiceTest {
 
     private fun project(structure: List<String>) {
         Files.createDirectories(root.resolve("source")); Files.createDirectories(root.resolve("midi/clean")); Files.createDirectories(root.resolve("analysis"))
+        Files.copy(TestSoundLibrary.root().resolve("instruments.json"), root.resolve("instruments.json"))
         writeMidi(root.resolve("source/A.mid")); Files.copy(root.resolve("source/A.mid"), root.resolve("midi/clean/A.mid"))
         val analysis = MidiPartAnalyzer().analyze(root.resolve("midi/clean/A.mid"), "A")
         Files.writeString(root.resolve("analysis/A.midi.json"), Json.encodeToString(MidiAnalysis.serializer(), analysis))
@@ -121,7 +137,17 @@ class CohesionApplicationServiceTest {
             name = "cohesion",
             parts = listOf(Part("A", "source/A.mid", analysis = PartAnalysisReference("analysis/A.midi.json", AnalysisKind.MIDI), midi = canonicalMidiReferences(root, "A"))),
             renderFormat = RenderFormat(),
-            envelope = ProjectV4Envelope(structureOccurrences = structure.mapIndexed { index, partId -> StructureOccurrence("occ-$index", partId) })
+            envelope = ProjectV4Envelope(
+                compositionSettings = CompositionSettings(
+                    key = MusicalKey(PitchClass.of(PitchSpelling.C), ScaleModeId.MAJOR), tempo = Tempo(90.0),
+                    timeSignature = TimeSignature(4, 4), profile = CompositionProfileRef("lofi", 1), mood = MoodRef("warm", 1),
+                    decisionRevision = 1, resolvedProfileSha256 = "a".repeat(64), decisionSha256 = "b".repeat(64)
+                ),
+                harmony = HarmonySettings(progressions = listOf(ChordProgression(
+                    app.melotrail.harmony.SectionTypeId("verse"), listOf(ChordEvent(ChordEventId("one"), PitchClass.of(PitchSpelling.C), ChordQuality.MAJOR, 0))
+                ))),
+                structureOccurrences = structure.mapIndexed { index, partId -> StructureOccurrence("occ-$index", partId) }
+            )
         ))
     }
     private suspend fun arrange() {
@@ -131,12 +157,18 @@ class CohesionApplicationServiceTest {
         )
         Files.createDirectories(root.resolve("midi/generated"))
         Files.copy(root.resolve("midi/clean/A.mid"), root.resolve("midi/generated/drums.mid"), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        Files.writeString(root.resolve("midi/generated/drums.validation.json"), "{\"version\":1}")
         val project = ProjectStore.read(root)
         val hash = app.melotrail.arrangement.sha256(root.resolve("midi/generated/drums.mid"))
+        val reportHash = app.melotrail.arrangement.sha256(root.resolve("midi/generated/drums.validation.json"))
+        val approval = requireNotNull(project.workflow.arrangement)
         ProjectStore.write(root, project.copy(workflow = project.workflow.invalidate(WorkflowChange.GENERATED_MIDI)
             .markCurrent(WorkflowArtifact.GENERATED_MIDI)
-            .copy(generatedMidi = GeneratedMidiWorkflowReferences(requireNotNull(project.workflow.arrangement).arrangement.sha256,
-                listOf(GeneratedMidiArtifactReference("drums", WorkflowArtifactReference("midi/generated/drums.mid", hash)))))))
+            .copy(generatedMidi = GeneratedMidiWorkflowReferences(
+                approval.arrangement.sha256, approval.authoritySha256, approval.registrySha256, "arrangement-generators-v1", 0L,
+                listOf(GeneratedMidiArtifactReference("drums", WorkflowArtifactReference("midi/generated/drums.mid", hash),
+                    WorkflowArtifactReference("midi/generated/drums.validation.json", reportHash)))
+            ))))
     }
     private fun writeMidi(path: Path) { val sequence = Sequence(Sequence.PPQ, 480); val track = sequence.createTrack(); track.add(MidiEvent(MetaMessage(0x51, byteArrayOf(7, -95, 32), 3), 0)); track.add(MidiEvent(MetaMessage(0x58, byteArrayOf(4, 2, 24, 8), 4), 0)); track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, 60, 90), 0)); track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, 60, 0), 1_920)); MidiSystem.write(sequence, 1, path.toFile()) }
 }

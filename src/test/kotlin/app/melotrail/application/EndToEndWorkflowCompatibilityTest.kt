@@ -7,6 +7,20 @@ import app.melotrail.arrangement.MixedStem
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.RenderResult
+import app.melotrail.arrangement.CompositionSettings
+import app.melotrail.harmony.ChordEvent
+import app.melotrail.harmony.ChordEventId
+import app.melotrail.harmony.ChordProgression
+import app.melotrail.harmony.ChordQuality
+import app.melotrail.harmony.HarmonySettings
+import app.melotrail.music.MusicalKey
+import app.melotrail.music.PitchClass
+import app.melotrail.music.PitchSpelling
+import app.melotrail.music.ScaleModeId
+import app.melotrail.music.Tempo
+import app.melotrail.music.TimeSignature
+import app.melotrail.profile.CompositionProfileRef
+import app.melotrail.profile.MoodRef
 import app.melotrail.preparation.AudioCleanupBoundary
 import app.melotrail.preparation.AudioCleanupRequest
 import app.melotrail.preparation.AudioCleanupResult
@@ -86,6 +100,7 @@ class EndToEndWorkflowCompatibilityTest {
 
             services.projects.analyzePart(AnalyzePartRequest(root, "A"))
             services.projects.saveStructure(SaveStructureRequest(root, listOf("A", "A")))
+            prepareArrangementContext(root)
             val arrangement = services.arrangements.generate(GenerateArrangementRequest(root, instruments = listOf("piano", "drums")))
             assertTrue(arrangement.approved)
             generateApprovedCohesion(root, services.arrangements)
@@ -116,6 +131,20 @@ class EndToEndWorkflowCompatibilityTest {
                 critic = app.melotrail.arrangement.CriticWorkflowReferences(inputHash, app.melotrail.arrangement.WorkflowArtifactReference(relative, hash(report))),
                 fullSongEnhancementSelection = app.melotrail.arrangement.FullSongEnhancementSelection.NO_OP
             )))
+    }
+
+    private fun prepareArrangementContext(root: Path) {
+        val project = ProjectStore.read(root)
+        ProjectStore.write(root, project.copy(envelope = project.envelope.copy(
+            compositionSettings = CompositionSettings(
+                key = MusicalKey(PitchClass.of(PitchSpelling.C), ScaleModeId.MAJOR), tempo = Tempo(90.0),
+                timeSignature = TimeSignature(4, 4), profile = CompositionProfileRef("lofi", 1), mood = MoodRef("warm", 1),
+                decisionRevision = 1, resolvedProfileSha256 = "a".repeat(64), decisionSha256 = "b".repeat(64)
+            ),
+            harmony = HarmonySettings(progressions = listOf(ChordProgression(
+                app.melotrail.harmony.SectionTypeId("verse"), listOf(ChordEvent(ChordEventId("one"), PitchClass.of(PitchSpelling.C), ChordQuality.MAJOR, 0))
+            )))
+        )))
     }
 
     @Test

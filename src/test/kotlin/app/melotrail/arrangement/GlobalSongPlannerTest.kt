@@ -57,7 +57,7 @@ class GlobalSongPlannerTest {
     }
 
     @Test
-    fun `Qwen structured plan restores application-owned identity and intents`() {
+    fun `Qwen structured plan rejects changed application-owned identity and intents`() {
         val input = structuredInput()
         val expected = DeterministicGlobalSongPlanner().plan(input)
         val modelPlan = expected.copy(
@@ -78,11 +78,11 @@ class GlobalSongPlannerTest {
         )
         val client = CapturingFixtureClient(Json { encodeDefaults = true }.encodeToString(modelPlan))
 
-        assertEquals(expected, LocalQwenGlobalSongPlanner(client).plan(input))
+        assertThrows(IllegalArgumentException::class.java) { LocalQwenGlobalSongPlanner(client).plan(input) }
         assertTrue(client.userPrompt.contains(input.contextHash().orEmpty()))
         assertTrue(client.userPrompt.contains("melody and harmony = piano"))
         assertTrue(client.userPrompt.contains("texture and ambience = pad"))
-        assertTrue(client.userPrompt.contains("empty soundIntents array"))
+        assertTrue(client.systemPrompt.contains("sound intents. Do not"))
         assertTrue(client.userPrompt.contains("counter-melody = strings"))
     }
 

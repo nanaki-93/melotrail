@@ -1,5 +1,6 @@
 package app.melotrail.arrangement
 
+import app.melotrail.application.ArrangementGenerationProjection
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -105,7 +106,12 @@ data class SongPlanningInput(
     val style: String? = null,
     val constraints: SongPlanningConstraints = SongPlanningConstraints(),
     val soundContext: ArrangementSoundContext? = null,
-    val requestedIntents: List<InstrumentIntent> = emptyList()
+    val requestedIntents: List<InstrumentIntent> = emptyList(),
+    /**
+     * The only project-musical context accepted by the current arrangement
+     * protocol. It is built from canonical v4 data, never from model output.
+     */
+    val canonicalProjection: ArrangementGenerationProjection? = null
 ) {
     val resolvedStyle: String
         get() = if (soundContext != null) "" else style?.trim().takeUnless { it.isNullOrEmpty() } ?: "unspecified"
@@ -160,6 +166,23 @@ data class SongPlanningInput(
             val expectedLogical = requestedIntents.map { LegacyLogicalInstrumentRoles.logicalFor(it.role) }.toSet()
             if (!expectedLogical.all { it in allowedInstruments }) errors += "Allowed instruments must include compatibility aliases for requested roles"
         }
+        canonicalProjection?.let { projection ->
+            if (projection.contextSha256.isBlank() || projection.inputSha256.length != 64) {
+                errors += "Arrangement projection fingerprints are invalid"
+            }
+            val expected = projection.occurrences.mapIndexed { index, occurrence ->
+                Triple(index, occurrence.partId, occurrence.occurrenceId)
+            }
+            if (structure.map { Triple(it.index, it.partId, it.instanceId) } != expected) {
+                errors += "Song-planning structure must exactly match the canonical occurrence projection"
+            }
+            if (analyses.keys != projection.analyzedFacts.map { it.partId }.toSet()) {
+                errors += "Song-planning analyses must exactly match the canonical arrangement projection"
+            }
+            if (projection.harmony.map { it.occurrenceId }.distinct() != projection.occurrences.map { it.occurrenceId }) {
+                errors += "Arrangement projection harmony must cover every occurrence exactly once"
+            }
+        }
         try {
             constraints.requireValid()
         } catch (error: IllegalArgumentException) {
@@ -172,7 +195,7 @@ data class SongPlanningInput(
         const val MAX_STYLE_LENGTH = 160
     }
 
-    fun contextHash(): String? = soundContext?.let { context ->
+    fun contextHash(): String? = canonicalProjection?.inputSha256 ?: soundContext?.let { context ->
         java.security.MessageDigest.getInstance("SHA-256").digest(
             Json { encodeDefaults = true }.encodeToString(ArrangementSoundContext.serializer(), context).toByteArray(Charsets.UTF_8)
         ).joinToString("") { "%02x".format(it) }
@@ -233,7 +256,7 @@ object SongPlanValidator {
         }
 
         if (plan.version !in setOf(1, SongPlan.CURRENT_VERSION)) errors += "Unsupported song-plan version: ${plan.version}"
-        if (input.soundContext != null) {
+        if (input.soundContext != null || input.canonicalProjection != null) {
             if (plan.version != SongPlan.CURRENT_VERSION) errors += "Structured song plan must use version ${SongPlan.CURRENT_VERSION}"
             if (plan.contextHash != input.contextHash()) errors += "Song-plan context hash does not match the requested context"
         } else if (plan.version == 1 && plan.contextHash != null) errors += "Planner-protocol v1 must not contain a context hash"
@@ -250,7 +273,7 @@ object SongPlanValidator {
             if (section.instanceId != expected.instanceId) errors += "Song-plan section ${position + 1} has unexpected instance ID '${section.instanceId}'"
             if (section.partId != expected.partId) errors += "Song-plan section ${position + 1} has unexpected part ID '${section.partId}'"
             if (section.occurrence != expected.occurrence) errors += "Song-plan section ${position + 1} has occurrence ${section.occurrence}; expected ${expected.occurrence}"
-            if (input.soundContext != null && section.occurrenceHash != input.occurrenceHash(expected)) {
+            if ((input.soundContext != null || input.canonicalProjection != null) && section.occurrenceHash != input.occurrenceHash(expected)) {
                 errors += "Song-plan section ${position + 1} occurrence hash does not match the saved Structure"
             }
             validateInstruments(position, section.instrumentProgression, input, errors)
@@ -338,13 +361,13 @@ class DeterministicGlobalSongPlanner : GlobalSongPlanner {
                 purpose = purpose(position, climaxIndex, sections.lastIndex),
                 instrumentProgression = instruments,
                 transitionIntent = transition(position, climaxIndex, sections.lastIndex),
-                occurrenceHash = input.soundContext?.let { input.occurrenceHash(section) },
+                occurrenceHash = if (input.soundContext != null || input.canonicalProjection != null) input.occurrenceHash(section) else null,
                 soundIntents = input.soundContext?.let { input.intentsFor(purpose(position, climaxIndex, sections.lastIndex))
                     .filter { LegacyLogicalInstrumentRoles.logicalFor(it.role) in instruments } }.orEmpty()
             )
         }
         return SongPlan(
-            version = if (input.soundContext == null) 1 else SongPlan.CURRENT_VERSION,
+            version = if (input.soundContext == null && input.canonicalProjection == null) 1 else SongPlan.CURRENT_VERSION,
             style = input.resolvedStyle,
             energyCurve = energyCurve,
             sections = planSections,
@@ -412,52 +435,9 @@ class LocalQwenGlobalSongPlanner(
         } catch (error: Exception) {
             throw IllegalArgumentException("Qwen returned invalid song-plan JSON: ${error.message}", error)
         }
-        val canonical = plan.withApplicationOwnedFields(input)
-        val validation = canonical.validate(input)
+        val validation = plan.validate(input)
         require(validation.isValid) { "Invalid Qwen song plan: ${validation.errors.joinToString("; ")}" }
-        return canonical
-    }
-
-    /**
-     * Qwen chooses the musical arc only. Stable occurrence identity, context
-     * binding, and profile-bound intents are application-owned data; asking the
-     * model to reproduce them adds thousands of tokens and is error-prone.
-     */
-    private fun SongPlan.withApplicationOwnedFields(input: SongPlanningInput): SongPlan {
-        val expectedSections = input.sectionsWithIdentity()
-        val purposes = climaxIndex.takeIf { it in expectedSections.indices }?.let { climax ->
-            expectedSections.indices.map { index ->
-                when {
-                    index == climax -> SongSectionPurpose.CLIMAX
-                    index == 0 -> SongSectionPurpose.INTRODUCTION
-                    index == expectedSections.lastIndex -> SongSectionPurpose.CONCLUSION
-                    index > climax -> SongSectionPurpose.RELEASE
-                    else -> SongSectionPurpose.DEVELOPMENT
-                }
-            }
-        }
-        return copy(
-            version = if (input.soundContext == null) 1 else SongPlan.CURRENT_VERSION,
-            style = input.resolvedStyle,
-            contextHash = input.contextHash(),
-            sections = sections.mapIndexed { position, section ->
-                val expected = expectedSections.getOrNull(position) ?: return@mapIndexed section
-                val purpose = purposes?.getOrNull(position) ?: section.purpose
-                section.copy(
-                    index = expected.index,
-                    instanceId = expected.instanceId,
-                    partId = expected.partId,
-                    occurrence = expected.occurrence,
-                    purpose = purpose,
-                    occurrenceHash = input.soundContext?.let { input.occurrenceHash(expected) },
-                    soundIntents = input.soundContext?.let {
-                        input.intentsFor(purpose).filter { intent ->
-                            LegacyLogicalInstrumentRoles.logicalFor(intent.role) in section.instrumentProgression
-                        }
-                    }.orEmpty()
-                )
-            }
-        )
+        return plan
     }
 
     private fun createUserPrompt(input: SongPlanningInput): String = """
@@ -466,6 +446,10 @@ class LocalQwenGlobalSongPlanner(
 
         Versioned MIDI part analyses:
         ${promptJson.encodeToString(input.analyses.toSortedMap().map { QwenAnalysis(it.key, it.value) })}
+
+        Canonical arrangement projection (authoritative key, tempo, meter, repeated occurrences, per-occurrence harmony,
+        selected-MIDI hashes, melody evidence, profile, mood, and input hash):
+        ${promptJson.encodeToString(input.canonicalProjection)}
 
         Requested sections:
         ${promptJson.encodeToString(input.sectionsWithIdentity())}
@@ -492,13 +476,14 @@ class LocalQwenGlobalSongPlanner(
         ${promptJson.encodeToString(input.constraints)}
 
         Response requirements:
-        - version must be 1.
+        - version must be ${if (input.soundContext == null && input.canonicalProjection == null) 1 else SongPlan.CURRENT_VERSION}.
         - style must equal the supplied Style string exactly.
         - energyCurve and sections must each contain exactly ${input.structure.size} entries in the supplied order.
-        - Include index, instanceId, partId, and occurrence for every section. The application restores these stable identities.
+        - Include index, instanceId, partId, and occurrence for every section exactly as supplied. A changed, missing,
+          duplicated, unknown, or reordered occurrence is rejected.
         - instrumentProgression must start with piano and contain only Allowed instruments.
-        - If Structured planning context is present, return version 2. Use null for contextHash and occurrenceHash and an
-          empty soundIntents array in every section; the application restores those bound fields after validation.
+        - When a canonical arrangement projection or structured planning context is present, copy the supplied contextHash and every
+          occurrenceHash exactly. Preserve each supplied sound intent; do not create instruments or IDs.
           Do not invent traits, stable IDs, paths, filenames, engine settings, or free-form sound text.
         - Choose climaxIndex. Section purposes are derived from it: first is introduction, its index is climax, final is
           conclusion, positions before it are development, and positions after it are release.
@@ -520,7 +505,7 @@ class LocalQwenGlobalSongPlanner(
 
             The required response schema is exactly:
             {
-              "version": 1,
+              "version": "use the version required by the user input",
               "style": "the exact supplied style string",
               "energyCurve": [0.0],
               "sections": [{
@@ -538,12 +523,12 @@ class LocalQwenGlobalSongPlanner(
               "ending": "resolved",
               "contextHash": null
             }
-            All shown fields are required. Do not add fields. Use empty/null values for `soundIntents`, `contextHash`, and `occurrenceHash`;
-            the application binds them to its trusted request after parsing. energyCurve and sections must have one entry per supplied
+            All shown fields are required. The illustrative version field is replaced by the exact version required by the user input.
+            Do not add fields. energyCurve and sections must have one entry per supplied
             requested section, not merely the single illustrative entry above. Each section has exactly index, instanceId,
             partId, occurrence, purpose, instrumentProgression, and transitionIntent.
-            Include every supplied section index, instanceId, partId, and occurrence. Do not calculate hashes: use null for
-            occurrenceHash and contextHash, and an empty soundIntents list. Choose one climaxIndex; the app derives section purposes.
+            Include every supplied section index, instanceId, partId, occurrence, occurrenceHash, contextHash, and the exact allowed
+            sound intents. Do not calculate or change hashes. Choose one climaxIndex; section purposes must follow the required arc.
             Use only supplied logical instruments,
             start each progression with piano, and use every supplied logical instrument somewhere in the song when the supplied
             section count and limits permit it. Use one climax, and make the final transitionIntent none. Allowed purpose

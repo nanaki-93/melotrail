@@ -16,6 +16,7 @@ import app.melotrail.arrangement.DeterministicSectionVariationPlanner
 import app.melotrail.arrangement.DrumMidiGenerationAdapter
 import app.melotrail.arrangement.GlobalSongPlanner
 import app.melotrail.arrangement.GeneratedMidiArtifactReference
+import app.melotrail.arrangement.GeneratedMidiArtifactPaths
 import app.melotrail.arrangement.GeneratedMidiWorkflowReferences
 import app.melotrail.arrangement.InstrumentMode
 import app.melotrail.arrangement.LocalQwenDetailedArrangementPlanner
@@ -23,6 +24,7 @@ import app.melotrail.arrangement.LocalQwenGlobalSongPlanner
 import app.melotrail.arrangement.LogicalInstrument
 import app.melotrail.arrangement.LegacyLogicalInstrumentRoles
 import app.melotrail.arrangement.MidiAnalysis
+import app.melotrail.arrangement.MidiChord
 import app.melotrail.arrangement.MidiTransitionGenerationAdapter
 import app.melotrail.arrangement.OccurrenceMidiArtifactResolver
 import app.melotrail.arrangement.PadMidiGenerationAdapter
@@ -52,9 +54,12 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.coroutineContext
@@ -104,6 +109,19 @@ data class GeneratedMidiArtifact(val instrument: String, val path: Path, val eve
 
 data class GeneratedMidiSnapshot(val artifacts: List<GeneratedMidiArtifact>)
 
+@Serializable
+private data class GeneratedMidiValidationReport(
+    val version: Int = 1,
+    val role: String,
+    val generatorVersion: String,
+    val seed: Long,
+    val arrangementSha256: String,
+    val authoritySha256: String,
+    val registrySha256: String,
+    val outputSha256: String,
+    val eventCount: Int
+)
+
 enum class ApplicationErrorCategory { PREREQUISITE, VALIDATION, WORKER, MODEL, RENDERER, ARTIFACT, IO }
 
 class ApplicationServiceException(
@@ -130,11 +148,13 @@ class DefaultArrangementApplicationService(
     private val qwenGlobalPlanner: GlobalSongPlanner = LocalQwenGlobalSongPlanner(),
     private val deterministicDetailedPlanner: DetailedArrangementPlanner = DeterministicDetailedArrangementPlanner(),
     private val qwenDetailedPlanner: DetailedArrangementPlanner = LocalQwenDetailedArrangementPlanner(),
-    private val libraryRoot: Path
+    private val libraryRoot: Path,
+    private val musicalAuthorityBuilder: MusicalAuthorityBuilder = MusicalAuthorityBuilder()
 ) : ArrangementApplicationService {
     override suspend fun generate(request: GenerateArrangementRequest, progress: ProgressSink): ArrangementSnapshot = mutate(request.root) { root ->
         progress.report(OperationProgress("arrange", 1, 3, "Validating MIDI analyses"))
         val project = readProject(root)
+        val projection = musicalAuthorityBuilder.arrangementGeneration(root)
         val structure = project.envelope.structureOccurrences.mapIndexed { index, occurrence -> occurrence.toSectionInstance(index) }
         require(structure.isNotEmpty()) { "Song structure must not be empty" }
         val context = request.roleSelections.takeIf { it.isNotEmpty() }?.let { structuredContext(project) }
@@ -149,7 +169,7 @@ class DefaultArrangementApplicationService(
         require("piano" in allowed && allowed.all { it in LogicalInstrument.entries.map(LogicalInstrument::wireName) }) {
             "Arrangement instruments must be selected from piano, bass, drums, pad, and strings and include piano"
         }
-        val analyses = midiAnalyses(root, project, structure.map(SectionInstance::partId).toSet())
+        val analyses = canonicalMidiAnalyses(projection)
         // Role selections activate the structured planning protocol, which has
         // no legacy style-string field. Ignore a stale compatibility value from
         // callers rather than constructing an invalid mixed-mode request.
@@ -161,7 +181,8 @@ class DefaultArrangementApplicationService(
             allowedInstruments = allowed,
             style = request.style?.takeIf { intents.isEmpty() },
             soundContext = context,
-            requestedIntents = intents
+            requestedIntents = intents,
+            canonicalProjection = projection
         )
         input.requireValid()
         coroutineContext.ensureActive()
@@ -194,9 +215,10 @@ class DefaultArrangementApplicationService(
 
     override suspend fun generateRequiredMidi(root: Path, progress: ProgressSink): GeneratedMidiSnapshot = mutate(root) { normalized ->
         val project = readProject(normalized)
+        val projection = musicalAuthorityBuilder.arrangementGeneration(normalized)
         val input = detailedInput(normalized, project)
         val arrangement = readApproved(normalized, input)
-        val analyses = midiAnalyses(normalized, project, project.parts.map { it.id }.toSet())
+        val analyses = canonicalMidiAnalyses(projection)
         val active = arrangement.sections.flatMap { it.instruments }.filter { it.mode == InstrumentMode.GENERATED }.map { it.name }.toSet()
         val needsTransitionMidi = arrangement.sections.any { it.transitionOut.type.name != "NONE" }
         val total = active.size + if (needsTransitionMidi) 1 else 0
@@ -236,14 +258,30 @@ class DefaultArrangementApplicationService(
         val approval = requireNotNull(ProjectStore.read(normalized).workflow.arrangement) {
             "Generated MIDI requires approved arrangement lineage"
         }
+        require(approval.authoritySha256 == projection.contextSha256) {
+            "Approved arrangement is stale for the current musical authority. Regenerate Arrangement first."
+        }
+        val registrySha256 = registrySha256()
+        require(approval.registrySha256 == registrySha256) {
+            "Approved arrangement is stale for the current instrument registry. Regenerate Arrangement first."
+        }
         val references = artifacts.map { artifact ->
             val relative = normalized.relativize(artifact.path.toAbsolutePath().normalize()).toString().replace('\\', '/')
-            GeneratedMidiArtifactReference(artifact.instrument, WorkflowArtifactReference(relative, sha256(artifact.path)))
+            val outputSha256 = sha256(artifact.path)
+            val report = writeGeneratedMidiValidationReport(
+                normalized, artifact.instrument, artifact.events, approval.arrangement.sha256, projection.contextSha256, registrySha256, outputSha256
+            )
+            GeneratedMidiArtifactReference(
+                artifact.instrument, WorkflowArtifactReference(relative, outputSha256),
+                WorkflowArtifactReference(GeneratedMidiArtifactPaths.validationReport(artifact.instrument), sha256(report))
+            )
         }
         ProjectWorkflowStore.update(normalized) { workflow ->
             workflow.invalidate(WorkflowChange.GENERATED_MIDI)
                 .markCurrent(WorkflowArtifact.GENERATED_MIDI)
-                .copy(generatedMidi = GeneratedMidiWorkflowReferences(approval.arrangement.sha256, references))
+                .copy(generatedMidi = GeneratedMidiWorkflowReferences(
+                    approval.arrangement.sha256, projection.contextSha256, registrySha256, GENERATOR_VERSION, GENERATOR_SEED, references
+                ))
         }
         GeneratedMidiSnapshot(artifacts)
     }
@@ -301,11 +339,12 @@ class DefaultArrangementApplicationService(
     }
 
     private fun detailedInput(root: Path, project: Project): DetailedArrangementInput {
+        val projection = musicalAuthorityBuilder.arrangementGeneration(root)
         val planPath = root.resolve(SongPlanStore.FILE_NAME)
         require(Files.isRegularFile(planPath)) { "Song plan not found: $planPath. Generate an arrangement first." }
         val rawPlan = json.decodeFromString(SongPlan.serializer(), Files.readString(planPath, StandardCharsets.UTF_8))
         val structure = rawPlan.sections.map { SectionInstance(it.index, it.partId, it.instanceId) }
-        val analyses = midiAnalyses(root, project, structure.map(SectionInstance::partId).toSet())
+        val analyses = canonicalMidiAnalyses(projection)
         val planningInput = SongPlanningInput(
             projectName = project.name,
             projectVersion = project.version,
@@ -313,8 +352,10 @@ class DefaultArrangementApplicationService(
             structure = structure,
             allowedInstruments = rawPlan.sections.flatMap { it.instrumentProgression }.distinct(),
             style = rawPlan.style.takeIf { rawPlan.contextHash == null },
-            soundContext = rawPlan.contextHash?.let { structuredContext(project) },
-            requestedIntents = rawPlan.sections.flatMap { it.soundIntents }.distinctBy { it.role }
+            soundContext = rawPlan.sections.flatMap { it.soundIntents }.distinctBy { it.role }
+                .takeIf { it.isNotEmpty() }?.let { structuredContext(project) },
+            requestedIntents = rawPlan.sections.flatMap { it.soundIntents }.distinctBy { it.role },
+            canonicalProjection = projection
         )
         val plan = SongPlanStore.read(root, planningInput)
         return DetailedArrangementInput(planningInput, plan, SectionVariationStore.read(root, planningInput, plan))
@@ -331,6 +372,36 @@ class DefaultArrangementApplicationService(
         ArrangementHarmonyContext.apply(analysis, part.sectionType, project.envelope.harmony)
     }
 
+    /**
+     * Arrangement input never trusts inferred timing, key, or chords. Analysis
+     * contributes only descriptive measurements; the authority projection
+     * supplies the declared meter, tempo, key, and occurrence harmony.
+     */
+    private fun canonicalMidiAnalyses(projection: ArrangementGenerationProjection): Map<String, MidiAnalysis> {
+        val facts = projection.analyzedFacts.associateBy { it.partId }
+        return facts.mapValues { (partId, fact) ->
+            val analysis = fact.analysis
+            val occurrence = projection.occurrences.firstOrNull { it.partId == partId }
+                ?: throw IllegalArgumentException("Canonical arrangement projection has no occurrence for '$partId'.")
+            require(projection.harmonyPpq % analysis.ppq == 0) { "Canonical arrangement timing cannot be projected to '$partId'." }
+            val scale = (projection.harmonyPpq / analysis.ppq).toLong()
+            val chords = projection.harmony.filter { it.occurrenceId == occurrence.occurrenceId }.map { chord ->
+                MidiChord(
+                    startTick = (chord.startTick - occurrence.startTick) / scale,
+                    endTick = (chord.endTick - occurrence.startTick) / scale,
+                    symbol = chord.chord.symbol,
+                    confidence = 1.0
+                )
+            }
+            analysis.copy(
+                tempoMap = listOf(app.melotrail.arrangement.MidiTempoChange(0, projection.tempo.bpm)),
+                timeSignatures = listOf(app.melotrail.arrangement.MidiTimeSignature(0, projection.meter.numerator, projection.meter.denominator)),
+                key = app.melotrail.arrangement.MidiKey(projection.projectKey.tonic.toString(), projection.projectKey.modeId.value, 1.0),
+                chords = chords
+            )
+        }
+    }
+
     private fun approvalReferences(root: Path, project: Project, input: SongPlanningInput): ArrangementApprovalReferences {
         val plan = root.resolve(SongPlanStore.FILE_NAME)
         val arrangement = root.resolve(DetailedArrangementStore.APPROVED_FILE)
@@ -338,9 +409,13 @@ class DefaultArrangementApplicationService(
         val structure = project.envelope.structureOccurrences.joinToString("|") { "${it.id}:${it.partId}:${it.revision}" }
         val occurrences = input.sectionsWithIdentity().joinToString("|") { "${it.index}:${it.instanceId}:${it.occurrenceHash}" }
         val context = input.contextHash() ?: sha256("${input.resolvedStyle}|${input.allowedInstruments.joinToString(",")}".toByteArray(StandardCharsets.UTF_8))
+        val authoritySha256 = requireNotNull(input.canonicalProjection) {
+            "Approved arrangement requires the canonical arrangement projection."
+        }.contextSha256
         return ArrangementApprovalReferences(
             app.melotrail.arrangement.WorkflowArtifactReference(DetailedArrangementStore.APPROVED_FILE, sha256(arrangement)),
-            sha256(structure.toByteArray(StandardCharsets.UTF_8)), sha256(occurrences.toByteArray(StandardCharsets.UTF_8)), context, sha256(plan)
+            sha256(structure.toByteArray(StandardCharsets.UTF_8)), sha256(occurrences.toByteArray(StandardCharsets.UTF_8)), context, sha256(plan),
+            authoritySha256, registrySha256()
         )
     }
 
@@ -457,6 +532,41 @@ class DefaultArrangementApplicationService(
         ).also(ArrangementSoundContext::requireValid)
     }
     private fun Path.normalizeRoot(): Path = toAbsolutePath().normalize()
+    private fun registrySha256(): String {
+        val registry = libraryRoot.toAbsolutePath().normalize().resolve("instruments.json")
+        require(Files.isRegularFile(registry)) { "Validated instrument registry is unavailable. Choose a valid sound library in Settings." }
+        return sha256(registry)
+    }
+    private fun writeGeneratedMidiValidationReport(
+        root: Path,
+        role: String,
+        events: Int,
+        arrangementSha256: String,
+        authoritySha256: String,
+        registrySha256: String,
+        outputSha256: String
+    ): Path {
+        val relative = GeneratedMidiArtifactPaths.validationReport(role)
+        val output = root.resolve(relative)
+        Files.createDirectories(checkNotNull(output.parent))
+        val temporary = output.resolveSibling(".${output.fileName}.tmp")
+        val report = GeneratedMidiValidationReport(
+            role = role, generatorVersion = GENERATOR_VERSION, seed = GENERATOR_SEED,
+            arrangementSha256 = arrangementSha256, authoritySha256 = authoritySha256,
+            registrySha256 = registrySha256, outputSha256 = outputSha256, eventCount = events
+        )
+        Files.writeString(temporary, json.encodeToString(report), StandardCharsets.UTF_8)
+        try {
+            try {
+                Files.move(temporary, output, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            } catch (_: java.nio.file.AtomicMoveNotSupportedException) {
+                Files.move(temporary, output, StandardCopyOption.REPLACE_EXISTING)
+            }
+        } finally {
+            Files.deleteIfExists(temporary)
+        }
+        return output
+    }
     private fun sha256(path: Path): String = sha256(Files.readAllBytes(path))
     private fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private fun categoryFor(error: Throwable) = when (error) {
@@ -466,6 +576,8 @@ class DefaultArrangementApplicationService(
     }
 
     private companion object {
+        const val GENERATOR_VERSION = "arrangement-generators-v1"
+        const val GENERATOR_SEED = 0L
         val locks = ConcurrentHashMap<Path, Mutex>()
         val json = Json { ignoreUnknownKeys = false }
     }

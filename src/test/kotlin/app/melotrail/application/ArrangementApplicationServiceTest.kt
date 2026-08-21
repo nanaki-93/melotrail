@@ -11,9 +11,23 @@ import app.melotrail.arrangement.Part
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.ProjectV4Envelope
+import app.melotrail.arrangement.CompositionSettings
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.StructureOccurrence
 import app.melotrail.arrangement.TestSoundLibrary
+import app.melotrail.harmony.ChordEvent
+import app.melotrail.harmony.ChordEventId
+import app.melotrail.harmony.ChordProgression
+import app.melotrail.harmony.ChordQuality
+import app.melotrail.harmony.HarmonySettings
+import app.melotrail.music.MusicalKey
+import app.melotrail.music.PitchClass
+import app.melotrail.music.PitchSpelling
+import app.melotrail.music.ScaleModeId
+import app.melotrail.music.Tempo
+import app.melotrail.music.TimeSignature
+import app.melotrail.profile.CompositionProfileRef
+import app.melotrail.profile.MoodRef
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.decodeFromString
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -95,7 +109,17 @@ class ArrangementApplicationServiceTest {
             name = name,
             parts = listOf(Part("A", "source/A.mid", "verse", midi = canonicalMidiReferences(root, "A"))),
             renderFormat = RenderFormat(),
-            envelope = ProjectV4Envelope(structureOccurrences = structure.mapIndexed { index, partId -> StructureOccurrence("occ-$index", partId) })
+            envelope = ProjectV4Envelope(
+                compositionSettings = CompositionSettings(
+                    key = MusicalKey(PitchClass.of(PitchSpelling.C), ScaleModeId.MAJOR), tempo = Tempo(90.0),
+                    timeSignature = TimeSignature(4, 4), profile = CompositionProfileRef("lofi", 1), mood = MoodRef("warm", 1),
+                    decisionRevision = 1, resolvedProfileSha256 = "a".repeat(64), decisionSha256 = "b".repeat(64)
+                ),
+                harmony = HarmonySettings(progressions = listOf(ChordProgression(
+                    app.melotrail.harmony.SectionTypeId("verse"), listOf(ChordEvent(ChordEventId("one"), PitchClass.of(PitchSpelling.C), ChordQuality.MAJOR, 0))
+                ))),
+                structureOccurrences = structure.mapIndexed { index, partId -> StructureOccurrence("occ-$index", partId) }
+            )
         )
         ProjectStore.write(root, project)
         MidiAnalysisStore.write(root, project, "A", MidiPartAnalyzer().analyze(root.resolve("midi/clean/A.mid"), "A"))

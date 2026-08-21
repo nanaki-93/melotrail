@@ -313,17 +313,39 @@ data class CohesionPreviewReferences(
 )
 
 @Serializable
-data class GeneratedMidiArtifactReference(val id: String, val artifact: WorkflowArtifactReference) {
-    init { require(SAFE_ID.matches(id)) { "Generated MIDI artifact ID is invalid" } }
+data class GeneratedMidiArtifactReference(
+    val id: String,
+    val artifact: WorkflowArtifactReference,
+    /** Deterministic, persisted output validation evidence for this role. */
+    val validationReport: WorkflowArtifactReference
+) {
+    init {
+        require(SAFE_ID.matches(id)) { "Generated MIDI artifact ID is invalid" }
+        require(validationReport.file == GeneratedMidiArtifactPaths.validationReport(id)) {
+            "Generated MIDI validation-report path is not canonical"
+        }
+    }
+}
+
+object GeneratedMidiArtifactPaths {
+    fun validationReport(id: String): String {
+        require(SAFE_ID.matches(id)) { "Generated MIDI artifact ID is invalid" }
+        return "midi/generated/$id.validation.json"
+    }
 }
 
 @Serializable
 data class GeneratedMidiWorkflowReferences(
     val arrangementSha256: String,
+    val authoritySha256: String,
+    val registrySha256: String,
+    val generatorVersion: String,
+    val seed: Long,
     val artifacts: List<GeneratedMidiArtifactReference>
 ) {
     init {
-        require(SHA_256.matches(arrangementSha256) && artifacts.map { it.id }.distinct().size == artifacts.size) {
+        require(SHA_256.matches(arrangementSha256) && SHA_256.matches(authoritySha256) && SHA_256.matches(registrySha256) &&
+            generatorVersion == "arrangement-generators-v1" && artifacts.map { it.id }.distinct().size == artifacts.size) {
             "Generated MIDI workflow references are invalid"
         }
     }
@@ -381,11 +403,13 @@ data class ArrangementApprovalReferences(
     val structureSha256: String,
     val occurrenceSha256: String,
     val contextSha256: String,
-    val planSha256: String
+    val planSha256: String,
+    val authoritySha256: String,
+    val registrySha256: String
 ) {
     init {
         require(SHA_256.matches(structureSha256) && SHA_256.matches(occurrenceSha256) &&
-            SHA_256.matches(contextSha256) && SHA_256.matches(planSha256)) {
+            SHA_256.matches(contextSha256) && SHA_256.matches(planSha256) && SHA_256.matches(authoritySha256) && SHA_256.matches(registrySha256)) {
             "Arrangement approval fingerprints are invalid"
         }
         require(arrangement.file == "arrangement.json") { "Approved arrangement path is not canonical" }

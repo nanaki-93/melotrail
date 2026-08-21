@@ -23,6 +23,8 @@ import app.melotrail.music.PitchSpelling
 import app.melotrail.music.ScaleModeId
 import app.melotrail.music.Tempo
 import app.melotrail.music.TimeSignature
+import app.melotrail.profile.CompositionProfileRef
+import app.melotrail.profile.MoodRef
 import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -65,6 +67,19 @@ class CanonicalMusicalAuthorityTest {
 
         assertEquals("C major", authority.projectKey.displayName)
         assertTrue(authority.diagnostics.any { it.kind == MusicalAuthorityDiagnosticKind.ANALYZED_KEY_CONFLICT && it.analyzedValue == "D natural minor" })
+    }
+
+    @Test
+    fun `arrangement projection retains repeated occurrence identity and canonical harmony`() {
+        val root = project("arrangement-projection", occurrences = listOf("verse-one", "verse-two"))
+
+        val projection = MusicalAuthorityBuilder().arrangementGeneration(root)
+
+        assertEquals(listOf("verse-one", "verse-two"), projection.occurrences.map(MusicalOccurrence::occurrenceId))
+        assertEquals(listOf("verse-one", "verse-two"), projection.harmony.map { it.occurrenceId }.distinct())
+        assertEquals("C major", projection.projectKey.displayName)
+        assertTrue(projection.inputSha256.matches(Regex("[0-9a-f]{64}")))
+        assertNotEquals(projection.contextSha256, projection.inputSha256)
     }
 
     @Test
@@ -128,7 +143,11 @@ class CanonicalMusicalAuthorityTest {
             parts = listOf(SongPart("A", "source/A.mid", sectionType = SectionTypeId.VERSE, midi = canonicalMidiReferences(root, "A"))),
             renderFormat = RenderFormat(),
             envelope = ProjectV4Envelope(
-                compositionSettings = app.melotrail.arrangement.CompositionSettings(key = key(PitchSpelling.C), tempo = Tempo(120.0), timeSignature = TimeSignature(4, 4)),
+                compositionSettings = app.melotrail.arrangement.CompositionSettings(
+                    key = key(PitchSpelling.C), tempo = Tempo(120.0), timeSignature = TimeSignature(4, 4),
+                    profile = CompositionProfileRef("lofi", 1), mood = MoodRef("warm", 1),
+                    decisionRevision = 1, resolvedProfileSha256 = "a".repeat(64), decisionSha256 = "b".repeat(64)
+                ),
                 harmony = harmony(PitchSpelling.C),
                 structureOccurrences = occurrences.map { StructureOccurrence(it, "A") }
             )

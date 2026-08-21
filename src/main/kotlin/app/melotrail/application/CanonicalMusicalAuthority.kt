@@ -201,13 +201,19 @@ data class PartEnhancementProjection(
 data class ArrangementGenerationProjection(
     val schemaVersion: Int = CanonicalMusicalAuthority.SCHEMA_VERSION,
     val contextSha256: String,
+    /** Hash of this exact, bounded planner input. Never a model-provided value. */
+    val inputSha256: String,
     val projectKey: MusicalKey,
     val tempo: Tempo,
     val meter: TimeSignature,
+    val profile: CompositionProfileRef,
+    val mood: MoodRef,
+    val harmonyPpq: Int,
     val occurrences: List<MusicalOccurrence>,
     val harmony: List<HarmonicTimelineEntry>,
     val selectedParts: List<CanonicalSelectedPartArtifact>,
-    val analyzedFacts: List<CanonicalAnalyzedPartFacts>
+    val analyzedFacts: List<CanonicalAnalyzedPartFacts>,
+    val melodyEvidence: List<MelodyEvidenceReference>
 )
 
 @Serializable
@@ -316,11 +322,21 @@ class MusicalAuthorityBuilder(
     }
 
     fun arrangementGeneration(projectRoot: Path): ArrangementGenerationProjection = build(projectRoot).let { authority ->
-        ArrangementGenerationProjection(
-            contextSha256 = authority.contextSha256, projectKey = authority.projectKey, tempo = authority.tempo,
-            meter = authority.meter, occurrences = authority.occurrenceTimeline, harmony = authority.harmonicTimeline.entries,
-            selectedParts = authority.selectedPartArtifacts, analyzedFacts = authority.analyzedFacts
+        val project = ProjectStore.read(projectRoot.toAbsolutePath().normalize())
+        val settings = requireNotNull(project.envelope.compositionSettings) {
+            "Project Setup must be complete before Arrangement."
+        }
+        val projection = ArrangementGenerationProjection(
+            contextSha256 = authority.contextSha256, inputSha256 = "", projectKey = authority.projectKey, tempo = authority.tempo,
+            meter = authority.meter,
+            profile = requireNotNull(settings.profile) { "Project profile is required before Arrangement." },
+            mood = requireNotNull(settings.mood) { "Project mood is required before Arrangement." },
+            harmonyPpq = authority.harmonicTimeline.ppq,
+            occurrences = authority.occurrenceTimeline, harmony = authority.harmonicTimeline.entries,
+            selectedParts = authority.selectedPartArtifacts, analyzedFacts = authority.analyzedFacts,
+            melodyEvidence = authority.melodyEvidenceReferences
         )
+        projection.copy(inputSha256 = sha256(canonicalJson.encodeToString(ArrangementGenerationProjection.serializer(), projection).toByteArray(Charsets.UTF_8)))
     }
 
     fun cohesion(projectRoot: Path): CohesionProjection {
@@ -474,10 +490,17 @@ class MusicalAuthorityBuilder(
         require(generated.arrangementSha256 == arrangement.sha256) {
             "Generated MIDI is stale for the approved arrangement. Generate Arrangement again."
         }
+        require(generated.authoritySha256 == build(root).contextSha256 && generated.authoritySha256 == project.workflow.arrangement!!.authoritySha256) {
+            "Generated MIDI is stale for the current musical authority. Regenerate Arrangement first."
+        }
         val roles = generated.artifacts.sortedBy(GeneratedMidiArtifactReference::id).map { generatedArtifact ->
             val artifact = generatedArtifact.artifact
             require(sha256(Files.readAllBytes(resolveProjectFile(root, artifact.file, "generated MIDI '${generatedArtifact.id}'"))) == artifact.sha256) {
                 "Generated MIDI '${generatedArtifact.id}' is stale. Generate Arrangement again."
+            }
+            val report = generatedArtifact.validationReport
+            require(sha256(Files.readAllBytes(resolveProjectFile(root, report.file, "generated MIDI validation report '${generatedArtifact.id}'"))) == report.sha256) {
+                "Generated MIDI validation report '${generatedArtifact.id}' is stale. Generate Arrangement again."
             }
             ValidatedGeneratedRoleArtifact(generatedArtifact.id, artifact)
         }

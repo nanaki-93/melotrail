@@ -104,7 +104,7 @@ class DetailedArrangementTest {
     }
 
     @Test
-    fun `Qwen detailed arrangement restores upstream locked bass and drum fields`() {
+    fun `Qwen detailed arrangement rejects changed locked bass and drum fields`() {
         val input = input()
         val fixture = json.decodeFromString<DetailedArrangement>(fixture("valid-detailed-arrangement.json"))
         val response = fixture.copy(sections = fixture.sections.mapIndexed { index, section ->
@@ -116,14 +116,7 @@ class DetailedArrangementTest {
         })
         val client = CapturingClient(json.encodeToString(response))
 
-        val arrangement = LocalQwenDetailedArrangementPlanner(client).plan(input)
-
-        val bass = arrangement.sections[0].instruments.filterIsInstance<BassInstrumentPlan>().single()
-        val drums = arrangement.sections[1].instruments.filterIsInstance<DrumsInstrumentPlan>().single()
-        assertEquals(DetailedBassRole.ROOT, bass.role)
-        assertEquals(InstrumentMode.GENERATED, bass.mode)
-        assertEquals(DrumsRole.STANDARD_GROOVE, drums.role)
-        assertEquals(InstrumentMode.GENERATED, drums.mode)
+        assertThrows(IllegalArgumentException::class.java) { LocalQwenDetailedArrangementPlanner(client).plan(input) }
         assertTrue(client.userPrompt.contains("Locked instrument values"))
     }
 

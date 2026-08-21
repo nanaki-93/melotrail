@@ -20,7 +20,7 @@ resources, UI copy, and stale documentation in the task that replaces them.
 | 121 | [Melody identity, anchors, and mutation evidence](completed/121-melody-identity-and-mutation-evidence.md) | Shared note identity and reports |
 | 122 | [AI Fix canonical context cutover](completed/122-ai-fix-canonical-context.md) | Declared harmony controls repair |
 | 123 | [Per-track enhancement harmonic validation](completed/123-track-enhancement-harmonic-validation.md) | Chord-aware bounded enhancement |
-| 124 | [Arrangement context and generator contracts](124-arrangement-context-and-generator-contracts.md) | Canonical planner/executor inputs |
+| 124 | [Arrangement context and generator contracts](completed/124-arrangement-context-and-generator-contracts.md) | Canonical planner/executor inputs |
 | 125 | [Generated-track quality validators](125-generated-track-quality-validators.md) | Typed reports for every role |
 | 126 | [Boundary-only Cohesion](126-boundary-only-cohesion.md) | No whole-song Cohesion edits |
 | 127 | [Deterministic full-song critic](127-deterministic-full-song-critic.md) | Reproducible whole-song issues |

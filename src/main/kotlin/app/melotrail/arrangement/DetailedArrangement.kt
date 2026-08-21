@@ -481,13 +481,12 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
         } catch (error: Exception) {
             throw IllegalArgumentException("Qwen returned invalid detailed-arrangement JSON: ${error.message}", error)
         }
-        // Instrument identity, mode, and variation role are approved upstream. They
-        // are constants, not model choices, so restore them from the trusted
-        // variation plan before checking the model's bounded musical controls.
-        val canonical = arrangement.withLockedInstrumentFields(input)
-        val validation = canonical.validate(input)
+        // Stable identity and every instrument field are part of the strict
+        // contract. Never repair model output by restoring trusted values: a
+        // changed or reordered occurrence/role must fail before publication.
+        val validation = arrangement.validate(input)
         require(validation.isValid) { "Invalid Qwen detailed arrangement: ${validation.errors.joinToString("; ")}" }
-        return canonical
+        return arrangement
     }
 
     private fun createUserPrompt(input: DetailedArrangementInput): String = """
@@ -519,34 +518,6 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
         "- Section ${section.index + 1}: " + section.instruments.joinToString(", ") { instrument ->
             "${instrument.name} { mode=${if (instrument.name == "piano") "source" else "generated"}, role=${instrument.role} }"
         }
-    }
-
-    private fun DetailedArrangement.withLockedInstrumentFields(input: DetailedArrangementInput): DetailedArrangement = copy(
-        cohesion = null,
-        sections = sections.mapIndexed { index, section ->
-            val expected = input.variations.sections.getOrNull(index) ?: return@mapIndexed section
-            if (section.instruments.size != expected.instruments.size) return@mapIndexed section
-            section.copy(
-                instruments = section.instruments.zip(expected.instruments).map { (instrument, variation) -> instrument.withLockedFields(variation) },
-                transitionOut = section.transitionOut
-            )
-        }
-    )
-
-    private fun DetailedInstrumentPlan.withLockedFields(variation: SectionVariationInstrument): DetailedInstrumentPlan = when (this) {
-        is PianoSourcePlan -> if (variation.name == "piano" && variation.role == "source") PianoSourcePlan() else this
-        is BassInstrumentPlan -> if (variation.name == "bass") copy(
-            name = variation.name,
-            mode = InstrumentMode.GENERATED,
-            role = DetailedBassRole.entries.first { it.name.lowercase() == variation.role }
-        ) else this
-        is DrumsInstrumentPlan -> if (variation.name == "drums") copy(
-            name = variation.name,
-            mode = InstrumentMode.GENERATED,
-            role = DrumsRole.entries.first { it.name.lowercase() == variation.role }
-        ) else this
-        is PadInstrumentPlan -> if (variation.name == "pad") copy(name = variation.name, mode = InstrumentMode.GENERATED) else this
-        is StringsInstrumentPlan -> if (variation.name == "strings") copy(name = variation.name, mode = InstrumentMode.GENERATED) else this
     }
 
     @Serializable
