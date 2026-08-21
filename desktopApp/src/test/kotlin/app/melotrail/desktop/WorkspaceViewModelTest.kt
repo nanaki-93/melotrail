@@ -1063,7 +1063,7 @@ class WorkspaceViewModelTest {
 
         assertEquals(0, build.calls)
         assertEquals(
-            "Build Song requires current approved arrangement-aware Cohesion. Generate and approve Cohesion.",
+            "Build Song requires current approved full-song Cohesion & Enhance. Generate and approve Cohesion & Enhance.",
             assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation).message
         )
         viewModel.close()

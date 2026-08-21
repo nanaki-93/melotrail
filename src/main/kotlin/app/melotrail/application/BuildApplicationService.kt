@@ -5,6 +5,7 @@ import app.melotrail.arrangement.DeterministicStemMixer
 import app.melotrail.arrangement.MixedStem
 import app.melotrail.arrangement.ProjectWorkflowStore
 import app.melotrail.arrangement.WorkflowArtifact
+import app.melotrail.arrangement.ProjectStore
 import app.melotrail.audio.AudioBuffer
 import app.melotrail.audio.WAVDecoder
 import app.melotrail.dsp.DSPChain
@@ -94,20 +95,14 @@ class DefaultBuildApplicationService(
                     }
                     val cohesion = cohesionService.load(root)
                     require(cohesion.approved && !cohesion.approvalRequired && !cohesion.stale) {
-                        "Build Song requires current approved arrangement-aware Cohesion. Regenerate and approve Cohesion."
+                        "Build Song requires current approved full-song Cohesion & Enhance. Regenerate, compare, and approve it."
                     }
                     if (!worker.healthCheck()) throw ApplicationServiceException(ApplicationErrorCategory.WORKER, "Python worker is not running. Start it with `make worker`.")
                 }
                 coroutineContext.ensureActive()
-                stage(progress, 2, "Generating required MIDI") { arrangementService.generateRequiredMidi(root, progress) }
+                stage(progress, 2, "Validating approved ensemble MIDI") { requireCurrentGeneratedMidi(root) }
                 coroutineContext.ensureActive()
-                stage(progress, 3, "Preparing selected humanization") {
-                    if (app.melotrail.arrangement.ProjectStore.read(root).workflow.humanizationSelection == app.melotrail.arrangement.HumanizationSelection.HUMANIZED) {
-                        humanizationService.generate(GenerateHumanizationRequest(root))
-                    } else {
-                        progress.report(OperationProgress("build", 3, STAGE_COUNT, "Bypassing humanization; rendering cohesive MIDI input"))
-                    }
-                }
+                stage(progress, 3, "Validating selected humanization") { humanizationService.load(root) }
                 coroutineContext.ensureActive()
                 val render = stage(progress, 4, "Rendering or reusing stems") { arrangementService.renderApprovedStems(root, renderer, progress) }
                 coroutineContext.ensureActive()
@@ -176,6 +171,24 @@ class DefaultBuildApplicationService(
     private suspend fun <T> stage(progress: ProgressSink, index: Int, message: String, artifact: Path? = null, action: suspend () -> T): T {
         progress.report(OperationProgress("build", index, STAGE_COUNT, message, artifact))
         return action()
+    }
+
+    private fun requireCurrentGeneratedMidi(root: Path) {
+        val project = ProjectStore.read(root)
+        require(WorkflowArtifact.GENERATED_MIDI !in project.workflow.stale) {
+            "Build Song requires current ensemble MIDI created before Cohesion & Enhance. Regenerate Cohesion & Enhance."
+        }
+        val arrangement = requireNotNull(project.workflow.arrangement)
+        val generated = requireNotNull(project.workflow.generatedMidi) {
+            "Build Song requires fingerprinted ensemble MIDI. Regenerate Cohesion & Enhance."
+        }
+        require(generated.arrangementSha256 == arrangement.arrangement.sha256) { "Generated ensemble MIDI belongs to another arrangement." }
+        generated.artifacts.forEach { reference ->
+            val path = root.resolve(reference.artifact.file).normalize()
+            require(path.startsWith(root) && Files.isRegularFile(path) && digest(path) == reference.artifact.sha256) {
+                "Generated ensemble MIDI '${reference.id}' is missing or changed. Regenerate Cohesion & Enhance."
+            }
+        }
     }
 
     private fun applyLoFi(input: Path, output: Path, presetId: LoFiPresetId, strength: Double) {

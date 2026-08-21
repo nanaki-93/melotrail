@@ -7,12 +7,14 @@ import app.melotrail.arrangement.HumanizationRole
 import app.melotrail.arrangement.HumanizationSelection
 import app.melotrail.arrangement.HumanizationWorkflowReferences
 import app.melotrail.arrangement.MidiAnalysisInput
+import app.melotrail.arrangement.OccurrenceMidiArtifactResolver
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.SeededHumanizationProcessor
 import app.melotrail.arrangement.WorkflowArtifact
 import app.melotrail.arrangement.WorkflowArtifactReference
 import app.melotrail.arrangement.WorkflowChange
 import app.melotrail.arrangement.sha256
+import app.melotrail.arrangement.toSectionInstance
 import app.melotrail.profile.BundledCompositionProfileCatalog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.withLock
@@ -26,6 +28,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
+import java.nio.ByteBuffer
 
 data class GenerateHumanizationRequest(
     val root: Path,
@@ -68,34 +71,45 @@ class DefaultHumanizationApplicationService(
             val config = profileDefault(project).let { default ->
                 request.amountPercent?.let { default.copy(amountPercent = it) } ?: default
             }.also(HumanizationConfig::requireValid)
-            val selected = app.melotrail.arrangement.SelectedMidiArtifactResolver()
+            val occurrences = project.envelope.structureOccurrences.mapIndexed { index, occurrence -> occurrence.toSectionInstance(index) }
+            val cohesiveOccurrences = OccurrenceMidiArtifactResolver().resolve(root, project, occurrences)
             val inputs = buildList {
-                project.parts.sortedBy { it.id }.forEach { part ->
-                    val artifact = selected.resolve(root, project, part.id)
-                    add(Input("piano-${part.id}", HumanizationRole.PIANO, artifact.projectRelativePath, artifact.sha256,
+                cohesiveOccurrences.forEach { artifact ->
+                    val part = project.parts.single { it.id == artifact.partId }
+                    add(Input("piano-${artifact.occurrenceId}", HumanizationRole.PIANO, artifact.projectRelativePath, artifact.sha256,
                         part.midi?.analysisInput == MidiAnalysisInput.LOFI_FEEL))
                 }
-                listOf("bass" to HumanizationRole.BASS, "drums" to HumanizationRole.DRUMS, "pad" to HumanizationRole.PAD, "strings" to HumanizationRole.STRINGS, "transitions" to HumanizationRole.TRANSITIONS).forEach { (id, role) ->
-                    val path = root.resolve("midi/generated/$id.mid")
-                    if (Files.isRegularFile(path)) add(Input(id, role, "midi/generated/$id.mid", sha256(path), false))
+                val cohesion = requireNotNull(project.workflow.cohesion)
+                cohesion.roles.forEach { reference ->
+                    require(reference.approved && reference.cohesionInputSha256 == cohesion.inputSha256) { "Cohesion role '${reference.role}' is stale." }
+                    val path = root.resolve(reference.result.file).normalize()
+                    require(path.startsWith(root) && Files.isRegularFile(path) && sha256(path) == reference.result.sha256) { "Cohesion role '${reference.role}' is missing or changed." }
+                    val role = when (reference.role) {
+                        "bass" -> HumanizationRole.BASS
+                        "drums" -> HumanizationRole.DRUMS
+                        "pad" -> HumanizationRole.PAD
+                        "strings" -> HumanizationRole.STRINGS
+                        else -> error("Unsupported cohesive role '${reference.role}'.")
+                    }
+                    add(Input(reference.role, role, reference.result.file, reference.result.sha256, false))
                 }
             }
             require(inputs.isNotEmpty()) { "Humanization requires selected arrangement MIDI." }
             val inputHash = digest(inputs.joinToString("|") { "${it.id}:${it.sha256}" }.toByteArray(StandardCharsets.UTF_8))
             val seed = request.seed ?: (project.workflow.humanization?.seed?.plus(1) ?: 1L)
-            val runId = digest("$inputHash|$config|$seed|seeded-humanization-v1".toByteArray(StandardCharsets.UTF_8))
+            val runId = digest("$inputHash|$config|$seed|seeded-humanization-v2".toByteArray(StandardCharsets.UTF_8))
             val reports = mutableListOf<HumanizationReport>()
             val references = inputs.map { input ->
                 val outputRelative = "midi/humanized/$runId/${input.id}.mid"
                 val output = root.resolve(outputRelative)
-                val report = processor.transform(root.resolve(input.file), output, input.role, config, seed, input.legacyGroove).report
+                val report = processor.transform(root.resolve(input.file), output, input.role, config, scopedSeed(seed, input.id), input.legacyGroove).report
                 reports += report
                 HumanizationArtifactReference(input.id, input.role, WorkflowArtifactReference(input.file, input.sha256), WorkflowArtifactReference(outputRelative, report.outputSha256))
             }
             val reportRelative = "midi/humanized/$runId/report.json"
             val aggregate = HumanizationRunReport(inputHash, config, seed, reports)
             atomicWrite(root.resolve(reportRelative), json.encodeToString(aggregate))
-            val refs = HumanizationWorkflowReferences(config, seed, "seeded-humanization-v1", inputHash, references,
+            val refs = HumanizationWorkflowReferences(config, seed, "seeded-humanization-v2", inputHash, references,
                 WorkflowArtifactReference(reportRelative, sha256(root.resolve(reportRelative))), inputs.filter(Input::legacyGroove).map(Input::id).toSet())
             ProjectStore.write(root, project.copy(workflow = project.workflow.invalidate(WorkflowChange.HUMANIZATION)
                 .markCurrent(WorkflowArtifact.HUMANIZATION)
@@ -120,6 +134,15 @@ class DefaultHumanizationApplicationService(
         } else {
             val report = decode(normalized.resolve(refs.report.file))
             require(report.inputSha256 == refs.inputsSha256 && report.seed == refs.seed && report.config == refs.config) { "Humanization report is stale." }
+            require(WorkflowArtifact.HUMANIZATION !in workflow.stale) { "Humanization selection is stale. Regenerate it or select Bypass." }
+            refs.artifacts.forEach { artifact ->
+                val input = normalized.resolve(artifact.input.file).normalize()
+                val output = normalized.resolve(artifact.output.file).normalize()
+                require(input.startsWith(normalized) && output.startsWith(normalized) && Files.isRegularFile(input) && Files.isRegularFile(output) &&
+                    sha256(input) == artifact.input.sha256 && sha256(output) == artifact.output.sha256) {
+                    "Humanization MIDI '${artifact.id}' is missing or stale. Regenerate it or select Bypass."
+                }
+            }
             snapshot(HumanizationSelection.HUMANIZED, refs, report)
         }
     }
@@ -153,6 +176,10 @@ class DefaultHumanizationApplicationService(
         catch (error: AtomicMoveNotSupportedException) { throw IllegalStateException("Atomic publication is unavailable for humanization evidence.", error) } } finally { Files.deleteIfExists(temporary) }
     }
     private fun digest(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+    /** Stable per-occurrence scope prevents repeated sections from receiving an identical performance pass. */
+    private fun scopedSeed(runSeed: Long, id: String): Long = ByteBuffer.wrap(
+        MessageDigest.getInstance("SHA-256").digest("$runSeed|$id".toByteArray(StandardCharsets.UTF_8))
+    ).long
     private data class Input(val id: String, val role: HumanizationRole, val file: String, val sha256: String, val legacyGroove: Boolean)
     private companion object { val json = Json { prettyPrint = true; encodeDefaults = true; ignoreUnknownKeys = false } }
 }

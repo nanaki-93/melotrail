@@ -1255,7 +1255,12 @@ class DefaultProjectApplicationService(
                 structureReady = project.envelope.structureOccurrences.isNotEmpty(),
                 songPlanAvailable = Files.isRegularFile(root.resolve("song_plan.json")) && current(WorkflowArtifact.ARRANGEMENT),
                 arrangementAvailable = Files.isRegularFile(root.resolve("arrangement.json")) && current(WorkflowArtifact.ARRANGEMENT),
-                generatedMidiAvailable = Files.isDirectory(root.resolve("midi/generated")) && current(WorkflowArtifact.GENERATED_MIDI) && Files.list(root.resolve("midi/generated")).use { it.anyMatch { Files.isRegularFile(it) } },
+                generatedMidiAvailable = current(WorkflowArtifact.GENERATED_MIDI) && project.workflow.generatedMidi?.let { generated ->
+                    generated.artifacts.all { reference ->
+                        val path = root.resolve(reference.artifact.file).normalize()
+                        path.startsWith(root) && Files.isRegularFile(path) && sha256(path) == reference.artifact.sha256
+                    }
+                } == true,
                 humanizationSelection = project.workflow.humanizationSelection,
                 humanizationAvailable = project.workflow.humanization != null && current(WorkflowArtifact.HUMANIZATION),
                 stemsAvailable = Files.isDirectory(root.resolve("stems")) && current(WorkflowArtifact.STEMS) && Files.list(root.resolve("stems")).use { it.anyMatch { Files.isRegularFile(it) } },
@@ -1309,7 +1314,7 @@ class DefaultProjectApplicationService(
         val arrangementPath = root.resolve(arrangement.arrangement.file).normalize()
         require(arrangementPath.startsWith(root) && Files.isRegularFile(arrangementPath) && sha256(arrangementPath) == arrangement.arrangement.sha256)
         val detailed = json.decodeFromString(DetailedArrangement.serializer(), Files.readString(arrangementPath))
-        val transitionInput = TransitionCohesionInputFactory.build(root, project, input, detailed, arrangement.arrangement.sha256, arrangement.contextSha256)
+        val transitionInput = TransitionCohesionInputFactory.build(root, project, input, detailed, arrangement.arrangement.sha256, arrangement.contextSha256, cohesion.intensity)
         return TransitionCohesionStore.isApprovedCurrent(root, transitionInput)
     }.getOrDefault(false)
 

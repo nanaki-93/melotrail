@@ -19,6 +19,11 @@ import app.melotrail.arrangement.SectionInstance
 import app.melotrail.arrangement.SongPlanningInput
 import app.melotrail.arrangement.TimingHandoff
 import app.melotrail.arrangement.TransitionRoleAction
+import app.melotrail.arrangement.GeneratedMidiArtifactReference
+import app.melotrail.arrangement.GeneratedMidiWorkflowReferences
+import app.melotrail.arrangement.WorkflowArtifact
+import app.melotrail.arrangement.WorkflowArtifactReference
+import app.melotrail.arrangement.WorkflowChange
 import app.melotrail.arrangement.TransitionBridgePlan
 import app.melotrail.arrangement.TransitionCohesionInput
 import app.melotrail.arrangement.TransitionCohesionInputFactory
@@ -43,7 +48,7 @@ import javax.sound.midi.ShortMessage
 class CohesionApplicationServiceTest {
     @TempDir lateinit var root: Path
 
-    @Test fun `each adjacent boundary needs current explicit review before aggregate approval`() = runBlocking {
+    @Test fun `full song cohesion uses one aggregate approval`() = runBlocking {
         project(listOf("A", "A", "A"))
         arrange()
         val service = DefaultCohesionApplicationService(::plan)
@@ -52,10 +57,13 @@ class CohesionApplicationServiceTest {
         assertFalse(draft.approved)
         assertEquals(listOf("occ-A-1" to "occ-A-2", "occ-A-2" to "occ-A-3"), draft.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId })
         assertTrue(draft.boundaries.all { Files.isRegularFile(it.bridgeMidi) && !it.reviewed })
-        service.reviewBoundary(root, "occ-A-1", "occ-A-2")
-        assertThrows(IllegalArgumentException::class.java) { service.approve(root) }
-        service.reviewBoundary(root, "occ-A-2", "occ-A-3")
+        val reviewedHashes = ProjectStore.read(root).workflow.cohesion!!.let { workflow ->
+            (workflow.occurrences.map { it.result } + workflow.roles.map { it.result }).associate { it.file to it.sha256 }
+        }
         assertTrue(service.approve(root).approved)
+        assertEquals(reviewedHashes, ProjectStore.read(root).workflow.cohesion!!.let { workflow ->
+            (workflow.occurrences.map { it.result } + workflow.roles.map { it.result }).associate { it.file to it.sha256 }
+        })
         assertEquals(sourceBefore, java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(root.resolve("midi/clean/A.mid"))).joinToString("") { "%02x".format(it) })
     }
 
@@ -109,9 +117,18 @@ class CohesionApplicationServiceTest {
         ProjectStore.write(root, Project(Project.CURRENT_VERSION, "cohesion", listOf(Part("A", "source/A.mid", analysis = PartAnalysisReference("analysis/A.midi.json", AnalysisKind.MIDI), midi = MidiReferences(clean = "midi/clean/A.mid"))), structure, RenderFormat()))
     }
     private suspend fun arrange() {
-        DefaultArrangementApplicationService(libraryRoot = root).generate(
+        val service = DefaultArrangementApplicationService(libraryRoot = root)
+        service.generate(
             GenerateArrangementRequest(root, instruments = listOf("piano", "drums"))
         )
+        Files.createDirectories(root.resolve("midi/generated"))
+        Files.copy(root.resolve("midi/clean/A.mid"), root.resolve("midi/generated/drums.mid"), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        val project = ProjectStore.read(root)
+        val hash = app.melotrail.arrangement.sha256(root.resolve("midi/generated/drums.mid"))
+        ProjectStore.write(root, project.copy(workflow = project.workflow.invalidate(WorkflowChange.GENERATED_MIDI)
+            .markCurrent(WorkflowArtifact.GENERATED_MIDI)
+            .copy(generatedMidi = GeneratedMidiWorkflowReferences(requireNotNull(project.workflow.arrangement).arrangement.sha256,
+                listOf(GeneratedMidiArtifactReference("drums", WorkflowArtifactReference("midi/generated/drums.mid", hash)))))))
     }
     private fun writeMidi(path: Path) { val sequence = Sequence(Sequence.PPQ, 480); val track = sequence.createTrack(); track.add(MidiEvent(MetaMessage(0x51, byteArrayOf(7, -95, 32), 3), 0)); track.add(MidiEvent(MetaMessage(0x58, byteArrayOf(4, 2, 24, 8), 4), 0)); track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, 60, 90), 0)); track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, 60, 0), 1_920)); MidiSystem.write(sequence, 1, path.toFile()) }
 }

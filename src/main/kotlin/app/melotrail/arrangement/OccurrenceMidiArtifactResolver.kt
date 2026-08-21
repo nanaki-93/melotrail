@@ -31,7 +31,10 @@ class OccurrenceMidiArtifactResolver(
             val cohesive = project.workflow.cohesion?.takeIf { it.approved && WorkflowArtifact.COHESION !in project.workflow.stale }
                 ?.occurrences?.singleOrNull { it.instanceId == occurrence.instanceId }
             val resolved = cohesive?.let { reference ->
-                require(reference.approved && reference.sourceSha256 == selected.sha256) { "Approved Cohesion occurrence '${occurrence.instanceId}' is stale" }
+                require(reference.approved && reference.sourceSha256 == selected.sha256 &&
+                    reference.cohesionInputSha256 == project.workflow.cohesion?.inputSha256) {
+                    "Approved Cohesion occurrence '${occurrence.instanceId}' is stale"
+                }
                 val path = normalized.resolve(reference.result.file).normalize()
                 require(path.startsWith(normalized) && java.nio.file.Files.isRegularFile(path) && sha256(path) == reference.result.sha256) {
                     "Approved Cohesion occurrence '${occurrence.instanceId}' is missing or changed"

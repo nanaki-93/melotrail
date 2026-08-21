@@ -186,7 +186,7 @@ object CreationProgressDeriver {
         if (cohesion.status != CreationStageStatus.COMPLETE) return CreationStageProgress(
             CreationStage.MIX_AND_MASTER,
             if (input.project == null) CreationStageStatus.NOT_STARTED else CreationStageStatus.BLOCKED,
-            "Build requires current approved arrangement-aware Cohesion.",
+            "Build requires current approved full-song Cohesion & Enhance.",
             release,
             cohesion.nextAction.copy(artifact = release)
         )

@@ -47,6 +47,8 @@ enum class WorkflowChange {
     PART_SECTION,
     /** A newly approved arrangement changes the only supported Cohesion input. */
     ARRANGEMENT,
+    /** Baseline ensemble MIDI changed after Arrangement approval. */
+    GENERATED_MIDI,
     COHESION,
     HUMANIZATION,
     COMPOSITION_KEY,
@@ -93,8 +95,13 @@ object WorkflowArtifactGraph {
             WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
             WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
         )
+        WorkflowChange.GENERATED_MIDI -> setOf(
+            WorkflowArtifact.COHESION, WorkflowArtifact.HUMANIZATION, WorkflowArtifact.STEMS,
+            WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
+            WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
+        )
         WorkflowChange.COHESION -> setOf(
-            WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.HUMANIZATION, WorkflowArtifact.STEMS,
+            WorkflowArtifact.HUMANIZATION, WorkflowArtifact.STEMS,
             WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER,
             WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT
         )
@@ -271,6 +278,19 @@ object CohesionOccurrenceArtifactPaths {
         require(SHA_256.matches(inputSha256)) { "Cohesion occurrence input fingerprint is invalid" }
         return "cohesion/occurrences/${safeId(instanceId, "cohesion occurrence")}/$inputSha256/cohesive.mid"
     }
+    fun enhancedOutput(inputSha256: String, instanceId: String): String {
+        require(SHA_256.matches(inputSha256)) { "Cohesion input fingerprint is invalid" }
+        return "cohesion/runs/$inputSha256/occurrences/${safeId(instanceId, "cohesion occurrence")}.mid"
+    }
+}
+
+object CohesionRoleArtifactPaths {
+    fun output(inputSha256: String, role: String): String {
+        require(SHA_256.matches(inputSha256)) { "Cohesion input fingerprint is invalid" }
+        return "cohesion/runs/$inputSha256/roles/${safeId(role, "cohesion role")}.mid"
+    }
+    fun baselinePreview(inputSha256: String) = "cohesion/runs/$inputSha256/preview/baseline.wav"
+    fun enhancedPreview(inputSha256: String) = "cohesion/runs/$inputSha256/preview/enhanced.wav"
 }
 
 /** One fingerprinted boundary between adjacent, stable Structure occurrences. */
@@ -308,12 +328,54 @@ data class CohesionOccurrenceReference(
     val instanceId: String,
     val sourceSha256: String,
     val result: WorkflowArtifactReference,
-    val approved: Boolean
+    val approved: Boolean,
+    val cohesionInputSha256: String? = null
 ) {
     init {
         require(SAFE_ID.matches(instanceId)) { "Cohesion occurrence ID is invalid" }
         require(SHA_256.matches(sourceSha256)) { "Cohesion source fingerprint is invalid" }
-        require(result.file == CohesionOccurrenceArtifactPaths.output(instanceId, sourceSha256)) { "Cohesion occurrence artifact path is not canonical" }
+        cohesionInputSha256?.let { require(SHA_256.matches(it)) { "Cohesion occurrence input fingerprint is invalid" } }
+        val expected = cohesionInputSha256?.let { CohesionOccurrenceArtifactPaths.enhancedOutput(it, instanceId) }
+            ?: CohesionOccurrenceArtifactPaths.output(instanceId, sourceSha256)
+        require(result.file == expected) { "Cohesion occurrence artifact path is not canonical" }
+    }
+}
+
+@Serializable
+data class CohesionRoleReference(
+    val role: String,
+    val sourceSha256: String,
+    val result: WorkflowArtifactReference,
+    val approved: Boolean,
+    val cohesionInputSha256: String? = null
+) {
+    init {
+        require(SAFE_ID.matches(role) && SHA_256.matches(sourceSha256)) { "Cohesion role reference is invalid" }
+        val inputHash = cohesionInputSha256 ?: result.file.split('/').getOrNull(2).orEmpty()
+        require(SHA_256.matches(inputHash) && result.file == CohesionRoleArtifactPaths.output(inputHash, role)) { "Cohesion role artifact path is not canonical" }
+    }
+}
+
+@Serializable
+data class CohesionPreviewReferences(
+    val baseline: WorkflowArtifactReference,
+    val enhanced: WorkflowArtifactReference
+)
+
+@Serializable
+data class GeneratedMidiArtifactReference(val id: String, val artifact: WorkflowArtifactReference) {
+    init { require(SAFE_ID.matches(id)) { "Generated MIDI artifact ID is invalid" } }
+}
+
+@Serializable
+data class GeneratedMidiWorkflowReferences(
+    val arrangementSha256: String,
+    val artifacts: List<GeneratedMidiArtifactReference>
+) {
+    init {
+        require(SHA_256.matches(arrangementSha256) && artifacts.map { it.id }.distinct().size == artifacts.size) {
+            "Generated MIDI workflow references are invalid"
+        }
     }
 }
 
@@ -326,7 +388,11 @@ data class CohesionWorkflowReferences(
     /** Per-boundary plan and bridge evidence used to derive [occurrences]. */
     val boundaries: List<CohesionBoundaryReference> = emptyList(),
     /** The saved Structure occurrence sequence that produced [inputSha256]. */
-    val structureSha256: String = ""
+    val structureSha256: String = "",
+    /** Full-song generated-role derivatives published by Cohesion & Enhance v5. */
+    val roles: List<CohesionRoleReference> = emptyList(),
+    val intensity: CohesionEnhancementIntensity = CohesionEnhancementIntensity.BALANCED,
+    val previews: CohesionPreviewReferences? = null
 ) {
     init {
         require(SHA_256.matches(inputSha256)) { "Cohesion input fingerprint is invalid" }
@@ -336,6 +402,14 @@ data class CohesionWorkflowReferences(
         }
         require(!approved || occurrences.all(CohesionOccurrenceReference::approved)) {
             "Approved cohesion requires approved results for every occurrence"
+        }
+        require(roles.map(CohesionRoleReference::role).distinct().size == roles.size) { "Cohesion role IDs must be unique" }
+        require(!approved || roles.all(CohesionRoleReference::approved)) { "Approved cohesion requires approved generated-role results" }
+        previews?.let {
+            require(it.baseline.file == CohesionRoleArtifactPaths.baselinePreview(inputSha256) &&
+                it.enhanced.file == CohesionRoleArtifactPaths.enhancedPreview(inputSha256)) {
+                "Cohesion preview artifact paths are not canonical"
+            }
         }
         require(boundaries.map { it.outgoingInstanceId to it.incomingInstanceId }.distinct().size == boundaries.size) {
             "Cohesion boundary identities must be unique"
@@ -406,7 +480,7 @@ data class HumanizationWorkflowReferences(
 ) {
     init {
         config.requireValid()
-        require(SHA_256.matches(inputsSha256) && processorVersion == "seeded-humanization-v1") { "Humanization run identity is invalid" }
+        require(SHA_256.matches(inputsSha256) && processorVersion in setOf("seeded-humanization-v1", "seeded-humanization-v2")) { "Humanization run identity is invalid" }
         require(artifacts.isNotEmpty() && artifacts.map(HumanizationArtifactReference::id).distinct().size == artifacts.size) { "Humanization artifacts are invalid" }
         require(legacyGrooveInputs.all(SAFE_ID::matches) && legacyGrooveInputs.all { it in artifacts.map(HumanizationArtifactReference::id) }) { "Humanization legacy-groove evidence is invalid" }
     }
@@ -419,6 +493,7 @@ data class ProjectWorkflowReferences(
     val arrangement: ArrangementApprovalReferences? = null,
     val humanizationSelection: HumanizationSelection = HumanizationSelection.BYPASS,
     val humanization: HumanizationWorkflowReferences? = null,
+    val generatedMidi: GeneratedMidiWorkflowReferences? = null,
     /** One-way marker for the Task 023 dependency migration. */
     val cohesionOrderMigration: Int = 0,
     val commercialProvenance: CommercialProvenanceReferences? = null

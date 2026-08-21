@@ -9,6 +9,9 @@ import app.melotrail.application.DefaultProjectApplicationService
 import app.melotrail.application.DefaultArrangementApplicationService
 import app.melotrail.application.DefaultMixApplicationService
 import app.melotrail.application.DefaultBuildApplicationService
+import app.melotrail.application.DefaultCohesionApplicationService
+import app.melotrail.application.EnsembleMidiPreparation
+import app.melotrail.application.CohesionPreviewPreparation
 import app.melotrail.application.BuildAudioWorker
 import app.melotrail.application.DefaultPartPreviewApplicationService
 import app.melotrail.application.DefaultReleaseExportApplicationService
@@ -75,14 +78,21 @@ fun main() {
     val sfizzRenderer = app.melotrail.arrangement.SfizzInstrumentRenderer(
         InstrumentRegistryLoader(libraryRoot)
     )
+    val cohesionService = DefaultCohesionApplicationService(
+        ensemblePreparation = EnsembleMidiPreparation { root, progress -> arrangementService.generateRequiredMidi(root, progress) },
+        previewPreparation = CohesionPreviewPreparation { root, input ->
+            app.melotrail.arrangement.FullSongCohesionPreviewRenderer(sfizzRenderer, libraryRoot).render(root, input)
+        }
+    )
     val viewModel = WorkspaceViewModel(
         projectService = projectService,
         fileDialogs = SwingDesktopFileDialogs(),
         runtimeReadinessService = defaultRuntimeReadinessService { librarySettings.refresh().resolvedRoot },
         libraryRoot = libraryRoot,
         arrangementService = arrangementService,
+        cohesionService = cohesionService,
         mixService = mixService,
-        buildService = DefaultBuildApplicationService(arrangementService, mixService, sfizzRenderer, DesktopBuildWorker(client)),
+        buildService = DefaultBuildApplicationService(arrangementService, mixService, sfizzRenderer, DesktopBuildWorker(client), cohesionService),
         player = player,
         partPreviewService = DefaultPartPreviewApplicationService(sfizzRenderer),
         audioPreparationService = DefaultAudioPreparationApplicationService(

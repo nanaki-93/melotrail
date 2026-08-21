@@ -34,6 +34,29 @@ class TransitionCohesionPlannerTest {
         assertFalse(TransitionCohesionValidator.validate(unsafe, input).isValid)
     }
 
+    @Test fun `full song enhancement preserves melody anchors and intensity budget`() {
+        val notes = List(20) { index -> CohesionMelodyNote("n-${index.toString().padStart(5, '0')}", 0, 60 + index % 3, 72, index * 96L, index * 96L + 72) }
+        val musical = evidence("A", "a".repeat(64), MidiKey("C", "major", 1.0)).copy(melodyNotes = notes)
+        val input = TransitionCohesionInput(
+            inputHash = "b".repeat(64), structureSha256 = "c".repeat(64), arrangementSha256 = "d".repeat(64), contextSha256 = "e".repeat(64),
+            supportedInstruments = emptyList(), boundaries = emptyList(), intensity = CohesionEnhancementIntensity.BALANCED,
+            occurrences = listOf(SongOccurrenceEvidence("A1", musical))
+        )
+        fun plan(edits: List<SongEnhancementEdit>) = TransitionCohesionPlan(
+            inputHash = input.inputHash, arrangementSha256 = input.arrangementSha256, contextSha256 = input.contextSha256,
+            model = CohesionModelIdentity.DETERMINISTIC, boundaries = emptyList(), intensity = input.intensity, songEdits = edits
+        )
+        val anchorPitch = SongEnhancementEdit(SongEnhancementTarget.MELODY, "A1", CohesionMelodyEditKind.SET_PITCH, "n-00000", value = 61, reason = "reshape opening anchor")
+        assertFalse(TransitionCohesionValidator.validate(plan(listOf(anchorPitch)), input).isValid)
+
+        val overBudget = listOf(4, 5, 6).map { index ->
+            SongEnhancementEdit(SongEnhancementTarget.MELODY, "A1", CohesionMelodyEditKind.SET_VELOCITY,
+                "n-${index.toString().padStart(5, '0')}", value = 76, reason = "shape phrase dynamics")
+        }
+        assertFalse(TransitionCohesionValidator.validate(plan(overBudget), input).isValid)
+        assertTrue(TransitionCohesionValidator.validate(plan(overBudget.take(2)), input).isValid)
+    }
+
     private fun policy(hash: String, action: TransitionRoleAction = TransitionRoleAction.DRUM_FILL) = TransitionPolicyEvidence("lofi", "calm", hash, listOf(action))
     private fun evidence(partId: String, sourceHash: String, key: MidiKey? = null, meter: MidiTimeSignature = MidiTimeSignature(0, 4, 4)) = TransitionMusicalEvidence(partId, sourceHash, "f".repeat(64), 480, 1_920, key, emptyList(), MidiTempoChange(0, 80.0), meter, 0.5, TransitionBoundarySummary(true, true, 0, 1_440), TransitionArrangementEvidence("9".repeat(64), SongSectionPurpose.DEVELOPMENT, listOf(TransitionInstrumentEvidence("drums", "DrumsInstrumentPlan", 0.5)), "8".repeat(64)))
 }

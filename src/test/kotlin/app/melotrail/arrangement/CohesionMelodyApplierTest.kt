@@ -58,6 +58,19 @@ class CohesionMelodyApplierTest {
         assertFalse(Files.exists(target))
     }
 
+    @Test
+    fun `cohesion refuses to retime or repitch melody endpoints`() {
+        val source = root.resolve("selected.mid"); writeMidi(source)
+        listOf(
+            CohesionMelodyEdit("A1", CohesionMelodyEditKind.SET_PITCH, "n-00000", value = 62, reason = "unsafe endpoint pitch"),
+            CohesionMelodyEdit("A1", CohesionMelodyEditKind.SET_START, "n-00019", value = 9_000, reason = "unsafe endpoint timing")
+        ).forEachIndexed { index, edit ->
+            val target = root.resolve("cohesion/rejected-$index.mid")
+            assertThrows(IllegalArgumentException::class.java) { CohesionMelodyApplier.write(source, target, evidence(source), listOf(edit)) }
+            assertFalse(Files.exists(target))
+        }
+    }
+
     private fun evidence(source: Path): TransitionMusicalEvidence = TransitionMusicalEvidence(
         partId = "A", sourceHash = sha256(source), analysisHash = "a".repeat(64), ppq = 480, durationTicks = 9_600,
         key = MidiKey("C", "major", 1.0), chords = emptyList(), tempo = MidiTempoChange(0, 80.0),

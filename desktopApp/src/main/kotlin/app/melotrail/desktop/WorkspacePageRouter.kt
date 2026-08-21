@@ -68,6 +68,7 @@ import app.melotrail.application.StructureSectionSummary
 import app.melotrail.application.filtered
 import app.melotrail.arrangement.LogicalInstrument
 import app.melotrail.arrangement.ArrangementRole
+import app.melotrail.arrangement.CohesionEnhancementIntensity
 import app.melotrail.arrangement.SoundTrait
 import java.net.URI
 import java.nio.file.Path
@@ -1138,10 +1139,9 @@ private fun ArrangePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
     val mutating = state.operation.isMutating
     val arrangementApproved = state.arrangement?.let { it.approved && !it.approvalRequired && !it.stale } == true
     val cohesionAction = if (!arrangementApproved || state.project?.readiness?.cohesionReady == true) null else when {
-        state.cohesion?.stale == true -> "Retry Cohesion"
-        state.cohesion?.approvalRequired == true && state.cohesion.boundaries.any { !it.reviewed } -> "Review Cohesion"
-        state.cohesion?.approvalRequired == true -> "Approve Cohesion"
-        else -> "Generate Cohesion"
+        state.cohesion?.stale == true -> "Retry Cohesion & Enhance"
+        state.cohesion?.approvalRequired == true -> "Approve Cohesion & Enhance"
+        else -> "Generate Cohesion & Enhance"
     }
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
@@ -1158,8 +1158,8 @@ private fun ArrangePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
                     OutlinedButton(
                         onClick = {
                             when (label) {
-                                "Generate Cohesion", "Retry Cohesion" -> onIntent(WorkspaceIntent.GenerateCohesion)
-                                "Approve Cohesion" -> onIntent(WorkspaceIntent.ApproveCohesion)
+                                "Generate Cohesion & Enhance", "Retry Cohesion & Enhance" -> onIntent(WorkspaceIntent.GenerateCohesion)
+                                "Approve Cohesion & Enhance" -> onIntent(WorkspaceIntent.ApproveCohesion)
                                 else -> onIntent(WorkspaceIntent.SelectArrangeTab(ArrangeTab.TRANSITIONS))
                             }
                         },
@@ -1185,20 +1185,38 @@ private fun ArrangePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
 /** Cohesion review is intentionally shown only after Arrangement approval. */
 @Composable
 private fun CohesionReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
-    val cohesion = state.cohesion ?: return
-    if (!cohesion.approvalRequired || cohesion.approved || cohesion.stale || cohesion.boundaries.isEmpty()) return
-    OverviewCard(WorkspacePageTags.ARRANGE_COHESION_REVIEW, "Cohesion boundary review") {
-        Text("Review every current boundary before aggregate approval.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        cohesion.boundaries.filterNot { it.reviewed }.forEach { boundary ->
-            Text("${boundary.outgoingInstanceId} → ${boundary.incomingInstanceId}: ${boundary.rationale}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            OutlinedButton(
-                onClick = { onIntent(WorkspaceIntent.ReviewCohesionBoundary(boundary.outgoingInstanceId, boundary.incomingInstanceId)) },
-                enabled = !state.operation.isMutating,
-                modifier = Modifier.semantics {
-                    testTag = WorkspacePageTags.ARRANGE_COHESION_BOUNDARY_PREFIX + boundary.outgoingInstanceId + "--" + boundary.incomingInstanceId
-                    contentDescription = "Review cohesion boundary ${boundary.outgoingInstanceId} to ${boundary.incomingInstanceId}"
-                }
-            ) { Text("Review ${boundary.outgoingInstanceId} → ${boundary.incomingInstanceId}") }
+    val cohesion = state.cohesion
+    OverviewCard(WorkspacePageTags.ARRANGE_COHESION_REVIEW, "Cohesion & Enhance") {
+        Text("Enhances the complete arranged song while preserving its melody identity, section structure, tempo, meter, and instrument roles.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+            CohesionEnhancementIntensity.entries.forEach { intensity ->
+                val selected = state.cohesionDraft.intensity == intensity
+                if (selected) Button(
+                    onClick = { onIntent(WorkspaceIntent.UpdateCohesionIntensity(intensity)) },
+                    enabled = !state.operation.isMutating
+                ) { Text(intensity.name.lowercase().replaceFirstChar(Char::uppercase)) }
+                else OutlinedButton(
+                    onClick = { onIntent(WorkspaceIntent.UpdateCohesionIntensity(intensity)) },
+                    enabled = !state.operation.isMutating
+                ) { Text(intensity.name.lowercase().replaceFirstChar(Char::uppercase)) }
+            }
+        }
+        cohesion?.takeIf { it.approvalRequired && !it.approved && !it.stale }?.let { draft ->
+            Text("Full-song draft: ${draft.melodyEditCount} melody edits, ${draft.accompanimentEditCount} accompaniment edits, ${draft.boundaries.size} transition handoffs.", style = MaterialTheme.typography.bodySmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+                OutlinedButton(
+                    onClick = { onIntent(WorkspaceIntent.PlayCohesionPreview(false)) },
+                    enabled = !state.operation.isMutating && draft.baselinePreview != null
+                ) { Text("Play baseline") }
+                Button(
+                    onClick = { onIntent(WorkspaceIntent.PlayCohesionPreview(true)) },
+                    enabled = !state.operation.isMutating && draft.enhancedPreview != null
+                ) { Text("Play enhanced") }
+            }
+            draft.boundaries.forEach { boundary ->
+                Text("${boundary.outgoingInstanceId} → ${boundary.incomingInstanceId}: ${boundary.rationale}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text("Approve or reject this single full-song result after comparing the baseline and enhanced previews.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -2268,7 +2286,7 @@ private fun mixMasterBuildMessage(state: WorkspaceUiState): String = when {
     state.arrangement.stale -> "The arrangement is stale; regenerate it before building."
     state.downstreamArtifactsStale -> "Mix artifacts are stale; regenerate them from the current arrangement before building."
     state.arrangement.approvalRequired || !state.arrangement.approved -> "Approve the reviewed arrangement before building."
-    state.project.readiness.cohesionApprovalRequired -> "Review and approve Cohesion before building."
+    state.project.readiness.cohesionApprovalRequired -> "Compare and approve Cohesion & Enhance before building."
     !state.project.readiness.cohesionReady -> "Generate and approve Cohesion before building."
     state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.available != true -> state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.reason ?: "Checking local build readiness."
     else -> "Build validates artifacts, publishes a lossless master WAV atomically, then optionally exports MP3."

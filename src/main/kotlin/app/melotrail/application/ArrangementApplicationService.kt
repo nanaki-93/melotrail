@@ -15,6 +15,8 @@ import app.melotrail.arrangement.DeterministicGlobalSongPlanner
 import app.melotrail.arrangement.DeterministicSectionVariationPlanner
 import app.melotrail.arrangement.DrumMidiGenerationAdapter
 import app.melotrail.arrangement.GlobalSongPlanner
+import app.melotrail.arrangement.GeneratedMidiArtifactReference
+import app.melotrail.arrangement.GeneratedMidiWorkflowReferences
 import app.melotrail.arrangement.InstrumentMode
 import app.melotrail.arrangement.LocalQwenDetailedArrangementPlanner
 import app.melotrail.arrangement.LocalQwenGlobalSongPlanner
@@ -28,6 +30,8 @@ import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.ProjectWorkflowStore
 import app.melotrail.arrangement.WorkflowArtifact
+import app.melotrail.arrangement.WorkflowArtifactReference
+import app.melotrail.arrangement.WorkflowChange
 import app.melotrail.arrangement.SectionInstance
 import app.melotrail.arrangement.SectionVariationStore
 import app.melotrail.arrangement.SongPlan
@@ -194,8 +198,7 @@ class DefaultArrangementApplicationService(
         val arrangement = readApproved(normalized, input)
         val analyses = midiAnalyses(normalized, project, project.parts.map { it.id }.toSet())
         val active = arrangement.sections.flatMap { it.instruments }.filter { it.mode == InstrumentMode.GENERATED }.map { it.name }.toSet()
-        val approvedCohesion = project.workflow.cohesion?.approved == true && WorkflowArtifact.COHESION !in project.workflow.stale
-        val needsTransitionMidi = approvedCohesion || arrangement.sections.any { it.transitionOut.type.name != "NONE" }
+        val needsTransitionMidi = arrangement.sections.any { it.transitionOut.type.name != "NONE" }
         val total = active.size + if (needsTransitionMidi) 1 else 0
         var stage = 0
         val artifacts = mutableListOf<GeneratedMidiArtifact>()
@@ -230,7 +233,18 @@ class DefaultArrangementApplicationService(
             val path = normalized.resolve("midi/generated/transitions.mid"); generating("transitions", path)
             MidiTransitionGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("transitions", it.path, it.result.events.size) }
         }
-        ProjectWorkflowStore.update(normalized) { it.markCurrent(WorkflowArtifact.GENERATED_MIDI) }
+        val approval = requireNotNull(ProjectStore.read(normalized).workflow.arrangement) {
+            "Generated MIDI requires approved arrangement lineage"
+        }
+        val references = artifacts.map { artifact ->
+            val relative = normalized.relativize(artifact.path.toAbsolutePath().normalize()).toString().replace('\\', '/')
+            GeneratedMidiArtifactReference(artifact.instrument, WorkflowArtifactReference(relative, sha256(artifact.path)))
+        }
+        ProjectWorkflowStore.update(normalized) { workflow ->
+            workflow.invalidate(WorkflowChange.GENERATED_MIDI)
+                .markCurrent(WorkflowArtifact.GENERATED_MIDI)
+                .copy(generatedMidi = GeneratedMidiWorkflowReferences(approval.arrangement.sha256, references))
+        }
         GeneratedMidiSnapshot(artifacts)
     }
 

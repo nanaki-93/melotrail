@@ -57,20 +57,25 @@ class StemRenderingMixer(
         }
         val bindings = approvedBindings(project, active, registry)
 
+        val cohesiveRoles = project.workflow.cohesion?.roles.orEmpty().takeIf { cohesiveOverlay }.orEmpty()
         val requiredInputs = active.filter { it != LogicalInstrument.PIANO }.associateWith { instrument ->
-            humanizedInput(root, project, instrument.wireName, root.resolve("midi/generated/${instrument.wireName}.mid"))
+            val original = if (cohesiveRoles.isEmpty()) root.resolve("midi/generated/${instrument.wireName}.mid")
+            else resolveCohesiveRole(root, project, instrument.wireName)
+            humanizedInput(root, project, instrument.wireName, original)
         }
         requiredInputs.forEach { (instrument, path) ->
             require(Files.isRegularFile(path)) { "Missing generated ${instrument.wireName} MIDI: $path" }
         }
-        val needsTransitions = cohesiveOverlay || timeline.segments.any { it.insertedTicksAfter > 0L }
+        val bridgesMergedIntoRoles = cohesiveOverlay && cohesiveRoles.isNotEmpty()
+        val hasCohesionBridges = project.workflow.cohesion?.boundaries?.isNotEmpty() == true
+        val needsTransitions = !bridgesMergedIntoRoles && (hasCohesionBridges || timeline.segments.any { it.insertedTicksAfter > 0L })
         val transitionBase = root.resolve("midi/generated/transitions.mid")
-        val transitions = if (Files.isRegularFile(transitionBase)) humanizedInput(root, project, "transitions", transitionBase) else transitionBase
-        if (needsTransitions) require(Files.isRegularFile(transitions)) {
+        val transitions = if (bridgesMergedIntoRoles) null else if (Files.isRegularFile(transitionBase)) humanizedInput(root, project, "transitions", transitionBase) else transitionBase
+        if (needsTransitions) require(transitions != null && Files.isRegularFile(transitions)) {
             "Transition insertions are planned but transition MIDI is missing: $transitions"
         }
 
-        val fingerprint = fingerprint(root, project, arrangement, analyses, occurrenceMidi, requiredInputs.values.toList(), transitions.takeIf(Files::isRegularFile), bindings, registry)
+        val fingerprint = fingerprint(root, project, arrangement, analyses, occurrenceMidi, requiredInputs.values.toList(), transitions?.takeIf(Files::isRegularFile), bindings, registry)
         existingReport?.let { existing -> assertApprovedLibraryIsUnchanged(existing, bindings, registry) }
         existingReport?.takeIf { it.inputFingerprint == fingerprint && it.timelineFrames == timeline.frames(format.sampleRate) }
             ?.takeIf { report -> report.stems.all { stem ->
@@ -84,7 +89,7 @@ class StemRenderingMixer(
         val stems = mutableListOf<StemArtifact>()
         active.forEach { instrument ->
             val binding = bindings.getValue(instrument)
-            val assembled = assembleMidi(root, occurrenceMidi, instrument, binding.stableInstrumentId, timeline, requiredInputs[instrument], transitions.takeIf(Files::isRegularFile))
+            val assembled = assembleMidi(root, occurrenceMidi, instrument, binding.stableInstrumentId, timeline, requiredInputs[instrument], transitions?.takeIf(Files::isRegularFile))
             val target = root.resolve("stems/${instrument.wireName}.wav")
             val temporary = target.resolveSibling(".${target.fileName}.${UUID.randomUUID()}.rendering.wav")
             try {
@@ -147,7 +152,12 @@ class StemRenderingMixer(
             "Resolved selected MIDI does not match the approved arrangement occurrences."
         }
         return arrangementIds.zip(resolved.map { occurrence ->
-            val selected = humanizedInput(root, project, "piano-${occurrence.partId}", occurrence.path)
+            val pianoId = if (project.workflow.humanization?.processorVersion == "seeded-humanization-v1") {
+                "piano-${occurrence.partId}"
+            } else {
+                "piano-${occurrence.occurrenceId}"
+            }
+            val selected = humanizedInput(root, project, pianoId, occurrence.path)
             if (selected == occurrence.path) occurrence else occurrence.copy(
                 path = selected,
                 projectRelativePath = root.relativize(selected).toString().replace('\\', '/'),
@@ -168,6 +178,17 @@ class StemRenderingMixer(
             "Humanized MIDI '$id' is missing or stale. Regenerate it or select Bypass."
         }
         return output
+    }
+
+    private fun resolveCohesiveRole(root: Path, project: Project, role: String): Path {
+        val cohesion = requireNotNull(project.workflow.cohesion) { "Cohesion role '$role' has no workflow evidence." }
+        val reference = requireNotNull(cohesion.roles.singleOrNull { it.role == role }) { "Cohesion is missing enhanced role '$role'." }
+        require(reference.approved && reference.cohesionInputSha256 == cohesion.inputSha256) { "Cohesion role '$role' is stale." }
+        val path = root.resolve(reference.result.file).normalize()
+        require(path.startsWith(root) && Files.isRegularFile(path) && digest(Files.readAllBytes(path)) == reference.result.sha256) {
+            "Cohesion role '$role' is missing or changed."
+        }
+        return path
     }
 
     private fun assembleMidi(root: Path, occurrenceMidi: Map<String, OccurrenceMidiArtifact>, instrument: LogicalInstrument, stableInstrumentId: String, timeline: Timeline, generated: Path?, transitions: Path?): Path {

@@ -1170,6 +1170,7 @@ internal fun CompactTransport(state: WorkspaceUiState, onIntent: (WorkspaceInten
     val hasPlayableSelection = when (val request = session.request) {
         is PlaybackRequest.Part -> session.phase in setOf(PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED) || (session.phase == PlaybackSessionPhase.STOPPED && session.artifact != null)
         is PlaybackRequest.Mix -> session.phase in setOf(PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED) || playbackSourceAvailable(state, request.source)
+        is PlaybackRequest.Cohesion -> session.phase in setOf(PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED) || session.artifact != null
         null -> playbackSourceAvailable(state, PlaybackSource.DRY)
     }
     val canStop = session.phase in setOf(PlaybackSessionPhase.RESOLVING, PlaybackSessionPhase.PREPARING, PlaybackSessionPhase.READY, PlaybackSessionPhase.STARTING, PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED)
@@ -1177,6 +1178,7 @@ internal fun CompactTransport(state: WorkspaceUiState, onIntent: (WorkspaceInten
     val label = when (val request = session.request) {
         is PlaybackRequest.Part -> "Part ${request.partId} preview"
         is PlaybackRequest.Mix -> request.source.name.lowercase().replaceFirstChar(Char::uppercase) + " mix"
+        is PlaybackRequest.Cohesion -> if (request.enhanced) "Enhanced full-song preview" else "Baseline full-song preview"
         null -> "Dry mix"
     }
     Card(
@@ -1539,7 +1541,7 @@ private fun statusText(state: WorkspaceUiState): String = when (val operation = 
     is WorkspaceOperation.TranscribingPart -> "Running transcription quality gate for ${operation.id}…"
     is WorkspaceOperation.UpdatingPartRole -> "Saving ${operation.id} role…"
     WorkspaceOperation.SavingStructure -> "Saving song structure…"
-    is WorkspaceOperation.GeneratingCohesion -> "Generating arrangement-aware boundary cohesion…"
+    is WorkspaceOperation.GeneratingCohesion -> "Enhancing the arranged full song and rendering A/B previews…"
     is WorkspaceOperation.ReviewingCohesion -> "Recording review for cohesion boundary ${operation.outgoingInstanceId} → ${operation.incomingInstanceId}…"
     WorkspaceOperation.ApprovingCohesion -> "Approving validated cohesion…"
     is WorkspaceOperation.GeneratingArrangement -> "Generating reviewed song plan and detailed arrangement…"
@@ -1960,7 +1962,7 @@ private fun buildSongPrerequisite(state: WorkspaceUiState): String = when {
     state.project.readiness.cohesionApprovalRequired -> "Build Song is blocked: review and approve Cohesion."
     !state.project.readiness.cohesionReady -> "Build Song is blocked: generate and approve Cohesion."
     state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.available != true -> state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.reason ?: "Build Song is checking local readiness."
-    else -> "Build Song will generate/reuse MIDI and stems, then mix, repair, master, and write release metadata."
+    else -> "Build Song will reuse approved MIDI and humanization, then render/reuse stems, mix, repair, master, and write release metadata."
 }
 
 private fun arrangementPrerequisite(state: WorkspaceUiState): String = when {
