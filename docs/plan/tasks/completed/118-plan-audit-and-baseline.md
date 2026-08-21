@@ -2,7 +2,7 @@
 
 ## Goal
 
-Turn the verified repository findings in `docs/plan/PLAN.md` into a durable
+Turn the verified repository findings in `../../PLAN.md` into a durable
 implementation baseline and make schema v4 the sole project format. This task
 intentionally changes project-open behavior by deleting legacy-project support.
 
@@ -12,7 +12,7 @@ None. This is the first task in the alignment sequence.
 
 ## Required work
 
-- Create `docs/plan/music-context-audit.md` with a table for every declared or
+- Create `../../music-context-audit.md` with a table for every declared or
   analyzed musical fact: owner, Kotlin type, serialization, producer, consumers,
   authority level, validation, and known duplication.
 - Inventory the real input, output, approval/bypass, report, hashes, and
@@ -27,7 +27,7 @@ None. This is the first task in the alignment sequence.
   canonical artifacts make duplicate numbered history unnecessary.
 - Run and record the baseline results for `./gradlew test :desktopApp:test`.
   Record pre-existing failures without changing unrelated code.
-- Link the audit from `docs/plan/PLAN.md` and the task index. Do not rewrite
+- Link the audit from `../../PLAN.md` and the task index. Do not rewrite
   older completed-task evidence to make it appear current.
 - Remove v1–v3 and provisional legacy-v4 project readers, DTOs, warning state,
   migration/save APIs, stage-run/cohesion-order migration mappers, desktop

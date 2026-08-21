@@ -14,8 +14,8 @@ resources, UI copy, and stale documentation in the task that replaces them.
 
 | Order | Task | Primary result |
 | ---: | --- | --- |
-| 118 | [Pipeline audit and executable baseline](118-plan-audit-and-baseline.md) | Verified evidence and ownership map |
-| 119 | [Canonical musical authority and harmonic timeline](119-canonical-musical-authority.md) | Shared authority and projections |
+| 118 | [Pipeline audit and executable baseline](completed/118-plan-audit-and-baseline.md) | Verified evidence and ownership map |
+| 119 | [Canonical musical authority and harmonic timeline](completed/119-canonical-musical-authority.md) | Shared authority and projections |
 | 120 | [Durable stage taxonomy, ordering, and invalidation](120-stage-taxonomy-and-order.md) | One workflow order and dependency graph |
 | 121 | [Melody identity, anchors, and mutation evidence](121-melody-identity-and-mutation-evidence.md) | Shared note identity and reports |
 | 122 | [AI Fix canonical context cutover](122-ai-fix-canonical-context.md) | Declared harmony controls repair |
