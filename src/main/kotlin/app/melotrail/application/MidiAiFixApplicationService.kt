@@ -55,7 +55,8 @@ interface MidiAiFixApplicationService {
  */
 class DefaultMidiAiFixApplicationService(
     private val planner: (MidiAiFixInput) -> MidiAiFixPlan = { LocalQwenMidiAiFixPlanner().plan(it) },
-    private val transformer: MidiAiFixTransformer = MidiAiFixTransformer()
+    private val transformer: MidiAiFixTransformer = MidiAiFixTransformer(),
+    private val musicalAuthorityBuilder: MusicalAuthorityBuilder = MusicalAuthorityBuilder()
 ) : MidiAiFixApplicationService {
     override suspend fun create(request: CreateMidiAiFixRequest, progress: ProgressSink): MidiAiFixSnapshot = mutate(request.root) { root ->
         progress.report(OperationProgress("ai-fix", 1, 3, "Validating current cleaned MIDI"))
@@ -69,7 +70,7 @@ class DefaultMidiAiFixApplicationService(
             return@mutate MidiAiFixSnapshot(
                 partId = request.partId,
                 inputHash = current.input.inputHash,
-                inputSha256 = current.input.cleanedSha256,
+                inputSha256 = current.input.selectedInputSha256,
                 outputSha256 = null,
                 edits = emptyList(),
                 approved = false,
@@ -87,13 +88,13 @@ class DefaultMidiAiFixApplicationService(
     }
 
     override fun load(root: Path, partId: String): MidiAiFixSnapshot = locked(root) { normalized ->
-        val current = currentInput(normalized, partId)
         val project = ProjectStore.read(normalized); val midi = project.parts.single { it.id == partId }.midi!!
         val refs = requireNotNull(midi.aiFix) { "No AI-fix draft exists. Create one first." }
-        require(refs.inputSha256 == current.input.cleanedSha256 && refs.draft != null) { "AI-fix draft is stale. Regenerate it." }
+        require(refs.draft != null) { "AI-fix draft is stale. Regenerate it." }
         val diff = MidiAiFixStore.readDiff(normalized, partId)
-        require(diff.inputSha256 == current.input.cleanedSha256 && diff.outputSha256 == refs.draft.sha256) { "AI-fix diff is stale. Regenerate it." }
-        snapshot(normalized, partId, current.input, diff, midi.aiFixSelection == app.melotrail.arrangement.MidiAiFixSelection.APPROVED)
+        val plan = MidiAiFixStore.readPlan(normalized, partId)
+        requireCurrentEvidence(normalized, partId, refs.inputSha256, plan, diff, refs.draft.sha256)
+        snapshotEvidence(normalized, partId, plan, diff, midi.aiFixSelection == app.melotrail.arrangement.MidiAiFixSelection.APPROVED)
     }
 
     override fun approve(root: Path, partId: String): MidiAiFixSnapshot = locked(root) { normalized ->
@@ -104,16 +105,15 @@ class DefaultMidiAiFixApplicationService(
     }
 
     override fun returnToCleaned(root: Path, partId: String): MidiAiFixSnapshot? = locked(root) { normalized ->
-        val current = currentInput(normalized, partId)
         val refs = MidiAiFixStore.selectCleaned(normalized, partId) ?: return@locked null
         val diff = runCatching { MidiAiFixStore.readDiff(normalized, partId) }.getOrNull() ?: return@locked null
+        val plan = runCatching { MidiAiFixStore.readPlan(normalized, partId) }.getOrNull() ?: return@locked null
         val draft = requireNotNull(refs.draft) { return@locked null }
-        require(diff.inputSha256 == current.input.cleanedSha256 && diff.outputSha256 == draft.sha256) { "Retained AI-fix draft is stale. Regenerate it." }
-        snapshot(normalized, partId, current.input, diff, approved = false)
+        requireCurrentEvidence(normalized, partId, refs.inputSha256, plan, diff, draft.sha256)
+        snapshotEvidence(normalized, partId, plan, diff, approved = false)
     }
 
     override fun skip(root: Path, partId: String): MidiAiFixSnapshot? = locked(root) { normalized ->
-        val current = currentInput(normalized, partId)
         val project = ProjectStore.read(normalized); val part = project.parts.single { it.id == partId }; val midi = requireNotNull(part.midi)
         val refs = MidiAiFixStore.selectCleaned(normalized, partId)
         if (refs == null) {
@@ -124,7 +124,10 @@ class DefaultMidiAiFixApplicationService(
             return@locked null
         }
         val diff = MidiAiFixStore.readDiff(normalized, partId)
-        snapshot(normalized, partId, current.input, diff, approved = false)
+        val plan = MidiAiFixStore.readPlan(normalized, partId)
+        val draft = requireNotNull(refs.draft) { return@locked null }
+        requireCurrentEvidence(normalized, partId, refs.inputSha256, plan, diff, draft.sha256)
+        snapshotEvidence(normalized, partId, plan, diff, approved = false)
     }
 
     private fun currentInput(root: Path, partId: String): CurrentInput {
@@ -147,7 +150,11 @@ class DefaultMidiAiFixApplicationService(
             "Technical correction is stale. Run Technical Correction again."
         }
         val corrected = safeCorrected(root, correction.output)
-        val input = MidiAiFixInputFactory.build(partId, corrected)
+        val projection = musicalAuthorityBuilder.partRepair(root, partId)
+        require(projection.part.sha256 == app.melotrail.arrangement.sha256(corrected)) {
+            "Canonical AI-fix context does not select the current corrected MIDI. Re-analyze the corrected MIDI."
+        }
+        val input = MidiAiFixInputFactory.build(projection, corrected)
         return CurrentInput(corrected, input)
     }
 
@@ -186,7 +193,26 @@ class DefaultMidiAiFixApplicationService(
         val project = ProjectStore.read(root); val midi = project.parts.single { it.id == partId }.midi!!; val refs = midi.aiFix
         val draftAvailable = refs?.draft?.let { ref -> runCatching { Files.isRegularFile(root.resolve(ref.file)) && ref.sha256 == diff.outputSha256 }.getOrDefault(false) } == true
         val approvedAvailable = refs?.approved?.let { ref -> runCatching { Files.isRegularFile(root.resolve(ref.file)) && ref.sha256 == diff.outputSha256 }.getOrDefault(false) } == true
-        return MidiAiFixSnapshot(partId, input.inputHash, input.cleanedSha256, diff.outputSha256, diff.edits, approved, draftAvailable, approvedAvailable)
+        return MidiAiFixSnapshot(partId, input.inputHash, input.selectedInputSha256, diff.outputSha256, diff.edits, approved, draftAvailable, approvedAvailable)
+    }
+
+    private fun requireCurrentEvidence(root: Path, partId: String, selectedInputSha256: String, plan: MidiAiFixPlan, diff: MidiAiFixDiff, draftSha256: String) {
+        val project = ProjectStore.read(root)
+        val correction = requireNotNull(project.parts.single { it.id == partId }.midi?.technicalCorrection) { "AI-fix corrected input is missing." }
+        val corrected = safeCorrected(root, correction.output)
+        require(app.melotrail.arrangement.sha256(corrected) == selectedInputSha256 && plan.selectedInputSha256 == selectedInputSha256 &&
+            diff.version == 2 && diff.inputSha256 == selectedInputSha256 && diff.outputSha256 == draftSha256 &&
+            diff.mutationReport.inputSha256 == selectedInputSha256 && diff.mutationReport.outputSha256 == draftSha256 &&
+            diff.mutationReport.contextSha256 == plan.contextSha256) { "Retained AI-fix evidence is stale. Regenerate it." }
+        diff.mutationReport.requireValid()
+    }
+
+    private fun snapshotEvidence(root: Path, partId: String, plan: MidiAiFixPlan, diff: MidiAiFixDiff, approved: Boolean): MidiAiFixSnapshot {
+        val midi = ProjectStore.read(root).parts.single { it.id == partId }.midi!!
+        val refs = midi.aiFix
+        val draftAvailable = refs?.draft?.let { ref -> Files.isRegularFile(root.resolve(ref.file)) && ref.sha256 == diff.outputSha256 } == true
+        val approvedAvailable = refs?.approved?.let { ref -> Files.isRegularFile(root.resolve(ref.file)) && ref.sha256 == diff.outputSha256 } == true
+        return MidiAiFixSnapshot(partId, plan.inputHash, plan.selectedInputSha256, diff.outputSha256, diff.edits, approved, draftAvailable, approvedAvailable)
     }
 
     private fun noSafeFixReason(input: MidiAiFixInput): String = if (input.problemRegions.any {

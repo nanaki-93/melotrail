@@ -8,7 +8,25 @@ import app.melotrail.arrangement.MidiAiFixModelIdentity
 import app.melotrail.arrangement.MidiAiFixPlan
 import app.melotrail.arrangement.MidiAiFixSelection
 import app.melotrail.arrangement.ProjectStore
+import app.melotrail.arrangement.MidiAnalysisStore
+import app.melotrail.arrangement.MidiPartAnalyzer
+import app.melotrail.arrangement.MidiAnalysis
+import app.melotrail.arrangement.MidiKey
+import app.melotrail.arrangement.CompositionSettings
+import app.melotrail.arrangement.StructureOccurrence
+import app.melotrail.harmony.ChordEvent
+import app.melotrail.harmony.ChordEventId
+import app.melotrail.harmony.ChordProgression
+import app.melotrail.harmony.ChordQuality
+import app.melotrail.harmony.HarmonySettings
+import app.melotrail.music.MusicalKey
+import app.melotrail.music.PitchClass
+import app.melotrail.music.PitchSpelling
+import app.melotrail.music.ScaleModeId
+import app.melotrail.music.Tempo
+import app.melotrail.music.TimeSignature
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -33,11 +51,13 @@ class MidiAiFixApplicationServiceTest {
         projectService.importPart(ImportPartRequest(root, "A", source))
         projectService.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
         DefaultTechnicalCorrectionApplicationService().create(CreateTechnicalCorrectionRequest(root, "A"))
+        configureCanonicalContext()
         val rawBefore = Files.readAllBytes(root.resolve("midi/raw/A.mid"))
         val cleanBefore = Files.readAllBytes(root.resolve("midi/clean/A.mid"))
         val sourceBefore = Files.readAllBytes(source)
         val service = DefaultMidiAiFixApplicationService(planner = { input ->
-            MidiAiFixPlan(partId = input.partId, cleanedSha256 = input.cleanedSha256, inputHash = input.inputHash,
+            MidiAiFixPlan(partId = input.partId, selectedInputSha256 = input.selectedInputSha256, inputHash = input.inputHash,
+                contextSchemaVersion = input.contextSchemaVersion, contextSha256 = input.contextSha256,
                 model = MidiAiFixModelIdentity("fake", "1", "1".repeat(64), "Apache-2.0"),
                 edits = listOf(MidiAiFixEdit(MidiAiFixEditKind.VELOCITY, noteId = input.notes.first().id, velocity = input.notes.first().velocity - 10)))
         })
@@ -53,6 +73,8 @@ class MidiAiFixApplicationServiceTest {
         assertTrue(Files.isRegularFile(root.resolve("midi/ai-fix/A/diff.json")))
         assertTrue(Files.isRegularFile(root.resolve("midi/ai-fix/A/audit.json")))
         assertTrue(Files.isRegularFile(root.resolve("midi/ai-fix/A/provenance.json")))
+        assertEquals(app.melotrail.arrangement.MidiMutationStage.AI_FIX,
+            app.melotrail.arrangement.MidiAiFixStore.readDiff(root, "A").mutationReport.stage)
 
         val approved = service.approve(root, "A")
         assertTrue(approved.approved)
@@ -72,11 +94,14 @@ class MidiAiFixApplicationServiceTest {
         projectService.importPart(ImportPartRequest(root, "A", source))
         projectService.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
         DefaultTechnicalCorrectionApplicationService().create(CreateTechnicalCorrectionRequest(root, "A"))
+        configureCanonicalContext()
         val service = DefaultMidiAiFixApplicationService(planner = { input ->
             MidiAiFixPlan(
                 partId = input.partId,
-                cleanedSha256 = input.cleanedSha256,
+                selectedInputSha256 = input.selectedInputSha256,
                 inputHash = input.inputHash,
+                contextSchemaVersion = input.contextSchemaVersion,
+                contextSha256 = input.contextSha256,
                 model = MidiAiFixModelIdentity("fake", "1", "1".repeat(64), "Apache-2.0"),
                 edits = emptyList()
             )
@@ -112,11 +137,14 @@ class MidiAiFixApplicationServiceTest {
             )) else part
         }))
         DefaultTechnicalCorrectionApplicationService().create(CreateTechnicalCorrectionRequest(root, "A"))
+        configureCanonicalContext()
         val service = DefaultMidiAiFixApplicationService(planner = { input ->
             MidiAiFixPlan(
                 partId = input.partId,
-                cleanedSha256 = input.cleanedSha256,
+                selectedInputSha256 = input.selectedInputSha256,
                 inputHash = input.inputHash,
+                contextSchemaVersion = input.contextSchemaVersion,
+                contextSha256 = input.contextSha256,
                 model = MidiAiFixModelIdentity("fake", "1", "1".repeat(64), "Apache-2.0"),
                 edits = listOf(MidiAiFixEdit(MidiAiFixEditKind.VELOCITY, noteId = input.notes.first().id, velocity = input.notes.first().velocity - 1))
             )
@@ -135,11 +163,14 @@ class MidiAiFixApplicationServiceTest {
         projectService.importPart(ImportPartRequest(root, "A", firstSource))
         projectService.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
         DefaultTechnicalCorrectionApplicationService().create(CreateTechnicalCorrectionRequest(root, "A"))
+        configureCanonicalContext()
         val aiFix = DefaultMidiAiFixApplicationService(planner = { input ->
             MidiAiFixPlan(
                 partId = input.partId,
-                cleanedSha256 = input.cleanedSha256,
+                selectedInputSha256 = input.selectedInputSha256,
                 inputHash = input.inputHash,
+                contextSchemaVersion = input.contextSchemaVersion,
+                contextSha256 = input.contextSha256,
                 model = MidiAiFixModelIdentity("fake", "1", "1".repeat(64), "Apache-2.0"),
                 edits = listOf(MidiAiFixEdit(MidiAiFixEditKind.VELOCITY, noteId = input.notes.first().id, velocity = input.notes.first().velocity - 1))
             )
@@ -157,11 +188,12 @@ class MidiAiFixApplicationServiceTest {
     fun `model parser rejects unknown fields stale identity paths and unbounded edits before output`() = runBlocking {
         val projectService = projectService(); projectService.create(CreateProjectRequest(root))
         val source = writeMidi(root.resolveSibling("input.mid")); projectService.importPart(ImportPartRequest(root, "A", source)); projectService.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
-        val input = app.melotrail.arrangement.MidiAiFixInputFactory.build("A", root.resolve("midi/clean/A.mid"))
+        configureCanonicalContext()
+        val input = aiFixInput()
         listOf(
-            "{\"version\":1,\"partId\":\"A\",\"cleanedSha256\":\"${input.cleanedSha256}\",\"inputHash\":\"${input.inputHash}\",\"model\":{\"name\":\"fake\",\"version\":\"1\",\"hash\":\"${"1".repeat(64)}\",\"license\":\"Apache-2.0\"},\"edits\":[],\"path\":\"/tmp/x\"}",
-            "{\"version\":1,\"partId\":\"A\",\"cleanedSha256\":\"${"0".repeat(64)}\",\"inputHash\":\"${input.inputHash}\",\"model\":{\"name\":\"fake\",\"version\":\"1\",\"hash\":\"${"1".repeat(64)}\",\"license\":\"Apache-2.0\"},\"edits\":[]}",
-            "{\"version\":1,\"partId\":\"A\",\"cleanedSha256\":\"${input.cleanedSha256}\",\"inputHash\":\"${input.inputHash}\",\"model\":{\"name\":\"fake\",\"version\":\"1\",\"hash\":\"${"1".repeat(64)}\",\"license\":\"Apache-2.0\"},\"edits\":[{\"kind\":\"velocity\",\"noteId\":\"${input.notes.first().id}\",\"velocity\":127}]}")
+            "{\"version\":2,\"partId\":\"A\",\"selectedInputSha256\":\"${input.selectedInputSha256}\",\"inputHash\":\"${input.inputHash}\",\"contextSchemaVersion\":${input.contextSchemaVersion},\"contextSha256\":\"${input.contextSha256}\",\"edits\":[],\"path\":\"/tmp/x\"}",
+            "{\"version\":2,\"partId\":\"A\",\"selectedInputSha256\":\"${"0".repeat(64)}\",\"inputHash\":\"${input.inputHash}\",\"contextSchemaVersion\":${input.contextSchemaVersion},\"contextSha256\":\"${input.contextSha256}\",\"edits\":[]}",
+            "{\"version\":2,\"partId\":\"A\",\"selectedInputSha256\":\"${input.selectedInputSha256}\",\"inputHash\":\"${input.inputHash}\",\"contextSchemaVersion\":${input.contextSchemaVersion},\"contextSha256\":\"${input.contextSha256}\",\"edits\":[{\"kind\":\"velocity\",\"noteId\":\"${input.notes.first().id}\",\"velocity\":127}]}")
             .forEach { response -> assertThrows(IllegalArgumentException::class.java) { LocalQwenMidiAiFixPlanner(LocalQwenClient { _, _ -> response }).plan(input) } }
         assertFalse(Files.exists(root.resolve("midi/ai-fix/A/draft.mid")))
     }
@@ -170,9 +202,10 @@ class MidiAiFixApplicationServiceTest {
     fun `model response omits code-owned provenance and uses the concrete edit schema`() = runBlocking {
         val projectService = projectService(); projectService.create(CreateProjectRequest(root))
         val source = writeMidi(root.resolveSibling("input.mid")); projectService.importPart(ImportPartRequest(root, "A", source)); projectService.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
-        val input = app.melotrail.arrangement.MidiAiFixInputFactory.build("A", root.resolve("midi/clean/A.mid"))
+        configureCanonicalContext()
+        val input = aiFixInput()
         val trustedModel = MidiAiFixModelIdentity("qwen", "local", "a".repeat(64), "unknown")
-        val response = "{\"version\":1,\"partId\":\"${input.partId}\",\"cleanedSha256\":\"${input.cleanedSha256}\",\"inputHash\":\"${input.inputHash}\",\"edits\":[{\"kind\":\"timing\",\"noteId\":\"${input.notes.first().id}\",\"startTick\":1}]}"
+        val response = "{\"version\":2,\"partId\":\"${input.partId}\",\"selectedInputSha256\":\"${input.selectedInputSha256}\",\"inputHash\":\"${input.inputHash}\",\"contextSchemaVersion\":${input.contextSchemaVersion},\"contextSha256\":\"${input.contextSha256}\",\"edits\":[{\"kind\":\"timing\",\"noteId\":\"${input.notes.first().id}\",\"startTick\":1}]}"
 
         val plan = LocalQwenMidiAiFixPlanner(LocalQwenClient { _, _ -> response }, trustedModel).plan(input)
 
@@ -181,12 +214,61 @@ class MidiAiFixApplicationServiceTest {
         assertEquals(1, plan.edits.single().startTick)
     }
 
+    @Test
+    fun `declared A minor stays authoritative over an inferred C major prompt observation`() = runBlocking {
+        val projectService = projectService(); projectService.create(CreateProjectRequest(root))
+        projectService.importPart(ImportPartRequest(root, "A", writeMidi(root.resolveSibling("authority.mid"))))
+        projectService.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
+        configureCanonicalContext()
+        val analysisPath = root.resolve("analysis/A.json")
+        val analysis = Json.decodeFromString(MidiAnalysis.serializer(), Files.readString(analysisPath))
+        Files.writeString(analysisPath, Json.encodeToString(MidiAnalysis.serializer(), analysis.copy(key = MidiKey("C", "major", 0.99))))
+        val input = aiFixInput()
+        val prompts = mutableListOf<String>()
+        val response = "{\"version\":2,\"partId\":\"${input.partId}\",\"selectedInputSha256\":\"${input.selectedInputSha256}\",\"inputHash\":\"${input.inputHash}\",\"contextSchemaVersion\":${input.contextSchemaVersion},\"contextSha256\":\"${input.contextSha256}\",\"edits\":[]}"
+
+        LocalQwenMidiAiFixPlanner(LocalQwenClient { _, prompt -> prompts += prompt; response }).plan(input)
+
+        assertEquals("A natural minor", input.declaredKey.displayName)
+        assertTrue(input.analyzedObservations.any { it.analyzedValue == "C major" })
+        assertTrue(prompts.single().contains("\"declaredKey\"") && prompts.single().contains("\"contextSha256\"") && prompts.single().contains("\"limits\""))
+    }
+
     private fun projectService() = DefaultProjectApplicationService(
         object : MidiPreparationService {
             override suspend fun transcribe(input: Path, output: Path) = Files.copy(input, output).let { Unit }
             override suspend fun clean(input: Path, output: Path) = Files.copy(input, output).let { Unit }
         }
     )
+
+    private fun configureCanonicalContext() {
+        val initial = ProjectStore.read(root)
+        val part = initial.parts.single { it.id == "A" }
+        val key = MusicalKey(PitchClass.of(PitchSpelling.A), ScaleModeId.NATURAL_MINOR)
+        val settings = CompositionSettings(key = key, tempo = Tempo(120.0), timeSignature = TimeSignature(4, 4))
+        val harmony = HarmonySettings(progressions = listOf(ChordProgression(
+            app.melotrail.harmony.SectionTypeId(part.sectionType.value),
+            listOf(ChordEvent(ChordEventId("a-minor"), PitchClass.of(PitchSpelling.A), ChordQuality.MINOR, 0))
+        )))
+        ProjectStore.write(root, initial.copy(envelope = initial.envelope.copy(
+            compositionSettings = settings,
+            harmony = harmony,
+            structureOccurrences = listOf(StructureOccurrence("verse-1", "A"))
+        )))
+        val updated = ProjectStore.read(root)
+        val midi = updated.parts.single { it.id == "A" }.midi!!
+        val reference = if (midi.technicalCorrectionSelection == app.melotrail.arrangement.TechnicalCorrectionSelection.CORRECTED) {
+            midi.technicalCorrection!!.output.file
+        } else {
+            midi.clean!!
+        }
+        MidiAnalysisStore.write(root, updated, "A", MidiPartAnalyzer().analyze(root.resolve(reference), "A"))
+    }
+
+    private fun aiFixInput(): app.melotrail.arrangement.MidiAiFixInput {
+        val projection = MusicalAuthorityBuilder().partRepair(root, "A")
+        return app.melotrail.arrangement.MidiAiFixInputFactory.build(projection = projection, selectedInput = root.resolve(projection.part.projectRelativePath))
+    }
 
     private fun writeMidi(path: Path): Path {
         val sequence = Sequence(Sequence.PPQ, 480); val track = sequence.createTrack()

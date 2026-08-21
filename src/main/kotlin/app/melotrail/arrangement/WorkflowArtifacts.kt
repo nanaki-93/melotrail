@@ -194,7 +194,7 @@ enum class MidiAiFixSelection { PENDING, SKIP, APPROVED }
 
 /**
  * The draft is review evidence only. [approved] is selectable only when it is
- * bound to the exact cleaned-MIDI fingerprint in [inputSha256].
+ * bound to the exact selected corrected-MIDI fingerprint in [inputSha256].
  */
 @Serializable
 data class MidiAiFixReferences(

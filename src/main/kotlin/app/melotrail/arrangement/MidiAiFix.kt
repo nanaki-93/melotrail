@@ -1,5 +1,13 @@
 package app.melotrail.arrangement
 
+import app.melotrail.application.HarmonicTimelineEntry
+import app.melotrail.application.MusicalAuthorityDiagnostic
+import app.melotrail.application.MusicalOccurrence
+import app.melotrail.application.PartRepairProjection
+import app.melotrail.music.MusicalKey
+import app.melotrail.music.PitchClass
+import app.melotrail.music.Tempo
+import app.melotrail.music.TimeSignature
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -25,13 +33,25 @@ import kotlin.math.abs
 data class MidiAiFixInput(
     val version: Int = CURRENT_VERSION,
     val partId: String,
-    val cleanedSha256: String,
+    /** Hash of the selected corrected MIDI. This is not a cleaned-MIDI fallback. */
+    val selectedInputSha256: String,
     val inputHash: String,
     val ppq: Int,
-    val tempoMap: List<MidiTempoChange>,
-    val timeSignatures: List<MidiTimeSignature>,
-    val key: MidiKey? = null,
-    val chords: List<MidiChord> = emptyList(),
+    /** PPQ used by the canonical occurrence and harmonic timelines. */
+    val harmonicPpq: Int,
+    /** Version and hash of the declared musical projection supplied to the advisor. */
+    val contextSchemaVersion: Int,
+    val contextSha256: String,
+    /** Declared settings are authoritative; analysis is diagnostic only. */
+    val declaredKey: MusicalKey,
+    val declaredTempo: Tempo,
+    val declaredMeter: TimeSignature,
+    val occurrenceTimeline: List<MusicalOccurrence>,
+    val harmonicTimeline: List<HarmonicTimelineEntry>,
+    val analyzedObservations: List<MusicalAuthorityDiagnostic>,
+    val melodyIdentity: MelodyIdentity,
+    /** Code-owned repair budget supplied to the advisor; model output cannot relax it. */
+    val limits: MidiAiFixLimits,
     val pitchRange: MidiIntRange? = null,
     val noteDensity: Double,
     val rhythmicDensity: Double,
@@ -41,15 +61,53 @@ data class MidiAiFixInput(
 ) {
     fun requireValid() {
         require(version == CURRENT_VERSION) { "Unsupported AI-fix input version" }
-        require(SAFE_ID.matches(partId) && HASH.matches(cleanedSha256) && HASH.matches(inputHash)) { "AI-fix input identity is invalid" }
-        require(ppq in 24..9_600 && tempoMap.isNotEmpty() && timeSignatures.isNotEmpty()) { "AI-fix timing summary is invalid" }
+        require(SAFE_ID.matches(partId) && HASH.matches(selectedInputSha256) && HASH.matches(inputHash) &&
+            contextSchemaVersion > 0 && HASH.matches(contextSha256)) { "AI-fix input identity is invalid" }
+        require(ppq in 24..9_600 && harmonicPpq >= ppq && harmonicPpq % ppq == 0 && declaredKey.isExecutable && declaredTempo.bpm.isFinite() && declaredTempo.bpm > 0.0) {
+            "AI-fix declared musical context is invalid"
+        }
+        require(occurrenceTimeline.isNotEmpty() && occurrenceTimeline.map(MusicalOccurrence::occurrenceId).distinct().size == occurrenceTimeline.size &&
+            harmonicTimeline.isNotEmpty() && harmonicTimeline.all { it.occurrenceId in occurrenceTimeline.map(MusicalOccurrence::occurrenceId).toSet() }) {
+            "AI-fix occurrence or harmonic context is invalid"
+        }
         require(noteDensity.isFinite() && rhythmicDensity.isFinite() && noteDensity in 0.0..1.0 && rhythmicDensity in 0.0..1.0 && noteCount == notes.size) { "AI-fix note summary is invalid" }
         require(notes.size <= MAX_NOTES && notes.map(MidiAiFixNote::id).distinct().size == notes.size) { "AI-fix note input is invalid" }
         require(problemRegions.size <= MAX_REGIONS && problemRegions.map(MidiAiFixProblemRegion::id).distinct().size == problemRegions.size) { "AI-fix problem regions are invalid" }
+        require(melodyIdentity.sourceSha256 == selectedInputSha256 && melodyIdentity.ppq == ppq &&
+            melodyIdentity.notes.map { it.id.value }.toSet() == notes.map(MidiAiFixNote::id).toSet()) { "AI-fix melody identity is stale or incomplete" }
+        require(limits == MidiAiFixLimits.codeOwned()) { "AI-fix limits must be code-owned" }
         notes.forEach { it.requireValid() }; problemRegions.forEach { it.requireValid() }
     }
 
-    companion object { const val CURRENT_VERSION = 1; const val MAX_NOTES = 4_000; const val MAX_REGIONS = 64 }
+    companion object { const val CURRENT_VERSION = 2; const val MAX_NOTES = 4_000; const val MAX_REGIONS = 64 }
+}
+
+@Serializable
+data class MidiAiFixLimits(
+    val maximumEdits: Int,
+    val maximumAdditions: Int,
+    val maximumTimingShiftBeats: Long,
+    val maximumDurationExtensionBeats: Long,
+    val maximumVelocityDelta: Int,
+    val maximumPitchDelta: Int
+) {
+    init {
+        require(maximumEdits in 1..64 && maximumAdditions in 0..8 && maximumTimingShiftBeats in 0..4 &&
+            maximumDurationExtensionBeats in 0..4 && maximumVelocityDelta in 0..127 && maximumPitchDelta in 0..12) {
+            "AI-fix limits are invalid"
+        }
+    }
+
+    companion object {
+        fun codeOwned() = MidiAiFixLimits(
+            MidiAiFixValidator.MAX_EDITS,
+            MidiAiFixValidator.MAX_ADDITIONS,
+            MidiAiFixValidator.MAX_TIMING_SHIFT_BEATS,
+            MidiAiFixValidator.MAX_DURATION_EXTENSION_BEATS,
+            MidiAiFixValidator.MAX_VELOCITY_DELTA,
+            MidiAiFixValidator.MAX_PITCH_DELTA
+        )
+    }
 }
 
 @Serializable
@@ -98,13 +156,15 @@ data class MidiAiFixEdit(
 data class MidiAiFixPlan(
     val version: Int = CURRENT_VERSION,
     val partId: String,
-    val cleanedSha256: String,
+    val selectedInputSha256: String,
     val inputHash: String,
+    val contextSchemaVersion: Int,
+    val contextSha256: String,
     val model: MidiAiFixModelIdentity,
     val edits: List<MidiAiFixEdit>
 ) {
     fun requireValid(input: MidiAiFixInput) = MidiAiFixValidator.requireValid(this, input)
-    companion object { const val CURRENT_VERSION = 1 }
+    companion object { const val CURRENT_VERSION = 2 }
 }
 
 /**
@@ -116,8 +176,10 @@ data class MidiAiFixPlan(
 private data class MidiAiFixModelResponse(
     val version: Int = MidiAiFixPlan.CURRENT_VERSION,
     val partId: String,
-    val cleanedSha256: String,
+    val selectedInputSha256: String,
     val inputHash: String,
+    val contextSchemaVersion: Int,
+    val contextSha256: String,
     val edits: List<MidiAiFixEdit>
 )
 
@@ -132,7 +194,11 @@ object MidiAiFixValidator {
 
     fun requireValid(plan: MidiAiFixPlan, input: MidiAiFixInput) {
         input.requireValid()
-        require(plan.version == MidiAiFixPlan.CURRENT_VERSION && plan.partId == input.partId && plan.cleanedSha256 == input.cleanedSha256 && plan.inputHash == input.inputHash) { "AI-fix plan identity is stale or invalid" }
+        require(plan.version == MidiAiFixPlan.CURRENT_VERSION && plan.partId == input.partId &&
+            plan.selectedInputSha256 == input.selectedInputSha256 && plan.inputHash == input.inputHash &&
+            plan.contextSchemaVersion == input.contextSchemaVersion && plan.contextSha256 == input.contextSha256) {
+            "AI-fix plan identity or canonical context is stale or invalid"
+        }
         plan.model.requireValid()
         require(plan.edits.size <= MAX_EDITS) { "AI-fix plan exceeds the $MAX_EDITS-edit limit" }
         // An empty plan is a code-owned, safe fallback after bounded replanning.
@@ -186,6 +252,59 @@ object MidiAiFixValidator {
             }
         }
         validateResultingNotes(plan, input)
+        validateCanonicalHarmony(plan, input)
+        validateMelodyIdentity(plan, input)
+    }
+
+    private fun validateMelodyIdentity(plan: MidiAiFixPlan, input: MidiAiFixInput) {
+        val mutations = plan.edits.mapNotNull { edit ->
+            val note = edit.noteId?.let { id -> input.melodyIdentity.notes.singleOrNull { it.id.value == id } } ?: return@mapNotNull null
+            val before = MidiMutationValues(note.channel, note.pitch, note.velocity, note.originalStartTick, note.originalEndTick)
+            val operation = when (edit.kind) {
+                MidiAiFixEditKind.TIMING -> MidiMutationOperation.TIMING
+                MidiAiFixEditKind.DURATION -> MidiMutationOperation.DURATION
+                MidiAiFixEditKind.VELOCITY -> MidiMutationOperation.VELOCITY
+                MidiAiFixEditKind.PITCH -> MidiMutationOperation.PITCH
+                MidiAiFixEditKind.REMOVE_COLLISION_OR_DUPLICATE -> MidiMutationOperation.REMOVE
+                MidiAiFixEditKind.ADD_LOCAL_GAP_NOTE -> return@mapNotNull null
+            }
+            val after = when (edit.kind) {
+                MidiAiFixEditKind.TIMING -> before.copy(startTick = edit.startTick!!)
+                MidiAiFixEditKind.DURATION -> before.copy(endTick = note.originalStartTick + edit.durationTicks!!)
+                MidiAiFixEditKind.VELOCITY -> before.copy(velocity = edit.velocity!!)
+                MidiAiFixEditKind.PITCH -> before.copy(pitch = edit.pitch!!)
+                MidiAiFixEditKind.REMOVE_COLLISION_OR_DUPLICATE -> null
+                MidiAiFixEditKind.ADD_LOCAL_GAP_NOTE -> null
+            }
+            MidiMutation(operation, note.id, before, after, MidiMutationReasonCode.TIMING_REPAIR)
+        }
+        MidiMutationInvariants.requireAnchorPreservation(input.melodyIdentity, mutations)
+        MidiMutationInvariants.requireAllowedPitchDelta(input.melodyIdentity, mutations, MAX_PITCH_DELTA)
+        mutations.forEach { MidiMutationInvariants.requireOccurrenceWindow(input.melodyIdentity, it) }
+    }
+
+    /** A repeated source part is rendered at every stable occurrence, so a pitch must fit every active declared chord. */
+    private fun validateCanonicalHarmony(plan: MidiAiFixPlan, input: MidiAiFixInput) {
+        fun requireFit(pitch: Int, start: Long, end: Long) {
+            require(input.declaredKey.contains(PitchClass.canonical(pitch % 12))) { "AI-fix pitch violates declared project scale" }
+            val scale = (input.harmonicPpq / input.ppq).toLong()
+            val canonicalStart = Math.multiplyExact(start, scale)
+            val canonicalEnd = Math.multiplyExact(end, scale)
+            val matches = input.occurrenceTimeline.flatMap { occurrence ->
+                input.harmonicTimeline.filter { chord -> chord.occurrenceId == occurrence.occurrenceId &&
+                    chord.startTick < occurrence.startTick + canonicalEnd && occurrence.startTick + canonicalStart < chord.endTick }
+            }
+            require(matches.isNotEmpty()) { "AI-fix pitch has no resolved canonical harmonic position" }
+            require(matches.all { chord -> (pitch % 12) in chord.chord.quality.intervals.map { (chord.chord.rootChromatic + it) % 12 } }) {
+                "AI-fix pitch clashes with the declared active chord"
+            }
+        }
+        val notes = input.notes.associateBy(MidiAiFixNote::id)
+        plan.edits.forEach { edit -> when (edit.kind) {
+            MidiAiFixEditKind.PITCH -> notes.getValue(edit.noteId!!).let { requireFit(edit.pitch!!, it.startTick, it.endTick) }
+            MidiAiFixEditKind.ADD_LOCAL_GAP_NOTE -> requireFit(edit.pitch!!, edit.startTick!!, edit.endTick!!)
+            else -> Unit
+        } }
     }
 
     /**
@@ -214,6 +333,9 @@ object MidiAiFixValidator {
         require(kept.all { it.start >= 0 && it.end > it.start && it.pitch in 0..127 && it.velocity in 1..127 }) {
             "AI-fix plan produces an invalid note"
         }
+        require(kept.maxOf(ResultingNote::end) == input.notes.maxOf(MidiAiFixNote::endTick)) {
+            "AI-fix plan changes MIDI duration"
+        }
         val collision = kept.groupBy { it.channel to it.pitch }.values
             .asSequence()
             .flatMap { it.sortedBy { note -> note.start }.zipWithNext().asSequence() }
@@ -235,7 +357,14 @@ object MidiAiFixValidator {
 }
 
 @Serializable
-data class MidiAiFixDiff(val version: Int = 1, val partId: String, val inputSha256: String, val outputSha256: String, val edits: List<MidiAiFixEdit>)
+data class MidiAiFixDiff(
+    val version: Int = 2,
+    val partId: String,
+    val inputSha256: String,
+    val outputSha256: String,
+    val edits: List<MidiAiFixEdit>,
+    val mutationReport: MidiMutationReport
+)
 @Serializable
 data class MidiAiFixAudit(val version: Int = 1, val partId: String, val inputSha256: String, val outputSha256: String, val planSha256: String, val editCount: Int, val roundTripValid: Boolean)
 @Serializable
@@ -258,8 +387,10 @@ class LocalQwenMidiAiFixPlanner(
             val candidate = MidiAiFixPlan(
                 version = parsed.version,
                 partId = parsed.partId,
-                cleanedSha256 = parsed.cleanedSha256,
+                selectedInputSha256 = parsed.selectedInputSha256,
                 inputHash = parsed.inputHash,
+                contextSchemaVersion = parsed.contextSchemaVersion,
+                contextSha256 = parsed.contextSha256,
                 model = model,
                 edits = parsed.edits
             )
@@ -277,8 +408,10 @@ class LocalQwenMidiAiFixPlanner(
         // validated plan as a successful no-safe-change outcome.
         return MidiAiFixPlan(
             partId = input.partId,
-            cleanedSha256 = input.cleanedSha256,
+            selectedInputSha256 = input.selectedInputSha256,
             inputHash = input.inputHash,
+            contextSchemaVersion = input.contextSchemaVersion,
+            contextSha256 = input.contextSha256,
             model = model,
             edits = emptyList()
         ).also { it.requireValid(input) }
@@ -302,13 +435,16 @@ class LocalQwenMidiAiFixPlanner(
         val SYSTEM_PROMPT = """
             Return one JSON object only: no markdown, prose, reasoning, or fields other than the exact response schema below.
             {
-              "version": 1,
+              "version": 2,
               "partId": "copy the supplied value exactly",
-              "cleanedSha256": "copy the supplied value exactly",
+              "selectedInputSha256": "copy the supplied value exactly",
               "inputHash": "copy the supplied value exactly",
+              "contextSchemaVersion": "copy the supplied value exactly",
+              "contextSha256": "copy the supplied value exactly",
               "edits": [{ "kind": "timing", "noteId": "a supplied note id", "startTick": 0 }]
             }
             The model field is code-owned: never include it. Return 1 to 32 edits only, and edit each note at most once.
+            declaredKey, declaredTempo, declaredMeter, occurrenceTimeline, and harmonicTimeline are canonical project authority. analyzedObservations are diagnostics only and never override declared values.
             The complete resulting MIDI must have no overlapping notes sharing the same MIDI channel and pitch. Check every timing, duration, pitch, and added-note edit against all supplied notes before responding.
             Use only these edit objects, with exactly the fields stated for that kind:
             - timing: {"kind":"timing","noteId":"supplied id","startTick":new non-negative integer}; startTick must differ from the note's supplied startTick and move it by no more than ppq / 4 ticks.
@@ -328,7 +464,7 @@ class MidiAiFixTransformer {
     fun apply(input: Path, output: Path, plan: MidiAiFixPlan, modelInput: MidiAiFixInput): MidiAiFixDiff {
         plan.requireValid(modelInput)
         val before = sha256(input)
-        require(before == modelInput.cleanedSha256) { "Cleaned MIDI changed before applying the AI fix" }
+        require(before == modelInput.selectedInputSha256) { "Selected MIDI changed before applying the AI fix" }
         val sequence = read(input)
         require(sequence.resolution == modelInput.ppq) { "Cleaned MIDI PPQ no longer matches AI-fix input" }
         val notes = notes(sequence, input)
@@ -351,7 +487,63 @@ class MidiAiFixTransformer {
         val result = read(output); val outputNotes = notes(result, output)
         require(result.resolution == sequence.resolution && tempoMap(result) == tempoMap(sequence) && signatures(result) == signatures(sequence)) { "AI-fix output changed MIDI timing metadata" }
         require(outputNotes.size == all.size && noCollisions(outputNotes.map { it.toMutable() })) { "AI-fix output did not round-trip" }
-        return MidiAiFixDiff(partId = modelInput.partId, inputSha256 = before, outputSha256 = sha256(output), edits = plan.edits)
+        val outputHash = sha256(output)
+        return MidiAiFixDiff(
+            partId = modelInput.partId,
+            inputSha256 = before,
+            outputSha256 = outputHash,
+            edits = plan.edits,
+            mutationReport = mutationReport(modelInput, plan, outputHash)
+        ).also { it.mutationReport.requireValid() }
+    }
+
+    private fun mutationReport(input: MidiAiFixInput, plan: MidiAiFixPlan, outputSha256: String): MidiMutationReport {
+        val notes = input.melodyIdentity.notes.associateBy { it.id.value }
+        var additionOrdinal = input.melodyIdentity.notes.maxOfOrNull { it.noteOnOrdinal }?.plus(1) ?: 0
+        val mutations = plan.edits.map { edit ->
+            if (edit.kind == MidiAiFixEditKind.ADD_LOCAL_GAP_NOTE) {
+                val values = MidiMutationValues(0, edit.pitch!!, edit.velocity!!, edit.startTick!!, edit.endTick!!)
+                MidiMutation(MidiMutationOperation.ADD, MelodyNoteId.derive(input.selectedInputSha256, 0, 0, additionOrdinal++, values.pitch, values.startTick, values.endTick), null, values, MidiMutationReasonCode.TIMING_REPAIR)
+            } else {
+                val note = notes.getValue(edit.noteId!!)
+                val before = MidiMutationValues(note.channel, note.pitch, note.velocity, note.originalStartTick, note.originalEndTick)
+                val operation = when (edit.kind) {
+                    MidiAiFixEditKind.TIMING -> MidiMutationOperation.TIMING
+                    MidiAiFixEditKind.DURATION -> MidiMutationOperation.DURATION
+                    MidiAiFixEditKind.VELOCITY -> MidiMutationOperation.VELOCITY
+                    MidiAiFixEditKind.PITCH -> MidiMutationOperation.PITCH
+                    MidiAiFixEditKind.REMOVE_COLLISION_OR_DUPLICATE -> MidiMutationOperation.REMOVE
+                    MidiAiFixEditKind.ADD_LOCAL_GAP_NOTE -> error("unreachable")
+                }
+                val after = when (edit.kind) {
+                    MidiAiFixEditKind.TIMING -> before.copy(startTick = edit.startTick!!)
+                    MidiAiFixEditKind.DURATION -> before.copy(endTick = before.startTick + edit.durationTicks!!)
+                    MidiAiFixEditKind.VELOCITY -> before.copy(velocity = edit.velocity!!)
+                    MidiAiFixEditKind.PITCH -> before.copy(pitch = edit.pitch!!)
+                    MidiAiFixEditKind.REMOVE_COLLISION_OR_DUPLICATE -> null
+                    MidiAiFixEditKind.ADD_LOCAL_GAP_NOTE -> error("unreachable")
+                }
+                val reason = when (edit.kind) {
+                    MidiAiFixEditKind.TIMING -> MidiMutationReasonCode.TIMING_REPAIR
+                    MidiAiFixEditKind.DURATION, MidiAiFixEditKind.VELOCITY, MidiAiFixEditKind.PITCH -> MidiMutationReasonCode.HARMONY_REPAIR
+                    MidiAiFixEditKind.REMOVE_COLLISION_OR_DUPLICATE -> MidiMutationReasonCode.COLLISION_REPAIR
+                    MidiAiFixEditKind.ADD_LOCAL_GAP_NOTE -> error("unreachable")
+                }
+                MidiMutation(operation, note.id, before, after, reason)
+            }
+        }.sortedWith(compareBy<MidiMutation> { it.noteId.value }.thenBy { it.operation.ordinal })
+        val additions = plan.edits.count { it.kind == MidiAiFixEditKind.ADD_LOCAL_GAP_NOTE }
+        val deletions = plan.edits.count { it.kind == MidiAiFixEditKind.REMOVE_COLLISION_OR_DUPLICATE }
+        return MidiMutationReport(
+            inputSha256 = input.selectedInputSha256,
+            outputSha256 = outputSha256,
+            contextSha256 = input.contextSha256,
+            target = "part-${input.partId}",
+            stage = MidiMutationStage.AI_FIX,
+            mutations = mutations,
+            budget = MidiMutationBudget(input.noteCount, plan.edits.size - additions, additions, deletions,
+                MidiAiFixValidator.MAX_EDITS, MidiAiFixValidator.MAX_ADDITIONS, MidiAiFixValidator.MAX_EDITS)
+        )
     }
 
     private fun publish(source: Sequence, notes: List<Note>, transformed: Map<String, MutableNote>, additions: List<MutableNote>, output: Path) {
@@ -430,22 +622,27 @@ object MidiAiFixStore {
 
     fun writeDraft(root: Path, input: MidiAiFixInput, plan: MidiAiFixPlan, diff: MidiAiFixDiff): MidiAiFixReferences {
         plan.requireValid(input)
-        require(diff.inputSha256 == input.cleanedSha256 && HASH.matches(diff.outputSha256)) { "AI-fix draft evidence is invalid" }
+        require(diff.version == 2 && diff.inputSha256 == input.selectedInputSha256 && HASH.matches(diff.outputSha256) &&
+            diff.mutationReport.inputSha256 == input.selectedInputSha256 && diff.mutationReport.outputSha256 == diff.outputSha256 &&
+            diff.mutationReport.contextSha256 == input.contextSha256 && diff.mutationReport.stage == MidiMutationStage.AI_FIX) {
+            "AI-fix draft evidence is invalid"
+        }
+        diff.mutationReport.requireValid()
         val normalized = root.toAbsolutePath().normalize(); val partId = input.partId
         val draft = normalized.resolve(MidiAiFixArtifactPaths.draft(partId)); require(sha256(draft) == diff.outputSha256) { "AI-fix draft MIDI hash does not match its evidence" }
         write(normalized.resolve(MidiAiFixArtifactPaths.plan(partId)), json.encodeToString(plan))
         write(normalized.resolve(MidiAiFixArtifactPaths.diff(partId)), json.encodeToString(diff))
         val planHash = sha256(normalized.resolve(MidiAiFixArtifactPaths.plan(partId)))
-        write(normalized.resolve(MidiAiFixArtifactPaths.audit(partId)), json.encodeToString(MidiAiFixAudit(partId = partId, inputSha256 = input.cleanedSha256, outputSha256 = diff.outputSha256, planSha256 = planHash, editCount = plan.edits.size, roundTripValid = true)))
-        write(normalized.resolve(MidiAiFixArtifactPaths.provenance(partId)), json.encodeToString(MidiAiFixProvenance(partId = partId, inputSha256 = input.cleanedSha256, outputSha256 = diff.outputSha256, model = plan.model)))
-        val references = MidiAiFixReferences(input.cleanedSha256, WorkflowArtifactReference(MidiAiFixArtifactPaths.draft(partId), diff.outputSha256))
+        write(normalized.resolve(MidiAiFixArtifactPaths.audit(partId)), json.encodeToString(MidiAiFixAudit(partId = partId, inputSha256 = input.selectedInputSha256, outputSha256 = diff.outputSha256, planSha256 = planHash, editCount = plan.edits.size, roundTripValid = true)))
+        write(normalized.resolve(MidiAiFixArtifactPaths.provenance(partId)), json.encodeToString(MidiAiFixProvenance(partId = partId, inputSha256 = input.selectedInputSha256, outputSha256 = diff.outputSha256, model = plan.model)))
+        val references = MidiAiFixReferences(input.selectedInputSha256, WorkflowArtifactReference(MidiAiFixArtifactPaths.draft(partId), diff.outputSha256))
         val project = ProjectStore.read(normalized); val part = project.parts.singleOrNull { it.id == partId } ?: error("Part not found: $partId")
         val midi = requireNotNull(part.midi) { "Part '$partId' has no cleaned MIDI" }
         val selectedInput = when (midi.technicalCorrectionSelection) {
             TechnicalCorrectionSelection.CORRECTED -> requireNotNull(midi.technicalCorrection).output.file
             TechnicalCorrectionSelection.BASE -> requireNotNull(midi.clean)
         }
-        require(sha256(normalized.resolve(selectedInput)) == input.cleanedSha256) { "Selected MIDI changed before AI-fix draft publication" }
+        require(sha256(normalized.resolve(selectedInput)) == input.selectedInputSha256) { "Selected MIDI changed before AI-fix draft publication" }
         ProjectStore.write(normalized, project.copy(parts = project.parts.map { if (it.id == partId) it.copy(midi = midi.copy(aiFixSelection = MidiAiFixSelection.PENDING, aiFix = references)) else it }, workflow = project.workflow.markCurrent(WorkflowArtifact.AI_FIX)))
         return references
     }
@@ -453,14 +650,14 @@ object MidiAiFixStore {
     fun approve(root: Path, partId: String, input: MidiAiFixInput): MidiAiFixReferences {
         val normalized = root.toAbsolutePath().normalize(); val project = ProjectStore.read(normalized); val part = project.parts.singleOrNull { it.id == partId } ?: error("Part not found: $partId")
         val midi = requireNotNull(part.midi); val refs = requireNotNull(midi.aiFix) { "No AI-fix draft exists. Create one first." }
-        require(refs.inputSha256 == input.cleanedSha256 && refs.draft != null) { "AI-fix draft is stale. Regenerate it." }
+        require(refs.inputSha256 == input.selectedInputSha256 && refs.draft != null) { "AI-fix draft is stale. Regenerate it." }
         val draft = normalized.resolve(refs.draft.file); require(sha256(draft) == refs.draft.sha256) { "AI-fix draft is stale. Regenerate it." }
         val plan = readPlan(normalized, partId); plan.requireValid(input)
-        val diff = readDiff(normalized, partId); require(diff.inputSha256 == input.cleanedSha256 && diff.outputSha256 == refs.draft.sha256) { "AI-fix diff is stale" }
+        val diff = readDiff(normalized, partId); require(diff.version == 2 && diff.inputSha256 == input.selectedInputSha256 && diff.outputSha256 == refs.draft.sha256 && diff.mutationReport.contextSha256 == input.contextSha256) { "AI-fix diff is stale" }
         val approved = normalized.resolve(MidiAiFixArtifactPaths.approved(partId)); copyAtomically(draft, approved)
         val approvedRef = WorkflowArtifactReference(MidiAiFixArtifactPaths.approved(partId), sha256(approved))
         val updatedRefs = refs.copy(approved = approvedRef)
-        write(normalized.resolve(MidiAiFixArtifactPaths.provenance(partId)), json.encodeToString(MidiAiFixProvenance(partId = partId, inputSha256 = input.cleanedSha256, outputSha256 = approvedRef.sha256, model = plan.model, approved = true)))
+        write(normalized.resolve(MidiAiFixArtifactPaths.provenance(partId)), json.encodeToString(MidiAiFixProvenance(partId = partId, inputSha256 = input.selectedInputSha256, outputSha256 = approvedRef.sha256, model = plan.model, approved = true)))
         ProjectStore.write(normalized, project.copy(parts = project.parts.map { if (it.id == partId) it.copy(analysis = null, midi = midi.copy(aiFixSelection = MidiAiFixSelection.APPROVED, aiFix = updatedRefs, analysisInput = MidiAnalysisInput.CURRENT, feel = null)) else it }, workflow = project.workflow.invalidate(WorkflowChange.AI_FIX_SELECTION).markCurrent(WorkflowArtifact.AI_FIX)))
         return updatedRefs
     }
@@ -502,14 +699,43 @@ object MidiAiFixStore {
     private fun sha256(path: Path): String = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
 }
 
-/** Builds one deterministic path-free summary and detected-problem vocabulary from cleaned MIDI. */
+/** Builds a bounded advisor DTO from the canonical part-repair projection and selected MIDI. */
 object MidiAiFixInputFactory {
-    fun build(partId: String, cleaned: Path): MidiAiFixInput {
-        val analysis = MidiPartAnalyzer().analyze(cleaned, partId)
-        val notes = collectNotes(cleaned, analysis.ppq * 4L / analysis.timeSignatures.first().denominator)
-        require(notes.size == analysis.noteCount && notes.size <= MidiAiFixInput.MAX_NOTES) { "Cleaned MIDI is too large or inconsistent for bounded AI fix" }
+    fun build(projection: PartRepairProjection, selectedInput: Path): MidiAiFixInput {
+        require(Files.isRegularFile(selectedInput) && sha256(selectedInput) == projection.part.sha256) { "Selected MIDI changed before AI-fix context assembly" }
+        val analysis = projection.analysis.analysis
+        require(analysis.partId == projection.part.partId && projection.analysis.selectedMidiSha256 == projection.part.sha256) {
+            "AI-fix analysis does not describe the selected canonical MIDI"
+        }
+        require(projection.harmonyPpq % analysis.ppq == 0) { "AI-fix harmonic timeline cannot represent selected MIDI timing" }
+        val beatTicks = analysis.ppq * 4L / projection.meter.denominator
+        val notes = collectNotes(selectedInput, beatTicks)
+        require(notes.size == analysis.noteCount && notes.size <= MidiAiFixInput.MAX_NOTES) { "Selected MIDI is too large or inconsistent for bounded AI fix" }
         val regions = problems(notes, analysis.ppq)
-        val withoutHash = MidiAiFixInput(partId = partId, cleanedSha256 = sha256(cleaned), inputHash = "0".repeat(64), ppq = analysis.ppq, tempoMap = analysis.tempoMap, timeSignatures = analysis.timeSignatures, key = analysis.key, chords = analysis.chords, pitchRange = analysis.pitchRange, noteDensity = analysis.noteDensity, rhythmicDensity = analysis.rhythmicDensity, noteCount = notes.size, notes = notes, problemRegions = regions)
+        val identity = MelodyIdentityBuilder.build(selectedInput, beatTicks)
+        val withoutHash = MidiAiFixInput(
+            partId = projection.part.partId,
+            selectedInputSha256 = projection.part.sha256,
+            inputHash = "0".repeat(64),
+            ppq = analysis.ppq,
+            harmonicPpq = projection.harmonyPpq,
+            contextSchemaVersion = projection.schemaVersion,
+            contextSha256 = projection.contextSha256,
+            declaredKey = projection.projectKey,
+            declaredTempo = projection.tempo,
+            declaredMeter = projection.meter,
+            occurrenceTimeline = projection.occurrences,
+            harmonicTimeline = projection.harmony,
+            analyzedObservations = projection.diagnostics,
+            melodyIdentity = identity,
+            limits = MidiAiFixLimits.codeOwned(),
+            pitchRange = analysis.pitchRange,
+            noteDensity = analysis.noteDensity,
+            rhythmicDensity = analysis.rhythmicDensity,
+            noteCount = notes.size,
+            notes = notes,
+            problemRegions = regions
+        )
         return withoutHash.copy(inputHash = sha256(json.encodeToString(withoutHash.copy(inputHash = "")))) .also(MidiAiFixInput::requireValid)
     }
     private fun collectNotes(path: Path, canonicalBeatTicks: Long): List<MidiAiFixNote> =

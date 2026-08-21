@@ -170,7 +170,12 @@ data class PartRepairProjection(
     val meter: TimeSignature,
     val occurrences: List<MusicalOccurrence>,
     val harmony: List<HarmonicTimelineEntry>,
-    val melodyEvidence: List<MelodyEvidenceReference>
+    val harmonyPpq: Int,
+    /** Descriptive analysis only; declared project facts above remain authoritative. */
+    val analysis: CanonicalAnalyzedPartFacts,
+    val melodyEvidence: List<MelodyEvidenceReference>,
+    /** Inference conflicts are visible to the repair advisor but never executable authority. */
+    val diagnostics: List<MusicalAuthorityDiagnostic>
 )
 
 @Serializable
@@ -276,7 +281,10 @@ class MusicalAuthorityBuilder(
             contextSha256 = authority.contextSha256, part = part, projectKey = authority.projectKey,
             tempo = authority.tempo, meter = authority.meter, occurrences = occurrences,
             harmony = occurrences.flatMap { authority.harmonicTimeline.forOccurrence(it.occurrenceId) },
-            melodyEvidence = authority.melodyEvidenceReferences.filter { it.partId == partId }
+            harmonyPpq = authority.harmonicTimeline.ppq,
+            analysis = authority.analyzedFacts.single { it.partId == partId },
+            melodyEvidence = authority.melodyEvidenceReferences.filter { it.partId == partId },
+            diagnostics = authority.diagnostics.filter { it.partId == partId }
         )
     }
 
