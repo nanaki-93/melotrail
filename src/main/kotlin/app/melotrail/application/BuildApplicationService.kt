@@ -91,7 +91,7 @@ class DefaultBuildApplicationService(
                     }
                     val cohesion = cohesionService.load(root)
                     require(cohesion.approved && !cohesion.approvalRequired && !cohesion.stale) {
-                        "Build Song requires current approved full-song Cohesion & Enhance. Regenerate, compare, and approve it."
+                        "Build Song requires current approved Cohesion. Regenerate, compare, and approve it."
                     }
                     if (!worker.healthCheck()) throw ApplicationServiceException(ApplicationErrorCategory.WORKER, "Python worker is not running. Start it with `make worker`.")
                     requireCurrentFullSongEnhancement(root)
@@ -173,17 +173,17 @@ class DefaultBuildApplicationService(
     private fun requireCurrentGeneratedMidi(root: Path) {
         val project = ProjectStore.read(root)
         require(WorkflowArtifact.GENERATED_MIDI !in project.workflow.stale) {
-            "Build Song requires current ensemble MIDI created before Cohesion & Enhance. Regenerate Cohesion & Enhance."
+            "Build Song requires current ensemble MIDI created before Cohesion. Regenerate Cohesion."
         }
         val arrangement = requireNotNull(project.workflow.arrangement)
         val generated = requireNotNull(project.workflow.generatedMidi) {
-            "Build Song requires fingerprinted ensemble MIDI. Regenerate Cohesion & Enhance."
+            "Build Song requires fingerprinted ensemble MIDI. Regenerate Cohesion."
         }
         require(generated.arrangementSha256 == arrangement.arrangement.sha256) { "Generated ensemble MIDI belongs to another arrangement." }
         generated.artifacts.forEach { reference ->
             val path = root.resolve(reference.artifact.file).normalize()
             require(path.startsWith(root) && Files.isRegularFile(path) && digest(path) == reference.artifact.sha256) {
-                "Generated ensemble MIDI '${reference.id}' is missing or changed. Regenerate Cohesion & Enhance."
+                "Generated ensemble MIDI '${reference.id}' is missing or changed. Regenerate Cohesion."
             }
         }
     }

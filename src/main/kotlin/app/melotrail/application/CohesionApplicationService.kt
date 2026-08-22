@@ -28,7 +28,7 @@ import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 
-/** Cohesion & Enhance is one bounded full-song post-arrangement planning stage. */
+/** Cohesion is one bounded post-arrangement transition-planning stage. */
 enum class CohesionPlannerKind { QWEN }
 data class GenerateCohesionRequest(
     val root: Path,
@@ -76,7 +76,7 @@ interface CohesionApplicationService {
     suspend fun regenerate(request: GenerateCohesionRequest, progress: ProgressSink = ProgressSink.None) = generate(request, progress)
 }
 
-/** UI-neutral orchestration for baseline generation, bounded enhancement, rendered A/B review, and exact promotion. */
+/** UI-neutral orchestration for baseline generation, bounded boundary planning, A/B review, and exact promotion. */
 class DefaultCohesionApplicationService(
     private val ensemblePreparation: EnsembleMidiPreparation = EnsembleMidiPreparation { _, _ -> },
     private val previewPreparation: CohesionPreviewPreparation = CohesionPreviewPreparation { _, _ -> null },
@@ -91,13 +91,13 @@ class DefaultCohesionApplicationService(
     override suspend fun generate(request: GenerateCohesionRequest, progress: ProgressSink): CohesionSnapshot = mutate(request.root) { root ->
         progress.report(OperationProgress("cohesion", 1, 5, "Preparing the approved arrangement ensemble"))
         ensemblePreparation.prepare(root, progress)
-        progress.report(OperationProgress("cohesion", 2, 5, "Validating full-song musical evidence"))
+        progress.report(OperationProgress("cohesion", 2, 5, "Validating adjacent-boundary musical evidence"))
         val input = currentInput(root, request.intensity)
-        progress.report(OperationProgress("cohesion", 3, 5, "Requesting bounded Cohesion & Enhance plan"))
+        progress.report(OperationProgress("cohesion", 3, 5, "Requesting bounded Cohesion plan"))
         val plan = qwenPlanner(input)
-        progress.report(OperationProgress("cohesion", 4, 5, "Publishing enhanced melody and ensemble MIDI"))
+        progress.report(OperationProgress("cohesion", 4, 5, "Publishing boundary Cohesion MIDI"))
         TransitionCohesionStore.writeDraft(root, input, plan)
-        progress.report(OperationProgress("cohesion", 5, 5, "Rendering whole-song baseline and enhanced previews"))
+        progress.report(OperationProgress("cohesion", 5, 5, "Rendering Cohesion baseline and preview"))
         previewPreparation.render(root, input)?.let { TransitionCohesionStore.attachPreviews(root, input, it) }
         snapshot(root, input, plan, false)
     }
@@ -142,10 +142,10 @@ class DefaultCohesionApplicationService(
             "Cohesion requires a current approved arrangement. Regenerate and approve Arrangement first."
         }
         require(WorkflowArtifact.GENERATED_MIDI !in project.workflow.stale) {
-            "Cohesion & Enhance requires current baseline ensemble MIDI for the approved arrangement."
+            "Cohesion requires current baseline ensemble MIDI for the approved arrangement."
         }
         val generated = requireNotNull(project.workflow.generatedMidi) {
-            "Cohesion & Enhance requires fingerprinted baseline ensemble MIDI."
+            "Cohesion requires fingerprinted baseline ensemble MIDI."
         }
         require(generated.arrangementSha256 == approval.arrangement.sha256) {
             "Baseline ensemble MIDI belongs to another arrangement."
@@ -196,8 +196,8 @@ class DefaultCohesionApplicationService(
             approvalRequired = !approved, approved = approved, stale = false,
             artifact = root.resolve(if (approved) TransitionCohesionStore.APPROVED_FILE else TransitionCohesionStore.DRAFT_FILE),
             intensity = input.intensity,
-            melodyEditCount = plan.songEdits.count { it.target == app.melotrail.arrangement.SongEnhancementTarget.MELODY } + plan.boundaries.sumOf { it.melodyEdits.size },
-            accompanimentEditCount = plan.songEdits.count { it.target == app.melotrail.arrangement.SongEnhancementTarget.GENERATED_ROLE },
+            melodyEditCount = plan.boundaries.sumOf { it.melodyEdits.size },
+            accompanimentEditCount = plan.boundaries.size,
             baselinePreview = cohesionWorkflow?.previews?.baseline?.file?.let(root::resolve),
             enhancedPreview = cohesionWorkflow?.previews?.enhanced?.file?.let(root::resolve))
     }

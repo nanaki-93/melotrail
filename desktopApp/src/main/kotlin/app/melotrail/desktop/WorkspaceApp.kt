@@ -1169,7 +1169,7 @@ internal fun CompactTransport(state: WorkspaceUiState, onIntent: (WorkspaceInten
     val label = when (val request = session.request) {
         is PlaybackRequest.Part -> "Part ${request.partId} preview"
         is PlaybackRequest.Mix -> request.source.name.lowercase().replaceFirstChar(Char::uppercase) + " mix"
-        is PlaybackRequest.Cohesion -> if (request.enhanced) "Enhanced full-song preview" else "Baseline full-song preview"
+    is PlaybackRequest.Cohesion -> if (request.enhanced) "Cohesion preview" else "Baseline preview"
         null -> "Dry mix"
     }
     Card(
@@ -1532,7 +1532,7 @@ private fun statusText(state: WorkspaceUiState): String = when (val operation = 
     is WorkspaceOperation.TranscribingPart -> "Running transcription quality gate for ${operation.id}…"
     is WorkspaceOperation.UpdatingPartRole -> "Saving ${operation.id} role…"
     WorkspaceOperation.SavingStructure -> "Saving song structure…"
-    is WorkspaceOperation.GeneratingCohesion -> "Enhancing the arranged full song and rendering A/B previews…"
+    is WorkspaceOperation.GeneratingCohesion -> "Creating boundary Cohesion and rendering A/B previews…"
     is WorkspaceOperation.ReviewingCohesion -> "Recording review for cohesion boundary ${operation.outgoingInstanceId} → ${operation.incomingInstanceId}…"
     WorkspaceOperation.ApprovingCohesion -> "Approving validated cohesion…"
     is WorkspaceOperation.GeneratingArrangement -> "Generating reviewed song plan and detailed arrangement…"

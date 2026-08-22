@@ -2,7 +2,6 @@ package app.melotrail.arrangement
 
 import app.melotrail.profile.BundledCompositionProfileCatalog
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import java.nio.charset.StandardCharsets
@@ -22,7 +21,7 @@ import kotlin.math.roundToLong
 @Serializable
 data class CohesionModelIdentity(val provider: String, val model: String, val sha256: String) {
     init { require(provider.matches(Regex("[a-z0-9_-]{1,40}")) && model.length in 1..80 && sha256.matches(Regex("[0-9a-f]{64}"))) { "Cohesion model identity is invalid" } }
-    companion object { val DETERMINISTIC = CohesionModelIdentity("deterministic", "cohesion-song-enhance-v5", "0".repeat(64)) }
+    companion object { val DETERMINISTIC = CohesionModelIdentity("deterministic", "cohesion-boundary-v6", "0".repeat(64)) }
 }
 
 @Serializable enum class CohesionEnhancementIntensity { SUBTLE, BALANCED, CREATIVE }
@@ -49,7 +48,7 @@ data class CohesionEnhancementPolicy(val melodyPercent: Int, val rolePercent: In
     val intensity: CohesionEnhancementIntensity = CohesionEnhancementIntensity.BALANCED,
     val occurrences: List<SongOccurrenceEvidence> = emptyList(),
     val generatedRoles: List<GeneratedRoleEvidence> = emptyList()
-) { companion object { const val VERSION = 5 } }
+) { companion object { const val VERSION = 6 } }
 
 @Serializable data class SongOccurrenceEvidence(val instanceId: String, val evidence: TransitionMusicalEvidence)
 @Serializable data class GeneratedRoleEvidence(val role: String, val sourceHash: String, val ppq: Int, val durationTicks: Long, val notes: List<CohesionMelodyNote>)
@@ -95,30 +94,13 @@ data class CohesionEnhancementPolicy(val melodyPercent: Int, val rolePercent: In
     val model: CohesionModelIdentity,
     val boundaries: List<TransitionBridgePlan>,
     val intensity: CohesionEnhancementIntensity = CohesionEnhancementIntensity.BALANCED,
-    val songEdits: List<SongEnhancementEdit> = emptyList(),
     /** Code-owned result; untrusted planners cannot report their own validation. */
     val validation: TransitionCohesionValidationReport = TransitionCohesionValidationReport(),
-    /** One whole-song approval is code-owned and promotes the exact reviewed A/B candidate. */
+    /** One code-owned approval promotes the exact reviewed boundary candidate. */
     val approval: TransitionCohesionApproval = TransitionCohesionApproval.DRAFT
 )
 @Serializable data class TransitionCohesionValidationReport(val errors: List<String> = emptyList()) { val valid: Boolean get() = errors.isEmpty() }
 @Serializable enum class TransitionCohesionApproval { DRAFT, APPROVED }
-
-@Serializable enum class SongEnhancementTarget { MELODY, GENERATED_ROLE }
-@Serializable data class SongEnhancementEdit(
-    val target: SongEnhancementTarget,
-    val targetId: String,
-    val kind: CohesionMelodyEditKind,
-    val noteId: String,
-    val value: Long = 0,
-    val pitch: Int? = null,
-    val velocity: Int? = null,
-    val startTick: Long? = null,
-    val durationTicks: Long? = null,
-    val channel: Int? = null,
-    val anchorNoteId: String? = null,
-    val reason: String
-)
 
 /**
  * Compact, path-free evidence supplied to the model. Identity values are
@@ -127,12 +109,8 @@ data class CohesionEnhancementPolicy(val melodyPercent: Int, val rolePercent: In
 @Serializable private data class TransitionCohesionModelInput(
     val supportedInstruments: List<String>,
     val boundaries: List<TransitionCohesionBoundaryEvidence>,
-    val intensity: CohesionEnhancementIntensity,
-    val occurrences: List<SongOccurrenceModelEvidence>,
-    val generatedRoles: List<GeneratedRoleModelEvidence>
+    val intensity: CohesionEnhancementIntensity
 )
-@Serializable private data class SongOccurrenceModelEvidence(val instanceId: String, val summary: TransitionCohesionMusicalSummary)
-@Serializable private data class GeneratedRoleModelEvidence(val role: String, val ppq: Int, val durationTicks: Long, val notes: List<CohesionMelodyNote>)
 @Serializable private data class TransitionCohesionBoundaryEvidence(
     val outgoing: TransitionCohesionMusicalSummary,
     val incoming: TransitionCohesionMusicalSummary,
@@ -194,10 +172,7 @@ data class CohesionEnhancementPolicy(val melodyPercent: Int, val rolePercent: In
     val tailBeats: Int = 0,
     val melodyEdits: List<CohesionMelodyModelEdit> = emptyList()
 )
-@Serializable private data class TransitionCohesionModelResponse(
-    val boundaries: List<TransitionCohesionModelDecision>,
-    val songEdits: List<SongEnhancementEdit> = emptyList()
-)
+@Serializable private data class TransitionCohesionModelResponse(val boundaries: List<TransitionCohesionModelDecision>)
 
 @Serializable data class TransitionBridgePlan(
     val outgoingInstanceId: String,
@@ -279,7 +254,6 @@ object TransitionCohesionValidator {
                 errors += "Cohesion melody edits for '$occurrenceId' exceed the recognizable identity budget"
             }
         }
-        validateSongEdits(plan, input, editedTargets, editCounts, errors)
         return TransitionCohesionValidationResult(errors)
     }
     fun requireValid(plan: TransitionCohesionPlan, input: TransitionCohesionInput) { val result = validate(plan, input); require(result.isValid) { result.errors.joinToString("; ") } }
@@ -311,7 +285,7 @@ object TransitionCohesionValidator {
             }
             else -> {
                 val note = notes[edit.noteId]
-                if (note == null || note.startTick !in windowStart until windowEnd) errors += "$label melody edit targets a note outside its boundary window"
+                if (note == null || note.startTick !in windowStart until windowEnd || note.endTick > windowEnd) errors += "$label melody edit targets a note outside its boundary window"
                 if (melodyAnchorMutation(edit.kind) && note != null && note.id in setOf(evidence.melodyNotes.firstOrNull()?.id, evidence.melodyNotes.lastOrNull()?.id)) {
                     errors += "$label cannot remove, retime, or repitch a recognizable melody anchor"
                 }
@@ -336,84 +310,17 @@ object TransitionCohesionValidator {
         TransitionRoleAction.CONTINUITY -> bridge.instrument in setOf("drums", "bass", "pad", "strings") && bridge.bridgeType == BridgeType.CONTINUITY
     }
 
-    private fun validateSongEdits(
-        plan: TransitionCohesionPlan,
-        input: TransitionCohesionInput,
-        editedTargets: MutableSet<Pair<String, String>>,
-        boundaryEditCounts: Map<String, Int>,
-        errors: MutableList<String>
-    ) {
-        val occurrences = input.occurrences.associateBy(SongOccurrenceEvidence::instanceId)
-        val roles = input.generatedRoles.associateBy(GeneratedRoleEvidence::role)
-        if (input.occurrences.map(SongOccurrenceEvidence::instanceId).distinct().size != input.occurrences.size) errors += "Cohesion occurrence evidence is duplicated"
-        if (input.generatedRoles.map(GeneratedRoleEvidence::role).distinct().size != input.generatedRoles.size) errors += "Cohesion generated-role evidence is duplicated"
-        val policy = CohesionEnhancementPolicy.forIntensity(input.intensity)
-        val counts = boundaryEditCounts.mapKeys { SongEnhancementTarget.MELODY to it.key }.toMutableMap()
-        plan.songEdits.forEach { edit ->
-            if (!id.matches(edit.targetId) || !rationale.matches(edit.reason)) errors += "Song enhancement edit identity or reason is invalid"
-            if (!editedTargets.add(edit.targetId to edit.noteId)) errors += "Song enhancement contains a conflicting edit for '${edit.noteId}'"
-            val evidence = when (edit.target) {
-                SongEnhancementTarget.MELODY -> occurrences[edit.targetId]?.evidence
-                SongEnhancementTarget.GENERATED_ROLE -> roles[edit.targetId]?.let { role ->
-                    TransitionMusicalEvidence(role.role, role.sourceHash, role.sourceHash, role.ppq, role.durationTicks, null, emptyList(), MidiTempoChange(0, 120.0), MidiTimeSignature(0, 4, 4), 0.5, TransitionBoundarySummary(false, false, null, null), TransitionArrangementEvidence("0".repeat(64), SongSectionPurpose.DEVELOPMENT, emptyList(), "0".repeat(64)), role.notes)
-                }
-            }
-            if (evidence == null) { errors += "Song enhancement edit targets unknown ${edit.target.name.lowercase()} '${edit.targetId}'"; return@forEach }
-            validateWholeSongEdit(edit, evidence, edit.target == SongEnhancementTarget.MELODY, policy, errors)
-            val key = edit.target to edit.targetId; counts[key] = counts.getOrDefault(key, 0) + 1
-        }
-        counts.forEach { (target, count) ->
-            val noteCount = if (target.first == SongEnhancementTarget.MELODY) occurrences[target.second]?.evidence?.melodyNotes?.size else roles[target.second]?.notes?.size
-            val maximum = if (target.first == SongEnhancementTarget.MELODY) policy.melodyPercent else policy.rolePercent
-            if (count * 100 / (noteCount ?: 0).coerceAtLeast(1) > maximum) errors += "Song enhancement edits for '${target.second}' exceed the ${maximum}% identity budget"
-        }
-    }
-
-    private fun validateWholeSongEdit(edit: SongEnhancementEdit, evidence: TransitionMusicalEvidence, melody: Boolean, policy: CohesionEnhancementPolicy, errors: MutableList<String>) {
-        val notes = evidence.melodyNotes.associateBy(CohesionMelodyNote::id)
-        val note = notes[edit.noteId]
-        val beat = evidence.ppq * 4L / evidence.meter.denominator
-        when (edit.kind) {
-            CohesionMelodyEditKind.ADD_NOTE -> {
-                val anchor = notes[edit.anchorNoteId]
-                if (!edit.noteId.matches(Regex("add-[0-9]{5}")) || anchor == null || edit.pitch !in 0..127 || edit.velocity !in 1..127 || edit.channel !in 0..15 ||
-                    edit.startTick == null || edit.durationTicks == null || edit.durationTicks <= 0 || edit.durationTicks > beat * 2 || edit.startTick < 0 || edit.startTick + edit.durationTicks > evidence.durationTicks ||
-                    melody && edit.pitch != null && kotlin.math.abs(edit.pitch - anchor.pitch) > 12 ||
-                    !melody && edit.pitch != null && edit.pitch !in rolePitchRange(edit.targetId)) errors += "Song enhancement contains an invalid note addition"
-            }
-            else -> {
-                if (note == null) { errors += "Song enhancement references an unknown note '${edit.noteId}'"; return }
-                if (melody && melodyAnchorMutation(edit.kind) && edit.noteId in setOf(evidence.melodyNotes.firstOrNull()?.id, evidence.melodyNotes.lastOrNull()?.id)) errors += "Song enhancement cannot remove, retime, or repitch a melody endpoint"
-                if (edit.kind == CohesionMelodyEditKind.SET_PITCH && (edit.value !in 0..127 || melody && kotlin.math.abs(edit.value - note.pitch) > 2 ||
-                        !melody && (edit.value.toInt() !in rolePitchRange(edit.targetId) || kotlin.math.abs(edit.value - note.pitch) > 12))) errors += "Song enhancement replacement pitch is invalid"
-                if (edit.kind == CohesionMelodyEditKind.SET_VELOCITY && (edit.value !in 1..127 || kotlin.math.abs(edit.value - note.velocity) > policy.velocityDelta)) errors += "Song enhancement velocity exceeds intensity policy"
-                if (edit.kind == CohesionMelodyEditKind.SET_START && (edit.value < 0 || edit.value + (note.endTick - note.startTick) > evidence.durationTicks || kotlin.math.abs(edit.value - note.startTick) > beat / policy.timingBeatFraction)) errors += "Song enhancement timing exceeds intensity policy"
-                if (edit.kind == CohesionMelodyEditKind.SET_DURATION && (edit.value <= 0 || note.startTick + edit.value > evidence.durationTicks ||
-                        kotlin.math.abs(edit.value - (note.endTick - note.startTick)) > beat / policy.timingBeatFraction)) errors += "Song enhancement duration exceeds intensity policy"
-            }
-        }
-    }
-
     private fun melodyAnchorMutation(kind: CohesionMelodyEditKind): Boolean = kind in setOf(
         CohesionMelodyEditKind.REMOVE_NOTE, CohesionMelodyEditKind.SET_PITCH, CohesionMelodyEditKind.SET_START
     )
 
-    private fun rolePitchRange(role: String): IntRange = when (role) {
-        "bass" -> 28..60
-        "drums" -> 35..81
-        "pad" -> 36..96
-        "strings" -> 36..100
-        else -> 0..127
-    }
 }
 
 class LocalQwenTransitionCohesionPlanner(private val client: LocalQwenClient = LmStudioQwenClient(), private val model: CohesionModelIdentity) {
     fun plan(input: TransitionCohesionInput): TransitionCohesionPlan {
         val response = client.complete(PROMPT, json.encodeToString(TransitionCohesionModelInput.serializer(), modelInput(input)))
         val modelResponse = try {
-            if (response.trimStart().startsWith("[")) TransitionCohesionModelResponse(
-                json.decodeFromString(ListSerializer(TransitionCohesionModelDecision.serializer()), response)
-            ) else json.decodeFromString(TransitionCohesionModelResponse.serializer(), response)
+            json.decodeFromString(TransitionCohesionModelResponse.serializer(), response)
         } catch (error: Exception) {
             throw IllegalArgumentException("Qwen returned invalid transition-cohesion JSON: ${error.message}", error)
         }
@@ -451,7 +358,7 @@ class LocalQwenTransitionCohesionPlanner(private val client: LocalQwenClient = L
                 tailBeats = decision.tailBeats
             )
         }
-        val plan = TransitionCohesionPlan(inputHash = input.inputHash, arrangementSha256 = input.arrangementSha256, contextSha256 = input.contextSha256, model = model, boundaries = boundaries, intensity = input.intensity, songEdits = modelResponse.songEdits)
+        val plan = TransitionCohesionPlan(inputHash = input.inputHash, arrangementSha256 = input.arrangementSha256, contextSha256 = input.contextSha256, model = model, boundaries = boundaries, intensity = input.intensity)
         val validation = TransitionCohesionValidator.validate(plan, input)
         require(validation.isValid) { "Qwen returned an invalid transition-cohesion plan: ${validation.errors.joinToString("; ")}" }
         return plan.copy(validation = TransitionCohesionValidationReport())
@@ -487,12 +394,10 @@ class LocalQwenTransitionCohesionPlanner(private val client: LocalQwenClient = L
                 allowedRoleActions = boundary.allowedRoleActions
             )
         },
-        intensity = input.intensity,
-        occurrences = input.occurrences.map { SongOccurrenceModelEvidence(it.instanceId, summary(it.evidence, useLastChord = false, wholeOccurrence = true)) },
-        generatedRoles = input.generatedRoles.map { GeneratedRoleModelEvidence(it.role, it.ppq, it.durationTicks, modelNotes(it.notes)) }
+        intensity = input.intensity
     )
 
-    private fun summary(evidence: TransitionMusicalEvidence, useLastChord: Boolean, wholeOccurrence: Boolean = false): TransitionCohesionMusicalSummary {
+    private fun summary(evidence: TransitionMusicalEvidence, useLastChord: Boolean): TransitionCohesionMusicalSummary {
         val chords = if (useLastChord) evidence.chords.asReversed() else evidence.chords
         return TransitionCohesionMusicalSummary(
             key = evidence.key,
@@ -506,14 +411,14 @@ class LocalQwenTransitionCohesionPlanner(private val client: LocalQwenClient = L
             purpose = evidence.arrangement.purpose,
             instruments = evidence.arrangement.instruments.map { it.instrument }.distinct().sorted(),
             editableNotes = modelNotes(evidence.melodyNotes.filter { note ->
-                if (wholeOccurrence) return@filter true
                 val bar = evidence.ppq * 4L / evidence.meter.denominator * evidence.meter.numerator
-                if (useLastChord) note.startTick >= (evidence.durationTicks - bar).coerceAtLeast(0) else note.startTick < minOf(bar, evidence.durationTicks)
+                if (useLastChord) note.startTick >= (evidence.durationTicks - bar).coerceAtLeast(0) && note.endTick <= evidence.durationTicks
+                else note.startTick < minOf(bar, evidence.durationTicks) && note.endTick <= minOf(bar, evidence.durationTicks)
             })
         )
     }
 
-    /** Even sampling keeps full-song coverage inside a predictable local-model context window. */
+    /** Even sampling keeps each boundary window inside a predictable local-model context window. */
     private fun modelNotes(notes: List<CohesionMelodyNote>, maximum: Int = 512): List<CohesionMelodyNote> {
         if (notes.size <= maximum) return notes
         return (0 until maximum).map { index -> notes[(index.toLong() * notes.lastIndex / (maximum - 1)).toInt()] }
@@ -523,7 +428,7 @@ class LocalQwenTransitionCohesionPlanner(private val client: LocalQwenClient = L
     private companion object {
         val json = Json { encodeDefaults = true; explicitNulls = false; ignoreUnknownKeys = false }
         const val PROMPT = """
-            Return exactly one JSON object and no markdown or prose, with exactly the keys boundaries and songEdits.
+            Return exactly one JSON object and no markdown or prose, with exactly the key boundaries.
             boundaries is an array containing exactly one object per supplied boundary, in the same order.
             Every boundary object has exactly these keys: roleAction, bars, harmonicHandoff, rhythmicGesture,
             energyContour, rationale, leadBeats, tailBeats, melodyEdits. Choose roleAction only from that boundary's allowedRoleActions.
@@ -537,12 +442,6 @@ class LocalQwenTransitionCohesionPlanner(private val client: LocalQwenClient = L
             reason, and null addition fields. ADD_NOTE uses noteId add-00000, value 0, pitch, velocity, startTick,
             durationTicks, channel, anchorNoteId, and reason. Add or remove notes only when it improves the handoff;
             keep phrase anchors, recognizable contour, tempo, meter, section length, and structure unchanged.
-            songEdits is the bounded full-song enhancement array. Each edit has target MELODY or GENERATED_ROLE,
-            targetId copied from a supplied occurrence instanceId or generated role, kind ADD_NOTE, REMOVE_NOTE,
-            SET_PITCH, SET_START, SET_DURATION, or SET_VELOCITY, noteId, value, optional addition fields, and reason.
-            Improve cross-role rhythm, harmony, voicing, density, dynamics, repetition, and melodic flow. Respect the
-            supplied intensity. Preserve the first and last melody note, all sections, instruments, tempo, meter,
-            PPQ, and total duration. Prefer zero edits when no justified improvement exists.
             Never return instrument, bridgeType, paths, commands, code, MIDI events, DSP values, samples, plugins,
             hashes, model fields, validation, approval, or any key outside this decision schema.
         """
@@ -713,18 +612,18 @@ object CohesionMelodyApplier {
     }
 }
 
-/** Applies validated full-song role edits and folds boundary bridges into the same authoritative role timeline. */
-object CohesionRoleMidiApplier {
-    fun write(root: Path, source: Path, target: Path, evidence: GeneratedRoleEvidence, edits: List<SongEnhancementEdit>, input: TransitionCohesionInput, plan: TransitionCohesionPlan) {
-        val musicalEvidence = TransitionMusicalEvidence(
-            evidence.role, evidence.sourceHash, evidence.sourceHash, evidence.ppq, evidence.durationTicks, null, emptyList(),
-            MidiTempoChange(0, 120.0), MidiTimeSignature(0, 4, 4), 0.5,
-            TransitionBoundarySummary(false, false, null, null),
-            TransitionArrangementEvidence("0".repeat(64), SongSectionPurpose.DEVELOPMENT, emptyList(), "0".repeat(64)), evidence.notes
-        )
-        val mapped = edits.map { edit -> CohesionMelodyEdit(edit.targetId, edit.kind, edit.noteId, edit.value, edit.pitch, edit.velocity, edit.startTick, edit.durationTicks, edit.channel, edit.anchorNoteId, edit.reason) }
-        CohesionMelodyApplier.write(source, target, musicalEvidence, mapped, protectAnchors = false, maximumIdentityPercent = CohesionEnhancementPolicy.forIntensity(input.intensity).rolePercent)
-        mergeBridges(root, target, evidence.role, input, plan)
+/** Copies one generated role and folds only validated boundary bridges into its authoritative timeline. */
+object CohesionRoleBridgeApplier {
+    fun write(root: Path, source: Path, target: Path, role: String, input: TransitionCohesionInput, plan: TransitionCohesionPlan) {
+        require(Files.isRegularFile(source)) { "Generated $role MIDI is missing before Cohesion" }
+        Files.createDirectories(requireNotNull(target.parent))
+        val temporary = target.resolveSibling(".${target.fileName}.copy.tmp")
+        try {
+            Files.copy(source, temporary, StandardCopyOption.REPLACE_EXISTING)
+            mergeBridges(root, temporary, role, input, plan)
+            try { Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE) }
+            catch (_: AtomicMoveNotSupportedException) { Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING) }
+        } finally { Files.deleteIfExists(temporary) }
     }
 
     private fun mergeBridges(root: Path, target: Path, role: String, input: TransitionCohesionInput, plan: TransitionCohesionPlan) {
@@ -844,9 +743,7 @@ object TransitionCohesionStore {
             } else {
                 require(source.sha256 == evidence.sourceHash) { "Cohesion occurrence source is stale" }
                 val boundaryEdits = plan.boundaries.flatMap(TransitionBridgePlan::melodyEdits).filter { it.occurrenceInstanceId == occurrence.id }
-                val songEdits = plan.songEdits.filter { it.target == SongEnhancementTarget.MELODY && it.targetId == occurrence.id }
-                    .map { CohesionMelodyEdit(occurrence.id, it.kind, it.noteId, it.value, it.pitch, it.velocity, it.startTick, it.durationTicks, it.channel, it.anchorNoteId, it.reason) }
-                CohesionMelodyApplier.write(source.path, root.resolve(relative), evidence, boundaryEdits + songEdits, maximumIdentityPercent = CohesionEnhancementPolicy.forIntensity(input.intensity).melodyPercent)
+                CohesionMelodyApplier.write(source.path, root.resolve(relative), evidence, boundaryEdits, maximumIdentityPercent = CohesionEnhancementPolicy.forIntensity(input.intensity).melodyPercent)
             }
             CohesionOccurrenceReference(occurrence.id, source.sha256, WorkflowArtifactReference(relative, digest(root.resolve(relative))), approved, input.inputHash)
         }
@@ -865,9 +762,9 @@ object TransitionCohesionStore {
             }
         } else input.generatedRoles.map { evidence ->
             val source = root.resolve("midi/generated/${evidence.role}.mid")
-            require(Files.isRegularFile(source) && digest(source) == evidence.sourceHash) { "Generated ${evidence.role} MIDI changed before Cohesion & Enhance" }
+            require(Files.isRegularFile(source) && digest(source) == evidence.sourceHash) { "Generated ${evidence.role} MIDI changed before Cohesion" }
             val relative = CohesionRoleArtifactPaths.output(input.inputHash, evidence.role)
-            CohesionRoleMidiApplier.write(root, source, root.resolve(relative), evidence, plan.songEdits.filter { it.target == SongEnhancementTarget.GENERATED_ROLE && it.targetId == evidence.role }, input, plan)
+            CohesionRoleBridgeApplier.write(root, source, root.resolve(relative), evidence.role, input, plan)
             CohesionRoleReference(evidence.role, evidence.sourceHash, WorkflowArtifactReference(relative, digest(root.resolve(relative))), approved, input.inputHash)
         }
         val retainedPreviews = existing?.previews
@@ -929,7 +826,7 @@ object TransitionCohesionInputFactory {
             TransitionRoleAction.DRUM_FILL, TransitionRoleAction.DYNAMICS_AUTOMATION -> "drums" in instruments
             TransitionRoleAction.BASS_MOTION -> "bass" in instruments
             TransitionRoleAction.CHORD_MOTION, TransitionRoleAction.SUSTAINED_TEXTURE -> "pad" in instruments || "strings" in instruments
-            TransitionRoleAction.CONTINUITY -> true
+            TransitionRoleAction.CONTINUITY -> instruments.isNotEmpty()
         } }
         return TransitionPolicyEvidence(profile?.id ?: "legacy", mood?.id ?: "legacy", contextHash, actions.distinct())
     }

@@ -38,6 +38,7 @@ class CohesionMelodyApplierTest {
         val notes = midiNotes(target)
 
         assertArrayEquals(sourceBytes, Files.readAllBytes(source))
+        assertEquals(midiNotes(source).filter { it.first < 7_680 }, notes.filter { it.first < 7_680 })
         assertEquals(20, notes.size)
         assertEquals(60 to 60, notes.first().second to notes.last().second)
         assertTrue(notes.any { (start, pitch, end) -> start == 8_160L && pitch == 62 && end == 8_280L })

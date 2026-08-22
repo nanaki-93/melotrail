@@ -361,7 +361,7 @@ data class CohesionWorkflowReferences(
     val boundaries: List<CohesionBoundaryReference> = emptyList(),
     /** The saved Structure occurrence sequence that produced [inputSha256]. */
     val structureSha256: String = "",
-    /** Full-song generated-role derivatives published by Cohesion & Enhance v5. */
+    /** Generated-role derivatives containing only validated Cohesion boundary bridges. */
     val roles: List<CohesionRoleReference> = emptyList(),
     val intensity: CohesionEnhancementIntensity = CohesionEnhancementIntensity.BALANCED,
     val previews: CohesionPreviewReferences? = null

@@ -70,7 +70,7 @@ import javax.sound.midi.ShortMessage
 class CohesionApplicationServiceTest {
     @TempDir lateinit var root: Path
 
-    @Test fun `full song cohesion uses one aggregate approval`() = runBlocking {
+    @Test fun `boundary cohesion uses one aggregate approval`() = runBlocking {
         project(listOf("A", "A", "A"))
         arrange()
         val service = DefaultCohesionApplicationService(::plan)

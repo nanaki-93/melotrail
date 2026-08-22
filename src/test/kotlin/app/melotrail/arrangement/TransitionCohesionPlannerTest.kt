@@ -1,62 +1,123 @@
 package app.melotrail.arrangement
 
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Files
+import java.nio.file.Path
 
 class TransitionCohesionPlannerTest {
-    @Test fun `model returns compact decisions while application binds arrangement context identity`() {
-        val outgoingHash = "a".repeat(64); val incomingHash = "b".repeat(64)
-        val arrangementHash = "e".repeat(64); val contextHash = "f".repeat(64)
-        val input = TransitionCohesionInput(inputHash = "c".repeat(64), structureSha256 = "d".repeat(64), arrangementSha256 = arrangementHash, contextSha256 = contextHash, supportedInstruments = listOf("drums"), boundaries = listOf(TransitionBoundaryInput("phrase11", "phrase12", evidence("phrase1", outgoingHash), evidence("phrase1", incomingHash), listOf(TransitionRoleAction.DRUM_FILL), policy(contextHash))))
-        val trustedModel = CohesionModelIdentity("qwen", "local", arrangementHash)
-        val response = """[{"roleAction":"DRUM_FILL","bars":1,"harmonicHandoff":"HOLD","rhythmicGesture":"FILL","energyContour":"RISE","rationale":"Carry energy forward"}]"""
+    @TempDir lateinit var root: Path
+
+    @Test fun `model receives only adjacent boundary evidence and binds it to the current input`() {
+        val input = input("phrase11" to "phrase12")
+        val trustedModel = CohesionModelIdentity("qwen", "local", "e".repeat(64))
+        val response = """{"boundaries":[{"roleAction":"DRUM_FILL","bars":1,"harmonicHandoff":"HOLD","rhythmicGesture":"FILL","energyContour":"RISE","rationale":"Carry energy forward"}]}"""
         var prompt = ""
+
         val plan = LocalQwenTransitionCohesionPlanner(LocalQwenClient { _, userPrompt -> prompt = userPrompt; response }, trustedModel).plan(input)
-        assertEquals(trustedModel, plan.model); assertEquals(BridgeType.DRUM_FILL, plan.boundaries.single().bridgeType); assertEquals(outgoingHash, plan.boundaries.single().outgoingHash)
-        assertFalse(prompt.contains(outgoingHash)); assertFalse(prompt.contains(input.inputHash)); assertFalse(prompt.contains(arrangementHash)); assertFalse(prompt.contains(contextHash))
+
+        assertEquals(trustedModel, plan.model)
+        assertEquals(listOf("phrase11" to "phrase12"), plan.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId })
+        assertFalse(prompt.contains(input.inputHash))
+        assertFalse(prompt.contains(input.arrangementSha256))
+        assertFalse(prompt.contains("phrase11"))
     }
 
-    @Test fun `mixed meter minor flat-key evidence is valid when PPQ matches`() {
-        val hash = "a".repeat(64); val arrangement = "b".repeat(64); val context = "c".repeat(64)
-        val outgoing = evidence("A", hash, MidiKey("Db", "minor", 0.8), MidiTimeSignature(0, 3, 4))
-        val incoming = evidence("B", hash, MidiKey("F#", "minor", 0.8), MidiTimeSignature(0, 6, 8))
-        val input = TransitionCohesionInput(inputHash = "d".repeat(64), structureSha256 = "e".repeat(64), arrangementSha256 = arrangement, contextSha256 = context, supportedInstruments = listOf("bass"), boundaries = listOf(TransitionBoundaryInput("A1", "B1", outgoing, incoming, listOf(TransitionRoleAction.BASS_MOTION), policy(context, TransitionRoleAction.BASS_MOTION))))
-        val plan = TransitionCohesionPlan(inputHash = input.inputHash, arrangementSha256 = arrangement, contextSha256 = context, model = CohesionModelIdentity.DETERMINISTIC, boundaries = listOf(TransitionBridgePlan("A1", "B1", hash, hash, arrangement, context, TransitionRoleAction.BASS_MOTION, BridgeType.BASS_WALK, 1, "bass", HarmonicHandoff.STEP_TO_INCOMING, RhythmicGesture.PICKUP, EnergyContour.RISE, rationale = "Move into the incoming minor harmony")))
-        assertTrue(TransitionCohesionValidator.validate(plan, input).isValid)
+    @Test fun `two and repeated occurrences require the exact adjacent boundary sequence`() {
+        val repeated = input("A1" to "A2", "A2" to "A3")
+        val exact = plan(repeated)
+        assertTrue(TransitionCohesionValidator.validate(exact, repeated).isValid)
+
+        assertFalse(TransitionCohesionValidator.validate(exact.copy(boundaries = exact.boundaries.dropLast(1)), repeated).isValid)
+        assertFalse(TransitionCohesionValidator.validate(exact.copy(boundaries = exact.boundaries.reversed()), repeated).isValid)
+        val two = input("A1" to "A2")
+        assertTrue(TransitionCohesionValidator.validate(plan(two), two).isValid)
     }
 
-    @Test fun `validator rejects malformed action and stale arrangement hash`() {
-        val hash = "a".repeat(64); val arrangement = "b".repeat(64); val context = "c".repeat(64)
-        val input = TransitionCohesionInput(inputHash = "d".repeat(64), structureSha256 = "e".repeat(64), arrangementSha256 = arrangement, contextSha256 = context, supportedInstruments = listOf("drums"), boundaries = listOf(TransitionBoundaryInput("A1", "B1", evidence("A", hash), evidence("B", hash), listOf(TransitionRoleAction.DRUM_FILL), policy(context))))
-        val unsafe = TransitionCohesionPlan(inputHash = input.inputHash, arrangementSha256 = "f".repeat(64), contextSha256 = context, model = CohesionModelIdentity.DETERMINISTIC, boundaries = listOf(TransitionBridgePlan("A1", "B1", hash, hash, "f".repeat(64), context, TransitionRoleAction.BASS_MOTION, BridgeType.BASS_WALK, 3, "drums", HarmonicHandoff.HOLD, RhythmicGesture.FILL, EnergyContour.RISE, rationale = "../unsafe")))
-        assertFalse(TransitionCohesionValidator.validate(unsafe, input).isValid)
-    }
-
-    @Test fun `full song enhancement preserves melody anchors and intensity budget`() {
-        val notes = List(20) { index -> CohesionMelodyNote("n-${index.toString().padStart(5, '0')}", 0, 60 + index % 3, 72, index * 96L, index * 96L + 72) }
-        val musical = evidence("A", "a".repeat(64), MidiKey("C", "major", 1.0)).copy(melodyNotes = notes)
-        val input = TransitionCohesionInput(
-            inputHash = "b".repeat(64), structureSha256 = "c".repeat(64), arrangementSha256 = "d".repeat(64), contextSha256 = "e".repeat(64),
-            supportedInstruments = emptyList(), boundaries = emptyList(), intensity = CohesionEnhancementIntensity.BALANCED,
-            occurrences = listOf(SongOccurrenceEvidence("A1", musical))
+    @Test fun `boundary edits accept first and last ticks but reject one tick outside either window`() {
+        val input = input("A1" to "A2", notes =
+            List(20) { index -> CohesionMelodyNote(if (index == 0) "outgoing-last" else "outgoing-$index", 0, 60, 72, 3_839, 3_840) } +
+                List(20) { index -> CohesionMelodyNote(if (index == 0) "incoming-first" else "incoming-$index", 0, 62, 72, 0, 1) }
         )
-        fun plan(edits: List<SongEnhancementEdit>) = TransitionCohesionPlan(
-            inputHash = input.inputHash, arrangementSha256 = input.arrangementSha256, contextSha256 = input.contextSha256,
-            model = CohesionModelIdentity.DETERMINISTIC, boundaries = emptyList(), intensity = input.intensity, songEdits = edits
-        )
-        val anchorPitch = SongEnhancementEdit(SongEnhancementTarget.MELODY, "A1", CohesionMelodyEditKind.SET_PITCH, "n-00000", value = 61, reason = "reshape opening anchor")
-        assertFalse(TransitionCohesionValidator.validate(plan(listOf(anchorPitch)), input).isValid)
+        val bridge = plan(input).boundaries.single()
+        val edgePlan = plan(input, bridge.copy(melodyEdits = listOf(
+            CohesionMelodyEdit("A1", CohesionMelodyEditKind.SET_VELOCITY, "outgoing-last", value = 80, reason = "shape boundary arrival"),
+            CohesionMelodyEdit("A2", CohesionMelodyEditKind.SET_VELOCITY, "incoming-first", value = 80, reason = "shape boundary departure")
+        )))
+        assertTrue(TransitionCohesionValidator.validate(edgePlan, input).isValid)
 
-        val overBudget = listOf(4, 5, 6).map { index ->
-            SongEnhancementEdit(SongEnhancementTarget.MELODY, "A1", CohesionMelodyEditKind.SET_VELOCITY,
-                "n-${index.toString().padStart(5, '0')}", value = 76, reason = "shape phrase dynamics")
+        val outgoingOutside = edgePlan.copy(boundaries = listOf(bridge.copy(melodyEdits = listOf(
+            CohesionMelodyEdit("A1", CohesionMelodyEditKind.ADD_NOTE, "add-00000", pitch = 60, velocity = 72, startTick = 1_919, durationTicks = 1, channel = 0, anchorNoteId = "outgoing-last", reason = "outside outgoing boundary")
+        ))))
+        val incomingOutside = edgePlan.copy(boundaries = listOf(bridge.copy(melodyEdits = listOf(
+            CohesionMelodyEdit("A2", CohesionMelodyEditKind.ADD_NOTE, "add-00000", pitch = 62, velocity = 72, startTick = 1_920, durationTicks = 1, channel = 0, anchorNoteId = "incoming-first", reason = "outside incoming boundary")
+        ))))
+        assertFalse(TransitionCohesionValidator.validate(outgoingOutside, input).isValid)
+        assertFalse(TransitionCohesionValidator.validate(incomingOutside, input).isValid)
+    }
+
+    @Test fun `superseded whole song payloads are rejected before publication`() {
+        val input = input("A1" to "A2")
+        val superseded = Json.encodeToString(TransitionCohesionPlan.serializer(), plan(input)).dropLast(1) + ",\"songEdits\":[]}"
+        val draft = root.resolve(TransitionCohesionStore.DRAFT_FILE)
+        Files.createDirectories(draft.parent)
+        Files.writeString(draft, superseded)
+
+        assertThrows(Exception::class.java) { TransitionCohesionStore.readDraft(root, input) }
+        assertFalse(Files.exists(root.resolve(TransitionCohesionStore.bridgeMidi("A1", "A2"))))
+    }
+
+    @Test fun `model whole song edit JSON is rejected by the boundary-only schema`() {
+        val input = input("A1" to "A2")
+        val response = """{"boundaries":[],"songEdits":[]}"""
+
+        assertThrows(IllegalArgumentException::class.java) {
+            LocalQwenTransitionCohesionPlanner(LocalQwenClient { _, _ -> response }, CohesionModelIdentity.DETERMINISTIC).plan(input)
         }
-        assertFalse(TransitionCohesionValidator.validate(plan(overBudget), input).isValid)
-        assertTrue(TransitionCohesionValidator.validate(plan(overBudget.take(2)), input).isValid)
     }
 
-    private fun policy(hash: String, action: TransitionRoleAction = TransitionRoleAction.DRUM_FILL) = TransitionPolicyEvidence("lofi", "calm", hash, listOf(action))
-    private fun evidence(partId: String, sourceHash: String, key: MidiKey? = null, meter: MidiTimeSignature = MidiTimeSignature(0, 4, 4)) = TransitionMusicalEvidence(partId, sourceHash, "f".repeat(64), 480, 1_920, key, emptyList(), MidiTempoChange(0, 80.0), meter, 0.5, TransitionBoundarySummary(true, true, 0, 1_440), TransitionArrangementEvidence("9".repeat(64), SongSectionPurpose.DEVELOPMENT, listOf(TransitionInstrumentEvidence("drums", "DrumsInstrumentPlan", 0.5)), "8".repeat(64)))
+    @Test fun `stale boundary hashes fail before any derived artifact is written`() {
+        val input = input("A1" to "A2")
+        val stale = plan(input).copy(boundaries = plan(input).boundaries.map { it.copy(outgoingHash = "f".repeat(64)) })
+
+        assertThrows(IllegalArgumentException::class.java) { TransitionCohesionStore.writeDraft(root, input, stale) }
+        assertFalse(Files.exists(root.resolve(TransitionCohesionStore.DRAFT_FILE)))
+        assertFalse(Files.exists(root.resolve(TransitionCohesionStore.bridgeMidi("A1", "A2"))))
+    }
+
+    private fun input(vararg boundaries: Pair<String, String>, notes: List<CohesionMelodyNote> = emptyList()): TransitionCohesionInput {
+        val hash = "a".repeat(64); val context = "c".repeat(64)
+        val occurrenceEvidence = boundaries.flatMap { listOf(it.first, it.second) }.distinct().associateWith { id ->
+            evidence(id, hash, notes.filter { note -> note.id.startsWith(if (id.endsWith("1")) "outgoing" else "incoming") })
+        }
+        return TransitionCohesionInput(
+            inputHash = "d".repeat(64), structureSha256 = "b".repeat(64), arrangementSha256 = "e".repeat(64), contextSha256 = context,
+            supportedInstruments = listOf("drums"),
+            boundaries = boundaries.map { (outgoing, incoming) ->
+                TransitionBoundaryInput(outgoing, incoming, occurrenceEvidence.getValue(outgoing), occurrenceEvidence.getValue(incoming), listOf(TransitionRoleAction.DRUM_FILL), policy(context))
+            }
+        )
+    }
+
+    private fun plan(input: TransitionCohesionInput, override: TransitionBridgePlan? = null) = TransitionCohesionPlan(
+        inputHash = input.inputHash, arrangementSha256 = input.arrangementSha256, contextSha256 = input.contextSha256,
+        model = CohesionModelIdentity.DETERMINISTIC,
+        boundaries = input.boundaries.map { boundary -> override ?: TransitionBridgePlan(
+            boundary.outgoingInstanceId, boundary.incomingInstanceId, boundary.outgoing.sourceHash, boundary.incoming.sourceHash,
+            input.arrangementSha256, input.contextSha256, TransitionRoleAction.DRUM_FILL, BridgeType.DRUM_FILL, 1, "drums",
+            HarmonicHandoff.HOLD, RhythmicGesture.FILL, EnergyContour.RISE, rationale = "Carry energy forward"
+        ) }
+    )
+
+    private fun policy(hash: String) = TransitionPolicyEvidence("lofi", "calm", hash, listOf(TransitionRoleAction.DRUM_FILL))
+    private fun evidence(partId: String, sourceHash: String, notes: List<CohesionMelodyNote>) = TransitionMusicalEvidence(
+        partId, sourceHash, "f".repeat(64), 480, 3_840, MidiKey("C", "major", 1.0), emptyList(), MidiTempoChange(0, 80.0), MidiTimeSignature(0, 4, 4), 0.5,
+        TransitionBoundarySummary(true, true, 0, 1_440), TransitionArrangementEvidence("9".repeat(64), SongSectionPurpose.DEVELOPMENT, listOf(TransitionInstrumentEvidence("drums", "DrumsInstrumentPlan", 0.5)), "8".repeat(64)), notes
+    )
 }

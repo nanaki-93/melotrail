@@ -1137,9 +1137,9 @@ private fun ArrangePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
     val mutating = state.operation.isMutating
     val arrangementApproved = state.arrangement?.let { it.approved && !it.approvalRequired && !it.stale } == true
     val cohesionAction = if (!arrangementApproved || state.project?.readiness?.cohesionReady == true) null else when {
-        state.cohesion?.stale == true -> "Retry Cohesion & Enhance"
-        state.cohesion?.approvalRequired == true -> "Approve Cohesion & Enhance"
-        else -> "Generate Cohesion & Enhance"
+        state.cohesion?.stale == true -> "Retry Cohesion"
+        state.cohesion?.approvalRequired == true -> "Approve Cohesion"
+        else -> "Generate Cohesion"
     }
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
@@ -1156,8 +1156,8 @@ private fun ArrangePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
                     OutlinedButton(
                         onClick = {
                             when (label) {
-                                "Generate Cohesion & Enhance", "Retry Cohesion & Enhance" -> onIntent(WorkspaceIntent.GenerateCohesion)
-                                "Approve Cohesion & Enhance" -> onIntent(WorkspaceIntent.ApproveCohesion)
+                                "Generate Cohesion", "Retry Cohesion" -> onIntent(WorkspaceIntent.GenerateCohesion)
+                                "Approve Cohesion" -> onIntent(WorkspaceIntent.ApproveCohesion)
                                 else -> onIntent(WorkspaceIntent.SelectArrangeTab(ArrangeTab.TRANSITIONS))
                             }
                         },
@@ -1184,8 +1184,8 @@ private fun ArrangePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
 @Composable
 private fun CohesionReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
     val cohesion = state.cohesion
-    OverviewCard(WorkspacePageTags.ARRANGE_COHESION_REVIEW, "Cohesion & Enhance") {
-        Text("Enhances the complete arranged song while preserving its melody identity, section structure, tempo, meter, and instrument roles.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    OverviewCard(WorkspacePageTags.ARRANGE_COHESION_REVIEW, "Cohesion") {
+        Text("Creates only adjacent-occurrence boundary bridges while preserving melody identity, structure, tempo, meter, and instrument roles.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
             CohesionEnhancementIntensity.entries.forEach { intensity ->
                 val selected = state.cohesionDraft.intensity == intensity
@@ -1200,7 +1200,7 @@ private fun CohesionReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent) 
             }
         }
         cohesion?.takeIf { it.approvalRequired && !it.approved && !it.stale }?.let { draft ->
-            Text("Full-song draft: ${draft.melodyEditCount} melody edits, ${draft.accompanimentEditCount} accompaniment edits, ${draft.boundaries.size} transition handoffs.", style = MaterialTheme.typography.bodySmall)
+            Text("Boundary draft: ${draft.melodyEditCount} melody edits and ${draft.accompanimentEditCount} transition handoffs.", style = MaterialTheme.typography.bodySmall)
             Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
                 OutlinedButton(
                     onClick = { onIntent(WorkspaceIntent.PlayCohesionPreview(false)) },
@@ -1214,7 +1214,7 @@ private fun CohesionReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent) 
             draft.boundaries.forEach { boundary ->
                 Text("${boundary.outgoingInstanceId} → ${boundary.incomingInstanceId}: ${boundary.rationale}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text("Approve or reject this single full-song result after comparing the baseline and enhanced previews.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Approve or reject this boundary-only result after comparing the baseline and Cohesion previews.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -2284,7 +2284,7 @@ private fun mixMasterBuildMessage(state: WorkspaceUiState): String = when {
     state.arrangement.stale -> "The arrangement is stale; regenerate it before building."
     state.downstreamArtifactsStale -> "Mix artifacts are stale; regenerate them from the current arrangement before building."
     state.arrangement.approvalRequired || !state.arrangement.approved -> "Approve the reviewed arrangement before building."
-    state.project.readiness.cohesionApprovalRequired -> "Compare and approve Cohesion & Enhance before building."
+    state.project.readiness.cohesionApprovalRequired -> "Compare and approve Cohesion before building."
     !state.project.readiness.cohesionReady -> "Generate and approve Cohesion before building."
     state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.available != true -> state.runtimeReadiness?.capability(RuntimeCapability.BUILD_SONG)?.reason ?: "Checking local build readiness."
     else -> "Build validates artifacts, publishes a lossless master WAV atomically, then optionally exports MP3."

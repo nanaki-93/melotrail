@@ -2140,9 +2140,9 @@ class WorkspaceViewModel(
 
     private fun PlaybackRequest.Cohesion.artifact(): PlaybackArtifactIdentity {
         val root = projectRoot.toAbsolutePath().normalize()
-        val snapshot = requireNotNull(state.value.cohesion) { "Generate Cohesion & Enhance previews first." }
+        val snapshot = requireNotNull(state.value.cohesion) { "Generate Cohesion previews first." }
         val path = requireNotNull(if (enhanced) snapshot.enhancedPreview else snapshot.baselinePreview) {
-            "The ${if (enhanced) "enhanced" else "baseline"} full-song preview is unavailable. Regenerate Cohesion & Enhance."
+            "The ${if (enhanced) "Cohesion" else "baseline"} preview is unavailable. Regenerate Cohesion."
         }.toAbsolutePath().normalize()
         require(path.startsWith(root) && Files.isRegularFile(path)) { "Cohesion preview is missing or outside the project." }
         return PlaybackArtifactIdentity(root, path)
@@ -2436,9 +2436,9 @@ class WorkspaceViewModel(
 
     private fun playCohesionPreview(enhanced: Boolean) {
         val project = state.value.project ?: return
-        val cohesion = state.value.cohesion ?: return fail("preview cohesion", "Generate Cohesion & Enhance before previewing it.")
+        val cohesion = state.value.cohesion ?: return fail("preview cohesion", "Generate Cohesion before previewing it.")
         val path = if (enhanced) cohesion.enhancedPreview else cohesion.baselinePreview
-        if (path == null || !Files.isRegularFile(path)) return fail("preview cohesion", "Regenerate Cohesion & Enhance to create the full-song A/B previews.")
+        if (path == null || !Files.isRegularFile(path)) return fail("preview cohesion", "Regenerate Cohesion to create the A/B previews.")
         startPlaybackSession(PlaybackRequest.Cohesion(project.root, enhanced))
     }
 
@@ -2449,7 +2449,7 @@ class WorkspaceViewModel(
             runCatching {
                 withContext(ioDispatcher) { cohesionService.generate(request) { progress -> scope.launch { updateProgress(feedbackId, WorkspaceOperation.GeneratingCohesion(progress)) } } }
             }.onSuccess { cohesion ->
-                val message = if (cohesion.approved) "Cohesion & Enhance is approved for the full song." else "The full-song Cohesion & Enhance draft is ready for A/B review."
+                val message = if (cohesion.approved) "Cohesion is approved." else "The Cohesion boundary draft is ready for A/B review."
                 val refreshed = runCatching { projectService.open(request.root) }.getOrNull()
                 mutableState.update { it.copy(project = refreshed ?: it.project, cohesion = cohesion, operation = WorkspaceOperation.Idle, notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message, if (cohesion.approved) OperationSeverity.SUCCESS else OperationSeverity.WARNING) ?: it.operationFeedback) }
             }.onFailure { fail("generate cohesion", it.message ?: "Unable to generate cohesion.", WorkspaceRetry.GenerateCohesion(request), feedbackId) }
@@ -2466,7 +2466,7 @@ class WorkspaceViewModel(
             runCatching { withContext(ioDispatcher) { cohesionService.approve(project.root) } }
                 .onSuccess { approved ->
                     val refreshed = runCatching { projectService.open(project.root) }.getOrNull()
-                    mutableState.update { it.copy(project = refreshed ?: it.project, cohesion = approved, operation = WorkspaceOperation.Idle, notification = "Cohesion & Enhance approved for the full song.", operationFeedback = feedbackTracker.complete(feedbackId, "Cohesion & Enhance approved for the full song.") ?: it.operationFeedback) }
+                    mutableState.update { it.copy(project = refreshed ?: it.project, cohesion = approved, operation = WorkspaceOperation.Idle, notification = "Cohesion approved.", operationFeedback = feedbackTracker.complete(feedbackId, "Cohesion approved.") ?: it.operationFeedback) }
                 }
                 .onFailure { fail("approve cohesion", it.message ?: "Unable to approve cohesion.", sessionId = feedbackId) }
         }
@@ -2652,8 +2652,8 @@ class WorkspaceViewModel(
         if (arrangement == null || arrangement.stale || arrangement.approvalRequired || !arrangement.approved) return fail("build song", "Build Song requires a current approved arrangement.")
         val readiness = project.readiness
         if (!readiness.cohesionReady) {
-            val action = if (readiness.cohesionApprovalRequired) "Compare and approve Cohesion & Enhance." else "Generate and approve Cohesion & Enhance."
-            return fail("build song", "Build Song requires current approved full-song Cohesion & Enhance. $action")
+            val action = if (readiness.cohesionApprovalRequired) "Compare and approve Cohesion." else "Generate and approve Cohesion."
+            return fail("build song", "Build Song requires current approved Cohesion. $action")
         }
         state.value.runtimeReadiness.capabilityFailure(RuntimeCapability.BUILD_SONG)?.let { return fail("build song", it) }
         val options = state.value.buildOptions
