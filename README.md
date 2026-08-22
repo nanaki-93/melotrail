@@ -12,8 +12,8 @@ Gradle subproject. The Python worker remains a separate process.
 
 ## Compose Desktop workspace
 
-The local desktop workspace uses the same typed Kotlin application services as
-the CLI. It launches in-process:
+The local desktop workspace uses typed Kotlin application services. It launches
+in-process:
 
 ```bash
 make desktop
@@ -27,8 +27,9 @@ as part of this compatibility migration.
 Equivalent Gradle command: `./gradlew :desktopApp:run`.
 
 Use **New Project** or **Open Project**, then follow the desktop happy path:
-**Melody Parts**, which automatically prepares its supported stages, optional **AI Fix**,
-**Structure**, **Arrangement**, and **Cohesion**, then deterministic **Humanization** before
+**Melody Parts**, which automatically prepares its supported stages, optional **AI Fix** and
+**Enhance**, **Structure**, **Arrangement**, boundary-only **Cohesion**, deterministic
+**Critic**, optional **Full-Song Enhance**, then deterministic **Humanization** before
 using **Build song**. Project files remain canonical: `project.json`, plans and arrangements,
 generated MIDI, stems, mixes, and release artifacts are all kept under the
 chosen project directory. Desktop settings retain only the last successfully
@@ -97,11 +98,13 @@ then update a local checkout with `git remote set-url origin <new-url>`.
 Use the desktop app as a guided sequence: create or open a project, explicitly save its
 musical Setup (name, key, tempo, meter, Lo-fi profile, and mood), then import MIDI or an eligible WAV/MP3
 source, convert audio to MIDI when needed, clean then deterministically normalize MIDI, keep it or review an
-optional bounded AI-fix draft, select optional Lo-fi Feel, analyze MIDI, then
-save the structure, generate/review an arrangement, then generate/review Cohesion,
-then explicitly select deterministic Humanization or bypass before building and auditioning validated artifacts.
+optional bounded AI-fix and per-track Enhance drafts, select optional Lo-fi Feel, analyze MIDI,
+then save the structure, generate/review an arrangement, then generate/review boundary-only
+Cohesion, run the deterministic Critic, explicitly approve, bypass, or record a no-op for
+Full-Song Enhance, then select deterministic Humanization or bypass before building and
+auditioning validated artifacts.
 
-- Direct MIDI is preserved under `source/` and copied as immutable evidence under `midi/raw/`. Worker **Clean MIDI** repairs invalid events; Kotlin **Normalize MIDI** then publishes deterministic `midi/normalized/` evidence and a hash-bound report. Melotrail records detected source-key confidence; below its fixed gate, confirm the source key explicitly before **Transpose to project key** publishes a separate `midi/transposed/` artifact and report. Legacy clean-only projects remain readable until normalization is explicitly run.
+- Direct MIDI is preserved under `source/` and copied as immutable evidence under `midi/raw/`. Worker **Clean MIDI** repairs invalid events; Kotlin **Normalize MIDI** then publishes deterministic `midi/normalized/` evidence and a hash-bound report. Melotrail records detected source-key confidence; below its fixed gate, confirm the source key explicitly before **Transpose to project key** publishes a separate `midi/transposed/` artifact and report.
 - WAV/WAVE and MP3 input is accepted only for the optional **solo-piano**
   transcription workflow. Do not use it to claim reliable editable MIDI from
   vocals, full mixes, or arbitrary polyphonic material.
@@ -126,23 +129,14 @@ recovery, see [Track process workflow](docs/TRACK_PROCESS_WORKFLOW.md).
 
 ### Workflow state and migration
 
-New projects use project schema v4. Schema v1, v2, and v3 projects stay
-readable without an open-time rewrite; a legacy project can be explicitly and
-atomically saved as v4 once normal project validation succeeds. Missing creative
-setup is surfaced as a typed setup requirement and is never inferred on open.
-The v1-v3 readers, fixtures, and this compatibility note must be removed together
-only after the declared project-format support window ends. Readiness comes
-from validated files and available fingerprints, never a completion flag alone.
-Changes to source/raw MIDI, cleaned MIDI, analysis, structure, arrangement, cohesion, or selected Humanization seed/config,
-mix-only settings, or audio texture mark only their documented descendants
-stale. Stale artifacts remain inspectable evidence; regenerate them instead of
-deleting, copying, or treating them as release-ready.
-
-The complete list of retained persisted and external compatibility readers,
-their callers, owners, fixtures, and removal conditions is in
-[`docs/COMPATIBILITY_READERS.md`](docs/COMPATIBILITY_READERS.md). It is a
-release gate: a compatibility adapter that is not listed there is not a
-supported contract.
+Only the current canonical project schema v4 shape opens. Older and superseded
+documents fail without conversion or writes. Missing creative setup is surfaced as a typed
+setup requirement and is never inferred on open. Readiness comes from validated files and
+available fingerprints, never a completion flag alone. Changes to source/raw MIDI, selected
+MIDI, analysis, structure, arrangement, Cohesion, Critic, Full-Song Enhance, or selected
+Humanization seed/config mark only their documented descendants stale. Stale artifacts remain
+inspectable evidence; regenerate them instead of deleting, copying, or treating them as
+release-ready.
 
 ## Testing
 

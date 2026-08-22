@@ -41,13 +41,13 @@ Tasks 118–129.
 - Remove superseded runtime paths, exclusive tests/fixtures, dead DTOs, prompts,
   readiness branches, and UI copy identified by Tasks 118–129. No compatibility
   reader may defer that deletion.
-- Update `README.md` and relevant files under `docs/plan/` to the canonical order,
+- Update `../../../../README.md` and relevant files under `../..` to the canonical order,
   shared authority, boundary-only Cohesion, explicit Full-Song Enhance, and
   deterministic Humanization behavior.
 - Remove claims that Spring is a supported/optional product surface and keep the
   Python worker described as a separate stateless HTTP worker.
-- Ensure the task index and implementation prompt point to `docs/plan/PLAN.md`
-  and `docs/plan/tasks/` and contain no dead completed-task links.
+- Ensure the task index and implementation prompt point to `../../PLAN.md`
+  and `..` and contain no dead completed-task links.
 
 ## Verification
 

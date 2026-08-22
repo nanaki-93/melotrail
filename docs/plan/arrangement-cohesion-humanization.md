@@ -7,6 +7,8 @@ selected part melodies + harmony + structure occurrences
   -> arrangement plan and occurrence variations
   -> generated role MIDI
   -> cohesion boundary/continuity plan and artifacts
+  -> deterministic full-song critic
+  -> optional bounded full-song enhancement
   -> seeded humanization
   -> renderable occurrence timeline/stems
 ```
@@ -138,7 +140,7 @@ new cohesion evidence.
 
 ## Humanization
 
-Humanization is a first-class deterministic transform after cohesion. It receives
+Humanization is a first-class deterministic transform after Full-Song Enhance. It receives
 the resolved profile/mood parameters, role/occurrence plan, tempo/meter, and a
 stored seed. It can control:
 
