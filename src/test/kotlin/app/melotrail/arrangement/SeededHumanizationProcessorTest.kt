@@ -17,6 +17,18 @@ class SeededHumanizationProcessorTest {
     @TempDir lateinit var root: Path
 
     @Test
+    fun `one humanization edit can retain every applicable reason`() {
+        val edit = HumanizationEdit(
+            noteId = "m-" + "a".repeat(64), channel = 0, pitch = 60,
+            originalStartTick = 120, originalEndTick = 360, originalVelocity = 80,
+            startTick = 125, endTick = 370, velocity = 86,
+            reasons = listOf("timing", "duration", "velocity", "chord-stagger", "collision-repair")
+        )
+
+        assertEquals(5, edit.reasons.size)
+    }
+
+    @Test
     fun `same input config seed and version produces identical evidence without source mutation`() {
         val input = root.resolve("input.mid").also(::midi)
         val source = Files.readAllBytes(input)

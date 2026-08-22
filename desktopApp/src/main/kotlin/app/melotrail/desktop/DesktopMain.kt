@@ -8,6 +8,7 @@ import androidx.compose.ui.window.rememberWindowState
 import app.melotrail.application.DefaultProjectApplicationService
 import app.melotrail.application.DefaultArrangementApplicationService
 import app.melotrail.application.DefaultMixApplicationService
+import app.melotrail.application.DefaultFullSongEnhancementApplicationService
 import app.melotrail.application.DefaultBuildApplicationService
 import app.melotrail.application.DefaultCohesionApplicationService
 import app.melotrail.application.EnsembleMidiPreparation
@@ -29,6 +30,7 @@ import app.melotrail.preparation.TranscriptionQualityGateService
 import app.melotrail.preparation.WorkerTranscriptionBoundary
 import app.melotrail.arrangement.MidiCleanupOptions
 import app.melotrail.arrangement.InstrumentRegistryLoader
+import app.melotrail.arrangement.LocalQwenFullSongEnhancementPlanner
 import app.melotrail.arrangement.SoundLibraryLocator
 import app.melotrail.arrangement.SoundLibraryLocation
 import app.melotrail.profile.BundledCompositionProfileCatalog
@@ -76,6 +78,9 @@ fun main() {
             app.melotrail.arrangement.FullSongCohesionPreviewRenderer(sfizzRenderer, libraryRoot).render(root, input, progress)
         }
     )
+    val fullSongEnhancementService = DefaultFullSongEnhancementApplicationService(
+        planner = LocalQwenFullSongEnhancementPlanner()
+    )
     val viewModel = WorkspaceViewModel(
         projectService = projectService,
         fileDialogs = SwingDesktopFileDialogs(),
@@ -83,6 +88,7 @@ fun main() {
         libraryRoot = libraryRoot,
         arrangementService = arrangementService,
         cohesionService = cohesionService,
+        fullSongEnhancementService = fullSongEnhancementService,
         mixService = mixService,
         buildService = DefaultBuildApplicationService(arrangementService, mixService, sfizzRenderer, DesktopBuildWorker(client), cohesionService),
         player = player,

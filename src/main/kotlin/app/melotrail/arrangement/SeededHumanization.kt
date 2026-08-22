@@ -82,7 +82,7 @@ data class HumanizationEdit(
         require(originalStartTick >= 0 && originalEndTick > originalStartTick && startTick >= 0 && endTick > startTick) {
             "Humanization edit timing is invalid"
         }
-        require(reasons.isNotEmpty() && reasons.size <= 4 && reasons.all { it in HUMANIZATION_REASONS }) {
+        require(reasons.isNotEmpty() && reasons.size <= HUMANIZATION_REASONS.size && reasons.all { it in HUMANIZATION_REASONS }) {
             "Humanization edit reasons are invalid"
         }
     }
