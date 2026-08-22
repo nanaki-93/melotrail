@@ -75,7 +75,11 @@ data class GeneratedRoleValidationInput(
     val registry: ValidatedInstrumentRegistry,
     val arrangementSha256: String,
     val registrySha256: String,
-    val policy: RoleValidationPolicy = RoleValidationPolicy()
+    val policy: RoleValidationPolicy = RoleValidationPolicy(),
+    /** Exact windows published by the transition generator. Required for the transitions role. */
+    val transitionWindows: List<TransitionMidiWindow> = emptyList(),
+    /** Exact generated transition timeline end. Required for the transitions role. */
+    val transitionTimelineEndTick: Long? = null
 )
 
 fun interface GeneratedRoleValidator { fun validate(input: GeneratedRoleValidationInput): RoleValidationReport }
@@ -95,10 +99,14 @@ class DeterministicGeneratedRoleValidator : GeneratedRoleValidator {
         if (active.isNotEmpty() && notes.isEmpty()) violations += "Activated role has no notes"
         if (notes.groupBy { listOf(it.channel, it.pitch, it.velocity, it.start, it.end) }.any { it.value.size > 1 }) violations += "MIDI contains exact duplicate notes"
         if (!metadataMatches(sequence, input)) violations += "MIDI tempo or meter does not preserve canonical settings"
+        val songEnd = if (input.role == "transitions") requireNotNull(input.transitionTimelineEndTick) {
+            "Transition validation requires the generator-owned timeline end."
+        }
+        else occurrences.lastOrNull()?.endTick.orEmpty()
         notes.forEach { note ->
             if (note.velocity !in 1..127) violations += "Note velocity is outside 1..127"
             if (note.end <= note.start) violations += "Note duration must be positive"
-            if (note.start < 0 || note.end > occurrences.lastOrNull()?.endTick.orEmpty()) violations += "Note lies outside occurrence bounds"
+            if (note.start < 0 || note.end > songEnd) violations += "Note lies outside occurrence bounds"
         }
         if (input.role == "transitions") validateTransitions(notes, input, violations)
         else validateOccurrences(notes, input, active, violations)
@@ -178,13 +186,7 @@ class DeterministicGeneratedRoleValidator : GeneratedRoleValidator {
     }
 
     private fun validateTransitions(notes: List<Note>, input: GeneratedRoleValidationInput, violations: MutableList<String>) {
-        val windows = input.arrangement.sections.dropLast(1).mapIndexedNotNull { index, section ->
-            section.transitionOut.takeIf { it.type != TransitionType.NONE && it.bars > 0 }?.let {
-                val next = input.projection.occurrences[index + 1]
-                val beat = input.projection.harmonyPpq * 4L / input.projection.meter.denominator
-                next.startTick until (next.startTick + beat * input.projection.meter.numerator * it.bars)
-            }
-        }
+        val windows = input.transitionWindows
         notes.forEach { note -> if (windows.none { note.start in it && note.end - 1 in it }) violations += "Transition note lies outside its supplied boundary window" }
     }
 

@@ -317,8 +317,9 @@ object TransitionCohesionValidator {
 }
 
 class LocalQwenTransitionCohesionPlanner(private val client: LocalQwenClient = LmStudioQwenClient(), private val model: CohesionModelIdentity) {
-    fun plan(input: TransitionCohesionInput): TransitionCohesionPlan {
-        val response = client.complete(PROMPT, json.encodeToString(TransitionCohesionModelInput.serializer(), modelInput(input)))
+    fun plan(input: TransitionCohesionInput): TransitionCohesionPlan = requestQwenWithAutomaticRetries(
+        client, PROMPT, json.encodeToString(TransitionCohesionModelInput.serializer(), modelInput(input))
+    ) { response ->
         val modelResponse = try {
             json.decodeFromString(TransitionCohesionModelResponse.serializer(), response)
         } catch (error: Exception) {
@@ -361,7 +362,7 @@ class LocalQwenTransitionCohesionPlanner(private val client: LocalQwenClient = L
         val plan = TransitionCohesionPlan(inputHash = input.inputHash, arrangementSha256 = input.arrangementSha256, contextSha256 = input.contextSha256, model = model, boundaries = boundaries, intensity = input.intensity)
         val validation = TransitionCohesionValidator.validate(plan, input)
         require(validation.isValid) { "Qwen returned an invalid transition-cohesion plan: ${validation.errors.joinToString("; ")}" }
-        return plan.copy(validation = TransitionCohesionValidationReport())
+        plan.copy(validation = TransitionCohesionValidationReport())
     }
 
     /** These are mechanical compatibility rules, not musical choices for the model. */

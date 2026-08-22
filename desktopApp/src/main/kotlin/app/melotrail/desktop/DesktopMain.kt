@@ -72,8 +72,8 @@ fun main() {
     )
     val cohesionService = DefaultCohesionApplicationService(
         ensemblePreparation = EnsembleMidiPreparation { root, progress -> arrangementService.generateRequiredMidi(root, progress) },
-        previewPreparation = CohesionPreviewPreparation { root, input ->
-            app.melotrail.arrangement.FullSongCohesionPreviewRenderer(sfizzRenderer, libraryRoot).render(root, input)
+        previewPreparation = CohesionPreviewPreparation { root, input, progress ->
+            app.melotrail.arrangement.FullSongCohesionPreviewRenderer(sfizzRenderer, libraryRoot).render(root, input, progress)
         }
     )
     val viewModel = WorkspaceViewModel(

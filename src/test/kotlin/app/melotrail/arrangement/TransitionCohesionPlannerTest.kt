@@ -40,6 +40,25 @@ class TransitionCohesionPlannerTest {
         assertTrue(TransitionCohesionValidator.validate(plan(two), two).isValid)
     }
 
+    @Test fun `Qwen cohesion retries an incomplete boundary response with its validation error`() {
+        val input = input("A1" to "A2", "A2" to "A3")
+        val prompts = mutableListOf<String>()
+        var calls = 0
+        val incomplete = response(1)
+        val complete = response(2)
+        val planner = LocalQwenTransitionCohesionPlanner(LocalQwenClient { _, prompt ->
+            prompts += prompt
+            if (calls++ == 0) incomplete else complete
+        }, CohesionModelIdentity.DETERMINISTIC)
+
+        val plan = planner.plan(input)
+
+        assertEquals(2, calls)
+        assertEquals(2, plan.boundaries.size)
+        assertTrue(prompts[1].contains("Automatic repair attempt 1 of 5"))
+        assertTrue(prompts[1].contains("Qwen returned 1 cohesion decisions for 2 boundaries"))
+    }
+
     @Test fun `boundary edits accept first and last ticks but reject one tick outside either window`() {
         val input = input("A1" to "A2", notes =
             List(20) { index -> CohesionMelodyNote(if (index == 0) "outgoing-last" else "outgoing-$index", 0, 60, 72, 3_839, 3_840) } +
@@ -114,6 +133,10 @@ class TransitionCohesionPlannerTest {
             HarmonicHandoff.HOLD, RhythmicGesture.FILL, EnergyContour.RISE, rationale = "Carry energy forward"
         ) }
     )
+
+    private fun response(boundaries: Int): String = """{"boundaries":[${List(boundaries) {
+        """{"roleAction":"DRUM_FILL","bars":1,"harmonicHandoff":"HOLD","rhythmicGesture":"FILL","energyContour":"RISE","rationale":"Carry energy forward"}"""
+    }.joinToString(",")}]}"""
 
     private fun policy(hash: String) = TransitionPolicyEvidence("lofi", "calm", hash, listOf(TransitionRoleAction.DRUM_FILL))
     private fun evidence(partId: String, sourceHash: String, notes: List<CohesionMelodyNote>) = TransitionMusicalEvidence(

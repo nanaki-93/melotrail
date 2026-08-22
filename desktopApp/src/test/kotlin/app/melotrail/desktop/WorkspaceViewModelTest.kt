@@ -961,6 +961,35 @@ class WorkspaceViewModelTest {
     }
 
     @Test
+    fun `regenerating an arrangement discards the retained Cohesion review draft`() = runTest {
+        val root = Path.of("build/regenerated-arrangement-project")
+        val project = projectSnapshot(root).copy(
+            parts = listOf(analyzedPart("A")),
+            structure = listOf(app.melotrail.application.StructureSectionSummary(0, "A", 1, "A1", 4.0)),
+            readiness = projectSnapshot(root).readiness.copy(cohesionReady = false)
+        )
+        val retainedCohesion = app.melotrail.application.CohesionSnapshot(
+            root, app.melotrail.application.CohesionPlannerKind.QWEN, "0".repeat(64), "1".repeat(64),
+            emptyList(), approvalRequired = true, approved = false, stale = false, artifact = root.resolve("cohesion/draft.json")
+        )
+        val viewModel = WorkspaceViewModel(
+            FakeProjectService(result = project), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)),
+            arrangementService = FakeArrangementService(loaded = arrangementSnapshot(root), generated = arrangementSnapshot(root)),
+            cohesionService = FakeCohesionService(retainedCohesion)
+        )
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root))
+        advanceUntilIdle()
+        assertEquals(retainedCohesion, viewModel.state.value.cohesion)
+
+        viewModel.accept(WorkspaceIntent.GenerateArrangement)
+        advanceUntilIdle()
+
+        assertNull(viewModel.state.value.cohesion)
+        viewModel.close()
+    }
+
+    @Test
     fun `Qwen draft remains reviewable until explicit approval and reopens from artifacts`() = runTest {
         val root = Path.of("build/qwen-project")
         val project = projectSnapshot(root).copy(
@@ -1914,6 +1943,18 @@ private class FakeArrangementService(
         approveCalls++
         return checkNotNull(approved)
     }
+}
+
+private class FakeCohesionService(private val snapshot: app.melotrail.application.CohesionSnapshot) : app.melotrail.application.CohesionApplicationService {
+    override suspend fun generate(
+        request: app.melotrail.application.GenerateCohesionRequest,
+        progress: app.melotrail.application.ProgressSink
+    ) = snapshot
+
+    override fun load(root: Path) = snapshot
+    override fun reviewBoundary(root: Path, outgoingInstanceId: String, incomingInstanceId: String) = snapshot
+    override fun approve(root: Path) = snapshot
+    override fun reject(root: Path) = snapshot
 }
 
 private class FakeBuildService(private val failure: Throwable? = null) : BuildApplicationService {

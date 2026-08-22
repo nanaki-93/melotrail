@@ -65,7 +65,7 @@ fun interface EnsembleMidiPreparation {
 }
 
 fun interface CohesionPreviewPreparation {
-    suspend fun render(root: Path, input: TransitionCohesionInput): CohesionPreviewReferences?
+    suspend fun render(root: Path, input: TransitionCohesionInput, progress: ProgressSink): CohesionPreviewReferences?
 }
 
 interface CohesionApplicationService {
@@ -80,13 +80,13 @@ interface CohesionApplicationService {
 /** UI-neutral orchestration for baseline generation, bounded boundary planning, A/B review, and exact promotion. */
 class DefaultCohesionApplicationService(
     private val ensemblePreparation: EnsembleMidiPreparation = EnsembleMidiPreparation { _, _ -> },
-    private val previewPreparation: CohesionPreviewPreparation = CohesionPreviewPreparation { _, _ -> null },
+    private val previewPreparation: CohesionPreviewPreparation = CohesionPreviewPreparation { _, _, _ -> null },
     private val qwenPlanner: (TransitionCohesionInput) -> TransitionCohesionPlan = { input ->
         LocalQwenTransitionCohesionPlanner(model = CohesionModelIdentity("qwen", "local", "0".repeat(64))).plan(input)
     }
 ) : CohesionApplicationService {
     constructor(qwenPlanner: (TransitionCohesionInput) -> TransitionCohesionPlan) : this(
-        EnsembleMidiPreparation { _, _ -> }, CohesionPreviewPreparation { _, _ -> null }, qwenPlanner
+        EnsembleMidiPreparation { _, _ -> }, CohesionPreviewPreparation { _, _, _ -> null }, qwenPlanner
     )
 
     override suspend fun generate(request: GenerateCohesionRequest, progress: ProgressSink): CohesionSnapshot = mutate(request.root) { root ->
@@ -100,7 +100,7 @@ class DefaultCohesionApplicationService(
         TransitionCohesionStore.writeDraft(root, input, plan)
         persistComparisons(root, input)
         progress.report(OperationProgress("cohesion", 5, 5, "Rendering Cohesion baseline and preview"))
-        previewPreparation.render(root, input)?.let { TransitionCohesionStore.attachPreviews(root, input, it) }
+        previewPreparation.render(root, input, progress)?.let { TransitionCohesionStore.attachPreviews(root, input, it) }
         snapshot(root, input, plan, false)
     }
 

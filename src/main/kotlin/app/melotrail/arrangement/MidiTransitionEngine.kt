@@ -14,7 +14,7 @@ import javax.sound.midi.ShortMessage
 import kotlin.math.roundToInt
 import kotlinx.serialization.json.Json
 
-/** The MIDI-only transition vocabulary. Legacy audio fades are deliberately absent. */
+/** The MIDI-only transition vocabulary. */
 enum class MidiTransitionType { NONE, DRUM_FILL, BASS_WALK, PAD_SUSTAIN, BUILD, DROP, CYMBAL }
 
 data class MidiTransitionPlan(val type: MidiTransitionType = MidiTransitionType.NONE, val bars: Int = 0) {
@@ -74,6 +74,12 @@ data class TransitionMidiEvent(
     val pitch: Int,
     val velocity: Int
 )
+
+/** Exact half-open song-tick window in which a generated transition may sound. */
+data class TransitionMidiWindow(val startTick: Long, val endTick: Long) {
+    init { require(startTick >= 0 && endTick > startTick) { "Transition MIDI window is invalid" } }
+    operator fun contains(tick: Long): Boolean = tick in startTick until endTick
+}
 
 data class TransitionSectionPlacement(val sectionIndex: Int, val startTick: Long, val endTick: Long, val insertedTicksAfter: Long)
 data class TransitionGenerationResult(
@@ -281,7 +287,14 @@ class DeterministicMidiTransitionEngine {
     }
 }
 
-data class GeneratedTransitionMidi(val path: Path, val result: TransitionGenerationResult)
+data class GeneratedTransitionMidi(
+    val path: Path,
+    val result: TransitionGenerationResult,
+    /** Exact half-open windows in the generated MIDI timeline. */
+    val validationWindows: List<TransitionMidiWindow>,
+    /** End of the generated timeline, including any inserted transition bars. */
+    val validationTimelineEndTick: Long
+)
 
 /** Publishes the pure engine output as midi/generated/transitions.mid, atomically and idempotently. */
 class MidiTransitionGenerationAdapter(
@@ -295,12 +308,7 @@ class MidiTransitionGenerationAdapter(
         val active = arrangement.sections.flatMap { section ->
             section.instruments.filter { it.mode == InstrumentMode.GENERATED }.map { LogicalInstrument.parse(it.name) }
         }.toSet()
-        // Legacy v1 projects may have a piano-only arrangement with historical
-        // Cohesion evidence that names a logical bridge role. Its registry has
-        // a descriptor for every logical role, so retain that compatibility
-        // surface. Versioned catalogs may only use explicitly approved roles.
-        val availableRoles = if (registry.version == 1) LogicalInstrument.entries.toSet() else active
-        val available = availableRoles.associateWith { logical ->
+        val available = active.associateWith { logical ->
             val descriptor = registry.resolveApprovedRole(project, logical)
             TransitionInstrument(descriptor.midiChannelZeroBased ?: 0, descriptor.midiProgram)
         }
@@ -315,19 +323,23 @@ class MidiTransitionGenerationAdapter(
         val plans = arrangement.sections.mapIndexed { index, section ->
             if (index == arrangement.sections.lastIndex) MidiTransitionPlan() else section.transitionOut.toMidiPlan()
         }
-        val drumMap = availableRoles.takeIf { LogicalInstrument.DRUMS in it }
+        val drumMap = active.takeIf { LogicalInstrument.DRUMS in it }
             ?.let { registry.resolveApprovedRole(project, LogicalInstrument.DRUMS).noteMap }
             .orEmpty()
         val result = engine.generate(sections, plans, available, drumMap)
         val output = root.resolve("midi/generated/transitions.mid")
         writeMidi(output, result, available, sections)
-        return GeneratedTransitionMidi(output, result)
+        val validationWindows = result.placements.dropLast(1).mapIndexedNotNull { index, placement ->
+            plans[index].takeIf { it.type != MidiTransitionType.NONE && it.type != MidiTransitionType.DROP && placement.insertedTicksAfter > 0 }
+                ?.let { TransitionMidiWindow(placement.endTick, placement.endTick + placement.insertedTicksAfter) }
+        }
+        val timelineEnd = result.placements.last().let { it.endTick + it.insertedTicksAfter }
+        return GeneratedTransitionMidi(output, result, validationWindows, timelineEnd)
     }
 
     /**
      * Task 117 path: publish the already approved Cohesion bridge MIDI at its
-     * shifted boundary. This does not ask the legacy transition engine to
-     * compose a replacement gesture.
+     * shifted boundary. This does not compose a replacement gesture.
      */
     private fun generateApprovedCohesion(
         root: Path,
@@ -368,7 +380,14 @@ class MidiTransitionGenerationAdapter(
                 }
             }
         }
-        return GeneratedTransitionMidi(output, TransitionGenerationResult(ppq, placements, events, emptyList()))
+        val validationWindows = bridges.mapIndexed { index, bridge ->
+            val outgoingBeat = ppq * 4L / sections[index].timeSignatures.first().denominator
+            val incomingBeat = ppq * 4L / sections[index + 1].timeSignatures.first().denominator
+            val start = bridgeOverlayStart(placements[index], sections[index], bridge)
+            TransitionMidiWindow(start, start + outgoingBeat * bridge.leadBeats + incomingBeat * bridge.tailBeats)
+        }
+        val timelineEnd = placements.last().let { it.endTick + it.insertedTicksAfter }
+        return GeneratedTransitionMidi(output, TransitionGenerationResult(ppq, placements, events, emptyList()), validationWindows, timelineEnd)
     }
 
     private fun bridgesIndex(cohesion: ArrangementCohesionReferences, reference: ArrangementCohesionBoundaryReference): Int =

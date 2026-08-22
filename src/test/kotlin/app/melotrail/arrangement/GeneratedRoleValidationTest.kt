@@ -59,6 +59,31 @@ class GeneratedRoleValidationTest {
         assertTrue(report.violations.size <= RoleValidationPolicy().maximumViolations)
     }
 
+    @Test
+    fun `approved Cohesion overlay window permits a transition crossing its occurrence boundary`() {
+        val base = context()
+        val first = base.projection.occurrences.single()
+        val second = first.copy(occurrenceId = "occ-1", startBar = 1, endBar = 2, startTick = 1_920, endTick = 3_840)
+        val projection = base.projection.copy(occurrences = listOf(first, second))
+        val arrangement = DetailedArrangement(sections = listOf(
+            DetailedArrangementSection(0, "occ-0", "A", SongSectionPurpose.DEVELOPMENT, 0.5, listOf(PianoSourcePlan()), TransitionPlan()),
+            DetailedArrangementSection(1, "occ-1", "A", SongSectionPurpose.DEVELOPMENT, 0.5, listOf(PianoSourcePlan()), TransitionPlan())
+        ))
+        writeMidi(base.midi, listOf(Note(1_440, 2_160, 38, 100)), channel = 9)
+
+        val withoutSuppliedWindow = DeterministicGeneratedRoleValidator().validate(
+            GeneratedRoleValidationInput("transitions", base.midi, base.project, arrangement, projection, base.registry, "a".repeat(64), "b".repeat(64),
+                transitionTimelineEndTick = 3_840)
+        )
+        val overlay = DeterministicGeneratedRoleValidator().validate(
+            GeneratedRoleValidationInput("transitions", base.midi, base.project, arrangement, projection, base.registry, "a".repeat(64), "b".repeat(64),
+                transitionWindows = listOf(TransitionMidiWindow(1_440, 2_400)), transitionTimelineEndTick = 3_840)
+        )
+
+        assertTrue(withoutSuppliedWindow.violations.contains("Transition note lies outside its supplied boundary window"))
+        assertTrue(overlay.passed, overlay.violations.joinToString("; "))
+    }
+
     private fun context(role: String = "bass"): Context {
         val source = root.resolve("source/A.mid"); val clean = root.resolve("midi/clean/A.mid")
         writeMidi(source, listOf(Note(0, 1_920, 60, 100))); Files.createDirectories(clean.parent); Files.copy(source, clean)
@@ -92,7 +117,8 @@ class GeneratedRoleValidationTest {
     }
 
     private data class Context(val role: String, val project: Project, val arrangement: DetailedArrangement, val projection: app.melotrail.application.ArrangementGenerationProjection, val midi: Path) {
-        fun input() = GeneratedRoleValidationInput(role, midi, project, arrangement, projection, InstrumentRegistryLoader(TestSoundLibrary.root()).load(), "a".repeat(64), "b".repeat(64))
+        val registry get() = InstrumentRegistryLoader(TestSoundLibrary.root()).load()
+        fun input() = GeneratedRoleValidationInput(role, midi, project, arrangement, projection, registry, "a".repeat(64), "b".repeat(64))
     }
     private data class Note(val start: Long, val end: Long, val pitch: Int, val velocity: Int)
 }

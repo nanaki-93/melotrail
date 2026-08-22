@@ -43,6 +43,8 @@ import app.melotrail.application.GenerateHumanizationRequest
 import app.melotrail.application.FullSongEnhancementApplicationService
 import app.melotrail.application.DefaultFullSongEnhancementApplicationService
 import app.melotrail.application.FullSongEnhancementSnapshot
+import app.melotrail.application.FullSongCriticApplicationService
+import app.melotrail.application.DefaultFullSongCriticApplicationService
 import app.melotrail.application.PartPreviewApplicationService
 import app.melotrail.application.PreviewRequest
 import app.melotrail.application.PreviewResult
@@ -412,6 +414,7 @@ sealed interface WorkspaceOperation {
     data object ApprovingCohesion : WorkspaceOperation
     data class GeneratingArrangement(val progress: OperationProgress? = null) : WorkspaceOperation
     data class ApplyingMix(val progress: OperationProgress? = null) : WorkspaceOperation
+    data object RunningCritic : WorkspaceOperation
     data object Humanizing : WorkspaceOperation
     data class BuildingSong(val progress: OperationProgress? = null) : WorkspaceOperation
     data object ExportingCommercialProvenance : WorkspaceOperation
@@ -435,7 +438,7 @@ val WorkspaceOperation.isMutating: Boolean
         this is WorkspaceOperation.UpdatingPartRole || this is WorkspaceOperation.SavingStructure ||
         this is WorkspaceOperation.GeneratingCohesion || this is WorkspaceOperation.ReviewingCohesion || this is WorkspaceOperation.ApprovingCohesion ||
         this is WorkspaceOperation.GeneratingArrangement || this is WorkspaceOperation.ApprovingArrangement
-        || this is WorkspaceOperation.ApplyingMix || this is WorkspaceOperation.Humanizing || this is WorkspaceOperation.BuildingSong || this is WorkspaceOperation.ExportingCommercialProvenance || this is WorkspaceOperation.ExportingRelease
+        || this is WorkspaceOperation.ApplyingMix || this is WorkspaceOperation.RunningCritic || this is WorkspaceOperation.Humanizing || this is WorkspaceOperation.BuildingSong || this is WorkspaceOperation.ExportingCommercialProvenance || this is WorkspaceOperation.ExportingRelease
 
 sealed interface WorkspaceDialog {
     data class CreateProject(
@@ -689,6 +692,7 @@ sealed interface WorkspaceIntent {
     data object ResetMix : WorkspaceIntent
     data object GenerateHumanization : WorkspaceIntent
     data object BypassHumanization : WorkspaceIntent
+    data object GenerateCritic : WorkspaceIntent
     data object GenerateFullSongEnhancement : WorkspaceIntent
     data object ApproveFullSongEnhancement : WorkspaceIntent
     data object BypassFullSongEnhancement : WorkspaceIntent
@@ -736,6 +740,7 @@ class WorkspaceViewModel(
     private val enhancementService: EnhancementApplicationService = DefaultEnhancementApplicationService(),
     private val mixService: MixApplicationService = DefaultMixApplicationService(),
     private val fullSongEnhancementService: FullSongEnhancementApplicationService = DefaultFullSongEnhancementApplicationService(),
+    private val fullSongCriticService: FullSongCriticApplicationService = DefaultFullSongCriticApplicationService(),
     private val humanizationService: HumanizationApplicationService = DefaultHumanizationApplicationService(),
     private val buildService: BuildApplicationService? = null,
     private val player: ArtifactAudioPlayer? = null,
@@ -889,6 +894,7 @@ class WorkspaceViewModel(
             WorkspaceIntent.ResetMix -> resetMix()
             WorkspaceIntent.GenerateHumanization -> generateHumanization()
             WorkspaceIntent.BypassHumanization -> bypassHumanization()
+            WorkspaceIntent.GenerateCritic -> generateCritic()
             WorkspaceIntent.GenerateFullSongEnhancement -> generateFullSongEnhancement()
             WorkspaceIntent.ApproveFullSongEnhancement -> approveFullSongEnhancement()
             WorkspaceIntent.BypassFullSongEnhancement -> bypassFullSongEnhancement()
@@ -2557,7 +2563,22 @@ class WorkspaceViewModel(
                     ArrangementPlannerKind.QWEN -> "Qwen arrangement draft is ready for review and explicit approval."
                     ArrangementPlannerKind.DETERMINISTIC -> "Approved deterministic arrangement generated."
                 }
-                mutableState.update { it.copy(project = refreshedProject ?: it.project, arrangement = arrangement, selectedArrangementSection = arrangement.sections.firstOrNull()?.index, arrangementDraftDirty = false, operation = WorkspaceOperation.Idle, notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message, if (arrangement.approvalRequired) OperationSeverity.WARNING else OperationSeverity.SUCCESS) ?: it.operationFeedback, retry = null) }
+                mutableState.update {
+                    // A newly published arrangement invalidates every Cohesion input.
+                    // Drop the retained review snapshot so the Arrange page offers a
+                    // fresh Cohesion generation instead of approving old evidence.
+                    it.copy(
+                        project = refreshedProject ?: it.project,
+                        arrangement = arrangement,
+                        cohesion = null,
+                        selectedArrangementSection = arrangement.sections.firstOrNull()?.index,
+                        arrangementDraftDirty = false,
+                        operation = WorkspaceOperation.Idle,
+                        notification = message,
+                        operationFeedback = feedbackTracker.complete(feedbackId, message, if (arrangement.approvalRequired) OperationSeverity.WARNING else OperationSeverity.SUCCESS) ?: it.operationFeedback,
+                        retry = null
+                    )
+                }
             }.onFailure { fail("generate arrangement", it.message ?: "Unable to generate arrangement.", WorkspaceRetry.GenerateArrangement(request), feedbackId) }
         }
     }
@@ -2579,7 +2600,16 @@ class WorkspaceViewModel(
         mutableState.update { it.copy(operation = WorkspaceOperation.ApprovingArrangement, notification = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
             runCatching { withContext(ioDispatcher) { arrangementService.approve(project.root) } }
-                .onSuccess { arrangement -> mutableState.update { it.copy(arrangement = arrangement, selectedArrangementSection = arrangement.sections.firstOrNull()?.index, operation = WorkspaceOperation.Idle, notification = "Arrangement approved.", operationFeedback = feedbackTracker.complete(feedbackId, "Arrangement approved.") ?: it.operationFeedback) } }
+                .onSuccess { arrangement -> mutableState.update {
+                    it.copy(
+                        arrangement = arrangement,
+                        cohesion = null,
+                        selectedArrangementSection = arrangement.sections.firstOrNull()?.index,
+                        operation = WorkspaceOperation.Idle,
+                        notification = "Arrangement approved.",
+                        operationFeedback = feedbackTracker.complete(feedbackId, "Arrangement approved.") ?: it.operationFeedback
+                    )
+                } }
                 .onFailure { fail("approve arrangement", it.message ?: "Unable to approve arrangement.", sessionId = feedbackId) }
         }
     }
@@ -2694,6 +2724,31 @@ class WorkspaceViewModel(
                     if (it is CancellationException) mutableState.update { current -> current.copy(operation = WorkspaceOperation.Idle, notification = "Build cancellation requested; the current atomic stage was allowed to finish safely.", operationFeedback = feedbackTracker.complete(feedbackId, "Build cancellation completed at a safe boundary.", OperationSeverity.INFORMATION) ?: current.operationFeedback) }
                     else fail("build song", it.message ?: "Build Song failed.", sessionId = feedbackId)
                 }
+        }
+    }
+
+    private fun generateCritic() {
+        val project = state.value.project ?: return fail("critic", "Open a project before running Critic.")
+        if (!project.readiness.cohesionReady) return fail("critic", "Critic requires current approved Cohesion.")
+        if (state.value.operation.isMutating) return
+        val feedbackId = beginFeedback(OperationKind.CRITIC, OperationPhase.VALIDATING, "Analyzing approved Cohesion with Critic…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.RunningCritic, notification = null, retry = null, operationFeedback = feedbackTracker.current) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { fullSongCriticService.run(project.root) } }
+                .onSuccess { snapshot ->
+                    val refreshed = withContext(ioDispatcher) { projectService.open(project.root) }
+                    mutableState.update { current ->
+                        current.copy(
+                            project = refreshed,
+                            fullSongEnhancement = null,
+                            humanization = null,
+                            operation = WorkspaceOperation.Idle,
+                            notification = "Critic report ready: ${snapshot.report.issues.size} issue(s) found.",
+                            operationFeedback = feedbackTracker.complete(feedbackId, "Critic report ready.") ?: current.operationFeedback
+                        )
+                    }
+                }
+                .onFailure { fail("critic", it.message ?: "Unable to generate the Critic report.", sessionId = feedbackId) }
         }
     }
 

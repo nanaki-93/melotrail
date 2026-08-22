@@ -30,6 +30,7 @@ import app.melotrail.arrangement.LegacyLogicalInstrumentRoles
 import app.melotrail.arrangement.MidiAnalysis
 import app.melotrail.arrangement.MidiChord
 import app.melotrail.arrangement.MidiTransitionGenerationAdapter
+import app.melotrail.arrangement.TransitionMidiWindow
 import app.melotrail.arrangement.OccurrenceMidiArtifactResolver
 import app.melotrail.arrangement.PadMidiGenerationAdapter
 import app.melotrail.arrangement.Project
@@ -251,10 +252,16 @@ class DefaultArrangementApplicationService(
             val path = normalized.resolve("midi/generated/strings.mid"); generating("strings", path)
             StringsMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("strings", it.path, it.notes.size) }
         }
+        var transitionWindows = emptyList<TransitionMidiWindow>()
+        var transitionTimelineEndTick: Long? = null
         if (needsTransitionMidi) {
             coroutineContext.ensureActive()
             val path = normalized.resolve("midi/generated/transitions.mid"); generating("transitions", path)
-            MidiTransitionGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("transitions", it.path, it.result.events.size) }
+            MidiTransitionGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let {
+                transitionWindows = it.validationWindows
+                transitionTimelineEndTick = it.validationTimelineEndTick
+                emit("transitions", it.path, it.result.events.size)
+            }
         }
         val approval = requireNotNull(ProjectStore.read(normalized).workflow.arrangement) {
             "Generated MIDI requires approved arrangement lineage"
@@ -271,7 +278,9 @@ class DefaultArrangementApplicationService(
             val relative = normalized.relativize(artifact.path.toAbsolutePath().normalize()).toString().replace('\\', '/')
             val report = generatedRoleValidator.validate(GeneratedRoleValidationInput(
                 role = artifact.instrument, midi = artifact.path, project = project, arrangement = arrangement,
-                projection = projection, registry = registry, arrangementSha256 = approval.arrangement.sha256, registrySha256 = registrySha256
+                projection = projection, registry = registry, arrangementSha256 = approval.arrangement.sha256, registrySha256 = registrySha256,
+                transitionWindows = if (artifact.instrument == "transitions") transitionWindows else emptyList(),
+                transitionTimelineEndTick = transitionTimelineEndTick.takeIf { artifact.instrument == "transitions" }
             ))
             val reportPath = writeGeneratedMidiValidationReport(normalized, artifact.instrument, report)
             require(report.passed) {

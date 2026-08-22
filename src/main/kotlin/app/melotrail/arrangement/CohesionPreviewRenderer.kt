@@ -1,5 +1,7 @@
 package app.melotrail.arrangement
 
+import app.melotrail.application.OperationProgress
+import app.melotrail.application.ProgressSink
 import app.melotrail.audio.WAVDecoder
 import app.melotrail.model.ErrorReporter
 import kotlinx.serialization.json.Json
@@ -19,7 +21,7 @@ class FullSongCohesionPreviewRenderer(
     private val libraryRoot: Path,
     private val mixer: DeterministicStemMixer = DeterministicStemMixer()
 ) {
-    suspend fun render(root: Path, input: TransitionCohesionInput): CohesionPreviewReferences {
+    suspend fun render(root: Path, input: TransitionCohesionInput, progress: ProgressSink = ProgressSink.None): CohesionPreviewReferences {
         val project = ProjectStore.read(root).also { it.requireValid(root) }
         val workflow = requireNotNull(project.workflow.cohesion).also {
             require(it.inputSha256 == input.inputHash) { "Cohesion preview input is stale" }
@@ -35,8 +37,9 @@ class FullSongCohesionPreviewRenderer(
         val baselinePiano = assemblePiano(root, input, enhanced = false)
         val enhancedPiano = assemblePiano(root, input, enhanced = true)
         return try {
-            val baseline = renderVariant(root, project, input, baselinePiano, enhanced = false, format, expectedFrames)
-            val enhanced = renderVariant(root, project, input, enhancedPiano, enhanced = true, format, expectedFrames)
+            val totalStems = (1 + input.generatedRoles.size) * 2
+            val baseline = renderVariant(root, project, input, baselinePiano, enhanced = false, format, expectedFrames, progress, 0, totalStems)
+            val enhanced = renderVariant(root, project, input, enhancedPiano, enhanced = true, format, expectedFrames, progress, 1 + input.generatedRoles.size, totalStems)
             CohesionPreviewReferences(
                 WorkflowArtifactReference(root.relativize(baseline).toString().replace('\\', '/'), sha256(baseline)),
                 WorkflowArtifactReference(root.relativize(enhanced).toString().replace('\\', '/'), sha256(enhanced))
@@ -54,13 +57,16 @@ class FullSongCohesionPreviewRenderer(
         piano: Path,
         enhanced: Boolean,
         format: RenderFormat,
-        expectedFrames: Long
+        expectedFrames: Long,
+        progress: ProgressSink,
+        completedStems: Int,
+        totalStems: Int
     ): Path {
         val registry = InstrumentRegistryLoader(libraryRoot).load()
         val roles = listOf("piano") + input.generatedRoles.map(GeneratedRoleEvidence::role)
         val stems = mutableListOf<Path>()
         try {
-            val tracks = roles.map { role ->
+            val tracks = roles.mapIndexed { index, role ->
                 val logical = LogicalInstrument.parse(role)
                 val midi = when {
                     role == "piano" -> piano
@@ -68,6 +74,10 @@ class FullSongCohesionPreviewRenderer(
                     else -> root.resolve(requireNotNull(project.workflow.cohesion?.roles?.singleOrNull { it.role == role }).result.file)
                 }
                 require(Files.isRegularFile(midi)) { "Cohesion preview is missing $role MIDI" }
+                progress.report(OperationProgress(
+                    operation = "cohesion", stageIndex = 5, stageCount = 5,
+                    message = "Rendering ${if (enhanced) "enhanced" else "baseline"} Cohesion preview: $role (${completedStems + index + 1}/$totalStems)"
+                ))
                 val stem = root.resolve("cohesion/runs/${input.inputHash}/preview/.${if (enhanced) "enhanced" else "baseline"}-$role-${UUID.randomUUID()}.wav")
                 Files.createDirectories(requireNotNull(stem.parent))
                 renderer.render(midi, registry.resolveApprovedRole(project, logical).id, stem, format, expectedFrames)
@@ -79,6 +89,10 @@ class FullSongCohesionPreviewRenderer(
                     generated = role != "piano"
                 )
             }
+            progress.report(OperationProgress(
+                operation = "cohesion", stageIndex = 5, stageCount = 5,
+                message = "Mixing ${if (enhanced) "enhanced" else "baseline"} Cohesion preview"
+            ))
             val mixed = mixer.mix(tracks, MixSettings(requiredFormat = format, peakCeiling = 0.95))
             val target = root.resolve(if (enhanced) CohesionRoleArtifactPaths.enhancedPreview(input.inputHash) else CohesionRoleArtifactPaths.baselinePreview(input.inputHash))
             return mixer.writeWav(mixed, target)

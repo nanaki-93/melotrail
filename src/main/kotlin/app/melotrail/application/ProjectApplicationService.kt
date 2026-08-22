@@ -22,6 +22,7 @@ import app.melotrail.arrangement.TechnicalCorrectionSelection
 import app.melotrail.arrangement.MidiLoFiFeelTransformer
 import app.melotrail.arrangement.MidiTranspositionReportStore
 import app.melotrail.arrangement.DetailedArrangement
+import app.melotrail.arrangement.ArrangementHarmonyContext
 import app.melotrail.arrangement.TransitionCohesionInputFactory
 import app.melotrail.arrangement.TransitionCohesionStore
 import app.melotrail.arrangement.SelectedMidiArtifactResolver
@@ -1321,7 +1322,8 @@ class DefaultProjectApplicationService(
             val part = project.parts.first { it.id == partId }
             val reference = requireNotNull(part.analysis)
             require(reference.kind == AnalysisKind.MIDI)
-            json.decodeFromString(MidiAnalysis.serializer(), Files.readString(root.resolve(reference.file)))
+            val analysis = json.decodeFromString(MidiAnalysis.serializer(), Files.readString(root.resolve(reference.file)))
+            ArrangementHarmonyContext.apply(analysis, part.sectionType, project.envelope.harmony)
         }
         val input = SongPlanningInput(project.name, project.version, analyses, structure, LogicalInstrument.entries.map { it.wireName })
         val arrangement = project.workflow.arrangement ?: return false

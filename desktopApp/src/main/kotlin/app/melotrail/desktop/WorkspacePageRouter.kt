@@ -2186,26 +2186,43 @@ private fun MixMasterPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                     }
                     OverviewCard("mix-master-humanization", "Humanization") {
                         val humanization = state.humanization
+                        val humanizationReady = state.project?.readiness?.let { readiness ->
+                            readiness.criticAvailable && readiness.fullSongEnhancementSelection != app.melotrail.arrangement.FullSongEnhancementSelection.UNRESOLVED
+                        } == true
                         Text(
                             humanization?.let { snapshot ->
                                 if (snapshot.selection == app.melotrail.arrangement.HumanizationSelection.HUMANIZED)
                                     "Current comparison evidence · seed ${snapshot.seed} · ${snapshot.artifacts} artifacts · ${snapshot.changedNotes} recorded edits"
                                 else "Bypass selected · cohesive MIDI will be rendered unchanged"
-                            } ?: "Profile default is available after approved Cohesion. Select bypass or create a deterministic variation.",
+                            } ?: if (humanizationReady) "Select bypass or create a deterministic variation."
+                            else "Run Critic, then choose or bypass Full-Song Enhance before Humanization.",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         humanization?.warnings?.forEach { warning -> Text(warning, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary) }
                         Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-                            OutlinedButton(onClick = { onIntent(WorkspaceIntent.BypassHumanization) }, enabled = !mutating,
+                            OutlinedButton(onClick = { onIntent(WorkspaceIntent.BypassHumanization) }, enabled = !mutating && humanizationReady,
                                 modifier = Modifier.semantics { testTag = "mix-master-humanization-bypass"; contentDescription = "Bypass humanization and use cohesive MIDI input." }) { Text("Bypass") }
-                            Button(onClick = { onIntent(WorkspaceIntent.GenerateHumanization) }, enabled = !mutating,
+                            Button(onClick = { onIntent(WorkspaceIntent.GenerateHumanization) }, enabled = !mutating && humanizationReady,
                                 modifier = Modifier.semantics { testTag = "mix-master-humanization-regenerate"; contentDescription = "Create and select a new deterministic humanization variation." }) {
                                 Text(if (humanization?.selection == app.melotrail.arrangement.HumanizationSelection.HUMANIZED) "New variation" else "Use profile default")
                             }
                         }
                     }
+                    OverviewCard("mix-master-critic", "Critic") {
+                        val criticReady = state.project?.readiness?.criticAvailable == true
+                        Text(
+                            if (criticReady) "Current Critic report is available for the approved Cohesion output."
+                            else "Run Critic before choosing Full-Song Enhance or Humanization.",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Button(
+                            onClick = { onIntent(WorkspaceIntent.GenerateCritic) },
+                            enabled = !mutating && state.project?.readiness?.cohesionReady == true
+                        ) { Text(if (criticReady) "Rerun Critic" else "Run Critic") }
+                    }
                     OverviewCard("mix-master-full-song-enhance", "Full-Song Enhance") {
                         val enhancement = state.fullSongEnhancement
+                        val criticReady = state.project?.readiness?.criticAvailable == true
                         Text(
                             enhancement?.let { snapshot ->
                                 when (snapshot.selection) {
@@ -2219,11 +2236,11 @@ private fun MixMasterPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                         )
                         enhancement?.warnings?.forEach { warning -> Text(warning, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary) }
                         Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-                            OutlinedButton(onClick = { onIntent(WorkspaceIntent.BypassFullSongEnhancement) }, enabled = !mutating) { Text("Bypass") }
+                            OutlinedButton(onClick = { onIntent(WorkspaceIntent.BypassFullSongEnhancement) }, enabled = !mutating && criticReady) { Text("Bypass") }
                             if (enhancement?.candidateAvailable == true) {
                                 Button(onClick = { onIntent(WorkspaceIntent.ApproveFullSongEnhancement) }, enabled = !mutating) { Text("Approve") }
                             } else if (enhancement?.selection != app.melotrail.arrangement.FullSongEnhancementSelection.NO_OP && enhancement?.selection != app.melotrail.arrangement.FullSongEnhancementSelection.APPROVED) {
-                                Button(onClick = { onIntent(WorkspaceIntent.GenerateFullSongEnhancement) }, enabled = !mutating) { Text("Generate candidate") }
+                                Button(onClick = { onIntent(WorkspaceIntent.GenerateFullSongEnhancement) }, enabled = !mutating && criticReady) { Text("Generate candidate") }
                             }
                         }
                     }
