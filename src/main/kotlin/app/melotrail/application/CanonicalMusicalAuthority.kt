@@ -2,6 +2,7 @@ package app.melotrail.application
 
 import app.melotrail.arrangement.AnalysisKind
 import app.melotrail.arrangement.GeneratedMidiArtifactReference
+import app.melotrail.arrangement.RoleValidationReport
 import app.melotrail.arrangement.MidiAnalysis
 import app.melotrail.arrangement.MidiChord
 import app.melotrail.arrangement.MidiTempoChange
@@ -501,6 +502,10 @@ class MusicalAuthorityBuilder(
             val report = generatedArtifact.validationReport
             require(sha256(Files.readAllBytes(resolveProjectFile(root, report.file, "generated MIDI validation report '${generatedArtifact.id}'"))) == report.sha256) {
                 "Generated MIDI validation report '${generatedArtifact.id}' is stale. Generate Arrangement again."
+            }
+            val validation = canonicalJson.decodeFromString(RoleValidationReport.serializer(), Files.readString(resolveProjectFile(root, report.file, "generated MIDI validation report '${generatedArtifact.id}'")))
+            require(validation.passed && validation.role == generatedArtifact.id && validation.outputSha256 == artifact.sha256) {
+                "Generated MIDI '${generatedArtifact.id}' has no current passing validation report. Generate Arrangement again."
             }
             ValidatedGeneratedRoleArtifact(generatedArtifact.id, artifact)
         }

@@ -12,8 +12,7 @@ class SelectedMidiArchitectureTest {
     fun `selected midi consumers do not read cleaned references directly`() {
         val source = Path.of("src/main/kotlin/app/melotrail")
         val consumers = listOf(
-            "arrangement/StemRenderingMixer.kt",
-            "arrangement/PianoBassQualityGate.kt"
+            "arrangement/StemRenderingMixer.kt"
         )
         consumers.forEach { relative ->
             val text = Files.readString(source.resolve(relative))

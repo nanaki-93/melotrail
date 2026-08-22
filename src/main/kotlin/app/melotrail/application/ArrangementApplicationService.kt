@@ -18,6 +18,10 @@ import app.melotrail.arrangement.GlobalSongPlanner
 import app.melotrail.arrangement.GeneratedMidiArtifactReference
 import app.melotrail.arrangement.GeneratedMidiArtifactPaths
 import app.melotrail.arrangement.GeneratedMidiWorkflowReferences
+import app.melotrail.arrangement.GeneratedRoleValidationInput
+import app.melotrail.arrangement.GeneratedRoleValidators
+import app.melotrail.arrangement.GeneratedRoleValidator
+import app.melotrail.arrangement.RoleValidationReport
 import app.melotrail.arrangement.InstrumentMode
 import app.melotrail.arrangement.LocalQwenDetailedArrangementPlanner
 import app.melotrail.arrangement.LocalQwenGlobalSongPlanner
@@ -54,7 +58,6 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -109,19 +112,6 @@ data class GeneratedMidiArtifact(val instrument: String, val path: Path, val eve
 
 data class GeneratedMidiSnapshot(val artifacts: List<GeneratedMidiArtifact>)
 
-@Serializable
-private data class GeneratedMidiValidationReport(
-    val version: Int = 1,
-    val role: String,
-    val generatorVersion: String,
-    val seed: Long,
-    val arrangementSha256: String,
-    val authoritySha256: String,
-    val registrySha256: String,
-    val outputSha256: String,
-    val eventCount: Int
-)
-
 enum class ApplicationErrorCategory { PREREQUISITE, VALIDATION, WORKER, MODEL, RENDERER, ARTIFACT, IO }
 
 class ApplicationServiceException(
@@ -149,7 +139,8 @@ class DefaultArrangementApplicationService(
     private val deterministicDetailedPlanner: DetailedArrangementPlanner = DeterministicDetailedArrangementPlanner(),
     private val qwenDetailedPlanner: DetailedArrangementPlanner = LocalQwenDetailedArrangementPlanner(),
     private val libraryRoot: Path,
-    private val musicalAuthorityBuilder: MusicalAuthorityBuilder = MusicalAuthorityBuilder()
+    private val musicalAuthorityBuilder: MusicalAuthorityBuilder = MusicalAuthorityBuilder(),
+    private val generatedRoleValidator: GeneratedRoleValidator = GeneratedRoleValidators
 ) : ArrangementApplicationService {
     override suspend fun generate(request: GenerateArrangementRequest, progress: ProgressSink): ArrangementSnapshot = mutate(request.root) { root ->
         progress.report(OperationProgress("arrange", 1, 3, "Validating MIDI analyses"))
@@ -265,15 +256,20 @@ class DefaultArrangementApplicationService(
         require(approval.registrySha256 == registrySha256) {
             "Approved arrangement is stale for the current instrument registry. Regenerate Arrangement first."
         }
+        val registry = InstrumentRegistryLoader(libraryRoot).load()
         val references = artifacts.map { artifact ->
             val relative = normalized.relativize(artifact.path.toAbsolutePath().normalize()).toString().replace('\\', '/')
-            val outputSha256 = sha256(artifact.path)
-            val report = writeGeneratedMidiValidationReport(
-                normalized, artifact.instrument, artifact.events, approval.arrangement.sha256, projection.contextSha256, registrySha256, outputSha256
-            )
+            val report = generatedRoleValidator.validate(GeneratedRoleValidationInput(
+                role = artifact.instrument, midi = artifact.path, project = project, arrangement = arrangement,
+                projection = projection, registry = registry, arrangementSha256 = approval.arrangement.sha256, registrySha256 = registrySha256
+            ))
+            val reportPath = writeGeneratedMidiValidationReport(normalized, artifact.instrument, report)
+            require(report.passed) {
+                "Generated ${artifact.instrument} MIDI failed validation: ${report.violations.joinToString("; ")}"
+            }
             GeneratedMidiArtifactReference(
-                artifact.instrument, WorkflowArtifactReference(relative, outputSha256),
-                WorkflowArtifactReference(GeneratedMidiArtifactPaths.validationReport(artifact.instrument), sha256(report))
+                artifact.instrument, WorkflowArtifactReference(relative, sha256(artifact.path)),
+                WorkflowArtifactReference(GeneratedMidiArtifactPaths.validationReport(artifact.instrument), sha256(reportPath))
             )
         }
         ProjectWorkflowStore.update(normalized) { workflow ->
@@ -540,21 +536,12 @@ class DefaultArrangementApplicationService(
     private fun writeGeneratedMidiValidationReport(
         root: Path,
         role: String,
-        events: Int,
-        arrangementSha256: String,
-        authoritySha256: String,
-        registrySha256: String,
-        outputSha256: String
+        report: RoleValidationReport
     ): Path {
         val relative = GeneratedMidiArtifactPaths.validationReport(role)
         val output = root.resolve(relative)
         Files.createDirectories(checkNotNull(output.parent))
         val temporary = output.resolveSibling(".${output.fileName}.tmp")
-        val report = GeneratedMidiValidationReport(
-            role = role, generatorVersion = GENERATOR_VERSION, seed = GENERATOR_SEED,
-            arrangementSha256 = arrangementSha256, authoritySha256 = authoritySha256,
-            registrySha256 = registrySha256, outputSha256 = outputSha256, eventCount = events
-        )
         Files.writeString(temporary, json.encodeToString(report), StandardCharsets.UTF_8)
         try {
             try {

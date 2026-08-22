@@ -29,6 +29,10 @@ import app.melotrail.arrangement.GeneratedMidiWorkflowReferences
 import app.melotrail.arrangement.WorkflowArtifact
 import app.melotrail.arrangement.WorkflowArtifactReference
 import app.melotrail.arrangement.WorkflowChange
+import app.melotrail.arrangement.RoleValidationHash
+import app.melotrail.arrangement.RoleValidationMetric
+import app.melotrail.arrangement.RoleValidationReport
+import app.melotrail.arrangement.RoleValidationTarget
 import app.melotrail.arrangement.TransitionBridgePlan
 import app.melotrail.arrangement.TransitionCohesionInput
 import app.melotrail.arrangement.TransitionCohesionInputFactory
@@ -157,11 +161,16 @@ class CohesionApplicationServiceTest {
         )
         Files.createDirectories(root.resolve("midi/generated"))
         Files.copy(root.resolve("midi/clean/A.mid"), root.resolve("midi/generated/drums.mid"), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
-        Files.writeString(root.resolve("midi/generated/drums.validation.json"), "{\"version\":1}")
         val project = ProjectStore.read(root)
         val hash = app.melotrail.arrangement.sha256(root.resolve("midi/generated/drums.mid"))
-        val reportHash = app.melotrail.arrangement.sha256(root.resolve("midi/generated/drums.validation.json"))
         val approval = requireNotNull(project.workflow.arrangement)
+        Files.writeString(root.resolve("midi/generated/drums.validation.json"), Json.encodeToString(RoleValidationReport(
+            role = "drums", target = RoleValidationTarget(occurrenceIds = emptyList()),
+            inputHashes = listOf(RoleValidationHash("arrangement", approval.arrangement.sha256), RoleValidationHash("authority", approval.authoritySha256), RoleValidationHash("registry", approval.registrySha256)),
+            outputSha256 = hash, policyVersion = 1, metrics = listOf(RoleValidationMetric("noteCount", 1), RoleValidationMetric("ppq", 480)),
+            warnings = emptyList(), violations = emptyList(), passed = true
+        )))
+        val reportHash = app.melotrail.arrangement.sha256(root.resolve("midi/generated/drums.validation.json"))
         ProjectStore.write(root, project.copy(workflow = project.workflow.invalidate(WorkflowChange.GENERATED_MIDI)
             .markCurrent(WorkflowArtifact.GENERATED_MIDI)
             .copy(generatedMidi = GeneratedMidiWorkflowReferences(
