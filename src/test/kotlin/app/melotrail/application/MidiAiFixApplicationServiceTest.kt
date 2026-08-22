@@ -73,11 +73,13 @@ class MidiAiFixApplicationServiceTest {
         assertTrue(Files.isRegularFile(root.resolve("midi/ai-fix/A/diff.json")))
         assertTrue(Files.isRegularFile(root.resolve("midi/ai-fix/A/audit.json")))
         assertTrue(Files.isRegularFile(root.resolve("midi/ai-fix/A/provenance.json")))
+        assertTrue(Files.isRegularFile(root.resolve("midi/ai-fix/A/draft.comparison.json")))
         assertEquals(app.melotrail.arrangement.MidiMutationStage.AI_FIX,
             app.melotrail.arrangement.MidiAiFixStore.readDiff(root, "A").mutationReport.stage)
 
         val approved = service.approve(root, "A")
         assertTrue(approved.approved)
+        assertTrue(Files.isRegularFile(root.resolve("midi/ai-fix/A/approved.comparison.json")))
         assertEquals(MidiAiFixSelection.APPROVED, ProjectStore.read(root).parts.single().midi!!.aiFixSelection)
         assertFalse(projectService.open(root).parts.single().preparation.analyzed)
 

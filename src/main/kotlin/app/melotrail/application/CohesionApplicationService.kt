@@ -19,6 +19,7 @@ import app.melotrail.arrangement.TransitionCohesionPlan
 import app.melotrail.arrangement.TransitionCohesionStore
 import app.melotrail.arrangement.toSectionInstance
 import app.melotrail.arrangement.WorkflowArtifact
+import app.melotrail.arrangement.WorkflowArtifactReference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
@@ -97,6 +98,7 @@ class DefaultCohesionApplicationService(
         val plan = qwenPlanner(input)
         progress.report(OperationProgress("cohesion", 4, 5, "Publishing boundary Cohesion MIDI"))
         TransitionCohesionStore.writeDraft(root, input, plan)
+        persistComparisons(root, input)
         progress.report(OperationProgress("cohesion", 5, 5, "Rendering Cohesion baseline and preview"))
         previewPreparation.render(root, input)?.let { TransitionCohesionStore.attachPreviews(root, input, it) }
         snapshot(root, input, plan, false)
@@ -200,6 +202,25 @@ class DefaultCohesionApplicationService(
             accompanimentEditCount = plan.boundaries.size,
             baselinePreview = cohesionWorkflow?.previews?.baseline?.file?.let(root::resolve),
             enhancedPreview = cohesionWorkflow?.previews?.enhanced?.file?.let(root::resolve))
+    }
+    private fun persistComparisons(root: Path, input: TransitionCohesionInput) {
+        val project = ProjectStore.read(root)
+        val cohesion = requireNotNull(project.workflow.cohesion)
+        cohesion.occurrences.sortedBy { it.instanceId }.forEach { occurrence ->
+            val selected = app.melotrail.arrangement.SelectedMidiArtifactResolver().resolve(root, project, occurrence.instanceId.let { id -> project.envelope.structureOccurrences.single { it.instanceId == id }.partId })
+            val before = WorkflowArtifactReference(selected.projectRelativePath, selected.sha256)
+            val output = occurrence.result
+            val beforeEvidence = StageComparisonArtifact(StageComparisonStage.COHESION, before, input.contextSha256, role = "piano", occurrenceId = occurrence.instanceId)
+            val afterEvidence = StageComparisonArtifact(StageComparisonStage.COHESION, output, input.contextSha256, StageEvidenceStatus.DRAFT, "piano", occurrence.instanceId)
+            StageComparisonReportStore.write(root, afterEvidence, StageComparisonService().compare(root, beforeEvidence, afterEvidence))
+        }
+        val generated = project.workflow.generatedMidi?.artifacts.orEmpty().associateBy { it.id }
+        cohesion.roles.sortedBy { it.role }.forEach { output ->
+            val source = requireNotNull(generated[output.role]) { "Cohesion role '${output.role}' has no generated MIDI source." }.artifact
+            val beforeEvidence = StageComparisonArtifact(StageComparisonStage.COHESION, source, input.contextSha256, role = output.role)
+            val afterEvidence = StageComparisonArtifact(StageComparisonStage.COHESION, output.result, input.contextSha256, StageEvidenceStatus.DRAFT, output.role)
+            StageComparisonReportStore.write(root, afterEvidence, StageComparisonService().compare(root, beforeEvidence, afterEvidence))
+        }
     }
     private fun digest(path: Path): String = digest(Files.readAllBytes(path))
     private fun digest(value: String): String = digest(value.toByteArray())

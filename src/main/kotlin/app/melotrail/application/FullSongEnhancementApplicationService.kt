@@ -89,6 +89,7 @@ class DefaultFullSongEnhancementApplicationService(
             fullSongEnhancementSelection = FullSongEnhancementSelection.UNRESOLVED,
             fullSongEnhancement = references
         ).markCurrent(WorkflowArtifact.FULL_SONG_ENHANCEMENT)))
+        persistComparisons(normalized, input, references)
         snapshot(FullSongEnhancementSelection.UNRESOLVED, references, applied.report, input.issues.size)
     }
 
@@ -267,6 +268,17 @@ class DefaultFullSongEnhancementApplicationService(
     private fun snapshot(selection: FullSongEnhancementSelection, refs: FullSongEnhancementReferences, report: FullSongEnhancementApplicationReport, issues: Int) =
         FullSongEnhancementSnapshot(selection, refs.status == FullSongEnhancementCandidateStatus.DRAFT, refs.status == FullSongEnhancementCandidateStatus.APPROVED,
             issues, report.addressedIssueIds.size, report.changedNotes, report.warnings)
+
+    private fun persistComparisons(root: Path, input: FullSongEnhancementInput, refs: FullSongEnhancementReferences) {
+        refs.artifacts.sortedBy { it.id }.forEach { artifact ->
+            val target = input.targets.single { it.id == artifact.id }
+            val before = StageComparisonArtifact(StageComparisonStage.FULL_SONG_ENHANCE, artifact.input, input.contextSha256,
+                role = target.role, occurrenceId = target.occurrenceId)
+            val after = StageComparisonArtifact(StageComparisonStage.FULL_SONG_ENHANCE, artifact.output, input.contextSha256,
+                StageEvidenceStatus.DRAFT, target.role, target.occurrenceId)
+            StageComparisonReportStore.write(root, after, StageComparisonService().compare(root, before, after))
+        }
+    }
 
     private fun target(id: String, role: String, occurrence: String?, offset: Long, ref: WorkflowArtifactReference, root: Path): FullSongEnhancementTarget {
         val path = verified(root, ref, "Cohesion MIDI '$id'"); return FullSongEnhancementTarget(id, role, occurrence, offset, ref, readNotes(path, ref.sha256, offset).map { it.note })

@@ -89,6 +89,7 @@ class DefaultEnhancementApplicationService(
                 WorkflowArtifactReference(reportRelative, sha256(root.resolve(reportRelative))), context.contextSha256, EnhancementApproval.DRAFT,
                 WorkflowArtifactReference(planRelative, sha256(root.resolve(planRelative))), WorkflowArtifactReference(provenanceRelative, sha256(root.resolve(provenanceRelative))))
             update(root, request.partId, refs, EnhancementSelection.CORRECTED)
+            persistComparison(root, refs, report, StageEvidenceStatus.DRAFT)
             snapshot(request.partId, refs, report)
         }
     }
@@ -108,6 +109,7 @@ class DefaultEnhancementApplicationService(
         requireBoundEvidence(root, refs, report)
         requireCurrentAuthority(root, request.partId, refs)
         val approved = refs.copy(approval = EnhancementApproval.APPROVED); update(root, request.partId, approved, EnhancementSelection.ENHANCED)
+        persistComparison(root, approved, report, StageEvidenceStatus.APPROVED)
         snapshot(request.partId, approved, report)
     }
 
@@ -177,6 +179,12 @@ class DefaultEnhancementApplicationService(
         }
     }
     private fun snapshot(partId: String, refs: EnhancementReferences, report: EnhancementEditReport) = EnhancementSnapshot(partId, refs.intensity, refs.input.sha256, refs.output.sha256, refs.contextSha256, refs.approval, report.appliedEdits.size, report.appliedEdits.map(EnhancementEdit::reason), report.placeholder)
+    private fun persistComparison(root: Path, refs: EnhancementReferences, report: EnhancementEditReport, status: StageEvidenceStatus) {
+        val before = StageComparisonArtifact(StageComparisonStage.ENHANCE, refs.input, refs.contextSha256)
+        val after = StageComparisonArtifact(StageComparisonStage.ENHANCE, refs.output, refs.contextSha256, status,
+            mutationReport = report.mutationReport, anchorsRetained = report.anchorsRetained)
+        StageComparisonReportStore.write(root, after, StageComparisonService().compare(root, before, after))
+    }
     private fun locked(root: Path, block: (Path) -> EnhancementSnapshot): EnhancementSnapshot { val normalized = root.toAbsolutePath().normalize(); val lock = ProjectMutationCoordinator.lock(normalized); check(lock.tryLock()) { "Another enhancement operation is already running." }; return try { block(normalized) } finally { lock.unlock() } }
     private fun publish(source: Path, target: Path, label: String) { Files.createDirectories(requireNotNull(target.parent)); val staged = target.resolveSibling(".${target.fileName}.save"); try { Files.copy(source, staged, StandardCopyOption.REPLACE_EXISTING); try { Files.move(staged, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING) } catch (error: AtomicMoveNotSupportedException) { throw IllegalStateException("Atomic publication is unavailable for $label.", error) } } finally { Files.deleteIfExists(staged); Files.deleteIfExists(source) } }
     private fun write(path: Path, text: String) { Files.createDirectories(requireNotNull(path.parent)); val temporary = path.resolveSibling(".${path.fileName}.save"); try { Files.writeString(temporary, text, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING); Files.move(temporary, path, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING) } finally { Files.deleteIfExists(temporary) } }

@@ -84,6 +84,7 @@ class DefaultMidiAiFixApplicationService(
         val draft = root.resolve(app.melotrail.arrangement.MidiAiFixArtifactPaths.draft(request.partId))
         val diff = transformer.apply(current.cleaned, draft, plan, current.input)
         MidiAiFixStore.writeDraft(root, current.input, plan, diff)
+        persistComparison(root, request.partId, plan.contextSha256, diff, StageEvidenceStatus.DRAFT)
         snapshot(root, request.partId, current.input, diff, approved = false)
     }
 
@@ -101,6 +102,8 @@ class DefaultMidiAiFixApplicationService(
         val current = currentInput(normalized, partId)
         val refs = MidiAiFixStore.approve(normalized, partId, current.input)
         val diff = MidiAiFixStore.readDiff(normalized, partId)
+        val plan = MidiAiFixStore.readPlan(normalized, partId)
+        persistComparison(normalized, partId, plan.contextSha256, diff.copy(outputSha256 = requireNotNull(refs.approved).sha256), StageEvidenceStatus.APPROVED)
         snapshot(normalized, partId, current.input, diff.copy(outputSha256 = requireNotNull(refs.approved).sha256), approved = true)
     }
 
@@ -213,6 +216,21 @@ class DefaultMidiAiFixApplicationService(
         val draftAvailable = refs?.draft?.let { ref -> Files.isRegularFile(root.resolve(ref.file)) && ref.sha256 == diff.outputSha256 } == true
         val approvedAvailable = refs?.approved?.let { ref -> Files.isRegularFile(root.resolve(ref.file)) && ref.sha256 == diff.outputSha256 } == true
         return MidiAiFixSnapshot(partId, plan.inputHash, plan.selectedInputSha256, diff.outputSha256, diff.edits, approved, draftAvailable, approvedAvailable)
+    }
+
+    /** Report publication is evidence-only and occurs after the draft/approval reference exists in project.json. */
+    private fun persistComparison(root: Path, partId: String, contextSha256: String, diff: MidiAiFixDiff, status: StageEvidenceStatus) {
+        val midi = requireNotNull(ProjectStore.read(root).parts.single { it.id == partId }.midi)
+        val before = requireNotNull(midi.technicalCorrection).output
+        val after = when (status) {
+            StageEvidenceStatus.DRAFT -> requireNotNull(midi.aiFix?.draft)
+            StageEvidenceStatus.APPROVED -> requireNotNull(midi.aiFix?.approved)
+            else -> error("AI Fix comparison status is invalid")
+        }
+        val report = StageComparisonService().compare(root,
+            StageComparisonArtifact(StageComparisonStage.AI_FIX, before, contextSha256),
+            StageComparisonArtifact(StageComparisonStage.AI_FIX, after, contextSha256, status, mutationReport = diff.mutationReport))
+        StageComparisonReportStore.write(root, StageComparisonArtifact(StageComparisonStage.AI_FIX, after, contextSha256, status, mutationReport = diff.mutationReport), report)
     }
 
     private fun noSafeFixReason(input: MidiAiFixInput): String = if (input.problemRegions.any {

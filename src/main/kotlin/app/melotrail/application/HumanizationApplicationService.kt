@@ -126,6 +126,7 @@ class DefaultHumanizationApplicationService(
             ProjectStore.write(root, project.copy(workflow = project.workflow.invalidate(WorkflowChange.HUMANIZATION)
                 .markCurrent(WorkflowArtifact.HUMANIZATION)
                 .copy(humanizationSelection = HumanizationSelection.HUMANIZED, humanization = refs)))
+            persistComparisons(root, refs)
             snapshot(HumanizationSelection.HUMANIZED, refs, aggregate)
         }
     }
@@ -176,6 +177,16 @@ class DefaultHumanizationApplicationService(
 
     private fun snapshot(selection: HumanizationSelection, refs: HumanizationWorkflowReferences, report: HumanizationRunReport) =
         HumanizationSnapshot(selection, refs.config, refs.seed, refs.artifacts.size, report.reports.sumOf { it.summary.changedNotes }, report.reports.flatMap(HumanizationReport::warnings))
+    private fun persistComparisons(root: Path, refs: HumanizationWorkflowReferences) {
+        refs.artifacts.sortedBy { it.id }.forEach { artifact ->
+            val occurrence = artifact.id.removePrefix("piano-").takeIf { artifact.id.startsWith("piano-") }
+            val before = StageComparisonArtifact(StageComparisonStage.HUMANIZATION, artifact.input, refs.inputsSha256,
+                role = artifact.role.name.lowercase(), occurrenceId = occurrence)
+            val after = StageComparisonArtifact(StageComparisonStage.HUMANIZATION, artifact.output, refs.inputsSha256,
+                StageEvidenceStatus.APPROVED, artifact.role.name.lowercase(), occurrence)
+            StageComparisonReportStore.write(root, after, StageComparisonService().compare(root, before, after))
+        }
+    }
     private fun decode(path: Path): HumanizationRunReport = try { json.decodeFromString(HumanizationRunReport.serializer(), Files.readString(path)) }
     catch (error: Exception) { throw IllegalArgumentException("Humanization report is malformed.", error) }
     private fun locked(root: Path, block: (Path) -> HumanizationSnapshot): HumanizationSnapshot {

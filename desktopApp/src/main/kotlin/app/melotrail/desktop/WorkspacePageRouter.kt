@@ -1199,8 +1199,14 @@ private fun CohesionReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent) 
                 ) { Text(intensity.name.lowercase().replaceFirstChar(Char::uppercase)) }
             }
         }
+        cohesion?.takeIf { it.stale }?.let {
+            Text("Stale historical Cohesion evidence · regenerate before approval or build.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        }
+        cohesion?.takeIf { it.approved && !it.stale }?.let { approved ->
+            Text("Current approved comparison evidence: ${approved.melodyEditCount} melody edits and ${approved.accompanimentEditCount} transition handoffs.", style = MaterialTheme.typography.bodySmall)
+        }
         cohesion?.takeIf { it.approvalRequired && !it.approved && !it.stale }?.let { draft ->
-            Text("Boundary draft: ${draft.melodyEditCount} melody edits and ${draft.accompanimentEditCount} transition handoffs.", style = MaterialTheme.typography.bodySmall)
+            Text("Draft comparison evidence: ${draft.melodyEditCount} melody edits and ${draft.accompanimentEditCount} transition handoffs.", style = MaterialTheme.typography.bodySmall)
             Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
                 OutlinedButton(
                     onClick = { onIntent(WorkspaceIntent.PlayCohesionPreview(false)) },
@@ -1735,7 +1741,7 @@ private fun MidiAiFixReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent)
                 OutlinedButton(onClick = { onIntent(WorkspaceIntent.PreviewMidiPart(part.id, if (fix.approved) app.melotrail.application.PreviewMidiSource.AI_FIX_APPROVED else app.melotrail.application.PreviewMidiSource.AI_FIX_DRAFT)) }, enabled = available && (if (fix.approved) fix.approvedAvailable else fix.draftAvailable),
                     modifier = Modifier.semantics { testTag = WorkspacePageTags.IMPORT_AI_FIX_PREVIEW_DRAFT }) { Text("Preview AI fix") }
             }
-            Text("${fix.edits.size} bounded edit${if (fix.edits.size == 1) "" else "s"} · ${if (fix.approved) "approved" else "review required"}", style = MaterialTheme.typography.bodySmall, color = if (fix.approved) semanticColor(WorkspaceSemanticState.READY) else semanticColor(WorkspaceSemanticState.WARNING))
+            Text("Comparison evidence: ${fix.edits.size} bounded edit${if (fix.edits.size == 1) "" else "s"} · ${if (fix.approved) "current approved" else "draft review required"}", style = MaterialTheme.typography.bodySmall, color = if (fix.approved) semanticColor(WorkspaceSemanticState.READY) else semanticColor(WorkspaceSemanticState.WARNING))
             Column(Modifier.semantics { testTag = WorkspacePageTags.IMPORT_AI_FIX_DIFF }, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
                 fix.edits.forEachIndexed { index, edit -> Text("${index + 1}. ${edit.kind.name.lowercase().replace('_', ' ')}", style = MaterialTheme.typography.bodySmall) }
             }
@@ -1802,7 +1808,7 @@ private fun MidiLoFiFeelReview(state: WorkspaceUiState, onIntent: (WorkspaceInte
     }
     val enhancement = part.preparation.enhancement
     OverviewCard("enhancement-intensity", "Enhancement") {
-        Text("${enhancement.capabilityLabel}. It requires the corrected baseline; comparison UX arrives in a later task.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("${enhancement.capabilityLabel}. It requires the corrected baseline; its retained comparison evidence is hash-bound and review-only.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text("Current: ${if (enhancement.selected == app.melotrail.arrangement.EnhancementSelection.CORRECTED) "Corrected" else enhancement.intensity.name.lowercase().replaceFirstChar(Char::uppercase)}", style = MaterialTheme.typography.bodySmall)
         Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
             app.melotrail.arrangement.EnhancementIntensity.entries.forEach { intensity ->
@@ -1812,7 +1818,7 @@ private fun MidiLoFiFeelReview(state: WorkspaceUiState, onIntent: (WorkspaceInte
             }
         }
         state.enhancementReview?.takeIf { it.partId == part.id }?.let { review ->
-            Text("${review.edits} validated edit${if (review.edits == 1) "" else "s"} · ${review.approval.name.lowercase()}", style = MaterialTheme.typography.bodySmall)
+            Text("Comparison evidence: ${review.edits} validated edit${if (review.edits == 1) "" else "s"} · ${review.approval.name.lowercase()}", style = MaterialTheme.typography.bodySmall)
             review.reasons.forEach { reason -> Text(reason, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             if (review.approval == app.melotrail.arrangement.EnhancementApproval.DRAFT) {
                 Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
@@ -2183,7 +2189,7 @@ private fun MixMasterPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                         Text(
                             humanization?.let { snapshot ->
                                 if (snapshot.selection == app.melotrail.arrangement.HumanizationSelection.HUMANIZED)
-                                    "Selected variation seed ${snapshot.seed} · ${snapshot.changedNotes} recorded edits"
+                                    "Current comparison evidence · seed ${snapshot.seed} · ${snapshot.artifacts} artifacts · ${snapshot.changedNotes} recorded edits"
                                 else "Bypass selected · cohesive MIDI will be rendered unchanged"
                             } ?: "Profile default is available after approved Cohesion. Select bypass or create a deterministic variation.",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -2203,10 +2209,10 @@ private fun MixMasterPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                         Text(
                             enhancement?.let { snapshot ->
                                 when (snapshot.selection) {
-                                    app.melotrail.arrangement.FullSongEnhancementSelection.APPROVED -> "Approved complete-ensemble candidate · ${snapshot.changedNotes} note edits"
-                                    app.melotrail.arrangement.FullSongEnhancementSelection.NO_OP -> "No actionable Critic issues · Cohesion MIDI remains selected"
-                                    app.melotrail.arrangement.FullSongEnhancementSelection.BYPASS -> "Bypass selected · Cohesion MIDI remains selected"
-                                    app.melotrail.arrangement.FullSongEnhancementSelection.UNRESOLVED -> if (snapshot.candidateAvailable) "Draft candidate · ${snapshot.addressedIssues} of ${snapshot.actionableIssues} issues addressed" else "Run the Critic first, then generate a bounded candidate."
+                                    app.melotrail.arrangement.FullSongEnhancementSelection.APPROVED -> "Current approved candidate · ${snapshot.changedNotes} note edits"
+                                    app.melotrail.arrangement.FullSongEnhancementSelection.NO_OP -> "Critic no-op evidence · Cohesion MIDI remains selected"
+                                    app.melotrail.arrangement.FullSongEnhancementSelection.BYPASS -> "Bypassed evidence · Cohesion MIDI remains selected"
+                                    app.melotrail.arrangement.FullSongEnhancementSelection.UNRESOLVED -> if (snapshot.candidateAvailable) "Draft candidate evidence · ${snapshot.addressedIssues} of ${snapshot.actionableIssues} Critic issues addressed" else "Run the Critic first, then generate a bounded candidate."
                                 }
                             } ?: "After Cohesion and Critic, generate a bounded candidate, approve it, or bypass it.",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
