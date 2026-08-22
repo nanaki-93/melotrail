@@ -201,9 +201,14 @@ data class SongPlanningInput(
         ).joinToString("") { "%02x".format(it) }
     }
 
-    fun intentsFor(purpose: SongSectionPurpose): List<InstrumentIntent> = requestedIntents.map { intent ->
-        if (intent.sectionPurpose == null || intent.sectionPurpose == purpose) intent.copy(sectionPurpose = purpose) else intent
-    }
+    /**
+     * Section purpose is a planner-derived value, so it is bound only after a
+     * section has a purpose. A purpose-specific request is absent from other
+     * sections; an unrestricted request is rebound to the current section.
+     */
+    fun intentsFor(purpose: SongSectionPurpose): List<InstrumentIntent> = requestedIntents
+        .filter { it.sectionPurpose == null || it.sectionPurpose == purpose }
+        .map { it.copy(sectionPurpose = purpose) }
 
     fun occurrenceHash(section: SongPlanningSectionInstance): String = section.occurrenceHash
 }
@@ -302,9 +307,12 @@ object SongPlanValidator {
             if (LegacyLogicalInstrumentRoles.logicalFor(intent.role) !in section.instrumentProgression) {
                 errors += "Song-plan section ${position + 1} role '${intent.role.name.lowercase()}' has no compatibility alias"
             }
-            if (intent.profile != input.soundContext.profile || intent.mood != input.soundContext.mood || intent.sectionPurpose != section.purpose) {
-                errors += "Song-plan section ${position + 1} has a sound intent outside the requested context"
-            }
+        }
+        val expected = input.intentsFor(section.purpose)
+            .filter { LegacyLogicalInstrumentRoles.logicalFor(it.role) in section.instrumentProgression }
+            .toSet()
+        if (section.soundIntents.toSet() != expected) {
+            errors += "Song-plan section ${position + 1} sound intents do not match the requested roles for its instruments"
         }
     }
 
@@ -429,15 +437,49 @@ class LocalQwenGlobalSongPlanner(
 ) : GlobalSongPlanner {
     override fun plan(input: SongPlanningInput): SongPlan {
         input.requireValid()
-        val output = client.complete(SYSTEM_PROMPT, createUserPrompt(input))
-        val plan = try {
-            strictJson.decodeFromString<SongPlan>(output)
-        } catch (error: Exception) {
-            throw IllegalArgumentException("Qwen returned invalid song-plan JSON: ${error.message}", error)
+        return requestQwenWithAutomaticRetries(client, SYSTEM_PROMPT, createUserPrompt(input)) { output ->
+            val plan = try {
+                strictJson.decodeFromString<SongPlan>(output)
+            } catch (error: Exception) {
+                throw IllegalArgumentException("Qwen returned invalid song-plan JSON: ${error.message}", error)
+            }
+            val normalizedPlan = bindApplicationOwnedFields(plan, input)
+            val validation = normalizedPlan.validate(input)
+            require(validation.isValid) { "Invalid Qwen song plan: ${validation.errors.joinToString("; ")}" }
+            normalizedPlan
         }
-        val validation = plan.validate(input)
-        require(validation.isValid) { "Invalid Qwen song plan: ${validation.errors.joinToString("; ")}" }
-        return plan
+    }
+
+    /**
+     * Qwen owns musical choices only. Structure identity, fingerprints, style,
+     * and instrument intents are application-owned, so they are rebound after
+     * parsing. This prevents imperfect copies of long hashes or
+     * `sectionPurpose: null` from invalidating an otherwise valid plan.
+     */
+    private fun bindApplicationOwnedFields(plan: SongPlan, input: SongPlanningInput): SongPlan {
+        val structured = input.soundContext != null || input.canonicalProjection != null
+        val requestedSections = input.sectionsWithIdentity()
+        return plan.copy(
+            version = if (structured) SongPlan.CURRENT_VERSION else plan.version,
+            style = input.resolvedStyle,
+            contextHash = if (structured) input.contextHash() else plan.contextHash,
+            sections = plan.sections.mapIndexed { position, modelSection ->
+                val boundIdentity = requestedSections.getOrNull(position)?.let { expected ->
+                    modelSection.copy(
+                        index = expected.index,
+                        instanceId = expected.instanceId,
+                        partId = expected.partId,
+                        occurrence = expected.occurrence,
+                        occurrenceHash = if (structured) input.occurrenceHash(expected) else modelSection.occurrenceHash
+                    )
+                } ?: modelSection
+                val soundIntents = input.soundContext?.let {
+                    input.intentsFor(boundIdentity.purpose)
+                        .filter { LegacyLogicalInstrumentRoles.logicalFor(it.role) in boundIdentity.instrumentProgression }
+                }.orEmpty()
+                boundIdentity.copy(soundIntents = soundIntents)
+            }
+        )
     }
 
     private fun createUserPrompt(input: SongPlanningInput): String = """
@@ -463,7 +505,7 @@ class LocalQwenGlobalSongPlanner(
         Structured planning context (present only for role-based requests):
         ${promptJson.encodeToString(input.soundContext)}
 
-        Required context hash (present only for role-based requests; copy it verbatim, never calculate it):
+        Required context hash (present only for role-based requests):
         ${promptJson.encodeToString(input.contextHash())}
 
         Controlled requested sound intents (present only for role-based requests):
@@ -482,8 +524,9 @@ class LocalQwenGlobalSongPlanner(
         - Include index, instanceId, partId, and occurrence for every section exactly as supplied. A changed, missing,
           duplicated, unknown, or reordered occurrence is rejected.
         - instrumentProgression must start with piano and contain only Allowed instruments.
-        - When a canonical arrangement projection or structured planning context is present, copy the supplied contextHash and every
-          occurrenceHash exactly. Preserve each supplied sound intent; do not create instruments or IDs.
+        - When a canonical arrangement projection or structured planning context is present, set contextHash and every occurrenceHash
+          to null. Set soundIntents to [] in every section. The application binds hashes, identities, and supplied role requests after
+          you choose each section's purpose and instrumentProgression. Do not create instruments or IDs.
           Do not invent traits, stable IDs, paths, filenames, engine settings, or free-form sound text.
         - Choose climaxIndex. Section purposes are derived from it: first is introduction, its index is climax, final is
           conclusion, positions before it are development, and positions after it are release.
@@ -527,8 +570,10 @@ class LocalQwenGlobalSongPlanner(
             Do not add fields. energyCurve and sections must have one entry per supplied
             requested section, not merely the single illustrative entry above. Each section has exactly index, instanceId,
             partId, occurrence, purpose, instrumentProgression, and transitionIntent.
-            Include every supplied section index, instanceId, partId, occurrence, occurrenceHash, contextHash, and the exact allowed
-            sound intents. Do not calculate or change hashes. Choose one climaxIndex; section purposes must follow the required arc.
+            Include every supplied section index, instanceId, partId, occurrence, occurrenceHash, contextHash, and the
+            soundIntents field. For structured planning contextHash and occurrenceHash must be null and soundIntents must be [].
+            The application binds controlled identity, hashes, and sound requests. Choose one climaxIndex; section purposes must
+            follow the required arc.
             Use only supplied logical instruments,
             start each progression with piano, and use every supplied logical instrument somewhere in the song when the supplied
             section count and limits permit it. Use one climax, and make the final transitionIntent none. Allowed purpose

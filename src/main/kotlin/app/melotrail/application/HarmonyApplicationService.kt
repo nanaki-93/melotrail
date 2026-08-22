@@ -141,7 +141,16 @@ class HarmonyApplicationService {
     fun query(project: Project): HarmonyView {
         val harmony = project.envelope.harmony
         val key = project.envelope.compositionSettings?.key
-        val required = HarmonySectionPolicy.requiredSections(project.envelope.compositionSettings?.profile)
+        // Profile defaults make the initial harmony editor useful, but the
+        // executable requirement is also defined by the structure the user
+        // actually saved. Otherwise a non-profile section (for example an
+        // intro) can appear ready here and fail only when Arrangement builds
+        // its canonical harmonic timeline.
+        val structuredSections = project.envelope.structureOccurrences.map { occurrence ->
+            SectionTypeId(project.parts.single { it.id == occurrence.partId }.sectionType.value)
+        }
+        val required = (HarmonySectionPolicy.requiredSections(project.envelope.compositionSettings?.profile) + structuredSections)
+            .distinct()
         val progressions = harmony?.progressions.orEmpty()
         val bySection = progressions.associateBy(ChordProgression::sectionType)
         val missing = required.filterNot(bySection::containsKey)

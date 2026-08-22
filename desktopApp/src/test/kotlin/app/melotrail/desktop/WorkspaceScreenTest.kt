@@ -254,7 +254,15 @@ class WorkspaceScreenTest {
         val template = app.melotrail.harmony.HarmonyTemplateCatalog.options(
             app.melotrail.music.MusicalKey(PitchClass.canonical(0), app.melotrail.music.ScaleModeId.MAJOR)
         ).first()
-        listOf(HarmonyPageTags.TABS, HarmonyPageTags.TAB_PREFIX + "verse", HarmonyPageTags.TAB_PREFIX + "chorus", HarmonyPageTags.TEMPLATE_PREFIX + template.id.value)
+        listOf(
+            HarmonyPageTags.TABS,
+            HarmonyPageTags.TAB_PREFIX + "intro",
+            HarmonyPageTags.TAB_PREFIX + "verse",
+            HarmonyPageTags.TAB_PREFIX + "chorus",
+            HarmonyPageTags.TAB_PREFIX + "bridge",
+            HarmonyPageTags.TAB_PREFIX + "outro",
+            HarmonyPageTags.TEMPLATE_PREFIX + template.id.value
+        )
             .forEach { onNodeWithTag(it).assertExists() }
         onNodeWithTag(HarmonyPageTags.TAB_PREFIX + "chorus").performClick()
         assertEquals(WorkspaceIntent.SelectHarmonySection(SectionTypeId.CHORUS), intents.last())

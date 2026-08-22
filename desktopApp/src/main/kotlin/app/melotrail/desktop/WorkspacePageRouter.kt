@@ -2091,7 +2091,7 @@ private fun formatImportFileSize(bytes: Long?): String = when {
 
 private fun workflowSubtitle(state: WorkspaceUiState): String = when (state.workspaceSection) {
     WorkspaceSection.SETUP -> "Set the explicit musical context before downstream analysis."
-    WorkspaceSection.HARMONY -> "Author structured Verse, Chorus, and Bridge chord progressions."
+    WorkspaceSection.HARMONY -> "Author structured Intro, Verse, Chorus, Bridge, and Outro chord progressions."
     WorkspaceSection.IMPORT -> "Import a MIDI or eligible solo-piano audio source."
     WorkspaceSection.STRUCTURE -> "Canonical structure has ${state.project?.structure?.size ?: 0} section(s)."
     WorkspaceSection.ARRANGE -> "Arrangement state is derived from canonical artifacts."

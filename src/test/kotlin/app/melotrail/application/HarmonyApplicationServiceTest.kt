@@ -3,6 +3,8 @@ package app.melotrail.application
 import app.melotrail.arrangement.PartAnalysis
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.RenderFormat
+import app.melotrail.arrangement.SongPart
+import app.melotrail.arrangement.StructureOccurrence
 import app.melotrail.arrangement.WorkflowArtifact
 import app.melotrail.harmony.ChordEvent
 import app.melotrail.harmony.ChordEventId
@@ -51,6 +53,25 @@ class HarmonyApplicationServiceTest {
         assertEquals(ChordQuality.MAJOR_7, updated.harmony.progressions.first { it.sectionType == SectionTypeId.VERSE }.events.first().quality)
         assertEquals(listOf("verse-two"), deleted.harmony.progressions.first { it.sectionType == SectionTypeId.VERSE }.events.map { it.id.value })
         assertTrue(future.harmony.progressions.any { it.sectionType == SectionTypeId("outro") })
+    }
+
+    @Test
+    fun `structured non-profile sections are required before arrangement`() {
+        val service = configuredService()
+        val seeded = ProjectStore.read(root)
+        val projectWithIntro = seeded.copy(
+            parts = listOf(SongPart("intro", "source/intro.mid", sectionType = app.melotrail.arrangement.SectionTypeId.INTRO)),
+            envelope = seeded.envelope.copy(structureOccurrences = listOf(StructureOccurrence("intro-1", "intro")))
+        )
+
+        val harmony = HarmonyApplicationService().query(projectWithIntro)
+
+        assertEquals(
+            listOf(SectionTypeId.VERSE, SectionTypeId.CHORUS, SectionTypeId.BRIDGE, SectionTypeId("intro")),
+            harmony.completeness.requiredSections
+        )
+        assertEquals(listOf(SectionTypeId("intro")), harmony.completeness.missingSections)
+        assertFalse(harmony.ready)
     }
 
     @Test

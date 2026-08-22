@@ -145,6 +145,16 @@ class DefaultArrangementApplicationService(
     override suspend fun generate(request: GenerateArrangementRequest, progress: ProgressSink): ArrangementSnapshot = mutate(request.root) { root ->
         progress.report(OperationProgress("arrange", 1, 3, "Validating MIDI analyses"))
         val project = readProject(root)
+        val harmony = HarmonyApplicationService().query(project)
+        require(harmony.ready) {
+            val incomplete = buildList {
+                harmony.completeness.missingSections.forEach { add("${it.value} (missing)") }
+                harmony.completeness.emptySections.forEach { add("${it.value} (empty)") }
+                harmony.validationErrors.forEach { add(it.message) }
+                harmony.replacementRequiredSections.forEach { add("${it.value} (choose a compatible progression)") }
+            }.distinct()
+            "Arrangement requires complete canonical harmony. Update Harmony for: ${incomplete.joinToString()}."
+        }
         val projection = musicalAuthorityBuilder.arrangementGeneration(root)
         val structure = project.envelope.structureOccurrences.mapIndexed { index, occurrence -> occurrence.toSectionInstance(index) }
         require(structure.isNotEmpty()) { "Song structure must not be empty" }
@@ -341,6 +351,12 @@ class DefaultArrangementApplicationService(
         val rawPlan = json.decodeFromString(SongPlan.serializer(), Files.readString(planPath, StandardCharsets.UTF_8))
         val structure = rawPlan.sections.map { SectionInstance(it.index, it.partId, it.instanceId) }
         val analyses = canonicalMidiAnalyses(projection)
+        // Persisted song-plan intents are already bound to individual section
+        // purposes. Reconstruct the user request as purpose-neutral input so
+        // validation can rebind each role to the section being checked.
+        val requestedIntents = rawPlan.sections.flatMap { it.soundIntents }
+            .distinctBy { it.role }
+            .map { it.copy(sectionPurpose = null) }
         val planningInput = SongPlanningInput(
             projectName = project.name,
             projectVersion = project.version,
@@ -348,9 +364,8 @@ class DefaultArrangementApplicationService(
             structure = structure,
             allowedInstruments = rawPlan.sections.flatMap { it.instrumentProgression }.distinct(),
             style = rawPlan.style.takeIf { rawPlan.contextHash == null },
-            soundContext = rawPlan.sections.flatMap { it.soundIntents }.distinctBy { it.role }
-                .takeIf { it.isNotEmpty() }?.let { structuredContext(project) },
-            requestedIntents = rawPlan.sections.flatMap { it.soundIntents }.distinctBy { it.role },
+            soundContext = requestedIntents.takeIf { it.isNotEmpty() }?.let { structuredContext(project) },
+            requestedIntents = requestedIntents,
             canonicalProjection = projection
         )
         val plan = SongPlanStore.read(root, planningInput)

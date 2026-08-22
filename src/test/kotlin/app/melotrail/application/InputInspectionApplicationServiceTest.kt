@@ -100,6 +100,19 @@ class InputInspectionApplicationServiceTest {
     }
 
     @Test
+    fun `Clean MIDI replaces invalid prior report evidence for the same part`() = runBlocking {
+        val service = service(InputInspectionBoundary { InputInspectionResult.Inspected(report(it)) })
+        val root = project(service)
+        service.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
+        Files.delete(root.resolve("midi/quality/A.json"))
+
+        val refreshed = service.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
+
+        assertTrue(refreshed.parts.single().preparation.cleanMidi)
+        assertTrue(Files.isRegularFile(root.resolve("midi/quality/A.json")))
+    }
+
+    @Test
     fun `inspection participates in the per project mutation mutex`() = runBlocking {
         val started = CompletableDeferred<Unit>()
         val release = CompletableDeferred<Unit>()

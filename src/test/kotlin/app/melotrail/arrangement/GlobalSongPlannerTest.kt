@@ -57,7 +57,7 @@ class GlobalSongPlannerTest {
     }
 
     @Test
-    fun `Qwen structured plan rejects changed application-owned identity and intents`() {
+    fun `Qwen structured plan rejects an invalid musical outline`() {
         val input = structuredInput()
         val expected = DeterministicGlobalSongPlanner().plan(input)
         val modelPlan = expected.copy(
@@ -82,8 +82,53 @@ class GlobalSongPlannerTest {
         assertTrue(client.userPrompt.contains(input.contextHash().orEmpty()))
         assertTrue(client.userPrompt.contains("melody and harmony = piano"))
         assertTrue(client.userPrompt.contains("texture and ambience = pad"))
-        assertTrue(client.systemPrompt.contains("sound intents. Do not"))
+        assertTrue(client.systemPrompt.contains("occurrenceHash must be null"))
         assertTrue(client.userPrompt.contains("counter-melody = strings"))
+    }
+
+    @Test
+    fun `Qwen plan rebinds application owned identity hashes and sound intents`() {
+        val input = structuredInput()
+        val expected = DeterministicGlobalSongPlanner().plan(input)
+        val copiedInputIntents = expected.copy(
+            version = 1,
+            style = "model text must not persist",
+            contextHash = null,
+            sections = expected.sections.map { section ->
+                section.copy(
+                    index = 99,
+                    instanceId = "model-id",
+                    partId = "model-part",
+                    occurrence = 99,
+                    occurrenceHash = "0".repeat(64),
+                    soundIntents = section.soundIntents.map { it.copy(sectionPurpose = null) }
+                )
+            }
+        )
+
+        val plan = LocalQwenGlobalSongPlanner(
+            FixtureClient(Json { encodeDefaults = true }.encodeToString(copiedInputIntents))
+        ).plan(input)
+
+        assertEquals(expected, plan)
+    }
+
+    @Test
+    fun `Qwen song plan retries with the prior validation error`() {
+        val prompts = mutableListOf<String>()
+        var calls = 0
+        val invalid = fixture("valid-song-plan.json").replace("\"bass\"", "\"synth\"")
+        val client = LocalQwenClient { _, prompt ->
+            prompts += prompt
+            if (calls++ == 0) invalid else fixture("valid-song-plan.json")
+        }
+
+        val plan = LocalQwenGlobalSongPlanner(client).plan(input())
+
+        assertEquals(2, calls)
+        assertEquals(3, plan.climaxIndex)
+        assertTrue(prompts[1].contains("Automatic repair attempt 1 of 5"))
+        assertTrue(prompts[1].contains("uses instrument 'synth', which is not allowed"))
     }
 
     @Test

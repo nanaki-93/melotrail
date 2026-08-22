@@ -121,6 +121,47 @@ class DetailedArrangementTest {
     }
 
     @Test
+    fun `Qwen detailed arrangement retries with the prior validation error`() {
+        val valid = fixture("valid-detailed-arrangement.json")
+        val invalid = valid.replace("0.3", "1e309")
+        val prompts = mutableListOf<String>()
+        var calls = 0
+        val client = LocalQwenClient { _, prompt ->
+            prompts += prompt
+            if (calls++ == 0) invalid else valid
+        }
+
+        val arrangement = LocalQwenDetailedArrangementPlanner(client).plan(input())
+
+        assertEquals(2, calls)
+        assertTrue(arrangement.validate(input()).isValid)
+        assertTrue(prompts[1].contains("Automatic repair attempt 1 of 5"))
+        assertTrue(prompts[1].contains("invalid detailed-arrangement JSON"))
+    }
+
+    @Test
+    fun `Qwen detailed arrangement discards instruments outside the validated variation`() {
+        val input = input()
+        val fixture = json.decodeFromString<DetailedArrangement>(fixture("valid-detailed-arrangement.json"))
+        val response = fixture.copy(sections = fixture.sections.mapIndexed { index, section ->
+            if (index == 1) section.copy(instruments = section.instruments + BassInstrumentPlan(
+                role = DetailedBassRole.ROOT,
+                density = 0.4,
+                movement = DetailedBassMovement.ROOT_MOTION,
+                register = MusicalRegister.LOW,
+                syncopation = 0.1
+            )) else section
+        })
+
+        val arrangement = LocalQwenDetailedArrangementPlanner(
+            FixtureClient(json.encodeToString(response))
+        ).plan(input)
+
+        assertTrue(arrangement.validate(input).isValid)
+        assertEquals(listOf("piano", "drums", "pad", "strings"), arrangement.sections[1].instruments.map { it.name })
+    }
+
+    @Test
     fun `draft approval is atomic and preserves approved arrangement after a failed validation`() {
         val input = input()
         val approved = tempDir.resolve(DetailedArrangementStore.APPROVED_FILE)

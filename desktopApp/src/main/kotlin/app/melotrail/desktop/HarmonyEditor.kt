@@ -75,12 +75,25 @@ internal object HarmonyPageTags {
     const val CANCEL = "harmony-cancel"
 }
 
+/**
+ * These are authoring choices, not evidence that a melody part has already
+ * been imported. A structure later decides which authored progressions become
+ * required for arrangement generation.
+ */
+private val authorableSections = listOf(
+    SectionTypeId("intro"),
+    SectionTypeId.VERSE,
+    SectionTypeId.CHORUS,
+    SectionTypeId.BRIDGE,
+    SectionTypeId("outro")
+)
+
 @Composable
 internal fun HarmonyPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
     val editor = state.harmony
     val view = editor.view
-    val sections = (view?.completeness?.requiredSections.orEmpty() + view?.progressions.orEmpty().map { it.sectionType })
-        .distinct().ifEmpty { listOf(SectionTypeId.VERSE, SectionTypeId.CHORUS, SectionTypeId.BRIDGE) }
+    val sections = (authorableSections + view?.completeness?.requiredSections.orEmpty() + view?.progressions.orEmpty().map { it.sectionType })
+        .distinct()
     val progression = view?.progressions?.firstOrNull { it.sectionType == editor.selectedSection }
     val selected = progression?.events?.firstOrNull { it.id == editor.selectedEventId }
     BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -90,7 +103,7 @@ internal fun HarmonyPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) ->
             verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)
         ) {
             Text("Harmony", style = MaterialTheme.typography.headlineMedium)
-            Text("Choose a key-aware progression for Verse, Chorus, and Bridge, then continue with Melody Parts.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Author a key-aware progression for any song section before or after importing Melody Parts.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (view == null) {
                 Text(
                     if (editor.loading) "Loading canonical harmony…" else editor.error ?: "Save Setup before adding structured harmony.",

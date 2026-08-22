@@ -18,6 +18,7 @@ import app.melotrail.arrangement.MidiFeelProfile
 import app.melotrail.arrangement.MidiFeelReferences
 import app.melotrail.arrangement.MidiFeelReport
 import app.melotrail.arrangement.MidiFeelReportStore
+import app.melotrail.arrangement.TechnicalCorrectionSelection
 import app.melotrail.arrangement.MidiLoFiFeelTransformer
 import app.melotrail.arrangement.MidiTranspositionReportStore
 import app.melotrail.arrangement.DetailedArrangement
@@ -697,7 +698,7 @@ class DefaultProjectApplicationService(
 
     override suspend fun cleanMidi(request: CleanMidiRequest, progress: ProgressSink): ProjectSnapshot = mutateSuspend(request.root) { root ->
         request.cleanup.requireValid()
-        val project = readValidProject(root)
+        val project = readProjectForCleanMidi(root, request.partId)
         val part = project.parts.find { it.id == request.partId }
             ?: throw IllegalArgumentException("Part not found: ${request.partId}")
         val midi = requireNotNull(part.midi) { "Part '${request.partId}' has no raw MIDI artifact to clean." }
@@ -749,6 +750,8 @@ class DefaultProjectApplicationService(
                         transposed = null,
                         transposition = null,
                         cleanApproval = approval,
+                        technicalCorrectionSelection = TechnicalCorrectionSelection.BASE,
+                        technicalCorrection = null,
                         aiFixSelection = MidiAiFixSelection.PENDING,
                         aiFix = null,
                         enhancementSelection = app.melotrail.arrangement.EnhancementSelection.PENDING,
@@ -1187,6 +1190,47 @@ class DefaultProjectApplicationService(
     private fun readValidProject(root: Path): Project {
         require(Files.isRegularFile(root.resolve(ProjectStore.FILE_NAME))) { "Project file not found: ${root.resolve(ProjectStore.FILE_NAME)}" }
         return ProjectStore.read(root).also { it.requireValid(root) }
+    }
+
+    /**
+     * Re-running Clean MIDI is the recovery boundary for a part's derived
+     * evidence. A missing or altered old quality/correction report must not
+     * prevent that recovery: the new clean run replaces every downstream
+     * reference for this part. Other project validation failures still block
+     * the operation.
+     */
+    private fun readProjectForCleanMidi(root: Path, partId: String): Project = try {
+        readValidProject(root)
+    } catch (validationFailure: IllegalArgumentException) {
+        val project = runCatching { ProjectStore.read(root) }.getOrElse { throw validationFailure }
+        val part = project.parts.singleOrNull { it.id == partId } ?: throw validationFailure
+        val midi = part.midi ?: throw validationFailure
+        val recoverable = project.copy(parts = project.parts.map {
+            if (it.id == partId) it.copy(
+                analysis = null,
+                sourceKeyEvidence = null,
+                midi = midi.copy(
+                    clean = null,
+                    cleanup = null,
+                    quality = null,
+                    normalized = null,
+                    normalization = null,
+                    transposed = null,
+                    transposition = null,
+                    cleanApproval = null,
+                    technicalCorrectionSelection = TechnicalCorrectionSelection.BASE,
+                    technicalCorrection = null,
+                    aiFixSelection = MidiAiFixSelection.PENDING,
+                    aiFix = null,
+                    enhancementSelection = app.melotrail.arrangement.EnhancementSelection.PENDING,
+                    enhancement = null,
+                    analysisInput = MidiAnalysisInput.CURRENT,
+                    feel = null
+                )
+            ) else it
+        })
+        if (!recoverable.validate(root).isValid) throw validationFailure
+        project
     }
 
     private fun snapshot(root: Path, project: Project): ProjectSnapshot {

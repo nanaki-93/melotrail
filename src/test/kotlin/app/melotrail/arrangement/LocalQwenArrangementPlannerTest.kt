@@ -41,6 +41,25 @@ class LocalQwenArrangementPlannerTest {
         assertTrue(exception.message.orEmpty().contains("path"))
     }
 
+    @Test
+    fun `Qwen arrangement makes five automatic correction requests before failing`() {
+        var calls = 0
+        val prompts = mutableListOf<String>()
+        val client = LocalQwenClient { _, prompt ->
+            calls++
+            prompts += prompt
+            fixture("disallowed-instrument.json")
+        }
+
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            LocalQwenArrangementPlanner(client).plan(input())
+        }
+
+        assertEquals(QWEN_MAX_ATTEMPTS, calls)
+        assertTrue(error.message.orEmpty().contains("after 5 automatic retries"))
+        assertTrue(prompts.last().contains("Automatic repair attempt 5 of 5"))
+    }
+
     private fun input() = ArrangementInput(
         project = Project(
             name = "demo",

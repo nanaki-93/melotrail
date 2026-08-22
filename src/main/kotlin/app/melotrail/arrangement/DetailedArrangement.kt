@@ -475,19 +475,45 @@ class DeterministicDetailedArrangementPlanner : DetailedArrangementPlanner {
 class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = LmStudioQwenClient()) : DetailedArrangementPlanner {
     override fun plan(input: DetailedArrangementInput): DetailedArrangement {
         input.requireValid()
-        val output = client.complete(SYSTEM_PROMPT, createUserPrompt(input))
-        val arrangement = try {
-            strictJson.decodeFromString<DetailedArrangement>(output)
-        } catch (error: Exception) {
-            throw IllegalArgumentException("Qwen returned invalid detailed-arrangement JSON: ${error.message}", error)
+        return requestQwenWithAutomaticRetries(client, SYSTEM_PROMPT, createUserPrompt(input)) { output ->
+            val modelArrangement = try {
+                strictJson.decodeFromString<DetailedArrangement>(output)
+            } catch (error: Exception) {
+                throw IllegalArgumentException("Qwen returned invalid detailed-arrangement JSON: ${error.message}", error)
+            }
+            val arrangement = bindLockedArrangementFields(modelArrangement, input)
+            val validation = arrangement.validate(input)
+            require(validation.isValid) { "Invalid Qwen detailed arrangement: ${validation.errors.joinToString("; ")}" }
+            arrangement
         }
-        // Stable identity and every instrument field are part of the strict
-        // contract. Never repair model output by restoring trusted values: a
-        // changed or reordered occurrence/role must fail before publication.
-        val validation = arrangement.validate(input)
-        require(validation.isValid) { "Invalid Qwen detailed arrangement: ${validation.errors.joinToString("; ")}" }
-        return arrangement
     }
+
+    /**
+     * The song plan and variation plan own section identity, energy, and the
+     * exact instrument list. Qwen supplies only the bounded controls for each
+     * allowed instrument plus the transition. Ignore extra instruments rather
+     * than repeatedly asking it to undo a non-executable orchestration choice;
+     * missing or invalid required instruments still fail validation and retry.
+     */
+    private fun bindLockedArrangementFields(
+        arrangement: DetailedArrangement,
+        input: DetailedArrangementInput
+    ): DetailedArrangement = arrangement.copy(
+        version = DetailedArrangement.CURRENT_VERSION,
+        cohesion = null,
+        sections = arrangement.sections.mapIndexed { position, modelSection ->
+            val expected = input.variations.sections.getOrNull(position) ?: return@mapIndexed modelSection
+            val byName = modelSection.instruments.associateBy(DetailedInstrumentPlan::name)
+            modelSection.copy(
+                index = expected.index,
+                instanceId = expected.instanceId,
+                partId = expected.partId,
+                role = expected.purpose,
+                energy = expected.energy,
+                instruments = expected.instruments.mapNotNull { byName[it.name] }
+            )
+        }
+    )
 
     private fun createUserPrompt(input: DetailedArrangementInput): String = """
         Validated global song plan:
@@ -503,8 +529,8 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
 
         Response requirements:
         - Return exactly ${input.variations.sections.size} sections in the supplied order.
-        - Copy every section index, instanceId, partId, role, and energy exactly.
-        - Keep the exact instrument order, names, modes, and variation roles supplied for each section. Do not choose or alter those locked values.
+        - The application binds every section index, instanceId, partId, role, energy, and exact instrument list from the validated variations.
+        - Return one complete control object for every locked instrument, in the supplied order. Do not add instruments; extra instruments are discarded.
         - Fill only the instrument-specific fields required by the system response schema.
         - Map transitionIntent none to transitionOut type none, build to bridge, and release to crossfade.
 

@@ -389,7 +389,7 @@ private fun ContextRail(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
                 WorkspaceSection.HARMONY -> {
                     Icon(Icons.Default.Tune, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Text("HARMONY READINESS", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.TextSecondary)
-                    Text(if (state.harmony.view?.ready == true) "Verse, Chorus, and Bridge are complete. Continue to Melody Parts." else "Complete Setup, then add a chord to every required progression.", style = MaterialTheme.typography.bodySmall)
+                    Text(if (state.harmony.view?.ready == true) "Required harmony is complete. You can now import Melody Parts or continue composing." else "Complete Setup, then add a chord to every required progression.", style = MaterialTheme.typography.bodySmall)
                 }
                 WorkspaceSection.ARRANGE -> {
                     Icon(Icons.Default.Tune, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
