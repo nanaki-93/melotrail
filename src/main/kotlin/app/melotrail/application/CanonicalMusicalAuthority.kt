@@ -237,6 +237,7 @@ data class WholeSongAnalysisProjection(
     val projectKey: MusicalKey,
     val tempo: Tempo,
     val meter: TimeSignature,
+    val harmonyPpq: Int,
     val occurrences: List<MusicalOccurrence>,
     val harmony: List<HarmonicTimelineEntry>,
     val selectedParts: List<CanonicalSelectedPartArtifact>,
@@ -354,7 +355,7 @@ class MusicalAuthorityBuilder(
         val outputs = validatedArrangementAndGenerated(projectRoot)
         return WholeSongAnalysisProjection(
             contextSha256 = authority.contextSha256, projectKey = authority.projectKey, tempo = authority.tempo,
-            meter = authority.meter, occurrences = authority.occurrenceTimeline, harmony = authority.harmonicTimeline.entries,
+            meter = authority.meter, harmonyPpq = authority.harmonicTimeline.ppq, occurrences = authority.occurrenceTimeline, harmony = authority.harmonicTimeline.entries,
             selectedParts = authority.selectedPartArtifacts, analyzedFacts = authority.analyzedFacts,
             melodyEvidence = authority.melodyEvidenceReferences, approvedArrangement = outputs.arrangement, generatedRoles = outputs.roles
         )
