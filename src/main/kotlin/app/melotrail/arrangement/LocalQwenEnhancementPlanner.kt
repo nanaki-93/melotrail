@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 
 /**
  * Strict, fakeable local-model adapter. The model receives serialized musical
@@ -25,8 +26,16 @@ class LocalQwenEnhancementPlanner(
             "A known local-model license is required before enhancement can be commercial-ready."
         }
         val policy = EnhancementPolicy.forIntensity(context.intensity)
-        val response = client.complete(SYSTEM_PROMPT, json.encodeToString(EnhancementModelInput(context, policy)))
-        val modelPlan = try { json.decodeFromString<ModelPlan>(response) }
+        val prompt = json.encodeToString(EnhancementModelInput(context, policy))
+        val response = if (client is JsonSchemaLocalQwenClient) {
+            client.completeJsonSchema(SYSTEM_PROMPT, prompt, RESPONSE_SCHEMA)
+        } else {
+            client.complete(SYSTEM_PROMPT, prompt)
+        }
+        // A few local Qwen templates use [] to mean "no suggestions" despite
+        // the object contract. It is unambiguous and equivalent to no goals or
+        // edits, so accept only this exact safe shorthand.
+        val modelPlan = if (response.trim() == "[]") ModelPlan() else try { json.decodeFromString<ModelPlan>(response) }
         catch (error: Exception) { throw IllegalArgumentException("Local model returned malformed enhancement JSON", error) }
         return EnhancementPlan(
             // These values bind the accepted plan to the exact application-owned
@@ -52,6 +61,7 @@ class LocalQwenEnhancementPlanner(
     private fun editFromWire(edit: ModelEdit, policy: EnhancementPolicy, context: MusicalProcessingContext): EnhancementEdit? {
         val kind = MODEL_EDIT_KINDS[edit.kind]
             ?: throw IllegalArgumentException("Local model returned an unsupported enhancement edit kind")
+        if (!context.hasDeclaredSongHarmony && kind in setOf(EnhancementEditKind.PITCH, EnhancementEditKind.ADD_NOTE)) return null
         val withinPolicy = when (kind) {
             EnhancementEditKind.VELOCITY -> kotlin.math.abs(edit.value) <= policy.maximumVelocityDelta
             EnhancementEditKind.TIMING -> kotlin.math.abs(edit.value) <= policy.maximumTimingShiftMs
@@ -116,11 +126,32 @@ class LocalQwenEnhancementPlanner(
             An addition uses {"kind":"add_note","noteId":"add-00000","value":0,"pitch":60,"velocity":72,
             "startTick":480,"durationTicks":240,"channel":0,"anchorNoteId":"n-00001","goal":"passing_note","reason":"brief rationale"}.
             Existing-note edits may target only supplied note IDs. Additions must be anchored to a supplied note and fit a real gap.
+            When context.contextScope is PART_LOCAL, do not return pitch or add_note edits: Structure and declared harmony have not been saved yet.
             For every edit, abs(value) must be at most maximumVelocityDelta for velocity, maximumTimingShiftMs for timing,
             or 2 for pitch. Omit an edit that cannot meet its limit.
             Do not alter harmony, tempo, meter, channels of existing notes, files, instruments, or song structure.
             Respect the supplied policy. Prefer zero edits when no bounded improvement is justified.
         """
+        val RESPONSE_SCHEMA = Json.parseToJsonElement(
+            """{
+              "type":"object",
+              "additionalProperties":false,
+              "properties":{
+                "goals":{"type":"array","maxItems":16,"items":{"type":"string","enum":["phrase_ending","flow_contour","chord_clash","passing_note","repetition_reduction"]}},
+                "edits":{"type":"array","maxItems":32,"items":{
+                  "type":"object",
+                  "additionalProperties":false,
+                  "properties":{
+                    "kind":{"type":"string","enum":["velocity","timing","pitch","duration","add_note","remove_note"]},
+                    "noteId":{"type":"string"},"value":{"type":"integer"},"goal":{"type":"string"},"reason":{"type":"string"},
+                    "pitch":{"type":"integer"},"velocity":{"type":"integer"},"startTick":{"type":"integer"},"durationTicks":{"type":"integer"},"channel":{"type":"integer"},"anchorNoteId":{"type":"string"}
+                  },
+                  "required":["kind","noteId"]
+                }}
+              },
+              "required":["goals","edits"]
+            }"""
+        ).jsonObject
         val MODEL_GOALS = mapOf(
             "phrase_ending" to EnhancementGoal.PHRASE_ENDING,
             "flow_contour" to EnhancementGoal.FLOW_CONTOUR,

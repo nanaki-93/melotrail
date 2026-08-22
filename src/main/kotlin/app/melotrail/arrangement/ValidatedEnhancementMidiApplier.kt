@@ -153,6 +153,12 @@ class ValidatedEnhancementMidiApplier : EnhancementPlanApplier {
     }
 
     private fun validateHarmony(plan: EnhancementPlan, candidate: List<CandidateNote>, context: MusicalProcessingContext) {
+        if (!context.hasDeclaredSongHarmony) {
+            require(plan.edits.none { it.kind == EnhancementEditKind.PITCH || it.kind == EnhancementEditKind.ADD_NOTE }) {
+                "Save Structure and declared harmony before using pitch or added-note enhancement edits"
+            }
+            return
+        }
         val byId = candidate.associateBy(CandidateNote::id)
         plan.edits.forEach { edit ->
             val note = byId[edit.noteId]

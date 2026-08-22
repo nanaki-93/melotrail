@@ -8,6 +8,7 @@ import app.melotrail.profile.CompositionProfileRef
 import app.melotrail.profile.MoodRef
 import app.melotrail.profile.ResolvedCompositionProfile
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
@@ -30,6 +31,10 @@ enum class EnhancementSelection { PENDING, CORRECTED, ENHANCED }
 /** Code-owned melody edit vocabulary. Tempo, meter, structure and paths remain outside the model contract. */
 @Serializable
 enum class EnhancementEditKind { VELOCITY, TIMING, PITCH, DURATION, ADD_NOTE, REMOVE_NOTE }
+
+/** Whether this enhancement has declared song occurrences and harmonic spans. */
+@Serializable
+enum class EnhancementContextScope { DECLARED_SONG, PART_LOCAL }
 
 /** The model may select only these bounded musical intentions; Kotlin owns the edit mechanics. */
 @Serializable
@@ -171,15 +176,23 @@ data class MusicalProcessingContext(
     val seed: Long,
     val pipelineVersion: String,
     val notes: List<EnhancementNoteSummary> = emptyList(),
+    /** Part-local import enhancement deliberately has no declared harmony. */
+    @OptIn(ExperimentalSerializationApi::class)
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val contextScope: EnhancementContextScope = EnhancementContextScope.DECLARED_SONG,
     val contextSha256: String
 ) {
     fun requireValid() {
         require(version == VERSION && projectKey.isExecutable && scalePitchClasses == projectKey.scalePitchClasses().map { it.chromatic }) {
             "Enhancement key/scale context is invalid"
         }
-        require(ENHANCEMENT_ID.matches(occurrenceId) && harmony.isNotEmpty() &&
-            harmony.all { it.occurrenceId == occurrenceId } &&
-            harmony.zipWithNext().all { (left, right) -> left.endTick == right.startTick }) { "Enhancement harmonic context is invalid" }
+        require(ENHANCEMENT_ID.matches(occurrenceId)) { "Enhancement occurrence identity is invalid" }
+        when (contextScope) {
+            EnhancementContextScope.DECLARED_SONG -> require(harmony.isNotEmpty() &&
+                harmony.all { it.occurrenceId == occurrenceId } &&
+                harmony.zipWithNext().all { (left, right) -> left.endTick == right.startTick }) { "Enhancement harmonic context is invalid" }
+            EnhancementContextScope.PART_LOCAL -> require(harmony.isEmpty()) { "Part-local enhancement must not claim undeclared harmony" }
+        }
         require(bpm in 30..240 && ppq in 24..9_600 && meterNumerator in 1..12 && meterDenominator in setOf(1, 2, 4, 8, 16)) { "Enhancement tempo or meter is invalid" }
         require(ENHANCEMENT_ID.matches(partId) && ENHANCEMENT_HASH.matches(correctedInputSha256) && ENHANCEMENT_HASH.matches(authorityContextSha256) &&
             ENHANCEMENT_VERSION.matches(pipelineVersion) && ENHANCEMENT_HASH.matches(contextSha256)) { "Enhancement identity is invalid" }
@@ -190,6 +203,8 @@ data class MusicalProcessingContext(
     }
 
     fun cacheKey(): String = contextSha256
+
+    val hasDeclaredSongHarmony: Boolean get() = contextScope == EnhancementContextScope.DECLARED_SONG
 
     companion object { const val VERSION = 4 }
 }
@@ -300,6 +315,11 @@ object EnhancementPlanValidator {
         require(plan.goals.size <= policy.maximumOperations) { "Enhancement plan exceeds its goal budget" }
         require(plan.edits.size <= policy.maximumEdits && plan.edits.map(EnhancementEdit::noteId).distinct().size == plan.edits.size) { "Enhancement plan exceeds its edit budget" }
         require(plan.edits.map(EnhancementEdit::kind).distinct().size <= policy.maximumOperations) { "Enhancement plan exceeds its operation budget" }
+        if (!context.hasDeclaredSongHarmony) {
+            require(plan.edits.none { it.kind == EnhancementEditKind.PITCH || it.kind == EnhancementEditKind.ADD_NOTE }) {
+                "Save Structure and declared harmony before using pitch or added-note enhancement edits"
+            }
+        }
         plan.edits.forEach { edit ->
             when (edit.kind) {
                 EnhancementEditKind.VELOCITY -> require(kotlin.math.abs(edit.value) <= policy.maximumVelocityDelta) { "Enhancement velocity edit exceeds policy" }
@@ -432,6 +452,58 @@ object MusicalProcessingContextFactory {
         )
         return bare.copy(contextSha256 = MusicalProcessingContextHasher.hash(bare)).also(MusicalProcessingContext::requireValid)
     }
+
+    /**
+     * Enhancement is available during import before a part is placed in the
+     * song. The resulting context has no synthetic harmony, so pitch and note
+     * additions remain unavailable until Structure is saved.
+     */
+    fun buildPartLocal(
+        project: Project,
+        partId: String,
+        selectedInput: Path,
+        intensity: EnhancementIntensity = EnhancementIntensity.SUBTLE,
+        seed: Long = 0L,
+        pipelineVersion: String = "enhancement-v1",
+        profiles: CompositionProfileCatalog
+    ): MusicalProcessingContext {
+        require(project.parts.any { it.id == partId }) { "Part not found for enhancement: $partId" }
+        val settings = requireNotNull(project.envelope.compositionSettings) { "Save Setup before enhancement." }
+        require(settings.complete) { "Save complete Setup before enhancement." }
+        require(Files.isRegularFile(selectedInput)) { "Selected MIDI changed before enhancement context assembly" }
+        val inputSha256 = enhancementSha256(selectedInput)
+        val analysis = MidiPartAnalyzer().analyze(selectedInput, partId)
+        val resolved = profiles.resolve(requireNotNull(settings.profile), requireNotNull(settings.mood))
+        val bare = MusicalProcessingContext(
+            projectKey = settings.key,
+            scalePitchClasses = settings.key.scalePitchClasses().map { it.chromatic },
+            occurrenceId = partId,
+            harmony = emptyList(),
+            bpm = settings.tempo.bpm.toInt(),
+            ppq = analysis.ppq,
+            meterNumerator = settings.timeSignature.numerator,
+            meterDenominator = settings.timeSignature.denominator,
+            profile = profileContext(resolved),
+            pitchRange = analysis.pitchRange,
+            authorityContextSha256 = enhancementSha256(JSON.encodeToString(PartLocalEnhancementAuthority(partId, inputSha256, settings)).toByteArray(StandardCharsets.UTF_8)),
+            partId = partId,
+            correctedInputSha256 = inputSha256,
+            intensity = intensity,
+            seed = seed,
+            pipelineVersion = pipelineVersion,
+            notes = enhancementNoteSummaries(selectedInput, analysis.ppq * 4L / settings.timeSignature.denominator),
+            contextScope = EnhancementContextScope.PART_LOCAL,
+            contextSha256 = "0".repeat(64)
+        )
+        return bare.copy(contextSha256 = MusicalProcessingContextHasher.hash(bare)).also(MusicalProcessingContext::requireValid)
+    }
+
+    @Serializable
+    private data class PartLocalEnhancementAuthority(
+        val partId: String,
+        val selectedInputSha256: String,
+        val settings: CompositionSettings
+    )
 
     private fun profileContext(profile: ResolvedCompositionProfile) = EnhancementProfileContext(
         profile.profile, profile.mood, profile.resolvedHash, profile.enhancementAmountPercent, profile.timingToleranceMs, profile.velocityTolerance

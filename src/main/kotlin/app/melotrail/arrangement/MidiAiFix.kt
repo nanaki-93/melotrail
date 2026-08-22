@@ -13,6 +13,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import java.nio.charset.StandardCharsets
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
@@ -30,6 +31,15 @@ import kotlin.math.abs
 
 /** Path-free, bounded evidence supplied to the optional local AI advisor. */
 @Serializable
+enum class MidiAiFixContextScope {
+    /** The part is placed in the saved song structure and has declared harmony. */
+    DECLARED_SONG,
+    /** The part is being repaired before song structure exists; musical rewrites are disabled. */
+    PART_LOCAL
+}
+
+/** Path-free, bounded evidence supplied to the optional local AI advisor. */
+@Serializable
 data class MidiAiFixInput(
     val version: Int = CURRENT_VERSION,
     val partId: String,
@@ -42,13 +52,15 @@ data class MidiAiFixInput(
     /** Version and hash of the declared musical projection supplied to the advisor. */
     val contextSchemaVersion: Int,
     val contextSha256: String,
+    /** Whether this repair has song-level declared harmony available. */
+    val contextScope: MidiAiFixContextScope = MidiAiFixContextScope.DECLARED_SONG,
     /** Declared settings are authoritative; analysis is diagnostic only. */
-    val declaredKey: MusicalKey,
-    val declaredTempo: Tempo,
-    val declaredMeter: TimeSignature,
-    val occurrenceTimeline: List<MusicalOccurrence>,
-    val harmonicTimeline: List<HarmonicTimelineEntry>,
-    val analyzedObservations: List<MusicalAuthorityDiagnostic>,
+    val declaredKey: MusicalKey? = null,
+    val declaredTempo: Tempo? = null,
+    val declaredMeter: TimeSignature? = null,
+    val occurrenceTimeline: List<MusicalOccurrence> = emptyList(),
+    val harmonicTimeline: List<HarmonicTimelineEntry> = emptyList(),
+    val analyzedObservations: List<MusicalAuthorityDiagnostic> = emptyList(),
     val melodyIdentity: MelodyIdentity,
     /** Code-owned repair budget supplied to the advisor; model output cannot relax it. */
     val limits: MidiAiFixLimits,
@@ -63,12 +75,21 @@ data class MidiAiFixInput(
         require(version == CURRENT_VERSION) { "Unsupported AI-fix input version" }
         require(SAFE_ID.matches(partId) && HASH.matches(selectedInputSha256) && HASH.matches(inputHash) &&
             contextSchemaVersion > 0 && HASH.matches(contextSha256)) { "AI-fix input identity is invalid" }
-        require(ppq in 24..9_600 && harmonicPpq >= ppq && harmonicPpq % ppq == 0 && declaredKey.isExecutable && declaredTempo.bpm.isFinite() && declaredTempo.bpm > 0.0) {
-            "AI-fix declared musical context is invalid"
-        }
-        require(occurrenceTimeline.isNotEmpty() && occurrenceTimeline.map(MusicalOccurrence::occurrenceId).distinct().size == occurrenceTimeline.size &&
-            harmonicTimeline.isNotEmpty() && harmonicTimeline.all { it.occurrenceId in occurrenceTimeline.map(MusicalOccurrence::occurrenceId).toSet() }) {
-            "AI-fix occurrence or harmonic context is invalid"
+        require(ppq in 24..9_600 && harmonicPpq >= ppq && harmonicPpq % ppq == 0) { "AI-fix timing context is invalid" }
+        when (contextScope) {
+            MidiAiFixContextScope.DECLARED_SONG -> {
+                require(declaredKey?.isExecutable == true && declaredTempo?.bpm?.isFinite() == true && declaredTempo.bpm > 0.0 && declaredMeter != null) {
+                    "AI-fix declared musical context is invalid"
+                }
+                require(occurrenceTimeline.isNotEmpty() && occurrenceTimeline.map(MusicalOccurrence::occurrenceId).distinct().size == occurrenceTimeline.size &&
+                    harmonicTimeline.isNotEmpty() && harmonicTimeline.all { it.occurrenceId in occurrenceTimeline.map(MusicalOccurrence::occurrenceId).toSet() }) {
+                    "AI-fix occurrence or harmonic context is invalid"
+                }
+            }
+            MidiAiFixContextScope.PART_LOCAL -> require(
+                declaredKey == null && declaredTempo == null && declaredMeter == null &&
+                    occurrenceTimeline.isEmpty() && harmonicTimeline.isEmpty() && analyzedObservations.isEmpty()
+            ) { "Part-local AI-fix context must not claim undeclared song authority" }
         }
         require(noteDensity.isFinite() && rhythmicDensity.isFinite() && noteDensity in 0.0..1.0 && rhythmicDensity in 0.0..1.0 && noteCount == notes.size) { "AI-fix note summary is invalid" }
         require(notes.size <= MAX_NOTES && notes.map(MidiAiFixNote::id).distinct().size == notes.size) { "AI-fix note input is invalid" }
@@ -78,6 +99,8 @@ data class MidiAiFixInput(
         require(limits == MidiAiFixLimits.codeOwned()) { "AI-fix limits must be code-owned" }
         notes.forEach { it.requireValid() }; problemRegions.forEach { it.requireValid() }
     }
+
+    val hasDeclaredSongHarmony: Boolean get() = contextScope == MidiAiFixContextScope.DECLARED_SONG
 
     companion object { const val CURRENT_VERSION = 2; const val MAX_NOTES = 4_000; const val MAX_REGIONS = 64 }
 }
@@ -218,7 +241,10 @@ object MidiAiFixValidator {
                 MidiAiFixEditKind.TIMING -> {
                     val note = target(); val tick = requireNotNull(edit.startTick) { "Timing edit requires startTick" }
                     require(edit.durationTicks == null && edit.velocity == null && edit.pitch == null && edit.gapId == null && edit.endTick == null) { "Timing edit contains unsupported fields" }
-                    require(tick >= 0 && tick != note.startTick && abs(tick - note.startTick) <= input.ppq * MAX_TIMING_SHIFT_BEATS / 4) { "Timing edit exceeds the bounded shift or is a no-op" }
+                    val maxShift = input.ppq * MAX_TIMING_SHIFT_BEATS / 4
+                    require(tick >= 0 && tick != note.startTick && abs(tick - note.startTick) <= maxShift) {
+                        "Timing edit for '${note.id}' must move startTick ${note.startTick} by 1..$maxShift ticks"
+                    }
                 }
                 MidiAiFixEditKind.DURATION -> {
                     val note = target(); val duration = requireNotNull(edit.durationTicks) { "Duration edit requires durationTicks" }
@@ -285,8 +311,14 @@ object MidiAiFixValidator {
 
     /** A repeated source part is rendered at every stable occurrence, so a pitch must fit every active declared chord. */
     private fun validateCanonicalHarmony(plan: MidiAiFixPlan, input: MidiAiFixInput) {
+        if (!input.hasDeclaredSongHarmony) {
+            require(plan.edits.none { it.kind == MidiAiFixEditKind.PITCH || it.kind == MidiAiFixEditKind.ADD_LOCAL_GAP_NOTE }) {
+                "Save Structure and declared harmony before using AI-fix pitch or added-note edits"
+            }
+            return
+        }
         fun requireFit(pitch: Int, start: Long, end: Long) {
-            require(input.declaredKey.contains(PitchClass.canonical(pitch % 12))) { "AI-fix pitch violates declared project scale" }
+            require(requireNotNull(input.declaredKey).contains(PitchClass.canonical(pitch % 12))) { "AI-fix pitch violates declared project scale" }
             val scale = (input.harmonicPpq / input.ppq).toLong()
             val canonicalStart = Math.multiplyExact(start, scale)
             val canonicalEnd = Math.multiplyExact(end, scale)
@@ -380,7 +412,11 @@ class LocalQwenMidiAiFixPlanner(
         input.requireValid()
         var safetyFeedback: String? = null
         repeat(MAX_SAFETY_ATTEMPTS) {
-            val response = client.complete(SYSTEM_PROMPT, request(input, safetyFeedback))
+            val response = if (client is JsonSchemaLocalQwenClient) {
+                client.completeJsonSchema(SYSTEM_PROMPT, request(input, safetyFeedback), RESPONSE_SCHEMA)
+            } else {
+                client.complete(SYSTEM_PROMPT, request(input, safetyFeedback))
+            }
             val parsed = try { json.decodeFromString(MidiAiFixModelResponse.serializer(), response) } catch (error: Exception) {
                 throw IllegalArgumentException("Local model returned invalid AI-fix JSON: ${error.message}", error)
             }
@@ -427,7 +463,10 @@ class LocalQwenMidiAiFixPlanner(
     }
 
     private fun isRetryableSafetyRejection(error: IllegalArgumentException): Boolean =
-        error.message?.startsWith("AI-fix plan produces a note collision") == true || error.message == "AI-fix plan produces an invalid note"
+        error.message?.startsWith("AI-fix plan produces a note collision") == true ||
+            error.message == "AI-fix plan produces an invalid note" ||
+            error.message?.startsWith("Timing edit for '") == true ||
+            error.message?.startsWith("Save Structure and declared harmony") == true
 
     @OptIn(ExperimentalSerializationApi::class)
     private companion object {
@@ -443,8 +482,10 @@ class LocalQwenMidiAiFixPlanner(
               "contextSha256": "copy the supplied value exactly",
               "edits": [{ "kind": "timing", "noteId": "a supplied note id", "startTick": 0 }]
             }
-            The model field is code-owned: never include it. Return 1 to 32 edits only, and edit each note at most once.
-            declaredKey, declaredTempo, declaredMeter, occurrenceTimeline, and harmonicTimeline are canonical project authority. analyzedObservations are diagnostics only and never override declared values.
+            The model field is code-owned: never include it. Return at most 8 edits, edit each note at most once, and return [] when no safe repair is available.
+            When contextScope is DECLARED_SONG, declaredKey, declaredTempo, declaredMeter, occurrenceTimeline, and harmonicTimeline are canonical project authority. analyzedObservations are diagnostics only and never override declared values.
+            When contextScope is PART_LOCAL, the part has not been placed in a song: do not return pitch or add_local_gap_note edits; use only timing, duration, velocity, or removal of an identified collision/duplicate.
+            Only edit a note named in problemRegions. Do not quantize, align, or otherwise rewrite every supplied note. Do not set multiple notes to the same start tick unless they already shared it and the edit is an identified collision/duplicate removal.
             The complete resulting MIDI must have no overlapping notes sharing the same MIDI channel and pitch. Check every timing, duration, pitch, and added-note edit against all supplied notes before responding.
             Use only these edit objects, with exactly the fields stated for that kind:
             - timing: {"kind":"timing","noteId":"supplied id","startTick":new non-negative integer}; startTick must differ from the note's supplied startTick and move it by no more than ppq / 4 ticks.
@@ -455,6 +496,36 @@ class LocalQwenMidiAiFixPlanner(
             - add_local_gap_note: {"kind":"add_local_gap_note","gapId":"supplied local-gap id","startTick":integer,"endTick":integer,"pitch":integer,"velocity":integer}; at most two additions.
             Do not use action, align, quantize, a model field, or any other keys. Prefer the smallest safe set of concrete edits. Never return paths, commands, code, prompts, instruments, or new phrases.
         """.trimIndent()
+        val RESPONSE_SCHEMA = Json.parseToJsonElement(
+            """{
+              "type":"object",
+              "additionalProperties":false,
+              "properties":{
+                "version":{"type":"integer"},
+                "partId":{"type":"string"},
+                "selectedInputSha256":{"type":"string"},
+                "inputHash":{"type":"string"},
+                "contextSchemaVersion":{"type":"integer"},
+                "contextSha256":{"type":"string"},
+                "edits":{"type":"array","maxItems":32,"items":{
+                  "type":"object",
+                  "additionalProperties":false,
+                  "properties":{
+                    "kind":{"type":"string","enum":["timing","duration","velocity","pitch","remove_collision_or_duplicate","add_local_gap_note"]},
+                    "noteId":{"type":"string"},
+                    "startTick":{"type":"integer"},
+                    "durationTicks":{"type":"integer"},
+                    "velocity":{"type":"integer"},
+                    "pitch":{"type":"integer"},
+                    "gapId":{"type":"string"},
+                    "endTick":{"type":"integer"}
+                  },
+                  "required":["kind"]
+                }}
+              },
+              "required":["version","partId","selectedInputSha256","inputHash","contextSchemaVersion","contextSha256","edits"]
+            }"""
+        ).jsonObject
         const val MAX_SAFETY_ATTEMPTS = 3
     }
 }
@@ -738,6 +809,44 @@ object MidiAiFixInputFactory {
         )
         return withoutHash.copy(inputHash = sha256(json.encodeToString(withoutHash.copy(inputHash = "")))) .also(MidiAiFixInput::requireValid)
     }
+
+    /**
+     * AI Fix is available during import, before a part has a song occurrence.
+     * This context deliberately carries no inferred key or harmony as declared
+     * authority; the validator consequently permits only non-harmonic repairs.
+     */
+    fun buildPartLocal(partId: String, selectedInput: Path): MidiAiFixInput {
+        val selectedInputSha256 = sha256(selectedInput)
+        val analysis = MidiPartAnalyzer().analyze(selectedInput, partId)
+        val beatTicks = analysis.ppq * 4L / analysis.timeSignatures.first().denominator
+        val notes = collectNotes(selectedInput, beatTicks)
+        require(notes.size == analysis.noteCount && notes.size <= MidiAiFixInput.MAX_NOTES) { "Selected MIDI is too large or inconsistent for bounded AI fix" }
+        val identity = MelodyIdentityBuilder.build(selectedInput, beatTicks)
+        val contextSha256 = sha256(json.encodeToString(PartLocalRepairContext(partId, selectedInputSha256, analysis)))
+        val withoutHash = MidiAiFixInput(
+            partId = partId,
+            selectedInputSha256 = selectedInputSha256,
+            inputHash = "0".repeat(64),
+            ppq = analysis.ppq,
+            harmonicPpq = analysis.ppq,
+            contextSchemaVersion = PART_LOCAL_CONTEXT_SCHEMA_VERSION,
+            contextSha256 = contextSha256,
+            contextScope = MidiAiFixContextScope.PART_LOCAL,
+            melodyIdentity = identity,
+            limits = MidiAiFixLimits.codeOwned(),
+            pitchRange = analysis.pitchRange,
+            noteDensity = analysis.noteDensity,
+            rhythmicDensity = analysis.rhythmicDensity,
+            noteCount = notes.size,
+            notes = notes,
+            problemRegions = problems(notes, analysis.ppq)
+        )
+        return withoutHash.copy(inputHash = sha256(json.encodeToString(withoutHash.copy(inputHash = "")))).also(MidiAiFixInput::requireValid)
+    }
+
+    @Serializable
+    private data class PartLocalRepairContext(val partId: String, val selectedInputSha256: String, val analysis: MidiAnalysis)
+
     private fun collectNotes(path: Path, canonicalBeatTicks: Long): List<MidiAiFixNote> =
         MelodyIdentityBuilder.build(path, canonicalBeatTicks).notes.map { note ->
             MidiAiFixNote(note.id.value, note.channel, note.pitch, note.velocity, note.originalStartTick, note.originalEndTick)
@@ -754,6 +863,7 @@ object MidiAiFixInputFactory {
     private fun sha256(text: String): String = sha256(text.toByteArray(StandardCharsets.UTF_8))
     private fun sha256(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     @OptIn(ExperimentalSerializationApi::class) private val json = Json { encodeDefaults = true; explicitNulls = false; ignoreUnknownKeys = false }
+    private const val PART_LOCAL_CONTEXT_SCHEMA_VERSION = 1
 }
 
 private val SAFE_ID = Regex("[A-Za-z0-9_-]{1,80}")

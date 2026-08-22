@@ -5,6 +5,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
@@ -19,6 +20,11 @@ import java.io.IOException
  */
 fun interface LocalQwenClient {
     fun complete(systemPrompt: String, userPrompt: String): String
+}
+
+/** Optional capability for planners whose response is a small, fixed JSON document. */
+interface JsonSchemaLocalQwenClient : LocalQwenClient {
+    fun completeJsonSchema(systemPrompt: String, userPrompt: String, schema: JsonObject): String
 }
 
 /** Calls LM Studio's OpenAI-compatible local chat-completions endpoint. */
@@ -37,8 +43,14 @@ class LmStudioQwenClient(
         .callTimeout(600, java.util.concurrent.TimeUnit.SECONDS)
         .readTimeout(600, java.util.concurrent.TimeUnit.SECONDS)
         .build()
-) : LocalQwenClient {
-    override fun complete(systemPrompt: String, userPrompt: String): String {
+) : JsonSchemaLocalQwenClient {
+    override fun complete(systemPrompt: String, userPrompt: String): String =
+        complete(systemPrompt, userPrompt, responseFormat = null)
+
+    override fun completeJsonSchema(systemPrompt: String, userPrompt: String, schema: JsonObject): String =
+        complete(systemPrompt, userPrompt, JsonSchemaResponseFormat("json_schema", JsonSchemaDefinition("melotrail_response", true, schema)))
+
+    private fun complete(systemPrompt: String, userPrompt: String, responseFormat: JsonSchemaResponseFormat?): String {
         val payload = json.encodeToString(
             ChatCompletionRequest(
                 model = model,
@@ -51,7 +63,8 @@ class LmStudioQwenClient(
                 ),
                 temperature = 0.0,
                 maximumCompletionTokens = maximumCompletionTokens,
-                enableThinking = false
+                enableThinking = false,
+                responseFormat = responseFormat
             )
         )
         val request = Request.Builder()
@@ -118,8 +131,18 @@ class LmStudioQwenClient(
         val messages: List<ChatMessage>,
         val temperature: Double,
         @SerialName("max_tokens") val maximumCompletionTokens: Int,
-        @SerialName("enable_thinking") val enableThinking: Boolean
+        @SerialName("enable_thinking") val enableThinking: Boolean,
+        @SerialName("response_format") val responseFormat: JsonSchemaResponseFormat? = null
     )
+
+    @Serializable
+    private data class JsonSchemaResponseFormat(
+        val type: String,
+        @SerialName("json_schema") val jsonSchema: JsonSchemaDefinition
+    )
+
+    @Serializable
+    private data class JsonSchemaDefinition(val name: String, val strict: Boolean, val schema: JsonObject)
 
     @Serializable
     private data class ChatMessage(
@@ -131,8 +154,12 @@ class LmStudioQwenClient(
         const val DEFAULT_ENDPOINT = "http://127.0.0.1:1234/v1/chat/completions"
         const val DEFAULT_MODEL = "qwen"
         const val MIN_COMPLETION_TOKENS = 256
-        const val MAX_COMPLETION_TOKENS = 8_192
-        const val DEFAULT_COMPLETION_TOKENS = 6_144
+        // AI Fix returns a compact JSON plan, but some local reasoning models
+        // still consume completion tokens before emitting it. Leave enough room
+        // for the final strict response while retaining QWEN_MAX_TOKENS as an
+        // explicit per-machine override.
+        const val MAX_COMPLETION_TOKENS = 16_384
+        const val DEFAULT_COMPLETION_TOKENS = 8_192
         const val MAX_ERROR_BODY_LENGTH = 500
         val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
         val json = Json { ignoreUnknownKeys = false }

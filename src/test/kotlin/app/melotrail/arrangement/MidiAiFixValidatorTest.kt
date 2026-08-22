@@ -79,6 +79,24 @@ class MidiAiFixValidatorTest {
     }
 
     @Test
+    fun `retries no-op timing plans with the note-specific bounded range`() {
+        val source = directory.resolve("retry-noop.mid")
+        val sequence = Sequence(Sequence.PPQ, 480); val track = sequence.createTrack()
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, 60, 100), 0))
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, 60, 0), 240))
+        MidiSystem.write(sequence, 1, source.toFile())
+        val input = input(source)
+        val unsafe = """{"version":2,"partId":"${input.partId}","selectedInputSha256":"${input.selectedInputSha256}","inputHash":"${input.inputHash}","contextSchemaVersion":${input.contextSchemaVersion},"contextSha256":"${input.contextSha256}","edits":[{"kind":"timing","noteId":"${input.notes.single().id}","startTick":0}]}"""
+        val prompts = mutableListOf<String>()
+
+        val plan = LocalQwenMidiAiFixPlanner(LocalQwenClient { _, prompt -> prompts += prompt; unsafe }).plan(input)
+
+        assertTrue(plan.edits.isEmpty())
+        assertEquals(3, prompts.size)
+        assertTrue(prompts.drop(1).all { it.contains("must move startTick 0 by 1..120 ticks") })
+    }
+
+    @Test
     fun `rejects pitch that clashes with declared chord even when analysis could infer otherwise`() {
         val source = directory.resolve("chord.mid")
         val sequence = Sequence(Sequence.PPQ, 480); val track = sequence.createTrack()

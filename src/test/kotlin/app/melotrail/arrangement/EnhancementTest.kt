@@ -129,6 +129,9 @@ class EnhancementTest {
         assertEquals(sha256Subject(context), accepted.subjectHash)
         assertEquals(context.correctedInputSha256, accepted.inputSha256)
         assertEquals(context.contextSha256, accepted.contextSha256)
+        val emptyArrayNoOp = LocalQwenEnhancementPlanner(LocalQwenClient { _, _ -> "[]" }, EnhancementModelIdentity("qwen", "fixture", "1", "apache-2.0"))
+            .plan(context)
+        assertEquals(emptyList<EnhancementEdit>(), emptyArrayNoOp.edits)
         val firstId = "m-" + "1".repeat(64)
         val secondId = "m-" + "2".repeat(64)
         val lowercaseWirePlan = LocalQwenEnhancementPlanner(LocalQwenClient { _, _ -> """{"goals":["flow_contour","passing_note"],"edits":[{"kind":"velocity","noteId":"$firstId","value":2,"goal":"flow_contour","reason":"smooth contour"},{"kind":"velocity","noteId":"$secondId","value":9,"goal":"flow_contour","reason":"outside subtle policy"}]}""" }, EnhancementModelIdentity("qwen", "fixture", "1", "apache-2.0"))
@@ -141,6 +144,31 @@ class EnhancementTest {
         assertThrows(IllegalArgumentException::class.java) { unsupportedGoal.plan(context) }
         val unknown = LocalQwenEnhancementPlanner(LocalQwenClient { _, _ -> valid }, EnhancementModelIdentity("qwen", "fixture", "1", "unknown"))
         assertThrows(IllegalArgumentException::class.java) { unknown.plan(context) }
+    }
+
+    @Test
+    fun `part-local enhancement works before Structure and refuses harmonic rewrites`() {
+        val input = root.resolve("part-local.mid")
+        writeMidi(input)
+        val context = MusicalProcessingContextFactory.buildPartLocal(
+            project = project(),
+            partId = "A",
+            selectedInput = input,
+            profiles = BundledCompositionProfileCatalog.load()
+        )
+        val velocityPlan = EnhancementPlan(
+            subjectHash = sha256Subject(context), inputSha256 = context.correctedInputSha256, contextSha256 = context.contextSha256,
+            processorId = "fixture", processorVersion = "1", placeholder = false,
+            model = EnhancementModelIdentity("qwen", "fixture", "1", "apache-2.0"),
+            edits = listOf(EnhancementEdit(EnhancementEditKind.VELOCITY, context.notes[1].id, 2))
+        )
+        val pitchPlan = velocityPlan.copy(edits = listOf(EnhancementEdit(EnhancementEditKind.PITCH, context.notes[1].id, 2)))
+
+        context.requireValid()
+        assertEquals(EnhancementContextScope.PART_LOCAL, context.contextScope)
+        assertTrue(context.harmony.isEmpty())
+        velocityPlan.requireValid(context, EnhancementPolicy.forIntensity(context.intensity))
+        assertThrows(IllegalArgumentException::class.java) { pitchPlan.requireValid(context, EnhancementPolicy.forIntensity(context.intensity)) }
     }
 
     @Test

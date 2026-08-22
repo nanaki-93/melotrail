@@ -1,6 +1,7 @@
 package app.melotrail.application
 
 import app.melotrail.arrangement.LocalQwenClient
+import app.melotrail.arrangement.JsonSchemaLocalQwenClient
 import app.melotrail.arrangement.LocalQwenMidiAiFixPlanner
 import app.melotrail.arrangement.MidiAiFixEdit
 import app.melotrail.arrangement.MidiAiFixEditKind
@@ -27,6 +28,10 @@ import app.melotrail.music.Tempo
 import app.melotrail.music.TimeSignature
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -118,6 +123,34 @@ class MidiAiFixApplicationServiceTest {
         assertFalse(result.draftAvailable)
         assertEquals(MidiAiFixSelection.SKIP, midi.aiFixSelection)
         assertEquals(null, midi.aiFix)
+    }
+
+    @Test
+    fun `AI Fix can repair an imported part before song Structure is saved`() = runBlocking {
+        val projectService = projectService()
+        projectService.create(CreateProjectRequest(root))
+        projectService.importPart(ImportPartRequest(root, "A", writeMidi(root.resolveSibling("pre-structure.mid"))))
+        projectService.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
+        DefaultTechnicalCorrectionApplicationService().create(CreateTechnicalCorrectionRequest(root, "A"))
+        var inputScope: app.melotrail.arrangement.MidiAiFixContextScope? = null
+        val service = DefaultMidiAiFixApplicationService(planner = { input ->
+            inputScope = input.contextScope
+            MidiAiFixPlan(
+                partId = input.partId,
+                selectedInputSha256 = input.selectedInputSha256,
+                inputHash = input.inputHash,
+                contextSchemaVersion = input.contextSchemaVersion,
+                contextSha256 = input.contextSha256,
+                model = MidiAiFixModelIdentity("fake", "1", "1".repeat(64), "Apache-2.0"),
+                edits = listOf(MidiAiFixEdit(MidiAiFixEditKind.VELOCITY, noteId = input.notes.first().id, velocity = input.notes.first().velocity - 10))
+            )
+        })
+
+        val result = service.create(CreateMidiAiFixRequest(root, "A"))
+
+        assertEquals(app.melotrail.arrangement.MidiAiFixContextScope.PART_LOCAL, inputScope)
+        assertTrue(result.draftAvailable)
+        assertTrue(ProjectStore.read(root).envelope.structureOccurrences.isEmpty())
     }
 
     @Test
@@ -217,6 +250,28 @@ class MidiAiFixApplicationServiceTest {
     }
 
     @Test
+    fun `AI Fix asks schema-capable local clients for at most 32 edits`() = runBlocking {
+        val projectService = projectService(); projectService.create(CreateProjectRequest(root))
+        projectService.importPart(ImportPartRequest(root, "A", writeMidi(root.resolveSibling("schema-input.mid"))))
+        projectService.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
+        configureCanonicalContext()
+        val input = aiFixInput()
+        var capturedSchema: JsonObject? = null
+        val response = "{\"version\":2,\"partId\":\"${input.partId}\",\"selectedInputSha256\":\"${input.selectedInputSha256}\",\"inputHash\":\"${input.inputHash}\",\"contextSchemaVersion\":${input.contextSchemaVersion},\"contextSha256\":\"${input.contextSha256}\",\"edits\":[]}"
+        val client = object : JsonSchemaLocalQwenClient {
+            override fun complete(systemPrompt: String, userPrompt: String): String = error("AI Fix should use the JSON-schema capability")
+            override fun completeJsonSchema(systemPrompt: String, userPrompt: String, schema: JsonObject): String {
+                capturedSchema = schema
+                return response
+            }
+        }
+
+        LocalQwenMidiAiFixPlanner(client).plan(input)
+
+        assertEquals(32, capturedSchema!!.getValue("properties").jsonObject.getValue("edits").jsonObject.getValue("maxItems").jsonPrimitive.int)
+    }
+
+    @Test
     fun `declared A minor stays authoritative over an inferred C major prompt observation`() = runBlocking {
         val projectService = projectService(); projectService.create(CreateProjectRequest(root))
         projectService.importPart(ImportPartRequest(root, "A", writeMidi(root.resolveSibling("authority.mid"))))
@@ -231,7 +286,7 @@ class MidiAiFixApplicationServiceTest {
 
         LocalQwenMidiAiFixPlanner(LocalQwenClient { _, prompt -> prompts += prompt; response }).plan(input)
 
-        assertEquals("A natural minor", input.declaredKey.displayName)
+        assertEquals("A natural minor", input.declaredKey!!.displayName)
         assertTrue(input.analyzedObservations.any { it.analyzedValue == "C major" })
         assertTrue(prompts.single().contains("\"declaredKey\"") && prompts.single().contains("\"contextSha256\"") && prompts.single().contains("\"limits\""))
     }

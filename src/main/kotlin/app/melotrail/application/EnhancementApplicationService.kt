@@ -61,10 +61,7 @@ class DefaultEnhancementApplicationService(
         ProjectMutationCoordinator.lock(request.root.toAbsolutePath().normalize()).withLock {
             require(request.intensity != EnhancementIntensity.OFF) { "Use rejection to select Corrected MIDI." }
             val root = request.root.toAbsolutePath().normalize(); val current = current(root, request.partId)
-            val context = app.melotrail.arrangement.MusicalProcessingContextFactory.build(
-                musicalAuthorityBuilder.partEnhancement(root, request.partId), current.input, request.intensity, request.seed,
-                profiles = app.melotrail.profile.BundledCompositionProfileCatalog.load()
-            )
+            val context = contextFor(root, current, request.partId, request.intensity, request.seed)
             val plan = planner.plan(context)
             val outputRelative = EnhancementArtifactPaths.output(request.partId, context.contextSha256)
             val reportRelative = EnhancementArtifactPaths.report(request.partId, context.contextSha256)
@@ -158,14 +155,23 @@ class DefaultEnhancementApplicationService(
     }
     private fun requireCurrentAuthority(root: Path, partId: String, refs: EnhancementReferences) {
         val current = current(root, partId)
-        val context = app.melotrail.arrangement.MusicalProcessingContextFactory.build(
-            musicalAuthorityBuilder.partEnhancement(root, partId), current.input, refs.intensity,
-            profiles = app.melotrail.profile.BundledCompositionProfileCatalog.load()
-        )
+        val context = contextFor(root, current, partId, refs.intensity)
         require(context.correctedInputSha256 == refs.input.sha256 && context.contextSha256 == refs.contextSha256) {
             "Enhancement draft is stale for the current selected MIDI or musical authority."
         }
     }
+    private fun contextFor(root: Path, current: Current, partId: String, intensity: EnhancementIntensity, seed: Long = 0L) =
+        if (current.project.envelope.structureOccurrences.isEmpty()) {
+            app.melotrail.arrangement.MusicalProcessingContextFactory.buildPartLocal(
+                current.project, partId, current.input, intensity, seed,
+                profiles = app.melotrail.profile.BundledCompositionProfileCatalog.load()
+            )
+        } else {
+            app.melotrail.arrangement.MusicalProcessingContextFactory.build(
+                musicalAuthorityBuilder.partEnhancement(root, partId), current.input, intensity, seed,
+                profiles = app.melotrail.profile.BundledCompositionProfileCatalog.load()
+            )
+        }
     private fun requireBoundEvidence(root: Path, refs: EnhancementReferences, report: EnhancementEditReport) {
         val provenanceRef = requireNotNull(refs.provenance) { "Enhancement draft is missing provenance evidence." }
         val planRef = requireNotNull(refs.plan) { "Enhancement draft is missing plan evidence." }

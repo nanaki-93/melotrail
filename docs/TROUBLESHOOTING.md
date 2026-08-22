@@ -111,6 +111,15 @@ that audio started.
 
 Build Song stops until its precise prerequisites are ready: worker, sound
 library, samples, and renderer. It does not implicitly approve a Qwen draft.
+
+### LM Studio planner response is truncated
+
+Melotrail requests up to 8,192 completion tokens by default. If the loaded
+model still reaches its completion limit, restart the desktop app with a larger
+per-process budget, for example `QWEN_MAX_TOKENS=16384 make desktop`. The
+model's configured context window must also be large enough for the MIDI input
+plus that completion budget.
+
 After valid approved arrangement-aware Cohesion, the build creates or reuses inspectable
 generated MIDI, stems, dry mix, repair/optional LoFi output, `output/master.wav`,
 and optional MP3/release metadata. The transition track

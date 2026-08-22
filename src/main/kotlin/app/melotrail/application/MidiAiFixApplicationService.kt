@@ -153,11 +153,18 @@ class DefaultMidiAiFixApplicationService(
             "Technical correction is stale. Run Technical Correction again."
         }
         val corrected = safeCorrected(root, correction.output)
-        val projection = musicalAuthorityBuilder.partRepair(root, partId)
-        require(projection.part.sha256 == app.melotrail.arrangement.sha256(corrected)) {
-            "Canonical AI-fix context does not select the current corrected MIDI. Re-analyze the corrected MIDI."
+        val input = if (project.envelope.structureOccurrences.isEmpty()) {
+            // AI Fix belongs to the import flow. Until the part is placed in a
+            // structure there is no declared harmonic occurrence to validate,
+            // so use the deliberately non-harmonic part-local repair context.
+            MidiAiFixInputFactory.buildPartLocal(partId, corrected)
+        } else {
+            val projection = musicalAuthorityBuilder.partRepair(root, partId)
+            require(projection.part.sha256 == app.melotrail.arrangement.sha256(corrected)) {
+                "Canonical AI-fix context does not select the current corrected MIDI. Re-analyze the corrected MIDI."
+            }
+            MidiAiFixInputFactory.build(projection, corrected)
         }
-        val input = MidiAiFixInputFactory.build(projection, corrected)
         return CurrentInput(corrected, input)
     }
 

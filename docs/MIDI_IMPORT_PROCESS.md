@@ -94,6 +94,15 @@ optional **AI Fix**, optional **Lo-fi Feel**, **Structure**, **Cohesion**, then
 they are not the post-mix Lo-fi audio texture. A selected MIDI change makes
 analysis, Cohesion, Arrangement, generated MIDI, stems, and releases stale.
 
+Before Structure is saved, AI Fix operates in a part-local repair mode. It can
+correct timing, duration, velocity, and identified collisions/duplicates, but
+it will not change pitches or add notes without the declared structure and
+harmony needed to validate those musical edits.
+
+AI Enhance is also available before Structure in part-local mode. It can shape
+timing, duration, velocity, and remove bounded redundant notes, but pitch and
+new-note edits wait for the declared structure and harmony.
+
 ## Errors and recovery
 
 The **Import** page keeps its one current source/repair/analysis action visible.
