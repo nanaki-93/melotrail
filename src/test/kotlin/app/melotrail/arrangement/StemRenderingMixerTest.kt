@@ -32,7 +32,7 @@ class StemRenderingMixerTest {
         Files.copy(root.resolve("source/A.mid"), root.resolve("midi/clean/A.mid"))
         Files.copy(root.resolve("source/B.mid"), root.resolve("midi/clean/B.mid"))
         writeMidi(root.resolve("midi/generated/bass.mid"), 0, 3_840)
-        val project = project().copy(workflow = criticBypassWorkflow().copy(fullSongEnhancementSelection = FullSongEnhancementSelection.PENDING))
+        val project = project().copy(workflow = criticBypassWorkflow().copy(fullSongEnhancementSelection = FullSongEnhancementSelection.UNRESOLVED, fullSongEnhancement = null))
 
         val error = org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException::class.java) {
             runBlocking { StemRenderingMixer(FakeRenderer(), TestSoundLibrary.root()).render(root, project, flatArrangement(), analyses) }
@@ -170,7 +170,8 @@ class StemRenderingMixerTest {
         Files.writeString(report, "critic")
         return ProjectWorkflowReferences(
             FullSongEnhancementSelection.BYPASS,
-            critic = CriticWorkflowReferences(inputHash, WorkflowArtifactReference(relative, sha256(report)))
+            critic = CriticWorkflowReferences(inputHash, WorkflowArtifactReference(relative, sha256(report))),
+            fullSongEnhancement = FullSongEnhancementReferences(inputHash, null, "d".repeat(64))
         )
     }
 

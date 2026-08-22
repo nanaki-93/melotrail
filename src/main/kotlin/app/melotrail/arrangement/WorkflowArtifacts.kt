@@ -479,8 +479,12 @@ object CriticArtifactPaths {
     }
 }
 
+/** The selected downstream source. Drafts are retained evidence, not a selection. */
 @Serializable
-enum class FullSongEnhancementSelection { PENDING, DRAFT, APPROVED, NO_OP, BYPASS }
+enum class FullSongEnhancementSelection { UNRESOLVED, BYPASS, NO_OP, APPROVED }
+
+@Serializable
+enum class FullSongEnhancementCandidateStatus { DRAFT, APPROVED }
 
 /** One selected full-song candidate output; the input is always verified before rendering. */
 @Serializable
@@ -492,17 +496,39 @@ data class FullSongEnhancementArtifactReference(
     init { require(SAFE_ID.matches(id)) { "Full-song enhancement artifact ID is invalid" } }
 }
 
-/** Approved candidate evidence. No processor is introduced by this taxonomy task. */
+/**
+ * Hash-bound candidate and selection evidence.  A draft remains here while the
+ * selection is UNRESOLVED; it is never inferred from files on disk.
+ */
 @Serializable
 data class FullSongEnhancementReferences(
     val criticInputSha256: String,
-    val artifacts: List<FullSongEnhancementArtifactReference>
+    val criticReportSha256: String? = null,
+    val cohesionInputSha256: String,
+    val status: FullSongEnhancementCandidateStatus? = null,
+    val artifacts: List<FullSongEnhancementArtifactReference> = emptyList(),
+    val plan: WorkflowArtifactReference? = null,
+    val report: WorkflowArtifactReference? = null
 ) {
     init {
-        require(SHA_256.matches(criticInputSha256) && artifacts.isNotEmpty() && artifacts.map(FullSongEnhancementArtifactReference::id).distinct().size == artifacts.size) {
+        require(SHA_256.matches(criticInputSha256) && SHA_256.matches(cohesionInputSha256) &&
+            (criticReportSha256 == null || SHA_256.matches(criticReportSha256)) &&
+            artifacts.map(FullSongEnhancementArtifactReference::id).distinct().size == artifacts.size &&
+            ((status == null && artifacts.isEmpty() && plan == null && report == null) ||
+                (status != null && artifacts.isNotEmpty() && plan != null && report != null))) {
             "Full-song enhancement references are invalid"
         }
     }
+}
+
+object FullSongEnhancementArtifactPaths {
+    private fun directory(criticInputSha256: String, revision: String): String {
+        require(SHA_256.matches(criticInputSha256) && SAFE_ID.matches(revision)) { "Full-song enhancement path is invalid" }
+        return "midi/full-song-enhance/$criticInputSha256/$revision"
+    }
+    fun output(criticInputSha256: String, revision: String, id: String): String = "${directory(criticInputSha256, revision)}/${safeId(id, "Full-song enhancement artifact")}.mid"
+    fun plan(criticInputSha256: String, revision: String): String = "${directory(criticInputSha256, revision)}/plan.json"
+    fun report(criticInputSha256: String, revision: String): String = "${directory(criticInputSha256, revision)}/report.json"
 }
 
 @Serializable
@@ -520,8 +546,12 @@ data class ProjectWorkflowReferences(
     val commercialProvenance: CommercialProvenanceReferences? = null
 ) {
     init {
-        require((fullSongEnhancementSelection in setOf(FullSongEnhancementSelection.DRAFT, FullSongEnhancementSelection.APPROVED)) == (fullSongEnhancement != null)) {
-            "A draft or approved full-song enhancement must have, and only have, candidate evidence"
+        require(when (fullSongEnhancementSelection) {
+            FullSongEnhancementSelection.UNRESOLVED -> fullSongEnhancement == null || fullSongEnhancement.status == FullSongEnhancementCandidateStatus.DRAFT
+            FullSongEnhancementSelection.APPROVED -> fullSongEnhancement?.status == FullSongEnhancementCandidateStatus.APPROVED
+            FullSongEnhancementSelection.NO_OP, FullSongEnhancementSelection.BYPASS -> fullSongEnhancement != null && fullSongEnhancement.status == null
+        }) {
+            "Full-song enhancement selection does not match its retained evidence"
         }
     }
 
@@ -532,7 +562,7 @@ data class ProjectWorkflowReferences(
     fun markCurrent(vararg artifacts: WorkflowArtifact): ProjectWorkflowReferences = copy(stale = stale - artifacts.toSet())
 
     companion object {
-        fun initial() = ProjectWorkflowReferences(FullSongEnhancementSelection.PENDING)
+        fun initial() = ProjectWorkflowReferences(FullSongEnhancementSelection.UNRESOLVED)
     }
 }
 

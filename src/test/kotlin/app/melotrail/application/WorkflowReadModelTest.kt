@@ -93,11 +93,11 @@ class WorkflowReadModelTest {
                 staleArtifacts = stale
             ))
 
-        assertEquals(WorkflowState.CURRENT, WorkflowReadModelDeriver.derive(ready(FullSongEnhancementSelection.PENDING), approvedArrangement)[WorkflowStage.FULL_SONG_ENHANCE].state)
-        assertEquals(WorkflowState.BLOCKED, WorkflowReadModelDeriver.derive(ready(FullSongEnhancementSelection.PENDING, critic = false), approvedArrangement)[WorkflowStage.FULL_SONG_ENHANCE].state)
-        assertEquals(WorkflowState.CURRENT, WorkflowReadModelDeriver.derive(ready(FullSongEnhancementSelection.PENDING, critic = false), approvedArrangement)[WorkflowStage.CRITIC].state)
-        assertEquals(WorkflowState.STALE, WorkflowReadModelDeriver.derive(ready(FullSongEnhancementSelection.PENDING, stale = setOf(WorkflowArtifact.CRITIC)), approvedArrangement)[WorkflowStage.CRITIC].state)
-        assertEquals(WorkflowState.REVIEW, WorkflowReadModelDeriver.derive(ready(FullSongEnhancementSelection.DRAFT, candidateAvailable = true), approvedArrangement)[WorkflowStage.FULL_SONG_ENHANCE].state)
+        assertEquals(WorkflowState.CURRENT, WorkflowReadModelDeriver.derive(ready(FullSongEnhancementSelection.UNRESOLVED), approvedArrangement)[WorkflowStage.FULL_SONG_ENHANCE].state)
+        assertEquals(WorkflowState.BLOCKED, WorkflowReadModelDeriver.derive(ready(FullSongEnhancementSelection.UNRESOLVED, critic = false), approvedArrangement)[WorkflowStage.FULL_SONG_ENHANCE].state)
+        assertEquals(WorkflowState.CURRENT, WorkflowReadModelDeriver.derive(ready(FullSongEnhancementSelection.UNRESOLVED, critic = false), approvedArrangement)[WorkflowStage.CRITIC].state)
+        assertEquals(WorkflowState.STALE, WorkflowReadModelDeriver.derive(ready(FullSongEnhancementSelection.UNRESOLVED, stale = setOf(WorkflowArtifact.CRITIC)), approvedArrangement)[WorkflowStage.CRITIC].state)
+        assertEquals(WorkflowState.REVIEW, WorkflowReadModelDeriver.derive(ready(FullSongEnhancementSelection.UNRESOLVED, candidateAvailable = true), approvedArrangement)[WorkflowStage.FULL_SONG_ENHANCE].state)
         assertEquals(WorkflowState.STALE, WorkflowReadModelDeriver.derive(ready(FullSongEnhancementSelection.APPROVED), approvedArrangement)[WorkflowStage.FULL_SONG_ENHANCE].state)
         assertEquals(WorkflowState.COMPLETE, WorkflowReadModelDeriver.derive(ready(FullSongEnhancementSelection.APPROVED, candidateAvailable = true), approvedArrangement)[WorkflowStage.FULL_SONG_ENHANCE].state)
         assertEquals(WorkflowState.COMPLETE, WorkflowReadModelDeriver.derive(ready(FullSongEnhancementSelection.BYPASS), approvedArrangement)[WorkflowStage.FULL_SONG_ENHANCE].state)

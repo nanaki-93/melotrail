@@ -411,7 +411,7 @@ data class ProjectReadiness(
     val stageRuns: List<StageRunSnapshot> = emptyList(),
     /** A current critic report is required before an enhancement selection is meaningful. */
     val criticAvailable: Boolean = false,
-    val fullSongEnhancementSelection: app.melotrail.arrangement.FullSongEnhancementSelection = app.melotrail.arrangement.FullSongEnhancementSelection.PENDING,
+    val fullSongEnhancementSelection: app.melotrail.arrangement.FullSongEnhancementSelection = app.melotrail.arrangement.FullSongEnhancementSelection.UNRESOLVED,
     /** True only when the approved candidate's exact inputs and outputs are current. */
     val fullSongEnhancementAvailable: Boolean = false,
     val humanizationSelection: app.melotrail.arrangement.HumanizationSelection = app.melotrail.arrangement.HumanizationSelection.BYPASS,
@@ -1232,12 +1232,13 @@ class DefaultProjectApplicationService(
                 } == true,
                 fullSongEnhancementSelection = project.workflow.fullSongEnhancementSelection,
                 fullSongEnhancementAvailable = project.workflow.fullSongEnhancement?.let { enhancement ->
-                    current(WorkflowArtifact.FULL_SONG_ENHANCEMENT) && enhancement.artifacts.all { artifact ->
+                    enhancement.status != null && current(WorkflowArtifact.FULL_SONG_ENHANCEMENT) && enhancement.artifacts.all { artifact ->
                         val input = root.resolve(artifact.input.file).normalize()
                         val output = root.resolve(artifact.output.file).normalize()
                         input.startsWith(root) && output.startsWith(root) && Files.isRegularFile(input) && Files.isRegularFile(output) &&
                             sha256(input) == artifact.input.sha256 && sha256(output) == artifact.output.sha256
-                    }
+                    } && enhancement.plan?.let { plan -> root.resolve(plan.file).normalize().let { Files.isRegularFile(it) && sha256(it) == plan.sha256 } } == true &&
+                        enhancement.report?.let { report -> root.resolve(report.file).normalize().let { Files.isRegularFile(it) && sha256(it) == report.sha256 } } == true
                 } == true,
                 humanizationSelection = project.workflow.humanizationSelection,
                 humanizationAvailable = project.workflow.humanization != null && current(WorkflowArtifact.HUMANIZATION),

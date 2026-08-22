@@ -2198,6 +2198,29 @@ private fun MixMasterPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                             }
                         }
                     }
+                    OverviewCard("mix-master-full-song-enhance", "Full-Song Enhance") {
+                        val enhancement = state.fullSongEnhancement
+                        Text(
+                            enhancement?.let { snapshot ->
+                                when (snapshot.selection) {
+                                    app.melotrail.arrangement.FullSongEnhancementSelection.APPROVED -> "Approved complete-ensemble candidate · ${snapshot.changedNotes} note edits"
+                                    app.melotrail.arrangement.FullSongEnhancementSelection.NO_OP -> "No actionable Critic issues · Cohesion MIDI remains selected"
+                                    app.melotrail.arrangement.FullSongEnhancementSelection.BYPASS -> "Bypass selected · Cohesion MIDI remains selected"
+                                    app.melotrail.arrangement.FullSongEnhancementSelection.UNRESOLVED -> if (snapshot.candidateAvailable) "Draft candidate · ${snapshot.addressedIssues} of ${snapshot.actionableIssues} issues addressed" else "Run the Critic first, then generate a bounded candidate."
+                                }
+                            } ?: "After Cohesion and Critic, generate a bounded candidate, approve it, or bypass it.",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        enhancement?.warnings?.forEach { warning -> Text(warning, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary) }
+                        Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+                            OutlinedButton(onClick = { onIntent(WorkspaceIntent.BypassFullSongEnhancement) }, enabled = !mutating) { Text("Bypass") }
+                            if (enhancement?.candidateAvailable == true) {
+                                Button(onClick = { onIntent(WorkspaceIntent.ApproveFullSongEnhancement) }, enabled = !mutating) { Text("Approve") }
+                            } else if (enhancement?.selection != app.melotrail.arrangement.FullSongEnhancementSelection.NO_OP && enhancement?.selection != app.melotrail.arrangement.FullSongEnhancementSelection.APPROVED) {
+                                Button(onClick = { onIntent(WorkspaceIntent.GenerateFullSongEnhancement) }, enabled = !mutating) { Text("Generate candidate") }
+                            }
+                        }
+                    }
                 }
                 OverviewCard(WorkspacePageTags.MIX_BUILD_STATUS, "Render / Build") {
                     Text(buildMessage, style = MaterialTheme.typography.bodySmall, color = if (buildReady) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error)

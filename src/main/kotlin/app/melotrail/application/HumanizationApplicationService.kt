@@ -71,7 +71,7 @@ class DefaultHumanizationApplicationService(
             require(project.workflow.critic != null && WorkflowArtifact.CRITIC !in project.workflow.stale) {
                 "Humanization requires a current Critic report after Cohesion."
             }
-            require(project.workflow.fullSongEnhancementSelection !in setOf(app.melotrail.arrangement.FullSongEnhancementSelection.PENDING, app.melotrail.arrangement.FullSongEnhancementSelection.DRAFT)) {
+            require(project.workflow.fullSongEnhancementSelection != app.melotrail.arrangement.FullSongEnhancementSelection.UNRESOLVED) {
                 "Humanization requires an approved Full-Song Enhance candidate, recorded no-op, or explicit bypass."
             }
             require(project.workflow.fullSongEnhancementSelection != app.melotrail.arrangement.FullSongEnhancementSelection.APPROVED ||
@@ -86,7 +86,8 @@ class DefaultHumanizationApplicationService(
             val inputs = buildList {
                 cohesiveOccurrences.forEach { artifact ->
                     val part = project.parts.single { it.id == artifact.partId }
-                    add(Input("piano-${artifact.occurrenceId}", HumanizationRole.PIANO, artifact.projectRelativePath, artifact.sha256,
+                    val selected = fullSongEnhancedInput(root, project, "piano-${artifact.occurrenceId}", WorkflowArtifactReference(artifact.projectRelativePath, artifact.sha256))
+                    add(Input("piano-${artifact.occurrenceId}", HumanizationRole.PIANO, selected.file, selected.sha256,
                         part.midi?.analysisInput == MidiAnalysisInput.LOFI_FEEL))
                 }
                 val cohesion = requireNotNull(project.workflow.cohesion)
@@ -101,7 +102,8 @@ class DefaultHumanizationApplicationService(
                         "strings" -> HumanizationRole.STRINGS
                         else -> error("Unsupported cohesive role '${reference.role}'.")
                     }
-                    add(Input(reference.role, role, reference.result.file, reference.result.sha256, false))
+                    val selected = fullSongEnhancedInput(root, project, reference.role, reference.result)
+                    add(Input(reference.role, role, selected.file, selected.sha256, false))
                 }
             }
             require(inputs.isNotEmpty()) { "Humanization requires selected arrangement MIDI." }
@@ -179,6 +181,17 @@ class DefaultHumanizationApplicationService(
     private fun locked(root: Path, block: (Path) -> HumanizationSnapshot): HumanizationSnapshot {
         val normalized = root.toAbsolutePath().normalize(); val lock = ProjectMutationCoordinator.lock(normalized)
         check(lock.tryLock()) { "Another project mutation is already running." }; return try { block(normalized) } finally { lock.unlock() }
+    }
+    private fun fullSongEnhancedInput(root: Path, project: app.melotrail.arrangement.Project, id: String, input: WorkflowArtifactReference): WorkflowArtifactReference = when (project.workflow.fullSongEnhancementSelection) {
+        app.melotrail.arrangement.FullSongEnhancementSelection.BYPASS, app.melotrail.arrangement.FullSongEnhancementSelection.NO_OP -> input
+        app.melotrail.arrangement.FullSongEnhancementSelection.UNRESOLVED -> error("Full-Song Enhance selection is unresolved.")
+        app.melotrail.arrangement.FullSongEnhancementSelection.APPROVED -> {
+            val run = requireNotNull(project.workflow.fullSongEnhancement) { "Full-Song Enhance selection has no evidence." }
+            val artifact = requireNotNull(run.artifacts.singleOrNull { it.id == id }) { "Full-Song Enhance is missing MIDI for '$id'." }
+            require(artifact.input == input && WorkflowArtifact.FULL_SONG_ENHANCEMENT !in project.workflow.stale) { "Full-Song Enhance input '$id' is stale." }
+            val path = root.resolve(artifact.output.file).normalize(); require(path.startsWith(root) && Files.isRegularFile(path) && sha256(path) == artifact.output.sha256) { "Full-Song Enhance MIDI '$id' is missing or stale." }
+            artifact.output
+        }
     }
     private fun atomicWrite(target: Path, text: String) {
         Files.createDirectories(requireNotNull(target.parent)); val temporary = target.resolveSibling(".${target.fileName}.tmp")

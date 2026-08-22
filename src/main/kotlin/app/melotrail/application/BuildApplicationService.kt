@@ -197,7 +197,7 @@ class DefaultBuildApplicationService(
         require(WorkflowArtifact.CRITIC !in project.workflow.stale && report.startsWith(root) && Files.isRegularFile(report) && digest(report) == critic.report.sha256) {
             "Build Song requires a current Critic report. Rerun Critic after Cohesion."
         }
-        require(project.workflow.fullSongEnhancementSelection !in setOf(app.melotrail.arrangement.FullSongEnhancementSelection.PENDING, app.melotrail.arrangement.FullSongEnhancementSelection.DRAFT)) {
+        require(project.workflow.fullSongEnhancementSelection != app.melotrail.arrangement.FullSongEnhancementSelection.UNRESOLVED) {
             "Build Song requires an approved Full-Song Enhance candidate, recorded no-op, or explicit bypass."
         }
         if (project.workflow.fullSongEnhancementSelection == app.melotrail.arrangement.FullSongEnhancementSelection.APPROVED) {

@@ -196,12 +196,12 @@ object WorkflowReadModelDeriver {
         val fullSongEnhancement = when {
             critic.state != WorkflowState.COMPLETE -> blocked(WorkflowStage.FULL_SONG_ENHANCE, critic)
             WorkflowArtifact.FULL_SONG_ENHANCEMENT in stale -> step(WorkflowStage.FULL_SONG_ENHANCE, WorkflowState.STALE, WorkflowAction.SELECT_FULL_SONG_ENHANCEMENT, WorkflowPrerequisite.FULL_SONG_ENHANCEMENT_SELECTION)
-            project.readiness.fullSongEnhancementSelection == app.melotrail.arrangement.FullSongEnhancementSelection.PENDING ->
-                step(WorkflowStage.FULL_SONG_ENHANCE, WorkflowState.CURRENT, WorkflowAction.SELECT_FULL_SONG_ENHANCEMENT, WorkflowPrerequisite.FULL_SONG_ENHANCEMENT_SELECTION)
-            project.readiness.fullSongEnhancementSelection in setOf(app.melotrail.arrangement.FullSongEnhancementSelection.DRAFT, app.melotrail.arrangement.FullSongEnhancementSelection.APPROVED) && !project.readiness.fullSongEnhancementAvailable ->
+            project.readiness.fullSongEnhancementSelection == app.melotrail.arrangement.FullSongEnhancementSelection.APPROVED && !project.readiness.fullSongEnhancementAvailable ->
                 step(WorkflowStage.FULL_SONG_ENHANCE, WorkflowState.STALE, WorkflowAction.SELECT_FULL_SONG_ENHANCEMENT, WorkflowPrerequisite.FULL_SONG_ENHANCEMENT_SELECTION)
-            project.readiness.fullSongEnhancementSelection == app.melotrail.arrangement.FullSongEnhancementSelection.DRAFT ->
+            project.readiness.fullSongEnhancementSelection == app.melotrail.arrangement.FullSongEnhancementSelection.UNRESOLVED && project.readiness.fullSongEnhancementAvailable ->
                 step(WorkflowStage.FULL_SONG_ENHANCE, WorkflowState.REVIEW, WorkflowAction.SELECT_FULL_SONG_ENHANCEMENT, WorkflowPrerequisite.FULL_SONG_ENHANCEMENT_SELECTION)
+            project.readiness.fullSongEnhancementSelection == app.melotrail.arrangement.FullSongEnhancementSelection.UNRESOLVED ->
+                step(WorkflowStage.FULL_SONG_ENHANCE, WorkflowState.CURRENT, WorkflowAction.SELECT_FULL_SONG_ENHANCEMENT, WorkflowPrerequisite.FULL_SONG_ENHANCEMENT_SELECTION)
             else -> complete(WorkflowStage.FULL_SONG_ENHANCE, WorkflowAction.SELECT_FULL_SONG_ENHANCEMENT)
         }
         val humanization = when {

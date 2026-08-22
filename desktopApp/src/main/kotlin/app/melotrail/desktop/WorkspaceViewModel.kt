@@ -40,6 +40,9 @@ import app.melotrail.application.HumanizationApplicationService
 import app.melotrail.application.DefaultHumanizationApplicationService
 import app.melotrail.application.HumanizationSnapshot
 import app.melotrail.application.GenerateHumanizationRequest
+import app.melotrail.application.FullSongEnhancementApplicationService
+import app.melotrail.application.DefaultFullSongEnhancementApplicationService
+import app.melotrail.application.FullSongEnhancementSnapshot
 import app.melotrail.application.PartPreviewApplicationService
 import app.melotrail.application.PreviewRequest
 import app.melotrail.application.PreviewResult
@@ -141,6 +144,7 @@ data class WorkspaceUiState(
     val enhancementReview: EnhancementSnapshot? = null,
     val arrangement: ArrangementSnapshot? = null,
     val mix: MixSnapshot? = null,
+    val fullSongEnhancement: FullSongEnhancementSnapshot? = null,
     val humanization: HumanizationSnapshot? = null,
     val buildOptions: BuildOptionsDraft = BuildOptionsDraft(),
     val export: ExportUiState = ExportUiState(),
@@ -685,6 +689,9 @@ sealed interface WorkspaceIntent {
     data object ResetMix : WorkspaceIntent
     data object GenerateHumanization : WorkspaceIntent
     data object BypassHumanization : WorkspaceIntent
+    data object GenerateFullSongEnhancement : WorkspaceIntent
+    data object ApproveFullSongEnhancement : WorkspaceIntent
+    data object BypassFullSongEnhancement : WorkspaceIntent
     data class UpdateBuildOptions(val options: BuildOptionsDraft) : WorkspaceIntent
     data object BuildSong : WorkspaceIntent
     data object ExportCommercialProvenance : WorkspaceIntent
@@ -728,6 +735,7 @@ class WorkspaceViewModel(
     private val technicalCorrectionService: TechnicalCorrectionApplicationService = DefaultTechnicalCorrectionApplicationService(),
     private val enhancementService: EnhancementApplicationService = DefaultEnhancementApplicationService(),
     private val mixService: MixApplicationService = DefaultMixApplicationService(),
+    private val fullSongEnhancementService: FullSongEnhancementApplicationService = DefaultFullSongEnhancementApplicationService(),
     private val humanizationService: HumanizationApplicationService = DefaultHumanizationApplicationService(),
     private val buildService: BuildApplicationService? = null,
     private val player: ArtifactAudioPlayer? = null,
@@ -881,6 +889,9 @@ class WorkspaceViewModel(
             WorkspaceIntent.ResetMix -> resetMix()
             WorkspaceIntent.GenerateHumanization -> generateHumanization()
             WorkspaceIntent.BypassHumanization -> bypassHumanization()
+            WorkspaceIntent.GenerateFullSongEnhancement -> generateFullSongEnhancement()
+            WorkspaceIntent.ApproveFullSongEnhancement -> approveFullSongEnhancement()
+            WorkspaceIntent.BypassFullSongEnhancement -> bypassFullSongEnhancement()
             is WorkspaceIntent.UpdateBuildOptions -> mutableState.update { it.copy(buildOptions = intent.options) }
             WorkspaceIntent.BuildSong -> buildSong()
             WorkspaceIntent.ExportCommercialProvenance -> exportCommercialProvenance()
@@ -2711,6 +2722,38 @@ class WorkspaceViewModel(
             .onFailure { fail("humanization", it.message ?: "Unable to select humanization bypass.") }
     }
 
+    private fun generateFullSongEnhancement() {
+        val project = state.value.project ?: return fail("full-song enhance", "Open a project before generating a candidate.")
+        mutableState.update { it.copy(operation = WorkspaceOperation.Humanizing, notification = null, retry = null) }
+        scope.launch { runCatching { withContext(ioDispatcher) { fullSongEnhancementService.generateCandidate(project.root) } }
+            .onSuccess { snapshot ->
+                val refreshed = withContext(ioDispatcher) { projectService.open(project.root) }
+                mutableState.update { it.copy(project = refreshed, fullSongEnhancement = snapshot, operation = WorkspaceOperation.Idle,
+                    notification = if (snapshot.selection == app.melotrail.arrangement.FullSongEnhancementSelection.NO_OP) "No actionable Critic issues; Cohesion MIDI remains selected." else "Full-Song Enhance candidate is ready for review.") }
+            }.onFailure { fail("full-song enhance", it.message ?: "Unable to generate Full-Song Enhance candidate.") }
+        }
+    }
+
+    private fun approveFullSongEnhancement() {
+        val project = state.value.project ?: return fail("full-song enhance", "Open a project before approving a candidate.")
+        scope.launch { runCatching { withContext(ioDispatcher) { fullSongEnhancementService.approve(project.root) } }
+            .onSuccess { snapshot ->
+                val refreshed = withContext(ioDispatcher) { projectService.open(project.root) }
+                mutableState.update { it.copy(project = refreshed, fullSongEnhancement = snapshot, notification = "Full-Song Enhance candidate approved for the complete ensemble.") }
+            }.onFailure { fail("full-song enhance", it.message ?: "Unable to approve Full-Song Enhance candidate.") }
+        }
+    }
+
+    private fun bypassFullSongEnhancement() {
+        val project = state.value.project ?: return fail("full-song enhance", "Open a project before selecting bypass.")
+        scope.launch { runCatching { withContext(ioDispatcher) { fullSongEnhancementService.selectBypass(project.root) } }
+            .onSuccess { snapshot ->
+                val refreshed = withContext(ioDispatcher) { projectService.open(project.root) }
+                mutableState.update { it.copy(project = refreshed, fullSongEnhancement = snapshot, notification = "Full-Song Enhance bypass selected; Cohesion MIDI remains selected.") }
+            }.onFailure { fail("full-song enhance", it.message ?: "Unable to select Full-Song Enhance bypass.") }
+        }
+    }
+
     private fun exportCommercialProvenance() {
         val project = state.value.project ?: return fail("commercial provenance", "Open a project before creating commercial evidence.")
         if (!project.readiness.releaseAvailable || state.value.operation.isMutating) return fail("commercial provenance", "Build a current master and release metadata before creating commercial evidence.")
@@ -2904,8 +2947,9 @@ class WorkspaceViewModel(
             val cohesion = runCatching { cohesionService.load(project.root) }
             val aiFix = project.parts.firstOrNull { it.preparation.midiAiFix.draftAvailable || it.preparation.midiAiFix.approvedAvailable }
                 ?.let { part -> runCatching { midiAiFixService.load(project.root, part.id) } }
+            val fullSongEnhancement = runCatching { fullSongEnhancementService.load(project.root) }
             val humanization = runCatching { humanizationService.load(project.root) }
-            listOf(mix, arrangement, cohesion, aiFix, humanization)
+            listOf(mix, arrangement, cohesion, aiFix, fullSongEnhancement, humanization)
         }
         val warnings = buildList {
             hydration[0]?.exceptionOrNull()?.message?.let { add("mix settings could not be loaded: $it") }
@@ -2927,7 +2971,8 @@ class WorkspaceViewModel(
                     cohesion = cohesion,
                     cohesionDraft = cohesion?.let { current.cohesionDraft.copy(intensity = it.intensity) } ?: current.cohesionDraft,
                     midiAiFix = hydration[3]?.getOrNull() as? MidiAiFixSnapshot,
-                    humanization = hydration[4]?.getOrNull() as? HumanizationSnapshot,
+                    fullSongEnhancement = hydration[4]?.getOrNull() as? FullSongEnhancementSnapshot,
+                    humanization = hydration[5]?.getOrNull() as? HumanizationSnapshot,
                     selectedArrangementSection = if (resetWorkspace) arrangement?.sections?.firstOrNull()?.index else current.selectedArrangementSection,
                     notification = if (warnings.isEmpty()) current.notification ?: openedMessage
                     else "$openedMessage Some optional artifacts need attention: ${warnings.joinToString("; ")}",

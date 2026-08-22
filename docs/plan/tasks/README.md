@@ -24,7 +24,7 @@ resources, UI copy, and stale documentation in the task that replaces them.
 | 125 | [Generated-track quality validators](completed/125-generated-track-quality-validators.md) | Typed reports for every role |
 | 126 | [Boundary-only Cohesion](completed/126-boundary-only-cohesion.md) | No whole-song Cohesion edits |
 | 127 | [Deterministic full-song critic](completed/127-deterministic-full-song-critic.md) | Reproducible whole-song issues |
-| 128 | [AI Full-Song Enhance](128-ai-full-song-enhance.md) | Separate targeted AI stage |
+| 128 | [AI Full-Song Enhance](completed/128-ai-full-song-enhance.md) | Separate targeted AI stage |
 | 129 | [Stage comparison and diagnostic reports](129-stage-comparison-and-diagnostic-reports.md) | Persisted service/UI evidence |
 | 130 | [Reference-song integration and rollout](130-reference-song-integration-and-rollout.md) | End-to-end acceptance and cleanup |
 

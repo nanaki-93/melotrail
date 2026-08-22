@@ -77,7 +77,8 @@ class SongTimingReproductionTest {
         Files.createDirectories(requireNotNull(report.parent))
         Files.writeString(report, "critic")
         return ProjectWorkflowReferences(FullSongEnhancementSelection.BYPASS,
-            critic = CriticWorkflowReferences(inputHash, WorkflowArtifactReference(relative, sha256(Files.readAllBytes(report)))))
+            critic = CriticWorkflowReferences(inputHash, WorkflowArtifactReference(relative, sha256(Files.readAllBytes(report)))),
+            fullSongEnhancement = FullSongEnhancementReferences(inputHash, null, "d".repeat(64)))
     }
 
     @Test

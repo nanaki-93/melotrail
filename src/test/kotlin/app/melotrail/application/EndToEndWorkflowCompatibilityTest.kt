@@ -129,7 +129,8 @@ class EndToEndWorkflowCompatibilityTest {
             .markCurrent(app.melotrail.arrangement.WorkflowArtifact.CRITIC)
             .copy(
                 critic = app.melotrail.arrangement.CriticWorkflowReferences(inputHash, app.melotrail.arrangement.WorkflowArtifactReference(relative, hash(report))),
-                fullSongEnhancementSelection = app.melotrail.arrangement.FullSongEnhancementSelection.NO_OP
+                fullSongEnhancementSelection = app.melotrail.arrangement.FullSongEnhancementSelection.NO_OP,
+                fullSongEnhancement = app.melotrail.arrangement.FullSongEnhancementReferences(inputHash, hash(report), "d".repeat(64))
             )))
     }
 

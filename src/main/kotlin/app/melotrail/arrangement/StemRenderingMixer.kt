@@ -185,8 +185,7 @@ class StemRenderingMixer(
     /** The approved candidate is the only replacement path; bypass/no-op retain the exact cohesive input. */
     private fun fullSongEnhancedInput(root: Path, project: Project, id: String, original: Path): Path = when (project.workflow.fullSongEnhancementSelection) {
         FullSongEnhancementSelection.BYPASS, FullSongEnhancementSelection.NO_OP -> original
-        FullSongEnhancementSelection.PENDING -> error("Full-Song Enhance selection is unresolved. Run Critic, then approve, record no-op, or bypass it.")
-        FullSongEnhancementSelection.DRAFT -> error("Full-Song Enhance candidate needs approval, recorded no-op, or explicit bypass.")
+        FullSongEnhancementSelection.UNRESOLVED -> error("Full-Song Enhance selection is unresolved. Run Critic, then approve, record no-op, or bypass it.")
         FullSongEnhancementSelection.APPROVED -> {
             require(WorkflowArtifact.FULL_SONG_ENHANCEMENT !in project.workflow.stale) { "Full-Song Enhance selection is stale. Regenerate it, record no-op, or bypass it." }
             val run = requireNotNull(project.workflow.fullSongEnhancement) { "Full-Song Enhance selection has no candidate evidence." }
@@ -206,7 +205,7 @@ class StemRenderingMixer(
         require(WorkflowArtifact.CRITIC !in project.workflow.stale && report.startsWith(root) && Files.isRegularFile(report) && digest(Files.readAllBytes(report)) == critic.report.sha256) {
             "Critic report is missing or stale. Rerun Critic before rendering."
         }
-        require(project.workflow.fullSongEnhancementSelection !in setOf(FullSongEnhancementSelection.PENDING, FullSongEnhancementSelection.DRAFT)) {
+        require(project.workflow.fullSongEnhancementSelection != FullSongEnhancementSelection.UNRESOLVED) {
             "Render requires an approved Full-Song Enhance candidate, recorded no-op, or explicit bypass."
         }
     }

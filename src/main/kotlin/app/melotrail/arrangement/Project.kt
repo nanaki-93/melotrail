@@ -571,6 +571,8 @@ object ProjectValidator {
                 validateArtifactReference(root, artifact.input, "Full-song enhancement input '${artifact.id}'", errors)
                 validateArtifactReference(root, artifact.output, "Full-song enhancement output '${artifact.id}'", errors)
             }
+            enhancement.plan?.let { validateArtifactReference(root, it, "Full-song enhancement plan", errors) }
+            enhancement.report?.let { validateArtifactReference(root, it, "Full-song enhancement report", errors) }
         }
         project.workflow.humanization?.let { humanization ->
             runCatching { humanization.artifacts.forEach { artifact ->
