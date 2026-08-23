@@ -43,7 +43,9 @@ data class StringsGenerationRequest(
     val role: StringsMidiRole,
     val register: String,
     val midiChannel: Int = 0,
-    val midiProgram: Int? = null
+    val midiProgram: Int? = null,
+    /** Complete accepted core arrangement, not just the source analysis. */
+    val arrangementState: ArrangementState? = null
 ) {
     fun requireValid() {
         require(sectionIndex >= 0 && sectionStartTick >= 0 && sectionLengthTicks > 0) { "Strings section timing is invalid" }
@@ -52,6 +54,7 @@ data class StringsGenerationRequest(
         require(sourceNoteDensity.isFinite() && sourceNoteDensity in 0.0..1.0 && sourceRhythmicDensity.isFinite() && sourceRhythmicDensity in 0.0..1.0) { "Strings source density facts must be from 0.0 to 1.0" }
         require(register in REGISTER_RANGES) { "Unsupported strings register '$register'. Allowed registers: ${REGISTER_RANGES.keys.joinToString()}" }
         require(midiChannel in 0..15 && (midiProgram == null || midiProgram in 0..127)) { "Strings MIDI routing is invalid" }
+        arrangementState?.requireTrack(ArrangementState.PIANO)
         require(tempoMap.isNotEmpty() && tempoMap.first().tick == 0L && timeSignatures.isNotEmpty() && timeSignatures.first().tick == 0L) { "Strings maps must start at tick 0" }
         tempoMap.zipWithNext().forEach { (first, second) -> require(first.tick < second.tick) { "Strings tempo changes must be ordered" } }
         timeSignatures.zipWithNext().forEach { (first, second) -> require(first.tick < second.tick) { "Strings time signatures must be ordered" } }
@@ -251,7 +254,7 @@ class StringsMidiGenerationAdapter(
     private val composer: DeterministicStringsMidiGenerator = DeterministicStringsMidiGenerator(),
     private val libraryRoot: Path
 ) {
-    fun generate(projectRoot: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): GeneratedStringsMidi {
+    fun generate(projectRoot: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>, arrangementState: ArrangementState? = null, output: Path? = null): GeneratedStringsMidi {
         val root = projectRoot.toAbsolutePath().normalize()
         project.requireCleanMidi(root)
         val strings = InstrumentRegistryLoader(libraryRoot).load().resolveApprovedRole(project, LogicalInstrument.STRINGS)
@@ -268,15 +271,15 @@ class StringsMidiGenerationAdapter(
             require(plans.size <= 1) { "Detailed arrangement section ${section.index + 1} contains duplicate strings plans" }
             plans.singleOrNull()?.let { plan ->
                 require(plan.name == LogicalInstrument.STRINGS.wireName && plan.mode == InstrumentMode.GENERATED) { "Detailed arrangement section ${section.index + 1} has an invalid strings plan" }
-                requests += StringsGenerationRequest(position, section.role, start, analysis.ppq, analysis.tempoMap, analysis.timeSignatures, analysis.durationTicks, analysis.key, analysis.chords, analysis.pitchRange, analysis.melodicRange, analysis.noteDensity, analysis.rhythmicDensity, section.energy, plan.density, plan.role.toMidiRole(), plan.register.toStringsRegister(), strings.midiChannelZeroBased ?: 0, strings.midiProgram)
+                requests += StringsGenerationRequest(position, section.role, start, analysis.ppq, analysis.tempoMap, analysis.timeSignatures, analysis.durationTicks, analysis.key, analysis.chords, analysis.pitchRange, analysis.melodicRange, analysis.noteDensity, analysis.rhythmicDensity, section.energy, plan.density, plan.role.toMidiRole(), plan.register.toStringsRegister(), strings.midiChannelZeroBased ?: 0, strings.midiProgram, arrangementState)
             }
             start = Math.addExact(start, analysis.durationTicks)
         }
         require(requests.isNotEmpty()) { "Detailed arrangement does not contain a generated strings instrument" }
         val results = requests.map { it to composer.generate(it) }
-        val output = root.resolve("midi/generated/strings.mid")
-        writeMidi(output, checkNotNull(ppq), start, strings.midiChannelZeroBased ?: 0, strings.midiProgram, timeline, results)
-        return GeneratedStringsMidi(output, checkNotNull(ppq), results.flatMap { it.second.notes }, results.flatMap { it.second.diagnostics })
+        val target = output ?: root.resolve("midi/generated/strings.mid")
+        writeMidi(target, checkNotNull(ppq), start, strings.midiChannelZeroBased ?: 0, strings.midiProgram, timeline, results)
+        return GeneratedStringsMidi(target, checkNotNull(ppq), results.flatMap { it.second.notes }, results.flatMap { it.second.diagnostics })
     }
 
     private fun StringsRole.toMidiRole(): StringsMidiRole = when (this) {

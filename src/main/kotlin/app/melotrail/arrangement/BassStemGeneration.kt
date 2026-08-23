@@ -49,7 +49,9 @@ data class BassGenerationRequest(
     val register: String = "low",
     val syncopation: Double = 0.0,
     val midiChannel: Int = 0,
-    val midiProgram: Int? = null
+    val midiProgram: Int? = null,
+    /** Full accepted piano/ensemble MIDI; deterministic generation never receives a rendered mix. */
+    val arrangementState: ArrangementState? = null
 ) {
     fun requireValid() {
         require(sectionIndex >= 0) { "Bass section index must not be negative" }
@@ -64,6 +66,7 @@ data class BassGenerationRequest(
         }
         require(midiChannel in 0..15) { "Bass MIDI channel must be 0..15" }
         require(midiProgram == null || midiProgram in 0..127) { "Bass MIDI program must be 0..127" }
+        arrangementState?.requireTrack(ArrangementState.PIANO)
         require(tempoMap.isNotEmpty() && tempoMap.first().tick == 0L) { "Bass tempo map must start at tick 0" }
         require(timeSignatures.isNotEmpty() && timeSignatures.first().tick == 0L) { "Bass time-signature map must start at tick 0" }
         tempoMap.zipWithNext().forEach { (first, second) -> require(first.tick < second.tick) { "Bass tempo changes must be ordered" } }
@@ -280,7 +283,7 @@ class BassMidiGenerationAdapter(
     }
 
     /** Consumes the approved canonical detailed-arrangement controls. */
-    fun generate(projectRoot: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): GeneratedBassMidi {
+    fun generate(projectRoot: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>, arrangementState: ArrangementState? = null, output: Path? = null): GeneratedBassMidi {
         val root = projectRoot.toAbsolutePath().normalize()
         project.requireCleanMidi(root)
         val bass = InstrumentRegistryLoader(libraryRoot).load().resolveApprovedRole(project, LogicalInstrument.BASS)
@@ -314,16 +317,17 @@ class BassMidiGenerationAdapter(
                     register = plan.register.name.lowercase(),
                     syncopation = plan.syncopation,
                     midiChannel = bass.midiChannelZeroBased ?: 0,
-                    midiProgram = bass.midiProgram
+                    midiProgram = bass.midiProgram,
+                    arrangementState = arrangementState
                 )
             }
             start = Math.addExact(start, analysis.durationTicks)
         }
         require(requests.isNotEmpty()) { "Detailed arrangement does not contain a generated bass instrument" }
         val result = requests.map { it to composer.generate(it) }
-        val output = root.resolve("midi/generated/bass.mid")
-        writeMidi(output, checkNotNull(ppq), start, requests, result)
-        return GeneratedBassMidi(output, checkNotNull(ppq), result.flatMap { it.second.notes }, result.flatMap { it.second.diagnostics })
+        val target = output ?: root.resolve("midi/generated/bass.mid")
+        writeMidi(target, checkNotNull(ppq), start, requests, result)
+        return GeneratedBassMidi(target, checkNotNull(ppq), result.flatMap { it.second.notes }, result.flatMap { it.second.diagnostics })
     }
 
     private fun DetailedBassRole.toBassRole(): BassRole = when (this) {

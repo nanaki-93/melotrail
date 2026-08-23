@@ -37,7 +37,9 @@ data class DrumGenerationRequest(
     val fillLastBar: Boolean,
     val transitionIntent: SongTransitionIntent,
     val midiChannel: Int,
-    val noteMap: Map<String, Int>
+    val noteMap: Map<String, Int>,
+    /** Accepted piano plus any earlier accepted generated tracks, including bass attacks. */
+    val arrangementState: ArrangementState? = null
 ) {
     fun requireValid() {
         require(sectionIndex >= 0 && sectionStartTick >= 0) { "Drum section index and start tick must not be negative" }
@@ -48,6 +50,7 @@ data class DrumGenerationRequest(
         }
         require(swing.isFinite() && swing in 0.0..MAX_SWING) { "Drum swing must be from 0.0 to $MAX_SWING" }
         require(midiChannel in 0..15) { "Drum MIDI channel must be 0..15" }
+        arrangementState?.requireTrack(ArrangementState.PIANO)
         require(tempoMap.isNotEmpty() && tempoMap.first().tick == 0L) { "Drum tempo map must start at tick 0" }
         require(timeSignatures.isNotEmpty() && timeSignatures.first().tick == 0L) { "Drum time-signature map must start at tick 0" }
         tempoMap.zipWithNext().forEach { (first, second) -> require(first.tick < second.tick) { "Drum tempo changes must be ordered" } }
@@ -231,7 +234,7 @@ class DrumMidiGenerationAdapter(
     private val composer: DeterministicDrumMidiGenerator = DeterministicDrumMidiGenerator(),
     private val libraryRoot: Path
 ) {
-    fun generate(projectRoot: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): GeneratedDrumMidi {
+    fun generate(projectRoot: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>, arrangementState: ArrangementState? = null, output: Path? = null): GeneratedDrumMidi {
         val root = projectRoot.toAbsolutePath().normalize()
         project.requireCleanMidi(root)
         val drums = InstrumentRegistryLoader(libraryRoot).load().resolveApprovedRole(project, LogicalInstrument.DRUMS)
@@ -254,16 +257,16 @@ class DrumMidiGenerationAdapter(
                     position, start, analysis.ppq, analysis.tempoMap, analysis.timeSignatures, analysis.durationTicks,
                     section.energy, plan.density, plan.role, plan.kickDensity, plan.snarePattern, plan.hiHatDensity,
                     plan.swing, plan.fillLastBar, section.transitionOut.type.toSongTransitionIntent(),
-                    requireNotNull(drums.midiChannelZeroBased) { "Validated drum registry has no MIDI channel" }, drums.noteMap
+                    requireNotNull(drums.midiChannelZeroBased) { "Validated drum registry has no MIDI channel" }, drums.noteMap, arrangementState
                 )
             }
             start = Math.addExact(start, analysis.durationTicks)
         }
         require(requests.isNotEmpty()) { "Detailed arrangement does not contain a generated drums instrument" }
         val results = requests.map { it to composer.generate(it) }
-        val output = root.resolve("midi/generated/drums.mid")
-        writeMidi(output, checkNotNull(ppq), start, requireNotNull(drums.midiChannelZeroBased), timeline, results)
-        return GeneratedDrumMidi(output, checkNotNull(ppq), results.flatMap { it.second.hits }, results.flatMap { it.second.diagnostics })
+        val target = output ?: root.resolve("midi/generated/drums.mid")
+        writeMidi(target, checkNotNull(ppq), start, requireNotNull(drums.midiChannelZeroBased), timeline, results)
+        return GeneratedDrumMidi(target, checkNotNull(ppq), results.flatMap { it.second.hits }, results.flatMap { it.second.diagnostics })
     }
 
     private fun writeMidi(

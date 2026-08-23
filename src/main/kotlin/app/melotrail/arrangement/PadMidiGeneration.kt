@@ -40,7 +40,9 @@ data class PadGenerationRequest(
     val role: PadRole = PadRole.SUSTAINED_CHORDS,
     val register: String,
     val midiChannel: Int = 0,
-    val midiProgram: Int? = null
+    val midiProgram: Int? = null,
+    /** Full accepted ensemble MIDI and summaries for register/density-aware voicing. */
+    val arrangementState: ArrangementState? = null
 ) {
     fun requireValid() {
         require(sectionIndex >= 0 && sectionStartTick >= 0) { "Pad section index and start tick must not be negative" }
@@ -52,6 +54,7 @@ data class PadGenerationRequest(
         require(register in REGISTER_RANGES) { "Unsupported pad register '$register'. Allowed registers: ${REGISTER_RANGES.keys.joinToString()}" }
         require(midiChannel in 0..15) { "Pad MIDI channel must be 0..15" }
         require(midiProgram == null || midiProgram in 0..127) { "Pad MIDI program must be 0..127" }
+        arrangementState?.requireTrack(ArrangementState.PIANO)
         require(tempoMap.isNotEmpty() && tempoMap.first().tick == 0L) { "Pad tempo map must start at tick 0" }
         require(timeSignatures.isNotEmpty() && timeSignatures.first().tick == 0L) { "Pad time-signature map must start at tick 0" }
         tempoMap.zipWithNext().forEach { (first, second) -> require(first.tick < second.tick) { "Pad tempo changes must be ordered" } }
@@ -230,7 +233,7 @@ class PadMidiGenerationAdapter(
     private val composer: DeterministicPadMidiGenerator = DeterministicPadMidiGenerator(),
     private val libraryRoot: Path
 ) {
-    fun generate(projectRoot: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): GeneratedPadMidi {
+    fun generate(projectRoot: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>, arrangementState: ArrangementState? = null, output: Path? = null): GeneratedPadMidi {
         val root = projectRoot.toAbsolutePath().normalize()
         project.requireCleanMidi(root)
         val pad = InstrumentRegistryLoader(libraryRoot).load().resolveApprovedRole(project, LogicalInstrument.PAD)
@@ -252,16 +255,16 @@ class PadMidiGenerationAdapter(
                 requests += PadGenerationRequest(
                     position, start, analysis.ppq, analysis.tempoMap, analysis.timeSignatures, analysis.durationTicks,
                     analysis.key, analysis.chords, section.energy, plan.density, PadRole.SUSTAINED_CHORDS,
-                    plan.register.toPadRegister(), pad.midiChannelZeroBased ?: 0, pad.midiProgram
+                    plan.register.toPadRegister(), pad.midiChannelZeroBased ?: 0, pad.midiProgram, arrangementState
                 )
             }
             start = Math.addExact(start, analysis.durationTicks)
         }
         require(requests.isNotEmpty()) { "Detailed arrangement does not contain a generated pad instrument" }
         val results = requests.map { it to composer.generate(it) }
-        val output = root.resolve("midi/generated/pad.mid")
-        writeMidi(output, checkNotNull(ppq), start, pad.midiChannelZeroBased ?: 0, pad.midiProgram, timeline, results)
-        return GeneratedPadMidi(output, checkNotNull(ppq), results.flatMap { it.second.notes }, results.flatMap { it.second.diagnostics })
+        val target = output ?: root.resolve("midi/generated/pad.mid")
+        writeMidi(target, checkNotNull(ppq), start, pad.midiChannelZeroBased ?: 0, pad.midiProgram, timeline, results)
+        return GeneratedPadMidi(target, checkNotNull(ppq), results.flatMap { it.second.notes }, results.flatMap { it.second.diagnostics })
     }
 
     private fun MusicalRegister.toPadRegister(): String = when (this) {

@@ -117,10 +117,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/ArrangementApplicationService.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/application/ArrangementApplicationService.kt has 24 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 24,
-      "declarationDigest": "7fe08792921a583194fa94c909252d5ca607acc91295427cf34bd9dd1585fd6e",
-      "documentedFunctionCount": 2
+      "reason": "Milestone 08 reviewed incremental accepted-track publication; the remaining callable declarations retain this declaration-digest-pinned local exemption until they receive focused KDoc.",
+      "functionCount": 38,
+      "declarationDigest": "f2c10d2695ce60caa2e5e140c829baedbf73550cf310380ef4e93f55230e8b1d",
+      "documentedFunctionCount": 3
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/AudioPreparationApplicationService.kt",
@@ -211,6 +211,14 @@
       "documentedFunctionCount": 12
     },
     {
+      "path": "src/main/kotlin/app/melotrail/arrangement/ArrangementState.kt",
+      "classification": "deferred-with-reason",
+      "reason": "Milestone 08's immutable accepted-track state has focused contract KDoc on its publication and planner boundaries; its remaining small helpers are covered by the declaration-digest-pinned local exemption.",
+      "functionCount": 14,
+      "declarationDigest": "2bcd70f8abb8a6f1eb8c57c78c6cddc4772ba288780d367866953e803b5c64ba",
+      "documentedFunctionCount": 2
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/arrangement/Arrangement.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/arrangement/Arrangement.kt has 11 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
@@ -245,17 +253,17 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/DetailedArrangement.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/DetailedArrangement.kt has 27 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 27,
-      "declarationDigest": "2ba47d98453558aca7c1cc1eeb8247a6a25fb71a41efc5fc07785263a1606378",
-      "documentedFunctionCount": 0
+      "reason": "Milestone 08 reviewed the bounded accepted-MIDI planner context; remaining callable declarations retain this declaration-digest-pinned local exemption until they receive focused KDoc.",
+      "functionCount": 28,
+      "declarationDigest": "89776a14ea03b1bdca3bb8da038a4266f280d865a36f0b3e24e489d07df59814",
+      "documentedFunctionCount": 1
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/DrumMidiGeneration.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/DrumMidiGeneration.kt has 16 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 16,
-      "declarationDigest": "5ec30a0b05e0f1edd6b087ce279c45c95488f49e4745eefaf9367ea26ed75aa8",
+      "reason": "Milestone 08 reviewed accepted ensemble context for drum generation; remaining callable declarations retain this declaration-digest-pinned local exemption until they receive focused KDoc.",
+      "functionCount": 18,
+      "declarationDigest": "c3e6ae8ba6616f7f664748d39bcc1212c3664e81c2265fe1334e79556bce58be",
       "documentedFunctionCount": 0
     },
     {

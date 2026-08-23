@@ -267,7 +267,9 @@ enum class DrumFillPlacement {
 data class DetailedArrangementInput(
     val planningInput: SongPlanningInput,
     val songPlan: SongPlan,
-    val variations: SectionVariationPlan
+    val variations: SectionVariationPlan,
+    /** Compact accepted MIDI facts for a Qwen planner; raw full MIDI stays local. */
+    val arrangementStateContext: ArrangementPlannerContext? = null
 ) {
     fun requireValid() {
         songPlan.requireValid(planningInput)
@@ -574,6 +576,9 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
         ${promptJson.encodeToString(input.planningInput.analyses.toSortedMap().map { (partId, analysis) ->
             DetailedPlanningAnalysis(partId, analysis.pitchRange, analysis.melodicRange, analysis.noteDensity, analysis.rhythmicDensity)
         })}
+
+        Accepted arrangement MIDI context (summaries plus a bounded relevant excerpt; never return MIDI events):
+        ${input.arrangementStateContext?.toString() ?: "No accepted ensemble state is available."}
 
         Response requirements:
         - Return exactly ${input.variations.sections.size} sections in the supplied order.

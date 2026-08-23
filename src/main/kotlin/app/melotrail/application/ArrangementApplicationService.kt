@@ -3,10 +3,12 @@ package app.melotrail.application
 import app.melotrail.arrangement.BassMidiGenerationAdapter
 import app.melotrail.arrangement.ArrangementApprovalReferences
 import app.melotrail.arrangement.ArrangementAssignmentReference
+import app.melotrail.arrangement.ArrangementState
 import app.melotrail.arrangement.ArrangementRoleSelection
 import app.melotrail.arrangement.ArrangementSoundContext
 import app.melotrail.arrangement.ArrangementHarmonyContext
 import app.melotrail.arrangement.DetailedArrangement
+import app.melotrail.arrangement.DetailedArrangementSection
 import app.melotrail.arrangement.DetailedArrangementInput
 import app.melotrail.arrangement.DetailedArrangementPlanner
 import app.melotrail.arrangement.DetailedArrangementStore
@@ -29,6 +31,7 @@ import app.melotrail.arrangement.LogicalInstrument
 import app.melotrail.arrangement.LegacyLogicalInstrumentRoles
 import app.melotrail.arrangement.MidiAnalysis
 import app.melotrail.arrangement.MidiChord
+import app.melotrail.arrangement.MidiNote
 import app.melotrail.arrangement.MidiTransitionGenerationAdapter
 import app.melotrail.arrangement.TransitionMidiWindow
 import app.melotrail.arrangement.OccurrenceMidiArtifactResolver
@@ -199,7 +202,7 @@ class DefaultArrangementApplicationService(
         coroutineContext.ensureActive()
 
         progress.report(OperationProgress("arrange", 3, 3, "Creating detailed arrangement"))
-        val detailedInput = detailedInput(root, project)
+        val detailedInput = detailedInput(root, project, includeArrangementState = request.planner == ArrangementPlannerKind.QWEN)
         val detailed = if (request.planner == ArrangementPlannerKind.QWEN) qwenDetailedPlanner else deterministicDetailedPlanner
         val arrangement = detailed.plan(detailedInput)
         val artifact = if (request.planner == ArrangementPlannerKind.QWEN) {
@@ -228,42 +231,10 @@ class DefaultArrangementApplicationService(
         val total = active.size + if (needsTransitionMidi) 1 else 0
         var stage = 0
         val artifacts = mutableListOf<GeneratedMidiArtifact>()
-        fun emit(name: String, path: Path, events: Int) {
-            artifacts += GeneratedMidiArtifact(name, path, events)
-        }
+        var arrangementState = acceptedPianoState(normalized, project, arrangement, analyses)
         fun generating(name: String, path: Path) {
             stage++
             progress.report(OperationProgress("generate-midi", stage, total, "Generating $name MIDI", path))
-        }
-        if ("bass" in active) {
-            val path = normalized.resolve("midi/generated/bass.mid"); generating("bass", path)
-            BassMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("bass", it.path, it.notes.size) }
-        }
-        coroutineContext.ensureActive()
-        if ("drums" in active) {
-            val path = normalized.resolve("midi/generated/drums.mid"); generating("drums", path)
-            DrumMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("drums", it.path, it.hits.size) }
-        }
-        coroutineContext.ensureActive()
-        if ("pad" in active) {
-            val path = normalized.resolve("midi/generated/pad.mid"); generating("pad", path)
-            PadMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("pad", it.path, it.notes.size) }
-        }
-        coroutineContext.ensureActive()
-        if ("strings" in active) {
-            val path = normalized.resolve("midi/generated/strings.mid"); generating("strings", path)
-            StringsMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let { emit("strings", it.path, it.notes.size) }
-        }
-        var transitionWindows = emptyList<TransitionMidiWindow>()
-        var transitionTimelineEndTick: Long? = null
-        if (needsTransitionMidi) {
-            coroutineContext.ensureActive()
-            val path = normalized.resolve("midi/generated/transitions.mid"); generating("transitions", path)
-            MidiTransitionGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let {
-                transitionWindows = it.validationWindows
-                transitionTimelineEndTick = it.validationTimelineEndTick
-                emit("transitions", it.path, it.result.events.size)
-            }
         }
         val approval = requireNotNull(ProjectStore.read(normalized).workflow.arrangement) {
             "Generated MIDI requires approved arrangement lineage"
@@ -276,7 +247,57 @@ class DefaultArrangementApplicationService(
             "Approved arrangement is stale for the current instrument registry. Regenerate Arrangement first."
         }
         val registry = InstrumentRegistryLoader(libraryRoot).load()
-        val references = artifacts.map { artifact ->
+        fun accept(name: String, candidate: Path, events: Int) {
+            val report = generatedRoleValidator.validate(GeneratedRoleValidationInput(
+                role = name, midi = candidate, project = project, arrangement = arrangement,
+                projection = projection, registry = registry, arrangementSha256 = approval.arrangement.sha256, registrySha256 = registrySha256
+            ))
+            val reportPath = writeGeneratedMidiValidationReport(normalized, name, report)
+            require(report.passed) { "Generated $name MIDI failed validation: ${report.violations.joinToString("; ")}" }
+            val output = normalized.resolve("midi/generated/$name.mid")
+            publishGeneratedCandidate(candidate, output)
+            arrangementState = arrangementState.acceptValidated(name, output)
+            artifacts += GeneratedMidiArtifact(name, output, events)
+        }
+        if ("bass" in active) {
+            val path = normalized.resolve("midi/generated/bass.mid"); generating("bass", path)
+            val candidate = generatedCandidate(path)
+            BassMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses, arrangementState, candidate)
+                .let { accept("bass", it.path, it.notes.size) }
+        }
+        coroutineContext.ensureActive()
+        if ("drums" in active) {
+            val path = normalized.resolve("midi/generated/drums.mid"); generating("drums", path)
+            val candidate = generatedCandidate(path)
+            DrumMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses, arrangementState, candidate)
+                .let { accept("drums", it.path, it.hits.size) }
+        }
+        coroutineContext.ensureActive()
+        if ("pad" in active) {
+            val path = normalized.resolve("midi/generated/pad.mid"); generating("pad", path)
+            val candidate = generatedCandidate(path)
+            PadMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses, arrangementState, candidate)
+                .let { accept("pad", it.path, it.notes.size) }
+        }
+        coroutineContext.ensureActive()
+        if ("strings" in active) {
+            val path = normalized.resolve("midi/generated/strings.mid"); generating("strings", path)
+            val candidate = generatedCandidate(path)
+            StringsMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses, arrangementState, candidate)
+                .let { accept("strings", it.path, it.notes.size) }
+        }
+        var transitionWindows = emptyList<TransitionMidiWindow>()
+        var transitionTimelineEndTick: Long? = null
+        if (needsTransitionMidi) {
+            coroutineContext.ensureActive()
+            val path = normalized.resolve("midi/generated/transitions.mid"); generating("transitions", path)
+            MidiTransitionGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses).let {
+                transitionWindows = it.validationWindows
+                transitionTimelineEndTick = it.validationTimelineEndTick
+                artifacts += GeneratedMidiArtifact("transitions", it.path, it.result.events.size)
+            }
+        }
+        val transitionReferences = artifacts.filter { it.instrument == "transitions" }.map { artifact ->
             val relative = normalized.relativize(artifact.path.toAbsolutePath().normalize()).toString().replace('\\', '/')
             val report = generatedRoleValidator.validate(GeneratedRoleValidationInput(
                 role = artifact.instrument, midi = artifact.path, project = project, arrangement = arrangement,
@@ -293,6 +314,13 @@ class DefaultArrangementApplicationService(
                 WorkflowArtifactReference(GeneratedMidiArtifactPaths.validationReport(artifact.instrument), sha256(reportPath))
             )
         }
+        val references = artifacts.filter { it.instrument != "transitions" }.map { artifact ->
+            val relative = normalized.relativize(artifact.path.toAbsolutePath().normalize()).toString().replace('\\', '/')
+            GeneratedMidiArtifactReference(
+                artifact.instrument, WorkflowArtifactReference(relative, sha256(artifact.path)),
+                WorkflowArtifactReference(GeneratedMidiArtifactPaths.validationReport(artifact.instrument), sha256(normalized.resolve(GeneratedMidiArtifactPaths.validationReport(artifact.instrument))))
+            )
+        } + transitionReferences
         ProjectWorkflowStore.update(normalized) { workflow ->
             workflow.invalidate(WorkflowChange.GENERATED_MIDI)
                 .markCurrent(WorkflowArtifact.GENERATED_MIDI)
@@ -355,7 +383,7 @@ class DefaultArrangementApplicationService(
         snapshot(normalized, approvedProject, readApproved(normalized, input), approved, false)
     }
 
-    private fun detailedInput(root: Path, project: Project): DetailedArrangementInput {
+    private fun detailedInput(root: Path, project: Project, includeArrangementState: Boolean = false): DetailedArrangementInput {
         val projection = musicalAuthorityBuilder.arrangementGeneration(root)
         val planPath = root.resolve(SongPlanStore.FILE_NAME)
         require(Files.isRegularFile(planPath)) { "Song plan not found: $planPath. Generate an arrangement first." }
@@ -380,7 +408,11 @@ class DefaultArrangementApplicationService(
             canonicalProjection = projection
         )
         val plan = SongPlanStore.read(root, planningInput)
-        return DetailedArrangementInput(planningInput, plan, SectionVariationStore.read(root, planningInput, plan))
+        val variations = SectionVariationStore.read(root, planningInput, plan)
+        val stateContext = if (includeArrangementState) acceptedPianoState(root, project, variations.sections.map {
+            app.melotrail.arrangement.DetailedArrangementSection(it.index, it.instanceId, it.partId, it.purpose, it.energy, emptyList(), app.melotrail.arrangement.TransitionPlan())
+        }, analyses).plannerContext() else null
+        return DetailedArrangementInput(planningInput, plan, variations, stateContext)
     }
 
     private fun midiAnalyses(root: Path, project: Project, ids: Set<String>): Map<String, MidiAnalysis> = ids.associateWith { id ->
@@ -421,6 +453,42 @@ class DefaultArrangementApplicationService(
                 key = app.melotrail.arrangement.MidiKey(projection.projectKey.tonic.toString(), projection.projectKey.modeId.value, 1.0),
                 chords = chords
             )
+        }
+    }
+
+    private fun acceptedPianoState(root: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): ArrangementState =
+        acceptedPianoState(root, project, arrangement.sections, analyses)
+
+    private fun acceptedPianoState(
+        root: Path,
+        project: Project,
+        sections: List<DetailedArrangementSection>,
+        analyses: Map<String, MidiAnalysis>
+    ): ArrangementState {
+        val occurrences = sections.map { SectionInstance(it.index, it.partId, it.instanceId) }
+        val artifacts = OccurrenceMidiArtifactResolver().resolve(root, project, occurrences)
+        var ppq: Int? = null
+        var startTick = 0L
+        val notes = mutableListOf<MidiNote>()
+        artifacts.forEach { artifact ->
+            val track = ArrangementState.fromMidi(ArrangementState.PIANO, artifact.path, artifact.ppq)
+            if (ppq == null) ppq = track.ppq else require(ppq == track.ppq) { "Accepted source/piano MIDI must share one PPQ" }
+            notes += track.notes.map { note -> note.copy(startTick = note.startTick + startTick, endTick = note.endTick + startTick) }
+            startTick = Math.addExact(startTick, requireNotNull(analyses[artifact.partId]).durationTicks)
+        }
+        val fingerprint = sha256(artifacts.joinToString("|") { "${it.occurrenceId}:${it.sha256}" }.toByteArray(StandardCharsets.UTF_8))
+        return ArrangementState.fromAcceptedPiano(requireNotNull(ppq), notes, fingerprint)
+    }
+
+    private fun generatedCandidate(output: Path): Path = output.resolveSibling(".${output.fileName}.candidate")
+
+    private fun publishGeneratedCandidate(candidate: Path, output: Path) {
+        require(Files.isRegularFile(candidate)) { "Generated MIDI candidate is missing: $candidate" }
+        Files.createDirectories(requireNotNull(output.parent))
+        try {
+            Files.move(candidate, output, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        } catch (error: java.nio.file.AtomicMoveNotSupportedException) {
+            throw IllegalStateException("Atomic publish is not supported for generated MIDI '$output'", error)
         }
     }
 
