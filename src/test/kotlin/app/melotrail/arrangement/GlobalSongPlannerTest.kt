@@ -39,6 +39,20 @@ class GlobalSongPlannerTest {
     }
 
     @Test
+    fun `different source analyses produce different reviewable global arrangement fingerprints`() {
+        val quiet = input()
+        val energetic = quiet.copy(analyses = quiet.analyses.mapValues { (partId, analysis) ->
+            analysis.copy(energy = if (partId == "A") 0.95 else 0.05)
+        })
+
+        val quietPlan = DeterministicGlobalSongPlanner().plan(quiet)
+        val energeticPlan = DeterministicGlobalSongPlanner().plan(energetic)
+
+        assertFalse(quietPlan == energeticPlan)
+        assertFalse(Json { encodeDefaults = true }.encodeToString(quietPlan) == Json { encodeDefaults = true }.encodeToString(energeticPlan))
+    }
+
+    @Test
     fun `fixture backed Qwen plan is strict and receives no paths`() {
         val client = CapturingFixtureClient(fixture("valid-song-plan.json"))
         val plan = LocalQwenGlobalSongPlanner(client).plan(input())

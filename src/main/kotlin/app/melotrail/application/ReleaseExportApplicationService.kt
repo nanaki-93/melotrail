@@ -160,7 +160,7 @@ class DefaultReleaseExportApplicationService(
 
     private companion object {
         val MP3_BITRATES = setOf(128, 160, 192, 256, 320)
-        val PROTECTED_NAMES = setOf("master.wav", "release.json", "project.json", "arrangement.json")
+        val PROTECTED_NAMES = setOf("master.wav", "release.json", "project.json", "arrangement_plan.json")
     }
 }
 

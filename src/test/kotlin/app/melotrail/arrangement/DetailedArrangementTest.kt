@@ -20,11 +20,11 @@ class DetailedArrangementTest {
     lateinit var tempDir: Path
 
     @Test
-    fun `deterministic v3 expansion is decision complete and round trips`() {
+    fun `deterministic v4 expansion is decision complete and round trips`() {
         val input = input()
         val arrangement = DeterministicDetailedArrangementPlanner().plan(input)
 
-        assertEquals(3, arrangement.version)
+        assertEquals(4, arrangement.version)
         assertEquals(listOf("A1", "B1"), arrangement.sections.map { it.instanceId })
         assertEquals(listOf(SongSectionPurpose.INTRODUCTION, SongSectionPurpose.CLIMAX), arrangement.sections.map { it.role })
         assertTrue(arrangement.sections.all { it.instruments.singleOrNull { plan -> plan is PianoSourcePlan }?.mode == InstrumentMode.SOURCE })
@@ -57,7 +57,7 @@ class DetailedArrangementTest {
         })
         val invalidBass = valid.copy(sections = valid.sections.mapIndexed { index, section ->
             if (index == 0) section.copy(instruments = section.instruments.map { instrument ->
-                if (instrument is BassInstrumentPlan) instrument.copy(role = DetailedBassRole.OCTAVE) else instrument
+                if (instrument is BassInstrumentPlan) instrument.copy(name = "synth") else instrument
             }) else section
         })
         val nan = valid.copy(sections = valid.sections.mapIndexed { index, section -> if (index == 0) section.copy(energy = Double.NaN) else section })
@@ -75,7 +75,7 @@ class DetailedArrangementTest {
     }
 
     @Test
-    fun `fixture backed Qwen v3 output is strict and cannot include unsafe fields`() {
+    fun `fixture backed Qwen v4 output is strict and cannot include unsafe fields`() {
         val input = input()
         val fixture = fixture("valid-detailed-arrangement.json")
         val client = CapturingClient(fixture)
@@ -93,7 +93,7 @@ class DetailedArrangementTest {
         assertFalse(client.userPrompt.contains("midi/"))
 
         listOf("path", "notes", "command", "renderer", "outputPath").forEach { field ->
-            val invalid = fixture.replace("\"version\": 3", "\"version\": 3, \"$field\": \"unsafe\"")
+            val invalid = fixture.replace("\"version\": 4", "\"version\": 4, \"$field\": \"unsafe\"")
             assertThrows(IllegalArgumentException::class.java) {
                 LocalQwenDetailedArrangementPlanner(FixtureClient(invalid)).plan(input)
             }
@@ -159,6 +159,35 @@ class DetailedArrangementTest {
 
         assertTrue(arrangement.validate(input).isValid)
         assertEquals(listOf("piano", "drums", "pad", "strings"), arrangement.sections[1].instruments.map { it.name })
+    }
+
+    @Test
+    fun `Qwen selects bounded arrangement variation and rejects omitted pattern controls`() {
+        val input = input()
+        val model = json.decodeFromString<DetailedArrangement>(fixture("valid-detailed-arrangement.json"))
+        val varied = model.copy(sections = model.sections.mapIndexed { index, section ->
+            if (index == 0) section.copy(instruments = section.instruments.map { instrument ->
+                if (instrument is BassInstrumentPlan) instrument.copy(
+                    role = DetailedBassRole.OCTAVE,
+                    density = 0.67,
+                    movement = DetailedBassMovement.OCTAVES,
+                    pattern = BassPatternId.DIATONIC_APPROACH
+                ) else instrument
+            }) else section
+        })
+
+        val arrangement = LocalQwenDetailedArrangementPlanner(FixtureClient(json.encodeToString(varied))).plan(input)
+        val bass = arrangement.sections.first().instruments.filterIsInstance<BassInstrumentPlan>().single()
+        assertEquals(DetailedBassRole.OCTAVE, bass.role)
+        assertEquals(0.67, bass.density)
+        assertEquals(BassPatternId.DIATONIC_APPROACH, bass.pattern)
+
+        val missingPattern = fixture("valid-detailed-arrangement.json").replace(
+            ", \"pattern\": \"sustained-root\"", ""
+        )
+        assertThrows(IllegalArgumentException::class.java) {
+            LocalQwenDetailedArrangementPlanner(FixtureClient(missingPattern)).plan(input)
+        }
     }
 
     @Test

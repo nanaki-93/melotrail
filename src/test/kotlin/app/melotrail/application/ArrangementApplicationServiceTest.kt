@@ -68,7 +68,7 @@ class ArrangementApplicationServiceTest {
 
         assertTrue(Files.isRegularFile(root.resolve("song_plan.json")))
         assertTrue(Files.isRegularFile(root.resolve("section_variations.json")))
-        assertTrue(Files.isRegularFile(root.resolve("arrangement.json")))
+        assertTrue(Files.isRegularFile(root.resolve("arrangement_plan.json")))
         assertTrue(result.approved)
         assertFalse(result.approvalRequired)
         assertFalse(result.stale)
@@ -90,12 +90,12 @@ class ArrangementApplicationServiceTest {
         val draft = service.generate(GenerateArrangementRequest(root, ArrangementPlannerKind.QWEN, instruments = listOf("piano")))
         assertTrue(draft.approvalRequired)
         assertFalse(draft.approved)
-        assertTrue(Files.isRegularFile(root.resolve("arrangement.draft.json")))
-        assertFalse(Files.isRegularFile(root.resolve("arrangement.json")))
+        assertTrue(Files.isRegularFile(root.resolve("arrangement_plan.draft.json")))
+        assertFalse(Files.isRegularFile(root.resolve("arrangement_plan.json")))
 
         val approved = service.approve(root)
         assertTrue(approved.approved)
-        assertTrue(Files.isRegularFile(root.resolve("arrangement.json")))
+        assertTrue(Files.isRegularFile(root.resolve("arrangement_plan.json")))
     }
 
     @Test
@@ -107,11 +107,11 @@ class ArrangementApplicationServiceTest {
             .generate(GenerateArrangementRequest(root, instruments = listOf("piano", "drums")))
 
         val arrangement = kotlinx.serialization.json.Json { ignoreUnknownKeys = false }
-            .decodeFromString(app.melotrail.arrangement.DetailedArrangement.serializer(), Files.readString(root.resolve("arrangement.json")))
+            .decodeFromString(app.melotrail.arrangement.DetailedArrangement.serializer(), Files.readString(root.resolve("arrangement_plan.json")))
         val approval = ProjectStore.read(root).workflow.arrangement!!
 
         assertEquals(null, arrangement.cohesion)
-        assertEquals(sha256(root.resolve("arrangement.json")), approval.arrangement.sha256)
+        assertEquals(sha256(root.resolve("arrangement_plan.json")), approval.arrangement.sha256)
         assertTrue(approval.structureSha256.matches(Regex("[0-9a-f]{64}")))
         assertTrue(approval.occurrenceSha256.matches(Regex("[0-9a-f]{64}")))
         assertTrue(approval.contextSha256.matches(Regex("[0-9a-f]{64}")))

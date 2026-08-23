@@ -99,7 +99,7 @@ class ArrangementCriticTest {
         val input = input()
         val arrangement = DeterministicDetailedArrangementPlanner().plan(input)
         val approvedText = "{\n  \"version\": 3, \"sections\": []\n}" // deliberately invalid source remains untouched on failure
-        val approved = tempDir.resolve("arrangement.json")
+        val approved = tempDir.resolve("arrangement_plan.json")
         Files.writeString(approved, approvedText, StandardCharsets.UTF_8)
         assertThrows(Exception::class.java) {
             ArrangementCriticStore.writeReviewArtifacts(tempDir, input, approvedText, arrangement, ArrangementCritique(decision = CriticDecision.ACCEPT))

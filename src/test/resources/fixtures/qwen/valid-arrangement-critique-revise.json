@@ -6,7 +6,7 @@
     "sectionIndex": 0,
     "instruments": [
       {"kind":"piano","name":"piano","mode":"source"},
-      {"kind":"bass","name":"bass","mode":"generated","role":"root","density":0.5,"movement":"root_motion","register":"low","syncopation":0.2}
+      {"kind":"bass","name":"bass","mode":"generated","role":"root","density":0.5,"movement":"root_motion","register":"low","syncopation":0.2,"pattern":"sustained-root"}
     ]
   }]
 }

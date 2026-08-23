@@ -1287,7 +1287,7 @@ class DefaultProjectApplicationService(
                 analysesReady = summaries.isNotEmpty() && summaries.all { it.preparation.analyzed },
                 structureReady = project.envelope.structureOccurrences.isNotEmpty(),
                 songPlanAvailable = Files.isRegularFile(root.resolve("song_plan.json")) && current(WorkflowArtifact.ARRANGEMENT),
-                arrangementAvailable = Files.isRegularFile(root.resolve("arrangement.json")) && current(WorkflowArtifact.ARRANGEMENT),
+                arrangementAvailable = Files.isRegularFile(root.resolve("arrangement_plan.json")) && current(WorkflowArtifact.ARRANGEMENT),
                 generatedMidiAvailable = current(WorkflowArtifact.GENERATED_MIDI) && project.workflow.generatedMidi?.let { generated ->
                     generated.artifacts.all { reference ->
                         val path = root.resolve(reference.artifact.file).normalize()

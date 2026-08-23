@@ -1,6 +1,7 @@
 package app.melotrail.arrangement
 
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -13,7 +14,7 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 
 /**
- * Version 3 is the MIDI-first arrangement decision document.  It deliberately
+ * Version 4 is the MIDI-first arrangement decision document.  It deliberately
  * contains roles and bounded pattern controls, never note events or render paths.
  */
 @Serializable
@@ -32,7 +33,7 @@ data class DetailedArrangement(
     }
 
     companion object {
-        const val CURRENT_VERSION = 3
+        const val CURRENT_VERSION = 4
     }
 }
 
@@ -146,7 +147,9 @@ data class BassInstrumentPlan(
     val density: Double,
     val movement: DetailedBassMovement,
     val register: MusicalRegister,
-    val syncopation: Double
+    val syncopation: Double,
+    /** A typed algorithm from the pattern library, never a raw MIDI reference. */
+    @Required val pattern: BassPatternId = BassPatternId.SUSTAINED_ROOT
 ) : DetailedInstrumentPlan()
 
 @Serializable
@@ -160,7 +163,11 @@ data class DrumsInstrumentPlan(
     val snarePattern: SnarePattern,
     val hiHatDensity: Double,
     val swing: Double,
-    val fillLastBar: Boolean
+    val fillLastBar: Boolean,
+    /** A curated in-code groove, never a filename or event list. */
+    @Required val pattern: DrumGroovePatternId = DrumGroovePatternId.DUSTY_STRAIGHT,
+    @Required val grooveCharacter: GrooveCharacter = GrooveCharacter.STRAIGHT,
+    @Required val fillPlacement: DrumFillPlacement = DrumFillPlacement.NONE
 ) : DetailedInstrumentPlan()
 
 @Serializable
@@ -170,7 +177,8 @@ data class PadInstrumentPlan(
     override val mode: InstrumentMode = InstrumentMode.GENERATED,
     val role: SustainedRole,
     val density: Double,
-    val register: MusicalRegister
+    val register: MusicalRegister,
+    @Required val pattern: PadVoicingPatternId = PadVoicingPatternId.SUSTAINED
 ) : DetailedInstrumentPlan()
 
 @Serializable
@@ -237,6 +245,23 @@ enum class MusicalRegister {
     @SerialName("low") LOW,
     @SerialName("mid") MID,
     @SerialName("high") HIGH
+}
+
+/** Producer-controlled feel remains an allow-listed musical descriptor. */
+@Serializable
+enum class GrooveCharacter {
+    @SerialName("straight") STRAIGHT,
+    @SerialName("laid_back") LAID_BACK,
+    @SerialName("swung") SWUNG,
+    @SerialName("half_time") HALF_TIME,
+    @SerialName("building") BUILDING
+}
+
+/** Drum fills are bounded to a section boundary; no arbitrary tick positions are accepted. */
+@Serializable
+enum class DrumFillPlacement {
+    @SerialName("none") NONE,
+    @SerialName("last_bar") LAST_BAR
 }
 
 data class DetailedArrangementInput(
@@ -313,7 +338,7 @@ object DetailedArrangementValidator {
                     errors += "$label piano must use source mode and source role"
                 }
                 is BassInstrumentPlan -> {
-                    if (instrument.name != "bass" || instrument.mode != InstrumentMode.GENERATED || instrument.role.wireName != variation.role) {
+                    if (instrument.name != "bass" || instrument.mode != InstrumentMode.GENERATED) {
                         errors += "$label bass role or mode is invalid"
                     }
                     bounded(label, "bass density", instrument.density, errors)
@@ -323,7 +348,7 @@ object DetailedArrangementValidator {
                     if (instrument.register != MusicalRegister.LOW) errors += "$label bass register must be low"
                 }
                 is DrumsInstrumentPlan -> {
-                    if (instrument.name != "drums" || instrument.mode != InstrumentMode.GENERATED || instrument.role.wireName != variation.role) {
+                    if (instrument.name != "drums" || instrument.mode != InstrumentMode.GENERATED) {
                         errors += "$label drums role or mode is invalid"
                     }
                     bounded(label, "drums density", instrument.density, errors)
@@ -332,13 +357,14 @@ object DetailedArrangementValidator {
                     if (!instrument.swing.isFinite() || instrument.swing !in 0.0..0.5) errors += "$label swing must be a finite number from 0 through 0.5"
                 }
                 is PadInstrumentPlan -> {
-                    if (instrument.name != "pad" || instrument.mode != InstrumentMode.GENERATED || instrument.role.wireName != variation.role) {
+                    if (instrument.name != "pad" || instrument.mode != InstrumentMode.GENERATED) {
                         errors += "$label pad role or mode is invalid"
                     }
                     bounded(label, "pad density", instrument.density, errors)
                 }
                 is StringsInstrumentPlan -> {
-                    if (instrument.name != "strings" || instrument.mode != InstrumentMode.GENERATED || !instrument.role.matches(variation.role, sectionRole)) {
+                    if (instrument.name != "strings" || instrument.mode != InstrumentMode.GENERATED ||
+                        (instrument.role == StringsRole.CLIMAX_REINFORCEMENT && sectionRole != SongSectionPurpose.CLIMAX)) {
                         errors += "$label strings role or mode is invalid"
                     }
                     bounded(label, "strings density", instrument.density, errors)
@@ -413,7 +439,13 @@ class DeterministicDetailedArrangementPlanner : DetailedArrangementPlanner {
         "bass" -> BassInstrumentPlan(
             role = DetailedBassRole.entries.first { it.wireName == instrument.role }, density = instrument.density,
             movement = when (instrument.role) { "root" -> DetailedBassMovement.ROOT_MOTION; "root_fifth" -> DetailedBassMovement.LEAPING; "octave" -> DetailedBassMovement.OCTAVES; else -> DetailedBassMovement.STATIC },
-            register = MusicalRegister.LOW, syncopation = (instrument.density * 0.2).coerceIn(0.0, 0.25)
+            register = MusicalRegister.LOW, syncopation = (instrument.density * 0.2).coerceIn(0.0, 0.25),
+            pattern = when (instrument.role) {
+                "root" -> BassPatternId.SUSTAINED_ROOT
+                "root_fifth" -> BassPatternId.ROOT_FIFTH
+                "octave" -> BassPatternId.OCTAVE
+                else -> BassPatternId.SUSTAINED_ROOT
+            }
         )
         "drums" -> DrumsInstrumentPlan(
             role = DrumsRole.entries.first { it.wireName == instrument.role }, density = instrument.density,
@@ -423,9 +455,25 @@ class DeterministicDetailedArrangementPlanner : DetailedArrangementPlanner {
                 "half_time" -> SnarePattern.BEAT_3
                 else -> SnarePattern.BEATS_2_4
             },
-            hiHatDensity = (instrument.density * 0.8).coerceIn(0.0, 1.0), swing = 0.0, fillLastBar = energy >= 0.7
+            hiHatDensity = (instrument.density * 0.8).coerceIn(0.0, 1.0), swing = 0.0, fillLastBar = energy >= 0.7,
+            pattern = when (instrument.role) {
+                "half_time" -> DrumGroovePatternId.HALF_TIME_POCKET
+                "build" -> DrumGroovePatternId.LIFT_BUILD
+                "soft_lofi" -> DrumGroovePatternId.LAZY_SWING
+                else -> DrumGroovePatternId.DUSTY_STRAIGHT
+            },
+            grooveCharacter = when (instrument.role) {
+                "half_time" -> GrooveCharacter.HALF_TIME
+                "build" -> GrooveCharacter.BUILDING
+                "soft_lofi" -> GrooveCharacter.SWUNG
+                else -> GrooveCharacter.STRAIGHT
+            },
+            fillPlacement = if (energy >= 0.7) DrumFillPlacement.LAST_BAR else DrumFillPlacement.NONE
         )
-        "pad" -> PadInstrumentPlan(role = SustainedRole.entries.first { it.wireName == instrument.role }, density = instrument.density, register = register(energy))
+        "pad" -> PadInstrumentPlan(
+            role = SustainedRole.entries.first { it.wireName == instrument.role }, density = instrument.density, register = register(energy),
+            pattern = if (instrument.role == "sustained") PadVoicingPatternId.SUSTAINED else PadVoicingPatternId.COMMON_TONE
+        )
         "strings" -> StringsInstrumentPlan(role = stringsRole(instrument.role, energy, purpose), density = instrument.density, register = register(energy))
         else -> error("Unsupported variation instrument '${instrument.name}'")
     }
@@ -490,8 +538,8 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
 
     /**
      * The song plan and variation plan own section identity, energy, and the
-     * exact instrument list. Qwen supplies only the bounded controls for each
-     * allowed instrument plus the transition. Ignore extra instruments rather
+     * exact instrument list. Qwen supplies only the bounded role, density,
+     * pattern, groove, fill, and transition controls for each allowed instrument. Ignore extra instruments rather
      * than repeatedly asking it to undo a non-executable orchestration choice;
      * missing or invalid required instruments still fail validation and retry.
      */
@@ -531,13 +579,13 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
         - Return exactly ${input.variations.sections.size} sections in the supplied order.
         - The application binds every section index, instanceId, partId, role, energy, and exact instrument list from the validated variations.
         - Return one complete control object for every locked instrument, in the supplied order. Do not add instruments; extra instruments are discarded.
-        - Fill only the instrument-specific fields required by the system response schema.
+        - Choose only the allow-listed role, density, pattern, groove, swing, fill, and transition fields in the system response schema.
         - Map transitionIntent none to transitionOut type none, build to bridge, and release to crossfade.
 
         Locked instrument values (copy these literal values exactly; they are not creative decisions):
         ${lockedInstrumentFields(input)}
 
-        Return the complete version 3 object described by the system response schema and no other text.
+        Return the complete version 4 object described by the system response schema and no other text.
     """.trimIndent()
 
     private fun lockedInstrumentFields(input: DetailedArrangementInput): String = input.variations.sections.joinToString("\n") { section ->
@@ -562,21 +610,25 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
             You are a MIDI-first arrangement planner. Return JSON only, without markdown or prose. You never provide notes,
             MIDI events, frequencies, sample data, file paths, code, commands, renderer configuration, sample rates, or output paths.
             The document has exactly these top-level fields:
-            {"version":3,"sections":[SECTION_OBJECTS]}
+            {"version":4,"sections":[SECTION_OBJECTS]}
             Every section object has exactly index, instanceId, partId, role, energy, instruments, and transitionOut.
 
             Instrument objects are a tagged union. Use exactly one of these shapes and no extra fields:
             piano:   {"kind":"piano","name":"piano","mode":"source"}
-            bass:    {"kind":"bass","name":"bass","mode":"generated","role":"root","density":0.4,"movement":"root_motion","register":"low","syncopation":0.1}
-            drums:   {"kind":"drums","name":"drums","mode":"generated","role":"soft_lofi","density":0.4,"kickDensity":0.4,"snarePattern":"beats_2_4","hiHatDensity":0.3,"swing":0.1,"fillLastBar":false}
-            pad:     {"kind":"pad","name":"pad","mode":"generated","role":"texture","density":0.4,"register":"mid"}
+            bass:    {"kind":"bass","name":"bass","mode":"generated","role":"root","density":0.4,"movement":"root_motion","register":"low","syncopation":0.1,"pattern":"sustained-root"}
+            drums:   {"kind":"drums","name":"drums","mode":"generated","role":"soft_lofi","density":0.4,"kickDensity":0.4,"snarePattern":"beats_2_4","hiHatDensity":0.3,"swing":0.1,"fillLastBar":false,"pattern":"lazy-swing","grooveCharacter":"swung","fillPlacement":"none"}
+            pad:     {"kind":"pad","name":"pad","mode":"generated","role":"texture","density":0.4,"register":"mid","pattern":"common-tone"}
             strings: {"kind":"strings","name":"strings","mode":"generated","role":"sustained_harmony","density":0.4,"register":"mid"}
 
             Allowed bass roles: root, root_fifth, octave, sustained. Allowed bass movement: static, root_motion, leaping, octaves.
+            Allowed bass patterns: sustained-root, root-fifth, octave, walk-to-next-root, diatonic-approach.
             Allowed drum roles: minimal, soft_lofi, standard_groove, half_time, build. Allowed snarePattern: beats_2_4, beat_3, none.
             Allowed pad roles: sustained, texture. Allowed strings roles: sustained_harmony, climax_reinforcement, long_notes,
             simple_countermelody. Allowed register: low, mid, high. Densities are finite 0..1, bass syncopation is finite
-            0..0.25, and drum swing is finite 0..0.5. Bass must use register low. Strings are voiced above the source
+            0..0.25, and drum swing is finite 0..0.5. Allowed drum patterns: dusty-straight, lazy-swing, half-time-pocket,
+            lift-build. Allowed grooveCharacter: straight, laid_back, swung, half_time, building. fillPlacement is none or
+            last_bar and must agree with fillLastBar. Allowed pad patterns: sustained, close, open, common-tone, minimal.
+            Bass must use register low. Strings are voiced above the source
             piano range where practical: choose high when a strings section's MIDI analysis has a high pitchRange.max;
             dense source material can still force conservative silence if no complete voicing fits above it.
 
@@ -596,8 +648,8 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
 
 /** Strict canonical detailed-arrangement persistence. */
 object DetailedArrangementStore {
-    const val APPROVED_FILE = "arrangement.json"
-    const val DRAFT_FILE = "arrangement.draft.json"
+    const val APPROVED_FILE = "arrangement_plan.json"
+    const val DRAFT_FILE = "arrangement_plan.draft.json"
     private val json = Json { prettyPrint = true; encodeDefaults = true; ignoreUnknownKeys = false }
 
     fun writeApproved(projectRoot: Path, input: DetailedArrangementInput, arrangement: DetailedArrangement): Path =

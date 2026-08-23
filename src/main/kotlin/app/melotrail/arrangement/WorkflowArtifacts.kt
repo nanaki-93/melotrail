@@ -412,7 +412,7 @@ data class ArrangementApprovalReferences(
             SHA_256.matches(contextSha256) && SHA_256.matches(planSha256) && SHA_256.matches(authoritySha256) && SHA_256.matches(registrySha256)) {
             "Arrangement approval fingerprints are invalid"
         }
-        require(arrangement.file == "arrangement.json") { "Approved arrangement path is not canonical" }
+        require(arrangement.file == "arrangement_plan.json") { "Approved arrangement path is not canonical" }
     }
 }
 

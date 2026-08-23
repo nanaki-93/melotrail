@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "sections": [
     {
       "index": 0,
@@ -9,7 +9,7 @@
       "energy": 0.3,
       "instruments": [
         {"kind": "piano", "name": "piano", "mode": "source"},
-        {"kind": "bass", "name": "bass", "mode": "generated", "role": "root", "density": 0.3, "movement": "root_motion", "register": "low", "syncopation": 0.12}
+        {"kind": "bass", "name": "bass", "mode": "generated", "role": "root", "density": 0.3, "movement": "root_motion", "register": "low", "syncopation": 0.12, "pattern": "sustained-root"}
       ],
       "transitionOut": {"type": "bridge", "bars": 1, "crossfadeMs": 0, "bridge": {"energy": 0.3, "elements": ["melody_pickup"]}}
     },
@@ -21,8 +21,8 @@
       "energy": 0.9,
       "instruments": [
         {"kind": "piano", "name": "piano", "mode": "source"},
-        {"kind": "drums", "name": "drums", "mode": "generated", "role": "standard_groove", "density": 0.9, "kickDensity": 0.9, "snarePattern": "beats_2_4", "hiHatDensity": 0.72, "swing": 0.0, "fillLastBar": true},
-        {"kind": "pad", "name": "pad", "mode": "generated", "role": "texture", "density": 0.9, "register": "high"},
+        {"kind": "drums", "name": "drums", "mode": "generated", "role": "standard_groove", "density": 0.9, "kickDensity": 0.9, "snarePattern": "beats_2_4", "hiHatDensity": 0.72, "swing": 0.0, "fillLastBar": true, "pattern": "dusty-straight", "grooveCharacter": "straight", "fillPlacement": "last_bar"},
+        {"kind": "pad", "name": "pad", "mode": "generated", "role": "texture", "density": 0.9, "register": "high", "pattern": "common-tone"},
         {"kind": "strings", "name": "strings", "mode": "generated", "role": "climax_reinforcement", "density": 0.9, "register": "high"}
       ],
       "transitionOut": {"type": "none", "bars": 0, "crossfadeMs": 0}
