@@ -228,7 +228,8 @@ private object ReferenceSongFixture {
         )
         val harmony = HarmonySettings(progressions = listOf(
             ChordProgression(HarmonySectionTypeId("verse"), listOf(ChordEvent(ChordEventId("a-minor"), PitchClass.of(PitchSpelling.A), ChordQuality.MINOR, 0))),
-            ChordProgression(HarmonySectionTypeId("chorus"), listOf(ChordEvent(ChordEventId("f-major"), PitchClass.of(PitchSpelling.F), ChordQuality.MAJOR, 0)))
+            ChordProgression(HarmonySectionTypeId("chorus"), listOf(ChordEvent(ChordEventId("f-major"), PitchClass.of(PitchSpelling.F), ChordQuality.MAJOR, 0))),
+            ChordProgression(HarmonySectionTypeId("bridge"), listOf(ChordEvent(ChordEventId("e-major"), PitchClass.of(PitchSpelling.E), ChordQuality.MAJOR, 0)))
         ))
         ProjectStore.write(root, Project(
             name = "task-130-reference-song", renderFormat = RenderFormat(),

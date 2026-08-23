@@ -115,9 +115,12 @@ class ArrangementApplicationServiceTest {
                     timeSignature = TimeSignature(4, 4), profile = CompositionProfileRef("lofi", 1), mood = MoodRef("warm", 1),
                     decisionRevision = 1, resolvedProfileSha256 = "a".repeat(64), decisionSha256 = "b".repeat(64)
                 ),
-                harmony = HarmonySettings(progressions = listOf(ChordProgression(
-                    app.melotrail.harmony.SectionTypeId("verse"), listOf(ChordEvent(ChordEventId("one"), PitchClass.of(PitchSpelling.C), ChordQuality.MAJOR, 0))
-                ))),
+                harmony = HarmonySettings(progressions = listOf("verse", "chorus", "bridge").map { section ->
+                    ChordProgression(
+                        app.melotrail.harmony.SectionTypeId(section),
+                        listOf(ChordEvent(ChordEventId("one"), PitchClass.of(PitchSpelling.C), ChordQuality.MAJOR, 0))
+                    )
+                }),
                 structureOccurrences = structure.mapIndexed { index, partId -> StructureOccurrence("occ-$index", partId) }
             )
         )

@@ -2,6 +2,9 @@
 
 This pack contains one implementation prompt per V2 milestone.
 
+For the validated direct-MIDI and eligible solo-piano audio routes, see the
+[MIDI import process](docs/MIDI_IMPORT_PROCESS.md).
+
 ## Recommended workflow
 
 For each milestone:

@@ -83,6 +83,23 @@ class CanonicalMusicalAuthorityTest {
     }
 
     @Test
+    fun `AI Fix and Enhance receive the same declared tick-addressable harmony`() {
+        val root = project("shared-repair-context", durationTicks = 5_760)
+        val builder = MusicalAuthorityBuilder()
+
+        val repair = builder.partRepair(root, "A")
+        val enhancement = builder.partEnhancement(root, "A")
+
+        assertEquals(repair.contextSha256, enhancement.contextSha256)
+        assertEquals(repair.projectKey, enhancement.projectKey)
+        assertEquals(repair.tempo, enhancement.tempo)
+        assertEquals(repair.meter, enhancement.meter)
+        assertEquals(repair.harmony, enhancement.harmony)
+        assertEquals(listOf("C", "Dm", "C"), repair.harmony.map { it.chord.symbol })
+        assertEquals(listOf(0L, 1_920L, 3_840L), repair.harmony.map { it.startTick })
+    }
+
+    @Test
     fun `hash reflects canonical inputs but not project location`() {
         val root = project("hash")
         val builder = MusicalAuthorityBuilder()
