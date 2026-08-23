@@ -307,6 +307,14 @@
       "documentedFunctionCount": 1
     },
     {
+      "path": "src/main/kotlin/app/melotrail/arrangement/MusicalPatternLibrary.kt",
+      "classification": "documented",
+      "reason": "Every callable declaration has directly attached, reviewed KDoc/docstring coverage.",
+      "functionCount": 22,
+      "declarationDigest": "53a70de79dec1c1ae42cee0ed5936134fe81ae28f387c06ae7abccaa8da53c77",
+      "documentedFunctionCount": 22
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/arrangement/MidiTransitionEngine.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/arrangement/MidiTransitionEngine.kt has 23 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
