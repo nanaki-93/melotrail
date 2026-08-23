@@ -362,3 +362,25 @@ Actions:
 - Generate YouTube Release Metadata
 
 Commercial-ready status must be visually distinct from ordinary build success.
+
+---
+
+## 11. Progressive disclosure, recovery, and safe edits
+
+The default workspace presents one next action per stage. Advanced evidence,
+planner controls, runtime details, and technical metrics are available through
+contextual **More options**, **Show details**, or **Inspect** disclosures; they
+do not become a second workflow or change pipeline state by themselves.
+
+Long-running work shows an explicit local/worker/model/renderer status, known
+step progress when the service provides it, actionable failure text, and a
+safe retry. Cancellation is offered only at an artifact-safe boundary. UI
+progress comes from `WorkflowReadModel`, durable stage runs, and typed operation
+feedback—not filesystem inspection.
+
+Changes that remove a melody part, structure occurrence, or the entire song
+structure require confirmation. The confirmation explains that source and
+validated historical artifacts remain recoverable evidence, while downstream
+results become stale and must be regenerated. Harmony, source-rights, cleanup,
+and other approval gates stay explicit; navigation and page visits never bypass
+them.

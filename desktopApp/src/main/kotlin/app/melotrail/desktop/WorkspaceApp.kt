@@ -1383,6 +1383,13 @@ private fun WorkspaceDialogs(state: WorkspaceUiState, onIntent: (WorkspaceIntent
         is WorkspaceDialog.ConfirmSourceKey -> ConfirmSourceKeyDialog(dialog, onIntent)
         is WorkspaceDialog.ConfirmSourceSongApproval -> ConfirmSourceSongApprovalDialog(dialog, onIntent)
         is WorkspaceDialog.ConfirmDiscardDraft -> ConfirmDiscardDraftDialog(dialog, onIntent)
+        WorkspaceDialog.ConfirmClearStructure -> AlertDialog(
+            onDismissRequest = { onIntent(WorkspaceIntent.DismissDialog) },
+            title = { Text("Clear song structure?") },
+            text = { Text("This removes every occurrence from the canonical song structure. Melody parts and their immutable source evidence remain available. Existing cohesion, arrangement, and build artifacts stay inspectable but must be regenerated before use.") },
+            confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.ConfirmClearStructure) }) { Text("Clear structure") } },
+            dismissButton = { TextButton(onClick = { onIntent(WorkspaceIntent.DismissDialog) }) { Text("Keep structure") } }
+        )
         WorkspaceDialog.ConfirmClose -> ConfirmCloseDialog(onIntent, onExit)
         WorkspaceDialog.ConfirmClearSoundLibraryRoot -> ConfirmClearSoundLibraryRootDialog(onIntent)
         null -> Unit

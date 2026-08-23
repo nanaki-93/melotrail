@@ -223,6 +223,25 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `structure confirmations describe retained evidence before destructive edits`() = runComposeUiTest {
+        setContent {
+            MelotrailTheme {
+                WorkspaceScreen(
+                    populatedState().copy(
+                        workspaceSection = WorkspaceSection.STRUCTURE,
+                        dialog = WorkspaceDialog.ConfirmClearStructure
+                    ),
+                    onIntent = {}
+                )
+            }
+        }
+
+        onNodeWithText("Clear song structure?").assertExists()
+        onNodeWithText("Melody parts and their immutable source evidence remain available.", substring = true).assertExists()
+        onNodeWithText("Keep structure").assertExists()
+    }
+
+    @Test
     fun `part comparison exposes labeled keyboard reachable A B preview actions`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         val state = importState(importPart("A.mid", rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT)).copy(

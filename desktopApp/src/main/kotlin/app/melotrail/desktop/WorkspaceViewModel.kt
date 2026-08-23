@@ -537,6 +537,7 @@ sealed interface WorkspaceDialog {
     data class ConfirmSourceKey(val partId: String, val selected: MusicalKey) : WorkspaceDialog
     data class ConfirmSourceSongApproval(val requiresOverride: Boolean, val reason: String = "") : WorkspaceDialog
     data class ConfirmDiscardDraft(val root: Path? = null, val createProject: Boolean = false) : WorkspaceDialog
+    data object ConfirmClearStructure : WorkspaceDialog
     data object ConfirmClearSoundLibraryRoot : WorkspaceDialog
     data object ConfirmClose : WorkspaceDialog
 }
@@ -742,6 +743,7 @@ sealed interface WorkspaceIntent {
     data class RemoveStructurePart(val index: Int) : WorkspaceIntent
     data class MoveStructurePart(val fromIndex: Int, val toIndex: Int) : WorkspaceIntent
     data object ClearStructure : WorkspaceIntent
+    data object ConfirmClearStructure : WorkspaceIntent
     data class SelectArrangeTab(val tab: ArrangeTab) : WorkspaceIntent
     data class UpdateArrangementPlanner(val planner: ArrangementPlannerKind) : WorkspaceIntent
     data class UpdateCohesionPlanner(val planner: EnsembleCohesionPlannerKind) : WorkspaceIntent
@@ -955,12 +957,20 @@ class WorkspaceViewModel(
             is WorkspaceIntent.AddStructurePart -> addStructurePart(intent.partId)
             is WorkspaceIntent.SelectStructureOccurrence -> selectStructureOccurrence(intent.instanceId)
             is WorkspaceIntent.DuplicateStructureOccurrence -> duplicateStructureOccurrence(intent.instanceId)
-            is WorkspaceIntent.RemoveStructureOccurrence -> removeStructureOccurrence(intent.instanceId)
+            is WorkspaceIntent.RemoveStructureOccurrence -> {
+                val occurrence = state.value.project?.structure?.firstOrNull { it.instanceId == intent.instanceId }
+                if (occurrence != null) requestRemovePartFromStructure(occurrence.partId, occurrence.instanceId)
+            }
             is WorkspaceIntent.MoveStructureOccurrence -> moveStructureOccurrence(intent.instanceId, intent.earlier)
             is WorkspaceIntent.DuplicateStructurePart -> duplicateStructurePart(intent.index)
             is WorkspaceIntent.RemoveStructurePart -> removeStructurePart(intent.index)
             is WorkspaceIntent.MoveStructurePart -> moveStructurePart(intent.fromIndex, intent.toIndex)
-            WorkspaceIntent.ClearStructure -> saveStructure(emptyList())
+            WorkspaceIntent.ClearStructure -> {
+                if (!state.value.operation.isMutating && state.value.project?.structure?.isNotEmpty() == true) {
+                    mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmClearStructure) }
+                }
+            }
+            WorkspaceIntent.ConfirmClearStructure -> saveStructure(emptyList())
             is WorkspaceIntent.SelectArrangeTab -> mutableState.update { it.copy(arrangeTab = intent.tab) }
             is WorkspaceIntent.UpdateArrangementPlanner -> updateArrangementPlanner(intent.planner)
             is WorkspaceIntent.UpdateCohesionPlanner -> mutableState.update { it.copy(cohesionDraft = it.cohesionDraft.copy(planner = intent.planner), notification = null) }
