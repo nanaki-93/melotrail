@@ -1,6 +1,7 @@
 package app.melotrail.desktop
 
 import app.melotrail.application.WorkflowPrerequisite
+import app.melotrail.application.WorkflowStageStatus
 import app.melotrail.application.WorkflowState
 import app.melotrail.application.WorkflowStep
 
@@ -33,4 +34,16 @@ internal fun workflowDescription(step: WorkflowStep): String {
         WorkflowPrerequisite.MASTER -> "Create and validate the current master and release metadata."
         WorkflowPrerequisite.SOURCE_RIGHTS_ATTESTATION -> "Review source-rights attestations for commercial export."
     }
+}
+
+/** Textual lifecycle semantics keep status understandable without relying on color. */
+internal fun workflowStatusLabel(step: WorkflowStep): String = when (step.status) {
+    WorkflowStageStatus.LOCKED -> "Locked"
+    WorkflowStageStatus.READY -> "Ready"
+    WorkflowStageStatus.RUNNING -> step.job?.progress?.let { "Running ($it%)" } ?: "Running"
+    WorkflowStageStatus.FAILED -> "Failed"
+    WorkflowStageStatus.REVIEW_REQUIRED -> "Review required"
+    WorkflowStageStatus.APPROVED -> "Approved"
+    WorkflowStageStatus.STALE -> "Stale"
+    WorkflowStageStatus.COMPLETE -> "Complete"
 }

@@ -6,7 +6,7 @@ import app.melotrail.application.ProjectSnapshot
 import app.melotrail.application.WorkflowAction
 import app.melotrail.application.WorkflowReadModelDeriver
 import app.melotrail.application.WorkflowStage
-import app.melotrail.application.WorkflowState
+import app.melotrail.application.WorkflowStageStatus
 import app.melotrail.application.WorkflowStep
 
 /** Desktop adapter over the canonical ordered workflow. */
@@ -178,14 +178,15 @@ object CreationProgressDeriver {
             WorkflowStage.FULL_SONG_ENHANCE -> CreationStage.FULL_SONG_ENHANCE
             else -> error("Unsupported creation workflow stage: ${step.stage}")
         }
-        val status = when (step.state) {
-            WorkflowState.COMPLETE -> CreationStageStatus.COMPLETE
-            WorkflowState.STALE -> CreationStageStatus.STALE
-            WorkflowState.BLOCKED -> if (noProject) CreationStageStatus.NOT_STARTED else CreationStageStatus.BLOCKED
-            WorkflowState.CURRENT, WorkflowState.REVIEW -> CreationStageStatus.CURRENT
+        val status = when (step.status) {
+            WorkflowStageStatus.COMPLETE, WorkflowStageStatus.APPROVED -> CreationStageStatus.COMPLETE
+            WorkflowStageStatus.STALE -> CreationStageStatus.STALE
+            WorkflowStageStatus.LOCKED -> if (noProject) CreationStageStatus.NOT_STARTED else CreationStageStatus.BLOCKED
+            WorkflowStageStatus.READY, WorkflowStageStatus.RUNNING, WorkflowStageStatus.FAILED,
+            WorkflowStageStatus.REVIEW_REQUIRED -> CreationStageStatus.CURRENT
         }
         val artifact = artifact(step)
-        val reason = workflowDescription(step).takeUnless { step.state == WorkflowState.COMPLETE }
+        val reason = workflowDescription(step).takeUnless { step.status in setOf(WorkflowStageStatus.COMPLETE, WorkflowStageStatus.APPROVED) }
         return CreationStageProgress(
             stage,
             status,

@@ -112,7 +112,16 @@ data class StageRunSnapshot(
     val retryable: Boolean,
     val progress: Int? = null,
     val failure: SafeFailureCode? = null,
-    val cancellation: StageCancellation = StageCancellation.UNSUPPORTED
+    val cancellation: StageCancellation = StageCancellation.UNSUPPORTED,
+    /** Safe, project-relative version references; UI clients never inspect the filesystem. */
+    val outputs: List<StageArtifactSnapshot> = emptyList(),
+    val reports: List<StageArtifactSnapshot> = emptyList()
+)
+
+/** A stable artifact version identity published by one immutable stage run. */
+data class StageArtifactSnapshot(
+    val id: String,
+    val sha256: String
 )
 
 enum class StageCancellation { UNSUPPORTED, STOP_AFTER_CURRENT }
@@ -329,8 +338,16 @@ class StageRunner(
 
     private fun snapshots(root: Path): List<StageRunSnapshot> = records(root).map(::snapshot)
 
-    private fun snapshot(record: StageRunRecord, progress: Int? = null) = StageRunSnapshot(record.runId, record.stage, record.subject,
-        record.status, record.status == StageRunStatus.FAILED, progress, record.failure?.code)
+    private fun snapshot(record: StageRunRecord, progress: Int? = null) = StageRunSnapshot(
+        record.runId, record.stage, record.subject, record.status,
+        record.status == StageRunStatus.FAILED, progress, record.failure?.code,
+        outputs = record.outputArtifacts.mapIndexed { index, artifact ->
+            StageArtifactSnapshot("${record.runId}:output:$index", artifact.sha256)
+        },
+        reports = record.reportArtifacts.mapIndexed { index, artifact ->
+            StageArtifactSnapshot("${record.runId}:report:$index", artifact.sha256)
+        }
+    )
 
     private fun refresh(root: Path, progress: Int? = null) {
         observations[root]?.value = snapshots(root).map { snapshot ->

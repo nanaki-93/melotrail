@@ -33,6 +33,37 @@ object WorkflowStageOrder {
 
 enum class WorkflowState { BLOCKED, CURRENT, REVIEW, STALE, COMPLETE }
 
+/**
+ * Normalized lifecycle for UI/API consumers.  This is deliberately separate
+ * from [WorkflowState], which remains the internal derivation vocabulary.
+ */
+enum class WorkflowStageStatus {
+    LOCKED, READY, RUNNING, FAILED, REVIEW_REQUIRED, APPROVED, STALE, COMPLETE
+}
+
+/** Approval is exposed independently so a completed artifact is never mistaken for user approval. */
+enum class WorkflowApprovalState { NOT_REQUIRED, WAITING, APPROVED, BYPASSED }
+
+/** A durable stage-run job; failure text and paths stay outside this contract. */
+data class WorkflowJobSnapshot(
+    val id: String,
+    val status: StageRunStatus,
+    val progress: Int?,
+    val retryable: Boolean,
+    val failure: app.melotrail.arrangement.SafeFailureCode?,
+    val cancellation: StageCancellation
+)
+
+/** A safe, immutable output/report version owned by a completed stage-run job. */
+data class WorkflowArtifactVersion(
+    val id: String,
+    val stageRunId: String,
+    val kind: WorkflowArtifactVersionKind,
+    val sha256: String
+)
+
+enum class WorkflowArtifactVersionKind { OUTPUT, REPORT }
+
 enum class WorkflowAction {
     CREATE_OR_OPEN, UPDATE_COMPOSITION_SETTINGS, IMPORT, INSPECT, TRANSCRIBE, CLEAN_MIDI, APPROVE_CLEAN_MIDI,
     CREATE_AI_FIX, APPROVE_AI_FIX, SELECT_MIDI_FEEL, ANALYZE, SAVE_STRUCTURE, GENERATE_COHESION,
@@ -76,13 +107,23 @@ data class WorkflowStep(
     /** Present when one exact part is the next safe target. */
     val partId: String? = null,
     /** Runner-owned durable status; the UI never infers it from files. */
-    val stageRun: StageRunSnapshot? = null
+    val stageRun: StageRunSnapshot? = null,
+    /** Explicit UI/API lifecycle derived from the canonical snapshot and stage runs. */
+    val status: WorkflowStageStatus = WorkflowStageStatus.LOCKED,
+    val approval: WorkflowApprovalState = WorkflowApprovalState.NOT_REQUIRED,
+    /** Versioned output/report IDs for this pipeline stage, never paths. */
+    val artifactVersions: List<WorkflowArtifactVersion> = emptyList(),
+    /** Present while a durable stage run is pending, running, or has failed. */
+    val job: WorkflowJobSnapshot? = null
 )
 
 data class WorkflowReadModel(val steps: List<WorkflowStep>) {
     init { require(steps.map(WorkflowStep::stage) == WorkflowStageOrder.ordered) }
     operator fun get(stage: WorkflowStage): WorkflowStep = steps.first { it.stage == stage }
-    val current: WorkflowStep get() = steps.firstOrNull { it.state != WorkflowState.COMPLETE } ?: steps.last()
+    /** Lifecycle wins over an older completed artifact when a current job is running or has failed. */
+    val current: WorkflowStep get() = steps.firstOrNull {
+        it.status !in setOf(WorkflowStageStatus.COMPLETE, WorkflowStageStatus.APPROVED)
+    } ?: steps.last()
 }
 
 object WorkflowReadModelDeriver {
@@ -93,7 +134,7 @@ object WorkflowReadModelDeriver {
                 if (index == 0) WorkflowState.CURRENT else WorkflowState.BLOCKED,
                 WorkflowAction.CREATE_OR_OPEN,
                 WorkflowPrerequisite.PROJECT_ROOT
-            )
+            ).copy(status = if (index == 0) WorkflowStageStatus.READY else WorkflowStageStatus.LOCKED)
         })
         val stale = project.readiness.staleArtifacts
         val missingSource = project.parts.firstOrNull { !it.preparation.sourcePreserved }
@@ -222,10 +263,80 @@ object WorkflowReadModelDeriver {
             composition, imported, transcription, clean, aiFix,
             feel, analysis, structure, arrangementStep, generated, cohesion, critic, fullSongEnhancement, humanization, render, mix, master, commercial
         )
-        return WorkflowReadModel(steps.map { step -> step.copy(stageRun = project.readiness.stageRuns.lastOrNull { run ->
-            workflowStage(run.stage) == step.stage && run.status in setOf(StageRunStatus.PROCESSING, StageRunStatus.FAILED)
-        }) })
+        return WorkflowReadModel(steps.map { step ->
+            val runs = project.readiness.stageRuns.filter { run -> workflowStage(run.stage) == step.stage }
+            val activeRun = runs.lastOrNull { run -> run.status in setOf(StageRunStatus.PENDING, StageRunStatus.PROCESSING, StageRunStatus.FAILED) }
+            val approval = approvalFor(step, project, arrangement)
+            step.copy(
+                stageRun = activeRun,
+                status = statusFor(step, activeRun, approval),
+                approval = approval,
+                artifactVersions = artifactVersions(runs),
+                job = activeRun?.toWorkflowJob()
+            )
+        })
     }
+
+    private fun approvalFor(
+        step: WorkflowStep,
+        project: ProjectSnapshot,
+        arrangement: ArrangementSnapshot?
+    ): WorkflowApprovalState = when (step.stage) {
+        WorkflowStage.CLEAN_MIDI -> if (step.state == WorkflowState.REVIEW) WorkflowApprovalState.WAITING else WorkflowApprovalState.NOT_REQUIRED
+        WorkflowStage.ARRANGEMENT -> when {
+            arrangement?.approved == true && !arrangement.stale -> WorkflowApprovalState.APPROVED
+            step.state == WorkflowState.REVIEW -> WorkflowApprovalState.WAITING
+            else -> WorkflowApprovalState.NOT_REQUIRED
+        }
+        WorkflowStage.COHESION -> when {
+            project.readiness.cohesionReady -> WorkflowApprovalState.APPROVED
+            step.state == WorkflowState.REVIEW -> WorkflowApprovalState.WAITING
+            else -> WorkflowApprovalState.NOT_REQUIRED
+        }
+        WorkflowStage.FULL_SONG_ENHANCE -> when (project.readiness.fullSongEnhancementSelection) {
+            app.melotrail.arrangement.FullSongEnhancementSelection.APPROVED -> WorkflowApprovalState.APPROVED
+            app.melotrail.arrangement.FullSongEnhancementSelection.BYPASS,
+            app.melotrail.arrangement.FullSongEnhancementSelection.NO_OP -> WorkflowApprovalState.BYPASSED
+            app.melotrail.arrangement.FullSongEnhancementSelection.UNRESOLVED ->
+                if (step.state == WorkflowState.REVIEW) WorkflowApprovalState.WAITING else WorkflowApprovalState.NOT_REQUIRED
+        }
+        WorkflowStage.HUMANIZATION -> if (project.readiness.humanizationSelection == app.melotrail.arrangement.HumanizationSelection.BYPASS) {
+            WorkflowApprovalState.BYPASSED
+        } else WorkflowApprovalState.NOT_REQUIRED
+        else -> WorkflowApprovalState.NOT_REQUIRED
+    }
+
+    private fun statusFor(
+        step: WorkflowStep,
+        run: StageRunSnapshot?,
+        approval: WorkflowApprovalState
+    ): WorkflowStageStatus = when (run?.status) {
+        StageRunStatus.PENDING, StageRunStatus.PROCESSING -> WorkflowStageStatus.RUNNING
+        StageRunStatus.FAILED -> WorkflowStageStatus.FAILED
+        StageRunStatus.COMPLETED, null -> when (step.state) {
+            WorkflowState.BLOCKED -> WorkflowStageStatus.LOCKED
+            WorkflowState.CURRENT -> WorkflowStageStatus.READY
+            WorkflowState.REVIEW -> WorkflowStageStatus.REVIEW_REQUIRED
+            WorkflowState.STALE -> WorkflowStageStatus.STALE
+            WorkflowState.COMPLETE -> if (approval == WorkflowApprovalState.APPROVED) WorkflowStageStatus.APPROVED else WorkflowStageStatus.COMPLETE
+        }
+    }
+
+    private fun artifactVersions(runs: List<StageRunSnapshot>): List<WorkflowArtifactVersion> = runs
+        .filter { it.status == StageRunStatus.COMPLETED }
+        .flatMap { run ->
+            run.outputs.map { artifact -> WorkflowArtifactVersion(artifact.id, run.runId, WorkflowArtifactVersionKind.OUTPUT, artifact.sha256) } +
+                run.reports.map { artifact -> WorkflowArtifactVersion(artifact.id, run.runId, WorkflowArtifactVersionKind.REPORT, artifact.sha256) }
+        }
+
+    private fun StageRunSnapshot.toWorkflowJob() = WorkflowJobSnapshot(
+        id = runId,
+        status = status,
+        progress = progress,
+        retryable = retryable,
+        failure = failure,
+        cancellation = cancellation
+    )
 
     private fun downstream(
         stage: WorkflowStage,

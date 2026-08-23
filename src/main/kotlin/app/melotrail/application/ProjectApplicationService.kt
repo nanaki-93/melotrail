@@ -87,6 +87,13 @@ import javax.sound.midi.MidiSystem
 /** UI- and CLI-neutral boundary for the local, file-backed arranger project. */
 interface ProjectApplicationService {
     fun open(root: Path): ProjectSnapshot
+    /**
+     * The one normalized workflow contract for local UI/CLI adapters.  It
+     * exposes canonical lifecycle, approval, job, and artifact-version state;
+     * callers must not inspect project files to reconstruct it.
+     */
+    fun getWorkflowStatus(command: GetWorkflowStatus): WorkflowReadModel =
+        WorkflowReadModelDeriver.derive(open(command.root), command.arrangement)
     fun getHarmony(command: GetHarmony): HarmonyView =
         throw UnsupportedOperationException("This project service does not support harmony.")
     fun createHarmonyEvent(command: CreateHarmonyEvent): HarmonyMutationResult =
@@ -147,6 +154,12 @@ interface ProjectApplicationService {
         throw UnsupportedOperationException("This project service does not support structure occurrences.")
     fun saveStructure(request: SaveStructureRequest): ProjectSnapshot
 }
+
+data class GetWorkflowStatus(
+    val root: Path,
+    /** Arrangement review is an application snapshot owned by the arrangement service. */
+    val arrangement: ArrangementSnapshot? = null
+)
 
 data class CreateProjectRequest(
     val root: Path,
@@ -1333,7 +1346,13 @@ class DefaultProjectApplicationService(
         if (reference.index == null) emptyList() else StageRunStore().read(root, reference).map { record ->
             StageRunSnapshot(record.runId, record.stage, record.subject, record.status,
                 retryable = record.status == app.melotrail.arrangement.StageRunStatus.FAILED,
-                failure = record.failure?.code)
+                failure = record.failure?.code,
+                outputs = record.outputArtifacts.mapIndexed { index, artifact ->
+                    StageArtifactSnapshot("${record.runId}:output:$index", artifact.sha256)
+                },
+                reports = record.reportArtifacts.mapIndexed { index, artifact ->
+                    StageArtifactSnapshot("${record.runId}:report:$index", artifact.sha256)
+                })
         }
     }.getOrDefault(emptyList())
 

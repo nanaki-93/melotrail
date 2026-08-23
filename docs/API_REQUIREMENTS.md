@@ -12,6 +12,17 @@ Recommended API categories:
 - PUT project musical authority
 - GET workflow status
 
+### Current local contract
+
+The supported Compose Desktop product uses the typed local application boundary,
+not a Spring/HTTP controller. `ProjectApplicationService.getWorkflowStatus`
+accepts `GetWorkflowStatus` and returns the normalized `WorkflowReadModel`.
+Every ordered step exposes an explicit lifecycle (`LOCKED`, `READY`, `RUNNING`,
+`FAILED`, `REVIEW_REQUIRED`, `APPROVED`, `STALE`, or `COMPLETE`), separate
+approval state, safe artifact-version IDs and hashes, and the current durable
+stage-run job ID/progress/retry/failure state. Artifact filesystem paths and
+exception messages are not part of this UI contract.
+
 ## Parts
 
 - list parts

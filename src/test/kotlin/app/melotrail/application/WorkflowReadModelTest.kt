@@ -5,6 +5,10 @@ import app.melotrail.arrangement.MidiAnalysisInput
 import app.melotrail.arrangement.FullSongEnhancementSelection
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.RenderFormat
+import app.melotrail.arrangement.SafeFailureCode
+import app.melotrail.arrangement.StageId
+import app.melotrail.arrangement.StageRunStatus
+import app.melotrail.arrangement.StageSubject
 import app.melotrail.arrangement.WorkflowArtifact
 import java.nio.file.Path
 import kotlin.test.Test
@@ -103,6 +107,58 @@ class WorkflowReadModelTest {
         assertEquals(WorkflowState.COMPLETE, WorkflowReadModelDeriver.derive(ready(FullSongEnhancementSelection.BYPASS), approvedArrangement)[WorkflowStage.FULL_SONG_ENHANCE].state)
         assertEquals(WorkflowState.COMPLETE, WorkflowReadModelDeriver.derive(ready(FullSongEnhancementSelection.NO_OP), approvedArrangement)[WorkflowStage.FULL_SONG_ENHANCE].state)
         assertEquals(WorkflowState.COMPLETE, WorkflowReadModelDeriver.derive(ready(FullSongEnhancementSelection.BYPASS), approvedArrangement)[WorkflowStage.HUMANIZATION].state)
+    }
+
+    @Test
+    fun `normalized workflow contract exposes job lifecycle and immutable artifact versions`() {
+        val failedClean = StageRunSnapshot(
+            runId = "run-clean", stage = StageId.CLEANED, subject = StageSubject.Part("A"),
+            status = StageRunStatus.FAILED, retryable = true, failure = SafeFailureCode.INTERRUPTED
+        )
+        val completedExtraction = StageRunSnapshot(
+            runId = "run-extract", stage = StageId.EXTRACTED, subject = StageSubject.Part("A"),
+            status = StageRunStatus.COMPLETED, retryable = false,
+            outputs = listOf(StageArtifactSnapshot("run-extract:output:0", "a".repeat(64))),
+            reports = listOf(StageArtifactSnapshot("run-extract:report:0", "b".repeat(64)))
+        )
+        val snapshot = project().copy(readiness = project().readiness.copy(
+            stageRuns = listOf(completedExtraction, failedClean)
+        ))
+        val workflow = WorkflowReadModelDeriver.derive(snapshot)
+
+        val clean = workflow[WorkflowStage.CLEAN_MIDI]
+        assertEquals(WorkflowStageStatus.FAILED, clean.status)
+        assertEquals("run-clean", clean.job?.id)
+        assertEquals(SafeFailureCode.INTERRUPTED, clean.job?.failure)
+        assertEquals(WorkflowStage.CLEAN_MIDI, workflow.current.stage)
+
+        val transcription = workflow[WorkflowStage.TRANSCRIPTION]
+        assertEquals(WorkflowStageStatus.COMPLETE, transcription.status)
+        assertEquals(
+            listOf("run-extract:output:0", "run-extract:report:0"),
+            transcription.artifactVersions.map(WorkflowArtifactVersion::id)
+        )
+    }
+
+    @Test
+    fun `workflow exposes review and approval separately from completion`() {
+        val base = project()
+        val sections = base.structure.map {
+            ArrangementSectionSnapshot(it.index, it.instanceId, it.partId, "verse", 0.5, emptyList(), "none", it.durationSeconds)
+        }
+        val review = WorkflowReadModelDeriver.derive(
+            base,
+            ArrangementSnapshot(base.root, sections, approvalRequired = true, approved = false, stale = false, artifact = base.root.resolve("arrangement.json"))
+        )[WorkflowStage.ARRANGEMENT]
+        val approved = WorkflowReadModelDeriver.derive(
+            base,
+            ArrangementSnapshot(base.root, sections, approvalRequired = false, approved = true, stale = false, artifact = base.root.resolve("arrangement.json"))
+        )[WorkflowStage.ARRANGEMENT]
+
+        assertEquals(WorkflowStageStatus.REVIEW_REQUIRED, review.status)
+        assertEquals(WorkflowApprovalState.WAITING, review.approval)
+        assertEquals(WorkflowStageStatus.APPROVED, approved.status)
+        assertEquals(WorkflowApprovalState.APPROVED, approved.approval)
     }
 
     private fun project(): ProjectSnapshot {

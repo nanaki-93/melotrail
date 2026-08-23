@@ -65,6 +65,7 @@ import app.melotrail.application.PartSourceType
 import app.melotrail.application.MidiQualityStatus
 import app.melotrail.application.ReleaseExportFormat
 import app.melotrail.application.StructureSectionSummary
+import app.melotrail.application.WorkflowStage
 import app.melotrail.application.filtered
 import app.melotrail.arrangement.LogicalInstrument
 import app.melotrail.arrangement.ArrangementRole
@@ -484,26 +485,20 @@ private fun ProjectInfo(state: WorkspaceUiState) = OverviewCard(WorkspacePageTag
 
 @Composable
 private fun ArtifactStatus(state: WorkspaceUiState) = OverviewCard(WorkspacePageTags.OVERVIEW_ARTIFACTS, "Artifact status") {
-    val readiness = state.project?.readiness
-    if (readiness == null) {
-        Text("Project artifacts unavailable", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        return@OverviewCard
-    }
+    if (state.project == null) return@OverviewCard Text("Project artifacts unavailable", color = MaterialTheme.colorScheme.onSurfaceVariant)
     listOf(
-        "Setup" to readiness.compositionSettingsReady,
-        "Harmony" to readiness.harmonyReady,
-        "Clean MIDI" to readiness.cleanMidiReady,
-        "Analysis" to readiness.analysesReady,
-        "Structure" to readiness.structureReady,
-        "Arrangement" to readiness.arrangementAvailable,
-        "Stems" to readiness.stemsAvailable,
-        "Master" to readiness.masterAvailable,
-        "Release" to readiness.releaseAvailable
-    ).forEach { (label, available) ->
-        Text("$label: ${if (available) "available" else "unavailable"}", style = MaterialTheme.typography.bodySmall)
-    }
-    if (readiness.staleArtifacts.isNotEmpty()) {
-        Text("Stale evidence: ${readiness.staleArtifacts.size} artifact type(s)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        "Setup" to WorkflowStage.PROJECT,
+        "Clean MIDI" to WorkflowStage.CLEAN_MIDI,
+        "Analysis" to WorkflowStage.ANALYSIS,
+        "Structure" to WorkflowStage.STRUCTURE,
+        "Arrangement" to WorkflowStage.ARRANGEMENT,
+        "Stems" to WorkflowStage.RENDER,
+        "Master" to WorkflowStage.MASTER,
+        "Release" to WorkflowStage.COMMERCIAL_EXPORT
+    ).forEach { (label, stage) ->
+        val step = state.workflow[stage]
+        val versions = step.artifactVersions.size
+        Text("$label: ${workflowStatusLabel(step)}${if (versions > 0) " · $versions version(s)" else ""}", style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -515,7 +510,7 @@ private fun OverviewActivity(state: WorkspaceUiState) = OverviewCard(WorkspacePa
         return@OverviewCard
     }
     val current = state.workflow.current
-    Text(current.stage.name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase), style = MaterialTheme.typography.titleMedium)
+    Text("${current.stage.name.lowercase().replace('_', ' ').replaceFirstChar(Char::uppercase)} · ${workflowStatusLabel(current)}", style = MaterialTheme.typography.titleMedium)
     Text(workflowDescription(current), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
