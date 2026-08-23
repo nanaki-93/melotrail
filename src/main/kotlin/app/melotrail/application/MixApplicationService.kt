@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.nio.charset.StandardCharsets
 import java.nio.file.AtomicMoveNotSupportedException
@@ -38,14 +39,36 @@ data class MixSnapshot(
     val availableStems: List<String>,
     val dryMix: Path?,
     val report: AudioMixCriticReport? = null,
-    val stale: Boolean
+    val stale: Boolean,
+    /** Present only when the exact persisted plan and dry-mix artifact were explicitly approved. */
+    val approval: MixApproval? = null
 )
+
+/** Durable user approval for one exact production-mix revision. */
+@Serializable
+data class MixApproval(
+    val version: Int = VERSION,
+    val planSha256: String,
+    val mixSha256: String
+) {
+    init {
+        require(version == VERSION) { "Unsupported mix approval" }
+        require(SHA_256.matches(planSha256) && SHA_256.matches(mixSha256)) { "Mix approval fingerprints are invalid" }
+    }
+
+    companion object {
+        const val VERSION = 1
+        private val SHA_256 = Regex("[0-9a-f]{64}")
+    }
+}
 
 data class ApplyMixRequest(val root: Path, val settings: MixPlan)
 
 interface MixApplicationService {
     fun load(root: Path): MixSnapshot
     suspend fun apply(request: ApplyMixRequest, progress: ProgressSink = ProgressSink.None): MixSnapshot
+    /** Approves the exact plan and dry mix currently inspected by the musician. */
+    fun approve(root: Path): MixSnapshot
 }
 
 /** Re-mixes validated stems only; it never triggers MIDI generation, rendering, DSP, or mastering. */
@@ -58,7 +81,24 @@ class DefaultMixApplicationService(private val mixer: ProductionStemMixer = Prod
         val report = normalized.resolve(REPORT_FILE).takeIf(Files::isRegularFile)?.let { path ->
             runCatching { json.decodeFromString(AudioMixCriticReport.serializer(), Files.readString(path, StandardCharsets.UTF_8)) }.getOrNull()
         }
-        return MixSnapshot(normalized, settings, stems, dry, report, stale = stems.isEmpty())
+        val approval = report?.let { currentApproval(normalized, it) }
+        return MixSnapshot(normalized, settings, stems, dry, report, stale = stems.isEmpty(), approval = approval)
+    }
+
+    override fun approve(root: Path): MixSnapshot {
+        val normalized = root.normalizeRoot()
+        val snapshot = load(normalized)
+        val report = requireNotNull(snapshot.report) { "Build a current dry mix and audio critic report before approving the mix." }
+        val dry = requireNotNull(snapshot.dryMix) { "Build a current dry mix before approving the mix." }
+        val planPath = normalized.resolve(PLAN_FILE)
+        require(Files.isRegularFile(planPath)) { "Current mix settings are missing. Build the dry mix again." }
+        val planHash = sha256(Files.readAllBytes(planPath))
+        val mixHash = digest(dry)
+        require(report.planSha256 == planHash && report.mixSha256 == mixHash) {
+            "Mix evidence no longer matches the current plan or dry mix. Build the dry mix again."
+        }
+        writeAtomically(normalized.resolve(APPROVAL_FILE), json.encodeToString(MixApproval(planSha256 = planHash, mixSha256 = mixHash)))
+        return load(normalized)
     }
 
     override suspend fun apply(request: ApplyMixRequest, progress: ProgressSink): MixSnapshot {
@@ -101,6 +141,21 @@ class DefaultMixApplicationService(private val mixer: ProductionStemMixer = Prod
         return json.decodeFromString(MixPlan.serializer(), Files.readString(path, StandardCharsets.UTF_8)).also(MixPlan::requireValid)
     }
 
+    private fun currentApproval(root: Path, report: AudioMixCriticReport): MixApproval? {
+        val path = root.resolve(APPROVAL_FILE)
+        if (!Files.isRegularFile(path)) return null
+        val approval = runCatching { json.decodeFromString(MixApproval.serializer(), Files.readString(path, StandardCharsets.UTF_8)) }.getOrNull() ?: return null
+        val plan = root.resolve(PLAN_FILE)
+        val dry = root.resolve(DRY_MIX)
+        if (!Files.isRegularFile(plan) || !Files.isRegularFile(dry)) return null
+        val planHash = sha256(Files.readAllBytes(plan))
+        val mixHash = digest(dry)
+        return approval.takeIf {
+            it.planSha256 == report.planSha256 && it.mixSha256 == report.mixSha256 &&
+                it.planSha256 == planHash && it.mixSha256 == mixHash
+        }
+    }
+
     private fun writeAtomically(target: Path, contents: String) {
         Files.createDirectories(checkNotNull(target.parent))
         val temporary = target.resolveSibling(".${target.fileName}.${UUID.randomUUID()}.tmp")
@@ -119,6 +174,7 @@ class DefaultMixApplicationService(private val mixer: ProductionStemMixer = Prod
     companion object {
         const val PLAN_FILE = "mix/plan.json"
         const val REPORT_FILE = "mix/report.json"
+        const val APPROVAL_FILE = "mix/approval.json"
         const val DRY_MIX = "mix/dry.wav"
         val json = Json { prettyPrint = true; encodeDefaults = true; ignoreUnknownKeys = false }
         val locks = ConcurrentHashMap<Path, Mutex>()

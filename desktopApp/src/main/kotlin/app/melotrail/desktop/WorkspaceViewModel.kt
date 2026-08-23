@@ -37,6 +37,9 @@ import app.melotrail.application.DefaultMixApplicationService
 import app.melotrail.application.BuildApplicationService
 import app.melotrail.application.BuildSongRequest
 import app.melotrail.application.LoFiPresetId
+import app.melotrail.arrangement.MixBus
+import app.melotrail.arrangement.MixBusPlan
+import app.melotrail.arrangement.SharedRoomPlan
 import app.melotrail.application.HumanizationApplicationService
 import app.melotrail.application.DefaultHumanizationApplicationService
 import app.melotrail.application.HumanizationSnapshot
@@ -460,6 +463,7 @@ sealed interface WorkspaceOperation {
     data object ApprovingCohesion : WorkspaceOperation
     data class GeneratingArrangement(val progress: OperationProgress? = null) : WorkspaceOperation
     data class ApplyingMix(val progress: OperationProgress? = null) : WorkspaceOperation
+    data object ApprovingMix : WorkspaceOperation
     data object RunningCritic : WorkspaceOperation
     data object Humanizing : WorkspaceOperation
     data class BuildingSong(val progress: OperationProgress? = null) : WorkspaceOperation
@@ -485,7 +489,7 @@ val WorkspaceOperation.isMutating: Boolean
         this is WorkspaceOperation.GeneratingSourceSong || this is WorkspaceOperation.ApprovingSourceSong ||
         this is WorkspaceOperation.GeneratingCohesion || this is WorkspaceOperation.ReviewingCohesion || this is WorkspaceOperation.ApprovingCohesion ||
         this is WorkspaceOperation.GeneratingArrangement || this is WorkspaceOperation.ApprovingArrangement
-        || this is WorkspaceOperation.ApplyingMix || this is WorkspaceOperation.RunningCritic || this is WorkspaceOperation.Humanizing || this is WorkspaceOperation.BuildingSong || this is WorkspaceOperation.ExportingCommercialProvenance || this is WorkspaceOperation.ExportingRelease
+        || this is WorkspaceOperation.ApplyingMix || this is WorkspaceOperation.ApprovingMix || this is WorkspaceOperation.RunningCritic || this is WorkspaceOperation.Humanizing || this is WorkspaceOperation.BuildingSong || this is WorkspaceOperation.ExportingCommercialProvenance || this is WorkspaceOperation.ExportingRelease
 
 sealed interface WorkspaceDialog {
     data class CreateProject(
@@ -742,7 +746,11 @@ sealed interface WorkspaceIntent {
     data class ToggleArrangementTrait(val trait: SoundTrait) : WorkspaceIntent
     data class PinArrangementInstrument(val role: ArrangementRole, val instrumentId: String?) : WorkspaceIntent
     data class UpdateMixSetting(val instrument: String, val setting: LogicalMixSetting) : WorkspaceIntent
+    data class UpdateMixRoom(val room: SharedRoomPlan) : WorkspaceIntent
+    data class UpdateMixBus(val bus: MixBus, val setting: MixBusPlan) : WorkspaceIntent
     data object ResetMix : WorkspaceIntent
+    data object BuildDryMix : WorkspaceIntent
+    data object ApproveMix : WorkspaceIntent
     data object GenerateHumanization : WorkspaceIntent
     data object BypassHumanization : WorkspaceIntent
     data object GenerateCritic : WorkspaceIntent
@@ -956,7 +964,11 @@ class WorkspaceViewModel(
             is WorkspaceIntent.ToggleArrangementTrait -> toggleArrangementTrait(intent.trait)
             is WorkspaceIntent.PinArrangementInstrument -> pinArrangementInstrument(intent.role, intent.instrumentId)
             is WorkspaceIntent.UpdateMixSetting -> updateMixSetting(intent.instrument, intent.setting)
+            is WorkspaceIntent.UpdateMixRoom -> updateMixRoom(intent.room)
+            is WorkspaceIntent.UpdateMixBus -> updateMixBus(intent.bus, intent.setting)
             WorkspaceIntent.ResetMix -> resetMix()
+            WorkspaceIntent.BuildDryMix -> state.value.mix?.let { applyMix(it.settings) }
+            WorkspaceIntent.ApproveMix -> approveMix()
             WorkspaceIntent.GenerateHumanization -> generateHumanization()
             WorkspaceIntent.BypassHumanization -> bypassHumanization()
             WorkspaceIntent.GenerateCritic -> generateCritic()
@@ -2849,8 +2861,26 @@ class WorkspaceViewModel(
         val mix = state.value.mix ?: return
         if (instrument !in mix.availableStems) return fail("apply mix", "Mix setting '$instrument' is unavailable because its rendered stem is missing.")
         runCatching { setting.requireValid(instrument) }.onFailure { return fail("apply mix", it.message ?: "Invalid mix setting.") }
-        val settings = mix.settings.copy(tracks = mix.settings.tracks + (instrument to setting))
-        mutableState.update { it.copy(mix = mix.copy(settings = settings)) }
+        updateMixSettings(mix.settings.copy(tracks = mix.settings.tracks + (instrument to setting)))
+    }
+
+    private fun updateMixRoom(room: SharedRoomPlan) {
+        val mix = state.value.mix ?: return
+        runCatching(room::requireValid).onFailure { return fail("apply mix", it.message ?: "Invalid shared reverb settings.") }
+        updateMixSettings(mix.settings.copy(room = room))
+    }
+
+    private fun updateMixBus(bus: MixBus, setting: MixBusPlan) {
+        if (bus == MixBus.DIRECT) return fail("apply mix", "Direct tracks do not have a bus processor.")
+        val mix = state.value.mix ?: return
+        runCatching { setting.requireValid(bus) }.onFailure { return fail("apply mix", it.message ?: "Invalid bus settings.") }
+        updateMixSettings(mix.settings.copy(buses = mix.settings.buses + (bus to setting)))
+    }
+
+    private fun updateMixSettings(settings: PersistedMixSettings) {
+        val mix = state.value.mix ?: return
+        runCatching(settings::requireValid).onFailure { return fail("apply mix", it.message ?: "Invalid mix settings.") }
+        mutableState.update { it.copy(mix = mix.copy(settings = settings, approval = null)) }
         mixCommit?.cancel()
         mixCommit = scope.launch {
             delay(250)
@@ -2863,6 +2893,25 @@ class WorkspaceViewModel(
         val settings = PersistedMixSettings()
         mutableState.update { current -> current.copy(mix = current.mix?.copy(settings = settings)) }
         applyMix(settings, root)
+    }
+
+    private fun approveMix() {
+        val root = state.value.project?.root ?: return fail("approve mix", "Open a project before approving its mix.")
+        if (state.value.operation.isMutating) return
+        val feedbackId = beginFeedback(OperationKind.MIXING, OperationPhase.VALIDATING, "Validating the current mix revision…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.ApprovingMix, notification = null, operationFeedback = feedbackTracker.current) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { mixService.approve(root) } }
+                .onSuccess { snapshot -> mutableState.update { current ->
+                    current.copy(
+                        mix = snapshot,
+                        operation = WorkspaceOperation.Idle,
+                        notification = "Mix approved for the current dry-mix revision.",
+                        operationFeedback = feedbackTracker.complete(feedbackId, "Mix approved for the current dry-mix revision.", OperationSeverity.SUCCESS) ?: current.operationFeedback
+                    )
+                } }
+                .onFailure { fail("approve mix", it.message ?: "Unable to approve the current mix.", sessionId = feedbackId) }
+        }
     }
 
     private fun applyMix(settings: PersistedMixSettings, root: Path? = state.value.project?.root) {

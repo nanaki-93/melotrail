@@ -60,6 +60,7 @@ import app.melotrail.application.LocalSoundLibraryInstrument
 import app.melotrail.application.LocalSoundLibraryInventory
 import app.melotrail.application.LocalSoundLibraryInventoryState
 import app.melotrail.arrangement.RenderFormat
+import app.melotrail.arrangement.AudioMixCriticReport
 import app.melotrail.harmony.ChordEvent
 import app.melotrail.harmony.ChordEventId
 import app.melotrail.harmony.ChordProgression
@@ -1313,6 +1314,25 @@ class WorkspaceScreenTest {
         assertTrue(intents.any { it == WorkspaceIntent.UpdateBuildOptions(BuildOptionsDraft(mp3 = true)) })
         assertTrue(intents.any { it == WorkspaceIntent.SelectPlaybackSource(PlaybackSource.DRY) })
         assertEquals(WorkspaceIntent.BuildSong, intents.last())
+    }
+
+    @Test
+    fun `Production Mix exposes persisted-approval controls and the measured audio critic`() = runComposeUiTest {
+        val report = AudioMixCriticReport(
+            planSha256 = "a".repeat(64), mixSha256 = "b".repeat(64), peakDbfs = -2.0, headroomDb = 2.0,
+            clippingSampleCount = 0, stereoCorrelation = 0.22, stemLoudness = emptyList(), melodyAudibility = null, issues = emptyList()
+        )
+        val intents = mutableListOf<WorkspaceIntent>()
+        val state = mixMasterState().copy(mix = mixMasterState().mix!!.copy(report = report))
+        setContent { MelotrailTheme { WorkspaceScreen(state, intents::add) } }
+
+        onNodeWithTag(WorkspacePageTags.MIX_CRITIC).assertExists()
+        onNodeWithText("No audio-quality findings.").assertExists()
+        onNodeWithTag(WorkspacePageTags.MIX_APPROVE).performScrollTo().assertIsEnabled().performClick()
+        onNodeWithTag(WorkspacePageTags.MIX_PRODUCTION_TOGGLE).performScrollTo().performClick()
+        onNodeWithTag(WorkspacePageTags.MIX_ROOM_MIX).assertExists()
+
+        assertTrue(intents.contains(WorkspaceIntent.ApproveMix))
     }
 
     @Test

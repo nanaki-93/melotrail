@@ -2019,6 +2019,11 @@ private class FakeMixService(root: Path) : MixApplicationService {
         snapshot = snapshot.copy(settings = request.settings)
         return snapshot
     }
+
+    override fun approve(root: Path): MixSnapshot {
+        snapshot = snapshot.copy(approval = app.melotrail.application.MixApproval(planSha256 = "a".repeat(64), mixSha256 = "a".repeat(64)))
+        return snapshot
+    }
 }
 
 private class FakeReleaseExportService(private val root: Path) : ReleaseExportApplicationService {

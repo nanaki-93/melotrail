@@ -68,6 +68,7 @@ import app.melotrail.application.StructureSectionSummary
 import app.melotrail.application.WorkflowStage
 import app.melotrail.application.filtered
 import app.melotrail.arrangement.LogicalInstrument
+import app.melotrail.arrangement.MixBus
 import app.melotrail.arrangement.ArrangementRole
 import app.melotrail.arrangement.EnsembleCohesionEnhancementIntensity
 import app.melotrail.arrangement.SoundTrait
@@ -205,6 +206,7 @@ internal object WorkspacePageTags {
     const val MIX_EMPTY_CHANNELS = "mix-master-empty-channels"
     const val MIX_GAIN_PREFIX = "mix-master-gain-"
     const val MIX_PAN_PREFIX = "mix-master-pan-"
+    const val MIX_REVERB_SEND_PREFIX = "mix-master-reverb-send-"
     const val MIX_MUTE_PREFIX = "mix-master-mute-"
     const val MIX_SOLO_PREFIX = "mix-master-solo-"
     const val MIX_METER_PREFIX = "mix-master-meter-"
@@ -218,6 +220,13 @@ internal object WorkspacePageTags {
     const val MIX_LOFI = "mix-master-lofi"
     const val MIX_MP3 = "mix-master-mp3"
     const val MIX_RESET = "mix-master-reset"
+    const val MIX_BUILD_DRY = "mix-master-build-dry"
+    const val MIX_APPROVE = "mix-master-approve"
+    const val MIX_CRITIC = "mix-master-audio-critic"
+    const val MIX_PRODUCTION_TOGGLE = "mix-master-production-toggle"
+    const val MIX_PRODUCTION = "mix-master-production"
+    const val MIX_ROOM_MIX = "mix-master-room-mix"
+    const val MIX_BUS_GAIN_PREFIX = "mix-master-bus-gain-"
     const val MIX_UNSUPPORTED_DSP = "mix-master-unsupported-dsp"
     const val MIX_PRIMARY_ACTION = "mix-master-primary-action"
     const val MIX_BUILD_STATUS = "mix-master-build-status"
@@ -2375,7 +2384,7 @@ private fun MixMasterPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
     val buildMessage = mixMasterBuildMessage(state)
     val channelNames = LogicalInstrument.entries.map { it.wireName }.filter { it in mix?.availableStems.orEmpty() }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
-        PageTitle("Mix & Master", "Adjust stems and build the master WAV")
+        PageTitle("Production Mix", "Balance rendered stems, compare dry and profile texture, then approve the exact mix revision.")
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val narrow = maxWidth < MusicWorkspaceTokens.Reference.MediumBreakpoint
             ResponsivePageColumns(narrow = narrow, first = { columnModifier ->
@@ -2405,6 +2414,34 @@ private fun MixMasterPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                         testTag = WorkspacePageTags.MIX_RESET
                         contentDescription = if (channelNames.isEmpty()) "Reset mix unavailable. Render stems first." else "Reset all rendered channel settings to engine defaults."
                     }) { Text("Reset engine defaults") }
+                }
+                SecondaryOptions(WorkspacePageTags.MIX_PRODUCTION_TOGGLE, WorkspacePageTags.MIX_PRODUCTION, "Production routing") {
+                    val settings = mix?.settings
+                    if (settings == null) {
+                        Text("Render stems before configuring shared reverb and buses.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        OverviewCard("mix-master-shared-reverb", "Shared reverb") {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(settings.room.enabled, { onIntent(WorkspaceIntent.UpdateMixRoom(settings.room.copy(enabled = it))) }, enabled = !mutating)
+                                Text("Enable shared room", style = MaterialTheme.typography.bodySmall)
+                            }
+                            Text("Return ${(settings.room.mix * 100).toInt()}% · ${"%.2f".format(settings.room.decaySeconds)} s", style = MaterialTheme.typography.labelSmall)
+                            Slider(settings.room.mix.toFloat(), { onIntent(WorkspaceIntent.UpdateMixRoom(settings.room.copy(mix = it.toDouble()))) }, valueRange = 0f..1f, enabled = !mutating,
+                                modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.MIX_ROOM_MIX; contentDescription = "Shared reverb return ${(settings.room.mix * 100).toInt()} percent" })
+                        }
+                        OverviewCard("mix-master-buses", "Buses") {
+                            listOf(MixBus.MUSIC, MixBus.DRUMS).forEach { bus ->
+                                val busPlan = settings.buses[bus] ?: app.melotrail.arrangement.MixBusPlan(enabled = false)
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+                                    Checkbox(busPlan.enabled, { onIntent(WorkspaceIntent.UpdateMixBus(bus, busPlan.copy(enabled = it))) }, enabled = !mutating)
+                                    Text(bus.name.lowercase().replaceFirstChar(Char::uppercase), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                                    Text("${"%.1f".format(busPlan.gainDb)} dB", style = MaterialTheme.typography.labelSmall)
+                                }
+                                Slider(busPlan.gainDb.toFloat(), { onIntent(WorkspaceIntent.UpdateMixBus(bus, busPlan.copy(gainDb = it.toDouble()))) }, valueRange = -24f..18f, enabled = !mutating,
+                                    modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.MIX_BUS_GAIN_PREFIX + bus.name.lowercase(); contentDescription = "${bus.name.lowercase()} bus gain ${"%.1f".format(busPlan.gainDb)} decibels" })
+                            }
+                        }
+                    }
                 }
             }
             }, second = { columnModifier ->
@@ -2468,18 +2505,53 @@ private fun MixMasterPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                         }
                     }
                 }
+                MixCriticCard(mix?.report)
                 OverviewCard(WorkspacePageTags.MIX_BUILD_STATUS, "Render / Build") {
                     Text(buildMessage, style = MaterialTheme.typography.bodySmall, color = if (buildReady) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error)
                     (state.operation as? WorkspaceOperation.BuildingSong)?.progress?.let { Text("Stage ${it.stageIndex} of ${it.stageCount}: ${it.message}", style = MaterialTheme.typography.bodySmall) }
+                    OutlinedButton(onClick = { onIntent(WorkspaceIntent.BuildDryMix) }, enabled = channelNames.isNotEmpty() && !mutating, modifier = Modifier.fillMaxWidth().semantics {
+                        testTag = WorkspacePageTags.MIX_BUILD_DRY
+                        contentDescription = "Build a dry mix and current audio critic report from rendered stems."
+                    }) { Text("Build dry mix") }
+                    val report = mix?.report
+                    val approvable = report?.commercialReady == true && mix?.approval == null && !mutating
+                    val approvalText = when {
+                        mix?.approval != null -> "Approved · exact dry-mix revision"
+                        report == null -> "Build the dry mix before approval."
+                        !report.commercialReady -> "Resolve blocking audio-critic findings before approval."
+                        else -> "Ready for approval"
+                    }
+                    Text(approvalText, style = MaterialTheme.typography.labelSmall, color = if (mix?.approval != null) semanticColor(WorkspaceSemanticState.READY) else MaterialTheme.colorScheme.onSurfaceVariant)
+                    OutlinedButton(onClick = { onIntent(WorkspaceIntent.ApproveMix) }, enabled = approvable, modifier = Modifier.fillMaxWidth().semantics {
+                        testTag = WorkspacePageTags.MIX_APPROVE
+                        contentDescription = if (approvable) "Approve the exact dry-mix revision." else approvalText
+                    }) { Text(if (mix?.approval != null) "Mix approved" else "Approve mix") }
                     Button(onClick = { onIntent(WorkspaceIntent.BuildSong) }, enabled = buildReady, modifier = Modifier.fillMaxWidth().semantics {
                         testTag = WorkspacePageTags.MIX_PRIMARY_ACTION
-                        contentDescription = if (buildReady) "Build Song using validated current artifacts." else "Build Song unavailable. $buildMessage"
-                    }) { Text(if (state.operation is WorkspaceOperation.BuildingSong) "Building Song…" else "Build Song") }
+                        contentDescription = if (buildReady) "Render current stems, build the selected profile texture, and master the song." else "Build production audio unavailable. $buildMessage"
+                    }) { Text(if (state.operation is WorkspaceOperation.BuildingSong) "Building production audio…" else "Build profile texture & master") }
                 }
             }
             })
         }
         ZeroSignalPlaceholder()
+    }
+}
+
+@Composable
+private fun MixCriticCard(report: app.melotrail.arrangement.AudioMixCriticReport?) = OverviewCard(WorkspacePageTags.MIX_CRITIC, "Audio critic") {
+    if (report == null) {
+        Text("Build a dry mix to measure clipping, headroom, masking, stereo correlation, and melody audibility.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    } else {
+        Text("Peak ${"%.1f".format(report.peakDbfs)} dBFS · headroom ${"%.1f".format(report.headroomDb)} dB · ${report.clippingSampleCount} clipped samples", style = MaterialTheme.typography.bodySmall)
+        report.stereoCorrelation?.let { Text("Stereo correlation ${"%.2f".format(it)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        report.melodyAudibility?.let { melody ->
+            Text("Melody audibility · ${if (melody.audible) "audible" else "needs attention"} · ${"%.1f".format(melody.signalToAccompanimentDb)} dB vs accompaniment", style = MaterialTheme.typography.labelSmall, color = if (melody.audible) semanticColor(WorkspaceSemanticState.READY) else MaterialTheme.colorScheme.error)
+        }
+        if (report.issues.isEmpty()) Text("No audio-quality findings.", style = MaterialTheme.typography.labelSmall, color = semanticColor(WorkspaceSemanticState.READY))
+        report.issues.forEach { issue ->
+            Text("${if (issue.severity == app.melotrail.arrangement.AudioMixIssueSeverity.BLOCKING) "Blocking" else "Warning"} · ${issue.message}", style = MaterialTheme.typography.labelSmall, color = if (issue.severity == app.melotrail.arrangement.AudioMixIssueSeverity.BLOCKING) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary)
+        }
     }
 }
 
@@ -2505,6 +2577,9 @@ private fun MixMasterChannel(name: String, setting: app.melotrail.application.Lo
         Text("Pan ${"%.2f".format(setting.pan)}", style = MaterialTheme.typography.labelSmall)
         Slider(value = setting.pan.toFloat(), onValueChange = { onSetting(setting.copy(pan = it.toDouble())) }, valueRange = -1f..1f, enabled = enabled,
             modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.MIX_PAN_PREFIX + name; contentDescription = "$name pan ${"%.2f".format(setting.pan)}" })
+        Text("Reverb send ${(setting.reverbSend * 100).toInt()}%", style = MaterialTheme.typography.labelSmall)
+        Slider(value = setting.reverbSend.toFloat(), onValueChange = { onSetting(setting.copy(reverbSend = it.toDouble())) }, valueRange = 0f..1f, enabled = enabled,
+            modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.MIX_REVERB_SEND_PREFIX + name; contentDescription = "$name reverb send ${(setting.reverbSend * 100).toInt()} percent" })
         Spacer(Modifier.weight(1f))
         Text("0.0 dBFS · Level unavailable", style = MaterialTheme.typography.labelSmall, color = semanticColor(WorkspaceSemanticState.DISABLED), modifier = Modifier.semantics { testTag = WorkspacePageTags.MIX_METER_PREFIX + name; contentDescription = "Level unavailable for $name; zero signal is displayed because no measured level data is available." })
         }
