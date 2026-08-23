@@ -46,8 +46,18 @@ class InstrumentResolverTest {
     }
 
     @Test
+    fun `automatic resolution excludes an unauditioned catalog entry but an explicit compatible pin may use it`() {
+        writeCatalog()
+        val resolver = VersionedInstrumentResolver(InstrumentRegistryLoader(root).load())
+
+        val automatic = resolver.invoke(ResolveInstrumentRequest(intent(), "test"))
+        assertTrue(automatic.candidates.single { it.id == "sneaky-bass" }.rejection.orEmpty().contains("production-approved"))
+        assertEquals("sneaky-bass", resolver.invoke(ResolveInstrumentRequest(intent(pinned = "sneaky-bass"), "test")).selectedId)
+    }
+
+    @Test
     fun `unknown sonic vocabulary makes only that entry unavailable while future affinity IDs stay neutral`() {
-        writeCatalog(extra = ",\"articulationTraits\":[\"future-articulation\"]")
+        writeCatalog(extra = ",\"articulationTraits\":[\"future-articulation\"]", sneakyApproved = true)
         val registry = InstrumentRegistryLoader(root).load()
 
         val unavailable = registry.resolve("fashion-bass")
@@ -63,14 +73,14 @@ class InstrumentResolverTest {
         requiredCapabilities = setOf(PerformanceCapability.PITCHED), pinnedInstrumentId = pinned
     )
 
-    private fun writeCatalog(extra: String = "") {
+    private fun writeCatalog(extra: String = "", sneakyApproved: Boolean = false) {
         copyLibrary()
         val standard = """"engine":{"type":"sfz","path":"bass/bass.sfz"},"library":{"id":"fixture-pack","name":"Fixture pack","version":"1","source":"fixture source"},"capabilities":{"performance":["pitched"]}"""
         val cc0 = """"license":{"id":"CC0-1.0","commercialUse":true,"attributionRequired":false,"sourceName":"Fixture source","licenseText":"CC0 evidence"}"""
         val ccBy = """"license":{"id":"CC-BY-4.0","commercialUse":true,"attributionRequired":true,"attributionText":"Fixture credit","sourceName":"Fixture source","licenseText":"CC BY evidence"}"""
         val nc = """"license":{"id":"CC-BY-NC-4.0","commercialUse":true,"attributionRequired":true,"attributionText":"Credit","sourceName":"Fixture source","licenseText":"NC evidence"}"""
-        fun entry(id: String, name: String, profile: Double, license: String, suffix: String = "") = """{"id":"$id","name":"$name","roles":["bass"],"profileAffinities":{"lofi":$profile,"future-profile":0.8},"moodAffinities":{"nostalgic":0.4},"attackTraits":["soft"],"toneTraits":["warm"],$standard,$license$suffix}"""
-        Files.writeString(root.resolve("instruments.json"), """{"version":2,"workingSampleRate":44100,"instruments":[${entry("fashion-bass", "Fashion Bass", 0.8, cc0, extra)},${entry("sneaky-bass", "Sneaky Bass", 0.2, ccBy)},${entry("unlicensed-bass", "Unlicensed Bass", 1.0, nc)}]}""")
+        fun entry(id: String, name: String, profile: Double, license: String, approved: Boolean, suffix: String = "") = """{"id":"$id","name":"$name","productionApproved":$approved,"qualityTier":"${if (approved) "production" else "draft"}","styleAffinity":["lofi"],"roles":["bass"],"preferredRoles":["bass"],"profileAffinities":{"lofi":$profile,"future-profile":0.8},"moodAffinities":{"nostalgic":0.4},"attackTraits":["soft"],"toneTraits":["warm"],$standard,$license$suffix}"""
+        Files.writeString(root.resolve("instruments.json"), """{"version":2,"workingSampleRate":44100,"instruments":[${entry("fashion-bass", "Fashion Bass", 0.8, cc0, true, extra)},${entry("sneaky-bass", "Sneaky Bass", 0.2, ccBy, sneakyApproved)},${entry("unlicensed-bass", "Unlicensed Bass", 1.0, nc, false)}]}""")
     }
 
     private fun copyLibrary() {

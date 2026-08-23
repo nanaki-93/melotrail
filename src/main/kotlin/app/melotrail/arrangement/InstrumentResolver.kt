@@ -68,6 +68,7 @@ class VersionedInstrumentResolver(private val registry: ValidatedInstrumentRegis
         val rejection = when {
             descriptor.licenseAdmission.admission != LicenseAdmission.ADMITTED -> descriptor.licenseAdmission.reasons.joinToString("; ")
             intent.role !in descriptor.roles -> "does not support role '${intent.role.name.lowercase()}'"
+            !descriptor.productionApproved && intent.pinnedInstrumentId != descriptor.id -> "not auditioned and production-approved for automatic selection"
             descriptor.selectionMode == InstrumentSelectionMode.MANUAL_ONLY && intent.pinnedInstrumentId != descriptor.id -> "manual-only catalog entry"
             !intent.requiredCapabilities.all { it in descriptor.verifiedCapabilities.performance } -> "missing verified required capability"
             intent.role == ArrangementRole.DRUMS && !descriptor.noteMap.keys.containsAll(REQUIRED_DRUM_HITS) -> "missing verified kick, snare, closed-hat, or open-hat mapping"
@@ -86,6 +87,10 @@ class VersionedInstrumentResolver(private val registry: ValidatedInstrumentRegis
         affinity("profile", descriptor.profileAffinities[intent.profile.id])
         affinity("mood", descriptor.moodAffinities[intent.mood.id])
         intent.sectionPurpose?.let { affinity("section", descriptor.sectionAffinities[it.name.lowercase().replace('_', '-')]) }
+        if (intent.role in descriptor.preferredRoles) {
+            score += PREFERRED_ROLE_POINTS
+            reasons += "preferred role +$PREFERRED_ROLE_POINTS"
+        }
         score += traitFit("attack", intent.attackTraits, descriptor.attackTraits, reasons)
         score += traitFit("tone", intent.toneTraits, descriptor.toneTraits, reasons)
         score += traitFit("articulation", intent.articulationTraits, descriptor.articulationTraits, reasons)
@@ -118,6 +123,7 @@ class VersionedInstrumentResolver(private val registry: ValidatedInstrumentRegis
     companion object {
         const val VERSION = 1
         private const val TRAIT_POINTS = 10
+        private const val PREFERRED_ROLE_POINTS = 15
         private val REQUIRED_DRUM_HITS = setOf("kick", "snare", "closedHat", "openHat")
     }
 }

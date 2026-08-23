@@ -36,6 +36,10 @@ data class RenderResult(
 
 /** Boundary between logical instruments and a local, offline sampler. */
 interface InstrumentRenderer {
+    /** Implementations advertise engine formats without exposing implementation details to arrangement planning. */
+    val supportedEngineTypes: Set<InstrumentEngineType>
+        get() = setOf(InstrumentEngineType.SFZ)
+
     suspend fun render(
         midi: Path,
         instrument: LogicalInstrument,
@@ -119,6 +123,7 @@ class SfizzInstrumentRenderer(
     private val rendererVersion: String = System.getenv("SFZ_RENDERER_VERSION")?.takeIf { it.isNotBlank() } ?: "not reported by renderer",
     private val timeoutMillis: Long = DEFAULT_TIMEOUT_MILLIS
 ) : InstrumentRenderer {
+    override val supportedEngineTypes: Set<InstrumentEngineType> = setOf(InstrumentEngineType.SFZ)
     override suspend fun render(
         midi: Path,
         instrument: LogicalInstrument,
@@ -138,6 +143,9 @@ class SfizzInstrumentRenderer(
         validateFormat(format, expectedFrames)
         val normalizedMidi = validateMidi(midi)
         val descriptor = registryLoader.load().resolve(instrumentId)
+        require(descriptor.engine.type in supportedEngineTypes) {
+            "SFZ renderer cannot render ${descriptor.engine.type.name.lowercase().replace('_', '-')} instrument '$instrumentId'"
+        }
         val target = output.toAbsolutePath().normalize()
         validateOutput(target, normalizedMidi, descriptor)
         Files.createDirectories(requireNotNull(target.parent))

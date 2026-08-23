@@ -61,9 +61,10 @@ class StemRenderingMixerTest {
         assertEquals(2, renderer.calls)
         assertEquals(48_000, first.report.timelineFrames) // two 2-second sections plus one 2-second inserted 4/4 bar
         assertEquals(listOf("piano", "bass"), first.report.stems.map { it.name })
-        assertEquals(2, first.report.version)
+        assertEquals(3, first.report.version)
         assertEquals(listOf("bass", "piano"), first.report.instruments.map { it.role })
         assertTrue(first.report.instruments.all { it.legacyAlias && it.stableInstrumentId == it.role && it.assets.isNotEmpty() })
+        assertTrue(first.report.instruments.all { it.productionApproved && it.qualityTier == InstrumentQualityTier.PRODUCTION && it.license.license.isNotBlank() && it.sourceLibrary.id.isNotBlank() })
         assertEquals(first.report.stems.map { it.name }, first.report.stems.map { it.stableInstrumentId })
         listOf("stems/piano.wav", "stems/bass.wav", "mix/dry.wav").forEach { relative ->
             val audio = WAVDecoder(QuietReporter).decode(root.resolve(relative))

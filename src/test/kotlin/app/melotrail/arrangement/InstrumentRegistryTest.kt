@@ -43,6 +43,45 @@ class InstrumentRegistryTest {
     }
 
     @Test
+    fun `production metadata gates automatic entries and non-SFZ assets remain renderer-neutral`() {
+        copyLibrary()
+        Files.write(root.resolve("piano/fixture.sf2"), byteArrayOf(0, 1, 2))
+        Files.createDirectories(root.resolve("piano/fixture.vst3"))
+        val license = """"license":{"id":"CC0-1.0","commercialUse":true,"attributionRequired":false,"sourceName":"Fixture","licenseText":"CC0 evidence"}"""
+        val library = """"library":{"id":"fixture-pack","name":"Fixture pack","version":"1","source":"fixture source"}"""
+        Files.writeString(root.resolve("instruments.json"), """{
+            "version":2,"workingSampleRate":44100,"instruments":[
+              {"id":"approved-piano","name":"Approved piano","productionApproved":true,"qualityTier":"production","styleAffinity":["lofi"],"roles":["melody"],"preferredRoles":["melody"],"engine":{"type":"sfz","path":"piano/piano.sfz"},$license,$library},
+              {"id":"manual-sf2","name":"Manual SF2","productionApproved":false,"qualityTier":"draft","roles":["melody"],"engine":{"type":"sf2","path":"piano/fixture.sf2"},$license,$library},
+              {"id":"future-vst3","name":"Future VST3","productionApproved":false,"qualityTier":"draft","roles":["melody"],"engine":{"type":"vst3","path":"piano/fixture.vst3"},$license,$library}
+            ]
+        }""".trimIndent())
+
+        val registry = InstrumentRegistryLoader(root).load()
+        assertEquals(listOf("approved-piano"), registry.automaticFor(ArrangementRole.MELODY).map { it.id })
+        assertEquals(InstrumentEngineType.SF2, registry.resolve("manual-sf2").engine.type)
+        assertTrue(registry.resolve("manual-sf2").samplePaths.isEmpty())
+        assertEquals(InstrumentEngineType.VST3, registry.resolve("future-vst3").engine.type)
+    }
+
+    @Test
+    fun `rejects production approval without production quality`() {
+        copyLibrary()
+        Files.writeString(root.resolve("instruments.json"), """{
+            "version":2,"workingSampleRate":44100,"instruments":[{
+              "id":"bad-production","name":"Bad production","productionApproved":true,"qualityTier":"draft","roles":["melody"],"preferredRoles":["bass"],
+              "engine":{"type":"sfz","path":"piano/piano.sfz"},
+              "license":{"id":"CC0-1.0","commercialUse":true,"attributionRequired":false,"sourceName":"Fixture","licenseText":"CC0 evidence"},
+              "library":{"id":"fixture-pack","name":"Fixture pack","version":"1","source":"fixture source"}
+            }]
+        }""".trimIndent())
+
+        val invalid = InstrumentRegistryLoader(root).load().resolve("bad-production")
+        assertEquals(LicenseAdmission.UNAVAILABLE, invalid.licenseAdmission.admission)
+        assertTrue(invalid.licenseAdmission.reasons.single().contains("must have production quality"))
+    }
+
+    @Test
     fun `approved logical stem binding excludes multi-role instruments assigned to another stem`() {
         copyLibrary()
         val license = """"license":{"id":"CC0-1.0","commercialUse":true,"attributionRequired":false,"sourceName":"Fixture","licenseText":"CC0 evidence"}"""

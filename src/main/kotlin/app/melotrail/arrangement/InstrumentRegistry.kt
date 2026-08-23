@@ -66,6 +66,17 @@ data class InstrumentRegistryV3File(
 )
 
 @Serializable enum class InstrumentSelectionMode { @SerialName("automatic") AUTOMATIC, @SerialName("manual-only") MANUAL_ONLY }
+@Serializable enum class InstrumentQualityTier { @SerialName("draft") DRAFT, @SerialName("production") PRODUCTION }
+@Serializable enum class InstrumentEngineType {
+    @SerialName("sfz") SFZ,
+    @SerialName("sf2") SF2,
+    @SerialName("vst3") VST3,
+    @SerialName("audio-unit") AUDIO_UNIT;
+
+    val extension: String get() = when (this) {
+        SFZ -> ".sfz"; SF2 -> ".sf2"; VST3 -> ".vst3"; AUDIO_UNIT -> ".component"
+    }
+}
 
 @Serializable
 data class InstrumentDefinition(
@@ -73,7 +84,14 @@ data class InstrumentDefinition(
     val name: String,
     val category: String = "instrument",
     val selectionMode: InstrumentSelectionMode = InstrumentSelectionMode.AUTOMATIC,
+    /** Explicit audition gate for automatic production selection. */
+    val productionApproved: Boolean = false,
+    val qualityTier: InstrumentQualityTier = InstrumentQualityTier.DRAFT,
+    /** Stable style labels, intentionally separate from profile score weights. */
+    val styleAffinity: Set<String> = emptySet(),
     val roles: Set<ArrangementRole>,
+    /** Roles for which this preset is preferred when it supports several. */
+    val preferredRoles: Set<ArrangementRole> = emptySet(),
     val profileAffinities: Map<String, Double> = emptyMap(),
     val moodAffinities: Map<String, Double> = emptyMap(),
     val sectionAffinities: Map<String, Double> = emptyMap(),
@@ -88,7 +106,7 @@ data class InstrumentDefinition(
     val midiChannel: Int? = null
 )
 
-@Serializable data class InstrumentEngineDescriptor(val type: String, val path: String)
+@Serializable data class InstrumentEngineDescriptor(val type: InstrumentEngineType, val path: String)
 @Serializable data class SourceLibraryProvenance(val id: String, val name: String, val version: String, val source: String)
 @Serializable
 data class InstrumentLicenseMetadata(
@@ -164,8 +182,13 @@ data class ValidatedInstrumentDescriptor(
     val name: String,
     val category: String = "instrument",
     val selectionMode: InstrumentSelectionMode = InstrumentSelectionMode.AUTOMATIC,
+    val productionApproved: Boolean = false,
+    val qualityTier: InstrumentQualityTier = InstrumentQualityTier.DRAFT,
+    val styleAffinity: Set<String> = emptySet(),
     val roles: Set<ArrangementRole>,
-    val sfzPath: Path,
+    val preferredRoles: Set<ArrangementRole> = emptySet(),
+    val engine: InstrumentEngineDescriptor,
+    val enginePath: Path,
     val samplePaths: List<Path>,
     val license: SoundLibraryLicense,
     val licenseAdmission: LicenseAdmissionResult,
@@ -187,7 +210,11 @@ data class ValidatedInstrumentDescriptor(
         version = "v1",
         source = "legacy registry compatibility"
     )
-)
+) {
+    /** Compatibility accessor for the existing SFZ renderer; never use for non-SFZ engines. */
+    val sfzPath: Path
+        get() = require(engine.type == InstrumentEngineType.SFZ) { "Instrument '$id' is not an SFZ instrument" }.let { enginePath }
+}
 
 class ValidatedInstrumentRegistry internal constructor(
     private val descriptors: Map<String, ValidatedInstrumentDescriptor>,
@@ -230,7 +257,9 @@ class ValidatedInstrumentRegistry internal constructor(
     /** Immutable validated descriptors for evidence export; callers never receive registry paths as outputs. */
     fun all(): List<ValidatedInstrumentDescriptor> = descriptors.values.sortedBy { it.id }
     fun availableFor(role: ArrangementRole): List<ValidatedInstrumentDescriptor> = all().filter { role in it.roles && it.licenseAdmission.admission == LicenseAdmission.ADMITTED }
-    fun automaticFor(role: ArrangementRole): List<ValidatedInstrumentDescriptor> = availableFor(role).filter { it.selectionMode == InstrumentSelectionMode.AUTOMATIC }
+    fun automaticFor(role: ArrangementRole): List<ValidatedInstrumentDescriptor> = availableFor(role).filter {
+        it.selectionMode == InstrumentSelectionMode.AUTOMATIC && it.productionApproved
+    }
     fun hasRoleCoverage(required: Set<ArrangementRole>): Boolean = required.all { role -> availableFor(role).isNotEmpty() }
 }
 
@@ -278,8 +307,12 @@ class InstrumentRegistryLoader(val libraryRoot: Path) {
             val regions = parseSfz(sfz, root, realRoot, name, setOf(registry.workingSampleRate))
             if (logical == LogicalInstrument.DRUMS) validateDrumMap(entry.noteMap, regions)
             logical.wireName to ValidatedInstrumentDescriptor(
-                id = logical.wireName, name = logical.wireName.replaceFirstChar(Char::uppercase), roles = setOf(LegacyLogicalInstrumentRoles.roleFor(logical.wireName)),
-                sfzPath = sfz, samplePaths = regions.map { it.sample }, license = license,
+                id = logical.wireName, name = logical.wireName.replaceFirstChar(Char::uppercase),
+                productionApproved = true, qualityTier = InstrumentQualityTier.PRODUCTION,
+                roles = setOf(LegacyLogicalInstrumentRoles.roleFor(logical.wireName)),
+                preferredRoles = setOf(LegacyLogicalInstrumentRoles.roleFor(logical.wireName)),
+                engine = InstrumentEngineDescriptor(InstrumentEngineType.SFZ, entry.path), enginePath = sfz,
+                samplePaths = regions.map { it.sample }, license = license,
                 licenseAdmission = license.admissionResult(),
                 verifiedCapabilities = regions.verifiedCapabilities(entry.noteMap.orEmpty(), logical == LogicalInstrument.DRUMS),
                 midiProgram = entry.midiProgram, midiChannelZeroBased = entry.midiChannel?.minus(1), noteMap = entry.noteMap ?: emptyMap(),
@@ -330,7 +363,7 @@ class InstrumentRegistryLoader(val libraryRoot: Path) {
     private fun validateV2Entry(root: Path, realRoot: Path, supportedSampleRates: Set<Int>, definition: InstrumentDefinition): ValidatedInstrumentDescriptor {
         fun unavailable(reason: String): ValidatedInstrumentDescriptor = ValidatedInstrumentDescriptor(
             id = definition.id.ifBlank { "invalid-entry" }, name = definition.name.ifBlank { "Unavailable instrument" }, roles = emptySet(),
-            sfzPath = root.resolve("instruments.json"), samplePaths = emptyList(),
+            engine = InstrumentEngineDescriptor(InstrumentEngineType.SFZ, "instruments.json"), enginePath = root.resolve("instruments.json"), samplePaths = emptyList(),
             license = SoundLibraryLicense("Unavailable", "Not available", "third-party", "unknown", commercialUse = false, attributionRequired = false, redistribution = "unknown"),
             licenseAdmission = LicenseAdmissionResult(LicenseAdmission.UNAVAILABLE, listOf(reason)),
             verifiedCapabilities = VerifiedInstrumentCapabilities(MidiPlayableRange(0, 0), 0, false, false, emptySet(), emptySet()),
@@ -340,7 +373,15 @@ class InstrumentRegistryLoader(val libraryRoot: Path) {
             require(STABLE_ID.matches(definition.id)) { "Instrument stable ID is invalid" }
             requireSafeMetadata(definition.name, "Instrument '${definition.id}' name")
             require(definition.roles.isNotEmpty()) { "Instrument '${definition.id}' requires at least one role" }
-            require(definition.engine.type == "sfz") { "Instrument '${definition.id}' uses unsupported engine '${definition.engine.type}'" }
+            require(definition.productionApproved.not() || definition.qualityTier == InstrumentQualityTier.PRODUCTION) {
+                "Production-approved instrument '${definition.id}' must have production quality"
+            }
+            require(definition.preferredRoles.all { it in definition.roles }) {
+                "Instrument '${definition.id}' preferred roles must be supported roles"
+            }
+            require(definition.styleAffinity.all(STABLE_ID::matches)) {
+                "Instrument '${definition.id}' style affinities must use stable IDs"
+            }
             require(definition.midiProgram == null || definition.midiProgram in 0..127) { "Instrument '${definition.id}' MIDI program must be 0..127" }
             require(definition.midiChannel == null || definition.midiChannel in 1..16) { "Instrument '${definition.id}' MIDI channel must be one-based 1..16" }
             validateAffinities(definition.profileAffinities, "profile")
@@ -349,15 +390,19 @@ class InstrumentRegistryLoader(val libraryRoot: Path) {
             validateProvenance(definition.library, definition.id)
             validateDeclaredCapabilities(definition.capabilities, definition.id)
             val normalizedTraits = normalizeTraits(definition)
-            val sfz = safeFile(root, root, realRoot, definition.engine.path, "Instrument '${definition.id}' SFZ")
-            require(sfz.fileName.toString().endsWith(".sfz", ignoreCase = true)) { "Instrument '${definition.id}' path must be an .sfz file" }
+            val enginePath = safeEngineAsset(root, root, realRoot, definition.engine.path, definition.engine.type, "Instrument '${definition.id}' engine")
+            require(enginePath.fileName.toString().endsWith(definition.engine.type.extension, ignoreCase = true)) {
+                "Instrument '${definition.id}' path must be a ${definition.engine.type.extension} file"
+            }
             requireSafeMetadata(definition.category, "Instrument '${definition.id}' category")
-            val regions = parseSfz(sfz, root, realRoot, definition.id, supportedSampleRates)
+            val regions = if (definition.engine.type == InstrumentEngineType.SFZ) {
+                parseSfz(enginePath, root, realRoot, definition.id, supportedSampleRates)
+            } else emptyList()
             val drums = ArrangementRole.DRUMS in definition.roles
             val noteMap = when {
                 !drums -> definition.capabilities.noteMap
                 definition.capabilities.noteMap.isNotEmpty() -> definition.capabilities.noteMap
-                else -> standardDrumNoteMap.takeIf { map -> map.values.all { note -> regions.any { note in it.lowKey..it.highKey } } }.orEmpty()
+                else -> standardDrumNoteMap.takeIf { map -> regions.isNotEmpty() && map.values.all { note -> regions.any { note in it.lowKey..it.highKey } } }.orEmpty()
             }
             if (drums) {
                 require(definition.midiChannel != null) { "Drum instrument '${definition.id}' requires a MIDI channel" }
@@ -365,10 +410,13 @@ class InstrumentRegistryLoader(val libraryRoot: Path) {
                     "Drum instrument '${definition.id}' requires verified kick, snare, closedHat, and openHat mappings"
                 }
             }
-            val verified = regions.verifiedCapabilities(noteMap, drums, definition.capabilities)
+            val verified = if (regions.isEmpty()) definition.capabilities.unverifiedCapabilities()
+            else regions.verifiedCapabilities(noteMap, drums, definition.capabilities)
             val license = definition.license.toLegacyLicense()
             ValidatedInstrumentDescriptor(
-                id = definition.id, name = definition.name, category = definition.category, selectionMode = definition.selectionMode, roles = definition.roles, sfzPath = sfz,
+                id = definition.id, name = definition.name, category = definition.category, selectionMode = definition.selectionMode,
+                productionApproved = definition.productionApproved, qualityTier = definition.qualityTier, styleAffinity = definition.styleAffinity.toSortedSet(),
+                roles = definition.roles, preferredRoles = definition.preferredRoles, engine = definition.engine, enginePath = enginePath,
                 samplePaths = regions.map { it.sample }.distinct(), license = license,
                 licenseAdmission = definition.license.admissionResult(), verifiedCapabilities = verified,
                 profileAffinities = definition.profileAffinities.toSortedMap(), moodAffinities = definition.moodAffinities.toSortedMap(),
@@ -416,6 +464,22 @@ class InstrumentRegistryLoader(val libraryRoot: Path) {
         value.polyphony?.let { require(it in 1..512) { "Instrument '$id' has invalid polyphony" } }
         require(value.noteMap.keys.all(STABLE_ID::matches) && value.noteMap.values.all { it in 0..127 }) { "Instrument '$id' has invalid note map" }
     }
+
+    /** SF2 and future plugin engines retain declared capability evidence until their renderer can verify it. */
+    private fun DeclaredInstrumentCapabilities.unverifiedCapabilities() = VerifiedInstrumentCapabilities(
+        playableRange = playableRange ?: MidiPlayableRange(0, 127), velocityLayers = velocityLayers ?: 0,
+        roundRobin = roundRobin ?: false, releaseSamples = releaseSamples ?: false, performance = performance,
+        declaredOnly = buildSet {
+            if (playableRange != null) add("playableRange")
+            if (velocityLayers != null) add("velocityLayers")
+            if (roundRobin != null) add("roundRobin")
+            if (releaseSamples != null) add("releaseSamples")
+            if (polyphony != null) add("polyphony")
+            if (articulations.isNotEmpty()) add("articulations")
+            if (noteMap.isNotEmpty()) add("noteMap")
+            if (performance.isNotEmpty()) add("performance")
+        }
+    )
 
     private fun validateMidi(entry: InstrumentRegistryEntry, name: String) {
         entry.midiProgram?.let { require(it in 0..127) { "Instrument '$name' MIDI program must be 0..127" } }
@@ -658,6 +722,18 @@ class InstrumentRegistryLoader(val libraryRoot: Path) {
         val resolved = base.resolve(relative).normalize()
         require(resolved.startsWith(libraryRoot)) { "$label path escapes the sound library: $reference" }
         require(Files.isRegularFile(resolved)) { "$label file does not exist: $reference" }
+        require(resolved.toRealPath().startsWith(realRoot)) { "$label path escapes the sound library through a symlink: $reference" }
+        return resolved
+    }
+
+    /** Engine bundles (VST3/Audio Unit) are directories; sampler assets remain regular files. */
+    private fun safeEngineAsset(base: Path, libraryRoot: Path, realRoot: Path, reference: String, type: InstrumentEngineType, label: String): Path {
+        val relative = try { Path.of(reference) } catch (_: Exception) { throw IllegalArgumentException("$label path is invalid: $reference") }
+        require(reference.isNotBlank() && !relative.isAbsolute && !reference.split('/', '\\').contains("..")) { "$label path must be relative and must not traverse: $reference" }
+        val resolved = base.resolve(relative).normalize()
+        require(resolved.startsWith(libraryRoot)) { "$label path escapes the sound library: $reference" }
+        val validType = if (type in setOf(InstrumentEngineType.SFZ, InstrumentEngineType.SF2)) Files.isRegularFile(resolved) else Files.isDirectory(resolved)
+        require(validType) { "$label ${if (type in setOf(InstrumentEngineType.SFZ, InstrumentEngineType.SF2)) "file" else "bundle"} does not exist: $reference" }
         require(resolved.toRealPath().startsWith(realRoot)) { "$label path escapes the sound library through a symlink: $reference" }
         return resolved
     }

@@ -11,7 +11,17 @@
       "name": "01- Bowed (velocity layer)",
       "category": "strings",
       "selectionMode": "automatic",
+      "productionApproved": true,
+      "qualityTier": "production",
+      "styleAffinity": [
+        "lofi",
+        "acoustic"
+      ],
       "roles": [
+        "counter-melody",
+        "texture"
+      ],
+      "preferredRoles": [
         "counter-melody",
         "texture"
       ],
@@ -40,10 +50,14 @@
       "name": "02- Bowed (mod wheel)",
       "category": "strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-bigcat-cello/Programs/02- Bowed (mod wheel).sfz"
@@ -69,10 +83,14 @@
       "name": "03- Plucked",
       "category": "strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-bigcat-cello/Programs/03- Plucked.sfz"
@@ -98,11 +116,15 @@
       "name": "emily_basic",
       "category": "guitar",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-emily-guitar/emily_basic.sfz"
@@ -128,11 +150,15 @@
       "name": "emily_chords",
       "category": "guitar",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-emily-guitar/emily_chords.sfz"
@@ -158,11 +184,15 @@
       "name": "emily_chords_wide",
       "category": "guitar",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-emily-guitar/emily_chords_wide.sfz"
@@ -188,11 +218,15 @@
       "name": "emily_clean",
       "category": "guitar",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-emily-guitar/emily_clean.sfz"
@@ -218,11 +252,15 @@
       "name": "emily_five_voice",
       "category": "guitar",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-emily-guitar/emily_five_voice.sfz"
@@ -248,11 +286,15 @@
       "name": "emily_three_voice",
       "category": "guitar",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-emily-guitar/emily_three_voice.sfz"
@@ -278,9 +320,13 @@
       "name": "fashionbass",
       "category": "bass",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "bass"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-fashionbass/fashionbass.sfz"
@@ -306,7 +352,16 @@
       "name": "fashionbass_clean",
       "category": "bass",
       "selectionMode": "automatic",
+      "productionApproved": true,
+      "qualityTier": "production",
+      "styleAffinity": [
+        "lofi",
+        "acoustic"
+      ],
       "roles": [
+        "bass"
+      ],
+      "preferredRoles": [
         "bass"
       ],
       "engine": {
@@ -334,9 +389,13 @@
       "name": "fashionbass_shifty",
       "category": "bass",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "bass"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-fashionbass/fashionbass_shifty.sfz"
@@ -362,9 +421,13 @@
       "name": "fashionbass_unison",
       "category": "bass",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "bass"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-fashionbass/fashionbass_unison.sfz"
@@ -390,9 +453,13 @@
       "name": "Hat",
       "category": "drum-kit",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "drums"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-gogodze-phu-vol-ii/Programs/Hat.sfz"
@@ -418,9 +485,13 @@
       "name": "Hat_b",
       "category": "drum-kit",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "drums"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-gogodze-phu-vol-ii/Programs/Hat_b.sfz"
@@ -446,9 +517,13 @@
       "name": "Kick",
       "category": "drum-kit",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "drums"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-gogodze-phu-vol-ii/Programs/Kick.sfz"
@@ -474,9 +549,13 @@
       "name": "Kick_b",
       "category": "drum-kit",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "drums"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-gogodze-phu-vol-ii/Programs/Kick_b.sfz"
@@ -502,7 +581,16 @@
       "name": "Kit",
       "category": "drum-kit",
       "selectionMode": "automatic",
+      "productionApproved": true,
+      "qualityTier": "production",
+      "styleAffinity": [
+        "lofi",
+        "acoustic"
+      ],
       "roles": [
+        "drums"
+      ],
+      "preferredRoles": [
         "drums"
       ],
       "engine": {
@@ -529,10 +617,14 @@
       "id": "karoryfer-gogodze-phu-vol-ii-programs-kit-b",
       "name": "Kit_b",
       "category": "drum-kit",
-      "selectionMode": "automatic",
+      "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "drums"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-gogodze-phu-vol-ii/Programs/Kit_b.sfz"
@@ -558,9 +650,13 @@
       "name": "Snare",
       "category": "drum-kit",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "drums"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-gogodze-phu-vol-ii/Programs/Snare.sfz"
@@ -586,9 +682,13 @@
       "name": "Snare_b",
       "category": "drum-kit",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "drums"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-gogodze-phu-vol-ii/Programs/Snare_b.sfz"
@@ -614,9 +714,13 @@
       "name": "Tom",
       "category": "drum-kit",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "drums"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-gogodze-phu-vol-ii/Programs/Tom.sfz"
@@ -642,9 +746,13 @@
       "name": "Tom_b",
       "category": "drum-kit",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "drums"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-gogodze-phu-vol-ii/Programs/Tom_b.sfz"
@@ -670,9 +778,13 @@
       "name": "combo_platter",
       "category": "bass",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "bass"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-pastabass/combo_platter.sfz"
@@ -698,9 +810,13 @@
       "name": "combo_platter_controls",
       "category": "bass",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "bass"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-pastabass/combo_platter_controls.sfz"
@@ -726,9 +842,13 @@
       "name": "combo_platter_enhanced",
       "category": "bass",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "bass"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-pastabass/combo_platter_enhanced.sfz"
@@ -754,9 +874,13 @@
       "name": "combo_platter_full",
       "category": "bass",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "bass"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-pastabass/combo_platter_full.sfz"
@@ -781,10 +905,14 @@
       "id": "karoryfer-pastabass-fetuccine",
       "name": "fetuccine",
       "category": "bass",
-      "selectionMode": "automatic",
+      "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "bass"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-pastabass/fetuccine.sfz"
@@ -809,10 +937,14 @@
       "id": "karoryfer-pastabass-fetuccine-controls",
       "name": "fetuccine_controls",
       "category": "bass",
-      "selectionMode": "automatic",
+      "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "bass"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-pastabass/fetuccine_controls.sfz"
@@ -838,9 +970,13 @@
       "name": "linguine",
       "category": "bass",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "bass"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-pastabass/linguine.sfz"
@@ -866,9 +1002,13 @@
       "name": "linguine_controls",
       "category": "bass",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "bass"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-pastabass/linguine_controls.sfz"
@@ -894,9 +1034,13 @@
       "name": "spaghetti",
       "category": "bass",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "bass"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-pastabass/spaghetti.sfz"
@@ -922,9 +1066,13 @@
       "name": "spaghetti_combo",
       "category": "bass",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "bass"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-pastabass/spaghetti_combo.sfz"
@@ -950,9 +1098,13 @@
       "name": "spaghetti_controls",
       "category": "bass",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "bass"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-pastabass/spaghetti_controls.sfz"
@@ -978,9 +1130,13 @@
       "name": "tagliatelle",
       "category": "bass",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "bass"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-pastabass/tagliatelle.sfz"
@@ -1006,9 +1162,13 @@
       "name": "tagliatelle_controls",
       "category": "bass",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "bass"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-pastabass/tagliatelle_controls.sfz"
@@ -1034,8 +1194,18 @@
       "name": "melotrail-main",
       "category": "guitar",
       "selectionMode": "automatic",
+      "productionApproved": true,
+      "qualityTier": "production",
+      "styleAffinity": [
+        "lofi",
+        "acoustic"
+      ],
       "roles": [
         "melody",
+        "harmony",
+        "texture"
+      ],
+      "preferredRoles": [
         "harmony",
         "texture"
       ],
@@ -1064,9 +1234,13 @@
       "name": "01-sneakybass_keyswitch",
       "category": "bass",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "bass"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-sneakybass/Programs/01-sneakybass_keyswitch.sfz"
@@ -1091,10 +1265,14 @@
       "id": "karoryfer-sneakybass-programs-02-sneakyba-3f9fd0",
       "name": "02-sneakybass_pluck",
       "category": "bass",
-      "selectionMode": "automatic",
+      "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "bass"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-sneakybass/Programs/02-sneakybass_pluck.sfz"
@@ -1120,9 +1298,13 @@
       "name": "03-sneakybass_ghost",
       "category": "bass",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "bass"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-sneakybass/Programs/03-sneakybass_ghost.sfz"
@@ -1148,9 +1330,13 @@
       "name": "04-sneakybass_mute",
       "category": "bass",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "bass"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-sneakybass/Programs/04-sneakybass_mute.sfz"
@@ -1176,9 +1362,13 @@
       "name": "05-sneakybass_fingering_noise",
       "category": "bass",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "bass"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-sneakybass/Programs/05-sneakybass_fingering_noise.sfz"
@@ -1204,9 +1394,13 @@
       "name": "06-sneakybass_release_noise",
       "category": "bass",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "bass"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/karoryfer-sneakybass/Programs/06-sneakybass_release_noise.sfz"
@@ -1232,10 +1426,14 @@
       "name": "Ocarina, Small - Sustain",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Ocarina, Small - Sustain.sfz"
@@ -1261,10 +1459,14 @@
       "name": "Baroque Tenor Recorder - SusVib",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Baroque Tenor Recorder - SusVib.sfz"
@@ -1290,10 +1492,14 @@
       "name": "Ocarina, Typical - Sus",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Ocarina, Typical - Sus.sfz"
@@ -1319,10 +1525,14 @@
       "name": "Baroque Soprano Recorder - Staccato",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Baroque Soprano Recorder - Staccato.sfz"
@@ -1348,10 +1558,14 @@
       "name": "Baroque Soprano Recorder - Keyswitch",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Baroque Soprano Recorder - Keyswitch.sfz"
@@ -1377,10 +1591,14 @@
       "name": "Ocarina, Small - Keyswitch",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Ocarina, Small - Keyswitch.sfz"
@@ -1406,10 +1624,14 @@
       "name": "Train Whistle, Toy",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Train Whistle, Toy.sfz"
@@ -1435,10 +1657,14 @@
       "name": "Baroque Bass Recorder - Keyswitch",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Baroque Bass Recorder - Keyswitch.sfz"
@@ -1464,10 +1690,14 @@
       "name": "Baroque Bass Recorder - SusVib",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Baroque Bass Recorder - SusVib.sfz"
@@ -1493,10 +1723,14 @@
       "name": "Pipe Organ - Loud",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Pipe Organ - Loud.sfz"
@@ -1522,10 +1756,14 @@
       "name": "Renaissance Organ - Keyswitch",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Renaissance Organ - Keyswitch.sfz"
@@ -1551,10 +1789,14 @@
       "name": "Pipe Organ - Keyswitch",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Pipe Organ - Keyswitch.sfz"
@@ -1580,10 +1822,14 @@
       "name": "Baroque Tenor Recorder - Sustain",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Baroque Tenor Recorder - Sustain.sfz"
@@ -1609,10 +1855,14 @@
       "name": "Baroque Alto Recorder - SusVib",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Baroque Alto Recorder - SusVib.sfz"
@@ -1638,10 +1888,14 @@
       "name": "Pipe Organ - Loud Pedal",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Pipe Organ - Loud Pedal.sfz"
@@ -1667,10 +1921,14 @@
       "name": "Baroque Soprano Recorder - Sustain",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Baroque Soprano Recorder - Sustain.sfz"
@@ -1696,10 +1954,14 @@
       "name": "Baroque Alto Recorder - Staccato",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Baroque Alto Recorder - Staccato.sfz"
@@ -1725,10 +1987,14 @@
       "name": "Baroque Bass Recorder - Staccato",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Baroque Bass Recorder - Staccato.sfz"
@@ -1754,10 +2020,14 @@
       "name": "Pipe Organ - Quiet Pedal",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Pipe Organ - Quiet Pedal.sfz"
@@ -1783,10 +2053,14 @@
       "name": "Ball Whistle",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Ball Whistle.sfz"
@@ -1812,10 +2086,14 @@
       "name": "Ocarina, Typical - SusVib",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Ocarina, Typical - SusVib.sfz"
@@ -1841,10 +2119,14 @@
       "name": "Ocarina, Small - Staccato",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Ocarina, Small - Staccato.sfz"
@@ -1870,10 +2152,14 @@
       "name": "Baroque Tenor Recorder - Keyswitch",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Baroque Tenor Recorder - Keyswitch.sfz"
@@ -1899,10 +2185,14 @@
       "name": "Baroque Alto Recorder - Sustain",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Baroque Alto Recorder - Sustain.sfz"
@@ -1928,10 +2218,14 @@
       "name": "Pipe Organ - Quiet",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Pipe Organ - Quiet.sfz"
@@ -1957,10 +2251,14 @@
       "name": "Baroque Bass Recorder - Sustain",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Baroque Bass Recorder - Sustain.sfz"
@@ -1986,10 +2284,14 @@
       "name": "Renaissance Organ - 4'",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Renaissance Organ - 4'.sfz"
@@ -2015,10 +2317,14 @@
       "name": "Ocarina, Typical - Keyswitch",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Ocarina, Typical - Keyswitch.sfz"
@@ -2044,10 +2350,14 @@
       "name": "Renaissance Organ - 8'",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Renaissance Organ - 8'.sfz"
@@ -2073,10 +2383,14 @@
       "name": "Renaissance Organ - 4'+8'",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Renaissance Organ - 4'+8'.sfz"
@@ -2102,10 +2416,14 @@
       "name": "Renaissance Organ - Full",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Renaissance Organ - Full.sfz"
@@ -2131,10 +2449,14 @@
       "name": "Baroque Tenor Recorder - Staccato",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Baroque Tenor Recorder - Staccato.sfz"
@@ -2160,10 +2482,14 @@
       "name": "Baroque Alto Recorder - Keyswitch",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Edge-blown Aerophones/Baroque Alto Recorder - Keyswitch.sfz"
@@ -2189,10 +2515,14 @@
       "name": "Harmonica-Hohner-Special20-F - Normal",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Free Aerophones/Harmonica-Hohner-Special20-F - Normal.sfz"
@@ -2218,10 +2548,14 @@
       "name": "Harmonica-Hohner-Super64 - Normal",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Free Aerophones/Harmonica-Hohner-Super64 - Normal.sfz"
@@ -2247,10 +2581,14 @@
       "name": "Harmonica-Hohner-Special20-C - Keyswitch",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Free Aerophones/Harmonica-Hohner-Special20-C - Keyswitch.sfz"
@@ -2276,10 +2614,14 @@
       "name": "Harmonica-Hohner-Special20-C - Normal",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Free Aerophones/Harmonica-Hohner-Special20-C - Normal.sfz"
@@ -2305,10 +2647,14 @@
       "name": "Harmonica-Hohner-Special20-F - Vib",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Free Aerophones/Harmonica-Hohner-Special20-F - Vib.sfz"
@@ -2334,10 +2680,14 @@
       "name": "Harmonica-Hohner-Super64 - Accented",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Free Aerophones/Harmonica-Hohner-Super64 - Accented.sfz"
@@ -2363,10 +2713,14 @@
       "name": "Harmonica-Hohner-Super64 - Vib",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Free Aerophones/Harmonica-Hohner-Super64 - Vib.sfz"
@@ -2392,10 +2746,14 @@
       "name": "Harmonica-Hohner-Special20-F - HandVib",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Free Aerophones/Harmonica-Hohner-Special20-F - HandVib.sfz"
@@ -2421,10 +2779,14 @@
       "name": "Harmonica-Hohner-Super64 - Keyswitch",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Free Aerophones/Harmonica-Hohner-Super64 - Keyswitch.sfz"
@@ -2450,10 +2812,14 @@
       "name": "Harmonica-Hohner-Special20-F - Stac",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Free Aerophones/Harmonica-Hohner-Special20-F - Stac.sfz"
@@ -2479,10 +2845,14 @@
       "name": "Siren",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Free Aerophones/Siren.sfz"
@@ -2508,10 +2878,14 @@
       "name": "Harmonica-Hohner-Special20-C - Soft",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Free Aerophones/Harmonica-Hohner-Special20-C - Soft.sfz"
@@ -2537,10 +2911,14 @@
       "name": "Harmonica-Hohner-Special20-F - Accented",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Free Aerophones/Harmonica-Hohner-Special20-F - Accented.sfz"
@@ -2566,10 +2944,14 @@
       "name": "Harmonica-Hohner-Special20-C - Vib",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Free Aerophones/Harmonica-Hohner-Special20-C - Vib.sfz"
@@ -2595,10 +2977,14 @@
       "name": "Harmonica-Hohner-Special20-F - Keyswitch",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Free Aerophones/Harmonica-Hohner-Special20-F - Keyswitch.sfz"
@@ -2624,10 +3010,14 @@
       "name": "Didgeridoo",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Lip Aerophones/Didgeridoo.sfz"
@@ -2653,10 +3043,14 @@
       "name": "Saxello - Staccato",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Reed Aerophones/Saxello - Staccato.sfz"
@@ -2682,10 +3076,14 @@
       "name": "Tenor Saxophone - Non-Vibrato",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Reed Aerophones/Tenor Saxophone - Non-Vibrato.sfz"
@@ -2711,10 +3109,14 @@
       "name": "Tenor Saxophone - Staccato",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Reed Aerophones/Tenor Saxophone - Staccato.sfz"
@@ -2740,10 +3142,14 @@
       "name": "Tenor Saxophone - Vibrato",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Reed Aerophones/Tenor Saxophone - Vibrato.sfz"
@@ -2769,10 +3175,14 @@
       "name": "Tenor Saxophone - Keyswitch",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Reed Aerophones/Tenor Saxophone - Keyswitch.sfz"
@@ -2798,10 +3208,14 @@
       "name": "Saxello - Vibrato",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Reed Aerophones/Saxello - Vibrato.sfz"
@@ -2827,10 +3241,14 @@
       "name": "Saxello - Keyswitch",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Reed Aerophones/Saxello - Keyswitch.sfz"
@@ -2856,10 +3274,14 @@
       "name": "Saxello - Non-Vibrato",
       "category": "winds",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Aerophones/Reed Aerophones/Saxello - Non-Vibrato.sfz"
@@ -2885,12 +3307,16 @@
       "name": "Folk Harp",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Composite Chordophones/Folk Harp.sfz"
@@ -2916,12 +3342,16 @@
       "name": "Concert Harp",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Composite Chordophones/Concert Harp.sfz"
@@ -2947,12 +3377,16 @@
       "name": "Strumstick",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Composite Chordophones/Strumstick.sfz"
@@ -2978,12 +3412,16 @@
       "name": "Dan Tranh - FX",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Dan Tranh - FX.sfz"
@@ -3009,12 +3447,16 @@
       "name": "Dan Tranh - Tremolo",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Dan Tranh - Tremolo.sfz"
@@ -3040,12 +3482,16 @@
       "name": "Psaltery, Bowed and Plucked - Pluck",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Psaltery, Bowed and Plucked - Pluck.sfz"
@@ -3071,12 +3517,16 @@
       "name": "Harpsichord, English - Normal",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Harpsichord, English - Normal.sfz"
@@ -3102,12 +3552,16 @@
       "name": "Upright Piano, Yamaha",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Upright Piano, Yamaha.sfz"
@@ -3133,12 +3587,16 @@
       "name": "Upright Piano, Knight",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Upright Piano, Knight.sfz"
@@ -3164,12 +3622,16 @@
       "name": "Psaltery, Bowed and Plucked - Spiccato",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Psaltery, Bowed and Plucked - Spiccato.sfz"
@@ -3194,13 +3656,17 @@
       "id": "versilian-vcsl-1-2-2-rc-chordophones-zith-54a37b",
       "name": "Grand Piano, Kawai - Legacy",
       "category": "keys-and-strings",
-      "selectionMode": "automatic",
+      "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Grand Piano, Kawai - Legacy.sfz"
@@ -3225,13 +3691,17 @@
       "id": "versilian-vcsl-1-2-2-rc-chordophones-zith-56c9bf",
       "name": "Grand Piano, Kawai",
       "category": "keys-and-strings",
-      "selectionMode": "automatic",
+      "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Grand Piano, Kawai.sfz"
@@ -3257,12 +3727,16 @@
       "name": "Psaltery, Bowed and Plucked - LongBow",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Psaltery, Bowed and Plucked - LongBow.sfz"
@@ -3288,12 +3762,16 @@
       "name": "Harpsichord, Unk",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Harpsichord, Unk.sfz"
@@ -3319,12 +3797,16 @@
       "name": "Harpsichord, English - Keyswitch",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Harpsichord, English - Keyswitch.sfz"
@@ -3350,12 +3832,16 @@
       "name": "Harpsichord, French",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Harpsichord, French.sfz"
@@ -3381,12 +3867,16 @@
       "name": "Psaltery, Bowed and Plucked - Keyswitch",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Psaltery, Bowed and Plucked - Keyswitch.sfz"
@@ -3412,12 +3902,16 @@
       "name": "Dan Tranh - Gliss",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Dan Tranh - Gliss.sfz"
@@ -3443,12 +3937,16 @@
       "name": "Dan Tranh - Keyswitch",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Dan Tranh - Keyswitch.sfz"
@@ -3474,12 +3972,16 @@
       "name": "Harpsichord, English - Lute",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Harpsichord, English - Lute.sfz"
@@ -3505,12 +4007,16 @@
       "name": "Harpsichord, Italian",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Harpsichord, Italian.sfz"
@@ -3536,12 +4042,16 @@
       "name": "Harpsichord, Flemish - 4'",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Harpsichord, Flemish - 4'.sfz"
@@ -3567,12 +4077,16 @@
       "name": "Dan Tranh - Normal",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Dan Tranh - Normal.sfz"
@@ -3598,12 +4112,16 @@
       "name": "Dan Tranh - Vibrato",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Dan Tranh - Vibrato.sfz"
@@ -3629,12 +4147,16 @@
       "name": "Harpsichord, Flemish - 8'",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Harpsichord, Flemish - 8'.sfz"
@@ -3660,12 +4182,16 @@
       "name": "Harpsichord, Flemish - Full",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Harpsichord, Flemish - Full.sfz"
@@ -3691,12 +4217,16 @@
       "name": "Harpsichord, Flemish - Keyswitch",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Harpsichord, Flemish - Keyswitch.sfz"
@@ -3722,12 +4252,16 @@
       "name": "Grand Piano, Steinway B",
       "category": "keys-and-strings",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Chordophones/Zithers/Grand Piano, Steinway B.sfz"
@@ -3753,11 +4287,15 @@
       "name": "TX81Z - Keyswitch",
       "category": "synth",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "harmony",
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Electrophones/TX81Z - Keyswitch.sfz"
@@ -3782,12 +4320,16 @@
       "id": "versilian-vcsl-1-2-2-rc-electrophones-tx8-6e7a28",
       "name": "TX81Z - Clavisynth",
       "category": "synth",
-      "selectionMode": "automatic",
+      "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "harmony",
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Electrophones/TX81Z - Clavisynth.sfz"
@@ -3813,11 +4355,15 @@
       "name": "TX81Z - FM Piano",
       "category": "synth",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "harmony",
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Electrophones/TX81Z - FM Piano.sfz"
@@ -3843,11 +4389,15 @@
       "name": "TX81Z - Piano 1",
       "category": "synth",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "harmony",
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Electrophones/TX81Z - Piano 1.sfz"
@@ -3873,10 +4423,14 @@
       "name": "Wine Glasses - Keyswitch",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Friction Idiophones/Wine Glasses - Keyswitch.sfz"
@@ -3902,10 +4456,14 @@
       "name": "Wine Glasses - Slow",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Friction Idiophones/Wine Glasses - Slow.sfz"
@@ -3931,10 +4489,14 @@
       "name": "Wine Glasses - Fast",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Friction Idiophones/Wine Glasses - Fast.sfz"
@@ -3960,10 +4522,14 @@
       "name": "Mbira Mavembe (Gandanga), Zimbabwe, Low G",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Plucked Idiophones/Mbira Mavembe (Gandanga), Zimbabwe, Low G.sfz"
@@ -3989,10 +4555,14 @@
       "name": "Kalimba, Kenya",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Plucked Idiophones/Kalimba, Kenya.sfz"
@@ -4018,10 +4588,14 @@
       "name": "Mbira dzaVadzimu Nyamaropa, Zimbabwe, Low B",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Plucked Idiophones/Mbira dzaVadzimu Nyamaropa, Zimbabwe, Low B.sfz"
@@ -4047,10 +4621,14 @@
       "name": "Nyunga Nyunga, Mozambique, Low F",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Plucked Idiophones/Nyunga Nyunga, Mozambique, Low F.sfz"
@@ -4076,10 +4654,14 @@
       "name": "Kalimba, Tanzania",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Plucked Idiophones/Kalimba, Tanzania.sfz"
@@ -4105,10 +4687,14 @@
       "name": "Slapstick",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Slapstick.sfz"
@@ -4134,10 +4720,14 @@
       "name": "Vibraphone - Bowed",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Vibraphone - Bowed.sfz"
@@ -4163,10 +4753,14 @@
       "name": "Clash Cymbals 1",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Clash Cymbals 1.sfz"
@@ -4192,10 +4786,14 @@
       "name": "Gong 1",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Gong 1.sfz"
@@ -4221,10 +4819,14 @@
       "name": "Balafon - Traditional Mallet",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Balafon - Traditional Mallet.sfz"
@@ -4250,10 +4852,14 @@
       "name": "Tambourine 5 - Legacy",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Tambourine 5 - Legacy.sfz"
@@ -4279,10 +4885,14 @@
       "name": "Suspended Cymbal 2",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Suspended Cymbal 2.sfz"
@@ -4308,10 +4918,14 @@
       "name": "Balafon - Soft Mallet",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Balafon - Soft Mallet.sfz"
@@ -4337,10 +4951,14 @@
       "name": "Tambourine 1",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Tambourine 1.sfz"
@@ -4366,10 +4984,14 @@
       "name": "Balafon - Hard Mallet",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Balafon - Hard Mallet.sfz"
@@ -4395,10 +5017,14 @@
       "name": "Claps",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Claps.sfz"
@@ -4424,10 +5050,14 @@
       "name": "Finger Cymbals",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Finger Cymbals.sfz"
@@ -4453,10 +5083,14 @@
       "name": "Tubular Bells 3 - Legacy",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Tubular Bells 3 - Legacy.sfz"
@@ -4482,10 +5116,14 @@
       "name": "Anvil",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Anvil.sfz"
@@ -4511,10 +5149,14 @@
       "name": "Bell Tree - Legacy",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Bell Tree - Legacy.sfz"
@@ -4540,10 +5182,14 @@
       "name": "Cowbells",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Cowbells.sfz"
@@ -4569,10 +5215,14 @@
       "name": "Gong 2",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Gong 2.sfz"
@@ -4598,10 +5248,14 @@
       "name": "Vibraphone - Soft Mallets",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Vibraphone - Soft Mallets.sfz"
@@ -4627,10 +5281,14 @@
       "name": "Guiro",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Guiro.sfz"
@@ -4656,10 +5314,14 @@
       "name": "Xylophone - Keyswitch",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Xylophone - Keyswitch.sfz"
@@ -4685,10 +5347,14 @@
       "name": "Hand Chimes",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Hand Chimes.sfz"
@@ -4714,10 +5380,14 @@
       "name": "Tubular Glockenspiel",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Tubular Glockenspiel.sfz"
@@ -4743,10 +5413,14 @@
       "name": "Claves",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Claves.sfz"
@@ -4772,10 +5446,14 @@
       "name": "Hand Bells, Nepalese",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Hand Bells, Nepalese.sfz"
@@ -4801,10 +5479,14 @@
       "name": "Vibraphone - Hard Mallets",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Vibraphone - Hard Mallets.sfz"
@@ -4830,10 +5512,14 @@
       "name": "Mark Trees",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Mark Trees.sfz"
@@ -4859,10 +5545,14 @@
       "name": "Balafon - Keyswitch",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Balafon - Keyswitch.sfz"
@@ -4888,10 +5578,14 @@
       "name": "Xylophone - Hard Mallets",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Xylophone - Hard Mallets.sfz"
@@ -4917,10 +5611,14 @@
       "name": "Flexatone",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Flexatone.sfz"
@@ -4946,10 +5644,14 @@
       "name": "Suspended Cymbal 1",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Suspended Cymbal 1.sfz"
@@ -4975,10 +5677,14 @@
       "name": "Guiro - Legacy",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Guiro - Legacy.sfz"
@@ -5004,10 +5710,14 @@
       "name": "Tubular Bells 2",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Tubular Bells 2.sfz"
@@ -5033,10 +5743,14 @@
       "name": "Vibraslap",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Vibraslap.sfz"
@@ -5062,10 +5776,14 @@
       "name": "Brake Drum",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Brake Drum.sfz"
@@ -5091,10 +5809,14 @@
       "name": "Agogo Bells",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Agogo Bells.sfz"
@@ -5120,10 +5842,14 @@
       "name": "Sleigh Bells",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Sleigh Bells.sfz"
@@ -5149,10 +5875,14 @@
       "name": "Cajon",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Cajon.sfz"
@@ -5178,10 +5908,14 @@
       "name": "Glockenspiel",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Glockenspiel.sfz"
@@ -5207,10 +5941,14 @@
       "name": "Shaker, Large",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Shaker, Large.sfz"
@@ -5236,10 +5974,14 @@
       "name": "Woodblock",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Woodblock.sfz"
@@ -5265,10 +6007,14 @@
       "name": "Cabasa",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Cabasa.sfz"
@@ -5294,10 +6040,14 @@
       "name": "Guiro - Keyswitch",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Guiro - Keyswitch.sfz"
@@ -5323,10 +6073,14 @@
       "name": "Slit Drum",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Slit Drum.sfz"
@@ -5352,10 +6106,14 @@
       "name": "Xylophone - Soft Mallets",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Xylophone - Soft Mallets.sfz"
@@ -5381,10 +6139,14 @@
       "name": "Tambourine 4 - Legacy",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Tambourine 4 - Legacy.sfz"
@@ -5410,10 +6172,14 @@
       "name": "Bell Tree - Stroke",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Bell Tree - Stroke.sfz"
@@ -5439,10 +6205,14 @@
       "name": "Shaker, Small",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Shaker, Small.sfz"
@@ -5468,10 +6238,14 @@
       "name": "Vibraphone - Keyswitch",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Vibraphone - Keyswitch.sfz"
@@ -5497,10 +6271,14 @@
       "name": "Ratchet",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Ratchet.sfz"
@@ -5526,10 +6304,14 @@
       "name": "Bell Tree - Individual",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Bell Tree - Individual.sfz"
@@ -5555,10 +6337,14 @@
       "name": "Shaker - Legacy",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Shaker - Legacy.sfz"
@@ -5584,10 +6370,14 @@
       "name": "Tambourine 2",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Tambourine 2.sfz"
@@ -5613,10 +6403,14 @@
       "name": "Hi-Hat Cymbal",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Hi-Hat Cymbal.sfz"
@@ -5642,10 +6436,14 @@
       "name": "Clash Cymbals 2",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Clash Cymbals 2.sfz"
@@ -5671,10 +6469,14 @@
       "name": "Tambourine 3 - Legacy",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Tambourine 3 - Legacy.sfz"
@@ -5700,10 +6502,14 @@
       "name": "Triangles",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Triangles.sfz"
@@ -5729,10 +6535,14 @@
       "name": "Tubular Bells 1",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Tubular Bells 1.sfz"
@@ -5758,10 +6568,14 @@
       "name": "Xylophone - Medium Mallets",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Xylophone - Medium Mallets.sfz"
@@ -5787,10 +6601,14 @@
       "name": "Bell Tree - Keyswitch",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Bell Tree - Keyswitch.sfz"
@@ -5816,10 +6634,14 @@
       "name": "Marimba",
       "category": "mallets-and-percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "counter-melody",
         "texture"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Idiophones/Struck Idiophones/Marimba.sfz"
@@ -5845,10 +6667,14 @@
       "name": "Ocean Drum",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Other Membranophones/Ocean Drum.sfz"
@@ -5874,10 +6700,14 @@
       "name": "Timpani 2 - All Samples",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Timpani 2 - All Samples.sfz"
@@ -5903,10 +6733,14 @@
       "name": "Legacy Snares - drum2",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Legacy Snares - drum2.sfz"
@@ -5932,10 +6766,14 @@
       "name": "Tom 2",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Tom 2.sfz"
@@ -5961,10 +6799,14 @@
       "name": "Timpani 1 - Keyswitch",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Timpani 1 - Keyswitch.sfz"
@@ -5990,10 +6832,14 @@
       "name": "Snare Drum, Modern 1",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Snare Drum, Modern 1.sfz"
@@ -6019,10 +6865,14 @@
       "name": "Legacy Snares - drum3_marching",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Legacy Snares - drum3_marching.sfz"
@@ -6048,10 +6898,14 @@
       "name": "Bass Drum 2",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Bass Drum 2.sfz"
@@ -6077,10 +6931,14 @@
       "name": "Darbuka",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Darbuka.sfz"
@@ -6106,10 +6964,14 @@
       "name": "Legacy Toms",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Legacy Toms.sfz"
@@ -6135,10 +6997,14 @@
       "name": "Frame Drum",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Frame Drum.sfz"
@@ -6164,10 +7030,14 @@
       "name": "Legacy Snares - Keyswitch",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Legacy Snares - Keyswitch.sfz"
@@ -6193,10 +7063,14 @@
       "name": "Bongos",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Bongos.sfz"
@@ -6222,10 +7096,14 @@
       "name": "Bass Drum 1",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Bass Drum 1.sfz"
@@ -6251,10 +7129,14 @@
       "name": "Timpani 2 - Keyswitch",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Timpani 2 - Keyswitch.sfz"
@@ -6280,10 +7162,14 @@
       "name": "Bass Drum 3 - Legacy",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Bass Drum 3 - Legacy.sfz"
@@ -6309,10 +7195,14 @@
       "name": "Snare Drum, Rope Tension",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Snare Drum, Rope Tension.sfz"
@@ -6338,10 +7228,14 @@
       "name": "Snare Drum, Modern 2",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Snare Drum, Modern 2.sfz"
@@ -6367,10 +7261,14 @@
       "name": "Timpani 2 - Scale",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Timpani 2 - Scale.sfz"
@@ -6396,10 +7294,14 @@
       "name": "Snare Drum, Modern 3",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Snare Drum, Modern 3.sfz"
@@ -6425,10 +7327,14 @@
       "name": "Conga",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Conga.sfz"
@@ -6454,10 +7360,14 @@
       "name": "Tom 1",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Tom 1.sfz"
@@ -6483,10 +7393,14 @@
       "name": "Legacy Snares - drum1",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Legacy Snares - drum1.sfz"
@@ -6512,10 +7426,14 @@
       "name": "Timpani 1 - Hit",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Timpani 1 - Hit.sfz"
@@ -6541,10 +7459,14 @@
       "name": "Legacy Snares - OldSnare",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Legacy Snares - OldSnare.sfz"
@@ -6570,10 +7492,14 @@
       "name": "Timpani 1 - Roll",
       "category": "percussion",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "texture",
         "ambience"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-1.2.2-rc/Membranophones/Struck Membranophones/Timpani 1 - Roll.sfz"
@@ -6598,8 +7524,19 @@
       "id": "versilian-vcsl-keys-grand-piano-k",
       "name": "Grand Piano, K",
       "category": "keys",
-      "selectionMode": "manual-only",
+      "selectionMode": "automatic",
+      "productionApproved": true,
+      "qualityTier": "production",
+      "styleAffinity": [
+        "lofi",
+        "acoustic"
+      ],
       "roles": [
+        "melody",
+        "harmony",
+        "counter-melody"
+      ],
+      "preferredRoles": [
         "melody",
         "harmony",
         "counter-melody"
@@ -6629,11 +7566,15 @@
       "name": "Grand Piano, K - Legacy",
       "category": "keys",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-keys/Grand Piano, K - Legacy.sfz"
@@ -6659,11 +7600,15 @@
       "name": "Grand Piano, S Model B 1895",
       "category": "keys",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-keys/Grand Piano, S Model B 1895.sfz"
@@ -6689,11 +7634,15 @@
       "name": "Harpsichord, English - Keyswitch",
       "category": "keys",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-keys/Harpsichord, English - Keyswitch.sfz"
@@ -6719,11 +7668,15 @@
       "name": "Harpsichord, English - Lute",
       "category": "keys",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-keys/Harpsichord, English - Lute.sfz"
@@ -6749,11 +7702,15 @@
       "name": "Harpsichord, English - Normal",
       "category": "keys",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-keys/Harpsichord, English - Normal.sfz"
@@ -6779,11 +7736,15 @@
       "name": "Harpsichord, Flemish - 4'",
       "category": "keys",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-keys/Harpsichord, Flemish - 4'.sfz"
@@ -6809,11 +7770,15 @@
       "name": "Harpsichord, Flemish - 8'",
       "category": "keys",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-keys/Harpsichord, Flemish - 8'.sfz"
@@ -6839,11 +7804,15 @@
       "name": "Harpsichord, Flemish - Full",
       "category": "keys",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-keys/Harpsichord, Flemish - Full.sfz"
@@ -6869,11 +7838,15 @@
       "name": "Harpsichord, Flemish - Keyswitch",
       "category": "keys",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-keys/Harpsichord, Flemish - Keyswitch.sfz"
@@ -6899,11 +7872,15 @@
       "name": "Harpsichord, French",
       "category": "keys",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-keys/Harpsichord, French.sfz"
@@ -6929,11 +7906,15 @@
       "name": "Harpsichord, Italian",
       "category": "keys",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-keys/Harpsichord, Italian.sfz"
@@ -6959,11 +7940,15 @@
       "name": "Harpsichord, Unk",
       "category": "keys",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-keys/Harpsichord, Unk.sfz"
@@ -6989,11 +7974,15 @@
       "name": "Upright Piano, Knight",
       "category": "keys",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-keys/Upright Piano, Knight.sfz"
@@ -7019,11 +8008,15 @@
       "name": "Upright Piano, Y",
       "category": "keys",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "melody",
         "harmony",
         "counter-melody"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-vcsl-keys/Upright Piano, Y.sfz"
@@ -7049,9 +8042,13 @@
       "name": "08-vintage-mic",
       "category": "drum-kit",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "drums"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-virtuosity-drums-0.925/Programs/08-vintage-mic.sfz"
@@ -7077,9 +8074,13 @@
       "name": "06-mid-mic",
       "category": "drum-kit",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "drums"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-virtuosity-drums-0.925/Programs/06-mid-mic.sfz"
@@ -7105,9 +8106,13 @@
       "name": "05-oh-mic",
       "category": "drum-kit",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "drums"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-virtuosity-drums-0.925/Programs/05-oh-mic.sfz"
@@ -7133,7 +8138,16 @@
       "name": "01-basic-kit",
       "category": "drum-kit",
       "selectionMode": "automatic",
+      "productionApproved": true,
+      "qualityTier": "production",
+      "styleAffinity": [
+        "lofi",
+        "acoustic"
+      ],
       "roles": [
+        "drums"
+      ],
+      "preferredRoles": [
         "drums"
       ],
       "engine": {
@@ -7161,9 +8175,13 @@
       "name": "07-room-mic",
       "category": "drum-kit",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "drums"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-virtuosity-drums-0.925/Programs/07-room-mic.sfz"
@@ -7189,9 +8207,13 @@
       "name": "04-snare-mic",
       "category": "drum-kit",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "drums"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-virtuosity-drums-0.925/Programs/04-snare-mic.sfz"
@@ -7216,10 +8238,14 @@
       "id": "versilian-virtuosity-drums-0-925-programs-d3a69d",
       "name": "02-full-kit",
       "category": "drum-kit",
-      "selectionMode": "automatic",
+      "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "drums"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-virtuosity-drums-0.925/Programs/02-full-kit.sfz"
@@ -7245,9 +8271,13 @@
       "name": "03-kick-mic",
       "category": "drum-kit",
       "selectionMode": "manual-only",
+      "productionApproved": false,
+      "qualityTier": "draft",
+      "styleAffinity": [],
       "roles": [
         "drums"
       ],
+      "preferredRoles": [],
       "engine": {
         "type": "sfz",
         "path": "libraries/versilian-virtuosity-drums-0.925/Programs/03-kick-mic.sfz"

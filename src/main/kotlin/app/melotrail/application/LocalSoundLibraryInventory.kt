@@ -1,6 +1,7 @@
 package app.melotrail.application
 
 import app.melotrail.arrangement.InstrumentRegistryLoader
+import app.melotrail.arrangement.InstrumentQualityTier
 import app.melotrail.arrangement.InstrumentSelectionMode
 import java.nio.file.Path
 import java.util.Locale
@@ -9,8 +10,8 @@ import java.util.Locale
  * UI-safe, read-only projection of the configured local sound library.
  *
  * Paths and registry documents remain inside the registry boundary.  A caller
- * receives an instrument only after its SFZ and every referenced sample have
- * passed the existing registry validation.
+ * receives an instrument only after its engine asset and any inspectable
+ * sample references have passed registry validation.
  */
 data class LocalSoundLibraryInventory(
     val state: LocalSoundLibraryInventoryState,
@@ -35,6 +36,10 @@ data class LocalSoundLibraryInstrument(
     val name: String,
     val category: String,
     val selectionMode: InstrumentSelectionMode = InstrumentSelectionMode.AUTOMATIC,
+    val productionApproved: Boolean = false,
+    val qualityTier: InstrumentQualityTier = InstrumentQualityTier.DRAFT,
+    val styleAffinity: Set<String> = emptySet(),
+    val preferredRoles: Set<String> = emptySet(),
     val sampleCount: Int,
     val licenseName: String,
     val license: String,
@@ -71,6 +76,10 @@ object RegistryLocalSoundLibraryInventoryReader : LocalSoundLibraryInventoryRead
                                 name = descriptor.name,
                                 category = descriptor.category,
                                 selectionMode = descriptor.selectionMode,
+                                productionApproved = descriptor.productionApproved,
+                                qualityTier = descriptor.qualityTier,
+                                styleAffinity = descriptor.styleAffinity,
+                                preferredRoles = descriptor.preferredRoles.map { it.name.lowercase().replace('_', '-') }.toSortedSet(),
                                 sampleCount = descriptor.samplePaths.size,
                                 licenseName = descriptor.license.displayName,
                                 license = descriptor.license.license,

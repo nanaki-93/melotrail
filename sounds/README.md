@@ -9,7 +9,7 @@ The samples and vendor source files remain local, are excluded from Git, and are
 
 ## Selection and rendering
 
-Every preset has a stable ID, musical roles, category, source-library provenance, and license metadata. A small curated automatic pool is used for default role resolution; the remaining presets are `manual-only` and become eligible when their stable ID is pinned in Arrange. The desktop Library page exposes all validated entries for browsing and filtering.
+Every preset has a stable ID, musical roles, category, source-library provenance, license metadata, and production metadata (`productionApproved`, `qualityTier`, `styleAffinity`, and `preferredRoles`). The six-entry auditioned production bank is the only default automatic pool; all other presets are `manual-only` and become eligible when their stable ID is pinned in Arrange. The desktop Library page exposes all validated entries for browsing and filtering.
 
 Arrangement approval records stable IDs and provenance for every structure occurrence. Rendering revalidates the registry and uses those approved assignments, never a filesystem path from project data.
 

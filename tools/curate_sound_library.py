@@ -28,6 +28,17 @@ PACKS = {
 
 LEGACY_STARTER_DIRECTORIES = ("bass", "drums", "pad", "piano", "strings")
 
+# Small, deliberately named auditioned default bank. Everything else remains
+# browseable/manual-only until it is explicitly auditioned and added here.
+AUDITIONED_PRODUCTION_BANK = {
+    ("Karoryfer_Bigcat_cello", "Programs/01- Bowed (velocity layer).sfz"): (("lofi", "acoustic"), ("counter-melody", "texture")),
+    ("Fashionbass", "fashionbass_clean.sfz"): (("lofi", "acoustic"), ("bass",)),
+    ("Gogodze_Phu_vol_II", "Programs/Kit.sfz"): (("lofi", "acoustic"), ("drums",)),
+    ("Shinyguitar", "Programs/melotrail-main.sfz"): (("lofi", "acoustic"), ("harmony", "texture")),
+    ("VCSL_Keys", "Grand Piano, K.sfz"): (("lofi", "acoustic"), ("melody", "harmony", "counter-melody")),
+    ("Virtuosity_Drums_v0.925", "Programs/01-basic-kit.sfz"): (("lofi", "acoustic"), ("drums",)),
+}
+
 
 def entrypoints(pack: str, directory: Path) -> list[Path]:
     sfz = lambda path: sorted(path.glob("*.sfz"))
@@ -54,26 +65,26 @@ def stable_id(pack_id: str, path: Path) -> str:
     return value if len(value) <= 48 else value[:41].rstrip("-") + "-" + hashlib.sha1(value.encode()).hexdigest()[:6]
 
 
-def metadata(pack: str, path: Path) -> tuple[str, list[str], str]:
+def metadata(pack: str, path: Path) -> tuple[str, list[str]]:
     name = path.stem.lower()
     if pack in {"Fashionbass", "Pastabass", "Sneakybass"}:
-        return "bass", ["bass"], "automatic" if any(x in name for x in ("clean", "fetuccine", "pluck")) else "manual-only"
+        return "bass", ["bass"]
     if pack in {"Gogodze_Phu_vol_II", "Virtuosity_Drums_v0.925"}:
-        return "drum-kit", ["drums"], "automatic" if "kit" in name else "manual-only"
+        return "drum-kit", ["drums"]
     if pack in {"Emilyguitar", "Shinyguitar"}:
-        return "guitar", ["melody", "harmony", "texture"], "automatic" if name in {"emily-clean", "main", "melotrail-main"} else "manual-only"
+        return "guitar", ["melody", "harmony", "texture"]
     if pack == "Karoryfer_Bigcat_cello":
-        return "strings", ["counter-melody", "texture"], "automatic" if name.startswith("01-") else "manual-only"
+        return "strings", ["counter-melody", "texture"]
     if pack == "VCSL_Keys":
-        return "keys", ["melody", "harmony", "counter-melody"], "automatic" if "grand-piano-k" in name else "manual-only"
+        return "keys", ["melody", "harmony", "counter-melody"]
     if pack == "VCSL-1.2.2-RC":
         top = path.parts[0] if path.parts else ""
-        if top == "Aerophones": return "winds", ["melody", "counter-melody"], "manual-only"
-        if top == "Chordophones": return "keys-and-strings", ["melody", "harmony", "counter-melody", "texture"], "automatic" if "grand piano, kawai" in name else "manual-only"
-        if top == "Electrophones": return "synth", ["harmony", "texture", "ambience"], "automatic" if "clavisynth" in name else "manual-only"
-        if top == "Idiophones": return "mallets-and-percussion", ["counter-melody", "texture"], "manual-only"
-        return "percussion", ["texture", "ambience"], "manual-only"
-    return "instrument", ["texture"], "manual-only"
+        if top == "Aerophones": return "winds", ["melody", "counter-melody"]
+        if top == "Chordophones": return "keys-and-strings", ["melody", "harmony", "counter-melody", "texture"]
+        if top == "Electrophones": return "synth", ["harmony", "texture", "ambience"]
+        if top == "Idiophones": return "mallets-and-percussion", ["counter-melody", "texture"]
+        return "percussion", ["texture", "ambience"]
+    return "instrument", ["texture"]
 
 
 def catalog(root: Path) -> dict:
@@ -85,13 +96,21 @@ def catalog(root: Path) -> dict:
             if not program.is_file():
                 raise FileNotFoundError(f"Missing catalog program: {program}")
             relative = program.relative_to(root).as_posix()
-            category, roles, selection = metadata(source_name, program.relative_to(directory))
+            relative_program = program.relative_to(directory).as_posix()
+            category, roles = metadata(source_name, program.relative_to(directory))
+            production = AUDITIONED_PRODUCTION_BANK.get((source_name, relative_program))
+            styles, preferred_roles = production if production else ((), ())
+            production_approved = production is not None
             instruments.append({
                 "id": stable_id(library_id, program.relative_to(directory)),
                 "name": program.stem,
                 "category": category,
-                "selectionMode": selection,
+                "selectionMode": "automatic" if production_approved else "manual-only",
+                "productionApproved": production_approved,
+                "qualityTier": "production" if production_approved else "draft",
+                "styleAffinity": list(styles),
                 "roles": roles,
+                "preferredRoles": list(preferred_roles),
                 "engine": {"type": "sfz", "path": relative},
                 "license": {
                     "id": "CC0-1.0", "commercialUse": True, "attributionRequired": False,

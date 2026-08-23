@@ -57,6 +57,11 @@ class StemRenderingMixer(
             }
         }
         val bindings = approvedBindings(project, active, registry)
+        bindings.values.forEach { binding ->
+            require(binding.manifest.engineType in renderer.supportedEngineTypes) {
+                "The configured renderer does not support ${binding.manifest.engineType.name.lowercase().replace('_', '-')} instrument '${binding.stableInstrumentId}'"
+            }
+        }
 
         val cohesiveRoles = project.workflow.cohesion?.roles.orEmpty().takeIf { cohesiveOverlay }.orEmpty()
         val requiredInputs = active.filter { it != LogicalInstrument.PIANO }.associateWith { instrument ->
@@ -343,10 +348,11 @@ class StemRenderingMixer(
         require(legacyAlias || descriptor.licenseAdmission.admission == LicenseAdmission.ADMITTED) {
             "Instrument '${descriptor.id}' is unavailable: ${descriptor.licenseAdmission.reasons.joinToString("; ")}. Restore its verified assets or choose an approved replacement."
         }
-        val assets = (listOf("sfz" to descriptor.sfzPath) + descriptor.samplePaths.distinct().map { "sample" to it })
+        val engineKind = descriptor.engine.type.name.lowercase().replace('_', '-')
+        val assets = (listOf(engineKind to descriptor.enginePath) + descriptor.samplePaths.distinct().map { "sample" to it })
             .map { (kind, path) ->
-                require(Files.isRegularFile(path)) { "Approved instrument '${descriptor.id}' has a missing $kind asset. Restore the approved library or choose and approve a replacement." }
-                RenderAssetSnapshot(kind, digest(Files.readAllBytes(path)))
+                require(Files.isRegularFile(path) || Files.isDirectory(path)) { "Approved instrument '${descriptor.id}' has a missing $kind asset. Restore the approved library or choose and approve a replacement." }
+                RenderAssetSnapshot(kind, digestEngineAsset(path))
             }
             .sortedWith(compareBy(RenderAssetSnapshot::kind, RenderAssetSnapshot::sha256))
         return RenderInstrumentBinding(
@@ -361,6 +367,11 @@ class StemRenderingMixer(
                 decisionSha256 = decisions.sorted(),
                 legacyAlias = legacyAlias,
                 assets = assets,
+                engineType = descriptor.engine.type,
+                productionApproved = descriptor.productionApproved,
+                qualityTier = descriptor.qualityTier,
+                styleAffinity = descriptor.styleAffinity.sorted(),
+                preferredRoles = descriptor.preferredRoles.sortedBy { it.name },
                 verifiedCapabilities = RenderCapabilitySnapshot(
                     playableRangeLow = descriptor.verifiedCapabilities.playableRange.low,
                     playableRangeHigh = descriptor.verifiedCapabilities.playableRange.high,
@@ -446,6 +457,16 @@ class StemRenderingMixer(
         catch (_: AtomicMoveNotSupportedException) { Files.move(source, target, StandardCopyOption.REPLACE_EXISTING) }
     }
     private fun digest(bytes: ByteArray): String = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+    /** A plugin bundle is immutable render evidence through a deterministic hash of every contained file. */
+    private fun digestEngineAsset(path: Path): String = if (Files.isRegularFile(path)) digest(Files.readAllBytes(path)) else {
+        val root = path.toRealPath()
+        val entries = Files.walk(root).use { files -> files.filter(Files::isRegularFile).sorted().map { file ->
+            val real = file.toRealPath()
+            require(real.startsWith(root)) { "Instrument bundle contains a symlink outside its bundle: $file" }
+            root.relativize(real).toString().replace('\\', '/') + ':' + digest(Files.readAllBytes(real))
+        }.toList() }
+        digest(entries.joinToString("|").toByteArray(StandardCharsets.UTF_8))
+    }
     private fun isNoteOff(message: MidiMessage): Boolean = (message as? ShortMessage)?.let { it.command == ShortMessage.NOTE_OFF || (it.command == ShortMessage.NOTE_ON && it.data2 == 0) } == true
     private fun isTimelineMeta(event: MidiEvent): Boolean = (event.message as? MetaMessage)?.type in setOf(0x2F, 0x51, 0x58)
     private fun MidiMessage.copy(): MidiMessage = clone() as MidiMessage
@@ -549,7 +570,7 @@ private data class Timeline(val ppq: Int, val segments: List<TimelineSegment>) {
 @Serializable data class StemArtifact(val name: String, val path: String, val frames: Long, val fingerprint: String, val stableInstrumentId: String = "")
 @Serializable data class RenderAssetSnapshot(val kind: String, val sha256: String) {
     init {
-        require(kind in setOf("sfz", "sample") && RENDER_SHA256.matches(sha256)) { "Render asset snapshot is invalid" }
+        require(kind in setOf("sfz", "sf2", "vst3", "audio-unit", "sample") && RENDER_SHA256.matches(sha256)) { "Render asset snapshot is invalid" }
     }
 }
 @Serializable data class RenderCapabilitySnapshot(
@@ -591,6 +612,11 @@ private data class Timeline(val ppq: Int, val segments: List<TimelineSegment>) {
     val decisionSha256: List<String>,
     val legacyAlias: Boolean,
     val assets: List<RenderAssetSnapshot>,
+    val engineType: InstrumentEngineType = InstrumentEngineType.SFZ,
+    val productionApproved: Boolean = false,
+    val qualityTier: InstrumentQualityTier = InstrumentQualityTier.DRAFT,
+    val styleAffinity: List<String> = emptyList(),
+    val preferredRoles: List<ArrangementRole> = emptyList(),
     val verifiedCapabilities: RenderCapabilitySnapshot,
     val license: RenderLicenseSnapshot,
     val sourceLibrary: SourceLibraryProvenance
@@ -605,10 +631,17 @@ private data class Timeline(val ppq: Int, val segments: List<TimelineSegment>) {
         require(assets.isNotEmpty() && assets == assets.sortedWith(compareBy(RenderAssetSnapshot::kind, RenderAssetSnapshot::sha256))) {
             "Render instrument assets are invalid"
         }
+        require(!productionApproved || qualityTier == InstrumentQualityTier.PRODUCTION) { "Production instrument snapshot has invalid quality" }
+        require(styleAffinity == styleAffinity.sorted() && styleAffinity.distinct().size == styleAffinity.size && styleAffinity.all(RENDER_STABLE_ID::matches)) {
+            "Render instrument style affinities are invalid"
+        }
+        require(preferredRoles == preferredRoles.sortedBy { it.name }.distinct()) {
+            "Render instrument preferred roles are invalid"
+        }
     }
 }
 @Serializable data class StemRenderReport(
-    val version: Int = 2, val inputFingerprint: String, val timelineFrames: Long, val sampleRate: Int, val channels: Int,
+    val version: Int = 3, val inputFingerprint: String, val timelineFrames: Long, val sampleRate: Int, val channels: Int,
     val stems: List<StemArtifact>, val dryMix: String, val dryMixFingerprint: String, val predictedPeak: Float, val appliedGain: Float, val appliedGainDb: Double, val sourceHashes: Map<String, String>,
     /** Exact approved Cohesion decision hashes consumed by this render; empty for legacy arrangements. */
     val cohesionBoundaryHashes: Map<String, String> = emptyMap(),
