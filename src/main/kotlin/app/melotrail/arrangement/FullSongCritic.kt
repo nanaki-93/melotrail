@@ -13,7 +13,11 @@ import javax.sound.midi.ShortMessage
 import kotlin.math.abs
 
 /** Post-Cohesion, code-owned critic. This is distinct from [ArrangementCritic], which reviews plans before MIDI exists. */
-@Serializable enum class FullSongIssueCategory { INVARIANT, HARMONIC_CLASH, VOICE_COLLISION, BASS_LEAP, DENSITY_MISMATCH, CONTRAST_DISCONTINUITY, TRANSITION_ABRUPTNESS }
+@Serializable enum class FullSongIssueCategory {
+    INVARIANT, HARMONIC_CLASH, VOICE_COLLISION, BASS_LEAP, DENSITY_MISMATCH,
+    CONTRAST_DISCONTINUITY, TRANSITION_ABRUPTNESS, GROOVE_INCOHERENCE,
+    BASS_MELODY_DEPENDENCE, MASKING, REPEATED_SECTION_STAGNATION, RECOGNIZABILITY_REGRESSION
+}
 @Serializable enum class FullSongIssueSeverity { BLOCKING, ACTIONABLE }
 @Serializable enum class FullSongCorrectionFamily { CHORD_REVOICING, BASS_LEAP_SIMPLIFICATION, DENSITY_REDUCTION, COLLISION_REMOVAL, LOCAL_EXPRESSION_ADJUSTMENT, CHORD_CLASH_CORRECTION, TRANSITION_NOTE_ADJUSTMENT }
 
@@ -51,6 +55,15 @@ import kotlin.math.abs
     init { require(name.matches(Regex("[a-zA-Z][A-Za-z0-9_-]{0,63}")) && value.isFinite()) }
 }
 
+/** Optional producer-facing observations; deterministic metrics and issues remain the acceptance authority. */
+@Serializable data class FullSongCriticAdvice(val modelIdentity: String, val observations: List<String>) {
+    init {
+        require(modelIdentity.matches(Regex("[A-Za-z0-9._:-]{1,120}")) && observations.size in 1..8 &&
+            observations == observations.sorted() && observations.distinct().size == observations.size &&
+            observations.all { it.matches(Regex("[A-Za-z0-9 ,.:';!?()/-]{1,240}")) }) { "Critic advice is invalid" }
+    }
+}
+
 @Serializable data class FullSongCriticReport(
     val schemaVersion: Int = SCHEMA_VERSION,
     val inputSha256: String,
@@ -59,13 +72,14 @@ import kotlin.math.abs
     val aggregateMetrics: List<FullSongAggregateMetric>,
     val issues: List<FullSongIssue>,
     val warnings: List<String>,
+    val advice: FullSongCriticAdvice? = null,
     val reportSha256: String
 ) {
     init {
         require(schemaVersion == SCHEMA_VERSION && HASH.matches(inputSha256) && HASH.matches(contextSha256) && processorIdentity == PROCESSOR_IDENTITY && HASH.matches(reportSha256)) { "Critic report identity is invalid" }
         require(aggregateMetrics == aggregateMetrics.sortedBy(FullSongAggregateMetric::name) && aggregateMetrics.map(FullSongAggregateMetric::name).distinct().size == aggregateMetrics.size &&
             issues == issues.sortedWith(ISSUE_ORDER) && issues.size <= MAX_ISSUES && warnings == warnings.sorted() && warnings.size <= 1) { "Critic report is not canonical" }
-        require(reportSha256 == hash(json.encodeToString(ReportHashPayload(schemaVersion, inputSha256, contextSha256, processorIdentity, aggregateMetrics, issues, warnings)))) { "Critic report hash does not match its evidence" }
+        require(reportSha256 == hash(json.encodeToString(ReportHashPayload(schemaVersion, inputSha256, contextSha256, processorIdentity, aggregateMetrics, issues, warnings, advice)))) { "Critic report hash does not match its evidence" }
     }
     companion object {
         const val SCHEMA_VERSION = 1
@@ -73,16 +87,19 @@ import kotlin.math.abs
         const val MAX_ISSUES = 64
         private val HASH = Regex("[0-9a-f]{64}")
         internal val ISSUE_ORDER = compareBy<FullSongIssue> { it.severity.ordinal }.thenBy { it.window.startTick }.thenBy { it.targetRole }.thenBy { it.category.ordinal }.thenBy { it.id }
-        fun create(inputHash: String, contextHash: String, metrics: List<FullSongAggregateMetric>, issues: List<FullSongIssue>, warnings: List<String>): FullSongCriticReport {
+        fun create(inputHash: String, contextHash: String, metrics: List<FullSongAggregateMetric>, issues: List<FullSongIssue>, warnings: List<String>, advice: FullSongCriticAdvice? = null): FullSongCriticReport {
             val canonicalMetrics = metrics.sortedBy(FullSongAggregateMetric::name); val canonicalIssues = issues.sortedWith(ISSUE_ORDER); val canonicalWarnings = warnings.sorted()
-            val hash = hash(json.encodeToString(ReportHashPayload(SCHEMA_VERSION, inputHash, contextHash, PROCESSOR_IDENTITY, canonicalMetrics, canonicalIssues, canonicalWarnings)))
-            return FullSongCriticReport(inputSha256 = inputHash, contextSha256 = contextHash, aggregateMetrics = canonicalMetrics, issues = canonicalIssues, warnings = canonicalWarnings, reportSha256 = hash)
+            val hash = hash(json.encodeToString(ReportHashPayload(SCHEMA_VERSION, inputHash, contextHash, PROCESSOR_IDENTITY, canonicalMetrics, canonicalIssues, canonicalWarnings, advice)))
+            return FullSongCriticReport(inputSha256 = inputHash, contextSha256 = contextHash, aggregateMetrics = canonicalMetrics, issues = canonicalIssues, warnings = canonicalWarnings, advice = advice, reportSha256 = hash)
         }
-        @Serializable private data class ReportHashPayload(val schemaVersion: Int, val inputSha256: String, val contextSha256: String, val processorIdentity: String, val aggregateMetrics: List<FullSongAggregateMetric>, val issues: List<FullSongIssue>, val warnings: List<String>)
+        @Serializable private data class ReportHashPayload(val schemaVersion: Int, val inputSha256: String, val contextSha256: String, val processorIdentity: String, val aggregateMetrics: List<FullSongAggregateMetric>, val issues: List<FullSongIssue>, val warnings: List<String>, val advice: FullSongCriticAdvice?)
         private val json = Json { encodeDefaults = true; explicitNulls = false }
         private fun hash(value: String) = sha256(value.toByteArray())
     }
 }
+
+/** An optional local model can summarize deterministic evidence but cannot create, suppress, or rank issues. */
+fun interface FullSongCriticAdvisor { fun advise(report: FullSongCriticReport): FullSongCriticAdvice }
 
 /** A path is deliberately in-memory only; persisted reports retain the validated relative reference and hash instead. */
 data class FullSongCriticMidiArtifact(val role: String, val occurrenceId: String? = null, val path: Path, val reference: WorkflowArtifactReference, val offsetTicks: Long = 0) {
@@ -125,18 +142,38 @@ class DeterministicFullSongCritic {
         raw += density(notes, input, beat)
         raw += contrast(notes, input, beat)
         raw += transitions(notes, input, beat)
+        raw += groove(notes, input, beat)
+        raw += bassMelodyIndependence(notes, authority, beat)
+        raw += masking(notes, authority, beat)
+        raw += repeatedSectionEvolution(notes, authority, beat)
         val consolidated = consolidate(raw).sortedWith(FullSongCriticReport.ISSUE_ORDER)
         val kept = consolidated.take(FullSongCriticReport.MAX_ISSUES)
         val warnings = if (consolidated.size > kept.size) listOf("issue-truncated-${consolidated.size - kept.size}") else emptyList()
         return FullSongCriticReport.create(input.inputSha256, authority.contextSha256,
-            listOf(FullSongAggregateMetric("noteCount", notes.size.toDouble()), FullSongAggregateMetric("issueCount", kept.size.toDouble())).sortedBy(FullSongAggregateMetric::name), kept, warnings)
+            listOf(
+                FullSongAggregateMetric("actionableIssueCount", kept.count { it.severity == FullSongIssueSeverity.ACTIONABLE }.toDouble()),
+                FullSongAggregateMetric("blockingIssueCount", kept.count { it.severity == FullSongIssueSeverity.BLOCKING }.toDouble()),
+                FullSongAggregateMetric("criticalIssueCount", kept.count(::isCritical).toDouble()),
+                FullSongAggregateMetric("issueCount", kept.size.toDouble()),
+                FullSongAggregateMetric("noteCount", notes.size.toDouble()),
+                FullSongAggregateMetric("recognizabilityIssueCount", kept.count { it.category == FullSongIssueCategory.RECOGNIZABILITY_REGRESSION }.toDouble())
+            ), kept, warnings)
     }
 
     private fun invariantIssues(input: FullSongCriticInput, notes: List<Note>, beat: Long): List<FullSongIssue> {
         val issues = mutableListOf<FullSongIssue>(); val barTicks = beat * input.authority.meter.numerator
         input.roleReports.filterNot(RoleValidationReport::passed).forEach { report -> issues += issue(FullSongIssueCategory.INVARIANT, FullSongIssueSeverity.BLOCKING, report.role, null, 0, beat, "role-invariant-failed", listOf(metric("violationCount", report.violations.size)), emptyList(), emptyList(), barTicks) }
         input.melodyIdentity?.let { identity ->
-            if (identity.sourceSha256 !in input.cohesionOccurrences.map { it.reference.sha256 }) issues += issue(FullSongIssueCategory.INVARIANT, FullSongIssueSeverity.BLOCKING, "piano", null, 0, beat, "melody-identity-source-mismatch", emptyList(), emptyList(), emptyList(), barTicks)
+            input.cohesionOccurrences.firstOrNull()?.let { occurrence ->
+                val offset = occurrence.offsetTicks
+                val anchors = identity.anchorIds.map { identity.note(it) }
+                val current = notes.filter { it.role == "piano" && it.occurrenceId == occurrence.occurrenceId }
+                if (anchors.any { anchor -> current.none { it.pitch == anchor.pitch && it.start == anchor.originalStartTick + offset && it.end == anchor.originalEndTick + offset } }) {
+                    issues += issue(FullSongIssueCategory.RECOGNIZABILITY_REGRESSION, FullSongIssueSeverity.BLOCKING, "piano", occurrence.occurrenceId,
+                        offset, offset + beat, "melody-anchor-mismatch", listOf(metric("missingAnchorCount", anchors.count { anchor -> current.none { it.pitch == anchor.pitch && it.start == anchor.originalStartTick + offset && it.end == anchor.originalEndTick + offset } })),
+                        listOf(metric("requiredAnchorCount", anchors.size)), emptyList(), barTicks)
+                }
+            }
         }
         notes.filter { it.end <= it.start || it.velocity !in 1..127 }.forEach { note -> issues += issue(FullSongIssueCategory.INVARIANT, FullSongIssueSeverity.BLOCKING, note.role, note.occurrenceId, note.start, maxOf(note.end, note.start + 1), "midi-invariant-failed", emptyList(), emptyList(), emptyList(), barTicks) }
         return issues
@@ -183,6 +220,48 @@ class DeterministicFullSongCritic {
         buildList { if (silence > beat) add(issue(FullSongIssueCategory.TRANSITION_ABRUPTNESS, FullSongIssueSeverity.ACTIONABLE, "ensemble", right.occurrenceId, before, after, "unplanned-boundary-silence", listOf(metric("silenceTicks", silence.toDouble())), listOf(metric("maximumSilenceTicks", beat.toDouble())), listOf(FullSongCorrectionFamily.TRANSITION_NOTE_ADJUSTMENT), beat * input.authority.meter.numerator)); if (onset > median * 2) add(issue(FullSongIssueCategory.TRANSITION_ABRUPTNESS, FullSongIssueSeverity.ACTIONABLE, "ensemble", right.occurrenceId, boundary, boundary + beat, "boundary-onset-spike", listOf(metric("onsets", onset.toDouble())), listOf(metric("maximumOnsets", median * 2)), listOf(FullSongCorrectionFamily.TRANSITION_NOTE_ADJUSTMENT, FullSongCorrectionFamily.DENSITY_REDUCTION), beat * input.authority.meter.numerator)) }
     }
 
+    /** Flags a large rhythmic phase shift between adjacent populated occurrences. */
+    private fun groove(notes: List<Note>, input: FullSongCriticInput, beat: Long): List<FullSongIssue> = input.authority.occurrences.zipWithNext().mapNotNull { (left, right) ->
+        fun phase(occurrence: app.melotrail.application.MusicalOccurrence): Double? = notes.filter { it.role in setOf("drums", "bass") && it.start in occurrence.startTick until occurrence.endTick }
+            .map { (it.start - occurrence.startTick).mod(beat).toDouble() }.takeIf { it.size >= 3 }?.average()
+        val leftPhase = phase(left) ?: return@mapNotNull null; val rightPhase = phase(right) ?: return@mapNotNull null
+        if (abs(leftPhase - rightPhase) <= beat / 4.0) null else issue(FullSongIssueCategory.GROOVE_INCOHERENCE, FullSongIssueSeverity.ACTIONABLE, "ensemble", right.occurrenceId,
+            left.endTick - beat, right.startTick + beat, "rhythmic-phase-discontinuity", listOf(metric("phaseDeltaTicks", abs(leftPhase - rightPhase))),
+            listOf(metric("maximumPhaseDeltaTicks", beat / 4.0)), listOf(FullSongCorrectionFamily.LOCAL_EXPRESSION_ADJUSTMENT, FullSongCorrectionFamily.TRANSITION_NOTE_ADJUSTMENT), beat * input.authority.meter.numerator)
+    }
+
+    /** Detects bass doubling melody notes instead of supplying an independent foundation. */
+    private fun bassMelodyIndependence(notes: List<Note>, authority: WholeSongAnalysisProjection, beat: Long): List<FullSongIssue> = authority.occurrences.mapNotNull { occurrence ->
+        val bass = notes.filter { it.role == "bass" && it.start in occurrence.startTick until occurrence.endTick }
+        val melody = notes.filter { it.role == "piano" && it.occurrenceId == occurrence.occurrenceId }
+        val doubled = bass.count { low -> melody.any { high -> low.start == high.start && low.pitch % 12 == high.pitch % 12 } }
+        if (bass.size < 3 || doubled * 100 < bass.size * 80) null else issue(FullSongIssueCategory.BASS_MELODY_DEPENDENCE, FullSongIssueSeverity.ACTIONABLE, "bass", occurrence.occurrenceId,
+            occurrence.startTick, occurrence.endTick, "bass-melody-pitch-class-doubling", listOf(metric("doubledBassNotes", doubled), metric("bassNoteCount", bass.size)),
+            listOf(metric("maximumDoublingPercent", 80.0)), listOf(FullSongCorrectionFamily.BASS_LEAP_SIMPLIFICATION, FullSongCorrectionFamily.CHORD_REVOICING), beat * authority.meter.numerator)
+    }
+
+    /** Reports a sustained foreground role that obscures the melody at the same pitch class. */
+    private fun masking(notes: List<Note>, authority: WholeSongAnalysisProjection, beat: Long): List<FullSongIssue> = notes.filter { it.role == "piano" && it.occurrenceId != null }.flatMap { melody ->
+        notes.filter { it.role !in setOf("piano", "drums") && it.pitch % 12 == melody.pitch % 12 && it.velocity >= melody.velocity }.mapNotNull { accompaniment ->
+            val start = maxOf(melody.start, accompaniment.start); val end = minOf(melody.end, accompaniment.end)
+            if (end - start < beat / 2) null else issue(FullSongIssueCategory.MASKING, FullSongIssueSeverity.ACTIONABLE, accompaniment.role, melody.occurrenceId,
+                start, end, "melody-pitch-class-masking", listOf(metric("overlapTicks", end - start), metric("velocityDelta", accompaniment.velocity - melody.velocity)),
+                listOf(metric("maximumOverlapTicks", beat / 2.0)), listOf(FullSongCorrectionFamily.DENSITY_REDUCTION, FullSongCorrectionFamily.LOCAL_EXPRESSION_ADJUSTMENT), beat * authority.meter.numerator)
+        }
+    }
+
+    /** Detects a repeated section whose ensemble onset/pitch-class signature did not evolve at all. */
+    private fun repeatedSectionEvolution(notes: List<Note>, authority: WholeSongAnalysisProjection, beat: Long): List<FullSongIssue> = authority.occurrences.groupBy { it.sectionType }.values.flatMap { repeated ->
+        repeated.sortedBy { it.startTick }.zipWithNext().mapNotNull { (left, right) ->
+            fun signature(occurrence: app.melotrail.application.MusicalOccurrence) = notes.filter { it.start in occurrence.startTick until occurrence.endTick }
+                .map { "${it.role}|${(it.start - occurrence.startTick) / beat}|${it.pitch % 12}" }.sorted()
+            val leftSignature = signature(left); val rightSignature = signature(right)
+            if (leftSignature.size < 4 || leftSignature != rightSignature) null else issue(FullSongIssueCategory.REPEATED_SECTION_STAGNATION, FullSongIssueSeverity.ACTIONABLE, "ensemble", right.occurrenceId,
+                right.startTick, right.endTick, "unchanged-repeated-section-signature", listOf(metric("signatureEvents", rightSignature.size)),
+                listOf(metric("minimumChangedEvents", 1.0)), listOf(FullSongCorrectionFamily.LOCAL_EXPRESSION_ADJUSTMENT, FullSongCorrectionFamily.DENSITY_REDUCTION), beat * authority.meter.numerator)
+        }
+    }
+
     private fun passing(note: Note, notes: List<Note>, authority: WholeSongAnalysisProjection, beat: Long): Boolean {
         if (note.pitch % 12 !in authority.projectKey.scalePitchClasses().map { it.chromatic }) return false
         val deadline = ((note.start / beat) + 1) * beat
@@ -213,6 +292,10 @@ class DeterministicFullSongCritic {
         return FullSongIssue(id, category, severity, role, occurrence, window, observed.sortedBy(FullSongMetric::name), expected.sortedBy(FullSongMetric::name), reason, corrections)
     }
     private fun metric(name: String, value: Number) = FullSongMetric(name, value.toDouble())
+    private fun isCritical(issue: FullSongIssue) = issue.severity == FullSongIssueSeverity.BLOCKING || issue.category in setOf(
+        FullSongIssueCategory.HARMONIC_CLASH, FullSongIssueCategory.VOICE_COLLISION, FullSongIssueCategory.MASKING,
+        FullSongIssueCategory.RECOGNIZABILITY_REGRESSION
+    )
     private fun chordTones(chord: app.melotrail.application.HarmonicTimelineEntry) = chord.chord.quality.intervals.map { (it + chord.chord.rootChromatic) % 12 }.toSet()
     private data class Note(val role: String, val occurrenceId: String?, val pitch: Int, val velocity: Int, val start: Long, val end: Long)
     private data class Indexed(val event: MidiEvent, val track: Int, val index: Int)

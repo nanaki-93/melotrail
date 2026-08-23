@@ -58,6 +58,32 @@ class FullSongCriticTest {
         assertEquals(listOf(FullSongCorrectionFamily.COLLISION_REMOVAL, FullSongCorrectionFamily.CHORD_REVOICING), issue.suggestedCorrections)
     }
 
+    @Test fun `optional Qwen critic receives only deterministic evidence and cannot replace issues`() {
+        val midi = write("pad.mid", listOf(0L to 240L to 61))
+        val deterministic = DeterministicFullSongCritic().criticize(input(artifact("pad", midi)))
+        var prompt = ""
+
+        val advice = LocalQwenFullSongCriticAdvisor(LocalQwenClient { _, userPrompt ->
+            prompt = userPrompt
+            "{\"observations\":[\"Reduce the sustained pad under the melody.\"]}"
+        }, "fake-critic-v1").advise(deterministic)
+
+        assertEquals("fake-critic-v1", advice.modelIdentity)
+        assertTrue(prompt.contains("HARMONIC_CLASH"))
+        assertFalse(prompt.contains("pad.mid"))
+        assertTrue(deterministic.issues.any { it.category == FullSongIssueCategory.HARMONIC_CLASH })
+    }
+
+    @Test fun `critic locates bass melody dependence and masking in the affected occurrence`() {
+        val piano = write("piano.mid", listOf(0L to 240L to 60, 240L to 480L to 64, 480L to 720L to 67))
+        val bass = write("bass.mid", listOf(0L to 240L to 48, 240L to 480L to 52, 480L to 720L to 55))
+
+        val issues = DeterministicFullSongCritic().criticize(input(occurrenceArtifact(piano), artifact("bass", bass))).issues
+
+        assertTrue(issues.any { it.category == FullSongIssueCategory.BASS_MELODY_DEPENDENCE && it.occurrenceId == "one" })
+        assertTrue(issues.any { it.category == FullSongIssueCategory.MASKING && it.occurrenceId == "one" })
+    }
+
     private fun input(vararg artifacts: FullSongCriticMidiArtifact): FullSongCriticInput = FullSongCriticInput(
         authority = WholeSongAnalysisProjection(
             contextSha256 = "a".repeat(64), projectKey = MusicalKey(PitchClass.of(PitchSpelling.C), ScaleModeId.MAJOR), tempo = Tempo(120.0), meter = TimeSignature(4, 4), harmonyPpq = 480,
@@ -69,6 +95,7 @@ class FullSongCriticTest {
     )
 
     private fun artifact(role: String, path: Path) = FullSongCriticMidiArtifact(role, null, path, WorkflowArtifactReference(path.fileName.toString(), sha256(path)))
+    private fun occurrenceArtifact(path: Path) = FullSongCriticMidiArtifact("piano", "one", path, WorkflowArtifactReference(path.fileName.toString(), sha256(path)))
     private fun write(name: String, notes: List<Pair<Pair<Long, Long>, Int>>): Path {
         val path = root.resolve(name); val sequence = Sequence(Sequence.PPQ, 480); val track = sequence.createTrack()
         notes.forEach { (range, pitch) -> track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, pitch, 90), range.first)); track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, pitch, 0), range.second)) }

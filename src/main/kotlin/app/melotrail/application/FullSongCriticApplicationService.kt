@@ -7,6 +7,7 @@ import app.melotrail.arrangement.DeterministicFullSongCritic
 import app.melotrail.arrangement.FullSongCriticInput
 import app.melotrail.arrangement.FullSongCriticMidiArtifact
 import app.melotrail.arrangement.FullSongCriticReport
+import app.melotrail.arrangement.FullSongCriticAdvisor
 import app.melotrail.arrangement.MelodyIdentityBuilder
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
@@ -30,16 +31,21 @@ data class FullSongCriticSnapshot(val report: FullSongCriticReport, val artifact
 interface FullSongCriticApplicationService {
     fun run(root: Path): FullSongCriticSnapshot
     fun load(root: Path): FullSongCriticSnapshot
+    fun analyzeCandidate(root: Path, outputs: Map<String, WorkflowArtifactReference>): FullSongCriticReport
 }
 
 class DefaultFullSongCriticApplicationService(
     private val authorityBuilder: MusicalAuthorityBuilder = MusicalAuthorityBuilder(),
-    private val critic: DeterministicFullSongCritic = DeterministicFullSongCritic()
+    private val critic: DeterministicFullSongCritic = DeterministicFullSongCritic(),
+    private val advisor: FullSongCriticAdvisor? = null
 ) : FullSongCriticApplicationService {
     override fun run(root: Path): FullSongCriticSnapshot {
         val normalized = root.toAbsolutePath().normalize()
         val input = currentInput(normalized)
-        val report = critic.criticize(input)
+        val deterministic = critic.criticize(input)
+        val report = advisor?.advise(deterministic)?.let { advice ->
+            FullSongCriticReport.create(deterministic.inputSha256, deterministic.contextSha256, deterministic.aggregateMetrics, deterministic.issues, deterministic.warnings, advice)
+        } ?: deterministic
         val relative = CriticArtifactPaths.report(input.inputSha256)
         val path = normalized.resolve(relative)
         atomicWrite(path, json.encodeToString(FullSongCriticReport.serializer(), report))
@@ -62,7 +68,14 @@ class DefaultFullSongCriticApplicationService(
         return FullSongCriticSnapshot(report, path, true)
     }
 
-    private fun currentInput(root: Path): FullSongCriticInput {
+    /** Re-runs the deterministic critic against a complete, unselected candidate without mutating workflow state. */
+    override fun analyzeCandidate(root: Path, outputs: Map<String, WorkflowArtifactReference>): FullSongCriticReport {
+        val normalized = root.toAbsolutePath().normalize()
+        require(outputs.isNotEmpty()) { "Candidate Critic requires candidate MIDI outputs." }
+        return critic.criticize(currentInput(normalized, outputs))
+    }
+
+    private fun currentInput(root: Path, candidateOutputs: Map<String, WorkflowArtifactReference> = emptyMap()): FullSongCriticInput {
         val project = ProjectStore.read(root).also { it.requireValid(root) }
         require(project.version == Project.CURRENT_VERSION) { "Full-Song Critic requires a schema-v4 project." }
         val cohesion = requireNotNull(project.workflow.cohesion) { "Full-Song Critic requires approved Cohesion." }
@@ -75,11 +88,14 @@ class DefaultFullSongCriticApplicationService(
         val occurrences = cohesion.occurrences.sortedBy { it.instanceId }.map { occurrence ->
             require(occurrence.approved && occurrence.cohesionInputSha256 == cohesion.inputSha256) { "Cohesion occurrence '${occurrence.instanceId}' is not approved." }
             val authorityOccurrence = requireNotNull(authority.occurrences.singleOrNull { it.occurrenceId == occurrence.instanceId }) { "Cohesion occurrence '${occurrence.instanceId}' is not in the canonical timeline." }
-            FullSongCriticMidiArtifact("piano", occurrence.instanceId, verified(root, occurrence.result, "Cohesion occurrence '${occurrence.instanceId}'"), occurrence.result, authorityOccurrence.startTick)
+            val id = "piano-${occurrence.instanceId}"
+            val reference = candidateOutputs[id] ?: occurrence.result
+            FullSongCriticMidiArtifact("piano", occurrence.instanceId, verified(root, reference, "Cohesion occurrence '${occurrence.instanceId}'"), reference, authorityOccurrence.startTick)
         }
         val roles = cohesion.roles.sortedBy { it.role }.map { role ->
             require(role.approved && role.cohesionInputSha256 == cohesion.inputSha256) { "Cohesion role '${role.role}' is not approved." }
-            FullSongCriticMidiArtifact(role.role, null, verified(root, role.result, "Cohesion role '${role.role}'"), role.result)
+            val reference = candidateOutputs[role.role] ?: role.result
+            FullSongCriticMidiArtifact(role.role, null, verified(root, reference, "Cohesion role '${role.role}'"), reference)
         }
         val reports = project.workflow.generatedMidi?.artifacts.orEmpty().sortedBy { it.id }.map { generated ->
             val path = verified(root, generated.validationReport, "Generated role validation '${generated.id}'")
@@ -91,7 +107,11 @@ class DefaultFullSongCriticApplicationService(
                 }
             }
         }
-        val melody = occurrences.firstOrNull()?.let { artifact -> MelodyIdentityBuilder.build(artifact.path, authority.harmonyPpq * 4L / authority.meter.denominator) }
+        val melody = cohesion.occurrences.sortedBy { it.instanceId }.firstOrNull()?.let { occurrence ->
+            MelodyIdentityBuilder.build(verified(root, occurrence.result, "Cohesion melody '${occurrence.instanceId}'"), authority.harmonyPpq * 4L / authority.meter.denominator)
+        }
+        require(candidateOutputs.keys.all { it in (occurrences.map { "piano-${it.occurrenceId}" } + roles.map { it.role }) } &&
+            (candidateOutputs.isEmpty() || candidateOutputs.size == occurrences.size + roles.size)) { "Candidate Critic outputs do not cover the approved Cohesion ensemble." }
         val hash = sha256(json.encodeToString(CriticInputHash(
             authority.contextSha256, cohesion.inputSha256, arrangementRef.sha256,
             occurrences.map { CriticArtifactHash(it.role, it.occurrenceId, it.reference.sha256) },

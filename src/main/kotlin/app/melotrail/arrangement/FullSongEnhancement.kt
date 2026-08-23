@@ -136,6 +136,10 @@ data class FullSongEnhancementApplicationReport(
     val changedNotes: Int,
     val additions: Int,
     val deletions: Int,
+    val beforeCriticalIssueCount: Int = 0,
+    val afterCriticalIssueCount: Int = 0,
+    val recognizabilityPreserved: Boolean = false,
+    val automaticallyAccepted: Boolean = false,
     val warnings: List<String> = emptyList()
 )
 

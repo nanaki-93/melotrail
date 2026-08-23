@@ -55,6 +55,7 @@ import kotlinx.serialization.json.Json
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -84,8 +85,8 @@ class ReferenceSongIntegrationTest {
     }
 
     @Test
-    fun `reference song approves a strict fake full-song plan before seeded humanization`() = runBlocking {
-        val result = runReference(tempDir.resolve("approved"), FullSongPath.APPROVED)
+    fun `reference song automatically rejects a no-change full-song candidate before seeded humanization`() = runBlocking {
+        val result = runReference(tempDir.resolve("rejected"), FullSongPath.REJECTED)
 
         assertTrue(result.rendered)
         assertEquals(1, result.modelCalls)
@@ -141,10 +142,15 @@ class ReferenceSongIntegrationTest {
             FullSongPath.BYPASS -> {
                 assertEquals(app.melotrail.arrangement.FullSongEnhancementSelection.BYPASS, enhance.selectBypass(root).selection)
             }
-            FullSongPath.APPROVED -> {
+            FullSongPath.REJECTED -> {
                 assertTrue(critic.report.issues.isNotEmpty(), "Reference fixture must supply a bounded fake-plan target.")
-                assertEquals(app.melotrail.arrangement.FullSongEnhancementSelection.UNRESOLVED, enhance.generateCandidate(root).selection)
-                assertEquals(app.melotrail.arrangement.FullSongEnhancementSelection.APPROVED, enhance.approve(root).selection)
+                val candidate = enhance.generateCandidate(root)
+                assertEquals(app.melotrail.arrangement.FullSongEnhancementSelection.UNRESOLVED, candidate.selection)
+                assertFalse(candidate.candidateAvailable)
+                assertTrue(candidate.warnings.isNotEmpty())
+                val evidence = requireNotNull(ProjectStore.read(root).workflow.fullSongEnhancement)
+                assertTrue(evidence.afterCriticReport != null)
+                assertEquals(app.melotrail.arrangement.FullSongEnhancementSelection.BYPASS, enhance.selectBypass(root).selection)
             }
         }
 
@@ -177,7 +183,7 @@ class ReferenceSongIntegrationTest {
         )))
     }
 
-    private enum class FullSongPath { NO_OP, BYPASS, APPROVED }
+    private enum class FullSongPath { NO_OP, BYPASS, REJECTED }
     private data class RunResult(val humanizedHashes: Map<String, String>, val occurrences: Int, val boundaries: Int, val rendered: Boolean, val modelCalls: Int)
 
     private class FakeRenderer : InstrumentRenderer {

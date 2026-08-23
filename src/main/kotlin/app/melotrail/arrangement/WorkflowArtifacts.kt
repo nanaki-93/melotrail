@@ -517,7 +517,7 @@ object CriticArtifactPaths {
 enum class FullSongEnhancementSelection { UNRESOLVED, BYPASS, NO_OP, APPROVED }
 
 @Serializable
-enum class FullSongEnhancementCandidateStatus { DRAFT, APPROVED }
+enum class FullSongEnhancementCandidateStatus { DRAFT, REJECTED, APPROVED }
 
 /** One selected full-song candidate output; the input is always verified before rendering. */
 @Serializable
@@ -536,19 +536,20 @@ data class FullSongEnhancementArtifactReference(
 @Serializable
 data class FullSongEnhancementReferences(
     val criticInputSha256: String,
-    val criticReportSha256: String? = null,
+    val criticReportSha256: String?,
     val cohesionInputSha256: String,
     val status: FullSongEnhancementCandidateStatus? = null,
     val artifacts: List<FullSongEnhancementArtifactReference> = emptyList(),
     val plan: WorkflowArtifactReference? = null,
-    val report: WorkflowArtifactReference? = null
+    val report: WorkflowArtifactReference? = null,
+    val afterCriticReport: WorkflowArtifactReference? = null
 ) {
     init {
         require(SHA_256.matches(criticInputSha256) && SHA_256.matches(cohesionInputSha256) &&
             (criticReportSha256 == null || SHA_256.matches(criticReportSha256)) &&
             artifacts.map(FullSongEnhancementArtifactReference::id).distinct().size == artifacts.size &&
-            ((status == null && artifacts.isEmpty() && plan == null && report == null) ||
-                (status != null && artifacts.isNotEmpty() && plan != null && report != null))) {
+            ((status == null && artifacts.isEmpty() && plan == null && report == null && afterCriticReport == null) ||
+                (status != null && artifacts.isNotEmpty() && plan != null && report != null && afterCriticReport != null))) {
             "Full-song enhancement references are invalid"
         }
     }
@@ -562,6 +563,7 @@ object FullSongEnhancementArtifactPaths {
     fun output(criticInputSha256: String, revision: String, id: String): String = "${directory(criticInputSha256, revision)}/${safeId(id, "Full-song enhancement artifact")}.mid"
     fun plan(criticInputSha256: String, revision: String): String = "${directory(criticInputSha256, revision)}/plan.json"
     fun report(criticInputSha256: String, revision: String): String = "${directory(criticInputSha256, revision)}/report.json"
+    fun afterCriticReport(criticInputSha256: String, revision: String): String = "${directory(criticInputSha256, revision)}/after-critic.json"
 }
 
 @Serializable
@@ -581,7 +583,7 @@ data class ProjectWorkflowReferences(
 ) {
     init {
         require(when (fullSongEnhancementSelection) {
-            FullSongEnhancementSelection.UNRESOLVED -> fullSongEnhancement == null || fullSongEnhancement.status == FullSongEnhancementCandidateStatus.DRAFT
+            FullSongEnhancementSelection.UNRESOLVED -> fullSongEnhancement == null || fullSongEnhancement.status in setOf(FullSongEnhancementCandidateStatus.DRAFT, FullSongEnhancementCandidateStatus.REJECTED)
             FullSongEnhancementSelection.APPROVED -> fullSongEnhancement?.status == FullSongEnhancementCandidateStatus.APPROVED
             FullSongEnhancementSelection.NO_OP, FullSongEnhancementSelection.BYPASS -> fullSongEnhancement != null && fullSongEnhancement.status == null
         }) {

@@ -66,7 +66,8 @@ class DefaultFullSongEnhancementApplicationService(
     private val planner: FullSongEnhancementPlanner = FullSongEnhancementPlanner {
         throw IllegalStateException("No Full-Song Enhance model is configured. Choose Bypass, or configure the approved local planner.")
     },
-    private val authorityBuilder: MusicalAuthorityBuilder = MusicalAuthorityBuilder()
+    private val authorityBuilder: MusicalAuthorityBuilder = MusicalAuthorityBuilder(),
+    private val criticService: FullSongCriticApplicationService = DefaultFullSongCriticApplicationService()
 ) : FullSongEnhancementApplicationService {
     override fun generateCandidate(root: Path): FullSongEnhancementSnapshot = locked(root) { normalized ->
         val current = current(normalized)
@@ -90,7 +91,8 @@ class DefaultFullSongEnhancementApplicationService(
             fullSongEnhancement = references
         ).markCurrent(WorkflowArtifact.FULL_SONG_ENHANCEMENT)))
         persistComparisons(normalized, input, references)
-        snapshot(FullSongEnhancementSelection.UNRESOLVED, references, applied.report, input.issues.size)
+        snapshot(FullSongEnhancementSelection.UNRESOLVED, references,
+            readReport(normalized.resolve(requireNotNull(references.report).file)), input.issues.size)
     }
 
     override fun load(root: Path): FullSongEnhancementSnapshot = locked(root) { normalized ->
@@ -99,9 +101,10 @@ class DefaultFullSongEnhancementApplicationService(
         val refs = project.workflow.fullSongEnhancement
         when (project.workflow.fullSongEnhancementSelection) {
             FullSongEnhancementSelection.UNRESOLVED -> {
-                if (refs?.status != FullSongEnhancementCandidateStatus.DRAFT) return@locked FullSongEnhancementSnapshot(FullSongEnhancementSelection.UNRESOLVED, false, false, current.issues.size, 0, 0, emptyList())
-                verifyReferences(normalized, current, refs)
-                snapshot(FullSongEnhancementSelection.UNRESOLVED, refs, readReport(normalized.resolve(requireNotNull(refs.report).file)), current.issues.size)
+                if (refs?.status !in setOf(FullSongEnhancementCandidateStatus.DRAFT, FullSongEnhancementCandidateStatus.REJECTED)) return@locked FullSongEnhancementSnapshot(FullSongEnhancementSelection.UNRESOLVED, false, false, current.issues.size, 0, 0, emptyList())
+                val candidate = requireNotNull(refs)
+                verifyReferences(normalized, current, candidate)
+                snapshot(FullSongEnhancementSelection.UNRESOLVED, candidate, readReport(normalized.resolve(requireNotNull(candidate.report).file)), current.issues.size)
             }
             FullSongEnhancementSelection.APPROVED -> {
                 val candidate = requireNotNull(refs) { "Approved Full-Song Enhance has no evidence." }; verifyReferences(normalized, current, candidate)
@@ -243,9 +246,23 @@ class DefaultFullSongEnhancementApplicationService(
         }
         val planRelative = FullSongEnhancementArtifactPaths.plan(current.critic.inputSha256, revision)
         val reportRelative = FullSongEnhancementArtifactPaths.report(current.critic.inputSha256, revision)
-        atomicWrite(root.resolve(planRelative), json.encodeToString(plan)); atomicWrite(root.resolve(reportRelative), json.encodeToString(applied.report))
-        return FullSongEnhancementReferences(current.critic.inputSha256, current.report.reportSha256, current.cohesionInputSha256, FullSongEnhancementCandidateStatus.DRAFT,
-            refs, WorkflowArtifactReference(planRelative, sha256(root.resolve(planRelative))), WorkflowArtifactReference(reportRelative, sha256(root.resolve(reportRelative))))
+        atomicWrite(root.resolve(planRelative), json.encodeToString(plan))
+        val after = criticService.analyzeCandidate(root, refs.associate { it.id to it.output })
+        val afterRelative = FullSongEnhancementArtifactPaths.afterCriticReport(current.critic.inputSha256, revision)
+        atomicWrite(root.resolve(afterRelative), json.encodeToString(FullSongCriticReport.serializer(), after))
+        val acceptance = candidateAcceptance(current.report, after)
+        val report = applied.report.copy(
+            beforeCriticalIssueCount = acceptance.beforeCriticalIssueCount,
+            afterCriticalIssueCount = acceptance.afterCriticalIssueCount,
+            recognizabilityPreserved = acceptance.recognizabilityPreserved,
+            automaticallyAccepted = acceptance.accepted,
+            warnings = acceptance.reasons
+        )
+        atomicWrite(root.resolve(reportRelative), json.encodeToString(report))
+        return FullSongEnhancementReferences(current.critic.inputSha256, current.report.reportSha256, current.cohesionInputSha256,
+            if (acceptance.accepted) FullSongEnhancementCandidateStatus.DRAFT else FullSongEnhancementCandidateStatus.REJECTED,
+            refs, WorkflowArtifactReference(planRelative, sha256(root.resolve(planRelative))), WorkflowArtifactReference(reportRelative, sha256(root.resolve(reportRelative))),
+            WorkflowArtifactReference(afterRelative, sha256(root.resolve(afterRelative))))
     }
 
     private fun verifyReferences(root: Path, current: Current, refs: FullSongEnhancementReferences) {
@@ -256,18 +273,43 @@ class DefaultFullSongEnhancementApplicationService(
         }
         val planPath = verified(root, requireNotNull(refs.plan), "Full-Song Enhance plan")
         val reportPath = verified(root, requireNotNull(refs.report), "Full-Song Enhance report")
+        val afterPath = verified(root, requireNotNull(refs.afterCriticReport), "post-polish Critic report")
         val input = input(current)
         val plan = FullSongEnhancementPlanParser.parse(Files.readString(planPath))
         val report = readReport(reportPath)
+        val after = try { json.decodeFromString(FullSongCriticReport.serializer(), Files.readString(afterPath)) }
+        catch (error: Exception) { throw IllegalArgumentException("Post-polish Critic report is malformed.", error) }
         require(plan.inputSha256 == input.inputSha256 && plan.contextSha256 == input.contextSha256 && plan.criticInputSha256 == current.critic.inputSha256 && plan.criticReportSha256 == current.report.reportSha256 &&
             report.inputSha256 == input.inputSha256 && report.contextSha256 == input.contextSha256 && report.criticReportSha256 == current.report.reportSha256 && report.planSha256 == sha256(planPath)) {
             "Full-Song Enhance candidate evidence is not hash-bound to current inputs."
+        }
+        val acceptance = candidateAcceptance(current.report, after)
+        require(report.beforeCriticalIssueCount == acceptance.beforeCriticalIssueCount && report.afterCriticalIssueCount == acceptance.afterCriticalIssueCount &&
+            report.recognizabilityPreserved == acceptance.recognizabilityPreserved && report.automaticallyAccepted == acceptance.accepted &&
+            (refs.status == FullSongEnhancementCandidateStatus.DRAFT) == acceptance.accepted) {
+            "Full-Song Enhance candidate acceptance evidence is invalid."
         }
     }
 
     private fun snapshot(selection: FullSongEnhancementSelection, refs: FullSongEnhancementReferences, report: FullSongEnhancementApplicationReport, issues: Int) =
         FullSongEnhancementSnapshot(selection, refs.status == FullSongEnhancementCandidateStatus.DRAFT, refs.status == FullSongEnhancementCandidateStatus.APPROVED,
             issues, report.addressedIssueIds.size, report.changedNotes, report.warnings)
+
+    private data class CandidateAcceptance(val accepted: Boolean, val beforeCriticalIssueCount: Int, val afterCriticalIssueCount: Int, val recognizabilityPreserved: Boolean, val reasons: List<String>)
+
+    /** A candidate must improve the code-owned critical metric and keep all protected melody anchors intact. */
+    private fun candidateAcceptance(before: FullSongCriticReport, after: FullSongCriticReport): CandidateAcceptance {
+        fun metric(report: FullSongCriticReport, name: String) = report.aggregateMetrics.singleOrNull { it.name == name }?.value?.toInt()
+            ?: error("Critic report does not contain '$name'.")
+        val beforeCritical = metric(before, "criticalIssueCount")
+        val afterCritical = metric(after, "criticalIssueCount")
+        val recognizable = metric(after, "recognizabilityIssueCount") <= metric(before, "recognizabilityIssueCount")
+        val reasons = buildList {
+            if (afterCritical >= beforeCritical) add("Candidate rejected: critical Critic metrics did not improve.")
+            if (!recognizable) add("Candidate rejected: melody recognizability regressed.")
+        }
+        return CandidateAcceptance(reasons.isEmpty(), beforeCritical, afterCritical, recognizable, reasons)
+    }
 
     private fun persistComparisons(root: Path, input: FullSongEnhancementInput, refs: FullSongEnhancementReferences) {
         refs.artifacts.sortedBy { it.id }.forEach { artifact ->

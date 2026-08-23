@@ -491,11 +491,43 @@
       "documentedFunctionCount": 0
     },
     {
+      "path": "src/main/kotlin/app/melotrail/application/FullSongCriticApplicationService.kt",
+      "classification": "deferred-with-reason",
+      "reason": "src/main/kotlin/app/melotrail/application/FullSongCriticApplicationService.kt has 11 callable declarations, including the reviewed candidate re-critique boundary. Remaining helpers retain a declaration-digest-pinned local exemption.",
+      "functionCount": 11,
+      "declarationDigest": "414146ad4bd4c70140981e82fc82e68511cef7ec345ede9b15e7d8f935aeb7a2",
+      "documentedFunctionCount": 1
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/application/FullSongEnhancementApplicationService.kt",
+      "classification": "deferred-with-reason",
+      "reason": "src/main/kotlin/app/melotrail/application/FullSongEnhancementApplicationService.kt has 34 callable declarations, including the reviewed automatic candidate acceptance gate. Remaining helpers retain a declaration-digest-pinned local exemption.",
+      "functionCount": 34,
+      "declarationDigest": "637fbb64c034f404eb5c1c3da296819fcc1aed0cc8d1b93e471f3d48dadd0d84",
+      "documentedFunctionCount": 1
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/arrangement/FullSongCritic.kt",
+      "classification": "deferred-with-reason",
+      "reason": "src/main/kotlin/app/melotrail/arrangement/FullSongCritic.kt has 25 callable declarations. The whole-song deterministic checks and optional advisory contract are reviewed; remaining helpers retain a declaration-digest-pinned local exemption.",
+      "functionCount": 25,
+      "declarationDigest": "aa3713ffbe3973634acc9b74d29d0cb3a3d80cb9d179a8d6ad150801207de1fc",
+      "documentedFunctionCount": 5
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/arrangement/LocalQwenFullSongCriticAdvisor.kt",
+      "classification": "documented",
+      "reason": "Every callable declaration has directly attached, reviewed KDoc/docstring coverage.",
+      "functionCount": 1,
+      "declarationDigest": "a7188269268a6834778c23f4262abf58dc7f3b9ed5c83ae12ca9cded5cff7d87",
+      "documentedFunctionCount": 1
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/arrangement/WorkflowArtifacts.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/WorkflowArtifacts.kt has 4 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 4,
-      "declarationDigest": "a326105f34ab799b2e88804d710cb4da96895e37a853c4ef76b010c86c5b04fb",
+      "reason": "src/main/kotlin/app/melotrail/arrangement/WorkflowArtifacts.kt has 40 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
+      "functionCount": 40,
+      "declarationDigest": "1ee4479e1b3c4a4f43639d909f7b27a2668e5f9dc8e0f2bbc37d2129a6e99cd0",
       "documentedFunctionCount": 0
     },
     {
