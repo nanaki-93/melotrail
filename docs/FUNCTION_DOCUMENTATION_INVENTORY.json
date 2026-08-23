@@ -165,10 +165,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/PartPreviewApplicationService.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/application/PartPreviewApplicationService.kt has 20 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 20,
-      "declarationDigest": "b664d7ad0b7298208b32d2c156e014bd184ac46add0cc934f67773d183e0288d",
-      "documentedFunctionCount": 1
+      "reason": "src/main/kotlin/app/melotrail/application/PartPreviewApplicationService.kt has 21 legacy callable declarations. The connected-source preview contract is directly documented; the remaining declaration-digest-pinned exemption must be replaced with focused KDoc before their behavior changes.",
+      "functionCount": 24,
+      "declarationDigest": "8f207ee5974175794e1d93a85761db7dee65ddf9730fcb54bee6e097dfcc3cbf",
+      "documentedFunctionCount": 3
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/ProjectApplicationService.kt",
@@ -201,6 +201,14 @@
       "functionCount": 1,
       "declarationDigest": "a70d1f422ea75bf580ae9c65abde6cce89d231c36bdb87f82a1116f0d2bab4e1",
       "documentedFunctionCount": 1
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/application/SourceSongCriticApplicationService.kt",
+      "classification": "documented",
+      "reason": "Every callable declaration has directly attached, reviewed KDoc/docstring coverage.",
+      "functionCount": 12,
+      "declarationDigest": "3c24058e05a514653eb0e54373fa4ac54cb331e553041a2e2a6de5bee3f3ec38",
+      "documentedFunctionCount": 12
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/Arrangement.kt",
@@ -417,6 +425,14 @@
       "functionCount": 16,
       "declarationDigest": "7ded751bf429a1f17926530556a59cc245ada3ce08289c1ab94627b0d8db9d19",
       "documentedFunctionCount": 16
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/arrangement/SourceSongCritic.kt",
+      "classification": "documented",
+      "reason": "Every callable declaration has directly attached, reviewed KDoc/docstring coverage.",
+      "functionCount": 18,
+      "declarationDigest": "7b8b001186b1c5bad06e5d5b56181527b1f5adb56bdf5dcff284ad3753fa7968",
+      "documentedFunctionCount": 18
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/StemMixer.kt",

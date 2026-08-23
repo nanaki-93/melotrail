@@ -28,12 +28,21 @@ Equivalent Gradle command: `./gradlew :desktopApp:run`.
 
 Use **New Project** or **Open Project**, then follow the desktop happy path:
 **Melody Parts**, which automatically prepares its supported stages, optional **AI Fix** and
-**Enhance**, **Structure**, **Arrangement**, boundary-only **Cohesion**, deterministic
+**Enhance**, **Structure**, **Source Song Critic**, **Arrangement**, boundary-only **Cohesion**, deterministic
 **Critic**, optional **Full-Song Enhance**, then deterministic **Humanization** before
 using **Build song**. Project files remain canonical: `project.json`, plans and arrangements,
 generated MIDI, stems, mixes, and release artifacts are all kept under the
 chosen project directory. Desktop settings retain only the last successfully
 opened project path; they never store project or audio data.
+
+Before arrangement, Melotrail assembles the selected source MIDI into the
+structured source-song timeline, creates its bounded connected-source candidate,
+and writes a deterministic Source Song Critic report. The report records each
+timing, gap/overlap, phrase, jump, chord-compatibility, and identity issue with
+its boundary and bar. Arrangement requires explicit approval of that exact
+report; blocking findings require a persisted override reason. The connected
+source melody is independently previewable as piano and never replaces the
+selected source MIDI.
 
 The top navigation keeps the guided stages visible: **Setup**, **Project**, **Melody Parts**,
 **Structure**, **Arrange**, and **Mix & Master**. **Library**, **Video Preview**,

@@ -101,6 +101,7 @@ class EndToEndWorkflowCompatibilityTest {
             services.projects.analyzePart(AnalyzePartRequest(root, "A"))
             services.projects.saveStructure(SaveStructureRequest(root, listOf("A", "A")))
             prepareArrangementContext(root)
+            approveSourceSongForArrangement(root)
             val arrangement = services.arrangements.generate(GenerateArrangementRequest(root, instruments = listOf("piano", "drums")))
             assertTrue(arrangement.approved)
             generateApprovedCohesion(root, services.arrangements)

@@ -11,6 +11,17 @@ import app.melotrail.arrangement.TransitionBridgePlan
 import app.melotrail.arrangement.TransitionCohesionPlan
 import java.nio.file.Path
 
+/** Record the explicit source-song gate decision required before test arrangements. */
+fun approveSourceSongForArrangement(root: Path) {
+    val critic = DefaultSourceSongCriticApplicationService()
+    val report = critic.run(root)
+    if (report.report.hasBlockingIssues) {
+        critic.approve(root, overrideBlockingIssues = true, overrideReason = "Fixture keeps its authored source melody.")
+    } else {
+        critic.approve(root)
+    }
+}
+
 private data class CohesionTestChoice(
     val action: TransitionRoleAction,
     val type: BridgeType,

@@ -141,7 +141,7 @@ class DefaultArrangementApplicationService(
     private val qwenDetailedPlanner: DetailedArrangementPlanner = LocalQwenDetailedArrangementPlanner(),
     private val libraryRoot: Path,
     private val musicalAuthorityBuilder: MusicalAuthorityBuilder = MusicalAuthorityBuilder(),
-    private val sourceSongApplicationService: SourceSongApplicationService = SourceSongApplicationService(musicalAuthorityBuilder),
+    private val sourceSongCriticApplicationService: SourceSongCriticApplicationService = DefaultSourceSongCriticApplicationService(),
     private val generatedRoleValidator: GeneratedRoleValidator = GeneratedRoleValidators
 ) : ArrangementApplicationService {
     override suspend fun generate(request: GenerateArrangementRequest, progress: ProgressSink): ArrangementSnapshot = mutate(request.root) { root ->
@@ -158,7 +158,7 @@ class DefaultArrangementApplicationService(
             "Arrangement requires complete canonical harmony. Update Harmony for: ${incomplete.joinToString()}."
         }
         val projection = musicalAuthorityBuilder.arrangementGeneration(root)
-        sourceSongApplicationService.assemble(root)
+        sourceSongCriticApplicationService.requireApproved(root)
         val structure = project.envelope.structureOccurrences.mapIndexed { index, occurrence -> occurrence.toSectionInstance(index) }
         require(structure.isNotEmpty()) { "Song structure must not be empty" }
         val context = request.roleSelections.takeIf { it.isNotEmpty() }?.let { structuredContext(project) }

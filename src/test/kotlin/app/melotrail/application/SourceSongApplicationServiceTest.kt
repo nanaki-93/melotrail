@@ -7,6 +7,9 @@ import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.ProjectV4Envelope
 import app.melotrail.arrangement.RenderFormat
+import app.melotrail.arrangement.RenderResult
+import app.melotrail.arrangement.InstrumentRenderer
+import app.melotrail.arrangement.LogicalInstrument
 import app.melotrail.arrangement.SectionTypeId
 import app.melotrail.arrangement.SongPart
 import app.melotrail.arrangement.SourceSong
@@ -26,6 +29,7 @@ import app.melotrail.music.TimeSignature
 import app.melotrail.profile.CompositionProfileRef
 import app.melotrail.profile.MoodRef
 import kotlinx.serialization.json.Json
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
@@ -37,6 +41,8 @@ import javax.sound.midi.Sequence
 import javax.sound.midi.ShortMessage
 import kotlin.io.path.createDirectories
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class SourceSongApplicationServiceTest {
@@ -64,6 +70,36 @@ class SourceSongApplicationServiceTest {
         assertEquals(listOf(90), tempoEvents(assembled))
         assertEquals(listOf(4 to 4), meterEvents(assembled))
         assertTrue(artifact.metadataPath.startsWith(root.resolve("source-song")))
+    }
+
+    @Test
+    fun `source critic persists boundary-addressed blockers and requires a recorded override`() {
+        val root = project()
+        val critic = DefaultSourceSongCriticApplicationService()
+
+        val report = critic.run(root)
+
+        assertTrue(report.report.issues.isNotEmpty())
+        assertTrue(report.report.issues.all { it.location.boundaryId.startsWith("boundary-") && it.location.bar >= 0 })
+        assertTrue(report.report.hasBlockingIssues)
+        assertFailsWith<IllegalArgumentException> { critic.approve(root) }
+        val approval = critic.approve(root, overrideBlockingIssues = true, overrideReason = "Keep the authored chromatic pickup.")
+
+        assertEquals(report.report.connectedMidi.sha256, approval.approval.connectedMidiSha256)
+        assertEquals(report.report.issues.filter { it.severity == app.melotrail.arrangement.SourceSongIssueSeverity.BLOCKING }.map { it.id }.sorted(), approval.approval.overriddenBlockingIssueIds.sorted())
+        assertEquals(approval.approval, critic.requireApproved(root).approval)
+    }
+
+    @Test
+    fun `connected source melody resolves as an independent piano preview input`() = runTest {
+        val root = project()
+        val renderer = CapturingRenderer()
+
+        val result = DefaultPartPreviewApplicationService(renderer).resolveConnectedSource(root)
+
+        assertTrue(result is PreviewResult.Prerequisite, "Expected connected-source preview to reach the renderer: $result")
+        assertTrue(renderer.input?.startsWith(root.resolve("source-song")) == true)
+        assertTrue(renderer.input?.fileName.toString() == "connected.mid")
     }
 
     private fun project(): Path {
@@ -117,6 +153,14 @@ class SourceSongApplicationServiceTest {
         track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, pitch, 90), 0))
         track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, pitch, 0), 1_920))
         MidiSystem.write(sequence, 1, path.toFile())
+    }
+
+    private inner class CapturingRenderer : InstrumentRenderer {
+        var input: Path? = null
+        override suspend fun render(midi: Path, instrument: LogicalInstrument, output: Path, format: RenderFormat, expectedFrames: Long): RenderResult {
+            input = midi
+            error("renderer unavailable")
+        }
     }
 
     private fun tempoEvents(sequence: Sequence): List<Int> = sequence.tracks.flatMap { track -> (0 until track.size()).map(track::get) }

@@ -110,6 +110,7 @@ class ReferenceSongIntegrationTest {
             },
             libraryRoot = ReferenceSongFixture.library(root)
         )
+        approveSourceSongForArrangement(root)
         arrangements.generate(GenerateArrangementRequest(root, instruments = LogicalInstrument.entries.map { it.wireName }))
         generateApprovedCohesion(root, arrangements)
         val authority = MusicalAuthorityBuilder().wholeSongAnalysis(root)

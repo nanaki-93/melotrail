@@ -33,6 +33,7 @@ import kotlinx.serialization.decodeFromString
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
@@ -46,8 +47,23 @@ class ArrangementApplicationServiceTest {
     @TempDir lateinit var tempDir: Path
 
     @Test
+    fun `arrangement is blocked until the current source song is explicitly approved`() = runBlocking {
+        val root = project("source-approval")
+        val service = DefaultArrangementApplicationService(libraryRoot = TestSoundLibrary.root())
+
+        val blocked = assertThrows(ApplicationServiceException::class.java) {
+            runBlocking { service.generate(GenerateArrangementRequest(root, instruments = listOf("piano"))) }
+        }
+        assertTrue(blocked.message!!.contains("Source Song Critic"))
+
+        approveSourceSongForArrangement(root)
+        assertTrue(service.generate(GenerateArrangementRequest(root, instruments = listOf("piano"))).approved)
+    }
+
+    @Test
     fun `deterministic generation writes an approved inspectable arrangement snapshot`() = runBlocking {
         val root = project("approved")
+        approveSourceSongForArrangement(root)
         val result = DefaultArrangementApplicationService(libraryRoot = TestSoundLibrary.root()).generate(GenerateArrangementRequest(root, instruments = listOf("piano", "bass")))
 
         assertTrue(Files.isRegularFile(root.resolve("song_plan.json")))
@@ -62,6 +78,7 @@ class ArrangementApplicationServiceTest {
     @Test
     fun `Qwen mode always creates a draft that requires explicit approval`() = runBlocking {
         val root = project("draft")
+        approveSourceSongForArrangement(root)
         val service = DefaultArrangementApplicationService(
             deterministicGlobalPlanner = app.melotrail.arrangement.DeterministicGlobalSongPlanner(),
             qwenGlobalPlanner = app.melotrail.arrangement.DeterministicGlobalSongPlanner(),
@@ -84,6 +101,7 @@ class ArrangementApplicationServiceTest {
     @Test
     fun `arrangements complete without Cohesion and publish exact approval context`() = runBlocking {
         val root = project("cohesion-boundary", structure = listOf("A", "A"))
+        approveSourceSongForArrangement(root)
 
         DefaultArrangementApplicationService(libraryRoot = TestSoundLibrary.root())
             .generate(GenerateArrangementRequest(root, instruments = listOf("piano", "drums")))

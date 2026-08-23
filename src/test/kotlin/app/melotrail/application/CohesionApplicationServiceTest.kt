@@ -158,6 +158,7 @@ class CohesionApplicationServiceTest {
         ))
     }
     private suspend fun arrange() {
+        approveSourceSongForArrangement(root)
         val service = DefaultArrangementApplicationService(libraryRoot = root)
         service.generate(
             GenerateArrangementRequest(root, instruments = listOf("piano", "drums"))

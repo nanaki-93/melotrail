@@ -20,6 +20,7 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import java.util.UUID
+import javax.sound.midi.MidiSystem
 import javax.sound.sampled.AudioFormat as JavaAudioFormat
 import javax.sound.sampled.AudioSystem
 import kotlin.math.roundToLong
@@ -101,6 +102,10 @@ class JavaSoundPreviewMp3Decoder : PreviewMp3Decoder {
 interface PartPreviewApplicationService {
     suspend fun resolve(request: PreviewRequest): PreviewResult
 
+    /** Resolve a piano monitor render for the current boundary-connected source melody. */
+    suspend fun resolveConnectedSource(projectRoot: Path): PreviewResult =
+        PreviewResult.Failed(PreviewStage.VALIDATE, "Connected source-song preview is unavailable from this preview service.")
+
     /** Compatibility seam for the existing transport adapter; Task 034 consumes [PreviewResult] directly. */
     suspend fun preview(root: Path, partId: String): Path = when (val result = resolve(PreviewRequest(root, partId))) {
         is PreviewResult.Resolved -> result.artifact
@@ -112,7 +117,9 @@ interface PartPreviewApplicationService {
 class DefaultPartPreviewApplicationService(
     private val renderer: InstrumentRenderer,
     private val mp3Decoder: PreviewMp3Decoder = JavaSoundPreviewMp3Decoder(),
-    private val rendererConfigurationFingerprint: () -> String = { renderer.javaClass.name }
+    private val rendererConfigurationFingerprint: () -> String = { renderer.javaClass.name },
+    private val sourceSongService: SourceSongApplicationService = SourceSongApplicationService(),
+    private val connectionPlanner: app.melotrail.arrangement.MelodyConnectionPlanner = app.melotrail.arrangement.MelodyConnectionPlanner()
 ) : PartPreviewApplicationService {
     override suspend fun resolve(request: PreviewRequest): PreviewResult = withContext(Dispatchers.IO) {
         val stages = mutableListOf(PreviewStage.VALIDATE)
@@ -145,6 +152,40 @@ class DefaultPartPreviewApplicationService(
             PreviewResult.Failed(PreviewStage.VALIDATE, error.message ?: "Preview input is invalid.", error)
         } catch (error: Exception) {
             PreviewResult.Failed(stages.lastOrNull() ?: PreviewStage.VALIDATE, error.message ?: "Preview resolution failed.", error)
+        }
+    }
+
+    /** Render only the current connected source MIDI as piano without affecting arrangement or release artifacts. */
+    override suspend fun resolveConnectedSource(projectRoot: Path): PreviewResult = withContext(Dispatchers.IO) {
+        val stages = mutableListOf(PreviewStage.VALIDATE)
+        try {
+            val root = projectRoot.toAbsolutePath().normalize()
+            val project = ProjectStore.read(root).also { it.requireValid(root) }
+            val format = project.renderFormat
+                ?: return@withContext PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Project render format is required before previewing the connected source melody.")
+            val sourceSong = sourceSongService.assemble(root).song
+            val connection = connectionPlanner.connect(root, sourceSong).connection
+            val midi = root.resolve(connection.outputMidi.file).normalize()
+            if (!midi.startsWith(root) || !Files.isRegularFile(midi) || digest(Files.readAllBytes(midi)) != connection.outputMidi.sha256) {
+                return@withContext PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Connected source melody is missing or stale. Recreate the source-song connection.")
+            }
+            val duration = MidiSystem.getSequence(midi.toFile()).microsecondLength / 1_000_000.0
+            if (!duration.isFinite() || duration <= 0.0) return@withContext PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Connected source melody has no usable duration.")
+            val frames = (duration * format.sampleRate).roundToLong()
+            val target = previewTarget(root, "piano-source-song", "connected", fingerprint(midi, "${format.sampleRate}|${format.channels}|$frames|${rendererConfigurationFingerprint()}"))
+            stages += PreviewStage.DECODE_OR_RENDER
+            if (validMonitorWav(target, format.sampleRate, format.channels, 24, frames)) {
+                return@withContext PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, true, identity("Connected source melody", midi))
+            }
+            val published = publish(target, { temporary -> renderer.render(midi, LogicalInstrument.PIANO, temporary, format, frames) }) { temporary ->
+                validMonitorWav(temporary, format.sampleRate, format.channels, 24, frames)
+            }
+            if (!published) PreviewResult.Failed(PreviewStage.VALIDATE_ARTIFACT, "Piano renderer did not produce a valid connected-source monitor artifact.")
+            else PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, false, identity("Connected source melody", midi))
+        } catch (error: IllegalArgumentException) {
+            PreviewResult.Failed(PreviewStage.VALIDATE, error.message ?: "Connected source preview input is invalid.", error)
+        } catch (error: Exception) {
+            PreviewResult.Prerequisite(stages.lastOrNull() ?: PreviewStage.VALIDATE, "Piano preview renderer or sound library is unavailable: ${error.message ?: "unknown failure"}")
         }
     }
 
