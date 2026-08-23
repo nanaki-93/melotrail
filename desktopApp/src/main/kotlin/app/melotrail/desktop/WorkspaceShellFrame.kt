@@ -55,6 +55,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import app.melotrail.application.WorkflowStage
+import app.melotrail.application.WorkflowStageStatus
 
 internal object WorkspaceShellTags {
     const val ROOT = "workspace-shell"
@@ -66,19 +68,69 @@ internal object WorkspaceShellTags {
     const val CONTEXT_TOGGLE = "workspace-context-toggle"
     const val OVERFLOW_MENU = "workspace-overflow-menu"
     const val ARTWORK = "workspace-local-artwork"
+    const val WORKER_STATUS = "workspace-worker-status"
+    const val PIPELINE_STATUS = "workspace-pipeline-status"
+    const val DESTINATION_PREFIX = "workflow-destination-"
 }
 
 private enum class SharedShellLayout { WIDE, MEDIUM, NARROW }
 
-internal val primaryWorkspaceDestinations = listOf(
-    WorkspaceSection.OVERVIEW,
-    WorkspaceSection.SETUP,
-    WorkspaceSection.HARMONY,
-    WorkspaceSection.IMPORT,
-    WorkspaceSection.STRUCTURE,
-    WorkspaceSection.ARRANGE,
-    WorkspaceSection.MIX_MASTER
-)
+/**
+ * The shell speaks in musician-facing workflow destinations.  Individual
+ * implementation pages remain routable for their focused milestones, but
+ * are not presented as the primary product workflow.
+ */
+internal enum class WorkspaceDestination(
+    val label: String,
+    val route: WorkspaceSection,
+    val stages: List<WorkflowStage>
+) {
+    PROJECT("Project", WorkspaceSection.OVERVIEW, listOf(WorkflowStage.PROJECT)),
+    SOURCE(
+        "Source",
+        WorkspaceSection.IMPORT,
+        listOf(
+            WorkflowStage.IMPORT_AND_INSPECTION,
+            WorkflowStage.TRANSCRIPTION,
+            WorkflowStage.CLEAN_MIDI,
+            WorkflowStage.AI_FIX,
+            WorkflowStage.MIDI_FEEL,
+            WorkflowStage.ANALYSIS
+        )
+    ),
+    STRUCTURE("Structure", WorkspaceSection.STRUCTURE, listOf(WorkflowStage.STRUCTURE)),
+    ARRANGE(
+        "Arrange",
+        WorkspaceSection.ARRANGE,
+        listOf(
+            WorkflowStage.ARRANGEMENT,
+            WorkflowStage.GENERATED_MIDI,
+            WorkflowStage.COHESION,
+            WorkflowStage.CRITIC,
+            WorkflowStage.FULL_SONG_ENHANCE,
+            WorkflowStage.HUMANIZATION
+        )
+    ),
+    MIX("Mix", WorkspaceSection.MIX_MASTER, listOf(WorkflowStage.RENDER, WorkflowStage.MIX, WorkflowStage.MASTER)),
+    RELEASE("Release", WorkspaceSection.EXPORT, listOf(WorkflowStage.COMMERCIAL_EXPORT))
+}
+
+internal val primaryWorkspaceDestinations = WorkspaceDestination.entries
+
+private fun WorkspaceUiState.selectedDestination(): WorkspaceDestination = when (workspaceSection) {
+    WorkspaceSection.SETUP, WorkspaceSection.HARMONY, WorkspaceSection.OVERVIEW -> WorkspaceDestination.PROJECT
+    WorkspaceSection.IMPORT -> WorkspaceDestination.SOURCE
+    WorkspaceSection.STRUCTURE -> WorkspaceDestination.STRUCTURE
+    WorkspaceSection.ARRANGE -> WorkspaceDestination.ARRANGE
+    WorkspaceSection.MIX_MASTER -> WorkspaceDestination.MIX
+    WorkspaceSection.EXPORT -> WorkspaceDestination.RELEASE
+    else -> WorkspaceDestination.PROJECT
+}
+
+private fun WorkspaceUiState.destinationStep(destination: WorkspaceDestination) =
+    destination.stages.map { workflow[it] }.firstOrNull { step ->
+        step.status !in setOf(WorkflowStageStatus.COMPLETE, WorkflowStageStatus.APPROVED)
+    } ?: workflow[destination.stages.last()]
 
 private fun sharedShellLayout(width: Dp): SharedShellLayout = when {
     width >= MusicWorkspaceTokens.Reference.WideBreakpoint -> SharedShellLayout.WIDE
@@ -208,10 +260,77 @@ private fun TopBar(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit,
             } else {
                 Spacer(Modifier.weight(1f))
             }
+            ShellStatus(state)
             HeaderProjectActions(state, onIntent)
             HeaderOverflow(onIntent)
         }
     }
+}
+
+/** The worker and pipeline lifecycle come from typed readiness/workflow snapshots, never file probes. */
+@Composable
+private fun ShellStatus(state: WorkspaceUiState) {
+    val worker = state.runtimeReadiness?.worker
+    val workerText = when {
+        worker == null -> "Worker checking"
+        worker.available -> "Worker ready"
+        else -> "Worker unavailable"
+    }
+    val current = state.workflow.current
+    val pipelineText = if (state.project == null) "Pipeline: create or open a project" else
+        "Pipeline: ${current.stage.workflowLabel()} · ${workflowStatusLabel(current)}"
+    Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+        Text(
+            workerText,
+            style = MaterialTheme.typography.labelSmall,
+            color = if (worker?.available == true) MusicWorkspaceTokens.Success else MusicWorkspaceTokens.Warning,
+            modifier = Modifier.semantics {
+                testTag = WorkspaceShellTags.WORKER_STATUS
+                contentDescription = "$workerText. ${worker?.detail ?: "Local runtime readiness is loading."}"
+            }
+        )
+        Text(
+            pipelineText,
+            style = MaterialTheme.typography.labelSmall,
+            color = workflowStatusColor(current.status),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.semantics {
+                testTag = WorkspaceShellTags.PIPELINE_STATUS
+                contentDescription = pipelineText
+            }
+        )
+    }
+}
+
+private fun WorkflowStage.workflowLabel(): String = when (this) {
+    WorkflowStage.PROJECT -> "Project"
+    WorkflowStage.IMPORT_AND_INSPECTION -> "Source import"
+    WorkflowStage.TRANSCRIPTION -> "Transcription"
+    WorkflowStage.CLEAN_MIDI -> "MIDI cleanup"
+    WorkflowStage.AI_FIX -> "MIDI correction"
+    WorkflowStage.MIDI_FEEL -> "MIDI feel"
+    WorkflowStage.ANALYSIS -> "Source analysis"
+    WorkflowStage.STRUCTURE -> "Structure"
+    WorkflowStage.ARRANGEMENT -> "Arrangement"
+    WorkflowStage.GENERATED_MIDI -> "Generated MIDI"
+    WorkflowStage.COHESION -> "Cohesion"
+    WorkflowStage.CRITIC -> "Critic"
+    WorkflowStage.FULL_SONG_ENHANCE -> "Full-song enhance"
+    WorkflowStage.HUMANIZATION -> "Humanization"
+    WorkflowStage.RENDER -> "Stem render"
+    WorkflowStage.MIX -> "Mix"
+    WorkflowStage.MASTER -> "Master"
+    WorkflowStage.COMMERCIAL_EXPORT -> "Release review"
+}
+
+private fun workflowStatusColor(status: WorkflowStageStatus) = when (status) {
+    WorkflowStageStatus.COMPLETE, WorkflowStageStatus.APPROVED -> MusicWorkspaceTokens.Success
+    WorkflowStageStatus.READY -> MusicWorkspaceTokens.Primary
+    WorkflowStageStatus.RUNNING -> MusicWorkspaceTokens.Progress
+    WorkflowStageStatus.REVIEW_REQUIRED -> MusicWorkspaceTokens.Warning
+    WorkflowStageStatus.FAILED, WorkflowStageStatus.STALE -> MusicWorkspaceTokens.Error
+    WorkflowStageStatus.LOCKED -> MusicWorkspaceTokens.Disabled
 }
 
 /** Keeps first-project actions visible while secondary destinations remain keyboard reachable. */
@@ -251,7 +370,7 @@ private fun HeaderOverflow(onIntent: (WorkspaceIntent) -> Unit) {
             }
         ) { Text("More") }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            listOf(WorkspaceSection.LIBRARY, WorkspaceSection.VIDEO_PREVIEW, WorkspaceSection.EXPORT).forEach { destination ->
+            listOf(WorkspaceSection.LIBRARY, WorkspaceSection.VIDEO_PREVIEW).forEach { destination ->
                 DropdownMenuItem(
                     text = { Text(destination.label) },
                     onClick = {
@@ -292,16 +411,17 @@ private fun DestinationChooser(state: WorkspaceUiState, onIntent: (WorkspaceInte
         OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth().semantics {
             testTag = WorkspacePageTags.NAVIGATION_MENU
             contentDescription = "Choose workspace page. Current page: ${state.workspaceSection.label}."
-        }) { Text(state.workspaceSection.label) }
+        }) { Text(state.selectedDestination().label) }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            workspaceNavigationOrder.forEach { destination ->
-                DropdownMenuItem(text = { Text(destination.label) }, onClick = {
+            primaryWorkspaceDestinations.forEach { destination ->
+                val step = state.destinationStep(destination)
+                DropdownMenuItem(text = { Text("${destination.label} · ${workflowStatusLabel(step)}") }, onClick = {
                     expanded = false
-                    onIntent(WorkspaceIntent.SelectWorkspaceSection(destination))
+                    onIntent(WorkspaceIntent.SelectWorkspaceSection(destination.route))
                 }, modifier = Modifier.semantics {
-                    testTag = WorkspaceTags.WORKSPACE_SECTION_PREFIX + destination.name.lowercase()
-                    selected = destination == state.workspaceSection
-                    contentDescription = "Open ${destination.label}${if (destination == state.workspaceSection) ", selected" else ""}"
+                    testTag = WorkspaceShellTags.DESTINATION_PREFIX + destination.name.lowercase()
+                    selected = destination == state.selectedDestination()
+                    contentDescription = "Open ${destination.label}. ${workflowStatusLabel(step)}${if (destination == state.selectedDestination()) ", selected" else ""}"
                 })
             }
         }
@@ -327,7 +447,7 @@ private fun projectRailStatus(state: WorkspaceUiState): String = when {
         "Melody changes are current; later song artifacts need regeneration."
     state.downstreamArtifactsStale -> "Some derived artifacts are stale."
     state.project.readiness.releaseAvailable -> "Validated release available."
-    else -> "Stage: ${state.workspaceSection.label}"
+    else -> "Current stage: ${state.workflow.current.stage.workflowLabel()} · ${workflowStatusLabel(state.workflow.current)}"
 }
 
 @Composable
@@ -343,34 +463,23 @@ private fun DestinationNavigation(state: WorkspaceUiState, onIntent: (WorkspaceI
 }
 
 @Composable
-private fun NavigationButton(destination: WorkspaceSection, state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, compact: Boolean) {
-    val selected = destination == state.workspaceSection
+private fun NavigationButton(destination: WorkspaceDestination, state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit, compact: Boolean) {
+    val selected = destination == state.selectedDestination()
+    val step = state.destinationStep(destination)
+    val status = workflowStatusLabel(step)
     OutlinedButton(
-        onClick = { onIntent(WorkspaceIntent.SelectWorkspaceSection(destination)) },
+        // Locked destinations remain inspectable; their visible typed status explains the prerequisite.
+        onClick = { onIntent(WorkspaceIntent.SelectWorkspaceSection(destination.route)) },
         modifier = (if (compact) Modifier.heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget) else Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget)).semantics {
-            testTag = WorkspaceTags.WORKSPACE_SECTION_PREFIX + destination.name.lowercase()
+            testTag = WorkspaceShellTags.DESTINATION_PREFIX + destination.name.lowercase()
             this.selected = selected
-            contentDescription = "Open ${destination.label}${if (selected) ", selected" else ""}"
+            contentDescription = "Open ${destination.label}. $status${if (selected) ", selected" else ""}"
         },
         colors = workspaceSelectableButtonColors(selected)
-    ) { Text(if (compact) destination.shortLabel else destination.navigationLabel) }
+    ) {
+        Text(if (compact) destination.label else "${destination.label}\n$status", maxLines = if (compact) 1 else 2)
+    }
 }
-
-private val WorkspaceSection.shortLabel: String
-    get() = when (this) {
-        WorkspaceSection.SETUP -> "Setup"
-        WorkspaceSection.HARMONY -> "Harmony"
-        WorkspaceSection.OVERVIEW -> "Info"
-        WorkspaceSection.MIX_MASTER -> "Mix"
-        WorkspaceSection.VIDEO_PREVIEW -> "Preview"
-        else -> label
-    }
-
-private val WorkspaceSection.navigationLabel: String
-    get() = when (this) {
-        WorkspaceSection.OVERVIEW -> "Info"
-        else -> label
-    }
 
 @Composable
 private fun LocalArtworkSlot() = Box(

@@ -212,7 +212,7 @@ class WorkspaceScreenTest {
         val intents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(populatedState(), intents::add) } }
 
-        onNodeWithTag(WorkspaceTags.WORKSPACE_SECTION_PREFIX + WorkspaceSection.STRUCTURE.name.lowercase()).performClick()
+        onNodeWithTag(WorkspaceShellTags.DESTINATION_PREFIX + WorkspaceDestination.STRUCTURE.name.lowercase()).performClick()
 
         assertEquals(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.STRUCTURE), intents.single())
         onAllNodesWithTag(WorkspaceTags.WORKSPACE_NAV).assertCountEquals(1)
@@ -326,7 +326,7 @@ class WorkspaceScreenTest {
         val intents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(populatedState(), intents::add) } }
 
-        val importNavigation = onNodeWithTag(WorkspaceTags.WORKSPACE_SECTION_PREFIX + WorkspaceSection.IMPORT.name.lowercase())
+        val importNavigation = onNodeWithTag(WorkspaceShellTags.DESTINATION_PREFIX + WorkspaceDestination.SOURCE.name.lowercase())
         importNavigation.performClick()
         intents.clear()
         importNavigation.performKeyInput { pressKey(Key.Enter) }
@@ -359,14 +359,14 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `project-open navigation keeps guided stages visible and secondary destinations in More`() = runComposeUiTest {
+    fun `project-open navigation follows the production workflow and keeps secondary destinations in More`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(populatedState(), intents::add) } }
 
-        listOf(WorkspaceSection.OVERVIEW, WorkspaceSection.IMPORT, WorkspaceSection.STRUCTURE, WorkspaceSection.ARRANGE, WorkspaceSection.MIX_MASTER).forEach { section ->
-            onNodeWithTag(WorkspaceTags.WORKSPACE_SECTION_PREFIX + section.name.lowercase()).assertExists()
+        WorkspaceDestination.entries.forEach { destination ->
+            onNodeWithTag(WorkspaceShellTags.DESTINATION_PREFIX + destination.name.lowercase()).assertExists()
         }
-        listOf(WorkspaceSection.LIBRARY, WorkspaceSection.VIDEO_PREVIEW, WorkspaceSection.EXPORT, WorkspaceSection.SETTINGS).forEach { section ->
+        listOf(WorkspaceSection.LIBRARY, WorkspaceSection.VIDEO_PREVIEW, WorkspaceSection.SETTINGS).forEach { section ->
             onNodeWithTag(WorkspaceTags.WORKSPACE_SECTION_PREFIX + section.name.lowercase()).assertDoesNotExist()
         }
 
@@ -376,14 +376,37 @@ class WorkspaceScreenTest {
     }
 
     @Test
-    fun `Info is the first primary destination and keeps the Overview route`() = runComposeUiTest {
-        assertEquals(WorkspaceSection.OVERVIEW, primaryWorkspaceDestinations.first())
-        assertEquals("Info", WorkspaceSection.OVERVIEW.label)
+    fun `Project is the first primary destination and keeps the Overview route`() = runComposeUiTest {
+        assertEquals(WorkspaceDestination.PROJECT, primaryWorkspaceDestinations.first())
+        assertEquals(WorkspaceSection.OVERVIEW, WorkspaceDestination.PROJECT.route)
 
         val intents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(populatedState(), intents::add) } }
-        onNodeWithTag(WorkspaceTags.WORKSPACE_SECTION_PREFIX + WorkspaceSection.OVERVIEW.name.lowercase()).assertExists()
-        onNodeWithContentDescription("Open Info, selected").assertExists()
+        onNodeWithTag(WorkspaceShellTags.DESTINATION_PREFIX + WorkspaceDestination.PROJECT.name.lowercase()).assertExists()
+        onNodeWithContentDescription("Open Project. Complete, selected").assertExists()
+    }
+
+    @Test
+    fun `shell shows typed worker pipeline and locked destination status without preventing inspection`() = runComposeUiTest {
+        val unavailableWorker = RuntimeReadiness.of(*RuntimeDependency.entries.map { dependency ->
+            dependency to DependencyReadiness(
+                if (dependency == RuntimeDependency.WORKER) DependencyStatus.UNAVAILABLE else DependencyStatus.READY,
+                if (dependency == RuntimeDependency.WORKER) "Start the Python worker with make worker." else "ready"
+            )
+        }.toTypedArray())
+        val state = populatedState().copy(
+            project = populatedState().project!!.copy(parts = emptyList()),
+            runtimeReadiness = unavailableWorker
+        )
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(state, intents::add) } }
+
+        onNodeWithTag(WorkspaceShellTags.WORKER_STATUS).assertExists()
+        onNodeWithContentDescription("Worker unavailable. Start the Python worker with make worker.").assertExists()
+        onNodeWithTag(WorkspaceShellTags.PIPELINE_STATUS).assertExists()
+        onNodeWithContentDescription("Open Structure. Locked").assertExists()
+        onNodeWithTag(WorkspaceShellTags.DESTINATION_PREFIX + WorkspaceDestination.STRUCTURE.name.lowercase()).performClick()
+        assertEquals(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.STRUCTURE), intents.single())
     }
 
     @Test
@@ -420,8 +443,8 @@ class WorkspaceScreenTest {
         setContent { MelotrailTheme { WorkspaceScreen(populatedState(), intents::add) } }
 
         onAllNodesWithTag(WorkspaceTags.WORKSPACE_NAV).assertCountEquals(1)
-        onNodeWithTag(WorkspaceShellTags.OVERFLOW_MENU).performClick()
-        onNodeWithTag(WorkspaceTags.WORKSPACE_SECTION_PREFIX + WorkspaceSection.EXPORT.name.lowercase()).performClick()
+        onNodeWithTag(WorkspacePageTags.NAVIGATION_MENU).performClick()
+        onNodeWithTag(WorkspaceShellTags.DESTINATION_PREFIX + WorkspaceDestination.RELEASE.name.lowercase()).performClick()
         assertEquals(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.EXPORT), intents.single())
 
         listOf(WorkspaceTags.PROJECT_HEADER, WorkspaceTags.CREATE_PROJECT, WorkspaceTags.OPEN_PROJECT, WorkspacePageTags.ROOT_PREFIX + WorkspaceSection.OVERVIEW.name.lowercase(), WorkspacePageTags.OVERVIEW_PREVIEW, WorkspacePageTags.OVERVIEW_ARTIFACTS).forEach { assertFitsNarrowViewport(it) }
