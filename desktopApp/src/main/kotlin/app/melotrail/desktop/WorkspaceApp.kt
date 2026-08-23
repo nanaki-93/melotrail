@@ -993,6 +993,7 @@ internal fun CompactTransport(state: WorkspaceUiState, onIntent: (WorkspaceInten
     val session = state.playbackSession
     val hasPlayableSelection = when (val request = session.request) {
         is PlaybackRequest.Part -> session.phase in setOf(PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED) || (session.phase == PlaybackSessionPhase.STOPPED && session.artifact != null)
+        is PlaybackRequest.ConnectedSource -> session.phase in setOf(PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED) || (session.phase == PlaybackSessionPhase.STOPPED && session.artifact != null)
         is PlaybackRequest.Mix -> session.phase in setOf(PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED) || playbackSourceAvailable(state, request.source)
         is PlaybackRequest.Cohesion -> session.phase in setOf(PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED) || session.artifact != null
         null -> playbackSourceAvailable(state, PlaybackSource.DRY)
@@ -1001,6 +1002,7 @@ internal fun CompactTransport(state: WorkspaceUiState, onIntent: (WorkspaceInten
     val canSeek = session.artifact != null && session.durationSeconds > 0.0 && session.phase in setOf(PlaybackSessionPhase.READY, PlaybackSessionPhase.STARTING, PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED, PlaybackSessionPhase.STOPPED)
     val label = when (val request = session.request) {
         is PlaybackRequest.Part -> "Part ${request.partId} preview"
+        is PlaybackRequest.ConnectedSource -> "Connected solo source"
         is PlaybackRequest.Mix -> request.source.name.lowercase().replaceFirstChar(Char::uppercase) + " mix"
     is PlaybackRequest.Cohesion -> if (request.enhanced) "Cohesion preview" else "Baseline preview"
         null -> "Dry mix"
@@ -1348,6 +1350,8 @@ private fun statusText(state: WorkspaceUiState): String = when (val operation = 
     is WorkspaceOperation.TranscribingPart -> "Running transcription quality gate for ${operation.id}…"
     is WorkspaceOperation.UpdatingPartRole -> "Saving ${operation.id} role…"
     WorkspaceOperation.SavingStructure -> "Saving song structure…"
+    WorkspaceOperation.GeneratingSourceSong -> "Creating connected source-song evidence and running its critic…"
+    WorkspaceOperation.ApprovingSourceSong -> "Recording approval for the current connected source song…"
     is WorkspaceOperation.GeneratingCohesion -> operation.progress?.message ?: "Preparing boundary Cohesion…"
     is WorkspaceOperation.ReviewingCohesion -> "Recording review for cohesion boundary ${operation.outgoingInstanceId} → ${operation.incomingInstanceId}…"
     WorkspaceOperation.ApprovingCohesion -> "Approving validated cohesion…"
@@ -1376,11 +1380,35 @@ private fun WorkspaceDialogs(state: WorkspaceUiState, onIntent: (WorkspaceIntent
         is WorkspaceDialog.ConfirmSafeCleanup -> ConfirmSafeCleanupDialog(dialog, onIntent)
         is WorkspaceDialog.ConfirmTightenTiming -> ConfirmTightenTimingDialog(dialog, onIntent)
         is WorkspaceDialog.ConfirmSourceKey -> ConfirmSourceKeyDialog(dialog, onIntent)
+        is WorkspaceDialog.ConfirmSourceSongApproval -> ConfirmSourceSongApprovalDialog(dialog, onIntent)
         is WorkspaceDialog.ConfirmDiscardDraft -> ConfirmDiscardDraftDialog(dialog, onIntent)
         WorkspaceDialog.ConfirmClose -> ConfirmCloseDialog(onIntent, onExit)
         WorkspaceDialog.ConfirmClearSoundLibraryRoot -> ConfirmClearSoundLibraryRootDialog(onIntent)
         null -> Unit
     }
+}
+
+@Composable
+private fun ConfirmSourceSongApprovalDialog(dialog: WorkspaceDialog.ConfirmSourceSongApproval, onIntent: (WorkspaceIntent) -> Unit) {
+    AlertDialog(
+        onDismissRequest = { onIntent(WorkspaceIntent.DismissDialog) },
+        title = { Text("Approve connected source song?") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                Text(if (dialog.requiresOverride) "The current critic has blocking findings. An explicit reason is required to proceed; this does not alter the original source MIDI." else "This approves the exact connected solo-source candidate and critic report for arrangement. The original source MIDI remains unchanged.")
+                if (dialog.requiresOverride) {
+                    OutlinedTextField(
+                        value = dialog.reason,
+                        onValueChange = { onIntent(WorkspaceIntent.UpdateSourceSongOverrideReason(it)) },
+                        label = { Text("Reason for overriding blockers") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        },
+        confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.ConfirmSourceSongApproval) }, enabled = !dialog.requiresOverride || dialog.reason.isNotBlank()) { Text(if (dialog.requiresOverride) "Record override and approve" else "Approve source song") } },
+        dismissButton = { TextButton(onClick = { onIntent(WorkspaceIntent.DismissDialog) }) { Text("Keep reviewing") } }
+    )
 }
 
 @Composable

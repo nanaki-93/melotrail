@@ -48,6 +48,11 @@ import app.melotrail.application.DefaultFullSongCriticApplicationService
 import app.melotrail.application.PartPreviewApplicationService
 import app.melotrail.application.PreviewRequest
 import app.melotrail.application.PreviewResult
+import app.melotrail.application.SourceSongApplicationService
+import app.melotrail.application.SourceSongApprovalSnapshot
+import app.melotrail.application.SourceSongCriticApplicationService
+import app.melotrail.application.SourceSongCriticSnapshot
+import app.melotrail.application.DefaultSourceSongCriticApplicationService
 import app.melotrail.application.OperationProgress
 import app.melotrail.application.PartSourceType
 import app.melotrail.application.PartAnalysisStatus
@@ -97,6 +102,9 @@ import app.melotrail.arrangement.MidiAnalysisInput
 import app.melotrail.arrangement.ArrangementRole
 import app.melotrail.arrangement.ArrangementRoleSelection
 import app.melotrail.arrangement.SoundTrait
+import app.melotrail.arrangement.MelodyConnection
+import app.melotrail.arrangement.MelodyConnectionPlanner
+import app.melotrail.arrangement.SourceSong
 import app.melotrail.application.MidiQualityStatus
 import app.melotrail.preparation.InputCleanupMode
 import app.melotrail.preparation.TranscriptionInputArtifact
@@ -148,6 +156,8 @@ data class WorkspaceUiState(
     val mix: MixSnapshot? = null,
     val fullSongEnhancement: FullSongEnhancementSnapshot? = null,
     val humanization: HumanizationSnapshot? = null,
+    /** Immutable source-song candidate and critic evidence for the pre-arrangement approval gate. */
+    val sourceSongReview: SourceSongReviewUiState = SourceSongReviewUiState(),
     val buildOptions: BuildOptionsDraft = BuildOptionsDraft(),
     val export: ExportUiState = ExportUiState(),
     val commercialEvidence: CommercialEvidenceUiState? = null,
@@ -192,6 +202,28 @@ data class WorkspaceUiState(
     val workflow: WorkflowReadModel
         get() = WorkflowReadModelDeriver.derive(project, arrangement)
 }
+
+/** UI projection of typed source-song services; composables never read MIDI or report files. */
+data class SourceSongReviewUiState(
+    val sourceSong: SourceSong? = null,
+    val connection: MelodyConnection? = null,
+    val critic: SourceSongCriticSnapshot? = null,
+    val approval: SourceSongApprovalSnapshot? = null,
+    val error: String? = null
+) {
+    val approved: Boolean get() = approval != null
+    val hasBlockingIssues: Boolean get() = critic?.report?.hasBlockingIssues == true
+}
+
+private data class ProjectHydration(
+    val mix: Result<MixSnapshot>,
+    val arrangement: Result<ArrangementSnapshot>,
+    val cohesion: Result<EnsembleCohesionSnapshot>,
+    val aiFix: Result<MidiAiFixSnapshot>?,
+    val fullSongEnhancement: Result<FullSongEnhancementSnapshot>,
+    val humanization: Result<HumanizationSnapshot>,
+    val sourceSongReview: SourceSongReviewUiState?
+)
 
 enum class WorkspaceSection(val label: String) {
     SETUP("Setup"),
@@ -289,6 +321,8 @@ data class PlaybackSession(
 sealed interface PlaybackRequest {
     val projectRoot: Path
     data class Part(override val projectRoot: Path, val partId: String, val audioSource: PreviewAudioSource, val midiSource: PreviewMidiSource? = null) : PlaybackRequest
+    /** The connected source is its own candidate, not a selected source part. */
+    data class ConnectedSource(override val projectRoot: Path) : PlaybackRequest
     data class Mix(override val projectRoot: Path, val source: PlaybackSource) : PlaybackRequest
     data class Cohesion(override val projectRoot: Path, val enhanced: Boolean) : PlaybackRequest
 }
@@ -409,6 +443,8 @@ sealed interface WorkspaceOperation {
     data class TranscribingPart(val id: String) : WorkspaceOperation
     data class UpdatingPartRole(val id: String) : WorkspaceOperation
     data object SavingStructure : WorkspaceOperation
+    data object GeneratingSourceSong : WorkspaceOperation
+    data object ApprovingSourceSong : WorkspaceOperation
     data class GeneratingCohesion(val progress: OperationProgress? = null) : WorkspaceOperation
     data class ReviewingCohesion(val outgoingInstanceId: String, val incomingInstanceId: String) : WorkspaceOperation
     data object ApprovingCohesion : WorkspaceOperation
@@ -436,6 +472,7 @@ val WorkspaceOperation.isMutating: Boolean
         this is WorkspaceOperation.SelectingEnhancement ||
         this is WorkspaceOperation.CreatingMidiAiFix || this is WorkspaceOperation.ApprovingMidiAiFix ||
         this is WorkspaceOperation.UpdatingPartRole || this is WorkspaceOperation.SavingStructure ||
+        this is WorkspaceOperation.GeneratingSourceSong || this is WorkspaceOperation.ApprovingSourceSong ||
         this is WorkspaceOperation.GeneratingCohesion || this is WorkspaceOperation.ReviewingCohesion || this is WorkspaceOperation.ApprovingCohesion ||
         this is WorkspaceOperation.GeneratingArrangement || this is WorkspaceOperation.ApprovingArrangement
         || this is WorkspaceOperation.ApplyingMix || this is WorkspaceOperation.RunningCritic || this is WorkspaceOperation.Humanizing || this is WorkspaceOperation.BuildingSong || this is WorkspaceOperation.ExportingCommercialProvenance || this is WorkspaceOperation.ExportingRelease
@@ -478,6 +515,7 @@ sealed interface WorkspaceDialog {
     data class ConfirmSafeCleanup(val partId: String) : WorkspaceDialog
     data class ConfirmTightenTiming(val partId: String) : WorkspaceDialog
     data class ConfirmSourceKey(val partId: String, val selected: MusicalKey) : WorkspaceDialog
+    data class ConfirmSourceSongApproval(val requiresOverride: Boolean, val reason: String = "") : WorkspaceDialog
     data class ConfirmDiscardDraft(val root: Path? = null, val createProject: Boolean = false) : WorkspaceDialog
     data object ConfirmClearSoundLibraryRoot : WorkspaceDialog
     data object ConfirmClose : WorkspaceDialog
@@ -629,6 +667,11 @@ sealed interface WorkspaceIntent {
     data class ShowSourceKeyConfirmation(val partId: String) : WorkspaceIntent
     data class SelectConfirmedSourceKey(val key: MusicalKey) : WorkspaceIntent
     data object ConfirmSourceKey : WorkspaceIntent
+    data object GenerateSourceSongConnections : WorkspaceIntent
+    data object PreviewConnectedSourceSong : WorkspaceIntent
+    data object RequestApproveSourceSong : WorkspaceIntent
+    data class UpdateSourceSongOverrideReason(val reason: String) : WorkspaceIntent
+    data object ConfirmSourceSongApproval : WorkspaceIntent
     data class TransposePart(val partId: String) : WorkspaceIntent
     data class SelectPart(val partId: String) : WorkspaceIntent
     data object InspectSelectedPart : WorkspaceIntent
@@ -745,6 +788,9 @@ class WorkspaceViewModel(
     private val buildService: BuildApplicationService? = null,
     private val player: ArtifactAudioPlayer? = null,
     private val partPreviewService: PartPreviewApplicationService? = null,
+    private val sourceSongService: SourceSongApplicationService = SourceSongApplicationService(),
+    private val melodyConnectionPlanner: MelodyConnectionPlanner = MelodyConnectionPlanner(),
+    private val sourceSongCriticService: SourceSongCriticApplicationService = DefaultSourceSongCriticApplicationService(),
     private val audioPreparationService: AudioPreparationApplicationService? = null,
     private val preferences: DesktopPreferences = NoOpDesktopPreferences,
     private val soundLibrarySettings: SoundLibrarySettingsService = SoundLibrarySettingsService(preferences),
@@ -832,6 +878,11 @@ class WorkspaceViewModel(
             is WorkspaceIntent.ShowSourceKeyConfirmation -> showSourceKeyConfirmation(intent.partId)
             is WorkspaceIntent.SelectConfirmedSourceKey -> selectConfirmedSourceKey(intent.key)
             WorkspaceIntent.ConfirmSourceKey -> confirmSourceKey()
+            WorkspaceIntent.GenerateSourceSongConnections -> generateSourceSongConnections()
+            WorkspaceIntent.PreviewConnectedSourceSong -> previewConnectedSourceSong()
+            WorkspaceIntent.RequestApproveSourceSong -> requestApproveSourceSong()
+            is WorkspaceIntent.UpdateSourceSongOverrideReason -> updateSourceSongOverrideReason(intent.reason)
+            WorkspaceIntent.ConfirmSourceSongApproval -> approveSourceSong()
             is WorkspaceIntent.TransposePart -> transposePart(intent.partId)
             is WorkspaceIntent.SelectPart -> selectPart(intent.partId)
             WorkspaceIntent.InspectSelectedPart -> inspectSelectedPart()
@@ -1970,6 +2021,64 @@ class WorkspaceViewModel(
         startPlaybackSession(PlaybackRequest.Part(project.root, partId, PreviewAudioSource.ORIGINAL, source), RuntimeCapability.MIDI_PREVIEW)
     }
 
+    /** Build the authoritative source-song candidate, then review its deterministic critic report. */
+    private fun generateSourceSongConnections() {
+        val project = state.value.project ?: return fail("generate source song", "Open a project before creating a connected source song.")
+        if (project.structure.isEmpty()) return fail("generate source song", "Add at least two prepared sections to Structure before creating connections.")
+        if (state.value.operation.isMutating) return
+        mutableState.update { it.copy(operation = WorkspaceOperation.GeneratingSourceSong, notification = null) }
+        scope.launch {
+            runCatching {
+                withContext(ioDispatcher) {
+                    val sourceSong = sourceSongService.assemble(project.root).song
+                    val connection = melodyConnectionPlanner.connect(project.root, sourceSong).connection
+                    val critic = sourceSongCriticService.run(project.root)
+                    SourceSongReviewUiState(sourceSong = sourceSong, connection = connection, critic = critic)
+                }
+            }.onSuccess { review ->
+                val message = if (review.hasBlockingIssues) "Connected source song is ready for review; resolve or explicitly override blocking critic findings before approval."
+                else "Connected source song and critic report are ready for approval."
+                mutableState.update { it.copy(sourceSongReview = review, operation = WorkspaceOperation.Idle, notification = message) }
+            }.onFailure { error ->
+                mutableState.update { it.copy(sourceSongReview = it.sourceSongReview.copy(error = error.message ?: "Unable to create connected source song.")) }
+                fail("generate source song", error.message ?: "Unable to create connected source song.")
+            }
+        }
+    }
+
+    private fun previewConnectedSourceSong() {
+        val project = state.value.project ?: return fail("preview connected source", "Open a project before previewing the connected source song.")
+        if (state.value.sourceSongReview.connection == null) return fail("preview connected source", "Generate connections before previewing the connected source song.")
+        startPlaybackSession(PlaybackRequest.ConnectedSource(project.root), RuntimeCapability.MIDI_PREVIEW)
+    }
+
+    private fun requestApproveSourceSong() {
+        val review = state.value.sourceSongReview
+        if (review.critic == null) return fail("approve source song", "Generate and review the current Source Song Critic report first.")
+        if (review.approved) return
+        mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmSourceSongApproval(review.hasBlockingIssues)) }
+    }
+
+    private fun updateSourceSongOverrideReason(reason: String) {
+        val dialog = state.value.dialog as? WorkspaceDialog.ConfirmSourceSongApproval ?: return
+        mutableState.update { it.copy(dialog = dialog.copy(reason = reason)) }
+    }
+
+    private fun approveSourceSong() {
+        val project = state.value.project ?: return
+        val dialog = state.value.dialog as? WorkspaceDialog.ConfirmSourceSongApproval ?: return
+        if (dialog.requiresOverride && dialog.reason.isBlank()) return fail("approve source song", "A reason is required to override blocking Source Song Critic findings.")
+        if (state.value.operation.isMutating) return
+        mutableState.update { it.copy(operation = WorkspaceOperation.ApprovingSourceSong, notification = null) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { sourceSongCriticService.approve(project.root, dialog.requiresOverride, dialog.reason.takeIf { dialog.requiresOverride }) } }
+                .onSuccess { approval ->
+                    mutableState.update { current -> current.copy(sourceSongReview = current.sourceSongReview.copy(approval = approval), operation = WorkspaceOperation.Idle, dialog = null, notification = "Connected source song approved for arrangement.") }
+                }
+                .onFailure { fail("approve source song", it.message ?: "Unable to approve the connected source song.") }
+        }
+    }
+
     private fun pausePreview() = pausePlaybackSession()
 
     private fun resumePreview() = resumePlaybackSession()
@@ -1996,6 +2105,7 @@ class WorkspaceViewModel(
             try {
                 val artifact = when (request) {
                     is PlaybackRequest.Part -> resolvePartArtifact(request, id) ?: return@launch
+                    is PlaybackRequest.ConnectedSource -> resolveConnectedSourceArtifact(request, id) ?: return@launch
                     is PlaybackRequest.Mix -> request.artifact()
                     is PlaybackRequest.Cohesion -> request.artifact()
                 }
@@ -2044,6 +2154,24 @@ class WorkspaceViewModel(
                 val stage = if (resolved.stage == app.melotrail.application.PreviewStage.DECODE_OR_RENDER) PlaybackFailureStage.DECODE else PlaybackFailureStage.RESOLUTION
                 failPlaybackSession(id, stage, resolved.message)
                 null
+            }
+        }
+    }
+
+    private suspend fun resolveConnectedSourceArtifact(request: PlaybackRequest.ConnectedSource, id: Long): PlaybackArtifactIdentity? {
+        val previews = partPreviewService ?: run {
+            failPlaybackSession(id, PlaybackFailureStage.RUNTIME, "Source-song preview service is not configured for this desktop session.")
+            return null
+        }
+        return when (val resolved = withContext(ioDispatcher) { previews.resolveConnectedSource(request.projectRoot) }) {
+            is PreviewResult.Resolved -> PlaybackArtifactIdentity(request.projectRoot, resolved.artifact, source = resolved.source)
+            is PreviewResult.Prerequisite -> {
+                val stage = if (resolved.stage == app.melotrail.application.PreviewStage.DECODE_OR_RENDER) PlaybackFailureStage.RUNTIME else PlaybackFailureStage.RESOLUTION
+                failPlaybackSession(id, stage, resolved.message); null
+            }
+            is PreviewResult.Failed -> {
+                val stage = if (resolved.stage == app.melotrail.application.PreviewStage.DECODE_OR_RENDER) PlaybackFailureStage.DECODE else PlaybackFailureStage.RESOLUTION
+                failPlaybackSession(id, stage, resolved.message); null
             }
         }
     }
@@ -2126,6 +2254,7 @@ class WorkspaceViewModel(
             PreviewAudioSource.PREPARED_CLEAN -> PlaybackSourceKind.PREPARED_AUDIO
             PreviewAudioSource.ORIGINAL -> if (state.value.project?.parts?.find { it.id == partId }?.sourceType == PartSourceType.MIDI) PlaybackSourceKind.MIDI else PlaybackSourceKind.SOURCE_AUDIO
         }
+        is PlaybackRequest.ConnectedSource -> PlaybackSourceKind.MIDI
         is PlaybackRequest.Mix -> when (source) {
             PlaybackSource.DRY -> PlaybackSourceKind.DRY_MIX
             PlaybackSource.LOFI -> PlaybackSourceKind.LOFI_MIX
@@ -2137,6 +2266,7 @@ class WorkspaceViewModel(
     private fun PlaybackRequest.requiredCapability(): RuntimeCapability? = when (this) {
         is PlaybackRequest.Mix -> null
         is PlaybackRequest.Cohesion -> null
+        is PlaybackRequest.ConnectedSource -> RuntimeCapability.MIDI_PREVIEW
         is PlaybackRequest.Part -> state.value.project?.parts?.find { it.id == partId }?.let {
             if (it.sourceType == PartSourceType.AUDIO) RuntimeCapability.SOURCE_PREVIEW else RuntimeCapability.MIDI_PREVIEW
         }
@@ -2278,7 +2408,7 @@ class WorkspaceViewModel(
             runCatching { withContext(ioDispatcher) { operation() } }
                 .onSuccess { snapshot ->
                     opened(snapshot, "Updated song structure", feedbackId, stale = state.value.downstreamArtifactsStale)
-                    mutableState.update { current -> current.copy(selectedStructureOccurrenceId =
+                    mutableState.update { current -> current.copy(sourceSongReview = SourceSongReviewUiState(), selectedStructureOccurrenceId =
                         selectInsertedAfter?.let { source -> snapshot.structure.getOrNull(snapshot.structure.indexOfFirst { it.instanceId == source } + 1)?.instanceId }
                             ?: snapshot.structure.firstOrNull { it.instanceId == selectedId }?.instanceId
                             ?: snapshot.structure.firstOrNull()?.instanceId) }
@@ -2324,7 +2454,7 @@ class WorkspaceViewModel(
                     opened(snapshot, if (partIds.isEmpty()) "Cleared structure" else "Saved song structure", feedbackId, stale =
                         state.value.downstreamArtifactsStale || (existing != partIds && artifactsExist))
                     mutableState.update { current ->
-                        current.copy(selectedStructureOccurrenceId = selectedIndex?.let(snapshot.structure::getOrNull)?.instanceId
+                        current.copy(sourceSongReview = SourceSongReviewUiState(), selectedStructureOccurrenceId = selectedIndex?.let(snapshot.structure::getOrNull)?.instanceId
                             ?: current.selectedStructureOccurrenceId?.takeIf { id -> snapshot.structure.any { it.instanceId == id } }
                             ?: snapshot.structure.firstOrNull()?.instanceId)
                     }
@@ -3004,30 +3134,32 @@ class WorkspaceViewModel(
                 ?.let { part -> runCatching { midiAiFixService.load(project.root, part.id) } }
             val fullSongEnhancement = runCatching { fullSongEnhancementService.load(project.root) }
             val humanization = runCatching { humanizationService.load(project.root) }
-            listOf(mix, arrangement, cohesion, aiFix, fullSongEnhancement, humanization)
+            val sourceSongReview = if (project.structure.size >= 2) runCatching { loadSourceSongReview(project.root) }.getOrNull() else null
+            ProjectHydration(mix, arrangement, cohesion, aiFix, fullSongEnhancement, humanization, sourceSongReview)
         }
         val warnings = buildList {
-            hydration[0]?.exceptionOrNull()?.message?.let { add("mix settings could not be loaded: $it") }
+            hydration.mix.exceptionOrNull()?.message?.let { add("mix settings could not be loaded: $it") }
             if (project.readiness.arrangementAvailable || project.readiness.songPlanAvailable) {
-                hydration[1]?.exceptionOrNull()?.message?.let { add("arrangement artifacts could not be loaded: $it") }
+                hydration.arrangement.exceptionOrNull()?.message?.let { add("arrangement artifacts could not be loaded: $it") }
             }
             if (project.readiness.cohesionReady || project.readiness.cohesionApprovalRequired) {
-                hydration[2]?.exceptionOrNull()?.message?.let { add("cohesion artifacts could not be loaded: $it") }
+                hydration.cohesion.exceptionOrNull()?.message?.let { add("cohesion artifacts could not be loaded: $it") }
             }
         }
         mutableState.update { current ->
             if (current.project?.root != project.root) current
             else {
-                val arrangement = hydration[1]?.getOrNull() as? ArrangementSnapshot
-                val cohesion = hydration[2]?.getOrNull() as? EnsembleCohesionSnapshot
+                val arrangement = hydration.arrangement.getOrNull()
+                val cohesion = hydration.cohesion.getOrNull()
                 current.copy(
-                    mix = hydration[0]?.getOrNull() as? MixSnapshot,
+                    mix = hydration.mix.getOrNull(),
                     arrangement = arrangement,
                     cohesion = cohesion,
                     cohesionDraft = cohesion?.let { current.cohesionDraft.copy(intensity = it.intensity) } ?: current.cohesionDraft,
-                    midiAiFix = hydration[3]?.getOrNull() as? MidiAiFixSnapshot,
-                    fullSongEnhancement = hydration[4]?.getOrNull() as? FullSongEnhancementSnapshot,
-                    humanization = hydration[5]?.getOrNull() as? HumanizationSnapshot,
+                    midiAiFix = hydration.aiFix?.getOrNull(),
+                    fullSongEnhancement = hydration.fullSongEnhancement.getOrNull(),
+                    humanization = hydration.humanization.getOrNull(),
+                    sourceSongReview = hydration.sourceSongReview ?: if (resetWorkspace) SourceSongReviewUiState() else current.sourceSongReview,
                     selectedArrangementSection = if (resetWorkspace) arrangement?.sections?.firstOrNull()?.index else current.selectedArrangementSection,
                     notification = if (warnings.isEmpty()) current.notification ?: openedMessage
                     else "$openedMessage Some optional artifacts need attention: ${warnings.joinToString("; ")}",
@@ -3039,6 +3171,15 @@ class WorkspaceViewModel(
                 )
             }
         }
+    }
+
+    /** Recover only hash-bound, current review evidence; missing reports stay absent until the user generates them. */
+    private fun loadSourceSongReview(root: Path): SourceSongReviewUiState {
+        val sourceSong = sourceSongService.assemble(root).song
+        val connection = melodyConnectionPlanner.connect(root, sourceSong).connection
+        val critic = sourceSongCriticService.load(root)
+        val approval = runCatching { sourceSongCriticService.requireApproved(root) }.getOrNull()
+        return SourceSongReviewUiState(sourceSong, connection, critic, approval)
     }
 
     private fun beginFeedback(

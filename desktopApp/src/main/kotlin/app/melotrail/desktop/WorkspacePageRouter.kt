@@ -158,6 +158,12 @@ internal object WorkspacePageTags {
     const val STRUCTURE_HELP = "structure-help"
     const val STRUCTURE_OPTIONS_TOGGLE = "structure-options-toggle"
     const val STRUCTURE_OPTIONS = "structure-options"
+    const val SOURCE_SONG_REVIEW = "source-song-review"
+    const val SOURCE_SONG_GENERATE = "source-song-generate"
+    const val SOURCE_SONG_PREVIEW = "source-song-preview"
+    const val SOURCE_SONG_APPROVE = "source-song-approve"
+    const val SOURCE_SONG_BOUNDARY_PREFIX = "source-song-boundary-"
+    const val SOURCE_SONG_ISSUE_PREFIX = "source-song-issue-"
     const val ARRANGE_PLANNER_PREFIX = "arrange-planner-"
     const val ARRANGE_INSTRUMENT_PREFIX = "arrange-instrument-"
     const val ARRANGE_ROLE_PREFIX = "arrange-role-"
@@ -1491,6 +1497,7 @@ private fun StructurePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
             PageTitle("Structure", "Build and save the canonical order of your song")
             StructureAddArea(state, onIntent)
             StructureStrip(sections, selected?.instanceId, onIntent)
+            SourceSongReview(state, onIntent)
             ResponsivePageColumns(narrow = narrow, first = { columnModifier ->
                 Column(columnModifier, verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
                     SecondaryOptions(WorkspacePageTags.STRUCTURE_OPTIONS_TOGGLE, WorkspacePageTags.STRUCTURE_OPTIONS, "Choose a different prepared part") {
@@ -1508,6 +1515,87 @@ private fun StructurePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
             })
         }
     }
+}
+
+/** Pre-arrangement review uses only the typed state published by source-song services. */
+@Composable
+private fun SourceSongReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = OverviewCard(
+    WorkspacePageTags.SOURCE_SONG_REVIEW,
+    "Melody connection · solo source song"
+) {
+    val review = state.sourceSongReview
+    val busy = state.operation.isMutating
+    Text(
+        "Connect the canonical structure before arrangement. The candidate remains separate from the selected source MIDI.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    if (review.connection == null || review.sourceSong == null) {
+        Text("No connected source candidate yet. Generate it after saving at least two prepared sections.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Button(
+            onClick = { onIntent(WorkspaceIntent.GenerateSourceSongConnections) },
+            enabled = state.project?.structure?.size?.let { it >= 2 } == true && !busy,
+            modifier = Modifier.semantics { testTag = WorkspacePageTags.SOURCE_SONG_GENERATE; contentDescription = "Generate source-song melody connections and critic report" }
+        ) { Text("Generate connections") }
+        review.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+        return@OverviewCard
+    }
+
+    val sections = review.sourceSong.sections.associateBy { it.instance.instanceId }
+    Text("Occurrence timeline", style = MaterialTheme.typography.labelLarge)
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+        review.sourceSong.sections.forEach { section ->
+            OutlinedButton(
+                onClick = { onIntent(WorkspaceIntent.SelectStructureOccurrence(section.instance.instanceId)) },
+                colors = workspaceSelectableButtonColors(section.instance.instanceId == state.selectedStructureOccurrenceId)
+            ) { Text("${section.sourcePartId}${section.occurrenceNumber} · ${section.sectionRole.value}") }
+        }
+    }
+    Text("Boundary inspector", style = MaterialTheme.typography.labelLarge)
+    review.connection.boundaries.forEach { boundary ->
+        val outgoing = sections[boundary.decision.outgoingInstanceId]
+        val incoming = sections[boundary.decision.incomingInstanceId]
+        val report = boundary.report
+        val outgoingChord = outgoing?.canonicalHarmony?.lastOrNull()?.let { it.rootSymbol + it.quality.symbolSuffix } ?: "—"
+        val incomingChord = incoming?.canonicalHarmony?.firstOrNull()?.let { it.rootSymbol + it.quality.symbolSuffix } ?: "—"
+        Card(
+            Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.SOURCE_SONG_BOUNDARY_PREFIX + boundary.decision.boundaryId },
+            colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface),
+            border = BorderStroke(1.dp, MusicWorkspaceTokens.Border)
+        ) {
+            Column(Modifier.padding(MusicWorkspaceTokens.Spacing.Sm), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+                Text("${outgoing?.sourcePartId ?: boundary.decision.outgoingInstanceId}${outgoing?.occurrenceNumber ?: ""} → ${incoming?.sourcePartId ?: boundary.decision.incomingInstanceId}${incoming?.occurrenceNumber ?: ""}", style = MaterialTheme.typography.titleSmall)
+                Text("$outgoingChord → $incomingChord · ${boundary.decision.strategy.name.replace('_', ' ')}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("${report.budget.changedNotes} changed note${if (report.budget.changedNotes == 1) "" else "s"} · budget ${report.budget.maximumChanges} · ${report.mutations.size} inspectable mutation${if (report.mutations.size == 1) "" else "s"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                report.warnings.firstOrNull()?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = semanticColor(WorkspaceSemanticState.WARNING)) }
+            }
+        }
+    }
+    val report = review.critic?.report
+    if (report != null) {
+        Text("Source Song Critic · ${if (report.hasBlockingIssues) "blocking findings" else "ready for approval"}", style = MaterialTheme.typography.labelLarge,
+            color = if (report.hasBlockingIssues) semanticColor(WorkspaceSemanticState.WARNING) else semanticColor(WorkspaceSemanticState.READY))
+        if (report.issues.isEmpty()) Text("No critic findings.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        report.issues.forEach { issue ->
+            Text("${issue.severity.name} · ${issue.location.boundaryId}, bar ${issue.location.bar + 1}: ${issue.message}",
+                modifier = Modifier.semantics { testTag = WorkspacePageTags.SOURCE_SONG_ISSUE_PREFIX + issue.id },
+                style = MaterialTheme.typography.bodySmall,
+                color = if (issue.severity.name == "BLOCKING") MaterialTheme.colorScheme.error else semanticColor(WorkspaceSemanticState.WARNING))
+        }
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+        OutlinedButton(
+            onClick = { onIntent(WorkspaceIntent.PreviewConnectedSourceSong) }, enabled = !busy,
+            modifier = Modifier.semantics { testTag = WorkspacePageTags.SOURCE_SONG_PREVIEW; contentDescription = "Preview connected solo source song as piano" }
+        ) { Text("Preview solo source") }
+        Button(
+            onClick = { onIntent(WorkspaceIntent.RequestApproveSourceSong) }, enabled = review.critic != null && !review.approved && !busy,
+            modifier = Modifier.semantics { testTag = WorkspacePageTags.SOURCE_SONG_APPROVE; contentDescription = "Approve current connected source song" }
+        ) { Text(if (review.approved) "Source approved" else "Approve source song") }
+        OutlinedButton(onClick = { onIntent(WorkspaceIntent.GenerateSourceSongConnections) }, enabled = !busy) { Text("Regenerate") }
+    }
+    if (review.approved) Text("Approved current source-song candidate. Arrangement may now use this approval gate.", color = semanticColor(WorkspaceSemanticState.READY), style = MaterialTheme.typography.bodySmall)
+    review.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
 }
 
 @Composable

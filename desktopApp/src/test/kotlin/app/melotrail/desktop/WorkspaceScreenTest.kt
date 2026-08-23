@@ -420,6 +420,18 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `Structure exposes the connected source-song review gate without inventing candidate data`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(populatedState().copy(workspaceSection = WorkspaceSection.STRUCTURE), intents::add) } }
+
+        onNodeWithTag(WorkspacePageTags.SOURCE_SONG_REVIEW).assertExists()
+        onNodeWithTag(WorkspacePageTags.SOURCE_SONG_GENERATE).performScrollTo().performClick()
+        assertEquals(WorkspaceIntent.GenerateSourceSongConnections, intents.single())
+        onNodeWithTag(WorkspacePageTags.SOURCE_SONG_PREVIEW).assertDoesNotExist()
+        onNodeWithTag(WorkspacePageTags.SOURCE_SONG_APPROVE).assertDoesNotExist()
+    }
+
+    @Test
     fun `project actions disable only while a mutation is in flight`() = runComposeUiTest {
         setContent {
             MelotrailTheme {
