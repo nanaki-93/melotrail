@@ -70,7 +70,7 @@ internal data class PartArtifactComparison(
     val preview: PartArtifactPreview
 )
 
-internal enum class PartArtifactKind { ORIGINAL, CLEANED, CORRECTED, ENHANCED }
+internal enum class PartArtifactKind { SOURCE, RAW, CLEANED, CORRECTED, AI_FIX, ENHANCED }
 
 internal sealed interface PartArtifactPreview {
     data class Audio(val source: PreviewAudioSource) : PartArtifactPreview
@@ -79,8 +79,9 @@ internal sealed interface PartArtifactPreview {
 
 /**
  * The desktop never discovers files itself: availability is the already
- * validated application snapshot. Draft, rejected, and stale enhancement
- * evidence is deliberately omitted from this current-ready list.
+ * validated application snapshot. Rejected and stale evidence is deliberately
+ * omitted; a validated AI-fix draft remains reviewable until the musician
+ * explicitly accepts or refuses it.
  */
 internal fun availablePartArtifactComparisons(project: ProjectSnapshot, part: PartSummary): List<PartArtifactComparison> {
     if (!part.preparation.sourcePreserved || (part.sourceType == PartSourceType.MIDI && !part.preparation.rawMidi)) return emptyList()
@@ -91,25 +92,35 @@ internal fun availablePartArtifactComparisons(project: ProjectSnapshot, part: Pa
     val preparation = part.preparation
     val current = when {
         preparation.enhancement.selected == EnhancementSelection.ENHANCED && preparation.enhancement.approvedAvailable -> PartArtifactKind.ENHANCED
+        preparation.midiAiFix.selected == app.melotrail.arrangement.MidiAiFixSelection.APPROVED && preparation.midiAiFix.approvedAvailable -> PartArtifactKind.AI_FIX
         preparation.technicalCorrection.selected == app.melotrail.arrangement.TechnicalCorrectionSelection.CORRECTED && preparation.technicalCorrection.available && !preparation.technicalCorrection.approvalRequired -> PartArtifactKind.CORRECTED
         preparation.cleanMidi && preparation.midiQuality.status == MidiQualityStatus.CURRENT -> PartArtifactKind.CLEANED
-        else -> PartArtifactKind.ORIGINAL
+        preparation.rawMidi -> PartArtifactKind.RAW
+        else -> PartArtifactKind.SOURCE
     }
-    val original = if (part.sourceType == PartSourceType.AUDIO) {
-        PartArtifactComparison(PartArtifactKind.ORIGINAL, "Original audio", run(StageId.SOURCE), "Immutable source audio monitor; it is not a MIDI representation.", current == PartArtifactKind.ORIGINAL, PartArtifactPreview.Audio(PreviewAudioSource.ORIGINAL))
+    val source = if (part.sourceType == PartSourceType.AUDIO) {
+        PartArtifactComparison(PartArtifactKind.SOURCE, "SOURCE · audio", run(StageId.SOURCE), "Immutable source audio monitor; it is not a MIDI representation.", current == PartArtifactKind.SOURCE, PartArtifactPreview.Audio(PreviewAudioSource.ORIGINAL))
     } else {
-        PartArtifactComparison(PartArtifactKind.ORIGINAL, "Original MIDI", run(StageId.SOURCE), "Immutable raw MIDI representation.", current == PartArtifactKind.ORIGINAL, PartArtifactPreview.Midi(PreviewMidiSource.RAW))
+        PartArtifactComparison(PartArtifactKind.SOURCE, "SOURCE · MIDI", run(StageId.SOURCE), "Immutable source evidence. RAW MIDI below is the same imported musical data.", current == PartArtifactKind.SOURCE, PartArtifactPreview.Midi(PreviewMidiSource.RAW))
     }
     return buildList {
-        add(original)
+        add(source)
+        if (preparation.rawMidi) {
+            add(PartArtifactComparison(PartArtifactKind.RAW, "RAW MIDI", run(StageId.EXTRACTED), "Immutable editable MIDI published from the source route.", current == PartArtifactKind.RAW, PartArtifactPreview.Midi(PreviewMidiSource.RAW)))
+        }
         if (preparation.cleanMidi && preparation.midiQuality.status == MidiQualityStatus.CURRENT) {
-            add(PartArtifactComparison(PartArtifactKind.CLEANED, "Cleaned MIDI", run(StageId.CLEANED), if (part.sourceType == PartSourceType.AUDIO) "Derived MIDI render from source audio; compare it with audio as different representations." else "Validated derived MIDI.", current == PartArtifactKind.CLEANED, PartArtifactPreview.Midi(PreviewMidiSource.CLEANED)))
+            add(PartArtifactComparison(PartArtifactKind.CLEANED, "CLEAN MIDI", run(StageId.CLEANED), if (part.sourceType == PartSourceType.AUDIO) "Derived MIDI render from source audio; compare it with audio as different representations." else "Validated derived MIDI.", current == PartArtifactKind.CLEANED, PartArtifactPreview.Midi(PreviewMidiSource.CLEANED)))
         }
         if (preparation.technicalCorrection.available && !preparation.technicalCorrection.approvalRequired) {
             add(PartArtifactComparison(PartArtifactKind.CORRECTED, "Corrected MIDI", run(StageId.CORRECTED), "Validated conservative correction; downstream selection can bypass Enhanced.", current == PartArtifactKind.CORRECTED, PartArtifactPreview.Midi(PreviewMidiSource.CORRECTED)))
         }
+        if (preparation.midiAiFix.draftAvailable) {
+            add(PartArtifactComparison(PartArtifactKind.AI_FIX, "AI FIX · draft", run(StageId.AI_FIXED), "Review-only bounded AI-fix draft; accept or refuse it explicitly.", false, PartArtifactPreview.Midi(PreviewMidiSource.AI_FIX_DRAFT)))
+        } else if (preparation.midiAiFix.approvedAvailable) {
+            add(PartArtifactComparison(PartArtifactKind.AI_FIX, "AI FIX", run(StageId.AI_FIXED), "Approved bounded AI-fix MIDI.", current == PartArtifactKind.AI_FIX, PartArtifactPreview.Midi(PreviewMidiSource.AI_FIX_APPROVED)))
+        }
         if (preparation.enhancement.approvedAvailable) {
-            add(PartArtifactComparison(PartArtifactKind.ENHANCED, "Enhanced MIDI", run(StageId.ENHANCED), "Approved enhanced MIDI; its corrected input and context were hash-validated.", current == PartArtifactKind.ENHANCED, PartArtifactPreview.Midi(PreviewMidiSource.ENHANCED)))
+            add(PartArtifactComparison(PartArtifactKind.ENHANCED, "AI ENHANCE", run(StageId.ENHANCED), "Approved enhanced MIDI; its corrected input and context were hash-validated.", current == PartArtifactKind.ENHANCED, PartArtifactPreview.Midi(PreviewMidiSource.ENHANCED)))
         }
     }
 }
@@ -216,7 +227,11 @@ private fun SimplifiedMelodyPartCard(state: WorkspaceUiState, part: PartSummary,
     val enhancementComplete = enhancement.selected == EnhancementSelection.CORRECTED ||
         (enhancement.selected == EnhancementSelection.ENHANCED && enhancement.approvedAvailable)
     val steps = listOf(
-        PipelineStep("Import audio/MIDI", if (part.preparation.rawMidi) PipelineStepStatus.COMPLETE else PipelineStepStatus.WAITING),
+        PipelineStep("Import audio/MIDI", when {
+            part.preparation.rawMidi -> PipelineStepStatus.COMPLETE
+            part.sourceType == PartSourceType.AUDIO -> PipelineStepStatus.CURRENT
+            else -> PipelineStepStatus.WAITING
+        }),
         PipelineStep("Clean MIDI", when {
             !part.preparation.rawMidi -> PipelineStepStatus.WAITING
             part.preparation.midiQuality.status == MidiQualityStatus.CURRENT -> PipelineStepStatus.COMPLETE
@@ -234,13 +249,13 @@ private fun SimplifiedMelodyPartCard(state: WorkspaceUiState, part: PartSummary,
             else -> PipelineStepStatus.CURRENT
         }),
         PipelineStep("AI Enhance", when {
-            !aiFixComplete -> PipelineStepStatus.WAITING
+            !correctionReady || !aiFixComplete -> PipelineStepStatus.WAITING
             enhancementComplete -> PipelineStepStatus.COMPLETE
             enhancement.available && enhancement.approval == app.melotrail.arrangement.EnhancementApproval.DRAFT -> PipelineStepStatus.REVIEW
             else -> PipelineStepStatus.CURRENT
         }),
         PipelineStep("Apply Lo-fi Feel", when {
-            !enhancementComplete -> PipelineStepStatus.WAITING
+            !correctionReady || !enhancementComplete -> PipelineStepStatus.WAITING
             part.preparation.midiFeel.selected == app.melotrail.arrangement.MidiAnalysisInput.LOFI_FEEL && part.preparation.midiFeel.available -> PipelineStepStatus.COMPLETE
             else -> PipelineStepStatus.CURRENT
         })
@@ -250,12 +265,34 @@ private fun SimplifiedMelodyPartCard(state: WorkspaceUiState, part: PartSummary,
         Modifier.fillMaxWidth().padding(MusicWorkspaceTokens.Spacing.Sm).semantics { testTag = WorkspacePageTags.IMPORTED_ROW_PREFIX + part.id },
         verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)
     ) {
-        Text(part.name, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(part.name, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${SectionTypeCatalog.label(part.sectionType)} · ${part.sourceType.name.lowercase()} · ${part.sourceName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            TextButton(
+                onClick = { onIntent(WorkspaceIntent.ShowPartDetails(part.id)) },
+                enabled = !locked,
+                modifier = Modifier.semantics {
+                    testTag = WorkspacePageTags.IMPORTED_DETAILS_PREFIX + part.id
+                    contentDescription = "Inspect and compare ${part.name}"
+                }
+            ) { Text("Inspect") }
+        }
+        val comparisons = state.project?.let { availablePartArtifactComparisons(it, part) }.orEmpty()
+        Text(
+            if (comparisons.isEmpty()) "Representations: SOURCE only" else "Representations: ${comparisons.joinToString(" · ") { comparison -> if (comparison.current) "${comparison.label} (current)" else comparison.label }}",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         steps.forEach { step ->
             Text("${step.label}: ${step.status.name.lowercase().replaceFirstChar(Char::uppercase)}", style = MaterialTheme.typography.bodySmall,
                 color = if (step == active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
         }
         when (active?.label) {
+            "Import audio/MIDI" -> if (part.sourceType == PartSourceType.AUDIO) {
+                Button(onClick = { onIntent(WorkspaceIntent.ShowPartDetails(part.id)) }, enabled = !locked) { Text("Inspect source") }
+            }
             "Clean MIDI" -> Button(onClick = { onIntent(WorkspaceIntent.CleanMidi(part.id)) }, enabled = !locked) { Text("Clean MIDI") }
             "Technical Correction" -> Button(onClick = { onIntent(WorkspaceIntent.SelectPart(part.id)); onIntent(WorkspaceIntent.CreateTechnicalCorrection) }, enabled = !locked) { Text("Apply Technical Correction") }
             "AI Fix" -> AiFixActions(part.id, aiFix.draftAvailable, locked, onIntent)

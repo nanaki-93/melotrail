@@ -228,12 +228,22 @@ class WorkspaceScreenTest {
         setContent { MelotrailTheme { WorkspaceScreen(state, intents::add) } }
 
         onNodeWithTag(WorkspaceTags.PART_COMPARISON).assertExists()
-        val original = onNodeWithTag(WorkspaceTags.PART_COMPARISON_PLAY_PREFIX + "original")
-        original.performSemanticsAction(SemanticsActions.RequestFocus)
-        original.performKeyInput { pressKey(Key.Enter) }
+        val source = onNodeWithTag(WorkspaceTags.PART_COMPARISON_PLAY_PREFIX + "source")
+        source.performSemanticsAction(SemanticsActions.RequestFocus)
+        source.performKeyInput { pressKey(Key.Enter) }
 
         assertEquals(WorkspaceIntent.PreviewMidiPart("A", app.melotrail.application.PreviewMidiSource.RAW), intents.single())
-        onNodeWithContentDescription("Play Original MIDI for A/B comparison").assertExists()
+        onNodeWithContentDescription("Play SOURCE · MIDI for A/B comparison").assertExists()
+    }
+
+    @Test
+    fun `audio part card keeps inspection as the first actionable source stage`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(importState(importPart("solo.wav", audio = true)), intents::add) } }
+
+        onNodeWithText("Inspect source").performClick()
+
+        assertEquals(WorkspaceIntent.ShowPartDetails("A"), intents.single())
     }
 
     @Test

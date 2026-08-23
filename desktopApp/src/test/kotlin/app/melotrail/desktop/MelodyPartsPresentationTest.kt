@@ -56,14 +56,18 @@ class MelodyPartsPresentationTest {
             sourcePreserved = true, inspected = true, preparedAudio = false, rawMidi = true, cleanMidi = true, analyzed = true, ready = true, warnings = emptyList(),
             midiQuality = MidiQualitySummary(MidiQualityStatus.CURRENT),
             technicalCorrection = TechnicalCorrectionSummary(TechnicalCorrectionSelection.CORRECTED, available = true),
+            midiAiFix = app.melotrail.application.MidiAiFixSummary(
+                selected = app.melotrail.arrangement.MidiAiFixSelection.APPROVED,
+                approvedAvailable = true
+            ),
             enhancement = EnhancementSummary(selected = EnhancementSelection.ENHANCED, available = true, approval = EnhancementApproval.APPROVED)
         )
         val choices = availablePartArtifactComparisons(project(part(preparation = preparation), listOf(
             run(StageId.SOURCE, StageRunStatus.COMPLETED), run(StageId.CLEANED, StageRunStatus.COMPLETED),
-            run(StageId.CORRECTED, StageRunStatus.COMPLETED), run(StageId.ENHANCED, StageRunStatus.COMPLETED)
+            run(StageId.CORRECTED, StageRunStatus.COMPLETED), run(StageId.AI_FIXED, StageRunStatus.COMPLETED), run(StageId.ENHANCED, StageRunStatus.COMPLETED)
         )), part(preparation = preparation))
 
-        assertEquals(listOf(PartArtifactKind.ORIGINAL, PartArtifactKind.CLEANED, PartArtifactKind.CORRECTED, PartArtifactKind.ENHANCED), choices.map { it.kind })
+        assertEquals(listOf(PartArtifactKind.SOURCE, PartArtifactKind.RAW, PartArtifactKind.CLEANED, PartArtifactKind.CORRECTED, PartArtifactKind.AI_FIX, PartArtifactKind.ENHANCED), choices.map { it.kind })
         assertEquals("Enhanced · run-ENHANCED", choices.last().runLabel)
         assertEquals(PartArtifactKind.ENHANCED, choices.single { it.current }.kind)
     }
@@ -78,9 +82,24 @@ class MelodyPartsPresentationTest {
         val audio = part(preparation = preparation).copy(sourceType = PartSourceType.AUDIO, sourceFile = "source/verse.wav", sourceName = "verse.wav")
         val choices = availablePartArtifactComparisons(project(audio, emptyList()), audio)
 
-        assertEquals("Original audio", choices.first().label)
+        assertEquals("SOURCE · audio", choices.first().label)
         assertTrue(choices.single { it.kind == PartArtifactKind.CLEANED }.detail.contains("Derived MIDI"))
         assertFalse(choices.any { it.kind == PartArtifactKind.ENHANCED })
+    }
+
+    @Test
+    fun `AI fix draft is safely previewable without becoming the current representation`() {
+        val preparation = PartPreparationSummary(
+            sourcePreserved = true, inspected = true, preparedAudio = false, rawMidi = true, cleanMidi = true, analyzed = false, ready = false, warnings = emptyList(),
+            midiQuality = MidiQualitySummary(MidiQualityStatus.CURRENT),
+            midiAiFix = app.melotrail.application.MidiAiFixSummary(draftAvailable = true)
+        )
+
+        val choices = availablePartArtifactComparisons(project(part(preparation = preparation), emptyList()), part(preparation = preparation))
+
+        assertEquals(PartArtifactKind.AI_FIX, choices.last().kind)
+        assertEquals(PartArtifactPreview.Midi(app.melotrail.application.PreviewMidiSource.AI_FIX_DRAFT), choices.last().preview)
+        assertFalse(choices.last().current)
     }
 
     private fun project(part: PartSummary, runs: List<StageRunSnapshot>) = ProjectSnapshot(

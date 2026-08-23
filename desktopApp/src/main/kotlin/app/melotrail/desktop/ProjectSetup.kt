@@ -103,7 +103,7 @@ internal fun ProjectSetupContent(state: WorkspaceUiState, onIntent: (WorkspaceIn
 private fun SetupForm(state: WorkspaceUiState, setup: ProjectSetupUiState, onIntent: (WorkspaceIntent) -> Unit) {
     val draft = checkNotNull(setup.draft)
     val options = checkNotNull(setup.options)
-    WorkspaceCard("Creative context", WorkspacePageTags.SETUP_FORM) {
+    WorkspaceCard("Authoritative musical context", WorkspacePageTags.SETUP_FORM) {
         Text(
             when {
                 state.operation is WorkspaceOperation.SavingProjectSetup -> "Saving…"
@@ -135,6 +135,8 @@ private fun SetupForm(state: WorkspaceUiState, setup: ProjectSetupUiState, onInt
             }
             Button(onClick = { onIntent(WorkspaceIntent.ConfirmProjectSetupSave) }, enabled = !state.operation.isMutating, modifier = Modifier.semantics { testTag = WorkspacePageTags.SETUP_CONFIRM }) { Text("Save and mark stale") }
         } ?: Button(onClick = { onIntent(WorkspaceIntent.SaveProjectSetup) }, enabled = !state.operation.isMutating, modifier = Modifier.semantics { testTag = WorkspacePageTags.SETUP_SAVE }) { Text(if (setup.requiresSetup) "Save setup" else "Save changes") }
+        Text("Key, BPM, and meter here are authoritative. Set the section chord progressions in Harmony; processing may use them but never replaces them.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.HARMONY)) }, enabled = !state.operation.isMutating) { Text("Edit authoritative harmony") }
     }
 }
 

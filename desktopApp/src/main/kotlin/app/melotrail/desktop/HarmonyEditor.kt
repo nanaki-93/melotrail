@@ -103,7 +103,7 @@ internal fun HarmonyPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) ->
             verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)
         ) {
             Text("Harmony", style = MaterialTheme.typography.headlineMedium)
-            Text("Author a key-aware progression for any song section before or after importing Melody Parts.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Authoritative project harmony. Create key-aware progressions for any song section; processing uses them and never replaces them.", color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (view == null) {
                 Text(
                     if (editor.loading) "Loading canonical harmony…" else editor.error ?: "Save Setup before adding structured harmony.",
