@@ -195,6 +195,14 @@
       "documentedFunctionCount": 0
     },
     {
+      "path": "src/main/kotlin/app/melotrail/application/SourceSongApplicationService.kt",
+      "classification": "documented",
+      "reason": "Every callable declaration has directly attached, reviewed KDoc/docstring coverage.",
+      "functionCount": 1,
+      "declarationDigest": "a70d1f422ea75bf580ae9c65abde6cce89d231c36bdb87f82a1116f0d2bab4e1",
+      "documentedFunctionCount": 1
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/arrangement/Arrangement.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/arrangement/Arrangement.kt has 11 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
@@ -385,6 +393,14 @@
       "functionCount": 2,
       "declarationDigest": "86bcde158232b7148dc1f597e6a418c8d0ace40ce1a0c2d18c07671228579fe0",
       "documentedFunctionCount": 1
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/arrangement/SourceSong.kt",
+      "classification": "documented",
+      "reason": "Every callable declaration has directly attached, reviewed KDoc/docstring coverage.",
+      "functionCount": 16,
+      "declarationDigest": "7ded751bf429a1f17926530556a59cc245ada3ce08289c1ab94627b0d8db9d19",
+      "documentedFunctionCount": 16
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/StemMixer.kt",
