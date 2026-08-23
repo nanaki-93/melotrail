@@ -122,6 +122,8 @@ class ReferenceSongIntegrationTest {
         assertEquals(3, authority.harmony.map { it.occurrenceId }.distinct().size)
         val critic = DefaultFullSongCriticApplicationService().run(root)
         assertTrue(critic.current)
+        assertEquals(critic.report.issues.map { it.id }, critic.issueLocations.map { it.issueId })
+        assertTrue(critic.issueLocations.all { it.occurrenceId == null || it.startBar >= 0L })
         var modelCalls = 0
         val enhance = DefaultFullSongEnhancementApplicationService(planner = { input ->
             modelCalls++

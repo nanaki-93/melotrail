@@ -46,6 +46,7 @@ import app.melotrail.application.DefaultFullSongEnhancementApplicationService
 import app.melotrail.application.FullSongEnhancementSnapshot
 import app.melotrail.application.FullSongCriticApplicationService
 import app.melotrail.application.DefaultFullSongCriticApplicationService
+import app.melotrail.application.FullSongCriticSnapshot
 import app.melotrail.application.PartPreviewApplicationService
 import app.melotrail.application.PreviewRequest
 import app.melotrail.application.PreviewResult
@@ -151,6 +152,8 @@ data class WorkspaceUiState(
     val cohesion: EnsembleCohesionSnapshot? = null,
     /** Immutable AI-fix review evidence; composables never read draft files. */
     val midiAiFix: MidiAiFixSnapshot? = null,
+    /** Immutable critic evidence and section/bar navigation supplied by the application service. */
+    val fullSongCritic: FullSongCriticSnapshot? = null,
     /** Task 019 review evidence; no composable reads enhancement files. */
     val enhancementReview: EnhancementSnapshot? = null,
     val arrangement: ArrangementSnapshot? = null,
@@ -177,6 +180,8 @@ data class WorkspaceUiState(
     /** UI navigation only; planner fields remain in [arrangementDraft] until generation. */
     val arrangeTab: ArrangeTab = ArrangeTab.ARRANGEMENT,
     val selectedArrangementSection: Int? = null,
+    /** The focused issue is UI selection only; its location remains service-derived evidence. */
+    val focusedCriticIssueId: String? = null,
     val operation: WorkspaceOperation = WorkspaceOperation.Idle,
     val operationFeedback: OperationFeedback = OperationFeedback.idle(),
     val notification: String? = null,
@@ -224,6 +229,7 @@ private data class ProjectHydration(
     val arrangementWorkspace: Result<ArrangementWorkspaceSnapshot>,
     val cohesion: Result<EnsembleCohesionSnapshot>,
     val aiFix: Result<MidiAiFixSnapshot>?,
+    val fullSongCritic: Result<FullSongCriticSnapshot>,
     val fullSongEnhancement: Result<FullSongEnhancementSnapshot>,
     val humanization: Result<HumanizationSnapshot>,
     val sourceSongReview: SourceSongReviewUiState?
@@ -740,6 +746,7 @@ sealed interface WorkspaceIntent {
     data object GenerateHumanization : WorkspaceIntent
     data object BypassHumanization : WorkspaceIntent
     data object GenerateCritic : WorkspaceIntent
+    data class FocusCriticIssue(val issueId: String) : WorkspaceIntent
     data object GenerateFullSongEnhancement : WorkspaceIntent
     data object ApproveFullSongEnhancement : WorkspaceIntent
     data object BypassFullSongEnhancement : WorkspaceIntent
@@ -953,6 +960,7 @@ class WorkspaceViewModel(
             WorkspaceIntent.GenerateHumanization -> generateHumanization()
             WorkspaceIntent.BypassHumanization -> bypassHumanization()
             WorkspaceIntent.GenerateCritic -> generateCritic()
+            is WorkspaceIntent.FocusCriticIssue -> focusCriticIssue(intent.issueId)
             WorkspaceIntent.GenerateFullSongEnhancement -> generateFullSongEnhancement()
             WorkspaceIntent.ApproveFullSongEnhancement -> approveFullSongEnhancement()
             WorkspaceIntent.BypassFullSongEnhancement -> bypassFullSongEnhancement()
@@ -2940,6 +2948,7 @@ class WorkspaceViewModel(
                     mutableState.update { current ->
                         current.copy(
                             project = refreshed,
+                            fullSongCritic = snapshot,
                             fullSongEnhancement = null,
                             humanization = null,
                             operation = WorkspaceOperation.Idle,
@@ -2949,6 +2958,24 @@ class WorkspaceViewModel(
                     }
                 }
                 .onFailure { fail("critic", it.message ?: "Unable to generate the Critic report.", sessionId = feedbackId) }
+        }
+    }
+
+    /** Routes a Critic finding through canonical occurrence identity, never a UI-derived timeline estimate. */
+    private fun focusCriticIssue(issueId: String) {
+        val critic = state.value.fullSongCritic ?: return fail("focus critic issue", "Run Critic before navigating to a finding.")
+        val location = critic.issueLocations.singleOrNull { it.issueId == issueId }
+            ?: return fail("focus critic issue", "The selected Critic finding is no longer part of the current report.")
+        val occurrenceId = location.occurrenceId
+        val sectionIndex = occurrenceId?.let { id -> state.value.arrangement?.sections?.firstOrNull { it.instanceId == id }?.index }
+        mutableState.update { current ->
+            current.copy(
+                workspaceSection = WorkspaceSection.ARRANGE,
+                selectedArrangementSection = sectionIndex ?: current.selectedArrangementSection,
+                selectedPartId = sectionIndex?.let { index -> current.arrangement?.sections?.firstOrNull { it.index == index }?.partId }
+                    ?: current.selectedPartId,
+                focusedCriticIssueId = issueId
+            )
         }
     }
 
@@ -3165,6 +3192,7 @@ class WorkspaceViewModel(
                 project = project,
                 cohesion = if (resetWorkspace) null else current.cohesion,
                 midiAiFix = if (resetWorkspace) null else current.midiAiFix,
+                fullSongCritic = if (resetWorkspace) null else current.fullSongCritic,
                 humanization = if (resetWorkspace) null else current.humanization,
                 arrangement = if (resetWorkspace) null else current.arrangement,
                 mix = if (resetWorkspace) null else current.mix,
@@ -3203,10 +3231,11 @@ class WorkspaceViewModel(
             val cohesion = runCatching { cohesionService.load(project.root) }
             val aiFix = project.parts.firstOrNull { it.preparation.midiAiFix.draftAvailable || it.preparation.midiAiFix.approvedAvailable }
                 ?.let { part -> runCatching { midiAiFixService.load(project.root, part.id) } }
+            val fullSongCritic = runCatching { fullSongCriticService.load(project.root) }
             val fullSongEnhancement = runCatching { fullSongEnhancementService.load(project.root) }
             val humanization = runCatching { humanizationService.load(project.root) }
             val sourceSongReview = if (project.structure.size >= 2) runCatching { loadSourceSongReview(project.root) }.getOrNull() else null
-            ProjectHydration(mix, arrangement, arrangementWorkspace, cohesion, aiFix, fullSongEnhancement, humanization, sourceSongReview)
+            ProjectHydration(mix, arrangement, arrangementWorkspace, cohesion, aiFix, fullSongCritic, fullSongEnhancement, humanization, sourceSongReview)
         }
         val warnings = buildList {
             hydration.mix.exceptionOrNull()?.message?.let { add("mix settings could not be loaded: $it") }
@@ -3229,10 +3258,14 @@ class WorkspaceViewModel(
                     cohesion = cohesion,
                     cohesionDraft = cohesion?.let { current.cohesionDraft.copy(intensity = it.intensity) } ?: current.cohesionDraft,
                     midiAiFix = hydration.aiFix?.getOrNull(),
+                    fullSongCritic = hydration.fullSongCritic.getOrNull(),
                     fullSongEnhancement = hydration.fullSongEnhancement.getOrNull(),
                     humanization = hydration.humanization.getOrNull(),
                     sourceSongReview = hydration.sourceSongReview ?: if (resetWorkspace) SourceSongReviewUiState() else current.sourceSongReview,
                     selectedArrangementSection = if (resetWorkspace) arrangement?.sections?.firstOrNull()?.index else current.selectedArrangementSection,
+                    focusedCriticIssueId = if (resetWorkspace) null else current.focusedCriticIssueId?.takeIf { issueId ->
+                        hydration.fullSongCritic.getOrNull()?.issueLocations?.any { it.issueId == issueId } == true
+                    },
                     notification = if (warnings.isEmpty()) current.notification ?: openedMessage
                     else "$openedMessage Some optional artifacts need attention: ${warnings.joinToString("; ")}",
                     operationFeedback = feedbackTracker.complete(

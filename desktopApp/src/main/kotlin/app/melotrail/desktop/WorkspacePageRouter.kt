@@ -175,6 +175,12 @@ internal object WorkspacePageTags {
     const val ARRANGE_COHESION_ACTION = "arrange-cohesion-action"
     const val ARRANGE_COHESION_REVIEW = "arrange-cohesion-review"
     const val ARRANGE_COHESION_BOUNDARY_PREFIX = "arrange-cohesion-boundary-"
+    const val ARRANGE_DENSITY_BUDGET = "arrange-density-budget"
+    const val ARRANGE_CRITIC = "arrange-full-song-critic"
+    const val ARRANGE_CRITIC_ISSUE_PREFIX = "arrange-critic-issue-"
+    const val ARRANGE_TARGETED_FIX = "arrange-targeted-fix"
+    const val ARRANGE_FINAL_MIDI = "arrange-final-midi"
+    const val ARRANGE_CRITIC_FOCUS = "arrange-critic-focus"
     const val ARRANGE_DIAGNOSTICS_TOGGLE = "arrange-diagnostics-toggle"
     const val ARRANGE_DIAGNOSTICS = "arrange-diagnostics"
     const val ARRANGE_REVIEW = "arrange-review"
@@ -1179,6 +1185,7 @@ private fun ArrangePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
         ArrangeTimeline(state, onIntent)
         ArrangeEnergyAndRoleProgress(state, onIntent)
         if (arrangementApproved) CohesionReview(state, onIntent)
+        if (arrangementApproved) WholeSongReview(state, onIntent)
         ArrangeTransport(state, onIntent)
         ArrangeReview(state, onIntent)
         ArrangeSummary(state)
@@ -1237,6 +1244,19 @@ private fun ArrangeEnergyAndRoleProgress(state: WorkspaceUiState, onIntent: (Wor
         if (workspace.roles.any { it.active && it.optional && it.status == app.melotrail.application.ArrangementRoleProgressStatus.ACCEPTED }) {
             OutlinedButton(onClick = { onIntent(WorkspaceIntent.GenerateOptionalArrangementMidi) }, enabled = !state.operation.isMutating) { Text("Generate optional layers") }
         }
+        workspace.densityBudget?.let { budget ->
+            HorizontalDivider()
+            Column(Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_DENSITY_BUDGET }, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("Optional-layer density budget", style = MaterialTheme.typography.labelLarge)
+                Text("Capacity ${budget.capacity} · core occupied ${budget.occupied} · remaining ${budget.remaining}", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    if (budget.remaining == 0L) "Optional sustained layers are recommended OFF: the approved core fills the pitched-note budget."
+                    else "Optional layers may use only the validated remaining pitched-note capacity.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 
@@ -1278,10 +1298,97 @@ private fun CohesionReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent) 
                 ) { Text("Play enhanced") }
             }
             draft.boundaries.forEach { boundary ->
-                Text("${boundary.outgoingInstanceId} → ${boundary.incomingInstanceId}: ${boundary.rationale}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedButton(
+                    onClick = { onIntent(WorkspaceIntent.ReviewCohesionBoundary(boundary.outgoingInstanceId, boundary.incomingInstanceId)) },
+                    enabled = !state.operation.isMutating,
+                    modifier = Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.ARRANGE_COHESION_BOUNDARY_PREFIX + boundary.outgoingInstanceId + "-" + boundary.incomingInstanceId }
+                ) { Text("${boundary.outgoingInstanceId} → ${boundary.incomingInstanceId}: ${if (boundary.reviewed) "reviewed" else "review boundary"}") }
+                Text(boundary.rationale, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Text("Approve or reject this boundary-only result after comparing the baseline and Ensemble Cohesion previews.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+                OutlinedButton(onClick = { onIntent(WorkspaceIntent.RejectCohesion) }, enabled = !state.operation.isMutating) { Text("Reject draft") }
+                Button(onClick = { onIntent(WorkspaceIntent.ApproveCohesion) }, enabled = !state.operation.isMutating && draft.boundaries.all { it.reviewed }) { Text("Approve Cohesion") }
+            }
         }
+        if (cohesion == null) Button(onClick = { onIntent(WorkspaceIntent.GenerateCohesion) }, enabled = !state.operation.isMutating) { Text("Generate Ensemble Cohesion") }
+    }
+}
+
+/** Full-song review remains in Arrange: its actions are bounded by the current Critic evidence. */
+@Composable
+private fun WholeSongReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    val critic = state.fullSongCritic
+    val mutating = state.operation.isMutating
+    OverviewCard(WorkspacePageTags.ARRANGE_CRITIC, "Whole-song Critic") {
+        if (critic == null) {
+            Text("Run Critic after approved Cohesion to review harmony, density, transitions, masking, groove, and recognizability.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Button(onClick = { onIntent(WorkspaceIntent.GenerateCritic) }, enabled = !mutating && state.project?.readiness?.cohesionReady == true) { Text("Run Critic") }
+        } else {
+            val recognizability = critic.report.aggregateMetrics.firstOrNull { it.name == "recognizabilityIssueCount" }?.value?.toInt() ?: 0
+            Text("${critic.report.issues.size} finding(s) · recognizability ${if (recognizability == 0) "preserved" else "$recognizability regression finding(s)"}", style = MaterialTheme.typography.bodySmall)
+            Text("Recognizability is checked before MIDI can advance to rendering.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            critic.report.warnings.forEach { warning -> Text(warning, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary) }
+            critic.report.advice?.observations?.forEach { observation -> Text(observation, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            if (critic.report.issues.isEmpty()) Text("No deterministic Critic findings. Select final-MIDI bypass or no-op evidence before rendering.", style = MaterialTheme.typography.bodySmall, color = semanticColor(WorkspaceSemanticState.READY))
+            critic.report.issues.forEach { issue ->
+                val location = critic.issueLocations.firstOrNull { it.issueId == issue.id }
+                val selected = state.focusedCriticIssueId == issue.id
+                OutlinedButton(
+                    onClick = { onIntent(WorkspaceIntent.FocusCriticIssue(issue.id)) },
+                    enabled = !mutating,
+                    modifier = Modifier.fillMaxWidth().semantics {
+                        testTag = WorkspacePageTags.ARRANGE_CRITIC_ISSUE_PREFIX + issue.id
+                        contentDescription = "${issue.category.name.lowercase().replace('_', ' ')} finding for ${location?.occurrenceId ?: "song"}, bars ${location?.startBar ?: issue.window.startBar} to ${location?.endBar ?: issue.window.endBar}${if (selected) ", focused" else ""}"
+                    }
+                ) {
+                    Column(Modifier.fillMaxWidth()) {
+                        Text("${issue.severity.name.lowercase().replaceFirstChar(Char::uppercase)} · ${issue.category.name.lowercase().replace('_', ' ')}")
+                        Text("${location?.occurrenceId ?: "Song"} · bars ${location?.startBar ?: issue.window.startBar}–${location?.endBar ?: issue.window.endBar} · ${issue.targetRole}", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+            }
+        }
+    }
+    if (critic != null) TargetedFixAndFinalMidi(state, onIntent)
+}
+
+@Composable
+private fun TargetedFixAndFinalMidi(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    val enhancement = state.fullSongEnhancement
+    val mutating = state.operation.isMutating
+    OverviewCard(WorkspacePageTags.ARRANGE_TARGETED_FIX, "Targeted fix") {
+        val description = enhancement?.let { snapshot ->
+            when (snapshot.selection) {
+                app.melotrail.arrangement.FullSongEnhancementSelection.APPROVED -> "Targeted candidate approved: ${snapshot.addressedIssues} of ${snapshot.actionableIssues} actionable findings addressed."
+                app.melotrail.arrangement.FullSongEnhancementSelection.NO_OP -> "Critic recorded a no-op; Cohesion MIDI remains selected."
+                app.melotrail.arrangement.FullSongEnhancementSelection.BYPASS -> "Targeted fixes explicitly bypassed; Cohesion MIDI remains selected."
+                app.melotrail.arrangement.FullSongEnhancementSelection.UNRESOLVED -> if (snapshot.candidateAvailable) "Candidate addresses ${snapshot.addressedIssues} of ${snapshot.actionableIssues} actionable findings. Review before approval." else "No candidate is available."
+            }
+        } ?: "Generate only a bounded candidate from current actionable Critic findings."
+        Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        enhancement?.warnings?.forEach { warning -> Text(warning, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary) }
+        Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+            OutlinedButton(onClick = { onIntent(WorkspaceIntent.BypassFullSongEnhancement) }, enabled = !mutating) { Text("Bypass targeted fixes") }
+            when {
+                enhancement?.candidateAvailable == true -> Button(onClick = { onIntent(WorkspaceIntent.ApproveFullSongEnhancement) }, enabled = !mutating) { Text("Approve targeted candidate") }
+                enhancement?.selection !in setOf(app.melotrail.arrangement.FullSongEnhancementSelection.NO_OP, app.melotrail.arrangement.FullSongEnhancementSelection.APPROVED) -> Button(onClick = { onIntent(WorkspaceIntent.GenerateFullSongEnhancement) }, enabled = !mutating) { Text("Generate targeted candidate") }
+            }
+        }
+    }
+    OverviewCard(WorkspacePageTags.ARRANGE_FINAL_MIDI, "Final MIDI approval") {
+        val selection = enhancement?.selection
+        val approved = selection in setOf(
+            app.melotrail.arrangement.FullSongEnhancementSelection.APPROVED,
+            app.melotrail.arrangement.FullSongEnhancementSelection.NO_OP,
+            app.melotrail.arrangement.FullSongEnhancementSelection.BYPASS
+        )
+        Text(
+            if (approved) "Final MIDI selection is explicit and current; rendering may use this approved evidence."
+            else "Choose the bounded candidate, no-op, or bypass after reviewing the Critic before rendering.",
+            style = MaterialTheme.typography.bodySmall,
+            color = if (approved) semanticColor(WorkspaceSemanticState.READY) else MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -1335,6 +1442,16 @@ private fun ArrangeTimeline(state: WorkspaceUiState, onIntent: (WorkspaceIntent)
     val sections = arrangeTimelineSections(state)
     val startTimes = arrangeSectionStartTimes(sections)
     val tracks = state.arrangement?.sections.orEmpty().flatMap { it.instruments }.map { it.name }.distinct()
+    state.focusedCriticIssueId?.let { issueId ->
+        val issue = state.fullSongCritic?.report?.issues?.firstOrNull { it.id == issueId }
+        val location = state.fullSongCritic?.issueLocations?.firstOrNull { it.issueId == issueId }
+        if (issue != null) Text(
+            "Critic focus: ${location?.occurrenceId ?: "song"}, bars ${location?.startBar ?: issue.window.startBar}–${location?.endBar ?: issue.window.endBar}.",
+            modifier = Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_CRITIC_FOCUS },
+            style = MaterialTheme.typography.bodySmall,
+            color = MusicWorkspaceTokens.Primary
+        )
+    }
     if (sections.isEmpty()) {
         Text("No saved structure is available. Timeline timing and track lanes appear only from canonical structure and arrangement snapshots.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         return@OverviewCard
@@ -2347,42 +2464,6 @@ private fun MixMasterPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
                             Button(onClick = { onIntent(WorkspaceIntent.GenerateHumanization) }, enabled = !mutating && humanizationReady,
                                 modifier = Modifier.semantics { testTag = "mix-master-humanization-regenerate"; contentDescription = "Create and select a new deterministic humanization variation." }) {
                                 Text(if (humanization?.selection == app.melotrail.arrangement.HumanizationSelection.HUMANIZED) "New variation" else "Use profile default")
-                            }
-                        }
-                    }
-                    OverviewCard("mix-master-critic", "Critic") {
-                        val criticReady = state.project?.readiness?.criticAvailable == true
-                        Text(
-                            if (criticReady) "Current Critic report is available for the approved Cohesion output."
-                            else "Run Critic before choosing Full-Song Enhance or Humanization.",
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Button(
-                            onClick = { onIntent(WorkspaceIntent.GenerateCritic) },
-                            enabled = !mutating && state.project?.readiness?.cohesionReady == true
-                        ) { Text(if (criticReady) "Rerun Critic" else "Run Critic") }
-                    }
-                    OverviewCard("mix-master-full-song-enhance", "Full-Song Enhance") {
-                        val enhancement = state.fullSongEnhancement
-                        val criticReady = state.project?.readiness?.criticAvailable == true
-                        Text(
-                            enhancement?.let { snapshot ->
-                                when (snapshot.selection) {
-                                    app.melotrail.arrangement.FullSongEnhancementSelection.APPROVED -> "Current approved candidate · ${snapshot.changedNotes} note edits"
-                                    app.melotrail.arrangement.FullSongEnhancementSelection.NO_OP -> "Critic no-op evidence · Cohesion MIDI remains selected"
-                                    app.melotrail.arrangement.FullSongEnhancementSelection.BYPASS -> "Bypassed evidence · Cohesion MIDI remains selected"
-                                    app.melotrail.arrangement.FullSongEnhancementSelection.UNRESOLVED -> if (snapshot.candidateAvailable) "Draft candidate evidence · ${snapshot.addressedIssues} of ${snapshot.actionableIssues} Critic issues addressed" else "Run the Critic first, then generate a bounded candidate."
-                                }
-                            } ?: "After Cohesion and Critic, generate a bounded candidate, approve it, or bypass it.",
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        enhancement?.warnings?.forEach { warning -> Text(warning, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary) }
-                        Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-                            OutlinedButton(onClick = { onIntent(WorkspaceIntent.BypassFullSongEnhancement) }, enabled = !mutating && criticReady) { Text("Bypass") }
-                            if (enhancement?.candidateAvailable == true) {
-                                Button(onClick = { onIntent(WorkspaceIntent.ApproveFullSongEnhancement) }, enabled = !mutating) { Text("Approve") }
-                            } else if (enhancement?.selection != app.melotrail.arrangement.FullSongEnhancementSelection.NO_OP && enhancement?.selection != app.melotrail.arrangement.FullSongEnhancementSelection.APPROVED) {
-                                Button(onClick = { onIntent(WorkspaceIntent.GenerateFullSongEnhancement) }, enabled = !mutating && criticReady) { Text("Generate candidate") }
                             }
                         }
                     }

@@ -120,8 +120,14 @@ data class ArrangementSnapshot(
 /** A UI-safe view of the persisted, incremental arrangement generation boundary. */
 data class ArrangementWorkspaceSnapshot(
     val arrangement: ArrangementSnapshot,
-    val roles: List<ArrangementRoleProgressSnapshot>
+    val roles: List<ArrangementRoleProgressSnapshot>,
+    /** Validated optional-layer capacity; never estimated by the UI. */
+    val densityBudget: DensityBudgetSummary? = null
 )
+
+data class DensityBudgetSummary(val capacity: Long, val occupied: Long, val remaining: Long) {
+    init { require(capacity >= 0 && occupied >= 0 && remaining >= 0) }
+}
 
 /** A role is reported from durable workflow references; it is never inferred from a MIDI path in the UI. */
 data class ArrangementRoleProgressSnapshot(
@@ -474,7 +480,7 @@ class DefaultArrangementApplicationService(
             }
             ArrangementRoleProgressSnapshot(instrument, planned?.role, planned != null, optional, status)
         }
-        return ArrangementWorkspaceSnapshot(arrangement, roles)
+        return ArrangementWorkspaceSnapshot(arrangement, roles, densityBudget(normalized, generated.values))
     }
 
     override fun preview(root: Path): ArrangementSnapshot {
@@ -482,6 +488,18 @@ class DefaultArrangementApplicationService(
         require(snapshot.approvalRequired) { "Arrangement preview is only available for a draft; no approval is needed." }
         require(!snapshot.stale) { "Arrangement draft is stale: validate or regenerate it before approval." }
         return snapshot
+    }
+
+    private fun densityBudget(root: Path, generated: Collection<GeneratedMidiArtifactReference>): DensityBudgetSummary? {
+        val reports = generated.mapNotNull { reference -> runCatching {
+            requireCurrentReference(root, reference.validationReport)
+            json.decodeFromString(RoleValidationReport.serializer(), Files.readString(root.resolve(reference.validationReport.file), StandardCharsets.UTF_8))
+        }.getOrNull() }
+        val metrics = reports.flatMap(RoleValidationReport::metrics).groupBy { it.name }
+        val capacity = metrics["densityBudgetCapacity"]?.maxOfOrNull { it.value } ?: return null
+        val occupied = metrics["densityBudgetOccupied"]?.maxOfOrNull { it.value } ?: return null
+        val remaining = metrics["densityBudgetRemaining"]?.minOfOrNull { it.value } ?: return null
+        return DensityBudgetSummary(capacity, occupied, remaining)
     }
 
     override fun approve(root: Path): ArrangementSnapshot = mutateBlocking(root) { normalized ->

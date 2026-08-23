@@ -1163,15 +1163,54 @@ class WorkspaceScreenTest {
             ArrangementRoleProgressSnapshot("piano", "melody", active = true, optional = false, status = ArrangementRoleProgressStatus.SOURCE_READY),
             ArrangementRoleProgressSnapshot("bass", "bass", active = true, optional = false, status = ArrangementRoleProgressStatus.READY_TO_GENERATE),
             ArrangementRoleProgressSnapshot("strings", "texture", active = true, optional = true, status = ArrangementRoleProgressStatus.LOCKED)
-        ))
+        ), app.melotrail.application.DensityBudgetSummary(capacity = 6, occupied = 6, remaining = 0))
         setContent { MelotrailTheme { WorkspaceScreen(arrangeState().copy(arrangement = arrangement, arrangementWorkspace = progress), intents::add) } }
 
         onNodeWithTag(WorkspacePageTags.ARRANGE_ENERGY).assertExists()
         onNodeWithTag(WorkspacePageTags.ARRANGE_ROLE_PROGRESS).assertExists()
+        onNodeWithTag(WorkspacePageTags.ARRANGE_DENSITY_BUDGET).assertExists()
+        onNodeWithText("Optional sustained layers are recommended OFF: the approved core fills the pitched-note budget.").assertExists()
         onNodeWithTag(WorkspacePageTags.ARRANGE_ROLE_ACTION_PREFIX + "bass").performScrollTo().performClick()
         onNodeWithTag(WorkspacePageTags.ARRANGE_ROLE_ACTION_PREFIX + "strings").assertIsNotEnabled()
 
         assertEquals(WorkspaceIntent.GenerateCoreArrangementMidi, intents.single())
+    }
+
+    @Test
+    fun `Arrange keeps Critic review targeted and makes issue section and bars focusable`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        val issue = app.melotrail.arrangement.FullSongIssue(
+            id = "transition-a2",
+            category = app.melotrail.arrangement.FullSongIssueCategory.TRANSITION_ABRUPTNESS,
+            severity = app.melotrail.arrangement.FullSongIssueSeverity.ACTIONABLE,
+            targetRole = "ensemble",
+            occurrenceId = "A2",
+            window = app.melotrail.arrangement.FullSongWindow(960, 1440, 3, 4),
+            observed = emptyList(), expected = emptyList(), reasonCode = "boundary-gap",
+            suggestedCorrections = emptyList()
+        )
+        val report = app.melotrail.arrangement.FullSongCriticReport.create(
+            "a".repeat(64), "b".repeat(64),
+            listOf(app.melotrail.arrangement.FullSongAggregateMetric("recognizabilityIssueCount", 0.0)),
+            listOf(issue), emptyList()
+        )
+        val arrangement = arrangementSnapshot(approved = true, sections = listOf(
+            arrangementSection(0, "A1", 18.0, "piano", "bass"),
+            arrangementSection(1, "A2", 18.0, "piano", "bass")
+        ))
+        val critic = app.melotrail.application.FullSongCriticSnapshot(
+            report, Path.of("build/critic.json"), true,
+            listOf(app.melotrail.application.FullSongCriticIssueLocation("transition-a2", "A2", 3, 4))
+        )
+        setContent { MelotrailTheme { WorkspaceScreen(arrangeState().copy(arrangement = arrangement, fullSongCritic = critic), intents::add) } }
+
+        onNodeWithTag(WorkspacePageTags.ARRANGE_CRITIC).performScrollTo().assertExists()
+        onNodeWithText("1 finding(s) · recognizability preserved").assertExists()
+        onNodeWithTag(WorkspacePageTags.ARRANGE_CRITIC_ISSUE_PREFIX + "transition-a2").performScrollTo().performClick()
+        assertEquals(WorkspaceIntent.FocusCriticIssue("transition-a2"), intents.single())
+        onNodeWithTag(WorkspacePageTags.ARRANGE_TARGETED_FIX).assertExists()
+        onNodeWithTag(WorkspacePageTags.ARRANGE_FINAL_MIDI).assertExists()
+        onAllNodesWithText("Improve everything").assertCountEquals(0)
     }
 
     @Test

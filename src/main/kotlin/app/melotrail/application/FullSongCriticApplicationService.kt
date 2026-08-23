@@ -25,7 +25,20 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.security.MessageDigest
 
-data class FullSongCriticSnapshot(val report: FullSongCriticReport, val artifact: Path, val current: Boolean)
+/** A UI-safe, immutable jump target derived from the Critic's canonical song context. */
+data class FullSongCriticIssueLocation(
+    val issueId: String,
+    val occurrenceId: String?,
+    val startBar: Long,
+    val endBar: Long
+)
+
+data class FullSongCriticSnapshot(
+    val report: FullSongCriticReport,
+    val artifact: Path,
+    val current: Boolean,
+    val issueLocations: List<FullSongCriticIssueLocation>
+)
 
 /** UI-neutral, read-only critic orchestration. Its only writes are its atomically published report and workflow evidence. */
 interface FullSongCriticApplicationService {
@@ -53,7 +66,7 @@ class DefaultFullSongCriticApplicationService(
         val project = ProjectStore.read(normalized)
         ProjectStore.write(normalized, project.copy(workflow = project.workflow.invalidate(WorkflowChange.CRITIC)
             .markCurrent(WorkflowArtifact.CRITIC).copy(critic = CriticWorkflowReferences(input.inputSha256, reference))))
-        return FullSongCriticSnapshot(report, path, true)
+        return snapshot(report, path, input)
     }
 
     override fun load(root: Path): FullSongCriticSnapshot {
@@ -65,7 +78,7 @@ class DefaultFullSongCriticApplicationService(
         val path = verified(normalized, reference.report, "Full-Song Critic report")
         val report = json.decodeFromString(FullSongCriticReport.serializer(), Files.readString(path))
         require(report.inputSha256 == input.inputSha256 && report.contextSha256 == input.authority.contextSha256) { "Full-Song Critic report does not match current Cohesion inputs." }
-        return FullSongCriticSnapshot(report, path, true)
+        return snapshot(report, path, input)
     }
 
     /** Re-runs the deterministic critic against a complete, unselected candidate without mutating workflow state. */
@@ -121,6 +134,19 @@ class DefaultFullSongCriticApplicationService(
         )).toByteArray(StandardCharsets.UTF_8))
         return FullSongCriticInput(authority, occurrences, roles, arrangement, arrangementRef.sha256, melody, reports, inputSha256 = hash)
     }
+
+    private fun snapshot(report: FullSongCriticReport, path: Path, input: FullSongCriticInput): FullSongCriticSnapshot =
+        FullSongCriticSnapshot(
+            report = report,
+            artifact = path,
+            current = true,
+            issueLocations = report.issues.map { issue ->
+                val occurrence = issue.occurrenceId ?: input.authority.occurrences.firstOrNull { candidate ->
+                    issue.window.startTick < candidate.endTick && issue.window.endTick > candidate.startTick
+                }?.occurrenceId
+                FullSongCriticIssueLocation(issue.id, occurrence, issue.window.startBar, issue.window.endBar)
+            }
+        )
 
     private fun verified(root: Path, reference: WorkflowArtifactReference, label: String): Path {
         val path = root.resolve(reference.file).normalize()
