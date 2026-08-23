@@ -1,6 +1,7 @@
 package app.melotrail.application
 
 import app.melotrail.arrangement.ProjectStore
+import app.melotrail.arrangement.MidiCleanupProfile
 import app.melotrail.preparation.AudioInspectionMeasurements
 import app.melotrail.preparation.DetectedAudioFormat
 import app.melotrail.preparation.DetectedInput
@@ -77,7 +78,11 @@ class UnifiedImportApplicationServiceTest {
             assertEquals(hash(input), evidence.sourceSha256)
             assertEquals(hash(root.resolve("midi/raw/A.mid")), evidence.rawMidiSha256)
             assertTrue(imported.parts.single().preparation.rawMidi)
-            assertFalse(imported.parts.single().preparation.cleanMidi)
+            assertTrue(imported.parts.single().preparation.cleanMidi)
+            assertEquals(MidiCleanupProfile.TRANSCRIPTION_SAFE, stored.midi?.cleanup?.profile)
+            assertEquals(15, stored.midi?.cleanup?.minVelocity)
+            assertTrue(Files.isRegularFile(root.resolve("midi/raw/A.mid")))
+            assertTrue(Files.isRegularFile(root.resolve("midi/clean/A.mid")))
         }
         assertEquals(3, harness.transcriptionCalls)
     }

@@ -158,8 +158,7 @@ class EndToEndWorkflowCompatibilityTest {
         val services = services(failCleanup = true)
         services.projects.create(CreateProjectRequest(root))
 
-        services.projects.importPart(ImportPartRequest(root, "A", source, transcribe = true))
-        val failure = runCatching { services.projects.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions())) }.exceptionOrNull()
+        val failure = runCatching { services.projects.importPart(ImportPartRequest(root, "A", source, transcribe = true)) }.exceptionOrNull()
         assertTrue(failure?.message.orEmpty().contains("cleanup failure"))
         assertTrue(Files.isRegularFile(root.resolve("source/A.wav")))
         assertFalse(Files.exists(root.resolve("midi/clean/A.mid")))

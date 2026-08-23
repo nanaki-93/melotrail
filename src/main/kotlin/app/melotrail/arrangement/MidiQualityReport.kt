@@ -27,12 +27,19 @@ data class MidiCleanupOptions(
     val minNoteMs: Int = 50,
     val minVelocity: Int = 8,
     val normalizeVelocity: Boolean = false,
-    val cleanSustain: Boolean = false
+    val cleanSustain: Boolean = false,
+    val preserveGraceNotes: Boolean = false,
+    val graceNoteMaxMs: Int = 80,
+    val graceVelocityMax: Int = 32,
+    val duplicateOnsetWindowMs: Int = 35
 ) {
     fun requireValid() {
         require(requestVersion == 2) { "Unsupported MIDI cleanup request version: $requestVersion" }
         require(minNoteMs in 1..1_000) { "MIDI cleanup minimum note length must be 1..1000 ms" }
         require(minVelocity in 0..127) { "MIDI cleanup minimum velocity must be 0..127" }
+        require(graceNoteMaxMs in 1..1_000) { "MIDI cleanup grace-note duration must be 1..1000 ms" }
+        require(graceVelocityMax in 1..127) { "MIDI cleanup grace-note velocity must be 1..127" }
+        require(duplicateOnsetWindowMs in 0..1_000) { "MIDI cleanup duplicate onset window must be 0..1000 ms" }
         require(strength in 0.0..1.0) { "MIDI cleanup strength must be 0.0..1.0" }
         val validGrid = quantize == null || quantize in VALID_GRIDS
         require(validGrid) { "MIDI cleanup quantize grid must be one of: ${VALID_GRIDS.joinToString()}" }
@@ -48,6 +55,46 @@ data class MidiCleanupOptions(
 
     companion object {
         private val VALID_GRIDS = setOf("1/4", "1/8", "1/16", "1/32")
+    }
+}
+
+/**
+ * The bounded deterministic cleanup policy applied immediately after audio
+ * transcription. Short or quiet notes are suspicious, but contextual grace
+ * notes and chord members are retained for later review.
+ */
+@Serializable
+data class TranscriptionCleanupProfile(
+    val version: Int = CURRENT_VERSION,
+    val minNoteMs: Int = 50,
+    val suspiciousVelocity: Int = 15,
+    val graceNoteMaxMs: Int = 80,
+    val graceVelocityMax: Int = 32,
+    val duplicateOnsetWindowMs: Int = 35
+) {
+    init {
+        require(version == CURRENT_VERSION) { "Unsupported transcription cleanup profile version: $version" }
+        require(minNoteMs in 1..1_000) { "Transcription cleanup minimum note length must be 1..1000 ms" }
+        require(suspiciousVelocity in 1..127) { "Transcription cleanup suspicious velocity must be 1..127" }
+        require(graceNoteMaxMs in minNoteMs..1_000) { "Transcription cleanup grace-note duration must be at least the suspicious duration" }
+        require(graceVelocityMax in suspiciousVelocity..127) { "Transcription cleanup grace-note velocity must be at least the suspicious velocity" }
+        require(duplicateOnsetWindowMs in 0..1_000) { "Transcription cleanup duplicate onset window must be 0..1000 ms" }
+    }
+
+    /** Converts the profile into the versioned worker cleanup contract. */
+    fun toMidiCleanupOptions() = MidiCleanupOptions(
+        profile = MidiCleanupProfile.TRANSCRIPTION_SAFE,
+        minNoteMs = minNoteMs,
+        minVelocity = suspiciousVelocity,
+        preserveGraceNotes = true,
+        graceNoteMaxMs = graceNoteMaxMs,
+        graceVelocityMax = graceVelocityMax,
+        duplicateOnsetWindowMs = duplicateOnsetWindowMs
+    )
+
+    companion object {
+        const val CURRENT_VERSION = 1
+        val DEFAULT = TranscriptionCleanupProfile()
     }
 }
 

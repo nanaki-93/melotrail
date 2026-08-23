@@ -89,6 +89,10 @@ object WorkerProtocol {
                 put("minVelocity", command.minVelocity)
                 put("normalizeVelocity", command.normalizeVelocity)
                 put("cleanSustain", command.cleanSustain)
+                put("preserveGraceNotes", command.preserveGraceNotes)
+                put("graceNoteMaxMs", command.graceNoteMaxMs)
+                put("graceVelocityMax", command.graceVelocityMax)
+                put("duplicateOnsetWindowMs", command.duplicateOnsetWindowMs)
             }
             is InputInspectionCommand -> put("path", command.path)
             is AudioCleanupCommand -> {

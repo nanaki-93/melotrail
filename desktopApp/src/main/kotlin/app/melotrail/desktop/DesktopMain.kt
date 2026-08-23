@@ -181,7 +181,8 @@ object DesktopServiceComposition {
             val response = client.execute(CleanMidiCommand(
                 input.toString(), output.toString(), options.requestVersion,
                 profile, options.quantize, options.strength,
-                options.minNoteMs, options.minVelocity, options.normalizeVelocity, options.cleanSustain
+                options.minNoteMs, options.minVelocity, options.normalizeVelocity, options.cleanSustain,
+                options.preserveGraceNotes, options.graceNoteMaxMs, options.graceVelocityMax, options.duplicateOnsetWindowMs
             ))
             require(response.status == WorkerStatus.COMPLETED) { cleanupFailureMessage(response.error) }
             requireMidi(output, "MIDI cleanup")

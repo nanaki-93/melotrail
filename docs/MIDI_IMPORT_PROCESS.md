@@ -62,7 +62,10 @@ an arbitrary external path.
 4. Select the original or validated prepared input and transcribe it with the
    local worker's optional Basic Pitch runtime. Only a validated output is
    atomically published as immutable `midi/raw/<part>.mid`.
-5. Continue with **Clean MIDI**, just as for direct MIDI.
+5. Melotrail immediately applies the mandatory `TranscriptionCleanupProfile`
+   and atomically publishes `midi/clean/<part>.mid` plus its quality evidence.
+   Raw and clean MIDI remain separately inspectable; cleanup failure leaves raw
+   MIDI as evidence and blocks analysis rather than routing it to arrangement.
 
 The worker accepts only the `piano` transcription instrument. It checks the
 published result is MIDI with notes in the piano range, a bounded note rate,

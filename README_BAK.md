@@ -107,7 +107,9 @@ auditioning validated artifacts.
 - Direct MIDI is preserved under `source/` and copied as immutable evidence under `midi/raw/`. Worker **Clean MIDI** repairs invalid events; Kotlin **Normalize MIDI** then publishes deterministic `midi/normalized/` evidence and a hash-bound report. Melotrail records detected source-key confidence; below its fixed gate, confirm the source key explicitly before **Transpose to project key** publishes a separate `midi/transposed/` artifact and report.
 - WAV/WAVE and MP3 input is accepted only for the optional **solo-piano**
   transcription workflow. Do not use it to claim reliable editable MIDI from
-  vocals, full mixes, or arbitrary polyphonic material.
+  vocals, full mixes, or arbitrary polyphonic material. A successful audio
+  transcription always preserves raw MIDI and immediately applies the bounded
+  deterministic transcription cleanup profile before analysis can proceed.
 - Inspection is the default and creates a measured `prepared/<part>/report.json`
   without changing the source. Safe cleanup requires explicit confirmation,
   keeps the original immutable, and can create `decoded.wav` and `clean.wav`
@@ -142,7 +144,7 @@ release-ready.
 
 ```bash
 make test                              # Kotlin unit/integration tests
-.venv/bin/python -m unittest discover -s worker/tests
+make worker-test                       # Python worker tests
 make build                             # Full Gradle build
 ```
 
@@ -156,6 +158,7 @@ and preserve the source sample rate and channels.
 |---|---|
 | `make build` | Build the application |
 | `make test` | Run tests |
+| `make worker-test` | Run offline Python worker tests |
 | `make check` | Run Gradle verification |
 | `make desktop` | Start the Compose Desktop application |
 | `make worker` | Start standalone Python worker on `:8081` |

@@ -22,7 +22,11 @@ class CleanMidiCommandTest {
             minNoteMs = 50,
             minVelocity = 8,
             normalizeVelocity = true,
-            cleanSustain = true
+            cleanSustain = true,
+            preserveGraceNotes = true,
+            graceNoteMaxMs = 80,
+            graceVelocityMax = 32,
+            duplicateOnsetWindowMs = 35
         )
 
         val request = WorkerProtocol.requestFor(command, "job-2")
@@ -37,5 +41,9 @@ class CleanMidiCommandTest {
         assertEquals("8", request["minVelocity"]?.jsonPrimitive?.content)
         assertEquals("true", request["normalizeVelocity"]?.jsonPrimitive?.content)
         assertEquals("true", request["cleanSustain"]?.jsonPrimitive?.content)
+        assertEquals("true", request["preserveGraceNotes"]?.jsonPrimitive?.content)
+        assertEquals("80", request["graceNoteMaxMs"]?.jsonPrimitive?.content)
+        assertEquals("32", request["graceVelocityMax"]?.jsonPrimitive?.content)
+        assertEquals("35", request["duplicateOnsetWindowMs"]?.jsonPrimitive?.content)
     }
 }

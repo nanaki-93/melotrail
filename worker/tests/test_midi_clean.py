@@ -137,6 +137,38 @@ class CleanMidiCommandTest(unittest.TestCase):
 
             self.assertEqual(1, result["outputNoteCount"])
 
+    def test_transcription_profile_keeps_contextual_grace_notes_and_merges_near_duplicates(self) -> None:
+        with tempfile.TemporaryDirectory() as directory_name:
+            directory = Path(directory_name)
+            source = directory / "raw.mid"
+            output = directory / "clean.mid"
+            midi = mido.MidiFile(ticks_per_beat=480)
+            track = mido.MidiTrack()
+            # The overlapping C captures are one 100 ms onset, not a retrigger.
+            track.append(mido.Message("note_on", note=60, velocity=64, time=0))
+            track.append(mido.Message("note_on", note=60, velocity=60, time=5))
+            track.append(mido.Message("note_off", note=60, velocity=0, time=91))
+            track.append(mido.Message("note_off", note=60, velocity=0, time=0))
+            # Quiet 25 ms grace note immediately leads to a stronger note.
+            track.append(mido.Message("note_on", note=61, velocity=12, time=0))
+            track.append(mido.Message("note_off", note=61, velocity=0, time=24))
+            track.append(mido.Message("note_on", note=62, velocity=85, time=0))
+            track.append(mido.Message("note_off", note=62, velocity=0, time=480))
+            # An isolated quiet/short artifact has no musical context and is removed.
+            track.append(mido.Message("note_on", note=64, velocity=10, time=0))
+            track.append(mido.Message("note_off", note=64, velocity=0, time=24))
+            midi.tracks.append(track)
+            midi.save(source)
+
+            result = midi_clean_command({
+                "path": str(source), "outputPath": str(output), "profile": "transcription-safe",
+                "minNoteMs": 50, "minVelocity": 15, "preserveGraceNotes": True,
+                "graceNoteMaxMs": 80, "graceVelocityMax": 32, "duplicateOnsetWindowMs": 35,
+            })
+
+            self.assertEqual(1, result["nearDuplicatesMerged"])
+            self.assertEqual([60, 61, 62], [note[2] for note in completed_notes(output)])
+
     def test_multiple_channels_and_programs_survive_round_trip(self) -> None:
         with tempfile.TemporaryDirectory() as directory_name:
             directory = Path(directory_name)

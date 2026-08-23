@@ -4,6 +4,7 @@ import app.melotrail.arrangement.ArtifactRef
 import app.melotrail.arrangement.ImportEvidence
 import app.melotrail.arrangement.MidiAnalysisInput
 import app.melotrail.arrangement.MidiCleanupOptions
+import app.melotrail.arrangement.TranscriptionCleanupProfile
 import app.melotrail.arrangement.MidiQualityReport
 import app.melotrail.arrangement.MidiQualityReportStore
 import app.melotrail.arrangement.MidiQualityReporter
@@ -103,9 +104,11 @@ class AutomaticImportProcessors(
             val raw = requireNotNull(part.midi?.raw) { "Extracted MIDI is required before cleanup" }
             val rawPath = source(request, raw)
             val clean = request.temporaryRoot.resolve("clean.mid")
-            midiPreparation.clean(rawPath, clean, defaultCleanup)
+            val cleanup = if (part.file.substringAfterLast('.', "").lowercase() in MIDI_EXTENSIONS) defaultCleanup
+            else TranscriptionCleanupProfile.DEFAULT.toMidiCleanupOptions()
+            midiPreparation.clean(rawPath, clean, cleanup)
             requireMidi(clean, "MIDI cleanup")
-            val report = qualityReporter.report(part.id, rawPath, clean, defaultCleanup)
+            val report = qualityReporter.report(part.id, rawPath, clean, cleanup)
             return StageProcessorResult(
                 outputs = listOf(TemporaryStageArtifact(clean, "midi/clean/${part.id}-${request.runId}.mid")),
                 reports = listOf(TemporaryStageArtifact(writeJson(request.temporaryRoot.resolve("quality.json"), report), "midi/quality/${part.id}-${request.runId}.json"))
@@ -126,7 +129,7 @@ class AutomaticImportProcessors(
             val approval = if (report.approvalRequired) null else MidiQualityReportStore.approval(request.root, quality.path, report)
             val updatedMidi = midi.copy(
                 clean = clean.path,
-                cleanup = defaultCleanup,
+                cleanup = report.cleanup,
                 quality = quality.path,
                 normalized = null,
                 normalization = null,

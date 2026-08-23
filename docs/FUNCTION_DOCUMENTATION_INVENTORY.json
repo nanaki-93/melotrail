@@ -285,10 +285,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/MidiQualityReport.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/MidiQualityReport.kt has 24 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 24,
-      "declarationDigest": "e1e7b3717063d7c419588ca2350001aeea883fc39eea647eddbfb54a00505e78",
-      "documentedFunctionCount": 0
+      "reason": "src/main/kotlin/app/melotrail/arrangement/MidiQualityReport.kt has 29 callable declarations. The transcription cleanup profile and its worker-contract conversion are directly documented; the remaining legacy declarations retain this declaration-digest-pinned exemption.",
+      "functionCount": 29,
+      "declarationDigest": "da1295ca3f51dcd0cc7c5fc8e369f41afc1a4c6da7f96f56f89e3cfae3c82208",
+      "documentedFunctionCount": 1
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/MidiTransitionEngine.kt",
@@ -965,10 +965,10 @@
     {
       "path": "worker/commands/midi_clean.py",
       "classification": "deferred-with-reason",
-      "reason": "worker/commands/midi_clean.py has 19 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 19,
-      "declarationDigest": "b792a12323962221bc0feec140731500a35bb05513c8053dd0a0e34bdf365f3e",
-      "documentedFunctionCount": 1
+      "reason": "worker/commands/midi_clean.py has 21 callable declarations. The context-aware grace-note and near-duplicate helpers are directly documented; the remaining legacy declarations retain this declaration-digest-pinned exemption.",
+      "functionCount": 21,
+      "declarationDigest": "506cb7aed10780af96fdb6f1ac409292417732e6a0d0f701d70de96f3101e6d6",
+      "documentedFunctionCount": 3
     },
     {
       "path": "worker/commands/mp3_convert.py",
@@ -1033,6 +1033,14 @@
       "functionCount": 0,
       "declarationDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "documentedFunctionCount": 0
+    },
+    {
+      "path": "worker/tools/benchmark_transcription.py",
+      "classification": "documented",
+      "reason": "Every callable declaration has directly attached, reviewed KDoc/docstring coverage.",
+      "functionCount": 9,
+      "declarationDigest": "8582381484d7f7cb648f7071d94cca5f44d8779a24173963d880d97d9cd70b52",
+      "documentedFunctionCount": 9
     },
     {
       "path": "worker/tools/transcribe_piano_spike.py",

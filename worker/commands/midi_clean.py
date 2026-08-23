@@ -33,7 +33,8 @@ SUPPORTED_PROFILES = {
 }
 ALLOWED_REQUEST_FIELDS = {
     "jobId", "path", "outputPath", "version", "profile", "quantize", "strength",
-    "minNoteMs", "minVelocity", "normalizeVelocity", "cleanSustain",
+    "minNoteMs", "minVelocity", "normalizeVelocity", "cleanSustain", "preserveGraceNotes",
+    "graceNoteMaxMs", "graceVelocityMax", "duplicateOnsetWindowMs",
 }
 TRANSCRIPTION_SAFE_VELOCITY_MIN = 12
 TRANSCRIPTION_SAFE_VELOCITY_MAX = 120
@@ -49,6 +50,10 @@ class CleanupOptions:
     min_velocity: int
     normalize_velocity: bool
     clean_sustain: bool
+    preserve_grace_notes: bool
+    grace_note_max_ms: int
+    grace_velocity_max: int
+    duplicate_onset_window_ms: int
 
 
 @dataclass
@@ -136,10 +141,22 @@ def _parse_request(request: dict) -> tuple[Path, Path, CleanupOptions]:
     min_velocity = _require_value(request, "minVelocity", int, DEFAULT_MIN_VELOCITY)
     normalize_velocity = _require_value(request, "normalizeVelocity", bool, False)
     clean_sustain = _require_value(request, "cleanSustain", bool, False)
+    preserve_grace_notes = _require_value(request, "preserveGraceNotes", bool, False)
+    grace_note_max_ms = _require_value(request, "graceNoteMaxMs", int, 80)
+    grace_velocity_max = _require_value(request, "graceVelocityMax", int, 32)
+    duplicate_onset_window_ms = _require_value(request, "duplicateOnsetWindowMs", int, 35)
     if not 0 <= min_note_ms <= 60_000:
         raise MidiCleanupValidationError("minNoteMs must be from 0 to 60000")
     if not 0 <= min_velocity <= 127:
         raise MidiCleanupValidationError("minVelocity must be from 0 to 127")
+    if not 1 <= grace_note_max_ms <= 60_000:
+        raise MidiCleanupValidationError("graceNoteMaxMs must be from 1 to 60000")
+    if not 1 <= grace_velocity_max <= 127:
+        raise MidiCleanupValidationError("graceVelocityMax must be from 1 to 127")
+    if not 0 <= duplicate_onset_window_ms <= 1_000:
+        raise MidiCleanupValidationError("duplicateOnsetWindowMs must be from 0 to 1000")
+    if preserve_grace_notes and profile != TRANSCRIPTION_SAFE_PROFILE:
+        raise MidiCleanupValidationError("preserveGraceNotes requires the transcription-safe profile")
     if profile == CONSERVATIVE_PROFILE and (normalize_velocity or clean_sustain):
         raise MidiCleanupValidationError(
             "normalizeVelocity and cleanSustain require transcription-safe or tighten-timing profile"
@@ -154,6 +171,10 @@ def _parse_request(request: dict) -> tuple[Path, Path, CleanupOptions]:
         min_velocity=min_velocity,
         normalize_velocity=normalize_velocity,
         clean_sustain=clean_sustain,
+        preserve_grace_notes=preserve_grace_notes,
+        grace_note_max_ms=grace_note_max_ms,
+        grace_velocity_max=grace_velocity_max,
+        duplicate_onset_window_ms=duplicate_onset_window_ms,
     )
 
 
@@ -309,6 +330,55 @@ def _repair_retrigger_collisions(notes: list[MidiNote]) -> int:
     return repaired
 
 
+def _merge_near_duplicates(
+    notes: list[MidiNote], tempos: list[tuple[int, int]], ticks_per_beat: int, window_ms: int,
+) -> int:
+    """Merge only overlapping same-pitch captures close enough to be one onset."""
+    merged = 0
+    by_pitch: dict[tuple[int, int], list[MidiNote]] = {}
+    for note in notes:
+        if not note.removed:
+            by_pitch.setdefault((note.channel, note.pitch), []).append(note)
+    for same_pitch_notes in by_pitch.values():
+        same_pitch_notes.sort(key=lambda note: (note.start_tick, note.end_tick, note.track, note.on_index))
+        for earlier, later in zip(same_pitch_notes, same_pitch_notes[1:]):
+            start_distance = abs(
+                _tick_to_microseconds(later.start_tick, tempos, ticks_per_beat)
+                - _tick_to_microseconds(earlier.start_tick, tempos, ticks_per_beat)
+            ) / 1000.0
+            if earlier.removed or later.removed or start_distance > window_ms or later.start_tick > earlier.end_tick:
+                continue
+            if abs(earlier.velocity - later.velocity) > 12:
+                continue
+            earlier.end_tick = max(earlier.end_tick, later.end_tick)
+            later.removed = True
+            merged += 1
+    return merged
+
+
+def _is_contextual_grace_note(
+    note: MidiNote, notes: list[MidiNote], tempos: list[tuple[int, int]], ticks_per_beat: int, options: CleanupOptions,
+) -> bool:
+    """Keep a short/quiet note only when a chord or following attack supports it."""
+    if not options.preserve_grace_notes or note.velocity > options.grace_velocity_max:
+        return False
+    duration = _duration_ms(note, tempos, ticks_per_beat)
+    if duration > options.grace_note_max_ms:
+        return False
+    start_us = _tick_to_microseconds(note.start_tick, tempos, ticks_per_beat)
+    end_us = _tick_to_microseconds(note.end_tick, tempos, ticks_per_beat)
+    window_us = options.duplicate_onset_window_ms * 1_000
+    for other in notes:
+        if other is note or other.removed or other.channel != note.channel:
+            continue
+        other_start_us = _tick_to_microseconds(other.start_tick, tempos, ticks_per_beat)
+        if other.pitch != note.pitch and abs(other_start_us - start_us) <= window_us:
+            return True
+        if other.pitch != note.pitch and 0 <= other_start_us - end_us <= options.grace_note_max_ms * 1_000 and other.velocity >= note.velocity:
+            return True
+    return False
+
+
 def _limit_velocity_outliers(notes: list[MidiNote]) -> int:
     limited = 0
     for note in notes:
@@ -416,6 +486,7 @@ def midi_clean_command(request: dict) -> dict:
     tempos = _tempo_events(timed_tracks)
     stats = {
         "duplicatesRemoved": 0,
+        "nearDuplicatesMerged": 0,
         "shortNotesRemoved": 0,
         "lowVelocityNotesRemoved": 0,
         "overlapsRepaired": 0,
@@ -434,13 +505,22 @@ def midi_clean_command(request: dict) -> dict:
             stats["duplicatesRemoved"] += 1
         else:
             seen.add(key)
+    stats["nearDuplicatesMerged"] = _merge_near_duplicates(
+        notes, tempos, source.ticks_per_beat, options.duplicate_onset_window_ms,
+    )
     for note in notes:
         if note.removed:
             continue
-        if _duration_ms(note, tempos, source.ticks_per_beat) < options.min_note_ms:
+        suspicious_short = _duration_ms(note, tempos, source.ticks_per_beat) < options.min_note_ms
+        suspicious_quiet = note.velocity < options.min_velocity
+        if (suspicious_short or suspicious_quiet) and _is_contextual_grace_note(
+            note, notes, tempos, source.ticks_per_beat, options,
+        ):
+            continue
+        if suspicious_short:
             note.removed = True
             stats["shortNotesRemoved"] += 1
-        elif note.velocity < options.min_velocity:
+        elif suspicious_quiet:
             note.removed = True
             stats["lowVelocityNotesRemoved"] += 1
 

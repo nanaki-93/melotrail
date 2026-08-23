@@ -4,6 +4,7 @@ import app.melotrail.arrangement.AnalysisKind
 import app.melotrail.arrangement.MidiAnalysis
 import app.melotrail.arrangement.MidiAnalysisStore
 import app.melotrail.arrangement.MidiCleanupOptions
+import app.melotrail.arrangement.TranscriptionCleanupProfile
 import app.melotrail.arrangement.MidiPartAnalyzer
 import app.melotrail.arrangement.MidiQualityRecommendation
 import app.melotrail.arrangement.MidiQualityReport
@@ -595,6 +596,20 @@ class DefaultProjectApplicationService(
             inputArtifacts = listOf(registration.source),
             configurationSha256 = configuration
         ))
+        require(firstRun.snapshot.status == StageRunStatus.COMPLETED) {
+            "Audio/MIDI extraction failed; inspect the recorded stage failure before retrying."
+        }
+        if (command.file.fileName.toString().substringAfterLast('.', "").lowercase() !in MIDI_EXTENSIONS) {
+            val cleanup = runner.run(RunStage(
+                root = root,
+                stage = StageId.CLEANED,
+                subject = StageSubject.Part(command.id),
+                configurationSha256 = sha256Hex("transcription-cleanup|${TranscriptionCleanupProfile.DEFAULT}")
+            ))
+            require(cleanup.snapshot.status == StageRunStatus.COMPLETED) {
+                "Mandatory transcription cleanup failed; raw MIDI remains available for inspection."
+            }
+        }
         return ImportSongPartResult(command.id, firstRun, open(root))
     }
 
@@ -612,7 +627,8 @@ class DefaultProjectApplicationService(
                 sourceAttestation = request.sourceAttestation
             )).snapshot
         }
-        return mutateSuspend(request.root) { root ->
+        val isAudio = request.source.fileName.toString().substringAfterLast('.', "").lowercase() !in MIDI_EXTENSIONS
+        val imported = mutateSuspend(request.root) { root ->
         require(PART_ID.matches(request.id)) { "Part ID must contain only letters, numbers, underscores, or hyphens: ${request.id}" }
         val source = request.source.toAbsolutePath().normalize()
         require(Files.isRegularFile(source)) { "Input file not found: $source" }
@@ -695,6 +711,10 @@ class DefaultProjectApplicationService(
         progress.report(OperationProgress("import-part", finalStage, finalStage, "Registered raw MIDI; Clean MIDI is next", root.resolve(ProjectStore.FILE_NAME)))
         snapshot(root, saved)
     }
+        return if (isAudio) {
+            progress.report(OperationProgress("import-part", 4, 5, "Applying mandatory transcription cleanup", request.root.resolve("midi/clean/${request.id}.mid")))
+            cleanMidi(CleanMidiRequest(request.root, request.id, TranscriptionCleanupProfile.DEFAULT.toMidiCleanupOptions()), progress)
+        } else imported
     }
 
     override suspend fun cleanMidi(request: CleanMidiRequest, progress: ProgressSink): ProjectSnapshot = mutateSuspend(request.root) { root ->
@@ -985,7 +1005,8 @@ class DefaultProjectApplicationService(
     override suspend fun transcribeAudioPart(
         request: TranscribeAudioPartRequest,
         progress: ProgressSink
-    ): ProjectSnapshot = mutateSuspend(request.root) { root ->
+    ): ProjectSnapshot {
+        mutateSuspend(request.root) { root ->
         val project = readValidProject(root)
         val part = project.parts.find { it.id == request.partId }
             ?: throw IllegalArgumentException("Part not found: ${request.partId}")
@@ -1012,6 +1033,9 @@ class DefaultProjectApplicationService(
         ProjectStore.write(root, updated)
         progress.report(OperationProgress("transcribe-audio", 2, 2, "Registered validated raw MIDI; Clean MIDI is next", root.resolve(ProjectStore.FILE_NAME)))
         snapshot(root, updated)
+    }
+        progress.report(OperationProgress("transcribe-audio", 2, 3, "Applying mandatory transcription cleanup", request.root.resolve("midi/clean/${request.partId}.mid")))
+        return cleanMidi(CleanMidiRequest(request.root, request.partId, TranscriptionCleanupProfile.DEFAULT.toMidiCleanupOptions()), progress)
     }
 
     override fun updateSongPartName(request: UpdateSongPartNameRequest): ProjectSnapshot = mutate(request.root) { root ->

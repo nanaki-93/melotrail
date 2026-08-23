@@ -54,7 +54,7 @@ class WorkerProtocolTest {
         assertEquals(setOf("jobId", "path", "outputPath", "instrument"), transcribe.keys)
 
         val clean = WorkerProtocol.requestFor(CleanMidiCommand("/raw.mid", "/clean.mid", quantize = "1/16", strength = 0.4), "job-1")
-        assertEquals(setOf("jobId", "path", "outputPath", "version", "profile", "quantize", "strength", "minNoteMs", "minVelocity", "normalizeVelocity", "cleanSustain"), clean.keys)
+        assertEquals(setOf("jobId", "path", "outputPath", "version", "profile", "quantize", "strength", "minNoteMs", "minVelocity", "normalizeVelocity", "cleanSustain", "preserveGraceNotes", "graceNoteMaxMs", "graceVelocityMax", "duplicateOnsetWindowMs"), clean.keys)
 
         val inspect = WorkerProtocol.requestFor(InputInspectionCommand("/input.wav"), "job-1")
         assertEquals(setOf("jobId", "path"), inspect.keys)

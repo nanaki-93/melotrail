@@ -119,11 +119,11 @@ class ProjectApplicationServiceTest {
     }
 
     @Test
-    fun `audio transcription publishes raw MIDI without implicitly invoking Clean MIDI`() {
+    fun `audio transcription publishes raw and mandatory cleaned MIDI`() {
         val root = tempDir.resolve("failure")
         val service = service(object : MidiPreparationService {
             override suspend fun transcribe(input: Path, output: Path) { Files.copy(midi("transcribed.mid"), output); Unit }
-            override suspend fun clean(input: Path, output: Path) = error("cleanup must not run during import")
+            override suspend fun clean(input: Path, output: Path) { Files.copy(input, output) }
         })
         service.create(CreateProjectRequest(root))
         val audio = wav("input.wav")
@@ -134,7 +134,7 @@ class ProjectApplicationServiceTest {
         assertTrue(before.contentEquals(Files.readAllBytes(audio)))
         assertTrue(before.contentEquals(Files.readAllBytes(root.resolve("source/A.wav"))))
         assertTrue(Files.isRegularFile(root.resolve("midi/raw/A.mid")))
-        assertFalse(Files.exists(root.resolve("midi/clean/A.mid")))
+        assertTrue(Files.isRegularFile(root.resolve("midi/clean/A.mid")))
         assertEquals(listOf("A"), ProjectStore.read(root).parts.map { it.id })
     }
 
@@ -153,11 +153,9 @@ class ProjectApplicationServiceTest {
         val audio = wav("retry.wav")
         val sourceBefore = Files.readAllBytes(audio)
 
-        blocking { service.importPart(ImportPartRequest(root, "A", audio, transcribe = true)) }
+        val failure = runCatching { blocking { service.importPart(ImportPartRequest(root, "A", audio, transcribe = true)) } }.exceptionOrNull()
+        assertTrue(failure?.message.orEmpty().contains("cleanup unavailable"))
         val rawBefore = Files.readAllBytes(root.resolve("midi/raw/A.mid"))
-        assertThrows(IllegalStateException::class.java) {
-            blocking { service.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions())) }
-        }
         assertFalse(Files.exists(root.resolve("midi/clean/A.mid")))
         assertEquals(null, ProjectStore.read(root).parts.single().midi?.clean)
         failCleanup = false

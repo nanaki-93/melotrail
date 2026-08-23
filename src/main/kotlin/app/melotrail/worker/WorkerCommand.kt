@@ -78,7 +78,11 @@ data class CleanMidiCommand(
     val minNoteMs: Int = 50,
     val minVelocity: Int = 8,
     val normalizeVelocity: Boolean = false,
-    val cleanSustain: Boolean = false
+    val cleanSustain: Boolean = false,
+    val preserveGraceNotes: Boolean = false,
+    val graceNoteMaxMs: Int = 80,
+    val graceVelocityMax: Int = 32,
+    val duplicateOnsetWindowMs: Int = 35
 ) : WorkerCommand() {
 }
 

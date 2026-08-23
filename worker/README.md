@@ -77,6 +77,25 @@ Example request:
 {"path":"/absolute/input.wav","outputPath":"/absolute/output.mid","instrument":"piano"}
 ```
 
+### Reproducible transcription benchmark
+
+The selected default is measured with the local benchmark rather than assumed.
+It writes five synthetic solo-piano fixtures (simple melody, chord-heavy,
+sustain-heavy, fast arpeggios, and expressive low-velocity playing), their
+target MIDI, raw/clean outputs, and a JSON report with note correctness, false
+and missed notes, duplicates, short notes, timing/chord capture, and cleanup
+burden. Generate fixtures without a model or run every installed provider:
+
+```bash
+.venv/bin/python -m worker.tools.benchmark_transcription --fixtures-only
+.venv-worker/bin/python -m worker.tools.benchmark_transcription --engine basic-pitch
+```
+
+Providers implement the `TranscriptionEngine` boundary in
+`worker.commands.transcribe`; add a provider there and pass another `--engine`
+value to compare it against the current Basic Pitch evidence. The benchmark's
+`recommendedEngine` is the best measured clean-MIDI F1 result for that run.
+
 ## Deterministic MIDI cleanup
 
 `POST /midi-clean` uses the pinned `mido==1.3.3` worker dependency to clean an
@@ -92,7 +111,12 @@ It preserves valid tempo and time-signature metadata.
 
 `transcription-safe` additionally removes orphan note-offs and repeated CC64
 values on the same track/channel, ends an earlier same-channel/pitch retrigger
-at the later start, and clamps retained velocity outliers to 12–120.
+at the later start, merges near-identical overlapping captures, and clamps
+retained velocity outliers to 12–120. The mandatory audio-transcription profile
+treats notes shorter than 50 ms or quieter than velocity 15 as suspicious, but
+retains an identifiable low-velocity grace note leading into another attack or
+a quiet chord member. These bounded thresholds are explicitly sent by Kotlin;
+they are not unconditional note deletion rules.
 `tighten-timing` includes those repairs and is the only profile that permits
 quantization. It requires a grid of `1/4`, `1/8`, `1/16`, or `1/32` and a
 strength greater than `0.0` and at most `1.0`. It never invents notes.

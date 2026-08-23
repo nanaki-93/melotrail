@@ -12,7 +12,7 @@ WORKER_DEPS_STAMP := $(VENV)/.worker-deps-installed
 WORKER_HOST ?= 127.0.0.1
 WORKER_PORT ?= 8081
 
-.PHONY: help build test check desktop worker python-install verify-worker-python clean
+.PHONY: help build test worker-test check desktop worker python-install verify-worker-python clean
 
 help:
 	@echo "Melotrail"
@@ -26,12 +26,16 @@ help:
 	@echo "Python services:"
 	@echo "  make worker                        Set up and start the complete Python 3.11 worker on :8081"
 	@echo "  make python-install                Install all worker dependencies, including Basic Pitch"
+	@echo "  make worker-test                   Run offline Python worker tests"
 	@echo ""
 build:
 	$(GRADLE) build
 
 test:
 	$(GRADLE) test
+
+worker-test: $(WORKER_DEPS_STAMP)
+	$(VENV_PYTHON) -m unittest discover -s worker/tests
 
 check:
 	$(GRADLE) check
