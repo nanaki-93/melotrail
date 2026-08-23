@@ -5,7 +5,7 @@ This script intentionally does not import the application worker or modify a
 song project. It loads Basic Pitch only when actual inference is requested, so
 ``--validate-midi`` and the parser tests work without model dependencies.
 
-See ``worker/README.md`` for the supported optional runtime and setup.
+See ``worker/README_BAK.md`` for the supported optional runtime and setup.
 """
 
 from __future__ import annotations
@@ -203,7 +203,7 @@ def transcribe(input_path: Path, output_path: Path) -> tuple[MidiNote, ...]:
     except ImportError as error:
         raise RuntimeError(
             "Basic Pitch is unavailable. Create the documented isolated environment "
-            "from worker/README.md."
+            "from worker/README_BAK.md."
         ) from error
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
