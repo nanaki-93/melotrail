@@ -1,6 +1,7 @@
 package app.melotrail.commercial
 
-import app.melotrail.application.PersistedMixSettings
+import app.melotrail.arrangement.AudioMixCriticReport
+import app.melotrail.arrangement.MixPlan
 import app.melotrail.arrangement.ArtifactRef
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
@@ -320,6 +321,7 @@ class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soun
             artifacts[path] = ProvenanceArtifact(path, sha256(file))
         }
         include("output/master.wav"); include("output/release.json")
+        mixCriticEvidence(projectRoot, project, unresolved)?.forEach(::include)
         sources.forEach { include(it.path) }
         selectedMidi.forEach { include(it.path) }
         releaseInput(projectRoot, release, unresolved)?.let(::include)
@@ -473,11 +475,11 @@ class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soun
         }
         artifacts[STEM_RENDER_REPORT] = ProvenanceArtifact(STEM_RENDER_REPORT, sha256(reportPath))
         val settings = runCatching {
-            val settingsPath = root.resolve(MIX_SETTINGS)
-            if (Files.isRegularFile(settingsPath)) json.decodeFromString<PersistedMixSettings>(Files.readString(settingsPath, StandardCharsets.UTF_8)).also { it.requireValid() }
-            else PersistedMixSettings()
-        }.getOrElse { unresolved += "persisted mix settings are invalid"; PersistedMixSettings() }
-        if (Files.isRegularFile(root.resolve(MIX_SETTINGS))) artifacts[MIX_SETTINGS] = ProvenanceArtifact(MIX_SETTINGS, sha256(root.resolve(MIX_SETTINGS)))
+            val settingsPath = root.resolve(MIX_PLAN)
+            if (Files.isRegularFile(settingsPath)) json.decodeFromString<MixPlan>(Files.readString(settingsPath, StandardCharsets.UTF_8)).also { it.requireValid() }
+            else MixPlan()
+        }.getOrElse { unresolved += "persisted production mix plan is invalid"; MixPlan() }
+        if (Files.isRegularFile(root.resolve(MIX_PLAN))) artifacts[MIX_PLAN] = ProvenanceArtifact(MIX_PLAN, sha256(root.resolve(MIX_PLAN)))
         val soloed = report.stems.any { settings.tracks[it.name]?.solo == true }
         return report.stems.sortedBy(StemArtifact::name).mapNotNull { stem ->
             val manifest = report.instruments.singleOrNull { it.role == stem.name && it.stableInstrumentId == stem.stableInstrumentId }
@@ -544,9 +546,35 @@ class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soun
         project.workflow.arrangement?.let { add(ReleaseDecisionRevision("arrangement-approval", 1, it.arrangement.sha256)) }
         project.workflow.cohesion?.let { refs -> if (refs.approved) add(ReleaseDecisionRevision("cohesion-approval", 1, refs.inputSha256)) }
         project.workflow.humanization?.let { refs -> add(ReleaseDecisionRevision("humanization", 1, refs.inputsSha256)) }
-        val mix = root.resolve(MIX_SETTINGS)
+        val mix = root.resolve(MIX_PLAN)
         if (Files.isRegularFile(mix)) add(ReleaseDecisionRevision("mix", 1, sha256(mix)))
     }.sortedBy(ReleaseDecisionRevision::kind)
+
+    private fun mixCriticEvidence(root: Path, project: Project, unresolved: MutableList<String>): List<String>? {
+        if (WorkflowArtifact.MIX_REPORT in project.workflow.stale) {
+            unresolved += "production mix critic report is stale"
+            return null
+        }
+        val plan = root.resolve(MIX_PLAN)
+        val reportPath = root.resolve(MIX_REPORT)
+        val dry = root.resolve("mix/dry.wav")
+        if (!Files.isRegularFile(plan) || !Files.isRegularFile(reportPath) || !Files.isRegularFile(dry)) {
+            unresolved += "production mix critic evidence is missing"
+            return null
+        }
+        val report = runCatching { json.decodeFromString<AudioMixCriticReport>(Files.readString(reportPath, StandardCharsets.UTF_8)) }.getOrElse {
+            unresolved += "production mix critic report is invalid"
+            return null
+        }
+        if (report.planSha256 != sha256(plan) || report.mixSha256 != sha256(dry)) {
+            unresolved += "production mix critic evidence does not match the selected mix"
+            return null
+        }
+        report.issues.filter { it.severity == app.melotrail.arrangement.AudioMixIssueSeverity.BLOCKING }.forEach {
+            unresolved += "blocking mix issue: ${it.kind.name.lowercase()}"
+        }
+        return listOf(MIX_PLAN, MIX_REPORT)
+    }
 
     private fun runDependencies(run: ReleaseStageRun): List<CommercialDependency> = buildList {
         if (run.processorId != null && run.processorVersion != null) add(CommercialDependency(
@@ -632,7 +660,8 @@ class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soun
         const val REPORT_FILE = "commercial-report.md"
         const val CHECKLIST_FILE = "youtube-upload-checklist.md"
         const val STEM_RENDER_REPORT = "stems/stem-render.json"
-        const val MIX_SETTINGS = "mix/settings.json"
+        const val MIX_PLAN = "mix/plan.json"
+        const val MIX_REPORT = "mix/report.json"
         val json = Json { prettyPrint = true; encodeDefaults = true; ignoreUnknownKeys = false }
     }
 }

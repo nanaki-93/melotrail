@@ -45,6 +45,16 @@ not invoke the selection resolver or substitute a newly available candidate.
 Mix remains a user-authored configuration. Profile/mood may suggest initial
 levels/pan, but a later profile update never overwrites saved user settings.
 
+The production mixer persists a typed `mix/plan.json`, binding the exact input
+stem hashes to gain, pan, filtering, EQ, compression, stereo placement,
+reverb sends, optional music/drum buses, and frame-bounded section automation.
+It writes `mix/report.json` with deterministic clipping, headroom, low-end
+overlap, masking, stereo-correlation, per-stem loudness, and piano-melody
+audibility measurements. Blocking critic findings are commercial-readiness
+evidence; they do not discard the mix or prevent private audition. The older
+deterministic stem mixer remains the unprocessed reference renderer for debug
+comparison.
+
 - Gain, pan, mute, and solo continue to operate on available stems.
 - A mix revision records input stem hashes and normalized settings hash.
 - Re-rendered unchanged stem IDs may reuse settings; changed/removed current

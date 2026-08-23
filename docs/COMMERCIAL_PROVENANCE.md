@@ -30,6 +30,9 @@ inspect missing, tampered, and unresolved evidence plus safe report references.
 Unknown model identity/license, missing attribution, stale artifact hashes, or
 missing decision evidence block a commercial-ready claim without changing the
 project. The report redacts secrets and unrestricted absolute paths.
+The selected production mix must also have a matching current `mix/plan.json`
+and `mix/report.json`; any blocking audio-critic finding (such as inadequate
+headroom, clipping, or inaudible melody) blocks the commercial-ready claim.
 
 ## Signature motif recognizability gate
 
