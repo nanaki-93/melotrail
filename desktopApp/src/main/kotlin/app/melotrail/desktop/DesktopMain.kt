@@ -10,9 +10,9 @@ import app.melotrail.application.DefaultArrangementApplicationService
 import app.melotrail.application.DefaultMixApplicationService
 import app.melotrail.application.DefaultFullSongEnhancementApplicationService
 import app.melotrail.application.DefaultBuildApplicationService
-import app.melotrail.application.DefaultCohesionApplicationService
+import app.melotrail.application.DefaultEnsembleCohesionApplicationService
 import app.melotrail.application.EnsembleMidiPreparation
-import app.melotrail.application.CohesionPreviewPreparation
+import app.melotrail.application.EnsembleCohesionPreviewPreparation
 import app.melotrail.application.BuildAudioWorker
 import app.melotrail.application.DefaultPartPreviewApplicationService
 import app.melotrail.application.DefaultReleaseExportApplicationService
@@ -72,9 +72,9 @@ fun main() {
     val sfizzRenderer = app.melotrail.arrangement.SfizzInstrumentRenderer(
         InstrumentRegistryLoader(libraryRoot)
     )
-    val cohesionService = DefaultCohesionApplicationService(
+    val cohesionService = DefaultEnsembleCohesionApplicationService(
         ensemblePreparation = EnsembleMidiPreparation { root, progress -> arrangementService.generateRequiredMidi(root, progress) },
-        previewPreparation = CohesionPreviewPreparation { root, input, progress ->
+        previewPreparation = EnsembleCohesionPreviewPreparation { root, input, progress ->
             app.melotrail.arrangement.FullSongCohesionPreviewRenderer(sfizzRenderer, libraryRoot).render(root, input, progress)
         }
     )

@@ -11,16 +11,16 @@ import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
 
-class TransitionCohesionPlannerTest {
+class EnsembleCohesionPlannerTest {
     @TempDir lateinit var root: Path
 
     @Test fun `model receives only adjacent boundary evidence and binds it to the current input`() {
         val input = input("phrase11" to "phrase12")
-        val trustedModel = CohesionModelIdentity("qwen", "local", "e".repeat(64))
+        val trustedModel = EnsembleCohesionModelIdentity("qwen", "local", "e".repeat(64))
         val response = """{"boundaries":[{"roleAction":"DRUM_FILL","bars":1,"harmonicHandoff":"HOLD","rhythmicGesture":"FILL","energyContour":"RISE","rationale":"Carry energy forward"}]}"""
         var prompt = ""
 
-        val plan = LocalQwenTransitionCohesionPlanner(LocalQwenClient { _, userPrompt -> prompt = userPrompt; response }, trustedModel).plan(input)
+        val plan = LocalQwenEnsembleCohesionPlanner(LocalQwenClient { _, userPrompt -> prompt = userPrompt; response }, trustedModel).plan(input)
 
         assertEquals(trustedModel, plan.model)
         assertEquals(listOf("phrase11" to "phrase12"), plan.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId })
@@ -32,12 +32,12 @@ class TransitionCohesionPlannerTest {
     @Test fun `two and repeated occurrences require the exact adjacent boundary sequence`() {
         val repeated = input("A1" to "A2", "A2" to "A3")
         val exact = plan(repeated)
-        assertTrue(TransitionCohesionValidator.validate(exact, repeated).isValid)
+        assertTrue(EnsembleCohesionValidator.validate(exact, repeated).isValid)
 
-        assertFalse(TransitionCohesionValidator.validate(exact.copy(boundaries = exact.boundaries.dropLast(1)), repeated).isValid)
-        assertFalse(TransitionCohesionValidator.validate(exact.copy(boundaries = exact.boundaries.reversed()), repeated).isValid)
+        assertFalse(EnsembleCohesionValidator.validate(exact.copy(boundaries = exact.boundaries.dropLast(1)), repeated).isValid)
+        assertFalse(EnsembleCohesionValidator.validate(exact.copy(boundaries = exact.boundaries.reversed()), repeated).isValid)
         val two = input("A1" to "A2")
-        assertTrue(TransitionCohesionValidator.validate(plan(two), two).isValid)
+        assertTrue(EnsembleCohesionValidator.validate(plan(two), two).isValid)
     }
 
     @Test fun `Qwen cohesion retries an incomplete boundary response with its validation error`() {
@@ -46,10 +46,10 @@ class TransitionCohesionPlannerTest {
         var calls = 0
         val incomplete = response(1)
         val complete = response(2)
-        val planner = LocalQwenTransitionCohesionPlanner(LocalQwenClient { _, prompt ->
+        val planner = LocalQwenEnsembleCohesionPlanner(LocalQwenClient { _, prompt ->
             prompts += prompt
             if (calls++ == 0) incomplete else complete
-        }, CohesionModelIdentity.DETERMINISTIC)
+        }, EnsembleCohesionModelIdentity.DETERMINISTIC)
 
         val plan = planner.plan(input)
 
@@ -69,7 +69,7 @@ class TransitionCohesionPlannerTest {
             CohesionMelodyEdit("A1", CohesionMelodyEditKind.SET_VELOCITY, "outgoing-last", value = 80, reason = "shape boundary arrival"),
             CohesionMelodyEdit("A2", CohesionMelodyEditKind.SET_VELOCITY, "incoming-first", value = 80, reason = "shape boundary departure")
         )))
-        assertTrue(TransitionCohesionValidator.validate(edgePlan, input).isValid)
+        assertTrue(EnsembleCohesionValidator.validate(edgePlan, input).isValid)
 
         val outgoingOutside = edgePlan.copy(boundaries = listOf(bridge.copy(melodyEdits = listOf(
             CohesionMelodyEdit("A1", CohesionMelodyEditKind.ADD_NOTE, "add-00000", pitch = 60, velocity = 72, startTick = 1_919, durationTicks = 1, channel = 0, anchorNoteId = "outgoing-last", reason = "outside outgoing boundary")
@@ -77,19 +77,19 @@ class TransitionCohesionPlannerTest {
         val incomingOutside = edgePlan.copy(boundaries = listOf(bridge.copy(melodyEdits = listOf(
             CohesionMelodyEdit("A2", CohesionMelodyEditKind.ADD_NOTE, "add-00000", pitch = 62, velocity = 72, startTick = 1_920, durationTicks = 1, channel = 0, anchorNoteId = "incoming-first", reason = "outside incoming boundary")
         ))))
-        assertFalse(TransitionCohesionValidator.validate(outgoingOutside, input).isValid)
-        assertFalse(TransitionCohesionValidator.validate(incomingOutside, input).isValid)
+        assertFalse(EnsembleCohesionValidator.validate(outgoingOutside, input).isValid)
+        assertFalse(EnsembleCohesionValidator.validate(incomingOutside, input).isValid)
     }
 
     @Test fun `superseded whole song payloads are rejected before publication`() {
         val input = input("A1" to "A2")
-        val superseded = Json.encodeToString(TransitionCohesionPlan.serializer(), plan(input)).dropLast(1) + ",\"songEdits\":[]}"
-        val draft = root.resolve(TransitionCohesionStore.DRAFT_FILE)
+        val superseded = Json.encodeToString(EnsembleCohesionPlan.serializer(), plan(input)).dropLast(1) + ",\"songEdits\":[]}"
+        val draft = root.resolve(EnsembleCohesionStore.DRAFT_FILE)
         Files.createDirectories(draft.parent)
         Files.writeString(draft, superseded)
 
-        assertThrows(Exception::class.java) { TransitionCohesionStore.readDraft(root, input) }
-        assertFalse(Files.exists(root.resolve(TransitionCohesionStore.bridgeMidi("A1", "A2"))))
+        assertThrows(Exception::class.java) { EnsembleCohesionStore.readDraft(root, input) }
+        assertFalse(Files.exists(root.resolve(EnsembleCohesionStore.bridgeMidi("A1", "A2"))))
     }
 
     @Test fun `model whole song edit JSON is rejected by the boundary-only schema`() {
@@ -97,7 +97,7 @@ class TransitionCohesionPlannerTest {
         val response = """{"boundaries":[],"songEdits":[]}"""
 
         assertThrows(IllegalArgumentException::class.java) {
-            LocalQwenTransitionCohesionPlanner(LocalQwenClient { _, _ -> response }, CohesionModelIdentity.DETERMINISTIC).plan(input)
+            LocalQwenEnsembleCohesionPlanner(LocalQwenClient { _, _ -> response }, EnsembleCohesionModelIdentity.DETERMINISTIC).plan(input)
         }
     }
 
@@ -105,28 +105,28 @@ class TransitionCohesionPlannerTest {
         val input = input("A1" to "A2")
         val stale = plan(input).copy(boundaries = plan(input).boundaries.map { it.copy(outgoingHash = "f".repeat(64)) })
 
-        assertThrows(IllegalArgumentException::class.java) { TransitionCohesionStore.writeDraft(root, input, stale) }
-        assertFalse(Files.exists(root.resolve(TransitionCohesionStore.DRAFT_FILE)))
-        assertFalse(Files.exists(root.resolve(TransitionCohesionStore.bridgeMidi("A1", "A2"))))
+        assertThrows(IllegalArgumentException::class.java) { EnsembleCohesionStore.writeDraft(root, input, stale) }
+        assertFalse(Files.exists(root.resolve(EnsembleCohesionStore.DRAFT_FILE)))
+        assertFalse(Files.exists(root.resolve(EnsembleCohesionStore.bridgeMidi("A1", "A2"))))
     }
 
-    private fun input(vararg boundaries: Pair<String, String>, notes: List<CohesionMelodyNote> = emptyList()): TransitionCohesionInput {
+    private fun input(vararg boundaries: Pair<String, String>, notes: List<CohesionMelodyNote> = emptyList()): EnsembleCohesionInput {
         val hash = "a".repeat(64); val context = "c".repeat(64)
         val occurrenceEvidence = boundaries.flatMap { listOf(it.first, it.second) }.distinct().associateWith { id ->
             evidence(id, hash, notes.filter { note -> note.id.startsWith(if (id.endsWith("1")) "outgoing" else "incoming") })
         }
-        return TransitionCohesionInput(
+        return EnsembleCohesionInput(
             inputHash = "d".repeat(64), structureSha256 = "b".repeat(64), arrangementSha256 = "e".repeat(64), contextSha256 = context,
             supportedInstruments = listOf("drums"),
             boundaries = boundaries.map { (outgoing, incoming) ->
-                TransitionBoundaryInput(outgoing, incoming, occurrenceEvidence.getValue(outgoing), occurrenceEvidence.getValue(incoming), listOf(TransitionRoleAction.DRUM_FILL), policy(context))
+                TransitionContext(outgoing, incoming, occurrenceEvidence.getValue(outgoing), occurrenceEvidence.getValue(incoming), listOf(TransitionRoleAction.DRUM_FILL), policy(context))
             }
         )
     }
 
-    private fun plan(input: TransitionCohesionInput, override: TransitionBridgePlan? = null) = TransitionCohesionPlan(
+    private fun plan(input: EnsembleCohesionInput, override: TransitionBridgePlan? = null) = EnsembleCohesionPlan(
         inputHash = input.inputHash, arrangementSha256 = input.arrangementSha256, contextSha256 = input.contextSha256,
-        model = CohesionModelIdentity.DETERMINISTIC,
+        model = EnsembleCohesionModelIdentity.DETERMINISTIC,
         boundaries = input.boundaries.map { boundary -> override ?: TransitionBridgePlan(
             boundary.outgoingInstanceId, boundary.incomingInstanceId, boundary.outgoing.sourceHash, boundary.incoming.sourceHash,
             input.arrangementSha256, input.contextSha256, TransitionRoleAction.DRUM_FILL, BridgeType.DRUM_FILL, 1, "drums",

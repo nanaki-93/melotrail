@@ -1,10 +1,10 @@
 package app.melotrail.application
 
-import app.melotrail.arrangement.CohesionModelIdentity
-import app.melotrail.arrangement.CohesionEnhancementIntensity
+import app.melotrail.arrangement.EnsembleCohesionModelIdentity
+import app.melotrail.arrangement.EnsembleCohesionEnhancementIntensity
 import app.melotrail.arrangement.CohesionPreviewReferences
 import app.melotrail.arrangement.ArrangementHarmonyContext
-import app.melotrail.arrangement.LocalQwenTransitionCohesionPlanner
+import app.melotrail.arrangement.LocalQwenEnsembleCohesionPlanner
 import app.melotrail.arrangement.LogicalInstrument
 import app.melotrail.arrangement.DetailedArrangement
 import app.melotrail.arrangement.MidiAnalysis
@@ -14,9 +14,9 @@ import app.melotrail.arrangement.SectionInstance
 import app.melotrail.arrangement.SongPlan
 import app.melotrail.arrangement.SongPlanStore
 import app.melotrail.arrangement.SongPlanningInput
-import app.melotrail.arrangement.TransitionCohesionInput
-import app.melotrail.arrangement.TransitionCohesionPlan
-import app.melotrail.arrangement.TransitionCohesionStore
+import app.melotrail.arrangement.EnsembleCohesionInput
+import app.melotrail.arrangement.EnsembleCohesionPlan
+import app.melotrail.arrangement.EnsembleCohesionStore
 import app.melotrail.arrangement.toSectionInstance
 import app.melotrail.arrangement.WorkflowArtifact
 import app.melotrail.arrangement.WorkflowArtifactReference
@@ -29,31 +29,31 @@ import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 
-/** Cohesion is one bounded post-arrangement transition-planning stage. */
-enum class CohesionPlannerKind { QWEN }
-data class GenerateCohesionRequest(
+/** Ensemble Cohesion is one bounded post-arrangement transition-planning stage. */
+enum class EnsembleCohesionPlannerKind { QWEN }
+data class GenerateEnsembleCohesionRequest(
     val root: Path,
-    val planner: CohesionPlannerKind = CohesionPlannerKind.QWEN,
-    val intensity: CohesionEnhancementIntensity = CohesionEnhancementIntensity.BALANCED
+    val planner: EnsembleCohesionPlannerKind = EnsembleCohesionPlannerKind.QWEN,
+    val intensity: EnsembleCohesionEnhancementIntensity = EnsembleCohesionEnhancementIntensity.BALANCED
 )
-data class CohesionBoundarySnapshot(
+data class EnsembleCohesionBoundarySnapshot(
     val outgoingInstanceId: String,
     val incomingInstanceId: String,
     val bridgeMidi: Path,
     val rationale: String,
     val reviewed: Boolean
 )
-data class CohesionSnapshot(
+data class EnsembleCohesionSnapshot(
     val root: Path,
-    val planner: CohesionPlannerKind,
+    val planner: EnsembleCohesionPlannerKind,
     val inputHash: String,
     val structureSha256: String,
-    val boundaries: List<CohesionBoundarySnapshot>,
+    val boundaries: List<EnsembleCohesionBoundarySnapshot>,
     val approvalRequired: Boolean,
     val approved: Boolean,
     val stale: Boolean,
     val artifact: Path,
-    val intensity: CohesionEnhancementIntensity = CohesionEnhancementIntensity.BALANCED,
+    val intensity: EnsembleCohesionEnhancementIntensity = EnsembleCohesionEnhancementIntensity.BALANCED,
     val melodyEditCount: Int = 0,
     val accompanimentEditCount: Int = 0,
     val baselinePreview: Path? = null,
@@ -64,72 +64,72 @@ fun interface EnsembleMidiPreparation {
     suspend fun prepare(root: Path, progress: ProgressSink)
 }
 
-fun interface CohesionPreviewPreparation {
-    suspend fun render(root: Path, input: TransitionCohesionInput, progress: ProgressSink): CohesionPreviewReferences?
+fun interface EnsembleCohesionPreviewPreparation {
+    suspend fun render(root: Path, input: EnsembleCohesionInput, progress: ProgressSink): CohesionPreviewReferences?
 }
 
-interface CohesionApplicationService {
-    suspend fun generate(request: GenerateCohesionRequest, progress: ProgressSink = ProgressSink.None): CohesionSnapshot
-    fun load(root: Path): CohesionSnapshot
-    fun reviewBoundary(root: Path, outgoingInstanceId: String, incomingInstanceId: String): CohesionSnapshot
-    fun approve(root: Path): CohesionSnapshot
-    fun reject(root: Path): CohesionSnapshot
-    suspend fun regenerate(request: GenerateCohesionRequest, progress: ProgressSink = ProgressSink.None) = generate(request, progress)
+interface EnsembleCohesionApplicationService {
+    suspend fun generate(request: GenerateEnsembleCohesionRequest, progress: ProgressSink = ProgressSink.None): EnsembleCohesionSnapshot
+    fun load(root: Path): EnsembleCohesionSnapshot
+    fun reviewBoundary(root: Path, outgoingInstanceId: String, incomingInstanceId: String): EnsembleCohesionSnapshot
+    fun approve(root: Path): EnsembleCohesionSnapshot
+    fun reject(root: Path): EnsembleCohesionSnapshot
+    suspend fun regenerate(request: GenerateEnsembleCohesionRequest, progress: ProgressSink = ProgressSink.None) = generate(request, progress)
 }
 
 /** UI-neutral orchestration for baseline generation, bounded boundary planning, A/B review, and exact promotion. */
-class DefaultCohesionApplicationService(
+class DefaultEnsembleCohesionApplicationService(
     private val ensemblePreparation: EnsembleMidiPreparation = EnsembleMidiPreparation { _, _ -> },
-    private val previewPreparation: CohesionPreviewPreparation = CohesionPreviewPreparation { _, _, _ -> null },
-    private val qwenPlanner: (TransitionCohesionInput) -> TransitionCohesionPlan = { input ->
-        LocalQwenTransitionCohesionPlanner(model = CohesionModelIdentity("qwen", "local", "0".repeat(64))).plan(input)
+    private val previewPreparation: EnsembleCohesionPreviewPreparation = EnsembleCohesionPreviewPreparation { _, _, _ -> null },
+    private val qwenPlanner: (EnsembleCohesionInput) -> EnsembleCohesionPlan = { input ->
+        LocalQwenEnsembleCohesionPlanner(model = EnsembleCohesionModelIdentity("qwen", "local", "0".repeat(64))).plan(input)
     }
-) : CohesionApplicationService {
-    constructor(qwenPlanner: (TransitionCohesionInput) -> TransitionCohesionPlan) : this(
-        EnsembleMidiPreparation { _, _ -> }, CohesionPreviewPreparation { _, _, _ -> null }, qwenPlanner
+) : EnsembleCohesionApplicationService {
+    constructor(qwenPlanner: (EnsembleCohesionInput) -> EnsembleCohesionPlan) : this(
+        EnsembleMidiPreparation { _, _ -> }, EnsembleCohesionPreviewPreparation { _, _, _ -> null }, qwenPlanner
     )
 
-    override suspend fun generate(request: GenerateCohesionRequest, progress: ProgressSink): CohesionSnapshot = mutate(request.root) { root ->
+    override suspend fun generate(request: GenerateEnsembleCohesionRequest, progress: ProgressSink): EnsembleCohesionSnapshot = mutate(request.root) { root ->
         progress.report(OperationProgress("cohesion", 1, 5, "Preparing the approved arrangement ensemble"))
         ensemblePreparation.prepare(root, progress)
         progress.report(OperationProgress("cohesion", 2, 5, "Validating adjacent-boundary musical evidence"))
         val input = currentInput(root, request.intensity)
-        progress.report(OperationProgress("cohesion", 3, 5, "Requesting bounded Cohesion plan"))
+        progress.report(OperationProgress("cohesion", 3, 5, "Requesting bounded Ensemble Cohesion plan"))
         val plan = qwenPlanner(input)
-        progress.report(OperationProgress("cohesion", 4, 5, "Publishing boundary Cohesion MIDI"))
-        TransitionCohesionStore.writeDraft(root, input, plan)
+        progress.report(OperationProgress("cohesion", 4, 5, "Publishing boundary Ensemble Cohesion MIDI"))
+        EnsembleCohesionStore.writeDraft(root, input, plan)
         persistComparisons(root, input)
-        progress.report(OperationProgress("cohesion", 5, 5, "Rendering Cohesion baseline and preview"))
-        previewPreparation.render(root, input, progress)?.let { TransitionCohesionStore.attachPreviews(root, input, it) }
+        progress.report(OperationProgress("cohesion", 5, 5, "Rendering Ensemble Cohesion baseline and preview"))
+        previewPreparation.render(root, input, progress)?.let { EnsembleCohesionStore.attachPreviews(root, input, it) }
         snapshot(root, input, plan, false)
     }
 
-    override fun load(root: Path): CohesionSnapshot = locked(root) { normalized ->
+    override fun load(root: Path): EnsembleCohesionSnapshot = locked(root) { normalized ->
         val input = currentInput(normalized, savedIntensity(normalized))
-        val approved = TransitionCohesionStore.isApprovedCurrent(normalized, input)
-        val plan = if (approved) TransitionCohesionStore.readApproved(normalized, input) else TransitionCohesionStore.readDraft(normalized, input)
+        val approved = EnsembleCohesionStore.isApprovedCurrent(normalized, input)
+        val plan = if (approved) EnsembleCohesionStore.readApproved(normalized, input) else EnsembleCohesionStore.readDraft(normalized, input)
         snapshot(normalized, input, plan, approved)
     }
 
-    override fun reviewBoundary(root: Path, outgoingInstanceId: String, incomingInstanceId: String): CohesionSnapshot = locked(root) { normalized ->
-        val input = currentInput(normalized, savedIntensity(normalized)); val plan = TransitionCohesionStore.readDraft(normalized, input)
-        TransitionCohesionStore.markReviewed(normalized, input, outgoingInstanceId, incomingInstanceId)
+    override fun reviewBoundary(root: Path, outgoingInstanceId: String, incomingInstanceId: String): EnsembleCohesionSnapshot = locked(root) { normalized ->
+        val input = currentInput(normalized, savedIntensity(normalized)); val plan = EnsembleCohesionStore.readDraft(normalized, input)
+        EnsembleCohesionStore.markReviewed(normalized, input, outgoingInstanceId, incomingInstanceId)
         snapshot(normalized, input, plan, false)
     }
 
-    override fun approve(root: Path): CohesionSnapshot = locked(root) { normalized ->
-        val input = currentInput(normalized, savedIntensity(normalized)); val plan = TransitionCohesionStore.readDraft(normalized, input)
-        TransitionCohesionStore.approve(normalized, input)
+    override fun approve(root: Path): EnsembleCohesionSnapshot = locked(root) { normalized ->
+        val input = currentInput(normalized, savedIntensity(normalized)); val plan = EnsembleCohesionStore.readDraft(normalized, input)
+        EnsembleCohesionStore.approve(normalized, input)
         snapshot(normalized, input, plan, true)
     }
 
-    override fun reject(root: Path): CohesionSnapshot = locked(root) { normalized ->
-        val input = currentInput(normalized, savedIntensity(normalized)); val plan = TransitionCohesionStore.readDraft(normalized, input)
-        val artifact = TransitionCohesionStore.reject(normalized, input)
+    override fun reject(root: Path): EnsembleCohesionSnapshot = locked(root) { normalized ->
+        val input = currentInput(normalized, savedIntensity(normalized)); val plan = EnsembleCohesionStore.readDraft(normalized, input)
+        val artifact = EnsembleCohesionStore.reject(normalized, input)
         snapshot(normalized, input, plan, false).copy(artifact = artifact)
     }
 
-    private fun currentInput(root: Path, intensity: CohesionEnhancementIntensity): TransitionCohesionInput {
+    private fun currentInput(root: Path, intensity: EnsembleCohesionEnhancementIntensity): EnsembleCohesionInput {
         val project = ProjectStore.read(root).also { it.requireValid(root) }
         require(project.version == Project.CURRENT_VERSION) { "Cohesion requires a MIDI-first v3 project." }
         require(project.envelope.structureOccurrences.isNotEmpty()) { "Save a non-empty structure before generating cohesion." }
@@ -177,12 +177,12 @@ class DefaultCohesionApplicationService(
         }
         val detailed = Json { ignoreUnknownKeys = false }
             .decodeFromString(DetailedArrangement.serializer(), Files.readString(arrangement))
-        return app.melotrail.arrangement.TransitionCohesionInputFactory.build(
+        return app.melotrail.arrangement.EnsembleTransitionContextFactory.build(
             root, project, planning, detailed, approval.arrangement.sha256, approval.contextSha256, intensity
         )
     }
-    private fun savedIntensity(root: Path): CohesionEnhancementIntensity =
-        ProjectStore.read(root).workflow.cohesion?.intensity ?: CohesionEnhancementIntensity.BALANCED
+    private fun savedIntensity(root: Path): EnsembleCohesionEnhancementIntensity =
+        ProjectStore.read(root).workflow.cohesion?.intensity ?: EnsembleCohesionEnhancementIntensity.BALANCED
     private fun analysis(root: Path, project: Project, partId: String): MidiAnalysis {
         val part = project.parts.firstOrNull { it.id == partId } ?: error("Structure references unknown part '$partId'.")
         val ref = requireNotNull(part.analysis) { "Missing MIDI analysis for part '$partId'. Run part analyze first." }
@@ -190,20 +190,20 @@ class DefaultCohesionApplicationService(
         val analysis = Json { ignoreUnknownKeys = false }.decodeFromString(MidiAnalysis.serializer(), Files.readString(root.resolve(ref.file)))
         return ArrangementHarmonyContext.apply(analysis, part.sectionType, project.envelope.harmony)
     }
-    private fun snapshot(root: Path, input: TransitionCohesionInput, plan: TransitionCohesionPlan, approved: Boolean): CohesionSnapshot {
+    private fun snapshot(root: Path, input: EnsembleCohesionInput, plan: EnsembleCohesionPlan, approved: Boolean): EnsembleCohesionSnapshot {
         val cohesionWorkflow = ProjectStore.read(root).workflow.cohesion
         val reviewed = cohesionWorkflow?.boundaries.orEmpty().filter { it.approved != null }.map { it.outgoingInstanceId to it.incomingInstanceId }.toSet()
-        return CohesionSnapshot(root, CohesionPlannerKind.QWEN, input.inputHash, input.structureSha256,
-            plan.boundaries.map { bridge -> CohesionBoundarySnapshot(bridge.outgoingInstanceId, bridge.incomingInstanceId, root.resolve(TransitionCohesionStore.bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId)), "${bridge.roleAction.name.lowercase().replace('_', ' ')}: ${bridge.rationale}", bridge.outgoingInstanceId to bridge.incomingInstanceId in reviewed) },
+        return EnsembleCohesionSnapshot(root, EnsembleCohesionPlannerKind.QWEN, input.inputHash, input.structureSha256,
+            plan.boundaries.map { bridge -> EnsembleCohesionBoundarySnapshot(bridge.outgoingInstanceId, bridge.incomingInstanceId, root.resolve(EnsembleCohesionStore.bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId)), "${bridge.roleAction.name.lowercase().replace('_', ' ')}: ${bridge.rationale}", bridge.outgoingInstanceId to bridge.incomingInstanceId in reviewed) },
             approvalRequired = !approved, approved = approved, stale = false,
-            artifact = root.resolve(if (approved) TransitionCohesionStore.APPROVED_FILE else TransitionCohesionStore.DRAFT_FILE),
+            artifact = root.resolve(if (approved) EnsembleCohesionStore.APPROVED_FILE else EnsembleCohesionStore.DRAFT_FILE),
             intensity = input.intensity,
             melodyEditCount = plan.boundaries.sumOf { it.melodyEdits.size },
             accompanimentEditCount = plan.boundaries.size,
             baselinePreview = cohesionWorkflow?.previews?.baseline?.file?.let(root::resolve),
             enhancedPreview = cohesionWorkflow?.previews?.enhanced?.file?.let(root::resolve))
     }
-    private fun persistComparisons(root: Path, input: TransitionCohesionInput) {
+    private fun persistComparisons(root: Path, input: EnsembleCohesionInput) {
         val project = ProjectStore.read(root)
         val cohesion = requireNotNull(project.workflow.cohesion)
         cohesion.occurrences.sortedBy { it.instanceId }.forEach { occurrence ->

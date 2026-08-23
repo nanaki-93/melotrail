@@ -5,12 +5,12 @@ import app.melotrail.application.ArrangementApplicationService
 import app.melotrail.application.ArrangementPlannerKind
 import app.melotrail.application.ArrangementSnapshot
 import app.melotrail.application.CreateProjectRequest
-import app.melotrail.application.CohesionApplicationService
-import app.melotrail.application.CohesionPlannerKind
-import app.melotrail.application.CohesionSnapshot
-import app.melotrail.application.DefaultCohesionApplicationService
-import app.melotrail.application.GenerateCohesionRequest
-import app.melotrail.arrangement.CohesionEnhancementIntensity
+import app.melotrail.application.EnsembleCohesionApplicationService
+import app.melotrail.application.EnsembleCohesionPlannerKind
+import app.melotrail.application.EnsembleCohesionSnapshot
+import app.melotrail.application.DefaultEnsembleCohesionApplicationService
+import app.melotrail.application.GenerateEnsembleCohesionRequest
+import app.melotrail.arrangement.EnsembleCohesionEnhancementIntensity
 import app.melotrail.application.CreateMidiAiFixRequest
 import app.melotrail.application.DefaultMidiAiFixApplicationService
 import app.melotrail.application.MidiAiFixApplicationService
@@ -139,7 +139,7 @@ data class WorkspaceDispatchers(
 data class WorkspaceUiState(
     val project: ProjectSnapshot? = null,
     /** Immutable review model; composables never inspect cohesion files. */
-    val cohesion: CohesionSnapshot? = null,
+    val cohesion: EnsembleCohesionSnapshot? = null,
     /** Immutable AI-fix review evidence; composables never read draft files. */
     val midiAiFix: MidiAiFixSnapshot? = null,
     /** Task 019 review evidence; no composable reads enhancement files. */
@@ -385,8 +385,8 @@ enum class ArrangeTab(val label: String) {
 }
 
 data class CohesionDraft(
-    val planner: CohesionPlannerKind = CohesionPlannerKind.QWEN,
-    val intensity: CohesionEnhancementIntensity = CohesionEnhancementIntensity.BALANCED
+    val planner: EnsembleCohesionPlannerKind = EnsembleCohesionPlannerKind.QWEN,
+    val intensity: EnsembleCohesionEnhancementIntensity = EnsembleCohesionEnhancementIntensity.BALANCED
 )
 
 sealed interface WorkspaceOperation {
@@ -575,7 +575,7 @@ sealed interface WorkspaceRetry {
     data class Transcribe(val root: Path, val partId: String, val selectedInput: TranscriptionInputArtifact) : WorkspaceRetry
     data class SaveStructure(val root: Path, val partIds: List<String>, val selectedIndex: Int?) : WorkspaceRetry
     data class GenerateArrangement(val request: GenerateArrangementRequest) : WorkspaceRetry
-    data class GenerateCohesion(val request: GenerateCohesionRequest) : WorkspaceRetry
+    data class GenerateCohesion(val request: GenerateEnsembleCohesionRequest) : WorkspaceRetry
 }
 
 sealed interface WorkspaceIntent {
@@ -681,8 +681,8 @@ sealed interface WorkspaceIntent {
     data object ClearStructure : WorkspaceIntent
     data class SelectArrangeTab(val tab: ArrangeTab) : WorkspaceIntent
     data class UpdateArrangementPlanner(val planner: ArrangementPlannerKind) : WorkspaceIntent
-    data class UpdateCohesionPlanner(val planner: CohesionPlannerKind) : WorkspaceIntent
-    data class UpdateCohesionIntensity(val intensity: CohesionEnhancementIntensity) : WorkspaceIntent
+    data class UpdateCohesionPlanner(val planner: EnsembleCohesionPlannerKind) : WorkspaceIntent
+    data class UpdateCohesionIntensity(val intensity: EnsembleCohesionEnhancementIntensity) : WorkspaceIntent
     data class UpdateArrangementStyle(val style: String) : WorkspaceIntent
     data class ToggleArrangementInstrument(val instrument: String) : WorkspaceIntent
     data class ToggleArrangementRole(val role: ArrangementRole) : WorkspaceIntent
@@ -734,7 +734,7 @@ class WorkspaceViewModel(
     private val runtimeReadinessService: RuntimeReadinessService = UnavailableRuntimeReadinessService,
     private val libraryRoot: Path = Path.of(System.getProperty("java.io.tmpdir"), "melotrail", "missing-sound-library"),
     private val arrangementService: ArrangementApplicationService = DefaultArrangementApplicationService(libraryRoot = libraryRoot),
-    private val cohesionService: CohesionApplicationService = DefaultCohesionApplicationService(),
+    private val cohesionService: EnsembleCohesionApplicationService = DefaultEnsembleCohesionApplicationService(),
     private val midiAiFixService: MidiAiFixApplicationService = DefaultMidiAiFixApplicationService(),
     private val technicalCorrectionService: TechnicalCorrectionApplicationService = DefaultTechnicalCorrectionApplicationService(),
     private val enhancementService: EnhancementApplicationService = DefaultEnhancementApplicationService(),
@@ -2157,11 +2157,11 @@ class WorkspaceViewModel(
 
     private fun PlaybackRequest.Cohesion.artifact(): PlaybackArtifactIdentity {
         val root = projectRoot.toAbsolutePath().normalize()
-        val snapshot = requireNotNull(state.value.cohesion) { "Generate Cohesion previews first." }
+        val snapshot = requireNotNull(state.value.cohesion) { "Generate Ensemble Cohesion previews first." }
         val path = requireNotNull(if (enhanced) snapshot.enhancedPreview else snapshot.baselinePreview) {
-            "The ${if (enhanced) "Cohesion" else "baseline"} preview is unavailable. Regenerate Cohesion."
+            "The ${if (enhanced) "Ensemble Cohesion" else "baseline"} preview is unavailable. Regenerate Ensemble Cohesion."
         }.toAbsolutePath().normalize()
-        require(path.startsWith(root) && Files.isRegularFile(path)) { "Cohesion preview is missing or outside the project." }
+        require(path.startsWith(root) && Files.isRegularFile(path)) { "Ensemble Cohesion preview is missing or outside the project." }
         return PlaybackArtifactIdentity(root, path)
     }
     private fun showRoleEditor(partId: String) {
@@ -2447,26 +2447,26 @@ class WorkspaceViewModel(
         when {
             state.value.structureDraft.isEmpty() -> fail("generate cohesion", "Save at least one structure occurrence before generating cohesion.")
             missing.isNotEmpty() -> fail("generate cohesion", "Analyze every structure part before generating cohesion: ${missing.joinToString(", ")}.")
-            else -> runGenerateCohesion(GenerateCohesionRequest(project.root, state.value.cohesionDraft.planner, state.value.cohesionDraft.intensity))
+            else -> runGenerateCohesion(GenerateEnsembleCohesionRequest(project.root, state.value.cohesionDraft.planner, state.value.cohesionDraft.intensity))
         }
     }
 
     private fun playCohesionPreview(enhanced: Boolean) {
         val project = state.value.project ?: return
-        val cohesion = state.value.cohesion ?: return fail("preview cohesion", "Generate Cohesion before previewing it.")
+        val cohesion = state.value.cohesion ?: return fail("preview cohesion", "Generate Ensemble Cohesion before previewing it.")
         val path = if (enhanced) cohesion.enhancedPreview else cohesion.baselinePreview
-        if (path == null || !Files.isRegularFile(path)) return fail("preview cohesion", "Regenerate Cohesion to create the A/B previews.")
+        if (path == null || !Files.isRegularFile(path)) return fail("preview cohesion", "Regenerate Ensemble Cohesion to create the A/B previews.")
         startPlaybackSession(PlaybackRequest.Cohesion(project.root, enhanced))
     }
 
-    private fun runGenerateCohesion(request: GenerateCohesionRequest) {
+    private fun runGenerateCohesion(request: GenerateEnsembleCohesionRequest) {
         val feedbackId = beginFeedback(OperationKind.COHESION, OperationPhase.VALIDATING, "Validating occurrence MIDI for cohesion…")
         mutableState.update { it.copy(operation = WorkspaceOperation.GeneratingCohesion(), notification = null, retry = null, operationFeedback = feedbackTracker.current) }
         scope.launch {
             runCatching {
                 withContext(ioDispatcher) { cohesionService.generate(request) { progress -> scope.launch { updateProgress(feedbackId, WorkspaceOperation.GeneratingCohesion(progress)) } } }
             }.onSuccess { cohesion ->
-                val message = if (cohesion.approved) "Cohesion is approved." else "The Cohesion boundary draft is ready for A/B review."
+                val message = if (cohesion.approved) "Ensemble Cohesion is approved." else "The Ensemble Cohesion boundary draft is ready for A/B review."
                 val refreshed = runCatching { projectService.open(request.root) }.getOrNull()
                 mutableState.update { it.copy(project = refreshed ?: it.project, cohesion = cohesion, operation = WorkspaceOperation.Idle, notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message, if (cohesion.approved) OperationSeverity.SUCCESS else OperationSeverity.WARNING) ?: it.operationFeedback) }
             }.onFailure { fail("generate cohesion", it.message ?: "Unable to generate cohesion.", WorkspaceRetry.GenerateCohesion(request), feedbackId) }
@@ -2483,7 +2483,7 @@ class WorkspaceViewModel(
             runCatching { withContext(ioDispatcher) { cohesionService.approve(project.root) } }
                 .onSuccess { approved ->
                     val refreshed = runCatching { projectService.open(project.root) }.getOrNull()
-                    mutableState.update { it.copy(project = refreshed ?: it.project, cohesion = approved, operation = WorkspaceOperation.Idle, notification = "Cohesion approved.", operationFeedback = feedbackTracker.complete(feedbackId, "Cohesion approved.") ?: it.operationFeedback) }
+                    mutableState.update { it.copy(project = refreshed ?: it.project, cohesion = approved, operation = WorkspaceOperation.Idle, notification = "Ensemble Cohesion approved.", operationFeedback = feedbackTracker.complete(feedbackId, "Ensemble Cohesion approved.") ?: it.operationFeedback) }
                 }
                 .onFailure { fail("approve cohesion", it.message ?: "Unable to approve cohesion.", sessionId = feedbackId) }
         }
@@ -2515,7 +2515,7 @@ class WorkspaceViewModel(
             runCatching { withContext(ioDispatcher) { cohesionService.reject(project.root) } }
                 .onSuccess { rejected ->
                     val refreshed = runCatching { projectService.open(project.root) }.getOrNull()
-                    mutableState.update { it.copy(project = refreshed ?: it.project, cohesion = rejected, notification = "Cohesion draft rejected. The last approved cohesion, if any, is preserved.") }
+                    mutableState.update { it.copy(project = refreshed ?: it.project, cohesion = rejected, notification = "Ensemble Cohesion draft rejected. The last approved result, if any, is preserved.") }
                 }
                 .onFailure { fail("reject cohesion", it.message ?: "Unable to reject cohesion.") }
         }
@@ -2693,8 +2693,8 @@ class WorkspaceViewModel(
         if (arrangement == null || arrangement.stale || arrangement.approvalRequired || !arrangement.approved) return fail("build song", "Build Song requires a current approved arrangement.")
         val readiness = project.readiness
         if (!readiness.cohesionReady) {
-            val action = if (readiness.cohesionApprovalRequired) "Compare and approve Cohesion." else "Generate and approve Cohesion."
-            return fail("build song", "Build Song requires current approved Cohesion. $action")
+            val action = if (readiness.cohesionApprovalRequired) "Compare and approve Ensemble Cohesion." else "Generate and approve Ensemble Cohesion."
+            return fail("build song", "Build Song requires current approved Ensemble Cohesion. $action")
         }
         state.value.runtimeReadiness.capabilityFailure(RuntimeCapability.BUILD_SONG)?.let { return fail("build song", it) }
         val options = state.value.buildOptions
@@ -3019,7 +3019,7 @@ class WorkspaceViewModel(
             if (current.project?.root != project.root) current
             else {
                 val arrangement = hydration[1]?.getOrNull() as? ArrangementSnapshot
-                val cohesion = hydration[2]?.getOrNull() as? CohesionSnapshot
+                val cohesion = hydration[2]?.getOrNull() as? EnsembleCohesionSnapshot
                 current.copy(
                     mix = hydration[0]?.getOrNull() as? MixSnapshot,
                     arrangement = arrangement,

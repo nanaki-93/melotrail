@@ -68,7 +68,7 @@ import app.melotrail.application.StructureSectionSummary
 import app.melotrail.application.filtered
 import app.melotrail.arrangement.LogicalInstrument
 import app.melotrail.arrangement.ArrangementRole
-import app.melotrail.arrangement.CohesionEnhancementIntensity
+import app.melotrail.arrangement.EnsembleCohesionEnhancementIntensity
 import app.melotrail.arrangement.SoundTrait
 import java.net.URI
 import java.nio.file.Path
@@ -1137,9 +1137,9 @@ private fun ArrangePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
     val mutating = state.operation.isMutating
     val arrangementApproved = state.arrangement?.let { it.approved && !it.approvalRequired && !it.stale } == true
     val cohesionAction = if (!arrangementApproved || state.project?.readiness?.cohesionReady == true) null else when {
-        state.cohesion?.stale == true -> "Retry Cohesion"
-        state.cohesion?.approvalRequired == true -> "Approve Cohesion"
-        else -> "Generate Cohesion"
+        state.cohesion?.stale == true -> "Retry Ensemble Cohesion"
+        state.cohesion?.approvalRequired == true -> "Approve Ensemble Cohesion"
+        else -> "Generate Ensemble Cohesion"
     }
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
@@ -1156,8 +1156,8 @@ private fun ArrangePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
                     OutlinedButton(
                         onClick = {
                             when (label) {
-                                "Generate Cohesion", "Retry Cohesion" -> onIntent(WorkspaceIntent.GenerateCohesion)
-                                "Approve Cohesion" -> onIntent(WorkspaceIntent.ApproveCohesion)
+                                "Generate Ensemble Cohesion", "Retry Ensemble Cohesion" -> onIntent(WorkspaceIntent.GenerateCohesion)
+                                "Approve Ensemble Cohesion" -> onIntent(WorkspaceIntent.ApproveCohesion)
                                 else -> onIntent(WorkspaceIntent.SelectArrangeTab(ArrangeTab.TRANSITIONS))
                             }
                         },
@@ -1184,10 +1184,10 @@ private fun ArrangePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
 @Composable
 private fun CohesionReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
     val cohesion = state.cohesion
-    OverviewCard(WorkspacePageTags.ARRANGE_COHESION_REVIEW, "Cohesion") {
+    OverviewCard(WorkspacePageTags.ARRANGE_COHESION_REVIEW, "Ensemble Cohesion") {
         Text("Creates only adjacent-occurrence boundary bridges while preserving melody identity, structure, tempo, meter, and instrument roles.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-            CohesionEnhancementIntensity.entries.forEach { intensity ->
+            EnsembleCohesionEnhancementIntensity.entries.forEach { intensity ->
                 val selected = state.cohesionDraft.intensity == intensity
                 if (selected) Button(
                     onClick = { onIntent(WorkspaceIntent.UpdateCohesionIntensity(intensity)) },
@@ -1200,7 +1200,7 @@ private fun CohesionReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent) 
             }
         }
         cohesion?.takeIf { it.stale }?.let {
-            Text("Stale historical Cohesion evidence · regenerate before approval or build.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            Text("Stale historical Ensemble Cohesion evidence · regenerate before approval or build.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         }
         cohesion?.takeIf { it.approved && !it.stale }?.let { approved ->
             Text("Current approved comparison evidence: ${approved.melodyEditCount} melody edits and ${approved.accompanimentEditCount} transition handoffs.", style = MaterialTheme.typography.bodySmall)
@@ -1220,7 +1220,7 @@ private fun CohesionReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent) 
             draft.boundaries.forEach { boundary ->
                 Text("${boundary.outgoingInstanceId} → ${boundary.incomingInstanceId}: ${boundary.rationale}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text("Approve or reject this boundary-only result after comparing the baseline and Cohesion previews.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Approve or reject this boundary-only result after comparing the baseline and Ensemble Cohesion previews.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

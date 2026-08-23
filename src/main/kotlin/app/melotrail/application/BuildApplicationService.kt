@@ -73,7 +73,7 @@ class DefaultBuildApplicationService(
     private val mixService: MixApplicationService,
     private val renderer: InstrumentRenderer,
     private val worker: BuildAudioWorker,
-    private val cohesionService: CohesionApplicationService = DefaultCohesionApplicationService(),
+    private val cohesionService: EnsembleCohesionApplicationService = DefaultEnsembleCohesionApplicationService(),
     private val humanizationService: HumanizationApplicationService = DefaultHumanizationApplicationService()
 ) : BuildApplicationService {
     override suspend fun build(request: BuildSongRequest, progress: ProgressSink): BuildResult {

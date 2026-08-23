@@ -24,8 +24,8 @@ import app.melotrail.arrangement.MidiLoFiFeelTransformer
 import app.melotrail.arrangement.MidiTranspositionReportStore
 import app.melotrail.arrangement.DetailedArrangement
 import app.melotrail.arrangement.ArrangementHarmonyContext
-import app.melotrail.arrangement.TransitionCohesionInputFactory
-import app.melotrail.arrangement.TransitionCohesionStore
+import app.melotrail.arrangement.EnsembleTransitionContextFactory
+import app.melotrail.arrangement.EnsembleCohesionStore
 import app.melotrail.arrangement.SelectedMidiArtifactResolver
 import app.melotrail.arrangement.LogicalInstrument
 import app.melotrail.arrangement.SectionInstance
@@ -1355,8 +1355,8 @@ class DefaultProjectApplicationService(
         val arrangementPath = root.resolve(arrangement.arrangement.file).normalize()
         require(arrangementPath.startsWith(root) && Files.isRegularFile(arrangementPath) && sha256(arrangementPath) == arrangement.arrangement.sha256)
         val detailed = json.decodeFromString(DetailedArrangement.serializer(), Files.readString(arrangementPath))
-        val transitionInput = TransitionCohesionInputFactory.build(root, project, input, detailed, arrangement.arrangement.sha256, arrangement.contextSha256, cohesion.intensity)
-        return TransitionCohesionStore.isApprovedCurrent(root, transitionInput)
+        val transitionInput = EnsembleTransitionContextFactory.build(root, project, input, detailed, arrangement.arrangement.sha256, arrangement.contextSha256, cohesion.intensity)
+        return EnsembleCohesionStore.isApprovedCurrent(root, transitionInput)
     }.getOrDefault(false)
 
     private fun SongPart.summary(root: Path, analysisCurrent: Boolean, projectKey: MusicalKey?): PartSummary {

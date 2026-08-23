@@ -2,7 +2,7 @@ package app.melotrail.application
 
 import app.melotrail.arrangement.AnalysisKind
 import app.melotrail.arrangement.BridgeType
-import app.melotrail.arrangement.CohesionModelIdentity
+import app.melotrail.arrangement.EnsembleCohesionModelIdentity
 import app.melotrail.arrangement.EnergyContour
 import app.melotrail.arrangement.HarmonicHandoff
 import app.melotrail.arrangement.LogicalInstrument
@@ -34,9 +34,9 @@ import app.melotrail.arrangement.RoleValidationMetric
 import app.melotrail.arrangement.RoleValidationReport
 import app.melotrail.arrangement.RoleValidationTarget
 import app.melotrail.arrangement.TransitionBridgePlan
-import app.melotrail.arrangement.TransitionCohesionInput
-import app.melotrail.arrangement.TransitionCohesionInputFactory
-import app.melotrail.arrangement.TransitionCohesionPlan
+import app.melotrail.arrangement.EnsembleCohesionInput
+import app.melotrail.arrangement.EnsembleTransitionContextFactory
+import app.melotrail.arrangement.EnsembleCohesionPlan
 import app.melotrail.harmony.ChordEvent
 import app.melotrail.harmony.ChordEventId
 import app.melotrail.harmony.ChordProgression
@@ -67,15 +67,15 @@ import javax.sound.midi.MidiSystem
 import javax.sound.midi.Sequence
 import javax.sound.midi.ShortMessage
 
-class CohesionApplicationServiceTest {
+class EnsembleCohesionApplicationServiceTest {
     @TempDir lateinit var root: Path
 
     @Test fun `boundary cohesion uses one aggregate approval`() = runBlocking {
         project(listOf("A", "A", "A"))
         arrange()
-        val service = DefaultCohesionApplicationService(::plan)
+        val service = DefaultEnsembleCohesionApplicationService(::plan)
         val sourceBefore = java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(root.resolve("midi/clean/A.mid"))).joinToString("") { "%02x".format(it) }
-        val draft = service.generate(GenerateCohesionRequest(root, CohesionPlannerKind.QWEN))
+        val draft = service.generate(GenerateEnsembleCohesionRequest(root, EnsembleCohesionPlannerKind.QWEN))
         assertFalse(draft.approved)
         assertEquals(listOf("occ-0" to "occ-1", "occ-1" to "occ-2"), draft.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId })
         assertTrue(draft.boundaries.all { Files.isRegularFile(it.bridgeMidi) && !it.reviewed })
@@ -89,28 +89,33 @@ class CohesionApplicationServiceTest {
         assertEquals(sourceBefore, java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(root.resolve("midi/clean/A.mid"))).joinToString("") { "%02x".format(it) })
     }
 
-    @Test fun `Cohesion rejects an absent or rerun arrangement`() = runBlocking {
+    @Test fun `Ensemble Cohesion never invokes its planner before arrangement is approved`() = runBlocking {
         project(listOf("A", "A"))
-        val service = DefaultCohesionApplicationService(::plan)
-        assertThrows(IllegalArgumentException::class.java) { runBlocking { service.generate(GenerateCohesionRequest(root)) } }
+        var plannerCalled = false
+        val service = DefaultEnsembleCohesionApplicationService { input ->
+            plannerCalled = true
+            plan(input)
+        }
+        assertThrows(IllegalArgumentException::class.java) { runBlocking { service.generate(GenerateEnsembleCohesionRequest(root)) } }
+        assertFalse(plannerCalled, "Ensemble Cohesion must remain after approved Arrangement")
 
         arrange()
-        service.generate(GenerateCohesionRequest(root)).boundaries.forEach { boundary ->
+        service.generate(GenerateEnsembleCohesionRequest(root)).boundaries.forEach { boundary ->
             service.reviewBoundary(root, boundary.outgoingInstanceId, boundary.incomingInstanceId)
         }
         service.approve(root)
         arrange()
 
         assertTrue(app.melotrail.arrangement.WorkflowArtifact.COHESION in ProjectStore.read(root).workflow.stale)
-        assertFalse(service.generate(GenerateCohesionRequest(root)).approved)
+        assertFalse(service.generate(GenerateEnsembleCohesionRequest(root)).approved)
     }
 
     @Test fun `reordered structure invalidates draft identity and one occurrence needs no model plan`() = runBlocking {
-        project(listOf("A", "A")); arrange(); val service = DefaultCohesionApplicationService(::plan)
-        val first = service.generate(GenerateCohesionRequest(root))
+        project(listOf("A", "A")); arrange(); val service = DefaultEnsembleCohesionApplicationService(::plan)
+        val first = service.generate(GenerateEnsembleCohesionRequest(root))
         val project = ProjectStore.read(root); ProjectStore.write(root, project.copy(envelope = project.envelope.copy(structureOccurrences = project.envelope.structureOccurrences.take(1))))
         arrange()
-        val single = service.generate(GenerateCohesionRequest(root))
+        val single = service.generate(GenerateEnsembleCohesionRequest(root))
         assertFalse(first.inputHash == single.inputHash)
         assertTrue(single.boundaries.isEmpty())
         assertTrue(service.approve(root).approved)
@@ -118,16 +123,16 @@ class CohesionApplicationServiceTest {
 
     @Test fun `rejected cohesion is stale evidence and generation retries from current input`() = runBlocking {
         project(listOf("A", "A")); arrange()
-        val service = DefaultCohesionApplicationService(::plan)
-        service.generate(GenerateCohesionRequest(root))
+        val service = DefaultEnsembleCohesionApplicationService(::plan)
+        service.generate(GenerateEnsembleCohesionRequest(root))
         service.reject(root)
         assertTrue(app.melotrail.arrangement.WorkflowArtifact.COHESION in ProjectStore.read(root).workflow.stale)
-        assertFalse(service.regenerate(GenerateCohesionRequest(root)).approved)
+        assertFalse(service.regenerate(GenerateEnsembleCohesionRequest(root)).approved)
     }
 
-    private fun plan(input: TransitionCohesionInput): TransitionCohesionPlan = TransitionCohesionPlan(
+    private fun plan(input: EnsembleCohesionInput): EnsembleCohesionPlan = EnsembleCohesionPlan(
         inputHash = input.inputHash, arrangementSha256 = input.arrangementSha256, contextSha256 = input.contextSha256,
-        model = CohesionModelIdentity("qwen", "1", "1".repeat(64)),
+        model = EnsembleCohesionModelIdentity("qwen", "1", "1".repeat(64)),
         boundaries = input.boundaries.map { b -> TransitionBridgePlan(b.outgoingInstanceId, b.incomingInstanceId, b.outgoing.sourceHash, b.incoming.sourceHash, input.arrangementSha256, input.contextSha256, TransitionRoleAction.DRUM_FILL, BridgeType.DRUM_FILL, 1, "drums", HarmonicHandoff.HOLD, RhythmicGesture.FILL, EnergyContour.RISE, TimingHandoff.PRESERVE, TimingHandoff.PRESERVE, "Carry energy into the next section") }
     )
 

@@ -73,7 +73,7 @@ data class ArrangementCohesionBoundaryReference(
 /** Trusted in-memory pairing of approved Cohesion data with its persisted references. */
 data class ApprovedArrangementCohesion(
     val references: ArrangementCohesionReferences,
-    val plan: TransitionCohesionPlan
+    val plan: EnsembleCohesionPlan
 ) {
     fun requireValid(input: SongPlanningInput) {
         val expected = input.sectionsWithIdentity().zipWithNext().map { (outgoing, incoming) -> outgoing.instanceId to incoming.instanceId }

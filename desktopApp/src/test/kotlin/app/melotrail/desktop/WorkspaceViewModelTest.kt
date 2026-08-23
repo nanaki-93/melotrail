@@ -968,8 +968,8 @@ class WorkspaceViewModelTest {
             structure = listOf(app.melotrail.application.StructureSectionSummary(0, "A", 1, "A1", 4.0)),
             readiness = projectSnapshot(root).readiness.copy(cohesionReady = false)
         )
-        val retainedCohesion = app.melotrail.application.CohesionSnapshot(
-            root, app.melotrail.application.CohesionPlannerKind.QWEN, "0".repeat(64), "1".repeat(64),
+        val retainedCohesion = app.melotrail.application.EnsembleCohesionSnapshot(
+            root, app.melotrail.application.EnsembleCohesionPlannerKind.QWEN, "0".repeat(64), "1".repeat(64),
             emptyList(), approvalRequired = true, approved = false, stale = false, artifact = root.resolve("cohesion/draft.json")
         )
         val viewModel = WorkspaceViewModel(
@@ -1075,7 +1075,7 @@ class WorkspaceViewModelTest {
 
         assertEquals(0, build.calls)
         assertEquals(
-            "Build Song requires current approved Cohesion. Generate and approve Cohesion.",
+            "Build Song requires current approved Ensemble Cohesion. Generate and approve Ensemble Cohesion.",
             assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation).message
         )
         viewModel.close()
@@ -1945,9 +1945,9 @@ private class FakeArrangementService(
     }
 }
 
-private class FakeCohesionService(private val snapshot: app.melotrail.application.CohesionSnapshot) : app.melotrail.application.CohesionApplicationService {
+private class FakeCohesionService(private val snapshot: app.melotrail.application.EnsembleCohesionSnapshot) : app.melotrail.application.EnsembleCohesionApplicationService {
     override suspend fun generate(
-        request: app.melotrail.application.GenerateCohesionRequest,
+        request: app.melotrail.application.GenerateEnsembleCohesionRequest,
         progress: app.melotrail.application.ProgressSink
     ) = snapshot
 

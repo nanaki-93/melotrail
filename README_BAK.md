@@ -50,6 +50,15 @@ fingerprinted core before optional strings may run. Strings use the remaining
 per-section density budget, preserve melody-register occupation, and may publish
 an inspectable explicit `OFF` result when no safe optional layer fits.
 
+**Ensemble Cohesion** runs only after that approved arrangement and its generated
+ensemble MIDI exist. It persists one `TransitionContext` and one reviewable
+transition decision for every adjacent structure boundary, then applies only
+deterministic pattern-library bridges in the boundary bars. Source melody MIDI
+remains immutable; any explicitly allowed local melody edit is bounded,
+anchor-protected, and published as a separate occurrence artifact. The earlier
+**Melody Connection** stage remains a separate, pre-arrangement source-song
+candidate and never becomes the selected source melody.
+
 The top navigation keeps the guided stages visible: **Setup**, **Project**, **Melody Parts**,
 **Structure**, **Arrange**, and **Mix & Master**. **Library**, **Video Preview**,
 **Export**, and **Settings** are available from the labelled **More** menu. The

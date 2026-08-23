@@ -39,9 +39,9 @@ import app.melotrail.application.ArrangementPlannerKind
 import app.melotrail.application.ArrangementInstrumentSnapshot
 import app.melotrail.application.ArrangementSectionSnapshot
 import app.melotrail.application.ArrangementSnapshot
-import app.melotrail.application.CohesionBoundarySnapshot
-import app.melotrail.application.CohesionPlannerKind
-import app.melotrail.application.CohesionSnapshot
+import app.melotrail.application.EnsembleCohesionBoundarySnapshot
+import app.melotrail.application.EnsembleCohesionPlannerKind
+import app.melotrail.application.EnsembleCohesionSnapshot
 import app.melotrail.application.LogicalMixSetting
 import app.melotrail.application.MixSnapshot
 import app.melotrail.application.PersistedMixSettings
@@ -1135,9 +1135,9 @@ class WorkspaceScreenTest {
     fun `Arrange remains enabled when retained Cohesion is not ready`() = runComposeUiTest {
         val base = arrangeState()
         val project = checkNotNull(base.project)
-        val draft = CohesionSnapshot(
+        val draft = EnsembleCohesionSnapshot(
             root = project.root,
-            planner = CohesionPlannerKind.QWEN,
+            planner = EnsembleCohesionPlannerKind.QWEN,
             inputHash = "0".repeat(64),
             structureSha256 = "0".repeat(64),
             boundaries = emptyList(),

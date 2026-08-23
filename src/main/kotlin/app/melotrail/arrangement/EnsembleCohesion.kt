@@ -19,33 +19,33 @@ import javax.sound.midi.ShortMessage
 import kotlin.math.roundToLong
 
 @Serializable
-data class CohesionModelIdentity(val provider: String, val model: String, val sha256: String) {
+data class EnsembleCohesionModelIdentity(val provider: String, val model: String, val sha256: String) {
     init { require(provider.matches(Regex("[a-z0-9_-]{1,40}")) && model.length in 1..80 && sha256.matches(Regex("[0-9a-f]{64}"))) { "Cohesion model identity is invalid" } }
-    companion object { val DETERMINISTIC = CohesionModelIdentity("deterministic", "cohesion-boundary-v6", "0".repeat(64)) }
+    companion object { val DETERMINISTIC = EnsembleCohesionModelIdentity("deterministic", "cohesion-boundary-v6", "0".repeat(64)) }
 }
 
-@Serializable enum class CohesionEnhancementIntensity { SUBTLE, BALANCED, CREATIVE }
+@Serializable enum class EnsembleCohesionEnhancementIntensity { SUBTLE, BALANCED, CREATIVE }
 
-data class CohesionEnhancementPolicy(val melodyPercent: Int, val rolePercent: Int, val timingBeatFraction: Int, val velocityDelta: Int) {
+data class EnsembleCohesionEnhancementPolicy(val melodyPercent: Int, val rolePercent: Int, val timingBeatFraction: Int, val velocityDelta: Int) {
     companion object {
-        fun forIntensity(value: CohesionEnhancementIntensity) = when (value) {
-            CohesionEnhancementIntensity.SUBTLE -> CohesionEnhancementPolicy(5, 10, 8, 8)
-            CohesionEnhancementIntensity.BALANCED -> CohesionEnhancementPolicy(10, 20, 4, 16)
-            CohesionEnhancementIntensity.CREATIVE -> CohesionEnhancementPolicy(15, 30, 2, 28)
+        fun forIntensity(value: EnsembleCohesionEnhancementIntensity) = when (value) {
+            EnsembleCohesionEnhancementIntensity.SUBTLE -> EnsembleCohesionEnhancementPolicy(5, 10, 8, 8)
+            EnsembleCohesionEnhancementIntensity.BALANCED -> EnsembleCohesionEnhancementPolicy(10, 20, 4, 16)
+            EnsembleCohesionEnhancementIntensity.CREATIVE -> EnsembleCohesionEnhancementPolicy(15, 30, 2, 28)
         }
     }
 }
 
 /** Path-free, arrangement-aware evidence for every adjacent saved occurrence. */
-@Serializable data class TransitionCohesionInput(
+@Serializable data class EnsembleCohesionInput(
     val version: Int = VERSION,
     val inputHash: String,
     val structureSha256: String,
     val arrangementSha256: String,
     val contextSha256: String,
     val supportedInstruments: List<String>,
-    val boundaries: List<TransitionBoundaryInput>,
-    val intensity: CohesionEnhancementIntensity = CohesionEnhancementIntensity.BALANCED,
+    val boundaries: List<TransitionContext>,
+    val intensity: EnsembleCohesionEnhancementIntensity = EnsembleCohesionEnhancementIntensity.BALANCED,
     val occurrences: List<SongOccurrenceEvidence> = emptyList(),
     val generatedRoles: List<GeneratedRoleEvidence> = emptyList()
 ) { companion object { const val VERSION = 6 } }
@@ -53,7 +53,14 @@ data class CohesionEnhancementPolicy(val melodyPercent: Int, val rolePercent: In
 @Serializable data class SongOccurrenceEvidence(val instanceId: String, val evidence: TransitionMusicalEvidence)
 @Serializable data class GeneratedRoleEvidence(val role: String, val sourceHash: String, val ppq: Int, val durationTicks: Long, val notes: List<CohesionMelodyNote>)
 
-@Serializable data class TransitionBoundaryInput(
+/**
+ * The authoritative context for one adjacent structure boundary.
+ *
+ * It deliberately combines only persisted source analysis with the approved
+ * arrangement evidence for those two occurrences.  This prevents a transition
+ * planner from widening an edit into a whole-song rewrite.
+ */
+@Serializable data class TransitionContext(
     val outgoingInstanceId: String,
     val incomingInstanceId: String,
     val outgoing: TransitionMusicalEvidence,
@@ -64,7 +71,7 @@ data class CohesionEnhancementPolicy(val melodyPercent: Int, val rolePercent: In
 
 @Serializable data class TransitionMusicalEvidence(
     val partId: String,
-    /** Hash of selected immutable MIDI; Cohesion publishes only derived occurrence MIDI. */
+    /** Hash of selected immutable MIDI; Ensemble Cohesion publishes only derived occurrence MIDI. */
     val sourceHash: String,
     val analysisHash: String,
     val ppq: Int,
@@ -86,37 +93,37 @@ data class CohesionEnhancementPolicy(val melodyPercent: Int, val rolePercent: In
 @Serializable data class TransitionInstrumentEvidence(val instrument: String, val role: String, val density: Double?)
 @Serializable data class TransitionPolicyEvidence(val profileId: String, val moodId: String, val policySha256: String, val allowedActions: List<TransitionRoleAction>)
 
-@Serializable data class TransitionCohesionPlan(
-    val version: Int = TransitionCohesionInput.VERSION,
+@Serializable data class EnsembleCohesionPlan(
+    val version: Int = EnsembleCohesionInput.VERSION,
     val inputHash: String,
     val arrangementSha256: String,
     val contextSha256: String,
-    val model: CohesionModelIdentity,
+    val model: EnsembleCohesionModelIdentity,
     val boundaries: List<TransitionBridgePlan>,
-    val intensity: CohesionEnhancementIntensity = CohesionEnhancementIntensity.BALANCED,
+    val intensity: EnsembleCohesionEnhancementIntensity = EnsembleCohesionEnhancementIntensity.BALANCED,
     /** Code-owned result; untrusted planners cannot report their own validation. */
-    val validation: TransitionCohesionValidationReport = TransitionCohesionValidationReport(),
+    val validation: EnsembleCohesionValidationReport = EnsembleCohesionValidationReport(),
     /** One code-owned approval promotes the exact reviewed boundary candidate. */
-    val approval: TransitionCohesionApproval = TransitionCohesionApproval.DRAFT
+    val approval: EnsembleCohesionApproval = EnsembleCohesionApproval.DRAFT
 )
-@Serializable data class TransitionCohesionValidationReport(val errors: List<String> = emptyList()) { val valid: Boolean get() = errors.isEmpty() }
-@Serializable enum class TransitionCohesionApproval { DRAFT, APPROVED }
+@Serializable data class EnsembleCohesionValidationReport(val errors: List<String> = emptyList()) { val valid: Boolean get() = errors.isEmpty() }
+@Serializable enum class EnsembleCohesionApproval { DRAFT, APPROVED }
 
 /**
  * Compact, path-free evidence supplied to the model. Identity values are
  * intentionally absent: they are application-owned and bound after parsing.
  */
-@Serializable private data class TransitionCohesionModelInput(
+@Serializable private data class EnsembleCohesionModelInput(
     val supportedInstruments: List<String>,
-    val boundaries: List<TransitionCohesionBoundaryEvidence>,
-    val intensity: CohesionEnhancementIntensity
+    val boundaries: List<EnsembleCohesionBoundaryEvidence>,
+    val intensity: EnsembleCohesionEnhancementIntensity
 )
-@Serializable private data class TransitionCohesionBoundaryEvidence(
-    val outgoing: TransitionCohesionMusicalSummary,
-    val incoming: TransitionCohesionMusicalSummary,
+@Serializable private data class EnsembleCohesionBoundaryEvidence(
+    val outgoing: EnsembleCohesionMusicalSummary,
+    val incoming: EnsembleCohesionMusicalSummary,
     val allowedRoleActions: List<TransitionRoleAction>
 )
-@Serializable private data class TransitionCohesionMusicalSummary(
+@Serializable private data class EnsembleCohesionMusicalSummary(
     val key: MidiKey?,
     val boundaryChord: String?,
     val tempoBpm: Double,
@@ -161,7 +168,7 @@ data class CohesionEnhancementPolicy(val melodyPercent: Int, val rolePercent: In
 )
 
 /** The only decisions a model is allowed to make for one boundary. */
-@Serializable private data class TransitionCohesionModelDecision(
+@Serializable private data class EnsembleCohesionModelDecision(
     val roleAction: TransitionRoleAction,
     val bars: Int,
     val harmonicHandoff: HarmonicHandoff,
@@ -172,7 +179,7 @@ data class CohesionEnhancementPolicy(val melodyPercent: Int, val rolePercent: In
     val tailBeats: Int = 0,
     val melodyEdits: List<CohesionMelodyModelEdit> = emptyList()
 )
-@Serializable private data class TransitionCohesionModelResponse(val boundaries: List<TransitionCohesionModelDecision>)
+@Serializable private data class EnsembleCohesionModelResponse(val boundaries: List<EnsembleCohesionModelDecision>)
 
 @Serializable data class TransitionBridgePlan(
     val outgoingInstanceId: String,
@@ -203,15 +210,15 @@ data class CohesionEnhancementPolicy(val melodyPercent: Int, val rolePercent: In
 @Serializable enum class EnergyContour { HOLD, RISE, FALL }
 @Serializable enum class TimingHandoff { PRESERVE }
 @Serializable enum class TransitionPlacement { OVERLAY_BOUNDARY }
-data class TransitionCohesionValidationResult(val errors: List<String>) { val isValid get() = errors.isEmpty() }
+data class EnsembleCohesionValidationResult(val errors: List<String>) { val isValid get() = errors.isEmpty() }
 
-object TransitionCohesionValidator {
+object EnsembleCohesionValidator {
     private val id = Regex("[A-Za-z0-9_-]{1,80}")
     private val hash = Regex("[0-9a-f]{64}")
     private val rationale = Regex("[A-Za-z0-9 ,.'-]{1,180}")
-    fun validate(plan: TransitionCohesionPlan, input: TransitionCohesionInput): TransitionCohesionValidationResult {
+    fun validate(plan: EnsembleCohesionPlan, input: EnsembleCohesionInput): EnsembleCohesionValidationResult {
         val errors = mutableListOf<String>()
-        if (input.version != TransitionCohesionInput.VERSION || plan.version != TransitionCohesionInput.VERSION) errors += "Unsupported transition cohesion version"
+        if (input.version != EnsembleCohesionInput.VERSION || plan.version != EnsembleCohesionInput.VERSION) errors += "Unsupported transition cohesion version"
         if (!hash.matches(input.arrangementSha256) || !hash.matches(input.contextSha256)) errors += "Transition cohesion requires approved arrangement and context identities"
         if (plan.inputHash != input.inputHash || plan.arrangementSha256 != input.arrangementSha256 || plan.contextSha256 != input.contextSha256) errors += "Transition cohesion plan hashes are stale"
         if (plan.intensity != input.intensity) errors += "Cohesion enhancement intensity is stale"
@@ -250,16 +257,16 @@ object TransitionCohesionValidator {
         }.toMap()
         editCounts.forEach { (occurrenceId, count) ->
             val noteCount = occurrenceEvidence[occurrenceId]?.melodyNotes?.size ?: 0
-            if (count * 100 / noteCount.coerceAtLeast(1) > CohesionEnhancementPolicy.forIntensity(input.intensity).melodyPercent) {
+            if (count * 100 / noteCount.coerceAtLeast(1) > EnsembleCohesionEnhancementPolicy.forIntensity(input.intensity).melodyPercent) {
                 errors += "Cohesion melody edits for '$occurrenceId' exceed the recognizable identity budget"
             }
         }
-        return TransitionCohesionValidationResult(errors)
+        return EnsembleCohesionValidationResult(errors)
     }
-    fun requireValid(plan: TransitionCohesionPlan, input: TransitionCohesionInput) { val result = validate(plan, input); require(result.isValid) { result.errors.joinToString("; ") } }
+    fun requireValid(plan: EnsembleCohesionPlan, input: EnsembleCohesionInput) { val result = validate(plan, input); require(result.isValid) { result.errors.joinToString("; ") } }
     private fun tempoValid(tempo: MidiTempoChange) = tempo.tick >= 0 && tempo.bpm.isFinite() && tempo.bpm in 20.0..300.0
     private fun meterValid(meter: MidiTimeSignature) = meter.tick >= 0 && meter.numerator in 1..12 && meter.denominator in setOf(1, 2, 4, 8, 16)
-    private fun validateMelodyEdit(label: String, edit: CohesionMelodyEdit, source: TransitionBoundaryInput, errors: MutableList<String>) {
+    private fun validateMelodyEdit(label: String, edit: CohesionMelodyEdit, source: TransitionContext, errors: MutableList<String>) {
         val evidence = when (edit.occurrenceInstanceId) {
             source.outgoingInstanceId -> source.outgoing
             source.incomingInstanceId -> source.incoming
@@ -316,12 +323,12 @@ object TransitionCohesionValidator {
 
 }
 
-class LocalQwenTransitionCohesionPlanner(private val client: LocalQwenClient = LmStudioQwenClient(), private val model: CohesionModelIdentity) {
-    fun plan(input: TransitionCohesionInput): TransitionCohesionPlan = requestQwenWithAutomaticRetries(
-        client, PROMPT, json.encodeToString(TransitionCohesionModelInput.serializer(), modelInput(input))
+class LocalQwenEnsembleCohesionPlanner(private val client: LocalQwenClient = LmStudioQwenClient(), private val model: EnsembleCohesionModelIdentity) {
+    fun plan(input: EnsembleCohesionInput): EnsembleCohesionPlan = requestQwenWithAutomaticRetries(
+        client, PROMPT, json.encodeToString(EnsembleCohesionModelInput.serializer(), modelInput(input))
     ) { response ->
         val modelResponse = try {
-            json.decodeFromString(TransitionCohesionModelResponse.serializer(), response)
+            json.decodeFromString(EnsembleCohesionModelResponse.serializer(), response)
         } catch (error: Exception) {
             throw IllegalArgumentException("Qwen returned invalid transition-cohesion JSON: ${error.message}", error)
         }
@@ -359,10 +366,10 @@ class LocalQwenTransitionCohesionPlanner(private val client: LocalQwenClient = L
                 tailBeats = decision.tailBeats
             )
         }
-        val plan = TransitionCohesionPlan(inputHash = input.inputHash, arrangementSha256 = input.arrangementSha256, contextSha256 = input.contextSha256, model = model, boundaries = boundaries, intensity = input.intensity)
-        val validation = TransitionCohesionValidator.validate(plan, input)
+        val plan = EnsembleCohesionPlan(inputHash = input.inputHash, arrangementSha256 = input.arrangementSha256, contextSha256 = input.contextSha256, model = model, boundaries = boundaries, intensity = input.intensity)
+        val validation = EnsembleCohesionValidator.validate(plan, input)
         require(validation.isValid) { "Qwen returned an invalid transition-cohesion plan: ${validation.errors.joinToString("; ")}" }
-        plan.copy(validation = TransitionCohesionValidationReport())
+        plan.copy(validation = EnsembleCohesionValidationReport())
     }
 
     /** These are mechanical compatibility rules, not musical choices for the model. */
@@ -386,10 +393,10 @@ class LocalQwenTransitionCohesionPlanner(private val client: LocalQwenClient = L
 
     private data class BridgeDetails(val instrument: String, val bridgeType: BridgeType)
 
-    private fun modelInput(input: TransitionCohesionInput) = TransitionCohesionModelInput(
+    private fun modelInput(input: EnsembleCohesionInput) = EnsembleCohesionModelInput(
         supportedInstruments = input.supportedInstruments,
         boundaries = input.boundaries.map { boundary ->
-            TransitionCohesionBoundaryEvidence(
+            EnsembleCohesionBoundaryEvidence(
                 outgoing = summary(boundary.outgoing, useLastChord = true),
                 incoming = summary(boundary.incoming, useLastChord = false),
                 allowedRoleActions = boundary.allowedRoleActions
@@ -398,9 +405,9 @@ class LocalQwenTransitionCohesionPlanner(private val client: LocalQwenClient = L
         intensity = input.intensity
     )
 
-    private fun summary(evidence: TransitionMusicalEvidence, useLastChord: Boolean): TransitionCohesionMusicalSummary {
+    private fun summary(evidence: TransitionMusicalEvidence, useLastChord: Boolean): EnsembleCohesionMusicalSummary {
         val chords = if (useLastChord) evidence.chords.asReversed() else evidence.chords
-        return TransitionCohesionMusicalSummary(
+        return EnsembleCohesionMusicalSummary(
             key = evidence.key,
             boundaryChord = chords.firstOrNull { it.symbol != null }?.symbol,
             tempoBpm = evidence.tempo.bpm,
@@ -449,9 +456,26 @@ class LocalQwenTransitionCohesionPlanner(private val client: LocalQwenClient = L
     }
 }
 
-/** Deterministic renderer consumes only validated vocabulary; melody source is never read or changed. */
+/**
+ * The bounded, code-owned transition pattern library. A planner selects an
+ * intent; only this mapping selects executable musical material.
+ */
+private object EnsembleTransitionPatternLibrary {
+    val forBridge: Map<BridgeType, EnsembleTransitionPattern> = mapOf(
+        BridgeType.DRUM_FILL to EnsembleTransitionPattern.DRUM_FILL,
+        BridgeType.BUILD to EnsembleTransitionPattern.DRUM_FILL,
+        BridgeType.CONTINUITY to EnsembleTransitionPattern.DRUM_FILL,
+        BridgeType.BASS_WALK to EnsembleTransitionPattern.BASS_WALK,
+        BridgeType.CHORD_MOTION to EnsembleTransitionPattern.CHORD_MOTION,
+        BridgeType.PAD_SUSTAIN to EnsembleTransitionPattern.PAD_SUSTAIN
+    )
+}
+
+private enum class EnsembleTransitionPattern { DRUM_FILL, BASS_WALK, CHORD_MOTION, PAD_SUSTAIN }
+
+/** Deterministic renderer consumes only pattern-library strategies; melody source is never read or changed. */
 object DeterministicTransitionBridgeEngine {
-    fun write(path: Path, input: TransitionBoundaryInput, plan: TransitionBridgePlan) {
+    fun write(path: Path, input: TransitionContext, plan: TransitionBridgePlan) {
         val ppq = input.incoming.ppq; val meter = input.incoming.meter
         val beat = ppq * 4L / input.outgoing.meter.denominator
         val incomingBeat = ppq * 4L / meter.denominator
@@ -463,15 +487,15 @@ object DeterministicTransitionBridgeEngine {
         val outgoing = harmony(input.outgoing.chords.lastOrNull { it.symbol != null }?.symbol, input.outgoing.key)
         val incoming = harmony(input.incoming.chords.firstOrNull { it.symbol != null }?.symbol, input.incoming.key)
         val velocityBase = when (plan.energyContour) { EnergyContour.FALL -> 58; EnergyContour.HOLD -> 70; EnergyContour.RISE -> 82 }
-        when (plan.bridgeType) {
-            BridgeType.DRUM_FILL, BridgeType.BUILD, BridgeType.CONTINUITY -> {
+        when (requireNotNull(EnsembleTransitionPatternLibrary.forBridge[plan.bridgeType]) { "Unsupported Ensemble Cohesion bridge pattern" }) {
+            EnsembleTransitionPattern.DRUM_FILL -> {
                 val step = (beat / 4).coerceAtLeast(1); val start = (boundary - beat).coerceAtLeast(0)
                 generateSequence(start) { it + step }.takeWhile { it < boundary }.forEachIndexed { index, tick ->
                     note(track, 9, if (index < 2) 38 else 36, (velocityBase + index * 7).coerceAtMost(112), tick, (tick + step / 2).coerceAtMost(boundary))
                 }
                 if (plan.tailBeats > 0) note(track, 9, 36, (velocityBase + 10).coerceAtMost(115), boundary, minOf(length, boundary + step))
             }
-            BridgeType.BASS_WALK -> {
+            EnsembleTransitionPattern.BASS_WALK -> {
                 val from = requireNotNull(outgoing) { "Bass Cohesion requires outgoing harmony or key evidence" }
                 val to = requireNotNull(incoming) { "Bass Cohesion requires incoming harmony or key evidence" }
                 val delta = ((to.root - from.root + 18) % 12) - 6
@@ -482,11 +506,11 @@ object DeterministicTransitionBridgeEngine {
                     note(track, 0, 36 + root, velocityBase, start, minOf(boundary, start + beat * 3 / 4))
                 }
             }
-            BridgeType.CHORD_MOTION -> {
+            EnsembleTransitionPattern.CHORD_MOTION -> {
                 val target = requireNotNull(incoming) { "Chord-motion Cohesion requires incoming harmony or key evidence" }
                 target.intervals.forEach { interval -> note(track, 0, 60 + target.root + interval, velocityBase - 10, 0, length) }
             }
-            BridgeType.PAD_SUSTAIN -> {
+            EnsembleTransitionPattern.PAD_SUSTAIN -> {
                 val from = requireNotNull(outgoing ?: incoming) { "Sustained Cohesion requires harmony or key evidence" }
                 val common = incoming?.let { next -> from.intervals.map { (from.root + it).mod(12) }.firstOrNull { pc -> pc in next.intervals.map { (next.root + it).mod(12) } } }
                 note(track, 0, 60 + (common ?: from.root), velocityBase - 12, 0, length)
@@ -615,7 +639,7 @@ object CohesionMelodyApplier {
 
 /** Copies one generated role and folds only validated boundary bridges into its authoritative timeline. */
 object CohesionRoleBridgeApplier {
-    fun write(root: Path, source: Path, target: Path, role: String, input: TransitionCohesionInput, plan: TransitionCohesionPlan) {
+    fun write(root: Path, source: Path, target: Path, role: String, input: EnsembleCohesionInput, plan: EnsembleCohesionPlan) {
         require(Files.isRegularFile(source)) { "Generated $role MIDI is missing before Cohesion" }
         Files.createDirectories(requireNotNull(target.parent))
         val temporary = target.resolveSibling(".${target.fileName}.copy.tmp")
@@ -627,7 +651,7 @@ object CohesionRoleBridgeApplier {
         } finally { Files.deleteIfExists(temporary) }
     }
 
-    private fun mergeBridges(root: Path, target: Path, role: String, input: TransitionCohesionInput, plan: TransitionCohesionPlan) {
+    private fun mergeBridges(root: Path, target: Path, role: String, input: EnsembleCohesionInput, plan: EnsembleCohesionPlan) {
         val bridges = plan.boundaries.filter { it.instrument == role }
         if (bridges.isEmpty()) return
         val sequence = MidiSystem.getSequence(target.toFile())
@@ -642,7 +666,7 @@ object CohesionRoleBridgeApplier {
             val globalEnd = input.occurrences.take(boundaryIndex + 1).sumOf { it.evidence.durationTicks }
             val beat = outgoing.ppq * 4L / outgoing.meter.denominator
             val offset = globalEnd - beat * bridge.leadBeats
-            val bridgePath = root.resolve(TransitionCohesionStore.bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId))
+            val bridgePath = root.resolve(EnsembleCohesionStore.bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId))
             roleNotes(MidiSystem.getSequence(bridgePath.toFile())).forEach { note ->
                 val shifted = note.copy(start = offset + note.start, end = offset + note.end, channel = channel)
                 if (occupied.none { it.channel == shifted.channel && it.pitch == shifted.pitch && it.start < shifted.end && shifted.start < it.end }) {
@@ -676,23 +700,23 @@ object CohesionRoleBridgeApplier {
     private data class RoleNote(val channel: Int, val pitch: Int, val velocity: Int, val start: Long, val end: Long)
 }
 
-object TransitionCohesionStore {
+object EnsembleCohesionStore {
     const val DRAFT_FILE = "cohesion/cohesion.draft.json"; const val APPROVED_FILE = "cohesion/cohesion.json"
     private val json = Json { prettyPrint = true; encodeDefaults = true; explicitNulls = false; ignoreUnknownKeys = false }
     fun bridgeMidi(outgoing: String, incoming: String) = "cohesion/boundaries/$outgoing--$incoming/bridge.mid"
     fun audit(outgoing: String, incoming: String) = "cohesion/boundaries/$outgoing--$incoming/audit.json"
-    fun writeDraft(root: Path, input: TransitionCohesionInput, plan: TransitionCohesionPlan): Path {
-        TransitionCohesionValidator.requireValid(plan, input)
+    fun writeDraft(root: Path, input: EnsembleCohesionInput, plan: EnsembleCohesionPlan): Path {
+        EnsembleCohesionValidator.requireValid(plan, input)
         plan.boundaries.forEachIndexed { index, bridge -> DeterministicTransitionBridgeEngine.write(root.resolve(bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId)), input.boundaries[index], bridge); atomicWrite(root.resolve(audit(bridge.outgoingInstanceId, bridge.incomingInstanceId)), json.encodeToString(TransitionBridgePlan.serializer(), bridge)) }
-        val text = json.encodeToString(TransitionCohesionPlan.serializer(), plan)
+        val text = json.encodeToString(EnsembleCohesionPlan.serializer(), plan)
         return atomicWrite(root.resolve(DRAFT_FILE), text).also { persist(root, input, plan, false, emptySet()) }
     }
-    fun readDraft(root: Path, input: TransitionCohesionInput) = read(root.resolve(DRAFT_FILE), input)
-    fun readApproved(root: Path, input: TransitionCohesionInput) = read(root.resolve(APPROVED_FILE), input)
-    fun markReviewed(root: Path, input: TransitionCohesionInput, outgoing: String, incoming: String): Set<Pair<String, String>> { val plan = readDraft(root, input); val pair = outgoing to incoming; require(pair in plan.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId }) { "Unknown cohesion boundary $outgoing -> $incoming" }; return (reviewed(root) + pair).also { persist(root, input, plan, false, it) } }
-    fun approve(root: Path, input: TransitionCohesionInput): Path { val plan = readDraft(root, input); val expected = plan.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId }.toSet(); val approved = plan.copy(approval = TransitionCohesionApproval.APPROVED); val text = json.encodeToString(TransitionCohesionPlan.serializer(), approved); return atomicWrite(root.resolve(APPROVED_FILE), text).also { persist(root, input, approved, true, expected) } }
-    fun reject(root: Path, input: TransitionCohesionInput): Path { val rejected = atomicWrite(root.resolve("cohesion/rejected-${input.inputHash}.json"), Files.readString(root.resolve(DRAFT_FILE))); ProjectStore.read(root).takeIf { it.version == Project.CURRENT_VERSION }?.let { project -> ProjectStore.write(root, project.copy(workflow = project.workflow.invalidate(WorkflowChange.COHESION).copy(stale = project.workflow.stale + WorkflowArtifact.COHESION))) }; return rejected }
-    fun attachPreviews(root: Path, input: TransitionCohesionInput, previews: CohesionPreviewReferences) {
+    fun readDraft(root: Path, input: EnsembleCohesionInput) = read(root.resolve(DRAFT_FILE), input)
+    fun readApproved(root: Path, input: EnsembleCohesionInput) = read(root.resolve(APPROVED_FILE), input)
+    fun markReviewed(root: Path, input: EnsembleCohesionInput, outgoing: String, incoming: String): Set<Pair<String, String>> { val plan = readDraft(root, input); val pair = outgoing to incoming; require(pair in plan.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId }) { "Unknown cohesion boundary $outgoing -> $incoming" }; return (reviewed(root) + pair).also { persist(root, input, plan, false, it) } }
+    fun approve(root: Path, input: EnsembleCohesionInput): Path { val plan = readDraft(root, input); val expected = plan.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId }.toSet(); val approved = plan.copy(approval = EnsembleCohesionApproval.APPROVED); val text = json.encodeToString(EnsembleCohesionPlan.serializer(), approved); return atomicWrite(root.resolve(APPROVED_FILE), text).also { persist(root, input, approved, true, expected) } }
+    fun reject(root: Path, input: EnsembleCohesionInput): Path { val rejected = atomicWrite(root.resolve("cohesion/rejected-${input.inputHash}.json"), Files.readString(root.resolve(DRAFT_FILE))); ProjectStore.read(root).takeIf { it.version == Project.CURRENT_VERSION }?.let { project -> ProjectStore.write(root, project.copy(workflow = project.workflow.invalidate(WorkflowChange.COHESION).copy(stale = project.workflow.stale + WorkflowArtifact.COHESION))) }; return rejected }
+    fun attachPreviews(root: Path, input: EnsembleCohesionInput, previews: CohesionPreviewReferences) {
         val project = ProjectStore.read(root)
         val cohesion = requireNotNull(project.workflow.cohesion)
         require(cohesion.inputSha256 == input.inputHash && listOf(previews.baseline, previews.enhanced).all { reference ->
@@ -701,7 +725,7 @@ object TransitionCohesionStore {
         }) { "Cohesion previews are missing or stale" }
         ProjectStore.write(root, project.copy(workflow = project.workflow.copy(cohesion = cohesion.copy(previews = previews))))
     }
-    fun isApprovedCurrent(root: Path, input: TransitionCohesionInput): Boolean = runCatching {
+    fun isApprovedCurrent(root: Path, input: EnsembleCohesionInput): Boolean = runCatching {
         val workflow = ProjectStore.read(root).workflow.cohesion ?: return false
         workflow.approved && workflow.inputSha256 == input.inputHash && workflow.structureSha256 == input.structureSha256 &&
             workflow.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId } == input.boundaries.map { it.outgoingInstanceId to it.incomingInstanceId } &&
@@ -712,9 +736,9 @@ object TransitionCohesionStore {
             workflow.previews?.let { previews -> listOf(previews.baseline, previews.enhanced).all { reference -> Files.isRegularFile(root.resolve(reference.file)) && digest(root.resolve(reference.file)) == reference.sha256 } } != false
     }.getOrDefault(false)
     private fun reviewed(root: Path) = ProjectStore.read(root).workflow.cohesion?.boundaries.orEmpty().filter { it.approved != null }.map { it.outgoingInstanceId to it.incomingInstanceId }.toSet()
-    private fun read(path: Path, input: TransitionCohesionInput) = json.decodeFromString(TransitionCohesionPlan.serializer(), Files.readString(path, StandardCharsets.UTF_8)).also { TransitionCohesionValidator.requireValid(it, input) }
-    private fun persist(root: Path, input: TransitionCohesionInput, plan: TransitionCohesionPlan, approved: Boolean, reviewed: Set<Pair<String, String>>) {
-        val text = json.encodeToString(TransitionCohesionPlan.serializer(), plan)
+    private fun read(path: Path, input: EnsembleCohesionInput) = json.decodeFromString(EnsembleCohesionPlan.serializer(), Files.readString(path, StandardCharsets.UTF_8)).also { EnsembleCohesionValidator.requireValid(it, input) }
+    private fun persist(root: Path, input: EnsembleCohesionInput, plan: EnsembleCohesionPlan, approved: Boolean, reviewed: Set<Pair<String, String>>) {
+        val text = json.encodeToString(EnsembleCohesionPlan.serializer(), plan)
         val boundaries = plan.boundaries.map { bridge -> val pair = bridge.outgoingInstanceId to bridge.incomingInstanceId; val draft = CohesionBoundaryArtifactPaths.draft(bridge.outgoingInstanceId, bridge.incomingInstanceId); atomicWrite(root.resolve(draft), json.encodeToString(TransitionBridgePlan.serializer(), bridge)); val approvedFile = CohesionBoundaryArtifactPaths.approved(bridge.outgoingInstanceId, bridge.incomingInstanceId); if (pair in reviewed) atomicWrite(root.resolve(approvedFile), json.encodeToString(TransitionBridgePlan.serializer(), bridge)); CohesionBoundaryReference(bridge.outgoingInstanceId, bridge.incomingInstanceId, input.inputHash, WorkflowArtifactReference(draft, digest(root.resolve(draft))), if (pair in reviewed) WorkflowArtifactReference(approvedFile, digest(root.resolve(approvedFile))) else null, digest(root.resolve(bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId)))) }
         val project = ProjectStore.read(root); if (project.version != Project.CURRENT_VERSION) return
         val occurrenceEvidence = input.occurrences.associate { it.instanceId to it.evidence }
@@ -744,7 +768,7 @@ object TransitionCohesionStore {
             } else {
                 require(source.sha256 == evidence.sourceHash) { "Cohesion occurrence source is stale" }
                 val boundaryEdits = plan.boundaries.flatMap(TransitionBridgePlan::melodyEdits).filter { it.occurrenceInstanceId == occurrence.id }
-                CohesionMelodyApplier.write(source.path, root.resolve(relative), evidence, boundaryEdits, maximumIdentityPercent = CohesionEnhancementPolicy.forIntensity(input.intensity).melodyPercent)
+                CohesionMelodyApplier.write(source.path, root.resolve(relative), evidence, boundaryEdits, maximumIdentityPercent = EnsembleCohesionEnhancementPolicy.forIntensity(input.intensity).melodyPercent)
             }
             CohesionOccurrenceReference(occurrence.id, source.sha256, WorkflowArtifactReference(relative, digest(root.resolve(relative))), approved, input.inputHash)
         }
@@ -787,8 +811,8 @@ object TransitionCohesionStore {
 }
 
 /** Builds evidence from selected MIDI, saved Structure, approved arrangement, and profile/mood settings. */
-object TransitionCohesionInputFactory {
-    fun build(root: Path, project: Project, planning: SongPlanningInput, arrangement: DetailedArrangement, arrangementSha256: String, contextSha256: String, intensity: CohesionEnhancementIntensity = CohesionEnhancementIntensity.BALANCED): TransitionCohesionInput {
+object EnsembleTransitionContextFactory {
+    fun build(root: Path, project: Project, planning: SongPlanningInput, arrangement: DetailedArrangement, arrangementSha256: String, contextSha256: String, intensity: EnsembleCohesionEnhancementIntensity = EnsembleCohesionEnhancementIntensity.BALANCED): EnsembleCohesionInput {
         require(HASH.matches(arrangementSha256) && HASH.matches(contextSha256)) { "Cohesion requires approved arrangement and context identities" }
         val sections = planning.sectionsWithIdentity(); require(arrangement.sections.map { it.instanceId } == sections.map { it.instanceId }) { "Approved arrangement does not match saved Structure" }
         val selected = SelectedMidiArtifactResolver(); val evidence = sections.associate { section ->
@@ -807,7 +831,7 @@ object TransitionCohesionInputFactory {
         val supported = approvedRoles.sorted()
         val policy = policy(project, contextSha256, supported)
         val boundaries = if (supported.isEmpty()) emptyList() else sections.zipWithNext().map { (outgoing, incoming) ->
-            TransitionBoundaryInput(outgoing.instanceId, incoming.instanceId, evidence.getValue(outgoing.instanceId), evidence.getValue(incoming.instanceId), policy.allowedActions, policy)
+            TransitionContext(outgoing.instanceId, incoming.instanceId, evidence.getValue(outgoing.instanceId), evidence.getValue(incoming.instanceId), policy.allowedActions, policy)
         }
         val generatedRoles = supported.map { role ->
             val path = root.resolve("midi/generated/$role.mid")
@@ -815,8 +839,8 @@ object TransitionCohesionInputFactory {
             val sequence = MidiSystem.getSequence(path.toFile())
             GeneratedRoleEvidence(role, sha256(Files.readAllBytes(path)), sequence.resolution, sequence.tickLength, melody(path))
         }
-        val seed = TransitionCohesionInput(inputHash = "", structureSha256 = sha256(project.envelope.structureOccurrences.joinToString("|") { "${it.id}:${it.partId}:${it.revision}" }.toByteArray()), arrangementSha256 = arrangementSha256, contextSha256 = contextSha256, supportedInstruments = supported, boundaries = boundaries, intensity = intensity, occurrences = sections.map { SongOccurrenceEvidence(it.instanceId, evidence.getValue(it.instanceId)) }, generatedRoles = generatedRoles)
-        return seed.copy(inputHash = sha256(Json { encodeDefaults = true; explicitNulls = false }.encodeToString(TransitionCohesionInput.serializer(), seed).toByteArray()))
+        val seed = EnsembleCohesionInput(inputHash = "", structureSha256 = sha256(project.envelope.structureOccurrences.joinToString("|") { "${it.id}:${it.partId}:${it.revision}" }.toByteArray()), arrangementSha256 = arrangementSha256, contextSha256 = contextSha256, supportedInstruments = supported, boundaries = boundaries, intensity = intensity, occurrences = sections.map { SongOccurrenceEvidence(it.instanceId, evidence.getValue(it.instanceId)) }, generatedRoles = generatedRoles)
+        return seed.copy(inputHash = sha256(Json { encodeDefaults = true; explicitNulls = false }.encodeToString(EnsembleCohesionInput.serializer(), seed).toByteArray()))
     }
     private fun policy(project: Project, contextHash: String, instruments: List<String>): TransitionPolicyEvidence {
         val settings = project.envelope.compositionSettings

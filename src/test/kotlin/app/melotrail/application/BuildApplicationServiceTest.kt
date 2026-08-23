@@ -39,9 +39,9 @@ class BuildApplicationServiceTest {
     private object UnusedRenderer : InstrumentRenderer {
         override suspend fun render(midi: Path, instrument: LogicalInstrument, output: Path, format: RenderFormat, expectedFrames: Long): RenderResult = error("Not used")
     }
-    private class ApprovedCohesion(private val root: Path) : CohesionApplicationService {
-        override suspend fun generate(request: GenerateCohesionRequest, progress: ProgressSink) = error("Not used")
-        override fun load(root: Path) = CohesionSnapshot(root, CohesionPlannerKind.QWEN, "0".repeat(64), "0".repeat(64), emptyList(), false, true, false, root.resolve("cohesion/cohesion.json"))
+    private class ApprovedCohesion(private val root: Path) : EnsembleCohesionApplicationService {
+        override suspend fun generate(request: GenerateEnsembleCohesionRequest, progress: ProgressSink) = error("Not used")
+        override fun load(root: Path) = EnsembleCohesionSnapshot(root, EnsembleCohesionPlannerKind.QWEN, "0".repeat(64), "0".repeat(64), emptyList(), false, true, false, root.resolve("cohesion/cohesion.json"))
         override fun reviewBoundary(root: Path, outgoingInstanceId: String, incomingInstanceId: String) = error("Not used")
         override fun approve(root: Path) = error("Not used")
         override fun reject(root: Path) = error("Not used")

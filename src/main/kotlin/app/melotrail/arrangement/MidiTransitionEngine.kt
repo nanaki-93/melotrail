@@ -370,7 +370,7 @@ class MidiTransitionGenerationAdapter(
         val output = root.resolve("midi/generated/transitions.mid")
         writeApprovedMidi(output, ppq, sections, placements, bridges, cohesion, available, root)
         val events = bridges.flatMapIndexed { index, bridge ->
-            val sequence = MidiSystem.getSequence(root.resolve(TransitionCohesionStore.bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId)).toFile())
+            val sequence = MidiSystem.getSequence(root.resolve(EnsembleCohesionStore.bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId)).toFile())
             val logical = LogicalInstrument.parse(bridge.instrument)
             sequence.tracks.flatMap { track -> (0 until track.size()).map(track::get) }.mapNotNull { event ->
                 val message = event.message as? ShortMessage
@@ -398,7 +398,7 @@ class MidiTransitionGenerationAdapter(
         if (!workflow.approved || WorkflowArtifact.COHESION in project.workflow.stale) return null
         val boundaries = workflow.boundaries.map { boundary ->
             val approved = requireNotNull(boundary.approved) { "Approved Cohesion boundary evidence is missing." }
-            val bridge = root.resolve(TransitionCohesionStore.bridgeMidi(boundary.outgoingInstanceId, boundary.incomingInstanceId))
+            val bridge = root.resolve(EnsembleCohesionStore.bridgeMidi(boundary.outgoingInstanceId, boundary.incomingInstanceId))
             val bridgeHash = requireNotNull(boundary.bridgeSha256) { "Historical Cohesion bridge evidence cannot be used for a new build; regenerate Cohesion." }
             require(Files.isRegularFile(bridge) && digest(bridge) == bridgeHash) { "Approved Cohesion bridge MIDI has changed; regenerate Cohesion." }
             ArrangementCohesionBoundaryReference(boundary.outgoingInstanceId, boundary.incomingInstanceId, approved.sha256, bridgeHash)
@@ -446,7 +446,7 @@ class MidiTransitionGenerationAdapter(
                 }
             }
             bridges.forEachIndexed { index, bridge ->
-                val source = root.resolve(TransitionCohesionStore.bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId))
+                val source = root.resolve(EnsembleCohesionStore.bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId))
                 val reference = cohesion.boundaries[index]
                 require(Files.isRegularFile(source) && digest(source) == reference.bridgeSha256) {
                     "Approved Cohesion bridge MIDI has changed for '${bridge.outgoingInstanceId} -> ${bridge.incomingInstanceId}'; regenerate cohesion."

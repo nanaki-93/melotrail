@@ -369,7 +369,7 @@ data class CohesionWorkflowReferences(
     val structureSha256: String = "",
     /** Generated-role derivatives containing only validated Cohesion boundary bridges. */
     val roles: List<CohesionRoleReference> = emptyList(),
-    val intensity: CohesionEnhancementIntensity = CohesionEnhancementIntensity.BALANCED,
+    val intensity: EnsembleCohesionEnhancementIntensity = EnsembleCohesionEnhancementIntensity.BALANCED,
     val previews: CohesionPreviewReferences? = null
 ) {
     init {

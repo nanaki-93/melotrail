@@ -21,7 +21,7 @@ class FullSongCohesionPreviewRenderer(
     private val libraryRoot: Path,
     private val mixer: DeterministicStemMixer = DeterministicStemMixer()
 ) {
-    suspend fun render(root: Path, input: TransitionCohesionInput, progress: ProgressSink = ProgressSink.None): CohesionPreviewReferences {
+    suspend fun render(root: Path, input: EnsembleCohesionInput, progress: ProgressSink = ProgressSink.None): CohesionPreviewReferences {
         val project = ProjectStore.read(root).also { it.requireValid(root) }
         val workflow = requireNotNull(project.workflow.cohesion).also {
             require(it.inputSha256 == input.inputHash) { "Cohesion preview input is stale" }
@@ -53,7 +53,7 @@ class FullSongCohesionPreviewRenderer(
     private suspend fun renderVariant(
         root: Path,
         project: Project,
-        input: TransitionCohesionInput,
+        input: EnsembleCohesionInput,
         piano: Path,
         enhanced: Boolean,
         format: RenderFormat,
@@ -101,7 +101,7 @@ class FullSongCohesionPreviewRenderer(
         }
     }
 
-    private fun assemblePiano(root: Path, input: TransitionCohesionInput, enhanced: Boolean): Path {
+    private fun assemblePiano(root: Path, input: EnsembleCohesionInput, enhanced: Boolean): Path {
         val workflow = requireNotNull(ProjectStore.read(root).workflow.cohesion)
         val ppq = input.occurrences.first().evidence.ppq
         val sequence = Sequence(Sequence.PPQ, ppq)

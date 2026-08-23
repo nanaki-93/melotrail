@@ -139,11 +139,11 @@
       "documentedFunctionCount": 0
     },
     {
-      "path": "src/main/kotlin/app/melotrail/application/CohesionApplicationService.kt",
+      "path": "src/main/kotlin/app/melotrail/application/EnsembleCohesionApplicationService.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/application/CohesionApplicationService.kt has 14 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 14,
-      "declarationDigest": "d45f5c0b4f7914434ee912603d488a0182923fae67adbae2b84d45b8eb7d17fd",
+      "reason": "The reviewed Ensemble Cohesion application boundary has 25 callable declarations. Its stage-level KDoc and typed request/snapshot contracts define the public orchestration boundary; focused callable KDoc remains a tracked follow-up.",
+      "functionCount": 25,
+      "declarationDigest": "f88c2f796cc0398ae4f795f9b4ad1fd7f4d2a354b065d51f119aa3cf0c5b420a",
       "documentedFunctionCount": 0
     },
     {
@@ -265,6 +265,14 @@
       "functionCount": 18,
       "declarationDigest": "c3e6ae8ba6616f7f664748d39bcc1212c3664e81c2265fe1334e79556bce58be",
       "documentedFunctionCount": 0
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/arrangement/EnsembleCohesion.kt",
+      "classification": "deferred-with-reason",
+      "reason": "Milestone 12 reviewed the explicit Ensemble Cohesion and TransitionContext boundary. The two stage-level KDoc entries document its immutable boundary; remaining helper declarations retain this declaration-digest-pinned exemption until they receive focused KDoc.",
+      "functionCount": 51,
+      "declarationDigest": "eecc4008fe19a53888a0031d8c391b3b0e534636f92fe143eaa88a8f63eee5cb",
+      "documentedFunctionCount": 2
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/GlobalSongPlanner.kt",
