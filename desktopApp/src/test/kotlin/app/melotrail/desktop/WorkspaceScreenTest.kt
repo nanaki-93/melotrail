@@ -39,6 +39,9 @@ import app.melotrail.application.ArrangementPlannerKind
 import app.melotrail.application.ArrangementInstrumentSnapshot
 import app.melotrail.application.ArrangementSectionSnapshot
 import app.melotrail.application.ArrangementSnapshot
+import app.melotrail.application.ArrangementWorkspaceSnapshot
+import app.melotrail.application.ArrangementRoleProgressSnapshot
+import app.melotrail.application.ArrangementRoleProgressStatus
 import app.melotrail.application.EnsembleCohesionBoundarySnapshot
 import app.melotrail.application.EnsembleCohesionPlannerKind
 import app.melotrail.application.EnsembleCohesionSnapshot
@@ -1148,6 +1151,27 @@ class WorkspaceScreenTest {
         onAllNodesWithTag(WorkspacePageTags.ARRANGE_INTENSITY).assertCountEquals(0)
         onAllNodesWithText("AI Arrangement Suggestions").assertCountEquals(0)
         onAllNodesWithText("Undo").assertCountEquals(0)
+    }
+
+    @Test
+    fun `Arrange exposes planner energy and persisted incremental role states`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        val arrangement = arrangementSnapshot(approved = true, sections = listOf(
+            arrangementSection(0, "A1", 18.0, "piano", "bass", "strings")
+        ))
+        val progress = ArrangementWorkspaceSnapshot(arrangement, listOf(
+            ArrangementRoleProgressSnapshot("piano", "melody", active = true, optional = false, status = ArrangementRoleProgressStatus.SOURCE_READY),
+            ArrangementRoleProgressSnapshot("bass", "bass", active = true, optional = false, status = ArrangementRoleProgressStatus.READY_TO_GENERATE),
+            ArrangementRoleProgressSnapshot("strings", "texture", active = true, optional = true, status = ArrangementRoleProgressStatus.LOCKED)
+        ))
+        setContent { MelotrailTheme { WorkspaceScreen(arrangeState().copy(arrangement = arrangement, arrangementWorkspace = progress), intents::add) } }
+
+        onNodeWithTag(WorkspacePageTags.ARRANGE_ENERGY).assertExists()
+        onNodeWithTag(WorkspacePageTags.ARRANGE_ROLE_PROGRESS).assertExists()
+        onNodeWithTag(WorkspacePageTags.ARRANGE_ROLE_ACTION_PREFIX + "bass").performScrollTo().performClick()
+        onNodeWithTag(WorkspacePageTags.ARRANGE_ROLE_ACTION_PREFIX + "strings").assertIsNotEnabled()
+
+        assertEquals(WorkspaceIntent.GenerateCoreArrangementMidi, intents.single())
     }
 
     @Test

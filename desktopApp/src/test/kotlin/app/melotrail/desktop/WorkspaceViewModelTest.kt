@@ -248,6 +248,25 @@ class WorkspaceViewModelTest {
     }
 
     @Test
+    fun `incremental arrangement intents use the persisted core and optional role boundaries`() = runTest {
+        val root = Path.of("build/incremental-arrangement-project")
+        val service = FakeArrangementService()
+        val viewModel = WorkspaceViewModel(
+            FakeProjectService(result = projectSnapshot(root)), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)), arrangementService = service
+        )
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root)); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.GenerateCoreArrangementMidi); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.ApproveCoreArrangement); advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.GenerateOptionalArrangementMidi); advanceUntilIdle()
+
+        assertEquals(1, service.requiredMidiCalls)
+        assertEquals(1, service.coreApprovalCalls)
+        assertEquals(1, service.optionalMidiCalls)
+        viewModel.close()
+    }
+
+    @Test
     fun `Export selection inspects release then exports only through typed service`() = runTest {
         val root = Path.of("build/task-089-project")
         val exporter = FakeReleaseExportService(root)
@@ -1916,6 +1935,9 @@ private class FakeArrangementService(
     var generatedRequest: GenerateArrangementRequest? = null
     var previewCalls = 0
     var approveCalls = 0
+    var requiredMidiCalls = 0
+    var coreApprovalCalls = 0
+    var optionalMidiCalls = 0
 
     override suspend fun generate(request: GenerateArrangementRequest, progress: app.melotrail.application.ProgressSink): ArrangementSnapshot {
         generatedRequest = request
@@ -1924,7 +1946,17 @@ private class FakeArrangementService(
         return checkNotNull(generated)
     }
 
-    override suspend fun generateRequiredMidi(root: Path, progress: app.melotrail.application.ProgressSink): GeneratedMidiSnapshot = GeneratedMidiSnapshot(emptyList())
+    override suspend fun generateRequiredMidi(root: Path, progress: app.melotrail.application.ProgressSink): GeneratedMidiSnapshot {
+        requiredMidiCalls++
+        return GeneratedMidiSnapshot(emptyList())
+    }
+
+    override suspend fun generateOptionalMidi(root: Path, progress: app.melotrail.application.ProgressSink): GeneratedMidiSnapshot {
+        optionalMidiCalls++
+        return GeneratedMidiSnapshot(emptyList())
+    }
+
+    override fun approveCoreArrangement(root: Path) { coreApprovalCalls++ }
 
     override suspend fun renderApprovedStems(
         root: Path,

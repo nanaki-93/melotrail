@@ -184,6 +184,7 @@ class ArrangementApplicationServiceTest {
         )
 
         service.generate(GenerateArrangementRequest(root, instruments = listOf("piano", "bass", "drums", "pad", "strings")))
+        assertEquals(ArrangementRoleProgressStatus.LOCKED, service.workspace(root).roles.single { it.instrument == "strings" }.status)
         val blocked = assertThrows(ApplicationServiceException::class.java) {
             runBlocking { service.generateOptionalMidi(root) }
         }
@@ -191,11 +192,16 @@ class ArrangementApplicationServiceTest {
 
         val core = service.generateRequiredMidi(root)
         assertFalse(core.artifacts.any { it.instrument == "strings" })
+        assertEquals(ArrangementRoleProgressStatus.VALIDATED, service.workspace(root).roles.single { it.instrument == "bass" }.status)
         service.approveCoreArrangement(root)
+        val approvedCore = service.workspace(root)
+        assertEquals(ArrangementRoleProgressStatus.ACCEPTED, approvedCore.roles.single { it.instrument == "bass" }.status)
+        assertEquals(ArrangementRoleProgressStatus.READY_TO_GENERATE, approvedCore.roles.single { it.instrument == "strings" }.status)
         val optional = service.generateOptionalMidi(root)
         val workflow = ProjectStore.read(root).workflow
 
         assertEquals(listOf("strings"), optional.artifacts.map { it.instrument })
+        assertEquals(ArrangementRoleProgressStatus.ACCEPTED, service.workspace(root).roles.single { it.instrument == "strings" }.status)
         assertTrue(workflow.coreArrangement != null)
         assertTrue(workflow.generatedMidi!!.artifacts.any { it.id == "strings" })
         val report = root.resolve("midi/generated/strings.validation.json")

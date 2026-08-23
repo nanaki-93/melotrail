@@ -4,6 +4,7 @@ import app.melotrail.application.AnalyzePartRequest
 import app.melotrail.application.ArrangementApplicationService
 import app.melotrail.application.ArrangementPlannerKind
 import app.melotrail.application.ArrangementSnapshot
+import app.melotrail.application.ArrangementWorkspaceSnapshot
 import app.melotrail.application.CreateProjectRequest
 import app.melotrail.application.EnsembleCohesionApplicationService
 import app.melotrail.application.EnsembleCohesionPlannerKind
@@ -153,6 +154,8 @@ data class WorkspaceUiState(
     /** Task 019 review evidence; no composable reads enhancement files. */
     val enhancementReview: EnhancementSnapshot? = null,
     val arrangement: ArrangementSnapshot? = null,
+    /** Incremental role state supplied by the arrangement service, never by UI file inspection. */
+    val arrangementWorkspace: ArrangementWorkspaceSnapshot? = null,
     val mix: MixSnapshot? = null,
     val fullSongEnhancement: FullSongEnhancementSnapshot? = null,
     val humanization: HumanizationSnapshot? = null,
@@ -218,6 +221,7 @@ data class SourceSongReviewUiState(
 private data class ProjectHydration(
     val mix: Result<MixSnapshot>,
     val arrangement: Result<ArrangementSnapshot>,
+    val arrangementWorkspace: Result<ArrangementWorkspaceSnapshot>,
     val cohesion: Result<EnsembleCohesionSnapshot>,
     val aiFix: Result<MidiAiFixSnapshot>?,
     val fullSongEnhancement: Result<FullSongEnhancementSnapshot>,
@@ -754,6 +758,9 @@ sealed interface WorkspaceIntent {
     data class SeekPlayback(val seconds: Double) : WorkspaceIntent
     data class SetPlaybackVolume(val volume: Double) : WorkspaceIntent
     data object GenerateArrangement : WorkspaceIntent
+    data object GenerateCoreArrangementMidi : WorkspaceIntent
+    data object ApproveCoreArrangement : WorkspaceIntent
+    data object GenerateOptionalArrangementMidi : WorkspaceIntent
     data object GenerateCohesion : WorkspaceIntent
     data class PlayCohesionPreview(val enhanced: Boolean) : WorkspaceIntent
     data class ReviewCohesionBoundary(val outgoingInstanceId: String, val incomingInstanceId: String) : WorkspaceIntent
@@ -964,6 +971,9 @@ class WorkspaceViewModel(
             is WorkspaceIntent.SeekPlayback -> seekPlaybackSession(intent.seconds)
             is WorkspaceIntent.SetPlaybackVolume -> setPlaybackVolume(intent.volume)
             WorkspaceIntent.GenerateArrangement -> generateArrangement()
+            WorkspaceIntent.GenerateCoreArrangementMidi -> generateCoreArrangementMidi()
+            WorkspaceIntent.ApproveCoreArrangement -> approveCoreArrangement()
+            WorkspaceIntent.GenerateOptionalArrangementMidi -> generateOptionalArrangementMidi()
             WorkspaceIntent.GenerateCohesion -> generateCohesion()
             is WorkspaceIntent.PlayCohesionPreview -> playCohesionPreview(intent.enhanced)
             is WorkspaceIntent.ReviewCohesionBoundary -> reviewCohesionBoundary(intent.outgoingInstanceId, intent.incomingInstanceId)
@@ -2700,6 +2710,7 @@ class WorkspaceViewModel(
                     it.copy(
                         project = refreshedProject ?: it.project,
                         arrangement = arrangement,
+                        arrangementWorkspace = runCatching { arrangementService.workspace(request.root) }.getOrNull(),
                         cohesion = null,
                         selectedArrangementSection = arrangement.sections.firstOrNull()?.index,
                         arrangementDraftDirty = false,
@@ -2733,6 +2744,7 @@ class WorkspaceViewModel(
                 .onSuccess { arrangement -> mutableState.update {
                     it.copy(
                         arrangement = arrangement,
+                        arrangementWorkspace = runCatching { arrangementService.workspace(project.root) }.getOrNull(),
                         cohesion = null,
                         selectedArrangementSection = arrangement.sections.firstOrNull()?.index,
                         operation = WorkspaceOperation.Idle,
@@ -2741,6 +2753,64 @@ class WorkspaceViewModel(
                     )
                 } }
                 .onFailure { fail("approve arrangement", it.message ?: "Unable to approve arrangement.", sessionId = feedbackId) }
+        }
+    }
+
+    /** Runs the existing atomic core candidate/validation pipeline; individual UI rows never bypass its dependencies. */
+    private fun generateCoreArrangementMidi() {
+        val project = state.value.project ?: return fail("generate core arrangement MIDI", "Open a project before generating role candidates.")
+        if (state.value.operation.isMutating) return
+        val feedbackId = beginFeedback(OperationKind.ARRANGEMENT, OperationPhase.LOCAL, "Generating and validating core role candidates…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.GeneratingArrangement(), notification = null, operationFeedback = feedbackTracker.current) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { arrangementService.generateRequiredMidi(project.root) { progress ->
+                scope.launch { updateProgress(feedbackId, WorkspaceOperation.GeneratingArrangement(progress)) }
+            } } }
+                .onSuccess {
+                    val refreshed = runCatching { projectService.open(project.root) }.getOrNull()
+                    val workspace = runCatching { arrangementService.workspace(project.root) }.getOrNull()
+                    val message = "Core role candidates were generated and validated. Review and approve the core before optional layers unlock."
+                    mutableState.update { current -> current.copy(project = refreshed ?: current.project, arrangementWorkspace = workspace, operation = WorkspaceOperation.Idle, notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message) ?: current.operationFeedback) }
+                }
+                .onFailure { fail("generate core arrangement MIDI", it.message ?: "Unable to generate core role candidates.", sessionId = feedbackId) }
+        }
+    }
+
+    /** Persists the existing all-core approval gate that protects optional layer generation. */
+    private fun approveCoreArrangement() {
+        val project = state.value.project ?: return fail("approve core arrangement", "Open a project before approving the core arrangement.")
+        if (state.value.operation.isMutating) return
+        val feedbackId = beginFeedback(OperationKind.APPROVAL, OperationPhase.VALIDATING, "Approving validated core arrangement…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.ApprovingArrangement, notification = null, operationFeedback = feedbackTracker.current) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { arrangementService.approveCoreArrangement(project.root) } }
+                .onSuccess {
+                    val refreshed = runCatching { projectService.open(project.root) }.getOrNull()
+                    val workspace = runCatching { arrangementService.workspace(project.root) }.getOrNull()
+                    val message = "Core arrangement approved. Optional layers are now available for generation."
+                    mutableState.update { current -> current.copy(project = refreshed ?: current.project, arrangementWorkspace = workspace, operation = WorkspaceOperation.Idle, notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message) ?: current.operationFeedback) }
+                }
+                .onFailure { fail("approve core arrangement", it.message ?: "Unable to approve the core arrangement.", sessionId = feedbackId) }
+        }
+    }
+
+    /** Generates the existing optional-layer batch only after the durable core approval boundary. */
+    private fun generateOptionalArrangementMidi() {
+        val project = state.value.project ?: return fail("generate optional arrangement MIDI", "Open a project before generating optional layers.")
+        if (state.value.operation.isMutating) return
+        val feedbackId = beginFeedback(OperationKind.ARRANGEMENT, OperationPhase.LOCAL, "Generating and validating optional layers…")
+        mutableState.update { it.copy(operation = WorkspaceOperation.GeneratingArrangement(), notification = null, operationFeedback = feedbackTracker.current) }
+        scope.launch {
+            runCatching { withContext(ioDispatcher) { arrangementService.generateOptionalMidi(project.root) { progress ->
+                scope.launch { updateProgress(feedbackId, WorkspaceOperation.GeneratingArrangement(progress)) }
+            } } }
+                .onSuccess {
+                    val refreshed = runCatching { projectService.open(project.root) }.getOrNull()
+                    val workspace = runCatching { arrangementService.workspace(project.root) }.getOrNull()
+                    val message = "Optional layer candidates were generated and validated."
+                    mutableState.update { current -> current.copy(project = refreshed ?: current.project, arrangementWorkspace = workspace, operation = WorkspaceOperation.Idle, notification = message, operationFeedback = feedbackTracker.complete(feedbackId, message) ?: current.operationFeedback) }
+                }
+                .onFailure { fail("generate optional arrangement MIDI", it.message ?: "Unable to generate optional layers.", sessionId = feedbackId) }
         }
     }
 
@@ -3129,13 +3199,14 @@ class WorkspaceViewModel(
         val hydration = withContext(ioDispatcher) {
             val mix = runCatching { mixService.load(project.root) }
             val arrangement = runCatching { arrangementService.load(project.root) }
+            val arrangementWorkspace = runCatching { arrangementService.workspace(project.root) }
             val cohesion = runCatching { cohesionService.load(project.root) }
             val aiFix = project.parts.firstOrNull { it.preparation.midiAiFix.draftAvailable || it.preparation.midiAiFix.approvedAvailable }
                 ?.let { part -> runCatching { midiAiFixService.load(project.root, part.id) } }
             val fullSongEnhancement = runCatching { fullSongEnhancementService.load(project.root) }
             val humanization = runCatching { humanizationService.load(project.root) }
             val sourceSongReview = if (project.structure.size >= 2) runCatching { loadSourceSongReview(project.root) }.getOrNull() else null
-            ProjectHydration(mix, arrangement, cohesion, aiFix, fullSongEnhancement, humanization, sourceSongReview)
+            ProjectHydration(mix, arrangement, arrangementWorkspace, cohesion, aiFix, fullSongEnhancement, humanization, sourceSongReview)
         }
         val warnings = buildList {
             hydration.mix.exceptionOrNull()?.message?.let { add("mix settings could not be loaded: $it") }
@@ -3154,6 +3225,7 @@ class WorkspaceViewModel(
                 current.copy(
                     mix = hydration.mix.getOrNull(),
                     arrangement = arrangement,
+                    arrangementWorkspace = hydration.arrangementWorkspace.getOrNull(),
                     cohesion = cohesion,
                     cohesionDraft = cohesion?.let { current.cohesionDraft.copy(intensity = it.intensity) } ?: current.cohesionDraft,
                     midiAiFix = hydration.aiFix?.getOrNull(),

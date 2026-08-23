@@ -102,7 +102,10 @@ data class ArrangementInstrumentSnapshot(
     val name: String,
     val mode: String,
     val role: String?,
-    val density: Double?
+    val density: Double?,
+    /** Curated plan identity, not a user-provided MIDI or file reference. */
+    val pattern: String? = null,
+    val register: String? = null
 )
 
 data class ArrangementSnapshot(
@@ -113,6 +116,30 @@ data class ArrangementSnapshot(
     val stale: Boolean,
     val artifact: Path
 )
+
+/** A UI-safe view of the persisted, incremental arrangement generation boundary. */
+data class ArrangementWorkspaceSnapshot(
+    val arrangement: ArrangementSnapshot,
+    val roles: List<ArrangementRoleProgressSnapshot>
+)
+
+/** A role is reported from durable workflow references; it is never inferred from a MIDI path in the UI. */
+data class ArrangementRoleProgressSnapshot(
+    val instrument: String,
+    val role: String?,
+    val active: Boolean,
+    val optional: Boolean,
+    val status: ArrangementRoleProgressStatus
+)
+
+enum class ArrangementRoleProgressStatus {
+    SOURCE_READY,
+    READY_TO_GENERATE,
+    VALIDATED,
+    ACCEPTED,
+    LOCKED,
+    NOT_ACTIVE
+}
 
 data class GeneratedMidiArtifact(
     val instrument: String,
@@ -144,6 +171,8 @@ interface ArrangementApplicationService {
     fun load(root: Path): ArrangementSnapshot
     fun preview(root: Path): ArrangementSnapshot
     fun approve(root: Path): ArrangementSnapshot
+    /** Returns role progress from persisted arrangement and workflow approval evidence. */
+    fun workspace(root: Path): ArrangementWorkspaceSnapshot = ArrangementWorkspaceSnapshot(load(root), emptyList())
     fun approveCoreArrangement(root: Path) {
         throw UnsupportedOperationException("Core-arrangement approval is not available from this arrangement service")
     }
@@ -421,6 +450,31 @@ class DefaultArrangementApplicationService(
             val arrangement = if (approvalRequired) DetailedArrangementStore.readDraft(normalized, input) else readApproved(normalized, input)
             snapshot(normalized, project, arrangement, artifact, approvalRequired)
         }.getOrElse { error -> staleSnapshot(normalized, artifact, approvalRequired, error) }
+    }
+
+    override fun workspace(root: Path): ArrangementWorkspaceSnapshot {
+        val normalized = root.normalizeRoot()
+        val project = readProject(normalized)
+        val arrangement = load(normalized)
+        val active = arrangement.sections.flatMap { it.instruments }.associateBy { it.name }
+        val generated = project.workflow.generatedMidi?.artifacts.orEmpty().associateBy { it.id }
+        val accepted = project.workflow.coreArrangement?.artifacts.orEmpty().map { it.id }.toSet()
+        val coreApproved = project.workflow.coreArrangement != null && WorkflowArtifact.CORE_ARRANGEMENT !in project.workflow.stale
+        val roles = listOf("piano", "bass", "drums", "pad", "strings").map { instrument ->
+            val planned = active[instrument]
+            val optional = instrument in OPTIONAL_GENERATED_ROLES
+            val status = when {
+                planned == null -> ArrangementRoleProgressStatus.NOT_ACTIVE
+                instrument == "piano" -> ArrangementRoleProgressStatus.SOURCE_READY
+                optional && !coreApproved -> ArrangementRoleProgressStatus.LOCKED
+                optional && instrument in generated -> ArrangementRoleProgressStatus.ACCEPTED
+                instrument in accepted -> ArrangementRoleProgressStatus.ACCEPTED
+                instrument in generated -> ArrangementRoleProgressStatus.VALIDATED
+                else -> ArrangementRoleProgressStatus.READY_TO_GENERATE
+            }
+            ArrangementRoleProgressSnapshot(instrument, planned?.role, planned != null, optional, status)
+        }
+        return ArrangementWorkspaceSnapshot(arrangement, roles)
     }
 
     override fun preview(root: Path): ArrangementSnapshot {
@@ -724,7 +778,19 @@ class DefaultArrangementApplicationService(
                             else -> null
                         }
                         val role = instrument::class.simpleName?.removeSuffix("InstrumentPlan")?.removeSuffix("SourcePlan")?.lowercase()
-                        ArrangementInstrumentSnapshot(instrument.name, instrument.mode.name.lowercase(), role, density)
+                        val pattern = when (instrument) {
+                            is app.melotrail.arrangement.BassInstrumentPlan -> instrument.pattern.id.value
+                            is app.melotrail.arrangement.DrumsInstrumentPlan -> instrument.pattern.id.value
+                            is app.melotrail.arrangement.PadInstrumentPlan -> instrument.pattern.id.value
+                            else -> null
+                        }
+                        val register = when (instrument) {
+                            is app.melotrail.arrangement.BassInstrumentPlan -> instrument.register.name.lowercase()
+                            is app.melotrail.arrangement.PadInstrumentPlan -> instrument.register.name.lowercase()
+                            is app.melotrail.arrangement.StringsInstrumentPlan -> instrument.register.name.lowercase()
+                            else -> null
+                        }
+                        ArrangementInstrumentSnapshot(instrument.name, instrument.mode.name.lowercase(), role, density, pattern, register)
                     },
                     section.transitionOut.type.name.lowercase(), analyses[section.partId]?.durationSeconds
                 )

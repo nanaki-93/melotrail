@@ -178,6 +178,9 @@ internal object WorkspacePageTags {
     const val ARRANGE_DIAGNOSTICS_TOGGLE = "arrange-diagnostics-toggle"
     const val ARRANGE_DIAGNOSTICS = "arrange-diagnostics"
     const val ARRANGE_REVIEW = "arrange-review"
+    const val ARRANGE_ENERGY = "arrange-energy-plan"
+    const val ARRANGE_ROLE_PROGRESS = "arrange-role-progress"
+    const val ARRANGE_ROLE_ACTION_PREFIX = "arrange-role-action-"
     const val ARRANGE_APPROVE = "arrange-approve"
     const val ARRANGE_TABS = "arrange-tabs"
     const val ARRANGE_TAB_PREFIX = "arrange-tab-"
@@ -1174,10 +1177,66 @@ private fun ArrangePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
                 ArrangeTabs(state.arrangeTab, mutating, onIntent)
             }
         ArrangeTimeline(state, onIntent)
+        ArrangeEnergyAndRoleProgress(state, onIntent)
         if (arrangementApproved) CohesionReview(state, onIntent)
         ArrangeTransport(state, onIntent)
         ArrangeReview(state, onIntent)
         ArrangeSummary(state)
+    }
+}
+
+/** Presents planner-derived energy and persisted role progress without reproducing musical decisions in Compose. */
+@Composable
+private fun ArrangeEnergyAndRoleProgress(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    val arrangement = state.arrangement
+    if (arrangement != null && !arrangement.stale) {
+        OverviewCard(WorkspacePageTags.ARRANGE_ENERGY, "Energy, density & role plan") {
+            Text("Planner-derived from saved structure, harmony, and MIDI analyses. Change those authoritative inputs to revise this plan.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            arrangement.sections.forEach { section ->
+                val density = section.instruments.mapNotNull { it.density }.average().takeUnless { it.isNaN() }
+                Text("${section.instanceId} · energy ${(section.energy * 100).toInt()}%${density?.let { " · density ${(it * 100).toInt()}%" }.orEmpty()}", style = MaterialTheme.typography.bodySmall)
+                section.instruments.filter { it.density != null || it.pattern != null || it.register != null }.forEach { instrument ->
+                    Text("${instrument.name}: ${instrument.pattern ?: instrument.role ?: instrument.mode}${instrument.density?.let { " · ${(it * 100).toInt()}%" }.orEmpty()}${instrument.register?.let { " · ${it} register" }.orEmpty()}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+    val workspace = state.arrangementWorkspace ?: return
+    OverviewCard(WorkspacePageTags.ARRANGE_ROLE_PROGRESS, "Incremental role review") {
+        Text("Core candidates are generated and validated as one dependency-safe batch. Optional layers remain locked until the exact core is approved.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        workspace.roles.filter { it.active }.forEach { role ->
+            val label = role.instrument.replaceFirstChar(Char::uppercase)
+            val status = role.status.name.lowercase().replace('_', ' ')
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                Column(Modifier.weight(1f)) {
+                    Text("$label · $status", style = MaterialTheme.typography.labelLarge)
+                    Text(role.role ?: if (role.instrument == "piano") "protected source melody" else "logical role", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                when (role.status) {
+                    app.melotrail.application.ArrangementRoleProgressStatus.READY_TO_GENERATE -> OutlinedButton(
+                        onClick = { onIntent(WorkspaceIntent.GenerateCoreArrangementMidi) }, enabled = !state.operation.isMutating,
+                        modifier = Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_ROLE_ACTION_PREFIX + role.instrument }
+                    ) { Text("Generate & validate core") }
+                    app.melotrail.application.ArrangementRoleProgressStatus.VALIDATED -> Button(
+                        onClick = { onIntent(WorkspaceIntent.ApproveCoreArrangement) }, enabled = !state.operation.isMutating,
+                        modifier = Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_ROLE_ACTION_PREFIX + role.instrument }
+                    ) { Text("Accept core") }
+                    app.melotrail.application.ArrangementRoleProgressStatus.LOCKED -> OutlinedButton(
+                        onClick = {}, enabled = false,
+                        modifier = Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_ROLE_ACTION_PREFIX + role.instrument; contentDescription = "$label is locked until core approval" }
+                    ) { Text("Locked until core approval") }
+                    app.melotrail.application.ArrangementRoleProgressStatus.ACCEPTED -> if (role.optional) OutlinedButton(
+                        onClick = { onIntent(WorkspaceIntent.GenerateOptionalArrangementMidi) }, enabled = !state.operation.isMutating,
+                        modifier = Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_ROLE_ACTION_PREFIX + role.instrument }
+                    ) { Text("Regenerate optional") } else Text("Accepted", color = semanticColor(WorkspaceSemanticState.READY), style = MaterialTheme.typography.labelSmall)
+                    app.melotrail.application.ArrangementRoleProgressStatus.SOURCE_READY -> Text("Protected source", color = semanticColor(WorkspaceSemanticState.READY), style = MaterialTheme.typography.labelSmall)
+                    app.melotrail.application.ArrangementRoleProgressStatus.NOT_ACTIVE -> Unit
+                }
+            }
+        }
+        if (workspace.roles.any { it.active && it.optional && it.status == app.melotrail.application.ArrangementRoleProgressStatus.ACCEPTED }) {
+            OutlinedButton(onClick = { onIntent(WorkspaceIntent.GenerateOptionalArrangementMidi) }, enabled = !state.operation.isMutating) { Text("Generate optional layers") }
+        }
     }
 }
 
