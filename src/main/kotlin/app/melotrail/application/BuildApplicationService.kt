@@ -6,6 +6,11 @@ import app.melotrail.arrangement.MixedStem
 import app.melotrail.arrangement.ProjectWorkflowStore
 import app.melotrail.arrangement.WorkflowArtifact
 import app.melotrail.arrangement.ProjectStore
+import app.melotrail.arrangement.DetailedArrangement
+import app.melotrail.arrangement.DetailedArrangementStore
+import app.melotrail.arrangement.ReleaseFingerprint
+import app.melotrail.arrangement.ReleaseSimilarityCritic
+import app.melotrail.arrangement.ReleaseSimilarityReport
 import app.melotrail.audio.AudioBuffer
 import app.melotrail.audio.WAVDecoder
 import app.melotrail.dsp.DSPChain
@@ -43,7 +48,9 @@ data class BuildSongRequest(
     val mp3BitrateKbps: Int = 320,
     val loFiPreset: LoFiPresetId = LoFiPresetId.MEDIUM,
     val loFiStrength: Double = 1.0,
-    val masteringProfile: MasteringProfile = MasteringProfiles.LOFI
+    val masteringProfile: MasteringProfile = MasteringProfiles.LOFI,
+    /** Explicit completed-release references only; no unreviewed global catalog is consulted. */
+    val similarityReferences: List<ReleaseFingerprint> = emptyList()
 )
 
 data class BuildResult(
@@ -280,6 +287,7 @@ class DefaultBuildApplicationService(
     private fun writeRelease(root: Path, input: Path, master: Path, mp3: Path?, request: BuildSongRequest, mastering: MasteringMeasurement) {
         val inputAudio = validate(input, "Master input")
         val audio = validate(master, "Master")
+        val similarityReview = releaseSimilarityReview(root, request.similarityReferences)
         val release = DesktopReleaseMetadata(
             master = "master.wav", masterFingerprint = digest(master), inputArtifact = root.relativize(input).toString(),
             inputFingerprint = digest(input), inputSampleRate = inputAudio.sampleRate, inputChannels = inputAudio.channels,
@@ -294,7 +302,8 @@ class DefaultBuildApplicationService(
             loFiPreset = request.loFiPreset.takeIf { request.enableLoFi }?.name?.lowercase(),
             loFiStrength = request.loFiStrength.takeIf { request.enableLoFi },
             loFiMeanAbsoluteDelta = if (request.enableLoFi) audioDelta(root.resolve("mix/repaired.wav"), root.resolve("mix/lofi.wav")) else null,
-            mp3 = mp3?.let { DesktopMp3Metadata("song.mp3", digest(it), request.mp3BitrateKbps) }
+            mp3 = mp3?.let { DesktopMp3Metadata("song.mp3", digest(it), request.mp3BitrateKbps) },
+            similarityReview = similarityReview
         )
         val target = root.resolve("output/release.json")
         Files.createDirectories(checkNotNull(target.parent))
@@ -304,6 +313,18 @@ class DefaultBuildApplicationService(
             try { Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING) }
             catch (_: AtomicMoveNotSupportedException) { Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING) }
         } finally { Files.deleteIfExists(temporary) }
+    }
+
+    private fun releaseSimilarityReview(root: Path, references: List<ReleaseFingerprint>): ReleaseSimilarityReport {
+        val project = ProjectStore.read(root)
+        val settings = requireNotNull(project.envelope.compositionSettings?.takeIf { it.complete }) {
+            "Release similarity review requires complete canonical composition settings."
+        }
+        val arrangementPath = root.resolve(DetailedArrangementStore.APPROVED_FILE)
+        require(Files.isRegularFile(arrangementPath)) { "Release similarity review requires the approved detailed arrangement." }
+        val arrangement = json.decodeFromString(DetailedArrangement.serializer(), Files.readString(arrangementPath, StandardCharsets.UTF_8))
+        val fingerprint = ReleaseSimilarityCritic().fingerprint(arrangement, settings.tempo, settings.timeSignature)
+        return ReleaseSimilarityCritic().review(fingerprint, references)
     }
 
     private fun digest(path: Path): String = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
@@ -329,7 +350,8 @@ class DefaultBuildApplicationService(
         val loudnessReference: String, val dynamicsPreserved: Boolean, val masteringQualityIssues: List<String>,
         val repairEnabled: Boolean, val loFiAudioTextureEnabled: Boolean,
         val loFiPreset: String? = null, val loFiStrength: Double? = null, val loFiMeanAbsoluteDelta: Double? = null,
-        val mp3: DesktopMp3Metadata? = null
+        val mp3: DesktopMp3Metadata? = null,
+        val similarityReview: ReleaseSimilarityReport
     )
     @Serializable private data class DesktopMp3Metadata(val name: String, val fingerprint: String, val bitrateKbps: Int, val format: String = "MP3")
 

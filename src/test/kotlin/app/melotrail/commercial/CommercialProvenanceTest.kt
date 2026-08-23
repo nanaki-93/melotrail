@@ -1,8 +1,13 @@
 package app.melotrail.commercial
 
 import app.melotrail.arrangement.MidiReferences
+import app.melotrail.arrangement.DetailedArrangement
+import app.melotrail.arrangement.DetailedArrangementSection
+import app.melotrail.arrangement.PianoSourcePlan
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
+import app.melotrail.arrangement.ReleaseSimilarityCritic
+import app.melotrail.arrangement.ReleaseSimilarityReviewStatus
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.SignatureMotifReleaseGateResult
 import app.melotrail.arrangement.SignatureMotifOccurrenceReport
@@ -11,6 +16,13 @@ import app.melotrail.arrangement.SignatureMotifLineageStatus
 import app.melotrail.arrangement.MelodyNoteId
 import app.melotrail.arrangement.SignatureMotifThresholds
 import app.melotrail.arrangement.SongPart
+import app.melotrail.arrangement.SongSectionPurpose
+import app.melotrail.arrangement.TransitionPlan
+import app.melotrail.music.Tempo
+import app.melotrail.music.TimeSignature
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test
@@ -101,6 +113,27 @@ class CommercialProvenanceTest {
 
             assertFalse(verification.closed)
             assertTrue("selected release manifest" in verification.tamperedDependencies)
+        } finally {
+            delete(root)
+        }
+    }
+
+    @Test
+    fun `commercial release manifest retains advisory release similarity review`() {
+        val root = projectRoot()
+        try {
+            val critic = ReleaseSimilarityCritic()
+            val fingerprint = critic.fingerprint(DetailedArrangement(sections = listOf(
+                DetailedArrangementSection(0, "A1", "A", SongSectionPurpose.INTRODUCTION, 0.3, listOf(PianoSourcePlan()), TransitionPlan())
+            )), Tempo(80.0), TimeSignature(4, 4))
+            val review = critic.review(fingerprint, emptyList())
+            Files.writeString(root.resolve("output/release.json"), "{\"inputArtifact\":\"mix/repaired.wav\",\"similarityReview\":${Json.encodeToString(review)}}")
+
+            val result = CommercialProvenanceService().export(root)
+            val manifest = Json.decodeFromString<CommercialProvenanceManifest>(Files.readString(assertNotNull(result.manifest)))
+
+            assertEquals(ReleaseSimilarityReviewStatus.NOT_COMPARED, manifest.similarityReview?.status)
+            assertEquals(fingerprint.sha256, manifest.similarityReview?.fingerprint?.sha256)
         } finally {
             delete(root)
         }

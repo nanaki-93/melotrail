@@ -25,6 +25,15 @@ MIDI, stage-run, decision, render, mix, master, and release metadata hashes.
 It snapshots only the exact instrument stems used by the final persisted mix;
 it does not reread the current sound registry during verification.
 
+Every completed build also records a deterministic arrangement-only similarity
+fingerprint in `output/release.json`: structure, energy, instrument
+entry/exit, bass and drum patterns, transitions, tempo/swing, and density.
+When explicit completed-release fingerprints are supplied for comparison, the
+review stores per-feature scores and explanations; a high score is an advisory
+warning only. The optional re-plan scope is limited to arrangement, groove, and
+orchestration. It never changes human melody, harmony, or structure, and it
+does not determine YouTube Partner Program eligibility or any policy outcome.
+
 Use `VerifyReleaseLineage(releaseId)` through the local application boundary to
 inspect missing, tampered, and unresolved evidence plus safe report references.
 Unknown model identity/license, missing attribution, stale artifact hashes, or

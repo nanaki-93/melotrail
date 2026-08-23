@@ -133,9 +133,9 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/BuildApplicationService.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/application/BuildApplicationService.kt has 20 callable declarations. The mastering-profile evidence gate was reviewed; remaining legacy declarations retain this declaration-digest-pinned local exemption.",
-      "functionCount": 20,
-      "declarationDigest": "12458aace92be3a0541ad2e17f69eb6be4e08a427a1d2cf8af07e75a04331d53",
+      "reason": "src/main/kotlin/app/melotrail/application/BuildApplicationService.kt has 21 callable declarations. The mastering-profile evidence gate and release-similarity metadata publication were reviewed; remaining legacy declarations retain this declaration-digest-pinned local exemption.",
+      "functionCount": 21,
+      "declarationDigest": "6e89e5f7fa6edb83f7d05bcd5dd7b10babb34af9aa71a6ae53dd69dc4eab6d87",
       "documentedFunctionCount": 2
     },
     {
@@ -385,6 +385,14 @@
       "functionCount": 12,
       "declarationDigest": "ae285638ea30dc64a5110471df49bbb54cdb2ca63ff41908ba6365dad3a29b93",
       "documentedFunctionCount": 2
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/arrangement/ReleaseSimilarity.kt",
+      "classification": "documented",
+      "reason": "Every callable declaration has directly attached, reviewed KDoc/docstring coverage.",
+      "functionCount": 16,
+      "declarationDigest": "2b84ffb9508eec26970bc760ad85fd866b8c1912f89ac19ee700eca6c5839d80",
+      "documentedFunctionCount": 16
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/SectionVariation.kt",
@@ -637,9 +645,9 @@
     {
       "path": "src/main/kotlin/app/melotrail/commercial/CommercialProvenance.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/commercial/CommercialProvenance.kt has 48 callable declarations. The CommercialReadyGate, critic evidence, and release metadata publication were reviewed; remaining legacy declarations retain this declaration-digest-pinned local exemption.",
-      "functionCount": 48,
-      "declarationDigest": "c8d8a74c448674023b084d79f67499bc9623654c6da5b42abb8a6931bb238220",
+      "reason": "src/main/kotlin/app/melotrail/commercial/CommercialProvenance.kt has 49 callable declarations. The CommercialReadyGate, critic evidence, release metadata, and release-similarity lineage publication were reviewed; remaining legacy declarations retain this declaration-digest-pinned local exemption.",
+      "functionCount": 49,
+      "declarationDigest": "5b747ea70e627a092e4508d5fca28b97628541d5a8fdce4f0443fa997c4e9504",
       "documentedFunctionCount": 6
     },
     {

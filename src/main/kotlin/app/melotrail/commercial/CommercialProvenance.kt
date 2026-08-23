@@ -10,6 +10,8 @@ import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.ProjectWorkflowStore
 import app.melotrail.arrangement.RenderInstrumentManifest
+import app.melotrail.arrangement.ReleaseSimilarityCritic
+import app.melotrail.arrangement.ReleaseSimilarityReport
 import app.melotrail.arrangement.SelectedMidiArtifactKind
 import app.melotrail.arrangement.SignatureMotifReleaseGateResult
 import app.melotrail.arrangement.SourceLibraryProvenance
@@ -24,6 +26,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.nio.charset.StandardCharsets
@@ -276,6 +279,8 @@ data class CommercialProvenanceManifest(
     val attribution: List<String>,
     val reports: ReleaseReportReferences,
     val signatureMotifGate: SignatureMotifReleaseGateResult? = null,
+    /** Advisory release-similarity evidence; it is never a commercial-readiness or policy verdict. */
+    val similarityReview: ReleaseSimilarityReport? = null,
     val aiDisclosureRecommended: Boolean = false,
     val audioExports: List<ReleaseAudioExport> = emptyList(),
     val credits: List<ReleaseCreditsArtifact> = emptyList(),
@@ -325,6 +330,7 @@ class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soun
         val unresolved = mutableListOf<String>()
         humanApprovalAndCriticEvidence(projectRoot, project, unresolved)
         val signatureMotifGate = signatureMotifGate(projectRoot, project, unresolved)
+        val similarityReview = releaseSimilarityReview(release, unresolved)
         val selectedMidi = selectedMidi(projectRoot, project, unresolved)
         val artifacts = linkedMapOf<String, ProvenanceArtifact>()
         fun include(path: String) {
@@ -360,7 +366,7 @@ class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soun
             stageRuns = selectedRuns, selectedMidi = selectedMidi, instrumentUsage = instrumentUsage,
             dependencies = normalizedDependencies, unresolvedEvidence = unresolved.distinct().sorted(),
             commercialReady = readiness.ready, reasons = readiness.reasons, attribution = readiness.attribution, reports = reports,
-            signatureMotifGate = signatureMotifGate, aiDisclosureRecommended = readiness.aiDisclosureRecommended
+            signatureMotifGate = signatureMotifGate, similarityReview = similarityReview, aiDisclosureRecommended = readiness.aiDisclosureRecommended
         )
         val manifestPath = projectRoot.resolve(reports.manifest)
         val reportPath = projectRoot.resolve(reports.report)
@@ -452,6 +458,17 @@ class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soun
         require(!input.isNullOrBlank() && safeProjectFileOrNull(root, input) != null) { "release input is invalid" }
         input
     }.getOrElse { unresolved += "release metadata has no validated mastering input"; null }
+
+    private fun releaseSimilarityReview(release: Path, unresolved: MutableList<String>): ReleaseSimilarityReport? = runCatching {
+        val element = json.parseToJsonElement(Files.readString(release, StandardCharsets.UTF_8)).jsonObject["similarityReview"]
+            ?: error("missing release similarity review")
+        json.decodeFromJsonElement(ReleaseSimilarityReport.serializer(), element).also {
+            require(ReleaseSimilarityCritic().isValid(it.fingerprint)) { "invalid release similarity fingerprint" }
+        }
+    }.getOrElse {
+        unresolved += "release similarity review is missing or invalid"
+        null
+    }
 
     private fun selectedWorkflowArtifacts(project: Project): List<WorkflowArtifactReference> = buildList {
         if (WorkflowArtifact.ARRANGEMENT !in project.workflow.stale) project.workflow.arrangement?.arrangement?.let(::add)
@@ -663,6 +680,9 @@ class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soun
         appendLine(); appendLine("## Required attribution")
         if (manifest.attribution.isEmpty()) appendLine("None recorded.") else manifest.attribution.forEach { appendLine("- $it") }
         appendLine(); appendLine("AI disclosure recommendation: ${if (manifest.aiDisclosureRecommended) "review and complete the platform's generative-AI disclosure" else "no material generative-AI stage is recorded in this release lineage"}.")
+        manifest.similarityReview?.let { review ->
+            appendLine(); appendLine("Release similarity review: ${review.status.name.lowercase()} (${review.comparisonCount} reference release(s)); ${review.advisory}")
+        }
         appendLine(); appendLine("This immutable, hash-bound selected lineage is in `${MANIFEST_FILE}`.")
     }
 

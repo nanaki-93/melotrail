@@ -112,6 +112,8 @@ class EndToEndWorkflowCompatibilityTest {
             assertTrue(Files.isRegularFile(build.master))
             assertTrue(Files.isRegularFile(root.resolve("output/release.json")))
             assertTrue(Files.readString(root.resolve("output/release.json")).contains("\"pcmBitDepth\": 24"))
+            assertTrue(Files.readString(root.resolve("output/release.json")).contains("\"similarityReview\":"))
+            assertTrue(Files.readString(root.resolve("output/release.json")).contains("\"status\": \"NOT_COMPARED\""))
             assertTrue(preview is PreviewResult.Failed, "fixture monitor artifacts are deliberately malformed and must not report preview success: $preview")
             assertEquals(sourceHash, hash(source), "fixture source must remain immutable")
             assertEquals(sourceHash, hash(root.resolve("source/A.${fixture.extension}")))
