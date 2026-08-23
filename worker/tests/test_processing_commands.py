@@ -8,7 +8,7 @@ from unittest.mock import patch
 import numpy as np
 import soundfile as sf
 
-from worker.commands.mastering import master_command
+from worker.commands.mastering import analyze_loudness, master_command, true_peak_amplitude
 from worker.commands.mp3_convert import mp3_convert_command
 from worker.commands.mp3_export import mp3_export_command
 
@@ -109,3 +109,36 @@ class ProcessingCommandsTest(unittest.TestCase):
             self.assertEqual(32000, info.samplerate)
             self.assertEqual(3, info.channels)
             self.assertEqual(3, info.frames)
+
+    def test_mastering_reports_bs1770_loudness_true_peak_and_dynamics_evidence(self):
+        sample_rate = 48000
+        seconds = 4
+        time = np.arange(sample_rate * seconds) / sample_rate
+        # This near-Nyquist sine has an inter-sample peak above its sample peak.
+        audio = 0.8 * np.sin(2 * np.pi * 19000 * time)
+
+        report = analyze_loudness(audio, sample_rate)
+
+        self.assertEqual("ITU-R BS.1770-4 / EBU R128", report["measurement_standard"])
+        self.assertGreater(true_peak_amplitude(audio), float(np.max(np.abs(audio))))
+        self.assertIn("lra_lu", report)
+        self.assertIn("crest_db", report)
+        self.assertIn("limiter_gain_reduction", report)
+
+    def test_mastering_does_not_accept_target_loudness_after_excessive_limiting(self):
+        with TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "mix.wav"
+            output_path = Path(temp_dir) / "master.wav"
+            sample_rate = 48000
+            audio = 0.95 * np.sin(2 * np.pi * 440 * np.arange(sample_rate * 4) / sample_rate)
+            sf.write(input_path, audio, sample_rate, format="WAV", subtype="PCM_24")
+
+            result = master_command({
+                "path": str(input_path), "outputPath": str(output_path),
+                "settings": {"target_lufs": -14.0, "limiter_enabled": True,
+                             "limiter": {"ceiling_db": -18.0},
+                             "max_limiter_gain_reduction_db": 1.0},
+            })
+
+            self.assertFalse(result["loudness"]["dynamics_preserved"])
+            self.assertIn("limiter-gain-reduction-too-large", result["loudness"]["quality_issues"])

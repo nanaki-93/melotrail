@@ -19,8 +19,8 @@ guarantee. Processing a work in Melotrail never makes it copyright free.
 ## Release lineage
 
 **Create commercial evidence** writes an immutable, versioned release folder:
-`output/releases/<releaseId>/release-manifest.json`, `commercial-report.md`,
-and `youtube-upload-checklist.md`. The manifest closes the selected source,
+`output/releases/<releaseId>/provenance.json`, `commercial-report.md`,
+and `youtube-release.json`. The provenance manifest closes the selected source,
 MIDI, stage-run, decision, render, mix, master, and release metadata hashes.
 It snapshots only the exact instrument stems used by the final persisted mix;
 it does not reread the current sound registry during verification.
@@ -61,3 +61,8 @@ required attribution is missing, contradictory, NC, or not admitted, commercial
 export remains blocked while private project and audition/export work remains
 available. Changing the selected mix or instrument creates a new release
 revision; changing the local library cannot rewrite an existing credits file.
+
+`youtube-release.json` records whether the selected lineage contains a material
+generative-AI stage and therefore recommends completing the platform AI
+disclosure. This is a release-preparation recommendation, not an automated
+upload action or a monetization conclusion.

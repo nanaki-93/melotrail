@@ -21,10 +21,10 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/DesktopMain.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/DesktopMain.kt has 19 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 19,
-      "declarationDigest": "f69349dd78aed57b20b3e0605aa3e3d574f62f87a5a382bfa3e23d6c86e89788",
-      "documentedFunctionCount": 1
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/DesktopMain.kt has 21 callable declarations. The DesktopBuildWorker mastering mapping was reviewed for the BS.1770 evidence contract; remaining legacy declarations retain this declaration-digest-pinned local exemption.",
+      "functionCount": 21,
+      "declarationDigest": "543583ec1540c76042cfc390486de7eb3ce1be2f66a52e0f8b1758e68cc40f87",
+      "documentedFunctionCount": 2
     },
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/DesktopSupport.kt",
@@ -133,10 +133,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/BuildApplicationService.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/application/BuildApplicationService.kt has 14 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 14,
-      "declarationDigest": "8b47bad962d29d7555bff36ab36d57a4aac7d176135edf897b545ec6cfa44ca1",
-      "documentedFunctionCount": 0
+      "reason": "src/main/kotlin/app/melotrail/application/BuildApplicationService.kt has 20 callable declarations. The mastering-profile evidence gate was reviewed; remaining legacy declarations retain this declaration-digest-pinned local exemption.",
+      "functionCount": 20,
+      "declarationDigest": "12458aace92be3a0541ad2e17f69eb6be4e08a427a1d2cf8af07e75a04331d53",
+      "documentedFunctionCount": 2
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/EnsembleCohesionApplicationService.kt",
@@ -637,10 +637,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/commercial/CommercialProvenance.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/commercial/CommercialProvenance.kt has 12 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 12,
-      "declarationDigest": "412a5d97757a3892750d06d12b5bd184f71e3530ffffa398fc0da70f06b33b81",
-      "documentedFunctionCount": 1
+      "reason": "src/main/kotlin/app/melotrail/commercial/CommercialProvenance.kt has 48 callable declarations. The CommercialReadyGate, critic evidence, and release metadata publication were reviewed; remaining legacy declarations retain this declaration-digest-pinned local exemption.",
+      "functionCount": 48,
+      "declarationDigest": "c8d8a74c448674023b084d79f67499bc9623654c6da5b42abb8a6931bb238220",
+      "documentedFunctionCount": 6
     },
     {
       "path": "src/main/kotlin/app/melotrail/commercial/YoutubePolicyDocumentation.kt",
@@ -1061,10 +1061,10 @@
     {
       "path": "worker/commands/mastering.py",
       "classification": "deferred-with-reason",
-      "reason": "worker/commands/mastering.py has 11 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
-      "functionCount": 11,
-      "declarationDigest": "f279e335af08005ffa024b7b725749cb36fef9c2dbf68b78cf0e7aa4b6ca8f23",
-      "documentedFunctionCount": 2
+      "reason": "worker/commands/mastering.py implements the reviewed BS.1770-4 / EBU R128 and four-times true-peak measurement contract. The one remaining legacy callable is retained under this declaration-digest-pinned local exemption.",
+      "functionCount": 19,
+      "declarationDigest": "da4071f18efb62bda345b59a4b62f4ecd0b4fe0050ee77cf8a5d6623f9515f12",
+      "documentedFunctionCount": 18
     },
     {
       "path": "worker/commands/midi_clean.py",

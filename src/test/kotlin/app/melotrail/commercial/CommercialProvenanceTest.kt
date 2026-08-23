@@ -27,13 +27,13 @@ class CommercialProvenanceTest {
     @Test
     fun `decision table blocks unresolved sources and dependencies`() {
         val approved = CommercialDependency(CommercialDependencyKind.MODEL, "planner", "1", hash, CommercialTerm.PERMITTED, true, "MIT", "local")
-        assertTrue(CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, attested)), listOf(approved))).ready)
+        assertTrue(CommercialReadyGate.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, attested)), listOf(approved))).ready)
         listOf(CommercialTerm.CONDITIONAL, CommercialTerm.UNKNOWN, CommercialTerm.BLOCKED).forEach { term ->
-            assertFalse(CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, attested)), listOf(approved.copy(commercialTerm = term)))).ready)
+            assertFalse(CommercialReadyGate.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, attested)), listOf(approved.copy(commercialTerm = term)))).ready)
         }
-        assertFalse(CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, null)), listOf(approved))).ready)
-        assertFalse(CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, attested)), listOf(approved), listOf("missing attribution"))).ready)
-        assertFalse(CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, attested)), listOf(approved.copy(identity = "fake-model")))).ready)
+        assertFalse(CommercialReadyGate.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, null)), listOf(approved))).ready)
+        assertFalse(CommercialReadyGate.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, attested)), listOf(approved), listOf("missing attribution"))).ready)
+        assertFalse(CommercialReadyGate.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, attested)), listOf(approved.copy(identity = "fake-model")))).ready)
     }
 
     @Test
@@ -46,9 +46,19 @@ class CommercialProvenanceTest {
             clearOccurrenceCount = 0, passed = false, reasons = listOf("no-clear-surviving-occurrence")
         )
 
-        assertFalse(CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(
+        assertFalse(CommercialReadyGate.evaluate(CommercialReadinessInput(
             listOf(CommercialSource("A", hash, attested)), listOf(approved), recognizabilityGate = failedGate
         )).ready)
+    }
+
+    @Test
+    fun `commercial ready gate records a disclosure recommendation for material generative AI`() {
+        val model = CommercialDependency(CommercialDependencyKind.MODEL, "arranger", "1", hash, CommercialTerm.PERMITTED, true, "MIT", "local")
+
+        val result = CommercialReadyGate.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, attested)), listOf(model)))
+
+        assertTrue(result.ready)
+        assertTrue(result.aiDisclosureRecommended)
     }
 
     @Test
@@ -63,10 +73,12 @@ class CommercialProvenanceTest {
 
             assertEquals(manifest, second.manifest)
             assertTrue(manifest.toString().contains("output/releases/release-"))
+            assertTrue(Files.isRegularFile(root.resolve("output/releases/${first.releaseId}/provenance.json")))
+            assertTrue(Files.isRegularFile(root.resolve("output/releases/${first.releaseId}/youtube-release.json")))
             assertFalse(first.readiness.ready, "missing settings and selected MIDI must remain explicit evidence gaps")
             assertTrue(service.verifyReleaseLineage(root, assertNotNull(first.releaseId)).closed)
             assertContains(Files.readString(assertNotNull(second.report)), "not legal advice")
-            assertContains(Files.readString(assertNotNull(second.checklist)), "Resolve every listed evidence action")
+            assertContains(Files.readString(assertNotNull(second.checklist)), "aiDisclosureRecommended")
 
             Files.writeString(root.resolve("source/A.mid"), "tampered")
             val verification = service.verifyReleaseLineage(root, assertNotNull(first.releaseId))

@@ -18,7 +18,9 @@ class BuildApplicationServiceTest {
         val service = DefaultBuildApplicationService(ApprovedArrangement(root), DefaultMixApplicationService(), UnusedRenderer, object : BuildAudioWorker {
             override suspend fun healthCheck() = false
             override suspend fun repair(input: Path, output: Path) = Unit
-            override suspend fun master(input: Path, output: Path) = Unit
+            override suspend fun master(input: Path, output: Path, profile: app.melotrail.model.MasteringProfile) = app.melotrail.model.MasteringMeasurement(
+                "ITU-R BS.1770-4 / EBU R128", -14.0, -1.0, 3.0, 8.0, 0.0, 0.0, true, emptyList(), "within-tolerance"
+            )
             override suspend fun exportMp3(input: Path, output: Path, bitrateKbps: Int) = false
         }, ApprovedCohesion(root))
 

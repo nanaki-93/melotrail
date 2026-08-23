@@ -11,6 +11,9 @@ import app.melotrail.audio.WAVDecoder
 import app.melotrail.dsp.DSPChain
 import app.melotrail.dsp.LOFIPresets
 import app.melotrail.model.ErrorReporter
+import app.melotrail.model.MasteringMeasurement
+import app.melotrail.model.MasteringProfile
+import app.melotrail.model.MasteringProfiles
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ensureActive
@@ -39,7 +42,8 @@ data class BuildSongRequest(
     val enableMp3: Boolean = false,
     val mp3BitrateKbps: Int = 320,
     val loFiPreset: LoFiPresetId = LoFiPresetId.MEDIUM,
-    val loFiStrength: Double = 1.0
+    val loFiStrength: Double = 1.0,
+    val masteringProfile: MasteringProfile = MasteringProfiles.LOFI
 )
 
 data class BuildResult(
@@ -55,7 +59,7 @@ data class BuildResult(
 interface BuildAudioWorker {
     suspend fun healthCheck(): Boolean
     suspend fun repair(input: Path, output: Path)
-    suspend fun master(input: Path, output: Path)
+    suspend fun master(input: Path, output: Path, profile: MasteringProfile): MasteringMeasurement
     suspend fun exportMp3(input: Path, output: Path, bitrateKbps: Int): Boolean
 }
 
@@ -128,11 +132,14 @@ class DefaultBuildApplicationService(
                 }
                 coroutineContext.ensureActive()
                 val master = root.resolve("output/master.wav")
-                stage(progress, 8, "Mastering lossless WAV", master) {
-                    publishWav(master, "master") { temporary -> worker.master(masteringInput, temporary) }
+                val masteringMeasurement = stage(progress, 8, "Mastering lossless WAV", master) {
+                    var measurement: MasteringMeasurement? = null
+                    publishWav(master, "master") { temporary -> measurement = worker.master(masteringInput, temporary, request.masteringProfile) }
                     val masterAudio = validate(master, "Master")
                     requireCompatible(validate(masteringInput, "Master input"), masterAudio, "Master")
-                    require(masterAudio.peak <= 0.891251 + PCM_24_TOLERANCE) { "Master exceeds the -1 dB peak ceiling" }
+                    val completedMeasurement = requireNotNull(measurement) { "Mastering worker returned no measurement evidence" }
+                    requireMasteringProfile(completedMeasurement, request.masteringProfile)
+                    completedMeasurement
                 }
                 coroutineContext.ensureActive()
                 val mp3 = if (request.enableMp3) {
@@ -145,7 +152,7 @@ class DefaultBuildApplicationService(
                     progress.report(OperationProgress("build", 9, STAGE_COUNT, "MP3 export not requested"))
                     null
                 }
-                stage(progress, 10, "Writing release metadata", master) { writeRelease(root, masteringInput, master, mp3, request) }
+                stage(progress, 10, "Writing release metadata", master) { writeRelease(root, masteringInput, master, mp3, request, masteringMeasurement) }
                 ProjectWorkflowStore.update(root) { workflow ->
                     workflow.markCurrent(WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE).let {
                         if (request.enableLoFi) it.markCurrent(WorkflowArtifact.AUDIO_TEXTURE) else it
@@ -256,7 +263,21 @@ class DefaultBuildApplicationService(
         require(abs(input.frames - output.frames).toDouble() / input.sampleRate <= 0.05) { "$label changed duration by more than 50 ms" }
     }
 
-    private fun writeRelease(root: Path, input: Path, master: Path, mp3: Path?, request: BuildSongRequest) {
+    /** Enforces the profile's true-peak and dynamics boundaries without treating -14 LUFS as an exact law. */
+    private fun requireMasteringProfile(measurement: MasteringMeasurement, profile: MasteringProfile) {
+        require(measurement.truePeakDbtp <= profile.maximumTruePeakDbtp + 0.05) {
+            "Master exceeds the ${profile.maximumTruePeakDbtp} dBTP true-peak ceiling"
+        }
+        require(measurement.integratedLufs <= profile.nominalIntegratedLufs + profile.loudnessToleranceLu) {
+            "Master exceeds the ${profile.nominalIntegratedLufs} LUFS delivery reference tolerance"
+        }
+        require(measurement.dynamicsPreserved && measurement.lraLu >= profile.minimumLraLu && measurement.crestDb >= profile.minimumCrestDb &&
+            measurement.limiterMaxGainReductionDb <= profile.maximumLimiterGainReductionDb) {
+            "Master dynamics quality failed: ${measurement.qualityIssues.joinToString().ifBlank { "profile limits exceeded" }}"
+        }
+    }
+
+    private fun writeRelease(root: Path, input: Path, master: Path, mp3: Path?, request: BuildSongRequest, mastering: MasteringMeasurement) {
         val inputAudio = validate(input, "Master input")
         val audio = validate(master, "Master")
         val release = DesktopReleaseMetadata(
@@ -265,6 +286,10 @@ class DefaultBuildApplicationService(
             inputPcmBitDepth = 24, sampleRate = audio.sampleRate, channels = audio.channels, pcmBitDepth = 24,
             frameCount = audio.frames, durationSeconds = audio.frames.toDouble() / audio.sampleRate, peak = audio.peak,
             peakDb = if (audio.peak == 0.0) Double.NEGATIVE_INFINITY else 20.0 * kotlin.math.log10(audio.peak),
+            masteringProfile = request.masteringProfile.id, integratedLufs = mastering.integratedLufs, truePeakDbtp = mastering.truePeakDbtp,
+            loudnessRangeLu = mastering.lraLu, crestDb = mastering.crestDb,
+            limiterMaxGainReductionDb = mastering.limiterMaxGainReductionDb, limiterMeanGainReductionDb = mastering.limiterMeanGainReductionDb,
+            loudnessReference = mastering.loudnessReference, dynamicsPreserved = mastering.dynamicsPreserved, masteringQualityIssues = mastering.qualityIssues,
             repairEnabled = true, loFiAudioTextureEnabled = request.enableLoFi,
             loFiPreset = request.loFiPreset.takeIf { request.enableLoFi }?.name?.lowercase(),
             loFiStrength = request.loFiStrength.takeIf { request.enableLoFi },
@@ -299,7 +324,9 @@ class DefaultBuildApplicationService(
         val version: Int = 1, val master: String, val masterFingerprint: String, val inputArtifact: String,
         val inputFingerprint: String, val inputSampleRate: Int, val inputChannels: Int, val inputPcmBitDepth: Int,
         val sampleRate: Int, val channels: Int, val pcmBitDepth: Int, val frameCount: Long, val durationSeconds: Double,
-        val peak: Double, val peakDb: Double, val targetLufs: Double = -14.0, val truePeakCeilingDb: Double = -1.0,
+        val peak: Double, val peakDb: Double, val masteringProfile: String, val integratedLufs: Double, val truePeakDbtp: Double,
+        val loudnessRangeLu: Double, val crestDb: Double, val limiterMaxGainReductionDb: Double, val limiterMeanGainReductionDb: Double,
+        val loudnessReference: String, val dynamicsPreserved: Boolean, val masteringQualityIssues: List<String>,
         val repairEnabled: Boolean, val loFiAudioTextureEnabled: Boolean,
         val loFiPreset: String? = null, val loFiStrength: Double? = null, val loFiMeanAbsoluteDelta: Double? = null,
         val mp3: DesktopMp3Metadata? = null
@@ -308,7 +335,6 @@ class DefaultBuildApplicationService(
 
     private companion object {
         const val STAGE_COUNT = 10
-        const val PCM_24_TOLERANCE = 1.0 / 8_388_608.0
         val MP3_BITRATES = setOf(128, 160, 192, 256, 320)
         val locks = ConcurrentHashMap<Path, Mutex>()
         val json = Json { prettyPrint = true; encodeDefaults = true }

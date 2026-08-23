@@ -66,3 +66,56 @@ data class LoudnessReport(
     val truePeak: Double,
     val rms: Double
 )
+
+/** Bounded delivery and dynamics policy; it is not an instruction to destroy dynamics for a numeric target. */
+@Serializable
+data class MasteringProfile(
+    val id: String,
+    val nominalIntegratedLufs: Double,
+    val loudnessToleranceLu: Double,
+    val maximumTruePeakDbtp: Double,
+    val minimumLraLu: Double,
+    val minimumCrestDb: Double,
+    val maximumLimiterGainReductionDb: Double
+) {
+    init {
+        require(id.matches(Regex("[a-z][a-z0-9-]{1,63}")) && nominalIntegratedLufs.isFinite() && loudnessToleranceLu >= 0.0 &&
+            maximumTruePeakDbtp <= 0.0 && minimumLraLu >= 0.0 && minimumCrestDb >= 0.0 && maximumLimiterGainReductionDb >= 0.0) {
+            "Mastering profile is invalid"
+        }
+    }
+}
+
+/** The current product profile uses a delivery reference while preserving a separate dynamics safety gate. */
+object MasteringProfiles {
+    val LOFI = MasteringProfile(
+        id = "lofi-v1",
+        nominalIntegratedLufs = -14.0,
+        loudnessToleranceLu = 1.0,
+        maximumTruePeakDbtp = -1.0,
+        minimumLraLu = 2.0,
+        minimumCrestDb = 5.0,
+        maximumLimiterGainReductionDb = 4.0
+    )
+}
+
+/** Immutable worker measurement evidence returned with one published master. */
+data class MasteringMeasurement(
+    val standard: String,
+    val integratedLufs: Double,
+    val truePeakDbtp: Double,
+    val lraLu: Double,
+    val crestDb: Double,
+    val limiterMaxGainReductionDb: Double,
+    val limiterMeanGainReductionDb: Double,
+    val dynamicsPreserved: Boolean,
+    val qualityIssues: List<String>,
+    val loudnessReference: String
+) {
+    init {
+        require(standard == "ITU-R BS.1770-4 / EBU R128" && listOf(integratedLufs, truePeakDbtp, lraLu, crestDb,
+            limiterMaxGainReductionDb, limiterMeanGainReductionDb).all(Double::isFinite) && qualityIssues == qualityIssues.distinct().sorted()) {
+            "Mastering measurement is invalid"
+        }
+    }
+}

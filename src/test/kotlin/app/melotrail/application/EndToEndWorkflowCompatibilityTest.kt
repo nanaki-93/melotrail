@@ -245,7 +245,12 @@ class EndToEndWorkflowCompatibilityTest {
     private class FakeBuildWorker : BuildAudioWorker {
         override suspend fun healthCheck() = true
         override suspend fun repair(input: Path, output: Path) { Files.copy(input, output) }
-        override suspend fun master(input: Path, output: Path) { Files.copy(input, output) }
+        override suspend fun master(input: Path, output: Path, profile: app.melotrail.model.MasteringProfile): app.melotrail.model.MasteringMeasurement {
+            Files.copy(input, output)
+            return app.melotrail.model.MasteringMeasurement(
+                "ITU-R BS.1770-4 / EBU R128", -14.0, -1.0, 3.0, 8.0, 0.0, 0.0, true, emptyList(), "within-tolerance"
+            )
+        }
         override suspend fun exportMp3(input: Path, output: Path, bitrateKbps: Int) = false
     }
     private class FakePreviewMp3Decoder : PreviewMp3Decoder {

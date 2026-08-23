@@ -139,6 +139,16 @@ The Kotlin project boundary validates published files and their fingerprints
 before later analysis or rendering is ready; a worker failure leaves prior
 artifacts available for inspection.
 
+## Mastering measurement
+
+`POST /master` measures its output with ITU-R BS.1770-4 / EBU R128 K-weighted,
+gated integrated loudness and a four-times oversampled true peak. Its response
+also records loudness range, crest, and limiter gain reduction. The built-in
+Lo-fi profile uses -14 LUFS as a nominal delivery reference (±1 LU), a maximum
+-1.0 dBTP true peak, and independent dynamics checks. A quieter master may
+remain acceptable when preserving dynamics requires it; a heavily limited
+master is rejected even when its loudness number is near the reference.
+
 `GET /health` also advertises the pinned `midiCleanup.requestVersion` and its
 allow-listed profiles. Kotlin checks that capability before sending a Clean MIDI
 request; it does not negotiate arbitrary worker options. Normalization is a

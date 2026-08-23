@@ -36,6 +36,8 @@ import app.melotrail.arrangement.SoundLibraryLocation
 import app.melotrail.profile.BundledCompositionProfileCatalog
 import app.melotrail.profile.CompositionProfileCatalog
 import app.melotrail.errors.ErrorReporter
+import app.melotrail.model.MasteringMeasurement
+import app.melotrail.model.MasteringProfile
 import app.melotrail.logging.DefaultLogger
 import app.melotrail.worker.CleanMidiCommand
 import app.melotrail.worker.MasterCommand
@@ -47,6 +49,9 @@ import app.melotrail.worker.WorkerClient
 import app.melotrail.worker.WorkerError
 import app.melotrail.worker.WorkerStatus
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
 import java.nio.file.Files
@@ -225,7 +230,7 @@ private class DesktopBuildWorker(private val client: WorkerClient) : BuildAudioW
         val response = client.execute(RepairCommand(input.toString(), listOf(RepairSpec("dc_offset"), RepairSpec("clip_removal", mapOf("threshold" to 0.999, "max_run_samples" to 12))), output.toString()))
         require(response.status == WorkerStatus.COMPLETED) { "Repair failed: ${response.error?.message ?: "Unknown worker error"}" }
     }
-    override suspend fun master(input: Path, output: Path) {
+    override suspend fun master(input: Path, output: Path, profile: MasteringProfile): MasteringMeasurement {
         val settings = mapOf<String, Any>(
             "eq_enabled" to true,
             "eq" to mapOf("bands" to listOf(mapOf("type" to "lowshelf", "frequency" to 180.0, "gain" to 1.5))),
@@ -235,12 +240,31 @@ private class DesktopBuildWorker(private val client: WorkerClient) : BuildAudioW
             "saturation" to mapOf("drive" to 1.08, "mix" to 0.08),
             "stereo_enabled" to false,
             "limiter_enabled" to true,
-            "limiter" to mapOf("ceiling_db" to -1.0, "release_ms" to 100.0),
-            "target_peak_db" to -1.0,
-            "target_lufs" to -14.0
+            "limiter" to mapOf("ceiling_db" to profile.maximumTruePeakDbtp, "release_ms" to 100.0),
+            "target_peak_dbtp" to profile.maximumTruePeakDbtp,
+            "target_lufs" to profile.nominalIntegratedLufs,
+            "loudness_tolerance_lu" to profile.loudnessToleranceLu,
+            "min_lra_lu" to profile.minimumLraLu,
+            "min_crest_db" to profile.minimumCrestDb,
+            "max_limiter_gain_reduction_db" to profile.maximumLimiterGainReductionDb,
+            "mastering_profile" to profile.id
         )
         val response = client.execute(MasterCommand(input.toString(), settings, output.toString()))
         require(response.status == WorkerStatus.COMPLETED) { "Mastering failed: ${response.error?.message ?: "Unknown worker error"}" }
+        val loudness = requireNotNull(response.output?.get("loudness")) { "Mastering worker returned no loudness evidence" }.jsonObject
+        val limiter = requireNotNull(loudness["limiter_gain_reduction"]) { "Mastering worker returned no limiter evidence" }.jsonObject
+        fun measurement(name: String) = requireNotNull(loudness[name]?.jsonPrimitive?.doubleOrNull) { "Mastering worker returned invalid $name" }
+        fun limiterMeasurement(name: String) = requireNotNull(limiter[name]?.jsonPrimitive?.doubleOrNull) { "Mastering worker returned invalid limiter $name" }
+        val issues = loudness["quality_issues"]?.let { element -> element.jsonArray.map { issue -> issue.jsonPrimitive.content } }
+            ?: throw IllegalArgumentException("Mastering worker returned no dynamics evidence")
+        return MasteringMeasurement(
+            standard = loudness["measurement_standard"]?.jsonPrimitive?.contentOrNull ?: "",
+            integratedLufs = measurement("integrated_lufs"), truePeakDbtp = measurement("true_peak_dbtp"),
+            lraLu = measurement("lra_lu"), crestDb = measurement("crest_db"),
+            limiterMaxGainReductionDb = limiterMeasurement("max_gain_reduction_db"), limiterMeanGainReductionDb = limiterMeasurement("mean_gain_reduction_db"),
+            dynamicsPreserved = loudness["dynamics_preserved"]?.jsonPrimitive?.content == "true", qualityIssues = issues.sorted(),
+            loudnessReference = loudness["loudness_reference"]?.jsonPrimitive?.contentOrNull ?: ""
+        )
     }
     override suspend fun exportMp3(input: Path, output: Path, bitrateKbps: Int): Boolean {
         val response = client.execute(MP3ExportCommand(input.toString(), output.toString(), bitrateKbps))
