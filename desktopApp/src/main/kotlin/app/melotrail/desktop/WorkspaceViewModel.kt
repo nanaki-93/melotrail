@@ -95,6 +95,9 @@ import app.melotrail.application.ReleaseExportApplicationService
 import app.melotrail.application.ReleaseExportFormat
 import app.melotrail.application.ReleaseExportInspection
 import app.melotrail.application.ReleaseExportRequest
+import app.melotrail.application.DefaultReleaseReviewApplicationService
+import app.melotrail.application.ReleaseReviewApplicationService
+import app.melotrail.application.ReleaseReviewSnapshot
 import app.melotrail.application.LocalSoundLibraryInventory
 import app.melotrail.application.LocalSoundLibraryInventoryReader
 import app.melotrail.application.LocalSoundLibraryInventoryState
@@ -170,6 +173,8 @@ data class WorkspaceUiState(
     val buildOptions: BuildOptionsDraft = BuildOptionsDraft(),
     val export: ExportUiState = ExportUiState(),
     val commercialEvidence: CommercialEvidenceUiState? = null,
+    /** Canonical release measurements and provenance; composables never inspect output files. */
+    val releaseReview: ReleaseReviewSnapshot? = null,
     val playbackSession: PlaybackSession = PlaybackSession(),
     val selectedPartId: String? = null,
     /** UI-only selected canonical artifact; it is never written to project files. */
@@ -235,6 +240,7 @@ private data class ProjectHydration(
     val fullSongCritic: Result<FullSongCriticSnapshot>,
     val fullSongEnhancement: Result<FullSongEnhancementSnapshot>,
     val humanization: Result<HumanizationSnapshot>,
+    val releaseReview: Result<ReleaseReviewSnapshot>,
     val sourceSongReview: SourceSongReviewUiState?
 )
 
@@ -819,7 +825,8 @@ class WorkspaceViewModel(
     private val soundLibraryInventory: LocalSoundLibraryInventoryReader = RegistryLocalSoundLibraryInventoryReader,
     private val operationLogger: DesktopOperationLogger = NoOpDesktopOperationLogger,
     private val commercialProvenanceService: CommercialProvenanceService = CommercialProvenanceService(libraryRoot),
-    private val releaseExportService: ReleaseExportApplicationService = DefaultReleaseExportApplicationService(creditsService = ReleaseCreditsService())
+    private val releaseExportService: ReleaseExportApplicationService = DefaultReleaseExportApplicationService(creditsService = ReleaseCreditsService()),
+    private val releaseReviewService: ReleaseReviewApplicationService = DefaultReleaseReviewApplicationService()
 ) : AutoCloseable {
     private val scope = CoroutineScope(SupervisorJob() + dispatchers.ui)
     private val ioDispatcher = dispatchers.io
@@ -1025,7 +1032,10 @@ class WorkspaceViewModel(
                 }
             )
         }
-        if (section == WorkspaceSection.EXPORT) refreshExport()
+        if (section == WorkspaceSection.EXPORT) {
+            refreshExport()
+            refreshReleaseReview()
+        }
         if (section == WorkspaceSection.LIBRARY) refreshSoundLibrary()
         if (section == WorkspaceSection.SETTINGS) {
             refreshSoundLibrary()
@@ -1162,7 +1172,10 @@ class WorkspaceViewModel(
     private fun backFromSettings() {
         val destination = state.value.settingsReturnSection ?: WorkspaceSection.OVERVIEW
         mutableState.update { it.copy(workspaceSection = destination, settingsReturnSection = null) }
-        if (destination == WorkspaceSection.EXPORT) refreshExport()
+        if (destination == WorkspaceSection.EXPORT) {
+            refreshExport()
+            refreshReleaseReview()
+        }
         if (destination == WorkspaceSection.LIBRARY) refreshSoundLibrary()
     }
 
@@ -2964,13 +2977,18 @@ class WorkspaceViewModel(
                 }
             } }
                 .onSuccess { result ->
-                    val (refreshed, loadedMix) = withContext(ioDispatcher) {
-                        projectService.open(project.root) to runCatching { mixService.load(project.root) }
+                    val (refreshed, loadedMix, releaseReview) = withContext(ioDispatcher) {
+                        Triple(
+                            projectService.open(project.root),
+                            runCatching { mixService.load(project.root) },
+                            runCatching { releaseReviewService.load(project.root) }
+                        )
                     }
                     mutableState.update { current ->
                         current.copy(
                             project = refreshed,
                             mix = loadedMix.getOrNull(),
+                            releaseReview = releaseReview.getOrNull(),
                             operation = WorkspaceOperation.Idle,
                             notification = loadedMix.exceptionOrNull()?.message?.let { warning -> "Build complete: ${result.master}. Mix controls could not be loaded: $warning" }
                                 ?: "Build complete: ${result.master}",
@@ -3103,6 +3121,7 @@ class WorkspaceViewModel(
                     val message = if (result.readiness.ready) "Commercial evidence is hash-verified. Review the report and YouTube checklist before release."
                     else "Commercial evidence was saved with unresolved actions; it is not Commercial-ready."
                     mutableState.update { current -> current.copy(operation = WorkspaceOperation.Idle, notification = message, commercialEvidence = evidence) }
+                    refreshReleaseReview()
                 }
                 .onFailure { failure -> fail("commercial provenance", failure.message ?: "Unable to create commercial evidence.") }
         }
@@ -3123,6 +3142,17 @@ class WorkspaceViewModel(
                     current.copy(export = current.export.copy(inspection = inspection, inspecting = false,
                         draft = current.export.draft.copy(filename = filename, destination = current.export.draft.destination ?: project.root.resolve("output"))))
                 }
+            }
+        }
+    }
+
+    private fun refreshReleaseReview() {
+        val project = state.value.project ?: return
+        if (state.value.operation.isMutating) return
+        scope.launch {
+            val review = runCatching { withContext(ioDispatcher) { releaseReviewService.load(project.root) } }
+            mutableState.update { current ->
+                if (current.project?.root != project.root) current else current.copy(releaseReview = review.getOrNull())
             }
         }
     }
@@ -3156,6 +3186,7 @@ class WorkspaceViewModel(
                         commercialEvidence = result.credits?.let { artifact -> current.commercialEvidence?.copy(creditsReference = artifact.relativePath) } ?: current.commercialEvidence,
                         operationFeedback = feedbackTracker.complete(feedbackId, "Exported ${result.output.fileName}.", artifactLabel = result.output.fileName.toString()) ?: current.operationFeedback) }
                     refreshExport()
+                    refreshReleaseReview()
                 }
                 .onFailure { failure -> fail("export song", failure.message ?: "Export Song failed.", sessionId = feedbackId) }
         }
@@ -3283,8 +3314,9 @@ class WorkspaceViewModel(
             val fullSongCritic = runCatching { fullSongCriticService.load(project.root) }
             val fullSongEnhancement = runCatching { fullSongEnhancementService.load(project.root) }
             val humanization = runCatching { humanizationService.load(project.root) }
+            val releaseReview = runCatching { releaseReviewService.load(project.root) }
             val sourceSongReview = if (project.structure.size >= 2) runCatching { loadSourceSongReview(project.root) }.getOrNull() else null
-            ProjectHydration(mix, arrangement, arrangementWorkspace, cohesion, aiFix, fullSongCritic, fullSongEnhancement, humanization, sourceSongReview)
+            ProjectHydration(mix, arrangement, arrangementWorkspace, cohesion, aiFix, fullSongCritic, fullSongEnhancement, humanization, releaseReview, sourceSongReview)
         }
         val warnings = buildList {
             hydration.mix.exceptionOrNull()?.message?.let { add("mix settings could not be loaded: $it") }
@@ -3310,6 +3342,7 @@ class WorkspaceViewModel(
                     fullSongCritic = hydration.fullSongCritic.getOrNull(),
                     fullSongEnhancement = hydration.fullSongEnhancement.getOrNull(),
                     humanization = hydration.humanization.getOrNull(),
+                    releaseReview = hydration.releaseReview.getOrNull(),
                     sourceSongReview = hydration.sourceSongReview ?: if (resetWorkspace) SourceSongReviewUiState() else current.sourceSongReview,
                     selectedArrangementSection = if (resetWorkspace) arrangement?.sections?.firstOrNull()?.index else current.selectedArrangementSection,
                     focusedCriticIssueId = if (resetWorkspace) null else current.focusedCriticIssueId?.takeIf { issueId ->

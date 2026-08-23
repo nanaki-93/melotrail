@@ -617,6 +617,40 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `Release keeps commercial readiness distinct from a successful build and exposes its measured gates`() = runComposeUiTest {
+        val base = exportState()
+        val state = base.copy(project = base.project!!.copy(readiness = base.project!!.readiness.copy(releaseAvailable = true)), releaseReview = app.melotrail.application.ReleaseReviewSnapshot(
+            mastering = app.melotrail.application.ReleaseMasteringSummary(-13.9, -1.1, 6.3, 9.2, "Streaming reference", true, emptyList()),
+            commercial = app.melotrail.application.ReleaseCommercialSummary(
+                ready = false,
+                reasons = listOf("Source 'A' has no creator rights attestation."),
+                requiredAttribution = emptyList(),
+                aiDisclosureRecommended = true,
+                reportReference = "output/releases/release-a/commercial-report.md",
+                youtubeMetadataReference = "output/releases/release-a/youtube-release.json"
+            ),
+            recognizability = app.melotrail.application.ReleaseRecognizabilitySummary(true, 1, emptyList()),
+            blockers = listOf("Commercial gate: Source 'A' has no creator rights attestation.")
+        ))
+        setContent { MelotrailTheme { WorkspaceScreen(state, onIntent = {}) } }
+
+        onNodeWithTag(WorkspacePageTags.RELEASE_STATUS).performScrollTo()
+        onNodeWithText("Build complete — commercial review required").assertExists()
+        listOf(
+            WorkspacePageTags.RELEASE_STATUS,
+            WorkspacePageTags.RELEASE_CHECKLIST,
+            WorkspacePageTags.RELEASE_MASTERING,
+            WorkspacePageTags.RELEASE_AUDIBILITY,
+            WorkspacePageTags.RELEASE_RECOGNIZABILITY,
+            WorkspacePageTags.RELEASE_SIMILARITY,
+            WorkspacePageTags.RELEASE_PROVENANCE,
+            WorkspacePageTags.RELEASE_PROVENANCE_ACTION
+        ).forEach { onNodeWithTag(it).performScrollTo().assertExists() }
+        onNodeWithText("Integrated  -13.9 LUFS").assertExists()
+        onNodeWithText("Source 'A' has no creator rights attestation.").assertExists()
+    }
+
+    @Test
     fun `Export page exposes typed destination and a ready export action`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         setContent { MelotrailTheme { WorkspaceScreen(exportState(), intents::add) } }

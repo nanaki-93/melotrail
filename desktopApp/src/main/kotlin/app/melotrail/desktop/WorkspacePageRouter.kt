@@ -234,6 +234,14 @@ internal object WorkspacePageTags {
     const val MIX_OPTIONS_TOGGLE = "mix-master-options-toggle"
     const val MIX_OPTIONS = "mix-master-options"
     const val EXPORT_FORMAT_PREFIX = "export-format-"
+    const val RELEASE_STATUS = "release-status"
+    const val RELEASE_CHECKLIST = "release-checklist"
+    const val RELEASE_MASTERING = "release-mastering"
+    const val RELEASE_RECOGNIZABILITY = "release-recognizability"
+    const val RELEASE_AUDIBILITY = "release-audibility"
+    const val RELEASE_SIMILARITY = "release-similarity"
+    const val RELEASE_PROVENANCE = "release-provenance"
+    const val RELEASE_PROVENANCE_ACTION = "release-provenance-action"
     const val EXPORT_AUDIO_ONLY = "export-audio-only"
     const val EXPORT_QUALITY = "export-quality"
     const val EXPORT_SAMPLE_RATE = "export-sample-rate"
@@ -916,7 +924,7 @@ private fun ExportPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
     val canExport = inspection?.ready == true && draft.format in formats && destinationIsProjectOutput && !state.operation.isMutating
     val clipboard = LocalClipboardManager.current
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Pages.PageGap)) {
-        PageTitle("Export", "Publish a validated audio release")
+        PageTitle("Release", "Review measured gates, provenance, and final audio exports")
         OverviewCard(WorkspacePageTags.EXPORT_AUDIO_ONLY, "Release mode") {
             Text("Audio only", style = MaterialTheme.typography.titleMedium)
             Text("Video, audio-and-video, FLAC, metadata editing, stems, and cloud destinations are not available in this local release flow.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -1018,6 +1026,129 @@ private fun ExportPage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> U
             })
         }
         CompactTransport(state, onIntent, Modifier.fillMaxWidth())
+        ReleaseReadinessPanel(state, onIntent)
+    }
+}
+
+@Composable
+private fun ReleaseReadinessPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) {
+    val review = state.releaseReview
+    val buildReady = state.project?.readiness?.releaseAvailable == true && !state.downstreamArtifactsStale
+    val commercialReady = review?.commercial?.ready == true
+    OverviewCard(WorkspacePageTags.RELEASE_STATUS, "Release status") {
+        Text(
+            when {
+                commercialReady -> "Commercial Ready"
+                buildReady -> "Build complete — commercial review required"
+                else -> "Release blocked"
+            },
+            style = MaterialTheme.typography.titleMedium,
+            color = when {
+                commercialReady -> semanticColor(WorkspaceSemanticState.READY)
+                buildReady -> semanticColor(WorkspaceSemanticState.WARNING)
+                else -> MaterialTheme.colorScheme.error
+            }
+        )
+        Text(
+            when {
+                commercialReady -> "The selected lineage and commercial evidence are current. This is not legal advice or a monetization guarantee."
+                buildReady -> "A master exists, but Commercial Ready requires current provenance, licensing, and recognizability evidence."
+                else -> "Build and validate a current master before release assets can be exported."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+    ReleaseChecklist(state, buildReady)
+    ReleaseMeasurements(state)
+    ReleaseProvenance(state, onIntent)
+}
+
+@Composable
+private fun ReleaseChecklist(state: WorkspaceUiState, buildReady: Boolean) = OverviewCard(WorkspacePageTags.RELEASE_CHECKLIST, "Release checklist") {
+    val review = state.releaseReview
+    ReleaseCheck("Build success", buildReady, if (buildReady) "Current master and release metadata are available." else "Build a current master and release metadata.")
+    val commercial = review?.commercial
+    ReleaseCheck("Source provenance & licenses", commercial?.ready == true,
+        commercial?.reasons?.joinToString(" ") ?: "Create commercial provenance to evaluate source rights and frozen instrument licenses.")
+    val recognizability = review?.recognizability
+    ReleaseCheck("Recognizability", recognizability?.passed == true,
+        recognizability?.let { "${it.clearOccurrenceCount} clear surviving occurrence(s). ${it.reasons.joinToString(" ")}" }
+            ?: "Select, confirm, and evaluate a signature motif.")
+    val audibility = state.mix?.report?.melodyAudibility
+    ReleaseCheck("Melody audibility", audibility?.audible == true,
+        audibility?.let { "${"%.1f".format(it.signalToAccompanimentDb)} dB above accompaniment." }
+            ?: "Build a dry mix and audio critic report.")
+    ReleaseCheck("Dynamics", review?.mastering?.dynamicsPreserved == true,
+        review?.mastering?.dynamicsIssues?.joinToString(" ")?.ifBlank { "Master dynamics passed." } ?: "Build a measured master.")
+    review?.blockers?.takeIf(List<String>::isNotEmpty)?.let { blockers ->
+        Text("Blocking details", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error)
+        blockers.forEach { Text("• $it", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+    }
+}
+
+@Composable
+private fun ReleaseCheck(label: String, passed: Boolean, detail: String) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm), verticalAlignment = Alignment.Top) {
+        Text(if (passed) "✓" else "!", color = if (passed) semanticColor(WorkspaceSemanticState.READY) else semanticColor(WorkspaceSemanticState.WARNING), style = MaterialTheme.typography.titleMedium)
+        Column(Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.labelLarge)
+            Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun ReleaseMeasurements(state: WorkspaceUiState) {
+    val mastering = state.releaseReview?.mastering
+    OverviewCard(WorkspacePageTags.RELEASE_MASTERING, "Master measurements") {
+        if (mastering == null) Text("Measured loudness, true peak, and dynamics are available after a validated master is built.", style = MaterialTheme.typography.bodySmall)
+        else {
+            Text("Integrated  ${"%.1f".format(mastering.integratedLufs)} LUFS", style = MaterialTheme.typography.bodyMedium)
+            Text("True peak  ${"%.1f".format(mastering.truePeakDbtp)} dBTP", style = MaterialTheme.typography.bodyMedium)
+            Text("Dynamics  ${"%.1f".format(mastering.loudnessRangeLu)} LU LRA · ${"%.1f".format(mastering.crestDb)} dB crest", style = MaterialTheme.typography.bodyMedium)
+            Text(mastering.loudnessReference, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+    OverviewCard(WorkspacePageTags.RELEASE_AUDIBILITY, "Melody audibility") {
+        val audibility = state.mix?.report?.melodyAudibility
+        if (audibility == null) Text("No current audio-critic measurement.", style = MaterialTheme.typography.bodySmall)
+        else Text("${if (audibility.audible) "Audible" else "Needs attention"} · ${"%.1f".format(audibility.signalToAccompanimentDb)} dB vs accompaniment", style = MaterialTheme.typography.bodyMedium,
+            color = if (audibility.audible) semanticColor(WorkspaceSemanticState.READY) else MaterialTheme.colorScheme.error)
+    }
+    OverviewCard(WorkspacePageTags.RELEASE_RECOGNIZABILITY, "Signature motif recognizability") {
+        val gate = state.releaseReview?.recognizability
+        Text(gate?.let { if (it.passed) "Passed" else "Needs attention" } ?: "Not evaluated", style = MaterialTheme.typography.bodyMedium,
+            color = if (gate?.passed == true) semanticColor(WorkspaceSemanticState.READY) else semanticColor(WorkspaceSemanticState.WARNING))
+        gate?.reasons?.forEach { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+    }
+    OverviewCard(WorkspacePageTags.RELEASE_SIMILARITY, "Release similarity") {
+        val similarity = state.releaseReview?.similarity
+        if (similarity == null) Text("Build a release to generate the arrangement-only advisory comparison.", style = MaterialTheme.typography.bodySmall)
+        else {
+            Text(similarity.status.name.lowercase().replaceFirstChar(Char::uppercase), style = MaterialTheme.typography.bodyMedium)
+            Text("${similarity.comparisonCount} comparison(s) · highest ${similarity.highestSimilarityScore?.let { "%.2f".format(it) } ?: "not compared"}", style = MaterialTheme.typography.bodySmall)
+            Text(similarity.advisory, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+@Composable
+private fun ReleaseProvenance(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = OverviewCard(WorkspacePageTags.RELEASE_PROVENANCE, "Provenance & YouTube metadata") {
+    val commercial = state.releaseReview?.commercial
+    Text(
+        commercial?.let { if (it.aiDisclosureRecommended) "AI-use disclosure is recommended for the selected lineage." else "No material generative-AI disclosure is recorded for the selected lineage." }
+            ?: "Create provenance to produce the hash-bound commercial report and YouTube release metadata.",
+        style = MaterialTheme.typography.bodySmall
+    )
+    commercial?.requiredAttribution?.takeIf(List<String>::isNotEmpty)?.forEach { Text(it, style = MaterialTheme.typography.bodySmall) }
+    commercial?.let {
+        Text("Report: ${it.reportReference}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("YouTube metadata: ${it.youtubeMetadataReference}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    OutlinedButton(onClick = { onIntent(WorkspaceIntent.ExportCommercialProvenance) }, enabled = state.project?.readiness?.releaseAvailable == true && !state.operation.isMutating,
+        modifier = Modifier.semantics { testTag = WorkspacePageTags.RELEASE_PROVENANCE_ACTION }) {
+        Text(if (commercial == null) "Create provenance & YouTube metadata" else "Refresh commercial provenance")
     }
 }
 
