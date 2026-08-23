@@ -203,7 +203,7 @@ object MelodyIdentityBuilder {
 }
 
 @Serializable
-enum class MidiMutationStage { AI_FIX, ENHANCE, COHESION, FULL_SONG_ENHANCE, HUMANIZATION }
+enum class MidiMutationStage { AI_FIX, ENHANCE, MELODY_CONNECTION, COHESION, FULL_SONG_ENHANCE, HUMANIZATION }
 @Serializable
 enum class MidiMutationOperation { TIMING, VELOCITY, PITCH, DURATION, ADD, REMOVE }
 @Serializable

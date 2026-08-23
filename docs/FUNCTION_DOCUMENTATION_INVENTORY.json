@@ -379,6 +379,22 @@
       "documentedFunctionCount": 0
     },
     {
+      "path": "src/main/kotlin/app/melotrail/arrangement/MelodyConnection.kt",
+      "classification": "deferred-with-reason",
+      "reason": "The new melody-connection boundary executor has documented public contracts; its private MIDI serialization helpers remain locally exempt until their behavior changes.",
+      "functionCount": 26,
+      "declarationDigest": "6325214feb2e52c7774f5cd32c6a334c797f6c788bbe364732638ef1d9d39b3d",
+      "documentedFunctionCount": 5
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/arrangement/MelodyIdentity.kt",
+      "classification": "deferred-with-reason",
+      "reason": "The existing melody identity and mutation-invariant implementation is a shared legacy contract; the milestone-four stage enum addition is covered by its focused regression tests.",
+      "functionCount": 20,
+      "declarationDigest": "b9295b9f48bf0b2b3091561d8925b4d5eda2f1df7d7ad85c610f25d32f3fc7b6",
+      "documentedFunctionCount": 0
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/arrangement/SongTimeline.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/arrangement/SongTimeline.kt has 38 legacy callable declarations. This declaration-digest-pinned local exemption must be replaced with focused KDoc/docstrings before a behavioral or contract change.",
