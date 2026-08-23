@@ -44,6 +44,12 @@ report; blocking findings require a persisted override reason. The connected
 source melody is independently previewable as piano and never replaces the
 selected source MIDI.
 
+Generated arrangement MIDI has an explicit core checkpoint: piano, bass, drums,
+and pad are generated and validated first, then the musician approves that exact
+fingerprinted core before optional strings may run. Strings use the remaining
+per-section density budget, preserve melody-register occupation, and may publish
+an inspectable explicit `OFF` result when no safe optional layer fits.
+
 The top navigation keeps the guided stages visible: **Setup**, **Project**, **Melody Parts**,
 **Structure**, **Arrange**, and **Mix & Master**. **Library**, **Video Preview**,
 **Export**, and **Settings** are available from the labelled **More** menu. The

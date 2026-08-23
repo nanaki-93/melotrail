@@ -64,6 +64,29 @@ data class ArrangementState(
         )
     }
 
+    /**
+     * Per-section pitched-note capacity after the approved core has occupied
+     * it. Optional layers consume only the remaining slots; drums are
+     * deliberately excluded because they do not mask melodic register.
+     */
+    fun densityBudget(startTick: Long, endTick: Long): DensityBudget {
+        val space = ensembleSpaceMap(startTick, endTick)
+        return DensityBudget(startTick, endTick, DensityBudget.MAX_PITCHED_NOTES, space.maximumSimultaneousNotes)
+    }
+
+    /** Exact source-melody activity used by call/response generation and collision validation. */
+    fun melodyIsActive(startTick: Long, endTick: Long): Boolean {
+        require(startTick >= 0 && endTick > startTick) { "Melody-occupation bounds are invalid" }
+        return requireTrack(PIANO).notes.any { it.startTick < endTick && startTick < it.endTick }
+    }
+
+    fun melodyCollides(startTick: Long, endTick: Long, pitch: Int, semitoneClearance: Int = 2): Boolean {
+        require(semitoneClearance >= 0) { "Melody collision clearance is invalid" }
+        return requireTrack(PIANO).notes.any { note ->
+            note.startTick < endTick && startTick < note.endTick && kotlin.math.abs(note.pitch - pitch) <= semitoneClearance
+        }
+    }
+
     /** The complete accepted MIDI notes, never a rendered or flattened audio representation. */
     fun fullAcceptedMidi(): List<MidiNote> = acceptedTracks.flatMap(AcceptedArrangementTrack::notes)
         .sortedWith(compareBy<MidiNote> { it.startTick }.thenBy(MidiNote::channel).thenBy(MidiNote::pitch).thenBy(MidiNote::endTick))
@@ -199,6 +222,23 @@ data class EnsembleSpaceMap(
     /** Six concurrent accepted notes is intentionally treated as a dense core: pads may rest. */
     val isDense: Boolean get() = maximumSimultaneousNotes >= DENSE_CORE_NOTE_COUNT
     companion object { const val DENSE_CORE_NOTE_COUNT = 6 }
+}
+
+/** Visible, deterministic capacity evidence for one optional-layer section. */
+data class DensityBudget(
+    val startTick: Long,
+    val endTick: Long,
+    val capacity: Int,
+    val occupied: Int
+) {
+    init {
+        require(startTick >= 0 && endTick > startTick && capacity > 0 && occupied >= 0) { "Density budget is invalid" }
+    }
+
+    val remaining: Int get() = (capacity - occupied).coerceAtLeast(0)
+    val permitsOptionalLayer: Boolean get() = remaining > 0
+
+    companion object { const val MAX_PITCHED_NOTES = 6 }
 }
 
 private data class IndexedMidiEvent(val event: MidiEvent, val track: Int, val index: Int)

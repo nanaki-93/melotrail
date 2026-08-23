@@ -42,6 +42,20 @@ class StringsMidiGenerationTest {
     }
 
     @Test
+    fun `density budget resolves strings off and countermelody waits for a melody gap`() {
+        val fullBudget = DensityBudget(0, 480, DensityBudget.MAX_PITCHED_NOTES, DensityBudget.MAX_PITCHED_NOTES)
+        val off = generator.generate(request().copy(densityBudget = fullBudget))
+        assertTrue(off.notes.isEmpty())
+        assertTrue(off.diagnostics.single().contains("resolved OFF"))
+
+        val state = ArrangementState.fromAcceptedPiano(
+            480, listOf(MidiNote(0, 60, 90, 0, 480)), "a".repeat(64)
+        )
+        val counter = generator.generate(request(role = StringsMidiRole.SIMPLE_COUNTERMELODY, sourceRange = MidiIntRange(48, 60)).copy(arrangementState = state))
+        assertTrue(counter.diagnostics.any { it.contains("fell back") })
+    }
+
+    @Test
     fun `harmony voice-leading density source clearance and boundaries stay bounded`() {
         val result = generator.generate(request(
             length = 960,

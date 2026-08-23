@@ -162,6 +162,47 @@ class ArrangementApplicationServiceTest {
         assertFalse(Files.exists(root.resolve("draft/core/strings.wav")))
     }
 
+    @Test
+    fun `optional strings require persisted core approval and retain an explicit resolution`() = runBlocking {
+        val root = project("optional-strings", structure = listOf("A", "A", "A"))
+        approveSourceSongForArrangement(root)
+        val service = DefaultArrangementApplicationService(
+            deterministicGlobalPlanner = object : app.melotrail.arrangement.GlobalSongPlanner {
+                override fun plan(input: app.melotrail.arrangement.SongPlanningInput): app.melotrail.arrangement.SongPlan =
+                    app.melotrail.arrangement.DeterministicGlobalSongPlanner().plan(input).let { plan ->
+                        plan.copy(sections = plan.sections.map { section ->
+                            section.copy(instrumentProgression = when (section.index) {
+                                0 -> listOf("piano", "bass", "drums")
+                                1 -> listOf("piano", "pad")
+                                else -> listOf("piano", "strings")
+                            })
+                        })
+                            .also { it.requireValid(input) }
+                    }
+            },
+            libraryRoot = coreLibrary(root)
+        )
+
+        service.generate(GenerateArrangementRequest(root, instruments = listOf("piano", "bass", "drums", "pad", "strings")))
+        val blocked = assertThrows(ApplicationServiceException::class.java) {
+            runBlocking { service.generateOptionalMidi(root) }
+        }
+        assertTrue(blocked.message!!.contains("core-arrangement approval"))
+
+        val core = service.generateRequiredMidi(root)
+        assertFalse(core.artifacts.any { it.instrument == "strings" })
+        service.approveCoreArrangement(root)
+        val optional = service.generateOptionalMidi(root)
+        val workflow = ProjectStore.read(root).workflow
+
+        assertEquals(listOf("strings"), optional.artifacts.map { it.instrument })
+        assertTrue(workflow.coreArrangement != null)
+        assertTrue(workflow.generatedMidi!!.artifacts.any { it.id == "strings" })
+        val report = root.resolve("midi/generated/strings.validation.json")
+        assertTrue(Files.isRegularFile(report))
+        assertTrue(Files.readString(report).contains("densityBudgetRemaining"))
+    }
+
     private fun project(name: String, structure: List<String> = listOf("A")): Path {
         val root = tempDir.resolve(name)
         Files.createDirectories(root.resolve("source")); Files.createDirectories(root.resolve("midi/clean"))

@@ -83,7 +83,7 @@ class CompositionSettingsApplicationServiceTest {
 
         val tempo = service.updateCompositionSettings(UpdateCompositionSettings(root, 2, original.copy(name = "Renamed", tempo = Tempo(104.0))))
         assertEquals(
-            setOf(WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.COHESION, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.CRITIC, WorkflowArtifact.FULL_SONG_ENHANCEMENT, WorkflowArtifact.HUMANIZATION, WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX,
+            setOf(WorkflowArtifact.ARRANGEMENT, WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.CORE_ARRANGEMENT, WorkflowArtifact.COHESION, WorkflowArtifact.CRITIC, WorkflowArtifact.FULL_SONG_ENHANCEMENT, WorkflowArtifact.HUMANIZATION, WorkflowArtifact.STEMS, WorkflowArtifact.DRY_MIX,
                 WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE, WorkflowArtifact.COMMERCIAL_EXPORT),
             tempo.invalidation.artifacts
         )

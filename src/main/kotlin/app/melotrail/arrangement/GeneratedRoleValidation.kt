@@ -121,6 +121,7 @@ class DeterministicGeneratedRoleValidator : GeneratedRoleValidator {
             "drums" -> validateDrums(notes, input, active, violations)
             "pad" -> validatePad(notes, input, violations)
         }
+        if (input.role == "strings") validateStrings(notes, input, violations)
         return report(input, notes, violations, warnings)
     }
 
@@ -234,11 +235,29 @@ class DeterministicGeneratedRoleValidator : GeneratedRoleValidator {
         }
     }
 
+    private fun validateStrings(notes: List<Note>, input: GeneratedRoleValidationInput, violations: MutableList<String>) {
+        val state = input.arrangementState ?: return
+        notes.forEach { strings ->
+            if (state.melodyCollides(strings.start, strings.end, strings.pitch)) {
+                violations += "Strings note collides with accepted source melody"
+            }
+        }
+        val budgets = activeOccurrences("strings", input.arrangement, input.projection.occurrences)
+            .map { state.densityBudget(it.startTick, it.endTick) }
+        notes.groupBy(Note::start).forEach { (tick, simultaneous) ->
+            val budget = budgets.singleOrNull { tick in it.startTick until it.endTick }
+            if (budget != null && simultaneous.size > budget.remaining) {
+                violations += "Strings exceed the approved density budget"
+            }
+        }
+    }
+
     private fun silenceAllowed(input: GeneratedRoleValidationInput, active: List<MusicalOccurrence>): Boolean = when (input.role) {
         "pad" -> active.all { occurrence ->
             val plan = input.arrangement.sections.single { it.instanceId == occurrence.occurrenceId }.instruments.filterIsInstance<PadInstrumentPlan>().single()
             plan.density == 0.0 || input.deliberateSilence || input.arrangementState?.ensembleSpaceMap(occurrence.startTick, occurrence.endTick)?.isDense == true
         }
+        "strings" -> input.deliberateSilence
         else -> false
     }
 
@@ -278,11 +297,20 @@ class DeterministicGeneratedRoleValidator : GeneratedRoleValidator {
     private fun report(input: GeneratedRoleValidationInput, notes: List<Note>, rawViolations: List<String>, rawWarnings: List<String>): RoleValidationReport {
         val violations = rawViolations.distinct().sorted().take(input.policy.maximumViolations)
         val warnings = rawWarnings.distinct().sorted().take(input.policy.maximumWarnings)
+        val densityMetrics = if (input.role == "strings" && input.arrangementState != null) {
+            val budgets = activeOccurrences("strings", input.arrangement, input.projection.occurrences)
+                .map { input.arrangementState.densityBudget(it.startTick, it.endTick) }
+            listOf(
+                RoleValidationMetric("densityBudgetCapacity", budgets.maxOfOrNull(DensityBudget::capacity)?.toLong() ?: 0),
+                RoleValidationMetric("densityBudgetOccupied", budgets.maxOfOrNull(DensityBudget::occupied)?.toLong() ?: 0),
+                RoleValidationMetric("densityBudgetRemaining", budgets.minOfOrNull(DensityBudget::remaining)?.toLong() ?: 0)
+            )
+        } else emptyList()
         return RoleValidationReport(
             role = input.role, target = RoleValidationTarget(occurrenceIds = activeOccurrences(input.role, input.arrangement, input.projection.occurrences).map { it.occurrenceId }.sorted()),
             inputHashes = listOf(RoleValidationHash("arrangement", input.arrangementSha256), RoleValidationHash("authority", input.projection.contextSha256), RoleValidationHash("registry", input.registrySha256)).sortedBy(RoleValidationHash::name),
             outputSha256 = digest(input.midi), policyVersion = input.policy.version,
-            metrics = listOf(RoleValidationMetric("noteCount", notes.size.toLong()), RoleValidationMetric("ppq", runCatching { MidiSystem.getSequence(input.midi.toFile()).resolution.toLong() }.getOrDefault(0))).sortedBy(RoleValidationMetric::name),
+            metrics = (listOf(RoleValidationMetric("noteCount", notes.size.toLong()), RoleValidationMetric("ppq", runCatching { MidiSystem.getSequence(input.midi.toFile()).resolution.toLong() }.getOrDefault(0))) + densityMetrics).sortedBy(RoleValidationMetric::name),
             warnings = warnings, violations = violations, passed = violations.isEmpty()
         )
     }

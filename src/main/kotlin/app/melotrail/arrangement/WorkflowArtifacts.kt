@@ -22,6 +22,7 @@ enum class WorkflowArtifact {
     ANALYSIS,
     ARRANGEMENT,
     GENERATED_MIDI,
+    CORE_ARRANGEMENT,
     COHESION,
     CRITIC,
     FULL_SONG_ENHANCEMENT,
@@ -68,7 +69,7 @@ object WorkflowArtifactGraph {
     private val orderedDerivedArtifacts = listOf(
         WorkflowArtifact.TRANSPOSED_MIDI, WorkflowArtifact.CORRECTED_MIDI, WorkflowArtifact.ENHANCED_MIDI,
         WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.ARRANGEMENT,
-        WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.COHESION, WorkflowArtifact.CRITIC,
+        WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.CORE_ARRANGEMENT, WorkflowArtifact.COHESION, WorkflowArtifact.CRITIC,
         WorkflowArtifact.FULL_SONG_ENHANCEMENT, WorkflowArtifact.HUMANIZATION, WorkflowArtifact.STEMS,
         WorkflowArtifact.DRY_MIX, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE,
         WorkflowArtifact.COMMERCIAL_EXPORT
@@ -83,7 +84,7 @@ object WorkflowArtifactGraph {
         WorkflowChange.MIDI_FEEL -> from(WorkflowArtifact.ANALYSIS)
         WorkflowChange.ANALYSIS, WorkflowChange.STRUCTURE, WorkflowChange.PART_SECTION -> from(WorkflowArtifact.ARRANGEMENT)
         WorkflowChange.ARRANGEMENT -> from(WorkflowArtifact.GENERATED_MIDI)
-        WorkflowChange.GENERATED_MIDI -> from(WorkflowArtifact.COHESION)
+        WorkflowChange.GENERATED_MIDI -> from(WorkflowArtifact.CORE_ARRANGEMENT)
         WorkflowChange.COHESION -> from(WorkflowArtifact.CRITIC)
         WorkflowChange.CRITIC -> from(WorkflowArtifact.FULL_SONG_ENHANCEMENT)
         WorkflowChange.FULL_SONG_ENHANCEMENT_SELECTION -> from(WorkflowArtifact.HUMANIZATION)
@@ -317,7 +318,9 @@ data class GeneratedMidiArtifactReference(
     val id: String,
     val artifact: WorkflowArtifactReference,
     /** Deterministic, persisted output validation evidence for this role. */
-    val validationReport: WorkflowArtifactReference
+    val validationReport: WorkflowArtifactReference,
+    /** Strings can intentionally publish a validated silent layer. */
+    val resolution: GeneratedMidiArtifactResolution = GeneratedMidiArtifactResolution.NOTES
 ) {
     init {
         require(SAFE_ID.matches(id)) { "Generated MIDI artifact ID is invalid" }
@@ -326,6 +329,9 @@ data class GeneratedMidiArtifactReference(
         }
     }
 }
+
+@Serializable
+enum class GeneratedMidiArtifactResolution { NOTES, OFF }
 
 object GeneratedMidiArtifactPaths {
     fun validationReport(id: String): String {
@@ -414,6 +420,33 @@ data class ArrangementApprovalReferences(
         }
         require(arrangement.file == "arrangement_plan.json") { "Approved arrangement path is not canonical" }
     }
+}
+
+/**
+ * Explicit approval boundary between the validated rhythm/harmony core and
+ * optional melodic layers. The source piano and every accepted core artifact
+ * are fingerprinted so optional generation cannot use another ensemble.
+ */
+@Serializable
+data class CoreArrangementApprovalReferences(
+    val arrangementSha256: String,
+    val authoritySha256: String,
+    val registrySha256: String,
+    val pianoSha256: String,
+    val artifacts: List<GeneratedMidiArtifactReference>
+) {
+    init {
+        require(SHA_256.matches(arrangementSha256) && SHA_256.matches(authoritySha256) &&
+            SHA_256.matches(registrySha256) && SHA_256.matches(pianoSha256)) {
+            "Core arrangement approval fingerprints are invalid"
+        }
+        require(artifacts.map(GeneratedMidiArtifactReference::id).distinct().size == artifacts.size &&
+            artifacts.all { it.id in CORE_GENERATED_ROLES && it.resolution == GeneratedMidiArtifactResolution.NOTES }) {
+            "Core arrangement approval artifacts are invalid"
+        }
+    }
+
+    companion object { val CORE_GENERATED_ROLES = setOf("bass", "drums", "pad") }
 }
 
 /** Pointer to the selected immutable Task 027 release-lineage manifest. */
@@ -540,6 +573,7 @@ data class ProjectWorkflowReferences(
     val critic: CriticWorkflowReferences? = null,
     val fullSongEnhancement: FullSongEnhancementReferences? = null,
     val arrangement: ArrangementApprovalReferences? = null,
+    val coreArrangement: CoreArrangementApprovalReferences? = null,
     val humanizationSelection: HumanizationSelection = HumanizationSelection.BYPASS,
     val humanization: HumanizationWorkflowReferences? = null,
     val generatedMidi: GeneratedMidiWorkflowReferences? = null,

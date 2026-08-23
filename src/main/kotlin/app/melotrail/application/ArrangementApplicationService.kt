@@ -2,6 +2,7 @@ package app.melotrail.application
 
 import app.melotrail.arrangement.BassMidiGenerationAdapter
 import app.melotrail.arrangement.ArrangementApprovalReferences
+import app.melotrail.arrangement.CoreArrangementApprovalReferences
 import app.melotrail.arrangement.ArrangementAssignmentReference
 import app.melotrail.arrangement.ArrangementState
 import app.melotrail.arrangement.ArrangementRoleSelection
@@ -18,6 +19,7 @@ import app.melotrail.arrangement.DeterministicSectionVariationPlanner
 import app.melotrail.arrangement.DrumMidiGenerationAdapter
 import app.melotrail.arrangement.GlobalSongPlanner
 import app.melotrail.arrangement.GeneratedMidiArtifactReference
+import app.melotrail.arrangement.GeneratedMidiArtifactResolution
 import app.melotrail.arrangement.GeneratedMidiArtifactPaths
 import app.melotrail.arrangement.GeneratedMidiWorkflowReferences
 import app.melotrail.arrangement.GeneratedRoleValidationInput
@@ -112,7 +114,12 @@ data class ArrangementSnapshot(
     val artifact: Path
 )
 
-data class GeneratedMidiArtifact(val instrument: String, val path: Path, val events: Int)
+data class GeneratedMidiArtifact(
+    val instrument: String,
+    val path: Path,
+    val events: Int,
+    val resolution: GeneratedMidiArtifactResolution = GeneratedMidiArtifactResolution.NOTES
+)
 
 data class GeneratedMidiSnapshot(val artifacts: List<GeneratedMidiArtifact>)
 
@@ -131,10 +138,15 @@ class ApplicationServiceException(
 interface ArrangementApplicationService {
     suspend fun generate(request: GenerateArrangementRequest, progress: ProgressSink = ProgressSink.None): ArrangementSnapshot
     suspend fun generateRequiredMidi(root: Path, progress: ProgressSink = ProgressSink.None): GeneratedMidiSnapshot
+    suspend fun generateOptionalMidi(root: Path, progress: ProgressSink = ProgressSink.None): GeneratedMidiSnapshot =
+        throw UnsupportedOperationException("Optional MIDI layers are not available from this arrangement service")
     suspend fun renderApprovedStems(root: Path, renderer: InstrumentRenderer, progress: ProgressSink = ProgressSink.None): StemRenderResult
     fun load(root: Path): ArrangementSnapshot
     fun preview(root: Path): ArrangementSnapshot
     fun approve(root: Path): ArrangementSnapshot
+    fun approveCoreArrangement(root: Path) {
+        throw UnsupportedOperationException("Core-arrangement approval is not available from this arrangement service")
+    }
 }
 
 class DefaultArrangementApplicationService(
@@ -226,7 +238,7 @@ class DefaultArrangementApplicationService(
         val input = detailedInput(normalized, project)
         val arrangement = readApproved(normalized, input)
         val analyses = canonicalMidiAnalyses(projection)
-        val active = arrangement.sections.flatMap { it.instruments }.filter { it.mode == InstrumentMode.GENERATED }.map { it.name }.toSet()
+        val active = arrangement.sections.flatMap { it.instruments }.filter { it.mode == InstrumentMode.GENERATED }.map { it.name }.toSet() - OPTIONAL_GENERATED_ROLES
         val needsTransitionMidi = arrangement.sections.any { it.transitionOut.type.name != "NONE" }
         val total = active.size + if (needsTransitionMidi) 1 else 0
         var stage = 0
@@ -281,12 +293,6 @@ class DefaultArrangementApplicationService(
                 .let { accept("pad", it.path, it.notes.size, deliberateSilence = it.notes.isEmpty() && it.diagnostics.isNotEmpty()) }
         }
         coroutineContext.ensureActive()
-        if ("strings" in active) {
-            val path = normalized.resolve("midi/generated/strings.mid"); generating("strings", path)
-            val candidate = generatedCandidate(path)
-            StringsMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses, arrangementState, candidate)
-                .let { accept("strings", it.path, it.notes.size) }
-        }
         var transitionWindows = emptyList<TransitionMidiWindow>()
         var transitionTimelineEndTick: Long? = null
         if (needsTransitionMidi) {
@@ -328,6 +334,60 @@ class DefaultArrangementApplicationService(
                 .copy(generatedMidi = GeneratedMidiWorkflowReferences(
                     approval.arrangement.sha256, projection.contextSha256, registrySha256, GENERATOR_VERSION, GENERATOR_SEED, references
                 ))
+        }
+        GeneratedMidiSnapshot(artifacts)
+    }
+
+    /** Generates optional melodic layers only against a separately approved core. */
+    override suspend fun generateOptionalMidi(root: Path, progress: ProgressSink): GeneratedMidiSnapshot = mutate(root) { normalized ->
+        val project = readProject(normalized)
+        val projection = musicalAuthorityBuilder.arrangementGeneration(normalized)
+        val input = detailedInput(normalized, project)
+        val arrangement = readApproved(normalized, input)
+        val analyses = canonicalMidiAnalyses(projection)
+        val approval = requireCurrentCoreApproval(normalized, project, arrangement, analyses, projection)
+        val active = arrangement.sections.flatMap { it.instruments }
+            .filter { it.mode == InstrumentMode.GENERATED && it.name in OPTIONAL_GENERATED_ROLES }
+            .map { it.name }.toSet()
+        if (active.isEmpty()) return@mutate GeneratedMidiSnapshot(emptyList())
+
+        val registrySha256 = registrySha256()
+        val registry = InstrumentRegistryLoader(libraryRoot).load()
+        var arrangementState = approvedCoreState(normalized, project, arrangement, analyses, approval)
+        val artifacts = mutableListOf<GeneratedMidiArtifact>()
+        var stage = 0
+        fun generating(name: String, path: Path) {
+            stage++
+            progress.report(OperationProgress("generate-optional-midi", stage, active.size, "Generating optional $name MIDI", path))
+        }
+        if ("strings" in active) {
+            val path = normalized.resolve("midi/generated/strings.mid")
+            generating("strings", path)
+            val candidate = generatedCandidate(path)
+            val generated = StringsMidiGenerationAdapter(libraryRoot = libraryRoot)
+                .generate(normalized, project, arrangement, analyses, arrangementState, candidate)
+            val deliberateSilence = generated.notes.isEmpty() && generated.diagnostics.isNotEmpty()
+            val report = generatedRoleValidator.validate(GeneratedRoleValidationInput(
+                role = "strings", midi = generated.path, project = project, arrangement = arrangement,
+                projection = projection, registry = registry, arrangementSha256 = approval.arrangementSha256,
+                registrySha256 = registrySha256, arrangementState = arrangementState, deliberateSilence = deliberateSilence
+            ))
+            val reportPath = writeGeneratedMidiValidationReport(normalized, "strings", report)
+            require(report.passed) { "Generated strings MIDI failed validation: ${report.violations.joinToString("; ")}" }
+            publishGeneratedCandidate(candidate, path)
+            arrangementState = arrangementState.acceptValidated("strings", path)
+            artifacts += GeneratedMidiArtifact(
+                "strings", path, generated.notes.size,
+                if (generated.notes.isEmpty()) GeneratedMidiArtifactResolution.OFF else GeneratedMidiArtifactResolution.NOTES
+            )
+        }
+        val existing = requireNotNull(ProjectStore.read(normalized).workflow.generatedMidi) {
+            "Optional MIDI requires generated core evidence"
+        }
+        val optionalReferences = artifacts.map { artifact -> generatedReference(normalized, artifact) }
+        ProjectWorkflowStore.update(normalized) { workflow ->
+            workflow.markCurrent(WorkflowArtifact.GENERATED_MIDI)
+                .copy(generatedMidi = existing.copy(artifacts = (existing.artifacts.filterNot { it.id in OPTIONAL_GENERATED_ROLES } + optionalReferences).sortedBy { it.id }))
         }
         GeneratedMidiSnapshot(artifacts)
     }
@@ -382,6 +442,41 @@ class DefaultArrangementApplicationService(
                 .copy(arrangement = approvalReferences(normalized, approvedProject, input.planningInput))
         }
         snapshot(normalized, approvedProject, readApproved(normalized, input), approved, false)
+    }
+
+    override fun approveCoreArrangement(root: Path) = mutateBlocking(root) { normalized ->
+        val project = readProject(normalized)
+        val projection = musicalAuthorityBuilder.arrangementGeneration(normalized)
+        val input = detailedInput(normalized, project)
+        val arrangement = readApproved(normalized, input)
+        val analyses = canonicalMidiAnalyses(projection)
+        val arrangementApproval = requireNotNull(project.workflow.arrangement) {
+            "Core approval requires an approved detailed arrangement"
+        }
+        val generated = requireNotNull(project.workflow.generatedMidi) {
+            "Core approval requires validated core MIDI. Generate core MIDI first."
+        }
+        require(WorkflowArtifact.GENERATED_MIDI !in project.workflow.stale) {
+            "Core approval requires current generated core MIDI. Regenerate core MIDI first."
+        }
+        require(generated.arrangementSha256 == arrangementApproval.arrangement.sha256 &&
+            generated.authoritySha256 == projection.contextSha256 && generated.registrySha256 == registrySha256()) {
+            "Core approval inputs are stale. Regenerate Arrangement and core MIDI first."
+        }
+        val activeCore = arrangement.sections.flatMap { it.instruments }
+            .filter { it.mode == InstrumentMode.GENERATED && it.name in CoreArrangementApprovalReferences.CORE_GENERATED_ROLES }
+            .map { it.name }.toSet()
+        val artifacts = generated.artifacts.filter { it.id in CoreArrangementApprovalReferences.CORE_GENERATED_ROLES }.sortedBy { it.id }
+        require(artifacts.map { it.id }.toSet() == activeCore && artifacts.all { it.resolution == GeneratedMidiArtifactResolution.NOTES }) {
+            "Core approval requires every activated bass, drums, and pad artifact to be validated."
+        }
+        artifacts.forEach { requireCurrentReference(normalized, it.artifact); requireCurrentReference(normalized, it.validationReport) }
+        val state = acceptedPianoState(normalized, project, arrangement, analyses)
+        ProjectWorkflowStore.update(normalized) { workflow ->
+            workflow.markCurrent(WorkflowArtifact.CORE_ARRANGEMENT).copy(coreArrangement = CoreArrangementApprovalReferences(
+                arrangementApproval.arrangement.sha256, projection.contextSha256, registrySha256(), state.acceptedTracks.first().sha256, artifacts
+            ))
+        }
     }
 
     private fun detailedInput(root: Path, project: Project, includeArrangementState: Boolean = false): DetailedArrangementInput {
@@ -479,6 +574,64 @@ class DefaultArrangementApplicationService(
         }
         val fingerprint = sha256(artifacts.joinToString("|") { "${it.occurrenceId}:${it.sha256}" }.toByteArray(StandardCharsets.UTF_8))
         return ArrangementState.fromAcceptedPiano(requireNotNull(ppq), notes, fingerprint)
+    }
+
+    private fun requireCurrentCoreApproval(
+        root: Path,
+        project: Project,
+        arrangement: DetailedArrangement,
+        analyses: Map<String, MidiAnalysis>,
+        projection: ArrangementGenerationProjection
+    ): CoreArrangementApprovalReferences {
+        val core = requireNotNull(project.workflow.coreArrangement) {
+            "Optional layers require explicit core-arrangement approval. Generate and approve core MIDI first."
+        }
+        require(WorkflowArtifact.CORE_ARRANGEMENT !in project.workflow.stale) {
+            "Core arrangement approval is stale. Regenerate and approve core MIDI first."
+        }
+        val arrangementApproval = requireNotNull(project.workflow.arrangement) {
+            "Optional layers require an approved detailed arrangement."
+        }
+        require(core.arrangementSha256 == arrangementApproval.arrangement.sha256 && core.authoritySha256 == projection.contextSha256 &&
+            core.registrySha256 == registrySha256()) {
+            "Core arrangement approval does not match the current arrangement authority or instrument registry."
+        }
+        val piano = acceptedPianoState(root, project, arrangement, analyses)
+        require(core.pianoSha256 == piano.acceptedTracks.first().sha256) {
+            "Core arrangement approval does not match the accepted source melody."
+        }
+        core.artifacts.forEach { requireCurrentReference(root, it.artifact); requireCurrentReference(root, it.validationReport) }
+        return core
+    }
+
+    private fun approvedCoreState(
+        root: Path,
+        project: Project,
+        arrangement: DetailedArrangement,
+        analyses: Map<String, MidiAnalysis>,
+        approval: CoreArrangementApprovalReferences
+    ): ArrangementState {
+        var state = acceptedPianoState(root, project, arrangement, analyses)
+        approval.artifacts.sortedBy { CORE_ROLE_ORDER.indexOf(it.id) }.forEach { reference ->
+            state = state.acceptValidated(reference.id, root.resolve(reference.artifact.file))
+        }
+        return state
+    }
+
+    private fun requireCurrentReference(root: Path, reference: WorkflowArtifactReference) {
+        val path = root.resolve(reference.file).normalize()
+        require(path.startsWith(root) && Files.isRegularFile(path) && sha256(path) == reference.sha256) {
+            "Approved core artifact is missing or has changed: ${reference.file}"
+        }
+    }
+
+    private fun generatedReference(root: Path, artifact: GeneratedMidiArtifact): GeneratedMidiArtifactReference {
+        val relative = root.relativize(artifact.path.toAbsolutePath().normalize()).toString().replace('\\', '/')
+        val report = root.resolve(GeneratedMidiArtifactPaths.validationReport(artifact.instrument))
+        return GeneratedMidiArtifactReference(
+            artifact.instrument, WorkflowArtifactReference(relative, sha256(artifact.path)),
+            WorkflowArtifactReference(GeneratedMidiArtifactPaths.validationReport(artifact.instrument), sha256(report)), artifact.resolution
+        )
     }
 
     private fun generatedCandidate(output: Path): Path = output.resolveSibling(".${output.fileName}.candidate")
@@ -660,6 +813,8 @@ class DefaultArrangementApplicationService(
     private companion object {
         const val GENERATOR_VERSION = "arrangement-generators-v1"
         const val GENERATOR_SEED = 0L
+        val OPTIONAL_GENERATED_ROLES = setOf("strings")
+        val CORE_ROLE_ORDER = listOf("bass", "drums", "pad")
         val locks = ConcurrentHashMap<Path, Mutex>()
         val json = Json { ignoreUnknownKeys = false }
     }

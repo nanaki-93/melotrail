@@ -45,7 +45,9 @@ data class StringsGenerationRequest(
     val midiChannel: Int = 0,
     val midiProgram: Int? = null,
     /** Complete accepted core arrangement, not just the source analysis. */
-    val arrangementState: ArrangementState? = null
+    val arrangementState: ArrangementState? = null,
+    /** Section capacity registered from the approved core before strings run. */
+    val densityBudget: DensityBudget? = null
 ) {
     fun requireValid() {
         require(sectionIndex >= 0 && sectionStartTick >= 0 && sectionLengthTicks > 0) { "Strings section timing is invalid" }
@@ -55,6 +57,11 @@ data class StringsGenerationRequest(
         require(register in REGISTER_RANGES) { "Unsupported strings register '$register'. Allowed registers: ${REGISTER_RANGES.keys.joinToString()}" }
         require(midiChannel in 0..15 && (midiProgram == null || midiProgram in 0..127)) { "Strings MIDI routing is invalid" }
         arrangementState?.requireTrack(ArrangementState.PIANO)
+        densityBudget?.let {
+            require(it.startTick == sectionStartTick && it.endTick == sectionStartTick + sectionLengthTicks) {
+                "Strings density budget does not match its section"
+            }
+        }
         require(tempoMap.isNotEmpty() && tempoMap.first().tick == 0L && timeSignatures.isNotEmpty() && timeSignatures.first().tick == 0L) { "Strings maps must start at tick 0" }
         tempoMap.zipWithNext().forEach { (first, second) -> require(first.tick < second.tick) { "Strings tempo changes must be ordered" } }
         timeSignatures.zipWithNext().forEach { (first, second) -> require(first.tick < second.tick) { "Strings time signatures must be ordered" } }
@@ -79,6 +86,9 @@ class DeterministicStringsMidiGenerator {
     fun generate(request: StringsGenerationRequest): StringsGenerationResult {
         request.requireValid()
         if (request.density == 0.0) return StringsGenerationResult(emptyList(), listOf("Strings density is 0.0; wrote silence."))
+        if (request.densityBudget?.permitsOptionalLayer == false) {
+            return StringsGenerationResult(emptyList(), listOf("Strings resolved OFF: approved core density budget is fully occupied."))
+        }
         if (request.role == StringsMidiRole.CLIMAX_REINFORCEMENT && request.sectionPurpose != SongSectionPurpose.CLIMAX) {
             return StringsGenerationResult(emptyList(), listOf("Climax reinforcement is silent outside a climax section."))
         }
@@ -103,6 +113,10 @@ class DeterministicStringsMidiGenerator {
                 diagnostics += "No strings voicing fits the collision-safe ${request.register} register at tick ${chord.startTick}; left silent."
                 return@flatMap emptyList()
             }
+            if (!densityPermits(request, voicing.size)) {
+                diagnostics += "Strings resolved OFF at tick ${request.sectionStartTick + chord.startTick}: density budget has ${request.densityBudget?.remaining ?: 0} remaining slots for ${voicing.size} voices."
+                return@flatMap emptyList()
+            }
             previous = voicing
             val gap = minOf(releaseGapTicks(request.ppq), chord.endTick - chord.startTick - 1)
             voicing.map { pitch -> StringsMidiNote(request.sectionStartTick + chord.startTick, request.sectionStartTick + chord.endTick - gap, pitch, velocity(request.energy, role)) }
@@ -120,13 +134,25 @@ class DeterministicStringsMidiGenerator {
         var previous: Int? = null
         selectedChords(request.chords, request.density).forEachIndexed { index, chord ->
             val harmony = harmonyFor(request, chord, diagnostics) ?: return null
-            val pitch = contourPitch(harmony, range, previous, index) ?: return null
             val beat = (request.ppq * 4L / request.timeSignatures.last { it.tick <= chord.startTick }.denominator).coerceAtLeast(1)
+            val start = request.sectionStartTick + chord.startTick
+            val responseEnd = minOf(request.sectionStartTick + chord.endTick, start + beat)
+            if (request.arrangementState?.melodyIsActive(start, responseEnd) == true) {
+                diagnostics += "Countermelody skipped tick $start because the source melody is active."
+                return@forEachIndexed
+            }
+            if (!densityPermits(request, 1)) {
+                diagnostics += "Countermelody skipped tick $start because the density budget has no remaining slot."
+                return@forEachIndexed
+            }
+            val pitch = contourPitch(harmony, range, previous, index) ?: return null
             val end = minOf(chord.endTick, chord.startTick + beat) - minOf(releaseGapTicks(request.ppq), beat - 1)
             if (end <= chord.startTick) return null
             notes += StringsMidiNote(request.sectionStartTick + chord.startTick, request.sectionStartTick + end, pitch, velocity(request.energy, StringsMidiRole.SIMPLE_COUNTERMELODY))
             previous = pitch
         }
+        if (notes.isEmpty()) return null
+        diagnostics += "Countermelody used ${notes.size} melodic response gap(s)."
         validate(notes, request, range)
         return StringsGenerationResult(notes, diagnostics.distinct())
     }
@@ -155,6 +181,9 @@ class DeterministicStringsMidiGenerator {
         val start = maxOf(configured.first, sourceTop + SOURCE_CLEARANCE_SEMITONES)
         return if (start <= configured.last) start..configured.last else null
     }
+
+    private fun densityPermits(request: StringsGenerationRequest, voices: Int): Boolean =
+        request.densityBudget?.remaining?.let { it >= voices } ?: true
 
     private fun selectedChords(chords: List<MidiChord>, density: Double): List<MidiChord> {
         if (chords.isEmpty()) return emptyList()
@@ -233,6 +262,9 @@ class DeterministicStringsMidiGenerator {
             require(note.pitch in range && note.velocity in 1..127 && note.endTick > note.startTick) { "Generated strings note is invalid" }
             require(note.startTick >= request.sectionStartTick && note.endTick < request.sectionStartTick + request.sectionLengthTicks) { "Generated strings note escapes its section" }
             require(note.startTick >= (lastEnd[note.pitch] ?: Long.MIN_VALUE)) { "Generated strings have a same-pitch overlap" }
+            require(request.arrangementState?.melodyCollides(note.startTick, note.endTick, note.pitch) != true) {
+                "Generated strings note collides with accepted source melody"
+            }
             lastEnd[note.pitch] = note.endTick
         }
     }
@@ -271,7 +303,7 @@ class StringsMidiGenerationAdapter(
             require(plans.size <= 1) { "Detailed arrangement section ${section.index + 1} contains duplicate strings plans" }
             plans.singleOrNull()?.let { plan ->
                 require(plan.name == LogicalInstrument.STRINGS.wireName && plan.mode == InstrumentMode.GENERATED) { "Detailed arrangement section ${section.index + 1} has an invalid strings plan" }
-                requests += StringsGenerationRequest(position, section.role, start, analysis.ppq, analysis.tempoMap, analysis.timeSignatures, analysis.durationTicks, analysis.key, analysis.chords, analysis.pitchRange, analysis.melodicRange, analysis.noteDensity, analysis.rhythmicDensity, section.energy, plan.density, plan.role.toMidiRole(), plan.register.toStringsRegister(), strings.midiChannelZeroBased ?: 0, strings.midiProgram, arrangementState)
+                requests += StringsGenerationRequest(position, section.role, start, analysis.ppq, analysis.tempoMap, analysis.timeSignatures, analysis.durationTicks, analysis.key, analysis.chords, analysis.pitchRange, analysis.melodicRange, analysis.noteDensity, analysis.rhythmicDensity, section.energy, plan.density, plan.role.toMidiRole(), plan.register.toStringsRegister(), strings.midiChannelZeroBased ?: 0, strings.midiProgram, arrangementState, arrangementState?.densityBudget(start, start + analysis.durationTicks))
             }
             start = Math.addExact(start, analysis.durationTicks)
         }
