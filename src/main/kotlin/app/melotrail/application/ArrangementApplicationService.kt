@@ -247,10 +247,11 @@ class DefaultArrangementApplicationService(
             "Approved arrangement is stale for the current instrument registry. Regenerate Arrangement first."
         }
         val registry = InstrumentRegistryLoader(libraryRoot).load()
-        fun accept(name: String, candidate: Path, events: Int) {
+        fun accept(name: String, candidate: Path, events: Int, deliberateSilence: Boolean = false) {
             val report = generatedRoleValidator.validate(GeneratedRoleValidationInput(
                 role = name, midi = candidate, project = project, arrangement = arrangement,
-                projection = projection, registry = registry, arrangementSha256 = approval.arrangement.sha256, registrySha256 = registrySha256
+                projection = projection, registry = registry, arrangementSha256 = approval.arrangement.sha256, registrySha256 = registrySha256,
+                arrangementState = arrangementState, deliberateSilence = deliberateSilence
             ))
             val reportPath = writeGeneratedMidiValidationReport(normalized, name, report)
             require(report.passed) { "Generated $name MIDI failed validation: ${report.violations.joinToString("; ")}" }
@@ -277,7 +278,7 @@ class DefaultArrangementApplicationService(
             val path = normalized.resolve("midi/generated/pad.mid"); generating("pad", path)
             val candidate = generatedCandidate(path)
             PadMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses, arrangementState, candidate)
-                .let { accept("pad", it.path, it.notes.size) }
+                .let { accept("pad", it.path, it.notes.size, deliberateSilence = it.notes.isEmpty() && it.diagnostics.isNotEmpty()) }
         }
         coroutineContext.ensureActive()
         if ("strings" in active) {

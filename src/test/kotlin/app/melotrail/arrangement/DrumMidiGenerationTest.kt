@@ -84,6 +84,22 @@ class DrumMidiGenerationTest {
     }
 
     @Test
+    fun `second motif bar can answer an accepted piano or bass attack`() {
+        val state = ArrangementState(
+            ppq = 480,
+            acceptedTracks = listOf(
+                AcceptedArrangementTrack("piano", 480, "a".repeat(64), listOf(MidiNote(0, 60, 80, 0, 3_840))),
+                AcceptedArrangementTrack("bass", 480, "b".repeat(64), listOf(MidiNote(0, 36, 80, 2_160, 2_400)))
+            )
+        )
+
+        val hits = generator.generate(request(length = 3_840, arrangementState = state)).hits
+
+        assertTrue(hits.any { it.name == "kick" && it.startTick == 2_160L })
+        assertEquals(hits, generator.generate(request(length = 3_840, arrangementState = state)).hits)
+    }
+
+    @Test
     fun `low PPQ swung fill closes a drum hit before the next same-pitch attack`() {
         val hits = generator.generate(request(ppq = 24, length = 96, role = DrumsRole.BUILD, swing = 0.5, fillLastBar = true)).hits
 
@@ -162,10 +178,11 @@ class DrumMidiGenerationTest {
         swing: Double = 0.0,
         fillLastBar: Boolean = false,
         transitionIntent: SongTransitionIntent = SongTransitionIntent.NONE,
-        noteMap: Map<String, Int> = this.noteMap
+        noteMap: Map<String, Int> = this.noteMap,
+        arrangementState: ArrangementState? = null
     ) = DrumGenerationRequest(
         sectionIndex, start, ppq, listOf(MidiTempoChange(0, 120.0)), signatures, length, energy, density, role,
-        kickDensity, snarePattern, hiHatDensity, swing, fillLastBar, transitionIntent, 9, noteMap
+        kickDensity, snarePattern, hiHatDensity, swing, fillLastBar, transitionIntent, 9, noteMap, arrangementState
     )
 
     private fun section(index: Int, role: DrumsRole, fill: Boolean) = DetailedArrangementSection(

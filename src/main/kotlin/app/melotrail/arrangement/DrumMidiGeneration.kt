@@ -87,7 +87,10 @@ class DeterministicDrumMidiGenerator {
 
         val bars = barWindows(request)
         val hits = linkedMapOf<Pair<Long, String>, DrumMidiHit>()
-        bars.forEach { bar -> addPattern(request, bar, hits) }
+        // Two bars are the normal motif unit. A BUILD can use a four-bar unit
+        // so its deterministic variation does not reset at every bar.
+        val motifLengthBars = if (request.role == DrumsRole.BUILD && bars.size >= 4) 4 else 2
+        bars.forEachIndexed { barIndex, bar -> addPattern(request, bar, barIndex % motifLengthBars, hits) }
         if (request.fillLastBar) addFill(request, bars.last(), hits)
         // A short PPQ combined with swing or a final-bar fill can place a later
         // same-pitch hit before the earlier hit's nominal end. Keep both hits,
@@ -98,7 +101,7 @@ class DeterministicDrumMidiGenerator {
         return DrumGenerationResult(result, emptyList())
     }
 
-    private fun addPattern(request: DrumGenerationRequest, bar: BarWindow, output: MutableMap<Pair<Long, String>, DrumMidiHit>) {
+    private fun addPattern(request: DrumGenerationRequest, bar: BarWindow, motifBar: Int, output: MutableMap<Pair<Long, String>, DrumMidiHit>) {
         val beat = bar.ticksPerBeat
         val role = request.role
         val kickBeats = when (role) {
@@ -107,6 +110,7 @@ class DeterministicDrumMidiGenerator {
             DrumsRole.BUILD -> (0 until bar.numerator).toList()
         }
         addSlots(request, bar, output, "kick", kickBeats.map { Slot(it.toLong() * beat, beat, false) }, request.kickDensity)
+        addContextualKick(request, bar, motifBar, output)
 
         val snareBeats = when (request.snarePattern) {
             SnarePattern.NONE -> emptyList()
@@ -127,6 +131,31 @@ class DeterministicDrumMidiGenerator {
         if (role == DrumsRole.SOFT_LOFI && request.energy >= 0.55 && bar.length >= beat) {
             addSlots(request, bar, output, "openHat", listOf(Slot(bar.length - beat / 2, beat / 2, true)), request.hiHatDensity)
         }
+    }
+
+    /**
+     * On the second (or later) bar of a motif, a spare bass/piano attack can
+     * become a kick. This ties the motif to accepted core MIDI while retaining
+     * the reviewed plan's density as the hard ceiling.
+     */
+    private fun addContextualKick(
+        request: DrumGenerationRequest,
+        bar: BarWindow,
+        motifBar: Int,
+        output: MutableMap<Pair<Long, String>, DrumMidiHit>
+    ) {
+        if (motifBar == 0 || request.kickDensity == 0.0) return
+        val barStart = request.sectionStartTick + bar.start
+        val rhythm = request.arrangementState?.pianoBassRhythmMap(barStart, barStart + bar.length) ?: return
+        val minimumDistance = (bar.ticksPerBeat / 4).coerceAtLeast(1)
+        val candidate = rhythm.tracks.flatMap(ArrangementTrackRhythm::onsets).sorted()
+            .firstOrNull { onset ->
+                val offset = onset - barStart
+                offset > 0 && offset < bar.length && offset % bar.ticksPerBeat != 0L &&
+                    output.values.none { it.name == "kick" && kotlin.math.abs(it.startTick - onset) < minimumDistance }
+            } ?: return
+        val offset = candidate - barStart
+        addHit(request, bar, output, "kick", Slot(offset, minimumDistance, offset % bar.ticksPerBeat != 0L), velocity(request.energy), applySwing = false)
     }
 
     private fun addFill(request: DrumGenerationRequest, bar: BarWindow, output: MutableMap<Pair<Long, String>, DrumMidiHit>) {

@@ -60,6 +60,20 @@ class GeneratedRoleValidationTest {
     }
 
     @Test
+    fun `drum validator checks the approved backbeat against accepted core state`() {
+        val context = context("drums")
+        writeMidi(context.midi, listOf(Note(0, 120, 36, 100)), channel = 9)
+        val acceptedCore = ArrangementState.fromAcceptedPiano(
+            480, listOf(MidiNote(0, 60, 90, 0, 1_920)), "c".repeat(64)
+        )
+
+        val report = DeterministicGeneratedRoleValidator().validate(context.input().copy(arrangementState = acceptedCore))
+
+        assertFalse(report.passed)
+        assertTrue(report.violations.contains("Drum backbeat does not match the approved beats 2 and 4 pattern"))
+    }
+
+    @Test
     fun `approved Cohesion overlay window permits a transition crossing its occurrence boundary`() {
         val base = context()
         val first = base.projection.occurrences.single()

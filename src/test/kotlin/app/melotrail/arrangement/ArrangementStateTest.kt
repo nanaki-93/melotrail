@@ -38,6 +38,11 @@ class ArrangementStateTest {
         assertEquals(listOf("piano", "bass"), accepted.acceptedTracks.map { it.role })
         assertEquals(4, accepted.fullAcceptedMidi().size)
         assertEquals(listOf(0L, 480L), accepted.summary("bass").onsets)
+        val rhythm = accepted.pianoBassRhythmMap(0, 960)
+        assertEquals(listOf(0L, 480L), rhythm.track("piano")?.onsets)
+        assertTrue(rhythm.track("bass")!!.isActiveAt(600))
+        assertTrue(rhythm.hasOnsetNear(480, 0))
+        assertEquals(2, accepted.ensembleSpaceMap(0, 960).maximumSimultaneousNotes)
         assertThrows(IllegalArgumentException::class.java) { accepted.acceptValidated("bass", bass) }
         assertTrue(Files.isRegularFile(bass))
 

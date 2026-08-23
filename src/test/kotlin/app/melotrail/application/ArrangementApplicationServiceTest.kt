@@ -11,8 +11,13 @@ import app.melotrail.arrangement.Part
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.ProjectV4Envelope
+import app.melotrail.arrangement.DeterministicStemMixer
+import app.melotrail.arrangement.InstrumentRenderer
+import app.melotrail.arrangement.LogicalInstrument
+import app.melotrail.arrangement.MixedStem
 import app.melotrail.arrangement.CompositionSettings
 import app.melotrail.arrangement.RenderFormat
+import app.melotrail.arrangement.RenderResult
 import app.melotrail.arrangement.StructureOccurrence
 import app.melotrail.arrangement.TestSoundLibrary
 import app.melotrail.harmony.ChordEvent
@@ -38,6 +43,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
+import app.melotrail.audio.AudioBuffer
+import app.melotrail.audio.AudioFormat
 import javax.sound.midi.MidiEvent
 import javax.sound.midi.MidiSystem
 import javax.sound.midi.Sequence
@@ -119,6 +126,42 @@ class ArrangementApplicationServiceTest {
         assertTrue(arrangement.sections.first().transitionOut.type in setOf(app.melotrail.arrangement.TransitionType.BRIDGE, app.melotrail.arrangement.TransitionType.CROSSFADE))
     }
 
+    @Test
+    fun `validated piano bass drums and pad render a core draft without strings`() = runBlocking {
+        val root = project("core-draft", structure = listOf("A", "A"))
+        approveSourceSongForArrangement(root)
+        val library = coreLibrary(root)
+        val service = DefaultArrangementApplicationService(
+            deterministicGlobalPlanner = object : app.melotrail.arrangement.GlobalSongPlanner {
+                override fun plan(input: app.melotrail.arrangement.SongPlanningInput): app.melotrail.arrangement.SongPlan =
+                    app.melotrail.arrangement.DeterministicGlobalSongPlanner().plan(input).let { plan ->
+                        plan.copy(sections = plan.sections.map { section ->
+                            section.copy(instrumentProgression = if (section.index == 0) listOf("piano", "bass", "drums") else listOf("piano", "bass", "pad"))
+                        })
+                            .also { it.requireValid(input) }
+                    }
+            },
+            libraryRoot = library
+        )
+
+        service.generate(GenerateArrangementRequest(root, instruments = listOf("piano", "bass", "drums", "pad")))
+        val generated = service.generateRequiredMidi(root)
+        val renderer = CoreDraftRenderer()
+        val coreMidi = mapOf(
+            LogicalInstrument.PIANO to root.resolve("midi/clean/A.mid"),
+            LogicalInstrument.BASS to root.resolve("midi/generated/bass.mid"),
+            LogicalInstrument.DRUMS to root.resolve("midi/generated/drums.mid"),
+            LogicalInstrument.PAD to root.resolve("midi/generated/pad.mid")
+        )
+        coreMidi.forEach { (instrument, midi) ->
+            renderer.render(midi, instrument, root.resolve("draft/core/${instrument.wireName}.wav"), RenderFormat(), 100)
+        }
+
+        assertTrue(generated.artifacts.map { it.instrument }.containsAll(listOf("bass", "drums", "pad")))
+        assertTrue(coreMidi.keys.all { Files.isRegularFile(root.resolve("draft/core/${it.wireName}.wav")) })
+        assertFalse(Files.exists(root.resolve("draft/core/strings.wav")))
+    }
+
     private fun project(name: String, structure: List<String> = listOf("A")): Path {
         val root = tempDir.resolve(name)
         Files.createDirectories(root.resolve("source")); Files.createDirectories(root.resolve("midi/clean"))
@@ -155,4 +198,29 @@ class ArrangementApplicationServiceTest {
     }
 
     private fun sha256(path: Path): String = java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
+
+    private fun coreLibrary(root: Path): Path {
+        val library = root.resolve("core-draft-library")
+        val source = TestSoundLibrary.root()
+        Files.walk(source).use { paths -> paths.forEach { path ->
+            val target = library.resolve(source.relativize(path).toString())
+            if (Files.isDirectory(path)) Files.createDirectories(target) else Files.copy(path, target)
+        } }
+        mapOf("piano" to "C2", "bass" to "E1", "pad" to "C2", "strings" to "C2").forEach { (name, sample) ->
+            Files.writeString(library.resolve("$name/$name.sfz"), "<region> sample=samples/$sample.wav lokey=0 hikey=127")
+        }
+        return library
+    }
+
+    private class CoreDraftRenderer : InstrumentRenderer {
+        override suspend fun render(midi: Path, instrument: LogicalInstrument, output: Path, format: RenderFormat, expectedFrames: Long): RenderResult {
+            Files.createDirectories(requireNotNull(output.parent))
+            val audio = AudioBuffer(
+                FloatArray((expectedFrames * format.channels).toInt()) { 0.1f },
+                AudioFormat(format.sampleRate, format.channels, 24, false, false, "WAV"), expectedFrames.toDouble() / format.sampleRate
+            )
+            DeterministicStemMixer().writeWav(MixedStem(audio, listOf(instrument.wireName)), output)
+            return RenderResult(output, format.sampleRate, format.channels, 24, expectedFrames, audio.duration, 0.1, "fake", "core", "", "")
+        }
+    }
 }

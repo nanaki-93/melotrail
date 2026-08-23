@@ -99,7 +99,18 @@ class DeterministicPadMidiGenerator {
         var previousVoicing: List<Int>? = null
         selectedChords(request.chords, request.density).forEach { chord ->
             val harmony = harmonyFor(request, chord, diagnostics) ?: return@forEach
-            val voicing = selectVoicing(harmony, request.energy, request.register, previousVoicing)
+            val space = request.arrangementState?.ensembleSpaceMap(
+                request.sectionStartTick + chord.startTick, request.sectionStartTick + chord.endTick
+            )
+            if (space?.isDense == true) {
+                diagnostics += "Dense accepted core at section ${request.sectionIndex + 1} tick ${chord.startTick}; pad rests."
+                return@forEach
+            }
+            val voicing = selectVoicing(harmony, request.energy, request.register, previousVoicing, space)
+            if (voicing == null) {
+                diagnostics += "No pad register space at section ${request.sectionIndex + 1} tick ${chord.startTick}; pad rests."
+                return@forEach
+            }
             val gap = minOf(releaseGapTicks(request.ppq), chord.endTick - chord.startTick - 1)
             val end = chord.endTick - gap
             notes += voicing.map { pitch ->
@@ -157,17 +168,33 @@ class DeterministicPadMidiGenerator {
         return ChordHarmony(root, tones)
     }
 
-    private fun selectVoicing(harmony: ChordHarmony, energy: Double, register: String, previous: List<Int>?): List<Int> {
+    private fun selectVoicing(
+        harmony: ChordHarmony,
+        energy: Double,
+        register: String,
+        previous: List<Int>?,
+        space: EnsembleSpaceMap?
+    ): List<Int>? {
         val tones = when {
             energy < REDUCED_VOICING_ENERGY -> intArrayOf(harmony.intervals.first(), harmony.intervals.first { it % 12 == 7 })
             energy < SEVENTH_VOICING_ENERGY -> harmony.intervals.take(3).toIntArray()
             else -> harmony.intervals
         }.map { (harmony.root + it) % 12 }
         val candidates = candidates(tones, requireNotNull(PadGenerationRequest.REGISTER_RANGES[register]))
-        require(candidates.isNotEmpty()) { "Pad chord cannot be voiced in $register register" }
-        return candidates.minWith(compareBy<List<Int>> {
+            .filter { voicing -> hasEnsembleSpace(voicing, space) }
+        return candidates.minWithOrNull(compareBy<List<Int>> {
             previous?.zip(it)?.sumOf { (before, after) -> abs(after - before) } ?: 0
         }.thenBy { voicing -> voicing.sumOf { abs(it - registerCenter(register)) } }.thenBy { it.joinToString(",") })
+    }
+
+    private fun hasEnsembleSpace(voicing: List<Int>, space: EnsembleSpaceMap?): Boolean {
+        if (space == null) return true
+        // Avoid the source melody's immediate register and keep the sustained
+        // pad above the bass's low-end footprint. If either rule cannot be met,
+        // silence is the intentional conservative result.
+        if (voicing.any { padPitch -> space.pianoPitches.any { pianoPitch -> abs(padPitch - pianoPitch) <= MASKING_DISTANCE_SEMITONES } }) return false
+        val highestBass = space.bassPitches.maxOrNull()
+        return highestBass == null || voicing.all { it > highestBass + BASS_CLEARANCE_SEMITONES }
     }
 
     private fun candidates(pitchClasses: List<Int>, range: IntRange): List<List<Int>> = buildList {
@@ -222,6 +249,8 @@ class DeterministicPadMidiGenerator {
         const val MIN_VELOCITY = 34
         const val MAX_VELOCITY = 76
         const val RELEASE_GAP_DIVISOR = 24
+        const val MASKING_DISTANCE_SEMITONES = 2
+        const val BASS_CLEARANCE_SEMITONES = 4
         val CHORD_SYMBOL = Regex("^([A-G](?:#|b)?)(|m|min|7|maj7|m7|min7|maj9|m9|min9|add9|sus2|sus4|sus)$", RegexOption.IGNORE_CASE)
     }
 }

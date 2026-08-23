@@ -76,6 +76,10 @@ data class GeneratedRoleValidationInput(
     val arrangementSha256: String,
     val registrySha256: String,
     val policy: RoleValidationPolicy = RoleValidationPolicy(),
+    /** Accepted core MIDI used to assess interaction before this candidate is admitted. */
+    val arrangementState: ArrangementState? = null,
+    /** Generator-owned evidence that an intentional rest was selected rather than a missing artifact. */
+    val deliberateSilence: Boolean = false,
     /** Exact windows published by the transition generator. Required for the transitions role. */
     val transitionWindows: List<TransitionMidiWindow> = emptyList(),
     /** Exact generated transition timeline end. Required for the transitions role. */
@@ -96,7 +100,7 @@ class DeterministicGeneratedRoleValidator : GeneratedRoleValidator {
         val notes = readNotes(sequence, violations)
         val occurrences = input.projection.occurrences
         val active = activeOccurrences(input.role, input.arrangement, occurrences)
-        if (active.isNotEmpty() && notes.isEmpty()) violations += "Activated role has no notes"
+        if (active.isNotEmpty() && notes.isEmpty() && !silenceAllowed(input, active)) violations += "Activated role has no notes"
         if (notes.groupBy { listOf(it.channel, it.pitch, it.velocity, it.start, it.end) }.any { it.value.size > 1 }) violations += "MIDI contains exact duplicate notes"
         if (!metadataMatches(sequence, input)) violations += "MIDI tempo or meter does not preserve canonical settings"
         val songEnd = if (input.role == "transitions") requireNotNull(input.transitionTimelineEndTick) {
@@ -115,6 +119,7 @@ class DeterministicGeneratedRoleValidator : GeneratedRoleValidator {
             "piano", "pad", "strings" -> validateSustainedHarmony(notes, input, violations)
             "bass" -> validateBass(notes, input, warnings, violations)
             "drums" -> validateDrums(notes, input, active, violations)
+            "pad" -> validatePad(notes, input, violations)
         }
         return report(input, notes, violations, warnings)
     }
@@ -177,12 +182,64 @@ class DeterministicGeneratedRoleValidator : GeneratedRoleValidator {
     }
 
     private fun validateDrums(notes: List<Note>, input: GeneratedRoleValidationInput, active: List<MusicalOccurrence>, violations: MutableList<String>) {
+        val kit = input.registry.resolveApprovedRole(input.project, LogicalInstrument.DRUMS)
+        val kick = requireNotNull(kit.noteMap["kick"]); val snare = requireNotNull(kit.noteMap["snare"]); val closedHat = requireNotNull(kit.noteMap["closedHat"])
+        val beat = input.projection.harmonyPpq * 4L / input.projection.meter.denominator
         active.forEach { occurrence ->
-            val density = input.arrangement.sections.single { it.instanceId == occurrence.occurrenceId }.instruments.filterIsInstance<DrumsInstrumentPlan>().singleOrNull()?.density ?: return@forEach
+            val plan = input.arrangement.sections.single { it.instanceId == occurrence.occurrenceId }.instruments.filterIsInstance<DrumsInstrumentPlan>().singleOrNull() ?: return@forEach
+            val density = plan.density
             val beats = (occurrence.endTick - occurrence.startTick).toDouble() / input.projection.harmonyPpq
             val maximum = ceil(beats * (1.0 + density * input.policy.densityNotesPerBeatAtFullDensity)).toInt()
             if (notes.count { it.start in occurrence.startTick until occurrence.endTick } > maximum) violations += "Drum density exceeds approved arrangement bound"
+            val occurrenceNotes = notes.filter { it.start in occurrence.startTick until occurrence.endTick }
+            if (input.arrangementState != null && density > 0.0 && plan.snarePattern == SnarePattern.BEATS_2_4 && input.projection.meter.numerator == 4) {
+                val backbeats = listOf(occurrence.startTick + beat, occurrence.startTick + beat * 3).filter { it < occurrence.endTick }
+                val selected = backbeats.take(ceil(backbeats.size * density).toInt().coerceIn(1, backbeats.size))
+                if (selected.any { expected -> occurrenceNotes.none { it.pitch == snare && it.start == expected } }) {
+                    violations += "Drum backbeat does not match the approved beats 2 and 4 pattern"
+                }
+            }
+            if (input.arrangementState != null && plan.swing > 0.0) {
+                val swungHat = occurrenceNotes.any { note ->
+                    note.pitch == closedHat && (note.start - occurrence.startTick) % beat > beat / 2
+                }
+                if (!swungHat) violations += "Drum swing has no delayed offbeat hi-hat"
+            }
+            if (input.arrangementState != null && plan.fillLastBar) {
+                val finalBeat = occurrence.endTick - beat
+                if (occurrenceNotes.count { it.pitch == snare && it.start >= finalBeat } < 2) violations += "Drum fill is missing from the final bar"
+            }
+            val bassOnsets = input.arrangementState?.track("bass")?.notes.orEmpty().map(MidiNote::startTick)
+                .filter { it in occurrence.startTick until occurrence.endTick }
+            if (bassOnsets.isNotEmpty() && occurrenceNotes.filter { it.pitch == kick }.none { drum -> bassOnsets.any { bass -> abs(drum.start - bass) <= beat / 4 } }) {
+                violations += "Drum kick has no accepted bass onset interaction"
+            }
         }
+    }
+
+    private fun validatePad(notes: List<Note>, input: GeneratedRoleValidationInput, violations: MutableList<String>) {
+        val state = input.arrangementState ?: return
+        val piano = state.track(ArrangementState.PIANO)?.notes.orEmpty()
+        val bass = state.track("bass")?.notes.orEmpty()
+        notes.forEach { pad ->
+            if (piano.any { source -> source.startTick < pad.end && pad.start < source.endTick && abs(source.pitch - pad.pitch) <= 2 }) {
+                violations += "Pad note masks the accepted piano register"
+            }
+            if (bass.any { source -> source.startTick < pad.end && pad.start < source.endTick && pad.pitch <= source.pitch + 4 }) {
+                violations += "Pad note overlaps the accepted bass register"
+            }
+        }
+        notes.groupBy(Note::start).toSortedMap().values.map { group -> group.sortedBy(Note::pitch) }.zipWithNext().forEach { (left, right) ->
+            left.zip(right).forEach { (before, after) -> if (abs(after.pitch - before.pitch) > 12) violations += "Pad voice leading exceeds one octave" }
+        }
+    }
+
+    private fun silenceAllowed(input: GeneratedRoleValidationInput, active: List<MusicalOccurrence>): Boolean = when (input.role) {
+        "pad" -> active.all { occurrence ->
+            val plan = input.arrangement.sections.single { it.instanceId == occurrence.occurrenceId }.instruments.filterIsInstance<PadInstrumentPlan>().single()
+            plan.density == 0.0 || input.deliberateSilence || input.arrangementState?.ensembleSpaceMap(occurrence.startTick, occurrence.endTick)?.isDense == true
+        }
+        else -> false
     }
 
     private fun validateTransitions(notes: List<Note>, input: GeneratedRoleValidationInput, violations: MutableList<String>) {

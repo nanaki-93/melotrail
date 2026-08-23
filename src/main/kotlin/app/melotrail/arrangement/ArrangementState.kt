@@ -34,6 +34,36 @@ data class ArrangementState(
 
     fun summary(role: String): ArrangementTrackSummary = requireTrack(role).summary
 
+    /**
+     * Exact piano/bass rhythm evidence for the drum generator.  This is MIDI
+     * state, not a rendered mix: onsets describe attacks and activity retains
+     * held notes so a groove can distinguish a rest from a sustained harmony.
+     */
+    fun pianoBassRhythmMap(startTick: Long, endTick: Long): ArrangementRhythmMap =
+        rhythmMap(startTick, endTick, setOf(PIANO, "bass"))
+
+    /**
+     * Register and activity evidence for a potential sustained layer.  It is
+     * intentionally derived only from accepted tracks, before the candidate
+     * pad itself is admitted to the arrangement state.
+     */
+    fun ensembleSpaceMap(startTick: Long, endTick: Long): EnsembleSpaceMap {
+        require(startTick >= 0 && endTick > startTick) { "Ensemble-space bounds are invalid" }
+        // Drums contribute rhythmic density but do not occupy pitched register
+        // space, so they must not make a pad rest by themselves.
+        val notes = acceptedTracks.filterNot { it.role == "drums" }.flatMap { track -> track.notes.filter { it.startTick < endTick && startTick < it.endTick }
+            .map { EnsembleSpaceNote(track.role, it.pitch, maxOf(startTick, it.startTick), minOf(endTick, it.endTick)) } }
+        val boundaries = (listOf(startTick, endTick) + notes.flatMap { listOf(it.startTick, it.endTick) }).distinct().sorted()
+        val maximumSimultaneousNotes = boundaries.dropLast(1).maxOfOrNull { tick -> notes.count { it.startTick <= tick && tick < it.endTick } } ?: 0
+        val piano = notes.filter { it.role == PIANO }
+        val bass = notes.filter { it.role == "bass" }
+        return EnsembleSpaceMap(
+            startTick, endTick, notes.sortedWith(compareBy<EnsembleSpaceNote> { it.startTick }.thenBy { it.role }.thenBy { it.pitch }),
+            maximumSimultaneousNotes,
+            piano.map(EnsembleSpaceNote::pitch).distinct().sorted(), bass.map(EnsembleSpaceNote::pitch).distinct().sorted()
+        )
+    }
+
     /** The complete accepted MIDI notes, never a rendered or flattened audio representation. */
     fun fullAcceptedMidi(): List<MidiNote> = acceptedTracks.flatMap(AcceptedArrangementTrack::notes)
         .sortedWith(compareBy<MidiNote> { it.startTick }.thenBy(MidiNote::channel).thenBy(MidiNote::pitch).thenBy(MidiNote::endTick))
@@ -58,6 +88,19 @@ data class ArrangementState(
         require(role in GENERATED_ROLES) { "Unsupported generated arrangement role '$role'" }
         require(!hasTrack(role)) { "Arrangement state already has an accepted $role track" }
         return copy(acceptedTracks = acceptedTracks + fromMidi(role, midi, ppq))
+    }
+
+    private fun rhythmMap(startTick: Long, endTick: Long, roles: Set<String>): ArrangementRhythmMap {
+        require(startTick >= 0 && endTick > startTick) { "Arrangement rhythm-map bounds are invalid" }
+        val tracks = acceptedTracks.filter { it.role in roles }.map { track ->
+            val clipped = track.notes.filter { it.startTick < endTick && startTick < it.endTick }
+            ArrangementTrackRhythm(
+                track.role,
+                clipped.filter { it.startTick in startTick until endTick }.map(MidiNote::startTick).distinct().sorted(),
+                clipped.map { ArrangementActivityWindow(maxOf(startTick, it.startTick), minOf(endTick, it.endTick)) }.distinct().sortedBy(ArrangementActivityWindow::startTick)
+            )
+        }
+        return ArrangementRhythmMap(startTick, endTick, tracks.sortedBy(ArrangementTrackRhythm::role))
     }
 
     private fun timelineEndTick(): Long = acceptedTracks.maxOf { track -> track.notes.maxOfOrNull(MidiNote::endTick) ?: 0L }.coerceAtLeast(1)
@@ -123,6 +166,40 @@ data class AcceptedArrangementTrack(val role: String, val ppq: Int, val sha256: 
 data class ArrangementTrackSummary(val role: String, val noteCount: Int, val onsets: List<Long>, val register: IntRange?, val densityPerTick: Double)
 data class ArrangementExcerptNote(val role: String, val pitch: Int, val velocity: Int, val startTick: Long, val endTick: Long)
 data class ArrangementPlannerContext(val version: Int, val tracks: List<ArrangementTrackSummary>, val excerpt: List<ArrangementExcerptNote>)
+
+data class ArrangementActivityWindow(val startTick: Long, val endTick: Long) {
+    init { require(startTick >= 0 && endTick > startTick) { "Arrangement activity window is invalid" } }
+    fun contains(tick: Long): Boolean = tick in startTick until endTick
+}
+
+data class ArrangementTrackRhythm(val role: String, val onsets: List<Long>, val activity: List<ArrangementActivityWindow>) {
+    init { require(onsets == onsets.distinct().sorted() && activity == activity.sortedBy(ArrangementActivityWindow::startTick)) }
+    fun hasOnsetNear(tick: Long, toleranceTicks: Long): Boolean = onsets.any { kotlin.math.abs(it - tick) <= toleranceTicks }
+    fun isActiveAt(tick: Long): Boolean = activity.any { it.contains(tick) }
+}
+
+data class ArrangementRhythmMap(val startTick: Long, val endTick: Long, val tracks: List<ArrangementTrackRhythm>) {
+    init { require(startTick >= 0 && endTick > startTick && tracks.map(ArrangementTrackRhythm::role).distinct().size == tracks.size) }
+    fun track(role: String): ArrangementTrackRhythm? = tracks.singleOrNull { it.role == role }
+    fun hasOnsetNear(tick: Long, toleranceTicks: Long): Boolean = tracks.any { it.hasOnsetNear(tick, toleranceTicks) }
+    fun isActiveAt(tick: Long): Boolean = tracks.any { it.isActiveAt(tick) }
+}
+
+data class EnsembleSpaceNote(val role: String, val pitch: Int, val startTick: Long, val endTick: Long)
+
+data class EnsembleSpaceMap(
+    val startTick: Long,
+    val endTick: Long,
+    val notes: List<EnsembleSpaceNote>,
+    val maximumSimultaneousNotes: Int,
+    val pianoPitches: List<Int>,
+    val bassPitches: List<Int>
+) {
+    init { require(startTick >= 0 && endTick > startTick && maximumSimultaneousNotes >= 0) }
+    /** Six concurrent accepted notes is intentionally treated as a dense core: pads may rest. */
+    val isDense: Boolean get() = maximumSimultaneousNotes >= DENSE_CORE_NOTE_COUNT
+    companion object { const val DENSE_CORE_NOTE_COUNT = 6 }
+}
 
 private data class IndexedMidiEvent(val event: MidiEvent, val track: Int, val index: Int)
 private fun List<MidiNote>.sortedNotes(): List<MidiNote> = sortedWith(compareBy<MidiNote> { it.startTick }.thenBy(MidiNote::channel).thenBy(MidiNote::pitch).thenBy(MidiNote::endTick))

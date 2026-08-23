@@ -83,6 +83,20 @@ class PadMidiGenerationTest {
     }
 
     @Test
+    fun `dense accepted core deliberately leaves the pad silent`() {
+        val denseState = ArrangementState.fromAcceptedPiano(
+            480,
+            (60..65).map { pitch -> MidiNote(0, pitch, 80, 0, 480) },
+            "a".repeat(64)
+        )
+
+        val result = generator.generate(request(arrangementState = denseState))
+
+        assertTrue(result.notes.isEmpty())
+        assertTrue(result.diagnostics.single().contains("pad rests"))
+    }
+
+    @Test
     fun `adapter writes full timeline on pad channel without changing source or other generated MIDI`() {
         val source = projectRoot.resolve("source/A.mid")
         val clean = projectRoot.resolve("midi/clean/A.mid")
@@ -128,10 +142,11 @@ class PadMidiGenerationTest {
         key: MidiKey? = MidiKey("C", "major", 0.8),
         density: Double = 1.0,
         energy: Double = 0.5,
-        register: String = "mid"
+        register: String = "mid",
+        arrangementState: ArrangementState? = null
     ) = PadGenerationRequest(
         sectionIndex, start, 480, listOf(MidiTempoChange(0, 120.0)), listOf(MidiTimeSignature(0, 4, 4)), length,
-        key, chords, energy, density, PadRole.SUSTAINED_CHORDS, register, 0, 89
+        key, chords, energy, density, PadRole.SUSTAINED_CHORDS, register, 0, 89, arrangementState
     )
 
     private fun section(index: Int, register: MusicalRegister) = DetailedArrangementSection(
