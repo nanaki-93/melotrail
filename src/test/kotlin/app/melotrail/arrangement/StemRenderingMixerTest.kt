@@ -169,7 +169,7 @@ class StemRenderingMixerTest {
         Files.createDirectories(requireNotNull(report.parent))
         Files.writeString(report, "critic")
         return ProjectWorkflowReferences(
-            FullSongEnhancementSelection.BYPASS,
+            FullSongEnhancementSelection.BYPASS, signatureMotif = null,
             critic = CriticWorkflowReferences(inputHash, WorkflowArtifactReference(relative, sha256(report))),
             fullSongEnhancement = FullSongEnhancementReferences(inputHash, null, "d".repeat(64))
         )

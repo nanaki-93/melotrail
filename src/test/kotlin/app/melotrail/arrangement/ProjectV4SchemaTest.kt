@@ -32,6 +32,15 @@ class ProjectV4SchemaTest {
     }
 
     @Test
+    fun `v4 project without the required signature motif field is rejected without rewriting`() {
+        val text = """{"version":4,"name":"missing-motif","parts":[],"workflow":{"fullSongEnhancementSelection":"UNRESOLVED"},"envelope":{}}"""
+        Files.writeString(root.resolve(ProjectStore.FILE_NAME), text)
+
+        assertFailsWith<IllegalArgumentException> { ProjectStore.read(root) }
+        assertEquals(text, Files.readString(root.resolve(ProjectStore.FILE_NAME)))
+    }
+
+    @Test
     fun `v4 composition context round trips typed musical primitives including an unknown future mode`() {
         val settings = CompositionSettings(
             key = MusicalKey(PitchClass.of(PitchSpelling.E_FLAT), ScaleModeId("future-mode-v2")),

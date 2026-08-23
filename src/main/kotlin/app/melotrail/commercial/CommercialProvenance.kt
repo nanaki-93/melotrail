@@ -7,6 +7,7 @@ import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.ProjectWorkflowStore
 import app.melotrail.arrangement.RenderInstrumentManifest
 import app.melotrail.arrangement.SelectedMidiArtifactKind
+import app.melotrail.arrangement.SignatureMotifReleaseGateResult
 import app.melotrail.arrangement.SourceLibraryProvenance
 import app.melotrail.arrangement.StageRunRecord
 import app.melotrail.arrangement.StageRunStatus
@@ -73,7 +74,9 @@ data class CommercialDependency(
 data class CommercialReadinessInput(
     val sources: List<CommercialSource>,
     val dependencies: List<CommercialDependency>,
-    val unresolvedEvidence: List<String> = emptyList()
+    val unresolvedEvidence: List<String> = emptyList(),
+    /** Null is retained for pure policy callers; release export supplies current gate evidence. */
+    val recognizabilityGate: SignatureMotifReleaseGateResult? = null
 )
 data class CommercialSource(val partId: String, val sourceHash: String, val attestation: SourceRightsAttestation?)
 data class CommercialReadiness(val ready: Boolean, val reasons: List<String>, val attribution: List<String>)
@@ -83,6 +86,9 @@ object CommercialReadinessEvaluator {
     fun evaluate(input: CommercialReadinessInput): CommercialReadiness {
         val reasons = buildList {
             input.unresolvedEvidence.sorted().forEach { add("Evidence is unresolved: $it") }
+            input.recognizabilityGate?.takeUnless(SignatureMotifReleaseGateResult::passed)?.reasons?.forEach { reason ->
+                add("Signature motif recognizability gate failed: $reason")
+            }
             input.sources.sortedBy { it.partId }.forEach { source ->
                 when (source.attestation?.claim) {
                     SourceRightsClaim.OWNED, SourceRightsClaim.COMMERCIAL_PERMISSION, SourceRightsClaim.PUBLIC_DOMAIN -> Unit
@@ -259,6 +265,7 @@ data class CommercialProvenanceManifest(
     val reasons: List<String>,
     val attribution: List<String>,
     val reports: ReleaseReportReferences,
+    val signatureMotifGate: SignatureMotifReleaseGateResult? = null,
     val audioExports: List<ReleaseAudioExport> = emptyList(),
     val credits: List<ReleaseCreditsArtifact> = emptyList(),
     val disclaimer: String = COMMERCIAL_DISCLAIMER
@@ -305,6 +312,7 @@ class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soun
             ManifestSource(part.id, part.file, sha256(safeProjectFile(projectRoot, part.file)), part.sourceAttestation)
         }
         val unresolved = mutableListOf<String>()
+        val signatureMotifGate = signatureMotifGate(projectRoot, project, unresolved)
         val selectedMidi = selectedMidi(projectRoot, project, unresolved)
         val artifacts = linkedMapOf<String, ProvenanceArtifact>()
         fun include(path: String) {
@@ -331,14 +339,15 @@ class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soun
             "$RELEASES_DIRECTORY/$releaseId/$CHECKLIST_FILE"
         )
         val readiness = CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(
-            sources.map { CommercialSource(it.partId, it.sha256, it.attestation) }, normalizedDependencies, unresolved.distinct().sorted()
+            sources.map { CommercialSource(it.partId, it.sha256, it.attestation) }, normalizedDependencies, unresolved.distinct().sorted(), signatureMotifGate
         ))
         val manifest = CommercialProvenanceManifest(
             releaseId = releaseId, releaseHash = sha256(master), sources = sources,
             artifacts = artifacts.values.sortedBy(ProvenanceArtifact::path), decisions = decisions,
             stageRuns = selectedRuns, selectedMidi = selectedMidi, instrumentUsage = instrumentUsage,
             dependencies = normalizedDependencies, unresolvedEvidence = unresolved.distinct().sorted(),
-            commercialReady = readiness.ready, reasons = readiness.reasons, attribution = readiness.attribution, reports = reports
+            commercialReady = readiness.ready, reasons = readiness.reasons, attribution = readiness.attribution, reports = reports,
+            signatureMotifGate = signatureMotifGate
         )
         val manifestPath = projectRoot.resolve(reports.manifest)
         val reportPath = projectRoot.resolve(reports.report)
@@ -408,7 +417,8 @@ class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soun
         if (stored == null || stored.file != manifest.reports.manifest) missing += "selected release reference"
         else if (stored.sha256 != sha256(path)) tampered += "selected release manifest"
         val readiness = CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(
-            manifest.sources.map { CommercialSource(it.partId, it.sha256, it.attestation) }, manifest.dependencies, manifest.unresolvedEvidence
+            manifest.sources.map { CommercialSource(it.partId, it.sha256, it.attestation) }, manifest.dependencies, manifest.unresolvedEvidence,
+            manifest.signatureMotifGate
         ))
         if (readiness.ready != manifest.commercialReady) tampered += "commercial readiness result"
         return ReleaseLineageVerification(
@@ -436,7 +446,23 @@ class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soun
             add(refs.plan); refs.occurrences.filter { it.approved }.forEach { add(it.result) }; refs.boundaries.mapNotNull { it.approved }.forEach(::add)
         }
         if (WorkflowArtifact.HUMANIZATION !in project.workflow.stale) project.workflow.humanization?.let { refs -> add(refs.report); refs.artifacts.forEach { add(it.input); add(it.output) } }
+        project.workflow.signatureMotif?.releaseGate?.let(::add)
     }.distinctBy(WorkflowArtifactReference::file)
+
+    private fun signatureMotifGate(root: Path, project: Project, unresolved: MutableList<String>): SignatureMotifReleaseGateResult? {
+        val references = project.workflow.signatureMotif ?: run { unresolved += "signature motif has not been selected and confirmed"; return null }
+        val gate = references.releaseGate ?: run { unresolved += "signature motif recognizability gate has not been evaluated"; return null }
+        val stored = references.releaseGateResult ?: run { unresolved += "signature motif recognizability gate result is missing"; return null }
+        val path = safeProjectFileOrNull(root, gate.file)
+        if (path == null || sha256(path) != gate.sha256) { unresolved += "signature motif recognizability gate report is missing or stale"; return null }
+        val report = runCatching { json.decodeFromString<SignatureMotifReleaseGateResult>(Files.readString(path, StandardCharsets.UTF_8)) }.getOrElse {
+            unresolved += "signature motif recognizability gate report is invalid"; return null
+        }
+        if (report != stored || report.sourceSha256 != references.motif.sourceSha256 || !references.motif.confirmed) {
+            unresolved += "signature motif recognizability gate does not match the confirmed source motif"; return null
+        }
+        return report
+    }
 
     private fun usedInstruments(root: Path, artifacts: MutableMap<String, ProvenanceArtifact>, unresolved: MutableList<String>): List<ReleaseInstrumentUsage> {
         val reportPath = root.resolve(STEM_RENDER_REPORT)

@@ -75,7 +75,7 @@ class WorkflowArtifactsTest {
             emptyList(),
             approved = false
         )
-        val retained = ProjectWorkflowReferences(FullSongEnhancementSelection.UNRESOLVED, cohesion = cohesion).invalidate(WorkflowChange.STRUCTURE)
+        val retained = ProjectWorkflowReferences(FullSongEnhancementSelection.UNRESOLVED, signatureMotif = null, cohesion = cohesion).invalidate(WorkflowChange.STRUCTURE)
 
         assertEquals(cohesion, retained.cohesion)
         assertTrue(WorkflowArtifact.COHESION in retained.stale)

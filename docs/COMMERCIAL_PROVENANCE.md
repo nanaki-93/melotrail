@@ -31,6 +31,17 @@ Unknown model identity/license, missing attribution, stale artifact hashes, or
 missing decision evidence block a commercial-ready claim without changing the
 project. The report redacts secrets and unrestricted absolute paths.
 
+## Signature motif recognizability gate
+
+Before creating commercial evidence, select a source melody phrase as the
+signature motif and explicitly confirm it. Melotrail writes a hash-bound debug
+report under `motif/<source-sha256>/<input-sha256>/report.json`. It records
+source-note lineage for every evaluated piano occurrence, interval-contour and
+rhythm similarity, protected-anchor retention, matched-note coverage, and the
+configured deterministic thresholds. At least one occurrence must clearly
+survive. A missing, stale, or failing gate blocks only the commercial-ready
+claim; it never overwrites source MIDI or removes retained project evidence.
+
 ## Instrument credits
 
 After commercial evidence is ready, **Export commercially with credits** creates

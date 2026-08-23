@@ -4,6 +4,12 @@ import app.melotrail.arrangement.MidiReferences
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.RenderFormat
+import app.melotrail.arrangement.SignatureMotifReleaseGateResult
+import app.melotrail.arrangement.SignatureMotifOccurrenceReport
+import app.melotrail.arrangement.SignatureMotifNoteLineage
+import app.melotrail.arrangement.SignatureMotifLineageStatus
+import app.melotrail.arrangement.MelodyNoteId
+import app.melotrail.arrangement.SignatureMotifThresholds
 import app.melotrail.arrangement.SongPart
 import java.nio.file.Files
 import java.nio.file.Path
@@ -28,6 +34,21 @@ class CommercialProvenanceTest {
         assertFalse(CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, null)), listOf(approved))).ready)
         assertFalse(CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, attested)), listOf(approved), listOf("missing attribution"))).ready)
         assertFalse(CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, attested)), listOf(approved.copy(identity = "fake-model")))).ready)
+    }
+
+    @Test
+    fun `commercial readiness blocks a failed signature motif release gate`() {
+        val approved = CommercialDependency(CommercialDependencyKind.MODEL, "planner", "1", hash, CommercialTerm.PERMITTED, true, "MIT", "local")
+        val failedGate = SignatureMotifReleaseGateResult(
+            sourceSha256 = hash, motifPhraseId = "p-00000", thresholds = SignatureMotifThresholds(),
+            occurrenceReports = listOf(SignatureMotifOccurrenceReport("verse-1", 0.0, 0.0, 0.0, 0.0, 0.0, false,
+                listOf(SignatureMotifNoteLineage(MelodyNoteId("m-$hash"), status = SignatureMotifLineageStatus.MISSING)))),
+            clearOccurrenceCount = 0, passed = false, reasons = listOf("no-clear-surviving-occurrence")
+        )
+
+        assertFalse(CommercialReadinessEvaluator.evaluate(CommercialReadinessInput(
+            listOf(CommercialSource("A", hash, attested)), listOf(approved), recognizabilityGate = failedGate
+        )).ready)
     }
 
     @Test

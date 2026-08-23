@@ -566,10 +566,31 @@ object FullSongEnhancementArtifactPaths {
     fun afterCriticReport(criticInputSha256: String, revision: String): String = "${directory(criticInputSha256, revision)}/after-critic.json"
 }
 
+/** User-confirmed melody identity plus the current deterministic release gate. */
+@Serializable
+data class SignatureMotifWorkflowReferences(
+    val motif: SignatureMotif,
+    val releaseGate: WorkflowArtifactReference? = null,
+    val releaseGateResult: SignatureMotifReleaseGateResult? = null
+) {
+    init {
+        require((releaseGate == null) == (releaseGateResult == null)) { "Signature motif release-gate evidence is incomplete" }
+    }
+}
+
+object SignatureMotifArtifactPaths {
+    fun report(sourceSha256: String, inputSha256: String): String {
+        require(SHA_256.matches(sourceSha256) && SHA_256.matches(inputSha256)) { "Signature motif report fingerprint is invalid" }
+        return "motif/$sourceSha256/$inputSha256/report.json"
+    }
+}
+
 @Serializable
 data class ProjectWorkflowReferences(
     /** Required field: serialized projects from the superseded shape must fail at open. */
     val fullSongEnhancementSelection: FullSongEnhancementSelection,
+    /** Required schema-v4 field; null means the musician has not selected a motif yet. */
+    val signatureMotif: SignatureMotifWorkflowReferences?,
     val stale: Set<WorkflowArtifact> = emptySet(),
     val cohesion: CohesionWorkflowReferences? = null,
     val critic: CriticWorkflowReferences? = null,
@@ -598,7 +619,7 @@ data class ProjectWorkflowReferences(
     fun markCurrent(vararg artifacts: WorkflowArtifact): ProjectWorkflowReferences = copy(stale = stale - artifacts.toSet())
 
     companion object {
-        fun initial() = ProjectWorkflowReferences(FullSongEnhancementSelection.UNRESOLVED)
+        fun initial() = ProjectWorkflowReferences(FullSongEnhancementSelection.UNRESOLVED, signatureMotif = null)
     }
 }
 

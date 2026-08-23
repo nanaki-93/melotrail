@@ -76,7 +76,7 @@ class SongTimingReproductionTest {
         val report = root.resolve(relative)
         Files.createDirectories(requireNotNull(report.parent))
         Files.writeString(report, "critic")
-        return ProjectWorkflowReferences(FullSongEnhancementSelection.BYPASS,
+        return ProjectWorkflowReferences(FullSongEnhancementSelection.BYPASS, signatureMotif = null,
             critic = CriticWorkflowReferences(inputHash, WorkflowArtifactReference(relative, sha256(Files.readAllBytes(report)))),
             fullSongEnhancement = FullSongEnhancementReferences(inputHash, null, "d".repeat(64)))
     }
