@@ -90,6 +90,10 @@ data class CanonicalPatternContext(
 data class PatternMidiNote(val startTick: Long, val endTick: Long, val pitch: Int, val velocity: Int) {
     init { require(startTick >= 0 && endTick > startTick && pitch in 0..127 && velocity in 1..127) { "Pattern MIDI note is invalid" } }
 }
+/** A bounded local harmony window for context-aware bass generation. */
+data class BassPatternWindow(val startTick: Long, val endTick: Long, val beatTicks: Long, val root: Int, val nextRoot: Int) {
+    init { require(startTick >= 0 && endTick > startTick && beatTicks > 0 && root in 0..11 && nextRoot in 0..11) { "Bass pattern window is invalid" } }
+}
 data class PatternDrumHit(val name: String, val startTick: Long, val endTick: Long, val velocity: Int) {
     init { require(name in DRUM_HIT_NAMES && startTick >= 0 && endTick > startTick && velocity in 1..127) { "Pattern drum hit is invalid" } }
     companion object { val DRUM_HIT_NAMES = setOf("kick", "snare", "closedHat", "openHat") }
@@ -134,6 +138,22 @@ object MusicalPatternLibrary {
         return chords.flatMapIndexed { index, chord ->
             val next = chords.getOrNull(index + 1)?.root ?: chord.root
             bassForChord(context, chord, next, parameters)
+        }
+    }
+
+    /** Render a selected library pattern for one analysis-derived chord window. */
+    fun bassWindow(window: BassPatternWindow, parameters: BassPatternParameters): List<PatternMidiNote> {
+        val beats = ((window.endTick - window.startTick) / window.beatTicks).toInt().coerceAtLeast(1)
+        val classes = when (parameters.pattern) {
+            BassPatternId.SUSTAINED_ROOT -> listOf(window.root)
+            BassPatternId.ROOT_FIFTH -> (0 until beats).map { if (it % 2 == 0) window.root else (window.root + 7) % 12 }
+            BassPatternId.OCTAVE -> (0 until beats).map { if (it % 2 == 0) window.root else window.root + 12 }
+            BassPatternId.WALK_TO_NEXT_ROOT -> (0 until beats).map { if (it == beats - 1) window.nextRoot else walkPitch(window.root, window.nextRoot, it, beats) }
+            BassPatternId.DIATONIC_APPROACH -> (0 until beats).map { if (it == beats - 1) (window.nextRoot + 11) % 12 else window.root }
+        }
+        return classes.mapIndexed { index, pitchClass ->
+            val start = window.startTick + index.toLong() * window.beatTicks
+            PatternMidiNote(start, if (parameters.pattern == BassPatternId.SUSTAINED_ROOT) window.endTick else minOf(window.endTick, start + window.beatTicks * 3 / 4), lowBassPitch(pitchClass), parameters.velocity)
         }
     }
 

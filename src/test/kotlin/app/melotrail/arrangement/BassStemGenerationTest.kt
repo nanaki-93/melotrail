@@ -53,6 +53,43 @@ class BassStemGenerationTest {
     }
 
     @Test
+    fun `busy accepted piano activity selects a simpler library bass pattern than sparse activity`() {
+        val sparse = ArrangementState.fromAcceptedPiano(480, listOf(MidiNote(0, 72, 80, 0, 240)), "a".repeat(64))
+        val busy = ArrangementState.fromAcceptedPiano(480, (0 until 16).map { MidiNote(0, 60 + it % 4, 80, it * 100L, it * 100L + 80) }, "b".repeat(64))
+
+        val sparseNotes = generator.generate(request().copy(arrangementState = sparse)).notes
+        val busyNotes = generator.generate(request().copy(arrangementState = busy)).notes
+
+        assertEquals(4, sparseNotes.size)
+        assertEquals(1, busyNotes.size)
+    }
+
+    @Test
+    fun `walking approach from the pattern library resolves to the next chord root at a phrase boundary`() {
+        val request = request(role = BassRole.SIMPLE_WALKING, length = 3840,
+            chords = listOf(chord(0, 1920, "C"), chord(1920, 3840, "D"))).copy(phraseBoundaries = listOf(1920, 3840))
+        val result = generator.generate(request)
+
+        assertEquals(listOf(36, 36, 37, 38), result.notes.take(4).map { it.pitch })
+        assertTrue(BassQualityValidator().validate(result.notes, request).passed)
+    }
+
+    @Test
+    fun `quality correction changes only report-named problem notes`() {
+        val request = request()
+        val candidate = listOf(BassMidiNote(0, 240, 36, 80), BassMidiNote(480, 720, 60, 80), BassMidiNote(960, 1200, 36, 80))
+        val validator = BassQualityValidator()
+        val report = validator.validate(candidate, request)
+        val corrected = validator.correct(candidate, request, report)
+
+        assertFalse(report.passed)
+        assertEquals(candidate.first(), corrected.first())
+        assertEquals(candidate.last(), corrected.last())
+        assertEquals(36, corrected[1].pitch)
+        assertTrue(validator.validate(corrected, request).passed)
+    }
+
+    @Test
     fun `movement and syncopation remain inside the section`() {
         val static = notes(BassRole.ROOT, movement = BassMovement.STATIC)
         val rising = notes(BassRole.ROOT, movement = BassMovement.RISING)

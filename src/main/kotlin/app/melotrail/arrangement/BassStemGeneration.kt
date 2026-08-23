@@ -51,7 +51,11 @@ data class BassGenerationRequest(
     val midiChannel: Int = 0,
     val midiProgram: Int? = null,
     /** Full accepted piano/ensemble MIDI; deterministic generation never receives a rendered mix. */
-    val arrangementState: ArrangementState? = null
+    val arrangementState: ArrangementState? = null,
+    /** Phrase starts are section-relative and make articulation decisions explicit. */
+    val phraseBoundaries: List<Long> = emptyList(),
+    /** The last accepted note from the preceding generated section, if any. */
+    val previousAcceptedBassNote: BassMidiNote? = null
 ) {
     fun requireValid() {
         require(sectionIndex >= 0) { "Bass section index must not be negative" }
@@ -80,6 +84,10 @@ data class BassGenerationRequest(
         }
         chords.zipWithNext().forEach { (first, second) -> require(first.endTick <= second.startTick) { "Bass chords must not overlap" } }
         chords.forEach { require(it.startTick >= 0 && it.endTick > it.startTick && it.endTick <= sectionLengthTicks && it.confidence.isFinite() && it.confidence in 0.0..1.0) { "Bass chord segment is invalid" } }
+        require(phraseBoundaries.all { it in 0..sectionLengthTicks } && phraseBoundaries == phraseBoundaries.sorted().distinct()) {
+            "Bass phrase boundaries must be ordered within the section"
+        }
+        previousAcceptedBassNote?.let { require(it.endTick <= sectionStartTick && it.pitch in 28..48) { "Previous accepted bass note is invalid" } }
     }
 
     private companion object { const val MAX_SYNCOPATION = 0.25 }
@@ -93,6 +101,8 @@ data class BassGenerationResult(val notes: List<BassMidiNote>, val diagnostics: 
  * interval is intentionally silent. Pitches stay in E1..C3 (MIDI 28..48).
  */
 class DeterministicBassMidiGenerator {
+    private val validator = BassQualityValidator()
+
     fun generate(request: BassGenerationRequest): BassGenerationResult {
         request.requireValid()
         if (request.density == 0.0) return BassGenerationResult(emptyList(), listOf("Bass density is 0.0; wrote silence."))
@@ -104,12 +114,28 @@ class DeterministicBassMidiGenerator {
             if (root == null) {
                 diagnostics += "No confident harmony for section ${request.sectionIndex + 1} at tick ${interval.start}; left silent."
             } else {
-                notes += pattern(request, interval, root, nextRoot(request, interval.end))
+                notes += pattern(request, interval, root, nextRoot(request, interval.end), notes.lastOrNull() ?: request.previousAcceptedBassNote)
             }
         }
-        validateNotes(notes, request)
+        val candidate = notes.sortedBy { it.startTick }
+        val report = validator.validate(candidate, request)
+        val accepted = when {
+            report.passed -> candidate
+            else -> {
+                diagnostics += "Corrected bass quality regions: ${report.issues.map { it.startTick }.distinct().joinToString(",")}."
+                val corrected = validator.correct(candidate, request, report)
+                val correctedReport = validator.validate(corrected, request)
+                if (correctedReport.passed) corrected else {
+                    diagnostics += "Bass quality correction did not pass; used deterministic root fallback."
+                    val fallback = fallback(request)
+                    require(validator.validate(fallback, request).passed) { "Deterministic bass fallback failed quality validation" }
+                    fallback
+                }
+            }
+        }
+        validateNotes(accepted, request)
         if (notes.isEmpty() && diagnostics.isEmpty()) diagnostics += "No bass events were selected."
-        return BassGenerationResult(notes.sortedBy { it.startTick }, diagnostics.distinct())
+        return BassGenerationResult(accepted, diagnostics.distinct())
     }
 
     private fun intervals(request: BassGenerationRequest): List<TickInterval> {
@@ -124,44 +150,55 @@ class DeterministicBassMidiGenerator {
         return boundaries.toList().zipWithNext().map { TickInterval(it.first, it.second) }.filter { it.end > it.start }
     }
 
-    private fun pattern(request: BassGenerationRequest, interval: TickInterval, root: Int, followingRoot: Int?): List<BassMidiNote> {
+    private fun pattern(request: BassGenerationRequest, interval: TickInterval, root: Int, followingRoot: Int?, previous: BassMidiNote?): List<BassMidiNote> {
         val signature = request.timeSignatures.last { it.tick <= interval.start }
         val beat = ticksPerBeat(request, signature)
         val beats = ((interval.end - interval.start) / beat).toInt().coerceAtLeast(1)
-        val slots = when (request.role) {
-            BassRole.SUSTAINED -> listOf(BassSlot(0, 0, true))
-            BassRole.ROOT -> (0 until beats).map { BassSlot(it, 0) }
-            BassRole.ROOT_FIFTH -> (0 until beats).map { BassSlot(it, if (it % 2 == 0) 0 else 7) }
-            BassRole.OCTAVE -> (0 until beats).map { BassSlot(it, if (it % 2 == 0) 0 else 12) }
-            BassRole.SIMPLE_WALKING -> walkingSlots(beats, root, followingRoot)
+        val phraseEnds = request.phraseBoundaries.ifEmpty { request.chords.map(MidiChord::endTick) }
+        val libraryPattern = when (request.role) {
+            BassRole.SUSTAINED -> BassPatternId.SUSTAINED_ROOT
+            BassRole.ROOT -> BassPatternId.WALK_TO_NEXT_ROOT
+            BassRole.ROOT_FIFTH -> BassPatternId.ROOT_FIFTH
+            BassRole.OCTAVE -> BassPatternId.OCTAVE
+            BassRole.SIMPLE_WALKING -> if (interval.end in phraseEnds) BassPatternId.WALK_TO_NEXT_ROOT else BassPatternId.ROOT_FIFTH
         }
-        val selected = if (request.role == BassRole.SUSTAINED) slots else slots.take(eventsForDensity(slots.size, request.density))
-        return selected.mapIndexed { index, slot ->
-            val originalStart = interval.start + slot.beat.toLong() * beat
-            val nextBeat = minOf(interval.end, originalStart + beat)
-            val offset = if (slot.sustained || originalStart == interval.start) 0L else (beat * request.syncopation).roundToInt().toLong()
+        val pattern = MusicalPatternLibrary.bassWindow(
+            BassPatternWindow(interval.start, interval.end, beat, root, if (request.role == BassRole.ROOT) root else followingRoot ?: root),
+            BassPatternParameters(libraryPattern, velocity = velocity(request.energy, false))
+        )
+        val density = effectiveDensity(request, interval, beat)
+        val selected = if (request.role == BassRole.SUSTAINED) pattern else pattern.take(eventsForDensity(pattern.size, density))
+        return selected.mapIndexed { index, note ->
+            val originalStart = note.startTick
+            val offset = if (request.role == BassRole.SUSTAINED || originalStart == interval.start) 0L else (beat * request.syncopation).roundToInt().toLong()
             val start = originalStart + offset
-            val end = if (slot.sustained) interval.end else minOf(nextBeat, start + (beat * NOTE_LENGTH_BEATS).roundToInt())
+            val end = if (request.role == BassRole.SUSTAINED) interval.end else minOf(note.endTick, start + (beat * NOTE_LENGTH_BEATS).roundToInt())
             BassMidiNote(
                 startTick = request.sectionStartTick + start,
                 endTick = request.sectionStartTick + end,
-                pitch = applyMovement(normalizePitch(36 + root + slot.semitones), request.movement, index, selected.size),
-                velocity = velocity(request.energy, slot.semitones >= 12)
+                pitch = voiceLead(applyMovement(note.pitch, request.movement, index, selected.size), previous, index == 0),
+                velocity = velocity(request.energy, request.role == BassRole.OCTAVE && index % 2 == 1)
             )
         }
     }
 
-    private fun walkingSlots(beats: Int, root: Int, followingRoot: Int?): List<BassSlot> = (0 until beats).map { beat ->
-        when (beat) {
-            0 -> BassSlot(beat, 0)
-            beats - 1 -> BassSlot(beat, followingRoot?.let { signedStep(root, it) } ?: 7)
-            else -> BassSlot(beat, if (followingRoot == null) 7 else signedStep(root, followingRoot) * beat / beats)
-        }
+    private fun effectiveDensity(request: BassGenerationRequest, interval: TickInterval, beat: Long): Double {
+        val piano = request.arrangementState?.requireTrack(ArrangementState.PIANO)?.notes.orEmpty()
+        val start = request.sectionStartTick + interval.start; val end = request.sectionStartTick + interval.end
+        val activity = piano.count { it.startTick in start until end }.toDouble() / maxOf(1.0, (end - start).toDouble() / beat)
+        return if (activity >= BUSY_PIANO_ONSETS_PER_BEAT) minOf(request.density, BUSY_MAX_DENSITY) else request.density
     }
 
-    private fun signedStep(from: Int, to: Int): Int {
-        val delta = ((to - from + 18) % 12) - 6
-        return delta.coerceIn(-5, 6)
+    private fun voiceLead(pitch: Int, previous: BassMidiNote?, first: Boolean): Int {
+        if (!first || previous == null) return normalizePitch(pitch)
+        return generateSequence(normalizePitch(pitch)) { current -> if (current - previous.pitch > 6) current - 12 else if (previous.pitch - current > 6) current + 12 else null }
+            .first { it in LOWEST_BASS_NOTE..HIGHEST_BASS_NOTE && kotlin.math.abs(it - previous.pitch) <= 12 }
+    }
+
+    private fun fallback(request: BassGenerationRequest): List<BassMidiNote> = intervals(request).mapNotNull { interval ->
+        harmonyRoot(request, interval.start)?.let { root ->
+            BassMidiNote(request.sectionStartTick + interval.start, request.sectionStartTick + interval.end, normalizePitch(36 + root), velocity(request.energy, false))
+        }
     }
 
     private fun eventsForDensity(slotCount: Int, density: Double): Int = ceil(slotCount * density).toInt().coerceIn(1, slotCount)
@@ -219,8 +256,6 @@ class DeterministicBassMidiGenerator {
     }
 
     private data class TickInterval(val start: Long, val end: Long)
-    private data class BassSlot(val beat: Int, val semitones: Int, val sustained: Boolean = false)
-
     private companion object {
         const val CHORD_CONFIDENCE = 0.75
         const val KEY_CONFIDENCE = 0.55
@@ -229,6 +264,8 @@ class DeterministicBassMidiGenerator {
         const val NOTE_LENGTH_BEATS = 0.75
         const val MIN_VELOCITY = 52
         const val MAX_VELOCITY = 100
+        const val BUSY_PIANO_ONSETS_PER_BEAT = 3.0
+        const val BUSY_MAX_DENSITY = 0.25
     }
 }
 
@@ -276,7 +313,7 @@ class BassMidiGenerationAdapter(
             start = Math.addExact(start, analysis.durationTicks)
         }
         require(requests.isNotEmpty()) { "Arrangement does not contain a generated bass instrument" }
-        val result = requests.map { it to composer.generate(it) }
+        val result = sequentialResults(requests)
         val output = root.resolve("midi/generated/bass.mid")
         writeMidi(output, checkNotNull(ppq), start, requests, result)
         return GeneratedBassMidi(output, checkNotNull(ppq), result.flatMap { it.second.notes }, result.flatMap { it.second.diagnostics })
@@ -324,7 +361,7 @@ class BassMidiGenerationAdapter(
             start = Math.addExact(start, analysis.durationTicks)
         }
         require(requests.isNotEmpty()) { "Detailed arrangement does not contain a generated bass instrument" }
-        val result = requests.map { it to composer.generate(it) }
+        val result = sequentialResults(requests)
         val target = output ?: root.resolve("midi/generated/bass.mid")
         writeMidi(target, checkNotNull(ppq), start, requests, result)
         return GeneratedBassMidi(target, checkNotNull(ppq), result.flatMap { it.second.notes }, result.flatMap { it.second.diagnostics })
@@ -340,6 +377,19 @@ class BassMidiGenerationAdapter(
     private fun DetailedBassMovement.toBassMovement(): BassMovement = when (this) {
         DetailedBassMovement.STATIC, DetailedBassMovement.ROOT_MOTION -> BassMovement.STATIC
         DetailedBassMovement.LEAPING, DetailedBassMovement.OCTAVES -> BassMovement.BALANCED
+    }
+
+    private fun sequentialResults(requests: List<BassGenerationRequest>): List<Pair<BassGenerationRequest, BassGenerationResult>> {
+        var previous: BassMidiNote? = null
+        return requests.map { request ->
+            val contextual = request.copy(
+                phraseBoundaries = request.phraseBoundaries.ifEmpty { request.chords.map(MidiChord::endTick).distinct().sorted() },
+                previousAcceptedBassNote = previous
+            )
+            val result = composer.generate(contextual)
+            previous = result.notes.lastOrNull() ?: previous
+            contextual to result
+        }
     }
 
     private fun writeMidi(
