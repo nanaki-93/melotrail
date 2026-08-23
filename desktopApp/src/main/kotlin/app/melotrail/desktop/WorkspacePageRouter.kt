@@ -174,6 +174,7 @@ internal object WorkspacePageTags {
     const val ARRANGE_PRIMARY_ACTION = "arrange-primary-action"
     const val ARRANGE_PREREQUISITE = "arrange-prerequisite"
     const val ARRANGE_COHESION_ACTION = "arrange-cohesion-action"
+    const val ARRANGE_WORKFLOW_ACTION = "arrange-workflow-action"
     const val ARRANGE_COHESION_REVIEW = "arrange-cohesion-review"
     const val ARRANGE_COHESION_BOUNDARY_PREFIX = "arrange-cohesion-boundary-"
     const val ARRANGE_DENSITY_BUDGET = "arrange-density-budget"
@@ -1349,8 +1350,9 @@ private fun ArrangeEnergyAndRoleProgress(state: WorkspaceUiState, onIntent: (Wor
         }
     }
     val workspace = state.arrangementWorkspace ?: return
+    val arrangementCanBeApproved = state.arrangement?.let { it.approvalRequired && !it.stale } == true
     OverviewCard(WorkspacePageTags.ARRANGE_ROLE_PROGRESS, "Incremental role review") {
-        Text("Core candidates are generated and validated as one dependency-safe batch. Optional layers remain locked until the exact core is approved.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Flow: approve Arrangement → generate and validate the core batch → accept the core → generate optional layers → Cohesion.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         workspace.roles.filter { it.active }.forEach { role ->
             val label = role.instrument.replaceFirstChar(Char::uppercase)
             val status = role.status.name.lowercase().replace('_', ' ')
@@ -1360,29 +1362,34 @@ private fun ArrangeEnergyAndRoleProgress(state: WorkspaceUiState, onIntent: (Wor
                     Text(role.role ?: if (role.instrument == "piano") "protected source melody" else "logical role", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 when (role.status) {
-                    app.melotrail.application.ArrangementRoleProgressStatus.READY_TO_GENERATE -> OutlinedButton(
-                        onClick = { onIntent(WorkspaceIntent.GenerateCoreArrangementMidi) }, enabled = !state.operation.isMutating,
-                        modifier = Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_ROLE_ACTION_PREFIX + role.instrument }
-                    ) { Text("Generate & validate core") }
-                    app.melotrail.application.ArrangementRoleProgressStatus.VALIDATED -> Button(
-                        onClick = { onIntent(WorkspaceIntent.ApproveCoreArrangement) }, enabled = !state.operation.isMutating,
-                        modifier = Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_ROLE_ACTION_PREFIX + role.instrument }
-                    ) { Text("Accept core") }
-                    app.melotrail.application.ArrangementRoleProgressStatus.LOCKED -> OutlinedButton(
-                        onClick = {}, enabled = false,
-                        modifier = Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_ROLE_ACTION_PREFIX + role.instrument; contentDescription = "$label is locked until core approval" }
-                    ) { Text("Locked until core approval") }
-                    app.melotrail.application.ArrangementRoleProgressStatus.ACCEPTED -> if (role.optional) OutlinedButton(
-                        onClick = { onIntent(WorkspaceIntent.GenerateOptionalArrangementMidi) }, enabled = !state.operation.isMutating,
-                        modifier = Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_ROLE_ACTION_PREFIX + role.instrument }
-                    ) { Text("Regenerate optional") } else Text("Accepted", color = semanticColor(WorkspaceSemanticState.READY), style = MaterialTheme.typography.labelSmall)
+                    app.melotrail.application.ArrangementRoleProgressStatus.ARRANGEMENT_APPROVAL_REQUIRED -> Text("Waiting for Arrangement approval", style = MaterialTheme.typography.labelSmall, color = semanticColor(WorkspaceSemanticState.WARNING))
+                    app.melotrail.application.ArrangementRoleProgressStatus.READY_TO_GENERATE -> Text(if (role.optional) "Ready after core approval" else "Ready for core batch", style = MaterialTheme.typography.labelSmall, color = semanticColor(WorkspaceSemanticState.READY))
+                    app.melotrail.application.ArrangementRoleProgressStatus.VALIDATED -> Text("Validated; pending core acceptance", style = MaterialTheme.typography.labelSmall, color = semanticColor(WorkspaceSemanticState.READY))
+                    app.melotrail.application.ArrangementRoleProgressStatus.LOCKED -> Text("Locked until core approval", style = MaterialTheme.typography.labelSmall, color = semanticColor(WorkspaceSemanticState.DISABLED))
+                    app.melotrail.application.ArrangementRoleProgressStatus.ACCEPTED -> Text("Accepted", color = semanticColor(WorkspaceSemanticState.READY), style = MaterialTheme.typography.labelSmall)
                     app.melotrail.application.ArrangementRoleProgressStatus.SOURCE_READY -> Text("Protected source", color = semanticColor(WorkspaceSemanticState.READY), style = MaterialTheme.typography.labelSmall)
                     app.melotrail.application.ArrangementRoleProgressStatus.NOT_ACTIVE -> Unit
                 }
             }
         }
-        if (workspace.roles.any { it.active && it.optional && it.status == app.melotrail.application.ArrangementRoleProgressStatus.ACCEPTED }) {
-            OutlinedButton(onClick = { onIntent(WorkspaceIntent.GenerateOptionalArrangementMidi) }, enabled = !state.operation.isMutating) { Text("Generate optional layers") }
+        val activeRoles = workspace.roles.filter { it.active }
+        val coreRoles = activeRoles.filter { !it.optional && it.instrument != "piano" }
+        val workflowAction = when {
+            activeRoles.any { it.status == app.melotrail.application.ArrangementRoleProgressStatus.ARRANGEMENT_APPROVAL_REQUIRED } ->
+                if (arrangementCanBeApproved) "Approve Arrangement" to WorkspaceIntent.ApproveArrangement else "Regenerate Arrangement" to WorkspaceIntent.GenerateArrangement
+            coreRoles.any { it.status == app.melotrail.application.ArrangementRoleProgressStatus.READY_TO_GENERATE } ->
+                "Generate & validate core" to WorkspaceIntent.GenerateCoreArrangementMidi
+            coreRoles.any { it.status == app.melotrail.application.ArrangementRoleProgressStatus.VALIDATED } ->
+                "Accept validated core" to WorkspaceIntent.ApproveCoreArrangement
+            activeRoles.any { it.optional && it.status in setOf(app.melotrail.application.ArrangementRoleProgressStatus.READY_TO_GENERATE, app.melotrail.application.ArrangementRoleProgressStatus.ACCEPTED) } ->
+                "Generate optional layers" to WorkspaceIntent.GenerateOptionalArrangementMidi
+            else -> null
+        }
+        workflowAction?.let { (label, intent) ->
+            Button(
+                onClick = { onIntent(intent) }, enabled = !state.operation.isMutating,
+                modifier = Modifier.semantics { testTag = WorkspacePageTags.ARRANGE_WORKFLOW_ACTION }
+            ) { Text(label) }
         }
         workspace.densityBudget?.let { budget ->
             HorizontalDivider()
@@ -1733,8 +1740,29 @@ private fun ArrangeInstrumentControls(state: WorkspaceUiState, onIntent: (Worksp
         }
     }
     Text("Suggested / Pinned Instrument", style = MaterialTheme.typography.labelMedium)
-    Text("Instrument resolution is a separate suggestion and user-choice step; this arrangement does not select files or engine settings.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    Text("User ownership is retained only for a pinned stable instrument ID.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text("Choose one instrument in Library, then link that selected instrument to an arrangement role. The link records only its stable catalog ID, never a file path.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    val librarySelection = state.libraryBrowser.inventory.instruments.firstOrNull { it.id == state.libraryBrowser.selectedId }
+    OutlinedButton(onClick = { onIntent(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.LIBRARY)) }, enabled = !state.operation.isMutating) {
+        Text(if (librarySelection == null) "Choose instrument in Library" else "Library selection: ${librarySelection.name}")
+    }
+    state.arrangementDraft.roles.sortedBy { it.name }.forEach { role ->
+        val roleName = role.name.lowercase().replace('_', '-')
+        Text(roleName.replace('-', ' ').replaceFirstChar(Char::uppercase), style = MaterialTheme.typography.labelSmall)
+        val pinnedId = state.arrangementDraft.pinnedInstrumentIds[role]
+        val pinnedName = state.libraryBrowser.inventory.instruments.firstOrNull { it.id == pinnedId }?.name ?: pinnedId
+        if (pinnedName != null) {
+            Text("Linked: $pinnedName", style = MaterialTheme.typography.labelSmall, color = semanticColor(WorkspaceSemanticState.READY))
+        } else if (librarySelection == null) {
+            Text("Choose a library instrument to link this role.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else if (!librarySelection.available || roleName !in librarySelection.roles) {
+            Text("${librarySelection.name} cannot be linked: it does not provide this licensed, validated role.", style = MaterialTheme.typography.labelSmall, color = semanticColor(WorkspaceSemanticState.WARNING))
+        } else {
+            OutlinedButton(
+                onClick = { onIntent(WorkspaceIntent.PinArrangementInstrument(role, librarySelection.id)) },
+                enabled = !state.operation.isMutating
+            ) { Text("Link ${librarySelection.name}") }
+        }
+    }
 }
 
 @Composable

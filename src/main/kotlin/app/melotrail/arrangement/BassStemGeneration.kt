@@ -195,10 +195,26 @@ class DeterministicBassMidiGenerator {
             .first { it in LOWEST_BASS_NOTE..HIGHEST_BASS_NOTE && kotlin.math.abs(it - previous.pitch) <= 12 }
     }
 
-    private fun fallback(request: BassGenerationRequest): List<BassMidiNote> = intervals(request).mapNotNull { interval ->
-        harmonyRoot(request, interval.start)?.let { root ->
-            BassMidiNote(request.sectionStartTick + interval.start, request.sectionStartTick + interval.end, normalizePitch(36 + root), velocity(request.energy, false))
+    /**
+     * Conservative fallback: one sustained root per contiguous harmonic region.
+     * Meter boundaries must not turn a held chord into repeated bass attacks,
+     * because the fallback itself is subject to the same quality gate.
+     */
+    private fun fallback(request: BassGenerationRequest): List<BassMidiNote> {
+        val fallback = mutableListOf<BassMidiNote>()
+        intervals(request).forEach { interval ->
+            val root = harmonyRoot(request, interval.start) ?: return@forEach
+            val start = request.sectionStartTick + interval.start
+            val end = request.sectionStartTick + interval.end
+            val pitch = normalizePitch(36 + root)
+            val previous = fallback.lastOrNull()
+            if (previous != null && previous.pitch == pitch && previous.endTick == start) {
+                fallback[fallback.lastIndex] = previous.copy(endTick = end)
+            } else {
+                fallback += BassMidiNote(start, end, pitch, velocity(request.energy, false))
+            }
         }
+        return fallback
     }
 
     private fun eventsForDensity(slotCount: Int, density: Double): Int = ceil(slotCount * density).toInt().coerceIn(1, slotCount)

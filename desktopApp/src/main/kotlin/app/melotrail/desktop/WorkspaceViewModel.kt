@@ -2803,6 +2803,10 @@ class WorkspaceViewModel(
     private fun generateCoreArrangementMidi() {
         val project = state.value.project ?: return fail("generate core arrangement MIDI", "Open a project before generating role candidates.")
         if (state.value.operation.isMutating) return
+        val arrangement = state.value.arrangement
+        if (arrangement == null || arrangement.stale || arrangement.approvalRequired || !arrangement.approved) {
+            return fail("generate core arrangement MIDI", "Approve the current arrangement before generating core MIDI.")
+        }
         val feedbackId = beginFeedback(OperationKind.ARRANGEMENT, OperationPhase.LOCAL, "Generating and validating core role candidates…")
         mutableState.update { it.copy(operation = WorkspaceOperation.GeneratingArrangement(), notification = null, operationFeedback = feedbackTracker.current) }
         scope.launch {

@@ -250,7 +250,7 @@ class WorkspaceViewModelTest {
     @Test
     fun `incremental arrangement intents use the persisted core and optional role boundaries`() = runTest {
         val root = Path.of("build/incremental-arrangement-project")
-        val service = FakeArrangementService()
+        val service = FakeArrangementService(loaded = arrangementSnapshot(root))
         val viewModel = WorkspaceViewModel(
             FakeProjectService(result = projectSnapshot(root)), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)), arrangementService = service
         )
@@ -1041,6 +1041,23 @@ class WorkspaceViewModelTest {
         advanceUntilIdle()
         assertEquals(1, service.approveCalls)
         assertTrue(viewModel.state.value.arrangement!!.approved)
+        viewModel.close()
+    }
+
+    @Test
+    fun `core MIDI dispatch is blocked while an arrangement is still a draft`() = runTest {
+        val root = Path.of("build/core-midi-draft-project")
+        val project = projectSnapshot(root)
+        val draft = arrangementSnapshot(root, approvalRequired = true, approved = false)
+        val service = FakeArrangementService(loaded = draft)
+        val viewModel = WorkspaceViewModel(FakeProjectService(result = project), FakeFileDialogs(), testDispatchers(StandardTestDispatcher(testScheduler)), arrangementService = service)
+
+        viewModel.accept(WorkspaceIntent.OpenProject(root))
+        advanceUntilIdle()
+        viewModel.accept(WorkspaceIntent.GenerateCoreArrangementMidi)
+
+        assertEquals(0, service.requiredMidiCalls)
+        assertEquals("Approve the current arrangement before generating core MIDI.", assertIs<WorkspaceOperation.Failed>(viewModel.state.value.operation).message)
         viewModel.close()
     }
 

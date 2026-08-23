@@ -14,6 +14,8 @@ import app.melotrail.arrangement.ProjectV4Envelope
 import app.melotrail.arrangement.DeterministicStemMixer
 import app.melotrail.arrangement.InstrumentRenderer
 import app.melotrail.arrangement.LogicalInstrument
+import app.melotrail.arrangement.ArrangementRole
+import app.melotrail.arrangement.InstrumentIntent
 import app.melotrail.arrangement.MixedStem
 import app.melotrail.arrangement.CompositionSettings
 import app.melotrail.arrangement.RenderFormat
@@ -83,26 +85,48 @@ class ArrangementApplicationServiceTest {
     }
 
     @Test
-    fun `Qwen mode always creates a draft that requires explicit approval`() = runBlocking {
+    fun `ambience resolves through texture catalog coverage for the logical pad stem`() {
+        val intent = InstrumentIntent(
+            role = ArrangementRole.AMBIENCE,
+            profile = CompositionProfileRef("lofi", 1),
+            mood = MoodRef("warm", 1)
+        )
+
+        assertEquals(ArrangementRole.TEXTURE, intent.forCatalogResolution().role)
+    }
+
+    @Test
+    fun `Qwen arrangement draft holds generated roles until explicit approval records lineage`() = runBlocking {
         val root = project("draft")
         approveSourceSongForArrangement(root)
         val service = DefaultArrangementApplicationService(
             deterministicGlobalPlanner = app.melotrail.arrangement.DeterministicGlobalSongPlanner(),
-            qwenGlobalPlanner = app.melotrail.arrangement.DeterministicGlobalSongPlanner(),
+            qwenGlobalPlanner = object : app.melotrail.arrangement.GlobalSongPlanner {
+                override fun plan(input: app.melotrail.arrangement.SongPlanningInput): app.melotrail.arrangement.SongPlan =
+                    app.melotrail.arrangement.DeterministicGlobalSongPlanner().plan(input).let { plan ->
+                        plan.copy(sections = plan.sections.map { it.copy(instrumentProgression = listOf("piano", "bass")) })
+                            .also { it.requireValid(input) }
+                    }
+            },
             deterministicDetailedPlanner = app.melotrail.arrangement.DeterministicDetailedArrangementPlanner(),
             qwenDetailedPlanner = app.melotrail.arrangement.DeterministicDetailedArrangementPlanner(),
             libraryRoot = TestSoundLibrary.root()
         )
 
-        val draft = service.generate(GenerateArrangementRequest(root, ArrangementPlannerKind.QWEN, instruments = listOf("piano")))
+        val draft = service.generate(GenerateArrangementRequest(root, ArrangementPlannerKind.QWEN, instruments = listOf("piano", "bass")))
         assertTrue(draft.approvalRequired)
         assertFalse(draft.approved)
         assertTrue(Files.isRegularFile(root.resolve("arrangement_plan.draft.json")))
         assertFalse(Files.isRegularFile(root.resolve("arrangement_plan.json")))
+        assertEquals(
+            ArrangementRoleProgressStatus.ARRANGEMENT_APPROVAL_REQUIRED,
+            service.workspace(root).roles.single { it.instrument == "bass" }.status
+        )
 
         val approved = service.approve(root)
         assertTrue(approved.approved)
         assertTrue(Files.isRegularFile(root.resolve("arrangement_plan.json")))
+        assertEquals(ArrangementRoleProgressStatus.READY_TO_GENERATE, service.workspace(root).roles.single { it.instrument == "bass" }.status)
     }
 
     @Test

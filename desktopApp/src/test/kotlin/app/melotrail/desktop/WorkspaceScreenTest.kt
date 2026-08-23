@@ -1183,6 +1183,30 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `Arrange lets a selected role pin a compatible validated library instrument`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        val bass = app.melotrail.application.LocalSoundLibraryInstrument(
+            id = "round-bass", name = "Round Bass", category = "instrument", sampleCount = 1,
+            licenseName = "CC0", license = "CC0-1.0", source = "fixture", commercialUse = true,
+            attributionRequired = false, roles = setOf("bass")
+        )
+        val state = arrangeState().copy(
+            arrangementDraft = ArrangementDraft(roles = setOf(app.melotrail.arrangement.ArrangementRole.MELODY, app.melotrail.arrangement.ArrangementRole.BASS)),
+            libraryBrowser = LibraryBrowserState(
+                app.melotrail.application.LocalSoundLibraryInventory(app.melotrail.application.LocalSoundLibraryInventoryState.READY, listOf(bass)),
+                selectedId = "round-bass"
+            )
+        )
+        setContent { MelotrailTheme { WorkspaceScreen(state, intents::add) } }
+
+        onNodeWithTag(WorkspaceShellTags.CONTEXT_TOGGLE).performClick()
+        onNodeWithTag(WorkspacePageTags.ARRANGE_OPTIONS_TOGGLE + "-context").performClick()
+        onNodeWithText("Link Round Bass").performScrollTo().performClick()
+
+        assertEquals(WorkspaceIntent.PinArrangementInstrument(app.melotrail.arrangement.ArrangementRole.BASS, "round-bass"), intents.single())
+    }
+
+    @Test
     fun `Arrange timeline uses canonical placements and tabs without mock controls`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         val arrangement = arrangementSnapshot(approved = true, sections = listOf(
@@ -1224,10 +1248,28 @@ class WorkspaceScreenTest {
         onNodeWithTag(WorkspacePageTags.ARRANGE_ROLE_PROGRESS).assertExists()
         onNodeWithTag(WorkspacePageTags.ARRANGE_DENSITY_BUDGET).assertExists()
         onNodeWithText("Optional sustained layers are recommended OFF: the approved core fills the pitched-note budget.").assertExists()
-        onNodeWithTag(WorkspacePageTags.ARRANGE_ROLE_ACTION_PREFIX + "bass").performScrollTo().performClick()
-        onNodeWithTag(WorkspacePageTags.ARRANGE_ROLE_ACTION_PREFIX + "strings").assertIsNotEnabled()
+        onNodeWithTag(WorkspacePageTags.ARRANGE_WORKFLOW_ACTION).performScrollTo().performClick()
+        onNodeWithText("Locked until core approval").assertExists()
 
         assertEquals(WorkspaceIntent.GenerateCoreArrangementMidi, intents.single())
+    }
+
+    @Test
+    fun `Arrange routes core generation to arrangement approval when its arrangement is a draft`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        val draft = arrangementSnapshot(approvalRequired = true, approved = false, sections = listOf(
+            arrangementSection(0, "A1", 18.0, "piano", "bass")
+        ))
+        val progress = ArrangementWorkspaceSnapshot(draft, listOf(
+            ArrangementRoleProgressSnapshot("piano", "melody", active = true, optional = false, status = ArrangementRoleProgressStatus.SOURCE_READY),
+            ArrangementRoleProgressSnapshot("bass", "bass", active = true, optional = false, status = ArrangementRoleProgressStatus.ARRANGEMENT_APPROVAL_REQUIRED)
+        ))
+
+        setContent { MelotrailTheme { WorkspaceScreen(arrangeState().copy(arrangement = draft, arrangementWorkspace = progress), intents::add) } }
+
+        onNodeWithText("Approve Arrangement").assertExists()
+        onNodeWithTag(WorkspacePageTags.ARRANGE_WORKFLOW_ACTION).performScrollTo().performClick()
+        assertEquals(WorkspaceIntent.ApproveArrangement, intents.single())
     }
 
     @Test

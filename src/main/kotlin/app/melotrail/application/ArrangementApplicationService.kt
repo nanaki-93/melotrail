@@ -27,6 +27,7 @@ import app.melotrail.arrangement.GeneratedRoleValidators
 import app.melotrail.arrangement.GeneratedRoleValidator
 import app.melotrail.arrangement.RoleValidationReport
 import app.melotrail.arrangement.InstrumentMode
+import app.melotrail.arrangement.InstrumentIntent
 import app.melotrail.arrangement.LocalQwenDetailedArrangementPlanner
 import app.melotrail.arrangement.LocalQwenGlobalSongPlanner
 import app.melotrail.arrangement.LogicalInstrument
@@ -139,6 +140,8 @@ data class ArrangementRoleProgressSnapshot(
 )
 
 enum class ArrangementRoleProgressStatus {
+    /** The planned role cannot generate until Arrangement has durable approval evidence. */
+    ARRANGEMENT_APPROVAL_REQUIRED,
     SOURCE_READY,
     READY_TO_GENERATE,
     VALIDATED,
@@ -462,6 +465,8 @@ class DefaultArrangementApplicationService(
         val normalized = root.normalizeRoot()
         val project = readProject(normalized)
         val arrangement = load(normalized)
+        val arrangementLineageCurrent = arrangement.approved && !arrangement.approvalRequired && !arrangement.stale &&
+            project.workflow.arrangement != null && WorkflowArtifact.ARRANGEMENT !in project.workflow.stale
         val active = arrangement.sections.flatMap { it.instruments }.associateBy { it.name }
         val generated = project.workflow.generatedMidi?.artifacts.orEmpty().associateBy { it.id }
         val accepted = project.workflow.coreArrangement?.artifacts.orEmpty().map { it.id }.toSet()
@@ -472,6 +477,7 @@ class DefaultArrangementApplicationService(
             val status = when {
                 planned == null -> ArrangementRoleProgressStatus.NOT_ACTIVE
                 instrument == "piano" -> ArrangementRoleProgressStatus.SOURCE_READY
+                !arrangementLineageCurrent -> ArrangementRoleProgressStatus.ARRANGEMENT_APPROVAL_REQUIRED
                 optional && !coreApproved -> ArrangementRoleProgressStatus.LOCKED
                 optional && instrument in generated -> ArrangementRoleProgressStatus.ACCEPTED
                 instrument in accepted -> ArrangementRoleProgressStatus.ACCEPTED
@@ -741,11 +747,17 @@ class DefaultArrangementApplicationService(
         val registry = InstrumentRegistryLoader(libraryRoot).load()
         if (registry.version == 1) return project
         val decisions = input.requestedIntents.sortedBy { it.role.name }.map { intent ->
-            VersionedInstrumentResolver(registry).invoke(ResolveInstrumentRequest(intent, actor = "arranger"))
+            VersionedInstrumentResolver(registry).invoke(ResolveInstrumentRequest(intent.forCatalogResolution(), actor = "arranger"))
         }
         require(decisions.all { it.selectedId != null }) {
             "No approved local instrument matches: " + decisions.filter { it.selectedId == null }
-                .joinToString { it.normalizedRequest.role.name.lowercase() }
+                .joinToString { decision ->
+                    val role = decision.normalizedRequest.role.name.lowercase().replace('_', '-')
+                    val rejections = decision.candidates.mapNotNull { candidate ->
+                        candidate.rejection?.let { "${candidate.id}: $it" }
+                    }.take(3)
+                    "$role${rejections.takeIf { it.isNotEmpty() }?.joinToString(prefix = " (", postfix = ")") ?: ""}"
+                } + ". Choose a compatible instrument in Arrange, or update the local library role, license, and production-approval metadata."
         }
         val byLogicalStem = decisions.groupBy { LegacyLogicalInstrumentRoles.logicalFor(it.normalizedRequest.role) }
             .mapValues { (_, choices) -> choices.minBy { it.normalizedRequest.role.name } }
@@ -902,4 +914,13 @@ class DefaultArrangementApplicationService(
         val locks = ConcurrentHashMap<Path, Mutex>()
         val json = Json { ignoreUnknownKeys = false }
     }
+}
+
+/**
+ * Catalogs describe concrete playable roles. The legacy pad stem is requested
+ * as ambience in the UI but is resolved from the catalog's texture presets.
+ */
+internal fun InstrumentIntent.forCatalogResolution(): InstrumentIntent = when (role) {
+    app.melotrail.arrangement.ArrangementRole.AMBIENCE -> copy(role = app.melotrail.arrangement.ArrangementRole.TEXTURE)
+    else -> this
 }

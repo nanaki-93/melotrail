@@ -90,6 +90,17 @@ class BassStemGenerationTest {
     }
 
     @Test
+    fun `fallback remains quality-valid across repeated meter intervals`() {
+        val request = request(length = 9_600, chords = listOf(chord(0, 9_600, "C")))
+
+        val result = generator.generate(request)
+
+        assertEquals(listOf(BassMidiNote(0, 9_600, 36, 76)), result.notes)
+        assertTrue(result.diagnostics.any { it.contains("deterministic root fallback") })
+        assertTrue(BassQualityValidator().validate(result.notes, request).passed)
+    }
+
+    @Test
     fun `movement and syncopation remain inside the section`() {
         val static = notes(BassRole.ROOT, movement = BassMovement.STATIC)
         val rising = notes(BassRole.ROOT, movement = BassMovement.RISING)
