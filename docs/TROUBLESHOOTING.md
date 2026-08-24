@@ -164,7 +164,13 @@ approval, or source can make downstream artifacts stale; regenerate rather than
 copying old outputs.
 
 `master.wav` is always the authoritative lossless release. MP3 is a separate
-optional final conversion. If a failure occurs, keep the source and inspect the
+optional final conversion. Each current build records an AAC/MP3 local-preview
+state tied to that exact master: an installed MP3 codec is encode-decoded and
+remeasured for clipping and 4× true peak, while unavailable codecs remain
+explicitly unverified. These local results are regression evidence, not a
+prediction of a YouTube transcode. If a preview is blocked, rebuild after
+repairing the master or changing the versioned delivery policy; do not use an
+old output file as evidence. If a failure occurs, keep the source and inspect the
 project-local reports/artifacts plus the bounded diagnostic logs under
 `~/.melotrail/logs/`.
 

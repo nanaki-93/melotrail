@@ -64,12 +64,45 @@ data class BuildResult(
     val reusedStems: Boolean
 )
 
+/** Local encode/decode evidence is a regression proxy, never a prediction of a platform transcode. */
+@Serializable
+enum class DeliveryCodec { AAC, MP3 }
+
+@Serializable
+enum class CodecPreviewStatus { VERIFIED, UNVERIFIED, BLOCKED }
+
+/** Hash-bound local codec-preview measurement for the exact selected lossless master. */
+@Serializable
+data class CodecPreviewEvidence(
+    val codec: DeliveryCodec,
+    val status: CodecPreviewStatus,
+    val masterSha256: String,
+    val encoded: WorkflowArtifactReference? = null,
+    val decoded: WorkflowArtifactReference? = null,
+    val truePeakDbtp: Double? = null,
+    val clippingSampleCount: Int? = null,
+    val detail: String
+) {
+    init {
+        require(masterSha256.matches(Regex("[0-9a-f]{64}")) && detail.isNotBlank() &&
+            (status == CodecPreviewStatus.VERIFIED || status == CodecPreviewStatus.BLOCKED) ==
+                (encoded != null && decoded != null && truePeakDbtp?.isFinite() == true && clippingSampleCount != null && clippingSampleCount >= 0)) {
+            "Codec-preview evidence is invalid"
+        }
+    }
+}
+
 /** Worker-only boundary. The build service owns all project and artifact orchestration. */
 interface BuildAudioWorker {
     suspend fun healthCheck(): Boolean
     suspend fun repair(input: Path, output: Path)
     suspend fun master(input: Path, output: Path, profile: MasteringProfile): MasteringMeasurement
     suspend fun exportMp3(input: Path, output: Path, bitrateKbps: Int): Boolean
+    /** Optional local codec execution. Unavailable codecs remain visible as unverified evidence. */
+    suspend fun codecPreviews(input: Path, outputDirectory: Path, profile: MasteringProfile): List<CodecPreviewEvidence> =
+        DeliveryCodec.entries.map { codec -> CodecPreviewEvidence(codec, CodecPreviewStatus.UNVERIFIED,
+            MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(input)).joinToString("") { "%02x".format(it) },
+            detail = "Local $codec codec preview is unavailable; no platform claim is implied.") }
 }
 
 interface BuildApplicationService {
@@ -151,17 +184,26 @@ class DefaultBuildApplicationService(
                     completedMeasurement
                 }
                 coroutineContext.ensureActive()
+                val codecPreviews = stage(progress, 9, "Measuring local codec previews", master) {
+                    val evidence = worker.codecPreviews(master, root.resolve("output/codec-previews"), request.masteringProfile)
+                    require(evidence.map(CodecPreviewEvidence::codec).toSet() == DeliveryCodec.entries.toSet()) { "Codec preview evidence is incomplete." }
+                    require(evidence.all { it.masterSha256 == digest(master) }) { "Codec preview evidence belongs to another selected master." }
+                    require(evidence.none { it.status == CodecPreviewStatus.BLOCKED }) {
+                        "A local codec preview exceeds the delivery policy. Lower the versioned pre-encode ceiling or repair the master before review."
+                    }
+                    evidence.sortedBy { it.codec.name }
+                }
                 val mp3 = if (request.enableMp3) {
                     val target = root.resolve("output/song.mp3")
-                    val available = stage(progress, 9, "Exporting optional MP3", target) {
+                    val available = stage(progress, 10, "Exporting optional MP3", target) {
                         worker.exportMp3(master, target, request.mp3BitrateKbps)
                     }
                     target.takeIf { available && Files.isRegularFile(it) && Files.size(it) > 0L }
                 } else {
-                    progress.report(OperationProgress("build", 9, STAGE_COUNT, "MP3 export not requested"))
+                    progress.report(OperationProgress("build", 10, STAGE_COUNT, "MP3 export not requested"))
                     null
                 }
-                stage(progress, 10, "Writing release metadata", master) { writeRelease(root, masteringInput, master, mp3, request, masteringMeasurement) }
+                stage(progress, 11, "Writing release metadata", master) { writeRelease(root, masteringInput, master, mp3, codecPreviews, request, masteringMeasurement) }
                 ProjectWorkflowStore.update(root) { workflow ->
                     workflow.markCurrent(WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE).let {
                         if (request.enableLoFi) it.markCurrent(WorkflowArtifact.AUDIO_TEXTURE) else it
@@ -286,7 +328,7 @@ class DefaultBuildApplicationService(
         }
     }
 
-    private fun writeRelease(root: Path, input: Path, master: Path, mp3: Path?, request: BuildSongRequest, mastering: MasteringMeasurement) {
+    private fun writeRelease(root: Path, input: Path, master: Path, mp3: Path?, codecPreviews: List<CodecPreviewEvidence>, request: BuildSongRequest, mastering: MasteringMeasurement) {
         val inputAudio = validate(input, "Master input")
         val audio = validate(master, "Master")
         val similarityReview = releaseSimilarityReview(root, request.similarityReferences)
@@ -298,6 +340,7 @@ class DefaultBuildApplicationService(
             frameCount = audio.frames, durationSeconds = audio.frames.toDouble() / audio.sampleRate, peak = audio.peak,
             peakDb = if (audio.peak == 0.0) Double.NEGATIVE_INFINITY else 20.0 * kotlin.math.log10(audio.peak),
             masteringProfile = request.masteringProfile.id, integratedLufs = mastering.integratedLufs, truePeakDbtp = mastering.truePeakDbtp,
+            masteringPolicy = request.masteringProfile,
             loudnessRangeLu = mastering.lraLu, crestDb = mastering.crestDb,
             limiterMaxGainReductionDb = mastering.limiterMaxGainReductionDb, limiterMeanGainReductionDb = mastering.limiterMeanGainReductionDb,
             loudnessReference = mastering.loudnessReference, dynamicsPreserved = mastering.dynamicsPreserved, masteringQualityIssues = mastering.qualityIssues,
@@ -306,6 +349,7 @@ class DefaultBuildApplicationService(
             loFiStrength = request.loFiStrength.takeIf { request.enableLoFi },
             loFiMeanAbsoluteDelta = if (request.enableLoFi) audioDelta(root.resolve("mix/repaired.wav"), root.resolve("mix/lofi.wav")) else null,
             mp3 = mp3?.let { DesktopMp3Metadata("song.mp3", digest(it), request.mp3BitrateKbps) },
+            codecPreviews = codecPreviews,
             canonicalFullMelody = canonicalFullMelody,
             similarityReview = similarityReview
         )
@@ -360,22 +404,24 @@ class DefaultBuildApplicationService(
     private data class AudioDescriptor(val sampleRate: Int, val channels: Int, val frames: Long, val peak: Double)
 
     @Serializable private data class DesktopReleaseMetadata(
-        val version: Int = 2, val master: String, val masterFingerprint: String, val inputArtifact: String,
+        val version: Int = 3, val master: String, val masterFingerprint: String, val inputArtifact: String,
         val inputFingerprint: String, val inputSampleRate: Int, val inputChannels: Int, val inputPcmBitDepth: Int,
         val sampleRate: Int, val channels: Int, val pcmBitDepth: Int, val frameCount: Long, val durationSeconds: Double,
-        val peak: Double, val peakDb: Double, val masteringProfile: String, val integratedLufs: Double, val truePeakDbtp: Double,
+        val peak: Double, val peakDb: Double, val masteringProfile: String, val masteringPolicy: MasteringProfile,
+        val integratedLufs: Double, val truePeakDbtp: Double,
         val loudnessRangeLu: Double, val crestDb: Double, val limiterMaxGainReductionDb: Double, val limiterMeanGainReductionDb: Double,
         val loudnessReference: String, val dynamicsPreserved: Boolean, val masteringQualityIssues: List<String>,
         val repairEnabled: Boolean, val loFiAudioTextureEnabled: Boolean,
         val loFiPreset: String? = null, val loFiStrength: Double? = null, val loFiMeanAbsoluteDelta: Double? = null,
         val mp3: DesktopMp3Metadata? = null,
+        val codecPreviews: List<CodecPreviewEvidence> = emptyList(),
         val canonicalFullMelody: WorkflowArtifactReference,
         val similarityReview: ReleaseSimilarityReport
     )
     @Serializable private data class DesktopMp3Metadata(val name: String, val fingerprint: String, val bitrateKbps: Int, val format: String = "MP3")
 
     private companion object {
-        const val STAGE_COUNT = 10
+        const val STAGE_COUNT = 11
         val MP3_BITRATES = setOf(128, 160, 192, 256, 320)
         val locks = ConcurrentHashMap<Path, Mutex>()
         val json = Json { prettyPrint = true; encodeDefaults = true }

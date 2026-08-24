@@ -20,6 +20,7 @@ class WorkerClientContractTest {
             MasterCommand("/input.wav", emptyMap()),
             MP3ConvertCommand("/input.mp3", "/output.wav"),
             MP3ExportCommand("/master.wav", "/song.mp3"),
+            CodecPreviewCommand("/master.wav", "mp3", "/preview.mp3", "/preview.wav"),
             TranscribeCommand("/input.wav", "/raw.mid", "piano"),
             CleanMidiCommand("/raw.mid", "/clean.mid"),
             InputInspectionCommand("/input.wav"),

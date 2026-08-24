@@ -1116,6 +1116,15 @@ private fun ReleaseMeasurements(state: WorkspaceUiState) {
             Text("True peak  ${"%.1f".format(mastering.truePeakDbtp)} dBTP", style = MaterialTheme.typography.bodyMedium)
             Text("Dynamics  ${"%.1f".format(mastering.loudnessRangeLu)} LU LRA · ${"%.1f".format(mastering.crestDb)} dB crest", style = MaterialTheme.typography.bodyMedium)
             Text(mastering.loudnessReference, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            mastering.policy?.let { policy ->
+                Text("Policy ${policy.id} · ≤ ${"%.1f".format(policy.maximumTruePeakDbtp)} dBTP · ${"%.1f".format(policy.nominalIntegratedLufs)} ± ${"%.1f".format(policy.loudnessToleranceLu)} LUFS · limiter ≤ ${"%.1f".format(policy.maximumLimiterGainReductionDb)} dB", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } ?: Text("Master policy is unverified for this retained release record; rebuild the selected master.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
+        }
+        val codecs = state.releaseReview?.codecPreviews.orEmpty()
+        if (codecs.isEmpty()) Text("Local codec previews are unverified until the selected master is rebuilt under the current delivery policy.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.tertiary)
+        codecs.forEach { preview ->
+            Text("${preview.codec} ${preview.status.name.lowercase()} · ${preview.truePeakDbtp?.let { "%.1f dBTP".format(it) } ?: "codec unavailable"} · ${preview.detail}", style = MaterialTheme.typography.bodySmall,
+                color = if (preview.status == app.melotrail.application.CodecPreviewStatus.BLOCKED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
     OverviewCard(WorkspacePageTags.RELEASE_AUDIBILITY, "Melody audibility") {
@@ -2819,6 +2828,17 @@ private fun MixCriticCard(report: app.melotrail.arrangement.AudioMixCriticReport
         report.melodyAudibility?.let { melody ->
             Text("Melody audibility · ${if (melody.audible) "audible" else "needs attention"} · ${"%.1f".format(melody.signalToAccompanimentDb)} dB vs accompaniment", style = MaterialTheme.typography.labelSmall, color = if (melody.audible) semanticColor(WorkspaceSemanticState.READY) else MaterialTheme.colorScheme.error)
         }
+        report.lowEndInteraction?.let { lowEnd ->
+            val plan = lowEnd.plan
+            Text("Low-end ${plan.status.name.lowercase()} · ${"%.1f".format(plan.before.combinedPeakDbfs)} → ${"%.1f".format(lowEnd.after.combinedPeakDbfs)} dBFS in 50–150 Hz · ${"%.1f".format(plan.duckingDb)} dB duck", style = MaterialTheme.typography.labelSmall,
+                color = if (lowEnd.severeUnresolvedOverlap || lowEnd.pumpingDetected) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Kick map ch ${plan.kickMidiChannel ?: "—"}, note ${plan.kickMidiNote ?: "—"}, ${plan.triggers.size} approved trigger(s) · ${plan.spectralOwner.name.lowercase()} owns the overlap band.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (lowEnd.severeUnresolvedOverlap) Text("Blocking · severe kick/bass overlap remains after the measured plan.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+            if (lowEnd.pumpingDetected) Text("Blocking · envelope recovery indicates audible pumping risk.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+            plan.blockers.forEach { blocker ->
+                Text("Blocking · $blocker", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+            }
+        } ?: Text("Rebuild this mix to derive current kick/bass ownership evidence; a retained output is not a passing low-end review.", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
         if (report.issues.isEmpty()) Text("No audio-quality findings.", style = MaterialTheme.typography.labelSmall, color = semanticColor(WorkspaceSemanticState.READY))
         report.issues.forEach { issue ->
             Text("${if (issue.severity == app.melotrail.arrangement.AudioMixIssueSeverity.BLOCKING) "Blocking" else "Warning"} · ${issue.message}", style = MaterialTheme.typography.labelSmall, color = if (issue.severity == app.melotrail.arrangement.AudioMixIssueSeverity.BLOCKING) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary)

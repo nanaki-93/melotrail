@@ -1,6 +1,8 @@
 package app.melotrail.arrangement
 
 import kotlinx.serialization.Serializable
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 
 /**
  * A bounded, user-authored production mix.  It is deliberately independent of
@@ -14,7 +16,9 @@ data class MixPlan(
     val inputStems: List<MixPlanInputStem> = emptyList(),
     val tracks: Map<String, MixTrackPlan> = defaults(),
     val room: SharedRoomPlan = SharedRoomPlan(),
-    val buses: Map<MixBus, MixBusPlan> = defaultBuses()
+    val buses: Map<MixBus, MixBusPlan> = defaultBuses(),
+    /** Current, hash-bound kick/bass ownership decision; absent only before the first measured production mix. */
+    val lowEndInteraction: LowEndInteractionPlan? = null
 ) {
     fun requireValid() {
         require(version == VERSION && mixerId == MIXER_ID) { "Unsupported production mix plan" }
@@ -24,6 +28,14 @@ data class MixPlan(
         room.requireValid()
         require(buses.keys.all { it != MixBus.DIRECT }) { "Direct tracks cannot have a bus configuration" }
         buses.forEach { (bus, plan) -> plan.requireValid(bus) }
+        lowEndInteraction?.let { interaction ->
+            require(interaction.mixInputsSha256 == inputFingerprint(inputStems)) { "Low-end interaction belongs to different mix inputs" }
+            listOf(LogicalInstrument.DRUMS.wireName to interaction.drumStemSha256, LogicalInstrument.BASS.wireName to interaction.bassStemSha256)
+                .filter { (_, hash) -> hash != null }
+                .forEach { (name, hash) -> require(inputStems.singleOrNull { it.name == name }?.sha256 == hash) {
+                    "Low-end interaction $name stem fingerprint is stale"
+                } }
+        }
     }
 
     fun withInputs(inputs: List<MixPlanInputStem>) = copy(inputStems = inputs.sortedBy(MixPlanInputStem::name))
@@ -36,6 +48,11 @@ data class MixPlan(
             MixTrackPlan(bus = if (name == LogicalInstrument.DRUMS.wireName) MixBus.DRUMS else MixBus.MUSIC)
         }
         fun defaultBuses() = mapOf(MixBus.MUSIC to MixBusPlan(), MixBus.DRUMS to MixBusPlan())
+
+        /** Return the canonical digest binding a low-end plan to every selected rendered stem. */
+        fun inputFingerprint(inputs: List<MixPlanInputStem>): String = MessageDigest.getInstance("SHA-256")
+            .digest(inputs.sortedBy(MixPlanInputStem::name).joinToString("|") { "${it.name}:${it.sha256}" }.toByteArray(StandardCharsets.UTF_8))
+            .joinToString("") { "%02x".format(it) }
     }
 }
 

@@ -22,6 +22,7 @@ object WorkerProtocol {
         is MasterCommand -> "/master"
         is MP3ConvertCommand -> "/mp3_convert"
         is MP3ExportCommand -> "/mp3_export"
+        is CodecPreviewCommand -> "/codec_preview"
         is TranscribeCommand -> "/transcribe"
         is CleanMidiCommand -> "/midi-clean"
         is InputInspectionCommand -> "/inspect-input"
@@ -72,6 +73,13 @@ object WorkerProtocol {
             is MP3ExportCommand -> {
                 put("path", command.path)
                 put("outputPath", command.outputPath)
+                put("bitrateKbps", command.bitrateKbps)
+            }
+            is CodecPreviewCommand -> {
+                put("path", command.path)
+                put("codec", command.codec)
+                put("encodedPath", command.encodedPath)
+                put("decodedPath", command.decodedPath)
                 put("bitrateKbps", command.bitrateKbps)
             }
             is TranscribeCommand -> {

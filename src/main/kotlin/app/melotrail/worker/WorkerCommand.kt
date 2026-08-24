@@ -64,6 +64,17 @@ data class MP3ExportCommand(
 ) : WorkerCommand() {
 }
 
+/** One local, lossless decode preview for the selected lossless delivery master. */
+data class CodecPreviewCommand(
+    val path: String,
+    val codec: String,
+    val encodedPath: String,
+    val decodedPath: String,
+    val bitrateKbps: Int = 320
+) : WorkerCommand() {
+    init { require(codec in setOf("aac", "mp3")) { "Unsupported delivery-preview codec: $codec" } }
+}
+
 data class TranscribeCommand(
     val path: String,
     val outputPath: String,

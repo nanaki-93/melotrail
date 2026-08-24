@@ -5,9 +5,20 @@
 The worker is a local HTTP process, not a browser or cloud service. Its
 supported command-specific endpoints are `GET /health` and `POST /analyze`,
 `/apply_dsp`, `/repair`, `/master`, `/mp3_export`, `/mp3_convert`,
-`/transcribe`, `/midi-clean`, `/inspect-input`, and `/cleanup`. Every POST
+`/codec_preview`, `/transcribe`, `/midi-clean`, `/inspect-input`, and `/cleanup`. Every POST
 response uses the version-1 job envelope; Kotlin validates the resulting
 artifact before a later stage treats it as ready.
+
+## Local delivery-codec preview
+
+`POST /codec_preview` receives one selected WAV master, a requested `aac` or
+`mp3` codec, and distinct project-local encoded/decoded output paths. For MP3,
+when the optional local `lameenc` runtime is installed, it encodes the master,
+decodes the result to PCM-24 WAV, and measures clipping plus four-times
+oversampled true peak with the same worker routine used by mastering. If the
+encoder is absent it returns `status: unavailable`; AAC likewise returns that
+explicit state until a local versioned AAC adapter is provided. Neither result
+predicts a platform transcode or claims YouTube approval.
 
 `/transcribe` is intentionally limited to the eligible solo-piano route. A
 successful endpoint response is not a claim of reliable editable MIDI for

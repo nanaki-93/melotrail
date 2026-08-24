@@ -11,6 +11,7 @@ import soundfile as sf
 from worker.commands.mastering import analyze_loudness, master_command, true_peak_amplitude
 from worker.commands.mp3_convert import mp3_convert_command
 from worker.commands.mp3_export import mp3_export_command
+from worker.commands.codec_preview import codec_preview_command
 
 
 class ProcessingCommandsTest(unittest.TestCase):
@@ -83,6 +84,28 @@ class ProcessingCommandsTest(unittest.TestCase):
             self.assertEqual(32000, info.samplerate)
             self.assertEqual(2, info.channels)
             self.assertEqual(3, info.frames)
+
+    def test_codec_preview_remeasures_decoded_mp3_or_reports_unavailable(self):
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            encoded = root / "preview.mp3"
+            decoded = root / "preview.wav"
+            time = np.arange(48000) / 48000
+            decoded_audio = 0.8 * np.sin(2 * np.pi * 19000 * time)
+            sf.write(decoded, decoded_audio, 48000, format="WAV", subtype="PCM_24")
+            with patch("worker.commands.codec_preview.mp3_export_command", return_value={"output": str(encoded)}), \
+                 patch("worker.commands.codec_preview.mp3_convert_command", return_value={"output": str(decoded)}):
+                measured = codec_preview_command({
+                    "path": str(root / "master.wav"), "codec": "mp3", "encodedPath": str(encoded), "decodedPath": str(decoded),
+                })
+            self.assertEqual("measured", measured["status"])
+            self.assertIn("truePeakDbtp", measured)
+            self.assertGreater(measured["truePeakDbtp"], 20.0 * np.log10(np.max(np.abs(decoded_audio))))
+            with patch("worker.commands.codec_preview.mp3_export_command", side_effect=ValueError("MP3 export requires lameenc")):
+                unavailable = codec_preview_command({
+                    "path": str(root / "master.wav"), "codec": "mp3", "encodedPath": str(encoded), "decodedPath": str(decoded),
+                })
+            self.assertEqual("unavailable", unavailable["status"])
 
     def test_mastering_writes_valid_wav_without_changing_format(self):
         with TemporaryDirectory() as temp_dir:

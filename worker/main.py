@@ -8,6 +8,7 @@ The worker is a standalone service. Each operation has its own endpoint:
     POST /master
     POST /mp3_export
     POST /mp3_convert
+    POST /codec_preview
     POST /transcribe
     POST /midi-clean
     POST /inspect-input
@@ -142,7 +143,7 @@ class WorkerHandler(BaseHTTPRequestHandler):
 
 def load_commands() -> None:
     # Importing these modules executes @register_command decorators.
-    from worker.commands import analyze, dsp, repair, mastering, mp3_convert, mp3_export, transcribe, midi_clean, input_inspection, cleanup  # noqa: F401
+    from worker.commands import analyze, dsp, repair, mastering, mp3_convert, mp3_export, codec_preview, transcribe, midi_clean, input_inspection, cleanup  # noqa: F401
     logger.info("Loaded commands: %s", ", ".join(sorted(COMMANDS)))
 
 

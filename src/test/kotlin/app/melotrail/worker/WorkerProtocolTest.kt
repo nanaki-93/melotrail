@@ -17,6 +17,7 @@ class WorkerProtocolTest {
             MasterCommand("/input.wav", mapOf("targetLufs" to -14), "/output.wav") to "/master",
             MP3ConvertCommand("/input.mp3", "/output.wav") to "/mp3_convert",
             MP3ExportCommand("/master.wav", "/song.mp3", 320) to "/mp3_export",
+            CodecPreviewCommand("/master.wav", "mp3", "/preview.mp3", "/preview.wav") to "/codec_preview",
             TranscribeCommand("/input.wav", "/raw.mid", "piano") to "/transcribe",
             CleanMidiCommand("/raw.mid", "/clean.mid") to "/midi-clean",
             InputInspectionCommand("/input.wav") to "/inspect-input",
@@ -50,6 +51,9 @@ class WorkerProtocolTest {
 
         val export = WorkerProtocol.requestFor(MP3ExportCommand("/master.wav", "/song.mp3", 192), "job-1")
         assertEquals(setOf("jobId", "path", "outputPath", "bitrateKbps"), export.keys)
+
+        val preview = WorkerProtocol.requestFor(CodecPreviewCommand("/master.wav", "mp3", "/preview.mp3", "/preview.wav", 192), "job-1")
+        assertEquals(setOf("jobId", "path", "codec", "encodedPath", "decodedPath", "bitrateKbps"), preview.keys)
 
         val transcribe = WorkerProtocol.requestFor(TranscribeCommand("/input.wav", "/raw.mid", "piano"), "job-1")
         assertEquals(setOf("jobId", "path", "outputPath", "instrument"), transcribe.keys)

@@ -7,9 +7,14 @@ import app.melotrail.arrangement.MixPlan
 import app.melotrail.arrangement.MixPlanInputStem
 import app.melotrail.arrangement.MixTrack
 import app.melotrail.arrangement.MixTrackPlan
+import app.melotrail.arrangement.LowEndBandAnalyzer
+import app.melotrail.arrangement.LowEndInteractionPlan
+import app.melotrail.arrangement.LowEndInteractionPlanner
+import app.melotrail.arrangement.LowEndInteractionStatus
 import app.melotrail.arrangement.ProductionStemMixer
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.ProjectWorkflowStore
+import app.melotrail.arrangement.RoleValidationReport
 import app.melotrail.arrangement.WorkflowArtifact
 import app.melotrail.arrangement.WorkflowChange
 import app.melotrail.audio.WAVDecoder
@@ -28,6 +33,10 @@ import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import javax.sound.midi.MetaMessage
+import javax.sound.midi.MidiSystem
+import javax.sound.midi.ShortMessage
+import kotlin.math.roundToInt
 
 /** Existing desktop naming is retained as a source alias; persisted data is [MixPlan]. */
 typealias LogicalMixSetting = MixTrackPlan
@@ -82,7 +91,7 @@ class DefaultMixApplicationService(private val mixer: ProductionStemMixer = Prod
             runCatching { json.decodeFromString(AudioMixCriticReport.serializer(), Files.readString(path, StandardCharsets.UTF_8)) }.getOrNull()
         }
         val approval = report?.let { currentApproval(normalized, it) }
-        return MixSnapshot(normalized, settings, stems, dry, report, stale = stems.isEmpty(), approval = approval)
+        return MixSnapshot(normalized, settings, stems, dry, report, stale = stems.isEmpty() || report?.lowEndInteraction == null, approval = approval)
     }
 
     override fun approve(root: Path): MixSnapshot {
@@ -96,6 +105,9 @@ class DefaultMixApplicationService(private val mixer: ProductionStemMixer = Prod
         val mixHash = digest(dry)
         require(report.planSha256 == planHash && report.mixSha256 == mixHash) {
             "Mix evidence no longer matches the current plan or dry mix. Build the dry mix again."
+        }
+        require(report.commercialReady && report.lowEndInteraction?.severeUnresolvedOverlap != true && report.lowEndInteraction?.pumpingDetected != true) {
+            "Current audio critic report has blocking low-end or production findings. Repair and rebuild the mix before approval."
         }
         writeAtomically(normalized.resolve(APPROVAL_FILE), json.encodeToString(MixApproval(planSha256 = planHash, mixSha256 = mixHash)))
         return load(normalized)
@@ -115,14 +127,15 @@ class DefaultMixApplicationService(private val mixer: ProductionStemMixer = Prod
                 progress.report(OperationProgress("mix", 1, 3, "Validating rendered stems"))
                 val tracks = stemNames.map { name -> MixTrack(name, WAVDecoder(noOpErrorReporter).decode(root.resolve("stems/$name.wav"))) }
                 val inputs = stemNames.map { name -> MixPlanInputStem(name, digest(root.resolve("stems/$name.wav"))) }
-                val plan = request.settings.withInputs(inputs).also(MixPlan::requireValid)
+                val basePlan = request.settings.withInputs(inputs)
+                val plan = basePlan.copy(lowEndInteraction = deriveLowEndPlan(root, project, tracks, inputs)).also(MixPlan::requireValid)
                 progress.report(OperationProgress("mix", 2, 3, "Rendering deterministic production mix", root.resolve(DRY_MIX)))
                 val mixed = mixer.mix(tracks, plan, format)
                 val output = root.resolve(DRY_MIX)
                 app.melotrail.arrangement.DeterministicStemMixer().writeWav(mixed, output)
                 val planText = json.encodeToString(plan)
                 writeAtomically(root.resolve(PLAN_FILE), planText)
-                val report = AudioMixCritic.analyze(mixed, tracks, sha256(planText.toByteArray(StandardCharsets.UTF_8)), digest(output))
+                val report = AudioMixCritic.analyze(mixed, tracks, sha256(planText.toByteArray(StandardCharsets.UTF_8)), digest(output), plan.lowEndInteraction)
                 writeAtomically(root.resolve(REPORT_FILE), json.encodeToString(report))
                 progress.report(OperationProgress("mix", 3, 3, "Published production mix and critic report", root.resolve(REPORT_FILE)))
                 ProjectWorkflowStore.update(root) { it.invalidate(WorkflowChange.MIX_ONLY).markCurrent(WorkflowArtifact.DRY_MIX, WorkflowArtifact.MIX_REPORT) }
@@ -152,8 +165,89 @@ class DefaultMixApplicationService(private val mixer: ProductionStemMixer = Prod
         val mixHash = digest(dry)
         return approval.takeIf {
             it.planSha256 == report.planSha256 && it.mixSha256 == report.mixSha256 &&
-                it.planSha256 == planHash && it.mixSha256 == mixHash
+                it.planSha256 == planHash && it.mixSha256 == mixHash && report.lowEndInteraction != null && report.commercialReady
         }
+    }
+
+    /** Derive a plan only from current approved drum-MIDI/report evidence and exact rendered-stem fingerprints. */
+    private fun deriveLowEndPlan(
+        root: Path,
+        project: app.melotrail.arrangement.Project,
+        tracks: List<MixTrack>,
+        inputs: List<MixPlanInputStem>
+    ): LowEndInteractionPlan {
+        val drums = tracks.singleOrNull { it.name == LogicalInstrument.DRUMS.wireName }?.buffer
+        val bass = tracks.singleOrNull { it.name == LogicalInstrument.BASS.wireName }?.buffer
+        val drumHash = inputs.singleOrNull { it.name == LogicalInstrument.DRUMS.wireName }?.sha256
+        val bassHash = inputs.singleOrNull { it.name == LogicalInstrument.BASS.wireName }?.sha256
+        val inputHash = MixPlan.inputFingerprint(inputs)
+        if (drums == null || bass == null) return LowEndInteractionPlanner.derive(
+            drums, bass, drumHash, bassHash, null, null, inputHash, null, null, emptyList()
+        )
+        return runCatching {
+            val generated = requireNotNull(project.workflow.generatedMidi) { "Current approved generated MIDI is required for low-end interaction." }
+            val drumsReference = requireNotNull(generated.artifacts.singleOrNull { it.id == LogicalInstrument.DRUMS.wireName }) {
+                "Current approved drum MIDI is required for low-end interaction."
+            }
+            val midi = verified(root, drumsReference.artifact, "Approved drum MIDI")
+            val reportPath = verified(root, drumsReference.validationReport, "Approved drum validation report")
+            val report = json.decodeFromString(RoleValidationReport.serializer(), Files.readString(reportPath, StandardCharsets.UTF_8))
+            require(report.passed && report.role == LogicalInstrument.DRUMS.wireName && report.outputSha256 == drumsReference.artifact.sha256) {
+                "Approved drum validation evidence is stale or failing. Regenerate drums before mixing."
+            }
+            val kick = requireNotNull(report.kickTimingEvidence) { "Approved drum validation report has no kick timing evidence." }
+            val map = requireNotNull(report.instrumentMapEvidence) { "Approved drum validation report has no instrument-note map." }
+            require(map.role == LogicalInstrument.DRUMS.wireName && map.midiChannel == kick.midiChannel && map.notes.any { it.name == "kick" && it.pitch == kick.note }) {
+                "Approved drum kick timing and instrument-note map disagree."
+            }
+            val ticks = kickTicks(midi, kick.midiChannel, kick.note)
+            require(ticks == kick.attackTicks) { "Approved drum MIDI kick attacks do not match its validation evidence." }
+            val triggers = ticks.map { tick -> app.melotrail.arrangement.LowEndKickTrigger(tick, tickToFrame(midi, tick, drums.format.sampleRate, drums.length)) }
+                .filter { it.frame in 0 until drums.length }
+            LowEndInteractionPlanner.derive(drums, bass, drumHash, bassHash, drumsReference.artifact.sha256, drumsReference.validationReport.sha256,
+                inputHash, kick.midiChannel, kick.note, triggers)
+        }.getOrElse {
+            LowEndInteractionPlan(
+                status = LowEndInteractionStatus.BLOCKED, drumStemSha256 = drumHash, bassStemSha256 = bassHash,
+                mixInputsSha256 = inputHash,
+                blockers = listOf(it.message ?: "Approved drum kick-map evidence is unavailable.").map(String::trim).distinct().sorted(),
+                before = LowEndBandAnalyzer.measure(drums, bass)
+            )
+        }
+    }
+
+    /** Verify a confined fingerprinted workflow artifact before using it as mix-control evidence. */
+    private fun verified(root: Path, reference: app.melotrail.arrangement.WorkflowArtifactReference, label: String): Path {
+        val path = root.resolve(reference.file).normalize()
+        require(path.startsWith(root) && Files.isRegularFile(path) && !Files.isSymbolicLink(path) && digest(path) == reference.sha256) {
+            "$label is missing or stale."
+        }
+        return path
+    }
+
+    /** Return sorted note-on ticks only for the exact approved kick channel/note. */
+    private fun kickTicks(path: Path, channel: Int, note: Int): List<Long> = MidiSystem.getSequence(path.toFile()).tracks.flatMap { track ->
+        (0 until track.size()).map(track::get).mapNotNull { event ->
+            val message = event.message as? ShortMessage
+            event.tick.takeIf { message?.command == ShortMessage.NOTE_ON && message.channel == channel && message.data1 == note && message.data2 > 0 }
+        }
+    }.sorted()
+
+    /** Map PPQ ticks with the MIDI's explicit tempo events, preserving every approved kick attack phase. */
+    private fun tickToFrame(path: Path, tick: Long, sampleRate: Int, maximumFrame: Int): Int {
+        val sequence = MidiSystem.getSequence(path.toFile())
+        val tempos = sequence.tracks.flatMap { track -> (0 until track.size()).map(track::get) }
+            .mapNotNull { event -> (event.message as? MetaMessage)?.takeIf { it.type == 0x51 && it.data.size == 3 }?.let { tempo ->
+                event.tick to (((tempo.data[0].toInt() and 0xFF) shl 16) or ((tempo.data[1].toInt() and 0xFF) shl 8) or (tempo.data[2].toInt() and 0xFF))
+            } }
+            .sortedBy { it.first }
+        var previousTick = 0L; var micros = 0.0; var tempo = 500_000
+        tempos.takeWhile { it.first <= tick }.forEach { (changeTick, nextTempo) ->
+            micros += (changeTick - previousTick).toDouble() * tempo / sequence.resolution
+            previousTick = changeTick; tempo = nextTempo
+        }
+        micros += (tick - previousTick).toDouble() * tempo / sequence.resolution
+        return (micros / 1_000_000.0 * sampleRate).roundToInt().coerceIn(0, maximumFrame)
     }
 
     private fun writeAtomically(target: Path, contents: String) {

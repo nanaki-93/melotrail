@@ -14,6 +14,9 @@ import app.melotrail.application.DefaultEnsembleCohesionApplicationService
 import app.melotrail.application.EnsembleMidiPreparation
 import app.melotrail.application.EnsembleCohesionPreviewPreparation
 import app.melotrail.application.BuildAudioWorker
+import app.melotrail.application.CodecPreviewEvidence
+import app.melotrail.application.CodecPreviewStatus
+import app.melotrail.application.DeliveryCodec
 import app.melotrail.application.DefaultPartPreviewApplicationService
 import app.melotrail.application.DefaultReleaseExportApplicationService
 import app.melotrail.application.ReleaseMp3Exporter
@@ -35,6 +38,7 @@ import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.SoundLibraryLocator
 import app.melotrail.arrangement.SoundLibraryLocation
 import app.melotrail.arrangement.WorkflowArtifact
+import app.melotrail.arrangement.WorkflowArtifactReference
 import app.melotrail.profile.BundledCompositionProfileCatalog
 import app.melotrail.profile.CompositionProfileCatalog
 import app.melotrail.errors.ErrorReporter
@@ -42,6 +46,7 @@ import app.melotrail.model.MasteringMeasurement
 import app.melotrail.model.MasteringProfile
 import app.melotrail.logging.DefaultLogger
 import app.melotrail.worker.CleanMidiCommand
+import app.melotrail.worker.CodecPreviewCommand
 import app.melotrail.worker.MasterCommand
 import app.melotrail.worker.MP3ExportCommand
 import app.melotrail.worker.RepairCommand
@@ -279,6 +284,54 @@ private class DesktopBuildWorker(private val client: WorkerClient) : BuildAudioW
         if (response.error?.message?.contains("requires lameenc") == true) return false
         throw IllegalStateException("MP3 export failed: ${response.error?.message ?: "Unknown worker error"}")
     }
+
+    /** Request local AAC/MP3 preview evidence; unavailable local codecs stay explicitly unverified. */
+    override suspend fun codecPreviews(input: Path, outputDirectory: Path, profile: MasteringProfile): List<CodecPreviewEvidence> {
+        val selectedMaster = input.toAbsolutePath().normalize()
+        val previews = outputDirectory.toAbsolutePath().normalize()
+        val outputRoot = checkNotNull(checkNotNull(previews.parent).parent)
+        require(selectedMaster.startsWith(outputRoot)) { "Codec preview input must be the selected project master." }
+        Files.createDirectories(previews)
+        val masterSha256 = digest(selectedMaster)
+        return DeliveryCodec.entries.map { codec ->
+            val suffix = codec.name.lowercase()
+            val encoded = previews.resolve("master-preview.$suffix")
+            val decoded = previews.resolve("master-preview.$suffix.decoded.wav")
+            val response = client.execute(CodecPreviewCommand(selectedMaster.toString(), suffix, encoded.toString(), decoded.toString()))
+            require(response.status == WorkerStatus.COMPLETED) {
+                "${codec.name} codec preview failed: ${response.error?.message ?: "Unknown worker error"}"
+            }
+            val evidence = requireNotNull(response.output) { "${codec.name} codec preview returned no evidence" }
+            val status = evidence["status"]?.jsonPrimitive?.contentOrNull
+            if (status == "unavailable") {
+                CodecPreviewEvidence(codec, CodecPreviewStatus.UNVERIFIED, masterSha256,
+                    detail = evidence["detail"]?.jsonPrimitive?.contentOrNull ?: "Local $codec codec preview is unavailable; no platform claim is implied.")
+            } else {
+                require(status == "measured" && Files.isRegularFile(encoded) && Files.isRegularFile(decoded)) {
+                    "${codec.name} codec preview did not publish encode/decode evidence."
+                }
+                val truePeak = requireNotNull(evidence["truePeakDbtp"]?.jsonPrimitive?.doubleOrNull) {
+                    "${codec.name} codec preview returned no true-peak measurement"
+                }
+                val clipping = requireNotNull(evidence["clippingSampleCount"]?.jsonPrimitive?.longOrNull?.toInt()) {
+                    "${codec.name} codec preview returned no clipping measurement"
+                }
+                val policyStatus = if (truePeak <= profile.maximumTruePeakDbtp + 0.05 && clipping == 0) CodecPreviewStatus.VERIFIED else CodecPreviewStatus.BLOCKED
+                CodecPreviewEvidence(
+                    codec, policyStatus, masterSha256, reference(outputRoot, encoded), reference(outputRoot, decoded), truePeak, clipping,
+                    evidence["detail"]?.jsonPrimitive?.contentOrNull ?: "Local $codec encode/decode preview measured the selected master."
+                )
+            }
+        }
+    }
+
+    /** Construct a project-relative artifact reference only after hashing the local worker output. */
+    private fun reference(root: Path, path: Path): WorkflowArtifactReference = WorkflowArtifactReference(
+        root.relativize(path).toString().replace('\\', '/'), digest(path)
+    )
+
+    private fun digest(path: Path): String = MessageDigest.getInstance("SHA-256")
+        .digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
 }
 
 private class DesktopReleaseMp3Exporter(private val client: WorkerClient) : ReleaseMp3Exporter {

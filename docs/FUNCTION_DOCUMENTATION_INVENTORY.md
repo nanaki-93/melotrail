@@ -51,3 +51,8 @@ QP-015 refreshed the desktop review, workspace orchestration, and preview
 application-service rows after adding verified canonical-melody evidence,
 typed source/prepared/full/boundary monitor requests, and peak-safe RMS
 matching for those opt-in piano previews.
+
+QP-016 refreshes the mix, mastering, desktop, worker-protocol, and local
+codec-preview rows after adding hash-bound low-end plans and explicit local
+delivery-codec evidence. The inventory retains the locally scoped legacy
+declaration exemptions only where direct KDoc/docstrings are still incomplete.

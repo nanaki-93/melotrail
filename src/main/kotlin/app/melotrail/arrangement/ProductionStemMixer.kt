@@ -29,7 +29,7 @@ data class MelodyAudibility(val melodyStem: String, val rmsDbfs: Double, val acc
 
 @Serializable
 data class AudioMixCriticReport(
-    val version: Int = 1,
+    val version: Int = 2,
     val planSha256: String,
     val mixSha256: String,
     val peakDbfs: Double,
@@ -38,6 +38,8 @@ data class AudioMixCriticReport(
     val stereoCorrelation: Double?,
     val stemLoudness: List<StemLoudness>,
     val melodyAudibility: MelodyAudibility?,
+    /** Hash-bound 50–150 Hz evidence; null means this pre-QP-016 report must be rebuilt. */
+    val lowEndInteraction: LowEndInteractionReport? = null,
     val issues: List<AudioMixIssue>
 ) {
     val commercialReady: Boolean get() = issues.none { it.severity == AudioMixIssueSeverity.BLOCKING }
@@ -69,6 +71,7 @@ class ProductionStemMixer(private val referenceMixer: DeterministicStemMixer = D
         active.forEach { track ->
             val setting = plan.tracks[track.name] ?: MixTrackPlan()
             var processed = toFormat(track.buffer, format)
+            processed = LowEndInteractionProcessor.process(track.name, track.buffer.copy(samples = processed), plan.lowEndInteraction).samples
             processed = filter(processed, format, setting.filter)
             processed = equalize(processed, format, setting.eq)
             if (setting.compression.enabled) processed = compress(processed, format, setting.compression)
@@ -180,7 +183,7 @@ class ProductionStemMixer(private val referenceMixer: DeterministicStemMixer = D
 
 /** Objective measurement only; it never changes a mix or its plan. */
 object AudioMixCritic {
-    fun analyze(mix: MixedStem, stems: List<MixTrack>, planSha256: String, mixSha256: String): AudioMixCriticReport {
+    fun analyze(mix: MixedStem, stems: List<MixTrack>, planSha256: String, mixSha256: String, lowEndPlan: LowEndInteractionPlan? = null): AudioMixCriticReport {
         val audio = mix.buffer
         val peak = audio.samples.maxOfOrNull { abs(it.toDouble()) } ?: 0.0
         val peakDb = db(peak)
@@ -192,20 +195,53 @@ object AudioMixCritic {
             MelodyAudibility(piano.name, db(melodyRms), db(otherRms), ratio, ratio >= -6.0)
         }
         val correlation = if (audio.format.channels == 2) correlation(audio.samples) else null
+        val lowEnd = lowEndPlan?.let { plan -> lowEndReport(stems, plan) }
         val issues = buildList {
             if (clipping > 0) add(AudioMixIssue(AudioMixIssueKind.CLIPPING, AudioMixIssueSeverity.BLOCKING, "$clipping samples reach PCM clipping"))
             if (20.0 * log10(1.0 / max(peak, 1e-12)) < 1.0) add(AudioMixIssue(AudioMixIssueKind.LOW_HEADROOM, AudioMixIssueSeverity.BLOCKING, "Peak headroom is below 1 dB"))
-            if (lowEndOverlap(stems)) add(AudioMixIssue(AudioMixIssueKind.LOW_END_OVERLAP, AudioMixIssueSeverity.WARNING, "Low-frequency stem energy overlaps"))
+            lowEnd?.takeIf { it.severeUnresolvedOverlap }?.let {
+                add(AudioMixIssue(AudioMixIssueKind.LOW_END_OVERLAP, AudioMixIssueSeverity.BLOCKING, "Measured 50–150 Hz kick/bass overlap remains severe after the current low-end plan"))
+            }
+            lowEnd?.takeIf { it.pumpingDetected || !it.timingPreserved || !it.durationPreserved }?.let {
+                add(AudioMixIssue(AudioMixIssueKind.LOW_END_OVERLAP, AudioMixIssueSeverity.BLOCKING, "Low-end plan changed timing/duration or produced pumping evidence"))
+            }
             melody?.takeUnless(MelodyAudibility::audible)?.let { add(AudioMixIssue(AudioMixIssueKind.MELODY_AUDIBILITY, AudioMixIssueSeverity.BLOCKING, "Melody is ${"%.1f".format(it.signalToAccompanimentDb)} dB below accompaniment")) }
             melody?.takeIf { it.signalToAccompanimentDb < -3.0 }?.let { add(AudioMixIssue(AudioMixIssueKind.MASKING, AudioMixIssueSeverity.WARNING, "Melody masking is elevated")) }
             correlation?.takeIf { it > 0.98 || it < -0.5 }?.let { add(AudioMixIssue(AudioMixIssueKind.STEREO_CORRELATION, AudioMixIssueSeverity.WARNING, "Stereo correlation is ${"%.2f".format(it)}")) }
         }
-        return AudioMixCriticReport(planSha256 = planSha256, mixSha256 = mixSha256, peakDbfs = peakDb, headroomDb = 20.0 * log10(1.0 / max(peak, 1e-12)), clippingSampleCount = clipping, stereoCorrelation = correlation, stemLoudness = loudness, melodyAudibility = melody, issues = issues)
+        return AudioMixCriticReport(planSha256 = planSha256, mixSha256 = mixSha256, peakDbfs = peakDb, headroomDb = 20.0 * log10(1.0 / max(peak, 1e-12)), clippingSampleCount = clipping, stereoCorrelation = correlation, stemLoudness = loudness, melodyAudibility = melody, lowEndInteraction = lowEnd, issues = issues)
     }
 
     private fun sumOthers(stems: List<MixTrack>, size: Int): FloatArray = FloatArray(size).also { result -> stems.forEach { stem -> stem.buffer.samples.indices.forEach { index -> if (index < result.size) result[index] += stem.buffer.samples[index] } } }
-    private fun lowEndOverlap(stems: List<MixTrack>): Boolean = stems.any { first -> stems.any { second -> first.name < second.name && rms(lowPass(first.buffer.samples, first.buffer.format.channels)) > 0.08 && rms(lowPass(second.buffer.samples, second.buffer.format.channels)) > 0.08 } }
-    private fun lowPass(samples: FloatArray, channels: Int): FloatArray { val previous = FloatArray(channels); return FloatArray(samples.size) { index -> val c = index % channels; previous[c] += 0.02f * (samples[index] - previous[c]); previous[c] } }
+    /** Reapply the same plan to its exact pre-mix stems so comparison evidence stays auditable and deterministic. */
+    private fun lowEndReport(stems: List<MixTrack>, plan: LowEndInteractionPlan): LowEndInteractionReport {
+        val drums = stems.singleOrNull { it.name == LogicalInstrument.DRUMS.wireName }?.buffer
+        val bass = stems.singleOrNull { it.name == LogicalInstrument.BASS.wireName }?.buffer
+        val afterDrums = drums?.let { LowEndInteractionProcessor.process("drums", it, plan) }
+        val afterBass = bass?.let { LowEndInteractionProcessor.process("bass", it, plan) }
+        val after = LowEndBandAnalyzer.measure(afterDrums, afterBass)
+        val timing = listOfNotNull(drums, bass, afterDrums, afterBass).zipWithNext().all { (left, right) -> left.length == right.length }
+        val duration = listOfNotNull(drums, bass, afterDrums, afterBass).zipWithNext().all { (left, right) -> left.duration == right.duration }
+        val pumping = plan.status == LowEndInteractionStatus.ACTIVE && bass != null && afterBass != null && pumping(afterBass, plan)
+        val unresolved = plan.status == LowEndInteractionStatus.BLOCKED || (plan.status == LowEndInteractionStatus.ACTIVE &&
+            after.overlapRatio >= LowEndInteractionPlanner.COLLISION_RATIO && after.coincidentWindowRatio >= LowEndInteractionPlanner.COINCIDENT_WINDOW_RATIO &&
+            after.combinedPeakDbfs > plan.before.combinedPeakDbfs - 1.0)
+        return LowEndInteractionReport(plan, after, unresolved, timing, duration, pumping)
+    }
+
+    /** A recovery steeper than the bounded 110 ms envelope is pumping evidence, not a passing duck. */
+    private fun pumping(audio: app.melotrail.audio.AudioBuffer, plan: LowEndInteractionPlan): Boolean {
+        val frames = audio.length; if (frames < 4) return false
+        val window = (audio.format.sampleRate * 0.020).toInt().coerceAtLeast(1)
+        val rmsByWindow = (0 until frames step window).map { start ->
+            val end = minOf(frames, start + window); val samples = audio.samples
+            sqrt((start until end).sumOf { frame -> (0 until audio.format.channels).sumOf { channel ->
+                val value = samples[frame * audio.format.channels + channel].toDouble(); value * value
+            } } / ((end - start) * audio.format.channels).toDouble().coerceAtLeast(1.0))
+        }
+        val allowedRatio = 10.0.pow((plan.duckingDb / 20.0) * (window / (audio.format.sampleRate * plan.releaseMs / 1000.0)).coerceAtMost(1.0))
+        return rmsByWindow.zipWithNext().any { (left, right) -> left > 1e-9 && right / left > allowedRatio * 1.25 }
+    }
     private fun correlation(samples: FloatArray): Double { val frames = samples.size / 2; if (frames < 2) return 1.0; val l = DoubleArray(frames) { samples[it * 2].toDouble() }; val r = DoubleArray(frames) { samples[it * 2 + 1].toDouble() }; val lm = l.average(); val rm = r.average(); val numerator = l.indices.sumOf { (l[it] - lm) * (r[it] - rm) }; val denominator = sqrt(l.sumOf { (it - lm) * (it - lm) } * r.sumOf { (it - rm) * (it - rm) }); return if (denominator <= 1e-12) 1.0 else numerator / denominator }
     private fun rms(samples: FloatArray): Double = sqrt(samples.map { it.toDouble() * it }.average())
     private fun db(value: Double): Double = 20.0 * log10(max(value, 1e-9))

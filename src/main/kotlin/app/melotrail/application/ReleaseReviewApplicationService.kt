@@ -4,6 +4,7 @@ import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.ReleaseSimilarityReport
 import app.melotrail.commercial.CommercialProvenanceManifest
 import app.melotrail.commercial.CommercialProvenanceService
+import app.melotrail.model.MasteringProfile
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
@@ -20,6 +21,8 @@ data class ReleaseReviewSnapshot(
     val commercial: ReleaseCommercialSummary? = null,
     val recognizability: ReleaseRecognizabilitySummary? = null,
     val similarity: ReleaseSimilarityReport? = null,
+    /** Local AAC/MP3 encode-decode measurements; unverified is explicit and never a pass. */
+    val codecPreviews: List<CodecPreviewEvidence> = emptyList(),
     val blockers: List<String> = emptyList()
 )
 
@@ -30,7 +33,9 @@ data class ReleaseMasteringSummary(
     val crestDb: Double,
     val loudnessReference: String,
     val dynamicsPreserved: Boolean,
-    val dynamicsIssues: List<String>
+    val dynamicsIssues: List<String>,
+    /** Null is legacy/stale evidence, not proof that any current policy passed. */
+    val policy: MasteringProfile? = null
 )
 
 data class ReleaseCommercialSummary(
@@ -87,6 +92,7 @@ class DefaultReleaseReviewApplicationService(
             commercial = commercial,
             recognizability = recognizability,
             similarity = metadata?.similarity,
+            codecPreviews = metadata?.codecPreviews.orEmpty(),
             blockers = blockers.distinct()
         )
     }
@@ -101,16 +107,28 @@ class DefaultReleaseReviewApplicationService(
             val objectValue = json.parseToJsonElement(Files.readString(path, StandardCharsets.UTF_8)).jsonObject
             fun number(name: String) = requireNotNull(objectValue[name]?.jsonPrimitive?.doubleOrNull) { "release metadata is missing $name" }
             fun text(name: String) = requireNotNull(objectValue[name]?.jsonPrimitive?.contentOrNull) { "release metadata is missing $name" }
+            val master = root.resolve("output").resolve(text("master")).normalize()
+            val masterFingerprint = text("masterFingerprint")
+            require(master.startsWith(root.resolve("output")) && Files.isRegularFile(master) && digest(master) == masterFingerprint) {
+                "release metadata does not match the selected lossless master"
+            }
             val issues = objectValue["masteringQualityIssues"]?.let { json.decodeFromJsonElement(ListSerializer, it) }
                 ?: error("release metadata is missing masteringQualityIssues")
             val similarity = objectValue["similarityReview"]?.let { json.decodeFromJsonElement(ReleaseSimilarityReport.serializer(), it) }
                 ?: error("release metadata is missing similarityReview")
+            val codecPreviews = objectValue["codecPreviews"]?.let { json.decodeFromJsonElement(CodecPreviewListSerializer, it) }.orEmpty()
+            require(codecPreviews.all { it.masterSha256 == masterFingerprint }) { "codec-preview evidence belongs to another master" }
+            val policy = objectValue["masteringPolicy"]?.let { json.decodeFromJsonElement(MasteringProfile.serializer(), it) }
+            codecPreviews.filter { it.status == CodecPreviewStatus.BLOCKED }.forEach { preview ->
+                blockers += "Local ${preview.codec} codec preview exceeds delivery policy: ${preview.detail}"
+            }
             ParsedReleaseMetadata(
                 ReleaseMasteringSummary(
                     number("integratedLufs"), number("truePeakDbtp"), number("loudnessRangeLu"), number("crestDb"),
-                    text("loudnessReference"), objectValue["dynamicsPreserved"]?.jsonPrimitive?.content == "true", issues
+                    text("loudnessReference"), objectValue["dynamicsPreserved"]?.jsonPrimitive?.content == "true", issues, policy
                 ),
-                similarity
+                similarity,
+                codecPreviews
             )
         }.getOrElse { failure ->
             blockers += "Release metadata is unavailable or invalid: ${failure.message ?: "unknown error"}"
@@ -140,7 +158,7 @@ class DefaultReleaseReviewApplicationService(
         }
     }
 
-    private data class ParsedReleaseMetadata(val mastering: ReleaseMasteringSummary, val similarity: ReleaseSimilarityReport)
+    private data class ParsedReleaseMetadata(val mastering: ReleaseMasteringSummary, val similarity: ReleaseSimilarityReport, val codecPreviews: List<CodecPreviewEvidence>)
 
     private fun digest(path: Path): String = MessageDigest.getInstance("SHA-256")
         .digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
@@ -148,5 +166,6 @@ class DefaultReleaseReviewApplicationService(
     private companion object {
         val json = Json { ignoreUnknownKeys = false }
         val ListSerializer = kotlinx.serialization.builtins.ListSerializer(kotlinx.serialization.serializer<String>())
+        val CodecPreviewListSerializer = kotlinx.serialization.builtins.ListSerializer(CodecPreviewEvidence.serializer())
     }
 }
