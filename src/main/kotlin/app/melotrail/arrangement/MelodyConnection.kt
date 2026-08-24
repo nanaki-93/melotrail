@@ -150,21 +150,22 @@ class MelodyConnectionPlanner(
         require(sequence.divisionType == Sequence.PPQ && sequence.resolution == sourceSong.canonicalPpq) {
             "Source-song MIDI timing is incompatible with its sidecar"
         }
-        val identities = sourceSong.sections.associate { section ->
-            section.instance.instanceId to MelodyIdentityBuilder.build(
-                normalizedRoot.resolve(section.sourceMidi.projectRelativePath),
-                canonicalBeatTicks = section.sourceMidi.ppq.toLong()
-            )
+        require(sequence.tracks.count { trackName(it) == sourceSong.fullMelody.melodyTrackName } == 1) {
+            "Source-song MIDI must contain exactly one canonical full melody track"
         }
-        val notes = collectNotes(sequence, sourceSong, identities)
+        val fullIdentity = MelodyIdentityBuilder.build(input,
+            canonicalBeatTicks = canonicalBeatTicks(sourceSong),
+            occurrenceWindows = sourceSong.fullMelody.occurrences.map { window -> MelodyOccurrenceWindow(window.occurrenceId, window.startTick, window.endTick) })
+        val anchorIdentity = fullIdentity.copy(anchorIds = (fullIdentity.anchorIds + sourceSong.fullMelody.protectedAnchorIdentityIds(fullIdentity)).distinct().sortedBy(MelodyNoteId::value))
+        val notes = collectNotes(sequence, sourceSong, fullIdentity)
         val reports = sourceSong.sections.zipWithNext().mapIndexed { index, (outgoing, incoming) ->
-            val beat = canonicalBeatTicks(sourceSong.canonicalPpq, outgoing)
+            val beat = canonicalBeatTicks(sourceSong)
             val boundary = MelodyConnectionBoundary(
                 boundaryId = "boundary-${index.toString().padStart(5, '0')}", outgoing = outgoing, incoming = incoming,
                 outgoingNotes = notes.getValue(outgoing.instance.instanceId), incomingNotes = notes.getValue(incoming.instance.instanceId),
                 canonicalBeatTicks = beat
             )
-            apply(boundary, identities.getValue(outgoing.instance.instanceId), sourceSong.assembledMidi.sha256, sourceSong.contextSha256)
+            apply(boundary, anchorIdentity, sourceSong.assembledMidi.sha256, sourceSong.contextSha256)
         }
         val decisionSha256 = digest(reports.joinToString("|") { report ->
             val mutations = report.report.mutations.joinToString(",") { mutation -> mutation.noteId.value + mutation.operation.name }
@@ -238,7 +239,7 @@ class MelodyConnectionPlanner(
 
     private fun extendChord(boundary: MelodyConnectionBoundary): List<MidiMutation> {
         val candidates = boundary.outgoingNotes.filter { it.globalEndTick < boundary.outgoing.endTick && it.globalStartTick >= boundary.outgoing.endTick - 2 * boundary.canonicalBeatTicks }
-            .sortedByDescending(MelodyConnectionNote::globalEndTick).take(2)
+            .sortedByDescending(MelodyConnectionNote::globalEndTick).take(1)
         if (candidates.isEmpty()) return emptyList()
         return candidates.map { note ->
             val before = values(note); note.endEvent.tick = boundary.outgoing.endTick
@@ -294,29 +295,38 @@ class MelodyConnectionPlanner(
         require(after.divisionType == Sequence.PPQ && after.resolution == song.canonicalPpq && after.tickLength == before.tickLength) {
             "Melody connection changed canonical song timing"
         }
+        val melodyTracks = after.tracks.filter { trackName(it) == song.fullMelody.melodyTrackName }
+        require(melodyTracks.size == 1 && after.tracks.size == 2 && (0 until melodyTracks.single().size()).none { index ->
+            (melodyTracks.single()[index].message as? ShortMessage)?.command == ShortMessage.CONTROL_CHANGE
+        }) { "Melody connection broke the canonical full-melody track contract" }
+        val outputIdentity = MelodyIdentityBuilder.build(output, canonicalBeatTicks(song), song.fullMelody.occurrences.map { window ->
+            MelodyOccurrenceWindow(window.occurrenceId, window.startTick, window.endTick)
+        })
+        require(outputIdentity.notes.zipWithNext().all { (left, right) -> left.originalEndTick <= right.originalStartTick }) {
+            "Melody connection created a cross-boundary or polyphonic melody overlap"
+        }
         reports.forEach { report -> report.report.requireValid() }
     }
 
-    private fun collectNotes(sequence: Sequence, song: SourceSong, identities: Map<String, MelodyIdentity>): Map<String, List<MelodyConnectionNote>> {
+    private fun collectNotes(sequence: Sequence, song: SourceSong, identity: MelodyIdentity): Map<String, List<MelodyConnectionNote>> {
         val sections = song.sections.associateBy { it.instance.instanceId }
         val result = sections.keys.associateWith { mutableListOf<MelodyConnectionNote>() }.toMutableMap()
-        sequence.tracks.forEach { track ->
-            val name = trackName(track) ?: return@forEach
-            val parts = name.split(':')
-            if (parts.size != 3) return@forEach
-            val section = sections[parts[0]] ?: return@forEach
-            val sourceTrack = parts[2].toIntOrNull() ?: return@forEach
-            val identityByOrdinal = identities.getValue(section.instance.instanceId).notes.filter { it.track == sourceTrack }.associateBy { it.channel to it.noteOnOrdinal }
+        sequence.tracks.forEachIndexed { trackIndex, track ->
+            if (trackName(track) != song.fullMelody.melodyTrackName) return@forEachIndexed
+            val identityByOrdinal = identity.notes.filter { it.track == trackIndex }.associateBy { it.channel to it.noteOnOrdinal }
             val ordinals = mutableMapOf<Int, Int>(); val active = mutableMapOf<Pair<Int, Int>, ArrayDeque<Pair<MelodyIdentityNote, MidiEvent>>>()
             (0 until track.size()).forEach { index ->
                 val event = track[index]; val message = event.message as? ShortMessage ?: return@forEach
                 val key = message.channel to message.data1
                 if (message.command == ShortMessage.NOTE_ON && message.data2 > 0) {
                     val ordinal = ordinals.getOrDefault(message.channel, 0); ordinals[message.channel] = ordinal + 1
-                    val identity = requireNotNull(identityByOrdinal[message.channel to ordinal]) { "Source-song note identity is missing" }
-                    active.getOrPut(key) { ArrayDeque() }.addLast(identity to event)
+                    val noteIdentity = requireNotNull(identityByOrdinal[message.channel to ordinal]) { "Source-song full-melody note identity is missing" }
+                    active.getOrPut(key) { ArrayDeque() }.addLast(noteIdentity to event)
                 } else if (message.command == ShortMessage.NOTE_OFF || message.command == ShortMessage.NOTE_ON && message.data2 == 0) {
                     val start = active[key]?.removeFirstOrNull() ?: throw IllegalArgumentException("Source-song MIDI has unmatched note-off")
+                    val section = requireNotNull(sections.values.singleOrNull { start.second.tick >= it.startTick && event.tick <= it.endTick }) {
+                        "Source-song full-melody note crosses an occurrence boundary"
+                    }
                     result.getValue(section.instance.instanceId) += MelodyConnectionNote(start.first, start.second, event, track, start.second.tick, event.tick)
                 }
             }
@@ -325,8 +335,8 @@ class MelodyConnectionPlanner(
         return result.mapValues { (_, notes) -> notes.sortedBy(MelodyConnectionNote::globalStartTick) }
     }
 
-    private fun canonicalBeatTicks(ppq: Int, section: SourceSongSection): Long = ppq * 4L / 4L
-    private fun localEnd(note: MelodyConnectionNote, globalEnd: Long): Long = note.identity.originalEndTick + (globalEnd - note.globalEndTick)
+    private fun canonicalBeatTicks(song: SourceSong): Long = song.canonicalPpq * 4L / song.meterDenominator
+    private fun localEnd(note: MelodyConnectionNote, globalEnd: Long): Long = globalEnd
     private fun values(note: MelodyConnectionNote): MidiMutationValues = MidiMutationValues(note.identity.channel, note.identity.pitch, note.identity.velocity, note.identity.originalStartTick, note.identity.originalEndTick)
     private fun candidatePickupPitch(lastPitch: Int, allowed: Set<Int>, stepwise: Boolean): Int? = (if (stepwise) (1..2).flatMap { listOf(lastPitch - it, lastPitch + it) } else (0..12).flatMap { listOf(lastPitch + it, lastPitch - it) })
         .firstOrNull { it in 0..127 && it.mod(12) in allowed && (!stepwise || abs(it - lastPitch) in 1..2) }

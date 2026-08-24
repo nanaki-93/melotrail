@@ -325,10 +325,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/SourceSongApplicationService.kt",
       "classification": "documented",
-      "reason": "All 2 callable declarations in src/main/kotlin/app/melotrail/application/SourceSongApplicationService.kt have directly attached KDoc/docstrings; reviewed for QP-005 on 2026-08-24.",
-      "functionCount": 2,
-      "declarationDigest": "aaa413c557b6e3df7751136f340101faead1a1d5a669c3dd48b61592e84ec36a",
-      "documentedFunctionCount": 2
+      "reason": "All 3 callable declarations in src/main/kotlin/app/melotrail/application/SourceSongApplicationService.kt have directly attached KDoc/docstrings; reviewed for QP-007 on 2026-08-24.",
+      "functionCount": 3,
+      "declarationDigest": "8f539381580a537adcb63aad543b65eeb3e0e9161e10590c89b57b5b7b332f9c",
+      "documentedFunctionCount": 3
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/SourceSongCriticApplicationService.kt",
@@ -505,6 +505,14 @@
       "functionCount": 4,
       "declarationDigest": "bb84431d57bafd379f7bed8ea5bd09ccca5d48644d2183b1ae22ae5e25f450dd",
       "documentedFunctionCount": 0
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/arrangement/FullSongMelody.kt",
+      "classification": "documented",
+      "reason": "All 12 callable declarations in src/main/kotlin/app/melotrail/arrangement/FullSongMelody.kt have directly attached KDoc/docstrings; introduced for QP-007 on 2026-08-24.",
+      "functionCount": 12,
+      "declarationDigest": "685e338f0f75399202e14c21db68b031d90fca5bdb9cab0e1a5617d84a127c1c",
+      "documentedFunctionCount": 12
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/GeneratedRoleValidation.kt",
@@ -805,18 +813,18 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/SourceSong.kt",
       "classification": "documented",
-      "reason": "All 18 callable declarations in src/main/kotlin/app/melotrail/arrangement/SourceSong.kt have directly attached KDoc/docstrings; reviewed for QP-006 on 2026-08-24.",
-      "functionCount": 18,
-      "declarationDigest": "0deee2abbe84124fdd63f1c2387fae936adf566c6cad51f061ecdd6dfaa638c8",
-      "documentedFunctionCount": 18
+      "reason": "All 26 callable declarations in src/main/kotlin/app/melotrail/arrangement/SourceSong.kt have directly attached KDoc/docstrings; reviewed for QP-007 on 2026-08-24.",
+      "functionCount": 26,
+      "declarationDigest": "8b4425e406d31e1aeecb8c67c807fd8afaf7662363ae8397a06e6924c50d1e39",
+      "documentedFunctionCount": 26
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/SourceSongCritic.kt",
       "classification": "documented",
-      "reason": "All 18 callable declarations in src/main/kotlin/app/melotrail/arrangement/SourceSongCritic.kt have directly attached KDoc/docstrings; reviewed on 2026-08-24.",
-      "functionCount": 18,
-      "declarationDigest": "7b8b001186b1c5bad06e5d5b56181527b1f5adb56bdf5dcff284ad3753fa7968",
-      "documentedFunctionCount": 18
+      "reason": "All 20 callable declarations in src/main/kotlin/app/melotrail/arrangement/SourceSongCritic.kt have directly attached KDoc/docstrings; reviewed for QP-007 on 2026-08-24.",
+      "functionCount": 20,
+      "declarationDigest": "36e4344ede638694c2beebecdffbf8d48045d5e0e6a061e44f259e864d7090b4",
+      "documentedFunctionCount": 20
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/StageRunStore.kt",

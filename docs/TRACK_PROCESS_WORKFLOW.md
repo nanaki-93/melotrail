@@ -62,7 +62,7 @@ dependencies or infer completion from page visits.
 | Clean/Normalize/Timing/Transpose | Separate MIDI plus quality/normalization/timing/transposition reports | Review cleanup and timing evidence; confirm low-confidence source key; rerun earliest stale stage |
 | Correction/AI Fix/Enhance/Feel | Hash-bound branch candidates and selections | Approve, reject, regenerate, select no-op/bypass; never copy by filename |
 | Analysis/Structure | `analysis/<part>.json`, stable `StructureOccurrence` entries | Reanalyze affected part or save intended occurrence order |
-| Source Song | Structured source MIDI/sidecar, connected candidate, critic report, approval | Preview exact source song; repair or explicitly review reported issues |
+| Source Song | Versioned two-track source MIDI/sidecar, connected candidate, critic report, approval | Preview exact source song; repair or explicitly review reported issues |
 | Arrangement | `song_plan.json`, `section_variations.json`, approved/draft detailed plan | Approve draft or regenerate from current authority/source approval |
 | Generated roles/core | Validated bass/drums/pad and optional string/transition evidence | Regenerate the failed role; later roles use accepted prior state |
 | Cohesion | Boundary contexts/plans, bridge/role/occurrence outputs, approval | Review each adjacent occurrence against the approved arrangement |
@@ -73,10 +73,12 @@ dependencies or infer completion from page visits.
 
 ## Source Song boundary
 
-The current application assembles selected source MIDI into ordered occurrences,
-retains occurrence IDs and canonical harmony in a sidecar, connects adjacent
-melody boundaries, runs a deterministic source critic, and requires explicit
-approval before arrangement.
+The current application assembles selected source MIDI into ordered occurrences
+as one conductor track plus one controller-free full-melody track. Its versioned
+sidecar retains occurrence IDs/windows, canonical harmony, source/preparation
+hashes, post-fit anchors, note lineage, and a reviewable global groove map;
+Melody Connection and Source Song Critic use that assembled identity before
+explicit approval.
 
 Known limitation: current downstream piano paths can reconstruct occurrence
 MIDI rather than consume the exact approved connected source song. QP-002 now
@@ -90,9 +92,10 @@ controller-aware one-track monophonic candidate. QP-006 then fits an immutable
 candidate per structure occurrence to the authoritative local harmony, with
 note-level pitch/tail/tie evidence and a tempo/PPQ-derived boundary gap. It
 does not rewrite project harmony, and ambiguity or an excessive repair blocks
-instead of publishing MIDI. Current assembly still does not publish one
-canonical full-melody track consumed downstream. The remaining gaps are
-QP-007–QP-010 and must not be described as current capabilities.
+instead of publishing MIDI. QP-008 has not yet cut every downstream arrangement,
+humanization, renderer, and export consumer over to the approved connected full
+melody. The remaining gaps are QP-008–QP-010 and must not be described as
+current capabilities.
 
 ## Arrangement and Cohesion boundary
 

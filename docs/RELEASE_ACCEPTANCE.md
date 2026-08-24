@@ -5,8 +5,8 @@ Review date: 2026-08-24
 Status: **NOT APPROVED FOR RELEASE**
 
 This is a living evidence gate, not a release declaration. QP-001 through
-QP-006 have code-owned evidence; QP-007–QP-018 remain incomplete, and the current
-four-source song has documented timing plus remaining full-melody, shared-groove,
+QP-007 have code-owned evidence; QP-008–QP-018 remain incomplete, and the current
+four-source song has documented downstream full-melody-consumption, shared-groove,
 voice-leading, arrangement, Cohesion, low-end, and
 bypass defects. A successful build or package cannot override those musical
 findings.

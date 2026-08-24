@@ -114,12 +114,15 @@ performed parts that do not share a downbeat, performed tempo, mode, or chord
 fit. Current normalization conforms MIDI representation/tempo metadata, while
 reviewed beat/downbeat alignment and occurrence-local harmony fitting are
 separate stages described in [`plan/PLAN.md`](plan/PLAN.md). Current source-song
-assembly prepares each selected source section into a separate globally
-monophonic candidate, then fits it to the authoritative harmony for its exact
-occurrence. A harmony-fit block means the nearest safe pitch is
+assembly prepares each selected source section into a globally monophonic
+candidate, fits it to the authoritative harmony for its exact occurrence, then
+publishes one versioned canonical full melody with a conductor track,
+controller-free note track, occurrence/harmony/lineage sidecar, and reviewable
+groove map. A harmony-fit block means the nearest safe pitch is
 ambiguous/excessive or a boundary tail cannot be released within policy; inspect
-its report rather than replacing the candidate. Assembly still does not publish
-one canonical full melody consumed by every downstream stage.
+its report rather than replacing the candidate. QP-008 still must ensure every
+later arrangement, humanization, renderer, and export path consumes the
+approved connected full melody.
 
 Before arranging a current project:
 
@@ -132,7 +135,7 @@ Before arranging a current project:
 
 If section starts drift away from the bar grid, different modes remain audible,
 simultaneous melody notes survive, or exposed notes clash with the active chord,
-treat the project as a private diagnostic run until QP-002–QP-010 are
+treat the project as a private diagnostic run until QP-008–QP-010 are
 implemented or the candidate is manually corrected and reviewed. Audio effects,
 mastering, and Cohesion cannot repair a fundamentally misaligned source melody.
 

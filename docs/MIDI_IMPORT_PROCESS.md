@@ -111,12 +111,18 @@ unselected branch cannot override the current candidate.
   and transcription tails are shortened under a versioned tempo/PPQ-derived
   gap policy before incompatible chord boundaries. The original selected MIDI
   and QP-005 candidate remain immutable.
-- Source-song assembly now requires both reports, but it still does not publish
-  one canonical full melody consumed by every downstream stage.
+- Source-song assembly now requires both reports and publishes an immutable
+  v2 candidate with one conductor and one controller-free full-melody track.
+  Its sidecar persists exact occurrence windows, markers, harmony, source and
+  preparation hashes, post-fit anchors, note lineage, and an occurrence-indexed
+  groove map. Melody Connection and Source Song Critic use that assembled
+  identity. QP-008 still must cut every later arrangement/render consumer over
+  to the approved connected candidate.
 
-These remaining limits are tracked by QP-007 through QP-010. Review the
+These remaining limits are tracked by QP-008 through QP-010. Review the
 connected source-song preview and Source Song Critic carefully; prepared-source
-completion is not musical approval or a canonical-full-melody guarantee.
+completion is not musical approval or a guarantee that all later consumers use
+the approved full melody.
 
 ## Recovery
 

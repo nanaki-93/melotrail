@@ -13,11 +13,18 @@ import app.melotrail.arrangement.SelectedMidiArtifactResolver
 import app.melotrail.arrangement.SourceSongArtifact
 import app.melotrail.arrangement.SourceSongAssembler
 import app.melotrail.arrangement.SourceSongAssemblyRequest
+import app.melotrail.arrangement.SourceSongGrooveEvidence
 import app.melotrail.arrangement.SourceSongHarmonySpan
 import app.melotrail.arrangement.SourceSongMidiInput
 import app.melotrail.arrangement.SourceSongSection
+import app.melotrail.arrangement.SourceSong
+import app.melotrail.arrangement.SongPart
+import app.melotrail.arrangement.WorkflowArtifactReference
 import app.melotrail.arrangement.sha256Hex
 import app.melotrail.arrangement.toSectionInstance
+import app.melotrail.preparation.MidiTimeMappingStore
+import app.melotrail.preparation.SourceGrooveTemplateStatus
+import app.melotrail.preparation.SourceTimingEvidenceStore
 import java.nio.file.Path
 import javax.sound.midi.MidiSystem
 
@@ -40,6 +47,9 @@ class SourceSongApplicationService(
         project.requireValid(root)
         val authority = musicalAuthorityBuilder.build(root)
         val usedPartIds = project.envelope.structureOccurrences.map { it.partId }.toSet()
+        val grooveByPart = project.parts.filter { it.id in usedPartIds }.associate { part ->
+            part.id to acceptedGrooveEvidence(root, part)
+        }
         val preparedByPart = project.parts.filter { it.id in usedPartIds }.associate { part ->
             val selected = selectedMidiArtifactResolver.resolve(root, project, part)
             val input = MelodyPreparationArtifactReference(selected.projectRelativePath, selected.sha256, selected.ppq, noteOnCount(selected.path))
@@ -67,10 +77,14 @@ class SourceSongApplicationService(
         }
         val preparationContext = sha256Hex(buildString {
             append(authority.contextSha256).append('|').append(MonophonicMelodyPreparationReport.PROCESSOR_VERSION).append('|')
-            append(MelodyHarmonyFitReport.PROCESSOR_VERSION).append('|')
+            append(MelodyHarmonyFitReport.PROCESSOR_VERSION).append('|').append(SourceSong.PROCESSOR_VERSION).append('|')
             sourceMidiByOccurrence.toSortedMap().forEach { (occurrenceId, source) ->
                 append(occurrenceId).append('=').append(source.sha256).append(':').append(requireNotNull(source.preparationReport).sha256)
                     .append(':').append(requireNotNull(source.harmonyFitReport).sha256).append(';')
+            }
+            grooveByPart.toSortedMap().forEach { (partId, evidence) ->
+                append(partId).append('=').append(evidence.status.name).append(':').append(evidence.sourceTimingReport?.sha256.orEmpty())
+                    .append(':').append(evidence.template?.sourceSha256.orEmpty()).append(';')
             }
         })
         val counts = mutableMapOf<String, Int>()
@@ -91,7 +105,8 @@ class SourceSongApplicationService(
                 canonicalHarmony = authority.harmonicTimeline.forOccurrence(occurrence.id).map { chord ->
                     SourceSongHarmonySpan(chord.occurrenceId, chord.bar, chord.startTick, chord.endTick,
                         chord.chord.rootChromatic, chord.chord.rootSymbol, chord.chord.quality)
-                }
+                },
+                groove = grooveByPart.getValue(occurrence.partId)
             )
         }
         return sourceSongAssembler.assemble(SourceSongAssemblyRequest(
@@ -111,5 +126,27 @@ class SourceSongApplicationService(
             val message = track[index].message as? javax.sound.midi.ShortMessage
             message?.command == javax.sound.midi.ShortMessage.NOTE_ON && message.data2 > 0
         }
+    }
+
+    /** Return only a QP-003-approved source template, otherwise persist an explicit neutral grid fallback. */
+    private fun acceptedGrooveEvidence(root: Path, part: SongPart): SourceSongGrooveEvidence {
+        val mappingReference = part.timingMappingEvidence ?: return SourceSongGrooveEvidence.gridFallback()
+        val timingReference = requireNotNull(part.sourceTimingEvidence) {
+            "Part '${part.id}' has timing mapping evidence without source timing evidence"
+        }
+        val mapping = MidiTimeMappingStore.readReport(root, mappingReference.report)
+        require(mapping.partId == part.id && mapping.sourceTimingReport == timingReference.report && mapping.sourceSha256 == timingReference.sourceSha256) {
+            "Part '${part.id}' timing mapping does not bind its source timing evidence"
+        }
+        if (!mapping.acceptedSourceGroove) return SourceSongGrooveEvidence.gridFallback()
+        val timing = SourceTimingEvidenceStore.read(root, timingReference.report)
+        require(timing.partId == part.id && timing.source.sha256 == timingReference.sourceSha256 && timing.groove.status == SourceGrooveTemplateStatus.MEASURED) {
+            "Part '${part.id}' has no accepted measured source groove"
+        }
+        return SourceSongGrooveEvidence(
+            status = app.melotrail.arrangement.SourceSongGrooveStatus.MEASURED,
+            sourceTimingReport = WorkflowArtifactReference(timingReference.report.path, timingReference.report.sha256),
+            template = timing.groove
+        )
     }
 }

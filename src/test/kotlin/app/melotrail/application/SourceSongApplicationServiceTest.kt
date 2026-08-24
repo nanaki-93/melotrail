@@ -72,7 +72,35 @@ class SourceSongApplicationServiceTest {
         assertEquals(9_600L, assembled.tickLength)
         assertEquals(listOf(90), tempoEvents(assembled))
         assertEquals(listOf(4 to 4), meterEvents(assembled))
+        assertEquals(2, assembled.tracks.size)
+        val fullMelodyTracks = assembled.tracks.filter { trackName(it) == "full-melody" }
+        assertEquals(1, fullMelodyTracks.size)
+        assertTrue((0 until fullMelodyTracks.single().size()).none { index ->
+            (fullMelodyTracks.single()[index].message as? ShortMessage)?.command == ShortMessage.CONTROL_CHANGE
+        })
+        assertEquals(1, artifact.song.fullMelody.maximumPolyphony)
+        assertEquals(listOf("a-one", "a-two", "b-one", "c-one", "b-two"), artifact.song.fullMelody.occurrences.map { it.occurrenceId })
+        assertTrue(artifact.song.fullMelody.noteLineage.any { it.protectedAnchor })
+        assertEquals(artifact.song.sections.map { it.canonicalHarmony }, artifact.song.fullMelody.occurrences.map { window ->
+            artifact.song.sections.single { it.instance.instanceId == window.occurrenceId }.canonicalHarmony
+        })
+        artifact.song.fullMelody.occurrences.forEach { window ->
+            val section = artifact.song.sections.single { it.instance.instanceId == window.occurrenceId }
+            assertEquals(section.sourceMidi.sha256, window.sourceMidiSha256)
+            assertEquals(section.sourceMidi.preparationReport, window.monophonicPreparationReport)
+            assertEquals(section.sourceMidi.harmonyFitReport, window.harmonyFitReport)
+            assertEquals(section.startTick, window.startTick)
+            assertEquals(section.endTick, window.endTick)
+        }
+        assertEquals(artifact.song.fullMelody.noteLineage.size, fullMelodyTracks.single().noteOnCount())
+        assertTrue(artifact.song.fullMelody.noteLineage.zipWithNext().all { (left, right) -> left.endTick <= right.startTick })
+        assertEquals(artifact.song.sections.map { it.instance.instanceId }, markerOccurrences(assembled))
+        val templates = artifact.song.fullMelody.grooveMap.occurrenceTemplateFingerprints.associateBy { it.occurrenceId }
+        assertEquals(templates.getValue("a-one").fingerprint, templates.getValue("a-two").fingerprint)
+        assertEquals(templates.getValue("b-one").fingerprint, templates.getValue("b-two").fingerprint)
+        assertTrue(artifact.song.fullMelody.grooveMap.boundaries.all { it.status == app.melotrail.arrangement.FullSongGrooveBoundaryStatus.CONTINUOUS })
         assertTrue(artifact.metadataPath.startsWith(root.resolve("source-song")))
+        assertTrue(artifact.metadataPath.toString().contains("source-song/v2/"))
         assertTrue(artifact.song.sections.all { it.sourceMidi.kind == "HARMONY_FITTED" && it.sourceMidi.preparationReport != null && it.sourceMidi.harmonyFitReport != null })
         artifact.song.sections.forEach { section ->
             val source = section.sourceMidi
@@ -184,4 +212,20 @@ class SourceSongApplicationServiceTest {
 
     private fun meterEvents(sequence: Sequence): List<Pair<Int, Int>> = sequence.tracks.flatMap { track -> (0 until track.size()).map(track::get) }
         .mapNotNull { it.message as? MetaMessage }.filter { it.type == 0x58 }.map { it.data[0].toInt() and 0xff to (1 shl (it.data[1].toInt() and 0xff)) }
+
+    private fun trackName(track: javax.sound.midi.Track): String? = (0 until track.size()).map(track::get).firstNotNullOfOrNull { event ->
+        (event.message as? MetaMessage)?.takeIf { it.type == 0x03 }?.data?.toString(Charsets.UTF_8)
+    }
+
+    private fun javax.sound.midi.Track.noteOnCount(): Int = (0 until size()).count { index ->
+        val message = get(index).message as? ShortMessage
+        message?.command == ShortMessage.NOTE_ON && message.data2 > 0
+    }
+
+    private fun markerOccurrences(sequence: Sequence): List<String> = sequence.tracks.first().let { conductor ->
+        (0 until conductor.size()).map(conductor::get).mapNotNull { event ->
+            (event.message as? MetaMessage)?.takeIf { it.type == 0x06 }?.data?.toString(Charsets.UTF_8)
+                ?.substringAfter("occurrence=")?.substringBefore(';')
+        }
+    }
 }

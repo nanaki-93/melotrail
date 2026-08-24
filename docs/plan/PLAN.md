@@ -48,8 +48,10 @@ outcome:
    QP-006 publishes a further occurrence-local harmony-fitted candidate.
    Ambiguous/excessive repairs block with note-level evidence rather than altering
    authority or selected MIDI.
-5. `SourceSongAssembler` now consumes that harmony-fitted candidate but copies it into
-   occurrence-local tracks rather than publishing one canonical full melody.
+5. QP-007 now assembles those harmony-fitted candidates into an immutable,
+   two-track canonical full melody with occurrence/lineage/harmony/groove
+   sidecar evidence; Melody Connection and Source Song Critic use its global
+   note identity.
 6. Source-song approval is checked before arrangement, but arrangement state,
    humanization, and rendering later reconstruct piano from occurrence
    artifacts instead of consuming the exact approved connected full melody.

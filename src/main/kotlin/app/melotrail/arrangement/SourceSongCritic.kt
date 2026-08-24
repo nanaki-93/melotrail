@@ -154,14 +154,20 @@ class SourceSongCritic {
             sourceSequence.resolution == input.sourceSong.canonicalPpq && connectedSequence.resolution == input.sourceSong.canonicalPpq) {
             "Source-song critic requires matching PPQ MIDI"
         }
+        requireCanonicalFullMelody(sourceSequence, input.sourceSong)
+        requireCanonicalFullMelody(connectedSequence, input.sourceSong)
         val notes = notes(connectedSequence)
         val beat = canonicalBeatTicks(input.sourceSong)
         val bar = beat * meterNumerator(sourceSequence)
+        val fullIdentity = MelodyIdentityBuilder.build(source, beat, input.sourceSong.fullMelody.occurrences.map { window ->
+            MelodyOccurrenceWindow(window.occurrenceId, window.startTick, window.endTick)
+        })
+        val anchorIdentity = fullIdentity.copy(anchorIds = (fullIdentity.anchorIds + input.sourceSong.fullMelody.protectedAnchorIdentityIds(fullIdentity)).distinct().sortedBy(MelodyNoteId::value))
         val issues = buildList {
             addAll(boundaries(input.sourceSong, connectedSequence, notes, beat, bar))
             addAll(phrases(input.sourceSong, notes, beat, bar))
             addAll(chords(input.sourceSong, notes, input.projectScalePitchClasses, bar))
-            addAll(identity(input.sourceSong, input.connection, root, bar))
+            addAll(identity(input.sourceSong, input.connection, anchorIdentity, bar))
         }.sortedWith(SourceSongCriticReport.ISSUE_ORDER)
         return SourceSongCriticReport(
             sourceSongContextSha256 = input.sourceSong.contextSha256,
@@ -248,7 +254,7 @@ class SourceSongCritic {
     }
 
     /** Verify persisted connection evidence still preserves every protected source melody anchor. */
-    private fun identity(song: SourceSong, connection: MelodyConnection, root: Path, bar: Long): List<SourceSongIssue> {
+    private fun identity(song: SourceSong, connection: MelodyConnection, fullIdentity: MelodyIdentity, bar: Long): List<SourceSongIssue> {
         val expected = song.sections.zipWithNext().mapIndexed { index, (outgoing, incoming) -> boundaryId(index) to (outgoing to incoming) }.toMap()
         val reports = connection.boundaries.associateBy { it.decision.boundaryId }
         val issues = mutableListOf<SourceSongIssue>()
@@ -258,10 +264,9 @@ class SourceSongCritic {
         expected.forEach { (id, pair) ->
             val report = reports[id] ?: return@forEach
             val outgoing = pair.first
-            val identity = MelodyIdentityBuilder.build(root.resolve(outgoing.sourceMidi.projectRelativePath), outgoing.sourceMidi.ppq.toLong())
             val invalid = report.report.mutations.filter { mutation ->
-                mutation.operation != MidiMutationOperation.ADD && (mutation.noteId !in identity.notes.map(MelodyIdentityNote::id) ||
-                    (identity.isAnchor(mutation.noteId) && (mutation.operation == MidiMutationOperation.REMOVE || mutation.after?.pitch != identity.note(mutation.noteId).pitch)))
+                mutation.operation != MidiMutationOperation.ADD && (mutation.noteId !in fullIdentity.notes.map(MelodyIdentityNote::id) ||
+                    (fullIdentity.isAnchor(mutation.noteId) && (mutation.operation == MidiMutationOperation.REMOVE || mutation.after?.pitch != fullIdentity.note(mutation.noteId).pitch)))
             }
             if (invalid.isNotEmpty() || report.report.inputSha256 != song.assembledMidi.sha256 || report.report.outputSha256 != connection.outputMidi.sha256) {
                 issues += issue(SourceSongIssueCategory.IDENTITY_PRESERVATION, SourceSongIssueSeverity.BLOCKING, id, outgoing.endTick / bar, outgoing.endTick - 1, outgoing.endTick, "connection evidence does not preserve protected source melody identity", invalid.size.toDouble(), 0.0)
@@ -292,6 +297,15 @@ class SourceSongCritic {
         return result.sortedWith(compareBy<Note> { it.startTick }.thenBy(Note::pitch).thenBy(Note::endTick))
     }
 
+    /** Enforce the QP-007 two-track, controller-free canonical melody contract before critiquing it. */
+    private fun requireCanonicalFullMelody(sequence: Sequence, song: SourceSong) {
+        require(sequence.tracks.size == 2) { "Source-song critic requires one conductor and one full melody track" }
+        val melodyTracks = sequence.tracks.filter { trackName(it) == song.fullMelody.melodyTrackName }
+        require(melodyTracks.size == 1 && (0 until melodyTracks.single().size()).none { index ->
+            (melodyTracks.single()[index].message as? ShortMessage)?.command == ShortMessage.CONTROL_CHANGE
+        }) { "Source-song critic found non-canonical melody controller state" }
+    }
+
     /** Build a stable issue identifier and preserve one full tick of issue evidence. */
     private fun issue(category: SourceSongIssueCategory, severity: SourceSongIssueSeverity, boundaryId: String, bar: Long, start: Long, end: Long, message: String, observed: Double, threshold: Double): SourceSongIssue {
         val safeStart = maxOf(0, start); val safeEnd = maxOf(safeStart + 1, end)
@@ -300,7 +314,12 @@ class SourceSongCritic {
     }
 
     /** Convert the canonical meter denominator to the fixed PPQ beat unit. */
-    private fun canonicalBeatTicks(song: SourceSong): Long = song.canonicalPpq.toLong()
+    private fun canonicalBeatTicks(song: SourceSong): Long = song.canonicalPpq * 4L / song.meterDenominator
+
+    /** Read the first track-name meta event so the note-bearing full melody is unambiguous. */
+    private fun trackName(track: javax.sound.midi.Track): String? = (0 until track.size()).map(track::get).firstNotNullOfOrNull { event ->
+        (event.message as? javax.sound.midi.MetaMessage)?.takeIf { it.type == 0x03 }?.data?.toString(Charsets.UTF_8)
+    }
 
     /** Read the source song's conductor meter numerator, which assembly always publishes at tick zero. */
     private fun meterNumerator(sequence: Sequence): Long = sequence.tracks.asSequence().flatMap { track -> (0 until track.size()).asSequence().map(track::get) }

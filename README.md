@@ -42,15 +42,17 @@ Setup and Harmony
   -> Render, Mix, Master, and Export
 ```
 
-Current source-song approval is a real gate, but the quality roadmap documents
-known musical gaps: performed beat grids are not yet warped to project beats,
-source melody is not yet guaranteed chord-compatible, sustain tails and source
-micro-timing are not enforced across
-the ensemble, cross-section accompaniment voicing can reset, and several
-downstream consumers reconstruct occurrence MIDI instead of using the approved
-full melody. Production also lacks interaction-aware kick/bass control and
-selected-master codec-preview evidence. Those defects are the scope of the new
-[`PLAN.md`](PLAN.md).
+Current source-song approval is a real gate. Reviewed timing candidates,
+mode-aware transposition, sustain-aware monophonic preparation, and
+occurrence-local harmony fitting now produce a versioned canonical full-melody
+candidate with one conductor track, one controller-free melody track, stable
+occurrence/harmony/lineage sidecar evidence, and a reviewable full-song groove
+map. The quality roadmap still documents material gaps: downstream arrangement,
+humanization, rendering, and export do not yet all consume that approved melody;
+source micro-timing is not yet applied across the ensemble; cross-section
+accompaniment voicing can reset; and production lacks interaction-aware
+kick/bass control and selected-master codec-preview evidence. Those defects are
+the scope of [`PLAN.md`](PLAN.md).
 
 For current operational behavior, use:
 
