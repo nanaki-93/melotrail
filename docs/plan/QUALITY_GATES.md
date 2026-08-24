@@ -44,6 +44,17 @@ silence, or a melody note crossing a boundary. Exact numeric tolerances must be
 calibrated in QP-001/QP-003 against PPQ-scaled fixtures and stored as a versioned
 policy; do not bury magic tick constants in individual validators.
 
+### QP-001 calibration evidence
+
+The deterministic QP-001 baseline uses a 480-PPQ, 4/4 fixture. It records a
+one-beat fractional-bar residual (480 ticks), a 60-tick phase defect, a 240-tick
+pedal-tail extension, and a 48-tick accompaniment-versus-piano residual. The
+fixture also records a 36-semitone reset-voicing movement, coincident 50–150 Hz
+kick/bass energy, and a decoded-preview sample peak above the selected-master
+sample peak. These values expose known failures in PPQ-scaled units; they are
+calibration inputs for versioned policies, not listening-quality claims or final
+acceptance thresholds.
+
 The source-groove extractor must exclude pickup placement, tempo drift, missing
 onsets, and statistical outliers from its micro-timing vector. A low-confidence
 template becomes review-required or falls back explicitly to the approved grid;

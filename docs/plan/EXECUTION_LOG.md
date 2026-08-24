@@ -9,7 +9,7 @@ containing commit and required checks are recorded.
 
 | Task | Status | Commit | Required checks | Notes |
 | --- | --- | --- | --- | --- |
-| QP-001 | Pending | — | `make test`, `make worker-test` | — |
+| QP-001 | Complete | SELF | `make test`, `make worker-test` | Deterministic MIDI/audio defect fixtures and measurement harness cover timing, harmony, monophony, sustain, arrangement, groove, low-end, codec, critic, and lineage evidence. |
 | QP-002 | Pending | — | focused Kotlin/worker tests, `make test`, `make worker-test` | — |
 | QP-003 | Pending | — | focused timing tests, `make test` | — |
 | QP-004 | Pending | — | transposition tests, `make test` | — |
