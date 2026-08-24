@@ -5,16 +5,20 @@ Review date: 2026-08-24
 Status: **NOT APPROVED FOR RELEASE**
 
 This is a living evidence gate, not a release declaration. The active
-composition-quality roadmap QP-001–QP-017 is not implemented, and the current
-four-source song has documented timing, key/mode, harmony, monophony,
-arrangement, Cohesion, and bypass defects. A successful build or package cannot
-override those musical findings.
+composition-quality roadmap QP-001–QP-018 is not implemented, and the current
+four-source song has documented timing, key/mode, harmony, sustain-tail,
+monophony, shared-groove, voice-leading, arrangement, Cohesion, low-end, and
+bypass defects. A successful build or package cannot override those musical
+findings.
 
 ## Policy review
 
 The official YouTube
 [channel monetization policies](https://support.google.com/youtube/answer/1311392?hl=en)
 and [GenAI disclosure guidance](https://support.google.com/youtube/answer/14328491?hl=en)
+plus the official
+[recommended upload encoding settings](https://support.google.com/youtube/answer/1722171?hl=en)
+and [partner music-video encoding specification](https://support.google.com/youtube/answer/6039860?hl=en)
 were reviewed on 2026-08-24. See
 [`COMMERCIAL_PROVENANCE.md`](COMMERCIAL_PROVENANCE.md) and
 [`plan/YOUTUBE_READINESS.md`](plan/YOUTUBE_READINESS.md). Melotrail does not
@@ -47,14 +51,17 @@ remains **NOT APPROVED**.
 ## Composition-quality blockers
 
 Release approval remains withheld until [`plan/QUALITY_GATES.md`](plan/QUALITY_GATES.md)
-is satisfied and QP-016 records evidence for the intended release:
+is satisfied and QP-017 records evidence for the intended release:
 
 - beat/downbeat mapping and canonical whole-bar or explicit pickup timing;
+- sustain-aware chord-boundary release and one accepted full-song groove map;
 - confirmed mode-aware key transposition;
 - globally monophonic, scale/harmony-compatible approved full melody;
 - exact canonical melody consumption by arrangement through export;
 - expressive section contrast and accepted generated-role validation;
+- smooth cross-section pad/string voice leading and phase-coherent drums/bass;
 - boundary-local Cohesion with improving before/after metrics;
+- controlled kick/bass interaction and selected-master/lossy-preview true peak;
 - no unresolved source/full-song hard blocker or critical issue;
 - renderer-backed, loudness-matched listening comparisons;
 - original sources and known-good candidates unchanged.
@@ -71,12 +78,20 @@ Required listening comparisons:
 3. full melody alone vs core arrangement;
 4. core vs Cohesion;
 5. pre/post targeted polish;
-6. dry vs production mix vs master.
+6. grid-only accompaniment vs source-groove-aligned accompaniment;
+7. pad/string section boundaries before/after global voice-leading;
+8. kick/bass interaction before/after processing;
+9. dry vs production mix vs selected master vs decoded lossy preview.
 
 The selected production output must also have decoded finite non-silent audio,
-correct duration/format, current mix plan/report, no unresolved clipping/peak,
-melody-audibility, masking/low-end, stereo, or loudness blocker, and matching
-stems/master/export hashes.
+correct duration/format, current mix plan/report, no unresolved clipping/true-
+peak, melody-audibility, masking/kick-bass overlap, pumping, stereo, loudness, or
+lossy-preview blocker, and matching stems/master/export hashes.
+
+The current `-14 LUFS` integrated and `-1 dBTP` references are versioned
+Melotrail production policy, not official YouTube mandates. The lossless master
+remains canonical; local lossy previews are regression evidence because YouTube
+performs its own transcode.
 
 ## Commercial-evidence gates
 

@@ -24,8 +24,9 @@ containing commit and required checks are recorded.
 | QP-013 | Pending | — | Cohesion tests, `make test` | — |
 | QP-014 | Pending | — | critic/enhancement tests, `make test` | — |
 | QP-015 | Pending | — | Compose tests and desktop build | — |
-| QP-016 | Pending | — | `make test`, `make worker-test`, `make build`, listening evidence | — |
-| QP-017 | Pending | — | full validation, docs/link cleanup, applicable manual gates | — |
+| QP-016 | Pending | — | low-end/mixer/mastering/codec tests, `make test`, `make worker-test`, `make build` | — |
+| QP-017 | Pending | — | `make test`, `make worker-test`, `make build`, listening evidence | — |
+| QP-018 | Pending | — | full validation, docs/link cleanup, applicable manual gates | — |
 
 Allowed statuses are `Pending`, `In progress`, `Complete`, and `Blocked`. Do not
 mark a task complete before its implementation, direct documentation, regression

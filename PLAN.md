@@ -10,9 +10,12 @@ per task is
 
 The roadmap targets a musician-authored, AI-assisted pipeline that turns
 section performances into one aligned, project-key-aware, harmony-compatible,
-monophonic canonical melody before arrangement. Arrangement, Cohesion,
-whole-song criticism, production, and release evidence must all consume that
-same approved melody lineage.
+monophonic canonical melody before arrangement. It also makes pedal-extended
+tails boundary-safe, derives one bounded full-song groove map shared by piano,
+bass, and drums, carries pad/string voice leading across sections, controls
+kick/bass low-end interaction, and validates the selected master plus lossy
+preview. Arrangement, Cohesion, whole-song criticism, production, and release
+evidence must all consume the same approved melody lineage.
 
 The product goal is consistently release-quality original music with evidence
 useful for YouTube release preparation. Melotrail cannot guarantee YouTube

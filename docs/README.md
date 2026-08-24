@@ -11,7 +11,7 @@ The complete canonical melody and release-quality roadmap is under
 - [`plan/PLAN.md`](plan/PLAN.md) — outcome and target architecture
 - [`plan/PROJECT_ANALYSIS.md`](plan/PROJECT_ANALYSIS.md) — file-level diagnosis
   of the current four-source and Ensemble Cohesion failures
-- [`plan/TASKS.md`](plan/TASKS.md) — ordered QP-001–QP-017 contracts
+- [`plan/TASKS.md`](plan/TASKS.md) — ordered QP-001–QP-018 contracts
 - [`plan/QUALITY_GATES.md`](plan/QUALITY_GATES.md) — musical, listening, and
   release gates
 - [`plan/YOUTUBE_READINESS.md`](plan/YOUTUBE_READINESS.md) — current platform

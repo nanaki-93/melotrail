@@ -30,13 +30,24 @@ Hard invariants:
 - no section or full-song event exceeds the canonical timeline;
 - beat/downbeat evidence, time mapping, input/output hashes, and processor
   version are present;
-- the canonical melody and generated roles share the same global project grid.
+- the canonical melody and generated roles share the same global project grid;
+- expressive offsets are represented separately from beat-grid warping in
+  confidence-scored per-source templates and one versioned,
+  occurrence-indexed full-song groove map;
+- drum and bass deviations follow the active span of that map within
+  role-specific bounds, rather than independent random timing or unfiltered
+  source jitter.
 
 Blocking quality checks include excessive beat-map residual, accumulated phase
 drift, a missing downbeat, a boundary with no playable melody, unplanned long
 silence, or a melody note crossing a boundary. Exact numeric tolerances must be
 calibrated in QP-001/QP-003 against PPQ-scaled fixtures and stored as a versioned
 policy; do not bury magic tick constants in individual validators.
+
+The source-groove extractor must exclude pickup placement, tempo drift, missing
+onsets, and statistical outliers from its micro-timing vector. A low-confidence
+template becomes review-required or falls back explicitly to the approved grid;
+it must never be presented as measured feel.
 
 ## Key, scale, and harmony
 
@@ -49,6 +60,12 @@ Hard invariants:
 - every prepared melody note is a project-scale tone or an explicitly active
   authoritative chord tone;
 - every stable/exposed note is an active chord tone;
+- harmony and monophony checks use effective sounding intervals after applying
+  sustain-controller state, not only written note-off positions;
+- an incompatible pedal-held or transcription tail ends before the next chord
+  boundary under a tempo/PPQ-derived gap policy;
+- a cross-boundary common tone, tie, or suspension survives only when the
+  authoritative harmony permits it and the sidecar records that intent;
 - every repair is bounded, deterministic, hash-bound, and reason-coded;
 - an unresolved key/harmony conflict blocks canonical melody approval.
 
@@ -91,6 +108,12 @@ Code-owned validation checks:
 - role range, note integrity, canonical harmony, occurrence bounds, and melody
   collision/masking constraints;
 - bass and drums use the canonical beat phase and section groove;
+- bass and drums apply the same active full-song groove-map span with
+  role-specific bounds and cannot create an audible piano/accompaniment flam;
+- pad and string voicing state carries across section requests, preserves voice
+  identity where possible, and minimizes total semitone motion inside approved
+  range and spacing constraints;
+- avoidable cross-section pad/string octave jumps are blocking findings;
 - generated density stays within the approved variation plan and ensemble
   capacity;
 - model output cannot copy schema examples as unchecked creative defaults;
@@ -118,6 +141,35 @@ Automated note counts cannot approve groove or “vibe.”
 - Cohesion and targeted polish are selectable only when blocker/critical issue
   counts do not increase and their targeted metrics improve.
 - Audit evidence compares actual before/after MIDI, not only the requested plan.
+
+## Low-end interaction and delivery master
+
+Code-owned production gates require:
+
+- kick triggers come from the approved drum role and instrument-note map, not a
+  full-stem amplitude guess that treats snares or cymbals as kick events;
+- when measured 50–150 Hz kick/bass coincidence exceeds the calibrated policy,
+  bass ducking remains inside its 2–4 dB policy range, attack/hold/release and
+  latency compensation are versioned, and 3 dB is a starting reference rather
+  than an unconditional result;
+- a no-kick or no-bass span remains materially unchanged and recovery cannot
+  produce audible pumping or alter MIDI timing/duration;
+- bass high-pass and complementary kick/bass spectral allocation are selected
+  from approved profile/instrument evidence and before/after band metrics. A
+  fixed 40 Hz high-pass or 80 Hz cut cannot be applied blindly;
+- unresolved severe low-end overlap blocks the quality-certified production
+  path rather than remaining only a warning;
+- the exact selected master retains its input/output hashes, mastering profile,
+  gated loudness, true peak, peak, crest/LRA, and limiter-reduction evidence;
+- the existing oversampled true-peak limiter path is preserved unless a
+  regression fixture proves it defective;
+- representative local AAC/MP3 encode-decode previews are remeasured for true
+  peak and clipping. Failure lowers the versioned pre-encode ceiling or blocks
+  review; passing is not represented as a prediction of YouTube transcoding.
+
+`-14 LUFS` integrated and `-1 dBTP` are Melotrail delivery references that may
+seed a versioned profile. They are not universal musical targets and are not
+documented as official YouTube requirements.
 
 ## Full-song critic
 
@@ -147,19 +199,25 @@ Required comparisons:
 3. full melody alone against melody plus core arrangement;
 4. core arrangement against Cohesion output;
 5. pre-polish against selected targeted polish;
-6. dry mix against production mix and master.
+6. grid-only accompaniment against the accepted full-song groove map;
+7. each pad/string section boundary with and without global voice-leading;
+8. kick/bass overlap before and after low-end interaction processing;
+9. dry mix against production mix, selected master, and decoded lossy preview.
 
 The review covers tempo stability, downbeat placement, melodic naturalness,
 harmony, groove, section contrast, transition intent, masking, fatigue, and
-recognizable identity. A listener can reject a structurally valid candidate.
+recognizable identity. It explicitly checks pedal-tail clashes, accompaniment
+flams, cross-section octave jumps, low-end pumping, and codec distortion. A
+listener can reject a structurally valid candidate.
 
 ## Release quality
 
 Release acceptance additionally requires:
 
 - decoded, finite, non-silent output with expected duration and format;
-- no clipping/true-peak, loudness, low-end, stereo, or melody-audibility blocker
-  under the versioned production policy;
+- no clipping/true-peak, loudness, kick/bass overlap, stereo, pumping,
+  lossy-preview, or melody-audibility blocker under the versioned production
+  policy;
 - source, instrument, sample, model, and selected-artifact provenance;
 - required attribution text and no noncommercial/unknown dependency in a
   commercial-ready lineage;

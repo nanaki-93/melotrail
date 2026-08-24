@@ -6,6 +6,8 @@ Official references:
 
 - [YouTube channel monetization policies](https://support.google.com/youtube/answer/1311392?hl=en)
 - [Disclosing use of GenAI content](https://support.google.com/youtube/answer/14328491?hl=en)
+- [YouTube recommended upload encoding settings](https://support.google.com/youtube/answer/1722171?hl=en)
+- [Encoding specifications for partner music videos](https://support.google.com/youtube/answer/6039860?hl=en)
 
 Policies change. A release owner must re-read the official pages and update the
 review date before relying on this document for a release.
@@ -25,6 +27,21 @@ a transparency requirement, not proof that a release is or is not monetizable.
 
 Melotrail must not display “YouTube approved,” “guaranteed monetizable,” or an
 equivalent claim.
+
+## Delivery engineering boundary
+
+YouTube's published upload settings recommend 48 kHz audio and identify
+AAC-LC, Opus, or Eclipsa Audio for the applicable video-upload workflow. Its
+partner music-video specification recommends a 48 kHz, 24-bit stereo lossless
+FLAC/PCM source and explains that YouTube transcodes delivered media. The pages
+do not define `-14 LUFS` integrated or `-1 dBTP` as mandatory upload targets.
+
+Melotrail therefore treats those loudness/ceiling values as conservative,
+versioned internal delivery references, not platform rules. It should retain a
+lossless selected master and may create local AAC/MP3 encode-decode previews to
+detect likely inter-sample overshoot before release. A passing preview is useful
+regression evidence only: it cannot reproduce every YouTube codec/settings
+combination or guarantee the platform result.
 
 ## Product responsibility
 

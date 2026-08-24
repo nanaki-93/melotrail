@@ -6,7 +6,7 @@ publishing, uploading, deleting user projects, or changing external services.
 
 ```text
 You are implementing the complete Melotrail quality-pipeline roadmap, in order,
-from QP-001 through QP-017.
+from QP-001 through QP-018.
 
 Read completely before acting:
 - AGENTS.md
@@ -78,10 +78,10 @@ Failure/blocking rules:
 - Ask for new authority before any external publication, push, upload, purchase,
   account action, or destructive project-data operation.
 
-Final closure after QP-017:
+Final closure after QP-018:
 1. Run `make test`, `make worker-test`, and `make build` from the final tree.
 2. Run documentation coverage, dangling-link/path searches, and `git diff --check`.
-3. Verify there are exactly 17 ordered QP task commits after the plan baseline,
+3. Verify there are exactly 18 ordered QP task commits after the plan baseline,
    unless a documented task was already complete before execution.
 4. Report each task/commit, files changed, automated results, manual/listening
    evidence, unverified dependencies, and any policy/rights limitations.

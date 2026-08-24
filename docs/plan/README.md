@@ -9,7 +9,8 @@ Read in this order:
 1. [`PLAN.md`](PLAN.md) — product outcome, current defects, target architecture,
    and delivery phases.
 2. [`PROJECT_ANALYSIS.md`](PROJECT_ANALYSIS.md) — file-level root-cause analysis,
-   including the current Ensemble Cohesion defects.
+   including the current Ensemble Cohesion defects and the five sustain,
+   low-end, voice-leading, micro-timing, and delivery-master risks.
 3. [`QUALITY_GATES.md`](QUALITY_GATES.md) — code-owned, evidence, listening, and
    release acceptance gates.
 4. [`TASKS.md`](TASKS.md) — the complete ordered implementation contract.

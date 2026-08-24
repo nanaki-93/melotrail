@@ -6,7 +6,7 @@ Baseline reviewed: 2026-08-24
 
 Canonical project format: schema v4
 
-Task IDs: QP-001 through QP-017
+Task IDs: QP-001 through QP-018
 
 ## Product outcome
 
@@ -60,6 +60,25 @@ outcome:
 10. Existing automated tests prove serialization, bounds, hashes, and output
     existence more strongly than they prove meter, groove, harmony, melodic
     identity, or listening quality.
+11. MIDI cleanup removes redundant sustain-controller changes but does not
+    convert pedal-extended sounding intervals into boundary-safe note releases.
+    A piano tail can therefore overlap the next authoritative chord even when
+    its written note-off appears acceptable.
+12. Generated bass and kick can share the same 50–150 Hz region. The mixer has
+    filter, EQ, and compression primitives, but the default plan has no
+    kick-triggered bass ducking and the current overlap critic is only a generic
+    warning.
+13. Pad and string generators choose smooth voicings inside one generation
+    request, but independent section requests reset their previous-voicing
+    state. Section boundaries can therefore introduce avoidable octave jumps.
+14. Drum and bass generation use an exact grid or independently seeded timing
+    variation. Neither role consumes a robust micro-timing template derived
+    from the approved source performance, so accompaniment can flam against the
+    piano even after global tempo alignment.
+15. The mastering worker already measures gated loudness and oversampled true
+    peak and applies a ceiling. The remaining operational risk is proving that
+    the selected release artifact used that path and remains inside the
+    versioned policy after a representative local lossy-codec round trip.
 
 These are pipeline defects, not an invitation to replace authoritative project
 harmony or broadly rewrite working DSP.
@@ -94,22 +113,27 @@ Project Setup + authoritative Harmony
   -> immutable source import
   -> audio/MIDI inspection and transcription cleanup
   -> beat/downbeat evidence
-  -> project-grid timing conformance and explicit pickup/body/tail mapping
+  -> project-grid timing conformance, source-groove evidence,
+     and explicit pickup/body/tail mapping
   -> confirmed source-key and mode-aware project-key transposition
   -> selected technical correction / AI Fix / per-track Enhance / Feel chain
   -> monophonic source reduction with reviewable discarded-note evidence
+  -> sustain-aware effective-note analysis and chord-boundary release conformance
   -> section-scale and active-harmony melody repair
   -> protected-anchor derivation on the prepared melody
   -> one canonical full-song melody + stable structure/harmony sidecar
   -> melody-boundary connection
   -> strict Source Song Critic and explicit approval
   -> arrangement plan and deterministic role generation
+     using one bounded full-song groove map
   -> core validation and approval
-  -> boundary-local Ensemble Cohesion
+  -> cross-section voice-leading and boundary-local Ensemble Cohesion
   -> deterministic Full-Song Critic
   -> optional targeted improvement that must improve code-owned metrics
   -> seeded Humanization
-  -> render, production mix, audio criticism, master
+  -> render, kick/bass interaction control, production mix,
+     audio criticism, master
+  -> selected-master and representative lossy-codec validation
   -> originality/provenance/AI-use/release review
   -> export
 ```
@@ -128,6 +152,8 @@ The prepared source-song MIDI contains:
 - canonical PPQ and global tick positions;
 - no drum-channel melody events;
 - no overlapping notes at any pitch or channel;
+- no uncontrolled sustain-controller state or pedal-extended sounding note
+  crossing a chord/occurrence boundary;
 - no note crossing an occurrence boundary unless an explicit tied-boundary
   policy records and validates it.
 
@@ -140,6 +166,8 @@ Its versioned sidecar contains:
 - original, normalized, transposed, selected, prepared, connected, and approved
   artifact hashes;
 - note-level timing, pitch, monophony, and harmony mutation evidence;
+- controller materialization, boundary release, per-source groove evidence, and
+  one accepted occurrence-indexed full-song groove map;
 - removed/deduplicated-note evidence and ambiguity/blocking findings;
 - protected melody identity and anchor IDs derived after deterministic repair.
 
@@ -151,9 +179,11 @@ approved candidate.
 
 ### Deterministic code
 
-Owns beat-grid application, bar/pickup mapping, mode-aware transposition,
+Owns beat-grid application, bar/pickup mapping, source-groove extraction,
+sustain-aware sounding intervals, boundary release, mode-aware transposition,
 monophony, pitch eligibility, active-chord lookup, MIDI transformation,
-collision detection, budgets, hashes, validation, cache/invalidation, and
+cross-section voice-leading validation, collision detection, low-end
+interaction policy, budgets, hashes, validation, cache/invalidation, and
 publication.
 
 ### Qwen
@@ -184,7 +214,8 @@ listening A/B decisions, rights attestations, AI disclosure, and release signoff
 | B. Canonical melody | QP-004–QP-008 | Mode-aware pitch preparation and one downstream canonical melody |
 | C. Quality gates | QP-009–QP-010 | Correct artifact lineage and strict source approval |
 | D. Arrangement and cohesion | QP-011–QP-014 | Expressive validated roles, boundary-local cohesion, improving targeted polish |
-| E. Product and release | QP-015–QP-017 | Review UI, listening/audio acceptance, policy/provenance/cleanup closure |
+| E. Product and production | QP-015–QP-016 | Review UI plus low-end and delivery-master hardening |
+| F. Proof and release | QP-017–QP-018 | End-to-end listening evidence, policy/provenance, and cleanup closure |
 
 The binding task details are in [`TASKS.md`](TASKS.md). Later tasks may not be
 implemented early unless their contract explicitly identifies a prerequisite
@@ -198,12 +229,18 @@ The roadmap is complete only when:
   checks pass;
 - the real four-source quality scenario begins every ordinary occurrence on its
   declared beat/bar or explicit pickup and has no uncontrolled phase drift;
+- sustain-extended notes cannot contaminate the following authoritative chord;
 - imported key/mode differences are resolved with reviewable evidence;
 - the approved full melody is globally monophonic and harmonically valid;
+- drums and bass follow one bounded occurrence-indexed full-song groove map, and
+  pad/string voice leading remains smooth across section boundaries;
 - arrangement, Cohesion, humanization, render, and release lineage all reference
   that exact approved melody;
 - critical critic findings cannot silently pass a quality-certified build;
 - targeted changes demonstrably reduce rather than increase code-owned issues;
+- kick/bass low-end interaction is controlled without pumping, and the exact
+  selected delivery master passes the versioned loudness/true-peak policy plus
+  its representative lossy-codec preview check;
 - automated suites pass and documentation coverage is current;
 - renderer/model integration and documented listening A/B gates have recorded
   evidence;

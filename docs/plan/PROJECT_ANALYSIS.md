@@ -63,7 +63,105 @@ samples will make the same musical conflicts more audible.
 | Arrangement intent | [`LocalQwenArrangementPlanner`](../../src/main/kotlin/app/melotrail/arrangement/LocalQwenArrangementPlanner.kt) sends bounded metadata and validates structure, but its prompt contains a concrete constant JSON arrangement example. Deterministic detail derives several controls mechanically; for example drum swing is fixed to zero. | Safe schema output can still be generic, flat, or template-like across intro/verse/chorus/bridge. Structural validity is stronger than musical direction. | QP-011 |
 | Generated roles | Current validators cover important integrity/range/harmony cases, but the ensemble admission path does not yet prove all roles share the canonical beat phase, avoid masking, and see every previously accepted role. | Individually plausible bass/drums/pad/strings can conflict as an ensemble or obscure the melody. | QP-012 |
 | Whole-song critic | [`DeterministicFullSongCritic`](../../src/main/kotlin/app/melotrail/arrangement/FullSongCritic.kt) truncates issues before calculating aggregate counts. [`BuildApplicationService`](../../src/main/kotlin/app/melotrail/application/BuildApplicationService.kt) requires a current report and a resolved Enhance selection, but does not require zero blockers/critical issues; `BYPASS` and `NO_OP` are accepted. | A build can be technically successful while the stored summary understates problems or the composition remains musically blocked. | QP-014 |
-| Listening evidence | Existing automated tests strongly cover files, hashes, schemas, invalidation, deterministic output, and error paths. Renderer-backed, loudness-matched musical A/B acceptance is not an ordinary hard gate. | Green tests do not refute the reported out-of-sync timing or terrible composition/vibe. | QP-001, QP-016 |
+| Listening evidence | Existing automated tests strongly cover files, hashes, schemas, invalidation, deterministic output, and error paths. Renderer-backed, loudness-matched musical A/B acceptance is not an ordinary hard gate. | Green tests do not refute the reported out-of-sync timing or terrible composition/vibe. | QP-001, QP-017 |
+
+## Five additional operational-risk findings
+
+The five reported risks are valid concerns, but two are partially implemented
+already. The plan must close the actual gaps instead of duplicating working DSP
+or replacing calibrated behavior with unverified constants.
+
+### RISK-01 — Pedal-extended piano tails contaminate the next chord
+
+[`midi_clean.py`](../../worker/commands/midi_clean.py) removes redundant CC64
+state changes, but it does not materialize the effective sounding interval of a
+note held by sustain. The Kotlin pairing and harmony checks likewise reason
+primarily from written note-on/note-off events. A note can therefore sound into
+the next chord even when its written pair appears to end safely.
+
+Required correction: QP-005/QP-006 must interpret sustain controllers before
+monophony and harmony analysis, then enforce a versioned boundary-release
+policy at every authoritative chord and occurrence boundary. Incompatible
+carried notes are released before the boundary; explicitly valid common-tone
+ties or suspensions may survive only with typed evidence. Any inter-note gap is
+derived from tempo/PPQ and calibrated fixtures, with 50 ms treated as a
+candidate upper reference rather than a hard-coded subtraction.
+
+### RISK-02 — Kick and bass have no interaction-aware low-end policy
+
+[`ProductionStemMixer`](../../src/main/kotlin/app/melotrail/arrangement/ProductionStemMixer.kt)
+can apply filters, EQ, and compression, but `MixPlan.defaults()` does not assign
+complementary low-end processing and there is no kick-triggered bass sidechain.
+The current low-end critic compares broad low-passed RMS values and emits a
+warning; it does not locate coincident kick/bass energy or prove that corrective
+processing improved it.
+
+Required correction: QP-016 must add a typed low-end interaction plan using
+approved drum MIDI as deterministic kick-trigger evidence, bounded bass ducking
+inside a 2–4 dB policy with a 3 dB starting reference, recovery/pumping checks,
+latency compensation, and calibrated sub-bass/spectral allocation. A 40 Hz bass
+high-pass and 80 Hz kick cut are
+starting hypotheses, not unconditional defaults: the selected instrument and
+measured stem energy must justify the final profile.
+
+### RISK-03 — Pad/string voice-leading state resets between sections
+
+[`PadMidiGeneration`](../../src/main/kotlin/app/melotrail/arrangement/PadMidiGeneration.kt)
+already selects the nearest inversion relative to the previous chord within a
+generation request. The adapter creates independent requests per section, so
+that state is reset at intro/verse/chorus/bridge boundaries. String generation
+has the same request-local previous-voicing limitation.
+
+Required correction: QP-011/QP-012 must carry accepted global voicing state
+across occurrence requests and validate voice identity, range, common tones,
+and total semitone motion at every boundary. QP-013 may smooth a remaining
+boundary only within those accepted role/harmony constraints; it must not use a
+generic transition to hide a generator reset.
+
+### RISK-04 — Grid-locked accompaniment does not inherit source feel
+
+[`DrumMidiGeneration`](../../src/main/kotlin/app/melotrail/arrangement/DrumMidiGeneration.kt)
+uses exact grid positions plus a fixed/configured swing value; deterministic
+detail currently selects zero swing. [`SeededHumanization`](../../src/main/kotlin/app/melotrail/arrangement/SeededHumanization.kt)
+applies bounded independent variation, but no stage derives and shares a robust
+micro-timing deviation vector from the approved piano performance. This can
+produce audible flams even when all roles share the same nominal BPM and bar
+grid.
+
+Required correction: QP-002/QP-003 must extract a confidence-scored
+`SourceGrooveTemplate` after excluding pickups, tempo drift, and outliers. The
+canonical grid remains authoritative; each template stores bounded deviations
+by beat/subdivision. QP-007 assembles them into one occurrence-indexed
+`FullSongGrooveMap`, and QP-011/QP-012 apply its active span with role-specific
+limits to piano, bass, and drums, rather than copying every raw piano error or
+adding unrelated jitter. QP-014 and QP-017 prove phase coherence and include a
+listening A/B.
+
+### RISK-05 — Delivery true peak must be proven, not assumed
+
+[`mastering.py`](../../worker/commands/mastering.py) already performs gated
+loudness measurement, limiting, and four-times-oversampled true-peak
+measurement. [`BuildApplicationService`](../../src/main/kotlin/app/melotrail/application/BuildApplicationService.kt)
+also validates the selected mastering
+profile, including ceiling and limiter-reduction constraints. Replacing this
+with a simple `pyloudnorm` normalization call would regress the existing
+design and would not itself create a true-peak limiter.
+
+Required correction: QP-016 must bind those measurements to the exact selected
+master and add representative local AAC/MP3 encode-decode previews followed by
+true-peak remeasurement. If a preview exceeds the internal ceiling, the
+pre-encode policy is adjusted or the release is blocked for review. This is a
+regression proxy, not a simulation or guarantee of YouTube's transcoder.
+The `-14 LUFS` and `-1 dBTP` values remain versioned Melotrail reference policy,
+not official YouTube mandates.
+
+| Risk | Primary tasks | Release proof |
+| --- | --- | --- |
+| Pedal/sustain tail collision | QP-005, QP-006, QP-010 | QP-017 |
+| Kick/bass low-end overlap | QP-012, QP-016 | QP-017 |
+| Cross-section pad/string jumps | QP-011–QP-013 | QP-017 |
+| Shared source micro-timing | QP-002, QP-003, QP-007, QP-011, QP-012, QP-014 | QP-017 |
+| Selected-master/lossy true peak | QP-016 | QP-017, QP-018 |
 
 ## Detailed Ensemble Cohesion analysis
 
@@ -188,6 +286,6 @@ Starting with Cohesion or mastering would optimize artifacts whose musical
 authority is still wrong.
 
 Release remains withheld until [`QUALITY_GATES.md`](QUALITY_GATES.md) and the
-renderer-backed/listening evidence in QP-016 pass. YouTube readiness then adds
+renderer-backed/listening evidence in QP-017 pass. YouTube readiness then adds
 rights, originality, anti-template, disclosure, and human channel/content
 review; it is never inferred from a technically successful build.

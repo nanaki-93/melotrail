@@ -27,10 +27,16 @@ Implement:
 
 - Add compact deterministic MIDI fixtures reproducing fractional bars,
   mismatched beat phase, mode mismatch, overlapping melody notes, chord clashes,
-  flat arrangement density, and unsafe boundary roles.
+  pedal-held/reverb-like note tails across chord boundaries, flat arrangement
+  density, unsafe boundary roles, and cross-section pad/string octave jumps.
+- Add deterministic audio/MIDI fixtures for a naturally offset piano against
+  grid-locked drums/bass, coincident kick/bass energy in the 50–150 Hz band,
+  inter-sample peaks, and lossy-codec true-peak overshoot.
 - Add a quality-measurement harness for occurrence phase, bar residual, maximum
-  melody polyphony, scale/chord exposure, boundary jumps, role phase, density
-  contrast, critic totals, and selected-artifact lineage.
+  written/effective melody polyphony, scale/chord exposure, sustain-tail
+  collisions, boundary jumps, shared-groove residual, role phase, density
+  contrast, kick/bass overlap, loudness/true peak, critic totals, and
+  selected-artifact lineage.
 - Keep the real four-source E2E opt-in and project-local; do not commit the large
   `data/audio` tree.
 - Record calibrated PPQ-scaled policy inputs without claiming listening quality.
@@ -51,6 +57,12 @@ Implement:
 
 - Version the worker analyze contract and return beat times/frames, onset times,
   tempo candidates/confidence, leading activity, and bounded downbeat evidence.
+- Derive a robust, confidence-scored source micro-timing deviation vector by
+  beat/subdivision after excluding pickups, tempo drift, missing onsets, and
+  outliers; publish it as versioned `SourceGrooveTemplate` evidence.
+- Leave unsupported subdivision bins explicitly neutral/unknown; interpolate
+  only across bounded high-confidence neighbours so silence is not invented as
+  timing evidence.
 - Remove the current behavior that computes onsets and then publishes an empty
   list.
 - Define explicit `UNKNOWN/REVIEW_REQUIRED` evidence when a downbeat cannot be
@@ -61,8 +73,9 @@ Implement:
 
 Tests and acceptance:
 
-- Synthetic click/pickup fixtures verify beat/downbeat/onset positions and low-
-  confidence behavior.
+- Synthetic click/pickup and human-offset fixtures verify beat/downbeat/onset
+  positions, groove-template deviations, outlier rejection, and low-confidence
+  behavior.
 - Malformed/empty/silent inputs fail or report uncertainty without invented beats.
 - Worker and Kotlin contract tests pass offline.
 
@@ -81,6 +94,9 @@ Implement:
 - Warp note/controller ticks piecewise onto the project beat grid while
   preserving ordering, positive duration, and expressive within-beat offsets
   inside a bounded policy.
+- Keep structural beat warping separate from the accepted source-groove
+  template. Preserve bounded expressive offsets against the canonical grid
+  without copying tempo drift or flattening the approved feel.
 - Ordinary occurrences occupy whole canonical bars. Pickups/tails are explicit
   typed windows that never shift the following occurrence.
 - Require user review for low confidence, large duration change, or ambiguous
@@ -92,6 +108,8 @@ Tests and acceptance:
 - The QP-001 fractional sources produce zero uncontrolled bar-phase accumulation.
 - Repeated use of one source has identical local mapping and distinct global
   occurrence bounds.
+- Groove offsets remain bounded and repeatable, while all canonical beat/bar
+  positions have zero uncontrolled accumulated phase error.
 - Tempo/meter, source hashes, and original MIDI are preserved as evidence.
 
 Commit: `quality-pipeline: QP-003 align sources to the project grid`
@@ -132,8 +150,14 @@ Implement:
   melody candidate.
 - Resolve simultaneous/overlapping candidates using transcription confidence
   when present, then bounded continuity/velocity/duration rules.
+- Materialize effective sounding intervals from CC64 sustain state before
+  overlap decisions; normalize or remove controller state that could recreate
+  an unreported overlap after rendering.
+- Interpret sustain and all-notes/reset controls per MIDI channel, including
+  pedal-up and end-of-file release, so a controller on one channel cannot change
+  another channel's melody evidence.
 - Persist every selection, removal, deduplication, trim, ambiguity, and source
-  note identity in a preparation report.
+  note/controller identity in a preparation report.
 - Block ambiguous material outside the safe policy rather than guessing.
 - Emit one note-bearing track and enforce global, cross-pitch/channel polyphony
   of at most one.
@@ -141,7 +165,8 @@ Implement:
 Tests and acceptance:
 
 - Chords, octave doubles, same-pitch overlaps, cross-pitch overlaps, channels,
-  repeated note-ons, and malformed pairs have fixtures.
+  repeated note-ons, malformed pairs, repeated sustain controls, and
+  pedal-extended overlaps have fixtures.
 - The result is deterministic, non-empty when valid, and globally monophonic.
 - Source and earlier selected artifacts remain byte-identical.
 
@@ -161,8 +186,14 @@ Implement:
   user-authored chord lies outside the base scale.
 - Choose nearest valid pitches with contour/register preservation and a strict
   movement/edit budget; block ambiguous or excessive repair.
-- Check notes crossing chord boundaries and split/shorten or request review
-  under an explicit policy.
+- At every authoritative chord, measure, and occurrence boundary, evaluate the
+  effective sounding end after sustain. Release or shorten an incompatible
+  carried note before the incoming harmony under a versioned tempo/PPQ-derived
+  gap policy; treat 50 ms only as a calibrated upper reference, not a raw
+  `end = boundary - 0.05` constant.
+- Preserve a common-tone tie or deliberate suspension only when its harmonic
+  eligibility, resolution, and controller behavior are explicit in the report;
+  otherwise split/shorten or require review.
 - Publish note-level before/after/reason evidence and derive protected anchors
   only after the deterministic candidate is valid.
 
@@ -171,6 +202,8 @@ Tests and acceptance:
 - Intro/verse/chorus/bridge/outro fixtures use different progressions.
 - Exposed clashes are fixed, legitimate passing tones survive, and authority is
   never rewritten.
+- Sustain-pedal and reverb-like transcription-tail fixtures cannot contaminate
+  the next chord; a valid common-tone tie remains intact.
 - Every output note satisfies the versioned eligibility rule.
 
 Commit: `quality-pipeline: QP-006 fit melody to canonical harmony`
@@ -186,16 +219,24 @@ Implement:
   melody track.
 - Persist section markers and a versioned sidecar with stable occurrence IDs,
   roles, part IDs, bar/tick/pickup windows, chord spans, preparation reports,
-  note lineage, anchors, and hashes.
+  note lineage, anchors, groove evidence, and hashes.
+- Assemble the accepted per-source groove templates into one occurrence-indexed
+  `FullSongGrooveMap` on global beats/subdivisions. Repeated occurrences retain
+  identical local feel; excessive feel discontinuity at a section boundary is
+  smoothed within policy or becomes review-required.
 - Adapt melody-connection identity to the assembled full melody instead of
   reconstructing per-source note identities.
 - Prevent cross-boundary overlap except an explicit validated tie.
+- Emit canonicalized controller state so no implicit pedal hold extends a note
+  across a chord or occurrence boundary.
 - Use a new content-addressed processor-version path so old candidates remain
   inspectable and are never overwritten.
 
 Tests and acceptance:
 
 - Repeated sections remain distinct occurrences in the sidecar.
+- Repeated source use has identical local groove evidence and no unreviewed
+  groove discontinuity at an occurrence boundary.
 - Exactly one note-bearing track exists and maximum melody polyphony is one.
 - Full duration, markers, harmony spans, hashes, and canonical PPQ agree.
 
@@ -258,7 +299,8 @@ Implement:
 
 - Add hard checks for timing mapping, explicit bar/pickup windows, global
   monophony, key eligibility, exposed chord fit, structure coverage, anchors,
-  extreme jumps, and canonical artifact lineage.
+  extreme jumps, sustain-aware sounding intervals, boundary-tail collisions,
+  source-groove evidence, and canonical artifact lineage.
 - Replace the current scale-tone-or-chord-tone shortcut with the exposure-aware
   QP-006 policy.
 - Quality-certified flow cannot override hard invariants or auto-confirm low-
@@ -284,10 +326,16 @@ Implement:
 
 - Pass resolved profile/mood groove, voicing, density, register, articulation,
   energy, and section-purpose constraints into global and detailed planners.
+- Pass the accepted full-song groove map and the previous accepted pad/string
+  voicing through the global occurrence plan so independent section requests do
+  not reset musical timing or voice-leading context.
 - Make prompt examples unmistakably non-executable examples; validate against
   copying a constant schema default across every role/section.
 - Keep deterministic section variation authoritative or constrain Qwen changes
   within versioned bounds.
+- Specify role-specific groove limits and cross-section voice-leading intent;
+  Qwen may choose bounded character but cannot invent an unrelated timing grid
+  or replace authoritative harmony.
 - Require meaningful planned section contrast while respecting user choices and
   legitimate repeated-section continuity.
 - Keep instrument assignment separate from musical role intent.
@@ -311,6 +359,15 @@ Implement:
 - Unify role validation for note integrity, range/capabilities, canonical chord
   fit, beat/downbeat phase, density, section activity, melody masking/collision,
   and transition bounds.
+- Make drums and bass consume the same active full-song groove-map span with
+  role-specific constraints; validate residual timing against the piano and
+  reject audible flam candidates.
+- Carry the last accepted pad/string voicing into the next section request.
+  Select inversions/voice assignments that minimize total semitone motion while
+  preserving common tones, range, spacing, voice-entry/exit penalties, and
+  intended section-register change when chord cardinality changes.
+- Record kick-note timing and instrument-map evidence needed by later
+  interaction-aware mixing without coupling MIDI generation to DSP.
 - Generate and validate incrementally so each role sees accepted prior tracks.
 - Fix density-direction diagnostics and distinguish deliberate silence from
   generator failure.
@@ -318,8 +375,11 @@ Implement:
 
 Tests and acceptance:
 
-- Off-phase drums/bass, chord-clashing bass, masked melody, excessive density,
-  inactive-section notes, and valid silence have fixtures.
+- Off-phase/grid-flamming drums/bass, chord-clashing bass, cross-section
+  pad/string jumps, masked melody, excessive density, inactive-section notes,
+  and valid silence have fixtures.
+- The nearest valid cross-section voicing beats the reset-octave alternative by
+  the versioned movement metric; purposeful reviewed register lifts still pass.
 - Failed role candidates never enter `ArrangementState`.
 
 Commit: `quality-pipeline: QP-012 strengthen generated role validation`
@@ -337,7 +397,9 @@ Implement:
 - Execute or remove every plan field (`bars`, rhythmic gesture, harmonic
   handoff, energy contour) so persisted intent matches rendered MIDI.
 - Constrain bass walks and pitched bridges to active harmony; make drum fills
-  follow the canonical beat phase.
+  follow the canonical beat phase and active full-song groove-map span.
+- Preserve global pad/string voice assignments through boundary overlays; do
+  not use a generic transition to conceal a section-request voicing reset.
 - Use overlay-aware merge/ducking and rerun full role/melody validation.
 - Persist actual before/after note evidence and critic metric deltas.
 
@@ -358,7 +420,8 @@ Implement:
 
 - Critic evaluates all issues and stores complete aggregates even when display
   details are bounded.
-- Correct metric directionality and add canonical melody, groove, harmony,
+- Correct metric directionality and add canonical melody, harmony, sustain-tail
+  collision, source-groove residual, cross-section voice-leading,
   masking, density/contrast, boundary, and role-activity checks.
 - Targeted enhancement receives complete target evidence in bounded batches;
   it cannot change authority or unreported windows.
@@ -382,8 +445,9 @@ Goal: let the musician understand and approve what changed before arrangement.
 Implement:
 
 - Show source key/confidence, timing/downbeat mapping, target bars/pickup,
-  monophony removals, pitch/harmony repairs, protected anchors, blockers, and
-  exact artifact selection.
+  measured groove/confidence, sustain-tail releases, monophony removals,
+  pitch/harmony repairs, cross-section voice-leading findings, protected
+  anchors, blockers, and exact artifact selection.
 - Provide loudness-matched source/prepared/full-melody and boundary previews.
 - Show the structure timeline from canonical sidecar windows.
 - Distinguish private audition, quality-certified build, and commercial-evidence
@@ -399,7 +463,56 @@ Tests and acceptance:
 
 Commit: `quality-pipeline: QP-015 add canonical melody quality review UI`
 
-## QP-016 — Prove composition and production quality end to end
+## QP-016 — Harden low-end interaction and delivery mastering
+
+Goal: keep kick and bass punchy without low-end buildup and prove the exact
+selected delivery master remains codec-safe under Melotrail's versioned policy.
+
+Implement:
+
+- Add a typed, versioned `LowEndInteractionPlan` to the mix contract. Derive a
+  deterministic kick trigger/envelope from approved drum MIDI plus its
+  instrument-note map, and bind the plan to drum, bass, mix, and processor
+  hashes.
+- When calibrated overlap evidence requires it, duck the bass around kick hits
+  with bounded attack/hold/release, latency compensation, and a 2–4 dB policy
+  range whose default starting reference is 3 dB. Preserve no-kick/no-bass spans
+  and reject audible pumping or timing/duration changes.
+- Add profile/instrument-calibrated bass high-pass and complementary kick/bass
+  spectral ownership using measured stem energy. Treat 40 Hz high-pass and an
+  80 Hz cut as hypotheses to test, not universal constants.
+- Upgrade `AudioMixCritic` from broad low-passed RMS comparison to time- and
+  band-aware kick/bass overlap evidence. Severe unresolved overlap blocks the
+  quality-certified path and before/after band, peak, and limiter metrics are
+  persisted.
+- Preserve the existing gated-loudness, limiter, and four-times-oversampled
+  true-peak implementation. Prove the actual selected master used it and meets
+  the profile ceiling, loudness tolerance, dynamics, and limiter-reduction
+  bounds.
+- Produce representative local AAC and MP3 encode-decode previews when the
+  required codec is available, then remeasure true peak/clipping. If a preview
+  exceeds policy, reduce the versioned pre-encode ceiling or block review. Mark
+  the preview as a regression proxy, never a prediction of YouTube transcoding.
+- Expose the low-end plan, before/after metrics, master policy, codec status, and
+  blocking/review state through the existing production report/UI rather than
+  inferring readiness from an output file.
+
+Tests and acceptance:
+
+- Coincident kick/bass fixtures produce the bounded target duck and recover;
+  bass without kick and kick without bass remain materially unchanged.
+- Calibrated filtering/ducking reduces 50–150 Hz collision evidence without
+  removing required bass notes, shifting events, or introducing pumping.
+- Inter-sample peak and lossy-overshoot fixtures prove the exact selected
+  master/preview gates; unavailable optional codecs are reported unverified,
+  not silently passed.
+- Existing mastering fixtures remain valid and working DSP is not rewritten
+  without a failing regression test.
+- `make test`, `make worker-test`, and `make build` pass.
+
+Commit: `quality-pipeline: QP-016 harden low end and delivery master`
+
+## QP-017 — Prove composition and production quality end to end
 
 Goal: validate the complete song, not merely artifact creation.
 
@@ -408,15 +521,17 @@ Implement:
 - Add deterministic reference-song integration covering all ordinary pipeline
   stages and the QP-001 metrics.
 - Upgrade the opt-in four-source E2E to reject unresolved key, timing, harmony,
-  monophony, role, Cohesion, and critic blockers; remove automatic quality
+  sustain-tail, monophony, shared-groove, cross-section voice-leading, role,
+  Cohesion, low-end, mastering, and critic blockers; remove automatic quality
   overrides.
 - Assert the selected artifact kind/hash at every handoff and verify sources are
   unchanged.
 - Produce debug comparison MIDI/WAV and a structured listening record using
   [`QUALITY_GATES.md`](QUALITY_GATES.md).
 - Validate production mix/master format, duration, clipping/peak, loudness,
-  masking/low-end, stereo, and melody-audibility evidence without treating one
-  target number as a YouTube guarantee.
+  time-local kick/bass overlap, stereo, melody audibility, selected-master true
+  peak, and decoded lossy-preview evidence without treating one target number
+  as a YouTube guarantee.
 
 Tests and acceptance:
 
@@ -426,9 +541,9 @@ Tests and acceptance:
   a release-quality claim is made; unavailable dependencies remain explicitly
   unverified.
 
-Commit: `quality-pipeline: QP-016 prove end-to-end song quality`
+Commit: `quality-pipeline: QP-017 prove end-to-end song quality`
 
-## QP-017 — Close release evidence, policy, cleanup, and documentation
+## QP-018 — Close release evidence, policy, cleanup, and documentation
 
 Goal: finish with one honest commercial-evidence workflow and no obsolete
 pipeline/documentation branches.
@@ -457,4 +572,4 @@ Tests and acceptance:
 - `make test`, `make worker-test`, and `make build` pass from the final tree.
 - Release acceptance records every unverified manual dependency honestly.
 
-Commit: `quality-pipeline: QP-017 close release readiness and cleanup`
+Commit: `quality-pipeline: QP-018 close release readiness and cleanup`
