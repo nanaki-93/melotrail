@@ -17,6 +17,7 @@ import app.melotrail.arrangement.SongPlanningInput
 import app.melotrail.arrangement.EnsembleCohesionInput
 import app.melotrail.arrangement.EnsembleCohesionPlan
 import app.melotrail.arrangement.EnsembleCohesionStore
+import app.melotrail.arrangement.FullSongCriticReport
 import app.melotrail.arrangement.toSectionInstance
 import app.melotrail.arrangement.WorkflowArtifact
 import app.melotrail.arrangement.WorkflowArtifactReference
@@ -68,6 +69,15 @@ fun interface EnsembleCohesionPreviewPreparation {
     suspend fun render(root: Path, input: EnsembleCohesionInput, progress: ProgressSink): CohesionPreviewReferences?
 }
 
+/** Reject a draft that worsens either critic count used as Cohesion acceptance evidence. */
+internal fun requireNoCohesionIssueIncrease(before: FullSongCriticReport, after: FullSongCriticReport) {
+    fun metric(report: FullSongCriticReport, name: String) = report.aggregateMetrics.singleOrNull { it.name == name }?.value ?: 0.0
+    require(metric(after, "blockingIssueCount") <= metric(before, "blockingIssueCount") &&
+        metric(after, "criticalIssueCount") <= metric(before, "criticalIssueCount")) {
+        "Cohesion approval would increase blocker or critical critic issues. Review or regenerate the boundary plan."
+    }
+}
+
 interface EnsembleCohesionApplicationService {
     suspend fun generate(request: GenerateEnsembleCohesionRequest, progress: ProgressSink = ProgressSink.None): EnsembleCohesionSnapshot
     fun load(root: Path): EnsembleCohesionSnapshot
@@ -81,12 +91,14 @@ interface EnsembleCohesionApplicationService {
 class DefaultEnsembleCohesionApplicationService(
     private val ensemblePreparation: EnsembleMidiPreparation = EnsembleMidiPreparation { _, _ -> },
     private val previewPreparation: EnsembleCohesionPreviewPreparation = EnsembleCohesionPreviewPreparation { _, _, _ -> null },
+    private val sourceSongCritic: SourceSongCriticApplicationService = DefaultSourceSongCriticApplicationService(),
+    private val criticService: FullSongCriticApplicationService = DefaultFullSongCriticApplicationService(),
     private val qwenPlanner: (EnsembleCohesionInput) -> EnsembleCohesionPlan = { input ->
         LocalQwenEnsembleCohesionPlanner(model = EnsembleCohesionModelIdentity("qwen", "local", "0".repeat(64))).plan(input)
     }
 ) : EnsembleCohesionApplicationService {
     constructor(qwenPlanner: (EnsembleCohesionInput) -> EnsembleCohesionPlan) : this(
-        EnsembleMidiPreparation { _, _ -> }, EnsembleCohesionPreviewPreparation { _, _, _ -> null }, qwenPlanner
+        EnsembleMidiPreparation { _, _ -> }, EnsembleCohesionPreviewPreparation { _, _, _ -> null }, DefaultSourceSongCriticApplicationService(), DefaultFullSongCriticApplicationService(), qwenPlanner
     )
 
     override suspend fun generate(request: GenerateEnsembleCohesionRequest, progress: ProgressSink): EnsembleCohesionSnapshot = mutate(request.root) { root ->
@@ -119,6 +131,9 @@ class DefaultEnsembleCohesionApplicationService(
 
     override fun approve(root: Path): EnsembleCohesionSnapshot = locked(root) { normalized ->
         val input = currentInput(normalized, savedIntensity(normalized)); val plan = EnsembleCohesionStore.readDraft(normalized, input)
+        requireCohesionImprovement(normalized)?.let { (baselineCritic, candidateCritic) ->
+            persistComparisons(normalized, input, baselineCritic, candidateCritic, StageEvidenceStatus.APPROVED)
+        }
         EnsembleCohesionStore.approve(normalized, input)
         snapshot(normalized, input, plan, true)
     }
@@ -178,7 +193,8 @@ class DefaultEnsembleCohesionApplicationService(
         val detailed = Json { ignoreUnknownKeys = false }
             .decodeFromString(DetailedArrangement.serializer(), Files.readString(arrangement))
         return app.melotrail.arrangement.EnsembleTransitionContextFactory.build(
-            root, project, planning, detailed, approval.arrangement.sha256, approval.contextSha256, intensity
+            root, project, planning, detailed, approval.arrangement.sha256, approval.contextSha256,
+            sourceSongCritic.requireApprovedMelody(root).sourceSong.fullMelody.grooveMap, intensity
         )
     }
     private fun savedIntensity(root: Path): EnsembleCohesionEnhancementIntensity =
@@ -202,7 +218,26 @@ class DefaultEnsembleCohesionApplicationService(
             baselinePreview = cohesionWorkflow?.previews?.baseline?.file?.let(root::resolve),
             enhancedPreview = cohesionWorkflow?.previews?.enhanced?.file?.let(root::resolve))
     }
-    private fun persistComparisons(root: Path, input: EnsembleCohesionInput) {
+    /** Refuse approval when the exact draft increases the deterministic blocker or critical evidence. */
+    private fun requireCohesionImprovement(root: Path): Pair<FullSongCriticReport, FullSongCriticReport>? {
+        val project = ProjectStore.read(root); val cohesion = requireNotNull(project.workflow.cohesion)
+        val roles = cohesion.roles.map { it.role }.toSet()
+        if (roles.isEmpty()) return null
+        val baseline = project.workflow.generatedMidi?.artifacts.orEmpty().filter { it.id in roles }.associate { it.id to it.artifact }
+        val candidate = cohesion.roles.associate { it.role to it.result }
+        require(baseline.keys == roles && candidate.keys == roles) { "Cohesion candidate does not cover every generated role." }
+        val before = criticService.analyzeCohesionCandidate(root, baseline)
+        val after = criticService.analyzeCohesionCandidate(root, candidate)
+        requireNoCohesionIssueIncrease(before, after)
+        return before to after
+    }
+    private fun persistComparisons(
+        root: Path,
+        input: EnsembleCohesionInput,
+        baselineCritic: FullSongCriticReport? = null,
+        candidateCritic: FullSongCriticReport? = null,
+        status: StageEvidenceStatus = StageEvidenceStatus.DRAFT
+    ) {
         val project = ProjectStore.read(root)
         val cohesion = requireNotNull(project.workflow.cohesion)
         val views = app.melotrail.arrangement.OccurrenceMidiArtifactResolver().resolve(root, project,
@@ -212,15 +247,15 @@ class DefaultEnsembleCohesionApplicationService(
             val approved = views.getValue(occurrence.instanceId)
             val before = WorkflowArtifactReference(approved.projectRelativePath, approved.sha256)
             val output = occurrence.result
-            val beforeEvidence = StageComparisonArtifact(StageComparisonStage.COHESION, before, input.contextSha256, role = "piano", occurrenceId = occurrence.instanceId)
-            val afterEvidence = StageComparisonArtifact(StageComparisonStage.COHESION, output, input.contextSha256, StageEvidenceStatus.DRAFT, "piano", occurrence.instanceId)
+            val beforeEvidence = StageComparisonArtifact(StageComparisonStage.COHESION, before, input.contextSha256, role = "piano", occurrenceId = occurrence.instanceId, criticReport = baselineCritic)
+            val afterEvidence = StageComparisonArtifact(StageComparisonStage.COHESION, output, input.contextSha256, status, "piano", occurrence.instanceId, criticReport = candidateCritic)
             StageComparisonReportStore.write(root, afterEvidence, StageComparisonService().compare(root, beforeEvidence, afterEvidence))
         }
         val generated = project.workflow.generatedMidi?.artifacts.orEmpty().associateBy { it.id }
         cohesion.roles.sortedBy { it.role }.forEach { output ->
             val source = requireNotNull(generated[output.role]) { "Cohesion role '${output.role}' has no generated MIDI source." }.artifact
-            val beforeEvidence = StageComparisonArtifact(StageComparisonStage.COHESION, source, input.contextSha256, role = output.role)
-            val afterEvidence = StageComparisonArtifact(StageComparisonStage.COHESION, output.result, input.contextSha256, StageEvidenceStatus.DRAFT, output.role)
+            val beforeEvidence = StageComparisonArtifact(StageComparisonStage.COHESION, source, input.contextSha256, role = output.role, criticReport = baselineCritic)
+            val afterEvidence = StageComparisonArtifact(StageComparisonStage.COHESION, output.result, input.contextSha256, status, output.role, criticReport = candidateCritic)
             StageComparisonReportStore.write(root, afterEvidence, StageComparisonService().compare(root, beforeEvidence, afterEvidence))
         }
     }

@@ -127,7 +127,12 @@ class MidiTransitionEngineTest {
             renderFormat = RenderFormat(),
             envelope = ProjectV4Envelope(structureOccurrences = listOf(StructureOccurrence("A1", "A"), StructureOccurrence("A2", "A")))
         )
-        val bridge = TransitionBridgePlan("A1", "A2", "1".repeat(64), "1".repeat(64), "2".repeat(64), "3".repeat(64), TransitionRoleAction.DRUM_FILL, BridgeType.DRUM_FILL, 1, "drums", HarmonicHandoff.HOLD, RhythmicGesture.FILL, EnergyContour.RISE, rationale = "Approved drum handoff")
+        val bridge = TransitionBridgePlan(
+            outgoingInstanceId = "A1", incomingInstanceId = "A2", outgoingHash = "1".repeat(64), incomingHash = "1".repeat(64),
+            arrangementSha256 = "2".repeat(64), contextSha256 = "3".repeat(64), roleAction = TransitionRoleAction.DRUM_FILL,
+            bridgeType = BridgeType.DRUM_FILL, instrument = "drums", harmonicHandoff = HarmonicHandoff.HOLD,
+            rhythmicGesture = RhythmicGesture.FILL, energyContour = EnergyContour.RISE, rationale = "Approved drum handoff"
+        )
         val approved = projectRoot.resolve(CohesionBoundaryArtifactPaths.approved("A1", "A2"))
         Files.createDirectories(approved.parent)
         Files.writeString(approved, Json.encodeToString(bridge))

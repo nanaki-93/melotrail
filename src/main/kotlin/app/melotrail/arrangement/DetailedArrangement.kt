@@ -91,7 +91,7 @@ data class ApprovedArrangementCohesion(
         val bridge = plan.boundaries.getOrNull(index) ?: error("Approved Cohesion is missing boundary ${index + 1}")
         return TransitionPlan(
             type = TransitionType.BRIDGE,
-            bars = bridge.bars,
+            bars = 1,
             bridge = BridgePlan(
                 energy = when (bridge.energyContour) {
                     EnergyContour.HOLD -> 0.5
@@ -99,9 +99,10 @@ data class ApprovedArrangementCohesion(
                     EnergyContour.FALL -> 0.3
                 },
                 elements = when (bridge.bridgeType) {
-                    BridgeType.DRUM_FILL, BridgeType.BUILD, BridgeType.CONTINUITY -> listOf(BridgeElement.DRUM_FILL)
+                    BridgeType.DRUM_FILL, BridgeType.BUILD -> listOf(BridgeElement.DRUM_FILL)
                     BridgeType.BASS_WALK -> listOf(BridgeElement.BASS_PICKUP)
                     BridgeType.PAD_SUSTAIN, BridgeType.CHORD_MOTION -> listOf(BridgeElement.PAD_SWELL)
+                    BridgeType.CONTINUITY -> emptyList()
                 }
             )
         )

@@ -1402,7 +1402,8 @@ class DefaultProjectApplicationService(
         val arrangementPath = root.resolve(arrangement.arrangement.file).normalize()
         require(arrangementPath.startsWith(root) && Files.isRegularFile(arrangementPath) && sha256(arrangementPath) == arrangement.arrangement.sha256)
         val detailed = json.decodeFromString(DetailedArrangement.serializer(), Files.readString(arrangementPath))
-        val transitionInput = EnsembleTransitionContextFactory.build(root, project, input, detailed, arrangement.arrangement.sha256, arrangement.contextSha256, cohesion.intensity)
+        val grooveMap = DefaultSourceSongCriticApplicationService().requireApprovedMelody(root).sourceSong.fullMelody.grooveMap
+        val transitionInput = EnsembleTransitionContextFactory.build(root, project, input, detailed, arrangement.arrangement.sha256, arrangement.contextSha256, grooveMap, cohesion.intensity)
         return EnsembleCohesionStore.isApprovedCurrent(root, transitionInput)
     }.getOrDefault(false)
 

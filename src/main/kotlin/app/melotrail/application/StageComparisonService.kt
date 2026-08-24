@@ -123,12 +123,15 @@ data class StageComparisonMetrics(
     val editBudget: MidiMutationBudget? = null,
     val roleMetrics: List<StageComparisonMetric> = emptyList(),
     val occurrenceMetrics: List<StageComparisonMetric> = emptyList(),
+    /** Complete deterministic critic aggregate deltas for the exact before/after candidate pair. */
+    val criticMetrics: List<StageComparisonMetric> = emptyList(),
     val criticIssueDeltas: List<StageComparisonIssueDelta> = emptyList()
 ) {
     init {
         require(additions >= 0 && deletions >= 0 && modifications >= 0 &&
             roleMetrics == roleMetrics.sortedBy(StageComparisonMetric::name) &&
             occurrenceMetrics == occurrenceMetrics.sortedBy(StageComparisonMetric::name) &&
+            criticMetrics == criticMetrics.sortedBy(StageComparisonMetric::name) &&
             criticIssueDeltas == criticIssueDeltas.sortedBy(StageComparisonIssueDelta::category)) {
             "Comparison metrics are not canonical"
         }
@@ -226,6 +229,7 @@ class StageComparisonService {
             editBudget = after.mutationReport?.budget,
             roleMetrics = roleMetrics(before, after, beforeNotes.size, afterNotes.size),
             occurrenceMetrics = occurrenceMetrics(before, after, beforeNotes.size, afterNotes.size),
+            criticMetrics = criticMetrics(before.criticReport, after.criticReport),
             criticIssueDeltas = issueDeltas(before.criticReport, after.criticReport)
         )
         val retained = details.take(StageComparisonReport.MAX_DETAIL_ROWS)
@@ -379,6 +383,14 @@ class StageComparisonService {
     private fun issueDeltas(before: FullSongCriticReport?, after: FullSongCriticReport?): List<StageComparisonIssueDelta> {
         val categories = (before?.issues.orEmpty().map { it.category.name } + after?.issues.orEmpty().map { it.category.name }).distinct().sorted()
         return categories.map { category -> StageComparisonIssueDelta(category, before?.issues?.count { it.category.name == category } ?: 0, after?.issues?.count { it.category.name == category } ?: 0) }
+    }
+
+    private fun criticMetrics(before: FullSongCriticReport?, after: FullSongCriticReport?): List<StageComparisonMetric> {
+        val previous = before?.aggregateMetrics.orEmpty().associate { it.name to it.value }
+        val current = after?.aggregateMetrics.orEmpty().associate { it.name to it.value }
+        return (previous.keys + current.keys).sorted().map { name ->
+            StageComparisonMetric("critic-$name", (previous[name] ?: 0.0).toLong(), (current[name] ?: 0.0).toLong())
+        }
     }
 
     @Serializable private data class ReportHashPayload(

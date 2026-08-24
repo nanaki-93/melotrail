@@ -123,10 +123,16 @@ derivatives without overwriting selected source MIDI or locally replacing the
 approved piano melody. Any future post-connection piano edit must first publish
 and reapprove a complete full-melody candidate.
 
-Known limitation: Cohesion currently needs stronger boundary-local active-role,
-gesture-execution, harmony, overlay, and post-merge validation. Until QP-013 is
-complete, audition every hard join/bridge at matched volume and reject an
-instrument or gesture that is unrelated to the adjacent sections.
+Cohesion is boundary-local: its input records active, entering, exiting, and
+continuing generated roles for each adjacent pair. A bridge may select only a
+locally supported role. `CONTINUITY` is an auditable no-op on a continuing role,
+never a fallback drum fill. Pitched bridge notes follow the canonical boundary
+harmony, drum bridge timing comes from the approved full-song groove-map span,
+and merge replaces an exact same-pitch overlap instead of stacking attacks.
+Before approval, the deterministic critic compares baseline and candidate role
+MIDI; Cohesion cannot increase blocker or critical counts. The saved comparison
+contains actual note deltas and critic aggregate deltas. Still audition hard
+joins at matched volume: this automated evidence does not substitute listening.
 
 ## Build, release, and quality labels
 

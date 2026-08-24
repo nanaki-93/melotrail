@@ -162,88 +162,55 @@ not official YouTube mandates.
 | Shared source micro-timing | QP-002, QP-003, QP-007, QP-011, QP-012, QP-014 | QP-017 |
 | Selected-master/lossy true peak | QP-016 | QP-017, QP-018 |
 
-## Detailed Ensemble Cohesion analysis
+## Detailed Ensemble Cohesion analysis and QP-013 closure
 
 `EnsembleCohesion.kt` is not the right place to repair source tempo, mode,
 general harmony, or polyphony. Those defects must be gone before arrangement.
 The class does, however, contain several issues that can make an already weak
 arrangement worse.
 
-### 1. It reads the wrong melody authority
+### 1. Canonical melody authority is retained
 
-`EnsembleTransitionContextFactory` resolves every section through
-`SelectedMidiArtifactResolver`, then builds boundary melody evidence from that
-part file. It does not read the approved connected full-melody artifact. The
-same per-part reconstruction continues through `OccurrenceMidiArtifactResolver`
-and Humanization.
+QP-008 already cut Cohesion over to occurrence views clipped from the approved
+connected full melody. `EnsembleTransitionContextFactory` binds each context to
+that immutable hash and QP-013 continues to publish only derived role/bridge
+MIDI. A missing or stale approval blocks Cohesion rather than rebuilding timing
+from individual selected parts.
 
-Effect: connection edits and the exact approved song timeline can disappear
-after approval, while every hash check still passes against a different but
-internally current artifact.
+### 2. Boundary roles are now local
 
-Required correction: QP-008 must cut all of these callers over to occurrence
-views clipped from one approved canonical full melody. Cohesion should fail if
-that hash/approval is missing or stale.
+`TransitionBoundaryRoleEvidence` now persists sorted outgoing-active,
+incoming-active, entering, exiting, continuing, and supported generated roles
+for every saved adjacent pair. The validator accepts a bridge instrument only
+when it is locally supported; a role inactive on both sides is rejected. Model
+evidence carries the same local facts, so compatibility selection cannot widen
+to an unrelated whole-song instrument.
 
-### 2. Supported instruments are global, not boundary-local
+### 3. `CONTINUITY` is explicit and non-destructive
 
-The context factory gathers every generated instrument used anywhere in the
-arrangement into one sorted `supportedInstruments` list. Every boundary then
-receives the same list. The validator only checks that a chosen bridge
-instrument appears in that global list.
+The planner selects `CONTINUITY` only from a continuing local role and emits a
+`NO_OP` placement with a zero-length note window. The renderer writes valid MIDI
+metadata but no note pairs, and both legacy transition adapters expose no bridge
+element for it. There is no `CONTINUITY -> DRUM_FILL` fallback.
 
-Effect: a bridge can introduce drums, bass, pad, or strings at a boundary where
-the role is active on neither side. This creates arbitrary handoffs rather than
-continuity between the actual outgoing and incoming ensemble.
+### 4. Persisted intent is executable
 
-Required correction: QP-013 must persist active, exiting, entering, and allowed
-roles per boundary and validate the action against those local sets.
+The ambiguous `bars` field was removed from the Cohesion plan. The renderer uses
+the bounded overlay window (`leadBeats`/`tailBeats`) and directly executes
+rhythmic gesture, harmonic handoff, and energy contour. Audits retain the exact
+rendered bridge-note evidence beside the reviewed plan.
 
-### 3. `CONTINUITY` becomes a drum fill
+### 5. Bridge material is constrained and improvement-gated
 
-The planner maps `CONTINUITY` to the first globally supported role in the order
-drums, bass, pad, strings. The deterministic pattern map then maps
-`BridgeType.CONTINUITY` to `DRUM_FILL`. The separate transition adapters in
-`MidiTransitionEngine.kt` and `DetailedArrangement.kt` also translate
-`CONTINUITY` into `BridgeElement.DRUM_FILL`.
-
-Effect: asking to preserve continuity can add a fill, commonly on drums, even
-when the musically correct behavior is a held common tone, a continued bass
-figure, or no new note.
-
-Required correction: continuity must sustain/tie a role that is already active
-at that boundary, or publish an explicit no-op. It must never have a fixed drum
-fallback.
-
-### 4. Persisted intent and rendered MIDI diverge
-
-The plan records `bars`, `harmonicHandoff`, `rhythmicGesture`, and
-`energyContour`. The deterministic bridge renderer uses energy and lead/tail
-beats, plus a pattern selected from `bridgeType`; it does not execute the
-declared harmonic-handoff or rhythmic-gesture field. `bars` does not directly
-own the rendered overlay duration when explicit lead/tail beats are present.
-
-Effect: reviewable JSON can claim a step-to-incoming pickup or sustained
-handoff while the MIDI renderer produces a generic pattern with different
-musical behavior.
-
-Required correction: QP-013 must either make every declared field executable
-and test its MIDI effect or remove that field from the plan contract.
-
-### 5. Harmonic validation is incomplete for bridge material
-
-Bass-walk intermediate pitch classes are calculated by chromatic interpolation
-between roots. Chord/pad patterns are derived from boundary harmony, but the
-merged result is not admitted through one complete post-merge validator that
-proves beat phase, active harmony, masking, density, range, and melody identity
-together.
-
-Effect: a transition can be locally well-formed MIDI while adding chromatic
-bass motion or density that clashes with the active harmonic span and melody.
-
-Required correction: bridge generation must use the canonical harmonic
-timeline and the same ensemble validator as ordinary generated roles; approval
-must require non-worsening critic metrics.
+Bass bridges use only the active outgoing/incoming canonical roots rather than
+chromatic interpolation; pitched bridges use their active canonical harmony.
+Drum bridge hits are selected from the approved global groove-map points inside
+the active boundary span. Sustained layers reuse an actual carried voicing when
+available, and same-pitch overlays duck/split the existing note rather than
+stacking duplicate attacks. The application runs the deterministic full-song
+critic against both baseline and draft Cohesion role sets before approval and
+rejects an increase in blocker or critical counts. Stage comparisons persist
+actual before/after note changes plus complete critic aggregate/category deltas.
 
 ## Why “one full melody before arrangement” is the correct design
 

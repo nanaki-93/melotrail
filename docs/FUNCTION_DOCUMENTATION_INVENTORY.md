@@ -1,6 +1,6 @@
 # Function documentation inventory
 
-Inventory reviewed: 2026-08-24
+Inventory reviewed: 2026-08-25
 
 [`FUNCTION_DOCUMENTATION_INVENTORY.json`](FUNCTION_DOCUMENTATION_INVENTORY.json)
 is the checked-in inventory for every Kotlin/Python production source under
@@ -39,3 +39,6 @@ The 2026-08-24 consolidation refreshed every discovered source row. Existing
 source-specific classifications were preserved when still valid; newly found
 legacy callables were classified locally rather than hidden behind a global
 exception.
+
+QP-013 refreshed the affected Cohesion, critic-candidate, and comparison rows
+after their boundary-local rendering and approval contracts changed.

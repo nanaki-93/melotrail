@@ -178,16 +178,21 @@ separate from a missing or failed candidate, and a candidate joins
 - Cohesion receives boundary-local active, entering, and exiting roles.
 - `CONTINUITY` sustains/ties an active role or performs no edit; it never maps
   unconditionally to a drum fill.
-- A bridge cannot introduce an instrument inactive on both sides without an
-  explicit reviewed entry action.
-- Rendered bridge notes execute the declared gesture, harmonic handoff, bar
-  length, and energy contour.
-- Bass walks and pitched transitions fit active harmony.
-- Merged output is revalidated for harmony, groove, masking, range, density,
-  monophony, anchors, and bounds.
+- A bridge cannot introduce an instrument inactive on both sides; reviewed
+  Cohesion remains limited to an actual adjacent arrangement handoff.
+- Rendered bridge notes execute the declared gesture, harmonic handoff,
+  boundary overlay window, and energy contour; the obsolete plan-level `bars`
+  field is not persisted.
+- Bass walks and pitched transitions fit active harmony; drum bridge attacks use
+  the canonical beat phase and the active full-song groove-map span.
+- Merged role MIDI is compared to its exact source note evidence, and the
+  deterministic full-song critic re-evaluates the candidate's harmony, groove,
+  masking, density, melody anchors, and bounds before Cohesion approval.
 - Cohesion and targeted polish are selectable only when blocker/critical issue
   counts do not increase and their targeted metrics improve.
-- Audit evidence compares actual before/after MIDI, not only the requested plan.
+- Audit evidence retains rendered bridge notes, actual before/after MIDI note
+  deltas, and complete critic aggregate/category deltas, not only the requested
+  plan.
 
 ## Low-end interaction and delivery master
 

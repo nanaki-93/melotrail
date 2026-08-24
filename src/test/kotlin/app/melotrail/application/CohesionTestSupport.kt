@@ -8,6 +8,7 @@ import app.melotrail.arrangement.RhythmicGesture
 import app.melotrail.arrangement.TimingHandoff
 import app.melotrail.arrangement.TransitionRoleAction
 import app.melotrail.arrangement.TransitionBridgePlan
+import app.melotrail.arrangement.TransitionPlacement
 import app.melotrail.arrangement.EnsembleCohesionPlan
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.WorkflowArtifact
@@ -51,10 +52,20 @@ suspend fun generateApprovedCohesion(root: Path, arrangements: ArrangementApplic
                 CohesionTestChoice(TransitionRoleAction.CONTINUITY, BridgeType.CONTINUITY, "bass", RhythmicGesture.SUSTAIN),
                 CohesionTestChoice(TransitionRoleAction.CONTINUITY, BridgeType.CONTINUITY, "pad", RhythmicGesture.SUSTAIN),
                 CohesionTestChoice(TransitionRoleAction.CONTINUITY, BridgeType.CONTINUITY, "strings", RhythmicGesture.SUSTAIN)
-            ).first { it.action in boundary.allowedRoleActions && it.instrument in input.supportedInstruments }
-            TransitionBridgePlan(boundary.outgoingInstanceId, boundary.incomingInstanceId, boundary.outgoing.sourceHash, boundary.incoming.sourceHash, input.arrangementSha256, input.contextSha256, choice.action,
-                choice.type, 1, choice.instrument, HarmonicHandoff.HOLD, choice.gesture, EnergyContour.RISE,
-                TimingHandoff.PRESERVE, TimingHandoff.PRESERVE, "Carry energy into the next section")
+            ).first { choice -> choice.action in boundary.allowedRoleActions && choice.instrument in boundary.roles.supported &&
+                (choice.action != TransitionRoleAction.CONTINUITY || choice.instrument in boundary.roles.continuing) }
+            TransitionBridgePlan(
+                outgoingInstanceId = boundary.outgoingInstanceId, incomingInstanceId = boundary.incomingInstanceId,
+                outgoingHash = boundary.outgoing.sourceHash, incomingHash = boundary.incoming.sourceHash,
+                arrangementSha256 = input.arrangementSha256, contextSha256 = input.contextSha256, roleAction = choice.action,
+                bridgeType = choice.type, instrument = choice.instrument, harmonicHandoff = HarmonicHandoff.HOLD,
+                rhythmicGesture = choice.gesture, energyContour = EnergyContour.RISE,
+                tempoHandoff = TimingHandoff.PRESERVE, meterHandoff = TimingHandoff.PRESERVE,
+                rationale = "Carry energy into the next section",
+                placement = if (choice.action == TransitionRoleAction.CONTINUITY) TransitionPlacement.NO_OP else TransitionPlacement.OVERLAY_BOUNDARY,
+                leadBeats = if (choice.action == TransitionRoleAction.CONTINUITY) 0 else 1,
+                tailBeats = 0
+            )
         })
     }
     val draft = service.generate(GenerateEnsembleCohesionRequest(root))

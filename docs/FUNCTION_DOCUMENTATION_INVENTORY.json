@@ -213,18 +213,18 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/EnsembleCohesionApplicationService.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/application/EnsembleCohesionApplicationService.kt has 25 callable declarations, 0 directly documented and 25 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 25,
-      "declarationDigest": "f88c2f796cc0398ae4f795f9b4ad1fd7f4d2a354b065d51f119aa3cf0c5b420a",
-      "documentedFunctionCount": 0
+      "reason": "src/main/kotlin/app/melotrail/application/EnsembleCohesionApplicationService.kt has 28 callable declarations, 2 directly documented and 26 still requiring focused KDoc/docstrings. QP-013 reviewed draft-Cohesion critic comparison and approval gating on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "functionCount": 28,
+      "declarationDigest": "5aaae6f9b7358691471d58088ed0c1eec04c49b6467f5b99c09a5a12890c72b6",
+      "documentedFunctionCount": 2
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/FullSongCriticApplicationService.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/application/FullSongCriticApplicationService.kt has 12 callable declarations, 1 directly documented and 11 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 12,
-      "declarationDigest": "8e2aa3e808b0e5e03b1466c8c8b85a55bc0ca1fa2d35d6b121539565ba599cbf",
-      "documentedFunctionCount": 1
+      "reason": "src/main/kotlin/app/melotrail/application/FullSongCriticApplicationService.kt has 14 callable declarations, 2 directly documented and 12 still requiring focused KDoc/docstrings. QP-013 reviewed its draft-Cohesion candidate analysis contract on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "functionCount": 14,
+      "declarationDigest": "b53768bab62bc4de3e486e5f82780278ef3847be80ab3550a305cc93913b36c3",
+      "documentedFunctionCount": 2
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/FullSongEnhancementApplicationService.kt",
@@ -357,9 +357,9 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/StageComparisonService.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/application/StageComparisonService.kt has 19 callable declarations, 0 directly documented and 19 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 19,
-      "declarationDigest": "8e6e2ba8d1761440f599d8eae9195669d80bb84d2ef96bd5e119b2be667340bc",
+      "reason": "src/main/kotlin/app/melotrail/application/StageComparisonService.kt has 20 callable declarations, 0 directly documented and 20 still requiring focused KDoc/docstrings. QP-013 reviewed persisted critic aggregate deltas on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "functionCount": 20,
+      "declarationDigest": "3d03388cd858f85dc72142ff1a665064dff8c20dd7a2538690dd716f09d87ddf",
       "documentedFunctionCount": 0
     },
     {
@@ -493,10 +493,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/EnsembleCohesion.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/EnsembleCohesion.kt has 47 callable declarations, 3 directly documented and 44 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 47,
-      "declarationDigest": "d359505a380f3b31ffa34ab13914fd54b3120a6d88456cdedd627e72d747f995",
-      "documentedFunctionCount": 3
+      "reason": "src/main/kotlin/app/melotrail/arrangement/EnsembleCohesion.kt has 58 callable declarations, 8 directly documented and 50 still requiring focused KDoc/docstrings. QP-013 reviewed actual MIDI-derived boundary-local roles, explicit no-op continuity, groove-bound rendering, overlay ducking, and rendered-note audit evidence on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "functionCount": 58,
+      "declarationDigest": "dc3709a7873010272c92867866e58c56717beb82cd75a02bac525f64da46b8bb",
+      "documentedFunctionCount": 8
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/FullSongCritic.kt",

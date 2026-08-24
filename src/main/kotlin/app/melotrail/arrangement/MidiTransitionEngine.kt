@@ -380,7 +380,8 @@ class MidiTransitionGenerationAdapter(
                 }
             }
         }
-        val validationWindows = bridges.mapIndexed { index, bridge ->
+        val validationWindows = bridges.mapIndexedNotNull { index, bridge ->
+            if (bridge.placement == TransitionPlacement.NO_OP) return@mapIndexedNotNull null
             val outgoingBeat = ppq * 4L / sections[index].timeSignatures.first().denominator
             val incomingBeat = ppq * 4L / sections[index + 1].timeSignatures.first().denominator
             val start = bridgeOverlayStart(placements[index], sections[index], bridge)
@@ -478,13 +479,14 @@ class MidiTransitionGenerationAdapter(
 
     private fun TransitionBridgePlan.toTransitionPlan(): TransitionPlan = TransitionPlan(
         TransitionType.BRIDGE,
-        bars,
+        1,
         bridge = BridgePlan(
             energy = when (energyContour) { EnergyContour.HOLD -> 0.5; EnergyContour.RISE -> 0.7; EnergyContour.FALL -> 0.3 },
             elements = when (bridgeType) {
-                BridgeType.DRUM_FILL, BridgeType.BUILD, BridgeType.CONTINUITY -> listOf(BridgeElement.DRUM_FILL)
+                BridgeType.DRUM_FILL, BridgeType.BUILD -> listOf(BridgeElement.DRUM_FILL)
                 BridgeType.BASS_WALK -> listOf(BridgeElement.BASS_PICKUP)
                 BridgeType.PAD_SUSTAIN, BridgeType.CHORD_MOTION -> listOf(BridgeElement.PAD_SWELL)
+                BridgeType.CONTINUITY -> emptyList()
             }
         )
     )

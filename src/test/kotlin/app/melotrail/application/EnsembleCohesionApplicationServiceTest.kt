@@ -37,6 +37,8 @@ import app.melotrail.arrangement.TransitionBridgePlan
 import app.melotrail.arrangement.EnsembleCohesionInput
 import app.melotrail.arrangement.EnsembleTransitionContextFactory
 import app.melotrail.arrangement.EnsembleCohesionPlan
+import app.melotrail.arrangement.FullSongCriticReport
+import app.melotrail.arrangement.FullSongAggregateMetric
 import app.melotrail.harmony.ChordEvent
 import app.melotrail.harmony.ChordEventId
 import app.melotrail.harmony.ChordProgression
@@ -146,10 +148,31 @@ class EnsembleCohesionApplicationServiceTest {
         assertFalse(service.regenerate(GenerateEnsembleCohesionRequest(root)).approved)
     }
 
+    @Test fun `approval rejects a cohesion draft that raises deterministic blocker or critical counts`() {
+        fun report(blocking: Double, critical: Double) = FullSongCriticReport.create(
+            "a".repeat(64), "b".repeat(64), listOf(
+                FullSongAggregateMetric("blockingIssueCount", blocking),
+                FullSongAggregateMetric("criticalIssueCount", critical)
+            ), emptyList(), emptyList()
+        )
+
+        assertThrows(IllegalArgumentException::class.java) { requireNoCohesionIssueIncrease(report(0.0, 0.0), report(1.0, 0.0)) }
+        assertThrows(IllegalArgumentException::class.java) { requireNoCohesionIssueIncrease(report(0.0, 0.0), report(0.0, 1.0)) }
+        requireNoCohesionIssueIncrease(report(1.0, 1.0), report(1.0, 1.0))
+    }
+
     private fun plan(input: EnsembleCohesionInput): EnsembleCohesionPlan = EnsembleCohesionPlan(
         inputHash = input.inputHash, arrangementSha256 = input.arrangementSha256, contextSha256 = input.contextSha256,
         model = EnsembleCohesionModelIdentity("qwen", "1", "1".repeat(64)),
-        boundaries = input.boundaries.map { b -> TransitionBridgePlan(b.outgoingInstanceId, b.incomingInstanceId, b.outgoing.sourceHash, b.incoming.sourceHash, input.arrangementSha256, input.contextSha256, TransitionRoleAction.DRUM_FILL, BridgeType.DRUM_FILL, 1, "drums", HarmonicHandoff.HOLD, RhythmicGesture.FILL, EnergyContour.RISE, TimingHandoff.PRESERVE, TimingHandoff.PRESERVE, "Carry energy into the next section") }
+        boundaries = input.boundaries.map { b -> TransitionBridgePlan(
+            outgoingInstanceId = b.outgoingInstanceId, incomingInstanceId = b.incomingInstanceId,
+            outgoingHash = b.outgoing.sourceHash, incomingHash = b.incoming.sourceHash,
+            arrangementSha256 = input.arrangementSha256, contextSha256 = input.contextSha256,
+            roleAction = TransitionRoleAction.DRUM_FILL, bridgeType = BridgeType.DRUM_FILL, instrument = "drums",
+            harmonicHandoff = HarmonicHandoff.HOLD, rhythmicGesture = RhythmicGesture.FILL,
+            energyContour = EnergyContour.RISE, tempoHandoff = TimingHandoff.PRESERVE,
+            meterHandoff = TimingHandoff.PRESERVE, rationale = "Carry energy into the next section"
+        ) }
     )
 
     private fun project(structure: List<String>) {
@@ -185,7 +208,7 @@ class EnsembleCohesionApplicationServiceTest {
             GenerateArrangementRequest(root, instruments = listOf("piano", "drums"))
         )
         Files.createDirectories(root.resolve("midi/generated"))
-        Files.copy(root.resolve("midi/clean/A.mid"), root.resolve("midi/generated/drums.mid"), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        writeGeneratedDrums(root.resolve("midi/generated/drums.mid"), ProjectStore.read(root).envelope.structureOccurrences.size)
         val project = ProjectStore.read(root)
         val hash = app.melotrail.arrangement.sha256(root.resolve("midi/generated/drums.mid"))
         val approval = requireNotNull(project.workflow.arrangement)
@@ -205,4 +228,14 @@ class EnsembleCohesionApplicationServiceTest {
             ))))
     }
     private fun writeMidi(path: Path) { val sequence = Sequence(Sequence.PPQ, 480); val track = sequence.createTrack(); track.add(MidiEvent(MetaMessage(0x51, byteArrayOf(7, -95, 32), 3), 0)); track.add(MidiEvent(MetaMessage(0x58, byteArrayOf(4, 2, 24, 8), 4), 0)); track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, 60, 90), 0)); track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, 60, 0), 1_920)); MidiSystem.write(sequence, 1, path.toFile()) }
+    /** Test baseline must be active in each occurrence to exercise local role derivation. */
+    private fun writeGeneratedDrums(path: Path, occurrences: Int) {
+        val sequence = Sequence(Sequence.PPQ, 480); val track = sequence.createTrack()
+        repeat(occurrences) { index ->
+            val start = index * 1_920L
+            track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 9, 36, 90), start))
+            track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 9, 36, 0), start + 960L))
+        }
+        MidiSystem.write(sequence, 1, path.toFile())
+    }
 }

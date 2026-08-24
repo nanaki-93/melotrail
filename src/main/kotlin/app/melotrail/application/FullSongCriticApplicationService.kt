@@ -46,6 +46,8 @@ interface FullSongCriticApplicationService {
     fun run(root: Path): FullSongCriticSnapshot
     fun load(root: Path): FullSongCriticSnapshot
     fun analyzeCandidate(root: Path, outputs: Map<String, WorkflowArtifactReference>): FullSongCriticReport
+    /** Analyze a complete draft Cohesion role set before it can be promoted. */
+    fun analyzeCohesionCandidate(root: Path, outputs: Map<String, WorkflowArtifactReference>): FullSongCriticReport
 }
 
 class DefaultFullSongCriticApplicationService(
@@ -90,11 +92,17 @@ class DefaultFullSongCriticApplicationService(
         return critic.criticize(currentInput(normalized, outputs))
     }
 
-    private fun currentInput(root: Path, candidateOutputs: Map<String, WorkflowArtifactReference> = emptyMap()): FullSongCriticInput {
+    override fun analyzeCohesionCandidate(root: Path, outputs: Map<String, WorkflowArtifactReference>): FullSongCriticReport {
+        val normalized = root.toAbsolutePath().normalize()
+        require(outputs.isNotEmpty()) { "Cohesion candidate Critic requires candidate role MIDI outputs." }
+        return critic.criticize(currentInput(normalized, outputs, allowDraftCohesion = true))
+    }
+
+    private fun currentInput(root: Path, candidateOutputs: Map<String, WorkflowArtifactReference> = emptyMap(), allowDraftCohesion: Boolean = false): FullSongCriticInput {
         val project = ProjectStore.read(root).also { it.requireValid(root) }
         require(project.version == Project.CURRENT_VERSION) { "Full-Song Critic requires a schema-v4 project." }
         val cohesion = requireNotNull(project.workflow.cohesion) { "Full-Song Critic requires approved Cohesion." }
-        require(cohesion.approved && WorkflowArtifact.COHESION !in project.workflow.stale) { "Full-Song Critic requires current approved Cohesion." }
+        require((cohesion.approved || allowDraftCohesion) && WorkflowArtifact.COHESION !in project.workflow.stale) { "Full-Song Critic requires current approved Cohesion." }
         sourceSongCritic.requireQualityCertifiedApproved(root)
         val approvedMelody = sourceSongCritic.requireApprovedMelody(root)
         val authority = authorityBuilder.wholeSongAnalysis(root)
@@ -106,7 +114,7 @@ class DefaultFullSongCriticApplicationService(
             app.melotrail.arrangement.SectionInstance(index, occurrence.partId, occurrence.id)
         }, approvedMelody).associateBy { it.occurrenceId }
         val occurrences = cohesion.occurrences.sortedBy { it.instanceId }.map { occurrence ->
-            require(occurrence.approved && occurrence.cohesionInputSha256 == cohesion.inputSha256) { "Cohesion occurrence '${occurrence.instanceId}' is not approved." }
+            require((occurrence.approved || allowDraftCohesion) && occurrence.cohesionInputSha256 == cohesion.inputSha256) { "Cohesion occurrence '${occurrence.instanceId}' is not approved." }
             require(occurrence.sourceSha256 == approvedMelody.connectedMidi.sha256) {
                 "Cohesion occurrence '${occurrence.instanceId}' is not bound to the approved connected full melody. Regenerate Cohesion."
             }
@@ -121,7 +129,7 @@ class DefaultFullSongCriticApplicationService(
             FullSongCriticMidiArtifact("piano", occurrence.instanceId, view.path, reference, authorityOccurrence.startTick)
         }
         val roles = cohesion.roles.sortedBy { it.role }.map { role ->
-            require(role.approved && role.cohesionInputSha256 == cohesion.inputSha256) { "Cohesion role '${role.role}' is not approved." }
+            require((role.approved || allowDraftCohesion) && role.cohesionInputSha256 == cohesion.inputSha256) { "Cohesion role '${role.role}' is not approved." }
             val reference = candidateOutputs[role.role] ?: role.result
             FullSongCriticMidiArtifact(role.role, null, verified(root, reference, "Cohesion role '${role.role}'"), reference)
         }

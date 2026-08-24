@@ -10,6 +10,10 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
+import javax.sound.midi.MidiEvent
+import javax.sound.midi.MidiSystem
+import javax.sound.midi.Sequence
+import javax.sound.midi.ShortMessage
 
 class EnsembleCohesionPlannerTest {
     @TempDir lateinit var root: Path
@@ -17,7 +21,7 @@ class EnsembleCohesionPlannerTest {
     @Test fun `model receives only adjacent boundary evidence and binds it to the current input`() {
         val input = input("phrase11" to "phrase12")
         val trustedModel = EnsembleCohesionModelIdentity("qwen", "local", "e".repeat(64))
-        val response = """{"boundaries":[{"roleAction":"DRUM_FILL","bars":1,"harmonicHandoff":"HOLD","rhythmicGesture":"FILL","energyContour":"RISE","rationale":"Carry energy forward"}]}"""
+        val response = """{"boundaries":[{"roleAction":"DRUM_FILL","harmonicHandoff":"HOLD","rhythmicGesture":"FILL","energyContour":"RISE","rationale":"Carry energy forward"}]}"""
         var prompt = ""
 
         val plan = LocalQwenEnsembleCohesionPlanner(LocalQwenClient { _, userPrompt -> prompt = userPrompt; response }, trustedModel).plan(input)
@@ -38,6 +42,66 @@ class EnsembleCohesionPlannerTest {
         assertFalse(EnsembleCohesionValidator.validate(exact.copy(boundaries = exact.boundaries.reversed()), repeated).isValid)
         val two = input("A1" to "A2")
         assertTrue(EnsembleCohesionValidator.validate(plan(two), two).isValid)
+    }
+
+    @Test fun `a bridge cannot select a role inactive on both sides of its boundary`() {
+        val input = input("A1" to "A2").copy(supportedInstruments = listOf("bass", "drums"))
+        val invalid = plan(input).copy(boundaries = plan(input).boundaries.map { bridge ->
+            bridge.copy(roleAction = TransitionRoleAction.BASS_MOTION, bridgeType = BridgeType.BASS_WALK, instrument = "bass")
+        })
+
+        assertFalse(EnsembleCohesionValidator.validate(invalid, input).isValid)
+    }
+
+    @Test fun `continuity is a reviewed no-op rather than a hidden drum fill`() {
+        val base = input("A1" to "A2")
+        val input = base.copy(boundaries = base.boundaries.map { boundary ->
+            boundary.copy(
+                allowedRoleActions = listOf(TransitionRoleAction.CONTINUITY),
+                transitionPolicy = boundary.transitionPolicy.copy(allowedActions = listOf(TransitionRoleAction.CONTINUITY))
+            )
+        })
+        val response = """{"boundaries":[{"roleAction":"CONTINUITY","harmonicHandoff":"HOLD","rhythmicGesture":"SUSTAIN","energyContour":"HOLD","rationale":"Keep the established role stable"}]}"""
+
+        val plan = LocalQwenEnsembleCohesionPlanner(LocalQwenClient { _, _ -> response }, EnsembleCohesionModelIdentity.DETERMINISTIC).plan(input)
+        val bridge = plan.boundaries.single()
+        val path = root.resolve("continuity.mid")
+        DeterministicTransitionBridgeEngine.write(path, input, input.boundaries.single(), bridge)
+        val noteOns = MidiSystem.getSequence(path.toFile()).tracks.sumOf { track ->
+            (0 until track.size()).count { index -> (track[index].message as? javax.sound.midi.ShortMessage)?.let { it.command == javax.sound.midi.ShortMessage.NOTE_ON && it.data2 > 0 } == true }
+        }
+
+        assertEquals(TransitionPlacement.NO_OP, bridge.placement)
+        assertEquals(0, bridge.leadBeats)
+        assertEquals(0, noteOns)
+    }
+
+    @Test fun `the saved five boundary fixture remains locally bound in structure order`() {
+        val input = input("intro" to "verse", "verse" to "chorus", "chorus" to "breakdown", "breakdown" to "chorus2", "chorus2" to "outro")
+        val plan = LocalQwenEnsembleCohesionPlanner(LocalQwenClient { _, _ -> response(5) }, EnsembleCohesionModelIdentity.DETERMINISTIC).plan(input)
+
+        assertEquals(5, plan.boundaries.size)
+        assertTrue(plan.boundaries.zip(input.boundaries).all { (bridge, context) ->
+            bridge.instrument in context.roles.supported && bridge.outgoingInstanceId == context.outgoingInstanceId && bridge.incomingInstanceId == context.incomingInstanceId
+        })
+    }
+
+    @Test fun `role bridge merge ducks an exact same-pitch overlay instead of stacking attacks`() {
+        val base = input("A1" to "A2")
+        val input = base.copy(occurrences = listOf(
+            SongOccurrenceEvidence("A1", base.boundaries.single().outgoing),
+            SongOccurrenceEvidence("A2", base.boundaries.single().incoming)
+        ))
+        val plan = plan(input); val bridge = plan.boundaries.single()
+        val bridgePath = root.resolve(EnsembleCohesionStore.bridgeMidi("A1", "A2"))
+        DeterministicTransitionBridgeEngine.write(bridgePath, input, input.boundaries.single(), bridge)
+        val source = root.resolve("midi/generated/drums.mid"); writeNote(source, 36, 3_300, 3_400)
+        val output = root.resolve("cohesion/drums.mid")
+
+        CohesionRoleBridgeApplier.write(root, source, output, "drums", input, plan)
+
+        val ranges = pairedNotes(output).filter { it.first == 36 }.map { it.second to it.third }.sortedBy { it.first }
+        assertTrue(ranges.zipWithNext().all { (left, right) -> left.second <= right.first })
     }
 
     @Test fun `Qwen cohesion retries an incomplete boundary response with its validation error`() {
@@ -61,7 +125,7 @@ class EnsembleCohesionPlannerTest {
 
     @Test fun `Qwen cohesion bounds display rationale without changing musical decisions`() {
         val input = input("A1" to "A2")
-        val response = """{"boundaries":[{"roleAction":"DRUM_FILL","bars":1,"harmonicHandoff":"HOLD","rhythmicGesture":"FILL","energyContour":"RISE","rationale":"${"Carry the groove forward! ".repeat(12)}"}]}"""
+        val response = """{"boundaries":[{"roleAction":"DRUM_FILL","harmonicHandoff":"HOLD","rhythmicGesture":"FILL","energyContour":"RISE","rationale":"${"Carry the groove forward! ".repeat(12)}"}]}"""
 
         val plan = LocalQwenEnsembleCohesionPlanner(LocalQwenClient { _, _ -> response }, EnsembleCohesionModelIdentity.DETERMINISTIC).plan(input)
 
@@ -106,9 +170,20 @@ class EnsembleCohesionPlannerTest {
         return EnsembleCohesionInput(
             inputHash = "d".repeat(64), structureSha256 = "b".repeat(64), arrangementSha256 = "e".repeat(64), contextSha256 = context,
             supportedInstruments = listOf("drums"),
-            boundaries = boundaries.map { (outgoing, incoming) ->
-                TransitionContext(outgoing, incoming, occurrenceEvidence.getValue(outgoing), occurrenceEvidence.getValue(incoming), listOf(TransitionRoleAction.DRUM_FILL), policy(context))
-            }
+            boundaries = boundaries.mapIndexed { index, (outgoing, incoming) ->
+                TransitionContext(
+                    outgoing, incoming, occurrenceEvidence.getValue(outgoing), occurrenceEvidence.getValue(incoming),
+                    listOf(TransitionRoleAction.DRUM_FILL), policy(context),
+                    TransitionBoundaryRoleEvidence(listOf("drums"), listOf("drums"), emptyList(), emptyList(), listOf("drums"), listOf("drums")),
+                    index * 3_840L, (index + 1L) * 3_840L
+                )
+            },
+            acceptedFullSongGrooveMap = FullSongGrooveMap(
+                ppq = 480, meterDenominator = 4, subdivisionsPerBeat = 4,
+                points = occurrenceEvidence.keys.sorted().flatMapIndexed { index, id ->
+                    listOf(FullSongGroovePoint(id, 7, 0, index * 3_840L + 3_360L, 0L))
+                }, occurrenceTemplateFingerprints = emptyList(), boundaries = emptyList(), maximumUnreviewedDiscontinuityTicks = 30L
+            )
         )
     }
 
@@ -116,14 +191,17 @@ class EnsembleCohesionPlannerTest {
         inputHash = input.inputHash, arrangementSha256 = input.arrangementSha256, contextSha256 = input.contextSha256,
         model = EnsembleCohesionModelIdentity.DETERMINISTIC,
         boundaries = input.boundaries.map { boundary -> override ?: TransitionBridgePlan(
-            boundary.outgoingInstanceId, boundary.incomingInstanceId, boundary.outgoing.sourceHash, boundary.incoming.sourceHash,
-            input.arrangementSha256, input.contextSha256, TransitionRoleAction.DRUM_FILL, BridgeType.DRUM_FILL, 1, "drums",
-            HarmonicHandoff.HOLD, RhythmicGesture.FILL, EnergyContour.RISE, rationale = "Carry energy forward"
+            outgoingInstanceId = boundary.outgoingInstanceId, incomingInstanceId = boundary.incomingInstanceId,
+            outgoingHash = boundary.outgoing.sourceHash, incomingHash = boundary.incoming.sourceHash,
+            arrangementSha256 = input.arrangementSha256, contextSha256 = input.contextSha256,
+            roleAction = TransitionRoleAction.DRUM_FILL, bridgeType = BridgeType.DRUM_FILL, instrument = "drums",
+            harmonicHandoff = HarmonicHandoff.HOLD, rhythmicGesture = RhythmicGesture.FILL,
+            energyContour = EnergyContour.RISE, rationale = "Carry energy forward"
         ) }
     )
 
     private fun response(boundaries: Int): String = """{"boundaries":[${List(boundaries) {
-        """{"roleAction":"DRUM_FILL","bars":1,"harmonicHandoff":"HOLD","rhythmicGesture":"FILL","energyContour":"RISE","rationale":"Carry energy forward"}"""
+        """{"roleAction":"DRUM_FILL","harmonicHandoff":"HOLD","rhythmicGesture":"FILL","energyContour":"RISE","rationale":"Carry energy forward"}"""
     }.joinToString(",")}]}"""
 
     private fun policy(hash: String) = TransitionPolicyEvidence("lofi", "calm", hash, listOf(TransitionRoleAction.DRUM_FILL))
@@ -131,4 +209,19 @@ class EnsembleCohesionPlannerTest {
         partId, sourceHash, "f".repeat(64), 480, 3_840, MidiKey("C", "major", 1.0), emptyList(), MidiTempoChange(0, 80.0), MidiTimeSignature(0, 4, 4), 0.5,
         TransitionBoundarySummary(true, true, 0, 1_440), TransitionArrangementEvidence("9".repeat(64), SongSectionPurpose.DEVELOPMENT, listOf(TransitionInstrumentEvidence("drums", "DrumsInstrumentPlan", 0.5)), "8".repeat(64)), notes
     )
+    private fun writeNote(path: Path, pitch: Int, start: Long, end: Long) {
+        Files.createDirectories(requireNotNull(path.parent)); val sequence = Sequence(Sequence.PPQ, 480); val track = sequence.createTrack()
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 9, pitch, 90), start))
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 9, pitch, 0), end))
+        MidiSystem.write(sequence, 1, path.toFile())
+    }
+    private fun pairedNotes(path: Path): List<Triple<Int, Long, Long>> {
+        val active = mutableMapOf<Pair<Int, Int>, ArrayDeque<Long>>(); val result = mutableListOf<Triple<Int, Long, Long>>()
+        MidiSystem.getSequence(path.toFile()).tracks.forEach { track -> (0 until track.size()).forEach { index ->
+            val event = track[index]; val message = event.message as? ShortMessage ?: return@forEach; val key = message.channel to message.data1
+            if (message.command == ShortMessage.NOTE_ON && message.data2 > 0) active.getOrPut(key) { ArrayDeque() }.addLast(event.tick)
+            else if (message.command == ShortMessage.NOTE_OFF || message.command == ShortMessage.NOTE_ON && message.data2 == 0) active[key]?.removeFirstOrNull()?.let { result += Triple(message.data1, it, event.tick) }
+        } }
+        return result
+    }
 }
