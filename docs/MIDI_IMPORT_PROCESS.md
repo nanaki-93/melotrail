@@ -83,8 +83,13 @@ unselected branch cannot override the current candidate.
 
 ## Important current musical limitations
 
-- Normalization can replace/conform tempo metadata but does not yet warp
-  performed beats/downbeats onto the project grid.
+- QP-002 can collect bounded source beat/onset/tempo/downbeat and groove
+  evidence through the local worker, but the evidence is explicitly
+  `UNKNOWN`/`REVIEW_REQUIRED` when audio cannot establish a safe phase. A
+  low-support source groove template is also `REVIEW_REQUIRED`; it cannot
+  invent silent bins and must be reviewed or fall back to the approved grid.
+  Normalization still does not warp performed beats/downbeats onto the project
+  grid; that derived-candidate operation is QP-003.
 - Current project-key transposition uses one tonic interval; different source
   and project modes are not yet mapped by scale degree.
 - Imported material is not yet guaranteed to become one-note-at-a-time melody.

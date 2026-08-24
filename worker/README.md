@@ -154,3 +154,21 @@ allow-listed profiles. Kotlin checks that capability before sending a Clean MIDI
 request; it does not negotiate arbitrary worker options. Normalization is a
 separate deterministic Kotlin stage after worker cleanup, so this worker does
 not perform swing, creative quantization, pitch correction, or humanization.
+
+## Source timing evidence
+
+`POST /analyze` uses request contract version `2` (Kotlin sends `"version":2`)
+for read-only source timing evidence. Its bounded response includes beat and
+onset frame/time points, confidence-scored tempo candidates, leading activity,
+and an explicit downbeat state. Audio-only phase is returned as
+`REVIEW_REQUIRED`; silent, malformed, or insufficient inputs remain
+`UNKNOWN`/failed evidence and never become invented beats or a confirmed
+downbeat. `GET /health` advertises the supported revision at
+`analysis.versions` so Kotlin fails with a recovery action when timing v2 is
+unavailable.
+
+Kotlin validates and stores the project-confined, source-hash-bound timing
+report, then derives its own confidence-scored source-groove template.
+Low-support bins remain neutral and make the template `REVIEW_REQUIRED`; a
+later Kotlin decision must review it or use the approved grid. The worker never writes a
+report, decides project bar placement, applies a warp, or replaces source MIDI.

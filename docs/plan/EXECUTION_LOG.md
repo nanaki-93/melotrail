@@ -10,7 +10,7 @@ containing commit and required checks are recorded.
 | Task | Status | Commit | Required checks | Notes |
 | --- | --- | --- | --- | --- |
 | QP-001 | Complete | SELF | `make test`, `make worker-test` | Deterministic MIDI/audio defect fixtures and measurement harness cover timing, harmony, monophony, sustain, arrangement, groove, low-end, codec, critic, and lineage evidence. |
-| QP-002 | Pending | — | focused Kotlin/worker tests, `make test`, `make worker-test` | — |
+| QP-002 | Complete | SELF | focused Kotlin/worker tests, `make test`, `make worker-test` | Analyze v2 emits bounded beat/onset/tempo/activity/downbeat evidence; Kotlin confines, validates, derives source groove, and persists immutable source-bound reports. |
 | QP-003 | Pending | — | focused timing tests, `make test` | — |
 | QP-004 | Pending | — | transposition tests, `make test` | — |
 | QP-005 | Pending | — | monophony tests, `make test` | — |

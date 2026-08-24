@@ -5,6 +5,8 @@ import app.melotrail.harmony.HarmonySettings
 import app.melotrail.music.MusicalKey
 import app.melotrail.music.Tempo
 import app.melotrail.music.TimeSignature
+import app.melotrail.preparation.SourceTimingEvidenceReference
+import app.melotrail.preparation.SourceTimingEvidenceStore
 import app.melotrail.profile.CompositionProfileRef
 import app.melotrail.profile.MoodRef
 import kotlinx.serialization.Serializable
@@ -253,6 +255,8 @@ data class SongPart(
     val sectionType: SectionTypeId = SectionTypeCatalog.fromLegacyRole(role),
     /** Optional analysis/user confirmation of the source key; this never changes project key. */
     val sourceKeyEvidence: SourceKeyEvidence? = null,
+    /** Immutable v2 audio timing evidence; a later timing decision remains separately reviewed. */
+    val sourceTimingEvidence: SourceTimingEvidenceReference? = null,
     /** Reserved stable run reference for Task 011's stage manifests; never a filesystem path. */
     val stageManifestRef: String? = null,
     /** Optimistic revision for explicit name/section decisions. */
@@ -438,6 +442,19 @@ object ProjectValidator {
             part.importEvidence?.let { evidence ->
                 runCatching(evidence::requireValid).exceptionOrNull()?.let { error ->
                     errors += "Part '${part.id}' import evidence is invalid: ${error.message}"
+                }
+            }
+            part.sourceTimingEvidence?.let { reference ->
+                runCatching(reference::requireValid).exceptionOrNull()?.let { error ->
+                    errors += "Part '${part.id}' source timing evidence reference is invalid: ${error.message}"
+                }
+                validateArtifactReference(root, reference.report, "Part '${part.id}' source timing evidence", errors)
+                runCatching { SourceTimingEvidenceStore.read(root, reference.report) }.onSuccess { evidence ->
+                    if (evidence.partId != part.id || evidence.source.relativePath != part.file || evidence.source.sha256 != reference.sourceSha256) {
+                        errors += "Part '${part.id}' source timing evidence does not match the preserved source"
+                    }
+                }.onFailure { error ->
+                    errors += "Part '${part.id}' source timing evidence is invalid: ${error.message}"
                 }
             }
             val midi = part.midi

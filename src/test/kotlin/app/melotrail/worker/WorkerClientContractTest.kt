@@ -51,10 +51,12 @@ class WorkerClientContractTest {
         )
 
         assertTrue(client.healthCheck())
-        assertEquals(WorkerRuntimeStatus(true, true, "1.0.0", true), client.runtimeStatus())
+        assertEquals(WorkerRuntimeStatus(true, true, "1.0.0", true, setOf(2)), client.runtimeStatus())
         assertTrue(client.supportsMidiCleanup(2, "transcription-safe"))
+        assertTrue(client.supportsTimingAnalysis(2))
+        assertFalse(client.supportsTimingAnalysis(1))
         assertFalse(client.supportsMidiCleanup(1, "transcription-safe"))
-        assertEquals(listOf("GET" to "/health", "GET" to "/health", "GET" to "/health", "GET" to "/health"), transport.requests)
+        assertEquals(listOf("GET" to "/health", "GET" to "/health", "GET" to "/health", "GET" to "/health", "GET" to "/health", "GET" to "/health"), transport.requests)
         assertFalse(transport.requestBodies.any { it?.contains("path") == true })
         assertEquals("Python worker is not running at http://127.0.0.1:8081", client.unavailableMessage)
     }
@@ -75,7 +77,7 @@ class WorkerClientContractTest {
         override fun request(method: String, path: String, body: String?, timeout: Duration): WorkerHttpResponse {
             requests += method to path
             requestBodies += body
-            return WorkerHttpResponse(200, """{"status":"ok","version":"1.0.0","transcriptionRuntime":true,"mp3ExportRuntime":true,"midiCleanup":{"requestVersion":2,"profiles":["conservative","transcription-safe"]}}""")
+            return WorkerHttpResponse(200, """{"status":"ok","version":"1.0.0","transcriptionRuntime":true,"mp3ExportRuntime":true,"midiCleanup":{"requestVersion":2,"profiles":["conservative","transcription-safe"]},"analysis":{"versions":[2]}}""")
         }
     }
 }

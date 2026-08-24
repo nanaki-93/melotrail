@@ -33,6 +33,7 @@ object WorkerProtocol {
         when (command) {
             is AnalyzeCommand -> {
                 put("path", command.path)
+                put("version", command.version)
                 put("options", buildJsonObject {
                     put("detectBPM", command.options.detectBPM)
                     put("detectKey", command.options.detectKey)

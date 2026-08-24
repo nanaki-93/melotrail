@@ -23,13 +23,17 @@ data class WorkerRuntimeStatus(
     val reachable: Boolean,
     val transcriptionAvailable: Boolean,
     val version: String? = null,
-    val mp3ExportAvailable: Boolean = false
+    val mp3ExportAvailable: Boolean = false,
+    /** Bounded advertised source-timing contract revisions; never a capability negotiation wildcard. */
+    val sourceTimingVersions: Set<Int> = emptySet()
 )
 
 interface WorkerGateway {
     val unavailableMessage: String get() = "Python worker is not running"
     suspend fun execute(command: WorkerCommand): WorkerResponse
     suspend fun healthCheck(): Boolean
+    /** Returns true only when the worker explicitly advertises this pinned timing contract revision. */
+    suspend fun supportsTimingAnalysis(version: Int): Boolean = false
 }
 
 data class WorkerHttpResponse(val code: Int, val body: String)
@@ -95,7 +99,9 @@ class WorkerClient(
                 reachable = body["status"]?.jsonPrimitive?.content == "ok",
                 transcriptionAvailable = body["transcriptionRuntime"]?.jsonPrimitive?.booleanOrNull == true,
                 version = body["version"]?.jsonPrimitive?.contentOrNull,
-                mp3ExportAvailable = body["mp3ExportRuntime"]?.jsonPrimitive?.booleanOrNull == true
+                mp3ExportAvailable = body["mp3ExportRuntime"]?.jsonPrimitive?.booleanOrNull == true,
+                sourceTimingVersions = body["analysis"]?.jsonObject?.get("versions")?.jsonArray
+                    ?.mapNotNull { it.jsonPrimitive.longOrNull?.toInt() }?.toSet().orEmpty()
             )
         }.getOrDefault(WorkerRuntimeStatus(false, false))
     }
@@ -108,6 +114,16 @@ class WorkerClient(
             val capability = json.parseToJsonElement(response.body).jsonObject["midiCleanup"]?.jsonObject ?: return@runCatching false
             capability["requestVersion"]?.jsonPrimitive?.longOrNull == requestVersion.toLong() &&
                 capability["profiles"]?.jsonArray?.any { it.jsonPrimitive.contentOrNull == profile } == true
+        }.getOrDefault(false)
+    }
+
+    /** Checks the worker's bounded `/health` timing capability before sending an analyze-v2 request. */
+    override suspend fun supportsTimingAnalysis(version: Int): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            val response = transport.request("GET", "/health", null, timeout)
+            if (response.code !in 200..299) return@runCatching false
+            json.parseToJsonElement(response.body).jsonObject["analysis"]?.jsonObject?.get("versions")?.jsonArray
+                ?.any { it.jsonPrimitive.longOrNull == version.toLong() } == true
         }.getOrDefault(false)
     }
 

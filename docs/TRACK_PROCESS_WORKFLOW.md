@@ -78,10 +78,14 @@ melody boundaries, runs a deterministic source critic, and requires explicit
 approval before arrangement.
 
 Known limitation: current downstream piano paths can reconstruct occurrence
-MIDI rather than consume the exact approved connected source song. Current
-assembly also does not guarantee beat-warped whole bars, mode-aware pitch
-mapping, harmony-fit stable tones, or global one-note-at-a-time melody. These
-gaps are QP-002–QP-010 and must not be described as current capabilities.
+MIDI rather than consume the exact approved connected source song. QP-002 now
+stores source beat/onset/tempo/downbeat and source-groove evidence, but it does
+not yet warp MIDI into whole bars or choose an unreviewed downbeat. A
+low-support groove template is explicitly review-required rather than inferred
+from silence. Current
+assembly also does not guarantee mode-aware pitch mapping, harmony-fit stable
+tones, or global one-note-at-a-time melody. The remaining gaps are QP-003–QP-010
+and must not be described as current capabilities.
 
 ## Arrangement and Cohesion boundary
 

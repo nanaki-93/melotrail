@@ -18,8 +18,11 @@ data class AnalyzeOptions(
 
 data class AnalyzeCommand(
     val path: String,
+    /** Pinned protocol revision for bounded beat/onset/downbeat evidence. */
+    val version: Int = 2,
     val options: AnalyzeOptions = AnalyzeOptions()
 ) : WorkerCommand() {
+    init { require(version == 2) { "Unsupported analyze request version: $version" } }
 }
 
 data class ApplyDSPCommand(

@@ -63,6 +63,9 @@ class WorkerHandler(BaseHTTPRequestHandler):
                     "requestVersion": 2,
                     "profiles": ["conservative", "transcription-safe", "tighten-timing"],
                 },
+                "analysis": {
+                    "versions": [2],
+                },
             })
             return
         self._send_json(404, {"error": "Not found"})

@@ -32,7 +32,8 @@ class WorkerProtocolTest {
     @Test
     fun `protocol preserves every command payload field name`() {
         val analyze = WorkerProtocol.requestFor(AnalyzeCommand("/input.wav"), "job-1")
-        assertEquals(setOf("jobId", "path", "options"), analyze.keys)
+        assertEquals(setOf("jobId", "path", "version", "options"), analyze.keys)
+        assertEquals("2", analyze["version"]!!.jsonPrimitive.content)
         assertEquals("true", analyze["options"]!!.jsonObject["detectBPM"]!!.jsonPrimitive.content)
 
         val dsp = WorkerProtocol.requestFor(ApplyDSPCommand("/input.wav", DSPSettings(), "wav"), "job-1")
