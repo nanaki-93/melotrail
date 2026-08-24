@@ -83,7 +83,7 @@ data class CanonicalAnalyzedPartFacts(
     val analysis: MidiAnalysis
 )
 
-/** Task 121 can extend this reference with anchor detail without changing authority ownership. */
+/** QP-006 can extend this reference with anchor detail without changing authority ownership. */
 @Serializable
 data class MelodyEvidenceReference(
     val partId: String,

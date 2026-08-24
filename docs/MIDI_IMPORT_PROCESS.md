@@ -1,138 +1,114 @@
 # MIDI import process
 
-Use **Import MIDI** when you already have editable MIDI. Use **Import audio**
-only for an eligible solo-piano WAV, WAVE, or MP3 source that you want to
-transcribe. Audio import does not promise a particular transcription quality:
-review the published MIDI before it becomes analysis input.
+This guide describes the current schema-v4 import implementation. The target
+beat-warp, mode-aware, harmony-fit, monophonic preparation pipeline is specified
+separately in [`plan/PLAN.md`](plan/PLAN.md); do not assume those improvements
+are already shipped.
+
+Use **Import MIDI** for editable Standard MIDI files. Use **Import audio** only
+for an eligible solo-piano or isolated melody WAV/WAVE/MP3 source. The current
+Basic Pitch route is not stem separation and does not promise useful melody MIDI
+from a full mix.
 
 ```mermaid
 flowchart LR
-    S[Choose one source] --> V[Validate type, container, events, and project path]
-    V -->|.mid or .midi| D[Preserve source and publish raw MIDI]
-    V -->|solo-piano .wav/.wave/.mp3| I[Inspect audio]
-    I --> C{Explicit cleanup approval?}
-    C -->|No| T[Transcribe original audio]
-    C -->|Yes| P[Create prepared copy, then transcribe selected audio]
-    T --> R[Clean MIDI and review when requested]
-    P --> R
-    D --> R
-    R --> A[Approve required quality evidence, then analyze]
-    A --> F[Keep Original feel or select optional Lo-fi Feel]
+    S[Choose source] --> V[Validate extension and container]
+    V -->|.mid/.midi| R[Preserve source and publish raw MIDI]
+    V -->|isolated .wav/.wave/.mp3| I[Inspect/select original or prepared audio]
+    I --> T[Basic Pitch transcription]
+    T --> R
+    R --> C[Clean MIDI]
+    C --> N[Normalize MIDI]
+    N --> K[Detect/confirm source key]
+    K --> P[Transpose to project key]
+    P --> O[Optional correction, AI Fix, Enhance, Feel]
+    O --> A[Analyze selected MIDI]
 ```
 
-## Choose and validate the source
+## Source validation and immutability
 
-Direct MIDI accepts only `.mid` and `.midi`. Validation is layered: import
-checks the extension and Standard MIDI header before it preserves source
-evidence; **Inspect only** verifies the actual Standard MIDI container,
-rejects corrupt or unsupported data, and requires playable events with a
-positive duration. The later quality review also requires supported PPQ timing
-and well-formed note pairs. A filename extension alone is never proof that a
-file is MIDI.
+Direct MIDI accepts `.mid` and `.midi`; audio accepts `.wav`, `.wave`, and
+`.mp3`. The service checks the actual container and bounded content, not only
+the suffix. Invalid identifiers, escaping paths, malformed MIDI, unsupported
+audio, missing playable notes, and non-positive duration are rejected.
 
-WAV (`.wav` or `.wave`) and MP3 (`.mp3`) are accepted only for the
-solo-piano transcription route. The worker validates their actual RIFF/WAVE or
-MPEG container and bounded decoded format before reporting measurements.
+The imported file is copied beneath `source/` and remains immutable. Every
+processor publishes a separate project-relative candidate and report. Failed,
+stale, rejected, and bypassed artifacts may remain as inspection evidence but
+cannot become selected by file existence.
 
-Every import is copied into the open project. Part IDs, artifact references,
-and source identities are validated; canonical paths are project-relative and
-confined below the project root. Do not point a report or a derived artifact at
-an arbitrary external path.
+## Direct MIDI route
 
-## The two routes
+1. Preserve the original file under `source/<part>.<ext>`.
+2. Publish immutable `midi/raw/<part>.mid` evidence.
+3. Run deterministic cleanup and review its quality evidence when required.
+4. Normalize timing representation conservatively.
+5. Detect source key; confirm it when confidence is below the fixed gate.
+6. Publish a separate project-key-transposed candidate and report.
 
-### Direct MIDI
+## Isolated audio route
 
-1. Import the valid `.mid` or `.midi` file.
-2. Melotrail copies it as immutable source evidence at
-   `source/<part>.<ext>` and atomically publishes the same MIDI as
-   `midi/raw/<part>.mid`.
-3. Run **Clean MIDI**. Import does not clean, analyze, or silently alter the
-   MIDI.
+1. Preserve the original audio under `source/<part>.<ext>`.
+2. Inspection writes `prepared/<part>/report.json` without modifying audio.
+3. Explicit safe preparation may publish `prepared/<part>/decoded.wav` and
+   `prepared/<part>/clean.wav`; it never overwrites the source, removes time,
+   changes pitch/tempo, normalizes loudness, or separates stems.
+4. Transcribe the selected original/prepared input through the optional local
+   Basic Pitch runtime.
+5. Validate and atomically publish `midi/raw/<part>.mid`.
+6. Apply the mandatory transcription cleanup profile before analysis-ready
+   progression.
 
-### Solo-piano audio to MIDI
+If the optional model/runtime is unavailable or output validation fails, the
+source remains intact and no invalid raw MIDI is selected. Follow
+[`worker/README.md`](../worker/README.md) for the supported Python environment.
 
-1. Import an eligible WAV/WAVE/MP3 recording. The original is copied to
-   `source/<part>.<ext>` and remains immutable.
-2. Use **Inspect only** to create `prepared/<part>/report.json`. Inspection
-   measures the source and does not create editable MIDI or change audio.
-3. If the report calls for it, explicitly approve conservative cleanup. The
-   resulting derived copies can be `prepared/<part>/decoded.wav` and
-   `prepared/<part>/clean.wav`; the original source is never overwritten.
-4. Select the original or validated prepared input and transcribe it with the
-   local worker's optional Basic Pitch runtime. Only a validated output is
-   atomically published as immutable `midi/raw/<part>.mid`.
-5. Melotrail immediately applies the mandatory `TranscriptionCleanupProfile`
-   and atomically publishes `midi/clean/<part>.mid` plus its quality evidence.
-   Raw and clean MIDI remain separately inspectable; cleanup failure leaves raw
-   MIDI as evidence and blocks analysis rather than routing it to arrangement.
+## Current MIDI evidence
 
-The worker accepts only the `piano` transcription instrument. It checks the
-published result is MIDI with notes in the piano range, a bounded note rate,
-and timing that matches the selected audio input. A failed or invalid result
-does not replace an existing raw MIDI artifact; a parseable rejected result can
-remain as project-local diagnostic evidence.
+| Evidence | Current path and meaning |
+| --- | --- |
+| Imported source | `source/<part>.<ext>` — immutable imported MIDI/audio |
+| Inspection | `prepared/<part>/report.json` — measured input evidence |
+| Optional prepared audio | `prepared/<part>/decoded.wav`, `prepared/<part>/clean.wav` |
+| Raw MIDI | `midi/raw/<part>.mid` — direct copy or validated transcription |
+| Clean MIDI | `midi/clean/<part>.mid` |
+| Cleanup quality | `midi/quality/<part>.json` |
+| Normalized MIDI | `midi/normalized/<part>-<run>.mid` plus normalization report |
+| Transposed MIDI | `midi/transposed/<part>-<run>.mid` plus transposition report |
+| Optional fixed Feel | `midi/derived/<part>/lofi-80-swing-v1.mid` and `midi/feel/<part>/lofi-80-swing-v1.json` |
 
-## MIDI evidence and review
+The selected branch may additionally include Technical Correction, AI Fix, and
+per-track Enhance candidates. Selection and approval are hash-bound; an
+unselected branch cannot override the current candidate.
 
-| Term | Canonical artifact | What it means |
-| --- | --- | --- |
-| Source evidence | `source/<part>.<ext>` | The immutable imported MIDI or audio file. |
-| Inspection report | `prepared/<part>/report.json` | Versioned, measured evidence for an imported source; audio cleanup/transcription selection is recorded here. |
-| Raw MIDI | `midi/raw/<part>.mid` | Immutable direct-MIDI evidence or a validated transcription output. It is not yet analysis-ready. |
-| Cleaned MIDI and quality evidence | `midi/clean/<part>.mid` and `midi/quality/<part>.json` | A separately published cleanup output plus its current quality report. Review it and explicitly approve it whenever the report requires approval before analysis. Approval is bound to the exact raw, cleaned, options, and report fingerprints. |
-| Optional Lo-fi Feel | `midi/derived/<part>/lofi-80-swing-v1.mid` and `midi/feel/<part>/lofi-80-swing-v1.json` | An opt-in derived analysis input (fixed 80 BPM, 58% eighth-note swing). **Original feel** keeps the cleaned MIDI selected. |
+## Important current musical limitations
 
-Clean MIDI and Lo-fi Feel never overwrite the source, raw MIDI, or cleaned MIDI.
-Changing raw MIDI, cleanup evidence, or the selected feel makes later analysis
-stale. Keep stale files for inspection, then rerun the earliest affected stage;
-do not copy an old artifact forward.
+- Normalization can replace/conform tempo metadata but does not yet warp
+  performed beats/downbeats onto the project grid.
+- Current project-key transposition uses one tonic interval; different source
+  and project modes are not yet mapped by scale degree.
+- Imported material is not yet guaranteed to become one-note-at-a-time melody.
+- Source-song assembly records structure/harmony but does not yet guarantee a
+  single harmony-fitted note-bearing track consumed by every downstream stage.
 
-## Handoff after import
+These are tracked by QP-002 through QP-010. Until implemented, review the
+transposed/selected MIDI, connected source-song preview, and Source Song Critic
+carefully; do not treat automated import completion as musical approval.
 
-The desktop keeps this exact happy-path order after a source is chosen:
-**Import**, **Convert to MIDI** when the source is audio, **Clean MIDI**,
-optional **AI Fix**, optional **Lo-fi Feel**, **Structure**, **Cohesion**, then
-**Arrangement**. AI Fix and Lo-fi Feel are independent reversible MIDI choices;
-they are not the post-mix Lo-fi audio texture. A selected MIDI change makes
-analysis, Cohesion, Arrangement, generated MIDI, stems, and releases stale.
+## Recovery
 
-Before Structure is saved, AI Fix operates in a part-local repair mode. It can
-correct timing, duration, velocity, and identified collisions/duplicates, but
-it will not change pitches or add notes without the declared structure and
-harmony needed to validate those musical edits.
+- **Corrupt/unsupported source:** choose a valid supported isolated source.
+- **Worker or Basic Pitch unavailable:** start/configure the worker, then retry
+  transcription; do not re-import solely to clear an error.
+- **Cleanup review required:** compare raw/cleaned MIDI and approve the exact
+  current report.
+- **Low-confidence key:** choose the source tonic/mode explicitly before
+  transposition.
+- **Stale derived evidence:** regenerate from the earliest changed selected
+  input; never copy an old MIDI forward or delete it to fake readiness.
+- **MIDI preview unavailable:** configure the validated sound library, samples,
+  `sfizz_render`, and an audio output device.
 
-AI Enhance is also available before Structure in part-local mode. It can shape
-timing, duration, velocity, and remove bounded redundant notes, but pitch and
-new-note edits wait for the declared structure and harmony.
-
-## Errors and recovery
-
-The **Import** page keeps its one current source/repair/analysis action visible.
-Use the selected part's labelled details or preparation disclosure for optional
-inspection, cleanup choice, transcription input, and evidence; those controls
-do not bypass the next required workflow stage.
-
-- **Unsupported or corrupt input:** choose one of the supported extensions,
-  verify its real container, and re-import it. For MIDI, use a Standard MIDI
-  file with playable events; for audio, use the narrow solo-piano route.
-- **Transcription runtime unavailable:** start the worker with `make worker`
-  after configuring the optional Basic Pitch runtime in Python 3.11 as
-  described in [`worker/README.md`](../worker/README.md). Re-run transcription
-  after readiness succeeds.
-- **Invalid model output:** no raw MIDI is published from invalid output.
-  Inspect the report and any project-local diagnostic MIDI, correct the input
-  or runtime, then transcribe again. This is a validation failure, not a
-  statement about the musical quality of a different recording.
-- **Stale quality evidence:** run **Clean MIDI** again, inspect the cleaned
-  MIDI and `midi/quality/<part>.json`, then approve the current report when the
-  workspace asks for it before analysis.
-- **Preview renderer unavailable:** audio-source monitoring may still work,
-  but MIDI preview requires a validated sound library, its samples, an audio
-  output device, and a configured local `sfizz_render`. Follow the readiness
-  message, refresh, and retry. A disabled or failed preview is not proof that
-  playback started.
-
-For the complete project stage order, see the
-[track process workflow](TRACK_PROCESS_WORKFLOW.md). For worker setup and
-transcription limits, see [`worker/README.md`](../worker/README.md).
+See [Track process workflow](TRACK_PROCESS_WORKFLOW.md) for the current full
+project order and [Desktop troubleshooting](TROUBLESHOOTING.md) for dependency
+setup.

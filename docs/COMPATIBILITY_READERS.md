@@ -1,5 +1,9 @@
 # Compatibility readers
 
+Reviewed: 2026-08-24
+
+Status: retained operational contract
+
 This is the Task 030 release inventory for supported non-project compatibility
 readers. Project schemas have no compatibility window: schema v4 is the sole
 accepted `project.json` format, and unsupported documents fail without writes.

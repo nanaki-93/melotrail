@@ -1,20 +1,29 @@
 # Commercial provenance and YouTube release check
 
-Policy review date: 2026-08-17
+Policy review date: 2026-08-24
 
 Before every release, a maintainer must manually re-read and update this date
-after checking YouTube's official [AI-use disclosure policy](https://support.google.com/youtube/answer/14328491)
+after checking YouTube's official [GenAI disclosure policy](https://support.google.com/youtube/answer/14328491)
 and [channel monetization policies](https://support.google.com/youtube/answer/1311392).
 Do not automate this check over the network or treat a stale date as approval.
 
 As reviewed on the date above, YouTube identifies AI-generated music as content
-to disclose through the AI-use workflow. Disclosure does not itself limit
-monetization eligibility. Monetized channels are evaluated for original,
-authentic, non-repetitive/non-mass-produced content. Policies can change.
+to disclose through the GenAI workflow and states that disclosure does not by
+itself limit audience or monetization eligibility. Its monetization review is
+channel-wide and expects original/authentic work rather than generic,
+repetitive, mass-produced, or template-like output. Rights, copyright,
+advertiser suitability, Community Guidelines, and other program policies still
+apply. Policies can change.
 
 Melotrail's commercial report is evidence and workflow assistance. It is not
 legal advice, copyright clearance, Content ID clearance, or a monetization
 guarantee. Processing a work in Melotrail never makes it copyright free.
+
+The engineering quality and anti-template requirements are maintained in
+[`plan/QUALITY_GATES.md`](plan/QUALITY_GATES.md) and
+[`plan/YOUTUBE_READINESS.md`](plan/YOUTUBE_READINESS.md). Those gates improve
+evidence and creator control; they do not calculate or predict a platform
+monetization decision.
 
 ## Release lineage
 

@@ -1,248 +1,214 @@
-# Melotrail — Canonical Musical Pipeline Alignment Plan
+# Melotrail canonical melody and release-quality pipeline
 
-## 1. Purpose
+Status: implementation required
 
-Before expanding the product, align every MIDI-producing and MIDI-modifying stage
-with one canonical musical authority, one dependency graph, and one auditable
-approval flow. This plan corrects the currently implemented pipeline; it does
-not introduce a second project format, artifact store, UI, or command-line
-product.
+Baseline reviewed: 2026-08-24
 
-Schema v4 is the only supported project format. This roadmap provides no
-backward/retro-compatibility for earlier project schemas or provisional legacy
-v4 shapes: they must fail clearly at open. Do not retain or add legacy readers,
-mappers, migration commands, migration UI, aliases used only by old serialized
-projects, or exclusive legacy fixtures/tests. Git history is the archive.
+Canonical project format: schema v4
 
-The implementation contracts for this plan are Tasks 118–130 in
-`docs/plan/tasks/`.
+Task IDs: QP-001 through QP-017
 
-Task 118's code-verified starting evidence is maintained in
-[`music-context-audit.md`](music-context-audit.md). It is the durable baseline
-for the subsequent alignment tasks, not a replacement design document.
+## Product outcome
 
-## 2. Verified baseline and alignment verdict
+Starting with independently performed intro, verse, chorus, bridge, and optional
+outro melody sources, Melotrail must build one musically coherent song whose
+melody:
 
-The repository is a Kotlin/JVM 21 Compose Desktop application with a separate,
-stateless Python HTTP worker. The v4 project envelope is canonical and already
-contains composition settings, structured section harmony, stable structure
-occurrences, workflow references, and hash-bound artifacts.
+- is aligned to the authoritative project tempo, meter, beats, and section bars;
+- is adapted from its confirmed source key and mode into the project key/mode;
+- respects the project scale and the active authoritative section harmony;
+- contains exactly one melodic note at a time;
+- is assembled into one approved full-song MIDI melody before arrangement;
+- retains stable occurrence structure for arrangement, transitions, review, and
+  provenance;
+- preserves recognizable protected anchors after deterministic preparation;
+- is the exact piano/melody input used by arrangement, Cohesion, humanization,
+  rendering, criticism, and release evidence.
 
-The current design is aligned in these areas:
+The final product target is original, release-quality music suitable for human
+review and YouTube release preparation. Melotrail can provide technical,
+musical, rights, AI-use, and lineage evidence. It cannot guarantee copyright or
+Content ID clearance, audience response, advertiser suitability, YouTube
+Partner Program admission, or monetization.
 
-- `Project` and `ProjectStore` are the persisted source of truth.
-- `SelectedMidiArtifactResolver` owns per-part MIDI selection precedence.
-- AI arrangement is a planner; deterministic Kotlin generators create MIDI.
-- AI Fix, per-track Enhance, Cohesion, and Humanization already retain useful
-  reports, drafts, approvals, or deterministic edit evidence.
-- The supported UI is Compose Desktop and the worker remains stateless.
+## Verified current defects
 
-The following gaps must be corrected:
+The current implementation has useful stages but does not yet satisfy the
+outcome:
 
-- AI Fix re-infers harmony from corrected MIDI instead of receiving canonical
-  project and occurrence harmony.
-- Enhancement receives broad project context but does not consistently validate
-  edits against the chord active at each note.
-- `StageId` and project dependency metadata do not represent all supported
-  stages or their actual order.
-- Cohesion currently combines boundary transitions with whole-song `songEdits`.
-- Humanization is deterministic timing, velocity, duration, and chord staggering;
-  it is not full-song AI enhancement.
-- Role validators and before/after evidence are incomplete and inconsistent.
-- The old plan proposed duplicate numbered MIDI history and a CLI, both of which
-  conflict with the canonical artifact and desktop-service architecture.
-- There is no single deterministic reference-song integration fixture.
+1. Source performances have different detected tempos and pickups. Normalizing
+   tempo metadata does not warp performed beats or detect the downbeat.
+2. Occurrence duration is copied exactly, so fractional-bar source lengths move
+   later sections progressively off the project bar grid.
+3. `MidiProjectKeyTransposer` applies one tonic interval. It does not map source
+   scale degrees when source and project modes differ.
+4. The selected source can still contain off-scale notes, exposed non-chord
+   tones, simultaneous notes, doubled notes, or multiple note-bearing tracks.
+5. `SourceSongAssembler` retains structure and harmony in a sidecar, but copies
+   source tracks into occurrence-local tracks rather than publishing one
+   canonical monophonic melody.
+6. Source-song approval is checked before arrangement, but arrangement state,
+   humanization, and rendering later reconstruct piano from occurrence
+   artifacts instead of consuming the exact approved connected full melody.
+7. Selected artifact precedence can choose Enhanced while ignoring a selected
+   MIDI Feel derivative.
+8. Source and full-song critics report serious problems, but explicit or silent
+   bypass paths can still produce a successful build.
+9. Cohesion derives supported instruments globally instead of at each boundary;
+   `CONTINUITY` can become a drum fill, and bridge renderers do not execute all
+   declared musical intent fields.
+10. Existing automated tests prove serialization, bounds, hashes, and output
+    existence more strongly than they prove meter, groove, harmony, melodic
+    identity, or listening quality.
 
-## 3. Canonical pipeline
+These are pipeline defects, not an invitation to replace authoritative project
+harmony or broadly rewrite working DSP.
 
-The supported musical and production order is:
+The file-level evidence and the specific `EnsembleCohesion.kt` diagnosis are in
+[`PROJECT_ANALYSIS.md`](PROJECT_ANALYSIS.md).
+
+## Musical authority
+
+Authority order is explicit:
+
+1. User-authored project structure, key/mode, tempo, meter, and section harmony.
+2. The approved prepared full melody and its protected anchors.
+3. Approved arrangement decisions and generated-role validation.
+4. Bounded Cohesion, targeted polish, and seeded humanization.
+5. Mix and production decisions.
+
+Detected tempo, downbeats, key, chords, and note confidence are evidence. They
+never overwrite declared authority without a reviewed derived candidate.
+
+Project scale and harmony can legitimately interact. A pitch is harmonically
+eligible when it is a project-scale tone or a chord tone explicitly authorized
+by the active user-authored chord. Stable or exposed melody notes must be active
+chord tones; short weak-position scale tones may be passing or neighbour tones.
+If project settings and harmony cannot produce a valid stable tone for a span,
+the project is blocked for correction rather than silently reinterpreted.
+
+## Target pipeline
 
 ```text
-source
-  → extracted
-  → cleaned
-  → normalized
-  → transposed
-  → corrected
-  → AI Fix
-  → per-track AI Enhance
-  → MIDI Feel
-  → analyzed
-  → structured
-  → arranged
-  → generated
-  → boundary Cohesion
-  → deterministic Full-Song Critic
-  → optional AI Full-Song Enhance
-  → optional seeded Humanization
-  → rendered
-  → mixed
-  → audio texture
-  → mastered
-  → exported
+Project Setup + authoritative Harmony
+  -> immutable source import
+  -> audio/MIDI inspection and transcription cleanup
+  -> beat/downbeat evidence
+  -> project-grid timing conformance and explicit pickup/body/tail mapping
+  -> confirmed source-key and mode-aware project-key transposition
+  -> selected technical correction / AI Fix / per-track Enhance / Feel chain
+  -> monophonic source reduction with reviewable discarded-note evidence
+  -> section-scale and active-harmony melody repair
+  -> protected-anchor derivation on the prepared melody
+  -> one canonical full-song melody + stable structure/harmony sidecar
+  -> melody-boundary connection
+  -> strict Source Song Critic and explicit approval
+  -> arrangement plan and deterministic role generation
+  -> core validation and approval
+  -> boundary-local Ensemble Cohesion
+  -> deterministic Full-Song Critic
+  -> optional targeted improvement that must improve code-owned metrics
+  -> seeded Humanization
+  -> render, production mix, audio criticism, master
+  -> originality/provenance/AI-use/release review
+  -> export
 ```
 
-Full-song AI enhancement is an explicit stage between Cohesion and
-Humanization. It is not hidden inside either stage. Humanization runs after the
-last note-level AI change so it never needs to be silently replayed.
+No later stage may rebuild the source melody from independent part files. A
+consumer either resolves the exact approved canonical melody hash or fails with
+an actionable stale/prerequisite error.
 
-## 4. Musical authority and projections
+## Canonical full-melody artifact
 
-Create one deterministic musical-authority builder from canonical project data:
+The prepared source-song MIDI contains:
 
-- declared key, scale/mode, tempo, and time signature;
-- section-keyed chord progressions;
-- stable structure occurrence IDs and bar/tick ranges;
-- selected per-part MIDI artifacts and SHA-256 fingerprints;
-- analyzed phrases, ranges, density, contour, energy, and melody anchors;
-- approved arrangement and generated role artifacts when applicable.
+- one conductor/meta track for project tempo, meter, section markers, and end
+  time;
+- exactly one note-bearing melody track;
+- canonical PPQ and global tick positions;
+- no drum-channel melody events;
+- no overlapping notes at any pitch or channel;
+- no note crossing an occurrence boundary unless an explicit tied-boundary
+  policy records and validates it.
 
-Declared project data is authoritative. Analyzed data is descriptive. An
-inference conflict may be reported, but must not replace declared key, meter,
-tempo, or harmony.
+Its versioned sidecar contains:
 
-Every stage receives a small immutable projection from this authority rather
-than reconstructing its own competing context. Each projection includes a
-schema/version identifier and an input hash. Repeated section occurrences keep
-their own stable identity even when they share a section type or chord pattern.
+- project-authority and processor versions/hashes;
+- every stable occurrence ID, section type, source part, order, start/end
+  bar/tick, and pickup/body/tail classification;
+- active chord spans;
+- original, normalized, transposed, selected, prepared, connected, and approved
+  artifact hashes;
+- note-level timing, pitch, monophony, and harmony mutation evidence;
+- removed/deduplicated-note evidence and ambiguity/blocking findings;
+- protected melody identity and anchor IDs derived after deterministic repair.
 
-The harmonic timeline must answer the active chord for a bar, tick, note, or
-occurrence. It uses canonical meter and progression cycling and rejects invalid
-or ambiguous occurrence bounds instead of guessing.
+The artifact is content-addressed and immutable. Regeneration publishes a new
+candidate and invalidates dependents; it never overwrites a known-good source or
+approved candidate.
 
-## 5. Stage responsibilities
+## Separation of responsibilities
 
-### AI Fix
+### Deterministic code
 
-AI Fix repairs objective MIDI defects in the selected corrected input. It must
-receive the canonical key, harmonic timeline, occurrence context, tempo, meter,
-and melody anchors. Inferred harmony is diagnostic evidence only. Approved AI
-Fix selection remains fingerprint-bound and bypassable.
+Owns beat-grid application, bar/pickup mapping, mode-aware transposition,
+monophony, pitch eligibility, active-chord lookup, MIDI transformation,
+collision detection, budgets, hashes, validation, cache/invalidation, and
+publication.
 
-### Per-track AI Enhance
+### Qwen
 
-Per-track Enhance improves an imported musical part within its existing
-identity. It validates every pitch edit against the active chord and project
-scale, protects melody anchors, enforces range and edit budgets, and publishes a
-deterministic edit report. It cannot change structure or canonical settings.
+May propose bounded producer, arrangement, transition, or targeted-correction
+choices using strict schemas and controlled vocabularies. It never chooses
+project harmony, writes MIDI/files, returns paths, approves itself, or bypasses
+code-owned quality gates.
 
-### Arrangement and generation
+### Ensemble Cohesion
 
-The arrangement model produces a high-level song plan and detailed arrangement.
-Kotlin generators remain the only MIDI executors. Inputs are projections of the
-canonical authority; generated piano, bass, drums, pad, strings, and transition
-roles are validated consistently before publication.
+Runs after arrangement against the approved full melody and actual generated
+roles. It owns boundary handoffs only. It does not transpose source parts,
+repair general melody harmony, reduce polyphony, rebuild the melody, or perform
+an unrestricted whole-song rewrite.
 
-### Boundary Cohesion
+### Human review
 
-Cohesion operates only in configured windows around adjacent occurrence
-boundaries. Its plan may bridge, overlap, thin, lead into, or smooth those
-transitions, but may not apply whole-song edits. The current `songEdits` contract
-is removed in a new schema version. No reader or adapter for its superseded
-serialized shape remains.
+Owns ambiguous source-key decisions, correction candidates beyond safe budgets,
+melodic identity judgments, source-song approval, core arrangement approval,
+listening A/B decisions, rights attestations, AI disclosure, and release signoff.
 
-### Deterministic Full-Song Critic
+## Delivery phases
 
-The critic analyzes the approved cohesive ensemble and never mutates MIDI. It
-emits a versioned `FullSongCriticReport` with typed issues containing severity,
-metric evidence, target occurrence/role, bar or tick window, and all input
-hashes. Checks cover:
+| Phase | Tasks | Outcome |
+| --- | --- | --- |
+| A. Baseline and timing | QP-001–QP-003 | Reproducible quality fixture, beat/downbeat evidence, bar-aligned source MIDI |
+| B. Canonical melody | QP-004–QP-008 | Mode-aware pitch preparation and one downstream canonical melody |
+| C. Quality gates | QP-009–QP-010 | Correct artifact lineage and strict source approval |
+| D. Arrangement and cohesion | QP-011–QP-014 | Expressive validated roles, boundary-local cohesion, improving targeted polish |
+| E. Product and release | QP-015–QP-017 | Review UI, listening/audio acceptance, policy/provenance/cleanup closure |
 
-- melody preservation and anchor integrity;
-- chord/scale consistency and voice collisions;
-- instrument range and bass leaps;
-- role density, contrast, and section energy;
-- transition continuity and abruptness.
+The binding task details are in [`TASKS.md`](TASKS.md). Later tasks may not be
+implemented early unless their contract explicitly identifies a prerequisite
+seam needed by the current task.
 
-An existing arrangement-plan critic remains an earlier concern and must be named
-or documented so it cannot be confused with this post-Cohesion critic.
+## Definition of done
 
-### AI Full-Song Enhance
+The roadmap is complete only when:
 
-The model receives only canonical context, the critic report, exact target
-windows, and an allow-listed operation vocabulary. It returns a strict,
-versioned `FullSongEnhancementPlan`; Kotlin validates and applies it.
-
-Allowed operations are chord revoicing, bass-leap simplification, density
-reduction, collision removal, local timing/velocity/duration adjustment,
-limited chord-clash correction, and transition-note adjustment. The stage may
-not change structure, harmony, tempo, meter, duration, instrument assignment, or
-unreported regions.
-
-Per target, changed existing notes plus additions and deletions are capped at
-5% of its note count; additions and deletions are each capped at 2%. Integer
-budgets round down, so a zero budget permits no such operation. Melody anchors
-cannot be deleted or pitch-shifted. Other melody pitch changes are limited to
-two semitones and must remain valid for the active harmony.
-
-The candidate is previewable, explicitly approvable, retryable, and bypassable.
-If the critic reports no actionable issue, record a current, hash-bound no-op.
-Humanization consumes the approved result or, after explicit bypass, the
-approved Cohesion output.
-
-### Humanization
-
-Humanization remains a seeded deterministic processor. It may alter timing,
-velocity, duration, chord staggering, and configured groove characteristics,
-but not pitch, note count, tempo, meter, structure, or harmony.
-
-## 6. Persistence, invalidation, and diagnostics
-
-Extend durable stage and workflow identifiers without renaming existing wire
-values. Add explicit identifiers for `ai-fixed`, `midi-feel`, `critiqued`,
-`full-song-enhanced`, `humanized`, and `audio-textured`, and correct project
-ordering so Arrangement and Generation precede Cohesion.
-
-Every selected output is tied to its exact inputs, processor/model identity,
-context version, report, and SHA-256. Changing any upstream selected artifact,
-composition setting, harmony, structure occurrence, arrangement, or generator
-output invalidates every dependent selection while retaining old files as
-inspection evidence.
-
-Use existing project-relative artifact storage and atomic publication. Do not
-create numbered duplicate MIDI folders. Diagnostics are application-service
-snapshots and persisted reports displayed through the existing desktop review
-surfaces; no CLI or dedicated diagnostics product is added.
-
-Comparison reports use stable, code-owned metrics where applicable: note count,
-pitch/range, chord-fit, anchor preservation, timing, velocity, density, edit
-budget, input/output hashes, warnings, and rejection reasons. No subjective
-"sounds good" flag is persisted as workflow truth.
-
-## 7. Validation and acceptance
-
-All external model responses are strict JSON, schema-versioned, hash-bound, and
-validated against allow-lists before deterministic application. Invalid,
-malformed, stale, excessive, or out-of-scope plans fail safely without changing
-the selected artifact.
-
-Completion requires:
-
-- schema v4 as the only accepted project format, with all legacy-project code,
-  UI, migration paths, and exclusive evidence removed;
-- one canonical authority and timeline used by all relevant stages;
-- exact workflow ordering and dependency invalidation across MIDI stages;
-- boundary-only Cohesion with no whole-song edit path;
-- a deterministic critic and separate optional AI Full-Song Enhance stage;
-- reusable melody identity and role validation evidence;
-- approval/bypass precedence into Humanization and rendering;
-- deterministic offline tests, including one end-to-end reference song;
-- current planning, architecture, task-index, and prompt documentation.
-
-The Kotlin baseline is `./gradlew test :desktopApp:test`; task completion also
-requires `./gradlew :desktopApp:build`. Worker tests run only when worker code is
-changed. Model boundaries are tested offline with fakes and fixtures.
-
-## 8. Delivery sequence
-
-Tasks 118–130 are ordered contracts. Task 118 removes legacy-project support and
-establishes the executable baseline; Tasks 119–121 establish shared authority.
-Tasks 122–126 align existing stages. Tasks 127–128 add the separate
-critic and full-song enhancement stages. Tasks 129–130 complete diagnostics,
-integration evidence, cleanup, and release acceptance.
-
-Do not implement a later task early unless its contract explicitly permits
-parallel work. A task that replaces a runtime path must remove its superseded
-project-owned implementation, readers, and exclusive tests in the same task.
-Callers move directly to the canonical contract. No compatibility window or
-dual-read period is permitted; Git history is the archive.
+- all QP tasks are implemented and individually committed after their required
+  checks pass;
+- the real four-source quality scenario begins every ordinary occurrence on its
+  declared beat/bar or explicit pickup and has no uncontrolled phase drift;
+- imported key/mode differences are resolved with reviewable evidence;
+- the approved full melody is globally monophonic and harmonically valid;
+- arrangement, Cohesion, humanization, render, and release lineage all reference
+  that exact approved melody;
+- critical critic findings cannot silently pass a quality-certified build;
+- targeted changes demonstrably reduce rather than increase code-owned issues;
+- automated suites pass and documentation coverage is current;
+- renderer/model integration and documented listening A/B gates have recorded
+  evidence;
+- a release review confirms source/instrument/model rights evidence, appropriate
+  AI-use disclosure recommendation, meaningful creator contribution, and no
+  unresolved release blockers;
+- obsolete branches, flags, DTOs, tests, and documentation replaced by the new
+  pipeline are removed in their owning task.

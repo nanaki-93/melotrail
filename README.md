@@ -1,32 +1,105 @@
-# MeloTrail Agent Prompts V2
+# Melotrail
 
-This pack contains one implementation prompt per V2 milestone.
+Melotrail is a local, MIDI-first, AI-assisted music arranger and producer. The
+musician owns the melody, project key, harmony, structure, and approvals. Kotlin
+owns orchestration, validation, project artifacts, and the Compose Desktop UI;
+the separate Python worker owns bounded audio and transcription workloads.
 
-For the validated direct-MIDI and eligible solo-piano audio routes, see the
-[MIDI import process](docs/MIDI_IMPORT_PROCESS.md).
+## Requirements
 
-## Recommended workflow
+- JDK 21
+- Python 3.10+ for the worker; the optional Basic Pitch route uses the
+  environment documented in [`worker/README.md`](worker/README.md)
+- `make`, or the equivalent Gradle/Python commands
 
-For each milestone:
+## Run locally
 
-1. Start a fresh agent run/session when practical.
-2. Run the corresponding prompt from `prompts`.
-3. Let the agent inspect `AGENTS.md`, `PLAN.md`, and the milestone file.
-4. Review the agent's proposed scope before allowing a large refactor.
-5. Require tests/build/smoke verification.
-6. Review/commit the milestone before starting the next one.
-
-Do not give the agent all 18 implementation prompts at once.
-
-## Suggested invocation
-
-Example:
-
-```text
-Implement MeloTrail Milestone 04 using prompts/04-milestone-prompt.md.
-Work only on this milestone. Stop after tests and report.
+```bash
+make desktop
+make worker
 ```
 
-## Why prompts are deliberately concise
+`make worker` is required only for operations that use the Python worker.
+Rendering and MIDI preview additionally require a validated local sound library
+and `sfizz_render`; see
+[`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
 
-They are outcome-first: the milestone file contains the detailed product requirements, while the prompt defines execution behavior, invariants, verification and stopping rules. This reduces duplicated context and makes it less likely that the agent tries to implement the entire roadmap in one run.
+## Current workflow
+
+The current schema-v4 desktop workflow is:
+
+```text
+Setup and Harmony
+  -> Import Melody Parts
+  -> Clean / Normalize / Transpose
+  -> Technical Correction / AI Fix / Enhance / optional MIDI Feel
+  -> Analyze and Structure
+  -> Assemble, connect, criticize, and approve the Source Song
+  -> Arrange and generate roles
+  -> Ensemble Cohesion
+  -> Full-Song Critic and optional targeted enhancement
+  -> Humanization
+  -> Render, Mix, Master, and Export
+```
+
+Current source-song approval is a real gate, but the quality roadmap documents
+known musical gaps: performed beat grids are not yet warped to project beats,
+transposition is not mode-aware, source melody is not guaranteed monophonic or
+chord-compatible, and several downstream consumers reconstruct occurrence MIDI
+instead of using the approved full melody. Those defects are the scope of the
+new [`PLAN.md`](PLAN.md).
+
+For current operational behavior, use:
+
+- [MIDI import process](docs/MIDI_IMPORT_PROCESS.md)
+- [`docs/TRACK_PROCESS_WORKFLOW.md`](docs/TRACK_PROCESS_WORKFLOW.md)
+- [`docs/COMMERCIAL_PROVENANCE.md`](docs/COMMERCIAL_PROVENANCE.md)
+- [`docs/RELEASE_ACCEPTANCE.md`](docs/RELEASE_ACCEPTANCE.md)
+
+## Data and safety
+
+- `project.json` and project-relative artifacts are canonical.
+- Source MIDI/audio and known-good candidates are immutable.
+- MIDI is canonical during composition; WAV is canonical during audio
+  production.
+- Model output is a bounded plan. Deterministic code validates and applies it.
+- Stale or rejected artifacts remain inspectable evidence but never become
+  current merely because a file exists.
+- AI and automation do not replace project key, harmony, structure, protected
+  melody anchors, or user approval.
+
+## Validation
+
+```bash
+make test
+make worker-test
+make build
+```
+
+Automated checks establish deterministic and structural correctness. The
+quality plan also requires renderer-backed A/B listening gates and a real
+four-source end-to-end composition review; structural tests alone cannot prove
+that a song sounds good.
+
+## Project layout
+
+```text
+src/main/kotlin/app/melotrail/   Kotlin domain and application services
+desktopApp/                      Compose Desktop product
+worker/                          Stateless Python HTTP worker
+sounds/                          Local sound-library contract and metadata
+docs/                            Operational and release documentation
+docs/plan/                       Canonical quality-pipeline roadmap
+```
+
+## Release and monetization scope
+
+Melotrail can preserve provenance, expose AI-use metadata, detect selected
+technical/compositional problems, and produce release evidence. It cannot
+guarantee copyright ownership, Content ID clearance, YouTube policy compliance,
+Partner Program admission, or monetization. Each release and channel still
+requires human rights, policy, originality, and listening review.
+
+## License
+
+MIT

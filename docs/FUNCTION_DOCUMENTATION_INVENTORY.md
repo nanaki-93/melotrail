@@ -1,5 +1,7 @@
 # Function documentation inventory
 
+Inventory reviewed: 2026-08-24
+
 [`FUNCTION_DOCUMENTATION_INVENTORY.json`](FUNCTION_DOCUMENTATION_INVENTORY.json)
 is the checked-in inventory for every Kotlin/Python production source under
 `src/main/kotlin`, `desktopApp/src/main/kotlin`, and `worker/`. It deliberately
@@ -32,3 +34,8 @@ declaration digest. Do not copy an old exemption to a new function. The
 validator's failure identifies the row requiring review; the focused unit test
 in `worker/tests/test_documentation_coverage.py` exercises documented, exempt,
 missing, and stale-declaration cases offline.
+
+The 2026-08-24 consolidation refreshed every discovered source row. Existing
+source-specific classifications were preserved when still valid; newly found
+legacy callables were classified locally rather than hidden behind a global
+exception.

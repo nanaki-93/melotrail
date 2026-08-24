@@ -107,6 +107,31 @@ audio output device. If preview is unavailable, follow the specific readiness
 message, then refresh or retry; do not treat a disabled Play button as proof
 that audio started.
 
+## Source song is out of sync or harmonically wrong
+
+The current pipeline can produce structurally valid output from independently
+performed parts that do not share a downbeat, performed tempo, mode, or chord
+fit. Current normalization conforms MIDI representation/tempo metadata but does
+not yet perform the beat/downbeat warping planned in
+[`plan/PLAN.md`](plan/PLAN.md). Current source-song assembly also does not yet
+guarantee a globally monophonic, harmony-repaired melody consumed by every
+downstream stage.
+
+Before arranging a current project:
+
+- inspect and explicitly confirm low-confidence source keys;
+- compare the transposed MIDI against the project key and section progression;
+- check every section's first musical beat and trailing duration;
+- audition the connected source melody alone;
+- do not override Source Song Critic blockers merely to reach Build;
+- retain the original and rejected candidates for comparison.
+
+If section starts drift away from the bar grid, different modes remain audible,
+simultaneous melody notes survive, or exposed notes clash with the active chord,
+treat the project as a private diagnostic run until QP-002–QP-010 are
+implemented or the candidate is manually corrected and reviewed. Audio effects,
+mastering, and Cohesion cannot repair a fundamentally misaligned source melody.
+
 ## Build and artifact recovery
 
 Build Song stops until its precise prerequisites are ready: worker, sound
@@ -120,9 +145,10 @@ per-process budget, for example `QWEN_MAX_TOKENS=16384 make desktop`. The
 model's configured context window must also be large enough for the MIDI input
 plus that completion budget.
 
-After valid approved arrangement-aware Cohesion, the build creates or reuses inspectable
-generated MIDI, stems, dry mix, repair/optional LoFi output, `output/master.wav`,
-and optional MP3/release metadata. The transition track
+After valid approved arrangement-aware Cohesion, current Critic/Full-Song
+Enhance selection, and selected/bypassed Humanization, the build creates or
+reuses inspectable generated MIDI, stems, dry mix, repair/optional LoFi output,
+`output/master.wav`, and optional MP3/release metadata. The transition track
 uses the exact approved Cohesion bridge at its shifted boundary and
 `stem-render.json` records the boundary hashes. A changed structure, Cohesion
 approval, or source can make downstream artifacts stale; regenerate rather than

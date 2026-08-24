@@ -151,8 +151,8 @@ class CommercialProvenanceTest {
 
     @Test
     fun `release documentation retains official links and dated review gate`() {
-        YoutubePolicyDocumentation.requireReviewed(Path.of("docs/COMMERCIAL_PROVENANCE.md"), "2026-08-17")
-        assertFalse(runCatching { YoutubePolicyDocumentation.requireReviewed(Path.of("docs/COMMERCIAL_PROVENANCE.md"), "2026-08-18") }.isSuccess)
+        YoutubePolicyDocumentation.requireReviewed(Path.of("docs/COMMERCIAL_PROVENANCE.md"), "2026-08-24")
+        assertFalse(runCatching { YoutubePolicyDocumentation.requireReviewed(Path.of("docs/COMMERCIAL_PROVENANCE.md"), "2026-08-25") }.isSuccess)
     }
 
     private fun projectRoot(): Path {

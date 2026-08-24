@@ -1,5 +1,9 @@
 # Spring API retirement
 
+Reviewed: 2026-08-24
+
+Status: retained non-destructive retirement record
+
 ## Decision
 
 Task 028 deletes the Spring JSON API. Task 001's checked support matrix found

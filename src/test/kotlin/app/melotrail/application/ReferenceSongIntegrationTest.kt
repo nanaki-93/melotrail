@@ -59,7 +59,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Task 130's portable reference song is generated in code so its canonical
+ * The portable reference-song fixture is generated in code so its canonical
  * source, MIDI, plans, and derived artifacts are always inspectable.
  */
 class ReferenceSongIntegrationTest {
