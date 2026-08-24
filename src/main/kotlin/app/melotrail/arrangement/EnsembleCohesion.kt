@@ -352,7 +352,7 @@ class LocalQwenEnsembleCohesionPlanner(private val client: LocalQwenClient = LmS
                 harmonicHandoff = decision.harmonicHandoff,
                 rhythmicGesture = decision.rhythmicGesture,
                 energyContour = decision.energyContour,
-                rationale = decision.rationale,
+                rationale = boundedRationale(decision.rationale),
                 melodyEdits = decision.melodyEdits.map { edit ->
                     CohesionMelodyEdit(
                         occurrenceInstanceId = if (edit.side == CohesionMelodySide.OUTGOING) source.outgoingInstanceId else source.incomingInstanceId,
@@ -371,6 +371,14 @@ class LocalQwenEnsembleCohesionPlanner(private val client: LocalQwenClient = LmS
         require(validation.isValid) { "Qwen returned an invalid transition-cohesion plan: ${validation.errors.joinToString("; ")}" }
         plan.copy(validation = EnsembleCohesionValidationReport())
     }
+
+    /** Model prose is display-only; make it safe and bounded before persistence. */
+    private fun boundedRationale(value: String): String = value
+        .replace(Regex("[^A-Za-z0-9 ,.'-]"), " ")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+        .take(180)
+        .ifBlank { "Cohesive boundary handoff" }
 
     /** These are mechanical compatibility rules, not musical choices for the model. */
     private fun bridgeDetails(action: TransitionRoleAction, supported: List<String>): BridgeDetails = when (action) {

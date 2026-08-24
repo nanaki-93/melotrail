@@ -83,17 +83,39 @@ class PadMidiGenerationTest {
     }
 
     @Test
-    fun `dense accepted core deliberately leaves the pad silent`() {
-        val denseState = ArrangementState.fromAcceptedPiano(
+    fun `ordinary piano voicing receives a reduced pad shell while a truly dense core rests`() {
+        val ordinaryState = ArrangementState.fromAcceptedPiano(
             480,
             (60..65).map { pitch -> MidiNote(0, pitch, 80, 0, 480) },
             "a".repeat(64)
         )
+        val denseState = ArrangementState.fromAcceptedPiano(
+            480,
+            (60..69).map { pitch -> MidiNote(0, pitch, 80, 0, 480) },
+            "a".repeat(64)
+        )
 
+        val ordinary = generator.generate(request(arrangementState = ordinaryState))
         val result = generator.generate(request(arrangementState = denseState))
 
+        assertEquals(2, ordinary.notes.size)
         assertTrue(result.notes.isEmpty())
         assertTrue(result.diagnostics.single().contains("pad rests"))
+    }
+
+    @Test
+    fun `moving melody that occupies every shell receives one free chord-tone texture`() {
+        val state = ArrangementState.fromAcceptedPiano(
+            480,
+            listOf(57, 60, 64, 69).mapIndexed { index, pitch -> MidiNote(0, pitch, 80, index * 120L, index * 120L + 100) },
+            "a".repeat(64)
+        )
+
+        val result = generator.generate(request(chords = listOf(chord(0, 480, "Am")), arrangementState = state))
+
+        assertEquals(1, result.notes.size)
+        assertTrue(result.notes.single().pitch % 12 in setOf(9, 0, 4))
+        assertTrue(state.requireTrack(ArrangementState.PIANO).notes.none { it.pitch == result.notes.single().pitch })
     }
 
     @Test

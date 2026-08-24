@@ -70,6 +70,22 @@ import javax.sound.midi.ShortMessage
 class EnsembleCohesionApplicationServiceTest {
     @TempDir lateinit var root: Path
 
+    @Test fun `cohesion receives project tempo instead of transcription tempo`() = runBlocking {
+        project(listOf("A", "A", "A"))
+        arrange()
+        var captured: EnsembleCohesionInput? = null
+        val service = DefaultEnsembleCohesionApplicationService { input ->
+            captured = input
+            plan(input)
+        }
+
+        service.generate(GenerateEnsembleCohesionRequest(root))
+
+        val boundary = requireNotNull(captured).boundaries.first()
+        assertEquals(90.0, boundary.outgoing.tempo.bpm)
+        assertEquals(90.0, boundary.incoming.tempo.bpm)
+    }
+
     @Test fun `boundary cohesion uses one aggregate approval`() = runBlocking {
         project(listOf("A", "A", "A"))
         arrange()

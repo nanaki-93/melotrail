@@ -8,10 +8,38 @@ import app.melotrail.harmony.HarmonySettings
 import app.melotrail.harmony.SectionTypeId as HarmonySectionTypeId
 import app.melotrail.music.PitchClass
 import app.melotrail.music.PitchSpelling
+import app.melotrail.music.MusicalKey
+import app.melotrail.music.ScaleModeId
+import app.melotrail.music.Tempo
+import app.melotrail.music.TimeSignature
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class ArrangementHarmonyContextTest {
+    @Test
+    fun `project tempo meter and key replace transcription timing before arrangement`() {
+        val analysis = MidiAnalysis(
+            partId = "A", ppq = 480, durationTicks = 7_680, durationSeconds = 8.0,
+            tempoMap = listOf(MidiTempoChange(0, 120.0)), timeSignatures = listOf(MidiTimeSignature(0, 3, 4)),
+            bars = 4, beats = 16.0, noteCount = 8, noteDensity = 0.5, rhythmicDensity = 0.5, energy = 0.5,
+            key = MidiKey("G", "major", 0.8)
+        )
+        val project = Project(
+            name = "authority", renderFormat = RenderFormat(),
+            envelope = ProjectV4Envelope(compositionSettings = CompositionSettings(
+                key = MusicalKey(PitchClass.of(PitchSpelling.C), ScaleModeId.NATURAL_MINOR),
+                tempo = Tempo(80.0), timeSignature = TimeSignature(4, 4)
+            ))
+        )
+
+        val resolved = ArrangementHarmonyContext.apply(analysis, SectionTypeId.VERSE, project)
+
+        assertEquals(listOf(MidiTempoChange(0, 80.0)), resolved.tempoMap)
+        assertEquals(listOf(MidiTimeSignature(0, 4, 4)), resolved.timeSignatures)
+        assertEquals(MidiKey("C", ScaleModeId.NATURAL_MINOR.value, 1.0), resolved.key)
+        assertEquals(12.0, resolved.durationSeconds)
+    }
+
     @Test
     fun `saved section harmony replaces inferred chords on the shared MIDI clock`() {
         val analysis = MidiAnalysis(

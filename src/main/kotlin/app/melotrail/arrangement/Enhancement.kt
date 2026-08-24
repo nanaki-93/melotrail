@@ -411,14 +411,26 @@ object MusicalProcessingContextFactory {
         require(projection.harmonyPpq > 0 && projection.harmonyPpq % projection.part.ppq == 0) {
             "Enhancement harmonic timeline cannot represent selected MIDI timing"
         }
-        val occurrence = projection.occurrences.singleOrNull()
-            ?: throw IllegalArgumentException("Enhancement part '${projection.part.partId}' must map to exactly one canonical occurrence.")
-        require(projection.harmony.all { it.occurrenceId == occurrence.occurrenceId }) {
-            "Enhancement harmony does not map to its canonical occurrence."
+        val occurrence = projection.occurrences.firstOrNull()
+            ?: throw IllegalArgumentException("Enhancement part '${projection.part.partId}' must map to at least one canonical occurrence.")
+        val referenceHarmony = projection.harmony.filter { it.occurrenceId == occurrence.occurrenceId }
+        require(referenceHarmony.isNotEmpty()) { "Enhancement harmony does not map to its canonical occurrence." }
+        fun localHarmonySignature(candidate: app.melotrail.application.MusicalOccurrence) =
+            projection.harmony.filter { it.occurrenceId == candidate.occurrenceId }.map { entry ->
+                listOf(
+                    entry.startTick - candidate.startTick,
+                    entry.endTick - candidate.startTick,
+                    entry.chord.rootChromatic.toLong(),
+                    entry.chord.quality.ordinal.toLong()
+                )
+            }
+        val referenceSignature = localHarmonySignature(occurrence)
+        require(projection.occurrences.all { localHarmonySignature(it) == referenceSignature }) {
+            "Enhancement part '${projection.part.partId}' is reused with different local harmony; enhance each variation from an explicit source part."
         }
         val factor = projection.harmonyPpq / projection.part.ppq
         val resolved = profiles.resolve(projection.profile, projection.mood)
-        val harmony = projection.harmony.map { entry ->
+        val harmony = referenceHarmony.map { entry ->
             require((entry.startTick - occurrence.startTick) % factor == 0L && (entry.endTick - occurrence.startTick) % factor == 0L) {
                 "Enhancement harmonic timeline cannot exactly map selected MIDI ticks"
             }

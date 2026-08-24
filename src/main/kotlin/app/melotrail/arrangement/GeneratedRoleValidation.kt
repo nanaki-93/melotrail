@@ -223,7 +223,7 @@ class DeterministicGeneratedRoleValidator : GeneratedRoleValidator {
         val piano = state.track(ArrangementState.PIANO)?.notes.orEmpty()
         val bass = state.track("bass")?.notes.orEmpty()
         notes.forEach { pad ->
-            if (piano.any { source -> source.startTick < pad.end && pad.start < source.endTick && abs(source.pitch - pad.pitch) <= 2 }) {
+            if (piano.any { source -> source.startTick < pad.end && pad.start < source.endTick && source.pitch == pad.pitch }) {
                 violations += "Pad note masks the accepted piano register"
             }
             if (bass.any { source -> source.startTick < pad.end && pad.start < source.endTick && pad.pitch <= source.pitch + 4 }) {
@@ -238,7 +238,7 @@ class DeterministicGeneratedRoleValidator : GeneratedRoleValidator {
     private fun validateStrings(notes: List<Note>, input: GeneratedRoleValidationInput, violations: MutableList<String>) {
         val state = input.arrangementState ?: return
         notes.forEach { strings ->
-            if (state.melodyCollides(strings.start, strings.end, strings.pitch)) {
+            if (state.melodyCollides(strings.start, strings.end, strings.pitch, 0)) {
                 violations += "Strings note collides with accepted source melody"
             }
         }

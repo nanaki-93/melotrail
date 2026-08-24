@@ -10,6 +10,7 @@ import javax.sound.midi.MidiEvent
 import javax.sound.midi.MidiSystem
 import javax.sound.midi.Sequence
 import javax.sound.midi.ShortMessage
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -128,7 +129,11 @@ class DeterministicBassMidiGenerator {
                 if (correctedReport.passed) corrected else {
                     diagnostics += "Bass quality correction did not pass; used deterministic root fallback."
                     val fallback = fallback(request)
-                    require(validator.validate(fallback, request).passed) { "Deterministic bass fallback failed quality validation" }
+                    val fallbackReport = validator.validate(fallback, request)
+                    require(fallbackReport.passed) {
+                        "Deterministic bass fallback failed quality validation: " +
+                            fallbackReport.issues.joinToString { "${it.code}@${it.startTick}-${it.endTick}" }
+                    }
                     fallback
                 }
             }
@@ -196,9 +201,10 @@ class DeterministicBassMidiGenerator {
     }
 
     /**
-     * Conservative fallback: one sustained root per contiguous harmonic region.
-     * Meter boundaries must not turn a held chord into repeated bass attacks,
-     * because the fallback itself is subject to the same quality gate.
+     * Conservative fallback: one sustained, collision-free chord tone per
+     * contiguous harmonic region. Meter boundaries must not turn a held chord
+     * into repeated bass attacks, because the fallback itself is subject to the
+     * same quality gate.
      */
     private fun fallback(request: BassGenerationRequest): List<BassMidiNote> {
         val fallback = mutableListOf<BassMidiNote>()
@@ -206,8 +212,8 @@ class DeterministicBassMidiGenerator {
             val root = harmonyRoot(request, interval.start) ?: return@forEach
             val start = request.sectionStartTick + interval.start
             val end = request.sectionStartTick + interval.end
-            val pitch = normalizePitch(36 + root)
             val previous = fallback.lastOrNull()
+            val pitch = fallbackPitch(request, root, start, end, previous) ?: return@forEach
             if (previous != null && previous.pitch == pitch && previous.endTick == start) {
                 fallback[fallback.lastIndex] = previous.copy(endTick = end)
             } else {
@@ -215,6 +221,23 @@ class DeterministicBassMidiGenerator {
             }
         }
         return fallback
+    }
+
+    private fun fallbackPitch(
+        request: BassGenerationRequest,
+        root: Int,
+        start: Long,
+        end: Long,
+        previous: BassMidiNote?
+    ): Int? {
+        val piano = request.arrangementState?.requireTrack(ArrangementState.PIANO)?.notes.orEmpty()
+        val chordTones = listOf(root, (root + 3) % 12, (root + 4) % 12, (root + 7) % 12, (root + 10) % 12, (root + 11) % 12)
+        return chordTones.flatMapIndexed { priority, tone ->
+            (LOWEST_BASS_NOTE..HIGHEST_BASS_NOTE).filter { it % 12 == tone }.map { pitch -> priority to pitch }
+        }.filter { (_, pitch) -> piano.none { it.pitch == pitch && it.startTick < end && start < it.endTick } }
+            .filter { (_, pitch) -> previous == null || abs(pitch - previous.pitch) <= 12 }
+            .minWithOrNull(compareBy<Pair<Int, Int>> { it.first }.thenBy { (_, pitch) -> abs(pitch - (previous?.pitch ?: 36)) })
+            ?.second
     }
 
     private fun eventsForDensity(slotCount: Int, density: Double): Int = ceil(slotCount * density).toInt().coerceIn(1, slotCount)

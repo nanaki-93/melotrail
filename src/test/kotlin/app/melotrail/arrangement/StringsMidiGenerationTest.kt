@@ -36,9 +36,8 @@ class StringsMidiGenerationTest {
             role = StringsMidiRole.SIMPLE_COUNTERMELODY,
             sourceRange = MidiIntRange(60, 84), sourceNoteDensity = 0.8, sourceRhythmicDensity = 0.8
         ))
-        assertTrue(fallback.notes.isEmpty())
+        assertTrue(fallback.notes.isNotEmpty())
         assertTrue(fallback.diagnostics.any { it.contains("fell back") })
-        assertTrue(fallback.diagnostics.any { it.contains("no practical space") })
     }
 
     @Test
@@ -53,6 +52,53 @@ class StringsMidiGenerationTest {
         )
         val counter = generator.generate(request(role = StringsMidiRole.SIMPLE_COUNTERMELODY, sourceRange = MidiIntRange(48, 60)).copy(arrangementState = state))
         assertTrue(counter.diagnostics.any { it.contains("fell back") })
+    }
+
+    @Test
+    fun `wide source range uses time local collision space instead of forcing strings off`() {
+        val state = ArrangementState.fromAcceptedPiano(
+            480, listOf(MidiNote(0, 60, 90, 0, 480)), "a".repeat(64)
+        )
+
+        val result = generator.generate(request(
+            role = StringsMidiRole.LONG_NOTES,
+            sourceRange = MidiIntRange(36, 86)
+        ).copy(
+            arrangementState = state,
+            densityBudget = DensityBudget(0, 480, DensityBudget.MAX_PITCHED_NOTES, 7)
+        ))
+
+        assertTrue(result.notes.isNotEmpty())
+        assertTrue(result.notes.none { it.pitch == 60 })
+
+        val highRegisterSliver = generator.generate(request(
+            role = StringsMidiRole.SUSTAINED_HARMONY,
+            sourceRange = MidiIntRange(36, 86)
+        ).copy(
+            register = "high",
+            arrangementState = state,
+            densityBudget = DensityBudget(0, 480, DensityBudget.MAX_PITCHED_NOTES, 7)
+        ))
+        assertTrue(highRegisterSliver.notes.isNotEmpty())
+    }
+
+    @Test
+    fun `dense melody uses a later collision free window for sparse strings`() {
+        val occupiedChordTones = (60..79).filter { it % 12 in setOf(0, 4, 7) }
+        val state = ArrangementState.fromAcceptedPiano(
+            480,
+            occupiedChordTones.map { pitch -> MidiNote(0, pitch, 90, 0, 240) },
+            "a".repeat(64)
+        )
+
+        val result = generator.generate(request().copy(
+            arrangementState = state,
+            densityBudget = DensityBudget(0, 480, DensityBudget.MAX_PITCHED_NOTES, 6)
+        ))
+
+        assertTrue(result.notes.isNotEmpty())
+        assertTrue(result.notes.all { it.startTick == 240L })
+        assertTrue(result.diagnostics.any { it.contains("source-melody gap") })
     }
 
     @Test

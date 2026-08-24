@@ -93,6 +93,25 @@ class AutomaticImportApplicationServiceTest {
         assertEquals(listOf(StageId.SOURCE, StageId.EXTRACTED, StageId.CLEANED), runs.map { it.stage })
     }
 
+    @Test
+    fun `clean MIDI can be normalized through the project service before source key confirmation`() = runBlocking {
+        val input = tempDir.resolve("normalize.wav").also(::writeWav)
+        val service = service()
+        val root = tempDir.resolve("normalize-project")
+        service.create(CreateProjectRequest(root))
+        service.importSongPart(ImportSongPart(root, "verse", input, "Verse piano", SectionTypeId("verse")))
+
+        val snapshot = service.normalizePart(NormalizePartRequest(root, "verse"))
+        val project = ProjectStore.read(root)
+        val part = project.parts.single()
+        val runs = StageRunStore().read(root, project.envelope.stageRuns)
+
+        assertTrue(Files.isRegularFile(root.resolve(requireNotNull(part.midi?.normalized))))
+        assertTrue(Files.isRegularFile(root.resolve(requireNotNull(part.midi?.normalization))))
+        assertTrue(snapshot.parts.single().sourceKey?.detectedKey != null)
+        assertEquals(listOf(StageId.SOURCE, StageId.EXTRACTED, StageId.CLEANED, StageId.NORMALIZED), runs.map { it.stage })
+    }
+
     private fun service(): DefaultProjectApplicationService {
         val preparation = object : MidiPreparationService {
             override suspend fun transcribe(input: Path, output: Path) { writeMidi(output, 60) }

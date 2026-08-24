@@ -59,6 +59,16 @@ class EnsembleCohesionPlannerTest {
         assertTrue(prompts[1].contains("Qwen returned 1 cohesion decisions for 2 boundaries"))
     }
 
+    @Test fun `Qwen cohesion bounds display rationale without changing musical decisions`() {
+        val input = input("A1" to "A2")
+        val response = """{"boundaries":[{"roleAction":"DRUM_FILL","bars":1,"harmonicHandoff":"HOLD","rhythmicGesture":"FILL","energyContour":"RISE","rationale":"${"Carry the groove forward! ".repeat(12)}"}]}"""
+
+        val plan = LocalQwenEnsembleCohesionPlanner(LocalQwenClient { _, _ -> response }, EnsembleCohesionModelIdentity.DETERMINISTIC).plan(input)
+
+        assertTrue(plan.boundaries.single().rationale.matches(Regex("[A-Za-z0-9 ,.'-]{1,180}")))
+        assertEquals(TransitionRoleAction.DRUM_FILL, plan.boundaries.single().roleAction)
+    }
+
     @Test fun `boundary edits accept first and last ticks but reject one tick outside either window`() {
         val input = input("A1" to "A2", notes =
             List(20) { index -> CohesionMelodyNote(if (index == 0) "outgoing-last" else "outgoing-$index", 0, 60, 72, 3_839, 3_840) } +

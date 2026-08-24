@@ -94,8 +94,8 @@ data class ProjectV4Envelope(
             "V4 structure occurrence IDs must be unique"
         }
         require(structureOccurrences.all { it.partId in partIds }) { "V4 structure occurrence references an unknown part" }
-        require(arrangementAssignments.map { it.occurrenceId to it.instrumentId }.distinct().size == arrangementAssignments.size) {
-            "V4 arrangement assignments must be unique"
+        require(arrangementAssignments.map { it.occurrenceId to it.logicalInstrument }.distinct().size == arrangementAssignments.size) {
+            "V4 arrangement assignments must be unique per occurrence and logical instrument"
         }
         require(arrangementAssignments.all { assignment -> structureOccurrences.any { it.instanceId == assignment.occurrenceId } }) {
             "V4 arrangement assignment references an unknown occurrence"

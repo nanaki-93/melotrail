@@ -420,6 +420,22 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `Harmony is a visible primary destination in every responsive shell`() {
+        listOf(Size(1536f, 1024f), Size(1000f, 900f), Size(720f, 1120f)).forEach { size ->
+            runSkikoComposeUiTest(size = size) {
+                val intents = mutableListOf<WorkspaceIntent>()
+                setContent { MelotrailTheme { WorkspaceScreen(populatedState(), intents::add) } }
+
+                if (size.width < 800f) onNodeWithTag(WorkspacePageTags.NAVIGATION_MENU).performClick()
+                onNodeWithTag(WorkspaceShellTags.DESTINATION_PREFIX + WorkspaceDestination.HARMONY.name.lowercase())
+                    .performClick()
+
+                assertEquals(WorkspaceIntent.SelectWorkspaceSection(WorkspaceSection.HARMONY), intents.single())
+            }
+        }
+    }
+
+    @Test
     fun `shell shows typed worker pipeline and locked destination status without preventing inspection`() = runComposeUiTest {
         val unavailableWorker = RuntimeReadiness.of(*RuntimeDependency.entries.map { dependency ->
             dependency to DependencyReadiness(

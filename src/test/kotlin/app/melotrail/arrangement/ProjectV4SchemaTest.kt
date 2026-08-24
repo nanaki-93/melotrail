@@ -172,6 +172,26 @@ class ProjectV4SchemaTest {
         assertFalse(project.validate(root).isValid)
     }
 
+    @Test
+    fun `one resolved preset may serve different logical instruments in one occurrence`() {
+        val fingerprint = "a".repeat(64)
+        write("source/A.mid", "source")
+        val assignment = { logical: String -> ArrangementAssignmentReference(
+            occurrenceId = "occ-1", instrumentId = "shared-preset", decisionSha256 = fingerprint,
+            libraryProvenance = LibraryProvenanceSnapshot("library", fingerprint, fingerprint), logicalInstrument = logical
+        ) }
+        val project = Project(
+            version = Project.CURRENT_VERSION, name = "shared-preset", renderFormat = RenderFormat(),
+            parts = listOf(SongPart("A", "source/A.mid", importPending = true)),
+            envelope = ProjectV4Envelope(
+                structureOccurrences = listOf(StructureOccurrence("occ-1", "A")),
+                arrangementAssignments = listOf(assignment("piano"), assignment("pad"))
+            )
+        )
+
+        assertTrue(project.validate(root).isValid)
+    }
+
     private fun write(relative: String, content: String) {
         val path = root.resolve(relative)
         Files.createDirectories(path.parent)

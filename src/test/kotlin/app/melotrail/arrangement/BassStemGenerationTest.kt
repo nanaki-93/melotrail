@@ -101,6 +101,19 @@ class BassStemGenerationTest {
     }
 
     @Test
+    fun `fallback uses a different chord tone when the piano occupies the root`() {
+        val request = request().copy(
+            arrangementState = ArrangementState.fromAcceptedPiano(480, listOf(MidiNote(0, 36, 80, 0, 1_920)), "c".repeat(64))
+        )
+
+        val result = generator.generate(request)
+
+        assertTrue(result.notes.isNotEmpty())
+        assertTrue(result.notes.none { it.pitch == 36 })
+        assertTrue(BassQualityValidator().validate(result.notes, request).passed)
+    }
+
+    @Test
     fun `movement and syncopation remain inside the section`() {
         val static = notes(BassRole.ROOT, movement = BassMovement.STATIC)
         val rising = notes(BassRole.ROOT, movement = BassMovement.RISING)

@@ -12,6 +12,7 @@ import app.melotrail.arrangement.MidiQualityReportStore
 import app.melotrail.arrangement.MidiQualityReporter
 import app.melotrail.arrangement.MidiQualityWarning
 import app.melotrail.arrangement.MidiReferences
+import app.melotrail.arrangement.MidiNormalizationPolicy
 import app.melotrail.arrangement.MidiAnalysisInput
 import app.melotrail.arrangement.MidiAiFixArtifactPaths
 import app.melotrail.arrangement.MidiAiFixSelection
@@ -122,6 +123,8 @@ interface ProjectApplicationService {
     /** The one code-owned technical correction boundary. Analysis remains a separate stage. */
     suspend fun cleanMidi(request: CleanMidiRequest, progress: ProgressSink = ProgressSink.None): ProjectSnapshot
     fun approveCleanMidi(root: Path, partId: String): ProjectSnapshot
+    suspend fun normalizePart(request: NormalizePartRequest): ProjectSnapshot =
+        throw UnsupportedOperationException("This project service does not support MIDI normalization.")
     fun confirmSourceKey(command: ConfirmSourceKey): ProjectSnapshot =
         throw UnsupportedOperationException("This project service does not support source-key confirmation.")
     suspend fun transposePart(request: TransposePartRequest): ProjectSnapshot =
@@ -213,6 +216,7 @@ data class CleanMidiRequest(
     val cleanup: MidiCleanupOptions
 )
 
+data class NormalizePartRequest(val root: Path, val partId: String)
 /** Explicit musician decision used whenever detected key evidence is not trusted automatically. */
 data class ConfirmSourceKey(val root: Path, val partId: String, val key: MusicalKey, val expectedRevision: Long)
 data class TransposePartRequest(val root: Path, val partId: String)
@@ -832,6 +836,31 @@ class DefaultProjectApplicationService(
         })
         ProjectStore.write(projectRoot, updated)
         snapshot(projectRoot, updated)
+    }
+
+    override suspend fun normalizePart(request: NormalizePartRequest): ProjectSnapshot {
+        val runner = requireNotNull(automaticImportRunner) { "MIDI normalization is not configured." }
+        val root = request.root.normalizeRoot()
+        val project = readValidProject(root)
+        val part = project.parts.singleOrNull { it.id == request.partId }
+            ?: throw IllegalArgumentException("Part not found: ${request.partId}")
+        val midi = requireNotNull(part.midi) { "Part '${part.id}' has no MIDI evidence." }
+        val clean = requireNotNull(midi.clean) { "Clean MIDI before normalization." }
+        val raw = requireNotNull(midi.raw) { "Part '${part.id}' has no raw MIDI evidence." }
+        val quality = requireNotNull(midi.quality) { "Part '${part.id}' has no Clean MIDI quality report." }
+        MidiQualityReportStore.requireCurrent(root, part.id, raw, clean, requireNotNull(midi.cleanup), quality)
+        require(MidiQualityReportStore.isApproved(root, quality, midi.cleanApproval)) {
+            "Review and approve Clean MIDI before normalization."
+        }
+        val config = MidiNormalizationPolicy.resolve(project, compositionProfiles)
+        runner.run(RunStage(
+            root = root,
+            stage = StageId.NORMALIZED,
+            subject = StageSubject.Part(part.id),
+            inputArtifacts = listOf(artifactRef(root, clean)),
+            configurationSha256 = config.sha256()
+        ))
+        return open(root)
     }
 
     override fun confirmSourceKey(command: ConfirmSourceKey): ProjectSnapshot = mutate(command.root) { root ->

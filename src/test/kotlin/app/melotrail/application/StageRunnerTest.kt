@@ -41,6 +41,7 @@ class StageRunnerTest {
         assertTrue(cached.cacheHit)
         assertFalse(changed.cacheHit)
         assertEquals(2, processor.calls)
+        assertEquals(1, processor.cacheHits)
         assertEquals(2, runner.get(GetStageRuns(root)).size)
         assertTrue(Files.isRegularFile(root.resolve("derived/output-1.txt")))
         assertTrue(Files.isRegularFile(root.resolve("derived/output-2.txt")))
@@ -157,6 +158,7 @@ class StageRunnerTest {
     ) : StageProcessor {
         override val definition = StageDefinition(stage, StageSubjectKind.PART, automaticallyChainsTo = next, timeoutMillis = timeoutMillis)
         var calls = 0
+        var cacheHits = 0
         override suspend fun process(request: StageProcessingRequest): StageProcessorResult {
             calls++
             if (delayMillis > 0) delay(delayMillis)
@@ -164,6 +166,10 @@ class StageRunnerTest {
             val temporary = request.temporaryRoot.resolve("output.txt")
             Files.writeString(temporary, if (emptyOutput) "" else "result-$calls")
             return StageProcessorResult(listOf(TemporaryStageArtifact(temporary, "derived/output-$calls.txt")))
+        }
+
+        override fun onCacheHit(request: StageProcessingRequest, outputs: List<app.melotrail.arrangement.ArtifactRef>, reports: List<app.melotrail.arrangement.ArtifactRef>) {
+            cacheHits++
         }
     }
 

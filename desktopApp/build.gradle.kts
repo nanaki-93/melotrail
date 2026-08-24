@@ -23,6 +23,9 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+    if (System.getenv("MELOTRAIL_RUN_LIVE_E2E") == "1" || System.getenv("MELOTRAIL_RESUME_LIVE_E2E") == "1") {
+        maxHeapSize = "2g"
+    }
 }
 
 compose.desktop {

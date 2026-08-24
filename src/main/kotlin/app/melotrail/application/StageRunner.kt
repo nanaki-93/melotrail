@@ -44,6 +44,13 @@ interface StageProcessor {
      */
     fun onPublished(request: StageProcessingRequest, outputs: List<ArtifactRef>, reports: List<ArtifactRef>) = Unit
 
+    /**
+     * Rebinds already-published immutable artifacts when a stage cache hit is
+     * still valid but downstream user decisions cleared their canonical refs.
+     * Most processors need no action; stateful selectors opt in explicitly.
+     */
+    fun onCacheHit(request: StageProcessingRequest, outputs: List<ArtifactRef>, reports: List<ArtifactRef>) = Unit
+
     /** Stage-specific processors override this for MIME/container validation. */
     fun validate(result: StageProcessorResult) {
         result.outputs.forEach { artifact ->
@@ -185,7 +192,6 @@ class StageRunner(
         val processor = registry.require(command.stage)
         require(subjectKind(command.subject) == processor.definition.subjectKind) { "Stage subject is not eligible" }
         val key = "$root:${cacheKey(command, processor)}"
-        queryCached(root, command, processor)?.let { return it }
         val deferred = inFlight.computeIfAbsent(key) {
             scope.async { execute(command.copy(root = root), processor) }
         }
@@ -237,7 +243,14 @@ class StageRunner(
         val root = command.root
         val lock = ProjectMutationCoordinator.lock(root)
         return lock.withLock {
-            queryCached(root, command, processor)?.let { return@withLock it }
+            queryCachedRecord(root, command, processor)?.let { cached ->
+                val request = StageProcessingRequest(
+                    root, cached.runId, command.stage, command.subject, command.inputArtifacts,
+                    root.resolve("workflow-runs/work/${cached.runId}").normalize()
+                ) { }
+                processor.onCacheHit(request, cached.outputArtifacts, cached.reportArtifacts)
+                return@withLock StageRunResult(cached.runId, snapshot(cached), cacheHit = true)
+            }
             requireDependencies(root, command, processor.definition)
             val runId = runIdFactory().also { require(Regex("[A-Za-z0-9][A-Za-z0-9_-]{0,79}").matches(it)) { "Stage run ID is invalid" } }
             val processing = record(command, processor, runId, StageRunStatus.PROCESSING, startedAt = now())
@@ -316,10 +329,9 @@ class StageRunner(
         (result.outputs + result.reports).forEach { outputPublisher.publish(root, it.temporaryPath, it.destination) }
     }
 
-    private fun queryCached(root: Path, command: RunStage, processor: StageProcessor): StageRunResult? {
+    private fun queryCachedRecord(root: Path, command: RunStage, processor: StageProcessor): StageRunRecord? {
         val key = cacheKey(command, processor)
         return records(root).asReversed().firstOrNull { it.status == StageRunStatus.COMPLETED && it.cacheKey() == key }
-            ?.let { StageRunResult(it.runId, snapshot(it), cacheHit = true) }
     }
 
     private fun cacheKey(command: RunStage, processor: StageProcessor): String = record(command, processor, "cache", StageRunStatus.PENDING).cacheKey()

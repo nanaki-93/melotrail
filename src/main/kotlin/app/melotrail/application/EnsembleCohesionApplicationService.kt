@@ -188,7 +188,7 @@ class DefaultEnsembleCohesionApplicationService(
         val ref = requireNotNull(part.analysis) { "Missing MIDI analysis for part '$partId'. Run part analyze first." }
         require(ref.kind?.name == "MIDI") { "MIDI analysis is required for part '$partId'. Run part analyze first." }
         val analysis = Json { ignoreUnknownKeys = false }.decodeFromString(MidiAnalysis.serializer(), Files.readString(root.resolve(ref.file)))
-        return ArrangementHarmonyContext.apply(analysis, part.sectionType, project.envelope.harmony)
+        return ArrangementHarmonyContext.apply(analysis, part.sectionType, project)
     }
     private fun snapshot(root: Path, input: EnsembleCohesionInput, plan: EnsembleCohesionPlan, approved: Boolean): EnsembleCohesionSnapshot {
         val cohesionWorkflow = ProjectStore.read(root).workflow.cohesion

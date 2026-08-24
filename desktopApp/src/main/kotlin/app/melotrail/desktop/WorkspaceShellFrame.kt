@@ -76,9 +76,8 @@ internal object WorkspaceShellTags {
 private enum class SharedShellLayout { WIDE, MEDIUM, NARROW }
 
 /**
- * The shell speaks in musician-facing workflow destinations.  Individual
- * implementation pages remain routable for their focused milestones, but
- * are not presented as the primary product workflow.
+ * The shell speaks in musician-facing workflow destinations. Every required
+ * authoring page is a direct navigation target.
  */
 internal enum class WorkspaceDestination(
     val label: String,
@@ -86,6 +85,7 @@ internal enum class WorkspaceDestination(
     val stages: List<WorkflowStage>
 ) {
     PROJECT("Project", WorkspaceSection.OVERVIEW, listOf(WorkflowStage.PROJECT)),
+    HARMONY("Harmony", WorkspaceSection.HARMONY, listOf(WorkflowStage.PROJECT)),
     SOURCE(
         "Source",
         WorkspaceSection.IMPORT,
@@ -118,7 +118,8 @@ internal enum class WorkspaceDestination(
 internal val primaryWorkspaceDestinations = WorkspaceDestination.entries
 
 private fun WorkspaceUiState.selectedDestination(): WorkspaceDestination = when (workspaceSection) {
-    WorkspaceSection.SETUP, WorkspaceSection.HARMONY, WorkspaceSection.OVERVIEW -> WorkspaceDestination.PROJECT
+    WorkspaceSection.SETUP, WorkspaceSection.OVERVIEW -> WorkspaceDestination.PROJECT
+    WorkspaceSection.HARMONY -> WorkspaceDestination.HARMONY
     WorkspaceSection.IMPORT -> WorkspaceDestination.SOURCE
     WorkspaceSection.STRUCTURE -> WorkspaceDestination.STRUCTURE
     WorkspaceSection.ARRANGE -> WorkspaceDestination.ARRANGE

@@ -176,15 +176,29 @@ class DeterministicPadMidiGenerator {
         space: EnsembleSpaceMap?
     ): List<Int>? {
         val tones = when {
+            space != null && space.maximumSimultaneousNotes >= REDUCED_TEXTURE_NOTE_COUNT ->
+                intArrayOf(harmony.intervals.first(), harmony.intervals.firstOrNull { it % 12 == 7 } ?: harmony.intervals.last())
             energy < REDUCED_VOICING_ENERGY -> intArrayOf(harmony.intervals.first(), harmony.intervals.first { it % 12 == 7 })
             energy < SEVENTH_VOICING_ENERGY -> harmony.intervals.take(3).toIntArray()
             else -> harmony.intervals
         }.map { (harmony.root + it) % 12 }
         val candidates = candidates(tones, requireNotNull(PadGenerationRequest.REGISTER_RANGES[register]))
             .filter { voicing -> hasEnsembleSpace(voicing, space) }
-        return candidates.minWithOrNull(compareBy<List<Int>> {
+        val voiced = candidates.minWithOrNull(compareBy<List<Int>> {
             previous?.zip(it)?.sumOf { (before, after) -> abs(after - before) } ?: 0
         }.thenBy { voicing -> voicing.sumOf { abs(it - registerCenter(register)) } }.thenBy { it.joinToString(",") })
+        if (voiced != null || space == null) return voiced
+
+        // If every complete shell collides with a moving source melody, retain
+        // a quiet harmonic texture with one unoccupied chord tone. This keeps
+        // an activated pad playable without accepting masking or inventing a
+        // pitch outside the authoritative harmony.
+        val range = requireNotNull(PadGenerationRequest.REGISTER_RANGES[register])
+        val chordPitchClasses = harmony.intervals.map { (harmony.root + it) % 12 }.toSet()
+        return range.asSequence()
+            .filter { it % 12 in chordPitchClasses && hasEnsembleSpace(listOf(it), space) }
+            .minWithOrNull(compareBy<Int> { abs(it - registerCenter(register)) }.thenBy { it })
+            ?.let(::listOf)
     }
 
     private fun hasEnsembleSpace(voicing: List<Int>, space: EnsembleSpaceMap?): Boolean {
@@ -246,10 +260,11 @@ class DeterministicPadMidiGenerator {
         const val KEY_CONFIDENCE = 0.70
         const val REDUCED_VOICING_ENERGY = 0.35
         const val SEVENTH_VOICING_ENERGY = 0.75
+        const val REDUCED_TEXTURE_NOTE_COUNT = 6
         const val MIN_VELOCITY = 34
         const val MAX_VELOCITY = 76
         const val RELEASE_GAP_DIVISOR = 24
-        const val MASKING_DISTANCE_SEMITONES = 2
+        const val MASKING_DISTANCE_SEMITONES = 0
         const val BASS_CLEARANCE_SEMITONES = 4
         val CHORD_SYMBOL = Regex("^([A-G](?:#|b)?)(|m|min|7|maj7|m7|min7|maj9|m9|min9|add9|sus2|sus4|sus)$", RegexOption.IGNORE_CASE)
     }

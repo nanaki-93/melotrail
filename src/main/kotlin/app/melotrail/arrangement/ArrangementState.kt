@@ -219,9 +219,9 @@ data class EnsembleSpaceMap(
     val bassPitches: List<Int>
 ) {
     init { require(startTick >= 0 && endTick > startTick && maximumSimultaneousNotes >= 0) }
-    /** Six concurrent accepted notes is intentionally treated as a dense core: pads may rest. */
+    /** Ten concurrent pitched notes is a genuinely dense core; ordinary piano voicings still leave room for a quiet texture. */
     val isDense: Boolean get() = maximumSimultaneousNotes >= DENSE_CORE_NOTE_COUNT
-    companion object { const val DENSE_CORE_NOTE_COUNT = 6 }
+    companion object { const val DENSE_CORE_NOTE_COUNT = 10 }
 }
 
 /** Visible, deterministic capacity evidence for one optional-layer section. */
@@ -238,7 +238,7 @@ data class DensityBudget(
     val remaining: Int get() = (capacity - occupied).coerceAtLeast(0)
     val permitsOptionalLayer: Boolean get() = remaining > 0
 
-    companion object { const val MAX_PITCHED_NOTES = 6 }
+    companion object { const val MAX_PITCHED_NOTES = 10 }
 }
 
 private data class IndexedMidiEvent(val event: MidiEvent, val track: Int, val index: Int)

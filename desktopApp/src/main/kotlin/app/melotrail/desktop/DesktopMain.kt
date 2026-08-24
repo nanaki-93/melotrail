@@ -31,8 +31,10 @@ import app.melotrail.preparation.WorkerTranscriptionBoundary
 import app.melotrail.arrangement.MidiCleanupOptions
 import app.melotrail.arrangement.InstrumentRegistryLoader
 import app.melotrail.arrangement.LocalQwenFullSongEnhancementPlanner
+import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.SoundLibraryLocator
 import app.melotrail.arrangement.SoundLibraryLocation
+import app.melotrail.arrangement.WorkflowArtifact
 import app.melotrail.profile.BundledCompositionProfileCatalog
 import app.melotrail.profile.CompositionProfileCatalog
 import app.melotrail.errors.ErrorReporter
@@ -78,7 +80,12 @@ fun main() {
         InstrumentRegistryLoader(libraryRoot)
     )
     val cohesionService = DefaultEnsembleCohesionApplicationService(
-        ensemblePreparation = EnsembleMidiPreparation { root, progress -> arrangementService.generateRequiredMidi(root, progress) },
+        ensemblePreparation = EnsembleMidiPreparation { root, progress ->
+            val workflow = ProjectStore.read(root).workflow
+            if (workflow.generatedMidi == null || WorkflowArtifact.GENERATED_MIDI in workflow.stale) {
+                arrangementService.generateRequiredMidi(root, progress)
+            }
+        },
         previewPreparation = EnsembleCohesionPreviewPreparation { root, input, progress ->
             app.melotrail.arrangement.FullSongCohesionPreviewRenderer(sfizzRenderer, libraryRoot).render(root, input, progress)
         }

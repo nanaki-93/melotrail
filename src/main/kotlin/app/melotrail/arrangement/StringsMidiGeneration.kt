@@ -108,18 +108,26 @@ class DeterministicStringsMidiGenerator {
         var previous: List<Int>? = null
         val notes = selectedChords(request.chords, request.density).flatMap { chord ->
             val harmony = harmonyFor(request, chord, diagnostics) ?: return@flatMap emptyList()
-            val voicing = selectVoicing(harmony, role, request.energy, range, previous)
-            if (voicing == null) {
+            val selected = selectVoicing(harmony, role, request.energy, range, previous, request, chord)
+            if (selected == null) {
                 diagnostics += "No strings voicing fits the collision-safe ${request.register} register at tick ${chord.startTick}; left silent."
                 return@flatMap emptyList()
             }
-            if (!densityPermits(request, voicing.size)) {
-                diagnostics += "Strings resolved OFF at tick ${request.sectionStartTick + chord.startTick}: density budget has ${request.densityBudget?.remaining ?: 0} remaining slots for ${voicing.size} voices."
+            if (!densityPermits(request, selected.pitches.size)) {
+                diagnostics += "Strings resolved OFF at tick ${request.sectionStartTick + chord.startTick}: density budget has ${request.densityBudget?.remaining ?: 0} remaining slots for ${selected.pitches.size} voices."
                 return@flatMap emptyList()
             }
-            previous = voicing
-            val gap = minOf(releaseGapTicks(request.ppq), chord.endTick - chord.startTick - 1)
-            voicing.map { pitch -> StringsMidiNote(request.sectionStartTick + chord.startTick, request.sectionStartTick + chord.endTick - gap, pitch, velocity(request.energy, role)) }
+            previous = selected.pitches
+            if (selected.pitches.size < preferredVoiceCount(harmony, role, request.energy)) {
+                diagnostics += "Reduced strings to ${selected.pitches.size} collision-free voice(s) at tick ${chord.startTick}."
+            }
+            val chordStart = request.sectionStartTick + chord.startTick
+            val chordEnd = request.sectionStartTick + chord.endTick
+            if (selected.startTick != chordStart || selected.endTick != chordEnd) {
+                diagnostics += "Placed strings in a source-melody gap at ticks ${selected.startTick}-${selected.endTick}."
+            }
+            val gap = minOf(releaseGapTicks(request.ppq), selected.endTick - selected.startTick - 1)
+            selected.pitches.map { pitch -> StringsMidiNote(selected.startTick, selected.endTick - gap, pitch, velocity(request.energy, role)) }
         }
         validate(notes, request, range)
         if (notes.isEmpty() && diagnostics.isEmpty()) diagnostics += "No strings chord segments were selected."
@@ -179,7 +187,9 @@ class DeterministicStringsMidiGenerator {
         val configured = requireNotNull(StringsGenerationRequest.REGISTER_RANGES[request.register])
         val sourceTop = request.sourcePitchRange?.max ?: return configured
         val start = maxOf(configured.first, sourceTop + SOURCE_CLEARANCE_SEMITONES)
-        return if (start <= configured.last) start..configured.last else null
+        // Prefer a globally separate register when one exists. Dense, wide-range
+        // piano transcriptions instead use exact time-local collision checks.
+        return if (configured.last - start >= MIN_PRACTICAL_REGISTER_SPAN) start..configured.last else configured
     }
 
     private fun densityPermits(request: StringsGenerationRequest, voices: Int): Boolean =
@@ -226,15 +236,57 @@ class DeterministicStringsMidiGenerator {
         return Harmony(root, intervals)
     }
 
-    private fun selectVoicing(harmony: Harmony, role: StringsMidiRole, energy: Double, range: IntRange, previous: List<Int>?): List<Int>? {
-        val intervals = when (role) {
+    private fun selectVoicing(
+        harmony: Harmony,
+        role: StringsMidiRole,
+        energy: Double,
+        range: IntRange,
+        previous: List<Int>?,
+        request: StringsGenerationRequest,
+        chord: MidiChord
+    ): SelectedVoicing? {
+        val intervals = preferredIntervals(harmony, role, energy)
+        val intervalOptions = buildList {
+            add(intervals.toList())
+            if (intervals.size > 2) {
+                add(listOf(intervals.first(), intervals.firstOrNull { it % 12 == 7 } ?: intervals.last()))
+            }
+            intervals.forEach { add(listOf(it)) }
+        }.distinct()
+        val candidates = intervalOptions.flatMap { option -> voicingCandidates(harmony, option, range) }.distinct()
+            .filter { densityPermits(request, it.size) }
+        val withWindows = candidates.mapNotNull { pitches -> collisionFreeWindow(request, chord, pitches)?.let { window -> SelectedVoicing(pitches, window.first, window.second) } }
+        val chordStart = request.sectionStartTick + chord.startTick
+        val chordEnd = request.sectionStartTick + chord.endTick
+        val fullWindow = withWindows.filter { it.startTick == chordStart && it.endTick == chordEnd }
+        val minimumUsefulDuration = minOf(request.ppq.toLong(), chordEnd - chordStart)
+        val usefulWindow = withWindows.filter { it.endTick - it.startTick >= minimumUsefulDuration }
+        val eligible = when {
+            fullWindow.isNotEmpty() -> fullWindow
+            usefulWindow.isNotEmpty() -> usefulWindow
+            else -> withWindows
+        }
+        return eligible.minWithOrNull(compareByDescending<SelectedVoicing> { it.pitches.size }
+            .thenByDescending { it.endTick - it.startTick }
+            .thenBy { candidate -> previous?.zip(candidate.pitches)?.sumOf { (left, right) -> abs(right - left) } ?: 0 }
+            .thenBy { candidate -> candidate.pitches.sumOf { pitch -> abs(pitch - registerCenter(range)) } }
+            .thenBy { it.pitches.joinToString(",") })
+    }
+
+    private fun preferredIntervals(harmony: Harmony, role: StringsMidiRole, energy: Double): IntArray =
+        when (role) {
             StringsMidiRole.LONG_NOTES -> intArrayOf(harmony.intervals.first(), harmony.intervals.firstOrNull { it % 12 == 7 } ?: harmony.intervals.last())
             StringsMidiRole.SUSTAINED_HARMONY -> if (energy < 0.45) harmony.intervals.take(3).toIntArray() else harmony.intervals
             StringsMidiRole.CLIMAX_REINFORCEMENT -> harmony.intervals
             StringsMidiRole.SIMPLE_COUNTERMELODY -> error("Countermelody does not use sustained voicings")
         }
+
+    private fun preferredVoiceCount(harmony: Harmony, role: StringsMidiRole, energy: Double): Int =
+        preferredIntervals(harmony, role, energy).size
+
+    private fun voicingCandidates(harmony: Harmony, intervals: List<Int>, range: IntRange): List<List<Int>> {
         val tones = intervals.map { (harmony.root + it) % 12 }
-        val candidates = buildList {
+        return buildList {
             tones.indices.forEach { inversion ->
                 val ordered = tones.drop(inversion) + tones.take(inversion)
                 (range.first..range.last).filter { it % 12 == ordered.first() }.forEach { first ->
@@ -244,7 +296,18 @@ class DeterministicStringsMidiGenerator {
                 }
             }
         }
-        return candidates.minWithOrNull(compareBy<List<Int>> { previous?.zip(it)?.sumOf { (left, right) -> abs(right - left) } ?: 0 }.thenBy { it.sumOf { pitch -> abs(pitch - registerCenter(range)) } }.thenBy { it.joinToString(",") })
+    }
+
+    private fun collisionFreeWindow(request: StringsGenerationRequest, chord: MidiChord, pitches: List<Int>): Pair<Long, Long>? {
+        val start = request.sectionStartTick + chord.startTick
+        val end = request.sectionStartTick + chord.endTick
+        val piano = request.arrangementState?.requireTrack(ArrangementState.PIANO)?.notes.orEmpty()
+            .filter { it.pitch in pitches && it.startTick < end && start < it.endTick }
+        val boundaries = (listOf(start, end) + piano.flatMap { listOf(maxOf(start, it.startTick), minOf(end, it.endTick)) })
+            .distinct().sorted()
+        return boundaries.zipWithNext()
+            .filter { (windowStart, windowEnd) -> windowEnd > windowStart && pitches.none { pitch -> request.arrangementState?.melodyCollides(windowStart, windowEnd, pitch, 0) == true } }
+            .maxWithOrNull(compareBy<Pair<Long, Long>> { it.second - it.first }.thenByDescending { it.first })
     }
 
     private fun nextAtOrAbove(minimum: Int, pitchClass: Int): Int = minimum + ((pitchClass - minimum) % 12 + 12) % 12
@@ -262,7 +325,7 @@ class DeterministicStringsMidiGenerator {
             require(note.pitch in range && note.velocity in 1..127 && note.endTick > note.startTick) { "Generated strings note is invalid" }
             require(note.startTick >= request.sectionStartTick && note.endTick < request.sectionStartTick + request.sectionLengthTicks) { "Generated strings note escapes its section" }
             require(note.startTick >= (lastEnd[note.pitch] ?: Long.MIN_VALUE)) { "Generated strings have a same-pitch overlap" }
-            require(request.arrangementState?.melodyCollides(note.startTick, note.endTick, note.pitch) != true) {
+            require(request.arrangementState?.melodyCollides(note.startTick, note.endTick, note.pitch, 0) != true) {
                 "Generated strings note collides with accepted source melody"
             }
             lastEnd[note.pitch] = note.endTick
@@ -270,11 +333,13 @@ class DeterministicStringsMidiGenerator {
     }
 
     private data class Harmony(val root: Int, val intervals: IntArray)
+    private data class SelectedVoicing(val pitches: List<Int>, val startTick: Long, val endTick: Long)
 
     private companion object {
         const val CHORD_CONFIDENCE = 0.75; const val KEY_CONFIDENCE = 0.70; const val COUNTER_KEY_CONFIDENCE = 0.85; const val COUNTER_CHORD_CONFIDENCE = 0.85
         const val COUNTER_SOURCE_MAX_PITCH = 72; const val COUNTER_SOURCE_MAX_RANGE = 18; const val COUNTER_SOURCE_MAX_DENSITY = 0.35; const val COUNTER_SOURCE_MAX_RHYTHMIC_DENSITY = 0.50; const val COUNTER_MAX_STEP = 5
         const val SOURCE_CLEARANCE_SEMITONES = 2; const val MIN_VELOCITY = 42; const val MAX_VELOCITY = 82; const val CLIMAX_VELOCITY_BOOST = 6; const val RELEASE_GAP_DIVISOR = 24
+        const val MIN_PRACTICAL_REGISTER_SPAN = 7
         val CHORD_SYMBOL = Regex("^([A-G](?:#|b)?)(|m|min|7|maj7|m7|min7|maj9|m9|min9|add9|sus2|sus4|sus)$", RegexOption.IGNORE_CASE)
     }
 }

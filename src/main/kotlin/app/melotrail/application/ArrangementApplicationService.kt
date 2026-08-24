@@ -328,7 +328,7 @@ class DefaultArrangementApplicationService(
             val path = normalized.resolve("midi/generated/pad.mid"); generating("pad", path)
             val candidate = generatedCandidate(path)
             PadMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses, arrangementState, candidate)
-                .let { accept("pad", it.path, it.notes.size, deliberateSilence = it.notes.isEmpty() && it.diagnostics.isNotEmpty()) }
+                .let { accept("pad", it.path, it.notes.size) }
         }
         coroutineContext.ensureActive()
         var transitionWindows = emptyList<TransitionMidiWindow>()
@@ -404,14 +404,16 @@ class DefaultArrangementApplicationService(
             val candidate = generatedCandidate(path)
             val generated = StringsMidiGenerationAdapter(libraryRoot = libraryRoot)
                 .generate(normalized, project, arrangement, analyses, arrangementState, candidate)
-            val deliberateSilence = generated.notes.isEmpty() && generated.diagnostics.isNotEmpty()
             val report = generatedRoleValidator.validate(GeneratedRoleValidationInput(
                 role = "strings", midi = generated.path, project = project, arrangement = arrangement,
                 projection = projection, registry = registry, arrangementSha256 = approval.arrangementSha256,
-                registrySha256 = registrySha256, arrangementState = arrangementState, deliberateSilence = deliberateSilence
+                registrySha256 = registrySha256, arrangementState = arrangementState
             ))
             val reportPath = writeGeneratedMidiValidationReport(normalized, "strings", report)
-            require(report.passed) { "Generated strings MIDI failed validation: ${report.violations.joinToString("; ")}" }
+            require(report.passed) {
+                "Generated strings MIDI failed validation: ${report.violations.joinToString("; ")}. " +
+                    "Generator diagnostics: ${generated.diagnostics.joinToString("; ").ifBlank { "none" }}"
+            }
             publishGeneratedCandidate(candidate, path)
             arrangementState = arrangementState.acceptValidated("strings", path)
             artifacts += GeneratedMidiArtifact(
@@ -597,7 +599,7 @@ class DefaultArrangementApplicationService(
         val reference = requireNotNull(part.analysis) { "Missing MIDI analysis for part '$id'. Run part analyze first." }
         require(reference.kind?.name == "MIDI") { "MIDI analysis is required for part '$id'. Run part analyze first." }
         val analysis = json.decodeFromString(MidiAnalysis.serializer(), Files.readString(root.resolve(reference.file), StandardCharsets.UTF_8))
-        ArrangementHarmonyContext.apply(analysis, part.sectionType, project.envelope.harmony)
+        ArrangementHarmonyContext.apply(analysis, part.sectionType, project)
     }
 
     /**
@@ -622,6 +624,7 @@ class DefaultArrangementApplicationService(
                 )
             }
             analysis.copy(
+                durationSeconds = analysis.durationTicks.toDouble() / analysis.ppq * 60.0 / projection.tempo.bpm,
                 tempoMap = listOf(app.melotrail.arrangement.MidiTempoChange(0, projection.tempo.bpm)),
                 timeSignatures = listOf(app.melotrail.arrangement.MidiTimeSignature(0, projection.meter.numerator, projection.meter.denominator)),
                 key = app.melotrail.arrangement.MidiKey(projection.projectKey.tonic.toString(), projection.projectKey.modeId.value, 1.0),

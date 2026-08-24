@@ -1,5 +1,11 @@
 package app.melotrail.arrangement
 
+import app.melotrail.application.CanonicalAnalyzedPartFacts
+import app.melotrail.application.CanonicalChord
+import app.melotrail.application.CanonicalSelectedPartArtifact
+import app.melotrail.application.HarmonicTimelineEntry
+import app.melotrail.application.MusicalOccurrence
+import app.melotrail.application.PartEnhancementProjection
 import app.melotrail.harmony.ChordEvent
 import app.melotrail.harmony.ChordEventId
 import app.melotrail.harmony.ChordProgression
@@ -169,6 +175,46 @@ class EnhancementTest {
         assertTrue(context.harmony.isEmpty())
         velocityPlan.requireValid(context, EnhancementPolicy.forIntensity(context.intensity))
         assertThrows(IllegalArgumentException::class.java) { pitchPlan.requireValid(context, EnhancementPolicy.forIntensity(context.intensity)) }
+    }
+
+    @Test
+    fun `one source reused in equivalent verse occurrences has one bounded enhancement context`() {
+        val input = root.resolve("repeated-verse.mid")
+        writeMidi(input)
+        val analysis = MidiPartAnalyzer().analyze(input, "verse")
+        val duration = analysis.durationTicks
+        val occurrences = listOf(
+            MusicalOccurrence("verse-1", "verse", SectionTypeId.VERSE, 0, 5, 0, duration),
+            MusicalOccurrence("verse-2", "verse", SectionTypeId.VERSE, 5, 10, duration, duration * 2)
+        )
+        fun chord(occurrence: MusicalOccurrence, root: Int = 0) = HarmonicTimelineEntry(
+            occurrence.occurrenceId, SectionTypeId.VERSE, CanonicalChord(root, if (root == 0) "C" else "D", ChordQuality.MINOR),
+            occurrence.startBar, occurrence.startTick, occurrence.endTick
+        )
+        val hash = sha256(input)
+        val projection = PartEnhancementProjection(
+            contextSha256 = "a".repeat(64),
+            part = CanonicalSelectedPartArtifact("verse", "midi/corrected/verse.mid", hash, analysis.ppq, "corrected"),
+            projectKey = MusicalKey(PitchClass.of(PitchSpelling.C), ScaleModeId.NATURAL_MINOR),
+            tempo = Tempo(80.0), meter = TimeSignature(4, 4),
+            profile = CompositionProfileRef("lofi", 1), mood = MoodRef("warm", 1),
+            occurrences = occurrences, harmony = occurrences.map(::chord), harmonyPpq = analysis.ppq,
+            analysis = CanonicalAnalyzedPartFacts("verse", hash, "b".repeat(64), analysis), melodyEvidence = emptyList()
+        )
+
+        val context = MusicalProcessingContextFactory.build(
+            projection, input, EnhancementIntensity.BALANCED, profiles = BundledCompositionProfileCatalog.load()
+        )
+
+        assertEquals("verse-1", context.occurrenceId)
+        assertEquals(1, context.harmony.size)
+        assertThrows(IllegalArgumentException::class.java) {
+            MusicalProcessingContextFactory.build(
+                projection.copy(harmony = listOf(chord(occurrences[0]), chord(occurrences[1], 2))),
+                input,
+                profiles = BundledCompositionProfileCatalog.load()
+            )
+        }
     }
 
     @Test

@@ -142,6 +142,7 @@ class AutomaticImportProcessors(
                 if (it.id == part.id) it.copy(midi = updatedMidi) else it
             }))
         }
+
     }
 
     private val normalized = object : StageProcessor {
@@ -190,6 +191,9 @@ class AutomaticImportProcessors(
                 )) else it
             }))
         }
+
+        override fun onCacheHit(request: StageProcessingRequest, outputs: List<ArtifactRef>, reports: List<ArtifactRef>) =
+            onPublished(request, outputs, reports)
     }
 
     private val transposed = object : StageProcessor {
@@ -231,6 +235,9 @@ class AutomaticImportProcessors(
                 if (it.id == part.id) it.copy(analysis = null, midi = midi.copy(transposed = output.path, transposition = reportRef.path)) else it
             }, workflow = project.workflow.markCurrent(app.melotrail.arrangement.WorkflowArtifact.TRANSPOSED_MIDI)))
         }
+
+        override fun onCacheHit(request: StageProcessingRequest, outputs: List<ArtifactRef>, reports: List<ArtifactRef>) =
+            onPublished(request, outputs, reports)
     }
 
     private suspend fun inspect(
