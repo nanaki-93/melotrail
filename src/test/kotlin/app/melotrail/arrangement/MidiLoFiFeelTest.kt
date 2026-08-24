@@ -79,16 +79,19 @@ class MidiLoFiFeelTest {
     @Test
     fun `report store rejects stale source hashes and preserves the prior report on invalid publication`() {
         val clean = root.resolve("midi/clean/A.mid"); Files.createDirectories(clean.parent); midi(clean, 480)
-        val derived = MidiFeelReportStore.derivedPath(root, "A", MidiFeelProfile.LOFI_80_SWING_V1)
+        val input = WorkflowArtifactReference("midi/clean/A.mid", sha256(clean))
+        val context = MidiFeelArtifactPaths.contextSha256(input.sha256, MidiFeelProfile.LOFI_80_SWING_V1)
+        val derived = MidiFeelReportStore.derivedPath(root, "A", context)
         Files.createDirectories(derived.parent)
         val report = MidiLoFiFeelTransformer().transform(clean, derived, "A").report
         val reportPath = MidiFeelReportStore.write(root, report)
         val reportBefore = Files.readAllBytes(reportPath)
-        val refs = MidiFeelReferences(report.profile, root.relativize(derived).toString(), root.relativize(reportPath).toString())
-        assertTrue(MidiFeelReportStore.isCurrent(root, "A", "midi/clean/A.mid", refs))
+        val refs = MidiFeelReferences(report.profile, input, WorkflowArtifactReference(root.relativize(derived).toString(), sha256(derived)),
+            WorkflowArtifactReference(root.relativize(reportPath).toString(), sha256(reportPath)), context)
+        assertTrue(MidiFeelReportStore.isCurrent(root, "A", input, refs))
 
         Files.write(clean, Files.readAllBytes(clean) + byteArrayOf(0))
-        assertFalse(MidiFeelReportStore.isCurrent(root, "A", "midi/clean/A.mid", refs))
+        assertFalse(MidiFeelReportStore.isCurrent(root, "A", input, refs))
         assertThrows(IllegalArgumentException::class.java) { MidiFeelReportStore.write(root, report.copy(movedNoteCount = -1)) }
         assertTrue(reportBefore.contentEquals(Files.readAllBytes(reportPath)))
     }
@@ -116,4 +119,5 @@ class MidiLoFiFeelTest {
     private fun timeSignatureTicks(sequence: Sequence) = sequence.tracks.flatMap { track -> (0 until track.size()).mapNotNull { index -> (track[index].message as? MetaMessage)?.takeIf { it.type == 0x58 }?.let { track[index].tick } } }.sorted()
     private fun tempos(sequence: Sequence) = sequence.tracks.flatMap { track -> (0 until track.size()).mapNotNull { index -> (track[index].message as? MetaMessage)?.takeIf { it.type == 0x51 }?.let { message -> val data = message.data; 60_000_000.0 / (((data[0].toInt() and 255) shl 16) or ((data[1].toInt() and 255) shl 8) or (data[2].toInt() and 255)) } } }.sorted()
     private fun notes(sequence: Sequence, pitch: Int): List<Pair<Long, Long>> { val active = ArrayDeque<Long>(); return sequence.tracks.flatMap { track -> (0 until track.size()).mapNotNull { index -> val event = track[index]; val message = event.message as? ShortMessage ?: return@mapNotNull null; if (message.data1 != pitch) return@mapNotNull null; when { message.command == ShortMessage.NOTE_ON && message.data2 > 0 -> { active.addLast(event.tick); null }; message.command == ShortMessage.NOTE_OFF -> active.removeFirst() to event.tick; else -> null } } } }
+    private fun sha256(path: Path) = java.security.MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
 }

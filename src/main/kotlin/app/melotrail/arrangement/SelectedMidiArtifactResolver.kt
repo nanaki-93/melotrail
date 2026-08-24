@@ -7,6 +7,7 @@ import javax.sound.midi.MetaMessage
 import javax.sound.midi.MidiEvent
 import javax.sound.midi.MidiSystem
 import javax.sound.midi.Sequence
+import kotlinx.serialization.json.Json
 
 /**
  * The only boundary for the MIDI artifact selected by a MIDI-first part.
@@ -22,7 +23,20 @@ class SelectedMidiArtifactResolver(
         resolve(projectRoot, project, project.parts.singleOrNull { it.id == partId }
             ?: throw IllegalArgumentException("Unknown MIDI part '$partId'."))
 
-    fun resolve(projectRoot: Path, project: Project, part: SongPart): SelectedMidiArtifact {
+    /** Resolve the selected chain through Enhance, before the final optional Feel transform. */
+    fun resolveBeforeFeel(projectRoot: Path, project: Project, partId: String): SelectedMidiArtifact =
+        resolveBeforeFeel(projectRoot, project, project.parts.singleOrNull { it.id == partId }
+            ?: throw IllegalArgumentException("Unknown MIDI part '$partId'."))
+
+    /** Resolve the selected chain through Enhance, before the final optional Feel transform. */
+    fun resolveBeforeFeel(projectRoot: Path, project: Project, part: SongPart): SelectedMidiArtifact =
+        resolveInternal(projectRoot, project, part, includeFeel = false)
+
+    fun resolve(projectRoot: Path, project: Project, part: SongPart): SelectedMidiArtifact =
+        resolveInternal(projectRoot, project, part, includeFeel = true)
+
+    /** One canonical transformation order: transposed -> corrected -> AI Fix -> Enhance -> Feel. */
+    private fun resolveInternal(projectRoot: Path, project: Project, part: SongPart, includeFeel: Boolean): SelectedMidiArtifact {
         val root = projectRoot.toAbsolutePath().normalize()
         val rootReal = root.toRealPath()
         val midi = requireNotNull(part.midi) { "Part '${part.id}' has no MIDI references." }
@@ -31,9 +45,6 @@ class SelectedMidiArtifactResolver(
         }
         val cleaned = resolveFile(root, rootReal, cleanedReference, "cleaned MIDI")
         val cleanupFreshness = cleanupFreshness(root, part, midi, cleanedReference)
-        val manifestSelection = project.envelope.stageRuns.index?.let {
-            StageRunStore().selectedOutput(root, project.envelope.stageRuns, StageSubject.Part(part.id))
-        }
         val normalizedReference = midi.normalized
         val normalized = normalizedReference?.let { resolveFile(root, rootReal, it, "normalized MIDI") }
         val normalizationConfig = MidiNormalizationPolicy.resolve(project, compositionProfiles)
@@ -98,57 +109,40 @@ class SelectedMidiArtifactResolver(
                 BaseCandidate(approved.file, path, hash, SelectedMidiBaseKind.APPROVED_AI_FIX)
             }
         }
-        val selected = if (midi.enhancementSelection == EnhancementSelection.ENHANCED) {
-            val enhancement = requireNotNull(midi.enhancement) { "Part '${part.id}' has no enhancement evidence." }
-            enhancement.requireCanonical(part.id)
-            require(enhancement.approval == EnhancementApproval.APPROVED) {
-                "Enhanced MIDI is a draft or was rejected; preview it and approve it before selecting it."
-            }
-            require(enhancement.input.file == aiFixBase.reference && enhancement.input.sha256 == aiFixBase.sha256) {
-                "Enhanced MIDI is stale for part '${part.id}'; select the prior MIDI or run enhancement again."
-            }
-            val output = resolveFile(root, rootReal, enhancement.output.file, "enhanced MIDI")
-            require(sha256(output) == enhancement.output.sha256) { "Enhanced MIDI is stale for part '${part.id}'; select Corrected or run enhancement again." }
-            Candidate(enhancement.output.file, output, SelectedMidiArtifactKind.ENHANCED, null, MusicalProcessingContext.VERSION)
-        } else manifestSelection?.let { selected ->
-            when (selected.record.stage) {
-                StageId.CLEANED -> Candidate(selected.artifact.path, resolveFile(root, rootReal, selected.artifact.path, "selected cleaned MIDI"),
-                    SelectedMidiArtifactKind.CLEANED, null, null)
-                StageId.NORMALIZED -> Candidate(selected.artifact.path, resolveFile(root, rootReal, selected.artifact.path, "selected normalized MIDI"),
-                    SelectedMidiArtifactKind.NORMALIZED, null, null)
-                StageId.TRANSPOSED -> Candidate(selected.artifact.path, resolveFile(root, rootReal, selected.artifact.path, "selected transposed MIDI"),
-                    SelectedMidiArtifactKind.TRANSPOSED, null, null)
-                StageId.CORRECTED -> Candidate(selected.artifact.path, resolveFile(root, rootReal, selected.artifact.path, "selected corrected MIDI"),
-                    SelectedMidiArtifactKind.CORRECTED, null, null)
-                StageId.ENHANCED -> Candidate(selected.artifact.path, resolveFile(root, rootReal, selected.artifact.path, "selected enhanced MIDI"),
-                    SelectedMidiArtifactKind.LOFI_FEEL, midi.feel?.profile, null)
-                else -> throw IllegalArgumentException("Selected stage '${selected.record.stage}' cannot provide MIDI for part '${part.id}'.")
-            }
-        } ?: when (midi.analysisInput) {
-            MidiAnalysisInput.CURRENT -> Candidate(
-                aiFixBase.reference,
-                aiFixBase.path,
-                when (aiFixBase.kind) {
-                    SelectedMidiBaseKind.CLEANED -> SelectedMidiArtifactKind.CLEANED
-                    SelectedMidiBaseKind.NORMALIZED -> SelectedMidiArtifactKind.NORMALIZED
-                    SelectedMidiBaseKind.TRANSPOSED -> SelectedMidiArtifactKind.TRANSPOSED
-                    SelectedMidiBaseKind.CORRECTED -> SelectedMidiArtifactKind.CORRECTED
-                    SelectedMidiBaseKind.APPROVED_AI_FIX -> SelectedMidiArtifactKind.APPROVED_AI_FIX
-                },
-                null,
-                null
-            )
-            MidiAnalysisInput.LOFI_FEEL -> {
-                require(cleanupFreshness != MidiCleanupFreshness.STALE) {
-                    "Part '${part.id}' has stale cleaned MIDI evidence. Run Clean MIDI again."
+        val upstream = when (midi.enhancementSelection) {
+            EnhancementSelection.PENDING, EnhancementSelection.CORRECTED -> fromBase(aiFixBase)
+            EnhancementSelection.NO_OP, EnhancementSelection.ENHANCED -> {
+                val enhancement = requireNotNull(midi.enhancement) { "Part '${part.id}' has no enhancement evidence." }
+                enhancement.requireCanonical(part.id)
+                require(enhancement.approval == EnhancementApproval.APPROVED) {
+                    "Enhanced MIDI is a draft or was rejected; preview it and approve it before selecting it."
                 }
-                val feel = requireNotNull(midi.feel) { "Part '${part.id}' has no current Lo-fi MIDI Feel artifact." }
-                val derived = resolveFile(root, rootReal, feel.derived, "Lo-fi MIDI Feel")
-                require(MidiFeelReportStore.isCurrent(root, part.id, aiFixBase.reference, feel)) {
-                    "Lo-fi MIDI Feel artifact is missing, malformed, or stale for part '${part.id}'. Choose Original or regenerate Lo-fi MIDI Feel."
+                require(enhancement.input.file == aiFixBase.reference && enhancement.input.sha256 == aiFixBase.sha256) {
+                    "Enhanced MIDI is stale for part '${part.id}'; select the prior MIDI or run enhancement again."
                 }
-                Candidate(feel.derived, derived, SelectedMidiArtifactKind.LOFI_FEEL, feel.profile, MidiFeelReportStore.read(root, feel.report).version)
+                val output = resolveFile(root, rootReal, enhancement.output.file, "enhanced MIDI")
+                require(sha256(output) == enhancement.output.sha256) { "Enhanced MIDI is stale for part '${part.id}'; select the prior MIDI or run enhancement again." }
+                val report = readEnhancementReport(root, enhancement)
+                val noOp = report.appliedEdits.isEmpty()
+                if (midi.enhancementSelection == EnhancementSelection.NO_OP) {
+                    require(noOp && enhancement.output.sha256 == aiFixBase.sha256) {
+                        "No-op enhancement evidence must retain the exact upstream MIDI hash."
+                    }
+                    Candidate(aiFixBase.reference, aiFixBase.path, SelectedMidiArtifactKind.NO_OP, null, null)
+                } else {
+                    require(!noOp) { "Zero-edit enhancement must be selected as NO_OP, not ENHANCED." }
+                    Candidate(enhancement.output.file, output, SelectedMidiArtifactKind.ENHANCED, null, null)
+                }
             }
+        }
+        val selected = if (!includeFeel || midi.analysisInput == MidiAnalysisInput.CURRENT) upstream else {
+            val feel = requireNotNull(midi.feel) { "Part '${part.id}' has no current Lo-fi MIDI Feel artifact." }
+            val input = WorkflowArtifactReference(upstream.reference, sha256(upstream.path))
+            val derived = resolveFile(root, rootReal, feel.derived.file, "Lo-fi MIDI Feel")
+            require(MidiFeelReportStore.isCurrent(root, part.id, input, feel)) {
+                "Lo-fi MIDI Feel artifact is missing, malformed, or stale for part '${part.id}'. Regenerate Lo-fi Feel from the current selected upstream MIDI."
+            }
+            Candidate(feel.derived.file, derived, SelectedMidiArtifactKind.LOFI_FEEL, feel.profile, MidiFeelReportStore.read(root, feel.report).version)
         }
         val sequence = readMidi(selected.path, part.id)
         return SelectedMidiArtifact(
@@ -179,6 +173,33 @@ class SelectedMidiArtifactResolver(
         }
         return MidiCleanupFreshness.CURRENT
     }
+
+    private fun fromBase(base: BaseCandidate): Candidate = Candidate(
+        base.reference,
+        base.path,
+        when (base.kind) {
+            SelectedMidiBaseKind.CLEANED -> SelectedMidiArtifactKind.CLEANED
+            SelectedMidiBaseKind.NORMALIZED -> SelectedMidiArtifactKind.NORMALIZED
+            SelectedMidiBaseKind.TRANSPOSED -> SelectedMidiArtifactKind.TRANSPOSED
+            SelectedMidiBaseKind.CORRECTED -> SelectedMidiArtifactKind.CORRECTED
+            SelectedMidiBaseKind.APPROVED_AI_FIX -> SelectedMidiArtifactKind.APPROVED_AI_FIX
+        },
+        null,
+        null
+    )
+
+    private fun readEnhancementReport(root: Path, enhancement: EnhancementReferences): EnhancementEditReport = try {
+        val reportPath = root.resolve(enhancement.report.file).normalize()
+        require(reportPath.startsWith(root) && Files.isRegularFile(reportPath) && sha256(reportPath) == enhancement.report.sha256) {
+            "Enhancement report is missing or stale."
+        }
+        json.decodeFromString(EnhancementEditReport.serializer(), Files.readString(reportPath)).also { report ->
+            require(report.inputSha256 == enhancement.input.sha256 && report.outputSha256 == enhancement.output.sha256 && report.contextSha256 == enhancement.contextSha256) {
+                "Enhancement report does not bind the selected input, output, and context."
+            }
+        }
+    } catch (error: IllegalArgumentException) { throw error
+    } catch (error: Exception) { throw IllegalArgumentException("Enhancement report is malformed.", error) }
 
     private fun resolveFile(root: Path, rootReal: Path, reference: String, label: String): Path {
         val relative = try { Path.of(reference) } catch (error: Exception) {
@@ -235,10 +256,12 @@ class SelectedMidiArtifactResolver(
     }
     private data class BaseCandidate(val reference: String, val path: Path, val sha256: String, val kind: SelectedMidiBaseKind)
     private data class Candidate(val reference: String, val path: Path, val kind: SelectedMidiArtifactKind, val profile: MidiFeelProfile?, val profileVersion: Int?)
+
+    private companion object { val json = Json { explicitNulls = false; ignoreUnknownKeys = false } }
 }
 
 enum class SelectedMidiBaseKind { CLEANED, NORMALIZED, TRANSPOSED, CORRECTED, APPROVED_AI_FIX }
-enum class SelectedMidiArtifactKind { CLEANED, NORMALIZED, TRANSPOSED, CORRECTED, APPROVED_AI_FIX, ENHANCED, LOFI_FEEL }
+enum class SelectedMidiArtifactKind { CLEANED, NORMALIZED, TRANSPOSED, CORRECTED, APPROVED_AI_FIX, NO_OP, ENHANCED, LOFI_FEEL }
 enum class MidiCleanupFreshness { CURRENT, STALE }
 enum class MidiLoFiFreshness { CURRENT, NOT_SELECTED }
 data class MidiTimingSummary(val tempoMap: List<MidiTempoChange>, val timeSignatures: List<MidiTimeSignature>)

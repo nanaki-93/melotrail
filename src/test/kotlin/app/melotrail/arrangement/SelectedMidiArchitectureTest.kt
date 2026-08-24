@@ -33,4 +33,11 @@ class SelectedMidiArchitectureTest {
         assertTrue(mixer.contains("OccurrenceMidiArtifactResolver"), "piano rendering must resolve the current occurrence MIDI")
         assertFalse(mixer.contains("SelectedMidiArtifact::partId"), "piano rendering must not collapse repeated occurrences to one part MIDI")
     }
+
+    @Test
+    fun `selected resolver has no stage-run selection bypass`() {
+        val resolver = Files.readString(Path.of("src/main/kotlin/app/melotrail/arrangement/SelectedMidiArtifactResolver.kt"))
+
+        assertFalse(resolver.contains("selectedOutput("), "stage-run output selection must not compete with the explicit selected-artifact chain")
+    }
 }

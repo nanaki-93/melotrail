@@ -267,7 +267,7 @@ class StageComparisonService {
         }
         project.parts.mapNotNull { it.midi }.forEach { midi ->
             addPath(midi.raw); addPath(midi.clean); addPath(midi.normalized); addPath(midi.transposed)
-            midi.feel?.let { addPath(it.derived); addPath(it.report) }
+            midi.feel?.let { addPath(it.input.file); addPath(it.derived.file); addPath(it.report.file) }
             midi.technicalCorrection?.let { add(it.input); add(it.output); add(it.report) }
             midi.enhancement?.let { add(it.input); add(it.output); add(it.report); it.plan?.let(::add); it.provenance?.let(::add) }
             midi.aiFix?.let { it.draft?.let(::add); it.approved?.let(::add) }

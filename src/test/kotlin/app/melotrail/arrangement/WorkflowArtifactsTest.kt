@@ -28,8 +28,8 @@ class WorkflowArtifactsTest {
     @Test
     fun `invalidation matrix is exact and never marks an upstream artifact stale`() {
         val downstream = listOf(
-            WorkflowArtifact.TRANSPOSED_MIDI, WorkflowArtifact.CORRECTED_MIDI, WorkflowArtifact.ENHANCED_MIDI,
-            WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.ARRANGEMENT,
+            WorkflowArtifact.TRANSPOSED_MIDI, WorkflowArtifact.CORRECTED_MIDI, WorkflowArtifact.AI_FIX,
+            WorkflowArtifact.ENHANCED_MIDI, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.ARRANGEMENT,
             WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.CORE_ARRANGEMENT, WorkflowArtifact.COHESION, WorkflowArtifact.CRITIC,
             WorkflowArtifact.FULL_SONG_ENHANCEMENT, WorkflowArtifact.HUMANIZATION, WorkflowArtifact.STEMS,
             WorkflowArtifact.DRY_MIX, WorkflowArtifact.MIX_REPORT, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE,
@@ -39,8 +39,8 @@ class WorkflowArtifactsTest {
         val expected = mapOf(
             WorkflowChange.SOURCE_OR_RAW to setOf(WorkflowArtifact.CLEAN_MIDI) + from(WorkflowArtifact.TRANSPOSED_MIDI),
             WorkflowChange.CLEANED_MIDI to from(WorkflowArtifact.TRANSPOSED_MIDI), WorkflowChange.SOURCE_KEY to from(WorkflowArtifact.TRANSPOSED_MIDI),
-            WorkflowChange.CORRECTION_SELECTION to from(WorkflowArtifact.ENHANCED_MIDI), WorkflowChange.ENHANCEMENT_SELECTION to from(WorkflowArtifact.ENHANCED_MIDI),
-            WorkflowChange.AI_FIX_SELECTION to from(WorkflowArtifact.ENHANCED_MIDI), WorkflowChange.MIDI_FEEL to from(WorkflowArtifact.ANALYSIS),
+            WorkflowChange.CORRECTION_SELECTION to from(WorkflowArtifact.CORRECTED_MIDI), WorkflowChange.AI_FIX_SELECTION to from(WorkflowArtifact.AI_FIX),
+            WorkflowChange.ENHANCEMENT_SELECTION to from(WorkflowArtifact.ENHANCED_MIDI), WorkflowChange.MIDI_FEEL to from(WorkflowArtifact.MIDI_FEEL),
             WorkflowChange.ANALYSIS to from(WorkflowArtifact.ARRANGEMENT), WorkflowChange.STRUCTURE to from(WorkflowArtifact.ARRANGEMENT), WorkflowChange.PART_SECTION to from(WorkflowArtifact.ARRANGEMENT),
             WorkflowChange.ARRANGEMENT to from(WorkflowArtifact.GENERATED_MIDI), WorkflowChange.GENERATED_MIDI to from(WorkflowArtifact.CORE_ARRANGEMENT),
             WorkflowChange.COHESION to from(WorkflowArtifact.CRITIC), WorkflowChange.CRITIC to from(WorkflowArtifact.FULL_SONG_ENHANCEMENT),

@@ -275,7 +275,7 @@ class DefaultPartPreviewApplicationService(
             PreviewMidiSource.ENHANCED -> midi.enhancement?.output?.file
             PreviewMidiSource.AI_FIX_DRAFT -> midi.aiFix?.draft?.file
             PreviewMidiSource.AI_FIX_APPROVED -> midi.aiFix?.approved?.file
-            PreviewMidiSource.LOFI_FEEL -> midi.feel?.derived
+            PreviewMidiSource.LOFI_FEEL -> midi.feel?.derived?.file
         } ?: return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "${source.name.lowercase().replaceFirstChar(Char::uppercase)} MIDI is not available for '${part.id}'.")
         if (source == PreviewMidiSource.CLEANED && midi.raw != null) {
             val current = midi.cleanup != null && midi.quality != null && MidiQualityReportStore.isCurrent(root, part.id, midi.raw, reference, midi.cleanup, midi.quality)
@@ -284,14 +284,12 @@ class DefaultPartPreviewApplicationService(
         if (source == PreviewMidiSource.LOFI_FEEL) {
             val feel = midi.feel
             val base = runCatching {
-                val baseProject = project.copy(parts = project.parts.map {
-                    if (it.id == part.id) it.copy(midi = midi.copy(analysisInput = app.melotrail.arrangement.MidiAnalysisInput.CURRENT)) else it
-                })
-                SelectedMidiArtifactResolver().resolve(root, baseProject, part.id)
+                SelectedMidiArtifactResolver().resolveBeforeFeel(root, project, part)
             }.getOrElse { error ->
                 return PreviewResult.Prerequisite(PreviewStage.VALIDATE, error.message ?: "Current MIDI base is unavailable for '${part.id}'.")
             }
-            if (feel == null || !MidiFeelReportStore.isCurrent(root, part.id, base.projectRelativePath, feel)) {
+            val input = app.melotrail.arrangement.WorkflowArtifactReference(base.projectRelativePath, base.sha256)
+            if (feel == null || !MidiFeelReportStore.isCurrent(root, part.id, input, feel)) {
                 return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Lo-fi Feel MIDI is unavailable or stale. Choose Original feel or regenerate the fixed profile.")
             }
         }

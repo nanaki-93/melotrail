@@ -114,7 +114,7 @@ class DefaultTechnicalCorrectionApplicationService(
         val project = ProjectStore.read(normalized); val part = project.parts.single { it.id == partId }; val midi = requireNotNull(part.midi)
         ProjectStore.write(normalized, project.copy(parts = project.parts.map {
             if (it.id == partId) it.copy(analysis = null, midi = midi.copy(technicalCorrectionSelection = TechnicalCorrectionSelection.CORRECTED,
-                aiFixSelection = MidiAiFixSelection.PENDING, analysisInput = MidiAnalysisInput.CURRENT, feel = null)) else it
+                aiFixSelection = MidiAiFixSelection.PENDING)) else it
         }, workflow = project.workflow.invalidate(WorkflowChange.CORRECTION_SELECTION).markCurrent(WorkflowArtifact.CORRECTED_MIDI)))
             loaded.copy(selected = true)
         }
@@ -125,8 +125,7 @@ class DefaultTechnicalCorrectionApplicationService(
         val midi = requireNotNull(part.midi); val refs = midi.technicalCorrection ?: return@locked null
         val wasSelected = midi.technicalCorrectionSelection == TechnicalCorrectionSelection.CORRECTED
         ProjectStore.write(normalized, project.copy(parts = project.parts.map {
-            if (it.id == partId) it.copy(analysis = if (wasSelected) null else it.analysis, midi = midi.copy(technicalCorrectionSelection = TechnicalCorrectionSelection.BASE,
-                analysisInput = app.melotrail.arrangement.MidiAnalysisInput.CURRENT, feel = null)) else it
+            if (it.id == partId) it.copy(analysis = if (wasSelected) null else it.analysis, midi = midi.copy(technicalCorrectionSelection = TechnicalCorrectionSelection.BASE)) else it
         }, workflow = if (wasSelected) project.workflow.invalidate(WorkflowChange.CORRECTION_SELECTION).markCurrent(WorkflowArtifact.CORRECTED_MIDI) else project.workflow))
         val report = readReport(normalized.resolve(refs.report.file)); snapshot(normalized, partId, refs, report, false)
     }

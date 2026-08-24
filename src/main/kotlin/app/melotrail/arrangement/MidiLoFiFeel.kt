@@ -31,9 +31,25 @@ enum class MidiAnalysisInput { @SerialName("REPAIRED") CURRENT, LOFI_FEEL }
 @Serializable
 data class MidiFeelReferences(
     val profile: MidiFeelProfile,
-    val derived: String,
-    val report: String
+    /** Exact selected upstream MIDI; Feel is the final optional transform in the chain. */
+    val input: WorkflowArtifactReference,
+    val derived: WorkflowArtifactReference,
+    val report: WorkflowArtifactReference,
+    val contextSha256: String,
+    val processorVersion: String = MidiFeelArtifactPaths.PROCESSOR_VERSION
 )
+
+/** Content-addressed, non-overwriting storage for a Feel transform and its report. */
+object MidiFeelArtifactPaths {
+    const val PROCESSOR_VERSION = "midi-lofi-feel-v2"
+
+    fun contextSha256(inputSha256: String, profile: MidiFeelProfile): String = digest("$PROCESSOR_VERSION|${profile.id}|$inputSha256")
+    fun derived(partId: String, contextSha256: String): String = "midi/feel/$partId/$contextSha256/derived.mid"
+    fun report(partId: String, contextSha256: String): String = "midi/feel/$partId/$contextSha256/report.json"
+
+    private fun digest(value: String): String = MessageDigest.getInstance("SHA-256")
+        .digest(value.toByteArray(StandardCharsets.UTF_8)).joinToString("") { "%02x".format(it) }
+}
 
 @Serializable
 data class MidiFeelReport(
@@ -42,6 +58,8 @@ data class MidiFeelReport(
     val profile: MidiFeelProfile,
     val inputSha256: String,
     val outputSha256: String,
+    val contextSha256: String,
+    val processorVersion: String = MidiFeelArtifactPaths.PROCESSOR_VERSION,
     val previousTempoMap: List<MidiTempoChange>,
     val outputTempoBpm: Int,
     val movedNoteCount: Int,
@@ -52,14 +70,17 @@ data class MidiFeelReport(
     fun requireValid() {
         require(version == CURRENT_VERSION) { "Unsupported MIDI feel report version: $version" }
         require(MidiQualityReport.PART_ID.matches(partId)) { "Invalid MIDI feel report part ID: $partId" }
-        require(inputSha256.matches(HASH) && outputSha256.matches(HASH)) { "MIDI feel report fingerprints are invalid" }
+        require(inputSha256.matches(HASH) && outputSha256.matches(HASH) && contextSha256.matches(HASH) && processorVersion == MidiFeelArtifactPaths.PROCESSOR_VERSION) {
+            "MIDI feel report fingerprints or processor version are invalid"
+        }
+        require(contextSha256 == MidiFeelArtifactPaths.contextSha256(inputSha256, profile)) { "MIDI feel report context is stale" }
         require(outputTempoBpm == profile.targetBpm) { "MIDI feel report tempo does not match its profile" }
         require(movedNoteCount >= 0 && maximumShiftTicks >= 0 && collisionRepairs >= 0) { "MIDI feel report metrics are invalid" }
         require(previousTempoMap.isNotEmpty() && previousTempoMap.first().tick == 0L) { "MIDI feel report tempo map must start at zero" }
         require(warnings.size <= 8 && warnings.all { it.isNotBlank() && it.length <= 240 }) { "MIDI feel report warnings are invalid" }
     }
 
-    companion object { const val CURRENT_VERSION = 1; private val HASH = Regex("[0-9a-f]{64}") }
+    companion object { const val CURRENT_VERSION = 2; private val HASH = Regex("[0-9a-f]{64}") }
 }
 
 data class MidiFeelResult(val report: MidiFeelReport)
@@ -89,6 +110,7 @@ class MidiLoFiFeelTransformer {
             profile = profile,
             inputSha256 = sha256(input),
             outputSha256 = sha256(output),
+            contextSha256 = MidiFeelArtifactPaths.contextSha256(sha256(input), profile),
             previousTempoMap = previousTempo,
             outputTempoBpm = profile.targetBpm,
             movedNoteCount = moved,
@@ -171,8 +193,10 @@ class MidiLoFiFeelTransformer {
         try {
             require(MidiSystem.write(sequence, 1, temporary.toFile()) > 0) { "Could not write Lo-fi Feel MIDI" }
             validateOutput(temporary, source.resolution, profile, inputNotes, inputSignatures)
-            try {
-                Files.move(temporary, output, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            if (Files.exists(output)) {
+                require(sha256(output) == sha256(temporary)) { "Existing Lo-fi Feel MIDI differs; preserving it for inspection." }
+            } else try {
+                Files.move(temporary, output, StandardCopyOption.ATOMIC_MOVE)
             } catch (error: AtomicMoveNotSupportedException) {
                 throw IllegalStateException("Atomic publication is not supported for Lo-fi Feel MIDI '$output'.", error)
             }
@@ -226,19 +250,35 @@ object MidiFeelReportStore {
     @OptIn(ExperimentalSerializationApi::class)
     private val json = Json { prettyPrint = true; encodeDefaults = true; explicitNulls = false; ignoreUnknownKeys = false }
 
-    fun derivedPath(root: Path, partId: String, profile: MidiFeelProfile) = root.toAbsolutePath().normalize().resolve("midi/derived/$partId/${profile.id}.mid")
-    fun reportPath(root: Path, partId: String, profile: MidiFeelProfile) = root.toAbsolutePath().normalize().resolve("midi/feel/$partId/${profile.id}.json")
+    fun derivedPath(root: Path, partId: String, contextSha256: String) = root.toAbsolutePath().normalize().resolve(MidiFeelArtifactPaths.derived(partId, contextSha256))
+    fun reportPath(root: Path, partId: String, contextSha256: String) = root.toAbsolutePath().normalize().resolve(MidiFeelArtifactPaths.report(partId, contextSha256))
     fun write(root: Path, report: MidiFeelReport): Path {
-        report.requireValid(); val target = reportPath(root, report.partId, report.profile); Files.createDirectories(checkNotNull(target.parent)); val temporary = target.resolveSibling(".${target.fileName}.tmp")
-        try { Files.writeString(temporary, json.encodeToString(report), StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING); moveAtomically(temporary, target); return target } finally { Files.deleteIfExists(temporary) }
+        report.requireValid(); val target = reportPath(root, report.partId, report.contextSha256); Files.createDirectories(checkNotNull(target.parent)); val temporary = target.resolveSibling(".${target.fileName}.tmp")
+        try {
+            Files.writeString(temporary, json.encodeToString(report), StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+            if (Files.exists(target)) require(sha256(target) == sha256(temporary)) { "Existing Lo-fi Feel report differs; preserving it for inspection." }
+            else moveAtomically(temporary, target)
+            return target
+        } finally { Files.deleteIfExists(temporary) }
     }
-    fun read(root: Path, reference: String): MidiFeelReport = try { json.decodeFromString(MidiFeelReport.serializer(), Files.readString(resolve(root, reference), StandardCharsets.UTF_8)).also(MidiFeelReport::requireValid) } catch (error: Exception) { throw IllegalArgumentException("MIDI feel report is malformed: $reference", error) }
-    fun isCurrent(root: Path, partId: String, cleanReference: String, references: MidiFeelReferences): Boolean = runCatching {
+    fun read(root: Path, reference: WorkflowArtifactReference): MidiFeelReport = try {
+        val path = resolve(root, reference.file)
+        require(sha256(path) == reference.sha256) { "MIDI feel report is stale: ${reference.file}" }
+        json.decodeFromString(MidiFeelReport.serializer(), Files.readString(path, StandardCharsets.UTF_8)).also(MidiFeelReport::requireValid)
+    } catch (error: Exception) { throw IllegalArgumentException("MIDI feel report is malformed: ${reference.file}", error) }
+    fun isCurrent(root: Path, partId: String, input: WorkflowArtifactReference, references: MidiFeelReferences): Boolean = runCatching {
+        require(references.input == input && references.processorVersion == MidiFeelArtifactPaths.PROCESSOR_VERSION)
+        require(sha256(resolve(root, input.file)) == input.sha256)
+        require(references.contextSha256 == MidiFeelArtifactPaths.contextSha256(input.sha256, references.profile))
+        require(references.derived.file == MidiFeelArtifactPaths.derived(partId, references.contextSha256))
+        require(references.report.file == MidiFeelArtifactPaths.report(partId, references.contextSha256))
         val report = read(root, references.report)
-        report.partId == partId && report.profile == references.profile && report.inputSha256 == sha256(resolve(root, cleanReference)) && report.outputSha256 == sha256(resolve(root, references.derived))
+        report.partId == partId && report.profile == references.profile && report.inputSha256 == input.sha256 &&
+            report.outputSha256 == references.derived.sha256 && report.contextSha256 == references.contextSha256 &&
+            report.processorVersion == references.processorVersion && sha256(resolve(root, references.derived.file)) == references.derived.sha256
     }.getOrDefault(false)
-    fun requireCurrent(root: Path, partId: String, cleanReference: String, references: MidiFeelReferences) = require(isCurrent(root, partId, cleanReference, references)) { "Lo-fi Feel artifact is missing, malformed, or stale for part '$partId'. Choose Original feel or regenerate Lo-fi Feel." }
+    fun requireCurrent(root: Path, partId: String, input: WorkflowArtifactReference, references: MidiFeelReferences) = require(isCurrent(root, partId, input, references)) { "Lo-fi Feel artifact is missing, malformed, or stale for part '$partId'. Regenerate Lo-fi Feel from the current selected upstream MIDI." }
     private fun resolve(root: Path, reference: String): Path { val normalized = root.toAbsolutePath().normalize(); val relative = Path.of(reference); require(reference.isNotBlank() && !relative.isAbsolute) { "MIDI feel path must be project-relative" }; val path = normalized.resolve(relative).normalize(); require(path.startsWith(normalized) && Files.isRegularFile(path) && path.toRealPath().startsWith(normalized.toRealPath())) { "MIDI feel artifact is missing: $reference" }; return path }
     private fun sha256(path: Path) = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
-    private fun moveAtomically(source: Path, target: Path) = try { Files.move(source, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING) } catch (error: AtomicMoveNotSupportedException) { throw IllegalStateException("Atomic publish is not supported for MIDI feel report '$target'", error) }
+    private fun moveAtomically(source: Path, target: Path) = try { Files.move(source, target, StandardCopyOption.ATOMIC_MOVE) } catch (error: AtomicMoveNotSupportedException) { throw IllegalStateException("Atomic publish is not supported for MIDI feel report '$target'", error) }
 }

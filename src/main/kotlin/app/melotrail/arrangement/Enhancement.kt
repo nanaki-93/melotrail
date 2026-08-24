@@ -26,7 +26,7 @@ enum class EnhancementIntensity { OFF, SUBTLE, BALANCED, CREATIVE }
 
 /** The selected musical representation is never inferred from an artifact's presence. */
 @Serializable
-enum class EnhancementSelection { PENDING, CORRECTED, ENHANCED }
+enum class EnhancementSelection { PENDING, CORRECTED, NO_OP, ENHANCED }
 
 /** Code-owned melody edit vocabulary. Tempo, meter, structure and paths remain outside the model contract. */
 @Serializable

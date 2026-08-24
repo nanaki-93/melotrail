@@ -357,7 +357,8 @@ data class EnhancementSummary(
     val capabilityLabel: String = "MVP placeholder — no musical edits"
 ) {
     val approvedAvailable: Boolean get() = available && approval == app.melotrail.arrangement.EnhancementApproval.APPROVED
-    val selectedAvailable: Boolean get() = selected == app.melotrail.arrangement.EnhancementSelection.CORRECTED || (selected == app.melotrail.arrangement.EnhancementSelection.ENHANCED && approvedAvailable)
+    val selectedAvailable: Boolean get() = selected == app.melotrail.arrangement.EnhancementSelection.CORRECTED ||
+        ((selected == app.melotrail.arrangement.EnhancementSelection.NO_OP || selected == app.melotrail.arrangement.EnhancementSelection.ENHANCED) && approvedAvailable)
 }
 
 data class MidiFeelSummary(
@@ -923,14 +924,10 @@ class DefaultProjectApplicationService(
             MidiAnalysisInput.CURRENT -> midi.copy(analysisInput = MidiAnalysisInput.CURRENT)
             MidiAnalysisInput.LOFI_FEEL -> {
                 val profile = MidiFeelProfile.LOFI_80_SWING_V1
-                val derived = MidiFeelReportStore.derivedPath(root, part.id, profile)
-                val reportPath = MidiFeelReportStore.reportPath(root, part.id, profile)
-                val baseProject = project.copy(parts = project.parts.map {
-                    if (it.id == part.id) it.copy(midi = midi.copy(analysisInput = MidiAnalysisInput.CURRENT)) else it
-                })
-                val base = app.melotrail.arrangement.SelectedMidiArtifactResolver().resolve(root, baseProject, part.id)
-                val existing = midi.feel?.takeIf { it.profile == profile && MidiFeelReportStore.isCurrent(root, part.id, base.projectRelativePath, it) }
-                val feel = existing ?: publishMidiFeel(root, part.id, base.projectRelativePath, derived, reportPath, profile)
+                val base = app.melotrail.arrangement.SelectedMidiArtifactResolver().resolveBeforeFeel(root, project, part)
+                val input = app.melotrail.arrangement.WorkflowArtifactReference(base.projectRelativePath, base.sha256)
+                val existing = midi.feel?.takeIf { it.profile == profile && MidiFeelReportStore.isCurrent(root, part.id, input, it) }
+                val feel = existing ?: publishMidiFeel(root, part.id, input, profile)
                 midi.copy(analysisInput = MidiAnalysisInput.LOFI_FEEL, feel = feel)
             }
         }
@@ -961,7 +958,7 @@ class DefaultProjectApplicationService(
         if (request.intensity == app.melotrail.arrangement.EnhancementIntensity.OFF) {
             if (midi.enhancementSelection == app.melotrail.arrangement.EnhancementSelection.CORRECTED && midi.analysisInput == MidiAnalysisInput.CURRENT) return@mutate snapshot(root, project)
             val updated = project.copy(parts = project.parts.map {
-                if (it.id == part.id) it.copy(analysis = null, midi = midi.copy(enhancementSelection = app.melotrail.arrangement.EnhancementSelection.CORRECTED, analysisInput = MidiAnalysisInput.CURRENT)) else it
+                if (it.id == part.id) it.copy(analysis = null, midi = midi.copy(enhancementSelection = app.melotrail.arrangement.EnhancementSelection.CORRECTED)) else it
             }, workflow = project.workflow.invalidate(WorkflowChange.ENHANCEMENT_SELECTION))
             ProjectStore.write(root, updated)
             return@mutate snapshot(root, updated)
@@ -992,7 +989,7 @@ class DefaultProjectApplicationService(
             } finally { Files.deleteIfExists(outputTemp); Files.deleteIfExists(reportTemp) }
         }
         val updated = project.copy(parts = project.parts.map {
-            if (it.id == part.id) it.copy(analysis = null, midi = midi.copy(enhancementSelection = app.melotrail.arrangement.EnhancementSelection.ENHANCED, enhancement = references, analysisInput = MidiAnalysisInput.CURRENT)) else it
+            if (it.id == part.id) it.copy(analysis = null, midi = midi.copy(enhancementSelection = app.melotrail.arrangement.EnhancementSelection.NO_OP, enhancement = references)) else it
         }, workflow = project.workflow.invalidate(WorkflowChange.ENHANCEMENT_SELECTION).markCurrent(WorkflowArtifact.ENHANCED_MIDI))
         ProjectStore.write(root, updated)
         snapshot(root, updated)
@@ -1448,7 +1445,7 @@ class DefaultProjectApplicationService(
         val preparedAudio = sourceType == PartSourceType.AUDIO && inspected &&
             report?.preparation == PreparationStatus.CLEANED && isWaveArtifact(InputInspectionPaths.cleanWav(root, id))
         val aiFix = midiAiFix(root, this, cleanMidi)
-        val feel = midiFeel(root, this, cleanMidi, aiFix)
+        val feel = midiFeel(root, this)
         val feelSelectedAvailable = midi?.analysisInput != MidiAnalysisInput.LOFI_FEEL || feel.available
         val preparation = PartPreparationSummary(
             sourcePreserved = sourcePreserved,
@@ -1571,24 +1568,16 @@ class DefaultProjectApplicationService(
         return EnhancementSummary(refs.intensity, midi.enhancementSelection, available, refs.approval)
     }
 
-    private fun midiFeel(root: Path, part: SongPart, cleanMidi: Boolean, aiFix: MidiAiFixSummary): MidiFeelSummary {
+    /** Read Feel readiness from the one resolver order instead of reconstructing an upstream branch. */
+    private fun midiFeel(root: Path, part: SongPart): MidiFeelSummary {
         val midi = part.midi ?: return MidiFeelSummary()
         val references = midi.feel ?: return MidiFeelSummary(midi.analysisInput)
-        val base = when (midi.aiFixSelection) {
-            MidiAiFixSelection.PENDING -> null
-            MidiAiFixSelection.SKIP -> midi.technicalCorrection?.output?.file
-            MidiAiFixSelection.APPROVED -> midi.aiFix?.approved?.file.takeIf { aiFix.approvedAvailable }
-        } ?: midi.clean ?: return MidiFeelSummary(midi.analysisInput)
-        val enhancement = midi.enhancement?.takeIf {
-            midi.enhancementSelection == app.melotrail.arrangement.EnhancementSelection.ENHANCED &&
-                it.approval == app.melotrail.arrangement.EnhancementApproval.APPROVED &&
-                it.input.file == base && runCatching { sha256(safeDestination(root, it.output.file)) == it.output.sha256 }.getOrDefault(false)
-        }
-        val selectedBase = enhancement?.output?.file ?: base
+        val base = runCatching {
+            app.melotrail.arrangement.SelectedMidiArtifactResolver().resolveBeforeFeel(root, ProjectStore.read(root), part)
+        }.getOrNull() ?: return MidiFeelSummary(midi.analysisInput)
+        val input = app.melotrail.arrangement.WorkflowArtifactReference(base.projectRelativePath, base.sha256)
         val report = runCatching { MidiFeelReportStore.read(root, references.report) }.getOrNull()
-        // Like AI-fix, this artifact is tied to the part's selected base, not
-        // to the aggregate project workflow marker.
-        val current = cleanMidi && MidiFeelReportStore.isCurrent(root, part.id, selectedBase, references)
+        val current = MidiFeelReportStore.isCurrent(root, part.id, input, references)
         return MidiFeelSummary(midi.analysisInput, current, report?.takeIf { current })
     }
 
@@ -1793,32 +1782,33 @@ class DefaultProjectApplicationService(
         }
     }
 
-    private fun publishMidiFeel(root: Path, partId: String, inputReference: String, derived: Path, reportPath: Path, profile: MidiFeelProfile): MidiFeelReferences {
+    /** Publish a content-addressed Feel candidate without replacing an existing candidate. */
+    private fun publishMidiFeel(root: Path, partId: String, input: app.melotrail.arrangement.WorkflowArtifactReference, profile: MidiFeelProfile): MidiFeelReferences {
+        val contextSha256 = app.melotrail.arrangement.MidiFeelArtifactPaths.contextSha256(input.sha256, profile)
+        val derived = MidiFeelReportStore.derivedPath(root, partId, contextSha256)
         val work = temporaryMidi(derived)
-        val oldDerived = derived.takeIf(Files::isRegularFile)?.let { Files.readAllBytes(it) }
-        val oldReport = reportPath.takeIf(Files::isRegularFile)?.let { Files.readAllBytes(it) }
-        var derivedPublished = false
-        var reportPublished = false
         try {
-            val result = midiFeelTransformer.transform(safeDestination(root, inputReference), work, partId, profile)
+            val source = safeDestination(root, input.file)
+            require(sha256(source) == input.sha256) { "Lo-fi Feel input changed before processing." }
+            val result = midiFeelTransformer.transform(source, work, partId, profile)
             requireMidiArtifact(work, "Lo-fi Feel")
-            atomicReplace(work, derived, "Lo-fi Feel MIDI")
-            derivedPublished = true
+            if (Files.exists(derived)) {
+                require(sha256(derived) == sha256(work)) { "Existing Lo-fi Feel MIDI differs; preserving it for inspection." }
+            } else try {
+                Files.createDirectories(requireNotNull(derived.parent))
+                Files.move(work, derived, java.nio.file.StandardCopyOption.ATOMIC_MOVE)
+            } catch (error: java.nio.file.AtomicMoveNotSupportedException) {
+                throw IllegalStateException("Atomic publication is not supported for Lo-fi Feel MIDI.", error)
+            }
             val report = MidiFeelReportStore.write(root, result.report)
-            reportPublished = true
-            return MidiFeelReferences(profile, root.relativize(derived).toString().replace('\\', '/'), root.relativize(report).toString().replace('\\', '/'))
-        } catch (failure: Exception) {
-            if (derivedPublished) runCatching { restoreArtifact(derived, oldDerived, "Lo-fi Feel MIDI rollback") }
-            if (reportPublished) runCatching { restoreArtifact(reportPath, oldReport, "Lo-fi Feel report rollback") }
-            throw failure
+            return MidiFeelReferences(
+                profile,
+                input,
+                app.melotrail.arrangement.WorkflowArtifactReference(root.relativize(derived).toString().replace('\\', '/'), sha256(derived)),
+                app.melotrail.arrangement.WorkflowArtifactReference(root.relativize(report).toString().replace('\\', '/'), sha256(report)),
+                contextSha256
+            )
         } finally { Files.deleteIfExists(work) }
-    }
-
-    private fun restoreArtifact(target: Path, old: ByteArray?, stage: String) {
-        if (old == null) Files.deleteIfExists(target) else {
-            val temporary = target.resolveSibling(".${target.fileName}.restore-${UUID.randomUUID()}.tmp")
-            try { Files.write(temporary, old); atomicReplace(temporary, target, stage) } finally { Files.deleteIfExists(temporary) }
-        }
     }
 
     private fun sourceType(file: String): PartSourceType = when (file.substringAfterLast('.', "").lowercase()) {

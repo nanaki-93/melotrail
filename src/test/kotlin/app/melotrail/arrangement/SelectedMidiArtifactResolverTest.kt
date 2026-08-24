@@ -2,6 +2,8 @@ package app.melotrail.arrangement
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
@@ -27,7 +29,9 @@ class SelectedMidiArtifactResolverTest {
             WorkflowArtifactReference(MidiAiFixArtifactPaths.draft("A"), sha256(draft)),
             WorkflowArtifactReference(MidiAiFixArtifactPaths.approved("A"), sha256(approved))
         )
-        val lofi = root.resolve("midi/derived/A/lofi-80-swing-v1.mid")
+        val input = WorkflowArtifactReference(MidiAiFixArtifactPaths.approved("A"), sha256(approved))
+        val context = MidiFeelArtifactPaths.contextSha256(input.sha256, MidiFeelProfile.LOFI_80_SWING_V1)
+        val lofi = MidiFeelReportStore.derivedPath(root, "A", context)
         val report = MidiLoFiFeelTransformer().transform(approved, lofi, "A").report
         val reportPath = MidiFeelReportStore.write(root, report)
         val originalBytes = Files.readAllBytes(clean)
@@ -35,7 +39,9 @@ class SelectedMidiArtifactResolverTest {
         val approvedProject = project(MidiAnalysisInput.CURRENT, null, MidiAiFixSelection.APPROVED, ai)
         val lofiProject = project(
             MidiAnalysisInput.LOFI_FEEL,
-            MidiFeelReferences(MidiFeelProfile.LOFI_80_SWING_V1, "midi/derived/A/lofi-80-swing-v1.mid", root.relativize(reportPath).toString()),
+            MidiFeelReferences(MidiFeelProfile.LOFI_80_SWING_V1, input,
+                WorkflowArtifactReference(root.relativize(lofi).toString(), sha256(lofi)),
+                WorkflowArtifactReference(root.relativize(reportPath).toString(), sha256(reportPath)), context),
             MidiAiFixSelection.APPROVED,
             ai
         )
@@ -89,6 +95,91 @@ class SelectedMidiArtifactResolverTest {
         assertFailsWith<IllegalArgumentException> { SelectedMidiArtifactResolver().resolve(root, selected, "A") }
         assertFailsWith<IllegalArgumentException> {
             SelectedMidiArtifactResolver().resolve(root, selected.copy(parts = listOf(selected.parts.single().copy(midi = selected.parts.single().midi?.copy(aiFix = null)))), "A")
+        }
+    }
+
+    @Test
+    fun `resolves the complete selected chain and rejects a stale Feel branch`() {
+        val clean = root.resolve("midi/clean/A.mid"); writeMidi(clean, 60)
+        Files.createDirectories(root.resolve("source")); Files.copy(clean, root.resolve("source/A.mid"))
+        val transposed = root.resolve("midi/transposed/A.mid"); writeMidi(transposed, 61)
+        val transposedRef = WorkflowArtifactReference("midi/transposed/A.mid", sha256(transposed))
+
+        val correctedPath = root.resolve(TechnicalCorrectionArtifactPaths.output("A", transposedRef.sha256)); writeMidi(correctedPath, 62)
+        val correctedRef = WorkflowArtifactReference(root.relativize(correctedPath).toString(), sha256(correctedPath))
+        val correctionReport = root.resolve(TechnicalCorrectionArtifactPaths.report("A", transposedRef.sha256)).also {
+            Files.createDirectories(requireNotNull(it.parent)); Files.writeString(it, "reviewed")
+        }
+        val correction = TechnicalCorrectionReferences(transposedRef, correctedRef,
+            WorkflowArtifactReference(root.relativize(correctionReport).toString(), sha256(correctionReport)), "c".repeat(64))
+
+        val approvedPath = root.resolve(MidiAiFixArtifactPaths.approved("A")); writeMidi(approvedPath, 63)
+        val approvedRef = WorkflowArtifactReference(MidiAiFixArtifactPaths.approved("A"), sha256(approvedPath))
+        val aiFix = MidiAiFixReferences(correctedRef.sha256, approved = approvedRef)
+
+        val enhancementContext = "d".repeat(64)
+        val enhancedPath = root.resolve(EnhancementArtifactPaths.output("A", enhancementContext)); writeMidi(enhancedPath, 64)
+        val enhancedRef = WorkflowArtifactReference(EnhancementArtifactPaths.output("A", enhancementContext), sha256(enhancedPath))
+        val enhancementReport = EnhancementEditReport(
+            subjectHash = "e".repeat(64), inputSha256 = approvedRef.sha256, outputSha256 = enhancedRef.sha256,
+            contextSha256 = enhancementContext, intensity = EnhancementIntensity.SUBTLE, processorId = "fixture", processorVersion = "1",
+            placeholder = true, appliedEdits = listOf(EnhancementEdit(EnhancementEditKind.VELOCITY, "m-" + "f".repeat(64), 1)), message = "bounded fixture edit"
+        )
+        val enhancementReportPath = root.resolve(EnhancementArtifactPaths.report("A", enhancementContext)).also {
+            Files.createDirectories(requireNotNull(it.parent)); Files.writeString(it, Json { encodeDefaults = true }.encodeToString(enhancementReport))
+        }
+        val enhancement = EnhancementReferences(EnhancementIntensity.SUBTLE, approvedRef, enhancedRef,
+            WorkflowArtifactReference(EnhancementArtifactPaths.report("A", enhancementContext), sha256(enhancementReportPath)), enhancementContext)
+
+        val feelContext = MidiFeelArtifactPaths.contextSha256(enhancedRef.sha256, MidiFeelProfile.LOFI_80_SWING_V1)
+        val feelPath = MidiFeelReportStore.derivedPath(root, "A", feelContext)
+        val feelReport = MidiLoFiFeelTransformer().transform(enhancedPath, feelPath, "A").report
+        val feelReportPath = MidiFeelReportStore.write(root, feelReport)
+        val feel = MidiFeelReferences(MidiFeelProfile.LOFI_80_SWING_V1, enhancedRef,
+            WorkflowArtifactReference(root.relativize(feelPath).toString(), sha256(feelPath)),
+            WorkflowArtifactReference(root.relativize(feelReportPath).toString(), sha256(feelReportPath)), feelContext)
+
+        val seed = project(MidiAnalysisInput.CURRENT, null)
+        val chainedMidi = requireNotNull(seed.parts.single().midi).copy(
+            transposed = transposedRef.file,
+            technicalCorrectionSelection = TechnicalCorrectionSelection.CORRECTED,
+            technicalCorrection = correction,
+            aiFixSelection = MidiAiFixSelection.APPROVED,
+            aiFix = aiFix,
+            enhancementSelection = EnhancementSelection.ENHANCED,
+            enhancement = enhancement,
+            analysisInput = MidiAnalysisInput.LOFI_FEEL,
+            feel = feel
+        )
+        val chained = seed.copy(parts = listOf(seed.parts.single().copy(midi = chainedMidi)))
+        val resolver = SelectedMidiArtifactResolver()
+
+        assertEquals(SelectedMidiArtifactKind.ENHANCED, resolver.resolveBeforeFeel(root, chained, "A").kind)
+        assertEquals(SelectedMidiArtifactKind.LOFI_FEEL, resolver.resolve(root, chained, "A").kind)
+        assertEquals(feel.derived.sha256, resolver.resolve(root, chained, "A").sha256)
+        assertFailsWith<IllegalArgumentException> {
+            resolver.resolve(root, chained.copy(parts = listOf(chained.parts.single().copy(midi = chainedMidi.copy(aiFixSelection = MidiAiFixSelection.SKIP)))), "A")
+        }
+
+        val noOpOutput = root.resolve(EnhancementArtifactPaths.output("A", "a".repeat(64))).also { Files.createDirectories(requireNotNull(it.parent)); Files.copy(approvedPath, it) }
+        val noOpRef = WorkflowArtifactReference(EnhancementArtifactPaths.output("A", "a".repeat(64)), sha256(noOpOutput))
+        val noOpReport = EnhancementEditReport(
+            subjectHash = "b".repeat(64), inputSha256 = approvedRef.sha256, outputSha256 = noOpRef.sha256,
+            contextSha256 = "a".repeat(64), intensity = EnhancementIntensity.SUBTLE, processorId = "fixture", processorVersion = "1",
+            placeholder = true, message = "no musical edit"
+        )
+        val noOpReportPath = root.resolve(EnhancementArtifactPaths.report("A", "a".repeat(64))).also {
+            Files.createDirectories(requireNotNull(it.parent)); Files.writeString(it, Json { encodeDefaults = true }.encodeToString(noOpReport))
+        }
+        val noOp = EnhancementReferences(EnhancementIntensity.SUBTLE, approvedRef, noOpRef,
+            WorkflowArtifactReference(EnhancementArtifactPaths.report("A", "a".repeat(64)), sha256(noOpReportPath)), "a".repeat(64))
+        val noOpProject = chained.copy(parts = listOf(chained.parts.single().copy(midi = chainedMidi.copy(
+            enhancementSelection = EnhancementSelection.NO_OP, enhancement = noOp, analysisInput = MidiAnalysisInput.CURRENT, feel = null
+        ))))
+        assertEquals(SelectedMidiArtifactKind.NO_OP, resolver.resolve(root, noOpProject, "A").kind)
+        assertEquals(approvedRef.sha256, resolver.resolve(root, noOpProject, "A").sha256)
+        assertFailsWith<IllegalArgumentException> {
+            resolver.resolve(root, noOpProject.copy(parts = listOf(noOpProject.parts.single().copy(midi = noOpProject.parts.single().midi!!.copy(enhancementSelection = EnhancementSelection.ENHANCED)))), "A")
         }
     }
 

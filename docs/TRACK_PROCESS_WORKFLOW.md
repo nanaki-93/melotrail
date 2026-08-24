@@ -60,7 +60,7 @@ dependencies or infer completion from page visits.
 | Setup/Harmony | Structured key/mode, tempo/meter, profile/mood, section progressions | Resolve missing/incompatible authority before musical stages |
 | Source/import | Immutable `source/<part>.*`, preparation report, `midi/raw/<part>.mid` | Reinspect/retranscribe/re-import only the affected source |
 | Clean/Normalize/Timing/Transpose | Separate MIDI plus quality/normalization/timing/transposition reports | Review cleanup and timing evidence; confirm low-confidence source key; rerun earliest stale stage |
-| Correction/AI Fix/Enhance/Feel | Hash-bound branch candidates and selections | Approve, reject, regenerate, select no-op/bypass; never copy by filename |
+| Correction/AI Fix/Enhance/Feel | One ordered, hash-bound chain: transposed -> corrected -> AI Fix -> Enhance -> Feel | Approve, reject, regenerate, or select `NO_OP`; Feel is regenerated from the selected upstream candidate and never copied by filename |
 | Analysis/Structure | `analysis/<part>.json`, stable `StructureOccurrence` entries | Reanalyze affected part or save intended occurrence order |
 | Source Song | Versioned two-track source MIDI/sidecar, connected candidate, critic report, approval | Preview exact source song; repair or explicitly review reported issues |
 | Arrangement | `song_plan.json`, `section_variations.json`, approved/draft detailed plan | Approve draft or regenerate from current authority/source approval |
@@ -96,7 +96,7 @@ instead of publishing MIDI. QP-008 binds downstream arrangement, Cohesion,
 criticism, humanization, preview, renderer, and release lineage to the approved
 connected full melody. It clips occurrence views through the authoritative
 sidecar; it never reconstructs piano timing from selected part durations. The
-remaining gaps are QP-009–QP-010 and must not be described as current
+remaining gap is QP-010 and must not be described as current
 capabilities.
 
 ## Arrangement and Cohesion boundary

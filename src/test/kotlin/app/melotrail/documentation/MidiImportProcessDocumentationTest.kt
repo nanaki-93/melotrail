@@ -40,8 +40,8 @@ class MidiImportProcessDocumentationTest {
         listOf(
             "`.mid` and `.midi`", "`prepared/<part>/report.json`", "`prepared/<part>/decoded.wav`",
             "`prepared/<part>/clean.wav`", "`midi/raw/<part>.mid`", "`midi/clean/<part>.mid`",
-            "`midi/quality/<part>.json`", "`midi/derived/<part>/lofi-80-swing-v1.mid`",
-            "`midi/feel/<part>/lofi-80-swing-v1.json`"
+            "`midi/quality/<part>.json`", "`midi/feel/<part>/<context-hash>/derived.mid`",
+            "`midi/feel/<part>/<context-hash>/report.json`"
         ).forEach { expected -> assertTrue(guide.contains(expected), "Guide must contain $expected") }
     }
 

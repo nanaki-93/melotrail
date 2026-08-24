@@ -68,8 +68,8 @@ enum class WorkflowChange {
 /** Centralized, deliberately non-destructive invalidation matrix. */
 object WorkflowArtifactGraph {
     private val orderedDerivedArtifacts = listOf(
-        WorkflowArtifact.TRANSPOSED_MIDI, WorkflowArtifact.CORRECTED_MIDI, WorkflowArtifact.ENHANCED_MIDI,
-        WorkflowArtifact.AI_FIX, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.ARRANGEMENT,
+        WorkflowArtifact.TRANSPOSED_MIDI, WorkflowArtifact.CORRECTED_MIDI, WorkflowArtifact.AI_FIX,
+        WorkflowArtifact.ENHANCED_MIDI, WorkflowArtifact.MIDI_FEEL, WorkflowArtifact.ANALYSIS, WorkflowArtifact.ARRANGEMENT,
         WorkflowArtifact.GENERATED_MIDI, WorkflowArtifact.CORE_ARRANGEMENT, WorkflowArtifact.COHESION, WorkflowArtifact.CRITIC,
         WorkflowArtifact.FULL_SONG_ENHANCEMENT, WorkflowArtifact.HUMANIZATION, WorkflowArtifact.STEMS,
         WorkflowArtifact.DRY_MIX, WorkflowArtifact.MIX_REPORT, WorkflowArtifact.AUDIO_TEXTURE, WorkflowArtifact.MASTER, WorkflowArtifact.RELEASE,
@@ -81,8 +81,10 @@ object WorkflowArtifactGraph {
     fun invalidatedBy(change: WorkflowChange): Set<WorkflowArtifact> = when (change) {
         WorkflowChange.SOURCE_OR_RAW -> setOf(WorkflowArtifact.CLEAN_MIDI) + from(WorkflowArtifact.TRANSPOSED_MIDI)
         WorkflowChange.CLEANED_MIDI, WorkflowChange.SOURCE_KEY -> from(WorkflowArtifact.TRANSPOSED_MIDI)
-        WorkflowChange.CORRECTION_SELECTION, WorkflowChange.ENHANCEMENT_SELECTION, WorkflowChange.AI_FIX_SELECTION -> from(WorkflowArtifact.ENHANCED_MIDI)
-        WorkflowChange.MIDI_FEEL -> from(WorkflowArtifact.ANALYSIS)
+        WorkflowChange.CORRECTION_SELECTION -> from(WorkflowArtifact.CORRECTED_MIDI)
+        WorkflowChange.AI_FIX_SELECTION -> from(WorkflowArtifact.AI_FIX)
+        WorkflowChange.ENHANCEMENT_SELECTION -> from(WorkflowArtifact.ENHANCED_MIDI)
+        WorkflowChange.MIDI_FEEL -> from(WorkflowArtifact.MIDI_FEEL)
         WorkflowChange.ANALYSIS, WorkflowChange.STRUCTURE, WorkflowChange.PART_SECTION -> from(WorkflowArtifact.ARRANGEMENT)
         WorkflowChange.ARRANGEMENT -> from(WorkflowArtifact.GENERATED_MIDI)
         WorkflowChange.GENERATED_MIDI -> from(WorkflowArtifact.CORE_ARRANGEMENT)

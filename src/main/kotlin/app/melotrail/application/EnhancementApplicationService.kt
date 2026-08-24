@@ -105,7 +105,8 @@ class DefaultEnhancementApplicationService(
         val report = readReport(root.resolve(refs.report.file)); require(report.acceptedPlanSha256 != null && report.anchorsRetained) { "Enhancement draft is missing validated plan evidence." }
         requireBoundEvidence(root, refs, report)
         requireCurrentAuthority(root, request.partId, refs)
-        val approved = refs.copy(approval = EnhancementApproval.APPROVED); update(root, request.partId, approved, EnhancementSelection.ENHANCED)
+        val approved = refs.copy(approval = EnhancementApproval.APPROVED)
+        update(root, request.partId, approved, if (report.appliedEdits.isEmpty()) EnhancementSelection.NO_OP else EnhancementSelection.ENHANCED)
         persistComparison(root, approved, report, StageEvidenceStatus.APPROVED)
         snapshot(request.partId, approved, report)
     }
@@ -130,8 +131,9 @@ class DefaultEnhancementApplicationService(
         requireBoundEvidence(root, refs, report)
         requireCurrentAuthority(root, request.partId, refs)
         require(sha256(root.resolve(refs.input.file)) == refs.input.sha256 && sha256(root.resolve(refs.output.file)) == refs.output.sha256) { "Retained enhancement evidence is stale." }
+        val selection = if (report.appliedEdits.isEmpty()) EnhancementSelection.NO_OP else EnhancementSelection.ENHANCED
         ProjectStore.write(root, project.copy(parts = project.parts.map {
-            if (it.id == part.id) it.copy(revision = it.revision + 1, analysis = null, midi = midi.copy(enhancementSelection = EnhancementSelection.ENHANCED, analysisInput = app.melotrail.arrangement.MidiAnalysisInput.CURRENT, feel = null)) else it
+            if (it.id == part.id) it.copy(revision = it.revision + 1, analysis = null, midi = midi.copy(enhancementSelection = selection)) else it
         }, workflow = project.workflow.invalidate(WorkflowChange.ENHANCEMENT_SELECTION).markCurrent(WorkflowArtifact.ENHANCED_MIDI)))
         snapshot(part.id, refs, report)
     }
@@ -151,7 +153,7 @@ class DefaultEnhancementApplicationService(
         return Current(project, midi, path, input)
     }
     private fun update(root: Path, partId: String, refs: EnhancementReferences, selection: EnhancementSelection) {
-        val project = ProjectStore.read(root); ProjectStore.write(root, project.copy(parts = project.parts.map { part -> if (part.id == partId) part.copy(analysis = null, midi = requireNotNull(part.midi).copy(enhancement = refs, enhancementSelection = selection, analysisInput = app.melotrail.arrangement.MidiAnalysisInput.CURRENT, feel = null)) else part }, workflow = project.workflow.invalidate(WorkflowChange.ENHANCEMENT_SELECTION).markCurrent(WorkflowArtifact.ENHANCED_MIDI)))
+        val project = ProjectStore.read(root); ProjectStore.write(root, project.copy(parts = project.parts.map { part -> if (part.id == partId) part.copy(analysis = null, midi = requireNotNull(part.midi).copy(enhancement = refs, enhancementSelection = selection)) else part }, workflow = project.workflow.invalidate(WorkflowChange.ENHANCEMENT_SELECTION).markCurrent(WorkflowArtifact.ENHANCED_MIDI)))
     }
     private fun requireCurrentAuthority(root: Path, partId: String, refs: EnhancementReferences) {
         val current = current(root, partId)

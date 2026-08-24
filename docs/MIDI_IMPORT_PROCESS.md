@@ -80,11 +80,12 @@ source remains intact and no invalid raw MIDI is selected. Follow
 | Transposed MIDI | `midi/transposed/<part>-<run>.mid` plus transposition report |
 | Monophonic prepared MIDI | `midi/prepared/<part>/<hash>.mid` plus `analysis/melody-preparation/<part>/<hash>.json` |
 | Harmony-fitted MIDI | `midi/harmony-fit/<part>/<occurrence>/<hash>.mid` plus `analysis/harmony-fit/<part>/<occurrence>/<hash>.json` |
-| Optional fixed Feel | `midi/derived/<part>/lofi-80-swing-v1.mid` and `midi/feel/<part>/lofi-80-swing-v1.json` |
+| Optional fixed Feel | `midi/feel/<part>/<context-hash>/derived.mid` and `midi/feel/<part>/<context-hash>/report.json`, each bound to the exact selected upstream artifact, profile, and processor version |
 
-The selected branch may additionally include Technical Correction, AI Fix, and
-per-track Enhance candidates. Selection and approval are hash-bound; an
-unselected branch cannot override the current candidate.
+The selected branch follows one order: transposed -> Technical Correction -> AI
+Fix -> per-track Enhance -> optional Feel. Selection and approval are
+hash/context/processor-bound; an unselected branch cannot override the current
+candidate, and zero-edit Enhance is recorded as `NO_OP`.
 
 ## Important current musical limitations
 
@@ -120,7 +121,7 @@ unselected branch cannot override the current candidate.
   and release evidence use the exact approved connected candidate; local views
   are clipped through its sidecar windows and cannot fall back to selected parts.
 
-These remaining limits are tracked by QP-008 through QP-010. Review the
+These remaining limits are tracked by QP-010. Review the
 connected source-song preview and Source Song Critic carefully; prepared-source
 completion is not musical approval, and a stale/missing approval blocks rather
 than allowing a later selected-part fallback.

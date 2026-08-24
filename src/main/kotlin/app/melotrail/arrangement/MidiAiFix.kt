@@ -729,14 +729,14 @@ object MidiAiFixStore {
         val approvedRef = WorkflowArtifactReference(MidiAiFixArtifactPaths.approved(partId), sha256(approved))
         val updatedRefs = refs.copy(approved = approvedRef)
         write(normalized.resolve(MidiAiFixArtifactPaths.provenance(partId)), json.encodeToString(MidiAiFixProvenance(partId = partId, inputSha256 = input.selectedInputSha256, outputSha256 = approvedRef.sha256, model = plan.model, approved = true)))
-        ProjectStore.write(normalized, project.copy(parts = project.parts.map { if (it.id == partId) it.copy(analysis = null, midi = midi.copy(aiFixSelection = MidiAiFixSelection.APPROVED, aiFix = updatedRefs, analysisInput = MidiAnalysisInput.CURRENT, feel = null)) else it }, workflow = project.workflow.invalidate(WorkflowChange.AI_FIX_SELECTION).markCurrent(WorkflowArtifact.AI_FIX)))
+        ProjectStore.write(normalized, project.copy(parts = project.parts.map { if (it.id == partId) it.copy(analysis = null, midi = midi.copy(aiFixSelection = MidiAiFixSelection.APPROVED, aiFix = updatedRefs)) else it }, workflow = project.workflow.invalidate(WorkflowChange.AI_FIX_SELECTION).markCurrent(WorkflowArtifact.AI_FIX)))
         return updatedRefs
     }
 
     fun selectCleaned(root: Path, partId: String): MidiAiFixReferences? {
         val normalized = root.toAbsolutePath().normalize(); val project = ProjectStore.read(normalized); val part = project.parts.singleOrNull { it.id == partId } ?: error("Part not found: $partId"); val midi = requireNotNull(part.midi)
         val changed = midi.aiFixSelection != MidiAiFixSelection.SKIP
-        val updated = project.copy(parts = project.parts.map { if (it.id == partId) it.copy(analysis = if (changed) null else it.analysis, midi = midi.copy(aiFixSelection = MidiAiFixSelection.SKIP, analysisInput = MidiAnalysisInput.CURRENT, feel = null)) else it }, workflow = if (changed) project.workflow.invalidate(WorkflowChange.AI_FIX_SELECTION).markCurrent(WorkflowArtifact.AI_FIX) else project.workflow)
+        val updated = project.copy(parts = project.parts.map { if (it.id == partId) it.copy(analysis = if (changed) null else it.analysis, midi = midi.copy(aiFixSelection = MidiAiFixSelection.SKIP)) else it }, workflow = if (changed) project.workflow.invalidate(WorkflowChange.AI_FIX_SELECTION).markCurrent(WorkflowArtifact.AI_FIX) else project.workflow)
         ProjectStore.write(normalized, updated); return midi.aiFix
     }
 
@@ -752,9 +752,7 @@ object MidiAiFixStore {
                     analysis = null,
                     midi = midi.copy(
                         aiFixSelection = MidiAiFixSelection.SKIP,
-                        aiFix = null,
-                        analysisInput = MidiAnalysisInput.CURRENT,
-                        feel = null
+                        aiFix = null
                     )
                 ) else it
             },

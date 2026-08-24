@@ -538,10 +538,10 @@ object ProjectValidator {
                     runCatching { midi.enhancement?.requireCanonical(part.id) }.exceptionOrNull()?.let { error ->
                         errors += "Part '${part.id}' enhancement references are invalid: ${error.message}"
                     }
-                    if (midi.enhancementSelection == EnhancementSelection.ENHANCED && midi.enhancement == null) {
-                        errors += "Part '${part.id}' selects enhanced MIDI without enhancement evidence"
+                    if (midi.enhancementSelection in setOf(EnhancementSelection.NO_OP, EnhancementSelection.ENHANCED) && midi.enhancement == null) {
+                        errors += "Part '${part.id}' selects enhancement output without enhancement evidence"
                     }
-                    if (midi.enhancementSelection == EnhancementSelection.ENHANCED && midi.enhancement?.approval != EnhancementApproval.APPROVED) {
+                    if (midi.enhancementSelection in setOf(EnhancementSelection.NO_OP, EnhancementSelection.ENHANCED) && midi.enhancement?.approval != EnhancementApproval.APPROVED) {
                         errors += "Part '${part.id}' selects enhancement without user approval"
                     }
                     midi.enhancement?.let { enhancement ->
@@ -568,8 +568,9 @@ object ProjectValidator {
                     midi.quality?.let { validateFileReference(root, it, "Part '${part.id}' MIDI quality report", errors) }
                     midi.normalization?.let { validateFileReference(root, it, "Part '${part.id}' MIDI normalization report", errors) }
                     midi.feel?.let { feel ->
-                        validateFileReference(root, feel.derived, "Part '${part.id}' Lo-fi Feel MIDI", errors)
-                        validateFileReference(root, feel.report, "Part '${part.id}' Lo-fi Feel report", errors)
+                        validateArtifactReference(root, feel.input, "Part '${part.id}' Lo-fi Feel input", errors)
+                        validateArtifactReference(root, feel.derived, "Part '${part.id}' Lo-fi Feel MIDI", errors)
+                        validateArtifactReference(root, feel.report, "Part '${part.id}' Lo-fi Feel report", errors)
                     }
                     if (midi.analysisInput == MidiAnalysisInput.LOFI_FEEL && midi.feel == null) {
                         errors += "Part '${part.id}' selects Lo-fi Feel without a derived MIDI artifact"

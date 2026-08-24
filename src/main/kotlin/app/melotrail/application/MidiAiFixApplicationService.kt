@@ -121,8 +121,7 @@ class DefaultMidiAiFixApplicationService(
         val refs = MidiAiFixStore.selectCleaned(normalized, partId)
         if (refs == null) {
             ProjectStore.write(normalized, project.copy(parts = project.parts.map {
-                if (it.id == partId) it.copy(analysis = null, midi = midi.copy(aiFixSelection = app.melotrail.arrangement.MidiAiFixSelection.SKIP,
-                    analysisInput = app.melotrail.arrangement.MidiAnalysisInput.CURRENT, feel = null)) else it
+                if (it.id == partId) it.copy(analysis = null, midi = midi.copy(aiFixSelection = app.melotrail.arrangement.MidiAiFixSelection.SKIP)) else it
             }))
             return@locked null
         }

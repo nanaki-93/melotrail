@@ -86,14 +86,18 @@ class PartPreviewApplicationServiceTest {
         val clean = root.resolve("midi/clean/A.mid"); Files.createDirectories(clean.parent); Files.copy(sourceMidi, clean)
         val approvedReference = MidiAiFixArtifactPaths.approved("A")
         val approved = root.resolve(approvedReference); writeMidi(approved, 64)
-        val derived = MidiFeelReportStore.derivedPath(root, "A", MidiFeelProfile.LOFI_80_SWING_V1)
+        val input = WorkflowArtifactReference(approvedReference, sha256(approved))
+        val context = app.melotrail.arrangement.MidiFeelArtifactPaths.contextSha256(input.sha256, MidiFeelProfile.LOFI_80_SWING_V1)
+        val derived = MidiFeelReportStore.derivedPath(root, "A", context)
         val feelReport = MidiLoFiFeelTransformer().transform(approved, derived, "A").report
         val reportPath = MidiFeelReportStore.write(root, feelReport)
         val cleanup = MidiCleanupOptions()
         val quality = MidiQualityReporter().report("A", raw, clean, cleanup)
         val qualityPath = MidiQualityReportStore.write(root, quality)
-        val feelReferences = MidiFeelReferences(MidiFeelProfile.LOFI_80_SWING_V1, root.relativize(derived).toString(), root.relativize(reportPath).toString())
-        assertTrue(MidiFeelReportStore.isCurrent(root, "A", approvedReference, feelReferences))
+        val feelReferences = MidiFeelReferences(MidiFeelProfile.LOFI_80_SWING_V1, input,
+            WorkflowArtifactReference(root.relativize(derived).toString(), sha256(derived)),
+            WorkflowArtifactReference(root.relativize(reportPath).toString(), sha256(reportPath)), context)
+        assertTrue(MidiFeelReportStore.isCurrent(root, "A", input, feelReferences))
         val originalArtifacts = listOf(sourceMidi, sourceAudio, raw, clean, approved).associateWith(Files::readAllBytes)
         val project = Project(
             version = Project.CURRENT_VERSION,
@@ -112,9 +116,9 @@ class PartPreviewApplicationServiceTest {
             renderFormat = RenderFormat()
         )
         ProjectStore.write(root, project)
-        val resolvedBase = SelectedMidiArtifactResolver().resolve(root, project.copy(parts = project.parts.map { it.copy(midi = it.midi!!.copy(analysisInput = MidiAnalysisInput.CURRENT)) }), "A")
+        val resolvedBase = SelectedMidiArtifactResolver().resolveBeforeFeel(root, project, "A")
         assertEquals(approvedReference, resolvedBase.projectRelativePath)
-        assertTrue(MidiFeelReportStore.isCurrent(root, "A", resolvedBase.projectRelativePath, feelReferences))
+        assertTrue(MidiFeelReportStore.isCurrent(root, "A", WorkflowArtifactReference(resolvedBase.projectRelativePath, resolvedBase.sha256), feelReferences))
         val renderer = CapturingRenderer()
 
         val result = DefaultPartPreviewApplicationService(renderer).resolve(PreviewRequest(root, "A", midiSource = PreviewMidiSource.LOFI_FEEL))

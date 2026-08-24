@@ -136,7 +136,7 @@ Before arranging a current project:
 
 If section starts drift away from the bar grid, different modes remain audible,
 simultaneous melody notes survive, or exposed notes clash with the active chord,
-treat the project as a private diagnostic run until QP-009–QP-010 are
+treat the project as a private diagnostic run until QP-010 is
 implemented or the candidate is manually corrected and reviewed. Audio effects,
 mastering, and Cohesion cannot repair a fundamentally misaligned source melody.
 

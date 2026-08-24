@@ -285,10 +285,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/ProjectApplicationService.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/application/ProjectApplicationService.kt has 116 callable declarations, 10 directly documented and 106 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 116,
-      "declarationDigest": "a3c629e6f082625553f41eb76f7ffa7fb49910486d2d1abad4bdeab8a286e96e",
-      "documentedFunctionCount": 10
+      "reason": "src/main/kotlin/app/melotrail/application/ProjectApplicationService.kt has 115 callable declarations, 12 directly documented and 103 still requiring focused KDoc/docstrings. QP-009 reviewed the content-addressed Feel publication and canonical upstream resolution on 2026-08-24; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "functionCount": 115,
+      "declarationDigest": "6d00a203250e05ee4405319c8e07bf976735485e88d88806b547c927d2a0a11d",
+      "documentedFunctionCount": 12
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/ProjectMutationCoordinator.kt",
@@ -621,9 +621,9 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/MidiLoFiFeel.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/MidiLoFiFeel.kt has 20 callable declarations, 0 directly documented and 20 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 20,
-      "declarationDigest": "a8406393d056a97a9f761d196a5a8b5dab6350c610c26106deeee2b435e7b704",
+      "reason": "src/main/kotlin/app/melotrail/arrangement/MidiLoFiFeel.kt has 24 callable declarations, 0 directly documented and 24 still requiring focused KDoc/docstrings. QP-009 reviewed its content-addressed input/context/processor binding and non-overwrite behavior on 2026-08-24; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "functionCount": 24,
+      "declarationDigest": "5b3699fe99446e88984266782a97b82e4d41b692bcea3711cefd98b31b67f87d",
       "documentedFunctionCount": 0
     },
     {
@@ -773,10 +773,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/SelectedMidiArtifactResolver.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/SelectedMidiArtifactResolver.kt has 9 callable declarations, 0 directly documented and 9 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 9,
-      "declarationDigest": "ab98441b0a6839dbacc5af3bbdda205f06265ab9fa383b69824db4ac948135f8",
-      "documentedFunctionCount": 0
+      "reason": "src/main/kotlin/app/melotrail/arrangement/SelectedMidiArtifactResolver.kt has 14 callable declarations, 3 directly documented and 11 still requiring focused KDoc/docstrings. QP-009 reviewed the sole explicit selected-artifact chain and its pre-Feel boundary on 2026-08-24; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "functionCount": 14,
+      "declarationDigest": "37645864690446d9e08a1dfed46b073dffb3a4e3b26c8821aa03b8bb21996cac",
+      "documentedFunctionCount": 3
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/SfizzInstrumentRenderer.kt",
