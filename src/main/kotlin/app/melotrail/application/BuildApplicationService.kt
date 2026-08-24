@@ -11,6 +11,8 @@ import app.melotrail.arrangement.DetailedArrangementStore
 import app.melotrail.arrangement.ReleaseFingerprint
 import app.melotrail.arrangement.ReleaseSimilarityCritic
 import app.melotrail.arrangement.ReleaseSimilarityReport
+import app.melotrail.arrangement.StemRenderReport
+import app.melotrail.arrangement.WorkflowArtifactReference
 import app.melotrail.audio.AudioBuffer
 import app.melotrail.audio.WAVDecoder
 import app.melotrail.dsp.DSPChain
@@ -288,6 +290,7 @@ class DefaultBuildApplicationService(
         val inputAudio = validate(input, "Master input")
         val audio = validate(master, "Master")
         val similarityReview = releaseSimilarityReview(root, request.similarityReferences)
+        val canonicalFullMelody = releaseMelodyLineage(root)
         val release = DesktopReleaseMetadata(
             master = "master.wav", masterFingerprint = digest(master), inputArtifact = root.relativize(input).toString(),
             inputFingerprint = digest(input), inputSampleRate = inputAudio.sampleRate, inputChannels = inputAudio.channels,
@@ -303,6 +306,7 @@ class DefaultBuildApplicationService(
             loFiStrength = request.loFiStrength.takeIf { request.enableLoFi },
             loFiMeanAbsoluteDelta = if (request.enableLoFi) audioDelta(root.resolve("mix/repaired.wav"), root.resolve("mix/lofi.wav")) else null,
             mp3 = mp3?.let { DesktopMp3Metadata("song.mp3", digest(it), request.mp3BitrateKbps) },
+            canonicalFullMelody = canonicalFullMelody,
             similarityReview = similarityReview
         )
         val target = root.resolve("output/release.json")
@@ -313,6 +317,18 @@ class DefaultBuildApplicationService(
             try { Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING) }
             catch (_: AtomicMoveNotSupportedException) { Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING) }
         } finally { Files.deleteIfExists(temporary) }
+    }
+
+    /** Bind release evidence to the same approved connected melody that supplied every rendered piano section. */
+    private fun releaseMelodyLineage(root: Path): WorkflowArtifactReference {
+        val approved = DefaultSourceSongCriticApplicationService().requireApprovedMelody(root)
+        val reportPath = root.resolve("stem-render.json").normalize()
+        require(reportPath.startsWith(root) && Files.isRegularFile(reportPath)) { "Release requires a current stem-render report with canonical melody lineage." }
+        val report = json.decodeFromString(StemRenderReport.serializer(), Files.readString(reportPath, StandardCharsets.UTF_8))
+        require(report.canonicalFullMelody == approved.connectedMidi) {
+            "Stem-render melody lineage is stale. Rerender stems from the approved connected full melody before release."
+        }
+        return approved.connectedMidi
     }
 
     private fun releaseSimilarityReview(root: Path, references: List<ReleaseFingerprint>): ReleaseSimilarityReport {
@@ -342,7 +358,7 @@ class DefaultBuildApplicationService(
     private data class AudioDescriptor(val sampleRate: Int, val channels: Int, val frames: Long, val peak: Double)
 
     @Serializable private data class DesktopReleaseMetadata(
-        val version: Int = 1, val master: String, val masterFingerprint: String, val inputArtifact: String,
+        val version: Int = 2, val master: String, val masterFingerprint: String, val inputArtifact: String,
         val inputFingerprint: String, val inputSampleRate: Int, val inputChannels: Int, val inputPcmBitDepth: Int,
         val sampleRate: Int, val channels: Int, val pcmBitDepth: Int, val frameCount: Long, val durationSeconds: Double,
         val peak: Double, val peakDb: Double, val masteringProfile: String, val integratedLufs: Double, val truePeakDbtp: Double,
@@ -351,6 +367,7 @@ class DefaultBuildApplicationService(
         val repairEnabled: Boolean, val loFiAudioTextureEnabled: Boolean,
         val loFiPreset: String? = null, val loFiStrength: Double? = null, val loFiMeanAbsoluteDelta: Double? = null,
         val mp3: DesktopMp3Metadata? = null,
+        val canonicalFullMelody: WorkflowArtifactReference,
         val similarityReview: ReleaseSimilarityReport
     )
     @Serializable private data class DesktopMp3Metadata(val name: String, val fingerprint: String, val bitrateKbps: Int, val format: String = "MP3")

@@ -21,6 +21,7 @@ import app.melotrail.arrangement.SongPart
 import app.melotrail.arrangement.SongPlan
 import app.melotrail.arrangement.SongPlanningInput
 import app.melotrail.arrangement.StructureOccurrence
+import app.melotrail.arrangement.StemRenderReport
 import app.melotrail.arrangement.WorkflowArtifactReference
 import app.melotrail.arrangement.sha256
 import app.melotrail.arrangement.canonicalMidiReferences
@@ -161,11 +162,17 @@ class ReferenceSongIntegrationTest {
         val project = ProjectStore.read(root)
         val hashes = requireNotNull(project.workflow.humanization).artifacts
             .associate { it.id to it.output.sha256 }
-        assertTrue(hashes.keys.containsAll(setOf("piano-verse-1", "piano-chorus-1", "piano-verse-2", "bass", "drums", "pad", "strings")))
+        assertEquals(setOf("bass", "drums", "pad", "strings"), hashes.keys)
 
         val renderer = FakeRenderer()
         arrangements.renderApprovedStems(root, renderer)
         assertEquals(LogicalInstrument.entries.toSet(), renderer.rendered)
+        val approvedMelody = DefaultSourceSongCriticApplicationService().requireApprovedMelody(root)
+        val renderedProject = ProjectStore.read(root)
+        assertEquals(approvedMelody.connectedMidi.sha256, requireNotNull(renderedProject.workflow.coreArrangement).pianoSha256)
+        assertTrue(requireNotNull(renderedProject.workflow.cohesion).occurrences.all { it.sourceSha256 == approvedMelody.connectedMidi.sha256 })
+        val stemReport = JSON.decodeFromString(StemRenderReport.serializer(), Files.readString(root.resolve("stem-render.json")))
+        assertEquals(approvedMelody.connectedMidi, stemReport.canonicalFullMelody)
         return RunResult(hashes, project.envelope.structureOccurrences.size, requireNotNull(project.workflow.cohesion).boundaries.size, renderer.rendered.isNotEmpty(), modelCalls)
     }
 

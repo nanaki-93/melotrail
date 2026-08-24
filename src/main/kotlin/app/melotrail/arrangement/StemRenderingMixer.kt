@@ -43,7 +43,7 @@ class StemRenderingMixer(
         requireCurrentFullSongEnhancement(root, project)
         val cohesiveOverlay = project.workflow.cohesion?.approved == true && WorkflowArtifact.COHESION !in project.workflow.stale
         val timeline = Timeline.create(arrangement, analyses, cohesiveOverlay)
-        val occurrenceMidi = resolveOccurrenceMidi(root, project, arrangement, analyses)
+        val occurrenceMidi = resolveOccurrenceMidi(root, project, arrangement, analyses, timeline)
         val activeNames = arrangement.sections.flatMap { it.instruments }.map { LogicalInstrument.parse(it.name) }.toSet()
         val active = LogicalInstrument.entries.filter { it in activeNames }
         require(active.isNotEmpty()) { "Detailed arrangement has no active instruments" }
@@ -132,6 +132,10 @@ class StemRenderingMixer(
             appliedGain = mixed.appliedGain,
             appliedGainDb = mixed.appliedGainDb,
             sourceHashes = sourceHashes,
+            canonicalFullMelody = WorkflowArtifactReference(
+                occurrenceMidi.values.map(OccurrenceMidiArtifact::canonicalFullMelodyPath).distinct().single(),
+                occurrenceMidi.values.map(OccurrenceMidiArtifact::canonicalFullMelodySha256).distinct().single()
+            ),
             cohesionBoundaryHashes = arrangement.cohesion?.boundaries.orEmpty().associate { boundary ->
                 "${boundary.outgoingInstanceId}--${boundary.incomingInstanceId}" to boundary.approvedSha256
             },
@@ -151,26 +155,19 @@ class StemRenderingMixer(
         return StemRenderResult(report, reused = false)
     }
 
-    private fun resolveOccurrenceMidi(root: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>): Map<String, OccurrenceMidiArtifact> {
+    private fun resolveOccurrenceMidi(root: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>, timeline: Timeline): Map<String, OccurrenceMidiArtifact> {
         val occurrences = arrangement.sections.map { SectionInstance(it.index, it.partId, it.instanceId) }
         val resolved = OccurrenceMidiArtifactResolver().resolve(root, project, occurrences)
         val arrangementIds = arrangement.sections.map(DetailedArrangementSection::instanceId)
-        if (project.workflow.cohesion?.approved == true) require(resolved.map(OccurrenceMidiArtifact::occurrenceId) == arrangementIds) {
-            "Resolved selected MIDI does not match the approved arrangement occurrences."
+        require(resolved.map(OccurrenceMidiArtifact::occurrenceId) == arrangementIds &&
+            resolved.zip(timeline.segments).all { (occurrence, segment) ->
+                occurrence.partId == segment.partId && occurrence.ppq == timeline.ppq &&
+                    occurrence.startTick == segment.originalStartTick && occurrence.endTick == segment.originalEndTick
+            }) { "Rendered piano timeline does not match the approved full-melody sidecar. Re-run Source Song Critic, arrangement, and downstream stages." }
+        require(resolved.map(OccurrenceMidiArtifact::canonicalFullMelodySha256).distinct().size == 1) {
+            "Rendered piano occurrences do not share one approved connected full melody."
         }
-        return arrangementIds.zip(resolved.map { occurrence ->
-            val pianoId = if (project.workflow.humanization?.processorVersion == "seeded-humanization-v1") {
-                "piano-${occurrence.partId}"
-            } else {
-                "piano-${occurrence.occurrenceId}"
-            }
-            val selected = humanizedInput(root, project, pianoId, fullSongEnhancedInput(root, project, pianoId, occurrence.path))
-            if (selected == occurrence.path) occurrence else occurrence.copy(
-                path = selected,
-                projectRelativePath = root.relativize(selected).toString().replace('\\', '/'),
-                sha256 = digest(Files.readAllBytes(selected))
-            )
-        }).toMap()
+        return arrangementIds.zip(resolved).toMap()
     }
 
     /** Uses only a current, hash-bound selected run; bypass intentionally returns cohesive input unchanged. */
@@ -641,8 +638,10 @@ private data class Timeline(val ppq: Int, val segments: List<TimelineSegment>) {
     }
 }
 @Serializable data class StemRenderReport(
-    val version: Int = 3, val inputFingerprint: String, val timelineFrames: Long, val sampleRate: Int, val channels: Int,
+    val version: Int = 4, val inputFingerprint: String, val timelineFrames: Long, val sampleRate: Int, val channels: Int,
     val stems: List<StemArtifact>, val dryMix: String, val dryMixFingerprint: String, val predictedPeak: Float, val appliedGain: Float, val appliedGainDb: Double, val sourceHashes: Map<String, String>,
+    /** Exact approved connected full melody used for every rendered piano occurrence. */
+    val canonicalFullMelody: WorkflowArtifactReference? = null,
     /** Exact approved Cohesion decision hashes consumed by this render; empty for legacy arrangements. */
     val cohesionBoundaryHashes: Map<String, String> = emptyMap(),
     /** Exact approved Cohesion bridge-MIDI hashes consumed by this render; empty for legacy arrangements. */

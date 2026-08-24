@@ -1,6 +1,7 @@
 package app.melotrail.application
 
 import app.melotrail.arrangement.FullSongCriticReport
+import app.melotrail.arrangement.ApprovedFullMelodyOccurrencePaths
 import app.melotrail.arrangement.MidiMutationBudget
 import app.melotrail.arrangement.MidiMutationReport
 import app.melotrail.arrangement.ProjectStore
@@ -278,6 +279,13 @@ class StageComparisonService {
         project.workflow.critic?.let { add(it.report) }
         project.workflow.fullSongEnhancement?.let { run -> run.artifacts.forEach { add(it.input); add(it.output) }; run.plan?.let(::add); run.report?.let(::add) }
         project.workflow.humanization?.let { run -> run.artifacts.forEach { add(it.input); add(it.output) }; add(run.report) }
+        runCatching { DefaultSourceSongCriticApplicationService().requireApprovedMelody(root) }.getOrNull()?.let { approved ->
+            add(approved.sourceSongSidecar); add(approved.connectionSidecar); add(approved.connectedMidi)
+            add(approved.criticReport); add(approved.approvalSidecar)
+            approved.sourceSong.fullMelody.occurrences.forEach { window ->
+                addPath(ApprovedFullMelodyOccurrencePaths.midi(approved.sourceSong.contextSha256, approved.connectedMidi.sha256, window.occurrenceId))
+            }
+        }
     }
 
     private fun readMidi(path: Path, expectedHash: String): List<MidiNote> {

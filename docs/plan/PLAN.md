@@ -23,7 +23,8 @@ melody:
   provenance;
 - preserves recognizable protected anchors after deterministic preparation;
 - is the exact piano/melody input used by arrangement, Cohesion, humanization,
-  rendering, criticism, and release evidence.
+  preview, rendering, criticism, and release evidence; downstream occurrence
+  views are clipped from its authoritative sidecar windows.
 
 The final product target is original, release-quality music suitable for human
 review and YouTube release preparation. Melotrail can provide technical,
@@ -238,8 +239,8 @@ The roadmap is complete only when:
 - the approved full melody is globally monophonic and harmonically valid;
 - drums and bass follow one bounded occurrence-indexed full-song groove map, and
   pad/string voice leading remains smooth across section boundaries;
-- arrangement, Cohesion, humanization, render, and release lineage all reference
-  that exact approved melody;
+- arrangement, Cohesion, criticism, humanization, preview, render, and release
+  lineage all reference that exact approved melody;
 - critical critic findings cannot silently pass a quality-certified build;
 - targeted changes demonstrably reduce rather than increase code-owned issues;
 - kick/bass low-end interaction is controlled without pumping, and the exact

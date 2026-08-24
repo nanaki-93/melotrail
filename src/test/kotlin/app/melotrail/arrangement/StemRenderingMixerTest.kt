@@ -3,6 +3,20 @@ package app.melotrail.arrangement
 import app.melotrail.audio.AudioBuffer
 import app.melotrail.audio.AudioFormat
 import app.melotrail.audio.WAVDecoder
+import app.melotrail.application.approveSourceSongForArrangement
+import app.melotrail.harmony.ChordEvent
+import app.melotrail.harmony.ChordEventId
+import app.melotrail.harmony.ChordProgression
+import app.melotrail.harmony.ChordQuality
+import app.melotrail.harmony.HarmonySettings
+import app.melotrail.music.MusicalKey
+import app.melotrail.music.PitchClass
+import app.melotrail.music.PitchSpelling
+import app.melotrail.music.ScaleModeId
+import app.melotrail.music.Tempo
+import app.melotrail.music.TimeSignature
+import app.melotrail.profile.CompositionProfileRef
+import app.melotrail.profile.MoodRef
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -19,6 +33,8 @@ import javax.sound.midi.MidiEvent
 import javax.sound.midi.MidiSystem
 import javax.sound.midi.Sequence
 import javax.sound.midi.ShortMessage
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class StemRenderingMixerTest {
     @TempDir lateinit var root: Path
@@ -48,10 +64,9 @@ class StemRenderingMixerTest {
         Files.createDirectories(root.resolve("midi/clean"))
         Files.copy(root.resolve("source/A.mid"), root.resolve("midi/clean/A.mid"))
         Files.copy(root.resolve("source/B.mid"), root.resolve("midi/clean/B.mid"))
-        val project = project()
+        val project = approvedProject(project())
         writeMidi(root.resolve("midi/generated/bass.mid"), 0, 3_840)
         writeMidi(root.resolve("midi/generated/transitions.mid"), 1_920, 2_040)
-        ProjectStore.write(root, project)
 
         val renderer = FakeRenderer()
         val service = StemRenderingMixer(renderer, libraryRoot = TestSoundLibrary.root())
@@ -61,7 +76,7 @@ class StemRenderingMixerTest {
         assertEquals(2, renderer.calls)
         assertEquals(48_000, first.report.timelineFrames) // two 2-second sections plus one 2-second inserted 4/4 bar
         assertEquals(listOf("piano", "bass"), first.report.stems.map { it.name })
-        assertEquals(3, first.report.version)
+        assertEquals(4, first.report.version)
         assertEquals(listOf("bass", "piano"), first.report.instruments.map { it.role })
         assertTrue(first.report.instruments.all { it.legacyAlias && it.stableInstrumentId == it.role && it.assets.isNotEmpty() })
         assertTrue(first.report.instruments.all { it.productionApproved && it.qualityTier == InstrumentQualityTier.PRODUCTION && it.license.license.isNotBlank() && it.sourceLibrary.id.isNotBlank() })
@@ -108,7 +123,7 @@ class StemRenderingMixerTest {
         Files.createDirectories(root.resolve("midi/clean"))
         Files.copy(root.resolve("source/A.mid"), root.resolve("midi/clean/A.mid"))
         Files.copy(root.resolve("source/B.mid"), root.resolve("midi/clean/B.mid"))
-        val project = project()
+        val project = approvedProject(project())
         writeMidi(root.resolve("midi/generated/bass.mid"), 0, 3_840)
         writeMidi(root.resolve("midi/generated/transitions.mid"), 1_920, 2_040)
 
@@ -131,10 +146,11 @@ class StemRenderingMixerTest {
         Files.createDirectories(root.resolve("midi/clean"))
         Files.copy(root.resolve("source/A.mid"), root.resolve("midi/clean/A.mid"))
         Files.copy(root.resolve("source/B.mid"), root.resolve("midi/clean/B.mid"))
-        val project = project().copy(envelope = ProjectV4Envelope(arrangementAssignments = listOf(
+        val base = project()
+        val project = approvedProject(base.copy(envelope = base.envelope.copy(arrangementAssignments = listOf(
             assignment("A1", "fixture-piano"), assignment("A1", "fixture-bass"),
             assignment("B1", "fixture-piano"), assignment("B1", "fixture-bass")
-        )))
+        ))))
         writeMidi(root.resolve("midi/generated/bass.mid"), 0, 3_840)
 
         val renderer = StableIdRenderer()
@@ -160,8 +176,32 @@ class StemRenderingMixerTest {
         ),
         renderFormat = RenderFormat(8_000, 1, 24),
         workflow = criticBypassWorkflow(),
-        envelope = ProjectV4Envelope(structureOccurrences = listOf(StructureOccurrence("A1", "A"), StructureOccurrence("B1", "B")))
+        envelope = ProjectV4Envelope(
+            compositionSettings = CompositionSettings(
+                key = MusicalKey(PitchClass.of(PitchSpelling.C), ScaleModeId.MAJOR), tempo = Tempo(120.0), timeSignature = TimeSignature(4, 4),
+                profile = CompositionProfileRef("lofi", 1), mood = MoodRef("warm", 1), decisionRevision = 1,
+                resolvedProfileSha256 = "a".repeat(64), decisionSha256 = "b".repeat(64)
+            ),
+            harmony = HarmonySettings(progressions = listOf(ChordProgression(app.melotrail.harmony.SectionTypeId("verse"), listOf(
+                ChordEvent(ChordEventId("render-verse"), PitchClass.of(PitchSpelling.C), ChordQuality.MAJOR, 0)
+            )))),
+            structureOccurrences = listOf(StructureOccurrence("A1", "A"), StructureOccurrence("B1", "B"))
+        )
     )
+
+    /** Build the same approved full-melody prerequisite that the production render path requires. */
+    private fun approvedProject(project: Project): Project {
+        Files.createDirectories(root.resolve("analysis"))
+        val analyzed = project.copy(parts = project.parts.map { part ->
+            val analysis = MidiPartAnalyzer().analyze(root.resolve("midi/clean/${part.id}.mid"), part.id)
+            val relative = "analysis/${part.id}.midi.json"
+            Files.writeString(root.resolve(relative), Json.encodeToString(MidiAnalysis.serializer(), analysis))
+            part.copy(analysis = PartAnalysisReference(relative, AnalysisKind.MIDI))
+        })
+        ProjectStore.write(root, analyzed)
+        approveSourceSongForArrangement(root)
+        return analyzed
+    }
 
     private fun criticBypassWorkflow(): ProjectWorkflowReferences {
         val inputHash = "c".repeat(64)
@@ -194,7 +234,8 @@ class StemRenderingMixerTest {
             libraryId = "fixture-pack",
             licenseSha256 = sha256("Fixture|Fixture|third-party|CC0-1.0|true|false||unknown".toByteArray()),
             provenanceSha256 = sha256("fixture-pack|Fixture pack|1|fixture source".toByteArray())
-        )
+        ),
+        logicalInstrument = instrumentId.removePrefix("fixture-")
     )
 
     private fun writeV2Catalog(library: Path) {

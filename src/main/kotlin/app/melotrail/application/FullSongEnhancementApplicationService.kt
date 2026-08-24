@@ -67,7 +67,8 @@ class DefaultFullSongEnhancementApplicationService(
         throw IllegalStateException("No Full-Song Enhance model is configured. Choose Bypass, or configure the approved local planner.")
     },
     private val authorityBuilder: MusicalAuthorityBuilder = MusicalAuthorityBuilder(),
-    private val criticService: FullSongCriticApplicationService = DefaultFullSongCriticApplicationService()
+    private val criticService: FullSongCriticApplicationService = DefaultFullSongCriticApplicationService(),
+    private val sourceSongCritic: SourceSongCriticApplicationService = DefaultSourceSongCriticApplicationService()
 ) : FullSongEnhancementApplicationService {
     override fun generateCandidate(root: Path): FullSongEnhancementSnapshot = locked(root) { normalized ->
         val current = current(normalized)
@@ -156,6 +157,7 @@ class DefaultFullSongEnhancementApplicationService(
         val project = ProjectStore.read(root).also { it.requireValid(root) }
         val cohesion = requireNotNull(project.workflow.cohesion) { "Full-Song Enhance requires approved Cohesion." }
         require(cohesion.approved && WorkflowArtifact.COHESION !in project.workflow.stale) { "Full-Song Enhance requires current approved Cohesion." }
+        val approvedMelody = sourceSongCritic.requireApprovedMelody(root)
         val critic = requireNotNull(project.workflow.critic) { "Full-Song Enhance requires a current Critic report." }
         require(WorkflowArtifact.CRITIC !in project.workflow.stale) { "Critic report is stale. Rerun Critic after Cohesion." }
         val criticPath = verified(root, critic.report, "Critic report")
@@ -166,10 +168,9 @@ class DefaultFullSongEnhancementApplicationService(
         require(report.contextSha256 == authority.contextSha256) { "Critic report is stale for the canonical musical context." }
         val targets = buildList {
             cohesion.occurrences.sortedBy { it.instanceId }.forEach { occurrence ->
-                require(occurrence.approved && occurrence.cohesionInputSha256 == cohesion.inputSha256) { "Cohesion occurrence '${occurrence.instanceId}' is stale." }
-                val offset = authority.occurrences.singleOrNull { it.occurrenceId == occurrence.instanceId }?.startTick
-                    ?: error("Cohesion occurrence '${occurrence.instanceId}' is absent from canonical context.")
-                add(target("piano-${occurrence.instanceId}", "piano", occurrence.instanceId, offset, occurrence.result, root))
+                require(occurrence.approved && occurrence.cohesionInputSha256 == cohesion.inputSha256 && occurrence.sourceSha256 == approvedMelody.connectedMidi.sha256) {
+                    "Cohesion occurrence '${occurrence.instanceId}' is stale for the approved connected full melody. Regenerate Cohesion."
+                }
             }
             cohesion.roles.sortedBy { it.role }.forEach { role ->
                 require(role.approved && role.cohesionInputSha256 == cohesion.inputSha256) { "Cohesion role '${role.role}' is stale." }

@@ -118,8 +118,7 @@ class DefaultPartPreviewApplicationService(
     private val renderer: InstrumentRenderer,
     private val mp3Decoder: PreviewMp3Decoder = JavaSoundPreviewMp3Decoder(),
     private val rendererConfigurationFingerprint: () -> String = { renderer.javaClass.name },
-    private val sourceSongService: SourceSongApplicationService = SourceSongApplicationService(),
-    private val connectionPlanner: app.melotrail.arrangement.MelodyConnectionPlanner = app.melotrail.arrangement.MelodyConnectionPlanner()
+    private val sourceSongCritic: SourceSongCriticApplicationService = DefaultSourceSongCriticApplicationService()
 ) : PartPreviewApplicationService {
     override suspend fun resolve(request: PreviewRequest): PreviewResult = withContext(Dispatchers.IO) {
         val stages = mutableListOf(PreviewStage.VALIDATE)
@@ -163,11 +162,12 @@ class DefaultPartPreviewApplicationService(
             val project = ProjectStore.read(root).also { it.requireValid(root) }
             val format = project.renderFormat
                 ?: return@withContext PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Project render format is required before previewing the connected source melody.")
-            val sourceSong = sourceSongService.assemble(root).song
-            val connection = connectionPlanner.connect(root, sourceSong).connection
-            val midi = root.resolve(connection.outputMidi.file).normalize()
-            if (!midi.startsWith(root) || !Files.isRegularFile(midi) || digest(Files.readAllBytes(midi)) != connection.outputMidi.sha256) {
-                return@withContext PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Connected source melody is missing or stale. Recreate the source-song connection.")
+            val approved = try { sourceSongCritic.requireApprovedMelody(root) } catch (error: IllegalArgumentException) {
+                return@withContext PreviewResult.Prerequisite(PreviewStage.VALIDATE, error.message ?: "Run Source Song Critic and approve the connected full melody before previewing it.")
+            }
+            val midi = root.resolve(approved.connectedMidi.file).normalize()
+            if (!midi.startsWith(root) || !Files.isRegularFile(midi) || digest(Files.readAllBytes(midi)) != approved.connectedMidi.sha256) {
+                return@withContext PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Approved connected full melody is missing or stale. Rerun Source Song Critic and approve the current melody.")
             }
             val duration = MidiSystem.getSequence(midi.toFile()).microsecondLength / 1_000_000.0
             if (!duration.isFinite() || duration <= 0.0) return@withContext PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Connected source melody has no usable duration.")

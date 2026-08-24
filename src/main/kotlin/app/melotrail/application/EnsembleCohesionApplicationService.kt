@@ -198,7 +198,6 @@ class DefaultEnsembleCohesionApplicationService(
             approvalRequired = !approved, approved = approved, stale = false,
             artifact = root.resolve(if (approved) EnsembleCohesionStore.APPROVED_FILE else EnsembleCohesionStore.DRAFT_FILE),
             intensity = input.intensity,
-            melodyEditCount = plan.boundaries.sumOf { it.melodyEdits.size },
             accompanimentEditCount = plan.boundaries.size,
             baselinePreview = cohesionWorkflow?.previews?.baseline?.file?.let(root::resolve),
             enhancedPreview = cohesionWorkflow?.previews?.enhanced?.file?.let(root::resolve))
@@ -206,9 +205,12 @@ class DefaultEnsembleCohesionApplicationService(
     private fun persistComparisons(root: Path, input: EnsembleCohesionInput) {
         val project = ProjectStore.read(root)
         val cohesion = requireNotNull(project.workflow.cohesion)
+        val views = app.melotrail.arrangement.OccurrenceMidiArtifactResolver().resolve(root, project,
+            project.envelope.structureOccurrences.mapIndexed { index, occurrence -> occurrence.toSectionInstance(index) }
+        ).associateBy(app.melotrail.arrangement.OccurrenceMidiArtifact::occurrenceId)
         cohesion.occurrences.sortedBy { it.instanceId }.forEach { occurrence ->
-            val selected = app.melotrail.arrangement.SelectedMidiArtifactResolver().resolve(root, project, occurrence.instanceId.let { id -> project.envelope.structureOccurrences.single { it.instanceId == id }.partId })
-            val before = WorkflowArtifactReference(selected.projectRelativePath, selected.sha256)
+            val approved = views.getValue(occurrence.instanceId)
+            val before = WorkflowArtifactReference(approved.projectRelativePath, approved.sha256)
             val output = occurrence.result
             val beforeEvidence = StageComparisonArtifact(StageComparisonStage.COHESION, before, input.contextSha256, role = "piano", occurrenceId = occurrence.instanceId)
             val afterEvidence = StageComparisonArtifact(StageComparisonStage.COHESION, output, input.contextSha256, StageEvidenceStatus.DRAFT, "piano", occurrence.instanceId)

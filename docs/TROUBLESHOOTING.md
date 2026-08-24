@@ -120,9 +120,10 @@ publishes one versioned canonical full melody with a conductor track,
 controller-free note track, occurrence/harmony/lineage sidecar, and reviewable
 groove map. A harmony-fit block means the nearest safe pitch is
 ambiguous/excessive or a boundary tail cannot be released within policy; inspect
-its report rather than replacing the candidate. QP-008 still must ensure every
-later arrangement, humanization, renderer, and export path consumes the
-approved connected full melody.
+its report rather than replacing the candidate. Current arrangement, Cohesion,
+criticism, humanization, preview, renderer, and release paths consume the
+approved connected full melody. A missing or stale approval intentionally blocks
+with recovery guidance; it never reverts to selected-part piano MIDI.
 
 Before arranging a current project:
 
@@ -135,7 +136,7 @@ Before arranging a current project:
 
 If section starts drift away from the bar grid, different modes remain audible,
 simultaneous melody notes survive, or exposed notes clash with the active chord,
-treat the project as a private diagnostic run until QP-008–QP-010 are
+treat the project as a private diagnostic run until QP-009–QP-010 are
 implemented or the candidate is manually corrected and reviewed. Audio effects,
 mastering, and Cohesion cannot repair a fundamentally misaligned source melody.
 

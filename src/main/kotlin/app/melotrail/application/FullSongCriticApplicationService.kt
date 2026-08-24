@@ -9,6 +9,7 @@ import app.melotrail.arrangement.FullSongCriticMidiArtifact
 import app.melotrail.arrangement.FullSongCriticReport
 import app.melotrail.arrangement.FullSongCriticAdvisor
 import app.melotrail.arrangement.MelodyIdentityBuilder
+import app.melotrail.arrangement.OccurrenceMidiArtifactResolver
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.RoleValidationReport
@@ -50,7 +51,8 @@ interface FullSongCriticApplicationService {
 class DefaultFullSongCriticApplicationService(
     private val authorityBuilder: MusicalAuthorityBuilder = MusicalAuthorityBuilder(),
     private val critic: DeterministicFullSongCritic = DeterministicFullSongCritic(),
-    private val advisor: FullSongCriticAdvisor? = null
+    private val advisor: FullSongCriticAdvisor? = null,
+    private val sourceSongCritic: SourceSongCriticApplicationService = DefaultSourceSongCriticApplicationService()
 ) : FullSongCriticApplicationService {
     override fun run(root: Path): FullSongCriticSnapshot {
         val normalized = root.toAbsolutePath().normalize()
@@ -93,17 +95,29 @@ class DefaultFullSongCriticApplicationService(
         require(project.version == Project.CURRENT_VERSION) { "Full-Song Critic requires a schema-v4 project." }
         val cohesion = requireNotNull(project.workflow.cohesion) { "Full-Song Critic requires approved Cohesion." }
         require(cohesion.approved && WorkflowArtifact.COHESION !in project.workflow.stale) { "Full-Song Critic requires current approved Cohesion." }
+        val approvedMelody = sourceSongCritic.requireApprovedMelody(root)
         val authority = authorityBuilder.wholeSongAnalysis(root)
         val arrangementRef = requireNotNull(project.workflow.arrangement?.arrangement) { "Full-Song Critic requires an approved arrangement." }
         val arrangementPath = verified(root, arrangementRef, "Approved arrangement")
         val arrangement = json.decodeFromString(DetailedArrangement.serializer(), Files.readString(arrangementPath))
         require(arrangement.sections.map { it.instanceId } == authority.occurrences.map { it.occurrenceId }) { "Approved arrangement no longer matches canonical occurrences." }
+        val approvedViews = OccurrenceMidiArtifactResolver().resolve(root, project, project.envelope.structureOccurrences.mapIndexed { index, occurrence ->
+            app.melotrail.arrangement.SectionInstance(index, occurrence.partId, occurrence.id)
+        }, approvedMelody).associateBy { it.occurrenceId }
         val occurrences = cohesion.occurrences.sortedBy { it.instanceId }.map { occurrence ->
             require(occurrence.approved && occurrence.cohesionInputSha256 == cohesion.inputSha256) { "Cohesion occurrence '${occurrence.instanceId}' is not approved." }
+            require(occurrence.sourceSha256 == approvedMelody.connectedMidi.sha256) {
+                "Cohesion occurrence '${occurrence.instanceId}' is not bound to the approved connected full melody. Regenerate Cohesion."
+            }
             val authorityOccurrence = requireNotNull(authority.occurrences.singleOrNull { it.occurrenceId == occurrence.instanceId }) { "Cohesion occurrence '${occurrence.instanceId}' is not in the canonical timeline." }
             val id = "piano-${occurrence.instanceId}"
-            val reference = candidateOutputs[id] ?: occurrence.result
-            FullSongCriticMidiArtifact("piano", occurrence.instanceId, verified(root, reference, "Cohesion occurrence '${occurrence.instanceId}'"), reference, authorityOccurrence.startTick)
+            require(id !in candidateOutputs) { "Post-connection piano edits require publication and approval of a new full melody candidate." }
+            val view = approvedViews.getValue(occurrence.instanceId)
+            val reference = WorkflowArtifactReference(view.projectRelativePath, view.sha256)
+            require(view.canonicalFullMelodySha256 == approvedMelody.connectedMidi.sha256 && view.startTick == authorityOccurrence.startTick && view.endTick == authorityOccurrence.endTick) {
+                "Approved full-melody view does not match the canonical timeline."
+            }
+            FullSongCriticMidiArtifact("piano", occurrence.instanceId, view.path, reference, authorityOccurrence.startTick)
         }
         val roles = cohesion.roles.sortedBy { it.role }.map { role ->
             require(role.approved && role.cohesionInputSha256 == cohesion.inputSha256) { "Cohesion role '${role.role}' is not approved." }
@@ -120,17 +134,15 @@ class DefaultFullSongCriticApplicationService(
                 }
             }
         }
-        val melody = cohesion.occurrences.sortedBy { it.instanceId }.firstOrNull()?.let { occurrence ->
-            MelodyIdentityBuilder.build(verified(root, occurrence.result, "Cohesion melody '${occurrence.instanceId}'"), authority.harmonyPpq * 4L / authority.meter.denominator)
-        }
-        require(candidateOutputs.keys.all { it in (occurrences.map { "piano-${it.occurrenceId}" } + roles.map { it.role }) } &&
-            (candidateOutputs.isEmpty() || candidateOutputs.size == occurrences.size + roles.size)) { "Candidate Critic outputs do not cover the approved Cohesion ensemble." }
+        val melody = MelodyIdentityBuilder.build(root.resolve(approvedMelody.connectedMidi.file), authority.harmonyPpq * 4L / authority.meter.denominator)
+        require(candidateOutputs.keys.all { it in roles.map { it.role } } &&
+            (candidateOutputs.isEmpty() || candidateOutputs.size == roles.size)) { "Candidate Critic outputs must cover generated roles only; piano is the approved connected full melody." }
         val hash = sha256(json.encodeToString(CriticInputHash(
             authority.contextSha256, cohesion.inputSha256, arrangementRef.sha256,
             occurrences.map { CriticArtifactHash(it.role, it.occurrenceId, it.reference.sha256) },
             roles.map { CriticArtifactHash(it.role, it.occurrenceId, it.reference.sha256) },
             reports.map { CriticRoleReportHash(it.role, it.outputSha256, it.passed) },
-            melody?.sourceSha256
+            approvedMelody.connectedMidi.sha256
         )).toByteArray(StandardCharsets.UTF_8))
         return FullSongCriticInput(authority, occurrences, roles, arrangement, arrangementRef.sha256, melody, reports, inputSha256 = hash)
     }

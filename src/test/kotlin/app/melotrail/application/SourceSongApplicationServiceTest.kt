@@ -15,6 +15,8 @@ import app.melotrail.arrangement.MelodyHarmonyFitReport
 import app.melotrail.arrangement.SectionTypeId
 import app.melotrail.arrangement.SongPart
 import app.melotrail.arrangement.SourceSong
+import app.melotrail.arrangement.OccurrenceMidiArtifactResolver
+import app.melotrail.arrangement.SectionInstance
 import app.melotrail.arrangement.StructureOccurrence
 import app.melotrail.arrangement.canonicalMidiReferences
 import app.melotrail.harmony.ChordEvent
@@ -46,6 +48,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertContentEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
+import kotlin.test.assertFailsWith
 
 class SourceSongApplicationServiceTest {
     @TempDir lateinit var tempDir: Path
@@ -129,18 +132,52 @@ class SourceSongApplicationServiceTest {
         assertEquals(report.report.connectedMidi.sha256, approval.approval.connectedMidiSha256)
         assertTrue(approval.approval.overriddenBlockingIssueIds.isEmpty())
         assertEquals(approval.approval, critic.requireApproved(root).approval)
+        val approved = critic.requireApprovedMelody(root)
+        assertEquals(approval.approval.connectedMidiSha256, approved.connectedMidi.sha256)
+        assertTrue(approved.sourceSongSidecar.file.endsWith("source-song.json"))
+        assertTrue(approved.connectionSidecar.file.endsWith("connection.json"))
+        assertTrue(approved.approvalSidecar.file.endsWith("approval.json"))
     }
 
     @Test
     fun `connected source melody resolves as an independent piano preview input`() = runTest {
         val root = project()
         val renderer = CapturingRenderer()
+        val preview = DefaultPartPreviewApplicationService(renderer)
 
-        val result = DefaultPartPreviewApplicationService(renderer).resolveConnectedSource(root)
+        val blocked = preview.resolveConnectedSource(root)
+        assertTrue(blocked is PreviewResult.Prerequisite)
+        assertTrue(renderer.input == null)
+        val critic = DefaultSourceSongCriticApplicationService()
+        critic.run(root); critic.approve(root)
+        val result = preview.resolveConnectedSource(root)
 
         assertTrue(result is PreviewResult.Prerequisite, "Expected connected-source preview to reach the renderer: $result")
         assertTrue(renderer.input?.startsWith(root.resolve("source-song")) == true)
         assertTrue(renderer.input?.fileName.toString() == "connected.mid")
+    }
+
+    @Test
+    fun `occurrence views are clipped from one approved connected melody with canonical bounds`() {
+        val root = project()
+        val critic = DefaultSourceSongCriticApplicationService()
+        val project = ProjectStore.read(root)
+        val occurrences = project.envelope.structureOccurrences.mapIndexed { index, occurrence ->
+            SectionInstance(index, occurrence.partId, occurrence.id)
+        }
+
+        val missingApproval = assertFailsWith<IllegalArgumentException> {
+            OccurrenceMidiArtifactResolver().resolve(root, project, occurrences)
+        }
+        assertTrue(missingApproval.message.orEmpty().contains("Run the critic"))
+
+        critic.run(root); val approved = critic.approve(root)
+        val views = OccurrenceMidiArtifactResolver().resolve(root, project, occurrences)
+        val exact = critic.requireApprovedMelody(root)
+        assertEquals(approved.approval.connectedMidiSha256, exact.connectedMidi.sha256)
+        assertTrue(views.all { it.canonicalFullMelodySha256 == exact.connectedMidi.sha256 })
+        assertEquals(exact.sourceSong.fullMelody.occurrences.map { it.startTick to it.endTick }, views.map { it.startTick to it.endTick })
+        assertTrue(views.all { MidiSystem.getSequence(it.path.toFile()).tickLength == it.endTick - it.startTick })
     }
 
     private fun project(): Path {

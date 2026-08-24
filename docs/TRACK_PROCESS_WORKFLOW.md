@@ -92,17 +92,21 @@ controller-aware one-track monophonic candidate. QP-006 then fits an immutable
 candidate per structure occurrence to the authoritative local harmony, with
 note-level pitch/tail/tie evidence and a tempo/PPQ-derived boundary gap. It
 does not rewrite project harmony, and ambiguity or an excessive repair blocks
-instead of publishing MIDI. QP-008 has not yet cut every downstream arrangement,
-humanization, renderer, and export consumer over to the approved connected full
-melody. The remaining gaps are QP-008–QP-010 and must not be described as
-current capabilities.
+instead of publishing MIDI. QP-008 binds downstream arrangement, Cohesion,
+criticism, humanization, preview, renderer, and release lineage to the approved
+connected full melody. It clips occurrence views through the authoritative
+sidecar; it never reconstructs piano timing from selected part durations. The
+remaining gaps are QP-009–QP-010 and must not be described as current
+capabilities.
 
 ## Arrangement and Cohesion boundary
 
 Arrangement uses authoritative project context and deterministic MIDI
 generators. Core piano/bass/drums/pad evidence is validated before optional
 layers. Cohesion runs after arrangement and publishes reviewed boundary
-derivatives without overwriting selected source MIDI.
+derivatives without overwriting selected source MIDI or locally replacing the
+approved piano melody. Any future post-connection piano edit must first publish
+and reapprove a complete full-melody candidate.
 
 Known limitation: Cohesion currently needs stronger boundary-local active-role,
 gesture-execution, harmony, overlay, and post-merge validation. Until QP-013 is

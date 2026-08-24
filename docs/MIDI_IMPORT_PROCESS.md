@@ -116,13 +116,14 @@ unselected branch cannot override the current candidate.
   Its sidecar persists exact occurrence windows, markers, harmony, source and
   preparation hashes, post-fit anchors, note lineage, and an occurrence-indexed
   groove map. Melody Connection and Source Song Critic use that assembled
-  identity. QP-008 still must cut every later arrangement/render consumer over
-  to the approved connected candidate.
+  identity. Arrangement, Cohesion, critics, humanization, preview, stem render,
+  and release evidence use the exact approved connected candidate; local views
+  are clipped through its sidecar windows and cannot fall back to selected parts.
 
 These remaining limits are tracked by QP-008 through QP-010. Review the
 connected source-song preview and Source Song Critic carefully; prepared-source
-completion is not musical approval or a guarantee that all later consumers use
-the approved full melody.
+completion is not musical approval, and a stale/missing approval blocks rather
+than allowing a later selected-part fallback.
 
 ## Recovery
 

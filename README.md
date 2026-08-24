@@ -47,9 +47,11 @@ mode-aware transposition, sustain-aware monophonic preparation, and
 occurrence-local harmony fitting now produce a versioned canonical full-melody
 candidate with one conductor track, one controller-free melody track, stable
 occurrence/harmony/lineage sidecar evidence, and a reviewable full-song groove
-map. The quality roadmap still documents material gaps: downstream arrangement,
-humanization, rendering, and export do not yet all consume that approved melody;
-source micro-timing is not yet applied across the ensemble; cross-section
+map. Arrangement, Cohesion, criticism, humanization, preview, rendering, and
+release lineage now bind to that exact approved connected melody; occurrence
+views are clipped from its sidecar windows rather than reconstructed from part
+durations. The quality roadmap still documents material gaps: source
+micro-timing is not yet applied across the ensemble; cross-section
 accompaniment voicing can reset; and production lacks interaction-aware
 kick/bass control and selected-master codec-preview evidence. Those defects are
 the scope of [`PLAN.md`](PLAN.md).

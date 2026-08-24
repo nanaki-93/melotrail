@@ -2,6 +2,7 @@ package app.melotrail.arrangement
 
 import app.melotrail.application.OperationProgress
 import app.melotrail.application.ProgressSink
+import app.melotrail.application.DefaultSourceSongCriticApplicationService
 import app.melotrail.audio.WAVDecoder
 import app.melotrail.model.ErrorReporter
 import kotlinx.serialization.json.Json
@@ -27,27 +28,24 @@ class FullSongCohesionPreviewRenderer(
             require(it.inputSha256 == input.inputHash) { "Cohesion preview input is stale" }
         }
         val format = requireNotNull(project.renderFormat)
-        val expectedFrames = input.occurrences.sumOf { occurrence ->
-            val part = project.parts.single { it.id == occurrence.evidence.partId }
-            val analysis = Json.decodeFromString(MidiAnalysis.serializer(), Files.readString(root.resolve(requireNotNull(part.analysis).file)))
-            analysis.durationSeconds
-        }.times(format.sampleRate).roundToLong()
+        val approvedMelody = DefaultSourceSongCriticApplicationService().requireApprovedMelody(root)
+        require(input.occurrences.all { it.evidence.sourceHash == approvedMelody.connectedMidi.sha256 }) {
+            "Cohesion preview input is not bound to the approved connected full melody. Regenerate Cohesion."
+        }
+        val canonicalPiano = root.resolve(approvedMelody.connectedMidi.file).normalize()
+        require(canonicalPiano.startsWith(root) && Files.isRegularFile(canonicalPiano) && sha256(canonicalPiano) == approvedMelody.connectedMidi.sha256) {
+            "Approved connected full melody is missing or stale. Rerun Source Song Critic and approve the current melody."
+        }
+        val expectedFrames = (MidiSystem.getSequence(canonicalPiano.toFile()).microsecondLength / 1_000_000.0 * format.sampleRate).roundToLong()
         require(expectedFrames > 0) { "Cohesion preview timeline is empty" }
 
-        val baselinePiano = assemblePiano(root, input, enhanced = false)
-        val enhancedPiano = assemblePiano(root, input, enhanced = true)
-        return try {
-            val totalStems = (1 + input.generatedRoles.size) * 2
-            val baseline = renderVariant(root, project, input, baselinePiano, enhanced = false, format, expectedFrames, progress, 0, totalStems)
-            val enhanced = renderVariant(root, project, input, enhancedPiano, enhanced = true, format, expectedFrames, progress, 1 + input.generatedRoles.size, totalStems)
-            CohesionPreviewReferences(
-                WorkflowArtifactReference(root.relativize(baseline).toString().replace('\\', '/'), sha256(baseline)),
-                WorkflowArtifactReference(root.relativize(enhanced).toString().replace('\\', '/'), sha256(enhanced))
-            )
-        } finally {
-            Files.deleteIfExists(baselinePiano)
-            Files.deleteIfExists(enhancedPiano)
-        }
+        val totalStems = (1 + input.generatedRoles.size) * 2
+        val baseline = renderVariant(root, project, input, canonicalPiano, enhanced = false, format, expectedFrames, progress, 0, totalStems)
+        val enhanced = renderVariant(root, project, input, canonicalPiano, enhanced = true, format, expectedFrames, progress, 1 + input.generatedRoles.size, totalStems)
+        return CohesionPreviewReferences(
+            WorkflowArtifactReference(root.relativize(baseline).toString().replace('\\', '/'), sha256(baseline)),
+            WorkflowArtifactReference(root.relativize(enhanced).toString().replace('\\', '/'), sha256(enhanced))
+        )
     }
 
     private suspend fun renderVariant(
@@ -100,37 +98,6 @@ class FullSongCohesionPreviewRenderer(
             stems.forEach(Files::deleteIfExists)
         }
     }
-
-    private fun assemblePiano(root: Path, input: EnsembleCohesionInput, enhanced: Boolean): Path {
-        val workflow = requireNotNull(ProjectStore.read(root).workflow.cohesion)
-        val ppq = input.occurrences.first().evidence.ppq
-        val sequence = Sequence(Sequence.PPQ, ppq)
-        var offset = 0L
-        input.occurrences.forEach { occurrence ->
-            val source = if (!enhanced) {
-                SelectedMidiArtifactResolver().resolve(root, ProjectStore.read(root), occurrence.evidence.partId).path
-            } else {
-                root.resolve(requireNotNull(workflow.occurrences.singleOrNull { it.instanceId == occurrence.instanceId }).result.file)
-            }
-            val part = MidiSystem.getSequence(source.toFile())
-            require(part.divisionType == Sequence.PPQ && part.resolution == ppq) { "Cohesion preview occurrence PPQ is incompatible" }
-            part.tracks.forEach { sourceTrack ->
-                val target = sequence.createTrack()
-                (0 until sourceTrack.size()).map(sourceTrack::get)
-                    .filterNot { (it.message as? MetaMessage)?.type == 0x2F }
-                    .filter { it.tick <= occurrence.evidence.durationTicks }
-                    .forEach { target.add(MidiEvent(it.message.copy(), offset + it.tick)) }
-            }
-            offset += occurrence.evidence.durationTicks
-        }
-        sequence.createTrack().add(MidiEvent(MetaMessage(0x2F, byteArrayOf(), 0), offset))
-        val path = root.resolve("cohesion/runs/${input.inputHash}/preview/.${if (enhanced) "enhanced" else "baseline"}-piano-${UUID.randomUUID()}.mid")
-        Files.createDirectories(requireNotNull(path.parent))
-        require(MidiSystem.write(sequence, 1, path.toFile()) > 0) { "Could not assemble Cohesion preview piano" }
-        return path
-    }
-
-    private fun MidiMessage.copy(): MidiMessage = clone() as MidiMessage
 
     private companion object {
         val GAINS = mapOf("piano" to 0.0, "bass" to -6.0, "drums" to -8.0, "pad" to -10.0, "strings" to -10.0)

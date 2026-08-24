@@ -37,7 +37,6 @@ import app.melotrail.arrangement.MidiChord
 import app.melotrail.arrangement.MidiNote
 import app.melotrail.arrangement.MidiTransitionGenerationAdapter
 import app.melotrail.arrangement.TransitionMidiWindow
-import app.melotrail.arrangement.OccurrenceMidiArtifactResolver
 import app.melotrail.arrangement.PadMidiGenerationAdapter
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
@@ -642,19 +641,18 @@ class DefaultArrangementApplicationService(
         sections: List<DetailedArrangementSection>,
         analyses: Map<String, MidiAnalysis>
     ): ArrangementState {
-        val occurrences = sections.map { SectionInstance(it.index, it.partId, it.instanceId) }
-        val artifacts = OccurrenceMidiArtifactResolver().resolve(root, project, occurrences)
-        var ppq: Int? = null
-        var startTick = 0L
-        val notes = mutableListOf<MidiNote>()
-        artifacts.forEach { artifact ->
-            val track = ArrangementState.fromMidi(ArrangementState.PIANO, artifact.path, artifact.ppq)
-            if (ppq == null) ppq = track.ppq else require(ppq == track.ppq) { "Accepted source/piano MIDI must share one PPQ" }
-            notes += track.notes.map { note -> note.copy(startTick = note.startTick + startTick, endTick = note.endTick + startTick) }
-            startTick = Math.addExact(startTick, requireNotNull(analyses[artifact.partId]).durationTicks)
+        val approved = sourceSongCriticApplicationService.requireApprovedMelody(root)
+        require(sections.map(DetailedArrangementSection::instanceId) == approved.sourceSong.fullMelody.occurrences.map { it.occurrenceId } &&
+            sections.zip(approved.sourceSong.fullMelody.occurrences).all { (section, window) ->
+                section.partId == window.sourcePartId
+            }) { "Approved arrangement no longer matches the approved full-melody sidecar. Regenerate arrangement from the current source melody." }
+        val midi = root.resolve(approved.connectedMidi.file).normalize()
+        require(midi.startsWith(root) && Files.isRegularFile(midi) && sha256(midi) == approved.connectedMidi.sha256) {
+            "Approved connected full melody is missing or stale. Re-run Source Song Critic and approve the current melody."
         }
-        val fingerprint = sha256(artifacts.joinToString("|") { "${it.occurrenceId}:${it.sha256}" }.toByteArray(StandardCharsets.UTF_8))
-        return ArrangementState.fromAcceptedPiano(requireNotNull(ppq), notes, fingerprint)
+        val piano = ArrangementState.fromMidi(ArrangementState.PIANO, midi, approved.sourceSong.canonicalPpq)
+        require(piano.sha256 == approved.connectedMidi.sha256) { "Arrangement piano state is not the approved connected full melody." }
+        return ArrangementState.fromAcceptedPiano(piano.ppq, piano.notes, approved.connectedMidi.sha256)
     }
 
     private fun requireCurrentCoreApproval(

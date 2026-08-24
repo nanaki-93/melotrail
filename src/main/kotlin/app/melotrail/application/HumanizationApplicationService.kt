@@ -56,7 +56,8 @@ interface HumanizationApplicationService {
  * local-library path: only already validated MIDI and bounded profile policy.
  */
 class DefaultHumanizationApplicationService(
-    private val processor: SeededHumanizationProcessor = SeededHumanizationProcessor()
+    private val processor: SeededHumanizationProcessor = SeededHumanizationProcessor(),
+    private val sourceSongCritic: SourceSongCriticApplicationService = DefaultSourceSongCriticApplicationService()
 ) : HumanizationApplicationService {
     override suspend fun generate(request: GenerateHumanizationRequest): HumanizationSnapshot = withContext(Dispatchers.IO) {
         val root = request.root.toAbsolutePath().normalize()
@@ -82,13 +83,13 @@ class DefaultHumanizationApplicationService(
                 request.amountPercent?.let { default.copy(amountPercent = it) } ?: default
             }.also(HumanizationConfig::requireValid)
             val occurrences = project.envelope.structureOccurrences.mapIndexed { index, occurrence -> occurrence.toSectionInstance(index) }
-            val cohesiveOccurrences = OccurrenceMidiArtifactResolver().resolve(root, project, occurrences)
+            val approvedMelody = sourceSongCritic.requireApprovedMelody(root)
+            val cohesiveOccurrences = OccurrenceMidiArtifactResolver().resolve(root, project, occurrences, approvedMelody)
             val inputs = buildList {
                 cohesiveOccurrences.forEach { artifact ->
-                    val part = project.parts.single { it.id == artifact.partId }
-                    val selected = fullSongEnhancedInput(root, project, "piano-${artifact.occurrenceId}", WorkflowArtifactReference(artifact.projectRelativePath, artifact.sha256))
-                    add(Input("piano-${artifact.occurrenceId}", HumanizationRole.PIANO, selected.file, selected.sha256,
-                        part.midi?.analysisInput == MidiAnalysisInput.LOFI_FEEL))
+                    require(artifact.canonicalFullMelodySha256 == approvedMelody.connectedMidi.sha256) {
+                        "Humanization requires occurrence views from the approved connected full melody. Regenerate Cohesion."
+                    }
                 }
                 val cohesion = requireNotNull(project.workflow.cohesion)
                 cohesion.roles.forEach { reference ->

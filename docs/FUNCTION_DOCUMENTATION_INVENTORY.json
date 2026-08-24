@@ -173,10 +173,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/BuildApplicationService.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/application/BuildApplicationService.kt has 21 callable declarations, 2 directly documented and 19 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 21,
-      "declarationDigest": "6e89e5f7fa6edb83f7d05bcd5dd7b10babb34af9aa71a6ae53dd69dc4eab6d87",
-      "documentedFunctionCount": 2
+      "reason": "src/main/kotlin/app/melotrail/application/BuildApplicationService.kt has 22 callable declarations, 3 directly documented and 19 still requiring focused KDoc/docstrings. QP-008 reviewed the new release-melody lineage gate on 2026-08-24; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "functionCount": 22,
+      "declarationDigest": "381cbe8c8cd8956978cd99e4f0897f0a37b8336ae8d1899774c44e0d543640b5",
+      "documentedFunctionCount": 3
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/CanonicalMusicalAuthority.kt",
@@ -333,10 +333,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/SourceSongCriticApplicationService.kt",
       "classification": "documented",
-      "reason": "All 12 callable declarations in src/main/kotlin/app/melotrail/application/SourceSongCriticApplicationService.kt have directly attached KDoc/docstrings; reviewed on 2026-08-24.",
-      "functionCount": 12,
-      "declarationDigest": "3c24058e05a514653eb0e54373fa4ac54cb331e553041a2e2a6de5bee3f3ec38",
-      "documentedFunctionCount": 12
+      "reason": "All 15 callable declarations in src/main/kotlin/app/melotrail/application/SourceSongCriticApplicationService.kt have directly attached KDoc/docstrings; reviewed for QP-008 approved-full-melody lineage on 2026-08-24.",
+      "functionCount": 15,
+      "declarationDigest": "9660184580ff5fadc7cf5ab7f059c3470a434651f4c0d98cf5d205cd9f238005",
+      "documentedFunctionCount": 15
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/SourceTimingAlignmentApplicationService.kt",
@@ -453,9 +453,9 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/CohesionPreviewRenderer.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/CohesionPreviewRenderer.kt has 4 callable declarations, 0 directly documented and 4 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 4,
-      "declarationDigest": "6e9af673c667cdc39d877e05a13c6ebd3020a03970f9578d483104eaac5ae796",
+      "reason": "src/main/kotlin/app/melotrail/arrangement/CohesionPreviewRenderer.kt has 2 callable declarations, 0 directly documented and 2 still requiring focused KDoc/docstrings. QP-008 removed its selected-part piano assembly in favor of the approved connected candidate; the remaining file-local, declaration-digest-pinned debt was reviewed on 2026-08-24.",
+      "functionCount": 2,
+      "declarationDigest": "2f84bf5ac3f74f26c56123daa1a887809b46e1832844dd5c3103220ca0d545ed",
       "documentedFunctionCount": 0
     },
     {
@@ -485,9 +485,9 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/EnsembleCohesion.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/EnsembleCohesion.kt has 52 callable declarations, 3 directly documented and 49 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 52,
-      "declarationDigest": "ed2bd7fa752ed45bfc16f0aec0184e8b7bf47b40ae6fbefdbc5d552aae5b7c56",
+      "reason": "src/main/kotlin/app/melotrail/arrangement/EnsembleCohesion.kt has 47 callable declarations, 3 directly documented and 44 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
+      "functionCount": 47,
+      "declarationDigest": "d359505a380f3b31ffa34ab13914fd54b3120a6d88456cdedd627e72d747f995",
       "documentedFunctionCount": 3
     },
     {
@@ -693,10 +693,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/OccurrenceMidiArtifactResolver.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/OccurrenceMidiArtifactResolver.kt has 1 callable declarations, 0 directly documented and 1 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 1,
-      "declarationDigest": "820eacb79d204413beeecd56a347770076c9eb56af3726b7d588860f419d7ac1",
-      "documentedFunctionCount": 0
+      "reason": "src/main/kotlin/app/melotrail/arrangement/OccurrenceMidiArtifactResolver.kt has 12 callable declarations, 2 directly documented and 10 still requiring focused KDoc/docstrings. QP-008 reviewed its approval-bound sidecar clipping contract on 2026-08-24; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "functionCount": 12,
+      "declarationDigest": "9049e31fac6ec129156920d08f9686302008141e44229fd47ac9914a93e19259",
+      "documentedFunctionCount": 2
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/PadMidiGeneration.kt",

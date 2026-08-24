@@ -1,8 +1,11 @@
 package app.melotrail.application
 
 import app.melotrail.arrangement.MelodyConnection
+import app.melotrail.arrangement.MelodyConnectionArtifact
 import app.melotrail.arrangement.MelodyConnectionPlanner
 import app.melotrail.arrangement.ProjectStore
+import app.melotrail.arrangement.SourceSong
+import app.melotrail.arrangement.SourceSongArtifact
 import app.melotrail.arrangement.SourceSongApproval
 import app.melotrail.arrangement.SourceSongCritic
 import app.melotrail.arrangement.SourceSongCriticArtifactPaths
@@ -30,6 +33,22 @@ data class SourceSongCriticSnapshot(
 /** A loaded, current user approval that satisfies the pre-arrangement gate. */
 data class SourceSongApprovalSnapshot(val approval: SourceSongApproval, val approvalPath: Path)
 
+/**
+ * The only approved piano/melody input permitted after source-song review.
+ * Every reference is project-relative and fingerprinted so downstream stages
+ * cannot silently re-resolve an occurrence from a selected source part.
+ */
+data class ApprovedSourceSongMelody(
+    val sourceSong: SourceSong,
+    val sourceSongSidecar: WorkflowArtifactReference,
+    val connection: MelodyConnection,
+    val connectionSidecar: WorkflowArtifactReference,
+    val connectedMidi: WorkflowArtifactReference,
+    val criticReport: WorkflowArtifactReference,
+    val approval: SourceSongApproval,
+    val approvalSidecar: WorkflowArtifactReference
+)
+
 /** UI-neutral pre-arrangement source-song review and approval boundary. */
 interface SourceSongCriticApplicationService {
     /** Analyze and atomically publish deterministic evidence without changing any MIDI. */
@@ -43,6 +62,9 @@ interface SourceSongCriticApplicationService {
 
     /** Require a current approval before arrangement may begin. */
     fun requireApproved(root: Path): SourceSongApprovalSnapshot
+
+    /** Resolve the exact approved full melody and all of its immutable lineage. */
+    fun requireApprovedMelody(root: Path): ApprovedSourceSongMelody
 }
 
 /** Default file-backed implementation for the deterministic source-song approval gate. */
@@ -99,7 +121,12 @@ class DefaultSourceSongCriticApplicationService(
     }
 
     /** Reject missing, stale, or incomplete approval evidence before any arrangement work starts. */
-    override fun requireApproved(root: Path): SourceSongApprovalSnapshot {
+    override fun requireApproved(root: Path): SourceSongApprovalSnapshot = requireApprovedMelody(root).let {
+        SourceSongApprovalSnapshot(it.approval, root.toAbsolutePath().normalize().resolve(it.approvalSidecar.file))
+    }
+
+    /** Reject missing or stale approval before exposing the canonical full melody to a downstream consumer. */
+    override fun requireApprovedMelody(root: Path): ApprovedSourceSongMelody {
         val current = current(root)
         val report = load(current.root)
         val path = current.root.resolve(SourceSongCriticArtifactPaths.approval(report.report.sourceSongContextSha256, report.report.connectedMidi.sha256)).normalize()
@@ -112,19 +139,30 @@ class DefaultSourceSongCriticApplicationService(
         require(approval.overriddenBlockingIssueIds.sorted() == blocking) {
             "Source Song approval does not cover the current blocking issues. Record a current explicit override."
         }
-        return SourceSongApprovalSnapshot(approval, path)
+        return ApprovedSourceSongMelody(
+            sourceSong = current.sourceSong,
+            sourceSongSidecar = reference(current.root, current.sourceSongArtifact.metadataPath),
+            connection = current.connection,
+            connectionSidecar = reference(current.root, current.connectionArtifact.metadataPath),
+            connectedMidi = current.connection.outputMidi,
+            criticReport = WorkflowArtifactReference(relative(report.reportPath, current.root), sha256(report.reportPath)),
+            approval = approval,
+            approvalSidecar = reference(current.root, path)
+        )
     }
 
     /** Resolve all current, immutable inputs used by every critic and approval operation. */
     private fun current(root: Path): CurrentSourceSong {
         val normalized = root.toAbsolutePath().normalize()
         val project = ProjectStore.read(normalized).also { it.requireValid(normalized) }
-        val sourceSong = sourceSongService.assemble(normalized).song
-        val connection = connectionPlanner.connect(normalized, sourceSong).connection
+        val sourceSongArtifact = sourceSongService.assemble(normalized)
+        val sourceSong = sourceSongArtifact.song
+        val connectionArtifact = connectionPlanner.connect(normalized, sourceSong)
+        val connection = connectionArtifact.connection
         val connected = normalized.resolve(connection.outputMidi.file).normalize()
         require(connected.startsWith(normalized) && Files.isRegularFile(connected)) { "Connected source melody is missing." }
         val authority = authorityBuilder.build(normalized)
-        return CurrentSourceSong(normalized, sourceSong, connection, connected,
+        return CurrentSourceSong(normalized, sourceSongArtifact, connectionArtifact, connected,
             SourceSongCriticInput(normalized, sourceSong, connection, authority.projectKey.scalePitchClasses().map { it.chromatic }.toSet()))
     }
 
@@ -153,14 +191,24 @@ class DefaultSourceSongCriticApplicationService(
     /** Hash persisted evidence before it is bound into an approval decision. */
     private fun sha256(path: Path): String = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
 
+    /** Bind an existing immutable sidecar or MIDI artifact into a portable reference. */
+    private fun reference(root: Path, path: Path): WorkflowArtifactReference {
+        val normalized = path.toAbsolutePath().normalize()
+        require(normalized.startsWith(root) && Files.isRegularFile(normalized)) { "Source-song artifact is missing or outside the project root" }
+        return WorkflowArtifactReference(relative(normalized, root), sha256(normalized))
+    }
+
     /** Internal immutable assembly used to avoid recomputing different source inputs within an operation. */
     private data class CurrentSourceSong(
         val root: Path,
-        val sourceSong: app.melotrail.arrangement.SourceSong,
-        val connection: MelodyConnection,
+        val sourceSongArtifact: SourceSongArtifact,
+        val connectionArtifact: MelodyConnectionArtifact,
         val connectedMidi: Path,
         val input: SourceSongCriticInput
-    )
+    ) {
+        val sourceSong get() = sourceSongArtifact.song
+        val connection get() = connectionArtifact.connection
+    }
 
     private companion object { val json = Json { encodeDefaults = true; explicitNulls = false; ignoreUnknownKeys = false } }
 }

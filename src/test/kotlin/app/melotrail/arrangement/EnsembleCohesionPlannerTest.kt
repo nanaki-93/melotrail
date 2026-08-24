@@ -69,28 +69,6 @@ class EnsembleCohesionPlannerTest {
         assertEquals(TransitionRoleAction.DRUM_FILL, plan.boundaries.single().roleAction)
     }
 
-    @Test fun `boundary edits accept first and last ticks but reject one tick outside either window`() {
-        val input = input("A1" to "A2", notes =
-            List(20) { index -> CohesionMelodyNote(if (index == 0) "outgoing-last" else "outgoing-$index", 0, 60, 72, 3_839, 3_840) } +
-                List(20) { index -> CohesionMelodyNote(if (index == 0) "incoming-first" else "incoming-$index", 0, 62, 72, 0, 1) }
-        )
-        val bridge = plan(input).boundaries.single()
-        val edgePlan = plan(input, bridge.copy(melodyEdits = listOf(
-            CohesionMelodyEdit("A1", CohesionMelodyEditKind.SET_VELOCITY, "outgoing-last", value = 80, reason = "shape boundary arrival"),
-            CohesionMelodyEdit("A2", CohesionMelodyEditKind.SET_VELOCITY, "incoming-first", value = 80, reason = "shape boundary departure")
-        )))
-        assertTrue(EnsembleCohesionValidator.validate(edgePlan, input).isValid)
-
-        val outgoingOutside = edgePlan.copy(boundaries = listOf(bridge.copy(melodyEdits = listOf(
-            CohesionMelodyEdit("A1", CohesionMelodyEditKind.ADD_NOTE, "add-00000", pitch = 60, velocity = 72, startTick = 1_919, durationTicks = 1, channel = 0, anchorNoteId = "outgoing-last", reason = "outside outgoing boundary")
-        ))))
-        val incomingOutside = edgePlan.copy(boundaries = listOf(bridge.copy(melodyEdits = listOf(
-            CohesionMelodyEdit("A2", CohesionMelodyEditKind.ADD_NOTE, "add-00000", pitch = 62, velocity = 72, startTick = 1_920, durationTicks = 1, channel = 0, anchorNoteId = "incoming-first", reason = "outside incoming boundary")
-        ))))
-        assertFalse(EnsembleCohesionValidator.validate(outgoingOutside, input).isValid)
-        assertFalse(EnsembleCohesionValidator.validate(incomingOutside, input).isValid)
-    }
-
     @Test fun `superseded whole song payloads are rejected before publication`() {
         val input = input("A1" to "A2")
         val superseded = Json.encodeToString(EnsembleCohesionPlan.serializer(), plan(input)).dropLast(1) + ",\"songEdits\":[]}"

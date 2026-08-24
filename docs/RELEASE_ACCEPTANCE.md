@@ -57,7 +57,8 @@ is satisfied and QP-017 records evidence for the intended release:
 - sustain-aware chord-boundary release and one accepted full-song groove map;
 - confirmed mode-aware key transposition;
 - globally monophonic, scale/harmony-compatible approved full melody;
-- exact canonical melody consumption by arrangement through export;
+- exact approved connected-melody hash and sidecar lineage from arrangement
+  through preview, render, and release metadata;
 - expressive section contrast and accepted generated-role validation;
 - smooth cross-section pad/string voice leading and phase-coherent drums/bass;
 - boundary-local Cohesion with improving before/after metrics;
