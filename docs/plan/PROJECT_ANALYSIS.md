@@ -108,33 +108,32 @@ measured stem energy must justify the final profile.
 
 [`PadMidiGeneration`](../../src/main/kotlin/app/melotrail/arrangement/PadMidiGeneration.kt)
 already selects the nearest inversion relative to the previous chord within a
-generation request. The adapter creates independent requests per section, so
-that state is reset at intro/verse/chorus/bridge boundaries. String generation
-has the same request-local previous-voicing limitation.
+generation request. QP-012 carries each role's final actual voicing into the
+next request, scores ordered assignments with versioned total movement,
+common-tone, and entry/exit evidence, and rejects an unplanned cross-section
+octave jump. A declared register change may still enter or release voices.
 
-Required correction: QP-011/QP-012 must carry accepted global voicing state
-across occurrence requests and validate voice identity, range, common tones,
-and total semitone motion at every boundary. QP-013 may smooth a remaining
-boundary only within those accepted role/harmony constraints; it must not use a
-generic transition to hide a generator reset.
+Remaining correction: QP-013 may smooth a boundary only within these accepted
+role/harmony constraints; it must not use a generic transition to hide a
+generator reset.
 
 ### RISK-04 — Grid-locked accompaniment does not inherit source feel
 
 [`DrumMidiGeneration`](../../src/main/kotlin/app/melotrail/arrangement/DrumMidiGeneration.kt)
-uses exact grid positions plus a fixed/configured swing value; deterministic
-detail currently selects zero swing. [`SeededHumanization`](../../src/main/kotlin/app/melotrail/arrangement/SeededHumanization.kt)
-applies bounded independent variation, but no stage derives and shares a robust
-micro-timing deviation vector from the approved piano performance. This can
-produce audible flams even when all roles share the same nominal BPM and bar
-grid.
+used exact grid positions plus a fixed/configured swing value. QP-012 now
+supplies the approved `FullSongGrooveMap` to bass and drum generation, replacing
+that independent offset when source-feel evidence is available. Validation
+requires the active map span, measures role phase against it, and rejects a
+near-simultaneous piano flam. [`SeededHumanization`](../../src/main/kotlin/app/melotrail/arrangement/SeededHumanization.kt)
+remains a later bounded stage and cannot make generated-role admission pass.
 
 Required correction: QP-002/QP-003 must extract a confidence-scored
 `SourceGrooveTemplate` after excluding pickups, tempo drift, and outliers. The
 canonical grid remains authoritative; each template stores bounded deviations
-by beat/subdivision. QP-007 now assembles them into one occurrence-indexed,
-reviewable `FullSongGrooveMap`; QP-011/QP-012 apply its active span with role-specific
-limits to piano, bass, and drums, rather than copying every raw piano error or
-adding unrelated jitter. QP-014 and QP-017 prove phase coherence and include a
+by beat/subdivision. QP-007 assembles them into one occurrence-indexed,
+reviewable `FullSongGrooveMap`; QP-012 applies its active span with role-specific
+limits to bass and drums, rather than copying raw piano error or adding unrelated
+jitter. QP-014 and QP-017 still need to prove phase coherence and include a
 listening A/B.
 
 ### RISK-05 — Delivery true peak must be proven, not assumed

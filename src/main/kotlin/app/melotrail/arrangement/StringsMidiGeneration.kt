@@ -47,7 +47,9 @@ data class StringsGenerationRequest(
     /** Complete accepted core arrangement, not just the source analysis. */
     val arrangementState: ArrangementState? = null,
     /** Section capacity registered from the approved core before strings run. */
-    val densityBudget: DensityBudget? = null
+    val densityBudget: DensityBudget? = null,
+    /** Last accepted strings voicing from the immediately preceding generated section. */
+    val previousAcceptedVoicing: List<Int> = emptyList()
 ) {
     fun requireValid() {
         require(sectionIndex >= 0 && sectionStartTick >= 0 && sectionLengthTicks > 0) { "Strings section timing is invalid" }
@@ -57,6 +59,8 @@ data class StringsGenerationRequest(
         require(register in REGISTER_RANGES) { "Unsupported strings register '$register'. Allowed registers: ${REGISTER_RANGES.keys.joinToString()}" }
         require(midiChannel in 0..15 && (midiProgram == null || midiProgram in 0..127)) { "Strings MIDI routing is invalid" }
         arrangementState?.requireTrack(ArrangementState.PIANO)
+        require(previousAcceptedVoicing.size <= AcceptedPadStringVoicing.MAXIMUM_VOICES && previousAcceptedVoicing.all { it in 0..127 } &&
+            previousAcceptedVoicing == previousAcceptedVoicing.distinct().sorted()) { "Previous accepted strings voicing is invalid" }
         densityBudget?.let {
             require(it.startTick == sectionStartTick && it.endTick == sectionStartTick + sectionLengthTicks) {
                 "Strings density budget does not match its section"
@@ -105,7 +109,7 @@ class DeterministicStringsMidiGenerator {
         val diagnostics = mutableListOf<String>()
         val range = collisionSafeRange(request)
         if (range == null) return StringsGenerationResult(emptyList(), listOf("Strings register has no practical space above the source range; wrote silence."))
-        var previous: List<Int>? = null
+        var previous: List<Int>? = request.previousAcceptedVoicing.takeIf { it.isNotEmpty() }
         val notes = selectedChords(request.chords, request.density).flatMap { chord ->
             val harmony = harmonyFor(request, chord, diagnostics) ?: return@flatMap emptyList()
             val selected = selectVoicing(harmony, role, request.energy, range, previous, request, chord)
@@ -268,7 +272,7 @@ class DeterministicStringsMidiGenerator {
         }
         return eligible.minWithOrNull(compareByDescending<SelectedVoicing> { it.pitches.size }
             .thenByDescending { it.endTick - it.startTick }
-            .thenBy { candidate -> previous?.zip(candidate.pitches)?.sumOf { (left, right) -> abs(right - left) } ?: 0 }
+            .thenBy { candidate -> SustainedVoicingContinuity.selectionScore(previous, candidate.pitches, range) }
             .thenBy { candidate -> candidate.pitches.sumOf { pitch -> abs(pitch - registerCenter(range)) } }
             .thenBy { it.pitches.joinToString(",") })
     }
@@ -373,7 +377,14 @@ class StringsMidiGenerationAdapter(
             start = Math.addExact(start, analysis.durationTicks)
         }
         require(requests.isNotEmpty()) { "Detailed arrangement does not contain a generated strings instrument" }
-        val results = requests.map { it to composer.generate(it) }
+        var previousVoicing: List<Int> = emptyList()
+        val results = requests.map { request ->
+            val contextual = request.copy(previousAcceptedVoicing = previousVoicing)
+            val result = composer.generate(contextual)
+            previousVoicing = result.notes.groupBy(StringsMidiNote::startTick).toSortedMap().values.lastOrNull()
+                ?.map(StringsMidiNote::pitch)?.sorted() ?: previousVoicing
+            contextual to result
+        }
         val target = output ?: root.resolve("midi/generated/strings.mid")
         writeMidi(target, checkNotNull(ppq), start, strings.midiChannelZeroBased ?: 0, strings.midiProgram, timeline, results)
         return GeneratedStringsMidi(target, checkNotNull(ppq), results.flatMap { it.second.notes }, results.flatMap { it.second.diagnostics })

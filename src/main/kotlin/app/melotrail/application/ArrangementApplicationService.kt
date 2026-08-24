@@ -275,6 +275,7 @@ class DefaultArrangementApplicationService(
     override suspend fun generateRequiredMidi(root: Path, progress: ProgressSink): GeneratedMidiSnapshot = mutate(root) { normalized ->
         val project = readProject(normalized)
         val projection = musicalAuthorityBuilder.arrangementGeneration(normalized)
+        val acceptedFullSongGrooveMap = sourceSongCriticApplicationService.requireApprovedMelody(normalized).sourceSong.fullMelody.grooveMap
         val input = detailedInput(normalized, project)
         val arrangement = readApproved(normalized, input)
         val analyses = canonicalMidiAnalyses(projection)
@@ -303,7 +304,7 @@ class DefaultArrangementApplicationService(
             val report = generatedRoleValidator.validate(GeneratedRoleValidationInput(
                 role = name, midi = candidate, project = project, arrangement = arrangement,
                 projection = projection, registry = registry, arrangementSha256 = approval.arrangement.sha256, registrySha256 = registrySha256,
-                arrangementState = arrangementState, deliberateSilence = deliberateSilence
+                acceptedFullSongGrooveMap = acceptedFullSongGrooveMap, arrangementState = arrangementState, deliberateSilence = deliberateSilence
             ))
             val reportPath = writeGeneratedMidiValidationReport(normalized, name, report)
             require(report.passed) { "Generated $name MIDI failed validation: ${report.violations.joinToString("; ")}" }
@@ -315,15 +316,25 @@ class DefaultArrangementApplicationService(
         if ("bass" in active) {
             val path = normalized.resolve("midi/generated/bass.mid"); generating("bass", path)
             val candidate = generatedCandidate(path)
-            BassMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses, arrangementState, candidate)
-                .let { accept("bass", it.path, it.notes.size) }
+            BassMidiGenerationAdapter(libraryRoot = libraryRoot).generate(
+                normalized, project, arrangement, analyses, arrangementState, candidate, acceptedFullSongGrooveMap
+            )
+                .let { generated ->
+                    accept("bass", generated.path, generated.notes.size,
+                        generated.notes.isEmpty() && generated.diagnostics.any { diagnostic -> diagnostic.contains("density is 0.0") })
+                }
         }
         coroutineContext.ensureActive()
         if ("drums" in active) {
             val path = normalized.resolve("midi/generated/drums.mid"); generating("drums", path)
             val candidate = generatedCandidate(path)
-            DrumMidiGenerationAdapter(libraryRoot = libraryRoot).generate(normalized, project, arrangement, analyses, arrangementState, candidate)
-                .let { accept("drums", it.path, it.hits.size) }
+            DrumMidiGenerationAdapter(libraryRoot = libraryRoot).generate(
+                normalized, project, arrangement, analyses, arrangementState, candidate, acceptedFullSongGrooveMap
+            )
+                .let { generated ->
+                    accept("drums", generated.path, generated.hits.size,
+                        generated.hits.isEmpty() && generated.diagnostics.any { diagnostic -> diagnostic.contains("density is 0.0") })
+                }
         }
         coroutineContext.ensureActive()
         if ("pad" in active) {
@@ -349,6 +360,7 @@ class DefaultArrangementApplicationService(
             val report = generatedRoleValidator.validate(GeneratedRoleValidationInput(
                 role = artifact.instrument, midi = artifact.path, project = project, arrangement = arrangement,
                 projection = projection, registry = registry, arrangementSha256 = approval.arrangement.sha256, registrySha256 = registrySha256,
+                acceptedFullSongGrooveMap = acceptedFullSongGrooveMap,
                 transitionWindows = if (artifact.instrument == "transitions") transitionWindows else emptyList(),
                 transitionTimelineEndTick = transitionTimelineEndTick.takeIf { artifact.instrument == "transitions" }
             ))
@@ -382,6 +394,7 @@ class DefaultArrangementApplicationService(
     override suspend fun generateOptionalMidi(root: Path, progress: ProgressSink): GeneratedMidiSnapshot = mutate(root) { normalized ->
         val project = readProject(normalized)
         val projection = musicalAuthorityBuilder.arrangementGeneration(normalized)
+        val acceptedFullSongGrooveMap = sourceSongCriticApplicationService.requireApprovedMelody(normalized).sourceSong.fullMelody.grooveMap
         val input = detailedInput(normalized, project)
         val arrangement = readApproved(normalized, input)
         val analyses = canonicalMidiAnalyses(projection)
@@ -409,7 +422,10 @@ class DefaultArrangementApplicationService(
             val report = generatedRoleValidator.validate(GeneratedRoleValidationInput(
                 role = "strings", midi = generated.path, project = project, arrangement = arrangement,
                 projection = projection, registry = registry, arrangementSha256 = approval.arrangementSha256,
-                registrySha256 = registrySha256, arrangementState = arrangementState
+                registrySha256 = registrySha256, acceptedFullSongGrooveMap = acceptedFullSongGrooveMap, arrangementState = arrangementState,
+                deliberateSilence = generated.notes.isEmpty() && generated.diagnostics.any { diagnostic ->
+                    diagnostic.contains("density is 0.0") || diagnostic.contains("approved core density budget")
+                }
             ))
             val reportPath = writeGeneratedMidiValidationReport(normalized, "strings", report)
             require(report.passed) {

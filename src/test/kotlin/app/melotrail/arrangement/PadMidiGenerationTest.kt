@@ -46,6 +46,19 @@ class PadMidiGenerationTest {
     }
 
     @Test
+    fun `carries the accepted prior section voicing and beats a reset octave by the versioned movement metric`() {
+        val first = generator.generate(request(length = 480, chords = listOf(chord(0, 480, "C")))).notes.map { it.pitch }.sorted()
+        val carried = generator.generate(request(sectionIndex = 1, start = 480, length = 480, chords = listOf(chord(0, 480, "F"))).copy(previousAcceptedVoicing = first)).notes.map { it.pitch }.sorted()
+        val reset = generator.generate(request(sectionIndex = 1, start = 480, length = 480, chords = listOf(chord(0, 480, "F")))).notes.map { it.pitch }.sorted()
+
+        val carriedMovement = SustainedVoicingContinuity.measure(first, carried)
+        val resetMovement = SustainedVoicingContinuity.measure(first, reset)
+        assertTrue(carriedMovement.totalSemitoneMotion < resetMovement.totalSemitoneMotion)
+        assertTrue(carriedMovement.commonToneCount >= resetMovement.commonToneCount)
+        assertEquals(SustainedVoicingContinuity.VERSION, carriedMovement.version)
+    }
+
+    @Test
     fun `density energy and register rules stay bounded`() {
         val fourChords = listOf(chord(0, 480, "C"), chord(480, 960, "Dm"), chord(960, 1440, "Em"), chord(1440, 1920, "F"))
         assertTrue(generator.generate(request(length = 1920, chords = fourChords, density = 0.0)).notes.isEmpty())

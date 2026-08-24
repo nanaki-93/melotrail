@@ -111,6 +111,23 @@ class DrumMidiGenerationTest {
     }
 
     @Test
+    fun `approved groove map replaces independent drum swing with the shared source feel`() {
+        val map = FullSongGrooveMap(
+            ppq = 480, meterDenominator = 4, subdivisionsPerBeat = 4,
+            points = (0 until 16).map { index ->
+                val tick = index * 120L
+                FullSongGroovePoint("occ-0", tick / 480, index % 4, tick, if (tick == 240L) 12 else 0)
+            },
+            occurrenceTemplateFingerprints = listOf(FullSongGrooveOccurrenceTemplate("occ-0", "A", "a".repeat(64))),
+            boundaries = emptyList(), maximumUnreviewedDiscontinuityTicks = 30
+        )
+        val hits = generator.generate(request(role = DrumsRole.STANDARD_GROOVE, swing = 0.5).copy(acceptedFullSongGrooveMap = map)).hits
+
+        assertTrue(hits.any { it.name == "closedHat" && it.startTick == 252L })
+        assertTrue(hits.none { it.name == "closedHat" && it.startTick == 300L })
+    }
+
+    @Test
     fun `adapter writes full timeline on registry channel without changing source or bass MIDI`() {
         val source = projectRoot.resolve("source/A.mid")
         val clean = projectRoot.resolve("midi/clean/A.mid")

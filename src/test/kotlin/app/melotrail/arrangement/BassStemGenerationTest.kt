@@ -131,6 +131,14 @@ class BassStemGenerationTest {
     }
 
     @Test
+    fun `approved groove map replaces independent bass syncopation with the shared source feel`() {
+        val map = testGrooveMap(deviationAt480 = 12)
+        val result = generator.generate(request(syncopation = 0.1).copy(acceptedFullSongGrooveMap = map))
+
+        assertEquals(listOf(0L, 492L, 960L, 1440L), result.notes.map { it.startTick })
+    }
+
+    @Test
     fun `supports three-four sections and repeated section requests without overflows or overlaps`() {
         val threeFour = generator.generate(request(length = 1440, signatures = listOf(MidiTimeSignature(0, 3, 4)), density = 1.0))
         assertEquals(listOf(0L, 480L, 960L), threeFour.notes.map { it.startTick })
@@ -237,4 +245,14 @@ class BassStemGenerationTest {
     )
 
     private fun chord(start: Long, end: Long, symbol: String, confidence: Double = 0.9) = MidiChord(start, end, symbol, confidence)
+
+    private fun testGrooveMap(deviationAt480: Long) = FullSongGrooveMap(
+        ppq = 480, meterDenominator = 4, subdivisionsPerBeat = 4,
+        points = (0 until 16).map { index ->
+            val tick = index * 120L
+            FullSongGroovePoint("occ-0", tick / 480, (index % 4), tick, if (tick == 480L) deviationAt480 else 0L)
+        },
+        occurrenceTemplateFingerprints = listOf(FullSongGrooveOccurrenceTemplate("occ-0", "A", "a".repeat(64))),
+        boundaries = emptyList(), maximumUnreviewedDiscontinuityTicks = 30
+    )
 }

@@ -155,6 +155,95 @@ data class AcceptedOccurrenceVoicing(
     }
 }
 
+/** Comparable versioned evidence for one actual cross-section sustained-role voicing handoff. */
+@Serializable
+data class SustainedVoicingMovement(
+    val version: Int = CURRENT_VERSION,
+    val totalSemitoneMotion: Long,
+    val maximumVoiceMotion: Int,
+    val commonToneCount: Int,
+    val enteringVoiceCount: Int,
+    val exitingVoiceCount: Int
+) {
+    /** Reject negative or unversioned movement evidence before it enters a role-validation report. */
+    fun requireValid() {
+        require(version == CURRENT_VERSION && totalSemitoneMotion >= 0 && maximumVoiceMotion >= 0 && commonToneCount >= 0 &&
+            enteringVoiceCount >= 0 && exitingVoiceCount >= 0) { "Sustained voicing movement is invalid" }
+    }
+
+    companion object { const val CURRENT_VERSION = 1 }
+}
+
+/** Deterministic sustained-voicing assignment and score policy shared by pad, strings, and role validation. */
+object SustainedVoicingContinuity {
+    const val VERSION = 1
+    private const val ENTRY_OR_EXIT_PENALTY = 6L
+    private const val REGISTER_DIRECTION_PENALTY = 24L
+
+    /** Measure ordered voice movement, common tones, and cardinality changes without matching voices by raw array index. */
+    fun measure(previous: List<Int>, current: List<Int>): SustainedVoicingMovement {
+        requireVoicing(previous); requireVoicing(current)
+        val pairCount = minOf(previous.size, current.size)
+        val matched = if (pairCount == 0) emptyList() else minimumOrderedPairs(previous, current)
+        val movements = matched.map { (before, after) -> kotlin.math.abs(after - before) }
+        val entering = (current.size - pairCount).coerceAtLeast(0)
+        val exiting = (previous.size - pairCount).coerceAtLeast(0)
+        val common = previous.groupingBy { it % 12 }.eachCount().entries.sumOf { (pitchClass, count) -> minOf(count, current.count { it % 12 == pitchClass }) }
+        return SustainedVoicingMovement(
+            totalSemitoneMotion = movements.sum().toLong() + (entering + exiting) * ENTRY_OR_EXIT_PENALTY,
+            maximumVoiceMotion = movements.maxOrNull() ?: 0,
+            commonToneCount = common,
+            enteringVoiceCount = entering,
+            exitingVoiceCount = exiting
+        ).also(SustainedVoicingMovement::requireValid)
+    }
+
+    /** Score candidates by actual movement first, then retain common tones and an explicit intended register direction. */
+    fun selectionScore(previous: List<Int>?, current: List<Int>, intendedRange: IntRange): Long {
+        requireVoicing(current)
+        if (previous.isNullOrEmpty()) return current.sumOf { kotlin.math.abs(it - (intendedRange.first + intendedRange.last) / 2) }.toLong()
+        val movement = measure(previous, current)
+        val previousCenter = previous.average()
+        val currentCenter = current.average()
+        val intendedCenter = (intendedRange.first + intendedRange.last) / 2.0
+        val directionPenalty = when {
+            intendedCenter > previousCenter && currentCenter <= previousCenter -> REGISTER_DIRECTION_PENALTY
+            intendedCenter < previousCenter && currentCenter >= previousCenter -> REGISTER_DIRECTION_PENALTY
+            else -> 0L
+        }
+        return movement.totalSemitoneMotion * 100L - movement.commonToneCount * 10L + directionPenalty
+    }
+
+    /** Pair the smaller voicing into the larger one while preserving ascending voice order. */
+    private fun minimumOrderedPairs(previous: List<Int>, current: List<Int>): List<Pair<Int, Int>> =
+        if (previous.size <= current.size) choosePairs(previous, current) else choosePairs(current, previous).map { (after, before) -> before to after }
+
+    /** Exhaustively select the small ordered assignment space, avoiding a greedy voice-identity reset. */
+    private fun choosePairs(shorter: List<Int>, longer: List<Int>): List<Pair<Int, Int>> {
+        var best: List<Pair<Int, Int>>? = null
+        /** Visit each order-preserving assignment exactly once and retain the smallest total semitone movement. */
+        fun search(shortIndex: Int, longIndex: Int, pairs: List<Pair<Int, Int>>) {
+            if (shortIndex == shorter.size) {
+                if (best == null || pairs.sumOf { (left, right) -> kotlin.math.abs(right - left) } < best!!.sumOf { (left, right) -> kotlin.math.abs(right - left) }) best = pairs
+                return
+            }
+            val remaining = shorter.size - shortIndex
+            for (candidate in longIndex..longer.size - remaining) {
+                search(shortIndex + 1, candidate + 1, pairs + (shorter[shortIndex] to longer[candidate]))
+            }
+        }
+        search(0, 0, emptyList())
+        return requireNotNull(best)
+    }
+
+    /** Keep metric inputs inside the same bounded, ordered sustained-voicing domain used by the planner. */
+    private fun requireVoicing(pitches: List<Int>) {
+        require(pitches.size <= AcceptedPadStringVoicing.MAXIMUM_VOICES && pitches.all { it in 0..127 } && pitches == pitches.distinct().sorted()) {
+            "Sustained voicing is invalid"
+        }
+    }
+}
+
 /**
  * Versioned, occurrence-bound musical intent emitted by the global planner.
  * It is data for review and detailed planning; it contains no note events.

@@ -42,7 +42,9 @@ data class PadGenerationRequest(
     val midiChannel: Int = 0,
     val midiProgram: Int? = null,
     /** Full accepted ensemble MIDI and summaries for register/density-aware voicing. */
-    val arrangementState: ArrangementState? = null
+    val arrangementState: ArrangementState? = null,
+    /** Last accepted pad voicing from the immediately preceding generated section. */
+    val previousAcceptedVoicing: List<Int> = emptyList()
 ) {
     fun requireValid() {
         require(sectionIndex >= 0 && sectionStartTick >= 0) { "Pad section index and start tick must not be negative" }
@@ -55,6 +57,8 @@ data class PadGenerationRequest(
         require(midiChannel in 0..15) { "Pad MIDI channel must be 0..15" }
         require(midiProgram == null || midiProgram in 0..127) { "Pad MIDI program must be 0..127" }
         arrangementState?.requireTrack(ArrangementState.PIANO)
+        require(previousAcceptedVoicing.size <= AcceptedPadStringVoicing.MAXIMUM_VOICES && previousAcceptedVoicing.all { it in 0..127 } &&
+            previousAcceptedVoicing == previousAcceptedVoicing.distinct().sorted()) { "Previous accepted pad voicing is invalid" }
         require(tempoMap.isNotEmpty() && tempoMap.first().tick == 0L) { "Pad tempo map must start at tick 0" }
         require(timeSignatures.isNotEmpty() && timeSignatures.first().tick == 0L) { "Pad time-signature map must start at tick 0" }
         tempoMap.zipWithNext().forEach { (first, second) -> require(first.tick < second.tick) { "Pad tempo changes must be ordered" } }
@@ -96,7 +100,7 @@ class DeterministicPadMidiGenerator {
 
         val notes = mutableListOf<PadMidiNote>()
         val diagnostics = mutableListOf<String>()
-        var previousVoicing: List<Int>? = null
+        var previousVoicing: List<Int>? = request.previousAcceptedVoicing.takeIf { it.isNotEmpty() }
         selectedChords(request.chords, request.density).forEach { chord ->
             val harmony = harmonyFor(request, chord, diagnostics) ?: return@forEach
             val space = request.arrangementState?.ensembleSpaceMap(
@@ -184,8 +188,9 @@ class DeterministicPadMidiGenerator {
         }.map { (harmony.root + it) % 12 }
         val candidates = candidates(tones, requireNotNull(PadGenerationRequest.REGISTER_RANGES[register]))
             .filter { voicing -> hasEnsembleSpace(voicing, space) }
+        val range = requireNotNull(PadGenerationRequest.REGISTER_RANGES[register])
         val voiced = candidates.minWithOrNull(compareBy<List<Int>> {
-            previous?.zip(it)?.sumOf { (before, after) -> abs(after - before) } ?: 0
+            SustainedVoicingContinuity.selectionScore(previous, it, range)
         }.thenBy { voicing -> voicing.sumOf { abs(it - registerCenter(register)) } }.thenBy { it.joinToString(",") })
         if (voiced != null || space == null) return voiced
 
@@ -193,7 +198,6 @@ class DeterministicPadMidiGenerator {
         // a quiet harmonic texture with one unoccupied chord tone. This keeps
         // an activated pad playable without accepting masking or inventing a
         // pitch outside the authoritative harmony.
-        val range = requireNotNull(PadGenerationRequest.REGISTER_RANGES[register])
         val chordPitchClasses = harmony.intervals.map { (harmony.root + it) % 12 }.toSet()
         return range.asSequence()
             .filter { it % 12 in chordPitchClasses && hasEnsembleSpace(listOf(it), space) }
@@ -305,7 +309,14 @@ class PadMidiGenerationAdapter(
             start = Math.addExact(start, analysis.durationTicks)
         }
         require(requests.isNotEmpty()) { "Detailed arrangement does not contain a generated pad instrument" }
-        val results = requests.map { it to composer.generate(it) }
+        var previousVoicing: List<Int> = emptyList()
+        val results = requests.map { request ->
+            val contextual = request.copy(previousAcceptedVoicing = previousVoicing)
+            val result = composer.generate(contextual)
+            previousVoicing = result.notes.groupBy(PadMidiNote::startTick).toSortedMap().values.lastOrNull()
+                ?.map(PadMidiNote::pitch)?.sorted() ?: previousVoicing
+            contextual to result
+        }
         val target = output ?: root.resolve("midi/generated/pad.mid")
         writeMidi(target, checkNotNull(ppq), start, pad.midiChannelZeroBased ?: 0, pad.midiProgram, timeline, results)
         return GeneratedPadMidi(target, checkNotNull(ppq), results.flatMap { it.second.notes }, results.flatMap { it.second.diagnostics })

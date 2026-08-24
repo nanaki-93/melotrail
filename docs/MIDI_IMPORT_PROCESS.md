@@ -129,8 +129,12 @@ blocker is private-audition evidence only and labels downstream use
 experimental; it cannot satisfy a quality-certified flow. QP-011 now carries
 the approved occurrence-indexed groove map, profile/mood, role density,
 register, articulation, and sustained-voicing continuity intent into
-Arrangement. It plans from evidence only; QP-012 remains responsible for
-validating generated MIDI timing and actual cross-section voicings.
+Arrangement. QP-012 now validates generated MIDI timing and actual
+cross-section voicings: bass/drums use the active approved groove-map span and
+cannot pass an audible piano flam, while pad/strings carry their actual prior
+voicing into the following request. Generated-role reports retain role metrics,
+accepted-state baselines, registry map evidence, and kick timing without
+changing source MIDI or coupling generation to DSP.
 
 ## Recovery
 

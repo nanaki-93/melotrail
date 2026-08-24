@@ -103,8 +103,11 @@ overridden, and an ordinary-blocker override is explicitly private-audition and
 experimental. QP-011 binds the approved full-song groove map and typed
 profile/mood/role intent into each Arrangement occurrence, including bounded
 density, register, articulation, groove allowance, and prior accepted
-pad/string voicing evidence. It does not generate or validate timing offsets;
-QP-012 remains the generated-role admission boundary.
+pad/string voicing evidence. QP-012 is the generated-role admission boundary:
+bass and drums consume and are checked against the active approved map span,
+including piano-flam rejection; pad/string requests retain actual prior
+voicings; all reports record accepted-state/candidate metrics and registry/kick
+evidence. A failed candidate remains outside the accepted ensemble state.
 
 ## Arrangement and Cohesion boundary
 

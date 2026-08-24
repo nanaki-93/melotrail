@@ -159,6 +159,20 @@ accepted pad/string voicings into the next occurrence; it cannot manufacture
 voicing evidence. This is a planning constraint, not generated-MIDI proof:
 QP-012 validates the actual timing and voicings against the accepted ensemble.
 
+### QP-012 generated-role evidence
+
+The generated-role admission report now binds bass and drums to the exact
+approved full-song groove-map digest. Their generators use that map instead of
+an independent timing offset; the validator rejects missing map coverage,
+off-phase attacks, and near-simultaneous piano flams. Each report retains the
+accepted-ensemble baseline metrics, candidate role metrics, registry-resolved
+instrument-map evidence, and drum-kick attack/residual evidence for later
+mixing work. Pad and strings carry their last actual generated voicing into the
+next request and score ordered assignments with versioned total movement,
+common-tone, and cardinality evidence. Explicit planned/safe silence remains
+separate from a missing or failed candidate, and a candidate joins
+`ArrangementState` only after its report passes.
+
 ## Cohesion and targeted polish
 
 - Cohesion receives boundary-local active, entering, and exiting roles.

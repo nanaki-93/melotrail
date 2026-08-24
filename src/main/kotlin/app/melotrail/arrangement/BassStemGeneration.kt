@@ -56,7 +56,9 @@ data class BassGenerationRequest(
     /** Phrase starts are section-relative and make articulation decisions explicit. */
     val phraseBoundaries: List<Long> = emptyList(),
     /** The last accepted note from the preceding generated section, if any. */
-    val previousAcceptedBassNote: BassMidiNote? = null
+    val previousAcceptedBassNote: BassMidiNote? = null,
+    /** Approved full-song source-feel map used instead of an independent timing offset. */
+    val acceptedFullSongGrooveMap: FullSongGrooveMap? = null
 ) {
     fun requireValid() {
         require(sectionIndex >= 0) { "Bass section index must not be negative" }
@@ -89,6 +91,11 @@ data class BassGenerationRequest(
             "Bass phrase boundaries must be ordered within the section"
         }
         previousAcceptedBassNote?.let { require(it.endTick <= sectionStartTick && it.pitch in 28..48) { "Previous accepted bass note is invalid" } }
+        acceptedFullSongGrooveMap?.let { map ->
+            require(map.ppq == ppq && map.meterDenominator == timeSignatures.first().denominator) {
+                "Bass groove map must use the generated MIDI PPQ and meter denominator"
+            }
+        }
     }
 
     private companion object { const val MAX_SYNCOPATION = 0.25 }
@@ -175,8 +182,10 @@ class DeterministicBassMidiGenerator {
         val selected = if (request.role == BassRole.SUSTAINED) pattern else pattern.take(eventsForDensity(pattern.size, density))
         return selected.mapIndexed { index, note ->
             val originalStart = note.startTick
-            val offset = if (request.role == BassRole.SUSTAINED || originalStart == interval.start) 0L else (beat * request.syncopation).roundToInt().toLong()
-            val start = originalStart + offset
+            val unwarpedStart = if (request.acceptedFullSongGrooveMap == null && request.role != BassRole.SUSTAINED && originalStart != interval.start) {
+                originalStart + (beat * request.syncopation).roundToInt().toLong()
+            } else originalStart
+            val start = grooveAdjustedStart(request, unwarpedStart)
             val end = if (request.role == BassRole.SUSTAINED) interval.end else minOf(note.endTick, start + (beat * NOTE_LENGTH_BEATS).roundToInt())
             BassMidiNote(
                 startTick = request.sectionStartTick + start,
@@ -192,6 +201,15 @@ class DeterministicBassMidiGenerator {
         val start = request.sectionStartTick + interval.start; val end = request.sectionStartTick + interval.end
         val activity = piano.count { it.startTick in start until end }.toDouble() / maxOf(1.0, (end - start).toDouble() / beat)
         return if (activity >= BUSY_PIANO_ONSETS_PER_BEAT) minOf(request.density, BUSY_MAX_DENSITY) else request.density
+    }
+
+    /** Apply only the matching approved source-feel point; missing evidence blocks rather than silently falling back. */
+    private fun grooveAdjustedStart(request: BassGenerationRequest, sectionRelativeStart: Long): Long {
+        val map = request.acceptedFullSongGrooveMap ?: return sectionRelativeStart
+        val globalGridTick = request.sectionStartTick + sectionRelativeStart
+        return requireNotNull(FullSongGrooveMapTiming.expectedTick(map, globalGridTick)) {
+            "Bass pattern tick $globalGridTick has no active approved full-song groove-map point"
+        } - request.sectionStartTick
     }
 
     private fun voiceLead(pitch: Int, previous: BassMidiNote?, first: Boolean): Int {
@@ -359,7 +377,15 @@ class BassMidiGenerationAdapter(
     }
 
     /** Consumes the approved canonical detailed-arrangement controls. */
-    fun generate(projectRoot: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>, arrangementState: ArrangementState? = null, output: Path? = null): GeneratedBassMidi {
+    fun generate(
+        projectRoot: Path,
+        project: Project,
+        arrangement: DetailedArrangement,
+        analyses: Map<String, MidiAnalysis>,
+        arrangementState: ArrangementState? = null,
+        output: Path? = null,
+        acceptedFullSongGrooveMap: FullSongGrooveMap? = null
+    ): GeneratedBassMidi {
         val root = projectRoot.toAbsolutePath().normalize()
         project.requireCleanMidi(root)
         val bass = InstrumentRegistryLoader(libraryRoot).load().resolveApprovedRole(project, LogicalInstrument.BASS)
@@ -394,7 +420,8 @@ class BassMidiGenerationAdapter(
                     syncopation = plan.syncopation,
                     midiChannel = bass.midiChannelZeroBased ?: 0,
                     midiProgram = bass.midiProgram,
-                    arrangementState = arrangementState
+                    arrangementState = arrangementState,
+                    acceptedFullSongGrooveMap = acceptedFullSongGrooveMap
                 )
             }
             start = Math.addExact(start, analysis.durationTicks)

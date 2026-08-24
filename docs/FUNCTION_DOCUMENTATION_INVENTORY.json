@@ -437,10 +437,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/ArrangementMusicalIntent.kt",
       "classification": "documented",
-      "reason": "All 12 callable declarations in src/main/kotlin/app/melotrail/arrangement/ArrangementMusicalIntent.kt have directly attached KDoc; introduced for QP-011 on 2026-08-24.",
-      "functionCount": 12,
-      "declarationDigest": "46831ed3d3331cc6d69acf7404c0a4158a35c5fdf63982ee6f0aa04a3ef62bcc",
-      "documentedFunctionCount": 12
+      "reason": "All 19 callable declarations in src/main/kotlin/app/melotrail/arrangement/ArrangementMusicalIntent.kt have directly attached KDoc; QP-012 adds documented, versioned sustained-voicing movement and order-preserving assignment evidence on 2026-08-24.",
+      "functionCount": 19,
+      "declarationDigest": "1e8acf438b8143ac29e95cf2319a4a2293e4bbb250fb375036dc49327ddac082",
+      "documentedFunctionCount": 19
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/BassQualityValidator.kt",
@@ -453,10 +453,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/BassStemGeneration.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/BassStemGeneration.kt has 28 callable declarations, 2 directly documented and 26 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 28,
-      "declarationDigest": "45f22c96ca591c35518715a545788b5177c87bebe00c70b660de7de7909405aa",
-      "documentedFunctionCount": 2
+      "reason": "src/main/kotlin/app/melotrail/arrangement/BassStemGeneration.kt has 29 callable declarations, 3 directly documented and 26 still requiring focused KDoc/docstrings. QP-012 documents approved groove-map timing in the changed generator contract; the remaining file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
+      "functionCount": 29,
+      "declarationDigest": "04a360b189c5b76143fa475f62d7aea79a27d4919db4e2968b23e50e44c7ff0e",
+      "documentedFunctionCount": 3
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/CohesionPreviewRenderer.kt",
@@ -517,18 +517,18 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/FullSongMelody.kt",
       "classification": "documented",
-      "reason": "All 12 callable declarations in src/main/kotlin/app/melotrail/arrangement/FullSongMelody.kt have directly attached KDoc/docstrings; introduced for QP-007 on 2026-08-24.",
-      "functionCount": 12,
-      "declarationDigest": "685e338f0f75399202e14c21db68b031d90fca5bdb9cab0e1a5617d84a127c1c",
-      "documentedFunctionCount": 12
+      "reason": "All 14 callable declarations in src/main/kotlin/app/melotrail/arrangement/FullSongMelody.kt have directly attached KDoc/docstrings; QP-012 adds reviewed full-song groove-map timing resolution on 2026-08-24.",
+      "functionCount": 14,
+      "declarationDigest": "8b69ca06eccba255cbaba186f28a46a64ee1b618b5d15d96da359b8482f092d7",
+      "documentedFunctionCount": 14
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/GeneratedRoleValidation.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/GeneratedRoleValidation.kt has 22 callable declarations, 0 directly documented and 22 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 22,
-      "declarationDigest": "407ae5bad94664f7aacace0a441ef382ca5597cc35fa19837b1a167b946814fc",
-      "documentedFunctionCount": 0
+      "reason": "src/main/kotlin/app/melotrail/arrangement/GeneratedRoleValidation.kt has 31 callable declarations, 5 directly documented and 26 still requiring focused KDoc/docstrings. QP-012 documents its report evidence while adding groove, flam, density-direction, sustained-voicing, and instrument-map checks; the remaining file-local debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
+      "functionCount": 31,
+      "declarationDigest": "db468f5246d08bee6de331f53b36196b4e886422087e37691031258607b88994",
+      "documentedFunctionCount": 5
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/GlobalSongPlanner.kt",

@@ -27,6 +27,22 @@ class StringsMidiGenerationTest {
     }
 
     @Test
+    fun `carries a prior strings voicing across a section cardinality change without an octave reset`() {
+        val first = generator.generate(request(role = StringsMidiRole.SUSTAINED_HARMONY, chords = listOf(chord(0, 480, "C")))).notes.map { it.pitch }.sorted()
+        val carried = generator.generate(request(role = StringsMidiRole.SUSTAINED_HARMONY, chords = listOf(chord(0, 480, "F"))).copy(
+            sectionIndex = 1, sectionStartTick = 480, previousAcceptedVoicing = first
+        )).notes.map { it.pitch }.sorted()
+        val reset = generator.generate(request(role = StringsMidiRole.SUSTAINED_HARMONY, chords = listOf(chord(0, 480, "F"))).copy(
+            sectionIndex = 1, sectionStartTick = 480
+        )).notes.map { it.pitch }.sorted()
+
+        val carriedMovement = SustainedVoicingContinuity.measure(first, carried)
+        val resetMovement = SustainedVoicingContinuity.measure(first, reset)
+        assertTrue(carriedMovement.totalSemitoneMotion <= resetMovement.totalSemitoneMotion)
+        assertTrue(carriedMovement.maximumVoiceMotion <= 12)
+    }
+
+    @Test
     fun `climax and countermelody gates conservatively degrade`() {
         val outsideClimax = generator.generate(request(role = StringsMidiRole.CLIMAX_REINFORCEMENT))
         assertTrue(outsideClimax.notes.isEmpty())

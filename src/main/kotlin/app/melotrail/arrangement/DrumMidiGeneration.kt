@@ -39,7 +39,9 @@ data class DrumGenerationRequest(
     val midiChannel: Int,
     val noteMap: Map<String, Int>,
     /** Accepted piano plus any earlier accepted generated tracks, including bass attacks. */
-    val arrangementState: ArrangementState? = null
+    val arrangementState: ArrangementState? = null,
+    /** Approved full-song source-feel map shared with bass; it replaces independent swing offsets. */
+    val acceptedFullSongGrooveMap: FullSongGrooveMap? = null
 ) {
     fun requireValid() {
         require(sectionIndex >= 0 && sectionStartTick >= 0) { "Drum section index and start tick must not be negative" }
@@ -65,6 +67,11 @@ data class DrumGenerationRequest(
         require(noteMap.keys.containsAll(REQUIRED_HITS)) { "Drum note map is missing required hit(s): ${REQUIRED_HITS.filterNot(noteMap::containsKey).joinToString()}" }
         require(noteMap.values.distinct().size == noteMap.values.size) { "Drum note map must not assign one MIDI pitch to multiple named hits" }
         noteMap.forEach { (name, pitch) -> require(pitch in 0..127) { "Drum note map '$name' must be 0..127" } }
+        acceptedFullSongGrooveMap?.let { map ->
+            require(map.ppq == ppq && map.meterDenominator == timeSignatures.first().denominator) {
+                "Drum groove map must use the generated MIDI PPQ and meter denominator"
+            }
+        }
     }
 
     private companion object {
@@ -152,7 +159,8 @@ class DeterministicDrumMidiGenerator {
             .firstOrNull { onset ->
                 val offset = onset - barStart
                 offset > 0 && offset < bar.length && offset % bar.ticksPerBeat != 0L &&
-                    output.values.none { it.name == "kick" && kotlin.math.abs(it.startTick - onset) < minimumDistance }
+                    output.values.none { it.name == "kick" && kotlin.math.abs(it.startTick - onset) < minimumDistance } &&
+                    (request.acceptedFullSongGrooveMap == null || FullSongGrooveMapTiming.expectedTick(request.acceptedFullSongGrooveMap, onset) != null)
             } ?: return
         val offset = candidate - barStart
         addHit(request, bar, output, "kick", Slot(offset, minimumDistance, offset % bar.ticksPerBeat != 0L), velocity(request.energy), applySwing = false)
@@ -195,9 +203,14 @@ class DeterministicDrumMidiGenerator {
         velocity: Int,
         applySwing: Boolean
     ) {
-        val delayed = if (applySwing && slot.offBeat) (slot.subdivision * request.swing / 2.0).roundToInt().toLong() else 0L
+        val delayed = if (request.acceptedFullSongGrooveMap == null && applySwing && slot.offBeat) (slot.subdivision * request.swing / 2.0).roundToInt().toLong() else 0L
         val offset = (slot.offset + delayed).coerceAtMost(bar.length - 1)
-        val start = request.sectionStartTick + bar.start + offset
+        val unwarpedStart = request.sectionStartTick + bar.start + offset
+        val start = request.acceptedFullSongGrooveMap?.let { map ->
+            requireNotNull(FullSongGrooveMapTiming.expectedTick(map, unwarpedStart)) {
+                "Drum pattern tick $unwarpedStart has no active approved full-song groove-map point"
+            }
+        } ?: unwarpedStart
         val end = minOf(request.sectionStartTick + bar.start + bar.length, start + minOf(NOTE_LENGTH_TICKS, slot.subdivision.coerceAtLeast(1)))
         val hit = DrumMidiHit(name, start, end, requireNotNull(request.noteMap[name]) { "Drum note map is missing '$name'" }, velocity)
         output.putIfAbsent(start to name, hit)
@@ -263,7 +276,15 @@ class DrumMidiGenerationAdapter(
     private val composer: DeterministicDrumMidiGenerator = DeterministicDrumMidiGenerator(),
     private val libraryRoot: Path
 ) {
-    fun generate(projectRoot: Path, project: Project, arrangement: DetailedArrangement, analyses: Map<String, MidiAnalysis>, arrangementState: ArrangementState? = null, output: Path? = null): GeneratedDrumMidi {
+    fun generate(
+        projectRoot: Path,
+        project: Project,
+        arrangement: DetailedArrangement,
+        analyses: Map<String, MidiAnalysis>,
+        arrangementState: ArrangementState? = null,
+        output: Path? = null,
+        acceptedFullSongGrooveMap: FullSongGrooveMap? = null
+    ): GeneratedDrumMidi {
         val root = projectRoot.toAbsolutePath().normalize()
         project.requireCleanMidi(root)
         val drums = InstrumentRegistryLoader(libraryRoot).load().resolveApprovedRole(project, LogicalInstrument.DRUMS)
@@ -286,7 +307,8 @@ class DrumMidiGenerationAdapter(
                     position, start, analysis.ppq, analysis.tempoMap, analysis.timeSignatures, analysis.durationTicks,
                     section.energy, plan.density, plan.role, plan.kickDensity, plan.snarePattern, plan.hiHatDensity,
                     plan.swing, plan.fillLastBar, section.transitionOut.type.toSongTransitionIntent(),
-                    requireNotNull(drums.midiChannelZeroBased) { "Validated drum registry has no MIDI channel" }, drums.noteMap, arrangementState
+                    requireNotNull(drums.midiChannelZeroBased) { "Validated drum registry has no MIDI channel" }, drums.noteMap, arrangementState,
+                    acceptedFullSongGrooveMap
                 )
             }
             start = Math.addExact(start, analysis.durationTicks)

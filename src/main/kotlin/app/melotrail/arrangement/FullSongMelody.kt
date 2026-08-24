@@ -169,6 +169,19 @@ data class FullSongGrooveMap(
     companion object { const val CURRENT_VERSION = 1 }
 }
 
+/** Resolve approved source-feel points without turning the canonical grid into a timing warp. */
+object FullSongGrooveMapTiming {
+    /** Return the exact approved expressive tick for one global grid point, or null when the span has no evidence. */
+    fun expectedTick(map: FullSongGrooveMap, globalGridTick: Long): Long? =
+        map.points.singleOrNull { it.globalTick == globalGridTick }?.let { point -> point.globalTick + point.deviationTicks }
+
+    /** Return the closest approved expressive tick inside one occurrence's active groove-map span. */
+    fun nearestExpectedTick(map: FullSongGrooveMap, occurrenceId: String, actualTick: Long): Long? =
+        map.points.asSequence().filter { it.occurrenceId == occurrenceId }
+            .map { point -> point.globalTick + point.deviationTicks }
+            .minWithOrNull(compareBy<Long> { kotlin.math.abs(it - actualTick) }.thenBy { it })
+}
+
 /** Stable per-occurrence source-groove fingerprint retained to prove repeated local feel. */
 @Serializable
 data class FullSongGrooveOccurrenceTemplate(val occurrenceId: String, val sourcePartId: String, val fingerprint: String) {
