@@ -83,10 +83,11 @@ MIDI rather than consume the exact approved connected source song. QP-002 now
 stores source beat/onset/tempo/downbeat and source-groove evidence, and QP-003
 can publish a reviewed, source-hash-bound, piecewise timing candidate with
 whole-bar body bounds plus explicit pickup/tail windows. It does not silently
-select that candidate or choose an unreviewed downbeat. Current assembly also
-does not guarantee mode-aware pitch mapping, harmony-fit stable tones, or
-global one-note-at-a-time melody. The remaining gaps are QP-004–QP-010 and must
-not be described as current capabilities.
+select that candidate or choose an unreviewed downbeat. QP-004 maps recognized
+source scale degrees into the project mode and records unresolved chromatic
+fallbacks, but current assembly still does not guarantee harmony-fit stable
+tones or global one-note-at-a-time melody. The remaining gaps are QP-005–QP-010
+and must not be described as current capabilities.
 
 ## Arrangement and Cohesion boundary
 

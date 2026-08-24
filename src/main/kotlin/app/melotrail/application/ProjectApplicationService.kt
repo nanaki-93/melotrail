@@ -22,6 +22,7 @@ import app.melotrail.arrangement.MidiFeelReport
 import app.melotrail.arrangement.MidiFeelReportStore
 import app.melotrail.arrangement.TechnicalCorrectionSelection
 import app.melotrail.arrangement.MidiLoFiFeelTransformer
+import app.melotrail.arrangement.MidiTranspositionReport
 import app.melotrail.arrangement.MidiTranspositionReportStore
 import app.melotrail.arrangement.DetailedArrangement
 import app.melotrail.arrangement.ArrangementHarmonyContext
@@ -903,7 +904,7 @@ class DefaultProjectApplicationService(
         val target = project.envelope.compositionSettings?.takeIf { it.complete }?.key
             ?: throw IllegalStateException("Complete project Setup before transposition.")
         val input = artifactRef(root, normalized)
-        val configuration = sha256Hex("${source.tonic.chromatic}|${source.modeId.value}|${target.tonic.chromatic}|${target.modeId.value}|${SourceKeyEvidence.CONFIDENCE_THRESHOLD}")
+        val configuration = sha256Hex("${MidiTranspositionReport.PROCESSOR_VERSION}|${source.tonic.chromatic}|${source.modeId.value}|${target.tonic.chromatic}|${target.modeId.value}|${SourceKeyEvidence.CONFIDENCE_THRESHOLD}")
         runner.run(RunStage(root, StageId.TRANSPOSED, StageSubject.Part(part.id), inputArtifacts = listOf(input), configurationSha256 = configuration))
         return open(root)
     }

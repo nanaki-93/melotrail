@@ -645,9 +645,9 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/MidiTransposition.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/MidiTransposition.kt has 13 callable declarations, 0 directly documented and 13 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 13,
-      "declarationDigest": "0ea6e869326fac01b234fa38e5d7e43cdf6c24c3993e9e300302c74ae3cfdc67",
+      "reason": "src/main/kotlin/app/melotrail/arrangement/MidiTransposition.kt has 14 callable declarations, 0 directly documented and 14 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed for QP-004 on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
+      "functionCount": 14,
+      "declarationDigest": "1afe53d965b32ad467eb2096a73c2c996e1e29ffa0b73c112b2a4747f20df254",
       "documentedFunctionCount": 0
     },
     {

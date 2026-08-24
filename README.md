@@ -44,8 +44,8 @@ Setup and Harmony
 
 Current source-song approval is a real gate, but the quality roadmap documents
 known musical gaps: performed beat grids are not yet warped to project beats,
-transposition is not mode-aware, source melody is not guaranteed monophonic or
-chord-compatible, sustain tails and source micro-timing are not enforced across
+source melody is not guaranteed monophonic or chord-compatible, sustain tails
+and source micro-timing are not enforced across
 the ensemble, cross-section accompaniment voicing can reset, and several
 downstream consumers reconstruct occurrence MIDI instead of using the approved
 full melody. Production also lacks interaction-aware kick/bass control and

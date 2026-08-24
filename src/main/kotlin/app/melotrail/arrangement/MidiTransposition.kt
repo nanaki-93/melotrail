@@ -16,6 +16,7 @@ import javax.sound.midi.MidiMessage
 import javax.sound.midi.MidiSystem
 import javax.sound.midi.Sequence
 import javax.sound.midi.ShortMessage
+import kotlin.math.abs
 
 /** The only range policy supported by the deterministic project-key processor. */
 @Serializable
@@ -36,7 +37,9 @@ data class MidiPitchMovement(
     val endTick: Long,
     val sourcePitch: Int,
     val outputPitch: Int,
-    val octaveFolded: Boolean
+    val octaveFolded: Boolean,
+    val mappingKind: MidiPitchMappingKind,
+    val sourceScaleDegree: Int? = null
 ) {
     init {
         require(channel in 0..15 && startTick >= 0 && endTick > startTick && sourcePitch in 0..127 && outputPitch in 0..127) {
@@ -44,6 +47,10 @@ data class MidiPitchMovement(
         }
     }
 }
+
+/** Explains whether a note used tonic transposition, a mode-aware degree, or an unresolved chromatic fallback. */
+@Serializable
+enum class MidiPitchMappingKind { TONIC_CHROMATIC, MODE_AWARE_SCALE_DEGREE, UNRESOLVED_CHROMATIC }
 
 @Serializable
 data class MidiScaleFitEvidence(val notes: Int, val fittingNotes: Int) {
@@ -72,6 +79,8 @@ data class MidiTranspositionReport(
     val projectScaleFit: MidiScaleFitEvidence,
     val chordFit: MidiChordFitEvidence,
     val movements: List<MidiPitchMovement>,
+    val modeAdjustedMovements: Int,
+    val unresolvedChromaticSourceNotes: List<MidiPitchMovement> = emptyList(),
     val warnings: List<String> = emptyList()
 ) {
     fun requireValid() {
@@ -83,14 +92,20 @@ data class MidiTranspositionReport(
         projectScaleFit.let { require(it.notes == movements.size) { "MIDI project scale evidence does not match movements" } }
         chordFit.let { require(it.noteOnsets == movements.size) { "MIDI chord evidence does not match movements" } }
         require(input.noteCount == output.noteCount) { "MIDI transposition changed note count" }
+        require(modeAdjustedMovements == movements.count { it.mappingKind == MidiPitchMappingKind.MODE_AWARE_SCALE_DEGREE }) {
+            "MIDI mode-adjusted movement count is invalid"
+        }
+        require(unresolvedChromaticSourceNotes == movements.filter { it.mappingKind == MidiPitchMappingKind.UNRESOLVED_CHROMATIC }) {
+            "MIDI unresolved chromatic evidence is invalid"
+        }
         require(warnings == warnings.distinct() && warnings.all { it in WARNING_CODES }) { "MIDI transposition warnings are invalid" }
     }
 
     companion object {
-        const val CURRENT_VERSION = 1
-        const val PROCESSOR_VERSION = "1"
+        const val CURRENT_VERSION = 2
+        const val PROCESSOR_VERSION = "2"
         private val PART_ID = Regex("[A-Za-z0-9_-]{1,80}")
-        private val WARNING_CODES = setOf("OCTAVE_FOLD_APPLIED", "PERCUSSION_CHANNEL_PRESERVED")
+        private val WARNING_CODES = setOf("OCTAVE_FOLD_APPLIED", "PERCUSSION_CHANNEL_PRESERVED", "MODE_AWARE_SCALE_DEGREES", "UNRESOLVED_CHROMATIC_SOURCE_NOTES")
     }
 }
 
@@ -115,13 +130,13 @@ class MidiProjectKeyTransposer {
         val inputHash = sha256(source)
         val before = read(source)
         val interval = signedInterval(sourceKey.tonic.chromatic, projectKey.tonic.chromatic)
-        val movements = movements(before, interval, rangePolicy)
+        val movements = movements(before, sourceKey, projectKey, interval, rangePolicy)
         val sequence = Sequence(Sequence.PPQ, before.resolution)
         before.tracks.forEach { sourceTrack ->
             val targetTrack = sequence.createTrack()
             (0 until sourceTrack.size()).map(sourceTrack::get)
                 .filterNot { (it.message as? MetaMessage)?.type == END_OF_TRACK }
-                .forEach { event -> targetTrack.add(MidiEvent(transform(event.message, interval, rangePolicy), event.tick)) }
+                .forEach { event -> targetTrack.add(MidiEvent(transform(event.message, sourceKey, projectKey, interval, rangePolicy), event.tick)) }
         }
         Files.createDirectories(requireNotNull(target.parent))
         MidiSystem.write(sequence, 1, target.toFile())
@@ -134,18 +149,23 @@ class MidiProjectKeyTransposer {
         val warnings = buildList {
             if (movements.any(MidiPitchMovement::octaveFolded)) add("OCTAVE_FOLD_APPLIED")
             if (before.tracks.any { track -> (0 until track.size()).any { (track[it].message as? ShortMessage)?.channel == DRUM_CHANNEL } }) add("PERCUSSION_CHANNEL_PRESERVED")
+            if (movements.any { it.mappingKind == MidiPitchMappingKind.MODE_AWARE_SCALE_DEGREE }) add("MODE_AWARE_SCALE_DEGREES")
+            if (movements.any { it.mappingKind == MidiPitchMappingKind.UNRESOLVED_CHROMATIC }) add("UNRESOLVED_CHROMATIC_SOURCE_NOTES")
         }
         return MidiTranspositionReport(
             partId = partId, sourceKey = sourceKey, projectKey = projectKey, intervalSemitones = interval, rangePolicy = rangePolicy,
             input = MidiTranspositionArtifact(inputHash, before.resolution, eventCount(before), noteCount(before)),
             output = MidiTranspositionArtifact(sha256(target), after.resolution, outputEvents, noteCount(after)),
             sourceScaleFit = sourceFit, projectScaleFit = projectFit,
-            chordFit = MidiChordFitEvidence(chordWindows, movements.size), movements = movements, warnings = warnings
+            chordFit = MidiChordFitEvidence(chordWindows, movements.size), movements = movements,
+            modeAdjustedMovements = movements.count { it.mappingKind == MidiPitchMappingKind.MODE_AWARE_SCALE_DEGREE },
+            unresolvedChromaticSourceNotes = movements.filter { it.mappingKind == MidiPitchMappingKind.UNRESOLVED_CHROMATIC },
+            warnings = warnings
         ).also(MidiTranspositionReport::requireValid)
     }
 
-    private fun movements(sequence: Sequence, interval: Int, policy: MidiTransposeRangePolicy): List<MidiPitchMovement> {
-        data class Start(val tick: Long, val outputPitch: Int, val folded: Boolean)
+    private fun movements(sequence: Sequence, sourceKey: MusicalKey, projectKey: MusicalKey, interval: Int, policy: MidiTransposeRangePolicy): List<MidiPitchMovement> {
+        data class Start(val tick: Long, val mapping: PitchMapping)
         val active = mutableMapOf<Pair<Int, Int>, ArrayDeque<Start>>()
         val result = mutableListOf<MidiPitchMovement>()
         sequence.tracks.forEach { track ->
@@ -157,13 +177,14 @@ class MidiProjectKeyTransposer {
                 if (!noteOn && !noteOff) return@forEach
                 val key = message.channel to message.data1
                 if (noteOn) {
-                    val mapped = mapPitch(message.data1, interval, policy)
-                    active.getOrPut(key) { ArrayDeque() }.addLast(Start(event.tick, mapped.pitch, mapped.folded))
+                    val mapped = mapPitch(message.data1, sourceKey, projectKey, interval, policy)
+                    active.getOrPut(key) { ArrayDeque() }.addLast(Start(event.tick, mapped))
                 } else {
                     val start = active[key]?.removeFirstOrNull()
                         ?: throw IllegalArgumentException("MIDI transposition input has an unmatched note-off")
                     require(event.tick > start.tick) { "MIDI transposition input has a non-positive note duration" }
-                    result += MidiPitchMovement(message.channel, start.tick, event.tick, message.data1, start.outputPitch, start.folded)
+                    result += MidiPitchMovement(message.channel, start.tick, event.tick, message.data1, start.mapping.pitch, start.mapping.folded,
+                        start.mapping.kind, start.mapping.sourceScaleDegree)
                 }
             }
         }
@@ -171,18 +192,26 @@ class MidiProjectKeyTransposer {
         return result.sortedWith(compareBy<MidiPitchMovement> { it.startTick }.thenBy { it.channel }.thenBy { it.sourcePitch })
     }
 
-    private fun transform(message: MidiMessage, interval: Int, policy: MidiTransposeRangePolicy): MidiMessage {
+    private fun transform(message: MidiMessage, sourceKey: MusicalKey, projectKey: MusicalKey, interval: Int, policy: MidiTransposeRangePolicy): MidiMessage {
         val copy = message.clone() as MidiMessage
         val short = copy as? ShortMessage ?: return copy
         val isNote = short.command == ShortMessage.NOTE_ON || short.command == ShortMessage.NOTE_OFF
         if (!isNote || short.channel == DRUM_CHANNEL) return copy
-        val mapped = mapPitch(short.data1, interval, policy)
+        val mapped = mapPitch(short.data1, sourceKey, projectKey, interval, policy)
         short.setMessage(short.command, short.channel, mapped.pitch, short.data2)
         return short
     }
 
-    private fun mapPitch(pitch: Int, interval: Int, policy: MidiTransposeRangePolicy): PitchMapping {
-        var mapped = pitch + interval
+    private fun mapPitch(pitch: Int, sourceKey: MusicalKey, projectKey: MusicalKey, interval: Int, policy: MidiTransposeRangePolicy): PitchMapping {
+        val sourceDegree = sourceKey.scalePitchClasses().indexOfFirst { it.chromatic == Math.floorMod(pitch, 12) }.takeIf { it >= 0 }
+        val kind = when {
+            sourceKey.modeId == projectKey.modeId -> MidiPitchMappingKind.TONIC_CHROMATIC
+            sourceDegree != null -> MidiPitchMappingKind.MODE_AWARE_SCALE_DEGREE
+            else -> MidiPitchMappingKind.UNRESOLVED_CHROMATIC
+        }
+        var mapped = if (kind == MidiPitchMappingKind.MODE_AWARE_SCALE_DEGREE) {
+            nearestRegister(projectKey.scalePitchClasses()[requireNotNull(sourceDegree)].chromatic, pitch + interval)
+        } else pitch + interval
         var folded = false
         when (policy) {
             MidiTransposeRangePolicy.OCTAVE_FOLD -> while (mapped !in 0..127) {
@@ -190,7 +219,13 @@ class MidiProjectKeyTransposer {
                 folded = true
             }
         }
-        return PitchMapping(mapped, folded)
+        return PitchMapping(mapped, folded, kind, sourceDegree)
+    }
+
+    private fun nearestRegister(targetPitchClass: Int, referencePitch: Int): Int {
+        val lower = referencePitch - Math.floorMod(referencePitch - targetPitchClass, 12)
+        val upper = lower + 12
+        return if (abs(referencePitch - lower) <= abs(upper - referencePitch)) lower else upper
     }
 
     private fun signedInterval(source: Int, target: Int): Int {
@@ -215,7 +250,7 @@ class MidiProjectKeyTransposer {
         }
     }
 
-    private data class PitchMapping(val pitch: Int, val folded: Boolean)
+    private data class PitchMapping(val pitch: Int, val folded: Boolean, val kind: MidiPitchMappingKind, val sourceScaleDegree: Int?)
 
     private companion object {
         val PART_ID = Regex("[A-Za-z0-9_-]{1,80}")
