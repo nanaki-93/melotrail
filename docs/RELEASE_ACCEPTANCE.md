@@ -48,6 +48,12 @@ These results prove repository correctness under their contracts, not musical
 listening quality. The remaining QP roadmap and its human evidence gates are
 incomplete, so release status remains **NOT APPROVED**.
 
+QP-017 implementation evidence is limited to the deterministic offline
+reference song and its pending hash-bound MIDI/WAV review bundle. No live
+four-source renderer/Qwen/worker run, audio-device session, or human listening
+decision is recorded in this repository. Those dependencies are **unverified**
+and cannot support a release-quality claim.
+
 ## Composition-quality blockers
 
 Release approval remains withheld until [`plan/QUALITY_GATES.md`](plan/QUALITY_GATES.md)

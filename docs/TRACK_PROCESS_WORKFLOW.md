@@ -68,7 +68,7 @@ dependencies or infer completion from page visits.
 | Cohesion | Boundary contexts/plans, bridge/role/occurrence outputs, approval | Review each adjacent occurrence against the approved arrangement |
 | Full-song review | Critic report, complete actionable evidence, bounded correction batches, and hash-bound candidate result | Repair/retry failed batches; record `NO_OP` only when no actionable evidence exists. A quality-certified run cannot bypass a failed or rejected planner. |
 | Humanization | Seeded per-role candidates/reports or bypass | Select current seed/config or bypass to current upstream input |
-| Render/mix/master | Stems, mix plans/reports, `mix/dry.wav`, `output/master.wav` | Restore worker/library/renderer and rerun only stale descendants |
+| Render/mix/master | Stems, mix plans/reports, `mix/dry.wav`, `output/master.wav`, and a hash-bound pending `debug/quality/.../listening-record.json` when a review bundle is requested | Restore worker/library/renderer and rerun only stale descendants; a pending form is not listening approval |
 | Release | Export plus frozen provenance/credits/release metadata | Resolve rights/license/AI-use/policy/manual blockers; never overwrite master |
 
 ## Source Song boundary
@@ -160,6 +160,13 @@ Use these distinctions:
 - **Commercial evidence ready:** provenance and policy evidence is complete
   under [`COMMERCIAL_PROVENANCE.md`](COMMERCIAL_PROVENANCE.md); it is not legal
   or platform approval.
+
+The QP-017 review bundle copies named, hash-validated MIDI/WAV pairs under
+`debug/quality/<project-context-sha256>/` and writes a `PENDING_HUMAN_REVIEW`
+form. It preserves selected artifacts and source bytes; the form becomes
+evidence only after a real listener records their identity, date, device, and
+decision. Offline fixtures and omitted local renderer/model/audio-device runs
+remain explicitly unverified.
 
 ## Practical recovery rules
 

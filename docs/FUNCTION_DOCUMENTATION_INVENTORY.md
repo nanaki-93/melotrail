@@ -56,3 +56,7 @@ QP-016 refreshes the mix, mastering, desktop, worker-protocol, and local
 codec-preview rows after adding hash-bound low-end plans and explicit local
 delivery-codec evidence. The inventory retains the locally scoped legacy
 declaration exemptions only where direct KDoc/docstrings are still incomplete.
+
+QP-017 adds a fully documented quality-review evidence service. It produces
+immutable MIDI/WAV debug copies and an explicitly pending listening form;
+offline tests cannot populate listener, date, device, or decision fields.

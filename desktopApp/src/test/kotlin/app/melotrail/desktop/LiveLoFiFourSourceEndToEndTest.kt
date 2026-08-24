@@ -5,6 +5,8 @@ import app.melotrail.application.ArrangementPlannerKind
 import app.melotrail.application.BuildApplicationService
 import app.melotrail.application.BuildAudioWorker
 import app.melotrail.application.BuildSongRequest
+import app.melotrail.application.CodecPreviewEvidence
+import app.melotrail.application.CodecPreviewStatus
 import app.melotrail.application.CompositionSettingsInput
 import app.melotrail.application.ConfirmSourceKey
 import app.melotrail.application.CreateEnhancementRequest
@@ -22,6 +24,7 @@ import app.melotrail.application.DefaultMidiAiFixApplicationService
 import app.melotrail.application.DefaultMixApplicationService
 import app.melotrail.application.DefaultSourceSongCriticApplicationService
 import app.melotrail.application.DefaultTechnicalCorrectionApplicationService
+import app.melotrail.application.DeliveryCodec
 import app.melotrail.application.EnsembleCohesionPlannerKind
 import app.melotrail.application.GenerateArrangementRequest
 import app.melotrail.application.GenerateEnsembleCohesionRequest
@@ -30,6 +33,9 @@ import app.melotrail.application.ImportSongPart
 import app.melotrail.application.MidiQualityStatus
 import app.melotrail.application.NormalizePartRequest
 import app.melotrail.application.ProgressSink
+import app.melotrail.application.QualityDebugPair
+import app.melotrail.application.QualityReviewArtifactKind
+import app.melotrail.application.QualityReviewEvidenceService
 import app.melotrail.application.SaveStructureRequest
 import app.melotrail.application.SelectMidiFeelRequest
 import app.melotrail.application.SetHarmonyProgression
@@ -53,6 +59,7 @@ import app.melotrail.arrangement.MidiAnalysisInput
 import app.melotrail.arrangement.SectionTypeId
 import app.melotrail.arrangement.SharedRoomPlan
 import app.melotrail.arrangement.SfizzInstrumentRenderer
+import app.melotrail.arrangement.WorkflowArtifactReference
 import app.melotrail.harmony.HarmonyTemplateId
 import app.melotrail.logging.DefaultLogger
 import app.melotrail.errors.ErrorReporter
@@ -67,6 +74,7 @@ import app.melotrail.music.TimeSignature
 import app.melotrail.profile.CompositionProfileRef
 import app.melotrail.profile.MoodRef
 import app.melotrail.worker.MP3ExportCommand
+import app.melotrail.worker.CodecPreviewCommand
 import app.melotrail.worker.MasterCommand
 import app.melotrail.worker.RepairCommand
 import app.melotrail.worker.RepairSpec
@@ -78,10 +86,12 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
 import java.nio.file.Path
+import java.security.MessageDigest
 import kotlin.test.assertTrue
 
 /**
@@ -148,44 +158,13 @@ class LiveLoFiFourSourceEndToEndTest {
         val mix = DefaultMixApplicationService()
         arrangements.renderApprovedStems(root, renderer, ProgressSink.None)
         mix.apply(ApplyMixRequest(root, loFiMixPlan()), ProgressSink.None)
+        mix.approve(root)
         val build = DefaultBuildApplicationService(arrangements, mix, renderer, LiveBuildWorker(client), cohesion)
             .build(BuildSongRequest(root, enableLoFi = true, enableMp3 = false), ProgressSink.None)
         assertTrue(Files.isRegularFile(build.master) && Files.size(build.master) > 44, "Expected a rendered master WAV.")
         assertTrue(Files.isRegularFile(output.resolve("master.wav")))
-    }
-
-    @Test
-    fun `existing live project can finish after an explicit full-song model bypass`() = runBlocking {
-        assumeTrue(System.getenv("MELOTRAIL_RESUME_LIVE_E2E") == "1", "Set MELOTRAIL_RESUME_LIVE_E2E=1 only after an explicit reviewed Full-Song Enhance bypass.")
-        val workspace = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath().normalize()) { it.parent }
-            .firstOrNull { Files.isDirectory(it.resolve("data/audio/input")) && Files.isDirectory(it.resolve("sounds")) }
-            ?: error("Unable to locate the MeloTrail workspace from the Gradle test working directory.")
-        val root = workspace.resolve("data/audio")
-        val output = root.resolve("output")
-        val client = WorkerClient(logger = DefaultLogger(), errorReporter = ErrorReporter(DefaultLogger()))
-        assertTrue(client.healthCheck(), "The local worker must be running at http://127.0.0.1:8081.")
-        val libraryRoot = workspace.resolve("sounds")
-        val arrangements = DefaultArrangementApplicationService(libraryRoot = libraryRoot)
-        val renderer = SfizzInstrumentRenderer(InstrumentRegistryLoader(libraryRoot))
-        val projects = DesktopServiceComposition.projectService()
-        val partIds = listOf("intro", "verse", "chorus", "bridge")
-
-        val cohesion = DefaultEnsembleCohesionApplicationService()
-        prepareSourcesInProjectKey(projects, root, partIds)
-        processSources(projects, root, partIds)
-        projects.saveStructure(SaveStructureRequest(root, listOf("intro", "verse", "verse", "chorus", "bridge", "verse")))
-        approveSourceCritic(root)
-        arrangeAllStandardInstruments(arrangements, root)
-        applyCohesion(cohesion, root)
-        critiqueAndEnhanceSong(root)
-        DefaultHumanizationApplicationService().generate(GenerateHumanizationRequest(root))
-        val mix = DefaultMixApplicationService()
-        arrangements.renderApprovedStems(root, renderer, ProgressSink.None)
-        mix.apply(ApplyMixRequest(root, loFiMixPlan()), ProgressSink.None)
-        val build = DefaultBuildApplicationService(arrangements, mix, renderer, LiveBuildWorker(client), cohesion)
-            .build(BuildSongRequest(root, enableLoFi = true, enableMp3 = false), ProgressSink.None)
-        assertTrue(Files.isRegularFile(build.master) && Files.size(build.master) > 44, "Expected a rendered master WAV.")
-        assertTrue(Files.isRegularFile(output.resolve("master.wav")))
+        assertStrictProductionEvidence(root, mix)
+        publishPendingLiveListeningReview(root, sources.first().id)
     }
 
     @Test
@@ -218,10 +197,13 @@ class LiveLoFiFourSourceEndToEndTest {
         val mix = DefaultMixApplicationService()
         arrangements.renderApprovedStems(root, renderer, ProgressSink.None)
         mix.apply(ApplyMixRequest(root, loFiMixPlan()), ProgressSink.None)
+        mix.approve(root)
         val build = DefaultBuildApplicationService(arrangements, mix, renderer, LiveBuildWorker(client), cohesion)
             .build(BuildSongRequest(root, enableLoFi = true, enableMp3 = false), ProgressSink.None)
         assertTrue(Files.isRegularFile(build.master) && Files.size(build.master) > 44, "Expected a rendered master WAV.")
         assertTrue(Files.isRegularFile(currentMaster))
+        assertStrictProductionEvidence(root, mix)
+        publishPendingLiveListeningReview(root, "intro")
     }
 
     private suspend fun prepareSourcesInProjectKey(
@@ -306,12 +288,10 @@ class LiveLoFiFourSourceEndToEndTest {
     private fun approveSourceCritic(root: Path) {
         val sourceCritic = DefaultSourceSongCriticApplicationService()
         val sourceReport = sourceCritic.run(root)
-        val hasBlockingSourceIssue = sourceReport.report.issues.any { it.severity.name == "BLOCKING" }
-        sourceCritic.approve(
-            root,
-            hasBlockingSourceIssue,
-            if (hasBlockingSourceIssue) "Live E2E audition pending; proceeding with explicit bounded test override." else null
-        )
+        require(!sourceReport.report.hasHardBlockers && sourceReport.report.issues.none { it.severity.name == "BLOCKING" }) {
+            "Live E2E requires a quality-certified source; repair all current source critic blockers before arranging."
+        }
+        sourceCritic.approve(root)
     }
 
     private suspend fun arrangeAllStandardInstruments(
@@ -353,15 +333,52 @@ class LiveLoFiFourSourceEndToEndTest {
     private suspend fun critiqueAndEnhanceSong(root: Path) {
         DefaultFullSongCriticApplicationService().run(root)
         val enhancement = DefaultFullSongEnhancementApplicationService(app.melotrail.arrangement.LocalQwenFullSongEnhancementPlanner())
-        val candidate = runCatching { enhancement.generateCandidate(root) }.getOrNull()
-        if (candidate?.selection?.name == "UNRESOLVED") enhancement.approve(root)
-        else if (candidate == null) enhancement.selectBypass(root)
+        val candidate = enhancement.generateCandidate(root)
+        when (candidate.selection.name) {
+            "UNRESOLVED" -> {
+                require(candidate.candidateAvailable) { "Full-Song Enhance produced unresolved evidence; repair or retry instead of bypassing it." }
+                enhancement.approve(root)
+            }
+            "NO_OP" -> Unit
+            else -> error("Unexpected Full-Song Enhance selection: ${candidate.selection}")
+        }
     }
 
     private fun applyHarmony(projects: app.melotrail.application.ProjectApplicationService, root: Path, section: SectionTypeId, template: String) {
         val current = projects.getHarmony(app.melotrail.application.GetHarmony(root))
         projects.setHarmonyProgression(SetHarmonyProgression(root, current.projectRevision, requireNotNull(current.revision), app.melotrail.harmony.SectionTypeId(section.value), HarmonyTemplateId(template)))
     }
+
+    /** Assert only code-owned production evidence; commercial and human-listening decisions remain separate. */
+    private fun assertStrictProductionEvidence(root: Path, mix: DefaultMixApplicationService) {
+        val snapshot = mix.load(root)
+        require(snapshot.approval != null && snapshot.report?.commercialReady == true) {
+            "Live E2E must not continue with an unresolved production-mix blocker."
+        }
+        val lowEnd = requireNotNull(snapshot.report?.lowEndInteraction)
+        require(!lowEnd.severeUnresolvedOverlap && !lowEnd.pumpingDetected && lowEnd.timingPreserved && lowEnd.durationPreserved) {
+            "Live E2E low-end evidence is unresolved."
+        }
+        val release = app.melotrail.application.DefaultReleaseReviewApplicationService().load(root)
+        require(release.mastering != null && release.codecPreviews.map { it.codec }.toSet() == DeliveryCodec.entries.toSet() &&
+            release.codecPreviews.none { it.status == CodecPreviewStatus.BLOCKED }) {
+            "Live E2E master or local codec preview evidence is incomplete."
+        }
+    }
+
+    /** Publish a pending review form and immutable MIDI/WAV copies; this does not claim that anyone listened. */
+    private fun publishPendingLiveListeningReview(root: Path, partId: String) {
+        val clean = root.resolve("midi/clean/$partId.mid")
+        val approved = DefaultSourceSongCriticApplicationService().requireApprovedMelody(root)
+        val reference = { path: Path -> WorkflowArtifactReference(root.relativize(path).toString().replace('\\', '/'), digest(path)) }
+        QualityReviewEvidenceService().publishPending(root, listOf(
+            QualityDebugPair("prepared-connected", QualityReviewArtifactKind.MIDI, reference(clean), approved.connectedMidi),
+            QualityDebugPair("dry-master", QualityReviewArtifactKind.WAV, reference(root.resolve("mix/dry.wav")), reference(root.resolve("output/master.wav")))
+        ), listOf("human listening session not recorded", "audio-device result unverified"))
+    }
+
+    private fun digest(path: Path): String = MessageDigest.getInstance("SHA-256")
+        .digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
 
     private fun loFiMixPlan() = MixPlan(
         tracks = mapOf(
@@ -420,6 +437,42 @@ private class LiveBuildWorker(private val client: WorkerClient) : BuildAudioWork
         )
     }
 
+    /** Use the worker's actual local preview path during an opt-in integration run. */
+    override suspend fun codecPreviews(input: Path, outputDirectory: Path, profile: MasteringProfile): List<CodecPreviewEvidence> {
+        val selectedMaster = input.toAbsolutePath().normalize()
+        val directory = outputDirectory.toAbsolutePath().normalize()
+        val root = checkNotNull(checkNotNull(directory.parent).parent)
+        require(selectedMaster.startsWith(root)) { "Live codec preview input must be the selected master." }
+        Files.createDirectories(directory)
+        val masterHash = digest(selectedMaster)
+        return DeliveryCodec.entries.map { codec ->
+            val suffix = codec.name.lowercase()
+            val encoded = directory.resolve("master-preview.$suffix")
+            val decoded = directory.resolve("master-preview.$suffix.decoded.wav")
+            val response = client.execute(CodecPreviewCommand(selectedMaster.toString(), suffix, encoded.toString(), decoded.toString()))
+            require(response.status == WorkerStatus.COMPLETED) { "${codec.name} codec preview failed: ${response.error?.message ?: "Unknown worker error"}" }
+            val evidence = requireNotNull(response.output) { "${codec.name} codec preview returned no evidence" }
+            if (evidence["status"]?.jsonPrimitive?.contentOrNull == "unavailable") {
+                CodecPreviewEvidence(codec, CodecPreviewStatus.UNVERIFIED, masterHash,
+                    detail = evidence["detail"]?.jsonPrimitive?.contentOrNull ?: "Local $codec preview is unavailable; no platform claim is implied.")
+            } else {
+                require(evidence["status"]?.jsonPrimitive?.contentOrNull == "measured" && Files.isRegularFile(encoded) && Files.isRegularFile(decoded)) {
+                    "${codec.name} codec preview did not publish encode/decode evidence."
+                }
+                val truePeak = requireNotNull(evidence["truePeakDbtp"]?.jsonPrimitive?.doubleOrNull)
+                val clipping = requireNotNull(evidence["clippingSampleCount"]?.jsonPrimitive?.longOrNull?.toInt())
+                val status = if (truePeak <= profile.maximumTruePeakDbtp + 0.05 && clipping == 0) CodecPreviewStatus.VERIFIED else CodecPreviewStatus.BLOCKED
+                CodecPreviewEvidence(codec, status, masterHash, reference(root, encoded), reference(root, decoded), truePeak, clipping,
+                    evidence["detail"]?.jsonPrimitive?.contentOrNull ?: "Local $codec preview measured the selected master.")
+            }
+        }
+    }
+
     override suspend fun exportMp3(input: Path, output: Path, bitrateKbps: Int): Boolean =
         client.execute(MP3ExportCommand(input.toString(), output.toString(), bitrateKbps)).status == WorkerStatus.COMPLETED
+
+    /** Create project-relative debug evidence only after hashing worker output. */
+    private fun reference(root: Path, path: Path) = WorkflowArtifactReference(root.relativize(path).toString().replace('\\', '/'), digest(path))
+    private fun digest(path: Path): String = MessageDigest.getInstance("SHA-256")
+        .digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
 }

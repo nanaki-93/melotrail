@@ -299,6 +299,14 @@
       "documentedFunctionCount": 0
     },
     {
+      "path": "src/main/kotlin/app/melotrail/application/QualityReviewEvidenceService.kt",
+      "classification": "documented",
+      "reason": "All 8 callable declarations in src/main/kotlin/app/melotrail/application/QualityReviewEvidenceService.kt have directly attached KDoc/docstrings; reviewed for QP-017 on 2026-08-25.",
+      "functionCount": 8,
+      "declarationDigest": "581e49748f91864a8b0e86f118c584a9a6dc2d8c5503c9c4acdebbe17929841e",
+      "documentedFunctionCount": 8
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/application/ReleaseExportApplicationService.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/application/ReleaseExportApplicationService.kt has 30 callable declarations, 0 directly documented and 30 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",

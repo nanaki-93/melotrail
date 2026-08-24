@@ -59,6 +59,7 @@ import org.junit.jupiter.api.io.TempDir
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -195,6 +196,25 @@ class ReferenceSongIntegrationTest {
         assertTrue(requireNotNull(renderedProject.workflow.cohesion).occurrences.all { it.sourceSha256 == approvedMelody.connectedMidi.sha256 })
         val stemReport = JSON.decodeFromString(StemRenderReport.serializer(), Files.readString(root.resolve("stem-render.json")))
         assertEquals(approvedMelody.connectedMidi, stemReport.canonicalFullMelody)
+        val sourceHash = sha256(root.resolve("source/melody.mid"))
+        val mix = DefaultMixApplicationService()
+        val build = DefaultBuildApplicationService(arrangements, mix, renderer, FakeBuildWorker()).build(BuildSongRequest(root))
+        val mixReport = assertNotNull(mix.load(root).report)
+        assertTrue(mixReport.lowEndInteraction != null, "Reference proof must retain time-local kick/bass evidence.")
+        val release = DefaultReleaseReviewApplicationService().load(root)
+        assertEquals(build.master.fileName.toString(), "master.wav")
+        assertTrue(release.mastering?.dynamicsPreserved == true)
+        assertTrue(release.codecPreviews.all { it.status == CodecPreviewStatus.UNVERIFIED }, "Offline fake codecs must remain visibly unverified.")
+        val listening = QualityReviewEvidenceService().publishPending(root, listOf(
+            QualityDebugPair("melody-connected", QualityReviewArtifactKind.MIDI,
+                WorkflowArtifactReference("midi/clean/verse.mid", sha256(root.resolve("midi/clean/verse.mid"))), approvedMelody.connectedMidi),
+            QualityDebugPair("dry-master", QualityReviewArtifactKind.WAV,
+                WorkflowArtifactReference("mix/dry.wav", sha256(root.resolve("mix/dry.wav"))),
+                WorkflowArtifactReference("output/master.wav", sha256(root.resolve("output/master.wav"))))
+        ), listOf("offline fake renderer", "human listening session not recorded"))
+        val listeningRecord = QualityReviewEvidenceService().load(root, listening)
+        assertEquals(ListeningReviewStatus.PENDING_HUMAN_REVIEW, listeningRecord.status)
+        assertEquals(sourceHash, sha256(root.resolve("source/melody.mid")), "Reference source must remain immutable across every production handoff.")
         return RunResult(hashes, project.envelope.structureOccurrences.size, requireNotNull(project.workflow.cohesion).boundaries.size, renderer.rendered.isNotEmpty(), modelCalls)
     }
 
@@ -230,6 +250,19 @@ class ReferenceSongIntegrationTest {
             DeterministicStemMixer().writeWav(MixedStem(audio, listOf(instrument.wireName)), output)
             return RenderResult(output, format.sampleRate, format.channels, 24, expectedFrames, audio.duration, 0.1, "fake", "1", "", "")
         }
+    }
+
+    /** Offline mastering boundary reports policy-compliant measurements without simulating a live worker or codec. */
+    private class FakeBuildWorker : BuildAudioWorker {
+        override suspend fun healthCheck() = true
+        override suspend fun repair(input: Path, output: Path) { Files.copy(input, output) }
+        override suspend fun master(input: Path, output: Path, profile: app.melotrail.model.MasteringProfile): app.melotrail.model.MasteringMeasurement {
+            Files.copy(input, output)
+            return app.melotrail.model.MasteringMeasurement(
+                "ITU-R BS.1770-4 / EBU R128", -14.0, -1.0, 3.0, 8.0, 0.0, 0.0, true, emptyList(), "offline-profile-fixture"
+            )
+        }
+        override suspend fun exportMp3(input: Path, output: Path, bitrateKbps: Int) = false
     }
 
     private companion object {

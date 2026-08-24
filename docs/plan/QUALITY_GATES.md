@@ -274,6 +274,14 @@ recognizable identity. It explicitly checks pedal-tail clashes, accompaniment
 flams, cross-section octave jumps, low-end pumping, and codec distortion. A
 listener can reject a structurally valid candidate.
 
+QP-017 publishes a hash-bound pending form at
+`debug/quality/<project-context-sha256>/listening-record.json` with immutable
+MIDI/WAV debug copies for the selected comparisons. It is only a review aid:
+`PENDING_HUMAN_REVIEW` has no listener, date, device, or decision and cannot be
+treated as listening approval. A completed record must name all four; live
+renderer, model, codec, audio-device, and listening evidence remains
+unverified until actually recorded.
+
 ## Release quality
 
 Release acceptance additionally requires:
