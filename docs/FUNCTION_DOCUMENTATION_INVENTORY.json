@@ -333,10 +333,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/SourceSongCriticApplicationService.kt",
       "classification": "documented",
-      "reason": "All 15 callable declarations in src/main/kotlin/app/melotrail/application/SourceSongCriticApplicationService.kt have directly attached KDoc/docstrings; reviewed for QP-008 approved-full-melody lineage on 2026-08-24.",
-      "functionCount": 15,
-      "declarationDigest": "9660184580ff5fadc7cf5ab7f059c3470a434651f4c0d98cf5d205cd9f238005",
-      "documentedFunctionCount": 15
+      "reason": "All 17 callable declarations in src/main/kotlin/app/melotrail/application/SourceSongCriticApplicationService.kt have directly attached KDoc/docstrings; reviewed for QP-010 hard-invariant and private-audition approval separation on 2026-08-24.",
+      "functionCount": 17,
+      "declarationDigest": "aaaf7b2e18501252251b8dfb7bfbc944b8e477033534a209525e8b0f876756ed",
+      "documentedFunctionCount": 17
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/SourceTimingAlignmentApplicationService.kt",
@@ -821,10 +821,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/SourceSongCritic.kt",
       "classification": "documented",
-      "reason": "All 20 callable declarations in src/main/kotlin/app/melotrail/arrangement/SourceSongCritic.kt have directly attached KDoc/docstrings; reviewed for QP-007 on 2026-08-24.",
-      "functionCount": 20,
-      "declarationDigest": "36e4344ede638694c2beebecdffbf8d48045d5e0e6a061e44f259e864d7090b4",
-      "documentedFunctionCount": 20
+      "reason": "All 24 callable declarations in src/main/kotlin/app/melotrail/arrangement/SourceSongCritic.kt have directly attached KDoc/docstrings; reviewed for QP-010 canonical hard checks, QP-006 eligibility evidence, source-groove evidence, and complete issue counts on 2026-08-24.",
+      "functionCount": 24,
+      "declarationDigest": "dec51b8dbec17405ceba9e2eee1b0b7df38146392670295c7a26da437bee92b2",
+      "documentedFunctionCount": 24
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/StageRunStore.kt",

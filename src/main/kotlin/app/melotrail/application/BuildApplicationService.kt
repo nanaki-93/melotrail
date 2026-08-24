@@ -321,7 +321,9 @@ class DefaultBuildApplicationService(
 
     /** Bind release evidence to the same approved connected melody that supplied every rendered piano section. */
     private fun releaseMelodyLineage(root: Path): WorkflowArtifactReference {
-        val approved = DefaultSourceSongCriticApplicationService().requireApprovedMelody(root)
+        val sourceApproval = DefaultSourceSongCriticApplicationService()
+        sourceApproval.requireQualityCertifiedApproved(root)
+        val approved = sourceApproval.requireApprovedMelody(root)
         val reportPath = root.resolve("stem-render.json").normalize()
         require(reportPath.startsWith(root) && Files.isRegularFile(reportPath)) { "Release requires a current stem-render report with canonical melody lineage." }
         val report = json.decodeFromString(StemRenderReport.serializer(), Files.readString(reportPath, StandardCharsets.UTF_8))

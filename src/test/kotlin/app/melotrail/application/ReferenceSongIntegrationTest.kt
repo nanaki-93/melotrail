@@ -47,6 +47,7 @@ import java.nio.ByteOrder
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.sound.midi.MidiEvent
+import javax.sound.midi.MetaMessage
 import javax.sound.midi.MidiSystem
 import javax.sound.midi.Sequence
 import javax.sound.midi.ShortMessage
@@ -276,6 +277,7 @@ private object ReferenceSongFixture {
             track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, pitch, 84), start))
             track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, pitch, 0), start + 360))
         }
+        track.add(MidiEvent(MetaMessage(0x2F, byteArrayOf(), 0), 7_680))
         MidiSystem.write(sequence, 1, path.toFile())
     }
 

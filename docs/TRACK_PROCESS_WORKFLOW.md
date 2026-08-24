@@ -62,7 +62,7 @@ dependencies or infer completion from page visits.
 | Clean/Normalize/Timing/Transpose | Separate MIDI plus quality/normalization/timing/transposition reports | Review cleanup and timing evidence; confirm low-confidence source key; rerun earliest stale stage |
 | Correction/AI Fix/Enhance/Feel | One ordered, hash-bound chain: transposed -> corrected -> AI Fix -> Enhance -> Feel | Approve, reject, regenerate, or select `NO_OP`; Feel is regenerated from the selected upstream candidate and never copied by filename |
 | Analysis/Structure | `analysis/<part>.json`, stable `StructureOccurrence` entries | Reanalyze affected part or save intended occurrence order |
-| Source Song | Versioned two-track source MIDI/sidecar, connected candidate, critic report, approval | Preview exact source song; repair or explicitly review reported issues |
+| Source Song | Versioned two-track source MIDI/sidecar, connected candidate, complete-count critic report, approval mode | Repair hard findings; a recorded ordinary-blocker override is private-audition-only and experimental |
 | Arrangement | `song_plan.json`, `section_variations.json`, approved/draft detailed plan | Approve draft or regenerate from current authority/source approval |
 | Generated roles/core | Validated bass/drums/pad and optional string/transition evidence | Regenerate the failed role; later roles use accepted prior state |
 | Cohesion | Boundary contexts/plans, bridge/role/occurrence outputs, approval | Review each adjacent occurrence against the approved arrangement |
@@ -95,8 +95,12 @@ does not rewrite project harmony, and ambiguity or an excessive repair blocks
 instead of publishing MIDI. QP-008 binds downstream arrangement, Cohesion,
 criticism, humanization, preview, renderer, and release lineage to the approved
 connected full melody. It clips occurrence views through the authoritative
-sidecar; it never reconstructs piano timing from selected part durations. The
-remaining gap is QP-010 and must not be described as current
+sidecar; it never reconstructs piano timing from selected part durations.
+QP-010 verifies canonical lineage, explicit windows, monophony, QP-006
+eligibility, anchors, tails, source groove, and source-key confirmation before
+approval. It exposes complete severity counts; hard invariants cannot be
+overridden, and an ordinary-blocker override is explicitly private-audition and
+experimental. The remaining gap is QP-011 and must not be described as current
 capabilities.
 
 ## Arrangement and Cohesion boundary

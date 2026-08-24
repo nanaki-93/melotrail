@@ -48,6 +48,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
 import javax.sound.midi.MidiEvent
+import javax.sound.midi.MetaMessage
 import javax.sound.midi.MidiSystem
 import javax.sound.midi.Sequence
 import javax.sound.midi.ShortMessage
@@ -285,6 +286,7 @@ class EndToEndWorkflowCompatibilityTest {
             Files.createDirectories(path.parent)
             val sequence = Sequence(Sequence.PPQ, 480); val track = sequence.createTrack()
             track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, 60, 100), 0)); track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, 60, 0), 480))
+            track.add(MidiEvent(MetaMessage(0x2F, byteArrayOf(), 0), 1_920))
             MidiSystem.write(sequence, 1, path.toFile())
         }
         fun writeWav(path: Path) {

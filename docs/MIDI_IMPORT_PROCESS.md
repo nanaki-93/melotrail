@@ -121,10 +121,13 @@ candidate, and zero-edit Enhance is recorded as `NO_OP`.
   and release evidence use the exact approved connected candidate; local views
   are clipped through its sidecar windows and cannot fall back to selected parts.
 
-These remaining limits are tracked by QP-010. Review the
-connected source-song preview and Source Song Critic carefully; prepared-source
-completion is not musical approval, and a stale/missing approval blocks rather
-than allowing a later selected-part fallback.
+QP-010 verifies the exact connected MIDI against the explicit bar/pickup/body/
+tail windows, global monophony, QP-006 eligibility and boundary evidence,
+protected anchors, groove coverage, source-key confirmation, and canonical
+lineage. Hard findings cannot be overridden. A recorded override of an ordinary
+blocker is private-audition evidence only and labels downstream use
+experimental; it cannot satisfy a quality-certified flow. The remaining musical
+planning limits are tracked by QP-011.
 
 ## Recovery
 

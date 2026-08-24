@@ -60,8 +60,10 @@ outcome:
    Fix -> Enhance -> Feel chain. Each selected step is hash/context/processor
    bound; `NO_OP` retains its exact upstream artifact instead of masquerading
    as an enhanced candidate.
-8. Source and full-song critics report serious problems, but explicit or silent
-   bypass paths can still produce a successful build.
+8. QP-010 verifies the full source melody against canonical windows, QP-006
+   eligibility, anchors, tails, groove, key confirmation, and lineage. Hard
+   findings cannot be overridden; any ordinary-blocker override is labeled
+   private-audition/experimental rather than quality-certified.
 9. Cohesion derives supported instruments globally instead of at each boundary;
    `CONTINUITY` can become a drum fill, and bridge renderers do not execute all
    declared musical intent fields.
@@ -219,7 +221,7 @@ listening A/B decisions, rights attestations, AI disclosure, and release signoff
 | --- | --- | --- |
 | A. Baseline and timing | QP-001–QP-003 | Reproducible quality fixture, beat/downbeat evidence, bar-aligned source MIDI |
 | B. Canonical melody | QP-004–QP-008 | Mode-aware pitch preparation and one downstream canonical melody |
-| C. Quality gates | QP-010 | Strict source approval |
+| C. Quality gates | QP-010 complete | Strict source approval with non-overridable canonical invariants |
 | D. Arrangement and cohesion | QP-011–QP-014 | Expressive validated roles, boundary-local cohesion, improving targeted polish |
 | E. Product and production | QP-015–QP-016 | Review UI plus low-end and delivery-master hardening |
 | F. Proof and release | QP-017–QP-018 | End-to-end listening evidence, policy/provenance, and cleanup closure |

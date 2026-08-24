@@ -131,14 +131,15 @@ Before arranging a current project:
 - compare the transposed MIDI against the project key and section progression;
 - check every section's first musical beat and trailing duration;
 - audition the connected source melody alone;
-- do not override Source Song Critic blockers merely to reach Build;
+- repair Source Song Critic hard findings; an ordinary-blocker override is
+  private-audition-only and cannot support a quality-certified claim;
 - retain the original and rejected candidates for comparison.
 
 If section starts drift away from the bar grid, different modes remain audible,
 simultaneous melody notes survive, or exposed notes clash with the active chord,
-treat the project as a private diagnostic run until QP-010 is
-implemented or the candidate is manually corrected and reviewed. Audio effects,
-mastering, and Cohesion cannot repair a fundamentally misaligned source melody.
+the critic now blocks quality-certified approval. Repair the earliest source or
+prepared candidate and rerun the source-song review; audio effects, mastering,
+and Cohesion cannot repair a fundamentally misaligned source melody.
 
 ## Build and artifact recovery
 

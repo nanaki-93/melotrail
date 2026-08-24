@@ -95,6 +95,7 @@ class DefaultFullSongCriticApplicationService(
         require(project.version == Project.CURRENT_VERSION) { "Full-Song Critic requires a schema-v4 project." }
         val cohesion = requireNotNull(project.workflow.cohesion) { "Full-Song Critic requires approved Cohesion." }
         require(cohesion.approved && WorkflowArtifact.COHESION !in project.workflow.stale) { "Full-Song Critic requires current approved Cohesion." }
+        sourceSongCritic.requireQualityCertifiedApproved(root)
         val approvedMelody = sourceSongCritic.requireApprovedMelody(root)
         val authority = authorityBuilder.wholeSongAnalysis(root)
         val arrangementRef = requireNotNull(project.workflow.arrangement?.arrangement) { "Full-Song Critic requires an approved arrangement." }

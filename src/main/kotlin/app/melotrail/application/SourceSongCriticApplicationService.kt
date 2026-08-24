@@ -12,6 +12,7 @@ import app.melotrail.arrangement.SourceSongCriticArtifactPaths
 import app.melotrail.arrangement.SourceSongCriticInput
 import app.melotrail.arrangement.SourceSongCriticReport
 import app.melotrail.arrangement.SourceSongIssueSeverity
+import app.melotrail.arrangement.SourceSongApprovalMode
 import app.melotrail.arrangement.WorkflowArtifactReference
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -46,7 +47,9 @@ data class ApprovedSourceSongMelody(
     val connectedMidi: WorkflowArtifactReference,
     val criticReport: WorkflowArtifactReference,
     val approval: SourceSongApproval,
-    val approvalSidecar: WorkflowArtifactReference
+    val approvalSidecar: WorkflowArtifactReference,
+    /** Private-audition evidence is usable for explicitly experimental consumers only. */
+    val experimental: Boolean
 )
 
 /** UI-neutral pre-arrangement source-song review and approval boundary. */
@@ -57,7 +60,7 @@ interface SourceSongCriticApplicationService {
     /** Load the current report only when it still matches the assembled connected source. */
     fun load(root: Path): SourceSongCriticSnapshot
 
-    /** Persist ordinary approval, or an explicit recorded override for current blocking issues. */
+    /** Persist quality-certified approval, or an explicitly labeled private-audition override for current non-hard blockers. */
     fun approve(root: Path, overrideBlockingIssues: Boolean = false, overrideReason: String? = null): SourceSongApprovalSnapshot
 
     /** Require a current approval before arrangement may begin. */
@@ -65,6 +68,9 @@ interface SourceSongCriticApplicationService {
 
     /** Resolve the exact approved full melody and all of its immutable lineage. */
     fun requireApprovedMelody(root: Path): ApprovedSourceSongMelody
+
+    /** Require an approval that is eligible to be represented as quality-certified. */
+    fun requireQualityCertifiedApproved(root: Path): SourceSongApprovalSnapshot
 }
 
 /** Default file-backed implementation for the deterministic source-song approval gate. */
@@ -100,8 +106,11 @@ class DefaultSourceSongCriticApplicationService(
     override fun approve(root: Path, overrideBlockingIssues: Boolean, overrideReason: String?): SourceSongApprovalSnapshot {
         val snapshot = load(root)
         val blocking = snapshot.report.issues.filter { it.severity == SourceSongIssueSeverity.BLOCKING }.map { it.id }
+        require(!snapshot.report.hasHardBlockers) {
+            "Source Song Critic found non-overridable hard invariants. Repair the canonical source evidence before approval."
+        }
         require(blocking.isEmpty() || overrideBlockingIssues) {
-            "Source Song Critic found blocking issues. Record an explicit override with a reason before arranging."
+            "Source Song Critic found blocking issues. Record an explicit private-audition override with a reason before arranging."
         }
         require(!overrideBlockingIssues || blocking.isNotEmpty()) { "A source-song override is allowed only for current blocking issues." }
         if (overrideBlockingIssues) require(!overrideReason.isNullOrBlank()) { "A source-song override requires a reason." }
@@ -112,6 +121,7 @@ class DefaultSourceSongCriticApplicationService(
             sourceMidiSha256 = snapshot.report.sourceMidiSha256,
             connectedMidiSha256 = snapshot.report.connectedMidi.sha256,
             criticReport = reportReference,
+            mode = if (overrideBlockingIssues) SourceSongApprovalMode.PRIVATE_AUDITION else SourceSongApprovalMode.QUALITY_CERTIFIED,
             overriddenBlockingIssueIds = if (overrideBlockingIssues) blocking else emptyList(),
             overrideReason = if (overrideBlockingIssues) overrideReason?.trim() else null
         )
@@ -125,6 +135,15 @@ class DefaultSourceSongCriticApplicationService(
         SourceSongApprovalSnapshot(it.approval, root.toAbsolutePath().normalize().resolve(it.approvalSidecar.file))
     }
 
+    /** Reject an experimental/private approval at the boundary used for quality claims and certified progression. */
+    override fun requireQualityCertifiedApproved(root: Path): SourceSongApprovalSnapshot {
+        val approved = requireApproved(root)
+        require(approved.approval.mode == SourceSongApprovalMode.QUALITY_CERTIFIED) {
+            "Source Song approval is experimental/private-audition evidence and cannot satisfy a quality-certified flow."
+        }
+        return approved
+    }
+
     /** Reject missing or stale approval before exposing the canonical full melody to a downstream consumer. */
     override fun requireApprovedMelody(root: Path): ApprovedSourceSongMelody {
         val current = current(root)
@@ -133,10 +152,12 @@ class DefaultSourceSongCriticApplicationService(
         require(path.startsWith(current.root) && Files.isRegularFile(path)) { "Arrangement requires explicit Source Song approval. Review the Source Song Critic report first." }
         val approval = json.decodeFromString(SourceSongApproval.serializer(), Files.readString(path))
         val blocking = report.report.issues.filter { it.severity == SourceSongIssueSeverity.BLOCKING }.map { it.id }.sorted()
+        require(!report.report.hasHardBlockers) { "Source Song approval cannot bypass current hard invariants. Repair the canonical source evidence." }
         require(approval.sourceSongContextSha256 == report.report.sourceSongContextSha256 && approval.sourceMidiSha256 == report.report.sourceMidiSha256 &&
             approval.connectedMidiSha256 == report.report.connectedMidi.sha256 && approval.criticReport.file == relative(report.reportPath, current.root) &&
             approval.criticReport.sha256 == sha256(report.reportPath)) { "Source Song approval is stale. Review and approve the current critic report." }
-        require(approval.overriddenBlockingIssueIds.sorted() == blocking) {
+        require((approval.mode == SourceSongApprovalMode.QUALITY_CERTIFIED && blocking.isEmpty() && approval.overriddenBlockingIssueIds.isEmpty()) ||
+            (approval.mode == SourceSongApprovalMode.PRIVATE_AUDITION && approval.overriddenBlockingIssueIds.sorted() == blocking && blocking.isNotEmpty())) {
             "Source Song approval does not cover the current blocking issues. Record a current explicit override."
         }
         return ApprovedSourceSongMelody(
@@ -147,7 +168,8 @@ class DefaultSourceSongCriticApplicationService(
             connectedMidi = current.connection.outputMidi,
             criticReport = WorkflowArtifactReference(relative(report.reportPath, current.root), sha256(report.reportPath)),
             approval = approval,
-            approvalSidecar = reference(current.root, path)
+            approvalSidecar = reference(current.root, path),
+            experimental = approval.mode == SourceSongApprovalMode.PRIVATE_AUDITION
         )
     }
 
@@ -162,8 +184,10 @@ class DefaultSourceSongCriticApplicationService(
         val connected = normalized.resolve(connection.outputMidi.file).normalize()
         require(connected.startsWith(normalized) && Files.isRegularFile(connected)) { "Connected source melody is missing." }
         val authority = authorityBuilder.build(normalized)
+        val sourceParts = project.envelope.structureOccurrences.map { it.partId }.toSet()
         return CurrentSourceSong(normalized, sourceSongArtifact, connectionArtifact, connected,
-            SourceSongCriticInput(normalized, sourceSong, connection, authority.projectKey.scalePitchClasses().map { it.chromatic }.toSet()))
+            SourceSongCriticInput(normalized, sourceSong, connection, authority.projectKey.scalePitchClasses().map { it.chromatic }.toSet(),
+                project.parts.filter { it.id in sourceParts && it.sourceKeyEvidence?.confirmationRequired == true }.map { it.id }.toSet()))
     }
 
     /** Atomically write immutable deterministic evidence, rejecting conflicting existing bytes. */

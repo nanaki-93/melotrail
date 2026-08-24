@@ -229,6 +229,8 @@ data class SourceSongReviewUiState(
 ) {
     val approved: Boolean get() = approval != null
     val hasBlockingIssues: Boolean get() = critic?.report?.hasBlockingIssues == true
+    val hasHardBlockers: Boolean get() = critic?.report?.hasHardBlockers == true
+    val experimentalApproval: Boolean get() = approval?.approval?.mode?.name == "PRIVATE_AUDITION"
 }
 
 private data class ProjectHydration(
@@ -2089,7 +2091,8 @@ class WorkspaceViewModel(
                     SourceSongReviewUiState(sourceSong = sourceSong, connection = connection, critic = critic)
                 }
             }.onSuccess { review ->
-                val message = if (review.hasBlockingIssues) "Connected source song is ready for review; resolve or explicitly override blocking critic findings before approval."
+                val message = if (review.hasHardBlockers) "Connected source song has non-overridable hard critic findings; repair the canonical evidence before approval."
+                else if (review.hasBlockingIssues) "Connected source song has blocking findings; a recorded private-audition override remains experimental."
                 else "Connected source song and critic report are ready for approval."
                 mutableState.update { it.copy(sourceSongReview = review, operation = WorkspaceOperation.Idle, notification = message) }
             }.onFailure { error ->
@@ -2109,6 +2112,7 @@ class WorkspaceViewModel(
         val review = state.value.sourceSongReview
         if (review.critic == null) return fail("approve source song", "Generate and review the current Source Song Critic report first.")
         if (review.approved) return
+        if (review.hasHardBlockers) return fail("approve source song", "Repair non-overridable hard Source Song Critic findings before approving this source candidate.")
         mutableState.update { it.copy(dialog = WorkspaceDialog.ConfirmSourceSongApproval(review.hasBlockingIssues)) }
     }
 
@@ -2120,13 +2124,15 @@ class WorkspaceViewModel(
     private fun approveSourceSong() {
         val project = state.value.project ?: return
         val dialog = state.value.dialog as? WorkspaceDialog.ConfirmSourceSongApproval ?: return
-        if (dialog.requiresOverride && dialog.reason.isBlank()) return fail("approve source song", "A reason is required to override blocking Source Song Critic findings.")
+        if (dialog.requiresOverride && dialog.reason.isBlank()) return fail("approve source song", "A reason is required for an experimental private-audition override.")
         if (state.value.operation.isMutating) return
         mutableState.update { it.copy(operation = WorkspaceOperation.ApprovingSourceSong, notification = null) }
         scope.launch {
             runCatching { withContext(ioDispatcher) { sourceSongCriticService.approve(project.root, dialog.requiresOverride, dialog.reason.takeIf { dialog.requiresOverride }) } }
                 .onSuccess { approval ->
-                    mutableState.update { current -> current.copy(sourceSongReview = current.sourceSongReview.copy(approval = approval), operation = WorkspaceOperation.Idle, dialog = null, notification = "Connected source song approved for arrangement.") }
+                    val label = if (approval.approval.mode.name == "PRIVATE_AUDITION") "Connected source song approved for private audition only; downstream use is experimental."
+                    else "Connected source song quality-certified for arrangement."
+                    mutableState.update { current -> current.copy(sourceSongReview = current.sourceSongReview.copy(approval = approval), operation = WorkspaceOperation.Idle, dialog = null, notification = label) }
                 }
                 .onFailure { fail("approve source song", it.message ?: "Unable to approve the connected source song.") }
         }

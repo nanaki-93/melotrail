@@ -1917,14 +1917,15 @@ private fun SourceSongReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent
     }
     val report = review.critic?.report
     if (report != null) {
-        Text("Source Song Critic · ${if (report.hasBlockingIssues) "blocking findings" else "ready for approval"}", style = MaterialTheme.typography.labelLarge,
+        Text("Source Song Critic · ${report.counts.total} total · ${report.counts.hardBlockers} hard · ${report.counts.blocking} blocking · ${report.counts.warnings} warning", style = MaterialTheme.typography.labelLarge,
             color = if (report.hasBlockingIssues) semanticColor(WorkspaceSemanticState.WARNING) else semanticColor(WorkspaceSemanticState.READY))
+        if (report.hasHardBlockers) Text("Hard findings cannot be overridden. Repair the canonical source evidence.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         if (report.issues.isEmpty()) Text("No critic findings.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         report.issues.forEach { issue ->
             Text("${issue.severity.name} · ${issue.location.boundaryId}, bar ${issue.location.bar + 1}: ${issue.message}",
                 modifier = Modifier.semantics { testTag = WorkspacePageTags.SOURCE_SONG_ISSUE_PREFIX + issue.id },
                 style = MaterialTheme.typography.bodySmall,
-                color = if (issue.severity.name == "BLOCKING") MaterialTheme.colorScheme.error else semanticColor(WorkspaceSemanticState.WARNING))
+                color = if (issue.severity.name == "WARNING") semanticColor(WorkspaceSemanticState.WARNING) else MaterialTheme.colorScheme.error)
         }
     }
     Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
@@ -1933,12 +1934,13 @@ private fun SourceSongReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent
             modifier = Modifier.semantics { testTag = WorkspacePageTags.SOURCE_SONG_PREVIEW; contentDescription = "Preview connected solo source song as piano" }
         ) { Text("Preview solo source") }
         Button(
-            onClick = { onIntent(WorkspaceIntent.RequestApproveSourceSong) }, enabled = review.critic != null && !review.approved && !busy,
+            onClick = { onIntent(WorkspaceIntent.RequestApproveSourceSong) }, enabled = review.critic != null && !review.hasHardBlockers && !review.approved && !busy,
             modifier = Modifier.semantics { testTag = WorkspacePageTags.SOURCE_SONG_APPROVE; contentDescription = "Approve current connected source song" }
         ) { Text(if (review.approved) "Source approved" else "Approve source song") }
         OutlinedButton(onClick = { onIntent(WorkspaceIntent.GenerateSourceSongConnections) }, enabled = !busy) { Text("Regenerate") }
     }
-    if (review.approved) Text("Approved current source-song candidate. Arrangement may now use this approval gate.", color = semanticColor(WorkspaceSemanticState.READY), style = MaterialTheme.typography.bodySmall)
+    if (review.approved) Text(if (review.experimentalApproval) "Private-audition approval: downstream use is experimental and not quality-certified." else "Quality-certified current source-song candidate. Arrangement may use this approval gate.",
+        color = if (review.experimentalApproval) semanticColor(WorkspaceSemanticState.WARNING) else semanticColor(WorkspaceSemanticState.READY), style = MaterialTheme.typography.bodySmall)
     review.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
 }
 

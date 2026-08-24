@@ -1403,18 +1403,18 @@ private fun ConfirmSourceSongApprovalDialog(dialog: WorkspaceDialog.ConfirmSourc
         title = { Text("Approve connected source song?") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-                Text(if (dialog.requiresOverride) "The current critic has blocking findings. An explicit reason is required to proceed; this does not alter the original source MIDI." else "This approves the exact connected solo-source candidate and critic report for arrangement. The original source MIDI remains unchanged.")
+                Text(if (dialog.requiresOverride) "The current critic has blocking findings. An explicit reason permits private audition only; downstream use is labeled experimental and never quality-certified. This does not alter the original source MIDI." else "This quality-certifies the exact connected solo-source candidate and critic report for arrangement. The original source MIDI remains unchanged.")
                 if (dialog.requiresOverride) {
                     OutlinedTextField(
                         value = dialog.reason,
                         onValueChange = { onIntent(WorkspaceIntent.UpdateSourceSongOverrideReason(it)) },
-                        label = { Text("Reason for overriding blockers") },
+                        label = { Text("Reason for private-audition override") },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
         },
-        confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.ConfirmSourceSongApproval) }, enabled = !dialog.requiresOverride || dialog.reason.isNotBlank()) { Text(if (dialog.requiresOverride) "Record override and approve" else "Approve source song") } },
+        confirmButton = { Button(onClick = { onIntent(WorkspaceIntent.ConfirmSourceSongApproval) }, enabled = !dialog.requiresOverride || dialog.reason.isNotBlank()) { Text(if (dialog.requiresOverride) "Record experimental approval" else "Quality-certify source") } },
         dismissButton = { TextButton(onClick = { onIntent(WorkspaceIntent.DismissDialog) }) { Text("Keep reviewing") } }
     )
 }
