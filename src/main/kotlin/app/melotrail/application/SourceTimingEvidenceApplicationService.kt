@@ -49,7 +49,7 @@ class SourceTimingEvidenceApplicationService(private val boundary: SourceTimingB
         val latestPart = requireNotNull(latest.parts.singleOrNull { it.id == part.id }) { "Part changed during timing analysis; retry it." }
         require(sha256(projectSource(root, latestPart)) == sourceHash) { "Preserved source changed during timing analysis." }
         ProjectStore.write(root, latest.copy(parts = latest.parts.map { candidate ->
-            if (candidate.id == part.id) candidate.copy(sourceTimingEvidence = reference) else candidate
+            if (candidate.id == part.id) candidate.copy(sourceTimingEvidence = reference, timingMappingEvidence = null) else candidate
         }))
         return SourceTimingEvidenceSnapshot(
             report,

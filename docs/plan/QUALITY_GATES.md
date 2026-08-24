@@ -60,6 +60,17 @@ onsets, and statistical outliers from its micro-timing vector. A low-confidence
 template becomes review-required or falls back explicitly to the approved grid;
 it must never be presented as measured feel.
 
+### QP-003 timing-map policy evidence
+
+The version-1 timing-map policy uses a minimum source-beat confidence of 0.50,
+a review threshold for source/target duration changes above 25%, and four
+expressive subdivisions per beat bounded to half a subdivision. A mapping with
+an unknown or audio-only-review downbeat, low-confidence beat, large duration
+change, or ambiguous target-bar count cannot publish until a typed human review
+is approved. Its report records source and target hashes, target beat/bar and
+pickup/body/tail windows, plus zero accumulated anchor phase. These are
+structural safety checks, not a listening-quality approval.
+
 ## Key, scale, and harmony
 
 Hard invariants:

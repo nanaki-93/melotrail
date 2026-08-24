@@ -779,6 +779,7 @@ class DefaultProjectApplicationService(
                 if (it.id == request.partId) it.copy(
                     analysis = null,
                     sourceKeyEvidence = null,
+                    timingMappingEvidence = null,
                     midi = midi.copy(
                         clean = root.relativize(cleanPath).toString().replace('\\', '/'),
                         cleanup = request.cleanup,

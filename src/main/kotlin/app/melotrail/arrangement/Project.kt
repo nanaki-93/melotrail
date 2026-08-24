@@ -7,6 +7,8 @@ import app.melotrail.music.Tempo
 import app.melotrail.music.TimeSignature
 import app.melotrail.preparation.SourceTimingEvidenceReference
 import app.melotrail.preparation.SourceTimingEvidenceStore
+import app.melotrail.preparation.MidiTimeMappingReference
+import app.melotrail.preparation.MidiTimeMappingStore
 import app.melotrail.profile.CompositionProfileRef
 import app.melotrail.profile.MoodRef
 import kotlinx.serialization.Serializable
@@ -257,6 +259,8 @@ data class SongPart(
     val sourceKeyEvidence: SourceKeyEvidence? = null,
     /** Immutable v2 audio timing evidence; a later timing decision remains separately reviewed. */
     val sourceTimingEvidence: SourceTimingEvidenceReference? = null,
+    /** Reviewed QP-003 derived candidate; normalized/transposed MIDI remains separate immutable evidence. */
+    val timingMappingEvidence: MidiTimeMappingReference? = null,
     /** Reserved stable run reference for Task 011's stage manifests; never a filesystem path. */
     val stageManifestRef: String? = null,
     /** Optimistic revision for explicit name/section decisions. */
@@ -455,6 +459,25 @@ object ProjectValidator {
                     }
                 }.onFailure { error ->
                     errors += "Part '${part.id}' source timing evidence is invalid: ${error.message}"
+                }
+            }
+            part.timingMappingEvidence?.let { reference ->
+                runCatching(reference::requireValid).exceptionOrNull()?.let { error ->
+                    errors += "Part '${part.id}' timing-mapping reference is invalid: ${error.message}"
+                }
+                validateArtifactReference(root, reference.candidate, "Part '${part.id}' timing-mapping candidate", errors)
+                validateArtifactReference(root, reference.report, "Part '${part.id}' timing-mapping report", errors)
+                validateArtifactReference(root, reference.sourceTimingReport, "Part '${part.id}' timing-mapping source timing report", errors)
+                validateArtifactReference(root, reference.sourceMidi, "Part '${part.id}' timing-mapping source MIDI", errors)
+                runCatching { MidiTimeMappingStore.readReport(root, reference.report) }.onSuccess { report ->
+                    if (report.partId != part.id || report.sourceTimingReport != reference.sourceTimingReport || report.sourceMidi != reference.sourceMidi ||
+                        report.output.sha256 != reference.candidate.sha256 || report.sourceSha256 != part.sourceTimingEvidence?.sourceSha256 ||
+                        reference.sourceTimingReport != part.sourceTimingEvidence?.report ||
+                        reference.sourceMidi.path !in listOfNotNull(part.midi?.normalized, part.midi?.transposed)) {
+                        errors += "Part '${part.id}' timing-mapping evidence does not match its references"
+                    }
+                }.onFailure { error ->
+                    errors += "Part '${part.id}' timing-mapping report is invalid: ${error.message}"
                 }
             }
             val midi = part.midi

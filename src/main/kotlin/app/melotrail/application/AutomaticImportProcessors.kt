@@ -139,7 +139,7 @@ class AutomaticImportProcessors(
                 analysisInput = MidiAnalysisInput.CURRENT
             )
             ProjectStore.write(request.root, project.copy(parts = project.parts.map {
-                if (it.id == part.id) it.copy(midi = updatedMidi) else it
+                if (it.id == part.id) it.copy(timingMappingEvidence = null, midi = updatedMidi) else it
             }))
         }
 
@@ -186,7 +186,7 @@ class AutomaticImportProcessors(
                 inputSha256 = detectedKey?.let { output.sha256 }
             )
             ProjectStore.write(request.root, project.copy(parts = project.parts.map {
-                if (it.id == part.id) it.copy(sourceKeyEvidence = evidence, midi = midi.copy(
+                if (it.id == part.id) it.copy(sourceKeyEvidence = evidence, timingMappingEvidence = null, midi = midi.copy(
                     normalized = output.path, normalization = reportRef.path, transposed = null, transposition = null
                 )) else it
             }))
@@ -232,7 +232,7 @@ class AutomaticImportProcessors(
                 "Transposition report does not match the published MIDI"
             }
             ProjectStore.write(request.root, project.copy(parts = project.parts.map {
-                if (it.id == part.id) it.copy(analysis = null, midi = midi.copy(transposed = output.path, transposition = reportRef.path)) else it
+                if (it.id == part.id) it.copy(analysis = null, timingMappingEvidence = null, midi = midi.copy(transposed = output.path, transposition = reportRef.path)) else it
             }, workflow = project.workflow.markCurrent(app.melotrail.arrangement.WorkflowArtifact.TRANSPOSED_MIDI)))
         }
 

@@ -4,8 +4,8 @@ Review date: 2026-08-24
 
 Status: **NOT APPROVED FOR RELEASE**
 
-This is a living evidence gate, not a release declaration. The active
-composition-quality roadmap QP-001–QP-018 is not implemented, and the current
+This is a living evidence gate, not a release declaration. QP-001 through
+QP-003 have code-owned evidence; QP-004–QP-018 remain incomplete, and the current
 four-source song has documented timing, key/mode, harmony, sustain-tail,
 monophony, shared-groove, voice-leading, arrangement, Cohesion, low-end, and
 bypass defects. A successful build or package cannot override those musical
@@ -45,8 +45,8 @@ Documentation-consolidation verification on 2026-08-24:
 - `git diff --check` — passed after removing Markdown trailing whitespace.
 
 These results prove repository correctness under their contracts, not musical
-listening quality. The QP roadmap remains unimplemented, so release status
-remains **NOT APPROVED**.
+listening quality. The remaining QP roadmap and its human evidence gates are
+incomplete, so release status remains **NOT APPROVED**.
 
 ## Composition-quality blockers
 

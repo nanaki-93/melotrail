@@ -339,6 +339,14 @@
       "documentedFunctionCount": 12
     },
     {
+      "path": "src/main/kotlin/app/melotrail/application/SourceTimingAlignmentApplicationService.kt",
+      "classification": "documented",
+      "reason": "All 2 callable declarations in src/main/kotlin/app/melotrail/application/SourceTimingAlignmentApplicationService.kt have directly attached KDoc/docstrings; reviewed for QP-003 on 2026-08-24.",
+      "functionCount": 2,
+      "declarationDigest": "e464c0bbd2ce1911c723792df6884747901294ecf046bdba41fc23d4fe3c3a35",
+      "documentedFunctionCount": 2
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/application/SourceTimingEvidenceApplicationService.kt",
       "classification": "documented",
       "reason": "All 2 callable declarations in src/main/kotlin/app/melotrail/application/SourceTimingEvidenceApplicationService.kt have directly attached KDoc/docstrings; reviewed for QP-002 on 2026-08-24.",
@@ -1329,6 +1337,14 @@
       "functionCount": 24,
       "declarationDigest": "23954f125136b6694f76fec16cad5995d5854c3470a81f1fde3b19f1c23eba2a",
       "documentedFunctionCount": 1
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/preparation/MidiTimeMapping.kt",
+      "classification": "documented",
+      "reason": "All 45 callable declarations in src/main/kotlin/app/melotrail/preparation/MidiTimeMapping.kt have directly attached KDoc/docstrings; reviewed for QP-003 on 2026-08-24.",
+      "functionCount": 45,
+      "declarationDigest": "2af5ef6a26e44626c9d8c7f90a41d43a634dc0b7b7d13fdbad9d62d8bf65384c",
+      "documentedFunctionCount": 45
     },
     {
       "path": "src/main/kotlin/app/melotrail/preparation/SourceTimingEvidence.kt",

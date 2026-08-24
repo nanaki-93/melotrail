@@ -2,6 +2,7 @@ package app.melotrail.arrangement
 
 import app.melotrail.harmony.HarmonySettingsDto
 import app.melotrail.preparation.SourceTimingEvidenceReference
+import app.melotrail.preparation.MidiTimeMappingReference
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -98,6 +99,7 @@ object ProjectStore {
         val importEvidence: ImportEvidence? = null,
         val sourceKeyEvidence: SourceKeyEvidence? = null,
         val sourceTimingEvidence: SourceTimingEvidenceReference? = null,
+        val timingMappingEvidence: MidiTimeMappingReference? = null,
         val stageManifestRef: String? = null,
         val revision: Long = 1,
         val importPending: Boolean = false
@@ -118,6 +120,7 @@ object ProjectStore {
                 importEvidence = it.importEvidence,
                 sourceKeyEvidence = it.sourceKeyEvidence,
                 sourceTimingEvidence = it.sourceTimingEvidence,
+                timingMappingEvidence = it.timingMappingEvidence,
                 stageManifestRef = it.stageManifestRef,
                 revision = it.revision,
                 importPending = it.importPending
@@ -143,6 +146,7 @@ object ProjectStore {
                 importEvidence = it.importEvidence,
                 sourceKeyEvidence = it.sourceKeyEvidence,
                 sourceTimingEvidence = it.sourceTimingEvidence,
+                timingMappingEvidence = it.timingMappingEvidence,
                 stageManifestRef = it.stageManifestRef,
                 revision = it.revision,
                 importPending = it.importPending

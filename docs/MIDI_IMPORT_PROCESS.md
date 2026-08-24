@@ -19,7 +19,8 @@ flowchart LR
     T --> R
     R --> C[Clean MIDI]
     C --> N[Normalize MIDI]
-    N --> K[Detect/confirm source key]
+    N --> M[Review source timing / publish alignment candidate]
+    M --> K[Detect/confirm source key]
     K --> P[Transpose to project key]
     P --> O[Optional correction, AI Fix, Enhance, Feel]
     O --> A[Analyze selected MIDI]
@@ -74,6 +75,8 @@ source remains intact and no invalid raw MIDI is selected. Follow
 | Clean MIDI | `midi/clean/<part>.mid` |
 | Cleanup quality | `midi/quality/<part>.json` |
 | Normalized MIDI | `midi/normalized/<part>-<run>.mid` plus normalization report |
+| Timing evidence | `analysis/timing/<part>/<hash>.json` — source beat/onset/downbeat and groove evidence |
+| Reviewed timing candidate | `midi/timing/<part>/<hash>.mid` plus `analysis/timing-mapping/<part>/<hash>.json` |
 | Transposed MIDI | `midi/transposed/<part>-<run>.mid` plus transposition report |
 | Optional fixed Feel | `midi/derived/<part>/lofi-80-swing-v1.mid` and `midi/feel/<part>/lofi-80-swing-v1.json` |
 
@@ -83,13 +86,13 @@ unselected branch cannot override the current candidate.
 
 ## Important current musical limitations
 
-- QP-002 can collect bounded source beat/onset/tempo/downbeat and groove
-  evidence through the local worker, but the evidence is explicitly
-  `UNKNOWN`/`REVIEW_REQUIRED` when audio cannot establish a safe phase. A
-  low-support source groove template is also `REVIEW_REQUIRED`; it cannot
-  invent silent bins and must be reviewed or fall back to the approved grid.
-  Normalization still does not warp performed beats/downbeats onto the project
-  grid; that derived-candidate operation is QP-003.
+- QP-002 collects bounded source beat/onset/tempo/downbeat and groove evidence
+  through the local worker. QP-003 accepts only an immutable reviewed timing
+  decision, piecewise maps it to the declared project tempo/meter, and records
+  zero-anchor-phase residual evidence. The result is a separate content-addressed
+  candidate: it never overwrites normalized or transposed MIDI. Low-support
+  groove evidence must explicitly fall back to the grid; it is not invented
+  from silence or silently copied into a candidate.
 - Current project-key transposition uses one tonic interval; different source
   and project modes are not yet mapped by scale degree.
 - Imported material is not yet guaranteed to become one-note-at-a-time melody.

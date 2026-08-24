@@ -16,6 +16,7 @@ Project Setup and structured Harmony
   -> Extract/transcribe
   -> Clean
   -> Normalize
+  -> source-timing evidence / reviewed timing candidate
   -> Detect/confirm source key
   -> Transpose to project key
   -> Technical Correction
@@ -58,7 +59,7 @@ dependencies or infer completion from page visits.
 | Project | Canonical schema-v4 `project.json` | Unsupported/malformed projects fail without rewriting; create/open a canonical project |
 | Setup/Harmony | Structured key/mode, tempo/meter, profile/mood, section progressions | Resolve missing/incompatible authority before musical stages |
 | Source/import | Immutable `source/<part>.*`, preparation report, `midi/raw/<part>.mid` | Reinspect/retranscribe/re-import only the affected source |
-| Clean/Normalize/Transpose | Separate MIDI plus quality/normalization/transposition reports | Review cleanup; confirm low-confidence source key; rerun earliest stale stage |
+| Clean/Normalize/Timing/Transpose | Separate MIDI plus quality/normalization/timing/transposition reports | Review cleanup and timing evidence; confirm low-confidence source key; rerun earliest stale stage |
 | Correction/AI Fix/Enhance/Feel | Hash-bound branch candidates and selections | Approve, reject, regenerate, select no-op/bypass; never copy by filename |
 | Analysis/Structure | `analysis/<part>.json`, stable `StructureOccurrence` entries | Reanalyze affected part or save intended occurrence order |
 | Source Song | Structured source MIDI/sidecar, connected candidate, critic report, approval | Preview exact source song; repair or explicitly review reported issues |
@@ -79,13 +80,13 @@ approval before arrangement.
 
 Known limitation: current downstream piano paths can reconstruct occurrence
 MIDI rather than consume the exact approved connected source song. QP-002 now
-stores source beat/onset/tempo/downbeat and source-groove evidence, but it does
-not yet warp MIDI into whole bars or choose an unreviewed downbeat. A
-low-support groove template is explicitly review-required rather than inferred
-from silence. Current
-assembly also does not guarantee mode-aware pitch mapping, harmony-fit stable
-tones, or global one-note-at-a-time melody. The remaining gaps are QP-003–QP-010
-and must not be described as current capabilities.
+stores source beat/onset/tempo/downbeat and source-groove evidence, and QP-003
+can publish a reviewed, source-hash-bound, piecewise timing candidate with
+whole-bar body bounds plus explicit pickup/tail windows. It does not silently
+select that candidate or choose an unreviewed downbeat. Current assembly also
+does not guarantee mode-aware pitch mapping, harmony-fit stable tones, or
+global one-note-at-a-time melody. The remaining gaps are QP-004–QP-010 and must
+not be described as current capabilities.
 
 ## Arrangement and Cohesion boundary
 
