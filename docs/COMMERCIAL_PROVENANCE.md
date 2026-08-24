@@ -1,19 +1,19 @@
 # Commercial provenance and YouTube release check
 
-Policy review date: 2026-08-24
+Policy review date: 2026-08-25
 
 Before every release, a maintainer must manually re-read and update this date
 after checking YouTube's official [GenAI disclosure policy](https://support.google.com/youtube/answer/14328491)
 and [channel monetization policies](https://support.google.com/youtube/answer/1311392).
 Do not automate this check over the network or treat a stale date as approval.
 
-As reviewed on the date above, YouTube identifies AI-generated music as content
-to disclose through the GenAI workflow and states that disclosure does not by
-itself limit audience or monetization eligibility. Its monetization review is
-channel-wide and expects original/authentic work rather than generic,
-repetitive, mass-produced, or template-like output. Rights, copyright,
-advertiser suitability, Community Guidelines, and other program policies still
-apply. Policies can change.
+As reviewed on the date above, YouTube lists AI-generated music among the
+examples requiring disclosure when the content is realistic or meaningfully
+AI-altered, and states that disclosure does not by itself limit audience or
+monetization eligibility. Its monetization review is channel-wide and expects
+original/authentic work rather than generic, repetitive, mass-produced, or
+template-like output. Rights, copyright, advertiser suitability, Community
+Guidelines, and other program policies still apply. Policies can change.
 
 Melotrail's commercial report is evidence and workflow assistance. It is not
 legal advice, copyright clearance, Content ID clearance, or a monetization
@@ -30,7 +30,10 @@ monetization decision.
 **Create commercial evidence** writes an immutable, versioned release folder:
 `output/releases/<releaseId>/provenance.json`, `commercial-report.md`,
 and `youtube-release.json`. The provenance manifest closes the selected source,
-MIDI, stage-run, decision, render, mix, master, and release metadata hashes.
+the quality-certified source-song/connection/connected-MIDI/critic/approval
+chain, MIDI, stage-run, decision, render, mix, master, and release metadata
+hashes. A missing, stale, or private-audition melody approval remains a
+commercial blocker; it cannot be substituted with selected part MIDI.
 It snapshots only the exact instrument stems used by the final persisted mix;
 it does not reread the current sound registry during verification.
 
@@ -80,7 +83,19 @@ export remains blocked while private project and audition/export work remains
 available. Changing the selected mix or instrument creates a new release
 revision; changing the local library cannot rewrite an existing credits file.
 
-`youtube-release.json` records whether the selected lineage contains a material
-generative-AI stage and therefore recommends completing the platform AI
-disclosure. This is a release-preparation recommendation, not an automated
-upload action or a monetization conclusion.
+## AI-use disclosure draft
+
+`youtube-release.json` is a local human-review draft. It records the selected
+model identities, whether each recorded model use has a structured reviewer,
+the current disclosure-review state, and `platformApprovalStatus: NOT_REQUESTED`.
+It never uploads, contacts YouTube, claims that YouTube approved the work, or
+concludes that the work will monetize.
+
+Every recorded model use in a new release manifest requires a structured
+AI-use review with a reviewer ID, ISO-8601 review time, disclosure decision,
+and concise rationale. Missing review blocks the `COMMERCIAL_EVIDENCE_READY`
+result even when a model's license is otherwise admitted. The release owner
+must still compare the final upload—including visuals, title, description,
+lyrics, and channel context—with the current official policy and complete the
+applicable upload disclosure. The resulting metadata is evidence for human
+review, not an automated upload action or a monetization conclusion.

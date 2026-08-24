@@ -60,3 +60,9 @@ declaration exemptions only where direct KDoc/docstrings are still incomplete.
 QP-017 adds a fully documented quality-review evidence service. It produces
 immutable MIDI/WAV debug copies and an explicitly pending listening form;
 offline tests cannot populate listener, date, device, or decision fields.
+
+QP-018 refreshes commercial provenance and the model-license conversion boundary
+after adding an explicit approved canonical-melody closure, structured AI-use
+review input, and human-review-only YouTube release metadata. Historical v2/v3
+manifests remain readable evidence; new v4 manifests block commercial readiness
+when those current inputs are unresolved.

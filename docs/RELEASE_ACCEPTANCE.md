@@ -1,15 +1,15 @@
 # Release acceptance record
 
-Review date: 2026-08-24
+Review date: 2026-08-25
 
 Status: **NOT APPROVED FOR RELEASE**
 
 This is a living evidence gate, not a release declaration. QP-001 through
-QP-007 have code-owned evidence; QP-008–QP-018 remain incomplete, and the current
-four-source song has documented downstream full-melody-consumption, shared-groove,
-voice-leading, arrangement, Cohesion, low-end, and
-bypass defects. A successful build or package cannot override those musical
-findings.
+QP-018 have code-owned implementation evidence. The completed roadmap does not
+turn the offline fixture into a release candidate or satisfy a real song's
+rights, renderer, model, package, audio-device, originality, policy, or
+listening review. A successful build or package cannot override those manual
+requirements.
 
 ## Policy review
 
@@ -19,7 +19,7 @@ and [GenAI disclosure guidance](https://support.google.com/youtube/answer/143284
 plus the official
 [recommended upload encoding settings](https://support.google.com/youtube/answer/1722171?hl=en)
 and [partner music-video encoding specification](https://support.google.com/youtube/answer/6039860?hl=en)
-were reviewed on 2026-08-24. See
+were reviewed on 2026-08-25. See
 [`COMMERCIAL_PROVENANCE.md`](COMMERCIAL_PROVENANCE.md) and
 [`plan/YOUTUBE_READINESS.md`](plan/YOUTUBE_READINESS.md). Melotrail does not
 guarantee rights clearance or monetization.
@@ -36,23 +36,26 @@ Run from a clean tree for every release candidate:
 | `python3 tools/check_documentation_coverage.py --repository .` | Checked-in production source inventory is current |
 | `git diff --check` | No whitespace/patch errors |
 
-Documentation-consolidation verification on 2026-08-24:
+QP-018 final repository validation is recorded in
+[`plan/EXECUTION_LOG.md`](plan/EXECUTION_LOG.md). Those automated results prove
+repository correctness under their contracts, not musical listening quality.
 
-- `make test` — passed;
-- `make worker-test` — 43 tests passed;
+Final validation on 2026-08-25:
+
+- `make test` — passed, including root and desktop test suites;
+- `make worker-test` — 47 offline tests passed (dependency warnings only);
 - `make build` — passed, including documentation coverage;
-- local Markdown link audit — passed;
-- `git diff --check` — passed after removing Markdown trailing whitespace.
+- `:desktopApp:packageDistributionForCurrentOS` — local macOS app and DMG
+  artifacts produced; install/launch remains a manual gate;
+- local Markdown-path audit, documentation coverage, and `git diff --check` —
+  passed.
 
-These results prove repository correctness under their contracts, not musical
-listening quality. The remaining QP roadmap and its human evidence gates are
-incomplete, so release status remains **NOT APPROVED**.
-
-QP-017 implementation evidence is limited to the deterministic offline
-reference song and its pending hash-bound MIDI/WAV review bundle. No live
-four-source renderer/Qwen/worker run, audio-device session, or human listening
-decision is recorded in this repository. Those dependencies are **unverified**
-and cannot support a release-quality claim.
+QP-017/018 implementation evidence is limited to the deterministic offline
+reference song, hash-bound selected-melody/commercial lineage, and pending
+MIDI/WAV review bundle. No live four-source renderer/Qwen/worker run,
+audio-device session, human listening decision, or release-owner decision is
+recorded in this repository. Those dependencies are **unverified** and cannot
+support a release-quality claim.
 
 ## Composition-quality blockers
 
@@ -108,6 +111,7 @@ performs its own transcode.
 - selected signature motif remains recognizable;
 - cross-release similarity has a human originality decision when applicable;
 - AI-use metadata reflects the selected generative stages;
+- every recorded model use has a structured human AI-use disclosure review;
 - title, description, lyrics, visuals, thumbnail, and channel context receive a
   separate human policy/rights review;
 - commercial evidence is labeled as evidence, not platform approval.
@@ -130,11 +134,30 @@ Unverified dependencies remain explicitly unverified. Do not infer Windows,
 Linux, renderer, model, audio-device, package, policy, rights, or listening
 support from offline fakes.
 
+## Current unverified manual dependencies
+
+- Creator source-rights attestations, third-party sample/instrument/model terms,
+  required attribution, model output-rights interpretation, and every structured
+  AI-use disclosure decision for the intended release.
+- Human signature-motif/originality review, comparison-release interpretation,
+  and any bounded arrangement/groove/orchestration re-plan selected after that
+  review; Melotrail cannot alter melody, harmony, or structure for this purpose.
+- A real local renderer, live Qwen and worker/model sessions, validated sample
+  library, audio output device, and renderer-backed loudness-matched listening
+  decisions for the intended canonical project.
+- Current-OS package install/launch/open/save/accessibility checks and review of
+  the final title, description, lyrics, visuals, thumbnail, channel context,
+  upload disclosure, and current platform policy.
+
+`COMMERCIAL_EVIDENCE_READY` means only that the selected lineage has completed
+Melotrail's defined evidence gate. It is not legal advice, a copyright or
+Content ID clearance, platform approval, or a monetization guarantee.
+
 ## Sign-off
 
 | Owner | Decision | Date |
 | --- | --- | --- |
-| Engineering | Withheld pending QP roadmap and clean validation | — |
+| Engineering | QP implementation complete; release withheld pending final candidate/manual evidence | 2026-08-25 |
 | Composition/listening | Pending | — |
 | Production/audio | Pending | — |
 | Rights/policy | Pending | — |

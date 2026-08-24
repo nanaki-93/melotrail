@@ -46,7 +46,7 @@ class ReleaseCreditsServiceTest {
                 usage.license.license, usage.license.source, usage.license.attributionText)
         }
         return CommercialProvenanceManifest(
-            releaseId = "release-" + "b".repeat(32), releaseHash = hash, sources = emptyList(), artifacts = emptyList(), decisions = emptyList(),
+            version = 3, releaseId = "release-" + "b".repeat(32), releaseHash = hash, sources = emptyList(), artifacts = emptyList(), decisions = emptyList(),
             stageRuns = emptyList(), selectedMidi = emptyList(), instrumentUsage = usages.toList(), dependencies = dependencies,
             unresolvedEvidence = emptyList(), commercialReady = true, reasons = emptyList(), attribution = dependencies.mapNotNull { it.attribution },
             reports = ReleaseReportReferences("output/releases/release-${"b".repeat(32)}/provenance.json", "output/releases/release-${"b".repeat(32)}/commercial-report.md", "output/releases/release-${"b".repeat(32)}/youtube-release.json")

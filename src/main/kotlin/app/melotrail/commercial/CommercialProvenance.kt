@@ -22,6 +22,7 @@ import app.melotrail.arrangement.StemArtifact
 import app.melotrail.arrangement.StemRenderReport
 import app.melotrail.arrangement.WorkflowArtifact
 import app.melotrail.arrangement.WorkflowArtifactReference
+import app.melotrail.application.DefaultSourceSongCriticApplicationService
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -52,6 +53,22 @@ enum class CommercialTerm { PERMITTED, CONDITIONAL, UNKNOWN, BLOCKED }
 @Serializable
 enum class CommercialDependencyKind { MODEL, PROCESSOR, SOUND_LIBRARY, SAMPLE }
 
+/** A human review of whether one recorded model use requires an upload disclosure. */
+@Serializable
+data class AiUseDisclosureReview(
+    val reviewerId: String,
+    val reviewedAt: String,
+    val disclosureRequired: Boolean,
+    val rationale: String
+) {
+    init {
+        require(SAFE_ID.matches(reviewerId) && reviewedAt.matches(ISO_INSTANT) &&
+            rationale.length in 1..240 && rationale.none(Char::isISOControl)) {
+            "AI-use disclosure review is invalid"
+        }
+    }
+}
+
 /** Snapshot of an actually used dependency. It is intentionally data-only and portable. */
 @Serializable
 data class CommercialDependency(
@@ -66,7 +83,10 @@ data class CommercialDependency(
     val attribution: String? = null,
     val outputRightsNote: String? = null,
     val promptContract: String? = null,
-    val approved: Boolean? = null
+    /** Legacy v2/v3 boolean retained only so immutable historical manifests remain readable. */
+    val approved: Boolean? = null,
+    /** Current human review bound into the selected release manifest. */
+    val aiUseReview: AiUseDisclosureReview? = null
 ) {
     init {
         require(identity.matches(SAFE_ID) && version.isNotBlank()) { "Commercial dependency identity is invalid" }
@@ -83,7 +103,11 @@ data class CommercialReadinessInput(
     val dependencies: List<CommercialDependency>,
     val unresolvedEvidence: List<String> = emptyList(),
     /** Null is retained for pure policy callers; release export supplies current gate evidence. */
-    val recognizabilityGate: SignatureMotifReleaseGateResult? = null
+    val recognizabilityGate: SignatureMotifReleaseGateResult? = null,
+    /** New release manifests must close over the approved connected full-melody lineage. */
+    val canonicalMelodyLineageComplete: Boolean = true,
+    /** New release manifests require a structured human review for every recorded model use. */
+    val requireStructuredAiUseReview: Boolean = false
 )
 data class CommercialSource(val partId: String, val sourceHash: String, val attestation: SourceRightsAttestation?)
 data class CommercialReadiness(
@@ -98,6 +122,7 @@ object CommercialReadyGate {
     fun evaluate(input: CommercialReadinessInput): CommercialReadiness {
         val reasons = buildList {
             input.unresolvedEvidence.sorted().forEach { add("Evidence is unresolved: $it") }
+            if (!input.canonicalMelodyLineageComplete) add("Approved canonical melody lineage is unavailable or stale.")
             input.recognizabilityGate?.takeUnless(SignatureMotifReleaseGateResult::passed)?.reasons?.forEach { reason ->
                 add("Signature motif recognizability gate failed: $reason")
             }
@@ -113,6 +138,9 @@ object CommercialReadyGate {
                 if (dependency.kind == CommercialDependencyKind.MODEL &&
                     (dependency.identity.contains("unknown", ignoreCase = true) || dependency.identity.contains("fake", ignoreCase = true) || dependency.version.equals("unknown", ignoreCase = true))) {
                     add("model '${dependency.identity}' has an unknown or fake identity.")
+                }
+                if (dependency.kind == CommercialDependencyKind.MODEL && input.requireStructuredAiUseReview && dependency.aiUseReview == null) {
+                    add("model '${dependency.identity}' has no structured AI-use disclosure review.")
                 }
                 when (dependency.commercialTerm) {
                     CommercialTerm.PERMITTED -> if (!dependency.reviewed) add("${dependency.kind.name.lowercase()} '${dependency.identity}' has unreviewed commercial terms.")
@@ -137,6 +165,26 @@ data class ManifestSource(val partId: String, val path: String, val sha256: Stri
 
 @Serializable
 data class SelectedMidiProvenance(val partId: String, val path: String, val sha256: String, val kind: SelectedMidiArtifactKind, val profile: String? = null)
+
+/** Exact quality-certified connected-melody approval chain selected by a release. */
+@Serializable
+data class ReleaseCanonicalMelodyLineage(
+    val sourceSongSidecar: ProvenanceArtifact,
+    val connectionSidecar: ProvenanceArtifact,
+    val connectedMidi: ProvenanceArtifact,
+    val criticReport: ProvenanceArtifact,
+    val approvalSidecar: ProvenanceArtifact,
+    val sourceSongContextSha256: String,
+    val sourceMidiSha256: String
+) {
+    init {
+        require(SHA_256.matches(sourceSongContextSha256) && SHA_256.matches(sourceMidiSha256) &&
+            listOf(sourceSongSidecar, connectionSidecar, connectedMidi, criticReport, approvalSidecar)
+                .map(ProvenanceArtifact::path).distinct().size == 5) {
+            "Canonical melody release lineage is invalid"
+        }
+    }
+}
 
 /** A portable revision marker. The underlying project decision remains canonical evidence. */
 @Serializable
@@ -260,7 +308,7 @@ data class ReleaseReportReferences(val manifest: String, val report: String, val
     init { require(listOf(manifest, report, checklist).all(SAFE_RELATIVE_PATH::matches)) { "Release report path is invalid" } }
 }
 
-/** Immutable selected-lineage closure. Older v2 closures remain readable evidence. */
+/** Immutable selected-lineage closure. Older v2/v3 closures remain readable evidence. */
 @Serializable
 data class CommercialProvenanceManifest(
     val version: Int = VERSION,
@@ -271,6 +319,8 @@ data class CommercialProvenanceManifest(
     val decisions: List<ReleaseDecisionRevision>,
     val stageRuns: List<ReleaseStageRun>,
     val selectedMidi: List<SelectedMidiProvenance>,
+    /** Null records a blocked release where the exact approved melody lineage could not be verified. */
+    val canonicalMelody: ReleaseCanonicalMelodyLineage? = null,
     val instrumentUsage: List<ReleaseInstrumentUsage>,
     val dependencies: List<CommercialDependency>,
     val unresolvedEvidence: List<String>,
@@ -295,7 +345,7 @@ data class CommercialProvenanceManifest(
         }
     }
 
-    companion object { const val VERSION = 3 }
+    companion object { const val VERSION = 4 }
 }
 
 data class CommercialExportResult(val readiness: CommercialReadiness, val manifest: Path?, val report: Path?, val checklist: Path?, val releaseId: String? = null)
@@ -332,6 +382,7 @@ class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soun
         val signatureMotifGate = signatureMotifGate(projectRoot, project, unresolved)
         val similarityReview = releaseSimilarityReview(release, unresolved)
         val selectedMidi = selectedMidi(projectRoot, project, unresolved)
+        val canonicalMelody = canonicalMelodyLineage(projectRoot, unresolved)
         val artifacts = linkedMapOf<String, ProvenanceArtifact>()
         fun include(path: String) {
             val file = safeProjectFile(projectRoot, path)
@@ -341,6 +392,10 @@ class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soun
         mixCriticEvidence(projectRoot, project, unresolved)?.forEach(::include)
         sources.forEach { include(it.path) }
         selectedMidi.forEach { include(it.path) }
+        canonicalMelody?.let { lineage ->
+            listOf(lineage.sourceSongSidecar, lineage.connectionSidecar, lineage.connectedMidi, lineage.criticReport, lineage.approvalSidecar)
+                .forEach { artifacts[it.path] = it }
+        }
         releaseInput(projectRoot, release, unresolved)?.let(::include)
         selectedWorkflowArtifacts(project).forEach { reference -> include(reference.file) }
         val instrumentUsage = usedInstruments(projectRoot, artifacts, unresolved)
@@ -358,12 +413,14 @@ class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soun
             "$RELEASES_DIRECTORY/$releaseId/$CHECKLIST_FILE"
         )
         val readiness = CommercialReadyGate.evaluate(CommercialReadinessInput(
-            sources.map { CommercialSource(it.partId, it.sha256, it.attestation) }, normalizedDependencies, unresolved.distinct().sorted(), signatureMotifGate
+            sources = sources.map { CommercialSource(it.partId, it.sha256, it.attestation) }, dependencies = normalizedDependencies,
+            unresolvedEvidence = unresolved.distinct().sorted(), recognizabilityGate = signatureMotifGate,
+            canonicalMelodyLineageComplete = canonicalMelody != null, requireStructuredAiUseReview = true
         ))
         val manifest = CommercialProvenanceManifest(
             releaseId = releaseId, releaseHash = sha256(master), sources = sources,
             artifacts = artifacts.values.sortedBy(ProvenanceArtifact::path), decisions = decisions,
-            stageRuns = selectedRuns, selectedMidi = selectedMidi, instrumentUsage = instrumentUsage,
+            stageRuns = selectedRuns, selectedMidi = selectedMidi, canonicalMelody = canonicalMelody, instrumentUsage = instrumentUsage,
             dependencies = normalizedDependencies, unresolvedEvidence = unresolved.distinct().sorted(),
             commercialReady = readiness.ready, reasons = readiness.reasons, attribution = readiness.attribution, reports = reports,
             signatureMotifGate = signatureMotifGate, similarityReview = similarityReview, aiDisclosureRecommended = readiness.aiDisclosureRecommended
@@ -435,9 +492,15 @@ class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soun
         val stored = project?.workflow?.commercialProvenance?.manifest
         if (stored == null || stored.file != manifest.reports.manifest) missing += "selected release reference"
         else if (stored.sha256 != sha256(path)) tampered += "selected release manifest"
+        manifest.canonicalMelody?.let { lineage ->
+            listOf(lineage.sourceSongSidecar, lineage.connectionSidecar, lineage.connectedMidi, lineage.criticReport, lineage.approvalSidecar)
+                .filter { it !in manifest.artifacts }
+                .forEach { tampered += "canonical melody lineage ${it.path}" }
+        }
         val readiness = CommercialReadyGate.evaluate(CommercialReadinessInput(
-            manifest.sources.map { CommercialSource(it.partId, it.sha256, it.attestation) }, manifest.dependencies, manifest.unresolvedEvidence,
-            manifest.signatureMotifGate
+            sources = manifest.sources.map { CommercialSource(it.partId, it.sha256, it.attestation) }, dependencies = manifest.dependencies,
+            unresolvedEvidence = manifest.unresolvedEvidence, recognizabilityGate = manifest.signatureMotifGate,
+            canonicalMelodyLineageComplete = manifest.canonicalMelody != null, requireStructuredAiUseReview = manifest.version >= 4
         ))
         if (readiness.ready != manifest.commercialReady) tampered += "commercial readiness result"
         return ReleaseLineageVerification(
@@ -452,6 +515,26 @@ class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soun
                 SelectedMidiProvenance(it.partId, it.projectRelativePath, it.sha256, it.kind, it.profile?.id)
             }
         }.getOrElse { unresolved += "selected MIDI evidence is unavailable"; emptyList() }
+
+    /** Load the current non-experimental source-song approval without selecting or regenerating melody MIDI. */
+    private fun canonicalMelodyLineage(root: Path, unresolved: MutableList<String>): ReleaseCanonicalMelodyLineage? = runCatching {
+        val approved = DefaultSourceSongCriticApplicationService().requireApprovedMelody(root)
+        require(!approved.experimental) { "Private-audition melody approval cannot support commercial evidence" }
+        fun artifact(reference: WorkflowArtifactReference): ProvenanceArtifact {
+            val path = safeProjectFile(root, reference.file)
+            require(sha256(path) == reference.sha256) { "Canonical melody approval artifact is stale" }
+            return ProvenanceArtifact(reference.file, reference.sha256)
+        }
+        ReleaseCanonicalMelodyLineage(
+            sourceSongSidecar = artifact(approved.sourceSongSidecar), connectionSidecar = artifact(approved.connectionSidecar),
+            connectedMidi = artifact(approved.connectedMidi), criticReport = artifact(approved.criticReport),
+            approvalSidecar = artifact(approved.approvalSidecar), sourceSongContextSha256 = approved.approval.sourceSongContextSha256,
+            sourceMidiSha256 = approved.approval.sourceMidiSha256
+        )
+    }.getOrElse {
+        unresolved += "exact quality-certified canonical melody lineage is unavailable"
+        null
+    }
 
     private fun releaseInput(root: Path, release: Path, unresolved: MutableList<String>): String? = runCatching {
         val input = json.parseToJsonElement(Files.readString(release, StandardCharsets.UTF_8)).jsonObject["inputArtifact"]?.jsonPrimitive?.content
@@ -679,18 +762,17 @@ class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soun
         if (manifest.reasons.isNotEmpty()) { appendLine(); appendLine("## Unresolved actions"); manifest.reasons.forEach { appendLine("- $it") } }
         appendLine(); appendLine("## Required attribution")
         if (manifest.attribution.isEmpty()) appendLine("None recorded.") else manifest.attribution.forEach { appendLine("- $it") }
-        appendLine(); appendLine("AI disclosure recommendation: ${if (manifest.aiDisclosureRecommended) "review and complete the platform's generative-AI disclosure" else "no material generative-AI stage is recorded in this release lineage"}.")
+        appendLine(); appendLine("Canonical melody lineage: ${manifest.canonicalMelody?.connectedMidi?.path ?: "unavailable; commercial-ready status is blocked"}.")
+        val metadata = youtubeReleaseMetadata(manifest)
+        appendLine(); appendLine("AI-use disclosure review: ${metadata.aiUseDisclosureStatus.name.lowercase()}. ${metadata.aiUseDisclosureGuidance}")
+        appendLine("Platform approval status: ${metadata.platformApprovalStatus.name.lowercase()}; this report never claims platform approval or monetization.")
         manifest.similarityReview?.let { review ->
             appendLine(); appendLine("Release similarity review: ${review.status.name.lowercase()} (${review.comparisonCount} reference release(s)); ${review.advisory}")
         }
         appendLine(); appendLine("This immutable, hash-bound selected lineage is in `${MANIFEST_FILE}`.")
     }
 
-    private fun checklist(manifest: CommercialProvenanceManifest): String = json.encodeToString(YoutubeReleaseMetadata(
-        releaseId = manifest.releaseId, commercialReady = manifest.commercialReady,
-        requiredAttribution = manifest.attribution, aiDisclosureRecommended = manifest.aiDisclosureRecommended,
-        unresolvedEvidence = manifest.reasons
-    ))
+    private fun checklist(manifest: CommercialProvenanceManifest): String = json.encodeToString(youtubeReleaseMetadata(manifest))
 
     private fun readManifest(path: Path): CommercialProvenanceManifest = json.decodeFromString(Files.readString(path, StandardCharsets.UTF_8))
     private fun safeProjectFile(root: Path, reference: String): Path = requireNotNull(safeProjectFileOrNull(root, reference)) { "Release artifact is missing or unsafe: $reference" }
@@ -725,6 +807,14 @@ class CommercialProvenanceService(@Suppress("UNUSED_PARAMETER") private val soun
     }
 }
 
+/** AI-use review state for a local release draft; it is never a platform decision. */
+@Serializable
+enum class YoutubeAiUseDisclosureStatus { HUMAN_REVIEW_REQUIRED, HUMAN_REVIEW_RECORDED_DISCLOSURE_REQUIRED, HUMAN_REVIEW_RECORDED_NO_DISCLOSURE }
+
+/** Melotrail cannot request, receive, or infer a YouTube approval. */
+@Serializable
+enum class YoutubePlatformApprovalStatus { NOT_REQUESTED }
+
 /** Portable platform-upload guidance derived only from the immutable selected release lineage. */
 @Serializable
 data class YoutubeReleaseMetadata(
@@ -732,8 +822,44 @@ data class YoutubeReleaseMetadata(
     val commercialReady: Boolean,
     val requiredAttribution: List<String>,
     val aiDisclosureRecommended: Boolean,
-    val unresolvedEvidence: List<String>
-)
+    val unresolvedEvidence: List<String>,
+    val recordedModelDependencies: List<String>,
+    val aiUseDisclosureStatus: YoutubeAiUseDisclosureStatus,
+    val aiUseDisclosureGuidance: String,
+    val platformApprovalStatus: YoutubePlatformApprovalStatus = YoutubePlatformApprovalStatus.NOT_REQUESTED
+) {
+    init {
+        require(recordedModelDependencies == recordedModelDependencies.distinct().sorted() && aiUseDisclosureGuidance.isNotBlank() &&
+            platformApprovalStatus == YoutubePlatformApprovalStatus.NOT_REQUESTED) {
+            "YouTube release metadata is invalid"
+        }
+    }
+}
+
+/** Derive a human-review-only upload draft from immutable selected release evidence. */
+private fun youtubeReleaseMetadata(manifest: CommercialProvenanceManifest): YoutubeReleaseMetadata {
+    val modelDependencies = manifest.dependencies.filter { it.kind == CommercialDependencyKind.MODEL }
+    val models = modelDependencies.map { "${it.identity}@${it.version}" }.distinct().sorted()
+    val status = when {
+        models.isEmpty() || modelDependencies.any { it.aiUseReview == null } -> YoutubeAiUseDisclosureStatus.HUMAN_REVIEW_REQUIRED
+        modelDependencies.any { it.aiUseReview?.disclosureRequired == true } -> YoutubeAiUseDisclosureStatus.HUMAN_REVIEW_RECORDED_DISCLOSURE_REQUIRED
+        else -> YoutubeAiUseDisclosureStatus.HUMAN_REVIEW_RECORDED_NO_DISCLOSURE
+    }
+    val guidance = when (status) {
+        YoutubeAiUseDisclosureStatus.HUMAN_REVIEW_REQUIRED ->
+            "A human must compare the final upload, including music and visuals, with the current YouTube AI-use policy and record the disclosure decision."
+        YoutubeAiUseDisclosureStatus.HUMAN_REVIEW_RECORDED_DISCLOSURE_REQUIRED ->
+            "A recorded model-use review requires the release owner to complete the applicable YouTube AI-use disclosure during upload and verify the final metadata."
+        YoutubeAiUseDisclosureStatus.HUMAN_REVIEW_RECORDED_NO_DISCLOSURE ->
+            "A recorded model-use review did not require an audio-lineage disclosure; the release owner must still review the final upload, including visuals, against current policy."
+    }
+    return YoutubeReleaseMetadata(
+        releaseId = manifest.releaseId, commercialReady = manifest.commercialReady,
+        requiredAttribution = manifest.attribution, aiDisclosureRecommended = manifest.aiDisclosureRecommended,
+        unresolvedEvidence = manifest.reasons, recordedModelDependencies = models,
+        aiUseDisclosureStatus = status, aiUseDisclosureGuidance = guidance
+    )
+}
 
 /** Command deliberately contains no caller-supplied credits text or filesystem path. */
 data class GenerateReleaseCredits(val releaseId: String, val audioExportId: String)
@@ -806,7 +932,7 @@ class ReleaseCreditsService {
             "output/releases/$revisionId/youtube-release.json"
         )
         val revision = parent.copy(
-            version = CommercialProvenanceManifest.VERSION, releaseId = revisionId, reports = reports,
+            version = parent.version, releaseId = revisionId, reports = reports,
             audioExports = (parent.audioExports + audio).distinctBy(ReleaseAudioExport::id).sortedBy(ReleaseAudioExport::id),
             credits = (parent.credits + credits).distinctBy(ReleaseCreditsArtifact::id).sortedBy(ReleaseCreditsArtifact::id)
         )
@@ -921,7 +1047,7 @@ class ReleaseCreditsService {
     }
 
     private fun report(manifest: CommercialProvenanceManifest) = "# Melotrail commercial-readiness report\n\n**Status: Commercial-ready evidence complete**\n\n$COMMERCIAL_DISCLAIMER\n\nRelease ID: `${manifest.releaseId}`\n\nCredits are paired to ${manifest.credits.size} audio export(s).\n"
-    private fun checklist(manifest: CommercialProvenanceManifest) = "# YouTube upload checklist\n\n- [ ] Copy the required instrument attribution from the hash-paired credits text.\n- [ ] Review release `${manifest.releaseId}`; it is not legal advice or a monetization guarantee.\n"
+    private fun checklist(manifest: CommercialProvenanceManifest) = json.encodeToString(youtubeReleaseMetadata(manifest))
     private fun digest(path: Path): String = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
     private fun digestText(text: String): String = MessageDigest.getInstance("SHA-256").digest(text.toByteArray(StandardCharsets.UTF_8)).joinToString("") { "%02x".format(it) }
 

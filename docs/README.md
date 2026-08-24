@@ -3,14 +3,14 @@
 Documentation is split by ownership so active implementation plans do not
 compete with current operating instructions.
 
-## Active implementation plan
+## Completed quality-pipeline record
 
 The complete canonical melody and release-quality roadmap is under
 [`plan/`](plan/README.md):
 
-- [`plan/PLAN.md`](plan/PLAN.md) — outcome and target architecture
-- [`plan/PROJECT_ANALYSIS.md`](plan/PROJECT_ANALYSIS.md) — file-level diagnosis
-  of the current four-source and Ensemble Cohesion failures
+- [`plan/PLAN.md`](plan/PLAN.md) — completed outcome and target architecture
+- [`plan/PROJECT_ANALYSIS.md`](plan/PROJECT_ANALYSIS.md) — baseline diagnosis
+  retained as rationale for the completed four-source and Ensemble Cohesion work
 - [`plan/TASKS.md`](plan/TASKS.md) — ordered QP-001–QP-018 contracts
 - [`plan/QUALITY_GATES.md`](plan/QUALITY_GATES.md) — musical, listening, and
   release gates
@@ -31,8 +31,9 @@ The complete canonical melody and release-quality roadmap is under
 - [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) — desktop, worker, Basic Pitch,
   sound library, renderer, and build recovery
 
-These documents describe shipped behavior. Target behavior that has not landed
-belongs in `docs/plan/` and must not be presented as currently available.
+These documents describe shipped behavior. The completed QP record in
+`docs/plan/` is retained for acceptance evidence; do not present its historical
+baseline defects as current behavior.
 
 ## Release, policy, and maintenance
 

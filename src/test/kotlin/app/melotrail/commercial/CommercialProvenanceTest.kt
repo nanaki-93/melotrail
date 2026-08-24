@@ -38,19 +38,24 @@ class CommercialProvenanceTest {
 
     @Test
     fun `decision table blocks unresolved sources and dependencies`() {
-        val approved = CommercialDependency(CommercialDependencyKind.MODEL, "planner", "1", hash, CommercialTerm.PERMITTED, true, "MIT", "local")
-        assertTrue(CommercialReadyGate.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, attested)), listOf(approved))).ready)
+        val approved = CommercialDependency(CommercialDependencyKind.MODEL, "planner", "1", hash, CommercialTerm.PERMITTED, true, "MIT", "local", aiUseReview = aiReview())
+        assertTrue(CommercialReadyGate.evaluate(CommercialReadinessInput(
+            listOf(CommercialSource("A", hash, attested)), listOf(approved), requireStructuredAiUseReview = true
+        )).ready)
         listOf(CommercialTerm.CONDITIONAL, CommercialTerm.UNKNOWN, CommercialTerm.BLOCKED).forEach { term ->
-            assertFalse(CommercialReadyGate.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, attested)), listOf(approved.copy(commercialTerm = term)))).ready)
+        assertFalse(CommercialReadyGate.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, attested)), listOf(approved.copy(commercialTerm = term)))).ready)
         }
         assertFalse(CommercialReadyGate.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, null)), listOf(approved))).ready)
         assertFalse(CommercialReadyGate.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, attested)), listOf(approved), listOf("missing attribution"))).ready)
         assertFalse(CommercialReadyGate.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, attested)), listOf(approved.copy(identity = "fake-model")))).ready)
+        assertFalse(CommercialReadyGate.evaluate(CommercialReadinessInput(
+            listOf(CommercialSource("A", hash, attested)), listOf(approved.copy(aiUseReview = null)), requireStructuredAiUseReview = true
+        )).ready)
     }
 
     @Test
     fun `commercial readiness blocks a failed signature motif release gate`() {
-        val approved = CommercialDependency(CommercialDependencyKind.MODEL, "planner", "1", hash, CommercialTerm.PERMITTED, true, "MIT", "local")
+        val approved = CommercialDependency(CommercialDependencyKind.MODEL, "planner", "1", hash, CommercialTerm.PERMITTED, true, "MIT", "local", aiUseReview = aiReview())
         val failedGate = SignatureMotifReleaseGateResult(
             sourceSha256 = hash, motifPhraseId = "p-00000", thresholds = SignatureMotifThresholds(),
             occurrenceReports = listOf(SignatureMotifOccurrenceReport("verse-1", 0.0, 0.0, 0.0, 0.0, 0.0, false,
@@ -65,9 +70,11 @@ class CommercialProvenanceTest {
 
     @Test
     fun `commercial ready gate records a disclosure recommendation for material generative AI`() {
-        val model = CommercialDependency(CommercialDependencyKind.MODEL, "arranger", "1", hash, CommercialTerm.PERMITTED, true, "MIT", "local")
+        val model = CommercialDependency(CommercialDependencyKind.MODEL, "arranger", "1", hash, CommercialTerm.PERMITTED, true, "MIT", "local", aiUseReview = aiReview())
 
-        val result = CommercialReadyGate.evaluate(CommercialReadinessInput(listOf(CommercialSource("A", hash, attested)), listOf(model)))
+        val result = CommercialReadyGate.evaluate(CommercialReadinessInput(
+            listOf(CommercialSource("A", hash, attested)), listOf(model), requireStructuredAiUseReview = true
+        ))
 
         assertTrue(result.ready)
         assertTrue(result.aiDisclosureRecommended)
@@ -91,6 +98,8 @@ class CommercialProvenanceTest {
             assertTrue(service.verifyReleaseLineage(root, assertNotNull(first.releaseId)).closed)
             assertContains(Files.readString(assertNotNull(second.report)), "not legal advice")
             assertContains(Files.readString(assertNotNull(second.checklist)), "aiDisclosureRecommended")
+            assertContains(Files.readString(assertNotNull(second.checklist)), "HUMAN_REVIEW_REQUIRED")
+            assertContains(Files.readString(assertNotNull(second.checklist)), "NOT_REQUESTED")
 
             Files.writeString(root.resolve("source/A.mid"), "tampered")
             val verification = service.verifyReleaseLineage(root, assertNotNull(first.releaseId))
@@ -151,9 +160,11 @@ class CommercialProvenanceTest {
 
     @Test
     fun `release documentation retains official links and dated review gate`() {
-        YoutubePolicyDocumentation.requireReviewed(Path.of("docs/COMMERCIAL_PROVENANCE.md"), "2026-08-24")
-        assertFalse(runCatching { YoutubePolicyDocumentation.requireReviewed(Path.of("docs/COMMERCIAL_PROVENANCE.md"), "2026-08-25") }.isSuccess)
+        YoutubePolicyDocumentation.requireReviewed(Path.of("docs/COMMERCIAL_PROVENANCE.md"), "2026-08-25")
+        assertFalse(runCatching { YoutubePolicyDocumentation.requireReviewed(Path.of("docs/COMMERCIAL_PROVENANCE.md"), "2026-08-26") }.isSuccess)
     }
+
+    private fun aiReview(disclosureRequired: Boolean = true) = AiUseDisclosureReview("release-owner", "2026-08-25T00:00:00Z", disclosureRequired, "Reviewed against the selected release lineage.")
 
     private fun projectRoot(): Path {
         val root = Files.createTempDirectory("commercial-provenance")

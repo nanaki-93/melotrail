@@ -50,11 +50,11 @@ occurrence/harmony/lineage sidecar evidence, and a reviewable full-song groove
 map. Arrangement, Cohesion, criticism, humanization, preview, rendering, and
 release lineage now bind to that exact approved connected melody; occurrence
 views are clipped from its sidecar windows rather than reconstructed from part
-durations. The quality roadmap still documents material gaps: source
-micro-timing is not yet applied across the ensemble; cross-section
-accompaniment voicing can reset; and production lacks interaction-aware
-kick/bass control and selected-master codec-preview evidence. Those defects are
-the scope of [`PLAN.md`](PLAN.md).
+durations. Boundary-local Cohesion, generated-role validation, controlled
+kick/bass interaction, selected-master codec-preview evidence, and release
+provenance are also implemented. [`PLAN.md`](PLAN.md) retains the completed
+quality-pipeline record and its task evidence; a real release still needs the
+manual gates below.
 
 Before arrangement, the Structure page exposes a canonical melody quality
 review: source-key confidence, reviewed timing/downbeat mapping, pickup/body/

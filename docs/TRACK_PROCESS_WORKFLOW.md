@@ -80,9 +80,10 @@ hashes, post-fit anchors, note lineage, and a reviewable global groove map;
 Melody Connection and Source Song Critic use that assembled identity before
 explicit approval.
 
-Known limitation: current downstream piano paths can reconstruct occurrence
-MIDI rather than consume the exact approved connected source song. QP-002 now
-stores source beat/onset/tempo/downbeat and source-groove evidence, and QP-003
+Current downstream piano paths consume the exact approved connected source song;
+their occurrence views are clipped through its authoritative sidecar rather
+than reconstructed from selected part MIDI. QP-002 stores source
+beat/onset/tempo/downbeat and source-groove evidence, and QP-003
 can publish a reviewed, source-hash-bound, piecewise timing candidate with
 whole-bar body bounds plus explicit pickup/tail windows. It does not silently
 select that candidate or choose an unreviewed downbeat. QP-004 maps recognized
@@ -155,7 +156,7 @@ Use these distinctions:
 
 - **Private audition:** current enough to preview, possibly with explicit
   experimental bypass.
-- **Quality-certified:** satisfies the future hard/quality/listening gates in
+- **Quality-certified:** satisfies the current hard/quality/listening gates in
   [`plan/QUALITY_GATES.md`](plan/QUALITY_GATES.md).
 - **Commercial evidence ready:** provenance and policy evidence is complete
   under [`COMMERCIAL_PROVENANCE.md`](COMMERCIAL_PROVENANCE.md); it is not legal

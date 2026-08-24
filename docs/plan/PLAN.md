@@ -1,6 +1,7 @@
 # Melotrail canonical melody and release-quality pipeline
 
-Status: implementation required
+Status: implementation complete in QP-001 through QP-018; manual release and
+listening gates remain external evidence
 
 Baseline reviewed: 2026-08-24
 
@@ -32,10 +33,11 @@ musical, rights, AI-use, and lineage evidence. It cannot guarantee copyright or
 Content ID clearance, audience response, advertiser suitability, YouTube
 Partner Program admission, or monetization.
 
-## Verified current defects
+## Baseline defects addressed by the completed pipeline
 
-The current implementation has useful stages but does not yet satisfy the
-outcome:
+The 2026-08-24 baseline had useful stages but did not yet satisfy the outcome.
+The numbered findings below are retained as task rationale; they are not claims
+about the current implementation.
 
 1. Source performances have different detected tempos and pickups. Normalizing
    tempo metadata does not warp performed beats or detect the downbeat.
@@ -53,8 +55,8 @@ outcome:
    two-track canonical full melody with occurrence/lineage/harmony/groove
    sidecar evidence; Melody Connection and Source Song Critic use its global
    note identity.
-6. Source-song approval is checked before arrangement, but arrangement state,
-   humanization, and rendering later reconstruct piano from occurrence
+6. Source-song approval was checked before arrangement, but arrangement state,
+   humanization, and rendering later reconstructed piano from occurrence
    artifacts instead of consuming the exact approved connected full melody.
 7. Selected artifact precedence is one ordered transposed -> corrected -> AI
    Fix -> Enhance -> Feel chain. Each selected step is hash/context/processor

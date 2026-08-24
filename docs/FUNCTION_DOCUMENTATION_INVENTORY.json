@@ -1029,10 +1029,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/commercial/CommercialProvenance.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/commercial/CommercialProvenance.kt has 49 callable declarations, 6 directly documented and 43 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 49,
-      "declarationDigest": "5b747ea70e627a092e4508d5fca28b97628541d5a8fdce4f0443fa997c4e9504",
-      "documentedFunctionCount": 6
+      "reason": "src/main/kotlin/app/melotrail/commercial/CommercialProvenance.kt has 52 callable declarations, 8 directly documented and 44 still requiring focused KDoc/docstrings. QP-018 reviewed the hash-bound canonical-melody release closure and human-review-only AI-use metadata on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "functionCount": 52,
+      "declarationDigest": "957e9da01de019d45004d37baabb484d023bd5ada2d6c0340d9eb1b82fe83f19",
+      "documentedFunctionCount": 8
     },
     {
       "path": "src/main/kotlin/app/melotrail/commercial/YoutubePolicyDocumentation.kt",
@@ -1269,10 +1269,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/licensing/ModelLicense.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/licensing/ModelLicense.kt has 5 callable declarations, 0 directly documented and 5 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
+      "reason": "src/main/kotlin/app/melotrail/licensing/ModelLicense.kt has 5 callable declarations, 1 directly documented and 4 still requiring focused KDoc/docstrings. QP-018 reviewed the structured AI-use review handoff on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
       "functionCount": 5,
       "declarationDigest": "fe1a1de42c34e086f935c9c35f14bd5381920c436fe4fd553faa8b8bdec950a8",
-      "documentedFunctionCount": 0
+      "documentedFunctionCount": 1
     },
     {
       "path": "src/main/kotlin/app/melotrail/licensing/ModelRegistry.kt",

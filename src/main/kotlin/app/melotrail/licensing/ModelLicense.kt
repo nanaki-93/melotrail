@@ -3,6 +3,7 @@ package app.melotrail.licensing
 import kotlinx.datetime.Instant
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import app.melotrail.commercial.AiUseDisclosureReview
 import app.melotrail.commercial.CommercialDependency
 import app.melotrail.commercial.CommercialDependencyKind
 import app.melotrail.commercial.CommercialTerm
@@ -86,7 +87,8 @@ data class ModelLicense(
         return status == LicenseStatus.BLOCKED
     }
 
-    fun commercialDependency(use: ModelUse, promptContract: String? = null, approved: Boolean? = null): CommercialDependency = CommercialDependency(
+    /** Snapshot this specific model use with its optional release-owner AI-use review. */
+    fun commercialDependency(use: ModelUse, promptContract: String? = null, aiUseReview: AiUseDisclosureReview? = null): CommercialDependency = CommercialDependency(
         kind = CommercialDependencyKind.MODEL,
         identity = id.name,
         version = id.version,
@@ -103,6 +105,6 @@ data class ModelLicense(
         attribution = reviewNotes?.takeIf { attribution == AttributionRequirement.REQUIRED },
         outputRightsNote = outputRights,
         promptContract = promptContract,
-        approved = approved
+        aiUseReview = aiUseReview
     )
 }

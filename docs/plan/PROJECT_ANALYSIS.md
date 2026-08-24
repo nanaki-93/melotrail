@@ -5,15 +5,17 @@ Analysis baseline: 2026-08-24
 Scope: the current schema-v4 Kotlin/worker composition path, with emphasis on
 the intro/verse/chorus/bridge end-to-end failure and
 [`EnsembleCohesion.kt`](../../src/main/kotlin/app/melotrail/arrangement/EnsembleCohesion.kt).
-This is the diagnostic basis for [`TASKS.md`](TASKS.md), not a second roadmap.
+This is the 2026-08-24 baseline diagnostic basis for [`TASKS.md`](TASKS.md),
+not a second roadmap. Its findings are retained as rationale for completed QP
+work and are not statements of the current implementation.
 
 ## Executive diagnosis
 
-The project has strong artifact safety, typed authority, validation, and
-workflow evidence, but those controls mostly answer “is this artifact current
-and structurally valid?” They do not yet prove “are these four performances on
-one beat grid, in one mode, harmonically compatible, monophonic, and used as the
-same melody throughout the build?”
+At the baseline, the project had strong artifact safety, typed authority,
+validation, and workflow evidence, but those controls mostly answered “is this
+artifact current and structurally valid?” They did not yet prove “are these four
+performances on one beat grid, in one mode, harmonically compatible,
+monophonic, and used as the same melody throughout the build?”
 
 The poor result is therefore cumulative rather than one isolated Cohesion bug:
 
@@ -23,8 +25,8 @@ The poor result is therefore cumulative rather than one isolated Cohesion bug:
    offsets;
 3. tonic-only transposition leaves mode differences unresolved;
 4. scale/chord problems and polyphony are inspected more than repaired;
-5. the assembled/connected canonical full melody is approved, but downstream
-   stages still reconstruct piano from occurrence-local selected MIDI;
+5. the assembled/connected canonical full melody was approved, but downstream
+   stages still reconstructed piano from occurrence-local selected MIDI;
 6. generic arrangement choices magnify those source inconsistencies;
 7. Cohesion adds locally valid events using global role evidence and several
    intent fields that do not reach the renderer;

@@ -1,9 +1,9 @@
 # MIDI import process
 
 This guide describes the current schema-v4 import implementation. Reviewed
-beat-grid alignment and occurrence-local harmony fitting are now separate,
-hash-bound preparation stages; the remaining canonical-full-melody work is
-specified in [`plan/PLAN.md`](plan/PLAN.md).
+beat-grid alignment and occurrence-local harmony fitting are separate,
+hash-bound preparation stages; their outputs feed the implemented canonical
+full-melody approval chain described in [`TRACK_PROCESS_WORKFLOW.md`](TRACK_PROCESS_WORKFLOW.md).
 
 Use **Import MIDI** for editable Standard MIDI files. Use **Import audio** only
 for an eligible solo-piano or isolated melody WAV/WAVE/MP3 source. The current

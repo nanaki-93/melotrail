@@ -1,6 +1,6 @@
 # YouTube release and monetization-readiness scope
 
-Policy review date: 2026-08-24
+Policy review date: 2026-08-25
 
 Official references:
 
@@ -20,10 +20,11 @@ generic, repetitive, mass-produced, or template-like output as inauthentic.
 Rights, copyright, Community Guidelines, advertiser-friendly rules, and other
 program policies also apply.
 
-YouTube's GenAI disclosure guidance explicitly includes AI-generated music as
-an example requiring disclosure. The guidance also states that disclosure does
-not itself reduce audience or monetization eligibility. Disclosure is therefore
-a transparency requirement, not proof that a release is or is not monetizable.
+YouTube's GenAI disclosure guidance lists AI-generated music among the examples
+requiring disclosure when the content is realistic or meaningfully AI-altered.
+The guidance also states that disclosure does not itself reduce audience or
+monetization eligibility. Disclosure is therefore a transparency requirement,
+not proof that a release is or is not monetizable.
 
 Melotrail must not display “YouTube approved,” “guaranteed monetizable,” or an
 equivalent claim.
@@ -89,6 +90,13 @@ A release may be labeled `COMMERCIAL_EVIDENCE_READY` only when:
 
 `COMMERCIAL_EVIDENCE_READY` means evidence is complete under Melotrail's current
 policy. It is not legal advice, platform approval, or a monetization guarantee.
+
+For a new selected lineage, each recorded model use additionally needs a
+structured human AI-use review. Melotrail emits `youtube-release.json` as a
+human-review draft containing recorded model identities, disclosure guidance,
+and `platformApprovalStatus: NOT_REQUESTED`; the release owner must review the
+final upload and complete the applicable upload setting. The draft does not
+upload content, obtain a YouTube decision, or predict monetization.
 
 ## Anti-template product requirements
 

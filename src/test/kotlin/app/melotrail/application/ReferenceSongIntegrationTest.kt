@@ -27,6 +27,8 @@ import app.melotrail.arrangement.sha256
 import app.melotrail.arrangement.canonicalMidiReferences
 import app.melotrail.audio.AudioBuffer
 import app.melotrail.audio.AudioFormat
+import app.melotrail.commercial.CommercialProvenanceManifest
+import app.melotrail.commercial.CommercialProvenanceService
 import app.melotrail.harmony.ChordEvent
 import app.melotrail.harmony.ChordEventId
 import app.melotrail.harmony.ChordProgression
@@ -205,6 +207,13 @@ class ReferenceSongIntegrationTest {
         assertEquals(build.master.fileName.toString(), "master.wav")
         assertTrue(release.mastering?.dynamicsPreserved == true)
         assertTrue(release.codecPreviews.all { it.status == CodecPreviewStatus.UNVERIFIED }, "Offline fake codecs must remain visibly unverified.")
+        val commercial = CommercialProvenanceService().export(root)
+        val commercialManifest = JSON.decodeFromString(CommercialProvenanceManifest.serializer(), Files.readString(assertNotNull(commercial.manifest)))
+        val canonicalLineage = assertNotNull(commercialManifest.canonicalMelody)
+        assertEquals(approvedMelody.connectedMidi.sha256, canonicalLineage.connectedMidi.sha256)
+        assertTrue(canonicalLineage.connectedMidi in commercialManifest.artifacts)
+        assertTrue(canonicalLineage.approvalSidecar in commercialManifest.artifacts)
+        assertFalse(commercial.readiness.ready, "Missing human rights and release review evidence must remain blocked.")
         val listening = QualityReviewEvidenceService().publishPending(root, listOf(
             QualityDebugPair("melody-connected", QualityReviewArtifactKind.MIDI,
                 WorkflowArtifactReference("midi/clean/verse.mid", sha256(root.resolve("midi/clean/verse.mid"))), approvedMelody.connectedMidi),

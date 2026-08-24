@@ -1,5 +1,6 @@
 package app.melotrail.licensing
 
+import app.melotrail.commercial.AiUseDisclosureReview
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -79,5 +80,19 @@ class ModelLicenseTest {
         )
 
         assertFalse(license.isBlocked())
+    }
+
+    @Test
+    fun `commercial dependency retains the structured AI-use review`() {
+        val review = AiUseDisclosureReview("release-owner", "2026-08-25T00:00:00Z", true, "Reviewed against the selected release lineage.")
+        val license = ModelLicense(
+            id = ModelId("approved-model", "1.0"),
+            displayName = "Approved Model",
+            description = "An approved model",
+            commercialUse = LicensePermission.PERMITTED,
+            status = LicenseStatus.APPROVED
+        )
+
+        assertEquals(review, license.commercialDependency(ModelUse.PLANNING, aiUseReview = review).aiUseReview)
     }
 }
