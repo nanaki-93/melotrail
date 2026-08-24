@@ -84,6 +84,43 @@ class FullSongCriticTest {
         assertTrue(issues.any { it.category == FullSongIssueCategory.MASKING && it.occurrenceId == "one" })
     }
 
+    @Test fun `critic keeps uncapped aggregate evidence when its displayed issue list is bounded`() {
+        val path = root.resolve("unmatched.mid"); val sequence = Sequence(Sequence.PPQ, 480); val track = sequence.createTrack()
+        repeat(70) { index -> track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, 48, 0), index * 480L)) }
+        MidiSystem.write(sequence, 1, path.toFile())
+
+        val report = DeterministicFullSongCritic().criticize(input(artifact("bass", path)))
+        fun metric(name: String) = report.aggregateMetrics.single { it.name == name }.value.toInt()
+
+        assertEquals(70, metric("issueCount"))
+        assertEquals(64, metric("displayedIssueCount"))
+        assertEquals(70, metric("blockingIssueCount"))
+        assertEquals(64, report.issues.size)
+        assertEquals(listOf("issue-truncated-6"), report.warnings)
+    }
+
+    @Test fun `critic retains every actionable issue for bounded enhancement batches`() {
+        val midi = write("many-clashes.mid", (0 until 70).map { index ->
+            val start = index * 480L
+            start to start + 240L to 61
+        })
+        val source = input(artifact("pad", midi))
+        val end = 70 * 480L
+        val authority = source.authority.copy(
+            occurrences = listOf(MusicalOccurrence("one", "A", SectionTypeId.VERSE, 0, 1, 0, end)),
+            harmony = listOf(HarmonicTimelineEntry("one", SectionTypeId.VERSE, CanonicalChord(0, "C", ChordQuality.MAJOR), 0, 0, end))
+        )
+
+        val report = DeterministicFullSongCritic().criticize(source.copy(authority = authority))
+        fun metric(name: String) = report.aggregateMetrics.single { it.name == name }.value.toInt()
+
+        assertEquals(70, metric("actionableIssueCount"))
+        assertEquals(64, metric("displayedIssueCount"))
+        assertEquals(64, report.issues.size)
+        assertEquals(70, report.actionableIssueEvidence.size)
+        assertEquals((0 until 70).map { it * 480L }, report.actionableIssueEvidence.map { it.window.startTick })
+    }
+
     private fun input(vararg artifacts: FullSongCriticMidiArtifact): FullSongCriticInput = FullSongCriticInput(
         authority = WholeSongAnalysisProjection(
             contextSha256 = "a".repeat(64), projectKey = MusicalKey(PitchClass.of(PitchSpelling.C), ScaleModeId.MAJOR), tempo = Tempo(120.0), meter = TimeSignature(4, 4), harmonyPpq = 480,

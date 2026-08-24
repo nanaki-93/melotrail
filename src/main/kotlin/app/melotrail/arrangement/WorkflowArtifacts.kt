@@ -520,7 +520,7 @@ object CriticArtifactPaths {
 enum class FullSongEnhancementSelection { UNRESOLVED, BYPASS, NO_OP, APPROVED }
 
 @Serializable
-enum class FullSongEnhancementCandidateStatus { DRAFT, REJECTED, APPROVED }
+enum class FullSongEnhancementCandidateStatus { DRAFT, REJECTED, APPROVED, FAILED }
 
 /** One selected full-song candidate output; the input is always verified before rendering. */
 @Serializable
@@ -545,14 +545,17 @@ data class FullSongEnhancementReferences(
     val artifacts: List<FullSongEnhancementArtifactReference> = emptyList(),
     val plan: WorkflowArtifactReference? = null,
     val report: WorkflowArtifactReference? = null,
-    val afterCriticReport: WorkflowArtifactReference? = null
+    val afterCriticReport: WorkflowArtifactReference? = null,
+    /** A planner failure is retained as explicit stage evidence; it never means bypass. */
+    val failureReason: String? = null
 ) {
     init {
         require(SHA_256.matches(criticInputSha256) && SHA_256.matches(cohesionInputSha256) &&
             (criticReportSha256 == null || SHA_256.matches(criticReportSha256)) &&
             artifacts.map(FullSongEnhancementArtifactReference::id).distinct().size == artifacts.size &&
-            ((status == null && artifacts.isEmpty() && plan == null && report == null && afterCriticReport == null) ||
-                (status != null && artifacts.isNotEmpty() && plan != null && report != null && afterCriticReport != null))) {
+            ((status == null && artifacts.isEmpty() && plan == null && report == null && afterCriticReport == null && failureReason == null) ||
+                (status == FullSongEnhancementCandidateStatus.FAILED && artifacts.isEmpty() && plan == null && report == null && afterCriticReport == null && failureReason?.matches(Regex("[A-Za-z0-9 ,.:';!?()/-]{1,240}")) == true) ||
+                (status != null && status != FullSongEnhancementCandidateStatus.FAILED && artifacts.isNotEmpty() && plan != null && report != null && afterCriticReport != null && failureReason == null))) {
             "Full-song enhancement references are invalid"
         }
     }
@@ -607,7 +610,7 @@ data class ProjectWorkflowReferences(
 ) {
     init {
         require(when (fullSongEnhancementSelection) {
-            FullSongEnhancementSelection.UNRESOLVED -> fullSongEnhancement == null || fullSongEnhancement.status in setOf(FullSongEnhancementCandidateStatus.DRAFT, FullSongEnhancementCandidateStatus.REJECTED)
+            FullSongEnhancementSelection.UNRESOLVED -> fullSongEnhancement == null || fullSongEnhancement.status in setOf(FullSongEnhancementCandidateStatus.DRAFT, FullSongEnhancementCandidateStatus.REJECTED, FullSongEnhancementCandidateStatus.FAILED)
             FullSongEnhancementSelection.APPROVED -> fullSongEnhancement?.status == FullSongEnhancementCandidateStatus.APPROVED
             FullSongEnhancementSelection.NO_OP, FullSongEnhancementSelection.BYPASS -> fullSongEnhancement != null && fullSongEnhancement.status == null
         }) {

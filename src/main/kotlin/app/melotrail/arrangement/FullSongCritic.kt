@@ -71,6 +71,8 @@ import kotlin.math.abs
     val processorIdentity: String = PROCESSOR_IDENTITY,
     val aggregateMetrics: List<FullSongAggregateMetric>,
     val issues: List<FullSongIssue>,
+    /** Complete actionable evidence for bounded correction batches; [issues] remains the UI summary. */
+    val actionableIssueEvidence: List<FullSongIssue> = issues.filter { it.severity == FullSongIssueSeverity.ACTIONABLE },
     val warnings: List<String>,
     val advice: FullSongCriticAdvice? = null,
     val reportSha256: String
@@ -78,21 +80,36 @@ import kotlin.math.abs
     init {
         require(schemaVersion == SCHEMA_VERSION && HASH.matches(inputSha256) && HASH.matches(contextSha256) && processorIdentity == PROCESSOR_IDENTITY && HASH.matches(reportSha256)) { "Critic report identity is invalid" }
         require(aggregateMetrics == aggregateMetrics.sortedBy(FullSongAggregateMetric::name) && aggregateMetrics.map(FullSongAggregateMetric::name).distinct().size == aggregateMetrics.size &&
-            issues == issues.sortedWith(ISSUE_ORDER) && issues.size <= MAX_ISSUES && warnings == warnings.sorted() && warnings.size <= 1) { "Critic report is not canonical" }
-        require(reportSha256 == hash(json.encodeToString(ReportHashPayload(schemaVersion, inputSha256, contextSha256, processorIdentity, aggregateMetrics, issues, warnings, advice)))) { "Critic report hash does not match its evidence" }
+            actionableIssueEvidence == actionableIssueEvidence.sortedWith(ISSUE_ORDER) && actionableIssueEvidence.all { it.severity == FullSongIssueSeverity.ACTIONABLE } &&
+            actionableIssueEvidence.map(FullSongIssue::id).distinct().size == actionableIssueEvidence.size &&
+            issues == issues.sortedWith(ISSUE_ORDER) && issues.size <= MAX_ISSUES &&
+            issues.filter { it.severity == FullSongIssueSeverity.ACTIONABLE }.all { it in actionableIssueEvidence } &&
+            warnings == warnings.sorted() && warnings.size <= 1) { "Critic report is not canonical" }
+        require(reportSha256 == hash(json.encodeToString(ReportHashPayload(schemaVersion, inputSha256, contextSha256, processorIdentity, aggregateMetrics, actionableIssueEvidence, issues, warnings, advice)))) { "Critic report hash does not match its evidence" }
     }
     companion object {
-        const val SCHEMA_VERSION = 1
-        const val PROCESSOR_IDENTITY = "deterministic-full-song-critic-v1"
+        const val SCHEMA_VERSION = 2
+        const val PROCESSOR_IDENTITY = "deterministic-full-song-critic-v2"
         const val MAX_ISSUES = 64
         private val HASH = Regex("[0-9a-f]{64}")
         internal val ISSUE_ORDER = compareBy<FullSongIssue> { it.severity.ordinal }.thenBy { it.window.startTick }.thenBy { it.targetRole }.thenBy { it.category.ordinal }.thenBy { it.id }
-        fun create(inputHash: String, contextHash: String, metrics: List<FullSongAggregateMetric>, issues: List<FullSongIssue>, warnings: List<String>, advice: FullSongCriticAdvice? = null): FullSongCriticReport {
-            val canonicalMetrics = metrics.sortedBy(FullSongAggregateMetric::name); val canonicalIssues = issues.sortedWith(ISSUE_ORDER); val canonicalWarnings = warnings.sorted()
-            val hash = hash(json.encodeToString(ReportHashPayload(SCHEMA_VERSION, inputHash, contextHash, PROCESSOR_IDENTITY, canonicalMetrics, canonicalIssues, canonicalWarnings, advice)))
-            return FullSongCriticReport(inputSha256 = inputHash, contextSha256 = contextHash, aggregateMetrics = canonicalMetrics, issues = canonicalIssues, warnings = canonicalWarnings, advice = advice, reportSha256 = hash)
+        fun create(
+            inputHash: String,
+            contextHash: String,
+            metrics: List<FullSongAggregateMetric>,
+            issues: List<FullSongIssue>,
+            warnings: List<String>,
+            advice: FullSongCriticAdvice? = null,
+            actionableIssueEvidence: List<FullSongIssue> = issues.filter { it.severity == FullSongIssueSeverity.ACTIONABLE }
+        ): FullSongCriticReport {
+            val canonicalMetrics = metrics.sortedBy(FullSongAggregateMetric::name)
+            val canonicalEvidence = actionableIssueEvidence.sortedWith(ISSUE_ORDER)
+            val canonicalIssues = issues.sortedWith(ISSUE_ORDER)
+            val canonicalWarnings = warnings.sorted()
+            val hash = hash(json.encodeToString(ReportHashPayload(SCHEMA_VERSION, inputHash, contextHash, PROCESSOR_IDENTITY, canonicalMetrics, canonicalEvidence, canonicalIssues, canonicalWarnings, advice)))
+            return FullSongCriticReport(inputSha256 = inputHash, contextSha256 = contextHash, aggregateMetrics = canonicalMetrics, actionableIssueEvidence = canonicalEvidence, issues = canonicalIssues, warnings = canonicalWarnings, advice = advice, reportSha256 = hash)
         }
-        @Serializable private data class ReportHashPayload(val schemaVersion: Int, val inputSha256: String, val contextSha256: String, val processorIdentity: String, val aggregateMetrics: List<FullSongAggregateMetric>, val issues: List<FullSongIssue>, val warnings: List<String>, val advice: FullSongCriticAdvice?)
+        @Serializable private data class ReportHashPayload(val schemaVersion: Int, val inputSha256: String, val contextSha256: String, val processorIdentity: String, val aggregateMetrics: List<FullSongAggregateMetric>, val actionableIssueEvidence: List<FullSongIssue>, val issues: List<FullSongIssue>, val warnings: List<String>, val advice: FullSongCriticAdvice?)
         private val json = Json { encodeDefaults = true; explicitNulls = false }
         private fun hash(value: String) = sha256(value.toByteArray())
     }
@@ -149,15 +166,20 @@ class DeterministicFullSongCritic {
         val consolidated = consolidate(raw).sortedWith(FullSongCriticReport.ISSUE_ORDER)
         val kept = consolidated.take(FullSongCriticReport.MAX_ISSUES)
         val warnings = if (consolidated.size > kept.size) listOf("issue-truncated-${consolidated.size - kept.size}") else emptyList()
+        val categoryCounts = FullSongIssueCategory.entries.map { category ->
+            FullSongAggregateMetric("${category.name.lowercase()}IssueCount", consolidated.count { it.category == category }.toDouble())
+        }
         return FullSongCriticReport.create(input.inputSha256, authority.contextSha256,
             listOf(
-                FullSongAggregateMetric("actionableIssueCount", kept.count { it.severity == FullSongIssueSeverity.ACTIONABLE }.toDouble()),
-                FullSongAggregateMetric("blockingIssueCount", kept.count { it.severity == FullSongIssueSeverity.BLOCKING }.toDouble()),
-                FullSongAggregateMetric("criticalIssueCount", kept.count(::isCritical).toDouble()),
-                FullSongAggregateMetric("issueCount", kept.size.toDouble()),
+                FullSongAggregateMetric("actionableIssueCount", consolidated.count { it.severity == FullSongIssueSeverity.ACTIONABLE }.toDouble()),
+                FullSongAggregateMetric("blockingIssueCount", consolidated.count { it.severity == FullSongIssueSeverity.BLOCKING }.toDouble()),
+                FullSongAggregateMetric("criticalIssueCount", consolidated.count(::isCritical).toDouble()),
+                /** `issueCount` is deliberately uncapped; `displayedIssueCount` describes the bounded summary. */
+                FullSongAggregateMetric("issueCount", consolidated.size.toDouble()),
+                FullSongAggregateMetric("displayedIssueCount", kept.size.toDouble()),
                 FullSongAggregateMetric("noteCount", notes.size.toDouble()),
-                FullSongAggregateMetric("recognizabilityIssueCount", kept.count { it.category == FullSongIssueCategory.RECOGNIZABILITY_REGRESSION }.toDouble())
-            ), kept, warnings)
+                FullSongAggregateMetric("recognizabilityIssueCount", consolidated.count { it.category == FullSongIssueCategory.RECOGNIZABILITY_REGRESSION }.toDouble())
+            ) + categoryCounts, kept, warnings, actionableIssueEvidence = consolidated.filter { it.severity == FullSongIssueSeverity.ACTIONABLE })
     }
 
     private fun invariantIssues(input: FullSongCriticInput, notes: List<Note>, beat: Long): List<FullSongIssue> {

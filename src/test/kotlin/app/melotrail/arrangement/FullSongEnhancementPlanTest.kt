@@ -4,6 +4,7 @@ import app.melotrail.application.CanonicalChord
 import app.melotrail.application.HarmonicTimelineEntry
 import app.melotrail.application.MusicalOccurrence
 import app.melotrail.application.WholeSongAnalysisProjection
+import app.melotrail.application.fullSongCandidateAcceptance
 import app.melotrail.harmony.ChordQuality
 import app.melotrail.music.MusicalKey
 import app.melotrail.music.PitchClass
@@ -57,6 +58,40 @@ class FullSongEnhancementPlanTest {
         assertFalse(prompt.contains("source.mid"))
         assertEquals(48, "\"id\":\"n-".toRegex().findAll(prompt).count())
         assertTrue(prompt.contains(input.issues.single().id))
+    }
+
+    @Test fun `all actionable evidence is supplied through bounded correction batches`() {
+        val base = enhancementInput(noteCount = 70)
+        val allIssues = (0 until 70).map { index ->
+            base.issues.single().copy(
+                id = index.toString(16).padStart(32, '0'),
+                window = FullSongWindow(index * 10L, index * 10L + 5, 0, 1)
+            )
+        }
+        val prompts = mutableListOf<String>()
+        val planner = LocalQwenFullSongEnhancementPlanner(LocalQwenClient { _, prompt ->
+            prompts += prompt
+            "{\"operations\":[]}"
+        })
+
+        val sentIds = (0 until 3).flatMap { batchIndex ->
+            val batch = base.copy(
+                issues = allIssues.drop(batchIndex * FullSongEnhancementInput.MAX_ACTIONABLE_ISSUES)
+                    .take(FullSongEnhancementInput.MAX_ACTIONABLE_ISSUES),
+                totalActionableIssueCount = allIssues.size,
+                batchIndex = batchIndex,
+                batchCount = 3
+            )
+            FullSongEnhancementPlanParser.parse(planner.plan(batch))
+            batch.issues.map(FullSongIssue::id)
+        }
+
+        assertEquals(allIssues.map(FullSongIssue::id), sentIds)
+        assertEquals(3, prompts.size)
+        assertTrue(prompts[0].contains("\"totalActionableIssueCount\":70"))
+        assertTrue(prompts[0].contains("\"batchIndex\":0"))
+        assertTrue(prompts[2].contains("\"batchIndex\":2"))
+        assertTrue(prompts[2].contains(allIssues.last().id))
     }
 
     @Test fun `Qwen explanatory fields are discarded before strict plan publication`() {
@@ -134,6 +169,26 @@ class FullSongEnhancementPlanTest {
 
         assertTrue(schemaUsed)
         assertTrue(FullSongEnhancementPlanParser.parse(plan).operations.isEmpty())
+    }
+
+    @Test fun `polish gate distinguishes no-op regression partial and genuine critic candidates`() {
+        fun report(critical: Int, blocking: Int, actionable: Int, recognizable: Int = 0) = FullSongCriticReport.create(
+            "a".repeat(64), "b".repeat(64), listOf(
+                FullSongAggregateMetric("criticalIssueCount", critical.toDouble()),
+                FullSongAggregateMetric("blockingIssueCount", blocking.toDouble()),
+                FullSongAggregateMetric("actionableIssueCount", actionable.toDouble()),
+                FullSongAggregateMetric("recognizabilityIssueCount", recognizable.toDouble())
+            ), emptyList(), emptyList()
+        )
+        val before = report(1, 1, 3)
+
+        assertEquals(FullSongEnhancementImprovement.NO_OP, fullSongCandidateAcceptance(before, before).improvement)
+        assertEquals(FullSongEnhancementImprovement.REGRESSION, fullSongCandidateAcceptance(before, report(1, 1, 3, recognizable = 1)).improvement)
+        assertEquals(FullSongEnhancementImprovement.REGRESSION, fullSongCandidateAcceptance(before, report(2, 1, 2)).improvement)
+        assertEquals(FullSongEnhancementImprovement.PARTIAL, fullSongCandidateAcceptance(before, report(1, 1, 2)).improvement)
+        val genuine = fullSongCandidateAcceptance(before, report(0, 0, 0))
+        assertEquals(FullSongEnhancementImprovement.GENUINE, genuine.improvement)
+        assertTrue(genuine.accepted)
     }
 
     private fun enhancementInput(noteCount: Int) = FullSongEnhancementInput(

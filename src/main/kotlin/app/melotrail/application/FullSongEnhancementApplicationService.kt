@@ -7,6 +7,7 @@ import app.melotrail.arrangement.FullSongEnhancementArtifactPaths
 import app.melotrail.arrangement.FullSongEnhancementArtifactReference
 import app.melotrail.arrangement.FullSongEnhancementCandidateStatus
 import app.melotrail.arrangement.FullSongEnhancementInput
+import app.melotrail.arrangement.FullSongEnhancementImprovement
 import app.melotrail.arrangement.FullSongEnhancementNote
 import app.melotrail.arrangement.FullSongEnhancementOperationKind
 import app.melotrail.arrangement.FullSongEnhancementPlan
@@ -49,6 +50,46 @@ data class FullSongEnhancementSnapshot(
     val warnings: List<String>
 )
 
+/** Deterministic aggregate gate shared by candidate publication and regression tests. */
+internal data class FullSongCandidateAcceptance(
+    val accepted: Boolean,
+    val beforeCriticalIssueCount: Int,
+    val afterCriticalIssueCount: Int,
+    val beforeBlockingIssueCount: Int,
+    val afterBlockingIssueCount: Int,
+    val beforeActionableIssueCount: Int,
+    val afterActionableIssueCount: Int,
+    val recognizabilityPreserved: Boolean,
+    val improvement: FullSongEnhancementImprovement,
+    val reasons: List<String>
+)
+
+/** Reject no-ops/regressions; permit only bounded critic improvement with no new hard finding. */
+internal fun fullSongCandidateAcceptance(before: FullSongCriticReport, after: FullSongCriticReport): FullSongCandidateAcceptance {
+    fun metric(report: FullSongCriticReport, name: String) = report.aggregateMetrics.singleOrNull { it.name == name }?.value?.toInt()
+        ?: error("Critic report does not contain '$name'.")
+    val beforeCritical = metric(before, "criticalIssueCount")
+    val afterCritical = metric(after, "criticalIssueCount")
+    val beforeBlocking = metric(before, "blockingIssueCount")
+    val afterBlocking = metric(after, "blockingIssueCount")
+    val beforeActionable = metric(before, "actionableIssueCount")
+    val afterActionable = metric(after, "actionableIssueCount")
+    val recognizable = metric(after, "recognizabilityIssueCount") <= metric(before, "recognizabilityIssueCount")
+    val reasons = buildList {
+        if (afterCritical > beforeCritical) add("Candidate rejected: critical Critic issues increased.")
+        if (afterBlocking > beforeBlocking) add("Candidate rejected: blocking Critic issues increased.")
+        if (!recognizable) add("Candidate rejected: melody recognizability regressed.")
+        if (afterCritical >= beforeCritical && afterBlocking >= beforeBlocking && afterActionable >= beforeActionable) add("Candidate rejected: targeted Critic metrics did not improve.")
+    }
+    val improvement = when {
+        reasons.isNotEmpty() && recognizable && afterCritical == beforeCritical && afterBlocking == beforeBlocking && afterActionable == beforeActionable -> FullSongEnhancementImprovement.NO_OP
+        reasons.isNotEmpty() -> FullSongEnhancementImprovement.REGRESSION
+        afterCritical == 0 && afterBlocking == 0 && afterActionable == 0 -> FullSongEnhancementImprovement.GENUINE
+        else -> FullSongEnhancementImprovement.PARTIAL
+    }
+    return FullSongCandidateAcceptance(reasons.isEmpty(), beforeCritical, afterCritical, beforeBlocking, afterBlocking, beforeActionable, afterActionable, recognizable, improvement, reasons)
+}
+
 interface FullSongEnhancementApplicationService {
     fun generateCandidate(root: Path): FullSongEnhancementSnapshot
     fun load(root: Path): FullSongEnhancementSnapshot
@@ -77,14 +118,34 @@ class DefaultFullSongEnhancementApplicationService(
             saveSelection(normalized, FullSongEnhancementSelection.NO_OP, noOp)
             return@locked FullSongEnhancementSnapshot(FullSongEnhancementSelection.NO_OP, false, false, 0, 0, 0, listOf("Critic found no actionable issues; Cohesion MIDI remains selected."))
         }
-        val input = input(current)
-        val plan = FullSongEnhancementPlanParser.parse(planner.plan(input))
-        require(plan.inputSha256 == input.inputSha256 && plan.contextSha256 == input.contextSha256 &&
-            plan.criticInputSha256 == input.criticInputSha256 && plan.criticReportSha256 == input.criticReportSha256) {
-            "Full-song enhancement plan belongs to a different current input, context, or Critic report."
+        val inputs = inputs(current)
+        val input = inputs.first()
+        val candidate = try {
+            val plans = inputs.map { batch ->
+                FullSongEnhancementPlanParser.parse(planner.plan(batch)).also { candidate ->
+                    require(candidate.inputSha256 == batch.inputSha256 && candidate.contextSha256 == batch.contextSha256 &&
+                        candidate.criticInputSha256 == batch.criticInputSha256 && candidate.criticReportSha256 == batch.criticReportSha256) {
+                        "Full-song enhancement plan belongs to a different current input, context, or Critic report."
+                    }
+                }
+            }
+            val plan = combinePlans(input, plans)
+            plan to apply(normalized, input, plan, current.issues)
+        } catch (error: Exception) {
+            val failed = FullSongEnhancementReferences(
+                current.critic.inputSha256, current.report.reportSha256, current.cohesionInputSha256,
+                status = FullSongEnhancementCandidateStatus.FAILED,
+                failureReason = "Planner failed: ${error.message.orEmpty().replace(Regex("[^A-Za-z0-9 ,.:';!?()/-]"), " ").trim().take(200).ifBlank { error.javaClass.simpleName }}"
+            )
+            val project = ProjectStore.read(normalized)
+            ProjectStore.write(normalized, project.copy(workflow = project.workflow.copy(
+                fullSongEnhancementSelection = FullSongEnhancementSelection.UNRESOLVED,
+                fullSongEnhancement = failed
+            ).markCurrent(WorkflowArtifact.FULL_SONG_ENHANCEMENT)))
+            return@locked FullSongEnhancementSnapshot(FullSongEnhancementSelection.UNRESOLVED, false, false, current.issues.size, 0, 0, listOf(requireNotNull(failed.failureReason)))
         }
+        val (plan, applied) = candidate
         val revision = nextRevision(normalized, current.critic.inputSha256)
-        val applied = apply(normalized, input, plan)
         val references = publish(normalized, current, input, plan, applied, revision)
         val project = ProjectStore.read(normalized)
         ProjectStore.write(normalized, project.copy(workflow = project.workflow.copy(
@@ -102,6 +163,7 @@ class DefaultFullSongEnhancementApplicationService(
         val refs = project.workflow.fullSongEnhancement
         when (project.workflow.fullSongEnhancementSelection) {
             FullSongEnhancementSelection.UNRESOLVED -> {
+                if (refs?.status == FullSongEnhancementCandidateStatus.FAILED) return@locked FullSongEnhancementSnapshot(FullSongEnhancementSelection.UNRESOLVED, false, false, current.issues.size, 0, 0, listOf(requireNotNull(refs.failureReason)))
                 if (refs?.status !in setOf(FullSongEnhancementCandidateStatus.DRAFT, FullSongEnhancementCandidateStatus.REJECTED)) return@locked FullSongEnhancementSnapshot(FullSongEnhancementSelection.UNRESOLVED, false, false, current.issues.size, 0, 0, emptyList())
                 val candidate = requireNotNull(refs)
                 verifyReferences(normalized, current, candidate)
@@ -136,6 +198,9 @@ class DefaultFullSongEnhancementApplicationService(
 
     override fun selectBypass(root: Path): FullSongEnhancementSnapshot = locked(root) { normalized ->
         val current = current(normalized)
+        require(runCatching { sourceSongCritic.requireQualityCertifiedApproved(normalized) }.isFailure) {
+            "Quality-certified Full-Song Enhance cannot bypass a failed or unhelpful planner. Retry, repair the reported windows, or select a recorded no-op only when Critic has no actionable issues."
+        }
         saveSelection(normalized, FullSongEnhancementSelection.BYPASS,
             FullSongEnhancementReferences(current.critic.inputSha256, null, current.cohesionInputSha256))
         FullSongEnhancementSnapshot(FullSongEnhancementSelection.BYPASS, false, false, current.issues.size, 0, 0, listOf("Bypass selected; Cohesion MIDI remains selected."))
@@ -177,22 +242,51 @@ class DefaultFullSongEnhancementApplicationService(
                 add(target(role.role, role.role, null, 0, role.result, root))
             }
         }
-        val actionable = report.issues.filter { it.severity == FullSongIssueSeverity.ACTIONABLE }.take(FullSongEnhancementInput.MAX_ACTIONABLE_ISSUES)
+        val actionable = report.actionableIssueEvidence
         return Current(project, critic, report, authority, cohesion.inputSha256, targets, actionable)
     }
 
-    private fun input(current: Current): FullSongEnhancementInput {
+    /** Each planner call gets one bounded window, while the shared input hash commits every actionable issue ID. */
+    private fun inputs(current: Current): List<FullSongEnhancementInput> {
+        require(current.issues.isNotEmpty()) { "Full-Song Enhance has no actionable Critic evidence." }
+        val batchCount = (current.issues.size + FullSongEnhancementInput.MAX_ACTIONABLE_ISSUES - 1) / FullSongEnhancementInput.MAX_ACTIONABLE_ISSUES
+        return (0 until batchCount).map { batchIndex -> input(current, batchIndex, batchCount) }
+    }
+
+    private fun input(current: Current, batchIndex: Int = 0, batchCount: Int = 1): FullSongEnhancementInput {
+        val totalActionable = current.report.aggregateMetrics.singleOrNull { it.name == "actionableIssueCount" }?.value?.toInt()
+            ?: error("Critic report does not contain actionableIssueCount.")
+        require(totalActionable == current.issues.size) { "Critic report actionable aggregate does not match its complete actionable evidence." }
         val payload = json.encodeToString(EnhancementInputHash(current.critic.inputSha256, current.report.reportSha256, current.authority.contextSha256,
             current.targets.map { TargetHash(it.id, it.input.sha256) }, current.issues.map(FullSongIssue::id)))
         return FullSongEnhancementInput(inputSha256 = digest(payload.toByteArray(StandardCharsets.UTF_8)), contextSha256 = current.authority.contextSha256,
-            criticInputSha256 = current.critic.inputSha256, criticReportSha256 = current.report.reportSha256, authority = current.authority, issues = current.issues, targets = current.targets)
+            criticInputSha256 = current.critic.inputSha256, criticReportSha256 = current.report.reportSha256, authority = current.authority,
+            issues = current.issues.drop(batchIndex * FullSongEnhancementInput.MAX_ACTIONABLE_ISSUES).take(FullSongEnhancementInput.MAX_ACTIONABLE_ISSUES), targets = current.targets,
+            totalActionableIssueCount = totalActionable,
+            batchIndex = batchIndex,
+            batchCount = batchCount)
+    }
+
+    /** Merges independently bounded responses before one authority/budget validation and candidate write. */
+    private fun combinePlans(input: FullSongEnhancementInput, plans: List<FullSongEnhancementPlan>): FullSongEnhancementPlan {
+        require(plans.isNotEmpty())
+        val modelIdentity = plans.map(FullSongEnhancementPlan::modelIdentity).distinct().singleOrNull()
+            ?: throw IllegalArgumentException("Full-song enhancement batches must use one model identity.")
+        return FullSongEnhancementPlan(
+            inputSha256 = input.inputSha256,
+            contextSha256 = input.contextSha256,
+            criticInputSha256 = input.criticInputSha256,
+            criticReportSha256 = input.criticReportSha256,
+            modelIdentity = modelIdentity,
+            operations = plans.flatMap(FullSongEnhancementPlan::operations)
+        )
     }
 
     private data class Applied(val files: Map<String, EditableTarget>, val report: FullSongEnhancementApplicationReport)
 
-    private fun apply(root: Path, input: FullSongEnhancementInput, plan: FullSongEnhancementPlan): Applied {
+    private fun apply(root: Path, input: FullSongEnhancementInput, plan: FullSongEnhancementPlan, actionableEvidence: List<FullSongIssue>): Applied {
         val targets = input.targets.associateBy(FullSongEnhancementTarget::id)
-        val issues = input.issues.associateBy(FullSongIssue::id)
+        val issues = actionableEvidence.associateBy(FullSongIssue::id)
         val notesByTarget = input.targets.associate { it.id to it.notes.associateBy(FullSongEnhancementNote::id) }
         val changed = mutableMapOf<String, MutableSet<String>>(); val deletions = mutableMapOf<String, Int>(); val additions = mutableMapOf<String, Int>()
         val editable = input.targets.associate { target -> target.id to readEditable(root, target) }.toMutableMap()
@@ -236,7 +330,7 @@ class DefaultFullSongEnhancementApplicationService(
         val files = editable
         val addressed = plan.operations.map { it.issueId }.distinct().sorted()
         val report = FullSongEnhancementApplicationReport(input.inputSha256, input.contextSha256, input.criticReportSha256, digest(json.encodeToString(plan).toByteArray()), addressed,
-            input.issues.map(FullSongIssue::id).filterNot { it in addressed }, changed.values.sumOf { it.size }, additions.values.sum(), deletions.values.sum())
+            actionableEvidence.map(FullSongIssue::id).filterNot { it in addressed }, changed.values.sumOf { it.size }, additions.values.sum(), deletions.values.sum())
         return Applied(files, report)
     }
 
@@ -251,11 +345,16 @@ class DefaultFullSongEnhancementApplicationService(
         val after = criticService.analyzeCandidate(root, refs.associate { it.id to it.output })
         val afterRelative = FullSongEnhancementArtifactPaths.afterCriticReport(current.critic.inputSha256, revision)
         atomicWrite(root.resolve(afterRelative), json.encodeToString(FullSongCriticReport.serializer(), after))
-        val acceptance = candidateAcceptance(current.report, after)
+        val acceptance = fullSongCandidateAcceptance(current.report, after)
         val report = applied.report.copy(
             beforeCriticalIssueCount = acceptance.beforeCriticalIssueCount,
             afterCriticalIssueCount = acceptance.afterCriticalIssueCount,
+            beforeBlockingIssueCount = acceptance.beforeBlockingIssueCount,
+            afterBlockingIssueCount = acceptance.afterBlockingIssueCount,
+            beforeActionableIssueCount = acceptance.beforeActionableIssueCount,
+            afterActionableIssueCount = acceptance.afterActionableIssueCount,
             recognizabilityPreserved = acceptance.recognizabilityPreserved,
+            improvement = acceptance.improvement,
             automaticallyAccepted = acceptance.accepted,
             warnings = acceptance.reasons
         )
@@ -275,7 +374,7 @@ class DefaultFullSongEnhancementApplicationService(
         val planPath = verified(root, requireNotNull(refs.plan), "Full-Song Enhance plan")
         val reportPath = verified(root, requireNotNull(refs.report), "Full-Song Enhance report")
         val afterPath = verified(root, requireNotNull(refs.afterCriticReport), "post-polish Critic report")
-        val input = input(current)
+        val input = inputs(current).first()
         val plan = FullSongEnhancementPlanParser.parse(Files.readString(planPath))
         val report = readReport(reportPath)
         val after = try { json.decodeFromString(FullSongCriticReport.serializer(), Files.readString(afterPath)) }
@@ -284,9 +383,11 @@ class DefaultFullSongEnhancementApplicationService(
             report.inputSha256 == input.inputSha256 && report.contextSha256 == input.contextSha256 && report.criticReportSha256 == current.report.reportSha256 && report.planSha256 == sha256(planPath)) {
             "Full-Song Enhance candidate evidence is not hash-bound to current inputs."
         }
-        val acceptance = candidateAcceptance(current.report, after)
+        val acceptance = fullSongCandidateAcceptance(current.report, after)
         require(report.beforeCriticalIssueCount == acceptance.beforeCriticalIssueCount && report.afterCriticalIssueCount == acceptance.afterCriticalIssueCount &&
-            report.recognizabilityPreserved == acceptance.recognizabilityPreserved && report.automaticallyAccepted == acceptance.accepted &&
+            report.beforeBlockingIssueCount == acceptance.beforeBlockingIssueCount && report.afterBlockingIssueCount == acceptance.afterBlockingIssueCount &&
+            report.beforeActionableIssueCount == acceptance.beforeActionableIssueCount && report.afterActionableIssueCount == acceptance.afterActionableIssueCount &&
+            report.recognizabilityPreserved == acceptance.recognizabilityPreserved && report.improvement == acceptance.improvement && report.automaticallyAccepted == acceptance.accepted &&
             (refs.status == FullSongEnhancementCandidateStatus.DRAFT) == acceptance.accepted) {
             "Full-Song Enhance candidate acceptance evidence is invalid."
         }
@@ -295,22 +396,6 @@ class DefaultFullSongEnhancementApplicationService(
     private fun snapshot(selection: FullSongEnhancementSelection, refs: FullSongEnhancementReferences, report: FullSongEnhancementApplicationReport, issues: Int) =
         FullSongEnhancementSnapshot(selection, refs.status == FullSongEnhancementCandidateStatus.DRAFT, refs.status == FullSongEnhancementCandidateStatus.APPROVED,
             issues, report.addressedIssueIds.size, report.changedNotes, report.warnings)
-
-    private data class CandidateAcceptance(val accepted: Boolean, val beforeCriticalIssueCount: Int, val afterCriticalIssueCount: Int, val recognizabilityPreserved: Boolean, val reasons: List<String>)
-
-    /** A candidate must improve the code-owned critical metric and keep all protected melody anchors intact. */
-    private fun candidateAcceptance(before: FullSongCriticReport, after: FullSongCriticReport): CandidateAcceptance {
-        fun metric(report: FullSongCriticReport, name: String) = report.aggregateMetrics.singleOrNull { it.name == name }?.value?.toInt()
-            ?: error("Critic report does not contain '$name'.")
-        val beforeCritical = metric(before, "criticalIssueCount")
-        val afterCritical = metric(after, "criticalIssueCount")
-        val recognizable = metric(after, "recognizabilityIssueCount") <= metric(before, "recognizabilityIssueCount")
-        val reasons = buildList {
-            if (afterCritical >= beforeCritical) add("Candidate rejected: critical Critic metrics did not improve.")
-            if (!recognizable) add("Candidate rejected: melody recognizability regressed.")
-        }
-        return CandidateAcceptance(reasons.isEmpty(), beforeCritical, afterCritical, recognizable, reasons)
-    }
 
     private fun persistComparisons(root: Path, input: FullSongEnhancementInput, refs: FullSongEnhancementReferences) {
         refs.artifacts.sortedBy { it.id }.forEach { artifact ->

@@ -58,6 +58,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
@@ -79,18 +80,26 @@ class ReferenceSongIntegrationTest {
     }
 
     @Test
-    fun `reference song accepts explicit full-song bypass before seeded humanization`() = runBlocking {
+    fun `quality-certified reference song rejects full-song bypass`() = runBlocking {
         val result = runReference(tempDir.resolve("bypass"), FullSongPath.BYPASS)
 
-        assertTrue(result.rendered)
+        assertFalse(result.rendered)
         assertEquals(0, result.modelCalls)
     }
 
     @Test
-    fun `reference song automatically rejects a no-change full-song candidate before seeded humanization`() = runBlocking {
+    fun `quality-certified reference song leaves a no-change candidate unresolved`() = runBlocking {
         val result = runReference(tempDir.resolve("rejected"), FullSongPath.REJECTED)
 
-        assertTrue(result.rendered)
+        assertFalse(result.rendered)
+        assertEquals(1, result.modelCalls)
+    }
+
+    @Test
+    fun `quality-certified reference song records planner failure instead of silently bypassing`() = runBlocking {
+        val result = runReference(tempDir.resolve("planner-failure"), FullSongPath.FAILED)
+
+        assertFalse(result.rendered)
         assertEquals(1, result.modelCalls)
     }
 
@@ -129,6 +138,7 @@ class ReferenceSongIntegrationTest {
         var modelCalls = 0
         val enhance = DefaultFullSongEnhancementApplicationService(planner = { input ->
             modelCalls++
+            if (path == FullSongPath.FAILED) error("offline planner failed")
             JSON.encodeToString(FullSongEnhancementPlan(
                 inputSha256 = input.inputSha256,
                 contextSha256 = input.contextSha256,
@@ -144,7 +154,8 @@ class ReferenceSongIntegrationTest {
                 assertEquals(app.melotrail.arrangement.FullSongEnhancementSelection.NO_OP, enhance.generateCandidate(root).selection)
             }
             FullSongPath.BYPASS -> {
-                assertEquals(app.melotrail.arrangement.FullSongEnhancementSelection.BYPASS, enhance.selectBypass(root).selection)
+                assertFailsWith<IllegalArgumentException> { enhance.selectBypass(root) }
+                return RunResult(emptyMap(), 0, 0, false, modelCalls)
             }
             FullSongPath.REJECTED -> {
                 assertTrue(critic.report.issues.isNotEmpty(), "Reference fixture must supply a bounded fake-plan target.")
@@ -154,7 +165,17 @@ class ReferenceSongIntegrationTest {
                 assertTrue(candidate.warnings.isNotEmpty())
                 val evidence = requireNotNull(ProjectStore.read(root).workflow.fullSongEnhancement)
                 assertTrue(evidence.afterCriticReport != null)
-                assertEquals(app.melotrail.arrangement.FullSongEnhancementSelection.BYPASS, enhance.selectBypass(root).selection)
+                assertFailsWith<IllegalArgumentException> { enhance.selectBypass(root) }
+                return RunResult(emptyMap(), 0, 0, false, modelCalls)
+            }
+            FullSongPath.FAILED -> {
+                val failed = enhance.generateCandidate(root)
+                assertEquals(app.melotrail.arrangement.FullSongEnhancementSelection.UNRESOLVED, failed.selection)
+                assertTrue(failed.warnings.single().contains("Planner failed"))
+                val evidence = requireNotNull(ProjectStore.read(root).workflow.fullSongEnhancement)
+                assertEquals(app.melotrail.arrangement.FullSongEnhancementCandidateStatus.FAILED, evidence.status)
+                assertFailsWith<IllegalArgumentException> { enhance.selectBypass(root) }
+                return RunResult(emptyMap(), 0, 0, false, modelCalls)
             }
         }
 
@@ -193,7 +214,7 @@ class ReferenceSongIntegrationTest {
         )))
     }
 
-    private enum class FullSongPath { NO_OP, BYPASS, REJECTED }
+    private enum class FullSongPath { NO_OP, BYPASS, REJECTED, FAILED }
     private data class RunResult(val humanizedHashes: Map<String, String>, val occurrences: Int, val boundaries: Int, val rendered: Boolean, val modelCalls: Int)
 
     private class FakeRenderer : InstrumentRenderer {

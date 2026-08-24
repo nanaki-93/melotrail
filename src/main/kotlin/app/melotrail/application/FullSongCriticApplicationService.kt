@@ -61,7 +61,15 @@ class DefaultFullSongCriticApplicationService(
         val input = currentInput(normalized)
         val deterministic = critic.criticize(input)
         val report = advisor?.advise(deterministic)?.let { advice ->
-            FullSongCriticReport.create(deterministic.inputSha256, deterministic.contextSha256, deterministic.aggregateMetrics, deterministic.issues, deterministic.warnings, advice)
+            FullSongCriticReport.create(
+                deterministic.inputSha256,
+                deterministic.contextSha256,
+                deterministic.aggregateMetrics,
+                deterministic.issues,
+                deterministic.warnings,
+                advice,
+                deterministic.actionableIssueEvidence
+            )
         } ?: deterministic
         val relative = CriticArtifactPaths.report(input.inputSha256)
         val path = normalized.resolve(relative)
@@ -133,9 +141,10 @@ class DefaultFullSongCriticApplicationService(
             val reference = candidateOutputs[role.role] ?: role.result
             FullSongCriticMidiArtifact(role.role, null, verified(root, reference, "Cohesion role '${role.role}'"), reference)
         }
-        val reports = project.workflow.generatedMidi?.artifacts.orEmpty().sortedBy { it.id }.map { generated ->
-            val path = verified(root, generated.validationReport, "Generated role validation '${generated.id}'")
-            json.decodeFromString(RoleValidationReport.serializer(), Files.readString(path)).also { report ->
+        val validatedReports = project.workflow.generatedMidi?.artifacts.orEmpty().sortedBy { it.id }.map { generated ->
+            val validation = generated.validationReport
+            val path = verified(root, validation, "Generated role validation '${generated.id}'")
+            validation.sha256 to json.decodeFromString(RoleValidationReport.serializer(), Files.readString(path)).also { report ->
                 require(report.role == generated.id && report.outputSha256 == generated.artifact.sha256 &&
                     report.inputHashes.any { it.name == "arrangement" && it.sha256 == arrangementRef.sha256 } &&
                     report.inputHashes.any { it.name == "authority" && it.sha256 == authority.contextSha256 }) {
@@ -150,10 +159,10 @@ class DefaultFullSongCriticApplicationService(
             authority.contextSha256, cohesion.inputSha256, arrangementRef.sha256,
             occurrences.map { CriticArtifactHash(it.role, it.occurrenceId, it.reference.sha256) },
             roles.map { CriticArtifactHash(it.role, it.occurrenceId, it.reference.sha256) },
-            reports.map { CriticRoleReportHash(it.role, it.outputSha256, it.passed) },
+            validatedReports.map { (validationHash, report) -> CriticRoleReportHash(report.role, report.outputSha256, report.passed, validationHash) },
             approvedMelody.connectedMidi.sha256
         )).toByteArray(StandardCharsets.UTF_8))
-        return FullSongCriticInput(authority, occurrences, roles, arrangement, arrangementRef.sha256, melody, reports, inputSha256 = hash)
+        return FullSongCriticInput(authority, occurrences, roles, arrangement, arrangementRef.sha256, melody, validatedReports.map { it.second }, inputSha256 = hash)
     }
 
     private fun snapshot(report: FullSongCriticReport, path: Path, input: FullSongCriticInput): FullSongCriticSnapshot =
@@ -186,7 +195,8 @@ class DefaultFullSongCriticApplicationService(
 
     @kotlinx.serialization.Serializable private data class CriticInputHash(val context: String, val cohesion: String, val arrangement: String, val occurrences: List<CriticArtifactHash>, val roles: List<CriticArtifactHash>, val reports: List<CriticRoleReportHash>, val melody: String?)
     @kotlinx.serialization.Serializable private data class CriticArtifactHash(val role: String, val occurrence: String?, val sha256: String)
-    @kotlinx.serialization.Serializable private data class CriticRoleReportHash(val role: String, val output: String, val passed: Boolean)
+    /** Includes the exact accepted role report so groove, activity, and voice-leading evidence cannot go stale by omission. */
+    @kotlinx.serialization.Serializable private data class CriticRoleReportHash(val role: String, val output: String, val passed: Boolean, val validationReport: String)
     private fun sha256(path: Path) = sha256(Files.readAllBytes(path))
     private fun sha256(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     private companion object { val json = Json { encodeDefaults = true; explicitNulls = false; ignoreUnknownKeys = false } }

@@ -227,7 +227,11 @@ documented as official YouTube requirements.
 
 The deterministic critic must inspect the entire uncapped issue set before
 deciding quality status. A bounded UI summary may be truncated only when the
-report preserves total counts and severity/category aggregates.
+report preserves total counts, severity/category aggregates, and complete
+actionable issue evidence for bounded correction batches. The critic rechecks
+canonical melody anchors, harmony, sustain-tail collisions, accepted
+source-groove/voice-leading role evidence, masking, density/contrast,
+boundaries, and generated-role activity before a candidate can be reviewed.
 
 Quality-certified progression requires:
 
@@ -237,6 +241,14 @@ Quality-certified progression requires:
 - zero hard timing, monophony, range, or MIDI-integrity violations;
 - zero unreviewed critical harmony/groove/masking/transition findings;
 - an explicit human decision for remaining warnings.
+
+Targeted Full-Song Enhance can address only report-named windows and current
+targets. Its batches share a hash over the complete actionable evidence; their
+combined candidate must preserve protected anchors and not increase critical,
+blocking, or melody-recognizability findings. A candidate is recorded as
+`NO_OP`, `REGRESSION`, `PARTIAL`, or `GENUINE`; only an improved candidate may
+enter review. Planner failures remain explicit `FAILED` retry evidence, and a
+quality-certified run cannot turn that failure into a bypass.
 
 ## Listening acceptance
 

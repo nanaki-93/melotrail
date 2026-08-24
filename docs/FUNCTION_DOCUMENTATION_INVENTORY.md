@@ -42,3 +42,7 @@ exception.
 
 QP-013 refreshed the affected Cohesion, critic-candidate, and comparison rows
 after their boundary-local rendering and approval contracts changed.
+
+QP-014 refreshed the full-song Critic, targeted-enhancement, workflow-evidence,
+and local-planner rows after complete actionable-batch evidence and
+improvement-gated candidate selection were added.

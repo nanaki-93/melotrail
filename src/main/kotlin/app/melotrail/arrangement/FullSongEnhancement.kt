@@ -49,7 +49,7 @@ data class FullSongEnhancementTarget(
     companion object { private val ID = Regex("[A-Za-z0-9_-]{1,80}"); private val ROLE = Regex("[a-z][a-z0-9_-]{0,63}") }
 }
 
-/** Bounded input sent to a model. Blocking critic issues are deliberately omitted. */
+/** One bounded correction batch. Targets remain complete; omitted actionable windows are explicit rather than silently editable. */
 @Serializable
 data class FullSongEnhancementInput(
     val schemaVersion: Int = SCHEMA_VERSION,
@@ -60,12 +60,17 @@ data class FullSongEnhancementInput(
     val authority: WholeSongAnalysisProjection,
     val issues: List<FullSongIssue>,
     val targets: List<FullSongEnhancementTarget>,
+    val totalActionableIssueCount: Int = issues.size,
+    val batchIndex: Int = 0,
+    val batchCount: Int = 1,
     val policy: FullSongEnhancementPolicy = FullSongEnhancementPolicy()
 ) {
     init {
         require(schemaVersion == SCHEMA_VERSION && HASH.matches(inputSha256) && HASH.matches(contextSha256) && HASH.matches(criticInputSha256) && HASH.matches(criticReportSha256) &&
             issues.size <= MAX_ACTIONABLE_ISSUES && issues.all { it.severity == FullSongIssueSeverity.ACTIONABLE } &&
-            issues == issues.sortedWith(FullSongCriticReport.ISSUE_ORDER) && targets.map(FullSongEnhancementTarget::id).distinct().size == targets.size) {
+            issues == issues.sortedWith(FullSongCriticReport.ISSUE_ORDER) && targets.map(FullSongEnhancementTarget::id).distinct().size == targets.size &&
+            totalActionableIssueCount >= issues.size && batchIndex in 0 until batchCount &&
+            batchCount == maxOf(1, (totalActionableIssueCount + MAX_ACTIONABLE_ISSUES - 1) / MAX_ACTIONABLE_ISSUES)) {
             "Full-song enhancement input is invalid"
         }
     }
@@ -118,11 +123,11 @@ data class FullSongEnhancementPlan(
 ) {
     init {
         require(schemaVersion == SCHEMA_VERSION && HASH.matches(inputSha256) && HASH.matches(contextSha256) && HASH.matches(criticInputSha256) && HASH.matches(criticReportSha256) &&
-            MODEL.matches(modelIdentity) && operations.size <= 256 && operations.map { it.targetId to it.noteId }.distinct().size == operations.size) {
+            MODEL.matches(modelIdentity) && operations.size <= MAX_TOTAL_OPERATIONS && operations.map { it.targetId to it.noteId }.distinct().size == operations.size) {
             "Full-song enhancement plan is invalid"
         }
     }
-    companion object { const val SCHEMA_VERSION = 1; private val HASH = Regex("[0-9a-f]{64}"); private val MODEL = Regex("[A-Za-z0-9._:-]{1,120}") }
+    companion object { const val SCHEMA_VERSION = 1; const val MAX_TOTAL_OPERATIONS = 2_048; private val HASH = Regex("[0-9a-f]{64}"); private val MODEL = Regex("[A-Za-z0-9._:-]{1,120}") }
 }
 
 @Serializable
@@ -138,10 +143,18 @@ data class FullSongEnhancementApplicationReport(
     val deletions: Int,
     val beforeCriticalIssueCount: Int = 0,
     val afterCriticalIssueCount: Int = 0,
+    val beforeBlockingIssueCount: Int = 0,
+    val afterBlockingIssueCount: Int = 0,
+    val beforeActionableIssueCount: Int = 0,
+    val afterActionableIssueCount: Int = 0,
     val recognizabilityPreserved: Boolean = false,
+    val improvement: FullSongEnhancementImprovement = FullSongEnhancementImprovement.NO_OP,
     val automaticallyAccepted: Boolean = false,
     val warnings: List<String> = emptyList()
 )
+
+/** Evidence-backed candidate outcome; only improved candidates can enter review. */
+@Serializable enum class FullSongEnhancementImprovement { NO_OP, REGRESSION, PARTIAL, GENUINE }
 
 fun interface FullSongEnhancementPlanner { fun plan(input: FullSongEnhancementInput): String }
 

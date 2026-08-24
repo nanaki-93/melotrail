@@ -59,6 +59,9 @@ class LocalQwenFullSongEnhancementPlanner(
             .toList()
         val notesByTarget = eligibleNotes.groupBy({ it.first.id }, { it.second })
         return ModelInput(
+            totalActionableIssueCount = input.totalActionableIssueCount,
+            batchIndex = input.batchIndex,
+            batchCount = input.batchCount,
             issues = input.issues.map(::ModelIssue),
             targets = input.targets.mapNotNull { target ->
                 notesByTarget[target.id]?.let { notes ->
@@ -173,6 +176,9 @@ class LocalQwenFullSongEnhancementPlanner(
     @Serializable private data class ModelPlan(val operations: List<FullSongEnhancementOperation> = emptyList())
 
     @Serializable private data class ModelInput(
+        val totalActionableIssueCount: Int,
+        val batchIndex: Int,
+        val batchCount: Int,
         val issues: List<ModelIssue>,
         val targets: List<ModelTarget>
     )

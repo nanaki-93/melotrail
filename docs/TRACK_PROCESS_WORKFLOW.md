@@ -31,7 +31,7 @@ Project Setup and structured Harmony
   -> optional roles
   -> Ensemble Cohesion and approval
   -> deterministic Full-Song Critic
-  -> approved/no-op/explicitly bypassed targeted Full-Song Enhance
+  -> improvement-gated/no-op targeted Full-Song Enhance
   -> selected/bypassed seeded Humanization
   -> Render stems and dry mix
   -> production mix / optional texture
@@ -66,7 +66,7 @@ dependencies or infer completion from page visits.
 | Arrangement | `song_plan.json`, `section_variations.json`, approved/draft detailed plan | Approve draft or regenerate from current authority/source approval |
 | Generated roles/core | Validated bass/drums/pad and optional string/transition evidence | Regenerate the failed role; later roles use accepted prior state |
 | Cohesion | Boundary contexts/plans, bridge/role/occurrence outputs, approval | Review each adjacent occurrence against the approved arrangement |
-| Full-song review | Critic report and targeted enhancement selection | Repair targeted issues, record no-op, retry, or explicit experimental bypass |
+| Full-song review | Critic report, complete actionable evidence, bounded correction batches, and hash-bound candidate result | Repair/retry failed batches; record `NO_OP` only when no actionable evidence exists. A quality-certified run cannot bypass a failed or rejected planner. |
 | Humanization | Seeded per-role candidates/reports or bypass | Select current seed/config or bypass to current upstream input |
 | Render/mix/master | Stems, mix plans/reports, `mix/dry.wav`, `output/master.wav` | Restore worker/library/renderer and rerun only stale descendants |
 | Release | Export plus frozen provenance/credits/release metadata | Resolve rights/license/AI-use/policy/manual blockers; never overwrite master |

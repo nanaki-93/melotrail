@@ -221,7 +221,7 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/FullSongCriticApplicationService.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/application/FullSongCriticApplicationService.kt has 14 callable declarations, 2 directly documented and 12 still requiring focused KDoc/docstrings. QP-013 reviewed its draft-Cohesion candidate analysis contract on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "reason": "src/main/kotlin/app/melotrail/application/FullSongCriticApplicationService.kt has 14 callable declarations, 2 directly documented and 12 still requiring focused KDoc/docstrings. QP-014 reviewed its exact role-validation-report hash binding for full-song groove, activity, and voice-leading evidence on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
       "functionCount": 14,
       "declarationDigest": "b53768bab62bc4de3e486e5f82780278ef3847be80ab3550a305cc93913b36c3",
       "documentedFunctionCount": 2
@@ -229,10 +229,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/FullSongEnhancementApplicationService.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/application/FullSongEnhancementApplicationService.kt has 34 callable declarations, 1 directly documented and 33 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 34,
-      "declarationDigest": "637fbb64c034f404eb5c1c3da296819fcc1aed0cc8d1b93e471f3d48dadd0d84",
-      "documentedFunctionCount": 1
+      "reason": "src/main/kotlin/app/melotrail/application/FullSongEnhancementApplicationService.kt has 36 callable declarations, 3 directly documented and 33 still requiring focused KDoc/docstrings. QP-014 reviewed its complete actionable-batch and improvement-gated candidate contracts on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "functionCount": 36,
+      "declarationDigest": "e1bc6a60d441c06dbbd786bfb93c821a8b5ff5457ce9d0e303eda12428856791",
+      "documentedFunctionCount": 3
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/HarmonyApplicationService.kt",
@@ -501,7 +501,7 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/FullSongCritic.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/FullSongCritic.kt has 25 callable declarations, 5 directly documented and 20 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
+      "reason": "src/main/kotlin/app/melotrail/arrangement/FullSongCritic.kt has 25 callable declarations, 5 directly documented and 20 still requiring focused KDoc/docstrings. QP-014 reviewed uncapped aggregates, category counts, and complete actionable correction evidence on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
       "functionCount": 25,
       "declarationDigest": "aa3713ffbe3973634acc9b74d29d0cb3a3d80cb9d179a8d6ad150801207de1fc",
       "documentedFunctionCount": 5
@@ -509,7 +509,7 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/FullSongEnhancement.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/FullSongEnhancement.kt has 4 callable declarations, 0 directly documented and 4 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
+      "reason": "src/main/kotlin/app/melotrail/arrangement/FullSongEnhancement.kt has 4 callable declarations, 0 directly documented and 4 still requiring focused KDoc/docstrings. QP-014 reviewed bounded-batch metadata, combined plan limits, and explicit candidate improvement evidence on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
       "functionCount": 4,
       "declarationDigest": "bb84431d57bafd379f7bed8ea5bd09ccca5d48644d2183b1ae22ae5e25f450dd",
       "documentedFunctionCount": 0
@@ -581,7 +581,7 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/LocalQwenFullSongEnhancementPlanner.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/LocalQwenFullSongEnhancementPlanner.kt has 6 callable declarations, 1 directly documented and 5 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
+      "reason": "src/main/kotlin/app/melotrail/arrangement/LocalQwenFullSongEnhancementPlanner.kt has 6 callable declarations, 1 directly documented and 5 still requiring focused KDoc/docstrings. QP-014 reviewed complete actionable-batch metadata in the local planner payload on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
       "functionCount": 6,
       "declarationDigest": "ee2e758e8db20710f9eeb6138e2cc08de14150b75a9e76657fb07b7aedd77435",
       "documentedFunctionCount": 1
@@ -901,7 +901,7 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/WorkflowArtifacts.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/WorkflowArtifacts.kt has 41 callable declarations, 0 directly documented and 41 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
+      "reason": "src/main/kotlin/app/melotrail/arrangement/WorkflowArtifacts.kt has 41 callable declarations, 0 directly documented and 41 still requiring focused KDoc/docstrings. QP-014 reviewed explicit failed-planner workflow evidence and unresolved selection validity on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
       "functionCount": 41,
       "declarationDigest": "60908c424056ffac6a43ad065a8220d254748b397c7bd36143402e0a664ba63f",
       "documentedFunctionCount": 0
