@@ -435,6 +435,14 @@
       "documentedFunctionCount": 6
     },
     {
+      "path": "src/main/kotlin/app/melotrail/arrangement/ArrangementMusicalIntent.kt",
+      "classification": "documented",
+      "reason": "All 12 callable declarations in src/main/kotlin/app/melotrail/arrangement/ArrangementMusicalIntent.kt have directly attached KDoc; introduced for QP-011 on 2026-08-24.",
+      "functionCount": 12,
+      "declarationDigest": "46831ed3d3331cc6d69acf7404c0a4158a35c5fdf63982ee6f0aa04a3ef62bcc",
+      "documentedFunctionCount": 12
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/arrangement/BassQualityValidator.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/arrangement/BassQualityValidator.kt has 9 callable declarations, 1 directly documented and 8 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
@@ -461,10 +469,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/DetailedArrangement.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/DetailedArrangement.kt has 28 callable declarations, 1 directly documented and 27 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
+      "reason": "src/main/kotlin/app/melotrail/arrangement/DetailedArrangement.kt has 28 callable declarations, 3 directly documented and 25 still requiring focused KDoc/docstrings. QP-011 documented its resolved-intent enforcement and swing derivation on 2026-08-24; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
       "functionCount": 28,
-      "declarationDigest": "89776a14ea03b1bdca3bb8da038a4266f280d865a36f0b3e24e489d07df59814",
-      "documentedFunctionCount": 1
+      "declarationDigest": "fcc43d3688f990bb1398018b818154dd1f53e0b4679921f292209c169132d692",
+      "documentedFunctionCount": 3
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/DrumMidiGeneration.kt",
@@ -525,10 +533,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/GlobalSongPlanner.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/GlobalSongPlanner.kt has 25 callable declarations, 2 directly documented and 23 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 25,
-      "declarationDigest": "abcf5c1d6d6fc8efffe8816cead98ba66b338554426edca55bb9e98392f16a30",
-      "documentedFunctionCount": 2
+      "reason": "src/main/kotlin/app/melotrail/arrangement/GlobalSongPlanner.kt has 28 callable declarations, 6 directly documented and 22 still requiring focused KDoc/docstrings. QP-011 documented groove-map binding, musical-intent validation, contrast rejection, and application-owned field binding on 2026-08-24; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "functionCount": 28,
+      "declarationDigest": "57075770044709d04b977232ec91d215b77fa7e3a376ba565a9cf617ed3e44d7",
+      "documentedFunctionCount": 6
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/InstrumentRegistry.kt",
@@ -757,10 +765,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/SectionVariation.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/SectionVariation.kt has 10 callable declarations, 0 directly documented and 10 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 10,
-      "declarationDigest": "70b5a7027c5dd3a8d07495cf7222133eba6cb8ec05d329cee2d5acee85f85de0",
-      "documentedFunctionCount": 0
+      "reason": "src/main/kotlin/app/melotrail/arrangement/SectionVariation.kt has 15 callable declarations, 7 directly documented and 8 still requiring focused KDoc/docstrings. QP-011 documented resolved-intent expansion, drift rejection, and its legacy bounded fallbacks on 2026-08-24; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "functionCount": 15,
+      "declarationDigest": "65ac3d514d1852d015affbdb5225b8ec71fd5677206b73a1ad3bd5c7a730ac87",
+      "documentedFunctionCount": 7
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/SeededHumanization.kt",

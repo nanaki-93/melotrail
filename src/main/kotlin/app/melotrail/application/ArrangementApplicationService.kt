@@ -47,6 +47,7 @@ import app.melotrail.arrangement.WorkflowChange
 import app.melotrail.arrangement.SectionInstance
 import app.melotrail.arrangement.SectionVariationStore
 import app.melotrail.arrangement.SongPlan
+import app.melotrail.arrangement.SongPlanApplicationBinding
 import app.melotrail.arrangement.SongPlanStore
 import app.melotrail.arrangement.SongPlanningInput
 import app.melotrail.arrangement.StemRenderResult
@@ -210,21 +211,21 @@ class DefaultArrangementApplicationService(
             "Arrangement requires complete canonical harmony. Update Harmony for: ${incomplete.joinToString()}."
         }
         val projection = musicalAuthorityBuilder.arrangementGeneration(root)
-        sourceSongCriticApplicationService.requireApproved(root)
+        val approvedMelody = sourceSongCriticApplicationService.requireApprovedMelody(root)
         val structure = project.envelope.structureOccurrences.mapIndexed { index, occurrence -> occurrence.toSectionInstance(index) }
         require(structure.isNotEmpty()) { "Song structure must not be empty" }
-        val context = request.roleSelections.takeIf { it.isNotEmpty() }?.let { structuredContext(project) }
-        val intents = request.roleSelections.map { it.bind(requireNotNull(context)) }
         require(request.roleSelections.map(ArrangementRoleSelection::role).distinct().size == request.roleSelections.size) {
             "Arrangement role selections must not contain duplicates"
         }
-        val requestedInstruments = if (intents.isEmpty()) request.instruments else intents
+        val requestedInstruments = if (request.roleSelections.isEmpty()) request.instruments else request.roleSelections
             .map { LegacyLogicalInstrumentRoles.logicalFor(it.role) }.distinct().sortedBy { if (it == "piano") 0 else 1 }
         val allowed = requestedInstruments.distinct()
-        if (intents.isEmpty()) require(allowed == request.instruments) { "Arrangement instruments must not contain duplicates" }
+        if (request.roleSelections.isEmpty()) require(allowed == request.instruments) { "Arrangement instruments must not contain duplicates" }
         require("piano" in allowed && allowed.all { it in LogicalInstrument.entries.map(LogicalInstrument::wireName) }) {
             "Arrangement instruments must be selected from piano, bass, drums, pad, and strings and include piano"
         }
+        val context = structuredContext(project)
+        val intents = request.roleSelections.map { it.bind(context) }
         val analyses = canonicalMidiAnalyses(projection)
         // Role selections activate the structured planning protocol, which has
         // no legacy style-string field. Ignore a stale compatibility value from
@@ -235,9 +236,11 @@ class DefaultArrangementApplicationService(
             analyses = analyses,
             structure = structure,
             allowedInstruments = allowed,
-            style = request.style?.takeIf { intents.isEmpty() },
-            soundContext = context,
+            style = null,
+            soundContext = context.takeIf { intents.isNotEmpty() },
+            planningSoundContext = context,
             requestedIntents = intents,
+            acceptedFullSongGrooveMap = approvedMelody.sourceSong.fullMelody.grooveMap,
             canonicalProjection = projection
         )
         input.requireValid()
@@ -245,7 +248,7 @@ class DefaultArrangementApplicationService(
 
         progress.report(OperationProgress("arrange", 2, 3, "Creating reviewed song plan"))
         val global = if (request.planner == ArrangementPlannerKind.QWEN) qwenGlobalPlanner else deterministicGlobalPlanner
-        val plan = global.plan(input)
+        val plan = SongPlanApplicationBinding.bind(global.plan(input), input)
         SongPlanStore.write(root, input, plan)
         SectionVariationStore.write(root, input, plan, DeterministicSectionVariationPlanner.plan(input, plan))
         coroutineContext.ensureActive()
@@ -560,6 +563,7 @@ class DefaultArrangementApplicationService(
 
     private fun detailedInput(root: Path, project: Project, includeArrangementState: Boolean = false): DetailedArrangementInput {
         val projection = musicalAuthorityBuilder.arrangementGeneration(root)
+        val approvedMelody = sourceSongCriticApplicationService.requireApprovedMelody(root)
         val planPath = root.resolve(SongPlanStore.FILE_NAME)
         require(Files.isRegularFile(planPath)) { "Song plan not found: $planPath. Generate an arrangement first." }
         val rawPlan = json.decodeFromString(SongPlan.serializer(), Files.readString(planPath, StandardCharsets.UTF_8))
@@ -579,7 +583,9 @@ class DefaultArrangementApplicationService(
             allowedInstruments = rawPlan.sections.flatMap { it.instrumentProgression }.distinct(),
             style = rawPlan.style.takeIf { rawPlan.contextHash == null },
             soundContext = requestedIntents.takeIf { it.isNotEmpty() }?.let { structuredContext(project) },
+            planningSoundContext = structuredContext(project),
             requestedIntents = requestedIntents,
+            acceptedFullSongGrooveMap = approvedMelody.sourceSong.fullMelody.grooveMap,
             canonicalProjection = projection
         )
         val plan = SongPlanStore.read(root, planningInput)

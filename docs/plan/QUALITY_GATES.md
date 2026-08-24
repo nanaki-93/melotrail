@@ -148,6 +148,17 @@ Code-owned validation checks:
 Arrangement quality also requires a renderer-backed piano/core/full comparison.
 Automated note counts cannot approve groove or “vibe.”
 
+### QP-011 planning evidence
+
+Before detailed planning, the global occurrence plan binds the approved
+full-song groove-map digest and the resolved profile/mood to closed role intent:
+energy, density, register, articulation, groove policy, and pad/string
+voice-leading direction. Instrument assignment remains separate from this
+musical intent. The planner may carry only a contiguous sequence of previously
+accepted pad/string voicings into the next occurrence; it cannot manufacture
+voicing evidence. This is a planning constraint, not generated-MIDI proof:
+QP-012 validates the actual timing and voicings against the accepted ensemble.
+
 ## Cohesion and targeted polish
 
 - Cohesion receives boundary-local active, entering, and exiting roles.

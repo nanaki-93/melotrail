@@ -100,7 +100,7 @@ class ReferenceSongIntegrationTest {
             deterministicGlobalPlanner = object : GlobalSongPlanner {
                 override fun plan(input: SongPlanningInput): SongPlan {
                     val base = DeterministicGlobalSongPlanner().plan(input)
-                    return base.copy(
+                    return app.melotrail.arrangement.SongPlanApplicationBinding.bind(base.copy(
                         sections = base.sections.map { section ->
                             section.copy(instrumentProgression = when (section.index) {
                                 0 -> listOf("piano", "bass")
@@ -108,7 +108,7 @@ class ReferenceSongIntegrationTest {
                                 else -> listOf("piano", "pad")
                             })
                         }
-                    ).also { it.requireValid(input) }
+                    ), input).also { it.requireValid(input) }
                 }
             },
             libraryRoot = ReferenceSongFixture.library(root)

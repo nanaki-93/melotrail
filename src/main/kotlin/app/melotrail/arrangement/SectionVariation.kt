@@ -50,7 +50,15 @@ data class SectionVariation(
 data class SectionVariationInstrument(
     val name: String,
     val role: String,
-    val density: Double
+    val density: Double,
+    /** Bounded register passed unchanged to detailed arrangement planning. */
+    val register: MusicalRegister = MusicalRegister.LOW,
+    /** Bounded performance behaviour, never a renderer control. */
+    val articulation: ArrangementArticulation = ArrangementArticulation.SOURCE,
+    /** Role-specific relation to the accepted full-song groove map. */
+    val groove: RoleGrooveIntent = RoleGrooveIntent(GrooveTimingPolicy.GRID_ONLY, GrooveCharacter.STRAIGHT, 0, 0.0),
+    /** Sustained-role continuity intent for the preceding accepted voicing. */
+    val voicing: CrossSectionVoicingIntent = CrossSectionVoicingIntent.NONE
 )
 
 data class SectionVariationValidationResult(val errors: List<String>) {
@@ -68,6 +76,7 @@ object DeterministicSectionVariationPlanner {
         songPlan.requireValid(input)
         val variations = songPlan.sections.mapIndexed { position, section ->
             val fallingEnergy = position > 0 && songPlan.energyCurve[position] < songPlan.energyCurve[position - 1]
+            val resolvedIntent = section.musicalIntent
             SectionVariation(
                 index = section.index,
                 instanceId = section.instanceId,
@@ -76,7 +85,7 @@ object DeterministicSectionVariationPlanner {
                 purpose = section.purpose,
                 energy = songPlan.energyCurve[position],
                 instruments = section.instrumentProgression.map { instrument ->
-                    instrumentDetail(instrument, section, songPlan.energyCurve[position], fallingEnergy)
+                    instrumentDetail(instrument, section, songPlan.energyCurve[position], fallingEnergy, resolvedIntent)
                 }.map { generated ->
                     input.sectionsWithIdentity()[position].variationOverrides.instruments.firstOrNull { it.instrument == generated.name }?.let { override ->
                         generated.copy(role = override.role ?: generated.role, density = override.density ?: generated.density)
@@ -88,21 +97,38 @@ object DeterministicSectionVariationPlanner {
         return SectionVariationPlan(sections = variations).also { it.requireValid(input, songPlan) }
     }
 
+    /** Fill one selected instrument with the global occurrence's bounded musical intent. */
     private fun instrumentDetail(
         instrument: String,
         section: SongPlanSection,
         energy: Double,
-        fallingEnergy: Boolean
+        fallingEnergy: Boolean,
+        resolvedIntent: SectionMusicalIntent?
     ): SectionVariationInstrument {
-        if (instrument == "piano") return SectionVariationInstrument("piano", "source", 1.0)
+        val roleIntent = resolvedIntent?.roles?.singleOrNull { it.role == LegacyLogicalInstrumentRoles.roleFor(instrument) }
+        if (instrument == "piano") return SectionVariationInstrument(
+            "piano", "source", 1.0,
+            roleIntent?.register ?: MusicalRegister.MID,
+            roleIntent?.articulation ?: ArrangementArticulation.SOURCE,
+            roleIntent?.groove ?: RoleGrooveIntent(GrooveTimingPolicy.SOURCE_EXACT, GrooveCharacter.STRAIGHT, 0, 0.0),
+            roleIntent?.voicing ?: CrossSectionVoicingIntent.NONE
+        )
 
         val densityOffset = when {
             section.purpose == SongSectionPurpose.CONCLUSION || fallingEnergy -> -0.12
             section.occurrence > 1 -> 0.08
             else -> 0.0
         }
-        val density = (energy + densityOffset).coerceIn(MIN_GENERATED_DENSITY, 1.0)
-        return SectionVariationInstrument(instrument, roleFor(instrument, section, fallingEnergy), density)
+        val density = roleIntent?.density ?: (energy + densityOffset).coerceIn(MIN_GENERATED_DENSITY, 1.0)
+        return SectionVariationInstrument(
+            instrument,
+            roleFor(instrument, section, fallingEnergy),
+            density,
+            roleIntent?.register ?: if (instrument == "bass") MusicalRegister.LOW else register(energy),
+            roleIntent?.articulation ?: defaultArticulation(instrument),
+            roleIntent?.groove ?: defaultGroove(instrument, section.purpose),
+            roleIntent?.voicing ?: CrossSectionVoicingIntent.NONE
+        )
     }
 
     private fun roleFor(instrument: String, section: SongPlanSection, fallingEnergy: Boolean): String = when (instrument) {
@@ -119,6 +145,38 @@ object DeterministicSectionVariationPlanner {
         }
         "pad", "strings" -> if (fallingEnergy || section.purpose == SongSectionPurpose.CONCLUSION) "sustained" else "texture"
         else -> error("Song plan contains unsupported instrument '$instrument'")
+    }
+
+    /** Choose the fallback generated-role register when legacy planning has no resolved intent. */
+    private fun register(energy: Double): MusicalRegister = when {
+        energy < 0.34 -> MusicalRegister.LOW
+        energy > 0.72 -> MusicalRegister.HIGH
+        else -> MusicalRegister.MID
+    }
+
+    /** Keep legacy variation expansion bounded when a structured intent is unavailable. */
+    private fun defaultArticulation(instrument: String): ArrangementArticulation = when (instrument) {
+        "bass", "drums" -> ArrangementArticulation.PULSED
+        "pad" -> ArrangementArticulation.SUSTAINED
+        "strings" -> ArrangementArticulation.LEGATO
+        else -> ArrangementArticulation.SOURCE
+    }
+
+    /** Supply a closed groove policy for legacy expansion without inventing timing data. */
+    private fun defaultGroove(instrument: String, purpose: SongSectionPurpose): RoleGrooveIntent = when (instrument) {
+        "bass" -> RoleGrooveIntent(
+            GrooveTimingPolicy.FOLLOW_SOURCE_SUBTLE,
+            GrooveCharacter.STRAIGHT,
+            ArrangementGrooveLimits.SUBTLE_MAXIMUM_ADDITIONAL_DEVIATION_TICKS,
+            0.0
+        )
+        "drums" -> RoleGrooveIntent(
+            GrooveTimingPolicy.FOLLOW_SOURCE_STANDARD,
+            if (purpose == SongSectionPurpose.CLIMAX) GrooveCharacter.BUILDING else GrooveCharacter.STRAIGHT,
+            ArrangementGrooveLimits.STANDARD_MAXIMUM_ADDITIONAL_DEVIATION_TICKS,
+            0.0
+        )
+        else -> RoleGrooveIntent(GrooveTimingPolicy.GRID_ONLY, GrooveCharacter.STRAIGHT, 0, 0.0)
     }
 
     private const val MIN_GENERATED_DENSITY = 0.10
@@ -156,15 +214,18 @@ object SectionVariationValidator {
             if (variation.instruments.map { it.name } != expected.instrumentProgression) {
                 errors += "$label instruments must match the explicit song-plan progression"
             }
-            validateInstrumentDetails(label, variation.instruments, errors)
+            validateInstrumentDetails(label, variation.instruments, input.acceptedFullSongGrooveMap != null, errors)
+            validateResolvedIntent(label, position, variation, expected, input, songPlan, errors)
         }
         validateRepeatedVariation(variationPlan.sections, errors)
         return SectionVariationValidationResult(errors)
     }
 
+    /** Validate only QP-011 structured controls when accepted groove evidence is present. */
     private fun validateInstrumentDetails(
         label: String,
         instruments: List<SectionVariationInstrument>,
+        enhancedPlanning: Boolean,
         errors: MutableList<String>
     ) {
         if (instruments.firstOrNull()?.name != "piano") errors += "$label must retain piano first"
@@ -178,6 +239,10 @@ object SectionVariationValidator {
             if (!instrument.density.isFinite() || instrument.density !in 0.0..1.0) {
                 errors += "$label instrument '${instrument.name}' density must be between 0 and 1"
             }
+            if (enhancedPlanning) {
+                try { instrument.groove.requireValid(LegacyLogicalInstrumentRoles.roleFor(instrument.name)) }
+                catch (error: IllegalArgumentException) { errors += error.message.orEmpty() }
+            }
             val allowedRoles = ROLES_BY_INSTRUMENT[instrument.name]
             if (instrument.role !in allowedRoles.orEmpty()) {
                 errors += "$label instrument '${instrument.name}' uses unsupported role '${instrument.role}'"
@@ -185,7 +250,61 @@ object SectionVariationValidator {
             if (instrument.name == "piano" && (instrument.role != "source" || instrument.density != 1.0)) {
                 errors += "$label piano must use source role and density 1.0"
             }
+            if (enhancedPlanning && instrument.name == "bass" && instrument.register != MusicalRegister.LOW) {
+                errors += "$label bass must use low register"
+            }
+            if (enhancedPlanning && instrument.name !in setOf("pad", "strings") && instrument.voicing != CrossSectionVoicingIntent.NONE) {
+                errors += "$label only pad and strings may carry voicing intent"
+            }
         }
+    }
+
+    /** Reject a persisted variation that drifts from the global plan without an explicit Structure override. */
+    private fun validateResolvedIntent(
+        label: String,
+        position: Int,
+        variation: SectionVariation,
+        section: SongPlanSection,
+        input: SongPlanningInput,
+        songPlan: SongPlan,
+        errors: MutableList<String>
+    ) {
+        if (input.acceptedFullSongGrooveMap == null) return
+        val musicalIntent = section.musicalIntent ?: return
+        val fallingEnergy = position > 0 && songPlan.energyCurve[position] < songPlan.energyCurve[position - 1]
+        val overrides = input.sectionsWithIdentity()[position].variationOverrides.instruments.associateBy { it.instrument }
+        variation.instruments.forEach { instrument ->
+            val roleIntent = musicalIntent.roles.singleOrNull { it.role == LegacyLogicalInstrumentRoles.roleFor(instrument.name) }
+            if (roleIntent == null) {
+                errors += "$label instrument '${instrument.name}' has no resolved musical intent"
+                return@forEach
+            }
+            val override = overrides[instrument.name]
+            val expectedRole = override?.role ?: roleFor(instrument.name, section, fallingEnergy)
+            val expectedDensity = override?.density ?: roleIntent.density
+            if (instrument.role != expectedRole || instrument.density != expectedDensity || instrument.register != roleIntent.register ||
+                instrument.articulation != roleIntent.articulation || instrument.groove != roleIntent.groove || instrument.voicing != roleIntent.voicing) {
+                errors += "$label instrument '${instrument.name}' must match its resolved musical intent or explicit Structure override"
+            }
+        }
+    }
+
+    /** Mirror deterministic role expansion so validator and planner share the same bounded role contract. */
+    private fun roleFor(instrument: String, section: SongPlanSection, fallingEnergy: Boolean): String = when (instrument) {
+        "piano" -> "source"
+        "bass" -> when {
+            fallingEnergy || section.purpose == SongSectionPurpose.CONCLUSION -> "sustained"
+            section.occurrence % 2 == 0 -> "root_fifth"
+            else -> "root"
+        }
+        "drums" -> when {
+            section.purpose == SongSectionPurpose.INTRODUCTION || fallingEnergy -> "minimal"
+            section.purpose == SongSectionPurpose.CLIMAX -> "build"
+            section.occurrence % 2 == 0 -> "soft_lofi"
+            else -> "standard_groove"
+        }
+        "pad", "strings" -> if (fallingEnergy || section.purpose == SongSectionPurpose.CONCLUSION) "sustained" else "texture"
+        else -> error("Song plan contains unsupported instrument '$instrument'")
     }
 
     private fun validateRepeatedVariation(sections: List<SectionVariation>, errors: MutableList<String>) {

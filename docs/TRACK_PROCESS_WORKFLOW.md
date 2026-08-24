@@ -100,13 +100,21 @@ QP-010 verifies canonical lineage, explicit windows, monophony, QP-006
 eligibility, anchors, tails, source groove, and source-key confirmation before
 approval. It exposes complete severity counts; hard invariants cannot be
 overridden, and an ordinary-blocker override is explicitly private-audition and
-experimental. The remaining gap is QP-011 and must not be described as current
-capabilities.
+experimental. QP-011 binds the approved full-song groove map and typed
+profile/mood/role intent into each Arrangement occurrence, including bounded
+density, register, articulation, groove allowance, and prior accepted
+pad/string voicing evidence. It does not generate or validate timing offsets;
+QP-012 remains the generated-role admission boundary.
 
 ## Arrangement and Cohesion boundary
 
 Arrangement uses authoritative project context and deterministic MIDI
-generators. Core piano/bass/drums/pad evidence is validated before optional
+generators. Every new plan consumes the approved full-song groove map and
+resolves profile/mood, section purpose, density, register, articulation, and
+role-specific timing/voicing intent before detailed planning. A planner cannot
+replace authoritative harmony or invent a separate timing grid; Qwen schema
+illustrations are explicitly non-executable and flat copied defaults are
+rejected. Core piano/bass/drums/pad evidence is validated before optional
 layers. Cohesion runs after arrangement and publishes reviewed boundary
 derivatives without overwriting selected source MIDI or locally replacing the
 approved piano melody. Any future post-connection piano edit must first publish

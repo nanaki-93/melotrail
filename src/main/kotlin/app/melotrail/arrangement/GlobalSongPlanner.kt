@@ -26,7 +26,9 @@ data class SongPlan(
     val climaxIndex: Int,
     val ending: SongEnding,
     /** Binds the plan to typed profile/mood/key/meter context, never a style prompt. */
-    val contextHash: String? = null
+    val contextHash: String? = null,
+    /** Fingerprint of the accepted occurrence-indexed groove map used for planning. */
+    val grooveMapSha256: String? = null
 ) {
     fun validate(input: SongPlanningInput): SongPlanValidationResult = SongPlanValidator.validate(this, input)
 
@@ -53,7 +55,9 @@ data class SongPlanSection(
     /** Fingerprint of this stable Structure occurrence. */
     val occurrenceHash: String? = null,
     /** Controlled sound requests. */
-    val soundIntents: List<InstrumentIntent> = emptyList()
+    val soundIntents: List<InstrumentIntent> = emptyList(),
+    /** Application-owned musical behaviour, separate from instrument assignment. */
+    val musicalIntent: SectionMusicalIntent? = null
 )
 
 @Serializable
@@ -106,7 +110,13 @@ data class SongPlanningInput(
     val style: String? = null,
     val constraints: SongPlanningConstraints = SongPlanningConstraints(),
     val soundContext: ArrangementSoundContext? = null,
+    /** Resolved project profile/mood for musical planning without selecting an instrument registry entry. */
+    val planningSoundContext: ArrangementSoundContext? = null,
     val requestedIntents: List<InstrumentIntent> = emptyList(),
+    /** Accepted source-feel evidence shared by piano, bass, and drum planning. */
+    val acceptedFullSongGrooveMap: FullSongGrooveMap? = null,
+    /** Optional contiguous accepted sustained-role state when planning resumes. */
+    val acceptedOccurrenceVoicings: List<AcceptedOccurrenceVoicing> = emptyList(),
     /**
      * The only project-musical context accepted by the current arrangement
      * protocol. It is built from canonical v4 data, never from model output.
@@ -166,6 +176,10 @@ data class SongPlanningInput(
             val expectedLogical = requestedIntents.map { LegacyLogicalInstrumentRoles.logicalFor(it.role) }.toSet()
             if (!expectedLogical.all { it in allowedInstruments }) errors += "Allowed instruments must include compatibility aliases for requested roles"
         }
+        planningSoundContext?.let { context ->
+            try { context.requireValid() } catch (error: IllegalArgumentException) { errors += error.message.orEmpty() }
+            if (soundContext != null && soundContext != context) errors += "Instrument selection context must match musical planning context"
+        }
         canonicalProjection?.let { projection ->
             if (projection.contextSha256.isBlank() || projection.inputSha256.length != 64) {
                 errors += "Arrangement projection fingerprints are invalid"
@@ -182,6 +196,31 @@ data class SongPlanningInput(
             if (projection.harmony.map { it.occurrenceId }.distinct() != projection.occurrences.map { it.occurrenceId }) {
                 errors += "Arrangement projection harmony must cover every occurrence exactly once"
             }
+            if (acceptedFullSongGrooveMap == null) errors += "Canonical arrangement planning requires the accepted full-song groove map"
+        }
+        acceptedFullSongGrooveMap?.let { map ->
+            val instanceIds = structure.map { it.instanceId }
+            if (map.occurrenceTemplateFingerprints.map(FullSongGrooveOccurrenceTemplate::occurrenceId).toSet() != instanceIds.toSet()) {
+                errors += "Accepted full-song groove map must cover every requested occurrence"
+            }
+            if (map.points.map(FullSongGroovePoint::occurrenceId).toSet() != instanceIds.toSet()) {
+                errors += "Accepted full-song groove map points must cover every requested occurrence"
+            }
+            val expectedBoundaries = instanceIds.zipWithNext()
+            if (map.boundaries.map { it.outgoingOccurrenceId to it.incomingOccurrenceId } != expectedBoundaries) {
+                errors += "Accepted full-song groove map boundaries must follow requested occurrence order"
+            }
+            val expectedDenominators = analyses.values.map { it.timeSignatures.singleOrNull()?.denominator }.toSet()
+            if (expectedDenominators.size == 1 && map.meterDenominator !in expectedDenominators) {
+                errors += "Accepted full-song groove map meter must match MIDI analysis"
+            }
+        }
+        val acceptedIds = acceptedOccurrenceVoicings.map(AcceptedOccurrenceVoicing::instanceId)
+        if (acceptedIds != structure.take(acceptedIds.size).map(SectionInstance::instanceId) || acceptedIds.distinct().size != acceptedIds.size) {
+            errors += "Accepted pad/string voicings must form a unique leading occurrence sequence"
+        }
+        acceptedOccurrenceVoicings.forEach { voicing ->
+            try { voicing.requireValid() } catch (error: IllegalArgumentException) { errors += error.message.orEmpty() }
         }
         try {
             constraints.requireValid()
@@ -195,9 +234,16 @@ data class SongPlanningInput(
         const val MAX_STYLE_LENGTH = 160
     }
 
-    fun contextHash(): String? = canonicalProjection?.inputSha256 ?: soundContext?.let { context ->
+    fun contextHash(): String? = canonicalProjection?.inputSha256 ?: (planningSoundContext ?: soundContext)?.let { context ->
         java.security.MessageDigest.getInstance("SHA-256").digest(
             Json { encodeDefaults = true }.encodeToString(ArrangementSoundContext.serializer(), context).toByteArray(Charsets.UTF_8)
+        ).joinToString("") { "%02x".format(it) }
+    }
+
+    /** Content fingerprint used to prove planning consumed the reviewed source groove map. */
+    fun grooveMapHash(): String? = acceptedFullSongGrooveMap?.let { map ->
+        java.security.MessageDigest.getInstance("SHA-256").digest(
+            Json { encodeDefaults = true }.encodeToString(FullSongGrooveMap.serializer(), map).toByteArray(Charsets.UTF_8)
         ).joinToString("") { "%02x".format(it) }
     }
 
@@ -261,11 +307,12 @@ object SongPlanValidator {
         }
 
         if (plan.version !in setOf(1, SongPlan.CURRENT_VERSION)) errors += "Unsupported song-plan version: ${plan.version}"
-        if (input.soundContext != null || input.canonicalProjection != null) {
+        if (input.soundContext != null || input.canonicalProjection != null || input.acceptedFullSongGrooveMap != null) {
             if (plan.version != SongPlan.CURRENT_VERSION) errors += "Structured song plan must use version ${SongPlan.CURRENT_VERSION}"
             if (plan.contextHash != input.contextHash()) errors += "Song-plan context hash does not match the requested context"
         } else if (plan.version == 1 && plan.contextHash != null) errors += "Planner-protocol v1 must not contain a context hash"
         if (plan.style != input.resolvedStyle) errors += "Song-plan style must match the requested style"
+        if (plan.grooveMapSha256 != input.grooveMapHash()) errors += "Song-plan groove-map hash does not match the accepted source groove"
         if (plan.energyCurve.size != input.structure.size) errors += "Song-plan energy curve count does not match requested structure"
         plan.energyCurve.forEachIndexed { index, energy ->
             if (!energy.isFinite() || energy !in 0.0..1.0) errors += "Song-plan energy at index $index must be between 0 and 1"
@@ -294,7 +341,36 @@ object SongPlanValidator {
         }
         val climaxCount = plan.sections.count { it.purpose == SongSectionPurpose.CLIMAX }
         if (climaxCount != 1) errors += "Song plan must contain exactly one climax section"
+        validateMusicalIntent(plan, input, errors)
+        validateEnergyContrast(plan, input, errors)
         return SongPlanValidationResult(errors)
+    }
+
+    /** Reject planner output whose role behaviour no longer matches application-owned intent. */
+    private fun validateMusicalIntent(plan: SongPlan, input: SongPlanningInput, errors: MutableList<String>) {
+        val enhancedPlanning = input.acceptedFullSongGrooveMap != null
+        if (!enhancedPlanning) return
+        val expected = SectionMusicalIntentPlanner.create(input, plan.sections, plan.energyCurve)
+        plan.sections.forEachIndexed { index, section ->
+            val intent = section.musicalIntent
+            if (enhancedPlanning && intent == null) {
+                errors += "Song-plan section ${index + 1} must contain resolved musical intent"
+            }
+            intent?.let {
+                try { it.requireValid() } catch (error: IllegalArgumentException) { errors += error.message.orEmpty() }
+                if (it != expected[index]) errors += "Song-plan section ${index + 1} musical intent must match the authoritative context"
+            }
+        }
+    }
+
+    /** Reject a copied single energy default when several planned occurrences permit contrast. */
+    private fun validateEnergyContrast(plan: SongPlan, input: SongPlanningInput, errors: MutableList<String>) {
+        if (input.acceptedFullSongGrooveMap == null || plan.sections.size < 3) return
+        if (plan.energyCurve.distinct().size == 1) errors += "Song plan must not copy one flat energy default across every section"
+        val climaxEnergy = plan.energyCurve.getOrNull(plan.climaxIndex)
+        if (climaxEnergy != null && plan.energyCurve.any { it > climaxEnergy }) {
+            errors += "Song-plan climax must have the highest planned energy"
+        }
     }
 
     private fun validateSoundIntents(position: Int, section: SongPlanSection, input: SongPlanningInput, errors: MutableList<String>) {
@@ -351,7 +427,7 @@ class DeterministicGlobalSongPlanner : GlobalSongPlanner {
         val energyCurve = sections.map { section -> energy(section.index, climaxIndex, sections.lastIndex, input.analyses.getValue(section.partId).energy) }
         val nonPiano = input.allowedInstruments.filter { it != "piano" }
         var introduced = 0
-        val planSections = sections.mapIndexed { position, section ->
+        val planSectionsWithoutIntent = sections.mapIndexed { position, section ->
             val target = if (position == 0) 0 else (energyCurve[position] * nonPiano.size).roundToInt()
             introduced = if (position <= climaxIndex) {
                 minOf(target, introduced + input.constraints.maxNewInstrumentsPerSection, nonPiano.size)
@@ -374,14 +450,19 @@ class DeterministicGlobalSongPlanner : GlobalSongPlanner {
                     .filter { LegacyLogicalInstrumentRoles.logicalFor(it.role) in instruments } }.orEmpty()
             )
         }
+        val planSections = if (input.acceptedFullSongGrooveMap == null) planSectionsWithoutIntent else {
+            val musicalIntents = SectionMusicalIntentPlanner.create(input, planSectionsWithoutIntent, energyCurve)
+            planSectionsWithoutIntent.mapIndexed { index, section -> section.copy(musicalIntent = musicalIntents[index]) }
+        }
         return SongPlan(
-            version = if (input.soundContext == null && input.canonicalProjection == null) 1 else SongPlan.CURRENT_VERSION,
+            version = if (input.soundContext == null && input.canonicalProjection == null && input.acceptedFullSongGrooveMap == null) 1 else SongPlan.CURRENT_VERSION,
             style = input.resolvedStyle,
             energyCurve = energyCurve,
             sections = planSections,
             climaxIndex = climaxIndex,
             ending = SongEnding.RESOLVED,
-            contextHash = input.contextHash()
+            contextHash = input.contextHash(),
+            grooveMapSha256 = input.grooveMapHash()
         ).also { it.requireValid(input) }
     }
 
@@ -443,7 +524,7 @@ class LocalQwenGlobalSongPlanner(
             } catch (error: Exception) {
                 throw IllegalArgumentException("Qwen returned invalid song-plan JSON: ${error.message}", error)
             }
-            val normalizedPlan = bindApplicationOwnedFields(plan, input)
+            val normalizedPlan = SongPlanApplicationBinding.bind(plan, input)
             val validation = normalizedPlan.validate(input)
             require(validation.isValid) { "Invalid Qwen song plan: ${validation.errors.joinToString("; ")}" }
             normalizedPlan
@@ -456,32 +537,6 @@ class LocalQwenGlobalSongPlanner(
      * parsing. This prevents imperfect copies of long hashes or
      * `sectionPurpose: null` from invalidating an otherwise valid plan.
      */
-    private fun bindApplicationOwnedFields(plan: SongPlan, input: SongPlanningInput): SongPlan {
-        val structured = input.soundContext != null || input.canonicalProjection != null
-        val requestedSections = input.sectionsWithIdentity()
-        return plan.copy(
-            version = if (structured) SongPlan.CURRENT_VERSION else plan.version,
-            style = input.resolvedStyle,
-            contextHash = if (structured) input.contextHash() else plan.contextHash,
-            sections = plan.sections.mapIndexed { position, modelSection ->
-                val boundIdentity = requestedSections.getOrNull(position)?.let { expected ->
-                    modelSection.copy(
-                        index = expected.index,
-                        instanceId = expected.instanceId,
-                        partId = expected.partId,
-                        occurrence = expected.occurrence,
-                        occurrenceHash = if (structured) input.occurrenceHash(expected) else modelSection.occurrenceHash
-                    )
-                } ?: modelSection
-                val soundIntents = input.soundContext?.let {
-                    input.intentsFor(boundIdentity.purpose)
-                        .filter { LegacyLogicalInstrumentRoles.logicalFor(it.role) in boundIdentity.instrumentProgression }
-                }.orEmpty()
-                boundIdentity.copy(soundIntents = soundIntents)
-            }
-        )
-    }
-
     private fun createUserPrompt(input: SongPlanningInput): String = """
         Project metadata:
         ${promptJson.encodeToString(QwenProjectMetadata(input.projectName, input.projectVersion))}
@@ -505,11 +560,20 @@ class LocalQwenGlobalSongPlanner(
         Structured planning context (present only for role-based requests):
         ${promptJson.encodeToString(input.soundContext)}
 
+        Resolved profile/mood planning context (not an instrument assignment):
+        ${promptJson.encodeToString(input.planningSoundContext ?: input.soundContext)}
+
         Required context hash (present only for role-based requests):
         ${promptJson.encodeToString(input.contextHash())}
 
         Controlled requested sound intents (present only for role-based requests):
         ${promptJson.encodeToString(input.requestedIntents)}
+
+        Accepted full-song groove map (authoritative occurrence timing; do not create another grid):
+        ${promptJson.encodeToString(input.acceptedFullSongGrooveMap)}
+
+        Previously accepted pad/string voicings (only a leading accepted sequence may be supplied):
+        ${promptJson.encodeToString(input.acceptedOccurrenceVoicings)}
 
         Compatibility aliases for controlled roles (use these to decide which intents belong in a section):
         melody and harmony = piano; bass = bass; drums = drums; counter-melody = strings; texture and ambience = pad.
@@ -518,14 +582,15 @@ class LocalQwenGlobalSongPlanner(
         ${promptJson.encodeToString(input.constraints)}
 
         Response requirements:
-        - version must be ${if (input.soundContext == null && input.canonicalProjection == null) 1 else SongPlan.CURRENT_VERSION}.
+        - version must be ${if (input.soundContext == null && input.canonicalProjection == null && input.acceptedFullSongGrooveMap == null) 1 else SongPlan.CURRENT_VERSION}.
         - style must equal the supplied Style string exactly.
         - energyCurve and sections must each contain exactly ${input.structure.size} entries in the supplied order.
         - Include index, instanceId, partId, and occurrence for every section exactly as supplied. A changed, missing,
           duplicated, unknown, or reordered occurrence is rejected.
         - instrumentProgression must start with piano and contain only Allowed instruments.
-        - When a canonical arrangement projection or structured planning context is present, set contextHash and every occurrenceHash
-          to null. Set soundIntents to [] in every section. The application binds hashes, identities, and supplied role requests after
+        - When a canonical arrangement projection, structured planning context, or accepted groove map is present, set contextHash,
+          grooveMapSha256, every occurrenceHash, and musicalIntent to null. Set soundIntents to [] in every section. The application binds
+          hashes, identities, groove/voicing continuity, and supplied role requests after
           you choose each section's purpose and instrumentProgression. Do not create instruments or IDs.
           Do not invent traits, stable IDs, paths, filenames, engine settings, or free-form sound text.
         - Choose climaxIndex. Section purposes are derived from it: first is introduction, its index is climax, final is
@@ -546,7 +611,9 @@ class LocalQwenGlobalSongPlanner(
             file paths, sample data, renderer settings, or executable behavior. Return JSON only, without markdown
             or prose.
 
-            The required response schema is exactly:
+            NON-EXECUTABLE SCHEMA ILLUSTRATION ONLY. It is not an approved plan,
+            a preset, or a default musical choice; copying its constant values
+            across sections is rejected. The required response shape is:
             {
               "version": "use the version required by the user input",
               "style": "the exact supplied style string",
@@ -560,13 +627,15 @@ class LocalQwenGlobalSongPlanner(
                 "instrumentProgression": ["piano"],
                 "transitionIntent": "none",
                 "occurrenceHash": null,
-                "soundIntents": []
+                "soundIntents": [],
+                "musicalIntent": null
               }],
               "climaxIndex": 0,
               "ending": "resolved",
-              "contextHash": null
+              "contextHash": null,
+              "grooveMapSha256": null
             }
-            All shown fields are required. The illustrative version field is replaced by the exact version required by the user input.
+            The values in this illustration are placeholders, not response defaults. The illustrative version field is replaced by the exact version required by the user input.
             Do not add fields. energyCurve and sections must have one entry per supplied
             requested section, not merely the single illustrative entry above. Each section has exactly index, instanceId,
             partId, occurrence, purpose, instrumentProgression, and transitionIntent.
@@ -582,6 +651,44 @@ class LocalQwenGlobalSongPlanner(
             A sound intent uses only its supplied role, profile, mood, controlled trait IDs, performance capabilities, license
             policy, and optional stable pinned ID. Never include samples, SFZ files, paths, renderer arguments, commands, or code.
         """
+    }
+}
+
+/**
+ * Rebinds fields owned by the application after a planner selects only its
+ * bounded musical outline. This keeps identities, sound assignment, groove
+ * evidence, and continuity data out of model control.
+ */
+object SongPlanApplicationBinding {
+    /** Rebind all application-owned plan fields after a bounded outline has been selected. */
+    fun bind(plan: SongPlan, input: SongPlanningInput): SongPlan {
+        val structured = input.soundContext != null || input.canonicalProjection != null || input.acceptedFullSongGrooveMap != null
+        val requestedSections = input.sectionsWithIdentity()
+        val bound = plan.copy(
+            version = if (structured) SongPlan.CURRENT_VERSION else plan.version,
+            style = input.resolvedStyle,
+            contextHash = if (structured) input.contextHash() else plan.contextHash,
+            grooveMapSha256 = input.grooveMapHash(),
+            sections = plan.sections.mapIndexed { position, modelSection ->
+                val boundIdentity = requestedSections.getOrNull(position)?.let { expected ->
+                    modelSection.copy(
+                        index = expected.index,
+                        instanceId = expected.instanceId,
+                        partId = expected.partId,
+                        occurrence = expected.occurrence,
+                        occurrenceHash = if (structured) input.occurrenceHash(expected) else modelSection.occurrenceHash
+                    )
+                } ?: modelSection
+                val soundIntents = input.soundContext?.let {
+                    input.intentsFor(boundIdentity.purpose)
+                        .filter { LegacyLogicalInstrumentRoles.logicalFor(it.role) in boundIdentity.instrumentProgression }
+                }.orEmpty()
+                boundIdentity.copy(soundIntents = soundIntents)
+            }
+        )
+        if (input.acceptedFullSongGrooveMap == null) return bound
+        val intents = SectionMusicalIntentPlanner.create(input, bound.sections, bound.energyCurve)
+        return bound.copy(sections = bound.sections.mapIndexed { index, section -> section.copy(musicalIntent = intents[index]) })
     }
 }
 

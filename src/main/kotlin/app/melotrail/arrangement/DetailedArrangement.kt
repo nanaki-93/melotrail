@@ -247,16 +247,6 @@ enum class MusicalRegister {
     @SerialName("high") HIGH
 }
 
-/** Producer-controlled feel remains an allow-listed musical descriptor. */
-@Serializable
-enum class GrooveCharacter {
-    @SerialName("straight") STRAIGHT,
-    @SerialName("laid_back") LAID_BACK,
-    @SerialName("swung") SWUNG,
-    @SerialName("half_time") HALF_TIME,
-    @SerialName("building") BUILDING
-}
-
 /** Drum fills are bounded to a section boundary; no arbitrary tick positions are accepted. */
 @Serializable
 enum class DrumFillPlacement {
@@ -311,18 +301,20 @@ object DetailedArrangementValidator {
             if (section.instruments.map { it.name } != expectedNames) {
                 errors += "$label instruments must match the section variation exactly"
             }
-            validateInstruments(label, section.role, section.instruments, expected.instruments, errors)
+            validateInstruments(label, section.role, section.instruments, expected.instruments, input.planningInput.acceptedFullSongGrooveMap != null, errors)
             if (arrangement.cohesion != null) errors += "$label has historical target-order Cohesion references; regenerate this arrangement."
             validateTransition(label, section.transitionOut, expected.transitionIntent, position == input.variations.sections.lastIndex, errors)
         }
         return DetailedArrangementValidationResult(errors)
     }
 
+    /** Verify typed detail controls and enforce resolved role intent for enhanced plans. */
     private fun validateInstruments(
         label: String,
         sectionRole: SongSectionPurpose,
         instruments: List<DetailedInstrumentPlan>,
         expected: List<SectionVariationInstrument>,
+        enforceMusicalIntent: Boolean,
         errors: MutableList<String>
     ) {
         if (instruments.groupingBy { it.name.lowercase() }.eachCount().values.any { it > 1 }) {
@@ -348,6 +340,9 @@ object DetailedArrangementValidator {
                         errors += "$label bass syncopation must be a finite number from 0 through 0.25"
                     }
                     if (instrument.register != MusicalRegister.LOW) errors += "$label bass register must be low"
+                    if (enforceMusicalIntent && (instrument.role.wireName != variation.role || instrument.density != variation.density || instrument.register != variation.register)) {
+                        errors += "$label bass controls must match its resolved musical intent"
+                    }
                 }
                 is DrumsInstrumentPlan -> {
                     if (instrument.name != "drums" || instrument.mode != InstrumentMode.GENERATED) {
@@ -357,12 +352,19 @@ object DetailedArrangementValidator {
                     bounded(label, "kick density", instrument.kickDensity, errors)
                     bounded(label, "hi-hat density", instrument.hiHatDensity, errors)
                     if (!instrument.swing.isFinite() || instrument.swing !in 0.0..0.5) errors += "$label swing must be a finite number from 0 through 0.5"
+                    if (enforceMusicalIntent && (instrument.role.wireName != variation.role || instrument.density != variation.density ||
+                        instrument.grooveCharacter != variation.groove.character || instrument.swing > variation.groove.maximumSwing)) {
+                        errors += "$label drum controls must match the resolved role-specific groove intent"
+                    }
                 }
                 is PadInstrumentPlan -> {
                     if (instrument.name != "pad" || instrument.mode != InstrumentMode.GENERATED) {
                         errors += "$label pad role or mode is invalid"
                     }
                     bounded(label, "pad density", instrument.density, errors)
+                    if (enforceMusicalIntent && (instrument.role.wireName != variation.role || instrument.density != variation.density || instrument.register != variation.register)) {
+                        errors += "$label pad controls must match its resolved musical intent"
+                    }
                 }
                 is StringsInstrumentPlan -> {
                     if (instrument.name != "strings" || instrument.mode != InstrumentMode.GENERATED ||
@@ -370,6 +372,9 @@ object DetailedArrangementValidator {
                         errors += "$label strings role or mode is invalid"
                     }
                     bounded(label, "strings density", instrument.density, errors)
+                    if (enforceMusicalIntent && (!instrument.role.matches(variation.role, sectionRole) || instrument.density != variation.density || instrument.register != variation.register)) {
+                        errors += "$label strings controls must match its resolved musical intent"
+                    }
                 }
             }
         }
@@ -441,7 +446,7 @@ class DeterministicDetailedArrangementPlanner : DetailedArrangementPlanner {
         "bass" -> BassInstrumentPlan(
             role = DetailedBassRole.entries.first { it.wireName == instrument.role }, density = instrument.density,
             movement = when (instrument.role) { "root" -> DetailedBassMovement.ROOT_MOTION; "root_fifth" -> DetailedBassMovement.LEAPING; "octave" -> DetailedBassMovement.OCTAVES; else -> DetailedBassMovement.STATIC },
-            register = MusicalRegister.LOW, syncopation = (instrument.density * 0.2).coerceIn(0.0, 0.25),
+            register = instrument.register, syncopation = (instrument.density * 0.2).coerceIn(0.0, 0.25),
             pattern = when (instrument.role) {
                 "root" -> BassPatternId.SUSTAINED_ROOT
                 "root_fifth" -> BassPatternId.ROOT_FIFTH
@@ -457,26 +462,22 @@ class DeterministicDetailedArrangementPlanner : DetailedArrangementPlanner {
                 "half_time" -> SnarePattern.BEAT_3
                 else -> SnarePattern.BEATS_2_4
             },
-            hiHatDensity = (instrument.density * 0.8).coerceIn(0.0, 1.0), swing = 0.0, fillLastBar = energy >= 0.7,
+            hiHatDensity = (instrument.density * 0.8).coerceIn(0.0, 1.0),
+            swing = swing(instrument.groove), fillLastBar = energy >= 0.7,
             pattern = when (instrument.role) {
                 "half_time" -> DrumGroovePatternId.HALF_TIME_POCKET
                 "build" -> DrumGroovePatternId.LIFT_BUILD
                 "soft_lofi" -> DrumGroovePatternId.LAZY_SWING
                 else -> DrumGroovePatternId.DUSTY_STRAIGHT
             },
-            grooveCharacter = when (instrument.role) {
-                "half_time" -> GrooveCharacter.HALF_TIME
-                "build" -> GrooveCharacter.BUILDING
-                "soft_lofi" -> GrooveCharacter.SWUNG
-                else -> GrooveCharacter.STRAIGHT
-            },
+            grooveCharacter = instrument.groove.character,
             fillPlacement = if (energy >= 0.7) DrumFillPlacement.LAST_BAR else DrumFillPlacement.NONE
         )
         "pad" -> PadInstrumentPlan(
-            role = SustainedRole.entries.first { it.wireName == instrument.role }, density = instrument.density, register = register(energy),
+            role = SustainedRole.entries.first { it.wireName == instrument.role }, density = instrument.density, register = instrument.register,
             pattern = if (instrument.role == "sustained") PadVoicingPatternId.SUSTAINED else PadVoicingPatternId.COMMON_TONE
         )
-        "strings" -> StringsInstrumentPlan(role = stringsRole(instrument.role, energy, purpose), density = instrument.density, register = register(energy))
+        "strings" -> StringsInstrumentPlan(role = stringsRole(instrument.role, energy, purpose), density = instrument.density, register = instrument.register)
         else -> error("Unsupported variation instrument '${instrument.name}'")
     }
 
@@ -504,10 +505,10 @@ class DeterministicDetailedArrangementPlanner : DetailedArrangementPlanner {
         else -> listOf(BridgeElement.MELODY_PICKUP)
     }
 
-    private fun register(energy: Double): MusicalRegister = when {
-        energy < 0.34 -> MusicalRegister.LOW
-        energy > 0.72 -> MusicalRegister.HIGH
-        else -> MusicalRegister.MID
+    /** Derive allowed swing only from the resolved groove character and its bounded limit. */
+    private fun swing(groove: RoleGrooveIntent): Double = when (groove.character) {
+        GrooveCharacter.SWUNG, GrooveCharacter.LAID_BACK -> groove.maximumSwing
+        else -> 0.0
     }
 
     private fun stringsRole(variationRole: String, energy: Double, purpose: SongSectionPurpose): StringsRole = when (variationRole) {
@@ -580,6 +581,9 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
         Accepted arrangement MIDI context (summaries plus a bounded relevant excerpt; never return MIDI events):
         ${input.arrangementStateContext?.toString() ?: "No accepted ensemble state is available."}
 
+        Accepted full-song groove map and bounded role-specific limits (do not invent a timing grid):
+        ${promptJson.encodeToString(input.planningInput.acceptedFullSongGrooveMap)}
+
         Response requirements:
         - Return exactly ${input.variations.sections.size} sections in the supplied order.
         - The application binds every section index, instanceId, partId, role, energy, and exact instrument list from the validated variations.
@@ -614,6 +618,8 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
         const val SYSTEM_PROMPT = """
             You are a MIDI-first arrangement planner. Return JSON only, without markdown or prose. You never provide notes,
             MIDI events, frequencies, sample data, file paths, code, commands, renderer configuration, sample rates, or output paths.
+            NON-EXECUTABLE SCHEMA EXAMPLES FOLLOW. They are not a preset or a default arrangement;
+            copying one constant role/density/register/groove combination across sections is rejected.
             The document has exactly these top-level fields:
             {"version":4,"sections":[SECTION_OBJECTS]}
             Every section object has exactly index, instanceId, partId, role, energy, instruments, and transitionOut.

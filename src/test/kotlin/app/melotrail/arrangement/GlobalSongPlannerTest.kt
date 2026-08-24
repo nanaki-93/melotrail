@@ -60,7 +60,7 @@ class GlobalSongPlannerTest {
         assertEquals(3, plan.climaxIndex)
         assertEquals(listOf("A1", "A2", "B1", "B2", "A3"), plan.sections.map { it.instanceId })
         assertTrue(client.systemPrompt.contains("whole-song musical planner"))
-        assertTrue(client.systemPrompt.contains("The required response schema is exactly"))
+        assertTrue(client.systemPrompt.contains("NON-EXECUTABLE SCHEMA ILLUSTRATION ONLY"))
         assertTrue(client.systemPrompt.contains("\"instrumentProgression\""))
         assertTrue(client.systemPrompt.contains("every supplied logical instrument"))
         assertTrue(client.userPrompt.contains("exactly 5 entries"))
@@ -165,6 +165,45 @@ class GlobalSongPlannerTest {
     }
 
     @Test
+    fun `enhanced occurrence planning carries profile groove voicing and intentional section contrast`() {
+        val input = enhancedInput()
+        val plan = DeterministicGlobalSongPlanner().plan(input)
+        val variations = DeterministicSectionVariationPlanner.plan(input, plan)
+
+        assertEquals(
+            listOf(SongSectionPurpose.INTRODUCTION, SongSectionPurpose.DEVELOPMENT, SongSectionPurpose.CLIMAX, SongSectionPurpose.CONCLUSION),
+            plan.sections.map { it.purpose }
+        )
+        assertTrue(plan.energyCurve.distinct().size >= 3)
+        assertTrue(plan.sections.all { it.musicalIntent?.profile == input.soundContext?.profile })
+        assertTrue(plan.sections.all { it.musicalIntent?.grooveMapSha256 == input.grooveMapHash() })
+        assertEquals(listOf(55, 60, 64), plan.sections[1].musicalIntent?.previousAcceptedVoicing?.pad)
+        assertEquals(listOf(55, 60, 64), plan.sections[2].musicalIntent?.previousAcceptedVoicing?.pad)
+        assertEquals(listOf(62, 67, 71), plan.sections[2].musicalIntent?.previousAcceptedVoicing?.strings)
+        assertTrue(plan.sections.flatMap { it.musicalIntent!!.roles }.any { it.role == ArrangementRole.BASS && it.groove.timingPolicy == GrooveTimingPolicy.FOLLOW_SOURCE_SUBTLE })
+        assertTrue(plan.sections.flatMap { it.musicalIntent!!.roles }.any { it.role == ArrangementRole.DRUMS && it.groove.timingPolicy == GrooveTimingPolicy.FOLLOW_SOURCE_STANDARD })
+        assertTrue(variations.sections.map { section -> section.instruments.joinToString { "${it.role}:${it.density}:${it.articulation}" } }.distinct().size >= 3)
+
+        val flattened = variations.copy(sections = variations.sections.map { section ->
+            section.copy(instruments = section.instruments.map { instrument ->
+                if (instrument.name == "bass") instrument.copy(role = "root", density = 0.4) else instrument
+            })
+        })
+        assertFalse(flattened.validate(input, plan).isValid)
+    }
+
+    @Test
+    fun `Qwen flat schema defaults are rejected for enhanced occurrence planning`() {
+        val input = enhancedInput()
+        val baseline = DeterministicGlobalSongPlanner().plan(input)
+        val flat = baseline.copy(energyCurve = List(baseline.sections.size) { 0.4 })
+
+        assertThrows(IllegalArgumentException::class.java) {
+            LocalQwenGlobalSongPlanner(FixtureClient(Json { encodeDefaults = true }.encodeToString(flat))).plan(input)
+        }
+    }
+
+    @Test
     fun `path command and code-like styles are rejected at the planning boundary`() {
         listOf("/tmp/song", "warm; rm -rf", "function arrange() {}").forEach { style ->
             assertThrows(IllegalArgumentException::class.java) {
@@ -223,6 +262,46 @@ class GlobalSongPlannerTest {
             )
         )
     }
+
+    private fun enhancedInput(): SongPlanningInput {
+        val profile = CompositionProfileRef("lofi", 1)
+        val mood = MoodRef("nostalgic", 1)
+        val structure = listOf(
+            SectionInstance(0, "A", "A1"), SectionInstance(1, "B", "B1"),
+            SectionInstance(2, "C", "C1"), SectionInstance(3, "D", "D1")
+        )
+        return SongPlanningInput(
+            projectName = "enhanced",
+            projectVersion = Project.CURRENT_VERSION,
+            analyses = structure.associate { section ->
+                section.partId to analysis(section.partId, mapOf("A" to 0.10, "B" to 0.35, "C" to 0.95, "D" to 0.20).getValue(section.partId))
+            },
+            structure = structure,
+            allowedInstruments = listOf("piano", "bass", "drums", "pad", "strings"),
+            soundContext = ArrangementSoundContext(profile, mood, "C-major-v1", 4, 4, "a".repeat(64)),
+            requestedIntents = listOf(
+                ArrangementRole.MELODY, ArrangementRole.BASS, ArrangementRole.DRUMS, ArrangementRole.TEXTURE, ArrangementRole.COUNTER_MELODY
+            ).map { role -> InstrumentIntent(role = role, profile = profile, mood = mood) },
+            acceptedFullSongGrooveMap = grooveMap(structure),
+            acceptedOccurrenceVoicings = listOf(
+                AcceptedOccurrenceVoicing("A1", AcceptedPadStringVoicing(pad = listOf(55, 60, 64))),
+                AcceptedOccurrenceVoicing("B1", AcceptedPadStringVoicing(strings = listOf(62, 67, 71)))
+            ),
+            constraints = SongPlanningConstraints(maxInstrumentsPerSection = 5, maxNewInstrumentsPerSection = 2)
+        )
+    }
+
+    private fun grooveMap(structure: List<SectionInstance>): FullSongGrooveMap = FullSongGrooveMap(
+        ppq = 480,
+        meterDenominator = 4,
+        subdivisionsPerBeat = 4,
+        points = structure.mapIndexed { index, section -> FullSongGroovePoint(section.instanceId, 0, 0, index * 1_920L, 0) },
+        occurrenceTemplateFingerprints = structure.map { section -> FullSongGrooveOccurrenceTemplate(section.instanceId, section.partId, "b".repeat(64)) },
+        boundaries = structure.zipWithNext().mapIndexed { index, (outgoing, incoming) ->
+            FullSongGrooveBoundary("boundary-$index", (index + 1) * 1_920L, outgoing.instanceId, incoming.instanceId, 0, 0, FullSongGrooveBoundaryStatus.CONTINUOUS)
+        },
+        maximumUnreviewedDiscontinuityTicks = 24
+    )
 
     private fun analysis(partId: String, energy: Double) = MidiAnalysis(
         partId = partId,

@@ -126,8 +126,11 @@ tail windows, global monophony, QP-006 eligibility and boundary evidence,
 protected anchors, groove coverage, source-key confirmation, and canonical
 lineage. Hard findings cannot be overridden. A recorded override of an ordinary
 blocker is private-audition evidence only and labels downstream use
-experimental; it cannot satisfy a quality-certified flow. The remaining musical
-planning limits are tracked by QP-011.
+experimental; it cannot satisfy a quality-certified flow. QP-011 now carries
+the approved occurrence-indexed groove map, profile/mood, role density,
+register, articulation, and sustained-voicing continuity intent into
+Arrangement. It plans from evidence only; QP-012 remains responsible for
+validating generated MIDI timing and actual cross-section voicings.
 
 ## Recovery
 

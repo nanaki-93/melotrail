@@ -82,6 +82,10 @@ class ArrangementApplicationServiceTest {
         assertFalse(result.approvalRequired)
         assertFalse(result.stale)
         assertTrue(result.sections.single().instruments.any { it.name == "piano" })
+        val songPlan = kotlinx.serialization.json.Json { ignoreUnknownKeys = false }
+            .decodeFromString(app.melotrail.arrangement.SongPlan.serializer(), Files.readString(root.resolve("song_plan.json")))
+        assertTrue(songPlan.grooveMapSha256?.matches(Regex("[0-9a-f]{64}")) == true)
+        assertTrue(songPlan.sections.single().musicalIntent?.roles?.isNotEmpty() == true)
     }
 
     @Test
@@ -104,7 +108,9 @@ class ArrangementApplicationServiceTest {
             qwenGlobalPlanner = object : app.melotrail.arrangement.GlobalSongPlanner {
                 override fun plan(input: app.melotrail.arrangement.SongPlanningInput): app.melotrail.arrangement.SongPlan =
                     app.melotrail.arrangement.DeterministicGlobalSongPlanner().plan(input).let { plan ->
-                        plan.copy(sections = plan.sections.map { it.copy(instrumentProgression = listOf("piano", "bass")) })
+                        app.melotrail.arrangement.SongPlanApplicationBinding.bind(
+                            plan.copy(sections = plan.sections.map { it.copy(instrumentProgression = listOf("piano", "bass")) }), input
+                        )
                             .also { it.requireValid(input) }
                     }
             },
@@ -159,9 +165,9 @@ class ArrangementApplicationServiceTest {
             deterministicGlobalPlanner = object : app.melotrail.arrangement.GlobalSongPlanner {
                 override fun plan(input: app.melotrail.arrangement.SongPlanningInput): app.melotrail.arrangement.SongPlan =
                     app.melotrail.arrangement.DeterministicGlobalSongPlanner().plan(input).let { plan ->
-                        plan.copy(sections = plan.sections.map { section ->
+                        app.melotrail.arrangement.SongPlanApplicationBinding.bind(plan.copy(sections = plan.sections.map { section ->
                             section.copy(instrumentProgression = if (section.index == 0) listOf("piano", "bass", "drums") else listOf("piano", "bass", "pad"))
-                        })
+                        }), input)
                             .also { it.requireValid(input) }
                     }
             },
@@ -194,13 +200,13 @@ class ArrangementApplicationServiceTest {
             deterministicGlobalPlanner = object : app.melotrail.arrangement.GlobalSongPlanner {
                 override fun plan(input: app.melotrail.arrangement.SongPlanningInput): app.melotrail.arrangement.SongPlan =
                     app.melotrail.arrangement.DeterministicGlobalSongPlanner().plan(input).let { plan ->
-                        plan.copy(sections = plan.sections.map { section ->
+                        app.melotrail.arrangement.SongPlanApplicationBinding.bind(plan.copy(sections = plan.sections.map { section ->
                             section.copy(instrumentProgression = when (section.index) {
                                 0 -> listOf("piano", "bass", "drums")
                                 1 -> listOf("piano", "pad")
                                 else -> listOf("piano", "strings")
                             })
-                        })
+                        }), input)
                             .also { it.requireValid(input) }
                     }
             },
