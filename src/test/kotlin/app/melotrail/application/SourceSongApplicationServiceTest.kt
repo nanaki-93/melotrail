@@ -252,21 +252,31 @@ class SourceSongApplicationServiceTest {
     }
 
     @Test
-    fun `connected source melody resolves as an independent piano preview input`() = runTest {
+    fun `canonical melody review previews use verified source prepared full and bounded boundary inputs before approval`() = runTest {
         val root = project()
+        val source = SourceSongApplicationService().assemble(root).song
+        val connection = app.melotrail.arrangement.MelodyConnectionPlanner().connect(root, source).connection
         val renderer = CapturingRenderer()
         val preview = DefaultPartPreviewApplicationService(renderer)
 
-        val blocked = preview.resolveConnectedSource(root)
-        assertTrue(blocked is PreviewResult.Prerequisite)
-        assertTrue(renderer.input == null)
-        val critic = DefaultSourceSongCriticApplicationService()
-        critic.run(root); critic.approve(root)
-        val result = preview.resolveConnectedSource(root)
+        val sourceResult = preview.resolveSourceSongReview(root, SourceSongReviewPreviewRequest(SourceSongReviewPreview.SOURCE, partId = "A"))
+        assertIs<PreviewResult.Prerequisite>(sourceResult)
+        assertTrue(renderer.input?.fileName.toString()?.endsWith(".mid") == true)
 
-        assertTrue(result is PreviewResult.Prerequisite, "Expected connected-source preview to reach the renderer: $result")
-        assertTrue(renderer.input?.startsWith(root.resolve("source-song")) == true)
-        assertTrue(renderer.input?.fileName.toString() == "connected.mid")
+        val preparedResult = preview.resolveSourceSongReview(root, SourceSongReviewPreviewRequest(SourceSongReviewPreview.PREPARED))
+        assertIs<PreviewResult.Prerequisite>(preparedResult)
+        assertEquals(source.assembledMidi.file, root.relativize(requireNotNull(renderer.input)).toString().replace('\\', '/'))
+
+        val fullResult = preview.resolveSourceSongReview(root, SourceSongReviewPreviewRequest(SourceSongReviewPreview.FULL_MELODY))
+        assertIs<PreviewResult.Prerequisite>(fullResult)
+        assertEquals(connection.outputMidi.file, root.relativize(requireNotNull(renderer.input)).toString().replace('\\', '/'))
+
+        val boundaryId = connection.boundaries.first().decision.boundaryId
+        val boundaryResult = preview.resolveSourceSongReview(root, SourceSongReviewPreviewRequest(SourceSongReviewPreview.BOUNDARY, boundaryId = boundaryId))
+        assertIs<PreviewResult.Prerequisite>(boundaryResult)
+        val boundary = requireNotNull(renderer.input)
+        assertTrue(boundary.startsWith(root.resolve("previews")))
+        assertEquals(3_840L, MidiSystem.getSequence(boundary.toFile()).tickLength)
     }
 
     @Test

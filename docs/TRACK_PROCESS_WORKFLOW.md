@@ -109,6 +109,16 @@ including piano-flam rejection; pad/string requests retain actual prior
 voicings; all reports record accepted-state/candidate metrics and registry/kick
 evidence. A failed candidate remains outside the accepted ensemble state.
 
+The Structure-page canonical melody review projects only current, verified
+sidecars. It shows source key/confidence; downbeat and mapping confidence;
+target bars and pickup/body/tail windows; accepted groove; controller-aware
+sustain releases; monophony and harmony-fit changes; anchors; boundary
+voice-leading findings; critic blockers; and each selected project-relative
+artifact plus SHA-256. Its opt-in piano comparisons resolve the preserved
+source, assembled prepared melody, connected full melody, or the exact two-
+occurrence boundary segment. Each monitor is RMS-matched with a peak-safe
+ceiling and never selects, overwrites, or publishes a MIDI/audio candidate.
+
 ## Arrangement and Cohesion boundary
 
 Arrangement uses authoritative project context and deterministic MIDI

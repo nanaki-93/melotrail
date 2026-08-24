@@ -993,7 +993,7 @@ internal fun CompactTransport(state: WorkspaceUiState, onIntent: (WorkspaceInten
     val session = state.playbackSession
     val hasPlayableSelection = when (val request = session.request) {
         is PlaybackRequest.Part -> session.phase in setOf(PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED) || (session.phase == PlaybackSessionPhase.STOPPED && session.artifact != null)
-        is PlaybackRequest.ConnectedSource -> session.phase in setOf(PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED) || (session.phase == PlaybackSessionPhase.STOPPED && session.artifact != null)
+        is PlaybackRequest.SourceSongReview -> session.phase in setOf(PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED) || (session.phase == PlaybackSessionPhase.STOPPED && session.artifact != null)
         is PlaybackRequest.Mix -> session.phase in setOf(PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED) || playbackSourceAvailable(state, request.source)
         is PlaybackRequest.Cohesion -> session.phase in setOf(PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED) || session.artifact != null
         null -> playbackSourceAvailable(state, PlaybackSource.DRY)
@@ -1002,7 +1002,7 @@ internal fun CompactTransport(state: WorkspaceUiState, onIntent: (WorkspaceInten
     val canSeek = session.artifact != null && session.durationSeconds > 0.0 && session.phase in setOf(PlaybackSessionPhase.READY, PlaybackSessionPhase.STARTING, PlaybackSessionPhase.PLAYING, PlaybackSessionPhase.PAUSED, PlaybackSessionPhase.STOPPED)
     val label = when (val request = session.request) {
         is PlaybackRequest.Part -> "Part ${request.partId} preview"
-        is PlaybackRequest.ConnectedSource -> "Connected solo source"
+        is PlaybackRequest.SourceSongReview -> "Canonical melody ${request.selection.selection.name.lowercase().replace('_', ' ')} preview"
         is PlaybackRequest.Mix -> request.source.name.lowercase().replaceFirstChar(Char::uppercase) + " mix"
     is PlaybackRequest.Cohesion -> if (request.enhanced) "Cohesion preview" else "Baseline preview"
         null -> "Dry mix"

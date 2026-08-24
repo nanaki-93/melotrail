@@ -1,6 +1,7 @@
 package app.melotrail.application
 
 import app.melotrail.arrangement.AnalysisKind
+import app.melotrail.arrangement.MelodyConnectionPlanner
 import app.melotrail.arrangement.InstrumentRenderer
 import app.melotrail.arrangement.LogicalInstrument
 import app.melotrail.arrangement.MidiAnalysis
@@ -9,6 +10,12 @@ import app.melotrail.arrangement.MidiFeelReportStore
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.SelectedMidiArtifactResolver
+import app.melotrail.arrangement.SourceSong
+import app.melotrail.arrangement.WorkflowArtifactReference
+import app.melotrail.arrangement.DeterministicStemMixer
+import app.melotrail.arrangement.MixedStem
+import app.melotrail.audio.WAVDecoder
+import app.melotrail.model.ErrorReporter
 import app.melotrail.preparation.InputInspectionPaths
 import app.melotrail.preparation.InputInspectionReportStore
 import app.melotrail.preparation.PreparationStatus
@@ -20,9 +27,14 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import java.util.UUID
+import javax.sound.midi.MetaMessage
+import javax.sound.midi.MidiEvent
+import javax.sound.midi.MidiMessage
 import javax.sound.midi.MidiSystem
+import javax.sound.midi.Sequence
 import javax.sound.sampled.AudioFormat as JavaAudioFormat
 import javax.sound.sampled.AudioSystem
+import kotlin.math.abs
 import kotlin.math.roundToLong
 
 /** A UI-neutral request for one monitor-only part artifact. */
@@ -41,6 +53,23 @@ enum class PreviewAudioSource { ORIGINAL, PREPARED_CLEAN }
  * paths and do not alter the project's selected downstream artifact.
  */
 enum class PreviewMidiSource { RAW, CLEANED, CORRECTED, ENHANCED, AI_FIX_DRAFT, AI_FIX_APPROVED, LOFI_FEEL }
+
+/** Bounded canonical melody monitor choices; none selects, mutates, or publishes release MIDI. */
+enum class SourceSongReviewPreview { SOURCE, PREPARED, FULL_MELODY, BOUNDARY }
+
+/** A UI-neutral canonical-melody monitor request with stable part/boundary identities only. */
+data class SourceSongReviewPreviewRequest(
+    val selection: SourceSongReviewPreview,
+    val partId: String? = null,
+    val boundaryId: String? = null
+) {
+    init {
+        require((selection == SourceSongReviewPreview.SOURCE) == (partId != null) &&
+            (selection == SourceSongReviewPreview.BOUNDARY) == (boundaryId != null)) {
+            "Canonical melody preview selection is incomplete."
+        }
+    }
+}
 
 enum class PreviewStage { VALIDATE, DECODE_OR_RENDER, VALIDATE_ARTIFACT, REUSE_OR_PUBLISH }
 
@@ -102,9 +131,9 @@ class JavaSoundPreviewMp3Decoder : PreviewMp3Decoder {
 interface PartPreviewApplicationService {
     suspend fun resolve(request: PreviewRequest): PreviewResult
 
-    /** Resolve a piano monitor render for the current boundary-connected source melody. */
-    suspend fun resolveConnectedSource(projectRoot: Path): PreviewResult =
-        PreviewResult.Failed(PreviewStage.VALIDATE, "Connected source-song preview is unavailable from this preview service.")
+    /** Resolve one current source/prepared/full/boundary comparison monitor before arrangement approval. */
+    suspend fun resolveSourceSongReview(projectRoot: Path, request: SourceSongReviewPreviewRequest): PreviewResult =
+        PreviewResult.Failed(PreviewStage.VALIDATE, "Canonical melody review preview is unavailable from this preview service.")
 
     /** Compatibility seam for the existing transport adapter; Task 034 consumes [PreviewResult] directly. */
     suspend fun preview(root: Path, partId: String): Path = when (val result = resolve(PreviewRequest(root, partId))) {
@@ -118,7 +147,8 @@ class DefaultPartPreviewApplicationService(
     private val renderer: InstrumentRenderer,
     private val mp3Decoder: PreviewMp3Decoder = JavaSoundPreviewMp3Decoder(),
     private val rendererConfigurationFingerprint: () -> String = { renderer.javaClass.name },
-    private val sourceSongCritic: SourceSongCriticApplicationService = DefaultSourceSongCriticApplicationService()
+    private val sourceSongService: SourceSongApplicationService = SourceSongApplicationService(),
+    private val melodyConnectionPlanner: MelodyConnectionPlanner = MelodyConnectionPlanner()
 ) : PartPreviewApplicationService {
     override suspend fun resolve(request: PreviewRequest): PreviewResult = withContext(Dispatchers.IO) {
         val stages = mutableListOf(PreviewStage.VALIDATE)
@@ -154,40 +184,132 @@ class DefaultPartPreviewApplicationService(
         }
     }
 
-    /** Render only the current connected source MIDI as piano without affecting arrangement or release artifacts. */
-    override suspend fun resolveConnectedSource(projectRoot: Path): PreviewResult = withContext(Dispatchers.IO) {
+    /** Resolve source, prepared, full-melody, or two-occurrence boundary monitoring from the current canonical sidecars. */
+    override suspend fun resolveSourceSongReview(projectRoot: Path, request: SourceSongReviewPreviewRequest): PreviewResult = withContext(Dispatchers.IO) {
         val stages = mutableListOf(PreviewStage.VALIDATE)
         try {
             val root = projectRoot.toAbsolutePath().normalize()
             val project = ProjectStore.read(root).also { it.requireValid(root) }
             val format = project.renderFormat
-                ?: return@withContext PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Project render format is required before previewing the connected source melody.")
-            val approved = try { sourceSongCritic.requireApprovedMelody(root) } catch (error: IllegalArgumentException) {
-                return@withContext PreviewResult.Prerequisite(PreviewStage.VALIDATE, error.message ?: "Run Source Song Critic and approve the connected full melody before previewing it.")
+                ?: return@withContext PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Project render format is required before previewing the canonical melody.")
+            val sourceSong = sourceSongService.assemble(root).song
+            val connection = melodyConnectionPlanner.connect(root, sourceSong).connection
+            val selection = when (request.selection) {
+                SourceSongReviewPreview.SOURCE -> {
+                    val partId = requireNotNull(request.partId)
+                    val part = project.parts.singleOrNull { it.id == partId }
+                        ?: return@withContext PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Source part '$partId' is no longer in the current project.")
+                    val raw = part.midi?.raw
+                        ?: return@withContext PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Preserved source MIDI is unavailable for '$partId'.")
+                    val rawPath = root.resolve(raw).normalize()
+                    if (!rawPath.startsWith(root) || !Files.isRegularFile(rawPath) || Files.isSymbolicLink(rawPath)) {
+                        return@withContext PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Preserved source MIDI is unavailable for '$partId'.")
+                    }
+                    CanonicalReviewMidi("Preserved source $partId", WorkflowArtifactReference(raw, digest(Files.readAllBytes(rawPath))), "source-$partId")
+                }
+                SourceSongReviewPreview.PREPARED -> CanonicalReviewMidi("Prepared canonical melody", sourceSong.assembledMidi, "prepared")
+                SourceSongReviewPreview.FULL_MELODY -> CanonicalReviewMidi("Connected full melody", connection.outputMidi, "full")
+                SourceSongReviewPreview.BOUNDARY -> {
+                    val boundaryId = requireNotNull(request.boundaryId)
+                    val boundary = connection.boundaries.singleOrNull { it.decision.boundaryId == boundaryId }
+                        ?: return@withContext PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Canonical boundary '$boundaryId' is not in the current connected melody.")
+                    val clipped = boundaryMidi(root, sourceSong, connection.outputMidi, boundary.decision.outgoingInstanceId, boundary.decision.incomingInstanceId, boundaryId)
+                    CanonicalReviewMidi("Boundary $boundaryId", clipped, "boundary-$boundaryId")
+                }
             }
-            val midi = root.resolve(approved.connectedMidi.file).normalize()
-            if (!midi.startsWith(root) || !Files.isRegularFile(midi) || digest(Files.readAllBytes(midi)) != approved.connectedMidi.sha256) {
-                return@withContext PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Approved connected full melody is missing or stale. Rerun Source Song Critic and approve the current melody.")
-            }
-            val duration = MidiSystem.getSequence(midi.toFile()).microsecondLength / 1_000_000.0
-            if (!duration.isFinite() || duration <= 0.0) return@withContext PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Connected source melody has no usable duration.")
-            val frames = (duration * format.sampleRate).roundToLong()
-            val target = previewTarget(root, "piano-source-song", "connected", fingerprint(midi, "${format.sampleRate}|${format.channels}|$frames|${rendererConfigurationFingerprint()}"))
-            stages += PreviewStage.DECODE_OR_RENDER
-            if (validMonitorWav(target, format.sampleRate, format.channels, 24, frames)) {
-                return@withContext PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, true, identity("Connected source melody", midi))
-            }
-            val published = publish(target, { temporary -> renderer.render(midi, LogicalInstrument.PIANO, temporary, format, frames) }) { temporary ->
-                validMonitorWav(temporary, format.sampleRate, format.channels, 24, frames)
-            }
-            if (!published) PreviewResult.Failed(PreviewStage.VALIDATE_ARTIFACT, "Piano renderer did not produce a valid connected-source monitor artifact.")
-            else PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, false, identity("Connected source melody", midi))
+            resolveCanonicalReviewMidi(root, format, selection, stages)
         } catch (error: IllegalArgumentException) {
-            PreviewResult.Failed(PreviewStage.VALIDATE, error.message ?: "Connected source preview input is invalid.", error)
+            PreviewResult.Failed(PreviewStage.VALIDATE, error.message ?: "Canonical melody preview input is invalid.", error)
         } catch (error: Exception) {
             PreviewResult.Prerequisite(stages.lastOrNull() ?: PreviewStage.VALIDATE, "Piano preview renderer or sound library is unavailable: ${error.message ?: "unknown failure"}")
         }
     }
+
+    /** Render a verified canonical MIDI reference through the same level-matched piano monitor. */
+    private suspend fun resolveCanonicalReviewMidi(root: Path, format: RenderFormat, selection: CanonicalReviewMidi, stages: MutableList<PreviewStage>): PreviewResult {
+        val midi = verified(root, selection.reference, selection.label)
+        val duration = try { MidiSystem.getSequence(midi.toFile()).microsecondLength / 1_000_000.0 } catch (_: Exception) { 0.0 }
+        if (!duration.isFinite() || duration <= 0.0) return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "${selection.label} has no usable duration.")
+        val frames = (duration * format.sampleRate).roundToLong()
+        val target = previewTarget(root, "piano-review-${selection.id}", "canonical", fingerprint(midi, "${format.sampleRate}|${format.channels}|$frames|${rendererConfigurationFingerprint()}|rms-v1"))
+        stages += PreviewStage.DECODE_OR_RENDER
+        if (validMonitorWav(target, format.sampleRate, format.channels, 24, frames)) {
+            return PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, true, identity(selection.label, midi))
+        }
+        val published = publish(target, { temporary ->
+            renderer.render(midi, LogicalInstrument.PIANO, temporary, format, frames)
+            loudnessMatchMonitor(temporary)
+        }) { temporary -> validMonitorWav(temporary, format.sampleRate, format.channels, 24, frames) }
+        return if (published) PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, false, identity(selection.label, midi))
+        else PreviewResult.Failed(PreviewStage.VALIDATE_ARTIFACT, "Piano renderer did not produce a valid canonical-melody monitor artifact.")
+    }
+
+    /** Clip exactly the two canonical sidecar occurrences adjacent to one reviewed boundary without touching source candidates. */
+    private fun boundaryMidi(
+        root: Path,
+        sourceSong: SourceSong,
+        connected: WorkflowArtifactReference,
+        outgoingId: String,
+        incomingId: String,
+        boundaryId: String
+    ): WorkflowArtifactReference {
+        val outgoing = requireNotNull(sourceSong.fullMelody.occurrences.singleOrNull { it.occurrenceId == outgoingId }) { "Boundary '$boundaryId' has no outgoing sidecar window." }
+        val incoming = requireNotNull(sourceSong.fullMelody.occurrences.singleOrNull { it.occurrenceId == incomingId }) { "Boundary '$boundaryId' has no incoming sidecar window." }
+        require(outgoing.endTick == incoming.startTick) { "Boundary '$boundaryId' is not contiguous in the canonical sidecar." }
+        val source = verified(root, connected, "Connected full melody")
+        val sequence = MidiSystem.getSequence(source.toFile())
+        require(sequence.divisionType == Sequence.PPQ && sequence.resolution == sourceSong.canonicalPpq) { "Connected full melody has incompatible timing." }
+        val duration = incoming.endTick - outgoing.startTick
+        val fingerprint = digest(Files.readAllBytes(source) + "$boundaryId|${outgoing.startTick}|${incoming.endTick}".toByteArray())
+        val target = root.resolve("previews/canonical-boundary-$boundaryId-$fingerprint.mid").normalize()
+        require(target.startsWith(root)) { "Canonical boundary preview escapes the project root." }
+        val clipped = Sequence(Sequence.PPQ, sequence.resolution)
+        sequence.tracks.forEach { input ->
+            val output = clipped.createTrack()
+            (0 until input.size()).map(input::get)
+                .filter { event -> event.tick in outgoing.startTick..incoming.endTick && (event.message as? MetaMessage)?.type != 0x2F }
+                .forEach { event -> output.add(MidiEvent(event.message.clone() as MidiMessage, event.tick - outgoing.startTick)) }
+            output.add(MidiEvent(MetaMessage(0x2F, byteArrayOf(), 0), duration))
+        }
+        Files.createDirectories(requireNotNull(target.parent))
+        val temporary = target.resolveSibling(".${target.fileName}.${UUID.randomUUID()}.tmp")
+        try {
+            require(MidiSystem.write(clipped, 1, temporary.toFile()) > 0) { "Could not write canonical boundary preview MIDI." }
+            val digest = digest(Files.readAllBytes(temporary))
+            if (Files.exists(target)) {
+                require(Files.isRegularFile(target) && !Files.isSymbolicLink(target) && digest(Files.readAllBytes(target)) == digest) {
+                    "Existing canonical boundary preview differs; preserving it for inspection."
+                }
+            } else {
+                try { Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE) }
+                catch (_: java.nio.file.AtomicMoveNotSupportedException) { Files.move(temporary, target) }
+            }
+        } finally { Files.deleteIfExists(temporary) }
+        return WorkflowArtifactReference(root.relativize(target).toString().replace('\\', '/'), digest(Files.readAllBytes(target)))
+    }
+
+    /** Verify a fingerprinted MIDI reference without exposing its local path to a caller. */
+    private fun verified(root: Path, reference: WorkflowArtifactReference, label: String): Path {
+        val path = root.resolve(reference.file).normalize()
+        require(path.startsWith(root) && Files.isRegularFile(path) && !Files.isSymbolicLink(path) && digest(Files.readAllBytes(path)) == reference.sha256) {
+            "$label is missing or stale. Regenerate the current canonical melody review."
+        }
+        return path
+    }
+
+    /** Match every canonical MIDI monitor to a fixed RMS target with a peak-safe ceiling for fair A/B listening. */
+    private fun loudnessMatchMonitor(path: Path) {
+        val audio = WAVDecoder(ErrorReporter.NoOp).decode(path)
+        val rms = kotlin.math.sqrt(audio.samples.sumOf { sample -> sample.toDouble() * sample } / audio.samples.size.coerceAtLeast(1))
+        if (rms <= 1e-9) return
+        val requestedGain = (MONITOR_RMS / rms).coerceIn(0.25, 4.0)
+        val peak = audio.samples.maxOfOrNull { sample -> abs(sample).toDouble() } ?: 0.0
+        val gain = if (peak * requestedGain > MONITOR_PEAK) MONITOR_PEAK / peak else requestedGain
+        val normalized = audio.copy(samples = FloatArray(audio.samples.size) { index -> (audio.samples[index] * gain).toFloat() })
+        DeterministicStemMixer().writeWav(MixedStem(normalized, listOf("canonical-preview")), path)
+    }
+
+    private data class CanonicalReviewMidi(val label: String, val reference: WorkflowArtifactReference, val id: String)
 
     private fun resolveWavSource(source: Path, stages: MutableList<PreviewStage>): PreviewResult {
         val info = inspectWav(source) ?: return PreviewResult.Failed(PreviewStage.VALIDATE, "WAV source is not a supported RIFF PCM/float WAV.")
@@ -246,11 +368,14 @@ class DefaultPartPreviewApplicationService(
         }
         if (!duration.isFinite() || duration <= 0) return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "MIDI analysis for '$partId' has no usable duration.")
         val frames = (duration * format.sampleRate).roundToLong()
-        val target = previewTarget(root, "piano", partId, fingerprint(clean, "${format.sampleRate}|${format.channels}|$frames|${rendererConfigurationFingerprint()}"))
+        val target = previewTarget(root, "piano", partId, fingerprint(clean, "${format.sampleRate}|${format.channels}|$frames|${rendererConfigurationFingerprint()}|rms-v1"))
         stages += PreviewStage.DECODE_OR_RENDER
         if (validMonitorWav(target, format.sampleRate, format.channels, 24, frames)) return PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, true, identity("Current selected MIDI", clean))
         return try {
-            val published = publish(target, { temporary -> renderer.render(clean, LogicalInstrument.PIANO, temporary, format, frames) }) { temporary -> validMonitorWav(temporary, format.sampleRate, format.channels, 24, frames) }
+            val published = publish(target, { temporary ->
+                renderer.render(clean, LogicalInstrument.PIANO, temporary, format, frames)
+                loudnessMatchMonitor(temporary)
+            }) { temporary -> validMonitorWav(temporary, format.sampleRate, format.channels, 24, frames) }
             if (!published) {
                 PreviewResult.Failed(PreviewStage.VALIDATE_ARTIFACT, "Piano renderer did not produce a valid project-format WAV monitor artifact.")
             } else PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, false, identity("Current selected MIDI", clean))
@@ -330,11 +455,14 @@ class DefaultPartPreviewApplicationService(
         val duration = try { javax.sound.midi.MidiSystem.getSequence(midiPath.toFile()).microsecondLength / 1_000_000.0 } catch (_: Exception) { 0.0 }
         if (!duration.isFinite() || duration <= 0.0) return PreviewResult.Prerequisite(PreviewStage.VALIDATE, "Selected MIDI has no usable duration.")
         val frames = (duration * format.sampleRate).roundToLong()
-        val target = previewTarget(root, "piano-${source.name.lowercase()}", part.id, fingerprint(midiPath, "${format.sampleRate}|${format.channels}|$frames|${rendererConfigurationFingerprint()}"))
+        val target = previewTarget(root, "piano-${source.name.lowercase()}", part.id, fingerprint(midiPath, "${format.sampleRate}|${format.channels}|$frames|${rendererConfigurationFingerprint()}|rms-v1"))
         stages += PreviewStage.DECODE_OR_RENDER
         if (validMonitorWav(target, format.sampleRate, format.channels, 24, frames)) return PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, true, identity(source.label(), midiPath))
         return try {
-            val published = publish(target, { temporary -> renderer.render(midiPath, LogicalInstrument.PIANO, temporary, format, frames) }) { temporary -> validMonitorWav(temporary, format.sampleRate, format.channels, 24, frames) }
+            val published = publish(target, { temporary ->
+                renderer.render(midiPath, LogicalInstrument.PIANO, temporary, format, frames)
+                loudnessMatchMonitor(temporary)
+            }) { temporary -> validMonitorWav(temporary, format.sampleRate, format.channels, 24, frames) }
             if (!published) PreviewResult.Failed(PreviewStage.VALIDATE_ARTIFACT, "Piano renderer did not produce a valid project-format WAV monitor artifact.")
             else PreviewResult.Resolved(target, stages + PreviewStage.VALIDATE_ARTIFACT + PreviewStage.REUSE_OR_PUBLISH, false, identity(source.label(), midiPath))
         } catch (error: Exception) {
@@ -392,7 +520,12 @@ class DefaultPartPreviewApplicationService(
         }
     } catch (_: Exception) { null }
 
-    private companion object { val json = Json { ignoreUnknownKeys = false }; val PART_ID = Regex("[A-Za-z0-9_-]+") }
+    private companion object {
+        val json = Json { ignoreUnknownKeys = false }
+        val PART_ID = Regex("[A-Za-z0-9_-]+")
+        const val MONITOR_RMS = 0.1
+        const val MONITOR_PEAK = 0.98
+    }
 }
 
 private fun PreviewMidiSource.label(): String = when (this) {

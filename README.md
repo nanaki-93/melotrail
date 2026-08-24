@@ -56,6 +56,14 @@ accompaniment voicing can reset; and production lacks interaction-aware
 kick/bass control and selected-master codec-preview evidence. Those defects are
 the scope of [`PLAN.md`](PLAN.md).
 
+Before arrangement, the Structure page exposes a canonical melody quality
+review: source-key confidence, reviewed timing/downbeat mapping, pickup/body/
+tail windows, accepted groove, monophony and harmony-fit changes, protected
+anchors, critic blockers, and exact hash-bound artifact references. Its opt-in
+source/prepared/full-melody/boundary piano monitors use one peak-safe RMS target
+for fair listening; private audition remains experimental, while source
+certification and commercial-evidence readiness remain distinct gates.
+
 For current operational behavior, use:
 
 - [MIDI import process](docs/MIDI_IMPORT_PROCESS.md)

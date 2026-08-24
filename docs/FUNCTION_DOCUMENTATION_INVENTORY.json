@@ -109,10 +109,10 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspacePageRouter.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspacePageRouter.kt has 102 callable declarations, 10 directly documented and 92 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 102,
-      "declarationDigest": "1795d0010716f45ea57d33ae61eafb5fc761af851743326c33397d0fb3305a85",
-      "documentedFunctionCount": 10
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspacePageRouter.kt has 105 callable declarations, 13 directly documented and 92 still requiring focused KDoc/docstrings. QP-015 reviewed canonical melody evidence, readiness, and preview presentation on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "functionCount": 105,
+      "declarationDigest": "fdf39d86d7c5f0fc1218664bc13addfdc4034753d43581a980002aa9d0ed9e30",
+      "documentedFunctionCount": 13
     },
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspaceShellFrame.kt",
@@ -133,10 +133,10 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspaceViewModel.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspaceViewModel.kt has 190 callable declarations, 8 directly documented and 182 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 190,
-      "declarationDigest": "66453bc9aaa59677e38fbbd29464026519c4d02f41421662e3b7309fdb4e3eca",
-      "documentedFunctionCount": 8
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspaceViewModel.kt has 193 callable declarations, 13 directly documented and 180 still requiring focused KDoc/docstrings. QP-015 reviewed canonical melody evidence and monitor-request orchestration on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "functionCount": 193,
+      "declarationDigest": "7574aa629006b0e1320080f1f21fd9599fefade7cd296fa61395a10434a2d337",
+      "documentedFunctionCount": 13
     },
     {
       "path": "src/main/kotlin/app/melotrail/analysis/SongAnalysis.kt",
@@ -277,10 +277,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/PartPreviewApplicationService.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/application/PartPreviewApplicationService.kt has 24 callable declarations, 3 directly documented and 21 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 24,
-      "declarationDigest": "8f207ee5974175794e1d93a85761db7dee65ddf9730fcb54bee6e097dfcc3cbf",
-      "documentedFunctionCount": 3
+      "reason": "src/main/kotlin/app/melotrail/application/PartPreviewApplicationService.kt has 28 callable declarations, 7 directly documented and 21 still requiring focused KDoc/docstrings. QP-015 reviewed verified canonical source/prepared/full/boundary monitors and level matching on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "functionCount": 28,
+      "declarationDigest": "a313f6417466d92425794c4f7203aa3d9e9d484c92efbe40dfe1c1d532ced635",
+      "documentedFunctionCount": 7
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/ProjectApplicationService.kt",

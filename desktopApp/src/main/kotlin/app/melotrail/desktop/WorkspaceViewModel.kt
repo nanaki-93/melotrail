@@ -81,6 +81,8 @@ import app.melotrail.application.AudioPreparationAvailability
 import app.melotrail.application.AudioPreparationSnapshot
 import app.melotrail.application.PreviewAudioSource
 import app.melotrail.application.PreviewMidiSource
+import app.melotrail.application.SourceSongReviewPreview
+import app.melotrail.application.SourceSongReviewPreviewRequest
 import app.melotrail.application.SaveStructureRequest
 import app.melotrail.application.InsertStructureOccurrenceRequest
 import app.melotrail.application.DuplicateStructureOccurrenceRequest
@@ -112,8 +114,17 @@ import app.melotrail.arrangement.ArrangementRoleSelection
 import app.melotrail.arrangement.SoundTrait
 import app.melotrail.arrangement.MelodyConnection
 import app.melotrail.arrangement.MelodyConnectionPlanner
+import app.melotrail.arrangement.MelodyHarmonyFitReason
+import app.melotrail.arrangement.MelodyHarmonyFitReport
+import app.melotrail.arrangement.MelodyPreparationDecisionKind
+import app.melotrail.arrangement.MelodyPreparationReleaseKind
+import app.melotrail.arrangement.MonophonicMelodyPreparationReport
+import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.SourceSong
+import app.melotrail.arrangement.WorkflowArtifactReference
 import app.melotrail.application.MidiQualityStatus
+import app.melotrail.preparation.MidiTimeMappingStore
+import app.melotrail.preparation.SourceTimingEvidenceStore
 import app.melotrail.preparation.InputCleanupMode
 import app.melotrail.preparation.TranscriptionInputArtifact
 import app.melotrail.commercial.SourceRightsAttestation
@@ -143,14 +154,18 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import java.nio.file.Files
 import java.nio.file.Path
+import java.security.MessageDigest
 import java.time.Instant
 
 data class WorkspaceDispatchers(
     val ui: CoroutineDispatcher = Dispatchers.Main.immediate,
     val io: CoroutineDispatcher = Dispatchers.IO
 )
+
+private val canonicalJson = Json { ignoreUnknownKeys = false }
 
 data class WorkspaceUiState(
     val project: ProjectSnapshot? = null,
@@ -225,13 +240,72 @@ data class SourceSongReviewUiState(
     val connection: MelodyConnection? = null,
     val critic: SourceSongCriticSnapshot? = null,
     val approval: SourceSongApprovalSnapshot? = null,
+    /** Verified canonical preparation evidence; a null value means the candidate has not been built. */
+    val canonicalEvidence: CanonicalMelodyReviewEvidence? = null,
+    /** A structure change explicitly invalidated the previously reviewed source-song evidence. */
+    val stale: Boolean = false,
     val error: String? = null
 ) {
     val approved: Boolean get() = approval != null
     val hasBlockingIssues: Boolean get() = critic?.report?.hasBlockingIssues == true
     val hasHardBlockers: Boolean get() = critic?.report?.hasHardBlockers == true
     val experimentalApproval: Boolean get() = approval?.approval?.mode?.name == "PRIVATE_AUDITION"
+    /** An explicit evidence state; retained files never make this state ready. */
+    val readiness: CanonicalMelodyReviewReadiness get() = when {
+        error != null -> CanonicalMelodyReviewReadiness.ERROR
+        stale -> CanonicalMelodyReviewReadiness.STALE
+        sourceSong == null || connection == null || critic == null || canonicalEvidence == null -> CanonicalMelodyReviewReadiness.REVIEW
+        !critic.current -> CanonicalMelodyReviewReadiness.STALE
+        hasHardBlockers -> CanonicalMelodyReviewReadiness.BLOCKED
+        approval?.approval?.mode?.name == "QUALITY_CERTIFIED" -> CanonicalMelodyReviewReadiness.READY
+        else -> CanonicalMelodyReviewReadiness.REVIEW
+    }
 }
+
+/** Truthful pre-arrangement states, derived from current service evidence rather than artifact existence. */
+enum class CanonicalMelodyReviewReadiness { READY, REVIEW, BLOCKED, STALE, ERROR }
+
+/** Source-key evidence already projected by the project application boundary. */
+data class CanonicalMelodySourceKeyEvidence(
+    val partId: String,
+    val key: String,
+    val confidence: Double,
+    val confirmed: Boolean
+)
+
+/** One hash-bound source-to-song timing decision shown before arrangement approval. */
+data class CanonicalMelodyTimingEvidence(
+    val partId: String,
+    val sourceDownbeatBeatIndex: Int?,
+    val downbeatConfidence: Double?,
+    val mappingConfidence: Double?,
+    val targetStartBar: Long?,
+    val targetBarCount: Int?,
+    val acceptedSourceGroove: Boolean,
+    val grooveConfidence: Double?
+)
+
+/** Exact preparation and fitting totals, never inferred from a MIDI filename. */
+data class CanonicalMelodyPreparationEvidence(
+    val sustainTailReleases: Int,
+    val monophonyRemovals: Int,
+    val pitchRepairs: Int,
+    val harmonyTailRepairs: Int,
+    val protectedAnchors: Int,
+    val preparationBlockers: Int,
+    val harmonyBlockers: Int
+)
+
+/** A project-relative, fingerprinted artifact selected for this review. */
+data class CanonicalMelodyArtifactEvidence(val label: String, val reference: WorkflowArtifactReference)
+
+/** Complete typed evidence required by the canonical melody quality-review UI. */
+data class CanonicalMelodyReviewEvidence(
+    val sourceKeys: List<CanonicalMelodySourceKeyEvidence>,
+    val timing: List<CanonicalMelodyTimingEvidence>,
+    val preparation: CanonicalMelodyPreparationEvidence,
+    val artifacts: List<CanonicalMelodyArtifactEvidence>
+)
 
 private data class ProjectHydration(
     val mix: Result<MixSnapshot>,
@@ -243,7 +317,8 @@ private data class ProjectHydration(
     val fullSongEnhancement: Result<FullSongEnhancementSnapshot>,
     val humanization: Result<HumanizationSnapshot>,
     val releaseReview: Result<ReleaseReviewSnapshot>,
-    val sourceSongReview: SourceSongReviewUiState?
+    /** Retain load failure so a previously ready review becomes stale rather than falsely remaining ready. */
+    val sourceSongReview: Result<SourceSongReviewUiState>?
 )
 
 enum class WorkspaceSection(val label: String) {
@@ -342,8 +417,8 @@ data class PlaybackSession(
 sealed interface PlaybackRequest {
     val projectRoot: Path
     data class Part(override val projectRoot: Path, val partId: String, val audioSource: PreviewAudioSource, val midiSource: PreviewMidiSource? = null) : PlaybackRequest
-    /** The connected source is its own candidate, not a selected source part. */
-    data class ConnectedSource(override val projectRoot: Path) : PlaybackRequest
+    /** A current canonical source/prepared/full/boundary monitor, independent of selected part MIDI. */
+    data class SourceSongReview(override val projectRoot: Path, val selection: SourceSongReviewPreviewRequest) : PlaybackRequest
     data class Mix(override val projectRoot: Path, val source: PlaybackSource) : PlaybackRequest
     data class Cohesion(override val projectRoot: Path, val enhanced: Boolean) : PlaybackRequest
 }
@@ -691,7 +766,7 @@ sealed interface WorkspaceIntent {
     data class SelectConfirmedSourceKey(val key: MusicalKey) : WorkspaceIntent
     data object ConfirmSourceKey : WorkspaceIntent
     data object GenerateSourceSongConnections : WorkspaceIntent
-    data object PreviewConnectedSourceSong : WorkspaceIntent
+    data class PreviewSourceSongReview(val selection: SourceSongReviewPreviewRequest) : WorkspaceIntent
     data object RequestApproveSourceSong : WorkspaceIntent
     data class UpdateSourceSongOverrideReason(val reason: String) : WorkspaceIntent
     data object ConfirmSourceSongApproval : WorkspaceIntent
@@ -912,7 +987,7 @@ class WorkspaceViewModel(
             is WorkspaceIntent.SelectConfirmedSourceKey -> selectConfirmedSourceKey(intent.key)
             WorkspaceIntent.ConfirmSourceKey -> confirmSourceKey()
             WorkspaceIntent.GenerateSourceSongConnections -> generateSourceSongConnections()
-            WorkspaceIntent.PreviewConnectedSourceSong -> previewConnectedSourceSong()
+            is WorkspaceIntent.PreviewSourceSongReview -> previewSourceSongReview(intent.selection)
             WorkspaceIntent.RequestApproveSourceSong -> requestApproveSourceSong()
             is WorkspaceIntent.UpdateSourceSongOverrideReason -> updateSourceSongOverrideReason(intent.reason)
             WorkspaceIntent.ConfirmSourceSongApproval -> approveSourceSong()
@@ -2088,7 +2163,12 @@ class WorkspaceViewModel(
                     val sourceSong = sourceSongService.assemble(project.root).song
                     val connection = melodyConnectionPlanner.connect(project.root, sourceSong).connection
                     val critic = sourceSongCriticService.run(project.root)
-                    SourceSongReviewUiState(sourceSong = sourceSong, connection = connection, critic = critic)
+                    SourceSongReviewUiState(
+                        sourceSong = sourceSong,
+                        connection = connection,
+                        critic = critic,
+                        canonicalEvidence = canonicalMelodyEvidence(project, project.root, sourceSong, connection, critic)
+                    )
                 }
             }.onSuccess { review ->
                 val message = if (review.hasHardBlockers) "Connected source song has non-overridable hard critic findings; repair the canonical evidence before approval."
@@ -2102,10 +2182,11 @@ class WorkspaceViewModel(
         }
     }
 
-    private fun previewConnectedSourceSong() {
-        val project = state.value.project ?: return fail("preview connected source", "Open a project before previewing the connected source song.")
-        if (state.value.sourceSongReview.connection == null) return fail("preview connected source", "Generate connections before previewing the connected source song.")
-        startPlaybackSession(PlaybackRequest.ConnectedSource(project.root), RuntimeCapability.MIDI_PREVIEW)
+    /** Start an opt-in, level-matched canonical melody review monitor without selecting or changing any MIDI. */
+    private fun previewSourceSongReview(selection: SourceSongReviewPreviewRequest) {
+        val project = state.value.project ?: return fail("preview canonical melody", "Open a project before previewing canonical melody evidence.")
+        if (state.value.sourceSongReview.connection == null) return fail("preview canonical melody", "Generate canonical melody evidence before previewing it.")
+        startPlaybackSession(PlaybackRequest.SourceSongReview(project.root, selection), RuntimeCapability.MIDI_PREVIEW)
     }
 
     private fun requestApproveSourceSong() {
@@ -2164,7 +2245,7 @@ class WorkspaceViewModel(
             try {
                 val artifact = when (request) {
                     is PlaybackRequest.Part -> resolvePartArtifact(request, id) ?: return@launch
-                    is PlaybackRequest.ConnectedSource -> resolveConnectedSourceArtifact(request, id) ?: return@launch
+                    is PlaybackRequest.SourceSongReview -> resolveSourceSongReviewArtifact(request, id) ?: return@launch
                     is PlaybackRequest.Mix -> request.artifact()
                     is PlaybackRequest.Cohesion -> request.artifact()
                 }
@@ -2217,12 +2298,13 @@ class WorkspaceViewModel(
         }
     }
 
-    private suspend fun resolveConnectedSourceArtifact(request: PlaybackRequest.ConnectedSource, id: Long): PlaybackArtifactIdentity? {
+    /** Resolve only a typed, hash-bound canonical-melody monitor from the preview application service. */
+    private suspend fun resolveSourceSongReviewArtifact(request: PlaybackRequest.SourceSongReview, id: Long): PlaybackArtifactIdentity? {
         val previews = partPreviewService ?: run {
-            failPlaybackSession(id, PlaybackFailureStage.RUNTIME, "Source-song preview service is not configured for this desktop session.")
+            failPlaybackSession(id, PlaybackFailureStage.RUNTIME, "Canonical melody preview service is not configured for this desktop session.")
             return null
         }
-        return when (val resolved = withContext(ioDispatcher) { previews.resolveConnectedSource(request.projectRoot) }) {
+        return when (val resolved = withContext(ioDispatcher) { previews.resolveSourceSongReview(request.projectRoot, request.selection) }) {
             is PreviewResult.Resolved -> PlaybackArtifactIdentity(request.projectRoot, resolved.artifact, source = resolved.source)
             is PreviewResult.Prerequisite -> {
                 val stage = if (resolved.stage == app.melotrail.application.PreviewStage.DECODE_OR_RENDER) PlaybackFailureStage.RUNTIME else PlaybackFailureStage.RESOLUTION
@@ -2313,7 +2395,7 @@ class WorkspaceViewModel(
             PreviewAudioSource.PREPARED_CLEAN -> PlaybackSourceKind.PREPARED_AUDIO
             PreviewAudioSource.ORIGINAL -> if (state.value.project?.parts?.find { it.id == partId }?.sourceType == PartSourceType.MIDI) PlaybackSourceKind.MIDI else PlaybackSourceKind.SOURCE_AUDIO
         }
-        is PlaybackRequest.ConnectedSource -> PlaybackSourceKind.MIDI
+        is PlaybackRequest.SourceSongReview -> PlaybackSourceKind.MIDI
         is PlaybackRequest.Mix -> when (source) {
             PlaybackSource.DRY -> PlaybackSourceKind.DRY_MIX
             PlaybackSource.LOFI -> PlaybackSourceKind.LOFI_MIX
@@ -2325,7 +2407,7 @@ class WorkspaceViewModel(
     private fun PlaybackRequest.requiredCapability(): RuntimeCapability? = when (this) {
         is PlaybackRequest.Mix -> null
         is PlaybackRequest.Cohesion -> null
-        is PlaybackRequest.ConnectedSource -> RuntimeCapability.MIDI_PREVIEW
+        is PlaybackRequest.SourceSongReview -> RuntimeCapability.MIDI_PREVIEW
         is PlaybackRequest.Part -> state.value.project?.parts?.find { it.id == partId }?.let {
             if (it.sourceType == PartSourceType.AUDIO) RuntimeCapability.SOURCE_PREVIEW else RuntimeCapability.MIDI_PREVIEW
         }
@@ -2467,7 +2549,7 @@ class WorkspaceViewModel(
             runCatching { withContext(ioDispatcher) { operation() } }
                 .onSuccess { snapshot ->
                     opened(snapshot, "Updated song structure", feedbackId, stale = state.value.downstreamArtifactsStale)
-                    mutableState.update { current -> current.copy(sourceSongReview = SourceSongReviewUiState(), selectedStructureOccurrenceId =
+                    mutableState.update { current -> current.copy(sourceSongReview = SourceSongReviewUiState(stale = true), selectedStructureOccurrenceId =
                         selectInsertedAfter?.let { source -> snapshot.structure.getOrNull(snapshot.structure.indexOfFirst { it.instanceId == source } + 1)?.instanceId }
                             ?: snapshot.structure.firstOrNull { it.instanceId == selectedId }?.instanceId
                             ?: snapshot.structure.firstOrNull()?.instanceId) }
@@ -2513,7 +2595,7 @@ class WorkspaceViewModel(
                     opened(snapshot, if (partIds.isEmpty()) "Cleared structure" else "Saved song structure", feedbackId, stale =
                         state.value.downstreamArtifactsStale || (existing != partIds && artifactsExist))
                     mutableState.update { current ->
-                        current.copy(sourceSongReview = SourceSongReviewUiState(), selectedStructureOccurrenceId = selectedIndex?.let(snapshot.structure::getOrNull)?.instanceId
+                        current.copy(sourceSongReview = SourceSongReviewUiState(stale = existing != partIds), selectedStructureOccurrenceId = selectedIndex?.let(snapshot.structure::getOrNull)?.instanceId
                             ?: current.selectedStructureOccurrenceId?.takeIf { id -> snapshot.structure.any { it.instanceId == id } }
                             ?: snapshot.structure.firstOrNull()?.instanceId)
                     }
@@ -3335,7 +3417,7 @@ class WorkspaceViewModel(
             val fullSongEnhancement = runCatching { fullSongEnhancementService.load(project.root) }
             val humanization = runCatching { humanizationService.load(project.root) }
             val releaseReview = runCatching { releaseReviewService.load(project.root) }
-            val sourceSongReview = if (project.structure.size >= 2) runCatching { loadSourceSongReview(project.root) }.getOrNull() else null
+            val sourceSongReview = if (project.structure.size >= 2) runCatching { loadSourceSongReview(project.root) } else null
             ProjectHydration(mix, arrangement, arrangementWorkspace, cohesion, aiFix, fullSongCritic, fullSongEnhancement, humanization, releaseReview, sourceSongReview)
         }
         val warnings = buildList {
@@ -3363,7 +3445,12 @@ class WorkspaceViewModel(
                     fullSongEnhancement = hydration.fullSongEnhancement.getOrNull(),
                     humanization = hydration.humanization.getOrNull(),
                     releaseReview = hydration.releaseReview.getOrNull(),
-                    sourceSongReview = hydration.sourceSongReview ?: if (resetWorkspace) SourceSongReviewUiState() else current.sourceSongReview,
+                    sourceSongReview = when {
+                        hydration.sourceSongReview?.isSuccess == true -> hydration.sourceSongReview.getOrNull()!!
+                        resetWorkspace -> SourceSongReviewUiState()
+                        hydration.sourceSongReview != null && current.sourceSongReview.sourceSong != null -> SourceSongReviewUiState(stale = true)
+                        else -> current.sourceSongReview
+                    },
                     selectedArrangementSection = if (resetWorkspace) arrangement?.sections?.firstOrNull()?.index else current.selectedArrangementSection,
                     focusedCriticIssueId = if (resetWorkspace) null else current.focusedCriticIssueId?.takeIf { issueId ->
                         hydration.fullSongCritic.getOrNull()?.issueLocations?.any { it.issueId == issueId } == true
@@ -3386,8 +3473,87 @@ class WorkspaceViewModel(
         val connection = melodyConnectionPlanner.connect(root, sourceSong).connection
         val critic = sourceSongCriticService.load(root)
         val approval = runCatching { sourceSongCriticService.requireApproved(root) }.getOrNull()
-        return SourceSongReviewUiState(sourceSong, connection, critic, approval)
+        val project = projectService.open(root)
+        return SourceSongReviewUiState(
+            sourceSong = sourceSong,
+            connection = connection,
+            critic = critic,
+            approval = approval,
+            canonicalEvidence = canonicalMelodyEvidence(project, root, sourceSong, connection, critic)
+        )
     }
+
+    /** Read only verified current sidecars and project summaries for the musician-facing canonical melody review. */
+    private fun canonicalMelodyEvidence(
+        project: ProjectSnapshot,
+        projectRoot: Path,
+        sourceSong: SourceSong,
+        connection: MelodyConnection,
+        critic: SourceSongCriticSnapshot
+    ): CanonicalMelodyReviewEvidence {
+        val root = projectRoot.toAbsolutePath().normalize()
+        val persisted = ProjectStore.read(root).also { it.requireValid(root) }
+        val partIds = sourceSong.sections.map { it.sourcePartId }.distinct()
+        val sourceKeys = partIds.mapNotNull { partId -> project.parts.singleOrNull { it.id == partId }?.let { part ->
+            val key = part.sourceKey
+            CanonicalMelodySourceKeyEvidence(
+                partId = partId,
+                key = key?.confirmedOverride?.toString() ?: key?.detectedKey?.toString() ?: "Unknown",
+                confidence = key?.confidence ?: 0.0,
+                confirmed = part.sourceKeyConfirmed
+            )
+        } }
+        val timing = partIds.map { partId ->
+            val part = requireNotNull(persisted.parts.singleOrNull { it.id == partId }) { "Source-song part '$partId' is absent from the current project." }
+            val mapping = part.timingMappingEvidence?.let { MidiTimeMappingStore.readReport(root, it.report) }
+            val sourceTiming = part.sourceTimingEvidence?.let { SourceTimingEvidenceStore.read(root, it.report) }
+            CanonicalMelodyTimingEvidence(
+                partId = partId,
+                sourceDownbeatBeatIndex = mapping?.sourceDownbeatBeatIndex ?: sourceTiming?.downbeat?.candidateBeatIndex,
+                downbeatConfidence = sourceTiming?.downbeat?.confidence,
+                mappingConfidence = mapping?.mappingConfidence,
+                targetStartBar = mapping?.targetStartBar,
+                targetBarCount = mapping?.targetBarCount,
+                acceptedSourceGroove = mapping?.acceptedSourceGroove == true,
+                grooveConfidence = sourceSong.sections.firstOrNull { it.sourcePartId == partId }?.groove?.template?.confidence
+            )
+        }
+        val preparations = sourceSong.sections.mapNotNull { it.sourceMidi.preparationReport }.distinctBy(WorkflowArtifactReference::file)
+            .map { reference -> canonicalJson.decodeFromString(MonophonicMelodyPreparationReport.serializer(), verifiedCanonicalSidecar(root, reference)) }
+        val harmonyFits = sourceSong.sections.mapNotNull { it.sourceMidi.harmonyFitReport }.distinctBy(WorkflowArtifactReference::file)
+            .map { reference -> canonicalJson.decodeFromString(MelodyHarmonyFitReport.serializer(), verifiedCanonicalSidecar(root, reference)) }
+        val preparation = CanonicalMelodyPreparationEvidence(
+            sustainTailReleases = preparations.sumOf { report -> report.sourceNotes.count { note -> note.releaseKind != MelodyPreparationReleaseKind.NOTE_OFF } },
+            monophonyRemovals = preparations.sumOf { report -> report.decisions.count { decision -> decision.kind in setOf(MelodyPreparationDecisionKind.REMOVED_OVERLAP, MelodyPreparationDecisionKind.DEDUPLICATED) } },
+            pitchRepairs = harmonyFits.sumOf { report -> report.noteDecisions.count { decision -> MelodyHarmonyFitReason.REPAIRED_TO_ACTIVE_CHORD_TONE in decision.reasons } },
+            harmonyTailRepairs = harmonyFits.sumOf { report -> report.noteDecisions.count { decision -> MelodyHarmonyFitReason.SHORTENED_INCOMPATIBLE_BOUNDARY in decision.reasons } },
+            protectedAnchors = sourceSong.fullMelody.noteLineage.count { it.protectedAnchor },
+            preparationBlockers = preparations.sumOf { it.issues.size },
+            harmonyBlockers = harmonyFits.sumOf { it.issues.size }
+        )
+        val criticReference = WorkflowArtifactReference(root.relativize(critic.reportPath.toAbsolutePath().normalize()).toString().replace('\\', '/'), canonicalDigest(critic.reportPath))
+        val artifacts = buildList {
+            add(CanonicalMelodyArtifactEvidence("Assembled source melody", sourceSong.assembledMidi))
+            add(CanonicalMelodyArtifactEvidence("Connected full melody", connection.outputMidi))
+            add(CanonicalMelodyArtifactEvidence("Source Song Critic", criticReference))
+            sourceSong.sections.map { it.sourceMidi }.distinctBy { it.projectRelativePath }.forEach { input ->
+                add(CanonicalMelodyArtifactEvidence("Prepared ${input.partId}", WorkflowArtifactReference(input.projectRelativePath, input.sha256)))
+            }
+        }
+        return CanonicalMelodyReviewEvidence(sourceKeys, timing, preparation, artifacts)
+    }
+
+    /** Reject escaped, altered, or missing report evidence before it can appear as a completed review fact. */
+    private fun verifiedCanonicalSidecar(root: Path, reference: WorkflowArtifactReference): String {
+        val file = root.resolve(reference.file).normalize()
+        require(file.startsWith(root) && Files.isRegularFile(file) && !Files.isSymbolicLink(file) && canonicalDigest(file) == reference.sha256) {
+            "Canonical melody review evidence is missing or stale: ${reference.file}"
+        }
+        return Files.readString(file)
+    }
+
+    /** Return the stable SHA-256 for a file already confined to the selected project root. */
+    private fun canonicalDigest(path: Path): String = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(path)).joinToString("") { "%02x".format(it) }
 
     private fun beginFeedback(
         kind: OperationKind,

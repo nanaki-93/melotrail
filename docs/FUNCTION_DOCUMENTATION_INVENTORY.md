@@ -46,3 +46,8 @@ after their boundary-local rendering and approval contracts changed.
 QP-014 refreshed the full-song Critic, targeted-enhancement, workflow-evidence,
 and local-planner rows after complete actionable-batch evidence and
 improvement-gated candidate selection were added.
+
+QP-015 refreshed the desktop review, workspace orchestration, and preview
+application-service rows after adding verified canonical-melody evidence,
+typed source/prepared/full/boundary monitor requests, and peak-safe RMS
+matching for those opt-in piano previews.

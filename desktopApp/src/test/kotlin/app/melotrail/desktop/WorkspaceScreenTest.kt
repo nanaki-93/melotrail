@@ -53,6 +53,8 @@ import app.melotrail.application.ProjectSnapshot
 import app.melotrail.application.HarmonyCompleteness
 import app.melotrail.application.HarmonyView
 import app.melotrail.application.StructureSectionSummary
+import app.melotrail.application.SourceSongApprovalSnapshot
+import app.melotrail.application.SourceSongCriticSnapshot
 import app.melotrail.application.ReleaseExportFormat
 import app.melotrail.application.ReleaseExportInspection
 import app.melotrail.application.ReleaseExportSummary
@@ -61,6 +63,28 @@ import app.melotrail.application.LocalSoundLibraryInventory
 import app.melotrail.application.LocalSoundLibraryInventoryState
 import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.AudioMixCriticReport
+import app.melotrail.arrangement.FullMelodyNoteLineage
+import app.melotrail.arrangement.FullMelodyOccurrenceWindow
+import app.melotrail.arrangement.FullSongGrooveMapBuilder
+import app.melotrail.arrangement.FullMelodyControllerPolicy
+import app.melotrail.arrangement.MelodyConnection
+import app.melotrail.arrangement.SectionInstance
+import app.melotrail.arrangement.SectionTypeId as ArrangementSectionTypeId
+import app.melotrail.arrangement.SourceSong
+import app.melotrail.arrangement.SourceSongFullMelody
+import app.melotrail.arrangement.SourceSongGrooveEvidence
+import app.melotrail.arrangement.SourceSongHarmonySpan
+import app.melotrail.arrangement.SourceSongMidiInput
+import app.melotrail.arrangement.SourceSongSection
+import app.melotrail.arrangement.SourceSongCriticCounts
+import app.melotrail.arrangement.SourceSongCriticReport
+import app.melotrail.arrangement.SourceSongIssue
+import app.melotrail.arrangement.SourceSongIssueCategory
+import app.melotrail.arrangement.SourceSongIssueLocation
+import app.melotrail.arrangement.SourceSongIssueSeverity
+import app.melotrail.arrangement.SourceSongApproval
+import app.melotrail.arrangement.SourceSongApprovalMode
+import app.melotrail.arrangement.WorkflowArtifactReference
 import app.melotrail.harmony.ChordEvent
 import app.melotrail.harmony.ChordEventId
 import app.melotrail.harmony.ChordProgression
@@ -1144,6 +1168,62 @@ class WorkspaceScreenTest {
     }
 
     @Test
+    fun `canonical melody review composes ready review blocked stale and error states without file inference`() = runComposeUiTest {
+        val states = listOf(
+            "Quality-certified build ready" to sourceReviewState(),
+            "Review required before arrangement" to sourceReviewState(approval = null),
+            "Blocked · repair canonical melody evidence" to sourceReviewState(issue = hardSourceIssue()),
+            "Stale · regenerate and review current evidence" to sourceReviewState().copy(sourceSongReview = SourceSongReviewUiState(stale = true)),
+            "Review error · no approval implied" to sourceReviewState(error = "stale report")
+        )
+        states.forEach { (label, state) ->
+            setContent { MelotrailTheme { WorkspaceScreen(state, onIntent = {}) } }
+            onNodeWithTag(WorkspacePageTags.SOURCE_SONG_REVIEW_STATUS).performScrollTo().assertExists()
+            onNodeWithText(label).assertExists()
+        }
+
+        setContent { MelotrailTheme { WorkspaceScreen(sourceReviewState(), onIntent = {}) } }
+        onNodeWithTag(WorkspacePageTags.SOURCE_SONG_EVIDENCE).performScrollTo().assertExists()
+        onNodeWithTag(WorkspacePageTags.SOURCE_SONG_TIMELINE).assertExists()
+        onNodeWithTag(WorkspacePageTags.SOURCE_SONG_ARTIFACTS).assertExists()
+        onNodeWithText("1 sustain-tail release(s) · 2 monophony removal(s) · 1 pitch repair(s) · 1 harmony-tail repair(s)").assertExists()
+        onNodeWithText("Improve everything").assertDoesNotExist()
+    }
+
+    @Test
+    fun `canonical melody review preview actions are keyboard reachable and retain experimental state`() = runComposeUiTest {
+        val intents = mutableListOf<WorkspaceIntent>()
+        setContent { MelotrailTheme { WorkspaceScreen(sourceReviewState(approval = privateApproval()), intents::add) } }
+
+        onNodeWithText("Private audition only · experimental").performScrollTo().assertExists()
+        val source = onNodeWithTag(WorkspacePageTags.SOURCE_SONG_PREVIEW_SOURCE_PREFIX + "A")
+        source.performScrollTo().performSemanticsAction(SemanticsActions.RequestFocus) { it.invoke() }
+        source.assertIsFocused()
+        source.performKeyInput { pressKey(Key.Enter) }
+        onNodeWithTag(WorkspacePageTags.SOURCE_SONG_PREVIEW_PREPARED_PREFIX + "A").performScrollTo().performSemanticsAction(SemanticsActions.OnClick) { it.invoke() }
+        waitForIdle()
+
+        assertEquals(
+            listOf<WorkspaceIntent>(
+                WorkspaceIntent.PreviewSourceSongReview(app.melotrail.application.SourceSongReviewPreviewRequest(app.melotrail.application.SourceSongReviewPreview.SOURCE, partId = "A")),
+                WorkspaceIntent.PreviewSourceSongReview(app.melotrail.application.SourceSongReviewPreviewRequest(app.melotrail.application.SourceSongReviewPreview.PREPARED))
+            ),
+            intents
+        )
+    }
+
+    @Test
+    fun `canonical melody review evidence stays reachable at wide medium and narrow breakpoints`() {
+        listOf(Size(1536f, 1024f), Size(1000f, 900f), Size(720f, 1120f)).forEach { size ->
+            runSkikoComposeUiTest(size = size) {
+                setContent { MelotrailTheme { WorkspaceScreen(sourceReviewState(), onIntent = {}) } }
+                onNodeWithTag(WorkspacePageTags.SOURCE_SONG_REVIEW).performScrollTo().assertExists()
+                onNodeWithTag(WorkspacePageTags.SOURCE_SONG_EVIDENCE).performScrollTo().assertExists()
+            }
+        }
+    }
+
+    @Test
     fun `Arrange stays focused across blocked generating draft approval stale and failed states`() = runComposeUiTest {
         val ready = arrangeState()
         val states = listOf(
@@ -1872,6 +1952,115 @@ class WorkspaceScreenTest {
     )
 
     private fun arrangeState(): WorkspaceUiState = populatedState().copy(workspaceSection = WorkspaceSection.ARRANGE)
+
+    private fun sourceReviewState(
+        approval: SourceSongApprovalSnapshot? = qualityApproval(),
+        issue: SourceSongIssue? = null,
+        current: Boolean = true,
+        error: String? = null
+    ): WorkspaceUiState {
+        val hash = "a".repeat(64)
+        val source = sourceSong()
+        val connected = WorkflowArtifactReference("source-song/connected.mid", "b".repeat(64))
+        val report = SourceSongCriticReport(
+            sourceSongContextSha256 = hash,
+            sourceMidiSha256 = source.assembledMidi.sha256,
+            connectedMidi = connected,
+            issues = listOfNotNull(issue),
+            counts = SourceSongCriticCounts(
+                total = if (issue == null) 0 else 1,
+                warnings = if (issue?.severity == SourceSongIssueSeverity.WARNING) 1 else 0,
+                blocking = if (issue?.severity == SourceSongIssueSeverity.BLOCKING) 1 else 0,
+                hardBlockers = if (issue?.severity == SourceSongIssueSeverity.HARD_BLOCKER) 1 else 0
+            )
+        )
+        return populatedState().copy(
+            workspaceSection = WorkspaceSection.STRUCTURE,
+            sourceSongReview = SourceSongReviewUiState(
+                sourceSong = source,
+                connection = MelodyConnection(sourceSongContextSha256 = hash, inputMidiSha256 = source.assembledMidi.sha256, outputMidi = connected, boundaries = emptyList()),
+                critic = SourceSongCriticSnapshot(report, Path.of("analysis/critic.json"), Path.of("source-song/connected.mid"), current),
+                approval = approval,
+                canonicalEvidence = CanonicalMelodyReviewEvidence(
+                    sourceKeys = listOf(CanonicalMelodySourceKeyEvidence("A", "C major", 0.92, true)),
+                    timing = listOf(CanonicalMelodyTimingEvidence("A", 0, 0.88, 0.91, 1, 4, true, 0.78)),
+                    preparation = CanonicalMelodyPreparationEvidence(1, 2, 1, 1, 2, 0, 0),
+                    artifacts = listOf(
+                        CanonicalMelodyArtifactEvidence("Assembled source melody", source.assembledMidi),
+                        CanonicalMelodyArtifactEvidence("Connected full melody", connected)
+                    )
+                ),
+                error = error
+            )
+        )
+    }
+
+    private fun sourceSong(): SourceSong {
+        val hash = "a".repeat(64)
+        val sourceMidi = WorkflowArtifactReference("source-song/assembled.mid", hash)
+        val groove = SourceSongGrooveEvidence.gridFallback()
+        val windows = listOf(
+            FullMelodyOccurrenceWindow("A1", ArrangementSectionTypeId.VERSE, "A", 0, 1, 0, 1920, 0, 0, 0, 1920, 1920, 1920,
+                "A1", hash, null, null, groove),
+            FullMelodyOccurrenceWindow("B1", ArrangementSectionTypeId.CHORUS, "A", 1, 2, 1920, 3840, 1920, 1920, 1920, 3840, 3840, 3840,
+                "B1", hash, null, null, groove)
+        )
+        val full = SourceSongFullMelody(
+            melodyTrackName = "full-melody",
+            occurrences = windows,
+            noteLineage = listOf(
+                FullMelodyNoteLineage("fm-" + "1".repeat(64), "A1", "A", "source-a", 0, 960, 60, 96, true),
+                FullMelodyNoteLineage("fm-" + "2".repeat(64), "B1", "A", "source-b", 1920, 2880, 64, 96, true)
+            ),
+            maximumPolyphony = 1,
+            controllerPolicy = FullMelodyControllerPolicy.CONTROLLER_FREE_CANONICAL_OUTPUT,
+            grooveMap = FullSongGrooveMapBuilder.build(480, 4, windows)
+        )
+        val input = SourceSongMidiInput("A", "midi/harmony-fit/A.mid", hash, 480, "RAW")
+        fun section(index: Int, id: String, role: ArrangementSectionTypeId, start: Long) = SourceSongSection(
+            SectionInstance(index, "A", id, id), "A", role, index + 1, index.toLong(), index + 1L, start, start + 1920,
+            input, listOf(SourceSongHarmonySpan(id, index.toLong(), start, start + 1920, 0, "C", ChordQuality.MAJOR)), groove
+        )
+        return SourceSong(
+            contextSha256 = hash,
+            canonicalPpq = 480,
+            meterNumerator = 4,
+            meterDenominator = 4,
+            assembledMidi = sourceMidi,
+            sections = listOf(section(0, "A1", ArrangementSectionTypeId.VERSE, 0), section(1, "B1", ArrangementSectionTypeId.CHORUS, 1920)),
+            fullMelody = full
+        )
+    }
+
+    private fun qualityApproval(): SourceSongApprovalSnapshot = sourceApproval(SourceSongApprovalMode.QUALITY_CERTIFIED)
+
+    private fun privateApproval(): SourceSongApprovalSnapshot = sourceApproval(SourceSongApprovalMode.PRIVATE_AUDITION)
+
+    private fun sourceApproval(mode: SourceSongApprovalMode): SourceSongApprovalSnapshot {
+        val hash = "a".repeat(64)
+        return SourceSongApprovalSnapshot(
+            SourceSongApproval(
+                sourceSongContextSha256 = hash,
+                sourceMidiSha256 = hash,
+                connectedMidiSha256 = "b".repeat(64),
+                criticReport = WorkflowArtifactReference("source-song/critic.json", "c".repeat(64)),
+                mode = mode,
+                overriddenBlockingIssueIds = if (mode == SourceSongApprovalMode.PRIVATE_AUDITION) listOf("blocking") else emptyList(),
+                overrideReason = if (mode == SourceSongApprovalMode.PRIVATE_AUDITION) "Private listening only" else null
+            ),
+            Path.of("source-song/approval.json")
+        )
+    }
+
+    private fun hardSourceIssue(): SourceSongIssue = SourceSongIssue(
+        id = "hard-source",
+        category = SourceSongIssueCategory.PROTECTED_ANCHOR,
+        severity = SourceSongIssueSeverity.HARD_BLOCKER,
+        location = SourceSongIssueLocation("A1", 0, 0, 960),
+        message = "Protected anchor is missing",
+        observed = 0.0,
+        threshold = 1.0
+    )
 
     private fun mixMasterState(): WorkspaceUiState = populatedState().copy(
         workspaceSection = WorkspaceSection.MIX_MASTER,

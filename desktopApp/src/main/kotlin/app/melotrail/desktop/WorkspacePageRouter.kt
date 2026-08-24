@@ -160,8 +160,15 @@ internal object WorkspacePageTags {
     const val STRUCTURE_OPTIONS_TOGGLE = "structure-options-toggle"
     const val STRUCTURE_OPTIONS = "structure-options"
     const val SOURCE_SONG_REVIEW = "source-song-review"
+    const val SOURCE_SONG_REVIEW_STATUS = "source-song-review-status"
+    const val SOURCE_SONG_EVIDENCE = "source-song-evidence"
+    const val SOURCE_SONG_TIMELINE = "source-song-timeline"
+    const val SOURCE_SONG_ARTIFACTS = "source-song-artifacts"
     const val SOURCE_SONG_GENERATE = "source-song-generate"
     const val SOURCE_SONG_PREVIEW = "source-song-preview"
+    const val SOURCE_SONG_PREVIEW_SOURCE_PREFIX = "source-song-preview-source-"
+    const val SOURCE_SONG_PREVIEW_PREPARED_PREFIX = "source-song-preview-prepared-"
+    const val SOURCE_SONG_PREVIEW_BOUNDARY_PREFIX = "source-song-preview-boundary-"
     const val SOURCE_SONG_APPROVE = "source-song-approve"
     const val SOURCE_SONG_BOUNDARY_PREFIX = "source-song-boundary-"
     const val SOURCE_SONG_ISSUE_PREFIX = "source-song-issue-"
@@ -1865,36 +1872,51 @@ private fun StructurePage(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -
 @Composable
 private fun SourceSongReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> Unit) = OverviewCard(
     WorkspacePageTags.SOURCE_SONG_REVIEW,
-    "Melody connection · solo source song"
+    "Canonical melody quality review"
 ) {
     val review = state.sourceSongReview
     val busy = state.operation.isMutating
-    Text(
-        "Connect the canonical structure before arrangement. The candidate remains separate from the selected source MIDI.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
     if (review.connection == null || review.sourceSong == null) {
+        Text(
+            "Connect the canonical structure before arrangement. The candidate remains separate from the selected source MIDI.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         Text("No connected source candidate yet. Generate it after saving at least two prepared sections.", color = MaterialTheme.colorScheme.onSurfaceVariant)
         Button(
             onClick = { onIntent(WorkspaceIntent.GenerateSourceSongConnections) },
             enabled = state.project?.structure?.size?.let { it >= 2 } == true && !busy,
-            modifier = Modifier.semantics { testTag = WorkspacePageTags.SOURCE_SONG_GENERATE; contentDescription = "Generate source-song melody connections and critic report" }
+            modifier = Modifier.semantics {
+                testTag = WorkspacePageTags.SOURCE_SONG_GENERATE
+                contentDescription = "Generate source-song melody connections and critic report"
+            }
         ) { Text("Generate connections") }
+        if (review.readiness == CanonicalMelodyReviewReadiness.STALE || review.readiness == CanonicalMelodyReviewReadiness.ERROR) {
+            SourceSongReviewStatus(review, state.commercialEvidence)
+        }
         review.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
         return@OverviewCard
     }
 
-    val sections = review.sourceSong.sections.associateBy { it.instance.instanceId }
-    Text("Occurrence timeline", style = MaterialTheme.typography.labelLarge)
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-        review.sourceSong.sections.forEach { section ->
+    Text(
+        "Review the preserved source, prepared canonical melody, and connected full melody before arrangement. Preview controls are local monitor-only and keep their current shared monitor level.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    SourceSongReviewStatus(review, state.commercialEvidence)
+    val sourceSong = review.sourceSong
+    val sections = sourceSong.sections.associateBy { it.instance.instanceId }
+    Text("Canonical sidecar timeline", style = MaterialTheme.typography.labelLarge)
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).semantics { testTag = WorkspacePageTags.SOURCE_SONG_TIMELINE }, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+        sourceSong.fullMelody.occurrences.forEach { occurrence ->
             OutlinedButton(
-                onClick = { onIntent(WorkspaceIntent.SelectStructureOccurrence(section.instance.instanceId)) },
-                colors = workspaceSelectableButtonColors(section.instance.instanceId == state.selectedStructureOccurrenceId)
-            ) { Text("${section.sourcePartId}${section.occurrenceNumber} · ${section.sectionRole.value}") }
+                onClick = { onIntent(WorkspaceIntent.SelectStructureOccurrence(occurrence.occurrenceId)) },
+                colors = workspaceSelectableButtonColors(occurrence.occurrenceId == state.selectedStructureOccurrenceId),
+                modifier = Modifier.semantics { contentDescription = "${occurrence.markerText}; bars ${occurrence.startBar + 1} through ${occurrence.endBar}; pickup ${occurrence.pickupStartTick} through ${occurrence.pickupEndTick}; body ${occurrence.bodyStartTick} through ${occurrence.bodyEndTick}; tail ${occurrence.tailStartTick} through ${occurrence.tailEndTick}" }
+            ) { Text("${occurrence.markerText} · bars ${occurrence.startBar + 1}–${occurrence.endBar}") }
         }
     }
+    CanonicalMelodyEvidenceReview(review)
     Text("Boundary inspector", style = MaterialTheme.typography.labelLarge)
     review.connection.boundaries.forEach { boundary ->
         val outgoing = sections[boundary.decision.outgoingInstanceId]
@@ -1912,6 +1934,14 @@ private fun SourceSongReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent
                 Text("$outgoingChord → $incomingChord · ${boundary.decision.strategy.name.replace('_', ' ')}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("${report.budget.changedNotes} changed note${if (report.budget.changedNotes == 1) "" else "s"} · budget ${report.budget.maximumChanges} · ${report.mutations.size} inspectable mutation${if (report.mutations.size == 1) "" else "s"}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 report.warnings.firstOrNull()?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = semanticColor(WorkspaceSemanticState.WARNING)) }
+                OutlinedButton(
+                    onClick = { onIntent(WorkspaceIntent.PreviewSourceSongReview(app.melotrail.application.SourceSongReviewPreviewRequest(app.melotrail.application.SourceSongReviewPreview.BOUNDARY, boundaryId = boundary.decision.boundaryId))) },
+                    enabled = !busy,
+                    modifier = Modifier.semantics {
+                        testTag = WorkspacePageTags.SOURCE_SONG_PREVIEW_BOUNDARY_PREFIX + boundary.decision.boundaryId
+                        contentDescription = "Preview the current connected full melody while inspecting boundary ${boundary.decision.boundaryId}"
+                    }
+                ) { Text("Preview boundary in full melody") }
             }
         }
     }
@@ -1928,20 +1958,100 @@ private fun SourceSongReview(state: WorkspaceUiState, onIntent: (WorkspaceIntent
                 color = if (issue.severity.name == "WARNING") semanticColor(WorkspaceSemanticState.WARNING) else MaterialTheme.colorScheme.error)
         }
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+    Text("Monitor previews", style = MaterialTheme.typography.labelLarge)
+    Text("Source, prepared, and full melody use the same level-matched piano monitor. They are listen-only; no preview changes the selected artifact.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+        sourceSong.sections.distinctBy { it.sourcePartId }.forEach { section ->
+            OutlinedButton(
+                onClick = { onIntent(WorkspaceIntent.PreviewSourceSongReview(app.melotrail.application.SourceSongReviewPreviewRequest(app.melotrail.application.SourceSongReviewPreview.SOURCE, partId = section.sourcePartId))) }, enabled = !busy,
+                modifier = Modifier.semantics { testTag = WorkspacePageTags.SOURCE_SONG_PREVIEW_SOURCE_PREFIX + section.sourcePartId; contentDescription = "Preview preserved source MIDI for ${section.sourcePartId} at the matched monitor level" }
+            ) { Text("Source ${section.sourcePartId}") }
+            OutlinedButton(
+                onClick = { onIntent(WorkspaceIntent.PreviewSourceSongReview(app.melotrail.application.SourceSongReviewPreviewRequest(app.melotrail.application.SourceSongReviewPreview.PREPARED))) }, enabled = !busy,
+                modifier = Modifier.semantics { testTag = WorkspacePageTags.SOURCE_SONG_PREVIEW_PREPARED_PREFIX + section.sourcePartId; contentDescription = "Preview the prepared canonical melody at the matched monitor level" }
+            ) { Text("Prepared ${section.sourcePartId}") }
+        }
         OutlinedButton(
-            onClick = { onIntent(WorkspaceIntent.PreviewConnectedSourceSong) }, enabled = !busy,
-            modifier = Modifier.semantics { testTag = WorkspacePageTags.SOURCE_SONG_PREVIEW; contentDescription = "Preview connected solo source song as piano" }
-        ) { Text("Preview solo source") }
+            onClick = { onIntent(WorkspaceIntent.PreviewSourceSongReview(app.melotrail.application.SourceSongReviewPreviewRequest(app.melotrail.application.SourceSongReviewPreview.FULL_MELODY))) }, enabled = !busy,
+            modifier = Modifier.semantics { testTag = WorkspacePageTags.SOURCE_SONG_PREVIEW; contentDescription = "Preview connected full melody as piano at the matched monitor level" }
+        ) { Text("Full melody") }
+    }
+    val primaryIntent = when (review.readiness) {
+        CanonicalMelodyReviewReadiness.STALE, CanonicalMelodyReviewReadiness.ERROR -> WorkspaceIntent.GenerateSourceSongConnections
+        CanonicalMelodyReviewReadiness.REVIEW -> WorkspaceIntent.RequestApproveSourceSong
+        CanonicalMelodyReviewReadiness.READY, CanonicalMelodyReviewReadiness.BLOCKED -> null
+    }
+    Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
         Button(
-            onClick = { onIntent(WorkspaceIntent.RequestApproveSourceSong) }, enabled = review.critic != null && !review.hasHardBlockers && !review.approved && !busy,
-            modifier = Modifier.semantics { testTag = WorkspacePageTags.SOURCE_SONG_APPROVE; contentDescription = "Approve current connected source song" }
-        ) { Text(if (review.approved) "Source approved" else "Approve source song") }
-        OutlinedButton(onClick = { onIntent(WorkspaceIntent.GenerateSourceSongConnections) }, enabled = !busy) { Text("Regenerate") }
+            onClick = { primaryIntent?.let(onIntent) }, enabled = primaryIntent != null && review.critic != null && !review.hasHardBlockers && !review.approved && !busy,
+            modifier = Modifier.semantics { testTag = WorkspacePageTags.SOURCE_SONG_APPROVE; contentDescription = sourceSongPrimaryActionLabel(review) }
+        ) { Text(sourceSongPrimaryActionLabel(review)) }
     }
     if (review.approved) Text(if (review.experimentalApproval) "Private-audition approval: downstream use is experimental and not quality-certified." else "Quality-certified current source-song candidate. Arrangement may use this approval gate.",
         color = if (review.experimentalApproval) semanticColor(WorkspaceSemanticState.WARNING) else semanticColor(WorkspaceSemanticState.READY), style = MaterialTheme.typography.bodySmall)
     review.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+}
+
+/** Reports the evidence state without using an artifact path or file presence as proof of completion. */
+@Composable
+private fun SourceSongReviewStatus(review: SourceSongReviewUiState, commercial: CommercialEvidenceUiState?) {
+    val (label, colour) = when (review.readiness) {
+        CanonicalMelodyReviewReadiness.READY -> "Quality-certified build ready" to semanticColor(WorkspaceSemanticState.READY)
+        CanonicalMelodyReviewReadiness.REVIEW -> if (review.experimentalApproval) "Private audition only · experimental" to semanticColor(WorkspaceSemanticState.WARNING) else "Review required before arrangement" to semanticColor(WorkspaceSemanticState.WARNING)
+        CanonicalMelodyReviewReadiness.BLOCKED -> "Blocked · repair canonical melody evidence" to MaterialTheme.colorScheme.error
+        CanonicalMelodyReviewReadiness.STALE -> "Stale · regenerate and review current evidence" to semanticColor(WorkspaceSemanticState.WARNING)
+        CanonicalMelodyReviewReadiness.ERROR -> "Review error · no approval implied" to MaterialTheme.colorScheme.error
+    }
+    Text(label, modifier = Modifier.semantics { testTag = WorkspacePageTags.SOURCE_SONG_REVIEW_STATUS }, style = MaterialTheme.typography.labelLarge, color = colour)
+    Text(
+        when (commercial?.commercialReady) {
+            true -> "Commercial-evidence readiness is current; source certification remains a separate musical gate."
+            false, null -> "Commercial-evidence readiness is not established by this source review; rights, release evidence, and delivery checks remain separate."
+        },
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+}
+
+/** Lists verified canonical preparation facts and exact fingerprinted selection, without exposing filesystem paths. */
+@Composable
+private fun CanonicalMelodyEvidenceReview(review: SourceSongReviewUiState) {
+    val evidence = review.canonicalEvidence ?: return
+    val preparation = evidence.preparation
+    Card(
+        Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.SOURCE_SONG_EVIDENCE },
+        colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface),
+        border = BorderStroke(1.dp, MusicWorkspaceTokens.Border)
+    ) {
+        Column(Modifier.padding(MusicWorkspaceTokens.Spacing.Sm), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+            Text("Preparation evidence", style = MaterialTheme.typography.titleSmall)
+            evidence.sourceKeys.forEach { key -> Text("${key.partId} · source key ${key.key} · ${"%.0f".format(key.confidence * 100)}% confidence · ${if (key.confirmed) "confirmed" else "confirmation required"}", style = MaterialTheme.typography.bodySmall) }
+            evidence.timing.forEach { timing -> Text("${timing.partId} · downbeat ${timing.sourceDownbeatBeatIndex?.let { "beat ${it + 1}" } ?: "not accepted"} · mapping ${timing.mappingConfidence?.let { "${"%.0f".format(it * 100)}%" } ?: "not published"} · target bars ${timing.targetStartBar?.plus(1)?.toString() ?: "—"}/${timing.targetBarCount ?: "—"} · ${if (timing.acceptedSourceGroove) "measured groove ${timing.grooveConfidence?.let { "${"%.0f".format(it * 100)}%" } ?: "confidence unavailable"}" else "grid fallback"}", style = MaterialTheme.typography.bodySmall) }
+            Text("${preparation.sustainTailReleases} sustain-tail release(s) · ${preparation.monophonyRemovals} monophony removal(s) · ${preparation.pitchRepairs} pitch repair(s) · ${preparation.harmonyTailRepairs} harmony-tail repair(s)", style = MaterialTheme.typography.bodySmall)
+            Text("${preparation.protectedAnchors} protected anchor(s) · ${preparation.preparationBlockers + preparation.harmonyBlockers} preparation/harmony blocker(s)", style = MaterialTheme.typography.bodySmall, color = if (preparation.preparationBlockers + preparation.harmonyBlockers > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+            val voiceLeading = review.connection?.boundaries.orEmpty().count { it.report.mutations.isNotEmpty() || it.report.warnings.isNotEmpty() }
+            Text("$voiceLeading cross-section voice-leading finding(s) require boundary inspection.", style = MaterialTheme.typography.bodySmall)
+        }
+    }
+    Card(
+        Modifier.fillMaxWidth().semantics { testTag = WorkspacePageTags.SOURCE_SONG_ARTIFACTS },
+        colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface),
+        border = BorderStroke(1.dp, MusicWorkspaceTokens.Border)
+    ) {
+        Column(Modifier.padding(MusicWorkspaceTokens.Spacing.Sm), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+            Text("Exact selected artifacts", style = MaterialTheme.typography.titleSmall)
+            evidence.artifacts.forEach { artifact -> Text("${artifact.label} · ${artifact.reference.file} · sha256 ${artifact.reference.sha256}", style = MaterialTheme.typography.bodySmall) }
+        }
+    }
+}
+
+/** Returns one truthful next action instead of a generic mutation control. */
+private fun sourceSongPrimaryActionLabel(review: SourceSongReviewUiState): String = when (review.readiness) {
+    CanonicalMelodyReviewReadiness.READY -> "Source quality-certified"
+    CanonicalMelodyReviewReadiness.REVIEW -> if (review.experimentalApproval) "Private audition recorded" else "Approve source song"
+    CanonicalMelodyReviewReadiness.BLOCKED -> "Repair blockers first"
+    CanonicalMelodyReviewReadiness.STALE -> "Regenerate current review"
+    CanonicalMelodyReviewReadiness.ERROR -> "Retry review"
 }
 
 @Composable
