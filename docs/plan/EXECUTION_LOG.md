@@ -14,7 +14,7 @@ containing commit and required checks are recorded.
 | QP-003 | Complete | SELF | focused timing tests, `make test` | Reviewed piecewise maps preserve source MIDI, publish hash-bound candidates/reports, retain typed pickup/body/tail windows, and report zero anchor-phase accumulation. |
 | QP-004 | Complete | SELF | transposition/source-key/import focused tests, `make test` | Mode-aware degree mapping preserves non-pitch MIDI/timing, records unresolved chromatic fallbacks, and invalidates v1 tonic-only report/cache evidence. |
 | QP-005 | Complete | SELF | monophony/source-song focused tests, `make test` | Controller-aware one-track candidates preserve selected MIDI, record note/controller decisions and blocking ambiguity, and are hash-bound before source-song assembly. |
-| QP-006 | Pending | — | harmony-fit tests, `make test` | — |
+| QP-006 | Complete | SELF | harmony-fit tests, `make test` | Occurrence-local, authority-hash-bound candidates repair exposed clashes within fixed movement/edit budgets; report weak passing tones, chromatic chord authorization, ties/suspensions, anchors, and tempo/PPQ boundary-tail evidence; ambiguity or excess blocks. |
 | QP-007 | Pending | — | source-song/connection tests, `make test` | — |
 | QP-008 | Pending | — | arrangement/render/humanization tests, `make test` | — |
 | QP-009 | Pending | — | selection/invalidation tests, `make test` | — |

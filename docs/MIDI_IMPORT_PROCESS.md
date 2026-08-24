@@ -1,9 +1,9 @@
 # MIDI import process
 
-This guide describes the current schema-v4 import implementation. The target
-beat-warp and harmony-fit preparation pipeline is specified separately in
-[`plan/PLAN.md`](plan/PLAN.md); do not assume those improvements are already
-shipped.
+This guide describes the current schema-v4 import implementation. Reviewed
+beat-grid alignment and occurrence-local harmony fitting are now separate,
+hash-bound preparation stages; the remaining canonical-full-melody work is
+specified in [`plan/PLAN.md`](plan/PLAN.md).
 
 Use **Import MIDI** for editable Standard MIDI files. Use **Import audio** only
 for an eligible solo-piano or isolated melody WAV/WAVE/MP3 source. The current
@@ -78,6 +78,8 @@ source remains intact and no invalid raw MIDI is selected. Follow
 | Timing evidence | `analysis/timing/<part>/<hash>.json` — source beat/onset/downbeat and groove evidence |
 | Reviewed timing candidate | `midi/timing/<part>/<hash>.mid` plus `analysis/timing-mapping/<part>/<hash>.json` |
 | Transposed MIDI | `midi/transposed/<part>-<run>.mid` plus transposition report |
+| Monophonic prepared MIDI | `midi/prepared/<part>/<hash>.mid` plus `analysis/melody-preparation/<part>/<hash>.json` |
+| Harmony-fitted MIDI | `midi/harmony-fit/<part>/<occurrence>/<hash>.mid` plus `analysis/harmony-fit/<part>/<occurrence>/<hash>.json` |
 | Optional fixed Feel | `midi/derived/<part>/lofi-80-swing-v1.mid` and `midi/feel/<part>/lofi-80-swing-v1.json` |
 
 The selected branch may additionally include Technical Correction, AI Fix, and
@@ -101,12 +103,20 @@ unselected branch cannot override the current candidate.
   content-addressed one-track monophonic candidate. Its report records source
   note/controller identities, sustain-aware effective ends, every reduction
   decision, and any safe blocking ambiguity; selected MIDI remains unchanged.
-- Source-song assembly still does not guarantee a harmony-fitted canonical full
-  melody consumed by every downstream stage.
+- QP-006 fits every QP-005 candidate against the authoritative harmony active
+  in its exact structure occurrence. It preserves only short weak scale
+  passing tones, explicitly authorized chromatic chord tones, and evidenced
+  common-tone ties or suspensions. Exposed clashes are repaired only within a
+  bounded movement/edit policy; ambiguous or excessive repairs block. Pedal
+  and transcription tails are shortened under a versioned tempo/PPQ-derived
+  gap policy before incompatible chord boundaries. The original selected MIDI
+  and QP-005 candidate remain immutable.
+- Source-song assembly now requires both reports, but it still does not publish
+  one canonical full melody consumed by every downstream stage.
 
-These remaining limits are tracked by QP-006 through QP-010. Until implemented, review the
-transposed/selected MIDI, connected source-song preview, and Source Song Critic
-carefully; do not treat automated import completion as musical approval.
+These remaining limits are tracked by QP-007 through QP-010. Review the
+connected source-song preview and Source Song Critic carefully; prepared-source
+completion is not musical approval or a canonical-full-melody guarantee.
 
 ## Recovery
 

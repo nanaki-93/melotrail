@@ -90,7 +90,9 @@ data class SourceSongMidiInput(
     val ppq: Int,
     val kind: String,
     /** QP-005 binds the one-track candidate to its controller-aware reduction report. */
-    val preparationReport: WorkflowArtifactReference? = null
+    val preparationReport: WorkflowArtifactReference? = null,
+    /** QP-006 binds an occurrence-local harmony candidate to its QP-005 input and authority evidence. */
+    val harmonyFitReport: WorkflowArtifactReference? = null
 ) {
     init {
         require(partId.isNotBlank() && projectRelativePath.isNotBlank() && SourceSong.SHA_256.matches(sha256) && ppq > 0 && kind.isNotBlank()) {
@@ -98,6 +100,9 @@ data class SourceSongMidiInput(
         }
         if (kind == "MONOPHONIC_PREPARED") require(preparationReport != null) {
             "Monophonic prepared source MIDI requires its preparation report"
+        }
+        if (kind == "HARMONY_FITTED") require(preparationReport != null && harmonyFitReport != null) {
+            "Harmony-fitted source MIDI requires monophonic and harmony-fit reports"
         }
     }
 }
@@ -248,9 +253,9 @@ class SourceSongAssembler {
         return output
     }
 
-    /** Require QP-005 report evidence before a prepared melody can enter the assembled source song. */
+    /** Require QP-005/QP-006 evidence before a prepared melody can enter the assembled source song. */
     private fun verifyPreparationEvidence(root: Path, source: SourceSongMidiInput) {
-        if (source.kind != "MONOPHONIC_PREPARED") return
+        if (source.kind !in setOf("MONOPHONIC_PREPARED", "HARMONY_FITTED")) return
         val reference = requireNotNull(source.preparationReport)
         val reportPath = root.resolve(reference.file).normalize()
         require(reportPath.startsWith(root) && Files.isRegularFile(reportPath) && reportPath.toRealPath().startsWith(root.toRealPath())) {
@@ -259,9 +264,29 @@ class SourceSongAssembler {
         require(sha256(reportPath) == reference.sha256) { "Source-song monophonic preparation report changed after selection" }
         val report = JSON.decodeFromString(MonophonicMelodyPreparationReport.serializer(), Files.readString(reportPath))
         report.requireValid()
-        require(report.status == MelodyPreparationStatus.COMPLETED && report.partId == source.partId &&
-            report.output?.path == source.projectRelativePath && report.output.sha256 == source.sha256 && report.output.ppq == source.ppq) {
+        require(report.status == MelodyPreparationStatus.COMPLETED && report.partId == source.partId) {
+            "Source-song monophonic preparation report does not bind its part"
+        }
+        if (source.kind == "MONOPHONIC_PREPARED") require(report.output?.path == source.projectRelativePath && report.output.sha256 == source.sha256 && report.output.ppq == source.ppq) {
             "Source-song monophonic preparation report does not bind its MIDI input"
+        }
+        if (source.kind == "HARMONY_FITTED") verifyHarmonyFitEvidence(root, source, report)
+    }
+
+    /** Require QP-006 report evidence to bind its output to the verified QP-005 candidate. */
+    private fun verifyHarmonyFitEvidence(root: Path, source: SourceSongMidiInput, preparation: MonophonicMelodyPreparationReport) {
+        val reference = requireNotNull(source.harmonyFitReport)
+        val reportPath = root.resolve(reference.file).normalize()
+        require(reportPath.startsWith(root) && Files.isRegularFile(reportPath) && reportPath.toRealPath().startsWith(root.toRealPath())) {
+            "Source-song harmony-fit report is missing"
+        }
+        require(sha256(reportPath) == reference.sha256) { "Source-song harmony-fit report changed after selection" }
+        val report = JSON.decodeFromString(MelodyHarmonyFitReport.serializer(), Files.readString(reportPath))
+        report.requireValid()
+        require(report.status == MelodyHarmonyFitStatus.COMPLETED && report.context.partId == source.partId &&
+            report.monophonicPreparationReport == source.preparationReport && report.input == preparation.output &&
+            report.output?.path == source.projectRelativePath && report.output.sha256 == source.sha256 && report.output.ppq == source.ppq) {
+            "Source-song harmony-fit report does not bind its MIDI input"
         }
     }
 

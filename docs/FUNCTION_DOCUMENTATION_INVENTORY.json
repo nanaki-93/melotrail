@@ -603,6 +603,14 @@
       "documentedFunctionCount": 0
     },
     {
+      "path": "src/main/kotlin/app/melotrail/arrangement/MidiHarmonyFitting.kt",
+      "classification": "documented",
+      "reason": "All 31 callable declarations in src/main/kotlin/app/melotrail/arrangement/MidiHarmonyFitting.kt have directly attached KDoc/docstrings; added for QP-006 on 2026-08-24.",
+      "functionCount": 31,
+      "declarationDigest": "56adf926db933633f5c26437131359ad218fad57d6e855985739b10fc1d96183",
+      "documentedFunctionCount": 31
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/arrangement/MidiLoFiFeel.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/arrangement/MidiLoFiFeel.kt has 20 callable declarations, 0 directly documented and 20 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
@@ -797,10 +805,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/SourceSong.kt",
       "classification": "documented",
-      "reason": "All 17 callable declarations in src/main/kotlin/app/melotrail/arrangement/SourceSong.kt have directly attached KDoc/docstrings; reviewed for QP-005 on 2026-08-24.",
-      "functionCount": 17,
-      "declarationDigest": "3e28eba0b46307e2b9f2af24998049fcd86781b740b7c81fd785ca25992f7c5e",
-      "documentedFunctionCount": 17
+      "reason": "All 18 callable declarations in src/main/kotlin/app/melotrail/arrangement/SourceSong.kt have directly attached KDoc/docstrings; reviewed for QP-006 on 2026-08-24.",
+      "functionCount": 18,
+      "declarationDigest": "0deee2abbe84124fdd63f1c2387fae936adf566c6cad51f061ecdd6dfaa638c8",
+      "documentedFunctionCount": 18
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/SourceSongCritic.kt",

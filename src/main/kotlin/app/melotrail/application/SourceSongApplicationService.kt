@@ -2,6 +2,11 @@ package app.melotrail.application
 
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.MelodyPreparationArtifactReference
+import app.melotrail.arrangement.MelodyHarmonyFitContext
+import app.melotrail.arrangement.MelodyHarmonyFitReport
+import app.melotrail.arrangement.MelodyHarmonyFitRequest
+import app.melotrail.arrangement.MelodyHarmonyFitSpan
+import app.melotrail.arrangement.MidiHarmonyFitter
 import app.melotrail.arrangement.MidiMonophonicMelodyPreparer
 import app.melotrail.arrangement.MonophonicMelodyPreparationReport
 import app.melotrail.arrangement.SelectedMidiArtifactResolver
@@ -25,6 +30,7 @@ class SourceSongApplicationService(
     private val musicalAuthorityBuilder: MusicalAuthorityBuilder = MusicalAuthorityBuilder(),
     private val selectedMidiArtifactResolver: SelectedMidiArtifactResolver = SelectedMidiArtifactResolver(),
     private val melodyPreparer: MidiMonophonicMelodyPreparer = MidiMonophonicMelodyPreparer(),
+    private val harmonyFitter: MidiHarmonyFitter = MidiHarmonyFitter(),
     private val sourceSongAssembler: SourceSongAssembler = SourceSongAssembler()
 ) {
     /** Assemble the current structured source song, or verify its existing immutable candidate. */
@@ -34,20 +40,40 @@ class SourceSongApplicationService(
         project.requireValid(root)
         val authority = musicalAuthorityBuilder.build(root)
         val usedPartIds = project.envelope.structureOccurrences.map { it.partId }.toSet()
-        val sourceMidi = project.parts.filter { it.id in usedPartIds }.associate { part ->
+        val preparedByPart = project.parts.filter { it.id in usedPartIds }.associate { part ->
             val selected = selectedMidiArtifactResolver.resolve(root, project, part)
             val input = MelodyPreparationArtifactReference(selected.projectRelativePath, selected.sha256, selected.ppq, noteOnCount(selected.path))
-            val prepared = melodyPreparer.prepare(root, part.id, input)
-            part.id to SourceSongMidiInput(part.id, prepared.midi.path, prepared.midi.sha256, prepared.midi.ppq, "MONOPHONIC_PREPARED", prepared.report)
+            part.id to melodyPreparer.prepare(root, part.id, input)
+        }
+        val occurrences = authority.occurrenceTimeline.associateBy { it.occurrenceId }
+        val sourceMidiByOccurrence = project.envelope.structureOccurrences.associate { occurrence ->
+            val timeline = requireNotNull(occurrences[occurrence.id]) { "Missing canonical source-song occurrence '${occurrence.id}'" }
+            val prepared = preparedByPart.getValue(occurrence.partId)
+            require(authority.harmonicTimeline.ppq % prepared.midi.ppq == 0) { "Harmony timeline cannot exactly represent prepared MIDI for '${occurrence.partId}'" }
+            val scale = authority.harmonicTimeline.ppq / prepared.midi.ppq
+            val harmony = authority.harmonicTimeline.forOccurrence(occurrence.id).map { span ->
+                require((span.startTick - timeline.startTick) % scale == 0L && (span.endTick - timeline.startTick) % scale == 0L) {
+                    "Harmony timeline cannot exactly map '${occurrence.id}' to prepared MIDI ticks"
+                }
+                MelodyHarmonyFitSpan(span.bar, (span.startTick - timeline.startTick) / scale, (span.endTick - timeline.startTick) / scale,
+                    span.chord.rootChromatic, span.chord.rootSymbol, span.chord.quality)
+            }
+            val fit = harmonyFitter.fit(MelodyHarmonyFitRequest(
+                root, prepared.midi, prepared.report,
+                MelodyHarmonyFitContext(authority.contextSha256, occurrence.partId, occurrence.id, authority.projectKey, authority.tempo.bpm,
+                    authority.meter.numerator, authority.meter.denominator, prepared.midi.ppq, harmony)
+            ))
+            occurrence.id to SourceSongMidiInput(occurrence.partId, fit.midi.path, fit.midi.sha256, fit.midi.ppq, "HARMONY_FITTED", prepared.report, fit.report)
         }
         val preparationContext = sha256Hex(buildString {
             append(authority.contextSha256).append('|').append(MonophonicMelodyPreparationReport.PROCESSOR_VERSION).append('|')
-            sourceMidi.toSortedMap().forEach { (partId, source) ->
-                append(partId).append('=').append(source.sha256).append(':').append(requireNotNull(source.preparationReport).sha256).append(';')
+            append(MelodyHarmonyFitReport.PROCESSOR_VERSION).append('|')
+            sourceMidiByOccurrence.toSortedMap().forEach { (occurrenceId, source) ->
+                append(occurrenceId).append('=').append(source.sha256).append(':').append(requireNotNull(source.preparationReport).sha256)
+                    .append(':').append(requireNotNull(source.harmonyFitReport).sha256).append(';')
             }
         })
         val counts = mutableMapOf<String, Int>()
-        val occurrences = authority.occurrenceTimeline.associateBy { it.occurrenceId }
         val sections = project.envelope.structureOccurrences.mapIndexed { index, occurrence ->
             val timeline = requireNotNull(occurrences[occurrence.id]) { "Missing canonical source-song occurrence '${occurrence.id}'" }
             val number = (counts[occurrence.partId] ?: 0) + 1
@@ -61,7 +87,7 @@ class SourceSongApplicationService(
                 endBar = timeline.endBar,
                 startTick = timeline.startTick,
                 endTick = timeline.endTick,
-                sourceMidi = sourceMidi.getValue(occurrence.partId),
+                sourceMidi = sourceMidiByOccurrence.getValue(occurrence.id),
                 canonicalHarmony = authority.harmonicTimeline.forOccurrence(occurrence.id).map { chord ->
                     SourceSongHarmonySpan(chord.occurrenceId, chord.bar, chord.startTick, chord.endTick,
                         chord.chord.rootChromatic, chord.chord.rootSymbol, chord.chord.quality)

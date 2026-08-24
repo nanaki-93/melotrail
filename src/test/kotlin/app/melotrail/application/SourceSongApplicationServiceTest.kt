@@ -11,6 +11,7 @@ import app.melotrail.arrangement.RenderResult
 import app.melotrail.arrangement.InstrumentRenderer
 import app.melotrail.arrangement.LogicalInstrument
 import app.melotrail.arrangement.MonophonicMelodyPreparationReport
+import app.melotrail.arrangement.MelodyHarmonyFitReport
 import app.melotrail.arrangement.SectionTypeId
 import app.melotrail.arrangement.SongPart
 import app.melotrail.arrangement.SourceSong
@@ -43,7 +44,6 @@ import javax.sound.midi.ShortMessage
 import kotlin.io.path.createDirectories
 import kotlin.test.assertEquals
 import kotlin.test.assertContentEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -73,32 +73,33 @@ class SourceSongApplicationServiceTest {
         assertEquals(listOf(90), tempoEvents(assembled))
         assertEquals(listOf(4 to 4), meterEvents(assembled))
         assertTrue(artifact.metadataPath.startsWith(root.resolve("source-song")))
-        assertTrue(artifact.song.sections.all { it.sourceMidi.kind == "MONOPHONIC_PREPARED" && it.sourceMidi.preparationReport != null })
-        artifact.song.sections.distinctBy { it.sourcePartId }.forEach { section ->
+        assertTrue(artifact.song.sections.all { it.sourceMidi.kind == "HARMONY_FITTED" && it.sourceMidi.preparationReport != null && it.sourceMidi.harmonyFitReport != null })
+        artifact.song.sections.forEach { section ->
             val source = section.sourceMidi
-            val report = Json.decodeFromString(MonophonicMelodyPreparationReport.serializer(), Files.readString(root.resolve(requireNotNull(source.preparationReport).file)))
-            assertEquals(source.sha256, report.output?.sha256)
-            assertEquals(1, report.maximumOutputPolyphony)
+            val preparation = Json.decodeFromString(MonophonicMelodyPreparationReport.serializer(), Files.readString(root.resolve(requireNotNull(source.preparationReport).file)))
+            val fit = Json.decodeFromString(MelodyHarmonyFitReport.serializer(), Files.readString(root.resolve(requireNotNull(source.harmonyFitReport).file)))
+            assertEquals(preparation.output, fit.input)
+            assertEquals(source.sha256, fit.output?.sha256)
+            assertTrue(fit.outputNotes.all { it.eligibility in setOf(app.melotrail.arrangement.MelodyHarmonyEligibility.CHORD_TONE, app.melotrail.arrangement.MelodyHarmonyEligibility.COMMON_TONE_TIE) })
+            assertEquals(1, preparation.maximumOutputPolyphony)
             assertTrue(Files.isRegularFile(root.resolve(source.projectRelativePath)))
         }
         selectedBefore.forEach { (partId, bytes) -> assertContentEquals(bytes, Files.readAllBytes(root.resolve("midi/clean/$partId.mid"))) }
     }
 
     @Test
-    fun `source critic persists boundary-addressed blockers and requires a recorded override`() {
+    fun `source critic preserves the harmony-fitted source and permits ordinary approval`() {
         val root = project()
         val critic = DefaultSourceSongCriticApplicationService()
 
         val report = critic.run(root)
 
-        assertTrue(report.report.issues.isNotEmpty())
-        assertTrue(report.report.issues.all { it.location.boundaryId.startsWith("boundary-") && it.location.bar >= 0 })
-        assertTrue(report.report.hasBlockingIssues)
-        assertFailsWith<IllegalArgumentException> { critic.approve(root) }
-        val approval = critic.approve(root, overrideBlockingIssues = true, overrideReason = "Keep the authored chromatic pickup.")
+        assertTrue(report.report.issues.none { it.category == app.melotrail.arrangement.SourceSongIssueCategory.CHORD_COMPATIBILITY })
+        assertTrue(!report.report.hasBlockingIssues)
+        val approval = critic.approve(root)
 
         assertEquals(report.report.connectedMidi.sha256, approval.approval.connectedMidiSha256)
-        assertEquals(report.report.issues.filter { it.severity == app.melotrail.arrangement.SourceSongIssueSeverity.BLOCKING }.map { it.id }.sorted(), approval.approval.overriddenBlockingIssueIds.sorted())
+        assertTrue(approval.approval.overriddenBlockingIssueIds.isEmpty())
         assertEquals(approval.approval, critic.requireApproved(root).approval)
     }
 

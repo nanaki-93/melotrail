@@ -86,10 +86,13 @@ whole-bar body bounds plus explicit pickup/tail windows. It does not silently
 select that candidate or choose an unreviewed downbeat. QP-004 maps recognized
 source scale degrees into the project mode and records unresolved chromatic
 fallbacks. QP-005 turns each selected source section into a separate,
-controller-aware one-track monophonic candidate, but current assembly still
-does not guarantee harmony-fit stable tones or one canonical full-melody track
-consumed downstream. The remaining gaps are QP-006–QP-010 and must not be
-described as current capabilities.
+controller-aware one-track monophonic candidate. QP-006 then fits an immutable
+candidate per structure occurrence to the authoritative local harmony, with
+note-level pitch/tail/tie evidence and a tempo/PPQ-derived boundary gap. It
+does not rewrite project harmony, and ambiguity or an excessive repair blocks
+instead of publishing MIDI. Current assembly still does not publish one
+canonical full-melody track consumed downstream. The remaining gaps are
+QP-007–QP-010 and must not be described as current capabilities.
 
 ## Arrangement and Cohesion boundary
 

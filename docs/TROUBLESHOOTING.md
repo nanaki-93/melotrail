@@ -111,12 +111,15 @@ that audio started.
 
 The current pipeline can produce structurally valid output from independently
 performed parts that do not share a downbeat, performed tempo, mode, or chord
-fit. Current normalization conforms MIDI representation/tempo metadata but does
-not yet perform the beat/downbeat warping planned in
-[`plan/PLAN.md`](plan/PLAN.md). Current source-song assembly prepares each
-selected source section into a separate globally monophonic candidate, but does
-not yet guarantee harmony repair or one canonical full melody consumed by every
-downstream stage.
+fit. Current normalization conforms MIDI representation/tempo metadata, while
+reviewed beat/downbeat alignment and occurrence-local harmony fitting are
+separate stages described in [`plan/PLAN.md`](plan/PLAN.md). Current source-song
+assembly prepares each selected source section into a separate globally
+monophonic candidate, then fits it to the authoritative harmony for its exact
+occurrence. A harmony-fit block means the nearest safe pitch is
+ambiguous/excessive or a boundary tail cannot be released within policy; inspect
+its report rather than replacing the candidate. Assembly still does not publish
+one canonical full melody consumed by every downstream stage.
 
 Before arranging a current project:
 

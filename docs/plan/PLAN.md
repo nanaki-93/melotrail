@@ -44,9 +44,11 @@ outcome:
    differ, but intentionally retains unresolved chromatic notes as evidence for
    the later harmony-fit gate.
 4. Selected source MIDI remains immutable and can retain its original texture;
-   QP-005 now publishes a separate controller-aware monophonic source candidate.
-   Off-scale and exposed non-chord tones still require QP-006 repair.
-5. `SourceSongAssembler` now consumes that prepared candidate but copies it into
+   QP-005 publishes a separate controller-aware monophonic source candidate and
+   QP-006 publishes a further occurrence-local harmony-fitted candidate.
+   Ambiguous/excessive repairs block with note-level evidence rather than altering
+   authority or selected MIDI.
+5. `SourceSongAssembler` now consumes that harmony-fitted candidate but copies it into
    occurrence-local tracks rather than publishing one canonical full melody.
 6. Source-song approval is checked before arrangement, but arrangement state,
    humanization, and rendering later reconstruct piano from occurrence
@@ -61,8 +63,9 @@ outcome:
 10. Existing automated tests prove serialization, bounds, hashes, and output
     existence more strongly than they prove meter, groove, harmony, melodic
     identity, or listening quality.
-11. QP-005 materializes pedal-extended sounding intervals before monophony,
-    but the later chord/occurrence boundary-release policy is still QP-006 work.
+11. QP-005 materializes pedal-extended sounding intervals before monophony, and
+    QP-006 applies the versioned tempo/PPQ-derived chord/occurrence boundary-
+    release policy with explicit common-tone/suspension evidence.
 12. Generated bass and kick can share the same 50–150 Hz region. The mixer has
     filter, EQ, and compression primitives, but the default plan has no
     kick-triggered bass ducking and the current overlap critic is only a generic
