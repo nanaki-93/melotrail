@@ -1,8 +1,8 @@
 # MIDI import process
 
 This guide describes the current schema-v4 import implementation. The target
-beat-warp, harmony-fit, monophonic preparation pipeline is specified separately
-in [`plan/PLAN.md`](plan/PLAN.md); do not assume those improvements are already
+beat-warp and harmony-fit preparation pipeline is specified separately in
+[`plan/PLAN.md`](plan/PLAN.md); do not assume those improvements are already
 shipped.
 
 Use **Import MIDI** for editable Standard MIDI files. Use **Import audio** only
@@ -97,11 +97,14 @@ unselected branch cannot override the current candidate.
   degrees when source and project modes differ. Chromatic source notes remain
   explicit unresolved evidence under the bounded tonic fallback; they are not
   silently treated as scale tones.
-- Imported material is not yet guaranteed to become one-note-at-a-time melody.
-- Source-song assembly records structure/harmony but does not yet guarantee a
-  single harmony-fitted note-bearing track consumed by every downstream stage.
+- QP-005 turns the selected MIDI for each source section into a separate,
+  content-addressed one-track monophonic candidate. Its report records source
+  note/controller identities, sustain-aware effective ends, every reduction
+  decision, and any safe blocking ambiguity; selected MIDI remains unchanged.
+- Source-song assembly still does not guarantee a harmony-fitted canonical full
+  melody consumed by every downstream stage.
 
-These remaining limits are tracked by QP-005 through QP-010. Until implemented, review the
+These remaining limits are tracked by QP-006 through QP-010. Until implemented, review the
 transposed/selected MIDI, connected source-song preview, and Source Song Critic
 carefully; do not treat automated import completion as musical approval.
 

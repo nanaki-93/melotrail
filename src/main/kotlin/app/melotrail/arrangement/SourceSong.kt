@@ -81,18 +81,23 @@ data class SourceSongSection(
     }
 }
 
-/** Immutable selected MIDI evidence copied into one source-song occurrence. */
+/** Immutable prepared MIDI evidence copied into one source-song occurrence. */
 @Serializable
 data class SourceSongMidiInput(
     val partId: String,
     val projectRelativePath: String,
     val sha256: String,
     val ppq: Int,
-    val kind: String
+    val kind: String,
+    /** QP-005 binds the one-track candidate to its controller-aware reduction report. */
+    val preparationReport: WorkflowArtifactReference? = null
 ) {
     init {
         require(partId.isNotBlank() && projectRelativePath.isNotBlank() && SourceSong.SHA_256.matches(sha256) && ppq > 0 && kind.isNotBlank()) {
             "Source-song MIDI input is invalid"
+        }
+        if (kind == "MONOPHONIC_PREPARED") require(preparationReport != null) {
+            "Monophonic prepared source MIDI requires its preparation report"
         }
     }
 }
@@ -210,6 +215,7 @@ class SourceSongAssembler {
             require(sha256(sourcePath) == section.sourceMidi.sha256) {
                 "Source-song MIDI for '${section.instance.instanceId}' changed after selection"
             }
+            verifyPreparationEvidence(root, section.sourceMidi)
             val source = try {
                 MidiSystem.getSequence(sourcePath.toFile())
             } catch (error: Exception) {
@@ -240,6 +246,23 @@ class SourceSongAssembler {
             }
         }
         return output
+    }
+
+    /** Require QP-005 report evidence before a prepared melody can enter the assembled source song. */
+    private fun verifyPreparationEvidence(root: Path, source: SourceSongMidiInput) {
+        if (source.kind != "MONOPHONIC_PREPARED") return
+        val reference = requireNotNull(source.preparationReport)
+        val reportPath = root.resolve(reference.file).normalize()
+        require(reportPath.startsWith(root) && Files.isRegularFile(reportPath) && reportPath.toRealPath().startsWith(root.toRealPath())) {
+            "Source-song monophonic preparation report is missing"
+        }
+        require(sha256(reportPath) == reference.sha256) { "Source-song monophonic preparation report changed after selection" }
+        val report = JSON.decodeFromString(MonophonicMelodyPreparationReport.serializer(), Files.readString(reportPath))
+        report.requireValid()
+        require(report.status == MelodyPreparationStatus.COMPLETED && report.partId == source.partId &&
+            report.output?.path == source.projectRelativePath && report.output.sha256 == source.sha256 && report.output.ppq == source.ppq) {
+            "Source-song monophonic preparation report does not bind its MIDI input"
+        }
     }
 
     /** Reparse the written file and enforce its canonical timing contract. */

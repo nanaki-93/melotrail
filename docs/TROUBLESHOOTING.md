@@ -113,8 +113,9 @@ The current pipeline can produce structurally valid output from independently
 performed parts that do not share a downbeat, performed tempo, mode, or chord
 fit. Current normalization conforms MIDI representation/tempo metadata but does
 not yet perform the beat/downbeat warping planned in
-[`plan/PLAN.md`](plan/PLAN.md). Current source-song assembly also does not yet
-guarantee a globally monophonic, harmony-repaired melody consumed by every
+[`plan/PLAN.md`](plan/PLAN.md). Current source-song assembly prepares each
+selected source section into a separate globally monophonic candidate, but does
+not yet guarantee harmony repair or one canonical full melody consumed by every
 downstream stage.
 
 Before arranging a current project:

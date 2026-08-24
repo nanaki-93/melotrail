@@ -10,6 +10,7 @@ import app.melotrail.arrangement.RenderFormat
 import app.melotrail.arrangement.RenderResult
 import app.melotrail.arrangement.InstrumentRenderer
 import app.melotrail.arrangement.LogicalInstrument
+import app.melotrail.arrangement.MonophonicMelodyPreparationReport
 import app.melotrail.arrangement.SectionTypeId
 import app.melotrail.arrangement.SongPart
 import app.melotrail.arrangement.SourceSong
@@ -41,6 +42,7 @@ import javax.sound.midi.Sequence
 import javax.sound.midi.ShortMessage
 import kotlin.io.path.createDirectories
 import kotlin.test.assertEquals
+import kotlin.test.assertContentEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
@@ -51,6 +53,7 @@ class SourceSongApplicationServiceTest {
     @Test
     fun `assembles repeated source MIDI into distinct structured instances with authoritative timing and harmony`() {
         val root = project()
+        val selectedBefore = listOf("A", "B", "C").associateWith { Files.readAllBytes(root.resolve("midi/clean/$it.mid")) }
 
         val artifact = SourceSongApplicationService().assemble(root)
         val repeated = SourceSongApplicationService().assemble(root)
@@ -70,6 +73,15 @@ class SourceSongApplicationServiceTest {
         assertEquals(listOf(90), tempoEvents(assembled))
         assertEquals(listOf(4 to 4), meterEvents(assembled))
         assertTrue(artifact.metadataPath.startsWith(root.resolve("source-song")))
+        assertTrue(artifact.song.sections.all { it.sourceMidi.kind == "MONOPHONIC_PREPARED" && it.sourceMidi.preparationReport != null })
+        artifact.song.sections.distinctBy { it.sourcePartId }.forEach { section ->
+            val source = section.sourceMidi
+            val report = Json.decodeFromString(MonophonicMelodyPreparationReport.serializer(), Files.readString(root.resolve(requireNotNull(source.preparationReport).file)))
+            assertEquals(source.sha256, report.output?.sha256)
+            assertEquals(1, report.maximumOutputPolyphony)
+            assertTrue(Files.isRegularFile(root.resolve(source.projectRelativePath)))
+        }
+        selectedBefore.forEach { (partId, bytes) -> assertContentEquals(bytes, Files.readAllBytes(root.resolve("midi/clean/$partId.mid"))) }
     }
 
     @Test

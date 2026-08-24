@@ -85,9 +85,11 @@ can publish a reviewed, source-hash-bound, piecewise timing candidate with
 whole-bar body bounds plus explicit pickup/tail windows. It does not silently
 select that candidate or choose an unreviewed downbeat. QP-004 maps recognized
 source scale degrees into the project mode and records unresolved chromatic
-fallbacks, but current assembly still does not guarantee harmony-fit stable
-tones or global one-note-at-a-time melody. The remaining gaps are QP-005–QP-010
-and must not be described as current capabilities.
+fallbacks. QP-005 turns each selected source section into a separate,
+controller-aware one-track monophonic candidate, but current assembly still
+does not guarantee harmony-fit stable tones or one canonical full-melody track
+consumed downstream. The remaining gaps are QP-006–QP-010 and must not be
+described as current capabilities.
 
 ## Arrangement and Cohesion boundary
 

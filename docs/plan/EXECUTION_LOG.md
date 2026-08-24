@@ -13,7 +13,7 @@ containing commit and required checks are recorded.
 | QP-002 | Complete | SELF | focused Kotlin/worker tests, `make test`, `make worker-test` | Analyze v2 emits bounded beat/onset/tempo/activity/downbeat evidence; Kotlin confines, validates, derives source groove, and persists immutable source-bound reports. |
 | QP-003 | Complete | SELF | focused timing tests, `make test` | Reviewed piecewise maps preserve source MIDI, publish hash-bound candidates/reports, retain typed pickup/body/tail windows, and report zero anchor-phase accumulation. |
 | QP-004 | Complete | SELF | transposition/source-key/import focused tests, `make test` | Mode-aware degree mapping preserves non-pitch MIDI/timing, records unresolved chromatic fallbacks, and invalidates v1 tonic-only report/cache evidence. |
-| QP-005 | Pending | — | monophony tests, `make test` | — |
+| QP-005 | Complete | SELF | monophony/source-song focused tests, `make test` | Controller-aware one-track candidates preserve selected MIDI, record note/controller decisions and blocking ambiguity, and are hash-bound before source-song assembly. |
 | QP-006 | Pending | — | harmony-fit tests, `make test` | — |
 | QP-007 | Pending | — | source-song/connection tests, `make test` | — |
 | QP-008 | Pending | — | arrangement/render/humanization tests, `make test` | — |

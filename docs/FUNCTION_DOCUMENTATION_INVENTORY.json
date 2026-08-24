@@ -325,10 +325,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/SourceSongApplicationService.kt",
       "classification": "documented",
-      "reason": "All 1 callable declarations in src/main/kotlin/app/melotrail/application/SourceSongApplicationService.kt have directly attached KDoc/docstrings; reviewed on 2026-08-24.",
-      "functionCount": 1,
-      "declarationDigest": "a70d1f422ea75bf580ae9c65abde6cce89d231c36bdb87f82a1116f0d2bab4e1",
-      "documentedFunctionCount": 1
+      "reason": "All 2 callable declarations in src/main/kotlin/app/melotrail/application/SourceSongApplicationService.kt have directly attached KDoc/docstrings; reviewed for QP-005 on 2026-08-24.",
+      "functionCount": 2,
+      "declarationDigest": "aaa413c557b6e3df7751136f340101faead1a1d5a669c3dd48b61592e84ec36a",
+      "documentedFunctionCount": 2
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/SourceSongCriticApplicationService.kt",
@@ -627,6 +627,14 @@
       "documentedFunctionCount": 0
     },
     {
+      "path": "src/main/kotlin/app/melotrail/arrangement/MidiMonophonicMelodyPreparation.kt",
+      "classification": "deferred-with-reason",
+      "reason": "src/main/kotlin/app/melotrail/arrangement/MidiMonophonicMelodyPreparation.kt has 30 callable declarations, 12 directly documented and 18 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed for QP-005 on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
+      "functionCount": 30,
+      "declarationDigest": "dbfd2be2ec181f90ca3d881cdf5869667f6869da8989a647b37ab630747a2328",
+      "documentedFunctionCount": 12
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/arrangement/MidiQualityReport.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/arrangement/MidiQualityReport.kt has 29 callable declarations, 1 directly documented and 28 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
@@ -789,10 +797,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/SourceSong.kt",
       "classification": "documented",
-      "reason": "All 16 callable declarations in src/main/kotlin/app/melotrail/arrangement/SourceSong.kt have directly attached KDoc/docstrings; reviewed on 2026-08-24.",
-      "functionCount": 16,
-      "declarationDigest": "7ded751bf429a1f17926530556a59cc245ada3ce08289c1ab94627b0d8db9d19",
-      "documentedFunctionCount": 16
+      "reason": "All 17 callable declarations in src/main/kotlin/app/melotrail/arrangement/SourceSong.kt have directly attached KDoc/docstrings; reviewed for QP-005 on 2026-08-24.",
+      "functionCount": 17,
+      "declarationDigest": "3e28eba0b46307e2b9f2af24998049fcd86781b740b7c81fd785ca25992f7c5e",
+      "documentedFunctionCount": 17
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/SourceSongCritic.kt",

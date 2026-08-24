@@ -40,13 +40,14 @@ outcome:
    tempo metadata does not warp performed beats or detect the downbeat.
 2. Occurrence duration is copied exactly, so fractional-bar source lengths move
    later sections progressively off the project bar grid.
-3. `MidiProjectKeyTransposer` applies one tonic interval. It does not map source
-   scale degrees when source and project modes differ.
-4. The selected source can still contain off-scale notes, exposed non-chord
-   tones, simultaneous notes, doubled notes, or multiple note-bearing tracks.
-5. `SourceSongAssembler` retains structure and harmony in a sidecar, but copies
-   source tracks into occurrence-local tracks rather than publishing one
-   canonical monophonic melody.
+3. QP-004 maps recognized source scale degrees when source and project modes
+   differ, but intentionally retains unresolved chromatic notes as evidence for
+   the later harmony-fit gate.
+4. Selected source MIDI remains immutable and can retain its original texture;
+   QP-005 now publishes a separate controller-aware monophonic source candidate.
+   Off-scale and exposed non-chord tones still require QP-006 repair.
+5. `SourceSongAssembler` now consumes that prepared candidate but copies it into
+   occurrence-local tracks rather than publishing one canonical full melody.
 6. Source-song approval is checked before arrangement, but arrangement state,
    humanization, and rendering later reconstruct piano from occurrence
    artifacts instead of consuming the exact approved connected full melody.
@@ -60,10 +61,8 @@ outcome:
 10. Existing automated tests prove serialization, bounds, hashes, and output
     existence more strongly than they prove meter, groove, harmony, melodic
     identity, or listening quality.
-11. MIDI cleanup removes redundant sustain-controller changes but does not
-    convert pedal-extended sounding intervals into boundary-safe note releases.
-    A piano tail can therefore overlap the next authoritative chord even when
-    its written note-off appears acceptable.
+11. QP-005 materializes pedal-extended sounding intervals before monophony,
+    but the later chord/occurrence boundary-release policy is still QP-006 work.
 12. Generated bass and kick can share the same 50–150 Hz region. The mixer has
     filter, EQ, and compression primitives, but the default plan has no
     kick-triggered bass ducking and the current overlap critic is only a generic
