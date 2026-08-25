@@ -7,6 +7,7 @@ import app.melotrail.arrangement.ArrangementHarmonyContext
 import app.melotrail.arrangement.LocalQwenEnsembleCohesionPlanner
 import app.melotrail.arrangement.LogicalInstrument
 import app.melotrail.arrangement.DetailedArrangement
+import app.melotrail.arrangement.DeterministicContinuityEnsembleCohesionPlanner
 import app.melotrail.arrangement.MidiAnalysis
 import app.melotrail.arrangement.Project
 import app.melotrail.arrangement.ProjectStore
@@ -31,7 +32,7 @@ import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 
 /** Ensemble Cohesion is one bounded post-arrangement transition-planning stage. */
-enum class EnsembleCohesionPlannerKind { QWEN }
+enum class EnsembleCohesionPlannerKind { DETERMINISTIC, QWEN }
 data class GenerateEnsembleCohesionRequest(
     val root: Path,
     val planner: EnsembleCohesionPlannerKind = EnsembleCohesionPlannerKind.QWEN,
@@ -93,12 +94,16 @@ class DefaultEnsembleCohesionApplicationService(
     private val previewPreparation: EnsembleCohesionPreviewPreparation = EnsembleCohesionPreviewPreparation { _, _, _ -> null },
     private val sourceSongCritic: SourceSongCriticApplicationService = DefaultSourceSongCriticApplicationService(),
     private val criticService: FullSongCriticApplicationService = DefaultFullSongCriticApplicationService(),
+    private val deterministicPlanner: (EnsembleCohesionInput) -> EnsembleCohesionPlan =
+        DeterministicContinuityEnsembleCohesionPlanner()::plan,
     private val qwenPlanner: (EnsembleCohesionInput) -> EnsembleCohesionPlan = { input ->
         LocalQwenEnsembleCohesionPlanner(model = EnsembleCohesionModelIdentity("qwen", "local", "0".repeat(64))).plan(input)
     }
 ) : EnsembleCohesionApplicationService {
     constructor(qwenPlanner: (EnsembleCohesionInput) -> EnsembleCohesionPlan) : this(
-        EnsembleMidiPreparation { _, _ -> }, EnsembleCohesionPreviewPreparation { _, _, _ -> null }, DefaultSourceSongCriticApplicationService(), DefaultFullSongCriticApplicationService(), qwenPlanner
+        EnsembleMidiPreparation { _, _ -> }, EnsembleCohesionPreviewPreparation { _, _, _ -> null },
+        DefaultSourceSongCriticApplicationService(), DefaultFullSongCriticApplicationService(),
+        DeterministicContinuityEnsembleCohesionPlanner()::plan, qwenPlanner
     )
 
     override suspend fun generate(request: GenerateEnsembleCohesionRequest, progress: ProgressSink): EnsembleCohesionSnapshot = mutate(request.root) { root ->
@@ -107,7 +112,10 @@ class DefaultEnsembleCohesionApplicationService(
         progress.report(OperationProgress("cohesion", 2, 5, "Validating adjacent-boundary musical evidence"))
         val input = currentInput(root, request.intensity)
         progress.report(OperationProgress("cohesion", 3, 5, "Requesting bounded Ensemble Cohesion plan"))
-        val plan = qwenPlanner(input)
+        val plan = when (request.planner) {
+            EnsembleCohesionPlannerKind.DETERMINISTIC -> deterministicPlanner(input)
+            EnsembleCohesionPlannerKind.QWEN -> qwenPlanner(input)
+        }
         progress.report(OperationProgress("cohesion", 4, 5, "Publishing boundary Ensemble Cohesion MIDI"))
         EnsembleCohesionStore.writeDraft(root, input, plan)
         persistComparisons(root, input)
@@ -209,7 +217,10 @@ class DefaultEnsembleCohesionApplicationService(
     private fun snapshot(root: Path, input: EnsembleCohesionInput, plan: EnsembleCohesionPlan, approved: Boolean): EnsembleCohesionSnapshot {
         val cohesionWorkflow = ProjectStore.read(root).workflow.cohesion
         val reviewed = cohesionWorkflow?.boundaries.orEmpty().filter { it.approved != null }.map { it.outgoingInstanceId to it.incomingInstanceId }.toSet()
-        return EnsembleCohesionSnapshot(root, EnsembleCohesionPlannerKind.QWEN, input.inputHash, input.structureSha256,
+        val planner = if (plan.model == app.melotrail.arrangement.EnsembleCohesionModelIdentity.DETERMINISTIC) {
+            EnsembleCohesionPlannerKind.DETERMINISTIC
+        } else EnsembleCohesionPlannerKind.QWEN
+        return EnsembleCohesionSnapshot(root, planner, input.inputHash, input.structureSha256,
             plan.boundaries.map { bridge -> EnsembleCohesionBoundarySnapshot(bridge.outgoingInstanceId, bridge.incomingInstanceId, root.resolve(EnsembleCohesionStore.bridgeMidi(bridge.outgoingInstanceId, bridge.incomingInstanceId)), "${bridge.roleAction.name.lowercase().replace('_', ' ')}: ${bridge.rationale}", bridge.outgoingInstanceId to bridge.incomingInstanceId in reviewed) },
             approvalRequired = !approved, approved = approved, stale = false,
             artifact = root.resolve(if (approved) EnsembleCohesionStore.APPROVED_FILE else EnsembleCohesionStore.DRAFT_FILE),

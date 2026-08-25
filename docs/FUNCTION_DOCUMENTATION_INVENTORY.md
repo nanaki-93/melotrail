@@ -67,7 +67,8 @@ review input, and human-review-only YouTube release metadata. Historical v2/v3
 manifests remain readable evidence; new v4 manifests block commercial readiness
 when those current inputs are unresolved.
 
-The 2026-08-25 live five-source review also refreshes the affected MIDI-fix,
-planning, Cohesion, enhancement, selection, drum, pad, and pattern-library rows.
-It covers occurrence-scoped validation, catalog-driven lo-fi grooves and fills,
-authoritative-harmony chord comping, and the bounded no-bass arrangement path.
+The 2026-08-25 live five-source review also refreshes the affected harmony,
+planning, Cohesion, enhancement-selection, drum, pad, and pattern-library rows.
+It covers exact slash/sixth-chord execution, catalog-driven lo-fi grooves and
+fills, deterministic continuity, authoritative-harmony chord comping, and the
+bounded no-bass/no-model arrangement path.

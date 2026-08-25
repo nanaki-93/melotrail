@@ -63,17 +63,6 @@ live-e2e: $(WORKER_DEPS_STAMP)
 			exit 1; \
 		fi; \
 	done
-	@qwen_model="$${QWEN_MODEL:-qwen}"; \
-	qwen_endpoint="$${LM_STUDIO_CHAT_COMPLETIONS_URL:-http://127.0.0.1:1234/v1/chat/completions}"; \
-	qwen_models_endpoint="$${qwen_endpoint%/chat/completions}/models"; \
-	qwen_models="$$(curl --fail --silent --max-time 5 "$$qwen_models_endpoint")" || { \
-		echo "Live E2E requires LM Studio with the Qwen model loaded at $$qwen_endpoint."; \
-		exit 1; \
-	}; \
-	if ! printf '%s' "$$qwen_models" | grep -F '"id": "'"$$qwen_model"'"' >/dev/null; then \
-		echo "Live E2E requires loaded Qwen model '$$qwen_model'. Load it in LM Studio, then retry."; \
-		exit 1; \
-	fi
 	@renderer="$${SFZ_RENDERER_PATH:-$$(command -v sfizz_render || true)}"; \
 	if [ -z "$$renderer" ] || [ ! -x "$$renderer" ]; then \
 		echo "Live E2E requires sfizz_render. Set SFZ_RENDERER_PATH to its executable path."; \

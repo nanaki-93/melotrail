@@ -30,6 +30,7 @@ class BassStemGenerationTest {
         assertEquals(37, notes(BassRole.ROOT, chords = listOf(chord(0, 1920, "C#m"))).first().pitch)
         assertEquals(46, notes(BassRole.ROOT, chords = listOf(chord(0, 1920, "Bb"))).first().pitch)
         assertEquals(40, notes(BassRole.ROOT, chords = listOf(chord(0, 1920, "E"))).first().pitch)
+        assertEquals(47, notes(BassRole.ROOT, chords = listOf(chord(0, 1920, "G/B"))).first().pitch)
     }
 
     @Test

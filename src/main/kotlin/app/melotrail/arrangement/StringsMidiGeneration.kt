@@ -1,5 +1,7 @@
 package app.melotrail.arrangement
 
+import app.melotrail.harmony.ChordSymbolFormatter
+
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -227,17 +229,8 @@ class DeterministicStringsMidiGenerator {
     }
 
     private fun parseChord(symbol: String?): Harmony? {
-        val match = CHORD_SYMBOL.matchEntire(symbol?.trim().orEmpty()) ?: return null
-        val root = pitchClass(match.groupValues[1]) ?: return null
-        val intervals = when (match.groupValues[2].lowercase()) {
-            "" -> intArrayOf(0, 4, 7); "m", "min" -> intArrayOf(0, 3, 7); "7" -> intArrayOf(0, 4, 7, 10)
-            "maj7" -> intArrayOf(0, 4, 7, 11); "m7", "min7" -> intArrayOf(0, 3, 7, 10)
-            "maj9" -> intArrayOf(0, 4, 7, 11, 14); "m9", "min9" -> intArrayOf(0, 3, 7, 10, 14)
-            "add9" -> intArrayOf(0, 4, 7, 14)
-            "sus2" -> intArrayOf(0, 2, 7); "sus4", "sus" -> intArrayOf(0, 5, 7)
-            else -> return null
-        }
-        return Harmony(root, intervals)
+        val parsed = ChordSymbolFormatter.parse(symbol?.trim().orEmpty()) ?: return null
+        return Harmony(parsed.root.chromatic, parsed.quality.intervals.toIntArray())
     }
 
     private fun selectVoicing(
@@ -318,11 +311,6 @@ class DeterministicStringsMidiGenerator {
     private fun registerCenter(range: IntRange): Int = (range.first + range.last) / 2
     private fun releaseGapTicks(ppq: Int): Long = maxOf(1, ppq / RELEASE_GAP_DIVISOR).toLong()
     private fun velocity(energy: Double, role: StringsMidiRole): Int = (MIN_VELOCITY + (MAX_VELOCITY - MIN_VELOCITY) * energy + if (role == StringsMidiRole.CLIMAX_REINFORCEMENT) CLIMAX_VELOCITY_BOOST else 0).roundToInt().coerceIn(MIN_VELOCITY, MAX_VELOCITY)
-    private fun pitchClass(value: String): Int? {
-        val base = when (value.firstOrNull()?.uppercaseChar()) { 'C' -> 0; 'D' -> 2; 'E' -> 4; 'F' -> 5; 'G' -> 7; 'A' -> 9; 'B' -> 11; else -> return null }
-        return when (value.getOrNull(1)) { '#' -> (base + 1) % 12; 'b' -> (base + 11) % 12; else -> base }
-    }
-
     private fun validate(notes: List<StringsMidiNote>, request: StringsGenerationRequest, range: IntRange) {
         val lastEnd = mutableMapOf<Int, Long>()
         notes.sortedWith(compareBy<StringsMidiNote> { it.startTick }.thenBy { it.pitch }).forEach { note ->
@@ -344,7 +332,6 @@ class DeterministicStringsMidiGenerator {
         const val COUNTER_SOURCE_MAX_PITCH = 72; const val COUNTER_SOURCE_MAX_RANGE = 18; const val COUNTER_SOURCE_MAX_DENSITY = 0.35; const val COUNTER_SOURCE_MAX_RHYTHMIC_DENSITY = 0.50; const val COUNTER_MAX_STEP = 5
         const val SOURCE_CLEARANCE_SEMITONES = 2; const val MIN_VELOCITY = 42; const val MAX_VELOCITY = 82; const val CLIMAX_VELOCITY_BOOST = 6; const val RELEASE_GAP_DIVISOR = 24
         const val MIN_PRACTICAL_REGISTER_SPAN = 7
-        val CHORD_SYMBOL = Regex("^([A-G](?:#|b)?)(|m|min|7|maj7|m7|min7|maj9|m9|min9|add9|sus2|sus4|sus)$", RegexOption.IGNORE_CASE)
     }
 }
 

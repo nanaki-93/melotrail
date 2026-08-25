@@ -1,5 +1,6 @@
 package app.melotrail.arrangement
 
+import app.melotrail.harmony.ChordSymbolFormatter
 import kotlin.math.abs
 
 data class BassQualityIssue(val code: String, val startTick: Long, val endTick: Long, val detail: String)
@@ -65,6 +66,7 @@ class BassQualityValidator {
         if (previous == null) return pitch
         return listOf(pitch - 12, pitch, pitch + 12).filter { it in LOWEST..HIGHEST }.minBy { abs(it - previous.pitch) }
     }
-    private fun pitchClass(symbol: String): Int? { val base = when (symbol.trim().firstOrNull()?.uppercaseChar()) { 'C' -> 0; 'D' -> 2; 'E' -> 4; 'F' -> 5; 'G' -> 7; 'A' -> 9; 'B' -> 11; else -> return null }; return when (symbol.trim().getOrNull(1)) { '#' -> (base + 1) % 12; 'b' -> (base + 11) % 12; else -> base } }
+    private fun pitchClass(symbol: String): Int? =
+        ChordSymbolFormatter.parse(symbol.trim())?.let { it.bass ?: it.root }?.chromatic
     private companion object { const val LOWEST = 28; const val HIGHEST = 48; const val MAX_LEAP = 12; const val CONFIDENCE = 0.75 }
 }

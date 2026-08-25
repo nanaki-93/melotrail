@@ -190,7 +190,7 @@ private fun HarmonyTemplatePicker(options: List<HarmonyTemplateOption>, selected
     }
 }
 
-internal fun chordSymbol(event: ChordEvent): String = event.root.toString() + event.quality.symbolSuffix
+internal fun chordSymbol(event: ChordEvent): String = app.melotrail.harmony.ChordSymbolFormatter.format(event)
 
 @Composable
 private fun HarmonyCard(tag: String, title: String, modifier: Modifier = Modifier, content: @Composable () -> Unit) = Card(

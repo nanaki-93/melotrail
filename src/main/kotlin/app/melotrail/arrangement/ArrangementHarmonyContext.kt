@@ -1,6 +1,7 @@
 package app.melotrail.arrangement
 
 import app.melotrail.harmony.HarmonySettings
+import app.melotrail.harmony.ChordSymbolFormatter
 
 /**
  * Converts saved, musician-approved Harmony into the exact tick segments used
@@ -45,7 +46,7 @@ object ArrangementHarmonyContext {
             val end = minOf(analysis.durationTicks, barEnd, nextSignature ?: Long.MAX_VALUE)
             require(end > tick) { "Structured arrangement harmony encountered a non-positive measure" }
             val chord = events[chordIndex % events.size]
-            chords += MidiChord(tick, end, "${chord.root}${chord.quality.symbolSuffix}", 1.0)
+            chords += MidiChord(tick, end, ChordSymbolFormatter.format(chord), 1.0)
             tick = end
             chordIndex++
         }

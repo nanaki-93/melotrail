@@ -118,8 +118,15 @@ data class HarmonicTimelineEntry(
 )
 
 @Serializable
-data class CanonicalChord(val rootChromatic: Int, val rootSymbol: String, val quality: ChordQuality) {
-    val symbol: String get() = rootSymbol + quality.symbolSuffix
+data class CanonicalChord(
+    val rootChromatic: Int,
+    val rootSymbol: String,
+    val quality: ChordQuality,
+    val bassChromatic: Int? = null,
+    val bassSymbol: String? = null
+) {
+    init { require((bassChromatic == null) == (bassSymbol == null)) { "Canonical slash-chord bass must be complete." } }
+    val symbol: String get() = rootSymbol + quality.symbolSuffix + (bassSymbol?.let { "/$it" } ?: "")
 }
 
 /**
@@ -557,7 +564,10 @@ class MusicalAuthorityBuilder(
         return Math.multiplyExact(ticks, (toPpq / fromPpq).toLong())
     }
 
-    private fun chord(event: ChordEvent) = CanonicalChord(event.root.chromatic, event.root.toString(), event.quality)
+    private fun chord(event: ChordEvent) = CanonicalChord(
+        event.root.chromatic, event.root.toString(), event.quality,
+        event.bass?.chromatic, event.bass?.toString()
+    )
 
     private data class LoadedAnalysis(val facts: CanonicalAnalyzedPartFacts)
     private data class ValidatedOutputs(val arrangement: WorkflowArtifactReference, val roles: List<ValidatedGeneratedRoleArtifact>)

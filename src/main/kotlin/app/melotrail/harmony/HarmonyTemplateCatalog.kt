@@ -10,7 +10,13 @@ data class HarmonyTemplate(
     val label: String,
     val romanNumerals: String,
     val mode: ScaleModeId,
-    val degrees: List<Int>
+    val chords: List<HarmonyTemplateChord>
+)
+
+data class HarmonyTemplateChord(
+    val degree: Int,
+    val quality: ChordQuality? = null,
+    val bassDegree: Int? = null
 )
 
 data class HarmonyTemplateOption(
@@ -22,16 +28,27 @@ data class HarmonyTemplateOption(
 
 object HarmonyTemplateCatalog {
     private val major = listOf(
-        template("lofi-major-classic-v1", "Classic loop", "I–V–vi–IV", 1, 5, 6, 4),
+        exactTemplate("lofi-major-classic-v1", "Classic loop", "I–V/7–vi7–IVmaj7",
+            chord(1, ChordQuality.MAJOR), chord(5, ChordQuality.MAJOR, bassDegree = 7),
+            chord(6, ChordQuality.MINOR_7), chord(4, ChordQuality.MAJOR_7)),
         template("lofi-major-turnaround-v1", "Turnaround", "I–vi–ii–V", 1, 6, 2, 5),
         template("lofi-major-jazzy-v1", "Jazzy resolve", "ii–V–I", 2, 5, 1),
         template("lofi-major-cycle-v1", "Soft cycle", "vi–ii–V–I", 6, 2, 5, 1),
         template("lofi-major-lift-v1", "Gentle lift", "I–IV–vi–V", 1, 4, 6, 5),
         template("lofi-major-rising-v1", "Rising warmth", "I–iii–IV–V", 1, 3, 4, 5),
-        template("lofi-major-warm-intro-v1", "Warm intro", "I–vi–IV–V", 1, 6, 4, 5),
-        template("lofi-major-open-chorus-v1", "Open chorus", "IV–V–I–vi–IV–V–I–I", 4, 5, 1, 6, 4, 5, 1, 1),
-        template("lofi-major-reflective-bridge-v1", "Reflective bridge", "vi–iii–IV–V", 6, 3, 4, 5),
-        template("lofi-major-soft-outro-v1", "Soft outro", "IV–V–I–I", 4, 5, 1, 1)
+        exactTemplate("lofi-major-warm-intro-v1", "Warm intro", "Imaj7–vi7–IVmaj7–V",
+            chord(1, ChordQuality.MAJOR_7), chord(6, ChordQuality.MINOR_7),
+            chord(4, ChordQuality.MAJOR_7), chord(5, ChordQuality.MAJOR)),
+        exactTemplate("lofi-major-open-chorus-v1", "Open chorus", "IV–V–I–vi7–IV–V–I–I",
+            chord(4, ChordQuality.MAJOR), chord(5, ChordQuality.MAJOR), chord(1, ChordQuality.MAJOR),
+            chord(6, ChordQuality.MINOR_7), chord(4, ChordQuality.MAJOR), chord(5, ChordQuality.MAJOR),
+            chord(1, ChordQuality.MAJOR), chord(1, ChordQuality.MAJOR)),
+        exactTemplate("lofi-major-reflective-bridge-v1", "Reflective bridge", "vi7–iii–IVmaj7–V",
+            chord(6, ChordQuality.MINOR_7), chord(3, ChordQuality.MINOR),
+            chord(4, ChordQuality.MAJOR_7), chord(5, ChordQuality.MAJOR)),
+        exactTemplate("lofi-major-soft-outro-v1", "Soft outro", "IVmaj7–V–Imaj7–I6",
+            chord(4, ChordQuality.MAJOR_7), chord(5, ChordQuality.MAJOR),
+            chord(1, ChordQuality.MAJOR_7), chord(1, ChordQuality.MAJOR_6))
     )
     private val minor = listOf(
         template("lofi-minor-drift-v1", "Minor drift", "i–VII–VI–VII", 1, 7, 6, 7),
@@ -45,7 +62,7 @@ object HarmonyTemplateCatalog {
 
     fun options(key: MusicalKey): List<HarmonyTemplateOption> = templatesFor(key).map { template ->
         HarmonyTemplateOption(template.id, template.label, template.romanNumerals,
-            resolve(template, key).map { it.root.toString() + it.quality.symbolSuffix })
+            resolve(template, key).map(ChordSymbolFormatter::format))
     }
 
     fun resolve(id: HarmonyTemplateId, key: MusicalKey, section: SectionTypeId, previous: List<ChordEvent> = emptyList()): ChordProgression {
@@ -63,9 +80,10 @@ object HarmonyTemplateCatalog {
 
     private fun templatesFor(key: MusicalKey): List<HarmonyTemplate> = all.filter { it.mode == key.modeId }
 
-    private fun resolve(template: HarmonyTemplate, key: MusicalKey): List<ChordEvent> = template.degrees.mapIndexed { index, degree ->
-        val root = key.scalePitchClasses()[degree - 1]
-        ChordEvent(ChordEventId("template-$index"), root, qualityFor(key.modeId, degree), index)
+    private fun resolve(template: HarmonyTemplate, key: MusicalKey): List<ChordEvent> = template.chords.mapIndexed { index, chord ->
+        val root = key.scalePitchClasses()[chord.degree - 1]
+        val bass = chord.bassDegree?.let { key.scalePitchClasses()[it - 1] }
+        ChordEvent(ChordEventId("template-$index"), root, chord.quality ?: qualityFor(key.modeId, chord.degree), index, bass = bass)
     }
 
     private fun qualityFor(mode: ScaleModeId, degree: Int): ChordQuality = when (mode) {
@@ -87,6 +105,15 @@ object HarmonyTemplateCatalog {
     private fun template(id: String, label: String, numerals: String, vararg degrees: Int) = HarmonyTemplate(
         HarmonyTemplateId(id), label, numerals,
         if (id.contains("-major-")) ScaleModeId.MAJOR else ScaleModeId.NATURAL_MINOR,
-        degrees.toList()
+        degrees.map(::HarmonyTemplateChord)
     )
+
+    /** Declare an exact major-mode template without applying automatic diatonic chord qualities. */
+    private fun exactTemplate(id: String, label: String, numerals: String, vararg chords: HarmonyTemplateChord) = HarmonyTemplate(
+        HarmonyTemplateId(id), label, numerals, ScaleModeId.MAJOR, chords.toList()
+    )
+
+    /** Define one exact scale-relative chord, optionally with a scale-relative slash bass. */
+    private fun chord(degree: Int, quality: ChordQuality, bassDegree: Int? = null) =
+        HarmonyTemplateChord(degree, quality, bassDegree)
 }

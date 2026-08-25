@@ -1,5 +1,6 @@
 package app.melotrail.arrangement
 
+import app.melotrail.harmony.ChordSymbolFormatter
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -272,20 +273,16 @@ class DeterministicBassMidiGenerator {
 
     private fun harmonyRoot(request: BassGenerationRequest, tick: Long): Int? {
         val chord = request.chords.firstOrNull { tick >= it.startTick && tick < it.endTick }
-        chord?.takeIf { it.confidence >= CHORD_CONFIDENCE }?.symbol?.let(::pitchClass)?.let { return it }
+        chord?.takeIf { it.confidence >= CHORD_CONFIDENCE }?.symbol?.let(::bassOrRoot)?.let { return it }
         return request.key?.takeIf { it.confidence >= KEY_CONFIDENCE }?.toMusicalKeyOrNull()?.tonic?.chromatic
     }
 
     private fun nextRoot(request: BassGenerationRequest, tick: Long): Int? =
-        request.chords.firstOrNull { it.startTick >= tick && it.confidence >= CHORD_CONFIDENCE }?.symbol?.let(::pitchClass)
+        request.chords.firstOrNull { it.startTick >= tick && it.confidence >= CHORD_CONFIDENCE }?.symbol?.let(::bassOrRoot)
             ?: request.key?.takeIf { it.confidence >= KEY_CONFIDENCE }?.toMusicalKeyOrNull()?.tonic?.chromatic
 
-    private fun pitchClass(symbol: String): Int? {
-        val value = symbol.trim()
-        if (value.isEmpty()) return null
-        val base = when (value[0].uppercaseChar()) { 'C' -> 0; 'D' -> 2; 'E' -> 4; 'F' -> 5; 'G' -> 7; 'A' -> 9; 'B' -> 11; else -> return null }
-        return when (value.getOrNull(1)) { '#' -> (base + 1) % 12; 'b' -> (base + 11) % 12; else -> base }
-    }
+    private fun bassOrRoot(symbol: String): Int? =
+        ChordSymbolFormatter.parse(symbol.trim())?.let { it.bass ?: it.root }?.chromatic
 
     private fun normalizePitch(pitch: Int): Int {
         var result = pitch

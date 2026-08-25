@@ -27,6 +27,15 @@ class StringsMidiGenerationTest {
     }
 
     @Test
+    fun `shared exact chord parser accepts sixths and slash chords`() {
+        val sixth = generator.generate(request(chords = listOf(chord(0, 480, "C6")))).notes
+        val slash = generator.generate(request(chords = listOf(chord(0, 480, "G/B")))).notes
+
+        assertEquals(setOf(0, 4, 7, 9), sixth.map { it.pitch % 12 }.toSet())
+        assertEquals(setOf(2, 7, 11), slash.map { it.pitch % 12 }.toSet())
+    }
+
+    @Test
     fun `carries a prior strings voicing across a section cardinality change without an octave reset`() {
         val first = generator.generate(request(role = StringsMidiRole.SUSTAINED_HARMONY, chords = listOf(chord(0, 480, "C")))).notes.map { it.pitch }.sorted()
         val carried = generator.generate(request(role = StringsMidiRole.SUSTAINED_HARMONY, chords = listOf(chord(0, 480, "F"))).copy(

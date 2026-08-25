@@ -19,8 +19,17 @@ class PadMidiGenerationTest {
         assertEquals(setOf(0, 4, 7), pitchClasses(notes(chords = listOf(chord(0, 480, "C")))))
         assertEquals(setOf(0, 3, 7), pitchClasses(notes(chords = listOf(chord(0, 480, "Cm")))))
         assertEquals(setOf(0, 4, 7, 10), pitchClasses(notes(chords = listOf(chord(0, 480, "C7")), energy = 0.8)))
+        assertEquals(setOf(0, 4, 7, 9), pitchClasses(notes(chords = listOf(chord(0, 480, "C6")), energy = 0.8)))
         assertEquals(setOf(0, 2, 7), pitchClasses(notes(chords = listOf(chord(0, 480, "Csus2")))))
         assertEquals(setOf(0, 5, 7), pitchClasses(notes(chords = listOf(chord(0, 480, "Csus4")))))
+    }
+
+    @Test
+    fun `slash chord keeps its declared chord tone in the bottom voice`() {
+        val voicing = notes(chords = listOf(chord(0, 480, "G/B"))).map(PadMidiNote::pitch).sorted()
+
+        assertEquals(11, voicing.first() % 12)
+        assertEquals(setOf(2, 7, 11), voicing.map { it % 12 }.toSet())
     }
 
     @Test

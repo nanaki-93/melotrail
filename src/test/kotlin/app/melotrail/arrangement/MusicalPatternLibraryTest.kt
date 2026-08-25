@@ -31,6 +31,7 @@ class MusicalPatternLibraryTest {
         assertEquals("drums.lazy-swing", DrumGroovePatternId.LAZY_SWING.id.value)
         assertEquals("drums.fill.bridge-half-time-break", DrumFillPatternId.BRIDGE_HALF_TIME_BREAK.id.value)
         assertEquals("chords.rhythm.broken-syncopation", ChordRhythmPatternId.BROKEN_SYNCOPATION.id.value)
+        assertEquals(listOf(4, 8, 12), MusicalPatternLibrary.chordRhythm(ChordRhythmPatternId.LATE_ENTRY).steps.map { it.sixteenth })
         assertEquals("transition.drop-build", TransitionPatternId.DROP_BUILD.id.value)
         assertTrue(MusicalPatternLibrary.drumGrooves.all { !it.displayName.contains(".mid") })
         assertEquals(DrumFillPatternId.entries.toSet(), MusicalPatternLibrary.drumFills.map { it.id }.toSet())
@@ -45,6 +46,19 @@ class MusicalPatternLibraryTest {
         assertTrue(approached.any { it.startTick == 1440L && it.pitch % 12 in setOf(5, 9) })
         assertEquals(43, approached.first { it.startTick == 1920L }.pitch)
         assertEquals(MusicalPatternLibrary.bass(context, BassPatternParameters(BassPatternId.WALK_TO_NEXT_ROOT, 8)), MusicalPatternLibrary.bass(context, BassPatternParameters(BassPatternId.WALK_TO_NEXT_ROOT, 8)))
+    }
+
+    @Test fun `canonical bass patterns honor an executable slash bass`() {
+        val slash = oneChord().copy(events = listOf(
+            oneChord().events.single().copy(
+                root = PitchClass.of(PitchSpelling.G),
+                bass = PitchClass.of(PitchSpelling.B)
+            )
+        ))
+
+        assertEquals(listOf(47), MusicalPatternLibrary.bass(
+            context.copy(progression = slash), BassPatternParameters(BassPatternId.SUSTAINED_ROOT)
+        ).map { it.pitch })
     }
 
     @Test fun `pad strategies remain harmony-bound and common-tone minimizes movement`() {

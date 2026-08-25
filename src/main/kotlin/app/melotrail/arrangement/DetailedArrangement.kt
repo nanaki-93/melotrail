@@ -675,7 +675,7 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
             lift-build. Allowed grooveCharacter: straight, laid_back, swung, half_time, building. fillPlacement is none or
             last_bar and must agree with fillLastBar. Allowed drum fill patterns: soft-two-stroke, dusty-snare-roll,
             kick-snare-turnaround, bridge-half-time-break. Allowed pad patterns: sustained, close, open, common-tone, minimal.
-            Allowed pad rhythmPattern values: sustained, laid-back-quarters, dusty-offbeats, broken-syncopation,
+            Allowed pad rhythmPattern values: sustained, laid-back-quarters, late-entry, dusty-offbeats, broken-syncopation,
             bridge-half-time.
             Bass must use register low. Strings are voiced above the source
             piano range where practical: choose high when a strings section's MIDI analysis has a high pitchRange.max;

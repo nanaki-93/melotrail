@@ -1,5 +1,7 @@
 package app.melotrail.arrangement
 
+import app.melotrail.harmony.ChordSymbolFormatter
+
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -260,30 +262,13 @@ class DeterministicMidiTransitionEngine {
     private fun validateEvent(event: TransitionMidiEvent) = require(event.startTick >= 0 && event.endTick > event.startTick && event.pitch in 0..127 && event.velocity in 1..127) { "Transition MIDI event is invalid" }
 
     private fun parseHarmony(chord: MidiChord): Harmony? {
-        val match = CHORD.matchEntire(chord.symbol?.trim().orEmpty()) ?: return null
-        val root = pitchClass(match.groupValues[1]) ?: return null
-        val intervals = when (match.groupValues[2].lowercase()) {
-            "" -> intArrayOf(0, 4, 7)
-            "m", "min" -> intArrayOf(0, 3, 7)
-            "7" -> intArrayOf(0, 4, 7, 10)
-            "maj7" -> intArrayOf(0, 4, 7, 11)
-            "m7", "min7" -> intArrayOf(0, 3, 7, 10)
-            "sus2" -> intArrayOf(0, 2, 7)
-            "sus4", "sus" -> intArrayOf(0, 5, 7)
-            else -> return null
-        }
-        return Harmony(root, intervals)
-    }
-
-    private fun pitchClass(value: String): Int? {
-        val base = when (value.firstOrNull()?.uppercaseChar()) { 'C' -> 0; 'D' -> 2; 'E' -> 4; 'F' -> 5; 'G' -> 7; 'A' -> 9; 'B' -> 11; else -> return null }
-        return when (value.getOrNull(1)) { '#' -> (base + 1) % 12; 'b' -> (base + 11) % 12; else -> base }
+        val parsed = ChordSymbolFormatter.parse(chord.symbol?.trim().orEmpty()) ?: return null
+        return Harmony(parsed.root.chromatic, parsed.quality.intervals.toIntArray())
     }
 
     private data class Harmony(val root: Int, val intervals: IntArray)
     private companion object {
         const val HARMONY_CONFIDENCE = 0.75
-        val CHORD = Regex("^([A-G](?:#|b)?)(|m|min|7|maj7|m7|min7|sus2|sus4|sus)$", RegexOption.IGNORE_CASE)
     }
 }
 

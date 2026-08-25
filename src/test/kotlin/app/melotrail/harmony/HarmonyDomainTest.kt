@@ -28,6 +28,7 @@ class HarmonyDomainTest {
         val expectedIntervals = mapOf(
             ChordQuality.MAJOR to listOf(0, 4, 7),
             ChordQuality.MINOR to listOf(0, 3, 7),
+            ChordQuality.MAJOR_6 to listOf(0, 4, 7, 9),
             ChordQuality.DOMINANT_7 to listOf(0, 4, 7, 10),
             ChordQuality.MAJOR_7 to listOf(0, 4, 7, 11),
             ChordQuality.MINOR_7 to listOf(0, 3, 7, 10),
@@ -49,6 +50,12 @@ class HarmonyDomainTest {
         }
         assertEquals(null, ChordSymbolFormatter.parse("Hmaj7"))
         assertEquals(null, ChordSymbolFormatter.parse("C13"))
+        assertEquals(ChordQuality.MINOR_7, requireNotNull(ChordSymbolFormatter.parse("Cmin7")).quality)
+        assertEquals(ChordQuality.SUS_4, requireNotNull(ChordSymbolFormatter.parse("Csus")).quality)
+        val slash = event("slash", PitchClass.of(PitchSpelling.G), ChordQuality.MAJOR, 0,
+            bass = PitchClass.of(PitchSpelling.B))
+        assertEquals("G/B", ChordSymbolFormatter.format(slash))
+        assertEquals(PitchClass.of(PitchSpelling.B), requireNotNull(ChordSymbolFormatter.parse("G/B")).bass)
     }
 
     @Test
@@ -75,11 +82,11 @@ class HarmonyDomainTest {
             HarmonyTemplateId(templateId), cMajor, SectionTypeId.VERSE
         ).events.map(ChordSymbolFormatter::format)
 
-        assertEquals(listOf("Cmaj7", "Am7", "Fmaj7", "G7"), symbols("lofi-major-warm-intro-v1"))
-        assertEquals(listOf("Cmaj7", "G7", "Am7", "Fmaj7"), symbols("lofi-major-classic-v1"))
-        assertEquals(listOf("Fmaj7", "G7", "Cmaj7", "Am7", "Fmaj7", "G7", "Cmaj7", "Cmaj7"), symbols("lofi-major-open-chorus-v1"))
-        assertEquals(listOf("Am7", "Em7", "Fmaj7", "G7"), symbols("lofi-major-reflective-bridge-v1"))
-        assertEquals(listOf("Fmaj7", "G7", "Cmaj7", "Cmaj7"), symbols("lofi-major-soft-outro-v1"))
+        assertEquals(listOf("Cmaj7", "Am7", "Fmaj7", "G"), symbols("lofi-major-warm-intro-v1"))
+        assertEquals(listOf("C", "G/B", "Am7", "Fmaj7"), symbols("lofi-major-classic-v1"))
+        assertEquals(listOf("F", "G", "C", "Am7", "F", "G", "C", "C"), symbols("lofi-major-open-chorus-v1"))
+        assertEquals(listOf("Am7", "Em", "Fmaj7", "G"), symbols("lofi-major-reflective-bridge-v1"))
+        assertEquals(listOf("Fmaj7", "G", "Cmaj7", "C6"), symbols("lofi-major-soft-outro-v1"))
     }
 
     @Test

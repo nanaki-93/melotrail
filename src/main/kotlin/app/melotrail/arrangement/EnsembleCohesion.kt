@@ -1,5 +1,6 @@
 package app.melotrail.arrangement
 
+import app.melotrail.harmony.ChordSymbolFormatter
 import app.melotrail.profile.BundledCompositionProfileCatalog
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
@@ -138,6 +139,52 @@ data class EnsembleCohesionEnhancementPolicy(val melodyPercent: Int, val rolePer
 )
 @Serializable data class EnsembleCohesionValidationReport(val errors: List<String> = emptyList()) { val valid: Boolean get() = errors.isEmpty() }
 @Serializable enum class EnsembleCohesionApproval { DRAFT, APPROVED }
+
+/**
+ * Conservative cohesion for fixed arrangements. Every continuing generated
+ * role is left byte-for-byte unchanged; the explicit boundary records prove
+ * that no fill, pickup, chord, or timing material was added after arrangement.
+ */
+class DeterministicContinuityEnsembleCohesionPlanner {
+    /** Build and validate one explicit zero-edit decision for every adjacent boundary. */
+    fun plan(input: EnsembleCohesionInput): EnsembleCohesionPlan {
+        val boundaries = input.boundaries.map { boundary ->
+            require(TransitionRoleAction.CONTINUITY in boundary.allowedRoleActions) {
+                "Boundary ${boundary.outgoingInstanceId} -> ${boundary.incomingInstanceId} does not permit continuity."
+            }
+            val instrument = boundary.roles.continuing.firstOrNull()
+                ?: throw IllegalArgumentException(
+                    "Boundary ${boundary.outgoingInstanceId} -> ${boundary.incomingInstanceId} has no continuing generated role."
+                )
+            TransitionBridgePlan(
+                outgoingInstanceId = boundary.outgoingInstanceId,
+                incomingInstanceId = boundary.incomingInstanceId,
+                outgoingHash = boundary.outgoing.sourceHash,
+                incomingHash = boundary.incoming.sourceHash,
+                arrangementSha256 = input.arrangementSha256,
+                contextSha256 = input.contextSha256,
+                roleAction = TransitionRoleAction.CONTINUITY,
+                bridgeType = BridgeType.CONTINUITY,
+                instrument = instrument,
+                harmonicHandoff = HarmonicHandoff.HOLD,
+                rhythmicGesture = RhythmicGesture.SUSTAIN,
+                energyContour = EnergyContour.HOLD,
+                rationale = "Preserve the fixed arrangement across this boundary",
+                placement = TransitionPlacement.NO_OP,
+                leadBeats = 0,
+                tailBeats = 0
+            )
+        }
+        return EnsembleCohesionPlan(
+            inputHash = input.inputHash,
+            arrangementSha256 = input.arrangementSha256,
+            contextSha256 = input.contextSha256,
+            model = EnsembleCohesionModelIdentity.DETERMINISTIC,
+            boundaries = boundaries,
+            intensity = input.intensity
+        ).also { EnsembleCohesionValidator.requireValid(it, input) }
+    }
+}
 
 /**
  * Compact, path-free evidence supplied to the model. Identity values are
@@ -558,23 +605,10 @@ object DeterministicTransitionBridgeEngine {
     private fun addTempo(track: javax.sound.midi.Track, tempo: MidiTempoChange, tick: Long) { val micros = (60_000_000.0 / tempo.bpm).roundToLong().toInt(); track.add(MidiEvent(MetaMessage(0x51, byteArrayOf((micros ushr 16).toByte(), (micros ushr 8).toByte(), micros.toByte()), 3), tick)) }
     private fun addMeter(track: javax.sound.midi.Track, meter: MidiTimeSignature, tick: Long) { track.add(MidiEvent(MetaMessage(0x58, byteArrayOf(meter.numerator.toByte(), Integer.numberOfTrailingZeros(meter.denominator).toByte(), 24, 8), 4), tick)) }
     private fun harmony(symbol: String?, key: MidiKey?): Harmony? {
-        val match = Regex("^([A-G](?:#|b)?)(|m|min|7|maj7|m7|min7|maj9|m9|min9|add9|sus2|sus4|sus)$", RegexOption.IGNORE_CASE).matchEntire(symbol.orEmpty())
-        val root = match?.groupValues?.get(1)?.let(::pitchClass) ?: key?.toMusicalKeyOrNull()?.tonic?.chromatic ?: return null
-        val intervals = when (match?.groupValues?.get(2)?.lowercase()) {
-            "m", "min" -> listOf(0, 3, 7)
-            "7" -> listOf(0, 4, 7, 10)
-            "maj7" -> listOf(0, 4, 7, 11)
-            "m7", "min7" -> listOf(0, 3, 7, 10)
-            "maj9" -> listOf(0, 4, 7, 11, 14)
-            "m9", "min9" -> listOf(0, 3, 7, 10, 14)
-            "add9" -> listOf(0, 4, 7, 14)
-            "sus2" -> listOf(0, 2, 7)
-            "sus4", "sus" -> listOf(0, 5, 7)
-            else -> listOf(0, 4, 7)
-        }
-        return Harmony(root, intervals)
+        val parsed = symbol?.let(ChordSymbolFormatter::parse)
+        val root = parsed?.root?.chromatic ?: key?.toMusicalKeyOrNull()?.tonic?.chromatic ?: return null
+        return Harmony(root, parsed?.quality?.intervals ?: listOf(0, 4, 7))
     }
-    private fun pitchClass(value: String): Int? { val base = when (value.firstOrNull()?.uppercaseChar()) { 'C' -> 0; 'D' -> 2; 'E' -> 4; 'F' -> 5; 'G' -> 7; 'A' -> 9; 'B' -> 11; else -> return null }; return when (value.getOrNull(1)) { '#' -> (base + 1) % 12; 'b' -> (base + 11) % 12; else -> base } }
     private data class Harmony(val root: Int, val intervals: List<Int>) {
         fun pitchClasses(): List<Int> = intervals.map { (root + it).mod(12) }
     }

@@ -158,6 +158,8 @@ class ReferenceSongIntegrationTest {
             }
             FullSongPath.BYPASS -> {
                 assertFailsWith<IllegalArgumentException> { enhance.selectBypass(root) }
+                assertEquals(app.melotrail.arrangement.FullSongEnhancementSelection.BYPASS,
+                    enhance.selectBypass(root, preserveQualityCertifiedArrangement = true).selection)
                 return RunResult(emptyMap(), 0, 0, false, modelCalls)
             }
             FullSongPath.REJECTED -> {

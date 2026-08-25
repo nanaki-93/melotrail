@@ -213,6 +213,36 @@ class FullSongCriticTest {
         assertEquals(240.0, issue.observed.single { it.name == "phaseDeltaTicks" }.value, 0.001)
     }
 
+    @Test fun `repeated-section evolution distinguishes quarter notes from offbeat comping`() {
+        val unchanged = write("unchanged-verses.mid", listOf(
+            0L to 120L to 60, 480L to 600L to 60, 960L to 1_080L to 60, 1_440L to 1_560L to 60,
+            1_920L to 2_040L to 60, 2_400L to 2_520L to 60, 2_880L to 3_000L to 60, 3_360L to 3_480L to 60
+        ))
+        val offbeats = write("offbeat-verses.mid", listOf(
+            0L to 120L to 60, 480L to 600L to 60, 960L to 1_080L to 60, 1_440L to 1_560L to 60,
+            2_160L to 2_280L to 60, 2_640L to 2_760L to 60, 3_120L to 3_240L to 60, 3_600L to 3_720L to 60
+        ))
+        val base = input()
+        val authority = base.authority.copy(
+            occurrences = listOf(
+                MusicalOccurrence("one", "A", SectionTypeId.VERSE, 0, 1, 0, 1_920),
+                MusicalOccurrence("two", "A", SectionTypeId.VERSE, 1, 2, 1_920, 3_840)
+            ),
+            harmony = listOf(
+                HarmonicTimelineEntry("one", SectionTypeId.VERSE, CanonicalChord(0, "C", ChordQuality.MAJOR), 0, 0, 1_920),
+                HarmonicTimelineEntry("two", SectionTypeId.VERSE, CanonicalChord(0, "C", ChordQuality.MAJOR), 1, 1_920, 3_840)
+            )
+        )
+        fun report(path: Path) = DeterministicFullSongCritic().criticize(base.copy(
+            authority = authority,
+            cohesionRoles = listOf(artifact("pad", path)),
+            approvedArrangement = twoSectionArrangement()
+        ))
+
+        assertTrue(report(unchanged).issues.any { it.category == FullSongIssueCategory.REPEATED_SECTION_STAGNATION })
+        assertFalse(report(offbeats).issues.any { it.category == FullSongIssueCategory.REPEATED_SECTION_STAGNATION })
+    }
+
     private fun input(vararg artifacts: FullSongCriticMidiArtifact): FullSongCriticInput = FullSongCriticInput(
         authority = WholeSongAnalysisProjection(
             contextSha256 = "a".repeat(64), projectKey = MusicalKey(PitchClass.of(PitchSpelling.C), ScaleModeId.MAJOR), tempo = Tempo(120.0), meter = TimeSignature(4, 4), harmonyPpq = 480,

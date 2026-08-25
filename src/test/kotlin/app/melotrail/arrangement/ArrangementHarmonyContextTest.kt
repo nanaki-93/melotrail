@@ -52,13 +52,14 @@ class ArrangementHarmonyContextTest {
             HarmonySectionTypeId.VERSE,
             listOf(
                 ChordEvent(ChordEventId("c1"), PitchClass.of(PitchSpelling.C), ChordQuality.MAJOR_7, 0),
-                ChordEvent(ChordEventId("c2"), PitchClass.of(PitchSpelling.A), ChordQuality.MINOR_7, 1)
+                ChordEvent(ChordEventId("c2"), PitchClass.of(PitchSpelling.G), ChordQuality.MAJOR, 1,
+                    bass = PitchClass.of(PitchSpelling.B))
             )
         )))
 
         val resolved = ArrangementHarmonyContext.apply(analysis, SectionTypeId.VERSE, harmony)
 
-        assertEquals(listOf("Cmaj7", "Am7", "Cmaj7", "Am7"), resolved.chords.map(MidiChord::symbol))
+        assertEquals(listOf("Cmaj7", "G/B", "Cmaj7", "G/B"), resolved.chords.map(MidiChord::symbol))
         assertEquals(listOf(0L, 1_920L, 3_840L, 5_760L), resolved.chords.map(MidiChord::startTick))
         assertEquals(7_680L, resolved.chords.last().endTick)
         assertEquals(listOf(1.0, 1.0, 1.0, 1.0), resolved.chords.map(MidiChord::confidence))

@@ -1,5 +1,7 @@
 package app.melotrail.arrangement
 
+import app.melotrail.harmony.ChordSymbolFormatter
+
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -90,8 +92,8 @@ data class PadGenerationResult(val notes: List<PadMidiNote>, val diagnostics: Li
 
 /**
  * Deterministic sustained harmony. Supported symbols are major/minor triads,
- * dominant/major/minor sevenths, ninths, add9, and sus2/sus4 chords, with an optional sharp
- * or flat root. Chords need >= 0.75 confidence. A weak chord may use only the
+ * sixths, dominant/major/minor sevenths, ninths, add9, and sus2/sus4 chords, with an optional
+ * sharp or flat root and an optional chord-tone slash bass. Chords need >= 0.75 confidence. A weak chord may use only the
  * analyzed key tonic at >= 0.70 confidence; unsupported confident symbols and
  * missing chord segments remain silent rather than being guessed.
  */
@@ -191,24 +193,12 @@ class DeterministicPadMidiGenerator {
     }
 
     private fun parseChord(symbol: String?): ChordHarmony? {
-        val value = symbol?.trim().orEmpty()
-        val match = CHORD_SYMBOL.matchEntire(value) ?: return null
-        val root = pitchClass(match.groupValues[1]) ?: return null
-        val quality = match.groupValues[2].lowercase()
-        val tones = when (quality) {
-            "" -> intArrayOf(0, 4, 7)
-            "m", "min" -> intArrayOf(0, 3, 7)
-            "7" -> intArrayOf(0, 4, 7, 10)
-            "maj7" -> intArrayOf(0, 4, 7, 11)
-            "m7", "min7" -> intArrayOf(0, 3, 7, 10)
-            "maj9" -> intArrayOf(0, 4, 7, 11, 14)
-            "m9", "min9" -> intArrayOf(0, 3, 7, 10, 14)
-            "add9" -> intArrayOf(0, 4, 7, 14)
-            "sus2" -> intArrayOf(0, 2, 7)
-            "sus4", "sus" -> intArrayOf(0, 5, 7)
-            else -> return null
-        }
-        return ChordHarmony(root, tones)
+        val parsed = ChordSymbolFormatter.parse(symbol?.trim().orEmpty()) ?: return null
+        val root = parsed.root.chromatic
+        val tones = parsed.quality.intervals.toIntArray()
+        val bass = parsed.bass?.chromatic
+        if (bass != null && tones.none { (root + it) % 12 == bass }) return null
+        return ChordHarmony(root, tones, bass)
     }
 
     private fun selectVoicing(
@@ -218,14 +208,21 @@ class DeterministicPadMidiGenerator {
         previous: List<Int>?,
         space: EnsembleSpaceMap?
     ): List<Int>? {
-        val tones = when {
+        val selectedTones = when {
             space != null && space.maximumSimultaneousNotes >= REDUCED_TEXTURE_NOTE_COUNT ->
                 intArrayOf(harmony.intervals.first(), harmony.intervals.firstOrNull { it % 12 == 7 } ?: harmony.intervals.last())
             energy < REDUCED_VOICING_ENERGY -> intArrayOf(harmony.intervals.first(), harmony.intervals.first { it % 12 == 7 })
             energy < SEVENTH_VOICING_ENERGY -> harmony.intervals.take(3).toIntArray()
             else -> harmony.intervals
         }.map { (harmony.root + it) % 12 }
+        val tones = harmony.bass?.let { bass ->
+            val complete = harmony.intervals.map { (harmony.root + it) % 12 }
+            val bassIndex = complete.indexOf(bass)
+            require(bassIndex >= 0) { "Slash bass must be a chord tone" }
+            complete.drop(bassIndex) + complete.take(bassIndex)
+        } ?: selectedTones
         val candidates = candidates(tones, requireNotNull(PadGenerationRequest.REGISTER_RANGES[register]))
+            .filter { voicing -> harmony.bass == null || voicing.first() % 12 == harmony.bass }
             .filter { voicing -> hasEnsembleSpace(voicing, space) }
         val range = requireNotNull(PadGenerationRequest.REGISTER_RANGES[register])
         val voiced = candidates.minWithOrNull(compareBy<List<Int>> {
@@ -277,13 +274,6 @@ class DeterministicPadMidiGenerator {
     private fun velocity(energy: Double, offset: Int = 0): Int =
         ((MIN_VELOCITY + (MAX_VELOCITY - MIN_VELOCITY) * energy).roundToInt() + offset).coerceIn(MIN_VELOCITY, MAX_VELOCITY)
 
-    private fun pitchClass(value: String): Int? {
-        val base = when (value.firstOrNull()?.uppercaseChar()) {
-            'C' -> 0; 'D' -> 2; 'E' -> 4; 'F' -> 5; 'G' -> 7; 'A' -> 9; 'B' -> 11; else -> return null
-        }
-        return when (value.getOrNull(1)) { '#' -> (base + 1) % 12; 'b' -> (base + 11) % 12; else -> base }
-    }
-
     private fun validateNotes(notes: List<PadMidiNote>, request: PadGenerationRequest) {
         val range = requireNotNull(PadGenerationRequest.REGISTER_RANGES[request.register])
         val lastEndByPitch = mutableMapOf<Int, Long>()
@@ -296,7 +286,7 @@ class DeterministicPadMidiGenerator {
         }
     }
 
-    private data class ChordHarmony(val root: Int, val intervals: IntArray)
+    private data class ChordHarmony(val root: Int, val intervals: IntArray, val bass: Int? = null)
     private data class RhythmWindow(val startTick: Long, val endTick: Long, val velocityOffset: Int)
 
     private companion object {
@@ -310,7 +300,6 @@ class DeterministicPadMidiGenerator {
         const val RELEASE_GAP_DIVISOR = 24
         const val MASKING_DISTANCE_SEMITONES = 0
         const val BASS_CLEARANCE_SEMITONES = 4
-        val CHORD_SYMBOL = Regex("^([A-G](?:#|b)?)(|m|min|7|maj7|m7|min7|maj9|m9|min9|add9|sus2|sus4|sus)$", RegexOption.IGNORE_CASE)
     }
 }
 

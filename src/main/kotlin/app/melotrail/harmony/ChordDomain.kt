@@ -47,6 +47,7 @@ value class HarmonyTemplateId(val value: String) {
 enum class ChordQuality(val intervals: List<Int>, val symbolSuffix: String, val displayName: String) {
     @SerialName("major") MAJOR(listOf(0, 4, 7), "", "Major"),
     @SerialName("minor") MINOR(listOf(0, 3, 7), "m", "Minor"),
+    @SerialName("major6") MAJOR_6(listOf(0, 4, 7, 9), "6", "Major 6"),
     @SerialName("dominant7") DOMINANT_7(listOf(0, 4, 7, 10), "7", "Dominant 7"),
     @SerialName("major7") MAJOR_7(listOf(0, 4, 7, 11), "maj7", "Major 7"),
     @SerialName("minor7") MINOR_7(listOf(0, 3, 7, 10), "m7", "Minor 7"),
@@ -58,8 +59,9 @@ enum class ChordQuality(val intervals: List<Int>, val symbolSuffix: String, val 
 }
 
 /**
- * One chord occurrence. Future notation fields are durable structured data,
- * but no current processor may execute them. A null duration is one measure.
+ * One chord occurrence. [bass] is an executable slash-chord bass; the remaining
+ * future notation fields are durable structured data but are not executable.
+ * A null duration is one measure.
  */
 @Serializable
 data class ChordEvent(
@@ -84,7 +86,6 @@ data class ChordEvent(
     /** A clear execution guard for the round-tripped but not-yet-supported fields. */
     fun unsupportedExecutionFields(): Set<String> = buildSet {
         if (durationMeasures != null && durationMeasures != 1) add("durationMeasures")
-        if (bass != null) add("bass")
         if (inversion != null) add("inversion")
         if (extension != null) add("extension")
     }

@@ -61,9 +61,7 @@ class EnsembleCohesionPlannerTest {
                 transitionPolicy = boundary.transitionPolicy.copy(allowedActions = listOf(TransitionRoleAction.CONTINUITY))
             )
         })
-        val response = """{"boundaries":[{"roleAction":"CONTINUITY","harmonicHandoff":"HOLD","rhythmicGesture":"SUSTAIN","energyContour":"HOLD","rationale":"Keep the established role stable"}]}"""
-
-        val plan = LocalQwenEnsembleCohesionPlanner(LocalQwenClient { _, _ -> response }, EnsembleCohesionModelIdentity.DETERMINISTIC).plan(input)
+        val plan = DeterministicContinuityEnsembleCohesionPlanner().plan(input)
         val bridge = plan.boundaries.single()
         val path = root.resolve("continuity.mid")
         DeterministicTransitionBridgeEngine.write(path, input, input.boundaries.single(), bridge)
@@ -74,6 +72,7 @@ class EnsembleCohesionPlannerTest {
         assertEquals(TransitionPlacement.NO_OP, bridge.placement)
         assertEquals(0, bridge.leadBeats)
         assertEquals(0, noteOns)
+        assertEquals(EnsembleCohesionModelIdentity.DETERMINISTIC, plan.model)
     }
 
     @Test fun `the saved five boundary fixture remains locally bound in structure order`() {

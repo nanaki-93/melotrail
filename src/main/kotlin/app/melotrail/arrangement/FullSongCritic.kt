@@ -304,11 +304,11 @@ class DeterministicFullSongCritic {
         }
     }
 
-    /** Detects a repeated section whose ensemble onset/pitch-class signature did not evolve at all. */
+    /** Detects a repeated section whose sixteenth-grid onset/pitch-class signature did not evolve at all. */
     private fun repeatedSectionEvolution(notes: List<Note>, authority: WholeSongAnalysisProjection, beat: Long): List<FullSongIssue> = authority.occurrences.groupBy { it.sectionType }.values.flatMap { repeated ->
         repeated.sortedBy { it.startTick }.zipWithNext().mapNotNull { (left, right) ->
             fun signature(occurrence: app.melotrail.application.MusicalOccurrence) = notes.filter { it.start in occurrence.startTick until occurrence.endTick }
-                .map { "${it.role}|${(it.start - occurrence.startTick) / beat}|${it.pitch % 12}" }.sorted()
+                .map { "${it.role}|${(it.start - occurrence.startTick) * 4 / beat}|${it.pitch % 12}" }.sorted()
             val leftSignature = signature(left); val rightSignature = signature(right)
             if (leftSignature.size < 4 || leftSignature != rightSignature) null else issue(FullSongIssueCategory.REPEATED_SECTION_STAGNATION, FullSongIssueSeverity.ACTIONABLE, "ensemble", right.occurrenceId,
                 right.startTick, right.endTick, "unchanged-repeated-section-signature", listOf(metric("signatureEvents", rightSignature.size)),

@@ -229,10 +229,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/FullSongEnhancementApplicationService.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/application/FullSongEnhancementApplicationService.kt has 36 callable declarations, 3 directly documented and 33 still requiring focused KDoc/docstrings. QP-014 reviewed its complete actionable-batch and improvement-gated candidate contracts on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "reason": "src/main/kotlin/app/melotrail/application/FullSongEnhancementApplicationService.kt has 36 callable declarations, 4 directly documented and 32 still requiring focused KDoc/docstrings. The fixed-arrangement review documented its explicit certified-arrangement preservation choice on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
       "functionCount": 36,
       "declarationDigest": "e1bc6a60d441c06dbbd786bfb93c821a8b5ff5457ce9d0e303eda12428856791",
-      "documentedFunctionCount": 3
+      "documentedFunctionCount": 4
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/HarmonyApplicationService.kt",
@@ -461,9 +461,9 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/BassStemGeneration.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/BassStemGeneration.kt has 29 callable declarations, 3 directly documented and 26 still requiring focused KDoc/docstrings. QP-012 documents approved groove-map timing in the changed generator contract; the remaining file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
+      "reason": "src/main/kotlin/app/melotrail/arrangement/BassStemGeneration.kt has 29 callable declarations, 3 directly documented and 26 still requiring focused KDoc/docstrings. Slash-bass execution and approved groove-map timing were reviewed on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
       "functionCount": 29,
-      "declarationDigest": "04a360b189c5b76143fa475f62d7aea79a27d4919db4e2968b23e50e44c7ff0e",
+      "declarationDigest": "131ebe72454fd6b01e4ecd1d237055652e03c957f5ff3891226d588fad12a3f2",
       "documentedFunctionCount": 3
     },
     {
@@ -501,10 +501,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/EnsembleCohesion.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/EnsembleCohesion.kt has 59 callable declarations, 9 directly documented and 50 still requiring focused KDoc/docstrings. Boundary-local role and no-bass transition handling were reviewed on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "reason": "src/main/kotlin/app/melotrail/arrangement/EnsembleCohesion.kt has 59 callable declarations, 10 directly documented and 49 still requiring focused KDoc/docstrings. Deterministic zero-edit continuity and shared exact-chord parsing were reviewed on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
       "functionCount": 59,
-      "declarationDigest": "9e98d86e856fa36948c75880be1248bbe8dcb2e35ae391c27d6e9c29c3bb9314",
-      "documentedFunctionCount": 9
+      "declarationDigest": "81195732879b4f036773627226bc4d615fe527d3ca8c5c07c8519ed2d5108f87",
+      "documentedFunctionCount": 10
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/FullSongCritic.kt",
@@ -677,9 +677,9 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/MidiTransitionEngine.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/MidiTransitionEngine.kt has 32 callable declarations, 2 directly documented and 30 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 32,
-      "declarationDigest": "b1f55dd0b005b3fce51259e95084c72db36395e4f188a5097d187c3d7ca35b58",
+      "reason": "src/main/kotlin/app/melotrail/arrangement/MidiTransitionEngine.kt has 31 callable declarations, 2 directly documented and 29 still requiring focused KDoc/docstrings. Shared exact-chord parsing was reviewed on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "functionCount": 31,
+      "declarationDigest": "461738a117f615b58efbca62e1a64e568649e75d950a97c9f48f65de4caea382",
       "documentedFunctionCount": 2
     },
     {
@@ -725,9 +725,9 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/PadMidiGeneration.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/PadMidiGeneration.kt has 21 callable declarations, 1 directly documented and 20 still requiring focused KDoc/docstrings. Beat-relative authoritative-harmony chord comping was reviewed on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
-      "functionCount": 21,
-      "declarationDigest": "f39a7677c303699091de11b6136f01178bf49c01e4750e61ee35ce6e1f41684e",
+      "reason": "src/main/kotlin/app/melotrail/arrangement/PadMidiGeneration.kt has 20 callable declarations, 1 directly documented and 19 still requiring focused KDoc/docstrings. Beat-relative slash/sixth-chord comping was reviewed on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "functionCount": 20,
+      "declarationDigest": "cdb6e0920ab9c9368c64b9a4807a429625fb66e0be698f1b144f9b7a45d62226",
       "documentedFunctionCount": 1
     },
     {
@@ -885,9 +885,9 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/StringsMidiGeneration.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/arrangement/StringsMidiGeneration.kt has 29 callable declarations, 0 directly documented and 29 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 29,
-      "declarationDigest": "eb58703a69aabf8b5b6419718abff69b384364293df108a00c7bfbbda1f3fe16",
+      "reason": "src/main/kotlin/app/melotrail/arrangement/StringsMidiGeneration.kt has 28 callable declarations, 0 directly documented and 28 still requiring focused KDoc/docstrings. Shared slash/sixth-chord parsing was reviewed on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "functionCount": 28,
+      "declarationDigest": "287aa84ac5557ffe5e7a051c2eb17bc81ff63b1c76235e992d8cb4ec8bb43c33",
       "documentedFunctionCount": 0
     },
     {
@@ -1253,10 +1253,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/harmony/HarmonyTemplateCatalog.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/harmony/HarmonyTemplateCatalog.kt has 7 callable declarations, 0 directly documented and 7 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 7,
-      "declarationDigest": "ab49381a1d671db5a3711f2f82b2902c4e0a59f859f5d25022329c5296d1144f",
-      "documentedFunctionCount": 0
+      "reason": "src/main/kotlin/app/melotrail/harmony/HarmonyTemplateCatalog.kt has 9 callable declarations, 2 directly documented and 7 still requiring focused KDoc/docstrings. Exact chord-quality and slash-bass templates were reviewed on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "functionCount": 9,
+      "declarationDigest": "eb6700d25a2df9dd88102eccd3869e38fecdfabc327ea7e61f168defc86719ff",
+      "documentedFunctionCount": 2
     },
     {
       "path": "src/main/kotlin/app/melotrail/licensing/LicenseStatus.kt",

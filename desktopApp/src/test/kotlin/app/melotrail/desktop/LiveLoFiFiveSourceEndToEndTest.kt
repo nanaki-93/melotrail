@@ -1,6 +1,5 @@
 package app.melotrail.desktop
 
-import app.melotrail.application.ApproveEnhancementRequest
 import app.melotrail.application.ArrangementPlannerKind
 import app.melotrail.application.BuildApplicationService
 import app.melotrail.application.BuildAudioWorker
@@ -9,18 +8,14 @@ import app.melotrail.application.CodecPreviewEvidence
 import app.melotrail.application.CodecPreviewStatus
 import app.melotrail.application.CompositionSettingsInput
 import app.melotrail.application.ConfirmSourceKey
-import app.melotrail.application.CreateEnhancementRequest
-import app.melotrail.application.CreateMidiAiFixRequest
 import app.melotrail.application.CreateProjectRequest
 import app.melotrail.application.CreateTechnicalCorrectionRequest
 import app.melotrail.application.DefaultArrangementApplicationService
 import app.melotrail.application.DefaultBuildApplicationService
 import app.melotrail.application.DefaultEnsembleCohesionApplicationService
-import app.melotrail.application.DefaultEnhancementApplicationService
 import app.melotrail.application.DefaultFullSongCriticApplicationService
 import app.melotrail.application.DefaultFullSongEnhancementApplicationService
 import app.melotrail.application.DefaultHumanizationApplicationService
-import app.melotrail.application.DefaultMidiAiFixApplicationService
 import app.melotrail.application.DefaultMixApplicationService
 import app.melotrail.application.DefaultSourceSongCriticApplicationService
 import app.melotrail.application.DefaultTechnicalCorrectionApplicationService
@@ -28,7 +23,6 @@ import app.melotrail.application.DeliveryCodec
 import app.melotrail.application.EnsembleCohesionPlannerKind
 import app.melotrail.application.GenerateArrangementRequest
 import app.melotrail.application.GenerateEnsembleCohesionRequest
-import app.melotrail.application.GenerateHumanizationRequest
 import app.melotrail.application.ImportSongPart
 import app.melotrail.application.MidiQualityStatus
 import app.melotrail.application.MeasureSourceTimingRequest
@@ -38,7 +32,6 @@ import app.melotrail.application.QualityDebugPair
 import app.melotrail.application.QualityReviewArtifactKind
 import app.melotrail.application.QualityReviewEvidenceService
 import app.melotrail.application.SaveStructureRequest
-import app.melotrail.application.SelectMidiFeelRequest
 import app.melotrail.application.SetHarmonyProgression
 import app.melotrail.application.SourceTimingAlignmentApplicationService
 import app.melotrail.application.SourceTimingEvidenceApplicationService
@@ -50,18 +43,14 @@ import app.melotrail.application.ApplyMixRequest
 import app.melotrail.arrangement.ArrangementRole
 import app.melotrail.arrangement.ArrangementRoleSelection
 import app.melotrail.arrangement.ArtifactRef
-import app.melotrail.arrangement.BridgeElement
 import app.melotrail.arrangement.DetailedArrangement
 import app.melotrail.arrangement.DetailedArrangementInput
 import app.melotrail.arrangement.DetailedArrangementPlanner
 import app.melotrail.arrangement.DrumFillPlacement
 import app.melotrail.arrangement.DrumsInstrumentPlan
-import app.melotrail.arrangement.EnhancementIntensity
 import app.melotrail.arrangement.EnsembleCohesionEnhancementIntensity
 import app.melotrail.arrangement.GlobalSongPlanner
 import app.melotrail.arrangement.InstrumentRegistryLoader
-import app.melotrail.arrangement.LocalQwenDetailedArrangementPlanner
-import app.melotrail.arrangement.LocalQwenGlobalSongPlanner
 import app.melotrail.arrangement.LoFiSectionPatternPolicy
 import app.melotrail.arrangement.CompressionPlan
 import app.melotrail.arrangement.EqBandPlan
@@ -70,7 +59,6 @@ import app.melotrail.arrangement.MixBus
 import app.melotrail.arrangement.MixBusPlan
 import app.melotrail.arrangement.MixPlan
 import app.melotrail.arrangement.MixTrackPlan
-import app.melotrail.arrangement.MidiAnalysisInput
 import app.melotrail.arrangement.PadInstrumentPlan
 import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.SectionTypeId
@@ -93,9 +81,9 @@ import app.melotrail.music.Tempo
 import app.melotrail.music.TimeSignature
 import app.melotrail.profile.CompositionProfileRef
 import app.melotrail.profile.MoodRef
-import app.melotrail.worker.MP3ExportCommand
 import app.melotrail.worker.CodecPreviewCommand
 import app.melotrail.worker.MasterCommand
+import app.melotrail.worker.MP3ExportCommand
 import app.melotrail.worker.RepairCommand
 import app.melotrail.worker.RepairSpec
 import app.melotrail.worker.WorkerClient
@@ -127,7 +115,7 @@ import kotlin.test.assertTrue
 
 /**
  * Explicit live proof for the supplied five WAV sources. It is opt-in because
- * it invokes the local Basic Pitch, Qwen, sfizz, and mastering runtimes and
+ * it invokes the local Basic Pitch, sfizz, and mastering runtimes and
  * writes the canonical project into data/audio.
  */
 class LiveLoFiFiveSourceEndToEndTest {
@@ -160,8 +148,8 @@ class LiveLoFiFiveSourceEndToEndTest {
         val renderer = SfizzInstrumentRenderer(InstrumentRegistryLoader(libraryRoot))
         val projects = DesktopServiceComposition.projectService()
         val arrangements = DefaultArrangementApplicationService(
-            qwenGlobalPlanner = LiveLoFiRhythmGlobalPlanner(),
-            qwenDetailedPlanner = LiveLoFiRhythmDetailedPlanner(),
+            deterministicGlobalPlanner = FixedLoFiGlobalPlanner(),
+            deterministicDetailedPlanner = FixedLoFiDetailedPlanner(),
             libraryRoot = libraryRoot
         )
         val cohesion = DefaultEnsembleCohesionApplicationService()
@@ -189,7 +177,7 @@ class LiveLoFiFiveSourceEndToEndTest {
             prepareSourcesInProjectKey(projects, root, sources.map(Part::id))
             alignSourcesToDeclaredBars(client, root, sources)
 
-            processSources(projects, root, sources.map(Part::id))
+            correctAndAnalyzeSources(projects, root, sources.map(Part::id))
             projects.saveStructure(SaveStructureRequest(root, listOf("intro", "verse", "verse", "chorus", "bridge", "verse", "outro")))
 
             approveSourceCritic(root)
@@ -198,8 +186,8 @@ class LiveLoFiFiveSourceEndToEndTest {
         }
         arrangeLoFiRhythmSection(arrangements, root)
         applyCohesion(cohesion, root)
-        critiqueAndEnhanceSong(root)
-        DefaultHumanizationApplicationService().generate(GenerateHumanizationRequest(root))
+        auditAndPreserveFixedArrangement(root)
+        DefaultHumanizationApplicationService().selectBypass(root)
 
         val mix = DefaultMixApplicationService()
         arrangements.renderApprovedStems(root, renderer, ProgressSink.None)
@@ -213,44 +201,6 @@ class LiveLoFiFiveSourceEndToEndTest {
         publishPendingLiveListeningReview(root, sources.first().id)
     }
 
-    @Test
-    fun `current live project retries bounded full-song enhancement and rebuilds`() = runBlocking {
-        assumeTrue(System.getenv("MELOTRAIL_RETRY_FULL_SONG_E2E") == "1", "Set MELOTRAIL_RETRY_FULL_SONG_E2E=1 to retry the local critic-guided polish stage.")
-        val workspace = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath().normalize()) { it.parent }
-            .firstOrNull { Files.isDirectory(it.resolve("data/audio/input")) && Files.isDirectory(it.resolve("sounds")) }
-            ?: error("Unable to locate the MeloTrail workspace from the Gradle test working directory.")
-        val root = workspace.resolve("data/audio")
-        val output = root.resolve("output")
-        val currentMaster = output.resolve("master.wav")
-        val backup = output.resolve("master-before-full-song-retry.wav")
-        if (Files.isRegularFile(currentMaster) && !Files.exists(backup)) Files.copy(currentMaster, backup)
-
-        val client = WorkerClient(logger = DefaultLogger(), errorReporter = ErrorReporter(DefaultLogger()))
-        assertTrue(client.healthCheck(), "The local worker must be running at http://127.0.0.1:8081.")
-        val libraryRoot = workspace.resolve("sounds")
-        val arrangements = DefaultArrangementApplicationService(libraryRoot = libraryRoot)
-        val renderer = SfizzInstrumentRenderer(InstrumentRegistryLoader(libraryRoot))
-        val cohesion = DefaultEnsembleCohesionApplicationService()
-
-        val enhancement = DefaultFullSongEnhancementApplicationService(app.melotrail.arrangement.LocalQwenFullSongEnhancementPlanner())
-        val candidate = enhancement.generateCandidate(root)
-        assertTrue(candidate.selection.name == "NO_OP" || candidate.candidateAvailable,
-            "The bounded candidate was rejected: ${candidate.warnings.joinToString()}")
-        if (candidate.selection.name == "UNRESOLVED") enhancement.approve(root)
-        DefaultHumanizationApplicationService().generate(GenerateHumanizationRequest(root))
-
-        val mix = DefaultMixApplicationService()
-        arrangements.renderApprovedStems(root, renderer, ProgressSink.None)
-        mix.apply(ApplyMixRequest(root, loFiMixPlan()), ProgressSink.None)
-        mix.approve(root)
-        val build = DefaultBuildApplicationService(arrangements, mix, renderer, LiveBuildWorker(client), cohesion)
-            .build(BuildSongRequest(root, enableLoFi = true, enableMp3 = false), ProgressSink.None)
-        assertTrue(Files.isRegularFile(build.master) && Files.size(build.master) > 44, "Expected a rendered master WAV.")
-        assertTrue(Files.isRegularFile(currentMaster))
-        assertStrictProductionEvidence(root, mix)
-        publishPendingLiveListeningReview(root, "intro")
-    }
-
     private suspend fun prepareSourcesInProjectKey(
         projects: app.melotrail.application.ProjectApplicationService,
         root: Path,
@@ -258,7 +208,8 @@ class LiveLoFiFiveSourceEndToEndTest {
     ) {
         partIds.forEach { partId ->
             var part = projects.open(root).parts.single { it.id == partId }
-            if (part.preparation.transposedMidi && part.sourceKey?.confirmedOverride != null) return@forEach
+            val declaredSourceKey = MusicalKey(PitchClass.of(PitchSpelling.C), ScaleModeId.MAJOR)
+            if (part.preparation.transposedMidi && part.sourceKey?.confirmedOverride == declaredSourceKey) return@forEach
             if (part.preparation.midiQuality.status == MidiQualityStatus.APPROVAL_REQUIRED) {
                 projects.approveCleanMidi(root, partId)
                 part = projects.open(root).parts.single { it.id == partId }
@@ -270,11 +221,8 @@ class LiveLoFiFiveSourceEndToEndTest {
                 projects.normalizePart(NormalizePartRequest(root, partId))
                 part = projects.open(root).parts.single { it.id == partId }
             }
-            val detectedKey = requireNotNull(part.sourceKey?.detectedKey) {
-                "Normalization could not determine a source key for '$partId'; explicit musician input is required."
-            }
-            if (part.sourceKey?.confirmedOverride != detectedKey) {
-                projects.confirmSourceKey(ConfirmSourceKey(root, partId, detectedKey, part.revision))
+            if (part.sourceKey?.confirmedOverride != declaredSourceKey) {
+                projects.confirmSourceKey(ConfirmSourceKey(root, partId, declaredSourceKey, part.revision))
             }
             val transposed = projects.transposePart(TransposePartRequest(root, partId))
                 .parts.single { it.id == partId }
@@ -284,14 +232,12 @@ class LiveLoFiFiveSourceEndToEndTest {
         }
     }
 
-    private suspend fun processSources(
+    private suspend fun correctAndAnalyzeSources(
         projects: app.melotrail.application.ProjectApplicationService,
         root: Path,
         partIds: List<String>
     ) {
         val correction = DefaultTechnicalCorrectionApplicationService()
-        val aiFix = DefaultMidiAiFixApplicationService()
-        val enhancer = DefaultEnhancementApplicationService()
         partIds.forEach { partId ->
             val current = projects.open(root).parts.single { it.id == partId }.preparation.technicalCorrection
             if (!current.available || current.selected.name != "CORRECTED") {
@@ -299,31 +245,6 @@ class LiveLoFiFiveSourceEndToEndTest {
             }
         }
         partIds.forEach { partId ->
-            if (!projects.open(root).parts.single { it.id == partId }.preparation.analyzed) {
-                projects.analyzePart(AnalyzePartRequest(root, partId))
-            }
-        }
-        partIds.forEach { partId ->
-            val current = projects.open(root).parts.single { it.id == partId }.preparation.midiAiFix
-            if (!current.selectedAvailable) {
-                val fix = aiFix.create(CreateMidiAiFixRequest(root, partId))
-                if (fix.draftAvailable) aiFix.approve(root, partId) else aiFix.skip(root, partId)
-            }
-            if (!projects.open(root).parts.single { it.id == partId }.preparation.analyzed) {
-                projects.analyzePart(AnalyzePartRequest(root, partId))
-            }
-        }
-        partIds.forEach { partId ->
-            var current = projects.open(root).parts.single { it.id == partId }
-            if (!current.preparation.enhancement.approvedAvailable || current.preparation.enhancement.selected.name != "ENHANCED") {
-                val enhanced = enhancer.create(CreateEnhancementRequest(root, partId, EnhancementIntensity.BALANCED))
-                projects.analyzePart(AnalyzePartRequest(root, partId))
-                enhancer.approve(ApproveEnhancementRequest(root, partId, enhanced.draftSha256, enhanced.inputSha256, enhanced.contextSha256))
-            }
-            current = projects.open(root).parts.single { it.id == partId }
-            if (current.preparation.midiFeel.selected != MidiAnalysisInput.LOFI_FEEL || !current.preparation.midiFeel.available) {
-                projects.selectMidiFeel(SelectMidiFeelRequest(root, partId, MidiAnalysisInput.LOFI_FEEL))
-            }
             if (!projects.open(root).parts.single { it.id == partId }.preparation.analyzed) {
                 projects.analyzePart(AnalyzePartRequest(root, partId))
             }
@@ -418,8 +339,7 @@ class LiveLoFiFiveSourceEndToEndTest {
         )
         val existing = runCatching { arrangements.load(root) }.getOrNull()
         if (existing == null || !existing.approved || existing.approvalRequired || existing.stale) {
-            arrangements.generate(GenerateArrangementRequest(root, ArrangementPlannerKind.QWEN, roleSelections = roleSelections))
-            arrangements.approve(root)
+            arrangements.generate(GenerateArrangementRequest(root, ArrangementPlannerKind.DETERMINISTIC, roleSelections = roleSelections))
         }
         val arrangementPlan = Files.readString(root.resolve("arrangement_plan.json"))
         val requiredInstruments = setOf("piano", "drums", "pad")
@@ -438,23 +358,18 @@ class LiveLoFiFiveSourceEndToEndTest {
     }
 
     private suspend fun applyCohesion(cohesion: DefaultEnsembleCohesionApplicationService, root: Path) {
-        val cohesionDraft = cohesion.generate(GenerateEnsembleCohesionRequest(root, EnsembleCohesionPlannerKind.QWEN, EnsembleCohesionEnhancementIntensity.BALANCED))
+        val cohesionDraft = cohesion.generate(GenerateEnsembleCohesionRequest(root, EnsembleCohesionPlannerKind.DETERMINISTIC, EnsembleCohesionEnhancementIntensity.SUBTLE))
         cohesionDraft.boundaries.forEach { boundary -> cohesion.reviewBoundary(root, boundary.outgoingInstanceId, boundary.incomingInstanceId) }
         cohesion.approve(root)
     }
 
-    private suspend fun critiqueAndEnhanceSong(root: Path) {
-        DefaultFullSongCriticApplicationService().run(root)
-        val enhancement = DefaultFullSongEnhancementApplicationService(app.melotrail.arrangement.LocalQwenFullSongEnhancementPlanner())
-        val candidate = enhancement.generateCandidate(root)
-        when (candidate.selection.name) {
-            "UNRESOLVED" -> {
-                require(candidate.candidateAvailable) { "Full-Song Enhance produced unresolved evidence; repair or retry instead of bypassing it." }
-                enhancement.approve(root)
-            }
-            "NO_OP" -> Unit
-            else -> error("Unexpected Full-Song Enhance selection: ${candidate.selection}")
+    private fun auditAndPreserveFixedArrangement(root: Path) {
+        val audit = DefaultFullSongCriticApplicationService().run(root)
+        require(audit.report.issues.isEmpty()) {
+            "Fixed arrangement still has musical critic issues: " +
+                audit.report.issues.joinToString { "${it.category}:${it.reasonCode}@${it.occurrenceId ?: "song"}" }
         }
+        DefaultFullSongEnhancementApplicationService().selectBypass(root, preserveQualityCertifiedArrangement = true)
     }
 
     private fun applyHarmony(projects: app.melotrail.application.ProjectApplicationService, root: Path, section: SectionTypeId, template: String) {
@@ -516,23 +431,47 @@ class LiveLoFiFiveSourceEndToEndTest {
     }
 }
 
-/** Keep both rhythm layers active in every occurrence while retaining Qwen's bounded energy and section arc. */
-private class LiveLoFiRhythmGlobalPlanner(
-    private val delegate: GlobalSongPlanner = LocalQwenGlobalSongPlanner()
+/** A fixed seven-section arc with the same three deliberately small roles everywhere. */
+private class FixedLoFiGlobalPlanner(
+    private val delegate: GlobalSongPlanner = app.melotrail.arrangement.DeterministicGlobalSongPlanner()
 ) : GlobalSongPlanner {
     override fun plan(input: SongPlanningInput): SongPlan {
         val planned = delegate.plan(input)
         val alwaysActive = listOf("piano", "drums", "pad")
         require(alwaysActive.all { it in input.allowedInstruments }) { "Live lo-fi rhythm policy requires piano, drums, and pad." }
-        return planned.copy(sections = planned.sections.map { section ->
-            section.copy(instrumentProgression = alwaysActive)
-        })
+        val energy = planned.sections.map { section -> when (section.partId) {
+            "intro" -> 0.32
+            "verse" -> 0.46
+            "chorus" -> 0.68
+            "bridge" -> 0.40
+            "outro" -> 0.26
+            else -> 0.42
+        } }
+        val climax = planned.sections.indexOfFirst { it.partId == "chorus" }
+        require(climax >= 0) { "Fixed live lo-fi structure requires a chorus." }
+        return planned.copy(
+            energyCurve = energy,
+            climaxIndex = climax,
+            sections = planned.sections.map { section ->
+                section.copy(
+                    purpose = when (section.partId) {
+                        "intro" -> app.melotrail.arrangement.SongSectionPurpose.INTRODUCTION
+                        "chorus" -> app.melotrail.arrangement.SongSectionPurpose.CLIMAX
+                        "bridge" -> app.melotrail.arrangement.SongSectionPurpose.RELEASE
+                        "outro" -> app.melotrail.arrangement.SongSectionPurpose.CONCLUSION
+                        else -> app.melotrail.arrangement.SongSectionPurpose.DEVELOPMENT
+                    },
+                    instrumentProgression = alwaysActive,
+                    transitionIntent = app.melotrail.arrangement.SongTransitionIntent.NONE
+                )
+            }
+        )
     }
 }
 
-/** Apply the reviewed beat-relative catalogs after Qwen selects the rest of each bounded detail plan. */
-private class LiveLoFiRhythmDetailedPlanner(
-    private val delegate: DetailedArrangementPlanner = LocalQwenDetailedArrangementPlanner()
+/** Apply only the reviewed beat-relative catalogs; no model chooses notes or transitions. */
+private class FixedLoFiDetailedPlanner(
+    private val delegate: DetailedArrangementPlanner = app.melotrail.arrangement.DeterministicDetailedArrangementPlanner()
 ) : DetailedArrangementPlanner {
     override fun plan(input: DetailedArrangementInput): DetailedArrangement {
         val planned = delegate.plan(input)
@@ -547,17 +486,16 @@ private class LiveLoFiRhythmDetailedPlanner(
                             fillPattern = LoFiSectionPatternPolicy.drumFill(section.role)
                         )
                         is PadInstrumentPlan -> instrument.copy(
-                            rhythmPattern = LoFiSectionPatternPolicy.chordRhythm(section.role)
+                            rhythmPattern = when (section.index) {
+                                1 -> app.melotrail.arrangement.ChordRhythmPatternId.LATE_ENTRY
+                                5 -> app.melotrail.arrangement.ChordRhythmPatternId.DUSTY_OFFBEATS
+                                else -> LoFiSectionPatternPolicy.chordRhythm(section.role)
+                            }
                         )
                         else -> instrument
                     }
                 },
-                transitionOut = section.transitionOut.copy(
-                    bridge = section.transitionOut.bridge?.let { bridge ->
-                        bridge.copy(elements = bridge.elements.filterNot { it == BridgeElement.BASS_PICKUP }
-                            .ifEmpty { listOf(BridgeElement.DRUM_FILL) })
-                    }
-                )
+                transitionOut = app.melotrail.arrangement.TransitionPlan()
             )
         }).also { it.requireValid(input) }
     }

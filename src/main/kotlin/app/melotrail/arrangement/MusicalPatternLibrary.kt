@@ -58,6 +58,7 @@ enum class DrumFillPatternId(val id: PatternId) {
 enum class ChordRhythmPatternId(val id: PatternId) {
     @SerialName("sustained") SUSTAINED(PatternId("chords.rhythm.sustained")),
     @SerialName("laid-back-quarters") LAID_BACK_QUARTERS(PatternId("chords.rhythm.laid-back-quarters")),
+    @SerialName("late-entry") LATE_ENTRY(PatternId("chords.rhythm.late-entry")),
     @SerialName("dusty-offbeats") DUSTY_OFFBEATS(PatternId("chords.rhythm.dusty-offbeats")),
     @SerialName("broken-syncopation") BROKEN_SYNCOPATION(PatternId("chords.rhythm.broken-syncopation")),
     @SerialName("bridge-half-time") BRIDGE_HALF_TIME(PatternId("chords.rhythm.bridge-half-time"));
@@ -186,6 +187,9 @@ object MusicalPatternLibrary {
         CuratedChordRhythm(ChordRhythmPatternId.LAID_BACK_QUARTERS, "Laid-back quarters", listOf(
             CuratedChordStep(0, 3, -2), CuratedChordStep(4, 3, -5), CuratedChordStep(8, 3, 0), CuratedChordStep(12, 3, -4)
         )),
+        CuratedChordRhythm(ChordRhythmPatternId.LATE_ENTRY, "Late entry", listOf(
+            CuratedChordStep(4, 3, -5), CuratedChordStep(8, 3, 0), CuratedChordStep(12, 3, -4)
+        )),
         CuratedChordRhythm(ChordRhythmPatternId.DUSTY_OFFBEATS, "Dusty offbeats", listOf(
             CuratedChordStep(2, 2, -6), CuratedChordStep(6, 2, -3), CuratedChordStep(10, 2, -5), CuratedChordStep(14, 2, -1)
         )),
@@ -208,7 +212,7 @@ object MusicalPatternLibrary {
     fun bass(context: CanonicalPatternContext, parameters: BassPatternParameters): List<PatternMidiNote> {
         val chords = chordWindows(context)
         return chords.flatMapIndexed { index, chord ->
-            val next = chords.getOrNull(index + 1)?.root ?: chord.root
+            val next = chords.getOrNull(index + 1)?.bassRoot ?: chord.bassRoot
             bassForChord(context, chord, next, parameters)
         }
     }
@@ -268,12 +272,12 @@ object MusicalPatternLibrary {
         val beat = context.ticksPerBeat
         val beats = ((chord.end - chord.start) / beat).toInt().coerceAtLeast(1)
         val roots = when (parameters.pattern) {
-            BassPatternId.SUSTAINED_ROOT -> listOf(0 to chord.root)
-            BassPatternId.ROOT_FIFTH -> (0 until beats).map { it to if (it % 2 == 0) chord.root else (chord.root + 7) % 12 }
-            BassPatternId.OCTAVE -> (0 until beats).map { it to chord.root + if (it % 2 == 0) 0 else 12 }
-            BassPatternId.WALK_TO_NEXT_ROOT -> (0 until beats).map { beatIndex -> beatIndex to walkPitch(chord.root, nextRoot, beatIndex, beats) }
+            BassPatternId.SUSTAINED_ROOT -> listOf(0 to chord.bassRoot)
+            BassPatternId.ROOT_FIFTH -> (0 until beats).map { it to if (it % 2 == 0) chord.bassRoot else (chord.bassRoot + 7) % 12 }
+            BassPatternId.OCTAVE -> (0 until beats).map { it to chord.bassRoot + if (it % 2 == 0) 0 else 12 }
+            BassPatternId.WALK_TO_NEXT_ROOT -> (0 until beats).map { beatIndex -> beatIndex to walkPitch(chord.bassRoot, nextRoot, beatIndex, beats) }
             BassPatternId.DIATONIC_APPROACH -> (0 until beats).map { beatIndex ->
-                beatIndex to if (beatIndex == beats - 1 && nextRoot != chord.root) diatonicApproach(context.key, nextRoot, parameters.seed, chord.start) else chord.root
+                beatIndex to if (beatIndex == beats - 1 && nextRoot != chord.bassRoot) diatonicApproach(context.key, nextRoot, parameters.seed, chord.start) else chord.bassRoot
             }
         }
         return roots.map { (index, pitchClass) ->
@@ -323,7 +327,10 @@ object MusicalPatternLibrary {
         var tick = 0L
         return context.progression.events.map { chord ->
             val end = tick + chord.effectiveDurationMeasures * context.ticksPerMeasure
-            ChordWindow(tick, end, chord.root.chromatic, chord.quality.intervals.map { (chord.root.chromatic + it) % 12 }).also { tick = end }
+            ChordWindow(
+                tick, end, chord.root.chromatic, chord.bass?.chromatic ?: chord.root.chromatic,
+                chord.quality.intervals.map { (chord.root.chromatic + it) % 12 }
+            ).also { tick = end }
         }
     }
 
@@ -376,7 +383,7 @@ object MusicalPatternLibrary {
     private fun step(hit: String, sixteenth: Int, velocity: Int) = CuratedDrumStep(hit, sixteenth, velocity)
     /** Expand a regular closed-hat grid into explicit musical steps. */
     private fun hats(start: Int, step: Int, velocity: Int): Array<CuratedDrumStep> = (start..15 step step).map { CuratedDrumStep("closedHat", it, velocity) }.toTypedArray()
-    private data class ChordWindow(val start: Long, val end: Long, val root: Int, val tones: List<Int>)
+    private data class ChordWindow(val start: Long, val end: Long, val root: Int, val bassRoot: Int, val tones: List<Int>)
 }
 
 /** One reviewable section-aware lo-fi selection policy over the bounded catalogs above. */

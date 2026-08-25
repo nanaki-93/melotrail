@@ -94,7 +94,8 @@ interface FullSongEnhancementApplicationService {
     fun generateCandidate(root: Path): FullSongEnhancementSnapshot
     fun load(root: Path): FullSongEnhancementSnapshot
     fun approve(root: Path): FullSongEnhancementSnapshot
-    fun selectBypass(root: Path): FullSongEnhancementSnapshot
+    /** Record an explicit no-edit selection; preserving a certified arrangement requires an equally explicit caller decision. */
+    fun selectBypass(root: Path, preserveQualityCertifiedArrangement: Boolean = false): FullSongEnhancementSnapshot
     fun resolveInputs(root: Path): List<FullSongEnhancementTarget>
 }
 
@@ -196,9 +197,9 @@ class DefaultFullSongEnhancementApplicationService(
         snapshot(FullSongEnhancementSelection.APPROVED, approved, readReport(normalized.resolve(requireNotNull(approved.report).file)), current.issues.size)
     }
 
-    override fun selectBypass(root: Path): FullSongEnhancementSnapshot = locked(root) { normalized ->
+    override fun selectBypass(root: Path, preserveQualityCertifiedArrangement: Boolean): FullSongEnhancementSnapshot = locked(root) { normalized ->
         val current = current(normalized)
-        require(runCatching { sourceSongCritic.requireQualityCertifiedApproved(normalized) }.isFailure) {
+        require(preserveQualityCertifiedArrangement || runCatching { sourceSongCritic.requireQualityCertifiedApproved(normalized) }.isFailure) {
             "Quality-certified Full-Song Enhance cannot bypass a failed or unhelpful planner. Retry, repair the reported windows, or select a recorded no-op only when Critic has no actionable issues."
         }
         saveSelection(normalized, FullSongEnhancementSelection.BYPASS,

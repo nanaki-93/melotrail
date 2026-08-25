@@ -573,3 +573,34 @@ Tests and acceptance:
 - Release acceptance records every unverified manual dependency honestly.
 
 Commit: `quality-pipeline: QP-018 close release readiness and cleanup`
+
+## LIVE-E2E-FIXED — Reduce the five-source proof to a deterministic lo-fi arrangement
+
+Goal: preserve the supplied C-major melodies and section structure while
+removing creative pipeline stages that can make the result harmonically or
+rhythmically disconnected.
+
+Implement:
+
+- Resolve the five supplied section progressions exactly, including executable
+  `G/B` slash-bass voicing and `C6`; do not substitute automatic seventh chords.
+- Treat the user-declared C-major source key as authoritative instead of
+  transposing from an uncertain detected key.
+- Keep only connected melody, fixed drum/fill catalogs, and fixed chord-key
+  comping catalogs in every occurrence; generate no bass, strings, or separate
+  transition MIDI.
+- Give repeated verses fixed quarter-note, late-entry, and dusty-offbeat
+  comping variants so adjacent copies do not reset identically.
+- Use deterministic arrangement and explicit continuity no-op Cohesion.
+- Run deterministic correction and quality criticism, but record preservation
+  of the fixed arrangement instead of invoking MIDI AI fix, enhancement,
+  full-song rewriting, or humanization.
+- Keep `make live-e2e` non-destructive and remove its LM Studio/Qwen dependency.
+
+Tests and acceptance:
+
+- Exact template-symbol, slash-voicing, sixth-chord, canonical projection, and
+  deterministic no-op Cohesion regressions pass.
+- `make test`, `make worker-test`, and `make build` pass.
+- A clean opt-in run exports the fixed three-track WAV and retains a pending
+  human listening decision; automated metrics must not claim listening quality.

@@ -71,6 +71,25 @@ For current operational behavior, use:
 - [`docs/COMMERCIAL_PROVENANCE.md`](docs/COMMERCIAL_PROVENANCE.md)
 - [`docs/RELEASE_ACCEPTANCE.md`](docs/RELEASE_ACCEPTANCE.md)
 
+### Fixed five-source lo-fi proof
+
+`make live-e2e` builds the supplied `data/audio/input` melodies as a deliberately
+small C-major, 75 BPM, 4/4 arrangement. It keeps the connected melody, drums,
+and lo-fi chord-key accompaniment in every section; bass, strings, model
+arrangement, model cohesion, whole-song rewriting, and extra humanization are
+disabled. Repeated verses use fixed quarter-note, late-entry, and dusty-offbeat
+comping variants, so they develop without model-written notes. The authoritative
+progressions are:
+
+- Intro: `Cmaj7 | Am7 | Fmaj7 | G`
+- Verse: `C | G/B | Am7 | Fmaj7`
+- Chorus: `F | G | C | Am7 | F | G | C | C`
+- Bridge: `Am7 | Em | Fmaj7 | G`
+- Outro: `Fmaj7 | G | Cmaj7 | C6`
+
+Preserve or remove an existing generated `data/audio` project yourself before
+running the target; it never deletes source audio or known-good candidates.
+
 ## Data and safety
 
 - `project.json` and project-relative artifacts are canonical.
