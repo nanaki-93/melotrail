@@ -1,17 +1,22 @@
 # Documentation consolidation audit
 
+> **Historical schema-v4 audit.** The active product roadmap is now
+> [`../../PLAN.md`](../../PLAN.md); the current execution index is
+> [`README.md`](README.md).
+
 Audit date: 2026-08-24
 
 ## Organization decision
 
-`docs/plan/` contains the only active implementation roadmap. Operational,
+At the audit date, `docs/plan/` contained the only active implementation
+roadmap. Operational,
 troubleshooting, compatibility, provenance, release, and executable inventory
 documents remain directly under `docs/` because the running application and
 tests link to them. “Put all docs in `docs/plan`” is applied to the complete plan
 suite, not to durable user/maintainer manuals whose stable paths are product
 contracts.
 
-## Active plan suite
+## Plan suite at audit completion
 
 - `README.md`
 - `PLAN.md`

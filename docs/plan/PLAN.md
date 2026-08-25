@@ -1,5 +1,9 @@
 # Melotrail canonical melody and release-quality pipeline
 
+> **Historical schema-v4 record.** This plan was completed and is superseded by
+> [`../../PLAN.md`](../../PLAN.md). Do not use it as the next implementation
+> roadmap.
+
 Status: implementation complete in QP-001 through QP-018; manual release and
 listening gates remain external evidence
 

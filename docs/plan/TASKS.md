@@ -1,5 +1,8 @@
 # Ordered implementation tasks
 
+> **Historical—do not execute for new work.** QP-001–QP-018 are complete. Use
+> [`GUIDED_ARRANGER_TASKS.md`](GUIDED_ARRANGER_TASKS.md) for the active roadmap.
+
 These tasks are binding and sequential. Each task must preserve original source
 and known-good artifacts, add regression evidence, update affected operational
 documentation, pass its checks, and end in exactly one focused commit. Do not

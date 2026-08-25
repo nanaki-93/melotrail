@@ -52,9 +52,10 @@ release lineage now bind to that exact approved connected melody; occurrence
 views are clipped from its sidecar windows rather than reconstructed from part
 durations. Boundary-local Cohesion, generated-role validation, controlled
 kick/bass interaction, selected-master codec-preview evidence, and release
-provenance are also implemented. [`PLAN.md`](PLAN.md) retains the completed
-quality-pipeline record and its task evidence; a real release still needs the
-manual gates below.
+provenance are also implemented. [`PLAN.md`](PLAN.md) defines the next guided
+arranger product cycle; the completed schema-v4 record remains under
+[`docs/plan/`](docs/plan/README.md). A real release still needs the manual gates
+below.
 
 Before arrangement, the Structure page exposes a canonical melody quality
 review: source-key confidence, reviewed timing/downbeat mapping, pickup/body/

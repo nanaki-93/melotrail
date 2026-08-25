@@ -1,5 +1,9 @@
 # Prompt: execute the complete quality-pipeline roadmap
 
+> **Historical—do not run.** QP-001–QP-018 are complete. Use
+> [`EXECUTE_GUIDED_ARRANGER_TASKS_PROMPT.md`](EXECUTE_GUIDED_ARRANGER_TASKS_PROMPT.md)
+> for new implementation work.
+
 Copy the prompt below into a coding-agent session from the repository root. It
 authorizes the task commits described here; it does not authorize pushing,
 publishing, uploading, deleting user projects, or changing external services.

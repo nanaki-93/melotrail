@@ -3,9 +3,25 @@
 Documentation is split by ownership so active implementation plans do not
 compete with current operating instructions.
 
+## Active guided-arranger roadmap
+
+The product direction is root [`../PLAN.md`](../PLAN.md). Its executable
+planning suite is:
+
+- [`plan/GUIDED_ARRANGER_PHASE_0.md`](plan/GUIDED_ARRANGER_PHASE_0.md) —
+  GarageBand musical-reference and known-MIDI round-trip handoff
+- [`plan/GUIDED_ARRANGER_TASKS.md`](plan/GUIDED_ARRANGER_TASKS.md) — 76 ordered
+  mandatory task/commit contracts
+- [`plan/GUIDED_ARRANGER_EXECUTION_LOG.md`](plan/GUIDED_ARRANGER_EXECUTION_LOG.md)
+  — implementation and human-gate ledger
+- [`plan/EXECUTE_GUIDED_ARRANGER_TASKS_PROMPT.md`](plan/EXECUTE_GUIDED_ARRANGER_TASKS_PROMPT.md)
+  — serial coding-agent prompt
+- [`plan/GUIDED_ARRANGER_OPTIONAL_AI_TASKS.md`](plan/GUIDED_ARRANGER_OPTIONAL_AI_TASKS.md)
+  — frozen suggestion-only work after the deterministic MVP gate
+
 ## Completed quality-pipeline record
 
-The complete canonical melody and release-quality roadmap is under
+The historical completed canonical-melody and release-quality roadmap is under
 [`plan/`](plan/README.md):
 
 - [`plan/PLAN.md`](plan/PLAN.md) — completed outcome and target architecture
