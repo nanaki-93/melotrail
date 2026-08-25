@@ -295,9 +295,17 @@ class DefaultFullSongEnhancementApplicationService(
             val target = requireNotNull(targets[operation.targetId]) { "Plan references unknown target '${operation.targetId}'." }
             val issue = requireNotNull(issues[operation.issueId]) { "Plan references a non-actionable or unknown Critic issue '${operation.issueId}'." }
             require(issue.targetRole == target.role || issue.targetRole == "ensemble") { "Plan target is not named by its Critic issue." }
-            require(issue.occurrenceId == null || issue.occurrenceId == target.occurrenceId) { "Plan target occurrence is not named by its Critic issue." }
+            // Cohesion role artifacts span the full song.  Their notes are
+            // still constrained to the Critic's occurrence-local tick window.
+            require(issue.occurrenceId == null || target.occurrenceId == null || issue.occurrenceId == target.occurrenceId) {
+                "Plan target occurrence is not named by its Critic issue."
+            }
             val note = requireNotNull(notesByTarget.getValue(target.id)[operation.noteId]) { "Plan references unknown note '${operation.noteId}'." }
-            require(note.startTick >= issue.window.startTick && note.endTick <= issue.window.endTick) { "Plan changes a note outside its Critic window." }
+            require(if (operation.kind == FullSongEnhancementOperationKind.ADJUST_VELOCITY) {
+                note.startTick < issue.window.endTick && note.endTick > issue.window.startTick
+            } else {
+                note.startTick >= issue.window.startTick && note.endTick <= issue.window.endTick
+            }) { "Plan changes a note outside its Critic window." }
             val perTarget = changed.getOrPut(target.id) { linkedSetOf() }
             require(operation.noteId !in perTarget) { "Plan contains duplicate note operations." }
             val total = input.policy.totalBudget(target.notes.size); val addDelete = input.policy.additionDeletionBudget(target.notes.size)

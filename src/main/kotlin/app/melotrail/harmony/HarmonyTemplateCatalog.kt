@@ -27,7 +27,11 @@ object HarmonyTemplateCatalog {
         template("lofi-major-jazzy-v1", "Jazzy resolve", "ii–V–I", 2, 5, 1),
         template("lofi-major-cycle-v1", "Soft cycle", "vi–ii–V–I", 6, 2, 5, 1),
         template("lofi-major-lift-v1", "Gentle lift", "I–IV–vi–V", 1, 4, 6, 5),
-        template("lofi-major-rising-v1", "Rising warmth", "I–iii–IV–V", 1, 3, 4, 5)
+        template("lofi-major-rising-v1", "Rising warmth", "I–iii–IV–V", 1, 3, 4, 5),
+        template("lofi-major-warm-intro-v1", "Warm intro", "I–vi–IV–V", 1, 6, 4, 5),
+        template("lofi-major-open-chorus-v1", "Open chorus", "IV–V–I–vi–IV–V–I–I", 4, 5, 1, 6, 4, 5, 1, 1),
+        template("lofi-major-reflective-bridge-v1", "Reflective bridge", "vi–iii–IV–V", 6, 3, 4, 5),
+        template("lofi-major-soft-outro-v1", "Soft outro", "IV–V–I–I", 4, 5, 1, 1)
     )
     private val minor = listOf(
         template("lofi-minor-drift-v1", "Minor drift", "i–VII–VI–VII", 1, 7, 6, 7),

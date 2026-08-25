@@ -11,6 +11,10 @@ import javax.sound.midi.MidiEvent
 import javax.sound.midi.MidiSystem
 import javax.sound.midi.ShortMessage
 import kotlin.math.abs
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.min
+import kotlin.math.sin
 
 /** Post-Cohesion, code-owned critic. This is distinct from [ArrangementCritic], which reviews plans before MIDI exists. */
 @Serializable enum class FullSongIssueCategory {
@@ -186,13 +190,24 @@ class DeterministicFullSongCritic {
         val issues = mutableListOf<FullSongIssue>(); val barTicks = beat * input.authority.meter.numerator
         input.roleReports.filterNot(RoleValidationReport::passed).forEach { report -> issues += issue(FullSongIssueCategory.INVARIANT, FullSongIssueSeverity.BLOCKING, report.role, null, 0, beat, "role-invariant-failed", listOf(metric("violationCount", report.violations.size)), emptyList(), emptyList(), barTicks) }
         input.melodyIdentity?.let { identity ->
-            input.cohesionOccurrences.firstOrNull()?.let { occurrence ->
-                val offset = occurrence.offsetTicks
-                val anchors = identity.anchorIds.map { identity.note(it) }
+            input.cohesionOccurrences.forEach { occurrence ->
+                val window = requireNotNull(input.authority.occurrences.singleOrNull { it.occurrenceId == occurrence.occurrenceId }) {
+                    "Cohesion piano occurrence '${occurrence.occurrenceId}' is not in the canonical timeline."
+                }
+                // The occurrence view is rebased to zero on disk, then `read`
+                // restores its canonical global offset. Compare only the anchors
+                // that belong to this occurrence; comparing the complete song to
+                // its first view falsely reports every later anchor as missing.
+                val anchors = identity.anchorIds.map(identity::note).filter { anchor ->
+                    anchor.originalStartTick >= window.startTick && anchor.originalEndTick <= window.endTick
+                }
                 val current = notes.filter { it.role == "piano" && it.occurrenceId == occurrence.occurrenceId }
-                if (anchors.any { anchor -> current.none { it.pitch == anchor.pitch && it.start == anchor.originalStartTick + offset && it.end == anchor.originalEndTick + offset } }) {
+                val missing = anchors.count { anchor ->
+                    current.none { it.pitch == anchor.pitch && it.start == anchor.originalStartTick && it.end == anchor.originalEndTick }
+                }
+                if (missing > 0) {
                     issues += issue(FullSongIssueCategory.RECOGNIZABILITY_REGRESSION, FullSongIssueSeverity.BLOCKING, "piano", occurrence.occurrenceId,
-                        offset, offset + beat, "melody-anchor-mismatch", listOf(metric("missingAnchorCount", anchors.count { anchor -> current.none { it.pitch == anchor.pitch && it.start == anchor.originalStartTick + offset && it.end == anchor.originalEndTick + offset } })),
+                        window.startTick, window.startTick + beat, "melody-anchor-mismatch", listOf(metric("missingAnchorCount", missing)),
                         listOf(metric("requiredAnchorCount", anchors.size)), emptyList(), barTicks)
                 }
             }
@@ -223,8 +238,12 @@ class DeterministicFullSongCritic {
     private fun density(notes: List<Note>, input: FullSongCriticInput, beat: Long): List<FullSongIssue> = input.approvedArrangement.sections.flatMap { section -> section.instruments.filter { it.mode == InstrumentMode.GENERATED }.mapNotNull { instrument ->
         val target = when (instrument) { is BassInstrumentPlan -> instrument.density; is DrumsInstrumentPlan -> instrument.density; is PadInstrumentPlan -> instrument.density; is StringsInstrumentPlan -> instrument.density; else -> null } ?: return@mapNotNull null
         val occurrence = input.authority.occurrences.singleOrNull { it.occurrenceId == section.instanceId } ?: return@mapNotNull null
+        // Arrangement density is expressed on the 0..1 planner scale. The
+        // observed measure is normalized by the sixteen sixteenth-note slots
+        // per 4/4 bar, so the target must use the same scale before comparison.
         val actual = notes.count { it.role == instrument.name && it.start in occurrence.startTick until occurrence.endTick }.toDouble() / ((occurrence.endTick - occurrence.startTick).toDouble() / beat) / 16.0
-        if (abs(actual - target) <= .25) null else issue(FullSongIssueCategory.DENSITY_MISMATCH, FullSongIssueSeverity.ACTIONABLE, instrument.name, occurrence.occurrenceId, occurrence.startTick, occurrence.endTick, "normalized-density-delta", listOf(metric("normalizedDensity", actual)), listOf(metric("arrangementTarget", target)), listOf(FullSongCorrectionFamily.DENSITY_REDUCTION), beat * input.authority.meter.numerator)
+        val normalizedTarget = target / 16.0
+        if (abs(actual - normalizedTarget) <= .25) null else issue(FullSongIssueCategory.DENSITY_MISMATCH, FullSongIssueSeverity.ACTIONABLE, instrument.name, occurrence.occurrenceId, occurrence.startTick, occurrence.endTick, "normalized-density-delta", listOf(metric("normalizedDensity", actual)), listOf(metric("normalizedArrangementTarget", normalizedTarget)), listOf(FullSongCorrectionFamily.DENSITY_REDUCTION), beat * input.authority.meter.numerator)
     } }
 
     private fun contrast(notes: List<Note>, input: FullSongCriticInput, beat: Long): List<FullSongIssue> = input.authority.occurrences.zipWithNext().mapNotNull { (left, right) ->
@@ -242,13 +261,26 @@ class DeterministicFullSongCritic {
         buildList { if (silence > beat) add(issue(FullSongIssueCategory.TRANSITION_ABRUPTNESS, FullSongIssueSeverity.ACTIONABLE, "ensemble", right.occurrenceId, before, after, "unplanned-boundary-silence", listOf(metric("silenceTicks", silence.toDouble())), listOf(metric("maximumSilenceTicks", beat.toDouble())), listOf(FullSongCorrectionFamily.TRANSITION_NOTE_ADJUSTMENT), beat * input.authority.meter.numerator)); if (onset > median * 2) add(issue(FullSongIssueCategory.TRANSITION_ABRUPTNESS, FullSongIssueSeverity.ACTIONABLE, "ensemble", right.occurrenceId, boundary, boundary + beat, "boundary-onset-spike", listOf(metric("onsets", onset.toDouble())), listOf(metric("maximumOnsets", median * 2)), listOf(FullSongCorrectionFamily.TRANSITION_NOTE_ADJUSTMENT, FullSongCorrectionFamily.DENSITY_REDUCTION), beat * input.authority.meter.numerator)) }
     }
 
-    /** Flags a large rhythmic phase shift between adjacent populated occurrences. */
+    /**
+     * Flags a large rhythmic phase shift in the pulse foundation between adjacent
+     * occurrences. Hats and snares deliberately decorate several subdivisions,
+     * so averaging every drum event mistakes a normal fill for a tempo shift.
+     */
     private fun groove(notes: List<Note>, input: FullSongCriticInput, beat: Long): List<FullSongIssue> = input.authority.occurrences.zipWithNext().mapNotNull { (left, right) ->
-        fun phase(occurrence: app.melotrail.application.MusicalOccurrence): Double? = notes.filter { it.role in setOf("drums", "bass") && it.start in occurrence.startTick until occurrence.endTick }
-            .map { (it.start - occurrence.startTick).mod(beat).toDouble() }.takeIf { it.size >= 3 }?.average()
+        fun phase(occurrence: app.melotrail.application.MusicalOccurrence): Double? {
+            val phases = notes.filter { note ->
+                note.start in occurrence.startTick until occurrence.endTick &&
+                    (note.role == "bass" || note.role == "drums" && note.pitch in setOf(35, 36))
+            }.map { (it.start - occurrence.startTick).mod(beat).toDouble() }
+            if (phases.size < 3) return null
+            val radians = phases.map { it * (2.0 * Math.PI / beat) }
+            val angle = atan2(radians.sumOf(::sin), radians.sumOf(::cos))
+            return (if (angle < 0) angle + 2.0 * Math.PI else angle) * beat / (2.0 * Math.PI)
+        }
         val leftPhase = phase(left) ?: return@mapNotNull null; val rightPhase = phase(right) ?: return@mapNotNull null
-        if (abs(leftPhase - rightPhase) <= beat / 4.0) null else issue(FullSongIssueCategory.GROOVE_INCOHERENCE, FullSongIssueSeverity.ACTIONABLE, "ensemble", right.occurrenceId,
-            left.endTick - beat, right.startTick + beat, "rhythmic-phase-discontinuity", listOf(metric("phaseDeltaTicks", abs(leftPhase - rightPhase))),
+        val phaseDelta = min(abs(leftPhase - rightPhase), beat - abs(leftPhase - rightPhase))
+        if (phaseDelta <= beat / 4.0) null else issue(FullSongIssueCategory.GROOVE_INCOHERENCE, FullSongIssueSeverity.ACTIONABLE, "ensemble", right.occurrenceId,
+            left.endTick - beat, right.startTick + beat, "rhythmic-phase-discontinuity", listOf(metric("phaseDeltaTicks", phaseDelta)),
             listOf(metric("maximumPhaseDeltaTicks", beat / 4.0)), listOf(FullSongCorrectionFamily.LOCAL_EXPRESSION_ADJUSTMENT, FullSongCorrectionFamily.TRANSITION_NOTE_ADJUSTMENT), beat * input.authority.meter.numerator)
     }
 

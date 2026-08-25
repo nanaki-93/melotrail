@@ -168,7 +168,9 @@ data class DrumsInstrumentPlan(
     /** A curated in-code groove, never a filename or event list. */
     @Required val pattern: DrumGroovePatternId = DrumGroovePatternId.DUSTY_STRAIGHT,
     @Required val grooveCharacter: GrooveCharacter = GrooveCharacter.STRAIGHT,
-    @Required val fillPlacement: DrumFillPlacement = DrumFillPlacement.NONE
+    @Required val fillPlacement: DrumFillPlacement = DrumFillPlacement.NONE,
+    /** A curated section-ending fill; ignored when [fillPlacement] is none. */
+    @Required val fillPattern: DrumFillPatternId = DrumFillPatternId.DUSTY_SNARE_ROLL
 ) : DetailedInstrumentPlan()
 
 @Serializable
@@ -179,7 +181,9 @@ data class PadInstrumentPlan(
     val role: SustainedRole,
     val density: Double,
     val register: MusicalRegister,
-    @Required val pattern: PadVoicingPatternId = PadVoicingPatternId.SUSTAINED
+    @Required val pattern: PadVoicingPatternId = PadVoicingPatternId.SUSTAINED,
+    /** Beat-relative lo-fi comping pattern; pitches still come only from authoritative harmony. */
+    @Required val rhythmPattern: ChordRhythmPatternId = ChordRhythmPatternId.SUSTAINED
 ) : DetailedInstrumentPlan()
 
 @Serializable
@@ -442,7 +446,7 @@ class DeterministicDetailedArrangementPlanner : DetailedArrangementPlanner {
         }).also { it.requireValid(input) }
     }
 
-    private fun detail(instrument: SectionVariationInstrument, energy: Double, purpose: SongSectionPurpose): DetailedInstrumentPlan = when (instrument.name) {
+    internal fun detail(instrument: SectionVariationInstrument, energy: Double, purpose: SongSectionPurpose): DetailedInstrumentPlan = when (instrument.name) {
         "piano" -> PianoSourcePlan()
         "bass" -> BassInstrumentPlan(
             role = DetailedBassRole.entries.first { it.wireName == instrument.role }, density = instrument.density,
@@ -465,18 +469,15 @@ class DeterministicDetailedArrangementPlanner : DetailedArrangementPlanner {
             },
             hiHatDensity = (instrument.density * 0.8).coerceIn(0.0, 1.0),
             swing = swing(instrument.groove), fillLastBar = energy >= 0.7,
-            pattern = when (instrument.role) {
-                "half_time" -> DrumGroovePatternId.HALF_TIME_POCKET
-                "build" -> DrumGroovePatternId.LIFT_BUILD
-                "soft_lofi" -> DrumGroovePatternId.LAZY_SWING
-                else -> DrumGroovePatternId.DUSTY_STRAIGHT
-            },
+            pattern = LoFiSectionPatternPolicy.drumGroove(purpose),
             grooveCharacter = instrument.groove.character,
-            fillPlacement = if (energy >= 0.7) DrumFillPlacement.LAST_BAR else DrumFillPlacement.NONE
+            fillPlacement = if (energy >= 0.7) DrumFillPlacement.LAST_BAR else DrumFillPlacement.NONE,
+            fillPattern = LoFiSectionPatternPolicy.drumFill(purpose)
         )
         "pad" -> PadInstrumentPlan(
             role = SustainedRole.entries.first { it.wireName == instrument.role }, density = instrument.density, register = instrument.register,
-            pattern = if (instrument.role == "sustained") PadVoicingPatternId.SUSTAINED else PadVoicingPatternId.COMMON_TONE
+            pattern = if (instrument.role == "sustained") PadVoicingPatternId.SUSTAINED else PadVoicingPatternId.COMMON_TONE,
+            rhythmPattern = LoFiSectionPatternPolicy.chordRhythm(purpose)
         )
         "strings" -> StringsInstrumentPlan(role = stringsRole(instrument.role, energy, purpose), density = instrument.density, register = instrument.register)
         else -> error("Unsupported variation instrument '${instrument.name}'")
@@ -542,10 +543,11 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
 
     /**
      * The song plan and variation plan own section identity, energy, and the
-     * exact instrument list. Qwen supplies only the bounded role, density,
-     * pattern, groove, fill, and transition controls for each allowed instrument. Ignore extra instruments rather
-     * than repeatedly asking it to undo a non-executable orchestration choice;
-     * missing or invalid required instruments still fail validation and retry.
+     * exact instrument list. For enhanced plans, project-owned role, density,
+     * register, and groove limits are rebound from the resolved musical intent;
+     * Qwen still supplies bounded patterns, movement, accents, fills, and
+     * transitions. Extra instruments are ignored; missing or malformed required
+     * instruments still fail validation and retry.
      */
     private fun bindLockedArrangementFields(
         arrangement: DetailedArrangement,
@@ -562,10 +564,42 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
                 partId = expected.partId,
                 role = expected.purpose,
                 energy = expected.energy,
-                instruments = expected.instruments.mapNotNull { byName[it.name] }
+                instruments = expected.instruments.mapNotNull { variation ->
+                    byName[variation.name]?.let { modelInstrument ->
+                        if (input.planningInput.acceptedFullSongGrooveMap == null) modelInstrument
+                        else bindResolvedMusicalIntent(modelInstrument, variation, expected.energy, expected.purpose)
+                    }
+                }
             )
         }
     )
+
+    private fun bindResolvedMusicalIntent(
+        model: DetailedInstrumentPlan,
+        variation: SectionVariationInstrument,
+        energy: Double,
+        purpose: SongSectionPurpose
+    ): DetailedInstrumentPlan {
+        val resolved = DeterministicDetailedArrangementPlanner().detail(variation, energy, purpose)
+        return when {
+            model is BassInstrumentPlan && resolved is BassInstrumentPlan -> model.copy(
+                role = resolved.role, density = resolved.density, register = resolved.register
+            )
+            model is DrumsInstrumentPlan && resolved is DrumsInstrumentPlan -> model.copy(
+                role = resolved.role,
+                density = resolved.density,
+                grooveCharacter = resolved.grooveCharacter,
+                swing = model.swing.takeIf(Double::isFinite)?.coerceIn(0.0, resolved.swing) ?: resolved.swing
+            )
+            model is PadInstrumentPlan && resolved is PadInstrumentPlan -> model.copy(
+                role = resolved.role, density = resolved.density, register = resolved.register
+            )
+            model is StringsInstrumentPlan && resolved is StringsInstrumentPlan -> model.copy(
+                role = resolved.role, density = resolved.density, register = resolved.register
+            )
+            else -> model
+        }
+    }
 
     private fun createUserPrompt(input: DetailedArrangementInput): String = """
         Validated global song plan:
@@ -628,8 +662,8 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
             Instrument objects are a tagged union. Use exactly one of these shapes and no extra fields:
             piano:   {"kind":"piano","name":"piano","mode":"source"}
             bass:    {"kind":"bass","name":"bass","mode":"generated","role":"root","density":0.4,"movement":"root_motion","register":"low","syncopation":0.1,"pattern":"sustained-root"}
-            drums:   {"kind":"drums","name":"drums","mode":"generated","role":"soft_lofi","density":0.4,"kickDensity":0.4,"snarePattern":"beats_2_4","hiHatDensity":0.3,"swing":0.1,"fillLastBar":false,"pattern":"lazy-swing","grooveCharacter":"swung","fillPlacement":"none"}
-            pad:     {"kind":"pad","name":"pad","mode":"generated","role":"texture","density":0.4,"register":"mid","pattern":"common-tone"}
+            drums:   {"kind":"drums","name":"drums","mode":"generated","role":"soft_lofi","density":0.4,"kickDensity":0.4,"snarePattern":"beats_2_4","hiHatDensity":0.3,"swing":0.1,"fillLastBar":false,"pattern":"lazy-swing","grooveCharacter":"swung","fillPlacement":"none","fillPattern":"dusty-snare-roll"}
+            pad:     {"kind":"pad","name":"pad","mode":"generated","role":"texture","density":0.4,"register":"mid","pattern":"common-tone","rhythmPattern":"laid-back-quarters"}
             strings: {"kind":"strings","name":"strings","mode":"generated","role":"sustained_harmony","density":0.4,"register":"mid"}
 
             Allowed bass roles: root, root_fifth, octave, sustained. Allowed bass movement: static, root_motion, leaping, octaves.
@@ -639,7 +673,10 @@ class LocalQwenDetailedArrangementPlanner(private val client: LocalQwenClient = 
             simple_countermelody. Allowed register: low, mid, high. Densities are finite 0..1, bass syncopation is finite
             0..0.25, and drum swing is finite 0..0.5. Allowed drum patterns: dusty-straight, lazy-swing, half-time-pocket,
             lift-build. Allowed grooveCharacter: straight, laid_back, swung, half_time, building. fillPlacement is none or
-            last_bar and must agree with fillLastBar. Allowed pad patterns: sustained, close, open, common-tone, minimal.
+            last_bar and must agree with fillLastBar. Allowed drum fill patterns: soft-two-stroke, dusty-snare-roll,
+            kick-snare-turnaround, bridge-half-time-break. Allowed pad patterns: sustained, close, open, common-tone, minimal.
+            Allowed pad rhythmPattern values: sustained, laid-back-quarters, dusty-offbeats, broken-syncopation,
+            bridge-half-time.
             Bass must use register low. Strings are voiced above the source
             piano range where practical: choose high when a strings section's MIDI analysis has a high pitchRange.max;
             dense source material can still force conservative silence if no complete voicing fits above it.

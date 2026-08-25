@@ -31,6 +31,7 @@ import app.melotrail.application.GenerateEnsembleCohesionRequest
 import app.melotrail.application.GenerateHumanizationRequest
 import app.melotrail.application.ImportSongPart
 import app.melotrail.application.MidiQualityStatus
+import app.melotrail.application.MeasureSourceTimingRequest
 import app.melotrail.application.NormalizePartRequest
 import app.melotrail.application.ProgressSink
 import app.melotrail.application.QualityDebugPair
@@ -39,15 +40,29 @@ import app.melotrail.application.QualityReviewEvidenceService
 import app.melotrail.application.SaveStructureRequest
 import app.melotrail.application.SelectMidiFeelRequest
 import app.melotrail.application.SetHarmonyProgression
+import app.melotrail.application.SourceTimingAlignmentApplicationService
+import app.melotrail.application.SourceTimingEvidenceApplicationService
 import app.melotrail.application.TransposePartRequest
 import app.melotrail.application.UpdateCompositionSettings
 import app.melotrail.application.AnalyzePartRequest
+import app.melotrail.application.AlignSourceTimingRequest
 import app.melotrail.application.ApplyMixRequest
 import app.melotrail.arrangement.ArrangementRole
 import app.melotrail.arrangement.ArrangementRoleSelection
+import app.melotrail.arrangement.ArtifactRef
+import app.melotrail.arrangement.BridgeElement
+import app.melotrail.arrangement.DetailedArrangement
+import app.melotrail.arrangement.DetailedArrangementInput
+import app.melotrail.arrangement.DetailedArrangementPlanner
+import app.melotrail.arrangement.DrumFillPlacement
+import app.melotrail.arrangement.DrumsInstrumentPlan
 import app.melotrail.arrangement.EnhancementIntensity
 import app.melotrail.arrangement.EnsembleCohesionEnhancementIntensity
+import app.melotrail.arrangement.GlobalSongPlanner
 import app.melotrail.arrangement.InstrumentRegistryLoader
+import app.melotrail.arrangement.LocalQwenDetailedArrangementPlanner
+import app.melotrail.arrangement.LocalQwenGlobalSongPlanner
+import app.melotrail.arrangement.LoFiSectionPatternPolicy
 import app.melotrail.arrangement.CompressionPlan
 import app.melotrail.arrangement.EqBandPlan
 import app.melotrail.arrangement.FilterPlan
@@ -56,9 +71,14 @@ import app.melotrail.arrangement.MixBusPlan
 import app.melotrail.arrangement.MixPlan
 import app.melotrail.arrangement.MixTrackPlan
 import app.melotrail.arrangement.MidiAnalysisInput
+import app.melotrail.arrangement.PadInstrumentPlan
+import app.melotrail.arrangement.ProjectStore
 import app.melotrail.arrangement.SectionTypeId
+import app.melotrail.arrangement.SelectedMidiArtifactResolver
 import app.melotrail.arrangement.SharedRoomPlan
 import app.melotrail.arrangement.SfizzInstrumentRenderer
+import app.melotrail.arrangement.SongPlan
+import app.melotrail.arrangement.SongPlanningInput
 import app.melotrail.arrangement.WorkflowArtifactReference
 import app.melotrail.harmony.HarmonyTemplateId
 import app.melotrail.logging.DefaultLogger
@@ -80,6 +100,13 @@ import app.melotrail.worker.RepairCommand
 import app.melotrail.worker.RepairSpec
 import app.melotrail.worker.WorkerClient
 import app.melotrail.worker.WorkerStatus
+import app.melotrail.preparation.ExplicitTimingWindow
+import app.melotrail.preparation.MidiTimeMappingReview
+import app.melotrail.preparation.MidiTimeMappingReviewState
+import app.melotrail.preparation.SourceBeatTickAnchor
+import app.melotrail.preparation.SourceGrooveTemplateStatus
+import app.melotrail.preparation.SourceTimingDecision
+import app.melotrail.preparation.WorkerSourceTimingBoundary
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
@@ -92,16 +119,20 @@ import org.junit.jupiter.api.Test
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
+import java.time.Instant
+import javax.sound.midi.MidiSystem
+import javax.sound.sampled.AudioSystem
+import kotlin.math.abs
 import kotlin.test.assertTrue
 
 /**
- * Explicit live proof for the supplied four WAV sources. It is opt-in because
+ * Explicit live proof for the supplied five WAV sources. It is opt-in because
  * it invokes the local Basic Pitch, Qwen, sfizz, and mastering runtimes and
  * writes the canonical project into data/audio.
  */
-class LiveLoFiFourSourceEndToEndTest {
+class LiveLoFiFiveSourceEndToEndTest {
     @Test
-    fun `four source C natural minor lo-fi song reaches an exported WAV`() = runBlocking {
+    fun `five source C major lo-fi song reaches an exported WAV`() = runBlocking {
         assumeTrue(System.getenv("MELOTRAIL_RUN_LIVE_E2E") == "1", "Set MELOTRAIL_RUN_LIVE_E2E=1 to run local audio/model integration.")
         val workspace = generateSequence(Path.of(System.getProperty("user.dir")).toAbsolutePath().normalize()) { it.parent }
             .firstOrNull { Files.isDirectory(it.resolve("data/audio/input")) && Files.isDirectory(it.resolve("sounds")) }
@@ -109,48 +140,63 @@ class LiveLoFiFourSourceEndToEndTest {
         val root = workspace.resolve("data/audio")
         val input = root.resolve("input")
         val output = root.resolve("output")
+        val resumePreparedProject = System.getenv("MELOTRAIL_RESUME_LIVE_E2E") == "1"
         val sources = listOf(
-            Part("intro", "intro.wav", "Intro", SectionTypeId.INTRO),
-            Part("verse", "verse.wav", "Verse", SectionTypeId.VERSE),
-            Part("chorus", "ch.wav", "Chorus", SectionTypeId.CHORUS),
-            Part("bridge", "bridge.wav", "Bridge", SectionTypeId.BRIDGE)
+            Part("intro", "intro-C.wav", "Intro", SectionTypeId.INTRO, 4),
+            Part("verse", "verse-c.wav", "Verse", SectionTypeId.VERSE, 4),
+            Part("chorus", "chorus-C.wav", "Chorus", SectionTypeId.CHORUS, 8),
+            Part("bridge", "bridge-C.wav", "Bridge", SectionTypeId.BRIDGE, 4),
+            Part("outro", "outro-C.wav", "Outro", SectionTypeId.OUTRO, 4)
         )
-        require(sources.all { Files.isRegularFile(input.resolve(it.file)) }) { "Expected intro.wav, verse.wav, ch.wav, and bridge.wav in data/audio/input." }
-        require(!Files.exists(root.resolve("project.json"))) { "Live E2E refuses to replace an existing data/audio project." }
+        require(sources.all { Files.isRegularFile(input.resolve(it.file)) }) { "Expected intro-C.wav, verse-c.wav, chorus-C.wav, bridge-C.wav, and outro-C.wav in data/audio/input." }
+        require(resumePreparedProject == Files.exists(root.resolve("project.json"))) {
+            if (resumePreparedProject) "Live E2E resume requires an existing data/audio project."
+            else "Live E2E refuses to replace an existing data/audio project."
+        }
 
         val client = WorkerClient(logger = DefaultLogger(), errorReporter = ErrorReporter(DefaultLogger()))
         assertTrue(client.healthCheck(), "The local worker must be running at http://127.0.0.1:8081.")
         val libraryRoot = workspace.resolve("sounds")
         val renderer = SfizzInstrumentRenderer(InstrumentRegistryLoader(libraryRoot))
         val projects = DesktopServiceComposition.projectService()
-        val arrangements = DefaultArrangementApplicationService(libraryRoot = libraryRoot)
+        val arrangements = DefaultArrangementApplicationService(
+            qwenGlobalPlanner = LiveLoFiRhythmGlobalPlanner(),
+            qwenDetailedPlanner = LiveLoFiRhythmDetailedPlanner(),
+            libraryRoot = libraryRoot
+        )
         val cohesion = DefaultEnsembleCohesionApplicationService()
 
-        projects.create(CreateProjectRequest(root, name = "C Natural Minor Lo-fi Four Source E2E"))
-        projects.updateCompositionSettings(UpdateCompositionSettings(
-            root, 0,
-            CompositionSettingsInput(
-                name = "C Natural Minor Lo-fi Four Source E2E",
-                key = MusicalKey(PitchClass.of(PitchSpelling.C), ScaleModeId.NATURAL_MINOR),
-                tempo = Tempo(80.0), timeSignature = TimeSignature(4, 4),
-                profile = CompositionProfileRef("lofi", 1), mood = MoodRef("warm", 1)
-            )
-        ))
-        applyHarmony(projects, root, SectionTypeId.INTRO, "lofi-minor-drift-v1")
-        applyHarmony(projects, root, SectionTypeId.VERSE, "lofi-minor-moody-v1")
-        applyHarmony(projects, root, SectionTypeId.CHORUS, "lofi-minor-cinematic-v1")
-        applyHarmony(projects, root, SectionTypeId.BRIDGE, "lofi-minor-warm-v1")
+        if (!resumePreparedProject) {
+            projects.create(CreateProjectRequest(root, name = "C Major Lo-fi Five Source E2E"))
+            projects.updateCompositionSettings(UpdateCompositionSettings(
+                root, 0,
+                CompositionSettingsInput(
+                    name = "C Major Lo-fi Five Source E2E",
+                    key = MusicalKey(PitchClass.of(PitchSpelling.C), ScaleModeId.MAJOR),
+                    tempo = Tempo(75.0), timeSignature = TimeSignature(4, 4),
+                    profile = CompositionProfileRef("lofi", 1), mood = MoodRef("warm", 1)
+                )
+            ))
+            applyHarmony(projects, root, SectionTypeId.INTRO, "lofi-major-warm-intro-v1")
+            applyHarmony(projects, root, SectionTypeId.VERSE, "lofi-major-classic-v1")
+            applyHarmony(projects, root, SectionTypeId.CHORUS, "lofi-major-open-chorus-v1")
+            applyHarmony(projects, root, SectionTypeId.BRIDGE, "lofi-major-reflective-bridge-v1")
+            applyHarmony(projects, root, SectionTypeId.OUTRO, "lofi-major-soft-outro-v1")
 
-        sources.forEach { part ->
-            projects.importSongPart(ImportSongPart(root, part.id, input.resolve(part.file), part.name, part.sectionType))
+            sources.forEach { part ->
+                projects.importSongPart(ImportSongPart(root, part.id, input.resolve(part.file), part.name, part.sectionType))
+            }
+            prepareSourcesInProjectKey(projects, root, sources.map(Part::id))
+            alignSourcesToDeclaredBars(client, root, sources)
+
+            processSources(projects, root, sources.map(Part::id))
+            projects.saveStructure(SaveStructureRequest(root, listOf("intro", "verse", "verse", "chorus", "bridge", "verse", "outro")))
+
+            approveSourceCritic(root)
+        } else {
+            DefaultSourceSongCriticApplicationService().requireApprovedMelody(root)
         }
-        prepareSourcesInProjectKey(projects, root, sources.map(Part::id))
-
-        processSources(projects, root, sources.map(Part::id))
-        projects.saveStructure(SaveStructureRequest(root, listOf("intro", "verse", "verse", "chorus", "bridge", "verse")))
-
-        approveSourceCritic(root)
-        arrangeAllStandardInstruments(arrangements, root)
+        arrangeLoFiRhythmSection(arrangements, root)
         applyCohesion(cohesion, root)
         critiqueAndEnhanceSong(root)
         DefaultHumanizationApplicationService().generate(GenerateHumanizationRequest(root))
@@ -176,9 +222,8 @@ class LiveLoFiFourSourceEndToEndTest {
         val root = workspace.resolve("data/audio")
         val output = root.resolve("output")
         val currentMaster = output.resolve("master.wav")
-        require(Files.isRegularFile(currentMaster)) { "A current approved live master is required before retrying final polish." }
         val backup = output.resolve("master-before-full-song-retry.wav")
-        if (!Files.exists(backup)) Files.copy(currentMaster, backup)
+        if (Files.isRegularFile(currentMaster) && !Files.exists(backup)) Files.copy(currentMaster, backup)
 
         val client = WorkerClient(logger = DefaultLogger(), errorReporter = ErrorReporter(DefaultLogger()))
         assertTrue(client.healthCheck(), "The local worker must be running at http://127.0.0.1:8081.")
@@ -285,6 +330,74 @@ class LiveLoFiFourSourceEndToEndTest {
         }
     }
 
+    /** The user-declared 4/8-bar lengths explicitly approve each source's beat phase and bounded pickup/tail mapping. */
+    private suspend fun alignSourcesToDeclaredBars(client: WorkerClient, root: Path, sources: List<Part>) {
+        val timing = SourceTimingEvidenceApplicationService(WorkerSourceTimingBoundary(client))
+        val alignment = SourceTimingAlignmentApplicationService()
+        sources.forEach { source ->
+            val timingEvidence = timing.measure(MeasureSourceTimingRequest(root, source.id)).report
+            val bodyBars = source.bars - 1
+            val bodyBeats = Math.multiplyExact(bodyBars, 4)
+            val measuredBeats = timingEvidence.beats.take(bodyBeats + 1)
+            val project = ProjectStore.read(root)
+            val part = project.parts.single { it.id == source.id }
+            val transposedReference = requireNotNull(part.midi?.transposed) { "Source '${source.file}' was not transposed before timing alignment." }
+            val transposed = root.resolve(transposedReference)
+            val sequence = MidiSystem.getSequence(transposed.toFile())
+            val durationSeconds = wavDurationSeconds(root.resolve(part.file))
+            fun sourceTick(seconds: Double): Long = (seconds / durationSeconds * sequence.tickLength).toLong()
+                .coerceIn(1, sequence.tickLength - 1)
+            val expectedDurationSeconds = source.bars * 4 * 60.0 / 75.0
+            val hasMeasuredGrid = measuredBeats.size == bodyBeats + 1
+            val anchors = if (hasMeasuredGrid) {
+                measuredBeats.mapIndexed { index, beat -> SourceBeatTickAnchor(index, sourceTick(beat.timeSeconds)) }
+            } else {
+                // Sparse intros can have a correct exported duration but too few
+                // detectable onsets. The user's explicit bar declaration then
+                // authorizes the same fixed 75 BPM grid, retaining a one-beat
+                // pickup and three-beat tail without inventing a tempo change.
+                require(abs(durationSeconds - expectedDurationSeconds) <= 0.02) {
+                    "Source '${source.file}' has only ${measuredBeats.size} detected anchors and is ${"%.3f".format(durationSeconds)}s; " +
+                        "export exactly ${"%.3f".format(expectedDurationSeconds)}s for its declared ${source.bars}-bar structure."
+                }
+                (0..bodyBeats).map { index ->
+                    SourceBeatTickAnchor(index, sourceTick((index + 1) * 60.0 / 75.0))
+                }
+            }
+            require(anchors.zipWithNext().all { (left, right) -> left.sourceMidiTick < right.sourceMidiTick }) {
+                "Source '${source.file}' timing anchors are not strictly increasing."
+            }
+            val pickupTicks = sequence.resolution.toLong()
+            val tailTicks = Math.multiplyExact(source.bars, 4).toLong() * sequence.resolution - pickupTicks - bodyBeats.toLong() * sequence.resolution
+            require(tailTicks > 0 && anchors.first().sourceMidiTick > 0 && anchors.last().sourceMidiTick < sequence.tickLength) {
+                "Source '${source.file}' cannot form the reviewed pickup/body/tail timing windows."
+            }
+            alignment.align(AlignSourceTimingRequest(root, source.id, SourceTimingDecision(
+                partId = source.id,
+                occurrenceId = "${source.id}-declared-length",
+                sourceTimingReport = requireNotNull(part.sourceTimingEvidence).report,
+                sourceMidi = ArtifactRef(transposedReference, digest(transposed)),
+                sourcePpq = sequence.resolution,
+                targetPpq = sequence.resolution,
+                targetTempoBpm = 75,
+                targetMeterNumerator = 4,
+                targetMeterDenominator = 4,
+                sourceDownbeatBeatIndex = 0,
+                sourceBeats = anchors,
+                targetStartBar = 1,
+                targetBarCount = bodyBars,
+                pickup = ExplicitTimingWindow(0, anchors.first().sourceMidiTick, pickupTicks),
+                tail = ExplicitTimingWindow(anchors.last().sourceMidiTick, sequence.tickLength, tailTicks),
+                acceptSourceGroove = hasMeasuredGrid && timingEvidence.groove.status == SourceGrooveTemplateStatus.MEASURED,
+                review = MidiTimeMappingReview(MidiTimeMappingReviewState.APPROVED, "user", Instant.now().toString())
+            )))
+        }
+    }
+
+    private fun wavDurationSeconds(path: Path): Double = AudioSystem.getAudioInputStream(path.toFile()).use { stream ->
+        stream.frameLength.toDouble() / stream.format.frameRate.toDouble()
+    }.also { duration -> require(duration.isFinite() && duration > 0.0) { "Source WAV duration is invalid." } }
+
     private fun approveSourceCritic(root: Path) {
         val sourceCritic = DefaultSourceSongCriticApplicationService()
         val sourceReport = sourceCritic.run(root)
@@ -294,16 +407,14 @@ class LiveLoFiFourSourceEndToEndTest {
         sourceCritic.approve(root)
     }
 
-    private suspend fun arrangeAllStandardInstruments(
+    private suspend fun arrangeLoFiRhythmSection(
         arrangements: DefaultArrangementApplicationService,
         root: Path
     ) {
         val roleSelections = listOf(
             ArrangementRoleSelection(ArrangementRole.MELODY),
-            ArrangementRoleSelection(ArrangementRole.BASS),
-            ArrangementRoleSelection(ArrangementRole.DRUMS),
-            ArrangementRoleSelection(ArrangementRole.TEXTURE),
-            ArrangementRoleSelection(ArrangementRole.COUNTER_MELODY)
+            ArrangementRoleSelection(ArrangementRole.HARMONY, pinnedInstrumentId = "versilian-vcsl-keys-grand-piano-k"),
+            ArrangementRoleSelection(ArrangementRole.DRUMS)
         )
         val existing = runCatching { arrangements.load(root) }.getOrNull()
         if (existing == null || !existing.approved || existing.approvalRequired || existing.stale) {
@@ -311,17 +422,19 @@ class LiveLoFiFourSourceEndToEndTest {
             arrangements.approve(root)
         }
         val arrangementPlan = Files.readString(root.resolve("arrangement_plan.json"))
-        val requiredBaseInstruments = setOf("piano", "bass", "drums", "strings", "pad")
-        assertTrue(requiredBaseInstruments.all { "\"kind\": \"$it\"" in arrangementPlan }, "Qwen arrangement must include every standard base instrument.")
+        val requiredInstruments = setOf("piano", "drums", "pad")
+        assertTrue(requiredInstruments.all { "\"kind\": \"$it\"" in arrangementPlan }, "Every section must include melody, drums, and chord keys.")
+        assertTrue("\"kind\": \"bass\"" !in arrangementPlan && "\"kind\": \"strings\"" !in arrangementPlan,
+            "The reduced lo-fi arrangement must not contain bass or strings.")
+        assertTrue(Regex("\"fillPlacement\"\\s*:\\s*\"last_bar\"").findAll(arrangementPlan).count() == 7,
+            "Every song section must end with a selected drum fill.")
         val required = arrangements.generateRequiredMidi(root)
         val requiredByInstrument = required.artifacts.associateBy { it.instrument }
-        setOf("bass", "drums", "pad").forEach { instrument ->
+        setOf("drums", "pad").forEach { instrument ->
             assertTrue(requireNotNull(requiredByInstrument[instrument]) { "Missing generated $instrument MIDI." }.events > 0, "$instrument MIDI must contain playable events.")
         }
+        assertTrue("bass" !in requiredByInstrument, "Bass MIDI must not be generated for this arrangement.")
         arrangements.approveCoreArrangement(root)
-        val optional = arrangements.generateOptionalMidi(root)
-        val strings = requireNotNull(optional.artifacts.singleOrNull { it.instrument == "strings" }) { "Missing generated strings MIDI." }
-        assertTrue(strings.events > 0 && strings.resolution.name == "NOTES", "Strings MIDI must contain playable notes.")
     }
 
     private suspend fun applyCohesion(cohesion: DefaultEnsembleCohesionApplicationService, root: Path) {
@@ -368,11 +481,12 @@ class LiveLoFiFourSourceEndToEndTest {
 
     /** Publish a pending review form and immutable MIDI/WAV copies; this does not claim that anyone listened. */
     private fun publishPendingLiveListeningReview(root: Path, partId: String) {
-        val clean = root.resolve("midi/clean/$partId.mid")
+        val project = ProjectStore.read(root)
+        val selected = SelectedMidiArtifactResolver().resolve(root, project, partId)
         val approved = DefaultSourceSongCriticApplicationService().requireApprovedMelody(root)
         val reference = { path: Path -> WorkflowArtifactReference(root.relativize(path).toString().replace('\\', '/'), digest(path)) }
         QualityReviewEvidenceService().publishPending(root, listOf(
-            QualityDebugPair("prepared-connected", QualityReviewArtifactKind.MIDI, reference(clean), approved.connectedMidi),
+            QualityDebugPair("prepared-connected", QualityReviewArtifactKind.MIDI, reference(selected.path), approved.connectedMidi),
             QualityDebugPair("dry-master", QualityReviewArtifactKind.WAV, reference(root.resolve("mix/dry.wav")), reference(root.resolve("output/master.wav")))
         ), listOf("human listening session not recorded", "audio-device result unverified"))
     }
@@ -384,14 +498,11 @@ class LiveLoFiFourSourceEndToEndTest {
         tracks = mapOf(
             "piano" to MixTrackPlan(gainDb = -2.0, filter = FilterPlan(70.0, 9_000.0),
                 eq = listOf(EqBandPlan(280.0, -1.5, 0.8)), compression = CompressionPlan(true, -20.0, 1.8, 0.5), reverbSend = 0.20, stereoWidth = 0.9),
-            "bass" to MixTrackPlan(gainDb = -4.5, filter = FilterPlan(28.0, 4_500.0),
-                eq = listOf(EqBandPlan(95.0, 1.5, 0.8)), compression = CompressionPlan(true, -22.0, 2.5, 1.0), reverbSend = 0.03, stereoWidth = 0.65),
             "drums" to MixTrackPlan(gainDb = -6.0, filter = FilterPlan(35.0, 10_000.0),
                 eq = listOf(EqBandPlan(3_500.0, -1.5, 1.0)), compression = CompressionPlan(true, -20.0, 2.2, 0.5), reverbSend = 0.08, stereoWidth = 0.9, bus = MixBus.DRUMS),
-            "pad" to MixTrackPlan(gainDb = -12.0, pan = -0.12, filter = FilterPlan(180.0, 7_000.0),
-                compression = CompressionPlan(true, -24.0, 1.5), reverbSend = 0.30, stereoWidth = 1.25),
-            "strings" to MixTrackPlan(gainDb = -13.0, pan = 0.12, filter = FilterPlan(160.0, 8_000.0),
-                compression = CompressionPlan(true, -24.0, 1.5), reverbSend = 0.28, stereoWidth = 1.2)
+            "pad" to MixTrackPlan(gainDb = -9.0, pan = -0.08, filter = FilterPlan(150.0, 6_500.0),
+                eq = listOf(EqBandPlan(2_400.0, -1.5, 0.9)),
+                compression = CompressionPlan(true, -23.0, 1.7), reverbSend = 0.22, stereoWidth = 1.08)
         ),
         room = SharedRoomPlan(enabled = true, decaySeconds = 0.85, mix = 0.12),
         buses = mapOf(
@@ -400,7 +511,56 @@ class LiveLoFiFourSourceEndToEndTest {
         )
     )
 
-    private data class Part(val id: String, val file: String, val name: String, val sectionType: SectionTypeId)
+    private data class Part(val id: String, val file: String, val name: String, val sectionType: SectionTypeId, val bars: Int) {
+        init { require(bars > 1) }
+    }
+}
+
+/** Keep both rhythm layers active in every occurrence while retaining Qwen's bounded energy and section arc. */
+private class LiveLoFiRhythmGlobalPlanner(
+    private val delegate: GlobalSongPlanner = LocalQwenGlobalSongPlanner()
+) : GlobalSongPlanner {
+    override fun plan(input: SongPlanningInput): SongPlan {
+        val planned = delegate.plan(input)
+        val alwaysActive = listOf("piano", "drums", "pad")
+        require(alwaysActive.all { it in input.allowedInstruments }) { "Live lo-fi rhythm policy requires piano, drums, and pad." }
+        return planned.copy(sections = planned.sections.map { section ->
+            section.copy(instrumentProgression = alwaysActive)
+        })
+    }
+}
+
+/** Apply the reviewed beat-relative catalogs after Qwen selects the rest of each bounded detail plan. */
+private class LiveLoFiRhythmDetailedPlanner(
+    private val delegate: DetailedArrangementPlanner = LocalQwenDetailedArrangementPlanner()
+) : DetailedArrangementPlanner {
+    override fun plan(input: DetailedArrangementInput): DetailedArrangement {
+        val planned = delegate.plan(input)
+        return planned.copy(sections = planned.sections.map { section ->
+            section.copy(
+                instruments = section.instruments.map { instrument ->
+                    when (instrument) {
+                        is DrumsInstrumentPlan -> instrument.copy(
+                            fillLastBar = true,
+                            fillPlacement = DrumFillPlacement.LAST_BAR,
+                            pattern = LoFiSectionPatternPolicy.drumGroove(section.role),
+                            fillPattern = LoFiSectionPatternPolicy.drumFill(section.role)
+                        )
+                        is PadInstrumentPlan -> instrument.copy(
+                            rhythmPattern = LoFiSectionPatternPolicy.chordRhythm(section.role)
+                        )
+                        else -> instrument
+                    }
+                },
+                transitionOut = section.transitionOut.copy(
+                    bridge = section.transitionOut.bridge?.let { bridge ->
+                        bridge.copy(elements = bridge.elements.filterNot { it == BridgeElement.BASS_PICKUP }
+                            .ifEmpty { listOf(BridgeElement.DRUM_FILL) })
+                    }
+                )
+            )
+        }).also { it.requireValid(input) }
+    }
 }
 
 private class LiveBuildWorker(private val client: WorkerClient) : BuildAudioWorker {

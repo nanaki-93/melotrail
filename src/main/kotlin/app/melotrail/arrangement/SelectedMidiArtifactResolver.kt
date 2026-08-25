@@ -1,5 +1,6 @@
 package app.melotrail.arrangement
 
+import app.melotrail.preparation.MidiTimeMappingStore
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
@@ -31,6 +32,22 @@ class SelectedMidiArtifactResolver(
     /** Resolve the selected chain through Enhance, before the final optional Feel transform. */
     fun resolveBeforeFeel(projectRoot: Path, project: Project, part: SongPart): SelectedMidiArtifact =
         resolveInternal(projectRoot, project, part, includeFeel = false)
+
+    /** Resolve the immutable MIDI baseline used by Technical Correction, without reusing a prior correction or optional AI stage. */
+    fun resolveCorrectionBaseline(projectRoot: Path, project: Project, part: SongPart): SelectedMidiArtifact {
+        val midi = requireNotNull(part.midi) { "Part '${part.id}' has no MIDI references." }
+        val baselinePart = part.copy(midi = midi.copy(
+            technicalCorrectionSelection = TechnicalCorrectionSelection.BASE,
+            aiFixSelection = MidiAiFixSelection.PENDING,
+            enhancementSelection = EnhancementSelection.PENDING,
+            analysisInput = MidiAnalysisInput.CURRENT,
+            feel = null
+        ))
+        val baselineProject = project.copy(parts = project.parts.map { candidate ->
+            if (candidate.id == part.id) baselinePart else candidate
+        })
+        return resolveInternal(projectRoot, baselineProject, baselinePart, includeFeel = false)
+    }
 
     fun resolve(projectRoot: Path, project: Project, part: SongPart): SelectedMidiArtifact =
         resolveInternal(projectRoot, project, part, includeFeel = true)
@@ -66,20 +83,23 @@ class SelectedMidiArtifactResolver(
                 "Part '${part.id}' has stale transposed MIDI evidence. Run Transpose MIDI again."
             }
         }
-        val basePath = transposed ?: normalized ?: cleaned
-        val baseReference = transposedReference ?: normalizedReference ?: cleanedReference
-        val baseSha256 = sha256(basePath)
-        val baseKind = when {
+        val originalBasePath = transposed ?: normalized ?: cleaned
+        val originalBaseReference = transposedReference ?: normalizedReference ?: cleanedReference
+        val originalBaseSha256 = sha256(originalBasePath)
+        val originalBaseKind = when {
             transposed != null -> SelectedMidiBaseKind.TRANSPOSED
             normalized != null -> SelectedMidiBaseKind.NORMALIZED
             else -> SelectedMidiBaseKind.CLEANED
         }
+        val mappedBase = timingMappedBase(root, rootReal, project, part,
+            BaseCandidate(originalBaseReference, originalBasePath, originalBaseSha256, originalBaseKind))
+        val base = mappedBase ?: BaseCandidate(originalBaseReference, originalBasePath, originalBaseSha256, originalBaseKind)
         val correctedBase = when (midi.technicalCorrectionSelection) {
-            TechnicalCorrectionSelection.BASE -> BaseCandidate(baseReference, basePath, baseSha256, baseKind)
+            TechnicalCorrectionSelection.BASE -> base
             TechnicalCorrectionSelection.CORRECTED -> {
                 val correction = requireNotNull(midi.technicalCorrection) { "Part '${part.id}' has no technical-correction evidence." }
                 correction.requireCanonical(part.id)
-                require(correction.input.file == baseReference && correction.input.sha256 == baseSha256) {
+                require(correction.input.file == base.reference && correction.input.sha256 == base.sha256) {
                     "Corrected MIDI is stale for part '${part.id}'; recreate correction from the current baseline."
                 }
                 val output = resolveFile(root, rootReal, correction.output.file, "corrected MIDI")
@@ -181,12 +201,42 @@ class SelectedMidiArtifactResolver(
             SelectedMidiBaseKind.CLEANED -> SelectedMidiArtifactKind.CLEANED
             SelectedMidiBaseKind.NORMALIZED -> SelectedMidiArtifactKind.NORMALIZED
             SelectedMidiBaseKind.TRANSPOSED -> SelectedMidiArtifactKind.TRANSPOSED
+            SelectedMidiBaseKind.TIMING_MAPPED -> SelectedMidiArtifactKind.TIMING_MAPPED
             SelectedMidiBaseKind.CORRECTED -> SelectedMidiArtifactKind.CORRECTED
             SelectedMidiBaseKind.APPROVED_AI_FIX -> SelectedMidiArtifactKind.APPROVED_AI_FIX
         },
         null,
         null
     )
+
+    /** A user-reviewed QP-003 candidate is selected only while every source, project-grid, and byte binding remains current. */
+    private fun timingMappedBase(
+        root: Path,
+        rootReal: Path,
+        project: Project,
+        part: SongPart,
+        source: BaseCandidate
+    ): BaseCandidate? {
+        val mapping = part.timingMappingEvidence ?: return null
+        require(mapping.sourceMidi.path == source.reference && mapping.sourceMidi.sha256 == source.sha256) {
+            "Timing-mapped MIDI is stale for part '${part.id}'; align the current baseline again."
+        }
+        val report = MidiTimeMappingStore.readReport(root, mapping.report)
+        require(report.partId == part.id && report.sourceMidi == mapping.sourceMidi && report.sourceTimingReport == mapping.sourceTimingReport &&
+            report.output.sha256 == mapping.candidate.sha256 && report.sourceSha256 == part.sourceTimingEvidence?.sourceSha256) {
+            "Timing-mapped MIDI evidence is inconsistent for part '${part.id}'."
+        }
+        project.envelope.compositionSettings?.takeIf { it.complete }?.let { settings ->
+            require(report.targetTempoBpm.toDouble() == settings.tempo.bpm && report.targetMeterNumerator == settings.timeSignature.numerator &&
+                report.targetMeterDenominator == settings.timeSignature.denominator) {
+                "Timing-mapped MIDI is stale for the current project tempo or meter."
+            }
+        }
+        val candidate = resolveFile(root, rootReal, mapping.candidate.path, "timing-mapped MIDI")
+        require(sha256(candidate) == mapping.candidate.sha256) { "Timing-mapped MIDI is stale for part '${part.id}'." }
+        readMidi(candidate, part.id)
+        return BaseCandidate(mapping.candidate.path, candidate, mapping.candidate.sha256, SelectedMidiBaseKind.TIMING_MAPPED)
+    }
 
     private fun readEnhancementReport(root: Path, enhancement: EnhancementReferences): EnhancementEditReport = try {
         val reportPath = root.resolve(enhancement.report.file).normalize()
@@ -260,8 +310,8 @@ class SelectedMidiArtifactResolver(
     private companion object { val json = Json { explicitNulls = false; ignoreUnknownKeys = false } }
 }
 
-enum class SelectedMidiBaseKind { CLEANED, NORMALIZED, TRANSPOSED, CORRECTED, APPROVED_AI_FIX }
-enum class SelectedMidiArtifactKind { CLEANED, NORMALIZED, TRANSPOSED, CORRECTED, APPROVED_AI_FIX, NO_OP, ENHANCED, LOFI_FEEL }
+enum class SelectedMidiBaseKind { CLEANED, NORMALIZED, TRANSPOSED, TIMING_MAPPED, CORRECTED, APPROVED_AI_FIX }
+enum class SelectedMidiArtifactKind { CLEANED, NORMALIZED, TRANSPOSED, TIMING_MAPPED, CORRECTED, APPROVED_AI_FIX, NO_OP, ENHANCED, LOFI_FEEL }
 enum class MidiCleanupFreshness { CURRENT, STALE }
 enum class MidiLoFiFreshness { CURRENT, NOT_SELECTED }
 data class MidiTimingSummary(val tempoMap: List<MidiTempoChange>, val timeSignatures: List<MidiTimeSignature>)

@@ -146,9 +146,8 @@ class DefaultMidiAiFixApplicationService(
         require(midi.technicalCorrectionSelection == app.melotrail.arrangement.TechnicalCorrectionSelection.CORRECTED) {
             "Select corrected MIDI before creating an AI fix."
         }
-        val correctionInput = midi.transposed ?: midi.normalized ?: cleanRef
-        val correctionInputPath = safeTechnicalCorrectionInput(root, correctionInput)
-        require(correction.input.file == correctionInput && correction.input.sha256 == app.melotrail.arrangement.sha256(correctionInputPath)) {
+        val correctionBaseline = app.melotrail.arrangement.SelectedMidiArtifactResolver().resolveCorrectionBaseline(root, project, part)
+        require(correction.input.file == correctionBaseline.projectRelativePath && correction.input.sha256 == correctionBaseline.sha256) {
             "Technical correction is stale. Run Technical Correction again."
         }
         val corrected = safeCorrected(root, correction.output)
@@ -172,20 +171,6 @@ class DefaultMidiAiFixApplicationService(
         require(!relative.isAbsolute && reference.startsWith("midi/clean/") && relative.none { it.toString() == ".." }) { "Cleaned MIDI reference is unsafe" }
         val path = normalized.resolve(relative).normalize()
         require(path.startsWith(normalized) && Files.isRegularFile(path) && path.toRealPath().startsWith(normalized.toRealPath())) { "Cleaned MIDI is missing" }
-        return path
-    }
-
-    /** Technical Correction may use the clean, normalized, or transposed baseline. */
-    private fun safeTechnicalCorrectionInput(root: Path, reference: String): Path {
-        val normalized = root.toAbsolutePath().normalize(); val relative = Path.of(reference)
-        require(!relative.isAbsolute && relative.none { it.toString() == ".." } &&
-            (reference.startsWith("midi/clean/") || reference.startsWith("midi/normalized/") || reference.startsWith("midi/transposed/"))) {
-            "Technical-correction input reference is unsafe"
-        }
-        val path = normalized.resolve(relative).normalize()
-        require(path.startsWith(normalized) && Files.isRegularFile(path) && path.toRealPath().startsWith(normalized.toRealPath())) {
-            "Technical-correction input is missing"
-        }
         return path
     }
 

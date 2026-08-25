@@ -29,8 +29,12 @@ class MusicalPatternLibraryTest {
         assertEquals("bass.diatonic-approach", BassPatternId.DIATONIC_APPROACH.id.value)
         assertEquals("pad.common-tone", PadVoicingPatternId.COMMON_TONE.id.value)
         assertEquals("drums.lazy-swing", DrumGroovePatternId.LAZY_SWING.id.value)
+        assertEquals("drums.fill.bridge-half-time-break", DrumFillPatternId.BRIDGE_HALF_TIME_BREAK.id.value)
+        assertEquals("chords.rhythm.broken-syncopation", ChordRhythmPatternId.BROKEN_SYNCOPATION.id.value)
         assertEquals("transition.drop-build", TransitionPatternId.DROP_BUILD.id.value)
         assertTrue(MusicalPatternLibrary.drumGrooves.all { !it.displayName.contains(".mid") })
+        assertEquals(DrumFillPatternId.entries.toSet(), MusicalPatternLibrary.drumFills.map { it.id }.toSet())
+        assertEquals(ChordRhythmPatternId.entries.toSet(), MusicalPatternLibrary.chordRhythms.map { it.id }.toSet())
     }
 
     @Test fun `bass patterns use canonical chord roots and resolve their approaches`() {

@@ -84,6 +84,27 @@ class DrumMidiGenerationTest {
     }
 
     @Test
+    fun `selected lo-fi groove and section fill catalog identities drive the generated events`() {
+        val straight = generator.generate(request().copy(groovePattern = DrumGroovePatternId.DUSTY_STRAIGHT)).hits
+        val lazy = generator.generate(request().copy(groovePattern = DrumGroovePatternId.LAZY_SWING)).hits
+        assertEquals(listOf(0L, 960L), straight.filter { it.name == "kick" }.map { it.startTick })
+        assertEquals(listOf(0L, 1200L), lazy.filter { it.name == "kick" }.map { it.startTick })
+
+        val soft = generator.generate(request(fillLastBar = true).copy(
+            groovePattern = DrumGroovePatternId.DUSTY_STRAIGHT,
+            fillPattern = DrumFillPatternId.SOFT_TWO_STROKE
+        )).hits
+        val bridge = generator.generate(request(fillLastBar = true).copy(
+            groovePattern = DrumGroovePatternId.HALF_TIME_POCKET,
+            fillPattern = DrumFillPatternId.BRIDGE_HALF_TIME_BREAK
+        )).hits
+        assertTrue(soft.any { it.name == "snare" && it.startTick == 1800L })
+        assertTrue(bridge.any { it.name == "openHat" && it.startTick == 960L })
+        assertTrue(bridge.any { it.name == "kick" && it.startTick == 1680L })
+        assertTrue(soft.map { it.name to it.startTick } != bridge.map { it.name to it.startTick })
+    }
+
+    @Test
     fun `second motif bar can answer an accepted piano or bass attack`() {
         val state = ArrangementState(
             ppq = 480,
@@ -125,6 +146,27 @@ class DrumMidiGenerationTest {
 
         assertTrue(hits.any { it.name == "closedHat" && it.startTick == 252L })
         assertTrue(hits.none { it.name == "closedHat" && it.startTick == 300L })
+    }
+
+    @Test
+    fun `approved groove map shares nearby accepted piano attacks instead of creating drum flams`() {
+        val map = FullSongGrooveMap(
+            ppq = 480, meterDenominator = 4, subdivisionsPerBeat = 4,
+            points = (0 until 16).map { index ->
+                val tick = index * 120L
+                FullSongGroovePoint("occ-0", tick / 480, index % 4, tick, 0)
+            },
+            occurrenceTemplateFingerprints = listOf(FullSongGrooveOccurrenceTemplate("occ-0", "A", "a".repeat(64))),
+            boundaries = emptyList(), maximumUnreviewedDiscontinuityTicks = 30
+        )
+        val piano = ArrangementState.fromAcceptedPiano(480, listOf(MidiNote(0, 60, 80, 15, 240)), "b".repeat(64))
+
+        val hits = generator.generate(request(role = DrumsRole.MINIMAL, snarePattern = SnarePattern.NONE).copy(
+            acceptedFullSongGrooveMap = map,
+            arrangementState = piano
+        )).hits
+
+        assertEquals(setOf("kick", "closedHat"), hits.filter { it.startTick == 15L }.map { it.name }.toSet())
     }
 
     @Test

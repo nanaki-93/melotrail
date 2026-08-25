@@ -447,7 +447,7 @@ object DeterministicTransitionBridgeEngine {
                 val to = requireNotNull(incoming) { "Bass Cohesion requires incoming harmony or key evidence" }
                 requireNotNull(cohesion.acceptedFullSongGrooveMap) { "Bass Cohesion requires the accepted full-song groove map" }
                 pitchedStarts(plan, boundary, beat).forEach { start ->
-                    val selected = handoffHarmony(plan, from, to, start, boundary, beat)
+                    val selected = handoffHarmony(plan, from, to, start, boundary)
                     note(track, 0, 36 + selected.root, velocityBase, start, noteEnd(plan, start, length, boundary, beat))
                 }
             }
@@ -455,7 +455,7 @@ object DeterministicTransitionBridgeEngine {
                 val from = requireNotNull(outgoing) { "Chord-motion Cohesion requires outgoing harmony or key evidence" }
                 val to = requireNotNull(incoming) { "Chord-motion Cohesion requires incoming harmony or key evidence" }
                 pitchedStarts(plan, boundary, beat).forEach { start ->
-                    val selected = handoffHarmony(plan, from, to, start, boundary, beat)
+                    val selected = handoffHarmony(plan, from, to, start, boundary)
                     selected.intervals.forEach { interval -> note(track, 0, 60 + selected.root + interval, velocityBase - 10, start, noteEnd(plan, start, length, boundary, beat)) }
                 }
             }
@@ -464,11 +464,12 @@ object DeterministicTransitionBridgeEngine {
                 val to = incoming ?: from
                 val carried = carriedPitches(cohesion, plan.instrument, input)
                 pitchedStarts(plan, boundary, beat).forEach { start ->
-                    val selected = handoffHarmony(plan, from, to, start, boundary, beat)
+                    val selected = handoffHarmony(plan, from, to, start, boundary)
                     val common = from.pitchClasses().firstOrNull { it in selected.pitchClasses() }
                     val retained = carried.filter { pitch -> pitch.mod(12) in selected.pitchClasses() }
                     (retained.ifEmpty { listOf(60 + (common ?: selected.root)) }).forEach { pitch ->
-                        note(track, 0, pitch, velocityBase - 12, start, noteEnd(plan, start, length, boundary, beat))
+                        val end = noteEnd(plan, start, length, boundary, beat)
+                        note(track, 0, avoidForegroundUnison(pitch, input, start, end, boundary), velocityBase - 12, start, end)
                     }
                 }
             }
@@ -485,10 +486,32 @@ object DeterministicTransitionBridgeEngine {
         RhythmicGesture.SUSTAIN -> if (start < boundary && boundary < length) boundary else length
         RhythmicGesture.PICKUP, RhythmicGesture.FILL -> minOf(length, start + (beat * 3L / 4L).coerceAtLeast(1L))
     }
-    private fun handoffHarmony(plan: TransitionBridgePlan, outgoing: Harmony, incoming: Harmony, tick: Long, boundary: Long, beat: Long): Harmony = when (plan.harmonicHandoff) {
+    private fun handoffHarmony(plan: TransitionBridgePlan, outgoing: Harmony, incoming: Harmony, tick: Long, boundary: Long): Harmony = when (plan.harmonicHandoff) {
         HarmonicHandoff.HOLD -> if (tick >= boundary) incoming else outgoing
-        HarmonicHandoff.STEP_TO_INCOMING -> if (tick >= (boundary - beat).coerceAtLeast(0L)) incoming else outgoing
+        // A pickup may lead into the incoming section, but it is still sounded
+        // under the outgoing canonical chord. The new harmony starts only at
+        // the actual boundary; otherwise a final-beat pickup can create a
+        // detectable chord clash against the authoritative progression.
+        HarmonicHandoff.STEP_TO_INCOMING -> if (tick >= boundary) incoming else outgoing
     }
+
+    /** Keep an added sustained texture out of the foreground melody's exact register. */
+    private fun avoidForegroundUnison(pitch: Int, input: TransitionContext, start: Long, end: Long, boundary: Long): Int {
+        val outgoingStart = input.outgoing.durationTicks - boundary + start
+        val outgoingEnd = input.outgoing.durationTicks - boundary + minOf(end, boundary)
+        val incomingStart = (start - boundary).coerceAtLeast(0L)
+        val incomingEnd = (end - boundary).coerceAtLeast(0L)
+        val foreground = buildList {
+            addAll(input.outgoing.melodyNotes.filter { note -> note.startTick < outgoingEnd && outgoingStart < note.endTick }.map(CohesionMelodyNote::pitch))
+            if (incomingEnd > incomingStart) {
+                addAll(input.incoming.melodyNotes.filter { note -> note.startTick < incomingEnd && incomingStart < note.endTick }.map(CohesionMelodyNote::pitch))
+            }
+        }.toSet()
+        return listOf(pitch, pitch + 12, pitch - 12, pitch + 24, pitch - 24)
+            .firstOrNull { candidate -> candidate in 0..127 && candidate !in foreground }
+            ?: pitch
+    }
+
     /** Reuse an actual continuing sustained voicing instead of adding a reset-octave bridge chord. */
     private fun carriedPitches(cohesion: EnsembleCohesionInput, role: String, input: TransitionContext): List<Int> {
         val boundary = input.outgoingStartTick + input.outgoing.durationTicks

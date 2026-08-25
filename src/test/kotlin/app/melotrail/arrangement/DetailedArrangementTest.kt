@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import app.melotrail.profile.CompositionProfileRef
+import app.melotrail.profile.MoodRef
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -118,6 +120,25 @@ class DetailedArrangementTest {
 
         assertThrows(IllegalArgumentException::class.java) { LocalQwenDetailedArrangementPlanner(client).plan(input) }
         assertTrue(client.userPrompt.contains("Locked instrument values"))
+    }
+
+    @Test
+    fun `Qwen enhanced arrangement rebinds project-owned role density register and groove controls`() {
+        val input = enhancedInput()
+        val canonical = DeterministicDetailedArrangementPlanner().plan(input)
+        val model = canonical.copy(sections = canonical.sections.map { section ->
+            section.copy(instruments = section.instruments.map { instrument -> when (instrument) {
+                is BassInstrumentPlan -> instrument.copy(role = DetailedBassRole.OCTAVE, density = 0.1, register = MusicalRegister.MID)
+                is DrumsInstrumentPlan -> instrument.copy(role = DrumsRole.MINIMAL, density = 0.1, grooveCharacter = GrooveCharacter.STRAIGHT, swing = 0.5)
+                is PadInstrumentPlan -> instrument.copy(role = SustainedRole.SUSTAINED, density = 0.1, register = MusicalRegister.HIGH)
+                is StringsInstrumentPlan -> instrument.copy(role = StringsRole.SIMPLE_COUNTERMELODY, density = 0.1, register = MusicalRegister.LOW)
+                is PianoSourcePlan -> instrument
+            } })
+        })
+
+        val arrangement = LocalQwenDetailedArrangementPlanner(FixtureClient(json.encodeToString(model))).plan(input)
+
+        assertEquals(canonical, arrangement)
     }
 
     @Test
@@ -238,6 +259,34 @@ class DetailedArrangementTest {
             ), SongTransitionIntent.NONE)
         ))
         return DetailedArrangementInput(planningInput, songPlan, variations)
+    }
+
+    private fun enhancedInput(): DetailedArrangementInput {
+        val base = input().planningInput
+        val profile = CompositionProfileRef("lofi", 1)
+        val mood = MoodRef("nostalgic", 1)
+        val planning = base.copy(
+            style = null,
+            soundContext = ArrangementSoundContext(profile, mood, "C-major-v1", 4, 4, "a".repeat(64)),
+            planningSoundContext = ArrangementSoundContext(profile, mood, "C-major-v1", 4, 4, "a".repeat(64)),
+            requestedIntents = listOf(
+                ArrangementRole.MELODY, ArrangementRole.BASS, ArrangementRole.DRUMS,
+                ArrangementRole.TEXTURE, ArrangementRole.COUNTER_MELODY
+            ).map { role -> InstrumentIntent(role = role, profile = profile, mood = mood) },
+            acceptedFullSongGrooveMap = FullSongGrooveMap(
+                ppq = 480,
+                meterDenominator = 4,
+                subdivisionsPerBeat = 4,
+                points = base.structure.mapIndexed { index, section -> FullSongGroovePoint(section.instanceId, 0, 0, index * 1_920L, 0) },
+                occurrenceTemplateFingerprints = base.structure.map { section -> FullSongGrooveOccurrenceTemplate(section.instanceId, section.partId, "b".repeat(64)) },
+                boundaries = base.structure.zipWithNext().mapIndexed { index, (outgoing, incoming) ->
+                    FullSongGrooveBoundary("boundary-$index", (index + 1) * 1_920L, outgoing.instanceId, incoming.instanceId, 0, 0, FullSongGrooveBoundaryStatus.CONTINUOUS)
+                },
+                maximumUnreviewedDiscontinuityTicks = 24
+            )
+        )
+        val songPlan = DeterministicGlobalSongPlanner().plan(planning)
+        return DetailedArrangementInput(planning, songPlan, DeterministicSectionVariationPlanner.plan(planning, songPlan))
     }
 
     private fun analysis(partId: String, energy: Double) = MidiAnalysis(

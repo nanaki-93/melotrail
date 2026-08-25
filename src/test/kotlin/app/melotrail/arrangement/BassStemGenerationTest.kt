@@ -139,6 +139,33 @@ class BassStemGenerationTest {
     }
 
     @Test
+    fun `approved groove map shares nearby accepted piano attacks instead of creating a flam`() {
+        val piano = ArrangementState.fromAcceptedPiano(
+            480,
+            listOf(15L, 495L, 975L, 1_455L).map { start -> MidiNote(0, 60, 80, start, start + 240) },
+            "d".repeat(64)
+        )
+
+        val result = generator.generate(request().copy(acceptedFullSongGrooveMap = testGrooveMap(deviationAt480 = 0), arrangementState = piano))
+
+        assertEquals(listOf(15L, 495L, 975L, 1_455L), result.notes.map { it.startTick })
+    }
+
+    @Test
+    fun `shared piano onset alignment also applies to the conservative bass fallback`() {
+        val piano = ArrangementState.fromAcceptedPiano(480, listOf(MidiNote(0, 60, 80, 15, 240)), "e".repeat(64))
+        val request = request(length = 9_600, chords = listOf(chord(0, 9_600, "C"))).copy(
+            acceptedFullSongGrooveMap = longGrooveMap(),
+            arrangementState = piano
+        )
+
+        val result = generator.generate(request)
+
+        assertEquals(listOf(15L), result.notes.map { it.startTick })
+        assertTrue(result.diagnostics.any { it.contains("deterministic root fallback") })
+    }
+
+    @Test
     fun `supports three-four sections and repeated section requests without overflows or overlaps`() {
         val threeFour = generator.generate(request(length = 1440, signatures = listOf(MidiTimeSignature(0, 3, 4)), density = 1.0))
         assertEquals(listOf(0L, 480L, 960L), threeFour.notes.map { it.startTick })
@@ -251,6 +278,16 @@ class BassStemGenerationTest {
         points = (0 until 16).map { index ->
             val tick = index * 120L
             FullSongGroovePoint("occ-0", tick / 480, (index % 4), tick, if (tick == 480L) deviationAt480 else 0L)
+        },
+        occurrenceTemplateFingerprints = listOf(FullSongGrooveOccurrenceTemplate("occ-0", "A", "a".repeat(64))),
+        boundaries = emptyList(), maximumUnreviewedDiscontinuityTicks = 30
+    )
+
+    private fun longGrooveMap() = FullSongGrooveMap(
+        ppq = 480, meterDenominator = 4, subdivisionsPerBeat = 4,
+        points = (0 until 80).map { index ->
+            val tick = index * 120L
+            FullSongGroovePoint("occ-0", tick / 480, index % 4, tick, 0)
         },
         occurrenceTemplateFingerprints = listOf(FullSongGrooveOccurrenceTemplate("occ-0", "A", "a".repeat(64))),
         boundaries = emptyList(), maximumUnreviewedDiscontinuityTicks = 30

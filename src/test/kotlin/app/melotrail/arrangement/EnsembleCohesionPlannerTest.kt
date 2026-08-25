@@ -104,6 +104,53 @@ class EnsembleCohesionPlannerTest {
         assertTrue(ranges.zipWithNext().all { (left, right) -> left.second <= right.first })
     }
 
+    @Test fun `sustained texture moves an exact foreground melody unison by octave`() {
+        val base = input("A1" to "A2", notes = listOf(CohesionMelodyNote("outgoing-melody", 0, 60, 96, 3_360, 3_840)))
+        val boundary = base.boundaries.single().copy(
+            allowedRoleActions = listOf(TransitionRoleAction.SUSTAINED_TEXTURE),
+            transitionPolicy = base.boundaries.single().transitionPolicy.copy(allowedActions = listOf(TransitionRoleAction.SUSTAINED_TEXTURE)),
+            roles = TransitionBoundaryRoleEvidence(emptyList(), listOf("strings"), listOf("strings"), emptyList(), emptyList(), listOf("strings"))
+        )
+        val input = base.copy(supportedInstruments = listOf("strings"), boundaries = listOf(boundary))
+        val plan = TransitionBridgePlan(
+            outgoingInstanceId = "A1", incomingInstanceId = "A2", outgoingHash = boundary.outgoing.sourceHash, incomingHash = boundary.incoming.sourceHash,
+            arrangementSha256 = input.arrangementSha256, contextSha256 = input.contextSha256,
+            roleAction = TransitionRoleAction.SUSTAINED_TEXTURE, bridgeType = BridgeType.PAD_SUSTAIN, instrument = "strings",
+            harmonicHandoff = HarmonicHandoff.HOLD, rhythmicGesture = RhythmicGesture.SUSTAIN, energyContour = EnergyContour.HOLD,
+            rationale = "Keep the texture below the melody", leadBeats = 1
+        )
+        val path = root.resolve("texture.mid")
+
+        DeterministicTransitionBridgeEngine.write(path, input, boundary, plan)
+
+        assertEquals(listOf(72), pairedNotes(path).map(Triple<Int, Long, Long>::first))
+    }
+
+    @Test fun `step-to-incoming bass pickup retains the outgoing chord until the boundary`() {
+        val base = input("A1" to "A2")
+        val original = base.boundaries.single()
+        val boundary = original.copy(
+            outgoing = original.outgoing.copy(chords = listOf(MidiChord(0, 3_840, "G", 1.0))),
+            incoming = original.incoming.copy(chords = listOf(MidiChord(0, 3_840, "C", 1.0))),
+            allowedRoleActions = listOf(TransitionRoleAction.BASS_MOTION),
+            transitionPolicy = original.transitionPolicy.copy(allowedActions = listOf(TransitionRoleAction.BASS_MOTION)),
+            roles = TransitionBoundaryRoleEvidence(listOf("bass"), listOf("bass"), emptyList(), emptyList(), listOf("bass"), listOf("bass"))
+        )
+        val input = base.copy(supportedInstruments = listOf("bass"), boundaries = listOf(boundary))
+        val plan = TransitionBridgePlan(
+            outgoingInstanceId = "A1", incomingInstanceId = "A2", outgoingHash = boundary.outgoing.sourceHash, incomingHash = boundary.incoming.sourceHash,
+            arrangementSha256 = input.arrangementSha256, contextSha256 = input.contextSha256,
+            roleAction = TransitionRoleAction.BASS_MOTION, bridgeType = BridgeType.BASS_WALK, instrument = "bass",
+            harmonicHandoff = HarmonicHandoff.STEP_TO_INCOMING, rhythmicGesture = RhythmicGesture.PICKUP, energyContour = EnergyContour.HOLD,
+            rationale = "Lead into the next section"
+        )
+        val path = root.resolve("bass-pickup.mid")
+
+        DeterministicTransitionBridgeEngine.write(path, input, boundary, plan)
+
+        assertEquals(listOf(43), pairedNotes(path).map(Triple<Int, Long, Long>::first))
+    }
+
     @Test fun `Qwen cohesion retries an incomplete boundary response with its validation error`() {
         val input = input("A1" to "A2", "A2" to "A3")
         val prompts = mutableListOf<String>()

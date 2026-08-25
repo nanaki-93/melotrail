@@ -62,6 +62,7 @@ class LocalQwenEnhancementPlanner(
         val kind = MODEL_EDIT_KINDS[edit.kind]
             ?: throw IllegalArgumentException("Local model returned an unsupported enhancement edit kind")
         if (!context.hasDeclaredSongHarmony && kind in setOf(EnhancementEditKind.PITCH, EnhancementEditKind.ADD_NOTE)) return null
+        if (edit.noteId in context.protectedAnchorNoteIds && kind in setOf(EnhancementEditKind.PITCH, EnhancementEditKind.REMOVE_NOTE)) return null
         val withinPolicy = when (kind) {
             EnhancementEditKind.VELOCITY -> kotlin.math.abs(edit.value) <= policy.maximumVelocityDelta
             EnhancementEditKind.TIMING -> kotlin.math.abs(edit.value) <= policy.maximumTimingShiftMs
@@ -126,6 +127,7 @@ class LocalQwenEnhancementPlanner(
             An addition uses {"kind":"add_note","noteId":"add-00000","value":0,"pitch":60,"velocity":72,
             "startTick":480,"durationTicks":240,"channel":0,"anchorNoteId":"n-00001","goal":"passing_note","reason":"brief rationale"}.
             Existing-note edits may target only supplied note IDs. Additions must be anchored to a supplied note and fit a real gap.
+            IDs in context.protectedAnchorNoteIds may be shaped with velocity, timing, or duration, but must never be repitched or removed.
             When context.contextScope is PART_LOCAL, do not return pitch or add_note edits: Structure and declared harmony have not been saved yet.
             For every edit, abs(value) must be at most maximumVelocityDelta for velocity, maximumTimingShiftMs for timing,
             or 2 for pitch. Omit an edit that cannot meet its limit.

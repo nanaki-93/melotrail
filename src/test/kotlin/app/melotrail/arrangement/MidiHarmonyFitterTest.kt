@@ -84,6 +84,73 @@ class MidiHarmonyFitterTest {
     }
 
     @Test
+    fun `required chord-boundary release does not consume the bounded pitch repair budget`() {
+        val input = midi("repairs-and-release.mid", 7_680) { track ->
+            track.note(0, 0, 65, 90, 480)
+            track.note(0, 480, 64, 90, 1_950)
+            track.note(0, 1_950, 60, 90, 3_850)
+            track.note(0, 3_850, 60, 90, 5_000)
+            track.note(0, 5_000, 64, 90, 5_780)
+            track.note(0, 5_780, 67, 90, 7_000)
+            track.note(0, 7_000, 64, 90, 7_200)
+        }
+
+        val result = fit(input, context("repairs-and-release", listOf(
+            0 to ChordQuality.MAJOR_7,
+            9 to ChordQuality.MINOR_7,
+            5 to ChordQuality.MAJOR_7,
+            7 to ChordQuality.DOMINANT_7
+        )))
+
+        assertEquals(listOf(64, 64, 60, 60, 64, 67, 65), notes(result).map(Note::pitch))
+        assertEquals(5_730L, notes(result)[4].end)
+        assertTrue(result.fitting.issues.isEmpty())
+    }
+
+    @Test
+    fun `sub-sixteenth transcription ornaments do not consume the recognizable pitch repair budget`() {
+        val input = midi("repair-ornaments.mid", 1_920) { track ->
+            track.note(0, 0, 65, 90, 480)
+            track.note(0, 500, 65, 80, 530)
+            track.note(0, 540, 65, 80, 570)
+            track.note(0, 580, 65, 80, 610)
+        }
+
+        val result = fit(input, context("repair-ornaments", listOf(0 to ChordQuality.MAJOR_7)))
+
+        assertEquals(listOf(64, 64, 64, 64), notes(result).map(Note::pitch))
+        assertTrue(result.fitting.issues.isEmpty())
+    }
+
+    @Test
+    fun `equal nearest chord tones use an explicit later contour note rather than guessing`() {
+        val input = midi("contour-tie-break.mid", 1_920) { track ->
+            track.note(0, 240, 62, 90, 480)
+            track.note(0, 720, 60, 90, 960)
+        }
+
+        val result = fit(input, context("contour-tie-break", listOf(0 to ChordQuality.MAJOR)))
+
+        assertEquals(listOf(60, 60), notes(result).map(Note::pitch))
+        assertTrue(result.fitting.issues.isEmpty())
+    }
+
+    @Test
+    fun `at most half of recognizable notes may receive bounded pitch repairs`() {
+        val input = midi("half-repair-budget.mid", 1_920) { track ->
+            track.note(0, 0, 65, 90, 360)
+            track.note(0, 480, 65, 90, 840)
+            track.note(0, 960, 64, 90, 1_320)
+            track.note(0, 1_440, 67, 90, 1_800)
+        }
+
+        val result = fit(input, context("half-repair-budget", listOf(0 to ChordQuality.MAJOR_7)))
+
+        assertEquals(listOf(64, 64, 64, 67), notes(result).map(Note::pitch))
+        assertTrue(result.fitting.issues.isEmpty())
+    }
+
+    @Test
     fun `valid common tone tie remains intact with explicit boundary evidence`() {
         val input = midi("common-tone.mid", 3_840) { track -> track.note(0, 0, 60, 90, 2_400) }
         val result = fit(input, context("common-tone", listOf(0 to ChordQuality.MAJOR, 9 to ChordQuality.MINOR)))

@@ -69,6 +69,20 @@ class HarmonyDomainTest {
     }
 
     @Test
+    fun `C major live E2E templates preserve the requested section harmony and chorus length`() {
+        val cMajor = MusicalKey(PitchClass.of(PitchSpelling.C), ScaleModeId.MAJOR)
+        fun symbols(templateId: String) = HarmonyTemplateCatalog.resolve(
+            HarmonyTemplateId(templateId), cMajor, SectionTypeId.VERSE
+        ).events.map(ChordSymbolFormatter::format)
+
+        assertEquals(listOf("Cmaj7", "Am7", "Fmaj7", "G7"), symbols("lofi-major-warm-intro-v1"))
+        assertEquals(listOf("Cmaj7", "G7", "Am7", "Fmaj7"), symbols("lofi-major-classic-v1"))
+        assertEquals(listOf("Fmaj7", "G7", "Cmaj7", "Am7", "Fmaj7", "G7", "Cmaj7", "Cmaj7"), symbols("lofi-major-open-chorus-v1"))
+        assertEquals(listOf("Am7", "Em7", "Fmaj7", "G7"), symbols("lofi-major-reflective-bridge-v1"))
+        assertEquals(listOf("Fmaj7", "G7", "Cmaj7", "Cmaj7"), symbols("lofi-major-soft-outro-v1"))
+    }
+
+    @Test
     fun `ordered operations preserve event identity while normalizing presentation order`() {
         val first = event("first", PitchClass.of(PitchSpelling.C), ChordQuality.MAJOR, 0)
         val second = event("second", PitchClass.of(PitchSpelling.G), ChordQuality.DOMINANT_7, 1)

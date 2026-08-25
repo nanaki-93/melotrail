@@ -220,16 +220,23 @@ class MidiAiFixApplicationServiceTest {
     }
 
     @Test
-    fun `model parser rejects unknown fields stale identity paths and unbounded edits before output`() = runBlocking {
+    fun `model parser rejects unknown fields and unbounded edits while attaching canonical identity`() = runBlocking {
         val projectService = projectService(); projectService.create(CreateProjectRequest(root))
         val source = writeMidi(root.resolveSibling("input.mid")); projectService.importPart(ImportPartRequest(root, "A", source)); projectService.cleanMidi(CleanMidiRequest(root, "A", app.melotrail.arrangement.MidiCleanupOptions()))
         configureCanonicalContext()
         val input = aiFixInput()
         listOf(
             "{\"version\":2,\"partId\":\"A\",\"selectedInputSha256\":\"${input.selectedInputSha256}\",\"inputHash\":\"${input.inputHash}\",\"contextSchemaVersion\":${input.contextSchemaVersion},\"contextSha256\":\"${input.contextSha256}\",\"edits\":[],\"path\":\"/tmp/x\"}",
-            "{\"version\":2,\"partId\":\"A\",\"selectedInputSha256\":\"${"0".repeat(64)}\",\"inputHash\":\"${input.inputHash}\",\"contextSchemaVersion\":${input.contextSchemaVersion},\"contextSha256\":\"${input.contextSha256}\",\"edits\":[]}",
             "{\"version\":2,\"partId\":\"A\",\"selectedInputSha256\":\"${input.selectedInputSha256}\",\"inputHash\":\"${input.inputHash}\",\"contextSchemaVersion\":${input.contextSchemaVersion},\"contextSha256\":\"${input.contextSha256}\",\"edits\":[{\"kind\":\"velocity\",\"noteId\":\"${input.notes.first().id}\",\"velocity\":127}]}")
             .forEach { response -> assertThrows(IllegalArgumentException::class.java) { LocalQwenMidiAiFixPlanner(LocalQwenClient { _, _ -> response }).plan(input) } }
+        val staleIdentity = LocalQwenMidiAiFixPlanner(LocalQwenClient { _, _ ->
+            "{\"version\":0,\"partId\":\"other\",\"selectedInputSha256\":\"${"0".repeat(64)}\",\"inputHash\":\"${"0".repeat(64)}\",\"contextSchemaVersion\":0,\"contextSha256\":\"${"0".repeat(64)}\",\"edits\":[]}"
+        }).plan(input)
+        assertEquals(input.partId, staleIdentity.partId)
+        assertEquals(input.selectedInputSha256, staleIdentity.selectedInputSha256)
+        assertEquals(input.inputHash, staleIdentity.inputHash)
+        assertEquals(input.contextSchemaVersion, staleIdentity.contextSchemaVersion)
+        assertEquals(input.contextSha256, staleIdentity.contextSha256)
         assertFalse(Files.exists(root.resolve("midi/ai-fix/A/draft.mid")))
     }
 

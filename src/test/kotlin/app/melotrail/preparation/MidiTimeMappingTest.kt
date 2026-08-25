@@ -85,6 +85,25 @@ class MidiTimeMappingTest {
         assertEquals(3_960L, tail.songEndTick)
     }
 
+    @Test
+    fun `approved explicit grid fallback maps sparse timing evidence without indexing absent anchors`() {
+        val input = root.resolve("sparse.mid").also(::writeBodyMidi)
+        val evidence = evidence(sourceTicks = listOf(0L, 503L, 1_011L))
+        val decision = decision(
+            input = input,
+            evidence = evidence,
+            occurrenceId = "intro-1",
+            targetStartBar = 0,
+            review = approvedReview()
+        )
+
+        val report = MidiTimeMapper().map(input, root.resolve("sparse-mapped.mid"), decision, evidence)
+
+        assertEquals(0.0, report.mappingConfidence)
+        assertTrue(report.reviewReasons.contains(MidiTimeMappingReviewReason.DOWNBEAT_REVIEW_REQUIRED))
+        assertTrue(!report.acceptedSourceGroove)
+    }
+
     private fun decision(
         input: Path,
         evidence: SourceTimingEvidence,

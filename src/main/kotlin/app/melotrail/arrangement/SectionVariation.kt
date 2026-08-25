@@ -105,7 +105,7 @@ object DeterministicSectionVariationPlanner {
         fallingEnergy: Boolean,
         resolvedIntent: SectionMusicalIntent?
     ): SectionVariationInstrument {
-        val roleIntent = resolvedIntent?.roles?.singleOrNull { it.role == LegacyLogicalInstrumentRoles.roleFor(instrument) }
+        val roleIntent = resolvedIntent?.roles?.singleOrNull { LegacyLogicalInstrumentRoles.logicalFor(it.role) == instrument }
         if (instrument == "piano") return SectionVariationInstrument(
             "piano", "source", 1.0,
             roleIntent?.register ?: MusicalRegister.MID,
@@ -274,7 +274,7 @@ object SectionVariationValidator {
         val fallingEnergy = position > 0 && songPlan.energyCurve[position] < songPlan.energyCurve[position - 1]
         val overrides = input.sectionsWithIdentity()[position].variationOverrides.instruments.associateBy { it.instrument }
         variation.instruments.forEach { instrument ->
-            val roleIntent = musicalIntent.roles.singleOrNull { it.role == LegacyLogicalInstrumentRoles.roleFor(instrument.name) }
+            val roleIntent = musicalIntent.roles.singleOrNull { LegacyLogicalInstrumentRoles.logicalFor(it.role) == instrument.name }
             if (roleIntent == null) {
                 errors += "$label instrument '${instrument.name}' has no resolved musical intent"
                 return@forEach

@@ -421,12 +421,15 @@ class LocalQwenMidiAiFixPlanner(
                 throw IllegalArgumentException("Local model returned invalid AI-fix JSON: ${error.message}", error)
             }
             val candidate = MidiAiFixPlan(
-                version = parsed.version,
-                partId = parsed.partId,
-                selectedInputSha256 = parsed.selectedInputSha256,
-                inputHash = parsed.inputHash,
-                contextSchemaVersion = parsed.contextSchemaVersion,
-                contextSha256 = parsed.contextSha256,
+                // The model may only propose edits. Canonical identity comes
+                // from the code-owned input, so an imprecise echoed hash cannot
+                // make a safe proposal look stale or select another context.
+                version = MidiAiFixPlan.CURRENT_VERSION,
+                partId = input.partId,
+                selectedInputSha256 = input.selectedInputSha256,
+                inputHash = input.inputHash,
+                contextSchemaVersion = input.contextSchemaVersion,
+                contextSha256 = input.contextSha256,
                 model = model,
                 edits = parsed.edits
             )
@@ -466,6 +469,7 @@ class LocalQwenMidiAiFixPlanner(
         error.message?.startsWith("AI-fix plan produces a note collision") == true ||
             error.message == "AI-fix plan produces an invalid note" ||
             error.message?.startsWith("Timing edit for '") == true ||
+            error.message == "Removal is only allowed for a detected collision or duplicate" ||
             error.message?.startsWith("Save Structure and declared harmony") == true
 
     @OptIn(ExperimentalSerializationApi::class)

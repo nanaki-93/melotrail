@@ -26,14 +26,15 @@ class LocalQwenFullSongEnhancementPlanner(
             // deliberately permits only one edit per note. Preserve the first
             // proposed edit deterministically; the normal authority and budget
             // validation below still has to accept it.
-            val operations = canonicalize(modelPlan.operations, input)
+            val modelOperations = canonicalize(modelPlan.operations, input)
+            val operations = modelOperations.ifEmpty { deterministicMaskingFallback(input) }
             validate(operations, input)
             json.encodeToString(FullSongEnhancementPlan(
                 inputSha256 = input.inputSha256,
                 contextSha256 = input.contextSha256,
                 criticInputSha256 = input.criticInputSha256,
                 criticReportSha256 = input.criticReportSha256,
-                modelIdentity = modelIdentity,
+                modelIdentity = if (modelOperations.isEmpty() && operations.isNotEmpty()) FALLBACK_IDENTITY else modelIdentity,
                 operations = operations
             ))
         }
@@ -85,8 +86,58 @@ class LocalQwenFullSongEnhancementPlanner(
         note: FullSongEnhancementNote
     ): Boolean =
         (issue.targetRole == target.role || issue.targetRole == "ensemble") &&
-            (issue.occurrenceId == null || issue.occurrenceId == target.occurrenceId) &&
+            occurrenceMatches(issue, target) &&
             note.startTick >= issue.window.startTick && note.endTick <= issue.window.endTick
+
+    /** A whole-song role target is safely scoped by the immutable Critic window. */
+    private fun occurrenceMatches(issue: FullSongIssue, target: FullSongEnhancementTarget): Boolean =
+        issue.occurrenceId == null || target.occurrenceId == null || issue.occurrenceId == target.occurrenceId
+
+    /**
+     * A masking report identifies an accompaniment note that is at least as
+     * loud as the protected melody. If Qwen chooses no safe edit, lower the
+     * overlapping accompaniment by the measured delta plus one. This is an
+     * expression-only correction: no note timing, pitch, harmony, or anchor is
+     * changed, and the ordinary target budget still applies.
+     */
+    private fun deterministicMaskingFallback(input: FullSongEnhancementInput): List<FullSongEnhancementOperation> = input.issues
+        .asSequence()
+        .filter { issue -> issue.category == FullSongIssueCategory.MASKING }
+        .flatMap { issue -> input.targets.asSequence()
+            .filter { target -> target.role == issue.targetRole && occurrenceMatches(issue, target) && input.policy.totalBudget(target.notes.size) > 0 }
+            .flatMap { target -> target.notes.asSequence()
+                .filter { note -> overlaps(note, issue) && note.velocity > 1 }
+                .map { note -> issue to (target to note) }
+            }
+        }
+        .sortedWith(compareBy<Pair<FullSongIssue, Pair<FullSongEnhancementTarget, FullSongEnhancementNote>>> { it.first.window.startTick }
+            .thenBy { it.second.first.id }.thenBy { it.second.second.startTick }.thenBy { it.second.second.id })
+        .map { (issue, targetAndNote) ->
+            val (target, note) = targetAndNote
+            val observedDelta = issue.observed.singleOrNull { it.name == "velocityDelta" }?.value?.toInt()?.coerceAtLeast(0) ?: 0
+            FullSongEnhancementOperation(
+                kind = FullSongEnhancementOperationKind.ADJUST_VELOCITY,
+                issueId = issue.id,
+                targetId = target.id,
+                noteId = note.id,
+                velocityDelta = -minOf(note.velocity - 1, observedDelta + 1)
+            )
+        }
+        .distinctBy { operation -> operation.targetId to operation.noteId }
+        .groupBy(FullSongEnhancementOperation::targetId)
+        .flatMap { (targetId, operations) ->
+            val target = requireNotNull(input.targets.singleOrNull { it.id == targetId })
+            operations.take(input.policy.totalBudget(target.notes.size))
+        }
+        .take(256)
+        .toList()
+
+    private fun overlaps(note: FullSongEnhancementNote, issue: FullSongIssue): Boolean =
+        note.startTick < issue.window.endTick && note.endTick > issue.window.startTick
+
+    private fun operationIsScopedToIssue(operation: FullSongEnhancementOperation, note: FullSongEnhancementNote, issue: FullSongIssue): Boolean =
+        if (operation.kind == FullSongEnhancementOperationKind.ADJUST_VELOCITY) overlaps(note, issue)
+        else note.startTick >= issue.window.startTick && note.endTick <= issue.window.endTick
 
     private fun validate(operations: List<FullSongEnhancementOperation>, input: FullSongEnhancementInput) {
         require(operations.size <= 256 && operations.map { it.targetId to it.noteId }.distinct().size == operations.size) {
@@ -101,8 +152,8 @@ class LocalQwenFullSongEnhancementPlanner(
                 "Qwen referenced note '${operation.noteId}' outside target '${operation.targetId}'."
             }
             require(issue.targetRole == target.role || issue.targetRole == "ensemble") { "Qwen targeted a role not named by its Critic issue." }
-            require(issue.occurrenceId == null || issue.occurrenceId == target.occurrenceId) { "Qwen targeted an occurrence not named by its Critic issue." }
-            require(note.startTick >= issue.window.startTick && note.endTick <= issue.window.endTick) { "Qwen targeted a note outside the Critic issue window." }
+            require(occurrenceMatches(issue, target)) { "Qwen targeted an occurrence not named by its Critic issue." }
+            require(operationIsScopedToIssue(operation, note, issue)) { "Qwen targeted a note outside the Critic issue window." }
             operation.tickDelta?.let { delta ->
                 require(note.startTick + delta >= target.offsetTicks && note.startTick + delta >= issue.window.startTick && note.endTick + delta <= issue.window.endTick) {
                     "Qwen moved a note outside its Critic issue window."
@@ -238,6 +289,7 @@ class LocalQwenFullSongEnhancementPlanner(
         val json = Json { encodeDefaults = true; explicitNulls = false; ignoreUnknownKeys = true }
         val MODEL_ID = Regex("[A-Za-z0-9._:-]{1,120}")
         const val MAX_MODEL_NOTES = 48
+        const val FALLBACK_IDENTITY = "deterministic-masking-fallback-v1"
         val RESPONSE_SCHEMA = Json.parseToJsonElement(
             """{
               "type":"object",

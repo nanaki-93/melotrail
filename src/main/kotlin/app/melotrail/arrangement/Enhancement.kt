@@ -176,6 +176,8 @@ data class MusicalProcessingContext(
     val seed: Long,
     val pipelineVersion: String,
     val notes: List<EnhancementNoteSummary> = emptyList(),
+    /** Melody identities that may be shaped but must never be repitched or removed. */
+    val protectedAnchorNoteIds: List<String> = emptyList(),
     /** Part-local import enhancement deliberately has no declared harmony. */
     @OptIn(ExperimentalSerializationApi::class)
     @EncodeDefault(EncodeDefault.Mode.NEVER)
@@ -196,7 +198,10 @@ data class MusicalProcessingContext(
         require(bpm in 30..240 && ppq in 24..9_600 && meterNumerator in 1..12 && meterDenominator in setOf(1, 2, 4, 8, 16)) { "Enhancement tempo or meter is invalid" }
         require(ENHANCEMENT_ID.matches(partId) && ENHANCEMENT_HASH.matches(correctedInputSha256) && ENHANCEMENT_HASH.matches(authorityContextSha256) &&
             ENHANCEMENT_VERSION.matches(pipelineVersion) && ENHANCEMENT_HASH.matches(contextSha256)) { "Enhancement identity is invalid" }
-        require(notes.size <= 512 && notes.map(EnhancementNoteSummary::id).distinct().size == notes.size) { "Enhancement note context is invalid" }
+        require(notes.size <= 512 && notes.map(EnhancementNoteSummary::id).distinct().size == notes.size &&
+            protectedAnchorNoteIds.distinct().size == protectedAnchorNoteIds.size && protectedAnchorNoteIds.all { it in notes.map(EnhancementNoteSummary::id) }) {
+            "Enhancement note context is invalid"
+        }
         require(pitchRange == null || pitchRange.min in 0..pitchRange.max && pitchRange.max <= 127) { "Enhancement pitch range is invalid" }
         require(contextSha256 == MusicalProcessingContextHasher.hash(this)) { "Enhancement context hash does not match its contents" }
         profile.let { /* constructor validates it */ }
@@ -333,6 +338,9 @@ object EnhancementPlanValidator {
                 ) { "Enhancement addition is incomplete" }
             }
         }
+        require(plan.edits.none { it.noteId in context.protectedAnchorNoteIds && it.kind in setOf(EnhancementEditKind.PITCH, EnhancementEditKind.REMOVE_NOTE) }) {
+            "Enhancement cannot repitch or remove a protected melody anchor"
+        }
         require(policy.intensity != EnhancementIntensity.OFF || plan.edits.isEmpty()) { "Off enhancement cannot contain edits" }
     }
 }
@@ -460,6 +468,7 @@ object MusicalProcessingContextFactory {
             seed = seed,
             pipelineVersion = pipelineVersion,
             notes = enhancementNoteSummaries(selectedInput, projection.part.ppq * 4L / projection.meter.denominator),
+            protectedAnchorNoteIds = enhancementAnchorNoteIds(selectedInput, projection.part.ppq * 4L / projection.meter.denominator),
             contextSha256 = "0".repeat(64)
         )
         return bare.copy(contextSha256 = MusicalProcessingContextHasher.hash(bare)).also(MusicalProcessingContext::requireValid)
@@ -504,6 +513,7 @@ object MusicalProcessingContextFactory {
             seed = seed,
             pipelineVersion = pipelineVersion,
             notes = enhancementNoteSummaries(selectedInput, analysis.ppq * 4L / settings.timeSignature.denominator),
+            protectedAnchorNoteIds = enhancementAnchorNoteIds(selectedInput, analysis.ppq * 4L / settings.timeSignature.denominator),
             contextScope = EnhancementContextScope.PART_LOCAL,
             contextSha256 = "0".repeat(64)
         )
@@ -537,6 +547,8 @@ private fun enhancementNoteSummaries(path: Path, canonicalBeatTicks: Long): List
             note.phraseId.removePrefix("p-").toInt().coerceAtMost(255))
     }
 }
+private fun enhancementAnchorNoteIds(path: Path, canonicalBeatTicks: Long): List<String> =
+    MelodyIdentityBuilder.build(path, canonicalBeatTicks).anchorIds.map(MelodyNoteId::value).sorted()
 private fun enhancementSha256(path: Path): String = Files.newInputStream(path).use { input ->
     val digest = MessageDigest.getInstance("SHA-256"); val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
     while (true) { val count = input.read(buffer); if (count < 0) break; digest.update(buffer, 0, count) }

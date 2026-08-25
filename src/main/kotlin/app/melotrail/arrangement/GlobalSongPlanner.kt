@@ -5,6 +5,10 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -520,7 +524,7 @@ class LocalQwenGlobalSongPlanner(
         input.requireValid()
         return requestQwenWithAutomaticRetries(client, SYSTEM_PROMPT, createUserPrompt(input)) { output ->
             val plan = try {
-                strictJson.decodeFromString<SongPlan>(output)
+                strictJson.decodeFromString<SongPlan>(removeLegacySectionContextHash(output, input))
             } catch (error: Exception) {
                 throw IllegalArgumentException("Qwen returned invalid song-plan JSON: ${error.message}", error)
             }
@@ -529,6 +533,27 @@ class LocalQwenGlobalSongPlanner(
             require(validation.isValid) { "Invalid Qwen song plan: ${validation.errors.joinToString("; ")}" }
             normalizedPlan
         }
+    }
+
+    /**
+     * Earlier local templates emitted a non-schema `contextHash` on a section
+     * (and sometimes inside its musical intent). During enhanced planning that
+     * intent and its occurrence binding are application-owned and rebound
+     * below, so remove only those obsolete per-section fields. Every other
+     * unknown model field remains a strict parse failure.
+     */
+    private fun removeLegacySectionContextHash(output: String, input: SongPlanningInput): String {
+        if (input.acceptedFullSongGrooveMap == null) return output
+        val root = strictJson.parseToJsonElement(output).jsonObject
+        val sections = root["sections"]?.jsonArray ?: return output
+        val sanitizedSections = sections.map { rawSection ->
+            val section = rawSection.jsonObject
+            val sanitizedIntent = (section["musicalIntent"] as? JsonObject)?.let { intent ->
+                "musicalIntent" to JsonObject(intent - "contextHash")
+            }
+            JsonObject((section - "contextHash") + listOfNotNull(sanitizedIntent).toMap())
+        }
+        return JsonObject(root + ("sections" to JsonArray(sanitizedSections))).toString()
     }
 
     /**

@@ -207,9 +207,18 @@ class DeterministicBassMidiGenerator {
     private fun grooveAdjustedStart(request: BassGenerationRequest, sectionRelativeStart: Long): Long {
         val map = request.acceptedFullSongGrooveMap ?: return sectionRelativeStart
         val globalGridTick = request.sectionStartTick + sectionRelativeStart
-        return requireNotNull(FullSongGrooveMapTiming.expectedTick(map, globalGridTick)) {
+        val expected = requireNotNull(FullSongGrooveMapTiming.expectedTick(map, globalGridTick)) {
             "Bass pattern tick $globalGridTick has no active approved full-song groove-map point"
-        } - request.sectionStartTick
+        }
+        // The bass follows the reviewed source groove. When the accepted piano
+        // has a same-beat onset within that groove residual, use its exact tick
+        // rather than leaving two nearly simultaneous attacks (a flam).
+        val sharedPianoOnset = request.arrangementState?.requireTrack(ArrangementState.PIANO)?.notes
+            ?.asSequence()
+            ?.map(MidiNote::startTick)
+            ?.filter { onset -> abs(onset - expected) <= (request.ppq * MAXIMUM_SHARED_GROOVE_RESIDUAL_BEATS).roundToInt() }
+            ?.minWithOrNull(compareBy<Long> { onset -> abs(onset - expected) }.thenBy { it })
+        return (sharedPianoOnset ?: expected) - request.sectionStartTick
     }
 
     private fun voiceLead(pitch: Int, previous: BassMidiNote?, first: Boolean): Int {
@@ -228,8 +237,9 @@ class DeterministicBassMidiGenerator {
         val fallback = mutableListOf<BassMidiNote>()
         intervals(request).forEach { interval ->
             val root = harmonyRoot(request, interval.start) ?: return@forEach
-            val start = request.sectionStartTick + interval.start
+            val start = request.sectionStartTick + grooveAdjustedStart(request, interval.start)
             val end = request.sectionStartTick + interval.end
+            if (start >= end) return@forEach
             val previous = fallback.lastOrNull()
             val pitch = fallbackPitch(request, root, start, end, previous) ?: return@forEach
             if (previous != null && previous.pitch == pitch && previous.endTick == start) {
@@ -323,6 +333,7 @@ class DeterministicBassMidiGenerator {
         const val MAX_VELOCITY = 100
         const val BUSY_PIANO_ONSETS_PER_BEAT = 3.0
         const val BUSY_MAX_DENSITY = 0.25
+        const val MAXIMUM_SHARED_GROOVE_RESIDUAL_BEATS = 0.05
     }
 }
 

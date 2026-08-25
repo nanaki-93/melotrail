@@ -280,7 +280,7 @@ data class MelodyHarmonyFitReport(
 
     companion object {
         const val CURRENT_VERSION = 1
-        const val PROCESSOR_VERSION = "1"
+        const val PROCESSOR_VERSION = "2"
         private val OUTPUT_NOTE_ORDER = compareBy<HarmonyFittedMelodyNote> { it.startTick }.thenBy { it.endTick }.thenBy { it.pitch }.thenBy { it.noteId }
         private val ISSUE_ORDER = compareBy<MelodyHarmonyFitIssue> { it.kind.ordinal }.thenBy { it.noteId.orEmpty() }.thenBy { it.boundaryTick ?: Long.MAX_VALUE }
     }
@@ -391,7 +391,8 @@ class MidiHarmonyFitter {
             } else if (isPassingTone(note, index, notes, context)) {
                 pitchReasons.getValue(note.id) += MelodyHarmonyFitReason.PRESERVED_WEAK_SCALE_PASSING_TONE
             } else {
-                when (val choice = nearestChordTone(note, notes.getOrNull(index - 1), input.getOrNull(index - 1), span)) {
+                val nextDifferentInput = input.drop(index + 1).firstOrNull { following -> following.pitch != note.pitch }
+                when (val choice = nearestChordTone(note, notes.getOrNull(index - 1), input.getOrNull(index - 1), nextDifferentInput, span)) {
                     is PitchChoice.Selected -> {
                         if (choice.distance > MAX_PITCH_MOVEMENT) issues += MelodyHarmonyFitIssue(
                             MelodyHarmonyFitIssueKind.EXCESSIVE_PITCH_MOVEMENT, note.id, observed = choice.distance.toLong(), limit = MAX_PITCH_MOVEMENT.toLong()
@@ -407,10 +408,18 @@ class MidiHarmonyFitter {
         }
         val boundaries = evaluateBoundaries(notes, context, policy, pitchReasons, issues)
         val decisions = decisions(input, notes, context, pitchReasons, boundaries, issues)
-        val changed = decisions.count { it.before != it.after }
-        val maximumEdits = maxOf(1, input.size / MAX_EDIT_DIVISOR)
-        if (changed > maximumEdits) issues += MelodyHarmonyFitIssue(
-            MelodyHarmonyFitIssueKind.EXCESSIVE_EDIT_BUDGET, observed = changed.toLong(), limit = maximumEdits.toLong(), noteId = notes.first().id
+        // The edit budget protects recognizable melody from pitch rewrites.
+        // Required chord-boundary releases and sub-sixteenth transcription
+        // ornaments are not melodic replacements, so neither may make an
+        // otherwise bounded chord-tone correction fail publication.
+        val minimumRecognizableDuration = beatTicks(context) / 4L
+        val pitchChanges = decisions.count { decision ->
+            decision.after?.pitch != decision.before.pitch &&
+                decision.before.endTick - decision.before.startTick >= minimumRecognizableDuration
+        }
+        val maximumEdits = maxOf(1, (input.size + 1) / MAX_EDIT_DIVISOR)
+        if (pitchChanges > maximumEdits) issues += MelodyHarmonyFitIssue(
+            MelodyHarmonyFitIssueKind.EXCESSIVE_EDIT_BUDGET, observed = pitchChanges.toLong(), limit = maximumEdits.toLong(), noteId = notes.first().id
         )
         notes.forEach { note -> note.eligibility = eligibility(note, notes, context, boundaries) }
         val output = notes.map { note -> HarmonyFittedMelodyNote(note.id, note.pitch, note.velocity, note.startTick, note.endTick, requireNotNull(note.eligibility)) }
@@ -543,8 +552,14 @@ class MidiHarmonyFitter {
             next.pitch.mod(12) in spanAt(context, next.startTick).chordTones()
     }
 
-    /** Select the nearest active chord tone, using local contour only to resolve an otherwise equal movement. */
-    private fun nearestChordTone(note: Candidate, previous: Candidate?, previousInput: InputNote?, span: MelodyHarmonyFitSpan): PitchChoice {
+    /** Select the nearest active chord tone, using explicit local contour only to resolve an otherwise equal movement. */
+    private fun nearestChordTone(
+        note: Candidate,
+        previous: Candidate?,
+        previousInput: InputNote?,
+        nextDifferentInput: InputNote?,
+        span: MelodyHarmonyFitSpan
+    ): PitchChoice {
         val candidates = (0..127).filter { it.mod(12) in span.chordTones() }
         val minimum = candidates.minOf { abs(it - note.pitch) }
         var nearest = candidates.filter { abs(it - note.pitch) == minimum }
@@ -554,6 +569,10 @@ class MidiHarmonyFitter {
             if (directed.isNotEmpty()) nearest = directed
             val continuity = nearest.minOf { abs(it - previous.pitch) }
             nearest = nearest.filter { abs(it - previous.pitch) == continuity }
+        }
+        if (nearest.size > 1 && nextDifferentInput != null) {
+            val continuity = nearest.minOf { abs(it - nextDifferentInput.pitch) }
+            nearest = nearest.filter { abs(it - nextDifferentInput.pitch) == continuity }
         }
         return if (nearest.size == 1) PitchChoice.Selected(nearest.single(), minimum) else PitchChoice.Ambiguous
     }
@@ -710,7 +729,8 @@ class MidiHarmonyFitter {
         const val MELODY_CHANNEL = 0
         const val END_OF_TRACK = 0x2F
         const val MAX_PITCH_MOVEMENT = 2
-        const val MAX_EDIT_DIVISOR = 3
+        /** At most half of recognizable notes may receive a bounded pitch repair. */
+        const val MAX_EDIT_DIVISOR = 2
         val INPUT_ORDER = compareBy<InputNote> { it.startTick }.thenBy { it.endTick }.thenBy { it.pitch }.thenBy { it.id }
         val ISSUE_ORDER = compareBy<MelodyHarmonyFitIssue> { it.kind.ordinal }.thenBy { it.noteId.orEmpty() }.thenBy { it.boundaryTick ?: Long.MAX_VALUE }
         val JSON = Json { encodeDefaults = true; explicitNulls = false; ignoreUnknownKeys = false; prettyPrint = true }

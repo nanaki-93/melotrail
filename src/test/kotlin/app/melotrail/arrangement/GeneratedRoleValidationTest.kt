@@ -76,6 +76,62 @@ class GeneratedRoleValidationTest {
     }
 
     @Test
+    fun `drum backbeats may share a nearby accepted piano onset within the approved groove residual`() {
+        val context = context("drums")
+        writeMidi(context.midi, listOf(Note(495, 600, 38, 100), Note(1_455, 1_560, 38, 100)), channel = 9)
+        val piano = ArrangementState.fromAcceptedPiano(
+            480,
+            listOf(MidiNote(0, 60, 90, 495, 600), MidiNote(0, 64, 90, 1_455, 1_560)),
+            "c".repeat(64)
+        )
+
+        val report = DeterministicGeneratedRoleValidator().validate(context.input().copy(arrangementState = piano))
+
+        assertTrue(report.passed, report.violations.joinToString("; "))
+    }
+
+    @Test
+    fun `drum fill may begin just before the nominal final beat within the approved groove residual`() {
+        val context = context("drums")
+        val drums = context.arrangement.sections.single().instruments.filterIsInstance<DrumsInstrumentPlan>().single()
+        val arrangement = context.arrangement.copy(sections = context.arrangement.sections.map { section ->
+            section.copy(instruments = section.instruments.map { instrument ->
+                if (instrument is DrumsInstrumentPlan) drums.copy(
+                    snarePattern = SnarePattern.NONE,
+                    fillLastBar = true,
+                    fillPlacement = DrumFillPlacement.LAST_BAR
+                ) else instrument
+            })
+        })
+        writeMidi(context.midi, listOf(Note(1_430, 1_500, 38, 90), Note(1_800, 1_860, 38, 96)), channel = 9)
+        val piano = ArrangementState.fromAcceptedPiano(
+            480, listOf(MidiNote(0, 60, 90, 0, 1_920)), "c".repeat(64)
+        )
+
+        val report = DeterministicGeneratedRoleValidator().validate(context.input().copy(
+            arrangement = arrangement,
+            arrangementState = piano
+        ))
+
+        assertTrue(report.passed, report.violations.joinToString("; "))
+    }
+
+    @Test
+    fun `exact shared attack is not a flam when the piano has another nearby onset`() {
+        val context = context("bass")
+        writeMidi(context.midi, listOf(Note(15, 480, 48, 100)))
+        val piano = ArrangementState.fromAcceptedPiano(
+            480,
+            listOf(MidiNote(0, 60, 90, 0, 120), MidiNote(0, 64, 90, 15, 480)),
+            "c".repeat(64)
+        )
+
+        val report = DeterministicGeneratedRoleValidator().validate(context.input().copy(arrangementState = piano))
+
+        assertTrue(report.passed, report.violations.joinToString("; "))
+    }
+
+    @Test
     fun `bass and drums reject off-grid timing and piano flams against the accepted groove map`() {
         val bass = context("bass")
         writeMidi(bass.midi, listOf(Note(48, 480, 40, 100)))

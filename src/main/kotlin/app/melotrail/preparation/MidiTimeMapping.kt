@@ -160,13 +160,15 @@ data class SourceTimingDecision(
         }
     }
 
-    /** Verifies anchor indices, source timing, and optional groove acceptance against QP-002 evidence. */
+    /** Verifies measured anchors when source groove is accepted; an explicit grid fallback is intentionally independent of sparse onset evidence. */
     fun requireMatches(evidence: SourceTimingEvidence) {
         requireValid(); evidence.requireValid()
         require(evidence.partId == partId) { "Source timing evidence does not match this mapping decision" }
-        require(sourceBeats.all { anchor -> anchor.sourceBeatIndex in evidence.beats.indices }) { "Source beat anchor is absent from timing evidence" }
-        if (acceptSourceGroove) require(evidence.groove.status == SourceGrooveTemplateStatus.MEASURED) {
-            "A review-required source groove must explicitly fall back to the grid"
+        if (acceptSourceGroove) {
+            require(sourceBeats.all { anchor -> anchor.sourceBeatIndex in evidence.beats.indices }) { "Source beat anchor is absent from timing evidence" }
+            require(evidence.groove.status == SourceGrooveTemplateStatus.MEASURED) {
+                "A review-required source groove must explicitly fall back to the grid"
+            }
         }
     }
 
@@ -181,13 +183,15 @@ data class SourceTimingDecision(
                 if (evidence.downbeat.candidateBeatIndex != sourceDownbeatBeatIndex) reasons += MidiTimeMappingReviewReason.DOWNBEAT_UNKNOWN
             }
         }
-        if (sourceBeats.any { evidence.beats[it.sourceBeatIndex].confidence.orEmptyConfidence() < policy.minimumBeatConfidence }) {
-            reasons += MidiTimeMappingReviewReason.LOW_BEAT_CONFIDENCE
-        }
-        val sourceDuration = evidence.beats[sourceBeats.last().sourceBeatIndex].timeSeconds - evidence.beats[sourceBeats.first().sourceBeatIndex].timeSeconds
-        val targetDuration = bodyBeatCount() * 60.0 / targetTempoBpm
-        if (sourceDuration <= 0.0 || abs(sourceDuration / targetDuration - 1.0) > policy.maximumDurationChangeFraction) {
-            reasons += MidiTimeMappingReviewReason.LARGE_DURATION_CHANGE
+        if (sourceBeats.all { it.sourceBeatIndex in evidence.beats.indices }) {
+            if (sourceBeats.any { evidence.beats[it.sourceBeatIndex].confidence.orEmptyConfidence() < policy.minimumBeatConfidence }) {
+                reasons += MidiTimeMappingReviewReason.LOW_BEAT_CONFIDENCE
+            }
+            val sourceDuration = evidence.beats[sourceBeats.last().sourceBeatIndex].timeSeconds - evidence.beats[sourceBeats.first().sourceBeatIndex].timeSeconds
+            val targetDuration = bodyBeatCount() * 60.0 / targetTempoBpm
+            if (sourceDuration <= 0.0 || abs(sourceDuration / targetDuration - 1.0) > policy.maximumDurationChangeFraction) {
+                reasons += MidiTimeMappingReviewReason.LARGE_DURATION_CHANGE
+            }
         }
         if (targetBarCountAmbiguous) reasons += MidiTimeMappingReviewReason.AMBIGUOUS_TARGET_BAR_COUNT
         return reasons.toList()
@@ -477,7 +481,11 @@ class MidiTimeMapper {
             targetMeterDenominator = decision.targetMeterDenominator,
             targetStartBar = decision.targetStartBar,
             targetBarCount = decision.targetBarCount,
-            mappingConfidence = decision.sourceBeats.minOf { evidence.beats[it.sourceBeatIndex].confidence.orEmptyConfidence() },
+            mappingConfidence = if (decision.sourceBeats.all { it.sourceBeatIndex in evidence.beats.indices }) {
+                decision.sourceBeats.minOf { evidence.beats[it.sourceBeatIndex].confidence.orEmptyConfidence() }
+            } else {
+                0.0
+            },
             policy = decision.policy,
             review = decision.review,
             reviewReasons = decision.reviewReasons(evidence),

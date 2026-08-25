@@ -143,7 +143,10 @@ object LegacyLogicalInstrumentRoles {
     /** Compatibility adapter only; registry resolution must replace this in Task 022B. */
     fun logicalFor(role: ArrangementRole): String = logicalByRole[role]
         ?: when (role) {
-            ArrangementRole.HARMONY -> "piano"
+            // The source melody already owns the piano stem. A separately
+            // requested harmony role uses the generated polyphonic pad stem,
+            // whose concrete approved sound may be an electric/acoustic key.
+            ArrangementRole.HARMONY -> "pad"
             ArrangementRole.AMBIENCE -> "pad"
             else -> error("No legacy logical instrument alias for $role")
         }

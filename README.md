@@ -93,7 +93,7 @@ make build
 
 Automated checks establish deterministic and structural correctness. The
 quality plan also requires renderer-backed A/B listening gates and a real
-four-source end-to-end composition review; structural tests alone cannot prove
+multi-source end-to-end composition review; structural tests alone cannot prove
 that a song sounds good.
 
 ## Project layout

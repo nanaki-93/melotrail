@@ -4,6 +4,11 @@ import app.melotrail.profile.CompositionProfileRef
 import app.melotrail.profile.MoodRef
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -123,6 +128,23 @@ class GlobalSongPlannerTest {
         val plan = LocalQwenGlobalSongPlanner(
             FixtureClient(Json { encodeDefaults = true }.encodeToString(copiedInputIntents))
         ).plan(input)
+
+        assertEquals(expected, plan)
+    }
+
+    @Test
+    fun `Qwen enhanced plan tolerates only legacy application-owned musical-intent context hash`() {
+        val input = enhancedInput()
+        val expected = DeterministicGlobalSongPlanner().plan(input)
+        val json = Json { encodeDefaults = true }
+        val root = json.parseToJsonElement(json.encodeToString(expected)).jsonObject
+        val legacy = JsonObject(root + ("sections" to JsonArray(root.getValue("sections").jsonArray.map { rawSection ->
+            val section = rawSection.jsonObject
+            val intent = section.getValue("musicalIntent").jsonObject
+            JsonObject(section + ("musicalIntent" to JsonObject(intent + ("contextHash" to JsonNull))) + ("contextHash" to JsonNull))
+        }))).toString()
+
+        val plan = LocalQwenGlobalSongPlanner(FixtureClient(legacy)).plan(input)
 
         assertEquals(expected, plan)
     }

@@ -97,6 +97,24 @@ class MidiAiFixValidatorTest {
     }
 
     @Test
+    fun `retries a removal that is not supported by collision evidence`() {
+        val source = directory.resolve("retry-removal.mid")
+        val sequence = Sequence(Sequence.PPQ, 480); val track = sequence.createTrack()
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, 60, 100), 0))
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, 60, 0), 240))
+        MidiSystem.write(sequence, 1, source.toFile())
+        val input = input(source)
+        val unsafe = """{"version":2,"partId":"${input.partId}","selectedInputSha256":"${input.selectedInputSha256}","inputHash":"${input.inputHash}","contextSchemaVersion":${input.contextSchemaVersion},"contextSha256":"${input.contextSha256}","edits":[{"kind":"remove_collision_or_duplicate","noteId":"${input.notes.single().id}"}]}"""
+        val prompts = mutableListOf<String>()
+
+        val plan = LocalQwenMidiAiFixPlanner(LocalQwenClient { _, prompt -> prompts += prompt; unsafe }).plan(input)
+
+        assertTrue(plan.edits.isEmpty())
+        assertEquals(3, prompts.size)
+        assertTrue(prompts.drop(1).all { it.contains("Removal is only allowed for a detected collision or duplicate") })
+    }
+
+    @Test
     fun `rejects pitch that clashes with declared chord even when analysis could infer otherwise`() {
         val source = directory.resolve("chord.mid")
         val sequence = Sequence(Sequence.PPQ, 480); val track = sequence.createTrack()

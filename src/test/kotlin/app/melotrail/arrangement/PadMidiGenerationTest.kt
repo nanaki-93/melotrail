@@ -96,6 +96,30 @@ class PadMidiGenerationTest {
     }
 
     @Test
+    fun `lo-fi chord rhythms repeat on the four-four grid without changing harmony`() {
+        val chord = listOf(chord(0, 1920, "Cmaj7"))
+        val quarters = generator.generate(request(length = 1920, chords = chord).copy(
+            rhythmPattern = ChordRhythmPatternId.LAID_BACK_QUARTERS
+        )).notes
+        val offbeats = generator.generate(request(length = 1920, chords = chord).copy(
+            rhythmPattern = ChordRhythmPatternId.DUSTY_OFFBEATS
+        )).notes
+        val bridge = generator.generate(request(length = 1920, chords = chord).copy(
+            rhythmPattern = ChordRhythmPatternId.BRIDGE_HALF_TIME
+        )).notes
+
+        assertEquals(listOf(0L, 480L, 960L, 1440L), quarters.map { it.startTick }.distinct())
+        assertEquals(listOf(240L, 720L, 1200L, 1680L), offbeats.map { it.startTick }.distinct())
+        assertEquals(listOf(0L, 960L), bridge.map { it.startTick }.distinct())
+        listOf(quarters, offbeats, bridge).forEach { notes ->
+            assertEquals(setOf(0, 4, 7), pitchClasses(notes))
+            notes.groupBy(PadMidiNote::pitch).values.forEach { samePitch ->
+                assertTrue(samePitch.sortedBy(PadMidiNote::startTick).zipWithNext().all { (left, right) -> left.endTick <= right.startTick })
+            }
+        }
+    }
+
+    @Test
     fun `ordinary piano voicing receives a reduced pad shell while a truly dense core rests`() {
         val ordinaryState = ArrangementState.fromAcceptedPiano(
             480,

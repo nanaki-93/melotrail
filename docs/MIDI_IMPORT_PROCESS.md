@@ -82,8 +82,9 @@ source remains intact and no invalid raw MIDI is selected. Follow
 | Harmony-fitted MIDI | `midi/harmony-fit/<part>/<occurrence>/<hash>.mid` plus `analysis/harmony-fit/<part>/<occurrence>/<hash>.json` |
 | Optional fixed Feel | `midi/feel/<part>/<context-hash>/derived.mid` and `midi/feel/<part>/<context-hash>/report.json`, each bound to the exact selected upstream artifact, profile, and processor version |
 
-The selected branch follows one order: transposed -> Technical Correction -> AI
-Fix -> per-track Enhance -> optional Feel. Selection and approval are
+The selected branch follows one order: transposed -> explicitly reviewed timing
+mapping (when present) -> Technical Correction -> AI Fix -> per-track Enhance
+-> optional Feel. Selection and approval are
 hash/context/processor-bound; an unselected branch cannot override the current
 candidate, and zero-edit Enhance is recorded as `NO_OP`.
 
@@ -93,7 +94,9 @@ candidate, and zero-edit Enhance is recorded as `NO_OP`.
   through the local worker. QP-003 accepts only an immutable reviewed timing
   decision, piecewise maps it to the declared project tempo/meter, and records
   zero-anchor-phase residual evidence. The result is a separate content-addressed
-  candidate: it never overwrites normalized or transposed MIDI. Low-support
+candidate: it never overwrites normalized or transposed MIDI. Once an explicit
+review accepts it, the selected timing candidate is the correction baseline;
+an unreviewed candidate cannot become current. Low-support
   groove evidence must explicitly fall back to the grid; it is not invented
   from silence or silently copied into a candidate.
 - QP-004 maps recognized source-scale degrees to the corresponding target-scale

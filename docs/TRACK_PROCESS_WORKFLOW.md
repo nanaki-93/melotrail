@@ -60,7 +60,7 @@ dependencies or infer completion from page visits.
 | Setup/Harmony | Structured key/mode, tempo/meter, profile/mood, section progressions | Resolve missing/incompatible authority before musical stages |
 | Source/import | Immutable `source/<part>.*`, preparation report, `midi/raw/<part>.mid` | Reinspect/retranscribe/re-import only the affected source |
 | Clean/Normalize/Timing/Transpose | Separate MIDI plus quality/normalization/timing/transposition reports | Review cleanup and timing evidence; confirm low-confidence source key; rerun earliest stale stage |
-| Correction/AI Fix/Enhance/Feel | One ordered, hash-bound chain: transposed -> corrected -> AI Fix -> Enhance -> Feel | Approve, reject, regenerate, or select `NO_OP`; Feel is regenerated from the selected upstream candidate and never copied by filename |
+| Correction/AI Fix/Enhance/Feel | One ordered, hash-bound chain: transposed -> reviewed timing mapping (when selected) -> corrected -> AI Fix -> Enhance -> Feel | Approve, reject, regenerate, or select `NO_OP`; Feel is regenerated from the selected upstream candidate and never copied by filename |
 | Analysis/Structure | `analysis/<part>.json`, stable `StructureOccurrence` entries | Reanalyze affected part or save intended occurrence order |
 | Source Song | Versioned two-track source MIDI/sidecar, connected candidate, complete-count critic report, approval mode | Repair hard findings; a recorded ordinary-blocker override is private-audition-only and experimental |
 | Arrangement | `song_plan.json`, `section_variations.json`, approved/draft detailed plan | Approve draft or regenerate from current authority/source approval |
@@ -85,8 +85,9 @@ their occurrence views are clipped through its authoritative sidecar rather
 than reconstructed from selected part MIDI. QP-002 stores source
 beat/onset/tempo/downbeat and source-groove evidence, and QP-003
 can publish a reviewed, source-hash-bound, piecewise timing candidate with
-whole-bar body bounds plus explicit pickup/tail windows. It does not silently
-select that candidate or choose an unreviewed downbeat. QP-004 maps recognized
+whole-bar body bounds plus explicit pickup/tail windows. An explicit approved
+decision selects that candidate as the current correction baseline; an
+unreviewed candidate and downbeat are never selected implicitly. QP-004 maps recognized
 source scale degrees into the project mode and records unresolved chromatic
 fallbacks. QP-005 turns each selected source section into a separate,
 controller-aware one-track monophonic candidate. QP-006 then fits an immutable

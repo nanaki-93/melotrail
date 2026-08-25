@@ -55,6 +55,7 @@ class ArrangementRoleIntentTest {
         assertEquals(ArrangementRole.DRUMS, LegacyLogicalInstrumentRoles.roleFor("drums"))
         assertEquals(ArrangementRole.TEXTURE, LegacyLogicalInstrumentRoles.roleFor("pad"))
         assertEquals(ArrangementRole.COUNTER_MELODY, LegacyLogicalInstrumentRoles.roleFor("strings"))
+        assertEquals("pad", LegacyLogicalInstrumentRoles.logicalFor(ArrangementRole.HARMONY))
     }
 
     @Test

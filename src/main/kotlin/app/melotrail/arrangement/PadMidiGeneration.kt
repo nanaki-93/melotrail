@@ -44,7 +44,9 @@ data class PadGenerationRequest(
     /** Full accepted ensemble MIDI and summaries for register/density-aware voicing. */
     val arrangementState: ArrangementState? = null,
     /** Last accepted pad voicing from the immediately preceding generated section. */
-    val previousAcceptedVoicing: List<Int> = emptyList()
+    val previousAcceptedVoicing: List<Int> = emptyList(),
+    /** Beat-relative chord attacks; authoritative chord pitches are never changed by this choice. */
+    val rhythmPattern: ChordRhythmPatternId = ChordRhythmPatternId.SUSTAINED
 ) {
     fun requireValid() {
         require(sectionIndex >= 0 && sectionStartTick >= 0) { "Pad section index and start tick must not be negative" }
@@ -115,10 +117,17 @@ class DeterministicPadMidiGenerator {
                 diagnostics += "No pad register space at section ${request.sectionIndex + 1} tick ${chord.startTick}; pad rests."
                 return@forEach
             }
-            val gap = minOf(releaseGapTicks(request.ppq), chord.endTick - chord.startTick - 1)
-            val end = chord.endTick - gap
-            notes += voicing.map { pitch ->
-                PadMidiNote(request.sectionStartTick + chord.startTick, request.sectionStartTick + end, pitch, velocity(request.energy))
+            rhythmWindows(request, chord).forEach { window ->
+                val gap = minOf(releaseGapTicks(request.ppq), window.endTick - window.startTick - 1)
+                val end = window.endTick - gap
+                notes += voicing.map { pitch ->
+                    PadMidiNote(
+                        request.sectionStartTick + window.startTick,
+                        request.sectionStartTick + end,
+                        pitch,
+                        velocity(request.energy, window.velocityOffset)
+                    )
+                }
             }
             previousVoicing = voicing
         }
@@ -131,6 +140,36 @@ class DeterministicPadMidiGenerator {
         if (chords.isEmpty()) return emptyList()
         val count = ceil(chords.size * density).toInt().coerceIn(1, chords.size)
         return (0 until count).map { index -> chords[index * chords.size / count] }
+    }
+
+    /** Repeat one catalog rhythm across every covered 4/4 bar, clipped to the authoritative chord window. */
+    private fun rhythmWindows(request: PadGenerationRequest, chord: MidiChord): List<RhythmWindow> {
+        if (request.rhythmPattern == ChordRhythmPatternId.SUSTAINED) {
+            return listOf(RhythmWindow(chord.startTick, chord.endTick, 0))
+        }
+        val signature = request.timeSignatures.lastOrNull { it.tick <= chord.startTick }
+            ?: return listOf(RhythmWindow(chord.startTick, chord.endTick, 0))
+        if (signature.numerator != 4 || signature.denominator != 4) {
+            return listOf(RhythmWindow(chord.startTick, chord.endTick, 0))
+        }
+        val beat = request.ppq.toLong()
+        val sixteenth = (beat / 4).coerceAtLeast(1)
+        val barLength = beat * 4
+        var barStart = signature.tick
+        while (barStart + barLength <= chord.startTick) barStart += barLength
+        val steps = MusicalPatternLibrary.chordRhythm(request.rhythmPattern).steps
+        return buildList {
+            while (barStart < chord.endTick) {
+                steps.forEach { step ->
+                    val start = barStart + step.sixteenth * sixteenth
+                    val end = minOf(chord.endTick, start + step.durationSixteenths * sixteenth)
+                    if (start >= chord.startTick && start < chord.endTick && end > start) {
+                        add(RhythmWindow(start, end, step.velocityOffset))
+                    }
+                }
+                barStart += barLength
+            }
+        }.ifEmpty { listOf(RhythmWindow(chord.startTick, chord.endTick, 0)) }
     }
 
     private fun harmonyFor(request: PadGenerationRequest, chord: MidiChord, diagnostics: MutableList<String>): ChordHarmony? {
@@ -235,8 +274,8 @@ class DeterministicPadMidiGenerator {
 
     private fun releaseGapTicks(ppq: Int): Long = maxOf(1, ppq / RELEASE_GAP_DIVISOR).toLong()
 
-    private fun velocity(energy: Double): Int =
-        (MIN_VELOCITY + (MAX_VELOCITY - MIN_VELOCITY) * energy).roundToInt().coerceIn(MIN_VELOCITY, MAX_VELOCITY)
+    private fun velocity(energy: Double, offset: Int = 0): Int =
+        ((MIN_VELOCITY + (MAX_VELOCITY - MIN_VELOCITY) * energy).roundToInt() + offset).coerceIn(MIN_VELOCITY, MAX_VELOCITY)
 
     private fun pitchClass(value: String): Int? {
         val base = when (value.firstOrNull()?.uppercaseChar()) {
@@ -258,6 +297,7 @@ class DeterministicPadMidiGenerator {
     }
 
     private data class ChordHarmony(val root: Int, val intervals: IntArray)
+    private data class RhythmWindow(val startTick: Long, val endTick: Long, val velocityOffset: Int)
 
     private companion object {
         const val CHORD_CONFIDENCE = 0.75
@@ -303,7 +343,8 @@ class PadMidiGenerationAdapter(
                 requests += PadGenerationRequest(
                     position, start, analysis.ppq, analysis.tempoMap, analysis.timeSignatures, analysis.durationTicks,
                     analysis.key, analysis.chords, section.energy, plan.density, PadRole.SUSTAINED_CHORDS,
-                    plan.register.toPadRegister(), pad.midiChannelZeroBased ?: 0, pad.midiProgram, arrangementState
+                    plan.register.toPadRegister(), pad.midiChannelZeroBased ?: 0, pad.midiProgram, arrangementState,
+                    rhythmPattern = plan.rhythmPattern
                 )
             }
             start = Math.addExact(start, analysis.durationTicks)

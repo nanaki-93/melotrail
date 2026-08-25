@@ -263,13 +263,20 @@ class DeterministicGeneratedRoleValidator : GeneratedRoleValidator {
         }
         val maximumResidual = (input.projection.harmonyPpq * if (input.role == "bass") input.policy.maximumBassGrooveResidualBeats else input.policy.maximumDrumGrooveResidualBeats).toLong()
         val flamWindow = (input.projection.harmonyPpq * input.policy.maximumPianoFlamBeats).toLong().coerceAtLeast(1)
-        val pianoOnsets = input.arrangementState?.track(ArrangementState.PIANO)?.notes.orEmpty().map(MidiNote::startTick)
+        val pianoOnsets = input.arrangementState?.track(ArrangementState.PIANO)?.notes.orEmpty().map(MidiNote::startTick).toSet()
         notes.forEach { note ->
             val occurrence = active.singleOrNull { note.start in it.startTick until it.endTick } ?: return@forEach
             val expected = FullSongGrooveMapTiming.nearestExpectedTick(map, occurrence.occurrenceId, note.start)
             if (expected == null) violations += "Generated role has no active full-song groove-map span"
             else if (abs(note.start - expected) > maximumResidual) violations += "Generated role is off the approved groove-map phase"
-            if (pianoOnsets.any { onset -> val residual = abs(note.start - onset); residual in 1..flamWindow }) {
+            // An exact shared piano attack is intentional; nearby source-note
+            // onsets in the same piano cluster must not turn it into a false
+            // flam. Only a generated attack with no exact shared onset can be
+            // an audible near-simultaneous duplicate.
+            if (note.start !in pianoOnsets && pianoOnsets.any { onset ->
+                    val residual = abs(note.start - onset)
+                    residual in 1..flamWindow
+                }) {
                 violations += "Generated role creates an audible piano flam"
             }
         }
@@ -291,7 +298,8 @@ class DeterministicGeneratedRoleValidator : GeneratedRoleValidator {
                 val selected = backbeats.take(ceil(backbeats.size * density).toInt().coerceIn(1, backbeats.size)).map { expected ->
                     input.acceptedFullSongGrooveMap?.let { map -> FullSongGrooveMapTiming.expectedTick(map, expected) } ?: expected
                 }
-                if (selected.any { expected -> occurrenceNotes.none { it.pitch == snare && it.start == expected } }) {
+                val maximumResidual = (input.projection.harmonyPpq * input.policy.maximumDrumGrooveResidualBeats).toLong()
+                if (selected.any { expected -> occurrenceNotes.none { it.pitch == snare && abs(it.start - expected) <= maximumResidual } }) {
                     violations += "Drum backbeat does not match the approved beats 2 and 4 pattern"
                 }
             }
@@ -303,7 +311,14 @@ class DeterministicGeneratedRoleValidator : GeneratedRoleValidator {
             }
             if (input.arrangementState != null && plan.fillLastBar) {
                 val finalBeat = occurrence.endTick - beat
-                if (occurrenceNotes.count { it.pitch == snare && it.start >= finalBeat } < 2) violations += "Drum fill is missing from the final bar"
+                // A fill attack is allowed to inherit the same bounded source-
+                // groove displacement as every other generated drum attack.
+                // Do not reject a first stroke that lands a few approved ticks
+                // before the nominal final-beat boundary.
+                val maximumResidual = (input.projection.harmonyPpq * input.policy.maximumDrumGrooveResidualBeats).toLong()
+                if (occurrenceNotes.count { it.pitch == snare && it.start >= finalBeat - maximumResidual } < 2) {
+                    violations += "Drum fill is missing from the final bar"
+                }
             }
             val bassOnsets = input.arrangementState?.track("bass")?.notes.orEmpty().map(MidiNote::startTick)
                 .filter { it in occurrence.startTick until occurrence.endTick }

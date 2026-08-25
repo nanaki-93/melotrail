@@ -134,11 +134,8 @@ class DefaultTechnicalCorrectionApplicationService(
     private fun current(root: Path, partId: String): Current {
         val project = ProjectStore.read(root).also { it.requireValid(root) }
         val part = project.parts.singleOrNull { it.id == partId } ?: throw IllegalArgumentException("Part not found: $partId")
-        val midi = requireNotNull(part.midi) { "Part '$partId' has no MIDI evidence." }
-        val reference = midi.transposed ?: midi.normalized ?: midi.clean ?: throw IllegalArgumentException("Part '$partId' has no cleaned MIDI.")
-        val relative = Path.of(reference); val input = root.resolve(relative).normalize()
-        require(!relative.isAbsolute && input.startsWith(root) && Files.isRegularFile(input) && input.toRealPath().startsWith(root.toRealPath())) { "Technical-correction input is missing or unsafe." }
-        return Current(input, reference, TechnicalCorrectionContextFactory.build(project, partId, input))
+        val baseline = app.melotrail.arrangement.SelectedMidiArtifactResolver().resolveCorrectionBaseline(root, project, part)
+        return Current(baseline.path, baseline.projectRelativePath, TechnicalCorrectionContextFactory.build(project, partId, baseline.path))
     }
 
     private fun snapshot(root: Path, partId: String, refs: TechnicalCorrectionReferences, report: TechnicalCorrectionReport, selected: Boolean): TechnicalCorrectionSnapshot {

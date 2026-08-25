@@ -60,6 +60,58 @@ class FullSongEnhancementPlanTest {
         assertTrue(prompt.contains(input.issues.single().id))
     }
 
+    @Test fun `Qwen may edit a whole-song role inside an occurrence-local critic window`() {
+        var prompt = ""
+        val base = enhancementInput(noteCount = 50)
+        val input = base.copy(issues = base.issues.map {
+            it.copy(occurrenceId = "one", window = FullSongWindow(0, 1_000, 0, 1))
+        })
+        val target = input.targets.single()
+        val issue = input.issues.single()
+        val response = """{"operations":[{"kind":"ADJUST_VELOCITY","issueId":"${issue.id}","targetId":"${target.id}","noteId":"${target.notes.first().id}","velocityDelta":-1}]}"""
+
+        val plan = FullSongEnhancementPlanParser.parse(
+            LocalQwenFullSongEnhancementPlanner(LocalQwenClient { _, userPrompt ->
+                prompt = userPrompt
+                response
+            }).plan(input)
+        )
+
+        assertTrue(prompt.contains("\"occurrenceId\":\"one\""))
+        assertEquals(1, plan.operations.size)
+        assertEquals(target.notes.first().id, plan.operations.single().noteId)
+    }
+
+    @Test fun `empty Qwen response lowers an overlapping masking note within budget`() {
+        val base = enhancementInput(noteCount = 50)
+        val input = base.copy(
+            issues = base.issues.map {
+                it.copy(
+                    category = FullSongIssueCategory.MASKING,
+                    occurrenceId = "one",
+                    window = FullSongWindow(1_000, 1_100, 0, 1),
+                    observed = listOf(FullSongMetric("velocityDelta", 0.0)),
+                    suggestedCorrections = listOf(FullSongCorrectionFamily.LOCAL_EXPRESSION_ADJUSTMENT)
+                )
+            },
+            targets = base.targets.map { target ->
+                target.copy(notes = target.notes.mapIndexed { index, note ->
+                    if (index == 0) note.copy(startTick = 0, endTick = 1_920) else note
+                })
+            }
+        )
+
+        val plan = FullSongEnhancementPlanParser.parse(
+            LocalQwenFullSongEnhancementPlanner(LocalQwenClient { _, _ -> "{\"operations\":[]}" }).plan(input)
+        )
+
+        assertEquals("deterministic-masking-fallback-v1", plan.modelIdentity)
+        assertEquals(1, plan.operations.size)
+        assertEquals(FullSongEnhancementOperationKind.ADJUST_VELOCITY, plan.operations.single().kind)
+        assertEquals(-1, plan.operations.single().velocityDelta)
+        assertEquals(input.targets.single().notes.first().id, plan.operations.single().noteId)
+    }
+
     @Test fun `all actionable evidence is supplied through bounded correction batches`() {
         val base = enhancementInput(noteCount = 70)
         val allIssues = (0 until 70).map { index ->

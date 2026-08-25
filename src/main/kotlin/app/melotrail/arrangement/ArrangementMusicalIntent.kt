@@ -335,8 +335,10 @@ object SectionMusicalIntentPlanner {
         energy: Double,
         fallingEnergy: Boolean
     ): RoleMusicalIntent {
-        val role = LegacyLogicalInstrumentRoles.roleFor(instrument)
-        val selected = input.intentsFor(section.purpose).singleOrNull { it.role == role }
+        val selected = input.intentsFor(section.purpose).singleOrNull {
+            LegacyLogicalInstrumentRoles.logicalFor(it.role) == instrument
+        }
+        val role = selected?.role ?: LegacyLogicalInstrumentRoles.roleFor(instrument)
         val articulation = selected?.articulationTraits?.let { traits ->
             when {
                 SoundTrait.LEGATO in traits -> ArrangementArticulation.LEGATO

@@ -45,6 +45,25 @@ enum class DrumGroovePatternId(val id: PatternId) {
 }
 
 @Serializable
+/** Stable identities for fills placed in the final bar of a section. */
+enum class DrumFillPatternId(val id: PatternId) {
+    @SerialName("soft-two-stroke") SOFT_TWO_STROKE(PatternId("drums.fill.soft-two-stroke")),
+    @SerialName("dusty-snare-roll") DUSTY_SNARE_ROLL(PatternId("drums.fill.dusty-snare-roll")),
+    @SerialName("kick-snare-turnaround") KICK_SNARE_TURNAROUND(PatternId("drums.fill.kick-snare-turnaround")),
+    @SerialName("bridge-half-time-break") BRIDGE_HALF_TIME_BREAK(PatternId("drums.fill.bridge-half-time-break"));
+}
+
+@Serializable
+/** Stable beat-relative identities for harmony-key comping rhythms. */
+enum class ChordRhythmPatternId(val id: PatternId) {
+    @SerialName("sustained") SUSTAINED(PatternId("chords.rhythm.sustained")),
+    @SerialName("laid-back-quarters") LAID_BACK_QUARTERS(PatternId("chords.rhythm.laid-back-quarters")),
+    @SerialName("dusty-offbeats") DUSTY_OFFBEATS(PatternId("chords.rhythm.dusty-offbeats")),
+    @SerialName("broken-syncopation") BROKEN_SYNCOPATION(PatternId("chords.rhythm.broken-syncopation")),
+    @SerialName("bridge-half-time") BRIDGE_HALF_TIME(PatternId("chords.rhythm.bridge-half-time"));
+}
+
+@Serializable
 enum class TransitionPatternId(val id: PatternId) {
     @SerialName("drum-fill") DRUM_FILL(PatternId("transition.drum-fill")),
     @SerialName("bass-approach") BASS_APPROACH(PatternId("transition.bass-approach")),
@@ -108,6 +127,18 @@ data class CuratedDrumGroove(val id: DrumGroovePatternId, val displayName: Strin
 data class CuratedDrumStep(val hit: String, val sixteenth: Int, val velocityOffset: Int) {
     init { require(hit in PatternDrumHit.DRUM_HIT_NAMES && sixteenth in 0..15) { "Curated groove step is invalid" } }
 }
+/** One reviewable fill and its named starter-kit attacks. */
+data class CuratedDrumFill(val id: DrumFillPatternId, val displayName: String, val steps: List<CuratedDrumStep>)
+/** One reviewable harmony-key rhythm and its beat-relative attacks. */
+data class CuratedChordRhythm(val id: ChordRhythmPatternId, val displayName: String, val steps: List<CuratedChordStep>)
+/** One chord attack in a 16-step 4/4 bar, including its bounded duration and accent. */
+data class CuratedChordStep(val sixteenth: Int, val durationSixteenths: Int, val velocityOffset: Int) {
+    init {
+        require(sixteenth in 0..15 && durationSixteenths in 1..16 && sixteenth + durationSixteenths <= 16) {
+            "Curated chord-rhythm step is invalid"
+        }
+    }
+}
 
 /**
  * Deterministic implementations for the bounded arrangement vocabulary. These
@@ -131,6 +162,47 @@ object MusicalPatternLibrary {
             step("kick", 0, 5), step("kick", 8, 5), step("snare", 4, 4), step("snare", 12, 6), *hats(0, 1, -9)
         ))
     )
+
+    /** Section-ending fill vocabulary. Positions are sixteenths in the section's final 4/4 bar. */
+    val drumFills: List<CuratedDrumFill> = listOf(
+        CuratedDrumFill(DrumFillPatternId.SOFT_TWO_STROKE, "Soft two-stroke", listOf(
+            step("snare", 14, -6), step("snare", 15, 2)
+        )),
+        CuratedDrumFill(DrumFillPatternId.DUSTY_SNARE_ROLL, "Dusty snare roll", listOf(
+            step("snare", 12, 0), step("snare", 13, 4), step("snare", 14, 8), step("snare", 15, 12)
+        )),
+        CuratedDrumFill(DrumFillPatternId.KICK_SNARE_TURNAROUND, "Kick-snare turnaround", listOf(
+            step("kick", 12, -2), step("snare", 14, 4), step("snare", 15, 9)
+        )),
+        CuratedDrumFill(DrumFillPatternId.BRIDGE_HALF_TIME_BREAK, "Bridge half-time break", listOf(
+            step("openHat", 8, -10), step("kick", 10, -4), step("snare", 12, 1),
+            step("kick", 14, -2), step("snare", 15, 7)
+        ))
+    )
+
+    /** Lo-fi chord-comping vocabulary. Positions and durations are relative to a 4/4 bar. */
+    val chordRhythms: List<CuratedChordRhythm> = listOf(
+        CuratedChordRhythm(ChordRhythmPatternId.SUSTAINED, "Sustained", listOf(CuratedChordStep(0, 16, 0))),
+        CuratedChordRhythm(ChordRhythmPatternId.LAID_BACK_QUARTERS, "Laid-back quarters", listOf(
+            CuratedChordStep(0, 3, -2), CuratedChordStep(4, 3, -5), CuratedChordStep(8, 3, 0), CuratedChordStep(12, 3, -4)
+        )),
+        CuratedChordRhythm(ChordRhythmPatternId.DUSTY_OFFBEATS, "Dusty offbeats", listOf(
+            CuratedChordStep(2, 2, -6), CuratedChordStep(6, 2, -3), CuratedChordStep(10, 2, -5), CuratedChordStep(14, 2, -1)
+        )),
+        CuratedChordRhythm(ChordRhythmPatternId.BROKEN_SYNCOPATION, "Broken syncopation", listOf(
+            CuratedChordStep(0, 3, 0), CuratedChordStep(6, 2, -5), CuratedChordStep(10, 2, -3), CuratedChordStep(14, 2, -1)
+        )),
+        CuratedChordRhythm(ChordRhythmPatternId.BRIDGE_HALF_TIME, "Bridge half-time", listOf(
+            CuratedChordStep(0, 6, -5), CuratedChordStep(8, 6, -2)
+        ))
+    )
+
+    /** Resolve one validated drum-groove identity. */
+    fun drumGroove(id: DrumGroovePatternId): CuratedDrumGroove = drumGrooves.single { it.id == id }
+    /** Resolve one validated section-fill identity. */
+    fun drumFill(id: DrumFillPatternId): CuratedDrumFill = drumFills.single { it.id == id }
+    /** Resolve one validated chord-rhythm identity. */
+    fun chordRhythm(id: ChordRhythmPatternId): CuratedChordRhythm = chordRhythms.single { it.id == id }
 
     /** Compose the selected bass pattern from the canonical progression. */
     fun bass(context: CanonicalPatternContext, parameters: BassPatternParameters): List<PatternMidiNote> {
@@ -305,4 +377,32 @@ object MusicalPatternLibrary {
     /** Expand a regular closed-hat grid into explicit musical steps. */
     private fun hats(start: Int, step: Int, velocity: Int): Array<CuratedDrumStep> = (start..15 step step).map { CuratedDrumStep("closedHat", it, velocity) }.toTypedArray()
     private data class ChordWindow(val start: Long, val end: Long, val root: Int, val tones: List<Int>)
+}
+
+/** One reviewable section-aware lo-fi selection policy over the bounded catalogs above. */
+object LoFiSectionPatternPolicy {
+    /** Select a lo-fi drum pocket for one structural purpose. */
+    fun drumGroove(purpose: SongSectionPurpose): DrumGroovePatternId = when (purpose) {
+        SongSectionPurpose.INTRODUCTION -> DrumGroovePatternId.LAZY_SWING
+        SongSectionPurpose.DEVELOPMENT -> DrumGroovePatternId.DUSTY_STRAIGHT
+        SongSectionPurpose.CLIMAX -> DrumGroovePatternId.LIFT_BUILD
+        SongSectionPurpose.RELEASE -> DrumGroovePatternId.HALF_TIME_POCKET
+        SongSectionPurpose.CONCLUSION -> DrumGroovePatternId.LAZY_SWING
+    }
+
+    /** Select a distinct final-bar fill for one structural purpose. */
+    fun drumFill(purpose: SongSectionPurpose): DrumFillPatternId = when (purpose) {
+        SongSectionPurpose.INTRODUCTION, SongSectionPurpose.CONCLUSION -> DrumFillPatternId.SOFT_TWO_STROKE
+        SongSectionPurpose.DEVELOPMENT -> DrumFillPatternId.DUSTY_SNARE_ROLL
+        SongSectionPurpose.CLIMAX -> DrumFillPatternId.KICK_SNARE_TURNAROUND
+        SongSectionPurpose.RELEASE -> DrumFillPatternId.BRIDGE_HALF_TIME_BREAK
+    }
+
+    /** Select a lo-fi harmony-key comping rhythm for one structural purpose. */
+    fun chordRhythm(purpose: SongSectionPurpose): ChordRhythmPatternId = when (purpose) {
+        SongSectionPurpose.INTRODUCTION, SongSectionPurpose.CONCLUSION -> ChordRhythmPatternId.SUSTAINED
+        SongSectionPurpose.DEVELOPMENT -> ChordRhythmPatternId.LAID_BACK_QUARTERS
+        SongSectionPurpose.CLIMAX -> ChordRhythmPatternId.BROKEN_SYNCOPATION
+        SongSectionPurpose.RELEASE -> ChordRhythmPatternId.BRIDGE_HALF_TIME
+    }
 }

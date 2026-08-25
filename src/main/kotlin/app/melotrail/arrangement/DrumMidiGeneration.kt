@@ -10,6 +10,7 @@ import javax.sound.midi.MidiEvent
 import javax.sound.midi.MidiSystem
 import javax.sound.midi.Sequence
 import javax.sound.midi.ShortMessage
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
@@ -41,7 +42,10 @@ data class DrumGenerationRequest(
     /** Accepted piano plus any earlier accepted generated tracks, including bass attacks. */
     val arrangementState: ArrangementState? = null,
     /** Approved full-song source-feel map shared with bass; it replaces independent swing offsets. */
-    val acceptedFullSongGrooveMap: FullSongGrooveMap? = null
+    val acceptedFullSongGrooveMap: FullSongGrooveMap? = null,
+    /** Selected reviewed groove. Null retains the legacy role-derived pattern for old persisted requests. */
+    val groovePattern: DrumGroovePatternId? = null,
+    val fillPattern: DrumFillPatternId = DrumFillPatternId.DUSTY_SNARE_ROLL
 ) {
     fun requireValid() {
         require(sectionIndex >= 0 && sectionStartTick >= 0) { "Drum section index and start tick must not be negative" }
@@ -109,6 +113,40 @@ class DeterministicDrumMidiGenerator {
     }
 
     private fun addPattern(request: DrumGenerationRequest, bar: BarWindow, motifBar: Int, output: MutableMap<Pair<Long, String>, DrumMidiHit>) {
+        if (bar.numerator == 4 && request.groovePattern != null) {
+            addCuratedPattern(request, bar, motifBar, output)
+            return
+        }
+        addLegacyPattern(request, bar, motifBar, output)
+    }
+
+    /** Render the selected catalog identity instead of re-deriving a different groove from the role. */
+    private fun addCuratedPattern(
+        request: DrumGenerationRequest,
+        bar: BarWindow,
+        motifBar: Int,
+        output: MutableMap<Pair<Long, String>, DrumMidiHit>
+    ) {
+        val sixteenth = (bar.ticksPerBeat / 4).coerceAtLeast(1)
+        MusicalPatternLibrary.drumGroove(requireNotNull(request.groovePattern)).steps.groupBy(CuratedDrumStep::hit).forEach { (name, steps) ->
+            val density = when (name) {
+                "kick" -> request.kickDensity
+                "snare" -> if (request.snarePattern == SnarePattern.NONE) 0.0 else request.density
+                else -> request.hiHatDensity
+            }
+            selectedVelocitySlots(steps.map { step ->
+                VelocitySlot(Slot(step.sixteenth.toLong() * sixteenth, sixteenth, step.sixteenth % 4 != 0), step.velocityOffset)
+            }, density).forEach { selected ->
+                addHit(
+                    request, bar, output, name, selected.slot,
+                    velocity(request.energy, selected.velocityOffset), applySwing = true
+                )
+            }
+        }
+        addContextualKick(request, bar, motifBar, output)
+    }
+
+    private fun addLegacyPattern(request: DrumGenerationRequest, bar: BarWindow, motifBar: Int, output: MutableMap<Pair<Long, String>, DrumMidiHit>) {
         val beat = bar.ticksPerBeat
         val role = request.role
         val kickBeats = when (role) {
@@ -167,13 +205,14 @@ class DeterministicDrumMidiGenerator {
     }
 
     private fun addFill(request: DrumGenerationRequest, bar: BarWindow, output: MutableMap<Pair<Long, String>, DrumMidiHit>) {
-        val beat = bar.ticksPerBeat
-        val step = beat / 4
-        val start = (bar.length - beat).coerceAtLeast(0)
-        val slots = (0 until 4).map { Slot(start + it * step, step, it > 0) }.filter { it.offset < bar.length }
-        slots.forEachIndexed { index, slot ->
-            val lift = index * if (request.transitionIntent == SongTransitionIntent.BUILD) 6 else 4
-            addHit(request, bar, output, "snare", slot, velocity(request.energy, lift), applySwing = false)
+        val sixteenth = (bar.ticksPerBeat / 4).coerceAtLeast(1)
+        val fill = MusicalPatternLibrary.drumFill(request.fillPattern)
+        fill.steps.forEachIndexed { index, step ->
+            val slot = Slot(step.sixteenth.toLong() * sixteenth, sixteenth, step.sixteenth % 4 != 0)
+            if (slot.offset < bar.length) {
+                val transitionLift = if (request.transitionIntent == SongTransitionIntent.BUILD) index * 2 else 0
+                addHit(request, bar, output, step.hit, slot, velocity(request.energy, step.velocityOffset + transitionLift), applySwing = false)
+            }
         }
     }
 
@@ -194,6 +233,12 @@ class DeterministicDrumMidiGenerator {
         return (0 until count).map { index -> slots[index * slots.size / count] }
     }
 
+    private fun selectedVelocitySlots(slots: List<VelocitySlot>, density: Double): List<VelocitySlot> {
+        if (slots.isEmpty() || density == 0.0) return emptyList()
+        val count = ceil(slots.size * density).toInt().coerceIn(1, slots.size)
+        return (0 until count).map { index -> slots[index * slots.size / count] }
+    }
+
     private fun addHit(
         request: DrumGenerationRequest,
         bar: BarWindow,
@@ -207,14 +252,23 @@ class DeterministicDrumMidiGenerator {
         val offset = (slot.offset + delayed).coerceAtMost(bar.length - 1)
         val unwarpedStart = request.sectionStartTick + bar.start + offset
         val start = request.acceptedFullSongGrooveMap?.let { map ->
-            requireNotNull(FullSongGrooveMapTiming.expectedTick(map, unwarpedStart)) {
+            val expected = requireNotNull(FullSongGrooveMapTiming.expectedTick(map, unwarpedStart)) {
                 "Drum pattern tick $unwarpedStart has no active approved full-song groove-map point"
             }
+            sharedPianoOnset(request, expected, request.sectionStartTick + bar.start, request.sectionStartTick + bar.start + bar.length) ?: expected
         } ?: unwarpedStart
         val end = minOf(request.sectionStartTick + bar.start + bar.length, start + minOf(NOTE_LENGTH_TICKS, slot.subdivision.coerceAtLeast(1)))
         val hit = DrumMidiHit(name, start, end, requireNotNull(request.noteMap[name]) { "Drum note map is missing '$name'" }, velocity)
         output.putIfAbsent(start to name, hit)
     }
+
+    /** Keep shared downbeats exact when the accepted piano carries a small approved source-feel offset. */
+    private fun sharedPianoOnset(request: DrumGenerationRequest, expected: Long, rangeStart: Long, rangeEnd: Long): Long? =
+        request.arrangementState?.requireTrack(ArrangementState.PIANO)?.notes
+            ?.asSequence()
+            ?.map(MidiNote::startTick)
+            ?.filter { onset -> onset in rangeStart until rangeEnd && abs(onset - expected) <= (request.ppq * MAXIMUM_SHARED_GROOVE_RESIDUAL_BEATS).roundToInt() }
+            ?.minWithOrNull(compareBy<Long> { onset -> abs(onset - expected) }.thenBy { it })
 
     private fun barWindows(request: DrumGenerationRequest): List<BarWindow> {
         val windows = mutableListOf<BarWindow>()
@@ -260,12 +314,14 @@ class DeterministicDrumMidiGenerator {
     }
 
     private data class Slot(val offset: Long, val subdivision: Long, val offBeat: Boolean)
+    private data class VelocitySlot(val slot: Slot, val velocityOffset: Int)
     private data class BarWindow(val start: Long, val length: Long, val ticksPerBeat: Long, val numerator: Int)
 
     private companion object {
         const val MIN_VELOCITY = 44
         const val MAX_VELOCITY = 104
         const val NOTE_LENGTH_TICKS = 60L
+        const val MAXIMUM_SHARED_GROOVE_RESIDUAL_BEATS = 0.05
     }
 }
 
@@ -308,7 +364,7 @@ class DrumMidiGenerationAdapter(
                     section.energy, plan.density, plan.role, plan.kickDensity, plan.snarePattern, plan.hiHatDensity,
                     plan.swing, plan.fillLastBar, section.transitionOut.type.toSongTransitionIntent(),
                     requireNotNull(drums.midiChannelZeroBased) { "Validated drum registry has no MIDI channel" }, drums.noteMap, arrangementState,
-                    acceptedFullSongGrooveMap
+                    acceptedFullSongGrooveMap, plan.pattern, plan.fillPattern
                 )
             }
             start = Math.addExact(start, analysis.durationTicks)

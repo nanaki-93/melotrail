@@ -153,6 +153,26 @@ class EnhancementTest {
     }
 
     @Test
+    fun `local enhancement adapter discards forbidden protected-anchor pitch and removal edits`() {
+        val input = root.resolve("protected-anchor.mid").also(::writeMidi)
+        val unprotected = context(input)
+        val anchorId = unprotected.notes.first().id
+        val context = unprotected.copy(protectedAnchorNoteIds = listOf(anchorId), contextSha256 = "0".repeat(64)).let { bare ->
+            bare.copy(contextSha256 = MusicalProcessingContextHasher.hash(bare))
+        }
+        val planner = LocalQwenEnhancementPlanner(
+            LocalQwenClient { _, _ ->
+                """{"goals":["flow_contour"],"edits":[{"kind":"pitch","noteId":"$anchorId","value":1,"goal":"flow_contour","reason":"forbidden"},{"kind":"remove_note","noteId":"$anchorId","value":0,"goal":"flow_contour","reason":"forbidden"},{"kind":"velocity","noteId":"$anchorId","value":2,"goal":"flow_contour","reason":"allowed"}]}"""
+            },
+            EnhancementModelIdentity("qwen", "fixture", "1", "apache-2.0")
+        )
+
+        val accepted = planner.plan(context)
+
+        assertEquals(listOf(EnhancementEdit(EnhancementEditKind.VELOCITY, anchorId, 2, EnhancementGoal.FLOW_CONTOUR, "allowed")), accepted.edits)
+    }
+
+    @Test
     fun `part-local enhancement works before Structure and refuses harmonic rewrites`() {
         val input = root.resolve("part-local.mid")
         writeMidi(input)

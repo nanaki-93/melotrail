@@ -121,6 +121,98 @@ class FullSongCriticTest {
         assertEquals((0 until 70).map { it * 480L }, report.actionableIssueEvidence.map { it.window.startTick })
     }
 
+    @Test fun `anchor preservation is assessed in each canonical occurrence`() {
+        val connected = write("connected.mid", listOf(0L to 240L to 60, 1_920L to 2_160L to 64))
+        val first = write("first.mid", listOf(0L to 240L to 60))
+        val second = write("second.mid", listOf(0L to 240L to 64))
+        val base = input()
+        val authority = base.authority.copy(
+            occurrences = listOf(
+                MusicalOccurrence("one", "A", SectionTypeId.VERSE, 0, 1, 0, 1_920),
+                MusicalOccurrence("two", "B", SectionTypeId.VERSE, 1, 1, 1_920, 3_840)
+            ),
+            harmony = listOf(
+                HarmonicTimelineEntry("one", SectionTypeId.VERSE, CanonicalChord(0, "C", ChordQuality.MAJOR), 0, 0, 1_920),
+                HarmonicTimelineEntry("two", SectionTypeId.VERSE, CanonicalChord(0, "C", ChordQuality.MAJOR), 1, 1_920, 3_840)
+            )
+        )
+        val criticInput = base.copy(
+            authority = authority,
+            cohesionOccurrences = listOf(
+                FullSongCriticMidiArtifact("piano", "one", first, WorkflowArtifactReference("first.mid", sha256(first)), 0),
+                FullSongCriticMidiArtifact("piano", "two", second, WorkflowArtifactReference("second.mid", sha256(second)), 1_920)
+            ),
+            melodyIdentity = MelodyIdentityBuilder.build(connected, 480),
+            approvedArrangement = DetailedArrangement(sections = listOf(
+                DetailedArrangementSection(0, "one", "A", SongSectionPurpose.DEVELOPMENT, 0.5, emptyList(), TransitionPlan()),
+                DetailedArrangementSection(1, "two", "B", SongSectionPurpose.DEVELOPMENT, 0.5, emptyList(), TransitionPlan())
+            ))
+        )
+
+        val issues = DeterministicFullSongCritic().criticize(criticInput).issues
+
+        assertFalse(issues.any { it.category == FullSongIssueCategory.RECOGNIZABILITY_REGRESSION })
+    }
+
+    @Test fun `density compares the observed and arrangement targets on the same normalized scale`() {
+        val bass = write("bass-density.mid", listOf(0L to 120L to 48, 960L to 1_080L to 48))
+        val section = DetailedArrangementSection(
+            0, "one", "A", SongSectionPurpose.DEVELOPMENT, 0.5,
+            listOf(BassInstrumentPlan(role = DetailedBassRole.ROOT, density = 0.5, movement = DetailedBassMovement.STATIC, register = MusicalRegister.LOW, syncopation = 0.0)),
+            TransitionPlan()
+        )
+        val criticInput = input(artifact("bass", bass)).copy(approvedArrangement = DetailedArrangement(sections = listOf(section)))
+
+        val issues = DeterministicFullSongCritic().criticize(criticInput).issues
+
+        assertFalse(issues.any { it.category == FullSongIssueCategory.DENSITY_MISMATCH })
+    }
+
+    @Test fun `syncopated hats do not make an otherwise steady kick pulse look incoherent`() {
+        val drums = write("steady-kick-with-fill.mid", listOf(
+            0L to 120L to 36, 960L to 1_080L to 36, 1_920L to 2_040L to 36, 2_880L to 3_000L to 36,
+            240L to 360L to 42, 480L to 600L to 42, 720L to 840L to 38,
+            3_840L to 3_960L to 36, 4_800L to 4_920L to 36, 5_760L to 5_880L to 36, 6_720L to 6_840L to 36
+        ))
+        val base = input(artifact("drums", drums))
+        val authority = base.authority.copy(
+            occurrences = listOf(
+                MusicalOccurrence("one", "A", SectionTypeId.VERSE, 0, 1, 0, 3_840),
+                MusicalOccurrence("two", "B", SectionTypeId.VERSE, 1, 2, 3_840, 7_680)
+            ),
+            harmony = listOf(
+                HarmonicTimelineEntry("one", SectionTypeId.VERSE, CanonicalChord(0, "C", ChordQuality.MAJOR), 0, 0, 3_840),
+                HarmonicTimelineEntry("two", SectionTypeId.VERSE, CanonicalChord(0, "C", ChordQuality.MAJOR), 1, 3_840, 7_680)
+            )
+        )
+
+        val issues = DeterministicFullSongCritic().criticize(base.copy(authority = authority, approvedArrangement = twoSectionArrangement())).issues
+
+        assertFalse(issues.any { it.category == FullSongIssueCategory.GROOVE_INCOHERENCE })
+    }
+
+    @Test fun `a consistent off-grid kick pulse is still reported at the section boundary`() {
+        val drums = write("shifted-kick.mid", listOf(
+            240L to 360L to 36, 1_200L to 1_320L to 36, 2_160L to 2_280L to 36, 3_120L to 3_240L to 36,
+            3_840L to 3_960L to 36, 4_800L to 4_920L to 36, 5_760L to 5_880L to 36, 6_720L to 6_840L to 36
+        ))
+        val base = input(artifact("drums", drums))
+        val authority = base.authority.copy(
+            occurrences = listOf(
+                MusicalOccurrence("one", "A", SectionTypeId.VERSE, 0, 1, 0, 3_840),
+                MusicalOccurrence("two", "B", SectionTypeId.VERSE, 1, 2, 3_840, 7_680)
+            ),
+            harmony = listOf(
+                HarmonicTimelineEntry("one", SectionTypeId.VERSE, CanonicalChord(0, "C", ChordQuality.MAJOR), 0, 0, 3_840),
+                HarmonicTimelineEntry("two", SectionTypeId.VERSE, CanonicalChord(0, "C", ChordQuality.MAJOR), 1, 3_840, 7_680)
+            )
+        )
+
+        val issue = DeterministicFullSongCritic().criticize(base.copy(authority = authority, approvedArrangement = twoSectionArrangement())).issues.single { it.category == FullSongIssueCategory.GROOVE_INCOHERENCE }
+
+        assertEquals(240.0, issue.observed.single { it.name == "phaseDeltaTicks" }.value, 0.001)
+    }
+
     private fun input(vararg artifacts: FullSongCriticMidiArtifact): FullSongCriticInput = FullSongCriticInput(
         authority = WholeSongAnalysisProjection(
             contextSha256 = "a".repeat(64), projectKey = MusicalKey(PitchClass.of(PitchSpelling.C), ScaleModeId.MAJOR), tempo = Tempo(120.0), meter = TimeSignature(4, 4), harmonyPpq = 480,
@@ -130,6 +222,11 @@ class FullSongCriticTest {
         ),
         cohesionOccurrences = emptyList(), cohesionRoles = artifacts.toList(), approvedArrangement = DetailedArrangement(sections = emptyList()), approvedArrangementSha256 = "b".repeat(64), roleReports = emptyList(), inputSha256 = "c".repeat(64)
     )
+
+    private fun twoSectionArrangement() = DetailedArrangement(sections = listOf(
+        DetailedArrangementSection(0, "one", "A", SongSectionPurpose.DEVELOPMENT, 0.5, emptyList(), TransitionPlan()),
+        DetailedArrangementSection(1, "two", "B", SongSectionPurpose.DEVELOPMENT, 0.5, emptyList(), TransitionPlan())
+    ))
 
     private fun artifact(role: String, path: Path) = FullSongCriticMidiArtifact(role, null, path, WorkflowArtifactReference(path.fileName.toString(), sha256(path)))
     private fun occurrenceArtifact(path: Path) = FullSongCriticMidiArtifact("piano", "one", path, WorkflowArtifactReference(path.fileName.toString(), sha256(path)))
