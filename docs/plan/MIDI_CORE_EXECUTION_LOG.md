@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-002 complete; MC-003 is next
+Status: MC-003 complete; MC-004 is next
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -42,7 +42,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-000 | DONE | `midi-core: MC-000 freeze execution baseline` | PASS — local Markdown links, `git diff --check`, `make test`, `make build` | Clean baseline at `a7f03b7`; no unrelated changes; metrics recorded below. |
 | MC-001 | DONE | `midi-core: MC-001 add owned MIDI fixtures` | PASS — `OwnedMidiFixturesTest`; `make test` | Ten hand-authored, SHA-256-pinned fixtures cover all Phase 1 reader inputs without legacy audio-project data. |
 | MC-002 | DONE | `midi-core: MC-002 characterize reusable MIDI safety` | PASS — focused characterization and `make test` | Retained/extract/delete owner map recorded below; no legacy owner was adopted wholesale. |
-| MC-003 | TODO | | | |
+| MC-003 | DONE | `midi-core: MC-003 enforce target boundaries` | PASS — architecture rules, `make test`, `make build` | Target package policy is executable; legacy packages are intentionally outside the new roots until cutover. |
 | MC-004 | TODO | | | |
 | MC-005 | TODO | | | |
 | MC-006 | TODO | | | |
@@ -202,8 +202,29 @@ Full validation: `make test` PASS (2026-08-26; 14 Gradle tasks, 20 seconds).
 Manual evidence: Not required.
 Decisions/deviations: No code was extracted yet: MC-002 is intentionally a characterization boundary. The source-owned MC-001 fixtures are used rather than legacy generated MIDI. The legacy analyzer's automatic key/chord inference is expressly excluded because project authority must be explicit.
 Known limitations: Current Java MIDI access remains widely scattered until MC-003 through MC-008 establish replacement boundaries; this task records the migration map rather than creating an adapter prematurely.
-Commit: `midi-core: MC-002 characterize reusable MIDI safety`.
+Commit: `d0da538` — `midi-core: MC-002 characterize reusable MIDI safety`.
 Next task: MC-003 after MC-002 validation and commit.
+
+### MC-003 — Enforce target dependency boundaries
+
+Status: DONE
+Started: 2026-08-26
+Completed: 2026-08-26
+Starting commit/status: `d0da538` / clean worktree after MC-002.
+Contracts read: Architecture sections 3 and 5; F-SYS-001; F-SYS-002; and MC-003 task contract.
+Current owners inspected: root and desktop Gradle modules; root source package inventory; desktop import graph; existing domain candidates; all existing Java MIDI owners.
+Behavior retained/extracted: Target source roots are `project`, `midi/domain`, `music/core`, `structure`, `arrangement/core`, `review`, and `export/domain`; raw Java MIDI is allowed only in `midi/adapter` and `audition/adapter`; future focused Compose code is under `desktop/target`. These distinct roots let the migration enforce the target architecture while legacy packages remain compiled solely until their owning deletion tasks.
+Files added/changed: `src/test/kotlin/app/melotrail/architecture/TargetArchitectureRulesTest.kt` and `docs/plan/MIDI_CORE_EXECUTION_LOG.md`.
+Files/data deleted: None.
+Tracked deletion recoverability: Not applicable.
+Ignored deletion recoverability: Not applicable.
+Focused tests: `./gradlew :test --tests app.melotrail.architecture.TargetArchitectureRulesTest` PASS. The test proves violations fail for Compose/filesystem/HTTP/raw-MIDI imports in target domain code, raw-MIDI parsing in target desktop code, and raw MIDI outside target adapters.
+Full validation: `make test` PASS (2026-08-26; 14 Gradle tasks, 20 seconds); `make build` PASS (15 Gradle tasks; documentation coverage executed).
+Manual evidence: Not required.
+Decisions/deviations: The task creates no target service, port, worker boundary, or compatibility adapter. Existing legacy application/arrangement/desktop packages are intentionally not scanned by the new policy because they are scheduled for replacement and deletion rather than adoption; every new target class is now governed from its first commit.
+Known limitations: The target roots become populated in MC-004 onward; their empty initial state is deliberate and covered by concrete synthetic violation tests so the policy itself cannot pass vacuously.
+Commit: `midi-core: MC-003 enforce target boundaries`.
+Next task: MC-004 after MC-003 validation and commit.
 
 ## 6. Manual gate records
 
