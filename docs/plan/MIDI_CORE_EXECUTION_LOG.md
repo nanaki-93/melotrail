@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-003 complete; MC-004 is next
+Status: MC-004 complete; MC-005 is next
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -43,7 +43,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-001 | DONE | `midi-core: MC-001 add owned MIDI fixtures` | PASS — `OwnedMidiFixturesTest`; `make test` | Ten hand-authored, SHA-256-pinned fixtures cover all Phase 1 reader inputs without legacy audio-project data. |
 | MC-002 | DONE | `midi-core: MC-002 characterize reusable MIDI safety` | PASS — focused characterization and `make test` | Retained/extract/delete owner map recorded below; no legacy owner was adopted wholesale. |
 | MC-003 | DONE | `midi-core: MC-003 enforce target boundaries` | PASS — architecture rules, `make test`, `make build` | Target package policy is executable; legacy packages are intentionally outside the new roots until cutover. |
-| MC-004 | TODO | | | |
+| MC-004 | DONE | `midi-core: MC-004 add semantic MIDI model` | PASS — `SemanticMidiTest`; `make test` | Immutable target semantic sequence records source/event identity, deterministic ordering, supported event types, and one rational tick-rounding policy without Java MIDI types. |
 | MC-005 | TODO | | | |
 | MC-006 | TODO | | | |
 | MC-007 | TODO | | | |
@@ -105,7 +105,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 
 | Gate | Tasks | Status | Evidence |
 | --- | --- | --- | --- |
-| G0 Documentation ready | MC-000 | TODO | |
+| G0 Documentation ready | MC-000 | DONE | `7dee33b`; documentation baseline, link audit, `make test`, and `make build` are recorded under MC-000. |
 | G1 MIDI compatibility proven | MC-001–MC-009 | TODO | |
 | G2 MIDI project kernel complete | MC-010–MC-019 | TODO | |
 | G3 Vertical slice complete | MC-020–MC-030 | TODO | |
@@ -223,8 +223,29 @@ Full validation: `make test` PASS (2026-08-26; 14 Gradle tasks, 20 seconds); `ma
 Manual evidence: Not required.
 Decisions/deviations: The task creates no target service, port, worker boundary, or compatibility adapter. Existing legacy application/arrangement/desktop packages are intentionally not scanned by the new policy because they are scheduled for replacement and deletion rather than adoption; every new target class is now governed from its first commit.
 Known limitations: The target roots become populated in MC-004 onward; their empty initial state is deliberate and covered by concrete synthetic violation tests so the policy itself cannot pass vacuously.
-Commit: `midi-core: MC-003 enforce target boundaries`.
+Commit: `515839e` — `midi-core: MC-003 enforce target boundaries`.
 Next task: MC-004 after MC-003 validation and commit.
+
+### MC-004 — Implement the immutable semantic MIDI model
+
+Status: DONE
+Started: 2026-08-26
+Starting commit/status: `515839e` / clean worktree after MC-003.
+Contracts read: F-MIDI-001 through F-MIDI-005; MIDI Contract section 4; MC-004 task contract.
+Completed: 2026-08-26
+Current owners inspected: `MidiAnalysis.kt` (`MidiNote`, tempo/meter facts, and JDK parsing); `MidiTimeMapping.kt` (source track/index ordering and timing rounding); `StageComparisonService.kt` (stable note comparison order); `BassStemGeneration.kt` and `PadMidiGeneration.kt` (legacy generated-note shapes). These remain legacy owners for their existing callers.
+Behavior retained/extracted: Retained the safe source track/event identity and stable ordering concepts only. The target model owns source identity, PPQ, reduced rational beat positions, nearest-tick/ties-up rounding, source/generated event keys, immutable tracks/sequences, and typed note/controller/pitch-bend/channel-pressure/tempo/meter/name/marker/text/unsupported records. It neither imports `javax.sound.midi` nor adopts legacy analysis, inferred harmony, mutable timing repair, or audio-era role models.
+Files added/changed: `src/main/kotlin/app/melotrail/midi/domain/SemanticMidi.kt`; `src/test/kotlin/app/melotrail/midi/domain/SemanticMidiTest.kt`; `docs/plan/MIDI_CORE_EXECUTION_LOG.md`.
+Files/data deleted: None.
+Tracked deletion recoverability: Not applicable.
+Ignored deletion recoverability: Not applicable.
+Focused tests: `./gradlew :test --tests app.melotrail.midi.domain.SemanticMidiTest` PASS (five tests: immutable snapshots, global ordering, source/generated key invariants, value boundaries, all supported event categories, exact/rational rounding, and overflow).
+Full validation: `make test` PASS (2026-08-26; 14 Gradle tasks, 28 seconds).
+Manual evidence: Not required.
+Decisions/deviations: The source identity accepts only format 0/1 now because this target semantic model intentionally has no format-2 representation. Event ordering is tick, semantic priority, source track/event identity, then generated key; keys are unique sequence-wide. Rounding is non-negative nearest tick with half values rounded up; overflow is an explicit failure.
+Known limitations: The JDK reader/writer remains in legacy owners until MC-005 and MC-007 route parsing/output through the target adapter. The semantic model has no persistence annotation yet because project serialization is owned by MC-010.
+Commit: `midi-core: MC-004 add semantic MIDI model`.
+Next task: MC-005 after MC-004 validation and commit.
 
 ## 6. Manual gate records
 
