@@ -11,7 +11,7 @@ DAW-ready MIDI package.
 ## Project status
 
 The MIDI-only product direction and its dependency-ordered implementation task
-suite are ready. Execution has not started. The repository still contains the
+suite are being executed serially. The repository still contains the
 superseded audio-production runtime while the replacement vertical slice is
 built; that runtime and its Python worker are scheduled for complete removal
 and are not supported product directions.

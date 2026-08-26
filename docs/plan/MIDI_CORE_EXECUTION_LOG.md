@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: not started
+Status: MC-000 complete; MC-001 is next
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -10,21 +10,21 @@ This file is evidence, not a second plan. Update it after every task and commit.
 
 ## 1. Baseline
 
-- Repository root:
-- Branch:
-- Starting commit:
-- Starting status:
-- Preserved unrelated changes:
-- JDK/Gradle/macOS:
-- Production Kotlin files/lines:
-- Test Kotlin files/lines:
-- Python files/lines:
-- Repository-local old audio data size:
-- Local sound-library size:
-- Legacy UI fixture size:
-- Baseline `make test`:
-- Baseline `make build`:
-- Recorded by/date:
+- Repository root: `/Users/marcoandreose/DEV/lab/melotrail`
+- Branch: `main` (ahead of `origin/main` by two approved documentation commits)
+- Starting commit: `a7f03b7 Plan for cleaning and refactor the purpose of the project`
+- Starting status: clean
+- Preserved unrelated changes: none
+- JDK/Gradle/macOS: OpenJDK 21.0.11 LTS; Gradle wrapper 8.14.3; macOS 26.6.2 (25G83)
+- Production Kotlin files/lines: 319 / 53,630
+- Test Kotlin files/lines: 171 / 23,370
+- Python files/lines: 28 / 4,201 in `worker/` (additional obsolete tools and ignored environments are deletion inventory)
+- Repository-local old audio data size: 303 MB in ignored `data/audio`
+- Local sound-library size: 10 GB in `sounds` (two tracked metadata files; remaining library data is ignored)
+- Legacy UI fixture size: 15 MB in `docs/pictures`; tracked root video is 4.8 MB
+- Baseline `make test`: PASS — `make test` (2026-08-26; 14 Gradle tasks up-to-date)
+- Baseline `make build`: PASS — `make build` (2026-08-26; documentation coverage executed and all 15 Gradle tasks succeeded)
+- Recorded by/date: Codex / 2026-08-26
 
 ## 2. Status vocabulary
 
@@ -39,7 +39,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 
 | Task | Status | Commit | Validation | Evidence / decision |
 | --- | --- | --- | --- | --- |
-| MC-000 | TODO | | | |
+| MC-000 | DONE | `midi-core: MC-000 freeze execution baseline` | PASS — local Markdown links, `git diff --check`, `make test`, `make build` | Clean baseline at `a7f03b7`; no unrelated changes; metrics recorded below. |
 | MC-001 | TODO | | | |
 | MC-002 | TODO | | | |
 | MC-003 | TODO | | | |
@@ -140,6 +140,27 @@ Known limitations:
 Commit:
 Next task:
 ```
+
+### MC-000 — Freeze the approved MIDI Core baseline
+
+Status: DONE
+Started: 2026-08-26
+Completed: 2026-08-26
+Starting commit/status: `a7f03b7` / clean worktree on `main`; branch is ahead of `origin/main` by the two approved documentation commits.
+Contracts read: AGENTS.md; PLAN.md; README.md; docs/README.md; ARCHITECTURE.md; FUNCTIONAL_SPEC.md; MIDI_CONTRACT.md; DAW_COMPATIBILITY.md; CLEANUP_SCOPE.md; QUALITY_GATES.md; MIDI_CORE_TASKS.md; MIDI_CORE_EXECUTION_LOG.md.
+Current owners inspected: root/docs index; Makefile; Gradle verification wiring; repository status/history; task suite.
+Behavior retained/extracted: None. MC-000 is documentation and execution-baseline work only.
+Files added/changed: `PLAN.md`, `README.md`, `docs/README.md`, and `docs/plan/MIDI_CORE_EXECUTION_LOG.md`.
+Files/data deleted: None.
+Tracked deletion recoverability: Not applicable.
+Ignored deletion recoverability: Not applicable.
+Focused tests: Local Markdown link audit PASS; `git diff --check` PASS.
+Full validation: `make test` PASS (14 Gradle tasks up-to-date); `make build` PASS (15 Gradle tasks; the legacy documentation-inventory check executed successfully).
+Manual evidence: Not required.
+Decisions/deviations: The planning baseline was already committed at start; no unrelated user changes exist. Only PLAN.md, MIDI_CORE_TASKS.md, and EXECUTE_MIDI_CORE_TASKS_PROMPT.md are active plan/prompt candidates; the prompt is an execution aid, not a competing roadmap. Existing Python documentation coverage is recorded as legacy build wiring to be removed in MC-058, not adopted by target work.
+Known limitations: The legacy build still invokes Python documentation coverage and exposes worker/audio targets; those are recorded deletion scope for MC-054 and MC-058, not target behavior.
+Commit: `midi-core: MC-000 freeze execution baseline`.
+Next task: MC-001 after MC-000 validation and commit.
 
 ## 6. Manual gate records
 

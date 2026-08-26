@@ -1,6 +1,6 @@
 # Melotrail MIDI Core Plan
 
-Status: implementation task suite ready; execution not started
+Status: MIDI Core execution in progress; task evidence is recorded in the execution log
 
 Last updated: 2026-08-26
 

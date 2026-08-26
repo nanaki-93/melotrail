@@ -28,7 +28,8 @@ defined by the root `PLAN.md`.
 [Planning index](plan/README.md) owns the active execution suite. The suite now
 contains the dependency-ordered [MIDI Core tasks](plan/MIDI_CORE_TASKS.md), the
 [serial agent prompt](plan/EXECUTE_MIDI_CORE_TASKS_PROMPT.md), and the
-[execution log](plan/MIDI_CORE_EXECUTION_LOG.md). Execution has not started.
+[execution log](plan/MIDI_CORE_EXECUTION_LOG.md). Consult the log for the
+current serial-execution status.
 
 The old quality-pipeline and guided-arranger suites have been removed because
 they describe a rejected audio-production product. Git history is their
