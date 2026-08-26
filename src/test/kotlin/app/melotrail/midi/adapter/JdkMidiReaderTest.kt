@@ -3,6 +3,9 @@ package app.melotrail.midi.adapter
 import app.melotrail.midi.OwnedMidiFixtures
 import app.melotrail.midi.domain.MidiControlChangeEvent
 import app.melotrail.midi.domain.MidiChannelPressureEvent
+import app.melotrail.midi.domain.MidiReaderIssue
+import app.melotrail.midi.domain.MidiReaderIssueCode
+import app.melotrail.midi.domain.MidiTrackSummary
 import app.melotrail.midi.domain.MidiMarkerEvent
 import app.melotrail.midi.domain.MidiNoteEvent
 import app.melotrail.midi.domain.MidiPitchBendEvent

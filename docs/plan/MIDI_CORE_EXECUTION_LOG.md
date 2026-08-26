@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-005 complete; MC-006 is next
+Status: MC-006 in progress
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -45,7 +45,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-003 | DONE | `midi-core: MC-003 enforce target boundaries` | PASS — architecture rules, `make test`, `make build` | Target package policy is executable; legacy packages are intentionally outside the new roots until cutover. |
 | MC-004 | DONE | `midi-core: MC-004 add semantic MIDI model` | PASS — `SemanticMidiTest`; `make test` | Immutable target semantic sequence records source/event identity, deterministic ordering, supported event types, and one rational tick-rounding policy without Java MIDI types. |
 | MC-005 | DONE | `midi-core: MC-005 add Standard MIDI reader` | PASS — `JdkMidiReaderTest`; `make test` | One target adapter reads SMF 0/1 PPQ into semantic MIDI and deterministic track summaries without source mutation. |
-| MC-006 | TODO | | | |
+| MC-006 | IN_PROGRESS | | Pending | Defining stable MIDI finding codes and the contract’s blocking/advisory boundary. |
 | MC-007 | TODO | | | |
 | MC-008 | TODO | | | |
 | MC-009 | TODO | | | |
@@ -267,6 +267,27 @@ Decisions/deviations: A same-track/channel/pitch overlap is rejected immediately
 Known limitations: Typed blocking/advisory user-facing classification belongs to MC-006. The adapter currently has no project import caller; MC-013 will make this target reader the project source-import path.
 Commit: `midi-core: MC-005 add Standard MIDI reader`.
 Next task: MC-006 after MC-005 validation and commit.
+
+### MC-006 — Implement blocking and advisory MIDI validation
+
+Status: DONE
+Started: 2026-08-26
+Starting commit/status: `c94b1e2` / clean worktree after MC-005.
+Contracts read: F-MIDI-004, F-SYS-004; MIDI Contract section 7; MC-006 task contract.
+Completed: 2026-08-26
+Current owners inspected: `MidiQualityReport.kt`, `MidiMonophonicMelodyPreparation.kt`, `GeneratedRoleValidation.kt`, and `BassQualityValidator.kt`; their tests; and the MC-005 target reader/semantic model. The legacy validators depend on transcription cleanup, analysis confidence, audio-stage state, render instruments, or mutable correction, so none satisfies the source-import contract.
+Behavior retained/extracted: Parser issues, track/channel summaries, and inspection results moved to the semantic MIDI domain so deterministic validation can consume them without JDK MIDI types. `MidiImportValidator` now returns one stable, typed finding list with scope, severity, message, action, and an accepted/rejected/awaiting-authority disposition. It blocks unsafe timing, changing/non-origin tempo or meter, invalid/missing selected melody, and selected-track unclosed notes; it keeps orphan note-offs, reference-track unclosed notes, unsupported messages, polyphony, and chromatic melody advisory. Missing fixed tempo/meter or melody selection is awaiting explicit authority.
+Files added/changed: `src/main/kotlin/app/melotrail/midi/domain/MidiInspection.kt`, `src/main/kotlin/app/melotrail/midi/domain/MidiImportValidation.kt`, `src/main/kotlin/app/melotrail/midi/adapter/JdkMidiReader.kt`, `src/test/kotlin/app/melotrail/midi/domain/MidiImportValidatorTest.kt`, `src/test/kotlin/app/melotrail/midi/adapter/JdkMidiReaderTest.kt`, and `docs/plan/MIDI_CORE_EXECUTION_LOG.md`.
+Files/data deleted: None.
+Tracked deletion recoverability: Not applicable.
+Ignored deletion recoverability: Not applicable.
+Focused tests: `./gradlew :test --tests app.melotrail.midi.domain.MidiImportValidatorTest --tests app.melotrail.midi.adapter.JdkMidiReaderTest --tests app.melotrail.architecture.TargetArchitectureRulesTest` PASS (13 tests; table-driven accepted/awaiting/rejected dispositions; fixed-map checks; selected-melody pairing; malformed timing; stable ordering; and explicit polyphony/chromatic advisory classification).
+Full validation: `make test` PASS (2026-08-26; 14 Gradle tasks, 27 seconds).
+Manual evidence: Not required.
+Decisions/deviations: Repeated equal tempo/meter facts are accepted as one effective setting; an event that starts away from tick zero is blocked because target authority requires both values at the song origin. Key compatibility is deliberately an optional advisory pitch-class set; it does not replace later explicit key/mode/harmony authority. Structural reader failures (unreadable source, format 2, SMPTE, same-pitch overlap) remain immediate typed reader errors and will be mapped by the MC-013 import use case.
+Known limitations: Target validation currently classifies an inspected source only; atomic import publication and UI-ready error mapping are owned by MC-012 and MC-013. MPE-like multi-channel protected-melody selection is owned by MC-014.
+Commit: `midi-core: MC-006 classify MIDI findings`.
+Next task: MC-007 after MC-006 validation and commit.
 
 ## 6. Manual gate records
 
