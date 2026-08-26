@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-000 complete; MC-001 is next
+Status: MC-001 complete; MC-002 is next
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -40,7 +40,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | Task | Status | Commit | Validation | Evidence / decision |
 | --- | --- | --- | --- | --- |
 | MC-000 | DONE | `midi-core: MC-000 freeze execution baseline` | PASS — local Markdown links, `git diff --check`, `make test`, `make build` | Clean baseline at `a7f03b7`; no unrelated changes; metrics recorded below. |
-| MC-001 | TODO | | | |
+| MC-001 | DONE | `midi-core: MC-001 add owned MIDI fixtures` | PASS — `OwnedMidiFixturesTest`; `make test` | Ten hand-authored, SHA-256-pinned fixtures cover all Phase 1 reader inputs without legacy audio-project data. |
 | MC-002 | TODO | | | |
 | MC-003 | TODO | | | |
 | MC-004 | TODO | | | |
@@ -159,8 +159,30 @@ Full validation: `make test` PASS (14 Gradle tasks up-to-date); `make build` PAS
 Manual evidence: Not required.
 Decisions/deviations: The planning baseline was already committed at start; no unrelated user changes exist. Only PLAN.md, MIDI_CORE_TASKS.md, and EXECUTE_MIDI_CORE_TASKS_PROMPT.md are active plan/prompt candidates; the prompt is an execution aid, not a competing roadmap. Existing Python documentation coverage is recorded as legacy build wiring to be removed in MC-058, not adopted by target work.
 Known limitations: The legacy build still invokes Python documentation coverage and exposes worker/audio targets; those are recorded deletion scope for MC-054 and MC-058, not target behavior.
-Commit: `midi-core: MC-000 freeze execution baseline`.
+Commit: `7dee33b` — `midi-core: MC-000 freeze execution baseline`.
 Next task: MC-001 after MC-000 validation and commit.
+
+### MC-001 — Establish owned Standard MIDI fixtures
+
+Status: DONE
+Started: 2026-08-26
+Completed: 2026-08-26
+Starting commit/status: `7dee33b` / clean worktree after MC-000.
+Contracts read: F-MIDI-001 and F-MIDI-004; MIDI Contract sections 2 and 5; Quality Gate 3; MC-001 task contract.
+Current owners inspected: `MidiTestFixtures.kt`, `CanonicalMidiFixture.kt`, `MidiTimeMappingTest.kt`, and `TranscriptionQualityGateTest.kt`; every tracked test resource; every MIDI file under the repository. No target-owned checked-in MIDI fixture existed. Discovered MIDI bytes are generated build output or ignored legacy `data/audio` state and are not reused.
+Behavior retained/extracted: Reused only the proven PPQ-480 test convention. The new fixture source is independent of legacy writers so parser tests cannot validate their own output path.
+Files added/changed: `src/test/kotlin/app/melotrail/midi/OwnedMidiFixtures.kt`, `src/test/kotlin/app/melotrail/midi/OwnedMidiFixturesTest.kt`, and `docs/plan/MIDI_CORE_EXECUTION_LOG.md`.
+Files/data deleted: None.
+Tracked deletion recoverability: Not applicable.
+Ignored deletion recoverability: Not applicable.
+Focused tests: `./gradlew :test --tests app.melotrail.midi.OwnedMidiFixturesTest` PASS (two tests; materialization, SHA-256, SMF header, format, track count, bounded size, and purpose coverage).
+Full validation: `make test` PASS (2026-08-26; 14 Gradle tasks, 27 seconds).
+Manual evidence: Not required.
+Decisions/deviations: Fixtures are hand-authored byte definitions in test source rather than opaque binary resources. This makes their source, purpose, and exact byte/hash contract reviewable while `writeAll` supplies ordinary `.mid` files to every later parser/export test. The failed root-only filter was corrected to `:test`; the initial all-project filter incorrectly required the test class in `desktopApp`.
+Fixture manifest/hashes: `smf0-melody.mid` `a2e32b1df5e78867193191a15c82caaa0b7c070b2e328c56b41a1ea5aaba4a35`; `smf1-reference-tracks.mid` `f3166580ebc70d96168ad238471762d20882d86d967a02389b69a96b4c52af67`; `pickup-timing.mid` `edea690670c84305fe8d5ba17e13b3fa3567921faaafb41094dfe1b32242cb7f`; `sub-bar-harmony.mid` `507dd7d2f2b57d86b2c95b2019d7b5daf649d63fcb2a13861c5f58bd8ab1dd88`; `expressive-controller-pitch.mid` `9c08782d6e56327ea64b5ed6aebaf2158b41cea32e95ec6fcb52f79238580ef5`; `velocity-zero-note-off.mid` `3006621283cf65a5446dfa4c48b919e71445b830861e77e83dd81f33e2d98bae`; `final-boundary-note.mid` `08dde8e7da1e32fbbe6bbfa71937fc2c95e3fa778928a13479e323f163e66044`; `truncated-header.mid` `7ed5302ab537819c49fb41c3670d2080240a3c05af841b51bb04ced49d11f4a1`; `format-2.mid` `fd8d72b9fa38e47ec870001b8db2828ac60c0874e947e330f2d4c844cf933c5b`; `smpte-division.mid` `d18577cd143c20baf9b75f2b36a5369a426c6e8c7ba02074fc26b495fe9646cc`.
+Known limitations: Semantic parser assertions begin in MC-005; MC-001 intentionally locks input facts and does not adopt legacy parsing behavior.
+Commit: `midi-core: MC-001 add owned MIDI fixtures`.
+Next task: MC-002 after MC-001 validation and commit.
 
 ## 6. Manual gate records
 
