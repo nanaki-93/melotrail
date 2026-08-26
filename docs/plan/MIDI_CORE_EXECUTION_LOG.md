@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-006 in progress
+Status: MC-007 complete
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -45,8 +45,8 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-003 | DONE | `midi-core: MC-003 enforce target boundaries` | PASS — architecture rules, `make test`, `make build` | Target package policy is executable; legacy packages are intentionally outside the new roots until cutover. |
 | MC-004 | DONE | `midi-core: MC-004 add semantic MIDI model` | PASS — `SemanticMidiTest`; `make test` | Immutable target semantic sequence records source/event identity, deterministic ordering, supported event types, and one rational tick-rounding policy without Java MIDI types. |
 | MC-005 | DONE | `midi-core: MC-005 add Standard MIDI reader` | PASS — `JdkMidiReaderTest`; `make test` | One target adapter reads SMF 0/1 PPQ into semantic MIDI and deterministic track summaries without source mutation. |
-| MC-006 | IN_PROGRESS | | Pending | Defining stable MIDI finding codes and the contract’s blocking/advisory boundary. |
-| MC-007 | TODO | | | |
+| MC-006 | DONE | `midi-core: MC-006 classify MIDI findings` | PASS — target validator, reader, architecture tests, `make test` | Stable typed source findings classify every inspected input as accepted, rejected, or awaiting authority without legacy audio validation. |
+| MC-007 | DONE | `midi-core: MC-007 add deterministic MIDI writer` | PASS — writer/reader/architecture tests, `make test`, `make build` | One target SMF format-1 writer owns conductor metadata, role ordering, channel remapping, marker sanitization, and aligned role files. |
 | MC-008 | TODO | | | |
 | MC-009 | TODO | | | |
 | MC-010 | TODO | | | |
@@ -288,6 +288,27 @@ Decisions/deviations: Repeated equal tempo/meter facts are accepted as one effec
 Known limitations: Target validation currently classifies an inspected source only; atomic import publication and UI-ready error mapping are owned by MC-012 and MC-013. MPE-like multi-channel protected-melody selection is owned by MC-014.
 Commit: `midi-core: MC-006 classify MIDI findings`.
 Next task: MC-007 after MC-006 validation and commit.
+
+### MC-007 — Implement the deterministic Standard MIDI writer
+
+Status: DONE
+Started: 2026-08-26
+Completed: 2026-08-26
+Starting commit/status: `e1591df` / clean worktree after MC-006.
+Contracts read: F-EXP-002 and F-EXP-003; MIDI Contract sections 9 through 12; MC-007 task contract.
+Current owners inspected: `BassStemGeneration.kt`, `DrumMidiGeneration.kt`, `PadMidiGeneration.kt`, `StringsMidiGeneration.kt`, `MidiTimeMapping.kt`, `OccurrenceMidiArtifactResolver.kt`, their writer tests, and MC-005 semantic reader. Legacy writers are individually coupled to audio-era roles, instruments, stage artifacts, or inferred timing and remain compiled only for their legacy callers.
+Behavior retained/extracted: `JdkMidiWriter` is the one target SMF format-1 output adapter. A target export model owns deterministic Melody/Chords/Bass/Drums ordering, channels 1/2/3/10, conductor sequence/tempo/meter/marker metadata, sanitized marker labels, role-file assembly, end-of-track boundaries, and the generated-role note-only policy. Melody controllers, pitch bend, and channel pressure are preserved and remapped consistently; program, SysEx, and unsupported messages have no semantic write path.
+Files added/changed: `src/main/kotlin/app/melotrail/midi/domain/MidiExportModel.kt`, `src/main/kotlin/app/melotrail/midi/adapter/JdkMidiWriter.kt`, `src/test/kotlin/app/melotrail/midi/adapter/JdkMidiWriterTest.kt`, `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`, and `docs/plan/MIDI_CORE_EXECUTION_LOG.md`.
+Files/data deleted: None.
+Tracked deletion recoverability: Not applicable.
+Ignored deletion recoverability: Not applicable.
+Focused tests: `./gradlew :test --tests app.melotrail.midi.adapter.JdkMidiWriterTest --tests app.melotrail.midi.adapter.JdkMidiReaderTest --tests app.melotrail.architecture.TargetArchitectureRulesTest` PASS (12 tests; byte-stable complete files, conductor/role order, channel policy, marker sanitization, song-boundary notes, aligned role file, and forbidden generated event/boundary rejection).
+Full validation: `make test` PASS (2026-08-26; 14 Gradle tasks, 27 seconds); `make build` PASS (2026-08-26; 15 Gradle tasks).
+Manual evidence: Not required.
+Decisions/deviations: The first `make build` correctly failed because the current transitional Python documentation-inventory gate had no classifications for the MC-004 through MC-007 target files. Added specific inherited-contract/trivial rows with current callable digests; rerun passed. Atomic staging, collision refusal, manifests, and semantic re-import remain exporter work in MC-008/MC-029 rather than writer responsibilities.
+Known limitations: The writer is not yet routed through a project export use case. Legacy role-specific writers remain until replacement callers are live and cleanup reaches their owners.
+Commit: `midi-core: MC-007 add deterministic MIDI writer`.
+Next task: MC-008 after MC-007 validation and commit.
 
 ## 6. Manual gate records
 

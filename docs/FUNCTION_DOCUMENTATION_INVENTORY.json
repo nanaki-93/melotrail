@@ -1355,6 +1355,54 @@
       "documentedFunctionCount": 0
     },
     {
+      "path": "src/main/kotlin/app/melotrail/midi/adapter/JdkMidiReader.kt",
+      "classification": "inherited-contract",
+      "reason": "The 14 callable declarations implement the target Standard MIDI import contract in docs/MIDI_CONTRACT.md sections 2 through 5; MC-005 reviewed the adapter boundary and its fixture-backed behavior on 2026-08-26.",
+      "functionCount": 14,
+      "declarationDigest": "efc5bbe810e93bc084a6a6c680c75a1657ddd665f247aa8952c10257ff873f03",
+      "documentedFunctionCount": 0
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/midi/adapter/JdkMidiWriter.kt",
+      "classification": "inherited-contract",
+      "reason": "The 10 callable declarations implement the deterministic SMF format-1 output contract in docs/MIDI_CONTRACT.md sections 9 through 12; MC-007 reviewed their golden writer behavior on 2026-08-26.",
+      "functionCount": 10,
+      "declarationDigest": "8249d99ddb5b15a8911776f49f17d892203770617eec4d2828b4eb3adb41e765",
+      "documentedFunctionCount": 0
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/midi/domain/MidiExportModel.kt",
+      "classification": "inherited-contract",
+      "reason": "The 3 callable declarations express the target export channel, marker, ordering, and boundary rules in docs/MIDI_CONTRACT.md sections 9 through 12; MC-007 reviewed them on 2026-08-26.",
+      "functionCount": 3,
+      "declarationDigest": "90bebe43e6a08a171319c702add6c4ec1e747e182de464458d590f1f9d73770c",
+      "documentedFunctionCount": 0
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/midi/domain/MidiImportValidation.kt",
+      "classification": "inherited-contract",
+      "reason": "The 8 callable declarations implement the typed blocking, advisory, and awaiting-authority import decisions in docs/MIDI_CONTRACT.md section 7; MC-006 reviewed the table-driven boundary on 2026-08-26.",
+      "functionCount": 8,
+      "declarationDigest": "ad740b11679ca4556d32d5edcc9c7cda5c5a6d0558cf31c7d7bf493c9a609efc",
+      "documentedFunctionCount": 0
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/midi/domain/MidiInspection.kt",
+      "classification": "trivial/generated",
+      "reason": "src/main/kotlin/app/melotrail/midi/domain/MidiInspection.kt contains immutable inspection records and no callable declarations; reviewed for MC-006 on 2026-08-26.",
+      "functionCount": 0,
+      "declarationDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "documentedFunctionCount": 0
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/midi/domain/SemanticMidi.kt",
+      "classification": "inherited-contract",
+      "reason": "The 12 callable declarations implement the immutable semantic event and rational timing contract in docs/MIDI_CONTRACT.md section 4; MC-004 reviewed their invariant tests on 2026-08-26.",
+      "functionCount": 12,
+      "declarationDigest": "f59683feb4894c00da0f750764c4b99840f46773b6603375adaeba174b342f1c",
+      "documentedFunctionCount": 0
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/music/MusicalPrimitives.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/music/MusicalPrimitives.kt has 12 callable declarations, 4 directly documented and 8 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
