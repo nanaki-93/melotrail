@@ -1323,6 +1323,14 @@
       "documentedFunctionCount": 0
     },
     {
+      "path": "src/main/kotlin/app/melotrail/export/adapter/MinimalMidiExportBundle.kt",
+      "classification": "inherited-contract",
+      "reason": "The 11 callable declarations implement the MC-008 staged immutable MIDI export spike, including semantic re-import, digest verification, and collision refusal required by docs/MIDI_CONTRACT.md sections 9 through 14; reviewed on 2026-08-26.",
+      "functionCount": 11,
+      "declarationDigest": "e0496a5cafe0d2782b0a09c8e5f21da1bd71ede4b9349e0879a67e3c7b80fad0",
+      "documentedFunctionCount": 0
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/model/DSPSettings.kt",
       "classification": "trivial/generated",
       "reason": "src/main/kotlin/app/melotrail/model/DSPSettings.kt contains no callable declarations; reviewed against the production source tree on 2026-08-24.",

@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-007 complete
+Status: MC-008 complete; MC-009 ready for manual gate
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -47,7 +47,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-005 | DONE | `midi-core: MC-005 add Standard MIDI reader` | PASS — `JdkMidiReaderTest`; `make test` | One target adapter reads SMF 0/1 PPQ into semantic MIDI and deterministic track summaries without source mutation. |
 | MC-006 | DONE | `midi-core: MC-006 classify MIDI findings` | PASS — target validator, reader, architecture tests, `make test` | Stable typed source findings classify every inspected input as accepted, rejected, or awaiting authority without legacy audio validation. |
 | MC-007 | DONE | `midi-core: MC-007 add deterministic MIDI writer` | PASS — writer/reader/architecture tests, `make test`, `make build` | One target SMF format-1 writer owns conductor metadata, role ordering, channel remapping, marker sanitization, and aligned role files. |
-| MC-008 | TODO | | | |
+| MC-008 | DONE | `midi-core: MC-008 prove MIDI export round trip` | PASS — focused export suite, `make test`, `make build` | Staged five-file core-role bundle is semantically re-imported, digest-bound, collision-safe, and test-only. |
 | MC-009 | TODO | | | |
 | MC-010 | TODO | | | |
 | MC-011 | TODO | | | |
@@ -309,6 +309,27 @@ Decisions/deviations: The first `make build` correctly failed because the curren
 Known limitations: The writer is not yet routed through a project export use case. Legacy role-specific writers remain until replacement callers are live and cleanup reaches their owners.
 Commit: `midi-core: MC-007 add deterministic MIDI writer`.
 Next task: MC-008 after MC-007 validation and commit.
+
+### MC-008 — Prove semantic re-import and a minimal export bundle
+
+Status: DONE
+Started: 2026-08-26
+Completed: 2026-08-26
+Starting commit/status: `6a9e36e` / MC-008 in-progress worktree containing only the task log update and initial target export adapter.
+Contracts read: F-EXP-001 through F-EXP-006; Architecture section 4.7; MIDI Contract sections 9 through 14; Quality Gate 3 persistence/export; MC-008 task contract.
+Current owners inspected: MC-007 `JdkMidiWriter` and `JdkMidiReader`; legacy `ReleaseExportApplicationService`, `StageRunStore`, and `WorkflowArtifactReference` atomic/digest behavior. The legacy owners remain audio-era code and were not adopted.
+Behavior retained/extracted: The target adapter owns a small immutable snapshot identity, staging beside the destination, collision refusal before and immediately before publication, per-file SHA-256, portable relative manifest entries, generated MIDI semantic re-import, semantic role/conductor comparison, and cleanup after interrupted or tampered staging. It uses only the target reader/writer and no audio/export dependency.
+Files added/changed: `src/main/kotlin/app/melotrail/export/adapter/MinimalMidiExportBundle.kt`; `src/test/kotlin/app/melotrail/export/adapter/MinimalMidiExportBundleTest.kt`; `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`; `docs/plan/MIDI_CORE_EXECUTION_LOG.md`.
+Files/data deleted: None.
+Tracked deletion recoverability: Not applicable.
+Ignored deletion recoverability: Not applicable.
+Focused tests: `./gradlew :test --tests app.melotrail.export.adapter.MinimalMidiExportBundleTest --tests app.melotrail.midi.adapter.JdkMidiWriterTest --tests app.melotrail.midi.adapter.JdkMidiReaderTest --tests app.melotrail.architecture.TargetArchitectureRulesTest` PASS (semantic comparison, complete/role re-import, hash/manifest verification, collision refusal, interrupted staging cleanup, and post-validation digest tamper rejection).
+Full validation: `make test` PASS (2026-08-26; 14 Gradle tasks, 28 seconds). `make build` initially exposed the mandatory transitional documentation-inventory row for the new target adapter; after the inherited-contract classification was added, `make build` PASS (2026-08-26; 15 Gradle tasks).
+Manual evidence: Not required for MC-008. The resulting temporary test bundle has `complete-song.mid`, `melody.mid`, `chords.mid`, `bass.mid`, `drums.mid`, and `manifest.json`; its test asserts all returned SHA-256 digests match the published bytes and all files share PPQ 480 and end tick 480. MC-009 owns DAW import evidence.
+Decisions/deviations: The snapshot and manifest deliberately remain minimal because project schema, authority serialization, accepted candidates, and production snapshot records are owned by MC-010 onward. Semantic comparison intentionally ignores source filename/digest and source-event identity while requiring format, PPQ, conductor metadata, track names/order, channel-remapped musical events, markers, and the exact song boundary.
+Known limitations: This is a test-only bundle generator rather than a project export use case or full manifest. No DAW compatibility result is claimed; MC-009 must collect the manual matrix. The current Python documentation-inventory build gate is legacy deletion scope for MC-058 and is only updated here because it presently guards all production Kotlin sources.
+Commit: `midi-core: MC-008 prove MIDI export round trip`.
+Next task: MC-009 — prepare the bundle and await Logic Pro and GarageBand import evidence.
 
 ## 6. Manual gate records
 
