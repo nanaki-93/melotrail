@@ -1,84 +1,82 @@
 # Melotrail documentation
 
-Documentation is split by ownership so active implementation plans do not
-compete with current operating instructions.
+This directory describes one product: the Kotlin/Compose Desktop MIDI arranger
+defined by the root `PLAN.md`.
 
-## Active guided-arranger roadmap
+## Read order
 
-The product direction is root [`../PLAN.md`](../PLAN.md). Its executable
-planning suite is:
+1. [Product README](../README.md) — product introduction and current transition
+   status.
+2. [Root plan](../PLAN.md) — the only active roadmap and delivery sequence.
+3. [Architecture](ARCHITECTURE.md) — target ownership, components, data flow, and dependency
+   rules.
+4. [Functional specification](FUNCTIONAL_SPEC.md) — numbered product functions and user-visible
+   acceptance behavior.
+5. [MIDI contract](MIDI_CONTRACT.md) — supported Standard MIDI input, semantic model,
+   validation, and output package.
+6. [DAW compatibility](DAW_COMPATIBILITY.md) — Logic Pro and GarageBand boundary
+   and manual checks.
+7. [Quality gates](QUALITY_GATES.md) — automated, musical, UI, and DAW acceptance
+   gates.
+8. [Cleanup scope](CLEANUP_SCOPE.md) — explicit keep, refactor, delete, and data-disposition
+   decisions.
+9. [Troubleshooting](TROUBLESHOOTING.md) — target build, project, MIDI, audition, and export
+   recovery guidance.
 
-- [`plan/GUIDED_ARRANGER_PHASE_0.md`](plan/GUIDED_ARRANGER_PHASE_0.md) —
-  GarageBand musical-reference and known-MIDI round-trip handoff
-- [`plan/GUIDED_ARRANGER_TASKS.md`](plan/GUIDED_ARRANGER_TASKS.md) — 76 ordered
-  mandatory task/commit contracts
-- [`plan/GUIDED_ARRANGER_EXECUTION_LOG.md`](plan/GUIDED_ARRANGER_EXECUTION_LOG.md)
-  — implementation and human-gate ledger
-- [`plan/EXECUTE_GUIDED_ARRANGER_TASKS_PROMPT.md`](plan/EXECUTE_GUIDED_ARRANGER_TASKS_PROMPT.md)
-  — serial coding-agent prompt
-- [`plan/GUIDED_ARRANGER_OPTIONAL_AI_TASKS.md`](plan/GUIDED_ARRANGER_OPTIONAL_AI_TASKS.md)
-  — frozen suggestion-only work after the deterministic MVP gate
+## Planning directory
 
-## Completed quality-pipeline record
+[Planning index](plan/README.md) owns future execution artifacts. The old quality-pipeline and
+guided-arranger suites have been removed because they describe a rejected
+audio-production product. Git history is their archive.
 
-The historical completed canonical-melody and release-quality roadmap is under
-[`plan/`](plan/README.md):
+The dependency-ordered MIDI Core task specification and serial agent prompt
+will be added only after this documentation baseline is accepted. No old plan
+or prompt is executable.
 
-- [`plan/PLAN.md`](plan/PLAN.md) — completed outcome and target architecture
-- [`plan/PROJECT_ANALYSIS.md`](plan/PROJECT_ANALYSIS.md) — baseline diagnosis
-  retained as rationale for the completed four-source and Ensemble Cohesion work
-- [`plan/TASKS.md`](plan/TASKS.md) — ordered QP-001–QP-018 contracts
-- [`plan/QUALITY_GATES.md`](plan/QUALITY_GATES.md) — musical, listening, and
-  release gates
-- [`plan/YOUTUBE_READINESS.md`](plan/YOUTUBE_READINESS.md) — current platform
-  policy scope
-- [`plan/EXECUTE_ALL_TASKS_PROMPT.md`](plan/EXECUTE_ALL_TASKS_PROMPT.md) —
-  sequential implementation/commit prompt
-- [`plan/EXECUTION_LOG.md`](plan/EXECUTION_LOG.md) — task evidence ledger
-- [`plan/DOCUMENTATION_AUDIT.md`](plan/DOCUMENTATION_AUDIT.md) — consolidation
-  decisions
+## Transitional contracts
 
-## Current product operation
+The implementation has not yet completed the MIDI Core migration. A few old
+documents and image fixtures remain at stable paths because current source or
+tests read them directly:
 
-- [`MIDI_IMPORT_PROCESS.md`](MIDI_IMPORT_PROCESS.md) — direct MIDI and eligible
-  solo-melody audio import
-- [`TRACK_PROCESS_WORKFLOW.md`](TRACK_PROCESS_WORKFLOW.md) — current schema-v4
-  stage order, artifacts, approvals, and recovery
-- [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md) — desktop, worker, Basic Pitch,
-  sound library, renderer, and build recovery
+- `MIDI_IMPORT_PROCESS.md`
+- `TRACK_PROCESS_WORKFLOW.md`
+- `COMMERCIAL_PROVENANCE.md`
+- `COMPATIBILITY_READERS.md`
+- `SPRING_API_RETIREMENT.md`
+- `FUNCTION_DOCUMENTATION_INVENTORY.md`
+- `FUNCTION_DOCUMENTATION_INVENTORY.json`
+- `pictures/`
 
-These documents describe shipped behavior. The completed QP record in
-`docs/plan/` is retained for acceptance evidence; do not present its historical
-baseline defects as current behavior.
+They are not product authority. Each must be deleted together with the code,
+tests, or build wiring that owns its path. Keeping a transitional contract does
+not authorize a compatibility implementation in the new architecture.
 
-## Release, policy, and maintenance
+The current UI still links the transitional [MIDI import process](MIDI_IMPORT_PROCESS.md)
+and workflow guide. Those links will be replaced when the MIDI page and focused
+navigation are implemented.
 
-- [`COMMERCIAL_PROVENANCE.md`](COMMERCIAL_PROVENANCE.md) — current commercial
-  evidence and YouTube policy-review boundary
-- [`RELEASE_ACCEPTANCE.md`](RELEASE_ACCEPTANCE.md) — automated and manual release
-  gate
-- [`COMPATIBILITY_READERS.md`](COMPATIBILITY_READERS.md) — active external
-  compatibility contracts and removal conditions
-- [`SPRING_API_RETIREMENT.md`](SPRING_API_RETIREMENT.md) — non-destructive legacy
-  data disposition retained by an executable test
-- [`FUNCTION_DOCUMENTATION_INVENTORY.md`](FUNCTION_DOCUMENTATION_INVENTORY.md) —
-  production callable-documentation coverage
+## Documentation ownership
 
-## Visual regression fixtures
+- Product boundary and user promise: `README.md` and `FUNCTIONAL_SPEC.md`.
+- Delivery order and gates: root `PLAN.md`.
+- Technical ownership: `ARCHITECTURE.md`.
+- File/event compatibility: `MIDI_CONTRACT.md` and `DAW_COMPATIBILITY.md`.
+- Deletion decisions: `CLEANUP_SCOPE.md`.
+- Test evidence: `QUALITY_GATES.md`.
+- Executable work: future files indexed by `plan/README.md`.
 
-`pictures/App-pages.png` and the referenced images under `pictures/UI/` are
-test inputs for the Compose Desktop visual regression suite. They are not an
-active product roadmap. Do not delete or rename them without migrating their
-test consumers.
+Do not duplicate a contract across several documents. Link to its owner and
+state only the local consequence.
 
 ## Documentation rules
 
-- Root `README.md` introduces the product; root `PLAN.md` points to the one
-  active plan suite.
-- Operational docs remain at stable paths used by the UI and tests.
-- Remove superseded plans once their information is either implemented or
-  consolidated; Git history is the archive.
-- Never claim model, renderer, transcription, packaging, listening, rights, or
-  platform support that has not been verified.
-- Run documentation coverage and dangling-reference checks with each behavior
-  task that changes contracts.
+- Describe target behavior as target behavior until it is implemented.
+- Never present the superseded audio runtime as an active product option.
+- Never claim DAW compatibility without recording the manual matrix version and
+  result.
+- Update the functional ID and its owning test when behavior changes.
+- Remove transition documents when their last executable reader is removed.
+- Prefer deletion to historical folders; Git contains the history.
+- Keep links relative and run the documentation link audit with documentation
+  changes.

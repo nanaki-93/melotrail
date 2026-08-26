@@ -1,4 +1,9 @@
-# Commercial provenance and YouTube release check
+# Transitional commercial provenance test record
+
+> This file remains only because an audio-era commercial-release test reads its
+> dated policy metadata. Commercial release, YouTube readiness, audio lineage,
+> and monetization review are outside MIDI Core. Delete this file with that code
+> and test; it is not active product documentation.
 
 Policy review date: 2026-08-25
 
@@ -19,11 +24,9 @@ Melotrail's commercial report is evidence and workflow assistance. It is not
 legal advice, copyright clearance, Content ID clearance, or a monetization
 guarantee. Processing a work in Melotrail never makes it copyright free.
 
-The engineering quality and anti-template requirements are maintained in
-[`plan/QUALITY_GATES.md`](plan/QUALITY_GATES.md) and
-[`plan/YOUTUBE_READINESS.md`](plan/YOUTUBE_READINESS.md). Those gates improve
-evidence and creator control; they do not calculate or predict a platform
-monetization decision.
+The former engineering-quality and YouTube-readiness plans have been removed.
+This record survives temporarily only for its executable legacy test; it does
+not define a MIDI Core release gate or platform decision.
 
 ## Release lineage
 

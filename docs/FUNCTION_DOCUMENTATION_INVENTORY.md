@@ -1,4 +1,10 @@
-# Function documentation inventory
+# Transitional function documentation inventory
+
+> This generated inventory includes the superseded Kotlin/audio and Python
+> runtime because the current Gradle check invokes a Python coverage script. It
+> is not the target functional specification. `FUNCTIONAL_SPEC.md` owns the new
+> product contract. Delete this inventory, its JSON, and its Python checker when
+> their build wiring is removed.
 
 Inventory reviewed: 2026-08-25
 

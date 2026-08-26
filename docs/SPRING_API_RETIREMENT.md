@@ -1,4 +1,8 @@
-# Spring API retirement
+# Transitional Spring API retirement test record
+
+> This historical record remains only because a current retirement test reads
+> this exact path. It is not part of the MIDI Core architecture and must be
+> deleted with that test during cleanup. Git history is the long-term archive.
 
 Reviewed: 2026-08-24
 

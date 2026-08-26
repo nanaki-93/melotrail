@@ -1,4 +1,8 @@
-# Compatibility readers
+# Transitional compatibility reader inventory
+
+> This inventory describes readers in the superseded runtime. MIDI Core does
+> not retain legacy schema or audio compatibility branches. Delete this file
+> when those readers and their tests are removed.
 
 Reviewed: 2026-08-24
 

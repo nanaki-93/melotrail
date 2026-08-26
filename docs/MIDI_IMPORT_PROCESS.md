@@ -1,4 +1,9 @@
-# MIDI import process
+# Transitional audio-era MIDI import process
+
+> This file is not target product authority. The current UI and documentation
+> contract tests still read this exact path. It will be deleted with the old
+> import/transcription workflow and replaced in the UI by `MIDI_CONTRACT.md`.
+> Do not implement new worker or audio behavior from the material below.
 
 This guide describes the current schema-v4 import implementation. Reviewed
 beat-grid alignment and occurrence-local harmony fitting are separate,

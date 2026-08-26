@@ -1,139 +1,118 @@
 # Melotrail
 
-Melotrail is a local, MIDI-first, AI-assisted music arranger and producer. The
-musician owns the melody, project key, harmony, structure, and approvals. Kotlin
-owns orchestration, validation, project artifacts, and the Compose Desktop UI;
-the separate Python worker owns bounded audio and transcription workloads.
+Melotrail is a local desktop MIDI arranger for musicians who want help building
+a song before finishing it in Logic Pro or GarageBand.
 
-## Requirements
+The musician owns the melody, key, harmony, structure, arrangement approvals,
+and final sound. Melotrail imports Standard MIDI, helps define musical context,
+generates reviewable chord, bass, and drum alternatives, and exports a clean
+DAW-ready MIDI package.
+
+## Project status
+
+The MIDI-only product direction is accepted and documented. Implementation is
+the next phase. The repository still contains the superseded audio-production
+runtime while the replacement vertical slice is built; that runtime and its
+Python worker are scheduled for complete removal and are not supported product
+directions.
+
+[PLAN.md](PLAN.md) is the only active roadmap. Historical audio, quality-pipeline, and
+guided-arranger plans are superseded; Git history is their archive.
+
+## Product workflow
+
+```text
+Create project
+  -> Import one Standard MIDI file
+  -> Select and protect one melody track
+  -> Confirm key, tempo, meter, structure, and harmony
+  -> Audition the source through MIDI playback
+  -> Generate and compare chord, bass, and drum candidates
+  -> Accept or regenerate by section and role
+  -> Review the complete arrangement
+  -> Export a Logic Pro / GarageBand MIDI package
+```
+
+The MVP accepts one SMF format 0 or 1 file, uses a fixed tempo and time
+signature, and supports one selected melody track. Multiple source files,
+tempo maps, meter changes, audio import, and transcription are outside V1.
+
+## Desktop UI
+
+The Compose Desktop UI remains the product. Its target workspace contains:
+
+- Project
+- MIDI
+- Structure & Harmony
+- Arrange
+- Review
+- Export
+
+Settings that are genuinely required for MIDI audition or export may use a
+small dialog. Melotrail does not reproduce a DAW mixer, mastering suite, sound
+browser, video editor, or publishing console.
+
+## DAW relationship
+
+- Logic Pro is a supported Standard MIDI input and output workflow.
+- GarageBand is a supported MIDI import destination.
+- Melotrail exports performance intent and optional instrument suggestions; the
+  musician chooses the actual instruments and production chain in the DAW.
+- GarageBand project-to-MIDI round-tripping is not promised.
+
+See [DAW compatibility](docs/DAW_COMPATIBILITY.md) for the verified boundary and manual acceptance
+matrix.
+
+## Target runtime
 
 - JDK 21
-- Python 3.10+ for the worker; the optional Basic Pitch route uses the
-  environment documented in [`worker/README.md`](worker/README.md)
-- `make`, or the equivalent Gradle/Python commands
+- Kotlin/JVM
+- Compose Desktop
+- `javax.sound.midi` or a narrowly wrapped replacement proven by tests
 
-## Run locally
+Python is not part of the target runtime.
+
+## Development commands
 
 ```bash
 make desktop
-make worker
-```
-
-`make worker` is required only for operations that use the Python worker.
-Rendering and MIDI preview additionally require a validated local sound library
-and `sfizz_render`; see
-[`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md).
-
-## Current workflow
-
-The current schema-v4 desktop workflow is:
-
-```text
-Setup and Harmony
-  -> Import Melody Parts
-  -> Clean / Normalize / Transpose
-  -> Technical Correction / AI Fix / Enhance / optional MIDI Feel
-  -> Analyze and Structure
-  -> Assemble, connect, criticize, and approve the Source Song
-  -> Arrange and generate roles
-  -> Ensemble Cohesion
-  -> Full-Song Critic and optional targeted enhancement
-  -> Humanization
-  -> Render, Mix, Master, and Export
-```
-
-Current source-song approval is a real gate. Reviewed timing candidates,
-mode-aware transposition, sustain-aware monophonic preparation, and
-occurrence-local harmony fitting now produce a versioned canonical full-melody
-candidate with one conductor track, one controller-free melody track, stable
-occurrence/harmony/lineage sidecar evidence, and a reviewable full-song groove
-map. Arrangement, Cohesion, criticism, humanization, preview, rendering, and
-release lineage now bind to that exact approved connected melody; occurrence
-views are clipped from its sidecar windows rather than reconstructed from part
-durations. Boundary-local Cohesion, generated-role validation, controlled
-kick/bass interaction, selected-master codec-preview evidence, and release
-provenance are also implemented. [`PLAN.md`](PLAN.md) defines the next guided
-arranger product cycle; the completed schema-v4 record remains under
-[`docs/plan/`](docs/plan/README.md). A real release still needs the manual gates
-below.
-
-Before arrangement, the Structure page exposes a canonical melody quality
-review: source-key confidence, reviewed timing/downbeat mapping, pickup/body/
-tail windows, accepted groove, monophony and harmony-fit changes, protected
-anchors, critic blockers, and exact hash-bound artifact references. Its opt-in
-source/prepared/full-melody/boundary piano monitors use one peak-safe RMS target
-for fair listening; private audition remains experimental, while source
-certification and commercial-evidence readiness remain distinct gates.
-
-For current operational behavior, use:
-
-- [MIDI import process](docs/MIDI_IMPORT_PROCESS.md)
-- [`docs/TRACK_PROCESS_WORKFLOW.md`](docs/TRACK_PROCESS_WORKFLOW.md)
-- [`docs/COMMERCIAL_PROVENANCE.md`](docs/COMMERCIAL_PROVENANCE.md)
-- [`docs/RELEASE_ACCEPTANCE.md`](docs/RELEASE_ACCEPTANCE.md)
-
-### Fixed five-source lo-fi proof
-
-`make live-e2e` builds the supplied `data/audio/input` melodies as a deliberately
-small C-major, 75 BPM, 4/4 arrangement. It keeps the connected melody, drums,
-and lo-fi chord-key accompaniment in every section; bass, strings, model
-arrangement, model cohesion, whole-song rewriting, and extra humanization are
-disabled. Repeated verses use fixed quarter-note, late-entry, and dusty-offbeat
-comping variants, so they develop without model-written notes. The authoritative
-progressions are:
-
-- Intro: `Cmaj7 | Am7 | Fmaj7 | G`
-- Verse: `C | G/B | Am7 | Fmaj7`
-- Chorus: `F | G | C | Am7 | F | G | C | C`
-- Bridge: `Am7 | Em | Fmaj7 | G`
-- Outro: `Fmaj7 | G | Cmaj7 | C6`
-
-Preserve or remove an existing generated `data/audio` project yourself before
-running the target; it never deletes source audio or known-good candidates.
-
-## Data and safety
-
-- `project.json` and project-relative artifacts are canonical.
-- Source MIDI/audio and known-good candidates are immutable.
-- MIDI is canonical during composition; WAV is canonical during audio
-  production.
-- Model output is a bounded plan. Deterministic code validates and applies it.
-- Stale or rejected artifacts remain inspectable evidence but never become
-  current merely because a file exists.
-- AI and automation do not replace project key, harmony, structure, protected
-  melody anchors, or user approval.
-
-## Validation
-
-```bash
 make test
-make worker-test
 make build
 ```
 
-Automated checks establish deterministic and structural correctness. The
-quality plan also requires renderer-backed A/B listening gates and a real
-multi-source end-to-end composition review; structural tests alone cannot prove
-that a song sounds good.
+Obsolete worker, renderer, and live-audio commands may remain in the current
+Makefile until their owning implementation is deleted. Do not build new work on
+them.
 
-## Project layout
+The current UI still exposes a transitional [MIDI import process](docs/MIDI_IMPORT_PROCESS.md)
+from the rejected runtime. It remains only until the focused MIDI page replaces
+that executable documentation contract.
 
-```text
-src/main/kotlin/app/melotrail/   Kotlin domain and application services
-desktopApp/                      Compose Desktop product
-worker/                          Stateless Python HTTP worker
-sounds/                          Local sound-library contract and metadata
-docs/                            Operational and release documentation
-docs/plan/                       Canonical quality-pipeline roadmap
-```
+## Safety and musical authority
 
-## Release and monetization scope
+- Imported MIDI is immutable.
+- Project key, harmony, tempo, meter, and structure are authoritative.
+- Accepted candidates are immutable and content-addressed.
+- Regeneration creates a new candidate; it does not overwrite the accepted one.
+- Qwen, if added after the deterministic MVP, can only return constrained plans
+  that deterministic code validates.
+- Export uses an immutable snapshot and never silently replaces an existing
+  package.
 
-Melotrail can preserve provenance, expose AI-use metadata, detect selected
-technical/compositional problems, and produce release evidence. It cannot
-guarantee copyright ownership, Content ID clearance, YouTube policy compliance,
-Partner Program admission, or monetization. Each release and channel still
-requires human rights, policy, originality, and listening review.
+## Documentation
+
+- [Plan](PLAN.md) — authoritative delivery plan
+- [Architecture](docs/ARCHITECTURE.md) — target components and ownership
+- [Functional specification](docs/FUNCTIONAL_SPEC.md) — user-visible functions
+  and acceptance rules
+- [MIDI contract](docs/MIDI_CONTRACT.md) — MIDI import, internal semantics, and
+  export contract
+- [DAW compatibility](docs/DAW_COMPATIBILITY.md) — Logic Pro and GarageBand
+  support boundary
+- [Cleanup scope](docs/CLEANUP_SCOPE.md) — keep, refactor, and delete decisions
+- [Quality gates](docs/QUALITY_GATES.md) — automated, musical, and DAW
+  acceptance gates
+- [Documentation index](docs/README.md) — ownership and transition notes
 
 ## License
 

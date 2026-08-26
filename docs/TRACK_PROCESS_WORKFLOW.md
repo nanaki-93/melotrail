@@ -1,7 +1,11 @@
-# Current track and song workflow
+# Transitional audio-era track and song workflow
 
-This document describes shipped schema-v4 behavior. The active implementation
-roadmap is [`plan/PLAN.md`](plan/PLAN.md). Retained files are evidence, not proof
+> This file is not target product authority. The current UI still links this
+> exact path. The workflow below is scheduled for deletion; use root `PLAN.md`,
+> `ARCHITECTURE.md`, and `FUNCTIONAL_SPEC.md` for new work.
+
+This document describes shipped schema-v4 behavior only. Retained files are
+evidence, not proof
 that a stage is current; readiness comes from validated references, hashes,
 approvals, and stale-state dependencies.
 
@@ -157,8 +161,7 @@ Use these distinctions:
 
 - **Private audition:** current enough to preview, possibly with explicit
   experimental bypass.
-- **Quality-certified:** satisfies the current hard/quality/listening gates in
-  [`plan/QUALITY_GATES.md`](plan/QUALITY_GATES.md).
+- **Quality-certified:** legacy audio-era label with no MIDI Core equivalent.
 - **Commercial evidence ready:** provenance and policy evidence is complete
   under [`COMMERCIAL_PROVENANCE.md`](COMMERCIAL_PROVENANCE.md); it is not legal
   or platform approval.

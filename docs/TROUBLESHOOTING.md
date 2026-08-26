@@ -1,193 +1,133 @@
-# Desktop troubleshooting
+# MIDI Core troubleshooting
 
-This guide covers the local Compose Desktop application. It does not require
-Spring.
+Status: target workflow plus migration notes
 
-## Package and project startup
+## Repository is still in migration
 
-Build the current macOS package with:
+The current checkout may still expose worker, audio, render, mix, or release
+commands. They belong to the superseded runtime and will disappear during the
+ordered cleanup. Do not install Python or a sound library for new MIDI Core
+work.
 
-```bash
-./gradlew :desktopApp:packageDistributionForCurrentOS
-```
+Use the root [plan](../PLAN.md) and target [documentation index](README.md) when deciding
+whether a problem belongs to the new product.
 
-Open `desktopApp/build/compose/binaries/main/dmg/Melotrail-1.0.0.dmg`,
-copy the app to Applications (or another local folder), and launch it. The
-package includes a Java runtime but is unsigned and not notarized. It has only
-been packaged and smoke-tested on macOS; do not infer Windows or Linux support.
+## Build or tests fail
 
-Use **New Project** to select an empty/new project folder, or **Open Project** to select a
-directory containing a valid `project.json`. Project audio and metadata stay in
-that selected project directory; desktop preferences retain only the last
-successfully opened project and a validated sound-library location.
-
-For a canonical v4 project, open **Setup** and explicitly save the project name,
-key, BPM, time signature, Lo-fi profile, and mood before analysis. Older or
-non-canonical project files are rejected without conversion or writes.
-
-## Sound library or renderer unavailable
-
-The package intentionally does not bundle the starter samples or an SFZ
-renderer. In the app, open the shell **More** menu, then **Settings**, and select the absolute
-`sounds/` directory that contains `instruments.json` and `LICENSES.json`. A fresh checkout
-needs the approved local 25 sample WAV files copied back into the existing
-`*/samples/` paths first; see [`sounds/README.md`](../sounds/README.md).
-
-For a terminal launch only, use an explicit override:
+Run:
 
 ```bash
-export MUSIC_SOUNDS_ROOT=/absolute/path/to/sounds
+make test
+make build
 ```
 
-The override takes precedence over the saved selection. Correct or unset it
-before trying another folder. Do not use the app's launch directory as a
-library location.
+If Gradle reports a Java toolchain problem, verify that JDK 21 is installed and
+selected. If a failure comes only from an obsolete worker/documentation/audio
+contract during migration, do not add a compatibility fix; resolve it in the
+task that removes or replaces its owner.
 
-MIDI preview, stem rendering, and Build Song additionally need a real local
-`sfizz_render` executable. Configure it with an absolute path and let the
-readiness panel verify it:
+## Desktop does not start
+
+Run:
 
 ```bash
-export SFZ_RENDERER_PATH=/absolute/path/to/sfizz_render
+make desktop
 ```
 
-No renderer, model, or sample-library support is implied until its readiness
-check succeeds locally.
+Capture the Gradle failure and Compose stack trace. The target desktop must not
+require a worker health check, Python process, renderer, SFZ path, or network
+connection.
 
-The desktop **Settings** destination contains only the validated sound-library
-preference, local runtime readiness, and local build/platform information.
-The sound-library chooser and its validation error remain visible; use the
-labelled **Runtime details** and **Build information** disclosures for the
-infrequent readiness rows and local build metadata.
-Telemetry, cloud sync, update checks, themes, audio-device selection, autosave,
-backups, model downloads, and broad preference resets are intentionally absent.
+## MIDI file is rejected
 
-## Worker and optional transcription
+Confirm:
 
-Start the Python worker only when a selected operation needs it:
+- extension is `.mid` or `.midi`;
+- file is SMF format 0 or 1;
+- timing uses PPQ rather than SMPTE;
+- tempo and meter do not change;
+- the selected melody can be resolved to one note channel; and
+- the import report identifies a blocking condition rather than an advisory.
 
-```bash
-make worker
-```
+Do not repair or overwrite the source manually inside the project. Preserve the
+original and, if necessary, export a simplified MIDI selection from Logic Pro.
 
-WAV/WAVE and MP3 import is a solo-piano transcription path. It requires the
-optional Basic Pitch runtime in a separate Python 3.11 environment; follow
-[`worker/README.md`](../worker/README.md). A worker without that optional
-runtime remains useful for supported non-transcription operations. The app
-shows the failed stage and recovery action rather than treating an unavailable
-worker or model as a successful import.
+## No melody track is available
 
-## Import, cleanup, and preview
+Inspect track note counts, channel use, pitch ranges, and names. Format-0 MIDI
+may expose one combined track; choose the supported melody channel if the import
+UI offers that resolution. Multi-channel expressive melody is outside V1 and
+must be simplified in the source DAW.
 
-Choose MIDI, WAV/WAVE, or MP3 only. The service validates both extension and
-actual format. Source files are immutable under `source/`.
+## Structure or harmony blocks generation
 
-- **Inspect only** is the default: it measures the input and writes a versioned
-  `prepared/<part>/report.json` without creating a cleaned copy.
-- **Safe cleanup** is opt-in and requires confirmation. It can write derived
-  PCM-24 `decoded.wav`/`clean.wav` under `prepared/<part>/`; it never
-  normalizes loudness, removes time or silence, changes pitch/tempo, separates
-  stems, or overwrites the source.
-- Select original or prepared audio explicitly before transcription. Raw and
-  clean MIDI, analysis, and preview artifacts stay under the project.
-- After raw MIDI exists, **Clean MIDI** repairs invalid events and then the deterministic
-  **Normalize MIDI** stage publishes `midi/normalized/<part>-<run>.mid` plus a
-  hash-bound `midi/normalization/<part>-<run>.json`. Both retain source/raw/clean
-  MIDI unchanged; no pitch correction, swing, creative quantization, or humanization occurs.
-  The detected source key and confidence are shown on the Melody Parts card. If confidence
-  is low, choose the source tonic/mode before **Transpose to project key** can publish
-  `midi/transposed/<part>-<run>.mid` and its hash-bound report; original and normalized
-  MIDI remain unchanged.
-  If clean review is required,
-  **Approve Clean MIDI** binds approval to the exact cleanup evidence.
+Check that:
 
-Audio-source monitoring can be available without an SFZ renderer. MIDI preview
-needs the selected validated library, all samples, a verified renderer, and an
-audio output device. If preview is unavailable, follow the specific readiness
-message, then refresh or retry; do not treat a disabled Play button as proof
-that audio started.
+- occurrences are ordered and cover the song without gaps/overlaps;
+- every occurrence has an explicit length;
+- chord events cover the intended window;
+- every chord symbol parses and can be realized; and
+- the melody lies inside the intended occurrence range.
 
-## Source song is out of sync or harmonically wrong
+An out-of-key chord is not itself an error. The project harmony is
+authoritative.
 
-The current pipeline can produce structurally valid output from independently
-performed parts that do not share a downbeat, performed tempo, mode, or chord
-fit. Current normalization conforms MIDI representation/tempo metadata, while
-reviewed beat/downbeat alignment and occurrence-local harmony fitting are
-separate stages described in [`plan/PLAN.md`](plan/PLAN.md). Current source-song
-assembly prepares each selected source section into a globally monophonic
-candidate, fits it to the authoritative harmony for its exact occurrence, then
-publishes one versioned canonical full melody with a conductor track,
-controller-free note track, occurrence/harmony/lineage sidecar, and reviewable
-groove map. A harmony-fit block means the nearest safe pitch is
-ambiguous/excessive or a boundary tail cannot be released within policy; inspect
-its report rather than replacing the candidate. Current arrangement, Cohesion,
-criticism, humanization, preview, renderer, and release paths consume the
-approved connected full melody. A missing or stale approval intentionally blocks
-with recovery guidance; it never reverts to selected-part piano MIDI.
+## MIDI audition is unavailable
 
-Before arranging a current project:
+- Confirm that a supported local MIDI output or synthesizer is available.
+- Stop other playback and retry device selection.
+- Reopen the project if the OS removed a device while it was active.
+- Use Stop before switching output devices.
 
-- inspect and explicitly confirm low-confidence source keys;
-- compare the transposed MIDI against the project key and section progression;
-- check every section's first musical beat and trailing duration;
-- audition the connected source melody alone;
-- repair Source Song Critic hard findings; an ordinary-blocker override is
-  private-audition-only and cannot support a quality-certified claim;
-- retain the original and rejected candidates for comparison.
+Audition failure must not block editing or export once the arrangement is
+otherwise valid. It must not trigger the old audio renderer.
 
-If section starts drift away from the bar grid, different modes remain audible,
-simultaneous melody notes survive, or exposed notes clash with the active chord,
-the critic now blocks quality-certified approval. Repair the earliest source or
-prepared candidate and rerun the source-song review; audio effects, mastering,
-and Cohesion cannot repair a fundamentally misaligned source melody.
+## Candidate is stale
 
-## Build and artifact recovery
+Inspect which authority hash member changed. Regenerate only the affected role
+and occurrence, then explicitly accept the new candidate. Do not copy or rename
+an old candidate file to make it current.
 
-Build Song stops until its precise prerequisites are ready: worker, sound
-library, samples, and renderer. It does not implicitly approve a Qwen draft.
+## Candidate generation is rejected
 
-### LM Studio planner response is truncated
+Open its validation report and distinguish hard role violations from musical
+advisories. Change the scoped pattern/profile/seed or correct invalid authority.
+Do not weaken global validation to admit one result.
 
-Melotrail requests up to 8,192 completion tokens by default. If the loaded
-model still reaches its completion limit, restart the desktop app with a larger
-per-process budget, for example `QWEN_MAX_TOKENS=16384 make desktop`. The
-model's configured context window must also be large enough for the MIDI input
-plus that completion budget.
+## Export fails
 
-After valid approved arrangement-aware Cohesion, current Critic/Full-Song
-Enhance selection, and selected/bypassed Humanization, the build creates or
-reuses inspectable generated MIDI, stems, dry mix, repair/optional LoFi output,
-`output/master.wav`, and optional MP3/release metadata. The transition track
-uses the exact approved Cohesion bridge at its shifted boundary and
-`stem-render.json` records the boundary hashes. A changed structure, Cohesion
-approval, or source can make downstream artifacts stale; regenerate rather than
-copying old outputs.
+Check:
 
-`master.wav` is always the authoritative lossless release. MP3 is a separate
-optional final conversion. Each current build records an AAC/MP3 local-preview
-state tied to that exact master: an installed MP3 codec is encode-decoded and
-remeasured for clipping and 4× true peak, while unavailable codecs remain
-explicitly unverified. These local results are regression evidence, not a
-prediction of a YouTube transcode. If a preview is blocked, rebuild after
-repairing the master or changing the versioned delivery policy; do not use an
-old output file as evidence. If a failure occurs, keep the source and inspect the
-project-local reports/artifacts plus the bounded diagnostic logs under
-`~/.melotrail/logs/`.
+- every enabled core role has a current accepted candidate;
+- referenced source/candidate digests match;
+- no accepted candidate is stale;
+- destination is writable and does not require silent overwrite;
+- staged files pass semantic re-import; and
+- manifest paths remain relative.
 
-On **Export**, the disabled or enabled **Export Song** action and its recovery
-route are always visible. Open **Release options** only to change the permitted
-format, filename, or project `output/` destination; it cannot make a stale or
-missing master exportable.
+A failed staged directory is diagnostic output only and must not be marked as a
+complete export.
 
-## Unsupported projects and stale artifacts
+## DAW import differs
 
-New projects are schema v4, and only the current canonical v4 shape can open.
-If an older or superseded document is rejected, the application will not rewrite
-or convert it. Use Git history or an external archival checkout if its data must
-be inspected; do not copy old serialized fields back into a current project.
+Use [DAW compatibility](DAW_COMPATIBILITY.md):
 
-Changing source/raw MIDI, cleaned MIDI, the selected Lo-fi Feel, analysis,
-structure, cohesion, mix-only settings, or audio texture can mark downstream
-artifacts stale. Retained stems, mixes, and masters are inspectable but not
-build-ready until their prerequisites and fingerprints are current again. Do
-not delete stale artifacts to make a stage look complete.
+- import at song start;
+- record exact DAW/macOS versions;
+- check whether the DAW adopted or retained tempo;
+- compare track names, channels, first/last ticks, and role files;
+- assign instruments manually; and
+- classify the result as pass, conditional pass, or fail.
+
+Preview timbre differences are expected. Timing, note, role, or stuck-note
+differences are not.
+
+## Old audio project does not open
+
+This is intentional. Old audio projects are unsupported and are not migrated.
+Repository-owned old project data is deleted during the cleanup phase after
+exact targets are verified.
+
+If a melody is worth retaining, export or locate its original Standard MIDI
+source outside the destructive cleanup target and create a new MIDI Core
+project.
