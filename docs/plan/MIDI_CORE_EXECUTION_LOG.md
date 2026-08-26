@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-004 complete; MC-005 is next
+Status: MC-005 complete; MC-006 is next
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -44,7 +44,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-002 | DONE | `midi-core: MC-002 characterize reusable MIDI safety` | PASS — focused characterization and `make test` | Retained/extract/delete owner map recorded below; no legacy owner was adopted wholesale. |
 | MC-003 | DONE | `midi-core: MC-003 enforce target boundaries` | PASS — architecture rules, `make test`, `make build` | Target package policy is executable; legacy packages are intentionally outside the new roots until cutover. |
 | MC-004 | DONE | `midi-core: MC-004 add semantic MIDI model` | PASS — `SemanticMidiTest`; `make test` | Immutable target semantic sequence records source/event identity, deterministic ordering, supported event types, and one rational tick-rounding policy without Java MIDI types. |
-| MC-005 | TODO | | | |
+| MC-005 | DONE | `midi-core: MC-005 add Standard MIDI reader` | PASS — `JdkMidiReaderTest`; `make test` | One target adapter reads SMF 0/1 PPQ into semantic MIDI and deterministic track summaries without source mutation. |
 | MC-006 | TODO | | | |
 | MC-007 | TODO | | | |
 | MC-008 | TODO | | | |
@@ -246,6 +246,27 @@ Decisions/deviations: The source identity accepts only format 0/1 now because th
 Known limitations: The JDK reader/writer remains in legacy owners until MC-005 and MC-007 route parsing/output through the target adapter. The semantic model has no persistence annotation yet because project serialization is owned by MC-010.
 Commit: `midi-core: MC-004 add semantic MIDI model`.
 Next task: MC-005 after MC-004 validation and commit.
+
+### MC-005 — Implement the Standard MIDI reader and track inspector
+
+Status: DONE
+Started: 2026-08-26
+Starting commit/status: `e429e4f` / clean worktree after MC-004.
+Contracts read: F-MIDI-001 through F-MIDI-003; MIDI Contract sections 2 through 5; MC-005 task contract.
+Completed: 2026-08-26
+Current owners inspected: Every production `MidiSystem` owner was inventoried. `MidiAnalysis.kt` is the current direct reader/track analyzer; `MidiTimeMapping.kt`, `StageComparisonService.kt`, and old role readers contain local ordering/pairing variants. They remain legacy owners for their current callers and are scheduled for later cutover/deletion.
+Behavior retained/extracted: `JdkMidiReader` is the only target parsing path. It computes source identity, rejects format 2 and SMPTE, translates JDK messages to MC-004 semantic events, pairs notes safely (including velocity-zero note-off), retains controller/pitch/channel-pressure metadata, records unsupported messages and recoverable orphan/unclosed/non-positive pairing findings, and emits ordered track/channel summaries with advisory role hints. It never writes or repairs the source.
+Files added/changed: `src/main/kotlin/app/melotrail/midi/adapter/JdkMidiReader.kt`; `src/test/kotlin/app/melotrail/midi/adapter/JdkMidiReaderTest.kt`; `docs/plan/MIDI_CORE_EXECUTION_LOG.md`.
+Files/data deleted: None.
+Tracked deletion recoverability: Not applicable.
+Ignored deletion recoverability: Not applicable.
+Focused tests: `./gradlew :test --tests app.melotrail.midi.adapter.JdkMidiReaderTest` PASS (seven tests: all valid owned fixtures; SMF 0/1 semantic snapshots and source immutability; track/channel/marker/controller/pitch/channel-pressure facts; velocity-zero note-off; orphan/unclosed findings; unsafe same-pitch overlap; malformed, format-2, and SMPTE rejection; omitted-message evidence).
+Full validation: `make test` PASS (2026-08-26; 14 Gradle tasks, 27 seconds).
+Manual evidence: Not required.
+Decisions/deviations: A same-track/channel/pitch overlap is rejected immediately because V1 has no selected safe pairing policy. Orphan and unclosed notes are reader findings so MC-006 can classify them precisely after melody selection. Program changes are represented as explicitly omitted-message findings; no output policy is inferred from them. Role hints are advisory summary facts only.
+Known limitations: Typed blocking/advisory user-facing classification belongs to MC-006. The adapter currently has no project import caller; MC-013 will make this target reader the project source-import path.
+Commit: `midi-core: MC-005 add Standard MIDI reader`.
+Next task: MC-006 after MC-005 validation and commit.
 
 ## 6. Manual gate records
 
