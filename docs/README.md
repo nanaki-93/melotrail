@@ -25,13 +25,14 @@ defined by the root `PLAN.md`.
 
 ## Planning directory
 
-[Planning index](plan/README.md) owns future execution artifacts. The old quality-pipeline and
-guided-arranger suites have been removed because they describe a rejected
-audio-production product. Git history is their archive.
+[Planning index](plan/README.md) owns the active execution suite. The suite now
+contains the dependency-ordered [MIDI Core tasks](plan/MIDI_CORE_TASKS.md), the
+[serial agent prompt](plan/EXECUTE_MIDI_CORE_TASKS_PROMPT.md), and the
+[execution log](plan/MIDI_CORE_EXECUTION_LOG.md). Execution has not started.
 
-The dependency-ordered MIDI Core task specification and serial agent prompt
-will be added only after this documentation baseline is accepted. No old plan
-or prompt is executable.
+The old quality-pipeline and guided-arranger suites have been removed because
+they describe a rejected audio-production product. Git history is their
+archive; no old plan or prompt is executable.
 
 ## Transitional contracts
 
@@ -64,7 +65,7 @@ navigation are implemented.
 - File/event compatibility: `MIDI_CONTRACT.md` and `DAW_COMPATIBILITY.md`.
 - Deletion decisions: `CLEANUP_SCOPE.md`.
 - Test evidence: `QUALITY_GATES.md`.
-- Executable work: future files indexed by `plan/README.md`.
+- Executable work and evidence: the files indexed by `plan/README.md`.
 
 Do not duplicate a contract across several documents. Link to its owner and
 state only the local consequence.

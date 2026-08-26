@@ -10,11 +10,11 @@ DAW-ready MIDI package.
 
 ## Project status
 
-The MIDI-only product direction is accepted and documented. Implementation is
-the next phase. The repository still contains the superseded audio-production
-runtime while the replacement vertical slice is built; that runtime and its
-Python worker are scheduled for complete removal and are not supported product
-directions.
+The MIDI-only product direction and its dependency-ordered implementation task
+suite are ready. Execution has not started. The repository still contains the
+superseded audio-production runtime while the replacement vertical slice is
+built; that runtime and its Python worker are scheduled for complete removal
+and are not supported product directions.
 
 [PLAN.md](PLAN.md) is the only active roadmap. Historical audio, quality-pipeline, and
 guided-arranger plans are superseded; Git history is their archive.
@@ -112,6 +112,12 @@ that executable documentation contract.
 - [Cleanup scope](docs/CLEANUP_SCOPE.md) — keep, refactor, and delete decisions
 - [Quality gates](docs/QUALITY_GATES.md) — automated, musical, and DAW
   acceptance gates
+- [Implementation tasks](docs/plan/MIDI_CORE_TASKS.md) — mandatory sequential
+  build, cutover, and cleanup work
+- [Agent execution prompt](docs/plan/EXECUTE_MIDI_CORE_TASKS_PROMPT.md) —
+  standalone prompt for executing the task suite
+- [Execution log](docs/plan/MIDI_CORE_EXECUTION_LOG.md) — evidence and sign-off
+  ledger
 - [Documentation index](docs/README.md) — ownership and transition notes
 
 ## License

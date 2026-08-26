@@ -17,6 +17,8 @@ Before changing the project, read:
 - `docs/DAW_COMPATIBILITY.md`
 - `docs/CLEANUP_SCOPE.md`
 - `docs/QUALITY_GATES.md`
+- `docs/plan/MIDI_CORE_TASKS.md`
+- `docs/plan/MIDI_CORE_EXECUTION_LOG.md`
 
 ## Target architecture
 

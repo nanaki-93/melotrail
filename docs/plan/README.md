@@ -9,20 +9,23 @@ archive; none of their prompts or task IDs may be executed.
 ## Current state
 
 - Product direction: accepted.
-- Documentation baseline: being reviewed.
-- Dependency-ordered implementation tasks: not yet generated.
-- Serial agent execution prompt: not yet generated.
+- Documentation baseline: accepted.
+- Dependency-ordered implementation tasks: ready; execution not started.
+- Serial agent execution prompt: ready.
 - Execution log: not yet started.
 
-## Files to add after documentation approval
+## Active execution suite
 
-The next planning step will add:
+Read and use these files in order:
 
-1. one mandatory task specification ordered by dependency and cutover safety;
-2. one serial agent prompt that executes only that specification; and
-3. one execution/evidence log template.
+1. [MIDI Core tasks](MIDI_CORE_TASKS.md) — the only executable task sequence,
+   ordered by dependency and cutover safety.
+2. [Agent execution prompt](EXECUTE_MIDI_CORE_TASKS_PROMPT.md) — the standalone
+   prompt for one implementation agent to execute the sequence.
+3. [Execution log](MIDI_CORE_EXECUTION_LOG.md) — the task ledger, validation
+   evidence, manual gates, cleanup ledger, and final sign-off record.
 
-The task specification must map every item to:
+The task specification maps every item to:
 
 - root plan phase;
 - functional requirement IDs;
@@ -39,3 +42,8 @@ The task specification must map every item to:
 No task may defer old-code deletion indefinitely. Deletion occurs with the
 replacement task when safe, or in the final destructive cleanup phase when it
 depends on full cutover.
+
+Execute tasks strictly from `MC-000` through `MC-060`. Do not begin the optional
+enhancements in the root plan. Tasks that require Logic Pro, GarageBand, or
+human musical review must stop at their named manual gate and preserve all
+automated evidence already collected.

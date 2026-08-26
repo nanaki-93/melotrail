@@ -1,6 +1,6 @@
 # Melotrail MIDI Core Plan
 
-Status: accepted product direction; implementation tasks pending
+Status: implementation task suite ready; execution not started
 
 Last updated: 2026-08-26
 
@@ -366,9 +366,13 @@ The MIDI Core migration is complete only when:
 - no competing plan or architecture remains; and
 - `make test` and `make build` pass from a clean checkout.
 
-## 14. Next planning artifact
+## 14. Execution artifacts
 
-After this documentation baseline is reviewed, create one dependency-ordered
-task specification and one serial agent-execution prompt. Each task must name
-its scope, deletions, tests, validation commands, evidence, and stop condition.
-No implementation agent should execute an obsolete task suite.
+The mandatory implementation sequence is
+`docs/plan/MIDI_CORE_TASKS.md`. Execute it strictly from `MC-000` through
+`MC-060` using `docs/plan/EXECUTE_MIDI_CORE_TASKS_PROMPT.md`, and record every
+task, commit, validation result, manual gate, deletion, and final sign-off in
+`docs/plan/MIDI_CORE_EXECUTION_LOG.md`.
+
+No implementation agent may execute an obsolete task suite, skip a task, hide
+a failed gate, or begin the optional enhancements before MIDI Core acceptance.
