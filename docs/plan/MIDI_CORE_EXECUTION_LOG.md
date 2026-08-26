@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-001 complete; MC-002 is next
+Status: MC-002 complete; MC-003 is next
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -41,7 +41,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | --- | --- | --- | --- | --- |
 | MC-000 | DONE | `midi-core: MC-000 freeze execution baseline` | PASS — local Markdown links, `git diff --check`, `make test`, `make build` | Clean baseline at `a7f03b7`; no unrelated changes; metrics recorded below. |
 | MC-001 | DONE | `midi-core: MC-001 add owned MIDI fixtures` | PASS — `OwnedMidiFixturesTest`; `make test` | Ten hand-authored, SHA-256-pinned fixtures cover all Phase 1 reader inputs without legacy audio-project data. |
-| MC-002 | TODO | | | |
+| MC-002 | DONE | `midi-core: MC-002 characterize reusable MIDI safety` | PASS — focused characterization and `make test` | Retained/extract/delete owner map recorded below; no legacy owner was adopted wholesale. |
 | MC-003 | TODO | | | |
 | MC-004 | TODO | | | |
 | MC-005 | TODO | | | |
@@ -181,8 +181,29 @@ Manual evidence: Not required.
 Decisions/deviations: Fixtures are hand-authored byte definitions in test source rather than opaque binary resources. This makes their source, purpose, and exact byte/hash contract reviewable while `writeAll` supplies ordinary `.mid` files to every later parser/export test. The failed root-only filter was corrected to `:test`; the initial all-project filter incorrectly required the test class in `desktopApp`.
 Fixture manifest/hashes: `smf0-melody.mid` `a2e32b1df5e78867193191a15c82caaa0b7c070b2e328c56b41a1ea5aaba4a35`; `smf1-reference-tracks.mid` `f3166580ebc70d96168ad238471762d20882d86d967a02389b69a96b4c52af67`; `pickup-timing.mid` `edea690670c84305fe8d5ba17e13b3fa3567921faaafb41094dfe1b32242cb7f`; `sub-bar-harmony.mid` `507dd7d2f2b57d86b2c95b2019d7b5daf649d63fcb2a13861c5f58bd8ab1dd88`; `expressive-controller-pitch.mid` `9c08782d6e56327ea64b5ed6aebaf2158b41cea32e95ec6fcb52f79238580ef5`; `velocity-zero-note-off.mid` `3006621283cf65a5446dfa4c48b919e71445b830861e77e83dd81f33e2d98bae`; `final-boundary-note.mid` `08dde8e7da1e32fbbe6bbfa71937fc2c95e3fa778928a13479e323f163e66044`; `truncated-header.mid` `7ed5302ab537819c49fb41c3670d2080240a3c05af841b51bb04ced49d11f4a1`; `format-2.mid` `fd8d72b9fa38e47ec870001b8db2828ac60c0874e947e330f2d4c844cf933c5b`; `smpte-division.mid` `d18577cd143c20baf9b75f2b36a5369a426c6e8c7ba02074fc26b495fe9646cc`.
 Known limitations: Semantic parser assertions begin in MC-005; MC-001 intentionally locks input facts and does not adopt legacy parsing behavior.
-Commit: `midi-core: MC-001 add owned MIDI fixtures`.
+Commit: `da01dd5` — `midi-core: MC-001 add owned MIDI fixtures`.
 Next task: MC-002 after MC-001 validation and commit.
+
+### MC-002 — Characterize reusable MIDI and artifact behavior
+
+Status: DONE
+Started: 2026-08-26
+Completed: 2026-08-26
+Starting commit/status: `da01dd5` / clean worktree after MC-001.
+Contracts read: F-MIDI-005, F-PROJ-004, F-SYS-004, and MC-002 task contract.
+Current owners inspected: all `javax.sound.midi` users; `MidiPartAnalyzer`; `ProjectStore`; `StageRunStore`; `WorkflowArtifacts`; `ArrangementState`; `SelectedMidiArtifactResolver`; their focused tests; and duplicated SHA-256 helpers across legacy application/arrangement code.
+Behavior retained/extracted: `MidiPartAnalyzer` contributes only proven PPQ/event-pairing, velocity-zero, tempo/meter, and track-name facts for extraction into MC-004/MC-005; its inference and audio-era ownership are not retained. `StageRunStore` and `WorkflowArtifactReference` contribute streaming SHA-256, root confinement (including real-path/symlink validation), immutable publication, and failed-index orphan evidence for extraction into MC-011/MC-019. `ProjectStore` contributes atomic-write recovery semantics only; its schema-v4 DTO and render fields are deleted in MC-050. Existing candidate/selected-artifact state contributes digest-before-selection and no-fallback behavior for extraction into MC-019/MC-026; its stage graph and mutation pipeline are deletion scope.
+Files added/changed: `src/test/kotlin/app/melotrail/arrangement/LegacyMidiArtifactCharacterizationTest.kt` and `docs/plan/MIDI_CORE_EXECUTION_LOG.md`.
+Files/data deleted: None.
+Tracked deletion recoverability: Not applicable.
+Ignored deletion recoverability: Not applicable.
+Focused tests: `./gradlew :test --tests app.melotrail.arrangement.LegacyMidiArtifactCharacterizationTest` PASS (JDK SMF facts, velocity-zero pairing, deterministic digest, confined reference rejection, immutable append, and tamper rejection). Existing `StageRunStoreTest` independently proves failed-index publication leaves an inspectable orphan rather than a visible run.
+Full validation: `make test` PASS (2026-08-26; 14 Gradle tasks, 20 seconds).
+Manual evidence: Not required.
+Decisions/deviations: No code was extracted yet: MC-002 is intentionally a characterization boundary. The source-owned MC-001 fixtures are used rather than legacy generated MIDI. The legacy analyzer's automatic key/chord inference is expressly excluded because project authority must be explicit.
+Known limitations: Current Java MIDI access remains widely scattered until MC-003 through MC-008 establish replacement boundaries; this task records the migration map rather than creating an adapter prematurely.
+Commit: `midi-core: MC-002 characterize reusable MIDI safety`.
+Next task: MC-003 after MC-002 validation and commit.
 
 ## 6. Manual gate records
 
