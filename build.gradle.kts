@@ -25,6 +25,9 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+    System.getProperty("melotrail.dawSpikeDirectory")?.let { directory ->
+        systemProperty("melotrail.dawSpikeDirectory", directory)
+    }
 }
 
 tasks.register<Exec>("checkDocumentationCoverage") {

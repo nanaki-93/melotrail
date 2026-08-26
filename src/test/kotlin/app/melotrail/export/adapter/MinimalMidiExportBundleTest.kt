@@ -27,7 +27,7 @@ class MinimalMidiExportBundleTest {
 
     @Test
     fun `publishes a complete semantically re-imported core role bundle with a portable manifest`() {
-        val destination = root.resolve("exports/intro")
+        val destination = System.getProperty("melotrail.dawSpikeDirectory")?.let(Path::of) ?: root.resolve("exports/intro")
         val result = MinimalMidiExportBundle().export(snapshot(), song(), destination)
 
         assertEquals(destination, result.directory)

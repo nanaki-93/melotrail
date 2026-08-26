@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-008 complete; MC-009 ready for manual gate
+Status: MC-009 complete; MC-010 ready
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -48,7 +48,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-006 | DONE | `midi-core: MC-006 classify MIDI findings` | PASS — target validator, reader, architecture tests, `make test` | Stable typed source findings classify every inspected input as accepted, rejected, or awaiting authority without legacy audio validation. |
 | MC-007 | DONE | `midi-core: MC-007 add deterministic MIDI writer` | PASS — writer/reader/architecture tests, `make test`, `make build` | One target SMF format-1 writer owns conductor metadata, role ordering, channel remapping, marker sanitization, and aligned role files. |
 | MC-008 | DONE | `midi-core: MC-008 prove MIDI export round trip` | PASS — focused export suite, `make test`, `make build` | Staged five-file core-role bundle is semantically re-imported, digest-bound, collision-safe, and test-only. |
-| MC-009 | TODO | | | |
+| MC-009 | DONE | `midi-core: MC-009 record DAW compatibility spike` | PASS — automated preparation, GarageBand 10.4.14, Logic Pro 12.3.1 | Both DAWs imported the core-role bundle with correct timing/roles and safe playback; marker display is non-blocking metadata and was unassessed. |
 | MC-010 | TODO | | | |
 | MC-011 | TODO | | | |
 | MC-012 | TODO | | | |
@@ -106,7 +106,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | Gate | Tasks | Status | Evidence |
 | --- | --- | --- | --- |
 | G0 Documentation ready | MC-000 | DONE | `7dee33b`; documentation baseline, link audit, `make test`, and `make build` are recorded under MC-000. |
-| G1 MIDI compatibility proven | MC-001–MC-009 | TODO | |
+| G1 MIDI compatibility proven | MC-001–MC-009 | DONE | MC-008 semantic/export gate and MC-009 GarageBand 10.4.14 plus Logic Pro 12.3.1 manual imports pass. |
 | G2 MIDI project kernel complete | MC-010–MC-019 | TODO | |
 | G3 Vertical slice complete | MC-020–MC-030 | TODO | |
 | G4 Focused desktop complete | MC-031–MC-040 | TODO | |
@@ -331,18 +331,39 @@ Known limitations: This is a test-only bundle generator rather than a project ex
 Commit: `midi-core: MC-008 prove MIDI export round trip`.
 Next task: MC-009 — prepare the bundle and await Logic Pro and GarageBand import evidence.
 
+### MC-009 — Complete the early Logic Pro and GarageBand spike
+
+Status: DONE
+Started: 2026-08-26
+Completed: 2026-08-27
+Starting commit/status: `d2b4807` / clean worktree after MC-008; this task records the automated preparation and user-supplied manual decision in its single task commit.
+Contracts read: F-EXP-007; DAW Compatibility sections 1 through 6; Quality Gate 6; MC-009 task contract.
+Current owners inspected: MC-008 test-only bundle adapter and its semantic re-import coverage; installed-app metadata probe. The host is macOS 26.6.2 and has no inspectable Logic Pro or GarageBand installation, so it cannot supply the mandatory destination evidence.
+Behavior retained/extracted: Added narrow test-property forwarding solely to materialize the already-tested MC-008 bundle under `build/mc009-daw-spike`; it does not change production export behavior or create a DAW dependency.
+Files added/changed: `build.gradle.kts`; `src/test/kotlin/app/melotrail/export/adapter/MinimalMidiExportBundleTest.kt`; `docs/plan/MIDI_CORE_EXECUTION_LOG.md`.
+Files/data deleted: None.
+Tracked deletion recoverability: Not applicable.
+Ignored deletion recoverability: The generated ignored `build/mc009-daw-spike` evidence bundle is disposable and regenerable from the focused test; it is not a source artifact.
+Focused tests: `./gradlew :test --tests app.melotrail.export.adapter.MinimalMidiExportBundleTest -Dmelotrail.dawSpikeDirectory=build/mc009-daw-spike` PASS; bundle semantic re-import validates conductor, track order/names, channels, markers, PPQ 480, and end tick 480 before publication.
+Full validation: final `./gradlew :test --tests app.melotrail.export.adapter.MinimalMidiExportBundleTest` PASS (2026-08-27); `make test` PASS (2026-08-27; 14 Gradle tasks); `make build` PASS (2026-08-27; 15 Gradle tasks).
+Manual evidence: GarageBand PASS except unassessed marker display, recorded 2026-08-27: user imported `complete-song.mid` in GarageBand 10.4.14 on macOS Tahoe 26.6.2 and observed four tracks correctly named Melody, Chords, Bass, and Drums; each has the intentional one note over a half-bar; tempo is 120 BPM and meter is 4/4. User played the complete file through its end without stuck or truncated notes, imported the role files with their notes aligned at song origin, and confirmed the Drums note sounds correct after drum assignment. Logic Pro 12.3.1 then passed the same import test on the same user environment: role separation/names, 120 BPM, 4/4, song-origin alignment, drum interpretation, and safe playback. Marker display was not assessed; it is best-effort metadata and does not alter the confirmed timing result. Materialized files/SHA-256: `complete-song.mid` `75ccd9c7ba4c34e40d0c04f11fcd56efda2406e284642e099bb77021de135a04`; `melody.mid` `ac9d2bca1eb24dd898be72a5cf4043435642d8f9f83a62eacf00f3e3989d3d21`; `chords.mid` `aa8b57c623c22b2973a717b14ff64efe45991d56a415260e801ff544f7123ad3`; `bass.mid` `fc10b58c7290972c78a8abcf1f47466c8c2329c8ccb3773853a3e92dd5c2abe7`; `drums.mid` `2ab7c7b786f235c6b04a1208c9a94cbf9186c59c13bbe84e703c95ab355bff9e`; `manifest.json` `bca743a48c1ec02ad8ffd52b2aa7ff951f285ed42cac1a0e37eca804a9a4b766`.
+Decisions/deviations: The bundle is intentionally a deterministic test fixture for the early compatibility spike, not an accepted project export snapshot. The host could not inspect installed DAWs directly; GarageBand and Logic Pro results, versions, and macOS version are user-supplied manual evidence rather than inferred host state.
+Known limitations: The early fixture is intentionally a one-half-bar, one-note-per-role compatibility spike rather than a complete user arrangement. Marker display is unassessed and remains best-effort metadata; all timing/event-safety checks pass.
+Commit: `midi-core: MC-009 record DAW compatibility spike`.
+Next task: MC-010 — define the MIDI-only project schema.
+
 ## 6. Manual gate records
 
 ### MC-009 — Early DAW compatibility
 
-- Melotrail build/commit:
-- Fixture/export snapshot and hashes:
-- macOS version:
-- Logic Pro version/result/evidence:
-- GarageBand version/result/evidence:
-- Required user actions:
-- Reviewer/date:
-- Decision:
+- Melotrail build/commit: MC-008 `d2b4807`; MC-009 `midi-core: MC-009 record DAW compatibility spike`.
+- Fixture/export snapshot and hashes: `build/mc009-daw-spike`; complete file SHA-256 `75ccd9c7ba4c34e40d0c04f11fcd56efda2406e284642e099bb77021de135a04`; per-role and manifest hashes are recorded under MC-009.
+- macOS version: Tahoe 26.6.2 (user-supplied).
+- Logic Pro version/result/evidence: Logic Pro 12.3.1. PASS, user report 2026-08-27: the user ran the same complete and role-file import checks as GarageBand; role separation/names, 120 BPM, 4/4, song-origin alignment, drum interpretation, and playback passed. Marker display unassessed.
+- GarageBand version/result/evidence: GarageBand 10.4.14. PASS except unassessed marker display, user report 2026-08-27: importing `complete-song.mid` produced Melody, Chords, Bass, and Drums tracks; each shows one intentional half-bar note; tempo is 120 BPM and meter is 4/4. The complete file played through its end without stuck/truncated notes; all role-file notes align at song origin; the drum note sounds correct after drum assignment.
+- Required user actions: None for MC-009. Marker display is unassessed and recorded as best-effort metadata.
+- Reviewer/date: User / 2026-08-27.
+- Decision: PASS — G1 is complete; continue to MC-010.
 
 ### MC-048 — Final DAW compatibility
 
