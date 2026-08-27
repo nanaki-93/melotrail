@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-029 complete
+Status: MC-030 complete
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -69,7 +69,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-027 | DONE | `midi-core: MC-027 assemble accepted song` | PASS — focused diff/assembly/review suite, documentation coverage, `git diff --check`, `make test` | Deterministic event-level diff summaries and accepted-song assembly preserve the protected melody, aggregate exact occurrence-scoped role candidates, and reject incomplete, stale, tampered, malformed, mis-channelled, or overflowing evidence before review. |
 | MC-028 | DONE | `midi-core: MC-028 add MIDI audition` | PASS — focused audition/writer/JVM-boundary suite, documentation coverage, `git diff --check`, `make test` | MIDI-only scope/session control supports source melody, candidate, occurrence, role, and accepted arrangement views with bounded seek/loop, mute/solo, supersession, recoverable device errors, and cleanup without project writes. |
 | MC-029 | DONE | `midi-core: MC-029 export MIDI package` | PASS — focused exporter/MIDI/project suite, documentation coverage, `git diff --check`, `make test` | Complete and optional-role MIDI packages are semantically re-imported, atomically published, portable-manifested, collision-safe, and bound to reopened project snapshots. |
-| MC-030 | TODO | | | |
+| MC-030 | DONE | `midi-core: MC-030 prove vertical slice` | PASS — JVM vertical slice, `make test`, `make build`, documentation coverage, `git diff --check` | Target project creation through semantic MIDI package re-import passes without legacy services; failure/recovery and immutable evidence are covered. |
 | MC-031 | TODO | | | |
 | MC-032 | TODO | | | |
 | MC-033 | TODO | | | |
@@ -108,7 +108,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | G0 Documentation ready | MC-000 | DONE | `7dee33b`; documentation baseline, link audit, `make test`, and `make build` are recorded under MC-000. |
 | G1 MIDI compatibility proven | MC-001–MC-009 | DONE | MC-008 semantic/export gate and MC-009 GarageBand 10.4.14 plus Logic Pro 12.3.1 manual imports pass. |
 | G2 MIDI project kernel complete | MC-010–MC-019 | DONE | MC-010–MC-019 target schema, artifact, authority, invalidation, lifecycle, and full test/build gates pass. |
-| G3 Vertical slice complete | MC-020–MC-030 | TODO | |
+| G3 Vertical slice complete | MC-020–MC-030 | DONE | MC-020–MC-030 target context, validation, generation, review, assembly, audition, export, and the JVM vertical-slice gate pass. |
 | G4 Focused desktop complete | MC-031–MC-040 | TODO | |
 | G5 Product behavior accepted | MC-041–MC-049 | TODO | |
 | G6 Legacy product removed | MC-050–MC-059 | TODO | |
@@ -792,6 +792,27 @@ Decisions/deviations: The target exporter always includes Melody and treats `ena
 Known limitations: Compose Export-page wiring remains with MC-039; manual Logic Pro/GarageBand export evidence remains the MC-048 gate. The transitional Python documentation-inventory build check remains until MC-058.
 Commit: `midi-core: MC-029 export MIDI package`.
 Next task: MC-030 — prove the kernel vertical slice end to end.
+
+### MC-030 — Prove the kernel vertical slice end to end
+
+Status: DONE
+Started: 2026-08-28
+Completed: 2026-08-28
+Starting commit/status: `7a666f9` / only the preserved unrelated deleted Kotlin compiler session marker is present.
+Contracts read: F-PROJ-001–F-EXP-006 and G3; MC-030 task contract.
+Current owners inspected: target project lifecycle, source import, melody selection, authority, structure/harmony, candidate generation/review, accepted-song assembly, MIDI audition, vertical package exporter, target test fixtures, and test composition boundaries.
+Behavior retained/extracted: Added `MidiCoreVerticalSliceTest` as a target-only JVM composition proof. The test creates and reopens a project, imports and protects an SMF source, confirms fixed authority, persists structure and harmony, rejects an incomplete export and recovers after review, generates two semantically different alternatives for each core role, rejects/accepts/locks the selected candidates, preserves the first candidate bytes through targeted regeneration, assembles the accepted song, auditions it through a fake MIDI output port, publishes the complete package, verifies its portable tree and digests, and semantically re-imports every exported MIDI file.
+Files added/changed: `src/test/kotlin/app/melotrail/application/MidiCoreVerticalSliceTest.kt`; and this execution log.
+Files/data deleted: None planned.
+Tracked deletion recoverability: The unrelated Kotlin compiler session-marker deletion remains recoverable from Git and will not be included in the task commit.
+Ignored deletion recoverability: None planned.
+Focused tests: `./gradlew :test --tests app.melotrail.application.MidiCoreVerticalSliceTest --rerun-tasks --console=plain` PASS. One JVM test covers the project tree (`source/original.mid`, `reports/import.json`, six immutable candidate MIDI/report pairs, and `exports/vertical-export`), the source fixture SHA-256 `a2e32b1df5e78867193191a15c82caaa0b7c070b2e328c56b41a1ea5aaba4a35`, persisted source/candidate digests, five exported MIDI digests, manifest digest, snapshot references, and semantic re-import facts (SMF 1, PPQ 480, exact role names/order, and end tick 480).
+Full validation: `git diff --check` PASS; `make test` PASS (2026-08-28; 14 Gradle tasks); `make build` PASS (2026-08-28; 15 Gradle tasks, including documentation coverage).
+Manual evidence: Not required.
+Decisions/deviations: The E2E uses the application boundaries directly with a fake `MidiAuditionOutput`; no Python worker, audio renderer, legacy project schema, or old arrangement service is reachable from the test. The failure/recovery path intentionally attempts export before any acceptance, verifies no snapshot or project mutation, then completes the same project after explicit review transitions. Each role uses one first candidate and one targeted regenerated alternative; the second is rejected, the first accepted, and the first acceptance locked.
+Known limitations: Compose desktop composition and workflow wiring remain with MC-031–MC-040; final Logic Pro/GarageBand package evidence remains the MC-048 gate. The transitional Python documentation-inventory build check remains until MC-058.
+Commit: `midi-core: MC-030 prove vertical slice`.
+Next task: MC-031 — compose the desktop from target services.
 
 ## 6. Manual gate records
 
