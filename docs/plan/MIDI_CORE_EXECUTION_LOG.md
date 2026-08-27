@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-009 complete; MC-010 ready
+Status: MC-010 complete; MC-011 ready
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -49,7 +49,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-007 | DONE | `midi-core: MC-007 add deterministic MIDI writer` | PASS — writer/reader/architecture tests, `make test`, `make build` | One target SMF format-1 writer owns conductor metadata, role ordering, channel remapping, marker sanitization, and aligned role files. |
 | MC-008 | DONE | `midi-core: MC-008 prove MIDI export round trip` | PASS — focused export suite, `make test`, `make build` | Staged five-file core-role bundle is semantically re-imported, digest-bound, collision-safe, and test-only. |
 | MC-009 | DONE | `midi-core: MC-009 record DAW compatibility spike` | PASS — automated preparation, GarageBand 10.4.14, Logic Pro 12.3.1 | Both DAWs imported the core-role bundle with correct timing/roles and safe playback; marker display is non-blocking metadata and was unassessed. |
-| MC-010 | TODO | | | |
+| MC-010 | DONE | `midi-core: MC-010 define MIDI project schema` | PASS — schema/architecture tests, `make test`, `make build` | Strict MIDI Core v1 DTO boundary and golden document contain only target metadata, MIDI authority, candidate acceptance, and export ownership. |
 | MC-011 | TODO | | | |
 | MC-012 | TODO | | | |
 | MC-013 | TODO | | | |
@@ -351,6 +351,27 @@ Decisions/deviations: The bundle is intentionally a deterministic test fixture f
 Known limitations: The early fixture is intentionally a one-half-bar, one-note-per-role compatibility spike rather than a complete user arrangement. Marker display is unassessed and remains best-effort metadata; all timing/event-safety checks pass.
 Commit: `midi-core: MC-009 record DAW compatibility spike`.
 Next task: MC-010 — define the MIDI-only project schema.
+
+### MC-010 — Define the MIDI-only project schema
+
+Status: DONE
+Started: 2026-08-27
+Completed: 2026-08-27
+Starting commit/status: `daaeb20` / resumed the existing MC-010 in-progress worktree containing only the task log, two target schema sources, their focused test/golden fixture, and the required transitional documentation-inventory rows.
+Contracts read: F-PROJ-001 through F-PROJ-003; Architecture sections 4.1 and 6; MC-010 task contract.
+Current owners inspected: Legacy `ProjectStore`, its private schema-v4 DTO/envelope mapping and atomic writer, `ProjectV4SchemaTest`, and the resumed target schema implementation/tests. The legacy store remains compiled only for its current callers and is not imported by the target package.
+Behavior retained/extracted: Retained strict unknown-field decoding, explicit schema/version discrimination, and validation before domain admission. `MidiCoreProjectSchema` owns a private DTO boundary distinct from target domain records and classifies legacy/unknown documents without migration or writes. `ProjectRelativePath` provides portable lexical confinement; actual root/symlink confinement remains MC-011 ownership.
+Files added/changed: `src/main/kotlin/app/melotrail/project/MidiCoreProject.kt`; `src/main/kotlin/app/melotrail/project/MidiCoreProjectSchema.kt`; `src/test/kotlin/app/melotrail/project/MidiCoreProjectSchemaTest.kt`; `src/test/resources/fixtures/project/midi-core-v1.json`; `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`; `docs/plan/MIDI_CORE_EXECUTION_LOG.md`.
+Files/data deleted: None.
+Tracked deletion recoverability: Not applicable.
+Ignored deletion recoverability: Not applicable.
+Focused tests: `./gradlew :test --tests app.melotrail.project.MidiCoreProjectSchemaTest --tests app.melotrail.architecture.TargetArchitectureRulesTest --rerun-tasks` PASS (five schema tests plus target boundary rules). Tests cover complete encode/decode, byte-stable golden serialization, imported-source state before melody selection, required fields, strict unknown fields, malformed discriminators, legacy/future/unknown versions, traversal/absolute/drive paths, and aggregate ownership invariants.
+Full validation: `make test` PASS (2026-08-27; 14 Gradle tasks); `make build` first exposed the reviewed callable-count/digest change, then PASS after refreshing the MC-010 inventory row (15 Gradle tasks).
+Manual evidence: Not required.
+Decisions/deviations: Added explicit section-definition records so occurrences cannot reference an undeclared section while MC-016 remains the owner of timeline mutations. Corrected the resumed aggregate invariant so a successfully imported source may await explicit melody selection; candidates, acceptances, and exports still require a selected melody. Field ownership is: document discriminator -> schema boundary; metadata/source/selection/authority -> project aggregate; paths/digests -> artifact records; candidates/acceptances/locks -> review state; snapshots/files -> export history. The golden fixture SHA-256 is `d2fecce83fcab99a29ba3aef3fe3a60511dfcc22d316717e8e2dfac7c1147ea5`.
+Known limitations: Filesystem publication, digest verification, symlink confinement, and crash recovery are intentionally absent until MC-011. Project lifecycle use cases and UI-ready legacy rejection are MC-012. Later task-owned authority and candidate lifecycle fields will extend the still-unshipped v1 DTO before product cutover.
+Commit: `midi-core: MC-010 define MIDI project schema`.
+Next task: MC-011 — implement the target artifact store.
 
 ## 6. Manual gate records
 

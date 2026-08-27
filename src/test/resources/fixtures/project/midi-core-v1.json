@@ -1,0 +1,111 @@
+{
+    "schema": "melotrail-midi-core",
+    "version": 1,
+    "project": {
+        "id": "project-1",
+        "metadata": {
+            "name": "MIDI Core fixture",
+            "createdAt": "2026-08-27T00:00:00Z",
+            "applicationVersion": "test-1"
+        },
+        "sourceMidi": {
+            "originalFilename": "fixture.mid",
+            "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "format": 1,
+            "ppq": 480,
+            "original": {
+                "path": "source/original.mid",
+                "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+        },
+        "selectedMelody": {
+            "trackIndex": 1,
+            "channel": 0,
+            "identitySha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        },
+        "authority": {
+            "key": {
+                "tonic": 0,
+                "modeId": "major"
+            },
+            "tempoMicrosecondsPerQuarter": 500000,
+            "meterNumerator": 4,
+            "meterDenominatorExponent": 2,
+            "sectionDefinitions": [
+                {
+                    "id": "intro",
+                    "name": "Intro"
+                }
+            ],
+            "occurrences": [
+                {
+                    "id": "intro-1",
+                    "definitionId": "intro",
+                    "label": "Intro",
+                    "startTick": 0,
+                    "endTick": 480
+                }
+            ],
+            "chordEvents": [
+                {
+                    "id": "chord-1",
+                    "occurrenceId": "intro-1",
+                    "symbol": "C",
+                    "startTick": 0,
+                    "endTick": 480
+                }
+            ]
+        },
+        "candidates": [
+            {
+                "id": "candidate-1",
+                "role": "CHORDS",
+                "occurrenceId": "intro-1",
+                "generatorVersion": "chords-v1",
+                "authorityHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "seed": 42,
+                "midi": {
+                    "path": "candidates/chords/intro-1/candidate-1.mid",
+                    "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+                },
+                "validationReport": {
+                    "path": "reports/candidates/candidate-1.json",
+                    "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+                },
+                "createdAt": "2026-08-27T00:01:00Z"
+            }
+        ],
+        "acceptances": [
+            {
+                "occurrenceId": "intro-1",
+                "role": "CHORDS",
+                "candidateId": "candidate-1",
+                "locked": true
+            }
+        ],
+        "exportSnapshots": [
+            {
+                "id": "export-1",
+                "sourceSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "authorityHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "files": [
+                    {
+                        "kind": "COMPLETE_SONG",
+                        "artifact": {
+                            "path": "exports/export-1/complete-song.mid",
+                            "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+                        }
+                    },
+                    {
+                        "kind": "MANIFEST",
+                        "artifact": {
+                            "path": "exports/export-1/manifest.json",
+                            "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+                        }
+                    }
+                ],
+                "createdAt": "2026-08-27T00:02:00Z"
+            }
+        ]
+    }
+}

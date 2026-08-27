@@ -1483,6 +1483,22 @@
       "documentedFunctionCount": 0
     },
     {
+      "path": "src/main/kotlin/app/melotrail/project/MidiCoreProject.kt",
+      "classification": "trivial/generated",
+      "reason": "src/main/kotlin/app/melotrail/project/MidiCoreProject.kt contains immutable MIDI Core schema domain records and no callable declarations; MC-010 reviewed its ownership and invariant boundary on 2026-08-27.",
+      "functionCount": 0,
+      "declarationDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "documentedFunctionCount": 0
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/project/MidiCoreProjectSchema.kt",
+      "classification": "inherited-contract",
+      "reason": "The 32 callable declarations implement MC-010's explicitly discriminated MIDI Core v1 JSON schema, strict decoding, legacy classification, and DTO/domain mapping under F-PROJ-001 through F-PROJ-003 and Architecture sections 4.1 and 6; reviewed on 2026-08-27.",
+      "functionCount": 32,
+      "declarationDigest": "18f83b13f8eeb5a309ae9dc16fd34b8beda55359aefcd848c82ca16e927807ff",
+      "documentedFunctionCount": 1
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/profile/CompositionProfile.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/profile/CompositionProfile.kt has 15 callable declarations, 0 directly documented and 15 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
