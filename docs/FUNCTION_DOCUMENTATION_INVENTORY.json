@@ -325,10 +325,18 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreCandidateLifecycle.kt",
       "classification": "inherited-contract",
-      "reason": "The 21 callable declarations implement MC-019 immutable candidate publication, digest/authority admission, acceptance replacement and restoration, rejection, lock transitions, acceptance history, export-snapshot capture, and the MC-025 cancellation-aware publication boundary under F-REV-001 through F-REV-005, F-EXP-001, and F-SYS-003; reviewed on 2026-08-27.",
-      "functionCount": 21,
-      "declarationDigest": "3888850fa3d6b5021513991227c4285571fcc5dd8bfff0a76d498afe42cb1e00",
+      "reason": "The 22 callable declarations implement MC-019 immutable candidate publication, digest/authority admission, acceptance replacement and restoration, rejection, lock transitions, acceptance history, export-snapshot capture, project revision advancement, and the MC-025 cancellation-aware publication boundary under F-REV-001 through F-REV-005, F-EXP-001, and F-SYS-003; reviewed on 2026-08-27.",
+      "functionCount": 22,
+      "declarationDigest": "ff70409df41e7851e0fa1603edb964b16b35a09422f1c2fd44f4ffb0e1074f76",
       "documentedFunctionCount": 1
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/application/MidiCoreCandidateReview.kt",
+      "classification": "inherited-contract",
+      "reason": "The 20 callable declarations implement MC-026 candidate listing, semantic comparison, digest/authority revalidation, explicit review-decision delegation, targeted regeneration, and optimistic revision admission under F-REV-001 through F-REV-005 and F-ARR-006; reviewed on 2026-08-27.",
+      "functionCount": 20,
+      "declarationDigest": "9c23934ac6008c02ff6cdaee35144d65f757463aa2f7f43e89056c31eb40d435",
+      "documentedFunctionCount": 8
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreCandidateGeneration.kt",

@@ -58,7 +58,7 @@ class MidiCoreAuthoritativeHarmony(private val artifacts: MidiCoreArtifactStore 
             return rejected(MidiCoreAuthoritativeHarmonyProblemCode.INVALID_HARMONY, "The authoritative harmony has blocking coverage or realization findings.", "Correct the affected chord windows and retry.", validation)
         }
         val updated = try {
-            current.copy(authority = authority.copy(chordEvents = request.events))
+            current.copy(authority = authority.copy(chordEvents = request.events), revision = current.revision + 1L)
         } catch (error: IllegalArgumentException) {
             return rejected(MidiCoreAuthoritativeHarmonyProblemCode.INVALID_HARMONY, error.message ?: "The authoritative harmony is invalid.", "Save chord windows in deterministic occurrence and tick order.", validation)
         }

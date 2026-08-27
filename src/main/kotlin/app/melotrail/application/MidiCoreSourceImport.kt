@@ -113,6 +113,7 @@ class MidiCoreSourceImport(
             val reportArtifact = artifacts.publishImportReport(root, importReport(inspection, validation))
             published += reportArtifact
             val updated = current.copy(
+                revision = current.revision + 1L,
                 sourceMidi = SourceMidiRecord(
                     originalFilename = inspection.sequence.source.originalFilename,
                     sha256 = inspection.sequence.source.sha256,

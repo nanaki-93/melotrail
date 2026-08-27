@@ -17,8 +17,11 @@ data class MidiCoreProject(
     val acceptances: List<CandidateAcceptance> = emptyList(),
     val exportSnapshots: List<MidiCoreExportSnapshot> = emptyList(),
     val acceptanceHistory: List<CandidateAcceptanceHistory> = emptyList(),
+    /** Monotonic optimistic-concurrency revision for the persisted project document. */
+    val revision: Long = 0L,
 ) {
     init {
+        require(revision >= 0L) { "Project revision must not be negative" }
         require(selectedMelody == null || sourceMidi != null) { "A selected melody requires an imported source MIDI record" }
         require(sourceMidi != null || (candidates.isEmpty() && acceptances.isEmpty() && exportSnapshots.isEmpty() && acceptanceHistory.isEmpty())) {
             "Candidates, acceptances, and exports require an imported source MIDI record"

@@ -125,7 +125,7 @@ class MidiCoreMusicalAuthority(
             existingAuthority?.chordEvents.orEmpty(),
             existingAuthority?.pickupTicks ?: 0L,
         )
-        val updated = current.copy(authority = authority)
+        val updated = current.copy(authority = authority, revision = current.revision + 1L)
         val invalidation = MidiCoreInvalidationPlanner.preview(
             MidiCoreAuthorityHasher.from(current),
             MidiCoreAuthorityHasher.from(updated),

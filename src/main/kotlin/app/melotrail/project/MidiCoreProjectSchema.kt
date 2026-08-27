@@ -87,6 +87,7 @@ private data class ProjectDto(
     val acceptances: List<AcceptanceDto> = emptyList(),
     val acceptanceHistory: List<AcceptanceHistoryDto> = emptyList(),
     val exportSnapshots: List<ExportSnapshotDto> = emptyList(),
+    val revision: Long = 0L,
 )
 
 @Serializable
@@ -217,6 +218,7 @@ private fun MidiCoreProject.toDto() = ProjectDto(
     acceptances = acceptances.map(CandidateAcceptance::toDto),
     acceptanceHistory = acceptanceHistory.map(CandidateAcceptanceHistory::toDto),
     exportSnapshots = exportSnapshots.map(MidiCoreExportSnapshot::toDto),
+    revision = revision,
 )
 
 private fun ProjectDto.toDomain() = MidiCoreProject(
@@ -229,6 +231,7 @@ private fun ProjectDto.toDomain() = MidiCoreProject(
     acceptances = acceptances.map(AcceptanceDto::toDomain),
     acceptanceHistory = acceptanceHistory.map(AcceptanceHistoryDto::toDomain),
     exportSnapshots = exportSnapshots.map(ExportSnapshotDto::toDomain),
+    revision = revision,
 )
 
 private fun ProjectMetadata.toDto() = ProjectMetadataDto(name, createdAt, applicationVersion)

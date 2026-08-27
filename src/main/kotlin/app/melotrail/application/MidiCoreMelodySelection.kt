@@ -79,7 +79,7 @@ class MidiCoreMelodySelection(
                 )
             }
         }
-        val updated = current.copy(selectedMelody = selected)
+        val updated = current.copy(selectedMelody = selected, revision = current.revision + 1L)
         val invalidation = MidiCoreInvalidationPlanner.preview(
             MidiCoreAuthorityHasher.from(current),
             MidiCoreAuthorityHasher.from(updated),

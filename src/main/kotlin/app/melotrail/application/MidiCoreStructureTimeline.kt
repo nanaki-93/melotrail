@@ -54,12 +54,13 @@ class MidiCoreStructureTimeline(private val artifacts: MidiCoreArtifactStore = M
             return rejected(MidiCoreStructureTimelineProblemCode.INVALID_STRUCTURE, error.message ?: "Structure is invalid.", "Review the structure and authoritative harmony before retrying.")
         }
         val updatedProject = try {
-            current.copy(authority = updatedAuthority)
+            current.copy(authority = updatedAuthority, revision = current.revision + 1L)
         } catch (error: IllegalArgumentException) {
             try {
                 // A removed occurrence makes its prior candidate evidence stale, not disposable.
                 current.copy(
                     authority = updatedAuthority,
+                    revision = current.revision + 1L,
                     candidates = emptyList(),
                     acceptances = emptyList(),
                     acceptanceHistory = emptyList(),

@@ -122,7 +122,10 @@ class MidiCoreCandidateLifecycle(
                     "The published evidence remains inspectable; retry generation if another candidate is required.",
                 )
             }
-            val updated = current.copy(candidates = current.candidates + candidate)
+            val updated = current.copy(
+                candidates = current.candidates + candidate,
+                revision = Math.addExact(current.revision, 1L),
+            )
             save(loaded.root, updated)
         } catch (error: MidiCoreProjectSaveException) {
             return rejected(MidiCoreCandidateProblemCode.SAVE_FAILED, "The candidate evidence was published but project state could not be saved.", "Keep the immutable evidence and retry the project save; the last known-good project remains current.")
@@ -131,16 +134,25 @@ class MidiCoreCandidateLifecycle(
         } catch (error: Exception) {
             return rejected(MidiCoreCandidateProblemCode.ARTIFACT_FAILURE, "Candidate MIDI or validation evidence could not be published safely.", "Check the generated files and project permissions, then retry.")
         }
-        val updatedSession = MidiCoreProjectSession(loaded.root, current.copy(candidates = current.candidates + candidate))
+        val updatedSession = MidiCoreProjectSession(
+            loaded.root,
+            current.copy(candidates = current.candidates + candidate, revision = Math.addExact(current.revision, 1L)),
+        )
         return MidiCoreCandidateLifecycleResult.Published(updatedSession, candidate)
     }
 
-    fun accept(request: AcceptMidiCoreCandidate): MidiCoreCandidateLifecycleResult {
-        val loaded = ready(request.session) ?: return loadRejected(request.session)
+    fun accept(request: AcceptMidiCoreCandidate): MidiCoreCandidateLifecycleResult =
+        MidiCoreProjectWriteCoordinator.withLock(request.session.root) { acceptLocked(request) }
+
+    private fun acceptLocked(request: AcceptMidiCoreCandidate): MidiCoreCandidateLifecycleResult {
+        val loaded = when (val result = load(request.session, request.expectedRevision)) {
+            is CandidateLoad.Ready -> result
+            is CandidateLoad.Rejected -> return result.result
+        }
         val current = loaded.project
         val candidate = current.candidates.singleOrNull { it.id == request.candidateId }
             ?: return rejected(MidiCoreCandidateProblemCode.CANDIDATE_NOT_FOUND, "The candidate does not exist in this project.", "Choose an inspectable candidate and retry.")
-        ensureAcceptable(current, candidate)?.let { return it }
+        ensureAcceptable(loaded.root, current, candidate)?.let { return it }
         val existing = current.acceptances.singleOrNull { it.occurrenceId == candidate.occurrenceId && it.role == candidate.role }
         if (existing?.candidateId == candidate.id && existing.locked && candidate.status != MidiCoreCandidateStatus.ACCEPTED) {
             return rejected(MidiCoreCandidateProblemCode.LOCKED, "The accepted candidate is locked for this occurrence and role.", "Explicitly unlock the current acceptance before changing it.")
@@ -177,8 +189,14 @@ class MidiCoreCandidateLifecycle(
         return persistTransition(loaded.root, updated, candidate, acceptance)
     }
 
-    fun reject(request: RejectMidiCoreCandidate): MidiCoreCandidateLifecycleResult {
-        val loaded = ready(request.session) ?: return loadRejected(request.session)
+    fun reject(request: RejectMidiCoreCandidate): MidiCoreCandidateLifecycleResult =
+        MidiCoreProjectWriteCoordinator.withLock(request.session.root) { rejectLocked(request) }
+
+    private fun rejectLocked(request: RejectMidiCoreCandidate): MidiCoreCandidateLifecycleResult {
+        val loaded = when (val result = load(request.session, request.expectedRevision)) {
+            is CandidateLoad.Ready -> result
+            is CandidateLoad.Rejected -> return result.result
+        }
         val current = loaded.project
         val candidate = current.candidates.singleOrNull { it.id == request.candidateId }
             ?: return rejected(MidiCoreCandidateProblemCode.CANDIDATE_NOT_FOUND, "The candidate does not exist in this project.", "Choose an inspectable candidate and retry.")
@@ -209,19 +227,31 @@ class MidiCoreCandidateLifecycle(
         return persistTransition(loaded.root, updated, rejectedCandidate, null)
     }
 
-    fun lock(request: LockMidiCoreCandidate): MidiCoreCandidateLifecycleResult = setLock(request.session, request.candidateId, true)
+    fun lock(request: LockMidiCoreCandidate): MidiCoreCandidateLifecycleResult =
+        MidiCoreProjectWriteCoordinator.withLock(request.session.root) {
+            setLockLocked(request.session, request.candidateId, true, request.expectedRevision)
+        }
 
-    fun unlock(request: UnlockMidiCoreCandidate): MidiCoreCandidateLifecycleResult = setLock(request.session, request.candidateId, false)
+    fun unlock(request: UnlockMidiCoreCandidate): MidiCoreCandidateLifecycleResult =
+        MidiCoreProjectWriteCoordinator.withLock(request.session.root) {
+            setLockLocked(request.session, request.candidateId, false, request.expectedRevision)
+        }
 
-    fun restore(request: RestoreMidiCoreCandidate): MidiCoreCandidateLifecycleResult {
-        val loaded = ready(request.session) ?: return loadRejected(request.session)
+    fun restore(request: RestoreMidiCoreCandidate): MidiCoreCandidateLifecycleResult =
+        MidiCoreProjectWriteCoordinator.withLock(request.session.root) { restoreLocked(request) }
+
+    private fun restoreLocked(request: RestoreMidiCoreCandidate): MidiCoreCandidateLifecycleResult {
+        val loaded = when (val result = load(request.session, request.expectedRevision)) {
+            is CandidateLoad.Ready -> result
+            is CandidateLoad.Rejected -> return result.result
+        }
         val current = loaded.project
         val candidate = current.candidates.singleOrNull { it.id == request.candidateId }
             ?: return rejected(MidiCoreCandidateProblemCode.CANDIDATE_NOT_FOUND, "The candidate does not exist in this project.", "Choose an inspectable candidate and retry.")
         if (candidate.role != request.role || candidate.occurrenceId != request.occurrenceId) {
             return rejected(MidiCoreCandidateProblemCode.INVALID_STATE, "The candidate does not belong to the requested role and occurrence.", "Restore the candidate from its recorded scope.")
         }
-        ensureAcceptable(current, candidate)?.let { return it }
+        ensureAcceptable(loaded.root, current, candidate)?.let { return it }
         if (current.acceptanceHistory.none {
                 it.candidateId == candidate.id && it.role == candidate.role && it.occurrenceId == candidate.occurrenceId &&
                     it.action in setOf(MidiCoreAcceptanceAction.ACCEPTED, MidiCoreAcceptanceAction.REPLACED, MidiCoreAcceptanceAction.RESTORED)
@@ -255,12 +285,20 @@ class MidiCoreCandidateLifecycle(
         return persistTransition(loaded.root, updated, candidate, acceptance)
     }
 
-    private fun setLock(session: MidiCoreProjectSession, candidateId: String, locked: Boolean): MidiCoreCandidateLifecycleResult {
-        val loaded = ready(session) ?: return loadRejected(session)
+    private fun setLockLocked(
+        session: MidiCoreProjectSession,
+        candidateId: String,
+        locked: Boolean,
+        expectedRevision: Long?,
+    ): MidiCoreCandidateLifecycleResult {
+        val loaded = when (val result = load(session, expectedRevision)) {
+            is CandidateLoad.Ready -> result
+            is CandidateLoad.Rejected -> return result.result
+        }
         val current = loaded.project
         val candidate = current.candidates.singleOrNull { it.id == candidateId }
             ?: return rejected(MidiCoreCandidateProblemCode.CANDIDATE_NOT_FOUND, "The candidate does not exist in this project.", "Choose an inspectable candidate and retry.")
-        ensureAcceptable(current, candidate)?.let { return it }
+        ensureAcceptable(loaded.root, current, candidate)?.let { return it }
         if (candidate.status != MidiCoreCandidateStatus.ACCEPTED) {
             return rejected(MidiCoreCandidateProblemCode.INVALID_STATE, "Only the current accepted candidate can be locked or unlocked.", "Accept this candidate first, then change its lock state.")
         }
@@ -286,7 +324,11 @@ class MidiCoreCandidateLifecycle(
         return persistTransition(loaded.root, updated, candidate, updatedAcceptance)
     }
 
-    private fun ensureAcceptable(project: MidiCoreProject, candidate: MidiCoreCandidate): MidiCoreCandidateLifecycleResult.Rejected? {
+    private fun ensureAcceptable(
+        root: Path,
+        project: MidiCoreProject,
+        candidate: MidiCoreCandidate,
+    ): MidiCoreCandidateLifecycleResult.Rejected? {
         if (candidate.status == MidiCoreCandidateStatus.REJECTED) {
             return rejected(MidiCoreCandidateProblemCode.INVALID_STATE, "A rejected candidate cannot become accepted.", "Publish a new candidate or choose a non-rejected alternative.")
         }
@@ -300,6 +342,16 @@ class MidiCoreCandidateLifecycle(
         }
         if (candidate.authorityHash != currentAuthorityHash) {
             return rejected(MidiCoreCandidateProblemCode.CANDIDATE_STALE, "The candidate authority hash no longer matches current authority.", "Regenerate the affected role and occurrence before accepting it.")
+        }
+        try {
+            artifacts.verify(root, candidate.midi)
+            artifacts.verify(root, candidate.validationReport)
+        } catch (error: Exception) {
+            return rejected(
+                MidiCoreCandidateProblemCode.DIGEST_MISMATCH,
+                "Candidate MIDI or validation evidence no longer matches its recorded digest.",
+                "Restore the immutable candidate files or publish a new candidate; the current candidate cannot be accepted.",
+            )
         }
         return null
     }
@@ -320,9 +372,23 @@ class MidiCoreCandidateLifecycle(
         candidate: MidiCoreCandidate,
         acceptance: CandidateAcceptance?,
     ): MidiCoreCandidateLifecycleResult {
+        val next = try {
+            project.copy(revision = Math.addExact(project.revision, 1L))
+        } catch (error: ArithmeticException) {
+            return rejected(MidiCoreCandidateProblemCode.INVALID_STATE, "The project revision cannot advance safely.", "Save a new project copy before applying another review decision.")
+        }
         return try {
-            save(root, project)
-            MidiCoreCandidateLifecycleResult.Updated(MidiCoreProjectSession(root, project), candidate, acceptance, project.acceptanceHistory.lastOrNull())
+            save(root, next)
+            val persistedCandidate = next.candidates.singleOrNull { it.id == candidate.id } ?: candidate
+            val persistedAcceptance = acceptance?.let { expected ->
+                next.acceptances.singleOrNull { it.occurrenceId == expected.occurrenceId && it.role == expected.role }
+            }
+            MidiCoreCandidateLifecycleResult.Updated(
+                MidiCoreProjectSession(root, next),
+                persistedCandidate,
+                persistedAcceptance,
+                next.acceptanceHistory.lastOrNull(),
+            )
         } catch (error: MidiCoreProjectSaveException) {
             rejected(MidiCoreCandidateProblemCode.SAVE_FAILED, "Candidate review state could not be saved safely.", "Retry the transition; the last known-good project remains current.")
         } catch (error: Exception) {
@@ -334,22 +400,35 @@ class MidiCoreCandidateLifecycle(
         artifacts.saveProject(root, project)
     }
 
-    private fun ready(session: MidiCoreProjectSession): CandidateLoad.Ready? = when (val result = load(session)) {
-        is CandidateLoad.Ready -> result
-        is CandidateLoad.Rejected -> null
-    }
-
-    private fun loadRejected(session: MidiCoreProjectSession): MidiCoreCandidateLifecycleResult.Rejected = when (val result = load(session)) {
-        is CandidateLoad.Ready -> rejected(MidiCoreCandidateProblemCode.INVALID_PROJECT, "The project could not be verified for this transition.", "Reopen the project and retry.")
-        is CandidateLoad.Rejected -> result.result
-    }
-
-    private fun load(session: MidiCoreProjectSession): CandidateLoad {
+    private fun load(session: MidiCoreProjectSession, expectedRevision: Long? = null): CandidateLoad {
         val root = session.root.toAbsolutePath().normalize()
+        if (expectedRevision != null && expectedRevision < 0L) {
+            return CandidateLoad.Rejected(
+                rejected(
+                    MidiCoreCandidateProblemCode.INVALID_CANDIDATE,
+                    "The expected project revision is invalid.",
+                    "Reload the project and retry the review decision.",
+                ),
+            )
+        }
         val current = try {
             artifacts.openProject(root)
         } catch (error: Exception) {
-            return CandidateLoad.Rejected(rejected(MidiCoreCandidateProblemCode.INVALID_PROJECT, "The project cannot be verified before changing candidate state.", "Open a valid MIDI Core project and retry."))
+            val code = if (error.message.orEmpty().contains("digest", ignoreCase = true)) {
+                MidiCoreCandidateProblemCode.DIGEST_MISMATCH
+            } else {
+                MidiCoreCandidateProblemCode.INVALID_PROJECT
+            }
+            return CandidateLoad.Rejected(rejected(code, "The project cannot be verified before changing candidate state.", "Open a valid MIDI Core project and retry."))
+        }
+        if (expectedRevision != null && current.revision != expectedRevision) {
+            return CandidateLoad.Rejected(
+                rejected(
+                    MidiCoreCandidateProblemCode.REVISION_CONFLICT,
+                    "The project changed from revision $expectedRevision to ${current.revision}.",
+                    "Reload the Review page before applying another decision.",
+                ),
+            )
         }
         if (current != session.project) {
             return CandidateLoad.Rejected(rejected(MidiCoreCandidateProblemCode.STALE_PROJECT, "The project changed since this screen was opened.", "Reopen the project before changing candidate state."))
@@ -451,7 +530,10 @@ class MidiCoreExportSnapshotLifecycle(
                 }
                 artifacts.verify(root, file.artifact)
             }
-            save(root, current.copy(exportSnapshots = current.exportSnapshots + snapshot))
+            save(root, current.copy(
+                exportSnapshots = current.exportSnapshots + snapshot,
+                revision = Math.addExact(current.revision, 1L),
+            ))
         } catch (error: MidiCoreProjectSaveException) {
             return rejected(MidiCoreExportSnapshotProblemCode.SAVE_FAILED, "The export snapshot could not be saved safely.", "Retry the save; existing export evidence remains immutable.")
         } catch (error: MidiCoreArtifactCollisionException) {
@@ -459,7 +541,16 @@ class MidiCoreExportSnapshotLifecycle(
         } catch (error: Exception) {
             return rejected(MidiCoreExportSnapshotProblemCode.INVALID_SNAPSHOT, error.message ?: "Export snapshot files are invalid or unavailable.", "Verify the staged export files and retry.")
         }
-        return MidiCoreExportSnapshotLifecycleResult.Captured(MidiCoreProjectSession(root, current.copy(exportSnapshots = current.exportSnapshots + snapshot)), snapshot)
+        return MidiCoreExportSnapshotLifecycleResult.Captured(
+            MidiCoreProjectSession(
+                root,
+                current.copy(
+                    exportSnapshots = current.exportSnapshots + snapshot,
+                    revision = Math.addExact(current.revision, 1L),
+                ),
+            ),
+            snapshot,
+        )
     }
 
     fun isCurrent(project: MidiCoreProject, snapshot: MidiCoreExportSnapshot): Boolean = snapshot.isCurrent(project)
@@ -493,16 +584,35 @@ data class PublishMidiCoreCandidate(
     val beforeProjectSave: ((MidiCoreCandidate) -> Boolean)? = null,
 )
 
-data class AcceptMidiCoreCandidate(val session: MidiCoreProjectSession, val candidateId: String, val locked: Boolean = false)
-data class RejectMidiCoreCandidate(val session: MidiCoreProjectSession, val candidateId: String, val reason: String)
-data class LockMidiCoreCandidate(val session: MidiCoreProjectSession, val candidateId: String)
-data class UnlockMidiCoreCandidate(val session: MidiCoreProjectSession, val candidateId: String)
+data class AcceptMidiCoreCandidate(
+    val session: MidiCoreProjectSession,
+    val candidateId: String,
+    val locked: Boolean = false,
+    val expectedRevision: Long? = null,
+)
+data class RejectMidiCoreCandidate(
+    val session: MidiCoreProjectSession,
+    val candidateId: String,
+    val reason: String,
+    val expectedRevision: Long? = null,
+)
+data class LockMidiCoreCandidate(
+    val session: MidiCoreProjectSession,
+    val candidateId: String,
+    val expectedRevision: Long? = null,
+)
+data class UnlockMidiCoreCandidate(
+    val session: MidiCoreProjectSession,
+    val candidateId: String,
+    val expectedRevision: Long? = null,
+)
 data class RestoreMidiCoreCandidate(
     val session: MidiCoreProjectSession,
     val occurrenceId: String,
     val role: CandidateRole,
     val candidateId: String,
     val locked: Boolean = false,
+    val expectedRevision: Long? = null,
 )
 
 data class CaptureMidiCoreExportSnapshot(
@@ -539,6 +649,9 @@ enum class MidiCoreCandidateProblemCode {
     ARTIFACT_COLLISION,
     SAVE_FAILED,
     CANCELLED,
+    REVISION_CONFLICT,
+    DIGEST_MISMATCH,
+    CANDIDATE_SCOPE_MISMATCH,
 }
 
 sealed interface MidiCoreExportSnapshotLifecycleResult {
