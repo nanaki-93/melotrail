@@ -277,7 +277,7 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreMelodySelection.kt",
       "classification": "inherited-contract",
-      "reason": "The 4 callable declarations implement MC-014's UI-ready protected melody selection, source reinspection, digest binding, and safe derived-work invalidation boundary under F-MIDI-003 and F-MIDI-005; reviewed on 2026-08-27.",
+      "reason": "The 4 callable declarations implement MC-014's UI-ready protected melody selection, source reinspection, digest binding, and MC-018 scoped derived-work invalidation preview under F-MIDI-003, F-MIDI-005, and F-REV-005; reviewed on 2026-08-27.",
       "functionCount": 4,
       "declarationDigest": "106487ce7bda3433ed15678207c1b5e817d73f289a72409b6342d1f644cac6ac",
       "documentedFunctionCount": 0
@@ -285,7 +285,7 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreMusicalAuthority.kt",
       "classification": "inherited-contract",
-      "reason": "The 3 callable declarations implement MC-015's explicit fixed tempo, meter, key, and mode confirmation, source timing suggestions, source reinspection, and advisory chromatic compatibility under F-AUTH-001 and F-AUTH-002; reviewed on 2026-08-27.",
+      "reason": "The 3 callable declarations implement MC-015's explicit fixed tempo, meter, key, and mode confirmation, source timing suggestions, source reinspection, and MC-018 scoped authority-impact preview under F-AUTH-001, F-AUTH-002, and F-REV-005; reviewed on 2026-08-27.",
       "functionCount": 3,
       "declarationDigest": "d10e8340ff618fcd01941715e03f6d1eee8d1adcdd69257df7308b0a28686032",
       "documentedFunctionCount": 0
@@ -309,7 +309,7 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreStructureTimeline.kt",
       "classification": "inherited-contract",
-      "reason": "The 2 callable declarations implement MC-016's source-range-checked, revision-safe, atomic section-occurrence timeline persistence and deterministic marker projection under F-AUTH-003; reviewed on 2026-08-27.",
+      "reason": "The 2 callable declarations implement MC-016's source-range-checked, revision-safe, atomic section-occurrence timeline persistence and MC-018 scoped authority-impact preview under F-AUTH-003 and F-REV-005; reviewed on 2026-08-27.",
       "functionCount": 2,
       "declarationDigest": "0190672037c2676854fec104b0f588a6edbf80f49cd7c2b0c2361b11ece6252c",
       "documentedFunctionCount": 0
@@ -317,7 +317,7 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreAuthoritativeHarmony.kt",
       "classification": "inherited-contract",
-      "reason": "The 2 callable declarations implement MC-017's explicit chord-window validation, chromatic advisory handling, stale-session check, derived-work protection, and atomic persistence under F-AUTH-004 and MIDI Contract section 8; reviewed on 2026-08-27.",
+      "reason": "The 2 callable declarations implement MC-017's explicit chord-window validation, chromatic advisory handling, stale-session check, scoped invalidation preview, and atomic persistence under F-AUTH-004 and MIDI Contract section 8; reviewed on 2026-08-27.",
       "functionCount": 2,
       "declarationDigest": "0190672037c2676854fec104b0f588a6edbf80f49cd7c2b0c2361b11ece6252c",
       "documentedFunctionCount": 0
@@ -448,6 +448,14 @@
       "reason": "src/main/kotlin/app/melotrail/arrangement/Arrangement.kt has 11 callable declarations, 0 directly documented and 11 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
       "functionCount": 11,
       "declarationDigest": "4c9653c2992237a6863860703b35d65da1f20569653348ece2b26aed76bad9e7",
+      "documentedFunctionCount": 0
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/arrangement/core/MidiCoreInvalidation.kt",
+      "classification": "inherited-contract",
+      "reason": "The 6 callable declarations implement MC-018's canonical dimension/scoped invalidation preview, accepted-dependency propagation, export staleness reporting, and exact async-generation admission under F-AUTH-005, F-REV-005, and Architecture sections 7-8; reviewed on 2026-08-27.",
+      "functionCount": 6,
+      "declarationDigest": "65d8906056310072242ea760207bdbbdadb5cf2397448731d65af3bcb0441afd",
       "documentedFunctionCount": 0
     },
     {
@@ -1577,6 +1585,14 @@
       "functionCount": 36,
       "declarationDigest": "2f4ce1da4847fb383d2b848b67172eaecf0125ff41bdb40e55f05247f5b747df",
       "documentedFunctionCount": 1
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/project/MidiCoreAuthorityFingerprint.kt",
+      "classification": "inherited-contract",
+      "reason": "The 9 callable declarations implement MC-018's canonical source, melody, timing, structure, harmony, settings, scoped role/occurrence, generator, and accepted-dependency fingerprints under F-AUTH-005, F-REV-005, and Architecture sections 7-8; reviewed on 2026-08-27.",
+      "functionCount": 9,
+      "declarationDigest": "f73c9fe45ec506e647aafb7a82c5f0899780a47734ba080dc4750465ee9cf73c",
+      "documentedFunctionCount": 0
     },
     {
       "path": "src/main/kotlin/app/melotrail/structure/MidiCoreOccurrenceTimeline.kt",

@@ -1,5 +1,8 @@
 package app.melotrail.application
 
+import app.melotrail.arrangement.core.MidiCoreCandidateDependency
+import app.melotrail.arrangement.core.MidiCoreExportDependency
+import app.melotrail.arrangement.core.MidiCoreInvalidationPlanner
 import app.melotrail.midi.adapter.JdkMidiReader
 import app.melotrail.midi.domain.MidiImportDisposition
 import app.melotrail.midi.domain.MidiImportValidationResult
@@ -10,6 +13,7 @@ import app.melotrail.midi.domain.MidiMelodySelectionFailure
 import app.melotrail.midi.domain.MidiProtectedMelodySelector
 import app.melotrail.midi.domain.MidiProtectedMelodyView
 import app.melotrail.midi.domain.MidiValidationContext
+import app.melotrail.project.MidiCoreAuthorityHasher
 import app.melotrail.project.SelectedMelodyTrack
 import app.melotrail.project.adapter.MidiCoreArtifactStore
 import app.melotrail.project.adapter.MidiCoreProjectSaveException
@@ -65,20 +69,28 @@ class MidiCoreMelodySelection(
         }
         val selected = SelectedMelodyTrack(request.trackIndex, request.channel, view.identitySha256)
         current.selectedMelody?.let { existing ->
-            if (existing == selected) return MidiCoreMelodySelectionResult.Selected(request.session, view, validation)
-            if (current.candidates.isNotEmpty() || current.acceptances.isNotEmpty() || current.exportSnapshots.isNotEmpty()) {
-                return rejected(
-                    MidiCoreMelodySelectionProblemCode.DERIVED_WORK_INVALIDATION_REQUIRED,
-                    "Changing protected melody authority would invalidate immutable candidates or export history.",
-                    "Review or explicitly invalidate derived work before selecting a different melody.",
+            if (existing == selected) {
+                val fingerprint = MidiCoreAuthorityHasher.from(current)
+                return MidiCoreMelodySelectionResult.Selected(
+                    request.session,
+                    view,
                     validation,
+                    MidiCoreInvalidationPlanner.preview(fingerprint, fingerprint),
                 )
             }
         }
         val updated = current.copy(selectedMelody = selected)
+        val invalidation = MidiCoreInvalidationPlanner.preview(
+            MidiCoreAuthorityHasher.from(current),
+            MidiCoreAuthorityHasher.from(updated),
+            current.candidates.map { candidate ->
+                MidiCoreCandidateDependency(candidate.id, candidate.role, candidate.occurrenceId, candidate.authorityHash)
+            },
+            current.exportSnapshots.map { snapshot -> MidiCoreExportDependency(snapshot.id, snapshot.authorityHash) },
+        )
         return try {
             artifacts.saveProject(root, updated)
-            MidiCoreMelodySelectionResult.Selected(MidiCoreProjectSession(root, updated), view, validation)
+            MidiCoreMelodySelectionResult.Selected(MidiCoreProjectSession(root, updated), view, validation, invalidation)
         } catch (_: MidiCoreProjectSaveException) {
             rejected(MidiCoreMelodySelectionProblemCode.SAVE_FAILED, "The protected melody could not be saved safely.", "Retry the save; the last known-good project remains available.", validation)
         } catch (_: Exception) {
@@ -116,6 +128,7 @@ sealed interface MidiCoreMelodySelectionResult {
         val session: MidiCoreProjectSession,
         val view: MidiProtectedMelodyView,
         val validation: MidiImportValidationResult,
+        val invalidation: app.melotrail.arrangement.core.MidiCoreInvalidationPreview,
     ) : MidiCoreMelodySelectionResult
 
     data class Rejected(
@@ -140,6 +153,5 @@ enum class MidiCoreMelodySelectionProblemCode {
     NO_COMPLETE_NOTES,
     UNSUPPORTED_MPE_LIKE_EXPRESSION,
     SELECTION_REJECTED,
-    DERIVED_WORK_INVALIDATION_REQUIRED,
     SAVE_FAILED,
 }

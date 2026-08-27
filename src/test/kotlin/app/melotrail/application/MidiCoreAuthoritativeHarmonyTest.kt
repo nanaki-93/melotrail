@@ -1,7 +1,11 @@
 package app.melotrail.application
 
+import app.melotrail.arrangement.core.MidiCoreDerivedWorkKind
 import app.melotrail.midi.OwnedMidiFixtures
+import app.melotrail.project.CandidateRole
 import app.melotrail.project.AuthoritativeChordEvent
+import app.melotrail.project.MidiCoreAuthorityHasher
+import app.melotrail.project.MidiCoreCandidate
 import app.melotrail.project.ProjectSectionDefinition
 import app.melotrail.project.adapter.MidiCoreArtifactStore
 import app.melotrail.structure.MidiCoreOccurrencePlacement
@@ -77,6 +81,45 @@ class MidiCoreAuthoritativeHarmonyTest {
 
         assertEquals(MidiCoreAuthoritativeHarmonyProblemCode.SAVE_FAILED, result.problem.code)
         assertContentEquals(before, Files.readAllBytes(session.root.resolve(MidiCoreArtifactStore.PROJECT_FILE)))
+    }
+
+    @Test
+    fun `authority edit persists while previewing the affected candidate`() {
+        val store = MidiCoreArtifactStore()
+        val session = structured(store)
+        val source = OwnedMidiFixtures.writeAll(root.resolve("candidate-fixtures-${store.hashCode()}"))
+            .single { it.fileName.toString() == "smf0-melody.mid" }
+        val candidateMidi = store.publishCandidateMidi(session.root, CandidateRole.CHORDS, "verse-1", "candidate-1", source)
+        val candidateReport = store.publishCandidateReport(session.root, "candidate-1", "{}")
+        val authorityHash = MidiCoreAuthorityHasher.from(session.project)
+            .scopeHash("verse-1", CandidateRole.CHORDS)
+        val candidate = MidiCoreCandidate(
+            "candidate-1",
+            CandidateRole.CHORDS,
+            "verse-1",
+            "chords-v1",
+            authorityHash,
+            42,
+            candidateMidi,
+            candidateReport,
+            "2026-08-27T00:00:00Z",
+        )
+        val withCandidate = session.project.copy(candidates = listOf(candidate))
+        store.saveProject(session.root, withCandidate)
+        val current = MidiCoreProjectSession(session.root, withCandidate)
+
+        val result = assertIs<MidiCoreAuthoritativeHarmonyResult.Updated>(
+            MidiCoreAuthoritativeHarmony(store).replace(
+                ReplaceMidiCoreHarmony(
+                    current,
+                    listOf(AuthoritativeChordEvent("chord-1", "verse-1", "Db", 0, 480)),
+                ),
+            ),
+        )
+
+        assertEquals(listOf("candidate-1"), result.invalidation.staleCandidateIds)
+        assertEquals(listOf(MidiCoreDerivedWorkKind.CANDIDATE), result.invalidation.staleTargets.map { it.kind })
+        assertEquals("Db", requireNotNull(store.openProject(session.root).authority).chordEvents.single().symbol)
     }
 
     private fun structured(store: MidiCoreArtifactStore): MidiCoreProjectSession {

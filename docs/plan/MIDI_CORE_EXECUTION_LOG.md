@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-017 complete; MC-018 next
+Status: MC-018 complete; MC-019 next
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -57,7 +57,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-015 | DONE | `midi-core: MC-015 add core musical authority` | PASS — authority/schema/architecture tests, `make test`, `make build` | Typed fixed tempo/meter and spelling-aware key/mode authority are explicitly confirmed, persisted, and reopened without source mutation. |
 | MC-016 | DONE | `midi-core: MC-016 add exact occurrence timeline` | PASS — focused timeline/schema/application tests, `make test` | Explicit tick/beat occurrence timeline, pickup policy, deterministic markers, ordered mutations, source-range coverage, and safe persistence are implemented without duration inference. |
 | MC-017 | DONE | `midi-core: MC-017 add authoritative harmony` | PASS — focused harmony/application tests, `make test`, `make build` | Exact chord-window coverage, bounded parsing/realization, chromatic advisories, stale-safe application binding, reopen, and atomic save-failure behavior are covered. |
-| MC-018 | TODO | | | |
+| MC-018 | DONE | `midi-core: MC-018 add scoped invalidation` | PASS — fingerprint/invalidation/application tests, `make test`, `make build` | Canonical component and role/occurrence hashes, generator/dependency inputs, scoped impact preview, immutable artifact retention, and stale async rejection are covered. |
 | MC-019 | TODO | | | |
 | MC-020 | TODO | | | |
 | MC-021 | TODO | | | |
@@ -523,6 +523,28 @@ Decisions/deviations: The parser deliberately exposes a bounded V1 vocabulary ra
 Known limitations: Dependency-aware scoped invalidation and authority fingerprints remain MC-018; candidate status and acceptance lifecycle remain MC-019. The harmony application is not yet wired to Compose Desktop; MC-036 owns the target structure/harmony page. The transitional Python documentation-inventory build check remains until MC-058.
 Commit: `midi-core: MC-017 add authoritative harmony`.
 Next task: MC-018 — implement authority hashes and dependency-aware invalidation.
+
+### MC-018 — Implement authority hashes and dependency-aware invalidation
+
+Status: DONE
+Started: 2026-08-27
+Completed: 2026-08-27
+Starting commit/status: `3ef533a` / clean after the MC-017 task commit; the unrelated deleted Kotlin compiler session marker remains outside the task commit.
+Contracts read: F-AUTH-005 and F-REV-005; Architecture sections 7 and 8; Quality Gate 3; MC-018 task contract.
+Current owners inspected: Target project authority, candidate/export records, and all target authority mutation use cases; legacy stale workflow artifacts, context hashes, project mutation coordination, and arrangement fingerprints. Legacy state remains outside the target path.
+Behavior retained/extracted: `MidiCoreAuthorityHasher` uses length-delimited canonical serialization for source, selected melody, timing, structure, harmony, and settings components, then derives one exact hash for every role/occurrence scope. Source and melody identity, fixed tempo/meter/pickup, occurrence boundaries, key spelling/chords, and explicit settings are never inferred or normalized. `MidiCoreGenerationFingerprint` adds generator ID/version/pattern/seed and accepted role/occurrence/candidate hash inputs. `MidiCoreInvalidationPlanner` compares component and scoped hashes, reports affected candidates and whole-song exports before mutation, propagates accepted-candidate impact to dependents, and never deletes an artifact. `MidiCoreGenerationAdmission` rejects any completion whose scoped authority, generator, or dependency fingerprint differs. Melody, musical-authority, structure, and harmony application mutations now return this preview and preserve existing authority/derived files while allowing later candidate lifecycle code to expose stale status.
+Files added/changed: `src/main/kotlin/app/melotrail/project/MidiCoreAuthorityFingerprint.kt`; `src/main/kotlin/app/melotrail/arrangement/core/MidiCoreInvalidation.kt`; `src/main/kotlin/app/melotrail/application/MidiCoreMusicalAuthority.kt`; `src/main/kotlin/app/melotrail/application/MidiCoreMelodySelection.kt`; `src/main/kotlin/app/melotrail/application/MidiCoreStructureTimeline.kt`; `src/main/kotlin/app/melotrail/application/MidiCoreAuthoritativeHarmony.kt`; `src/test/kotlin/app/melotrail/project/MidiCoreAuthorityFingerprintTest.kt`; `src/test/kotlin/app/melotrail/arrangement/core/MidiCoreInvalidationTest.kt`; `src/test/kotlin/app/melotrail/application/MidiCoreAuthoritativeHarmonyTest.kt`; `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`; and this execution log.
+Files/data deleted: None. The pre-existing `.kotlin/sessions/kotlin-compiler-10759057547151889139.salive` deletion remains a preserved unrelated user change.
+Tracked deletion recoverability: Not applicable to MC-018; the unrelated session-marker deletion remains recoverable from Git and was not included in the task commit.
+Ignored deletion recoverability: None.
+Focused tests: `./gradlew :test --tests app.melotrail.project.MidiCoreAuthorityFingerprintTest --tests app.melotrail.arrangement.core.MidiCoreInvalidationTest --tests app.melotrail.application.MidiCoreMusicalAuthorityTest --tests app.melotrail.application.MidiCoreMelodySelectionTest --tests app.melotrail.application.MidiCoreStructureTimelineTest --tests app.melotrail.application.MidiCoreAuthoritativeHarmonyTest --rerun-tasks` PASS. Coverage includes every authority dimension, stable canonical serialization, chorus-only scope changes, role-prefixed settings, accepted-dependency propagation, generator/seed changes, unrelated-scope async admission, stale completion rejection, pre-mutation impact reporting, authority re-confirmation without structure loss, candidate artifact retention, and atomic persistence.
+Full validation: `make test` PASS (2026-08-27; 14 Gradle tasks); `make build` PASS (2026-08-27; 15 Gradle tasks including the documentation-inventory check); `git diff --check` PASS.
+Manual evidence: Not required.
+Invalidation matrix: source or selected melody change affects every role/occurrence; tempo, meter, or pickup change affects every role/occurrence; a structure or harmony change affects only the changed occurrence scopes; a `chords.`, `bass.`, or `drums.` setting change affects only that role across occurrences; accepted dependency changes propagate to dependent candidates; any authority change makes a current whole-song export snapshot stale. Existing files remain inspectable and digest-verified.
+Decisions/deviations: Candidate `authorityHash` is defined as the role/occurrence-scoped authority hash, while export `authorityHash` remains the complete-project hash. Role-specific settings use the lower-case role prefix convention; unprefixed settings are global. Existing v1 candidate records do not yet serialize accepted-dependency lists or explicit stale status, so MC-018 carries those inputs in the generation fingerprint and gives MC-019 the dependency record/lifecycle extension. Musical-authority confirmation now preserves existing structure and harmony instead of rebuilding empty lists. The target application reports impact before its atomic write; it does not mutate or delete candidate/export artifacts.
+Known limitations: Candidate status, persisted accepted-dependency history, lock/rejection/restore transitions, and export-snapshot lifecycle remain MC-019. The target desktop does not yet render impact previews; MC-036 owns that UI. The transitional Python documentation-inventory build check remains until MC-058.
+Commit: `midi-core: MC-018 add scoped invalidation`.
+Next task: MC-019 — implement candidate, acceptance, lock, and export-snapshot records.
 
 ## 6. Manual gate records
 

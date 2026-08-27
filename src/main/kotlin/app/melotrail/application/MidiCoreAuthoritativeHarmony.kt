@@ -1,6 +1,10 @@
 package app.melotrail.application
 
+import app.melotrail.arrangement.core.MidiCoreCandidateDependency
+import app.melotrail.arrangement.core.MidiCoreExportDependency
+import app.melotrail.arrangement.core.MidiCoreInvalidationPlanner
 import app.melotrail.project.AuthoritativeChordEvent
+import app.melotrail.project.MidiCoreAuthorityHasher
 import app.melotrail.project.adapter.MidiCoreArtifactStore
 import app.melotrail.project.adapter.MidiCoreProjectSaveException
 import app.melotrail.structure.MidiCoreHarmonyTimeline
@@ -17,6 +21,7 @@ sealed interface MidiCoreAuthoritativeHarmonyResult {
         val session: MidiCoreProjectSession,
         val timeline: MidiCoreHarmonyTimeline,
         val validation: MidiCoreHarmonyValidation,
+        val invalidation: app.melotrail.arrangement.core.MidiCoreInvalidationPreview,
     ) : MidiCoreAuthoritativeHarmonyResult
 
     data class Rejected(
@@ -32,7 +37,6 @@ enum class MidiCoreAuthoritativeHarmonyProblemCode {
     STALE_PROJECT,
     AUTHORITY_REQUIRED,
     INVALID_HARMONY,
-    DERIVED_WORK_INVALIDATION_REQUIRED,
     SAVE_FAILED,
 }
 
@@ -58,12 +62,22 @@ class MidiCoreAuthoritativeHarmony(private val artifacts: MidiCoreArtifactStore 
         } catch (error: IllegalArgumentException) {
             return rejected(MidiCoreAuthoritativeHarmonyProblemCode.INVALID_HARMONY, error.message ?: "The authoritative harmony is invalid.", "Save chord windows in deterministic occurrence and tick order.", validation)
         }
-        if (current.authority != updated.authority && (current.candidates.isNotEmpty() || current.acceptances.isNotEmpty() || current.exportSnapshots.isNotEmpty())) {
-            return rejected(MidiCoreAuthoritativeHarmonyProblemCode.DERIVED_WORK_INVALIDATION_REQUIRED, "Changing authoritative harmony would invalidate immutable candidates or export history.", "Review or explicitly invalidate derived work before changing harmony.", validation)
-        }
+        val invalidation = MidiCoreInvalidationPlanner.preview(
+            MidiCoreAuthorityHasher.from(current),
+            MidiCoreAuthorityHasher.from(updated),
+            current.candidates.map { candidate ->
+                MidiCoreCandidateDependency(candidate.id, candidate.role, candidate.occurrenceId, candidate.authorityHash)
+            },
+            current.exportSnapshots.map { snapshot -> MidiCoreExportDependency(snapshot.id, snapshot.authorityHash) },
+        )
         return try {
             artifacts.saveProject(root, updated)
-            MidiCoreAuthoritativeHarmonyResult.Updated(MidiCoreProjectSession(root, updated), MidiCoreHarmonyTimeline.build(updated.authority!!), validation)
+            MidiCoreAuthoritativeHarmonyResult.Updated(
+                MidiCoreProjectSession(root, updated),
+                MidiCoreHarmonyTimeline.build(updated.authority!!),
+                validation,
+                invalidation,
+            )
         } catch (_: MidiCoreProjectSaveException) {
             rejected(MidiCoreAuthoritativeHarmonyProblemCode.SAVE_FAILED, "Authoritative harmony could not be saved safely.", "Retry the save; the last known-good project remains available.", validation)
         } catch (_: Exception) {

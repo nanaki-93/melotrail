@@ -1,6 +1,10 @@
 package app.melotrail.application
 
+import app.melotrail.arrangement.core.MidiCoreCandidateDependency
+import app.melotrail.arrangement.core.MidiCoreExportDependency
+import app.melotrail.arrangement.core.MidiCoreInvalidationPlanner
 import app.melotrail.midi.domain.MidiPpq
+import app.melotrail.project.MidiCoreAuthorityHasher
 import app.melotrail.project.ProjectSectionDefinition
 import app.melotrail.project.adapter.MidiCoreArtifactStore
 import app.melotrail.project.adapter.MidiCoreProjectSaveException
@@ -17,12 +21,16 @@ data class ReplaceMidiCoreStructure(
 )
 
 sealed interface MidiCoreStructureTimelineResult {
-    data class Updated(val session: MidiCoreProjectSession, val markerLabels: List<String>) : MidiCoreStructureTimelineResult
+    data class Updated(
+        val session: MidiCoreProjectSession,
+        val markerLabels: List<String>,
+        val invalidation: app.melotrail.arrangement.core.MidiCoreInvalidationPreview,
+    ) : MidiCoreStructureTimelineResult
     data class Rejected(val problem: MidiCoreStructureTimelineProblem) : MidiCoreStructureTimelineResult
 }
 
 data class MidiCoreStructureTimelineProblem(val code: MidiCoreStructureTimelineProblemCode, val message: String, val nextAction: String)
-enum class MidiCoreStructureTimelineProblemCode { INVALID_PROJECT, STALE_PROJECT, AUTHORITY_REQUIRED, DERIVED_WORK_INVALIDATION_REQUIRED, INVALID_STRUCTURE, SAVE_FAILED }
+enum class MidiCoreStructureTimelineProblemCode { INVALID_PROJECT, STALE_PROJECT, AUTHORITY_REQUIRED, INVALID_STRUCTURE, SAVE_FAILED }
 
 /** Atomically persists the sole target section-occurrence timeline. */
 class MidiCoreStructureTimeline(private val artifacts: MidiCoreArtifactStore = MidiCoreArtifactStore()) {
@@ -40,18 +48,25 @@ class MidiCoreStructureTimeline(private val artifacts: MidiCoreArtifactStore = M
         } catch (error: IllegalArgumentException) {
             return rejected(MidiCoreStructureTimelineProblemCode.INVALID_STRUCTURE, error.message ?: "Structure is invalid.", "Use known section definitions and contiguous positive durations.")
         }
-        val changed = authority.sectionDefinitions != request.definitions || authority.occurrences != timeline.occurrences || authority.pickupTicks != timeline.pickupTicks
-        if ((current.candidates.isNotEmpty() || current.acceptances.isNotEmpty() || current.exportSnapshots.isNotEmpty()) && changed) {
-            return rejected(MidiCoreStructureTimelineProblemCode.DERIVED_WORK_INVALIDATION_REQUIRED, "Changing structure would invalidate immutable derived work.", "Review or explicitly invalidate derived work before changing structure.")
-        }
-        val updated = try {
+        val updatedAuthority = try {
             MidiCoreStructureEditor(ppq).replace(authority, request.definitions, request.occurrences, request.pickupTicks)
         } catch (error: IllegalArgumentException) {
             return rejected(MidiCoreStructureTimelineProblemCode.INVALID_STRUCTURE, error.message ?: "Structure is invalid.", "Review the structure and authoritative harmony before retrying.")
         }
+        val updatedProject = try { current.copy(authority = updatedAuthority) } catch (error: IllegalArgumentException) {
+            return rejected(MidiCoreStructureTimelineProblemCode.INVALID_STRUCTURE, error.message ?: "Structure is incompatible with current authority.", "Update dependent authority windows before retrying.")
+        }
+        val invalidation = MidiCoreInvalidationPlanner.preview(
+            MidiCoreAuthorityHasher.from(current),
+            MidiCoreAuthorityHasher.from(updatedProject),
+            current.candidates.map { candidate ->
+                MidiCoreCandidateDependency(candidate.id, candidate.role, candidate.occurrenceId, candidate.authorityHash)
+            },
+            current.exportSnapshots.map { snapshot -> MidiCoreExportDependency(snapshot.id, snapshot.authorityHash) },
+        )
         return try {
-            artifacts.saveProject(root, current.copy(authority = updated))
-            MidiCoreStructureTimelineResult.Updated(MidiCoreProjectSession(root, current.copy(authority = updated)), timeline.markerLabels())
+            artifacts.saveProject(root, updatedProject)
+            MidiCoreStructureTimelineResult.Updated(MidiCoreProjectSession(root, updatedProject), timeline.markerLabels(), invalidation)
         } catch (_: MidiCoreProjectSaveException) {
             rejected(MidiCoreStructureTimelineProblemCode.SAVE_FAILED, "Structure could not be saved safely.", "Retry the save; the last known-good project remains available.")
         } catch (_: Exception) {

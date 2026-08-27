@@ -1,5 +1,8 @@
 package app.melotrail.application
 
+import app.melotrail.arrangement.core.MidiCoreCandidateDependency
+import app.melotrail.arrangement.core.MidiCoreExportDependency
+import app.melotrail.arrangement.core.MidiCoreInvalidationPlanner
 import app.melotrail.midi.adapter.JdkMidiReader
 import app.melotrail.midi.domain.MidiImportDisposition
 import app.melotrail.midi.domain.MidiImportValidationResult
@@ -12,6 +15,7 @@ import app.melotrail.midi.domain.MidiValidationContext
 import app.melotrail.music.core.ProjectMeter
 import app.melotrail.music.core.ProjectTempo
 import app.melotrail.project.ProjectAuthority
+import app.melotrail.project.MidiCoreAuthorityHasher
 import app.melotrail.project.ProjectKey
 import app.melotrail.project.adapter.MidiCoreArtifactStore
 import app.melotrail.project.adapter.MidiCoreProjectSaveException
@@ -34,6 +38,7 @@ sealed interface MidiCoreAuthorityResult {
         val session: MidiCoreProjectSession,
         val suggestions: MidiCoreAuthoritySuggestions,
         val validation: MidiImportValidationResult,
+        val invalidation: app.melotrail.arrangement.core.MidiCoreInvalidationPreview,
     ) : MidiCoreAuthorityResult
 
     data class Rejected(
@@ -54,7 +59,6 @@ enum class MidiCoreAuthorityProblemCode {
     SOURCE_REQUIRED,
     MELODY_REQUIRED,
     SOURCE_TIMING_UNSUPPORTED,
-    DERIVED_WORK_INVALIDATION_REQUIRED,
     SAVE_FAILED,
 }
 
@@ -111,24 +115,32 @@ class MidiCoreMusicalAuthority(
                 validation,
             )
         }
-        val authority = ProjectAuthority(request.key, request.tempo, request.meter, emptyList(), emptyList(), emptyList())
-        if (current.authority != null && current.authority != authority &&
-            (current.candidates.isNotEmpty() || current.acceptances.isNotEmpty() || current.exportSnapshots.isNotEmpty())
-        ) {
-            return rejected(
-                MidiCoreAuthorityProblemCode.DERIVED_WORK_INVALIDATION_REQUIRED,
-                "Changing musical authority would invalidate immutable candidates or export history.",
-                "Review or explicitly invalidate derived work before changing project authority.",
-                validation,
-            )
-        }
+        val existingAuthority = current.authority
+        val authority = ProjectAuthority(
+            request.key,
+            request.tempo,
+            request.meter,
+            existingAuthority?.sectionDefinitions.orEmpty(),
+            existingAuthority?.occurrences.orEmpty(),
+            existingAuthority?.chordEvents.orEmpty(),
+            existingAuthority?.pickupTicks ?: 0L,
+        )
         val updated = current.copy(authority = authority)
+        val invalidation = MidiCoreInvalidationPlanner.preview(
+            MidiCoreAuthorityHasher.from(current),
+            MidiCoreAuthorityHasher.from(updated),
+            current.candidates.map { candidate ->
+                MidiCoreCandidateDependency(candidate.id, candidate.role, candidate.occurrenceId, candidate.authorityHash)
+            },
+            current.exportSnapshots.map { snapshot -> MidiCoreExportDependency(snapshot.id, snapshot.authorityHash) },
+        )
         return try {
             artifacts.saveProject(root, updated)
             MidiCoreAuthorityResult.Confirmed(
                 MidiCoreProjectSession(root, updated),
                 suggestions(inspection),
                 validation,
+                invalidation,
             )
         } catch (_: MidiCoreProjectSaveException) {
             rejected(MidiCoreAuthorityProblemCode.SAVE_FAILED, "Musical authority could not be saved safely.", "Retry the save; the last known-good project remains available.", validation)
