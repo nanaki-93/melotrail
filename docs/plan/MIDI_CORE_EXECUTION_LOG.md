@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-019 complete; MC-020 next
+Status: MC-020 complete; MC-021 next
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -59,7 +59,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-017 | DONE | `midi-core: MC-017 add authoritative harmony` | PASS — focused harmony/application tests, `make test`, `make build` | Exact chord-window coverage, bounded parsing/realization, chromatic advisories, stale-safe application binding, reopen, and atomic save-failure behavior are covered. |
 | MC-018 | DONE | `midi-core: MC-018 add scoped invalidation` | PASS — fingerprint/invalidation/application tests, `make test`, `make build` | Canonical component and role/occurrence hashes, generator/dependency inputs, scoped impact preview, immutable artifact retention, and stale async rejection are covered. |
 | MC-019 | DONE | `midi-core: MC-019 add candidate lifecycle records` | PASS — candidate lifecycle/schema/artifact/application tests, `make test`, `make build` | Immutable candidate publication, accepted/rejected/locked/restored transitions, prior acceptance history, scoped stale status, and export provenance snapshots are persisted and digest-bound. |
-| MC-020 | TODO | | | |
+| MC-020 | DONE | `midi-core: MC-020 define generation context` | PASS — context/catalog tests, documentation coverage, `git diff --check`, `make test` | One immutable occurrence-scoped request and target-only pattern/profile inventory cover all three core roles without project files or analysis sidecars. |
 | MC-021 | TODO | | | |
 | MC-022 | TODO | | | |
 | MC-023 | TODO | | | |
@@ -567,6 +567,28 @@ Decisions/deviations: Candidate `authorityHash` remains the role/occurrence-scop
 Known limitations: Candidate generation and review UI remain MC-020 through MC-040; complete package export remains MC-029. The transitional Python documentation-inventory build check remains until MC-058.
 Commit: `midi-core: MC-019 add candidate lifecycle records`.
 Next task: MC-020 — define generation context.
+
+### MC-020 — Establish shared generation context and curated patterns
+
+Status: DONE
+Started: 2026-08-27
+Completed: 2026-08-27
+Starting commit/status: `b7fbaa2` / only the unrelated deleted Kotlin compiler session marker was present and remained outside the task commit.
+Contracts read: F-ARR-004, F-ARR-006, F-ARR-007; Architecture section 4.4; MC-020 task contract.
+Current owners inspected: `MusicalPatternLibrary.kt`, `CompositionProfile.kt`, `CompositionProfileCatalog.kt`, legacy arrangement harmony/musical-intent and density/space policy, protected melody semantic model, exact harmony timeline, authority fingerprint, and target architecture rules. Transition, strings, AI, renderer, and sound-library owners were not imported into the target context.
+Behavior retained/extracted: `MidiCoreAuthoritySnapshot` projects loaded target authority, source/melody identities, PPQ, fixed tempo/meter/key, exact occurrences, and validated chord windows without a project path. `MidiCoreGenerationContext` binds one role and one occurrence to scoped harmony, protected melody notes, accepted semantic dependency notes, section energy/density/fill intent, a curated performance profile, pattern ID, generator identity/version, explicit seed, and a representable tick grid. Its context hash is length-delimited and scoped so unrelated occurrence edits do not change the request identity. `MidiCorePatternCatalog` contains only the extracted bass, chord-rhythm, complete drum-groove, and drum-fill variants; `MidiCorePerformanceProfileCatalog` contains MIDI intent/register profiles, not instrument or audio choices.
+Files added/changed: `src/main/kotlin/app/melotrail/arrangement/core/MidiCoreGenerationContext.kt`; `src/main/kotlin/app/melotrail/arrangement/core/MidiCorePatternCatalog.kt`; `src/test/kotlin/app/melotrail/arrangement/core/MidiCoreGenerationContextTest.kt`; `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`; and this execution log.
+Files/data deleted: None. The pre-existing `.kotlin/sessions/kotlin-compiler-10759057547151889139.salive` deletion remains a preserved unrelated user change.
+Tracked deletion recoverability: Not applicable to MC-020; the unrelated session-marker deletion remains recoverable from Git and was not included in the task commit.
+Ignored deletion recoverability: None.
+Focused tests: `./gradlew :test --tests app.melotrail.arrangement.core.MidiCoreGenerationContextTest --rerun-tasks` PASS (5 tests). Coverage includes stable scoped hashes and seed changes, unrelated-occurrence hash isolation, allowed core pattern IDs, complete authored groove/fill inventory, representable PPQ/grid boundaries, occurrence/harmony/melody/dependency scoping, and role/profile/pattern enforcement.
+Full validation: `make test` PASS (2026-08-27; 14 tasks); `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS.
+Manual evidence: Not required.
+Context fixture: The five-test `MidiCoreGenerationContextTest` fixture uses two exact 1,920-tick occurrences with full authoritative harmony, a PPQ-480 quarter/sixteenth grid, scoped protected notes, and an accepted chord dependency. The extracted inventory is `MidiCorePatternCatalog.inventory()` with 6 chord-rhythm, 5 bass, 4 complete drum-groove, and 4 drum-fill entries; profiles are `chords.sustained`, `chords.pulsed`, `bass.sustained-sub-like`, `bass.muted-plucked`, `drums.dusty`, and `drums.lifted`.
+Decisions/deviations: The generation boundary stores semantic dependency notes rather than artifact paths, so role engines can consume accepted context without filesystem access. `MidiCoreAuthoritySnapshot.from` requires an imported source, selected melody, complete authority, and gap-free harmony before constructing a request. A context hash uses the role/occurrence scope hash and exact local inputs, while the exposed snapshot retains complete authority for export/stale checks. Legacy pattern/profile owners remain compiled for old callers and are not deleted until their assigned cutover/cleanup tasks.
+Known limitations: Role validation and the three target generators remain MC-021 through MC-024; candidate publication remains MC-025. The context is not yet wired to the desktop or project mutation use cases. The transitional Python documentation-inventory build check remains until MC-058.
+Commit: `midi-core: MC-020 define generation context`.
+Next task: MC-021 — implement target role validation.
 
 ## 6. Manual gate records
 

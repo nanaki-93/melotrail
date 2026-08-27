@@ -467,6 +467,22 @@
       "documentedFunctionCount": 0
     },
     {
+      "path": "src/main/kotlin/app/melotrail/arrangement/core/MidiCoreGenerationContext.kt",
+      "classification": "documented",
+      "reason": "All 12 callable declarations define the immutable occurrence-scoped MIDI Core authority, semantic dependency, grid, profile, and deterministic context-hash boundary required by MC-020; reviewed on 2026-08-27.",
+      "functionCount": 12,
+      "declarationDigest": "adaee16913df9e1736d0c502d088b21dfefca21e28ba52d468a72073aa93dc42",
+      "documentedFunctionCount": 12
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/arrangement/core/MidiCorePatternCatalog.kt",
+      "classification": "documented",
+      "reason": "All 12 callable declarations define the extracted target bass, chord-rhythm, drum-groove, fill, and MIDI performance-profile inventory without transition, strings, AI, renderer, or sound-library choices; reviewed on 2026-08-27.",
+      "functionCount": 12,
+      "declarationDigest": "bad00b22f9d987afe1ef656282b1b79000487b6ba9bd2dc58d118303ac1e118a",
+      "documentedFunctionCount": 12
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/arrangement/ArrangementCritic.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/arrangement/ArrangementCritic.kt has 13 callable declarations, 1 directly documented and 12 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
