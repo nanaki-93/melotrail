@@ -130,8 +130,11 @@ data class ProjectAuthority(
     val sectionDefinitions: List<ProjectSectionDefinition>,
     val occurrences: List<ProjectSectionOccurrence>,
     val chordEvents: List<AuthoritativeChordEvent>,
+    /** Explicit leading pickup length in project ticks; zero means no pickup. */
+    val pickupTicks: Long = 0L,
 ) {
     init {
+        require(pickupTicks >= 0) { "Pickup length must not be negative" }
         require(sectionDefinitions.map(ProjectSectionDefinition::id).distinct().size == sectionDefinitions.size) {
             "Section definition IDs must be unique"
         }

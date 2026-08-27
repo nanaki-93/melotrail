@@ -83,7 +83,8 @@
                     "startTick": 0,
                     "endTick": 480
                 }
-            ]
+            ],
+            "pickupTicks": 0
         },
         "candidates": [
             {

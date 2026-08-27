@@ -131,6 +131,7 @@ private data class AuthorityDto(
     val sectionDefinitions: List<SectionDefinitionDto>,
     val occurrences: List<OccurrenceDto>,
     val chordEvents: List<ChordEventDto>,
+    val pickupTicks: Long = 0L,
 )
 
 @Serializable
@@ -231,13 +232,13 @@ private fun SelectedMelodyDto.toDomain() = SelectedMelodyTrack(trackIndex, chann
 private fun ProjectAuthority.toDto() = AuthorityDto(
     key.toDto(), tempo.microsecondsPerQuarter, meter.numerator, meter.denominatorExponent,
     sectionDefinitions.map(ProjectSectionDefinition::toDto), occurrences.map(ProjectSectionOccurrence::toDto),
-    chordEvents.map(AuthoritativeChordEvent::toDto),
+    chordEvents.map(AuthoritativeChordEvent::toDto), pickupTicks,
 )
 
 private fun AuthorityDto.toDomain() = ProjectAuthority(
     key.toDomain(), ProjectTempo(tempoMicrosecondsPerQuarter), ProjectMeter(meterNumerator, meterDenominatorExponent),
     sectionDefinitions.map(SectionDefinitionDto::toDomain), occurrences.map(OccurrenceDto::toDomain),
-    chordEvents.map(ChordEventDto::toDomain),
+    chordEvents.map(ChordEventDto::toDomain), pickupTicks,
 )
 
 private fun ProjectKey.toDto() = KeyDto(tonic, modeId, spelling)

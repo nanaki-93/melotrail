@@ -307,6 +307,14 @@
       "documentedFunctionCount": 0
     },
     {
+      "path": "src/main/kotlin/app/melotrail/application/MidiCoreStructureTimeline.kt",
+      "classification": "inherited-contract",
+      "reason": "The 2 callable declarations implement MC-016's source-range-checked, revision-safe, atomic section-occurrence timeline persistence and deterministic marker projection under F-AUTH-003; reviewed on 2026-08-27.",
+      "functionCount": 2,
+      "declarationDigest": "0190672037c2676854fec104b0f588a6edbf80f49cd7c2b0c2361b11ece6252c",
+      "documentedFunctionCount": 0
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/application/PartPreviewApplicationService.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/application/PartPreviewApplicationService.kt has 28 callable declarations, 7 directly documented and 21 still requiring focused KDoc/docstrings. QP-015 reviewed verified canonical source/prepared/full/boundary monitors and level matching on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
@@ -1552,6 +1560,14 @@
       "reason": "The 36 callable declarations implement MC-010's explicitly discriminated MIDI Core v1 JSON schema and MC-013's persisted source inspection summaries/report binding, with strict decoding, legacy classification, and DTO/domain mapping under F-PROJ-001 through F-PROJ-003 and Architecture sections 4.1 and 6; reviewed on 2026-08-27.",
       "functionCount": 36,
       "declarationDigest": "2f4ce1da4847fb383d2b848b67172eaecf0125ff41bdb40e55f05247f5b747df",
+      "documentedFunctionCount": 1
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/structure/MidiCoreOccurrenceTimeline.kt",
+      "classification": "inherited-contract",
+      "reason": "The 13 callable declarations implement MC-016's exact PPQ/meter-aware occurrence timeline, explicit duration/start validation, bounded pickup policy, ordered mutations, and deterministic marker projection under F-AUTH-003; reviewed on 2026-08-27.",
+      "functionCount": 13,
+      "declarationDigest": "77906afb3b0c4f86ee1fa0536eb0e285694c7f4de09fa676e940b1f0e2c0c770",
       "documentedFunctionCount": 1
     },
     {

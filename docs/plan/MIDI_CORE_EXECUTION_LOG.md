@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-015 complete; MC-016 next
+Status: MC-016 complete; MC-017 next
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -55,7 +55,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-013 | DONE | `midi-core: MC-013 import immutable MIDI source` | PASS — source-import/store/schema/lifecycle/architecture tests, `make test`, `make build` | One-file SMF import validates before publication, preserves source/report bytes under digest, persists inspection summaries, and leaves the prior project document unchanged on every tested failure. |
 | MC-014 | DONE | `midi-core: MC-014 protect selected melody` | PASS — melody-selection/validator/architecture tests, `make test`, `make build` | Exactly one source track/channel yields a digest-bound protected view with controller/expression policy, deterministic anchors, source-event lineage, and no source mutation. |
 | MC-015 | DONE | `midi-core: MC-015 add core musical authority` | PASS — authority/schema/architecture tests, `make test`, `make build` | Typed fixed tempo/meter and spelling-aware key/mode authority are explicitly confirmed, persisted, and reopened without source mutation. |
-| MC-016 | TODO | | | |
+| MC-016 | DONE | `midi-core: MC-016 add exact occurrence timeline` | PASS — focused timeline/schema/application tests, `make test` | Explicit tick/beat occurrence timeline, pickup policy, deterministic markers, ordered mutations, source-range coverage, and safe persistence are implemented without duration inference. |
 | MC-017 | TODO | | | |
 | MC-018 | TODO | | | |
 | MC-019 | TODO | | | |
@@ -480,6 +480,27 @@ Decisions/deviations: Major and natural-minor are the only executable V1 advisor
 Known limitations: Exact occurrence timing, pickup policy, duration-aware chord windows, and scoped invalidation remain MC-016 through MC-018. Desktop authority editing is MC-036.
 Commit: `midi-core: MC-015 add core musical authority`.
 Next task: MC-016 — implement exact section occurrence timelines.
+
+### MC-016 — Implement exact section occurrence timelines
+
+Status: DONE
+Started: 2026-08-27
+Completed: 2026-08-27
+Starting commit/status: `c0b8c4a` / worktree contained the user's in-progress MC-016 timeline files and execution-log status update plus an unrelated deleted Kotlin compiler session marker; the unrelated deletion was preserved and excluded from the task commit.
+Contracts read: F-AUTH-003; Architecture sections 4.3 and 7; MIDI Contract sections 4, 8, and 11; MC-016 task contract.
+Current owners inspected: Target `ProjectAuthority`/schema and the in-progress occurrence timeline; legacy `SongTimeline`, structure occurrence mutations, MIDI time mapping, and canonical-authority occurrence construction. Legacy occurrences infer timing from audio-era part analysis and remain outside the target path.
+Behavior retained/extracted: `MidiCoreOccurrenceTimeline` owns one PPQ/meter-aware, tick-exact contiguous timeline with stable occurrence and definition identities, explicit durations, optional explicit start assertions, bounded pickup metadata, exact beat-position views, and deterministic sanitized marker derivation. `MidiCoreStructureEditor` provides ordered replace/insert/duplicate/move/remove mutations without inferring duration or discarding authoritative harmony. `MidiCoreStructureTimeline` validates the intended source range, checks the project revision, previews derived-work invalidation, and atomically persists the new authority.
+Files added/changed: `src/main/kotlin/app/melotrail/structure/MidiCoreOccurrenceTimeline.kt`; `src/main/kotlin/app/melotrail/application/MidiCoreStructureTimeline.kt`; `src/main/kotlin/app/melotrail/project/MidiCoreProject.kt`; `src/main/kotlin/app/melotrail/project/MidiCoreProjectSchema.kt`; `src/test/kotlin/app/melotrail/structure/MidiCoreOccurrenceTimelineTest.kt`; `src/test/kotlin/app/melotrail/application/MidiCoreStructureTimelineTest.kt`; `src/test/resources/fixtures/project/midi-core-v1.json`; and this execution log.
+Files/data deleted: None. The pre-existing `.kotlin/sessions/kotlin-compiler-10759057547151889139.salive` deletion remains a preserved unrelated user change.
+Tracked deletion recoverability: Not applicable to MC-016; the unrelated session-marker deletion remains recoverable from Git and was not included in the task commit.
+Ignored deletion recoverability: None.
+Focused tests: `./gradlew :test --tests app.melotrail.structure.MidiCoreOccurrenceTimelineTest --tests app.melotrail.application.MidiCoreStructureTimelineTest --tests app.melotrail.project.MidiCoreProjectSchemaTest --rerun-tasks` PASS (12 tests). Coverage includes repeated sections, explicit starts, exact tick/beat positions, pickup bounds and persistence, marker sanitization, insert/duplicate/move/remove, source-range coverage, harmony preservation, stale-safe save, and atomic save failure recovery.
+Full validation: `make test` PASS (2026-08-27; 14 Gradle tasks). `git diff --check` PASS.
+Manual evidence: Not required.
+Decisions/deviations: Pickup length is explicit project metadata and must be shorter than one representable meter bar; it remains zero on an empty authority draft and is preserved through every editor mutation. The application defaults intended song coverage to the preserved source end tick while allowing an explicit arrangement range for deliberate extension. Existing authoritative chord events are carried forward and invalid structure/harmony relationships fail rather than silently deleting them. Marker rendering delegates to the established `MidiExportMarker` sanitization policy.
+Known limitations: Duration-aware chord editing and scoped candidate invalidation remain MC-017 and MC-018. The timeline application is not yet wired to Compose Desktop; MC-036 owns the target structure page. The transitional Python documentation-inventory build check remains until MC-058.
+Commit: `midi-core: MC-016 add exact occurrence timeline`.
+Next task: MC-017 — implement duration-aware authoritative harmony.
 
 ## 6. Manual gate records
 
