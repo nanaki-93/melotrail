@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-022 complete; MC-023 next
+Status: MC-023 complete; next task MC-024
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -62,7 +62,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-020 | DONE | `midi-core: MC-020 define generation context` | PASS — context/catalog tests, documentation coverage, `git diff --check`, `make test` | One immutable occurrence-scoped request and target-only pattern/profile inventory cover all three core roles without project files or analysis sidecars. |
 | MC-021 | DONE | `midi-core: MC-021 validate core roles` | PASS — role-validation tests, documentation coverage, `git diff --check`, `make test` | Deterministic typed validation reports cover common, Chords, Bass, and Drums policies before publication. |
 | MC-022 | DONE | `midi-core: MC-022 generate chord candidates` | PASS — chord-generator tests, documentation coverage, `git diff --check`, `make test` | Deterministic Chords candidates cover complete chord tones, curated rhythm alternatives, bounded inversions, voice leading, and scoped validation. |
-| MC-023 | TODO | | | |
+| MC-023 | DONE | `midi-core: MC-023 generate bass candidates` | PASS — focused Bass suite, documentation coverage, `git diff --check`, `make test` | Deterministic Bass candidates cover exact harmony windows, all curated patterns, both MIDI performance profiles, phrase/melody activity, accepted Chords rhythm, low-end spacing, and typed fallback/rejection. |
 | MC-024 | TODO | | | |
 | MC-025 | TODO | | | |
 | MC-026 | TODO | | | |
@@ -643,6 +643,28 @@ Decisions/deviations: Rhythm positions are anchored at each authoritative window
 Known limitations: Candidate publication and persisted validation-report serialization remain MC-025; bass and drum generators remain MC-023 and MC-024. Legacy pad behavior remains until its scheduled target cutover/cleanup. The transitional Python documentation-inventory build check remains until MC-058.
 Commit: `midi-core: MC-022 generate chord candidates`.
 Next task: MC-023 — implement the bass generator and performance profiles.
+
+### MC-023 — Implement the bass generator and performance profiles
+
+Status: DONE
+Started: 2026-08-27
+Completed: 2026-08-27
+Starting commit/status: `007ab91` / only the unrelated deleted Kotlin compiler session marker was present; MC-023 was then marked in progress.
+Contracts read: F-ARR-002 and F-ARR-004–F-ARR-007; Architecture sections 4.4 and 8; MIDI Contract sections 6, 8, and 10–12; Quality Gate 3 generation; MC-023 task contract.
+Current owners inspected: `BassStemGeneration.kt`, `BassQualityValidator.kt`, `MusicalPatternLibrary.kt`, `LowEndInteraction.kt`, target authority/harmony/context/profile/pattern/validator models, accepted dependency context, and candidate lifecycle. The legacy Bass adapter remains compiled for pre-cutover callers and is not imported by the target generator.
+Behavior retained/extracted: `MidiCoreBassGenerator` consumes one immutable occurrence-scoped Bass context and emits note-only semantic events on musician-facing channel 3 (zero-based 2). It covers sustained-root, root/fifth, octave, walk-to-next-root, and diatonic-approach patterns; slash-chord bass classes; exact authoritative chord-window clipping; sustained sub-like and muted/plucked MIDI intent profiles; bounded 28–55 register placement; phrase/purpose/energy accents; melody-activity density reduction; accepted Chords onset alignment; deterministic low-end spacing and voice continuity; and seeded, repeatable pattern alternatives. Walking and approach requests are quantized to legal current-chord tones, so every published note remains valid under exact harmony. Candidate validation is returned with the context-bound result before publication; no analysis-confidence fallback, instrument renderer, sound-library, filesystem, path, or audio dependency entered the target path.
+Files added/changed: `src/main/kotlin/app/melotrail/arrangement/core/MidiCoreBassGenerator.kt`; `src/test/kotlin/app/melotrail/arrangement/core/MidiCoreBassGeneratorTest.kt`; `src/test/resources/fixtures/midi-core/bass-golden.json`; `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`; and this execution log.
+Files/data deleted: None. The old Bass adapter and pattern owner remain until their scheduled target cutover/cleanup; no obsolete audio data was touched.
+Tracked deletion recoverability: Not applicable to MC-023; the unrelated session-marker deletion remains recoverable from Git and was not included in the task commit.
+Ignored deletion recoverability: None.
+Focused tests: `./gradlew :test --tests app.melotrail.arrangement.core.MidiCoreBassGeneratorTest --rerun-tasks` PASS (9 tests). Coverage includes every curated pattern with both profiles, the semantic golden sequence, slash bass and sub-bar harmony boundaries, profile note lengths, walking/diatonic legality and movement bounds, accepted Chords rhythm, melody activity, protected-anchor and low-end collision avoidance, seeded alternatives, and typed off-grid rejection.
+Full validation: `make test` PASS (2026-08-27; 14 Gradle tasks); `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS.
+Manual evidence: Not required.
+Per-pattern semantic golden: `src/test/resources/fixtures/midi-core/bass-golden.json`, SHA-256 `db6f7834cdf5677dcec8d133a1535cc8f2f3c4b28ecceec46573db59cc523938`; PPQ 480, 4/4, C harmony, muted-plucked profile, seed 17. It records note start/end/pitch/velocity sequences for all five curated Bass patterns.
+Decisions/deviations: Accepted Chords rhythm is advisory context only: only grid-representable onsets within the exact occurrence and harmony window can move a non-sustained attack, while unrepresentable authority remains a typed validation rejection. Melody activity reduces authored attack density without changing authority. Alternatives advance through the curated Bass pattern catalog and derive their explicit seed deterministically; no random, prompt, analysis, or renderer input is consulted.
+Known limitations: Candidate publication and persisted validation-report serialization remain MC-025; drum generation remains MC-024. The legacy Bass adapter remains until its scheduled cleanup, and the transitional Python documentation-inventory build check remains until MC-058.
+Commit: `midi-core: MC-023 generate bass candidates`.
+Next task: MC-024 — implement the drum generator and complete drum variants.
 
 ## 6. Manual gate records
 

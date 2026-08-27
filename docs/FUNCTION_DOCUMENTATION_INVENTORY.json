@@ -499,6 +499,14 @@
       "documentedFunctionCount": 12
     },
     {
+      "path": "src/main/kotlin/app/melotrail/arrangement/core/MidiCoreBassGenerator.kt",
+      "classification": "documented",
+      "reason": "All 16 callable declarations implement MC-023's deterministic Bass candidates from exact harmony windows, curated root/fifth/octave/walking/approach patterns, MIDI performance profiles, phrase and melody activity, accepted Chords rhythm context, seed, and low-end space; reviewed on 2026-08-27.",
+      "functionCount": 16,
+      "declarationDigest": "4e1c7d2ef5f84e8e69da529144d8f690ba02d3c30ae4d5fca3876492290975bd",
+      "documentedFunctionCount": 16
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/arrangement/ArrangementCritic.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/arrangement/ArrangementCritic.kt has 13 callable declarations, 1 directly documented and 12 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
