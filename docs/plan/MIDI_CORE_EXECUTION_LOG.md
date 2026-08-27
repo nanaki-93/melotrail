@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-016 complete; MC-017 next
+Status: MC-017 complete; MC-018 next
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -56,7 +56,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-014 | DONE | `midi-core: MC-014 protect selected melody` | PASS — melody-selection/validator/architecture tests, `make test`, `make build` | Exactly one source track/channel yields a digest-bound protected view with controller/expression policy, deterministic anchors, source-event lineage, and no source mutation. |
 | MC-015 | DONE | `midi-core: MC-015 add core musical authority` | PASS — authority/schema/architecture tests, `make test`, `make build` | Typed fixed tempo/meter and spelling-aware key/mode authority are explicitly confirmed, persisted, and reopened without source mutation. |
 | MC-016 | DONE | `midi-core: MC-016 add exact occurrence timeline` | PASS — focused timeline/schema/application tests, `make test` | Explicit tick/beat occurrence timeline, pickup policy, deterministic markers, ordered mutations, source-range coverage, and safe persistence are implemented without duration inference. |
-| MC-017 | TODO | | | |
+| MC-017 | DONE | `midi-core: MC-017 add authoritative harmony` | PASS — focused harmony/application tests, `make test`, `make build` | Exact chord-window coverage, bounded parsing/realization, chromatic advisories, stale-safe application binding, reopen, and atomic save-failure behavior are covered. |
 | MC-018 | TODO | | | |
 | MC-019 | TODO | | | |
 | MC-020 | TODO | | | |
@@ -501,6 +501,28 @@ Decisions/deviations: Pickup length is explicit project metadata and must be sho
 Known limitations: Duration-aware chord editing and scoped candidate invalidation remain MC-017 and MC-018. The timeline application is not yet wired to Compose Desktop; MC-036 owns the target structure page. The transitional Python documentation-inventory build check remains until MC-058.
 Commit: `midi-core: MC-016 add exact occurrence timeline`.
 Next task: MC-017 — implement duration-aware authoritative harmony.
+
+### MC-017 — Implement duration-aware authoritative harmony
+
+Status: DONE
+Started: 2026-08-27
+Completed: 2026-08-27
+Starting commit/status: `c92b99f` / clean after the MC-016 task commit; the unrelated deleted Kotlin compiler session marker remains outside the task commit.
+Contracts read: F-AUTH-004; MIDI Contract section 8; Architecture sections 4.4 and 7; MC-017 task contract.
+Current owners inspected: Target project authority and exact occurrence timeline; legacy harmony parser/formatter/application and harmonic timeline owners. The legacy path remains outside the target architecture and is not used as a fallback.
+Behavior retained/extracted: `MidiCoreChordSymbol` provides spelling-preserving roots, bounded major/minor/seventh/ninth/suspended/sixth/add-ninth qualities, optional slash bass, and deterministic pitch-class realization. `MidiCoreHarmonyValidator` requires explicit, positive-duration windows that cover every saved occurrence without gaps or overlaps, reports syntax/occurrence/order blockers, and emits key compatibility only as an advisory. `MidiCoreAuthoritativeHarmony` checks the session revision, validates the complete request before mutation, preserves approved chromatic symbols without transposition, refuses changes that would silently orphan immutable derived work, and saves through the atomic project adapter.
+Files added/changed: `src/main/kotlin/app/melotrail/music/core/MidiCoreHarmony.kt`; `src/main/kotlin/app/melotrail/structure/MidiCoreHarmonyTimeline.kt`; `src/main/kotlin/app/melotrail/application/MidiCoreAuthoritativeHarmony.kt`; `src/test/kotlin/app/melotrail/structure/MidiCoreHarmonyTimelineTest.kt`; `src/test/kotlin/app/melotrail/application/MidiCoreAuthoritativeHarmonyTest.kt`; `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`; and this execution log.
+Files/data deleted: None. The pre-existing `.kotlin/sessions/kotlin-compiler-10759057547151889139.salive` deletion remains a preserved unrelated user change.
+Tracked deletion recoverability: Not applicable to MC-017; the unrelated session-marker deletion remains recoverable from Git and was not included in the task commit.
+Ignored deletion recoverability: None.
+Focused tests: `./gradlew :test --tests app.melotrail.structure.MidiCoreHarmonyTimelineTest --tests app.melotrail.application.MidiCoreAuthoritativeHarmonyTest --tests app.melotrail.application.MidiCoreStructureTimelineTest --tests app.melotrail.project.MidiCoreProjectSchemaTest --rerun-tasks` PASS (16 tests). Coverage includes `Dbmaj9/F`, extensions, chromatic advisory preservation, repeated occurrences, exact sub-bar boundaries, gaps, overlaps, out-of-bound request events, invalid symbols, deterministic event order, transposition independence, reopen, stale-safe application binding, blocking rejection without project-byte changes, and atomic save-failure preservation.
+Full validation: `make test` PASS (2026-08-27; 14 Gradle tasks); `make build` PASS (2026-08-27; 15 Gradle tasks including the documentation-inventory check); `git diff --check` PASS.
+Manual evidence: Not required.
+Harmonic timeline golden output: `verse-1` resolves `[0,960) C` then `[960,1920) Db`; repeated `verse-2` resolves `[1920,2880) G7` then `[2880,3840) C`. At exact boundary ticks 960 and 1920, lookup selects the next approved window. `Dbmaj9/F` remains the stored symbol and produces pitch classes `{0,1,3,5,8}`; its out-of-key status is advisory only.
+Decisions/deviations: The parser deliberately exposes a bounded V1 vocabulary rather than accepting arbitrary formatter syntax; all accepted roots and slash basses retain their requested enharmonic spelling. The persisted `ProjectAuthority` rejects impossible out-of-occurrence events, while the application validator accepts request input long enough to return typed out-of-bound findings before any write. Existing legacy harmony/template fallback code is not modified during this target task; its deletion belongs to the scheduled cleanup after target callers are cut over.
+Known limitations: Dependency-aware scoped invalidation and authority fingerprints remain MC-018; candidate status and acceptance lifecycle remain MC-019. The harmony application is not yet wired to Compose Desktop; MC-036 owns the target structure/harmony page. The transitional Python documentation-inventory build check remains until MC-058.
+Commit: `midi-core: MC-017 add authoritative harmony`.
+Next task: MC-018 — implement authority hashes and dependency-aware invalidation.
 
 ## 6. Manual gate records
 

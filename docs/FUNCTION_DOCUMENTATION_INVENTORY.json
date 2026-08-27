@@ -315,6 +315,14 @@
       "documentedFunctionCount": 0
     },
     {
+      "path": "src/main/kotlin/app/melotrail/application/MidiCoreAuthoritativeHarmony.kt",
+      "classification": "inherited-contract",
+      "reason": "The 2 callable declarations implement MC-017's explicit chord-window validation, chromatic advisory handling, stale-session check, derived-work protection, and atomic persistence under F-AUTH-004 and MIDI Contract section 8; reviewed on 2026-08-27.",
+      "functionCount": 2,
+      "declarationDigest": "0190672037c2676854fec104b0f588a6edbf80f49cd7c2b0c2361b11ece6252c",
+      "documentedFunctionCount": 0
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/application/PartPreviewApplicationService.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/application/PartPreviewApplicationService.kt has 28 callable declarations, 7 directly documented and 21 still requiring focused KDoc/docstrings. QP-015 reviewed verified canonical source/prepared/full/boundary monitors and level matching on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
@@ -1475,6 +1483,14 @@
       "documentedFunctionCount": 0
     },
     {
+      "path": "src/main/kotlin/app/melotrail/music/core/MidiCoreHarmony.kt",
+      "classification": "inherited-contract",
+      "reason": "The 3 callable declarations implement MC-017's bounded spelling-preserving chord parser, deterministic pitch-class realization, supported extensions/slash basses, and no-transposition authority boundary under F-AUTH-004; reviewed on 2026-08-27.",
+      "functionCount": 3,
+      "declarationDigest": "9c17527191765ef59c6aa17ba3c335e6e75bce60505edec667d91bff31f80af0",
+      "documentedFunctionCount": 2
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/preparation/InputCleanupApplicationService.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/preparation/InputCleanupApplicationService.kt has 12 callable declarations, 1 directly documented and 11 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
@@ -1569,6 +1585,14 @@
       "functionCount": 13,
       "declarationDigest": "77906afb3b0c4f86ee1fa0536eb0e285694c7f4de09fa676e940b1f0e2c0c770",
       "documentedFunctionCount": 1
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/structure/MidiCoreHarmonyTimeline.kt",
+      "classification": "inherited-contract",
+      "reason": "The 5 callable declarations implement MC-017's exact occurrence chord coverage validator, stable findings, advisory chromatic compatibility, and validated tick-window lookup under F-AUTH-004 and MIDI Contract section 8; reviewed on 2026-08-27.",
+      "functionCount": 5,
+      "declarationDigest": "980317cd5d6b5d891bd619c47ff3a0a992b9f774ae7d8c8ae09dfa5b94d31c2d",
+      "documentedFunctionCount": 0
     },
     {
       "path": "src/main/kotlin/app/melotrail/profile/CompositionProfile.kt",
