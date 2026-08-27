@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-023 complete; next task MC-024
+Status: MC-024 complete; next task MC-025
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -63,7 +63,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-021 | DONE | `midi-core: MC-021 validate core roles` | PASS — role-validation tests, documentation coverage, `git diff --check`, `make test` | Deterministic typed validation reports cover common, Chords, Bass, and Drums policies before publication. |
 | MC-022 | DONE | `midi-core: MC-022 generate chord candidates` | PASS — chord-generator tests, documentation coverage, `git diff --check`, `make test` | Deterministic Chords candidates cover complete chord tones, curated rhythm alternatives, bounded inversions, voice leading, and scoped validation. |
 | MC-023 | DONE | `midi-core: MC-023 generate bass candidates` | PASS — focused Bass suite, documentation coverage, `git diff --check`, `make test` | Deterministic Bass candidates cover exact harmony windows, all curated patterns, both MIDI performance profiles, phrase/melody activity, accepted Chords rhythm, low-end spacing, and typed fallback/rejection. |
-| MC-024 | TODO | | | |
+| MC-024 | DONE | `midi-core: MC-024 generate drum candidates` | PASS — focused Drum suite, documentation coverage, `git diff --check`, `make test` | Deterministic Drum candidates cover complete groove/fill variants, density selection, phrase boundaries, accepted Bass kick intent, GM mapping, energy/purpose velocities, and typed validation. |
 | MC-025 | TODO | | | |
 | MC-026 | TODO | | | |
 | MC-027 | TODO | | | |
@@ -665,6 +665,28 @@ Decisions/deviations: Accepted Chords rhythm is advisory context only: only grid
 Known limitations: Candidate publication and persisted validation-report serialization remain MC-025; drum generation remains MC-024. The legacy Bass adapter remains until its scheduled cleanup, and the transitional Python documentation-inventory build check remains until MC-058.
 Commit: `midi-core: MC-023 generate bass candidates`.
 Next task: MC-024 — implement the drum generator and complete drum variants.
+
+### MC-024 — Implement the complete-variant drum generator
+
+Status: DONE
+Started: 2026-08-27
+Completed: 2026-08-27
+Starting commit/status: `0c72b83` / only the unrelated deleted Kotlin compiler session marker was present; MC-024 was then marked in progress.
+Contracts read: F-ARR-003–F-ARR-006; MIDI Contract section 10; Architecture sections 4.4 and 8; Quality Gate 3 generation; MC-024 task contract.
+Current owners inspected: `DrumMidiGeneration.kt`, `MusicalPatternLibrary.kt`, legacy drum quality/context behavior, target pattern/profile/context/validator models, accepted Bass dependency context, and GM drum policy. The legacy filesystem/MIDI writer and renderer-specific note-map path remain compiled for pre-cutover callers and are not imported by the target generator.
+Behavior retained/extracted: `MidiCoreDrumGenerator` consumes one immutable occurrence-scoped Drum context and emits note-only semantic events on musician-facing channel 10 (zero-based 9), using only GM starter pitches kick 36, snare 38, closed hat 42, and open hat 46. It repeats each of the four complete authored groove variants without arbitrary hit decimation, selects another complete catalog variant only when the requested groove exceeds the occurrence density budget, applies an explicit fill only to the final phrase bar, clips every hit and note-off to the occurrence/bar boundary, and incorporates eligible representable off-beat attacks from accepted Bass context as deterministic kick intent. Energy, section purpose, phrase position, authored accents, profile intent, and seed shape bounded deterministic velocities; the result carries context-bound target validation before publication. No renderer, sound-library, filesystem, path, analysis, or audio dependency entered the target path.
+Files added/changed: `src/main/kotlin/app/melotrail/arrangement/core/MidiCoreDrumGenerator.kt`; `src/test/kotlin/app/melotrail/arrangement/core/MidiCoreDrumGeneratorTest.kt`; `src/test/resources/fixtures/midi-core/drums-golden.json`; `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`; and this execution log.
+Files/data deleted: None. The legacy Drum adapter, renderer map, and pattern owner remain until their scheduled MC-055 cleanup; no obsolete audio data was touched.
+Tracked deletion recoverability: Not applicable to MC-024; the unrelated session-marker deletion remains recoverable from Git and was not included in the task commit.
+Ignored deletion recoverability: None.
+Focused tests: `./gradlew :test --tests app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest --rerun-tasks` PASS (9 tests). Coverage includes all four complete grooves with both Drum profiles, groove and fill semantic goldens, whole-variant density selection, final-bar fill placement, cross-boundary safety, accepted Bass kick intent, GM pitches/channel, energy/purpose/profile velocity shaping, deterministic alternatives, deliberate silence, and off-grid dependency handling.
+Full validation: `make test` PASS (2026-08-27; 14 Gradle tasks); `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS.
+Manual evidence: Not required.
+Complete groove/fill semantic golden: `src/test/resources/fixtures/midi-core/drums-golden.json`, SHA-256 `5b6184ab6d86bbe6f7106e4010ea43746838751de55f183ad15d763858baaf8c`; PPQ 480, 4/4, dusty profile, seed 17. It records all four complete groove sequences and each of the four phrase-fill sequences.
+Decisions/deviations: `sectionPolicy.density` is a whole-variant selector: an explicit requested groove is preserved when its authored attack count fits the target role budget; otherwise the nearest compatible catalog groove is selected without filtering its steps. If no complete catalog variant can satisfy a very low density budget, the authored output is left intact for a typed validator rejection rather than silently deleting hits. A phrase fill replaces only a same-hit attack at the same boundary tick as an explicit fill operation; all other groove attacks remain. Accepted Bass context can add at most four sorted, off-beat, grid-representable kicks with available density budget, and off-grid dependency timing is ignored rather than shifted.
+Known limitations: Candidate publication and persisted validation-report serialization remain MC-025. Drum hardening across development fixtures remains MC-043; the legacy Drum adapter and renderer-specific map remain until MC-055, and the transitional Python documentation-inventory build check remains until MC-058.
+Commit: `midi-core: MC-024 generate drum candidates`.
+Next task: MC-025 — implement candidate generation and immutable publication use cases.
 
 ## 6. Manual gate records
 
