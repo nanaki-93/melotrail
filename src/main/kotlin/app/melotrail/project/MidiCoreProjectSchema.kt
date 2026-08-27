@@ -189,6 +189,7 @@ private data class ExportSnapshotDto(
     val acceptedCandidates: List<AcceptedCandidateReferenceDto> = emptyList(),
     val roleSettings: Map<String, String> = emptyMap(),
     val generatorVersions: Map<String, String> = emptyMap(),
+    val enabledRoles: List<CandidateRole> = CandidateRole.entries,
 )
 
 @Serializable
@@ -301,11 +302,11 @@ private fun CandidateAcceptanceHistory.toDto() = AcceptanceHistoryDto(id, occurr
 private fun AcceptanceHistoryDto.toDomain() = CandidateAcceptanceHistory(id, occurrenceId, role, candidateId, action, recordedAt)
 private fun MidiCoreExportSnapshot.toDto() = ExportSnapshotDto(
     id, sourceSha256, authorityHash, files.map(ExportedSnapshotFile::toDto), createdAt,
-    acceptedCandidates.map(MidiCoreAcceptedCandidateReference::toDto), roleSettings.toSortedMap(), generatorVersions.toSortedMap(),
+    acceptedCandidates.map(MidiCoreAcceptedCandidateReference::toDto), roleSettings.toSortedMap(), generatorVersions.toSortedMap(), enabledRoles,
 )
 private fun ExportSnapshotDto.toDomain() = MidiCoreExportSnapshot(
     id, sourceSha256, authorityHash, files.map(ExportedSnapshotFileDto::toDomain), createdAt,
-    acceptedCandidates.map(AcceptedCandidateReferenceDto::toDomain), roleSettings, generatorVersions,
+    acceptedCandidates.map(AcceptedCandidateReferenceDto::toDomain), roleSettings, generatorVersions, enabledRoles,
 )
 private fun ExportedSnapshotFile.toDto() = ExportedSnapshotFileDto(kind, artifact.toDto())
 private fun ExportedSnapshotFileDto.toDomain() = ExportedSnapshotFile(kind, artifact.toDomain())

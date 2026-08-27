@@ -352,6 +352,7 @@ data class MidiCoreExportSnapshot(
     val acceptedCandidates: List<MidiCoreAcceptedCandidateReference> = emptyList(),
     val roleSettings: Map<String, String> = emptyMap(),
     val generatorVersions: Map<String, String> = emptyMap(),
+    val enabledRoles: List<CandidateRole> = CandidateRole.entries,
 ) {
     init {
         require(SAFE_ID.matches(id)) { "Export snapshot ID is invalid" }
@@ -370,6 +371,12 @@ data class MidiCoreExportSnapshot(
         require(generatorVersions.values.all { it.isNotBlank() && it.length <= 120 && it.none(Char::isISOControl) }) {
             "Export snapshot generator versions are invalid"
         }
+        require(enabledRoles == enabledRoles.distinct().sortedBy(CandidateRole::ordinal)) {
+            "Export snapshot enabled roles must use deterministic order without duplicates"
+        }
+        require(acceptedCandidates.all { it.role in enabledRoles }) {
+            "Export snapshot accepted candidates must belong to enabled roles"
+        }
     }
 
     fun isCurrent(authorityHash: String): Boolean = this.authorityHash == authorityHash
@@ -387,6 +394,7 @@ data class MidiCoreExportSnapshot(
         if (!isCurrent(source.sha256, authority.sha256)) return false
         val candidates = project.candidates.associateBy(MidiCoreCandidate::id)
         val currentReferences = project.acceptances
+            .filter { it.role in enabledRoles }
             .sortedWith(compareBy<CandidateAcceptance> { it.occurrenceId }.thenBy { it.role.ordinal })
             .mapNotNull { acceptance ->
                 val candidate = candidates[acceptance.candidateId] ?: return@mapNotNull null

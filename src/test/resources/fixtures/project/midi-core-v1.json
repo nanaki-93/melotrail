@@ -142,7 +142,12 @@
                 "createdAt": "2026-08-27T00:02:00Z",
                 "acceptedCandidates": [],
                 "roleSettings": {},
-                "generatorVersions": {}
+                "generatorVersions": {},
+                "enabledRoles": [
+                    "CHORDS",
+                    "BASS",
+                    "DRUMS"
+                ]
             }
         ],
         "revision": 0

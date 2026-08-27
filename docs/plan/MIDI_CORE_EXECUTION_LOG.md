@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-028 complete
+Status: MC-029 complete
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -68,7 +68,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-026 | DONE | `midi-core: MC-026 review arrangement candidates` | PASS — focused schema/lifecycle/review suite, documentation coverage, `git diff --check`, `make test` | User-owned candidate listing and state transitions now use optimistic project revisions, authority/digest revalidation, immutable evidence, acceptance history, locking, restoration, and targeted regeneration. |
 | MC-027 | DONE | `midi-core: MC-027 assemble accepted song` | PASS — focused diff/assembly/review suite, documentation coverage, `git diff --check`, `make test` | Deterministic event-level diff summaries and accepted-song assembly preserve the protected melody, aggregate exact occurrence-scoped role candidates, and reject incomplete, stale, tampered, malformed, mis-channelled, or overflowing evidence before review. |
 | MC-028 | DONE | `midi-core: MC-028 add MIDI audition` | PASS — focused audition/writer/JVM-boundary suite, documentation coverage, `git diff --check`, `make test` | MIDI-only scope/session control supports source melody, candidate, occurrence, role, and accepted arrangement views with bounded seek/loop, mute/solo, supersession, recoverable device errors, and cleanup without project writes. |
-| MC-029 | TODO | | | |
+| MC-029 | DONE | `midi-core: MC-029 export MIDI package` | PASS — focused exporter/MIDI/project suite, documentation coverage, `git diff --check`, `make test` | Complete and optional-role MIDI packages are semantically re-imported, atomically published, portable-manifested, collision-safe, and bound to reopened project snapshots. |
 | MC-030 | TODO | | | |
 | MC-031 | TODO | | | |
 | MC-032 | TODO | | | |
@@ -771,6 +771,27 @@ Decisions/deviations: The port accepts a complete semantic `MidiExportSong` view
 Known limitations: Compose wiring remains with the later desktop integration task; the adapter does not render or persist audio and is not export evidence. The transitional Python documentation-inventory build check remains until MC-058.
 Commit: `midi-core: MC-028 add MIDI audition`.
 Next task: MC-029 — implement the vertical MIDI package exporter.
+
+### MC-029 — Implement the vertical MIDI package exporter
+
+Status: DONE
+Started: 2026-08-28
+Completed: 2026-08-28
+Starting commit/status: `0408a70` / only the preserved unrelated deleted Kotlin compiler session marker is present.
+Contracts read: F-EXP-001–F-EXP-006 and F-SYS-003; Architecture sections 4.7 and 5; MIDI Contract sections 9–14; MC-029 task contract.
+Current owners inspected: MC-008 `MinimalMidiExportBundle`, target MIDI writer/reader, artifact store, project export-snapshot records/lifecycle, and accepted-song assembly.
+Behavior retained/extracted: Added `MidiCoreMidiPackageExporter` as the target application boundary. It reopens and revision-checks the project, assembles the protected melody and selected accepted role scopes, writes complete and per-role SMF1 files in deterministic order, semantically re-imports every MIDI file, writes a portable minimum manifest with authority/candidate/profile/instrument-suggestion/file-validation evidence, verifies staged digests, atomically publishes one snapshot directory, and records the immutable snapshot only after publication. Enabled generated roles are explicit; Melody remains mandatory while disabled generated roles are omitted. Snapshot records now bind enabled roles and the manifest timestamp.
+Files added/changed: `src/main/kotlin/app/melotrail/application/MidiCoreMidiPackageExporter.kt`; `src/test/kotlin/app/melotrail/application/MidiCoreMidiPackageExporterTest.kt`; `src/main/kotlin/app/melotrail/application/MidiCoreCandidateLifecycle.kt`; `src/main/kotlin/app/melotrail/project/MidiCoreProject.kt`; `src/main/kotlin/app/melotrail/project/MidiCoreProjectSchema.kt`; `src/test/resources/fixtures/project/midi-core-v1.json`; `build.gradle.kts`; `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`; and this execution log.
+Files/data deleted: `src/main/kotlin/app/melotrail/export/adapter/MinimalMidiExportBundle.kt`; `src/test/kotlin/app/melotrail/export/adapter/MinimalMidiExportBundleTest.kt`; and the obsolete `melotrail.dawSpikeDirectory` test hook.
+Tracked deletion recoverability: The superseded MC-008 exporter and test are recoverable from Git; no user MIDI source, candidate, accepted artifact, or export snapshot was deleted. The unrelated Kotlin compiler session-marker deletion remains recoverable from Git and was not included in the task commit.
+Ignored deletion recoverability: None planned.
+Focused tests: `./gradlew :test --tests app.melotrail.application.MidiCoreMidiPackageExporterTest --tests app.melotrail.application.MidiCoreAcceptedSongAssemblyTest --tests app.melotrail.application.MidiCoreCandidateLifecycleTest --tests app.melotrail.project.MidiCoreProjectSchemaTest --tests app.melotrail.project.adapter.MidiCoreArtifactStoreTest --tests app.melotrail.midi.adapter.JdkMidiWriterTest --tests app.melotrail.midi.adapter.JdkMidiReaderTest --tests app.melotrail.architecture.TargetArchitectureRulesTest --rerun-tasks --console=plain` PASS. The exporter matrix covers complete/reopened package evidence, deterministic file order and hashes, optional-role omission, missing/stale/unaccepted blockers, failed/tampered staging cleanup, collision refusal, manifest portability, and source/candidate immutability.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS; `make test` PASS (2026-08-28; 14 Gradle tasks).
+Manual evidence: Not required.
+Decisions/deviations: The target exporter always includes Melody and treats `enabledRoles` as the explicit generated-role set. It records only enabled-role accepted references in the snapshot, while preserving disabled candidates and acceptances in project state. Manifest JSON uses relative filenames/digests and descriptive DAW instrument suggestions without program changes, device names, or private configuration. The old MC-008 spike and its dedicated test property were deleted once the target owner was live.
+Known limitations: Compose Export-page wiring remains with MC-039; manual Logic Pro/GarageBand export evidence remains the MC-048 gate. The transitional Python documentation-inventory build check remains until MC-058.
+Commit: `midi-core: MC-029 export MIDI package`.
+Next task: MC-030 — prove the kernel vertical slice end to end.
 
 ## 6. Manual gate records
 

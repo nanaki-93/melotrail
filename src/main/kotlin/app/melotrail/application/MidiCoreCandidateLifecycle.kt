@@ -479,12 +479,20 @@ class MidiCoreExportSnapshotLifecycle(
         if (!SAFE_ID.matches(snapshotId)) {
             return rejected(MidiCoreExportSnapshotProblemCode.INVALID_SNAPSHOT, "The export snapshot identifier is not safe.", "Use letters, numbers, hyphens, or underscores for the snapshot identifier.")
         }
+        val createdAt = try {
+            request.createdAt ?: Instant.now(clock).toString()
+        } catch (error: Exception) {
+            return rejected(MidiCoreExportSnapshotProblemCode.INVALID_SNAPSHOT, "A stable export snapshot timestamp could not be created.", "Retry with a valid export timestamp.")
+        }
         if (current.exportSnapshots.any { it.id == snapshotId }) {
             return rejected(MidiCoreExportSnapshotProblemCode.SNAPSHOT_ID_COLLISION, "An export snapshot with this identifier already exists.", "Retry with a new snapshot identifier; existing export evidence was preserved.")
         }
         val references = mutableListOf<MidiCoreAcceptedCandidateReference>()
         val candidates = current.candidates.associateBy(MidiCoreCandidate::id)
-        current.acceptances.sortedWith(compareBy<CandidateAcceptance> { it.occurrenceId }.thenBy { it.role.ordinal }).forEach { acceptance ->
+        val enabledRoles = request.enabledRoles.sortedBy(CandidateRole::ordinal)
+        current.acceptances
+            .filter { it.role in request.enabledRoles }
+            .sortedWith(compareBy<CandidateAcceptance> { it.occurrenceId }.thenBy { it.role.ordinal }).forEach { acceptance ->
             val candidate = candidates[acceptance.candidateId]
                 ?: return rejected(MidiCoreExportSnapshotProblemCode.EXPORT_NOT_READY, "The accepted candidate reference is missing.", "Repair the project acceptance state before exporting.")
             if (candidate.status != MidiCoreCandidateStatus.ACCEPTED) {
@@ -519,10 +527,11 @@ class MidiCoreExportSnapshotLifecycle(
                 sourceSha256 = source.sha256,
                 authorityHash = authority.sha256,
                 files = request.files,
-                createdAt = Instant.now(clock).toString(),
+                createdAt = createdAt,
                 acceptedCandidates = references,
                 roleSettings = request.roleSettings.toSortedMap(),
                 generatorVersions = generatorVersions.toSortedMap(),
+                enabledRoles = enabledRoles,
             )
             request.files.forEach { file ->
                 require(file.artifact.path == MidiCoreArtifactStore.exportFilePath(snapshotId, file.kind)) {
@@ -620,7 +629,14 @@ data class CaptureMidiCoreExportSnapshot(
     val files: List<ExportedSnapshotFile>,
     val roleSettings: Map<String, String> = emptyMap(),
     val snapshotId: String? = null,
-)
+    val enabledRoles: Set<CandidateRole> = CandidateRole.entries.toSet(),
+    val createdAt: String? = null,
+) {
+    init {
+        require(enabledRoles.all { it in CandidateRole.entries }) { "Export snapshot roles must be target MIDI Core roles" }
+        require(createdAt == null || createdAt.matches(ISO_INSTANT)) { "Export snapshot timestamp must be an ISO-8601 UTC instant" }
+    }
+}
 
 sealed interface MidiCoreCandidateLifecycleResult {
     data class Published(val session: MidiCoreProjectSession, val candidate: MidiCoreCandidate) : MidiCoreCandidateLifecycleResult
@@ -676,3 +692,4 @@ enum class MidiCoreExportSnapshotProblemCode {
 private val SAFE_ID = Regex("[A-Za-z0-9][A-Za-z0-9_-]{0,119}")
 private val TOKEN = Regex("[A-Za-z0-9][A-Za-z0-9_.:-]{0,119}")
 private val HASH = Regex("[0-9a-f]{64}")
+private val ISO_INSTANT = Regex("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]{1,9})?Z")

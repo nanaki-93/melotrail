@@ -347,6 +347,14 @@
       "documentedFunctionCount": 1
     },
     {
+      "path": "src/main/kotlin/app/melotrail/application/MidiCoreMidiPackageExporter.kt",
+      "classification": "inherited-contract",
+      "reason": "The 21 callable declarations implement MC-029's accepted-song package export, deterministic SMF1 file ordering, portable manifest, semantic re-import, atomic staging/publication, collision refusal, optional-role omission, and project snapshot binding under F-EXP-001 through F-EXP-006 and F-SYS-003; reviewed on 2026-08-28.",
+      "functionCount": 21,
+      "declarationDigest": "a80ad3db3739b3a34cdea437fd59d9b50c2c9d8b3a272080051c383da7defd37",
+      "documentedFunctionCount": 1
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreCandidateGeneration.kt",
       "classification": "inherited-contract",
       "reason": "The 14 callable declarations implement MC-025's off-UI-thread, one-role/one-occurrence deterministic generation, shared validation, semantic MIDI round-trip, immutable candidate/report publication, cancellation, stale-session admission, disk-failure retention, and collision retry under F-ARR-001 through F-ARR-006 and F-SYS-004; reviewed on 2026-08-27.",
@@ -1480,14 +1488,6 @@
       "reason": "src/main/kotlin/app/melotrail/logging/Logger.kt has 14 callable declarations, 0 directly documented and 14 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
       "functionCount": 14,
       "declarationDigest": "fbb1e9823f9a8896f5bce61cce5aaf3e3fc419e60467cf598266126f2b39afa8",
-      "documentedFunctionCount": 0
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/export/adapter/MinimalMidiExportBundle.kt",
-      "classification": "inherited-contract",
-      "reason": "The 11 callable declarations implement the MC-008 staged immutable MIDI export spike, including semantic re-import, digest verification, and collision refusal required by docs/MIDI_CONTRACT.md sections 9 through 14; reviewed on 2026-08-26.",
-      "functionCount": 11,
-      "declarationDigest": "e0496a5cafe0d2782b0a09c8e5f21da1bd71ede4b9349e0879a67e3c7b80fad0",
       "documentedFunctionCount": 0
     },
     {
