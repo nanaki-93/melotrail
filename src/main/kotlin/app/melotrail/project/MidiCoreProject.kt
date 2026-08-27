@@ -16,20 +16,27 @@ data class MidiCoreProject(
     val candidates: List<MidiCoreCandidate> = emptyList(),
     val acceptances: List<CandidateAcceptance> = emptyList(),
     val exportSnapshots: List<MidiCoreExportSnapshot> = emptyList(),
+    val acceptanceHistory: List<CandidateAcceptanceHistory> = emptyList(),
 ) {
     init {
         require(selectedMelody == null || sourceMidi != null) { "A selected melody requires an imported source MIDI record" }
-        require(sourceMidi != null || (candidates.isEmpty() && acceptances.isEmpty() && exportSnapshots.isEmpty())) {
+        require(sourceMidi != null || (candidates.isEmpty() && acceptances.isEmpty() && exportSnapshots.isEmpty() && acceptanceHistory.isEmpty())) {
             "Candidates, acceptances, and exports require an imported source MIDI record"
         }
-        require(selectedMelody != null || (candidates.isEmpty() && acceptances.isEmpty() && exportSnapshots.isEmpty())) {
+        require(selectedMelody != null || (candidates.isEmpty() && acceptances.isEmpty() && exportSnapshots.isEmpty() && acceptanceHistory.isEmpty())) {
             "Candidates, acceptances, and exports require a selected melody"
         }
-        require(authority != null || (candidates.isEmpty() && acceptances.isEmpty() && exportSnapshots.isEmpty())) {
+        require(authority != null || (candidates.isEmpty() && acceptances.isEmpty() && exportSnapshots.isEmpty() && acceptanceHistory.isEmpty())) {
             "Candidates, acceptances, and exports require musical authority"
         }
         require(candidates.map(MidiCoreCandidate::id).distinct().size == candidates.size) {
             "Candidate IDs must be unique"
+        }
+        val candidateIds = candidates.map(MidiCoreCandidate::id).toSet()
+        require(candidates.all { candidate ->
+            candidate.acceptedDependencyIds.none { it == candidate.id } && candidate.acceptedDependencyIds.all { it in candidateIds }
+        }) {
+            "Candidate accepted dependencies must reference existing distinct candidates"
         }
         require(acceptances.map { it.occurrenceId to it.role }.distinct().size == acceptances.size) {
             "A role may have one acceptance per occurrence"
@@ -39,13 +46,41 @@ data class MidiCoreProject(
             require(candidate != null && candidate.role == acceptance.role && candidate.occurrenceId == acceptance.occurrenceId) {
                 "Candidate acceptance must reference the same role and occurrence"
             }
+            require(candidate.status != MidiCoreCandidateStatus.REJECTED) {
+                "Candidate acceptance cannot reference a rejected candidate"
+            }
         }
         authority?.let { currentAuthority ->
             val occurrenceIds = currentAuthority.occurrences.map(ProjectSectionOccurrence::id).toSet()
-            require(candidates.all { it.occurrenceId in occurrenceIds }) { "Candidate references an unknown occurrence" }
+            require(candidates.all { it.status == MidiCoreCandidateStatus.STALE || it.occurrenceId in occurrenceIds }) {
+                "Candidate references an unknown occurrence"
+            }
         }
         require(exportSnapshots.map(MidiCoreExportSnapshot::id).distinct().size == exportSnapshots.size) {
             "Export snapshot IDs must be unique"
+        }
+        exportSnapshots.flatMap(MidiCoreExportSnapshot::acceptedCandidates).forEach { reference ->
+            val candidate = candidates.singleOrNull { it.id == reference.candidateId }
+            require(
+                candidate != null && candidate.role == reference.role && candidate.occurrenceId == reference.occurrenceId &&
+                    candidate.midi.sha256 == reference.midiSha256 && candidate.validationReport.sha256 == reference.validationReportSha256 &&
+                    candidate.authorityHash == reference.authorityHash && candidate.generatorVersion == reference.generatorVersion &&
+                    candidate.profileId == reference.profileId && candidate.patternId == reference.patternId && candidate.seed == reference.seed,
+            ) {
+                "Export snapshot accepted candidate reference does not match its candidate"
+            }
+        }
+        require(acceptanceHistory.map(CandidateAcceptanceHistory::id).distinct().size == acceptanceHistory.size) {
+            "Acceptance history IDs must be unique"
+        }
+        require(acceptanceHistory == acceptanceHistory.sortedWith(compareBy(CandidateAcceptanceHistory::recordedAt))) {
+            "Acceptance history must be ordered chronologically"
+        }
+        acceptanceHistory.forEach { history ->
+            val candidate = candidates.singleOrNull { it.id == history.candidateId }
+            require(candidate != null && candidate.role == history.role && candidate.occurrenceId == history.occurrenceId) {
+                "Acceptance history must reference the same role and occurrence"
+            }
         }
         sourceMidi?.let { source ->
             require(exportSnapshots.all { it.sourceSha256 == source.sha256 }) {
@@ -218,6 +253,8 @@ data class AuthoritativeChordEvent(
 
 enum class CandidateRole { CHORDS, BASS, DRUMS }
 
+enum class MidiCoreCandidateStatus { CURRENT, ACCEPTED, REJECTED, STALE }
+
 data class MidiCoreCandidate(
     val id: String,
     val role: CandidateRole,
@@ -228,12 +265,28 @@ data class MidiCoreCandidate(
     val midi: ProjectArtifact,
     val validationReport: ProjectArtifact,
     val createdAt: String,
+    val profileId: String = "default",
+    val patternId: String = "unspecified",
+    val status: MidiCoreCandidateStatus = MidiCoreCandidateStatus.CURRENT,
+    val rejectionReason: String? = null,
+    val acceptedDependencyIds: List<String> = emptyList(),
 ) {
     init {
         require(SAFE_ID.matches(id) && SAFE_ID.matches(occurrenceId)) { "Candidate identity is invalid" }
-        require(generatorVersion.isNotBlank() && generatorVersion.length <= 120) { "Generator version is invalid" }
+        require(generatorVersion.isNotBlank() && generatorVersion.length <= 120 && generatorVersion.none(Char::isISOControl)) { "Generator version is invalid" }
         require(SHA_256.matches(authorityHash)) { "Candidate authority hash must be a SHA-256 value" }
         require(createdAt.matches(ISO_INSTANT)) { "Candidate timestamp must be an ISO-8601 UTC instant" }
+        require(TOKEN.matches(profileId)) { "Candidate profile identifier is invalid" }
+        require(TOKEN.matches(patternId)) { "Candidate pattern identifier is invalid" }
+        require((status == MidiCoreCandidateStatus.REJECTED) == (rejectionReason != null)) {
+            "Only rejected candidates may carry a rejection reason"
+        }
+        require(rejectionReason == null || rejectionReason.isNotBlank() && rejectionReason.length <= 240 && rejectionReason.none(Char::isISOControl)) {
+            "Candidate rejection reason is invalid"
+        }
+        require(acceptedDependencyIds == acceptedDependencyIds.distinct() && acceptedDependencyIds.all(SAFE_ID::matches)) {
+            "Candidate accepted dependency IDs must be unique safe identifiers"
+        }
     }
 }
 
@@ -241,9 +294,51 @@ data class CandidateAcceptance(val occurrenceId: String, val role: CandidateRole
     init { require(SAFE_ID.matches(occurrenceId) && SAFE_ID.matches(candidateId)) { "Candidate acceptance identity is invalid" } }
 }
 
+enum class MidiCoreAcceptanceAction { ACCEPTED, REPLACED, RESTORED, REJECTED, LOCKED, UNLOCKED }
+
+data class CandidateAcceptanceHistory(
+    val id: String,
+    val occurrenceId: String,
+    val role: CandidateRole,
+    val candidateId: String,
+    val action: MidiCoreAcceptanceAction,
+    val recordedAt: String,
+) {
+    init {
+        require(SAFE_ID.matches(id) && SAFE_ID.matches(occurrenceId) && SAFE_ID.matches(candidateId)) {
+            "Acceptance history identity is invalid"
+        }
+        require(recordedAt.matches(ISO_INSTANT)) { "Acceptance history timestamp must be an ISO-8601 UTC instant" }
+    }
+}
+
 enum class ExportedFileKind { COMPLETE_SONG, MELODY, CHORDS, BASS, DRUMS, MANIFEST }
 
 data class ExportedSnapshotFile(val kind: ExportedFileKind, val artifact: ProjectArtifact)
+
+data class MidiCoreAcceptedCandidateReference(
+    val occurrenceId: String,
+    val role: CandidateRole,
+    val candidateId: String,
+    val midiSha256: String,
+    val validationReportSha256: String,
+    val authorityHash: String,
+    val generatorVersion: String,
+    val profileId: String,
+    val patternId: String,
+    val seed: Long,
+) {
+    init {
+        require(SAFE_ID.matches(occurrenceId) && SAFE_ID.matches(candidateId)) {
+            "Accepted candidate reference identity is invalid"
+        }
+        require(SHA_256.matches(midiSha256) && SHA_256.matches(validationReportSha256) && SHA_256.matches(authorityHash)) {
+            "Accepted candidate reference hashes are invalid"
+        }
+        require(generatorVersion.isNotBlank() && generatorVersion.length <= 120 && generatorVersion.none(Char::isISOControl)) { "Accepted generator version is invalid" }
+        require(TOKEN.matches(profileId) && TOKEN.matches(patternId)) { "Accepted candidate profile or pattern is invalid" }
+    }
+}
 
 data class MidiCoreExportSnapshot(
     val id: String,
@@ -251,6 +346,9 @@ data class MidiCoreExportSnapshot(
     val authorityHash: String,
     val files: List<ExportedSnapshotFile>,
     val createdAt: String,
+    val acceptedCandidates: List<MidiCoreAcceptedCandidateReference> = emptyList(),
+    val roleSettings: Map<String, String> = emptyMap(),
+    val generatorVersions: Map<String, String> = emptyMap(),
 ) {
     init {
         require(SAFE_ID.matches(id)) { "Export snapshot ID is invalid" }
@@ -258,10 +356,64 @@ data class MidiCoreExportSnapshot(
         require(files.map(ExportedSnapshotFile::kind).distinct().size == files.size) { "Export snapshot file kinds must be unique" }
         require(ExportedFileKind.MANIFEST in files.map(ExportedSnapshotFile::kind)) { "Export snapshot requires a manifest" }
         require(createdAt.matches(ISO_INSTANT)) { "Export snapshot timestamp must be an ISO-8601 UTC instant" }
+        require(acceptedCandidates.map { it.occurrenceId to it.role }.distinct().size == acceptedCandidates.size) {
+            "Export snapshot accepted candidates must have one reference per role and occurrence"
+        }
+        require(roleSettings.keys.all { SETTING_KEY.matches(it) }) { "Export snapshot role setting keys are invalid" }
+        require(roleSettings.values.all { it.length <= 1_000 && it.none(Char::isISOControl) }) {
+            "Export snapshot role setting values are invalid"
+        }
+        require(generatorVersions.keys.all { SETTING_KEY.matches(it) }) { "Export snapshot generator version keys are invalid" }
+        require(generatorVersions.values.all { it.isNotBlank() && it.length <= 120 && it.none(Char::isISOControl) }) {
+            "Export snapshot generator versions are invalid"
+        }
     }
+
+    fun isCurrent(authorityHash: String): Boolean = this.authorityHash == authorityHash
+
+    fun isCurrent(sourceSha256: String, authorityHash: String): Boolean =
+        this.sourceSha256 == sourceSha256 && this.authorityHash == authorityHash
+
+    fun isCurrent(project: MidiCoreProject): Boolean {
+        val source = project.sourceMidi ?: return false
+        val authority = try {
+            MidiCoreAuthorityHasher.from(project, MidiCoreAuthoritySettings(roleSettings))
+        } catch (_: IllegalArgumentException) {
+            return false
+        }
+        if (!isCurrent(source.sha256, authority.sha256)) return false
+        val candidates = project.candidates.associateBy(MidiCoreCandidate::id)
+        val currentReferences = project.acceptances
+            .sortedWith(compareBy<CandidateAcceptance> { it.occurrenceId }.thenBy { it.role.ordinal })
+            .mapNotNull { acceptance ->
+                val candidate = candidates[acceptance.candidateId] ?: return@mapNotNull null
+                if (candidate.status == MidiCoreCandidateStatus.STALE || candidate.status == MidiCoreCandidateStatus.REJECTED) return false
+                MidiCoreAcceptedCandidateReference(
+                    candidate.occurrenceId,
+                    candidate.role,
+                    candidate.id,
+                    candidate.midi.sha256,
+                    candidate.validationReport.sha256,
+                    candidate.authorityHash,
+                    candidate.generatorVersion,
+                    candidate.profileId,
+                    candidate.patternId,
+                    candidate.seed,
+                )
+            }
+        if (acceptedCandidates.isNotEmpty() || currentReferences.isNotEmpty()) {
+            if (acceptedCandidates != currentReferences) return false
+        }
+        val currentGeneratorVersions = currentReferences.associate { "${it.occurrenceId}.${it.role.name.lowercase()}" to it.generatorVersion }
+        return generatorVersions.toSortedMap() == currentGeneratorVersions.toSortedMap()
+    }
+
+    fun isStale(project: MidiCoreProject): Boolean = !isCurrent(project)
 }
 
 private val SAFE_ID = Regex("[A-Za-z0-9][A-Za-z0-9_-]{0,119}")
 private val SHA_256 = Regex("[0-9a-f]{64}")
+private val TOKEN = Regex("[A-Za-z0-9][A-Za-z0-9_.:-]{0,119}")
+private val SETTING_KEY = Regex("[A-Za-z0-9][A-Za-z0-9_.-]{0,119}")
 private val ISO_INSTANT = Regex("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]{1,9})?Z")
 private val PORTABLE_PATH_FORBIDDEN = setOf('<', '>', ':', '"', '|', '?', '*')

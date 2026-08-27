@@ -84,13 +84,14 @@ class MidiCoreMelodySelection(
             MidiCoreAuthorityHasher.from(current),
             MidiCoreAuthorityHasher.from(updated),
             current.candidates.map { candidate ->
-                MidiCoreCandidateDependency(candidate.id, candidate.role, candidate.occurrenceId, candidate.authorityHash)
+                MidiCoreCandidateDependency(candidate.id, candidate.role, candidate.occurrenceId, candidate.authorityHash, candidate.acceptedDependencyIds)
             },
             current.exportSnapshots.map { snapshot -> MidiCoreExportDependency(snapshot.id, snapshot.authorityHash) },
         )
+        val persisted = updated.withInvalidatedCandidates(invalidation.staleCandidateIds)
         return try {
-            artifacts.saveProject(root, updated)
-            MidiCoreMelodySelectionResult.Selected(MidiCoreProjectSession(root, updated), view, validation, invalidation)
+            artifacts.saveProject(root, persisted)
+            MidiCoreMelodySelectionResult.Selected(MidiCoreProjectSession(root, persisted), view, validation, invalidation)
         } catch (_: MidiCoreProjectSaveException) {
             rejected(MidiCoreMelodySelectionProblemCode.SAVE_FAILED, "The protected melody could not be saved safely.", "Retry the save; the last known-good project remains available.", validation)
         } catch (_: Exception) {

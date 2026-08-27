@@ -85,6 +85,7 @@ private data class ProjectDto(
     val authority: AuthorityDto? = null,
     val candidates: List<CandidateDto> = emptyList(),
     val acceptances: List<AcceptanceDto> = emptyList(),
+    val acceptanceHistory: List<AcceptanceHistoryDto> = emptyList(),
     val exportSnapshots: List<ExportSnapshotDto> = emptyList(),
 )
 
@@ -157,10 +158,25 @@ private data class CandidateDto(
     val midi: ArtifactDto,
     val validationReport: ArtifactDto,
     val createdAt: String,
+    val profileId: String = "default",
+    val patternId: String = "unspecified",
+    val status: MidiCoreCandidateStatus = MidiCoreCandidateStatus.CURRENT,
+    val rejectionReason: String? = null,
+    val acceptedDependencyIds: List<String> = emptyList(),
 )
 
 @Serializable
 private data class AcceptanceDto(val occurrenceId: String, val role: CandidateRole, val candidateId: String, val locked: Boolean)
+
+@Serializable
+private data class AcceptanceHistoryDto(
+    val id: String,
+    val occurrenceId: String,
+    val role: CandidateRole,
+    val candidateId: String,
+    val action: MidiCoreAcceptanceAction,
+    val recordedAt: String,
+)
 
 @Serializable
 private data class ExportSnapshotDto(
@@ -169,10 +185,27 @@ private data class ExportSnapshotDto(
     val authorityHash: String,
     val files: List<ExportedSnapshotFileDto>,
     val createdAt: String,
+    val acceptedCandidates: List<AcceptedCandidateReferenceDto> = emptyList(),
+    val roleSettings: Map<String, String> = emptyMap(),
+    val generatorVersions: Map<String, String> = emptyMap(),
 )
 
 @Serializable
 private data class ExportedSnapshotFileDto(val kind: ExportedFileKind, val artifact: ArtifactDto)
+
+@Serializable
+private data class AcceptedCandidateReferenceDto(
+    val occurrenceId: String,
+    val role: CandidateRole,
+    val candidateId: String,
+    val midiSha256: String,
+    val validationReportSha256: String,
+    val authorityHash: String,
+    val generatorVersion: String,
+    val profileId: String,
+    val patternId: String,
+    val seed: Long,
+)
 
 private fun MidiCoreProject.toDto() = ProjectDto(
     id = id.value,
@@ -182,6 +215,7 @@ private fun MidiCoreProject.toDto() = ProjectDto(
     authority = authority?.toDto(),
     candidates = candidates.map(MidiCoreCandidate::toDto),
     acceptances = acceptances.map(CandidateAcceptance::toDto),
+    acceptanceHistory = acceptanceHistory.map(CandidateAcceptanceHistory::toDto),
     exportSnapshots = exportSnapshots.map(MidiCoreExportSnapshot::toDto),
 )
 
@@ -193,6 +227,7 @@ private fun ProjectDto.toDomain() = MidiCoreProject(
     authority = authority?.toDomain(),
     candidates = candidates.map(CandidateDto::toDomain),
     acceptances = acceptances.map(AcceptanceDto::toDomain),
+    acceptanceHistory = acceptanceHistory.map(AcceptanceHistoryDto::toDomain),
     exportSnapshots = exportSnapshots.map(ExportSnapshotDto::toDomain),
 )
 
@@ -249,11 +284,31 @@ private fun ProjectSectionOccurrence.toDto() = OccurrenceDto(id, definitionId, l
 private fun OccurrenceDto.toDomain() = ProjectSectionOccurrence(id, definitionId, label, startTick, endTick)
 private fun AuthoritativeChordEvent.toDto() = ChordEventDto(id, occurrenceId, symbol, startTick, endTick)
 private fun ChordEventDto.toDomain() = AuthoritativeChordEvent(id, occurrenceId, symbol, startTick, endTick)
-private fun MidiCoreCandidate.toDto() = CandidateDto(id, role, occurrenceId, generatorVersion, authorityHash, seed, midi.toDto(), validationReport.toDto(), createdAt)
-private fun CandidateDto.toDomain() = MidiCoreCandidate(id, role, occurrenceId, generatorVersion, authorityHash, seed, midi.toDomain(), validationReport.toDomain(), createdAt)
+private fun MidiCoreCandidate.toDto() = CandidateDto(
+    id, role, occurrenceId, generatorVersion, authorityHash, seed, midi.toDto(), validationReport.toDto(), createdAt,
+    profileId, patternId, status, rejectionReason, acceptedDependencyIds,
+)
+private fun CandidateDto.toDomain() = MidiCoreCandidate(
+    id, role, occurrenceId, generatorVersion, authorityHash, seed, midi.toDomain(), validationReport.toDomain(), createdAt,
+    profileId, patternId, status, rejectionReason, acceptedDependencyIds,
+)
 private fun CandidateAcceptance.toDto() = AcceptanceDto(occurrenceId, role, candidateId, locked)
 private fun AcceptanceDto.toDomain() = CandidateAcceptance(occurrenceId, role, candidateId, locked)
-private fun MidiCoreExportSnapshot.toDto() = ExportSnapshotDto(id, sourceSha256, authorityHash, files.map(ExportedSnapshotFile::toDto), createdAt)
-private fun ExportSnapshotDto.toDomain() = MidiCoreExportSnapshot(id, sourceSha256, authorityHash, files.map(ExportedSnapshotFileDto::toDomain), createdAt)
+private fun CandidateAcceptanceHistory.toDto() = AcceptanceHistoryDto(id, occurrenceId, role, candidateId, action, recordedAt)
+private fun AcceptanceHistoryDto.toDomain() = CandidateAcceptanceHistory(id, occurrenceId, role, candidateId, action, recordedAt)
+private fun MidiCoreExportSnapshot.toDto() = ExportSnapshotDto(
+    id, sourceSha256, authorityHash, files.map(ExportedSnapshotFile::toDto), createdAt,
+    acceptedCandidates.map(MidiCoreAcceptedCandidateReference::toDto), roleSettings.toSortedMap(), generatorVersions.toSortedMap(),
+)
+private fun ExportSnapshotDto.toDomain() = MidiCoreExportSnapshot(
+    id, sourceSha256, authorityHash, files.map(ExportedSnapshotFileDto::toDomain), createdAt,
+    acceptedCandidates.map(AcceptedCandidateReferenceDto::toDomain), roleSettings, generatorVersions,
+)
 private fun ExportedSnapshotFile.toDto() = ExportedSnapshotFileDto(kind, artifact.toDto())
 private fun ExportedSnapshotFileDto.toDomain() = ExportedSnapshotFile(kind, artifact.toDomain())
+private fun MidiCoreAcceptedCandidateReference.toDto() = AcceptedCandidateReferenceDto(
+    occurrenceId, role, candidateId, midiSha256, validationReportSha256, authorityHash, generatorVersion, profileId, patternId, seed,
+)
+private fun AcceptedCandidateReferenceDto.toDomain() = MidiCoreAcceptedCandidateReference(
+    occurrenceId, role, candidateId, midiSha256, validationReportSha256, authorityHash, generatorVersion, profileId, patternId, seed,
+)

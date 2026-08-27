@@ -323,6 +323,14 @@
       "documentedFunctionCount": 0
     },
     {
+      "path": "src/main/kotlin/app/melotrail/application/MidiCoreCandidateLifecycle.kt",
+      "classification": "inherited-contract",
+      "reason": "The 20 callable declarations implement MC-019 immutable candidate publication, digest/authority admission, acceptance replacement and restoration, rejection, lock transitions, acceptance history, and export-snapshot capture under F-REV-001 through F-REV-005, F-EXP-001, and F-SYS-003; reviewed on 2026-08-27.",
+      "functionCount": 20,
+      "declarationDigest": "fa580dec64f889af33e908a4b8f0a51f059b4618b4e96f687ebedf569161b110",
+      "documentedFunctionCount": 1
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/application/PartPreviewApplicationService.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/application/PartPreviewApplicationService.kt has 28 callable declarations, 7 directly documented and 21 still requiring focused KDoc/docstrings. QP-015 reviewed verified canonical source/prepared/full/boundary monitors and level matching on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
@@ -1572,18 +1580,18 @@
     },
     {
       "path": "src/main/kotlin/app/melotrail/project/MidiCoreProject.kt",
-      "classification": "trivial/generated",
-      "reason": "src/main/kotlin/app/melotrail/project/MidiCoreProject.kt contains immutable MIDI Core schema domain records and no callable declarations; MC-010 reviewed its ownership and invariant boundary on 2026-08-27.",
-      "functionCount": 0,
-      "declarationDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "classification": "inherited-contract",
+      "reason": "The 4 callable declarations implement MC-019 immutable candidate status, acceptance history, accepted-candidate provenance, and export-snapshot currentness/staleness invariants extending the MC-010 project kernel under F-REV-001 through F-REV-005, F-EXP-001, and F-SYS-003; reviewed on 2026-08-27.",
+      "functionCount": 4,
+      "declarationDigest": "df6323612eb5cc7321ce55fb9d5916b760a32ef5604c67579b389c8d480850eb",
       "documentedFunctionCount": 0
     },
     {
       "path": "src/main/kotlin/app/melotrail/project/MidiCoreProjectSchema.kt",
       "classification": "inherited-contract",
-      "reason": "The 36 callable declarations implement MC-010's explicitly discriminated MIDI Core v1 JSON schema and MC-013's persisted source inspection summaries/report binding, with strict decoding, legacy classification, and DTO/domain mapping under F-PROJ-001 through F-PROJ-003 and Architecture sections 4.1 and 6; reviewed on 2026-08-27.",
-      "functionCount": 36,
-      "declarationDigest": "2f4ce1da4847fb383d2b848b67172eaecf0125ff41bdb40e55f05247f5b747df",
+      "reason": "The 40 callable declarations implement MC-010's explicitly discriminated MIDI Core v1 JSON schema, MC-013's persisted source inspection summaries/report binding, and MC-019 candidate lifecycle, acceptance history, and export provenance DTO mappings under F-PROJ-001 through F-PROJ-003, F-REV-001 through F-REV-005, F-EXP-001, and Architecture sections 4.1 and 6; reviewed on 2026-08-27.",
+      "functionCount": 40,
+      "declarationDigest": "70bb5be222a552662583cc2467d2cc89d9f988c505f50f3fe2c9a78a59d6ac4c",
       "documentedFunctionCount": 1
     },
     {

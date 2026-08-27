@@ -130,14 +130,15 @@ class MidiCoreMusicalAuthority(
             MidiCoreAuthorityHasher.from(current),
             MidiCoreAuthorityHasher.from(updated),
             current.candidates.map { candidate ->
-                MidiCoreCandidateDependency(candidate.id, candidate.role, candidate.occurrenceId, candidate.authorityHash)
+                MidiCoreCandidateDependency(candidate.id, candidate.role, candidate.occurrenceId, candidate.authorityHash, candidate.acceptedDependencyIds)
             },
             current.exportSnapshots.map { snapshot -> MidiCoreExportDependency(snapshot.id, snapshot.authorityHash) },
         )
+        val persisted = updated.withInvalidatedCandidates(invalidation.staleCandidateIds)
         return try {
-            artifacts.saveProject(root, updated)
+            artifacts.saveProject(root, persisted)
             MidiCoreAuthorityResult.Confirmed(
-                MidiCoreProjectSession(root, updated),
+                MidiCoreProjectSession(root, persisted),
                 suggestions(inspection),
                 validation,
                 invalidation,

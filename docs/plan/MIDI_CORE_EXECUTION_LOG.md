@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-018 complete; MC-019 next
+Status: MC-019 complete; MC-020 next
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -58,7 +58,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-016 | DONE | `midi-core: MC-016 add exact occurrence timeline` | PASS — focused timeline/schema/application tests, `make test` | Explicit tick/beat occurrence timeline, pickup policy, deterministic markers, ordered mutations, source-range coverage, and safe persistence are implemented without duration inference. |
 | MC-017 | DONE | `midi-core: MC-017 add authoritative harmony` | PASS — focused harmony/application tests, `make test`, `make build` | Exact chord-window coverage, bounded parsing/realization, chromatic advisories, stale-safe application binding, reopen, and atomic save-failure behavior are covered. |
 | MC-018 | DONE | `midi-core: MC-018 add scoped invalidation` | PASS — fingerprint/invalidation/application tests, `make test`, `make build` | Canonical component and role/occurrence hashes, generator/dependency inputs, scoped impact preview, immutable artifact retention, and stale async rejection are covered. |
-| MC-019 | TODO | | | |
+| MC-019 | DONE | `midi-core: MC-019 add candidate lifecycle records` | PASS — candidate lifecycle/schema/artifact/application tests, `make test`, `make build` | Immutable candidate publication, accepted/rejected/locked/restored transitions, prior acceptance history, scoped stale status, and export provenance snapshots are persisted and digest-bound. |
 | MC-020 | TODO | | | |
 | MC-021 | TODO | | | |
 | MC-022 | TODO | | | |
@@ -107,7 +107,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | --- | --- | --- | --- |
 | G0 Documentation ready | MC-000 | DONE | `7dee33b`; documentation baseline, link audit, `make test`, and `make build` are recorded under MC-000. |
 | G1 MIDI compatibility proven | MC-001–MC-009 | DONE | MC-008 semantic/export gate and MC-009 GarageBand 10.4.14 plus Logic Pro 12.3.1 manual imports pass. |
-| G2 MIDI project kernel complete | MC-010–MC-019 | TODO | |
+| G2 MIDI project kernel complete | MC-010–MC-019 | DONE | MC-010–MC-019 target schema, artifact, authority, invalidation, lifecycle, and full test/build gates pass. |
 | G3 Vertical slice complete | MC-020–MC-030 | TODO | |
 | G4 Focused desktop complete | MC-031–MC-040 | TODO | |
 | G5 Product behavior accepted | MC-041–MC-049 | TODO | |
@@ -545,6 +545,28 @@ Decisions/deviations: Candidate `authorityHash` is defined as the role/occurrenc
 Known limitations: Candidate status, persisted accepted-dependency history, lock/rejection/restore transitions, and export-snapshot lifecycle remain MC-019. The target desktop does not yet render impact previews; MC-036 owns that UI. The transitional Python documentation-inventory build check remains until MC-058.
 Commit: `midi-core: MC-018 add scoped invalidation`.
 Next task: MC-019 — implement candidate, acceptance, lock, and export-snapshot records.
+
+### MC-019 — Implement candidate, acceptance, lock, and export-snapshot records
+
+Status: DONE
+Started: 2026-08-27
+Completed: 2026-08-27
+Starting commit/status: `e81e4ad` / only the unrelated deleted Kotlin compiler session marker was present and remained outside the task commit.
+Contracts read: F-REV-001–F-REV-005, F-EXP-001, and F-SYS-003; Architecture sections 4.1, 4.5, and 6; Quality Gate 3 persistence/generation; MC-019 task contract.
+Current owners inspected: Target project records/schema, immutable artifact store, target authority mutation applications, and the generic accepted-candidate/export evidence patterns in the legacy arrangement state. Release, commercial, audio, renderer, and worker lineage was not introduced into the target records.
+Behavior retained/extracted: `MidiCoreCandidate` now records stable role/occurrence identity, generator version, seed, profile, pattern, scoped authority hash, immutable MIDI/report artifacts, status, rejection reason, and accepted dependency IDs. `MidiCoreCandidateLifecycle` verifies the current project and scoped authority before publication, preserves immutable evidence on save failure, and implements explicit accept, replace, reject, lock, unlock, and restore transitions with chronological `CandidateAcceptanceHistory`. Authority mutations now persist `STALE` status for affected current/accepted candidates while retaining their files. `MidiCoreExportSnapshot` records accepted candidate artifact digests, role settings, generator versions, source/complete authority identity, and immutable export files; currentness is re-evaluated without rewriting historical snapshots.
+Files added/changed: `src/main/kotlin/app/melotrail/application/MidiCoreCandidateLifecycle.kt`; `src/main/kotlin/app/melotrail/project/MidiCoreProject.kt`; `src/main/kotlin/app/melotrail/project/MidiCoreProjectSchema.kt`; `src/main/kotlin/app/melotrail/application/MidiCoreAuthoritativeHarmony.kt`; `src/main/kotlin/app/melotrail/application/MidiCoreMelodySelection.kt`; `src/main/kotlin/app/melotrail/application/MidiCoreMusicalAuthority.kt`; `src/main/kotlin/app/melotrail/application/MidiCoreStructureTimeline.kt`; `src/test/kotlin/app/melotrail/application/MidiCoreCandidateLifecycleTest.kt`; `src/test/resources/fixtures/project/midi-core-v1.json`; `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`; and this execution log.
+Files/data deleted: None. The pre-existing `.kotlin/sessions/kotlin-compiler-10759057547151889139.salive` deletion remains a preserved unrelated user change.
+Tracked deletion recoverability: Not applicable to MC-019; the unrelated session-marker deletion remains recoverable from Git and was not included in the task commit.
+Ignored deletion recoverability: None.
+Focused tests: `./gradlew :test --tests app.melotrail.application.MidiCoreCandidateLifecycleTest --tests app.melotrail.project.MidiCoreProjectSchemaTest --tests app.melotrail.project.adapter.MidiCoreArtifactStoreTest --tests app.melotrail.application.MidiCoreAuthoritativeHarmonyTest --tests app.melotrail.application.MidiCoreMelodySelectionTest --tests app.melotrail.application.MidiCoreMusicalAuthorityTest --tests app.melotrail.application.MidiCoreStructureTimelineTest --rerun-tasks` PASS. Coverage includes immutable publication, artifact/report digests, collision refusal, all review transitions, lock enforcement, rejected-candidate admission refusal, restoration, stale authority status, accepted-candidate snapshot references, snapshot currentness, schema round-trip, and artifact reopening.
+Full validation: `make test` PASS; `make build` PASS; documentation inventory check PASS; `git diff --check` PASS.
+Manual evidence: Not required.
+Lifecycle evidence: Candidate files remain at stable ID-derived paths and are never replaced or deleted by review transitions. Acceptance pointers move atomically while prior candidates and history remain recoverable. A changed authoritative chord marks the dependent candidate stale, rejects its later acceptance, makes the prior export snapshot stale, and leaves MIDI/report/export bytes unchanged.
+Decisions/deviations: Candidate `authorityHash` remains the role/occurrence-scoped hash established by MC-018; export snapshots use the complete authority hash plus role settings and explicit accepted-candidate references. Existing v1 documents remain readable because all new schema fields have defaults, while newly encoded documents include explicit lifecycle fields. Snapshot capture consumes already-published export artifacts; staged file writing and complete package assembly remain MC-029 responsibilities. No release/commercial/audio lineage fields were added.
+Known limitations: Candidate generation and review UI remain MC-020 through MC-040; complete package export remains MC-029. The transitional Python documentation-inventory build check remains until MC-058.
+Commit: `midi-core: MC-019 add candidate lifecycle records`.
+Next task: MC-020 — define generation context.
 
 ## 6. Manual gate records
 

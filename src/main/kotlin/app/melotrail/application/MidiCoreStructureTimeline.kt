@@ -53,20 +53,41 @@ class MidiCoreStructureTimeline(private val artifacts: MidiCoreArtifactStore = M
         } catch (error: IllegalArgumentException) {
             return rejected(MidiCoreStructureTimelineProblemCode.INVALID_STRUCTURE, error.message ?: "Structure is invalid.", "Review the structure and authoritative harmony before retrying.")
         }
-        val updatedProject = try { current.copy(authority = updatedAuthority) } catch (error: IllegalArgumentException) {
-            return rejected(MidiCoreStructureTimelineProblemCode.INVALID_STRUCTURE, error.message ?: "Structure is incompatible with current authority.", "Update dependent authority windows before retrying.")
+        val updatedProject = try {
+            current.copy(authority = updatedAuthority)
+        } catch (error: IllegalArgumentException) {
+            try {
+                // A removed occurrence makes its prior candidate evidence stale, not disposable.
+                current.copy(
+                    authority = updatedAuthority,
+                    candidates = emptyList(),
+                    acceptances = emptyList(),
+                    acceptanceHistory = emptyList(),
+                )
+            } catch (_: IllegalArgumentException) {
+                return rejected(MidiCoreStructureTimelineProblemCode.INVALID_STRUCTURE, error.message ?: "Structure is incompatible with current authority.", "Update dependent authority windows before retrying.")
+            }
         }
         val invalidation = MidiCoreInvalidationPlanner.preview(
             MidiCoreAuthorityHasher.from(current),
             MidiCoreAuthorityHasher.from(updatedProject),
             current.candidates.map { candidate ->
-                MidiCoreCandidateDependency(candidate.id, candidate.role, candidate.occurrenceId, candidate.authorityHash)
+                MidiCoreCandidateDependency(candidate.id, candidate.role, candidate.occurrenceId, candidate.authorityHash, candidate.acceptedDependencyIds)
             },
             current.exportSnapshots.map { snapshot -> MidiCoreExportDependency(snapshot.id, snapshot.authorityHash) },
         )
+        val persisted = if (updatedProject.candidates.isEmpty() && current.candidates.isNotEmpty()) {
+            updatedProject.copy(
+                candidates = current.candidates,
+                acceptances = current.acceptances,
+                acceptanceHistory = current.acceptanceHistory,
+            ).withInvalidatedCandidates(invalidation.staleCandidateIds)
+        } else {
+            updatedProject.withInvalidatedCandidates(invalidation.staleCandidateIds)
+        }
         return try {
-            artifacts.saveProject(root, updatedProject)
-            MidiCoreStructureTimelineResult.Updated(MidiCoreProjectSession(root, updatedProject), timeline.markerLabels(), invalidation)
+            artifacts.saveProject(root, persisted)
+            MidiCoreStructureTimelineResult.Updated(MidiCoreProjectSession(root, persisted), timeline.markerLabels(), invalidation)
         } catch (_: MidiCoreProjectSaveException) {
             rejected(MidiCoreStructureTimelineProblemCode.SAVE_FAILED, "Structure could not be saved safely.", "Retry the save; the last known-good project remains available.")
         } catch (_: Exception) {

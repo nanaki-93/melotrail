@@ -102,7 +102,11 @@
                     "path": "reports/candidates/candidate-1.json",
                     "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
                 },
-                "createdAt": "2026-08-27T00:01:00Z"
+                "createdAt": "2026-08-27T00:01:00Z",
+                "profileId": "default",
+                "patternId": "unspecified",
+                "status": "CURRENT",
+                "acceptedDependencyIds": []
             }
         ],
         "acceptances": [
@@ -113,6 +117,7 @@
                 "locked": true
             }
         ],
+        "acceptanceHistory": [],
         "exportSnapshots": [
             {
                 "id": "export-1",
@@ -134,7 +139,10 @@
                         }
                     }
                 ],
-                "createdAt": "2026-08-27T00:02:00Z"
+                "createdAt": "2026-08-27T00:02:00Z",
+                "acceptedCandidates": [],
+                "roleSettings": {},
+                "generatorVersions": {}
             }
         ]
     }
