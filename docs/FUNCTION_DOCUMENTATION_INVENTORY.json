@@ -37,9 +37,9 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt has 95 callable declarations, 5 directly documented and 90 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-032; the focused target reducer, explicit intent routing, operation admission, and blocker traces are covered by tests, and the remaining adapter/reducer declarations must be reconsidered when their behavior or contract changes.",
-      "functionCount": 95,
-      "declarationDigest": "6a39ec2c81f9ec9f1f46255dfc7f3e1ebc07e973274691b265fce2adb5d59580",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt has 99 callable declarations, 5 directly documented and 94 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-035; the focused target reducer, explicit intent routing, source audition preparation, operation admission, and blocker traces are covered by tests, and the remaining adapter/reducer declarations must be reconsidered when their behavior or contract changes.",
+      "functionCount": 99,
+      "declarationDigest": "6af4bebc0a3092319e3319245937325978fe523c5f03120cce6d8290f2cb0e2b",
       "documentedFunctionCount": 5
     },
     {
@@ -56,6 +56,14 @@
       "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreProjectPage.kt has 9 callable declarations, 1 directly documented and 8 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-034; target project lifecycle actions, readiness summaries, recovery explanations, and blocker navigation are covered by focused Compose tests, and the remaining local presentation declarations must be reconsidered when their behavior or contract changes.",
       "functionCount": 9,
       "declarationDigest": "7f214c93abba0d051978a8b0576ad4b584af57444c8eea9e8e3b036f1fd7fc05",
+      "documentedFunctionCount": 1
+    },
+    {
+      "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreMidiPage.kt",
+      "classification": "deferred-with-reason",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreMidiPage.kt has 18 callable declarations, 1 directly documented and 17 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-035; target MIDI import, protected-melody selection, findings, immutable identity evidence, and MIDI transport semantics are covered by focused Compose tests, and the remaining local presentation declarations must be reconsidered when their behavior or contract changes.",
+      "functionCount": 18,
+      "declarationDigest": "094b5db9a1a2cf3197dca750e5fab5c7f357494a579329ca98a9e4b0f3d5a963",
       "documentedFunctionCount": 1
     },
     {
@@ -337,6 +345,14 @@
       "functionCount": 12,
       "declarationDigest": "f5f5b81eaf80e01d4442a1d0c95889f960c7bb8c1a9742824ebaf39ff52ea257",
       "documentedFunctionCount": 0
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/application/MidiCoreSourceAudition.kt",
+      "classification": "deferred-with-reason",
+      "reason": "src/main/kotlin/app/melotrail/application/MidiCoreSourceAudition.kt has 2 callable declarations, 1 directly documented and 1 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-035; immutable source verification and source-melody audition-plan preparation are covered by focused application tests under F-PLAY-001, F-PLAY-002, and F-PLAY-004.",
+      "functionCount": 2,
+      "declarationDigest": "ea5c8580128b4762c03f4c67249f5d08331417dc7ef85fc59ddf7752046fc34e",
+      "documentedFunctionCount": 1
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreStructureTimeline.kt",
@@ -1557,9 +1573,9 @@
     {
       "path": "src/main/kotlin/app/melotrail/midi/adapter/JdkMidiReader.kt",
       "classification": "inherited-contract",
-      "reason": "The 14 callable declarations implement the target Standard MIDI import contract in docs/MIDI_CONTRACT.md sections 2 through 5; MC-005 reviewed the adapter boundary and its fixture-backed behavior on 2026-08-26.",
-      "functionCount": 14,
-      "declarationDigest": "efc5bbe810e93bc084a6a6c680c75a1657ddd665f247aa8952c10257ff873f03",
+      "reason": "The 15 callable declarations implement the target Standard MIDI import contract in docs/MIDI_CONTRACT.md sections 2 through 5, including persisted per-track duration facts; MC-005 and MC-035 reviewed the adapter boundary and fixture-backed behavior on 2026-08-28.",
+      "functionCount": 15,
+      "declarationDigest": "8339a76d4e1c0ebbfc082a3210c080f1a4904f91d936e8a1a2b392c62b780b72",
       "documentedFunctionCount": 0
     },
     {

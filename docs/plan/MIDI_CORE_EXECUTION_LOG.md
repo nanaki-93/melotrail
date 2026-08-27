@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-034 complete
+Status: MC-036 in progress
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -74,8 +74,8 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-032 | DONE | `midi-core: MC-032 add focused workspace state` | PASS — focused workspace/composition tests, documentation coverage, `git diff --check`, `make test`, `make build` | Focused MIDI Core state and explicit intents now own project, source/selection/findings, authority drafts, review, audition, export, operations, dialogs, and actionable blockers with revision/hash admission. |
 | MC-033 | DONE | `midi-core: MC-033 focus workspace navigation` | PASS — focused Compose shell tests, documentation coverage, `git diff --check`, `make test` | The default desktop shell exposes only Project, MIDI, Structure & Harmony, Arrange, Review, and Export with stable tags, selection semantics, keyboard activation, responsive wide/compact layouts, and blocker context. |
 | MC-034 | DONE | `midi-core: MC-034 build Project page` | PASS — focused Project-page Compose tests, documentation coverage, `git diff --check`, `make test` | Project creation/open/recent/current actions, persisted readiness/location, target next-step navigation, safe recovery, unsupported-schema explanation, and keyboard semantics are now available without audio-era setup. |
-| MC-035 | TODO | | | |
-| MC-036 | TODO | | | |
+| MC-035 | DONE | `midi-core: MC-035 build MIDI page` | PASS — focused MIDI page/source-audition tests, documentation coverage, `git diff --check`, `make test`, `make build` | One-file SMF 0/1 import, persisted source facts, protected melody selection, typed findings, source identity evidence, and MIDI-only source transport are reachable from the target shell. |
+| MC-036 | IN_PROGRESS | | | Structure & Harmony page is next after MC-035 completion. |
 | MC-037 | TODO | | | |
 | MC-038 | TODO | | | |
 | MC-039 | TODO | | | |
@@ -897,6 +897,29 @@ Decisions/deviations: The selected create folder and project name remain ephemer
 Known limitations: MC-035–MC-040 still need to make MIDI, Structure & Harmony, Arrange, Review, and Export fully usable; old graph cleanup remains MC-050/MC-051; final Logic Pro/GarageBand evidence remains MC-048; the transitional Python documentation-inventory build check remains until MC-058.
 Commit: `midi-core: MC-034 build Project page`.
 Next task: MC-035 — build the MIDI page.
+
+### MC-035 — Implement the MIDI page
+
+Status: DONE
+Started: 2026-08-28
+Completed: 2026-08-28
+Starting commit/status: `17844ee` / only the preserved unrelated deleted Kotlin compiler session marker is present.
+Contracts read: F-MIDI-001–F-MIDI-005 and F-PLAY-001–F-PLAY-004; MC-035 task contract.
+Current owners inspected: legacy import and preparation pages/dialogs, `WorkspaceApp` MIDI controls, `WorkspaceViewModel` import/preview intents, target source import/melody-selection/audition application boundaries, target `MidiCoreWorkspaceState`/`MidiCoreWorkspaceIntent`, and the focused shell.
+Behavior retained/extracted: The target MIDI page owns one-file `.mid`/`.midi` selection, source filename/digest/format/PPQ/duration facts, track/channel evidence, protected-melody selection, typed blocking/advisory/awaiting findings, immutable-source explanations, and MIDI-only source audition. The new application boundary revalidates the preserved source and selected melody before preparing a one-role audition plan; missing source context uses the source's fixed metadata or an explicit fixed 120-BPM/4-4 fallback and never renders audio. Existing controller transport state remains session-only.
+Files added/changed: `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreMidiPage.kt`, `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreMidiPageTest.kt`, `src/main/kotlin/app/melotrail/application/MidiCoreSourceAudition.kt`, `src/test/kotlin/app/melotrail/application/MidiCoreSourceAuditionTest.kt`, `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt`, `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspaceShell.kt`, `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreDesktopComposition.kt`, `desktopApp/src/test/kotlin/app/melotrail/desktop/MidiCoreWorkspaceTest.kt`, `src/main/kotlin/app/melotrail/midi/domain/MidiInspection.kt`, `src/main/kotlin/app/melotrail/midi/adapter/JdkMidiReader.kt`, `src/main/kotlin/app/melotrail/project/MidiCoreProjectSchema.kt`, `src/main/kotlin/app/melotrail/application/MidiCoreSourceImport.kt`, `src/test/kotlin/app/melotrail/midi/adapter/JdkMidiReaderTest.kt`, `src/test/resources/fixtures/project/midi-core-v1.json`, `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`, and this log.
+Files/data deleted: None planned.
+Tracked deletion recoverability: The unrelated Kotlin compiler session-marker deletion remains recoverable from Git and will not be included in the task commit.
+Ignored deletion recoverability: None planned.
+Focused tests: `./gradlew :desktopApp:test --tests app.melotrail.desktop.MidiCoreMidiPageTest --tests app.melotrail.desktop.MidiCoreWorkspaceTest --tests app.melotrail.desktop.MidiCoreWorkspaceShellTest --tests app.melotrail.desktop.MidiCoreDesktopCompositionTest` PASS; `./gradlew :test --tests app.melotrail.application.MidiCoreSourceAuditionTest` PASS; the page suite covers chooser intent normalization, SMF 0/1 facts, track duration/channel semantics, blocking/advisory findings, source identity, source play/pause/stop/seek/loop controls, device failure state preservation, and superseded-label absence.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS; `make test` PASS (2026-08-28; 14 Gradle tasks); `make build` PASS (2026-08-28; 15 Gradle tasks).
+Manual evidence: Not required. Automated imported-fixture evidence uses the owned SMF 0 and SMF 1 fixtures; no screenshot or DAW claim is substituted for a later manual gate.
+Decisions/deviations: Per-track duration is now an immutable persisted inspection fact with a backward-compatible zero default for older v1 project documents. Source audition deliberately remains available before musical authority confirmation by using source tempo/meter or explicit fixed defaults; it rechecks artifact and protected-melody identity and preserves project state on output-device failure. Source-role transport is intentionally limited to the source page; candidate/occurrence/role/full-arrangement audition integration belongs to MC-038 and later hardening.
+Known limitations: Reopening a project hydrates preserved source facts and report availability, while decoded persisted import findings are not yet projected into workspace state until a source operation refreshes them. The page does not claim a MIDI-device smoke result; MC-045 owns that manual behavior. Final DAW evidence remains MC-048.
+Commit: `midi-core: MC-035 build MIDI page`.
+Next task: MC-036 — build the Structure & Harmony page.
+Commit:
+Next task: MC-036 — build the Structure & Harmony page.
 
 ## 6. Manual gate records
 

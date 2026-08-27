@@ -91,10 +91,19 @@ class JdkMidiReader {
         }
         return TranslatedTrack(
             SemanticMidiTrack(trackIndex, semanticEvents),
-            MidiTrackSummary(trackIndex, trackName(semanticEvents), channelFacts.values.map(MutableChannelFacts::summary).sortedBy(MidiChannelSummary::channel)),
+            MidiTrackSummary(
+                trackIndex,
+                trackName(semanticEvents),
+                channelFacts.values.map(MutableChannelFacts::summary).sortedBy(MidiChannelSummary::channel),
+                trackDuration(semanticEvents),
+            ),
             findings,
         )
     }
+
+    private fun trackDuration(events: List<SemanticMidiEvent>): Long = events.maxOfOrNull { event ->
+        if (event is MidiNoteEvent) event.endTick else event.orderingKey.tick
+    } ?: 0L
 
     private fun translateMeta(
         tick: Long,

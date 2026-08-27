@@ -249,7 +249,12 @@ private data class ImportSourceDto(
 )
 
 @Serializable
-private data class ImportTrackSummaryDto(val trackIndex: Int, val name: String? = null, val channels: List<ImportChannelSummaryDto>)
+private data class ImportTrackSummaryDto(
+    val trackIndex: Int,
+    val name: String? = null,
+    val channels: List<ImportChannelSummaryDto>,
+    val durationTicks: Long = 0L,
+)
 
 @Serializable
 private data class ImportChannelSummaryDto(
@@ -273,6 +278,6 @@ private data class ImportFindingDto(
     val tick: Long? = null,
 )
 
-private fun MidiTrackSummary.toReportDto() = ImportTrackSummaryDto(trackIndex, name, channels.map(MidiChannelSummary::toReportDto))
+private fun MidiTrackSummary.toReportDto() = ImportTrackSummaryDto(trackIndex, name, channels.map(MidiChannelSummary::toReportDto), durationTicks)
 private fun MidiChannelSummary.toReportDto() = ImportChannelSummaryDto(channel, noteCount, minimumPitch, maximumPitch, controllerCount, likelyRoles.map(Enum<*>::name))
 private fun MidiFinding.toReportDto() = ImportFindingDto(code.name, severity.name, scope.name, message, action, trackIndex, channel, tick)

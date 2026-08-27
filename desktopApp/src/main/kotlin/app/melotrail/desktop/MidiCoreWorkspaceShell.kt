@@ -84,9 +84,10 @@ internal fun MidiCoreWorkspaceShell(
     workspace: MidiCoreWorkspaceViewModel,
     modifier: Modifier = Modifier,
     projectActions: MidiCoreProjectPageActions = MidiCoreProjectPageActions(),
+    midiActions: MidiCoreMidiPageActions = MidiCoreMidiPageActions(),
 ) {
     val state by workspace.state.collectAsState()
-    MidiCoreWorkspaceShell(state, workspace::accept, modifier, projectActions = projectActions)
+    MidiCoreWorkspaceShell(state, workspace::accept, modifier, projectActions = projectActions, midiActions = midiActions)
 }
 
 /** Render the shell from a stable state snapshot so its semantic tree is independently testable. */
@@ -97,6 +98,7 @@ internal fun MidiCoreWorkspaceShell(
     modifier: Modifier = Modifier,
     initialDestination: MidiCoreWorkspaceDestination = MidiCoreWorkspaceDestination.PROJECT,
     projectActions: MidiCoreProjectPageActions = MidiCoreProjectPageActions(),
+    midiActions: MidiCoreMidiPageActions = MidiCoreMidiPageActions(),
 ) {
     var selectedDestination by remember(initialDestination) { mutableStateOf(initialDestination) }
     val onDestinationSelected: (MidiCoreWorkspaceDestination) -> Unit = { selectedDestination = it }
@@ -129,6 +131,7 @@ internal fun MidiCoreWorkspaceShell(
                         onIntent = onIntent,
                         onDestinationSelected = onDestinationSelected,
                         projectActions = projectActions,
+                        midiActions = midiActions,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                     )
                 }
@@ -149,6 +152,7 @@ internal fun MidiCoreWorkspaceShell(
                         onIntent = onIntent,
                         onDestinationSelected = onDestinationSelected,
                         projectActions = projectActions,
+                        midiActions = midiActions,
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                     )
                 }
@@ -294,10 +298,15 @@ private fun MidiCoreWorkspacePage(
     onIntent: (MidiCoreWorkspaceIntent) -> Unit,
     onDestinationSelected: (MidiCoreWorkspaceDestination) -> Unit,
     projectActions: MidiCoreProjectPageActions,
+    midiActions: MidiCoreMidiPageActions,
     modifier: Modifier,
 ) {
     if (destination == MidiCoreWorkspaceDestination.PROJECT) {
         MidiCoreProjectPage(state, onIntent, onDestinationSelected, projectActions, modifier)
+        return
+    }
+    if (destination == MidiCoreWorkspaceDestination.MIDI) {
+        MidiCoreMidiPage(state, onIntent, midiActions, modifier)
         return
     }
     Column(

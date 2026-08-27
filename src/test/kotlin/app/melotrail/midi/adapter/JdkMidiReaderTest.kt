@@ -56,6 +56,7 @@ class JdkMidiReaderTest {
         assertEquals(480, result.sequence.source.ppq.value)
         assertEquals(480, result.sourceEndTick)
         assertEquals("Melody", result.trackSummaries.single().name)
+        assertEquals(480, result.trackSummaries.single().durationTicks)
         assertEquals(1, result.trackSummaries.single().channels.single().noteCount)
         assertEquals(
             listOf(MidiTempoEvent::class, MidiTimeSignatureEvent::class, MidiTrackNameEvent::class, MidiNoteEvent::class),

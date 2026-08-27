@@ -25,7 +25,8 @@
                 {
                     "trackIndex": 0,
                     "name": "Conductor",
-                    "channels": []
+                    "channels": [],
+                    "durationTicks": 0
                 },
                 {
                     "trackIndex": 1,
@@ -41,7 +42,8 @@
                                 "MELODY"
                             ]
                         }
-                    ]
+                    ],
+                    "durationTicks": 0
                 }
             ],
             "sourceEndTick": 480

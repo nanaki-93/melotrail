@@ -34,10 +34,16 @@ data class MidiChannelSummary(
     }
 }
 
-data class MidiTrackSummary(val trackIndex: Int, val name: String?, val channels: List<MidiChannelSummary>) {
+data class MidiTrackSummary(
+    val trackIndex: Int,
+    val name: String?,
+    val channels: List<MidiChannelSummary>,
+    val durationTicks: Long = 0L,
+) {
     init {
         require(trackIndex >= 0) { "MIDI track summary index must not be negative" }
         require(channels.map(MidiChannelSummary::channel) == channels.map(MidiChannelSummary::channel).sorted()) { "MIDI channel summaries must be ordered" }
+        require(durationTicks >= 0L) { "MIDI track duration must not be negative" }
     }
 }
 

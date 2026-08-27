@@ -22,6 +22,8 @@ import app.melotrail.application.MidiCoreProjectLifecycleResult
 import app.melotrail.application.MidiCoreProjectSession
 import app.melotrail.application.MidiCoreSourceImport
 import app.melotrail.application.MidiCoreSourceImportResult
+import app.melotrail.application.MidiCoreSourceAuditionResult
+import app.melotrail.application.PrepareMidiCoreSourceAudition
 import app.melotrail.application.MidiCoreStructureTimeline
 import app.melotrail.application.RejectMidiCoreCandidate
 import app.melotrail.application.RegenerateMidiCoreCandidate
@@ -93,6 +95,7 @@ interface MidiCoreWorkspaceUseCases {
     fun close(session: app.melotrail.application.MidiCoreProjectSession): app.melotrail.application.MidiCoreProjectCloseResult
     fun importSource(request: ImportMidiCoreSource): MidiCoreSourceImportResult
     fun selectMelody(request: SelectMidiCoreMelody): app.melotrail.application.MidiCoreMelodySelectionResult
+    fun prepareSourceAudition(request: PrepareMidiCoreSourceAudition): MidiCoreSourceAuditionResult
     fun confirmAuthority(request: ConfirmMidiCoreAuthority): app.melotrail.application.MidiCoreAuthorityResult
     fun replaceStructure(request: ReplaceMidiCoreStructure): app.melotrail.application.MidiCoreStructureTimelineResult
     fun replaceHarmony(request: ReplaceMidiCoreHarmony): app.melotrail.application.MidiCoreAuthoritativeHarmonyResult
@@ -120,6 +123,7 @@ class DefaultMidiCoreWorkspaceUseCases(
     private val review: MidiCoreCandidateReview,
     private val exporter: MidiCoreMidiPackageExporter,
     override val audition: MidiAuditionPort,
+    private val sourceAudition: app.melotrail.application.MidiCoreSourceAudition = app.melotrail.application.MidiCoreSourceAudition(),
 ) : MidiCoreWorkspaceUseCases {
     override fun create(request: CreateMidiCoreProject): MidiCoreProjectLifecycleResult = project.create(request)
 
@@ -135,6 +139,8 @@ class DefaultMidiCoreWorkspaceUseCases(
     override fun importSource(request: ImportMidiCoreSource): MidiCoreSourceImportResult = sourceImport.import(request)
 
     override fun selectMelody(request: SelectMidiCoreMelody) = melodySelection.select(request)
+
+    override fun prepareSourceAudition(request: PrepareMidiCoreSourceAudition): MidiCoreSourceAuditionResult = sourceAudition.prepare(request)
 
     override fun confirmAuthority(request: ConfirmMidiCoreAuthority) = authority.confirm(request)
 
@@ -396,6 +402,7 @@ sealed interface MidiCoreWorkspaceIntent {
     data class RestoreCandidate(val candidateId: String, val role: CandidateRole, val occurrenceId: String, val locked: Boolean = false) : MidiCoreWorkspaceIntent
     data object ExportPackage : MidiCoreWorkspaceIntent
     data class SelectAudition(val plan: MidiAuditionPlaybackPlan) : MidiCoreWorkspaceIntent
+    data object PlaySourceMelody : MidiCoreWorkspaceIntent
     data class PlayAudition(val plan: MidiAuditionPlaybackPlan? = null) : MidiCoreWorkspaceIntent
     data object PauseAudition : MidiCoreWorkspaceIntent
     data object StopAudition : MidiCoreWorkspaceIntent
@@ -458,6 +465,7 @@ class MidiCoreWorkspaceViewModel(
             is MidiCoreWorkspaceIntent.UnlockCandidate -> unlockCandidate(intent)
             is MidiCoreWorkspaceIntent.RestoreCandidate -> restoreCandidate(intent)
             MidiCoreWorkspaceIntent.ExportPackage -> exportPackage()
+            MidiCoreWorkspaceIntent.PlaySourceMelody -> playSourceMelody()
             is MidiCoreWorkspaceIntent.SelectAudition -> audition { useCases.audition.selectScope(intent.plan) }
             is MidiCoreWorkspaceIntent.PlayAudition -> audition {
                 intent.plan?.let { useCases.audition.play(it) } ?: useCases.audition.play()
@@ -766,6 +774,39 @@ class MidiCoreWorkspaceViewModel(
         }
     }
 
+    private fun playSourceMelody() {
+        val current = requireSessionOrBlock() ?: return
+        val intent = MidiCoreWorkspaceIntent.PlaySourceMelody
+        startOperation(MidiCoreWorkspaceOperationKind.AUDITION, "Starting source MIDI audition…", intent) { cancellation ->
+            if (cancellation.get()) return@startOperation cancelled()
+            when (val prepared = useCases.prepareSourceAudition(PrepareMidiCoreSourceAudition(current))) {
+                is MidiCoreSourceAuditionResult.Rejected -> failure(
+                    sourceAuditionBlocker(prepared.problem),
+                    intent,
+                )
+                is MidiCoreSourceAuditionResult.Ready -> {
+                    if (cancellation.get()) return@startOperation cancelled()
+                    when (val result = useCases.audition.play(prepared.plan)) {
+                        is MidiAuditionResult.Applied -> success("Source MIDI audition started.") {
+                            _state.value = _state.value.copy(audition = result.state, blockers = baseBlockers(session?.project))
+                        }
+                        is MidiAuditionResult.Failed -> failure(
+                            blocker(
+                                MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE,
+                                result.problem.message,
+                                result.problem.nextAction,
+                                result.problem.code.name,
+                            ),
+                            intent,
+                        ) {
+                            _state.value = _state.value.copy(audition = result.state)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private fun audition(action: () -> MidiAuditionResult) {
         val result = try {
             action()
@@ -914,7 +955,10 @@ class MidiCoreWorkspaceViewModel(
                     notification = outcome.message,
                 )
             }
-            is WorkspaceOutcome.Failure -> finishFailure(operationId, outcome.blocker, outcome.retry)
+            is WorkspaceOutcome.Failure -> {
+                outcome.apply?.invoke()
+                finishFailure(operationId, outcome.blocker, outcome.retry)
+            }
             WorkspaceOutcome.Cancelled -> finishCancelled(operationId)
         }
         activeJob = null
@@ -1078,6 +1122,23 @@ class MidiCoreWorkspaceViewModel(
         problem.code.name,
     )
 
+    private fun sourceAuditionBlocker(problem: app.melotrail.application.MidiCoreSourceAuditionProblem) = blocker(
+        when (problem.code) {
+            app.melotrail.application.MidiCoreSourceAuditionProblemCode.SOURCE_REQUIRED -> MidiCoreWorkspaceBlockerCode.SOURCE_REQUIRED
+            app.melotrail.application.MidiCoreSourceAuditionProblemCode.MELODY_REQUIRED,
+            app.melotrail.application.MidiCoreSourceAuditionProblemCode.MELODY_IDENTITY_MISMATCH,
+            -> MidiCoreWorkspaceBlockerCode.MELODY_REQUIRED
+            app.melotrail.application.MidiCoreSourceAuditionProblemCode.STALE_PROJECT -> MidiCoreWorkspaceBlockerCode.REVISION_CONFLICT
+            app.melotrail.application.MidiCoreSourceAuditionProblemCode.INVALID_PROJECT,
+            app.melotrail.application.MidiCoreSourceAuditionProblemCode.SOURCE_DIGEST_MISMATCH,
+            app.melotrail.application.MidiCoreSourceAuditionProblemCode.SOURCE_NOT_PLAYABLE,
+            -> MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE
+        },
+        problem.message,
+        problem.nextAction,
+        problem.code.name,
+    )
+
     private fun melodyBlocker(problem: MidiCoreMelodySelectionProblem, validation: MidiImportValidationResult? = null) = blocker(
         MidiCoreWorkspaceBlockerCode.MELODY_REQUIRED,
         problem.message,
@@ -1130,14 +1191,22 @@ class MidiCoreWorkspaceViewModel(
             val apply: (() -> Unit)? = null,
         ) : WorkspaceOutcome
 
-        data class Failure(val blocker: MidiCoreWorkspaceBlocker, val retry: MidiCoreWorkspaceIntent? = null) : WorkspaceOutcome
+        data class Failure(
+            val blocker: MidiCoreWorkspaceBlocker,
+            val retry: MidiCoreWorkspaceIntent? = null,
+            val apply: (() -> Unit)? = null,
+        ) : WorkspaceOutcome
 
         data object Cancelled : WorkspaceOutcome
     }
 
     private fun success(message: String, session: app.melotrail.application.MidiCoreProjectSession? = null, apply: (() -> Unit)? = null) = WorkspaceOutcome.Success(message, session, apply)
 
-    private fun failure(blocker: MidiCoreWorkspaceBlocker, retry: MidiCoreWorkspaceIntent? = null) = WorkspaceOutcome.Failure(blocker, retry)
+    private fun failure(
+        blocker: MidiCoreWorkspaceBlocker,
+        retry: MidiCoreWorkspaceIntent? = null,
+        apply: (() -> Unit)? = null,
+    ) = WorkspaceOutcome.Failure(blocker, retry, apply)
 
     private fun cancelled() = WorkspaceOutcome.Cancelled
 }

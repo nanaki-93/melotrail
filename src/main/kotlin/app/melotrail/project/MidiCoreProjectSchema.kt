@@ -109,7 +109,12 @@ private data class SourceMidiDto(
 )
 
 @Serializable
-private data class TrackSummaryDto(val trackIndex: Int, val name: String? = null, val channels: List<ChannelSummaryDto>)
+private data class TrackSummaryDto(
+    val trackIndex: Int,
+    val name: String? = null,
+    val channels: List<ChannelSummaryDto>,
+    val durationTicks: Long = 0L,
+)
 
 @Serializable
 private data class ChannelSummaryDto(
@@ -261,8 +266,8 @@ private fun SourceMidiDto.toDomain() = SourceMidiRecord(
     sourceEndTick,
 )
 
-private fun MidiTrackSummary.toDto() = TrackSummaryDto(trackIndex, name, channels.map(MidiChannelSummary::toDto))
-private fun TrackSummaryDto.toDomain() = MidiTrackSummary(trackIndex, name, channels.map(ChannelSummaryDto::toDomain))
+private fun MidiTrackSummary.toDto() = TrackSummaryDto(trackIndex, name, channels.map(MidiChannelSummary::toDto), durationTicks)
+private fun TrackSummaryDto.toDomain() = MidiTrackSummary(trackIndex, name, channels.map(ChannelSummaryDto::toDomain), durationTicks)
 private fun MidiChannelSummary.toDto() = ChannelSummaryDto(channel, noteCount, minimumPitch, maximumPitch, controllerCount, likelyRoles)
 private fun ChannelSummaryDto.toDomain() = MidiChannelSummary(channel, noteCount, minimumPitch, maximumPitch, controllerCount, likelyRoles)
 private fun SelectedMelodyTrack.toDto() = SelectedMelodyDto(trackIndex, channel, identitySha256)

@@ -123,6 +123,37 @@ class MidiCoreWorkspaceTest {
     }
 
     @Test
+    fun `source audition is asynchronous and preserves project state on device failure`() = runTest {
+        val fake = FakeMidiCoreWorkspaceUseCases()
+        fake.sourceAuditionResult = app.melotrail.application.MidiCoreSourceAuditionResult.Ready(fakeSourcePlan())
+        val viewModel = MidiCoreWorkspaceViewModel(fake, MemoryMidiCorePreferences(), NoOpDesktopOperationLogger, testDispatchers(testScheduler))
+        viewModel.accept(MidiCoreWorkspaceIntent.OpenProject(fake.session.root))
+        advanceUntilIdle()
+
+        viewModel.accept(MidiCoreWorkspaceIntent.PlaySourceMelody)
+        advanceUntilIdle()
+        assertEquals(MidiCoreWorkspaceOperationPhase.SUCCEEDED, viewModel.state.value.operation.phase)
+        assertEquals(MidiAuditionPlaybackState.PLAYING, viewModel.state.value.audition.playback)
+        val projectAfterPlay = viewModel.state.value.project
+
+        viewModel.accept(MidiCoreWorkspaceIntent.StopAudition)
+        fake.audition.playProblem = app.melotrail.audition.MidiAuditionProblem(
+            app.melotrail.audition.MidiAuditionProblemCode.DEVICE_UNAVAILABLE,
+            "No MIDI output device is available.",
+            "Connect a MIDI output and retry.",
+        )
+        val beforeFailure = viewModel.state.value.audition
+        viewModel.accept(MidiCoreWorkspaceIntent.PlaySourceMelody)
+        advanceUntilIdle()
+
+        assertEquals(MidiCoreWorkspaceOperationPhase.FAILED, viewModel.state.value.operation.phase)
+        assertEquals(beforeFailure, viewModel.state.value.audition)
+        assertEquals(projectAfterPlay, viewModel.state.value.project)
+        assertEquals(MidiCoreWorkspaceIntent.PlaySourceMelody, viewModel.state.value.operation.retry)
+        viewModel.close()
+    }
+
+    @Test
     fun `authority draft requires explicit discard before closing project`() = runTest {
         val fake = FakeMidiCoreWorkspaceUseCases()
         val dispatchers = testDispatchers(testScheduler)
@@ -255,6 +286,14 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
         ),
     )
     override val audition = FakeMidiAudition()
+    var sourceAuditionResult: app.melotrail.application.MidiCoreSourceAuditionResult =
+        app.melotrail.application.MidiCoreSourceAuditionResult.Rejected(
+            app.melotrail.application.MidiCoreSourceAuditionProblem(
+                app.melotrail.application.MidiCoreSourceAuditionProblemCode.MELODY_REQUIRED,
+                "not used",
+                "not used",
+            ),
+        )
     val openResults = ArrayDeque<MidiCoreProjectLifecycleResult>()
     var pendingGeneration: CompletableDeferred<MidiCoreCandidateGenerationResult>? = null
     var confirmAuthorityCalls = 0
@@ -277,6 +316,8 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
     override fun importSource(request: ImportMidiCoreSource): MidiCoreSourceImportResult = error("not used")
 
     override fun selectMelody(request: SelectMidiCoreMelody): MidiCoreMelodySelectionResult = error("not used")
+
+    override fun prepareSourceAudition(request: app.melotrail.application.PrepareMidiCoreSourceAudition): app.melotrail.application.MidiCoreSourceAuditionResult = sourceAuditionResult
 
     override fun confirmAuthority(request: ConfirmMidiCoreAuthority): MidiCoreAuthorityResult {
         confirmAuthorityCalls += 1
@@ -356,6 +397,7 @@ private class FakeMidiAudition : MidiAuditionPort {
 
     override val state: MidiAuditionState get() = current
     override val stateHistory: List<MidiAuditionState> get() = history.toList()
+    var playProblem: app.melotrail.audition.MidiAuditionProblem? = null
 
     override fun selectScope(plan: MidiAuditionPlaybackPlan): MidiAuditionResult {
         record(current.copy(scope = plan.view.scope, window = plan.view.window, positionTick = plan.startTick, mutedRoles = plan.mutedRoles, soloRoles = plan.soloRoles))
@@ -363,6 +405,7 @@ private class FakeMidiAudition : MidiAuditionPort {
     }
 
     override fun play(plan: MidiAuditionPlaybackPlan): MidiAuditionResult {
+        playProblem?.let { return MidiAuditionResult.Failed(it, current) }
         selectScope(plan)
         record(current.copy(playback = MidiAuditionPlaybackState.PLAYING, sessionId = 1L))
         return MidiAuditionResult.Applied(app.melotrail.audition.MidiAuditionAction.PLAY, current)
@@ -404,3 +447,18 @@ private class FakeMidiAudition : MidiAuditionPort {
         history += next
     }
 }
+
+private fun fakeSourcePlan(): MidiAuditionPlaybackPlan = MidiAuditionPlaybackPlan(
+    app.melotrail.audition.MidiAuditionView.sourceMelody(
+        app.melotrail.midi.domain.MidiExportSong(
+            app.melotrail.midi.domain.MidiPpq(480),
+            "fake-source",
+            500_000,
+            4,
+            2,
+            emptyList(),
+            listOf(app.melotrail.midi.domain.MidiExportRoleTrack(app.melotrail.midi.domain.MidiExportRole.MELODY, emptyList())),
+            1L,
+        ),
+    ),
+)

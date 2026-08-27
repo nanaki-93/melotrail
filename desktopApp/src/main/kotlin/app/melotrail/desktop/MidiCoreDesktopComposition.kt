@@ -17,6 +17,7 @@ import app.melotrail.application.MidiCoreMidiPackageExporter
 import app.melotrail.application.MidiCoreMusicalAuthority
 import app.melotrail.application.MidiCoreProjectLifecycle
 import app.melotrail.application.MidiCoreSourceImport
+import app.melotrail.application.MidiCoreSourceAudition
 import app.melotrail.application.MidiCoreStructureTimeline
 import app.melotrail.application.MidiCoreExportSnapshotLifecycle
 import app.melotrail.audition.MidiAuditionController
@@ -62,6 +63,7 @@ object MidiCoreDesktopComposition {
     ): MidiCoreDesktopServices {
         val project = MidiCoreProjectLifecycle(artifacts)
         val sourceImport = MidiCoreSourceImport(artifacts)
+        val sourceAudition = MidiCoreSourceAudition(artifacts)
         val melodySelection = MidiCoreMelodySelection(artifacts)
         val authority = MidiCoreMusicalAuthority(artifacts)
         val structure = MidiCoreStructureTimeline(artifacts)
@@ -88,6 +90,7 @@ object MidiCoreDesktopComposition {
             review = review,
             exporter = export,
             audition = audition,
+            sourceAudition = sourceAudition,
         )
         return MidiCoreDesktopServices(
             project = project,
@@ -124,6 +127,11 @@ object MidiCoreDesktopEntrypoint {
                     chooseNewProjectDirectory = { services.dialogs.chooseNewProjectDirectory() },
                 )
             }
+            val midiActions = remember(services) {
+                MidiCoreMidiPageActions(
+                    chooseMidiSource = { services.dialogs.chooseMidiSource() },
+                )
+            }
             val desktopWindowState = rememberWindowState(placement = WindowPlacement.Maximized)
             Window(
                 state = desktopWindowState,
@@ -135,7 +143,7 @@ object MidiCoreDesktopEntrypoint {
             ) {
                 window.minimumSize = java.awt.Dimension(900, 620)
                 MelotrailTheme {
-                    MidiCoreStartupSurface(workspace, projectActions)
+                    MidiCoreStartupSurface(workspace, projectActions, midiActions)
                 }
             }
         }
@@ -144,8 +152,12 @@ object MidiCoreDesktopEntrypoint {
 
 /** Target shell with only the six MIDI Core workflow destinations. */
 @Composable
-private fun MidiCoreStartupSurface(workspace: MidiCoreWorkspaceViewModel, projectActions: MidiCoreProjectPageActions) {
-    MidiCoreWorkspaceShell(workspace, projectActions = projectActions)
+private fun MidiCoreStartupSurface(
+    workspace: MidiCoreWorkspaceViewModel,
+    projectActions: MidiCoreProjectPageActions,
+    midiActions: MidiCoreMidiPageActions,
+) {
+    MidiCoreWorkspaceShell(workspace, projectActions = projectActions, midiActions = midiActions)
 }
 
 /** Target-only file-dialog boundary; it exposes MIDI and project locations, never audio or sound-library settings. */
