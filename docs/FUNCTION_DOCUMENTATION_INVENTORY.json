@@ -1067,6 +1067,22 @@
       "documentedFunctionCount": 0
     },
     {
+      "path": "src/main/kotlin/app/melotrail/audition/MidiAudition.kt",
+      "classification": "inherited-contract",
+      "reason": "The 49 callable declarations define MC-028's MIDI-only audition scopes, bounded loop/seek plan, recoverable transport results, superseding session state, mute/solo policy, completion handling, and deterministic cleanup under F-PLAY-001 through F-PLAY-004 and F-SYS-001; reviewed on 2026-08-28.",
+      "functionCount": 49,
+      "declarationDigest": "ec64b16a0de4f4c0ed2b53710b1db84d0cc7ebbe27d6eaaf494256b111bf855a",
+      "documentedFunctionCount": 6
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/audition/adapter/JdkMidiAuditionOutput.kt",
+      "classification": "inherited-contract",
+      "reason": "The 25 callable declarations implement MC-028's JVM Sequencer/Receiver adapter, local output discovery, transient exact-window clipping, loop configuration, role mute/solo mapping, end-of-view notification, all-notes-off cleanup, and recoverable device-loss handling under F-PLAY-001 through F-PLAY-004; reviewed on 2026-08-28.",
+      "functionCount": 25,
+      "declarationDigest": "26a5248b7ada373d3afaa6b76afa09a6ce4b9fb4efdfeb13de927dab78072230",
+      "documentedFunctionCount": 2
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/audio/AudioBuffer.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/audio/AudioBuffer.kt has 9 callable declarations, 0 directly documented and 9 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
@@ -1517,10 +1533,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/midi/adapter/JdkMidiWriter.kt",
       "classification": "inherited-contract",
-      "reason": "The 10 callable declarations implement the deterministic SMF format-1 output contract in docs/MIDI_CONTRACT.md sections 9 through 12; MC-007 reviewed their golden writer behavior on 2026-08-26.",
-      "functionCount": 10,
-      "declarationDigest": "8249d99ddb5b15a8911776f49f17d892203770617eec4d2828b4eb3adb41e765",
-      "documentedFunctionCount": 0
+      "reason": "The 11 callable declarations implement the deterministic SMF format-1 file and in-memory sequence contract in docs/MIDI_CONTRACT.md sections 9 through 12; MC-007 reviewed the golden writer behavior and MC-028 reused the same sequence construction for non-authoritative MIDI audition on 2026-08-28.",
+      "functionCount": 11,
+      "declarationDigest": "75137f18df2e2c6aa68038b4b9419e2b92782a87124271d74854e35bfb030bd1",
+      "documentedFunctionCount": 1
     },
     {
       "path": "src/main/kotlin/app/melotrail/midi/domain/MidiExportModel.kt",

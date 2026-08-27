@@ -65,6 +65,20 @@ class JdkMidiWriterTest {
     }
 
     @Test
+    fun `builds a deterministic in-memory sequence for MIDI audition`() {
+        val complete = writer.toSequence(song())
+        val roleOnly = writer.toSequence(song(), listOf(song().role(MidiExportRole.BASS)))
+
+        assertEquals(5, complete.tracks.size)
+        assertEquals(2, roleOnly.tracks.size)
+        assertEquals(480, complete.tickLength)
+        assertEquals(480, roleOnly.tickLength)
+        assertEquals("Conductor", trackName(roleOnly.tracks[0]))
+        assertEquals("Bass", trackName(roleOnly.tracks[1]))
+        assertTrue(roleOnly.tracks.flatMap(::events).none { (it.message as? ShortMessage)?.command == ShortMessage.PROGRAM_CHANGE })
+    }
+
+    @Test
     fun `rejects forbidden generated role events and events beyond the song boundary`() {
         assertFailsWith<IllegalArgumentException> {
             MidiExportRoleTrack(MidiExportRole.BASS, listOf(MidiTempoEvent(key(0, MidiSemanticEventKind.TEMPO, 10), 500_000)))

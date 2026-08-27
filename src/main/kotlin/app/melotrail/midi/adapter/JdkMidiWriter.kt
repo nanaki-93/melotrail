@@ -23,11 +23,18 @@ class JdkMidiWriter {
 
     fun writeRole(song: MidiExportSong, role: MidiExportRole, output: Path) = write(song, listOf(song.role(role)), output)
 
-    private fun write(song: MidiExportSong, roles: List<MidiExportRoleTrack>, output: Path) {
+    /** Build the same target format-1 sequence used by file export without touching the filesystem. */
+    fun toSequence(song: MidiExportSong, roles: List<MidiExportRoleTrack> = song.roles): Sequence {
         val sequence = Sequence(Sequence.PPQ, song.ppq.value)
         conductor(sequence.createTrack(), song)
         roles.forEach { roleTrack(sequence.createTrack(), it, song.songEndTick) }
-        require(MidiSystem.write(sequence, 1, output.toFile()) > 0) { "Could not write Standard MIDI format 1 output: $output" }
+        return sequence
+    }
+
+    private fun write(song: MidiExportSong, roles: List<MidiExportRoleTrack>, output: Path) {
+        require(MidiSystem.write(toSequence(song, roles), 1, output.toFile()) > 0) {
+            "Could not write Standard MIDI format 1 output: $output"
+        }
     }
 
     private fun conductor(track: Track, song: MidiExportSong) {

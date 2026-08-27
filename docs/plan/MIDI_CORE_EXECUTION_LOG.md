@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-027 complete
+Status: MC-028 complete
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -67,7 +67,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-025 | DONE | `midi-core: MC-025 publish generated candidates` | PASS — focused generation suite, documentation coverage, `git diff --check`, `make test` | One-role/one-occurrence generation publishes immutable MIDI/report evidence only after validation and current-authority admission; cancellation, stale completion, save failure, concurrency, immutable collision, and collision retry are covered. |
 | MC-026 | DONE | `midi-core: MC-026 review arrangement candidates` | PASS — focused schema/lifecycle/review suite, documentation coverage, `git diff --check`, `make test` | User-owned candidate listing and state transitions now use optimistic project revisions, authority/digest revalidation, immutable evidence, acceptance history, locking, restoration, and targeted regeneration. |
 | MC-027 | DONE | `midi-core: MC-027 assemble accepted song` | PASS — focused diff/assembly/review suite, documentation coverage, `git diff --check`, `make test` | Deterministic event-level diff summaries and accepted-song assembly preserve the protected melody, aggregate exact occurrence-scoped role candidates, and reject incomplete, stale, tampered, malformed, mis-channelled, or overflowing evidence before review. |
-| MC-028 | TODO | | | |
+| MC-028 | DONE | `midi-core: MC-028 add MIDI audition` | PASS — focused audition/writer/JVM-boundary suite, documentation coverage, `git diff --check`, `make test` | MIDI-only scope/session control supports source melody, candidate, occurrence, role, and accepted arrangement views with bounded seek/loop, mute/solo, supersession, recoverable device errors, and cleanup without project writes. |
 | MC-029 | TODO | | | |
 | MC-030 | TODO | | | |
 | MC-031 | TODO | | | |
@@ -750,6 +750,27 @@ Decisions/deviations: Role candidates are generated and stored per absolute occu
 Known limitations: The assembled review sequence remains in-memory until MC-029's exporter captures and publishes an immutable package; Compose Review/audition integration remains MC-028 and MC-038. The transitional Python documentation-inventory build check remains until MC-058.
 Commit: `midi-core: MC-027 assemble accepted song`.
 Next task: MC-028 — implement minimal local MIDI audition.
+
+### MC-028 — Implement minimal local MIDI audition
+
+Status: DONE
+Started: 2026-08-27
+Completed: 2026-08-28
+Starting commit/status: `50f1438` / only the preserved unrelated deleted Kotlin compiler session marker is present.
+Contracts read: F-PLAY-001–F-PLAY-004 and F-SYS-001; Architecture sections 4.6 and 5; MC-028 task contract.
+Current owners inspected: Target semantic MIDI export model/writer and reader; the existing audio player/renderer only as a boundary reference and not as an implementation dependency; JDK Sequencer, Receiver, Transmitter, and device-discovery APIs.
+Behavior retained/extracted: `MidiAuditionPort` and `MidiAuditionController` own immutable source/candidate/occurrence/role/full-arrangement views, bounded seek/loop plans, one active session, deterministic state history, mute/solo state, supersession tokens, end-of-view handling, and typed recoverable failures. `JdkMidiAuditionOutput` routes the existing target writer's in-memory format-1 sequence through a local JVM receiver, clips transient occurrence windows, maps role mute/solo to Sequencer tracks, discovers receiver-capable devices, and sends all-notes-off/all-sound-off during stop and close. Audition opens no project store and writes no files.
+Files added/changed: `src/main/kotlin/app/melotrail/audition/MidiAudition.kt`; `src/main/kotlin/app/melotrail/audition/adapter/JdkMidiAuditionOutput.kt`; `src/main/kotlin/app/melotrail/midi/adapter/JdkMidiWriter.kt`; `src/test/kotlin/app/melotrail/audition/MidiAuditionControllerTest.kt`; `src/test/kotlin/app/melotrail/audition/adapter/JdkMidiAuditionOutputTest.kt`; `src/test/kotlin/app/melotrail/midi/adapter/JdkMidiWriterTest.kt`; `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`; and this execution log.
+Files/data deleted: None.
+Tracked deletion recoverability: Not applicable to MC-028; the unrelated Kotlin compiler session-marker deletion remains recoverable from Git and was not included in the task commit.
+Ignored deletion recoverability: None.
+Focused tests: `./gradlew :test --tests app.melotrail.audition.MidiAuditionControllerTest --tests app.melotrail.audition.adapter.JdkMidiAuditionOutputTest --tests app.melotrail.midi.adapter.JdkMidiWriterTest --rerun-tasks --console=plain` PASS. Coverage includes state-machine transport, exact seek/loop boundaries, mute/solo, rapid start/stop, superseded callbacks, device loss/unavailable output, cleanup assertions, project-byte preservation, in-memory writer output, and JVM boundary error mapping.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS; `make test` PASS (2026-08-28; 14 Gradle tasks).
+Manual evidence: Not required.
+Decisions/deviations: The port accepts a complete semantic `MidiExportSong` view and keeps preview timbre entirely inside the local output adapter. A new play request closes the prior session before opening its replacement; stale completion callbacks are ignored by session ID. Occurrence windows are clipped only in the transient playback sequence so source/candidate/project data and their absolute musical authority remain untouched. A non-looping view uses the window as its end boundary; an explicit loop repeats only its validated subrange.
+Known limitations: Compose wiring remains with the later desktop integration task; the adapter does not render or persist audio and is not export evidence. The transitional Python documentation-inventory build check remains until MC-058.
+Commit: `midi-core: MC-028 add MIDI audition`.
+Next task: MC-029 — implement the vertical MIDI package exporter.
 
 ## 6. Manual gate records
 
