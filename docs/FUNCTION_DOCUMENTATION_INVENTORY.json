@@ -1483,6 +1483,14 @@
       "documentedFunctionCount": 0
     },
     {
+      "path": "src/main/kotlin/app/melotrail/project/adapter/MidiCoreArtifactStore.kt",
+      "classification": "inherited-contract",
+      "reason": "The 30 callable declarations implement MC-011's confined, digest-bound target artifact-store adapter, immutable publication, atomic project persistence, and recovery evidence under F-PROJ-004, F-SYS-004, and Architecture section 6; reviewed on 2026-08-27.",
+      "functionCount": 30,
+      "declarationDigest": "53b3d267a5b180c3b071289eebdd99fdc754904143b517cb160a2a07f6c05e30",
+      "documentedFunctionCount": 0
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/project/MidiCoreProject.kt",
       "classification": "trivial/generated",
       "reason": "src/main/kotlin/app/melotrail/project/MidiCoreProject.kt contains immutable MIDI Core schema domain records and no callable declarations; MC-010 reviewed its ownership and invariant boundary on 2026-08-27.",

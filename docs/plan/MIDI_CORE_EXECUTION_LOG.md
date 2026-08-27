@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-010 complete; MC-011 ready
+Status: MC-011 complete; MC-012 ready
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -50,7 +50,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-008 | DONE | `midi-core: MC-008 prove MIDI export round trip` | PASS — focused export suite, `make test`, `make build` | Staged five-file core-role bundle is semantically re-imported, digest-bound, collision-safe, and test-only. |
 | MC-009 | DONE | `midi-core: MC-009 record DAW compatibility spike` | PASS — automated preparation, GarageBand 10.4.14, Logic Pro 12.3.1 | Both DAWs imported the core-role bundle with correct timing/roles and safe playback; marker display is non-blocking metadata and was unassessed. |
 | MC-010 | DONE | `midi-core: MC-010 define MIDI project schema` | PASS — schema/architecture tests, `make test`, `make build` | Strict MIDI Core v1 DTO boundary and golden document contain only target metadata, MIDI authority, candidate acceptance, and export ownership. |
-| MC-011 | TODO | | | |
+| MC-011 | DONE | `midi-core: MC-011 add MIDI artifact store` | PASS — artifact-store/architecture tests, `make test`, `make build` | Target layout is path-confined, SHA-256-bound, immutable, and preserves the last good project JSON after an interrupted save. |
 | MC-012 | TODO | | | |
 | MC-013 | TODO | | | |
 | MC-014 | TODO | | | |
@@ -372,6 +372,27 @@ Decisions/deviations: Added explicit section-definition records so occurrences c
 Known limitations: Filesystem publication, digest verification, symlink confinement, and crash recovery are intentionally absent until MC-011. Project lifecycle use cases and UI-ready legacy rejection are MC-012. Later task-owned authority and candidate lifecycle fields will extend the still-unshipped v1 DTO before product cutover.
 Commit: `midi-core: MC-010 define MIDI project schema`.
 Next task: MC-011 — implement the target artifact store.
+
+### MC-011 — Implement the target artifact store
+
+Status: DONE
+Started: 2026-08-27
+Completed: 2026-08-27
+Starting commit/status: `729772e` / clean after the MC-010 commit, then this task's log-only `IN_PROGRESS` update. A compiler-generated `.kotlin/sessions/kotlin-compiler-10759057547151889139.salive` index/worktree marker appeared during Gradle execution; it is unrelated and explicitly excluded from this task commit.
+Contracts read: F-PROJ-004; F-SYS-004; Architecture section 6; MC-011 task contract.
+Current owners inspected: Legacy `ProjectStore` atomic replacement/recovery behavior; `StageRunStore` streaming SHA-256, real-path/symlink validation, immutable publication and failed-index orphan evidence; `WorkflowArtifactReference`; `StageRunStoreTest`; and `LegacyMidiArtifactCharacterizationTest`. No schema-v4/stage-run type is imported into the target store.
+Behavior retained/extracted: Retained streaming SHA-256, real-path confinement, no-overwrite immutable publication, strict validation before state admission, temporary-file publication, and inspectable recovery evidence. The new project adapter owns the target source/candidate/report/export layout and project.json persistence; legacy stage indexes, workflow enums, and artifact records remain legacy-only.
+Files added/changed: `src/main/kotlin/app/melotrail/project/adapter/MidiCoreArtifactStore.kt`; `src/test/kotlin/app/melotrail/project/adapter/MidiCoreArtifactStoreTest.kt`; `src/test/kotlin/app/melotrail/architecture/TargetArchitectureRulesTest.kt`; `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`; `docs/plan/MIDI_CORE_EXECUTION_LOG.md`.
+Files/data deleted: None.
+Tracked deletion recoverability: Not applicable.
+Ignored deletion recoverability: Not applicable.
+Focused tests: `./gradlew :test --tests app.melotrail.project.adapter.MidiCoreArtifactStoreTest --tests app.melotrail.architecture.TargetArchitectureRulesTest --rerun-tasks` PASS (artifact target tree, canonical paths, source/candidate/report/export publication, traversal and symlink escape rejection, missing/tampered digest rejection, exact-content republish, differing-content collision, interrupted project save recovery, missing-reference save rejection, and reopen digest verification).
+Full validation: `make test` PASS (2026-08-27; 14 Gradle tasks); `make build` initially identified the required MC-011 source-inventory row, then PASS after its reviewed classification was recorded (15 Gradle tasks).
+Manual evidence: Not required.
+Decisions/deviations: `project/adapter` is the explicit filesystem boundary; the architecture rule continues to prohibit filesystem imports in `project` domain records and additionally prohibits Compose, network, HTTP, and raw-MIDI imports in the adapter. Immutable republishing is idempotent only for byte-identical content; differing bytes at an occupied canonical path fail without replacing the first artifact. An interrupted `project.json` replacement preserves the old document and moves the temporary bytes to a uniquely named, project-local recovery file.
+Known limitations: Project lifecycle use cases, UI-ready error classification, source inspection/report binding, and post-publication cleanup belong to MC-012 and MC-013. Candidate lifecycle transitions and export snapshot policy remain MC-019/MC-029 responsibilities.
+Commit: `midi-core: MC-011 add MIDI artifact store`.
+Next task: MC-012 — implement create, open, save, and legacy rejection.
 
 ## 6. Manual gate records
 

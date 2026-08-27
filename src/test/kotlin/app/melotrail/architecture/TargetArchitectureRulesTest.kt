@@ -23,6 +23,8 @@ class TargetArchitectureRulesTest {
                 SourceFile("src/main/kotlin/app/melotrail/project/ProjectStore.kt", "import java.nio.file.Path"),
                 SourceFile("src/main/kotlin/app/melotrail/review/ReviewState.kt", "import androidx.compose.runtime.State"),
                 SourceFile("src/main/kotlin/app/melotrail/structure/Planner.kt", "import java.net.URI"),
+                SourceFile("src/main/kotlin/app/melotrail/project/adapter/ProjectStore.kt", "import java.nio.file.Path"),
+                SourceFile("src/main/kotlin/app/melotrail/project/adapter/BadStore.kt", "import java.net.URI"),
                 SourceFile("desktopApp/src/main/kotlin/app/melotrail/desktop/target/MidiPage.kt", "import javax.sound.midi.MidiSystem"),
                 SourceFile("src/main/kotlin/app/melotrail/midi/adapter/JdkMidiReader.kt", "import javax.sound.midi.MidiSystem"),
             ),
@@ -34,6 +36,7 @@ class TargetArchitectureRulesTest {
                 "src/main/kotlin/app/melotrail/project/ProjectStore.kt: domain code may not import java.nio.file",
                 "src/main/kotlin/app/melotrail/review/ReviewState.kt: domain code may not import androidx.compose",
                 "src/main/kotlin/app/melotrail/structure/Planner.kt: domain code may not import java.net",
+                "src/main/kotlin/app/melotrail/project/adapter/BadStore.kt: project adapter may not import java.net",
                 "desktopApp/src/main/kotlin/app/melotrail/desktop/target/MidiPage.kt: desktop code may not parse raw MIDI",
             ),
             violations,
@@ -54,7 +57,9 @@ private object TargetArchitectureRules {
         "src/main/kotlin/app/melotrail/export/domain/",
     )
     private const val desktopTargetRoot = "desktopApp/src/main/kotlin/app/melotrail/desktop/target/"
+    private const val projectAdapterRoot = "src/main/kotlin/app/melotrail/project/adapter/"
     private val forbiddenDomainImports = listOf("androidx.compose", "java.io", "java.net", "java.nio.file", "okhttp", "javax.sound.midi")
+    private val forbiddenProjectAdapterImports = listOf("androidx.compose", "java.net", "okhttp", "javax.sound.midi")
 
     fun readProductionSources(): List<SourceFile> = listOf(Path.of("src/main/kotlin"), Path.of("desktopApp/src/main/kotlin"))
         .filter(Files::isDirectory)
@@ -65,15 +70,20 @@ private object TargetArchitectureRules {
     fun violations(sources: List<SourceFile>): List<String> = sources.flatMap { source ->
         val imports = source.contents.lineSequence().filter { it.startsWith("import ") }.map { it.removePrefix("import ").trim() }.toList()
         buildList {
-            if (domainRoots.any(source.path::startsWith)) {
+            if (isDomainSource(source.path)) {
                 forbiddenDomainImports.firstOrNull { forbidden -> imports.any { it.startsWith(forbidden) } }?.let { forbidden ->
                     add("${source.path}: domain code may not import $forbidden")
+                }
+            }
+            if (source.path.startsWith(projectAdapterRoot)) {
+                forbiddenProjectAdapterImports.firstOrNull { forbidden -> imports.any { it.startsWith(forbidden) } }?.let { forbidden ->
+                    add("${source.path}: project adapter may not import $forbidden")
                 }
             }
             if (source.path.startsWith(desktopTargetRoot) && imports.any { it.startsWith("javax.sound.midi") }) {
                 add("${source.path}: desktop code may not parse raw MIDI")
             }
-            if (!domainRoots.any(source.path::startsWith) && source.path.startsWith("src/main/kotlin/app/melotrail/midi/") &&
+            if (!isDomainSource(source.path) && source.path.startsWith("src/main/kotlin/app/melotrail/midi/") &&
                 !source.path.startsWith("src/main/kotlin/app/melotrail/midi/adapter/") &&
                 imports.any { it.startsWith("javax.sound.midi") }
             ) {
@@ -87,4 +97,7 @@ private object TargetArchitectureRules {
             }
         }
     }
+
+    private fun isDomainSource(path: String): Boolean =
+        domainRoots.any(path::startsWith) && !path.startsWith(projectAdapterRoot)
 }
