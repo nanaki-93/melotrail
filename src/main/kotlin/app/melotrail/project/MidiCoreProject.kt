@@ -1,6 +1,10 @@
 package app.melotrail.project
 
 import app.melotrail.midi.domain.MidiTrackSummary
+import app.melotrail.music.core.ProjectKeySpelling
+import app.melotrail.music.core.ProjectMeter
+import app.melotrail.music.core.ProjectScaleMode
+import app.melotrail.music.core.ProjectTempo
 
 /** Immutable target aggregate for a MIDI-only Melotrail project. */
 data class MidiCoreProject(
@@ -121,16 +125,13 @@ data class SelectedMelodyTrack(val trackIndex: Int, val channel: Int, val identi
 
 data class ProjectAuthority(
     val key: ProjectKey,
-    val tempoMicrosecondsPerQuarter: Int,
-    val meterNumerator: Int,
-    val meterDenominatorExponent: Int,
+    val tempo: ProjectTempo,
+    val meter: ProjectMeter,
     val sectionDefinitions: List<ProjectSectionDefinition>,
     val occurrences: List<ProjectSectionOccurrence>,
     val chordEvents: List<AuthoritativeChordEvent>,
 ) {
     init {
-        require(tempoMicrosecondsPerQuarter > 0) { "Project tempo must be positive" }
-        require(meterNumerator in 1..255 && meterDenominatorExponent in 0..30) { "Project meter is invalid" }
         require(sectionDefinitions.map(ProjectSectionDefinition::id).distinct().size == sectionDefinitions.size) {
             "Section definition IDs must be unique"
         }
@@ -155,6 +156,7 @@ data class ProjectAuthority(
             }
         }
     }
+
 }
 
 data class ProjectSectionDefinition(val id: String, val name: String) {
@@ -166,11 +168,21 @@ data class ProjectSectionDefinition(val id: String, val name: String) {
     }
 }
 
-data class ProjectKey(val tonic: Int, val modeId: String) {
+data class ProjectKey(
+    val tonic: Int,
+    val modeId: String,
+    val spelling: ProjectKeySpelling = ProjectKeySpelling.canonical(tonic),
+) {
     init {
         require(tonic in 0..11) { "Project key tonic must be a chromatic pitch class" }
-        require(SAFE_ID.matches(modeId)) { "Project key mode identifier is invalid" }
+        require(ProjectScaleMode.fromId(modeId) != null) { "Project key mode identifier is not supported in MIDI Core V1" }
+        require(spelling.chromatic == tonic) { "Project key spelling must match its chromatic tonic" }
     }
+
+    constructor(spelling: ProjectKeySpelling, mode: ProjectScaleMode) : this(spelling.chromatic, mode.id, spelling)
+
+    val mode: ProjectScaleMode get() = requireNotNull(ProjectScaleMode.fromId(modeId))
+    val advisoryPitchClasses: Set<Int> get() = mode.intervals.mapTo(linkedSetOf()) { interval -> Math.floorMod(tonic + interval, 12) }
 }
 
 data class ProjectSectionOccurrence(

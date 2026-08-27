@@ -3,6 +3,8 @@ package app.melotrail.project
 import app.melotrail.midi.domain.MidiChannelSummary
 import app.melotrail.midi.domain.MidiTrackRoleHint
 import app.melotrail.midi.domain.MidiTrackSummary
+import app.melotrail.music.core.ProjectMeter
+import app.melotrail.music.core.ProjectTempo
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
@@ -59,7 +61,7 @@ class MidiCoreProjectSchemaTest {
         }
         assertFailsWith<IllegalArgumentException> {
             ProjectAuthority(
-                ProjectKey(0, "major"), 500_000, 4, 2,
+                ProjectKey(0, "major"), ProjectTempo(500_000), ProjectMeter(4, 2),
                 listOf(ProjectSectionDefinition("late", "Late")),
                 listOf(ProjectSectionOccurrence("late-1", "late", "Late", 1, 480)),
                 emptyList(),
@@ -103,7 +105,7 @@ class MidiCoreProjectSchemaTest {
             ),
             selectedMelody = SelectedMelodyTrack(1, 0, "c".repeat(64)),
             authority = ProjectAuthority(
-                ProjectKey(0, "major"), 500_000, 4, 2,
+                ProjectKey(0, "major"), ProjectTempo(500_000), ProjectMeter(4, 2),
                 listOf(ProjectSectionDefinition("intro", "Intro")),
                 listOf(ProjectSectionOccurrence("intro-1", "intro", "Intro", 0, 480)),
                 listOf(AuthoritativeChordEvent("chord-1", "intro-1", "C", 0, 480)),

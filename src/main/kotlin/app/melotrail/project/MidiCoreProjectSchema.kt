@@ -3,6 +3,9 @@ package app.melotrail.project
 import app.melotrail.midi.domain.MidiChannelSummary
 import app.melotrail.midi.domain.MidiTrackRoleHint
 import app.melotrail.midi.domain.MidiTrackSummary
+import app.melotrail.music.core.ProjectKeySpelling
+import app.melotrail.music.core.ProjectMeter
+import app.melotrail.music.core.ProjectTempo
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -131,7 +134,7 @@ private data class AuthorityDto(
 )
 
 @Serializable
-private data class KeyDto(val tonic: Int, val modeId: String)
+private data class KeyDto(val tonic: Int, val modeId: String, val spelling: ProjectKeySpelling? = null)
 
 @Serializable
 private data class SectionDefinitionDto(val id: String, val name: String)
@@ -226,19 +229,19 @@ private fun SelectedMelodyTrack.toDto() = SelectedMelodyDto(trackIndex, channel,
 private fun SelectedMelodyDto.toDomain() = SelectedMelodyTrack(trackIndex, channel, identitySha256)
 
 private fun ProjectAuthority.toDto() = AuthorityDto(
-    key.toDto(), tempoMicrosecondsPerQuarter, meterNumerator, meterDenominatorExponent,
+    key.toDto(), tempo.microsecondsPerQuarter, meter.numerator, meter.denominatorExponent,
     sectionDefinitions.map(ProjectSectionDefinition::toDto), occurrences.map(ProjectSectionOccurrence::toDto),
     chordEvents.map(AuthoritativeChordEvent::toDto),
 )
 
 private fun AuthorityDto.toDomain() = ProjectAuthority(
-    key.toDomain(), tempoMicrosecondsPerQuarter, meterNumerator, meterDenominatorExponent,
+    key.toDomain(), ProjectTempo(tempoMicrosecondsPerQuarter), ProjectMeter(meterNumerator, meterDenominatorExponent),
     sectionDefinitions.map(SectionDefinitionDto::toDomain), occurrences.map(OccurrenceDto::toDomain),
     chordEvents.map(ChordEventDto::toDomain),
 )
 
-private fun ProjectKey.toDto() = KeyDto(tonic, modeId)
-private fun KeyDto.toDomain() = ProjectKey(tonic, modeId)
+private fun ProjectKey.toDto() = KeyDto(tonic, modeId, spelling)
+private fun KeyDto.toDomain() = ProjectKey(tonic, modeId, spelling ?: ProjectKeySpelling.canonical(tonic))
 private fun ProjectSectionDefinition.toDto() = SectionDefinitionDto(id, name)
 private fun SectionDefinitionDto.toDomain() = ProjectSectionDefinition(id, name)
 private fun ProjectSectionOccurrence.toDto() = OccurrenceDto(id, definitionId, label, startTick, endTick)

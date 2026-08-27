@@ -54,7 +54,8 @@
         "authority": {
             "key": {
                 "tonic": 0,
-                "modeId": "major"
+                "modeId": "major",
+                "spelling": "C"
             },
             "tempoMicrosecondsPerQuarter": 500000,
             "meterNumerator": 4,

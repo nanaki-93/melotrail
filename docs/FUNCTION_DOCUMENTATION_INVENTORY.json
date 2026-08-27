@@ -283,6 +283,14 @@
       "documentedFunctionCount": 0
     },
     {
+      "path": "src/main/kotlin/app/melotrail/application/MidiCoreMusicalAuthority.kt",
+      "classification": "inherited-contract",
+      "reason": "The 3 callable declarations implement MC-015's explicit fixed tempo, meter, key, and mode confirmation, source timing suggestions, source reinspection, and advisory chromatic compatibility under F-AUTH-001 and F-AUTH-002; reviewed on 2026-08-27.",
+      "functionCount": 3,
+      "declarationDigest": "d10e8340ff618fcd01941715e03f6d1eee8d1adcdd69257df7308b0a28686032",
+      "documentedFunctionCount": 0
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreProjectLifecycle.kt",
       "classification": "inherited-contract",
       "reason": "The 7 callable declarations implement MC-012's target create/open/save/close lifecycle and UI-ready, no-migration legacy classification under F-PROJ-001 through F-PROJ-004; reviewed on 2026-08-27.",
@@ -1449,6 +1457,14 @@
       "functionCount": 12,
       "declarationDigest": "4a41e060c6999db4d98fe416977e73e4de88bd513a59f5af86f0fa6aa84b05cb",
       "documentedFunctionCount": 4
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/music/core/MidiCoreMusicalAuthority.kt",
+      "classification": "inherited-contract",
+      "reason": "The 2 callable declarations implement MC-015's typed fixed tempo/meter and authoritative key spelling/mode primitives, including advisory scale membership without source mutation; reviewed on 2026-08-27.",
+      "functionCount": 2,
+      "declarationDigest": "bb0eb1dd08f16d04a92ef046b4cf5ff189d9d65365ae530d68c0bbc6eda7faa4",
+      "documentedFunctionCount": 0
     },
     {
       "path": "src/main/kotlin/app/melotrail/preparation/InputCleanupApplicationService.kt",

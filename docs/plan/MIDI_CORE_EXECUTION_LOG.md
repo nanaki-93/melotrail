@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-014 complete; MC-015 next
+Status: MC-015 complete; MC-016 next
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -54,7 +54,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-012 | DONE | `midi-core: MC-012 add project lifecycle` | PASS — lifecycle/store/schema tests, `make test`, `make build` | Target lifecycle creates, reopens, saves, closes, and safely rejects legacy project files without invoking a worker or migration. |
 | MC-013 | DONE | `midi-core: MC-013 import immutable MIDI source` | PASS — source-import/store/schema/lifecycle/architecture tests, `make test`, `make build` | One-file SMF import validates before publication, preserves source/report bytes under digest, persists inspection summaries, and leaves the prior project document unchanged on every tested failure. |
 | MC-014 | DONE | `midi-core: MC-014 protect selected melody` | PASS — melody-selection/validator/architecture tests, `make test`, `make build` | Exactly one source track/channel yields a digest-bound protected view with controller/expression policy, deterministic anchors, source-event lineage, and no source mutation. |
-| MC-015 | TODO | | | |
+| MC-015 | DONE | `midi-core: MC-015 add core musical authority` | PASS — authority/schema/architecture tests, `make test`, `make build` | Typed fixed tempo/meter and spelling-aware key/mode authority are explicitly confirmed, persisted, and reopened without source mutation. |
 | MC-016 | TODO | | | |
 | MC-017 | TODO | | | |
 | MC-018 | TODO | | | |
@@ -458,6 +458,28 @@ Decisions/deviations: MPE-like input is defined conservatively as a selected not
 Known limitations: The selected view is re-derived from immutable source and durable selection digest rather than persisted as a second MIDI artifact. Compose UI selection wiring is MC-034; authority fields and candidate lifecycle are MC-015 through MC-019.
 Commit: `midi-core: MC-014 protect selected melody`.
 Next task: MC-015 — implement fixed tempo, meter, key, and mode authority.
+
+### MC-015 — Implement fixed tempo, meter, key, and mode authority
+
+Status: DONE
+Started: 2026-08-27
+Completed: 2026-08-27
+Starting commit/status: `1c4531d` / clean after the MC-014 task commit, then this task's log-only `IN_PROGRESS` update; the pre-existing deleted compiler session marker remains excluded from this task commit.
+Contracts read: F-AUTH-001 and F-AUTH-002; MIDI Contract sections 2, 7, and 8; Architecture sections 4.1 and 4.3; MC-015 task contract.
+Current owners inspected: Target project schema/aggregate, source import, melody selection, MIDI validator, and semantic tempo/meter events; legacy `CompositionSettingsApplicationService`, `MusicalPrimitives`, and their tests. The legacy owner combines profiles, moods, render-era workflow invalidation, template transposition, and catalog constraints, so it is not a target authority caller.
+Behavior retained/extracted: Retained only fixed Standard MIDI tempo/meter representation, enharmonic tonic spelling, major/natural-minor advisory scale membership, and source timing facts. `MidiCoreMusicalAuthority` re-inspects immutable source bytes, supplies fixed source tempo/meter as suggestions, requires an explicit musician authority decision, preserves chromatic melody as advisory, and saves no audio/render/profile/model setting.
+Files added/changed: `src/main/kotlin/app/melotrail/music/core/MidiCoreMusicalAuthority.kt`; `src/main/kotlin/app/melotrail/application/MidiCoreMusicalAuthority.kt`; target project aggregate/schema; target project JSON golden fixture; `MidiCoreMusicalAuthorityTest`; documentation inventory; execution log.
+Files/data deleted: None.
+Tracked deletion recoverability: Not applicable.
+Ignored deletion recoverability: Not applicable.
+Focused tests: `./gradlew :test --tests app.melotrail.application.MidiCoreMusicalAuthorityTest --tests app.melotrail.project.MidiCoreProjectSchemaTest --tests app.melotrail.architecture.TargetArchitectureRulesTest --rerun-tasks` PASS. The tests cover typed tempo/meter bounds, enharmonic key spelling, unsupported mode/spelling rejection, source timing suggestions, explicit missing-metadata confirmation, map rejection before import, chromatic advisory preservation, source immutability, persistence, and reopen.
+Full validation: `make test` PASS (2026-08-27; root and desktop suites); `make build` PASS (2026-08-27; 15 Gradle tasks, including documentation inventory verification).
+Manual evidence: Not required.
+Authority evidence: `ProjectAuthority` now stores `ProjectTempo`, `ProjectMeter`, and a spelling-aware `ProjectKey`; the v1 JSON golden document records its tonic spelling. Empty section/occurrence/chord lists remain valid until MC-016 and MC-017 own their authoring rules. Source metadata is never promoted automatically: missing source metadata is cleared from the post-confirmation blocking state only by the explicit fixed values in the request.
+Decisions/deviations: Major and natural-minor are the only executable V1 advisory modes, identified as `major` and `natural-minor`; a project key preserves one valid enharmonic spelling. Source tempo/meter values remain suggestions and can be explicitly confirmed rather than inferred. Changing authority with immutable derived records is conservatively refused until MC-018 provides dependency-aware invalidation.
+Known limitations: Exact occurrence timing, pickup policy, duration-aware chord windows, and scoped invalidation remain MC-016 through MC-018. Desktop authority editing is MC-036.
+Commit: `midi-core: MC-015 add core musical authority`.
+Next task: MC-016 — implement exact section occurrence timelines.
 
 ## 6. Manual gate records
 
