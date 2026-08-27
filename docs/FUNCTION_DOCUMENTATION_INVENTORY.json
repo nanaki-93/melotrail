@@ -27,6 +27,14 @@
       "documentedFunctionCount": 4
     },
     {
+      "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreDesktopComposition.kt",
+      "classification": "deferred-with-reason",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreDesktopComposition.kt has 22 callable declarations, 3 directly documented and 19 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-031; target service composition and startup behavior are covered by focused tests, and the remaining local adapter declarations must be reconsidered when their behavior or contract changes.",
+      "functionCount": 22,
+      "declarationDigest": "39607e3a9b4b5cbee401b43e73193cb63ba4207f7d30edfcf4bdb45aa2b0a347",
+      "documentedFunctionCount": 3
+    },
+    {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/DesktopSupport.kt",
       "classification": "deferred-with-reason",
       "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/DesktopSupport.kt has 25 callable declarations, 2 directly documented and 23 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",

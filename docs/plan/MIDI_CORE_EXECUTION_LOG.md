@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-030 complete
+Status: MC-031 complete
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -70,7 +70,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-028 | DONE | `midi-core: MC-028 add MIDI audition` | PASS — focused audition/writer/JVM-boundary suite, documentation coverage, `git diff --check`, `make test` | MIDI-only scope/session control supports source melody, candidate, occurrence, role, and accepted arrangement views with bounded seek/loop, mute/solo, supersession, recoverable device errors, and cleanup without project writes. |
 | MC-029 | DONE | `midi-core: MC-029 export MIDI package` | PASS — focused exporter/MIDI/project suite, documentation coverage, `git diff --check`, `make test` | Complete and optional-role MIDI packages are semantically re-imported, atomically published, portable-manifested, collision-safe, and bound to reopened project snapshots. |
 | MC-030 | DONE | `midi-core: MC-030 prove vertical slice` | PASS — JVM vertical slice, `make test`, `make build`, documentation coverage, `git diff --check` | Target project creation through semantic MIDI package re-import passes without legacy services; failure/recovery and immutable evidence are covered. |
-| MC-031 | TODO | | | |
+| MC-031 | DONE | `midi-core: MC-031 compose target desktop` | PASS — target desktop composition test, documentation coverage, `git diff --check`, `make test`, `make build` | Default entrypoint reaches the local MIDI-core service graph without constructing worker, network-era, audio, renderer, mix, release, or Qwen services. |
 | MC-032 | TODO | | | |
 | MC-033 | TODO | | | |
 | MC-034 | TODO | | | |
@@ -813,6 +813,27 @@ Decisions/deviations: The E2E uses the application boundaries directly with a fa
 Known limitations: Compose desktop composition and workflow wiring remain with MC-031–MC-040; final Logic Pro/GarageBand package evidence remains the MC-048 gate. The transitional Python documentation-inventory build check remains until MC-058.
 Commit: `midi-core: MC-030 prove vertical slice`.
 Next task: MC-031 — compose the desktop from target services.
+
+### MC-031 — Compose the desktop from target services
+
+Status: DONE
+Started: 2026-08-28
+Completed: 2026-08-28
+Starting commit/status: `fca02e5` / only the preserved unrelated deleted Kotlin compiler session marker is present.
+Contracts read: Architecture sections 3 and 4.8; F-SYS-001; MC-031 task contract.
+Current owners inspected: the legacy `DesktopMain` composition graph; `DesktopServiceComposition`; `DesktopFileDialogs`; `DesktopPreferences`; `RuntimeReadiness`; the existing Compose entrypoint; and target MIDI-core application, audition, export, artifact, and logging boundaries.
+Behavior retained/extracted: The default desktop entrypoint now delegates to a target-only composition root wiring project lifecycle, MIDI import and melody selection, musical authority, structure and harmony, candidate generation and review, accepted-song assembly, MIDI audition, export snapshots, target file dialogs, project-only preferences, and local logging. A minimal Compose startup surface proves the application can open while later tasks compose the focused workflow destinations. The old worker/audio/render/mix graph remains compiled but is unreachable from the default target entrypoint until its scheduled cleanup tasks.
+Files added/changed: `desktopApp/src/main/kotlin/app/melotrail/desktop/DesktopMain.kt`; `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreDesktopComposition.kt`; `desktopApp/src/test/kotlin/app/melotrail/desktop/MidiCoreDesktopCompositionTest.kt`; `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`; and this execution log.
+Files/data deleted: None.
+Tracked deletion recoverability: The unrelated Kotlin compiler session-marker deletion remains recoverable from Git and is not included in the task commit.
+Ignored deletion recoverability: None.
+Focused tests: `./gradlew :desktopApp:test --tests app.melotrail.desktop.MidiCoreDesktopCompositionTest --rerun-tasks --console=plain` PASS. The test constructs every target service with injectable local adapters, confirms no active audition session, verifies the default entrypoint delegates to the target root, and statically guards the target graph against worker, network-era, audio, render, mix, and legacy workspace construction.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS; `make test` PASS (2026-08-28; 14 Gradle tasks); `make build` PASS (2026-08-28; 15 Gradle tasks, including documentation coverage).
+Manual evidence: Not required.
+Decisions/deviations: The target composition root is deliberately small at this stage: it establishes the production service boundary and a startable local MIDI-only window, while MC-032–MC-040 add the focused state, routing, screens, and workflow surfaces. Existing legacy composition code is retained only as unreachable deletion scope permitted by MC-031.
+Known limitations: The old graph and its obsolete dialogs/preferences remain compiled until MC-050/MC-051; the startup surface is not yet the six-destination workspace; the final desktop manual checks remain MC-048; the transitional Python documentation-inventory build check remains until MC-058.
+Commit: `midi-core: MC-031 compose target desktop`.
+Next task: MC-032 — add focused workspace state and intents.
 
 ## 6. Manual gate records
 
