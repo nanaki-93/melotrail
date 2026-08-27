@@ -491,6 +491,14 @@
       "documentedFunctionCount": 15
     },
     {
+      "path": "src/main/kotlin/app/melotrail/arrangement/core/MidiCoreChordGenerator.kt",
+      "classification": "documented",
+      "reason": "All 12 callable declarations implement MC-022's deterministic Chords candidate generation from exact harmony windows, curated rhythms, bounded inversions, voice leading, performance intent, seed, and protected melody/bass space; reviewed on 2026-08-27.",
+      "functionCount": 12,
+      "declarationDigest": "97266669e56d13073fa38b06c3c72d904fe2d1b1ae9e18c6867cac10a47dc75c",
+      "documentedFunctionCount": 12
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/arrangement/ArrangementCritic.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/arrangement/ArrangementCritic.kt has 13 callable declarations, 1 directly documented and 12 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",

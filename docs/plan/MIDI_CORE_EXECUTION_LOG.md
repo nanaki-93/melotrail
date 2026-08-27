@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-021 complete; MC-022 next
+Status: MC-022 complete; MC-023 next
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -61,7 +61,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-019 | DONE | `midi-core: MC-019 add candidate lifecycle records` | PASS — candidate lifecycle/schema/artifact/application tests, `make test`, `make build` | Immutable candidate publication, accepted/rejected/locked/restored transitions, prior acceptance history, scoped stale status, and export provenance snapshots are persisted and digest-bound. |
 | MC-020 | DONE | `midi-core: MC-020 define generation context` | PASS — context/catalog tests, documentation coverage, `git diff --check`, `make test` | One immutable occurrence-scoped request and target-only pattern/profile inventory cover all three core roles without project files or analysis sidecars. |
 | MC-021 | DONE | `midi-core: MC-021 validate core roles` | PASS — role-validation tests, documentation coverage, `git diff --check`, `make test` | Deterministic typed validation reports cover common, Chords, Bass, and Drums policies before publication. |
-| MC-022 | TODO | | | |
+| MC-022 | DONE | `midi-core: MC-022 generate chord candidates` | PASS — chord-generator tests, documentation coverage, `git diff --check`, `make test` | Deterministic Chords candidates cover complete chord tones, curated rhythm alternatives, bounded inversions, voice leading, and scoped validation. |
 | MC-023 | TODO | | | |
 | MC-024 | TODO | | | |
 | MC-025 | TODO | | | |
@@ -621,6 +621,28 @@ Decisions/deviations: The validator consumes semantic values rather than MIDI fi
 Known limitations: Candidate generation and validation-report serialization/publication remain MC-022 through MC-025; the current report is an in-memory target evidence type. The transitional Python documentation-inventory build check remains until MC-058.
 Commit: `midi-core: MC-021 validate core roles`.
 Next task: MC-022 — implement the chord/keys accompaniment generator.
+
+### MC-022 — Implement the chord/keys accompaniment generator
+
+Status: DONE
+Started: 2026-08-27
+Completed: 2026-08-27
+Starting commit/status: `bab5d5c` / only the unrelated deleted Kotlin compiler session marker was present; MC-022 was then marked in progress.
+Contracts read: F-ARR-001 and F-ARR-004–F-ARR-007; Architecture section 4.4 and 8; MIDI Contract sections 6, 8, and 10–12; Quality Gate 3 generation; MC-022 task contract.
+Current owners inspected: `PadMidiGeneration.kt`, `MusicalPatternLibrary.kt`, `PadMidiGenerationTest.kt`, target authority/harmony/context/grid/pattern/validation models, and candidate lifecycle. The legacy pad adapter remains compiled for old callers and is not imported by the target generator.
+Behavior retained/extracted: `MidiCoreChordGenerator` consumes only one immutable Chords context and emits note-only semantic events on musician-facing channel 2 (zero-based 1). Each exact authoritative chord window receives all realized chord tones and extensions in a bounded 48–84 register. Slash-bass symbols force the declared bass pitch class into the lowest voice; non-slash windows enumerate deterministic inversions and choose a seeded, register-centered, prior-voicing-aware result. Complete curated chord rhythms repeat per window, clip at harmony boundaries, and use profile-aware representable note lengths and energy/accent velocities. Protected melody anchors and accepted bass notes are treated as spacing constraints when a safe voicing exists. The generator returns the candidate and typed validation result without filesystem or project-state writes.
+Files added/changed: `src/main/kotlin/app/melotrail/arrangement/core/MidiCoreChordGenerator.kt`; `src/test/kotlin/app/melotrail/arrangement/core/MidiCoreChordGeneratorTest.kt`; `src/test/resources/fixtures/midi-core/chords-golden.json`; `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`; and this execution log.
+Files/data deleted: None. The old pad adapter and pattern owner remain until their assigned MC-055 cleanup because pre-cutover callers still compile against them; no audio patch, renderer, sound-library, or path dependency entered the target path.
+Tracked deletion recoverability: Not applicable to MC-022; the unrelated session-marker deletion remains recoverable from Git and was not included in the task commit.
+Ignored deletion recoverability: None.
+Focused tests: `./gradlew :test --tests app.melotrail.arrangement.core.MidiCoreChordGeneratorTest --rerun-tasks` PASS (6 tests). Coverage includes chord extensions, all six curated rhythm variants with semantic golden output, slash-bass inversion, sub-bar chord boundaries, bounded voice leading, protected melody/bass spacing, seeded distinct alternatives, deterministic repeatability, and typed off-grid rejection.
+Full validation: `make test` PASS (2026-08-27; 14 Gradle tasks); `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS.
+Manual evidence: Not required.
+Per-pattern semantic golden: `src/test/resources/fixtures/midi-core/chords-golden.json`, SHA-256 `f8b1ad0069950e893be4f855ac970080c3e0b1bd6b7fd456c1dd4a6491cb4eb1`; PPQ 480, 4/4, C triad, pulsed profile, seed 17. It records note start/end/pitch/velocity sequences for sustained, laid-back quarters, late entry, dusty offbeats, broken syncopation, and bridge half-time patterns.
+Decisions/deviations: Rhythm positions are anchored at each authoritative window start so sub-bar chord changes re-articulate immediately and never inherit a prior chord's pitch material. Pattern note durations are snapped down to the shared grid after applying the MIDI-only profile fraction; an unrepresentable authority boundary remains a typed validation rejection rather than being silently moved. Alternatives advance through the curated rhythm catalog and derive their explicit seed deterministically; they do not invoke random, prompt, audio, or analysis inputs.
+Known limitations: Candidate publication and persisted validation-report serialization remain MC-025; bass and drum generators remain MC-023 and MC-024. Legacy pad behavior remains until its scheduled target cutover/cleanup. The transitional Python documentation-inventory build check remains until MC-058.
+Commit: `midi-core: MC-022 generate chord candidates`.
+Next task: MC-023 — implement the bass generator and performance profiles.
 
 ## 6. Manual gate records
 
