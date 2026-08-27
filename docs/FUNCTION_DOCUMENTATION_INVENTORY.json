@@ -275,6 +275,14 @@
       "documentedFunctionCount": 5
     },
     {
+      "path": "src/main/kotlin/app/melotrail/application/MidiCoreMelodySelection.kt",
+      "classification": "inherited-contract",
+      "reason": "The 4 callable declarations implement MC-014's UI-ready protected melody selection, source reinspection, digest binding, and safe derived-work invalidation boundary under F-MIDI-003 and F-MIDI-005; reviewed on 2026-08-27.",
+      "functionCount": 4,
+      "declarationDigest": "106487ce7bda3433ed15678207c1b5e817d73f289a72409b6342d1f644cac6ac",
+      "documentedFunctionCount": 0
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreProjectLifecycle.kt",
       "classification": "inherited-contract",
       "reason": "The 7 callable declarations implement MC-012's target create/open/save/close lifecycle and UI-ready, no-migration legacy classification under F-PROJ-001 through F-PROJ-004; reviewed on 2026-08-27.",
@@ -1416,6 +1424,14 @@
       "reason": "src/main/kotlin/app/melotrail/midi/domain/MidiInspection.kt contains immutable inspection records and no callable declarations; reviewed for MC-006 on 2026-08-26.",
       "functionCount": 0,
       "declarationDigest": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "documentedFunctionCount": 0
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/midi/domain/MidiProtectedMelody.kt",
+      "classification": "inherited-contract",
+      "reason": "The 10 callable declarations implement MC-014's immutable selected-channel melody projection, expression-preservation policy, protected-anchor derivation, source-event lineage, and deterministic identity digest under MIDI Contract sections 3, 6.1, and 10; reviewed on 2026-08-27.",
+      "functionCount": 10,
+      "declarationDigest": "b8d4b4d3ab7aed1fe20cb17a4afe6a8271b36ce83de10cac52b770b1c3075a2b",
       "documentedFunctionCount": 0
     },
     {

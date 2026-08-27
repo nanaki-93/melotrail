@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-013 complete; MC-014 next
+Status: MC-014 complete; MC-015 next
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -53,7 +53,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-011 | DONE | `midi-core: MC-011 add MIDI artifact store` | PASS — artifact-store/architecture tests, `make test`, `make build` | Target layout is path-confined, SHA-256-bound, immutable, and preserves the last good project JSON after an interrupted save. |
 | MC-012 | DONE | `midi-core: MC-012 add project lifecycle` | PASS — lifecycle/store/schema tests, `make test`, `make build` | Target lifecycle creates, reopens, saves, closes, and safely rejects legacy project files without invoking a worker or migration. |
 | MC-013 | DONE | `midi-core: MC-013 import immutable MIDI source` | PASS — source-import/store/schema/lifecycle/architecture tests, `make test`, `make build` | One-file SMF import validates before publication, preserves source/report bytes under digest, persists inspection summaries, and leaves the prior project document unchanged on every tested failure. |
-| MC-014 | TODO | | | |
+| MC-014 | DONE | `midi-core: MC-014 protect selected melody` | PASS — melody-selection/validator/architecture tests, `make test`, `make build` | Exactly one source track/channel yields a digest-bound protected view with controller/expression policy, deterministic anchors, source-event lineage, and no source mutation. |
 | MC-015 | TODO | | | |
 | MC-016 | TODO | | | |
 | MC-017 | TODO | | | |
@@ -436,6 +436,28 @@ Decisions/deviations: Import is allowed to return `AWAITING_AUTHORITY` for missi
 Known limitations: The current target import use case is not yet wired into Compose dialogs or recent-project state; MC-031/MC-034 own that cutover. Melody selection, project timing/key/meter, and structural authority continue in MC-014 through MC-016.
 Commit: `midi-core: MC-013 import immutable MIDI source`.
 Next task: MC-014 — add melody selection and immutable anchor extraction.
+
+### MC-014 — Implement protected melody selection and view
+
+Status: DONE
+Started: 2026-08-27
+Completed: 2026-08-27
+Starting commit/status: `c617cfd` / MC-014 log-only `IN_PROGRESS` update; the unrelated compiler session marker recorded under MC-011 remains excluded from this task commit.
+Contracts read: F-MIDI-003 and F-MIDI-005; MIDI Contract sections 3, 5, 6.1, and 10; Musical invariants; MC-014 task contract.
+Current owners inspected: Legacy `MelodyIdentityBuilder`, mutation-anchor invariants, and full-song melody sidecar. They provide only the proven source-event identity and phrase/held-note anchor assertions; their raw-JDK parsing, monophonic cleanup, phrase evidence, and mutation stages are not used by target code.
+Behavior retained/extracted: `MidiProtectedMelodySelector` works from the existing immutable semantic sequence. It selects exactly one track/channel, derives a channel-1-ready (zero-indexed channel 0) view with original source-event ordering, maps notes/CC/pitch bend/channel pressure consistently, omits unsupported messages under an explicit policy, derives stable phrase/held-note anchors, and hashes the entire selected view plus anchor policy. The application re-inspects and verifies the preserved source before binding `SelectedMelodyTrack`; it returns stable problems for stale projects, unknown track/channel, no notes, unsafe pairing, and MPE-like multi-channel pitch-bend/channel-pressure input.
+Files added/changed: `src/main/kotlin/app/melotrail/midi/domain/MidiProtectedMelody.kt`; `src/main/kotlin/app/melotrail/application/MidiCoreMelodySelection.kt`; `src/test/kotlin/app/melotrail/application/MidiCoreMelodySelectionTest.kt`; `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`; `docs/plan/MIDI_CORE_EXECUTION_LOG.md`.
+Files/data deleted: None.
+Tracked deletion recoverability: Not applicable.
+Ignored deletion recoverability: Not applicable.
+Focused tests: `./gradlew :test --tests app.melotrail.application.MidiCoreMelodySelectionTest --tests app.melotrail.midi.domain.MidiImportValidatorTest --tests app.melotrail.architecture.TargetArchitectureRulesTest --rerun-tasks` PASS. Tests cover SMF 1 and format-0 resolution, exact one-track/channel binding, source-controller/pitch-bend mapping, output channel 1 projection, protected-anchor and identity persistence, source-byte plus semantic-event diff preservation, selection change before derived work, and MPE-like refusal without project mutation.
+Full validation: `make test` PASS (2026-08-27; 14 Gradle tasks); `make build` PASS (2026-08-27; 15 Gradle tasks including the documentation-inventory check).
+Manual evidence: Not required.
+Melody identity evidence: Each selected note ID hashes the source SHA-256, source track/channel, source-event ordinal, timing, pitch, velocity, and release velocity. The selected-view SHA-256 includes source identity, PPQ, policy, all preserved projected events, and sorted protected-anchor IDs. The selection test proves a different source track/channel produces a different durable identity digest; its before/after reader event signatures and source bytes are identical.
+Decisions/deviations: MPE-like input is defined conservatively as a selected note channel in a track with pitch-bend or channel-pressure evidence across multiple note-bearing channels; V1 requires a single-channel protected melody. Selection changes are allowed before candidates/acceptances/snapshots exist. Once immutable derived work exists, the application refuses the selection change rather than silently deleting or retargeting immutable evidence; the explicit invalidation lifecycle is completed by MC-019.
+Known limitations: The selected view is re-derived from immutable source and durable selection digest rather than persisted as a second MIDI artifact. Compose UI selection wiring is MC-034; authority fields and candidate lifecycle are MC-015 through MC-019.
+Commit: `midi-core: MC-014 protect selected melody`.
+Next task: MC-015 — implement fixed tempo, meter, key, and mode authority.
 
 ## 6. Manual gate records
 
