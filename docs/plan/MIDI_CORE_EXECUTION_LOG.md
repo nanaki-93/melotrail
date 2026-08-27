@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-011 complete; MC-012 ready
+Status: MC-012 complete; MC-013 ready
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -51,7 +51,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-009 | DONE | `midi-core: MC-009 record DAW compatibility spike` | PASS — automated preparation, GarageBand 10.4.14, Logic Pro 12.3.1 | Both DAWs imported the core-role bundle with correct timing/roles and safe playback; marker display is non-blocking metadata and was unassessed. |
 | MC-010 | DONE | `midi-core: MC-010 define MIDI project schema` | PASS — schema/architecture tests, `make test`, `make build` | Strict MIDI Core v1 DTO boundary and golden document contain only target metadata, MIDI authority, candidate acceptance, and export ownership. |
 | MC-011 | DONE | `midi-core: MC-011 add MIDI artifact store` | PASS — artifact-store/architecture tests, `make test`, `make build` | Target layout is path-confined, SHA-256-bound, immutable, and preserves the last good project JSON after an interrupted save. |
-| MC-012 | TODO | | | |
+| MC-012 | DONE | `midi-core: MC-012 add project lifecycle` | PASS — lifecycle/store/schema tests, `make test`, `make build` | Target lifecycle creates, reopens, saves, closes, and safely rejects legacy project files without invoking a worker or migration. |
 | MC-013 | TODO | | | |
 | MC-014 | TODO | | | |
 | MC-015 | TODO | | | |
@@ -393,6 +393,27 @@ Decisions/deviations: `project/adapter` is the explicit filesystem boundary; the
 Known limitations: Project lifecycle use cases, UI-ready error classification, source inspection/report binding, and post-publication cleanup belong to MC-012 and MC-013. Candidate lifecycle transitions and export snapshot policy remain MC-019/MC-029 responsibilities.
 Commit: `midi-core: MC-011 add MIDI artifact store`.
 Next task: MC-012 — implement create, open, save, and legacy rejection.
+
+### MC-012 — Implement create, open, save, and legacy rejection
+
+Status: DONE
+Started: 2026-08-27
+Completed: 2026-08-27
+Starting commit/status: `dd92dbd` / MC-012 log-only `IN_PROGRESS` update; the unrelated compiler session marker recorded under MC-011 remains excluded from this task commit.
+Contracts read: F-PROJ-001 through F-PROJ-004; MC-012 task contract.
+Current owners inspected: The schema-v4 `ProjectApplicationService` create/open/mutation paths and its focused test, legacy `ProjectStore`, and the current Compose create/open dialog/view-model behavior. Those owners create audio-era paths, render settings, stage recovery, and worker-facing state, so they are not target callers and remain for later cutover/removal.
+Behavior retained/extracted: Retained only local root validation, explicit existing-project refusal, and UI-oriented failure handling. `MidiCoreProjectLifecycle` coordinates `MidiCoreArtifactStore` and target domain records, returns stable problem codes/messages/next actions, and never imports the legacy project service/store, stage runner, worker, renderer, or desktop runtime.
+Files added/changed: `src/main/kotlin/app/melotrail/application/MidiCoreProjectLifecycle.kt`; `src/test/kotlin/app/melotrail/application/MidiCoreProjectLifecycleTest.kt`; `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`; `docs/plan/MIDI_CORE_EXECUTION_LOG.md`.
+Files/data deleted: None.
+Tracked deletion recoverability: Not applicable.
+Ignored deletion recoverability: Not applicable.
+Focused tests: `./gradlew :test --tests app.melotrail.application.MidiCoreProjectLifecycleTest --tests app.melotrail.project.adapter.MidiCoreArtifactStoreTest --tests app.melotrail.project.MidiCoreProjectSchemaTest --rerun-tasks` PASS. Tests prove create/reopen/close identity, invalid-request pre-mutation rejection, corrupted/missing project problems, byte-preserving schema-v4 rejection, missing-artifact rejection, and failed-save recovery to the original readable project.
+Full validation: `make test` PASS (2026-08-27; 14 Gradle tasks); `make build` PASS (2026-08-27; 15 Gradle tasks including the transitional documentation-inventory check).
+Manual evidence: Not required.
+Decisions/deviations: Target open maps every non-current schema to `UNSUPPORTED_PROJECT` without a parse-and-migrate branch or any write. Artifact integrity is verified before a project session is returned. Close is deliberately a pure session boundary because this task opens no device/process resources. The existing desktop has not yet been redirected: target desktop composition and Project page cutover are MC-031 and MC-034.
+Known limitations: The target project has no MIDI source until MC-013; target UI wiring, recent-project persistence, and dialogs remain later desktop work. Candidate and export lifecycle persistence will be completed by MC-019.
+Commit: `midi-core: MC-012 add project lifecycle`.
+Next task: MC-013 — implement immutable MIDI source import.
 
 ## 6. Manual gate records
 

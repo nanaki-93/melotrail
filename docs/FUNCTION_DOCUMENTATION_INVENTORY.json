@@ -275,6 +275,14 @@
       "documentedFunctionCount": 5
     },
     {
+      "path": "src/main/kotlin/app/melotrail/application/MidiCoreProjectLifecycle.kt",
+      "classification": "inherited-contract",
+      "reason": "The 7 callable declarations implement MC-012's target create/open/save/close lifecycle and UI-ready, no-migration legacy classification under F-PROJ-001 through F-PROJ-004; reviewed on 2026-08-27.",
+      "functionCount": 7,
+      "declarationDigest": "d474ea7a61415363d8519ffbdd175b62a23115fda20a86e8757c42db801a0d41",
+      "documentedFunctionCount": 1
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/application/PartPreviewApplicationService.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/application/PartPreviewApplicationService.kt has 28 callable declarations, 7 directly documented and 21 still requiring focused KDoc/docstrings. QP-015 reviewed verified canonical source/prepared/full/boundary monitors and level matching on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
