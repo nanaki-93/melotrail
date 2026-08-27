@@ -88,6 +88,9 @@ class MidiCoreProjectLifecycleTest {
                 1,
                 480,
                 ProjectArtifact(MidiCoreArtifactStore.SOURCE_MIDI, hash),
+                ProjectArtifact(MidiCoreArtifactStore.IMPORT_REPORT, hash),
+                emptyList(),
+                0,
             ),
         )
         store.saveProject(root, created.session.project)

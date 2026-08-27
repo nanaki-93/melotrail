@@ -1,5 +1,7 @@
 package app.melotrail.project
 
+import app.melotrail.midi.domain.MidiTrackSummary
+
 /** Immutable target aggregate for a MIDI-only Melotrail project. */
 data class MidiCoreProject(
     val id: ProjectId,
@@ -91,6 +93,9 @@ data class SourceMidiRecord(
     val format: Int,
     val ppq: Int,
     val original: ProjectArtifact,
+    val importReport: ProjectArtifact,
+    val trackSummaries: List<MidiTrackSummary>,
+    val sourceEndTick: Long,
 ) {
     init {
         require(originalFilename.isNotBlank() && originalFilename.length <= 255 && originalFilename.none(Char::isISOControl)) {
@@ -100,6 +105,10 @@ data class SourceMidiRecord(
         require(format in setOf(0, 1)) { "Source MIDI format must be 0 or 1" }
         require(ppq in 1..0x7fff) { "Source MIDI PPQ is invalid" }
         require(original.sha256 == sha256) { "Original MIDI artifact must use the source SHA-256" }
+        require(trackSummaries.map(MidiTrackSummary::trackIndex) == trackSummaries.indices.toList()) {
+            "Source MIDI track summaries must be ordered from track zero"
+        }
+        require(sourceEndTick >= 0) { "Source MIDI end tick must not be negative" }
     }
 }
 

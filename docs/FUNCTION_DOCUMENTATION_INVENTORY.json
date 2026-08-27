@@ -283,6 +283,14 @@
       "documentedFunctionCount": 1
     },
     {
+      "path": "src/main/kotlin/app/melotrail/application/MidiCoreSourceImport.kt",
+      "classification": "inherited-contract",
+      "reason": "The 12 callable declarations implement MC-013's immutable SMF source import, validation classification, digest-bound report publication, source-change detection, and atomic project binding under F-MIDI-001, F-MIDI-002, F-MIDI-004, and F-MIDI-005; reviewed on 2026-08-27.",
+      "functionCount": 12,
+      "declarationDigest": "f5f5b81eaf80e01d4442a1d0c95889f960c7bb8c1a9742824ebaf39ff52ea257",
+      "documentedFunctionCount": 0
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/application/PartPreviewApplicationService.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/application/PartPreviewApplicationService.kt has 28 callable declarations, 7 directly documented and 21 still requiring focused KDoc/docstrings. QP-015 reviewed verified canonical source/prepared/full/boundary monitors and level matching on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
@@ -1493,10 +1501,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/project/adapter/MidiCoreArtifactStore.kt",
       "classification": "inherited-contract",
-      "reason": "The 30 callable declarations implement MC-011's confined, digest-bound target artifact-store adapter, immutable publication, atomic project persistence, and recovery evidence under F-PROJ-004, F-SYS-004, and Architecture section 6; reviewed on 2026-08-27.",
-      "functionCount": 30,
-      "declarationDigest": "53b3d267a5b180c3b071289eebdd99fdc754904143b517cb160a2a07f6c05e30",
-      "documentedFunctionCount": 0
+      "reason": "The 31 callable declarations implement MC-011's confined, digest-bound target artifact-store adapter and MC-013's safe cleanup of newly created, unbound import artifacts, alongside immutable publication, atomic project persistence, and recovery evidence under F-PROJ-004, F-SYS-004, and Architecture section 6; reviewed on 2026-08-27.",
+      "functionCount": 31,
+      "declarationDigest": "62fd51c03e22281507e4270339429e0496f295f019169065d7c4822ae5a8dfde",
+      "documentedFunctionCount": 1
     },
     {
       "path": "src/main/kotlin/app/melotrail/project/MidiCoreProject.kt",
@@ -1509,9 +1517,9 @@
     {
       "path": "src/main/kotlin/app/melotrail/project/MidiCoreProjectSchema.kt",
       "classification": "inherited-contract",
-      "reason": "The 32 callable declarations implement MC-010's explicitly discriminated MIDI Core v1 JSON schema, strict decoding, legacy classification, and DTO/domain mapping under F-PROJ-001 through F-PROJ-003 and Architecture sections 4.1 and 6; reviewed on 2026-08-27.",
-      "functionCount": 32,
-      "declarationDigest": "18f83b13f8eeb5a309ae9dc16fd34b8beda55359aefcd848c82ca16e927807ff",
+      "reason": "The 36 callable declarations implement MC-010's explicitly discriminated MIDI Core v1 JSON schema and MC-013's persisted source inspection summaries/report binding, with strict decoding, legacy classification, and DTO/domain mapping under F-PROJ-001 through F-PROJ-003 and Architecture sections 4.1 and 6; reviewed on 2026-08-27.",
+      "functionCount": 36,
+      "declarationDigest": "2f4ce1da4847fb383d2b848b67172eaecf0125ff41bdb40e55f05247f5b747df",
       "documentedFunctionCount": 1
     },
     {

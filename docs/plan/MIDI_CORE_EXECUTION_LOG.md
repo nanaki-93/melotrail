@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-012 complete; MC-013 ready
+Status: MC-013 complete; MC-014 next
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -52,7 +52,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-010 | DONE | `midi-core: MC-010 define MIDI project schema` | PASS — schema/architecture tests, `make test`, `make build` | Strict MIDI Core v1 DTO boundary and golden document contain only target metadata, MIDI authority, candidate acceptance, and export ownership. |
 | MC-011 | DONE | `midi-core: MC-011 add MIDI artifact store` | PASS — artifact-store/architecture tests, `make test`, `make build` | Target layout is path-confined, SHA-256-bound, immutable, and preserves the last good project JSON after an interrupted save. |
 | MC-012 | DONE | `midi-core: MC-012 add project lifecycle` | PASS — lifecycle/store/schema tests, `make test`, `make build` | Target lifecycle creates, reopens, saves, closes, and safely rejects legacy project files without invoking a worker or migration. |
-| MC-013 | TODO | | | |
+| MC-013 | DONE | `midi-core: MC-013 import immutable MIDI source` | PASS — source-import/store/schema/lifecycle/architecture tests, `make test`, `make build` | One-file SMF import validates before publication, preserves source/report bytes under digest, persists inspection summaries, and leaves the prior project document unchanged on every tested failure. |
 | MC-014 | TODO | | | |
 | MC-015 | TODO | | | |
 | MC-016 | TODO | | | |
@@ -414,6 +414,28 @@ Decisions/deviations: Target open maps every non-current schema to `UNSUPPORTED_
 Known limitations: The target project has no MIDI source until MC-013; target UI wiring, recent-project persistence, and dialogs remain later desktop work. Candidate and export lifecycle persistence will be completed by MC-019.
 Commit: `midi-core: MC-012 add project lifecycle`.
 Next task: MC-013 — implement immutable MIDI source import.
+
+### MC-013 — Import immutable MIDI source
+
+Status: DONE
+Started: 2026-08-27
+Completed: 2026-08-27
+Starting commit/status: `b9f232f` / MC-013 log-only `IN_PROGRESS` update; the unrelated compiler session marker recorded under MC-011 remains excluded from this task commit.
+Contracts read: F-MIDI-001, F-MIDI-002, F-MIDI-004, F-MIDI-005; MIDI Contract import/source-identity rules; MC-013 task contract.
+Current owners inspected: Target `JdkMidiReader` and `MidiImportValidator`; target project lifecycle/schema/artifact store; and the legacy project import service. The legacy service owns audio/stage-era concerns and was not reused.
+Behavior retained/extracted: `MidiCoreSourceImport` invokes only the target reader/validator/store. It accepts `.mid`/`.midi` SMF 0/1 PPQ sources, records typed validation, detects source mutation by comparing the inspected identity to the copied immutable artifact, publishes a digest-bound import report, and atomically binds source identity, track summaries, and end tick to `project.json`. The artifact adapter now verifies the report with every bound source and permits cleanup only for canonical import artifacts that are demonstrably unbound.
+Files added/changed: `src/main/kotlin/app/melotrail/application/MidiCoreSourceImport.kt`; `src/main/kotlin/app/melotrail/project/MidiCoreProject.kt`; `src/main/kotlin/app/melotrail/project/MidiCoreProjectSchema.kt`; `src/main/kotlin/app/melotrail/project/adapter/MidiCoreArtifactStore.kt`; schema/lifecycle/store/source-import tests; the v1 schema golden fixture; `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`; `docs/plan/MIDI_CORE_EXECUTION_LOG.md`.
+Files/data deleted: None.
+Tracked deletion recoverability: Not applicable.
+Ignored deletion recoverability: Not applicable.
+Focused tests: `./gradlew :test --tests app.melotrail.application.MidiCoreSourceImportTest --tests app.melotrail.project.MidiCoreProjectSchemaTest --tests app.melotrail.project.adapter.MidiCoreArtifactStoreTest --tests app.melotrail.application.MidiCoreProjectLifecycleTest --rerun-tasks` PASS; `./gradlew :test --tests app.melotrail.architecture.TargetArchitectureRulesTest --rerun-tasks` PASS. The source-import coverage includes SMF 0/1 import, canonical original/report publication, SHA-256 checks for both artifacts, persisted ordered summaries, renamed non-MIDI refusal, source mutation during copy, duplicate-source refusal, and simulated final-save failure cleanup.
+Full validation: `make test` PASS (2026-08-27; root and desktop Gradle test tasks); `make build` PASS (2026-08-27; 15 Gradle tasks including the documentation-inventory check).
+Manual evidence: Not required.
+Artifact and project-hash evidence: The supported-fixture test compares copied source bytes to the selected source and verifies `source/original.mid` plus `reports/import.json` against their persisted SHA-256 values. Failure tests capture the original `project.json` bytes and SHA-256 before renamed-input, source-mutation, duplicate, and simulated-save failures, then require the identical bytes and digest afterward; neither canonical import artifact remains after unbound failures.
+Decisions/deviations: Import is allowed to return `AWAITING_AUTHORITY` for missing explicit melody selection, tempo, or meter because MC-013 only admits a safe immutable source; MC-014 through MC-016 own user authority capture. A stale project session, unsupported extension, pre-existing unbound canonical artifacts, unreadable/unsupported MIDI, blocking findings, source mutation, and save failure are exposed as stable UI-ready problem codes rather than throwing into desktop callers. `SourceMidiRecord` gained the report artifact and inspection facts before UI cutover, so all later target consumers read one durable source record.
+Known limitations: The current target import use case is not yet wired into Compose dialogs or recent-project state; MC-031/MC-034 own that cutover. Melody selection, project timing/key/meter, and structural authority continue in MC-014 through MC-016.
+Commit: `midi-core: MC-013 import immutable MIDI source`.
+Next task: MC-014 — add melody selection and immutable anchor extraction.
 
 ## 6. Manual gate records
 

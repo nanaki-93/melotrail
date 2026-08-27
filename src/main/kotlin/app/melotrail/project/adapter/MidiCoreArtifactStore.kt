@@ -43,6 +43,32 @@ class MidiCoreArtifactStore(
     fun publishImportReport(projectRoot: Path, reportJson: String): ProjectArtifact =
         publishImmutable(projectRoot, IMPORT_REPORT, reportJson.toByteArray(StandardCharsets.UTF_8))
 
+    /**
+     * Removes artifacts created for an import that never became part of the project document.
+     * Bound source records are explicitly protected so imported source bytes are never deleted.
+     */
+    fun discardUnboundImportArtifacts(projectRoot: Path, artifacts: List<ProjectArtifact>) {
+        require(artifacts.isNotEmpty()) { "At least one unbound import artifact is required" }
+        require(artifacts.map(ProjectArtifact::path).toSet().size == artifacts.size) { "Unbound import artifacts must be unique" }
+        require(artifacts.all { it.path == SOURCE_MIDI || it.path == IMPORT_REPORT }) {
+            "Only canonical import artifacts may be discarded"
+        }
+        val root = existingRoot(projectRoot)
+        val projectFile = root.resolve(PROJECT_FILE)
+        if (Files.exists(projectFile, LinkOption.NOFOLLOW_LINKS)) {
+            require(Files.isRegularFile(projectFile, LinkOption.NOFOLLOW_LINKS)) { "Project file is not a regular file" }
+            val project = MidiCoreProjectSchema.decode(Files.readString(projectFile, StandardCharsets.UTF_8))
+            require(project.sourceMidi == null) { "Bound source artifacts cannot be discarded" }
+        }
+        artifacts.forEach { artifact ->
+            val path = resolve(root, artifact.path)
+            if (Files.exists(path, LinkOption.NOFOLLOW_LINKS)) {
+                verify(root, artifact)
+                Files.delete(path)
+            }
+        }
+    }
+
     fun publishCandidateMidi(
         projectRoot: Path,
         role: CandidateRole,
@@ -115,7 +141,9 @@ class MidiCoreArtifactStore(
         val root = existingRoot(projectRoot)
         project.sourceMidi?.let { source ->
             require(source.original.path == SOURCE_MIDI) { "Source MIDI path is not canonical" }
+            require(source.importReport.path == IMPORT_REPORT) { "Import report path is not canonical" }
             verify(root, source.original)
+            verify(root, source.importReport)
         }
         project.candidates.forEach { candidate ->
             require(candidate.midi.path == candidateMidiPath(candidate.role, candidate.occurrenceId, candidate.id)) {

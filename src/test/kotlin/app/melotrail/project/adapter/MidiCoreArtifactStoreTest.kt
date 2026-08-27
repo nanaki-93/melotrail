@@ -18,6 +18,9 @@ import app.melotrail.project.ProjectSectionDefinition
 import app.melotrail.project.ProjectSectionOccurrence
 import app.melotrail.project.SelectedMelodyTrack
 import app.melotrail.project.SourceMidiRecord
+import app.melotrail.midi.domain.MidiChannelSummary
+import app.melotrail.midi.domain.MidiTrackRoleHint
+import app.melotrail.midi.domain.MidiTrackSummary
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -131,6 +134,9 @@ class MidiCoreArtifactStoreTest {
             1,
             480,
             ProjectArtifact(MidiCoreArtifactStore.SOURCE_MIDI, hash),
+            ProjectArtifact(MidiCoreArtifactStore.IMPORT_REPORT, hash),
+            emptyList(),
+            0,
         )
 
         assertFailsWith<IllegalArgumentException> {
@@ -151,7 +157,7 @@ class MidiCoreArtifactStoreTest {
 
     private fun completeProject(store: MidiCoreArtifactStore): MidiCoreProject {
         val source = store.publishSource(root, bytesFile(root.resolve("input.mid"), "source-midi"))
-        store.publishImportReport(root, "{\"status\":\"accepted\"}")
+        val importReport = store.publishImportReport(root, "{\"status\":\"accepted\"}")
         val candidateMidi = store.publishCandidateMidi(
             root,
             CandidateRole.CHORDS,
@@ -176,7 +182,16 @@ class MidiCoreArtifactStoreTest {
         return MidiCoreProject(
             ProjectId("project-1"),
             ProjectMetadata("Artifact fixture", "2026-08-27T00:00:00Z"),
-            SourceMidiRecord("input.mid", source.sha256, 1, 480, source),
+            SourceMidiRecord(
+                "input.mid",
+                source.sha256,
+                1,
+                480,
+                source,
+                importReport,
+                listOf(MidiTrackSummary(0, "Melody", listOf(MidiChannelSummary(0, 1, 60, 60, 0, listOf(MidiTrackRoleHint.MELODY))))),
+                480,
+            ),
             SelectedMelodyTrack(1, 0, "c".repeat(64)),
             ProjectAuthority(
                 ProjectKey(0, "major"),

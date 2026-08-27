@@ -16,7 +16,35 @@
             "original": {
                 "path": "source/original.mid",
                 "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-            }
+            },
+            "importReport": {
+                "path": "reports/import.json",
+                "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+            },
+            "trackSummaries": [
+                {
+                    "trackIndex": 0,
+                    "name": "Conductor",
+                    "channels": []
+                },
+                {
+                    "trackIndex": 1,
+                    "name": "Melody",
+                    "channels": [
+                        {
+                            "channel": 0,
+                            "noteCount": 1,
+                            "minimumPitch": 60,
+                            "maximumPitch": 60,
+                            "controllerCount": 0,
+                            "likelyRoles": [
+                                "MELODY"
+                            ]
+                        }
+                    ]
+                }
+            ],
+            "sourceEndTick": 480
         },
         "selectedMelody": {
             "trackIndex": 1,

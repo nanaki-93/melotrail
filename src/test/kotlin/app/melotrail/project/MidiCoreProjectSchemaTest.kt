@@ -1,5 +1,8 @@
 package app.melotrail.project
 
+import app.melotrail.midi.domain.MidiChannelSummary
+import app.melotrail.midi.domain.MidiTrackRoleHint
+import app.melotrail.midi.domain.MidiTrackSummary
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
@@ -85,7 +88,19 @@ class MidiCoreProjectSchemaTest {
         return MidiCoreProject(
             id = ProjectId("project-1"),
             metadata = ProjectMetadata("MIDI Core fixture", "2026-08-27T00:00:00Z", "test-1"),
-            sourceMidi = SourceMidiRecord("fixture.mid", sourceHash, 1, 480, artifact("source/original.mid", sourceHash)),
+            sourceMidi = SourceMidiRecord(
+                "fixture.mid",
+                sourceHash,
+                1,
+                480,
+                artifact("source/original.mid", sourceHash),
+                artifact("reports/import.json", "1".repeat(64)),
+                listOf(
+                    MidiTrackSummary(0, "Conductor", emptyList()),
+                    MidiTrackSummary(1, "Melody", listOf(MidiChannelSummary(0, 1, 60, 60, 0, listOf(MidiTrackRoleHint.MELODY)))),
+                ),
+                480,
+            ),
             selectedMelody = SelectedMelodyTrack(1, 0, "c".repeat(64)),
             authority = ProjectAuthority(
                 ProjectKey(0, "major"), 500_000, 4, 2,

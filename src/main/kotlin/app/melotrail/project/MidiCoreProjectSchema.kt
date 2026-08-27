@@ -1,5 +1,8 @@
 package app.melotrail.project
 
+import app.melotrail.midi.domain.MidiChannelSummary
+import app.melotrail.midi.domain.MidiTrackRoleHint
+import app.melotrail.midi.domain.MidiTrackSummary
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -89,7 +92,29 @@ private data class ProjectMetadataDto(val name: String, val createdAt: String, v
 private data class ArtifactDto(val path: String, val sha256: String)
 
 @Serializable
-private data class SourceMidiDto(val originalFilename: String, val sha256: String, val format: Int, val ppq: Int, val original: ArtifactDto)
+private data class SourceMidiDto(
+    val originalFilename: String,
+    val sha256: String,
+    val format: Int,
+    val ppq: Int,
+    val original: ArtifactDto,
+    val importReport: ArtifactDto,
+    val trackSummaries: List<TrackSummaryDto>,
+    val sourceEndTick: Long,
+)
+
+@Serializable
+private data class TrackSummaryDto(val trackIndex: Int, val name: String? = null, val channels: List<ChannelSummaryDto>)
+
+@Serializable
+private data class ChannelSummaryDto(
+    val channel: Int,
+    val noteCount: Int,
+    val minimumPitch: Int? = null,
+    val maximumPitch: Int? = null,
+    val controllerCount: Int,
+    val likelyRoles: List<MidiTrackRoleHint>,
+)
 
 @Serializable
 private data class SelectedMelodyDto(val trackIndex: Int, val channel: Int, val identitySha256: String)
@@ -171,8 +196,32 @@ private fun ProjectMetadata.toDto() = ProjectMetadataDto(name, createdAt, applic
 private fun ProjectMetadataDto.toDomain() = ProjectMetadata(name, createdAt, applicationVersion)
 private fun ProjectArtifact.toDto() = ArtifactDto(path.value, sha256)
 private fun ArtifactDto.toDomain() = ProjectArtifact(ProjectRelativePath(path), sha256)
-private fun SourceMidiRecord.toDto() = SourceMidiDto(originalFilename, sha256, format, ppq, original.toDto())
-private fun SourceMidiDto.toDomain() = SourceMidiRecord(originalFilename, sha256, format, ppq, original.toDomain())
+private fun SourceMidiRecord.toDto() = SourceMidiDto(
+    originalFilename,
+    sha256,
+    format,
+    ppq,
+    original.toDto(),
+    importReport.toDto(),
+    trackSummaries.map(MidiTrackSummary::toDto),
+    sourceEndTick,
+)
+
+private fun SourceMidiDto.toDomain() = SourceMidiRecord(
+    originalFilename,
+    sha256,
+    format,
+    ppq,
+    original.toDomain(),
+    importReport.toDomain(),
+    trackSummaries.map(TrackSummaryDto::toDomain),
+    sourceEndTick,
+)
+
+private fun MidiTrackSummary.toDto() = TrackSummaryDto(trackIndex, name, channels.map(MidiChannelSummary::toDto))
+private fun TrackSummaryDto.toDomain() = MidiTrackSummary(trackIndex, name, channels.map(ChannelSummaryDto::toDomain))
+private fun MidiChannelSummary.toDto() = ChannelSummaryDto(channel, noteCount, minimumPitch, maximumPitch, controllerCount, likelyRoles)
+private fun ChannelSummaryDto.toDomain() = MidiChannelSummary(channel, noteCount, minimumPitch, maximumPitch, controllerCount, likelyRoles)
 private fun SelectedMelodyTrack.toDto() = SelectedMelodyDto(trackIndex, channel, identitySha256)
 private fun SelectedMelodyDto.toDomain() = SelectedMelodyTrack(trackIndex, channel, identitySha256)
 
