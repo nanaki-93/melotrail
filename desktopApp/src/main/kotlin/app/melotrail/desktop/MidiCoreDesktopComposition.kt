@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -51,6 +53,7 @@ data class MidiCoreDesktopServices(
     val assembly: MidiCoreAcceptedSongAssembly,
     val audition: MidiAuditionPort,
     val export: MidiCoreMidiPackageExporter,
+    val workspace: MidiCoreWorkspaceUseCases,
     val dialogs: MidiCoreDesktopFileDialogs,
     val preferences: MidiCoreDesktopPreferences,
     val logger: DesktopOperationLogger,
@@ -82,6 +85,18 @@ object MidiCoreDesktopComposition {
             assembly = assembly,
             snapshotLifecycle = snapshotLifecycle,
         )
+        val workspace = DefaultMidiCoreWorkspaceUseCases(
+            project = project,
+            sourceImport = sourceImport,
+            melodySelection = melodySelection,
+            authority = authority,
+            structure = structure,
+            harmony = harmony,
+            generation = generation,
+            review = review,
+            exporter = export,
+            audition = audition,
+        )
         return MidiCoreDesktopServices(
             project = project,
             sourceImport = sourceImport,
@@ -94,6 +109,7 @@ object MidiCoreDesktopComposition {
             assembly = assembly,
             audition = audition,
             export = export,
+            workspace = workspace,
             dialogs = dialogs,
             preferences = preferences,
             logger = logger,
@@ -107,18 +123,21 @@ object MidiCoreDesktopEntrypoint {
     fun run() {
         application {
             val services = remember { MidiCoreDesktopComposition.create() }
+            val workspace = remember(services) {
+                MidiCoreWorkspaceViewModel(services.workspace, services.preferences, services.logger)
+            }
             val desktopWindowState = rememberWindowState(placement = WindowPlacement.Maximized)
             Window(
                 state = desktopWindowState,
                 onCloseRequest = {
-                    services.audition.close()
+                    workspace.close()
                     exitApplication()
                 },
                 title = "Melotrail",
             ) {
                 window.minimumSize = java.awt.Dimension(900, 620)
                 MelotrailTheme {
-                    MidiCoreStartupSurface()
+                    MidiCoreStartupSurface(workspace)
                 }
             }
         }
@@ -127,11 +146,13 @@ object MidiCoreDesktopEntrypoint {
 
 /** Initial target surface; workflow state and six destinations arrive in MC-032–MC-040. */
 @Composable
-private fun MidiCoreStartupSurface() {
+private fun MidiCoreStartupSurface(workspace: MidiCoreWorkspaceViewModel) {
+    val state by workspace.state.collectAsState()
     Column(Modifier.fillMaxSize().padding(32.dp)) {
         Text("Melotrail", style = MaterialTheme.typography.headlineLarge)
         Text("MIDI Core", style = MaterialTheme.typography.titleLarge)
         Text("Local MIDI arrangement workspace", style = MaterialTheme.typography.bodyLarge)
+        Text(state.operation.message, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

@@ -1,0 +1,1143 @@
+package app.melotrail.desktop
+
+import app.melotrail.application.AcceptMidiCoreCandidate
+import app.melotrail.application.CompareMidiCoreCandidates
+import app.melotrail.application.ConfirmMidiCoreAuthority
+import app.melotrail.application.CreateMidiCoreProject
+import app.melotrail.application.GenerateMidiCoreCandidate
+import app.melotrail.application.ImportMidiCoreSource
+import app.melotrail.application.ListMidiCoreCandidates
+import app.melotrail.application.LockMidiCoreCandidate
+import app.melotrail.application.MidiCoreAuthoritativeHarmony
+import app.melotrail.application.MidiCoreCandidateGeneration
+import app.melotrail.application.MidiCoreCandidateGenerationResult
+import app.melotrail.application.MidiCoreCandidateReview
+import app.melotrail.application.MidiCoreCandidateReviewResult
+import app.melotrail.application.MidiCoreMelodySelection
+import app.melotrail.application.MidiCoreMidiPackageExporter
+import app.melotrail.application.MidiCoreMidiPackageExportResult
+import app.melotrail.application.MidiCoreMusicalAuthority
+import app.melotrail.application.MidiCoreProjectLifecycle
+import app.melotrail.application.MidiCoreProjectLifecycleResult
+import app.melotrail.application.MidiCoreProjectSession
+import app.melotrail.application.MidiCoreSourceImport
+import app.melotrail.application.MidiCoreSourceImportResult
+import app.melotrail.application.MidiCoreStructureTimeline
+import app.melotrail.application.RejectMidiCoreCandidate
+import app.melotrail.application.RegenerateMidiCoreCandidate
+import app.melotrail.application.ReplaceMidiCoreHarmony
+import app.melotrail.application.ReplaceMidiCoreStructure
+import app.melotrail.application.RestoreMidiCoreCandidate
+import app.melotrail.application.SelectMidiCoreMelody
+import app.melotrail.application.UnlockMidiCoreCandidate
+import app.melotrail.application.MidiCoreCandidateLifecycleResult
+import app.melotrail.application.MidiCoreCandidateProblem
+import app.melotrail.application.MidiCoreAuthorityProblem
+import app.melotrail.application.MidiCoreMelodySelectionProblem
+import app.melotrail.application.MidiCorePackageExportProblem
+import app.melotrail.application.MidiCoreProjectProblem
+import app.melotrail.application.MidiCoreSourceImportProblem
+import app.melotrail.application.MidiCoreStructureTimelineProblem
+import app.melotrail.application.MidiCoreAuthoritativeHarmonyProblem
+import app.melotrail.audition.MidiAuditionLoop
+import app.melotrail.audition.MidiAuditionPlaybackPlan
+import app.melotrail.audition.MidiAuditionPort
+import app.melotrail.audition.MidiAuditionResult
+import app.melotrail.audition.MidiAuditionState
+import app.melotrail.arrangement.core.MidiCoreSectionPolicy
+import app.melotrail.midi.domain.MidiFinding
+import app.melotrail.midi.domain.MidiImportValidationResult
+import app.melotrail.midi.domain.MidiTrackSummary
+import app.melotrail.project.AuthoritativeChordEvent
+import app.melotrail.project.CandidateRole
+import app.melotrail.project.MidiCoreAuthorityHasher
+import app.melotrail.project.MidiCoreGeneratorInput
+import app.melotrail.project.MidiCoreProject
+import app.melotrail.project.ProjectAuthority
+import app.melotrail.project.ProjectKey
+import app.melotrail.project.SelectedMelodyTrack
+import app.melotrail.music.core.ProjectKeySpelling
+import app.melotrail.music.core.ProjectMeter
+import app.melotrail.music.core.ProjectScaleMode
+import app.melotrail.music.core.ProjectTempo
+import app.melotrail.structure.MidiCoreOccurrencePlacement
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicBoolean
+
+/** Target-only dispatchers used by the focused workspace state machine. */
+data class MidiCoreWorkspaceDispatchers(
+    val ui: CoroutineDispatcher = Dispatchers.Main.immediate,
+    val io: CoroutineDispatcher = Dispatchers.IO,
+)
+
+/** Application boundaries used by the target workspace reducer and its tests. */
+interface MidiCoreWorkspaceUseCases {
+    val audition: MidiAuditionPort
+
+    fun create(request: CreateMidiCoreProject): MidiCoreProjectLifecycleResult
+    fun open(root: Path): MidiCoreProjectLifecycleResult
+    fun readCurrent(root: Path): MidiCoreProjectSession?
+    fun close(session: app.melotrail.application.MidiCoreProjectSession): app.melotrail.application.MidiCoreProjectCloseResult
+    fun importSource(request: ImportMidiCoreSource): MidiCoreSourceImportResult
+    fun selectMelody(request: SelectMidiCoreMelody): app.melotrail.application.MidiCoreMelodySelectionResult
+    fun confirmAuthority(request: ConfirmMidiCoreAuthority): app.melotrail.application.MidiCoreAuthorityResult
+    fun replaceStructure(request: ReplaceMidiCoreStructure): app.melotrail.application.MidiCoreStructureTimelineResult
+    fun replaceHarmony(request: ReplaceMidiCoreHarmony): app.melotrail.application.MidiCoreAuthoritativeHarmonyResult
+    fun listCandidates(request: ListMidiCoreCandidates): MidiCoreCandidateReviewResult
+    fun compareCandidates(request: CompareMidiCoreCandidates): MidiCoreCandidateReviewResult
+    fun acceptCandidate(request: AcceptMidiCoreCandidate): MidiCoreCandidateLifecycleResult
+    fun rejectCandidate(request: RejectMidiCoreCandidate): MidiCoreCandidateLifecycleResult
+    fun lockCandidate(request: LockMidiCoreCandidate): MidiCoreCandidateLifecycleResult
+    fun unlockCandidate(request: UnlockMidiCoreCandidate): MidiCoreCandidateLifecycleResult
+    fun restoreCandidate(request: RestoreMidiCoreCandidate): MidiCoreCandidateLifecycleResult
+    suspend fun generateCandidate(request: GenerateMidiCoreCandidate): MidiCoreCandidateGenerationResult
+    suspend fun regenerateCandidate(request: RegenerateMidiCoreCandidate): MidiCoreCandidateGenerationResult
+    fun export(request: app.melotrail.application.ExportMidiCorePackage): MidiCoreMidiPackageExportResult
+}
+
+/** The small project-facing use-case adapter consumed by the target desktop state. */
+class DefaultMidiCoreWorkspaceUseCases(
+    private val project: MidiCoreProjectLifecycle,
+    private val sourceImport: MidiCoreSourceImport,
+    private val melodySelection: MidiCoreMelodySelection,
+    private val authority: MidiCoreMusicalAuthority,
+    private val structure: MidiCoreStructureTimeline,
+    private val harmony: MidiCoreAuthoritativeHarmony,
+    private val generation: MidiCoreCandidateGeneration,
+    private val review: MidiCoreCandidateReview,
+    private val exporter: MidiCoreMidiPackageExporter,
+    override val audition: MidiAuditionPort,
+) : MidiCoreWorkspaceUseCases {
+    override fun create(request: CreateMidiCoreProject): MidiCoreProjectLifecycleResult = project.create(request)
+
+    override fun open(root: Path): MidiCoreProjectLifecycleResult = project.open(root)
+
+    override fun readCurrent(root: Path): MidiCoreProjectSession? = when (val result = project.open(root)) {
+        is MidiCoreProjectLifecycleResult.Opened -> result.session
+        is MidiCoreProjectLifecycleResult.Rejected -> null
+    }
+
+    override fun close(session: app.melotrail.application.MidiCoreProjectSession) = project.close(session)
+
+    override fun importSource(request: ImportMidiCoreSource): MidiCoreSourceImportResult = sourceImport.import(request)
+
+    override fun selectMelody(request: SelectMidiCoreMelody) = melodySelection.select(request)
+
+    override fun confirmAuthority(request: ConfirmMidiCoreAuthority) = authority.confirm(request)
+
+    override fun replaceStructure(request: ReplaceMidiCoreStructure) = structure.replace(request)
+
+    override fun replaceHarmony(request: ReplaceMidiCoreHarmony) = harmony.replace(request)
+
+    override fun listCandidates(request: ListMidiCoreCandidates): MidiCoreCandidateReviewResult = review.list(request)
+
+    override fun compareCandidates(request: CompareMidiCoreCandidates): MidiCoreCandidateReviewResult = review.compare(request)
+
+    override fun acceptCandidate(request: AcceptMidiCoreCandidate): MidiCoreCandidateLifecycleResult = review.accept(request)
+
+    override fun rejectCandidate(request: RejectMidiCoreCandidate): MidiCoreCandidateLifecycleResult = review.reject(request)
+
+    override fun lockCandidate(request: LockMidiCoreCandidate): MidiCoreCandidateLifecycleResult = review.lock(request)
+
+    override fun unlockCandidate(request: UnlockMidiCoreCandidate): MidiCoreCandidateLifecycleResult = review.unlock(request)
+
+    override fun restoreCandidate(request: RestoreMidiCoreCandidate): MidiCoreCandidateLifecycleResult = review.restore(request)
+
+    override suspend fun generateCandidate(request: GenerateMidiCoreCandidate): MidiCoreCandidateGenerationResult = generation.generate(request)
+
+    override suspend fun regenerateCandidate(request: RegenerateMidiCoreCandidate): MidiCoreCandidateGenerationResult = review.regenerate(request)
+
+    override fun export(request: app.melotrail.application.ExportMidiCorePackage): MidiCoreMidiPackageExportResult = exporter.export(request)
+
+}
+
+/** Immutable progress for one target workspace operation. */
+data class MidiCoreWorkspaceOperationProgress(
+    val completed: Int,
+    val total: Int,
+) {
+    init {
+        require(total > 0) { "Operation total must be positive" }
+        require(completed in 0..total) { "Completed operation work must be within the known total" }
+    }
+}
+
+enum class MidiCoreWorkspaceOperationKind {
+    PROJECT,
+    IMPORT,
+    MELODY,
+    AUTHORITY,
+    STRUCTURE,
+    HARMONY,
+    CANDIDATE_REVIEW,
+    CANDIDATE_GENERATION,
+    EXPORT,
+    AUDITION,
+}
+
+enum class MidiCoreWorkspaceOperationPhase { IDLE, RUNNING, CANCELLING, SUCCEEDED, FAILED, CANCELLED }
+
+enum class MidiCoreWorkspaceOperationOutcome { SUCCESS, FAILURE, CANCELLED }
+
+/** UI-neutral operation feedback for the target workspace; it has no worker/audio phases. */
+data class MidiCoreWorkspaceOperation(
+    val id: Long = 0L,
+    val kind: MidiCoreWorkspaceOperationKind? = null,
+    val phase: MidiCoreWorkspaceOperationPhase = MidiCoreWorkspaceOperationPhase.IDLE,
+    val message: String = "Ready.",
+    val progress: MidiCoreWorkspaceOperationProgress? = null,
+    val cancellableAtBoundary: Boolean = false,
+    val retry: MidiCoreWorkspaceIntent? = null,
+    val outcome: MidiCoreWorkspaceOperationOutcome? = null,
+) {
+    init {
+        require(id >= 0L) { "Operation ID must not be negative" }
+        require(phase !in setOf(MidiCoreWorkspaceOperationPhase.SUCCEEDED, MidiCoreWorkspaceOperationPhase.FAILED, MidiCoreWorkspaceOperationPhase.CANCELLED) || outcome != null) {
+            "Finished target operations require an outcome"
+        }
+        require(phase != MidiCoreWorkspaceOperationPhase.RUNNING || kind != null) {
+            "Running target operations require a kind"
+        }
+        require(phase !in setOf(MidiCoreWorkspaceOperationPhase.SUCCEEDED, MidiCoreWorkspaceOperationPhase.FAILED, MidiCoreWorkspaceOperationPhase.CANCELLED) || !cancellableAtBoundary) {
+            "Finished target operations cannot be cancellable"
+        }
+    }
+
+    val active: Boolean get() = phase == MidiCoreWorkspaceOperationPhase.RUNNING || phase == MidiCoreWorkspaceOperationPhase.CANCELLING
+
+    companion object {
+        /** Return the initial idle operation state. */
+        fun idle() = MidiCoreWorkspaceOperation()
+    }
+}
+
+enum class MidiCoreSourceStatus { EMPTY, IMPORTED, REJECTED }
+
+/** Persisted and in-memory MIDI import findings projected for the target UI. */
+data class MidiCoreSourceUiState(
+    val status: MidiCoreSourceStatus = MidiCoreSourceStatus.EMPTY,
+    val originalFilename: String? = null,
+    val sha256: String? = null,
+    val format: Int? = null,
+    val ppq: Int? = null,
+    val sourceEndTick: Long? = null,
+    val trackSummaries: List<MidiTrackSummary> = emptyList(),
+    val validation: MidiImportValidationResult? = null,
+    val findings: List<MidiFinding> = emptyList(),
+    val reportAvailable: Boolean = false,
+)
+
+/** Protected melody selection and its last typed validation result. */
+data class MidiCoreMelodyUiState(
+    val selected: SelectedMelodyTrack? = null,
+    val validation: MidiImportValidationResult? = null,
+)
+
+/** Typed authority draft kept in memory until the user explicitly confirms it. */
+data class MidiCoreAuthorityDraft(
+    val key: ProjectKey = ProjectKey(ProjectKeySpelling.C, ProjectScaleMode.MAJOR),
+    val tempo: ProjectTempo = ProjectTempo(500_000),
+    val meter: ProjectMeter = ProjectMeter(4, 2),
+) {
+    /** Convert the draft to the immutable project authority request. */
+    fun toRequest(
+        session: app.melotrail.application.MidiCoreProjectSession,
+    ): ConfirmMidiCoreAuthority = ConfirmMidiCoreAuthority(session, key, tempo, meter)
+
+    companion object {
+        /** Use fixed, transparent MIDI defaults until a musician edits the draft. */
+        fun defaults() = MidiCoreAuthorityDraft()
+    }
+}
+
+/** Authority state separates persisted confirmation from an unsaved UI draft. */
+data class MidiCoreAuthorityUiState(
+    val confirmed: ProjectAuthority? = null,
+    val draft: MidiCoreAuthorityDraft = MidiCoreAuthorityDraft.defaults(),
+    val draftDirty: Boolean = false,
+    val suggestions: app.melotrail.application.MidiCoreAuthoritySuggestions? = null,
+)
+
+/** Candidate review state contains inspectable evidence, never direct file reads. */
+data class MidiCoreCandidateReviewUiState(
+    val role: CandidateRole? = null,
+    val occurrenceId: String? = null,
+    val candidates: List<app.melotrail.application.MidiCoreCandidateReviewItem> = emptyList(),
+    val comparison: MidiCoreCandidateComparison? = null,
+    val selectedCandidateId: String? = null,
+)
+
+/** Candidate comparison projected without retaining a project session in Compose state. */
+data class MidiCoreCandidateComparison(
+    val first: app.melotrail.application.MidiCoreCandidateReviewItem,
+    val second: app.melotrail.application.MidiCoreCandidateReviewItem,
+    val differences: List<app.melotrail.application.MidiCoreCandidateDifference>,
+)
+
+/** Last successful target export and its current typed blocker. */
+data class MidiCoreExportUiState(
+    val latest: app.melotrail.application.MidiCoreExportedPackage? = null,
+    val latestSnapshot: app.melotrail.project.MidiCoreExportSnapshot? = null,
+)
+
+enum class MidiCoreWorkspaceBlockerCode {
+    PROJECT_REQUIRED,
+    SOURCE_REQUIRED,
+    MELODY_REQUIRED,
+    AUTHORITY_REQUIRED,
+    STRUCTURE_REQUIRED,
+    HARMONY_REQUIRED,
+    CANDIDATE_REVIEW_REQUIRED,
+    EXPORT_NOT_READY,
+    REVISION_CONFLICT,
+    STALE_COMPLETION,
+    OPERATION_BUSY,
+    APPLICATION_FAILURE,
+}
+
+/** An actionable explanation shown next to the target UI action it blocks. */
+data class MidiCoreWorkspaceBlocker(
+    val code: MidiCoreWorkspaceBlockerCode,
+    val message: String,
+    val nextAction: String,
+    val sourceCode: String? = null,
+    val action: MidiCoreWorkspaceIntent? = null,
+    val occurrenceId: String? = null,
+    val role: CandidateRole? = null,
+)
+
+/** Small confirmation dialog state for an unsaved authority draft. */
+sealed interface MidiCoreWorkspaceDialog {
+    data class ConfirmDiscardAuthorityDraft(val pending: MidiCoreWorkspaceIntent) : MidiCoreWorkspaceDialog
+}
+
+/** Complete target state exposed to Compose; no legacy audio-production state is present. */
+data class MidiCoreWorkspaceState(
+    val project: MidiCoreProject? = null,
+    val projectRoot: Path? = null,
+    val source: MidiCoreSourceUiState = MidiCoreSourceUiState(),
+    val melody: MidiCoreMelodyUiState = MidiCoreMelodyUiState(),
+    val authority: MidiCoreAuthorityUiState = MidiCoreAuthorityUiState(),
+    val review: MidiCoreCandidateReviewUiState = MidiCoreCandidateReviewUiState(),
+    val audition: MidiAuditionState = MidiAuditionState(),
+    val export: MidiCoreExportUiState = MidiCoreExportUiState(),
+    val operation: MidiCoreWorkspaceOperation = MidiCoreWorkspaceOperation.idle(),
+    val dialog: MidiCoreWorkspaceDialog? = null,
+    val blockers: List<MidiCoreWorkspaceBlocker> = emptyList(),
+    val notification: String? = null,
+) {
+    /** The revision admitted by the currently hydrated project, or null before opening one. */
+    val projectRevision: Long? get() = project?.revision
+
+    /** Whether a target operation is currently changing or validating project state. */
+    val busy: Boolean get() = operation.active
+}
+
+/** All target workspace mutations are represented as explicit intents. */
+sealed interface MidiCoreWorkspaceIntent {
+    data class CreateProject(
+        val root: Path,
+        val name: String,
+        val id: String? = null,
+        val applicationVersion: String? = null,
+    ) : MidiCoreWorkspaceIntent
+
+    data class OpenProject(val root: Path) : MidiCoreWorkspaceIntent
+    data object OpenLastProject : MidiCoreWorkspaceIntent
+    data object ReloadProject : MidiCoreWorkspaceIntent
+    data object CloseProject : MidiCoreWorkspaceIntent
+    data class ImportSource(val source: Path) : MidiCoreWorkspaceIntent
+    data class SelectMelody(val trackIndex: Int, val channel: Int) : MidiCoreWorkspaceIntent
+    data class UpdateAuthorityDraft(val draft: MidiCoreAuthorityDraft) : MidiCoreWorkspaceIntent
+    data object ConfirmAuthority : MidiCoreWorkspaceIntent
+    data class ReplaceStructure(
+        val definitions: List<app.melotrail.project.ProjectSectionDefinition>,
+        val occurrences: List<MidiCoreOccurrencePlacement>,
+        val pickupTicks: Long = 0L,
+        val expectedSongEndTick: Long? = null,
+    ) : MidiCoreWorkspaceIntent
+    data class ReplaceHarmony(val events: List<AuthoritativeChordEvent>) : MidiCoreWorkspaceIntent
+    data class SelectReviewScope(val role: CandidateRole, val occurrenceId: String) : MidiCoreWorkspaceIntent
+    data class LoadCandidates(val role: CandidateRole, val occurrenceId: String) : MidiCoreWorkspaceIntent
+    data class CompareCandidates(val firstCandidateId: String, val secondCandidateId: String) : MidiCoreWorkspaceIntent
+    data class GenerateCandidate(
+        val role: CandidateRole,
+        val occurrenceId: String,
+        val performanceProfileId: String,
+        val patternId: String,
+        val generator: MidiCoreGeneratorInput,
+        val sectionPolicy: MidiCoreSectionPolicy = MidiCoreSectionPolicy(),
+    ) : MidiCoreWorkspaceIntent
+    data class RegenerateCandidate(
+        val role: CandidateRole,
+        val occurrenceId: String,
+        val performanceProfileId: String,
+        val patternId: String,
+        val generator: MidiCoreGeneratorInput,
+        val sectionPolicy: MidiCoreSectionPolicy = MidiCoreSectionPolicy(),
+    ) : MidiCoreWorkspaceIntent
+    data class AcceptCandidate(val candidateId: String, val locked: Boolean = false) : MidiCoreWorkspaceIntent
+    data class RejectCandidate(val candidateId: String, val reason: String) : MidiCoreWorkspaceIntent
+    data class LockCandidate(val candidateId: String) : MidiCoreWorkspaceIntent
+    data class UnlockCandidate(val candidateId: String) : MidiCoreWorkspaceIntent
+    data class RestoreCandidate(val candidateId: String, val role: CandidateRole, val occurrenceId: String, val locked: Boolean = false) : MidiCoreWorkspaceIntent
+    data object ExportPackage : MidiCoreWorkspaceIntent
+    data class SelectAudition(val plan: MidiAuditionPlaybackPlan) : MidiCoreWorkspaceIntent
+    data class PlayAudition(val plan: MidiAuditionPlaybackPlan? = null) : MidiCoreWorkspaceIntent
+    data object PauseAudition : MidiCoreWorkspaceIntent
+    data object StopAudition : MidiCoreWorkspaceIntent
+    data class SeekAudition(val tick: Long) : MidiCoreWorkspaceIntent
+    data class SetAuditionLoop(val loop: MidiAuditionLoop?) : MidiCoreWorkspaceIntent
+    data class MuteAuditionRole(val role: app.melotrail.midi.domain.MidiExportRole, val muted: Boolean) : MidiCoreWorkspaceIntent
+    data class SoloAuditionRole(val role: app.melotrail.midi.domain.MidiExportRole, val solo: Boolean) : MidiCoreWorkspaceIntent
+    data object CancelOperation : MidiCoreWorkspaceIntent
+    data object Retry : MidiCoreWorkspaceIntent
+    data object DismissDialog : MidiCoreWorkspaceIntent
+    data object ConfirmDiscardAuthorityDraft : MidiCoreWorkspaceIntent
+}
+
+/**
+ * Focused target ViewModel. Blocking use cases run on the injected I/O
+ * dispatcher and every result is admitted by operation ID, project revision,
+ * and authority hash before it can update visible state.
+ */
+class MidiCoreWorkspaceViewModel(
+    private val useCases: MidiCoreWorkspaceUseCases,
+    private val preferences: MidiCoreDesktopPreferences = NoOpMidiCoreDesktopPreferences,
+    private val logger: DesktopOperationLogger = NoOpDesktopOperationLogger,
+    dispatchers: MidiCoreWorkspaceDispatchers = MidiCoreWorkspaceDispatchers(),
+) : AutoCloseable {
+    private val scope = CoroutineScope(SupervisorJob() + dispatchers.ui)
+    private val _state = MutableStateFlow(MidiCoreWorkspaceState())
+    private val dispatchers = dispatchers
+    private var session: app.melotrail.application.MidiCoreProjectSession? = null
+    private var nextOperationId = 0L
+    private var activeJob: Job? = null
+    private var activeCancellation: AtomicBoolean? = null
+    private var closed = false
+
+    /** Immutable state stream consumed by the focused Compose destinations. */
+    val state: StateFlow<MidiCoreWorkspaceState> = _state.asStateFlow()
+
+    /** Route one user intent through the target application boundaries. */
+    fun accept(intent: MidiCoreWorkspaceIntent) {
+        if (closed) return
+        when (intent) {
+            is MidiCoreWorkspaceIntent.CreateProject -> create(intent)
+            is MidiCoreWorkspaceIntent.OpenProject -> open(intent.root, intent)
+            MidiCoreWorkspaceIntent.OpenLastProject -> openLast()
+            MidiCoreWorkspaceIntent.ReloadProject -> reload()
+            MidiCoreWorkspaceIntent.CloseProject -> closeProject()
+            is MidiCoreWorkspaceIntent.ImportSource -> importSource(intent)
+            is MidiCoreWorkspaceIntent.SelectMelody -> selectMelody(intent)
+            is MidiCoreWorkspaceIntent.UpdateAuthorityDraft -> updateAuthorityDraft(intent.draft)
+            MidiCoreWorkspaceIntent.ConfirmAuthority -> confirmAuthority()
+            is MidiCoreWorkspaceIntent.ReplaceStructure -> replaceStructure(intent)
+            is MidiCoreWorkspaceIntent.ReplaceHarmony -> replaceHarmony(intent)
+            is MidiCoreWorkspaceIntent.SelectReviewScope -> selectReviewScope(intent)
+            is MidiCoreWorkspaceIntent.LoadCandidates -> loadCandidates(intent)
+            is MidiCoreWorkspaceIntent.CompareCandidates -> compareCandidates(intent)
+            is MidiCoreWorkspaceIntent.GenerateCandidate -> generateCandidate(intent, regenerate = false)
+            is MidiCoreWorkspaceIntent.RegenerateCandidate -> generateCandidate(intent, regenerate = true)
+            is MidiCoreWorkspaceIntent.AcceptCandidate -> acceptCandidate(intent)
+            is MidiCoreWorkspaceIntent.RejectCandidate -> rejectCandidate(intent)
+            is MidiCoreWorkspaceIntent.LockCandidate -> lockCandidate(intent)
+            is MidiCoreWorkspaceIntent.UnlockCandidate -> unlockCandidate(intent)
+            is MidiCoreWorkspaceIntent.RestoreCandidate -> restoreCandidate(intent)
+            MidiCoreWorkspaceIntent.ExportPackage -> exportPackage()
+            is MidiCoreWorkspaceIntent.SelectAudition -> audition { useCases.audition.selectScope(intent.plan) }
+            is MidiCoreWorkspaceIntent.PlayAudition -> audition {
+                intent.plan?.let { useCases.audition.play(it) } ?: useCases.audition.play()
+            }
+            MidiCoreWorkspaceIntent.PauseAudition -> audition { useCases.audition.pause() }
+            MidiCoreWorkspaceIntent.StopAudition -> audition { useCases.audition.stop() }
+            is MidiCoreWorkspaceIntent.SeekAudition -> audition { useCases.audition.seek(intent.tick) }
+            is MidiCoreWorkspaceIntent.SetAuditionLoop -> audition { useCases.audition.setLoop(intent.loop) }
+            is MidiCoreWorkspaceIntent.MuteAuditionRole -> audition { useCases.audition.setMutedRole(intent.role, intent.muted) }
+            is MidiCoreWorkspaceIntent.SoloAuditionRole -> audition { useCases.audition.setSoloRole(intent.role, intent.solo) }
+            MidiCoreWorkspaceIntent.CancelOperation -> cancelOperation()
+            MidiCoreWorkspaceIntent.Retry -> retry()
+            MidiCoreWorkspaceIntent.DismissDialog -> _state.value = _state.value.copy(dialog = null)
+            MidiCoreWorkspaceIntent.ConfirmDiscardAuthorityDraft -> confirmDiscardDraft()
+        }
+    }
+
+    /** Alias for Compose callers that prefer dispatch terminology. */
+    fun dispatch(intent: MidiCoreWorkspaceIntent) = accept(intent)
+
+    override fun close() {
+        if (closed) return
+        closed = true
+        activeCancellation?.set(true)
+        activeJob?.cancel()
+        activeJob = null
+        activeCancellation = null
+        useCases.audition.close()
+        scope.cancel()
+    }
+
+    private fun create(intent: MidiCoreWorkspaceIntent.CreateProject) {
+        if (guardProjectOperation(intent)) return
+        startOperation(MidiCoreWorkspaceOperationKind.PROJECT, "Creating MIDI Core project…", intent) { _ ->
+            when (val result = useCases.create(CreateMidiCoreProject(intent.root, intent.name, intent.id, intent.applicationVersion))) {
+                is MidiCoreProjectLifecycleResult.Opened -> success("MIDI Core project created.", result.session)
+                is MidiCoreProjectLifecycleResult.Rejected -> failure(projectBlocker(result.problem), intent)
+            }
+        }
+    }
+
+    private fun open(root: Path, pending: MidiCoreWorkspaceIntent = MidiCoreWorkspaceIntent.OpenProject(root)) {
+        if (state.value.authority.draftDirty) {
+            _state.value = _state.value.copy(dialog = MidiCoreWorkspaceDialog.ConfirmDiscardAuthorityDraft(pending))
+            return
+        }
+        if (guardProjectOperation(pending)) return
+        startOperation(MidiCoreWorkspaceOperationKind.PROJECT, "Opening MIDI Core project…", pending) { _ ->
+            when (val result = useCases.open(root)) {
+                is MidiCoreProjectLifecycleResult.Opened -> success("MIDI Core project opened.", result.session)
+                is MidiCoreProjectLifecycleResult.Rejected -> failure(projectBlocker(result.problem), pending)
+            }
+        }
+    }
+
+    private fun openLast() {
+        val root = preferences.lastOpenedProject()
+        if (root == null) {
+            failImmediately(blocker(
+                MidiCoreWorkspaceBlockerCode.PROJECT_REQUIRED,
+                "No previously opened MIDI Core project is available.",
+                "Create a project or choose a project folder.",
+                action = MidiCoreWorkspaceIntent.CreateProject(Path.of("."), "Untitled"),
+            ))
+        } else {
+            open(root, MidiCoreWorkspaceIntent.OpenLastProject)
+        }
+    }
+
+    private fun reload() {
+        val root = session?.root ?: return failImmediately(blocker(MidiCoreWorkspaceBlockerCode.PROJECT_REQUIRED, "No MIDI Core project is open.", "Open or create a project before reloading."))
+        if (state.value.authority.draftDirty) {
+            _state.value = _state.value.copy(dialog = MidiCoreWorkspaceDialog.ConfirmDiscardAuthorityDraft(MidiCoreWorkspaceIntent.ReloadProject))
+            return
+        }
+        open(root, MidiCoreWorkspaceIntent.ReloadProject)
+    }
+
+    private fun closeProject() {
+        val intent = MidiCoreWorkspaceIntent.CloseProject
+        if (state.value.authority.draftDirty) {
+            _state.value = _state.value.copy(dialog = MidiCoreWorkspaceDialog.ConfirmDiscardAuthorityDraft(intent))
+            return
+        }
+        val current = session ?: return
+        if (state.value.busy) return busyBlocker()
+        useCases.close(current)
+        session = null
+        _state.value = MidiCoreWorkspaceState(blockers = baseBlockers(null), notification = "MIDI Core project closed.")
+    }
+
+    private fun importSource(intent: MidiCoreWorkspaceIntent.ImportSource) {
+        val current = requireSessionOrBlock() ?: return
+        startOperation(MidiCoreWorkspaceOperationKind.IMPORT, "Importing source MIDI…", intent) { _ ->
+            when (val result = useCases.importSource(ImportMidiCoreSource(current, intent.source))) {
+                is MidiCoreSourceImportResult.Imported -> success("Source MIDI imported and preserved.", result.session) {
+                    hydrateSourceValidation(result.validation)
+                }
+                is MidiCoreSourceImportResult.Rejected -> failure(sourceBlocker(result.problem, result.validation), intent)
+            }
+        }
+    }
+
+    private fun selectMelody(intent: MidiCoreWorkspaceIntent.SelectMelody) {
+        val current = requireSessionOrBlock() ?: return
+        startOperation(MidiCoreWorkspaceOperationKind.MELODY, "Protecting selected melody…", intent) { _ ->
+            when (val result = useCases.selectMelody(SelectMidiCoreMelody(current, intent.trackIndex, intent.channel))) {
+                is app.melotrail.application.MidiCoreMelodySelectionResult.Selected -> success("Protected melody selected.", result.session) {
+                    _state.value = _state.value.copy(
+                        source = _state.value.source.copy(validation = result.validation, findings = result.validation.findings),
+                        melody = MidiCoreMelodyUiState(result.session.project.selectedMelody, result.validation),
+                    )
+                }
+                is app.melotrail.application.MidiCoreMelodySelectionResult.Rejected -> failure(melodyBlocker(result.problem, result.validation), intent)
+            }
+        }
+    }
+
+    private fun updateAuthorityDraft(draft: MidiCoreAuthorityDraft) {
+        if (session == null) {
+            failImmediately(blocker(MidiCoreWorkspaceBlockerCode.PROJECT_REQUIRED, "Open a MIDI Core project before editing authority.", "Create or open a project first."))
+            return
+        }
+        _state.value = _state.value.copy(
+            authority = _state.value.authority.copy(draft = draft, draftDirty = draft != authorityDraft(_state.value.project?.authority)),
+            notification = null,
+        )
+    }
+
+    private fun confirmAuthority() {
+        val current = requireSessionOrBlock() ?: return
+        if (state.value.authority.draftDirty.not() && current.project.authority != null) {
+            _state.value = _state.value.copy(notification = "Musical authority is already confirmed.")
+            return
+        }
+        startOperation(MidiCoreWorkspaceOperationKind.AUTHORITY, "Confirming musical authority…", MidiCoreWorkspaceIntent.ConfirmAuthority) { _ ->
+            when (val result = useCases.confirmAuthority(state.value.authority.draft.toRequest(current))) {
+                is app.melotrail.application.MidiCoreAuthorityResult.Confirmed -> success("Musical authority confirmed.", result.session) {
+                    _state.value = _state.value.copy(
+                        authority = _state.value.authority.copy(
+                            confirmed = result.session.project.authority,
+                            draft = authorityDraft(result.session.project.authority),
+                            draftDirty = false,
+                            suggestions = result.suggestions,
+                        ),
+                        source = _state.value.source.copy(validation = result.validation, findings = result.validation.findings),
+                    )
+                }
+                is app.melotrail.application.MidiCoreAuthorityResult.Rejected -> failure(authorityBlocker(result.problem, result.validation), MidiCoreWorkspaceIntent.ConfirmAuthority)
+            }
+        }
+    }
+
+    private fun replaceStructure(intent: MidiCoreWorkspaceIntent.ReplaceStructure) {
+        val current = requireSessionOrBlock() ?: return
+        startOperation(MidiCoreWorkspaceOperationKind.STRUCTURE, "Saving structure timeline…", intent) { _ ->
+            when (val result = useCases.replaceStructure(ReplaceMidiCoreStructure(current, intent.definitions, intent.occurrences, intent.pickupTicks, intent.expectedSongEndTick))) {
+                is app.melotrail.application.MidiCoreStructureTimelineResult.Updated -> success("Structure timeline saved.", result.session)
+                is app.melotrail.application.MidiCoreStructureTimelineResult.Rejected -> failure(structureBlocker(result.problem), intent)
+            }
+        }
+    }
+
+    private fun replaceHarmony(intent: MidiCoreWorkspaceIntent.ReplaceHarmony) {
+        val current = requireSessionOrBlock() ?: return
+        startOperation(MidiCoreWorkspaceOperationKind.HARMONY, "Saving authoritative harmony…", intent) { _ ->
+            when (val result = useCases.replaceHarmony(ReplaceMidiCoreHarmony(current, intent.events))) {
+                is app.melotrail.application.MidiCoreAuthoritativeHarmonyResult.Updated -> success("Authoritative harmony saved.", result.session)
+                is app.melotrail.application.MidiCoreAuthoritativeHarmonyResult.Rejected -> failure(harmonyBlocker(result.problem), intent)
+            }
+        }
+    }
+
+    private fun selectReviewScope(intent: MidiCoreWorkspaceIntent.SelectReviewScope) {
+        _state.value = _state.value.copy(review = _state.value.review.copy(role = intent.role, occurrenceId = intent.occurrenceId, comparison = null))
+    }
+
+    private fun loadCandidates(intent: MidiCoreWorkspaceIntent.LoadCandidates) {
+        val current = requireSessionOrBlock() ?: return
+        startOperation(MidiCoreWorkspaceOperationKind.CANDIDATE_REVIEW, "Loading candidate evidence…", intent) { _ ->
+            when (val result = useCases.listCandidates(ListMidiCoreCandidates(current, intent.role, intent.occurrenceId, current.project.revision))) {
+                is MidiCoreCandidateReviewResult.Listed -> success("Candidate evidence loaded.") {
+                    _state.value = _state.value.copy(review = _state.value.review.copy(
+                        role = intent.role,
+                        occurrenceId = intent.occurrenceId,
+                        candidates = result.candidates,
+                        comparison = null,
+                    ))
+                }
+                is MidiCoreCandidateReviewResult.Rejected -> failure(candidateBlocker(result.problem), intent)
+                is MidiCoreCandidateReviewResult.Compared -> error("Candidate listing returned comparison evidence")
+            }
+        }
+    }
+
+    private fun compareCandidates(intent: MidiCoreWorkspaceIntent.CompareCandidates) {
+        val current = requireSessionOrBlock() ?: return
+        val reviewState = state.value.review
+        val role = reviewState.role ?: return failImmediately(blocker(MidiCoreWorkspaceBlockerCode.CANDIDATE_REVIEW_REQUIRED, "Choose a role before comparing candidates.", "Select a role and occurrence, then load its candidates."))
+        val occurrence = reviewState.occurrenceId ?: return failImmediately(blocker(MidiCoreWorkspaceBlockerCode.CANDIDATE_REVIEW_REQUIRED, "Choose an occurrence before comparing candidates.", "Select a role and occurrence, then load its candidates."))
+        startOperation(MidiCoreWorkspaceOperationKind.CANDIDATE_REVIEW, "Comparing candidate evidence…", intent) { _ ->
+            when (val result = useCases.compareCandidates(CompareMidiCoreCandidates(current, role, occurrence, intent.firstCandidateId, intent.secondCandidateId, current.project.revision))) {
+                is MidiCoreCandidateReviewResult.Compared -> success("Candidate differences calculated.") {
+                    _state.value = _state.value.copy(review = _state.value.review.copy(
+                        candidates = listOf(result.first, result.second),
+                        comparison = MidiCoreCandidateComparison(result.first, result.second, result.differences),
+                    ))
+                }
+                is MidiCoreCandidateReviewResult.Rejected -> failure(candidateBlocker(result.problem), intent)
+                is MidiCoreCandidateReviewResult.Listed -> error("Candidate comparison returned a list")
+            }
+        }
+    }
+
+    private fun generateCandidate(intent: MidiCoreWorkspaceIntent, regenerate: Boolean) {
+        val current = requireSessionOrBlock() ?: return
+        val request = when (intent) {
+            is MidiCoreWorkspaceIntent.GenerateCandidate -> CandidateGenerationRequest(
+                intent.role, intent.occurrenceId, intent.performanceProfileId, intent.patternId, intent.generator, intent.sectionPolicy,
+            )
+            is MidiCoreWorkspaceIntent.RegenerateCandidate -> CandidateGenerationRequest(
+                intent.role, intent.occurrenceId, intent.performanceProfileId, intent.patternId, intent.generator, intent.sectionPolicy,
+            )
+            else -> return
+        }
+        startOperation(MidiCoreWorkspaceOperationKind.CANDIDATE_GENERATION, "Generating ${request.role.name.lowercase()} candidate…", intent) { cancellation ->
+            val generatorRequest = GenerateMidiCoreCandidate(
+                session = current,
+                role = request.role,
+                occurrenceId = request.occurrenceId,
+                performanceProfileId = request.performanceProfileId,
+                patternId = request.patternId,
+                generator = request.generator,
+                sectionPolicy = request.sectionPolicy,
+                cancellation = app.melotrail.application.MidiCoreGenerationCancellation { cancellation.get() },
+            )
+            val result = if (regenerate) {
+                useCases.regenerateCandidate(RegenerateMidiCoreCandidate(generatorRequest, current.project.revision))
+            } else {
+                useCases.generateCandidate(generatorRequest)
+            }
+            when (result) {
+                is MidiCoreCandidateGenerationResult.Published -> success("Candidate published.", result.session) {
+                    _state.value = _state.value.copy(review = _state.value.review.copy(
+                        role = request.role,
+                        occurrenceId = request.occurrenceId,
+                        candidates = emptyList(),
+                        comparison = null,
+                    ))
+                }
+                is MidiCoreCandidateGenerationResult.ValidationRejected -> failure(
+                    blocker(MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE, "The generated candidate failed typed role validation.", "Choose another curated profile or pattern and retry.", sourceCode = "VALIDATION_REJECTED", action = intent, occurrenceId = request.occurrenceId, role = request.role),
+                    intent,
+                )
+                is MidiCoreCandidateGenerationResult.Cancelled -> cancelled()
+                is MidiCoreCandidateGenerationResult.Rejected -> failure(candidateBlocker(result.problem), intent)
+            }
+        }
+    }
+
+    private fun acceptCandidate(intent: MidiCoreWorkspaceIntent.AcceptCandidate) = candidateTransition(intent) { current ->
+        useCases.acceptCandidate(AcceptMidiCoreCandidate(current, intent.candidateId, intent.locked, current.project.revision))
+    }
+
+    private fun rejectCandidate(intent: MidiCoreWorkspaceIntent.RejectCandidate) = candidateTransition(intent) { current ->
+        useCases.rejectCandidate(RejectMidiCoreCandidate(current, intent.candidateId, intent.reason, current.project.revision))
+    }
+
+    private fun lockCandidate(intent: MidiCoreWorkspaceIntent.LockCandidate) = candidateTransition(intent) { current ->
+        useCases.lockCandidate(LockMidiCoreCandidate(current, intent.candidateId, current.project.revision))
+    }
+
+    private fun unlockCandidate(intent: MidiCoreWorkspaceIntent.UnlockCandidate) = candidateTransition(intent) { current ->
+        useCases.unlockCandidate(UnlockMidiCoreCandidate(current, intent.candidateId, current.project.revision))
+    }
+
+    private fun restoreCandidate(intent: MidiCoreWorkspaceIntent.RestoreCandidate) = candidateTransition(intent) { current ->
+        useCases.restoreCandidate(RestoreMidiCoreCandidate(current, intent.occurrenceId, intent.role, intent.candidateId, intent.locked, current.project.revision))
+    }
+
+    private fun candidateTransition(
+        intent: MidiCoreWorkspaceIntent,
+        action: (app.melotrail.application.MidiCoreProjectSession) -> MidiCoreCandidateLifecycleResult,
+    ) {
+        val current = requireSessionOrBlock() ?: return
+        startOperation(MidiCoreWorkspaceOperationKind.CANDIDATE_REVIEW, "Saving candidate review decision…", intent) { _ ->
+            when (val result = action(current)) {
+                is MidiCoreCandidateLifecycleResult.Updated -> success("Candidate review decision saved.", result.session) {
+                    _state.value = _state.value.copy(review = _state.value.review.copy(candidates = emptyList(), comparison = null))
+                }
+                is MidiCoreCandidateLifecycleResult.Published -> success("Candidate published.", result.session)
+                is MidiCoreCandidateLifecycleResult.Rejected -> failure(candidateBlocker(result.problem), intent)
+            }
+        }
+    }
+
+    private fun exportPackage() {
+        val current = requireSessionOrBlock() ?: return
+        startOperation(MidiCoreWorkspaceOperationKind.EXPORT, "Publishing MIDI package…", MidiCoreWorkspaceIntent.ExportPackage) { _ ->
+            when (val result = useCases.export(app.melotrail.application.ExportMidiCorePackage(current, expectedRevision = current.project.revision))) {
+                is MidiCoreMidiPackageExportResult.Exported -> success("MIDI package published.", result.packageResult.session) {
+                    _state.value = _state.value.copy(export = MidiCoreExportUiState(result.packageResult, result.packageResult.snapshot))
+                }
+                is MidiCoreMidiPackageExportResult.Rejected -> failure(exportBlocker(result.problem), MidiCoreWorkspaceIntent.ExportPackage)
+            }
+        }
+    }
+
+    private fun audition(action: () -> MidiAuditionResult) {
+        val result = try {
+            action()
+        } catch (error: Exception) {
+            _state.value = _state.value.copy(blockers = listOf(blocker(MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE, "MIDI audition could not be updated.", "Stop audition, choose a valid MIDI view, and retry.", error.javaClass.simpleName)))
+            return
+        }
+        _state.value = _state.value.copy(
+            audition = result.state,
+            operation = _state.value.operation.copy(
+                kind = MidiCoreWorkspaceOperationKind.AUDITION,
+                phase = if (result is MidiAuditionResult.Failed) MidiCoreWorkspaceOperationPhase.FAILED else MidiCoreWorkspaceOperationPhase.SUCCEEDED,
+                message = if (result is MidiAuditionResult.Failed) result.problem.message else "MIDI audition updated.",
+                outcome = if (result is MidiAuditionResult.Failed) MidiCoreWorkspaceOperationOutcome.FAILURE else MidiCoreWorkspaceOperationOutcome.SUCCESS,
+            ),
+            blockers = if (result is MidiAuditionResult.Failed) listOf(blocker(MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE, result.problem.message, result.problem.nextAction, result.problem.code.name)) else baseBlockers(session?.project),
+        )
+    }
+
+    private fun cancelOperation() {
+        val current = state.value.operation
+        if (!current.active) return
+        if (!current.cancellableAtBoundary) return
+        activeCancellation?.set(true)
+        _state.value = _state.value.copy(operation = current.copy(phase = MidiCoreWorkspaceOperationPhase.CANCELLING, message = "Cancelling ${current.kind?.name?.lowercase() ?: "operation"}…", cancellableAtBoundary = false))
+        val cancelledJob = activeJob
+        cancelledJob?.cancel()
+        if (cancelledJob == null) {
+            finishCancelled(current.id)
+        } else {
+            scope.launch {
+                cancelledJob.join()
+                finishCancelled(current.id)
+            }
+        }
+    }
+
+    private fun retry() {
+        val retry = state.value.operation.retry ?: return
+        if (state.value.operation.active) return busyBlocker()
+        accept(retry)
+    }
+
+    private fun confirmDiscardDraft() {
+        val dialog = state.value.dialog as? MidiCoreWorkspaceDialog.ConfirmDiscardAuthorityDraft ?: return
+        val pending = dialog.pending
+        _state.value = _state.value.copy(
+            authority = _state.value.authority.copy(
+                draft = authorityDraft(_state.value.project?.authority),
+                draftDirty = false,
+            ),
+            dialog = null,
+        )
+        accept(pending)
+    }
+
+    private fun startOperation(
+        kind: MidiCoreWorkspaceOperationKind,
+        message: String,
+        retry: MidiCoreWorkspaceIntent?,
+        work: suspend (AtomicBoolean) -> WorkspaceOutcome,
+    ) {
+        if (state.value.operation.active) {
+            busyBlocker()
+            return
+        }
+        val operationId = ++nextOperationId
+        val admission = Admission(
+            root = session?.root?.toAbsolutePath()?.normalize(),
+            revision = session?.project?.revision,
+            authorityHash = session?.project?.let { runCatching { MidiCoreAuthorityHasher.from(it).sha256 }.getOrNull() },
+            sessionBound = session != null,
+        )
+        val cancellation = AtomicBoolean(false)
+        activeCancellation = cancellation
+        _state.value = _state.value.copy(
+            operation = MidiCoreWorkspaceOperation(
+                id = operationId,
+                kind = kind,
+                phase = MidiCoreWorkspaceOperationPhase.RUNNING,
+                message = message,
+                cancellableAtBoundary = true,
+                retry = retry,
+            ),
+            notification = null,
+        )
+        logger.event("midi_core_${kind.name.lowercase()}", "operation-${operationId}-started")
+        val job = scope.launch {
+            try {
+                val outcome = withContext(dispatchers.io) { work(cancellation) }
+                val persisted = withContext(dispatchers.io) {
+                    admission.root?.let { root -> useCases.readCurrent(root) }
+                }
+                withContext(dispatchers.ui) {
+                    finishOperation(operationId, admission, outcome, persisted)
+                }
+            } catch (_: CancellationException) {
+                withContext(NonCancellable + dispatchers.ui) { finishCancelled(operationId) }
+            } catch (error: Throwable) {
+                withContext(dispatchers.ui) {
+                    finishFailure(
+                        operationId,
+                        blocker(MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE, "The MIDI Core operation failed safely.", "Retry the operation after checking the project and its artifacts.", error.javaClass.simpleName, retry),
+                        retry,
+                    )
+                }
+            }
+        }
+        activeJob = job
+    }
+
+    private fun finishOperation(
+        operationId: Long,
+        admission: Admission,
+        outcome: WorkspaceOutcome,
+        persisted: MidiCoreProjectSession?,
+    ) {
+        if (state.value.operation.id != operationId) return
+        if (state.value.operation.phase == MidiCoreWorkspaceOperationPhase.CANCELLING) {
+            finishCancelled(operationId)
+            return
+        }
+        val expectedProject = (outcome as? WorkspaceOutcome.Success)?.session?.project
+        if (!admitted(admission, persisted, expectedProject)) {
+            val stale = blocker(
+                MidiCoreWorkspaceBlockerCode.STALE_COMPLETION,
+                "The operation completed against an older project revision or authority hash; its result was not admitted.",
+                "Reload the project and retry the operation.",
+                action = MidiCoreWorkspaceIntent.ReloadProject,
+            )
+            finishFailure(operationId, stale, state.value.operation.retry)
+            return
+        }
+        when (outcome) {
+            is WorkspaceOutcome.Success -> {
+                outcome.session?.let(::hydrate)
+                outcome.apply?.invoke()
+                _state.value = _state.value.copy(
+                    operation = state.value.operation.copy(
+                        phase = MidiCoreWorkspaceOperationPhase.SUCCEEDED,
+                        message = outcome.message,
+                        cancellableAtBoundary = false,
+                        outcome = MidiCoreWorkspaceOperationOutcome.SUCCESS,
+                        retry = null,
+                    ),
+                    notification = outcome.message,
+                )
+            }
+            is WorkspaceOutcome.Failure -> finishFailure(operationId, outcome.blocker, outcome.retry)
+            WorkspaceOutcome.Cancelled -> finishCancelled(operationId)
+        }
+        activeJob = null
+        activeCancellation = null
+    }
+
+    private fun finishFailure(operationId: Long, failure: MidiCoreWorkspaceBlocker, retry: MidiCoreWorkspaceIntent?, log: Boolean = true) {
+        if (state.value.operation.id != operationId) return
+        _state.value = _state.value.copy(
+            operation = state.value.operation.copy(
+                phase = MidiCoreWorkspaceOperationPhase.FAILED,
+                message = failure.message,
+                cancellableAtBoundary = false,
+                retry = retry,
+                outcome = MidiCoreWorkspaceOperationOutcome.FAILURE,
+            ),
+            blockers = listOf(failure) + baseBlockers(session?.project).filterNot { it.code == failure.code },
+            notification = null,
+        )
+        if (log) logger.event("midi_core_operation", "operation-${operationId}-failed")
+        activeJob = null
+        activeCancellation = null
+    }
+
+    private fun finishCancelled(operationId: Long) {
+        if (state.value.operation.id != operationId) return
+        _state.value = _state.value.copy(
+            operation = state.value.operation.copy(
+                phase = MidiCoreWorkspaceOperationPhase.CANCELLED,
+                message = "Operation cancelled; the last known-good project remains current.",
+                cancellableAtBoundary = false,
+                retry = state.value.operation.retry,
+                outcome = MidiCoreWorkspaceOperationOutcome.CANCELLED,
+            ),
+            notification = "Operation cancelled; the last known-good project remains current.",
+        )
+        activeJob = null
+        activeCancellation = null
+    }
+
+    private fun failImmediately(failure: MidiCoreWorkspaceBlocker) {
+        _state.value = _state.value.copy(
+            operation = MidiCoreWorkspaceOperation(
+                id = ++nextOperationId,
+                phase = MidiCoreWorkspaceOperationPhase.FAILED,
+                message = failure.message,
+                retry = failure.action,
+                outcome = MidiCoreWorkspaceOperationOutcome.FAILURE,
+            ),
+            blockers = listOf(failure) + baseBlockers(session?.project).filterNot { it.code == failure.code },
+        )
+    }
+
+    private fun busyBlocker() {
+        val failure = blocker(MidiCoreWorkspaceBlockerCode.OPERATION_BUSY, "Another MIDI Core operation is still running.", "Wait for it to finish or cancel it before starting another operation.", action = MidiCoreWorkspaceIntent.CancelOperation)
+        _state.value = _state.value.copy(blockers = listOf(failure) + baseBlockers(session?.project).filterNot { it.code == failure.code })
+    }
+
+    private fun guardProjectOperation(intent: MidiCoreWorkspaceIntent): Boolean {
+        if (state.value.authority.draftDirty) {
+            _state.value = _state.value.copy(dialog = MidiCoreWorkspaceDialog.ConfirmDiscardAuthorityDraft(intent))
+            return true
+        }
+        if (state.value.operation.active) {
+            busyBlocker()
+            return true
+        }
+        return false
+    }
+
+    private fun requireSessionOrBlock(): app.melotrail.application.MidiCoreProjectSession? = session ?: run {
+        failImmediately(blocker(MidiCoreWorkspaceBlockerCode.PROJECT_REQUIRED, "Open a MIDI Core project before using this action.", "Create or open a project first."))
+        null
+    }
+
+    private fun admitted(
+        admission: Admission,
+        persisted: MidiCoreProjectSession?,
+        expectedProject: MidiCoreProject?,
+    ): Boolean {
+        if (!admission.sessionBound) return true
+        val current = session
+        if (current == null || current.root.toAbsolutePath().normalize() != admission.root) return false
+        if (current.project.revision != admission.revision) return false
+        val currentHash = runCatching { MidiCoreAuthorityHasher.from(current.project).sha256 }.getOrNull()
+        if (currentHash != admission.authorityHash) return false
+        if (persisted == null) return false
+        val expectedRevision = expectedProject?.revision ?: admission.revision
+        if (persisted.project.revision != expectedRevision) return false
+        val expectedHash = expectedProject?.let { runCatching { MidiCoreAuthorityHasher.from(it).sha256 }.getOrNull() } ?: admission.authorityHash
+        return runCatching { MidiCoreAuthorityHasher.from(persisted.project).sha256 }.getOrNull() == expectedHash
+    }
+
+    private fun hydrate(next: app.melotrail.application.MidiCoreProjectSession) {
+        session = next
+        preferences.saveLastOpenedProject(next.root)
+        val project = next.project
+        val source = project.sourceMidi
+        val authority = project.authority
+        _state.value = _state.value.copy(
+            project = project,
+            projectRoot = next.root,
+            source = source?.let {
+                MidiCoreSourceUiState(
+                    status = MidiCoreSourceStatus.IMPORTED,
+                    originalFilename = it.originalFilename,
+                    sha256 = it.sha256,
+                    format = it.format,
+                    ppq = it.ppq,
+                    sourceEndTick = it.sourceEndTick,
+                    trackSummaries = it.trackSummaries,
+                    reportAvailable = true,
+                )
+            } ?: MidiCoreSourceUiState(),
+            melody = MidiCoreMelodyUiState(project.selectedMelody),
+            authority = MidiCoreAuthorityUiState(
+                confirmed = authority,
+                draft = authorityDraft(authority),
+                draftDirty = false,
+            ),
+            review = MidiCoreCandidateReviewUiState(),
+            audition = useCases.audition.state,
+            export = MidiCoreExportUiState(latestSnapshot = project.exportSnapshots.lastOrNull()),
+            blockers = baseBlockers(project),
+            dialog = null,
+        )
+    }
+
+    private fun hydrateSourceValidation(validation: MidiImportValidationResult) {
+        _state.value = _state.value.copy(source = _state.value.source.copy(validation = validation, findings = validation.findings, reportAvailable = true))
+    }
+
+    private fun authorityDraft(authority: ProjectAuthority?): MidiCoreAuthorityDraft = authority?.let { MidiCoreAuthorityDraft(it.key, it.tempo, it.meter) } ?: MidiCoreAuthorityDraft.defaults()
+
+    private fun baseBlockers(project: MidiCoreProject?): List<MidiCoreWorkspaceBlocker> = when {
+        project == null -> listOf(blocker(MidiCoreWorkspaceBlockerCode.PROJECT_REQUIRED, "No MIDI Core project is open.", "Create or open a MIDI Core project."))
+        project.sourceMidi == null -> listOf(blocker(MidiCoreWorkspaceBlockerCode.SOURCE_REQUIRED, "A source MIDI file has not been imported.", "Import one Standard MIDI source; the original will be preserved."))
+        project.selectedMelody == null -> listOf(blocker(MidiCoreWorkspaceBlockerCode.MELODY_REQUIRED, "The protected source melody has not been selected.", "Choose one source track and channel."))
+        project.authority == null -> listOf(blocker(MidiCoreWorkspaceBlockerCode.AUTHORITY_REQUIRED, "Tempo, meter, key, and mode are not authoritative yet.", "Edit and explicitly confirm musical authority."))
+        project.authority?.occurrences?.isEmpty() == true -> listOf(blocker(MidiCoreWorkspaceBlockerCode.STRUCTURE_REQUIRED, "The authoritative section timeline is empty.", "Define at least one contiguous section occurrence."))
+        project.authority?.chordEvents?.isEmpty() == true -> listOf(blocker(MidiCoreWorkspaceBlockerCode.HARMONY_REQUIRED, "No authoritative chord windows are defined.", "Enter gap-free chord windows for every section occurrence."))
+        else -> emptyList()
+    }
+
+    private fun blocker(
+        code: MidiCoreWorkspaceBlockerCode,
+        message: String,
+        nextAction: String,
+        sourceCode: String? = null,
+        action: MidiCoreWorkspaceIntent? = null,
+        occurrenceId: String? = null,
+        role: CandidateRole? = null,
+    ) = MidiCoreWorkspaceBlocker(code, message, nextAction, sourceCode, action, occurrenceId, role)
+
+    private fun projectBlocker(problem: MidiCoreProjectProblem) = blocker(MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE, problem.message, problem.nextAction, problem.code.name)
+
+    private fun sourceBlocker(problem: MidiCoreSourceImportProblem, validation: MidiImportValidationResult? = null) = blocker(
+        if (validation?.findings?.isNotEmpty() == true) MidiCoreWorkspaceBlockerCode.SOURCE_REQUIRED else MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE,
+        problem.message,
+        problem.nextAction,
+        problem.code.name,
+    )
+
+    private fun melodyBlocker(problem: MidiCoreMelodySelectionProblem, validation: MidiImportValidationResult? = null) = blocker(
+        MidiCoreWorkspaceBlockerCode.MELODY_REQUIRED,
+        problem.message,
+        problem.nextAction,
+        problem.code.name,
+    )
+
+    private fun authorityBlocker(problem: MidiCoreAuthorityProblem, validation: MidiImportValidationResult? = null) = blocker(
+        MidiCoreWorkspaceBlockerCode.AUTHORITY_REQUIRED,
+        problem.message,
+        problem.nextAction,
+        problem.code.name,
+    )
+
+    private fun structureBlocker(problem: MidiCoreStructureTimelineProblem) = blocker(MidiCoreWorkspaceBlockerCode.STRUCTURE_REQUIRED, problem.message, problem.nextAction, problem.code.name)
+
+    private fun harmonyBlocker(problem: MidiCoreAuthoritativeHarmonyProblem) = blocker(MidiCoreWorkspaceBlockerCode.HARMONY_REQUIRED, problem.message, problem.nextAction, problem.code.name)
+
+    private fun candidateBlocker(problem: MidiCoreCandidateProblem) = blocker(
+        if (problem.code.name.contains("REVISION")) MidiCoreWorkspaceBlockerCode.REVISION_CONFLICT else MidiCoreWorkspaceBlockerCode.CANDIDATE_REVIEW_REQUIRED,
+        problem.message,
+        problem.nextAction,
+        problem.code.name,
+    )
+
+    private fun exportBlocker(problem: MidiCorePackageExportProblem) = blocker(
+        if (problem.code.name.contains("REVISION")) MidiCoreWorkspaceBlockerCode.REVISION_CONFLICT else MidiCoreWorkspaceBlockerCode.EXPORT_NOT_READY,
+        problem.message,
+        problem.nextAction,
+        problem.code.name,
+        occurrenceId = problem.occurrenceId,
+        role = problem.role,
+    )
+
+    private data class Admission(val root: Path?, val revision: Long?, val authorityHash: String?, val sessionBound: Boolean)
+
+    private data class CandidateGenerationRequest(
+        val role: CandidateRole,
+        val occurrenceId: String,
+        val performanceProfileId: String,
+        val patternId: String,
+        val generator: MidiCoreGeneratorInput,
+        val sectionPolicy: MidiCoreSectionPolicy,
+    )
+
+    private sealed interface WorkspaceOutcome {
+        data class Success(
+            val message: String,
+            val session: app.melotrail.application.MidiCoreProjectSession? = null,
+            val apply: (() -> Unit)? = null,
+        ) : WorkspaceOutcome
+
+        data class Failure(val blocker: MidiCoreWorkspaceBlocker, val retry: MidiCoreWorkspaceIntent? = null) : WorkspaceOutcome
+
+        data object Cancelled : WorkspaceOutcome
+    }
+
+    private fun success(message: String, session: app.melotrail.application.MidiCoreProjectSession? = null, apply: (() -> Unit)? = null) = WorkspaceOutcome.Success(message, session, apply)
+
+    private fun failure(blocker: MidiCoreWorkspaceBlocker, retry: MidiCoreWorkspaceIntent? = null) = WorkspaceOutcome.Failure(blocker, retry)
+
+    private fun cancelled() = WorkspaceOutcome.Cancelled
+}

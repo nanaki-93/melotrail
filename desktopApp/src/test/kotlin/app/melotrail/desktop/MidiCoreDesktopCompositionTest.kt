@@ -39,6 +39,7 @@ class MidiCoreDesktopCompositionTest {
         assertIs<MidiCoreCandidateReview>(services.review)
         assertIs<MidiCoreAcceptedSongAssembly>(services.assembly)
         assertIs<MidiCoreMidiPackageExporter>(services.export)
+        assertIs<DefaultMidiCoreWorkspaceUseCases>(services.workspace)
         assertEquals(NoOpMidiCoreDesktopPreferences, services.preferences)
         assertTrue(services.audition.state.sessionId == null)
         assertFalse(services.audition.state.isClosed)

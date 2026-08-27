@@ -35,6 +35,14 @@
       "documentedFunctionCount": 3
     },
     {
+      "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt",
+      "classification": "deferred-with-reason",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt has 95 callable declarations, 5 directly documented and 90 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-032; the focused target reducer, explicit intent routing, operation admission, and blocker traces are covered by tests, and the remaining adapter/reducer declarations must be reconsidered when their behavior or contract changes.",
+      "functionCount": 95,
+      "declarationDigest": "6a39ec2c81f9ec9f1f46255dfc7f3e1ebc07e973274691b265fce2adb5d59580",
+      "documentedFunctionCount": 5
+    },
+    {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/DesktopSupport.kt",
       "classification": "deferred-with-reason",
       "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/DesktopSupport.kt has 25 callable declarations, 2 directly documented and 23 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",

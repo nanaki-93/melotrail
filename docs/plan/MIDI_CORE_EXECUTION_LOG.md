@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-031 complete
+Status: MC-032 complete
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -71,7 +71,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-029 | DONE | `midi-core: MC-029 export MIDI package` | PASS — focused exporter/MIDI/project suite, documentation coverage, `git diff --check`, `make test` | Complete and optional-role MIDI packages are semantically re-imported, atomically published, portable-manifested, collision-safe, and bound to reopened project snapshots. |
 | MC-030 | DONE | `midi-core: MC-030 prove vertical slice` | PASS — JVM vertical slice, `make test`, `make build`, documentation coverage, `git diff --check` | Target project creation through semantic MIDI package re-import passes without legacy services; failure/recovery and immutable evidence are covered. |
 | MC-031 | DONE | `midi-core: MC-031 compose target desktop` | PASS — target desktop composition test, documentation coverage, `git diff --check`, `make test`, `make build` | Default entrypoint reaches the local MIDI-core service graph without constructing worker, network-era, audio, renderer, mix, release, or Qwen services. |
-| MC-032 | TODO | | | |
+| MC-032 | DONE | `midi-core: MC-032 add focused workspace state` | PASS — focused workspace/composition tests, documentation coverage, `git diff --check`, `make test`, `make build` | Focused MIDI Core state and explicit intents now own project, source/selection/findings, authority drafts, review, audition, export, operations, dialogs, and actionable blockers with revision/hash admission. |
 | MC-033 | TODO | | | |
 | MC-034 | TODO | | | |
 | MC-035 | TODO | | | |
@@ -834,6 +834,27 @@ Decisions/deviations: The target composition root is deliberately small at this 
 Known limitations: The old graph and its obsolete dialogs/preferences remain compiled until MC-050/MC-051; the startup surface is not yet the six-destination workspace; the final desktop manual checks remain MC-048; the transitional Python documentation-inventory build check remains until MC-058.
 Commit: `midi-core: MC-031 compose target desktop`.
 Next task: MC-032 — add focused workspace state and intents.
+
+### MC-032 — Implement focused workspace state and intents
+
+Status: DONE
+Started: 2026-08-28
+Completed: 2026-08-28
+Starting commit/status: `d9d30f9` / only the preserved unrelated deleted Kotlin compiler session marker is present.
+Contracts read: F-UI-002, F-UI-003, F-UI-005; F-SYS-004; MC-032 task contract.
+Current owners inspected: legacy `WorkspaceUiState`/`WorkspaceIntent`/`WorkspaceViewModel`; `OperationFeedback`; `CreationProgress`; desktop dispatchers; target MIDI-core lifecycle, import, melody, authority, structure, harmony, generation, review, audition, assembly, and export boundaries.
+Behavior retained/extracted: Added a focused `MidiCoreWorkspaceState` and explicit `MidiCoreWorkspaceIntent` boundary for project lifecycle, immutable source import and melody selection, unsaved authority drafts, structure/harmony, candidate listing/comparison/generation/review, MIDI audition, export, operation feedback, dialogs, and typed actionable blockers. `MidiCoreWorkspaceViewModel` routes mutations through the target use-case adapter, runs blocking work on an injected I/O dispatcher, supports cancellation/retry, preserves the last known-good project, and admits async results only when operation ID, project root/revision, persisted revision, and authority hash still match. Reopening hydrates persisted project metadata, authority, export snapshot, source evidence, and project-only last-opened preference without retaining the legacy audio-era state model.
+Files added/changed: `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt`; `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreDesktopComposition.kt`; `desktopApp/src/test/kotlin/app/melotrail/desktop/MidiCoreWorkspaceTest.kt`; `desktopApp/src/test/kotlin/app/melotrail/desktop/MidiCoreDesktopCompositionTest.kt`; `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`; and this execution log.
+Files/data deleted: None planned.
+Tracked deletion recoverability: The unrelated Kotlin compiler session-marker deletion remains recoverable from Git and will not be included in the task commit.
+Ignored deletion recoverability: None planned.
+Focused tests: `./gradlew :desktopApp:test --tests app.melotrail.desktop.MidiCoreWorkspaceTest --tests app.melotrail.desktop.MidiCoreDesktopCompositionTest --rerun-tasks --console=plain` PASS. Five workspace traces cover project blockers and intent routing, unsaved authority-draft confirmation, busy generation cancellation with last-known-good preservation, failure/retry plus persisted restart hydration, and stale completion rejection after an external revision change. The composition trace confirms the target adapter is wired and the default target graph does not construct worker, network-era, audio, renderer, mix, or Qwen services.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS; `make test` PASS (2026-08-28; 14 Gradle tasks); `make build` PASS (2026-08-28; 15 Gradle tasks, including documentation coverage).
+Manual evidence: Not required.
+Decisions/deviations: The target ViewModel owns only MIDI Core workflow state and depends on a small fakeable use-case interface; the legacy `WorkspaceViewModel` remains compiled but is not reachable from the target entrypoint until its scheduled cleanup task. Source import findings remain available immediately from the typed import result and the persisted import report remains bound to the source record; the current hydration projection exposes persisted source metadata/report availability while later workflow screens can add report decoding at their read boundary.
+Known limitations: MC-033–MC-040 still need to replace the startup surface with the six-destination workflow and connect destination-specific dialogs/actions; old graph cleanup remains MC-050/MC-051; final Logic Pro/GarageBand evidence remains MC-048; the transitional Python documentation-inventory build check remains until MC-058.
+Commit: `midi-core: MC-032 add focused workspace state`.
+Next task: MC-033 — replace navigation with six destinations.
 
 ## 6. Manual gate records
 
