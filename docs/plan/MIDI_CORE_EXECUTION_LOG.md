@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-032 complete
+Status: MC-033 complete
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -72,7 +72,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-030 | DONE | `midi-core: MC-030 prove vertical slice` | PASS — JVM vertical slice, `make test`, `make build`, documentation coverage, `git diff --check` | Target project creation through semantic MIDI package re-import passes without legacy services; failure/recovery and immutable evidence are covered. |
 | MC-031 | DONE | `midi-core: MC-031 compose target desktop` | PASS — target desktop composition test, documentation coverage, `git diff --check`, `make test`, `make build` | Default entrypoint reaches the local MIDI-core service graph without constructing worker, network-era, audio, renderer, mix, release, or Qwen services. |
 | MC-032 | DONE | `midi-core: MC-032 add focused workspace state` | PASS — focused workspace/composition tests, documentation coverage, `git diff --check`, `make test`, `make build` | Focused MIDI Core state and explicit intents now own project, source/selection/findings, authority drafts, review, audition, export, operations, dialogs, and actionable blockers with revision/hash admission. |
-| MC-033 | TODO | | | |
+| MC-033 | DONE | `midi-core: MC-033 focus workspace navigation` | PASS — focused Compose shell tests, documentation coverage, `git diff --check`, `make test` | The default desktop shell exposes only Project, MIDI, Structure & Harmony, Arrange, Review, and Export with stable tags, selection semantics, keyboard activation, responsive wide/compact layouts, and blocker context. |
 | MC-034 | TODO | | | |
 | MC-035 | TODO | | | |
 | MC-036 | TODO | | | |
@@ -855,6 +855,27 @@ Decisions/deviations: The target ViewModel owns only MIDI Core workflow state an
 Known limitations: MC-033–MC-040 still need to replace the startup surface with the six-destination workflow and connect destination-specific dialogs/actions; old graph cleanup remains MC-050/MC-051; final Logic Pro/GarageBand evidence remains MC-048; the transitional Python documentation-inventory build check remains until MC-058.
 Commit: `midi-core: MC-032 add focused workspace state`.
 Next task: MC-033 — replace navigation with six destinations.
+
+### MC-033 — Replace navigation with six destinations
+
+Status: DONE
+Started: 2026-08-28
+Completed: 2026-08-28
+Starting commit/status: `4a7b2a5` / only the preserved unrelated deleted Kotlin compiler session marker is present.
+Contracts read: F-UI-001 and F-UI-004; MC-033 task contract.
+Current owners inspected: legacy `WorkspaceShellFrame`, `WorkspacePageRouter`, `WorkspaceApp`, `WorkspaceSection`, `WorkspaceDestination`, and their settings/library/video/mix/release routes; target `MidiCoreWorkspaceState`, `MidiCoreWorkspaceIntent`, and MC-031/MC-032 composition root.
+Behavior retained/extracted: Added a target-only `MidiCoreWorkspaceShell` with a fixed six-destination inventory: Project, MIDI, Structure & Harmony, Arrange, Review, and Export. Each route has a stable semantic tag, label, content description, selected state, minimum keyboard hit target, and Enter activation. The shell retains current-project name, location, revision, operation status, and actionable blocker context; it presents a vertical navigation rail at wide widths and a horizontally scrollable navigation row at compact widths. The default desktop entrypoint now renders this shell instead of the legacy page router.
+Files added/changed: `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspaceShell.kt`; `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreDesktopComposition.kt`; `desktopApp/src/test/kotlin/app/melotrail/desktop/MidiCoreWorkspaceShellTest.kt`; `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`; and this execution log.
+Files/data deleted: None planned.
+Tracked deletion recoverability: The unrelated Kotlin compiler session-marker deletion remains recoverable from Git and will not be included in the task commit.
+Ignored deletion recoverability: None planned.
+Focused tests: `./gradlew :desktopApp:test --tests app.melotrail.desktop.MidiCoreWorkspaceShellTest --rerun-tasks --console=plain` PASS. The semantic-tree assertions cover exactly six labels/routes, selected navigation and blocker tags, keyboard focus/Enter activation, wide rail and compact row layout, current page root, and absence of superseded navigation owner/route labels. The target composition remains covered by the MC-032 composition test.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS; `make test` PASS (2026-08-28; 14 Gradle tasks).
+Manual evidence: Not required.
+Decisions/deviations: Navigation is ephemeral presentation state and therefore is not persisted in `MidiCoreWorkspaceState`; reopening still hydrates workflow completion from the project document. Existing legacy navigation files remain compiled as scheduled cleanup scope, but the target shell has no reference to their routes, labels, or ViewModel.
+Known limitations: MC-034–MC-040 still need to replace placeholder page content with the six target workflow pages and connect contextual dialogs/actions; old graph cleanup remains MC-050/MC-051; final Logic Pro/GarageBand evidence remains MC-048; the transitional Python documentation-inventory build check remains until MC-058.
+Commit: `midi-core: MC-033 focus workspace navigation`.
+Next task: MC-034 — build the Project page.
 
 ## 6. Manual gate records
 

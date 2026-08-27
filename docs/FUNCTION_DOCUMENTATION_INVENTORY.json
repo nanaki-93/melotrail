@@ -43,6 +43,14 @@
       "documentedFunctionCount": 5
     },
     {
+      "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspaceShell.kt",
+      "classification": "deferred-with-reason",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspaceShell.kt has 11 callable declarations, 2 directly documented and 9 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-033; the six target destinations, responsive shell, stable semantics, and legacy-route absence are covered by focused Compose tests, and the remaining local presentation declarations must be reconsidered when their behavior or contract changes.",
+      "functionCount": 11,
+      "declarationDigest": "43255b74a3e918a9be53fa827b87dac30f1be7e8ab6200de924c512ec3008bcc",
+      "documentedFunctionCount": 2
+    },
+    {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/DesktopSupport.kt",
       "classification": "deferred-with-reason",
       "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/DesktopSupport.kt has 25 callable declarations, 2 directly documented and 23 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",

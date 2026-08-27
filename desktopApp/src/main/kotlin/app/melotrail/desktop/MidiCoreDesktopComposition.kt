@@ -1,16 +1,8 @@
 package app.melotrail.desktop
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.application
@@ -144,16 +136,10 @@ object MidiCoreDesktopEntrypoint {
     }
 }
 
-/** Initial target surface; workflow state and six destinations arrive in MC-032–MC-040. */
+/** Target shell with only the six MIDI Core workflow destinations. */
 @Composable
 private fun MidiCoreStartupSurface(workspace: MidiCoreWorkspaceViewModel) {
-    val state by workspace.state.collectAsState()
-    Column(Modifier.fillMaxSize().padding(32.dp)) {
-        Text("Melotrail", style = MaterialTheme.typography.headlineLarge)
-        Text("MIDI Core", style = MaterialTheme.typography.titleLarge)
-        Text("Local MIDI arrangement workspace", style = MaterialTheme.typography.bodyLarge)
-        Text(state.operation.message, style = MaterialTheme.typography.bodyMedium)
-    }
+    MidiCoreWorkspaceShell(workspace)
 }
 
 /** Target-only file-dialog boundary; it exposes MIDI and project locations, never audio or sound-library settings. */
