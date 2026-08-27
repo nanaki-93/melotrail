@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-020 complete; MC-021 next
+Status: MC-021 complete; MC-022 next
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -60,7 +60,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-018 | DONE | `midi-core: MC-018 add scoped invalidation` | PASS — fingerprint/invalidation/application tests, `make test`, `make build` | Canonical component and role/occurrence hashes, generator/dependency inputs, scoped impact preview, immutable artifact retention, and stale async rejection are covered. |
 | MC-019 | DONE | `midi-core: MC-019 add candidate lifecycle records` | PASS — candidate lifecycle/schema/artifact/application tests, `make test`, `make build` | Immutable candidate publication, accepted/rejected/locked/restored transitions, prior acceptance history, scoped stale status, and export provenance snapshots are persisted and digest-bound. |
 | MC-020 | DONE | `midi-core: MC-020 define generation context` | PASS — context/catalog tests, documentation coverage, `git diff --check`, `make test` | One immutable occurrence-scoped request and target-only pattern/profile inventory cover all three core roles without project files or analysis sidecars. |
-| MC-021 | TODO | | | |
+| MC-021 | DONE | `midi-core: MC-021 validate core roles` | PASS — role-validation tests, documentation coverage, `git diff --check`, `make test` | Deterministic typed validation reports cover common, Chords, Bass, and Drums policies before publication. |
 | MC-022 | TODO | | | |
 | MC-023 | TODO | | | |
 | MC-024 | TODO | | | |
@@ -589,6 +589,38 @@ Decisions/deviations: The generation boundary stores semantic dependency notes r
 Known limitations: Role validation and the three target generators remain MC-021 through MC-024; candidate publication remains MC-025. The context is not yet wired to the desktop or project mutation use cases. The transitional Python documentation-inventory build check remains until MC-058.
 Commit: `midi-core: MC-020 define generation context`.
 Next task: MC-021 — implement target role validation.
+
+### MC-021 — Implement target role validation
+
+Status: DONE
+Started: 2026-08-27
+Completed: 2026-08-27
+Starting commit/status: `2da3e74` / only the unrelated deleted Kotlin compiler session marker was present; the MC-021 log entry was then marked in progress.
+Contracts read: F-ARR-005; MIDI Contract sections 6–8 and 10; Quality Gate 3 generation; MC-021 task contract.
+Current owners inspected: `GeneratedRoleValidation.kt`, `BassQualityValidator.kt`, `LowEndInteraction.kt`, protected melody/context models, exact harmony windows, and target candidate lifecycle. The render/audio validators remain legacy owners until their assigned cutover and cleanup tasks; no render dependency entered the target validator.
+Behavior retained/extracted: `MidiCoreRoleValidator` validates in-memory note-only candidates against one immutable `MidiCoreGenerationContext`. Common findings cover role/occurrence identity, fixed role channel, supported event type, deliberate silence, positive timing, occurrence bounds, representable grid ticks, MIDI register, velocity, and exact duplicates. Chords and Bass must occupy exact authoritative chord pitch classes; Drums use zero-based channel 9 (musician-facing channel 10) and the curated GM starter pitches. Density is a deterministic role/section ceiling, protected anchor collisions block, close non-anchor melody proximity is advisory, and every report carries context/candidate SHA-256 evidence in stable order. A rejected result is typed and is not a publication request.
+Files added/changed: `src/main/kotlin/app/melotrail/arrangement/core/MidiCoreRoleValidation.kt`; `src/test/kotlin/app/melotrail/arrangement/core/MidiCoreRoleValidationTest.kt`; `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`; and this execution log.
+Files/data deleted: None. No target validator for piano/pad/strings/transitions existed under the target roots; legacy render-dependent owners remain compiled only for pre-cutover callers and are assigned to later deletion tasks.
+Tracked deletion recoverability: Not applicable to MC-021; the unrelated session-marker deletion remains recoverable from Git and was not included in the task commit.
+Ignored deletion recoverability: None.
+Focused tests: `./gradlew :test --tests app.melotrail.arrangement.core.MidiCoreRoleValidationTest --rerun-tasks` PASS (7 tests). Coverage includes passing Chords/Bass/Drums, every common blocking policy, chromatic authority, exact chord/bass mismatch, protected-anchor blocking versus advisory melody proximity, duplicate/density limits, deliberate silence, GM drum channel/pitches, and order-independent report evidence.
+Full validation: `make test` PASS (2026-08-27; 14 Gradle tasks); `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS.
+Manual evidence: Not required.
+Role-policy matrix:
+
+| Policy | Chords | Bass | Drums |
+| --- | --- | --- | --- |
+| Required channel | zero-based 1 / musician-facing 2 | zero-based 2 / musician-facing 3 | zero-based 9 / musician-facing 10 |
+| Register | MIDI pitches 48–84 | MIDI pitches 28–55 | MIDI pitches 0–127 |
+| Harmony | Every occupied chord window | Every occupied chord window; one-grid approach exception to the next window | Not applicable |
+| Density at full section density | 4 notes per quarter | 2 notes per quarter | 8 notes per quarter |
+| Additional event policy | Note events only | Note events only | Note events only; GM starter pitches 36/38/42/46 |
+| Melody space | Protected anchor exact collision blocks; close non-anchor proximity advises | Same | Same |
+
+Decisions/deviations: The validator consumes semantic values rather than MIDI files or artifact paths so malformed generator output can be rejected before storage. Harmony is authoritative even when chromatic; key scale compatibility is not substituted. The current target validator exposes a compatibility-named delegate for candidate callers, while the legacy generated-role validator is not imported. Publication integration remains MC-025, where only an accepted report may reach immutable artifact storage.
+Known limitations: Candidate generation and validation-report serialization/publication remain MC-022 through MC-025; the current report is an in-memory target evidence type. The transitional Python documentation-inventory build check remains until MC-058.
+Commit: `midi-core: MC-021 validate core roles`.
+Next task: MC-022 — implement the chord/keys accompaniment generator.
 
 ## 6. Manual gate records
 

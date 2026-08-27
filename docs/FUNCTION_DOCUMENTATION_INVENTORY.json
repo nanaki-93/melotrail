@@ -483,6 +483,14 @@
       "documentedFunctionCount": 12
     },
     {
+      "path": "src/main/kotlin/app/melotrail/arrangement/core/MidiCoreRoleValidation.kt",
+      "classification": "documented",
+      "reason": "All 15 callable declarations implement MC-021's deterministic common, Chords, Bass, and Drums candidate findings before publication, including authority harmony, protected melody, density, channel, range, timing, and event-type policies; reviewed on 2026-08-27.",
+      "functionCount": 15,
+      "declarationDigest": "9805e37980236c55332d219a2f814c21fbf1d3180f65e862c58188daafef3ee7",
+      "documentedFunctionCount": 15
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/arrangement/ArrangementCritic.kt",
       "classification": "deferred-with-reason",
       "reason": "src/main/kotlin/app/melotrail/arrangement/ArrangementCritic.kt has 13 callable declarations, 1 directly documented and 12 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
