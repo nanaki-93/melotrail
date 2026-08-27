@@ -154,6 +154,23 @@ class MidiCoreWorkspaceTest {
     }
 
     @Test
+    fun `occurrence audition prepares a separate MIDI occurrence scope`() = runTest {
+        val fake = FakeMidiCoreWorkspaceUseCases()
+        fake.sourceAuditionResult = app.melotrail.application.MidiCoreSourceAuditionResult.Ready(fakeOccurrencePlan())
+        val viewModel = MidiCoreWorkspaceViewModel(fake, MemoryMidiCorePreferences(), NoOpDesktopOperationLogger, testDispatchers(testScheduler))
+        viewModel.accept(MidiCoreWorkspaceIntent.OpenProject(fake.session.root))
+        advanceUntilIdle()
+
+        viewModel.accept(MidiCoreWorkspaceIntent.PlayOccurrence("verse-1"))
+        advanceUntilIdle()
+
+        assertEquals(1, fake.occurrenceAuditionCalls)
+        assertEquals(app.melotrail.audition.MidiAuditionScope.Occurrence("verse-1"), viewModel.state.value.audition.scope)
+        assertEquals(MidiCoreWorkspaceOperationPhase.SUCCEEDED, viewModel.state.value.operation.phase)
+        viewModel.close()
+    }
+
+    @Test
     fun `authority draft requires explicit discard before closing project`() = runTest {
         val fake = FakeMidiCoreWorkspaceUseCases()
         val dispatchers = testDispatchers(testScheduler)
@@ -297,6 +314,7 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
     val openResults = ArrayDeque<MidiCoreProjectLifecycleResult>()
     var pendingGeneration: CompletableDeferred<MidiCoreCandidateGenerationResult>? = null
     var confirmAuthorityCalls = 0
+    var occurrenceAuditionCalls = 0
     var closeCalls = 0
     private var currentSession = session
 
@@ -318,6 +336,11 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
     override fun selectMelody(request: SelectMidiCoreMelody): MidiCoreMelodySelectionResult = error("not used")
 
     override fun prepareSourceAudition(request: app.melotrail.application.PrepareMidiCoreSourceAudition): app.melotrail.application.MidiCoreSourceAuditionResult = sourceAuditionResult
+
+    override fun prepareOccurrenceAudition(request: app.melotrail.application.PrepareMidiCoreOccurrenceAudition): app.melotrail.application.MidiCoreSourceAuditionResult {
+        occurrenceAuditionCalls += 1
+        return sourceAuditionResult
+    }
 
     override fun confirmAuthority(request: ConfirmMidiCoreAuthority): MidiCoreAuthorityResult {
         confirmAuthorityCalls += 1
@@ -462,3 +485,10 @@ private fun fakeSourcePlan(): MidiAuditionPlaybackPlan = MidiAuditionPlaybackPla
         ),
     ),
 )
+
+private fun fakeOccurrencePlan(): MidiAuditionPlaybackPlan {
+    val source = fakeSourcePlan()
+    return MidiAuditionPlaybackPlan(
+        app.melotrail.audition.MidiAuditionView.occurrence("verse-1", source.view.song, 0L, 1L),
+    )
+}

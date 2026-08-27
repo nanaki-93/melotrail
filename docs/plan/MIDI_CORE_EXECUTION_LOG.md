@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-036 in progress
+Status: MC-037 in progress
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -75,8 +75,8 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-033 | DONE | `midi-core: MC-033 focus workspace navigation` | PASS — focused Compose shell tests, documentation coverage, `git diff --check`, `make test` | The default desktop shell exposes only Project, MIDI, Structure & Harmony, Arrange, Review, and Export with stable tags, selection semantics, keyboard activation, responsive wide/compact layouts, and blocker context. |
 | MC-034 | DONE | `midi-core: MC-034 build Project page` | PASS — focused Project-page Compose tests, documentation coverage, `git diff --check`, `make test` | Project creation/open/recent/current actions, persisted readiness/location, target next-step navigation, safe recovery, unsupported-schema explanation, and keyboard semantics are now available without audio-era setup. |
 | MC-035 | DONE | `midi-core: MC-035 build MIDI page` | PASS — focused MIDI page/source-audition tests, documentation coverage, `git diff --check`, `make test`, `make build` | One-file SMF 0/1 import, persisted source facts, protected melody selection, typed findings, source identity evidence, and MIDI-only source transport are reachable from the target shell. |
-| MC-036 | IN_PROGRESS | | | Structure & Harmony page is next after MC-035 completion. |
-| MC-037 | TODO | | | |
+| MC-036 | DONE | `midi-core: MC-036 build Structure and Harmony page` | PASS — focused page/application/workspace tests, documentation coverage, `git diff --check`, `make test`, `make build` | Target authority editor, exact occurrence/chord timing, findings, invalidation preview, and source/occurrence MIDI audition are covered; persisted fixture hash recorded below. |
+| MC-037 | IN_PROGRESS | | | Arrange page is next after MC-036 completion. |
 | MC-038 | TODO | | | |
 | MC-039 | TODO | | | |
 | MC-040 | TODO | | | |
@@ -918,8 +918,27 @@ Decisions/deviations: Per-track duration is now an immutable persisted inspectio
 Known limitations: Reopening a project hydrates preserved source facts and report availability, while decoded persisted import findings are not yet projected into workspace state until a source operation refreshes them. The page does not claim a MIDI-device smoke result; MC-045 owns that manual behavior. Final DAW evidence remains MC-048.
 Commit: `midi-core: MC-035 build MIDI page`.
 Next task: MC-036 — build the Structure & Harmony page.
-Commit:
-Next task: MC-036 — build the Structure & Harmony page.
+
+### MC-036 — Implement the Structure & Harmony page
+
+Status: DONE
+Started: 2026-08-28
+Completed: 2026-08-28
+Starting commit/status: `25c9206` / only the preserved unrelated deleted Kotlin compiler session marker is present.
+Contracts read: F-AUTH-001–F-AUTH-005; MIDI Contract timing and chord-window sections; F-PLAY-001–F-PLAY-004; MC-036 task contract.
+Current owners inspected: legacy `HarmonyEditor`, project setup musical controls, structure/occurrence mutation services, target `MidiCoreMusicalAuthority`, `MidiCoreStructureTimeline`, `MidiCoreAuthoritativeHarmony`, `MidiCoreInvalidationPlanner`, source audition boundary, focused workspace reducer, and six-destination shell.
+Behavior retained/extracted: The target Structure & Harmony page now edits fixed microseconds-per-quarter tempo, numerator/power-of-two meter, spelling-aware key, and major/natural-minor mode before explicit confirmation. It authors reusable section definitions, repeated named occurrences with explicit start/duration ticks and move/remove actions, optional pickup ticks, exact bar/beat/tick feedback, explicit duration-aware chord windows, blocking coverage/realization findings, and non-blocking chromatic advisories. Valid pending authority mutations calculate stale candidate/export impact before save; saved invalidation previews identify changed dimensions and affected scopes while preserving files. Source audition and one exact saved occurrence audition use the protected MIDI melody only; the occurrence boundary reuses source identity verification and never rewrites event ticks.
+Files added/changed: `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreStructureHarmonyPage.kt`, `desktopApp/src/test/kotlin/app/melotrail/desktop/MidiCoreStructureHarmonyPageTest.kt`, `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt`, `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspaceShell.kt`, `desktopApp/src/test/kotlin/app/melotrail/desktop/MidiCoreWorkspaceTest.kt`, `src/main/kotlin/app/melotrail/application/MidiCoreSourceAudition.kt`, `src/test/kotlin/app/melotrail/application/MidiCoreSourceAuditionTest.kt`, `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`, and this execution log.
+Files/data deleted: None planned; no legacy control owner was deleted because its scheduled cleanup task is MC-051.
+Tracked deletion recoverability: The unrelated Kotlin compiler session-marker deletion remains recoverable from Git and is not included in the task commit.
+Ignored deletion recoverability: None planned.
+Focused tests: `./gradlew :test --tests app.melotrail.application.MidiCoreSourceAuditionTest :desktopApp:test --tests app.melotrail.desktop.MidiCoreStructureHarmonyPageTest --tests app.melotrail.desktop.MidiCoreWorkspaceTest --rerun-tasks --console=plain` PASS. The application trace verifies an exact persisted occurrence window and protected-melody role; the Compose traces cover authority controls, repeated/sub-bar occurrences, exact positions, mutation routing, chromatic advisory semantics, invalidation before/after save, additive editing, recovery semantics, and target accessibility anchors. Existing workspace tests continue to cover stale edit conflict and restart hydration.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS; `make test` PASS (2026-08-28; 14 Gradle tasks); `make build` PASS (2026-08-28; 15 Gradle tasks, including documentation coverage).
+Manual evidence: Not required for MC-036. The persisted target project fixture `src/test/resources/fixtures/project/midi-core-v1.json` remains available for restart/schema evidence with SHA-256 `37907717e2fab79b06131a33742349f77b050c5e70c664e812f704e1acf94a0c`; no screenshot or DAW result is claimed in place of MC-048.
+Decisions/deviations: The page keeps editable structure and harmony drafts local until the user presses an explicit save/confirm action; application services remain the sole owners of revision checks, validation, atomic writes, and stale marking. Occurrence audition was added to the existing source-audition application boundary so it can verify the immutable source once and select an exact occurrence window. The page intentionally exposes no source-key correction, transposition, analysis-derived duration, song-part role, instrument override, or template fallback controls.
+Known limitations: Candidate, role, and full accepted-arrangement audition remain MC-038; final MIDI-device behavior remains MC-045; final Logic Pro/GarageBand evidence remains MC-048. Invalid/incomplete draft rows block local save and therefore do not produce a stale preview until a valid candidate authority exists. Persisted import findings still need source-operation refresh after restart as recorded under MC-035.
+Commit: `midi-core: MC-036 build Structure and Harmony page`.
+Next task: MC-037 — build the Arrange page.
 
 ## 6. Manual gate records
 

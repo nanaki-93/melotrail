@@ -118,6 +118,46 @@ class MidiCoreSourceAudition(
         )
     }
 
+    /** Reuse the verified protected melody song for one exact authoritative occurrence window. */
+    fun prepareOccurrence(request: PrepareMidiCoreOccurrenceAudition): MidiCoreSourceAuditionResult {
+        if (request.occurrenceId.isBlank()) {
+            return rejected(
+                MidiCoreSourceAuditionProblemCode.OCCURRENCE_REQUIRED,
+                "Choose a named section occurrence before starting occurrence audition.",
+                "Define and select one authoritative section occurrence.",
+            )
+        }
+        val prepared = prepare(PrepareMidiCoreSourceAudition(request.session))
+        if (prepared !is MidiCoreSourceAuditionResult.Ready) return prepared
+        val authority = request.session.project.authority ?: return rejected(
+            MidiCoreSourceAuditionProblemCode.AUTHORITY_REQUIRED,
+            "Musical authority is required before auditioning an occurrence.",
+            "Confirm tempo, meter, key, and mode first.",
+        )
+        val occurrence = authority.occurrences.singleOrNull { it.id == request.occurrenceId } ?: return rejected(
+            MidiCoreSourceAuditionProblemCode.OCCURRENCE_REQUIRED,
+            "The requested section occurrence is not part of the current authority.",
+            "Reload the structure timeline and choose a saved occurrence.",
+        )
+        if (occurrence.endTick > prepared.plan.view.song.songEndTick) {
+            return rejected(
+                MidiCoreSourceAuditionProblemCode.OCCURRENCE_NOT_PLAYABLE,
+                "The selected occurrence extends beyond the preserved source playback range.",
+                "Save a contiguous structure that fits inside the imported source range.",
+            )
+        }
+        return MidiCoreSourceAuditionResult.Ready(
+            MidiAuditionPlaybackPlan(
+                MidiAuditionView.occurrence(
+                    occurrence.id,
+                    prepared.plan.view.song,
+                    occurrence.startTick,
+                    occurrence.endTick,
+                ),
+            ),
+        )
+    }
+
     private fun rejected(
         code: MidiCoreSourceAuditionProblemCode,
         message: String,
@@ -131,6 +171,11 @@ class MidiCoreSourceAudition(
 }
 
 data class PrepareMidiCoreSourceAudition(val session: MidiCoreProjectSession)
+
+data class PrepareMidiCoreOccurrenceAudition(
+    val session: MidiCoreProjectSession,
+    val occurrenceId: String,
+)
 
 sealed interface MidiCoreSourceAuditionResult {
     data class Ready(val plan: MidiAuditionPlaybackPlan) : MidiCoreSourceAuditionResult
@@ -151,4 +196,7 @@ enum class MidiCoreSourceAuditionProblemCode {
     SOURCE_DIGEST_MISMATCH,
     MELODY_IDENTITY_MISMATCH,
     SOURCE_NOT_PLAYABLE,
+    AUTHORITY_REQUIRED,
+    OCCURRENCE_REQUIRED,
+    OCCURRENCE_NOT_PLAYABLE,
 }

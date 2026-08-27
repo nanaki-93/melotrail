@@ -37,9 +37,9 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt has 99 callable declarations, 5 directly documented and 94 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-035; the focused target reducer, explicit intent routing, source audition preparation, operation admission, and blocker traces are covered by tests, and the remaining adapter/reducer declarations must be reconsidered when their behavior or contract changes.",
-      "functionCount": 99,
-      "declarationDigest": "6af4bebc0a3092319e3319245937325978fe523c5f03120cce6d8290f2cb0e2b",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt has 102 callable declarations, 5 directly documented and 97 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-036; target authority invalidation projection, occurrence-audition routing, explicit intent handling, operation admission, and blocker traces are covered by tests, and the remaining adapter/reducer declarations must be reconsidered when their behavior or contract changes.",
+      "functionCount": 102,
+      "declarationDigest": "995d7929cbcd364c7796d409ba317abbfc6f46c6fe905f43031ab0728f56f76b",
       "documentedFunctionCount": 5
     },
     {
@@ -64,6 +64,14 @@
       "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreMidiPage.kt has 18 callable declarations, 1 directly documented and 17 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-035; target MIDI import, protected-melody selection, findings, immutable identity evidence, and MIDI transport semantics are covered by focused Compose tests, and the remaining local presentation declarations must be reconsidered when their behavior or contract changes.",
       "functionCount": 18,
       "declarationDigest": "094b5db9a1a2cf3197dca750e5fab5c7f357494a579329ca98a9e4b0f3d5a963",
+      "documentedFunctionCount": 1
+    },
+    {
+      "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreStructureHarmonyPage.kt",
+      "classification": "deferred-with-reason",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreStructureHarmonyPage.kt has 38 callable declarations, 1 directly documented and 37 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-036; target authority editing, exact occurrence and chord timing, coverage findings, invalidation preview, and MIDI audition semantics are covered by focused Compose tests, and the remaining local presentation declarations must be reconsidered when their behavior or contract changes.",
+      "functionCount": 38,
+      "declarationDigest": "9a7b88681978ef33dab90865b61b27e2009395cca3711cadad134f7ae8afe093",
       "documentedFunctionCount": 1
     },
     {
@@ -349,10 +357,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreSourceAudition.kt",
       "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/application/MidiCoreSourceAudition.kt has 2 callable declarations, 1 directly documented and 1 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-035; immutable source verification and source-melody audition-plan preparation are covered by focused application tests under F-PLAY-001, F-PLAY-002, and F-PLAY-004.",
-      "functionCount": 2,
-      "declarationDigest": "ea5c8580128b4762c03f4c67249f5d08331417dc7ef85fc59ddf7752046fc34e",
-      "documentedFunctionCount": 1
+      "reason": "src/main/kotlin/app/melotrail/application/MidiCoreSourceAudition.kt has 3 callable declarations, 2 directly documented and 1 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-036; immutable source verification, source-melody audition preparation, and exact occurrence-window audition preparation are covered by focused application tests under F-PLAY-001, F-PLAY-002, and F-PLAY-004.",
+      "functionCount": 3,
+      "declarationDigest": "1e2b6d16f0b4e43377050aa85546e1ee78cd586063500e382d9e1f7ed4f147af",
+      "documentedFunctionCount": 2
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreStructureTimeline.kt",

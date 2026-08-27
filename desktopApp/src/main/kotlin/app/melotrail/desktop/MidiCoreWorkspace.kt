@@ -23,6 +23,7 @@ import app.melotrail.application.MidiCoreProjectSession
 import app.melotrail.application.MidiCoreSourceImport
 import app.melotrail.application.MidiCoreSourceImportResult
 import app.melotrail.application.MidiCoreSourceAuditionResult
+import app.melotrail.application.PrepareMidiCoreOccurrenceAudition
 import app.melotrail.application.PrepareMidiCoreSourceAudition
 import app.melotrail.application.MidiCoreStructureTimeline
 import app.melotrail.application.RejectMidiCoreCandidate
@@ -47,6 +48,7 @@ import app.melotrail.audition.MidiAuditionPort
 import app.melotrail.audition.MidiAuditionResult
 import app.melotrail.audition.MidiAuditionState
 import app.melotrail.arrangement.core.MidiCoreSectionPolicy
+import app.melotrail.arrangement.core.MidiCoreInvalidationPreview
 import app.melotrail.midi.domain.MidiFinding
 import app.melotrail.midi.domain.MidiImportValidationResult
 import app.melotrail.midi.domain.MidiTrackSummary
@@ -96,6 +98,7 @@ interface MidiCoreWorkspaceUseCases {
     fun importSource(request: ImportMidiCoreSource): MidiCoreSourceImportResult
     fun selectMelody(request: SelectMidiCoreMelody): app.melotrail.application.MidiCoreMelodySelectionResult
     fun prepareSourceAudition(request: PrepareMidiCoreSourceAudition): MidiCoreSourceAuditionResult
+    fun prepareOccurrenceAudition(request: PrepareMidiCoreOccurrenceAudition): MidiCoreSourceAuditionResult
     fun confirmAuthority(request: ConfirmMidiCoreAuthority): app.melotrail.application.MidiCoreAuthorityResult
     fun replaceStructure(request: ReplaceMidiCoreStructure): app.melotrail.application.MidiCoreStructureTimelineResult
     fun replaceHarmony(request: ReplaceMidiCoreHarmony): app.melotrail.application.MidiCoreAuthoritativeHarmonyResult
@@ -141,6 +144,8 @@ class DefaultMidiCoreWorkspaceUseCases(
     override fun selectMelody(request: SelectMidiCoreMelody) = melodySelection.select(request)
 
     override fun prepareSourceAudition(request: PrepareMidiCoreSourceAudition): MidiCoreSourceAuditionResult = sourceAudition.prepare(request)
+
+    override fun prepareOccurrenceAudition(request: PrepareMidiCoreOccurrenceAudition): MidiCoreSourceAuditionResult = sourceAudition.prepareOccurrence(request)
 
     override fun confirmAuthority(request: ConfirmMidiCoreAuthority) = authority.confirm(request)
 
@@ -275,6 +280,7 @@ data class MidiCoreAuthorityUiState(
     val draft: MidiCoreAuthorityDraft = MidiCoreAuthorityDraft.defaults(),
     val draftDirty: Boolean = false,
     val suggestions: app.melotrail.application.MidiCoreAuthoritySuggestions? = null,
+    val lastInvalidation: MidiCoreInvalidationPreview? = null,
 )
 
 /** Candidate review state contains inspectable evidence, never direct file reads. */
@@ -403,6 +409,7 @@ sealed interface MidiCoreWorkspaceIntent {
     data object ExportPackage : MidiCoreWorkspaceIntent
     data class SelectAudition(val plan: MidiAuditionPlaybackPlan) : MidiCoreWorkspaceIntent
     data object PlaySourceMelody : MidiCoreWorkspaceIntent
+    data class PlayOccurrence(val occurrenceId: String) : MidiCoreWorkspaceIntent
     data class PlayAudition(val plan: MidiAuditionPlaybackPlan? = null) : MidiCoreWorkspaceIntent
     data object PauseAudition : MidiCoreWorkspaceIntent
     data object StopAudition : MidiCoreWorkspaceIntent
@@ -466,6 +473,7 @@ class MidiCoreWorkspaceViewModel(
             is MidiCoreWorkspaceIntent.RestoreCandidate -> restoreCandidate(intent)
             MidiCoreWorkspaceIntent.ExportPackage -> exportPackage()
             MidiCoreWorkspaceIntent.PlaySourceMelody -> playSourceMelody()
+            is MidiCoreWorkspaceIntent.PlayOccurrence -> playOccurrence(intent)
             is MidiCoreWorkspaceIntent.SelectAudition -> audition { useCases.audition.selectScope(intent.plan) }
             is MidiCoreWorkspaceIntent.PlayAudition -> audition {
                 intent.plan?.let { useCases.audition.play(it) } ?: useCases.audition.play()
@@ -577,6 +585,7 @@ class MidiCoreWorkspaceViewModel(
                     _state.value = _state.value.copy(
                         source = _state.value.source.copy(validation = result.validation, findings = result.validation.findings),
                         melody = MidiCoreMelodyUiState(result.session.project.selectedMelody, result.validation),
+                        authority = _state.value.authority.copy(lastInvalidation = result.invalidation),
                     )
                 }
                 is app.melotrail.application.MidiCoreMelodySelectionResult.Rejected -> failure(melodyBlocker(result.problem, result.validation), intent)
@@ -610,6 +619,7 @@ class MidiCoreWorkspaceViewModel(
                             draft = authorityDraft(result.session.project.authority),
                             draftDirty = false,
                             suggestions = result.suggestions,
+                            lastInvalidation = result.invalidation,
                         ),
                         source = _state.value.source.copy(validation = result.validation, findings = result.validation.findings),
                     )
@@ -623,7 +633,11 @@ class MidiCoreWorkspaceViewModel(
         val current = requireSessionOrBlock() ?: return
         startOperation(MidiCoreWorkspaceOperationKind.STRUCTURE, "Saving structure timeline…", intent) { _ ->
             when (val result = useCases.replaceStructure(ReplaceMidiCoreStructure(current, intent.definitions, intent.occurrences, intent.pickupTicks, intent.expectedSongEndTick))) {
-                is app.melotrail.application.MidiCoreStructureTimelineResult.Updated -> success("Structure timeline saved.", result.session)
+                is app.melotrail.application.MidiCoreStructureTimelineResult.Updated -> success("Structure timeline saved.", result.session) {
+                    _state.value = _state.value.copy(
+                        authority = _state.value.authority.copy(lastInvalidation = result.invalidation),
+                    )
+                }
                 is app.melotrail.application.MidiCoreStructureTimelineResult.Rejected -> failure(structureBlocker(result.problem), intent)
             }
         }
@@ -633,7 +647,11 @@ class MidiCoreWorkspaceViewModel(
         val current = requireSessionOrBlock() ?: return
         startOperation(MidiCoreWorkspaceOperationKind.HARMONY, "Saving authoritative harmony…", intent) { _ ->
             when (val result = useCases.replaceHarmony(ReplaceMidiCoreHarmony(current, intent.events))) {
-                is app.melotrail.application.MidiCoreAuthoritativeHarmonyResult.Updated -> success("Authoritative harmony saved.", result.session)
+                is app.melotrail.application.MidiCoreAuthoritativeHarmonyResult.Updated -> success("Authoritative harmony saved.", result.session) {
+                    _state.value = _state.value.copy(
+                        authority = _state.value.authority.copy(lastInvalidation = result.invalidation),
+                    )
+                }
                 is app.melotrail.application.MidiCoreAuthoritativeHarmonyResult.Rejected -> failure(harmonyBlocker(result.problem), intent)
             }
         }
@@ -788,6 +806,35 @@ class MidiCoreWorkspaceViewModel(
                     if (cancellation.get()) return@startOperation cancelled()
                     when (val result = useCases.audition.play(prepared.plan)) {
                         is MidiAuditionResult.Applied -> success("Source MIDI audition started.") {
+                            _state.value = _state.value.copy(audition = result.state, blockers = baseBlockers(session?.project))
+                        }
+                        is MidiAuditionResult.Failed -> failure(
+                            blocker(
+                                MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE,
+                                result.problem.message,
+                                result.problem.nextAction,
+                                result.problem.code.name,
+                            ),
+                            intent,
+                        ) {
+                            _state.value = _state.value.copy(audition = result.state)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun playOccurrence(intent: MidiCoreWorkspaceIntent.PlayOccurrence) {
+        val current = requireSessionOrBlock() ?: return
+        startOperation(MidiCoreWorkspaceOperationKind.AUDITION, "Starting occurrence MIDI audition…", intent) { cancellation ->
+            if (cancellation.get()) return@startOperation cancelled()
+            when (val prepared = useCases.prepareOccurrenceAudition(PrepareMidiCoreOccurrenceAudition(current, intent.occurrenceId))) {
+                is MidiCoreSourceAuditionResult.Rejected -> failure(sourceAuditionBlocker(prepared.problem), intent)
+                is MidiCoreSourceAuditionResult.Ready -> {
+                    if (cancellation.get()) return@startOperation cancelled()
+                    when (val result = useCases.audition.play(prepared.plan)) {
+                        is MidiAuditionResult.Applied -> success("Occurrence MIDI audition started.") {
                             _state.value = _state.value.copy(audition = result.state, blockers = baseBlockers(session?.project))
                         }
                         is MidiAuditionResult.Failed -> failure(
@@ -1132,6 +1179,9 @@ class MidiCoreWorkspaceViewModel(
             app.melotrail.application.MidiCoreSourceAuditionProblemCode.INVALID_PROJECT,
             app.melotrail.application.MidiCoreSourceAuditionProblemCode.SOURCE_DIGEST_MISMATCH,
             app.melotrail.application.MidiCoreSourceAuditionProblemCode.SOURCE_NOT_PLAYABLE,
+            app.melotrail.application.MidiCoreSourceAuditionProblemCode.AUTHORITY_REQUIRED,
+            app.melotrail.application.MidiCoreSourceAuditionProblemCode.OCCURRENCE_REQUIRED,
+            app.melotrail.application.MidiCoreSourceAuditionProblemCode.OCCURRENCE_NOT_PLAYABLE,
             -> MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE
         },
         problem.message,
