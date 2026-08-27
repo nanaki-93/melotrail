@@ -5,6 +5,10 @@ import kotlin.math.ceil
 import kotlin.math.abs
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 /** Severity used by the target role-validation report. */
 enum class MidiCoreRoleFindingSeverity {
@@ -381,6 +385,100 @@ object MidiCoreCandidateValidator {
     fun validate(context: MidiCoreGenerationContext, candidate: MidiCoreRoleCandidate): MidiCoreRoleValidationResult =
         MidiCoreRoleValidator.validate(context, candidate)
 }
+
+/** Stable JSON boundary for validation evidence stored beside an immutable candidate. */
+object MidiCoreRoleValidationReportJson {
+    const val SCHEMA = "melotrail-midi-core-role-validation"
+    const val VERSION = 1
+
+    private val json = Json {
+        prettyPrint = true
+        encodeDefaults = true
+        explicitNulls = false
+        ignoreUnknownKeys = false
+    }
+
+    /** Encode the complete deterministic report without exposing persistence DTOs to callers. */
+    fun encode(report: MidiCoreRoleValidationReport): String = json.encodeToString(
+        ReportDto(
+            schema = SCHEMA,
+            version = VERSION,
+            contextSha256 = report.contextSha256,
+            candidateSha256 = report.candidateSha256,
+            role = report.role.name,
+            occurrenceId = report.occurrenceId,
+            noteCount = report.noteCount,
+            passed = report.passed,
+            findings = report.findings.map { finding ->
+                FindingDto(
+                    code = finding.code.name,
+                    severity = finding.severity.name,
+                    role = finding.role.name,
+                    occurrenceId = finding.occurrenceId,
+                    tick = finding.tick,
+                    pitch = finding.pitch,
+                    message = finding.message,
+                )
+            },
+        ),
+    )
+
+    /** Decode and validate persisted report evidence before review or export uses it. */
+    fun decode(text: String): MidiCoreRoleValidationReport {
+        val dto = json.decodeFromString<ReportDto>(text)
+        require(dto.schema == SCHEMA && dto.version == VERSION) { "Unsupported MIDI Core role-validation report" }
+        val report = MidiCoreRoleValidationReport(
+            contextSha256 = dto.contextSha256,
+            candidateSha256 = dto.candidateSha256,
+            role = enumValue(dto.role, "role"),
+            occurrenceId = dto.occurrenceId,
+            noteCount = dto.noteCount,
+            findings = dto.findings.map { finding ->
+                MidiCoreRoleFinding(
+                    code = enumValue(finding.code, "finding code"),
+                    severity = enumValue(finding.severity, "finding severity"),
+                    role = enumValue(finding.role, "finding role"),
+                    occurrenceId = finding.occurrenceId,
+                    tick = finding.tick,
+                    pitch = finding.pitch,
+                    message = finding.message,
+                )
+            },
+        )
+        require(dto.passed == report.passed) { "MIDI Core role-validation pass state is inconsistent" }
+        return report
+    }
+
+    private inline fun <reified T : Enum<T>> enumValue(value: String, label: String): T = try {
+        enumValueOf<T>(value)
+    } catch (error: IllegalArgumentException) {
+        throw IllegalArgumentException("Unknown MIDI Core $label '$value'", error)
+    }
+}
+
+@Serializable
+private data class ReportDto(
+    val schema: String,
+    val version: Int,
+    val contextSha256: String,
+    val candidateSha256: String,
+    val role: String,
+    val occurrenceId: String,
+    val noteCount: Int,
+    val passed: Boolean,
+    val findings: List<FindingDto>,
+)
+
+@Serializable
+private data class FindingDto(
+    val code: String,
+    val severity: String,
+    val role: String,
+    val occurrenceId: String,
+    val tick: Long? = null,
+    val pitch: Int? = null,
+    val message: String,
+)
 
 private val SHA_256 = Regex("[0-9a-f]{64}")
 private val DRUM_PITCHES = setOf(36, 38, 42, 46)

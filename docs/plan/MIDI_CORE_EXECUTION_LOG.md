@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-024 complete; next task MC-025
+Status: MC-025 complete
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -64,7 +64,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-022 | DONE | `midi-core: MC-022 generate chord candidates` | PASS — chord-generator tests, documentation coverage, `git diff --check`, `make test` | Deterministic Chords candidates cover complete chord tones, curated rhythm alternatives, bounded inversions, voice leading, and scoped validation. |
 | MC-023 | DONE | `midi-core: MC-023 generate bass candidates` | PASS — focused Bass suite, documentation coverage, `git diff --check`, `make test` | Deterministic Bass candidates cover exact harmony windows, all curated patterns, both MIDI performance profiles, phrase/melody activity, accepted Chords rhythm, low-end spacing, and typed fallback/rejection. |
 | MC-024 | DONE | `midi-core: MC-024 generate drum candidates` | PASS — focused Drum suite, documentation coverage, `git diff --check`, `make test` | Deterministic Drum candidates cover complete groove/fill variants, density selection, phrase boundaries, accepted Bass kick intent, GM mapping, energy/purpose velocities, and typed validation. |
-| MC-025 | TODO | | | |
+| MC-025 | DONE | `midi-core: MC-025 publish generated candidates` | PASS — focused generation suite, documentation coverage, `git diff --check`, `make test` | One-role/one-occurrence generation publishes immutable MIDI/report evidence only after validation and current-authority admission; cancellation, stale completion, save failure, concurrency, immutable collision, and collision retry are covered. |
 | MC-026 | TODO | | | |
 | MC-027 | TODO | | | |
 | MC-028 | TODO | | | |
@@ -687,6 +687,27 @@ Decisions/deviations: `sectionPolicy.density` is a whole-variant selector: an ex
 Known limitations: Candidate publication and persisted validation-report serialization remain MC-025. Drum hardening across development fixtures remains MC-043; the legacy Drum adapter and renderer-specific map remain until MC-055, and the transitional Python documentation-inventory build check remains until MC-058.
 Commit: `midi-core: MC-024 generate drum candidates`.
 Next task: MC-025 — implement candidate generation and immutable publication use cases.
+
+### MC-025 — Implement candidate generation and immutable publication use cases
+
+Status: DONE
+Started: 2026-08-27
+Completed: 2026-08-27
+Starting commit/status: `a0e3f5a` / only the preserved unrelated deleted Kotlin compiler session marker is present.
+Contracts read: F-ARR-001–F-ARR-006; F-SYS-004; Architecture sections 4.4 and 8; MIDI Contract sections 4, 6, 9, and 13–14; Quality Gate 3 generation/persistence; MC-025 task contract.
+Current owners inspected: Target `MidiCoreCandidateLifecycle`, `MidiCoreArtifactStore`, semantic MIDI reader/writer, generation context/catalog, Chords/Bass/Drums generators, role validator, and target project schema. The old arrangement application service and stage artifact writers remain legacy owners and are not imported into the target use case.
+Behavior retained/extracted: `MidiCoreCandidateGeneration` owns one deterministic role/occurrence request, reconstructs source and protected-melody identity from immutable artifacts, consumes accepted dependency notes only after digest/status checks, validates generated semantic notes, round-trips the role MIDI through the target writer/reader, serializes the context-bound validation report, and publishes immutable MIDI/report artifacts before the atomic project append. `MidiCoreProjectWriteCoordinator` serializes candidate publication per project root. Cancellation after evidence publication leaves the evidence inspectable but unbound; stale sessions, save failures, and collisions never replace project state or existing files.
+Files added/changed: `src/main/kotlin/app/melotrail/application/MidiCoreCandidateGeneration.kt`; `src/main/kotlin/app/melotrail/application/MidiCoreProjectWriteCoordinator.kt`; `src/main/kotlin/app/melotrail/application/MidiCoreCandidateLifecycle.kt`; `src/main/kotlin/app/melotrail/arrangement/core/MidiCoreRoleValidation.kt`; `src/test/kotlin/app/melotrail/application/MidiCoreCandidateGenerationTest.kt`; `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`; and this execution log.
+Files/data deleted: None.
+Tracked deletion recoverability: Not applicable to MC-025; the unrelated Kotlin compiler session-marker deletion remains recoverable from Git and was not included in the task commit.
+Ignored deletion recoverability: None.
+Focused tests: `./gradlew :test --tests app.melotrail.application.MidiCoreCandidateGenerationTest --rerun-tasks` PASS (8 tests). Coverage includes all three roles, validation-report round trip, immutable overwrite rejection, collision-free retry, cancellation before/after publication, malformed-grid rejection, stale completion, atomic save failure with recovery evidence, and concurrent requests.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS; `make test` PASS (2026-08-27).
+Manual evidence: Not required.
+Decisions/deviations: The application boundary intentionally accepts a cooperative cancellation token in addition to coroutine cancellation so a UI cancel action can be represented as a typed result after immutable evidence has been published. A per-project-root lock protects the final load/check/publish/save transaction; the existing session equality remains the optimistic authority check. Candidate generation does not approve, mutate accepted references, generate all roles, render audio, or consult legacy arrangement services.
+Known limitations: The existing target review lifecycle remains the MC-026 application surface for list/accept/reject/lock/unlock/restore commands; this task only supplies safe candidate publication. Orphan evidence after cancellation or project-save failure is retained for inspection and later recovery rather than silently deleted.
+Commit: `midi-core: MC-025 publish generated candidates`.
+Next task: MC-026 — implement candidate review mutations.
 
 ## 6. Manual gate records
 

@@ -45,7 +45,10 @@ class MidiCoreCandidateLifecycle(
     private val clock: Clock = Clock.systemUTC(),
     private val idFactory: () -> String = { "candidate-${UUID.randomUUID()}" },
 ) {
-    fun publish(request: PublishMidiCoreCandidate): MidiCoreCandidateLifecycleResult {
+    fun publish(request: PublishMidiCoreCandidate): MidiCoreCandidateLifecycleResult =
+        MidiCoreProjectWriteCoordinator.withLock(request.session.root) { publishLocked(request) }
+
+    private fun publishLocked(request: PublishMidiCoreCandidate): MidiCoreCandidateLifecycleResult {
         val loaded = when (val result = load(request.session)) {
             is CandidateLoad.Ready -> result
             is CandidateLoad.Rejected -> return result.result
@@ -112,6 +115,13 @@ class MidiCoreCandidateLifecycle(
                 patternId = request.patternId,
                 acceptedDependencyIds = request.acceptedDependencyIds,
             )
+            if (request.beforeProjectSave?.invoke(candidate) == false) {
+                return rejected(
+                    MidiCoreCandidateProblemCode.CANCELLED,
+                    "Candidate generation was cancelled after immutable evidence publication.",
+                    "The published evidence remains inspectable; retry generation if another candidate is required.",
+                )
+            }
             val updated = current.copy(candidates = current.candidates + candidate)
             save(loaded.root, updated)
         } catch (error: MidiCoreProjectSaveException) {
@@ -479,6 +489,8 @@ data class PublishMidiCoreCandidate(
     val profileId: String = "default",
     val patternId: String = "unspecified",
     val acceptedDependencyIds: List<String> = emptyList(),
+    /** Optional checkpoint invoked after immutable files exist and before project-state append. */
+    val beforeProjectSave: ((MidiCoreCandidate) -> Boolean)? = null,
 )
 
 data class AcceptMidiCoreCandidate(val session: MidiCoreProjectSession, val candidateId: String, val locked: Boolean = false)
@@ -526,6 +538,7 @@ enum class MidiCoreCandidateProblemCode {
     ARTIFACT_FAILURE,
     ARTIFACT_COLLISION,
     SAVE_FAILED,
+    CANCELLED,
 }
 
 sealed interface MidiCoreExportSnapshotLifecycleResult {

@@ -325,10 +325,26 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreCandidateLifecycle.kt",
       "classification": "inherited-contract",
-      "reason": "The 20 callable declarations implement MC-019 immutable candidate publication, digest/authority admission, acceptance replacement and restoration, rejection, lock transitions, acceptance history, and export-snapshot capture under F-REV-001 through F-REV-005, F-EXP-001, and F-SYS-003; reviewed on 2026-08-27.",
-      "functionCount": 20,
-      "declarationDigest": "fa580dec64f889af33e908a4b8f0a51f059b4618b4e96f687ebedf569161b110",
+      "reason": "The 21 callable declarations implement MC-019 immutable candidate publication, digest/authority admission, acceptance replacement and restoration, rejection, lock transitions, acceptance history, export-snapshot capture, and the MC-025 cancellation-aware publication boundary under F-REV-001 through F-REV-005, F-EXP-001, and F-SYS-003; reviewed on 2026-08-27.",
+      "functionCount": 21,
+      "declarationDigest": "3888850fa3d6b5021513991227c4285571fcc5dd8bfff0a76d498afe42cb1e00",
       "documentedFunctionCount": 1
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/application/MidiCoreCandidateGeneration.kt",
+      "classification": "inherited-contract",
+      "reason": "The 14 callable declarations implement MC-025's off-UI-thread, one-role/one-occurrence deterministic generation, shared validation, semantic MIDI round-trip, immutable candidate/report publication, cancellation, stale-session admission, disk-failure retention, and collision retry under F-ARR-001 through F-ARR-006 and F-SYS-004; reviewed on 2026-08-27.",
+      "functionCount": 14,
+      "declarationDigest": "851d23dd5b5368c9846def0e82f4111bac8690da7ca024e35ade8e4f2625818f",
+      "documentedFunctionCount": 2
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/application/MidiCoreProjectWriteCoordinator.kt",
+      "classification": "inherited-contract",
+      "reason": "The one callable declaration serializes MC-025 candidate project publication per normalized project root so concurrent generation results cannot overwrite one another; reviewed on 2026-08-27.",
+      "functionCount": 1,
+      "declarationDigest": "ffcde717d5c3f2d1767cf8667c47139a6067bd11df7742d16dc4b66e2f0fc368",
+      "documentedFunctionCount": 0
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/PartPreviewApplicationService.kt",
@@ -484,11 +500,11 @@
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/core/MidiCoreRoleValidation.kt",
-      "classification": "documented",
-      "reason": "All 15 callable declarations implement MC-021's deterministic common, Chords, Bass, and Drums candidate findings before publication, including authority harmony, protected melody, density, channel, range, timing, and event-type policies; reviewed on 2026-08-27.",
-      "functionCount": 15,
-      "declarationDigest": "9805e37980236c55332d219a2f814c21fbf1d3180f65e862c58188daafef3ee7",
-      "documentedFunctionCount": 15
+      "classification": "inherited-contract",
+      "reason": "The 18 callable declarations implement MC-021's deterministic common, Chords, Bass, and Drums candidate findings before publication, including authority harmony, protected melody, density, channel, range, timing, event-type policies, and MC-025 persisted validation-report JSON; reviewed on 2026-08-27.",
+      "functionCount": 18,
+      "declarationDigest": "fe44f1fa4b100af9fa3dc2ec1ac6159396f5aafbf4d37ecf8856f670f9f14fe4",
+      "documentedFunctionCount": 17
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/core/MidiCoreChordGenerator.kt",
