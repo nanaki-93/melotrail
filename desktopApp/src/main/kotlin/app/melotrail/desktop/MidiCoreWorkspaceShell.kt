@@ -83,9 +83,10 @@ internal fun midiCoreWorkspaceShellLayout(width: Dp): String =
 internal fun MidiCoreWorkspaceShell(
     workspace: MidiCoreWorkspaceViewModel,
     modifier: Modifier = Modifier,
+    projectActions: MidiCoreProjectPageActions = MidiCoreProjectPageActions(),
 ) {
     val state by workspace.state.collectAsState()
-    MidiCoreWorkspaceShell(state, workspace::accept, modifier)
+    MidiCoreWorkspaceShell(state, workspace::accept, modifier, projectActions = projectActions)
 }
 
 /** Render the shell from a stable state snapshot so its semantic tree is independently testable. */
@@ -95,8 +96,10 @@ internal fun MidiCoreWorkspaceShell(
     onIntent: (MidiCoreWorkspaceIntent) -> Unit = {},
     modifier: Modifier = Modifier,
     initialDestination: MidiCoreWorkspaceDestination = MidiCoreWorkspaceDestination.PROJECT,
+    projectActions: MidiCoreProjectPageActions = MidiCoreProjectPageActions(),
 ) {
     var selectedDestination by remember(initialDestination) { mutableStateOf(initialDestination) }
+    val onDestinationSelected: (MidiCoreWorkspaceDestination) -> Unit = { selectedDestination = it }
     BoxWithConstraints(
         modifier.fillMaxSize().semantics {
             testTag = MidiCoreWorkspaceShellTags.ROOT
@@ -116,7 +119,7 @@ internal fun MidiCoreWorkspaceShell(
                 ) {
                     MidiCoreWorkspaceNavigation(
                         selectedDestination = selectedDestination,
-                        onDestinationSelected = { selectedDestination = it },
+                        onDestinationSelected = onDestinationSelected,
                         compact = false,
                         modifier = Modifier.width(224.dp).fillMaxHeight(),
                     )
@@ -124,6 +127,8 @@ internal fun MidiCoreWorkspaceShell(
                         destination = selectedDestination,
                         state = state,
                         onIntent = onIntent,
+                        onDestinationSelected = onDestinationSelected,
+                        projectActions = projectActions,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                     )
                 }
@@ -134,7 +139,7 @@ internal fun MidiCoreWorkspaceShell(
                 ) {
                     MidiCoreWorkspaceNavigation(
                         selectedDestination = selectedDestination,
-                        onDestinationSelected = { selectedDestination = it },
+                        onDestinationSelected = onDestinationSelected,
                         compact = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -142,6 +147,8 @@ internal fun MidiCoreWorkspaceShell(
                         destination = selectedDestination,
                         state = state,
                         onIntent = onIntent,
+                        onDestinationSelected = onDestinationSelected,
+                        projectActions = projectActions,
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                     )
                 }
@@ -285,8 +292,14 @@ private fun MidiCoreWorkspacePage(
     destination: MidiCoreWorkspaceDestination,
     state: MidiCoreWorkspaceState,
     onIntent: (MidiCoreWorkspaceIntent) -> Unit,
+    onDestinationSelected: (MidiCoreWorkspaceDestination) -> Unit,
+    projectActions: MidiCoreProjectPageActions,
     modifier: Modifier,
 ) {
+    if (destination == MidiCoreWorkspaceDestination.PROJECT) {
+        MidiCoreProjectPage(state, onIntent, onDestinationSelected, projectActions, modifier)
+        return
+    }
     Column(
         modifier.semantics {
             testTag = MidiCoreWorkspaceShellTags.PAGE + "-" + destination.route

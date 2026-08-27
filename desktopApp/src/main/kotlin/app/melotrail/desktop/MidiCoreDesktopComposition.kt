@@ -118,6 +118,12 @@ object MidiCoreDesktopEntrypoint {
             val workspace = remember(services) {
                 MidiCoreWorkspaceViewModel(services.workspace, services.preferences, services.logger)
             }
+            val projectActions = remember(services) {
+                MidiCoreProjectPageActions(
+                    chooseProjectDirectory = { services.dialogs.chooseProjectDirectory() },
+                    chooseNewProjectDirectory = { services.dialogs.chooseNewProjectDirectory() },
+                )
+            }
             val desktopWindowState = rememberWindowState(placement = WindowPlacement.Maximized)
             Window(
                 state = desktopWindowState,
@@ -129,7 +135,7 @@ object MidiCoreDesktopEntrypoint {
             ) {
                 window.minimumSize = java.awt.Dimension(900, 620)
                 MelotrailTheme {
-                    MidiCoreStartupSurface(workspace)
+                    MidiCoreStartupSurface(workspace, projectActions)
                 }
             }
         }
@@ -138,8 +144,8 @@ object MidiCoreDesktopEntrypoint {
 
 /** Target shell with only the six MIDI Core workflow destinations. */
 @Composable
-private fun MidiCoreStartupSurface(workspace: MidiCoreWorkspaceViewModel) {
-    MidiCoreWorkspaceShell(workspace)
+private fun MidiCoreStartupSurface(workspace: MidiCoreWorkspaceViewModel, projectActions: MidiCoreProjectPageActions) {
+    MidiCoreWorkspaceShell(workspace, projectActions = projectActions)
 }
 
 /** Target-only file-dialog boundary; it exposes MIDI and project locations, never audio or sound-library settings. */
