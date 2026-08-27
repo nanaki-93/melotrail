@@ -9,7 +9,6 @@ import app.melotrail.project.MidiCoreAuthorityHasher
 import app.melotrail.project.MidiCoreCandidate
 import app.melotrail.project.MidiCoreCandidateStatus
 import app.melotrail.project.MidiCoreProject
-import app.melotrail.project.ProjectArtifact
 import app.melotrail.project.adapter.MidiCoreArtifactStore
 import java.nio.file.Files
 import java.nio.file.LinkOption
@@ -88,12 +87,13 @@ class MidiCoreCandidateReview(
             is ItemLoad.Ready -> result.item
             is ItemLoad.Rejected -> return result.result
         }
+        val differences = MidiCoreCandidateDiff.differences(first.notes, second.notes)
         return MidiCoreCandidateReviewResult.Compared(
             MidiCoreProjectSession(loaded.root, loaded.project),
             loaded.project.revision,
             first,
             second,
-            semanticDifferences(first.notes, second.notes),
+            differences,
         )
     }
 
@@ -212,26 +212,6 @@ class MidiCoreCandidateReview(
         }.sortedWith(compareBy<MidiCoreReviewNote> { it.startTick }.thenBy { it.endTick }.thenBy { it.pitch }.thenBy { it.velocity })
     }
 
-    private fun semanticDifferences(
-        first: List<MidiCoreReviewNote>,
-        second: List<MidiCoreReviewNote>,
-    ): List<MidiCoreCandidateDifference> {
-        val firstByTick = first.groupBy(MidiCoreReviewNote::startTick)
-        val secondByTick = second.groupBy(MidiCoreReviewNote::startTick)
-        return (firstByTick.keys + secondByTick.keys).distinct().sorted().flatMap { tick ->
-            val left = firstByTick[tick].orEmpty()
-            val right = secondByTick[tick].orEmpty()
-            val common = minOf(left.size, right.size)
-            buildList {
-                (0 until common).forEach { index ->
-                    if (left[index] != right[index]) add(MidiCoreCandidateDifference(MidiCoreCandidateDifferenceKind.CHANGED, left[index], right[index]))
-                }
-                left.drop(common).forEach { note -> add(MidiCoreCandidateDifference(MidiCoreCandidateDifferenceKind.REMOVED, note, null)) }
-                right.drop(common).forEach { note -> add(MidiCoreCandidateDifference(MidiCoreCandidateDifferenceKind.ADDED, null, note)) }
-            }
-        }
-    }
-
     private fun load(session: MidiCoreProjectSession, expectedRevision: Long?): ReviewLoad {
         if (expectedRevision != null && expectedRevision < 0L) {
             return ReviewLoad.Rejected(rejected(
@@ -341,6 +321,12 @@ data class MidiCoreReviewNote(
     val velocity: Int,
 )
 
+private val NOTE_ORDER = compareBy<MidiCoreReviewNote> { it.startTick }
+    .thenBy { it.endTick }
+    .thenBy { it.channel }
+    .thenBy { it.pitch }
+    .thenBy { it.velocity }
+
 enum class MidiCoreCandidateDifferenceKind { ADDED, REMOVED, CHANGED }
 
 data class MidiCoreCandidateDifference(
@@ -348,6 +334,50 @@ data class MidiCoreCandidateDifference(
     val first: MidiCoreReviewNote?,
     val second: MidiCoreReviewNote?,
 )
+
+data class MidiCoreCandidateDifferenceSummary(
+    val additions: Int,
+    val removals: Int,
+    val changes: Int,
+) {
+    init {
+        require(additions >= 0 && removals >= 0 && changes >= 0) { "Candidate difference counts must not be negative" }
+    }
+
+    val total: Int get() = additions + removals + changes
+}
+
+/** Compares semantic note events in deterministic start-tick and event-value order. */
+object MidiCoreCandidateDiff {
+    fun differences(
+        first: List<MidiCoreReviewNote>,
+        second: List<MidiCoreReviewNote>,
+    ): List<MidiCoreCandidateDifference> {
+        val firstByTick = first.sortedWith(NOTE_ORDER).groupBy(MidiCoreReviewNote::startTick)
+        val secondByTick = second.sortedWith(NOTE_ORDER).groupBy(MidiCoreReviewNote::startTick)
+        return (firstByTick.keys + secondByTick.keys).distinct().sorted().flatMap { tick ->
+            val left = firstByTick[tick].orEmpty()
+            val right = secondByTick[tick].orEmpty()
+            val common = minOf(left.size, right.size)
+            buildList {
+                (0 until common).forEach { index ->
+                    if (left[index] != right[index]) {
+                        add(MidiCoreCandidateDifference(MidiCoreCandidateDifferenceKind.CHANGED, left[index], right[index]))
+                    }
+                }
+                left.drop(common).forEach { note -> add(MidiCoreCandidateDifference(MidiCoreCandidateDifferenceKind.REMOVED, note, null)) }
+                right.drop(common).forEach { note -> add(MidiCoreCandidateDifference(MidiCoreCandidateDifferenceKind.ADDED, null, note)) }
+            }
+        }
+    }
+
+    fun summary(differences: List<MidiCoreCandidateDifference>): MidiCoreCandidateDifferenceSummary =
+        MidiCoreCandidateDifferenceSummary(
+            additions = differences.count { it.kind == MidiCoreCandidateDifferenceKind.ADDED },
+            removals = differences.count { it.kind == MidiCoreCandidateDifferenceKind.REMOVED },
+            changes = differences.count { it.kind == MidiCoreCandidateDifferenceKind.CHANGED },
+        )
+}
 
 sealed interface MidiCoreCandidateReviewResult {
     data class Listed(
@@ -362,7 +392,9 @@ sealed interface MidiCoreCandidateReviewResult {
         val first: MidiCoreCandidateReviewItem,
         val second: MidiCoreCandidateReviewItem,
         val differences: List<MidiCoreCandidateDifference>,
-    ) : MidiCoreCandidateReviewResult
+    ) : MidiCoreCandidateReviewResult {
+        val summary: MidiCoreCandidateDifferenceSummary get() = MidiCoreCandidateDiff.summary(differences)
+    }
 
     data class Rejected(val problem: MidiCoreCandidateProblem) : MidiCoreCandidateReviewResult
 }

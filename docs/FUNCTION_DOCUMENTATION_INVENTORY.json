@@ -333,10 +333,18 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreCandidateReview.kt",
       "classification": "inherited-contract",
-      "reason": "The 20 callable declarations implement MC-026 candidate listing, semantic comparison, digest/authority revalidation, explicit review-decision delegation, targeted regeneration, and optimistic revision admission under F-REV-001 through F-REV-005 and F-ARR-006; reviewed on 2026-08-27.",
-      "functionCount": 20,
-      "declarationDigest": "9c23934ac6008c02ff6cdaee35144d65f757463aa2f7f43e89056c31eb40d435",
+      "reason": "The 21 callable declarations implement MC-026 candidate listing, semantic comparison, digest/authority revalidation, explicit review-decision delegation, targeted regeneration, optimistic revision admission, and MC-027 deterministic event-level diff summaries under F-REV-001 through F-REV-006 and F-ARR-006; reviewed on 2026-08-27.",
+      "functionCount": 21,
+      "declarationDigest": "463ba1acb2720d8fe5e8e6b8ee754c7d8d3522121e0701039ef55d266213f468",
       "documentedFunctionCount": 8
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/application/MidiCoreAcceptedSongAssembly.kt",
+      "classification": "inherited-contract",
+      "reason": "The 6 callable declarations implement MC-027 deterministic accepted-song assembly from the immutable protected melody and exact occurrence-scoped accepted role candidates, including source identity, authority, digest, validation-report, channel, scope, gap, and overflow checks under F-REV-001 and F-REV-006; reviewed on 2026-08-27.",
+      "functionCount": 6,
+      "declarationDigest": "10b574f5c1681d7cafa944c8a2c567bc2d7af161fb43c7a197bced52d814fe42",
+      "documentedFunctionCount": 1
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreCandidateGeneration.kt",

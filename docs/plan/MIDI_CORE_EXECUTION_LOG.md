@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-026 complete
+Status: MC-027 complete
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -66,7 +66,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-024 | DONE | `midi-core: MC-024 generate drum candidates` | PASS — focused Drum suite, documentation coverage, `git diff --check`, `make test` | Deterministic Drum candidates cover complete groove/fill variants, density selection, phrase boundaries, accepted Bass kick intent, GM mapping, energy/purpose velocities, and typed validation. |
 | MC-025 | DONE | `midi-core: MC-025 publish generated candidates` | PASS — focused generation suite, documentation coverage, `git diff --check`, `make test` | One-role/one-occurrence generation publishes immutable MIDI/report evidence only after validation and current-authority admission; cancellation, stale completion, save failure, concurrency, immutable collision, and collision retry are covered. |
 | MC-026 | DONE | `midi-core: MC-026 review arrangement candidates` | PASS — focused schema/lifecycle/review suite, documentation coverage, `git diff --check`, `make test` | User-owned candidate listing and state transitions now use optimistic project revisions, authority/digest revalidation, immutable evidence, acceptance history, locking, restoration, and targeted regeneration. |
-| MC-027 | TODO | | | |
+| MC-027 | DONE | `midi-core: MC-027 assemble accepted song` | PASS — focused diff/assembly/review suite, documentation coverage, `git diff --check`, `make test` | Deterministic event-level diff summaries and accepted-song assembly preserve the protected melody, aggregate exact occurrence-scoped role candidates, and reject incomplete, stale, tampered, malformed, mis-channelled, or overflowing evidence before review. |
 | MC-028 | TODO | | | |
 | MC-029 | TODO | | | |
 | MC-030 | TODO | | | |
@@ -729,6 +729,27 @@ Decisions/deviations: Revision defaults to zero for backward-compatible decoding
 Known limitations: The review facade is an application boundary and is not yet wired to the Compose Desktop Review page; MC-038 owns that UI integration. Full accepted-song assembly, gap/overflow validation, and export-facing review sequences remain MC-027. The transitional Python documentation-inventory build check remains until MC-058.
 Commit: `midi-core: MC-026 review arrangement candidates`.
 Next task: MC-027 — implement semantic candidate diff and accepted-song assembly.
+
+### MC-027 — Implement semantic candidate diff and accepted-song assembly
+
+Status: DONE
+Started: 2026-08-27
+Completed: 2026-08-27
+Starting commit/status: `ff4285a` / only the preserved unrelated deleted Kotlin compiler session marker is present.
+Contracts read: F-REV-001 and F-REV-006; Architecture sections 4.4–4.5 and 7–9; MIDI Contract sections 8–10; MC-027 task contract.
+Current owners inspected: Target review facade, candidate lifecycle/artifact store, protected-melody selector, semantic MIDI reader/writer, authority timeline, role validation report, and legacy arrangement full-song/stage comparison paths only for reusable event-comparison behavior.
+Behavior retained/extracted: `MidiCoreCandidateDiff` now reports deterministic semantic note additions, removals, and changes. `MidiCoreAcceptedSongAssembly` verifies the immutable source and protected melody, current authority and exact occurrence scopes, accepted candidate/report digests, role channels, file shape, note counts, boundaries, and intentional silence before building one in-memory review sequence with Melody first and one aggregated track per selected role. Assembly preserves absolute occurrence ticks and writes no source, candidate, or project artifacts.
+Files added/changed: `src/main/kotlin/app/melotrail/application/MidiCoreCandidateReview.kt`; `src/main/kotlin/app/melotrail/application/MidiCoreAcceptedSongAssembly.kt`; `src/test/kotlin/app/melotrail/application/MidiCoreAcceptedSongAssemblyTest.kt`; `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`; and this execution log.
+Files/data deleted: None.
+Tracked deletion recoverability: Not applicable to MC-027; the unrelated Kotlin compiler session-marker deletion remains recoverable from Git and was not included in the task commit.
+Ignored deletion recoverability: None.
+Focused tests: `./gradlew :test --tests app.melotrail.application.MidiCoreAcceptedSongAssemblyTest --tests app.melotrail.application.MidiCoreCandidateReviewTest --rerun-tasks --console=plain` PASS. Coverage includes repeated occurrences, pickup and sub-bar harmony windows, intentional role silence, missing/stale/digest-invalid evidence, candidate overflow and channel mismatch, source identity preservation, and deterministic additions/removals/changes.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS; `make test` PASS (2026-08-27; 14 Gradle tasks).
+Manual evidence: Not required.
+Decisions/deviations: Role candidates are generated and stored per absolute occurrence, but the review sequence has one track per role; assembly validates each occurrence independently and then aggregates its notes in occurrence order. An accepted candidate with zero notes is intentional role silence and remains a required accepted scope. Semantic diff pairs notes at equal start ticks after deterministic event-value ordering; it does not attempt musical alignment or critic/humanization behavior.
+Known limitations: The assembled review sequence remains in-memory until MC-029's exporter captures and publishes an immutable package; Compose Review/audition integration remains MC-028 and MC-038. The transitional Python documentation-inventory build check remains until MC-058.
+Commit: `midi-core: MC-027 assemble accepted song`.
+Next task: MC-028 — implement minimal local MIDI audition.
 
 ## 6. Manual gate records
 
