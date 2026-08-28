@@ -131,7 +131,7 @@ project.
 
 The only expected human pauses are:
 
-- MC-009: early Logic Pro and GarageBand import spike;
+- MC-009: early Logic Pro import spike;
 - MC-048: final DAW compatibility matrix;
 - MC-049: holdout musical listening rubric; and
 - MC-060: final product sign-off.
@@ -181,7 +181,7 @@ true:
 - all mandatory functional IDs are implemented;
 - the six-page desktop workflow passes;
 - generated Chords/Bass/Drums obey authority and immutable-candidate rules;
-- final Logic Pro and GarageBand matrices are recorded;
+- final Logic Pro matrix is recorded;
 - holdout musical thresholds pass;
 - Python, worker, audio/DSP, rendering/mixing/mastering, sound libraries,
   non-MVP AI/cohesion/critic roles, commercial/video/publishing, old schema,

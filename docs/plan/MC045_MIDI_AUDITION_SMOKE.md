@@ -17,8 +17,8 @@ library data, or project mutations.
   project data unchanged, and gives the user a reconnect-or-select-another-
   device retry action.
 - Preview timbre is deliberately not a Melotrail authority or export promise.
-  Choose instruments, audio rendering, mixing, and mastering in Logic Pro or
-  GarageBand after MIDI export.
+  Choose instruments, audio rendering, mixing, and mastering in Logic Pro after
+  MIDI export.
 
 ## Local smoke procedure
 

@@ -273,26 +273,27 @@ It must not fabricate a DAW result, listening score, or sign-off.
 - **Validation:** focused tests, `make test`, `make build`.
 - **Evidence:** fixture export bundle and validation report.
 - **Commit:** `midi-core: MC-008 prove MIDI export round trip`.
-- **Done when:** automated G1 behavior passes and one bundle is ready for both
-  DAWs.
+- **Done when:** automated G1 behavior passes and one bundle is ready for Logic
+  Pro.
 
-### MC-009 — Complete the early Logic Pro and GarageBand spike
+### MC-009 — Complete the early Logic Pro spike
 
 - **Depends on:** MC-008.
 - **Contracts:** F-EXP-007; DAW Compatibility 5–6.
 - **Inspect:** the MC-008 bundle and current installed DAW/macOS versions.
 - **Work:** prepare exact import steps and evidence form; ask the user to import
-  complete and role files in Logic Pro and GarageBand; record pass, conditional
-  pass, or fail for track names/count, tempo, meter, channels, markers, first/
-  last boundaries, instrument assignment, and stuck notes. Fix deterministic
-  export defects and repeat before closing the task.
+  complete and role files in Logic Pro; record pass, conditional pass, or fail
+  for track names/count, tempo, meter, channels, markers, first/last boundaries,
+  instrument assignment, and stuck notes. Fix deterministic export defects and
+  repeat before closing the task.
 - **Delete:** no code based on an unverified DAW assumption.
 - **Tests:** rerun MC-008 automated tests after any fix.
 - **Validation:** manual G1 matrix and `make build`.
 - **Evidence:** exact versions, fixture hashes, user actions, results, and
   screenshots when available.
 - **Commit:** `midi-core: MC-009 record DAW compatibility spike`.
-- **Done when:** both DAWs pass or have an accepted, documented conditional pass.
+- **Done when:** Logic Pro passes or has an accepted, documented conditional
+  pass.
   This task cannot be marked done from automated evidence alone.
 
 ## Phase 2 — MIDI project kernel
@@ -875,7 +876,7 @@ It must not fabricate a DAW result, listening score, or sign-off.
 - **Work:** show export readiness/blockers, snapshot summary, exact complete/
   role filenames, authority/candidate hashes, instrument suggestions, output
   destination, overwrite collision decision, progress/cancel, validation result,
-  reveal-folder action, and Logic/GarageBand import guidance.
+  reveal-folder action, and Logic Pro import guidance.
 - **Delete:** audio format/quality/sample-rate, master preview, credits,
   commercial evidence, and Mix/Master recovery from target UI.
 - **Tests:** ready/blocked/stale states, destination/collision, success/failure,
@@ -1045,23 +1046,23 @@ It must not fabricate a DAW result, listening score, or sign-off.
 - **Done when:** malformed bounded input returns typed failure and valid
   generated input round-trips semantically.
 
-### MC-048 — Complete the final Logic Pro and GarageBand matrix
+### MC-048 — Complete the final Logic Pro matrix
 
 - **Depends on:** MC-047.
 - **Contracts:** F-EXP-007; DAW Compatibility; Quality Gate 6.
 - **Inspect:** final export packages for every DAW fixture and MC-009 results.
 - **Work:** prepare hashed packages and exact checklist; ask the user to run the
-  complete/role import matrix in current Logic Pro and GarageBand versions;
-  record versions, tempo import behavior, tracks/names/channels, boundaries,
-  markers, instruments, playback, and required actions. Fix and repeat any
-  implementation failure.
+  complete/role import matrix in the current Logic Pro version; record version,
+  tempo import behavior, tracks/names/channels, boundaries, markers,
+  instruments, playback, and required actions. Fix and repeat any implementation
+  failure.
 - **Delete:** no unsupported DAW claim or workaround branch.
 - **Tests:** all export/semantic tests after any fix.
-- **Validation:** both final manual matrices and `make build`.
+- **Validation:** the final Logic Pro matrix and `make build`.
 - **Evidence:** completed DAW records, hashes, reviewer/date, screenshots when
   available.
 - **Commit:** `midi-core: MC-048 verify destination DAWs`.
-- **Done when:** both DAWs pass or have an explicitly accepted conditional pass.
+- **Done when:** Logic Pro passes or has an explicitly accepted conditional pass.
 
 ### MC-049 — Complete holdout musical acceptance
 
@@ -1319,7 +1320,7 @@ It must not fabricate a DAW result, listening score, or sign-off.
   may be hidden.
 - **Tests:** complete fresh automated suite and all required manual evidence.
 - **Validation:** clean `make test`, `make check`, `make build`, desktop smoke,
-  Logic/GarageBand records, holdout thresholds, cleanup scan, user sign-off.
+  Logic Pro record, holdout thresholds, cleanup scan, user sign-off.
 - **Evidence:** final commit, commands/results, DAW/holdout/UI/cleanup summaries,
   limitations, reviewer/date, and signed decision.
 - **Commit:** `midi-core: MC-060 complete MVP evidence`.

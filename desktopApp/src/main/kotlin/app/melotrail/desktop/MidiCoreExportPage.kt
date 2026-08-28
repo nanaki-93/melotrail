@@ -226,9 +226,8 @@ private fun ExportInstrumentSuggestionsCard() {
 
 @Composable
 private fun ExportDawGuidanceCard() {
-    ExportCard(MidiCoreExportPageTags.DAW_GUIDANCE, "Logic Pro and GarageBand") {
+    ExportCard(MidiCoreExportPageTags.DAW_GUIDANCE, "Logic Pro") {
         Text("Logic Pro: import complete-song.mid at bar 1, confirm whether to adopt its fixed tempo and meter, then assign instruments to Melody, Chords, Bass, and Drums.", style = MaterialTheme.typography.bodyMedium)
-        Text("GarageBand: drag complete-song.mid into the empty track area, confirm timing and role alignment, then choose software instruments. Role files begin at the same song origin for separate import.", style = MaterialTheme.typography.bodyMedium)
         Text("Track names, timing, channels, and MIDI event content are package evidence. Destination instrument choices remain in the DAW.", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
     }
 }

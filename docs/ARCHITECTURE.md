@@ -9,7 +9,7 @@ Authority: component ownership and dependency direction
 Melotrail is one local Kotlin/JVM desktop application. It reads and writes MIDI,
 stores explicit musical authority, generates deterministic accompaniment
 candidates, lets the user review them in Compose Desktop, and exports a package
-for Logic Pro or GarageBand.
+for Logic Pro. GarageBand is unverified and outside the supported boundary.
 
 The architecture is intentionally smaller than the current repository. There
 is no service boundary, Python process, audio representation, renderer, mixer,
@@ -25,7 +25,7 @@ Musician
        -> local MIDI audition output
        -> deterministic arrangement engine
        -> DAW MIDI export package
-  -> Logic Pro or GarageBand
+  -> Logic Pro
        -> instrument choice, recording, editing, mixing, mastering, release
 ```
 
@@ -170,7 +170,7 @@ Responsibilities:
 - refuse silent overwrite.
 
 DAW patch names are suggestions in the manifest. Export does not depend on
-Logic Pro or GarageBand being installed.
+Logic Pro being installed.
 
 ### 4.8 Compose Desktop
 

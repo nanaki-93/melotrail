@@ -235,31 +235,39 @@ class MidiCoreMidiPackageExporterTest {
     @Test
     fun `exports every development source fixture with portable semantic packages`() {
         listOf(
-            Triple("smf0-melody.mid", "simple-diatonic", 0),
-            Triple("pickup-timing.mid", "pickup-sub-bar", 1),
-            Triple("expressive-controller-pitch.mid", "chromatic-expressive", 1),
-        ).forEach { (fixture, label, melodyTrackIndex) ->
+            DawFixture("smf0-melody.mid", "smf0-melody", 0),
+            DawFixture("smf1-reference-tracks.mid", "smf1-reference-tracks", 1),
+            DawFixture("pickup-timing.mid", "pickup-timing", 1),
+            DawFixture("sub-bar-harmony.mid", "sub-bar-harmony", 1, listOf("C", "G7"), arrangementEndTick = 1_920),
+            DawFixture("expressive-controller-pitch.mid", "expressive-controller-pitch", 1),
+            DawFixture("final-boundary-note.mid", "complete-arrangement-boundary", 0, drumFillPatternId = "drums.fill.dusty-snare-roll"),
+        ).forEach { fixture ->
             val store = MidiCoreArtifactStore()
             val accepted = acceptAll(
                 store,
                 readySession(
                     store,
-                    root.resolve("development-$label"),
-                    sourceFixture = fixture,
-                    melodyTrackIndex = melodyTrackIndex,
+                    root.resolve("development-${fixture.label}"),
+                    sourceFixture = fixture.sourceFixture,
+                    melodyTrackIndex = fixture.melodyTrackIndex,
+                    harmonySymbols = fixture.harmonySymbols,
+                    arrangementEndTick = fixture.arrangementEndTick,
                 ),
+                drumFillPatternId = fixture.drumFillPatternId,
             )
 
             val exported = assertIs<MidiCoreMidiPackageExportResult.Exported>(
-                exporter(store, "export-$label").export(ExportMidiCorePackage(accepted)),
+                exporter(store, "export-${fixture.label}").export(ExportMidiCorePackage(accepted)),
             ).packageResult
 
             assertEquals(5, exported.files.size)
-            assertTrue(exported.files.all { it.validation.songEndTick == accepted.project.sourceMidi?.sourceEndTick })
+            val expectedSongEndTick = requireNotNull(accepted.project.authority).occurrences.last().endTick
+            assertTrue(exported.files.all { it.validation.songEndTick == expectedSongEndTick })
             assertTrue(exported.files.all { file -> JdkMidiReader().inspect(exported.directory.resolve(file.filename)).sourceEndTick == file.validation.songEndTick })
             val manifest = Files.readString(exported.directory.resolve("manifest.json"))
-            assertTrue(manifest.contains("\"filename\": \"$fixture\""))
+            assertTrue(manifest.contains("\"filename\": \"${fixture.sourceFixture}\""))
             assertFalse(manifest.contains(accepted.root.toString()))
+            materializeDawMatrixPackage(fixture.label, exported)
         }
     }
 
@@ -278,10 +286,14 @@ class MidiCoreMidiPackageExporterTest {
 
     private fun fixedClock(): Clock = Clock.fixed(Instant.parse("2026-08-28T00:00:00Z"), ZoneOffset.UTC)
 
-    private fun acceptAll(store: MidiCoreArtifactStore, initial: MidiCoreProjectSession): MidiCoreProjectSession {
+    private fun acceptAll(
+        store: MidiCoreArtifactStore,
+        initial: MidiCoreProjectSession,
+        drumFillPatternId: String? = null,
+    ): MidiCoreProjectSession {
         var session = initial
         CandidateRole.entries.forEachIndexed { index, role ->
-            val candidate = publishCandidate(store, session, role, "candidate-${role.name.lowercase()}", index)
+            val candidate = publishCandidate(store, session, role, "candidate-${role.name.lowercase()}", index, drumFillPatternId)
             session = assertIs<MidiCoreCandidateLifecycleResult.Updated>(
                 MidiCoreCandidateReview(artifacts = store).accept(
                     AcceptMidiCoreCandidate(candidate.session, candidate.candidate.id),
@@ -307,6 +319,7 @@ class MidiCoreMidiPackageExporterTest {
         role: CandidateRole,
         candidateId: String,
         index: Int,
+        drumFillPatternId: String? = null,
     ) = runBlocking {
         val patternId = when (role) {
             CandidateRole.CHORDS -> "chords.rhythm.sustained"
@@ -334,7 +347,10 @@ class MidiCoreMidiPackageExporterTest {
                     patternId,
                     index.toLong(),
                 ),
-                sectionPolicy = app.melotrail.arrangement.core.MidiCoreSectionPolicy(density = 1.0),
+                sectionPolicy = app.melotrail.arrangement.core.MidiCoreSectionPolicy(
+                    density = 1.0,
+                    fillPatternId = if (role == CandidateRole.DRUMS) drumFillPatternId else null,
+                ),
                 candidateId = candidateId,
             ),
         )
@@ -347,6 +363,8 @@ class MidiCoreMidiPackageExporterTest {
         projectId: String = "exporter-${projectRoot.fileName}",
         sourceFixture: String = "smf0-melody.mid",
         melodyTrackIndex: Int = 0,
+        harmonySymbols: List<String> = listOf("C"),
+        arrangementEndTick: Long? = null,
     ): MidiCoreProjectSession {
         val created = assertIs<MidiCoreProjectLifecycleResult.Opened>(
             MidiCoreProjectLifecycle(artifacts = store).create(
@@ -371,12 +389,14 @@ class MidiCoreMidiPackageExporterTest {
                 ),
             ),
         ).session
+        val songEndTick = arrangementEndTick ?: requireNotNull(selected.project.sourceMidi).sourceEndTick
         val structured = assertIs<MidiCoreStructureTimelineResult.Updated>(
             MidiCoreStructureTimeline(store).replace(
                 ReplaceMidiCoreStructure(
                     authority,
                     listOf(ProjectSectionDefinition("verse", "Verse")),
-                    listOf(app.melotrail.structure.MidiCoreOccurrencePlacement("verse-1", "verse", "Verse", requireNotNull(selected.project.sourceMidi).sourceEndTick)),
+                    listOf(app.melotrail.structure.MidiCoreOccurrencePlacement("verse-1", "verse", "Verse", songEndTick)),
+                    expectedSongEndTick = songEndTick,
                 ),
             ),
         ).session
@@ -384,11 +404,39 @@ class MidiCoreMidiPackageExporterTest {
             MidiCoreAuthoritativeHarmony(store).replace(
                 ReplaceMidiCoreHarmony(
                     structured,
-                    listOf(AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, requireNotNull(selected.project.sourceMidi).sourceEndTick)),
+                    harmonySymbols.mapIndexed { index, symbol ->
+                        val start = songEndTick * index / harmonySymbols.size
+                        val windowEnd = songEndTick * (index + 1) / harmonySymbols.size
+                        AuthoritativeChordEvent("chord-${index + 1}", "verse-1", symbol, start, windowEnd)
+                    },
                 ),
             ),
         ).session
     }
+
+    private fun materializeDawMatrixPackage(label: String, exported: MidiCoreExportedPackage) {
+        val configuredRoot = System.getProperty("melotrail.dawMatrixDirectory")
+            ?: System.getenv("MELOTRAIL_DAW_MATRIX_DIRECTORY")
+            ?: return
+        val matrixRoot = Path.of(configuredRoot).toAbsolutePath().normalize()
+        val destination = matrixRoot.resolve(label).normalize()
+        require(destination.startsWith(matrixRoot)) { "DAW matrix package path escapes its configured root" }
+        require(Files.notExists(destination)) { "DAW matrix package already exists: $destination" }
+        Files.createDirectories(matrixRoot)
+        Files.createDirectory(destination)
+        Files.list(exported.directory).use { paths ->
+            paths.forEach { source -> Files.copy(source, destination.resolve(source.fileName.toString())) }
+        }
+    }
+
+    private data class DawFixture(
+        val sourceFixture: String,
+        val label: String,
+        val melodyTrackIndex: Int,
+        val harmonySymbols: List<String> = listOf("C"),
+        val arrangementEndTick: Long? = null,
+        val drumFillPatternId: String? = null,
+    )
 
     private fun fileOrder() = compareBy<String> { filename ->
         listOf("complete-song.mid", "melody.mid", "chords.mid", "bass.mid", "drums.mid", "manifest.json").indexOf(filename)

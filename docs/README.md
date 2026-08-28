@@ -14,8 +14,8 @@ defined by the root `PLAN.md`.
    acceptance behavior.
 5. [MIDI contract](MIDI_CONTRACT.md) — supported Standard MIDI input, semantic model,
    validation, and output package.
-6. [DAW compatibility](DAW_COMPATIBILITY.md) — Logic Pro and GarageBand boundary
-   and manual checks.
+6. [DAW compatibility](DAW_COMPATIBILITY.md) — Logic Pro boundary and manual
+   checks.
 7. [Quality gates](QUALITY_GATES.md) — automated, musical, UI, and DAW acceptance
    gates.
 8. [Cleanup scope](CLEANUP_SCOPE.md) — explicit keep, refactor, delete, and data-disposition

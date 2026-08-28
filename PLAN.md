@@ -2,14 +2,15 @@
 
 Status: MIDI Core execution in progress; task evidence is recorded in the execution log
 
-Last updated: 2026-08-26
+Last updated: 2026-08-28
 
 Authority: this is the only active Melotrail roadmap
 
 ## 1. Decision
 
 Melotrail will become a focused desktop MIDI-arrangement tool that supports a
-musician's Logic Pro or GarageBand workflow.
+musician's Logic Pro workflow. GarageBand is unverified and not a supported
+destination.
 
 The current audio-production platform is superseded. Its output quality did not
 justify its complexity. Old audio projects do not require migration, and the
@@ -39,7 +40,7 @@ The MVP succeeds when a user can:
 6. generate multiple deterministic chord, bass, and drum candidates;
 7. approve, reject, or regenerate a role within one section;
 8. review the assembled song without losing accepted work; and
-9. import the exported package successfully into Logic Pro and GarageBand.
+9. import the exported package successfully into Logic Pro.
 
 ## 3. Non-goals
 
@@ -51,7 +52,7 @@ The target product does not:
 - repair, denoise, normalize, mix, master, or encode audio;
 - render WAV, MP3, AAC, AIFF, or CAF;
 - manage SFZ files, samplers, or commercial sound libraries;
-- replace Logic Pro or GarageBand instrument selection;
+- replace Logic Pro instrument selection;
 - edit video or prepare publishing releases;
 - assess copyright, monetization, or platform eligibility;
 - accept unrestricted model-written music;
@@ -253,11 +254,10 @@ Gate: documentation has no competing active product direction.
 - Capture small legal/test-owned SMF 0 and 1 fixtures.
 - Characterize current MIDI parsing and writing that may be reused.
 - Prove a minimal format-1 conductor-plus-role export.
-- Import the result into current supported versions of Logic Pro and
-  GarageBand.
+- Import the result into the current supported version of Logic Pro.
 - Record channel, marker, tempo, track-name, and instrument-assignment results.
 
-Gate: one minimal package passes semantic re-import plus both DAW checks.
+Gate: one minimal package passes semantic re-import plus the Logic Pro check.
 
 ### Phase 2 — MIDI project kernel
 
@@ -299,7 +299,7 @@ editing project files manually.
 - Complete separate-role files and manifest.
 - Enforce deterministic ordering, channel/controller policy, atomic export,
   collision handling, and semantic re-import.
-- Run automated fixtures, holdout musical reviews, and the Logic/GarageBand
+- Run automated fixtures, holdout musical reviews, and the Logic Pro
   compatibility matrix.
 - Resolve blockers through targeted changes only.
 
@@ -346,7 +346,7 @@ Musical acceptance therefore uses:
 - per-role and per-song minimum scores, not only an average;
 - correction-time and rejection-rate observations;
 - protected-melody comparison; and
-- manual Logic Pro and GarageBand import checks.
+- manual Logic Pro import checks.
 
 The exact gates and evidence format are in `docs/QUALITY_GATES.md`.
 
@@ -358,7 +358,7 @@ The MIDI Core migration is complete only when:
 - one MIDI source becomes a reviewable, DAW-ready arrangement;
 - generated chords, bass, and drums obey project authority;
 - accepted work cannot be silently overwritten;
-- exported files pass semantic re-import and both DAW checks;
+- exported files pass semantic re-import and the Logic Pro check;
 - old audio projects require no migration and have been removed from the
   repository-owned project locations;
 - Python and all audio-production code, tests, dependencies, assets, commands,

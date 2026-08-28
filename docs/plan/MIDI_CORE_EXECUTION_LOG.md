@@ -87,7 +87,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-045 | DONE | `midi-core: MC-045 harden MIDI audition` | PASS — controller/Sequencer/Receiver, focused desktop tests, local default-receiver smoke, `make test`, `make build` | Discoverable output selection, exact-tick session replacement, safe live transport rebuild, deterministic cleanup, and MIDI-only UI recovery are covered. |
 | MC-046 | DONE | `midi-core: MC-046 harden MIDI export` | PASS — exporter/development-fixture and focused Export UI suites, documentation coverage, `make test`, `make build` | Versioned self-validating portable manifest, semantic package re-import, deterministic package bytes/hashes, snapshot-failure cleanup, and explicit Logic/GarageBand conditional guidance are covered. |
 | MC-047 | DONE | `midi-core: MC-047 harden malformed input handling` | PASS — fixed-seed bounded property suite twice, documentation coverage, `make test`, `make build` | 400 deterministic boundary cases cover malformed chunks/note pairing, rational ticks, timelines, JSON/path/state, and writer-reader semantics. |
-| MC-048 | IN_PROGRESS | | | Final current-version Logic Pro and GarageBand matrix is awaiting the prepared user-run evidence. |
+| MC-048 | DONE | `midi-core: MC-048 verify Logic Pro` | PASS — six-package final Logic Pro matrix, focused Export/exporter suites, `make test`, `make build` | Logic Pro 12.3.1 final imports/playback/save-reopen pass; marker display is best-effort/unassessed. User-authorized scope is Logic Pro-only; GarageBand is unverified and receives no support claim. |
 | MC-049 | TODO | | | |
 | MC-050 | TODO | | | |
 | MC-051 | TODO | | | |
@@ -1178,6 +1178,25 @@ Known limitations: Bounded automation cannot replace the current-version DAW imp
 Commit: `midi-core: MC-047 harden malformed input handling`.
 Next task: MC-048 — complete the final Logic Pro and GarageBand matrix (user pause required).
 
+### MC-048 — Final Logic Pro and GarageBand matrix
+
+Status: DONE
+Started: 2026-08-28
+Completed: 2026-08-28
+Starting commit/status: `adfe25a` / only the preserved unrelated deleted Kotlin compiler-session marker was present. The MC-048 focused exporter-test change and the DAW evidence checklist are intentionally uncommitted until this manual task can be completed in one task commit.
+Contracts read: F-EXP-007; `docs/DAW_COMPATIBILITY.md`; Quality Gate 6; the revised MC-048 task contract; and MC-009's recorded early-compatibility evidence.
+Automated preparation: The focused final-export matrix test now materializes six collision-safe, immutable test packages only when `MELOTRAIL_DAW_MATRIX_DIRECTORY` is explicitly set. The generated packages are at `build/mc048-daw-matrix`, contain complete and all four role files plus a self-validating manifest, and each semantic re-import passed. `./gradlew :test --tests app.melotrail.application.MidiCoreMidiPackageExporterTest --rerun-tasks --console=plain` PASS after materialization; `git diff --check` and `make build` PASS (2026-08-28). `docs/plan/MC048_DAW_MATRIX.md` records the package source fixtures, manifest SHA-256 values, expected authority/end ticks/tracks/channels, exact current-version matrix, and response template. The local macOS value observed during preparation was `26.6.2` (build `25G83`); the reviewer must confirm it when running the DAWs.
+Current manual evidence: The user supplied six screenshots under `docs/checks` on 2026-08-28 and reported no error importing each track separately or the full song together. The six images are visibly Logic Pro captures for `smf0-melody`, `smf1-reference-tracks`, `pickup-timing`, `sub-bar-harmony`, `expressive-controller-pitch`, and `complete-arrangement-boundary`; each visibly shows 120 BPM, 4/4, named Bass/Chords/Drums/Melody tracks, and no error dialog. Their individual SHA-256 values and assessment are recorded in `docs/plan/MC048_DAW_MATRIX.md`. The user then confirmed Logic Pro 12.3.1, successful full playback, and successful save/close/reopen without error. This is a Logic Pro PASS: the complete and separate role imports for every fixture were reported successful, no timing, note, role-separation, import, playback, or save/reopen problem was reported, and the screenshots corroborate tempo, meter, and named-track evidence. The imported `1:Verse` marker display remains unassessed because adding a new Logic marker yielded the default `Marker 1`; that tests new-marker behavior rather than the imported marker and is documented best-effort metadata. The automated semantic re-import evidence retains the exact channel/controller policy; raw event-channel display in Logic was not separately captured.
+Scope decision: On 2026-08-28 the user explicitly authorized Logic Pro-only support. The active plan, product docs, DAW contract, quality gate, execution suite, agent instructions, Export UI, and focused UI regression test are revised to name Logic Pro as the only supported destination. GarageBand remains unverified and receives no compatibility claim; its earlier MC-009 evidence is retained only as historical audit information.
+Files added/changed: `AGENTS.md`, `PLAN.md`, `README.md`, `docs/ARCHITECTURE.md`, `docs/DAW_COMPATIBILITY.md`, `docs/FUNCTIONAL_SPEC.md`, `docs/MIDI_CONTRACT.md`, `docs/QUALITY_GATES.md`, `docs/README.md`, `docs/plan/README.md`, `docs/plan/MIDI_CORE_TASKS.md`, `docs/plan/EXECUTE_MIDI_CORE_TASKS_PROMPT.md`, `docs/plan/MC045_MIDI_AUDITION_SMOKE.md`, `docs/plan/MC048_DAW_MATRIX.md`, `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreExportPage.kt`, `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspaceShell.kt`, `desktopApp/src/test/kotlin/app/melotrail/desktop/MidiCoreExportPageTest.kt`, `src/test/kotlin/app/melotrail/application/MidiCoreMidiPackageExporterTest.kt`, six `docs/checks/*.png` Logic Pro evidence captures, and this execution log.
+Files/data deleted: The GarageBand-specific Export-page guidance and its assertion were deleted. No MIDI package, source input, candidate, accepted snapshot, or user project was deleted. The ignored DAW packages remain recreatable under `build/mc048-daw-matrix`.
+Focused tests: `./gradlew :desktopApp:test --tests app.melotrail.desktop.MidiCoreExportPageTest --rerun-tasks --console=plain` PASS (8 tests), including the regression that the Export source makes no GarageBand support claim. `./gradlew :test --tests app.melotrail.application.MidiCoreMidiPackageExporterTest --rerun-tasks --console=plain` PASS (8 tests), including all six final package materializations and semantic re-imports.
+Full validation: `git diff --check` PASS; `make test` PASS; `make build` PASS (2026-08-28, including documentation coverage).
+Decisions/deviations: The user-directed, Logic Pro-only destination scope supersedes the original two-DAW requirement. Standard MIDI output remains intentionally generic, but GarageBand behavior is not advertised, inferred, or gated. Logic marker display is retained as a documented best-effort metadata limitation; no event timing or safety workaround is introduced.
+Known limitations: The final Logic Pro record does not prove marker presentation because the imported `1:Verse` marker was not directly inspected. GarageBand is deliberately unverified and unsupported. Musical usefulness remains the separate MC-049 user listening gate.
+Commit: `midi-core: MC-048 verify Logic Pro`.
+Next task: MC-049 — complete holdout musical acceptance (user pause required).
+
 ## 6. Manual gate records
 
 ### MC-009 — Early DAW compatibility
@@ -1191,17 +1210,16 @@ Next task: MC-048 — complete the final Logic Pro and GarageBand matrix (user p
 - Reviewer/date: User / 2026-08-27.
 - Decision: PASS — G1 is complete; continue to MC-010.
 
-### MC-048 — Final DAW compatibility
+### MC-048 — Final Logic Pro compatibility
 
-- Melotrail build/commit:
-- Fixture/export snapshots and hashes:
-- macOS version:
-- Logic Pro complete/role results:
-- GarageBand complete/role results:
-- Tempo/meter/track/channel/marker/boundary/playback results:
-- Conditional user actions:
-- Reviewer/date:
-- Decision:
+- Melotrail build/commit: MC-047 `adfe25a`; MC-048 `midi-core: MC-048 verify Logic Pro`.
+- Fixture/export snapshots and hashes: `build/mc048-daw-matrix`; six manifest SHA-256 values and complete package instructions are recorded in `docs/plan/MC048_DAW_MATRIX.md`.
+- macOS version: 26.6.2 (build 25G83), observed on the preparation host; the same host previously supplied the MC-009 result.
+- Logic Pro complete/role results: Logic Pro 12.3.1 PASS. User report and six screenshot captures, 2026-08-28: every final fixture imported with no error both as `complete-song.mid` and individual role files; named Bass, Chords, Drums, and Melody tracks appear separately.
+- Tempo/meter/track/channel/marker/boundary/playback results: 120 BPM and 4/4 are visible in every screenshot. The package writer and semantic re-import verify the 1/2/3/10 role-channel policy; Logic's software-instrument output-channel UI was not separately captured. Full playback completed without a reported stuck or truncated note; save/close/reopen completed without error. The imported `1:Verse` marker display is unassessed; creating a new marker produced `Marker 1`, a non-blocking best-effort metadata finding. No timing or boundary problem was reported.
+- Required user actions: Logic Pro instrument selection and any choice to adopt or retain imported tempo/meter remain DAW-side user decisions; no workaround was required for import safety or alignment.
+- Reviewer/date: User / 2026-08-28.
+- Decision: PASS for Logic Pro. The user authorized Logic Pro-only support on 2026-08-28; GarageBand is unverified and outside the support claim, so no GarageBand matrix is required.
 
 ### MC-049 — Holdout musical acceptance
 

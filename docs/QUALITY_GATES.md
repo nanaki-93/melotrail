@@ -93,8 +93,6 @@ change.
 Mandatory release result:
 
 - Logic Pro: pass or documented conditional pass for complete and role files.
-- GarageBand for Mac: pass or documented conditional pass for complete and role
-  files.
 - No timing, note, channel, stuck-note, role-separation, or file-open failure.
 - Any required tempo-import action is shown in the Export UI and docs.
 
@@ -172,7 +170,6 @@ The final MVP evidence bundle contains:
 - automated fixture summary;
 - holdout rubric with hashes;
 - Logic Pro compatibility record;
-- GarageBand compatibility record;
 - UI acceptance result;
 - cleanup scan/result;
 - known limitations; and

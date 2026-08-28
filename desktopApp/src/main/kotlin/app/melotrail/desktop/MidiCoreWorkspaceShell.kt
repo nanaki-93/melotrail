@@ -68,7 +68,7 @@ internal enum class MidiCoreWorkspaceDestination(
     STRUCTURE_HARMONY("structure-harmony", "Structure & Harmony", "Define the authoritative section timeline and chord windows."),
     ARRANGE("arrange", "Arrange", "Generate and regenerate deterministic Chords, Bass, and Drums candidates."),
     REVIEW("review", "Review", "Compare, accept, reject, lock, and restore candidate evidence."),
-    EXPORT("export", "Export", "Publish a portable MIDI package for Logic Pro or GarageBand."),
+    EXPORT("export", "Export", "Publish a portable MIDI package for Logic Pro."),
 }
 
 internal val midiCoreWorkspaceDestinations: List<MidiCoreWorkspaceDestination> = MidiCoreWorkspaceDestination.entries

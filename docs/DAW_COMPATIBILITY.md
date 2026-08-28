@@ -1,7 +1,7 @@
-# Logic Pro and GarageBand compatibility
+# Logic Pro compatibility
 
-Status: target support contract; manual results must be recorded during the
-compatibility spike
+Status: supported-destination contract; manual results must be recorded for
+each release that changes export semantics
 
 Authority: DAW support claims and acceptance procedure
 
@@ -9,27 +9,23 @@ Authority: DAW support claims and acceptance procedure
 
 Melotrail exports Standard MIDI files rather than DAW project files.
 
-- Logic Pro is a supported MIDI source and destination. It can import/open and
-  export Standard MIDI format 0 and 1 files.
-- GarageBand for Mac is a supported MIDI destination. It can import a MIDI file
-  into one or more software-instrument tracks.
-- GarageBand-to-Melotrail MIDI round-tripping is not supported because
-  GarageBand's documented song export is audio-oriented.
-- Melotrail does not create `.logicx` or `.band` projects and does not automate
-  either application.
+- Logic Pro is the supported MIDI source and destination. It can import/open
+  and export Standard MIDI format 0 and 1 files.
+- GarageBand is unverified and is not a supported destination. Melotrail makes
+  no GarageBand import, playback, marker, instrument, or round-trip claim.
+- Melotrail does not create `.logicx` projects or automate Logic Pro.
 
 Official behavior references:
 
 - [Standard MIDI files in Logic Pro](https://support.apple.com/guide/logicpro/standard-midi-files-lgcpdf6a3851/mac)
-- [Import audio and MIDI files in GarageBand on Mac](https://support.apple.com/guide/garageband/import-audio-and-midi-files-gbndd01649ed/mac)
-- [Export songs from GarageBand on Mac](https://support.apple.com/guide/garageband/export-songs-to-disk-or-icloud-gbnd7cbf5ed9/mac)
 
 These links describe application capabilities. A Melotrail release still needs
 its own recorded manual verification.
 
 ## 2. Compatibility promise
 
-For a package that passes Melotrail validation:
+For a package that passes Melotrail validation and the recorded Logic Pro
+matrix:
 
 - the complete file imports without a MIDI parsing error;
 - melody, chords, bass, and drums appear as distinct tracks;
@@ -43,9 +39,9 @@ For a package that passes Melotrail validation:
 - the user can choose destination instruments without deleting embedded patch
   automation.
 
-Section markers are best-effort UI metadata because DAWs may display Standard
-MIDI markers differently. Marker loss is a compatibility finding; tick/bar
-misalignment is a blocker.
+Section markers are best-effort UI metadata because Logic Pro may display
+Standard MIDI markers differently. Marker loss or unassessed display is a
+compatibility finding; tick/bar misalignment is a blocker.
 
 ## 3. Logic Pro workflow
 
@@ -73,20 +69,7 @@ those non-event parameters to be baked into the exported MIDI.
 Logic patch assignment is a user decision. Melotrail's manifest suggestions are
 search hints, not a patch-loading API.
 
-## 4. GarageBand workflow
-
-1. Create a GarageBand project.
-2. Drag `complete-song.mid` from Finder to the empty area below existing tracks,
-   or import role files at the same project origin.
-3. Confirm that GarageBand creates one or more software-instrument tracks.
-4. Assign instruments from GarageBand's Library.
-5. Confirm tempo, meter, track alignment, drum interpretation, and song length.
-
-The product does not tell the user to export the GarageBand song back as MIDI.
-GarageBand's documented disk export produces AAC, MP3, AIFF, or WAVE and is part
-of the user's downstream production workflow, not Melotrail input.
-
-## 5. Manual compatibility matrix
+## 4. Manual compatibility matrix
 
 Run the matrix for each release that changes MIDI import, timing, event policy,
 track assembly, or export:
@@ -100,7 +83,7 @@ track assembly, or export:
 - sustained melody with CC64/pitch data covered by the selected policy.
 - complete arrangement with fills and notes ending at the song boundary.
 
-### Checks in each DAW
+### Checks in Logic Pro
 
 - application name and exact installed version recorded;
 - macOS version recorded;
@@ -127,7 +110,7 @@ track assembly, or export:
 
 A conditional pass cannot be silently promoted to pass.
 
-## 6. Evidence record
+## 5. Evidence record
 
 Each compatibility run records:
 
@@ -152,14 +135,14 @@ Screenshots or DAW project files are test evidence only when licensing and size
 permit them to be checked in. A written result plus exported fixture hashes is
 mandatory.
 
-## 7. Unsupported claims
+## 6. Unsupported claims
 
 Do not claim:
 
 - perfect preservation of DAW regions, articulation sets, plugins, patches,
   automation, or mixer state;
-- compatibility with GarageBand iOS unless separately tested;
+- compatibility with GarageBand, including GarageBand for Mac or iOS;
 - automatic sound matching;
-- direct installation of Logic/GarageBand patches;
-- identical playback between Melotrail preview and either DAW; or
+- direct installation of Logic Pro patches;
+- identical playback between Melotrail preview and Logic Pro; or
 - compatibility with an untested DAW version merely because it supports MIDI.

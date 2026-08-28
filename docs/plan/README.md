@@ -44,6 +44,6 @@ replacement task when safe, or in the final destructive cleanup phase when it
 depends on full cutover.
 
 Execute tasks strictly from `MC-000` through `MC-060`. Do not begin the optional
-enhancements in the root plan. Tasks that require Logic Pro, GarageBand, or
-human musical review must stop at their named manual gate and preserve all
-automated evidence already collected.
+enhancements in the root plan. Tasks that require Logic Pro or human musical
+review must stop at their named manual gate and preserve all automated evidence
+already collected.

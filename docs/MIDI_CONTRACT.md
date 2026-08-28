@@ -220,7 +220,7 @@ include, per role:
 - performance-profile ID;
 - human-readable category;
 - optional General MIDI program suggestion;
-- optional free-text Logic/GarageBand search suggestion; and
+- optional free-text Logic Pro search suggestion; and
 - register/articulation notes.
 
 Suggestions are not exact patch identifiers and do not claim a particular DAW

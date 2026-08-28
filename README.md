@@ -1,7 +1,7 @@
 # Melotrail
 
 Melotrail is a local desktop MIDI arranger for musicians who want help building
-a song before finishing it in Logic Pro or GarageBand.
+a song before finishing it in Logic Pro.
 
 The musician owns the melody, key, harmony, structure, arrangement approvals,
 and final sound. Melotrail imports Standard MIDI, helps define musical context,
@@ -30,7 +30,7 @@ Create project
   -> Generate and compare chord, bass, and drum candidates
   -> Accept or regenerate by section and role
   -> Review the complete arrangement
-  -> Export a Logic Pro / GarageBand MIDI package
+  -> Export a Logic Pro MIDI package
 ```
 
 The MVP accepts one SMF format 0 or 1 file, uses a fixed tempo and time
@@ -55,10 +55,9 @@ browser, video editor, or publishing console.
 ## DAW relationship
 
 - Logic Pro is a supported Standard MIDI input and output workflow.
-- GarageBand is a supported MIDI import destination.
+- GarageBand is unverified and not a supported destination.
 - Melotrail exports performance intent and optional instrument suggestions; the
   musician chooses the actual instruments and production chain in the DAW.
-- GarageBand project-to-MIDI round-tripping is not promised.
 
 See [DAW compatibility](docs/DAW_COMPATIBILITY.md) for the verified boundary and manual acceptance
 matrix.
@@ -107,8 +106,7 @@ that executable documentation contract.
   and acceptance rules
 - [MIDI contract](docs/MIDI_CONTRACT.md) — MIDI import, internal semantics, and
   export contract
-- [DAW compatibility](docs/DAW_COMPATIBILITY.md) — Logic Pro and GarageBand
-  support boundary
+- [DAW compatibility](docs/DAW_COMPATIBILITY.md) — Logic Pro support boundary
 - [Cleanup scope](docs/CLEANUP_SCOPE.md) — keep, refactor, and delete decisions
 - [Quality gates](docs/QUALITY_GATES.md) — automated, musical, and DAW
   acceptance gates

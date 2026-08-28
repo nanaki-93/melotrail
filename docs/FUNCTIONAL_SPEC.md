@@ -9,7 +9,7 @@ Authority: user-visible functions and acceptance behavior
 
 The primary actor is a musician with an existing MIDI composition or melody who
 wants arrangement assistance before completing sound design and production in
-Logic Pro or GarageBand.
+Logic Pro.
 
 The musician remains responsible for musical authority and every acceptance
 decision. Melotrail provides deterministic alternatives, evidence, MIDI
@@ -237,10 +237,10 @@ staged package becomes visible as complete.
 If a target package already exists, the user chooses a new destination or
 explicit replacement policy. A failed export leaves no package marked current.
 
-### F-EXP-007 — Support both destination DAWs
+### F-EXP-007 — Support the Logic Pro destination
 
-The package passes the manual Logic Pro and GarageBand matrix in
-`DAW_COMPATIBILITY.md`. GarageBand export back to Melotrail is not required.
+The package passes the manual Logic Pro matrix in `DAW_COMPATIBILITY.md`.
+GarageBand is not a supported destination and has no compatibility claim.
 
 ## 9. UI functions
 

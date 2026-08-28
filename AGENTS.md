@@ -3,7 +3,7 @@
 ## Product authority
 
 Melotrail is a local desktop MIDI-arrangement companion for musicians who finish
-their work in Logic Pro or GarageBand. The active product direction is defined
+their work in Logic Pro. The active product direction is defined
 by `PLAN.md`; the target architecture and behavior are defined under `docs/`.
 
 Before changing the project, read:
@@ -27,8 +27,9 @@ Before changing the project, read:
 - MIDI is the only musical interchange and generated-song representation.
 - The desktop UI remains a first-class tool; this is not a headless-only
   rewrite.
-- Logic Pro and GarageBand perform instrument selection, audio rendering,
-  mixing, mastering, and release production.
+- Logic Pro performs instrument selection, audio rendering, mixing, mastering,
+  and release production. GarageBand is unverified and is not a supported
+  destination.
 - Python, audio ingestion, transcription, DSP, rendering, mastering, video,
   publishing, and commercial-release workflows have no place in the target
   architecture.
@@ -82,9 +83,9 @@ make test
 make build
 ```
 
-For MIDI export or workflow changes, also complete the manual Logic Pro and
-GarageBand checks in `docs/DAW_COMPATIBILITY.md` and record the evidence
-required by `docs/QUALITY_GATES.md`.
+For MIDI export or workflow changes, also complete the manual Logic Pro checks
+in `docs/DAW_COMPATIBILITY.md` and record the evidence required by
+`docs/QUALITY_GATES.md`.
 
 The current repository is in transition and still contains obsolete worker and
 audio targets. They are deletion scope, not target validation requirements.
