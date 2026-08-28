@@ -76,7 +76,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-034 | DONE | `midi-core: MC-034 build Project page` | PASS — focused Project-page Compose tests, documentation coverage, `git diff --check`, `make test` | Project creation/open/recent/current actions, persisted readiness/location, target next-step navigation, safe recovery, unsupported-schema explanation, and keyboard semantics are now available without audio-era setup. |
 | MC-035 | DONE | `midi-core: MC-035 build MIDI page` | PASS — focused MIDI page/source-audition tests, documentation coverage, `git diff --check`, `make test`, `make build` | One-file SMF 0/1 import, persisted source facts, protected melody selection, typed findings, source identity evidence, and MIDI-only source transport are reachable from the target shell. |
 | MC-036 | DONE | `midi-core: MC-036 build Structure and Harmony page` | PASS — focused page/application/workspace tests, documentation coverage, `git diff --check`, `make test`, `make build` | Target authority editor, exact occurrence/chord timing, findings, invalidation preview, and source/occurrence MIDI audition are covered; persisted fixture hash recorded below. |
-| MC-037 | IN_PROGRESS | | | Arrange page is next after MC-036 completion. |
+| MC-037 | DONE | `midi-core: MC-037 build Arrange page` | PASS — focused Arrange/workspace Compose tests, documentation coverage, `make test`, `make build` | Scoped candidate generation, curated target-only choices, cancellation, candidate evidence, and Review handoff are reachable from the focused desktop shell. |
 | MC-038 | TODO | | | |
 | MC-039 | TODO | | | |
 | MC-040 | TODO | | | |
@@ -939,6 +939,27 @@ Decisions/deviations: The page keeps editable structure and harmony drafts local
 Known limitations: Candidate, role, and full accepted-arrangement audition remain MC-038; final MIDI-device behavior remains MC-045; final Logic Pro/GarageBand evidence remains MC-048. Invalid/incomplete draft rows block local save and therefore do not produce a stale preview until a valid candidate authority exists. Persisted import findings still need source-operation refresh after restart as recorded under MC-035.
 Commit: `midi-core: MC-036 build Structure and Harmony page`.
 Next task: MC-037 — build the Arrange page.
+
+### MC-037 — Implement the Arrange page
+
+Status: DONE
+Started: 2026-08-28
+Completed: 2026-08-28
+Starting commit/status: `3241614` / only the preserved unrelated deleted Kotlin compiler session marker is present.
+Contracts read: F-ARR-001–F-ARR-007; F-UI-002–F-UI-004; Architecture 4.4, 4.5, 4.8, and 8; Quality Gates 3–4; MC-037 task contract.
+Current owners inspected: target `MidiCoreWorkspace` generation/review intents and operation admission, `MidiCoreCandidateGeneration`, `MidiCoreCandidateReview`, `MidiCorePatternCatalog`, `MidiCorePerformanceProfileCatalog`, the six-destination workspace shell, and the existing target Compose-page tests. The legacy arrangement controls remain outside this target caller path until their assigned cleanup tasks.
+Behavior retained/extracted: The Arrange destination now selects exactly one occurrence and one Chords, Bass, or Drums role; presents only catalog-allowed performance profiles and complete curated patterns; records an explicit seed for reproducible generation; requests a new deterministic alternative or a narrow regeneration for that exact scope; exposes cancellable asynchronous operation status; lists immutable candidate ID, lifecycle status, seed, profile, pattern, validation count, blockers, and advisories; explains missing authority; refreshes evidence by exact scope; and routes that scope to Review without accepting it. It uses the existing stale-result admission, cancellation, validation, immutable publication, and review boundaries rather than adding a UI-owned generation path.
+Files added/changed: `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreArrangePage.kt`, `desktopApp/src/test/kotlin/app/melotrail/desktop/MidiCoreArrangePageTest.kt`, `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspaceShell.kt`, `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`, and this execution log.
+Files/data deleted: None planned; legacy arrangement controls are assigned to MC-050, MC-051, and MC-055 after their target callers have passed replacement gates.
+Tracked deletion recoverability: The unrelated Kotlin compiler session-marker deletion remains recoverable from Git and is not included in the task commit.
+Ignored deletion recoverability: None planned.
+Focused tests: `./gradlew :desktopApp:test --tests app.melotrail.desktop.MidiCoreArrangePageTest --tests app.melotrail.desktop.MidiCoreWorkspaceShellTest --tests app.melotrail.desktop.MidiCoreWorkspaceTest --rerun-tasks --console=plain` PASS. The Compose coverage verifies shell routing; all three target-role choice catalogs; accessible role/occurrence scope selection; deterministic seed, alternative, and exact-scope regeneration requests; rejected candidate validation evidence; incomplete-authority blockers; cancellation; Review handoff; and source-level absence of excluded control terminology. Existing workspace traces cover current-authority admission, cancellation, and stale completion rejection.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS; `make test` PASS (2026-08-28; 14 Gradle tasks); `make build` PASS (2026-08-28; 15 Gradle tasks, including documentation coverage).
+Manual evidence: Not required for MC-037. Stable semantic evidence uses `midi-core-arrange-*` tags and the immutable fixture candidate ID `candidate-existing`; no screenshot or DAW result is claimed in place of MC-048.
+Decisions/deviations: Multiple alternatives are represented as distinct, explicit seed requests rather than a batch operation, which preserves targeted scope and never hides publication results. Candidate approval is intentionally absent from Arrange and is deferred to the focused Review page in MC-038. The page uses catalog labels and MIDI performance profiles only; it presents no audio-production or model configuration.
+Known limitations: Candidate comparison, acceptance/rejection/lock/restore controls, candidate/role/full-arrangement audition, mute/solo, and the complete Review surface remain MC-038. Final MIDI-device hardening is MC-045; final Logic Pro/GarageBand evidence remains MC-048.
+Commit: `midi-core: MC-037 build Arrange page`.
+Next task: MC-038 — implement the Review page and integrated audition.
 
 ## 6. Manual gate records
 

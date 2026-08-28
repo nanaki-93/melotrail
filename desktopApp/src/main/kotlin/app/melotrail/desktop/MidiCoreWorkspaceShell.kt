@@ -313,6 +313,10 @@ private fun MidiCoreWorkspacePage(
         MidiCoreStructureHarmonyPage(state, onIntent, modifier)
         return
     }
+    if (destination == MidiCoreWorkspaceDestination.ARRANGE) {
+        MidiCoreArrangePage(state, onIntent, onDestinationSelected, modifier)
+        return
+    }
     Column(
         modifier.semantics {
             testTag = MidiCoreWorkspaceShellTags.PAGE + "-" + destination.route

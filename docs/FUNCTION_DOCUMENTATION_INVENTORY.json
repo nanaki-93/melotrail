@@ -59,6 +59,14 @@
       "documentedFunctionCount": 1
     },
     {
+      "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreArrangePage.kt",
+      "classification": "deferred-with-reason",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreArrangePage.kt has 14 callable declarations, 1 directly documented and 13 focused presentation helpers. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-037; scoped deterministic generation, curated choices, candidate evidence, progress/cancellation, accessibility semantics, and review navigation are covered by focused Compose tests, and the remaining local presentation declarations must be reconsidered when their behavior or contract changes.",
+      "functionCount": 14,
+      "declarationDigest": "461850626ae63d81111679bed500bbfff217d69402beff43bef628b753af67c2",
+      "documentedFunctionCount": 1
+    },
+    {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreMidiPage.kt",
       "classification": "deferred-with-reason",
       "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreMidiPage.kt has 18 callable declarations, 1 directly documented and 17 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-035; target MIDI import, protected-melody selection, findings, immutable identity evidence, and MIDI transport semantics are covered by focused Compose tests, and the remaining local presentation declarations must be reconsidered when their behavior or contract changes.",
