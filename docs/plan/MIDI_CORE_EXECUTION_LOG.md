@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-039 complete; MC-040 next
+Status: MC-040 complete; MC-041 next
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -79,7 +79,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-037 | DONE | `midi-core: MC-037 build Arrange page` | PASS — focused Arrange/workspace Compose tests, documentation coverage, `make test`, `make build` | Scoped candidate generation, curated target-only choices, cancellation, candidate evidence, and Review handoff are reachable from the focused desktop shell. |
 | MC-038 | DONE | `midi-core: MC-038 build Review page` | PASS — focused Review/workspace Compose tests, candidate lifecycle/assembly/audition tests, documentation coverage, `make test`, `make build` | Immutable comparison and decision controls, candidate/accepted-scope MIDI audition, transport, mute/solo, stale evidence, and Arrange handoff are reachable from the focused desktop shell. |
 | MC-039 | DONE | `midi-core: MC-039 build Export page` | PASS — focused Export/workspace Compose tests, exporter/assembly tests, documentation coverage, `make test`, `make build` | Immutable MIDI package readiness, stale/blocked evidence, destination/collision policy, publish/cancel/retry, hashes/files, reveal-folder action, and DAW guidance are reachable from the focused desktop shell. |
-| MC-040 | TODO | | | |
+| MC-040 | DONE | `midi-core: MC-040 prove desktop workflow` | PASS — real-service fake-audition Compose E2E, six-page visual fixtures, focused desktop suite, `make test`, `make build` | Default target navigation completes create/import/select/authority/arrange/review/reopen/export without old routes; smoke checklist is recorded. |
 | MC-041 | TODO | | | |
 | MC-042 | TODO | | | |
 | MC-043 | TODO | | | |
@@ -1002,6 +1002,27 @@ Decisions/deviations: The target exporter uses project-owned immutable snapshot 
 Known limitations: Full create-to-export desktop flow proof and visual-fixture capture belong to MC-040. Final MIDI-device smoke remains MC-045; final Logic Pro/GarageBand verification remains MC-048.
 Commit: `midi-core: MC-039 build Export page`.
 Next task: MC-040 — prove the focused desktop workflow.
+
+### MC-040 — Prove the focused desktop workflow
+
+Status: DONE
+Started: 2026-08-28
+Completed: 2026-08-28
+Starting commit/status: `62511e7` / only the preserved unrelated deleted Kotlin compiler-session marker is present.
+Contracts read: F-UI-001–F-UI-005; Quality Gate 4; Architecture sections 4.8 and 8; MC-040 task contract.
+Current owners inspected: target desktop entrypoint/composition, focused workspace reducer/use-case adapter, six focused page tests, target shell navigation, export and audition boundaries, and the existing audio-era screenshot test only to identify its incompatible fixture/output pattern.
+Behavior retained/extracted: `MidiCoreFocusedWorkflowTest` composes the focused shell and uses real target lifecycle, import, melody, authority, structure, harmony, generation, review, assembly, persistence, and export services with a fake MIDI audition port. It drives create, import, protected-melody selection, authority confirmation, explicit structure/harmony, role-scoped generation and approval, accepted-arrangement audition, close/reopen, and immutable package export. It captures exactly Project, MIDI, Structure & Harmony, Arrange, Review, and Export at `desktopApp/build/test-results/midi-core-focused-workflow/`; no legacy screen, screenshot, audio fixture, sound library, worker, or legacy service is involved.
+Files added/changed: `desktopApp/src/test/kotlin/app/melotrail/desktop/MidiCoreFocusedWorkflowTest.kt`, `docs/plan/MC040_DESKTOP_SMOKE_CHECKLIST.md`, and this execution log.
+Files/data deleted: None planned; legacy desktop screens and their assets have defined removal owners in MC-050 through MC-058 and remain outside the target workflow proof.
+Tracked deletion recoverability: The unrelated Kotlin compiler session-marker deletion remains recoverable from Git and is deliberately excluded from this task commit.
+Ignored deletion recoverability: The six generated visual fixture PNGs are Gradle test output, not versioned product data; they are recreated by the focused workflow test and may be removed with build output.
+Focused tests: `./gradlew :desktopApp:test --tests app.melotrail.desktop.MidiCoreFocusedWorkflowTest --tests app.melotrail.desktop.MidiCoreDesktopCompositionTest --tests app.melotrail.desktop.MidiCoreWorkspaceShellTest --tests app.melotrail.desktop.MidiCoreWorkspaceTest --tests app.melotrail.desktop.MidiCoreProjectPageTest --tests app.melotrail.desktop.MidiCoreMidiPageTest --tests app.melotrail.desktop.MidiCoreStructureHarmonyPageTest --tests app.melotrail.desktop.MidiCoreArrangePageTest --tests app.melotrail.desktop.MidiCoreReviewPageTest --tests app.melotrail.desktop.MidiCoreExportPageTest --rerun-tasks --console=plain` PASS. The E2E trace verifies the actual project and immutable export files; inspected captures include a post-export manifest/file digest summary and an accepted-candidate Review state.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS; `make test` PASS (2026-08-28; root and desktop suites); `make build` PASS (2026-08-28; root/desktop build and documentation coverage).
+Manual evidence: `docs/plan/MC040_DESKTOP_SMOKE_CHECKLIST.md` records the native chooser/device, cancellation, overwrite, and reopen smoke path without requiring a DAW. The fake-port E2E proves the testable device state transitions; final physical MIDI-device evidence remains MC-045, and the only scheduled human pauses remain MC-048, MC-049, and MC-060.
+Decisions/deviations: The focused E2E writes a minimal Standard MIDI test input at test runtime instead of importing an audio-era or root-test-only fixture, so the desktop module remains self-contained and its one source is still a genuine SMF. Visual fixtures live in Gradle test results instead of versioned binary references; their assertions prove all six target surfaces compose while avoiding a new binary asset baseline.
+Known limitations: This automated proof does not replace final local MIDI-device loss/lifecycle testing (MC-045), final DAW compatibility (MC-048), or musical listening acceptance (MC-049). It intentionally leaves legacy runtime removal to the explicitly sequenced cleanup tasks.
+Commit: `midi-core: MC-040 prove desktop workflow`.
+Next task: MC-041 — harden chord alternatives and voicing.
 
 ## 6. Manual gate records
 
