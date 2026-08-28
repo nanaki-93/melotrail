@@ -64,6 +64,8 @@ internal object MidiCoreReviewPageTags {
     const val SEEK_START = "midi-core-review-seek-start"
     const val LOOP = "midi-core-review-loop"
     const val CLEAR_LOOP = "midi-core-review-clear-loop"
+    const val OUTPUT_DEFAULT = "midi-core-review-output-default"
+    const val OUTPUT_PREFIX = "midi-core-review-output-"
     const val MUTE_PREFIX = "midi-core-review-mute-"
     const val SOLO_PREFIX = "midi-core-review-solo-"
     const val ARRANGE = "midi-core-review-open-arrange"
@@ -83,6 +85,7 @@ internal object MidiCoreReviewPageTags {
     fun playOccurrence(id: String): String = PLAY_OCCURRENCE_PREFIX + id
     fun mute(role: MidiExportRole): String = MUTE_PREFIX + role.name.lowercase()
     fun solo(role: MidiExportRole): String = SOLO_PREFIX + role.name.lowercase()
+    fun output(id: String): String = OUTPUT_PREFIX + id.hashCode().toUInt().toString(16)
 }
 
 /**
@@ -435,6 +438,32 @@ private fun ReviewTransportCard(state: MidiCoreWorkspaceState, onIntent: (MidiCo
     ReviewCard(MidiCoreReviewPageTags.TRANSPORT, "MIDI transport") {
         Text("Preview timbre is local MIDI playback only; it is not exported audio.", style = MaterialTheme.typography.bodyMedium)
         Text("${audition.playback.name.lowercase().replaceFirstChar(Char::uppercaseChar)} · tick ${audition.positionTick}", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
+        val selectedOutput = audition.outputDevices.singleOrNull { it.id == audition.outputDeviceId }
+        Text(
+            "Output: ${selectedOutput?.name ?: "System MIDI output"}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MusicWorkspaceTokens.TextSecondary,
+        )
+        OutlinedButton(
+            onClick = { onIntent(MidiCoreWorkspaceIntent.SelectAuditionOutputDevice(null)) },
+            enabled = audition.scope != null && audition.outputDeviceId != null,
+            modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                testTag = MidiCoreReviewPageTags.OUTPUT_DEFAULT
+                selected = audition.outputDeviceId == null
+                contentDescription = "Use the system MIDI output for audition"
+            },
+        ) { Text("Use system MIDI output") }
+        audition.outputDevices.forEach { device ->
+            OutlinedButton(
+                onClick = { onIntent(MidiCoreWorkspaceIntent.SelectAuditionOutputDevice(device.id)) },
+                enabled = audition.scope != null && audition.outputDeviceId != device.id,
+                modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                    testTag = MidiCoreReviewPageTags.output(device.id)
+                    selected = audition.outputDeviceId == device.id
+                    contentDescription = "Use ${device.name} for MIDI audition"
+                },
+            ) { Text("Use ${device.name}") }
+        }
         if (audition.playback == MidiAuditionPlaybackState.PLAYING) {
             OutlinedButton(
                 onClick = { onIntent(MidiCoreWorkspaceIntent.PauseAudition) },

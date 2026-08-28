@@ -123,6 +123,20 @@ data class MidiAuditionPlaybackPlan(
     }
 }
 
+/** A locally discoverable MIDI receiver offered only for non-authoritative audition. */
+data class MidiAuditionOutputDevice(
+    val id: String,
+    val name: String,
+    val vendor: String,
+    val description: String,
+    val version: String,
+) {
+    init {
+        require(id.isNotBlank()) { "MIDI output device ID must not be blank" }
+        require(name.isNotBlank()) { "MIDI output device name must not be blank" }
+    }
+}
+
 /** Recoverable failures raised by a local MIDI output adapter. */
 class MidiAuditionOutputException(
     val code: MidiAuditionProblemCode,
@@ -158,10 +172,12 @@ data class MidiAuditionState(
     val loop: MidiAuditionLoop? = null,
     val mutedRoles: Set<MidiExportRole> = emptySet(),
     val soloRoles: Set<MidiExportRole> = emptySet(),
+    val outputDeviceId: String? = null,
+    val outputDevices: List<MidiAuditionOutputDevice> = emptyList(),
     val lastProblem: MidiAuditionProblem? = null,
 )
 
-enum class MidiAuditionAction { SELECT_SCOPE, PLAY, PAUSE, STOP, SEEK, LOOP, MUTE, SOLO }
+enum class MidiAuditionAction { SELECT_SCOPE, SELECT_OUTPUT, PLAY, PAUSE, STOP, SEEK, LOOP, MUTE, SOLO }
 
 /** Result of a transport operation, with a recoverable failure instead of an exception. */
 sealed interface MidiAuditionResult {
@@ -178,6 +194,9 @@ fun interface MidiAuditionOutputListener {
 
 /** Platform-neutral output boundary used by the stateful audition controller and tests. */
 interface MidiAuditionOutput : AutoCloseable {
+    /** Discover dedicated local MIDI receivers without opening a playback session. */
+    fun availableDevices(): List<MidiAuditionOutputDevice> = emptyList()
+
     fun open(plan: MidiAuditionPlaybackPlan, listener: MidiAuditionOutputListener): MidiAuditionOutputSession
 
     override fun close() = Unit
@@ -188,6 +207,8 @@ interface MidiAuditionOutputSession : AutoCloseable {
     fun play()
     fun pause()
     fun stop()
+    /** Return the adapter's exact transport tick when it can expose one. */
+    fun positionTick(): Long? = null
     fun seek(tick: Long)
     fun setLoop(loop: MidiAuditionLoop?)
     fun setMutedRoles(roles: Set<MidiExportRole>)
@@ -208,6 +229,7 @@ interface MidiAuditionPort : AutoCloseable {
     fun setLoop(loop: MidiAuditionLoop?): MidiAuditionResult
     fun setMutedRole(role: MidiExportRole, muted: Boolean): MidiAuditionResult
     fun setSoloRole(role: MidiExportRole, solo: Boolean): MidiAuditionResult
+    fun selectOutputDevice(outputDeviceId: String?): MidiAuditionResult
 }
 
 /** Serializes one local audition session and supersedes/cleans up older output sessions. */
@@ -235,7 +257,7 @@ class MidiAuditionController(
         val cleanupFailure = disposeActive()
         if (cleanupFailure != null) return failAfterCleanup(cleanupFailure)
         selectedPlan = plan
-        record(selectedState(plan, plan.startTick))
+        record(selectedState(plan, plan.startTick, discoverOutputDevices()))
         return applied(MidiAuditionAction.SELECT_SCOPE)
     }
 
@@ -245,13 +267,14 @@ class MidiAuditionController(
         val cleanupFailure = disposeActive()
         if (cleanupFailure != null) return failAfterCleanup(cleanupFailure)
         selectedPlan = plan
-        record(selectedState(plan, plan.startTick))
+        val devices = discoverOutputDevices()
+        record(selectedState(plan, plan.startTick, devices))
         val id = ++nextSessionId
         try {
             val opened = output.open(plan, MidiAuditionOutputListener { onPlaybackEnded(id) })
             active = ActiveSession(id, plan, opened)
-            record(current.copy(playback = MidiAuditionPlaybackState.PLAYING, sessionId = id, lastProblem = null))
             opened.play()
+            record(current.copy(playback = MidiAuditionPlaybackState.PLAYING, sessionId = id, lastProblem = null))
             return applied(MidiAuditionAction.PLAY)
         } catch (error: Exception) {
             val problem = problemFrom(error)
@@ -294,7 +317,9 @@ class MidiAuditionController(
         if (current.playback == MidiAuditionPlaybackState.PAUSED) return applied(MidiAuditionAction.PAUSE)
         return try {
             session.output.pause()
-            record(current.copy(playback = MidiAuditionPlaybackState.PAUSED, lastProblem = null))
+            val positionTick = transportPosition(session)
+            selectedPlan = selectedPlan?.copy(startTick = positionTick)
+            record(current.copy(playback = MidiAuditionPlaybackState.PAUSED, positionTick = positionTick, lastProblem = null))
             applied(MidiAuditionAction.PAUSE)
         } catch (error: Exception) {
             failActive(error)
@@ -407,6 +432,49 @@ class MidiAuditionController(
     }
 
     @Synchronized
+    override fun selectOutputDevice(outputDeviceId: String?): MidiAuditionResult {
+        if (current.isClosed) return reject(MidiAuditionProblemCode.CLOSED, "The MIDI audition controller is closed.", "Create a new audition controller.")
+        val plan = selectedPlan ?: return rejectNoScope("selecting an output")
+        val devices = discoverOutputDevices()
+        if (outputDeviceId != null && devices.none { it.id == outputDeviceId }) {
+            return reject(
+                MidiAuditionProblemCode.INVALID_REQUEST,
+                "The selected MIDI output is no longer available.",
+                "Choose the system MIDI output or reconnect the device, then retry.",
+            )
+        }
+        val positionTick = active?.let { session ->
+            try {
+                transportPosition(session)
+            } catch (error: Exception) {
+                return failActive(error)
+            }
+        } ?: current.positionTick
+        val updated = plan.copy(startTick = positionTick, outputDeviceId = outputDeviceId)
+        val previousPlayback = current.playback
+        val cleanupFailure = disposeActive()
+        if (cleanupFailure != null) return failAfterCleanup(cleanupFailure)
+        selectedPlan = updated
+        if (previousPlayback == MidiAuditionPlaybackState.STOPPED) {
+            record(selectedState(updated, updated.startTick, devices))
+            return applied(MidiAuditionAction.SELECT_OUTPUT)
+        }
+        val id = ++nextSessionId
+        return try {
+            val opened = output.open(updated, MidiAuditionOutputListener { onPlaybackEnded(id) })
+            active = ActiveSession(id, updated, opened)
+            if (previousPlayback == MidiAuditionPlaybackState.PLAYING) opened.play()
+            record(selectedState(updated, updated.startTick, devices).copy(playback = previousPlayback, sessionId = id))
+            applied(MidiAuditionAction.SELECT_OUTPUT)
+        } catch (error: Exception) {
+            val problem = problemFrom(error)
+            disposeActive()
+            record(selectedState(updated, updated.startTick, devices).copy(lastProblem = problem))
+            MidiAuditionResult.Failed(problem, current)
+        }
+    }
+
+    @Synchronized
     override fun close() {
         if (current.isClosed) return
         val cleanupFailure = disposeActive()
@@ -435,11 +503,12 @@ class MidiAuditionController(
         } catch (error: Exception) {
             problemFrom(error)
         }
-        selectedPlan = session.plan.copy(startTick = session.plan.view.window.endTick)
+        val completedPlan = selectedPlan ?: session.plan
+        selectedPlan = completedPlan.copy(startTick = completedPlan.view.window.endTick)
         record(current.copy(
             playback = MidiAuditionPlaybackState.STOPPED,
             sessionId = null,
-            positionTick = session.plan.view.window.endTick,
+            positionTick = completedPlan.view.window.endTick,
             lastProblem = closeFailure,
         ))
     }
@@ -469,7 +538,15 @@ class MidiAuditionController(
         return failure
     }
 
-    private fun selectedState(plan: MidiAuditionPlaybackPlan, positionTick: Long): MidiAuditionState = current.copy(
+    private fun transportPosition(session: ActiveSession): Long = session.output.positionTick()
+        ?.coerceIn(session.plan.view.window.startTick, session.plan.view.window.endTick)
+        ?: current.positionTick
+
+    private fun selectedState(
+        plan: MidiAuditionPlaybackPlan,
+        positionTick: Long,
+        outputDevices: List<MidiAuditionOutputDevice>,
+    ): MidiAuditionState = current.copy(
         playback = MidiAuditionPlaybackState.STOPPED,
         sessionId = null,
         scope = plan.view.scope,
@@ -478,8 +555,19 @@ class MidiAuditionController(
         loop = plan.loop,
         mutedRoles = plan.mutedRoles,
         soloRoles = plan.soloRoles,
+        outputDeviceId = plan.outputDeviceId,
+        outputDevices = outputDevices,
         lastProblem = null,
     )
+
+    private fun discoverOutputDevices(): List<MidiAuditionOutputDevice> = try {
+        output.availableDevices()
+            .distinctBy(MidiAuditionOutputDevice::id)
+            .sortedWith(compareBy(MidiAuditionOutputDevice::name, MidiAuditionOutputDevice::vendor, MidiAuditionOutputDevice::id))
+    } catch (_: Exception) {
+        // A dedicated device list is optional. The default JVM receiver remains a valid fallback.
+        emptyList()
+    }
 
     private fun rejectNoScope(action: String): MidiAuditionResult = reject(
         MidiAuditionProblemCode.NO_ACTIVE_SESSION,

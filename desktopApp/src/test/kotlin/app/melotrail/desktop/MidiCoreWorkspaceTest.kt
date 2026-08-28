@@ -527,6 +527,11 @@ private class FakeMidiAudition : MidiAuditionPort {
 
     override fun setSoloRole(role: MidiExportRole, solo: Boolean): MidiAuditionResult = MidiAuditionResult.Applied(app.melotrail.audition.MidiAuditionAction.SOLO, current)
 
+    override fun selectOutputDevice(outputDeviceId: String?): MidiAuditionResult {
+        record(current.copy(outputDeviceId = outputDeviceId))
+        return MidiAuditionResult.Applied(app.melotrail.audition.MidiAuditionAction.SELECT_OUTPUT, current)
+    }
+
     override fun close() { record(current.copy(isClosed = true, playback = MidiAuditionPlaybackState.STOPPED, sessionId = null)) }
 
     private fun record(next: MidiAuditionState) {

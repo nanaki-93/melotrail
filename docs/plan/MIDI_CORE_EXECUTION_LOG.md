@@ -84,8 +84,8 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-042 | DONE | `midi-core: MC-042 harden bass arrangements` | PASS — focused Bass/development suite, `make test`, `make build` | Collision-safe, profile-distinct Bass candidates with SHA-pinned three-fixture alternatives and deterministic section lift. |
 | MC-043 | DONE | `midi-core: MC-043 harden drum arrangements` | PASS — focused Drum/development suite, `make test`, `make build` | Complete groove retention, restrained Bass-aware kicks, section-aware direct-fill companions, and SHA-pinned three-fixture alternatives. |
 | MC-044 | DONE | `midi-core: MC-044 harden ensemble interaction` | PASS — interaction/generation suite, `make test`, `make build` | Accepted same-occurrence role context, deterministic interaction validation, and one-role-only repair without a global rewrite. |
-| MC-045 | IN_PROGRESS | | | MIDI audition hardening follows completed MC-044. |
-| MC-046 | TODO | | | |
+| MC-045 | DONE | `midi-core: MC-045 harden MIDI audition` | PASS — controller/Sequencer/Receiver, focused desktop tests, local default-receiver smoke, `make test`, `make build` | Discoverable output selection, exact-tick session replacement, safe live transport rebuild, deterministic cleanup, and MIDI-only UI recovery are covered. |
+| MC-046 | IN_PROGRESS | | | Desktop interaction hardening follows completed MC-045. |
 | MC-047 | TODO | | | |
 | MC-048 | TODO | | | |
 | MC-049 | TODO | | | |
@@ -110,7 +110,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | G2 MIDI project kernel complete | MC-010–MC-019 | DONE | MC-010–MC-019 target schema, artifact, authority, invalidation, lifecycle, and full test/build gates pass. |
 | G3 Vertical slice complete | MC-020–MC-030 | DONE | MC-020–MC-030 target context, validation, generation, review, assembly, audition, export, and the JVM vertical-slice gate pass. |
 | G4 Focused desktop complete | MC-031–MC-040 | DONE | MC-040 real-service focused Compose E2E, six generated page fixtures, `make test`, and `make build` pass. |
-| G5 Product behavior accepted | MC-041–MC-049 | TODO | |
+| G5 Product behavior accepted | MC-041–MC-049 | IN_PROGRESS | MC-041–MC-045 are complete; MC-046–MC-049 remain. |
 | G6 Legacy product removed | MC-050–MC-059 | TODO | |
 | G7 MVP complete | MC-060 | TODO | |
 
@@ -1114,6 +1114,27 @@ Decisions/deviations: The policy reacts only to immutable semantic MIDI evidence
 Known limitations: This target policy cannot judge subjective mix, timbre, or long-form musical taste; MC-049 remains the human listening gate. Audition lifecycle and final DAW compatibility remain MC-045 and MC-048.
 Commit: `midi-core: MC-044 harden ensemble interaction`.
 Next task: MC-045 — harden audition lifecycle and desktop behavior.
+
+### MC-045 — Harden audition lifecycle and desktop behavior
+
+Status: DONE
+Started: 2026-08-28
+Completed: 2026-08-28
+Starting commit/status: `c14f843` / only the preserved unrelated deleted Kotlin compiler-session marker was present.
+Contracts read: F-PLAY-001–F-PLAY-004; Quality Gate 5; Architecture sections 3, 4.8, and 8; and the MC-045 task contract.
+Current owners inspected: target audition controller and plan/state contract, JVM Sequencer/Receiver adapter, focused workspace reducer, Review transport, fake ports/sessions, target desktop composition, the inherited MIDI writer, and existing target source/review audition use cases. Target source and desktop package scans found no `JvmAudioPlayer`, WAV path, renderer, volume-matched audio, or sound-library coupling.
+Behavior retained/extracted: The MIDI-only controller now discovers receiver-capable local outputs, exposes system-default fallback and output selection in Review, and reopens only the transient audition session at the adapter's precise tick while retaining scope, loop, mute, and solo state. Pause records the adapter tick; session completion retains the current edited plan; a failed output start never publishes a false PLAYING state. The JVM adapter reads the authoritative MIDI sequence tempo/meter, rebuilds live loop/mute/solo routing through stop + all-notes-off + resume, retains exact seek behavior, and closes sequencer/transmitter/receiver resources on stop, replacement, failure, or desktop shutdown. Device absence/loss remains a typed recoverable error with a direct retry/fallback action.
+Files added/changed: `src/main/kotlin/app/melotrail/audition/MidiAudition.kt`, `src/main/kotlin/app/melotrail/audition/adapter/JdkMidiAuditionOutput.kt`, `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt`, `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt`, focused audition/adapter/workspace/review/desktop tests, `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`, `docs/plan/MC045_MIDI_AUDITION_SMOKE.md`, and this execution log.
+Files/data deleted: None. The target path had no remaining audio artifact/service coupling to delete; legacy audio owners remain explicitly assigned to MC-050–MC-059 and were neither imported nor adapted.
+Tracked deletion recoverability: The unrelated Kotlin compiler session-marker deletion remains recoverable from Git and is deliberately excluded from this task commit.
+Ignored deletion recoverability: Gradle test outputs are untracked/recreatable; no source MIDI, project, accepted candidate, or export snapshot was changed by audition tests or smoke.
+Focused tests: `./gradlew :test --tests app.melotrail.audition.MidiAuditionControllerTest --tests app.melotrail.audition.adapter.JdkMidiAuditionOutputTest --rerun-tasks --console=plain` PASS. It covers exact pause/seek tick propagation, loop/mute/solo safe rebuild, tempo/meter sequence routing, receiver all-notes-off, device loss/retry, selected-output replacement, stale completion isolation, failed-start state admission, and 64 repeated lifecycle cycles with every fake session closed. `./gradlew :desktopApp:test --tests app.melotrail.desktop.MidiCoreWorkspaceTest --tests app.melotrail.desktop.MidiCoreReviewPageTest --tests app.melotrail.desktop.MidiCoreFocusedWorkflowTest --rerun-tasks --console=plain` PASS, including discovered-output and system-fallback Review intents.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS; `make test` PASS (2026-08-28); `make build` PASS (2026-08-28).
+Manual evidence: `docs/plan/MC045_MIDI_AUDITION_SMOKE.md` records the complete desktop procedure, non-authoritative timbre policy, and fallback behavior. The local host enumerated receiver-capable `Gervill`, `Real Time Sequencer`, and `Logic Pro Virtual In`; direct default-receiver NOTE_ON/NOTE_OFF returned `DEFAULT_MIDI_OUTPUT_SMOKE=PASS`. `Logic Pro Virtual Out` was correctly excluded because it has no receiver. This is device-output evidence only, not DAW import or subjective musical-listening evidence.
+Decisions/deviations: Receiver discovery failure leaves the system MIDI output usable rather than blocking audition. An unavailable explicitly selected receiver is rejected before mutation; on live receiver replacement, old-session all-notes-off/close occurs before new-session open. Preview timbre is output-device/DAW owned and intentionally not saved, exported, or treated as musical authority. No audio renderer, waveform, audio file, sound library, worker, or project-data write was introduced.
+Known limitations: The target UI reports transport position at precise user transport boundaries (pause, seek, output replacement, end), not as a continuously sampled playhead. DAW compatibility and human musical acceptance remain the scheduled MC-048 and MC-049 gates.
+Commit: `midi-core: MC-045 harden MIDI audition`.
+Next task: MC-046 — harden desktop interaction, recovery, and accessibility.
 
 ## 6. Manual gate records
 

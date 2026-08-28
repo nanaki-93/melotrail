@@ -440,6 +440,7 @@ sealed interface MidiCoreWorkspaceIntent {
     data class SetAuditionLoop(val loop: MidiAuditionLoop?) : MidiCoreWorkspaceIntent
     data class MuteAuditionRole(val role: app.melotrail.midi.domain.MidiExportRole, val muted: Boolean) : MidiCoreWorkspaceIntent
     data class SoloAuditionRole(val role: app.melotrail.midi.domain.MidiExportRole, val solo: Boolean) : MidiCoreWorkspaceIntent
+    data class SelectAuditionOutputDevice(val outputDeviceId: String?) : MidiCoreWorkspaceIntent
     data object CancelOperation : MidiCoreWorkspaceIntent
     data object Retry : MidiCoreWorkspaceIntent
     data object DismissDialog : MidiCoreWorkspaceIntent
@@ -519,6 +520,7 @@ class MidiCoreWorkspaceViewModel(
             is MidiCoreWorkspaceIntent.SetAuditionLoop -> audition { useCases.audition.setLoop(intent.loop) }
             is MidiCoreWorkspaceIntent.MuteAuditionRole -> audition { useCases.audition.setMutedRole(intent.role, intent.muted) }
             is MidiCoreWorkspaceIntent.SoloAuditionRole -> audition { useCases.audition.setSoloRole(intent.role, intent.solo) }
+            is MidiCoreWorkspaceIntent.SelectAuditionOutputDevice -> audition { useCases.audition.selectOutputDevice(intent.outputDeviceId) }
             MidiCoreWorkspaceIntent.CancelOperation -> cancelOperation()
             MidiCoreWorkspaceIntent.Retry -> retry()
             MidiCoreWorkspaceIntent.DismissDialog -> _state.value = _state.value.copy(dialog = null)

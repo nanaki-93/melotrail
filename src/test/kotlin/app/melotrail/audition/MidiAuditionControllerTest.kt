@@ -12,6 +12,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -37,8 +38,10 @@ class MidiAuditionControllerTest {
         assertEquals(1L, controller.state.sessionId)
         assertEquals(plan, session.plan)
 
+        session.playbackTick = 180
         assertIs<MidiAuditionResult.Applied>(controller.pause())
         assertEquals(MidiAuditionPlaybackState.PAUSED, controller.state.playback)
+        assertEquals(180L, controller.state.positionTick)
         assertIs<MidiAuditionResult.Applied>(controller.seek(360))
         assertEquals(360L, controller.state.positionTick)
         assertIs<MidiAuditionResult.Applied>(controller.setLoop(null))
@@ -145,6 +148,69 @@ class MidiAuditionControllerTest {
         assertNotNull(controller.state.lastProblem)
     }
 
+    @Test
+    fun `switches a live output at the exact current tick without losing transport masks`() {
+        val firstDevice = MidiAuditionOutputDevice("first", "First output", "Test", "First", "1")
+        val secondDevice = MidiAuditionOutputDevice("second", "Second output", "Test", "Second", "1")
+        val output = FakeOutput().apply { devices = listOf(firstDevice, secondDevice) }
+        val controller = MidiAuditionController(output)
+        val plan = MidiAuditionPlaybackPlan(MidiAuditionView.accepted(song()), outputDeviceId = firstDevice.id)
+
+        assertIs<MidiAuditionResult.Applied>(controller.play(plan))
+        val firstSession = output.sessions.single()
+        assertIs<MidiAuditionResult.Applied>(controller.seek(480))
+        assertIs<MidiAuditionResult.Applied>(controller.setLoop(MidiAuditionLoop(480, 960)))
+        assertIs<MidiAuditionResult.Applied>(controller.setMutedRole(MidiExportRole.BASS, true))
+        assertIs<MidiAuditionResult.Applied>(controller.setSoloRole(MidiExportRole.CHORDS, true))
+        firstSession.playbackTick = 600
+
+        assertIs<MidiAuditionResult.Applied>(controller.selectOutputDevice(secondDevice.id))
+        val secondSession = output.sessions.last()
+        assertTrue(firstSession.closed)
+        assertTrue(firstSession.allNotesOffSent)
+        assertEquals(MidiAuditionPlaybackState.PLAYING, controller.state.playback)
+        assertEquals(secondDevice.id, controller.state.outputDeviceId)
+        assertEquals(listOf(firstDevice, secondDevice), controller.state.outputDevices)
+        assertEquals(600L, secondSession.plan.startTick)
+        assertEquals(600L, controller.state.positionTick)
+        assertEquals(MidiAuditionLoop(480, 960), secondSession.plan.loop)
+        assertEquals(setOf(MidiExportRole.BASS), secondSession.plan.mutedRoles)
+        assertEquals(setOf(MidiExportRole.CHORDS), secondSession.plan.soloRoles)
+        assertEquals(secondDevice.id, secondSession.plan.outputDeviceId)
+
+        val unavailable = assertIs<MidiAuditionResult.Failed>(controller.selectOutputDevice("gone"))
+        assertEquals(MidiAuditionProblemCode.INVALID_REQUEST, unavailable.problem.code)
+        assertEquals(secondDevice.id, controller.state.outputDeviceId)
+    }
+
+    @Test
+    fun `failed playback never publishes playing state and repeated lifecycle leaves every session closed`() {
+        val output = FakeOutput().apply {
+            sessionFailure = MidiAuditionOutputException(MidiAuditionProblemCode.DEVICE_LOST, "MIDI output disappeared")
+        }
+        val controller = MidiAuditionController(output)
+        val plan = MidiAuditionPlaybackPlan(MidiAuditionView.accepted(song()))
+
+        val failedStart = assertIs<MidiAuditionResult.Failed>(controller.play(plan))
+        assertEquals(MidiAuditionProblemCode.DEVICE_LOST, failedStart.problem.code)
+        assertFalse(controller.stateHistory.any { it.playback == MidiAuditionPlaybackState.PLAYING })
+        assertTrue(output.sessions.single().closed)
+
+        output.sessionFailure = null
+        repeat(64) { attempt ->
+            val startTick = (attempt % 4) * 240L
+            assertIs<MidiAuditionResult.Applied>(controller.play(plan.copy(startTick = startTick)))
+            assertIs<MidiAuditionResult.Applied>(controller.pause())
+            assertIs<MidiAuditionResult.Applied>(controller.seek(startTick))
+            assertIs<MidiAuditionResult.Applied>(controller.stop())
+        }
+        controller.close()
+
+        assertTrue(output.sessions.all { it.closed && it.allNotesOffSent })
+        assertTrue(output.closed)
+        assertTrue(controller.state.isClosed)
+    }
+
     private fun song() = MidiExportSong(
         ppq = MidiPpq(480),
         sequenceName = "Audition fixture",
@@ -185,11 +251,15 @@ class MidiAuditionControllerTest {
 private class FakeOutput : MidiAuditionOutput {
     val sessions = mutableListOf<FakeSession>()
     var openFailure: Exception? = null
+    var sessionFailure: Exception? = null
+    var devices: List<MidiAuditionOutputDevice> = emptyList()
     var closed = false
+
+    override fun availableDevices(): List<MidiAuditionOutputDevice> = devices
 
     override fun open(plan: MidiAuditionPlaybackPlan, listener: MidiAuditionOutputListener): MidiAuditionOutputSession {
         openFailure?.let { throw it }
-        return FakeSession(plan, listener).also(sessions::add)
+        return FakeSession(plan, listener).apply { failure = sessionFailure }.also(sessions::add)
     }
 
     override fun close() {
@@ -205,6 +275,7 @@ private class FakeSession(
     var closed = false
     var allNotesOffSent = false
     var failure: Exception? = null
+    var playbackTick: Long? = null
 
     override fun play() {
         operations += "play"
@@ -221,8 +292,11 @@ private class FakeSession(
         allNotesOffSent = true
     }
 
+    override fun positionTick(): Long? = playbackTick
+
     override fun seek(tick: Long) {
         operations += "seek:$tick"
+        playbackTick = tick
         failure?.let { throw it }
     }
 

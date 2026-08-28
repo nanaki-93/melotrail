@@ -13,6 +13,7 @@ import app.melotrail.arrangement.core.MidiCoreRoleFindingSeverity
 import app.melotrail.arrangement.core.MidiCoreRoleValidationReport
 import app.melotrail.application.MidiCoreCandidateReviewItem
 import app.melotrail.audition.MidiAuditionPlaybackState
+import app.melotrail.audition.MidiAuditionOutputDevice
 import app.melotrail.audition.MidiAuditionScope
 import app.melotrail.audition.MidiAuditionState
 import app.melotrail.audition.MidiAuditionWindow
@@ -126,6 +127,24 @@ class MidiCoreReviewPageTest {
             ),
             intents,
         )
+    }
+
+    @Test
+    fun `Review exposes discovered MIDI outputs and the system fallback`() = runComposeUiTest {
+        val device = MidiAuditionOutputDevice("test-output", "Test MIDI output", "Test", "Test receiver", "1")
+        val intents = mutableListOf<MidiCoreWorkspaceIntent>()
+        val selectedState = reviewState().copy(audition = reviewState().audition.copy(outputDeviceId = device.id, outputDevices = listOf(device)))
+        setContent { MelotrailTheme { MidiCoreReviewPage(selectedState, intents::add, {}) } }
+
+        onNodeWithTag(MidiCoreReviewPageTags.OUTPUT_DEFAULT).performScrollTo().performClick()
+        waitForIdle()
+        assertEquals(listOf<MidiCoreWorkspaceIntent>(MidiCoreWorkspaceIntent.SelectAuditionOutputDevice(null)), intents)
+
+        intents.clear()
+        setContent { MelotrailTheme { MidiCoreReviewPage(reviewState().copy(audition = reviewState().audition.copy(outputDevices = listOf(device))), intents::add, {}) } }
+        onNodeWithTag(MidiCoreReviewPageTags.output(device.id)).performScrollTo().performClick()
+        waitForIdle()
+        assertEquals(listOf<MidiCoreWorkspaceIntent>(MidiCoreWorkspaceIntent.SelectAuditionOutputDevice(device.id)), intents)
     }
 
     @Test

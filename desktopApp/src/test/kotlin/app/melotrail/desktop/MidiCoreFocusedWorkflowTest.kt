@@ -297,6 +297,7 @@ private class WorkflowFakeMidiAudition : MidiAuditionPort {
     override fun setLoop(loop: MidiAuditionLoop?): MidiAuditionResult = apply(MidiAuditionAction.LOOP) { it.copy(loop = loop) }
     override fun setMutedRole(role: MidiExportRole, muted: Boolean): MidiAuditionResult = apply(MidiAuditionAction.MUTE) { it.copy(mutedRoles = if (muted) it.mutedRoles + role else it.mutedRoles - role) }
     override fun setSoloRole(role: MidiExportRole, solo: Boolean): MidiAuditionResult = apply(MidiAuditionAction.SOLO) { it.copy(soloRoles = if (solo) it.soloRoles + role else it.soloRoles - role) }
+    override fun selectOutputDevice(outputDeviceId: String?): MidiAuditionResult = apply(MidiAuditionAction.SELECT_OUTPUT) { it.copy(outputDeviceId = outputDeviceId) }
     override fun close() { record(current.copy(isClosed = true, playback = MidiAuditionPlaybackState.STOPPED, sessionId = null)) }
 
     private fun apply(action: MidiAuditionAction, transform: (MidiAuditionState) -> MidiAuditionState): MidiAuditionResult {

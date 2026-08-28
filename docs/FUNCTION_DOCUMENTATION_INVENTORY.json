@@ -77,9 +77,9 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt has 24 callable declarations, 1 directly documented and 23 focused presentation helpers. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-038; immutable candidate comparison, validation/stale evidence, explicit acceptance/rejection/lock/restore decisions, candidate/role/occurrence/full MIDI audition, transport, mute/solo, accessibility semantics, and Arrange handoff are covered by focused Compose tests.",
-      "functionCount": 24,
-      "declarationDigest": "9844e8dd01cd235cf7826e93ef5407c6e5ecb573bf53ed8695f520cfc686c9f2",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt has 25 callable declarations, 1 directly documented and 24 focused presentation helpers. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-045; immutable candidate comparison, validation/stale evidence, explicit acceptance/rejection/lock/restore decisions, candidate/role/occurrence/full MIDI audition, discoverable receiver/system-output selection, transport, mute/solo, accessibility semantics, and Arrange handoff are covered by focused Compose tests.",
+      "functionCount": 25,
+      "declarationDigest": "b253c32bdc6e3e2cdbb70dc448f30a46707cbd10fc34417f25fd579880ad75b8",
       "documentedFunctionCount": 1
     },
     {
@@ -1165,18 +1165,18 @@
     {
       "path": "src/main/kotlin/app/melotrail/audition/MidiAudition.kt",
       "classification": "inherited-contract",
-      "reason": "The 49 callable declarations define MC-028's MIDI-only audition scopes, bounded loop/seek plan, recoverable transport results, superseding session state, mute/solo policy, completion handling, and deterministic cleanup under F-PLAY-001 through F-PLAY-004 and F-SYS-001; reviewed on 2026-08-28.",
-      "functionCount": 49,
-      "declarationDigest": "ec64b16a0de4f4c0ed2b53710b1db84d0cc7ebbe27d6eaaf494256b111bf855a",
-      "documentedFunctionCount": 6
+      "reason": "The 55 callable declarations define MC-045's MIDI-only audition scopes, discoverable local receiver and system fallback selection, exact adapter-tick pause/output replacement, bounded loop/seek plan, recoverable transport results, superseding session state, mute/solo policy, completion handling, and deterministic cleanup under F-PLAY-001 through F-PLAY-004 and F-SYS-001; reviewed on 2026-08-28.",
+      "functionCount": 55,
+      "declarationDigest": "9d68e8d5289630259413a75cc5ba8e14790bdf7991dc2b9c2cdcd92c2b11023b",
+      "documentedFunctionCount": 8
     },
     {
       "path": "src/main/kotlin/app/melotrail/audition/adapter/JdkMidiAuditionOutput.kt",
       "classification": "inherited-contract",
-      "reason": "The 25 callable declarations implement MC-028's JVM Sequencer/Receiver adapter, local output discovery, transient exact-window clipping, loop configuration, role mute/solo mapping, end-of-view notification, all-notes-off cleanup, and recoverable device-loss handling under F-PLAY-001 through F-PLAY-004; reviewed on 2026-08-28.",
-      "functionCount": 25,
-      "declarationDigest": "26a5248b7ada373d3afaa6b76afa09a6ce4b9fb4efdfeb13de927dab78072230",
-      "documentedFunctionCount": 2
+      "reason": "The 27 callable declarations implement MC-045's JVM Sequencer/Receiver adapter, local output discovery and system fallback, authoritative tempo/meter sequence routing, exact transport-position readback, safe live loop/mute/solo rebuild, end-of-view notification, all-notes-off cleanup, and recoverable device-loss handling under F-PLAY-001 through F-PLAY-004; reviewed on 2026-08-28.",
+      "functionCount": 27,
+      "declarationDigest": "e7734f919ad517430d14f5734a1b7fd967a766211618afb03b72a62b86c1fe7b",
+      "documentedFunctionCount": 3
     },
     {
       "path": "src/main/kotlin/app/melotrail/audio/AudioBuffer.kt",

@@ -2,6 +2,7 @@ package app.melotrail.audition.adapter
 
 import app.melotrail.audition.MidiAuditionLoop
 import app.melotrail.audition.MidiAuditionOutput
+import app.melotrail.audition.MidiAuditionOutputDevice
 import app.melotrail.audition.MidiAuditionOutputException
 import app.melotrail.audition.MidiAuditionOutputListener
 import app.melotrail.audition.MidiAuditionOutputSession
@@ -20,24 +21,16 @@ import javax.sound.midi.Sequencer
 import javax.sound.midi.ShortMessage
 import javax.sound.midi.Transmitter
 
-/** Describes a local MIDI receiver that can be selected for non-authoritative preview. */
-data class MidiAuditionOutputDevice(
-    val id: String,
-    val name: String,
-    val vendor: String,
-    val description: String,
-    val version: String,
-)
-
 /** JVM adapter that routes an in-memory target MIDI sequence through a local MIDI receiver. */
 class JdkMidiAuditionOutput(
     private val writer: JdkMidiWriter = JdkMidiWriter(),
     private val sequencerFactory: () -> Sequencer = { MidiSystem.getSequencer(false) },
+    private val defaultReceiverFactory: () -> Receiver = { MidiSystem.getReceiver() },
 ) : MidiAuditionOutput {
     private val sessions = CopyOnWriteArraySet<JdkMidiAuditionOutputSession>()
 
     /** Return receiver-capable local MIDI devices without opening them. */
-    fun availableDevices(): List<MidiAuditionOutputDevice> = deviceDescriptors()
+    override fun availableDevices(): List<MidiAuditionOutputDevice> = deviceDescriptors()
         .map { it.public }
         .distinctBy(MidiAuditionOutputDevice::id)
         .sortedWith(compareBy(MidiAuditionOutputDevice::name, MidiAuditionOutputDevice::vendor, MidiAuditionOutputDevice::id))
@@ -89,7 +82,7 @@ class JdkMidiAuditionOutput(
     private fun openEndpoint(deviceId: String?): JdkMidiOutputEndpoint {
         if (deviceId == null) {
             return try {
-                JdkMidiOutputEndpoint(MidiSystem.getReceiver(), null)
+                JdkMidiOutputEndpoint(defaultReceiverFactory(), null)
             } catch (error: Exception) {
                 throw MidiAuditionOutputException(
                     MidiAuditionProblemCode.DEVICE_UNAVAILABLE,
@@ -237,6 +230,8 @@ private class JdkMidiAuditionOutputSession(
         }
     }
 
+    override fun positionTick(): Long = withOutput("MIDI audition position could not be read") { sequencer.tickPosition }
+
     override fun seek(tick: Long) = withOutput("MIDI audition seek failed") {
         require(tick in plan.view.window.startTick..plan.view.window.endTick) {
             "Seek position must remain inside the selected audition view"
@@ -256,17 +251,17 @@ private class JdkMidiAuditionOutputSession(
                 "Audition loop must remain inside the selected view window"
             }
         }
-        applyLoop(loop)
+        rebuildTransport { applyLoop(loop) }
     }
 
     override fun setMutedRoles(roles: Set<MidiExportRole>) = withOutput("MIDI audition mute update failed") {
         require(roles.all(plan.view.roles::contains)) { "Muted role is not present in the selected audition view" }
-        applyMutedRoles(roles)
+        rebuildTransport { applyMutedRoles(roles) }
     }
 
     override fun setSoloRoles(roles: Set<MidiExportRole>) = withOutput("MIDI audition solo update failed") {
         require(roles.all(plan.view.roles::contains)) { "Solo role is not present in the selected audition view" }
-        applySoloRoles(roles)
+        rebuildTransport { applySoloRoles(roles) }
     }
 
     override fun close() {
@@ -308,6 +303,17 @@ private class JdkMidiAuditionOutputSession(
         roleTracks.forEach { (role, trackIndex) -> sequencer.setTrackSolo(trackIndex, role in roles) }
     }
 
+    /** Rebuild a live routing mask from one tick boundary so previously sounding notes cannot leak through. */
+    private fun rebuildTransport(update: () -> Unit) {
+        val wasRunning = sequencer.isRunning
+        if (wasRunning) {
+            sequencer.stop()
+            allNotesOff()
+        }
+        update()
+        if (wasRunning) sequencer.start()
+    }
+
     private fun allNotesOff() {
         for (channel in 0..15) {
             for (controller in listOf(123, 120)) {
@@ -327,10 +333,10 @@ private class JdkMidiAuditionOutputSession(
         }
     }
 
-    private inline fun withOutput(message: String, operation: () -> Unit) {
+    private inline fun <T> withOutput(message: String, operation: () -> T): T {
         if (closed) throw MidiAuditionOutputException(MidiAuditionProblemCode.CLOSED, "MIDI audition output session is closed")
         try {
-            operation()
+            return operation()
         } catch (error: MidiAuditionOutputException) {
             throw error
         } catch (error: IllegalArgumentException) {
