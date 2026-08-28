@@ -73,21 +73,21 @@ object MidiCoreChordGenerator {
         var previousVoicing: List<Int>? = null
         context.chordWindows.forEachIndexed { windowIndex, window ->
             val rhythm = rhythmWindows(context, window)
+            if (rhythm.isEmpty()) return emptyList()
             val voicing = selectVoicing(context, window, rhythm, previousVoicing, windowIndex)
-            if (voicing != null) {
-                rhythm.forEach { attack ->
-                    val endTick = noteEnd(context, attack)
-                    voicing.forEach { pitch ->
-                        notes += MidiCoreCandidateEvent.Note(
-                            startTick = attack.startTick,
-                            endTick = endTick,
-                            pitch = pitch,
-                            velocity = velocity(context, attack.velocityOffset),
-                        )
-                    }
+            if (voicing == null) return emptyList()
+            rhythm.forEach { attack ->
+                val endTick = noteEnd(context, attack)
+                voicing.forEach { pitch ->
+                    notes += MidiCoreCandidateEvent.Note(
+                        startTick = attack.startTick,
+                        endTick = endTick,
+                        pitch = pitch,
+                        velocity = velocity(context, attack.velocityOffset + if (attack.phraseBoundary) PHRASE_ACCENT else 0),
+                    )
                 }
-                previousVoicing = voicing
             }
+            previousVoicing = voicing
         }
         return notes.sortedWith(
             compareBy<MidiCoreCandidateEvent.Note> { it.startTick }
@@ -104,7 +104,7 @@ object MidiCoreChordGenerator {
     ): List<RhythmWindow> {
         val pattern = MidiCorePatternCatalog.chordRhythm(context.patternId)
         if (pattern.id == MidiCoreChordRhythmPatternId.SUSTAINED) {
-            return listOf(RhythmWindow(window.startTick, window.endTick, 0))
+            return listOf(RhythmWindow(window.startTick, window.endTick, 0, phraseBoundary = true))
         }
         val stepTicks = context.tickGrid.ticksPerSubdivision
         val barTicks = context.tickGrid.ticksPerBar
@@ -115,12 +115,12 @@ object MidiCoreChordGenerator {
                     val start = barStart + step.sixteenth.toLong() * stepTicks
                     val end = minOf(window.endTick, start + step.durationSixteenths.toLong() * stepTicks)
                     if (start >= window.startTick && start < window.endTick && end > start) {
-                        add(RhythmWindow(start, end, step.velocityOffset))
+                        add(RhythmWindow(start, end, step.velocityOffset, phraseBoundary = step.sixteenth == 0))
                     }
                 }
                 barStart += barTicks
             }
-        }.ifEmpty { listOf(RhythmWindow(window.startTick, window.endTick, 0)) }
+        }
     }
 
     /** Select a bounded inversion using voice continuity, melody/bass space, and an explicit seed tie-break. */
@@ -136,7 +136,11 @@ object MidiCoreChordGenerator {
         val spaceSafe = all.filter { voicing ->
             !hasAnchorCollision(context, voicing, rhythm) && !hasBassCollision(context, voicing, rhythm)
         }
-        val pool = spaceSafe.ifEmpty { all }
+        if (spaceSafe.isEmpty()) return null
+        val movementSafe = previous?.let { prior ->
+            spaceSafe.filter { voicing -> voiceMovement(prior, voicing).maximumDistance <= MAX_VOICE_MOVEMENT }
+        }.orEmpty()
+        val pool = movementSafe.ifEmpty { spaceSafe }
         val ranked = pool.sortedWith(
             compareBy<List<Int>> { voiceLeadingScore(context, it, previous) }
                 .thenBy { it.joinToString(",") },
@@ -172,16 +176,54 @@ object MidiCoreChordGenerator {
         }
     }
 
-    /** Score a voicing against the previous window and the center of the approved register. */
+    /** Score a voicing against its bounded voice movement, retained common tones, and section-aware register target. */
     private fun voiceLeadingScore(
         context: MidiCoreGenerationContext,
         voicing: List<Int>,
         previous: List<Int>?,
     ): Long {
-        val center = (context.performanceProfile.register.first + context.performanceProfile.register.last) / 2
-        if (previous == null) return voicing.sumOf { pitch -> abs(pitch - center).toLong() }
-        val common = voicing.zip(previous).sumOf { (current, prior) -> abs(current - prior).toLong() }
-        return common + abs(voicing.size - previous.size).toLong() * VOICE_COUNT_PENALTY
+        val center = preferredRegisterCenter(context)
+        val registerDistance = voicing.sumOf { pitch -> abs(pitch - center).toLong() }
+        if (previous == null) return registerDistance
+        val movement = voiceMovement(previous, voicing)
+        return movement.totalDistance + movement.unmatchedVoices.toLong() * VOICE_COUNT_PENALTY -
+            movement.commonPitches.toLong() * COMMON_TONE_BONUS + registerDistance
+    }
+
+    /** Place section energy and purpose inside, rather than outside, the selected MIDI register. */
+    private fun preferredRegisterCenter(context: MidiCoreGenerationContext): Int {
+        val range = context.performanceProfile.register
+        val base = (range.first + range.last) / 2
+        val purposeOffset = when (context.sectionPolicy.purpose) {
+            MidiCoreSectionPurpose.CHORUS -> 5
+            MidiCoreSectionPurpose.PRE_CHORUS -> 3
+            MidiCoreSectionPurpose.BRIDGE -> 2
+            MidiCoreSectionPurpose.INTRO, MidiCoreSectionPurpose.OUTRO -> -4
+            MidiCoreSectionPurpose.VERSE, MidiCoreSectionPurpose.UNSPECIFIED -> 0
+        }
+        val energyOffset = ((context.sectionPolicy.energy - 0.5) * ENERGY_REGISTER_SPAN).roundToInt()
+        return (base + purposeOffset + energyOffset).coerceIn(range.first, range.last)
+    }
+
+    /** Align two ordered voicings with a bounded dynamic-programming movement metric. */
+    private fun voiceMovement(previous: List<Int>, current: List<Int>): VoiceMovement {
+        val memo = mutableMapOf<Pair<Int, Int>, VoiceMovement>()
+        /** Resolve the lowest-cost suffix while retaining ordering and exact common tones. */
+        fun align(previousIndex: Int, currentIndex: Int): VoiceMovement = memo.getOrPut(previousIndex to currentIndex) {
+            when {
+                previousIndex == previous.size && currentIndex == current.size -> VoiceMovement()
+                previousIndex == previous.size -> VoiceMovement(unmatchedVoices = current.size - currentIndex)
+                currentIndex == current.size -> VoiceMovement(unmatchedVoices = previous.size - previousIndex)
+                else -> {
+                    val distance = abs(previous[previousIndex] - current[currentIndex])
+                    val matched = align(previousIndex + 1, currentIndex + 1).withMatch(distance, previous[previousIndex] == current[currentIndex])
+                    val skippedPrevious = align(previousIndex + 1, currentIndex).withUnmatchedVoice()
+                    val skippedCurrent = align(previousIndex, currentIndex + 1).withUnmatchedVoice()
+                    listOf(matched, skippedPrevious, skippedCurrent).minWith(VOICE_MOVEMENT_ORDER)
+                }
+            }
+        }
+        return align(0, 0)
     }
 
     /** Reject a voicing only when a generated attack would overlap an exact protected melody anchor. */
@@ -225,11 +267,43 @@ object MidiCoreChordGenerator {
     /** Place one chord pitch class at or above a previous voice without leaving an accidental duplicate. */
     private fun nextAtOrAbove(minimum: Int, pitchClass: Int): Int = minimum + Math.floorMod(pitchClass - minimum, 12)
 
-    private data class RhythmWindow(val startTick: Long, val endTick: Long, val velocityOffset: Int)
+    private data class RhythmWindow(
+        val startTick: Long,
+        val endTick: Long,
+        val velocityOffset: Int,
+        val phraseBoundary: Boolean,
+    )
+
+    private data class VoiceMovement(
+        val totalDistance: Long = 0,
+        val maximumDistance: Int = 0,
+        val commonPitches: Int = 0,
+        val unmatchedVoices: Int = 0,
+    ) {
+        /** Extend the metric with one matched, order-preserving pair of voices. */
+        fun withMatch(distance: Int, commonPitch: Boolean): VoiceMovement = copy(
+            totalDistance = totalDistance + distance,
+            maximumDistance = maxOf(maximumDistance, distance),
+            commonPitches = commonPitches + if (commonPitch) 1 else 0,
+        )
+
+        /** Extend the metric when an extension or omitted chord tone has no matching voice. */
+        fun withUnmatchedVoice(): VoiceMovement = copy(unmatchedVoices = unmatchedVoices + 1)
+    }
 
     private const val MAX_VOICE_SPACING = 12
+    private const val MAX_VOICE_MOVEMENT = 12
     private const val VOICE_COUNT_PENALTY = 24L
+    private const val COMMON_TONE_BONUS = 10L
     private const val BASS_SPACE_SEMITONES = 5
     private const val ENERGY_VELOCITY_SPAN = 16.0
+    private const val ENERGY_REGISTER_SPAN = 10.0
+    private const val PHRASE_ACCENT = 3
     private const val SEED_STEP = 7_919L
+
+    private val VOICE_MOVEMENT_ORDER = compareBy<VoiceMovement> {
+        it.totalDistance + it.unmatchedVoices.toLong() * VOICE_COUNT_PENALTY
+    }.thenBy { it.maximumDistance }
+        .thenByDescending { it.commonPitches }
+        .thenBy { it.unmatchedVoices }
 }

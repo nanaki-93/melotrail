@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-040 complete; MC-041 next
+Status: MC-042 in progress
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -80,8 +80,8 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-038 | DONE | `midi-core: MC-038 build Review page` | PASS — focused Review/workspace Compose tests, candidate lifecycle/assembly/audition tests, documentation coverage, `make test`, `make build` | Immutable comparison and decision controls, candidate/accepted-scope MIDI audition, transport, mute/solo, stale evidence, and Arrange handoff are reachable from the focused desktop shell. |
 | MC-039 | DONE | `midi-core: MC-039 build Export page` | PASS — focused Export/workspace Compose tests, exporter/assembly tests, documentation coverage, `make test`, `make build` | Immutable MIDI package readiness, stale/blocked evidence, destination/collision policy, publish/cancel/retry, hashes/files, reveal-folder action, and DAW guidance are reachable from the focused desktop shell. |
 | MC-040 | DONE | `midi-core: MC-040 prove desktop workflow` | PASS — real-service fake-audition Compose E2E, six-page visual fixtures, focused desktop suite, `make test`, `make build` | Default target navigation completes create/import/select/authority/arrange/review/reopen/export without old routes; smoke checklist is recorded. |
-| MC-041 | TODO | | | |
-| MC-042 | TODO | | | |
+| MC-041 | DONE | `midi-core: MC-041 harden chord accompaniment` | PASS — focused Chords/development suite, `make test`, `make build` | Collision-safe common-tone voicings, phrase accents, section lift, complete catalog proof, and three SHA-pinned development fixture alternatives. |
+| MC-042 | IN_PROGRESS | | | Bass hardening follows completed MC-041. |
 | MC-043 | TODO | | | |
 | MC-044 | TODO | | | |
 | MC-045 | TODO | | | |
@@ -109,7 +109,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | G1 MIDI compatibility proven | MC-001–MC-009 | DONE | MC-008 semantic/export gate and MC-009 GarageBand 10.4.14 plus Logic Pro 12.3.1 manual imports pass. |
 | G2 MIDI project kernel complete | MC-010–MC-019 | DONE | MC-010–MC-019 target schema, artifact, authority, invalidation, lifecycle, and full test/build gates pass. |
 | G3 Vertical slice complete | MC-020–MC-030 | DONE | MC-020–MC-030 target context, validation, generation, review, assembly, audition, export, and the JVM vertical-slice gate pass. |
-| G4 Focused desktop complete | MC-031–MC-040 | TODO | |
+| G4 Focused desktop complete | MC-031–MC-040 | DONE | MC-040 real-service focused Compose E2E, six generated page fixtures, `make test`, and `make build` pass. |
 | G5 Product behavior accepted | MC-041–MC-049 | TODO | |
 | G6 Legacy product removed | MC-050–MC-059 | TODO | |
 | G7 MVP complete | MC-060 | TODO | |
@@ -1023,6 +1023,29 @@ Decisions/deviations: The focused E2E writes a minimal Standard MIDI test input 
 Known limitations: This automated proof does not replace final local MIDI-device loss/lifecycle testing (MC-045), final DAW compatibility (MC-048), or musical listening acceptance (MC-049). It intentionally leaves legacy runtime removal to the explicitly sequenced cleanup tasks.
 Commit: `midi-core: MC-040 prove desktop workflow`.
 Next task: MC-041 — harden chord alternatives and voicing.
+
+### MC-041 — Harden chord alternatives and voicing
+
+Status: DONE
+Started: 2026-08-28
+Completed: 2026-08-28
+Starting commit/status: `713a60c` / only the preserved unrelated deleted Kotlin compiler-session marker was present.
+Contracts read: F-ARR-001 and F-ARR-004–F-ARR-007; Quality Gates 3 and 8; MC-041 task contract.
+Current owners inspected: target `MidiCoreChordGenerator`, `MidiCorePatternCatalog`, `MidiCoreChordGeneratorTest`, Chords golden fixture, target context/role validation, and legacy `PadMidiGeneration`/`MusicalPatternLibrary` tests. The legacy pad/transition rhythm owner is still used by pre-cutover callers and is explicitly scheduled for removal in MC-055; it is not imported by the target path.
+Behavior retained/extracted: Chords retains the six complete, target-owned rhythm variants and exact authoritative chord windows. Safe voicings now require protected-melody and accepted-bass space rather than falling back to a colliding candidate; an unavailable complete safe voicing returns typed empty-output rejection before publication. Ordered dynamic-programming voice matching rewards retained exact common pitches, penalizes added/omitted voices, and bounds preferred per-voice moves at twelve semitones where such a safe candidate exists. Section purpose/energy creates a bounded in-register lift, and phrase attacks receive a deterministic accent. A non-applicable rhythm no longer falls back to an invented sustained attack.
+Files added/changed: `src/main/kotlin/app/melotrail/arrangement/core/MidiCoreChordGenerator.kt`, `src/test/kotlin/app/melotrail/arrangement/core/MidiCoreChordDevelopmentFixtureTest.kt`, `src/test/resources/fixtures/midi-core/chords-golden.json`, `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`, and this execution log.
+Files/data deleted: None. The inspected legacy pad/transition variants are runtime-referenced legacy code, so deleting them before MC-055 would break active pre-cutover callers. Target Chords has no pad/transition fallback or unused variant to retain.
+Tracked deletion recoverability: The unrelated Kotlin compiler session-marker deletion remains recoverable from Git and is deliberately excluded from this task commit.
+Ignored deletion recoverability: None.
+Focused tests: `./gradlew :test --tests app.melotrail.arrangement.core.MidiCoreChordGeneratorTest --tests app.melotrail.arrangement.core.MidiCoreChordDevelopmentFixtureTest --tests app.melotrail.arrangement.core.MidiCoreGenerationContextTest --tests app.melotrail.arrangement.core.MidiCoreRoleValidationTest --rerun-tasks --console=plain` PASS. It covers complete/unique/bar-bounded rhythm catalog, golden rhythms, exact chord-window containment, slash inversions, extensions, bounded movement/common-tone retention, protected melody/bass space, no colliding fallback publication, deterministic alternative distinctness, repeated-section pitch development, and typed off-grid rejection.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS; `make test` PASS (2026-08-28; root and desktop suites); `make build` PASS (2026-08-28; root/desktop build and documentation coverage).
+Manual evidence: The execution prompt names MC-048, MC-049, and MC-060 as the remaining human pauses. MC-041 therefore uses the repeatable MIDI semantic development review below; it does not claim a human listening pass or substitute for the MC-049 holdout rubric.
+Candidate evidence: Baseline Chords semantic golden SHA-256 `f8b1ad0069950e893be4f855ac970080c3e0b1bd6b7fd456c1dd4a6491cb4eb1`; hardened golden SHA-256 `0c1648ab1aa01a3e6d622fa1e32b1494592d3366aed4ff7fb3a59c2b6b207258`. Deterministic development alternatives (first, second candidate SHA-256) are: simple diatonic 4/4 `e2c507647338097ba284c01899deecec8980baef1a05bd5e286fd4ff8d880691`, `d9357f07482573e9d131388c0812a0a578764d548bcb0b424558f2385a21f494`; pickup/sub-bar change `9f5bfa092d988655f379a9bff97b9089083e6ae19a7833a9b09b85e185896e60`, `146025a93333be4d161da047b5d5295125d860f1d2fd642947ece3454837be3d`; chromatic expressive/controller-source `311ac3d1c71794113bbbdaef43cfa33ca0b5b858657bdc2a6f8165b39a416025`, `fb5d5b34f8ebb2bf2dc6fa447eebc5d2b47818ea359be2d1186f8f1b9da29284`.
+Development rubric notes: The mechanical review checks, for every named fixture and both alternatives, melody preservation 5/5 (no protected-anchor overlap), chord support/space 4/5 (all notes are legal chord tones and wholly inside one authoritative window), alternatives 4/5 (two accepted distinct candidate digests), and section/phrase development 3/5 or higher (deterministic in-register repeat lift and phrase accents). These are regression thresholds derived from semantic MIDI evidence, not subjective holdout-listening scores; no fixture is below 3 and each has two valid alternatives. The expressive fixture is paired to the owned CC64/pitch-bend source policy already verified in MC-014; the Chords context intentionally consumes the immutable protected melody projection rather than copying controllers into accompaniment.
+Decisions/deviations: The target catalog was already exact and complete, so MC-041 adds a completeness regression rather than inventing a seventh rhythm. Keeping safe rhythm silence as a typed rejection is preferable to silently changing the selected pattern or authoritative harmony. The schedule requires legacy pad/transition deletion at MC-055 after all old callers are cut over, so this task records that mapping instead of breaking the transitional build. Human musical acceptance remains intentionally deferred to MC-049.
+Known limitations: The static development review cannot replace the ten-project human holdout rubric in MC-049. Bass/drum hardening and ensemble interaction are separately sequenced in MC-042 through MC-044; final MIDI device and DAW evidence remains MC-045 and MC-048.
+Commit: `midi-core: MC-041 harden chord accompaniment`.
+Next task: MC-042 — harden bass profiles and musical motion.
 
 ## 6. Manual gate records
 
