@@ -259,6 +259,42 @@ class MidiCoreCandidateGenerationTest {
         assertEquals(1, store.openProject(session.root).candidates.size)
     }
 
+    @Test
+    fun `accepted role evidence enriches only a regenerated role occurrence without rewriting dependencies`() {
+        val store = MidiCoreArtifactStore()
+        var session = readySession(store, root.resolve("interaction-project"))
+        val generation = MidiCoreCandidateGeneration(artifacts = store)
+
+        val chords = assertIs<MidiCoreCandidateGenerationResult.Published>(runBlocking {
+            generation.generate(request(session, CandidateRole.CHORDS, "chords-accepted"))
+        })
+        session = accept(store, chords.session, chords.candidate.id)
+        val bass = assertIs<MidiCoreCandidateGenerationResult.Published>(runBlocking {
+            generation.generate(request(session, CandidateRole.BASS, "bass-accepted"))
+        })
+        session = accept(store, bass.session, bass.candidate.id)
+        val drums = assertIs<MidiCoreCandidateGenerationResult.Published>(runBlocking {
+            generation.generate(request(session, CandidateRole.DRUMS, "drums-accepted"))
+        })
+        session = accept(store, drums.session, drums.candidate.id)
+        val dependencyBytes = listOf(chords.candidate, bass.candidate, drums.candidate).associate { candidate ->
+            candidate.id to Files.readAllBytes(session.root.resolve(candidate.midi.path.value))
+        }
+
+        val regenerated = assertIs<MidiCoreCandidateGenerationResult.Published>(runBlocking {
+            generation.generate(request(session, CandidateRole.CHORDS, "chords-interaction-repair"))
+        })
+
+        assertEquals(listOf("bass-accepted", "drums-accepted"), regenerated.candidate.acceptedDependencyIds)
+        assertEquals(CandidateRole.CHORDS, regenerated.candidate.role)
+        assertEquals("verse-1", regenerated.candidate.occurrenceId)
+        dependencyBytes.forEach { (candidateId, bytes) ->
+            val candidate = session.project.candidates.single { it.id == candidateId }
+            assertContentEquals(bytes, Files.readAllBytes(session.root.resolve(candidate.midi.path.value)))
+        }
+        assertEquals(4, store.openProject(session.root).candidates.size)
+    }
+
     private fun readySession(store: MidiCoreArtifactStore, projectRoot: Path): MidiCoreProjectSession {
         val created = assertIs<MidiCoreProjectLifecycleResult.Opened>(
             projectLifecycle(store).create(CreateMidiCoreProject(projectRoot, "Generation Test", "generation-project")),
@@ -331,6 +367,11 @@ class MidiCoreCandidateGenerationTest {
         artifacts = store,
         idFactory = { "generation-project" },
     )
+
+    private fun accept(store: MidiCoreArtifactStore, session: MidiCoreProjectSession, candidateId: String): MidiCoreProjectSession =
+        assertIs<MidiCoreCandidateLifecycleResult.Updated>(
+            MidiCoreCandidateLifecycle(store).accept(AcceptMidiCoreCandidate(session, candidateId)),
+        ).session
 
     private fun hasGenerationTemporaryDirectory(projectRoot: Path): Boolean = Files.list(projectRoot).use { paths ->
         paths.anyMatch { it.fileName.toString().startsWith(".midi-core-generation-") }

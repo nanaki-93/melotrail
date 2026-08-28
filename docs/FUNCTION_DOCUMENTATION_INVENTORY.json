@@ -613,10 +613,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/core/MidiCoreRoleValidation.kt",
       "classification": "inherited-contract",
-      "reason": "The 18 callable declarations implement MC-021's deterministic common, Chords, Bass, and Drums candidate findings before publication, including authority harmony, protected melody, density, channel, range, timing, event-type policies, and MC-025 persisted validation-report JSON; reviewed on 2026-08-27.",
-      "functionCount": 18,
-      "declarationDigest": "fe44f1fa4b100af9fa3dc2ec1ac6159396f5aafbf4d37ecf8856f670f9f14fe4",
-      "documentedFunctionCount": 17
+      "reason": "The 23 callable declarations implement deterministic common, Chords, Bass, and Drums candidate findings before publication, including authority harmony, melody/chord register space, Chord/Bass separation, scoped kick/Bass intent, aggregate onset density, channel/range/timing/event policies, and persisted validation-report JSON; reviewed for MC-044 on 2026-08-28.",
+      "functionCount": 23,
+      "declarationDigest": "8e062c1da83c51303269c1d78fb418d77bd2dcbe27cc538fa57f216566edba99",
+      "documentedFunctionCount": 22
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/core/MidiCoreChordGenerator.kt",

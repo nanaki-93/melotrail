@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-044 in progress
+Status: MC-045 in progress
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -83,8 +83,8 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-041 | DONE | `midi-core: MC-041 harden chord accompaniment` | PASS — focused Chords/development suite, `make test`, `make build` | Collision-safe common-tone voicings, phrase accents, section lift, complete catalog proof, and three SHA-pinned development fixture alternatives. |
 | MC-042 | DONE | `midi-core: MC-042 harden bass arrangements` | PASS — focused Bass/development suite, `make test`, `make build` | Collision-safe, profile-distinct Bass candidates with SHA-pinned three-fixture alternatives and deterministic section lift. |
 | MC-043 | DONE | `midi-core: MC-043 harden drum arrangements` | PASS — focused Drum/development suite, `make test`, `make build` | Complete groove retention, restrained Bass-aware kicks, section-aware direct-fill companions, and SHA-pinned three-fixture alternatives. |
-| MC-044 | IN_PROGRESS | | | Ensemble interaction hardening follows completed MC-043. |
-| MC-045 | TODO | | | |
+| MC-044 | DONE | `midi-core: MC-044 harden ensemble interaction` | PASS — interaction/generation suite, `make test`, `make build` | Accepted same-occurrence role context, deterministic interaction validation, and one-role-only repair without a global rewrite. |
+| MC-045 | IN_PROGRESS | | | MIDI audition hardening follows completed MC-044. |
 | MC-046 | TODO | | | |
 | MC-047 | TODO | | | |
 | MC-048 | TODO | | | |
@@ -1092,6 +1092,28 @@ Decisions/deviations: Direct fill selection was the one catalog path that previo
 Known limitations: The semantic review cannot replace MC-049 holdout listening. Ensemble interaction, MIDI-device proof, and final DAW proof remain MC-044, MC-045, and MC-048.
 Commit: `midi-core: MC-043 harden drum arrangements`.
 Next task: MC-044 — harden ensemble interaction without a rewrite stage.
+
+### MC-044 — Harden ensemble interaction without a rewrite stage
+
+Status: DONE
+Started: 2026-08-28
+Completed: 2026-08-28
+Starting commit/status: `fe2765a` / only the preserved unrelated deleted Kotlin compiler-session marker was present.
+Contracts read: F-ARR-005, F-REV-006, Quality Gates 3 and 8, and the MC-044 task contract.
+Current owners inspected: target candidate generation/context/validation and Chords/Bass/Drums dependencies; accepted song assembly; existing legacy `EnsembleCohesion`, `ArrangementCritic`, and global-planner owners. Legacy whole-song quality owners remain outside target packages and are scheduled for cleanup; target generation already has no cohesion/critic/global-planner reference.
+Behavior retained/extracted: Candidate generation now projects every already accepted other core role from the same occurrence into the immutable, digest-bound generation context. Existing role generators use the relevant dependency (Bass to Chords, Drums to Bass, Chords to Bass), while the shared target validator adds deterministic melody/Chord register pressure advice, blocking Chord/Bass low-end conflicts, scoped Drum/Bass kick-intent advice, and a simultaneous-onset aggregate-density hard limit. No policy edits a dependency, source melody, accepted candidate, or whole song. A repair produces only a new candidate for the requested role and occurrence, with accepted dependency IDs as evidence.
+Files added/changed: `src/main/kotlin/app/melotrail/application/MidiCoreCandidateGeneration.kt`, `src/main/kotlin/app/melotrail/arrangement/core/MidiCoreRoleValidation.kt`, `src/test/kotlin/app/melotrail/application/MidiCoreCandidateGenerationTest.kt`, `src/test/kotlin/app/melotrail/arrangement/core/MidiCoreRoleValidationTest.kt`, `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`, and this execution log.
+Files/data deleted: None. Target packages have no cohesion/critic/global-planner reference to delete; legacy whole-song mutation owners remain reachable only by old runtime paths and are assigned to later cleanup rather than being imported or adapted.
+Tracked deletion recoverability: The unrelated Kotlin compiler session-marker deletion remains recoverable from Git and is deliberately excluded from this task commit.
+Ignored deletion recoverability: None.
+Focused tests: `./gradlew :test --tests app.melotrail.arrangement.core.MidiCoreRoleValidationTest --tests app.melotrail.arrangement.core.MidiCoreGenerationContextTest --tests app.melotrail.application.MidiCoreCandidateGenerationTest --rerun-tasks --console=plain` PASS. It covers melody register advice, blocking Chord/Bass space conflicts, scoped Bass-kick advice, aggregate-density rejection, deterministic evidence ordering, acceptance-derived role context, scoped re-generation, immutable prior candidates, and unchanged source/project authority.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS; `make test` PASS (2026-08-28); `make build` PASS (2026-08-28).
+Manual evidence: No manual pause is scheduled for this task. The complete development-song semantic review is the accepted Chords → Bass → Drums → Chords repair scenario in `MidiCoreCandidateGenerationTest`: all three accepted candidates remain byte-identical after the final Chords candidate is generated against the accepted Bass/Drums evidence.
+Ensemble evidence: The new typed findings are `MELODY_REGISTER_PRESSURE` (advisory), `CHORD_BASS_SPACE_CONFLICT` (blocking), `KICK_BASS_INTENT_MISSING` (advisory), and `ENSEMBLE_ONSET_DENSITY_EXCEEDED` (blocking). The target repair candidate records `bass-accepted` and `drums-accepted` as dependencies; only that Chords scope receives a fourth immutable candidate. Dense/sparse validation fixtures prove hard density admission and deliberate silence without melody mutation.
+Decisions/deviations: The policy reacts only to immutable semantic MIDI evidence already in the requested occurrence. Chord/Bass separation and aggregate onset density are hard publication policies; melody proximity and kick intent remain review-visible advice so a valid musical choice is not silently rewritten. No post-arrangement improvement stage was added.
+Known limitations: This target policy cannot judge subjective mix, timbre, or long-form musical taste; MC-049 remains the human listening gate. Audition lifecycle and final DAW compatibility remain MC-045 and MC-048.
+Commit: `midi-core: MC-044 harden ensemble interaction`.
+Next task: MC-045 — harden audition lifecycle and desktop behavior.
 
 ## 6. Manual gate records
 

@@ -35,6 +35,10 @@ enum class MidiCoreRoleFindingCode {
     PROTECTED_ANCHOR_COLLISION,
     MELODY_COLLISION,
     DENSITY_EXCEEDED,
+    MELODY_REGISTER_PRESSURE,
+    CHORD_BASS_SPACE_CONFLICT,
+    KICK_BASS_INTENT_MISSING,
+    ENSEMBLE_ONSET_DENSITY_EXCEEDED,
 }
 
 /** One deterministic finding attached to a generated role event or candidate. */
@@ -171,6 +175,7 @@ object MidiCoreRoleValidator {
             notes.forEach { note -> validateHarmony(context, note, findings) }
         }
         notes.forEach { note -> validateMelodySpace(context, note, findings) }
+        validateEnsembleInteraction(context, notes, findings)
 
         val report = MidiCoreRoleValidationReport(
             contextSha256 = context.contextSha256,
@@ -349,6 +354,115 @@ object MidiCoreRoleValidator {
         }
     }
 
+    /** Evaluate only the scoped candidate against immutable melody and already accepted role evidence. */
+    private fun validateEnsembleInteraction(
+        context: MidiCoreGenerationContext,
+        notes: List<MidiCoreCandidateEvent.Note>,
+        findings: MutableList<MidiCoreRoleFinding>,
+    ) {
+        validateChordMelodyRegisterSpace(context, notes, findings)
+        validateChordBassSpace(context, notes, findings)
+        validateKickBassIntent(context, notes, findings)
+        validateAggregateOnsetDensity(context, notes, findings)
+    }
+
+    /** Flag Chords that crowd protected melody register space even when no protected anchor is duplicated. */
+    private fun validateChordMelodyRegisterSpace(
+        context: MidiCoreGenerationContext,
+        notes: List<MidiCoreCandidateEvent.Note>,
+        findings: MutableList<MidiCoreRoleFinding>,
+    ) {
+        if (context.role != CandidateRole.CHORDS) return
+        notes.forEach { note ->
+            context.protectedMelodyNotes.firstOrNull { melody ->
+                melody.overlaps(note.startTick, note.endTick) && abs(melody.pitch - note.pitch) <= MELODY_CHORD_SPACE_SEMITONES &&
+                    !(melody.anchor && melody.pitch == note.pitch)
+            }?.let { melody ->
+                findings += finding(
+                    MidiCoreRoleFindingCode.MELODY_REGISTER_PRESSURE,
+                    MidiCoreRoleFindingSeverity.ADVISORY,
+                    context,
+                    note.startTick,
+                    note.pitch,
+                    "Chord note is close to protected melody register space without changing the melody.",
+                )
+            }
+        }
+    }
+
+    /** Block an overlapping Chords/Bass candidate pair whose pitches leave no low-end separation. */
+    private fun validateChordBassSpace(
+        context: MidiCoreGenerationContext,
+        notes: List<MidiCoreCandidateEvent.Note>,
+        findings: MutableList<MidiCoreRoleFinding>,
+    ) {
+        val counterpart = when (context.role) {
+            CandidateRole.CHORDS -> CandidateRole.BASS
+            CandidateRole.BASS -> CandidateRole.CHORDS
+            CandidateRole.DRUMS -> return
+        }
+        val accepted = context.dependency(counterpart)?.notes.orEmpty()
+        notes.forEach { note ->
+            accepted.firstOrNull { dependency ->
+                dependency.startTick < note.endTick && note.startTick < dependency.endTick &&
+                    abs(dependency.pitch - note.pitch) <= CHORD_BASS_SPACE_SEMITONES
+            }?.let {
+                findings += finding(
+                    MidiCoreRoleFindingCode.CHORD_BASS_SPACE_CONFLICT,
+                    MidiCoreRoleFindingSeverity.BLOCKING,
+                    context,
+                    note.startTick,
+                    note.pitch,
+                    "Chords and Bass must retain bounded low-end register separation.",
+                )
+            }
+        }
+    }
+
+    /** Report missing drum support for eligible accepted Bass pickups without changing either candidate. */
+    private fun validateKickBassIntent(
+        context: MidiCoreGenerationContext,
+        notes: List<MidiCoreCandidateEvent.Note>,
+        findings: MutableList<MidiCoreRoleFinding>,
+    ) {
+        if (context.role != CandidateRole.DRUMS || context.sectionPolicy.purpose in setOf(MidiCoreSectionPurpose.INTRO, MidiCoreSectionPurpose.OUTRO)) return
+        val kickStarts = notes.filter { it.pitch == KICK_PITCH }.map { it.startTick }.toSet()
+        context.dependency(CandidateRole.BASS)?.notes.orEmpty().firstOrNull { bass ->
+            val offset = bass.startTick - context.occurrence.startTick
+            offset % context.tickGrid.ticksPerSubdivision == 0L && offset % context.tickGrid.ticksPerBeat != 0L &&
+                bass.startTick !in kickStarts
+        }?.let { bass ->
+            findings += finding(
+                MidiCoreRoleFindingCode.KICK_BASS_INTENT_MISSING,
+                MidiCoreRoleFindingSeverity.ADVISORY,
+                context,
+                bass.startTick,
+                KICK_PITCH,
+                "Accepted Bass pickup has no matching Drum kick intent; choose another scoped Drum alternative if support is wanted.",
+            )
+        }
+    }
+
+    /** Block only excessive simultaneous onset density across this candidate and accepted scoped dependencies. */
+    private fun validateAggregateOnsetDensity(
+        context: MidiCoreGenerationContext,
+        notes: List<MidiCoreCandidateEvent.Note>,
+        findings: MutableList<MidiCoreRoleFinding>,
+    ) {
+        val onsetCount = (notes.map { it.startTick } + context.acceptedDependencies.flatMap { dependency -> dependency.notes.map { it.startTick } })
+            .groupingBy { it }
+            .eachCount()
+        onsetCount.filterValues { it > MAX_ENSEMBLE_ONSETS_PER_SUBDIVISION }.keys.minOrNull()?.let { tick ->
+            findings += finding(
+                MidiCoreRoleFindingCode.ENSEMBLE_ONSET_DENSITY_EXCEEDED,
+                MidiCoreRoleFindingSeverity.BLOCKING,
+                context,
+                tick,
+                message = "Accepted roles and this candidate exceed the scoped simultaneous-onset density limit.",
+            )
+        }
+    }
+
     /** Build a scope-bound finding and normalize malformed negative event ticks to absent evidence. */
     private fun finding(
         code: MidiCoreRoleFindingCode,
@@ -372,6 +486,11 @@ object MidiCoreRoleValidator {
 }
 
 private data class NoteKey(val startTick: Long, val endTick: Long, val pitch: Int, val velocity: Int)
+
+private const val MELODY_CHORD_SPACE_SEMITONES = 5
+private const val CHORD_BASS_SPACE_SEMITONES = 4
+private const val KICK_PITCH = 36
+private const val MAX_ENSEMBLE_ONSETS_PER_SUBDIVISION = 8
 
 /** Serialize one candidate event for deterministic digest ordering. */
 private fun canonicalEvent(event: MidiCoreCandidateEvent): String = when (event) {

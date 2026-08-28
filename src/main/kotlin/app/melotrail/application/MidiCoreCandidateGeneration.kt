@@ -404,11 +404,7 @@ class MidiCoreCandidateGeneration(
         root: Path,
         request: GenerateMidiCoreCandidate,
     ): DependencyLoad {
-        val roles = when (request.role) {
-            CandidateRole.CHORDS -> emptyList()
-            CandidateRole.BASS -> listOf(CandidateRole.CHORDS)
-            CandidateRole.DRUMS -> listOf(CandidateRole.BASS)
-        }
+        val roles = CandidateRole.entries.filter { it != request.role }
         val candidates = project.candidates.associateBy(MidiCoreCandidate::id)
         val dependencies = mutableListOf<MidiCoreAcceptedDependencyContext>()
         roles.forEach { role ->

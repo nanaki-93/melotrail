@@ -8,6 +8,7 @@ import app.melotrail.music.core.ProjectScaleMode
 import app.melotrail.music.core.ProjectTempo
 import app.melotrail.project.AuthoritativeChordEvent
 import app.melotrail.project.CandidateRole
+import app.melotrail.project.MidiCoreAcceptedDependency
 import app.melotrail.project.MidiCoreGeneratorInput
 import app.melotrail.project.MidiCoreProject
 import app.melotrail.project.ProjectArtifact
@@ -137,6 +138,55 @@ class MidiCoreRoleValidationTest {
     }
 
     @Test
+    fun `scoped ensemble validation preserves melody space and blocks crowded chord bass register`() {
+        val melodyPressure = MidiCoreRoleValidator.validate(
+            context(
+                CandidateRole.CHORDS,
+                protectedMelodyNotes = listOf(protectedNote(pitch = 64, anchor = false)),
+            ),
+            listOf(MidiCoreCandidateEvent.Note(0, 480, 60, 80)),
+        )
+        val chordBassConflict = MidiCoreRoleValidator.validate(
+            context(
+                CandidateRole.CHORDS,
+                acceptedDependencies = listOf(
+                    dependency(CandidateRole.BASS, listOf(MidiCoreGenerationNote(0, 480, 56, 80))),
+                ),
+            ),
+            listOf(MidiCoreCandidateEvent.Note(0, 480, 60, 80)),
+        )
+
+        val advisory = assertAccepted(melodyPressure)
+        assertTrue(advisory.findings.any { it.code == MidiCoreRoleFindingCode.MELODY_REGISTER_PRESSURE })
+        assertRejected(chordBassConflict, MidiCoreRoleFindingCode.CHORD_BASS_SPACE_CONFLICT)
+    }
+
+    @Test
+    fun `scoped drum bass intent is advisory while excessive aggregate onset density blocks`() {
+        val bass = dependency(CandidateRole.BASS, listOf(MidiCoreGenerationNote(720, 840, 36, 80)))
+        val missingKick = MidiCoreRoleValidator.validate(
+            context(CandidateRole.DRUMS, acceptedDependencies = listOf(bass)),
+            listOf(
+                MidiCoreCandidateEvent.Note(0, 120, 36, 90),
+                MidiCoreCandidateEvent.Note(0, 120, 42, 70),
+                MidiCoreCandidateEvent.Note(480, 600, 38, 88),
+            ),
+        )
+        val crowdedDependencies = listOf(
+            dependency(CandidateRole.CHORDS, (0 until 6).map { MidiCoreGenerationNote(0, 480, 60 + it, 80) }),
+            dependency(CandidateRole.BASS, (0 until 3).map { MidiCoreGenerationNote(0, 480, 36 + it, 80) }),
+        )
+        val crowded = MidiCoreRoleValidator.validate(
+            context(CandidateRole.DRUMS, acceptedDependencies = crowdedDependencies),
+            listOf(MidiCoreCandidateEvent.Note(0, 120, 36, 90)),
+        )
+
+        val advisory = assertAccepted(missingKick)
+        assertTrue(advisory.findings.any { it.code == MidiCoreRoleFindingCode.KICK_BASS_INTENT_MISSING })
+        assertRejected(crowded, MidiCoreRoleFindingCode.ENSEMBLE_ONSET_DENSITY_EXCEEDED)
+    }
+
+    @Test
     fun `duplicate and density violations reject while deliberate silence is valid`() {
         val base = context(CandidateRole.CHORDS)
         val duplicate = MidiCoreRoleValidator.validate(
@@ -219,6 +269,7 @@ class MidiCoreRoleValidationTest {
         chordSymbol: String = "C",
         protectedMelodyNotes: List<MidiCoreProtectedMelodyNote> = emptyList(),
         density: Double = 0.5,
+        acceptedDependencies: List<MidiCoreAcceptedDependencyContext> = emptyList(),
     ): MidiCoreGenerationContext {
         val patternId = when (role) {
             CandidateRole.CHORDS -> MidiCoreChordRhythmPatternId.SUSTAINED.id
@@ -238,9 +289,16 @@ class MidiCoreRoleValidationTest {
             patternId = patternId,
             generator = MidiCoreGeneratorInput("test-generator", "test-v1", patternId, 11),
             protectedMelodyNotes = protectedMelodyNotes,
+            acceptedDependencies = acceptedDependencies,
             sectionPolicy = MidiCoreSectionPolicy(density = density),
         )
     }
+
+    private fun dependency(role: CandidateRole, notes: List<MidiCoreGenerationNote>): MidiCoreAcceptedDependencyContext =
+        MidiCoreAcceptedDependencyContext(
+            MidiCoreAcceptedDependency(role, "verse-1", "${role.name.lowercase()}-accepted", "d".repeat(64)),
+            notes,
+        )
 
     private fun protectedNote(pitch: Int, anchor: Boolean): MidiCoreProtectedMelodyNote = MidiCoreProtectedMelodyNote(
         id = "pmn-" + (if (anchor) "a" else "b").repeat(64),
