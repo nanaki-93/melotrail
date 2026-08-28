@@ -76,17 +76,19 @@ object MidiCoreBassGenerator {
         val rhythmAware = applyAcceptedRhythmContext(context, authored)
         val selected = selectAttacks(context, rhythmAware)
         var previousPitch: Int? = null
-        return selected.mapIndexed { position, attack ->
+        val notes = mutableListOf<MidiCoreCandidateEvent.Note>()
+        selected.forEachIndexed { position, attack ->
             val endTick = noteEnd(context, attack)
-            val pitch = selectPitch(context, attack, endTick, previousPitch, position)
+            val pitch = selectPitch(context, attack, endTick, previousPitch, position) ?: return emptyList()
             previousPitch = pitch
-            MidiCoreCandidateEvent.Note(
+            notes += MidiCoreCandidateEvent.Note(
                 startTick = attack.startTick,
                 endTick = endTick,
                 pitch = pitch,
                 velocity = velocity(context, attack.velocityOffset),
             )
-        }.sortedWith(
+        }
+        return notes.sortedWith(
             compareBy<MidiCoreCandidateEvent.Note> { it.startTick }
                 .thenBy { it.endTick }
                 .thenBy { it.pitch }
@@ -284,36 +286,39 @@ object MidiCoreBassGenerator {
         return selected.distinctBy { it.startTick }
     }
 
-    /** Choose a bounded register pitch with deterministic melody, low-end, and voice-continuity preferences. */
+    /** Choose a bounded register pitch with deterministic melody, low-end, section, and voice-continuity preferences. */
     private fun selectPitch(
         context: MidiCoreGenerationContext,
         attack: BassAttack,
         endTick: Long,
         previousPitch: Int?,
         position: Int,
-    ): Int {
+    ): Int? {
         val range = context.performanceProfile.register
         val candidates = (range.first..range.last).filter { Math.floorMod(it, 12) == attack.pitchClass }
         val anchorSafe = candidates.filter { pitch ->
             context.protectedMelodyNotes.none { melody -> melody.anchor && melody.pitch == pitch && melody.overlaps(attack.startTick, endTick) }
         }
+        if (anchorSafe.isEmpty()) return null
         val lowEndSafe = anchorSafe.filter { pitch ->
             context.dependency(CandidateRole.CHORDS)?.notes.orEmpty().none { chordNote ->
                 chordNote.pitch == pitch && chordNote.startTick < endTick && attack.startTick < chordNote.endTick
             }
         }
-        val pool = lowEndSafe.ifEmpty { anchorSafe.ifEmpty { candidates } }
+        val pool = lowEndSafe.ifEmpty { anchorSafe }
         val continuous = previousPitch?.let { previous -> pool.filter { abs(it - previous) <= MAX_LEAP } }.orEmpty()
         val usable = continuous.ifEmpty { pool }
         val ranked = usable.sortedWith(
             compareBy<Int> { abs(it - attack.pitchTarget).toLong() }
-                .thenBy { previousPitch?.let { previous -> abs(it - previous) } ?: abs(it - REGISTER_CENTER) }
+                .thenBy { previousPitch?.let { previous -> abs(it - previous) } ?: abs(it - preferredRegisterCenter(context)) }
                 .thenBy { it },
         )
-        val variationCount = if (MidiCorePatternCatalog.bassPattern(context.patternId) == MidiCoreBassPatternId.OCTAVE) {
-            1
-        } else {
-            minOf(3, ranked.size)
+        val variationCount = when (MidiCorePatternCatalog.bassPattern(context.patternId)) {
+            MidiCoreBassPatternId.SUSTAINED_ROOT,
+            MidiCoreBassPatternId.OCTAVE,
+            -> 1
+
+            else -> minOf(3, ranked.size)
         }
         val variation = Math.floorMod(context.seed + attack.startTick + position.toLong(), variationCount.toLong()).toInt()
         return ranked[variation]
@@ -334,15 +339,29 @@ object MidiCoreBassGenerator {
         (context.performanceProfile.velocity + ((context.sectionPolicy.energy - 0.5) * ENERGY_VELOCITY_SPAN).roundToInt() + offset)
             .coerceIn(1, 127)
 
-    /** Place the requested pitch class at the closest available position to the low-register center. */
+    /** Place the requested pitch class at the closest available position to the bounded section-aware register target. */
     private fun pitchTarget(context: MidiCoreGenerationContext, pitchClass: Int, slot: Int): Int {
         val candidates = context.performanceProfile.register.filter { Math.floorMod(it, 12) == pitchClass }
         val center = when {
-            MidiCorePatternCatalog.bassPattern(context.patternId) != MidiCoreBassPatternId.OCTAVE -> REGISTER_CENTER
-            slot % 2 == 1 -> REGISTER_CENTER + 6
-            else -> REGISTER_CENTER - 6
+            MidiCorePatternCatalog.bassPattern(context.patternId) != MidiCoreBassPatternId.OCTAVE -> preferredRegisterCenter(context)
+            slot % 2 == 1 -> preferredRegisterCenter(context) + OCTAVE_TARGET_OFFSET
+            else -> preferredRegisterCenter(context) - OCTAVE_TARGET_OFFSET
         }
         return candidates.minWith(compareBy<Int> { abs(it - center) }.thenBy { it })
+    }
+
+    /** Shift repeat and section intent only inside the selected Bass register. */
+    private fun preferredRegisterCenter(context: MidiCoreGenerationContext): Int {
+        val range = context.performanceProfile.register
+        val base = (range.first + range.last) / 2
+        val purposeOffset = when (context.sectionPolicy.purpose) {
+            MidiCoreSectionPurpose.CHORUS, MidiCoreSectionPurpose.PRE_CHORUS -> 3
+            MidiCoreSectionPurpose.BRIDGE -> -2
+            MidiCoreSectionPurpose.INTRO, MidiCoreSectionPurpose.OUTRO -> -3
+            MidiCoreSectionPurpose.VERSE, MidiCoreSectionPurpose.UNSPECIFIED -> 0
+        }
+        val energyOffset = ((context.sectionPolicy.energy - 0.5) * ENERGY_REGISTER_SPAN).roundToInt()
+        return (base + purposeOffset + energyOffset).coerceIn(range.first, range.last)
     }
 
     /** Return the shortest pitch-class distance on the chromatic circle. */
@@ -364,8 +383,9 @@ object MidiCoreBassGenerator {
         val velocityOffset: Int,
     )
 
-    private const val REGISTER_CENTER = 42
     private const val MAX_LEAP = 12
+    private const val OCTAVE_TARGET_OFFSET = 6
     private const val ENERGY_VELOCITY_SPAN = 16.0
+    private const val ENERGY_REGISTER_SPAN = 8.0
     private const val SEED_STEP = 7_919L
 }

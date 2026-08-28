@@ -7,7 +7,7 @@
   "seed": 17,
   "patterns": {
     "bass.sustained-root": [
-      "0|1440|48|76"
+      "0|1440|36|76"
     ],
     "bass.root-fifth": [
       "0|360|48|78",

@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-042 in progress
+Status: MC-043 in progress
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -81,8 +81,8 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-039 | DONE | `midi-core: MC-039 build Export page` | PASS — focused Export/workspace Compose tests, exporter/assembly tests, documentation coverage, `make test`, `make build` | Immutable MIDI package readiness, stale/blocked evidence, destination/collision policy, publish/cancel/retry, hashes/files, reveal-folder action, and DAW guidance are reachable from the focused desktop shell. |
 | MC-040 | DONE | `midi-core: MC-040 prove desktop workflow` | PASS — real-service fake-audition Compose E2E, six-page visual fixtures, focused desktop suite, `make test`, `make build` | Default target navigation completes create/import/select/authority/arrange/review/reopen/export without old routes; smoke checklist is recorded. |
 | MC-041 | DONE | `midi-core: MC-041 harden chord accompaniment` | PASS — focused Chords/development suite, `make test`, `make build` | Collision-safe common-tone voicings, phrase accents, section lift, complete catalog proof, and three SHA-pinned development fixture alternatives. |
-| MC-042 | IN_PROGRESS | | | Bass hardening follows completed MC-041. |
-| MC-043 | TODO | | | |
+| MC-042 | DONE | `midi-core: MC-042 harden bass arrangements` | PASS — focused Bass/development suite, `make test`, `make build` | Collision-safe, profile-distinct Bass candidates with SHA-pinned three-fixture alternatives and deterministic section lift. |
+| MC-043 | IN_PROGRESS | | | Drum hardening follows completed MC-042. |
 | MC-044 | TODO | | | |
 | MC-045 | TODO | | | |
 | MC-046 | TODO | | | |
@@ -1046,6 +1046,29 @@ Decisions/deviations: The target catalog was already exact and complete, so MC-0
 Known limitations: The static development review cannot replace the ten-project human holdout rubric in MC-049. Bass/drum hardening and ensemble interaction are separately sequenced in MC-042 through MC-044; final MIDI device and DAW evidence remains MC-045 and MC-048.
 Commit: `midi-core: MC-041 harden chord accompaniment`.
 Next task: MC-042 — harden bass profiles and musical motion.
+
+### MC-042 — Harden bass profiles and musical motion
+
+Status: DONE
+Started: 2026-08-28
+Completed: 2026-08-28
+Starting commit/status: `b60be0c` / only the preserved unrelated deleted Kotlin compiler-session marker was present.
+Contracts read: F-ARR-002 and F-ARR-004–F-ARR-007; Quality Gates 3 and 8; MC-042 task contract.
+Current owners inspected: target `MidiCoreBassGenerator`, `MidiCorePatternCatalog`, `MidiCoreBassGeneratorTest`, Bass golden fixture, target generation context and role validation, and the legacy Bass stem/pattern owners. The legacy owners remain pre-cutover runtime dependencies and are scheduled for removal in MC-055; the target generator has no analysis, instrument-file, or rendered-timbre dependency.
+Behavior retained/extracted: Both MIDI performance profiles keep their separate representable note lengths and velocity intent. Bass attacks now fail as typed empty output when every matching protected-melody anchor pitch is unavailable rather than publishing a colliding fallback. The target register is bounded by the selected profile and deterministically responds to section purpose and energy. Sustained-root and octave patterns use their authored register target directly so seeded variation cannot invert the intended section lift; moving patterns retain bounded deterministic alternatives. Exact chord and slash-bass pitch classes, accepted Chords onsets, melody-activity reduction, low-end spacing, phrase accents, approaches, and maximum leap policy remain enforced.
+Files added/changed: `src/main/kotlin/app/melotrail/arrangement/core/MidiCoreBassGenerator.kt`, `src/test/kotlin/app/melotrail/arrangement/core/MidiCoreBassGeneratorTest.kt`, `src/test/resources/fixtures/midi-core/bass-golden.json`, `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`, and this execution log.
+Files/data deleted: None. The profile labels describe MIDI articulation intent, not a promise of exact rendered timbre, and the target has no profile implementation backed by analysis confidence or instrument files. Legacy Bass code remains until its explicit MC-055 cutover/removal owner.
+Tracked deletion recoverability: The unrelated Kotlin compiler session-marker deletion remains recoverable from Git and is deliberately excluded from this task commit.
+Ignored deletion recoverability: None.
+Focused tests: `./gradlew :test --tests app.melotrail.arrangement.core.MidiCoreBassGeneratorTest --tests app.melotrail.arrangement.core.MidiCoreGenerationContextTest --tests app.melotrail.arrangement.core.MidiCoreRoleValidationTest --rerun-tasks --console=plain` PASS. It covers catalog completeness, both profile durations, exact harmony and slash bass, approaches, bounded movement, rhythm/melody context, protected melody and low-end space, no colliding fallback, deterministic alternatives, typed off-grid rejection, repeated-section register lift, and three two-alternative development fixtures.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS; `make test` PASS (2026-08-28); `make build` PASS (2026-08-28).
+Manual evidence: The scheduled human pauses are MC-048, MC-049, and MC-060. This task uses repeatable semantic MIDI development review and does not claim a human listening pass or replace MC-049.
+Candidate evidence: Baseline Bass semantic golden SHA-256 `db6f7834cdf5677dcec8d133a1535cc8f2f3c4b28ecceec46573db59cc523938`; hardened golden SHA-256 `495351cab672565b9ffe5b5369ed9feacd360d66ddc26e862bfcd5e4e2f550e6`. Deterministic development alternatives (first, second candidate SHA-256) are: simple diatonic 4/4 `d652c7635dbbb8ab00f38176593c324e54b797d584a947501b95388759d7a239`, `f6f9e721e6716b6f9c40fee3f731ee00c485d6a943ae4fb1fc3523370360505a`; pickup/sub-bar changes `cfdd087c421fcd0f8dd9ffbb49cada70f69d8c2b54af1c9b8489b1b104f5f498`, `912764286496dbdd3466589168455a353026bdd72d91f19ae43167658f14e79a`; chromatic expressive/controller source `39ebd85476b89dfa45df02f0a87291df79a59c0756dadbf6cd78c149b254311d`, `968642ec9a304ab53674d642c029cf48833bd89b72adb66d994a3d21f42e99ba`.
+Development rubric notes: The semantic review checks protected-melody preservation 5/5 (no anchor overlap), chord correctness/space 4/5 (all notes are exact-window chord tones), profile contrast 4/5 (sustained and muted profiles have distinct lengths), alternatives 4/5 (two accepted distinct digests), and phrase/section development 3/5 or higher (deterministic bounded register lift and phrase accents). These are regression thresholds from semantic MIDI evidence, not a replacement for human holdout listening; no fixture is below 3.
+Decisions/deviations: Section lifting changes register preference but never exceeds the selected Bass range, alters authority, or edits the accepted melody. A typed rejection is preferred over silently choosing a melody-colliding bass pitch. The existing target profile vocabulary is retained because it states performable MIDI intent rather than sample/instrument outcomes.
+Known limitations: The development review cannot replace the MC-049 ten-project listening rubric. Drum hardening and ensemble interaction remain explicitly sequenced in MC-043 and MC-044; final MIDI-device and DAW evidence remains MC-045 and MC-048.
+Commit: `midi-core: MC-042 harden bass arrangements`.
+Next task: MC-043 — harden drum grooves, fills, and energy.
 
 ## 6. Manual gate records
 

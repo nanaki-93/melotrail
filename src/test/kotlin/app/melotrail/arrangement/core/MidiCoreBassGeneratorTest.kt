@@ -53,6 +53,14 @@ class MidiCoreBassGeneratorTest {
     }
 
     @Test
+    fun `bass pattern catalog exposes every supported pattern exactly once`() {
+        assertEquals(
+            MidiCoreBassPatternId.entries.map(MidiCoreBassPatternId::id).toSet(),
+            MidiCorePatternCatalog.allowedPatternIds(CandidateRole.BASS).toSet(),
+        )
+    }
+
+    @Test
     fun `matches the semantic golden sequence for every curated bass pattern`() {
         val generated = MidiCoreBassPatternId.entries.associate { pattern ->
             pattern.id to MidiCoreBassGenerator.generate(context(pattern.id, "bass.muted-plucked"))
@@ -232,6 +240,89 @@ class MidiCoreBassGeneratorTest {
         assertEquals(result.context.contextSha256, result.validation.report.contextSha256)
     }
 
+    @Test
+    fun `three development fixtures yield two valid distinct bass alternatives with exact harmony`() {
+        val expectedCandidateHashes = mapOf(
+            "simple-diatonic-4-4" to listOf(
+                "d652c7635dbbb8ab00f38176593c324e54b797d584a947501b95388759d7a239",
+                "f6f9e721e6716b6f9c40fee3f731ee00c485d6a943ae4fb1fc3523370360505a",
+            ),
+            "pickup-and-sub-bar-changes" to listOf(
+                "cfdd087c421fcd0f8dd9ffbb49cada70f69d8c2b54af1c9b8489b1b104f5f498",
+                "912764286496dbdd3466589168455a353026bdd72d91f19ae43167658f14e79a",
+            ),
+            "chromatic-expressive-controller-source" to listOf(
+                "39ebd85476b89dfa45df02f0a87291df79a59c0756dadbf6cd78c149b254311d",
+                "968642ec9a304ab53674d642c029cf48833bd89b72adb66d994a3d21f42e99ba",
+            ),
+        )
+        developmentFixtures().forEach { fixture ->
+            val alternatives = MidiCoreBassGenerator.generateAlternatives(fixture.context, count = 2)
+
+            assertEquals(2, alternatives.size, fixture.name)
+            assertTrue(alternatives.all(MidiCoreBassGenerationResult::accepted), "$fixture -> ${alternatives.map { it.validation.report.findings }}")
+            assertEquals(2, alternatives.map { it.validation.report.candidateSha256 }.toSet().size, fixture.name)
+            assertEquals(expectedCandidateHashes.getValue(fixture.name), alternatives.map { it.validation.report.candidateSha256 })
+            alternatives.forEach { alternative ->
+                val notes = alternative.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>()
+                assertTrue(notes.isNotEmpty(), fixture.name)
+                assertTrue(notes.all { note ->
+                    fixture.context.chordWindows.any { window ->
+                        note.startTick >= window.startTick && note.endTick <= window.endTick && window.chord.containsPitchClass(note.pitch)
+                    }
+                }, "$fixture -> $notes")
+                assertTrue(notes.all { note -> fixture.context.protectedMelodyNotes.none { melody ->
+                    melody.anchor && melody.pitch == note.pitch && melody.overlaps(note.startTick, note.endTick)
+                } }, fixture.name)
+            }
+        }
+    }
+
+    @Test
+    fun `never falls back to a protected melody collision when every matching bass pitch is blocked`() {
+        val anchors = (28..55).filter { Math.floorMod(it, 12) == 0 }.mapIndexed { index, pitch ->
+            protectedNote(0, pitch, true, index)
+        }
+        val result = MidiCoreBassGenerator.generate(
+            context(MidiCoreBassPatternId.SUSTAINED_ROOT.id, protectedMelodyNotes = anchors),
+        )
+
+        assertFalse(result.accepted)
+        assertTrue(result.candidate.events.isEmpty())
+        assertTrue(result.validation.report.blockers.any { it.code == MidiCoreRoleFindingCode.EMPTY_OUTPUT })
+    }
+
+    @Test
+    fun `same repeated harmony lifts bass pitch deterministically from explicit section policy`() {
+        val repeated = project(
+            chordEvents = listOf(
+                AuthoritativeChordEvent("verse-chord", "verse-1", "C", 0, 1_920),
+                AuthoritativeChordEvent("chorus-chord", "chorus-1", "C", 1_920, 3_840),
+            ),
+        )
+        val first = MidiCoreBassGenerator.generate(
+            context(
+                MidiCoreBassPatternId.SUSTAINED_ROOT.id,
+                project = repeated,
+                sectionPolicy = MidiCoreSectionPolicy(MidiCoreSectionPurpose.VERSE, energy = 0.2, density = 1.0),
+            ),
+        )
+        val lift = MidiCoreBassGenerator.generate(
+            context(
+                MidiCoreBassPatternId.SUSTAINED_ROOT.id,
+                project = repeated,
+                occurrenceId = "chorus-1",
+                sectionPolicy = MidiCoreSectionPolicy(MidiCoreSectionPurpose.CHORUS, energy = 0.9, density = 1.0),
+            ),
+        )
+
+        assertTrue(first.accepted, first.validation.report.findings.toString())
+        assertTrue(lift.accepted, lift.validation.report.findings.toString())
+        val firstPitch = (first.candidate.events.single() as MidiCoreCandidateEvent.Note).pitch
+        val liftPitch = (lift.candidate.events.single() as MidiCoreCandidateEvent.Note).pitch
+        assertTrue(liftPitch > firstPitch, "first=$firstPitch lift=$liftPitch")
+    }
+
     private fun starts(result: MidiCoreBassGenerationResult): List<Long> = result.candidate.events
         .filterIsInstance<MidiCoreCandidateEvent.Note>()
         .map(MidiCoreCandidateEvent.Note::startTick)
@@ -251,18 +342,20 @@ class MidiCoreBassGeneratorTest {
         seed: Long = 17,
         density: Double = 1.0,
         project: MidiCoreProject = project(),
+        occurrenceId: String = "verse-1",
         protectedMelodyNotes: List<MidiCoreProtectedMelodyNote> = emptyList(),
         acceptedDependencies: List<MidiCoreAcceptedDependencyContext> = emptyList(),
+        sectionPolicy: MidiCoreSectionPolicy = MidiCoreSectionPolicy(density = density),
     ): MidiCoreGenerationContext = MidiCoreGenerationContext.forOccurrence(
         authority = MidiCoreAuthoritySnapshot.from(project),
         role = CandidateRole.BASS,
-        occurrenceId = "verse-1",
+        occurrenceId = occurrenceId,
         performanceProfile = MidiCorePerformanceProfileCatalog.requireForRole(CandidateRole.BASS, profileId),
         patternId = patternId,
         generator = MidiCoreGeneratorInput("test-generator", "test-v1", patternId, seed),
         protectedMelodyNotes = protectedMelodyNotes,
         acceptedDependencies = acceptedDependencies,
-        sectionPolicy = MidiCoreSectionPolicy(density = density),
+        sectionPolicy = sectionPolicy,
     )
 
     private fun protectedNote(start: Long, pitch: Int, anchor: Boolean, suffix: Int): MidiCoreProtectedMelodyNote = MidiCoreProtectedMelodyNote(
@@ -316,4 +409,48 @@ class MidiCoreBassGeneratorTest {
             AuthoritativeChordEvent("chorus-chord", "chorus-1", "F", 1_920, 3_840),
         ),
     )
+
+    private fun developmentFixtures(): List<DevelopmentFixture> = listOf(
+        DevelopmentFixture(
+            "simple-diatonic-4-4",
+            context(
+                MidiCoreBassPatternId.ROOT_FIFTH.id,
+                project = project(chordEvents = listOf(
+                    AuthoritativeChordEvent("c", "verse-1", "C", 0, 960),
+                    AuthoritativeChordEvent("f", "verse-1", "F", 960, 1_920),
+                    AuthoritativeChordEvent("chorus", "chorus-1", "C", 1_920, 3_840),
+                )),
+                sectionPolicy = MidiCoreSectionPolicy(MidiCoreSectionPurpose.VERSE, energy = 0.45, density = 1.0),
+            ),
+        ),
+        DevelopmentFixture(
+            "pickup-and-sub-bar-changes",
+            context(
+                MidiCoreBassPatternId.WALK_TO_NEXT_ROOT.id,
+                project = project(chordEvents = listOf(
+                    AuthoritativeChordEvent("pickup-c", "verse-1", "C", 0, 480),
+                    AuthoritativeChordEvent("pickup-g", "verse-1", "G/B", 480, 960),
+                    AuthoritativeChordEvent("pickup-am", "verse-1", "Am", 960, 1_920),
+                    AuthoritativeChordEvent("chorus", "chorus-1", "F", 1_920, 3_840),
+                )),
+                protectedMelodyNotes = listOf(protectedNote(0, 48, true, 40), protectedNote(360, 52, true, 41)),
+                sectionPolicy = MidiCoreSectionPolicy(MidiCoreSectionPurpose.PRE_CHORUS, energy = 0.55, density = 1.0),
+            ),
+        ),
+        DevelopmentFixture(
+            "chromatic-expressive-controller-source",
+            context(
+                MidiCoreBassPatternId.ROOT_FIFTH.id,
+                project = project(chordEvents = listOf(
+                    AuthoritativeChordEvent("db", "verse-1", "Db", 0, 960),
+                    AuthoritativeChordEvent("e7", "verse-1", "E7", 960, 1_920),
+                    AuthoritativeChordEvent("chorus", "chorus-1", "F", 1_920, 3_840),
+                )),
+                protectedMelodyNotes = listOf(protectedNote(0, 69, true, 42)),
+                sectionPolicy = MidiCoreSectionPolicy(MidiCoreSectionPurpose.CHORUS, energy = 0.8, density = 1.0),
+            ),
+        ),
+    )
+
+    private data class DevelopmentFixture(val name: String, val context: MidiCoreGenerationContext)
 }
