@@ -171,6 +171,25 @@ class MidiCoreWorkspaceTest {
     }
 
     @Test
+    fun `Review audition prepares candidate and accepted arrangement scopes without project mutation`() = runTest {
+        val fake = FakeMidiCoreWorkspaceUseCases()
+        val viewModel = MidiCoreWorkspaceViewModel(fake, MemoryMidiCorePreferences(), NoOpDesktopOperationLogger, testDispatchers(testScheduler))
+        viewModel.accept(MidiCoreWorkspaceIntent.OpenProject(fake.session.root))
+        advanceUntilIdle()
+        val projectBeforeAudition = viewModel.state.value.project
+
+        viewModel.accept(MidiCoreWorkspaceIntent.PlayCandidate("candidate-review", app.melotrail.project.CandidateRole.CHORDS, "verse-1"))
+        advanceUntilIdle()
+        assertEquals(app.melotrail.audition.MidiAuditionScope.Candidate("candidate-review", MidiExportRole.CHORDS), viewModel.state.value.audition.scope)
+
+        viewModel.accept(MidiCoreWorkspaceIntent.PlayAcceptedArrangement)
+        advanceUntilIdle()
+        assertEquals(app.melotrail.audition.MidiAuditionScope.AcceptedArrangement, viewModel.state.value.audition.scope)
+        assertEquals(projectBeforeAudition, viewModel.state.value.project)
+        viewModel.close()
+    }
+
+    @Test
     fun `authority draft requires explicit discard before closing project`() = runTest {
         val fake = FakeMidiCoreWorkspaceUseCases()
         val dispatchers = testDispatchers(testScheduler)
@@ -342,6 +361,18 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
         return sourceAuditionResult
     }
 
+    override fun prepareCandidateAudition(request: app.melotrail.application.PrepareMidiCoreCandidateAudition): app.melotrail.application.MidiCoreReviewAuditionResult =
+        app.melotrail.application.MidiCoreReviewAuditionResult.Ready(fakeCandidatePlan())
+
+    override fun prepareAcceptedRoleAudition(request: app.melotrail.application.PrepareMidiCoreAcceptedRoleAudition): app.melotrail.application.MidiCoreReviewAuditionResult =
+        app.melotrail.application.MidiCoreReviewAuditionResult.Ready(fakeAcceptedPlan())
+
+    override fun prepareAcceptedOccurrenceAudition(request: app.melotrail.application.PrepareMidiCoreAcceptedOccurrenceAudition): app.melotrail.application.MidiCoreReviewAuditionResult =
+        app.melotrail.application.MidiCoreReviewAuditionResult.Ready(fakeOccurrencePlan())
+
+    override fun prepareAcceptedArrangementAudition(request: app.melotrail.application.PrepareMidiCoreAcceptedArrangementAudition): app.melotrail.application.MidiCoreReviewAuditionResult =
+        app.melotrail.application.MidiCoreReviewAuditionResult.Ready(fakeAcceptedPlan())
+
     override fun confirmAuthority(request: ConfirmMidiCoreAuthority): MidiCoreAuthorityResult {
         confirmAuthorityCalls += 1
         val authority = ProjectAuthority(
@@ -492,3 +523,40 @@ private fun fakeOccurrencePlan(): MidiAuditionPlaybackPlan {
         app.melotrail.audition.MidiAuditionView.occurrence("verse-1", source.view.song, 0L, 1L),
     )
 }
+
+private fun fakeCandidatePlan(): MidiAuditionPlaybackPlan = MidiAuditionPlaybackPlan(
+    app.melotrail.audition.MidiAuditionView.candidate(
+        "candidate-review",
+        app.melotrail.midi.domain.MidiExportRole.CHORDS,
+        app.melotrail.midi.domain.MidiExportSong(
+            app.melotrail.midi.domain.MidiPpq(480),
+            "fake-candidate",
+            500_000,
+            4,
+            2,
+            emptyList(),
+            listOf(app.melotrail.midi.domain.MidiExportRoleTrack(app.melotrail.midi.domain.MidiExportRole.CHORDS, emptyList())),
+            1L,
+        ),
+    ),
+)
+
+private fun fakeAcceptedPlan(): MidiAuditionPlaybackPlan = MidiAuditionPlaybackPlan(
+    app.melotrail.audition.MidiAuditionView.accepted(
+        app.melotrail.midi.domain.MidiExportSong(
+            app.melotrail.midi.domain.MidiPpq(480),
+            "fake-accepted",
+            500_000,
+            4,
+            2,
+            emptyList(),
+            listOf(
+                app.melotrail.midi.domain.MidiExportRoleTrack(app.melotrail.midi.domain.MidiExportRole.MELODY, emptyList()),
+                app.melotrail.midi.domain.MidiExportRoleTrack(app.melotrail.midi.domain.MidiExportRole.CHORDS, emptyList()),
+                app.melotrail.midi.domain.MidiExportRoleTrack(app.melotrail.midi.domain.MidiExportRole.BASS, emptyList()),
+                app.melotrail.midi.domain.MidiExportRoleTrack(app.melotrail.midi.domain.MidiExportRole.DRUMS, emptyList()),
+            ),
+            1L,
+        ),
+    ),
+)

@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-037 in progress
+Status: MC-038 complete; MC-039 next
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -77,7 +77,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-035 | DONE | `midi-core: MC-035 build MIDI page` | PASS — focused MIDI page/source-audition tests, documentation coverage, `git diff --check`, `make test`, `make build` | One-file SMF 0/1 import, persisted source facts, protected melody selection, typed findings, source identity evidence, and MIDI-only source transport are reachable from the target shell. |
 | MC-036 | DONE | `midi-core: MC-036 build Structure and Harmony page` | PASS — focused page/application/workspace tests, documentation coverage, `git diff --check`, `make test`, `make build` | Target authority editor, exact occurrence/chord timing, findings, invalidation preview, and source/occurrence MIDI audition are covered; persisted fixture hash recorded below. |
 | MC-037 | DONE | `midi-core: MC-037 build Arrange page` | PASS — focused Arrange/workspace Compose tests, documentation coverage, `make test`, `make build` | Scoped candidate generation, curated target-only choices, cancellation, candidate evidence, and Review handoff are reachable from the focused desktop shell. |
-| MC-038 | TODO | | | |
+| MC-038 | DONE | `midi-core: MC-038 build Review page` | PASS — focused Review/workspace Compose tests, candidate lifecycle/assembly/audition tests, documentation coverage, `make test`, `make build` | Immutable comparison and decision controls, candidate/accepted-scope MIDI audition, transport, mute/solo, stale evidence, and Arrange handoff are reachable from the focused desktop shell. |
 | MC-039 | TODO | | | |
 | MC-040 | TODO | | | |
 | MC-041 | TODO | | | |
@@ -960,6 +960,27 @@ Decisions/deviations: Multiple alternatives are represented as distinct, explici
 Known limitations: Candidate comparison, acceptance/rejection/lock/restore controls, candidate/role/full-arrangement audition, mute/solo, and the complete Review surface remain MC-038. Final MIDI-device hardening is MC-045; final Logic Pro/GarageBand evidence remains MC-048.
 Commit: `midi-core: MC-037 build Arrange page`.
 Next task: MC-038 — implement the Review page and integrated audition.
+
+### MC-038 — Implement the Review page and integrated audition
+
+Status: DONE
+Started: 2026-08-28
+Completed: 2026-08-28
+Starting commit/status: `ecb9cab` / the pre-existing MC-038 ledger marker and an unrelated tracked deleted Kotlin compiler-session marker were present; only the task marker is included in this task commit.
+Contracts read: F-REV-001–F-REV-006; F-PLAY-001–F-PLAY-004; Architecture 4.5, 4.6, 4.8, and 8; Quality Gates 3–5; MC-038 task contract.
+Current owners inspected: target `MidiCoreCandidateReview`, `MidiCoreCandidateLifecycle`, `MidiCoreAcceptedSongAssembly`, `MidiAuditionController`, target workspace intents/reducer, source/occurrence audition boundary, Arrange page, focused shell, and their application/Compose tests. Legacy comparison and preview owners remain outside the target path pending their assigned cleanup tasks.
+Behavior retained/extracted: The focused Review destination reuses the existing digest-bound candidate list/comparison and explicit candidate lifecycle. A new application-only `MidiCoreReviewAudition` prepares candidate, accepted-role, accepted-occurrence, and full accepted-arrangement MIDI plans from revalidated evidence, while the desktop reducer owns operation admission and the existing MIDI port owns session/device lifecycle. Compose neither reads MIDI artifacts nor mutates project files directly.
+Files added/changed: `src/main/kotlin/app/melotrail/application/MidiCoreReviewAudition.kt`, `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt`, `desktopApp/src/test/kotlin/app/melotrail/desktop/MidiCoreReviewPageTest.kt`, `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt`, `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspaceShell.kt`, `desktopApp/src/test/kotlin/app/melotrail/desktop/MidiCoreWorkspaceTest.kt`, `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`, and this execution log.
+Files/data deleted: None planned; the legacy Review and audio-preview owners are assigned to MC-050, MC-051, MC-052, and MC-055 after their target replacements pass later phase gates.
+Tracked deletion recoverability: The unrelated Kotlin compiler session-marker deletion remains recoverable from Git and is deliberately excluded from this task commit.
+Ignored deletion recoverability: None planned.
+Focused tests: `./gradlew :desktopApp:test --tests app.melotrail.desktop.MidiCoreReviewPageTest --tests app.melotrail.desktop.MidiCoreWorkspaceTest --tests app.melotrail.desktop.MidiCoreWorkspaceShellTest --tests app.melotrail.desktop.MidiCoreArrangePageTest --rerun-tasks --console=plain` PASS; `./gradlew :test --tests app.melotrail.application.MidiCoreCandidateReviewTest --tests app.melotrail.application.MidiCoreCandidateLifecycleTest --tests app.melotrail.application.MidiCoreAcceptedSongAssemblyTest --tests app.melotrail.audition.MidiAuditionControllerTest :desktopApp:test --tests app.melotrail.desktop.MidiCoreReviewPageTest --tests app.melotrail.desktop.MidiCoreWorkspaceTest --tests app.melotrail.desktop.MidiCoreWorkspaceShellTest --rerun-tasks --console=plain` PASS. Coverage includes the candidate decision state machine, stale acceptance suppression, missing/tampered evidence rejection, locks/restoration, semantic comparison, candidate/role/occurrence/full scopes, device failure preservation, restart hydration, transport, mute/solo, accessibility tags, and exact Arrange handoff.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS; `make test` PASS (2026-08-28; root and desktop suites); `make build` PASS (2026-08-28; root/desktop build and documentation coverage).
+Manual evidence: Not required for MC-038. MIDI device failures are covered by the fake-port state traces; MC-045 owns the final local-device smoke and lifecycle hardening.
+Decisions/deviations: Review allows stale candidates to remain audible and inspectable, but suppresses acceptance/restoration controls before an invalid lifecycle command can be issued. Candidate audition is scoped to the one immutable role artifact; accepted role, occurrence, and full-arrangement audition require the existing accepted-song assembly to revalidate all required scope evidence. Accepted work remains a pointer/history decision, never a MIDI rewrite.
+Known limitations: A complete occurrence/full-arrangement audition correctly remains blocked until every core role has a current accepted candidate for every required occurrence. Final device selection/loss recovery ergonomics and the manual local MIDI-output smoke remain MC-045; the Export destination is MC-039.
+Commit: `midi-core: MC-038 build Review page`.
+Next task: MC-039 — implement the Export page.
 
 ## 6. Manual gate records
 

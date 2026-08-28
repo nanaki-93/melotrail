@@ -23,6 +23,12 @@ import app.melotrail.application.MidiCoreProjectSession
 import app.melotrail.application.MidiCoreSourceImport
 import app.melotrail.application.MidiCoreSourceImportResult
 import app.melotrail.application.MidiCoreSourceAuditionResult
+import app.melotrail.application.MidiCoreReviewAudition
+import app.melotrail.application.MidiCoreReviewAuditionResult
+import app.melotrail.application.PrepareMidiCoreAcceptedArrangementAudition
+import app.melotrail.application.PrepareMidiCoreAcceptedOccurrenceAudition
+import app.melotrail.application.PrepareMidiCoreAcceptedRoleAudition
+import app.melotrail.application.PrepareMidiCoreCandidateAudition
 import app.melotrail.application.PrepareMidiCoreOccurrenceAudition
 import app.melotrail.application.PrepareMidiCoreSourceAudition
 import app.melotrail.application.MidiCoreStructureTimeline
@@ -99,6 +105,10 @@ interface MidiCoreWorkspaceUseCases {
     fun selectMelody(request: SelectMidiCoreMelody): app.melotrail.application.MidiCoreMelodySelectionResult
     fun prepareSourceAudition(request: PrepareMidiCoreSourceAudition): MidiCoreSourceAuditionResult
     fun prepareOccurrenceAudition(request: PrepareMidiCoreOccurrenceAudition): MidiCoreSourceAuditionResult
+    fun prepareCandidateAudition(request: PrepareMidiCoreCandidateAudition): MidiCoreReviewAuditionResult
+    fun prepareAcceptedRoleAudition(request: PrepareMidiCoreAcceptedRoleAudition): MidiCoreReviewAuditionResult
+    fun prepareAcceptedOccurrenceAudition(request: PrepareMidiCoreAcceptedOccurrenceAudition): MidiCoreReviewAuditionResult
+    fun prepareAcceptedArrangementAudition(request: PrepareMidiCoreAcceptedArrangementAudition): MidiCoreReviewAuditionResult
     fun confirmAuthority(request: ConfirmMidiCoreAuthority): app.melotrail.application.MidiCoreAuthorityResult
     fun replaceStructure(request: ReplaceMidiCoreStructure): app.melotrail.application.MidiCoreStructureTimelineResult
     fun replaceHarmony(request: ReplaceMidiCoreHarmony): app.melotrail.application.MidiCoreAuthoritativeHarmonyResult
@@ -127,6 +137,7 @@ class DefaultMidiCoreWorkspaceUseCases(
     private val exporter: MidiCoreMidiPackageExporter,
     override val audition: MidiAuditionPort,
     private val sourceAudition: app.melotrail.application.MidiCoreSourceAudition = app.melotrail.application.MidiCoreSourceAudition(),
+    private val reviewAudition: MidiCoreReviewAudition = MidiCoreReviewAudition(review),
 ) : MidiCoreWorkspaceUseCases {
     override fun create(request: CreateMidiCoreProject): MidiCoreProjectLifecycleResult = project.create(request)
 
@@ -146,6 +157,14 @@ class DefaultMidiCoreWorkspaceUseCases(
     override fun prepareSourceAudition(request: PrepareMidiCoreSourceAudition): MidiCoreSourceAuditionResult = sourceAudition.prepare(request)
 
     override fun prepareOccurrenceAudition(request: PrepareMidiCoreOccurrenceAudition): MidiCoreSourceAuditionResult = sourceAudition.prepareOccurrence(request)
+
+    override fun prepareCandidateAudition(request: PrepareMidiCoreCandidateAudition): MidiCoreReviewAuditionResult = reviewAudition.candidate(request)
+
+    override fun prepareAcceptedRoleAudition(request: PrepareMidiCoreAcceptedRoleAudition): MidiCoreReviewAuditionResult = reviewAudition.role(request)
+
+    override fun prepareAcceptedOccurrenceAudition(request: PrepareMidiCoreAcceptedOccurrenceAudition): MidiCoreReviewAuditionResult = reviewAudition.occurrence(request)
+
+    override fun prepareAcceptedArrangementAudition(request: PrepareMidiCoreAcceptedArrangementAudition): MidiCoreReviewAuditionResult = reviewAudition.acceptedArrangement(request)
 
     override fun confirmAuthority(request: ConfirmMidiCoreAuthority) = authority.confirm(request)
 
@@ -410,6 +429,10 @@ sealed interface MidiCoreWorkspaceIntent {
     data class SelectAudition(val plan: MidiAuditionPlaybackPlan) : MidiCoreWorkspaceIntent
     data object PlaySourceMelody : MidiCoreWorkspaceIntent
     data class PlayOccurrence(val occurrenceId: String) : MidiCoreWorkspaceIntent
+    data class PlayCandidate(val candidateId: String, val role: CandidateRole, val occurrenceId: String) : MidiCoreWorkspaceIntent
+    data class PlayAcceptedRole(val role: CandidateRole) : MidiCoreWorkspaceIntent
+    data class PlayAcceptedOccurrence(val occurrenceId: String) : MidiCoreWorkspaceIntent
+    data object PlayAcceptedArrangement : MidiCoreWorkspaceIntent
     data class PlayAudition(val plan: MidiAuditionPlaybackPlan? = null) : MidiCoreWorkspaceIntent
     data object PauseAudition : MidiCoreWorkspaceIntent
     data object StopAudition : MidiCoreWorkspaceIntent
@@ -474,6 +497,18 @@ class MidiCoreWorkspaceViewModel(
             MidiCoreWorkspaceIntent.ExportPackage -> exportPackage()
             MidiCoreWorkspaceIntent.PlaySourceMelody -> playSourceMelody()
             is MidiCoreWorkspaceIntent.PlayOccurrence -> playOccurrence(intent)
+            is MidiCoreWorkspaceIntent.PlayCandidate -> playReviewAudition(intent) { current ->
+                useCases.prepareCandidateAudition(PrepareMidiCoreCandidateAudition(current, intent.candidateId, intent.role, intent.occurrenceId))
+            }
+            is MidiCoreWorkspaceIntent.PlayAcceptedRole -> playReviewAudition(intent) { current ->
+                useCases.prepareAcceptedRoleAudition(PrepareMidiCoreAcceptedRoleAudition(current, intent.role))
+            }
+            is MidiCoreWorkspaceIntent.PlayAcceptedOccurrence -> playReviewAudition(intent) { current ->
+                useCases.prepareAcceptedOccurrenceAudition(PrepareMidiCoreAcceptedOccurrenceAudition(current, intent.occurrenceId))
+            }
+            MidiCoreWorkspaceIntent.PlayAcceptedArrangement -> playReviewAudition(intent) { current ->
+                useCases.prepareAcceptedArrangementAudition(PrepareMidiCoreAcceptedArrangementAudition(current))
+            }
             is MidiCoreWorkspaceIntent.SelectAudition -> audition { useCases.audition.selectScope(intent.plan) }
             is MidiCoreWorkspaceIntent.PlayAudition -> audition {
                 intent.plan?.let { useCases.audition.play(it) } ?: useCases.audition.play()
@@ -854,6 +889,38 @@ class MidiCoreWorkspaceViewModel(
         }
     }
 
+    private fun playReviewAudition(
+        intent: MidiCoreWorkspaceIntent,
+        prepare: (MidiCoreProjectSession) -> MidiCoreReviewAuditionResult,
+    ) {
+        val current = requireSessionOrBlock() ?: return
+        startOperation(MidiCoreWorkspaceOperationKind.AUDITION, "Preparing Review MIDI audition…", intent) { cancellation ->
+            if (cancellation.get()) return@startOperation cancelled()
+            when (val prepared = prepare(current)) {
+                is MidiCoreReviewAuditionResult.Rejected -> failure(reviewAuditionBlocker(prepared.problem), intent)
+                is MidiCoreReviewAuditionResult.Ready -> {
+                    if (cancellation.get()) return@startOperation cancelled()
+                    when (val result = useCases.audition.play(prepared.plan)) {
+                        is MidiAuditionResult.Applied -> success("Review MIDI audition started.") {
+                            _state.value = _state.value.copy(audition = result.state, blockers = baseBlockers(session?.project))
+                        }
+                        is MidiAuditionResult.Failed -> failure(
+                            blocker(
+                                MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE,
+                                result.problem.message,
+                                result.problem.nextAction,
+                                result.problem.code.name,
+                            ),
+                            intent,
+                        ) {
+                            _state.value = _state.value.copy(audition = result.state)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private fun audition(action: () -> MidiAuditionResult) {
         val result = try {
             action()
@@ -1187,6 +1254,13 @@ class MidiCoreWorkspaceViewModel(
         problem.message,
         problem.nextAction,
         problem.code.name,
+    )
+
+    private fun reviewAuditionBlocker(problem: app.melotrail.application.MidiCoreReviewAuditionProblem) = blocker(
+        MidiCoreWorkspaceBlockerCode.CANDIDATE_REVIEW_REQUIRED,
+        problem.message,
+        problem.nextAction,
+        "REVIEW_AUDITION",
     )
 
     private fun melodyBlocker(problem: MidiCoreMelodySelectionProblem, validation: MidiImportValidationResult? = null) = blocker(

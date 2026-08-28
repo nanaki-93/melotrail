@@ -317,6 +317,10 @@ private fun MidiCoreWorkspacePage(
         MidiCoreArrangePage(state, onIntent, onDestinationSelected, modifier)
         return
     }
+    if (destination == MidiCoreWorkspaceDestination.REVIEW) {
+        MidiCoreReviewPage(state, onIntent, onDestinationSelected, modifier)
+        return
+    }
     Column(
         modifier.semantics {
             testTag = MidiCoreWorkspaceShellTags.PAGE + "-" + destination.route

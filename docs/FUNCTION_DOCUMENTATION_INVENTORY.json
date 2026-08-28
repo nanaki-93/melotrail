@@ -37,9 +37,9 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt has 102 callable declarations, 5 directly documented and 97 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-036; target authority invalidation projection, occurrence-audition routing, explicit intent handling, operation admission, and blocker traces are covered by tests, and the remaining adapter/reducer declarations must be reconsidered when their behavior or contract changes.",
-      "functionCount": 102,
-      "declarationDigest": "995d7929cbcd364c7796d409ba317abbfc6f46c6fe905f43031ab0728f56f76b",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt has 112 callable declarations, 5 directly documented and 107 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-038; explicit candidate/accepted role/occurrence/full-arrangement audition preparation, authority-safe operation admission, and typed device failure traces are covered by focused workspace tests, and the remaining adapter/reducer declarations must be reconsidered when their behavior or contract changes.",
+      "functionCount": 112,
+      "declarationDigest": "53d4e1bb15aaa4b0b2362f25a6af2eb6ff22eb50126c0d9cca235d0ee0bc3aaf",
       "documentedFunctionCount": 5
     },
     {
@@ -64,6 +64,14 @@
       "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreArrangePage.kt has 14 callable declarations, 1 directly documented and 13 focused presentation helpers. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-037; scoped deterministic generation, curated choices, candidate evidence, progress/cancellation, accessibility semantics, and review navigation are covered by focused Compose tests, and the remaining local presentation declarations must be reconsidered when their behavior or contract changes.",
       "functionCount": 14,
       "declarationDigest": "461850626ae63d81111679bed500bbfff217d69402beff43bef628b753af67c2",
+      "documentedFunctionCount": 1
+    },
+    {
+      "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt",
+      "classification": "deferred-with-reason",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt has 24 callable declarations, 1 directly documented and 23 focused presentation helpers. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-038; immutable candidate comparison, validation/stale evidence, explicit acceptance/rejection/lock/restore decisions, candidate/role/occurrence/full MIDI audition, transport, mute/solo, accessibility semantics, and Arrange handoff are covered by focused Compose tests.",
+      "functionCount": 24,
+      "declarationDigest": "9844e8dd01cd235cf7826e93ef5407c6e5ecb573bf53ed8695f520cfc686c9f2",
       "documentedFunctionCount": 1
     },
     {
@@ -401,6 +409,14 @@
       "functionCount": 21,
       "declarationDigest": "463ba1acb2720d8fe5e8e6b8ee754c7d8d3522121e0701039ef55d266213f468",
       "documentedFunctionCount": 8
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/application/MidiCoreReviewAudition.kt",
+      "classification": "inherited-contract",
+      "reason": "The 8 callable declarations implement MC-038's digest-checked candidate, accepted-role, accepted-occurrence, and full accepted-arrangement MIDI audition plans under F-PLAY-001 through F-PLAY-004 and F-REV-001 through F-REV-006; reviewed on 2026-08-28.",
+      "functionCount": 8,
+      "declarationDigest": "71d59b5249ace4742f26cbef576de8531c631996f3a18ecb8c7eed56d822e6f7",
+      "documentedFunctionCount": 4
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreAcceptedSongAssembly.kt",
