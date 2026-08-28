@@ -437,10 +437,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreMidiPackageExporter.kt",
       "classification": "inherited-contract",
-      "reason": "The 21 callable declarations implement MC-029's accepted-song package export, deterministic SMF1 file ordering, portable manifest, semantic re-import, atomic staging/publication, collision refusal, optional-role omission, and project snapshot binding under F-EXP-001 through F-EXP-006 and F-SYS-003; reviewed on 2026-08-28.",
-      "functionCount": 21,
-      "declarationDigest": "a80ad3db3739b3a34cdea437fd59d9b50c2c9d8b3a272080051c383da7defd37",
-      "documentedFunctionCount": 1
+      "reason": "The 25 callable declarations implement MC-046's accepted-song package export, deterministic SMF1 file ordering, redacted portable manifest schema with self-validation, semantic MIDI re-import, post-publication digest recovery, atomic staging/publication, collision refusal, optional-role omission, and project snapshot binding under F-EXP-001 through F-EXP-006 and F-SYS-003; reviewed on 2026-08-28.",
+      "functionCount": 25,
+      "declarationDigest": "f0b1eba29783a79847b74da4e587ff50900f9f115ca4941da04a04d5f3751318",
+      "documentedFunctionCount": 2
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreCandidateGeneration.kt",

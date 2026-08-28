@@ -7,6 +7,7 @@ import app.melotrail.project.CandidateAcceptance
 import app.melotrail.project.CandidateRole
 import app.melotrail.project.ProjectKey
 import app.melotrail.project.ProjectSectionDefinition
+import app.melotrail.project.adapter.AtomicWriteObserver
 import app.melotrail.project.adapter.MidiCoreArtifactStore
 import app.melotrail.music.core.ProjectKeySpelling
 import app.melotrail.music.core.ProjectMeter
@@ -58,6 +59,7 @@ class MidiCoreMidiPackageExporterTest {
         assertTrue(Files.isRegularFile(exported.directory.resolve("manifest.json")))
 
         val manifest = Files.readString(exported.directory.resolve("manifest.json"))
+        assertTrue(manifest.contains("\"schema\": \"melotrail-midi-export\""))
         assertTrue(manifest.contains("\"manifestSchemaVersion\": 1"))
         assertTrue(manifest.contains("\"projectId\": \"${accepted.project.id.value}\""))
         assertTrue(manifest.contains("\"snapshotId\": \"export-1\""))
@@ -174,11 +176,45 @@ class MidiCoreMidiPackageExporterTest {
     }
 
     @Test
+    fun `redacts source paths and removes a package when snapshot persistence fails`() {
+        var failSnapshotSave = false
+        val store = MidiCoreArtifactStore(
+            AtomicWriteObserver { _, target ->
+                if (failSnapshotSave && target.fileName.toString() == "project.json") error("snapshot persistence unavailable")
+            },
+        )
+        val accepted = acceptAll(store, readySession(store, root.resolve("privacy-project")))
+        val privateSourceName = "/Users/example/private-recordings/lead.mid"
+        val rewrittenProject = accepted.project.copy(
+            sourceMidi = requireNotNull(accepted.project.sourceMidi).copy(originalFilename = privateSourceName),
+        )
+        store.saveProject(accepted.root, rewrittenProject)
+        val rewrittenSession = MidiCoreProjectSession(accepted.root, rewrittenProject)
+
+        val privateManifest = assertIs<MidiCoreMidiPackageExportResult.Exported>(
+            exporter(store, "export-private").export(ExportMidiCorePackage(rewrittenSession)),
+        ).packageResult
+        val manifestText = Files.readString(privateManifest.directory.resolve("manifest.json"))
+        assertTrue(manifestText.contains("\"filename\": \"lead.mid\""))
+        assertFalse(manifestText.contains("/Users/example/private-recordings"))
+        assertFalse(manifestText.contains(accepted.root.toString()))
+
+        failSnapshotSave = true
+        val failed = exporter(store, "export-save-failed").export(ExportMidiCorePackage(privateManifest.session))
+        assertEquals(
+            MidiCorePackageExportProblemCode.SAVE_FAILED,
+            assertIs<MidiCoreMidiPackageExportResult.Rejected>(failed).problem.code,
+        )
+        assertFalse(Files.exists(accepted.root.resolve("exports/export-save-failed")))
+        assertEquals(listOf("export-private"), store.openProject(accepted.root).exportSnapshots.map { it.id })
+    }
+
+    @Test
     fun `uses deterministic MIDI hashes for equal inputs`() {
         val firstStore = MidiCoreArtifactStore()
-        val first = acceptAll(firstStore, readySession(firstStore, root.resolve("deterministic-one")))
+        val first = acceptAll(firstStore, readySession(firstStore, root.resolve("deterministic-one"), projectId = "deterministic-project"))
         val secondStore = MidiCoreArtifactStore()
-        val second = acceptAll(secondStore, readySession(secondStore, root.resolve("deterministic-two")))
+        val second = acceptAll(secondStore, readySession(secondStore, root.resolve("deterministic-two"), projectId = "deterministic-project"))
 
         val firstExport = assertIs<MidiCoreMidiPackageExportResult.Exported>(
             exporter(firstStore, "export-deterministic").export(ExportMidiCorePackage(first)),
@@ -189,6 +225,42 @@ class MidiCoreMidiPackageExporterTest {
 
         assertEquals(firstExport.files.map { it.sha256 }, secondExport.files.map { it.sha256 })
         assertEquals(firstExport.files.map { it.filename }, secondExport.files.map { it.filename })
+        assertEquals(firstExport.manifestSha256, secondExport.manifestSha256)
+        assertContentEquals(
+            Files.readAllBytes(firstExport.directory.resolve("manifest.json")),
+            Files.readAllBytes(secondExport.directory.resolve("manifest.json")),
+        )
+    }
+
+    @Test
+    fun `exports every development source fixture with portable semantic packages`() {
+        listOf(
+            Triple("smf0-melody.mid", "simple-diatonic", 0),
+            Triple("pickup-timing.mid", "pickup-sub-bar", 1),
+            Triple("expressive-controller-pitch.mid", "chromatic-expressive", 1),
+        ).forEach { (fixture, label, melodyTrackIndex) ->
+            val store = MidiCoreArtifactStore()
+            val accepted = acceptAll(
+                store,
+                readySession(
+                    store,
+                    root.resolve("development-$label"),
+                    sourceFixture = fixture,
+                    melodyTrackIndex = melodyTrackIndex,
+                ),
+            )
+
+            val exported = assertIs<MidiCoreMidiPackageExportResult.Exported>(
+                exporter(store, "export-$label").export(ExportMidiCorePackage(accepted)),
+            ).packageResult
+
+            assertEquals(5, exported.files.size)
+            assertTrue(exported.files.all { it.validation.songEndTick == accepted.project.sourceMidi?.sourceEndTick })
+            assertTrue(exported.files.all { file -> JdkMidiReader().inspect(exported.directory.resolve(file.filename)).sourceEndTick == file.validation.songEndTick })
+            val manifest = Files.readString(exported.directory.resolve("manifest.json"))
+            assertTrue(manifest.contains("\"filename\": \"$fixture\""))
+            assertFalse(manifest.contains(accepted.root.toString()))
+        }
     }
 
     private fun exporter(store: MidiCoreArtifactStore, snapshotId: String) = MidiCoreMidiPackageExporter(
@@ -269,19 +341,25 @@ class MidiCoreMidiPackageExporterTest {
         assertIs<MidiCoreCandidateGenerationResult.Published>(result, result.toString())
     }
 
-    private fun readySession(store: MidiCoreArtifactStore, projectRoot: Path): MidiCoreProjectSession {
+    private fun readySession(
+        store: MidiCoreArtifactStore,
+        projectRoot: Path,
+        projectId: String = "exporter-${projectRoot.fileName}",
+        sourceFixture: String = "smf0-melody.mid",
+        melodyTrackIndex: Int = 0,
+    ): MidiCoreProjectSession {
         val created = assertIs<MidiCoreProjectLifecycleResult.Opened>(
             MidiCoreProjectLifecycle(artifacts = store).create(
-                CreateMidiCoreProject(projectRoot, "Exporter Test", "exporter-${projectRoot.fileName}"),
+                CreateMidiCoreProject(projectRoot, "Exporter Test", projectId),
             ),
         ).session
         val source = OwnedMidiFixtures.writeAll(root.resolve("fixture-${projectRoot.fileName}"))
-            .single { it.fileName.toString() == "smf0-melody.mid" }
+            .single { it.fileName.toString() == sourceFixture }
         val imported = assertIs<MidiCoreSourceImportResult.Imported>(
             MidiCoreSourceImport(store).import(ImportMidiCoreSource(created, source)),
         ).session
         val selected = assertIs<MidiCoreMelodySelectionResult.Selected>(
-            MidiCoreMelodySelection(store).select(SelectMidiCoreMelody(imported, 0, 0)),
+            MidiCoreMelodySelection(store).select(SelectMidiCoreMelody(imported, melodyTrackIndex, 0)),
         ).session
         val authority = assertIs<MidiCoreAuthorityResult.Confirmed>(
             MidiCoreMusicalAuthority(store).confirm(
@@ -298,13 +376,16 @@ class MidiCoreMidiPackageExporterTest {
                 ReplaceMidiCoreStructure(
                     authority,
                     listOf(ProjectSectionDefinition("verse", "Verse")),
-                    listOf(app.melotrail.structure.MidiCoreOccurrencePlacement("verse-1", "verse", "Verse", 480)),
+                    listOf(app.melotrail.structure.MidiCoreOccurrencePlacement("verse-1", "verse", "Verse", requireNotNull(selected.project.sourceMidi).sourceEndTick)),
                 ),
             ),
         ).session
         return assertIs<MidiCoreAuthoritativeHarmonyResult.Updated>(
             MidiCoreAuthoritativeHarmony(store).replace(
-                ReplaceMidiCoreHarmony(structured, listOf(AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 480))),
+                ReplaceMidiCoreHarmony(
+                    structured,
+                    listOf(AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, requireNotNull(selected.project.sourceMidi).sourceEndTick)),
+                ),
             ),
         ).session
     }

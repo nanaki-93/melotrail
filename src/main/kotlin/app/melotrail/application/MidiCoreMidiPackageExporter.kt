@@ -41,6 +41,7 @@ import java.time.Clock
 import java.time.Instant
 import java.util.UUID
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -288,6 +289,7 @@ class MidiCoreMidiPackageExporter(
                 enabledRoles = request.enabledRoles,
                 files = validations,
             )
+            validateManifest(manifestBytes, snapshotId, validations)
             Files.write(
                 staged.resolve(MANIFEST_FILENAME),
                 manifestBytes,
@@ -320,7 +322,16 @@ class MidiCoreMidiPackageExporter(
         }
 
         val exportedFiles = validations
-        val manifestSha256 = sha256(destination.resolve(MANIFEST_FILENAME))
+        val manifestSha256 = try {
+            sha256(destination.resolve(MANIFEST_FILENAME))
+        } catch (error: Exception) {
+            removeUnboundDestination(root, destination, snapshotId)
+            return rejected(
+                MidiCorePackageExportProblemCode.IO_FAILURE,
+                "The published MIDI package could not be verified.",
+                "Retry the export; an unbound incomplete package was removed when possible.",
+            )
+        }
         val snapshotFiles = (exportedFiles.map { file ->
             ExportedSnapshotFile(
                 file.kind,
@@ -471,6 +482,7 @@ class MidiCoreMidiPackageExporter(
             )
         }
         val manifest = MidiCoreExportManifest(
+            schema = MANIFEST_SCHEMA,
             manifestSchemaVersion = 1,
             projectId = project.id.value,
             snapshotId = snapshotId,
@@ -478,7 +490,7 @@ class MidiCoreMidiPackageExporter(
             applicationVersion = project.metadata.applicationVersion,
             buildIdentity = "melotrail-midi-core",
             source = ManifestSource(
-                filename = requireNotNull(project.sourceMidi).originalFilename,
+                filename = portableSourceFilename(requireNotNull(project.sourceMidi).originalFilename),
                 sha256 = review.sourceSha256,
                 format = requireNotNull(project.sourceMidi).format,
             ),
@@ -528,6 +540,40 @@ class MidiCoreMidiPackageExporter(
         return MANIFEST_JSON.encodeToString(manifest).toByteArray(StandardCharsets.UTF_8)
     }
 
+    /** Re-read the manifest before publication so a malformed or non-portable package remains only staged. */
+    private fun validateManifest(
+        bytes: ByteArray,
+        snapshotId: String,
+        files: List<MidiCoreExportedPackageFile>,
+    ) {
+        val manifest = try {
+            MANIFEST_JSON.decodeFromString<MidiCoreExportManifest>(bytes.toString(StandardCharsets.UTF_8))
+        } catch (error: Exception) {
+            throw SemanticExportValidationException("Generated export manifest is not valid JSON.", error)
+        }
+        val orderedFiles = files.sortedBy(MidiCoreExportedPackageFile::kind)
+        semanticManifestRequire(manifest.schema == MANIFEST_SCHEMA, "schema identifier differs")
+        semanticManifestRequire(manifest.manifestSchemaVersion == 1, "schema version differs")
+        semanticManifestRequire(manifest.snapshotId == snapshotId, "snapshot identifier differs")
+        semanticManifestRequire(isPortableFilename(manifest.source.filename), "source filename is not portable")
+        semanticManifestRequire(
+            manifest.generatedFiles.map(ManifestGeneratedFile::filename) == orderedFiles.map(MidiCoreExportedPackageFile::filename),
+            "generated MIDI filenames differ",
+        )
+        semanticManifestRequire(
+            manifest.generatedFiles.map(ManifestGeneratedFile::sha256) == orderedFiles.map(MidiCoreExportedPackageFile::sha256),
+            "generated MIDI digests differ",
+        )
+        semanticManifestRequire(
+            manifest.validation.semanticReimportedMidiFiles == orderedFiles.size && manifest.validation.allMIDIFilesPassed,
+            "semantic validation summary differs",
+        )
+    }
+
+    private fun semanticManifestRequire(condition: Boolean, message: String) {
+        if (!condition) throw SemanticExportValidationException("manifest.json: $message")
+    }
+
     private fun manifestChord(event: AuthoritativeChordEvent) = ManifestChordEvent(
         id = event.id,
         occurrenceId = event.occurrenceId,
@@ -542,6 +588,15 @@ class MidiCoreMidiPackageExporter(
         MidiExportRole.BASS -> ManifestInstrumentSuggestion("Electric or acoustic bass", "bass guitar, sub bass, or upright bass", "Keep the low register controlled")
         MidiExportRole.DRUMS -> ManifestInstrumentSuggestion("GM drum kit", "dusty acoustic kit or electronic kit", "Use General MIDI drum mapping on channel 10")
     }
+
+    private fun portableSourceFilename(filename: String): String = filename
+        .replace('\\', '/')
+        .substringAfterLast('/')
+        .takeIf(::isPortableFilename)
+        ?: "source.mid"
+
+    private fun isPortableFilename(filename: String): Boolean =
+        filename.isNotBlank() && filename != "." && filename != ".." && '/' !in filename && '\\' !in filename
 
     private fun prepareExportsRoot(root: Path): Path {
         val rootReal = root.toRealPath()
@@ -568,7 +623,9 @@ class MidiCoreMidiPackageExporter(
 
     private fun removeUnboundDestination(root: Path, destination: Path, snapshotId: String) {
         val bound = runCatching { artifacts.openProject(root).exportSnapshots.any { it.id == snapshotId } }.getOrDefault(false)
-        if (!bound && destination.startsWith(root) && Files.exists(destination, LinkOption.NOFOLLOW_LINKS)) deleteTree(destination)
+        if (!bound && destination.startsWith(root) && Files.exists(destination, LinkOption.NOFOLLOW_LINKS)) {
+            runCatching { deleteTree(destination) }
+        }
     }
 
     private fun deleteTree(root: Path) {
@@ -658,6 +715,7 @@ class MidiCoreMidiPackageExporter(
 
     private companion object {
         const val MANIFEST_FILENAME = "manifest.json"
+        const val MANIFEST_SCHEMA = "melotrail-midi-export"
         val SAFE_ID = Regex("[A-Za-z0-9][A-Za-z0-9_-]{0,119}")
         val MANIFEST_JSON = Json {
             prettyPrint = true
@@ -670,6 +728,7 @@ class MidiCoreMidiPackageExporter(
 
 @Serializable
 private data class MidiCoreExportManifest(
+    val schema: String,
     val manifestSchemaVersion: Int,
     val projectId: String,
     val snapshotId: String,

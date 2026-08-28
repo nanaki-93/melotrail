@@ -127,6 +127,8 @@ class MidiCoreExportPageTest {
         onNodeWithTag(MidiCoreExportPageTags.RETRY).performScrollTo().performClick()
         onNodeWithTag(MidiCoreExportPageTags.SUGGESTIONS).performScrollTo().assertExists()
         onNodeWithTag(MidiCoreExportPageTags.DAW_GUIDANCE).performScrollTo().assertExists()
+        onNodeWithText("Logic Pro: import complete-song.mid at bar 1, confirm whether to adopt its fixed tempo and meter, then assign instruments to Melody, Chords, Bass, and Drums.").assertExists()
+        onNodeWithText("GarageBand: drag complete-song.mid into the empty track area, confirm timing and role alignment, then choose software instruments. Role files begin at the same song origin for separate import.").assertExists()
         assertEquals(Path.of("build/export-project/exports/export-ready"), revealed)
         assertEquals(listOf<MidiCoreWorkspaceIntent>(MidiCoreWorkspaceIntent.Retry), intents)
     }

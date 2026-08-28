@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-045 in progress
+Status: MC-047 in progress
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -85,8 +85,8 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-043 | DONE | `midi-core: MC-043 harden drum arrangements` | PASS — focused Drum/development suite, `make test`, `make build` | Complete groove retention, restrained Bass-aware kicks, section-aware direct-fill companions, and SHA-pinned three-fixture alternatives. |
 | MC-044 | DONE | `midi-core: MC-044 harden ensemble interaction` | PASS — interaction/generation suite, `make test`, `make build` | Accepted same-occurrence role context, deterministic interaction validation, and one-role-only repair without a global rewrite. |
 | MC-045 | DONE | `midi-core: MC-045 harden MIDI audition` | PASS — controller/Sequencer/Receiver, focused desktop tests, local default-receiver smoke, `make test`, `make build` | Discoverable output selection, exact-tick session replacement, safe live transport rebuild, deterministic cleanup, and MIDI-only UI recovery are covered. |
-| MC-046 | IN_PROGRESS | | | Desktop interaction hardening follows completed MC-045. |
-| MC-047 | TODO | | | |
+| MC-046 | DONE | `midi-core: MC-046 harden MIDI export` | PASS — exporter/development-fixture and focused Export UI suites, documentation coverage, `make test`, `make build` | Versioned self-validating portable manifest, semantic package re-import, deterministic package bytes/hashes, snapshot-failure cleanup, and explicit Logic/GarageBand conditional guidance are covered. |
+| MC-047 | IN_PROGRESS | | | Bounded malformed-input and property coverage follows completed export hardening. |
 | MC-048 | TODO | | | |
 | MC-049 | TODO | | | |
 | MC-050 | TODO | | | |
@@ -110,7 +110,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | G2 MIDI project kernel complete | MC-010–MC-019 | DONE | MC-010–MC-019 target schema, artifact, authority, invalidation, lifecycle, and full test/build gates pass. |
 | G3 Vertical slice complete | MC-020–MC-030 | DONE | MC-020–MC-030 target context, validation, generation, review, assembly, audition, export, and the JVM vertical-slice gate pass. |
 | G4 Focused desktop complete | MC-031–MC-040 | DONE | MC-040 real-service focused Compose E2E, six generated page fixtures, `make test`, and `make build` pass. |
-| G5 Product behavior accepted | MC-041–MC-049 | IN_PROGRESS | MC-041–MC-045 are complete; MC-046–MC-049 remain. |
+| G5 Product behavior accepted | MC-041–MC-049 | IN_PROGRESS | MC-041–MC-046 are complete; MC-047–MC-049 remain. |
 | G6 Legacy product removed | MC-050–MC-059 | TODO | |
 | G7 MVP complete | MC-060 | TODO | |
 
@@ -1134,7 +1134,28 @@ Manual evidence: `docs/plan/MC045_MIDI_AUDITION_SMOKE.md` records the complete d
 Decisions/deviations: Receiver discovery failure leaves the system MIDI output usable rather than blocking audition. An unavailable explicitly selected receiver is rejected before mutation; on live receiver replacement, old-session all-notes-off/close occurs before new-session open. Preview timbre is output-device/DAW owned and intentionally not saved, exported, or treated as musical authority. No audio renderer, waveform, audio file, sound library, worker, or project-data write was introduced.
 Known limitations: The target UI reports transport position at precise user transport boundaries (pause, seek, output replacement, end), not as a continuously sampled playhead. DAW compatibility and human musical acceptance remain the scheduled MC-048 and MC-049 gates.
 Commit: `midi-core: MC-045 harden MIDI audition`.
-Next task: MC-046 — harden desktop interaction, recovery, and accessibility.
+Next task: MC-046 — harden export, manifest, and failure recovery.
+
+### MC-046 — Harden export, manifest, and failure recovery
+
+Status: DONE
+Started: 2026-08-28
+Completed: 2026-08-28
+Starting commit/status: `c164317` / only the preserved unrelated deleted Kotlin compiler-session marker was present.
+Contracts read: F-EXP-001–F-EXP-006; MIDI Contract sections 9–14; Quality Gate 3; `DAW_COMPATIBILITY.md`; MC-009's conditional DAW record; and the MC-046 task contract.
+Current owners inspected: accepted-song assembly, the target SMF1 writer/reader, target package exporter and snapshot lifecycle, immutable artifact store, fixture catalog, target Export page/reducer, MC-009 DAW evidence, and export/desktop regression suites. The target exporter and page did not import any legacy master, release, codec, credits, audio-rendering, or commercial-format owner.
+Behavior retained/extracted: Export now writes a named `melotrail-midi-export` v1 manifest, re-decodes and validates it before publication, redacts the source record to a portable filename, and verifies snapshot ID, file ordering, hashes, and semantic-validation count. All staged SMF1 files retain conductor tempo/meter/sequence-name/marker facts, canonical role tracks/channels, end ticks, and instrument suggestions. A package published before a manifest digest/snapshot-save failure is removed only while unbound; a prior immutable snapshot remains authoritative. The Export UI continues to make Logic's tempo/meter adoption conditional and gives the matching GarageBand origin/alignment instruction.
+Files added/changed: `src/main/kotlin/app/melotrail/application/MidiCoreMidiPackageExporter.kt`, `src/test/kotlin/app/melotrail/application/MidiCoreMidiPackageExporterTest.kt`, `desktopApp/src/test/kotlin/app/melotrail/desktop/MidiCoreExportPageTest.kt`, `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`, and this execution log.
+Files/data deleted: No repository data or source files. Failed test packages are isolated temporary directories and are deleted by export recovery assertions; accepted source MIDI, candidates, and previous export snapshots remain immutable.
+Tracked deletion recoverability: The unrelated Kotlin compiler session-marker deletion remains recoverable from Git and is deliberately excluded from this task commit.
+Ignored deletion recoverability: Gradle test outputs are untracked/recreatable; no production project, source MIDI, candidate, or accepted export snapshot is deleted by this task.
+Focused tests: `./gradlew :test --tests app.melotrail.application.MidiCoreMidiPackageExporterTest --rerun-tasks --console=plain` PASS. It proves the golden manifest schema/role/validation fields, complete and optional packages, missing/unaccepted/stale blockers, post-staging tamper cleanup, collision refusal, prior-snapshot preservation after injected project-save failure, source-path redaction, byte-identical deterministic manifests/hashes, semantic re-import, and final packages for `smf0-melody.mid`, `pickup-timing.mid`, and `expressive-controller-pitch.mid`. `./gradlew :desktopApp:test --tests app.melotrail.desktop.MidiCoreExportPageTest --tests app.melotrail.desktop.MidiCoreWorkspaceTest --rerun-tasks --console=plain` PASS, including explicit Logic tempo/meter and GarageBand role-origin guidance assertions.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS; `make test` PASS (2026-08-28); `make build` PASS (2026-08-28).
+Manual evidence: MC-009's completed GarageBand 10.4.14 and Logic Pro 12.3.1 results remain the verified conditional import evidence. MC-046 adds automated evidence only; the final current-version full DAW matrix remains the planned user checkpoint in MC-048.
+Decisions/deviations: The manifest schema identifier was added without changing its v1 field version, so consumers receive an explicit stable document type while existing minimum fields stay deterministic. Absolute, Windows, and malformed source name components cannot escape into the manifest; they reduce to a final portable filename or `source.mid`. Generated role program changes are not introduced; selected melody controllers/pitch data remain semantically preserved, and the UI/manifest keep destination instruments advisory.
+Known limitations: The final DAW matrix cannot be substituted by semantic re-import or earlier compatibility results and must pause for the user at MC-048. Subjective musical acceptance remains MC-049.
+Commit: `midi-core: MC-046 harden MIDI export`.
+Next task: MC-047 — add bounded malformed-input and property coverage.
 
 ## 6. Manual gate records
 
