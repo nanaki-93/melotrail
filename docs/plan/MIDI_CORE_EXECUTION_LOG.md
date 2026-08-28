@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-047 in progress
+Status: MC-048 in progress
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -86,8 +86,8 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-044 | DONE | `midi-core: MC-044 harden ensemble interaction` | PASS — interaction/generation suite, `make test`, `make build` | Accepted same-occurrence role context, deterministic interaction validation, and one-role-only repair without a global rewrite. |
 | MC-045 | DONE | `midi-core: MC-045 harden MIDI audition` | PASS — controller/Sequencer/Receiver, focused desktop tests, local default-receiver smoke, `make test`, `make build` | Discoverable output selection, exact-tick session replacement, safe live transport rebuild, deterministic cleanup, and MIDI-only UI recovery are covered. |
 | MC-046 | DONE | `midi-core: MC-046 harden MIDI export` | PASS — exporter/development-fixture and focused Export UI suites, documentation coverage, `make test`, `make build` | Versioned self-validating portable manifest, semantic package re-import, deterministic package bytes/hashes, snapshot-failure cleanup, and explicit Logic/GarageBand conditional guidance are covered. |
-| MC-047 | IN_PROGRESS | | | Bounded malformed-input and property coverage follows completed export hardening. |
-| MC-048 | TODO | | | |
+| MC-047 | DONE | `midi-core: MC-047 harden malformed input handling` | PASS — fixed-seed bounded property suite twice, documentation coverage, `make test`, `make build` | 400 deterministic boundary cases cover malformed chunks/note pairing, rational ticks, timelines, JSON/path/state, and writer-reader semantics. |
+| MC-048 | IN_PROGRESS | | | Final current-version Logic Pro and GarageBand matrix is awaiting the prepared user-run evidence. |
 | MC-049 | TODO | | | |
 | MC-050 | TODO | | | |
 | MC-051 | TODO | | | |
@@ -110,7 +110,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | G2 MIDI project kernel complete | MC-010–MC-019 | DONE | MC-010–MC-019 target schema, artifact, authority, invalidation, lifecycle, and full test/build gates pass. |
 | G3 Vertical slice complete | MC-020–MC-030 | DONE | MC-020–MC-030 target context, validation, generation, review, assembly, audition, export, and the JVM vertical-slice gate pass. |
 | G4 Focused desktop complete | MC-031–MC-040 | DONE | MC-040 real-service focused Compose E2E, six generated page fixtures, `make test`, and `make build` pass. |
-| G5 Product behavior accepted | MC-041–MC-049 | IN_PROGRESS | MC-041–MC-046 are complete; MC-047–MC-049 remain. |
+| G5 Product behavior accepted | MC-041–MC-049 | IN_PROGRESS | MC-041–MC-047 are complete; MC-048–MC-049 remain. |
 | G6 Legacy product removed | MC-050–MC-059 | TODO | |
 | G7 MVP complete | MC-060 | TODO | |
 
@@ -1156,6 +1156,27 @@ Decisions/deviations: The manifest schema identifier was added without changing 
 Known limitations: The final DAW matrix cannot be substituted by semantic re-import or earlier compatibility results and must pause for the user at MC-048. Subjective musical acceptance remains MC-049.
 Commit: `midi-core: MC-046 harden MIDI export`.
 Next task: MC-047 — add bounded malformed-input and property coverage.
+
+### MC-047 — Add bounded malformed-input and property coverage
+
+Status: DONE
+Started: 2026-08-28
+Completed: 2026-08-28
+Starting commit/status: `75e2e76` / only the preserved unrelated deleted Kotlin compiler-session marker was present.
+Contracts read: F-MIDI-004; F-SYS-004; Quality Gate 3; target reader/writer, source import, semantic model, timing, project schema, authority timeline, harmony validator, and candidate aggregate contracts; and the MC-047 task contract.
+Current owners inspected: JDK MIDI reader/writer, typed source-import boundary, owned bounded malformed fixtures, semantic event invariants, rational tick policy, target project schema/path confinement, authority/harmony validators, and candidate acceptance guards. Existing one-case unit tests remain the minimized regression fixtures; the new suite is intentionally not a random or network corpus.
+Behavior retained/extracted: A deterministic `MidiCoreBoundedPropertyTest` now runs six fixed-seed bounded corpora under a 20-second JUnit timeout. It makes malformed chunks return `INVALID_MIDI`; records unclosed/orphan pairing as typed reader findings and blocks import publication; proves exact/nearest-ties-up rational timing; detects malformed chord coverage with `CHORD_WINDOW_GAP`; rejects unsafe JSON path references and rejected-but-accepted candidate states; and semantic-round-trips complete SMF1 core-role songs with expression and no program/unsupported event. Every failure includes its seed/case index.
+Files added/changed: `src/test/kotlin/app/melotrail/midi/MidiCoreBoundedPropertyTest.kt`, `docs/plan/MC047_PROPERTY_EVIDENCE.md`, and this execution log.
+Files/data deleted: None. Test source is created only inside JUnit temporary folders; malformed data is never imported/published, and no persistent project, source MIDI, candidate, or snapshot is modified.
+Tracked deletion recoverability: The unrelated Kotlin compiler session-marker deletion remains recoverable from Git and is deliberately excluded from this task commit.
+Ignored deletion recoverability: Generated Gradle test reports are untracked/recreatable; the bounded corpus is generated in memory or temporary folders and intentionally not retained.
+Focused tests: `./gradlew :test --tests app.melotrail.midi.MidiCoreBoundedPropertyTest --rerun-tasks --console=plain` PASS twice. The second JUnit result completed six suites / 400 deterministic cases in 0.262 seconds (outside Gradle setup), with seeds 47001–47006, maximum malformed input 128 bytes, maximum generated project document 8192 characters, and a 20-second test-class timeout. `docs/plan/MC047_PROPERTY_EVIDENCE.md` records the case matrix and result contract.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS; `make test` PASS (2026-08-28); `make build` PASS (2026-08-28).
+Manual evidence: Not required for this automated task. No regression minimization was needed because both fixed-seed runs passed; existing hand-authored fixture files remain the retained minimal parser regressions.
+Decisions/deviations: The property corpus deliberately tests the target MIDI Core roots and avoids obsolete audio/worker modules even though they remain compiled before the later deletion phase. It uses fixed small case counts rather than property-test framework dependencies, preserving reproducibility and an explicit resource budget.
+Known limitations: Bounded automation cannot replace the current-version DAW import matrix. MC-048 now pauses for the user to run the prepared Logic Pro and GarageBand evidence; subjective holdout review remains MC-049.
+Commit: `midi-core: MC-047 harden malformed input handling`.
+Next task: MC-048 — complete the final Logic Pro and GarageBand matrix (user pause required).
 
 ## 6. Manual gate records
 
