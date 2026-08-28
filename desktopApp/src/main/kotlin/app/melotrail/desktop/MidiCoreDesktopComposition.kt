@@ -24,6 +24,7 @@ import app.melotrail.audition.MidiAuditionController
 import app.melotrail.audition.MidiAuditionPort
 import app.melotrail.audition.adapter.JdkMidiAuditionOutput
 import app.melotrail.project.adapter.MidiCoreArtifactStore
+import java.awt.Desktop
 import java.awt.KeyboardFocusManager
 import java.nio.file.Path
 import java.util.prefs.Preferences
@@ -132,6 +133,15 @@ object MidiCoreDesktopEntrypoint {
                     chooseMidiSource = { services.dialogs.chooseMidiSource() },
                 )
             }
+            val exportActions = remember(services) {
+                MidiCoreExportPageActions { directory ->
+                    runCatching {
+                        if (Desktop.isDesktopSupported() && directory.toFile().isDirectory) {
+                            Desktop.getDesktop().open(directory.toFile())
+                        }
+                    }
+                }
+            }
             val desktopWindowState = rememberWindowState(placement = WindowPlacement.Maximized)
             Window(
                 state = desktopWindowState,
@@ -143,7 +153,7 @@ object MidiCoreDesktopEntrypoint {
             ) {
                 window.minimumSize = java.awt.Dimension(900, 620)
                 MelotrailTheme {
-                    MidiCoreStartupSurface(workspace, projectActions, midiActions)
+                    MidiCoreStartupSurface(workspace, projectActions, midiActions, exportActions)
                 }
             }
         }
@@ -156,8 +166,9 @@ private fun MidiCoreStartupSurface(
     workspace: MidiCoreWorkspaceViewModel,
     projectActions: MidiCoreProjectPageActions,
     midiActions: MidiCoreMidiPageActions,
+    exportActions: MidiCoreExportPageActions,
 ) {
-    MidiCoreWorkspaceShell(workspace, projectActions = projectActions, midiActions = midiActions)
+    MidiCoreWorkspaceShell(workspace, projectActions = projectActions, midiActions = midiActions, exportActions = exportActions)
 }
 
 /** Target-only file-dialog boundary; it exposes MIDI and project locations, never audio or sound-library settings. */

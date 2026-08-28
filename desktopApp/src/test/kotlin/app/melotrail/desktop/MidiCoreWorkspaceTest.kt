@@ -239,6 +239,32 @@ class MidiCoreWorkspaceTest {
     }
 
     @Test
+    fun `export collision preserves the current project and offers the same safe retry`() = runTest {
+        val fake = FakeMidiCoreWorkspaceUseCases()
+        fake.exportResult = MidiCoreMidiPackageExportResult.Rejected(
+            MidiCorePackageExportProblem(
+                app.melotrail.application.MidiCorePackageExportProblemCode.DESTINATION_COLLISION,
+                "The target export snapshot directory already exists.",
+                "Retry with a fresh snapshot identifier; existing evidence was preserved.",
+            ),
+        )
+        val viewModel = MidiCoreWorkspaceViewModel(fake, MemoryMidiCorePreferences(), NoOpDesktopOperationLogger, testDispatchers(testScheduler))
+        viewModel.accept(MidiCoreWorkspaceIntent.OpenProject(fake.session.root))
+        advanceUntilIdle()
+        val projectBeforeExport = viewModel.state.value.project
+
+        viewModel.accept(MidiCoreWorkspaceIntent.ExportPackage)
+        advanceUntilIdle()
+
+        assertEquals(MidiCoreWorkspaceOperationPhase.FAILED, viewModel.state.value.operation.phase)
+        assertEquals(MidiCoreWorkspaceIntent.ExportPackage, viewModel.state.value.operation.retry)
+        assertEquals(MidiCoreWorkspaceBlockerCode.EXPORT_NOT_READY, viewModel.state.value.blockers.first().code)
+        assertEquals("DESTINATION_COLLISION", viewModel.state.value.blockers.first().sourceCode)
+        assertEquals(projectBeforeExport, viewModel.state.value.project)
+        viewModel.close()
+    }
+
+    @Test
     fun `failed operation retries the same intent and restart rehydrates persisted target state`() = runTest {
         val fake = FakeMidiCoreWorkspaceUseCases()
         val preferences = MemoryMidiCorePreferences()
@@ -335,6 +361,13 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
     var confirmAuthorityCalls = 0
     var occurrenceAuditionCalls = 0
     var closeCalls = 0
+    var exportResult: MidiCoreMidiPackageExportResult = MidiCoreMidiPackageExportResult.Rejected(
+        MidiCorePackageExportProblem(
+            app.melotrail.application.MidiCorePackageExportProblemCode.EXPORT_NOT_READY,
+            "not used",
+            "not used",
+        ),
+    )
     private var currentSession = session
 
     override fun create(request: CreateMidiCoreProject): MidiCoreProjectLifecycleResult = MidiCoreProjectLifecycleResult.Opened(session)
@@ -421,7 +454,7 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
 
     override suspend fun regenerateCandidate(request: RegenerateMidiCoreCandidate): MidiCoreCandidateGenerationResult = generateCandidate(request.generation)
 
-    override fun export(request: ExportMidiCorePackage): MidiCoreMidiPackageExportResult = error("not used")
+    override fun export(request: ExportMidiCorePackage): MidiCoreMidiPackageExportResult = exportResult
 
     fun advanceRevisionWithoutReplacingSession() {
         currentSession = MidiCoreProjectSession(currentSession.root, currentSession.project.copy(revision = currentSession.project.revision + 1L))

@@ -85,9 +85,10 @@ internal fun MidiCoreWorkspaceShell(
     modifier: Modifier = Modifier,
     projectActions: MidiCoreProjectPageActions = MidiCoreProjectPageActions(),
     midiActions: MidiCoreMidiPageActions = MidiCoreMidiPageActions(),
+    exportActions: MidiCoreExportPageActions = MidiCoreExportPageActions(),
 ) {
     val state by workspace.state.collectAsState()
-    MidiCoreWorkspaceShell(state, workspace::accept, modifier, projectActions = projectActions, midiActions = midiActions)
+    MidiCoreWorkspaceShell(state, workspace::accept, modifier, projectActions = projectActions, midiActions = midiActions, exportActions = exportActions)
 }
 
 /** Render the shell from a stable state snapshot so its semantic tree is independently testable. */
@@ -99,6 +100,7 @@ internal fun MidiCoreWorkspaceShell(
     initialDestination: MidiCoreWorkspaceDestination = MidiCoreWorkspaceDestination.PROJECT,
     projectActions: MidiCoreProjectPageActions = MidiCoreProjectPageActions(),
     midiActions: MidiCoreMidiPageActions = MidiCoreMidiPageActions(),
+    exportActions: MidiCoreExportPageActions = MidiCoreExportPageActions(),
 ) {
     var selectedDestination by remember(initialDestination) { mutableStateOf(initialDestination) }
     val onDestinationSelected: (MidiCoreWorkspaceDestination) -> Unit = { selectedDestination = it }
@@ -132,6 +134,7 @@ internal fun MidiCoreWorkspaceShell(
                         onDestinationSelected = onDestinationSelected,
                         projectActions = projectActions,
                         midiActions = midiActions,
+                        exportActions = exportActions,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                     )
                 }
@@ -153,6 +156,7 @@ internal fun MidiCoreWorkspaceShell(
                         onDestinationSelected = onDestinationSelected,
                         projectActions = projectActions,
                         midiActions = midiActions,
+                        exportActions = exportActions,
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                     )
                 }
@@ -299,6 +303,7 @@ private fun MidiCoreWorkspacePage(
     onDestinationSelected: (MidiCoreWorkspaceDestination) -> Unit,
     projectActions: MidiCoreProjectPageActions,
     midiActions: MidiCoreMidiPageActions,
+    exportActions: MidiCoreExportPageActions,
     modifier: Modifier,
 ) {
     if (destination == MidiCoreWorkspaceDestination.PROJECT) {
@@ -319,6 +324,10 @@ private fun MidiCoreWorkspacePage(
     }
     if (destination == MidiCoreWorkspaceDestination.REVIEW) {
         MidiCoreReviewPage(state, onIntent, onDestinationSelected, modifier)
+        return
+    }
+    if (destination == MidiCoreWorkspaceDestination.EXPORT) {
+        MidiCoreExportPage(state, onIntent, exportActions, modifier)
         return
     }
     Column(

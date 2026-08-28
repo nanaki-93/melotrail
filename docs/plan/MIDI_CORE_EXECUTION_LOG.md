@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-038 complete; MC-039 next
+Status: MC-039 complete; MC-040 next
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -78,7 +78,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-036 | DONE | `midi-core: MC-036 build Structure and Harmony page` | PASS — focused page/application/workspace tests, documentation coverage, `git diff --check`, `make test`, `make build` | Target authority editor, exact occurrence/chord timing, findings, invalidation preview, and source/occurrence MIDI audition are covered; persisted fixture hash recorded below. |
 | MC-037 | DONE | `midi-core: MC-037 build Arrange page` | PASS — focused Arrange/workspace Compose tests, documentation coverage, `make test`, `make build` | Scoped candidate generation, curated target-only choices, cancellation, candidate evidence, and Review handoff are reachable from the focused desktop shell. |
 | MC-038 | DONE | `midi-core: MC-038 build Review page` | PASS — focused Review/workspace Compose tests, candidate lifecycle/assembly/audition tests, documentation coverage, `make test`, `make build` | Immutable comparison and decision controls, candidate/accepted-scope MIDI audition, transport, mute/solo, stale evidence, and Arrange handoff are reachable from the focused desktop shell. |
-| MC-039 | TODO | | | |
+| MC-039 | DONE | `midi-core: MC-039 build Export page` | PASS — focused Export/workspace Compose tests, exporter/assembly tests, documentation coverage, `make test`, `make build` | Immutable MIDI package readiness, stale/blocked evidence, destination/collision policy, publish/cancel/retry, hashes/files, reveal-folder action, and DAW guidance are reachable from the focused desktop shell. |
 | MC-040 | TODO | | | |
 | MC-041 | TODO | | | |
 | MC-042 | TODO | | | |
@@ -981,6 +981,27 @@ Decisions/deviations: Review allows stale candidates to remain audible and inspe
 Known limitations: A complete occurrence/full-arrangement audition correctly remains blocked until every core role has a current accepted candidate for every required occurrence. Final device selection/loss recovery ergonomics and the manual local MIDI-output smoke remain MC-045; the Export destination is MC-039.
 Commit: `midi-core: MC-038 build Review page`.
 Next task: MC-039 — implement the Export page.
+
+### MC-039 — Implement the Export page
+
+Status: DONE
+Started: 2026-08-28
+Completed: 2026-08-28
+Starting commit/status: `cac6e1e` / only the preserved unrelated deleted Kotlin compiler-session marker is present.
+Contracts read: F-EXP-001–F-EXP-007; F-UI-002–F-UI-004; Architecture sections 4.7–4.8 and 8; Quality Gates 3–5; MC-039 task contract.
+Current owners inspected: target `MidiCoreMidiPackageExporter`, immutable export snapshots/manifest model, accepted-song assembly, focused workspace export reducer, project artifact layout, desktop file-dialog boundary, focused shell, and their tests. Legacy audio/release export controls remain outside the target path pending the later cleanup tasks.
+Behavior retained/extracted: The Export destination presents a project-owned `exports/` destination, exact package filenames, explicit no-overwrite/fresh-snapshot collision policy, role/occurrence acceptance readiness, stale accepted-evidence blockers, asynchronous publish/cancel/retry routing, and the existing semantically re-imported snapshot evidence. It reports source/authority/candidate/file/manifest digests, validation status, DAW-side role suggestions, immutable package-folder reveal, and Logic Pro/GarageBand import guidance. Compose only requests existing workspace/application actions; folder reveal is an optional desktop side effect after a snapshot has already been published.
+Files added/changed: `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreExportPage.kt`, `desktopApp/src/test/kotlin/app/melotrail/desktop/MidiCoreExportPageTest.kt`, `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreDesktopComposition.kt`, `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspaceShell.kt`, `desktopApp/src/test/kotlin/app/melotrail/desktop/MidiCoreWorkspaceTest.kt`, `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`, and this execution log.
+Files/data deleted: None planned; the target export page deliberately owns no audio-format, quality, sample-rate, mastering, credits, commercial-evidence, or release-recovery controls.
+Tracked deletion recoverability: The unrelated Kotlin compiler session-marker deletion remains recoverable from Git and is deliberately excluded from this task commit.
+Ignored deletion recoverability: None planned.
+Focused tests: `./gradlew :test --tests app.melotrail.application.MidiCoreMidiPackageExporterTest --tests app.melotrail.application.MidiCoreAcceptedSongAssemblyTest :desktopApp:test --tests app.melotrail.desktop.MidiCoreExportPageTest --tests app.melotrail.desktop.MidiCoreWorkspaceTest --tests app.melotrail.desktop.MidiCoreWorkspaceShellTest --rerun-tasks --console=plain` PASS. The page/workspace traces cover ready, missing, stale, destination/collision, publish intent, progress/cancellation, safe retry, current project preservation after failure, snapshot hashes/files/manifest, folder reveal, DAW guidance, and stable accessibility tags; exporter coverage supplies immutable-package success/failure and reopened snapshot evidence.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS; `make test` PASS (2026-08-28; root and desktop suites); `make build` PASS (2026-08-28; root/desktop build and documentation coverage).
+Manual evidence: Not required for MC-039. Existing fixture package tests provide semantic file evidence; final Logic Pro/GarageBand import evidence remains MC-048 and is not substituted by page text or automation.
+Decisions/deviations: The target exporter uses project-owned immutable snapshot directories, so the page accurately exposes that destination rather than presenting an arbitrary export-path chooser. A collision has no replacement action: retrying requests a fresh snapshot and preserves all prior evidence. DAW-side suggestions mirror the package manifest purpose without selecting an instrument or creating an audio-production dependency.
+Known limitations: Full create-to-export desktop flow proof and visual-fixture capture belong to MC-040. Final MIDI-device smoke remains MC-045; final Logic Pro/GarageBand verification remains MC-048.
+Commit: `midi-core: MC-039 build Export page`.
+Next task: MC-040 — prove the focused desktop workflow.
 
 ## 6. Manual gate records
 

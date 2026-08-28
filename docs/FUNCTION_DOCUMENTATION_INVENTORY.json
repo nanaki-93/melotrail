@@ -67,6 +67,14 @@
       "documentedFunctionCount": 1
     },
     {
+      "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreExportPage.kt",
+      "classification": "deferred-with-reason",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreExportPage.kt has 11 callable declarations, 1 directly documented and 10 focused presentation helpers. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-039; immutable package readiness including stale evidence, exact package filenames, DAW-side instrument suggestions, project-owned collision-safe destination, publish/cancel/retry actions, snapshot hashes/files, folder reveal, DAW import guidance, and accessibility semantics are covered by focused Compose and workspace tests.",
+      "functionCount": 11,
+      "declarationDigest": "d2d94b688ded46d15a5e9bba7f654dff9b56798348997a205a7a64e038443b18",
+      "documentedFunctionCount": 1
+    },
+    {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt",
       "classification": "deferred-with-reason",
       "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt has 24 callable declarations, 1 directly documented and 23 focused presentation helpers. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-038; immutable candidate comparison, validation/stale evidence, explicit acceptance/rejection/lock/restore decisions, candidate/role/occurrence/full MIDI audition, transport, mute/solo, accessibility semantics, and Arrange handoff are covered by focused Compose tests.",
