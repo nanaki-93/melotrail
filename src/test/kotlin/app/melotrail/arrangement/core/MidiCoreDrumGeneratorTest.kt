@@ -50,6 +50,15 @@ class MidiCoreDrumGeneratorTest {
     }
 
     @Test
+    fun `drum catalog exposes every supported groove and fill exactly once`() {
+        assertEquals(
+            (MidiCoreDrumGroovePatternId.entries.map(MidiCoreDrumGroovePatternId::id) +
+                MidiCoreDrumFillPatternId.entries.map(MidiCoreDrumFillPatternId::id)).toSet(),
+            MidiCorePatternCatalog.allowedPatternIds(CandidateRole.DRUMS).toSet(),
+        )
+    }
+
+    @Test
     fun `matches complete groove golden sequences without arbitrary hit deletion`() {
         val generated = MidiCoreDrumGroovePatternId.entries.associate { pattern ->
             pattern.id to MidiCoreDrumGenerator.generate(context(pattern.id)).candidate.events
@@ -151,6 +160,77 @@ class MidiCoreDrumGeneratorTest {
     }
 
     @Test
+    fun `bass-aware kicks are restrained per bar and never crowd an explicit final-bar fill`() {
+        val bassDependency = MidiCoreAcceptedDependencyContext(
+            MidiCoreAcceptedDependency(CandidateRole.BASS, "verse-1", "bass-accepted", "f".repeat(64)),
+            listOf(240L, 720L, 1_200L, 1_680L, 2_160L, 2_640L, 3_120L, 3_600L)
+                .map { start -> MidiCoreGenerationNote(start, start + 120, 36, 80) },
+        )
+        val withFill = MidiCoreDrumGenerator.generate(
+            context(
+                MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id,
+                project = project(3_840),
+                fillPatternId = MidiCoreDrumFillPatternId.DUSTY_SNARE_ROLL.id,
+                acceptedDependencies = listOf(bassDependency),
+            ),
+        )
+        val plain = MidiCoreDrumGenerator.generate(
+            context(MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id, project = project(3_840)),
+        )
+        val addedKicks = withFill.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>()
+            .filter { it.pitch == 36 && it.startTick !in plain.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>().filter { note -> note.pitch == 36 }.map { it.startTick }.toSet() }
+
+        assertTrue(withFill.accepted, withFill.validation.report.findings.toString())
+        assertEquals(listOf(720L, 1_200L), addedKicks.map { it.startTick })
+        assertTrue(addedKicks.groupBy { it.startTick / 1_920 }.values.all { it.size <= 2 })
+        assertTrue(addedKicks.none { it.startTick >= 1_920 })
+    }
+
+    @Test
+    fun `intro context leaves accepted bass offbeats to the authored sparse groove`() {
+        val bassDependency = MidiCoreAcceptedDependencyContext(
+            MidiCoreAcceptedDependency(CandidateRole.BASS, "verse-1", "bass-accepted", "1".repeat(64)),
+            listOf(MidiCoreGenerationNote(720, 840, 36, 80), MidiCoreGenerationNote(1_200, 1_320, 36, 80)),
+        )
+        val intro = MidiCoreDrumGenerator.generate(
+            context(
+                MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id,
+                purpose = MidiCoreSectionPurpose.INTRO,
+                energy = 0.2,
+                acceptedDependencies = listOf(bassDependency),
+            ),
+        )
+        val authored = MidiCoreDrumGenerator.generate(
+            context(MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id, purpose = MidiCoreSectionPurpose.INTRO, energy = 0.2),
+        )
+
+        assertEquals(authored.candidate.events, intro.candidate.events)
+    }
+
+    @Test
+    fun `direct fill selection uses a complete section-aware companion groove`() {
+        val low = MidiCoreDrumGenerator.generate(
+            context(
+                MidiCoreDrumFillPatternId.SOFT_TWO_STROKE.id,
+                energy = 0.2,
+                purpose = MidiCoreSectionPurpose.INTRO,
+            ),
+        )
+        val high = MidiCoreDrumGenerator.generate(
+            context(
+                MidiCoreDrumFillPatternId.SOFT_TWO_STROKE.id,
+                energy = 0.9,
+                purpose = MidiCoreSectionPurpose.CHORUS,
+            ),
+        )
+
+        assertTrue(low.accepted && high.accepted)
+        assertTrue(high.candidate.events.size > low.candidate.events.size)
+        assertTrue(low.candidate.events.all { it is MidiCoreCandidateEvent.Note && it.pitch in setOf(36, 38, 42, 46) })
+        assertTrue(high.candidate.events.all { it is MidiCoreCandidateEvent.Note && it.pitch in setOf(36, 38, 42, 46) })
+    }
+
+    @Test
     fun `GM pitches channel energy purpose and profile velocities remain deterministic`() {
         val low = MidiCoreDrumGenerator.generate(context(MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id, energy = 0.0, purpose = MidiCoreSectionPurpose.INTRO))
         val high = MidiCoreDrumGenerator.generate(context(MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id, energy = 1.0, purpose = MidiCoreSectionPurpose.CHORUS))
@@ -207,6 +287,39 @@ class MidiCoreDrumGeneratorTest {
         assertTrue(silent.candidate.events.isEmpty())
         assertTrue(result.accepted)
         assertTrue(241L !in kickStarts)
+    }
+
+    @Test
+    fun `three development fixtures yield two complete deterministic drum alternatives`() {
+        val expectedCandidateHashes = mapOf(
+            "low-energy-intro" to listOf(
+                "7e0b2769a766527110c98db792281a0edbc4473f0e16f03dd308f72e2a47b3d4",
+                "d6098777a62f8066a5269fb6131d2ba7ab303f317c61f8940f08a1a55ed4cc22",
+            ),
+            "chorus-lift-with-bass" to listOf(
+                "740770c87475d431a8aa69da8e195e91d19eb0436b72859086e38682c9b23c29",
+                "669b3db4622ad126531b7294d8079d2ab627bb5f6ed5992336ee69405caab167",
+            ),
+            "bridge-half-time-transition" to listOf(
+                "5d306020a745b043fb2b65dbe28c7d22cfbb7bfed5ca4055a255f0c33d1f9daf",
+                "69e3e0681ce5599bfd12f6df765f5fb3b537ca101703881f8a17f8369c01ac1e",
+            ),
+        )
+        developmentFixtures().forEach { fixture ->
+            val alternatives = MidiCoreDrumGenerator.generateAlternatives(fixture.context, count = 2)
+
+            assertEquals(2, alternatives.size, fixture.name)
+            assertTrue(alternatives.all(MidiCoreDrumGenerationResult::accepted), "$fixture -> ${alternatives.map { it.validation.report.findings }}")
+            assertEquals(2, alternatives.map { it.validation.report.candidateSha256 }.toSet().size, fixture.name)
+            assertEquals(expectedCandidateHashes.getValue(fixture.name), alternatives.map { it.validation.report.candidateSha256 })
+            alternatives.forEach { alternative ->
+                val notes = alternative.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>()
+                assertTrue(notes.isNotEmpty(), fixture.name)
+                assertTrue(notes.all { it.pitch in setOf(36, 38, 42, 46) })
+                assertTrue(notes.all { it.startTick >= alternative.context.occurrence.startTick && it.endTick <= alternative.context.occurrence.endTick })
+                assertTrue(notes.groupBy { it.startTick to it.pitch }.all { (_, values) -> values.size == 1 })
+            }
+        }
     }
 
     private fun semantic(note: MidiCoreCandidateEvent.Note): String =
@@ -272,4 +385,38 @@ class MidiCoreDrumGeneratorTest {
     private object MidiCoreDrumPatternCatalogSize {
         const val LIFT_BUILD_STEPS = 20
     }
+
+    private fun developmentFixtures(): List<DevelopmentFixture> = listOf(
+        DevelopmentFixture(
+            "low-energy-intro",
+            context(MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id, energy = 0.2, purpose = MidiCoreSectionPurpose.INTRO),
+        ),
+        DevelopmentFixture(
+            "chorus-lift-with-bass",
+            context(
+                MidiCoreDrumGroovePatternId.LIFT_BUILD.id,
+                energy = 0.9,
+                purpose = MidiCoreSectionPurpose.CHORUS,
+                project = project(3_840),
+                fillPatternId = MidiCoreDrumFillPatternId.KICK_SNARE_TURNAROUND.id,
+                acceptedDependencies = listOf(
+                    MidiCoreAcceptedDependencyContext(
+                        MidiCoreAcceptedDependency(CandidateRole.BASS, "verse-1", "bass-accepted", "2".repeat(64)),
+                        listOf(MidiCoreGenerationNote(720, 840, 36, 80), MidiCoreGenerationNote(1_200, 1_320, 36, 80)),
+                    ),
+                ),
+            ),
+        ),
+        DevelopmentFixture(
+            "bridge-half-time-transition",
+            context(
+                MidiCoreDrumGroovePatternId.HALF_TIME_POCKET.id,
+                energy = 0.45,
+                purpose = MidiCoreSectionPurpose.BRIDGE,
+                fillPatternId = MidiCoreDrumFillPatternId.BRIDGE_HALF_TIME_BREAK.id,
+            ),
+        ),
+    )
+
+    private data class DevelopmentFixture(val name: String, val context: MidiCoreGenerationContext)
 }

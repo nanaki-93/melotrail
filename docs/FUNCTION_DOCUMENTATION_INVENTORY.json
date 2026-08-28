@@ -637,10 +637,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/core/MidiCoreDrumGenerator.kt",
       "classification": "documented",
-      "reason": "All 13 callable declarations implement MC-024's deterministic complete Drum groove variants, phrase fills, accepted Bass kick intent, energy/purpose velocity shaping, GM mapping, density selection, and scoped validation; reviewed on 2026-08-27.",
-      "functionCount": 13,
-      "declarationDigest": "79cf603e8a91f033fecc7356e8fb4a241d4de62826e916f13b09083ce47683a2",
-      "documentedFunctionCount": 13
+      "reason": "All 17 callable declarations implement MC-043's deterministic complete Drum grooves/fills: density selects whole variants; direct fills select a section-aware companion groove; accepted Bass supplies restrained off-beat kick intent; and GM mapping, profile/section velocity hierarchy, phrase boundaries, and scoped validation remain explicit; reviewed on 2026-08-28.",
+      "functionCount": 17,
+      "declarationDigest": "00f6fd3ac645c6aa3eaf3c0e72a1eaebd32d28be4cad646f95091932358b4e9e",
+      "documentedFunctionCount": 17
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/ArrangementCritic.kt",

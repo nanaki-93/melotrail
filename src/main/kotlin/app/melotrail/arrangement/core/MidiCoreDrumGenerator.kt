@@ -88,7 +88,7 @@ object MidiCoreDrumGenerator {
     /** Resolve a requested groove and choose another whole authored variant only when density requires it. */
     private fun selectedGroove(context: MidiCoreGenerationContext): MidiCoreDrumPattern {
         val requested = MidiCorePatternCatalog.drumGrooves.singleOrNull { it.id == context.patternId }
-            ?: MidiCorePatternCatalog.drumGrooves.first()
+            ?: grooveForDirectFill(context)
         val budget = densityBudget(context)
         val compatible = MidiCorePatternCatalog.drumGrooves.filter { authoredAttackCount(context, it) <= budget }
         if (requested in compatible) return requested
@@ -96,6 +96,19 @@ object MidiCoreDrumGenerator {
             compareBy<MidiCoreDrumPattern> { abs(it.steps.size - requested.steps.size) }
                 .thenBy { it.id },
         ) ?: requested
+    }
+
+    /** Pair a directly selected transition fill with a whole groove that matches explicit section intent. */
+    private fun grooveForDirectFill(context: MidiCoreGenerationContext): MidiCoreDrumPattern {
+        val id = when {
+            context.sectionPolicy.purpose == MidiCoreSectionPurpose.BRIDGE -> MidiCoreDrumGroovePatternId.HALF_TIME_POCKET.id
+            context.sectionPolicy.purpose in setOf(MidiCoreSectionPurpose.CHORUS, MidiCoreSectionPurpose.PRE_CHORUS) &&
+                context.sectionPolicy.energy >= HIGH_ENERGY_THRESHOLD -> MidiCoreDrumGroovePatternId.LIFT_BUILD.id
+            context.sectionPolicy.purpose in setOf(MidiCoreSectionPurpose.INTRO, MidiCoreSectionPurpose.OUTRO) ||
+                context.sectionPolicy.energy <= LOW_ENERGY_THRESHOLD -> MidiCoreDrumGroovePatternId.DUSTY_STRAIGHT.id
+            else -> MidiCoreDrumGroovePatternId.LAZY_SWING.id
+        }
+        return MidiCorePatternCatalog.drumGroove(id)
     }
 
     /** Count complete authored attacks, including the selected phrase fill, without deleting any steps. */
@@ -151,7 +164,7 @@ object MidiCoreDrumGenerator {
         }
     }
 
-    /** Add eligible off-beat attacks from the accepted Bass context while respecting the density budget. */
+    /** Add restrained off-beat kick intent from accepted Bass without rewriting either authored pattern. */
     private fun addAcceptedBassKicks(
         context: MidiCoreGenerationContext,
         attacks: MutableMap<Pair<Long, MidiCoreDrumHit>, DrumAttack>,
@@ -159,23 +172,47 @@ object MidiCoreDrumGenerator {
         val bass = context.dependency(CandidateRole.BASS)?.notes.orEmpty()
         if (bass.isEmpty()) return
         val available = (densityBudget(context) - attacks.size).coerceAtLeast(0)
-        if (available == 0) return
+        val perBarLimit = contextualKickLimitPerBar(context)
+        if (available == 0 || perBarLimit == 0) return
         val grid = context.tickGrid.ticksPerSubdivision
         val beat = context.tickGrid.ticksPerBeat
         val existingKicks = attacks.values.filter { it.hit == MidiCoreDrumHit.KICK }.map { it.startTick }.toSet()
+        val existingSnares = attacks.values.filter { it.hit == MidiCoreDrumHit.SNARE }.map { it.startTick }.toSet()
+        val transitionBar = effectiveFill(context)?.let { barWindows(context).lastOrNull()?.first }
         bass.asSequence()
             .map(MidiCoreGenerationNote::startTick)
             .filter { it in context.occurrence.startTick until context.occurrence.endTick }
             .filter { it % grid == 0L }
             .filter { (it - context.occurrence.startTick) % beat != 0L }
-            .filter { it !in existingKicks }
+            .filter { sixteenthInBar(context, it) in CONTEXTUAL_KICK_SIXTEENTHS }
+            .filter { it !in existingKicks && it !in existingSnares }
+            .filter { transitionBar == null || it < transitionBar }
             .distinct()
             .sorted()
+            .groupBy { barStart(context, it) }
+            .toSortedMap()
+            .values
+            .flatMap { starts -> starts.take(perBarLimit) }
             .take(minOf(available, MAX_CONTEXTUAL_KICKS))
             .forEach { start ->
                 attacks[start to MidiCoreDrumHit.KICK] = DrumAttack(start, MidiCoreDrumHit.KICK, 1, false, true)
             }
     }
+
+    /** Limit dependency-derived kick support so low-energy sections and transitions retain their authored shape. */
+    private fun contextualKickLimitPerBar(context: MidiCoreGenerationContext): Int = when {
+        context.sectionPolicy.purpose in setOf(MidiCoreSectionPurpose.INTRO, MidiCoreSectionPurpose.OUTRO) -> 0
+        context.sectionPolicy.energy <= LOW_ENERGY_THRESHOLD -> 1
+        else -> MAX_CONTEXTUAL_KICKS_PER_BAR
+    }
+
+    /** Return one occurrence-relative bar start without relying on global source bar alignment. */
+    private fun barStart(context: MidiCoreGenerationContext, tick: Long): Long =
+        context.occurrence.startTick + (tick - context.occurrence.startTick) / context.tickGrid.ticksPerBar * context.tickGrid.ticksPerBar
+
+    /** Return the sixteenth position inside an occurrence-relative bar for authored kick placement. */
+    private fun sixteenthInBar(context: MidiCoreGenerationContext, tick: Long): Int =
+        ((tick - barStart(context, tick)) / context.tickGrid.ticksPerSubdivision).toInt()
 
     /** End a hit on the shared grid and never cross its bar or occurrence boundary. */
     private fun noteEnd(context: MidiCoreGenerationContext, attack: DrumAttack): Long {
@@ -244,6 +281,10 @@ object MidiCoreDrumGenerator {
     }
 
     private const val ENERGY_VELOCITY_SPAN = 20.0
+    private const val LOW_ENERGY_THRESHOLD = 0.33
+    private const val HIGH_ENERGY_THRESHOLD = 0.67
     private const val MAX_CONTEXTUAL_KICKS = 4
+    private const val MAX_CONTEXTUAL_KICKS_PER_BAR = 2
+    private val CONTEXTUAL_KICK_SIXTEENTHS = setOf(6, 10)
     private const val SEED_STEP = 7_919L
 }

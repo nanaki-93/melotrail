@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-043 in progress
+Status: MC-044 in progress
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -82,8 +82,8 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-040 | DONE | `midi-core: MC-040 prove desktop workflow` | PASS — real-service fake-audition Compose E2E, six-page visual fixtures, focused desktop suite, `make test`, `make build` | Default target navigation completes create/import/select/authority/arrange/review/reopen/export without old routes; smoke checklist is recorded. |
 | MC-041 | DONE | `midi-core: MC-041 harden chord accompaniment` | PASS — focused Chords/development suite, `make test`, `make build` | Collision-safe common-tone voicings, phrase accents, section lift, complete catalog proof, and three SHA-pinned development fixture alternatives. |
 | MC-042 | DONE | `midi-core: MC-042 harden bass arrangements` | PASS — focused Bass/development suite, `make test`, `make build` | Collision-safe, profile-distinct Bass candidates with SHA-pinned three-fixture alternatives and deterministic section lift. |
-| MC-043 | IN_PROGRESS | | | Drum hardening follows completed MC-042. |
-| MC-044 | TODO | | | |
+| MC-043 | DONE | `midi-core: MC-043 harden drum arrangements` | PASS — focused Drum/development suite, `make test`, `make build` | Complete groove retention, restrained Bass-aware kicks, section-aware direct-fill companions, and SHA-pinned three-fixture alternatives. |
+| MC-044 | IN_PROGRESS | | | Ensemble interaction hardening follows completed MC-043. |
 | MC-045 | TODO | | | |
 | MC-046 | TODO | | | |
 | MC-047 | TODO | | | |
@@ -1069,6 +1069,29 @@ Decisions/deviations: Section lifting changes register preference but never exce
 Known limitations: The development review cannot replace the MC-049 ten-project listening rubric. Drum hardening and ensemble interaction remain explicitly sequenced in MC-043 and MC-044; final MIDI-device and DAW evidence remains MC-045 and MC-048.
 Commit: `midi-core: MC-042 harden bass arrangements`.
 Next task: MC-043 — harden drum grooves, fills, and energy.
+
+### MC-043 — Harden drum grooves, fills, and energy
+
+Status: DONE
+Started: 2026-08-28
+Completed: 2026-08-28
+Starting commit/status: `5bd2e7b` / only the preserved unrelated deleted Kotlin compiler-session marker was present.
+Contracts read: F-ARR-003–F-ARR-007; Quality Gates 3 and 8; MC-043 task contract.
+Current owners inspected: target `MidiCoreDrumGenerator`, complete target groove/fill catalog, Drum golden fixture/tests, context/role validation, and legacy Drum generation/sample mapping owners. Legacy owners remain pre-cutover dependencies scheduled for MC-055; target has no renderer, sample map, or arbitrary hit-decimation policy.
+Behavior retained/extracted: Curated low-energy pocket, medium groove, half-time bridge, and high-energy lift variants remain complete authored MIDI patterns; density can only select a whole compatible groove. An explicitly selected fill now receives a deterministic section-aware complete companion groove instead of the arbitrary first catalog entry. Accepted Bass can add only restrained pickup kicks: two musically selected off-beat slots at most per eligible bar, never in an intro/outro, never on a snare, and never in a final fill bar. This consumes Bass context without changing the accepted Bass candidate. GM pitch/channel policy, profile and section velocity hierarchy, phrase fills, clipping, and deterministic alternatives are retained.
+Files added/changed: `src/main/kotlin/app/melotrail/arrangement/core/MidiCoreDrumGenerator.kt`, `src/test/kotlin/app/melotrail/arrangement/core/MidiCoreDrumGeneratorTest.kt`, `docs/FUNCTION_DOCUMENTATION_INVENTORY.json`, and this execution log.
+Files/data deleted: None. The target catalog already contains no arbitrary hit decimation/addition or renderer/sample-map assumption; legacy audio-era owners remain until MC-055 cutover.
+Tracked deletion recoverability: The unrelated Kotlin compiler session-marker deletion remains recoverable from Git and is deliberately excluded from this task commit.
+Ignored deletion recoverability: None.
+Focused tests: `./gradlew :test --tests app.melotrail.arrangement.core.MidiCoreDrumGeneratorTest --tests app.melotrail.arrangement.core.MidiCoreGenerationContextTest --tests app.melotrail.arrangement.core.MidiCoreRoleValidationTest --rerun-tasks --console=plain` PASS. It covers complete catalog/golden variants, density without decimation, fill boundary clipping, GM pitches/channel, profile/energy hierarchy, direct-fill companions, Bass-aware kick restraint, intro silence from dependency kicks, alternatives, and three development fixtures.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS; `make test` PASS (2026-08-28); `make build` PASS (2026-08-28).
+Manual evidence: The scheduled human pauses are MC-048, MC-049, and MC-060. This task's semantic MIDI review does not claim a human listening pass or replace MC-049.
+Candidate evidence: Drum golden SHA-256 remains `5b6184ab6d86bbe6f7106e4010ea43746838751de55f183ad15d763858baaf8c`; hardened rules add context/fill coverage without changing its no-dependency semantic baseline. Deterministic development alternatives (first, second candidate SHA-256) are: low-energy intro `7e0b2769a766527110c98db792281a0edbc4473f0e16f03dd308f72e2a47b3d4`, `d6098777a62f8066a5269fb6131d2ba7ab303f317c61f8940f08a1a55ed4cc22`; chorus lift with Bass `740770c87475d431a8aa69da8e195e91d19eb0436b72859086e38682c9b23c29`, `669b3db4622ad126531b7294d8079d2ab627bb5f6ed5992336ee69405caab167`; bridge half-time transition `5d306020a745b043fb2b65dbe28c7d22cfbb7bfed5ca4055a255f0c33d1f9daf`, `69e3e0681ce5599bfd12f6df765f5fb3b537ca101703881f8a17f8369c01ac1e`.
+Development rubric notes: Semantic review checks complete groove identity 4/5 (all authored steps retained), energy/velocity hierarchy 4/5 (profile/purpose contrast), transition restraint 4/5 (one explicit final-bar fill and no dependency kick there), Bass coherence 4/5 (only permitted pickup slots with per-bar cap), GM/boundary safety 5/5, and alternatives 4/5 (two accepted distinct digests). These are regression thresholds derived from semantic MIDI evidence, not human holdout listening; no fixture is below 3.
+Decisions/deviations: Direct fill selection was the one catalog path that previously defaulted to the first pattern; it now has explicit purpose/energy selection. Dependency evidence is advisory arrangement context, so it can only add bounded Drum intent and cannot rewrite Bass or a complete selected groove. Human musical acceptance remains deferred to MC-049.
+Known limitations: The semantic review cannot replace MC-049 holdout listening. Ensemble interaction, MIDI-device proof, and final DAW proof remain MC-044, MC-045, and MC-048.
+Commit: `midi-core: MC-043 harden drum arrangements`.
+Next task: MC-044 — harden ensemble interaction without a rewrite stage.
 
 ## 6. Manual gate records
 
