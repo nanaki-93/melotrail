@@ -91,7 +91,8 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-048A | DONE | `midi-core: MC-048A simplify source workflow` | PASS — focused JVM/Compose suites, documentation coverage, `make test`, `make build` | Valid complete-song input is protected atomically at import; ambiguous note tracks/channels are rejected; structure entry is ordered positive whole bars totaling the immutable source end. |
 | MC-049 | AWAITING_HUMAN | | | Awaiting ten user-approved, unseen, license-safe MIDI projects and listener rubric results; obsolete ignored `data/audio/` MIDI is not eligible. |
 | MC-050 | TODO | | | |
-| MC-051 | TODO | | | |
+| MC-051 | TODO | | | Rebuild the six target pages around the MIDI workspace visual system before legacy visual removal. |
+| MC-051A | TODO | | | Delete the legacy desktop UI and reference fixtures only after MC-051 target fixtures pass. |
 | MC-052 | TODO | | | |
 | MC-053 | TODO | | | |
 | MC-054 | TODO | | | |
@@ -1286,6 +1287,7 @@ Next action: Await user-provided holdouts and listener results; do not start MC-
 | --- | --- | --- | --- | --- | --- | --- |
 | MC-050 | | | | | | |
 | MC-051 | | | | | | |
+| MC-051A | | | | | | |
 | MC-052 | | | | | | |
 | MC-053 | | | | | | |
 | MC-054 | | | | | | |

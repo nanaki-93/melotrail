@@ -55,6 +55,15 @@ Settings that are genuinely required for MIDI audition or export may use a
 small dialog. Melotrail does not reproduce a DAW mixer, mastering suite, sound
 browser, video editor, or publishing console.
 
+## Visual direction
+
+The desktop is a focused dark MIDI workstation: a compact project header,
+six-destination navigation, an adaptive work area, and context that explains
+the current musical decision. Section, harmony, candidate, and MIDI-event
+visuals must show real project evidence rather than audio waveforms, video
+art, or simulated mixer controls. The visual system and its acceptance rules
+are defined in [MIDI workspace visual specification](docs/MIDI_WORKSPACE_VISUAL_SPEC.md).
+
 ## DAW relationship
 
 - Logic Pro is a supported Standard MIDI input and output workflow.
@@ -113,6 +122,8 @@ that executable documentation contract.
 - [Cleanup scope](docs/CLEANUP_SCOPE.md) — keep, refactor, and delete decisions
 - [Quality gates](docs/QUALITY_GATES.md) — automated, musical, and DAW
   acceptance gates
+- [MIDI workspace visual specification](docs/MIDI_WORKSPACE_VISUAL_SPEC.md) —
+  focused desktop visual language and visual acceptance rules
 - [Implementation tasks](docs/plan/MIDI_CORE_TASKS.md) — mandatory sequential
   build, cutover, and cleanup work
 - [Agent execution prompt](docs/plan/EXECUTE_MIDI_CORE_TASKS_PROMPT.md) —

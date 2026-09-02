@@ -38,6 +38,15 @@ Capture the Gradle failure and Compose stack trace. The target desktop must not
 require a worker health check, Python process, renderer, SFZ path, or network
 connection.
 
+## Desktop looks incomplete or visually inconsistent
+
+The target UI uses the MIDI workspace visual specification, not the transitional
+audio-era reference screens. Confirm that the active page is one of Project,
+MIDI, Structure & Harmony, Arrange, Review, or Export; its timeline or event
+display must reflect current project evidence. Report the page, window width,
+theme/state, and a screenshot. Do not restore a mixer, waveform, library, video,
+or settings page as a visual workaround.
+
 ## MIDI file is rejected
 
 Confirm:

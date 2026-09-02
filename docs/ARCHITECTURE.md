@@ -187,6 +187,14 @@ Responsibilities:
 - preserve useful keyboard and accessibility behavior; and
 - avoid direct filesystem, generator, or MIDI-device ownership.
 
+The desktop owns a small visual system and reusable presentation primitives,
+not a second domain model. Tokens and components may express responsive shell
+layout, panel hierarchy, state treatment, role identity, MIDI timeline/event
+rendering, and accessibility focus. They consume the same immutable workspace
+state as the pages; they must not invent audio waveforms, video previews,
+instrument libraries, mixer state, or hidden navigation destinations. The
+authoritative visual contract is `docs/MIDI_WORKSPACE_VISUAL_SPEC.md`.
+
 Target destinations:
 
 - Project

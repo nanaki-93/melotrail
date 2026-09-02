@@ -319,6 +319,9 @@ Gate: every criterion in `docs/QUALITY_GATES.md` passes.
 
 - Resolve exact repository-owned old project and generated-artifact locations.
 - Delete old audio projects and obsolete bundled media.
+- First replace the legacy screenshot-measured UI with the six-page MIDI
+  workspace visual system and its target visual regression fixtures. Delete the
+  old UI references only after the new fixtures and focused desktop smoke pass.
 - Delete the Python worker, requirements, environments/contracts, HTTP client,
   and worker tests.
 - Delete audio import/transcription, DSP, renderer, mix/master, sound-library,
@@ -380,8 +383,9 @@ The MIDI Core migration is complete only when:
 
 The mandatory implementation sequence is
 `docs/plan/MIDI_CORE_TASKS.md`. Execute it strictly from `MC-000` through
-`MC-060` using `docs/plan/EXECUTE_MIDI_CORE_TASKS_PROMPT.md`, and record every
-task, commit, validation result, manual gate, deletion, and final sign-off in
+`MC-060`, including `MC-048A` after `MC-048` and `MC-051A` after `MC-051`,
+using `docs/plan/EXECUTE_MIDI_CORE_TASKS_PROMPT.md`, and record every task,
+commit, validation result, manual gate, deletion, and final sign-off in
 `docs/plan/MIDI_CORE_EXECUTION_LOG.md`.
 
 No implementation agent may execute an obsolete task suite, skip a task, hide

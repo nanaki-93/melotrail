@@ -273,6 +273,15 @@ stable text/semantics for keyboard use and UI tests.
 Persisted project state, not ephemeral page state, determines which workflow
 actions are complete after reopening.
 
+### F-UI-006 — Present a focused MIDI workspace visual system
+
+The desktop uses one responsive, accessible visual language across Project,
+MIDI, Structure & Harmony, Arrange, Review, and Export. It presents real
+project evidence—MIDI events, authority timing, candidate state, and export
+validation—with clear hierarchy and never substitutes audio waveforms, video
+art, mixers, libraries, or settings pages. The visual contract is defined in
+`docs/MIDI_WORKSPACE_VISUAL_SPEC.md`.
+
 ## 10. System functions
 
 ### F-SYS-001 — Operate locally

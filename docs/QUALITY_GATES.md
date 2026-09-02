@@ -79,6 +79,12 @@ Before implementation tasks begin:
   selection, approval, regeneration, and export.
 - Restart restores persisted authority and acceptance state.
 - No removed page is reachable through a hidden route or settings entry.
+- The six target pages pass deterministic visual-regression checks at wide and
+  compact desktop widths, plus a blocked/error state where applicable.
+- Screen hierarchy, focus treatment, text contrast, and selected/disabled
+  states remain understandable without colour alone.
+- MIDI visualizations use current project evidence; no waveform, video,
+  mixer, library, or audio-production surrogate appears in the target shell.
 
 ## 5. Audition gates
 

@@ -20,7 +20,9 @@ defined by the root `PLAN.md`.
    gates.
 8. [Cleanup scope](CLEANUP_SCOPE.md) — explicit keep, refactor, delete, and data-disposition
    decisions.
-9. [Troubleshooting](TROUBLESHOOTING.md) — target build, project, MIDI, audition, and export
+9. [MIDI workspace visual specification](MIDI_WORKSPACE_VISUAL_SPEC.md) — focused desktop visual
+   language and visual acceptance rules.
+10. [Troubleshooting](TROUBLESHOOTING.md) — target build, project, MIDI, audition, and export
    recovery guidance.
 
 ## Planning directory
@@ -53,6 +55,11 @@ tests read them directly:
 They are not product authority. Each must be deleted together with the code,
 tests, or build wiring that owns its path. Keeping a transitional contract does
 not authorize a compatibility implementation in the new architecture.
+
+The UI images are a temporary visual-language reference only. The target design
+uses their calm dark workstation hierarchy, not their audio-production pages or
+their product branding. MC-051 replaces them with target MIDI-only visual
+fixtures; MC-051A deletes the old image set only after those fixtures pass.
 
 The current UI still links the transitional [MIDI import process](MIDI_IMPORT_PROCESS.md)
 and workflow guide. Those links will be replaced when the MIDI page and focused
