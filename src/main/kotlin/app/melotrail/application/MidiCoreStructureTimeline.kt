@@ -8,16 +8,13 @@ import app.melotrail.project.MidiCoreAuthorityHasher
 import app.melotrail.project.ProjectSectionDefinition
 import app.melotrail.project.adapter.MidiCoreArtifactStore
 import app.melotrail.project.adapter.MidiCoreProjectSaveException
-import app.melotrail.structure.MidiCoreOccurrencePlacement
+import app.melotrail.structure.MidiCoreBarOccurrencePlacement
 import app.melotrail.structure.MidiCoreOccurrenceTimeline
-import app.melotrail.structure.MidiCoreStructureEditor
 
 data class ReplaceMidiCoreStructure(
     val session: MidiCoreProjectSession,
     val definitions: List<ProjectSectionDefinition>,
-    val occurrences: List<MidiCoreOccurrencePlacement>,
-    val pickupTicks: Long = 0L,
-    val expectedSongEndTick: Long? = null,
+    val occurrences: List<MidiCoreBarOccurrencePlacement>,
 )
 
 sealed interface MidiCoreStructureTimelineResult {
@@ -42,14 +39,18 @@ class MidiCoreStructureTimeline(private val artifacts: MidiCoreArtifactStore = M
         if (current != request.session.project) return rejected(MidiCoreStructureTimelineProblemCode.STALE_PROJECT, "The project changed since this screen was opened.", "Reopen the project before editing structure.")
         val authority = current.authority ?: return rejected(MidiCoreStructureTimelineProblemCode.AUTHORITY_REQUIRED, "Confirm tempo, meter, key, and mode before defining structure.", "Complete musical authority first.")
         val ppq = MidiPpq(requireNotNull(current.sourceMidi).ppq)
-        val expectedEnd = request.expectedSongEndTick ?: requireNotNull(current.sourceMidi).sourceEndTick
+        val expectedEnd = requireNotNull(current.sourceMidi).sourceEndTick
         val timeline = try {
-            MidiCoreOccurrenceTimeline.build(ppq, authority.meter, request.definitions, request.occurrences, request.pickupTicks, expectedEnd)
+            MidiCoreOccurrenceTimeline.buildFromBars(ppq, authority.meter, request.definitions, request.occurrences, expectedEnd)
         } catch (error: IllegalArgumentException) {
-            return rejected(MidiCoreStructureTimelineProblemCode.INVALID_STRUCTURE, error.message ?: "Structure is invalid.", "Use known section definitions and contiguous positive durations.")
+            return rejected(MidiCoreStructureTimelineProblemCode.INVALID_STRUCTURE, error.message ?: "Structure is invalid.", "Use positive whole-bar section lengths whose total exactly matches the source melody.")
         }
         val updatedAuthority = try {
-            MidiCoreStructureEditor(ppq).replace(authority, request.definitions, request.occurrences, request.pickupTicks)
+            authority.copy(
+                sectionDefinitions = request.definitions,
+                occurrences = timeline.occurrences,
+                pickupTicks = 0L,
+            )
         } catch (error: IllegalArgumentException) {
             return rejected(MidiCoreStructureTimelineProblemCode.INVALID_STRUCTURE, error.message ?: "Structure is invalid.", "Review the structure and authoritative harmony before retrying.")
         }

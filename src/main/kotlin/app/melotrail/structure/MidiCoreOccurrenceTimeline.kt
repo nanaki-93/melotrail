@@ -20,6 +20,16 @@ data class MidiCoreOccurrencePlacement(
     init { require(startTick == null || startTick >= 0) { "Occurrence start tick must not be negative" } }
 }
 
+/** Musician-facing placement expressed only in whole bars; exact ticks are derived from project authority. */
+data class MidiCoreBarOccurrencePlacement(
+    val id: String,
+    val definitionId: String,
+    val label: String,
+    val barCount: Int,
+) {
+    init { require(barCount > 0) { "Occurrence bar count must be positive" } }
+}
+
 /** Tick-exact, gap-free occurrence authority for one fixed-PPQ project. */
 class MidiCoreOccurrenceTimeline private constructor(
     val ppq: MidiPpq,
@@ -62,6 +72,34 @@ class MidiCoreOccurrenceTimeline private constructor(
     }
 
     companion object {
+        fun buildFromBars(
+            ppq: MidiPpq,
+            meter: ProjectMeter,
+            definitions: List<ProjectSectionDefinition>,
+            placements: List<MidiCoreBarOccurrencePlacement>,
+            expectedSongEndTick: Long,
+        ): MidiCoreOccurrenceTimeline {
+            val barTicks = ticksPerBar(ppq, meter)
+            require(expectedSongEndTick >= 0) { "Expected song end tick must not be negative" }
+            require(expectedSongEndTick % barTicks == 0L) {
+                "The source ends at tick $expectedSongEndTick, which is not a whole-bar boundary in ${meter.numerator}/${meter.denominator}."
+            }
+            val expectedBars = expectedSongEndTick / barTicks
+            val actualBars = placements.sumOf { it.barCount.toLong() }
+            require(actualBars == expectedBars) {
+                "Structure totals $actualBars bars, but the source melody requires exactly $expectedBars bars."
+            }
+            val tickPlacements = placements.map { placement ->
+                MidiCoreOccurrencePlacement(
+                    placement.id,
+                    placement.definitionId,
+                    placement.label,
+                    Math.multiplyExact(barTicks, placement.barCount.toLong()),
+                )
+            }
+            return build(ppq, meter, definitions, tickPlacements, pickupTicks = 0L, expectedSongEndTick = expectedSongEndTick)
+        }
+
         fun build(
             ppq: MidiPpq,
             meter: ProjectMeter,
@@ -87,6 +125,12 @@ class MidiCoreOccurrenceTimeline private constructor(
                 "Occurrence timeline must cover the intended song range through tick $expectedSongEndTick"
             }
             return timeline
+        }
+
+        fun ticksPerBar(ppq: MidiPpq, meter: ProjectMeter): Long {
+            val numerator = Math.multiplyExact(ppq.value.toLong(), 4L)
+            require(numerator % meter.denominator == 0L) { "Project PPQ cannot represent the confirmed meter exactly" }
+            return Math.multiplyExact(meter.numerator.toLong(), numerator / meter.denominator)
         }
     }
 }

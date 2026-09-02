@@ -45,8 +45,10 @@ leaves the last known-good project readable.
 ### F-MIDI-001 — Import Standard MIDI
 
 The user can import one `.mid` or `.midi` SMF format 0 or 1 file using PPQ
-division. The original bytes, filename, digest, header facts, track summaries,
-and import report are preserved.
+division. It contains the complete song as exactly one note-bearing track on
+one note-bearing channel; additional tracks cannot contain notes. The original
+bytes, filename, digest, header facts, track summaries, and import report are
+preserved.
 
 ### F-MIDI-002 — Inspect tracks
 
@@ -54,11 +56,12 @@ The MIDI page shows track name, index, channels, note count, pitch range,
 duration, controller presence, and likely role hints without claiming that a
 heuristic is authoritative.
 
-### F-MIDI-003 — Select the melody
+### F-MIDI-003 — Protect the melody automatically
 
-The user must select exactly one source track as the protected melody before
-arrangement. Changing the selection is an authority change and invalidates
-affected derived work.
+Import atomically identifies and protects the only note-bearing track/channel.
+Files with zero or multiple note-bearing tracks, or multiple note-bearing
+channels in the melody track, are rejected with an actionable explanation.
+There is no manual selection or in-project source-switching step.
 
 ### F-MIDI-004 — Validate input
 
@@ -86,8 +89,9 @@ suggestion but cannot become authoritative without confirmation.
 ### F-AUTH-003 — Define sections and occurrences
 
 The user creates named section definitions and arranges occurrence instances in
-song order. Each occurrence has an explicit start, length, and stable identity.
-The timeline is contiguous and covers the intended song range.
+song order. Each occurrence has a positive whole-bar length and stable identity.
+The application derives contiguous start/end ticks from confirmed meter and PPQ.
+The section bar total must exactly equal the imported melody length.
 
 ### F-AUTH-004 — Define authoritative harmony
 

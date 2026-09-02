@@ -93,7 +93,8 @@ Responsibilities:
 - pair note-on/note-off events safely;
 - preserve supported meta, controller, pitch, and channel information;
 - expose a canonical, immutable semantic event model;
-- select or extract the protected melody view;
+- verify exactly one note-bearing track/channel and extract its protected view
+  atomically with source import;
 - compare semantic event streams;
 - write deterministic SMF files; and
 - re-import generated output for validation.
@@ -109,11 +110,14 @@ Responsibilities:
 - parse and realize authoritative chord symbols;
 - represent chord duration in beats/ticks, including sub-bar changes;
 - build a gap-free ordered occurrence timeline;
+- accept musician-authored occurrence lengths as whole-bar counts whose total
+  exactly matches the source, then resolve them to canonical ticks;
 - map melody and generated events to occurrences and chord windows; and
 - derive advisory scale/chord compatibility without replacing authority.
 
-Occurrence duration is explicit. It is never inferred independently by several
-services from raw melody length.
+Occurrence duration is explicit in whole bars. Contiguous tick boundaries are
+derived once from PPQ and confirmed meter; the required total comes from the
+immutable source end, never from competing service-specific inference.
 
 ### 4.4 Arrangement engine
 
@@ -253,7 +257,7 @@ Rules:
 
 Derived work binds to an authority hash containing at least:
 
-- source MIDI digest and selected melody identity;
+- source MIDI digest and protected melody identity;
 - tempo and meter;
 - key and mode;
 - occurrence order and exact boundaries;

@@ -52,7 +52,7 @@ class MidiImportValidatorTest {
     }
 
     @Test
-    fun `blocks malformed timing and unsafe selected melody pairing but keeps reference pairing advisory`() {
+    fun `blocks malformed timing and unsafe note pairing on every source track`() {
         val malformed = inspection(
             tracks = listOf(melodyTrack(), SemanticMidiTrack(1, emptyList())),
             summaries = listOf(MidiTrackSummary(0, "Melody", listOf(MidiChannelSummary(0, 1, 60, 60, 0, emptyList()))), MidiTrackSummary(1, "Reference", emptyList())),
@@ -66,22 +66,19 @@ class MidiImportValidatorTest {
 
         assertEquals(MidiImportDisposition.REJECTED, result.disposition)
         assertEquals(MidiFindingSeverity.BLOCKING, result.findings.single { it.code == MidiFindingCode.INVALID_NOTE_TIMING }.severity)
-        assertEquals(MidiFindingSeverity.ADVISORY, result.findings.single { it.code == MidiFindingCode.UNSAFE_SELECTED_MELODY_PAIRING }.severity)
+        assertEquals(MidiFindingSeverity.BLOCKING, result.findings.single { it.code == MidiFindingCode.UNSAFE_SELECTED_MELODY_PAIRING }.severity)
     }
 
     @Test
-    fun `requires a melody selection and blocks unclosed notes only in the selected track`() {
+    fun `infers the sole melody channel and blocks its unclosed notes`() {
         val input = inspection(
             tracks = listOf(melodyTrack(), SemanticMidiTrack(1, emptyList())),
             summaries = listOf(MidiTrackSummary(0, "Melody", listOf(MidiChannelSummary(0, 1, 60, 60, 0, emptyList()))), MidiTrackSummary(1, "Broken", emptyList())),
             issues = listOf(MidiReaderIssue(MidiReaderIssueCode.UNCLOSED_NOTE_ON, 0, 1, 12, "Melody note is unclosed")),
         )
 
-        val awaiting = validator.validate(input)
-        val rejected = validator.validate(input, MidiValidationContext(MidiMelodySelection(0, 0)))
+        val rejected = validator.validate(input)
 
-        assertEquals(MidiImportDisposition.AWAITING_AUTHORITY, awaiting.disposition)
-        assertEquals(MidiFindingSeverity.ADVISORY, awaiting.findings.single { it.code == MidiFindingCode.UNSAFE_SELECTED_MELODY_PAIRING }.severity)
         assertEquals(MidiImportDisposition.REJECTED, rejected.disposition)
         assertEquals(MidiFindingSeverity.BLOCKING, rejected.findings.single { it.code == MidiFindingCode.UNSAFE_SELECTED_MELODY_PAIRING }.severity)
     }

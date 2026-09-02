@@ -9,7 +9,7 @@ import app.melotrail.project.ProjectKey
 import app.melotrail.project.ProjectSectionDefinition
 import app.melotrail.project.adapter.AtomicWriteObserver
 import app.melotrail.project.adapter.MidiCoreArtifactStore
-import app.melotrail.structure.MidiCoreOccurrencePlacement
+import app.melotrail.structure.MidiCoreBarOccurrencePlacement
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -39,25 +39,23 @@ class MidiCoreStructureTimelineTest {
                     session,
                     listOf(ProjectSectionDefinition("verse", "Verse"), ProjectSectionDefinition("chorus", "Chorus")),
                     listOf(
-                        MidiCoreOccurrencePlacement("verse-1", "verse", "Verse   one", 240),
-                        MidiCoreOccurrencePlacement("chorus-1", "chorus", "Chorus", 240),
-                        MidiCoreOccurrencePlacement("verse-2", "verse", "Verse repeat", 480, 480),
+                        MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse   one", 1),
+                        MidiCoreBarOccurrencePlacement("chorus-1", "chorus", "Chorus", 1),
+                        MidiCoreBarOccurrencePlacement("verse-2", "verse", "Verse repeat", 1),
                     ),
-                    pickupTicks = 120,
-                    expectedSongEndTick = 960,
                 ),
             ),
         )
 
         val authority = requireNotNull(result.session.project.authority)
-        assertEquals(listOf(0L to 240L, 240L to 480L, 480L to 960L), authority.occurrences.map { it.startTick to it.endTick })
-        assertEquals(120L, authority.pickupTicks)
+        assertEquals(listOf(0L to 1920L, 1920L to 3840L, 3840L to 5760L), authority.occurrences.map { it.startTick to it.endTick })
+        assertEquals(0L, authority.pickupTicks)
         assertEquals(listOf("1:Verse one", "2:Chorus", "3:Verse repeat"), result.markerLabels)
         assertEquals(result.session.project, store.openProject(result.session.root))
 
         val persisted = Json.parseToJsonElement(Files.readString(result.session.root.resolve(MidiCoreArtifactStore.PROJECT_FILE))).jsonObject
             .getValue("project").jsonObject.getValue("authority").jsonObject
-        assertEquals("120", persisted.getValue("pickupTicks").jsonPrimitive.content)
+        assertEquals("0", persisted.getValue("pickupTicks").jsonPrimitive.content)
     }
 
     @Test
@@ -71,7 +69,7 @@ class MidiCoreStructureTimelineTest {
                 ReplaceMidiCoreStructure(
                     session,
                     listOf(ProjectSectionDefinition("verse", "Verse")),
-                    listOf(MidiCoreOccurrencePlacement("verse-1", "verse", "Verse", 479)),
+                    listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", 2)),
                 ),
             ),
         )
@@ -89,13 +87,13 @@ class MidiCoreStructureTimelineTest {
                 ReplaceMidiCoreStructure(
                     session,
                     listOf(ProjectSectionDefinition("verse", "Verse")),
-                    listOf(MidiCoreOccurrencePlacement("verse-1", "verse", "Verse", 480)),
+                    listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", 3)),
                 ),
             ),
         ).session
         val withHarmony = structured.project.copy(
             authority = requireNotNull(structured.project.authority).copy(
-                chordEvents = listOf(app.melotrail.project.AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 480)),
+                chordEvents = listOf(app.melotrail.project.AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 5760)),
             ),
         )
         store.saveProject(session.root, withHarmony)
@@ -106,7 +104,7 @@ class MidiCoreStructureTimelineTest {
                 ReplaceMidiCoreStructure(
                     current,
                     withHarmony.authority!!.sectionDefinitions,
-                    listOf(MidiCoreOccurrencePlacement("verse-1", "verse", "Renamed", 480)),
+                    listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Renamed", 3)),
                 ),
             ),
         )
@@ -131,7 +129,7 @@ class MidiCoreStructureTimelineTest {
             ReplaceMidiCoreStructure(
                 session,
                 listOf(ProjectSectionDefinition("verse", "Verse")),
-                listOf(MidiCoreOccurrencePlacement("verse-1", "verse", "Verse", 480)),
+                listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", 3)),
             ),
         )
 
@@ -145,17 +143,14 @@ class MidiCoreStructureTimelineTest {
             lifecycle(store).create(CreateMidiCoreProject(root.resolve("project-${store.hashCode()}"), "Structure Test", "project-1")),
         ).session
         val source = OwnedMidiFixtures.writeAll(root.resolve("fixtures-${store.hashCode()}"))
-            .single { it.fileName.toString() == "smf0-melody.mid" }
+            .single { it.fileName.toString() == "whole-song-three-bars.mid" }
         val imported = assertIs<MidiCoreSourceImportResult.Imported>(
             MidiCoreSourceImport(store).import(ImportMidiCoreSource(created, source)),
-        ).session
-        val selected = assertIs<MidiCoreMelodySelectionResult.Selected>(
-            MidiCoreMelodySelection(store).select(SelectMidiCoreMelody(imported, 0, 0)),
         ).session
         return assertIs<MidiCoreAuthorityResult.Confirmed>(
             MidiCoreMusicalAuthority(store).confirm(
                 ConfirmMidiCoreAuthority(
-                    selected,
+                    imported,
                     ProjectKey(ProjectKeySpelling.C, ProjectScaleMode.MAJOR),
                     ProjectTempo(500_000),
                     ProjectMeter(4, 2),

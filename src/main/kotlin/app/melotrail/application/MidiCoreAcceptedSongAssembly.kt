@@ -100,14 +100,14 @@ class MidiCoreAcceptedSongAssembly(
             return rejected(
                 MidiCoreSongAssemblyProblemCode.MELODY_IDENTITY_MISMATCH,
                 "The protected melody cannot be re-derived from the preserved source.",
-                "Restore the source artifact or reselect a safely pairable melody track and channel.",
+                "Restore the original source artifact or create a new project and import one valid single-track melody source.",
             )
         }
         if (protectedMelody.identitySha256 != selectedMelody.identitySha256 || protectedMelody.sourceSha256 != source.sha256) {
             return rejected(
                 MidiCoreSongAssemblyProblemCode.MELODY_IDENTITY_MISMATCH,
-                "The selected melody identity no longer matches the preserved source.",
-                "Restore the source or select the protected melody again before reviewing the song.",
+                "The protected melody identity no longer matches the preserved source.",
+                "Restore the original source artifact or create a new project and import it again.",
             )
         }
 
@@ -118,7 +118,7 @@ class MidiCoreAcceptedSongAssembly(
             return rejected(
                 MidiCoreSongAssemblyProblemCode.MELODY_OVERFLOW,
                 "Protected melody evidence extends beyond the authoritative song boundary.",
-                "Extend the structure authority or select a source melody contained by the song timeline.",
+                "Correct the source so its declared end contains every melody event, then import it into a new project.",
             )
         }
 

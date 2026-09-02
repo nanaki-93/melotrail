@@ -23,9 +23,9 @@ guided-arranger plans are superseded; Git history is their archive.
 
 ```text
 Create project
-  -> Import one Standard MIDI file
-  -> Select and protect one melody track
-  -> Confirm key, tempo, meter, structure, and harmony
+  -> Import one complete-song, single-melody-track MIDI file
+  -> Protect that melody automatically
+  -> Confirm key, tempo, meter, bar-count structure, and harmony
   -> Audition the source through MIDI playback
   -> Generate and compare chord, bass, and drum candidates
   -> Accept or regenerate by section and role
@@ -33,9 +33,12 @@ Create project
   -> Export a Logic Pro MIDI package
 ```
 
-The MVP accepts one SMF format 0 or 1 file, uses a fixed tempo and time
-signature, and supports one selected melody track. Multiple source files,
-tempo maps, meter changes, audio import, and transcription are outside V1.
+The MVP accepts one SMF format 0 or 1 file with exactly one note-bearing track
+and one note-bearing channel. Additional non-note conductor/reference tracks
+are allowed. The melody is protected automatically, structure is entered in
+whole bars, and the section total must match the source length. Multiple source
+files, tempo maps, meter changes, audio import, and transcription are outside
+V1.
 
 ## Desktop UI
 

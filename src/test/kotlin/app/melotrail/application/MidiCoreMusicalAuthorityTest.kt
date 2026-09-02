@@ -33,7 +33,7 @@ class MidiCoreMusicalAuthorityTest {
 
     @Test
     fun `explicit fixed authority persists imported timing suggestions and reopens unchanged`() {
-        val (store, selection) = selected(fixture("smf1-reference-tracks.mid"), trackIndex = 1)
+        val (store, selection) = imported(fixture("whole-song-one-bar.mid"))
         val key = ProjectKey(ProjectKeySpelling.D_FLAT, ProjectScaleMode.NATURAL_MINOR)
 
         val result = assertIs<MidiCoreAuthorityResult.Confirmed>(
@@ -52,7 +52,7 @@ class MidiCoreMusicalAuthorityTest {
 
     @Test
     fun `missing source timing is resolved only by explicit user confirmation`() {
-        val (store, selection) = selected(writeSource(root.resolve("input/no-timing.mid"), pitch = 60, timing = false))
+        val (store, selection) = imported(writeSource(root.resolve("input/no-timing.mid"), pitch = 60, timing = false))
 
         val result = assertIs<MidiCoreAuthorityResult.Confirmed>(
             MidiCoreMusicalAuthority(store).confirm(
@@ -75,7 +75,7 @@ class MidiCoreMusicalAuthorityTest {
     @Test
     fun `chromatic melody remains advisory after project key confirmation without source mutation`() {
         val source = writeSource(root.resolve("input/chromatic.mid"), pitch = 61, timing = true)
-        val (store, selection) = selected(source)
+        val (store, selection) = imported(source)
         val before = Files.readAllBytes(selection.root.resolve(MidiCoreArtifactStore.SOURCE_MIDI.value))
 
         val result = assertIs<MidiCoreAuthorityResult.Confirmed>(
@@ -125,7 +125,7 @@ class MidiCoreMusicalAuthorityTest {
         assertFailsWith<IllegalArgumentException> { ProjectKey(0, "dorian", ProjectKeySpelling.C) }
     }
 
-    private fun selected(source: Path, trackIndex: Int = 0): Pair<MidiCoreArtifactStore, MidiCoreProjectSession> {
+    private fun imported(source: Path): Pair<MidiCoreArtifactStore, MidiCoreProjectSession> {
         val store = MidiCoreArtifactStore()
         val created = assertIs<MidiCoreProjectLifecycleResult.Opened>(
             lifecycle(store).create(CreateMidiCoreProject(root.resolve("project-${source.fileName}"), "Authority Test", "project-1")),
@@ -133,10 +133,7 @@ class MidiCoreMusicalAuthorityTest {
         val imported = assertIs<MidiCoreSourceImportResult.Imported>(
             MidiCoreSourceImport(store).import(ImportMidiCoreSource(created, source)),
         ).session
-        val selected = assertIs<MidiCoreMelodySelectionResult.Selected>(
-            MidiCoreMelodySelection(store).select(SelectMidiCoreMelody(imported, trackIndex, 0)),
-        )
-        return store to selected.session
+        return store to imported
     }
 
     private fun fixture(filename: String): Path =

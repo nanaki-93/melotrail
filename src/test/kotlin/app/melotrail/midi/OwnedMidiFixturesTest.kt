@@ -15,8 +15,8 @@ class OwnedMidiFixturesTest {
 
     @Test
     fun `owned fixtures have stable bytes hashes headers and declared intent`() {
-        assertEquals(10, OwnedMidiFixtures.all.size)
-        assertEquals(10, OwnedMidiFixtures.all.map { it.fileName }.toSet().size)
+        assertEquals(13, OwnedMidiFixtures.all.size)
+        assertEquals(13, OwnedMidiFixtures.all.map { it.fileName }.toSet().size)
 
         assertEquals(
             OwnedMidiFixtures.all.associate { it.fileName to it.sha256 },

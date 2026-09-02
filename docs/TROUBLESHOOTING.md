@@ -46,7 +46,7 @@ Confirm:
 - file is SMF format 0 or 1;
 - timing uses PPQ rather than SMPTE;
 - tempo and meter do not change;
-- the selected melody can be resolved to one note channel; and
+- exactly one track contains notes and those notes use one MIDI channel; and
 - the import report identifies a blocking condition rather than an advisory.
 
 Do not repair or overwrite the source manually inside the project. Preserve the
@@ -54,17 +54,18 @@ original and, if necessary, export a simplified MIDI selection from Logic Pro.
 
 ## No melody track is available
 
-Inspect track note counts, channel use, pitch ranges, and names. Format-0 MIDI
-may expose one combined track; choose the supported melody channel if the import
-UI offers that resolution. Multi-channel expressive melody is outside V1 and
-must be simplified in the source DAW.
+Inspect track note counts, channel use, pitch ranges, and names. Export the
+complete song from Logic Pro with exactly one note-bearing track/channel;
+meta-only conductor tracks are allowed. Melotrail protects that melody
+automatically. Multi-track or multi-channel melody is outside V1 and must be
+simplified in the source DAW.
 
 ## Structure or harmony blocks generation
 
 Check that:
 
-- occurrences are ordered and cover the song without gaps/overlaps;
-- every occurrence has an explicit length;
+- occurrences are ordered and each has a positive whole-bar length;
+- section bar counts total the imported melody length exactly;
 - chord events cover the intended window;
 - every chord symbol parses and can be realized; and
 - the melody lies inside the intended occurrence range.

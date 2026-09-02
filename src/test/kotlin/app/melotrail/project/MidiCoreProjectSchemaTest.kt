@@ -70,17 +70,21 @@ class MidiCoreProjectSchemaTest {
     }
 
     @Test
-    fun `source import may await explicit melody selection`() {
+    fun `source import and protected melody identity are atomic`() {
         val complete = completeProject()
         val imported = MidiCoreProject(
             id = complete.id,
             metadata = complete.metadata,
             sourceMidi = complete.sourceMidi,
+            selectedMelody = complete.selectedMelody,
         )
 
         assertEquals(imported, MidiCoreProjectSchema.decode(MidiCoreProjectSchema.encode(imported)))
         assertFailsWith<IllegalArgumentException> {
-            imported.copy(candidates = complete.candidates)
+            imported.copy(selectedMelody = null)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            MidiCoreProject(id = complete.id, metadata = complete.metadata, selectedMelody = complete.selectedMelody)
         }
     }
 

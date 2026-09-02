@@ -47,10 +47,12 @@ compatibility finding; tick/bar misalignment is a blocker.
 
 ### Input to Melotrail
 
-1. In Logic Pro, prepare the MIDI regions that should become one source file.
-2. Export the selection as a Standard MIDI file.
+1. In Logic Pro, prepare the complete song as exactly one note-bearing melody
+   track on one MIDI channel. A separate conductor track may contain metadata.
+2. Export it as one Standard MIDI file.
 3. Import that file into Melotrail.
-4. Select the intended melody track and confirm project authority.
+4. Confirm project authority and enter the ordered section lengths in bars;
+   Melotrail protects the only melody track automatically.
 
 The user is responsible for applying Logic region parameters when they expect
 those non-event parameters to be baked into the exported MIDI.
@@ -76,11 +78,11 @@ track assembly, or export:
 
 ### Fixtures
 
-- SMF 0 melody with velocities and rests.
-- SMF 1 melody plus reference tracks.
-- pickup note before the first full bar.
-- sub-bar chord changes.
-- sustained melody with CC64/pitch data covered by the selected policy.
+- SMF 0 one-bar melody with a note ending at the song boundary.
+- SMF 1 melody plus a meta-only conductor track.
+- one-, two-, and three-bar complete-song melody inputs.
+- sub-bar authoritative chord changes over a whole-bar structure.
+- sustained melody with CC64/pitch data covered by the protected policy.
 - complete arrangement with fills and notes ending at the song boundary.
 
 ### Checks in Logic Pro

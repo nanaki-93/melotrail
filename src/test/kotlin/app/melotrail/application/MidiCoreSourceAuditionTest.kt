@@ -10,7 +10,7 @@ import app.melotrail.music.core.ProjectTempo
 import app.melotrail.project.ProjectKey
 import app.melotrail.project.ProjectSectionDefinition
 import app.melotrail.project.adapter.MidiCoreArtifactStore
-import app.melotrail.structure.MidiCoreOccurrencePlacement
+import app.melotrail.structure.MidiCoreBarOccurrencePlacement
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Clock
@@ -26,40 +26,29 @@ class MidiCoreSourceAuditionTest {
     @TempDir lateinit var root: Path
 
     @Test
-    fun `prepares selected immutable source melody as one MIDI audition role`() {
+    fun `prepares automatically protected immutable source melody as one MIDI audition role`() {
         val store = MidiCoreArtifactStore()
-        val imported = imported(store, "smf0-melody.mid")
-        val selected = assertIs<MidiCoreMelodySelectionResult.Selected>(
-            MidiCoreMelodySelection(store).select(SelectMidiCoreMelody(imported, 0, 0)),
-        )
+        val imported = imported(store, "whole-song-one-bar.mid")
 
         val result = assertIs<MidiCoreSourceAuditionResult.Ready>(
-            MidiCoreSourceAudition(store).prepare(PrepareMidiCoreSourceAudition(selected.session)),
+            MidiCoreSourceAudition(store).prepare(PrepareMidiCoreSourceAudition(imported)),
         )
 
         assertEquals(MidiAuditionScope.SourceMelody, result.plan.view.scope)
         assertEquals(listOf(MidiExportRole.MELODY), result.plan.view.roles)
-        assertEquals(selected.session.project.sourceMidi?.sourceEndTick, result.plan.view.song.songEndTick)
+        assertEquals(imported.project.sourceMidi?.sourceEndTick, result.plan.view.song.songEndTick)
         assertTrue(result.plan.view.song.role(MidiExportRole.MELODY).events.isNotEmpty())
     }
 
     @Test
-    fun `source audition requires selection and rejects a changed preserved artifact`() {
+    fun `source audition rejects a changed preserved artifact`() {
         val store = MidiCoreArtifactStore()
-        val imported = imported(store, "smf0-melody.mid")
-        val missingSelection = assertIs<MidiCoreSourceAuditionResult.Rejected>(
-            MidiCoreSourceAudition(store).prepare(PrepareMidiCoreSourceAudition(imported)),
-        )
-        assertEquals(MidiCoreSourceAuditionProblemCode.MELODY_REQUIRED, missingSelection.problem.code)
-
-        val selected = assertIs<MidiCoreMelodySelectionResult.Selected>(
-            MidiCoreMelodySelection(store).select(SelectMidiCoreMelody(imported, 0, 0)),
-        )
-        val sourcePath = selected.session.root.resolve(MidiCoreArtifactStore.SOURCE_MIDI.value)
+        val imported = imported(store, "whole-song-one-bar.mid")
+        val sourcePath = imported.root.resolve(MidiCoreArtifactStore.SOURCE_MIDI.value)
         Files.write(sourcePath, Files.readAllBytes(sourcePath) + byteArrayOf(0x01))
 
         val changed = assertIs<MidiCoreSourceAuditionResult.Rejected>(
-            MidiCoreSourceAudition(store).prepare(PrepareMidiCoreSourceAudition(selected.session)),
+            MidiCoreSourceAudition(store).prepare(PrepareMidiCoreSourceAudition(imported)),
         )
         assertEquals(MidiCoreSourceAuditionProblemCode.INVALID_PROJECT, changed.problem.code)
     }
@@ -67,14 +56,11 @@ class MidiCoreSourceAuditionTest {
     @Test
     fun `prepares one exact saved occurrence window without rewriting melody ticks`() {
         val store = MidiCoreArtifactStore()
-        val imported = imported(store, "smf0-melody.mid")
-        val selected = assertIs<MidiCoreMelodySelectionResult.Selected>(
-            MidiCoreMelodySelection(store).select(SelectMidiCoreMelody(imported, 0, 0)),
-        ).session
+        val imported = imported(store, "whole-song-one-bar.mid")
         val confirmed = assertIs<MidiCoreAuthorityResult.Confirmed>(
             MidiCoreMusicalAuthority(store).confirm(
                 ConfirmMidiCoreAuthority(
-                    selected,
+                    imported,
                     ProjectKey(ProjectKeySpelling.C, ProjectScaleMode.MAJOR),
                     ProjectTempo(500_000),
                     ProjectMeter(4, 2),
@@ -87,8 +73,7 @@ class MidiCoreSourceAuditionTest {
                 ReplaceMidiCoreStructure(
                     confirmed,
                     listOf(ProjectSectionDefinition("verse", "Verse")),
-                    listOf(MidiCoreOccurrencePlacement("verse-1", "verse", "Verse", sourceEnd)),
-                    expectedSongEndTick = sourceEnd,
+                    listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", 1)),
                 ),
             ),
         ).session

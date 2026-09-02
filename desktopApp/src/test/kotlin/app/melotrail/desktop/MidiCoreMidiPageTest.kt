@@ -28,11 +28,12 @@ import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalTestApi::class)
 class MidiCoreMidiPageTest {
     @Test
-    fun `MIDI page imports one source and protects exactly one inspected channel`() = runComposeUiTest {
+    fun `MIDI page imports one source and shows the automatically protected channel`() = runComposeUiTest {
         val intents = mutableListOf<MidiCoreWorkspaceIntent>()
         val source = Path.of("build/midi-page-source.mid")
         setContent {
@@ -61,9 +62,8 @@ class MidiCoreMidiPageTest {
             }
         }
         onNodeWithText("Format 0 · PPQ 480").assertExists()
-        onNodeWithTag(MidiCoreMidiPageTags.channel(1, 0) + "-select").performScrollTo().assertIsEnabled().performClick()
-        waitForIdle()
-        assertEquals(MidiCoreWorkspaceIntent.SelectMelody(1, 0), intents.single())
+        onNodeWithText("Protected automatically").performScrollTo().assertExists()
+        assertTrue(intents.isEmpty())
     }
 
     @Test
@@ -168,10 +168,10 @@ class MidiCoreMidiPageTest {
     private fun importedState(
         format: Int,
         findings: List<MidiFinding> = emptyList(),
-        selected: SelectedMelodyTrack? = null,
+        selected: SelectedMelodyTrack = SelectedMelodyTrack(1, 0, "b".repeat(64)),
         audition: MidiAuditionState = MidiAuditionState(),
     ) = MidiCoreWorkspaceState(
-        project = projectWithSource(format),
+        project = projectWithSource(format, selected),
         projectRoot = Path.of("build/midi-page-project"),
         source = MidiCoreSourceUiState(
             status = MidiCoreSourceStatus.IMPORTED,
@@ -194,16 +194,10 @@ class MidiCoreMidiPageTest {
         ),
         melody = MidiCoreMelodyUiState(selected),
         audition = audition,
-        blockers = if (selected == null) listOf(
-            MidiCoreWorkspaceBlocker(
-                MidiCoreWorkspaceBlockerCode.MELODY_REQUIRED,
-                "The protected source melody has not been selected.",
-                "Choose one source track and channel.",
-            ),
-        ) else emptyList(),
+        blockers = emptyList(),
     )
 
-    private fun projectWithSource(format: Int): MidiCoreProject = MidiCoreProject(
+    private fun projectWithSource(format: Int, selected: SelectedMelodyTrack): MidiCoreProject = MidiCoreProject(
         id = ProjectId("midi-page-project"),
         metadata = ProjectMetadata("MIDI page project", "2026-08-28T00:00:00Z"),
         sourceMidi = app.melotrail.project.SourceMidiRecord(
@@ -216,6 +210,7 @@ class MidiCoreMidiPageTest {
             listOf(MidiTrackSummary(0, "Conductor", emptyList(), 0), MidiTrackSummary(1, "Lead", emptyList(), 960)),
             960,
         ),
+        selectedMelody = selected,
         revision = 2L,
     )
 

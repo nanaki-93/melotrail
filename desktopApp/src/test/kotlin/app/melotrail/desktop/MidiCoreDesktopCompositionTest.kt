@@ -4,7 +4,6 @@ import app.melotrail.application.MidiCoreAcceptedSongAssembly
 import app.melotrail.application.MidiCoreAuthoritativeHarmony
 import app.melotrail.application.MidiCoreCandidateGeneration
 import app.melotrail.application.MidiCoreCandidateReview
-import app.melotrail.application.MidiCoreMelodySelection
 import app.melotrail.application.MidiCoreMidiPackageExporter
 import app.melotrail.application.MidiCoreMusicalAuthority
 import app.melotrail.application.MidiCoreProjectLifecycle
@@ -31,7 +30,6 @@ class MidiCoreDesktopCompositionTest {
 
         assertIs<MidiCoreProjectLifecycle>(services.project)
         assertIs<MidiCoreSourceImport>(services.sourceImport)
-        assertIs<MidiCoreMelodySelection>(services.melodySelection)
         assertIs<MidiCoreMusicalAuthority>(services.authority)
         assertIs<MidiCoreStructureTimeline>(services.structure)
         assertIs<MidiCoreAuthoritativeHarmony>(services.harmony)

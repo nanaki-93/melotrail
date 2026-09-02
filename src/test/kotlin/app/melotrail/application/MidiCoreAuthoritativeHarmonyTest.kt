@@ -8,7 +8,7 @@ import app.melotrail.project.MidiCoreAuthorityHasher
 import app.melotrail.project.MidiCoreCandidate
 import app.melotrail.project.ProjectSectionDefinition
 import app.melotrail.project.adapter.MidiCoreArtifactStore
-import app.melotrail.structure.MidiCoreOccurrencePlacement
+import app.melotrail.structure.MidiCoreBarOccurrencePlacement
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Clock
@@ -33,8 +33,8 @@ class MidiCoreAuthoritativeHarmonyTest {
                 ReplaceMidiCoreHarmony(
                     session,
                     listOf(
-                        AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 240),
-                        AuthoritativeChordEvent("chord-2", "verse-1", "Dbmaj9/F", 240, 480),
+                        AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 960),
+                        AuthoritativeChordEvent("chord-2", "verse-1", "Dbmaj9/F", 960, 1920),
                     ),
                 ),
             ),
@@ -55,7 +55,7 @@ class MidiCoreAuthoritativeHarmonyTest {
             MidiCoreAuthoritativeHarmony(store).replace(
                 ReplaceMidiCoreHarmony(
                     session,
-                    listOf(AuthoritativeChordEvent("bad", "verse-1", "C", 0, 239)),
+                    listOf(AuthoritativeChordEvent("bad", "verse-1", "C", 0, 1919)),
                 ),
             ),
         )
@@ -74,7 +74,7 @@ class MidiCoreAuthoritativeHarmonyTest {
             MidiCoreAuthoritativeHarmony(failingStore).replace(
                 ReplaceMidiCoreHarmony(
                     session,
-                    listOf(AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 480)),
+                    listOf(AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 1920)),
                 ),
             ),
         )
@@ -112,7 +112,7 @@ class MidiCoreAuthoritativeHarmonyTest {
             MidiCoreAuthoritativeHarmony(store).replace(
                 ReplaceMidiCoreHarmony(
                     current,
-                    listOf(AuthoritativeChordEvent("chord-1", "verse-1", "Db", 0, 480)),
+                    listOf(AuthoritativeChordEvent("chord-1", "verse-1", "Db", 0, 1920)),
                 ),
             ),
         )
@@ -127,17 +127,14 @@ class MidiCoreAuthoritativeHarmonyTest {
             lifecycle(store).create(CreateMidiCoreProject(root.resolve("project-${store.hashCode()}"), "Harmony Test", "project-1")),
         ).session
         val source = OwnedMidiFixtures.writeAll(root.resolve("fixtures-${store.hashCode()}"))
-            .single { it.fileName.toString() == "smf0-melody.mid" }
+            .single { it.fileName.toString() == "whole-song-one-bar.mid" }
         val imported = assertIs<MidiCoreSourceImportResult.Imported>(
             MidiCoreSourceImport(store).import(ImportMidiCoreSource(created, source)),
-        ).session
-        val selected = assertIs<MidiCoreMelodySelectionResult.Selected>(
-            MidiCoreMelodySelection(store).select(SelectMidiCoreMelody(imported, 0, 0)),
         ).session
         val authority = assertIs<MidiCoreAuthorityResult.Confirmed>(
             MidiCoreMusicalAuthority(store).confirm(
                 ConfirmMidiCoreAuthority(
-                    selected,
+                    imported,
                     app.melotrail.project.ProjectKey(app.melotrail.music.core.ProjectKeySpelling.C, app.melotrail.music.core.ProjectScaleMode.MAJOR),
                     app.melotrail.music.core.ProjectTempo(500_000),
                     app.melotrail.music.core.ProjectMeter(4, 2),
@@ -149,7 +146,7 @@ class MidiCoreAuthoritativeHarmonyTest {
                 ReplaceMidiCoreStructure(
                     authority,
                     listOf(ProjectSectionDefinition("verse", "Verse")),
-                    listOf(MidiCoreOccurrencePlacement("verse-1", "verse", "Verse", 480)),
+                    listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", 1)),
                 ),
             ),
         ).session

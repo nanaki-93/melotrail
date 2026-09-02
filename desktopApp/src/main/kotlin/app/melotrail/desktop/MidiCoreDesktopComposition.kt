@@ -12,7 +12,6 @@ import app.melotrail.application.MidiCoreAuthoritativeHarmony
 import app.melotrail.application.MidiCoreCandidateGeneration
 import app.melotrail.application.MidiCoreCandidateLifecycle
 import app.melotrail.application.MidiCoreCandidateReview
-import app.melotrail.application.MidiCoreMelodySelection
 import app.melotrail.application.MidiCoreMidiPackageExporter
 import app.melotrail.application.MidiCoreMusicalAuthority
 import app.melotrail.application.MidiCoreProjectLifecycle
@@ -38,7 +37,6 @@ import kotlin.coroutines.resumeWithException
 data class MidiCoreDesktopServices(
     val project: MidiCoreProjectLifecycle,
     val sourceImport: MidiCoreSourceImport,
-    val melodySelection: MidiCoreMelodySelection,
     val authority: MidiCoreMusicalAuthority,
     val structure: MidiCoreStructureTimeline,
     val harmony: MidiCoreAuthoritativeHarmony,
@@ -65,7 +63,6 @@ object MidiCoreDesktopComposition {
         val project = MidiCoreProjectLifecycle(artifacts)
         val sourceImport = MidiCoreSourceImport(artifacts)
         val sourceAudition = MidiCoreSourceAudition(artifacts)
-        val melodySelection = MidiCoreMelodySelection(artifacts)
         val authority = MidiCoreMusicalAuthority(artifacts)
         val structure = MidiCoreStructureTimeline(artifacts)
         val harmony = MidiCoreAuthoritativeHarmony(artifacts)
@@ -83,7 +80,6 @@ object MidiCoreDesktopComposition {
         val workspace = DefaultMidiCoreWorkspaceUseCases(
             project = project,
             sourceImport = sourceImport,
-            melodySelection = melodySelection,
             authority = authority,
             structure = structure,
             harmony = harmony,
@@ -96,7 +92,6 @@ object MidiCoreDesktopComposition {
         return MidiCoreDesktopServices(
             project = project,
             sourceImport = sourceImport,
-            melodySelection = melodySelection,
             authority = authority,
             structure = structure,
             harmony = harmony,

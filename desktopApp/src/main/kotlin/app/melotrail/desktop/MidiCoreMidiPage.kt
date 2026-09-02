@@ -23,7 +23,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -72,7 +71,7 @@ internal object MidiCoreMidiPageTags {
     fun channel(trackIndex: Int, channel: Int) = "$CHANNEL_PREFIX$trackIndex-$channel"
 }
 
-/** MIDI source import, protected-melody selection, evidence, and MIDI transport page. */
+/** MIDI source import, automatically protected melody evidence, and MIDI transport page. */
 @Composable
 internal fun MidiCoreMidiPage(
     state: MidiCoreWorkspaceState,
@@ -103,7 +102,7 @@ internal fun MidiCoreMidiPage(
             )
             state.source.takeIf { it.status == MidiCoreSourceStatus.IMPORTED }?.let { source ->
                 MidiSourceFacts(source)
-                MidiTrackTable(state, onIntent)
+                MidiTrackTable(state)
                 MidiSelectionCard(state)
                 MidiFindingsCard(source.findings)
                 MidiSourceTransport(state, onIntent)
@@ -121,7 +120,7 @@ private fun MidiImportCard(state: MidiCoreWorkspaceState, onChooseSource: () -> 
             if (state.source.status == MidiCoreSourceStatus.IMPORTED) {
                 "One immutable Standard MIDI source is bound to this project."
             } else {
-                "Choose one .mid or .midi Standard MIDI file. The original bytes are preserved before project binding."
+                "Choose one .mid or .midi file containing the complete song as one note-bearing melody track. Additional tracks cannot contain notes."
             },
             style = MaterialTheme.typography.bodyLarge,
         )
@@ -153,21 +152,21 @@ private fun MidiSourceFacts(source: MidiCoreSourceUiState) {
 }
 
 @Composable
-private fun MidiTrackTable(state: MidiCoreWorkspaceState, onIntent: (MidiCoreWorkspaceIntent) -> Unit) {
+private fun MidiTrackTable(state: MidiCoreWorkspaceState) {
     MidiCard(MidiCoreMidiPageTags.TRACK_TABLE, "Tracks and channels") {
         Text(
-            "Imported facts are evidence only; likely roles are suggestions and never become authority automatically.",
+            "The only note-bearing track is protected automatically. Additional non-note tracks remain immutable source evidence.",
             style = MaterialTheme.typography.bodyMedium,
             color = MusicWorkspaceTokens.TextSecondary,
         )
         state.source.trackSummaries.forEach { track ->
-            MidiTrackRow(track, state, onIntent)
+            MidiTrackRow(track, state)
         }
     }
 }
 
 @Composable
-private fun MidiTrackRow(track: MidiTrackSummary, state: MidiCoreWorkspaceState, onIntent: (MidiCoreWorkspaceIntent) -> Unit) {
+private fun MidiTrackRow(track: MidiTrackSummary, state: MidiCoreWorkspaceState) {
     Card(
         Modifier.fillMaxWidth().semantics {
             testTag = MidiCoreMidiPageTags.track(track.trackIndex)
@@ -186,7 +185,7 @@ private fun MidiTrackRow(track: MidiTrackSummary, state: MidiCoreWorkspaceState,
             } else {
                 track.channels.forEach { channel ->
                     val selected = state.melody.selected?.let { it.trackIndex == track.trackIndex && it.channel == channel.channel } == true
-                    MidiChannelRow(track, channel.channel, channel.noteCount, channel.minimumPitch, channel.maximumPitch, channel.controllerCount, channel.likelyRoles, selected, onIntent)
+                    MidiChannelRow(track, channel.channel, channel.noteCount, channel.minimumPitch, channel.maximumPitch, channel.controllerCount, channel.likelyRoles, selected)
                 }
             }
         }
@@ -203,7 +202,6 @@ private fun MidiChannelRow(
     controllerCount: Int,
     likelyRoles: List<MidiTrackRoleHint>,
     selected: Boolean,
-    onIntent: (MidiCoreWorkspaceIntent) -> Unit,
 ) {
     val range = if (minimumPitch != null && maximumPitch != null) "$minimumPitch–$maximumPitch" else "none"
     val roles = likelyRoles.joinToString(", ") { it.name.lowercase().replaceFirstChar(Char::uppercaseChar) }.ifBlank { "none" }
@@ -224,16 +222,9 @@ private fun MidiChannelRow(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        OutlinedButton(
-            onClick = { onIntent(MidiCoreWorkspaceIntent.SelectMelody(track.trackIndex, channel)) },
-            enabled = !selected && noteCount > 0,
-            modifier = Modifier.widthIn(min = 140.dp).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget)
-                .semantics {
-                    testTag = "${MidiCoreMidiPageTags.channel(track.trackIndex, channel)}-select"
-                    this.selected = selected
-                    contentDescription = if (selected) "Protected melody: track ${track.trackIndex}, channel ${channel + 1}" else "Protect track ${track.trackIndex}, channel ${channel + 1} as melody"
-                },
-        ) { Text(if (selected) "Protected melody" else "Protect melody") }
+        if (selected) {
+            Text("Protected automatically", style = MaterialTheme.typography.labelLarge, color = MusicWorkspaceTokens.Success)
+        }
     }
 }
 
@@ -242,12 +233,12 @@ private fun MidiSelectionCard(state: MidiCoreWorkspaceState) {
     MidiCard(MidiCoreMidiPageTags.SELECTION, "Protected melody") {
         val selected = state.melody.selected
         Text(
-            selected?.let { "Track ${it.trackIndex}, channel ${it.channel + 1} is the protected melody." }
-                ?: "Select exactly one source track and channel before arranging.",
+            selected?.let { "Track ${it.trackIndex}, channel ${it.channel + 1} was protected automatically during import." }
+                ?: "Import one valid single-track melody source.",
             style = MaterialTheme.typography.bodyLarge,
         )
         Text(
-            "The selected melody is immutable source evidence. Changing it is explicit and invalidates affected derived work.",
+            "The protected melody is immutable source evidence. Import a new project to use a different melody.",
             style = MaterialTheme.typography.bodySmall,
             color = MusicWorkspaceTokens.TextSecondary,
         )
@@ -367,7 +358,7 @@ private fun MidiExplanationCards() {
         Text("MIDI Core accepts Standard MIDI File format 0 or 1 with PPQ timing.", style = MaterialTheme.typography.bodyMedium)
         Text("Tempo and time-signature maps are reported as blocking findings; they are never flattened silently.", style = MaterialTheme.typography.bodySmall)
         Text("Unsupported messages remain visible in the import report and are omitted from generated-role output.", style = MaterialTheme.typography.bodySmall)
-        Text("MPE-like multi-channel expression is not a supported protected-melody map; choose one safely pairable channel.", style = MaterialTheme.typography.bodySmall)
+        Text("Files with multiple note-bearing tracks or multiple note-bearing channels are rejected.", style = MaterialTheme.typography.bodySmall)
     }
     MidiCard(MidiCoreMidiPageTags.IMMUTABILITY, "Source identity") {
         Text("The imported filename, bytes, SHA-256, import report, and selected melody identity are preserved. Importing never overwrites an existing source.", style = MaterialTheme.typography.bodyMedium)

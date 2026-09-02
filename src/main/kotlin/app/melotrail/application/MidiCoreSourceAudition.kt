@@ -70,14 +70,14 @@ class MidiCoreSourceAudition(
             return rejected(
                 MidiCoreSourceAuditionProblemCode.MELODY_IDENTITY_MISMATCH,
                 "The protected melody cannot be re-derived from the preserved source.",
-                "Restore the source or select the melody again.",
+                "Restore the original source artifact or create a new project and import it again.",
             )
         }
         if (protectedMelody.identitySha256 != selectedMelody.identitySha256 || protectedMelody.sourceSha256 != source.sha256) {
             return rejected(
                 MidiCoreSourceAuditionProblemCode.MELODY_IDENTITY_MISMATCH,
-                "The selected melody identity no longer matches the preserved source.",
-                "Restore the source or select the protected melody again.",
+                "The protected melody identity no longer matches the preserved source.",
+                "Restore the original source artifact or create a new project and import it again.",
             )
         }
         if (source.sourceEndTick <= 0L) {
@@ -110,7 +110,7 @@ class MidiCoreSourceAudition(
             return rejected(
                 MidiCoreSourceAuditionProblemCode.SOURCE_NOT_PLAYABLE,
                 error.message ?: "The protected melody cannot be opened for MIDI audition.",
-                "Select a valid protected melody and retry.",
+                "Create a new project and import one valid single-track melody source.",
             )
         }
         return MidiCoreSourceAuditionResult.Ready(

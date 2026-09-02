@@ -8,7 +8,8 @@ approved documentation/planning baseline is present.
 You are the implementation agent for the Melotrail MIDI Core migration.
 
 Your objective is to execute every mandatory task in
-`docs/plan/MIDI_CORE_TASKS.md`, strictly from MC-000 through MC-060, and leave a
+`docs/plan/MIDI_CORE_TASKS.md`, strictly from MC-000 through MC-060 including
+MC-048A between MC-048 and MC-049, and leave a
 tested, focused Kotlin/Compose Desktop MIDI arranger with no legacy Python or
 audio-production product remaining.
 
@@ -35,7 +36,8 @@ recovered from Git history.
 
 ## Mandatory scope
 
-- Execute MC-000 through MC-060 in numeric order.
+- Execute MC-000 through MC-060 in numeric order, with MC-048A immediately
+  after MC-048.
 - Implement only the deterministic MVP and its required cleanup.
 - Preserve Compose Desktop as the product UI.
 - Preserve source MIDI and accepted candidate immutability.
@@ -46,8 +48,9 @@ recovered from Git history.
   and transitional docs in their assigned tasks.
 
 Do not implement pad, Qwen, melody connection, variable tempo/meter, multiple
-source files, DAW automation, advanced MIDI editing, or enhanced preview
-instruments. They require a later user-approved plan.
+source files, multiple note-bearing source tracks/channels, manual melody
+selection, tick-based structure entry, DAW automation, advanced MIDI editing,
+or enhanced preview instruments. They require a later user-approved plan.
 
 ## Preflight
 
@@ -133,7 +136,7 @@ The only expected human pauses are:
 
 - MC-009: early Logic Pro import spike;
 - MC-048: final DAW compatibility matrix;
-- MC-049: holdout musical listening rubric; and
+- MC-049: single-melody-source holdout musical listening rubric; and
 - MC-060: final product sign-off.
 
 At a manual gate:
@@ -175,7 +178,7 @@ the phase gate complete or call the product production-ready.
 
 ## Completion
 
-Do not declare completion until MC-060 is `DONE` and all of the following are
+Do not declare completion until MC-048A and MC-060 are `DONE` and all of the following are
 true:
 
 - all mandatory functional IDs are implemented;

@@ -50,7 +50,7 @@ import app.melotrail.project.ProjectSectionOccurrence
 import app.melotrail.structure.MidiCoreHarmonyFinding
 import app.melotrail.structure.MidiCoreHarmonyFindingSeverity
 import app.melotrail.structure.MidiCoreHarmonyValidator
-import app.melotrail.structure.MidiCoreOccurrencePlacement
+import app.melotrail.structure.MidiCoreBarOccurrencePlacement
 import app.melotrail.structure.MidiCoreOccurrenceTimeline
 
 /** Stable semantic anchors for the target Structure & Harmony authoring page. */
@@ -71,11 +71,9 @@ internal object MidiCoreStructureHarmonyPageTags {
     const val ADD_DEFINITION = "midi-core-structure-add-definition"
     const val OCCURRENCE_PREFIX = "midi-core-structure-occurrence-"
     const val OCCURRENCE_DEFINITION_PREFIX = "midi-core-structure-occurrence-definition-"
-    const val OCCURRENCE_START_PREFIX = "midi-core-structure-occurrence-start-"
-    const val OCCURRENCE_DURATION_PREFIX = "midi-core-structure-occurrence-duration-"
+    const val OCCURRENCE_BARS_PREFIX = "midi-core-structure-occurrence-bars-"
     const val ADD_OCCURRENCE = "midi-core-structure-add-occurrence"
     const val SAVE_STRUCTURE = "midi-core-structure-save"
-    const val PICKUP = "midi-core-structure-pickup"
     const val STRUCTURE_FINDINGS = "midi-core-structure-findings"
     const val HARMONY = "midi-core-harmony"
     const val CHORD_PREFIX = "midi-core-harmony-chord-"
@@ -101,8 +99,7 @@ internal object MidiCoreStructureHarmonyPageTags {
     fun definitionName(index: Int) = DEFINITION_NAME_PREFIX + index
     fun occurrence(index: Int) = OCCURRENCE_PREFIX + index
     fun occurrenceDefinition(index: Int) = OCCURRENCE_DEFINITION_PREFIX + index
-    fun occurrenceStart(index: Int) = OCCURRENCE_START_PREFIX + index
-    fun occurrenceDuration(index: Int) = OCCURRENCE_DURATION_PREFIX + index
+    fun occurrenceBars(index: Int) = OCCURRENCE_BARS_PREFIX + index
     fun chord(index: Int) = CHORD_PREFIX + index
     fun chordSymbol(index: Int) = CHORD_SYMBOL_PREFIX + index
     fun chordStart(index: Int) = CHORD_START_PREFIX + index
@@ -117,8 +114,7 @@ private data class OccurrenceDraft(
     val id: String,
     val definitionId: String,
     val label: String,
-    val startTickText: String,
-    val durationTicksText: String,
+    val barCountText: String,
 )
 
 private data class ChordDraft(
@@ -131,8 +127,7 @@ private data class ChordDraft(
 
 private data class ParsedStructure(
     val definitions: List<ProjectSectionDefinition>,
-    val placements: List<MidiCoreOccurrencePlacement>,
-    val pickupTicks: Long,
+    val placements: List<MidiCoreBarOccurrencePlacement>,
     val occurrences: List<ProjectSectionOccurrence>,
 )
 
@@ -147,6 +142,9 @@ internal fun MidiCoreStructureHarmonyPage(
 ) {
     val project = state.project
     val persistedAuthority = state.authority.confirmed ?: project?.authority
+    val meter = state.authority.draft.meter
+    val ppq = state.source.ppq ?: project?.sourceMidi?.ppq
+    val expectedSongEndTick = state.source.sourceEndTick ?: project?.sourceMidi?.sourceEndTick
     var tempoText by remember(state.projectRevision) {
         mutableStateOf(state.authority.draft.tempo.microsecondsPerQuarter.toString())
     }
@@ -165,13 +163,9 @@ internal fun MidiCoreStructureHarmonyPage(
                 occurrence.id,
                 occurrence.definitionId,
                 occurrence.label,
-                occurrence.startTick.toString(),
-                (occurrence.endTick - occurrence.startTick).toString(),
+                occurrenceBarCount(occurrence, ppq, persistedAuthority?.meter ?: meter)?.toString().orEmpty(),
             )
         })
-    }
-    var pickupText by remember(state.projectRevision) {
-        mutableStateOf((persistedAuthority?.pickupTicks ?: 0L).toString())
     }
     var chords by remember(state.projectRevision) {
         mutableStateOf(persistedAuthority?.chordEvents.orEmpty().map { event ->
@@ -185,22 +179,18 @@ internal fun MidiCoreStructureHarmonyPage(
         })
     }
 
-    val meter = state.authority.draft.meter
-    val ppq = state.source.ppq ?: project?.sourceMidi?.ppq
-    val expectedSongEndTick = state.source.sourceEndTick ?: project?.sourceMidi?.sourceEndTick
-    val parsedStructure = parseStructure(definitions, occurrences, pickupText, ppq, meter, expectedSongEndTick)
+    val parsedStructure = parseStructure(definitions, occurrences, ppq, meter, expectedSongEndTick)
     val structureDirty = parsedStructure?.let { parsed ->
         persistedAuthority == null ||
             parsed.definitions != persistedAuthority.sectionDefinitions ||
-            parsed.occurrences != persistedAuthority.occurrences ||
-            parsed.pickupTicks != persistedAuthority.pickupTicks
+            parsed.occurrences != persistedAuthority.occurrences || persistedAuthority.pickupTicks != 0L
     } ?: true
     val parsedHarmony = parseHarmony(chords)
     val harmonyAuthority = parsedStructure?.let { parsed ->
         persistedAuthority?.copy(
             sectionDefinitions = parsed.definitions,
             occurrences = parsed.occurrences,
-            pickupTicks = parsed.pickupTicks,
+            pickupTicks = 0L,
             chordEvents = emptyList(),
         )
     } ?: persistedAuthority
@@ -275,14 +265,12 @@ internal fun MidiCoreStructureHarmonyPage(
                 state = state,
                 definitions = definitions,
                 occurrences = occurrences,
-                pickupText = pickupText,
                 ppq = ppq,
                 meter = meter,
                 expectedSongEndTick = expectedSongEndTick,
-                structureError = structureError(definitions, occurrences, pickupText, ppq, meter, expectedSongEndTick),
+                structureError = structureError(definitions, occurrences, ppq, meter, expectedSongEndTick),
                 onDefinitionChanged = { index, value -> definitions = definitions.updated(index, value) },
                 onOccurrenceChanged = { index, value -> occurrences = occurrences.updated(index, value) },
-                onPickupChanged = { value -> pickupText = value },
                 onAddDefinition = {
                     val id = nextSafeId("section", definitions.map(DefinitionDraft::id).toSet())
                     definitions = definitions + DefinitionDraft(id, "Section ${definitions.size + 1}")
@@ -290,22 +278,19 @@ internal fun MidiCoreStructureHarmonyPage(
                 onAddOccurrence = {
                     val definition = definitions.firstOrNull()
                     if (definition != null) {
-                        val duration = defaultOccurrenceDuration(occurrences, expectedSongEndTick, ppq, meter)
-                        val start = occurrences.sumOf { it.durationTicksText.toLongOrNull()?.coerceAtLeast(0L) ?: 0L }
+                        val bars = defaultOccurrenceBars(occurrences, expectedSongEndTick, ppq, meter)
                         val id = nextSafeId("occurrence", occurrences.map(OccurrenceDraft::id).toSet())
-                        occurrences = occurrences + OccurrenceDraft(id, definition.id, definition.name, start.toString(), duration.toString())
+                        occurrences = occurrences + OccurrenceDraft(id, definition.id, definition.name, bars.toString())
                     }
                 },
                 onMoveOccurrence = { index, delta -> occurrences = occurrences.reorderedOccurrence(index, delta) },
                 onRemoveOccurrence = { index -> occurrences = occurrences.filterIndexed { current, _ -> current != index } },
                 onSave = {
-                    parseStructure(definitions, occurrences, pickupText, ppq, meter, expectedSongEndTick)?.let { parsed ->
+                    parseStructure(definitions, occurrences, ppq, meter, expectedSongEndTick)?.let { parsed ->
                         onIntent(
                             MidiCoreWorkspaceIntent.ReplaceStructure(
                                 parsed.definitions,
                                 parsed.placements,
-                                parsed.pickupTicks,
-                                expectedSongEndTick,
                             ),
                         )
                     }
@@ -450,14 +435,12 @@ private fun StructureCard(
     state: MidiCoreWorkspaceState,
     definitions: List<DefinitionDraft>,
     occurrences: List<OccurrenceDraft>,
-    pickupText: String,
     ppq: Int?,
     meter: ProjectMeter,
     expectedSongEndTick: Long?,
     structureError: String?,
     onDefinitionChanged: (Int, DefinitionDraft) -> Unit,
     onOccurrenceChanged: (Int, OccurrenceDraft) -> Unit,
-    onPickupChanged: (String) -> Unit,
     onAddDefinition: () -> Unit,
     onAddOccurrence: () -> Unit,
     onMoveOccurrence: (Int, Int) -> Unit,
@@ -466,16 +449,7 @@ private fun StructureCard(
     enabled: Boolean,
 ) {
     MidiCoreStructureHarmonyCard(MidiCoreStructureHarmonyPageTags.STRUCTURE, "Section structure") {
-        Text("Define reusable section names, then place every occurrence in one explicit contiguous order. Durations are project ticks.", style = MaterialTheme.typography.bodyMedium)
-        OutlinedTextField(
-            value = pickupText,
-            onValueChange = onPickupChanged,
-            modifier = Modifier.fillMaxWidth().semantics { testTag = MidiCoreStructureHarmonyPageTags.PICKUP },
-            label = { Text("Pickup ticks") },
-            supportingText = { Text("Optional leading pickup; it must be shorter than one bar.") },
-            singleLine = true,
-            enabled = !state.busy,
-        )
+        Text("Define the song in ordered sections and enter each length in whole bars. The total must exactly match the imported melody.", style = MaterialTheme.typography.bodyMedium)
         Text("Section definitions", style = MaterialTheme.typography.titleMedium)
         definitions.forEachIndexed { index, definition ->
             Card(
@@ -541,7 +515,9 @@ private fun StructureCard(
             )
         }
         Text(
-            expectedSongEndTick?.let { "Intended source range ends at tick $it." } ?: "Import a source MIDI to show the intended song range.",
+            sourceBarCount(expectedSongEndTick, ppq, meter)?.let { "Imported melody length: $it bars." }
+                ?: expectedSongEndTick?.let { "The source ends at tick $it, which is not a whole bar in the confirmed meter." }
+                ?: "Import a source MIDI to show the required bar total.",
             style = MaterialTheme.typography.bodySmall,
             color = MusicWorkspaceTokens.TextSecondary,
         )
@@ -576,9 +552,13 @@ private fun OccurrenceRow(
     onMoveLater: () -> Unit,
     onRemove: () -> Unit,
 ) {
-    val start = occurrence.startTickText.toLongOrNull()
-    val duration = occurrence.durationTicksText.toLongOrNull()
-    val end = if (start != null && duration != null && start >= 0 && duration > 0) start + duration else null
+    val bars = occurrence.barCountText.toIntOrNull()
+    val barTicks = if (ppq != null) runCatching { MidiCoreOccurrenceTimeline.ticksPerBar(MidiPpq(ppq), meter) }.getOrNull() else null
+    val durationTicks = if (bars != null && bars > 0 && barTicks != null) {
+        runCatching { Math.multiplyExact(bars.toLong(), barTicks) }.getOrNull()
+    } else {
+        null
+    }
     Card(
         Modifier.fillMaxWidth().semantics {
             testTag = MidiCoreStructureHarmonyPageTags.occurrence(index)
@@ -617,29 +597,20 @@ private fun OccurrenceRow(
                 singleLine = true,
                 enabled = !state.busy,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-                OutlinedTextField(
-                    value = occurrence.startTickText,
-                    onValueChange = { onChanged(occurrence.copy(startTickText = it)) },
-                    modifier = Modifier.weight(1f).semantics { testTag = MidiCoreStructureHarmonyPageTags.occurrenceStart(index) },
-                    label = { Text("Start tick") },
-                    singleLine = true,
-                    enabled = !state.busy,
-                )
-                OutlinedTextField(
-                    value = occurrence.durationTicksText,
-                    onValueChange = { onChanged(occurrence.copy(durationTicksText = it)) },
-                    modifier = Modifier.weight(1f).semantics { testTag = MidiCoreStructureHarmonyPageTags.occurrenceDuration(index) },
-                    label = { Text("Duration ticks") },
-                    singleLine = true,
-                    enabled = !state.busy,
-                )
-            }
+            OutlinedTextField(
+                value = occurrence.barCountText,
+                onValueChange = { onChanged(occurrence.copy(barCountText = it)) },
+                modifier = Modifier.fillMaxWidth().semantics { testTag = MidiCoreStructureHarmonyPageTags.occurrenceBars(index) },
+                label = { Text("Length in bars") },
+                supportingText = { Text("Positive whole bars, for example 8 or 12.") },
+                singleLine = true,
+                enabled = !state.busy,
+            )
             Text(
-                if (start != null && end != null && ppq != null) {
-                    "Exact range: ${formatPosition(start, ppq, meter)} → ${formatPosition(end, ppq, meter)} · $start–$end ticks"
+                if (durationTicks != null) {
+                    "$bars bars · $durationTicks ticks"
                 } else {
-                    "Enter a non-negative start and positive duration for exact bar/beat/tick feedback."
+                    "Enter a positive whole number of bars."
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MusicWorkspaceTokens.TextSecondary,
@@ -937,7 +908,6 @@ private fun MidiCoreStructureHarmonyCard(tag: String, title: String, content: @C
 private fun parseStructure(
     definitions: List<DefinitionDraft>,
     occurrences: List<OccurrenceDraft>,
-    pickupText: String,
     ppq: Int?,
     meter: ProjectMeter,
     expectedSongEndTick: Long?,
@@ -945,20 +915,17 @@ private fun parseStructure(
     val parsed = runCatching {
         require(definitions.isNotEmpty()) { "Add at least one section definition." }
         val projectDefinitions = definitions.map { ProjectSectionDefinition(it.id.trim(), it.name.trim()) }
-        val pickup = pickupText.toLongOrNull() ?: error("Pickup ticks must be a non-negative integer.")
-        require(pickup >= 0) { "Pickup ticks must not be negative." }
         val placements = occurrences.map { occurrence ->
-            val start = occurrence.startTickText.toLongOrNull() ?: error("Occurrence ${occurrence.id} start tick is not an integer.")
-            val duration = occurrence.durationTicksText.toLongOrNull() ?: error("Occurrence ${occurrence.id} duration is not an integer.")
-            MidiCoreOccurrencePlacement(occurrence.id.trim(), occurrence.definitionId.trim(), occurrence.label.trim(), duration, start)
+            val bars = occurrence.barCountText.toIntOrNull() ?: error("Occurrence ${occurrence.id} bar count is not a whole number.")
+            MidiCoreBarOccurrencePlacement(occurrence.id.trim(), occurrence.definitionId.trim(), occurrence.label.trim(), bars)
         }
         require(placements.isNotEmpty()) { "Add at least one section occurrence." }
         val resolved = if (ppq == null) {
             error("Import a source MIDI before validating the exact project timeline.")
         } else {
-            MidiCoreOccurrenceTimeline.build(MidiPpq(ppq), meter, projectDefinitions, placements, pickup, expectedSongEndTick)
+            MidiCoreOccurrenceTimeline.buildFromBars(MidiPpq(ppq), meter, projectDefinitions, placements, requireNotNull(expectedSongEndTick))
         }
-        ParsedStructure(projectDefinitions, placements, pickup, resolved.occurrences)
+        ParsedStructure(projectDefinitions, placements, resolved.occurrences)
     }.getOrNull()
     return parsed
 }
@@ -966,7 +933,6 @@ private fun parseStructure(
 private fun structureError(
     definitions: List<DefinitionDraft>,
     occurrences: List<OccurrenceDraft>,
-    pickupText: String,
     ppq: Int?,
     meter: ProjectMeter,
     expectedSongEndTick: Long?,
@@ -974,16 +940,14 @@ private fun structureError(
     val result = runCatching {
         require(definitions.isNotEmpty()) { "Add at least one section definition." }
         val projectDefinitions = definitions.map { ProjectSectionDefinition(it.id.trim(), it.name.trim()) }
-        val pickup = pickupText.toLongOrNull() ?: error("Pickup ticks must be a non-negative integer.")
-        require(pickup >= 0) { "Pickup ticks must not be negative." }
         val placements = occurrences.map { occurrence ->
-            val start = occurrence.startTickText.toLongOrNull() ?: error("Occurrence ${occurrence.id} start tick is not an integer.")
-            val duration = occurrence.durationTicksText.toLongOrNull() ?: error("Occurrence ${occurrence.id} duration is not an integer.")
-            MidiCoreOccurrencePlacement(occurrence.id.trim(), occurrence.definitionId.trim(), occurrence.label.trim(), duration, start)
+            val bars = occurrence.barCountText.toIntOrNull() ?: error("Occurrence ${occurrence.id} bar count is not a whole number.")
+            MidiCoreBarOccurrencePlacement(occurrence.id.trim(), occurrence.definitionId.trim(), occurrence.label.trim(), bars)
         }
         require(placements.isNotEmpty()) { "Add at least one section occurrence." }
         requireNotNull(ppq) { "Import a source MIDI before validating the exact project timeline." }
-        MidiCoreOccurrenceTimeline.build(MidiPpq(ppq), meter, projectDefinitions, placements, pickup, expectedSongEndTick)
+        requireNotNull(expectedSongEndTick) { "Import a source MIDI before validating the exact project timeline." }
+        MidiCoreOccurrenceTimeline.buildFromBars(MidiPpq(ppq), meter, projectDefinitions, placements, expectedSongEndTick)
     }
     return result.exceptionOrNull()?.message
 }
@@ -1011,7 +975,7 @@ private fun buildPreviewAuthority(
             meter = draft.meter,
             sectionDefinitions = parsedStructure?.definitions ?: authority.sectionDefinitions,
             occurrences = parsedStructure?.occurrences ?: authority.occurrences,
-            pickupTicks = parsedStructure?.pickupTicks ?: authority.pickupTicks,
+            pickupTicks = if (parsedStructure != null) 0L else authority.pickupTicks,
             chordEvents = when {
                 harmonyValid && parsedHarmony != null -> parsedHarmony.events
                 parsedStructure != null && parsedHarmony != null -> emptyList()
@@ -1063,17 +1027,29 @@ private fun nextSafeId(prefix: String, used: Set<String>): String {
     return candidate
 }
 
-private fun defaultOccurrenceDuration(
+private fun defaultOccurrenceBars(
     occurrences: List<OccurrenceDraft>,
     expectedSongEndTick: Long?,
     ppq: Int?,
     meter: ProjectMeter,
-): Long {
-    val currentEnd = occurrences.sumOf { it.durationTicksText.toLongOrNull()?.coerceAtLeast(0L) ?: 0L }
-    val remaining = expectedSongEndTick?.minus(currentEnd)
-    if (remaining != null && remaining > 0L) return remaining
-    val ticksPerQuarter = ppq?.toLong() ?: 480L
-    return meter.numerator.toLong() * ticksPerQuarter * 4L / meter.denominator
+): Int {
+    val currentBars = occurrences.sumOf { it.barCountText.toIntOrNull()?.coerceAtLeast(0) ?: 0 }
+    val requiredBars = sourceBarCount(expectedSongEndTick, ppq, meter)
+    return requiredBars?.minus(currentBars)?.takeIf { it > 0 } ?: 1
+}
+
+private fun sourceBarCount(expectedSongEndTick: Long?, ppq: Int?, meter: ProjectMeter): Int? {
+    if (expectedSongEndTick == null || ppq == null) return null
+    val barTicks = runCatching { MidiCoreOccurrenceTimeline.ticksPerBar(MidiPpq(ppq), meter) }.getOrNull() ?: return null
+    if (expectedSongEndTick % barTicks != 0L) return null
+    return (expectedSongEndTick / barTicks).takeIf { it in 0..Int.MAX_VALUE }?.toInt()
+}
+
+private fun occurrenceBarCount(occurrence: ProjectSectionOccurrence, ppq: Int?, meter: ProjectMeter): Int? {
+    val ticks = occurrence.endTick - occurrence.startTick
+    val barTicks = ppq?.let { runCatching { MidiCoreOccurrenceTimeline.ticksPerBar(MidiPpq(it), meter) }.getOrNull() } ?: return null
+    if (ticks % barTicks != 0L) return null
+    return (ticks / barTicks).takeIf { it in 1..Int.MAX_VALUE }?.toInt()
 }
 
 private fun formatPosition(tick: Long, ppq: Int, meter: ProjectMeter): String {
@@ -1105,11 +1081,5 @@ private fun <T> List<T>.updated(index: Int, value: T): List<T> = mapIndexed { cu
 private fun List<OccurrenceDraft>.reorderedOccurrence(index: Int, delta: Int): List<OccurrenceDraft> {
     val destination = index + delta
     if (index !in indices || destination !in indices) return this
-    val moved = toMutableList().also { it.add(destination, it.removeAt(index)) }
-    var cursor = 0L
-    return moved.map { occurrence ->
-        val next = occurrence.copy(startTickText = cursor.toString())
-        cursor += occurrence.durationTicksText.toLongOrNull()?.coerceAtLeast(0L) ?: 0L
-        next
-    }
+    return toMutableList().also { it.add(destination, it.removeAt(index)) }
 }

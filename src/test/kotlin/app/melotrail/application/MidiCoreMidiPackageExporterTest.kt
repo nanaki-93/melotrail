@@ -130,7 +130,7 @@ class MidiCoreMidiPackageExporterTest {
             MidiCoreAuthoritativeHarmony(store).replace(
                 ReplaceMidiCoreHarmony(
                     accepted,
-                    listOf(AuthoritativeChordEvent("chord-1", "verse-1", "Db", 0, 480)),
+                    listOf(AuthoritativeChordEvent("chord-1", "verse-1", "Db", 0, 1920)),
                 ),
             ),
         ).session
@@ -235,12 +235,10 @@ class MidiCoreMidiPackageExporterTest {
     @Test
     fun `exports every development source fixture with portable semantic packages`() {
         listOf(
-            DawFixture("smf0-melody.mid", "smf0-melody", 0),
-            DawFixture("smf1-reference-tracks.mid", "smf1-reference-tracks", 1),
-            DawFixture("pickup-timing.mid", "pickup-timing", 1),
-            DawFixture("sub-bar-harmony.mid", "sub-bar-harmony", 1, listOf("C", "G7"), arrangementEndTick = 1_920),
-            DawFixture("expressive-controller-pitch.mid", "expressive-controller-pitch", 1),
-            DawFixture("final-boundary-note.mid", "complete-arrangement-boundary", 0, drumFillPatternId = "drums.fill.dusty-snare-roll"),
+            DawFixture("final-boundary-note.mid", "smf0-one-bar", drumFillPatternId = "drums.fill.dusty-snare-roll"),
+            DawFixture("whole-song-one-bar.mid", "smf1-one-bar"),
+            DawFixture("whole-song-two-bars.mid", "smf1-two-bars", listOf("C", "G7")),
+            DawFixture("whole-song-three-bars.mid", "smf1-three-bars"),
         ).forEach { fixture ->
             val store = MidiCoreArtifactStore()
             val accepted = acceptAll(
@@ -249,9 +247,7 @@ class MidiCoreMidiPackageExporterTest {
                     store,
                     root.resolve("development-${fixture.label}"),
                     sourceFixture = fixture.sourceFixture,
-                    melodyTrackIndex = fixture.melodyTrackIndex,
                     harmonySymbols = fixture.harmonySymbols,
-                    arrangementEndTick = fixture.arrangementEndTick,
                 ),
                 drumFillPatternId = fixture.drumFillPatternId,
             )
@@ -361,10 +357,8 @@ class MidiCoreMidiPackageExporterTest {
         store: MidiCoreArtifactStore,
         projectRoot: Path,
         projectId: String = "exporter-${projectRoot.fileName}",
-        sourceFixture: String = "smf0-melody.mid",
-        melodyTrackIndex: Int = 0,
+        sourceFixture: String = "whole-song-one-bar.mid",
         harmonySymbols: List<String> = listOf("C"),
-        arrangementEndTick: Long? = null,
     ): MidiCoreProjectSession {
         val created = assertIs<MidiCoreProjectLifecycleResult.Opened>(
             MidiCoreProjectLifecycle(artifacts = store).create(
@@ -376,27 +370,24 @@ class MidiCoreMidiPackageExporterTest {
         val imported = assertIs<MidiCoreSourceImportResult.Imported>(
             MidiCoreSourceImport(store).import(ImportMidiCoreSource(created, source)),
         ).session
-        val selected = assertIs<MidiCoreMelodySelectionResult.Selected>(
-            MidiCoreMelodySelection(store).select(SelectMidiCoreMelody(imported, melodyTrackIndex, 0)),
-        ).session
         val authority = assertIs<MidiCoreAuthorityResult.Confirmed>(
             MidiCoreMusicalAuthority(store).confirm(
                 ConfirmMidiCoreAuthority(
-                    selected,
+                    imported,
                     ProjectKey(ProjectKeySpelling.C, ProjectScaleMode.MAJOR),
                     ProjectTempo(500_000),
                     ProjectMeter(4, 2),
                 ),
             ),
         ).session
-        val songEndTick = arrangementEndTick ?: requireNotNull(selected.project.sourceMidi).sourceEndTick
+        val songEndTick = requireNotNull(imported.project.sourceMidi).sourceEndTick
+        val barCount = Math.toIntExact(songEndTick / 1_920L)
         val structured = assertIs<MidiCoreStructureTimelineResult.Updated>(
             MidiCoreStructureTimeline(store).replace(
                 ReplaceMidiCoreStructure(
                     authority,
                     listOf(ProjectSectionDefinition("verse", "Verse")),
-                    listOf(app.melotrail.structure.MidiCoreOccurrencePlacement("verse-1", "verse", "Verse", songEndTick)),
-                    expectedSongEndTick = songEndTick,
+                    listOf(app.melotrail.structure.MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", barCount)),
                 ),
             ),
         ).session
@@ -432,9 +423,7 @@ class MidiCoreMidiPackageExporterTest {
     private data class DawFixture(
         val sourceFixture: String,
         val label: String,
-        val melodyTrackIndex: Int,
         val harmonySymbols: List<String> = listOf("C"),
-        val arrangementEndTick: Long? = null,
         val drumFillPatternId: String? = null,
     )
 

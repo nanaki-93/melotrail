@@ -24,7 +24,7 @@ import app.melotrail.project.MidiCoreGeneratorInput
 import app.melotrail.project.ProjectKey
 import app.melotrail.project.ProjectSectionDefinition
 import app.melotrail.project.adapter.MidiCoreArtifactStore
-import app.melotrail.structure.MidiCoreOccurrencePlacement
+import app.melotrail.structure.MidiCoreBarOccurrencePlacement
 import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
@@ -53,18 +53,15 @@ class MidiCoreVerticalSliceTest {
             lifecycle.create(CreateMidiCoreProject(projectRoot, "Vertical Slice", "vertical-project", "mc-030")),
         ).session
 
-        val source = OwnedMidiFixtures.writeAll(root.resolve("fixtures")).single { it.fileName.toString() == "smf0-melody.mid" }
+        val source = OwnedMidiFixtures.writeAll(root.resolve("fixtures")).single { it.fileName.toString() == "whole-song-one-bar.mid" }
         val imported = assertIs<MidiCoreSourceImportResult.Imported>(
             MidiCoreSourceImport(store).import(ImportMidiCoreSource(session, source)),
         )
         session = imported.session
-        assertEquals(0, session.project.sourceMidi?.format)
+        assertEquals(1, session.project.sourceMidi?.format)
         assertEquals(480, session.project.sourceMidi?.ppq)
 
-        session = assertIs<MidiCoreMelodySelectionResult.Selected>(
-            MidiCoreMelodySelection(store).select(SelectMidiCoreMelody(session, 0, 0)),
-        ).session
-        assertEquals(0, session.project.selectedMelody?.trackIndex)
+        assertEquals(1, session.project.selectedMelody?.trackIndex)
         assertEquals(0, session.project.selectedMelody?.channel)
 
         session = assertIs<MidiCoreAuthorityResult.Confirmed>(
@@ -86,18 +83,17 @@ class MidiCoreVerticalSliceTest {
                 ReplaceMidiCoreStructure(
                     session,
                     listOf(ProjectSectionDefinition("verse", "Verse")),
-                    listOf(MidiCoreOccurrencePlacement("verse-1", "verse", "Verse", 480)),
-                    expectedSongEndTick = 480,
+                    listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", 1)),
                 ),
             ),
         ).session
-        assertEquals(listOf(0L to 480L), session.project.authority?.occurrences?.map { it.startTick to it.endTick })
+        assertEquals(listOf(0L to 1920L), session.project.authority?.occurrences?.map { it.startTick to it.endTick })
 
         session = assertIs<MidiCoreAuthoritativeHarmonyResult.Updated>(
             MidiCoreAuthoritativeHarmony(store).replace(
                 ReplaceMidiCoreHarmony(
                     session,
-                    listOf(AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 480)),
+                    listOf(AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 1920)),
                 ),
             ),
         ).session
@@ -178,7 +174,7 @@ class MidiCoreVerticalSliceTest {
             MidiCoreAcceptedSongAssembly(artifacts = store).assemble(AssembleMidiCoreSong(session)),
         ).review
         assertEquals(listOf("Melody", "Chords", "Bass", "Drums"), assembled.song.roles.map { it.role.trackName })
-        assertEquals(480L, assembled.song.songEndTick)
+        assertEquals(1920L, assembled.song.songEndTick)
         assertEquals(3, assembled.acceptedCandidates.size)
 
         val fakeOutput = RecordingMidiOutput()

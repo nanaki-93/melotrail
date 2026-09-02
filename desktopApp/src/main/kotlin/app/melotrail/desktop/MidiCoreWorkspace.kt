@@ -13,7 +13,6 @@ import app.melotrail.application.MidiCoreCandidateGeneration
 import app.melotrail.application.MidiCoreCandidateGenerationResult
 import app.melotrail.application.MidiCoreCandidateReview
 import app.melotrail.application.MidiCoreCandidateReviewResult
-import app.melotrail.application.MidiCoreMelodySelection
 import app.melotrail.application.MidiCoreMidiPackageExporter
 import app.melotrail.application.MidiCoreMidiPackageExportResult
 import app.melotrail.application.MidiCoreMusicalAuthority
@@ -37,12 +36,10 @@ import app.melotrail.application.RegenerateMidiCoreCandidate
 import app.melotrail.application.ReplaceMidiCoreHarmony
 import app.melotrail.application.ReplaceMidiCoreStructure
 import app.melotrail.application.RestoreMidiCoreCandidate
-import app.melotrail.application.SelectMidiCoreMelody
 import app.melotrail.application.UnlockMidiCoreCandidate
 import app.melotrail.application.MidiCoreCandidateLifecycleResult
 import app.melotrail.application.MidiCoreCandidateProblem
 import app.melotrail.application.MidiCoreAuthorityProblem
-import app.melotrail.application.MidiCoreMelodySelectionProblem
 import app.melotrail.application.MidiCorePackageExportProblem
 import app.melotrail.application.MidiCoreProjectProblem
 import app.melotrail.application.MidiCoreSourceImportProblem
@@ -70,7 +67,6 @@ import app.melotrail.music.core.ProjectKeySpelling
 import app.melotrail.music.core.ProjectMeter
 import app.melotrail.music.core.ProjectScaleMode
 import app.melotrail.music.core.ProjectTempo
-import app.melotrail.structure.MidiCoreOccurrencePlacement
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -102,7 +98,6 @@ interface MidiCoreWorkspaceUseCases {
     fun readCurrent(root: Path): MidiCoreProjectSession?
     fun close(session: app.melotrail.application.MidiCoreProjectSession): app.melotrail.application.MidiCoreProjectCloseResult
     fun importSource(request: ImportMidiCoreSource): MidiCoreSourceImportResult
-    fun selectMelody(request: SelectMidiCoreMelody): app.melotrail.application.MidiCoreMelodySelectionResult
     fun prepareSourceAudition(request: PrepareMidiCoreSourceAudition): MidiCoreSourceAuditionResult
     fun prepareOccurrenceAudition(request: PrepareMidiCoreOccurrenceAudition): MidiCoreSourceAuditionResult
     fun prepareCandidateAudition(request: PrepareMidiCoreCandidateAudition): MidiCoreReviewAuditionResult
@@ -128,7 +123,6 @@ interface MidiCoreWorkspaceUseCases {
 class DefaultMidiCoreWorkspaceUseCases(
     private val project: MidiCoreProjectLifecycle,
     private val sourceImport: MidiCoreSourceImport,
-    private val melodySelection: MidiCoreMelodySelection,
     private val authority: MidiCoreMusicalAuthority,
     private val structure: MidiCoreStructureTimeline,
     private val harmony: MidiCoreAuthoritativeHarmony,
@@ -152,7 +146,6 @@ class DefaultMidiCoreWorkspaceUseCases(
 
     override fun importSource(request: ImportMidiCoreSource): MidiCoreSourceImportResult = sourceImport.import(request)
 
-    override fun selectMelody(request: SelectMidiCoreMelody) = melodySelection.select(request)
 
     override fun prepareSourceAudition(request: PrepareMidiCoreSourceAudition): MidiCoreSourceAuditionResult = sourceAudition.prepare(request)
 
@@ -208,7 +201,6 @@ data class MidiCoreWorkspaceOperationProgress(
 enum class MidiCoreWorkspaceOperationKind {
     PROJECT,
     IMPORT,
-    MELODY,
     AUTHORITY,
     STRUCTURE,
     HARMONY,
@@ -270,7 +262,7 @@ data class MidiCoreSourceUiState(
     val reportAvailable: Boolean = false,
 )
 
-/** Protected melody selection and its last typed validation result. */
+/** Automatically protected melody identity and its last typed validation result. */
 data class MidiCoreMelodyUiState(
     val selected: SelectedMelodyTrack? = null,
     val validation: MidiImportValidationResult? = null,
@@ -391,14 +383,11 @@ sealed interface MidiCoreWorkspaceIntent {
     data object ReloadProject : MidiCoreWorkspaceIntent
     data object CloseProject : MidiCoreWorkspaceIntent
     data class ImportSource(val source: Path) : MidiCoreWorkspaceIntent
-    data class SelectMelody(val trackIndex: Int, val channel: Int) : MidiCoreWorkspaceIntent
     data class UpdateAuthorityDraft(val draft: MidiCoreAuthorityDraft) : MidiCoreWorkspaceIntent
     data object ConfirmAuthority : MidiCoreWorkspaceIntent
     data class ReplaceStructure(
         val definitions: List<app.melotrail.project.ProjectSectionDefinition>,
-        val occurrences: List<MidiCoreOccurrencePlacement>,
-        val pickupTicks: Long = 0L,
-        val expectedSongEndTick: Long? = null,
+        val occurrences: List<app.melotrail.structure.MidiCoreBarOccurrencePlacement>,
     ) : MidiCoreWorkspaceIntent
     data class ReplaceHarmony(val events: List<AuthoritativeChordEvent>) : MidiCoreWorkspaceIntent
     data class SelectReviewScope(val role: CandidateRole, val occurrenceId: String) : MidiCoreWorkspaceIntent
@@ -480,7 +469,6 @@ class MidiCoreWorkspaceViewModel(
             MidiCoreWorkspaceIntent.ReloadProject -> reload()
             MidiCoreWorkspaceIntent.CloseProject -> closeProject()
             is MidiCoreWorkspaceIntent.ImportSource -> importSource(intent)
-            is MidiCoreWorkspaceIntent.SelectMelody -> selectMelody(intent)
             is MidiCoreWorkspaceIntent.UpdateAuthorityDraft -> updateAuthorityDraft(intent.draft)
             MidiCoreWorkspaceIntent.ConfirmAuthority -> confirmAuthority()
             is MidiCoreWorkspaceIntent.ReplaceStructure -> replaceStructure(intent)
@@ -614,22 +602,6 @@ class MidiCoreWorkspaceViewModel(
         }
     }
 
-    private fun selectMelody(intent: MidiCoreWorkspaceIntent.SelectMelody) {
-        val current = requireSessionOrBlock() ?: return
-        startOperation(MidiCoreWorkspaceOperationKind.MELODY, "Protecting selected melody…", intent) { _ ->
-            when (val result = useCases.selectMelody(SelectMidiCoreMelody(current, intent.trackIndex, intent.channel))) {
-                is app.melotrail.application.MidiCoreMelodySelectionResult.Selected -> success("Protected melody selected.", result.session) {
-                    _state.value = _state.value.copy(
-                        source = _state.value.source.copy(validation = result.validation, findings = result.validation.findings),
-                        melody = MidiCoreMelodyUiState(result.session.project.selectedMelody, result.validation),
-                        authority = _state.value.authority.copy(lastInvalidation = result.invalidation),
-                    )
-                }
-                is app.melotrail.application.MidiCoreMelodySelectionResult.Rejected -> failure(melodyBlocker(result.problem, result.validation), intent)
-            }
-        }
-    }
-
     private fun updateAuthorityDraft(draft: MidiCoreAuthorityDraft) {
         if (session == null) {
             failImmediately(blocker(MidiCoreWorkspaceBlockerCode.PROJECT_REQUIRED, "Open a MIDI Core project before editing authority.", "Create or open a project first."))
@@ -669,7 +641,7 @@ class MidiCoreWorkspaceViewModel(
     private fun replaceStructure(intent: MidiCoreWorkspaceIntent.ReplaceStructure) {
         val current = requireSessionOrBlock() ?: return
         startOperation(MidiCoreWorkspaceOperationKind.STRUCTURE, "Saving structure timeline…", intent) { _ ->
-            when (val result = useCases.replaceStructure(ReplaceMidiCoreStructure(current, intent.definitions, intent.occurrences, intent.pickupTicks, intent.expectedSongEndTick))) {
+            when (val result = useCases.replaceStructure(ReplaceMidiCoreStructure(current, intent.definitions, intent.occurrences))) {
                 is app.melotrail.application.MidiCoreStructureTimelineResult.Updated -> success("Structure timeline saved.", result.session) {
                     _state.value = _state.value.copy(
                         authority = _state.value.authority.copy(lastInvalidation = result.invalidation),
@@ -1212,7 +1184,7 @@ class MidiCoreWorkspaceViewModel(
     private fun baseBlockers(project: MidiCoreProject?): List<MidiCoreWorkspaceBlocker> = when {
         project == null -> listOf(blocker(MidiCoreWorkspaceBlockerCode.PROJECT_REQUIRED, "No MIDI Core project is open.", "Create or open a MIDI Core project."))
         project.sourceMidi == null -> listOf(blocker(MidiCoreWorkspaceBlockerCode.SOURCE_REQUIRED, "A source MIDI file has not been imported.", "Import one Standard MIDI source; the original will be preserved."))
-        project.selectedMelody == null -> listOf(blocker(MidiCoreWorkspaceBlockerCode.MELODY_REQUIRED, "The protected source melody has not been selected.", "Choose one source track and channel."))
+        project.selectedMelody == null -> listOf(blocker(MidiCoreWorkspaceBlockerCode.MELODY_REQUIRED, "The imported source has no automatically protected melody.", "Create a new project and import one valid single-track melody source."))
         project.authority == null -> listOf(blocker(MidiCoreWorkspaceBlockerCode.AUTHORITY_REQUIRED, "Tempo, meter, key, and mode are not authoritative yet.", "Edit and explicitly confirm musical authority."))
         project.authority?.occurrences?.isEmpty() == true -> listOf(blocker(MidiCoreWorkspaceBlockerCode.STRUCTURE_REQUIRED, "The authoritative section timeline is empty.", "Define at least one contiguous section occurrence."))
         project.authority?.chordEvents?.isEmpty() == true -> listOf(blocker(MidiCoreWorkspaceBlockerCode.HARMONY_REQUIRED, "No authoritative chord windows are defined.", "Enter gap-free chord windows for every section occurrence."))
@@ -1263,13 +1235,6 @@ class MidiCoreWorkspaceViewModel(
         problem.message,
         problem.nextAction,
         "REVIEW_AUDITION",
-    )
-
-    private fun melodyBlocker(problem: MidiCoreMelodySelectionProblem, validation: MidiImportValidationResult? = null) = blocker(
-        MidiCoreWorkspaceBlockerCode.MELODY_REQUIRED,
-        problem.message,
-        problem.nextAction,
-        problem.code.name,
     )
 
     private fun authorityBlocker(problem: MidiCoreAuthorityProblem, validation: MidiImportValidationResult? = null) = blocker(

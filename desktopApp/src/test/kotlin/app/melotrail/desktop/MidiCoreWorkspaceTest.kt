@@ -11,7 +11,6 @@ import app.melotrail.application.MidiCoreAuthoritySuggestions
 import app.melotrail.application.MidiCoreCandidateGenerationResult
 import app.melotrail.application.MidiCoreCandidateLifecycleResult
 import app.melotrail.application.MidiCoreCandidateReviewResult
-import app.melotrail.application.MidiCoreMelodySelectionResult
 import app.melotrail.application.MidiCoreMidiPackageExportResult
 import app.melotrail.application.MidiCoreProjectCloseResult
 import app.melotrail.application.MidiCoreProjectLifecycleResult
@@ -22,7 +21,6 @@ import app.melotrail.application.MidiCoreAuthoritativeHarmonyResult
 import app.melotrail.application.MidiCoreCandidateProblem
 import app.melotrail.application.MidiCoreProjectProblem
 import app.melotrail.application.MidiCoreSourceImportProblem
-import app.melotrail.application.MidiCoreMelodySelectionProblem
 import app.melotrail.application.MidiCoreAuthorityProblem
 import app.melotrail.application.MidiCoreStructureTimelineProblem
 import app.melotrail.application.MidiCoreAuthoritativeHarmonyProblem
@@ -31,7 +29,6 @@ import app.melotrail.application.MidiCoreCandidateReview
 import app.melotrail.application.MidiCoreCandidateGeneration
 import app.melotrail.application.MidiCoreProjectLifecycle
 import app.melotrail.application.MidiCoreSourceImport
-import app.melotrail.application.MidiCoreMelodySelection
 import app.melotrail.application.MidiCoreMusicalAuthority
 import app.melotrail.application.MidiCoreStructureTimeline
 import app.melotrail.application.MidiCoreAuthoritativeHarmony
@@ -39,7 +36,6 @@ import app.melotrail.application.MidiCoreAcceptedSongAssembly
 import app.melotrail.application.MidiCoreMidiPackageExporter
 import app.melotrail.application.ReplaceMidiCoreHarmony
 import app.melotrail.application.ReplaceMidiCoreStructure
-import app.melotrail.application.SelectMidiCoreMelody
 import app.melotrail.application.AcceptMidiCoreCandidate
 import app.melotrail.application.RejectMidiCoreCandidate
 import app.melotrail.application.LockMidiCoreCandidate
@@ -384,8 +380,6 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
     }
 
     override fun importSource(request: ImportMidiCoreSource): MidiCoreSourceImportResult = error("not used")
-
-    override fun selectMelody(request: SelectMidiCoreMelody): MidiCoreMelodySelectionResult = error("not used")
 
     override fun prepareSourceAudition(request: app.melotrail.application.PrepareMidiCoreSourceAudition): app.melotrail.application.MidiCoreSourceAuditionResult = sourceAuditionResult
 

@@ -22,7 +22,9 @@ data class MidiCoreProject(
 ) {
     init {
         require(revision >= 0L) { "Project revision must not be negative" }
-        require(selectedMelody == null || sourceMidi != null) { "A selected melody requires an imported source MIDI record" }
+        require((sourceMidi == null) == (selectedMelody == null)) {
+            "Source MIDI and its automatically protected melody identity must be bound atomically"
+        }
         require(sourceMidi != null || (candidates.isEmpty() && acceptances.isEmpty() && exportSnapshots.isEmpty() && acceptanceHistory.isEmpty())) {
             "Candidates, acceptances, and exports require an imported source MIDI record"
         }

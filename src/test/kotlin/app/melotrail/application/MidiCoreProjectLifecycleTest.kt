@@ -92,6 +92,7 @@ class MidiCoreProjectLifecycleTest {
                 emptyList(),
                 0,
             ),
+            selectedMelody = app.melotrail.project.SelectedMelodyTrack(0, 0, "b".repeat(64)),
         )
         store.saveProject(root, created.session.project)
         Files.writeString(root.resolve(MidiCoreArtifactStore.PROJECT_FILE), app.melotrail.project.MidiCoreProjectSchema.encode(sourceBound))

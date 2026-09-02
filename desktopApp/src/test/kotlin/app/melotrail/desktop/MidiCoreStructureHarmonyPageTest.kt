@@ -46,8 +46,8 @@ class MidiCoreStructureHarmonyPageTest {
 
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.ROOT).assertExists()
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.AUTHORITY_STATUS).assertExists()
-        onNodeWithText("Exact range: bar 1 · beat 1 · tick 0 → bar 1 · beat 1 · tick 240 · 0–240 ticks").assertExists()
-        onNodeWithText("Exact range: bar 1 · beat 1 · tick 120 → bar 1 · beat 1 · tick 240 · 120–240 ticks").assertExists()
+        onNodeWithText("Exact range: bar 1 · beat 1 · tick 0 → bar 1 · beat 3 · tick 0 · 0–960 ticks").assertExists()
+        onNodeWithText("Exact range: bar 1 · beat 3 · tick 0 → bar 2 · beat 1 · tick 0 · 960–1920 ticks").assertExists()
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.HARMONY_FINDINGS).assertExists()
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.finding("CHROMATIC_CHORD")).assertExists()
     }
@@ -98,7 +98,7 @@ class MidiCoreStructureHarmonyPageTest {
     }
 
     @Test
-    fun `page blocks a non-contiguous edited occurrence and still permits additive authoring`() = runComposeUiTest {
+    fun `page blocks a mismatched bar total and still permits additive authoring`() = runComposeUiTest {
         val intents = mutableListOf<MidiCoreWorkspaceIntent>()
         setContent {
             MelotrailTheme {
@@ -110,7 +110,7 @@ class MidiCoreStructureHarmonyPageTest {
             }
         }
 
-        onNodeWithTag(MidiCoreStructureHarmonyPageTags.occurrenceStart(1)).performScrollTo().assertExists()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.occurrenceBars(1)).performScrollTo().assertExists()
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.ADD_DEFINITION).performScrollTo().performClick()
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.ADD_OCCURRENCE).performScrollTo().performClick()
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.ADD_CHORD).performScrollTo().performClick()
@@ -177,15 +177,15 @@ class MidiCoreStructureHarmonyPageTest {
                 ProjectSectionDefinition("chorus", "Chorus"),
             ),
             occurrences = listOf(
-                ProjectSectionOccurrence("verse-1", "verse", "Verse one", 0, 240),
-                ProjectSectionOccurrence("chorus-1", "chorus", "Chorus", 240, 480),
-                ProjectSectionOccurrence("verse-2", "verse", "Verse repeat", 480, 960),
+                ProjectSectionOccurrence("verse-1", "verse", "Verse one", 0, 1920),
+                ProjectSectionOccurrence("chorus-1", "chorus", "Chorus", 1920, 3840),
+                ProjectSectionOccurrence("verse-2", "verse", "Verse repeat", 3840, 5760),
             ),
             chordEvents = listOf(
-                AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 120),
-                AuthoritativeChordEvent("chord-2", "verse-1", "Dbmaj9/F", 120, 240),
-                AuthoritativeChordEvent("chord-3", "chorus-1", "G", 240, 480),
-                AuthoritativeChordEvent("chord-4", "verse-2", "C", 480, 960),
+                AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 960),
+                AuthoritativeChordEvent("chord-2", "verse-1", "Dbmaj9/F", 960, 1920),
+                AuthoritativeChordEvent("chord-3", "chorus-1", "G", 1920, 3840),
+                AuthoritativeChordEvent("chord-4", "verse-2", "C", 3840, 5760),
             ),
         )
         val source = SourceMidiRecord(
@@ -195,8 +195,8 @@ class MidiCoreStructureHarmonyPageTest {
             ppq = 480,
             original = ProjectArtifact(ProjectRelativePath("source.mid"), "a".repeat(64)),
             importReport = ProjectArtifact(ProjectRelativePath("report.json"), "b".repeat(64)),
-            trackSummaries = listOf(MidiTrackSummary(0, "Melody", emptyList(), 960)),
-            sourceEndTick = 960,
+            trackSummaries = listOf(MidiTrackSummary(0, "Melody", emptyList(), 5760)),
+            sourceEndTick = 5760,
         )
         val project = MidiCoreProject(
             id = ProjectId("authority-page-project"),

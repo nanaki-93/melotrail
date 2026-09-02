@@ -8,9 +8,14 @@ import app.melotrail.midi.domain.MidiImportDisposition
 import app.melotrail.midi.domain.MidiImportValidationResult
 import app.melotrail.midi.domain.MidiImportValidator
 import app.melotrail.midi.domain.MidiInspectionResult
+import app.melotrail.midi.domain.MidiMelodySelection
+import app.melotrail.midi.domain.MidiMelodySelectionException
+import app.melotrail.midi.domain.MidiProtectedMelodySelector
 import app.melotrail.midi.domain.MidiTrackSummary
+import app.melotrail.midi.domain.MidiValidationContext
 import app.melotrail.project.MidiCoreProject
 import app.melotrail.project.ProjectArtifact
+import app.melotrail.project.SelectedMelodyTrack
 import app.melotrail.project.SourceMidiRecord
 import app.melotrail.project.adapter.MidiCoreArtifactStore
 import app.melotrail.project.adapter.MidiCoreProjectSaveException
@@ -26,6 +31,7 @@ class MidiCoreSourceImport(
     private val artifacts: MidiCoreArtifactStore = MidiCoreArtifactStore(),
     private val reader: JdkMidiReader = JdkMidiReader(),
     private val validator: MidiImportValidator = MidiImportValidator(),
+    private val melodySelector: MidiProtectedMelodySelector = MidiProtectedMelodySelector(),
     private val inspectionObserver: SourceInspectionObserver = SourceInspectionObserver.NONE,
 ) {
     fun import(request: ImportMidiCoreSource): MidiCoreSourceImportResult {
@@ -77,7 +83,38 @@ class MidiCoreSourceImport(
         } catch (error: Exception) {
             return rejected(MidiCoreSourceImportProblemCode.IO_FAILURE, "The selected MIDI file could not be read.", "Check that the source file remains available and retry.")
         }
-        val validation = validator.validate(inspection)
+        val noteTracks = inspection.trackSummaries.filter { track -> track.channels.any { it.noteCount > 0 } }
+        if (noteTracks.size != 1) {
+            val validation = validator.validate(inspection)
+            return rejected(
+                MidiCoreSourceImportProblemCode.SINGLE_MELODY_TRACK_REQUIRED,
+                "The source must contain exactly one note-bearing melody track; ${noteTracks.size} were found.",
+                "Export the complete song as one melody track. Meta-only conductor tracks are allowed.",
+                validation,
+            )
+        }
+        val noteChannels = noteTracks.single().channels.filter { it.noteCount > 0 }
+        if (noteChannels.size != 1) {
+            val validation = validator.validate(inspection)
+            return rejected(
+                MidiCoreSourceImportProblemCode.SINGLE_MELODY_CHANNEL_REQUIRED,
+                "The melody track must contain exactly one note-bearing MIDI channel; ${noteChannels.size} were found.",
+                "Export all melody notes on one MIDI channel and retry the import.",
+                validation,
+            )
+        }
+        val selection = MidiMelodySelection(noteTracks.single().trackIndex, noteChannels.single().channel)
+        val protectedMelody = try {
+            melodySelector.select(inspection.sequence, selection)
+        } catch (error: MidiMelodySelectionException) {
+            return rejected(
+                MidiCoreSourceImportProblemCode.UNSAFE_MELODY,
+                error.message ?: "The only melody track cannot be protected safely.",
+                "Export one safely pairable, single-channel melody track and retry the import.",
+                validator.validate(inspection, MidiValidationContext(selection)),
+            )
+        }
+        val validation = validator.validate(inspection, MidiValidationContext(selection))
         if (validation.disposition == MidiImportDisposition.REJECTED) {
             return rejected(
                 MidiCoreSourceImportProblemCode.IMPORT_REJECTED,
@@ -87,7 +124,7 @@ class MidiCoreSourceImport(
             )
         }
 
-        return publishAndBind(root, current, request.source, inspection, validation)
+        return publishAndBind(root, current, request.source, inspection, protectedMelody.identitySha256, selection, validation)
     }
 
     private fun publishAndBind(
@@ -95,6 +132,8 @@ class MidiCoreSourceImport(
         current: MidiCoreProject,
         source: Path,
         inspection: MidiInspectionResult,
+        melodyIdentitySha256: String,
+        melodySelection: MidiMelodySelection,
         validation: MidiImportValidationResult,
     ): MidiCoreSourceImportResult {
         val published = mutableListOf<ProjectArtifact>()
@@ -123,6 +162,11 @@ class MidiCoreSourceImport(
                     importReport = reportArtifact,
                     trackSummaries = inspection.trackSummaries,
                     sourceEndTick = inspection.sourceEndTick,
+                ),
+                selectedMelody = SelectedMelodyTrack(
+                    trackIndex = melodySelection.trackIndex,
+                    channel = melodySelection.channel,
+                    identitySha256 = melodyIdentitySha256,
                 ),
             )
             artifacts.saveProject(root, updated)
@@ -215,6 +259,9 @@ enum class MidiCoreSourceImportProblemCode {
     UNSUPPORTED_EXTENSION,
     UNBOUND_IMPORT_ARTIFACTS,
     INVALID_MIDI,
+    SINGLE_MELODY_TRACK_REQUIRED,
+    SINGLE_MELODY_CHANNEL_REQUIRED,
+    UNSAFE_MELODY,
     IMPORT_REJECTED,
     SOURCE_CHANGED,
     SAVE_FAILED,

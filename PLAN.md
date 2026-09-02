@@ -2,7 +2,7 @@
 
 Status: MIDI Core execution in progress; task evidence is recorded in the execution log
 
-Last updated: 2026-08-28
+Last updated: 2026-09-02
 
 Authority: this is the only active Melotrail roadmap
 
@@ -33,9 +33,10 @@ the DAW or taking ownership of the composition.
 The MVP succeeds when a user can:
 
 1. create a project;
-2. import a valid SMF format 0 or 1 file;
-3. designate one immutable melody track;
-4. confirm fixed tempo, meter, key, sections, and section harmony;
+2. import a valid SMF format 0 or 1 file containing the whole song as exactly
+   one note-bearing melody track;
+3. have that melody track protected automatically during import;
+4. confirm fixed tempo, meter, key, whole-bar sections, and section harmony;
 5. audition the source and arrangement through MIDI playback;
 6. generate multiple deterministic chord, bass, and drum candidates;
 7. approve, reject, or regenerate a role within one section;
@@ -65,9 +66,12 @@ The target product does not:
 
 - Exactly one `.mid` or `.midi` file per project.
 - Standard MIDI format 0 or 1.
-- One track is selected as the protected melody.
-- Other imported tracks may be retained as immutable references but are not
-  arrangement authorities and are not mutated.
+- Exactly one track contains notes, on exactly one MIDI channel, and it spans
+  the complete song.
+- The importer protects that melody automatically; there is no track-selection
+  step or later source switch inside the project.
+- Additional non-note tracks may retain conductor or reference events, but they
+  cannot contain notes.
 - The original source bytes and SHA-256 digest are preserved.
 - Internal processing uses a normalized semantic event model; byte-identical
   round-trip output is not required.
@@ -77,18 +81,22 @@ The target product does not:
 - One fixed tempo.
 - One fixed time signature.
 - One project key and mode.
-- An ordered section/occurrence timeline with exact beat and tick boundaries.
+- An ordered section/occurrence timeline entered as positive whole-bar lengths.
+- Section bar counts must total the imported melody length exactly; contiguous
+  tick boundaries are derived from PPQ and the confirmed meter.
 - Authoritative chord events with explicit durations; sub-bar changes are
   allowed.
 
-Tempo maps, meter changes, SMPTE division, multiple source files, and ambiguous
-track selection are rejected with actionable explanations in V1.
+Tempo maps, meter changes, SMPTE division, multiple source files, and extra
+note-bearing tracks/channels are rejected at import with actionable
+explanations in V1. A source ending outside a whole-bar boundary in the
+confirmed meter blocks structure save with the same standard of explanation.
 
 ### 4.3 Validation policy
 
 Blocking failures are structural or unsafe: unreadable MIDI, unsupported
 division, unpaired note events that cannot be interpreted safely, invalid tick
-ranges, missing melody selection, or authority that cannot cover the song.
+ranges, an invalid single-melody shape, or authority that cannot cover the song.
 
 Polyphony, chromatic harmony, unusual ranges, repeated notes, controller use,
 and musical density are findings unless a specific target-role invariant makes
@@ -100,7 +108,7 @@ authoritative.
 The following records are authoritative:
 
 - source MIDI identity;
-- selected melody track;
+- automatically protected melody track;
 - tempo and meter;
 - project key and mode;
 - section definitions and ordered occurrences;
@@ -108,7 +116,7 @@ The following records are authoritative:
 - protected melody anchors; and
 - accepted candidate references.
 
-The selected source melody is immutable. Optional connection notes or melody
+The protected source melody is immutable. Optional connection notes or melody
 edits are separate candidates with an event-level diff and explicit approval.
 They are not required for MVP completion.
 
@@ -161,8 +169,10 @@ dependency.
 The target workspace has six focused destinations:
 
 1. **Project** — create/open project and show authority summary.
-2. **MIDI** — import, inspect tracks, select melody, validate, and audition.
-3. **Structure & Harmony** — edit occurrences, exact lengths, key, and chords.
+2. **MIDI** — import, automatically protect, inspect, validate, and audition the
+   single melody track.
+3. **Structure & Harmony** — enter ordered section lengths in bars, then edit
+   key and chord windows.
 4. **Arrange** — generate alternatives by role and section.
 5. **Review** — compare, mute/solo, approve, lock, and inspect findings.
 6. **Export** — create and verify the DAW MIDI package.

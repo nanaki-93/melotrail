@@ -88,8 +88,8 @@ class MidiCoreMusicalAuthority(
         )
         val melody = current.selectedMelody ?: return rejected(
             MidiCoreAuthorityProblemCode.MELODY_REQUIRED,
-            "Select the protected melody before confirming musical authority.",
-            "Choose exactly one source track and channel as melody first.",
+            "The imported source has no automatically protected melody.",
+            "Create a new project and import one valid single-track melody source.",
         )
         val inspection = try {
             reader.inspect(artifacts.verify(root, source.original))

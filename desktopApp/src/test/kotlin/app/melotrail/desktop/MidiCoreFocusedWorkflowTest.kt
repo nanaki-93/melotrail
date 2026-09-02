@@ -15,7 +15,6 @@ import app.melotrail.application.MidiCoreCandidateGeneration
 import app.melotrail.application.MidiCoreCandidateLifecycle
 import app.melotrail.application.MidiCoreCandidateReview
 import app.melotrail.application.MidiCoreExportSnapshotLifecycle
-import app.melotrail.application.MidiCoreMelodySelection
 import app.melotrail.application.MidiCoreMidiPackageExporter
 import app.melotrail.application.MidiCoreMusicalAuthority
 import app.melotrail.application.MidiCoreProjectLifecycle
@@ -37,7 +36,7 @@ import app.melotrail.project.CandidateRole
 import app.melotrail.project.MidiCoreGeneratorInput
 import app.melotrail.project.ProjectSectionDefinition
 import app.melotrail.project.adapter.MidiCoreArtifactStore
-import app.melotrail.structure.MidiCoreOccurrencePlacement
+import app.melotrail.structure.MidiCoreBarOccurrencePlacement
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Comparator
@@ -112,8 +111,6 @@ class MidiCoreFocusedWorkflowTest {
             navigateTo(MidiCoreWorkspaceDestination.MIDI)
             onNodeWithTag(MidiCoreMidiPageTags.IMPORT).performClick()
             awaitWorkspaceSuccess("import source")
-            onNodeWithTag("${MidiCoreMidiPageTags.channel(0, 0)}-select").performScrollTo().performClick()
-            awaitWorkspaceSuccess("select melody")
             captureFixture("midi", MidiCoreMidiPageTags.ROOT)
 
             navigateTo(MidiCoreWorkspaceDestination.STRUCTURE_HARMONY)
@@ -123,8 +120,7 @@ class MidiCoreFocusedWorkflowTest {
             workspace.accept(
                 MidiCoreWorkspaceIntent.ReplaceStructure(
                     definitions = listOf(ProjectSectionDefinition("verse", "Verse")),
-                    occurrences = listOf(MidiCoreOccurrencePlacement("verse-1", "verse", "Verse 1", sourceEndTick)),
-                    expectedSongEndTick = sourceEndTick,
+                    occurrences = listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse 1", 1)),
                 ),
             )
             awaitWorkspaceSuccess("save structure")
@@ -240,7 +236,6 @@ private fun newWorkspace(
     val useCases = DefaultMidiCoreWorkspaceUseCases(
         project = lifecycle,
         sourceImport = MidiCoreSourceImport(artifacts),
-        melodySelection = MidiCoreMelodySelection(artifacts),
         authority = MidiCoreMusicalAuthority(artifacts),
         structure = MidiCoreStructureTimeline(artifacts),
         harmony = MidiCoreAuthoritativeHarmony(artifacts),

@@ -19,7 +19,7 @@ import app.melotrail.project.ProjectSectionDefinition
 import app.melotrail.project.adapter.AtomicWriteObserver
 import app.melotrail.project.adapter.MidiCoreArtifactCollisionException
 import app.melotrail.project.adapter.MidiCoreArtifactStore
-import app.melotrail.structure.MidiCoreOccurrencePlacement
+import app.melotrail.structure.MidiCoreBarOccurrencePlacement
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -165,7 +165,7 @@ class MidiCoreCandidateGenerationTest {
             authority = authority.copy(
                 chordEvents = listOf(
                     AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 1),
-                    AuthoritativeChordEvent("chord-2", "verse-1", "C", 1, 480),
+                    AuthoritativeChordEvent("chord-2", "verse-1", "C", 1, 1920),
                 ),
             ),
         )
@@ -190,7 +190,7 @@ class MidiCoreCandidateGenerationTest {
         val session = readySession(store, root.resolve("stale-project"))
         val changed = session.project.copy(
             authority = requireNotNull(session.project.authority).copy(
-                chordEvents = listOf(AuthoritativeChordEvent("chord-1", "verse-1", "G", 0, 480)),
+                chordEvents = listOf(AuthoritativeChordEvent("chord-1", "verse-1", "G", 0, 1920)),
             ),
         )
 
@@ -300,17 +300,14 @@ class MidiCoreCandidateGenerationTest {
             projectLifecycle(store).create(CreateMidiCoreProject(projectRoot, "Generation Test", "generation-project")),
         ).session
         val source = OwnedMidiFixtures.writeAll(root.resolve("fixtures-${projectRoot.fileName}"))
-            .single { it.fileName.toString() == "smf0-melody.mid" }
+            .single { it.fileName.toString() == "whole-song-one-bar.mid" }
         val imported = assertIs<MidiCoreSourceImportResult.Imported>(
             MidiCoreSourceImport(store).import(ImportMidiCoreSource(created, source)),
-        ).session
-        val selected = assertIs<MidiCoreMelodySelectionResult.Selected>(
-            MidiCoreMelodySelection(store).select(SelectMidiCoreMelody(imported, 0, 0)),
         ).session
         val authority = assertIs<MidiCoreAuthorityResult.Confirmed>(
             MidiCoreMusicalAuthority(store).confirm(
                 ConfirmMidiCoreAuthority(
-                    selected,
+                    imported,
                     ProjectKey(ProjectKeySpelling.C, ProjectScaleMode.MAJOR),
                     ProjectTempo(500_000),
                     ProjectMeter(4, 2),
@@ -322,8 +319,7 @@ class MidiCoreCandidateGenerationTest {
                 ReplaceMidiCoreStructure(
                     authority,
                     listOf(ProjectSectionDefinition("verse", "Verse")),
-                    listOf(MidiCoreOccurrencePlacement("verse-1", "verse", "Verse", 480)),
-                    expectedSongEndTick = 480,
+                    listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", 1)),
                 ),
             ),
         ).session
@@ -331,7 +327,7 @@ class MidiCoreCandidateGenerationTest {
             MidiCoreAuthoritativeHarmony(store).replace(
                 ReplaceMidiCoreHarmony(
                     structured,
-                    listOf(AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 480)),
+                    listOf(AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 1920)),
                 ),
             ),
         ).session

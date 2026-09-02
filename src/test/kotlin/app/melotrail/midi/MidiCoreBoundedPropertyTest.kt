@@ -119,7 +119,7 @@ class MidiCoreBoundedPropertyTest {
             assertTrue(inspection.findings.any { it.code == expectedIssue }, "seed=$NOTE_PAIRING_SEED case=$caseIndex expected=$expectedIssue")
             val result = MidiCoreSourceImport(store).import(ImportMidiCoreSource(session, source))
             val rejected = assertIs<MidiCoreSourceImportResult.Rejected>(result, "seed=$NOTE_PAIRING_SEED case=$caseIndex result=$result")
-            assertEquals(MidiCoreSourceImportProblemCode.IMPORT_REJECTED, rejected.problem.code, "seed=$NOTE_PAIRING_SEED case=$caseIndex")
+            assertEquals(MidiCoreSourceImportProblemCode.SINGLE_MELODY_TRACK_REQUIRED, rejected.problem.code, "seed=$NOTE_PAIRING_SEED case=$caseIndex")
             assertEquals(null, store.openProject(projectRoot).sourceMidi, "seed=$NOTE_PAIRING_SEED case=$caseIndex must not publish malformed pairing")
         }
     }

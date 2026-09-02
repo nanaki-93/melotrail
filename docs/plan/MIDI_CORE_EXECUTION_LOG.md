@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-048 in progress
+Status: MC-049 awaiting human holdout evidence
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -88,7 +88,8 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-046 | DONE | `midi-core: MC-046 harden MIDI export` | PASS — exporter/development-fixture and focused Export UI suites, documentation coverage, `make test`, `make build` | Versioned self-validating portable manifest, semantic package re-import, deterministic package bytes/hashes, snapshot-failure cleanup, and explicit Logic/GarageBand conditional guidance are covered. |
 | MC-047 | DONE | `midi-core: MC-047 harden malformed input handling` | PASS — fixed-seed bounded property suite twice, documentation coverage, `make test`, `make build` | 400 deterministic boundary cases cover malformed chunks/note pairing, rational ticks, timelines, JSON/path/state, and writer-reader semantics. |
 | MC-048 | DONE | `midi-core: MC-048 verify Logic Pro` | PASS — six-package final Logic Pro matrix, focused Export/exporter suites, `make test`, `make build` | Logic Pro 12.3.1 final imports/playback/save-reopen pass; marker display is best-effort/unassessed. User-authorized scope is Logic Pro-only; GarageBand is unverified and receives no support claim. |
-| MC-049 | TODO | | | |
+| MC-048A | DONE | `midi-core: MC-048A simplify source workflow` | PASS — focused JVM/Compose suites, documentation coverage, `make test`, `make build` | Valid complete-song input is protected atomically at import; ambiguous note tracks/channels are rejected; structure entry is ordered positive whole bars totaling the immutable source end. |
+| MC-049 | AWAITING_HUMAN | | | Awaiting ten user-approved, unseen, license-safe MIDI projects and listener rubric results; obsolete ignored `data/audio/` MIDI is not eligible. |
 | MC-050 | TODO | | | |
 | MC-051 | TODO | | | |
 | MC-052 | TODO | | | |
@@ -110,7 +111,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | G2 MIDI project kernel complete | MC-010–MC-019 | DONE | MC-010–MC-019 target schema, artifact, authority, invalidation, lifecycle, and full test/build gates pass. |
 | G3 Vertical slice complete | MC-020–MC-030 | DONE | MC-020–MC-030 target context, validation, generation, review, assembly, audition, export, and the JVM vertical-slice gate pass. |
 | G4 Focused desktop complete | MC-031–MC-040 | DONE | MC-040 real-service focused Compose E2E, six generated page fixtures, `make test`, and `make build` pass. |
-| G5 Product behavior accepted | MC-041–MC-049 | IN_PROGRESS | MC-041–MC-047 are complete; MC-048–MC-049 remain. |
+| G5 Product behavior accepted | MC-041–MC-049 | IN_PROGRESS | MC-041–MC-048A are complete; MC-049 awaits the required user-approved holdout set and listener scores. |
 | G6 Legacy product removed | MC-050–MC-059 | TODO | |
 | G7 MVP complete | MC-060 | TODO | |
 
@@ -1197,6 +1198,40 @@ Known limitations: The final Logic Pro record does not prove marker presentation
 Commit: `midi-core: MC-048 verify Logic Pro`.
 Next task: MC-049 — complete holdout musical acceptance (user pause required).
 
+### MC-048A — Simplify the source and structure workflow
+
+Status: DONE
+Started: 2026-09-02
+Completed: 2026-09-02
+Starting commit/status: `ec2b75b` / preserved unrelated deleted Kotlin compiler-session marker plus the already prepared, uncommitted MC-049 holdout log/rubric.
+User decision: The source MIDI is now one track for the complete song; the user defines an ordered structure such as 8-bar Intro, 12-bar Verse, and 8-bar Chorus. The user confirmed that the source will maintain one note-bearing melody track for now.
+Contracts read: F-MIDI-001–F-MIDI-005, F-AUTH-003; MIDI Contract sections 2, 3, 6, and 8; Architecture sections 4.1–4.3; Quality Gates Import/Authority/UI; inserted MC-048A task.
+Current owners inspected: target SMF reader/import validator, source-import transaction, protected-melody projection, v1 project invariants/schema, occurrence timeline/editor, authority application services, focused workspace reducer/composition, MIDI and Structure & Harmony pages, owned fixtures, vertical workflow/export suites, Logic compatibility contract, and MC-049 rubric.
+Behavior retained/extracted: Import now requires exactly one safely pairable note-bearing track with exactly one note-bearing channel, permits extra tracks only when they contain no notes, derives the protected melody deterministically, and binds source/report/protected identity in one project revision. The validator makes the same automatic inference and blocks unclosed note pairing on every track. Polyphony inside the sole melody channel remains an advisory and is preserved. Structure requests now contain only ordered section identities/labels and positive whole-bar counts; PPQ and confirmed meter derive contiguous ticks, pickup is zero in the focused workflow, and totals must exactly match the immutable source end. Chord windows remain tick-exact so sub-bar harmony is still supported.
+Files added/changed: `PLAN.md`, `README.md`, active architecture/functional/MIDI/DAW/quality/troubleshooting docs, execution task/prompt/log/rubric docs, `MidiCoreSourceImport.kt`, `MidiImportValidation.kt`, `MidiCoreProject.kt`, `MidiCoreOccurrenceTimeline.kt`, `MidiCoreStructureTimeline.kt`, focused desktop composition/workspace/MIDI/Structure sources, documentation inventory, owned fixtures, and their application/domain/project/Compose/workflow/export regression tests.
+Files/data deleted: `src/main/kotlin/app/melotrail/application/MidiCoreMelodySelection.kt` and `src/test/kotlin/app/melotrail/application/MidiCoreMelodySelectionTest.kt`; the manual desktop selection intent, use-case port, composition wiring, button semantics, and operation branch were removed from their surviving owners. No source MIDI, project, candidate, acceptance, export snapshot, Logic evidence, or user data was deleted.
+Tracked deletion recoverability: The superseded manual-selection owner/test are recoverable from Git. The unrelated `.kotlin/sessions/kotlin-compiler-10759057547151889139.salive` deletion remains unstaged and excluded from the task commit.
+Ignored deletion recoverability: Gradle build/test output is recreatable; no ignored project data was deleted.
+Focused tests: `./gradlew :test --tests app.melotrail.midi.domain.MidiImportValidatorTest --tests app.melotrail.midi.domain.MidiProtectedMelodySelectorTest --tests app.melotrail.application.MidiCoreSourceImportTest --tests app.melotrail.structure.MidiCoreOccurrenceTimelineTest --tests app.melotrail.application.MidiCoreStructureTimelineTest --tests app.melotrail.application.MidiCoreVerticalSliceTest --tests app.melotrail.application.MidiCoreMidiPackageExporterTest --tests app.melotrail.project.MidiCoreProjectSchemaTest --rerun-tasks --console=plain` PASS. `./gradlew :desktopApp:test --tests app.melotrail.desktop.MidiCoreMidiPageTest --tests app.melotrail.desktop.MidiCoreStructureHarmonyPageTest --tests app.melotrail.desktop.MidiCoreFocusedWorkflowTest --tests app.melotrail.desktop.MidiCoreDesktopCompositionTest --tests app.melotrail.desktop.MidiCoreWorkspaceTest --rerun-tasks --console=plain` PASS. Coverage includes automatic SMF0/SMF1 protection, source/report immutability, multiple track/channel rejection, expression projection, atomic persistence, exact bar/tick conversion and mismatch rejection, removed selection semantics, real-service flow, package semantic re-import, and reopen/schema invariants.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; deleted-owner/text scans PASS; `git diff --check` PASS; `make test` PASS (2026-09-02; 14 Gradle tasks); `make build` PASS (2026-09-02; 15 Gradle tasks including documentation coverage).
+Manual evidence: Not required; this is an implementation task. The completed Logic Pro 12.3.1 MC-048 result remains valid historical export evidence, while future release matrices must use the revised eligible fixtures.
+Decisions/deviations: “One melody” means exactly one note-bearing track and channel, not forced monophony; overlapping different pitches remain a preserved advisory. Non-note conductor/reference tracks are allowed and never become arranged musical roles. The musician has no manual melody-selection, source-switch, occurrence-tick, or pickup control in the focused workflow. Existing canonical tick records and the internal tick timeline/editor remain because generators, persistence, export, and chord windows require exact ticks; they are not an alternate musician-facing structure path.
+Known limitations: A source whose end is not a whole-bar boundary in its confirmed meter cannot be structured in this MVP and must be corrected in Logic Pro before import into a new project. A pre-MC-048A v1 project document that contains a source without a protected-melody identity no longer satisfies the atomic project invariant; there is no migration path, so it must be recreated. MC-049 still requires ten eligible user-approved/license-safe holdouts and human listening scores.
+Fixture evidence: `whole-song-one-bar.mid` SHA-256 `ca4f370f54bd15ac39e6b8ee314ef98caaff81b48c1cf28de4540b00e92ed4fd`; `whole-song-two-bars.mid` SHA-256 `eec423c136cc30ed6c082a06a9a2f4a8d9fde1f45030aa878b16086e4eabc69c`; `whole-song-three-bars.mid` SHA-256 `287e5db185ca52d1b96cc336001b4075ac536b5b3809685788adeebdc59fa4a4`. At PPQ 480 and 4/4, their required totals resolve to 1,920, 3,840, and 5,760 ticks respectively.
+Commit: `midi-core: MC-048A simplify source workflow`.
+Next task: MC-049 — await the user-approved holdout set and listener results; do not begin MC-050 cleanup before the manual gate passes.
+
+### MC-049 — Holdout musical acceptance
+
+Status: AWAITING_HUMAN
+Started: 2026-08-28
+Starting commit/status: `ec2b75b` / only the preserved unrelated deleted Kotlin compiler-session marker was present when preparation began; MC-048A was inserted before scoring after the user's 2026-09-02 workflow decision.
+Contracts read: Quality Gates 7–8; all F-ARR/F-REV functions; MC-049 task contract; and the frozen holdout thresholds.
+Holdout inventory: No eligible project is presently available. The repository has no non-build, non-legacy `.mid` or `.midi` file. It does contain 70 ignored, untracked MIDI files under `data/audio/` (303 MB); they are audio-era cleanup scope, were not approved as license-safe/unseen holdouts, and must not be used or tuned against for MC-049.
+Automated preparation: `docs/plan/MC049_HOLDOUT_RUBRIC.md` freezes the project eligibility rules, review procedure, all eight 1–5 scores, mandatory thresholds, evidence fields, and a ten-project response template. It explicitly excludes development fixtures and the legacy `data/audio/` material.
+Unblock condition: The user must provide at least ten previously unseen, license-safe MIDI projects satisfying the single-note-bearing-track/channel and whole-bar-length contract, with an ownership/source statement, then perform the required arrangement/listening review and supply the completed rubric. The agent will hash/freeze the set before generation, record snapshot IDs/results, fix only reproducible defects, and repeat any failed project.
+Next action: Await user-provided holdouts and listener results; do not start MC-050 cleanup before MC-049 is DONE.
+
 ## 6. Manual gate records
 
 ### MC-009 — Early DAW compatibility
@@ -1223,16 +1258,16 @@ Next task: MC-049 — complete holdout musical acceptance (user pause required).
 
 ### MC-049 — Holdout musical acceptance
 
-- Holdout set ownership/source statement:
-- Project count and hashes:
-- Snapshot IDs:
-- Melody-preservation results:
-- Per-role scores:
-- Overall scores/median:
-- Review-time median:
-- Failed cases and targeted fixes:
-- Reviewer(s)/date:
-- Decision:
+- Holdout set ownership/source statement: Awaiting user-provided, license-safe, unseen projects. `data/audio/` is explicitly excluded as obsolete ignored audio-era material.
+- Project count and hashes: Awaiting user input.
+- Snapshot IDs: Awaiting user input.
+- Melody-preservation results: Awaiting user input.
+- Per-role scores: Awaiting user input.
+- Overall scores/median: Awaiting user input.
+- Review-time median: Awaiting user input.
+- Failed cases and targeted fixes: Awaiting user input.
+- Reviewer(s)/date: Awaiting user input.
+- Decision: AWAITING_HUMAN.
 
 ### MC-060 — Final sign-off
 

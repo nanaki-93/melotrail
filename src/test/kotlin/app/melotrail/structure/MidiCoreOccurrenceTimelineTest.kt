@@ -18,6 +18,41 @@ class MidiCoreOccurrenceTimelineTest {
     private val ppq = MidiPpq(480)
 
     @Test
+    fun `bar placements derive contiguous exact ticks and require the source total`() {
+        val timeline = MidiCoreOccurrenceTimeline.buildFromBars(
+            ppq,
+            ProjectMeter(4, 2),
+            definitions,
+            listOf(
+                MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", 2),
+                MidiCoreBarOccurrencePlacement("chorus-1", "chorus", "Chorus", 1),
+            ),
+            expectedSongEndTick = 5_760,
+        )
+
+        assertEquals(listOf(0L to 3_840L, 3_840L to 5_760L), timeline.occurrences.map { it.startTick to it.endTick })
+        assertEquals(0L, timeline.pickupTicks)
+        assertFailsWith<IllegalArgumentException> {
+            MidiCoreOccurrenceTimeline.buildFromBars(
+                ppq,
+                ProjectMeter(4, 2),
+                definitions,
+                listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", 2)),
+                expectedSongEndTick = 5_760,
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            MidiCoreOccurrenceTimeline.buildFromBars(
+                ppq,
+                ProjectMeter(4, 2),
+                definitions,
+                listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", 1)),
+                expectedSongEndTick = 1_919,
+            )
+        }
+    }
+
+    @Test
     fun `timeline keeps repeated sections contiguous with exact tick and beat positions`() {
         val timeline = MidiCoreOccurrenceTimeline.build(
             ppq,

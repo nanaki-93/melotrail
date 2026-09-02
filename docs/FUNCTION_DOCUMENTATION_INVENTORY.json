@@ -37,9 +37,9 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt has 112 callable declarations, 5 directly documented and 107 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-038; explicit candidate/accepted role/occurrence/full-arrangement audition preparation, authority-safe operation admission, and typed device failure traces are covered by focused workspace tests, and the remaining adapter/reducer declarations must be reconsidered when their behavior or contract changes.",
-      "functionCount": 112,
-      "declarationDigest": "53d4e1bb15aaa4b0b2362f25a6af2eb6ff22eb50126c0d9cca235d0ee0bc3aaf",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt has 108 callable declarations, 5 directly documented and 103 still requiring focused KDoc/docstrings. MC-048A reviewed removal of manual melody-selection routing and conversion to bar-count structure intents; operation admission, audition, and typed failure traces remain covered by focused workspace tests.",
+      "functionCount": 108,
+      "declarationDigest": "b5982046ad226ebe9f0b886a82486686189212fcf7d5bc083178e53d8556d05e",
       "documentedFunctionCount": 5
     },
     {
@@ -85,7 +85,7 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreMidiPage.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreMidiPage.kt has 18 callable declarations, 1 directly documented and 17 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-035; target MIDI import, protected-melody selection, findings, immutable identity evidence, and MIDI transport semantics are covered by focused Compose tests, and the remaining local presentation declarations must be reconsidered when their behavior or contract changes.",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreMidiPage.kt has 18 callable declarations, 1 directly documented and 17 still requiring focused KDoc/docstrings. MC-048A reviewed automatic single-track melody protection, findings, immutable identity evidence, and MIDI transport semantics with focused Compose coverage.",
       "functionCount": 18,
       "declarationDigest": "094b5db9a1a2cf3197dca750e5fab5c7f357494a579329ca98a9e4b0f3d5a963",
       "documentedFunctionCount": 1
@@ -93,9 +93,9 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreStructureHarmonyPage.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreStructureHarmonyPage.kt has 38 callable declarations, 1 directly documented and 37 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-036; target authority editing, exact occurrence and chord timing, coverage findings, invalidation preview, and MIDI audition semantics are covered by focused Compose tests, and the remaining local presentation declarations must be reconsidered when their behavior or contract changes.",
-      "functionCount": 38,
-      "declarationDigest": "9a7b88681978ef33dab90865b61b27e2009395cca3711cadad134f7ae8afe093",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreStructureHarmonyPage.kt has 39 callable declarations, 1 directly documented and 38 focused presentation helpers. MC-048A reviewed whole-bar occurrence entry, exact source-total feedback, derived ticks, chord timing, invalidation preview, and MIDI audition semantics with focused Compose coverage.",
+      "functionCount": 39,
+      "declarationDigest": "b583af39e4e69b03fda5467c7bd038f58a0a9a55a2dbeff11ced5f182c52bbbc",
       "documentedFunctionCount": 1
     },
     {
@@ -347,14 +347,6 @@
       "documentedFunctionCount": 5
     },
     {
-      "path": "src/main/kotlin/app/melotrail/application/MidiCoreMelodySelection.kt",
-      "classification": "inherited-contract",
-      "reason": "The 4 callable declarations implement MC-014's UI-ready protected melody selection, source reinspection, digest binding, and MC-018 scoped derived-work invalidation preview under F-MIDI-003, F-MIDI-005, and F-REV-005; reviewed on 2026-08-27.",
-      "functionCount": 4,
-      "declarationDigest": "106487ce7bda3433ed15678207c1b5e817d73f289a72409b6342d1f644cac6ac",
-      "documentedFunctionCount": 0
-    },
-    {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreMusicalAuthority.kt",
       "classification": "inherited-contract",
       "reason": "The 3 callable declarations implement MC-015's explicit fixed tempo, meter, key, and mode confirmation, source timing suggestions, source reinspection, and MC-018 scoped authority-impact preview under F-AUTH-001, F-AUTH-002, and F-REV-005; reviewed on 2026-08-27.",
@@ -373,7 +365,7 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreSourceImport.kt",
       "classification": "inherited-contract",
-      "reason": "The 12 callable declarations implement MC-013's immutable SMF source import, validation classification, digest-bound report publication, source-change detection, and atomic project binding under F-MIDI-001, F-MIDI-002, F-MIDI-004, and F-MIDI-005; reviewed on 2026-08-27.",
+      "reason": "The 12 callable declarations implement immutable SMF source import, MC-048A automatic single-track/channel protection, validation classification, digest-bound report publication, source-change detection, and atomic project binding under F-MIDI-001, F-MIDI-002, F-MIDI-004, and F-MIDI-005; reviewed on 2026-09-02.",
       "functionCount": 12,
       "declarationDigest": "f5f5b81eaf80e01d4442a1d0c95889f960c7bb8c1a9742824ebaf39ff52ea257",
       "documentedFunctionCount": 0
@@ -1637,9 +1629,9 @@
     {
       "path": "src/main/kotlin/app/melotrail/midi/domain/MidiImportValidation.kt",
       "classification": "inherited-contract",
-      "reason": "The 8 callable declarations implement the typed blocking, advisory, and awaiting-authority import decisions in docs/MIDI_CONTRACT.md section 7; MC-006 reviewed the table-driven boundary on 2026-08-26.",
-      "functionCount": 8,
-      "declarationDigest": "ad740b11679ca4556d32d5edcc9c7cda5c5a6d0558cf31c7d7bf493c9a609efc",
+      "reason": "The 10 callable declarations implement typed blocking, advisory, and awaiting-authority import decisions plus MC-048A's automatic exact single-note-track/channel boundary under MIDI Contract section 7.",
+      "functionCount": 10,
+      "declarationDigest": "3b787e27b9065038af0debd5b6ed9bd9b4d5352ffccf5adf052750caa2f72b17",
       "documentedFunctionCount": 0
     },
     {
@@ -1653,7 +1645,7 @@
     {
       "path": "src/main/kotlin/app/melotrail/midi/domain/MidiProtectedMelody.kt",
       "classification": "inherited-contract",
-      "reason": "The 10 callable declarations implement MC-014's immutable selected-channel melody projection, expression-preservation policy, protected-anchor derivation, source-event lineage, and deterministic identity digest under MIDI Contract sections 3, 6.1, and 10; reviewed on 2026-08-27.",
+      "reason": "The 10 callable declarations implement immutable automatically protected channel projection, expression-preservation policy, protected-anchor derivation, source-event lineage, and deterministic identity digest under MIDI Contract sections 3, 6.1, and 10; reviewed for MC-048A on 2026-09-02.",
       "functionCount": 10,
       "declarationDigest": "b8d4b4d3ab7aed1fe20cb17a4afe6a8271b36ce83de10cac52b770b1c3075a2b",
       "documentedFunctionCount": 0
@@ -1789,9 +1781,9 @@
     {
       "path": "src/main/kotlin/app/melotrail/structure/MidiCoreOccurrenceTimeline.kt",
       "classification": "inherited-contract",
-      "reason": "The 13 callable declarations implement MC-016's exact PPQ/meter-aware occurrence timeline, explicit duration/start validation, bounded pickup policy, ordered mutations, and deterministic marker projection under F-AUTH-003; reviewed on 2026-08-27.",
-      "functionCount": 13,
-      "declarationDigest": "77906afb3b0c4f86ee1fa0536eb0e285694c7f4de09fa676e940b1f0e2c0c770",
+      "reason": "The 15 callable declarations implement MC-016's exact PPQ/meter-aware timeline and MC-048A's whole-bar placements, exact source-total validation, deterministic tick derivation, ordered mutations, and marker projection under F-AUTH-003.",
+      "functionCount": 15,
+      "declarationDigest": "41fbacf313c2825772407e740d0cb4463c5e015184d11ff6886163ed10aca26c",
       "documentedFunctionCount": 1
     },
     {

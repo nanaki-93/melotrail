@@ -10,9 +10,10 @@ archive; none of their prompts or task IDs may be executed.
 
 - Product direction: accepted.
 - Documentation baseline: accepted.
-- Dependency-ordered implementation tasks: ready; execution not started.
+- Dependency-ordered implementation tasks: in progress; consult the execution
+  log for the current task and manual gate.
 - Serial agent execution prompt: ready.
-- Execution log: not yet started.
+- Execution log: active.
 
 ## Active execution suite
 
@@ -43,7 +44,8 @@ No task may defer old-code deletion indefinitely. Deletion occurs with the
 replacement task when safe, or in the final destructive cleanup phase when it
 depends on full cutover.
 
-Execute tasks strictly from `MC-000` through `MC-060`. Do not begin the optional
+Execute tasks strictly from `MC-000` through `MC-060`, including `MC-048A`
+between `MC-048` and `MC-049`. Do not begin the optional
 enhancements in the root plan. Tasks that require Logic Pro or human musical
 review must stop at their named manual gate and preserve all automated evidence
 already collected.

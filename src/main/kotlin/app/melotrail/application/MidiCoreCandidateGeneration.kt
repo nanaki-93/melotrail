@@ -352,15 +352,15 @@ class MidiCoreCandidateGeneration(
                 problem(
                     MidiCoreCandidateProblemCode.INVALID_PROJECT,
                     "The protected melody view cannot be re-derived from the preserved source.",
-                    "Restore the source or reselect a safely pairable melody track and channel.",
+                    "Restore the original source artifact or create a new project and import one valid single-track melody source.",
                 ),
             )
         }
         if (protectedMelody.identitySha256 != selectedMelody.identitySha256) return ContextLoad.Rejected(
             problem(
                 MidiCoreCandidateProblemCode.INVALID_PROJECT,
-                "The selected melody identity no longer matches the preserved source.",
-                "Reopen the project and select the protected melody again.",
+                "The protected melody identity no longer matches the preserved source.",
+                "Restore the original source artifact or create a new project and import it again.",
             ),
         )
 

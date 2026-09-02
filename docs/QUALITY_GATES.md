@@ -30,6 +30,8 @@ Before implementation tasks begin:
 ### Import
 
 - Golden SMF 0 and 1 fixtures parse deterministically.
+- Import accepts exactly one note-bearing track/channel, protects it
+  automatically, permits meta-only tracks, and rejects ambiguous sources.
 - Unsupported format/division/maps fail with stable actionable errors.
 - Note pairing, velocity-zero note-off, pickup timing, controllers, and end
   boundaries have regression coverage.
@@ -40,7 +42,8 @@ Before implementation tasks begin:
 ### Authority
 
 - Fixed tempo/meter/key serialize and reopen unchanged.
-- Occurrence timelines are ordered, contiguous, and tick-exact.
+- Occurrence lengths are positive whole bars, total the source exactly, and
+  resolve to one ordered, contiguous, tick-exact timeline.
 - Chord windows cover their intended scope with no inferred substitution.
 - Valid chromatic chords remain authoritative.
 - Authority changes invalidate only dependent candidates/exports.
@@ -105,7 +108,7 @@ Record exact DAW/macOS versions; “supports MIDI” is not sufficient evidence.
 Use three fixtures while developing:
 
 - simple diatonic 4/4 melody;
-- pickup and sub-bar chord-change melody; and
+- repeated whole-bar sections with sub-bar chord changes; and
 - chromatic/expressive melody with supported controllers.
 
 They prevent regression but are not production acceptance evidence.
@@ -113,8 +116,10 @@ They prevent regression but are not production acceptance evidence.
 ### Holdout set
 
 Use at least ten unseen MIDI projects that were not tuned into generator
-constants. Include different keys, tempos, section orders, melody registers,
-rhythmic activity, sustained material, repeated sections, and chromatic harmony.
+constants. Every source follows the single note-bearing track/channel and
+whole-bar-length contract. Include different keys, tempos, section orders,
+melody registers, rhythmic activity, sustained material, repeated sections,
+and chromatic harmony.
 
 Each project is evaluated without changing the authoritative melody or harmony
 to make the generator look better.

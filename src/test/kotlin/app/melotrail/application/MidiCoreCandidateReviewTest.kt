@@ -13,7 +13,7 @@ import app.melotrail.project.MidiCoreGeneratorInput
 import app.melotrail.project.ProjectKey
 import app.melotrail.project.ProjectSectionDefinition
 import app.melotrail.project.adapter.MidiCoreArtifactStore
-import app.melotrail.structure.MidiCoreOccurrencePlacement
+import app.melotrail.structure.MidiCoreBarOccurrencePlacement
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlinx.coroutines.Dispatchers
@@ -199,17 +199,14 @@ class MidiCoreCandidateReviewTest {
             MidiCoreProjectLifecycle(artifacts = store).create(CreateMidiCoreProject(projectRoot, "Review Test", "review-project")),
         ).session
         val source = OwnedMidiFixtures.writeAll(root.resolve("fixtures-${projectRoot.fileName}"))
-            .single { it.fileName.toString() == "smf0-melody.mid" }
+            .single { it.fileName.toString() == "whole-song-one-bar.mid" }
         val imported = assertIs<MidiCoreSourceImportResult.Imported>(
             MidiCoreSourceImport(store).import(ImportMidiCoreSource(created, source)),
-        ).session
-        val selected = assertIs<MidiCoreMelodySelectionResult.Selected>(
-            MidiCoreMelodySelection(store).select(SelectMidiCoreMelody(imported, 0, 0)),
         ).session
         val authority = assertIs<MidiCoreAuthorityResult.Confirmed>(
             MidiCoreMusicalAuthority(store).confirm(
                 ConfirmMidiCoreAuthority(
-                    selected,
+                    imported,
                     ProjectKey(ProjectKeySpelling.C, ProjectScaleMode.MAJOR),
                     ProjectTempo(500_000),
                     ProjectMeter(4, 2),
@@ -221,8 +218,7 @@ class MidiCoreCandidateReviewTest {
                 ReplaceMidiCoreStructure(
                     authority,
                     listOf(ProjectSectionDefinition("verse", "Verse")),
-                    listOf(MidiCoreOccurrencePlacement("verse-1", "verse", "Verse", 480)),
-                    expectedSongEndTick = 480,
+                    listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", 1)),
                 ),
             ),
         ).session
@@ -230,7 +226,7 @@ class MidiCoreCandidateReviewTest {
             MidiCoreAuthoritativeHarmony(store).replace(
                 ReplaceMidiCoreHarmony(
                     structured,
-                    listOf(AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 480)),
+                    listOf(AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 1920)),
                 ),
             ),
         ).session

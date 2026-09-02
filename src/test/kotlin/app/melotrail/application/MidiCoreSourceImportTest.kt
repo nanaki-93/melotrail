@@ -12,6 +12,10 @@ import java.security.MessageDigest
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
+import javax.sound.midi.MidiEvent
+import javax.sound.midi.MidiSystem
+import javax.sound.midi.Sequence
+import javax.sound.midi.ShortMessage
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -28,7 +32,7 @@ class MidiCoreSourceImportTest {
 
     @Test
     fun `imports supported SMF sources as immutable bytes with inspection report and track summaries`() {
-        listOf("smf0-melody.mid", "smf1-reference-tracks.mid").forEach { filename ->
+        listOf("smf0-melody.mid", "whole-song-one-bar.mid").forEach { filename ->
             val projectRoot = root.resolve(filename.removeSuffix(".mid"))
             val source = fixture(filename, root.resolve("inputs-$filename"))
             val store = MidiCoreArtifactStore()
@@ -39,7 +43,8 @@ class MidiCoreSourceImportTest {
             )
 
             val record = requireNotNull(result.session.project.sourceMidi)
-            assertEquals(MidiImportDisposition.AWAITING_AUTHORITY, result.validation.disposition)
+            assertEquals(MidiImportDisposition.ACCEPTED, result.validation.disposition)
+            assertEquals(record.trackSummaries.single { track -> track.channels.any { it.noteCount > 0 } }.trackIndex, result.session.project.selectedMelody?.trackIndex)
             assertEquals(filename, record.originalFilename)
             assertEquals(record.sha256, record.original.sha256)
             assertEquals(record.trackSummaries.indices.toList(), record.trackSummaries.map { it.trackIndex })
@@ -52,6 +57,45 @@ class MidiCoreSourceImportTest {
             assertEquals(record.sha256, report.getValue("source").jsonObject.getValue("sha256").jsonPrimitive.content)
             assertEquals(result.session.project, store.openProject(projectRoot))
         }
+    }
+
+    @Test
+    fun `rejects multiple note-bearing tracks without publishing source artifacts`() {
+        val store = MidiCoreArtifactStore()
+        val session = create(root.resolve("multi-track-project"), store)
+
+        val result = assertIs<MidiCoreSourceImportResult.Rejected>(
+            MidiCoreSourceImport(store).import(
+                ImportMidiCoreSource(session, fixture("smf1-reference-tracks.mid", root.resolve("multi-track-input"))),
+            ),
+        )
+
+        assertEquals(MidiCoreSourceImportProblemCode.SINGLE_MELODY_TRACK_REQUIRED, result.problem.code)
+        assertTrue(result.validation?.findings?.any { it.code.name == "SINGLE_MELODY_TRACK_REQUIRED" } == true)
+        assertFalse(Files.exists(session.root.resolve(MidiCoreArtifactStore.SOURCE_MIDI.value)))
+        assertEquals(session.project, store.openProject(session.root))
+    }
+
+    @Test
+    fun `rejects multiple note-bearing channels in the sole melody track`() {
+        val store = MidiCoreArtifactStore()
+        val session = create(root.resolve("multi-channel-project"), store)
+        val source = root.resolve("multi-channel.mid")
+        val sequence = Sequence(Sequence.PPQ, 480)
+        val track = sequence.createTrack()
+        listOf(0, 1).forEach { channel ->
+            track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, channel, 60 + channel, 96), 0))
+            track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, channel, 60 + channel, 0), 480))
+        }
+        require(MidiSystem.write(sequence, 1, source.toFile()) > 0)
+
+        val result = assertIs<MidiCoreSourceImportResult.Rejected>(
+            MidiCoreSourceImport(store).import(ImportMidiCoreSource(session, source)),
+        )
+
+        assertEquals(MidiCoreSourceImportProblemCode.SINGLE_MELODY_CHANNEL_REQUIRED, result.problem.code)
+        assertTrue(result.validation?.findings?.any { it.code.name == "SINGLE_MELODY_CHANNEL_REQUIRED" } == true)
+        assertFalse(Files.exists(session.root.resolve(MidiCoreArtifactStore.SOURCE_MIDI.value)))
     }
 
     @Test

@@ -2,7 +2,7 @@
 
 Status: ready for serial execution
 
-Task range: MC-000 through MC-060
+Task range: MC-000 through MC-060, including user-directed MC-048A
 
 Scope: deterministic MIDI Core MVP, focused Compose Desktop UI, acceptance,
 and complete removal of the superseded audio product
@@ -43,7 +43,8 @@ the final reduction.
 
 ### 3.1 Ordering
 
-- Execute tasks strictly in numeric order.
+- Execute tasks strictly in numeric order; MC-048A follows MC-048 and precedes
+  MC-049.
 - Only one task may be `IN_PROGRESS` in the execution log.
 - A task begins only after every earlier task is `DONE`, except a task marked
   `AWAITING_HUMAN` must be resolved before continuing past its phase gate.
@@ -1064,12 +1065,43 @@ It must not fabricate a DAW result, listening score, or sign-off.
 - **Commit:** `midi-core: MC-048 verify destination DAWs`.
 - **Done when:** Logic Pro passes or has an explicitly accepted conditional pass.
 
-### MC-049 — Complete holdout musical acceptance
+### MC-048A — Simplify the source and structure workflow
 
 - **Depends on:** MC-048.
+- **Contracts:** F-MIDI-001–F-MIDI-005, F-AUTH-003; MIDI Contract sections 2,
+  3, 6, and 8; user decision dated 2026-09-02.
+- **Inspect:** source import/validation, protected-melody selection, project
+  binding, structure timeline, focused Compose MIDI/Structure pages, workflow
+  tests, and Logic export fixture coverage.
+- **Work:** require one complete-song MIDI source with exactly one note-bearing
+  track and one note-bearing channel; allow meta-only conductor tracks;
+  automatically derive and persist the protected melody during the atomic
+  import; replace user-facing start/duration/pickup tick entry with ordered
+  positive whole-bar section lengths; derive contiguous ticks from confirmed
+  meter/PPQ; require the section total to equal the immutable source end.
+- **Delete:** the manual melody-selection application use case, desktop intent,
+  selection controls, composition wiring, and their obsolete tests. Do not keep
+  an alternate tick-entry or source-selection UI.
+- **Tests:** automatic format-0/1 protection, multiple track/channel rejection,
+  expression projection, source immutability, exact bar conversion/total
+  rejection, focused MIDI and Structure UI, real-service workflow, semantic
+  export/re-import, and persistence regression.
+- **Validation:** focused tests, documentation coverage, `make test`, and
+  `make build`.
+- **Evidence:** source/problem codes, resolved bar/tick examples, fixture
+  hashes, deleted-owner scan, and UI semantics.
+- **Commit:** `midi-core: MC-048A simplify source workflow`.
+- **Done when:** importing a valid source automatically establishes immutable
+  melody authority and the musician defines song structure only as ordered bar
+  counts that exactly cover that source.
+
+### MC-049 — Complete holdout musical acceptance
+
+- **Depends on:** MC-048A.
 - **Contracts:** Quality Gates 7–8; all F-ARR/F-REV functions.
-- **Inspect:** ten or more unseen, user-approved/license-safe MIDI projects and
-  the frozen rubric. Do not tune constants using future holdouts after scoring.
+- **Inspect:** ten or more unseen, user-approved/license-safe MIDI projects that
+  satisfy the single-melody-track and whole-bar source contract, plus the frozen
+  rubric. Do not tune constants using future holdouts after scoring.
 - **Work:** prepare/import each project, preserve melody/harmony authority,
   generate/review alternatives, measure review time, export accepted snapshot,
   and ask the user/listener to record per-role/overall scores and reasons. Fix
@@ -1330,8 +1362,9 @@ It must not fabricate a DAW result, listening score, or sign-off.
 ## 6. Functional traceability
 
 - **Project:** F-PROJ-001–004 -> MC-010–013, MC-031–034, MC-050, MC-060.
-- **MIDI source:** F-MIDI-001–005 -> MC-001–008, MC-013–014, MC-035, MC-047.
-- **Authority:** F-AUTH-001–005 -> MC-015–018, MC-036.
+- **MIDI source:** F-MIDI-001–005 -> MC-001–008, MC-013–014, MC-035, MC-047,
+  MC-048A.
+- **Authority:** F-AUTH-001–005 -> MC-015–018, MC-036, MC-048A.
 - **Audition:** F-PLAY-001–004 -> MC-028, MC-035, MC-038, MC-045.
 - **Arrangement:** F-ARR-001–007 -> MC-020–025, MC-037, MC-041–044.
 - **Review:** F-REV-001–006 -> MC-019, MC-025–027, MC-038, MC-044.
@@ -1345,7 +1378,7 @@ It must not fabricate a DAW result, listening score, or sign-off.
 
 ## 7. Completion rule
 
-MC-000 through MC-060 are mandatory. A task is not complete because its code
+MC-000 through MC-060, including MC-048A, are mandatory. A task is not complete because its code
 compiles; its deletion, focused tests, full required gate, evidence, and commit
 must all be recorded. Optional features require a new user-approved plan after
 MC-060 and may not be smuggled into this sequence.

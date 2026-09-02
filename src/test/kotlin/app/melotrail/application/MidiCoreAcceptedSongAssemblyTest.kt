@@ -25,7 +25,7 @@ import app.melotrail.project.MidiCoreAuthorityHasher
 import app.melotrail.project.ProjectKey
 import app.melotrail.project.ProjectSectionDefinition
 import app.melotrail.project.adapter.MidiCoreArtifactStore
-import app.melotrail.structure.MidiCoreOccurrencePlacement
+import app.melotrail.structure.MidiCoreBarOccurrencePlacement
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
@@ -46,23 +46,21 @@ class MidiCoreAcceptedSongAssemblyTest {
     @TempDir lateinit var root: Path
 
     @Test
-    fun `assembles repeated occurrences with pickup sub-bar harmony and source identity`() {
+    fun `assembles repeated bar-defined occurrences with sub-bar harmony and source identity`() {
         val store = MidiCoreArtifactStore()
         val session = readySession(
             store,
             root.resolve("repeated-project"),
-            sourceFixture = "pickup-timing.mid",
-            melodyTrackIndex = 1,
+            sourceFixture = "whole-song-two-bars.mid",
             placements = listOf(
-                MidiCoreOccurrencePlacement("verse-1", "verse", "Verse pickup", 960),
-                MidiCoreOccurrencePlacement("verse-2", "verse", "Verse repeat", 960, 960),
+                MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse one", 1),
+                MidiCoreBarOccurrencePlacement("verse-2", "verse", "Verse repeat", 1),
             ),
-            pickupTicks = 120,
             harmony = listOf(
-                AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 480),
-                AuthoritativeChordEvent("chord-2", "verse-1", "G", 480, 960),
-                AuthoritativeChordEvent("chord-3", "verse-2", "C", 960, 1440),
-                AuthoritativeChordEvent("chord-4", "verse-2", "G", 1440, 1920),
+                AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 960),
+                AuthoritativeChordEvent("chord-2", "verse-1", "G", 960, 1920),
+                AuthoritativeChordEvent("chord-3", "verse-2", "C", 1920, 2880),
+                AuthoritativeChordEvent("chord-4", "verse-2", "G", 2880, 3840),
             ),
         )
         val sourceBefore = Files.readAllBytes(session.root.resolve(MidiCoreArtifactStore.SOURCE_MIDI.value))
@@ -73,12 +71,12 @@ class MidiCoreAcceptedSongAssemblyTest {
         val assembled = (assemblyResult as MidiCoreAcceptedSongAssemblyResult.Assembled).review
         val song = assembled.song
 
-        assertEquals(1920L, song.songEndTick)
+        assertEquals(3840L, song.songEndTick)
         assertEquals(MidiPpq(480), song.ppq)
-        assertEquals(listOf(0L, 960L), song.markers.map(MidiExportMarker::tick))
+        assertEquals(listOf(0L, 1920L), song.markers.map(MidiExportMarker::tick))
         assertEquals(listOf("Melody", "Chords", "Bass", "Drums"), song.roles.map { it.role.trackName })
-        assertEquals(listOf(0L, 480L), song.roles.first().events.filterIsInstance<MidiNoteEvent>().map { it.orderingKey.tick })
-        assertEquals(setOf(0L, 480L, 960L, 1440L), song.roles[1].events.map { it.orderingKey.tick }.toSet())
+        assertEquals(listOf(0L, 960L, 1920L, 2880L), song.roles.first().events.filterIsInstance<MidiNoteEvent>().map { it.orderingKey.tick })
+        assertEquals(setOf(0L, 960L, 1920L, 2880L), song.roles[1].events.map { it.orderingKey.tick }.toSet())
         assertEquals(setOf(0, 1, 2, 9), song.roles.map { it.role.channel }.toSet())
         assertEquals(6, assembled.acceptedCandidates.size)
         assertEquals(accepted.project.sourceMidi!!.sha256, assembled.sourceSha256)
@@ -88,7 +86,7 @@ class MidiCoreAcceptedSongAssemblyTest {
         JdkMidiWriter().writeComplete(song, output)
         val inspected = JdkMidiReader().inspect(output)
         assertEquals(listOf("Conductor", "Melody", "Chords", "Bass", "Drums"), inspected.trackSummaries.map { it.name })
-        assertEquals(listOf(0L, 960L), inspected.sequence.tracks.first().events.filterIsInstance<MidiMarkerEvent>().map { it.orderingKey.tick })
+        assertEquals(listOf(0L, 1920L), inspected.sequence.tracks.first().events.filterIsInstance<MidiMarkerEvent>().map { it.orderingKey.tick })
         assertContentEquals(sourceBefore, Files.readAllBytes(session.root.resolve(MidiCoreArtifactStore.SOURCE_MIDI.value)))
     }
 
@@ -154,14 +152,14 @@ class MidiCoreAcceptedSongAssemblyTest {
         val overflowInitial = readySession(
             overflowStore,
             root.resolve("overflow-project"),
+            sourceFixture = "whole-song-two-bars.mid",
             placements = listOf(
-                MidiCoreOccurrencePlacement("verse-1", "verse", "Verse", 480),
-                MidiCoreOccurrencePlacement("verse-2", "verse", "Verse repeat", 480, 480),
+                MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", 1),
+                MidiCoreBarOccurrencePlacement("verse-2", "verse", "Verse repeat", 1),
             ),
-            expectedSongEndTick = 960,
             harmony = listOf(
-                AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 480),
-                AuthoritativeChordEvent("chord-2", "verse-2", "C", 480, 960),
+                AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 1920),
+                AuthoritativeChordEvent("chord-2", "verse-2", "C", 1920, 3840),
             ),
         )
         val overflowAccepted = acceptAll(overflowStore, overflowInitial, listOf("verse-1", "verse-2"))
@@ -175,7 +173,7 @@ class MidiCoreAcceptedSongAssemblyTest {
                 role = app.melotrail.midi.domain.MidiExportRole.CHORDS,
                 noteStart = 0,
                 noteEnd = 120,
-                songEnd = 960,
+                songEnd = 3840,
             ),
         )
         val overflowResult = assertIs<MidiCoreAcceptedSongAssemblyResult.Rejected>(
@@ -280,12 +278,9 @@ class MidiCoreAcceptedSongAssemblyTest {
     private fun readySession(
         store: MidiCoreArtifactStore,
         projectRoot: Path,
-        sourceFixture: String = "smf0-melody.mid",
-        melodyTrackIndex: Int = 0,
-        placements: List<MidiCoreOccurrencePlacement> = listOf(MidiCoreOccurrencePlacement("verse-1", "verse", "Verse", 480)),
-        pickupTicks: Long = 0,
-        expectedSongEndTick: Long = placements.sumOf(MidiCoreOccurrencePlacement::durationTicks),
-        harmony: List<AuthoritativeChordEvent> = listOf(AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 480)),
+        sourceFixture: String = "whole-song-one-bar.mid",
+        placements: List<MidiCoreBarOccurrencePlacement> = listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", 1)),
+        harmony: List<AuthoritativeChordEvent> = listOf(AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 1920)),
     ): MidiCoreProjectSession {
         val created = assertIs<MidiCoreProjectLifecycleResult.Opened>(
             MidiCoreProjectLifecycle(artifacts = store).create(CreateMidiCoreProject(projectRoot, "Assembly Test", "assembly-project-${projectRoot.fileName}")),
@@ -295,13 +290,10 @@ class MidiCoreAcceptedSongAssemblyTest {
         val imported = assertIs<MidiCoreSourceImportResult.Imported>(
             MidiCoreSourceImport(store).import(ImportMidiCoreSource(created, source)),
         ).session
-        val selected = assertIs<MidiCoreMelodySelectionResult.Selected>(
-            MidiCoreMelodySelection(store).select(SelectMidiCoreMelody(imported, melodyTrackIndex, 0)),
-        ).session
         val authority = assertIs<MidiCoreAuthorityResult.Confirmed>(
             MidiCoreMusicalAuthority(store).confirm(
                 ConfirmMidiCoreAuthority(
-                    selected,
+                    imported,
                     ProjectKey(ProjectKeySpelling.C, ProjectScaleMode.MAJOR),
                     ProjectTempo(500_000),
                     ProjectMeter(4, 2),
@@ -314,8 +306,6 @@ class MidiCoreAcceptedSongAssemblyTest {
                     authority,
                     listOf(ProjectSectionDefinition("verse", "Verse")),
                     placements,
-                    pickupTicks,
-                    expectedSongEndTick,
                 ),
             ),
         ).session
@@ -433,7 +423,7 @@ private object MidiExportSongForTest {
                 listOf(MidiNoteEvent(MidiEventOrderingKey(0, MidiSemanticEventKind.NOTE, generatedEventKey = 1), 120, 0, 60, 90)),
             ),
         ),
-        songEndTick = 480,
+        songEndTick = 1920,
     )
 
     fun writeWrongChannel(path: Path) {
@@ -443,13 +433,13 @@ private object MidiExportSongForTest {
         conductor.add(MidiEvent(MetaMessage(0x03, conductorName, conductorName.size), 0))
         conductor.add(MidiEvent(MetaMessage(0x51, byteArrayOf(0x07, 0xA1.toByte(), 0x20), 3), 0))
         conductor.add(MidiEvent(MetaMessage(0x58, byteArrayOf(4, 2, 24, 8), 4), 0))
-        conductor.add(MidiEvent(MetaMessage(0x2F, byteArrayOf(), 0), 480))
+        conductor.add(MidiEvent(MetaMessage(0x2F, byteArrayOf(), 0), 1920))
         val role = sequence.createTrack()
         val roleName = "Chords".encodeToByteArray()
         role.add(MidiEvent(MetaMessage(0x03, roleName, roleName.size), 0))
         role.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, 60, 90), 0))
         role.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, 60, 0), 120))
-        role.add(MidiEvent(MetaMessage(0x2F, byteArrayOf(), 0), 480))
+        role.add(MidiEvent(MetaMessage(0x2F, byteArrayOf(), 0), 1920))
         require(MidiSystem.write(sequence, 1, path.toFile()) > 0)
     }
 }
