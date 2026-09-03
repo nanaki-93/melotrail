@@ -68,6 +68,8 @@ data class GenerateMidiCoreCandidate(
     val sectionPolicy: app.melotrail.arrangement.core.MidiCoreSectionPolicy =
         app.melotrail.arrangement.core.MidiCoreSectionPolicy(),
     val candidateId: String? = null,
+    /** Explicit current upstream draft scopes; they are validated but need not be accepted. */
+    val draftDependencyIds: List<String> = emptyList(),
     val cancellation: MidiCoreGenerationCancellation = MidiCoreGenerationCancellation.NONE,
     val hooks: MidiCoreGenerationHooks = MidiCoreGenerationHooks(),
 )
@@ -212,7 +214,12 @@ class MidiCoreCandidateGeneration(
                         candidateId = candidateId,
                         profileId = context.performanceProfile.id,
                         patternId = context.patternId,
-                        acceptedDependencyIds = context.acceptedDependencies.map { it.dependency.candidateId },
+                        draftDependencyIds = request.draftDependencyIds,
+                        acceptedDependencyIds = if (request.draftDependencyIds.isEmpty()) {
+                            context.acceptedDependencies.map { it.dependency.candidateId }
+                        } else {
+                            emptyList()
+                        },
                         beforeProjectSave = { candidate ->
                             publishedCandidate = candidate
                             if (job?.isActive == false || request.cancellation.isCancelled()) return@PublishMidiCoreCandidate false
@@ -364,7 +371,7 @@ class MidiCoreCandidateGeneration(
             ),
         )
 
-        val dependencies = when (val result = acceptedDependencies(project, root, request)) {
+        val dependencies = when (val result = dependencies(project, root, request)) {
             is DependencyLoad.Ready -> result.dependencies
             is DependencyLoad.Rejected -> return ContextLoad.Rejected(result.problem)
         }
@@ -398,6 +405,12 @@ class MidiCoreCandidateGeneration(
         }
         return ContextLoad.Ready(root, context)
     }
+
+    private fun dependencies(
+        project: MidiCoreProject,
+        root: Path,
+        request: GenerateMidiCoreCandidate,
+    ): DependencyLoad = if (request.draftDependencyIds.isEmpty()) acceptedDependencies(project, root, request) else draftDependencies(project, root, request)
 
     private fun acceptedDependencies(
         project: MidiCoreProject,
@@ -476,6 +489,90 @@ class MidiCoreCandidateGeneration(
             )
         }
         return DependencyLoad.Ready(dependencies)
+    }
+
+    /** Reads exact current upstream scopes for an unaccepted full-draft chain. */
+    private fun draftDependencies(
+        project: MidiCoreProject,
+        root: Path,
+        request: GenerateMidiCoreCandidate,
+    ): DependencyLoad {
+        val expectedRoles = CandidateRole.entries.take(request.role.ordinal)
+        val candidates = project.candidates.associateBy(MidiCoreCandidate::id)
+        val dependencies = request.draftDependencyIds.map { id ->
+            candidates[id] ?: return DependencyLoad.Rejected(
+                problem(
+                    MidiCoreCandidateProblemCode.INVALID_STATE,
+                    "The requested draft dependency '$id' is missing.",
+                    "Regenerate the required upstream draft scope before continuing.",
+                ),
+            )
+        }
+        if (dependencies.map(MidiCoreCandidate::role) != expectedRoles ||
+            dependencies.any { it.occurrenceId != request.occurrenceId || it.status in setOf(MidiCoreCandidateStatus.REJECTED, MidiCoreCandidateStatus.STALE) }) {
+            return DependencyLoad.Rejected(
+                problem(
+                    MidiCoreCandidateProblemCode.INVALID_STATE,
+                    "Draft dependencies must be current Chords, then Bass scopes from this occurrence.",
+                    "Regenerate the affected draft scopes in Chords → Bass → Drums order.",
+                ),
+            )
+        }
+        val fingerprint = try {
+            app.melotrail.project.MidiCoreAuthorityHasher.from(project)
+        } catch (_: IllegalArgumentException) {
+            return DependencyLoad.Rejected(
+                problem(
+                    MidiCoreCandidateProblemCode.AUTHORITY_REQUIRED,
+                    "Current authority is required before reading draft dependencies.",
+                    "Restore musical authority and regenerate the affected draft scopes.",
+                ),
+            )
+        }
+        val contexts = mutableListOf<MidiCoreAcceptedDependencyContext>()
+        dependencies.forEach { candidate ->
+            if (candidate.authorityHash != fingerprint.scopeHash(candidate.occurrenceId, candidate.role)) {
+                return DependencyLoad.Rejected(
+                    problem(
+                        MidiCoreCandidateProblemCode.CANDIDATE_STALE,
+                        "The ${candidate.role.name.lowercase()} draft dependency no longer matches authority.",
+                        "Regenerate the affected upstream draft scope before continuing.",
+                    ),
+                )
+            }
+            val notes = try {
+                val inspected = reader.inspect(artifacts.verify(root, candidate.midi))
+                require(inspected.sequence.source.ppq.value == project.sourceMidi?.ppq && inspected.sequence.source.format == 1) {
+                    "Draft dependency MIDI has incompatible format or PPQ"
+                }
+                val expectedChannel = midiChannel(candidate.role)
+                inspected.sequence.tracks.flatMap { it.events }
+                    .filterIsInstance<MidiNoteEvent>()
+                    .filter { it.channel == expectedChannel }
+                    .map { note ->
+                        app.melotrail.arrangement.core.MidiCoreGenerationNote(
+                            note.orderingKey.tick,
+                            note.endTick,
+                            note.pitch,
+                            note.velocity.coerceAtLeast(1),
+                        )
+                    }
+                    .sortedWith(compareBy({ it.startTick }, { it.endTick }, { it.pitch }, { it.velocity }))
+            } catch (_: Exception) {
+                return DependencyLoad.Rejected(
+                    problem(
+                        MidiCoreCandidateProblemCode.INVALID_STATE,
+                        "The ${candidate.role.name.lowercase()} draft dependency MIDI cannot be read safely.",
+                        "Regenerate the affected upstream draft scope before continuing.",
+                    ),
+                )
+            }
+            contexts += MidiCoreAcceptedDependencyContext(
+                MidiCoreAcceptedDependency(candidate.role, request.occurrenceId, candidate.id, candidate.authorityHash),
+                notes,
+            )
+        }
+        return DependencyLoad.Ready(contexts)
     }
 
     private fun generateRole(context: MidiCoreGenerationContext): GeneratedRole = when (context.role) {

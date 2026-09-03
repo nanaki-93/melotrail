@@ -69,7 +69,10 @@ class MidiCoreCandidateLifecycle(
             request.generatorVersion.any(Char::isISOControl) ||
             !TOKEN.matches(request.profileId) || !TOKEN.matches(request.patternId) ||
             request.acceptedDependencyIds != request.acceptedDependencyIds.distinct() ||
-            request.acceptedDependencyIds.any { !SAFE_ID.matches(it) }) {
+            request.acceptedDependencyIds.any { !SAFE_ID.matches(it) } ||
+            request.draftDependencyIds != request.draftDependencyIds.distinct() ||
+            request.draftDependencyIds.any { !SAFE_ID.matches(it) } ||
+            request.draftDependencyIds.intersect(request.acceptedDependencyIds.toSet()).isNotEmpty()) {
             return rejected(MidiCoreCandidateProblemCode.INVALID_CANDIDATE, "Candidate identity or generator metadata is invalid.", "Correct the role, occurrence, profile, pattern, version, and dependency metadata and retry.")
         }
         if (!Files.isRegularFile(request.midi, LinkOption.NOFOLLOW_LINKS)) {
@@ -96,6 +99,48 @@ class MidiCoreCandidateLifecycle(
                 return rejected(MidiCoreCandidateProblemCode.INVALID_STATE, "The candidate references work that is not currently accepted.", "Accept and verify each dependency before publishing this candidate.")
             }
         }
+        request.draftDependencyIds.forEach { dependencyId ->
+            val dependency = dependencies[dependencyId]
+                ?: return rejected(
+                    MidiCoreCandidateProblemCode.INVALID_STATE,
+                    "The draft dependency is missing from the project.",
+                    "Regenerate the required upstream draft scope before publishing this candidate.",
+                )
+            if (dependency.occurrenceId != request.occurrenceId || dependency.role.ordinal >= request.role.ordinal ||
+                dependency.status in setOf(MidiCoreCandidateStatus.REJECTED, MidiCoreCandidateStatus.STALE)) {
+                return rejected(
+                    MidiCoreCandidateProblemCode.INVALID_STATE,
+                    "The draft dependency is not a current upstream role in this occurrence.",
+                    "Regenerate the Chords, then Bass, then Drums draft scopes in order.",
+                )
+            }
+            val dependencyAuthority = try {
+                MidiCoreAuthorityHasher.from(current).scopeHash(dependency.occurrenceId, dependency.role)
+            } catch (_: IllegalArgumentException) {
+                return rejected(
+                    MidiCoreCandidateProblemCode.AUTHORITY_REQUIRED,
+                    "The draft dependency no longer has a current authority scope.",
+                    "Restore authority and regenerate the affected draft scope.",
+                )
+            }
+            if (dependency.authorityHash != dependencyAuthority) {
+                return rejected(
+                    MidiCoreCandidateProblemCode.CANDIDATE_STALE,
+                    "The draft dependency no longer matches current authority.",
+                    "Regenerate the affected upstream draft scope before continuing.",
+                )
+            }
+            try {
+                artifacts.verify(loaded.root, dependency.midi)
+                artifacts.verify(loaded.root, dependency.validationReport)
+            } catch (_: Exception) {
+                return rejected(
+                    MidiCoreCandidateProblemCode.DIGEST_MISMATCH,
+                    "The draft dependency evidence no longer matches its recorded digest.",
+                    "Restore immutable evidence or regenerate the affected upstream draft scope.",
+                )
+            }
+        }
         val createdAt = Instant.now(clock).toString()
         val candidate: MidiCoreCandidate
         try {
@@ -113,6 +158,7 @@ class MidiCoreCandidateLifecycle(
                 createdAt = createdAt,
                 profileId = request.profileId,
                 patternId = request.patternId,
+                draftDependencyIds = request.draftDependencyIds,
                 acceptedDependencyIds = request.acceptedDependencyIds,
             )
             if (request.beforeProjectSave?.invoke(candidate) == false) {
@@ -588,6 +634,8 @@ data class PublishMidiCoreCandidate(
     val candidateId: String? = null,
     val profileId: String = "default",
     val patternId: String = "unspecified",
+    /** Current, validated upstream draft scopes consumed before they are accepted. */
+    val draftDependencyIds: List<String> = emptyList(),
     val acceptedDependencyIds: List<String> = emptyList(),
     /** Optional checkpoint invoked after immutable files exist and before project-state append. */
     val beforeProjectSave: ((MidiCoreCandidate) -> Boolean)? = null,

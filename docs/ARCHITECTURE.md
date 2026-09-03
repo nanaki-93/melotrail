@@ -78,7 +78,9 @@ Key records:
 - `SectionOccurrence`
 - `ChordEvent`
 - `CandidateRecord`
+- `ArrangementDraftRecord`
 - `AcceptedCandidateRef`
+- `ArrangementDraftAcceptanceHistory`
 - `ExportSnapshot`
 
 The implementation may choose different Kotlin type names, but every semantic
@@ -124,7 +126,8 @@ immutable source end, never from competing service-specific inference.
 Responsibilities:
 
 - create deterministic candidates for chords, bass, and drums;
-- consume an immutable authority snapshot and accepted dependency context;
+- consume an immutable authority snapshot and accepted or validated upstream
+  draft dependency context;
 - apply complete curated pattern variants;
 - validate range, timing, harmony, collision, density, and role-specific rules;
 - return candidate plus evidence without writing project state; and
@@ -142,6 +145,13 @@ Role engines are separate but share timing, harmony, seed, pattern, and
 validation primitives. They must not create their own project-key or harmony
 interpretation.
 
+The full-draft application orchestrator runs all required scopes in deterministic
+Chords -> Bass -> Drums order. It retains each valid scoped candidate through
+the normal immutable publication boundary, permits cancellation between scopes,
+and only writes one draft record after the full ordered reference set validates.
+Unaccepted upstream draft dependencies are explicit candidate evidence, never
+implicit acceptance pointers.
+
 ### 4.5 Candidate review
 
 Responsibilities:
@@ -149,12 +159,16 @@ Responsibilities:
 - list alternatives by role and occurrence;
 - provide semantic differences and validation findings;
 - accept, reject, lock, and restore candidate references;
+- assemble and audition a complete persisted draft before acceptance;
+- atomically use a complete draft after revalidating every reference, retaining
+  the prior acceptance set for restoration;
 - assemble the currently accepted song view;
 - identify stale candidates after authority changes; and
 - guarantee that regeneration never overwrites an artifact.
 
-Acceptance is pointer movement in project state, followed by an atomic save. It
-is not a destructive MIDI rewrite.
+Single acceptance is pointer movement in project state, followed by an atomic
+save. Complete-draft acceptance performs all pointer movement and batch history
+publication in one save or none; neither path is a destructive MIDI rewrite.
 
 ### 4.6 MIDI audition
 
@@ -162,7 +176,7 @@ Responsibilities:
 
 - play, pause, stop, seek, loop, mute, and solo MIDI views;
 - audition source, candidate, occurrence, all-role style preview, role, and
-  complete arrangement;
+  complete draft, role, and complete accepted arrangement;
 - open an audible JVM synthesizer as the managed default endpoint;
 - select a supported external local receiver when requested;
 - clean up sequencer/device resources deterministically; and
@@ -183,6 +197,9 @@ Responsibilities:
 - stage output and publish it atomically; and
 - refuse silent overwrite.
 
+Export assembles only current accepted references. A complete draft is audible
+review evidence but can never be selected by the exporter directly.
+
 DAW patch names are suggestions in the manifest. Export does not depend on
 Logic Pro being installed.
 
@@ -193,8 +210,8 @@ Responsibilities:
 - present six focused destinations;
 - expose current authority and blocking findings;
 - dispatch user intents to application use cases;
-- render primary style selection, advanced scoped correction, candidate, and
-  audition state;
+- render primary style selection, full-draft progress/retry, advanced scoped
+  correction, candidate, and audition state;
 - preserve useful keyboard and accessibility behavior; and
 - avoid direct filesystem, generator, or MIDI-device ownership.
 
@@ -214,13 +231,12 @@ not exposed as editing controls.
 
 Arrange and Review are a guided presentation over the existing scoped
 application use cases, not new domain owners. Arrange derives acceptance
-progress and the next unused deterministic seed from the project, then exposes
-scope -> feel -> generate. Review exposes one selected alternative and the
-play -> accept -> continue path. After generation or a lifecycle mutation, the
-workspace reducer rehydrates the persisted project and reloads the affected
-candidate scope before publishing success state, so the UI never depends on a
-manual refresh. Advanced comparison, lifecycle, device, and transport controls
-remain contextual.
+progress and the next unused deterministic seed from the project, then can
+create one complete style draft or expose targeted correction. Review exposes
+the complete-draft listen/use decision while retaining scoped alternatives as
+contextual evidence. After generation or a lifecycle mutation, the workspace
+reducer rehydrates the persisted project and reloads affected evidence before
+publishing success state, so the UI never depends on a manual refresh.
 
 The workspace shell, rather than a destination page, owns the one live MIDI
 transport presentation. Pages only prepare or select musical views. The dock
@@ -303,7 +319,7 @@ Derived work binds to an authority hash containing at least:
 - occurrence order and exact boundaries;
 - chord events and durations;
 - role settings and generator version; and
-- relevant accepted dependency candidate IDs.
+- relevant accepted or validated upstream draft dependency candidate IDs.
 
 When any member changes, affected candidates become stale but remain
 inspectable until cleanup. They cannot be exported as current. Invalidation is
@@ -319,7 +335,9 @@ verse candidate.
 - Only one project-state write transaction is active at a time.
 - Generation can run off the UI thread, but completion is admitted only if its
   authority hash still matches current state.
-- Cancellation cannot leave a partially current candidate or export.
+- Cancellation cannot leave a partially current candidate, draft, acceptance
+  batch, or export. Completed immutable scoped candidates may remain available
+  for an explicit retry of the same incomplete draft.
 
 ## 9. Error model
 

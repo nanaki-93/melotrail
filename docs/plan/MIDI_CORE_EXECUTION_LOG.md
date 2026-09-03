@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-048C done; MC-048D is next; MC-049 holdout is deferred until the
+Status: MC-048F done; MC-048G is next; MC-049 holdout is deferred until the
 arrangement UX tasks MC-048D through MC-048I pass
 
 Task authority: `MIDI_CORE_TASKS.md`
@@ -94,7 +94,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-048C | DONE | `midi-core: MC-048C guide arrangement review` | PASS — focused reducer/Arrange/Review/real-workflow/visual suites, documentation coverage, `git diff --check`, `make test`, `make build`, desktop startup | Scope/feel/generate and play/accept/continue replace control walls; generated and mutated candidates stay visible without manual refresh. |
 | MC-048D | DONE | `midi-core: MC-048D persist workspace playback` | PASS — focused desktop tests, documentation coverage, `make test`, `make build`, desktop smoke | One shell-owned MIDI player stays visible across every destination and wide/compact fixture; stale project transitions stop and clear audition safely. |
 | MC-048E | DONE | `midi-core: MC-048E preview arrangement styles` | PASS — focused catalog/preview/audition/workspace/Arrange/visual workflow suites, documentation coverage, `make test`, `make build`, desktop startup | Five versioned MIDI-only styles now produce bounded all-role previews from the protected melody and authority without candidate, artifact, acceptance, revision, model, or audio-file mutation. |
-| MC-048F | TODO | | | Add complete draft orchestration, draft audition, and atomic batch acceptance. |
+| MC-048F | DONE | `midi-core: MC-048F orchestrate complete drafts` | PASS — focused draft/schema/generation/assembly/audition suites, documentation coverage, `git diff --check`, `make test`, `make build` | Complete drafts preserve all valid scoped work, can audition before acceptance, and apply every selected role atomically or not at all. |
 | MC-048G | TODO | | | Rebuild Arrange around the shared song map and exception workflow. |
 | MC-048H | TODO | | | Make Review a whole-draft listen/use decision with contextual repair and undo. |
 | MC-048I | TODO | | | Prove the UX gates, synchronize contracts, and obtain genuine observed-session evidence. |
@@ -1320,6 +1320,23 @@ Decisions/deviations: A style preview is explicitly ephemeral rather than a hidd
 Known limitations: The 2–4-bar loop must fit the selected occurrence; a one-bar section explains the safe rejection rather than extending outside authority. Subjective sound/instrument choice remains intentionally DAW-side and is not a preview authority claim.
 Commit: `midi-core: MC-048E preview arrangement styles`.
 Next task: MC-048F after this commit.
+
+### MC-048F — Generate and accept complete arrangement drafts
+
+Status: DONE
+Started: 2026-09-04
+Completed: 2026-09-04
+Starting commit/status: `ad4a39a` on `main` / preserved unrelated changes: deleted `.kotlin/sessions/kotlin-compiler-10759057547151889139.salive`; uncommitted Chords reduced-voicing and density-validation work plus its focused test and documentation-inventory entry; and a scoped candidate-validation message in `MidiCoreWorkspace.kt`. None was staged, overwritten, or adopted by this task.
+Contracts read: root Plan 5 and 7.1; F-ARR-001–F-ARR-007; F-REV-001–F-REV-006; F-PLAY-001–F-PLAY-004; Architecture 4.4–4.8; Quality Gates 5–6; and the MC-048F task contract.
+Behavior retained/extracted: A persisted immutable draft owns its stable ID, style/version, authority fingerprint, root seed, occurrence-then-role candidate references, validation summary, and timestamp. The full-draft use case schedules deterministic Chords -> Bass -> Drums generation, records draft-only dependency evidence without weakening accepted-dependency rules, resumes only missing/failed/stale scopes, and does not publish an incomplete draft. Draft assembly/audition revalidates all artifacts and authority while intentionally permitting its unaccepted candidates; accepted-song assembly/export remain strict. **Use this draft** builds every replacement/acceptance-history mutation before one optimistic save, so a locked conflict, stale authority, tampered artifact, or save failure leaves all acceptance state unchanged.
+Files added/changed: `MidiCoreArrangementDraft.kt`; project/schema DTOs and invariants; candidate generation/publication dependency handling; accepted and draft assembly/audition; MIDI audition scope; export readiness mapping; focused draft tests; golden persisted-project fixture; desktop draft-target descriptions; active architecture, functional, quality, and documentation-inventory contracts; and this execution log.
+Files/data deleted: Removed the accepted-only restriction from complete-draft audition. No source MIDI, immutable candidate, artifact, acceptance, export snapshot, project file, or user data was deleted; draft-only candidates remain non-export authority until the atomic acceptance succeeds.
+Focused tests: `MidiCoreArrangementDraftTest`, `MidiCoreAcceptedSongAssemblyTest`, `MidiCoreCandidateGenerationTest`, `MidiCoreCandidateLifecycleTest`, and `MidiAuditionControllerTest` PASS. They cover stable style membership/dependency IDs, draft schema round trip, all-role audition without acceptance, cancel/resume reuse, atomic acceptance/history, locked rollback, authority invalidation, and strict accepted export/assembly boundaries. `MidiCoreProjectSchemaTest` PASS with the expanded v1 golden document.
+Full validation: `python3 tools/check_documentation_coverage.py` PASS; `git diff --check` PASS; `make test` PASS (14 Gradle tasks); `make build` PASS (15 Gradle tasks including documentation coverage).
+Decisions/deviations: Draft references are occurrence-then-role ordered for readable project records, while the pure generator executes role-first to make Chords evidence available across all occurrences before Bass and Drums. Draft dependency IDs are distinct from accepted dependency IDs; only the latter confer accepted-arrangement authority. Authority changes deliberately preserve old immutable drafts and candidates for inspection, but draft assembly and atomic use reject them as stale.
+Known limitations: MC-048F supplies domain/application/audition targets; the song-map Arrange and whole-draft Review interactions are intentionally owned by MC-048G and MC-048H. No manual DAW result is required because draft audition is local MIDI playback and export remains unchanged/accepted-only.
+Commit: `midi-core: MC-048F orchestrate complete drafts`.
+Next task: MC-048G after this commit.
 
 ### MC-049 — Holdout musical acceptance
 

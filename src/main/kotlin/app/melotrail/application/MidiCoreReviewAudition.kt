@@ -116,6 +116,16 @@ class MidiCoreReviewAudition(
             MidiAuditionPlaybackPlan(MidiAuditionView.accepted(review.song))
         }
 
+    /** Prepare a validated persisted full draft before any acceptance pointer is changed. */
+    fun draft(request: PrepareMidiCoreArrangementDraftAudition): MidiCoreReviewAuditionResult = when (
+        val assembled = assembly.assembleDraft(AssembleMidiCoreArrangementDraft(request.session, request.draftId, request.expectedRevision))
+    ) {
+        is MidiCoreArrangementDraftAssemblyResult.Rejected -> rejected(assembled.problem.message, assembled.problem.nextAction)
+        is MidiCoreArrangementDraftAssemblyResult.Assembled -> MidiCoreReviewAuditionResult.Ready(
+            MidiAuditionPlaybackPlan(MidiAuditionView.draft(assembled.review.draft.id, assembled.review.song)),
+        )
+    }
+
     private fun acceptedSong(
         session: MidiCoreProjectSession,
         expectedRevision: Long?,
@@ -164,6 +174,12 @@ data class PrepareMidiCoreAcceptedOccurrenceAudition(
 
 data class PrepareMidiCoreAcceptedArrangementAudition(
     val session: MidiCoreProjectSession,
+    val expectedRevision: Long? = session.project.revision,
+)
+
+data class PrepareMidiCoreArrangementDraftAudition(
+    val session: MidiCoreProjectSession,
+    val draftId: String,
     val expectedRevision: Long? = session.project.revision,
 )
 

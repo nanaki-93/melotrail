@@ -123,8 +123,8 @@ and owns an audible built-in synthesizer for preview.
 ### F-PLAY-002 — Audition scopes
 
 The user can audition source melody, one candidate, one section occurrence, one
-role, the currently accepted full arrangement, or an ephemeral all-role
-arrangement-style preview.
+role, a persisted complete arrangement draft before acceptance, the currently
+accepted full arrangement, or an ephemeral all-role arrangement-style preview.
 
 ### F-PLAY-003 — Mute and solo
 
@@ -204,6 +204,16 @@ generate the next immutable alternative; seeds advance automatically from the
 saved scope. A successful generation immediately shows its validation summary;
 there is no separate refresh step or duplicate generate/regenerate action.
 
+One full-draft action resolves the selected style across every authoritative
+occurrence in deterministic Chords -> Bass -> Drums dependency order. Each
+valid scope is published as its own immutable candidate and progress can be
+cancelled without discarding completed scopes. A draft record is persisted only
+after every occurrence/role reference and its validation report revalidate; it
+records a stable draft ID, style/version, authority hash, root seed, ordered
+candidate references, all-pass validation summary, and creation time. Retrying
+the same incomplete draft preserves valid scopes and addresses only failed or
+stale ones. A draft is review/audition evidence, not export authority.
+
 ## 7. Review functions
 
 ### F-REV-001 — Compare alternatives
@@ -215,7 +225,11 @@ optional comparison with another alternative.
 ### F-REV-002 — Accept a candidate
 
 Acceptance records an immutable candidate reference after verifying its digest
-and authority hash. The prior accepted candidate remains recoverable.
+and authority hash. The prior accepted candidate remains recoverable. Using a
+complete draft revalidates its authority, every candidate artifact and report,
+and every role/occurrence reference before moving all acceptance pointers and
+their restoration history in one project revision. A blocked, stale, locked, or
+save-failed scope changes none of those pointers.
 
 ### F-REV-003 — Reject a candidate
 
@@ -235,15 +249,19 @@ inspectable but cannot be exported as current.
 ### F-REV-006 — Assemble the song
 
 The application creates a review view from protected melody plus currently
-accepted role candidates using exact occurrence boundaries. Assembly does not
-rewrite source or candidate artifacts.
+accepted role candidates using exact occurrence boundaries. It can also create
+the same all-role review view from a persisted, current complete draft before
+acceptance. Both paths revalidate immutable source/candidate evidence and never
+rewrite source or candidate artifacts; only the accepted path may become export
+authority.
 
-Review's primary sequence is Play alternative -> Accept -> Continue to the next
-unfinished section/role. Acceptance and other lifecycle mutations refresh the
-same scope immediately. Reject, restore, lock, unlock, comparison, device
-choice, and detailed transport controls appear only when valid or explicitly
-expanded. Full-arrangement playback remains unavailable until all required
-section/role acceptances exist.
+Review's primary sequence is Play complete draft -> Use this draft when one is
+available, while detailed candidate actions remain scoped exceptions. Acceptance
+and other lifecycle mutations refresh the same scope immediately. Reject,
+restore, lock, unlock, comparison, device choice, and detailed transport
+controls appear only when valid or explicitly expanded. Accepted-arrangement
+playback and export remain blocked until all required section/role acceptances
+exist; draft playback does not weaken that boundary.
 
 ### F-REV-007 — Optional melody connection
 

@@ -30,10 +30,59 @@ class MidiCoreAcceptedSongAssembly(
 ) {
     /** Build one deterministic protected-melody-plus-accepted-roles review sequence without writing artifacts. */
     fun assemble(request: AssembleMidiCoreSong): MidiCoreAcceptedSongAssemblyResult {
-        val loaded = when (val result = load(request)) {
+        val loaded = when (val result = load(request.session, request.expectedRevision)) {
             is AssemblyLoad.Ready -> result
             is AssemblyLoad.Rejected -> return result.result
         }
+        return assembleLoaded(loaded, request.roles, CandidateSelection.Accepted)
+    }
+
+    /** Assemble a persisted complete draft before acceptance. This never changes candidate or acceptance state. */
+    fun assembleDraft(request: AssembleMidiCoreArrangementDraft): MidiCoreArrangementDraftAssemblyResult {
+        val loaded = when (val result = load(request.session, request.expectedRevision)) {
+            is AssemblyLoad.Ready -> result
+            is AssemblyLoad.Rejected -> return MidiCoreArrangementDraftAssemblyResult.Rejected(result.result.problem)
+        }
+        val draft = loaded.project.arrangementDrafts.singleOrNull { it.id == request.draftId }
+            ?: return MidiCoreArrangementDraftAssemblyResult.Rejected(MidiCoreSongAssemblyProblem(
+                MidiCoreSongAssemblyProblemCode.MISSING_DRAFT,
+                "The requested complete draft is unavailable.",
+                "Reload the project and choose a persisted complete draft.",
+            ))
+        validateDraft(loaded.root, loaded.project, draft, artifacts)?.let { problem ->
+            return MidiCoreArrangementDraftAssemblyResult.Rejected(MidiCoreSongAssemblyProblem(
+                when (problem.code) {
+                    MidiCoreArrangementDraftProblemCode.DRAFT_STALE -> MidiCoreSongAssemblyProblemCode.DRAFT_STALE
+                    MidiCoreArrangementDraftProblemCode.DIGEST_MISMATCH -> MidiCoreSongAssemblyProblemCode.DIGEST_MISMATCH
+                    else -> MidiCoreSongAssemblyProblemCode.INVALID_DRAFT
+                },
+                problem.message,
+                problem.nextAction,
+                problem.scope?.occurrenceId,
+                problem.scope?.role,
+            ))
+        }
+        return when (val result = assembleLoaded(loaded, CandidateRole.entries.toSet(), CandidateSelection.Draft(draft))) {
+            is MidiCoreAcceptedSongAssemblyResult.Rejected -> MidiCoreArrangementDraftAssemblyResult.Rejected(result.problem)
+            is MidiCoreAcceptedSongAssemblyResult.Assembled -> MidiCoreArrangementDraftAssemblyResult.Assembled(
+                MidiCoreArrangementDraftReview(
+                    session = result.review.session,
+                    draft = draft,
+                    sourceSha256 = result.review.sourceSha256,
+                    selectedMelodyIdentitySha256 = result.review.selectedMelodyIdentitySha256,
+                    authorityHash = result.review.authorityHash,
+                    candidates = result.review.acceptedCandidates,
+                    song = result.review.song,
+                ),
+            )
+        }
+    }
+
+    private fun assembleLoaded(
+        loaded: AssemblyLoad.Ready,
+        roles: Set<CandidateRole>,
+        selection: CandidateSelection,
+    ): MidiCoreAcceptedSongAssemblyResult {
         val project = loaded.project
         val authority = project.authority ?: return rejected(
             MidiCoreSongAssemblyProblemCode.AUTHORITY_REQUIRED,
@@ -122,7 +171,11 @@ class MidiCoreAcceptedSongAssembly(
             )
         }
 
-        val duplicateScopes = project.acceptances.groupBy { it.occurrenceId to it.role }.filterValues { it.size > 1 }
+        val duplicateScopes = if (selection == CandidateSelection.Accepted) {
+            project.acceptances.groupBy { it.occurrenceId to it.role }.filterValues { it.size > 1 }
+        } else {
+            emptyMap()
+        }
         if (duplicateScopes.isNotEmpty()) {
             val scope = duplicateScopes.keys.sortedWith(compareBy<Pair<String, CandidateRole>> { it.first }.thenBy { it.second.ordinal }).first()
             return rejected(
@@ -135,25 +188,33 @@ class MidiCoreAcceptedSongAssembly(
         }
 
         val acceptedCandidates = mutableListOf<MidiCoreAcceptedSongCandidate>()
-        val roleNotes = request.roles.associateWith { mutableListOf<MidiCoreReviewNote>() }
-        request.roles.sortedBy(CandidateRole::ordinal).forEach { role ->
+        val roleNotes = roles.associateWith { mutableListOf<MidiCoreReviewNote>() }
+        roles.sortedBy(CandidateRole::ordinal).forEach { role ->
             authority.occurrences.forEach { occurrence ->
-                val acceptance = project.acceptances.singleOrNull { it.role == role && it.occurrenceId == occurrence.id }
+                val candidateId = selection.candidateId(project, occurrence, role)
                     ?: return rejected(
-                        MidiCoreSongAssemblyProblemCode.MISSING_ACCEPTANCE,
-                        "No accepted $role candidate exists for occurrence '${occurrence.id}'.",
-                        "Accept one candidate for every enabled role and occurrence before reviewing the song.",
+                        if (selection == CandidateSelection.Accepted) MidiCoreSongAssemblyProblemCode.MISSING_ACCEPTANCE else MidiCoreSongAssemblyProblemCode.MISSING_DRAFT_SCOPE,
+                        if (selection == CandidateSelection.Accepted) {
+                            "No accepted $role candidate exists for occurrence '${occurrence.id}'."
+                        } else {
+                            "The complete draft has no $role candidate for occurrence '${occurrence.id}'."
+                        },
+                        if (selection == CandidateSelection.Accepted) {
+                            "Accept one candidate for every enabled role and occurrence before reviewing the song."
+                        } else {
+                            "Create a complete current draft before auditioning it."
+                        },
                         occurrenceId = occurrence.id,
                         role = role,
                     )
-                val candidate = project.candidates.singleOrNull { it.id == acceptance.candidateId }
+                val candidate = project.candidates.singleOrNull { it.id == candidateId }
                     ?: return rejected(
                         MidiCoreSongAssemblyProblemCode.CANDIDATE_SCOPE_MISMATCH,
-                        "The accepted candidate '${acceptance.candidateId}' is missing from project state.",
-                        "Restore the candidate record or choose another accepted candidate for this scope.",
+                        "The selected candidate '$candidateId' is missing from project state.",
+                        "Restore the candidate record or create a new complete draft for this scope.",
                         occurrenceId = occurrence.id,
                         role = role,
-                        candidateId = acceptance.candidateId,
+                        candidateId = candidateId,
                     )
                 if (candidate.role != role || candidate.occurrenceId != occurrence.id) {
                     return rejected(
@@ -175,7 +236,7 @@ class MidiCoreAcceptedSongAssembly(
                         candidateId = candidate.id,
                     )
                 }
-                if (candidate.status != MidiCoreCandidateStatus.ACCEPTED) {
+                if (selection == CandidateSelection.Accepted && candidate.status != MidiCoreCandidateStatus.ACCEPTED) {
                     return rejected(
                         MidiCoreSongAssemblyProblemCode.CANDIDATE_NOT_ACCEPTED,
                         "Candidate '${candidate.id}' is not marked as the accepted candidate for this scope.",
@@ -234,7 +295,7 @@ class MidiCoreAcceptedSongAssembly(
                 },
                 roles = listOf(
                     MidiExportRoleTrack(MidiExportRole.MELODY, protectedMelody.events),
-                    *request.roles.sortedBy(CandidateRole::ordinal).map { role -> roleTrack(role, roleNotes.getValue(role)) }.toTypedArray(),
+                    *roles.sortedBy(CandidateRole::ordinal).map { role -> roleTrack(role, roleNotes.getValue(role)) }.toTypedArray(),
                 ),
                 songEndTick = songEndTick,
             )
@@ -403,15 +464,15 @@ class MidiCoreAcceptedSongAssembly(
         )
     }
 
-    private fun load(request: AssembleMidiCoreSong): AssemblyLoad {
-        if (request.expectedRevision != null && request.expectedRevision < 0L) {
+    private fun load(session: MidiCoreProjectSession, expectedRevision: Long?): AssemblyLoad {
+        if (expectedRevision != null && expectedRevision < 0L) {
             return AssemblyLoad.Rejected(rejected(
                 MidiCoreSongAssemblyProblemCode.REVISION_CONFLICT,
                 "The expected project revision is invalid.",
                 "Reload the project before assembling the accepted song.",
             ))
         }
-        val root = request.session.root.toAbsolutePath().normalize()
+        val root = session.root.toAbsolutePath().normalize()
         val project = try {
             artifacts.openProject(root)
         } catch (error: Exception) {
@@ -422,14 +483,14 @@ class MidiCoreAcceptedSongAssembly(
             }
             return AssemblyLoad.Rejected(rejected(code, "The project cannot be verified for accepted-song review.", "Open a valid MIDI Core project and retry."))
         }
-        if (request.expectedRevision != null && project.revision != request.expectedRevision) {
+        if (expectedRevision != null && project.revision != expectedRevision) {
             return AssemblyLoad.Rejected(rejected(
                 MidiCoreSongAssemblyProblemCode.REVISION_CONFLICT,
-                "The project changed from revision ${request.expectedRevision} to ${project.revision}.",
+                "The project changed from revision $expectedRevision to ${project.revision}.",
                 "Reload the Review page before assembling the accepted song.",
             ))
         }
-        if (project != request.session.project) {
+        if (project != session.project) {
             return AssemblyLoad.Rejected(rejected(
                 MidiCoreSongAssemblyProblemCode.STALE_PROJECT,
                 "The project changed since this review view was opened.",
@@ -465,6 +526,20 @@ class MidiCoreAcceptedSongAssembly(
         data class Ready(val notes: List<MidiCoreReviewNote>) : CandidateNotesLoad
         data class Rejected(val result: MidiCoreAcceptedSongAssemblyResult.Rejected) : CandidateNotesLoad
     }
+
+    private sealed interface CandidateSelection {
+        fun candidateId(project: MidiCoreProject, occurrence: ProjectSectionOccurrence, role: CandidateRole): String?
+
+        data object Accepted : CandidateSelection {
+            override fun candidateId(project: MidiCoreProject, occurrence: ProjectSectionOccurrence, role: CandidateRole): String? =
+                project.acceptances.singleOrNull { it.occurrenceId == occurrence.id && it.role == role }?.candidateId
+        }
+
+        data class Draft(val draft: app.melotrail.project.MidiCoreArrangementDraft) : CandidateSelection {
+            override fun candidateId(project: MidiCoreProject, occurrence: ProjectSectionOccurrence, role: CandidateRole): String? =
+                draft.candidateReferences.singleOrNull { it.occurrenceId == occurrence.id && it.role == role }?.candidateId
+        }
+    }
 }
 
 data class AssembleMidiCoreSong(
@@ -476,6 +551,12 @@ data class AssembleMidiCoreSong(
         require(roles.all { it in CandidateRole.entries }) { "Accepted-song roles must be target MIDI Core roles" }
     }
 }
+
+data class AssembleMidiCoreArrangementDraft(
+    val session: MidiCoreProjectSession,
+    val draftId: String,
+    val expectedRevision: Long? = session.project.revision,
+)
 
 data class MidiCoreAcceptedSongCandidate(
     val occurrenceId: String,
@@ -506,6 +587,17 @@ data class MidiCoreAcceptedSongReview(
     }
 }
 
+/** A complete draft review is audible evidence only; it is never export authority until batch acceptance. */
+data class MidiCoreArrangementDraftReview(
+    val session: MidiCoreProjectSession,
+    val draft: app.melotrail.project.MidiCoreArrangementDraft,
+    val sourceSha256: String,
+    val selectedMelodyIdentitySha256: String,
+    val authorityHash: String,
+    val candidates: List<MidiCoreAcceptedSongCandidate>,
+    val song: MidiExportSong,
+)
+
 enum class MidiCoreSongAssemblyProblemCode {
     INVALID_PROJECT,
     REVISION_CONFLICT,
@@ -517,6 +609,10 @@ enum class MidiCoreSongAssemblyProblemCode {
     MELODY_OVERFLOW,
     AUTHORITY_REQUIRED,
     MISSING_ACCEPTANCE,
+    MISSING_DRAFT,
+    MISSING_DRAFT_SCOPE,
+    INVALID_DRAFT,
+    DRAFT_STALE,
     DUPLICATE_ROLE_SCOPE,
     CANDIDATE_SCOPE_MISMATCH,
     CANDIDATE_NOT_ACCEPTED,
@@ -542,6 +638,11 @@ data class MidiCoreSongAssemblyProblem(
 sealed interface MidiCoreAcceptedSongAssemblyResult {
     data class Assembled(val review: MidiCoreAcceptedSongReview) : MidiCoreAcceptedSongAssemblyResult
     data class Rejected(val problem: MidiCoreSongAssemblyProblem) : MidiCoreAcceptedSongAssemblyResult
+}
+
+sealed interface MidiCoreArrangementDraftAssemblyResult {
+    data class Assembled(val review: MidiCoreArrangementDraftReview) : MidiCoreArrangementDraftAssemblyResult
+    data class Rejected(val problem: MidiCoreSongAssemblyProblem) : MidiCoreArrangementDraftAssemblyResult
 }
 
 private val SHA_256 = Regex("[0-9a-f]{64}")

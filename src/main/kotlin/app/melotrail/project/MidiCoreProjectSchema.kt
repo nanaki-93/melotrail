@@ -84,8 +84,10 @@ private data class ProjectDto(
     val selectedMelody: SelectedMelodyDto? = null,
     val authority: AuthorityDto? = null,
     val candidates: List<CandidateDto> = emptyList(),
+    val arrangementDrafts: List<ArrangementDraftDto> = emptyList(),
     val acceptances: List<AcceptanceDto> = emptyList(),
     val acceptanceHistory: List<AcceptanceHistoryDto> = emptyList(),
+    val arrangementDraftAcceptanceHistory: List<ArrangementDraftAcceptanceHistoryDto> = emptyList(),
     val exportSnapshots: List<ExportSnapshotDto> = emptyList(),
     val revision: Long = 0L,
 )
@@ -168,7 +170,38 @@ private data class CandidateDto(
     val patternId: String = "unspecified",
     val status: MidiCoreCandidateStatus = MidiCoreCandidateStatus.CURRENT,
     val rejectionReason: String? = null,
+    val draftDependencyIds: List<String> = emptyList(),
     val acceptedDependencyIds: List<String> = emptyList(),
+)
+
+@Serializable
+private data class ArrangementDraftReferenceDto(
+    val occurrenceId: String,
+    val role: CandidateRole,
+    val candidateId: String,
+    val midiSha256: String,
+    val validationReportSha256: String,
+    val authorityHash: String,
+)
+
+@Serializable
+private data class ArrangementDraftValidationDto(
+    val scopeCount: Int,
+    val noteCount: Int,
+    val allPassed: Boolean,
+    val reportDigestSha256: String,
+)
+
+@Serializable
+private data class ArrangementDraftDto(
+    val id: String,
+    val styleId: String,
+    val styleVersion: Int,
+    val authorityHash: String,
+    val rootSeed: Long,
+    val candidateReferences: List<ArrangementDraftReferenceDto>,
+    val validation: ArrangementDraftValidationDto,
+    val createdAt: String,
 )
 
 @Serializable
@@ -181,6 +214,15 @@ private data class AcceptanceHistoryDto(
     val role: CandidateRole,
     val candidateId: String,
     val action: MidiCoreAcceptanceAction,
+    val recordedAt: String,
+)
+
+@Serializable
+private data class ArrangementDraftAcceptanceHistoryDto(
+    val id: String,
+    val draftId: String,
+    val previousAcceptances: List<AcceptanceDto>,
+    val appliedAcceptances: List<AcceptanceDto>,
     val recordedAt: String,
 )
 
@@ -221,8 +263,10 @@ private fun MidiCoreProject.toDto() = ProjectDto(
     selectedMelody = selectedMelody?.toDto(),
     authority = authority?.toDto(),
     candidates = candidates.map(MidiCoreCandidate::toDto),
+    arrangementDrafts = arrangementDrafts.map(MidiCoreArrangementDraft::toDto),
     acceptances = acceptances.map(CandidateAcceptance::toDto),
     acceptanceHistory = acceptanceHistory.map(CandidateAcceptanceHistory::toDto),
+    arrangementDraftAcceptanceHistory = arrangementDraftAcceptanceHistory.map(MidiCoreArrangementDraftAcceptanceHistory::toDto),
     exportSnapshots = exportSnapshots.map(MidiCoreExportSnapshot::toDto),
     revision = revision,
 )
@@ -234,8 +278,10 @@ private fun ProjectDto.toDomain() = MidiCoreProject(
     selectedMelody = selectedMelody?.toDomain(),
     authority = authority?.toDomain(),
     candidates = candidates.map(CandidateDto::toDomain),
+    arrangementDrafts = arrangementDrafts.map(ArrangementDraftDto::toDomain),
     acceptances = acceptances.map(AcceptanceDto::toDomain),
     acceptanceHistory = acceptanceHistory.map(AcceptanceHistoryDto::toDomain),
+    arrangementDraftAcceptanceHistory = arrangementDraftAcceptanceHistory.map(ArrangementDraftAcceptanceHistoryDto::toDomain),
     exportSnapshots = exportSnapshots.map(ExportSnapshotDto::toDomain),
     revision = revision,
 )
@@ -295,16 +341,40 @@ private fun AuthoritativeChordEvent.toDto() = ChordEventDto(id, occurrenceId, sy
 private fun ChordEventDto.toDomain() = AuthoritativeChordEvent(id, occurrenceId, symbol, startTick, endTick)
 private fun MidiCoreCandidate.toDto() = CandidateDto(
     id, role, occurrenceId, generatorVersion, authorityHash, seed, midi.toDto(), validationReport.toDto(), createdAt,
-    profileId, patternId, status, rejectionReason, acceptedDependencyIds,
+    profileId, patternId, status, rejectionReason, draftDependencyIds, acceptedDependencyIds,
 )
 private fun CandidateDto.toDomain() = MidiCoreCandidate(
     id, role, occurrenceId, generatorVersion, authorityHash, seed, midi.toDomain(), validationReport.toDomain(), createdAt,
-    profileId, patternId, status, rejectionReason, acceptedDependencyIds,
+    profileId, patternId, status, rejectionReason, draftDependencyIds, acceptedDependencyIds,
+)
+private fun MidiCoreArrangementDraft.toDto() = ArrangementDraftDto(
+    id, styleId, styleVersion, authorityHash, rootSeed, candidateReferences.map(MidiCoreArrangementDraftCandidateReference::toDto), validation.toDto(), createdAt,
+)
+private fun ArrangementDraftDto.toDomain() = MidiCoreArrangementDraft(
+    id, styleId, styleVersion, authorityHash, rootSeed, candidateReferences.map(ArrangementDraftReferenceDto::toDomain), validation.toDomain(), createdAt,
+)
+private fun MidiCoreArrangementDraftCandidateReference.toDto() = ArrangementDraftReferenceDto(
+    occurrenceId, role, candidateId, midiSha256, validationReportSha256, authorityHash,
+)
+private fun ArrangementDraftReferenceDto.toDomain() = MidiCoreArrangementDraftCandidateReference(
+    occurrenceId, role, candidateId, midiSha256, validationReportSha256, authorityHash,
+)
+private fun MidiCoreArrangementDraftValidationSummary.toDto() = ArrangementDraftValidationDto(
+    scopeCount, noteCount, allPassed, reportDigestSha256,
+)
+private fun ArrangementDraftValidationDto.toDomain() = MidiCoreArrangementDraftValidationSummary(
+    scopeCount, noteCount, allPassed, reportDigestSha256,
 )
 private fun CandidateAcceptance.toDto() = AcceptanceDto(occurrenceId, role, candidateId, locked)
 private fun AcceptanceDto.toDomain() = CandidateAcceptance(occurrenceId, role, candidateId, locked)
 private fun CandidateAcceptanceHistory.toDto() = AcceptanceHistoryDto(id, occurrenceId, role, candidateId, action, recordedAt)
 private fun AcceptanceHistoryDto.toDomain() = CandidateAcceptanceHistory(id, occurrenceId, role, candidateId, action, recordedAt)
+private fun MidiCoreArrangementDraftAcceptanceHistory.toDto() = ArrangementDraftAcceptanceHistoryDto(
+    id, draftId, previousAcceptances.map(CandidateAcceptance::toDto), appliedAcceptances.map(CandidateAcceptance::toDto), recordedAt,
+)
+private fun ArrangementDraftAcceptanceHistoryDto.toDomain() = MidiCoreArrangementDraftAcceptanceHistory(
+    id, draftId, previousAcceptances.map(AcceptanceDto::toDomain), appliedAcceptances.map(AcceptanceDto::toDomain), recordedAt,
+)
 private fun MidiCoreExportSnapshot.toDto() = ExportSnapshotDto(
     id, sourceSha256, authorityHash, files.map(ExportedSnapshotFile::toDto), createdAt,
     acceptedCandidates.map(MidiCoreAcceptedCandidateReference::toDto), roleSettings.toSortedMap(), generatorVersions.toSortedMap(), enabledRoles,

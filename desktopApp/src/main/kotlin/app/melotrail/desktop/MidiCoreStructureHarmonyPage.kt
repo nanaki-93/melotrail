@@ -793,6 +793,7 @@ private fun auditionStatus(scope: MidiAuditionScope?, playback: MidiAuditionPlay
     MidiAuditionScope.SourceMelody -> "Full melody · ${playback.name.lowercase()} · position $positionTick"
     is MidiAuditionScope.Occurrence -> "Section preview · ${playback.name.lowercase()} · position $positionTick"
     is MidiAuditionScope.StylePreview -> "Style preview · ${playback.name.lowercase()} · position $positionTick"
+    is MidiAuditionScope.ArrangementDraft -> "Draft preview · ${playback.name.lowercase()} · position $positionTick"
     is MidiAuditionScope.Candidate -> "Candidate preview · ${playback.name.lowercase()}"
     is MidiAuditionScope.Role -> "Role preview · ${playback.name.lowercase()}"
     MidiAuditionScope.AcceptedArrangement -> "Arrangement preview · ${playback.name.lowercase()}"

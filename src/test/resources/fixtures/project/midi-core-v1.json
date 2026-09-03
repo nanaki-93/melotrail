@@ -108,9 +108,11 @@
                 "profileId": "default",
                 "patternId": "unspecified",
                 "status": "CURRENT",
+                "draftDependencyIds": [],
                 "acceptedDependencyIds": []
             }
         ],
+        "arrangementDrafts": [],
         "acceptances": [
             {
                 "occurrenceId": "intro-1",
@@ -120,6 +122,7 @@
             }
         ],
         "acceptanceHistory": [],
+        "arrangementDraftAcceptanceHistory": [],
         "exportSnapshots": [
             {
                 "id": "export-1",

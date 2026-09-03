@@ -421,18 +421,18 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreReviewAudition.kt",
       "classification": "inherited-contract",
-      "reason": "The 8 callable declarations implement MC-038's digest-checked candidate, accepted-role, accepted-occurrence, and full accepted-arrangement MIDI audition plans under F-PLAY-001 through F-PLAY-004 and F-REV-001 through F-REV-006; reviewed on 2026-08-28.",
-      "functionCount": 8,
-      "declarationDigest": "71d59b5249ace4742f26cbef576de8531c631996f3a18ecb8c7eed56d822e6f7",
-      "documentedFunctionCount": 4
+      "reason": "The 9 callable declarations implement digest-checked candidate, accepted-role, accepted-occurrence, complete-draft-before-acceptance, and full accepted-arrangement MIDI audition plans under F-PLAY-001 through F-PLAY-004 and F-REV-001 through F-REV-006; MC-048F draft-audition behavior was reviewed on 2026-09-04.",
+      "functionCount": 9,
+      "declarationDigest": "1ed47f5fac01a6cd3f31ac657806c8f366c401fb2c2df5bf914b5814af026ca9",
+      "documentedFunctionCount": 5
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreAcceptedSongAssembly.kt",
       "classification": "inherited-contract",
-      "reason": "The 6 callable declarations implement MC-027 deterministic accepted-song assembly from the immutable protected melody and exact occurrence-scoped accepted role candidates, including source identity, authority, digest, validation-report, channel, scope, gap, and overflow checks under F-REV-001 and F-REV-006; reviewed on 2026-08-27.",
-      "functionCount": 6,
-      "declarationDigest": "10b574f5c1681d7cafa944c8a2c567bc2d7af161fb43c7a197bced52d814fe42",
-      "documentedFunctionCount": 1
+      "reason": "The 11 callable declarations implement deterministic accepted-song and MC-048F persisted-complete-draft assembly from immutable protected melody and exact occurrence-scoped candidate evidence, including source identity, authority, digest, validation-report, channel, scope, gap, overflow, and stale-draft checks under F-REV-001 and F-REV-006; reviewed on 2026-09-04.",
+      "functionCount": 11,
+      "declarationDigest": "2b94fdb6ee58441360e9d6f8be60d8b820eaa48e133c2fc6bc169ac9cff46439",
+      "documentedFunctionCount": 2
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreMidiPackageExporter.kt",
@@ -445,10 +445,18 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreCandidateGeneration.kt",
       "classification": "inherited-contract",
-      "reason": "The 14 callable declarations implement MC-025's off-UI-thread, one-role/one-occurrence deterministic generation, shared validation, semantic MIDI round-trip, immutable candidate/report publication, cancellation, stale-session admission, disk-failure retention, and collision retry under F-ARR-001 through F-ARR-006 and F-SYS-004; reviewed on 2026-08-27.",
-      "functionCount": 14,
-      "declarationDigest": "851d23dd5b5368c9846def0e82f4111bac8690da7ca024e35ade8e4f2625818f",
-      "documentedFunctionCount": 2
+      "reason": "The 16 callable declarations implement off-UI-thread one-role/one-occurrence deterministic generation, shared validation, semantic MIDI round-trip, immutable candidate/report publication, cancellation, stale-session admission, disk-failure retention, collision retry, and MC-048F validated unaccepted upstream draft-dependency loading under F-ARR-001 through F-ARR-006 and F-SYS-004; reviewed on 2026-09-04.",
+      "functionCount": 16,
+      "declarationDigest": "718ffed7b630875356e05fbd6c2f2c6ddb589de0bf32bf80acc2a9262cbb6ab2",
+      "documentedFunctionCount": 3
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/application/MidiCoreArrangementDraft.kt",
+      "classification": "inherited-contract",
+      "reason": "The 22 callable declarations implement MC-048F's deterministic full-draft orchestration, progress/cancellation/retry, immutable candidate membership and validation-summary construction, complete-draft persistence/reopen checks, all-or-nothing acceptance with restoration history, and authority/artifact/report revalidation under F-ARR-001 through F-ARR-007 and F-REV-001 through F-REV-006; reviewed on 2026-09-04.",
+      "functionCount": 22,
+      "declarationDigest": "3b6ad2f1e69235aeef0db9df30f91a1eb1e878d52efe5964e81da53cf63727b3",
+      "documentedFunctionCount": 1
     },
     {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreArrangementStylePreview.kt",
@@ -1181,10 +1189,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/audition/MidiAudition.kt",
       "classification": "inherited-contract",
-      "reason": "The 56 callable declarations define MIDI-only audition scopes including MC-048E's full-role style preview, discoverable external-receiver and built-in-synthesizer selection, exact adapter-tick pause/output replacement, bounded loop/seek plan, recoverable transport results, superseding session state, mute/solo policy, completion handling, and deterministic cleanup under F-PLAY-001 through F-PLAY-004 and F-SYS-001; reviewed on 2026-09-04.",
-      "functionCount": 56,
-      "declarationDigest": "d26d559133aaddc08bbdc9f86005d1905d0def85c9b6f0e0e9713bb7b1a8edbc",
-      "documentedFunctionCount": 9
+      "reason": "The 57 callable declarations define MIDI-only audition scopes including MC-048E's full-role style preview and MC-048F's persisted complete-draft-before-acceptance view, discoverable external-receiver and built-in-synthesizer selection, exact adapter-tick pause/output replacement, bounded loop/seek plan, recoverable transport results, superseding session state, mute/solo policy, completion handling, and deterministic cleanup under F-PLAY-001 through F-PLAY-004 and F-SYS-001; reviewed on 2026-09-04.",
+      "functionCount": 57,
+      "declarationDigest": "02e60fe9ea7ade6f9e13f08c9fb1844a640876e792c21042603e248a50d4674b",
+      "documentedFunctionCount": 10
     },
     {
       "path": "src/main/kotlin/app/melotrail/audition/adapter/JdkMidiAuditionOutput.kt",
@@ -1789,9 +1797,9 @@
     {
       "path": "src/main/kotlin/app/melotrail/project/MidiCoreProjectSchema.kt",
       "classification": "inherited-contract",
-      "reason": "The 40 callable declarations implement MC-010's explicitly discriminated MIDI Core v1 JSON schema, MC-013's persisted source inspection summaries/report binding, and MC-019 candidate lifecycle, acceptance history, and export provenance DTO mappings under F-PROJ-001 through F-PROJ-003, F-REV-001 through F-REV-005, F-EXP-001, and Architecture sections 4.1 and 6; reviewed on 2026-08-27.",
-      "functionCount": 40,
-      "declarationDigest": "70bb5be222a552662583cc2467d2cc89d9f988c505f50f3fe2c9a78a59d6ac4c",
+      "reason": "The 48 callable declarations implement the explicitly discriminated MIDI Core v1 JSON schema, persisted source inspection/report binding, candidate lifecycle, MC-048F complete arrangement draft/reference/validation-summary and batch-restoration-history mappings, plus export provenance DTO mappings under F-PROJ-001 through F-PROJ-003, F-REV-001 through F-REV-006, F-EXP-001, and Architecture sections 4.1 and 6; reviewed on 2026-09-04.",
+      "functionCount": 48,
+      "declarationDigest": "978811362623130e8e91014f0d13d3ae6dda7b171872f6047cbfa39779f2c108",
       "documentedFunctionCount": 1
     },
     {

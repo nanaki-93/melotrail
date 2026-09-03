@@ -434,13 +434,14 @@ private fun auditionTargetDescription(state: MidiCoreWorkspaceState): String {
     is MidiAuditionScope.Candidate -> "Current ${scope.role.trackName} alternative"
     is MidiAuditionScope.Occurrence -> "Current section ${scope.occurrenceId}"
     is MidiAuditionScope.StylePreview -> "${scope.styleId.replace('-', ' ')} style preview"
+    is MidiAuditionScope.ArrangementDraft -> "Draft ${scope.draftId}"
     is MidiAuditionScope.Role -> "Current accepted ${scope.role.trackName}"
     MidiAuditionScope.AcceptedArrangement -> "Accepted full arrangement"
     }
     val occurrenceId = when (scope) {
         is MidiAuditionScope.Candidate -> state.project?.candidates?.singleOrNull { it.id == scope.candidateId }?.occurrenceId
         is MidiAuditionScope.Occurrence -> scope.occurrenceId
-        is MidiAuditionScope.StylePreview -> scope.occurrenceId
+    is MidiAuditionScope.StylePreview -> scope.occurrenceId
         else -> null
     }
     val occurrenceLabel = occurrenceId?.let { id -> state.project?.authority?.occurrences?.singleOrNull { it.id == id }?.label }
@@ -454,6 +455,7 @@ private fun auditionRoles(scope: MidiAuditionScope?): List<MidiExportRole> = whe
     is MidiAuditionScope.Role -> listOf(scope.role)
     is MidiAuditionScope.Occurrence -> listOf(MidiExportRole.MELODY)
     is MidiAuditionScope.StylePreview -> MidiExportRole.entries
+    is MidiAuditionScope.ArrangementDraft -> MidiExportRole.entries
     MidiAuditionScope.AcceptedArrangement -> MidiExportRole.entries
 }
 

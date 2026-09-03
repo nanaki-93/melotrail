@@ -26,6 +26,12 @@ sealed interface MidiAuditionScope {
             require(styleId.matches(STYLE_ID) && occurrenceId.isNotBlank()) { "Style preview identity is invalid" }
         }
     }
+    /** Persisted but unaccepted complete-draft evidence selected for one whole-song decision. */
+    data class ArrangementDraft(val draftId: String) : MidiAuditionScope {
+        init {
+            require(draftId.isNotBlank()) { "Arrangement draft audition ID must not be blank" }
+        }
+    }
     data class Role(val role: MidiExportRole) : MidiAuditionScope
     data object AcceptedArrangement : MidiAuditionScope
 
@@ -82,6 +88,9 @@ data class MidiAuditionView(
             is MidiAuditionScope.StylePreview -> require(roles == MidiExportRole.entries) {
                 "A style preview must contain protected melody and every generated role"
             }
+            is MidiAuditionScope.ArrangementDraft -> require(roles == MidiExportRole.entries) {
+                "An arrangement draft must contain protected melody and every generated role"
+            }
             is MidiAuditionScope.Occurrence,
             MidiAuditionScope.AcceptedArrangement,
             -> Unit
@@ -116,6 +125,10 @@ data class MidiAuditionView(
             song,
             MidiAuditionWindow(startTick, endTick),
         )
+
+        /** Select a persisted complete draft without claiming it is accepted or exportable. */
+        fun draft(draftId: String, song: MidiExportSong): MidiAuditionView =
+            MidiAuditionView(MidiAuditionScope.ArrangementDraft(draftId), song)
 
         /** Select the currently accepted full arrangement. */
         fun accepted(song: MidiExportSong): MidiAuditionView = MidiAuditionView(MidiAuditionScope.AcceptedArrangement, song)

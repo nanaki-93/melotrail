@@ -670,6 +670,10 @@ class MidiCoreMidiPackageExporter(
             -> MidiCorePackageExportProblemCode.CANDIDATE_OVERFLOW
             MidiCoreSongAssemblyProblemCode.CANDIDATE_SCOPE_MISMATCH,
             MidiCoreSongAssemblyProblemCode.DUPLICATE_ROLE_SCOPE,
+            MidiCoreSongAssemblyProblemCode.MISSING_DRAFT,
+            MidiCoreSongAssemblyProblemCode.MISSING_DRAFT_SCOPE,
+            MidiCoreSongAssemblyProblemCode.INVALID_DRAFT,
+            MidiCoreSongAssemblyProblemCode.DRAFT_STALE,
             -> MidiCorePackageExportProblemCode.EXPORT_NOT_READY
             MidiCoreSongAssemblyProblemCode.INVALID_PROJECT -> MidiCorePackageExportProblemCode.INVALID_PROJECT
         },
