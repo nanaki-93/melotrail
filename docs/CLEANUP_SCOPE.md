@@ -154,9 +154,10 @@ Keep Compose Desktop and reusable controls. Do not keep hidden legacy pages.
 
 The checked-in UI images are temporary style references, not target fixtures.
 MC-048B first proves the MIDI-only visual system and captures replacement
-fixtures; MC-048C proves its guided Arrange/Review flow. MC-051 then removes
-image readers, legacy measurements, and the old images after confirming that
-target tests no longer reference them.
+fixtures; MC-048D–MC-048I prove and refresh the persistent-player,
+style-preview, full-draft, song-map, and exception-review flow. MC-051 then
+removes image readers, legacy measurements, and the old images after confirming
+that target tests no longer reference them.
 
 ### 5.6 Documentation and planning
 

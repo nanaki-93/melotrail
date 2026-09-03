@@ -2,8 +2,8 @@
 
 Status: ready for serial execution
 
-Task range: MC-000 through MC-060, including user-directed MC-048A,
-MC-048B, and MC-048C
+Task range: MC-000 through MC-060, including user-directed MC-048A through
+MC-048I
 
 Scope: deterministic MIDI Core MVP, focused Compose Desktop UI, acceptance,
 and complete removal of the superseded audio product
@@ -44,8 +44,8 @@ the final reduction.
 
 ### 3.1 Ordering
 
-- Execute tasks strictly in numeric order; MC-048A, MC-048B, and MC-048C
-  follow MC-048 and precede MC-049.
+- Execute tasks strictly in numeric order; MC-048A through MC-048I follow
+  MC-048 in letter order and precede MC-049.
 - Only one task may be `IN_PROGRESS` in the execution log.
 - A task begins only after every earlier task is `DONE`, except a task marked
   `AWAITING_HUMAN` must be resolved before continuing past its phase gate.
@@ -64,8 +64,11 @@ For every task:
    documentation/manual only;
 7. run `make build` at every phase gate;
 8. update `MIDI_CORE_EXECUTION_LOG.md` with commands, results, deletions, and
-   commit; and
-9. create one task commit named `midi-core: MC-NNN <imperative summary>`.
+   the planned commit subject;
+9. create exactly one task commit named
+   `midi-core: MC-NNN <imperative summary>`; and
+10. record that completed commit before beginning the next task. Never combine
+    two task IDs in one commit or split one task across several commits.
 
 Do not mark a task done with failing tests, an unrecorded deletion, a hidden
 legacy route, a TODO standing in for required behavior, or a compatibility
@@ -94,9 +97,10 @@ and fixtures. Destructive tasks must still:
 
 ### 3.5 Manual gates
 
-MC-009, MC-048, MC-049, and MC-060 require human evidence. The executing agent
-must prepare everything it can, then request only the specific manual action.
-It must not fabricate a DAW result, listening score, or sign-off.
+MC-009, MC-048, MC-048I, MC-049, and MC-060 require human evidence. The
+executing agent must prepare everything it can, then request only the specific
+manual action. It must not fabricate a DAW result, observed usability result,
+listening score, or sign-off.
 
 ## 4. Phase gates
 
@@ -1181,9 +1185,275 @@ It must not fabricate a DAW result, listening score, or sign-off.
   and a musician can prepare an arrangement by following one obvious action at
   a time without using manual refresh or navigating a wall of buttons.
 
-### MC-049 — Complete holdout musical acceptance
+### MC-048D — Make playback persistent across the workspace
 
 - **Depends on:** MC-048C.
+- **Contracts:** root Plan 7.2 and 7.6; F-PLAY-001–F-PLAY-004;
+  F-UI-001–F-UI-006; Architecture 4.8; Quality Gates 4–5;
+  `docs/MIDI_WORKSPACE_VISUAL_SPEC.md`; user decision dated 2026-09-04.
+- **Inspect:** `MidiCoreWorkspaceShell`, every page-local source/candidate/
+  arrangement transport, audition state and intents, navigation state,
+  managed/external MIDI output lifecycle, scrolling containers, keyboard
+  semantics, focused shell/page tests, and wide/compact fixtures.
+- **Work:** update the audition/UI contracts for one shell-owned playback dock;
+  render it outside every destination's scroll container; keep playback target,
+  section, playhead, loop, and device state stable across navigation; expose
+  current target, play/pause, stop, playhead, loop, and switching among the
+  available source, current audition, and accepted targets; leave the typed
+  target presentation ready for the preview and draft scopes added by MC-048E
+  and MC-048F; move output selection,
+  boundary seek, mute/solo, and device recovery into one expandable panel; make
+  the dock adapt without covering page content at the minimum supported wide
+  and compact sizes. Contextual page actions may choose what to hear, but they
+  must control this single transport rather than render another transport.
+- **Delete:** the Review playback card, MIDI page transport, duplicated
+  page-local pause/stop/loop/device controls, and any navigation keying that
+  destroys valid audition state. Do not delete candidate-selection or
+  source-audition actions that set the dock's target.
+- **Tests:** player remains in the semantic viewport while long Project, MIDI,
+  Arrange, and Review content scrolls at wide/compact sizes; navigation during
+  playback preserves session/position/loop; each essential control has one
+  reachable semantic owner; expandable options retain mute/solo/output/seek
+  behavior; device loss/project close/stale source stops safely; absence scan
+  for deleted duplicate transports; refreshed shell fixtures.
+- **Validation:** focused audition/workspace/shell/page/visual tests,
+  documentation coverage, `git diff --check`, `make test`, `make build`, and a
+  local desktop playback/navigation smoke.
+- **Evidence:** prior transport locations; new shell ownership and layout
+  bounds; wide/compact scrolled screenshots; semantic owner count; playback
+  continuity/device-loss results; deleted-control scan; and smoke result.
+- **Commit:** `midi-core: MC-048D persist workspace playback`.
+- **Done when:** one accessible player remains visible and functional across all
+  destinations and page scrolling, with no duplicate transport or lost valid
+  playback state.
+
+### MC-048E — Add arrangement styles and instant MIDI previews
+
+- **Depends on:** MC-048D.
+- **Contracts:** root Plan 7.1, 7.4, and 7.5; F-ARR-001–F-ARR-007;
+  F-PLAY-001–F-PLAY-004; Architecture 4.4–4.5 and 4.8; Quality Gates 4–5;
+  user decision dated 2026-09-04.
+- **Inspect:** performance-profile and complete-pattern catalogs; Chords, Bass,
+  and Drums generation entry points and dependency inputs; protected-melody and
+  occurrence/harmony projections; audition session replacement; workspace
+  generation state; persistence/artifact boundaries; and current Arrange
+  feel controls/tests.
+- **Work:** define a versioned catalog of four to six musically named
+  arrangement-style bundles. Each bundle must select valid role profiles,
+  patterns, fill policy, section-energy behavior, bounded settings, and a
+  deterministic preview seed policy without naming an instrument or audio
+  asset. Add an in-memory style-preview use case that renders a two-to-four-bar
+  selected-occurrence loop from protected melody, authoritative harmony, and
+  all three generated roles; validates its events; opens it through the
+  persistent player; keys its cache by authority/style/occurrence/seed; and
+  supersedes rapid requests without overlapping notes. Wire style selection to
+  automatic preview while preserving a selected style when output is
+  unavailable. Update the functional, architecture, audition, and UI contracts
+  for the explicit ephemeral boundary.
+- **Delete:** profile/pattern dropdowns from the primary Arrange path and any
+  preview implementation that publishes candidates, saves project state,
+  writes exportable audio, invokes a model, or owns a second MIDI session.
+  Retain profile/pattern controls behind advanced role adjustment for later
+  targeted correction.
+- **Tests:** every style resolves one allowed profile/pattern policy per core
+  role; catalog/version ordering is stable; previews cover the exact bounded
+  occurrence window and preserve melody/harmony; same key/seed yields the same
+  events; style/authority changes invalidate cache keys; warm/cold cache paths;
+  rapid request cancellation/latest-wins; no hanging notes; no candidate,
+  artifact, acceptance, or project-revision mutation; missing-device recovery;
+  keyboard style selection and persistent-player target.
+- **Validation:** focused catalog/generator/preview/audition/workspace/Arrange
+  tests, documentation coverage, `git diff --check`, `make test`, `make build`,
+  and a local click-to-sound smoke with measured cold/warm onset.
+- **Evidence:** style IDs/versions and readable intent; exact role mappings;
+  preview window/cache key; persistence before/after proof; cancellation/device
+  results; onset measurements; and smoke result.
+- **Commit:** `midi-core: MC-048E preview arrangement styles`.
+- **Done when:** choosing a style produces one immediate, deterministic,
+  validated MIDI preview of the current song without changing any durable
+  project or candidate state.
+
+### MC-048F — Generate and accept complete arrangement drafts
+
+- **Depends on:** MC-048E.
+- **Contracts:** root Plan 5 and 7.1; F-ARR-001–F-ARR-007;
+  F-REV-001–F-REV-006; F-PLAY-001–F-PLAY-004; Architecture 4.4–4.7;
+  Quality Gates 5–6; user decision dated 2026-09-04.
+- **Inspect:** scoped generation/publication, candidate schema/store/lifecycle,
+  authority fingerprints and invalidation, Chords-to-Bass-to-Drums dependency
+  evidence, accepted-song assembly, audition scopes, optimistic project
+  revisions, save-failure rollback, cancellation, and workflow tests.
+- **Work:** add an immutable persisted arrangement-draft record containing a
+  stable draft ID, style ID/version, authority hash, root seed, ordered
+  occurrence/role candidate references, validation summary, and creation time.
+  Update the schema, arrangement, review, audition, and atomic-persistence
+  contracts for this record and its lifecycle before implementing it.
+  Add one full-draft orchestrator that generates missing scopes in deterministic
+  Chords -> Bass -> Drums dependency order, publishes each valid scoped
+  candidate through the existing safe path, exposes per-scope progress,
+  responds to cancellation, preserves completed valid work, and retries only
+  failed/stale scopes. Publish the draft record only when all required
+  references validate. Add draft assembly/audition before acceptance and an
+  atomic **Use this draft** use case that revalidates every authority/artifact/
+  role reference and either updates all selected acceptances plus history in
+  one project revision or updates none. Define safe reopen and invalidation.
+- **Delete:** the application restriction that complete-song audition can only
+  assemble accepted candidates, any batch path that partially accepts a draft,
+  and any retry path that silently regenerates already valid scopes. Keep
+  accepted-arrangement assembly/export strict; unaccepted drafts are never
+  export authority.
+- **Tests:** stable draft/schema round trip; deterministic membership and bytes;
+  complete section/role coverage including repeated names; dependency order;
+  progress monotonicity; cancellation at each role boundary; partial generation
+  failure and exact retry; stale completion; artifact/project save failure;
+  concurrent authority change; draft audition with no acceptances; atomic
+  all-or-nothing acceptance; acceptance-history restoration data; reopen;
+  source/candidate immutability; and export remaining blocked until acceptance.
+- **Validation:** focused schema/store/generation/review/assembly/audition/
+  workflow tests, documentation coverage, `git diff --check`, `make test`, and
+  `make build`.
+- **Evidence:** draft document example and hashes; scope/dependency order;
+  progress/cancel/retry traces; draft audition result; atomic rollback cases;
+  acceptance history; and reopen/invalidation results.
+- **Commit:** `midi-core: MC-048F orchestrate complete drafts`.
+- **Done when:** one command creates a recoverable complete arrangement draft
+  that can be heard before acceptance and accepted atomically without weakening
+  scoped candidate safety or export authority.
+
+### MC-048G — Redesign Arrange around the song map
+
+- **Depends on:** MC-048F.
+- **Contracts:** root Plan 7.1, 7.3–7.6; F-ARR-001–F-ARR-007;
+  F-UI-001–F-UI-006; Architecture 4.8; Quality Gates 4–5;
+  `docs/MIDI_WORKSPACE_VISUAL_SPEC.md`; user decision dated 2026-09-04.
+- **Inspect:** shell header/navigation/context rail, Arrange page/component
+  hierarchy, occurrence timeline and chord summaries, draft/style/progress
+  workspace state, acceptance/invalidation projections, scroll behavior,
+  accessibility semantics, real-service workflow, and wide/compact fixtures.
+- **Work:** compress the project header and operation status; replace generic
+  wide context duplication with a selected-section inspector; build one shared,
+  horizontally navigable, bar-proportional song map with unique occurrence
+  labels, bar/chord summaries, role draft/acceptance states, current loop, and
+  playhead; make section selection update and loop the persistent player without
+  losing scroll. Rebuild Arrange around a style gallery, one visible **Create
+  full draft** action, scoped background progress/cancel/retry, and the selected
+  section's three role states. Make **Regenerate section** primary for repair and
+  keep **Adjust roles** with profile/pattern and role regeneration progressively
+  disclosed. Preserve the global style when creating scoped alternatives.
+  Update the visual/UI contracts and their semantic-state matrix before the
+  page cutover.
+- **Delete:** numbered scope -> feel -> generate cards; occurrence/role-first
+  dropdown workflow; oversized duplicate status/project cards; permanent
+  generic Arrange context text; page-local player remnants; and visual groups
+  that render headings/status as equally weighted cards. Do not delete advanced
+  targeted generation or immutable candidate evidence.
+- **Tests:** authoritative bar-proportional mapping; duplicate section labels;
+  all generated/accepted/stale/attention states; playhead/loop selection;
+  one-click style preview; full-draft generate/cancel/retry; section and role
+  regeneration action counts; advanced disclosure; stable selection across
+  recomposition/navigation; keyboard order/focus/accessible non-color state;
+  1280x900 and 720x900 scrolled fixtures; removed-label scan; and real-service
+  Arrange flow using visible controls.
+- **Validation:** focused song-map/workspace/Arrange/shell/accessibility/visual/
+  real-workflow tests, documentation coverage, `git diff --check`, `make test`,
+  `make build`, and a local desktop Arrange smoke.
+- **Evidence:** before/after action inventory; song-map scale/status examples;
+  selected-section behavior; wide/compact scrolled fixture paths/hashes;
+  accessibility results; removed-control scan; and smoke result.
+- **Commit:** `midi-core: MC-048G streamline song arrangement`.
+- **Done when:** a musician can understand the song's section state, preview a
+  style, create a full draft, and target an exception without walking every
+  section/role dropdown combination.
+
+### MC-048H — Make Review a whole-draft decision
+
+- **Depends on:** MC-048G.
+- **Contracts:** root Plan 7.1–7.3 and 7.5–7.6; F-REV-001–F-REV-006;
+  F-PLAY-001–F-PLAY-004; F-UI-001–F-UI-006; Architecture 4.6–4.8;
+  Quality Gates 4–6; user decision dated 2026-09-04.
+- **Inspect:** Review candidate loading/selection/comparison/lifecycle,
+  acceptance history, full-draft and accepted assembly/audition, song-map
+  component, navigation preservation, export readiness, and focused/real
+  workflow tests.
+- **Work:** make complete-draft playback and **Use this draft** the primary
+  Review decision; share the Arrange song map and preserve the selected
+  style/section/loop/playhead across the handoff; show validation blockers and
+  acceptance gaps on their exact occurrence/role; move candidate comparison,
+  lock/reject/restore, and per-role audition into the selected-section
+  inspector; route targeted regenerate back to the same selected context; add
+  one undo action that atomically restores the acceptance references captured
+  before the last batch acceptance; and expose Export only after strict
+  accepted-arrangement readiness. Update the review, audition, and UI contracts
+  for the new primary and contextual actions before removing the old flow.
+- **Delete:** the repeated choose-section/choose-role/accept/continue ladder;
+  requirement to accept each scope before hearing a complete draft; duplicate
+  transport; automatic jumps that discard user context; and any always-visible
+  candidate lifecycle wall. Retain immutable alternatives and detailed evidence
+  under contextual disclosure.
+- **Tests:** full draft heard before acceptance; one-action valid batch accept;
+  stale/missing/blocking all-or-nothing failure with song-map location; undo and
+  redo-by-reacceptance; focused compare/lifecycle behavior; targeted
+  regeneration round trip; context preservation between Arrange/Review;
+  accepted/draft target clarity; export gating; keyboard/accessibility; wide/
+  compact fixtures; removed-label scan; and a real-service full-draft flow.
+- **Validation:** focused review/lifecycle/assembly/audition/workspace/UI/visual/
+  real-workflow tests, documentation coverage, `git diff --check`, `make test`,
+  `make build`, and a local desktop review/undo smoke.
+- **Evidence:** primary/advanced action rules; batch acceptance and rollback
+  results; undo history example; context preservation; visual fixture hashes;
+  deleted-control scan; and smoke result.
+- **Commit:** `midi-core: MC-048H simplify draft review`.
+- **Done when:** Review supports one clear listen/use decision for the whole
+  draft and keeps detailed comparison or regeneration scoped to exceptions.
+
+### MC-048I — Prove the arrangement UX with musicians
+
+- **Depends on:** MC-048H.
+- **Contracts:** root Plan 7 and 12; all F-ARR/F-REV/F-PLAY/F-UI functions;
+  Architecture 4.4–4.8; Quality Gates 4–8;
+  `docs/MIDI_WORKSPACE_VISUAL_SPEC.md`; user decision dated 2026-09-04.
+- **Inspect:** every contract changed by MC-048D–MC-048H; full focused and root
+  tests; performance instrumentation; visual fixtures; desktop smoke path;
+  accessibility tree; and the prepared MC-049 holdout procedure.
+- **Work:** synchronize architecture, functional, audition, visual, quality,
+  README, cleanup, traceability, and execution documentation to the implemented
+  persistent-player/style-preview/full-draft/song-map/review behavior. Add a
+  repeatable UX measurement harness and
+  `docs/plan/MC048I_ARRANGEMENT_UX_RUBRIC.md`. Measure action counts, preview
+  onset, complete-draft progress/cancellation, scrolling visibility, navigation
+  continuity, and state immutability. Run five observed authority-complete
+  arrangement sessions, with at least three performed by musicians who did not
+  implement the feature; record time to first sound and first complete draft,
+  abandoned actions, wrong-scope regenerations, and active-section/target
+  comprehension. Fix each repeated confusion or reproducible defect with a
+  focused regression, then repeat affected observations. Refresh all six-page
+  wide/compact fixtures and the real-service workflow before resuming MC-049.
+- **Delete:** superseded MC-048C flow descriptions, fixtures, tags, tests,
+  documentation, and direct readers that assert the dropdown-first flow. Do not
+  alter or discard the frozen MC-049 musical scoring thresholds or reuse these
+  five UX sessions as unseen holdout scores.
+- **Tests:** full D–H focused suites; preview 95th-percentile warm/cold budgets;
+  latest-request/no-hanging-note stress; persistent-player viewport matrix;
+  three-action first-draft and two/three-action regeneration paths; no-project/
+  blocked/busy/failure/device-loss states; keyboard traversal; contrast and
+  non-color semantics; real-service create/import/authority/preview/draft/
+  accept/undo/reaccept/export workflow; and fixture integrity.
+- **Validation:** documentation link/coverage checks, `git diff --check`, all
+  focused tests with forced rerun, `make test`, `make build`, desktop smoke, and
+  the mandatory human UX rubric. Mark `AWAITING_HUMAN` after automated
+  preparation until genuine observed-session evidence is supplied.
+- **Evidence:** rubric with participant role/date and no sensitive identity;
+  action/timing table and medians; preview p95/cold results; issue/fix/retest
+  links; semantic/accessibility results; fixture paths/hashes; full validation;
+  and explicit UX gate decision.
+- **Commit:** `midi-core: MC-048I validate arrangement UX`.
+- **Done when:** every root Plan 12.1–12.3 UX gate passes, supporting contracts
+  describe shipped behavior, repeated confusion is resolved, and the product is
+  ready to resume the separate ten-project musical holdout.
+
+### MC-049 — Complete holdout musical acceptance
+
+- **Depends on:** MC-048I.
 - **Contracts:** Quality Gates 7–8; all F-ARR/F-REV functions.
 - **Inspect:** ten or more unseen, user-approved/license-safe MIDI projects that
   satisfy the single-melody-track and whole-bar source contract, plus the frozen
@@ -1231,12 +1501,12 @@ It must not fabricate a DAW result, listening score, or sign-off.
 - **Contracts:** Cleanup Scope 5.5–5.6; F-UI-001; F-UI-006; Quality Gate 4.
 - **Inspect:** default desktop source graph, UI tests/tags, direct readers of
   `docs/pictures`, legacy theme measurements, preferences/dialogs, and the
-  six target visual fixtures produced by MC-048B and refreshed by MC-048C.
+  six target visual fixtures produced by MC-048B and refreshed by MC-048I.
 - **Work:** reduce/replace workspace app/router/view model/shell to target code;
   delete audio player, melody-parts/workflow presentation, runtime readiness,
   sound-library settings, legacy setup/state/intents/dialogs/routes, live audio
   E2E, and all tests that assert removed behavior. Switch any useful visual
-  coverage to the MC-048C target fixtures, then remove every reader of the old UI
+  coverage to the MC-048I target fixtures, then remove every reader of the old UI
   references.
 - **Delete:** tracked old page images and theme constants measured from them
   only after consumer scans prove no target source or test reads them.
@@ -1459,20 +1729,24 @@ It must not fabricate a DAW result, listening score, or sign-off.
 - **MIDI source:** F-MIDI-001–005 -> MC-001–008, MC-013–014, MC-035, MC-047,
   MC-048A.
 - **Authority:** F-AUTH-001–005 -> MC-015–018, MC-036, MC-048A.
-- **Audition:** F-PLAY-001–004 -> MC-028, MC-035, MC-038, MC-045.
-- **Arrangement:** F-ARR-001–007 -> MC-020–025, MC-037, MC-041–044, MC-048C.
-- **Review:** F-REV-001–006 -> MC-019, MC-025–027, MC-038, MC-044, MC-048C.
+- **Audition:** F-PLAY-001–004 -> MC-028, MC-035, MC-038, MC-045,
+  MC-048D–MC-048F, MC-048H–MC-048I.
+- **Arrangement:** F-ARR-001–007 -> MC-020–025, MC-037, MC-041–044,
+  MC-048C, MC-048E–MC-048I.
+- **Review:** F-REV-001–006 -> MC-019, MC-025–027, MC-038, MC-044,
+  MC-048C, MC-048F, MC-048H–MC-048I.
 - **Optional melody connection:** F-REV-007 is post-MVP and intentionally not
   implemented; current mutation code is removed in MC-055.
 - **Export:** F-EXP-001–007 -> MC-007–009, MC-019, MC-029, MC-039, MC-046,
   MC-048.
-- **UI:** F-UI-001–006 -> MC-031–040, MC-048B–MC-048C, MC-051.
+- **UI:** F-UI-001–006 -> MC-031–040, MC-048B–MC-048I, MC-051.
 - **System:** F-SYS-001–004 -> all phases, especially MC-003, MC-011–013,
   MC-025, MC-028–030, MC-047, MC-050–060.
 
 ## 7. Completion rule
 
-MC-000 through MC-060, including MC-048A, MC-048B, and MC-048C, are mandatory. A task is not complete because its code
-compiles; its deletion, focused tests, full required gate, evidence, and commit
-must all be recorded. Optional features require a new user-approved plan after
-MC-060 and may not be smuggled into this sequence.
+MC-000 through MC-060, including MC-048A through MC-048I, are mandatory. A
+task is not complete because its code compiles; its deletion, focused tests,
+full required gate, evidence, and exactly one task commit must all be recorded.
+Optional features require a new user-approved plan after MC-060 and may not be
+smuggled into this sequence.

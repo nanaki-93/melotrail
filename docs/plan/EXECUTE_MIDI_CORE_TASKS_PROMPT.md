@@ -9,8 +9,7 @@ You are the implementation agent for the Melotrail MIDI Core migration.
 
 Your objective is to execute every mandatory task in
 `docs/plan/MIDI_CORE_TASKS.md`, strictly from MC-000 through MC-060 including
-MC-048A, MC-048B, and MC-048C between MC-048 and MC-049, and
-leave a
+MC-048A through MC-048I in letter order between MC-048 and MC-049, and leave a
 tested, focused Kotlin/Compose Desktop MIDI arranger with no legacy Python or
 audio-production product remaining.
 
@@ -28,8 +27,9 @@ Before any task action, read completely:
 8. `docs/DAW_COMPATIBILITY.md`
 9. `docs/CLEANUP_SCOPE.md`
 10. `docs/QUALITY_GATES.md`
-11. `docs/plan/MIDI_CORE_TASKS.md`
-12. `docs/plan/MIDI_CORE_EXECUTION_LOG.md`
+11. `docs/MIDI_WORKSPACE_VISUAL_SPEC.md`
+12. `docs/plan/MIDI_CORE_TASKS.md`
+13. `docs/plan/MIDI_CORE_EXECUTION_LOG.md`
 
 Those files override old code comments, deleted plans, Git history, and the
 shape of the current audio-era implementation. Never execute a task or prompt
@@ -37,8 +37,10 @@ recovered from Git history.
 
 ## Mandatory scope
 
-- Execute MC-000 through MC-060 in numeric order, with MC-048A, MC-048B, then
-  MC-048C immediately after MC-048.
+- Execute MC-000 through MC-060 in numeric order, with MC-048A through MC-048I
+  in letter order immediately after MC-048.
+- Treat MC-048D–MC-048I as mandatory product-acceptance work. Do not resume
+  MC-049 against the superseded dropdown-first Arrange/Review flow.
 - Implement only the deterministic MVP and its required cleanup.
 - Preserve Compose Desktop as the product UI.
 - Preserve source MIDI and accepted candidate immutability.
@@ -88,13 +90,20 @@ For each task, without waiting for routine confirmation:
    build wiring/dependencies change.
 10. Review the diff for unrelated edits, generated files, secrets, absolute
     paths, debug code, stale terminology, and missing deletions.
-11. Update the execution log with files changed/deleted, tests/commands/results,
-    evidence paths/hashes, decisions, limitations, and next task.
-12. Mark the task `DONE` only when every Done-when clause passes.
-13. Create exactly one commit using
-    `midi-core: MC-NNN <imperative summary>`. Do not amend, squash, or rewrite
-    earlier commits.
-14. Continue immediately to the next task.
+11. Review both the working-tree and staged diff. The task commit may contain
+    only the current task's implementation, tests, required contract updates,
+    and execution-log evidence. Leave every unrelated user change unstaged and
+    untouched.
+12. Update the execution log with files changed/deleted, tests/commands/results,
+    evidence paths/hashes, decisions, limitations, the exact planned commit
+    subject, and next task.
+13. Mark the task `DONE` only when every Done-when clause passes.
+14. Stage only the reviewed current-task files and create exactly one commit
+    using `midi-core: MC-NNN <imperative summary>`.
+15. Verify the commit subject and file list. Do not amend, squash, rewrite, or
+    add a follow-up commit for that task. Never put two task IDs in one commit.
+16. Begin the next task only after the current task's commit exists; record that
+    commit as the next task's starting commit, then continue immediately.
 
 Do not stop merely because a task is large, the context is compacted, or the
 remaining work is substantial. Re-read the task/log and continue.
@@ -137,6 +146,7 @@ The only expected human pauses are:
 
 - MC-009: early Logic Pro import spike;
 - MC-048: final DAW compatibility matrix;
+- MC-048I: observed arrangement-UX sessions after automated preparation;
 - MC-049: single-melody-source holdout musical listening rubric; and
 - MC-060: final product sign-off.
 
@@ -149,6 +159,11 @@ At a manual gate:
 5. record the user's evidence verbatim enough to audit it;
 6. fix and repeat failures before continuing; and
 7. never infer or fabricate a pass.
+
+Do not create the task's final commit while it is `AWAITING_HUMAN`. Keep the
+prepared diff limited to that task, complete any evidence-driven fixes and
+rerun its gates, then create its single task commit only after the human gate
+passes. A human pause does not authorize starting a later task.
 
 If a DAW is unavailable, the task remains awaiting human evidence. Do not mark
 the phase gate complete or call the product production-ready.
@@ -179,11 +194,13 @@ the phase gate complete or call the product production-ready.
 
 ## Completion
 
-Do not declare completion until MC-048A, MC-048B, MC-048C, and MC-060 are `DONE` and all of the following are
-true:
+Do not declare completion until MC-048A through MC-048I and MC-060 are `DONE`
+and all of the following are true:
 
 - all mandatory functional IDs are implemented;
 - the six-page desktop workflow passes;
+- the persistent player, click-to-preview styles, full arrangement drafts,
+  song map, whole-draft review, and targeted exception flow pass their UX gates;
 - generated Chords/Bass/Drums obey authority and immutable-candidate rules;
 - final Logic Pro matrix is recorded;
 - holdout musical thresholds pass;
@@ -199,6 +216,9 @@ results, DAW results, holdout results, cleanup/reduction metrics, known
 limitations, and exact remaining optional work. Do not recommend executing an
 old plan.
 
-Begin with MC-000 and continue serially.
+Begin with the first task not marked `DONE` in the execution log and continue
+serially. In the current post-MC-048C baseline that task is MC-048D; if the log
+has advanced, trust the recorded status and dependencies rather than repeating
+completed work.
 
 ---

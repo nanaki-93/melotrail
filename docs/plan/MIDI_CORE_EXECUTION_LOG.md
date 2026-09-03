@@ -1,6 +1,7 @@
 # MIDI Core execution log
 
-Status: MC-048C done; MC-049 awaiting human holdout evidence
+Status: MC-048C done; MC-048D is next; MC-049 holdout is deferred until the
+arrangement UX tasks MC-048D through MC-048I pass
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -91,9 +92,15 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-048A | DONE | `midi-core: MC-048A simplify source workflow` | PASS — focused JVM/Compose suites, documentation coverage, `make test`, `make build` | Valid complete-song input is protected atomically at import; ambiguous note tracks/channels are rejected; structure entry is ordered positive whole bars totaling the immutable source end. |
 | MC-048B | DONE | `midi-core: MC-048B make holdout workspace usable` | PASS — focused domain/audition/Compose suites, 12 visual fixtures, host synthesizer note smoke, documentation coverage, `make test`, `make build`, desktop startup | Imported playback uses an audible managed synthesizer by default; BPM and a three-step section/progression editor replace technical authority fields; all six pages use the target responsive navy/violet shell. |
 | MC-048C | DONE | `midi-core: MC-048C guide arrangement review` | PASS — focused reducer/Arrange/Review/real-workflow/visual suites, documentation coverage, `git diff --check`, `make test`, `make build`, desktop startup | Scope/feel/generate and play/accept/continue replace control walls; generated and mutated candidates stay visible without manual refresh. |
-| MC-049 | AWAITING_HUMAN | | | The guided-flow prerequisite is complete. Holdout intake/listening may resume using the frozen eligibility and rubric evidence. |
+| MC-048D | TODO | | | Next task: move all transport ownership into one persistent workspace player. |
+| MC-048E | TODO | | | Add deterministic arrangement-style bundles and non-persistent click-to-preview audition. |
+| MC-048F | TODO | | | Add complete draft orchestration, draft audition, and atomic batch acceptance. |
+| MC-048G | TODO | | | Rebuild Arrange around the shared song map and exception workflow. |
+| MC-048H | TODO | | | Make Review a whole-draft listen/use decision with contextual repair and undo. |
+| MC-048I | TODO | | | Prove the UX gates, synchronize contracts, and obtain genuine observed-session evidence. |
+| MC-049 | TODO | | | Prior holdout preparation is preserved, but listening must not resume before MC-048I is DONE. |
 | MC-050 | TODO | | | |
-| MC-051 | TODO | | | Delete the legacy desktop UI and reference fixtures only after MC-048B target fixtures pass and MC-050 removes its application owners. |
+| MC-051 | TODO | | | Delete the legacy desktop UI and reference fixtures only after MC-048I refreshes the target fixtures and MC-050 removes its application owners. |
 | MC-052 | TODO | | | |
 | MC-053 | TODO | | | |
 | MC-054 | TODO | | | |
@@ -113,7 +120,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | G2 MIDI project kernel complete | MC-010–MC-019 | DONE | MC-010–MC-019 target schema, artifact, authority, invalidation, lifecycle, and full test/build gates pass. |
 | G3 Vertical slice complete | MC-020–MC-030 | DONE | MC-020–MC-030 target context, validation, generation, review, assembly, audition, export, and the JVM vertical-slice gate pass. |
 | G4 Focused desktop complete | MC-031–MC-040 | DONE | MC-040 real-service focused Compose E2E, six generated page fixtures, `make test`, and `make build` pass. |
-| G5 Product behavior accepted | MC-041–MC-049 | IN_PROGRESS | MC-041–MC-048C are complete; MC-049 holdout intake/listening is the remaining human gate. |
+| G5 Product behavior accepted | MC-041–MC-049 | IN_PROGRESS | MC-041–MC-048C are complete; MC-048D–MC-048I arrangement UX remediation must pass before the prepared MC-049 holdout resumes. |
 | G6 Legacy product removed | MC-050–MC-059 | TODO | |
 | G7 MVP complete | MC-060 | TODO | |
 
@@ -1266,18 +1273,23 @@ Full validation: Documentation coverage PASS; removed-control source scans PASS;
 Decisions/deviations: The candidate/application contracts remain unchanged; this task simplifies presentation and corrects workspace-state projection. Deterministic seeds remain recorded but advance automatically from the selected saved scope. Narrow regeneration remains available by generating another immutable alternative for the exact scope rather than through a duplicate button.
 Known limitations: MC-049 still requires the user-approved/license-safe holdout set and human listening scores after this task passes.
 Commit: `midi-core: MC-048C guide arrangement review`.
-Next task: MC-049 — resume the user-approved holdout listening rubric on the guided workspace; do not begin MC-050 cleanup before the manual gate passes.
+Next task: Superseded by the user's 2026-09-04 UX decision. Start MC-048D and
+complete MC-048D through MC-048I before resuming MC-049.
 
 ### MC-049 — Holdout musical acceptance
 
-Status: AWAITING_HUMAN
+Status: TODO
 Started: 2026-08-28
 Starting commit/status: `ec2b75b` / only the preserved unrelated deleted Kotlin compiler-session marker was present when preparation began; MC-048A was inserted before scoring after the user's 2026-09-02 workflow decision.
+User decision: On 2026-09-04 the user rejected the completed MC-048C
+Arrange/Review experience as still too slow and visually poor. Preserve the
+prepared holdout rubric, but defer intake/listening until mandatory MC-048D
+through MC-048I implement and validate the replacement arrangement UX.
 Contracts read: Quality Gates 7–8; all F-ARR/F-REV functions; MC-049 task contract; and the frozen holdout thresholds.
 Holdout inventory: No eligible project is presently available. The repository has no non-build, non-legacy `.mid` or `.midi` file. It does contain 70 ignored, untracked MIDI files under `data/audio/` (303 MB); they are audio-era cleanup scope, were not approved as license-safe/unseen holdouts, and must not be used or tuned against for MC-049.
 Automated preparation: `docs/plan/MC049_HOLDOUT_RUBRIC.md` freezes the project eligibility rules, review procedure, all eight 1–5 scores, mandatory thresholds, evidence fields, and a ten-project response template. It explicitly excludes development fixtures and the legacy `data/audio/` material.
-Unblock condition: The user must provide at least ten previously unseen, license-safe MIDI projects satisfying the single-note-bearing-track/channel and whole-bar-length contract, with an ownership/source statement, then perform the required arrangement/listening review and supply the completed rubric. The agent will hash/freeze the set before generation, record snapshot IDs/results, fix only reproducible defects, and repeat any failed project.
-Next action: The MC-048C usability prerequisite is complete. Await user-provided holdouts and listener results; do not start MC-050 cleanup before MC-049 is DONE.
+Unblock condition: First complete MC-048D through MC-048I. Then the user must provide at least ten previously unseen, license-safe MIDI projects satisfying the single-note-bearing-track/channel and whole-bar-length contract, with an ownership/source statement, perform the required arrangement/listening review, and supply the completed rubric. The agent will hash/freeze the set before generation, record snapshot IDs/results, fix only reproducible defects, and repeat any failed project.
+Next action: Start MC-048D. Do not resume MC-049 intake/listening or begin MC-050 cleanup before the new prerequisites are DONE.
 
 ## 6. Manual gate records
 
@@ -1314,7 +1326,8 @@ Next action: The MC-048C usability prerequisite is complete. Await user-provided
 - Review-time median: Awaiting user input.
 - Failed cases and targeted fixes: Awaiting user input.
 - Reviewer(s)/date: Awaiting user input.
-- Decision: AWAITING_HUMAN.
+- Decision: DEFERRED by the user's 2026-09-04 UX decision. Resume and mark
+  `AWAITING_HUMAN` only after MC-048I is `DONE`.
 
 ### MC-060 — Final sign-off
 
