@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-048G done; MC-048H is next; MC-049 holdout is deferred until the
+Status: MC-048H done; MC-048I is next; MC-049 holdout is deferred until the
 arrangement UX tasks MC-048D through MC-048I pass
 
 Task authority: `MIDI_CORE_TASKS.md`
@@ -96,7 +96,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-048E | DONE | `midi-core: MC-048E preview arrangement styles` | PASS — focused catalog/preview/audition/workspace/Arrange/visual workflow suites, documentation coverage, `make test`, `make build`, desktop startup | Five versioned MIDI-only styles now produce bounded all-role previews from the protected melody and authority without candidate, artifact, acceptance, revision, model, or audio-file mutation. |
 | MC-048F | DONE | `midi-core: MC-048F orchestrate complete drafts` | PASS — focused draft/schema/generation/assembly/audition suites, documentation coverage, `git diff --check`, `make test`, `make build` | Complete drafts preserve all valid scoped work, can audition before acceptance, and apply every selected role atomically or not at all. |
 | MC-048G | DONE | `midi-core: MC-048G streamline song arrangement` | PASS — focused song-map/workspace/Arrange/real-workflow suites, documentation coverage, `git diff --check`, `make test`, `make build`, desktop smoke | Arrange now uses a shared bar-proportional song map, style-first full draft action, and selected-section repair without the old occurrence/role-first journey. |
-| MC-048H | TODO | | | Make Review a whole-draft listen/use decision with contextual repair and undo. |
+| MC-048H | DONE | `midi-core: MC-048H simplify draft review` | PASS — focused draft/Review/workspace/real-workflow suites, documentation coverage, `git diff --check`, `make test`, `make build`, desktop smoke | Review now shares the map, plays/uses one complete draft, exposes scoped exception evidence, and safely undoes the latest unchanged acceptance batch. |
 | MC-048I | TODO | | | Prove the UX gates, synchronize contracts, and obtain genuine observed-session evidence. |
 | MC-049 | TODO | | | Prior holdout preparation is preserved, but listening must not resume before MC-048I is DONE. |
 | MC-050 | TODO | | | |
@@ -1356,6 +1356,25 @@ Decisions/deviations: The map is presentation-only and derives facts instead of 
 Known limitations: Review remains the prior candidate-focused page until MC-048H makes it the whole-draft listen/use decision. The local smoke proves startup only; MIDI audition mechanics and accessible interaction behavior are covered by the focused controller/workspace/Compose suites, not by a subjective sound-quality claim.
 Commit: `midi-core: MC-048G streamline song arrangement`.
 Next task: MC-048H after this commit.
+
+### MC-048H — Make Review a whole-draft decision
+
+Status: DONE
+Started: 2026-09-04
+Completed: 2026-09-04
+Starting commit/status: `06532d4` on `main` / preserved unrelated changes: deleted `.kotlin/sessions/kotlin-compiler-10759057547151889139.salive`; uncommitted Chords reduced-voicing and density-validation work plus its focused test and documentation-inventory entry; and a scoped candidate-validation message in `MidiCoreWorkspace.kt`. None was staged, overwritten, or adopted by this task.
+Contracts read: root Plan 7.1–7.3 and 7.5–7.6; F-REV-001–F-REV-006; F-PLAY-001–F-PLAY-004; F-UI-001–F-UI-006; Architecture 4.6–4.8; Quality Gates 4–6; MIDI workspace visual specification; and the MC-048H task contract.
+Behavior retained/extracted: Review now shares Arrange's selected occurrence and horizontally navigable song map, makes **Play complete draft** and **Use this draft** the default decision, and preserves the one persistent player rather than adding transport. A valid draft can be heard before any acceptance. The existing application batch acceptance revalidates every authority/artifact/report reference and moves all pointers together or not at all. A new guarded undo application service restores only the captured prior pointers for the latest batch while every scope still matches that batch; changed scopes reject without writes, undo removes the consumed batch, and a later use is an explicit re-acceptance. The selected-section inspector shows role state and scoped blockers, routes repair to the same Arrange context, and retains comparison/lifecycle evidence only behind **Inspect alternatives**.
+Files added/changed: draft acceptance/undo application boundary and scoped error evidence; desktop composition/workspace draft audition, use, undo, and candidate-selection intents; whole-draft Review page; focused application, workspace, Review, and real-service workflow tests; active README, architecture, functional, quality, visual, documentation-inventory, and execution-log contracts.
+Files/data deleted: Removed Review's repeated section/role chooser -> accept -> continue ladder and its primary per-role acceptance journey. Candidate comparison, lifecycle, lock/reject/restore, and per-role audition remain as selected-section disclosure. No source MIDI, immutable candidate, draft, acceptance evidence, artifact, snapshot, or user data was deleted.
+Focused tests: `MidiCoreArrangementDraftTest` PASS (draft audition/use, atomic accepted assembly, latest-batch undo, re-acceptance, and later scoped change rejection with byte-for-byte no-write proof); `MidiCoreReviewPageTest` PASS (shared map, primary draft actions, Export gate, undo visibility, contextual alternatives, removed-control scan, wide/compact fixtures); `MidiCoreWorkspaceTest` and `MidiCoreFocusedWorkflowTest` PASS. The real-service Compose workflow creates a draft, plays it before acceptance, uses it atomically, undoes it, re-uses it, reopens the project, and exports the accepted MIDI package.
+Visual fixtures: 1280 x 900 `desktopApp/build/test-results/midi-core-review-draft/wide-review-draft.png` SHA-256 `44f4c161c1078292761743e768d33cb9f1e2f5c28df27dfb0cdfa482dbea3c60`; 720 x 900 scrolled `desktopApp/build/test-results/midi-core-review-draft/compact-review-draft-scrolled.png` SHA-256 `bd955affa50631daae2ea1843399406a7fb38fb5502e6a7c57f6bcf459c0057d`.
+Accessibility evidence: song-map blocks continue to expose unique identity, bar/chord context, textual role state, selection, loop, and playhead; primary draft, undo, Export, repair, disclosure, role, candidate, and lifecycle controls use stable button semantics/tags. The wide fixture proves Review uses its section inspector rather than the generic context rail. The compact scrolled fixture proves the horizontal map and persistent player remain available.
+Full validation: `python3 tools/check_documentation_coverage.py` PASS; `git diff --check` PASS; `make test` PASS (14 Gradle tasks); `make build` PASS (15 Gradle tasks including documentation coverage). `make desktop` compiled and reached the running Compose application without startup error, then was terminated cleanly after the Review smoke. The interaction-level review/undo path is covered by the real-service Compose workflow rather than a subjective audio-quality claim.
+Decisions/deviations: Undo is intentionally a guarded application operation rather than a UI-only pointer rewrite. It permits no partial restoration after any later scoped mutation and does not invent a generic redo; re-using a complete draft records a fresh immutable batch. Export remains strictly accepted-only even though complete draft audition is valid before acceptance.
+Known limitations: MC-048I still owns genuine observed-musician usability, broader performance, final accessibility-tree, and final contract synchronization evidence. No DAW check is needed for this UI/application task because export bytes and Logic Pro compatibility remain unchanged.
+Commit: `midi-core: MC-048H simplify draft review`.
+Next task: MC-048I after this commit.
 
 ### MC-049 — Holdout musical acceptance
 

@@ -226,20 +226,28 @@ individual role regeneration remain behind explicit **Adjust roles** disclosure.
 
 ## 7. Review functions
 
-### F-REV-001 — Compare alternatives
+### F-REV-001 — Listen to a complete draft, then inspect exceptions
 
-The Review page selects one alternative at a time for the chosen role and
-occurrence and exposes its seed, pattern/profile, validation findings, and an
-optional comparison with another alternative.
+Review's default decision is a persisted complete draft, not a sequence of
+role/occurrence selections. It shares Arrange's selected section and song map,
+so draft playback, the current loop, the selected style, and the playhead stay
+stable across the handoff. Candidate seed, pattern/profile, validation
+findings, and optional comparison are available only from the selected-section
+inspector after the user opens exception details.
 
 ### F-REV-002 — Accept a candidate
 
 Acceptance records an immutable candidate reference after verifying its digest
-and authority hash. The prior accepted candidate remains recoverable. Using a
-complete draft revalidates its authority, every candidate artifact and report,
+and authority hash. The prior accepted candidate remains recoverable. **Use
+this draft** revalidates its authority, every candidate artifact and report,
 and every role/occurrence reference before moving all acceptance pointers and
 their restoration history in one project revision. A blocked, stale, locked, or
-save-failed scope changes none of those pointers.
+save-failed scope changes none of those pointers and identifies the affected
+scope when one is known. **Undo last draft acceptance** restores exactly the
+prior batch references only while every scope still points to that batch; it
+also commits atomically, never edits candidate artifacts, and disappears after
+a successful undo. A later **Use this draft** is an intentional fresh batch,
+not an implicit redo.
 
 ### F-REV-003 — Reject a candidate
 
@@ -266,12 +274,14 @@ rewrite source or candidate artifacts; only the accepted path may become export
 authority.
 
 Review's primary sequence is Play complete draft -> Use this draft when one is
-available, while detailed candidate actions remain scoped exceptions. Acceptance
-and other lifecycle mutations refresh the same scope immediately. Reject,
-restore, lock, unlock, comparison, device choice, and detailed transport
-controls appear only when valid or explicitly expanded. Accepted-arrangement
-playback and export remain blocked until all required section/role acceptances
-exist; draft playback does not weaken that boundary.
+available, while detailed candidate actions remain scoped exceptions. The
+selected-section inspector places acceptance gaps and blockers beside the exact
+role and links repair back to Arrange without discarding the selected map
+context. Acceptance and other lifecycle mutations refresh that same context.
+Reject, restore, lock, unlock, comparison, device choice, and detailed
+transport controls appear only when valid or explicitly expanded.
+Accepted-arrangement playback and Export remain blocked until all required
+section/role acceptances exist; draft playback does not weaken that boundary.
 
 ### F-REV-007 — Optional melody connection
 

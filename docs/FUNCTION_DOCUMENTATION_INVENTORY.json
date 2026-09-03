@@ -45,10 +45,10 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt has 123 callable declarations, 11 directly documented and 112 focused orchestration helpers. MC-048G records song-map selection, routes it through the persistent player loop, generates/resumes complete drafts, and performs a deterministic selected-section repair while retaining the global style; focused reducer, player, and real-service workflow tests cover the changed paths on 2026-09-04.",
-      "functionCount": 123,
-      "declarationDigest": "c6254a6095f1d712de239ed3122adbd7d7aac3c0c0a4ca15f647936e1cca9315",
-      "documentedFunctionCount": 11
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt has 132 callable declarations, 13 directly documented and 119 focused orchestration helpers. MC-048H routes complete-draft playback, atomic batch use, guarded latest-batch undo, and selected exception evidence through the persistent player and rehydrated map context; focused reducer, player, and real-service workflow tests cover the changed paths on 2026-09-04.",
+      "functionCount": 132,
+      "declarationDigest": "8bf34242e48d7358e1c28905975fc9fd3b401405b03abdd099fa8cb2d70bb966",
+      "documentedFunctionCount": 13
     },
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspaceShell.kt",
@@ -69,9 +69,9 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreArrangePage.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreArrangePage.kt has 21 callable declarations, 2 directly documented and 19 focused presentation helpers. MC-048G makes the song map, named-style full-draft action, selected-section repair, and keyboard-accessible previous/next navigation the default Arrange path while retaining profile/pattern selectors only behind advanced adjustment; focused Compose tests cover the changed declarations on 2026-09-04.",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreArrangePage.kt has 21 callable declarations, 2 directly documented and 19 focused presentation helpers. MC-048G makes the song map, named-style full-draft action, selected-section repair, and keyboard-accessible previous/next navigation the default Arrange path while retaining profile/pattern selectors only behind advanced adjustment; MC-048H reuses its card primitive for contextual Review evidence; focused Compose tests cover the changed declarations on 2026-09-04.",
       "functionCount": 21,
-      "declarationDigest": "342a4a55c2f0f557b27f12ebace0d9558544ff69a555e12a7f5fc34dabc797d3",
+      "declarationDigest": "bfae21a8f800f3d19c9974f98407a045fabf9c3f7f5b65be6a59258c4a136ea3",
       "documentedFunctionCount": 2
     },
     {
@@ -93,9 +93,9 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt has 15 callable declarations, 1 directly documented and 14 focused presentation helpers. MC-048D retains Review's candidate decision flow while removing its duplicate transport; shell player tests cover the moved output, loop, seek, mute, solo, and device controls on 2026-09-04.",
-      "functionCount": 15,
-      "declarationDigest": "7d5ea7a2f4d5ef200f08acbca2f1b6a193c02255792e789702c8e48ad56fd571",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt has 14 callable declarations, 1 directly documented and 13 focused presentation helpers. MC-048H makes complete-draft playback/use and latest-batch undo primary, shares the song map and selected-section inspector, and moves candidate comparison/lifecycle behind contextual disclosure; focused Compose, workspace, and real-service tests cover the changed declarations on 2026-09-04.",
+      "functionCount": 14,
+      "declarationDigest": "41ff85518db4d4d71492b1ecf71c754fdd59183c21289b45a744280be1fb498d",
       "documentedFunctionCount": 1
     },
     {
@@ -461,9 +461,9 @@
     {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreArrangementDraft.kt",
       "classification": "inherited-contract",
-      "reason": "The 22 callable declarations implement MC-048F's deterministic full-draft orchestration, progress/cancellation/retry, immutable candidate membership and validation-summary construction, complete-draft persistence/reopen checks, all-or-nothing acceptance with restoration history, and authority/artifact/report revalidation under F-ARR-001 through F-ARR-007 and F-REV-001 through F-REV-006; reviewed on 2026-09-04.",
-      "functionCount": 22,
-      "declarationDigest": "3b6ad2f1e69235aeef0db9df30f91a1eb1e878d52efe5964e81da53cf63727b3",
+      "reason": "The 25 callable declarations implement MC-048F/H deterministic full-draft orchestration, progress/cancellation/retry, immutable candidate membership and validation-summary construction, complete-draft persistence/reopen checks, all-or-nothing acceptance, guarded latest-batch pointer restoration, and authority/artifact/report revalidation under F-ARR-001 through F-ARR-007 and F-REV-001 through F-REV-006; reviewed on 2026-09-04.",
+      "functionCount": 25,
+      "declarationDigest": "8bceda8cd16bfdcf71d211696998983e378f9a3924ee29a64c71f04084d4c901",
       "documentedFunctionCount": 1
     },
     {

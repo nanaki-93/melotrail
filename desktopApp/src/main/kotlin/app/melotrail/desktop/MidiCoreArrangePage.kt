@@ -402,7 +402,7 @@ private fun ArrangeCandidateSummary(
 }
 
 @Composable
-private fun ArrangeCard(tag: String, title: String, content: @Composable ColumnScope.() -> Unit) {
+internal fun ArrangeCard(tag: String, title: String, content: @Composable ColumnScope.() -> Unit) {
     Card(Modifier.fillMaxWidth().semantics { testTag = tag }, colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.Surface)) {
         Column(Modifier.fillMaxWidth().padding(MusicWorkspaceTokens.Spacing.Md), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
             Text(title, style = MaterialTheme.typography.titleMedium)

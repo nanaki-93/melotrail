@@ -1,7 +1,8 @@
 # MIDI workspace visual specification
 
-Status: implemented target design contract; MC-048G owns the song-map Arrange
-cutover and its wide/compact/accessibility validation
+Status: implemented target design contract; MC-048H extends the shared song
+map through the whole-draft Review decision and its wide/compact/accessibility
+validation
 
 Authority: visual language and visual acceptance for the Compose Desktop MIDI
 workspace
@@ -60,7 +61,7 @@ top-level pages.
 | MIDI | immutable-source import and track/channel facts | MIDI-event preview, findings, audition |
 | Structure & Harmony | ordered section timeline and chord windows | bar totals, authority validity, invalidation impact |
 | Arrange | shared song map -> named style gallery -> instant bounded MIDI preview -> complete-draft action | selected-section inspector, scoped draft progress, contextual repair, advanced role adjustment |
-| Review | shared song map -> complete-draft listen/use decision | selected-section lifecycle/diff/repair evidence and playback controls |
+| Review | shared song map -> play complete draft -> use this draft | selected-section lifecycle/diff/repair evidence, latest-batch undo, and Export readiness |
 | Export | readiness checklist and immutable package result | files, hashes, validation, Logic Pro guidance |
 
 Section and role views may use a compact MIDI timeline or piano-roll-style

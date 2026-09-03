@@ -520,6 +520,9 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
     override fun prepareAcceptedArrangementAudition(request: app.melotrail.application.PrepareMidiCoreAcceptedArrangementAudition): app.melotrail.application.MidiCoreReviewAuditionResult =
         app.melotrail.application.MidiCoreReviewAuditionResult.Ready(fakeAcceptedPlan())
 
+    override fun prepareArrangementDraftAudition(request: app.melotrail.application.PrepareMidiCoreArrangementDraftAudition): app.melotrail.application.MidiCoreReviewAuditionResult =
+        app.melotrail.application.MidiCoreReviewAuditionResult.Ready(fakeAcceptedPlan())
+
     override suspend fun previewArrangementStyle(
         request: app.melotrail.application.PrepareMidiCoreArrangementStylePreview,
     ): app.melotrail.application.MidiCoreArrangementStylePreviewResult {
@@ -581,6 +584,12 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
         draftRequests += request
         return draftGenerationResult
     }
+
+    override fun useArrangementDraft(request: app.melotrail.application.UseMidiCoreArrangementDraft): app.melotrail.application.MidiCoreArrangementDraftAcceptanceResult =
+        error("not used")
+
+    override fun undoArrangementDraftAcceptance(request: app.melotrail.application.UndoMidiCoreArrangementDraftAcceptance): app.melotrail.application.MidiCoreArrangementDraftAcceptanceUndoResult =
+        error("not used")
 
     override fun export(request: ExportMidiCorePackage): MidiCoreMidiPackageExportResult = exportResult
 

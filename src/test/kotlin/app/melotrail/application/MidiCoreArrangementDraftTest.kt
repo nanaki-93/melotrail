@@ -127,6 +127,34 @@ class MidiCoreArrangementDraftTest {
         assertIs<MidiCoreAcceptedSongAssemblyResult.Assembled>(
             MidiCoreAcceptedSongAssembly(artifacts = store).assemble(AssembleMidiCoreSong(accepted.session)),
         )
+
+        val laterScopedChange = accepted.session.project.copy(
+            acceptances = accepted.session.project.acceptances.map { it.copy(locked = true) },
+            revision = accepted.session.project.revision + 1L,
+        )
+        store.saveProject(accepted.session.root, laterScopedChange)
+        val beforeRejectedUndo = Files.readAllBytes(accepted.session.root.resolve(MidiCoreArtifactStore.PROJECT_FILE))
+        val rejectedUndo = assertIs<MidiCoreArrangementDraftAcceptanceUndoResult.Rejected>(
+            MidiCoreArrangementDraftAcceptanceUndo(artifacts = store).undo(
+                UndoMidiCoreArrangementDraftAcceptance(MidiCoreProjectSession(accepted.session.root, laterScopedChange), accepted.history.id),
+            ),
+        )
+        assertEquals(MidiCoreArrangementDraftProblemCode.REVISION_CONFLICT, rejectedUndo.problem.code)
+        assertContentEquals(beforeRejectedUndo, Files.readAllBytes(accepted.session.root.resolve(MidiCoreArtifactStore.PROJECT_FILE)))
+        store.saveProject(accepted.session.root, accepted.session.project)
+
+        val undone = assertIs<MidiCoreArrangementDraftAcceptanceUndoResult.Applied>(
+            MidiCoreArrangementDraftAcceptanceUndo(artifacts = store, historyIdFactory = { "undo-draft-accept-1" }).undo(
+                UndoMidiCoreArrangementDraftAcceptance(accepted.session, accepted.history.id),
+            ),
+        )
+        assertEquals(beforeRevision + 2L, undone.session.project.revision)
+        assertEquals(emptyList(), undone.session.project.acceptances)
+        assertTrue(undone.session.project.candidates.all { it.status == app.melotrail.project.MidiCoreCandidateStatus.CURRENT })
+        assertEquals(emptyList(), undone.session.project.arrangementDraftAcceptanceHistory)
+        assertIs<MidiCoreAcceptedSongAssemblyResult.Rejected>(
+            MidiCoreAcceptedSongAssembly(artifacts = store).assemble(AssembleMidiCoreSong(undone.session)),
+        )
     }
 
     @Test

@@ -13,7 +13,10 @@ import app.melotrail.application.MidiCoreCandidateGeneration
 import app.melotrail.application.MidiCoreCandidateLifecycle
 import app.melotrail.application.MidiCoreArrangementStylePreview
 import app.melotrail.application.MidiCoreArrangementDraftGeneration
+import app.melotrail.application.MidiCoreArrangementDraftAcceptance
+import app.melotrail.application.MidiCoreArrangementDraftAcceptanceUndo
 import app.melotrail.application.MidiCoreCandidateReview
+import app.melotrail.application.MidiCoreReviewAudition
 import app.melotrail.application.MidiCoreMidiPackageExporter
 import app.melotrail.application.MidiCoreMusicalAuthority
 import app.melotrail.application.MidiCoreProjectLifecycle
@@ -75,6 +78,9 @@ object MidiCoreDesktopComposition {
         val stylePreview = MidiCoreArrangementStylePreview(artifacts = artifacts)
         val review = MidiCoreCandidateReview(artifacts = artifacts, lifecycle = candidateLifecycle, generation = generation)
         val assembly = MidiCoreAcceptedSongAssembly(artifacts)
+        val reviewAudition = MidiCoreReviewAudition(review, assembly)
+        val draftAcceptance = MidiCoreArrangementDraftAcceptance(artifacts)
+        val draftAcceptanceUndo = MidiCoreArrangementDraftAcceptanceUndo(artifacts)
         val audition = MidiAuditionController(JdkMidiAuditionOutput())
         val snapshotLifecycle = MidiCoreExportSnapshotLifecycle(artifacts)
         val export = MidiCoreMidiPackageExporter(
@@ -94,7 +100,10 @@ object MidiCoreDesktopComposition {
             exporter = export,
             audition = audition,
             sourceAudition = sourceAudition,
+            reviewAudition = reviewAudition,
             stylePreview = stylePreview,
+            draftAcceptance = draftAcceptance,
+            draftAcceptanceUndo = draftAcceptanceUndo,
         )
         return MidiCoreDesktopServices(
             project = project,

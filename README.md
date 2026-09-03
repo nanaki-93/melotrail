@@ -54,9 +54,10 @@ The Compose Desktop UI remains the product. Its target workspace contains:
 
 The imported melody plays through an audible built-in synthesizer by default.
 Arrange and Review share a bar-proportional song map. Arrange presents named
-style previews and one full-draft action, while role/profile correction stays
-contextual to a selected section. Comparison, lifecycle, device, and transport
-controls appear only when relevant. Settings that are genuinely
+style previews and one full-draft action; Review plays and accepts that draft
+in one atomic decision, with a safe latest-batch undo. Role/profile correction,
+comparison, lifecycle, device, and transport controls stay contextual to a
+selected section. Settings that are genuinely
 required for MIDI audition or export may use a small dialog. Melotrail does not
 reproduce a DAW mixer, mastering suite, sound browser, video editor, or
 publishing console.

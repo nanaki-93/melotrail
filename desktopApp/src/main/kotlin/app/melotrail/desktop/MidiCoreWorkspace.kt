@@ -15,6 +15,10 @@ import app.melotrail.application.MidiCoreCandidateGenerationResult
 import app.melotrail.application.MidiCoreArrangementDraftGeneration
 import app.melotrail.application.MidiCoreArrangementDraftGenerationResult
 import app.melotrail.application.MidiCoreArrangementDraftProblem
+import app.melotrail.application.MidiCoreArrangementDraftAcceptance
+import app.melotrail.application.MidiCoreArrangementDraftAcceptanceResult
+import app.melotrail.application.MidiCoreArrangementDraftAcceptanceUndo
+import app.melotrail.application.MidiCoreArrangementDraftAcceptanceUndoResult
 import app.melotrail.application.MidiCoreArrangementStylePreview
 import app.melotrail.application.MidiCoreArrangementStylePreviewResult
 import app.melotrail.application.PrepareMidiCoreArrangementStylePreview
@@ -34,6 +38,7 @@ import app.melotrail.application.MidiCoreReviewAuditionResult
 import app.melotrail.application.PrepareMidiCoreAcceptedArrangementAudition
 import app.melotrail.application.PrepareMidiCoreAcceptedOccurrenceAudition
 import app.melotrail.application.PrepareMidiCoreAcceptedRoleAudition
+import app.melotrail.application.PrepareMidiCoreArrangementDraftAudition
 import app.melotrail.application.PrepareMidiCoreCandidateAudition
 import app.melotrail.application.PrepareMidiCoreOccurrenceAudition
 import app.melotrail.application.PrepareMidiCoreSourceAudition
@@ -43,7 +48,9 @@ import app.melotrail.application.RegenerateMidiCoreCandidate
 import app.melotrail.application.ReplaceMidiCoreHarmony
 import app.melotrail.application.ReplaceMidiCoreStructure
 import app.melotrail.application.RestoreMidiCoreCandidate
+import app.melotrail.application.UndoMidiCoreArrangementDraftAcceptance
 import app.melotrail.application.UnlockMidiCoreCandidate
+import app.melotrail.application.UseMidiCoreArrangementDraft
 import app.melotrail.application.MidiCoreCandidateLifecycleResult
 import app.melotrail.application.MidiCoreCandidateProblem
 import app.melotrail.application.MidiCoreAuthorityProblem
@@ -112,6 +119,7 @@ interface MidiCoreWorkspaceUseCases {
     fun prepareAcceptedRoleAudition(request: PrepareMidiCoreAcceptedRoleAudition): MidiCoreReviewAuditionResult
     fun prepareAcceptedOccurrenceAudition(request: PrepareMidiCoreAcceptedOccurrenceAudition): MidiCoreReviewAuditionResult
     fun prepareAcceptedArrangementAudition(request: PrepareMidiCoreAcceptedArrangementAudition): MidiCoreReviewAuditionResult
+    fun prepareArrangementDraftAudition(request: PrepareMidiCoreArrangementDraftAudition): MidiCoreReviewAuditionResult
     suspend fun previewArrangementStyle(request: PrepareMidiCoreArrangementStylePreview): MidiCoreArrangementStylePreviewResult
     fun confirmAuthority(request: ConfirmMidiCoreAuthority): app.melotrail.application.MidiCoreAuthorityResult
     fun replaceStructure(request: ReplaceMidiCoreStructure): app.melotrail.application.MidiCoreStructureTimelineResult
@@ -126,6 +134,8 @@ interface MidiCoreWorkspaceUseCases {
     suspend fun generateCandidate(request: GenerateMidiCoreCandidate): MidiCoreCandidateGenerationResult
     suspend fun regenerateCandidate(request: RegenerateMidiCoreCandidate): MidiCoreCandidateGenerationResult
     suspend fun generateArrangementDraft(request: GenerateMidiCoreArrangementDraft): MidiCoreArrangementDraftGenerationResult
+    fun useArrangementDraft(request: UseMidiCoreArrangementDraft): MidiCoreArrangementDraftAcceptanceResult
+    fun undoArrangementDraftAcceptance(request: UndoMidiCoreArrangementDraftAcceptance): MidiCoreArrangementDraftAcceptanceUndoResult
     fun export(request: app.melotrail.application.ExportMidiCorePackage): MidiCoreMidiPackageExportResult
 }
 
@@ -144,6 +154,8 @@ class DefaultMidiCoreWorkspaceUseCases(
     private val reviewAudition: MidiCoreReviewAudition = MidiCoreReviewAudition(review),
     private val stylePreview: MidiCoreArrangementStylePreview = MidiCoreArrangementStylePreview(),
     private val draftGeneration: MidiCoreArrangementDraftGeneration = MidiCoreArrangementDraftGeneration(),
+    private val draftAcceptance: MidiCoreArrangementDraftAcceptance = MidiCoreArrangementDraftAcceptance(),
+    private val draftAcceptanceUndo: MidiCoreArrangementDraftAcceptanceUndo = MidiCoreArrangementDraftAcceptanceUndo(),
 ) : MidiCoreWorkspaceUseCases {
     override fun create(request: CreateMidiCoreProject): MidiCoreProjectLifecycleResult = project.create(request)
 
@@ -170,6 +182,8 @@ class DefaultMidiCoreWorkspaceUseCases(
     override fun prepareAcceptedOccurrenceAudition(request: PrepareMidiCoreAcceptedOccurrenceAudition): MidiCoreReviewAuditionResult = reviewAudition.occurrence(request)
 
     override fun prepareAcceptedArrangementAudition(request: PrepareMidiCoreAcceptedArrangementAudition): MidiCoreReviewAuditionResult = reviewAudition.acceptedArrangement(request)
+
+    override fun prepareArrangementDraftAudition(request: PrepareMidiCoreArrangementDraftAudition): MidiCoreReviewAuditionResult = reviewAudition.draft(request)
 
     override suspend fun previewArrangementStyle(request: PrepareMidiCoreArrangementStylePreview): MidiCoreArrangementStylePreviewResult = stylePreview.prepare(request)
 
@@ -199,6 +213,11 @@ class DefaultMidiCoreWorkspaceUseCases(
 
     override suspend fun generateArrangementDraft(request: GenerateMidiCoreArrangementDraft): MidiCoreArrangementDraftGenerationResult =
         draftGeneration.generate(request)
+
+    override fun useArrangementDraft(request: UseMidiCoreArrangementDraft): MidiCoreArrangementDraftAcceptanceResult = draftAcceptance.use(request)
+
+    override fun undoArrangementDraftAcceptance(request: UndoMidiCoreArrangementDraftAcceptance): MidiCoreArrangementDraftAcceptanceUndoResult =
+        draftAcceptanceUndo.undo(request)
 
     override fun export(request: app.melotrail.application.ExportMidiCorePackage): MidiCoreMidiPackageExportResult = exporter.export(request)
 
@@ -427,6 +446,7 @@ sealed interface MidiCoreWorkspaceIntent {
     ) : MidiCoreWorkspaceIntent
     data class ReplaceHarmony(val events: List<AuthoritativeChordEvent>) : MidiCoreWorkspaceIntent
     data class SelectReviewScope(val role: CandidateRole, val occurrenceId: String) : MidiCoreWorkspaceIntent
+    data class SelectReviewCandidate(val candidateId: String) : MidiCoreWorkspaceIntent
     data class LoadCandidates(val role: CandidateRole, val occurrenceId: String) : MidiCoreWorkspaceIntent
     data class CompareCandidates(val firstCandidateId: String, val secondCandidateId: String) : MidiCoreWorkspaceIntent
     data class GenerateCandidate(
@@ -458,6 +478,7 @@ sealed interface MidiCoreWorkspaceIntent {
     data class PlayAcceptedRole(val role: CandidateRole) : MidiCoreWorkspaceIntent
     data class PlayAcceptedOccurrence(val occurrenceId: String) : MidiCoreWorkspaceIntent
     data object PlayAcceptedArrangement : MidiCoreWorkspaceIntent
+    data class PlayArrangementDraft(val draftId: String) : MidiCoreWorkspaceIntent
     data class PreviewArrangementStyle(
         val styleId: String,
         val occurrenceId: String,
@@ -474,6 +495,8 @@ sealed interface MidiCoreWorkspaceIntent {
         val styleId: String,
         val rootSeed: Long = 1L,
     ) : MidiCoreWorkspaceIntent
+    data class UseArrangementDraft(val draftId: String) : MidiCoreWorkspaceIntent
+    data class UndoArrangementDraftAcceptance(val historyId: String) : MidiCoreWorkspaceIntent
     data class PlayAudition(val plan: MidiAuditionPlaybackPlan? = null) : MidiCoreWorkspaceIntent
     data object PauseAudition : MidiCoreWorkspaceIntent
     data object StopAudition : MidiCoreWorkspaceIntent
@@ -526,6 +549,7 @@ class MidiCoreWorkspaceViewModel(
             is MidiCoreWorkspaceIntent.ReplaceStructure -> replaceStructure(intent)
             is MidiCoreWorkspaceIntent.ReplaceHarmony -> replaceHarmony(intent)
             is MidiCoreWorkspaceIntent.SelectReviewScope -> selectReviewScope(intent)
+            is MidiCoreWorkspaceIntent.SelectReviewCandidate -> selectReviewCandidate(intent)
             is MidiCoreWorkspaceIntent.LoadCandidates -> loadCandidates(intent)
             is MidiCoreWorkspaceIntent.CompareCandidates -> compareCandidates(intent)
             is MidiCoreWorkspaceIntent.GenerateCandidate -> generateCandidate(intent, regenerate = false)
@@ -550,10 +574,15 @@ class MidiCoreWorkspaceViewModel(
             MidiCoreWorkspaceIntent.PlayAcceptedArrangement -> playReviewAudition(intent) { current ->
                 useCases.prepareAcceptedArrangementAudition(PrepareMidiCoreAcceptedArrangementAudition(current))
             }
+            is MidiCoreWorkspaceIntent.PlayArrangementDraft -> playReviewAudition(intent) { current ->
+                useCases.prepareArrangementDraftAudition(PrepareMidiCoreArrangementDraftAudition(current, intent.draftId))
+            }
             is MidiCoreWorkspaceIntent.PreviewArrangementStyle -> previewArrangementStyle(intent)
             is MidiCoreWorkspaceIntent.SelectArrangementOccurrence -> selectArrangementOccurrence(intent)
             is MidiCoreWorkspaceIntent.CreateArrangementDraft -> generateArrangementDraft(intent)
             is MidiCoreWorkspaceIntent.RegenerateArrangementSection -> regenerateArrangementSection(intent)
+            is MidiCoreWorkspaceIntent.UseArrangementDraft -> useArrangementDraft(intent)
+            is MidiCoreWorkspaceIntent.UndoArrangementDraftAcceptance -> undoArrangementDraftAcceptance(intent)
             is MidiCoreWorkspaceIntent.SelectAudition -> audition { useCases.audition.selectScope(intent.plan) }
             is MidiCoreWorkspaceIntent.PlayAudition -> audition {
                 intent.plan?.let { useCases.audition.play(it) } ?: useCases.audition.play()
@@ -733,6 +762,11 @@ class MidiCoreWorkspaceViewModel(
 
     private fun selectReviewScope(intent: MidiCoreWorkspaceIntent.SelectReviewScope) {
         _state.value = _state.value.copy(review = _state.value.review.copy(role = intent.role, occurrenceId = intent.occurrenceId, comparison = null))
+    }
+
+    private fun selectReviewCandidate(intent: MidiCoreWorkspaceIntent.SelectReviewCandidate) {
+        if (state.value.review.candidates.none { it.candidate.id == intent.candidateId }) return
+        _state.value = _state.value.copy(review = _state.value.review.copy(selectedCandidateId = intent.candidateId, comparison = null))
     }
 
     private fun loadCandidates(intent: MidiCoreWorkspaceIntent.LoadCandidates) {
@@ -1237,6 +1271,37 @@ class MidiCoreWorkspaceViewModel(
                         selectedCandidateId = candidates.lastOrNull()?.candidate?.id,
                     ),
                 )
+            }
+        }
+    }
+
+    /** Promote every validated draft reference in one application-owned atomic project revision. */
+    private fun useArrangementDraft(intent: MidiCoreWorkspaceIntent.UseArrangementDraft) {
+        val current = requireSessionOrBlock() ?: return
+        startOperation(MidiCoreWorkspaceOperationKind.CANDIDATE_REVIEW, "Using complete draft…", intent) { _ ->
+            when (val result = useCases.useArrangementDraft(UseMidiCoreArrangementDraft(current, intent.draftId, expectedRevision = current.project.revision))) {
+                is MidiCoreArrangementDraftAcceptanceResult.Applied -> success("Complete draft is now the accepted arrangement.", result.session) {
+                    _state.value = _state.value.copy(
+                        arrangement = _state.value.arrangement.copy(incompleteDraftId = null, incompleteDraftStyleId = null),
+                        review = _state.value.review.copy(comparison = null),
+                    )
+                }
+                is MidiCoreArrangementDraftAcceptanceResult.Rejected -> failure(draftBlocker(result.problem, intent), intent)
+            }
+        }
+    }
+
+    /** Restore the exact captured pointers for the visible latest complete-draft acceptance. */
+    private fun undoArrangementDraftAcceptance(intent: MidiCoreWorkspaceIntent.UndoArrangementDraftAcceptance) {
+        val current = requireSessionOrBlock() ?: return
+        startOperation(MidiCoreWorkspaceOperationKind.CANDIDATE_REVIEW, "Undoing complete draft acceptance…", intent) { _ ->
+            when (val result = useCases.undoArrangementDraftAcceptance(
+                UndoMidiCoreArrangementDraftAcceptance(current, intent.historyId, current.project.revision),
+            )) {
+                is MidiCoreArrangementDraftAcceptanceUndoResult.Applied -> success("The prior accepted arrangement was restored.", result.session) {
+                    _state.value = _state.value.copy(review = _state.value.review.copy(comparison = null))
+                }
+                is MidiCoreArrangementDraftAcceptanceUndoResult.Rejected -> failure(draftBlocker(result.problem, intent), intent)
             }
         }
     }

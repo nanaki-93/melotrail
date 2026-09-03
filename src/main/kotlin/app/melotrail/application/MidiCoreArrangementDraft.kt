@@ -458,6 +458,7 @@ class MidiCoreArrangementDraftAcceptance(
             MidiCoreArrangementDraftProblemCode.LOCKED,
             "A locked acceptance prevents using this complete draft at '${locked.occurrenceId}' ${locked.role.name.lowercase()}.",
             "Explicitly unlock that scoped acceptance before using the draft.",
+            MidiCoreArrangementDraftScope(locked.occurrenceId, locked.role),
         )
         val applied = selected.map { candidate ->
             existing[candidate.occurrenceId to candidate.role]
@@ -528,8 +529,12 @@ class MidiCoreArrangementDraftAcceptance(
         }
     }
 
-    private fun rejected(code: MidiCoreArrangementDraftProblemCode, message: String, nextAction: String) =
-        MidiCoreArrangementDraftAcceptanceResult.Rejected(MidiCoreArrangementDraftProblem(code, message, nextAction))
+    private fun rejected(
+        code: MidiCoreArrangementDraftProblemCode,
+        message: String,
+        nextAction: String,
+        scope: MidiCoreArrangementDraftScope? = null,
+    ) = MidiCoreArrangementDraftAcceptanceResult.Rejected(MidiCoreArrangementDraftProblem(code, message, nextAction, scope))
 }
 
 data class UseMidiCoreArrangementDraft(
@@ -546,6 +551,115 @@ sealed interface MidiCoreArrangementDraftAcceptanceResult {
         val history: MidiCoreArrangementDraftAcceptanceHistory,
     ) : MidiCoreArrangementDraftAcceptanceResult
     data class Rejected(val problem: MidiCoreArrangementDraftProblem) : MidiCoreArrangementDraftAcceptanceResult
+}
+
+/** Restores the prior pointers captured by the latest complete-draft acceptance without touching immutable evidence. */
+class MidiCoreArrangementDraftAcceptanceUndo(
+    private val artifacts: MidiCoreArtifactStore = MidiCoreArtifactStore(),
+    private val clock: Clock = Clock.systemUTC(),
+    private val historyIdFactory: () -> String = { "undo-${UUID.randomUUID()}" },
+) {
+    fun undo(request: UndoMidiCoreArrangementDraftAcceptance): MidiCoreArrangementDraftAcceptanceUndoResult =
+        MidiCoreProjectWriteCoordinator.withLock(request.session.root) { undoLocked(request) }
+
+    private fun undoLocked(request: UndoMidiCoreArrangementDraftAcceptance): MidiCoreArrangementDraftAcceptanceUndoResult {
+        val root = request.session.root.toAbsolutePath().normalize()
+        val project = try { artifacts.openProject(root) } catch (_: Exception) {
+            return rejected(MidiCoreArrangementDraftProblemCode.INVALID_PROJECT, "The project cannot be verified before undoing the draft acceptance.", "Open a valid project and try again.")
+        }
+        if (project != request.session.project || (request.expectedRevision != null && project.revision != request.expectedRevision)) {
+            return rejected(MidiCoreArrangementDraftProblemCode.REVISION_CONFLICT, "The project changed before the draft acceptance could be undone.", "Reload Review and try again.")
+        }
+        val batch = project.arrangementDraftAcceptanceHistory.lastOrNull()
+            ?: return rejected(MidiCoreArrangementDraftProblemCode.DRAFT_NOT_FOUND, "There is no complete-draft acceptance to undo.", "Use a complete draft before requesting undo.")
+        if (request.historyId != null && request.historyId != batch.id) {
+            return rejected(MidiCoreArrangementDraftProblemCode.REVISION_CONFLICT, "A newer complete-draft acceptance is now the latest change.", "Review the current acceptance and use its undo action instead.")
+        }
+        val currentByScope = project.acceptances.associateBy { it.occurrenceId to it.role }
+        val changed = batch.appliedAcceptances.firstOrNull { applied ->
+            currentByScope[applied.occurrenceId to applied.role] != applied
+        }
+        if (changed != null) return rejected(
+            MidiCoreArrangementDraftProblemCode.REVISION_CONFLICT,
+            "The latest draft acceptance cannot be undone because '${changed.occurrenceId}' ${changed.role.name.lowercase()} changed afterward.",
+            "Keep the current scoped decision or explicitly choose a new complete draft.",
+            MidiCoreArrangementDraftScope(changed.occurrenceId, changed.role),
+        )
+        val restoredScopes = batch.appliedAcceptances.map { it.occurrenceId to it.role }.toSet()
+        val nextAcceptances = (project.acceptances.filterNot { it.occurrenceId to it.role in restoredScopes } + batch.previousAcceptances)
+            .sortedWith(compareBy<CandidateAcceptance> { acceptance ->
+                project.authority!!.occurrences.indexOfFirst { it.id == acceptance.occurrenceId }
+            }.thenBy { it.role.ordinal })
+        val now = Instant.now(clock).toString()
+        val restoredHistory = try {
+            batch.previousAcceptances.map { prior ->
+                CandidateAcceptanceHistory(
+                    historyIdFactory().also { require(SAFE_ID.matches(it)) },
+                    prior.occurrenceId,
+                    prior.role,
+                    prior.candidateId,
+                    MidiCoreAcceptanceAction.RESTORED,
+                    now,
+                )
+            }
+        } catch (_: Exception) {
+            return rejected(MidiCoreArrangementDraftProblemCode.DRAFT_INVALID, "Unique undo-history identifiers could not be created.", "Retry the undo; no acceptance changed.")
+        }
+        if (restoredHistory.map(CandidateAcceptanceHistory::id).distinct().size != restoredHistory.size ||
+            project.acceptanceHistory.any { old -> restoredHistory.any { it.id == old.id } }) {
+            return rejected(MidiCoreArrangementDraftProblemCode.DRAFT_INVALID, "Undo-history identifiers collided with existing evidence.", "Retry the undo with new history identifiers.")
+        }
+        val restoredIds = batch.previousAcceptances.map(CandidateAcceptance::candidateId).toSet()
+        val retainedAcceptedIds = nextAcceptances.map(CandidateAcceptance::candidateId).toSet()
+        val appliedIds = batch.appliedAcceptances.map(CandidateAcceptance::candidateId).toSet()
+        val next = try {
+            project.copy(
+                candidates = project.candidates.map { candidate ->
+                    when {
+                        candidate.id in restoredIds -> candidate.copy(status = MidiCoreCandidateStatus.ACCEPTED, rejectionReason = null)
+                        candidate.id in appliedIds && candidate.id !in retainedAcceptedIds && candidate.status == MidiCoreCandidateStatus.ACCEPTED ->
+                            candidate.copy(status = MidiCoreCandidateStatus.CURRENT)
+                        else -> candidate
+                    }
+                },
+                acceptances = nextAcceptances,
+                acceptanceHistory = project.acceptanceHistory + restoredHistory,
+                arrangementDraftAcceptanceHistory = project.arrangementDraftAcceptanceHistory.dropLast(1),
+                revision = Math.addExact(project.revision, 1L),
+            )
+        } catch (_: Exception) {
+            return rejected(MidiCoreArrangementDraftProblemCode.DRAFT_INVALID, "The draft acceptance undo could not be prepared atomically.", "Resolve the listed problem and retry; no acceptance changed.")
+        }
+        return try {
+            artifacts.saveProject(root, next)
+            MidiCoreArrangementDraftAcceptanceUndoResult.Applied(MidiCoreProjectSession(root, next), batch)
+        } catch (_: Exception) {
+            rejected(MidiCoreArrangementDraftProblemCode.SAVE_FAILED, "The draft acceptance undo could not be saved safely.", "Retry; no acceptance changed.")
+        }
+    }
+
+    private fun rejected(
+        code: MidiCoreArrangementDraftProblemCode,
+        message: String,
+        nextAction: String,
+        scope: MidiCoreArrangementDraftScope? = null,
+    ) = MidiCoreArrangementDraftAcceptanceUndoResult.Rejected(MidiCoreArrangementDraftProblem(code, message, nextAction, scope))
+}
+
+data class UndoMidiCoreArrangementDraftAcceptance(
+    val session: MidiCoreProjectSession,
+    /** The visible latest batch identity guards against a stale undo click. */
+    val historyId: String? = null,
+    val expectedRevision: Long? = session.project.revision,
+)
+
+sealed interface MidiCoreArrangementDraftAcceptanceUndoResult {
+    data class Applied(
+        val session: MidiCoreProjectSession,
+        val revertedHistory: MidiCoreArrangementDraftAcceptanceHistory,
+    ) : MidiCoreArrangementDraftAcceptanceUndoResult
+
+    data class Rejected(val problem: MidiCoreArrangementDraftProblem) : MidiCoreArrangementDraftAcceptanceUndoResult
 }
 
 /** Revalidates the exact draft membership, candidate artifacts, authority, and reports without mutating state. */
@@ -582,12 +696,22 @@ internal fun validateDraft(
     )
     draft.candidateReferences.forEach { reference ->
         val candidate = candidates[reference.candidateId]
-            ?: return problem(MidiCoreArrangementDraftProblemCode.DRAFT_INVALID, "A draft candidate record is missing.", "Restore project state or create a new complete draft.")
+            ?: return problem(
+                MidiCoreArrangementDraftProblemCode.DRAFT_INVALID,
+                "A draft candidate record is missing.",
+                "Restore project state or create a new complete draft.",
+                MidiCoreArrangementDraftScope(reference.occurrenceId, reference.role),
+            )
         if (candidate.role != reference.role || candidate.occurrenceId != reference.occurrenceId ||
             candidate.midi.sha256 != reference.midiSha256 || candidate.validationReport.sha256 != reference.validationReportSha256 ||
             candidate.authorityHash != reference.authorityHash || candidate.status in setOf(MidiCoreCandidateStatus.REJECTED, MidiCoreCandidateStatus.STALE) ||
             candidate.authorityHash != authority.scopeHash(candidate.occurrenceId, candidate.role)) {
-            return problem(MidiCoreArrangementDraftProblemCode.DRAFT_STALE, "A draft candidate is stale or no longer matches its immutable reference.", "Regenerate the affected scope and create a new complete draft.")
+            return problem(
+                MidiCoreArrangementDraftProblemCode.DRAFT_STALE,
+                "A draft candidate is stale or no longer matches its immutable reference.",
+                "Regenerate the affected scope and create a new complete draft.",
+                MidiCoreArrangementDraftScope(reference.occurrenceId, reference.role),
+            )
         }
     }
     return null

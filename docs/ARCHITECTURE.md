@@ -240,11 +240,15 @@ the next unused deterministic seed from the project, then can create one
 complete style draft or expose targeted correction. Its selected-section
 inspector supplies keyboard-accessible previous/next navigation and keeps
 profile/pattern controls behind the advanced local-repair disclosure. Review
-exposes the complete-draft listen/use decision while retaining scoped
-alternatives as contextual evidence. After generation or a lifecycle mutation,
-the workspace reducer rehydrates the persisted project and reloads affected
-evidence before publishing success state, so the UI never depends on a manual
-refresh.
+uses the same selected section/map context for complete-draft playback and its
+atomic **Use this draft** decision, reports known batch blockers at their
+scope, and retains comparison/lifecycle evidence behind a selected-section
+disclosure. A separate application service can undo only the latest unchanged
+draft-acceptance batch by restoring its captured prior pointers atomically;
+candidate artifacts and acceptance history remain immutable. After generation
+or a lifecycle mutation, the workspace reducer rehydrates the persisted project
+and reloads affected evidence before publishing success state, so the UI never
+depends on a manual refresh.
 
 The workspace shell, rather than a destination page, owns the one live MIDI
 transport presentation. Pages only prepare or select musical views. The dock

@@ -122,6 +122,11 @@ Before implementation tasks begin:
   draft** action with scoped progress, cancellation, and retry. Section and
   role regeneration retain that style; profile/pattern controls remain under
   explicit advanced disclosure.
+- Review's default path is **Play complete draft** then **Use this draft**;
+  per-role comparison and lifecycle controls are selected-section details.
+  Batch acceptance and its latest-batch undo are atomic: stale, locked,
+  missing, or later-modified scopes leave every acceptance pointer unchanged,
+  and accepted-arrangement playback/Export unlock only after strict readiness.
 
 ## 5. Audition gates
 
