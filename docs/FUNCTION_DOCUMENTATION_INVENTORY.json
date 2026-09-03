@@ -45,9 +45,9 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt has 108 callable declarations, 5 directly documented and 103 still requiring focused KDoc/docstrings. MC-048A reviewed removal of manual melody-selection routing and conversion to bar-count structure intents; operation admission, audition, and typed failure traces remain covered by focused workspace tests.",
-      "functionCount": 108,
-      "declarationDigest": "b5982046ad226ebe9f0b886a82486686189212fcf7d5bc083178e53d8556d05e",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt has 110 callable declarations, 5 directly documented and 105 focused orchestration helpers. MC-048C reviewed same-project Review-scope retention, automatic candidate reload/selection after generation and lifecycle mutations, comparison-list preservation, operation admission, audition, and typed failure traces on 2026-09-03; focused reducer and real-service UI workflow tests cover the changed paths.",
+      "functionCount": 110,
+      "declarationDigest": "eec91a90e6928ab99261345dc66abd39244fc96e44839a7e0cfd0feec5ec9f23",
       "documentedFunctionCount": 5
     },
     {
@@ -69,10 +69,10 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreArrangePage.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreArrangePage.kt has 14 callable declarations, 1 directly documented and 13 focused presentation helpers. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-037; scoped deterministic generation, curated choices, candidate evidence, progress/cancellation, accessibility semantics, and review navigation are covered by focused Compose tests, and the remaining local presentation declarations must be reconsidered when their behavior or contract changes.",
-      "functionCount": 14,
-      "declarationDigest": "461850626ae63d81111679bed500bbfff217d69402beff43bef628b753af67c2",
-      "documentedFunctionCount": 1
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreArrangePage.kt has 19 callable declarations, 4 directly documented and 15 focused presentation helpers. MC-048C reviewed the scope -> feel -> generate flow, acceptance progress, automatic deterministic seed, compact catalog selectors, immediate candidate summary, cancellation, and Review handoff on 2026-09-03; focused Compose and real-service workflow tests cover the changed declarations.",
+      "functionCount": 19,
+      "declarationDigest": "f8681a80dbfe822dbf02d7ec11c4f986519b8292bb964fa450ac64d23152a58c",
+      "documentedFunctionCount": 4
     },
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreExportPage.kt",
@@ -85,9 +85,9 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt has 25 callable declarations, 1 directly documented and 24 focused presentation helpers. MC-048B reviewed immutable candidate decisions, candidate/role/occurrence/full MIDI audition, explicit external-receiver or built-in-synthesizer selection, transport, mute/solo, accessibility semantics, and Arrange handoff on 2026-09-03.",
-      "functionCount": 25,
-      "declarationDigest": "b253c32bdc6e3e2cdbb70dc448f30a46707cbd10fc34417f25fd579880ad75b8",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt has 20 callable declarations, 1 directly documented and 19 focused presentation helpers. MC-048C reviewed one-alternative selection, play -> accept -> continue, acceptance progress, contextual comparison and lifecycle actions, complete-arrangement gating, collapsed output/transport options, stale evidence, accessibility semantics, and Arrange/Export handoff on 2026-09-03; focused Compose and real-service workflow tests cover the changed declarations.",
+      "functionCount": 20,
+      "declarationDigest": "7f57529ba66c7653354b704019e53c33ebe2217319c8678110c191525d4d2fbb",
       "documentedFunctionCount": 1
     },
     {

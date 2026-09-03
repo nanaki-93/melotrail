@@ -675,11 +675,17 @@ class MidiCoreWorkspaceViewModel(
         startOperation(MidiCoreWorkspaceOperationKind.CANDIDATE_REVIEW, "Loading candidate evidence…", intent) { _ ->
             when (val result = useCases.listCandidates(ListMidiCoreCandidates(current, intent.role, intent.occurrenceId, current.project.revision))) {
                 is MidiCoreCandidateReviewResult.Listed -> success("Candidate evidence loaded.") {
+                    val selectedCandidateId = _state.value.review.selectedCandidateId
+                        ?.takeIf { selected -> result.candidates.any { it.candidate.id == selected } }
+                        ?: result.candidates.singleOrNull { it.accepted }?.candidate?.id
+                        ?: result.candidates.lastOrNull { it.candidate.status != app.melotrail.project.MidiCoreCandidateStatus.REJECTED }?.candidate?.id
+                        ?: result.candidates.lastOrNull()?.candidate?.id
                     _state.value = _state.value.copy(review = _state.value.review.copy(
                         role = intent.role,
                         occurrenceId = intent.occurrenceId,
                         candidates = result.candidates,
                         comparison = null,
+                        selectedCandidateId = selectedCandidateId,
                     ))
                 }
                 is MidiCoreCandidateReviewResult.Rejected -> failure(candidateBlocker(result.problem), intent)
@@ -696,8 +702,10 @@ class MidiCoreWorkspaceViewModel(
         startOperation(MidiCoreWorkspaceOperationKind.CANDIDATE_REVIEW, "Comparing candidate evidence…", intent) { _ ->
             when (val result = useCases.compareCandidates(CompareMidiCoreCandidates(current, role, occurrence, intent.firstCandidateId, intent.secondCandidateId, current.project.revision))) {
                 is MidiCoreCandidateReviewResult.Compared -> success("Candidate differences calculated.") {
+                    val compared = listOf(result.first, result.second).associateBy { it.candidate.id }
+                    val currentCandidates = _state.value.review.candidates
                     _state.value = _state.value.copy(review = _state.value.review.copy(
-                        candidates = listOf(result.first, result.second),
+                        candidates = if (currentCandidates.isEmpty()) compared.values.toList() else currentCandidates.map { compared[it.candidate.id] ?: it },
                         comparison = MidiCoreCandidateComparison(result.first, result.second, result.differences),
                     ))
                 }
@@ -735,13 +743,25 @@ class MidiCoreWorkspaceViewModel(
                 useCases.generateCandidate(generatorRequest)
             }
             when (result) {
-                is MidiCoreCandidateGenerationResult.Published -> success("Candidate published.", result.session) {
-                    _state.value = _state.value.copy(review = _state.value.review.copy(
-                        role = request.role,
-                        occurrenceId = request.occurrenceId,
-                        candidates = emptyList(),
-                        comparison = null,
-                    ))
+                is MidiCoreCandidateGenerationResult.Published -> {
+                    val candidates = candidateReviewItems(result.session, request.role, request.occurrenceId)
+                        ?: listOf(app.melotrail.application.MidiCoreCandidateReviewItem(
+                            candidate = result.candidate,
+                            validation = result.validation,
+                            notes = emptyList(),
+                            authorityCurrent = true,
+                            accepted = false,
+                            locked = false,
+                        ))
+                    success("Alternative ready to review.", result.session) {
+                        _state.value = _state.value.copy(review = _state.value.review.copy(
+                            role = request.role,
+                            occurrenceId = request.occurrenceId,
+                            candidates = candidates,
+                            comparison = null,
+                            selectedCandidateId = result.candidate.id,
+                        ))
+                    }
                 }
                 is MidiCoreCandidateGenerationResult.ValidationRejected -> failure(
                     blocker(MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE, "The generated candidate failed typed role validation.", "Choose another curated profile or pattern and retry.", sourceCode = "VALIDATION_REJECTED", action = intent, occurrenceId = request.occurrenceId, role = request.role),
@@ -778,10 +798,29 @@ class MidiCoreWorkspaceViewModel(
         action: (app.melotrail.application.MidiCoreProjectSession) -> MidiCoreCandidateLifecycleResult,
     ) {
         val current = requireSessionOrBlock() ?: return
+        val currentReviewItems = state.value.review.candidates
         startOperation(MidiCoreWorkspaceOperationKind.CANDIDATE_REVIEW, "Saving candidate review decision…", intent) { _ ->
             when (val result = action(current)) {
-                is MidiCoreCandidateLifecycleResult.Updated -> success("Candidate review decision saved.", result.session) {
-                    _state.value = _state.value.copy(review = _state.value.review.copy(candidates = emptyList(), comparison = null))
+                is MidiCoreCandidateLifecycleResult.Updated -> {
+                    val candidate = result.candidate
+                    val candidates = candidateReviewItems(result.session, candidate.role, candidate.occurrenceId)
+                        ?: currentReviewItems.map { item ->
+                            val acceptance = result.session.project.acceptances.singleOrNull { it.candidateId == item.candidate.id }
+                            item.copy(
+                                candidate = if (item.candidate.id == candidate.id) candidate else item.candidate,
+                                accepted = acceptance != null,
+                                locked = acceptance?.locked == true,
+                            )
+                        }
+                    success(candidateTransitionMessage(intent), result.session) {
+                        _state.value = _state.value.copy(review = _state.value.review.copy(
+                            role = candidate.role,
+                            occurrenceId = candidate.occurrenceId,
+                            candidates = candidates,
+                            comparison = null,
+                            selectedCandidateId = candidate.id,
+                        ))
+                    }
                 }
                 is MidiCoreCandidateLifecycleResult.Published -> success("Candidate published.", result.session)
                 is MidiCoreCandidateLifecycleResult.Rejected -> failure(candidateBlocker(result.problem), intent)
@@ -1141,6 +1180,14 @@ class MidiCoreWorkspaceViewModel(
     }
 
     private fun hydrate(next: app.melotrail.application.MidiCoreProjectSession) {
+        val previous = _state.value
+        val sameProject = previous.project?.id == next.project.id &&
+            previous.projectRoot?.toAbsolutePath()?.normalize() == next.root.toAbsolutePath().normalize()
+        val reviewScope = if (sameProject) {
+            previous.review.copy(candidates = emptyList(), comparison = null)
+        } else {
+            MidiCoreCandidateReviewUiState()
+        }
         session = next
         preferences.saveLastOpenedProject(next.root)
         val project = next.project
@@ -1167,12 +1214,33 @@ class MidiCoreWorkspaceViewModel(
                 draft = authorityDraft(authority),
                 draftDirty = false,
             ),
-            review = MidiCoreCandidateReviewUiState(),
+            review = reviewScope,
             audition = useCases.audition.state,
             export = MidiCoreExportUiState(latestSnapshot = project.exportSnapshots.lastOrNull()),
             blockers = baseBlockers(project),
             dialog = null,
         )
+    }
+
+    private fun candidateReviewItems(
+        candidateSession: MidiCoreProjectSession,
+        role: CandidateRole,
+        occurrenceId: String,
+    ): List<app.melotrail.application.MidiCoreCandidateReviewItem>? =
+        when (val review = useCases.listCandidates(ListMidiCoreCandidates(candidateSession, role, occurrenceId, candidateSession.project.revision))) {
+            is MidiCoreCandidateReviewResult.Listed -> review.candidates
+            is MidiCoreCandidateReviewResult.Rejected,
+            is MidiCoreCandidateReviewResult.Compared,
+            -> null
+        }
+
+    private fun candidateTransitionMessage(intent: MidiCoreWorkspaceIntent): String = when (intent) {
+        is MidiCoreWorkspaceIntent.AcceptCandidate -> "Alternative accepted."
+        is MidiCoreWorkspaceIntent.RejectCandidate -> "Alternative rejected."
+        is MidiCoreWorkspaceIntent.LockCandidate -> "Accepted work locked."
+        is MidiCoreWorkspaceIntent.UnlockCandidate -> "Accepted work unlocked."
+        is MidiCoreWorkspaceIntent.RestoreCandidate -> "Prior acceptance restored."
+        else -> "Candidate review decision saved."
     }
 
     private fun hydrateSourceValidation(validation: MidiImportValidationResult) {

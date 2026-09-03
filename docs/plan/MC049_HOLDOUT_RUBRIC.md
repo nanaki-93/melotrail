@@ -32,11 +32,14 @@ fixtures or be used to tune constants before their initial score.
    is protected automatically. Enter authoritative key, tempo, meter, ordered
    section bar counts, and harmony. The bar total must equal the source length.
    Authority entry is excluded from review timing.
-2. Start the review timer at the first candidate generation. Generate and
-   review Chords, Bass, and Drums alternatives without editing the protected
-   melody or authoritative harmony to make a result look better.
-3. Accept an arrangement and export its immutable snapshot. Record the snapshot
-   ID, elapsed review time, and short reason for every score.
+2. Start the review timer at the first Arrange generation. Follow the guided
+   section/role -> feel -> Generate flow, then use Review's Play -> Accept ->
+   Continue path for Chords, Bass, and Drums. Generate another alternative only
+   when the current result is not useful; do not edit protected melody or
+   authoritative harmony merely to make a result look better.
+3. When every part is accepted, use Review's full-arrangement playback, continue
+   to Export, and publish its immutable snapshot. Record the snapshot ID,
+   elapsed review time, and short reason for every score.
 4. Do not manually edit generated MIDI outside Melotrail to conceal a timing or
    harmony defect. Report such a case as a blocker.
 

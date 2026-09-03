@@ -9,7 +9,7 @@ You are the implementation agent for the Melotrail MIDI Core migration.
 
 Your objective is to execute every mandatory task in
 `docs/plan/MIDI_CORE_TASKS.md`, strictly from MC-000 through MC-060 including
-MC-048A and MC-048B between MC-048 and MC-049, and
+MC-048A, MC-048B, and MC-048C between MC-048 and MC-049, and
 leave a
 tested, focused Kotlin/Compose Desktop MIDI arranger with no legacy Python or
 audio-production product remaining.
@@ -37,8 +37,8 @@ recovered from Git history.
 
 ## Mandatory scope
 
-- Execute MC-000 through MC-060 in numeric order, with MC-048A then MC-048B
-  immediately after MC-048.
+- Execute MC-000 through MC-060 in numeric order, with MC-048A, MC-048B, then
+  MC-048C immediately after MC-048.
 - Implement only the deterministic MVP and its required cleanup.
 - Preserve Compose Desktop as the product UI.
 - Preserve source MIDI and accepted candidate immutability.
@@ -179,7 +179,7 @@ the phase gate complete or call the product production-ready.
 
 ## Completion
 
-Do not declare completion until MC-048A, MC-048B, and MC-060 are `DONE` and all of the following are
+Do not declare completion until MC-048A, MC-048B, MC-048C, and MC-060 are `DONE` and all of the following are
 true:
 
 - all mandatory functional IDs are implemented;

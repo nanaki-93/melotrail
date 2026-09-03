@@ -1,6 +1,7 @@
 # MIDI workspace visual specification
 
-Status: implemented target design contract; validation is owned by MC-048B
+Status: implemented target design contract; validation is owned by MC-048B and
+the guided Arrange/Review refinement by MC-048C
 
 Authority: visual language and visual acceptance for the Compose Desktop MIDI
 workspace
@@ -51,8 +52,8 @@ top-level pages.
 | Project | project/readiness summary and next safe action | location, recent projects, authority facts |
 | MIDI | immutable-source import and track/channel facts | MIDI-event preview, findings, audition |
 | Structure & Harmony | ordered section timeline and chord windows | bar totals, authority validity, invalidation impact |
-| Arrange | exact role/occurrence scope and candidate alternatives | profile/pattern/seed, generation state, findings |
-| Review | candidate comparison and explicit lifecycle decision | MIDI-event diff, audition, mute/solo, stale evidence |
+| Arrange | guided scope -> feel -> generate flow and acceptance progress | compact alternative summary, generation state, findings |
+| Review | one selected alternative and play -> accept -> continue flow | optional diff, contextual lifecycle and playback controls, stale evidence |
 | Export | readiness checklist and immutable package result | files, hashes, validation, Logic Pro guidance |
 
 Section and role views may use a compact MIDI timeline or piano-roll-style
@@ -70,6 +71,11 @@ selection.
   remain legible at wide and compact desktop widths.
 - Long tables and timelines may scroll deliberately; page layout must not hide
   critical candidate or export information behind clipped panels.
+- Do not render every section, profile, pattern, alternative, lifecycle action,
+  output device, and transport command as simultaneous buttons. Use compact
+  selectors, one primary action per step, and progressive disclosure.
+- Successful candidate generation and review decisions remain visibly selected
+  in the same scope without asking the musician to refresh evidence.
 
 ## 6. Validation and reference retirement
 

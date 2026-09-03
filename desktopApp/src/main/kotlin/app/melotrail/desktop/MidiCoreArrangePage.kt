@@ -1,23 +1,25 @@
 package app.melotrail.desktop
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,30 +29,33 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
+import app.melotrail.application.MidiCoreCandidateReviewItem
 import app.melotrail.arrangement.core.MidiCorePatternCatalog
-import app.melotrail.arrangement.core.MidiCorePatternInventoryEntry
 import app.melotrail.arrangement.core.MidiCorePerformanceProfileCatalog
 import app.melotrail.arrangement.core.MidiCoreRoleFindingSeverity
 import app.melotrail.project.CandidateRole
+import app.melotrail.project.MidiCoreCandidateStatus
 import app.melotrail.project.MidiCoreGeneratorInput
+import app.melotrail.project.MidiCoreProject
+import app.melotrail.project.ProjectSectionOccurrence
 
-/** Stable semantic anchors for the focused, deterministic arrangement page. */
+/** Stable semantic anchors for the guided arrangement-preparation page. */
 internal object MidiCoreArrangePageTags {
     const val ROOT = "midi-core-arrange-page"
     const val EMPTY = "midi-core-arrange-empty"
+    const val PROGRESS = "midi-core-arrange-progress"
     const val SCOPE = "midi-core-arrange-scope"
     const val ROLE_PREFIX = "midi-core-arrange-role-"
+    const val OCCURRENCE_MENU = "midi-core-arrange-occurrence-menu"
     const val OCCURRENCE_PREFIX = "midi-core-arrange-occurrence-"
+    const val PROFILE_MENU = "midi-core-arrange-profile-menu"
     const val PROFILE_PREFIX = "midi-core-arrange-profile-"
+    const val PATTERN_MENU = "midi-core-arrange-pattern-menu"
     const val PATTERN_PREFIX = "midi-core-arrange-pattern-"
-    const val SEED = "midi-core-arrange-seed"
     const val GENERATE = "midi-core-arrange-generate"
-    const val ALTERNATIVE = "midi-core-arrange-alternative"
-    const val REGENERATE = "midi-core-arrange-regenerate"
-    const val LOAD_CANDIDATES = "midi-core-arrange-load-candidates"
+    const val STATUS = "midi-core-arrange-status"
     const val CANDIDATES = "midi-core-arrange-candidates"
     const val CANDIDATE_PREFIX = "midi-core-arrange-candidate-"
-    const val PROGRESS = "midi-core-arrange-progress"
     const val CANCEL = "midi-core-arrange-cancel"
     const val REVIEW = "midi-core-arrange-open-review"
     const val BLOCKERS = "midi-core-arrange-blockers"
@@ -62,7 +67,53 @@ internal object MidiCoreArrangePageTags {
     fun candidate(id: String): String = CANDIDATE_PREFIX + id
 }
 
-/** Scoped candidate generation and existing-candidate evidence for the Arrange destination. */
+internal data class MidiCoreArrangementScope(
+    val role: CandidateRole,
+    val occurrence: ProjectSectionOccurrence,
+)
+
+internal data class MidiCoreArrangementProgress(
+    val accepted: Int,
+    val total: Int,
+    val nextIncomplete: MidiCoreArrangementScope?,
+) {
+    val complete: Boolean get() = total > 0 && accepted == total
+}
+
+internal val midiCoreArrangementRoleOrder = listOf(CandidateRole.CHORDS, CandidateRole.BASS, CandidateRole.DRUMS)
+
+/** Return the musician's section-first arrangement order: Chords, Bass, then Drums. */
+internal fun midiCoreArrangementScopes(project: MidiCoreProject): List<MidiCoreArrangementScope> =
+    project.authority?.occurrences.orEmpty().flatMap { occurrence ->
+        midiCoreArrangementRoleOrder.map { role -> MidiCoreArrangementScope(role, occurrence) }
+    }
+
+/** Summarize accepted work and the next unfinished musical decision. */
+internal fun midiCoreArrangementProgress(project: MidiCoreProject): MidiCoreArrangementProgress {
+    val scopes = midiCoreArrangementScopes(project)
+    val acceptedScopes = project.acceptances.map { it.occurrenceId to it.role }.toSet()
+    return MidiCoreArrangementProgress(
+        accepted = scopes.count { it.occurrence.id to it.role in acceptedScopes },
+        total = scopes.size,
+        nextIncomplete = scopes.firstOrNull { it.occurrence.id to it.role !in acceptedScopes },
+    )
+}
+
+/** Pick the next unused deterministic seed for one role/section scope. */
+internal fun midiCoreNextCandidateSeed(project: MidiCoreProject, role: CandidateRole, occurrenceId: String): Long {
+    val used = project.candidates.asSequence()
+        .filter { it.role == role && it.occurrenceId == occurrenceId }
+        .map { it.seed }
+        .toSet()
+    var seed = 1L
+    while (seed in used) {
+        require(seed < Long.MAX_VALUE) { "No deterministic candidate seed remains for this arrangement scope" }
+        seed += 1L
+    }
+    return seed
+}
+
+/** Guide one scoped alternative from musical choices into Review. */
 @Composable
 internal fun MidiCoreArrangePage(
     state: MidiCoreWorkspaceState,
@@ -70,114 +121,130 @@ internal fun MidiCoreArrangePage(
     onNavigate: (MidiCoreWorkspaceDestination) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val authority = state.project?.authority
+    val project = state.project
+    val authority = project?.authority
     val occurrences = authority?.occurrences.orEmpty()
-    var role by remember(state.projectRevision) { mutableStateOf(state.review.role ?: CandidateRole.CHORDS) }
-    var occurrenceId by remember(state.projectRevision) { mutableStateOf(state.review.occurrenceId ?: occurrences.firstOrNull()?.id) }
-    var profileId by remember(state.projectRevision, role) {
+    val progress = project?.let(::midiCoreArrangementProgress)
+    val requestedOccurrence = state.review.occurrenceId?.takeIf { id -> occurrences.any { it.id == id } }
+        ?: progress?.nextIncomplete?.occurrence?.id
+        ?: occurrences.firstOrNull()?.id
+    val requestedRole = state.review.role ?: progress?.nextIncomplete?.role ?: CandidateRole.CHORDS
+    var role by remember(project?.id?.value) { mutableStateOf(requestedRole) }
+    var occurrenceId by remember(project?.id?.value) { mutableStateOf(requestedOccurrence) }
+    var profileId by remember(project?.id?.value, role) {
         mutableStateOf(MidiCorePerformanceProfileCatalog.allowedProfileIds(role).firstOrNull().orEmpty())
     }
-    var patternId by remember(state.projectRevision, role) {
+    var patternId by remember(project?.id?.value, role) {
         mutableStateOf(MidiCorePatternCatalog.allowedPatternIds(role).firstOrNull().orEmpty())
     }
-    var seedText by remember(state.projectRevision, role, occurrenceId) { mutableStateOf("1") }
-    val seed = seedText.toLongOrNull()
-    val generationReady = !state.busy && occurrenceId != null && profileId.isNotBlank() && patternId.isNotBlank() && seed != null
+
+    LaunchedEffect(project?.id?.value, role, occurrenceId) {
+        val selectedOccurrence = occurrenceId ?: return@LaunchedEffect
+        if (project != null && authority != null) {
+            onIntent(MidiCoreWorkspaceIntent.SelectReviewScope(role, selectedOccurrence))
+            onIntent(MidiCoreWorkspaceIntent.LoadCandidates(role, selectedOccurrence))
+        }
+    }
 
     Column(
         modifier.semantics {
             testTag = MidiCoreArrangePageTags.ROOT
-            contentDescription = "Arrange deterministic MIDI candidates"
+            contentDescription = "Prepare the MIDI arrangement in three guided steps"
         }.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Lg),
     ) {
         WorkspacePageHeading(
-            eyebrow = "CREATE",
+            eyebrow = "PREPARE",
             title = "Arrange",
-            summary = "Choose a section and role, then generate repeatable MIDI alternatives.",
+            summary = "Work through each section: choose a role, choose its feel, then create one alternative to review.",
         )
-        if (state.project == null || authority == null || occurrences.isEmpty() || authority.chordEvents.isEmpty()) {
+        if (project == null || authority == null || occurrences.isEmpty() || authority.chordEvents.isEmpty()) {
             ArrangeEmptyState(state)
-        } else {
-            ArrangeScopeCard(
-                role = role,
-                occurrenceId = occurrenceId,
-                occurrences = occurrences.map { it.id to it.label },
-                enabled = !state.busy,
-                onRoleSelected = { nextRole ->
-                    role = nextRole
-                    profileId = MidiCorePerformanceProfileCatalog.allowedProfileIds(nextRole).first()
-                    patternId = MidiCorePatternCatalog.allowedPatternIds(nextRole).first()
-                    onIntent(MidiCoreWorkspaceIntent.SelectReviewScope(nextRole, occurrenceId ?: occurrences.first().id))
-                    onIntent(MidiCoreWorkspaceIntent.LoadCandidates(nextRole, occurrenceId ?: occurrences.first().id))
-                },
-                onOccurrenceSelected = { nextOccurrenceId ->
-                    occurrenceId = nextOccurrenceId
-                    onIntent(MidiCoreWorkspaceIntent.SelectReviewScope(role, nextOccurrenceId))
-                    onIntent(MidiCoreWorkspaceIntent.LoadCandidates(role, nextOccurrenceId))
-                },
-            )
-            ArrangeChoicesCard(
-                role = role,
-                profileId = profileId,
-                patternId = patternId,
-                enabled = !state.busy,
-                onProfileSelected = { profileId = it },
-                onPatternSelected = { patternId = it },
-            )
-            ArrangeGenerationCard(
-                seedText = seedText,
-                seedValid = seed != null,
-                generationReady = generationReady,
-                isGenerating = state.operation.active && state.operation.kind == MidiCoreWorkspaceOperationKind.CANDIDATE_GENERATION,
-                operationMessage = state.operation.message,
-                onSeedChanged = { seedText = it },
-                onGenerate = {
-                    val request = generationIntent(role, requireNotNull(occurrenceId), profileId, patternId, requireNotNull(seed), regenerate = false)
-                    onIntent(request)
-                },
-                onAlternative = {
-                    val nextSeed = requireNotNull(seed).plus(1L)
-                    seedText = nextSeed.toString()
-                    onIntent(generationIntent(role, requireNotNull(occurrenceId), profileId, patternId, nextSeed, regenerate = false))
-                },
-                onRegenerate = {
-                    onIntent(generationIntent(role, requireNotNull(occurrenceId), profileId, patternId, requireNotNull(seed), regenerate = true))
-                },
-                onCancel = { onIntent(MidiCoreWorkspaceIntent.CancelOperation) },
-            )
-            ArrangeCandidateEvidenceCard(
-                state = state,
-                role = role,
-                occurrenceId = occurrenceId,
-                onLoad = { onIntent(MidiCoreWorkspaceIntent.LoadCandidates(role, requireNotNull(occurrenceId))) },
-                onReview = {
-                    onIntent(MidiCoreWorkspaceIntent.SelectReviewScope(role, requireNotNull(occurrenceId)))
-                    onNavigate(MidiCoreWorkspaceDestination.REVIEW)
-                },
-            )
+            return@Column
         }
+
+        requireNotNull(progress)
+        ArrangeProgressCard(progress, role, occurrenceId, occurrences)
+        ArrangeScopeCard(
+            role = role,
+            occurrenceId = occurrenceId,
+            occurrences = occurrences,
+            enabled = !state.busy,
+            onRoleSelected = { role = it },
+            onOccurrenceSelected = { occurrenceId = it },
+        )
+        ArrangeFeelCard(
+            role = role,
+            profileId = profileId,
+            patternId = patternId,
+            enabled = !state.busy,
+            onProfileSelected = { profileId = it },
+            onPatternSelected = { patternId = it },
+        )
+        val selectedOccurrence = occurrences.singleOrNull { it.id == occurrenceId }
+        val scopeMatches = state.review.role == role && state.review.occurrenceId == occurrenceId
+        val candidates = if (scopeMatches) state.review.candidates else emptyList()
+        val nextSeed = midiCoreNextCandidateSeed(project, role, occurrenceId.orEmpty())
+        ArrangeGenerateCard(
+            state = state,
+            role = role,
+            occurrenceLabel = selectedOccurrence?.label.orEmpty(),
+            ready = selectedOccurrence != null && profileId.isNotBlank() && patternId.isNotBlank(),
+            nextSeed = nextSeed,
+            onGenerate = {
+                onIntent(generationIntent(role, requireNotNull(occurrenceId), profileId, patternId, nextSeed))
+            },
+            onCancel = { onIntent(MidiCoreWorkspaceIntent.CancelOperation) },
+        )
+        ArrangeCandidateSummary(
+            state = state,
+            role = role,
+            occurrence = selectedOccurrence,
+            candidates = candidates,
+            onReview = {
+                onIntent(MidiCoreWorkspaceIntent.SelectReviewScope(role, requireNotNull(occurrenceId)))
+                onNavigate(MidiCoreWorkspaceDestination.REVIEW)
+            },
+        )
     }
 }
 
 @Composable
 private fun ArrangeEmptyState(state: MidiCoreWorkspaceState) {
-    ArrangeCard(MidiCoreArrangePageTags.EMPTY, "Arrange") {
-        Text("Generation becomes available after the protected melody, complete section timeline, and authoritative chord windows are saved.", style = MaterialTheme.typography.bodyLarge)
-        if (state.blockers.isEmpty()) {
-            Text("Open a MIDI Core project to begin.", style = MaterialTheme.typography.bodyMedium, color = MusicWorkspaceTokens.TextSecondary)
-        } else {
-            Column(
-                Modifier.fillMaxWidth().semantics {
-                    testTag = MidiCoreArrangePageTags.BLOCKERS
-                    contentDescription = "${state.blockers.size} generation blocker${if (state.blockers.size == 1) "" else "s"}"
-                },
-                verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs),
-            ) {
-                state.blockers.forEach { blocker ->
-                    Text("${blocker.message} Next: ${blocker.nextAction}", style = MaterialTheme.typography.bodyMedium, color = MusicWorkspaceTokens.Warning)
-                }
+    ArrangeCard(MidiCoreArrangePageTags.EMPTY, "Arrangement is not ready yet") {
+        Text("Finish the song settings, section list, and chord progressions first.", style = MaterialTheme.typography.bodyLarge)
+        Column(
+            Modifier.fillMaxWidth().semantics {
+                testTag = MidiCoreArrangePageTags.BLOCKERS
+                contentDescription = "${state.blockers.size} arrangement blocker${if (state.blockers.size == 1) "" else "s"}"
+            },
+            verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs),
+        ) {
+            state.blockers.forEach { blocker ->
+                Text("${blocker.message} Next: ${blocker.nextAction}", style = MaterialTheme.typography.bodyMedium, color = MusicWorkspaceTokens.Warning)
             }
+        }
+    }
+}
+
+@Composable
+private fun ArrangeProgressCard(
+    progress: MidiCoreArrangementProgress,
+    role: CandidateRole,
+    occurrenceId: String?,
+    occurrences: List<ProjectSectionOccurrence>,
+) {
+    val currentLabel = occurrences.singleOrNull { it.id == occurrenceId }?.label.orEmpty()
+    ArrangeCard(MidiCoreArrangePageTags.PROGRESS, "Arrangement progress") {
+        Text(
+            if (progress.complete) "All ${progress.total} section-role choices are accepted."
+            else "${progress.accepted} of ${progress.total} section-role choices accepted",
+            style = MaterialTheme.typography.titleMedium,
+            color = if (progress.complete) MusicWorkspaceTokens.Success else MusicWorkspaceTokens.Information,
+        )
+        Text("Now preparing: $currentLabel · ${role.displayName}", style = MaterialTheme.typography.bodyMedium)
+        progress.nextIncomplete?.let { next ->
+            Text("Recommended order: ${next.occurrence.label} · ${next.role.displayName}", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
         }
     }
 }
@@ -186,44 +253,58 @@ private fun ArrangeEmptyState(state: MidiCoreWorkspaceState) {
 private fun ArrangeScopeCard(
     role: CandidateRole,
     occurrenceId: String?,
-    occurrences: List<Pair<String, String>>,
+    occurrences: List<ProjectSectionOccurrence>,
     enabled: Boolean,
     onRoleSelected: (CandidateRole) -> Unit,
     onOccurrenceSelected: (String) -> Unit,
 ) {
-    ArrangeCard(MidiCoreArrangePageTags.SCOPE, "Target scope") {
-        Text("Generate one role for one exact occurrence. Existing candidate evidence is never replaced or accepted automatically.", style = MaterialTheme.typography.bodyMedium)
-        Text("Role", style = MaterialTheme.typography.labelLarge, color = MusicWorkspaceTokens.TextSecondary)
+    var occurrenceMenuOpen by remember { mutableStateOf(false) }
+    val occurrence = occurrences.singleOrNull { it.id == occurrenceId } ?: occurrences.first()
+    ArrangeCard(MidiCoreArrangePageTags.SCOPE, "1. Choose what to arrange") {
+        Text("Choose one section and one accompaniment role.", style = MaterialTheme.typography.bodyMedium, color = MusicWorkspaceTokens.TextSecondary)
+        Box {
+            OutlinedButton(
+                onClick = { occurrenceMenuOpen = true },
+                enabled = enabled,
+                colors = workspaceSelectableButtonColors(true),
+                modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                    testTag = MidiCoreArrangePageTags.OCCURRENCE_MENU
+                    contentDescription = "Section ${occurrence.label}; open section choices"
+                },
+            ) { Text("Section · ${occurrence.label}") }
+            DropdownMenu(expanded = occurrenceMenuOpen, onDismissRequest = { occurrenceMenuOpen = false }) {
+                occurrences.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option.label) },
+                        onClick = { occurrenceMenuOpen = false; onOccurrenceSelected(option.id) },
+                        modifier = Modifier.semantics {
+                            testTag = MidiCoreArrangePageTags.occurrence(option.id)
+                            selected = option.id == occurrenceId
+                        },
+                    )
+                }
+            }
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-            CandidateRole.entries.forEach { option ->
+            midiCoreArrangementRoleOrder.forEach { option ->
+                val selected = option == role
                 OutlinedButton(
                     onClick = { onRoleSelected(option) },
                     enabled = enabled,
-                    modifier = Modifier.heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                    colors = workspaceSelectableButtonColors(selected),
+                    modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                         testTag = MidiCoreArrangePageTags.role(option)
-                        selected = option == role
-                        contentDescription = "Select ${option.displayName} role${if (option == role) ". Selected." else ""}"
+                        this.selected = selected
+                        contentDescription = "${option.displayName}${if (selected) ", selected" else ""}"
                     },
                 ) { Text(option.displayName) }
             }
-        }
-        Text("Occurrence", style = MaterialTheme.typography.labelLarge, color = MusicWorkspaceTokens.TextSecondary)
-        occurrences.forEach { (id, label) ->
-            OutlinedButton(
-                onClick = { onOccurrenceSelected(id) },
-                enabled = enabled,
-                modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
-                    testTag = MidiCoreArrangePageTags.occurrence(id)
-                    selected = id == occurrenceId
-                    contentDescription = "Select occurrence $label${if (id == occurrenceId) ". Selected." else ""}"
-                },
-            ) { Text(label) }
         }
     }
 }
 
 @Composable
-private fun ArrangeChoicesCard(
+private fun ArrangeFeelCard(
     role: CandidateRole,
     profileId: String,
     patternId: String,
@@ -233,157 +314,148 @@ private fun ArrangeChoicesCard(
 ) {
     val profiles = MidiCorePerformanceProfileCatalog.profiles.filter { it.role == role }
     val patterns = MidiCorePatternCatalog.inventory().filter { it.role == role }
-    ArrangeCard("midi-core-arrange-choices", "Allowed MIDI choices") {
-        Text("Profiles express MIDI performance intent; patterns are the complete curated variants allowed for this role.", style = MaterialTheme.typography.bodyMedium)
-        Text("Performance profile", style = MaterialTheme.typography.labelLarge, color = MusicWorkspaceTokens.TextSecondary)
-        profiles.forEach { profile ->
-            OutlinedButton(
-                onClick = { onProfileSelected(profile.id) },
-                enabled = enabled,
-                modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
-                    testTag = MidiCoreArrangePageTags.profile(profile.id)
-                    selected = profile.id == profileId
-                    contentDescription = "Select performance profile ${profile.id}${if (profile.id == profileId) ". Selected." else ""}"
-                },
-            ) { Text(profile.id) }
-        }
-        Text("Pattern", style = MaterialTheme.typography.labelLarge, color = MusicWorkspaceTokens.TextSecondary)
-        patterns.forEach { pattern -> ArrangePatternChoice(pattern, patternId, enabled, onPatternSelected) }
+    ArrangeCard("midi-core-arrange-feel", "2. Choose the feel") {
+        Text("Performance controls note shape; rhythm controls where notes are played.", style = MaterialTheme.typography.bodyMedium, color = MusicWorkspaceTokens.TextSecondary)
+        ArrangeDropdown(
+            tag = MidiCoreArrangePageTags.PROFILE_MENU,
+            label = "Performance",
+            selectedLabel = friendlyToken(profileId),
+            options = profiles.map { it.id to friendlyToken(it.id) },
+            enabled = enabled,
+            optionTag = MidiCoreArrangePageTags::profile,
+            onSelected = onProfileSelected,
+        )
+        ArrangeDropdown(
+            tag = MidiCoreArrangePageTags.PATTERN_MENU,
+            label = "Rhythm",
+            selectedLabel = patterns.singleOrNull { it.id == patternId }?.displayName ?: friendlyToken(patternId),
+            options = patterns.map { it.id to it.displayName },
+            enabled = enabled,
+            optionTag = MidiCoreArrangePageTags::pattern,
+            onSelected = onPatternSelected,
+        )
     }
 }
 
 @Composable
-private fun ArrangePatternChoice(
-    pattern: MidiCorePatternInventoryEntry,
-    selectedPatternId: String,
+private fun ArrangeDropdown(
+    tag: String,
+    label: String,
+    selectedLabel: String,
+    options: List<Pair<String, String>>,
     enabled: Boolean,
-    onPatternSelected: (String) -> Unit,
+    optionTag: (String) -> String,
+    onSelected: (String) -> Unit,
 ) {
-    OutlinedButton(
-        onClick = { onPatternSelected(pattern.id) },
-        enabled = enabled,
-        modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
-            testTag = MidiCoreArrangePageTags.pattern(pattern.id)
-            selected = pattern.id == selectedPatternId
-            contentDescription = "Select pattern ${pattern.displayName}${if (pattern.id == selectedPatternId) ". Selected." else ""}"
-        },
-    ) { Text(pattern.displayName) }
+    var open by remember { mutableStateOf(false) }
+    Box {
+        OutlinedButton(
+            onClick = { open = true },
+            enabled = enabled,
+            colors = workspaceSelectableButtonColors(true),
+            modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                testTag = tag
+                contentDescription = "$label $selectedLabel; open choices"
+            },
+        ) { Text("$label · $selectedLabel") }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            options.forEach { (id, displayName) ->
+                DropdownMenuItem(
+                    text = { Text(displayName) },
+                    onClick = { open = false; onSelected(id) },
+                    modifier = Modifier.semantics { testTag = optionTag(id) },
+                )
+            }
+        }
+    }
 }
 
 @Composable
-private fun ArrangeGenerationCard(
-    seedText: String,
-    seedValid: Boolean,
-    generationReady: Boolean,
-    isGenerating: Boolean,
-    operationMessage: String,
-    onSeedChanged: (String) -> Unit,
+private fun ArrangeGenerateCard(
+    state: MidiCoreWorkspaceState,
+    role: CandidateRole,
+    occurrenceLabel: String,
+    ready: Boolean,
+    nextSeed: Long,
     onGenerate: () -> Unit,
-    onAlternative: () -> Unit,
-    onRegenerate: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    ArrangeCard(MidiCoreArrangePageTags.PROGRESS, "Generate alternatives") {
-        Text("The seed is recorded with each deterministic candidate. Change it to request a different alternative for this same scope.", style = MaterialTheme.typography.bodyMedium)
-        OutlinedTextField(
-            value = seedText,
-            onValueChange = onSeedChanged,
-            enabled = !isGenerating,
-            modifier = Modifier.fillMaxWidth().semantics { testTag = MidiCoreArrangePageTags.SEED },
-            label = { Text("Deterministic seed") },
-            supportingText = { Text(if (seedValid) "Same authority, settings, and seed reproduce this candidate." else "Enter a signed whole-number seed.") },
-            singleLine = true,
-        )
-        if (isGenerating) {
-            Text(operationMessage, style = MaterialTheme.typography.bodyMedium, color = MusicWorkspaceTokens.Information)
+    val generating = state.operation.active && state.operation.kind == MidiCoreWorkspaceOperationKind.CANDIDATE_GENERATION
+    ArrangeCard(MidiCoreArrangePageTags.STATUS, "3. Create an alternative") {
+        Text("This creates alternative #$nextSeed. Existing alternatives and accepted work stay untouched.", style = MaterialTheme.typography.bodyMedium)
+        if (generating) {
+            Text(state.operation.message, style = MaterialTheme.typography.titleMedium, color = MusicWorkspaceTokens.Information)
             OutlinedButton(
                 onClick = onCancel,
                 modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                     testTag = MidiCoreArrangePageTags.CANCEL
                     contentDescription = "Cancel candidate generation"
                 },
-            ) { Text("Cancel generation") }
+            ) { Text("Cancel") }
         } else {
             Button(
                 onClick = onGenerate,
-                enabled = generationReady,
+                enabled = ready && !state.busy,
                 modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                     testTag = MidiCoreArrangePageTags.GENERATE
-                    contentDescription = "Generate one scoped MIDI candidate"
+                    contentDescription = "Generate ${role.displayName} alternative for $occurrenceLabel"
                 },
-            ) { Text("Generate candidate") }
-            OutlinedButton(
-                onClick = onAlternative,
-                enabled = generationReady,
-                modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
-                    testTag = MidiCoreArrangePageTags.ALTERNATIVE
-                    contentDescription = "Generate next deterministic alternative"
-                },
-            ) { Text("Generate next alternative") }
-            OutlinedButton(
-                onClick = onRegenerate,
-                enabled = generationReady,
-                modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
-                    testTag = MidiCoreArrangePageTags.REGENERATE
-                    contentDescription = "Regenerate only this role and occurrence"
-                },
-            ) { Text("Regenerate this scope") }
+            ) { Text("Generate ${role.displayName} for $occurrenceLabel") }
+            if (state.operation.kind == MidiCoreWorkspaceOperationKind.CANDIDATE_GENERATION || state.operation.kind == MidiCoreWorkspaceOperationKind.CANDIDATE_REVIEW) {
+                Text(
+                    state.operation.message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (state.operation.outcome == MidiCoreWorkspaceOperationOutcome.FAILURE) MusicWorkspaceTokens.Warning else MusicWorkspaceTokens.Success,
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun ArrangeCandidateEvidenceCard(
+private fun ArrangeCandidateSummary(
     state: MidiCoreWorkspaceState,
     role: CandidateRole,
-    occurrenceId: String?,
-    onLoad: () -> Unit,
+    occurrence: ProjectSectionOccurrence?,
+    candidates: List<MidiCoreCandidateReviewItem>,
     onReview: () -> Unit,
 ) {
-    val scopeMatches = state.review.role == role && state.review.occurrenceId == occurrenceId
-    val candidates = if (scopeMatches) state.review.candidates else emptyList()
-    ArrangeCard(MidiCoreArrangePageTags.CANDIDATES, "Candidate evidence") {
-        Text("Candidate IDs, validation summaries, and lifecycle status remain inspectable. Approval happens in Review.", style = MaterialTheme.typography.bodyMedium)
-        OutlinedButton(
-            onClick = onLoad,
-            enabled = !state.busy && occurrenceId != null,
-            modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
-                testTag = MidiCoreArrangePageTags.LOAD_CANDIDATES
-                contentDescription = "Load candidate evidence for the selected scope"
-            },
-        ) { Text("Refresh candidates") }
-        if (!scopeMatches) {
-            Text("Load candidate evidence for this selected scope.", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
-        } else if (candidates.isEmpty()) {
-            Text("No candidate has been published for this scope yet.", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
+    ArrangeCard(MidiCoreArrangePageTags.CANDIDATES, "Ready to review") {
+        if (candidates.isEmpty()) {
+            Text("No alternatives yet for ${occurrence?.label.orEmpty()} · ${role.displayName}.", style = MaterialTheme.typography.bodyMedium, color = MusicWorkspaceTokens.TextSecondary)
         } else {
-            candidates.forEach { item ->
-                val candidate = item.candidate
+            Text("${candidates.size} alternative${if (candidates.size == 1) "" else "s"} available", style = MaterialTheme.typography.titleMedium, color = MusicWorkspaceTokens.Success)
+            candidates.takeLast(3).reversed().forEachIndexed { index, item ->
                 val report = item.validation
                 Card(
                     Modifier.fillMaxWidth().semantics {
-                        testTag = MidiCoreArrangePageTags.candidate(candidate.id)
-                        contentDescription = "Candidate ${candidate.id}: ${candidate.status.name.lowercase()}, ${report.noteCount} notes, ${report.blockers.size} blocking findings, ${report.findings.count { it.severity == MidiCoreRoleFindingSeverity.ADVISORY }} advisory findings"
+                        testTag = MidiCoreArrangePageTags.candidate(item.candidate.id)
+                        contentDescription = "Alternative ${candidates.size - index}: ${item.candidate.status.name.lowercase()}, ${report.noteCount} notes"
                     },
                     colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface),
                 ) {
                     Column(Modifier.fillMaxWidth().padding(MusicWorkspaceTokens.Spacing.Sm), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-                        Text(candidate.id, style = MaterialTheme.typography.titleSmall)
-                        Text("${candidate.status.name.lowercase().replaceFirstChar(Char::uppercaseChar)} · seed ${candidate.seed} · ${candidate.profileId} · ${candidate.patternId}", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
-                        Text("Validation: ${report.noteCount} notes · ${report.blockers.size} blocking · ${report.findings.count { it.severity == MidiCoreRoleFindingSeverity.ADVISORY }} advisory", style = MaterialTheme.typography.bodySmall)
-                        report.findings.take(3).forEach { finding -> Text(finding.message, style = MaterialTheme.typography.bodySmall, color = if (finding.severity == MidiCoreRoleFindingSeverity.BLOCKING) MusicWorkspaceTokens.Warning else MusicWorkspaceTokens.TextSecondary) }
+                        Text("Alternative ${candidates.size - index}", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "${friendlyToken(item.candidate.patternId)} · ${report.noteCount} notes · ${report.findings.count { it.severity == MidiCoreRoleFindingSeverity.ADVISORY }} notes to review",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MusicWorkspaceTokens.TextSecondary,
+                        )
+                        if (item.accepted) Text("Accepted${if (item.locked) " and locked" else ""}", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.Success)
+                        if (!item.authorityCurrent || item.candidate.status == MidiCoreCandidateStatus.STALE) Text("Needs regeneration after an authority change", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.Warning)
                     }
                 }
             }
         }
         Button(
             onClick = onReview,
-            enabled = !state.busy && occurrenceId != null,
+            enabled = !state.busy && occurrence != null && candidates.isNotEmpty(),
             modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                 testTag = MidiCoreArrangePageTags.REVIEW
-                contentDescription = "Open Review for selected candidate scope"
+                contentDescription = "Listen to and choose from the generated alternatives"
             },
-        ) { Text("Review candidates") }
+        ) { Text("Listen and choose") }
+        if (candidates.isEmpty()) Text("Generate an alternative to continue.", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
     }
 }
 
@@ -396,11 +468,10 @@ private fun ArrangeCard(tag: String, title: String, content: @Composable ColumnS
         Column(
             Modifier.fillMaxWidth().padding(MusicWorkspaceTokens.Spacing.Md),
             verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm),
-            content = {
-                Text(title, style = MaterialTheme.typography.titleLarge)
-                content()
-            },
-        )
+        ) {
+            Text(title, style = MaterialTheme.typography.titleLarge)
+            content()
+        }
     }
 }
 
@@ -410,20 +481,20 @@ private fun generationIntent(
     profileId: String,
     patternId: String,
     seed: Long,
-    regenerate: Boolean,
-): MidiCoreWorkspaceIntent {
-    val generator = MidiCoreGeneratorInput(
+): MidiCoreWorkspaceIntent.GenerateCandidate = MidiCoreWorkspaceIntent.GenerateCandidate(
+    role = role,
+    occurrenceId = occurrenceId,
+    performanceProfileId = profileId,
+    patternId = patternId,
+    generator = MidiCoreGeneratorInput(
         generatorId = "midi-core-desktop",
         generatorVersion = "midi-core-v1",
         patternId = patternId,
         seed = seed,
-    )
-    return if (regenerate) {
-        MidiCoreWorkspaceIntent.RegenerateCandidate(role, occurrenceId, profileId, patternId, generator)
-    } else {
-        MidiCoreWorkspaceIntent.GenerateCandidate(role, occurrenceId, profileId, patternId, generator)
-    }
-}
+    ),
+)
 
-private val CandidateRole.displayName: String
+internal fun friendlyToken(value: String): String = value.substringAfterLast('.').replace('-', ' ').replace('_', ' ').replaceFirstChar(Char::uppercaseChar)
+
+internal val CandidateRole.displayName: String
     get() = name.lowercase().replaceFirstChar(Char::uppercaseChar)

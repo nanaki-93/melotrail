@@ -70,8 +70,8 @@ internal enum class MidiCoreWorkspaceDestination(
     PROJECT("project", "Project", "Create or reopen a MIDI Core project and inspect its current authority."),
     MIDI("midi", "MIDI", "Import one immutable Standard MIDI source and automatically protect its melody."),
     STRUCTURE_HARMONY("structure-harmony", "Structure & Harmony", "Define the authoritative section timeline and chord windows."),
-    ARRANGE("arrange", "Arrange", "Generate and regenerate deterministic Chords, Bass, and Drums candidates."),
-    REVIEW("review", "Review", "Compare, accept, reject, lock, and restore candidate evidence."),
+    ARRANGE("arrange", "Arrange", "Choose one part and feel, then create a deterministic MIDI alternative."),
+    REVIEW("review", "Review", "Listen, accept, and continue through each unfinished arrangement part."),
     EXPORT("export", "Export", "Publish a portable MIDI package for Logic Pro."),
 }
 

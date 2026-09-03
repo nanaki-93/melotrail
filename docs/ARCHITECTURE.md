@@ -202,6 +202,16 @@ the canonical tempo, stable identities, contiguous tick ranges, and chord
 windows required by application services; internal IDs and tick arithmetic are
 not exposed as editing controls.
 
+Arrange and Review are a guided presentation over the existing scoped
+application use cases, not new domain owners. Arrange derives acceptance
+progress and the next unused deterministic seed from the project, then exposes
+scope -> feel -> generate. Review exposes one selected alternative and the
+play -> accept -> continue path. After generation or a lifecycle mutation, the
+workspace reducer rehydrates the persisted project and reloads the affected
+candidate scope before publishing success state, so the UI never depends on a
+manual refresh. Advanced comparison, lifecycle, device, and transport controls
+remain contextual.
+
 Target destinations:
 
 - Project

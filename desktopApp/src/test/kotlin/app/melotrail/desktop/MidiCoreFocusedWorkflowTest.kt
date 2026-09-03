@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -22,8 +23,6 @@ import app.melotrail.application.MidiCoreProjectLifecycle
 import app.melotrail.application.MidiCoreSourceImport
 import app.melotrail.application.MidiCoreSourceAudition
 import app.melotrail.application.MidiCoreStructureTimeline
-import app.melotrail.arrangement.core.MidiCorePatternCatalog
-import app.melotrail.arrangement.core.MidiCorePerformanceProfileCatalog
 import app.melotrail.audition.MidiAuditionAction
 import app.melotrail.audition.MidiAuditionLoop
 import app.melotrail.audition.MidiAuditionPlaybackPlan
@@ -34,7 +33,6 @@ import app.melotrail.audition.MidiAuditionState
 import app.melotrail.midi.domain.MidiExportRole
 import app.melotrail.project.AuthoritativeChordEvent
 import app.melotrail.project.CandidateRole
-import app.melotrail.project.MidiCoreGeneratorInput
 import app.melotrail.project.ProjectSectionDefinition
 import app.melotrail.project.adapter.MidiCoreArtifactStore
 import app.melotrail.structure.MidiCoreBarOccurrencePlacement
@@ -141,20 +139,30 @@ class MidiCoreFocusedWorkflowTest {
 
             navigateTo(MidiCoreWorkspaceDestination.ARRANGE)
             CandidateRole.entries.forEachIndexed { index, role ->
-                workspace.accept(generationIntent(role, "verse-1", index.toLong() + 1L))
+                onNodeWithTag(MidiCoreArrangePageTags.role(role)).performScrollTo().performClick()
+                waitForIdle()
+                onNodeWithTag(MidiCoreArrangePageTags.GENERATE).performScrollTo().assertIsEnabled().performClick()
                 awaitWorkspaceSuccess("generate ${role.name.lowercase()} candidate")
-                val candidate = checkNotNull(workspace.state.value.project).candidates.single {
-                    it.role == role && it.occurrenceId == "verse-1"
-                }
-                workspace.accept(MidiCoreWorkspaceIntent.AcceptCandidate(candidate.id))
+                assertEquals(role, workspace.state.value.review.role)
+                assertTrue(workspace.state.value.review.candidates.isNotEmpty(), "generated alternative must appear without a manual refresh")
+                onNodeWithTag(MidiCoreArrangePageTags.REVIEW).performScrollTo().assertIsEnabled().performClick()
+                waitForIdle()
+                if (workspace.state.value.operation.active) awaitWorkspaceSuccess("load ${role.name.lowercase()} review")
+                onNodeWithTag(MidiCoreReviewPageTags.PLAY_SELECTED).performScrollTo().assertIsEnabled().performClick()
+                awaitWorkspaceSuccess("play ${role.name.lowercase()} candidate")
+                onNodeWithTag(MidiCoreReviewPageTags.ACCEPT_SELECTED).performScrollTo().assertIsEnabled().performClick()
                 awaitWorkspaceSuccess("accept ${role.name.lowercase()} candidate")
+                assertTrue(workspace.state.value.review.candidates.single { it.candidate.id == workspace.state.value.review.selectedCandidateId }.accepted)
+                if (index < CandidateRole.entries.lastIndex) {
+                    onNodeWithTag(MidiCoreReviewPageTags.NEXT_SCOPE).performScrollTo().assertIsEnabled().performClick()
+                    waitForIdle()
+                }
             }
+            navigateTo(MidiCoreWorkspaceDestination.ARRANGE)
             captureFixture("arrange")
 
             navigateTo(MidiCoreWorkspaceDestination.REVIEW)
-            workspace.accept(MidiCoreWorkspaceIntent.SelectReviewScope(CandidateRole.CHORDS, "verse-1"))
-            workspace.accept(MidiCoreWorkspaceIntent.LoadCandidates(CandidateRole.CHORDS, "verse-1"))
-            awaitWorkspaceSuccess("load review evidence")
+            if (workspace.state.value.operation.active) awaitWorkspaceSuccess("load review evidence")
             onNodeWithTag(MidiCoreReviewPageTags.PLAY_ARRANGEMENT).performScrollTo().performClick()
             awaitWorkspaceSuccess("play accepted arrangement")
             assertEquals(MidiAuditionPlaybackState.PLAYING, audition.state.playback)
@@ -193,18 +201,6 @@ class MidiCoreFocusedWorkflowTest {
             workspace.close()
             deleteTree(temporaryRoot)
         }
-    }
-
-    private fun generationIntent(role: CandidateRole, occurrenceId: String, seed: Long): MidiCoreWorkspaceIntent.GenerateCandidate {
-        val profileId = MidiCorePerformanceProfileCatalog.allowedProfileIds(role).first()
-        val patternId = MidiCorePatternCatalog.allowedPatternIds(role).first()
-        return MidiCoreWorkspaceIntent.GenerateCandidate(
-            role = role,
-            occurrenceId = occurrenceId,
-            performanceProfileId = profileId,
-            patternId = patternId,
-            generator = MidiCoreGeneratorInput("midi-core-desktop", "midi-core-v1", patternId, seed),
-        )
     }
 
     private fun capturedFixtureNames(): List<String> = Files.list(visualFixtureRoot()).use { paths ->

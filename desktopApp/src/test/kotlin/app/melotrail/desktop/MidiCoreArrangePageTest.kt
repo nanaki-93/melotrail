@@ -6,7 +6,6 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.v2.runComposeUiTest
 import app.melotrail.arrangement.core.MidiCoreRoleFinding
 import app.melotrail.arrangement.core.MidiCoreRoleFindingCode
@@ -62,13 +61,17 @@ class MidiCoreArrangePageTest {
         CandidateRole.entries.forEach { role ->
             onNodeWithTag(MidiCoreArrangePageTags.role(role)).performScrollTo().assertIsEnabled().performClick()
             waitForIdle()
-            onNodeWithContentDescription("Select ${role.name.lowercase().replaceFirstChar(Char::uppercaseChar)} role. Selected.").assertExists()
+            onNodeWithContentDescription("${role.name.lowercase().replaceFirstChar(Char::uppercaseChar)}, selected").assertExists()
+            onNodeWithTag(MidiCoreArrangePageTags.PROFILE_MENU).performScrollTo().performClick()
             app.melotrail.arrangement.core.MidiCorePerformanceProfileCatalog.allowedProfileIds(role).forEach { profile ->
                 onNodeWithTag(MidiCoreArrangePageTags.profile(profile)).assertExists()
             }
+            onNodeWithTag(MidiCoreArrangePageTags.profile(app.melotrail.arrangement.core.MidiCorePerformanceProfileCatalog.allowedProfileIds(role).first())).performClick()
+            onNodeWithTag(MidiCoreArrangePageTags.PATTERN_MENU).performScrollTo().performClick()
             app.melotrail.arrangement.core.MidiCorePatternCatalog.allowedPatternIds(role).forEach { pattern ->
                 onNodeWithTag(MidiCoreArrangePageTags.pattern(pattern)).assertExists()
             }
+            onNodeWithTag(MidiCoreArrangePageTags.pattern(app.melotrail.arrangement.core.MidiCorePatternCatalog.allowedPatternIds(role).first())).performClick()
         }
     }
 
@@ -81,6 +84,8 @@ class MidiCoreArrangePageTest {
                 MidiCoreArrangePage(arrangeState(), intents::add, { destination = it })
             }
         }
+        waitForIdle()
+        intents.clear()
 
         onNodeWithTag(MidiCoreArrangePageTags.ROOT).assertExists()
         onNodeWithTag(MidiCoreArrangePageTags.candidate("candidate-existing")).assertExists()
@@ -93,12 +98,13 @@ class MidiCoreArrangePageTest {
             ),
             intents,
         )
+        intents.clear()
 
-        onNodeWithTag(MidiCoreArrangePageTags.profile("bass.muted-plucked")).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreArrangePageTags.PROFILE_MENU).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreArrangePageTags.profile("bass.muted-plucked")).performClick()
         waitForIdle()
-        onNodeWithTag(MidiCoreArrangePageTags.pattern("bass.root-fifth")).performScrollTo().performClick()
-        waitForIdle()
-        onNodeWithTag(MidiCoreArrangePageTags.SEED).performScrollTo().performTextReplacement("17")
+        onNodeWithTag(MidiCoreArrangePageTags.PATTERN_MENU).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreArrangePageTags.pattern("bass.root-fifth")).performClick()
         waitForIdle()
         onNodeWithTag(MidiCoreArrangePageTags.GENERATE).performScrollTo().assertIsEnabled().performClick()
         waitForIdle()
@@ -107,25 +113,29 @@ class MidiCoreArrangePageTest {
         assertEquals("verse-1", generated.occurrenceId)
         assertEquals("bass.muted-plucked", generated.performanceProfileId)
         assertEquals("bass.root-fifth", generated.patternId)
-        assertEquals(17L, generated.generator.seed)
+        assertEquals(1L, generated.generator.seed)
+        onNodeWithContentDescription("Generate next alternative").assertDoesNotExist()
+        onNodeWithContentDescription("Regenerate candidate").assertDoesNotExist()
 
-        onNodeWithTag(MidiCoreArrangePageTags.ALTERNATIVE).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreArrangePageTags.role(CandidateRole.CHORDS)).performScrollTo().performClick()
         waitForIdle()
-        val alternative = intents.filterIsInstance<MidiCoreWorkspaceIntent.GenerateCandidate>().last()
-        assertEquals(18L, alternative.generator.seed)
-        assertEquals("verse-1", alternative.occurrenceId)
-
-        onNodeWithTag(MidiCoreArrangePageTags.REGENERATE).performScrollTo().performClick()
-        waitForIdle()
-        val regenerated = intents.filterIsInstance<MidiCoreWorkspaceIntent.RegenerateCandidate>().single()
-        assertEquals(CandidateRole.BASS, regenerated.role)
-        assertEquals("verse-1", regenerated.occurrenceId)
-        assertEquals(18L, regenerated.generator.seed)
-
         onNodeWithTag(MidiCoreArrangePageTags.REVIEW).performScrollTo().performClick()
         waitForIdle()
         assertEquals(MidiCoreWorkspaceDestination.REVIEW, destination)
-        assertEquals(MidiCoreWorkspaceIntent.SelectReviewScope(CandidateRole.BASS, "verse-1"), intents.last())
+        assertEquals(MidiCoreWorkspaceIntent.SelectReviewScope(CandidateRole.CHORDS, "verse-1"), intents.last())
+    }
+
+    @Test
+    fun `Arrange progress follows section-first Chords Bass Drums order and seed is automatic`() {
+        val state = arrangeState()
+        val progress = midiCoreArrangementProgress(requireNotNull(state.project))
+
+        assertEquals(0, progress.accepted)
+        assertEquals(6, progress.total)
+        assertEquals("verse-1", progress.nextIncomplete?.occurrence?.id)
+        assertEquals(CandidateRole.CHORDS, progress.nextIncomplete?.role)
+        assertFalse(progress.complete)
+        assertEquals(1L, midiCoreNextCandidateSeed(requireNotNull(state.project), CandidateRole.CHORDS, "verse-1"))
     }
 
     @Test
@@ -158,6 +168,8 @@ class MidiCoreArrangePageTest {
             }
         }
 
+        waitForIdle()
+        intents.clear()
         onNodeWithTag(MidiCoreArrangePageTags.CANCEL).performScrollTo().assertIsEnabled().performClick()
         waitForIdle()
         assertEquals(listOf<MidiCoreWorkspaceIntent>(MidiCoreWorkspaceIntent.CancelOperation), intents)
@@ -192,7 +204,17 @@ class MidiCoreArrangePageTest {
     @Test
     fun `Arrange source contains no superseded generation controls`() {
         val source = Files.readString(sourceFile("src/main/kotlin/app/melotrail/desktop/MidiCoreArrangePage.kt")).lowercase()
-        listOf("planner", "model selector", "instrument catalog", "render-stem", "build-song", "auto-approval").forEach { forbidden ->
+        listOf(
+            "planner",
+            "model selector",
+            "instrument catalog",
+            "render-stem",
+            "build-song",
+            "auto-approval",
+            "refresh candidates",
+            "generate next alternative",
+            "regenerate candidate",
+        ).forEach { forbidden ->
             assertFalse(source.contains(forbidden), "Arrange page must not contain $forbidden")
         }
     }

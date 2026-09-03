@@ -173,8 +173,9 @@ The target workspace has six focused destinations:
    single melody track.
 3. **Structure & Harmony** — enter ordered section lengths in bars, then edit
    key and chord windows.
-4. **Arrange** — generate alternatives by role and section.
-5. **Review** — compare, mute/solo, approve, lock, and inspect findings.
+4. **Arrange** — choose one section/role and feel, then generate an alternative.
+5. **Review** — listen to one alternative, accept it, and continue through the
+   unfinished arrangement; comparison and playback options stay contextual.
 6. **Export** — create and verify the DAW MIDI package.
 
 The UI must expose the state required to make a decision. It must not expose
@@ -387,7 +388,7 @@ The MIDI Core migration is complete only when:
 
 The mandatory implementation sequence is
 `docs/plan/MIDI_CORE_TASKS.md`. Execute it strictly from `MC-000` through
-`MC-060`, including `MC-048A` and `MC-048B` after `MC-048`,
+`MC-060`, including `MC-048A`, `MC-048B`, and `MC-048C` after `MC-048`,
 using `docs/plan/EXECUTE_MIDI_CORE_TASKS_PROMPT.md`, and record every task,
 commit, validation result, manual gate, deletion, and final sign-off in
 `docs/plan/MIDI_CORE_EXECUTION_LOG.md`.

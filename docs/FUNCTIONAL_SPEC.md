@@ -177,12 +177,19 @@ candidates remain current and unchanged.
 Profiles express MIDI performance intent such as sustained/sub-like or
 muted/plucked bass. They do not claim to reproduce an exact audio patch.
 
+Arrange presents these controls as one guided decision: choose a section and
+role, choose its performance/rhythm feel, then generate the next immutable
+alternative. Seeds advance automatically from the saved scope. A successful
+generation immediately shows the new alternative and its validation summary;
+there is no separate refresh step or duplicate generate/regenerate action.
+
 ## 7. Review functions
 
 ### F-REV-001 — Compare alternatives
 
-The Review page lists alternatives for the selected role/occurrence and exposes
-seed, pattern/profile, validation findings, and semantic differences.
+The Review page selects one alternative at a time for the chosen role and
+occurrence and exposes its seed, pattern/profile, validation findings, and an
+optional comparison with another alternative.
 
 ### F-REV-002 — Accept a candidate
 
@@ -209,6 +216,13 @@ inspectable but cannot be exported as current.
 The application creates a review view from protected melody plus currently
 accepted role candidates using exact occurrence boundaries. Assembly does not
 rewrite source or candidate artifacts.
+
+Review's primary sequence is Play alternative -> Accept -> Continue to the next
+unfinished section/role. Acceptance and other lifecycle mutations refresh the
+same scope immediately. Reject, restore, lock, unlock, comparison, device
+choice, and detailed transport controls appear only when valid or explicitly
+expanded. Full-arrangement playback remains unavailable until all required
+section/role acceptances exist.
 
 ### F-REV-007 — Optional melody connection
 

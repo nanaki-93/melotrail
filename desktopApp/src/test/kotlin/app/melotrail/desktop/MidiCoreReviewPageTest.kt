@@ -2,6 +2,7 @@ package app.melotrail.desktop
 
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -25,6 +26,8 @@ import app.melotrail.music.core.ProjectScaleMode
 import app.melotrail.music.core.ProjectTempo
 import app.melotrail.project.AuthoritativeChordEvent
 import app.melotrail.project.CandidateRole
+import app.melotrail.project.CandidateAcceptanceHistory
+import app.melotrail.project.MidiCoreAcceptanceAction
 import app.melotrail.project.MidiCoreCandidate
 import app.melotrail.project.MidiCoreCandidateStatus
 import app.melotrail.project.MidiCoreProject
@@ -61,49 +64,48 @@ class MidiCoreReviewPageTest {
     }
 
     @Test
-    fun `Review exposes explicit scoped decisions, semantic comparison, and Arrange handoff`() = runComposeUiTest {
+    fun `Review guides one selected alternative through play accept compare and valid secondary actions`() = runComposeUiTest {
         val intents = mutableListOf<MidiCoreWorkspaceIntent>()
-        var destination: MidiCoreWorkspaceDestination? = null
-        setContent { MelotrailTheme { MidiCoreReviewPage(reviewState(), intents::add, { destination = it }) } }
+        setContent { MelotrailTheme { MidiCoreReviewPage(reviewState(), intents::add, {}) } }
+        waitForIdle()
+        intents.clear()
 
         onNodeWithTag(MidiCoreReviewPageTags.role(CandidateRole.BASS)).performScrollTo().assertIsEnabled()
-        onNodeWithTag(MidiCoreReviewPageTags.occurrence("verse-2")).performScrollTo().assertIsEnabled()
+        onNodeWithTag(MidiCoreReviewPageTags.OCCURRENCE_MENU).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreReviewPageTags.occurrence("verse-2")).assertIsEnabled()
+        onNodeWithTag(MidiCoreReviewPageTags.occurrence("verse-1")).performClick()
 
-        onNodeWithTag(MidiCoreReviewPageTags.select("candidate-current")).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreReviewPageTags.select("candidate-accepted")).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreReviewPageTags.COMPARE).performScrollTo().assertIsEnabled().performClick()
-        onNodeWithTag(MidiCoreReviewPageTags.accept("candidate-current")).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreReviewPageTags.reject("candidate-current")).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreReviewPageTags.restore("candidate-current")).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreReviewPageTags.lock("candidate-accepted")).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreReviewPageTags.unlock("candidate-locked")).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreReviewPageTags.ARRANGE).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreReviewPageTags.PLAY_SELECTED).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreReviewPageTags.ACCEPT_SELECTED).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreReviewPageTags.COMPARE_MENU).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreReviewPageTags.compare("candidate-accepted")).performClick()
+        onNodeWithTag(MidiCoreReviewPageTags.MORE_ACTIONS).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreReviewPageTags.REJECT_SELECTED).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreReviewPageTags.RESTORE_SELECTED).performScrollTo().performClick()
         waitForIdle()
 
-        assertEquals(MidiCoreWorkspaceDestination.ARRANGE, destination)
         assertEquals(
             listOf(
-                MidiCoreWorkspaceIntent.CompareCandidates("candidate-accepted", "candidate-current"),
+                MidiCoreWorkspaceIntent.PlayCandidate("candidate-current", CandidateRole.CHORDS, "verse-1"),
                 MidiCoreWorkspaceIntent.AcceptCandidate("candidate-current"),
+                MidiCoreWorkspaceIntent.CompareCandidates("candidate-current", "candidate-accepted"),
                 MidiCoreWorkspaceIntent.RejectCandidate("candidate-current", "Not selected in Review."),
                 MidiCoreWorkspaceIntent.RestoreCandidate("candidate-current", CandidateRole.CHORDS, "verse-1"),
-                MidiCoreWorkspaceIntent.LockCandidate("candidate-accepted"),
-                MidiCoreWorkspaceIntent.UnlockCandidate("candidate-locked"),
-                MidiCoreWorkspaceIntent.SelectReviewScope(CandidateRole.CHORDS, "verse-1"),
             ),
             intents,
         )
     }
 
     @Test
-    fun `Review provides candidate role occurrence full and transport MIDI controls`() = runComposeUiTest {
+    fun `Review hides lifecycle and transport complexity until requested`() = runComposeUiTest {
         val intents = mutableListOf<MidiCoreWorkspaceIntent>()
         setContent { MelotrailTheme { MidiCoreReviewPage(reviewState(), intents::add, {}) } }
+        waitForIdle()
+        intents.clear()
 
-        onNodeWithTag(MidiCoreReviewPageTags.playCandidate("candidate-current")).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreReviewPageTags.PLAY_ARRANGEMENT).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreReviewPageTags.playRole(MidiExportRole.BASS)).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreReviewPageTags.playOccurrence("verse-1")).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreReviewPageTags.PLAY_ARRANGEMENT).performScrollTo().assertIsNotEnabled()
+        onNodeWithTag(MidiCoreReviewPageTags.SEEK_START).assertDoesNotExist()
+        onNodeWithTag(MidiCoreReviewPageTags.ADVANCED).performScrollTo().performClick()
         onNodeWithTag(MidiCoreReviewPageTags.PAUSE).performScrollTo().performClick()
         onNodeWithTag(MidiCoreReviewPageTags.STOP).performScrollTo().performClick()
         onNodeWithTag(MidiCoreReviewPageTags.SEEK_START).performScrollTo().performClick()
@@ -114,10 +116,6 @@ class MidiCoreReviewPageTest {
 
         assertEquals(
             listOf<MidiCoreWorkspaceIntent>(
-                MidiCoreWorkspaceIntent.PlayCandidate("candidate-current", CandidateRole.CHORDS, "verse-1"),
-                MidiCoreWorkspaceIntent.PlayAcceptedArrangement,
-                MidiCoreWorkspaceIntent.PlayAcceptedRole(CandidateRole.BASS),
-                MidiCoreWorkspaceIntent.PlayAcceptedOccurrence("verse-1"),
                 MidiCoreWorkspaceIntent.PauseAudition,
                 MidiCoreWorkspaceIntent.StopAudition,
                 MidiCoreWorkspaceIntent.SeekAudition(0L),
@@ -136,13 +134,21 @@ class MidiCoreReviewPageTest {
         val selectedState = reviewState().copy(audition = reviewState().audition.copy(outputDeviceId = device.id, outputDevices = listOf(device)))
         setContent { MelotrailTheme { MidiCoreReviewPage(selectedState, intents::add, {}) } }
 
-        onNodeWithTag(MidiCoreReviewPageTags.OUTPUT_DEFAULT).performScrollTo().performClick()
+        waitForIdle()
+        intents.clear()
+        onNodeWithTag(MidiCoreReviewPageTags.ADVANCED).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreReviewPageTags.OUTPUT_MENU).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreReviewPageTags.OUTPUT_DEFAULT).performClick()
         waitForIdle()
         assertEquals(listOf<MidiCoreWorkspaceIntent>(MidiCoreWorkspaceIntent.SelectAuditionOutputDevice(null)), intents)
 
         intents.clear()
         setContent { MelotrailTheme { MidiCoreReviewPage(reviewState().copy(audition = reviewState().audition.copy(outputDevices = listOf(device))), intents::add, {}) } }
-        onNodeWithTag(MidiCoreReviewPageTags.output(device.id)).performScrollTo().performClick()
+        waitForIdle()
+        intents.clear()
+        onNodeWithTag(MidiCoreReviewPageTags.ADVANCED).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreReviewPageTags.OUTPUT_MENU).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreReviewPageTags.output(device.id)).performClick()
         waitForIdle()
         assertEquals(listOf<MidiCoreWorkspaceIntent>(MidiCoreWorkspaceIntent.SelectAuditionOutputDevice(device.id)), intents)
     }
@@ -152,14 +158,26 @@ class MidiCoreReviewPageTest {
         val stale = reviewState().review.candidates.first().copy(authorityCurrent = false)
         setContent { MelotrailTheme { MidiCoreReviewPage(reviewState(candidates = listOf(stale)), {}, {}) } }
 
-        onNodeWithContentDescription("Candidate candidate-current: current, 4 notes, 0 blocking findings, 1 advisory findings. Stale for current authority.").assertExists()
-        onNodeWithTag(MidiCoreReviewPageTags.accept("candidate-current")).assertDoesNotExist()
+        onNodeWithContentDescription("Selected alternative: current, 4 notes, 0 blocking findings, 1 advisory findings. Needs regeneration.").assertExists()
+        onNodeWithTag(MidiCoreReviewPageTags.ACCEPT_SELECTED).assertDoesNotExist()
     }
 
     @Test
     fun `Review source contains no superseded review or audio comparison control`() {
         val source = Files.readString(sourceFile("src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt")).lowercase()
-        listOf("source-song approval", "cohesion boundary", "critic", "full-song enhancement", "humanization", "dry/lo-fi", "matched-audio").forEach { forbidden ->
+        listOf(
+            "source-song approval",
+            "cohesion boundary",
+            "critic",
+            "full-song enhancement",
+            "humanization",
+            "dry/lo-fi",
+            "matched-audio",
+            "refresh candidate evidence",
+            "audition accepted chords",
+            "audition accepted bass",
+            "audition accepted drums",
+        ).forEach { forbidden ->
             assertFalse(source.contains(forbidden), "Review page must not contain $forbidden")
         }
     }
@@ -192,10 +210,20 @@ class MidiCoreReviewPageTest {
                 selectedMelody = SelectedMelodyTrack(0, 0, "c".repeat(64)),
                 authority = authority,
                 candidates = candidates.map(MidiCoreCandidateReviewItem::candidate),
+                acceptanceHistory = listOf(
+                    CandidateAcceptanceHistory(
+                        id = "history-current",
+                        occurrenceId = "verse-1",
+                        role = CandidateRole.CHORDS,
+                        candidateId = "candidate-current",
+                        action = MidiCoreAcceptanceAction.ACCEPTED,
+                        recordedAt = "2026-08-28T00:00:00Z",
+                    ),
+                ),
                 revision = 6L,
             ),
             projectRoot = Path.of("build/review-project"),
-            review = MidiCoreCandidateReviewUiState(CandidateRole.CHORDS, "verse-1", candidates),
+            review = MidiCoreCandidateReviewUiState(CandidateRole.CHORDS, "verse-1", candidates, selectedCandidateId = "candidate-current"),
             audition = MidiAuditionState(
                 playback = MidiAuditionPlaybackState.PLAYING,
                 scope = MidiAuditionScope.AcceptedArrangement,

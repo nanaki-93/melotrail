@@ -59,7 +59,8 @@ not authorize a compatibility implementation in the new architecture.
 The UI images are a temporary visual-language reference only. The target design
 uses their calm dark workstation hierarchy, not their audio-production pages or
 their product branding. MC-048B replaces them with target MIDI-only visual
-fixtures; MC-051 deletes the old image set only after those fixtures pass.
+fixtures and MC-048C proves the guided Arrange/Review flow; MC-051 deletes the
+old image set only after those fixtures pass.
 
 ## Documentation ownership
 

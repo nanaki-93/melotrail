@@ -2,8 +2,8 @@
 
 Status: ready for serial execution
 
-Task range: MC-000 through MC-060, including user-directed MC-048A and
-MC-048B
+Task range: MC-000 through MC-060, including user-directed MC-048A,
+MC-048B, and MC-048C
 
 Scope: deterministic MIDI Core MVP, focused Compose Desktop UI, acceptance,
 and complete removal of the superseded audio product
@@ -44,8 +44,8 @@ the final reduction.
 
 ### 3.1 Ordering
 
-- Execute tasks strictly in numeric order; MC-048A and MC-048B follow MC-048
-  and precede MC-049.
+- Execute tasks strictly in numeric order; MC-048A, MC-048B, and MC-048C
+  follow MC-048 and precede MC-049.
 - Only one task may be `IN_PROGRESS` in the execution log.
 - A task begins only after every earlier task is `DONE`, except a task marked
   `AWAITING_HUMAN` must be resolved before continuing past its phase gate.
@@ -1141,9 +1141,49 @@ It must not fabricate a DAW result, listening score, or sign-off.
   every target destination through a coherent responsive visual system before
   beginning the holdout listening rubric.
 
-### MC-049 — Complete holdout musical acceptance
+### MC-048C — Guide arrangement preparation and make actions visible
 
 - **Depends on:** MC-048B.
+- **Contracts:** F-ARR-001–F-ARR-007; F-REV-001–F-REV-006;
+  F-PLAY-001–F-PLAY-004; F-UI-002–F-UI-006; Architecture 4.8; Quality Gates
+  4–5; `docs/MIDI_WORKSPACE_VISUAL_SPEC.md`; user decision dated 2026-09-03.
+- **Inspect:** the Arrange and Review Compose pages, focused workspace
+  generation/review reducer, candidate listing/lifecycle results, acceptance
+  history, audition readiness, page tests, real-service focused workflow, and
+  current wide/compact visual fixtures.
+- **Work:** replace the simultaneous Arrange controls with scope -> feel ->
+  generate and automatic deterministic seed selection; show saved acceptance
+  progress and the recommended unfinished scope; automatically reload and
+  select a generated or mutated candidate in the same scope; make Review show
+  one alternative with play -> accept -> continue as its primary flow; expose
+  comparison and lifecycle operations only when valid; collapse device and
+  detailed transport controls; and gate full-arrangement playback on complete
+  acceptance.
+- **Delete:** manual candidate refresh, manual seed entry, duplicate generate/
+  alternative/regenerate buttons, per-candidate action stacks, invalid restore
+  actions, always-visible device buttons, and the full role/occurrence audition
+  matrix. Do not delete immutable candidates, history, or application use
+  cases; the simplified UI remains a presentation over those contracts.
+- **Tests:** automatic same-scope listing/selection after generation and
+  lifecycle mutation; automatic seed/progress ordering; compact selectors;
+  primary play/accept/continue path; contextual comparison/lifecycle actions;
+  complete-arrangement gating; progressive playback disclosure; real-service
+  workflow through the actual Arrange/Review buttons; refreshed wide/compact
+  fixtures; and absence of superseded control labels.
+- **Validation:** focused workspace/Arrange/Review/workflow/visual tests,
+  documentation coverage, `git diff --check`, `make test`, `make build`, and a
+  local desktop startup smoke before resuming MC-049.
+- **Evidence:** reducer root cause; action/visibility rules; focused workflow
+  result; visual fixture paths/hashes; accessibility semantics; deleted-control
+  scan; full validation; and desktop smoke result.
+- **Commit:** `midi-core: MC-048C guide arrangement review`.
+- **Done when:** generation and review presses visibly update the current scope,
+  and a musician can prepare an arrangement by following one obvious action at
+  a time without using manual refresh or navigating a wall of buttons.
+
+### MC-049 — Complete holdout musical acceptance
+
+- **Depends on:** MC-048C.
 - **Contracts:** Quality Gates 7–8; all F-ARR/F-REV functions.
 - **Inspect:** ten or more unseen, user-approved/license-safe MIDI projects that
   satisfy the single-melody-track and whole-bar source contract, plus the frozen
@@ -1191,12 +1231,12 @@ It must not fabricate a DAW result, listening score, or sign-off.
 - **Contracts:** Cleanup Scope 5.5–5.6; F-UI-001; F-UI-006; Quality Gate 4.
 - **Inspect:** default desktop source graph, UI tests/tags, direct readers of
   `docs/pictures`, legacy theme measurements, preferences/dialogs, and the
-  six target visual fixtures produced by MC-048B.
+  six target visual fixtures produced by MC-048B and refreshed by MC-048C.
 - **Work:** reduce/replace workspace app/router/view model/shell to target code;
   delete audio player, melody-parts/workflow presentation, runtime readiness,
   sound-library settings, legacy setup/state/intents/dialogs/routes, live audio
   E2E, and all tests that assert removed behavior. Switch any useful visual
-  coverage to MC-048B target fixtures, then remove every reader of the old UI
+  coverage to the MC-048C target fixtures, then remove every reader of the old UI
   references.
 - **Delete:** tracked old page images and theme constants measured from them
   only after consumer scans prove no target source or test reads them.
@@ -1420,19 +1460,19 @@ It must not fabricate a DAW result, listening score, or sign-off.
   MC-048A.
 - **Authority:** F-AUTH-001–005 -> MC-015–018, MC-036, MC-048A.
 - **Audition:** F-PLAY-001–004 -> MC-028, MC-035, MC-038, MC-045.
-- **Arrangement:** F-ARR-001–007 -> MC-020–025, MC-037, MC-041–044.
-- **Review:** F-REV-001–006 -> MC-019, MC-025–027, MC-038, MC-044.
+- **Arrangement:** F-ARR-001–007 -> MC-020–025, MC-037, MC-041–044, MC-048C.
+- **Review:** F-REV-001–006 -> MC-019, MC-025–027, MC-038, MC-044, MC-048C.
 - **Optional melody connection:** F-REV-007 is post-MVP and intentionally not
   implemented; current mutation code is removed in MC-055.
 - **Export:** F-EXP-001–007 -> MC-007–009, MC-019, MC-029, MC-039, MC-046,
   MC-048.
-- **UI:** F-UI-001–006 -> MC-031–040, MC-048B, MC-051.
+- **UI:** F-UI-001–006 -> MC-031–040, MC-048B–MC-048C, MC-051.
 - **System:** F-SYS-001–004 -> all phases, especially MC-003, MC-011–013,
   MC-025, MC-028–030, MC-047, MC-050–060.
 
 ## 7. Completion rule
 
-MC-000 through MC-060, including MC-048A and MC-048B, are mandatory. A task is not complete because its code
+MC-000 through MC-060, including MC-048A, MC-048B, and MC-048C, are mandatory. A task is not complete because its code
 compiles; its deletion, focused tests, full required gate, evidence, and commit
 must all be recorded. Optional features require a new user-approved plan after
 MC-060 and may not be smuggled into this sequence.

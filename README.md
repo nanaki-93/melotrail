@@ -27,8 +27,8 @@ Create project
   -> Protect that melody automatically
   -> Set key, tempo in BPM, meter, named sections in bars, and chord progressions
   -> Audition the source through the built-in MIDI synthesizer
-  -> Generate and compare chord, bass, and drum candidates
-  -> Accept or regenerate by section and role
+  -> Choose one section/role and feel, then generate an alternative
+  -> Listen, accept, and continue through each unfinished arrangement part
   -> Review the complete arrangement
   -> Export a Logic Pro MIDI package
 ```
@@ -52,8 +52,10 @@ The Compose Desktop UI remains the product. Its target workspace contains:
 - Review
 - Export
 
-The imported melody plays through an audible built-in synthesizer by default;
-an external MIDI receiver can be chosen from Review. Settings that are genuinely
+The imported melody plays through an audible built-in synthesizer by default.
+Arrange presents one guided scope/feel/generate path; Review presents one
+selected alternative and the next acceptance decision. Comparison, lifecycle,
+device, and transport controls appear only when relevant. Settings that are genuinely
 required for MIDI audition or export may use a small dialog. Melotrail does not
 reproduce a DAW mixer, mastering suite, sound browser, video editor, or
 publishing console.

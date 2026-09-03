@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-048B done; MC-049 awaiting human holdout evidence
+Status: MC-048C done; MC-049 awaiting human holdout evidence
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -90,7 +90,8 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-048 | DONE | `midi-core: MC-048 verify Logic Pro` | PASS — six-package final Logic Pro matrix, focused Export/exporter suites, `make test`, `make build` | Logic Pro 12.3.1 final imports/playback/save-reopen pass; marker display is best-effort/unassessed. User-authorized scope is Logic Pro-only; GarageBand is unverified and receives no support claim. |
 | MC-048A | DONE | `midi-core: MC-048A simplify source workflow` | PASS — focused JVM/Compose suites, documentation coverage, `make test`, `make build` | Valid complete-song input is protected atomically at import; ambiguous note tracks/channels are rejected; structure entry is ordered positive whole bars totaling the immutable source end. |
 | MC-048B | DONE | `midi-core: MC-048B make holdout workspace usable` | PASS — focused domain/audition/Compose suites, 12 visual fixtures, host synthesizer note smoke, documentation coverage, `make test`, `make build`, desktop startup | Imported playback uses an audible managed synthesizer by default; BPM and a three-step section/progression editor replace technical authority fields; all six pages use the target responsive navy/violet shell. |
-| MC-049 | AWAITING_HUMAN | | | The usability prerequisite is complete. Holdout intake/listening may resume using the frozen eligibility and rubric evidence. |
+| MC-048C | DONE | `midi-core: MC-048C guide arrangement review` | PASS — focused reducer/Arrange/Review/real-workflow/visual suites, documentation coverage, `git diff --check`, `make test`, `make build`, desktop startup | Scope/feel/generate and play/accept/continue replace control walls; generated and mutated candidates stay visible without manual refresh. |
+| MC-049 | AWAITING_HUMAN | | | The guided-flow prerequisite is complete. Holdout intake/listening may resume using the frozen eligibility and rubric evidence. |
 | MC-050 | TODO | | | |
 | MC-051 | TODO | | | Delete the legacy desktop UI and reference fixtures only after MC-048B target fixtures pass and MC-050 removes its application owners. |
 | MC-052 | TODO | | | |
@@ -112,7 +113,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | G2 MIDI project kernel complete | MC-010–MC-019 | DONE | MC-010–MC-019 target schema, artifact, authority, invalidation, lifecycle, and full test/build gates pass. |
 | G3 Vertical slice complete | MC-020–MC-030 | DONE | MC-020–MC-030 target context, validation, generation, review, assembly, audition, export, and the JVM vertical-slice gate pass. |
 | G4 Focused desktop complete | MC-031–MC-040 | DONE | MC-040 real-service focused Compose E2E, six generated page fixtures, `make test`, and `make build` pass. |
-| G5 Product behavior accepted | MC-041–MC-049 | IN_PROGRESS | MC-041–MC-048B are complete; MC-049 holdout intake/listening is the remaining human gate. |
+| G5 Product behavior accepted | MC-041–MC-049 | IN_PROGRESS | MC-041–MC-048C are complete; MC-049 holdout intake/listening is the remaining human gate. |
 | G6 Legacy product removed | MC-050–MC-059 | TODO | |
 | G7 MVP complete | MC-060 | TODO | |
 
@@ -1247,6 +1248,26 @@ Known limitations: Audible timbre varies with the host synthesizer or selected e
 Commit: `midi-core: MC-048B make holdout workspace usable`.
 Next task: MC-049 — resume the user-approved holdout listening rubric on this usable workspace; do not begin MC-050 cleanup before the manual gate passes.
 
+### MC-048C — Guide arrangement preparation and make actions visible
+
+Status: DONE
+Started: 2026-09-03
+Completed: 2026-09-03
+Starting commit/status: `e3cdb4c` / only the preserved unrelated deleted Kotlin compiler-session marker was present.
+User decision: Pause the MC-049 listening test again because Arrange/Review had too many simultaneous buttons, no clear preparation sequence, and button results did not appear in the UI. Complete this guided-flow fix before testing resumes.
+Contracts read: F-ARR-001–F-ARR-007; F-REV-001–F-REV-006; F-PLAY-001–F-PLAY-004; F-UI-002–F-UI-006; Architecture 4.8; Quality Gates 4–5; `docs/MIDI_WORKSPACE_VISUAL_SPEC.md`; and the inserted MC-048C task.
+Root cause: Candidate generation and lifecycle operations persisted successfully, but `hydrate` cleared the complete Review state and their success callbacks republished an empty candidate list. The page therefore required a separate manual refresh and made a successful press appear inert. Review also enabled full/role/occurrence audition and restore actions without satisfying their application preconditions, while both pages rendered every scope, catalog choice, candidate action, output, and transport command at once.
+Behavior retained/extracted: Arrange now derives section-first Chords -> Bass -> Drums acceptance progress and the next unused positive seed from saved project state. Its three steps use compact section/profile/pattern selectors and one Generate action, automatically load the chosen scope, summarize recent alternatives, and lead to Listen and choose. Review now selects one alternative, makes Play and Accept primary, continues to the next unfinished scope, and gates full-arrangement playback until all scopes are accepted. Comparison uses one contextual selector; valid lock/unlock/reject/restore actions and detailed output/seek/loop/mute/solo controls use progressive disclosure. The workspace preserves same-project Review scope across hydration, reloads the affected evidence after generation and every lifecycle mutation, selects the affected candidate, retains the full list after comparison, and emits action-specific success messages.
+Files added/changed: `desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreArrangePage.kt`; `MidiCoreReviewPage.kt`; `MidiCoreWorkspace.kt`; `MidiCoreWorkspaceShell.kt`; their focused Compose/workspace/real-service tests; root plan/README; active architecture, functional, UI, quality, cleanup, task/prompt/log, and transitional documentation-inventory records.
+Files/data deleted: Removed manual seed entry, candidate refresh, duplicate Generate next alternative/Regenerate controls, per-candidate action stacks, invalid unconditional restore, full role/occurrence audition matrices, and always-visible output/transport buttons from the focused UI. No tracked file, project, MIDI source, immutable candidate, acceptance history, export snapshot, reference image, or user data was deleted. The unrelated Kotlin compiler-session marker deletion remains unstaged and excluded; legacy docs/images remain assigned to MC-051 after their executable owners are removed.
+Focused tests: `./gradlew :desktopApp:test --tests 'app.melotrail.desktop.MidiCoreArrangePageTest' --tests 'app.melotrail.desktop.MidiCoreReviewPageTest' --tests 'app.melotrail.desktop.MidiCoreWorkspaceTest' --tests 'app.melotrail.desktop.MidiCoreFocusedWorkflowTest' --tests 'app.melotrail.desktop.MidiCoreVisualRegressionTest' --rerun-tasks --console=plain` PASS. The real-service Compose flow uses the visible Generate, Listen and choose, Play alternative, Accept this alternative, and Continue buttons for all three roles and asserts that generation/acceptance results remain selected without refresh.
+Visual fixtures: Wide 1280 x 900 Arrange `desktopApp/build/test-results/midi-core-focused-workflow/wide/arrange.png` SHA-256 `edbaf3d979e7eef71fb2f0bcd7d1b0ff2d1d7660f297381f035057fa6f7c658b`; Review `wide/review.png` SHA-256 `31075f9fb0f236ab403f2abc0cd56d7f9e0a3f601702c41ff67612f75fbf1d7a`. Compact 720 x 900 blocked Arrange SHA-256 `7b1d9152be15dabf7b8b71be66386c70ecb0cf13dc2b66a881f19436623907dd`; Review SHA-256 `06df7cb16e2a600cd082e5d5fdaf32b97a38094dbf6298d19bdacf047193805b`. Visual inspection confirms the calm navy/violet hierarchy, compact selectors, numbered flow, primary-action emphasis, visible acceptance state, and concise blocked states.
+Full validation: Documentation coverage PASS; removed-control source scans PASS; `git diff --check` PASS; `make test` PASS (14 Gradle tasks); `make build` PASS (15 Gradle tasks including documentation coverage). `make desktop` compiled and reached the running Compose application without startup error, then was intentionally interrupted.
+Decisions/deviations: The candidate/application contracts remain unchanged; this task simplifies presentation and corrects workspace-state projection. Deterministic seeds remain recorded but advance automatically from the selected saved scope. Narrow regeneration remains available by generating another immutable alternative for the exact scope rather than through a duplicate button.
+Known limitations: MC-049 still requires the user-approved/license-safe holdout set and human listening scores after this task passes.
+Commit: `midi-core: MC-048C guide arrangement review`.
+Next task: MC-049 — resume the user-approved holdout listening rubric on the guided workspace; do not begin MC-050 cleanup before the manual gate passes.
+
 ### MC-049 — Holdout musical acceptance
 
 Status: AWAITING_HUMAN
@@ -1256,7 +1277,7 @@ Contracts read: Quality Gates 7–8; all F-ARR/F-REV functions; MC-049 task cont
 Holdout inventory: No eligible project is presently available. The repository has no non-build, non-legacy `.mid` or `.midi` file. It does contain 70 ignored, untracked MIDI files under `data/audio/` (303 MB); they are audio-era cleanup scope, were not approved as license-safe/unseen holdouts, and must not be used or tuned against for MC-049.
 Automated preparation: `docs/plan/MC049_HOLDOUT_RUBRIC.md` freezes the project eligibility rules, review procedure, all eight 1–5 scores, mandatory thresholds, evidence fields, and a ten-project response template. It explicitly excludes development fixtures and the legacy `data/audio/` material.
 Unblock condition: The user must provide at least ten previously unseen, license-safe MIDI projects satisfying the single-note-bearing-track/channel and whole-bar-length contract, with an ownership/source statement, then perform the required arrangement/listening review and supply the completed rubric. The agent will hash/freeze the set before generation, record snapshot IDs/results, fix only reproducible defects, and repeat any failed project.
-Next action: Await user-provided holdouts and listener results; do not start MC-050 cleanup before MC-049 is DONE.
+Next action: The MC-048C usability prerequisite is complete. Await user-provided holdouts and listener results; do not start MC-050 cleanup before MC-049 is DONE.
 
 ## 6. Manual gate records
 

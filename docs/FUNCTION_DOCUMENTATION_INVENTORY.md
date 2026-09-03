@@ -82,3 +82,7 @@ bounded no-bass/no-model arrangement path.
 MC-048B adds the authority-drafting conversion owner and refreshes the focused
 Structure & Harmony page, MIDI-only responsive shell, visual tokens, and typed
 BPM primitive rows after their 2026-09-03 contract and regression review.
+
+MC-048C refreshes the focused Arrange, Review, and workspace orchestration rows
+after replacing simultaneous control walls with the guided scope/feel/generate
+and play/accept/continue flows, plus automatic same-scope candidate refresh.

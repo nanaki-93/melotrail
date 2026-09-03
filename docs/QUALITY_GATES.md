@@ -87,6 +87,13 @@ Before implementation tasks begin:
   states remain understandable without colour alone.
 - MIDI visualizations use current project evidence; no waveform, video,
   mixer, library, or audio-production surrogate appears in the target shell.
+- Arrange and Review expose one clear primary next action, visible acceptance
+  progress, and automatic same-scope refresh after generation or lifecycle
+  mutations; duplicate generation actions and manual evidence refresh are not
+  part of the musician workflow.
+- Candidate lifecycle, comparison, device, and detailed transport controls are
+  shown only when valid or explicitly expanded. Full-arrangement playback is
+  disabled until every required section/role acceptance exists.
 
 ## 5. Audition gates
 

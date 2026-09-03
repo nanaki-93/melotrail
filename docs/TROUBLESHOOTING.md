@@ -84,10 +84,11 @@ authoritative.
 
 ## MIDI audition is unavailable
 
-- With **Use built-in synthesizer** selected, stop other playback and retry. The
-  app must not silently substitute Logic Pro Virtual In or another virtual port.
-- If using external hardware or a DAW route, choose that receiver explicitly in
-  Review and confirm the destination is listening.
+- In Review, expand **Playback options**, choose **Built-in synthesizer** from
+  Output, stop other playback, and retry. The app must not silently substitute
+  Logic Pro Virtual In or another virtual port.
+- If using external hardware or a DAW route, choose that receiver explicitly
+  from the same Output selector and confirm the destination is listening.
 - Reopen the project if the OS removed a device while it was active.
 - Use Stop before switching output devices.
 
@@ -102,9 +103,10 @@ an old candidate file to make it current.
 
 ## Candidate generation is rejected
 
-Open its validation report and distinguish hard role violations from musical
-advisories. Change the scoped pattern/profile/seed or correct invalid authority.
-Do not weaken global validation to admit one result.
+Review the visible validation summary and distinguish hard role violations from
+musical advisories. Change the scoped performance/rhythm choice or correct
+invalid authority, then generate the next automatically seeded alternative. Do
+not weaken global validation to admit one result.
 
 ## Export fails
 
