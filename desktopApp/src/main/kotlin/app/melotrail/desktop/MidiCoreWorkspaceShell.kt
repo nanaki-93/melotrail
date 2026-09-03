@@ -98,8 +98,8 @@ internal enum class MidiCoreWorkspaceDestination(
     PROJECT("project", "Project", "Create or reopen a MIDI Core project and inspect its current authority."),
     MIDI("midi", "MIDI", "Import one immutable Standard MIDI source and automatically protect its melody."),
     STRUCTURE_HARMONY("structure-harmony", "Structure & Harmony", "Define the authoritative section timeline and chord windows."),
-    ARRANGE("arrange", "Arrange", "Choose one part and feel, then create a deterministic MIDI alternative."),
-    REVIEW("review", "Review", "Listen, accept, and continue through each unfinished arrangement part."),
+    ARRANGE("arrange", "Arrange", "Preview one named style, create a complete draft, and repair only selected sections."),
+    REVIEW("review", "Review", "Listen to the complete draft and inspect detailed alternatives only for exceptions."),
     EXPORT("export", "Export", "Publish a portable MIDI package for Logic Pro."),
 }
 
@@ -171,11 +171,13 @@ internal fun MidiCoreWorkspaceShell(
                             modifier = Modifier.weight(1f).fillMaxHeight(),
                         )
                     }
-                    MidiCoreWorkspaceContext(
-                        destination = selectedDestination,
-                        state = state,
-                        modifier = Modifier.width(MusicWorkspaceTokens.Layout.ContextRailWidth).fillMaxHeight(),
-                    )
+                    if (selectedDestination !in setOf(MidiCoreWorkspaceDestination.ARRANGE, MidiCoreWorkspaceDestination.REVIEW)) {
+                        MidiCoreWorkspaceContext(
+                            destination = selectedDestination,
+                            state = state,
+                            modifier = Modifier.width(MusicWorkspaceTokens.Layout.ContextRailWidth).fillMaxHeight(),
+                        )
+                    }
                 }
 
                 MidiCoreWorkspaceShellLayout.COMPACT -> Column(
@@ -461,53 +463,33 @@ private fun auditionRoles(scope: MidiAuditionScope?): List<MidiExportRole> = whe
 
 @Composable
 private fun MidiCoreWorkspaceHeader(state: MidiCoreWorkspaceState) {
-    Card(
-        Modifier.fillMaxWidth().semantics { testTag = MidiCoreWorkspaceShellTags.HEADER },
-        colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.Surface),
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = MusicWorkspaceTokens.Spacing.Sm, vertical = MusicWorkspaceTokens.Spacing.Xs)
+            .semantics { testTag = MidiCoreWorkspaceShellTags.HEADER },
+        horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md),
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = MusicWorkspaceTokens.Spacing.Lg, vertical = MusicWorkspaceTokens.Spacing.Sm),
-            horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Lg),
-        ) {
-            Column {
-                Text("MELOTRAIL", style = MaterialTheme.typography.titleMedium)
-                Text("MIDI ARRANGEMENT", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Primary)
-            }
-            Column(
-                Modifier.weight(1f).semantics {
-                    testTag = MidiCoreWorkspaceShellTags.CURRENT_PROJECT
-                    contentDescription = currentProjectDescription(state)
-                },
-                verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs),
-            ) {
-                Text("Current project", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.TextSecondary)
-                Text(
-                    state.project?.metadata?.name ?: "No project open",
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    state.projectRoot?.toString() ?: "Create or open a project to begin.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MusicWorkspaceTokens.TextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            Card(
-                Modifier.widthIn(min = 140.dp).semantics {
-                    testTag = MidiCoreWorkspaceShellTags.OPERATION
-                    contentDescription = state.operation.message
-                },
-                colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface),
-            ) {
-                Column(Modifier.padding(MusicWorkspaceTokens.Spacing.Sm)) {
-                    Text(operationLabel(state), style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.TextSecondary)
-                    Text(state.operation.message, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                }
-            }
-        }
+        Text("MELOTRAIL", style = MaterialTheme.typography.titleMedium, color = MusicWorkspaceTokens.Primary)
+        Text(
+            state.project?.metadata?.name ?: "No project open",
+            modifier = Modifier.weight(1f).semantics {
+                testTag = MidiCoreWorkspaceShellTags.CURRENT_PROJECT
+                contentDescription = currentProjectDescription(state)
+            },
+            style = MaterialTheme.typography.titleSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            operationLabel(state) + if (state.operation.active) " · ${state.operation.progress?.let { "${it.completed}/${it.total}" } ?: "working"}" else "",
+            modifier = Modifier.widthIn(max = 180.dp).semantics {
+                testTag = MidiCoreWorkspaceShellTags.OPERATION
+                contentDescription = state.operation.message
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = if (state.operation.outcome == MidiCoreWorkspaceOperationOutcome.FAILURE) MusicWorkspaceTokens.Warning else MusicWorkspaceTokens.TextSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

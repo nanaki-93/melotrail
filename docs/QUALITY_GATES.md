@@ -113,6 +113,15 @@ Before implementation tasks begin:
   shown only when valid or explicitly expanded. A validated complete draft can
   be heard before acceptance; accepted-arrangement playback and export remain
   disabled until every required section/role acceptance exists.
+- Arrange and Review share a bar-proportional, horizontally navigable song map
+  with distinct duplicate-occurrence labels, compact chord summaries, all
+  three role states, selected/loop/playhead treatment, and non-colour semantic
+  state labels. Selecting a map occurrence preserves style/scroll context and
+  loops the one persistent player to its exact authoritative boundary.
+- The default Arrange path is style preview then one visible **Create full
+  draft** action with scoped progress, cancellation, and retry. Section and
+  role regeneration retain that style; profile/pattern controls remain under
+  explicit advanced disclosure.
 
 ## 5. Audition gates
 

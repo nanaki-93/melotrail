@@ -126,7 +126,7 @@ class MidiCoreFocusedWorkflowTest {
             workspace.accept(
                 MidiCoreWorkspaceIntent.ReplaceStructure(
                     definitions = listOf(ProjectSectionDefinition("verse", "Verse")),
-                    occurrences = listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse 1", 1)),
+                    occurrences = listOf(MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse 1", 2)),
                 ),
             )
             awaitWorkspaceSuccess("save structure")
@@ -141,12 +141,18 @@ class MidiCoreFocusedWorkflowTest {
             captureFixture("structure-harmony")
 
             navigateTo(MidiCoreWorkspaceDestination.ARRANGE)
-            CandidateRole.entries.forEachIndexed { index, role ->
+            onNodeWithTag(MidiCoreArrangePageTags.style("late-night")).performScrollTo().performClick()
+            awaitWorkspaceSuccess("preview selected arrangement style")
+            onNodeWithTag(MidiCoreArrangePageTags.CREATE_DRAFT).performScrollTo().assertIsEnabled().performClick()
+            awaitWorkspaceSuccess("create complete arrangement draft")
+            assertEquals(1, workspace.state.value.project?.arrangementDrafts?.size)
+            onNodeWithTag(MidiCoreArrangePageTags.REGENERATE_SECTION).performScrollTo().assertIsEnabled().performClick()
+            awaitWorkspaceSuccess("regenerate selected section")
+            CandidateRole.entries.forEach { role ->
+                onNodeWithContentDescription("Show advanced role adjustment").performScrollTo().performClick()
                 onNodeWithTag(MidiCoreArrangePageTags.role(role)).performScrollTo().performClick()
                 waitForIdle()
-                onNodeWithContentDescription("Show advanced role adjustment").performScrollTo().performClick()
-                onNodeWithTag(MidiCoreArrangePageTags.GENERATE).performScrollTo().assertIsEnabled().performClick()
-                awaitWorkspaceSuccess("generate ${role.name.lowercase()} candidate")
+                if (workspace.state.value.operation.active) awaitWorkspaceSuccess("load ${role.name.lowercase()} draft candidate")
                 assertEquals(role, workspace.state.value.review.role)
                 assertTrue(workspace.state.value.review.candidates.isNotEmpty(), "generated alternative must appear without a manual refresh")
                 onNodeWithTag(MidiCoreArrangePageTags.REVIEW).performScrollTo().assertIsEnabled().performClick()
@@ -157,10 +163,7 @@ class MidiCoreFocusedWorkflowTest {
                 onNodeWithTag(MidiCoreReviewPageTags.ACCEPT_SELECTED).performScrollTo().assertIsEnabled().performClick()
                 awaitWorkspaceSuccess("accept ${role.name.lowercase()} candidate")
                 assertTrue(workspace.state.value.review.candidates.single { it.candidate.id == workspace.state.value.review.selectedCandidateId }.accepted)
-                if (index < CandidateRole.entries.lastIndex) {
-                    onNodeWithTag(MidiCoreReviewPageTags.NEXT_SCOPE).performScrollTo().assertIsEnabled().performClick()
-                    waitForIdle()
-                }
+                if (role != CandidateRole.DRUMS) navigateTo(MidiCoreWorkspaceDestination.ARRANGE)
             }
             navigateTo(MidiCoreWorkspaceDestination.ARRANGE)
             captureFixture("arrange")
@@ -227,7 +230,7 @@ class MidiCoreFocusedWorkflowTest {
         val name = "Lead".encodeToByteArray()
         track.add(MidiEvent(MetaMessage(0x03, name, name.size), 0L))
         track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, 60, 96), 0L))
-        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, 60, 0), 1_920L))
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, 60, 0), 3_840L))
         MidiSystem.write(sequence, 1, path.toFile())
         return path
     }

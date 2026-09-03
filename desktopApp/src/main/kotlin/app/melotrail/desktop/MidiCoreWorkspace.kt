@@ -5,12 +5,16 @@ import app.melotrail.application.CompareMidiCoreCandidates
 import app.melotrail.application.ConfirmMidiCoreAuthority
 import app.melotrail.application.CreateMidiCoreProject
 import app.melotrail.application.GenerateMidiCoreCandidate
+import app.melotrail.application.GenerateMidiCoreArrangementDraft
 import app.melotrail.application.ImportMidiCoreSource
 import app.melotrail.application.ListMidiCoreCandidates
 import app.melotrail.application.LockMidiCoreCandidate
 import app.melotrail.application.MidiCoreAuthoritativeHarmony
 import app.melotrail.application.MidiCoreCandidateGeneration
 import app.melotrail.application.MidiCoreCandidateGenerationResult
+import app.melotrail.application.MidiCoreArrangementDraftGeneration
+import app.melotrail.application.MidiCoreArrangementDraftGenerationResult
+import app.melotrail.application.MidiCoreArrangementDraftProblem
 import app.melotrail.application.MidiCoreArrangementStylePreview
 import app.melotrail.application.MidiCoreArrangementStylePreviewResult
 import app.melotrail.application.PrepareMidiCoreArrangementStylePreview
@@ -55,6 +59,7 @@ import app.melotrail.audition.MidiAuditionResult
 import app.melotrail.audition.MidiAuditionState
 import app.melotrail.arrangement.core.MidiCoreSectionPolicy
 import app.melotrail.arrangement.core.MidiCoreInvalidationPreview
+import app.melotrail.arrangement.core.MidiCoreArrangementStyleCatalog
 import app.melotrail.midi.domain.MidiFinding
 import app.melotrail.midi.domain.MidiImportValidationResult
 import app.melotrail.midi.domain.MidiTrackSummary
@@ -120,6 +125,7 @@ interface MidiCoreWorkspaceUseCases {
     fun restoreCandidate(request: RestoreMidiCoreCandidate): MidiCoreCandidateLifecycleResult
     suspend fun generateCandidate(request: GenerateMidiCoreCandidate): MidiCoreCandidateGenerationResult
     suspend fun regenerateCandidate(request: RegenerateMidiCoreCandidate): MidiCoreCandidateGenerationResult
+    suspend fun generateArrangementDraft(request: GenerateMidiCoreArrangementDraft): MidiCoreArrangementDraftGenerationResult
     fun export(request: app.melotrail.application.ExportMidiCorePackage): MidiCoreMidiPackageExportResult
 }
 
@@ -137,6 +143,7 @@ class DefaultMidiCoreWorkspaceUseCases(
     private val sourceAudition: app.melotrail.application.MidiCoreSourceAudition = app.melotrail.application.MidiCoreSourceAudition(),
     private val reviewAudition: MidiCoreReviewAudition = MidiCoreReviewAudition(review),
     private val stylePreview: MidiCoreArrangementStylePreview = MidiCoreArrangementStylePreview(),
+    private val draftGeneration: MidiCoreArrangementDraftGeneration = MidiCoreArrangementDraftGeneration(),
 ) : MidiCoreWorkspaceUseCases {
     override fun create(request: CreateMidiCoreProject): MidiCoreProjectLifecycleResult = project.create(request)
 
@@ -190,6 +197,9 @@ class DefaultMidiCoreWorkspaceUseCases(
 
     override suspend fun regenerateCandidate(request: RegenerateMidiCoreCandidate): MidiCoreCandidateGenerationResult = review.regenerate(request)
 
+    override suspend fun generateArrangementDraft(request: GenerateMidiCoreArrangementDraft): MidiCoreArrangementDraftGenerationResult =
+        draftGeneration.generate(request)
+
     override fun export(request: app.melotrail.application.ExportMidiCorePackage): MidiCoreMidiPackageExportResult = exporter.export(request)
 
 }
@@ -213,6 +223,7 @@ enum class MidiCoreWorkspaceOperationKind {
     HARMONY,
     CANDIDATE_REVIEW,
     CANDIDATE_GENERATION,
+    DRAFT_GENERATION,
     EXPORT,
     AUDITION,
 }
@@ -363,6 +374,7 @@ data class MidiCoreWorkspaceState(
     val authority: MidiCoreAuthorityUiState = MidiCoreAuthorityUiState(),
     val review: MidiCoreCandidateReviewUiState = MidiCoreCandidateReviewUiState(),
     val stylePreview: MidiCoreArrangementStyleUiState = MidiCoreArrangementStyleUiState(),
+    val arrangement: MidiCoreArrangementUiState = MidiCoreArrangementUiState(),
     val audition: MidiAuditionState = MidiAuditionState(),
     val export: MidiCoreExportUiState = MidiCoreExportUiState(),
     val operation: MidiCoreWorkspaceOperation = MidiCoreWorkspaceOperation.idle(),
@@ -383,6 +395,14 @@ data class MidiCoreArrangementStyleUiState(
     val occurrenceId: String? = null,
     val cacheStatus: app.melotrail.application.MidiCoreArrangementStylePreviewCacheStatus? = null,
     val key: app.melotrail.application.MidiCoreArrangementStylePreviewKey? = null,
+)
+
+/** Ephemeral selection and retry identity for the whole-song arrangement workspace. */
+data class MidiCoreArrangementUiState(
+    val selectedOccurrenceId: String? = null,
+    val incompleteDraftId: String? = null,
+    val incompleteDraftStyleId: String? = null,
+    val rootSeed: Long = 1L,
 )
 
 /** All target workspace mutations are represented as explicit intents. */
@@ -442,6 +462,17 @@ sealed interface MidiCoreWorkspaceIntent {
         val styleId: String,
         val occurrenceId: String,
         val seed: Long = PrepareMidiCoreArrangementStylePreview.DEFAULT_PREVIEW_SEED,
+    ) : MidiCoreWorkspaceIntent
+    data class SelectArrangementOccurrence(val occurrenceId: String) : MidiCoreWorkspaceIntent
+    data class CreateArrangementDraft(
+        val styleId: String,
+        val rootSeed: Long = 1L,
+        val draftId: String? = null,
+    ) : MidiCoreWorkspaceIntent
+    data class RegenerateArrangementSection(
+        val occurrenceId: String,
+        val styleId: String,
+        val rootSeed: Long = 1L,
     ) : MidiCoreWorkspaceIntent
     data class PlayAudition(val plan: MidiAuditionPlaybackPlan? = null) : MidiCoreWorkspaceIntent
     data object PauseAudition : MidiCoreWorkspaceIntent
@@ -520,6 +551,9 @@ class MidiCoreWorkspaceViewModel(
                 useCases.prepareAcceptedArrangementAudition(PrepareMidiCoreAcceptedArrangementAudition(current))
             }
             is MidiCoreWorkspaceIntent.PreviewArrangementStyle -> previewArrangementStyle(intent)
+            is MidiCoreWorkspaceIntent.SelectArrangementOccurrence -> selectArrangementOccurrence(intent)
+            is MidiCoreWorkspaceIntent.CreateArrangementDraft -> generateArrangementDraft(intent)
+            is MidiCoreWorkspaceIntent.RegenerateArrangementSection -> regenerateArrangementSection(intent)
             is MidiCoreWorkspaceIntent.SelectAudition -> audition { useCases.audition.selectScope(intent.plan) }
             is MidiCoreWorkspaceIntent.PlayAudition -> audition {
                 intent.plan?.let { useCases.audition.play(it) } ?: useCases.audition.play()
@@ -1025,6 +1059,201 @@ class MidiCoreWorkspaceViewModel(
         }
     }
 
+    /** Select one authoritative section without coupling the map to page-local candidate state. */
+    private fun selectArrangementOccurrence(intent: MidiCoreWorkspaceIntent.SelectArrangementOccurrence) {
+        val occurrence = state.value.project?.authority?.occurrences?.singleOrNull { it.id == intent.occurrenceId }
+            ?: return failImmediately(blocker(
+                MidiCoreWorkspaceBlockerCode.AUTHORITY_REQUIRED,
+                "The selected song-map section is no longer part of current authority.",
+                "Reload Structure & Harmony and select a saved section.",
+                occurrenceId = intent.occurrenceId,
+            ))
+        _state.value = _state.value.copy(arrangement = _state.value.arrangement.copy(selectedOccurrenceId = occurrence.id))
+        val window = state.value.audition.window
+        when {
+            state.value.busy -> Unit
+            window != null && window.startTick <= occurrence.startTick && window.endTick >= occurrence.endTick -> {
+                audition { useCases.audition.setLoop(MidiAuditionLoop(occurrence.startTick, occurrence.endTick)) }
+            }
+            state.value.stylePreview.selectedStyleId != null -> previewArrangementStyle(
+                MidiCoreWorkspaceIntent.PreviewArrangementStyle(
+                    styleId = requireNotNull(state.value.stylePreview.selectedStyleId),
+                    occurrenceId = occurrence.id,
+                ),
+            )
+        }
+    }
+
+    /** Create or resume one deterministic all-role draft while retaining scoped progress in workspace state. */
+    private fun generateArrangementDraft(intent: MidiCoreWorkspaceIntent.CreateArrangementDraft) {
+        val current = requireSessionOrBlock() ?: return
+        val draftId = intent.draftId ?: state.value.arrangement.incompleteDraftId
+            ?.takeIf { state.value.arrangement.incompleteDraftStyleId == intent.styleId }
+        startOperation(
+            MidiCoreWorkspaceOperationKind.DRAFT_GENERATION,
+            "Creating ${intent.styleId.replace('-', ' ')} complete draft…",
+            intent.copy(draftId = draftId),
+        ) { cancellation ->
+            val result = useCases.generateArrangementDraft(
+                GenerateMidiCoreArrangementDraft(
+                    session = current,
+                    styleId = intent.styleId,
+                    rootSeed = intent.rootSeed,
+                    draftId = draftId,
+                    cancellation = app.melotrail.application.MidiCoreGenerationCancellation { cancellation.get() },
+                    onProgress = { progress -> publishDraftProgress(progress) },
+                ),
+            )
+            when (result) {
+                is MidiCoreArrangementDraftGenerationResult.Completed -> success(
+                    "Complete draft ready for Review.",
+                    result.session,
+                ) {
+                    _state.value = _state.value.copy(
+                        arrangement = _state.value.arrangement.copy(
+                            incompleteDraftId = null,
+                            incompleteDraftStyleId = null,
+                            rootSeed = intent.rootSeed,
+                        ),
+                    )
+                }
+                is MidiCoreArrangementDraftGenerationResult.Incomplete -> failure(
+                    draftBlocker(result.problem, intent.copy(draftId = result.draftId)),
+                    intent.copy(draftId = result.draftId),
+                    result.session,
+                ) {
+                    _state.value = _state.value.copy(
+                        arrangement = _state.value.arrangement.copy(
+                            incompleteDraftId = result.draftId,
+                            incompleteDraftStyleId = intent.styleId,
+                            rootSeed = intent.rootSeed,
+                        ),
+                    )
+                }
+                is MidiCoreArrangementDraftGenerationResult.Cancelled -> cancelled(result.session) {
+                    _state.value = _state.value.copy(
+                        arrangement = _state.value.arrangement.copy(
+                            incompleteDraftId = result.draftId,
+                            incompleteDraftStyleId = intent.styleId,
+                            rootSeed = intent.rootSeed,
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    /** Marshal synchronous generation callbacks onto Compose state without admitting stale operations. */
+    private fun publishDraftProgress(progress: app.melotrail.application.MidiCoreArrangementDraftProgress) {
+        scope.launch(dispatchers.ui) {
+            val operation = _state.value.operation
+            if (!operation.active || operation.kind != MidiCoreWorkspaceOperationKind.DRAFT_GENERATION) return@launch
+            val active = progress.activeScope
+            _state.value = _state.value.copy(
+                operation = operation.copy(
+                    progress = MidiCoreWorkspaceOperationProgress(progress.completedCount, progress.totalScopes),
+                    message = active?.let { "Creating draft: ${it.occurrenceId} · ${it.role.name.lowercase()} (${progress.completedCount}/${progress.totalScopes})" }
+                        ?: "Creating draft: ${progress.completedCount}/${progress.totalScopes} scopes complete",
+                ),
+            )
+        }
+    }
+
+    /** Create three linked, immutable alternatives for one selected exception while retaining the global style. */
+    private fun regenerateArrangementSection(intent: MidiCoreWorkspaceIntent.RegenerateArrangementSection) {
+        val current = requireSessionOrBlock() ?: return
+        val style = runCatching { MidiCoreArrangementStyleCatalog.require(intent.styleId) }.getOrElse {
+            return failImmediately(blocker(
+                MidiCoreWorkspaceBlockerCode.CANDIDATE_REVIEW_REQUIRED,
+                "The selected arrangement style is no longer available.",
+                "Choose a current style before regenerating this section.",
+                action = intent,
+                occurrenceId = intent.occurrenceId,
+            ))
+        }
+        if (current.project.authority?.occurrences?.any { it.id == intent.occurrenceId } != true) {
+            return failImmediately(blocker(
+                MidiCoreWorkspaceBlockerCode.AUTHORITY_REQUIRED,
+                "The selected section is no longer part of current authority.",
+                "Reload Structure & Harmony and choose a saved section.",
+                action = intent,
+                occurrenceId = intent.occurrenceId,
+            ))
+        }
+        startOperation(MidiCoreWorkspaceOperationKind.CANDIDATE_GENERATION, "Regenerating selected section…", intent) { cancellation ->
+            var working = current
+            val dependencies = mutableListOf<String>()
+            CandidateRole.entries.forEachIndexed { index, role ->
+                if (cancellation.get()) return@startOperation cancelled(working)
+                publishSectionProgress(index, role)
+                val choice = style.role(role)
+                when (val result = useCases.generateCandidate(
+                    GenerateMidiCoreCandidate(
+                        session = working,
+                        role = role,
+                        occurrenceId = intent.occurrenceId,
+                        performanceProfileId = choice.performanceProfileId,
+                        patternId = choice.patternId,
+                        generator = MidiCoreGeneratorInput(
+                            generatorId = "midi-core-style-repair",
+                            generatorVersion = "midi-core-style-v${MidiCoreArrangementStyleCatalog.VERSION}",
+                            patternId = choice.patternId,
+                            seed = intent.rootSeed + index,
+                        ),
+                        sectionPolicy = choice.sectionPolicy,
+                        draftDependencyIds = dependencies.toList(),
+                        cancellation = app.melotrail.application.MidiCoreGenerationCancellation { cancellation.get() },
+                    ),
+                )) {
+                    is MidiCoreCandidateGenerationResult.Published -> {
+                        working = result.session
+                        dependencies += result.candidate.id
+                    }
+                    is MidiCoreCandidateGenerationResult.Cancelled -> return@startOperation cancelled(working)
+                    is MidiCoreCandidateGenerationResult.ValidationRejected -> return@startOperation failure(
+                        blocker(
+                            MidiCoreWorkspaceBlockerCode.CANDIDATE_REVIEW_REQUIRED,
+                            "The ${role.name.lowercase()} section repair did not pass validation.",
+                            "Adjust roles or choose another style, then retry this section.",
+                            action = intent,
+                            occurrenceId = intent.occurrenceId,
+                            role = role,
+                        ),
+                        intent,
+                        working,
+                    )
+                    is MidiCoreCandidateGenerationResult.Rejected -> return@startOperation failure(candidateBlocker(result.problem), intent, working)
+                }
+            }
+            val candidates = candidateReviewItems(working, CandidateRole.DRUMS, intent.occurrenceId).orEmpty()
+            success("Section alternatives are ready for review.", working) {
+                _state.value = _state.value.copy(
+                    arrangement = _state.value.arrangement.copy(selectedOccurrenceId = intent.occurrenceId),
+                    review = _state.value.review.copy(
+                        role = CandidateRole.DRUMS,
+                        occurrenceId = intent.occurrenceId,
+                        candidates = candidates,
+                        comparison = null,
+                        selectedCandidateId = candidates.lastOrNull()?.candidate?.id,
+                    ),
+                )
+            }
+        }
+    }
+
+    private fun publishSectionProgress(completed: Int, activeRole: CandidateRole) {
+        scope.launch(dispatchers.ui) {
+            val operation = _state.value.operation
+            if (!operation.active || operation.kind != MidiCoreWorkspaceOperationKind.CANDIDATE_GENERATION) return@launch
+            _state.value = _state.value.copy(
+                operation = operation.copy(
+                    progress = MidiCoreWorkspaceOperationProgress(completed, CandidateRole.entries.size),
+                    message = "Regenerating section: ${activeRole.name.lowercase()} (${completed}/${CandidateRole.entries.size})",
+                ),
+            )
+        }
+    }
+
     private fun audition(action: () -> MidiAuditionResult) {
         val result = try {
             action()
@@ -1057,7 +1286,7 @@ class MidiCoreWorkspaceViewModel(
         activeCancellation?.set(true)
         _state.value = _state.value.copy(operation = current.copy(phase = MidiCoreWorkspaceOperationPhase.CANCELLING, message = "Cancelling ${current.kind?.name?.lowercase() ?: "operation"}…", cancellableAtBoundary = false))
         val cancelledJob = activeJob
-        cancelledJob?.cancel()
+        if (current.kind != MidiCoreWorkspaceOperationKind.DRAFT_GENERATION) cancelledJob?.cancel()
         if (cancelledJob == null) {
             finishCancelled(current.id)
         } else {
@@ -1154,11 +1383,15 @@ class MidiCoreWorkspaceViewModel(
         persisted: MidiCoreProjectSession?,
     ) {
         if (state.value.operation.id != operationId) return
-        if (state.value.operation.phase == MidiCoreWorkspaceOperationPhase.CANCELLING) {
+        if (state.value.operation.phase == MidiCoreWorkspaceOperationPhase.CANCELLING && outcome !is WorkspaceOutcome.Cancelled) {
             finishCancelled(operationId)
             return
         }
-        val expectedProject = (outcome as? WorkspaceOutcome.Success)?.session?.project
+        val expectedProject = when (outcome) {
+            is WorkspaceOutcome.Success -> outcome.session?.project
+            is WorkspaceOutcome.Failure -> outcome.session?.project
+            is WorkspaceOutcome.Cancelled -> outcome.session?.project
+        }
         if (!admitted(admission, persisted, expectedProject)) {
             val stale = blocker(
                 MidiCoreWorkspaceBlockerCode.STALE_COMPLETION,
@@ -1185,10 +1418,15 @@ class MidiCoreWorkspaceViewModel(
                 )
             }
             is WorkspaceOutcome.Failure -> {
+                outcome.session?.let(::hydrate)
                 outcome.apply?.invoke()
                 finishFailure(operationId, outcome.blocker, outcome.retry)
             }
-            WorkspaceOutcome.Cancelled -> finishCancelled(operationId)
+            is WorkspaceOutcome.Cancelled -> {
+                outcome.session?.let(::hydrate)
+                outcome.apply?.invoke()
+                finishCancelled(operationId)
+            }
         }
         activeJob = null
         activeCancellation = null
@@ -1291,6 +1529,15 @@ class MidiCoreWorkspaceViewModel(
             MidiCoreCandidateReviewUiState()
         }
         val previewScope = if (sameProject) previous.stylePreview else MidiCoreArrangementStyleUiState()
+        val arrangementScope = if (sameProject) {
+            previous.arrangement.copy(
+                selectedOccurrenceId = previous.arrangement.selectedOccurrenceId
+                    ?.takeIf { selected -> next.project.authority?.occurrences?.any { it.id == selected } == true }
+                    ?: next.project.authority?.occurrences?.firstOrNull()?.id,
+            )
+        } else {
+            MidiCoreArrangementUiState(selectedOccurrenceId = next.project.authority?.occurrences?.firstOrNull()?.id)
+        }
         session = next
         preferences.saveLastOpenedProject(next.root)
         val project = next.project
@@ -1319,6 +1566,7 @@ class MidiCoreWorkspaceViewModel(
             ),
             review = reviewScope,
             stylePreview = previewScope,
+            arrangement = arrangementScope,
             audition = useCases.audition.state,
             export = MidiCoreExportUiState(latestSnapshot = project.exportSnapshots.lastOrNull()),
             blockers = baseBlockers(project),
@@ -1358,6 +1606,17 @@ class MidiCoreWorkspaceViewModel(
         problem.message,
         problem.nextAction,
         problem.code.name,
+    )
+
+    private fun draftBlocker(problem: MidiCoreArrangementDraftProblem, retry: MidiCoreWorkspaceIntent) = blocker(
+        if (problem.code.name.contains("STALE") || problem.code.name.contains("REVISION")) MidiCoreWorkspaceBlockerCode.REVISION_CONFLICT
+        else MidiCoreWorkspaceBlockerCode.CANDIDATE_REVIEW_REQUIRED,
+        problem.message,
+        problem.nextAction,
+        problem.code.name,
+        action = retry,
+        occurrenceId = problem.scope?.occurrenceId,
+        role = problem.scope?.role,
     )
 
     private fun baseBlockers(project: MidiCoreProject?): List<MidiCoreWorkspaceBlocker> = when {
@@ -1464,10 +1723,14 @@ class MidiCoreWorkspaceViewModel(
         data class Failure(
             val blocker: MidiCoreWorkspaceBlocker,
             val retry: MidiCoreWorkspaceIntent? = null,
+            val session: app.melotrail.application.MidiCoreProjectSession? = null,
             val apply: (() -> Unit)? = null,
         ) : WorkspaceOutcome
 
-        data object Cancelled : WorkspaceOutcome
+        data class Cancelled(
+            val session: app.melotrail.application.MidiCoreProjectSession? = null,
+            val apply: (() -> Unit)? = null,
+        ) : WorkspaceOutcome
     }
 
     private fun success(message: String, session: app.melotrail.application.MidiCoreProjectSession? = null, apply: (() -> Unit)? = null) = WorkspaceOutcome.Success(message, session, apply)
@@ -1475,8 +1738,12 @@ class MidiCoreWorkspaceViewModel(
     private fun failure(
         blocker: MidiCoreWorkspaceBlocker,
         retry: MidiCoreWorkspaceIntent? = null,
+        session: app.melotrail.application.MidiCoreProjectSession? = null,
         apply: (() -> Unit)? = null,
-    ) = WorkspaceOutcome.Failure(blocker, retry, apply)
+    ) = WorkspaceOutcome.Failure(blocker, retry, session, apply)
 
-    private fun cancelled() = WorkspaceOutcome.Cancelled
+    private fun cancelled(
+        session: app.melotrail.application.MidiCoreProjectSession? = null,
+        apply: (() -> Unit)? = null,
+    ) = WorkspaceOutcome.Cancelled(session, apply)
 }

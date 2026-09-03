@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-048F done; MC-048G is next; MC-049 holdout is deferred until the
+Status: MC-048G done; MC-048H is next; MC-049 holdout is deferred until the
 arrangement UX tasks MC-048D through MC-048I pass
 
 Task authority: `MIDI_CORE_TASKS.md`
@@ -95,7 +95,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-048D | DONE | `midi-core: MC-048D persist workspace playback` | PASS — focused desktop tests, documentation coverage, `make test`, `make build`, desktop smoke | One shell-owned MIDI player stays visible across every destination and wide/compact fixture; stale project transitions stop and clear audition safely. |
 | MC-048E | DONE | `midi-core: MC-048E preview arrangement styles` | PASS — focused catalog/preview/audition/workspace/Arrange/visual workflow suites, documentation coverage, `make test`, `make build`, desktop startup | Five versioned MIDI-only styles now produce bounded all-role previews from the protected melody and authority without candidate, artifact, acceptance, revision, model, or audio-file mutation. |
 | MC-048F | DONE | `midi-core: MC-048F orchestrate complete drafts` | PASS — focused draft/schema/generation/assembly/audition suites, documentation coverage, `git diff --check`, `make test`, `make build` | Complete drafts preserve all valid scoped work, can audition before acceptance, and apply every selected role atomically or not at all. |
-| MC-048G | TODO | | | Rebuild Arrange around the shared song map and exception workflow. |
+| MC-048G | DONE | `midi-core: MC-048G streamline song arrangement` | PASS — focused song-map/workspace/Arrange/real-workflow suites, documentation coverage, `git diff --check`, `make test`, `make build`, desktop smoke | Arrange now uses a shared bar-proportional song map, style-first full draft action, and selected-section repair without the old occurrence/role-first journey. |
 | MC-048H | TODO | | | Make Review a whole-draft listen/use decision with contextual repair and undo. |
 | MC-048I | TODO | | | Prove the UX gates, synchronize contracts, and obtain genuine observed-session evidence. |
 | MC-049 | TODO | | | Prior holdout preparation is preserved, but listening must not resume before MC-048I is DONE. |
@@ -1337,6 +1337,25 @@ Decisions/deviations: Draft references are occurrence-then-role ordered for read
 Known limitations: MC-048F supplies domain/application/audition targets; the song-map Arrange and whole-draft Review interactions are intentionally owned by MC-048G and MC-048H. No manual DAW result is required because draft audition is local MIDI playback and export remains unchanged/accepted-only.
 Commit: `midi-core: MC-048F orchestrate complete drafts`.
 Next task: MC-048G after this commit.
+
+### MC-048G — Redesign Arrange around the song map
+
+Status: DONE
+Started: 2026-09-04
+Completed: 2026-09-04
+Starting commit/status: `d302c48` on `main` / preserved unrelated changes: deleted `.kotlin/sessions/kotlin-compiler-10759057547151889139.salive`; uncommitted Chords reduced-voicing and density-validation work plus its focused test and documentation-inventory entry; and a scoped candidate-validation message in `MidiCoreWorkspace.kt`. None was staged, overwritten, or adopted by this task.
+Contracts read: root Plan 7.1 and 7.3–7.6; F-ARR-001–F-ARR-007; F-UI-001–F-UI-006; Architecture 4.8; Quality Gates 4–5; MIDI workspace visual specification; and the MC-048G task contract.
+Behavior retained/extracted: A reusable song-map projection derives each authoritative occurrence's bar-proportional width, duplicate-safe display label, bar/chord summary, and non-colour Chords/Bass/Drums state from existing project facts. Map selection is stored in workspace state and changes the existing persistent player loop without adding a second timeline or losing page scroll. Arrange now presents a compact shell header, map, named-style gallery, one visible **Create full draft** action with scoped progress/cancel/retry, and a selected-section inspector. The inspector reports all three roles, exposes keyboard-accessible previous/next selection, and makes **Regenerate section** primary; profile/pattern role controls remain behind **Adjust roles** and preserve the selected global style.
+Files added/changed: shared `MidiCoreSongMap.kt`; Arrange page; workspace/composition/shell integration; focused Arrange, workspace, and real-service workflow tests; active README, architecture, functional, quality, visual, documentation-inventory, and execution-log contracts.
+Files/data deleted: Removed the Arrange page's numbered scope/feel/generate first flow, permanent generic Arrange context rail, oversized path/status header cards, and primary occurrence/role dropdown journey. Advanced targeted generation and immutable candidate evidence remain. No source MIDI, candidate, draft, acceptance, artifact, snapshot, or user data was deleted.
+Focused tests: `MidiCoreArrangePageTest` PASS (bar scale, duplicate labels, non-colour role states, one-click preview, full-draft cancellation/retry, repair, advanced disclosure, removed-label scan, previous/next navigation, and wide/compact scrolled fixtures); `MidiCoreWorkspaceTest` PASS (selected map occurrence sets the exact persistent-player loop); `MidiCoreFocusedWorkflowTest` PASS (visible style, draft, repair, and advanced role path through real services).
+Visual fixtures: 1280 x 900 `desktopApp/build/test-results/midi-core-arrange-song-map/wide-song-map.png` SHA-256 `4b2ffd58ab97f86dfe52793da915024d732fc87fe5b12e9e7cf2968c825e998c`; 720 x 900 scrolled `desktopApp/build/test-results/midi-core-arrange-song-map/compact-song-map-scrolled.png` SHA-256 `943b0821e9ed39bd8458f56d903d35580b10958f1a442711db66927ab77a3a90`.
+Accessibility evidence: every map block has its unique label, bar/chord summary, textual role status, selection, loop, and playhead in its content description; status is never colour-only. Map blocks, style choices, and inspector previous/next actions are ordinary focusable buttons with stable semantic tags. The wide fixture proves Arrange uses its selected-section inspector rather than the generic context rail; the compact fixture proves the horizontal map and persistent player remain available after page scrolling.
+Full validation: `python3 tools/check_documentation_coverage.py` PASS; `git diff --check` PASS; `make test` PASS (14 Gradle tasks); `make build` PASS (15 Gradle tasks including documentation coverage). `make desktop` compiled and reached the running Compose application with no startup error, then was terminated cleanly after the Arrange smoke.
+Decisions/deviations: The map is presentation-only and derives facts instead of persisting another song-map schema. Draft generation continues to use the complete-draft application service and retains its durable partial session for exact retry; selected-section regeneration intentionally invokes deterministic scoped core-role generation rather than hidden whole-song regeneration. The shared map is available for MC-048H Review integration, which is intentionally not cut over in this task.
+Known limitations: Review remains the prior candidate-focused page until MC-048H makes it the whole-draft listen/use decision. The local smoke proves startup only; MIDI audition mechanics and accessible interaction behavior are covered by the focused controller/workspace/Compose suites, not by a subjective sound-quality claim.
+Commit: `midi-core: MC-048G streamline song arrangement`.
+Next task: MC-048H after this commit.
 
 ### MC-049 — Holdout musical acceptance
 

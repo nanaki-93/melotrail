@@ -230,13 +230,21 @@ windows required by application services; internal IDs and tick arithmetic are
 not exposed as editing controls.
 
 Arrange and Review are a guided presentation over the existing scoped
-application use cases, not new domain owners. Arrange derives acceptance
-progress and the next unused deterministic seed from the project, then can
-create one complete style draft or expose targeted correction. Review exposes
-the complete-draft listen/use decision while retaining scoped alternatives as
-contextual evidence. After generation or a lifecycle mutation, the workspace
-reducer rehydrates the persisted project and reloads affected evidence before
-publishing success state, so the UI never depends on a manual refresh.
+application use cases, not new domain owners. Their shared song map derives
+bar-proportional occurrence blocks, duplicate-safe labels, harmony summaries,
+and textual per-role status from the persisted authority, candidates,
+acceptances, and drafts. Selecting a block records the workspace selection and
+sets the existing persistent player loop; neither the map nor a page owns a
+second timeline or playback session. Arrange derives acceptance progress and
+the next unused deterministic seed from the project, then can create one
+complete style draft or expose targeted correction. Its selected-section
+inspector supplies keyboard-accessible previous/next navigation and keeps
+profile/pattern controls behind the advanced local-repair disclosure. Review
+exposes the complete-draft listen/use decision while retaining scoped
+alternatives as contextual evidence. After generation or a lifecycle mutation,
+the workspace reducer rehydrates the persisted project and reloads affected
+evidence before publishing success state, so the UI never depends on a manual
+refresh.
 
 The workspace shell, rather than a destination page, owns the one live MIDI
 transport presentation. Pages only prepare or select musical views. The dock

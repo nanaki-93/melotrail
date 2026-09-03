@@ -53,6 +53,7 @@ import app.melotrail.audition.MidiAuditionState
 import app.melotrail.arrangement.core.MidiCoreInvalidationPlanner
 import app.melotrail.midi.domain.MidiExportRole
 import app.melotrail.project.MidiCoreProject
+import app.melotrail.project.CandidateRole
 import app.melotrail.project.ProjectAuthority
 import app.melotrail.project.ProjectId
 import app.melotrail.project.ProjectKey
@@ -162,6 +163,24 @@ class MidiCoreWorkspaceTest {
 
         assertEquals(1, fake.occurrenceAuditionCalls)
         assertEquals(app.melotrail.audition.MidiAuditionScope.Occurrence("verse-1"), viewModel.state.value.audition.scope)
+        assertEquals(MidiCoreWorkspaceOperationPhase.SUCCEEDED, viewModel.state.value.operation.phase)
+        viewModel.close()
+    }
+
+    @Test
+    fun `song-map selection preserves the selected section and loops its authoritative range in the shared player`() = runTest {
+        val fake = FakeMidiCoreWorkspaceUseCases()
+        fake.seedPersistedSong()
+        val viewModel = MidiCoreWorkspaceViewModel(fake, MemoryMidiCorePreferences(), NoOpDesktopOperationLogger, testDispatchers(testScheduler))
+        viewModel.accept(MidiCoreWorkspaceIntent.OpenProject(fake.persistedSession().root))
+        advanceUntilIdle()
+        viewModel.accept(MidiCoreWorkspaceIntent.PreviewArrangementStyle("open-sky", "verse-1"))
+        advanceUntilIdle()
+
+        viewModel.accept(MidiCoreWorkspaceIntent.SelectArrangementOccurrence("verse-1"))
+
+        assertEquals("verse-1", viewModel.state.value.arrangement.selectedOccurrenceId)
+        assertEquals(MidiAuditionLoop(0L, 1920L), viewModel.state.value.audition.loop)
         assertEquals(MidiCoreWorkspaceOperationPhase.SUCCEEDED, viewModel.state.value.operation.phase)
         viewModel.close()
     }
@@ -297,6 +316,29 @@ class MidiCoreWorkspaceTest {
     }
 
     @Test
+    fun `complete draft intent preserves retry identity after a scoped incomplete result`() = runTest {
+        val fake = FakeMidiCoreWorkspaceUseCases()
+        val viewModel = MidiCoreWorkspaceViewModel(fake, MemoryMidiCorePreferences(), NoOpDesktopOperationLogger, testDispatchers(testScheduler))
+        viewModel.accept(MidiCoreWorkspaceIntent.OpenProject(fake.session.root))
+        advanceUntilIdle()
+
+        viewModel.accept(MidiCoreWorkspaceIntent.CreateArrangementDraft("late-night", rootSeed = 17L))
+        advanceUntilIdle()
+
+        assertEquals(1, fake.draftRequests.size)
+        assertEquals("late-night", fake.draftRequests.single().styleId)
+        assertEquals(17L, fake.draftRequests.single().rootSeed)
+        assertEquals(MidiCoreWorkspaceOperationKind.DRAFT_GENERATION, viewModel.state.value.operation.kind)
+        assertEquals(MidiCoreWorkspaceOperationPhase.FAILED, viewModel.state.value.operation.phase)
+        assertEquals("draft-incomplete", viewModel.state.value.arrangement.incompleteDraftId)
+        assertEquals(
+            MidiCoreWorkspaceIntent.CreateArrangementDraft("late-night", 17L, "draft-incomplete"),
+            viewModel.state.value.operation.retry,
+        )
+        viewModel.close()
+    }
+
+    @Test
     fun `export collision preserves the current project and offers the same safe retry`() = runTest {
         val fake = FakeMidiCoreWorkspaceUseCases()
         fake.exportResult = MidiCoreMidiPackageExportResult.Rejected(
@@ -416,6 +458,19 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
         )
     val openResults = ArrayDeque<MidiCoreProjectLifecycleResult>()
     var pendingGeneration: CompletableDeferred<MidiCoreCandidateGenerationResult>? = null
+    val draftRequests = mutableListOf<app.melotrail.application.GenerateMidiCoreArrangementDraft>()
+    var draftGenerationResult: app.melotrail.application.MidiCoreArrangementDraftGenerationResult =
+        app.melotrail.application.MidiCoreArrangementDraftGenerationResult.Incomplete(
+            session,
+            "draft-incomplete",
+            app.melotrail.application.MidiCoreArrangementDraftProgress("draft-incomplete", 3, emptyList()),
+            app.melotrail.application.MidiCoreArrangementDraftProblem(
+                app.melotrail.application.MidiCoreArrangementDraftProblemCode.CANDIDATE_FAILURE,
+                "The bass scope needs another attempt.",
+                "Retry the incomplete draft.",
+                app.melotrail.application.MidiCoreArrangementDraftScope("verse-1", CandidateRole.BASS),
+            ),
+        )
     var pendingStylePreview: CompletableDeferred<app.melotrail.application.MidiCoreArrangementStylePreviewResult>? = null
     val stylePreviewRequests = mutableListOf<app.melotrail.application.PrepareMidiCoreArrangementStylePreview>()
     var stylePreviewResult: app.melotrail.application.MidiCoreArrangementStylePreviewResult = fakeStylePreviewResult()
@@ -520,6 +575,13 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
 
     override suspend fun regenerateCandidate(request: RegenerateMidiCoreCandidate): MidiCoreCandidateGenerationResult = generateCandidate(request.generation)
 
+    override suspend fun generateArrangementDraft(
+        request: app.melotrail.application.GenerateMidiCoreArrangementDraft,
+    ): app.melotrail.application.MidiCoreArrangementDraftGenerationResult {
+        draftRequests += request
+        return draftGenerationResult
+    }
+
     override fun export(request: ExportMidiCorePackage): MidiCoreMidiPackageExportResult = exportResult
 
     fun advanceRevisionWithoutReplacingSession() {
@@ -540,6 +602,32 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
         currentSession = MidiCoreProjectSession(
             currentSession.root,
             currentSession.project.copy(authority = authority, revision = currentSession.project.revision + 1L),
+        )
+    }
+
+    fun seedPersistedSong() {
+        val authority = ProjectAuthority(
+            key = ProjectKey(ProjectKeySpelling.C, ProjectScaleMode.MAJOR),
+            tempo = ProjectTempo(500_000),
+            meter = ProjectMeter(4, 2),
+            sectionDefinitions = listOf(ProjectSectionDefinition("verse", "Verse")),
+            occurrences = listOf(ProjectSectionOccurrence("verse-1", "verse", "Verse", 0L, 1_920L)),
+            chordEvents = listOf(app.melotrail.project.AuthoritativeChordEvent("chord-1", "verse-1", "C", 0L, 1_920L)),
+        )
+        val source = app.melotrail.project.SourceMidiRecord(
+            "source.mid", "a".repeat(64), 1, 480,
+            app.melotrail.project.ProjectArtifact(app.melotrail.project.ProjectRelativePath("source/original.mid"), "a".repeat(64)),
+            app.melotrail.project.ProjectArtifact(app.melotrail.project.ProjectRelativePath("reports/import.json"), "b".repeat(64)),
+            emptyList(), 1_920L,
+        )
+        currentSession = MidiCoreProjectSession(
+            currentSession.root,
+            currentSession.project.copy(
+                sourceMidi = source,
+                selectedMelody = SelectedMelodyTrack(0, 0, "c".repeat(64)),
+                authority = authority,
+                revision = currentSession.project.revision + 1L,
+            ),
         )
     }
 }

@@ -1,7 +1,7 @@
 # MIDI workspace visual specification
 
-Status: implemented target design contract; validation is owned by MC-048B and
-the guided Arrange/Review refinement by MC-048C
+Status: implemented target design contract; MC-048G owns the song-map Arrange
+cutover and its wide/compact/accessibility validation
 
 Authority: visual language and visual acceptance for the Compose Desktop MIDI
 workspace
@@ -59,8 +59,8 @@ top-level pages.
 | Project | project/readiness summary and next safe action | location, recent projects, authority facts |
 | MIDI | immutable-source import and track/channel facts | MIDI-event preview, findings, audition |
 | Structure & Harmony | ordered section timeline and chord windows | bar totals, authority validity, invalidation impact |
-| Arrange | named style gallery -> instant bounded MIDI preview -> acceptance progress | compact targeted role adjustment, alternative summary, generation state, findings |
-| Review | one selected alternative and play -> accept -> continue flow | optional diff, contextual lifecycle and playback controls, stale evidence |
+| Arrange | shared song map -> named style gallery -> instant bounded MIDI preview -> complete-draft action | selected-section inspector, scoped draft progress, contextual repair, advanced role adjustment |
+| Review | shared song map -> complete-draft listen/use decision | selected-section lifecycle/diff/repair evidence and playback controls |
 | Export | readiness checklist and immutable package result | files, hashes, validation, Logic Pro guidance |
 
 Section and role views may use a compact MIDI timeline or piano-roll-style
@@ -81,7 +81,10 @@ selection.
 - Do not render every section, profile, pattern, alternative, lifecycle action,
   output device, and transport command as simultaneous buttons. Arrange shows
   four to six named style choices as its primary gallery; profile and pattern
-  selectors stay behind targeted advanced adjustment. Use compact selectors,
+  selectors stay behind targeted advanced adjustment. Use the shared,
+  horizontally scrollable bar-proportional song map for section selection;
+  every duplicate section label includes its occurrence number and every role
+  state has text as well as colour. Use compact selectors,
   one primary action per step, and progressive disclosure.
 - Successful candidate generation and review decisions remain visibly selected
   in the same scope without asking the musician to refresh evidence.

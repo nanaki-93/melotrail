@@ -12,6 +12,7 @@ import app.melotrail.application.MidiCoreAuthoritativeHarmony
 import app.melotrail.application.MidiCoreCandidateGeneration
 import app.melotrail.application.MidiCoreCandidateLifecycle
 import app.melotrail.application.MidiCoreArrangementStylePreview
+import app.melotrail.application.MidiCoreArrangementDraftGeneration
 import app.melotrail.application.MidiCoreCandidateReview
 import app.melotrail.application.MidiCoreMidiPackageExporter
 import app.melotrail.application.MidiCoreMusicalAuthority
@@ -42,6 +43,7 @@ data class MidiCoreDesktopServices(
     val structure: MidiCoreStructureTimeline,
     val harmony: MidiCoreAuthoritativeHarmony,
     val generation: MidiCoreCandidateGeneration,
+    val draftGeneration: MidiCoreArrangementDraftGeneration,
     val review: MidiCoreCandidateReview,
     val assembly: MidiCoreAcceptedSongAssembly,
     val audition: MidiAuditionPort,
@@ -69,6 +71,7 @@ object MidiCoreDesktopComposition {
         val harmony = MidiCoreAuthoritativeHarmony(artifacts)
         val candidateLifecycle = MidiCoreCandidateLifecycle(artifacts)
         val generation = MidiCoreCandidateGeneration(artifacts = artifacts, lifecycle = candidateLifecycle)
+        val draftGeneration = MidiCoreArrangementDraftGeneration(artifacts = artifacts, candidates = generation)
         val stylePreview = MidiCoreArrangementStylePreview(artifacts = artifacts)
         val review = MidiCoreCandidateReview(artifacts = artifacts, lifecycle = candidateLifecycle, generation = generation)
         val assembly = MidiCoreAcceptedSongAssembly(artifacts)
@@ -86,6 +89,7 @@ object MidiCoreDesktopComposition {
             structure = structure,
             harmony = harmony,
             generation = generation,
+            draftGeneration = draftGeneration,
             review = review,
             exporter = export,
             audition = audition,
@@ -99,6 +103,7 @@ object MidiCoreDesktopComposition {
             structure = structure,
             harmony = harmony,
             generation = generation,
+            draftGeneration = draftGeneration,
             review = review,
             assembly = assembly,
             audition = audition,

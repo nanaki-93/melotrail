@@ -214,6 +214,16 @@ candidate references, all-pass validation summary, and creation time. Retrying
 the same incomplete draft preserves valid scopes and addresses only failed or
 stale ones. A draft is review/audition evidence, not export authority.
 
+Arrange and Review share one horizontally navigable, bar-proportional song map.
+Each authoritative occurrence has a unique readable label, bar range, compact
+chord summary, three role states, current loop, and current playhead treatment.
+Selecting an occurrence preserves page scroll and selected style while setting
+the shared player's loop to that authoritative range. Arrange makes the named
+style gallery and **Create full draft** its visible primary path; per-section
+or per-role repair is contextual to the selected occurrence. **Regenerate
+section** retains the selected global style, while profile/pattern controls and
+individual role regeneration remain behind explicit **Adjust roles** disclosure.
+
 ## 7. Review functions
 
 ### F-REV-001 — Compare alternatives
@@ -342,6 +352,12 @@ project evidence—MIDI events, authority timing, candidate state, and export
 validation—with clear hierarchy and never substitutes audio waveforms, video
 art, mixers, libraries, or settings pages. The visual contract is defined in
 `docs/MIDI_WORKSPACE_VISUAL_SPEC.md`.
+
+The shell header summarizes the open project and active work in one compact
+toolbar. Arrange and Review replace generic wide context text with their
+selected-section inspector. Map labels, role states, selected/playing/loop
+states, progress, and blockers have text or semantic treatment in addition to
+colour, and the compact map remains horizontally keyboard reachable.
 
 ### F-UI-007 — Keep transport out of page flows
 
