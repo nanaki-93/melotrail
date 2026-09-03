@@ -20,8 +20,18 @@ sealed interface MidiAuditionScope {
             require(occurrenceId.isNotBlank()) { "Occurrence audition ID must not be blank" }
         }
     }
+    /** Ephemeral full-role MIDI preview selected from the Arrange style gallery. */
+    data class StylePreview(val styleId: String, val occurrenceId: String) : MidiAuditionScope {
+        init {
+            require(styleId.matches(STYLE_ID) && occurrenceId.isNotBlank()) { "Style preview identity is invalid" }
+        }
+    }
     data class Role(val role: MidiExportRole) : MidiAuditionScope
     data object AcceptedArrangement : MidiAuditionScope
+
+    private companion object {
+        val STYLE_ID = Regex("[a-z][a-z0-9-]{2,47}")
+    }
 }
 
 /** A non-empty, exact tick range used for an audition view or loop. */
@@ -69,6 +79,9 @@ data class MidiAuditionView(
             is MidiAuditionScope.Role -> require(roles == listOf(selectedScope.role)) {
                 "A role audition view must contain only its selected role"
             }
+            is MidiAuditionScope.StylePreview -> require(roles == MidiExportRole.entries) {
+                "A style preview must contain protected melody and every generated role"
+            }
             is MidiAuditionScope.Occurrence,
             MidiAuditionScope.AcceptedArrangement,
             -> Unit
@@ -90,6 +103,19 @@ data class MidiAuditionView(
         /** Select one exact occurrence window without rewriting any event ticks. */
         fun occurrence(occurrenceId: String, song: MidiExportSong, startTick: Long, endTick: Long): MidiAuditionView =
             MidiAuditionView(MidiAuditionScope.Occurrence(occurrenceId), song, MidiAuditionWindow(startTick, endTick))
+
+        /** Select a non-persistent all-role style preview over one exact occurrence window. */
+        fun stylePreview(
+            styleId: String,
+            occurrenceId: String,
+            song: MidiExportSong,
+            startTick: Long,
+            endTick: Long,
+        ): MidiAuditionView = MidiAuditionView(
+            MidiAuditionScope.StylePreview(styleId, occurrenceId),
+            song,
+            MidiAuditionWindow(startTick, endTick),
+        )
 
         /** Select the currently accepted full arrangement. */
         fun accepted(song: MidiExportSong): MidiAuditionView = MidiAuditionView(MidiAuditionScope.AcceptedArrangement, song)

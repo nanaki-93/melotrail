@@ -55,8 +55,16 @@ class MidiCoreArrangePageTest {
     }
 
     @Test
-    fun `Arrange exposes only curated profiles and patterns for every core role`() = runComposeUiTest {
+    fun `Arrange makes style bundles primary and keeps curated role controls behind advanced adjustment`() = runComposeUiTest {
         setContent { MelotrailTheme { MidiCoreArrangePage(arrangeState(), {}, {}) } }
+
+        onNodeWithTag(MidiCoreArrangePageTags.STYLES).assertExists()
+        app.melotrail.arrangement.core.MidiCoreArrangementStyleCatalog.styles.forEach { style ->
+            onNodeWithTag(MidiCoreArrangePageTags.style(style.id)).performScrollTo().assertIsEnabled()
+        }
+        onNodeWithTag(MidiCoreArrangePageTags.PROFILE_MENU).assertDoesNotExist()
+        onNodeWithTag(MidiCoreArrangePageTags.PATTERN_MENU).assertDoesNotExist()
+        onNodeWithContentDescription("Show advanced role adjustment").performScrollTo().performClick()
 
         CandidateRole.entries.forEach { role ->
             onNodeWithTag(MidiCoreArrangePageTags.role(role)).performScrollTo().assertIsEnabled().performClick()
@@ -73,6 +81,22 @@ class MidiCoreArrangePageTest {
             }
             onNodeWithTag(MidiCoreArrangePageTags.pattern(app.melotrail.arrangement.core.MidiCorePatternCatalog.allowedPatternIds(role).first())).performClick()
         }
+    }
+
+    @Test
+    fun `Arrange style selection previews the selected occurrence through the persistent player`() = runComposeUiTest {
+        val intents = mutableListOf<MidiCoreWorkspaceIntent>()
+        setContent { MelotrailTheme { MidiCoreArrangePage(arrangeState(), intents::add, {}) } }
+        waitForIdle()
+        intents.clear()
+
+        onNodeWithTag(MidiCoreArrangePageTags.style("late-night")).performScrollTo().assertIsEnabled().performClick()
+        waitForIdle()
+
+        assertEquals(
+            listOf<MidiCoreWorkspaceIntent>(MidiCoreWorkspaceIntent.PreviewArrangementStyle("late-night", "verse-1")),
+            intents,
+        )
     }
 
     @Test
@@ -100,6 +124,7 @@ class MidiCoreArrangePageTest {
         )
         intents.clear()
 
+        onNodeWithContentDescription("Show advanced role adjustment").performScrollTo().performClick()
         onNodeWithTag(MidiCoreArrangePageTags.PROFILE_MENU).performScrollTo().performClick()
         onNodeWithTag(MidiCoreArrangePageTags.profile("bass.muted-plucked")).performClick()
         waitForIdle()
@@ -170,6 +195,7 @@ class MidiCoreArrangePageTest {
 
         waitForIdle()
         intents.clear()
+        onNodeWithContentDescription("Show advanced role adjustment").performScrollTo().performClick()
         onNodeWithTag(MidiCoreArrangePageTags.CANCEL).performScrollTo().assertIsEnabled().performClick()
         waitForIdle()
         assertEquals(listOf<MidiCoreWorkspaceIntent>(MidiCoreWorkspaceIntent.CancelOperation), intents)

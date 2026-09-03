@@ -130,6 +130,14 @@ Responsibilities:
 - return candidate plus evidence without writing project state; and
 - support generation by one section occurrence and role.
 
+The engine also owns a versioned, four-to-six-item MIDI-only arrangement-style
+catalog. An application preview adapter may resolve one style to all three
+pure role engines for a two-to-four-bar occurrence loop. That adapter may read
+verified source evidence and hold a bounded in-memory cache keyed by
+authority/style/occurrence/seed, but must not publish candidates or artifacts,
+save project state, invoke a model, render audio, or create a second playback
+session.
+
 Role engines are separate but share timing, harmony, seed, pattern, and
 validation primitives. They must not create their own project-key or harmony
 interpretation.
@@ -153,7 +161,8 @@ is not a destructive MIDI rewrite.
 Responsibilities:
 
 - play, pause, stop, seek, loop, mute, and solo MIDI views;
-- audition source, candidate, occurrence, role, and complete arrangement;
+- audition source, candidate, occurrence, all-role style preview, role, and
+  complete arrangement;
 - open an audible JVM synthesizer as the managed default endpoint;
 - select a supported external local receiver when requested;
 - clean up sequencer/device resources deterministically; and
@@ -184,7 +193,8 @@ Responsibilities:
 - present six focused destinations;
 - expose current authority and blocking findings;
 - dispatch user intents to application use cases;
-- render candidate and audition state;
+- render primary style selection, advanced scoped correction, candidate, and
+  audition state;
 - preserve useful keyboard and accessibility behavior; and
 - avoid direct filesystem, generator, or MIDI-device ownership.
 

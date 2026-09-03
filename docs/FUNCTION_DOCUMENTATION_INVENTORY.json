@@ -45,10 +45,10 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt has 111 callable declarations, 6 directly documented and 105 focused orchestration helpers. MC-048D moved playback presentation to the shell and makes every project/authority transition stop and clear a stale selected audition target; focused reducer, player, and real-service workflow tests cover the changed paths on 2026-09-04.",
-      "functionCount": 111,
-      "declarationDigest": "854c75ea38dd0866f924fec106b6dd8bcbb27ad51ace27b344c13004d9f83335",
-      "documentedFunctionCount": 6
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt has 115 callable declarations, 7 directly documented and 108 focused orchestration helpers. MC-048E adds latest-wins in-memory arrangement-style preview routing through the existing player while preserving selected style across device failure; focused reducer, player, and real-service workflow tests cover the changed paths on 2026-09-04.",
+      "functionCount": 115,
+      "declarationDigest": "d252f7f3b96cfcb3ff0a9a92e62bac2870e11b139210599e17a11c988b175dd6",
+      "documentedFunctionCount": 7
     },
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspaceShell.kt",
@@ -69,10 +69,10 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreArrangePage.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreArrangePage.kt has 19 callable declarations, 4 directly documented and 15 focused presentation helpers. MC-048C reviewed the scope -> feel -> generate flow, acceptance progress, automatic deterministic seed, compact catalog selectors, immediate candidate summary, cancellation, and Review handoff on 2026-09-03; focused Compose and real-service workflow tests cover the changed declarations.",
-      "functionCount": 19,
-      "declarationDigest": "f8681a80dbfe822dbf02d7ec11c4f986519b8292bb964fa450ac64d23152a58c",
-      "documentedFunctionCount": 4
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreArrangePage.kt has 22 callable declarations, 6 directly documented and 16 focused presentation helpers. MC-048E makes the versioned named-style gallery the primary Arrange path, sends selected occurrence previews to the persistent player, and keeps profile/pattern selectors behind advanced targeted adjustment; focused Compose tests cover the changed declarations on 2026-09-04.",
+      "functionCount": 22,
+      "declarationDigest": "6b927f916663f5b8ab1ba8d653afe410254ad25329bba80b6015d36036e3cf78",
+      "documentedFunctionCount": 6
     },
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreExportPage.kt",
@@ -451,6 +451,14 @@
       "documentedFunctionCount": 2
     },
     {
+      "path": "src/main/kotlin/app/melotrail/application/MidiCoreArrangementStylePreview.kt",
+      "classification": "inherited-contract",
+      "reason": "The 9 callable declarations implement MC-048E's bounded, all-role style preview from verified source and authority evidence, deterministic authority/style/occurrence/seed cache identity, role validation, cancellation checkpoints, and no-persistence boundary under F-ARR-001 through F-ARR-007 and F-PLAY-001 through F-PLAY-004; reviewed on 2026-09-04.",
+      "functionCount": 9,
+      "declarationDigest": "8843a2c2925e9c7d61f23ef56a3f8b7efb07a286d08186d24ae4abdcfb40d63f",
+      "documentedFunctionCount": 2
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreProjectWriteCoordinator.kt",
       "classification": "inherited-contract",
       "reason": "The one callable declaration serializes MC-025 candidate project publication per normalized project root so concurrent generation results cannot overwrite one another; reviewed on 2026-08-27.",
@@ -601,6 +609,14 @@
       "functionCount": 12,
       "declarationDigest": "adaee16913df9e1736d0c502d088b21dfefca21e28ba52d468a72073aa93dc42",
       "documentedFunctionCount": 12
+    },
+    {
+      "path": "src/main/kotlin/app/melotrail/arrangement/core/MidiCoreArrangementStyle.kt",
+      "classification": "inherited-contract",
+      "reason": "The 4 callable declarations define MC-048E's stable five-style MIDI-only catalog, all-role curated profile/pattern mapping, bounded section energy/density/fill policy, and versioned lookup without instrument or audio-asset selection; reviewed on 2026-09-04.",
+      "functionCount": 4,
+      "declarationDigest": "a557a0e0a04e9279d4ca9927116886c968c0b901c293f1cbf93922aafe3d8461",
+      "documentedFunctionCount": 0
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/core/MidiCorePatternCatalog.kt",
@@ -1165,10 +1181,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/audition/MidiAudition.kt",
       "classification": "inherited-contract",
-      "reason": "The 55 callable declarations define MIDI-only audition scopes, discoverable external-receiver and built-in-synthesizer selection, exact adapter-tick pause/output replacement, bounded loop/seek plan, recoverable transport results, superseding session state, mute/solo policy, completion handling, and deterministic cleanup under F-PLAY-001 through F-PLAY-004 and F-SYS-001; default-endpoint wording was reviewed for MC-048B on 2026-09-03.",
-      "functionCount": 55,
-      "declarationDigest": "9d68e8d5289630259413a75cc5ba8e14790bdf7991dc2b9c2cdcd92c2b11023b",
-      "documentedFunctionCount": 8
+      "reason": "The 56 callable declarations define MIDI-only audition scopes including MC-048E's full-role style preview, discoverable external-receiver and built-in-synthesizer selection, exact adapter-tick pause/output replacement, bounded loop/seek plan, recoverable transport results, superseding session state, mute/solo policy, completion handling, and deterministic cleanup under F-PLAY-001 through F-PLAY-004 and F-SYS-001; reviewed on 2026-09-04.",
+      "functionCount": 56,
+      "declarationDigest": "d26d559133aaddc08bbdc9f86005d1905d0def85c9b6f0e0e9713bb7b1a8edbc",
+      "documentedFunctionCount": 9
     },
     {
       "path": "src/main/kotlin/app/melotrail/audition/adapter/JdkMidiAuditionOutput.kt",

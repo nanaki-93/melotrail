@@ -43,9 +43,10 @@ into the page and preserve an ordered, keyboard-accessible navigation path.
 
 One compact player dock belongs to this shell, outside page scrolling at both
 sizes. It shows the current target and section, source/current/accepted target
-switches where valid, play/pause, stop, position, and loop. Output, boundary
-seek, mute/solo, and recovery expand from the dock rather than duplicating
-controls in MIDI or Review.
+switches where valid, play/pause, stop, position, and loop. The current target
+may be an ephemeral arrangement-style preview. Output, boundary seek,
+mute/solo, and recovery expand from the dock rather than duplicating controls
+in MIDI or Review.
 
 The only destinations are Project, MIDI, Structure & Harmony, Arrange, Review,
 and Export. Device and export preferences remain small contextual dialogs, not
@@ -58,7 +59,7 @@ top-level pages.
 | Project | project/readiness summary and next safe action | location, recent projects, authority facts |
 | MIDI | immutable-source import and track/channel facts | MIDI-event preview, findings, audition |
 | Structure & Harmony | ordered section timeline and chord windows | bar totals, authority validity, invalidation impact |
-| Arrange | guided scope -> feel -> generate flow and acceptance progress | compact alternative summary, generation state, findings |
+| Arrange | named style gallery -> instant bounded MIDI preview -> acceptance progress | compact targeted role adjustment, alternative summary, generation state, findings |
 | Review | one selected alternative and play -> accept -> continue flow | optional diff, contextual lifecycle and playback controls, stale evidence |
 | Export | readiness checklist and immutable package result | files, hashes, validation, Logic Pro guidance |
 
@@ -78,8 +79,10 @@ selection.
 - Long tables and timelines may scroll deliberately; page layout must not hide
   critical candidate or export information behind clipped panels.
 - Do not render every section, profile, pattern, alternative, lifecycle action,
-  output device, and transport command as simultaneous buttons. Use compact
-  selectors, one primary action per step, and progressive disclosure.
+  output device, and transport command as simultaneous buttons. Arrange shows
+  four to six named style choices as its primary gallery; profile and pattern
+  selectors stay behind targeted advanced adjustment. Use compact selectors,
+  one primary action per step, and progressive disclosure.
 - Successful candidate generation and review decisions remain visibly selected
   in the same scope without asking the musician to refresh evidence.
 

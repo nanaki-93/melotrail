@@ -96,6 +96,10 @@ Before implementation tasks begin:
   progress, and automatic same-scope refresh after generation or lifecycle
   mutations; duplicate generation actions and manual evidence refresh are not
   part of the musician workflow.
+- Arrange exposes four to six stable, keyboard-reachable named styles as the
+  primary action. Profile/pattern selectors appear only after explicit advanced
+  role adjustment; selecting a style targets the persistent player rather than
+  creating a page-local transport.
 - Candidate lifecycle, comparison, device, and detailed transport controls are
   shown only when valid or explicitly expanded. Full-arrangement playback is
   disabled until every required section/role acceptance exists.
@@ -106,6 +110,13 @@ Before implementation tasks begin:
 - Repeated start/stop does not leak devices, threads, or stuck notes.
 - Candidate comparison uses the same timing origin and authority context.
 - Device absence or loss is recoverable and cannot mutate the project.
+- A style preview is exactly a two-to-four-bar selected-occurrence loop with
+  protected melody, authoritative harmony, and all three generated roles.
+  Cold and warm cache results are deterministic for authority/style/occurrence/
+  seed; authority or style changes use a new key; rapid selection supersedes
+  the old MIDI session without hanging notes.
+- Style preview produces no candidate, artifact, acceptance, project revision,
+  exportable audio, or model invocation.
 - The no-selection default opens a managed audible synthesizer rather than an
   arbitrary system receiver or virtual DAW port.
 - Audition does not write WAV/MP3 or require the old renderer/sound library.

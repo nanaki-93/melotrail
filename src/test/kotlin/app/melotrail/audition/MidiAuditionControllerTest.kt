@@ -72,6 +72,10 @@ class MidiAuditionControllerTest {
         assertEquals(listOf(MidiExportRole.CHORDS), MidiAuditionView.candidate("candidate-1", MidiExportRole.CHORDS, full).roles)
         assertEquals(listOf(MidiExportRole.BASS), MidiAuditionView.role(MidiExportRole.BASS, full).roles)
         assertEquals(listOf(MidiExportRole.MELODY, MidiExportRole.CHORDS, MidiExportRole.BASS, MidiExportRole.DRUMS), MidiAuditionView.accepted(full).roles)
+        val style = MidiAuditionView.stylePreview("late-night", "verse-2", full, 240, 720)
+        assertEquals(MidiAuditionScope.StylePreview("late-night", "verse-2"), style.scope)
+        assertEquals(MidiExportRole.entries, style.roles)
+        assertEquals(MidiAuditionWindow(240, 720), style.window)
 
         val occurrence = MidiAuditionView.occurrence("verse-2", full, 240, 720)
         val output = FakeOutput()
@@ -95,7 +99,7 @@ class MidiAuditionControllerTest {
     fun `supersedes rapid sessions and ignores an old completion callback`() {
         val output = FakeOutput()
         val controller = MidiAuditionController(output)
-        val first = MidiAuditionPlaybackPlan(MidiAuditionView.sourceMelody(song()))
+        val first = MidiAuditionPlaybackPlan(MidiAuditionView.stylePreview("open-sky", "verse-1", song(), 0, 960))
         val second = MidiAuditionPlaybackPlan(MidiAuditionView.role(MidiExportRole.BASS, song()))
 
         assertIs<MidiAuditionResult.Applied>(controller.play(first))

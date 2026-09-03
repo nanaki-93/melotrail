@@ -11,6 +11,9 @@ import app.melotrail.application.LockMidiCoreCandidate
 import app.melotrail.application.MidiCoreAuthoritativeHarmony
 import app.melotrail.application.MidiCoreCandidateGeneration
 import app.melotrail.application.MidiCoreCandidateGenerationResult
+import app.melotrail.application.MidiCoreArrangementStylePreview
+import app.melotrail.application.MidiCoreArrangementStylePreviewResult
+import app.melotrail.application.PrepareMidiCoreArrangementStylePreview
 import app.melotrail.application.MidiCoreCandidateReview
 import app.melotrail.application.MidiCoreCandidateReviewResult
 import app.melotrail.application.MidiCoreMidiPackageExporter
@@ -104,6 +107,7 @@ interface MidiCoreWorkspaceUseCases {
     fun prepareAcceptedRoleAudition(request: PrepareMidiCoreAcceptedRoleAudition): MidiCoreReviewAuditionResult
     fun prepareAcceptedOccurrenceAudition(request: PrepareMidiCoreAcceptedOccurrenceAudition): MidiCoreReviewAuditionResult
     fun prepareAcceptedArrangementAudition(request: PrepareMidiCoreAcceptedArrangementAudition): MidiCoreReviewAuditionResult
+    suspend fun previewArrangementStyle(request: PrepareMidiCoreArrangementStylePreview): MidiCoreArrangementStylePreviewResult
     fun confirmAuthority(request: ConfirmMidiCoreAuthority): app.melotrail.application.MidiCoreAuthorityResult
     fun replaceStructure(request: ReplaceMidiCoreStructure): app.melotrail.application.MidiCoreStructureTimelineResult
     fun replaceHarmony(request: ReplaceMidiCoreHarmony): app.melotrail.application.MidiCoreAuthoritativeHarmonyResult
@@ -132,6 +136,7 @@ class DefaultMidiCoreWorkspaceUseCases(
     override val audition: MidiAuditionPort,
     private val sourceAudition: app.melotrail.application.MidiCoreSourceAudition = app.melotrail.application.MidiCoreSourceAudition(),
     private val reviewAudition: MidiCoreReviewAudition = MidiCoreReviewAudition(review),
+    private val stylePreview: MidiCoreArrangementStylePreview = MidiCoreArrangementStylePreview(),
 ) : MidiCoreWorkspaceUseCases {
     override fun create(request: CreateMidiCoreProject): MidiCoreProjectLifecycleResult = project.create(request)
 
@@ -158,6 +163,8 @@ class DefaultMidiCoreWorkspaceUseCases(
     override fun prepareAcceptedOccurrenceAudition(request: PrepareMidiCoreAcceptedOccurrenceAudition): MidiCoreReviewAuditionResult = reviewAudition.occurrence(request)
 
     override fun prepareAcceptedArrangementAudition(request: PrepareMidiCoreAcceptedArrangementAudition): MidiCoreReviewAuditionResult = reviewAudition.acceptedArrangement(request)
+
+    override suspend fun previewArrangementStyle(request: PrepareMidiCoreArrangementStylePreview): MidiCoreArrangementStylePreviewResult = stylePreview.prepare(request)
 
     override fun confirmAuthority(request: ConfirmMidiCoreAuthority) = authority.confirm(request)
 
@@ -355,6 +362,7 @@ data class MidiCoreWorkspaceState(
     val melody: MidiCoreMelodyUiState = MidiCoreMelodyUiState(),
     val authority: MidiCoreAuthorityUiState = MidiCoreAuthorityUiState(),
     val review: MidiCoreCandidateReviewUiState = MidiCoreCandidateReviewUiState(),
+    val stylePreview: MidiCoreArrangementStyleUiState = MidiCoreArrangementStyleUiState(),
     val audition: MidiAuditionState = MidiAuditionState(),
     val export: MidiCoreExportUiState = MidiCoreExportUiState(),
     val operation: MidiCoreWorkspaceOperation = MidiCoreWorkspaceOperation.idle(),
@@ -368,6 +376,14 @@ data class MidiCoreWorkspaceState(
     /** Whether a target operation is currently changing or validating project state. */
     val busy: Boolean get() = operation.active
 }
+
+/** Ephemeral Arrange selection and cache evidence; it is intentionally absent from project persistence. */
+data class MidiCoreArrangementStyleUiState(
+    val selectedStyleId: String? = null,
+    val occurrenceId: String? = null,
+    val cacheStatus: app.melotrail.application.MidiCoreArrangementStylePreviewCacheStatus? = null,
+    val key: app.melotrail.application.MidiCoreArrangementStylePreviewKey? = null,
+)
 
 /** All target workspace mutations are represented as explicit intents. */
 sealed interface MidiCoreWorkspaceIntent {
@@ -422,6 +438,11 @@ sealed interface MidiCoreWorkspaceIntent {
     data class PlayAcceptedRole(val role: CandidateRole) : MidiCoreWorkspaceIntent
     data class PlayAcceptedOccurrence(val occurrenceId: String) : MidiCoreWorkspaceIntent
     data object PlayAcceptedArrangement : MidiCoreWorkspaceIntent
+    data class PreviewArrangementStyle(
+        val styleId: String,
+        val occurrenceId: String,
+        val seed: Long = PrepareMidiCoreArrangementStylePreview.DEFAULT_PREVIEW_SEED,
+    ) : MidiCoreWorkspaceIntent
     data class PlayAudition(val plan: MidiAuditionPlaybackPlan? = null) : MidiCoreWorkspaceIntent
     data object PauseAudition : MidiCoreWorkspaceIntent
     data object StopAudition : MidiCoreWorkspaceIntent
@@ -498,6 +519,7 @@ class MidiCoreWorkspaceViewModel(
             MidiCoreWorkspaceIntent.PlayAcceptedArrangement -> playReviewAudition(intent) { current ->
                 useCases.prepareAcceptedArrangementAudition(PrepareMidiCoreAcceptedArrangementAudition(current))
             }
+            is MidiCoreWorkspaceIntent.PreviewArrangementStyle -> previewArrangementStyle(intent)
             is MidiCoreWorkspaceIntent.SelectAudition -> audition { useCases.audition.selectScope(intent.plan) }
             is MidiCoreWorkspaceIntent.PlayAudition -> audition {
                 intent.plan?.let { useCases.audition.play(it) } ?: useCases.audition.play()
@@ -943,6 +965,66 @@ class MidiCoreWorkspaceViewModel(
         }
     }
 
+    /**
+     * Replace an in-flight style preview with the newest selection. The selected
+     * style is visible before opening the local output, so a missing device never
+     * discards the musician's choice. Other project-changing operations remain
+     * serialized by the regular workspace operation guard.
+     */
+    private fun previewArrangementStyle(intent: MidiCoreWorkspaceIntent.PreviewArrangementStyle) {
+        val current = requireSessionOrBlock() ?: return
+        _state.value = _state.value.copy(
+            stylePreview = _state.value.stylePreview.copy(selectedStyleId = intent.styleId, occurrenceId = intent.occurrenceId),
+        )
+        val active = state.value.operation
+        if (active.active && (active.kind != MidiCoreWorkspaceOperationKind.AUDITION || active.retry !is MidiCoreWorkspaceIntent.PreviewArrangementStyle)) {
+            busyBlocker()
+            return
+        }
+        startOperation(
+            MidiCoreWorkspaceOperationKind.AUDITION,
+            "Preparing ${intent.styleId.replace('-', ' ')} MIDI preview…",
+            intent,
+            supersedeActive = true,
+        ) { cancellation ->
+            if (cancellation.get()) return@startOperation cancelled()
+            when (val prepared = useCases.previewArrangementStyle(PrepareMidiCoreArrangementStylePreview(current, intent.styleId, intent.occurrenceId, intent.seed))) {
+                is MidiCoreArrangementStylePreviewResult.Rejected -> failure(
+                    stylePreviewBlocker(prepared.problem),
+                    intent,
+                )
+                is MidiCoreArrangementStylePreviewResult.Ready -> {
+                    if (cancellation.get()) return@startOperation cancelled()
+                    when (val result = useCases.audition.play(prepared.plan.copy(outputDeviceId = state.value.audition.outputDeviceId))) {
+                        is MidiAuditionResult.Applied -> success("${intent.styleId.replace('-', ' ')} style preview started.") {
+                            _state.value = _state.value.copy(
+                                audition = result.state,
+                                stylePreview = _state.value.stylePreview.copy(
+                                    selectedStyleId = intent.styleId,
+                                    occurrenceId = intent.occurrenceId,
+                                    cacheStatus = prepared.cacheStatus,
+                                    key = prepared.key,
+                                ),
+                                blockers = baseBlockers(session?.project),
+                            )
+                        }
+                        is MidiAuditionResult.Failed -> failure(
+                            blocker(
+                                MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE,
+                                result.problem.message,
+                                result.problem.nextAction,
+                                result.problem.code.name,
+                            ),
+                            intent,
+                        ) {
+                            _state.value = _state.value.copy(audition = result.state)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private fun audition(action: () -> MidiAuditionResult) {
         val result = try {
             action()
@@ -1009,11 +1091,16 @@ class MidiCoreWorkspaceViewModel(
         kind: MidiCoreWorkspaceOperationKind,
         message: String,
         retry: MidiCoreWorkspaceIntent?,
+        supersedeActive: Boolean = false,
         work: suspend (AtomicBoolean) -> WorkspaceOutcome,
     ) {
         if (state.value.operation.active) {
-            busyBlocker()
-            return
+            if (!supersedeActive) {
+                busyBlocker()
+                return
+            }
+            activeCancellation?.set(true)
+            activeJob?.cancel()
         }
         val operationId = ++nextOperationId
         val admission = Admission(
@@ -1203,6 +1290,7 @@ class MidiCoreWorkspaceViewModel(
         } else {
             MidiCoreCandidateReviewUiState()
         }
+        val previewScope = if (sameProject) previous.stylePreview else MidiCoreArrangementStyleUiState()
         session = next
         preferences.saveLastOpenedProject(next.root)
         val project = next.project
@@ -1230,6 +1318,7 @@ class MidiCoreWorkspaceViewModel(
                 draftDirty = false,
             ),
             review = reviewScope,
+            stylePreview = previewScope,
             audition = useCases.audition.state,
             export = MidiCoreExportUiState(latestSnapshot = project.exportSnapshots.lastOrNull()),
             blockers = baseBlockers(project),
@@ -1263,6 +1352,13 @@ class MidiCoreWorkspaceViewModel(
     }
 
     private fun authorityDraft(authority: ProjectAuthority?): MidiCoreAuthorityDraft = authority?.let { MidiCoreAuthorityDraft(it.key, it.tempo, it.meter) } ?: MidiCoreAuthorityDraft.defaults()
+
+    private fun stylePreviewBlocker(problem: app.melotrail.application.MidiCoreArrangementStylePreviewProblem) = blocker(
+        MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE,
+        problem.message,
+        problem.nextAction,
+        problem.code.name,
+    )
 
     private fun baseBlockers(project: MidiCoreProject?): List<MidiCoreWorkspaceBlocker> = when {
         project == null -> listOf(blocker(MidiCoreWorkspaceBlockerCode.PROJECT_REQUIRED, "No MIDI Core project is open.", "Create or open a MIDI Core project."))

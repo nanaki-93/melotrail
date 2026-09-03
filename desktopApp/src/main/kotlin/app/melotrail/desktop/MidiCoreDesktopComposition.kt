@@ -11,6 +11,7 @@ import app.melotrail.application.MidiCoreAcceptedSongAssembly
 import app.melotrail.application.MidiCoreAuthoritativeHarmony
 import app.melotrail.application.MidiCoreCandidateGeneration
 import app.melotrail.application.MidiCoreCandidateLifecycle
+import app.melotrail.application.MidiCoreArrangementStylePreview
 import app.melotrail.application.MidiCoreCandidateReview
 import app.melotrail.application.MidiCoreMidiPackageExporter
 import app.melotrail.application.MidiCoreMusicalAuthority
@@ -68,6 +69,7 @@ object MidiCoreDesktopComposition {
         val harmony = MidiCoreAuthoritativeHarmony(artifacts)
         val candidateLifecycle = MidiCoreCandidateLifecycle(artifacts)
         val generation = MidiCoreCandidateGeneration(artifacts = artifacts, lifecycle = candidateLifecycle)
+        val stylePreview = MidiCoreArrangementStylePreview(artifacts = artifacts)
         val review = MidiCoreCandidateReview(artifacts = artifacts, lifecycle = candidateLifecycle, generation = generation)
         val assembly = MidiCoreAcceptedSongAssembly(artifacts)
         val audition = MidiAuditionController(JdkMidiAuditionOutput())
@@ -88,6 +90,7 @@ object MidiCoreDesktopComposition {
             exporter = export,
             audition = audition,
             sourceAudition = sourceAudition,
+            stylePreview = stylePreview,
         )
         return MidiCoreDesktopServices(
             project = project,

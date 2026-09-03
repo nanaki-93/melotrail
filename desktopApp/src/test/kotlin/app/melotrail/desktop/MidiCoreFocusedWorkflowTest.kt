@@ -6,6 +6,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -143,6 +144,7 @@ class MidiCoreFocusedWorkflowTest {
             CandidateRole.entries.forEachIndexed { index, role ->
                 onNodeWithTag(MidiCoreArrangePageTags.role(role)).performScrollTo().performClick()
                 waitForIdle()
+                onNodeWithContentDescription("Show advanced role adjustment").performScrollTo().performClick()
                 onNodeWithTag(MidiCoreArrangePageTags.GENERATE).performScrollTo().assertIsEnabled().performClick()
                 awaitWorkspaceSuccess("generate ${role.name.lowercase()} candidate")
                 assertEquals(role, workspace.state.value.review.role)

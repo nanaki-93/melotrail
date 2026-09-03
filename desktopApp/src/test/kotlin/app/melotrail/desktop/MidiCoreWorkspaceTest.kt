@@ -186,6 +186,44 @@ class MidiCoreWorkspaceTest {
     }
 
     @Test
+    fun `rapid style previews are latest-wins and a device failure retains the selected style`() = runTest {
+        val fake = FakeMidiCoreWorkspaceUseCases()
+        val firstPreview = CompletableDeferred<app.melotrail.application.MidiCoreArrangementStylePreviewResult>()
+        fake.pendingStylePreview = firstPreview
+        val viewModel = MidiCoreWorkspaceViewModel(fake, MemoryMidiCorePreferences(), NoOpDesktopOperationLogger, testDispatchers(testScheduler))
+        viewModel.accept(MidiCoreWorkspaceIntent.OpenProject(fake.session.root))
+        advanceUntilIdle()
+        val projectBeforePreview = viewModel.state.value.project
+
+        viewModel.accept(MidiCoreWorkspaceIntent.PreviewArrangementStyle("open-sky", "verse-1"))
+        advanceUntilIdle()
+        assertEquals(MidiCoreWorkspaceOperationPhase.RUNNING, viewModel.state.value.operation.phase)
+        fake.pendingStylePreview = null
+        fake.stylePreviewResult = fakeStylePreviewResult("rising-room")
+        viewModel.accept(MidiCoreWorkspaceIntent.PreviewArrangementStyle("rising-room", "verse-1"))
+        advanceUntilIdle()
+
+        assertEquals(listOf("open-sky", "rising-room"), fake.stylePreviewRequests.map { it.styleId })
+        assertEquals("rising-room", viewModel.state.value.stylePreview.selectedStyleId)
+        assertEquals(MidiAuditionScope.StylePreview("rising-room", "verse-1"), viewModel.state.value.audition.scope)
+        assertEquals(projectBeforePreview, viewModel.state.value.project)
+
+        fake.stylePreviewResult = fakeStylePreviewResult("late-night")
+        fake.audition.playProblem = app.melotrail.audition.MidiAuditionProblem(
+            app.melotrail.audition.MidiAuditionProblemCode.DEVICE_UNAVAILABLE,
+            "No MIDI output device is available.",
+            "Connect a MIDI output and retry.",
+        )
+        viewModel.accept(MidiCoreWorkspaceIntent.PreviewArrangementStyle("late-night", "verse-1"))
+        advanceUntilIdle()
+
+        assertEquals(MidiCoreWorkspaceOperationPhase.FAILED, viewModel.state.value.operation.phase)
+        assertEquals("late-night", viewModel.state.value.stylePreview.selectedStyleId)
+        assertEquals(projectBeforePreview, viewModel.state.value.project)
+        viewModel.close()
+    }
+
+    @Test
     fun `project close and authority changes stop and clear the active MIDI target`() = runTest {
         val fake = FakeMidiCoreWorkspaceUseCases()
         fake.sourceAuditionResult = app.melotrail.application.MidiCoreSourceAuditionResult.Ready(fakeSourcePlan())
@@ -378,6 +416,9 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
         )
     val openResults = ArrayDeque<MidiCoreProjectLifecycleResult>()
     var pendingGeneration: CompletableDeferred<MidiCoreCandidateGenerationResult>? = null
+    var pendingStylePreview: CompletableDeferred<app.melotrail.application.MidiCoreArrangementStylePreviewResult>? = null
+    val stylePreviewRequests = mutableListOf<app.melotrail.application.PrepareMidiCoreArrangementStylePreview>()
+    var stylePreviewResult: app.melotrail.application.MidiCoreArrangementStylePreviewResult = fakeStylePreviewResult()
     var confirmAuthorityCalls = 0
     var occurrenceAuditionCalls = 0
     var closeCalls = 0
@@ -423,6 +464,13 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
 
     override fun prepareAcceptedArrangementAudition(request: app.melotrail.application.PrepareMidiCoreAcceptedArrangementAudition): app.melotrail.application.MidiCoreReviewAuditionResult =
         app.melotrail.application.MidiCoreReviewAuditionResult.Ready(fakeAcceptedPlan())
+
+    override suspend fun previewArrangementStyle(
+        request: app.melotrail.application.PrepareMidiCoreArrangementStylePreview,
+    ): app.melotrail.application.MidiCoreArrangementStylePreviewResult {
+        stylePreviewRequests += request
+        return pendingStylePreview?.await() ?: stylePreviewResult
+    }
 
     override fun confirmAuthority(request: ConfirmMidiCoreAuthority): MidiCoreAuthorityResult {
         confirmAuthorityCalls += 1
@@ -577,6 +625,33 @@ private fun fakeOccurrencePlan(): MidiAuditionPlaybackPlan {
     val source = fakeSourcePlan()
     return MidiAuditionPlaybackPlan(
         app.melotrail.audition.MidiAuditionView.occurrence("verse-1", source.view.song, 0L, 1L),
+    )
+}
+
+private fun fakeStylePreviewResult(styleId: String = "open-sky"): app.melotrail.application.MidiCoreArrangementStylePreviewResult.Ready {
+    val song = app.melotrail.midi.domain.MidiExportSong(
+        app.melotrail.midi.domain.MidiPpq(480),
+        "fake-style-preview",
+        500_000,
+        4,
+        2,
+        emptyList(),
+        listOf(
+            app.melotrail.midi.domain.MidiExportRoleTrack(MidiExportRole.MELODY, emptyList()),
+            app.melotrail.midi.domain.MidiExportRoleTrack(MidiExportRole.CHORDS, emptyList()),
+            app.melotrail.midi.domain.MidiExportRoleTrack(MidiExportRole.BASS, emptyList()),
+            app.melotrail.midi.domain.MidiExportRoleTrack(MidiExportRole.DRUMS, emptyList()),
+        ),
+        1920L,
+    )
+    return app.melotrail.application.MidiCoreArrangementStylePreviewResult.Ready(
+        app.melotrail.application.MidiCoreArrangementStylePreviewKey("0".repeat(64), styleId, "verse-1", 1L),
+        MidiAuditionPlaybackPlan(
+            app.melotrail.audition.MidiAuditionView.stylePreview(styleId, "verse-1", song, 0L, 1920L),
+            loop = MidiAuditionLoop(0L, 1920L),
+        ),
+        emptyList(),
+        app.melotrail.application.MidiCoreArrangementStylePreviewCacheStatus.COLD,
     )
 }
 

@@ -123,7 +123,8 @@ and owns an audible built-in synthesizer for preview.
 ### F-PLAY-002 — Audition scopes
 
 The user can audition source melody, one candidate, one section occurrence, one
-role, or the currently accepted full arrangement.
+role, the currently accepted full arrangement, or an ephemeral all-role
+arrangement-style preview.
 
 ### F-PLAY-003 — Mute and solo
 
@@ -140,11 +141,11 @@ unchanged.
 ### F-PLAY-005 — Keep one persistent player
 
 One shell-owned player remains visible while every destination scrolls or the
-musician navigates. Pages may choose a source, candidate, section, or accepted
-arrangement target, but only the player owns play/pause, stop, position, loop,
-output, boundary seek, mute, solo, and device recovery. Closing a project or
-making its audition target stale stops playback safely; navigation preserves a
-valid target, position, loop, and device selection.
+musician navigates. Pages may choose a source, candidate, section, style
+preview, or accepted arrangement target, but only the player owns play/pause,
+stop, position, loop, output, boundary seek, mute, solo, and device recovery.
+Closing a project or making its audition target stale stops playback safely;
+navigation preserves a valid target, position, loop, and device selection.
 
 ## 6. Arrangement functions
 
@@ -186,10 +187,21 @@ candidates remain current and unchanged.
 Profiles express MIDI performance intent such as sustained/sub-like or
 muted/plucked bass. They do not claim to reproduce an exact audio patch.
 
-Arrange presents these controls as one guided decision: choose a section and
-role, choose its performance/rhythm feel, then generate the next immutable
-alternative. Seeds advance automatically from the saved scope. A successful
-generation immediately shows the new alternative and its validation summary;
+Arrange presents a stable versioned catalog of four to six musically named
+styles as its primary decision. Every style maps each core role to one curated
+profile, pattern, fill policy, bounded energy/density behavior, and a
+deterministic seed policy. Choosing a style produces one validated two-to-four
+bar loop for the selected occurrence from protected melody, authoritative
+harmony, and Chords, Bass, and Drums. The preview is in-memory only: its cache
+is keyed by authority/style/occurrence/seed, rapid selections are latest-wins
+through the one persistent MIDI player, and it never publishes a candidate,
+artifact, acceptance, project revision, or audio file. A missing output keeps
+the selected style available to retry.
+
+Profile and pattern controls remain under an explicit advanced role adjustment
+for narrow correction. There, a musician may choose one section and role and
+generate the next immutable alternative; seeds advance automatically from the
+saved scope. A successful generation immediately shows its validation summary;
 there is no separate refresh step or duplicate generate/regenerate action.
 
 ## 7. Review functions
@@ -296,8 +308,8 @@ handling. Progress and cancellation are scoped to the active operation.
 
 ### F-UI-004 — Preserve accessibility
 
-Primary actions, status, candidate selection, transport, and navigation expose
-stable text/semantics for keyboard use and UI tests.
+Primary actions, status, style and candidate selection, transport, and
+navigation expose stable text/semantics for keyboard use and UI tests.
 
 ### F-UI-005 — Recover after restart
 

@@ -30,6 +30,8 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import app.melotrail.application.MidiCoreCandidateReviewItem
+import app.melotrail.arrangement.core.MidiCoreArrangementStyle
+import app.melotrail.arrangement.core.MidiCoreArrangementStyleCatalog
 import app.melotrail.arrangement.core.MidiCorePatternCatalog
 import app.melotrail.arrangement.core.MidiCorePerformanceProfileCatalog
 import app.melotrail.arrangement.core.MidiCoreRoleFindingSeverity
@@ -53,6 +55,9 @@ internal object MidiCoreArrangePageTags {
     const val PATTERN_MENU = "midi-core-arrange-pattern-menu"
     const val PATTERN_PREFIX = "midi-core-arrange-pattern-"
     const val GENERATE = "midi-core-arrange-generate"
+    const val STYLES = "midi-core-arrange-styles"
+    const val STYLE_PREFIX = "midi-core-arrange-style-"
+    const val ADVANCED = "midi-core-arrange-advanced"
     const val STATUS = "midi-core-arrange-status"
     const val CANDIDATES = "midi-core-arrange-candidates"
     const val CANDIDATE_PREFIX = "midi-core-arrange-candidate-"
@@ -65,6 +70,7 @@ internal object MidiCoreArrangePageTags {
     fun profile(id: String): String = PROFILE_PREFIX + id
     fun pattern(id: String): String = PATTERN_PREFIX + id
     fun candidate(id: String): String = CANDIDATE_PREFIX + id
+    fun style(id: String): String = STYLE_PREFIX + id
 }
 
 internal data class MidiCoreArrangementScope(
@@ -137,6 +143,7 @@ internal fun MidiCoreArrangePage(
     var patternId by remember(project?.id?.value, role) {
         mutableStateOf(MidiCorePatternCatalog.allowedPatternIds(role).firstOrNull().orEmpty())
     }
+    var advancedControlsOpen by remember(project?.id?.value) { mutableStateOf(false) }
 
     LaunchedEffect(project?.id?.value, role, occurrenceId) {
         val selectedOccurrence = occurrenceId ?: return@LaunchedEffect
@@ -156,7 +163,7 @@ internal fun MidiCoreArrangePage(
         WorkspacePageHeading(
             eyebrow = "PREPARE",
             title = "Arrange",
-            summary = "Work through each section: choose a role, choose its feel, then create one alternative to review.",
+            summary = "Choose a musical direction to hear a short MIDI preview. Use role adjustments only when a specific section needs repair.",
         )
         if (project == null || authority == null || occurrences.isEmpty() || authority.chordEvents.isEmpty()) {
             ArrangeEmptyState(state)
@@ -165,6 +172,14 @@ internal fun MidiCoreArrangePage(
 
         requireNotNull(progress)
         ArrangeProgressCard(progress, role, occurrenceId, occurrences)
+        val selectedOccurrence = occurrences.singleOrNull { it.id == occurrenceId }
+        ArrangeStyleGallery(
+            state = state,
+            occurrence = selectedOccurrence,
+            onPreview = { style ->
+                onIntent(MidiCoreWorkspaceIntent.PreviewArrangementStyle(style.id, requireNotNull(occurrenceId)))
+            },
+        )
         ArrangeScopeCard(
             role = role,
             occurrenceId = occurrenceId,
@@ -173,29 +188,33 @@ internal fun MidiCoreArrangePage(
             onRoleSelected = { role = it },
             onOccurrenceSelected = { occurrenceId = it },
         )
-        ArrangeFeelCard(
-            role = role,
-            profileId = profileId,
-            patternId = patternId,
-            enabled = !state.busy,
-            onProfileSelected = { profileId = it },
-            onPatternSelected = { patternId = it },
-        )
-        val selectedOccurrence = occurrences.singleOrNull { it.id == occurrenceId }
         val scopeMatches = state.review.role == role && state.review.occurrenceId == occurrenceId
         val candidates = if (scopeMatches) state.review.candidates else emptyList()
         val nextSeed = midiCoreNextCandidateSeed(project, role, occurrenceId.orEmpty())
-        ArrangeGenerateCard(
-            state = state,
-            role = role,
-            occurrenceLabel = selectedOccurrence?.label.orEmpty(),
-            ready = selectedOccurrence != null && profileId.isNotBlank() && patternId.isNotBlank(),
-            nextSeed = nextSeed,
-            onGenerate = {
-                onIntent(generationIntent(role, requireNotNull(occurrenceId), profileId, patternId, nextSeed))
-            },
-            onCancel = { onIntent(MidiCoreWorkspaceIntent.CancelOperation) },
-        )
+        ArrangeAdvancedRoleAdjustment(
+            open = advancedControlsOpen,
+            onOpenChanged = { advancedControlsOpen = it },
+        ) {
+            ArrangeFeelCard(
+                role = role,
+                profileId = profileId,
+                patternId = patternId,
+                enabled = !state.busy,
+                onProfileSelected = { profileId = it },
+                onPatternSelected = { patternId = it },
+            )
+            ArrangeGenerateCard(
+                state = state,
+                role = role,
+                occurrenceLabel = selectedOccurrence?.label.orEmpty(),
+                ready = selectedOccurrence != null && profileId.isNotBlank() && patternId.isNotBlank(),
+                nextSeed = nextSeed,
+                onGenerate = {
+                    onIntent(generationIntent(role, requireNotNull(occurrenceId), profileId, patternId, nextSeed))
+                },
+                onCancel = { onIntent(MidiCoreWorkspaceIntent.CancelOperation) },
+            )
+        }
         ArrangeCandidateSummary(
             state = state,
             role = role,
@@ -249,6 +268,50 @@ private fun ArrangeProgressCard(
     }
 }
 
+/** Primary Arrange choice: one named all-role style immediately opens the persistent MIDI player. */
+@Composable
+private fun ArrangeStyleGallery(
+    state: MidiCoreWorkspaceState,
+    occurrence: ProjectSectionOccurrence?,
+    onPreview: (MidiCoreArrangementStyle) -> Unit,
+) {
+    val previewBusy = state.operation.active && state.operation.kind == MidiCoreWorkspaceOperationKind.AUDITION &&
+        state.operation.retry is MidiCoreWorkspaceIntent.PreviewArrangementStyle
+    val canPreview = occurrence != null && (!state.busy || previewBusy)
+    ArrangeCard(MidiCoreArrangePageTags.STYLES, "1. Choose a direction") {
+        Text(
+            occurrence?.let { "Choose a style to hear ${it.label} as a two-to-four-bar MIDI loop." }
+                ?: "Choose a section occurrence before previewing a style.",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        MidiCoreArrangementStyleCatalog.styles.forEach { style ->
+            val selected = state.stylePreview.selectedStyleId == style.id && state.stylePreview.occurrenceId == occurrence?.id
+            OutlinedButton(
+                onClick = { onPreview(style) },
+                enabled = canPreview,
+                modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                    testTag = MidiCoreArrangePageTags.style(style.id)
+                    this.selected = selected
+                    contentDescription = "Preview ${style.displayName} style${if (selected) ", selected" else ""}"
+                },
+            ) {
+                Column(Modifier.fillMaxWidth()) {
+                    Text(style.displayName, style = MaterialTheme.typography.titleSmall)
+                    Text(style.summary, style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
+                }
+            }
+        }
+        state.stylePreview.cacheStatus?.let { cache ->
+            Text(
+                if (cache == app.melotrail.application.MidiCoreArrangementStylePreviewCacheStatus.WARM) "Preview ready from this session's MIDI cache."
+                else "Preview generated from the current protected melody and authority.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MusicWorkspaceTokens.TextSecondary,
+            )
+        }
+    }
+}
+
 @Composable
 private fun ArrangeScopeCard(
     role: CandidateRole,
@@ -260,8 +323,8 @@ private fun ArrangeScopeCard(
 ) {
     var occurrenceMenuOpen by remember { mutableStateOf(false) }
     val occurrence = occurrences.singleOrNull { it.id == occurrenceId } ?: occurrences.first()
-    ArrangeCard(MidiCoreArrangePageTags.SCOPE, "1. Choose what to arrange") {
-        Text("Choose one section and one accompaniment role.", style = MaterialTheme.typography.bodyMedium, color = MusicWorkspaceTokens.TextSecondary)
+    ArrangeCard(MidiCoreArrangePageTags.SCOPE, "2. Targeted correction") {
+        Text("Choose a section and role only when a specific part needs an alternative. Style previews always include all three generated roles.", style = MaterialTheme.typography.bodyMedium, color = MusicWorkspaceTokens.TextSecondary)
         Box {
             OutlinedButton(
                 onClick = { occurrenceMenuOpen = true },
@@ -303,6 +366,25 @@ private fun ArrangeScopeCard(
     }
 }
 
+/** Profile and pattern controls are intentionally secondary to style selection. */
+@Composable
+private fun ArrangeAdvancedRoleAdjustment(
+    open: Boolean,
+    onOpenChanged: (Boolean) -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    ArrangeCard(MidiCoreArrangePageTags.ADVANCED, "Advanced role adjustment") {
+        Text("Create a scoped alternative only when the selected style needs a local correction.", style = MaterialTheme.typography.bodyMedium)
+        OutlinedButton(
+            onClick = { onOpenChanged(!open) },
+            modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                contentDescription = if (open) "Hide advanced role adjustment" else "Show advanced role adjustment"
+            },
+        ) { Text(if (open) "Hide role controls" else "Adjust one role") }
+        if (open) content()
+    }
+}
+
 @Composable
 private fun ArrangeFeelCard(
     role: CandidateRole,
@@ -314,7 +396,7 @@ private fun ArrangeFeelCard(
 ) {
     val profiles = MidiCorePerformanceProfileCatalog.profiles.filter { it.role == role }
     val patterns = MidiCorePatternCatalog.inventory().filter { it.role == role }
-    ArrangeCard("midi-core-arrange-feel", "2. Choose the feel") {
+    ArrangeCard("midi-core-arrange-feel", "Choose a role feel") {
         Text("Performance controls note shape; rhythm controls where notes are played.", style = MaterialTheme.typography.bodyMedium, color = MusicWorkspaceTokens.TextSecondary)
         ArrangeDropdown(
             tag = MidiCoreArrangePageTags.PROFILE_MENU,
