@@ -157,11 +157,18 @@ rewrite project authority.
 
 ## 8. Authority timing
 
-The project has one tempo and meter at tick zero. The user enters each ordered
-section occurrence as a positive whole-bar count. Counts must total the source
-melody length exactly; the application derives the contiguous tick timeline
-from PPQ and meter. Chord events retain explicit tick-exact durations so sub-bar
-harmony remains supported.
+The project has one tempo and meter at tick zero. The UI accepts tempo as a
+positive finite BPM value and stores the nearest Standard MIDI tempo integer
+using `round(60,000,000 / BPM)`. The user enters each ordered section as a name
+and positive whole-bar count. Counts must total the source melody length exactly;
+the application derives stable occurrence identities and the contiguous tick
+timeline from PPQ and meter.
+
+The UI accepts one ordered chord-symbol progression per occurrence. Symbols are
+split into equal deterministic slots that cover the occurrence without gaps or
+overlap; repeated symbols represent a longer harmonic hold. Chord events retain
+explicit tick-exact durations in project authority so existing sub-bar harmony
+remains supported.
 
 Authoritative harmony may be chromatic. Generators use the resolved chord event
 for their current tick window and never substitute a scale-derived chord.

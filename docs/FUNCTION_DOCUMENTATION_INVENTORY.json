@@ -35,6 +35,14 @@
       "documentedFunctionCount": 3
     },
     {
+      "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreAuthorityDrafting.kt",
+      "classification": "inherited-contract",
+      "reason": "The 14 callable declarations implement MC-048B's musician-facing BPM, named whole-bar section, and progression drafting conversions under F-AUTH-001 through F-AUTH-004 and MIDI Contract section 8. Exact identity/timeline/window preservation and deterministic conversion are covered by focused tests; reviewed on 2026-09-03.",
+      "functionCount": 14,
+      "declarationDigest": "a882be5a2319fc1c952766330a9d999ea54e14977cf5f166588f25090e5f4881",
+      "documentedFunctionCount": 1
+    },
+    {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt",
       "classification": "deferred-with-reason",
       "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt has 108 callable declarations, 5 directly documented and 103 still requiring focused KDoc/docstrings. MC-048A reviewed removal of manual melody-selection routing and conversion to bar-count structure intents; operation admission, audition, and typed failure traces remain covered by focused workspace tests.",
@@ -45,9 +53,9 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspaceShell.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspaceShell.kt has 11 callable declarations, 2 directly documented and 9 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-033; the six target destinations, responsive shell, stable semantics, and legacy-route absence are covered by focused Compose tests, and the remaining local presentation declarations must be reconsidered when their behavior or contract changes.",
-      "functionCount": 11,
-      "declarationDigest": "43255b74a3e918a9be53fa827b87dac30f1be7e8ab6200de924c512ec3008bcc",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspaceShell.kt has 14 callable declarations, 2 directly documented and 12 focused presentation helpers. MC-048B reviewed the six target destinations, compact navigation, wide musical context rail, stable page scroll identity, accessibility semantics, and blocked/ready responsive fixtures on 2026-09-03.",
+      "functionCount": 14,
+      "declarationDigest": "1a1033028d131cd02078fba83dfa27fc3d6e5f1f739be894fd9a4fe74f0ae8b2",
       "documentedFunctionCount": 2
     },
     {
@@ -77,7 +85,7 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt has 25 callable declarations, 1 directly documented and 24 focused presentation helpers. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-045; immutable candidate comparison, validation/stale evidence, explicit acceptance/rejection/lock/restore decisions, candidate/role/occurrence/full MIDI audition, discoverable receiver/system-output selection, transport, mute/solo, accessibility semantics, and Arrange handoff are covered by focused Compose tests.",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt has 25 callable declarations, 1 directly documented and 24 focused presentation helpers. MC-048B reviewed immutable candidate decisions, candidate/role/occurrence/full MIDI audition, explicit external-receiver or built-in-synthesizer selection, transport, mute/solo, accessibility semantics, and Arrange handoff on 2026-09-03.",
       "functionCount": 25,
       "declarationDigest": "b253c32bdc6e3e2cdbb70dc448f30a46707cbd10fc34417f25fd579880ad75b8",
       "documentedFunctionCount": 1
@@ -85,7 +93,7 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreMidiPage.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreMidiPage.kt has 18 callable declarations, 1 directly documented and 17 still requiring focused KDoc/docstrings. MC-048A reviewed automatic single-track melody protection, findings, immutable identity evidence, and MIDI transport semantics with focused Compose coverage.",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreMidiPage.kt has 18 callable declarations, 1 directly documented and 17 focused presentation helpers. MC-048B reviewed automatic single-track melody protection, immediately visible built-in-synthesizer transport, findings, immutable identity evidence, and focused Compose coverage on 2026-09-03.",
       "functionCount": 18,
       "declarationDigest": "094b5db9a1a2cf3197dca750e5fab5c7f357494a579329ca98a9e4b0f3d5a963",
       "documentedFunctionCount": 1
@@ -93,9 +101,9 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreStructureHarmonyPage.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreStructureHarmonyPage.kt has 39 callable declarations, 1 directly documented and 38 focused presentation helpers. MC-048A reviewed whole-bar occurrence entry, exact source-total feedback, derived ticks, chord timing, invalidation preview, and MIDI audition semantics with focused Compose coverage.",
-      "functionCount": 39,
-      "declarationDigest": "b583af39e4e69b03fda5467c7bd038f58a0a9a55a2dbeff11ced5f182c52bbbc",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreStructureHarmonyPage.kt has 31 callable declarations, 1 directly documented and 30 focused presentation helpers. MC-048B reviewed the three-step BPM/song-settings, named-section/bar-count, and per-section progression workflow plus exact previews, invalidation, audition, removed technical fields, and Compose coverage on 2026-09-03.",
+      "functionCount": 31,
+      "declarationDigest": "157f4e7d50d90e20d64c58e960d612f58859dd32153cfc03e9b6eb6d4a8df611",
       "documentedFunctionCount": 1
     },
     {
@@ -197,10 +205,10 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspaceTheme.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspaceTheme.kt has 6 callable declarations, 1 directly documented and 5 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 6,
-      "declarationDigest": "d7e070724caf067c672287c329b27ecfe71595e6c6d1b80fa1c2c533db6e95fc",
-      "documentedFunctionCount": 1
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspaceTheme.kt has 7 callable declarations, 2 directly documented and 5 focused presentation helpers. MC-048B reviewed the target navy/violet palette, contrast states, responsive MIDI-only layout tokens, primary/selectable controls, and shared six-page heading with focused theme and visual tests on 2026-09-03.",
+      "functionCount": 7,
+      "declarationDigest": "35f0feb660b06ff8adb9beef7ec31a2ca283133ba467ff25813a39a67a005e48",
+      "documentedFunctionCount": 2
     },
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspaceViewModel.kt",
@@ -1157,7 +1165,7 @@
     {
       "path": "src/main/kotlin/app/melotrail/audition/MidiAudition.kt",
       "classification": "inherited-contract",
-      "reason": "The 55 callable declarations define MC-045's MIDI-only audition scopes, discoverable local receiver and system fallback selection, exact adapter-tick pause/output replacement, bounded loop/seek plan, recoverable transport results, superseding session state, mute/solo policy, completion handling, and deterministic cleanup under F-PLAY-001 through F-PLAY-004 and F-SYS-001; reviewed on 2026-08-28.",
+      "reason": "The 55 callable declarations define MIDI-only audition scopes, discoverable external-receiver and built-in-synthesizer selection, exact adapter-tick pause/output replacement, bounded loop/seek plan, recoverable transport results, superseding session state, mute/solo policy, completion handling, and deterministic cleanup under F-PLAY-001 through F-PLAY-004 and F-SYS-001; default-endpoint wording was reviewed for MC-048B on 2026-09-03.",
       "functionCount": 55,
       "declarationDigest": "9d68e8d5289630259413a75cc5ba8e14790bdf7991dc2b9c2cdcd92c2b11023b",
       "documentedFunctionCount": 8
@@ -1165,7 +1173,7 @@
     {
       "path": "src/main/kotlin/app/melotrail/audition/adapter/JdkMidiAuditionOutput.kt",
       "classification": "inherited-contract",
-      "reason": "The 27 callable declarations implement MC-045's JVM Sequencer/Receiver adapter, local output discovery and system fallback, authoritative tempo/meter sequence routing, exact transport-position readback, safe live loop/mute/solo rebuild, end-of-view notification, all-notes-off cleanup, and recoverable device-loss handling under F-PLAY-001 through F-PLAY-004; reviewed on 2026-08-28.",
+      "reason": "The 27 callable declarations implement the JVM Sequencer/Receiver adapter, local external-output discovery, MC-048B's managed audible synthesizer default, authoritative tempo/meter sequence routing, exact transport-position readback, safe live loop/mute/solo rebuild, end-of-view notification, all-notes-off cleanup, and recoverable device-loss handling under F-PLAY-001 through F-PLAY-004; reviewed on 2026-09-03.",
       "functionCount": 27,
       "declarationDigest": "e7734f919ad517430d14f5734a1b7fd967a766211618afb03b72a62b86c1fe7b",
       "documentedFunctionCount": 3
@@ -1669,10 +1677,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/music/core/MidiCoreMusicalAuthority.kt",
       "classification": "inherited-contract",
-      "reason": "The 2 callable declarations implement MC-015's typed fixed tempo/meter and authoritative key spelling/mode primitives, including advisory scale membership without source mutation; reviewed on 2026-08-27.",
-      "functionCount": 2,
-      "declarationDigest": "bb0eb1dd08f16d04a92ef046b4cf5ff189d9d65365ae530d68c0bbc6eda7faa4",
-      "documentedFunctionCount": 0
+      "reason": "The 3 callable declarations implement typed fixed tempo/meter and authoritative key spelling/mode primitives under MIDI Contract section 8, including MC-048B's positive finite BPM conversion to the nearest exact Standard MIDI tempo integer; reviewed on 2026-09-03.",
+      "functionCount": 3,
+      "declarationDigest": "4b94a75658ac4befa88e7dab9ae5107129af6b16279e28aa3366fa305c820bca",
+      "documentedFunctionCount": 1
     },
     {
       "path": "src/main/kotlin/app/melotrail/music/core/MidiCoreHarmony.kt",

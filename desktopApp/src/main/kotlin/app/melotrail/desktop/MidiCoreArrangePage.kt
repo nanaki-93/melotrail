@@ -89,8 +89,13 @@ internal fun MidiCoreArrangePage(
             testTag = MidiCoreArrangePageTags.ROOT
             contentDescription = "Arrange deterministic MIDI candidates"
         }.verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md),
+        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Lg),
     ) {
+        WorkspacePageHeading(
+            eyebrow = "CREATE",
+            title = "Arrange",
+            summary = "Choose a section and role, then generate repeatable MIDI alternatives.",
+        )
         if (state.project == null || authority == null || occurrences.isEmpty() || authority.chordEvents.isEmpty()) {
             ArrangeEmptyState(state)
         } else {

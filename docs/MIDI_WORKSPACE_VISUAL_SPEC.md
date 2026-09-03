@@ -1,6 +1,6 @@
 # MIDI workspace visual specification
 
-Status: target design contract; implementation is owned by MC-051
+Status: implemented target design contract; validation is owned by MC-048B
 
 Authority: visual language and visual acceptance for the Compose Desktop MIDI
 workspace
@@ -73,8 +73,11 @@ selection.
 
 ## 6. Validation and reference retirement
 
-MC-051 adds target visual-regression fixtures for the six destinations at wide
-and compact widths, including representative ready and blocked/error states.
-The fixtures are target test assets, not the old image set. MC-051A removes the
+MC-048B produces target visual-regression fixtures for the six destinations at
+1280 × 900 wide and 720 × 900 compact widths, including representative ready
+and blocked states. The wide shell includes the compact navigation rail, fluid
+work area, and musical context rail; compact layouts retain horizontally
+scrollable navigation and place the page first.
+The fixtures are target test assets, not the old image set. MC-051 removes the
 old `docs/pictures` readers and assets only after target fixture integrity,
 accessibility, desktop smoke, and consumer scans pass.

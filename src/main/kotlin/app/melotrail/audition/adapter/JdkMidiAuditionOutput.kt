@@ -25,7 +25,8 @@ import javax.sound.midi.Transmitter
 class JdkMidiAuditionOutput(
     private val writer: JdkMidiWriter = JdkMidiWriter(),
     private val sequencerFactory: () -> Sequencer = { MidiSystem.getSequencer(false) },
-    private val defaultReceiverFactory: () -> Receiver = { MidiSystem.getReceiver() },
+    private val defaultDeviceFactory: () -> MidiDevice = { MidiSystem.getSynthesizer() },
+    private val defaultReceiverFactory: (() -> Receiver)? = null,
 ) : MidiAuditionOutput {
     private val sessions = CopyOnWriteArraySet<JdkMidiAuditionOutputSession>()
 
@@ -81,12 +82,43 @@ class JdkMidiAuditionOutput(
 
     private fun openEndpoint(deviceId: String?): JdkMidiOutputEndpoint {
         if (deviceId == null) {
-            return try {
-                JdkMidiOutputEndpoint(defaultReceiverFactory(), null)
+            defaultReceiverFactory?.let { receiverFactory ->
+                return try {
+                    JdkMidiOutputEndpoint(receiverFactory(), null)
+                } catch (error: Exception) {
+                    throw MidiAuditionOutputException(
+                        MidiAuditionProblemCode.DEVICE_UNAVAILABLE,
+                        "The built-in MIDI preview could not be opened.",
+                        error,
+                    )
+                }
+            }
+            val device = try {
+                defaultDeviceFactory()
             } catch (error: Exception) {
                 throw MidiAuditionOutputException(
                     MidiAuditionProblemCode.DEVICE_UNAVAILABLE,
-                    "No default MIDI output device is available.",
+                    "The built-in MIDI synthesizer is unavailable.",
+                    error,
+                )
+            }
+            try {
+                device.open()
+            } catch (error: Exception) {
+                closeQuietly(device)
+                throw MidiAuditionOutputException(
+                    MidiAuditionProblemCode.DEVICE_UNAVAILABLE,
+                    "The built-in MIDI synthesizer is unavailable.",
+                    error,
+                )
+            }
+            return try {
+                JdkMidiOutputEndpoint(device.receiver, device)
+            } catch (error: Exception) {
+                closeQuietly(device)
+                throw MidiAuditionOutputException(
+                    MidiAuditionProblemCode.DEVICE_UNAVAILABLE,
+                    "The built-in MIDI synthesizer receiver could not be opened.",
                     error,
                 )
             }

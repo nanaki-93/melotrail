@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 
 object MusicWorkspaceTokens {
-    /** Measurements taken from plan/pictures/App-pages.png at 1536 × 1024, 100% scale. */
+    /** Transitional measurements retained only for the legacy shell until MC-051 removes it. */
     object Reference {
         val ViewportWidth = 1536.dp
         val ViewportHeight = 1024.dp
@@ -41,6 +41,13 @@ object MusicWorkspaceTokens {
         /** At this width a page and two rails no longer fit without page-level scrolling. */
         val NarrowBreakpoint = 760.dp
         const val BorderAlpha = 0.78f
+    }
+
+    /** Geometry for the focused MIDI-only workspace. */
+    object Layout {
+        val WideBreakpoint = 1240.dp
+        val NavigationWidth = 196.dp
+        val ContextRailWidth = 256.dp
     }
 
     /** Shared measurements for the compact reference shell; avoid per-widget approximations. */
@@ -96,30 +103,30 @@ object MusicWorkspaceTokens {
         val PartMetadata = 11.sp
         val HeaderProjectLabel = 10.sp
     }
-    /** Near-black navy base derived from the reference's cinematic hierarchy. */
-    val Canvas = Color(0xFF07111A)
-    val Surface = Color(0xFF0C1821)
-    val ElevatedSurface = Color(0xFF10232D)
-    val SelectedSurface = Color(0xFF123840)
-    val Border = Color(0xFF36515B)
-    val Primary = Color(0xFF66D7C8)
-    val Focus = Color(0xFF91F5E8)
+    /** Deep navy and violet language derived from the approved UI references. */
+    val Canvas = Color(0xFF070A14)
+    val Surface = Color(0xFF0E1422)
+    val ElevatedSurface = Color(0xFF151D2E)
+    val SelectedSurface = Color(0xFF2B2147)
+    val Border = Color(0xFF323A50)
+    val Primary = Color(0xFFA78BFA)
+    val Focus = Color(0xFFC4B5FD)
     val WarmAccent = Color(0xFFF4BC64)
-    val TextPrimary = Color(0xFFF0F8F8)
-    val TextSecondary = Color(0xFFB7C9CC)
-    val Disabled = Color(0xFF89A0A4)
-    val DisabledSurface = Color(0xFF17262D)
+    val TextPrimary = Color(0xFFF4F2FF)
+    val TextSecondary = Color(0xFFC2BED3)
+    val Disabled = Color(0xFF9892A8)
+    val DisabledSurface = Color(0xFF1B2030)
     val Error = Color(0xFFFFB4AB)
     val Warning = Color(0xFFF0B356)
     val Information = Color(0xFF8AB4F8)
     val Success = Color(0xFF7BDBA5)
-    val Progress = Color(0xFF62CFE0)
-    val Piano = Color(0xFF59CCC4)
+    val Progress = Color(0xFF8DB8FF)
+    val Piano = Color(0xFF65D6CE)
     val Bass = Color(0xFF86C979)
     val Drums = Color(0xFFF0B356)
     val Pad = Color(0xFFAB91EB)
     val Strings = Color(0xFFF08262)
-    val ScenePlaceholder = Color(0xFF122A33)
+    val ScenePlaceholder = Color(0xFF1A2032)
 
     object Spacing {
         val Xs = 4.dp
@@ -242,6 +249,16 @@ internal fun workspaceSelectableButtonColors(selected: Boolean): ButtonColors = 
     disabledContainerColor = MusicWorkspaceTokens.DisabledSurface,
     disabledContentColor = MusicWorkspaceTokens.Disabled
 )
+
+/** Compact target-page heading shared by the six MIDI workspace destinations. */
+@Composable
+internal fun WorkspacePageHeading(eyebrow: String, title: String, summary: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+        Text(eyebrow, style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Primary)
+        Text(title, style = MaterialTheme.typography.headlineLarge, color = MusicWorkspaceTokens.TextPrimary)
+        Text(summary, style = MaterialTheme.typography.bodyMedium, color = MusicWorkspaceTokens.TextSecondary)
+    }
+}
 
 object ThemeShowcaseTags {
     const val ROOT = "theme-showcase"

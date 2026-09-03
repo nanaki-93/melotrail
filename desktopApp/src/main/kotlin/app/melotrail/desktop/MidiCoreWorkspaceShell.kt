@@ -1,6 +1,7 @@
 package app.melotrail.desktop
 
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -26,6 +27,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -37,6 +39,7 @@ import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import java.util.Locale
 
 /** Stable semantic IDs for the target shell and its six reachable destinations. */
 internal object MidiCoreWorkspaceShellTags {
@@ -50,6 +53,7 @@ internal object MidiCoreWorkspaceShellTags {
     const val WIDE_NAVIGATION = "midi-core-workspace-navigation-wide"
     const val COMPACT_NAVIGATION = "midi-core-workspace-navigation-compact"
     const val PAGE = "midi-core-workspace-page"
+    const val CONTEXT = "midi-core-workspace-context"
     const val BLOCKERS = "midi-core-workspace-blockers"
     const val DESTINATION_PREFIX = "midi-core-destination-"
     const val BLOCKER_PREFIX = "midi-core-blocker-"
@@ -64,7 +68,7 @@ internal enum class MidiCoreWorkspaceDestination(
     val summary: String,
 ) {
     PROJECT("project", "Project", "Create or reopen a MIDI Core project and inspect its current authority."),
-    MIDI("midi", "MIDI", "Import one immutable Standard MIDI source and choose the protected melody."),
+    MIDI("midi", "MIDI", "Import one immutable Standard MIDI source and automatically protect its melody."),
     STRUCTURE_HARMONY("structure-harmony", "Structure & Harmony", "Define the authoritative section timeline and chord windows."),
     ARRANGE("arrange", "Arrange", "Generate and regenerate deterministic Chords, Bass, and Drums candidates."),
     REVIEW("review", "Review", "Compare, accept, reject, lock, and restore candidate evidence."),
@@ -76,7 +80,7 @@ internal val midiCoreWorkspaceDestinations: List<MidiCoreWorkspaceDestination> =
 private enum class MidiCoreWorkspaceShellLayout { WIDE, COMPACT }
 
 internal fun midiCoreWorkspaceShellLayout(width: Dp): String =
-    if (width >= MusicWorkspaceTokens.Reference.WideBreakpoint) "wide" else "compact"
+    if (width >= MusicWorkspaceTokens.Layout.WideBreakpoint) "wide" else "compact"
 
 /** Collect the focused ViewModel state and render the target-only shell. */
 @Composable
@@ -105,7 +109,7 @@ internal fun MidiCoreWorkspaceShell(
     var selectedDestination by remember(initialDestination) { mutableStateOf(initialDestination) }
     val onDestinationSelected: (MidiCoreWorkspaceDestination) -> Unit = { selectedDestination = it }
     BoxWithConstraints(
-        modifier.fillMaxSize().semantics {
+        modifier.fillMaxSize().background(MusicWorkspaceTokens.Canvas).semantics {
             testTag = MidiCoreWorkspaceShellTags.ROOT
             contentDescription = "Melotrail MIDI Core workspace"
         },
@@ -125,17 +129,24 @@ internal fun MidiCoreWorkspaceShell(
                         selectedDestination = selectedDestination,
                         onDestinationSelected = onDestinationSelected,
                         compact = false,
-                        modifier = Modifier.width(224.dp).fillMaxHeight(),
+                        modifier = Modifier.width(MusicWorkspaceTokens.Layout.NavigationWidth).fillMaxHeight(),
                     )
-                    MidiCoreWorkspacePage(
+                    key(selectedDestination) {
+                        MidiCoreWorkspacePage(
+                            destination = selectedDestination,
+                            state = state,
+                            onIntent = onIntent,
+                            onDestinationSelected = onDestinationSelected,
+                            projectActions = projectActions,
+                            midiActions = midiActions,
+                            exportActions = exportActions,
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                        )
+                    }
+                    MidiCoreWorkspaceContext(
                         destination = selectedDestination,
                         state = state,
-                        onIntent = onIntent,
-                        onDestinationSelected = onDestinationSelected,
-                        projectActions = projectActions,
-                        midiActions = midiActions,
-                        exportActions = exportActions,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        modifier = Modifier.width(MusicWorkspaceTokens.Layout.ContextRailWidth).fillMaxHeight(),
                     )
                 }
 
@@ -149,16 +160,18 @@ internal fun MidiCoreWorkspaceShell(
                         compact = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    MidiCoreWorkspacePage(
-                        destination = selectedDestination,
-                        state = state,
-                        onIntent = onIntent,
-                        onDestinationSelected = onDestinationSelected,
-                        projectActions = projectActions,
-                        midiActions = midiActions,
-                        exportActions = exportActions,
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                    )
+                    key(selectedDestination) {
+                        MidiCoreWorkspacePage(
+                            destination = selectedDestination,
+                            state = state,
+                            onIntent = onIntent,
+                            onDestinationSelected = onDestinationSelected,
+                            projectActions = projectActions,
+                            midiActions = midiActions,
+                            exportActions = exportActions,
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                        )
+                    }
                 }
             }
         }
@@ -176,8 +189,8 @@ private fun MidiCoreWorkspaceHeader(state: MidiCoreWorkspaceState) {
             horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Lg),
         ) {
             Column {
-                Text("Melotrail", style = MaterialTheme.typography.headlineSmall)
-                Text("MIDI Core", style = MaterialTheme.typography.labelLarge, color = MusicWorkspaceTokens.Primary)
+                Text("MELOTRAIL", style = MaterialTheme.typography.titleMedium)
+                Text("MIDI ARRANGEMENT", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Primary)
             }
             Column(
                 Modifier.weight(1f).semantics {
@@ -277,6 +290,7 @@ private fun MidiCoreDestinationButton(
     compact: Boolean,
 ) {
     val selected = destination == selectedDestination
+    val position = midiCoreWorkspaceDestinations.indexOf(destination) + 1
     Button(
         onClick = { onDestinationSelected(destination) },
         modifier = (if (compact) Modifier.widthIn(min = 116.dp) else Modifier.fillMaxWidth())
@@ -291,9 +305,60 @@ private fun MidiCoreDestinationButton(
             contentColor = MusicWorkspaceTokens.TextPrimary,
         ),
     ) {
-        Text(destination.label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(if (compact) destination.label else "${position.toString().padStart(2, '0')}  ${destination.label}", maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
+
+@Composable
+private fun MidiCoreWorkspaceContext(
+    destination: MidiCoreWorkspaceDestination,
+    state: MidiCoreWorkspaceState,
+    modifier: Modifier,
+) {
+    Card(
+        modifier.semantics {
+            testTag = MidiCoreWorkspaceShellTags.CONTEXT
+            contentDescription = "Current workspace context"
+        },
+        colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface),
+    ) {
+        Column(
+            Modifier.fillMaxSize().padding(MusicWorkspaceTokens.Spacing.Lg).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Lg),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+                Text("CURRENT STEP", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Primary)
+                Text(destination.label, style = MaterialTheme.typography.titleLarge)
+                Text(destination.summary, style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
+            }
+            state.project?.authority?.let { authority ->
+                Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                    Text("SONG SETTINGS", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Primary)
+                    ContextFact("Key", "${authority.key.spelling.symbol} ${authority.key.mode.displayName}")
+                    ContextFact("Tempo", "${formatContextBpm(authority.tempo.beatsPerMinute)} BPM")
+                    ContextFact("Meter", "${authority.meter.numerator}/${authority.meter.denominator}")
+                    ContextFact("Sections", authority.occurrences.size.toString())
+                }
+            }
+            val blocker = state.blockers.firstOrNull()
+            Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+                Text(if (blocker == null) "READY" else "NEXT ACTION", style = MaterialTheme.typography.labelSmall, color = if (blocker == null) MusicWorkspaceTokens.Success else MusicWorkspaceTokens.Warning)
+                Text(blocker?.nextAction ?: "No current blockers.", style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ContextFact(label: String, value: String) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
+        Text(value, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+private fun formatContextBpm(value: Double): String =
+    String.format(Locale.ROOT, "%.2f", value).trimEnd('0').trimEnd('.')
 
 @Composable
 private fun MidiCoreWorkspacePage(

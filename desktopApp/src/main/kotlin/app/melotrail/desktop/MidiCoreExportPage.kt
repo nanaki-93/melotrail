@@ -72,8 +72,13 @@ internal fun MidiCoreExportPage(
             testTag = MidiCoreExportPageTags.ROOT
             contentDescription = "Export immutable DAW MIDI package"
         }.verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md),
+        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Lg),
     ) {
+        WorkspacePageHeading(
+            eyebrow = "DELIVER",
+            title = "Export",
+            summary = "Validate the arrangement and publish an immutable MIDI package for Logic Pro.",
+        )
         if (project == null) {
             ExportEmptyCard(state)
             return@Column

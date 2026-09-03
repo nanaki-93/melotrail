@@ -2,10 +2,13 @@ package app.melotrail.desktop
 
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.v2.runComposeUiTest
 import app.melotrail.arrangement.core.MidiCoreInvalidationPlanner
 import app.melotrail.midi.domain.MidiTrackSummary
@@ -46,8 +49,7 @@ class MidiCoreStructureHarmonyPageTest {
 
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.ROOT).assertExists()
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.AUTHORITY_STATUS).assertExists()
-        onNodeWithText("Exact range: bar 1 · beat 1 · tick 0 → bar 1 · beat 3 · tick 0 · 0–960 ticks").assertExists()
-        onNodeWithText("Exact range: bar 1 · beat 3 · tick 0 → bar 2 · beat 1 · tick 0 · 960–1920 ticks").assertExists()
+        onNodeWithText("C bars 1.1–1.2  ·  Dbmaj9/F bars 1.3–1.4").assertExists()
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.HARMONY_FINDINGS).assertExists()
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.finding("CHROMATIC_CHORD")).assertExists()
     }
@@ -66,12 +68,14 @@ class MidiCoreStructureHarmonyPageTest {
         }
 
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.KEY).performScrollTo().performClick()
+        onNodeWithText("C#", useUnmergedTree = true).performClick()
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.MODE).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreStructureHarmonyPageTags.CONFIRM_AUTHORITY).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreStructureHarmonyPageTags.SAVE_STRUCTURE).performScrollTo().assertIsEnabled()
-        onNodeWithTag(MidiCoreStructureHarmonyPageTags.SAVE_HARMONY).performScrollTo().assertIsEnabled()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.CONFIRM_AUTHORITY).performScrollTo().assertIsNotEnabled()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.SAVE_STRUCTURE).performScrollTo().assertIsNotEnabled()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.SAVE_HARMONY).performScrollTo().assertIsNotEnabled()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.AUDITION).performScrollTo()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.occurrenceAudition("verse-1")).assertIsEnabled().performClick()
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.SOURCE_AUDITION).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreStructureHarmonyPageTags.occurrenceAudition("verse-1")).performScrollTo().performClick()
 
         assertEquals(
             listOf(
@@ -89,12 +93,34 @@ class MidiCoreStructureHarmonyPageTest {
                         ProjectMeter(4, 2),
                     ),
                 ),
-                MidiCoreWorkspaceIntent.ConfirmAuthority,
-                MidiCoreWorkspaceIntent.PlaySourceMelody,
                 MidiCoreWorkspaceIntent.PlayOccurrence("verse-1"),
+                MidiCoreWorkspaceIntent.PlaySourceMelody,
             ),
             intents,
         )
+    }
+
+    @Test
+    fun `tempo is edited as BPM and internal IDs and ticks are not musician-facing`() = runComposeUiTest {
+        val intents = mutableListOf<MidiCoreWorkspaceIntent>()
+        setContent {
+            MelotrailTheme {
+                MidiCoreWorkspaceShell(
+                    state = authorityState(),
+                    onIntent = intents::add,
+                    initialDestination = MidiCoreWorkspaceDestination.STRUCTURE_HARMONY,
+                )
+            }
+        }
+
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.TEMPO).assertTextContains("120")
+            .performTextReplacement("92")
+        assertEquals(
+            ProjectTempo.fromBeatsPerMinute(92.0),
+            (intents.single() as MidiCoreWorkspaceIntent.UpdateAuthorityDraft).draft.tempo,
+        )
+        listOf("Tempo µs/qn", "Stable ID", "Occurrence ID", "Definition ID", "Start tick", "Duration ticks")
+            .forEach { removed -> onNodeWithText(removed).assertDoesNotExist() }
     }
 
     @Test
@@ -111,12 +137,8 @@ class MidiCoreStructureHarmonyPageTest {
         }
 
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.occurrenceBars(1)).performScrollTo().assertExists()
-        onNodeWithTag(MidiCoreStructureHarmonyPageTags.ADD_DEFINITION).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreStructureHarmonyPageTags.ADD_OCCURRENCE).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreStructureHarmonyPageTags.ADD_CHORD).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreStructureHarmonyPageTags.definition(2)).assertExists()
-        onNodeWithTag(MidiCoreStructureHarmonyPageTags.occurrence(2)).assertExists()
-        onNodeWithTag(MidiCoreStructureHarmonyPageTags.chord(4)).assertExists()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.ADD_SECTION).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.section(3)).assertExists()
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.STRUCTURE_FINDINGS).assertExists()
         assertTrue(intents.isEmpty())
     }
@@ -139,9 +161,9 @@ class MidiCoreStructureHarmonyPageTest {
             }
         }
 
-        onNodeWithText("Last saved authority change marked the following derived work stale.").assertExists()
-        onNodeWithText("Changed dimensions: timing").assertExists()
-        onNodeWithText("Confirmed: C major, 4/4, 120.00 BPM.").assertExists()
+        onNodeWithText("The last saved change marked only the affected generated work as stale.").assertExists()
+        onNodeWithText("Changes · timing").assertExists()
+        onNodeWithText("Confirmed · C major · 4/4 · 120 BPM").assertExists()
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.RECOVERY).assertDoesNotExist()
     }
 
@@ -163,8 +185,8 @@ class MidiCoreStructureHarmonyPageTest {
             }
         }
 
-        onNodeWithText("Before saving, this explicit authority change will mark the following derived work stale.").assertExists()
-        onNodeWithText("Changed dimensions: timing").assertExists()
+        onNodeWithText("Saving these changes will mark only the affected generated work as stale.").assertExists()
+        onNodeWithText("Changes · timing").assertExists()
     }
 
     private fun authorityState(): MidiCoreWorkspaceState {

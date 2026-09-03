@@ -73,9 +73,9 @@ simplified in the source DAW.
 
 Check that:
 
-- occurrences are ordered and each has a positive whole-bar length;
+- sections are ordered and each has a name and positive whole-bar length;
 - section bar counts total the imported melody length exactly;
-- chord events cover the intended window;
+- every saved section has a `|`-separated chord progression;
 - every chord symbol parses and can be realized; and
 - the melody lies inside the intended occurrence range.
 
@@ -84,8 +84,10 @@ authoritative.
 
 ## MIDI audition is unavailable
 
-- Confirm that a supported local MIDI output or synthesizer is available.
-- Stop other playback and retry device selection.
+- With **Use built-in synthesizer** selected, stop other playback and retry. The
+  app must not silently substitute Logic Pro Virtual In or another virtual port.
+- If using external hardware or a DAW route, choose that receiver explicitly in
+  Review and confirm the destination is listening.
 - Reopen the project if the OS removed a device while it was active.
 - Use Stop before switching output devices.
 

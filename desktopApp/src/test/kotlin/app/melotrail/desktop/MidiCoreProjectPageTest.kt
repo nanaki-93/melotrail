@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.v2.runComposeUiTest
 import app.melotrail.application.MidiCoreProjectProblemCode
@@ -70,11 +71,11 @@ class MidiCoreProjectPageTest {
         onNodeWithTag(MidiCoreProjectPageTags.SUMMARY).assertExists()
         onNodeWithTag(MidiCoreProjectPageTags.LOCATION).assertExists()
         onNodeWithText("Project revision 12").assertExists()
-        onNodeWithText("Go to MIDI").performClick()
+        onNodeWithText("Go to MIDI").performScrollTo().performClick()
         onNodeWithContentDescription("Open MIDI. ${MidiCoreWorkspaceDestination.MIDI.summary} Selected.").assertExists()
         onNodeWithTag(MidiCoreWorkspaceShellTags.destination(MidiCoreWorkspaceDestination.PROJECT)).performClick()
-        onNodeWithTag(MidiCoreProjectPageTags.RELOAD).performClick()
-        onNodeWithTag(MidiCoreProjectPageTags.CLOSE).performClick()
+        onNodeWithTag(MidiCoreProjectPageTags.RELOAD).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreProjectPageTags.CLOSE).performScrollTo().performClick()
         assertEquals(listOf(MidiCoreWorkspaceIntent.ReloadProject, MidiCoreWorkspaceIntent.CloseProject), intents)
     }
 
@@ -102,7 +103,7 @@ class MidiCoreProjectPageTest {
 
         onNodeWithTag(MidiCoreProjectPageTags.UNSUPPORTED).assertExists()
         onNodeWithText("This folder was not migrated or changed because it is not a current MIDI Core project.").assertExists()
-        onNodeWithTag(MidiCoreProjectPageTags.RETRY).assertIsEnabled().performClick()
+        onNodeWithTag(MidiCoreProjectPageTags.RETRY).performScrollTo().assertIsEnabled().performClick()
         assertEquals(MidiCoreWorkspaceIntent.Retry, intents.single())
     }
 

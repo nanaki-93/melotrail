@@ -85,8 +85,13 @@ internal fun MidiCoreMidiPage(
             testTag = MidiCoreMidiPageTags.ROOT
             contentDescription = "MIDI source and protected melody page"
         }.verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md),
+        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Lg),
     ) {
+        WorkspacePageHeading(
+            eyebrow = "SOURCE",
+            title = "MIDI",
+            summary = "Import one complete melody, listen to it immediately, then review the preserved source facts.",
+        )
         if (state.project == null) {
             MidiCard(MidiCoreMidiPageTags.ROOT + "-empty", "Import MIDI source") {
                 Text("Open or create a MIDI Core project before importing a source.", style = MaterialTheme.typography.bodyLarge)
@@ -101,11 +106,11 @@ internal fun MidiCoreMidiPage(
                 },
             )
             state.source.takeIf { it.status == MidiCoreSourceStatus.IMPORTED }?.let { source ->
+                MidiSourceTransport(state, onIntent)
                 MidiSourceFacts(source)
                 MidiTrackTable(state)
                 MidiSelectionCard(state)
                 MidiFindingsCard(source.findings)
-                MidiSourceTransport(state, onIntent)
                 MidiExplanationCards()
             }
             MidiRecoveryCard(state, onIntent)
@@ -296,15 +301,16 @@ private fun MidiSourceTransport(state: MidiCoreWorkspaceState, onIntent: (MidiCo
     val sourceScope = audition.scope == MidiAuditionScope.SourceMelody
     val sourceEnd = state.source.sourceEndTick ?: 0L
     val position = if (sourceScope) audition.positionTick.coerceIn(0L, sourceEnd.coerceAtLeast(1L)) else 0L
-    MidiCard(MidiCoreMidiPageTags.TRANSPORT, "MIDI source audition") {
-        Text("Audition sends MIDI events to the selected local MIDI output; it never renders an audio file.", style = MaterialTheme.typography.bodyMedium)
+    MidiCard(MidiCoreMidiPageTags.TRANSPORT, "Listen to the imported melody") {
+        Text("The built-in synthesizer is used by default. You can choose an external MIDI output later in Review.", style = MaterialTheme.typography.bodyMedium, color = MusicWorkspaceTokens.TextSecondary)
         Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
             Button(
                 onClick = { onIntent(MidiCoreWorkspaceIntent.PlaySourceMelody) },
                 enabled = !state.busy && state.melody.selected != null,
+                colors = workspacePrimaryButtonColors(),
                 modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget)
                     .semantics { testTag = MidiCoreMidiPageTags.PLAY },
-            ) { Text("Play source melody") }
+            ) { Text("▶ Play MIDI") }
             OutlinedButton(
                 onClick = { onIntent(MidiCoreWorkspaceIntent.PauseAudition) },
                 enabled = sourceScope && audition.playback == MidiAuditionPlaybackState.PLAYING,
@@ -319,7 +325,7 @@ private fun MidiSourceTransport(state: MidiCoreWorkspaceState, onIntent: (MidiCo
             ) { Text("Stop") }
         }
         Text(
-            if (sourceScope) "${audition.playback.name.lowercase().replaceFirstChar(Char::uppercaseChar)} at $position / $sourceEnd ticks" else "Source melody is not playing.",
+            if (sourceScope) "${audition.playback.name.lowercase().replaceFirstChar(Char::uppercaseChar)} · $position / $sourceEnd" else "Ready to play through the built-in synthesizer.",
             Modifier.semantics { contentDescription = "MIDI audition transport status" },
             style = MaterialTheme.typography.bodySmall,
             color = MusicWorkspaceTokens.TextSecondary,

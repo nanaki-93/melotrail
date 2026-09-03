@@ -52,6 +52,20 @@ value class ProjectTempo(val microsecondsPerQuarter: Int) {
     }
 
     val beatsPerMinute: Double get() = 60_000_000.0 / microsecondsPerQuarter
+
+    companion object {
+        /** Convert a musician-facing BPM value to the nearest exact Standard MIDI tempo value. */
+        fun fromBeatsPerMinute(beatsPerMinute: Double): ProjectTempo {
+            require(beatsPerMinute.isFinite() && beatsPerMinute > 0.0) {
+                "Project tempo BPM must be positive and finite"
+            }
+            val microseconds = 60_000_000.0 / beatsPerMinute
+            require(microseconds in 1.0..0xFF_FF_FF.toDouble()) {
+                "Project tempo BPM is outside the Standard MIDI tempo range"
+            }
+            return ProjectTempo(kotlin.math.round(microseconds).toInt())
+        }
+    }
 }
 
 /** Fixed Standard MIDI meter. The exponent is preserved exactly from the SMF policy. */

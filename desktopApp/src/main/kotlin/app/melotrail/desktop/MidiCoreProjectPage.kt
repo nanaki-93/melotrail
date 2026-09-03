@@ -71,8 +71,13 @@ internal fun MidiCoreProjectPage(
             testTag = MidiCoreWorkspaceShellTags.PAGE + "-project"
             contentDescription = "Project destination page"
         }.verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md),
+        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Lg),
     ) {
+        WorkspacePageHeading(
+            eyebrow = "WORKSPACE",
+            title = "Project",
+            summary = "Open your song workspace and see the next safe step at a glance.",
+        )
         if (state.project == null) {
             ProjectCreationCard(
                 projectName = projectName,

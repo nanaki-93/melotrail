@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
@@ -93,8 +94,8 @@ class MidiCoreFocusedWorkflowTest {
                 onNodeWithTag(MidiCoreWorkspaceShellTags.destination(destination)).performClick()
                 waitForIdle()
             }
-            fun captureFixture(name: String, tag: String) {
-                val image = onNodeWithTag(tag).captureToImage().toAwtImage()
+            fun captureFixture(name: String) {
+                val image = onRoot().captureToImage().toAwtImage()
                 assertTrue(image.width > 0 && image.height > 0, "$name visual fixture must be non-empty")
                 val target = visualFixtureRoot().resolve("$name.png")
                 Files.createDirectories(target.parent)
@@ -106,12 +107,16 @@ class MidiCoreFocusedWorkflowTest {
             onNodeWithTag(MidiCoreProjectPageTags.NAME).performTextInput("Focused workflow")
             onNodeWithTag(MidiCoreProjectPageTags.CREATE).performClick()
             awaitWorkspaceSuccess("create project")
-            captureFixture("project", MidiCoreWorkspaceShellTags.PAGE + "-project")
+            captureFixture("project")
 
             navigateTo(MidiCoreWorkspaceDestination.MIDI)
             onNodeWithTag(MidiCoreMidiPageTags.IMPORT).performClick()
             awaitWorkspaceSuccess("import source")
-            captureFixture("midi", MidiCoreMidiPageTags.ROOT)
+            onNodeWithTag(MidiCoreMidiPageTags.PLAY).performClick()
+            awaitWorkspaceSuccess("play imported source")
+            assertEquals(MidiAuditionPlaybackState.PLAYING, audition.state.playback)
+            workspace.accept(MidiCoreWorkspaceIntent.StopAudition)
+            captureFixture("midi")
 
             navigateTo(MidiCoreWorkspaceDestination.STRUCTURE_HARMONY)
             onNodeWithTag(MidiCoreStructureHarmonyPageTags.CONFIRM_AUTHORITY).performScrollTo().performClick()
@@ -130,7 +135,9 @@ class MidiCoreFocusedWorkflowTest {
                 ),
             )
             awaitWorkspaceSuccess("save harmony")
-            captureFixture("structure-harmony", MidiCoreStructureHarmonyPageTags.ROOT)
+            navigateTo(MidiCoreWorkspaceDestination.MIDI)
+            navigateTo(MidiCoreWorkspaceDestination.STRUCTURE_HARMONY)
+            captureFixture("structure-harmony")
 
             navigateTo(MidiCoreWorkspaceDestination.ARRANGE)
             CandidateRole.entries.forEachIndexed { index, role ->
@@ -142,7 +149,7 @@ class MidiCoreFocusedWorkflowTest {
                 workspace.accept(MidiCoreWorkspaceIntent.AcceptCandidate(candidate.id))
                 awaitWorkspaceSuccess("accept ${role.name.lowercase()} candidate")
             }
-            captureFixture("arrange", MidiCoreArrangePageTags.ROOT)
+            captureFixture("arrange")
 
             navigateTo(MidiCoreWorkspaceDestination.REVIEW)
             workspace.accept(MidiCoreWorkspaceIntent.SelectReviewScope(CandidateRole.CHORDS, "verse-1"))
@@ -151,7 +158,9 @@ class MidiCoreFocusedWorkflowTest {
             onNodeWithTag(MidiCoreReviewPageTags.PLAY_ARRANGEMENT).performScrollTo().performClick()
             awaitWorkspaceSuccess("play accepted arrangement")
             assertEquals(MidiAuditionPlaybackState.PLAYING, audition.state.playback)
-            captureFixture("review", MidiCoreReviewPageTags.ROOT)
+            navigateTo(MidiCoreWorkspaceDestination.ARRANGE)
+            navigateTo(MidiCoreWorkspaceDestination.REVIEW)
+            captureFixture("review")
 
             navigateTo(MidiCoreWorkspaceDestination.PROJECT)
             onNodeWithTag(MidiCoreProjectPageTags.CLOSE).performScrollTo().performClick()
@@ -168,13 +177,13 @@ class MidiCoreFocusedWorkflowTest {
             assertTrue(reopened.authority?.chordEvents?.isNotEmpty() == true)
 
             navigateTo(MidiCoreWorkspaceDestination.EXPORT)
+            captureFixture("export")
             onNodeWithTag(MidiCoreExportPageTags.PUBLISH).performScrollTo().performClick()
             awaitWorkspaceSuccess("export immutable MIDI package")
             val snapshot = assertNotNull(workspace.state.value.export.latestSnapshot)
             val packageDirectory = projectRoot.resolve("exports").resolve(snapshot.id)
             assertTrue(Files.isRegularFile(packageDirectory.resolve("complete-song.mid")))
             assertTrue(Files.isRegularFile(packageDirectory.resolve("manifest.json")))
-            captureFixture("export", MidiCoreExportPageTags.ROOT)
 
             assertEquals(
                 listOf("arrange", "export", "midi", "project", "review", "structure-harmony"),
@@ -204,7 +213,7 @@ class MidiCoreFocusedWorkflowTest {
 
     private fun visualFixtureRoot(): Path = Path.of(System.getProperty("user.dir"))
         .toAbsolutePath()
-        .resolve("build/test-results/midi-core-focused-workflow")
+        .resolve("build/test-results/midi-core-focused-workflow/wide")
 
     private fun deleteTree(root: Path) {
         if (Files.notExists(root)) return

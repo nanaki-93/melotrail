@@ -113,6 +113,11 @@ class MidiCoreMusicalAuthorityTest {
 
     @Test
     fun `typed authority primitives enforce Standard MIDI and enharmonic boundaries`() {
+        assertEquals(ProjectTempo(500_000), ProjectTempo.fromBeatsPerMinute(120.0))
+        assertEquals(ProjectTempo(652_174), ProjectTempo.fromBeatsPerMinute(92.0))
+        assertEquals(92.0, ProjectTempo.fromBeatsPerMinute(92.0).beatsPerMinute, 0.001)
+        assertFailsWith<IllegalArgumentException> { ProjectTempo.fromBeatsPerMinute(0.0) }
+        assertFailsWith<IllegalArgumentException> { ProjectTempo.fromBeatsPerMinute(Double.NaN) }
         assertEquals(1, ProjectTempo(1).microsecondsPerQuarter)
         assertEquals(0xFF_FF_FF, ProjectTempo(0xFF_FF_FF).microsecondsPerQuarter)
         assertFailsWith<IllegalArgumentException> { ProjectTempo(0) }

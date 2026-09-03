@@ -3,7 +3,7 @@
 Status: ready for serial execution
 
 Task range: MC-000 through MC-060, including user-directed MC-048A and
-MC-051A
+MC-048B
 
 Scope: deterministic MIDI Core MVP, focused Compose Desktop UI, acceptance,
 and complete removal of the superseded audio product
@@ -44,8 +44,8 @@ the final reduction.
 
 ### 3.1 Ordering
 
-- Execute tasks strictly in numeric order; MC-048A follows MC-048 and precedes
-  MC-049, while MC-051A follows MC-051 and precedes MC-052.
+- Execute tasks strictly in numeric order; MC-048A and MC-048B follow MC-048
+  and precede MC-049.
 - Only one task may be `IN_PROGRESS` in the execution log.
 - A task begins only after every earlier task is `DONE`, except a task marked
   `AWAITING_HUMAN` must be resolved before continuing past its phase gate.
@@ -1096,9 +1096,54 @@ It must not fabricate a DAW result, listening score, or sign-off.
   melody authority and the musician defines song structure only as ordered bar
   counts that exactly cover that source.
 
-### MC-049 — Complete holdout musical acceptance
+### MC-048B — Make the MIDI workspace usable for holdout testing
 
 - **Depends on:** MC-048A.
+- **Contracts:** Architecture 4.8; F-MIDI-005; F-AUTH-001–F-AUTH-004;
+  F-UI-001–F-UI-006; Quality Gate 4; `docs/MIDI_WORKSPACE_VISUAL_SPEC.md`;
+  user decision dated 2026-09-03.
+- **Inspect:** the imported-source audition path and actual default receiver;
+  all six target pages and shell; Structure & Harmony draft/conversion logic;
+  current theme tokens; MC-040 fixtures; wide/compact behavior; accessibility
+  semantics; and direct readers of `docs/pictures/UI`.
+- **Work:** fix source playback so the default desktop path opens an audible
+  local synthesizer while explicit external MIDI receivers remain optional;
+  put a clear source transport next to imported MIDI evidence; accept and show
+  tempo as BPM while persisting the exact Standard MIDI tempo value; replace
+  user-facing section-definition/occurrence IDs and tick arithmetic with an
+  ordered section list using names and whole-bar lengths; replace raw chord
+  IDs, occurrence IDs, start ticks, and duration ticks with one readable chord
+  progression per section and deterministically derive exact gap-free windows.
+  Establish the six-page target visual system from the reference images'
+  hierarchy and mood: dark workstation surfaces, restrained violet primary
+  accent, warm semantic highlights, compact navigation, adaptive context, and
+  evidence-led musical panels. Every destination must remain MIDI-only.
+- **Delete:** the inaudible implicit virtual-receiver default; musician-facing
+  microseconds-per-quarter, stable-ID, and raw-tick fields. Do not delete the
+  reference images or legacy UI owners yet; MC-051 owns that cutover deletion
+  after the target fixtures pass.
+- **Tests:** import-to-source-playback through the audible default factory;
+  explicit external-output selection; BPM conversion/round trip; simple
+  section add/duplicate/reorder/remove and exact bar total; progression-to-
+  window conversion including chromatic advisories; six target page fixtures
+  at wide and compact widths; representative ready and blocked/error state;
+  focus/selected/disabled semantics; and absence of the removed technical
+  labels from the target authoring page.
+- **Validation:** focused audition/domain/UI tests, `make test`, `make build`,
+  and a local desktop smoke before asking the user to resume MC-049.
+- **Evidence:** playback root cause and endpoint class; BPM examples; section
+  and progression conversion examples; token/component inventory; target
+  fixture paths/hashes; width/state matrix; accessibility result; and desktop
+  smoke screenshots.
+- **Commit:** `midi-core: MC-048B make holdout workspace usable`.
+- **Done when:** a musician can import and audibly play the protected melody,
+  set BPM, define structure and harmony without internal IDs or ticks, and use
+  every target destination through a coherent responsive visual system before
+  beginning the holdout listening rubric.
+
+### MC-049 — Complete holdout musical acceptance
+
+- **Depends on:** MC-048B.
 - **Contracts:** Quality Gates 7–8; all F-ARR/F-REV functions.
 - **Inspect:** ten or more unseen, user-approved/license-safe MIDI projects that
   satisfy the single-melody-track and whole-bar source contract, plus the frozen
@@ -1140,52 +1185,18 @@ It must not fabricate a DAW result, listening score, or sign-off.
 - **Done when:** no runtime stage graph, schema-v4 branch, song-part pipeline, or
   old application façade remains.
 
-### MC-051 — Establish the MIDI workspace visual system
+### MC-051 — Remove the legacy desktop UI and visual fixtures
 
 - **Depends on:** MC-050.
-- **Contracts:** Architecture 4.8; F-UI-001–F-UI-006; Quality Gate 4; Cleanup
-  Scope 5.5; `docs/MIDI_WORKSPACE_VISUAL_SPEC.md`.
-- **Inspect:** the six target pages and shell, generated MC-040 fixtures,
-  `docs/pictures/UI` reference screens, current theme tokens, wide/compact
-  layout behavior, accessibility semantics, and screenshot-test infrastructure.
-- **Work:** derive a target-only visual system from the reference screens'
-  hierarchy and mood: dark workstation surfaces, restrained violet primary
-  accent, warm semantic highlights, compact navigation, an adaptive context
-  rail, and evidence-led musical panels. Replace screenshot-measured legacy
-  tokens with named responsive tokens and reusable shell, panel, status,
-  timeline, MIDI-event, and candidate presentation components. Recompose all
-  six destinations around real project state: Project readiness, MIDI source
-  facts/events, Structure & Harmony timeline, Arrange scope/candidates, Review
-  diffs/audition, and Export package evidence. Do not create audio waveforms,
-  video previews, library browsers, mixers, mastering controls, sound settings,
-  or hidden routes.
-- **Delete:** no tracked legacy image or executable owner in this task. Preserve
-  them solely until MC-051A confirms that their target replacements pass.
-- **Tests:** target screen/view-model/entrypoint/accessibility suite; visual
-  regression fixtures for every target page at wide and compact desktop widths;
-  representative ready and blocked/error states; focus/selected/disabled
-  treatment; and a test proving visual content is derived from target state.
-- **Validation:** focused UI tests, `make test`, `make build`, desktop smoke.
-- **Evidence:** approved visual specification, token/component inventory,
-  target fixture locations and hashes, six-page semantic tree, width/state
-  matrix, contrast/accessibility result, and desktop smoke screenshots.
-- **Commit:** `midi-core: MC-051 establish MIDI workspace visual system`.
-- **Done when:** every target page has a coherent, responsive, MIDI-only visual
-  treatment that passes the visual and accessibility suite without reintroducing
-  an audio-era concept.
-
-### MC-051A — Remove the legacy desktop UI and visual fixtures
-
-- **Depends on:** MC-051.
 - **Contracts:** Cleanup Scope 5.5–5.6; F-UI-001; F-UI-006; Quality Gate 4.
 - **Inspect:** default desktop source graph, UI tests/tags, direct readers of
   `docs/pictures`, legacy theme measurements, preferences/dialogs, and the
-  six target visual fixtures produced by MC-051.
+  six target visual fixtures produced by MC-048B.
 - **Work:** reduce/replace workspace app/router/view model/shell to target code;
   delete audio player, melody-parts/workflow presentation, runtime readiness,
   sound-library settings, legacy setup/state/intents/dialogs/routes, live audio
   E2E, and all tests that assert removed behavior. Switch any useful visual
-  coverage to MC-051 target fixtures, then remove every reader of the old UI
+  coverage to MC-048B target fixtures, then remove every reader of the old UI
   references.
 - **Delete:** tracked old page images and theme constants measured from them
   only after consumer scans prove no target source or test reads them.
@@ -1196,14 +1207,14 @@ It must not fabricate a DAW result, listening score, or sign-off.
 - **Evidence:** exact deleted UI/source/test/fixture list, consumer scan,
   tracked-file recoverability note, six-page semantic tree, and target fixture
   hashes/sizes.
-- **Commit:** `midi-core: MC-051A remove legacy desktop UI`.
+- **Commit:** `midi-core: MC-051 remove legacy desktop UI`.
 - **Done when:** no hidden route, state, intent, tag, screenshot, test, or
   reference-image reader for the old product remains, while all six target
   pages retain passing MIDI-only visual fixtures.
 
 ### MC-052 — Remove audio, DSP, mastering models, and their tests
 
-- **Depends on:** MC-051A.
+- **Depends on:** MC-051.
 - **Contracts:** Cleanup Scope 5.2; F-SYS-002.
 - **Inspect:** audio/dsp/model packages, all imports, resources, configuration,
   and application/arrangement users.
@@ -1415,13 +1426,13 @@ It must not fabricate a DAW result, listening score, or sign-off.
   implemented; current mutation code is removed in MC-055.
 - **Export:** F-EXP-001–007 -> MC-007–009, MC-019, MC-029, MC-039, MC-046,
   MC-048.
-- **UI:** F-UI-001–006 -> MC-031–040, MC-051, MC-051A.
+- **UI:** F-UI-001–006 -> MC-031–040, MC-048B, MC-051.
 - **System:** F-SYS-001–004 -> all phases, especially MC-003, MC-011–013,
   MC-025, MC-028–030, MC-047, MC-050–060.
 
 ## 7. Completion rule
 
-MC-000 through MC-060, including MC-048A and MC-051A, are mandatory. A task is not complete because its code
+MC-000 through MC-060, including MC-048A and MC-048B, are mandatory. A task is not complete because its code
 compiles; its deletion, focused tests, full required gate, evidence, and commit
 must all be recorded. Optional features require a new user-approved plan after
 MC-060 and may not be smuggled into this sequence.

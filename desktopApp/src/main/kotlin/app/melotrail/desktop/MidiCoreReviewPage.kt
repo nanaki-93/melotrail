@@ -112,8 +112,13 @@ internal fun MidiCoreReviewPage(
             testTag = MidiCoreReviewPageTags.ROOT
             contentDescription = "Review immutable MIDI candidate evidence and audition"
         }.verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md),
+        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Lg),
     ) {
+        WorkspacePageHeading(
+            eyebrow = "DECIDE",
+            title = "Review",
+            summary = "Listen to alternatives and explicitly choose what belongs in the arrangement.",
+        )
         if (state.project == null || authority == null || occurrences.isEmpty()) {
             ReviewEmptyState(state)
             return@Column
@@ -440,7 +445,7 @@ private fun ReviewTransportCard(state: MidiCoreWorkspaceState, onIntent: (MidiCo
         Text("${audition.playback.name.lowercase().replaceFirstChar(Char::uppercaseChar)} · tick ${audition.positionTick}", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
         val selectedOutput = audition.outputDevices.singleOrNull { it.id == audition.outputDeviceId }
         Text(
-            "Output: ${selectedOutput?.name ?: "System MIDI output"}",
+            "Output: ${selectedOutput?.name ?: "Built-in synthesizer"}",
             style = MaterialTheme.typography.bodySmall,
             color = MusicWorkspaceTokens.TextSecondary,
         )
@@ -450,9 +455,9 @@ private fun ReviewTransportCard(state: MidiCoreWorkspaceState, onIntent: (MidiCo
             modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                 testTag = MidiCoreReviewPageTags.OUTPUT_DEFAULT
                 selected = audition.outputDeviceId == null
-                contentDescription = "Use the system MIDI output for audition"
+                contentDescription = "Use the built-in synthesizer for audition"
             },
-        ) { Text("Use system MIDI output") }
+        ) { Text("Use built-in synthesizer") }
         audition.outputDevices.forEach { device ->
             OutlinedButton(
                 onClick = { onIntent(MidiCoreWorkspaceIntent.SelectAuditionOutputDevice(device.id)) },

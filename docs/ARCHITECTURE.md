@@ -154,7 +154,8 @@ Responsibilities:
 
 - play, pause, stop, seek, loop, mute, and solo MIDI views;
 - audition source, candidate, occurrence, role, and complete arrangement;
-- select a supported local output when necessary;
+- open an audible JVM synthesizer as the managed default endpoint;
+- select a supported external local receiver when requested;
 - clean up sequencer/device resources deterministically; and
 - report unavailable devices without corrupting project state.
 
@@ -194,6 +195,12 @@ rendering, and accessibility focus. They consume the same immutable workspace
 state as the pages; they must not invent audio waveforms, video previews,
 instrument libraries, mixer state, or hidden navigation destinations. The
 authoritative visual contract is `docs/MIDI_WORKSPACE_VISUAL_SPEC.md`.
+
+Musician-facing authority drafting uses BPM, named whole-bar sections, and one
+progression string per saved occurrence. The desktop converts those inputs into
+the canonical tempo, stable identities, contiguous tick ranges, and chord
+windows required by application services; internal IDs and tick arithmetic are
+not exposed as editing controls.
 
 Target destinations:
 

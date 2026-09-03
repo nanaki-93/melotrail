@@ -81,6 +81,8 @@ Before implementation tasks begin:
 - No removed page is reachable through a hidden route or settings entry.
 - The six target pages pass deterministic visual-regression checks at wide and
   compact desktop widths, plus a blocked/error state where applicable.
+- Structure & Harmony exposes BPM, section names/bar counts, and progression
+  text without stable-ID or raw-tick editing fields.
 - Screen hierarchy, focus treatment, text contrast, and selected/disabled
   states remain understandable without colour alone.
 - MIDI visualizations use current project evidence; no waveform, video,
@@ -92,6 +94,8 @@ Before implementation tasks begin:
 - Repeated start/stop does not leak devices, threads, or stuck notes.
 - Candidate comparison uses the same timing origin and authority context.
 - Device absence or loss is recoverable and cannot mutate the project.
+- The no-selection default opens a managed audible synthesizer rather than an
+  arbitrary system receiver or virtual DAW port.
 - Audition does not write WAV/MP3 or require the old renderer/sound library.
 
 ## 6. DAW gates

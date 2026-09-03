@@ -1,6 +1,6 @@
 # MIDI Core execution log
 
-Status: MC-049 awaiting human holdout evidence
+Status: MC-048B done; MC-049 awaiting human holdout evidence
 
 Task authority: `MIDI_CORE_TASKS.md`
 
@@ -84,15 +84,15 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-042 | DONE | `midi-core: MC-042 harden bass arrangements` | PASS — focused Bass/development suite, `make test`, `make build` | Collision-safe, profile-distinct Bass candidates with SHA-pinned three-fixture alternatives and deterministic section lift. |
 | MC-043 | DONE | `midi-core: MC-043 harden drum arrangements` | PASS — focused Drum/development suite, `make test`, `make build` | Complete groove retention, restrained Bass-aware kicks, section-aware direct-fill companions, and SHA-pinned three-fixture alternatives. |
 | MC-044 | DONE | `midi-core: MC-044 harden ensemble interaction` | PASS — interaction/generation suite, `make test`, `make build` | Accepted same-occurrence role context, deterministic interaction validation, and one-role-only repair without a global rewrite. |
-| MC-045 | DONE | `midi-core: MC-045 harden MIDI audition` | PASS — controller/Sequencer/Receiver, focused desktop tests, local default-receiver smoke, `make test`, `make build` | Discoverable output selection, exact-tick session replacement, safe live transport rebuild, deterministic cleanup, and MIDI-only UI recovery are covered. |
+| MC-045 | DONE | `midi-core: MC-045 harden MIDI audition` | PASS — controller/Sequencer/Receiver, focused desktop tests, route smoke, `make test`, `make build` | Discoverable output selection, exact-tick session replacement, safe live transport rebuild, deterministic cleanup, and MIDI-only UI recovery are covered. MC-048B later corrected the route smoke's false audible-default assumption. |
 | MC-046 | DONE | `midi-core: MC-046 harden MIDI export` | PASS — exporter/development-fixture and focused Export UI suites, documentation coverage, `make test`, `make build` | Versioned self-validating portable manifest, semantic package re-import, deterministic package bytes/hashes, snapshot-failure cleanup, and explicit Logic/GarageBand conditional guidance are covered. |
 | MC-047 | DONE | `midi-core: MC-047 harden malformed input handling` | PASS — fixed-seed bounded property suite twice, documentation coverage, `make test`, `make build` | 400 deterministic boundary cases cover malformed chunks/note pairing, rational ticks, timelines, JSON/path/state, and writer-reader semantics. |
 | MC-048 | DONE | `midi-core: MC-048 verify Logic Pro` | PASS — six-package final Logic Pro matrix, focused Export/exporter suites, `make test`, `make build` | Logic Pro 12.3.1 final imports/playback/save-reopen pass; marker display is best-effort/unassessed. User-authorized scope is Logic Pro-only; GarageBand is unverified and receives no support claim. |
 | MC-048A | DONE | `midi-core: MC-048A simplify source workflow` | PASS — focused JVM/Compose suites, documentation coverage, `make test`, `make build` | Valid complete-song input is protected atomically at import; ambiguous note tracks/channels are rejected; structure entry is ordered positive whole bars totaling the immutable source end. |
-| MC-049 | AWAITING_HUMAN | | | Awaiting ten user-approved, unseen, license-safe MIDI projects and listener rubric results; obsolete ignored `data/audio/` MIDI is not eligible. |
+| MC-048B | DONE | `midi-core: MC-048B make holdout workspace usable` | PASS — focused domain/audition/Compose suites, 12 visual fixtures, host synthesizer note smoke, documentation coverage, `make test`, `make build`, desktop startup | Imported playback uses an audible managed synthesizer by default; BPM and a three-step section/progression editor replace technical authority fields; all six pages use the target responsive navy/violet shell. |
+| MC-049 | AWAITING_HUMAN | | | The usability prerequisite is complete. Holdout intake/listening may resume using the frozen eligibility and rubric evidence. |
 | MC-050 | TODO | | | |
-| MC-051 | TODO | | | Rebuild the six target pages around the MIDI workspace visual system before legacy visual removal. |
-| MC-051A | TODO | | | Delete the legacy desktop UI and reference fixtures only after MC-051 target fixtures pass. |
+| MC-051 | TODO | | | Delete the legacy desktop UI and reference fixtures only after MC-048B target fixtures pass and MC-050 removes its application owners. |
 | MC-052 | TODO | | | |
 | MC-053 | TODO | | | |
 | MC-054 | TODO | | | |
@@ -112,7 +112,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | G2 MIDI project kernel complete | MC-010–MC-019 | DONE | MC-010–MC-019 target schema, artifact, authority, invalidation, lifecycle, and full test/build gates pass. |
 | G3 Vertical slice complete | MC-020–MC-030 | DONE | MC-020–MC-030 target context, validation, generation, review, assembly, audition, export, and the JVM vertical-slice gate pass. |
 | G4 Focused desktop complete | MC-031–MC-040 | DONE | MC-040 real-service focused Compose E2E, six generated page fixtures, `make test`, and `make build` pass. |
-| G5 Product behavior accepted | MC-041–MC-049 | IN_PROGRESS | MC-041–MC-048A are complete; MC-049 awaits the required user-approved holdout set and listener scores. |
+| G5 Product behavior accepted | MC-041–MC-049 | IN_PROGRESS | MC-041–MC-048B are complete; MC-049 holdout intake/listening is the remaining human gate. |
 | G6 Legacy product removed | MC-050–MC-059 | TODO | |
 | G7 MVP complete | MC-060 | TODO | |
 
@@ -1222,6 +1222,31 @@ Fixture evidence: `whole-song-one-bar.mid` SHA-256 `ca4f370f54bd15ac39e6b8ee314e
 Commit: `midi-core: MC-048A simplify source workflow`.
 Next task: MC-049 — await the user-approved holdout set and listener results; do not begin MC-050 cleanup before the manual gate passes.
 
+### MC-048B — Make the MIDI workspace usable for holdout testing
+
+Status: DONE
+Started: 2026-09-03
+Completed: 2026-09-03
+Starting commit/status: `ca87f18` / only the preserved unrelated deleted Kotlin compiler-session marker was present.
+User decision: Complete the graphics, playback, BPM, and Structure & Harmony usability work before resuming the listening test. The user's “MC045 test” wording is treated as the current manual holdout continuation; MC-045 itself was already complete and its audible-default defect is corrected here.
+Contracts read: Architecture 4.6 and 4.8; F-MIDI-005; F-AUTH-001–F-AUTH-004; F-PLAY-001–F-PLAY-004; F-UI-001–F-UI-006; MIDI Contract section 8; Quality Gates 4–5; `docs/MIDI_WORKSPACE_VISUAL_SPEC.md`; and the inserted MC-048B task.
+Root cause: On this host `MidiSystem.getReceiver()` resolved to `com.sun.media.sound.MidiOutDevice$MidiOutReceiver` for `Logic Pro Virtual In`. The old transport could therefore report PLAYING while no application was monitoring the virtual port. The earlier MC-045 default-receiver smoke proved delivery but not audibility.
+Behavior retained/extracted: The no-selection path now opens the JVM synthesizer as a managed device, routes the sequencer to its receiver, and closes both with the session; explicit external receivers remain optional. `ProjectTempo.fromBeatsPerMinute` validates positive finite input and rounds `60,000,000 / BPM` to the exact persisted SMF tempo. The authority page is now three musical steps: song settings, an ordered list of section name/bar rows, and one `|`-separated progression per saved section. Stable IDs and contiguous ticks remain canonical internally; unchanged exact chord windows are preserved and edited progressions deterministically cover their occurrence without gaps.
+Visual result: The six target destinations share a deep navy canvas, layered opaque panels, restrained violet selected/primary states, compact numbered navigation, a wide musical context rail, a horizontally traversable compact navigation row, consistent page headings, and accessible ready/warning/error text. The MIDI transport is immediately below import so listening no longer hides beneath track diagnostics. No waveform, audio renderer, mixer, video, library, release, or hidden target route was introduced.
+BPM/conversion evidence: 120 BPM -> 500,000 microseconds/quarter; 92 BPM -> 652,174 microseconds/quarter and round-trips within 0.001 BPM. At PPQ 480 and 4/4, two 2-bar section rows resolve exactly to `[0, 3,840)` and `[3,840, 7,680)`. `C | C | Am | F` resolves to four contiguous equal windows; a repeated symbol retains the same harmony across adjacent slots.
+Files added/changed: active plan/task/log/docs; root README; architecture, functional, MIDI, quality, troubleshooting, visual, audition-smoke, and documentation-inventory contracts; typed BPM conversion; JVM audition adapter/default copy; the focused shell/theme and all six page headings; the rewritten Structure & Harmony page; the new authority-drafting owner; and focused domain, adapter, Compose, workflow, accessibility, and visual-fixture tests.
+Files/data deleted: The musician-facing microseconds-per-quarter, stable section/definition/occurrence ID, pickup, start-tick, duration-tick, and raw chord-window editors were removed from the focused Structure & Harmony page. No source MIDI, project, candidate, accepted work, export snapshot, reference image, or user data was deleted. Transitional docs and legacy UI owners remain until MC-051 because executable readers still require them; premature deletion was rejected by the full-suite documentation regression.
+Tracked deletion recoverability: No task-owned tracked file was deleted. The unrelated `.kotlin/sessions/kotlin-compiler-10759057547151889139.salive` deletion remains unstaged and excluded.
+Ignored deletion recoverability: Gradle test/build output and generated PNG fixtures are reproducible; no ignored project data was deleted.
+Focused tests: BPM primitive/persistence tests, managed-device audition adapter tests, the real import-to-Play workflow, authority drafting, simplified Structure & Harmony mutations/absence scans, Project scroll semantics, six-destination shell behavior, theme contrast/accessibility, and wide/compact visual regression all PASS.
+Host playback smoke: OpenJDK 21.0.11 resolved `MidiSystem.getSynthesizer()` to `Gervill` (`com.sun.media.sound.SoftSynthesizer`), opened a `com.sun.media.sound.SoftReceiver`, delivered NOTE_ON/NOTE_OFF, and closed the device: `BUILT_IN_SYNTH_NOTE_SMOKE=PASS`.
+Visual fixtures: generated under `desktopApp/build/test-results/midi-core-focused-workflow/{wide,compact}`. Wide is 1280 × 900 with ready workflow state; compact is 720 × 900 with blocked/no-project state. Wide SHA-256: Arrange `a2b3efa24e78c7c233bb19c716067a8c0eb4f1df9b776506e66d5f56d015fddf`, Export `9175edda5af58499d3761f975c1097ff0420be94b7ec181261afe44d3135f7d8`, MIDI `deefb8bdfb48d853859bb4a6ca9ae4e3069605ee2102a3fc449c37dd3c4632dd`, Project `488df4eb3fdbd09feed5734e5359c4c6714efb93f0a6c18352208b8aa4a6b6ff`, Review `fcd023d927c71889a6ea4466716bf86e8d5dceb20179ba1d06909be538b0f4ff`, Structure & Harmony `de8d02d3731968345b0d5a901b1c2c024a93249592b45e5887140f324316b2e8`. Compact SHA-256: Arrange `c5c56963a25bf6e0115f60d3f1795539d8d5ab74cdc0c483783ecbacfb72c942`, Export `20e2f731f8583626f55cdacd5eabca9ad9329a89f7bd8d3ef474025efb4030b2`, MIDI `1029c46272dd69d7fe8a64ea7e9ce4c356f01f92fd946bfe9100f14ce00edb70`, Project `bd34be33161fc6b12064b31398c3dc7a280f11de1f6f73a375bd8c3124bb83db`, Review `da7e07f3322333c28464cc7cc8f9357c5e1d33c3fd7d93c2c4549791910dc3f7`, Structure & Harmony `f44c83dd3dfa490cbc8384da916078f70a61ec45cb1cfc1f6b29a425941c7eaf`.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; `git diff --check` PASS; `make test` PASS for the complete root and desktop suites; `make build` PASS (15 Gradle tasks); desktop startup reached the running Compose application without startup error and was then intentionally interrupted.
+Decisions/deviations: The internal project contract remains exact SMF tempo and tick authority; BPM and bars/progressions are lossless or deterministically resolved presentation inputs. The old reference image set was not deleted because MC-051 owns deletion after its remaining readers and legacy UI owners are removed. Generated fixture UUID/path text makes hashes run-specific; dimensions, semantic assertions, content, and paths are the durable regression evidence.
+Known limitations: Audible timbre varies with the host synthesizer or selected external receiver and is not export authority. A progression distributes changes evenly; repeat a symbol to hold it longer. The user must still supply and score the eligible MC-049 holdout set.
+Commit: `midi-core: MC-048B make holdout workspace usable`.
+Next task: MC-049 — resume the user-approved holdout listening rubric on this usable workspace; do not begin MC-050 cleanup before the manual gate passes.
+
 ### MC-049 — Holdout musical acceptance
 
 Status: AWAITING_HUMAN
@@ -1287,7 +1312,6 @@ Next action: Await user-provided holdouts and listener results; do not start MC-
 | --- | --- | --- | --- | --- | --- | --- |
 | MC-050 | | | | | | |
 | MC-051 | | | | | | |
-| MC-051A | | | | | | |
 | MC-052 | | | | | | |
 | MC-053 | | | | | | |
 | MC-054 | | | | | | |

@@ -17,6 +17,7 @@ import app.melotrail.midi.domain.MidiPpq
 import app.melotrail.midi.domain.MidiSemanticEventKind
 import javax.sound.midi.MidiUnavailableException
 import javax.sound.midi.MetaMessage
+import javax.sound.midi.MidiDevice
 import javax.sound.midi.MidiMessage
 import javax.sound.midi.Receiver
 import javax.sound.midi.Sequence
@@ -32,6 +33,29 @@ import org.junit.jupiter.api.Test
 
 class JdkMidiAuditionOutputTest {
     @Test
+    fun `default preview opens and closes the managed audible synthesizer`() {
+        val sequencer = RecordingSequencer()
+        val receiver = RecordingReceiver()
+        val synthesizer = RecordingMidiDevice(receiver)
+        val output = JdkMidiAuditionOutput(
+            sequencerFactory = { sequencer.instance },
+            defaultDeviceFactory = { synthesizer.instance },
+        )
+        val controller = MidiAuditionController(output)
+
+        assertIs<MidiAuditionResult.Applied>(
+            controller.play(MidiAuditionPlaybackPlan(MidiAuditionView.sourceMelody(song()))),
+        )
+        assertTrue(synthesizer.opened)
+        assertEquals(1, synthesizer.receiverRequests)
+
+        assertIs<MidiAuditionResult.Applied>(controller.stop())
+        controller.close()
+        assertTrue(receiver.closed)
+        assertTrue(synthesizer.closed)
+    }
+
+    @Test
     fun `maps an unavailable JVM sequencer to a recoverable device result`() {
         val output = JdkMidiAuditionOutput(
             sequencerFactory = { throw MidiUnavailableException("no local MIDI sequencer") },
@@ -44,6 +68,22 @@ class JdkMidiAuditionOutputTest {
 
         assertEquals(app.melotrail.audition.MidiAuditionProblemCode.DEVICE_UNAVAILABLE, result.problem.code)
         assertEquals(MidiAuditionPlaybackState.STOPPED, result.state.playback)
+    }
+
+    @Test
+    fun `closes a partially opened default synthesizer after failure`() {
+        val synthesizer = RecordingMidiDevice(RecordingReceiver(), MidiUnavailableException("audio line unavailable"))
+        val output = JdkMidiAuditionOutput(
+            sequencerFactory = { RecordingSequencer().instance },
+            defaultDeviceFactory = { synthesizer.instance },
+        )
+
+        val result = assertIs<MidiAuditionResult.Failed>(
+            MidiAuditionController(output).play(MidiAuditionPlaybackPlan(MidiAuditionView.sourceMelody(song()))),
+        )
+
+        assertEquals(app.melotrail.audition.MidiAuditionProblemCode.DEVICE_UNAVAILABLE, result.problem.code)
+        assertTrue(synthesizer.closed)
     }
 
     @Test
@@ -122,6 +162,37 @@ private class RecordingReceiver : Receiver {
     }
 
     override fun close() { closed = true }
+}
+
+private class RecordingMidiDevice(
+    private val receiver: Receiver,
+    private val openFailure: Exception? = null,
+) : InvocationHandler {
+    var opened = false
+    var closed = false
+    var receiverRequests = 0
+
+    val instance: MidiDevice = Proxy.newProxyInstance(
+        MidiDevice::class.java.classLoader,
+        arrayOf(MidiDevice::class.java),
+        this,
+    ) as MidiDevice
+
+    override fun invoke(proxy: Any, method: java.lang.reflect.Method, args: Array<out Any?>?): Any? = when (method.name) {
+        "open" -> openFailure?.let { throw it } ?: Unit.also { opened = true }
+        "close" -> Unit.also { closed = true; opened = false }
+        "isOpen" -> opened
+        "getReceiver" -> receiver.also { receiverRequests += 1 }
+        "getReceivers" -> listOf(receiver)
+        "getMaxReceivers" -> -1
+        "getTransmitters" -> emptyList<Transmitter>()
+        "getMaxTransmitters" -> 0
+        "getMicrosecondPosition" -> -1L
+        "toString" -> "RecordingMidiDevice"
+        "hashCode" -> System.identityHashCode(proxy)
+        "equals" -> proxy === args?.firstOrNull()
+        else -> null
+    }
 }
 
 private class RecordingSequencer : InvocationHandler {

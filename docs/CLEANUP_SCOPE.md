@@ -153,8 +153,8 @@ Delete:
 Keep Compose Desktop and reusable controls. Do not keep hidden legacy pages.
 
 The checked-in UI images are temporary style references, not target fixtures.
-MC-051 first proves the MIDI-only visual system and captures six replacement
-fixtures. MC-051A then removes image readers, legacy measurements, and the old
+MC-048B first proves the MIDI-only visual system and captures replacement
+fixtures. MC-051 then removes image readers, legacy measurements, and the old
 images after confirming that target tests no longer reference them.
 
 ### 5.6 Documentation and planning

@@ -6,7 +6,7 @@
 > product contract. Delete this inventory, its JSON, and its Python checker when
 > their build wiring is removed.
 
-Inventory reviewed: 2026-08-25
+Inventory reviewed: 2026-09-03
 
 [`FUNCTION_DOCUMENTATION_INVENTORY.json`](FUNCTION_DOCUMENTATION_INVENTORY.json)
 is the checked-in inventory for every Kotlin/Python production source under
@@ -78,3 +78,7 @@ planning, Cohesion, enhancement-selection, drum, pad, and pattern-library rows.
 It covers exact slash/sixth-chord execution, catalog-driven lo-fi grooves and
 fills, deterministic continuity, authoritative-harmony chord comping, and the
 bounded no-bass/no-model arrangement path.
+
+MC-048B adds the authority-drafting conversion owner and refreshes the focused
+Structure & Harmony page, MIDI-only responsive shell, visual tokens, and typed
+BPM primitive rows after their 2026-09-03 contract and regression review.

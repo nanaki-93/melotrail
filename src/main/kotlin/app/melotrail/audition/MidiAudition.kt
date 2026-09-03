@@ -440,7 +440,7 @@ class MidiAuditionController(
             return reject(
                 MidiAuditionProblemCode.INVALID_REQUEST,
                 "The selected MIDI output is no longer available.",
-                "Choose the system MIDI output or reconnect the device, then retry.",
+                "Choose the built-in synthesizer or reconnect the device, then retry.",
             )
         }
         val positionTick = active?.let { session ->

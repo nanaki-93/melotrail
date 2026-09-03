@@ -25,8 +25,8 @@ guided-arranger plans are superseded; Git history is their archive.
 Create project
   -> Import one complete-song, single-melody-track MIDI file
   -> Protect that melody automatically
-  -> Confirm key, tempo, meter, bar-count structure, and harmony
-  -> Audition the source through MIDI playback
+  -> Set key, tempo in BPM, meter, named sections in bars, and chord progressions
+  -> Audition the source through the built-in MIDI synthesizer
   -> Generate and compare chord, bass, and drum candidates
   -> Accept or regenerate by section and role
   -> Review the complete arrangement
@@ -35,8 +35,9 @@ Create project
 
 The MVP accepts one SMF format 0 or 1 file with exactly one note-bearing track
 and one note-bearing channel. Additional non-note conductor/reference tracks
-are allowed. The melody is protected automatically, structure is entered in
-whole bars, and the section total must match the source length. Multiple source
+are allowed. The melody is protected automatically, tempo is entered in BPM,
+structure is entered as named whole-bar sections, and harmony is written as one
+readable chord progression per section. The section total must match the source length. Multiple source
 files, tempo maps, meter changes, audio import, and transcription are outside
 V1.
 
@@ -51,9 +52,11 @@ The Compose Desktop UI remains the product. Its target workspace contains:
 - Review
 - Export
 
-Settings that are genuinely required for MIDI audition or export may use a
-small dialog. Melotrail does not reproduce a DAW mixer, mastering suite, sound
-browser, video editor, or publishing console.
+The imported melody plays through an audible built-in synthesizer by default;
+an external MIDI receiver can be chosen from Review. Settings that are genuinely
+required for MIDI audition or export may use a small dialog. Melotrail does not
+reproduce a DAW mixer, mastering suite, sound browser, video editor, or
+publishing console.
 
 ## Visual direction
 
@@ -95,9 +98,9 @@ Obsolete worker, renderer, and live-audio commands may remain in the current
 Makefile until their owning implementation is deleted. Do not build new work on
 them.
 
-The current UI still exposes a transitional [MIDI import process](docs/MIDI_IMPORT_PROCESS.md)
-from the rejected runtime. It remains only until the focused MIDI page replaces
-that executable documentation contract.
+The legacy runtime still owns a transitional [MIDI import process](docs/MIDI_IMPORT_PROCESS.md)
+contract and source-level reader. It is not the focused MIDI page workflow and
+will be deleted with its remaining owners in MC-051.
 
 ## Safety and musical authority
 

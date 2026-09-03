@@ -78,8 +78,10 @@ views point back to the preserved source digest and selected track identity.
 
 ### F-AUTH-001 — Set fixed tempo and meter
 
-The user confirms one tempo and one time signature. Unsupported maps are
-reported during import rather than flattened silently.
+The user enters tempo in beats per minute (BPM) and chooses one time signature.
+The application converts BPM to the nearest valid Standard MIDI
+microseconds-per-quarter value for exact persistence and export. Unsupported
+maps are reported during import rather than flattened silently.
 
 ### F-AUTH-002 — Set project key and mode
 
@@ -88,16 +90,21 @@ suggestion but cannot become authoritative without confirmation.
 
 ### F-AUTH-003 — Define sections and occurrences
 
-The user creates named section definitions and arranges occurrence instances in
-song order. Each occurrence has a positive whole-bar length and stable identity.
-The application derives contiguous start/end ticks from confirmed meter and PPQ.
-The section bar total must exactly equal the imported melody length.
+The user builds one ordered list using only musician-facing section names and
+positive whole-bar lengths. Stable definition and occurrence identities remain
+internal. The application derives contiguous start/end ticks from confirmed
+meter and PPQ. The section bar total must exactly equal the imported melody
+length.
 
 ### F-AUTH-004 — Define authoritative harmony
 
-The user assigns chord events with explicit durations to each section or
-occurrence. Valid chromatic chords are accepted. Syntax or realizability errors
-block generation only in the affected scope.
+The user writes one chord progression per saved section occurrence, with chord
+symbols in playing order separated by `|`. The application deterministically
+maps those symbols to gap-free windows across the section; repeating a symbol
+extends that harmony across additional equal slots. Persisted chord events keep
+their exact durations when the progression is unchanged. Valid chromatic chords
+are accepted. Syntax or realizability errors block generation only in the
+affected scope.
 
 ### F-AUTH-005 — Preview authority impact
 
@@ -110,7 +117,8 @@ silently.
 ### F-PLAY-001 — Control MIDI playback
 
 The user can play, pause, stop, seek, and loop an available MIDI view without
-rendering an audio file.
+rendering an audio file. With no external receiver selected, the desktop opens
+and owns an audible built-in synthesizer for preview.
 
 ### F-PLAY-002 — Audition scopes
 

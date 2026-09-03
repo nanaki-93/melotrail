@@ -2,7 +2,7 @@
 
 Status: MIDI Core execution in progress; task evidence is recorded in the execution log
 
-Last updated: 2026-09-02
+Last updated: 2026-09-03
 
 Authority: this is the only active Melotrail roadmap
 
@@ -309,6 +309,10 @@ editing project files manually.
 - Complete separate-role files and manifest.
 - Enforce deterministic ordering, channel/controller policy, atomic export,
   collision handling, and semantic re-import.
+- Before holdout listening, make the desktop workflow genuinely testable:
+  default source audition to an audible local synthesizer, accept tempo in BPM,
+  simplify Structure & Harmony around musical names/bars/chord progressions,
+  and establish the six-page MIDI workspace visual system.
 - Run automated fixtures, holdout musical reviews, and the Logic Pro
   compatibility matrix.
 - Resolve blockers through targeted changes only.
@@ -383,7 +387,7 @@ The MIDI Core migration is complete only when:
 
 The mandatory implementation sequence is
 `docs/plan/MIDI_CORE_TASKS.md`. Execute it strictly from `MC-000` through
-`MC-060`, including `MC-048A` after `MC-048` and `MC-051A` after `MC-051`,
+`MC-060`, including `MC-048A` and `MC-048B` after `MC-048`,
 using `docs/plan/EXECUTE_MIDI_CORE_TASKS_PROMPT.md`, and record every task,
 commit, validation result, manual gate, deletion, and final sign-off in
 `docs/plan/MIDI_CORE_EXECUTION_LOG.md`.
