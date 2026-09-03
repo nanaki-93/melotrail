@@ -97,21 +97,29 @@ class MidiCoreReviewPageTest {
     }
 
     @Test
-    fun `Review hides lifecycle and transport complexity until requested`() = runComposeUiTest {
+    fun `Review keeps lifecycle focused while the persistent player progressively discloses transport options`() = runComposeUiTest {
         val intents = mutableListOf<MidiCoreWorkspaceIntent>()
-        setContent { MelotrailTheme { MidiCoreReviewPage(reviewState(), intents::add, {}) } }
+        setContent {
+            MelotrailTheme {
+                MidiCoreWorkspaceShell(
+                    state = reviewState(),
+                    onIntent = intents::add,
+                    initialDestination = MidiCoreWorkspaceDestination.REVIEW,
+                )
+            }
+        }
         waitForIdle()
         intents.clear()
 
         onNodeWithTag(MidiCoreReviewPageTags.PLAY_ARRANGEMENT).performScrollTo().assertIsNotEnabled()
-        onNodeWithTag(MidiCoreReviewPageTags.SEEK_START).assertDoesNotExist()
-        onNodeWithTag(MidiCoreReviewPageTags.ADVANCED).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreReviewPageTags.PAUSE).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreReviewPageTags.STOP).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreReviewPageTags.SEEK_START).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreReviewPageTags.LOOP).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreReviewPageTags.mute(MidiExportRole.DRUMS)).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreReviewPageTags.solo(MidiExportRole.BASS)).performScrollTo().performClick()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_SEEK_START).assertDoesNotExist()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_OPTIONS).performClick()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_PLAY_PAUSE).performClick()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_STOP).performClick()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_SEEK_START).performClick()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_LOOP).performClick()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.mute(MidiExportRole.DRUMS)).performClick()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.solo(MidiExportRole.BASS)).performClick()
         waitForIdle()
 
         assertEquals(
@@ -132,23 +140,39 @@ class MidiCoreReviewPageTest {
         val device = MidiAuditionOutputDevice("test-output", "Test MIDI output", "Test", "Test receiver", "1")
         val intents = mutableListOf<MidiCoreWorkspaceIntent>()
         val selectedState = reviewState().copy(audition = reviewState().audition.copy(outputDeviceId = device.id, outputDevices = listOf(device)))
-        setContent { MelotrailTheme { MidiCoreReviewPage(selectedState, intents::add, {}) } }
+        setContent {
+            MelotrailTheme {
+                MidiCoreWorkspaceShell(
+                    state = selectedState,
+                    onIntent = intents::add,
+                    initialDestination = MidiCoreWorkspaceDestination.REVIEW,
+                )
+            }
+        }
 
         waitForIdle()
         intents.clear()
-        onNodeWithTag(MidiCoreReviewPageTags.ADVANCED).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreReviewPageTags.OUTPUT_MENU).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreReviewPageTags.OUTPUT_DEFAULT).performClick()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_OPTIONS).performClick()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_OUTPUT_MENU).performClick()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_OUTPUT_DEFAULT).performClick()
         waitForIdle()
         assertEquals(listOf<MidiCoreWorkspaceIntent>(MidiCoreWorkspaceIntent.SelectAuditionOutputDevice(null)), intents)
 
         intents.clear()
-        setContent { MelotrailTheme { MidiCoreReviewPage(reviewState().copy(audition = reviewState().audition.copy(outputDevices = listOf(device))), intents::add, {}) } }
+        setContent {
+            MelotrailTheme {
+                MidiCoreWorkspaceShell(
+                    state = reviewState().copy(audition = reviewState().audition.copy(outputDevices = listOf(device))),
+                    onIntent = intents::add,
+                    initialDestination = MidiCoreWorkspaceDestination.REVIEW,
+                )
+            }
+        }
         waitForIdle()
         intents.clear()
-        onNodeWithTag(MidiCoreReviewPageTags.ADVANCED).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreReviewPageTags.OUTPUT_MENU).performScrollTo().performClick()
-        onNodeWithTag(MidiCoreReviewPageTags.output(device.id)).performClick()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_OPTIONS).performClick()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_OUTPUT_MENU).performClick()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.output(device.id)).performClick()
         waitForIdle()
         assertEquals(listOf<MidiCoreWorkspaceIntent>(MidiCoreWorkspaceIntent.SelectAuditionOutputDevice(device.id)), intents)
     }

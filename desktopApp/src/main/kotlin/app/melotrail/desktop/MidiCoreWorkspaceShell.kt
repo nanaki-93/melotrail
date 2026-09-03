@@ -21,7 +21,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -39,6 +43,10 @@ import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import app.melotrail.audition.MidiAuditionLoop
+import app.melotrail.audition.MidiAuditionPlaybackState
+import app.melotrail.audition.MidiAuditionScope
+import app.melotrail.midi.domain.MidiExportRole
 import java.util.Locale
 
 /** Stable semantic IDs for the target shell and its six reachable destinations. */
@@ -55,10 +63,30 @@ internal object MidiCoreWorkspaceShellTags {
     const val PAGE = "midi-core-workspace-page"
     const val CONTEXT = "midi-core-workspace-context"
     const val BLOCKERS = "midi-core-workspace-blockers"
+    const val PLAYER = "midi-core-workspace-player"
+    const val PLAYER_TARGET = "midi-core-workspace-player-target"
+    const val PLAYER_SOURCE = "midi-core-workspace-player-source"
+    const val PLAYER_CURRENT = "midi-core-workspace-player-current"
+    const val PLAYER_ACCEPTED = "midi-core-workspace-player-accepted"
+    const val PLAYER_PLAY_PAUSE = "midi-core-workspace-player-play-pause"
+    const val PLAYER_STOP = "midi-core-workspace-player-stop"
+    const val PLAYER_POSITION = "midi-core-workspace-player-position"
+    const val PLAYER_LOOP = "midi-core-workspace-player-loop"
+    const val PLAYER_OPTIONS = "midi-core-workspace-player-options"
+    const val PLAYER_OUTPUT_MENU = "midi-core-workspace-player-output-menu"
+    const val PLAYER_OUTPUT_DEFAULT = "midi-core-workspace-player-output-default"
+    const val PLAYER_SEEK_START = "midi-core-workspace-player-seek-start"
+    const val PLAYER_RECOVERY = "midi-core-workspace-player-recovery"
+    const val PLAYER_OUTPUT_PREFIX = "midi-core-workspace-player-output-"
+    const val PLAYER_MUTE_PREFIX = "midi-core-workspace-player-mute-"
+    const val PLAYER_SOLO_PREFIX = "midi-core-workspace-player-solo-"
     const val DESTINATION_PREFIX = "midi-core-destination-"
     const val BLOCKER_PREFIX = "midi-core-blocker-"
 
     fun destination(destination: MidiCoreWorkspaceDestination): String = DESTINATION_PREFIX + destination.route
+    fun output(id: String): String = PLAYER_OUTPUT_PREFIX + id.hashCode().toUInt().toString(16)
+    fun mute(role: MidiExportRole): String = PLAYER_MUTE_PREFIX + role.name.lowercase()
+    fun solo(role: MidiExportRole): String = PLAYER_SOLO_PREFIX + role.name.lowercase()
 }
 
 /** The only top-level pages reachable from the target desktop shell. */
@@ -122,7 +150,7 @@ internal fun MidiCoreWorkspaceShell(
             MidiCoreWorkspaceHeader(state)
             when (layout) {
                 MidiCoreWorkspaceShellLayout.WIDE -> Row(
-                    Modifier.fillMaxSize().semantics { testTag = MidiCoreWorkspaceShellTags.WIDE_LAYOUT },
+                    Modifier.fillMaxWidth().weight(1f).semantics { testTag = MidiCoreWorkspaceShellTags.WIDE_LAYOUT },
                     horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md),
                 ) {
                     MidiCoreWorkspaceNavigation(
@@ -151,7 +179,7 @@ internal fun MidiCoreWorkspaceShell(
                 }
 
                 MidiCoreWorkspaceShellLayout.COMPACT -> Column(
-                    Modifier.fillMaxSize().semantics { testTag = MidiCoreWorkspaceShellTags.COMPACT_LAYOUT },
+                    Modifier.fillMaxWidth().weight(1f).semantics { testTag = MidiCoreWorkspaceShellTags.COMPACT_LAYOUT },
                     verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md),
                 ) {
                     MidiCoreWorkspaceNavigation(
@@ -174,8 +202,256 @@ internal fun MidiCoreWorkspaceShell(
                     }
                 }
             }
+            MidiCoreWorkspacePlaybackDock(state, onIntent)
         }
     }
+}
+
+/**
+ * The one workspace-owned MIDI transport. Destination pages choose a musical
+ * view, but never render their own pause, stop, loop, device, or role controls.
+ */
+@Composable
+private fun MidiCoreWorkspacePlaybackDock(
+    state: MidiCoreWorkspaceState,
+    onIntent: (MidiCoreWorkspaceIntent) -> Unit,
+) {
+    val audition = state.audition
+    val window = audition.window
+    val sourceAvailable = state.source.status == MidiCoreSourceStatus.IMPORTED && state.melody.selected != null
+    val acceptedAvailable = state.project?.let(::midiCoreArrangementProgress)?.complete == true
+    val currentAvailable = audition.scope != null
+    val position = window?.let { audition.positionTick.coerceIn(it.startTick, it.endTick) } ?: 0L
+    var optionsOpen by remember { mutableStateOf(false) }
+    var outputOpen by remember { mutableStateOf(false) }
+    val selectedOutput = audition.outputDevices.singleOrNull { it.id == audition.outputDeviceId }
+
+    Card(
+        Modifier.fillMaxWidth().semantics {
+            testTag = MidiCoreWorkspaceShellTags.PLAYER
+            contentDescription = "Persistent MIDI player. ${auditionTargetDescription(state)}"
+        },
+        colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface),
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(MusicWorkspaceTokens.Spacing.Sm),
+            verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm),
+        ) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm),
+            ) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+                    Text("PLAYER", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Primary)
+                    Text(
+                        auditionTargetDescription(state),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.semantics {
+                            testTag = MidiCoreWorkspaceShellTags.PLAYER_TARGET
+                            contentDescription = "Current playback target: ${auditionTargetDescription(state)}"
+                        },
+                    )
+                }
+                Text(
+                    "${audition.playback.name.lowercase().replaceFirstChar(Char::uppercaseChar)} · $position${window?.let { " / ${it.endTick}" } ?: ""}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MusicWorkspaceTokens.TextSecondary,
+                )
+            }
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs),
+            ) {
+                OutlinedButton(
+                    onClick = { onIntent(MidiCoreWorkspaceIntent.PlaySourceMelody) },
+                    enabled = sourceAvailable && !state.busy,
+                    modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                        testTag = MidiCoreWorkspaceShellTags.PLAYER_SOURCE
+                        selected = audition.scope == MidiAuditionScope.SourceMelody
+                        contentDescription = "Play protected source melody"
+                    },
+                ) { Text("Source") }
+                OutlinedButton(
+                    onClick = { onIntent(MidiCoreWorkspaceIntent.PlayAudition()) },
+                    enabled = currentAvailable && !state.busy,
+                    modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                        testTag = MidiCoreWorkspaceShellTags.PLAYER_CURRENT
+                        selected = currentAvailable && audition.scope != MidiAuditionScope.SourceMelody && audition.scope != MidiAuditionScope.AcceptedArrangement
+                        contentDescription = "Play the current MIDI audition target"
+                    },
+                ) { Text("Current") }
+                OutlinedButton(
+                    onClick = { onIntent(MidiCoreWorkspaceIntent.PlayAcceptedArrangement) },
+                    enabled = acceptedAvailable && !state.busy,
+                    modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                        testTag = MidiCoreWorkspaceShellTags.PLAYER_ACCEPTED
+                        selected = audition.scope == MidiAuditionScope.AcceptedArrangement
+                        contentDescription = if (acceptedAvailable) "Play the accepted MIDI arrangement" else "Accept every required role before playing the accepted arrangement"
+                    },
+                ) { Text("Accepted") }
+            }
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm),
+            ) {
+                Button(
+                    onClick = {
+                        onIntent(
+                            if (audition.playback == MidiAuditionPlaybackState.PLAYING) MidiCoreWorkspaceIntent.PauseAudition
+                            else MidiCoreWorkspaceIntent.PlayAudition()
+                        )
+                    },
+                    enabled = currentAvailable && !state.busy,
+                    colors = workspacePrimaryButtonColors(),
+                    modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                        testTag = MidiCoreWorkspaceShellTags.PLAYER_PLAY_PAUSE
+                        contentDescription = if (audition.playback == MidiAuditionPlaybackState.PLAYING) "Pause MIDI playback" else "Play current MIDI target"
+                    },
+                ) { Text(if (audition.playback == MidiAuditionPlaybackState.PLAYING) "Pause" else "Play") }
+                TextButton(
+                    onClick = { onIntent(MidiCoreWorkspaceIntent.StopAudition) },
+                    enabled = currentAvailable && audition.playback != MidiAuditionPlaybackState.STOPPED && !state.busy,
+                    modifier = Modifier.heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                        testTag = MidiCoreWorkspaceShellTags.PLAYER_STOP
+                        contentDescription = "Stop MIDI playback"
+                    },
+                ) { Text("Stop") }
+                OutlinedButton(
+                    onClick = {
+                        val currentWindow = window ?: return@OutlinedButton
+                        onIntent(MidiCoreWorkspaceIntent.SetAuditionLoop(if (audition.loop == null) MidiAuditionLoop(currentWindow.startTick, currentWindow.endTick) else null))
+                    },
+                    enabled = window != null && currentAvailable && !state.busy,
+                    modifier = Modifier.heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                        testTag = MidiCoreWorkspaceShellTags.PLAYER_LOOP
+                        selected = audition.loop != null
+                        contentDescription = if (audition.loop == null) "Loop current MIDI target" else "Disable MIDI loop"
+                    },
+                ) { Text(if (audition.loop == null) "Loop" else "Loop on") }
+                OutlinedButton(
+                    onClick = { optionsOpen = !optionsOpen },
+                    modifier = Modifier.heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                        testTag = MidiCoreWorkspaceShellTags.PLAYER_OPTIONS
+                        selected = optionsOpen
+                        contentDescription = if (optionsOpen) "Hide player options" else "Show player options"
+                    },
+                ) { Text("Options") }
+            }
+            if (window != null) {
+                Slider(
+                    value = position.toFloat(),
+                    onValueChange = { onIntent(MidiCoreWorkspaceIntent.SeekAudition(it.toLong().coerceIn(window.startTick, window.endTick))) },
+                    valueRange = window.startTick.toFloat()..window.endTick.toFloat(),
+                    enabled = currentAvailable && !state.busy,
+                    modifier = Modifier.fillMaxWidth().semantics {
+                        testTag = MidiCoreWorkspaceShellTags.PLAYER_POSITION
+                        contentDescription = "Seek current MIDI playback position"
+                    },
+                )
+            }
+            if (optionsOpen) {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                    Box {
+                        OutlinedButton(
+                            onClick = { outputOpen = true },
+                            enabled = currentAvailable && !state.busy,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                                testTag = MidiCoreWorkspaceShellTags.PLAYER_OUTPUT_MENU
+                                contentDescription = "Choose MIDI output. Current output: ${selectedOutput?.name ?: "Built-in synthesizer"}"
+                            },
+                        ) { Text("Output · ${selectedOutput?.name ?: "Built-in synthesizer"}") }
+                        DropdownMenu(expanded = outputOpen, onDismissRequest = { outputOpen = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Built-in synthesizer") },
+                                onClick = { outputOpen = false; onIntent(MidiCoreWorkspaceIntent.SelectAuditionOutputDevice(null)) },
+                                modifier = Modifier.semantics { testTag = MidiCoreWorkspaceShellTags.PLAYER_OUTPUT_DEFAULT },
+                            )
+                            audition.outputDevices.forEach { device ->
+                                DropdownMenuItem(
+                                    text = { Text(device.name) },
+                                    onClick = { outputOpen = false; onIntent(MidiCoreWorkspaceIntent.SelectAuditionOutputDevice(device.id)) },
+                                    modifier = Modifier.semantics { testTag = MidiCoreWorkspaceShellTags.output(device.id) },
+                                )
+                            }
+                        }
+                    }
+                    window?.let { currentWindow ->
+                        OutlinedButton(
+                            onClick = { onIntent(MidiCoreWorkspaceIntent.SeekAudition(currentWindow.startTick)) },
+                            enabled = currentAvailable && !state.busy,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                                testTag = MidiCoreWorkspaceShellTags.PLAYER_SEEK_START
+                                contentDescription = "Seek to current MIDI view boundary"
+                            },
+                        ) { Text("Restart current view") }
+                    }
+                    auditionRoles(audition.scope).forEach { role ->
+                        val muted = role in audition.mutedRoles
+                        val solo = role in audition.soloRoles
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                            OutlinedButton(
+                                onClick = { onIntent(MidiCoreWorkspaceIntent.MuteAuditionRole(role, !muted)) },
+                                enabled = currentAvailable && !state.busy,
+                                modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                                    testTag = MidiCoreWorkspaceShellTags.mute(role)
+                                    selected = muted
+                                },
+                            ) { Text(if (muted) "Unmute ${role.trackName}" else "Mute ${role.trackName}") }
+                            OutlinedButton(
+                                onClick = { onIntent(MidiCoreWorkspaceIntent.SoloAuditionRole(role, !solo)) },
+                                enabled = currentAvailable && !state.busy,
+                                modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                                    testTag = MidiCoreWorkspaceShellTags.solo(role)
+                                    selected = solo
+                                },
+                            ) { Text(if (solo) "Unsolo ${role.trackName}" else "Solo ${role.trackName}") }
+                        }
+                    }
+                    audition.lastProblem?.let { problem ->
+                        Column(
+                            Modifier.fillMaxWidth().semantics {
+                                testTag = MidiCoreWorkspaceShellTags.PLAYER_RECOVERY
+                                contentDescription = "MIDI device problem: ${problem.message} Next action: ${problem.nextAction}"
+                            },
+                            verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs),
+                        ) {
+                            Text(problem.message, style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.Warning)
+                            Text("Next: ${problem.nextAction}", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
+                            if (!state.busy) TextButton(onClick = { onIntent(MidiCoreWorkspaceIntent.Retry) }) { Text("Retry playback") }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun auditionTargetDescription(state: MidiCoreWorkspaceState): String {
+    val scope = state.audition.scope
+    val target = when (scope) {
+    null -> "No MIDI target selected"
+    MidiAuditionScope.SourceMelody -> "Protected source melody"
+    is MidiAuditionScope.Candidate -> "Current ${scope.role.trackName} alternative"
+    is MidiAuditionScope.Occurrence -> "Current section ${scope.occurrenceId}"
+    is MidiAuditionScope.Role -> "Current accepted ${scope.role.trackName}"
+    MidiAuditionScope.AcceptedArrangement -> "Accepted full arrangement"
+    }
+    val occurrenceId = when (scope) {
+        is MidiAuditionScope.Candidate -> state.project?.candidates?.singleOrNull { it.id == scope.candidateId }?.occurrenceId
+        is MidiAuditionScope.Occurrence -> scope.occurrenceId
+        else -> null
+    }
+    val occurrenceLabel = occurrenceId?.let { id -> state.project?.authority?.occurrences?.singleOrNull { it.id == id }?.label }
+    return occurrenceLabel?.let { "$target · $it" } ?: target
+}
+
+private fun auditionRoles(scope: MidiAuditionScope?): List<MidiExportRole> = when (scope) {
+    null -> emptyList()
+    MidiAuditionScope.SourceMelody -> listOf(MidiExportRole.MELODY)
+    is MidiAuditionScope.Candidate -> listOf(scope.role)
+    is MidiAuditionScope.Role -> listOf(scope.role)
+    is MidiAuditionScope.Occurrence -> listOf(MidiExportRole.MELODY)
+    MidiAuditionScope.AcceptedArrangement -> MidiExportRole.entries
 }
 
 @Composable

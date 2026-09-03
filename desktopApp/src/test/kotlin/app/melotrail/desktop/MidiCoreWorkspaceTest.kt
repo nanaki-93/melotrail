@@ -186,6 +186,30 @@ class MidiCoreWorkspaceTest {
     }
 
     @Test
+    fun `project close and authority changes stop and clear the active MIDI target`() = runTest {
+        val fake = FakeMidiCoreWorkspaceUseCases()
+        fake.sourceAuditionResult = app.melotrail.application.MidiCoreSourceAuditionResult.Ready(fakeSourcePlan())
+        val viewModel = MidiCoreWorkspaceViewModel(fake, MemoryMidiCorePreferences(), NoOpDesktopOperationLogger, testDispatchers(testScheduler))
+        viewModel.accept(MidiCoreWorkspaceIntent.OpenProject(fake.session.root))
+        advanceUntilIdle()
+        viewModel.accept(MidiCoreWorkspaceIntent.PlaySourceMelody)
+        advanceUntilIdle()
+
+        viewModel.accept(MidiCoreWorkspaceIntent.ConfirmAuthority)
+        advanceUntilIdle()
+        assertEquals(MidiAuditionPlaybackState.STOPPED, fake.audition.state.playback)
+        assertEquals(null, viewModel.state.value.audition.scope)
+
+        viewModel.accept(MidiCoreWorkspaceIntent.PlaySourceMelody)
+        advanceUntilIdle()
+        viewModel.accept(MidiCoreWorkspaceIntent.CloseProject)
+        assertEquals(MidiAuditionPlaybackState.STOPPED, fake.audition.state.playback)
+        assertEquals(null, viewModel.state.value.audition.scope)
+        assertNull(viewModel.state.value.project)
+        viewModel.close()
+    }
+
+    @Test
     fun `authority draft requires explicit discard before closing project`() = runTest {
         val fake = FakeMidiCoreWorkspaceUseCases()
         val dispatchers = testDispatchers(testScheduler)

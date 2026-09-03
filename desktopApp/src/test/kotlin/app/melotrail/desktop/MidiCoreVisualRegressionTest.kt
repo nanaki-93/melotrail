@@ -7,6 +7,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.v2.runSkikoComposeUiTest
@@ -40,6 +41,7 @@ class MidiCoreVisualRegressionTest {
                 waitForIdle()
                 onNodeWithTag(MidiCoreWorkspaceShellTags.COMPACT_LAYOUT).assertExists()
                 onNodeWithTag(pageTag(next)).assertExists()
+                onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER).assertIsDisplayed()
                 val image = onRoot().captureToImage().toAwtImage()
                 assertEquals(720, image.width)
                 assertEquals(900, image.height)

@@ -45,18 +45,18 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt has 110 callable declarations, 5 directly documented and 105 focused orchestration helpers. MC-048C reviewed same-project Review-scope retention, automatic candidate reload/selection after generation and lifecycle mutations, comparison-list preservation, operation admission, audition, and typed failure traces on 2026-09-03; focused reducer and real-service UI workflow tests cover the changed paths.",
-      "functionCount": 110,
-      "declarationDigest": "eec91a90e6928ab99261345dc66abd39244fc96e44839a7e0cfd0feec5ec9f23",
-      "documentedFunctionCount": 5
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspace.kt has 111 callable declarations, 6 directly documented and 105 focused orchestration helpers. MC-048D moved playback presentation to the shell and makes every project/authority transition stop and clear a stale selected audition target; focused reducer, player, and real-service workflow tests cover the changed paths on 2026-09-04.",
+      "functionCount": 111,
+      "declarationDigest": "854c75ea38dd0866f924fec106b6dd8bcbb27ad51ace27b344c13004d9f83335",
+      "documentedFunctionCount": 6
     },
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspaceShell.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspaceShell.kt has 14 callable declarations, 2 directly documented and 12 focused presentation helpers. MC-048B reviewed the six target destinations, compact navigation, wide musical context rail, stable page scroll identity, accessibility semantics, and blocked/ready responsive fixtures on 2026-09-03.",
-      "functionCount": 14,
-      "declarationDigest": "1a1033028d131cd02078fba83dfa27fc3d6e5f1f739be894fd9a4fe74f0ae8b2",
-      "documentedFunctionCount": 2
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspaceShell.kt has 20 callable declarations, 3 directly documented and 17 focused presentation helpers. MC-048D gives the shell one accessible persistent player, target switching, basic transport, and expandable device/role/boundary controls outside every page scroll container; wide/compact fixtures and player semantics cover the changed paths on 2026-09-04.",
+      "functionCount": 20,
+      "declarationDigest": "fb099690145dd4d4f35aac7f89b3d791ecc1bf57591ca81e3e58f87482407066",
+      "documentedFunctionCount": 3
     },
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreProjectPage.kt",
@@ -85,17 +85,17 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt has 20 callable declarations, 1 directly documented and 19 focused presentation helpers. MC-048C reviewed one-alternative selection, play -> accept -> continue, acceptance progress, contextual comparison and lifecycle actions, complete-arrangement gating, collapsed output/transport options, stale evidence, accessibility semantics, and Arrange/Export handoff on 2026-09-03; focused Compose and real-service workflow tests cover the changed declarations.",
-      "functionCount": 20,
-      "declarationDigest": "7f57529ba66c7653354b704019e53c33ebe2217319c8678110c191525d4d2fbb",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt has 15 callable declarations, 1 directly documented and 14 focused presentation helpers. MC-048D retains Review's candidate decision flow while removing its duplicate transport; shell player tests cover the moved output, loop, seek, mute, solo, and device controls on 2026-09-04.",
+      "functionCount": 15,
+      "declarationDigest": "7d5ea7a2f4d5ef200f08acbca2f1b6a193c02255792e789702c8e48ad56fd571",
       "documentedFunctionCount": 1
     },
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreMidiPage.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreMidiPage.kt has 18 callable declarations, 1 directly documented and 17 focused presentation helpers. MC-048B reviewed automatic single-track melody protection, immediately visible built-in-synthesizer transport, findings, immutable identity evidence, and focused Compose coverage on 2026-09-03.",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreMidiPage.kt has 18 callable declarations, 1 directly documented and 17 focused presentation helpers. MC-048D leaves the page responsible only for choosing the protected melody target; the persistent shell player owns playback, position, looping, output, and recovery. Focused Compose coverage verifies that separation on 2026-09-04.",
       "functionCount": 18,
-      "declarationDigest": "094b5db9a1a2cf3197dca750e5fab5c7f357494a579329ca98a9e4b0f3d5a963",
+      "declarationDigest": "a480c7599f96abfd160a7c861e5833c074a84088b6cae57786626d7d679fd232",
       "documentedFunctionCount": 1
     },
     {

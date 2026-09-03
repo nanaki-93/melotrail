@@ -87,6 +87,11 @@ Before implementation tasks begin:
   states remain understandable without colour alone.
 - MIDI visualizations use current project evidence; no waveform, video,
   mixer, library, or audio-production surrogate appears in the target shell.
+- Exactly one persistent player semantic owner is visible at wide and compact
+  sizes across all six destinations; scrolling page content or changing
+  destination preserves a valid audition target, position, loop, and output.
+- Output, boundary seek, mute/solo, and recovery are available only in the
+  player's expandable panel; page-local duplicate transports are absent.
 - Arrange and Review expose one clear primary next action, visible acceptance
   progress, and automatic same-scope refresh after generation or lifecycle
   mutations; duplicate generation actions and manual evidence refresh are not

@@ -92,7 +92,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-048A | DONE | `midi-core: MC-048A simplify source workflow` | PASS — focused JVM/Compose suites, documentation coverage, `make test`, `make build` | Valid complete-song input is protected atomically at import; ambiguous note tracks/channels are rejected; structure entry is ordered positive whole bars totaling the immutable source end. |
 | MC-048B | DONE | `midi-core: MC-048B make holdout workspace usable` | PASS — focused domain/audition/Compose suites, 12 visual fixtures, host synthesizer note smoke, documentation coverage, `make test`, `make build`, desktop startup | Imported playback uses an audible managed synthesizer by default; BPM and a three-step section/progression editor replace technical authority fields; all six pages use the target responsive navy/violet shell. |
 | MC-048C | DONE | `midi-core: MC-048C guide arrangement review` | PASS — focused reducer/Arrange/Review/real-workflow/visual suites, documentation coverage, `git diff --check`, `make test`, `make build`, desktop startup | Scope/feel/generate and play/accept/continue replace control walls; generated and mutated candidates stay visible without manual refresh. |
-| MC-048D | TODO | | | Next task: move all transport ownership into one persistent workspace player. |
+| MC-048D | DONE | `midi-core: MC-048D persist workspace playback` | PASS — focused desktop tests, documentation coverage, `make test`, `make build`, desktop smoke | One shell-owned MIDI player stays visible across every destination and wide/compact fixture; stale project transitions stop and clear audition safely. |
 | MC-048E | TODO | | | Add deterministic arrangement-style bundles and non-persistent click-to-preview audition. |
 | MC-048F | TODO | | | Add complete draft orchestration, draft audition, and atomic batch acceptance. |
 | MC-048G | TODO | | | Rebuild Arrange around the shared song map and exception workflow. |
@@ -1275,6 +1275,28 @@ Known limitations: MC-049 still requires the user-approved/license-safe holdout 
 Commit: `midi-core: MC-048C guide arrangement review`.
 Next task: Superseded by the user's 2026-09-04 UX decision. Start MC-048D and
 complete MC-048D through MC-048I before resuming MC-049.
+
+### MC-048D — Make playback persistent across the workspace
+
+Status: DONE
+Started: 2026-09-04
+Completed: 2026-09-04
+Starting commit/status: `3c4fdaf` on `main` (three commits ahead of `origin/main`) / preserved unrelated changes: deleted `.kotlin/sessions/kotlin-compiler-10759057547151889139.salive`; uncommitted Chords reduced-voicing and density-validation work plus its focused test and documentation-inventory entry; and a scoped candidate-validation message in `MidiCoreWorkspace.kt`. None will be staged or overwritten by this task.
+Contracts read: root Plan 7.2 and 7.6; F-PLAY-001–F-PLAY-004; F-UI-001–F-UI-006; Architecture 4.8; Quality Gates 4–5; MIDI workspace visual specification; and the MC-048D task contract.
+Current owners inspected: `MidiCoreWorkspaceShell`, MIDI and Review page-local transports, workspace audition intent handling, the MIDI audition controller, page/shell/workflow/visual tests, and wide/compact fixtures. The controller already held one session across navigation; only the desktop presentation duplicated it.
+Behavior retained/extracted: The shell now owns one player dock outside destination scroll containers. Pages only choose source, alternative, occurrence, or accepted-arrangement views. The dock exposes current target/section, source/current/accepted switches, play/pause, stop, position, loop, and one expandable output/boundary/mute/solo/recovery panel. Project create/open/close and source/authority transitions stop and clear a potentially stale selected view.
+Files added/changed: `MidiCoreWorkspaceShell.kt`, `MidiCoreWorkspace.kt`, MIDI/Review pages, focused desktop page/workspace/workflow/visual tests, active architecture/functional/quality/visual contracts, documentation inventory, and this execution log.
+Files/data deleted: Removed the MIDI-page transport and Review playback card plus their duplicate pause/stop/loop/device/seek/mute/solo semantics. No source MIDI, candidate, acceptance, export, or user data was deleted.
+Tracked deletion recoverability: Removed presentation code is recoverable from Git. The preserved unrelated Kotlin session-marker deletion and Chords/validation work remain unstaged.
+Ignored deletion recoverability: Generated visual fixtures and Gradle output are reproducible; no ignored project data was deleted.
+Focused tests: `:desktopApp:test` for MIDI page, Review page, workspace, focused real-service workflow, and visual regression PASS (22 tests). The fixtures assert the dock is displayed for all six wide and compact destinations; workspace tests prove authority change/project close stop and clear the active target.
+Full validation: `python3 tools/check_documentation_coverage.py --repository .` PASS; deleted-transport scan PASS; `git diff --check` PASS; `make test` PASS (14 Gradle tasks); `make build` PASS (15 Gradle tasks).
+Manual evidence: Local `make desktop` reached the running Compose application without startup error; it was intentionally interrupted after the shell/player smoke. No DAW result is required by this task.
+Visual fixtures: wide `arrange.png` `c34c3f65fe23821a29a245b7f8e3cd1677daf34409bea63b3ad574fd952ecee9`, `review.png` `816bde0f903d922574906d86881da72fa5302db48c1e57b1177b50934ce24cfe`; compact `arrange.png` `f7e8135f2260ac82b1f7140fd5c9612b78e17518f3884d53884a15ad07305bc7`, `review.png` `1e361cfbc2729856f152d96f77da350b9545739f5625e9e784b8d50091080860` under `desktopApp/build/test-results/midi-core-focused-workflow`.
+Decisions/deviations: Existing typed `MidiAuditionScope` is the stable target presentation seam for the preview/draft scopes introduced by MC-048E/F; no second transport or project representation was added. New source/current/accepted choices are shell actions, and output/device controls are unavailable until a current view exists.
+Known limitations: A live playhead is reported by the MIDI output adapter at supported transport boundaries; the dock does not add a polling/render loop. Arrangement-style preview and complete-draft targets remain MC-048E and MC-048F.
+Commit: `midi-core: MC-048D persist workspace playback`.
+Next task: MC-048E after this commit.
 
 ### MC-049 — Holdout musical acceptance
 

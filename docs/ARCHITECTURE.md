@@ -212,6 +212,11 @@ candidate scope before publishing success state, so the UI never depends on a
 manual refresh. Advanced comparison, lifecycle, device, and transport controls
 remain contextual.
 
+The workspace shell, rather than a destination page, owns the one live MIDI
+transport presentation. Pages only prepare or select musical views. The dock
+is outside page scroll containers and projects the single audition-port state;
+project close and authority transitions stop and clear stale selected views.
+
 Target destinations:
 
 - Project

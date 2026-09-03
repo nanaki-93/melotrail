@@ -105,7 +105,7 @@ class MidiCoreMidiPageTest {
     }
 
     @Test
-    fun `source transport exposes play pause stop seek and loop without audio actions`() = runComposeUiTest {
+    fun `source action chooses playback while the persistent player owns transport controls`() = runComposeUiTest {
         val intents = mutableListOf<MidiCoreWorkspaceIntent>()
         setContent {
             MelotrailTheme {
@@ -123,11 +123,11 @@ class MidiCoreMidiPageTest {
 
         onNodeWithTag(MidiCoreMidiPageTags.PLAY).performScrollTo().assertIsEnabled().performClick()
         waitForIdle()
-        onNodeWithTag(MidiCoreMidiPageTags.PAUSE).performScrollTo().assertIsEnabled().performClick()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_PLAY_PAUSE).assertIsEnabled().performClick()
         waitForIdle()
-        onNodeWithTag(MidiCoreMidiPageTags.STOP).performScrollTo().assertIsEnabled().performClick()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_STOP).assertIsEnabled().performClick()
         waitForIdle()
-        onNodeWithTag(MidiCoreMidiPageTags.LOOP).performScrollTo().assertIsEnabled().performClick()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_LOOP).assertIsEnabled().performClick()
         waitForIdle()
         assertEquals(
             listOf(
@@ -138,7 +138,7 @@ class MidiCoreMidiPageTest {
             ),
             intents,
         )
-        onNodeWithTag(MidiCoreMidiPageTags.SEEK).assertExists()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_POSITION).assertExists()
     }
 
     @Test

@@ -32,10 +32,8 @@ import androidx.compose.ui.semantics.testTag
 import app.melotrail.application.MidiCoreCandidateDiff
 import app.melotrail.application.MidiCoreCandidateReviewItem
 import app.melotrail.arrangement.core.MidiCoreRoleFindingSeverity
-import app.melotrail.audition.MidiAuditionLoop
 import app.melotrail.audition.MidiAuditionPlaybackState
 import app.melotrail.audition.MidiAuditionScope
-import app.melotrail.midi.domain.MidiExportRole
 import app.melotrail.project.CandidateRole
 import app.melotrail.project.MidiCoreAcceptanceAction
 import app.melotrail.project.MidiCoreCandidateStatus
@@ -67,18 +65,6 @@ internal object MidiCoreReviewPageTags {
     const val NEXT_SCOPE = "midi-core-review-next-scope"
     const val ARRANGEMENT = "midi-core-review-arrangement"
     const val PLAY_ARRANGEMENT = "midi-core-review-play-arrangement"
-    const val TRANSPORT = "midi-core-review-transport"
-    const val ADVANCED = "midi-core-review-advanced"
-    const val OUTPUT_MENU = "midi-core-review-output-menu"
-    const val OUTPUT_DEFAULT = "midi-core-review-output-default"
-    const val OUTPUT_PREFIX = "midi-core-review-output-"
-    const val PAUSE = "midi-core-review-pause"
-    const val STOP = "midi-core-review-stop"
-    const val SEEK_START = "midi-core-review-seek-start"
-    const val LOOP = "midi-core-review-loop"
-    const val CLEAR_LOOP = "midi-core-review-clear-loop"
-    const val MUTE_PREFIX = "midi-core-review-mute-"
-    const val SOLO_PREFIX = "midi-core-review-solo-"
     const val ARRANGE = "midi-core-review-open-arrange"
     const val EXPORT = "midi-core-review-open-export"
     const val STATUS = "midi-core-review-status"
@@ -88,9 +74,6 @@ internal object MidiCoreReviewPageTags {
     fun occurrence(id: String): String = OCCURRENCE_PREFIX + id
     fun candidate(id: String): String = CANDIDATE_PREFIX + id
     fun compare(id: String): String = COMPARE_PREFIX + id
-    fun mute(role: MidiExportRole): String = MUTE_PREFIX + role.name.lowercase()
-    fun solo(role: MidiExportRole): String = SOLO_PREFIX + role.name.lowercase()
-    fun output(id: String): String = OUTPUT_PREFIX + id.hashCode().toUInt().toString(16)
 }
 
 /** Listen, decide, and continue through one section-role scope at a time. */
@@ -178,7 +161,6 @@ internal fun MidiCoreReviewPage(
             onNavigate = onNavigate,
         )
         ReviewArrangementCard(state, progress.complete, onIntent)
-        ReviewTransportCard(state, onIntent)
     }
 }
 
@@ -538,88 +520,6 @@ private fun ReviewArrangementCard(
 }
 
 @Composable
-private fun ReviewTransportCard(state: MidiCoreWorkspaceState, onIntent: (MidiCoreWorkspaceIntent) -> Unit) {
-    val audition = state.audition
-    var advancedOpen by remember { mutableStateOf(false) }
-    var outputOpen by remember { mutableStateOf(false) }
-    ReviewCard(MidiCoreReviewPageTags.TRANSPORT, "Playback") {
-        Text("${audition.playback.name.lowercase().replaceFirstChar(Char::uppercaseChar)} · tick ${audition.positionTick}", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
-        if (audition.scope != null) {
-            Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-                if (audition.playback == MidiAuditionPlaybackState.PLAYING) {
-                    OutlinedButton(
-                        onClick = { onIntent(MidiCoreWorkspaceIntent.PauseAudition) },
-                        modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics { testTag = MidiCoreReviewPageTags.PAUSE },
-                    ) { Text("Pause") }
-                }
-                OutlinedButton(
-                    onClick = { onIntent(MidiCoreWorkspaceIntent.StopAudition) },
-                    modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics { testTag = MidiCoreReviewPageTags.STOP },
-                ) { Text("Stop") }
-            }
-        }
-        OutlinedButton(
-            onClick = { advancedOpen = !advancedOpen },
-            modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
-                testTag = MidiCoreReviewPageTags.ADVANCED
-                selected = advancedOpen
-            },
-        ) { Text(if (advancedOpen) "Hide playback options" else "Playback options") }
-        if (advancedOpen) {
-            val selectedOutput = audition.outputDevices.singleOrNull { it.id == audition.outputDeviceId }
-            Box {
-                OutlinedButton(
-                    onClick = { outputOpen = true },
-                    enabled = audition.scope != null,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics { testTag = MidiCoreReviewPageTags.OUTPUT_MENU },
-                ) { Text("Output · ${selectedOutput?.name ?: "Built-in synthesizer"}") }
-                DropdownMenu(expanded = outputOpen, onDismissRequest = { outputOpen = false }) {
-                    DropdownMenuItem(
-                        text = { Text("Built-in synthesizer") },
-                        onClick = { outputOpen = false; onIntent(MidiCoreWorkspaceIntent.SelectAuditionOutputDevice(null)) },
-                        modifier = Modifier.semantics { testTag = MidiCoreReviewPageTags.OUTPUT_DEFAULT },
-                    )
-                    audition.outputDevices.forEach { device ->
-                        DropdownMenuItem(
-                            text = { Text(device.name) },
-                            onClick = { outputOpen = false; onIntent(MidiCoreWorkspaceIntent.SelectAuditionOutputDevice(device.id)) },
-                            modifier = Modifier.semantics { testTag = MidiCoreReviewPageTags.output(device.id) },
-                        )
-                    }
-                }
-            }
-            audition.window?.let { window ->
-                OutlinedButton(
-                    onClick = { onIntent(MidiCoreWorkspaceIntent.SeekAudition(window.startTick)) },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics { testTag = MidiCoreReviewPageTags.SEEK_START },
-                ) { Text("Restart selected view") }
-                OutlinedButton(
-                    onClick = { onIntent(MidiCoreWorkspaceIntent.SetAuditionLoop(if (audition.loop == null) MidiAuditionLoop(window.startTick, window.endTick) else null)) },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics { testTag = if (audition.loop == null) MidiCoreReviewPageTags.LOOP else MidiCoreReviewPageTags.CLEAR_LOOP },
-                ) { Text(if (audition.loop == null) "Loop selected view" else "Disable loop") }
-            }
-            audition.scope?.let { scope ->
-                reviewAuditionRoles(scope).forEach { exportRole ->
-                    val muted = exportRole in audition.mutedRoles
-                    val solo = exportRole in audition.soloRoles
-                    Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-                        OutlinedButton(
-                            onClick = { onIntent(MidiCoreWorkspaceIntent.MuteAuditionRole(exportRole, !muted)) },
-                            modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics { testTag = MidiCoreReviewPageTags.mute(exportRole); selected = muted },
-                        ) { Text(if (muted) "Unmute ${exportRole.trackName}" else "Mute ${exportRole.trackName}") }
-                        OutlinedButton(
-                            onClick = { onIntent(MidiCoreWorkspaceIntent.SoloAuditionRole(exportRole, !solo)) },
-                            modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics { testTag = MidiCoreReviewPageTags.solo(exportRole); selected = solo },
-                        ) { Text(if (solo) "Unsolo ${exportRole.trackName}" else "Solo ${exportRole.trackName}") }
-                    }
-                }
-            }
-        }
-        audition.lastProblem?.let { problem -> Text("${problem.message} Next: ${problem.nextAction}", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.Warning) }
-    }
-}
-
-@Composable
 private fun ReviewCard(tag: String, title: String, content: @Composable ColumnScope.() -> Unit) {
     Card(
         Modifier.fillMaxWidth().semantics { testTag = tag },
@@ -633,13 +533,4 @@ private fun ReviewCard(tag: String, title: String, content: @Composable ColumnSc
             content()
         }
     }
-}
-
-private fun reviewAuditionRoles(scope: MidiAuditionScope): List<MidiExportRole> = when (scope) {
-    MidiAuditionScope.SourceMelody -> listOf(MidiExportRole.MELODY)
-    is MidiAuditionScope.Candidate -> listOf(scope.role)
-    is MidiAuditionScope.Role -> listOf(scope.role)
-    is MidiAuditionScope.Occurrence,
-    MidiAuditionScope.AcceptedArrangement,
-    -> MidiExportRole.entries
 }

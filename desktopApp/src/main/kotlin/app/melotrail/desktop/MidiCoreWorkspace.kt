@@ -534,7 +534,7 @@ class MidiCoreWorkspaceViewModel(
         if (guardProjectOperation(intent)) return
         startOperation(MidiCoreWorkspaceOperationKind.PROJECT, "Creating MIDI Core project…", intent) { _ ->
             when (val result = useCases.create(CreateMidiCoreProject(intent.root, intent.name, intent.id, intent.applicationVersion))) {
-                is MidiCoreProjectLifecycleResult.Opened -> success("MIDI Core project created.", result.session)
+                is MidiCoreProjectLifecycleResult.Opened -> success("MIDI Core project created.", result.session) { clearAuditionForProjectTransition() }
                 is MidiCoreProjectLifecycleResult.Rejected -> failure(projectBlocker(result.problem), intent)
             }
         }
@@ -548,7 +548,7 @@ class MidiCoreWorkspaceViewModel(
         if (guardProjectOperation(pending)) return
         startOperation(MidiCoreWorkspaceOperationKind.PROJECT, "Opening MIDI Core project…", pending) { _ ->
             when (val result = useCases.open(root)) {
-                is MidiCoreProjectLifecycleResult.Opened -> success("MIDI Core project opened.", result.session)
+                is MidiCoreProjectLifecycleResult.Opened -> success("MIDI Core project opened.", result.session) { clearAuditionForProjectTransition() }
                 is MidiCoreProjectLifecycleResult.Rejected -> failure(projectBlocker(result.problem), pending)
             }
         }
@@ -585,6 +585,7 @@ class MidiCoreWorkspaceViewModel(
         }
         val current = session ?: return
         if (state.value.busy) return busyBlocker()
+        clearAuditionForProjectTransition()
         useCases.close(current)
         session = null
         _state.value = MidiCoreWorkspaceState(blockers = baseBlockers(null), notification = "MIDI Core project closed.")
@@ -592,9 +593,11 @@ class MidiCoreWorkspaceViewModel(
 
     private fun importSource(intent: MidiCoreWorkspaceIntent.ImportSource) {
         val current = requireSessionOrBlock() ?: return
+        clearAuditionForProjectTransition()
         startOperation(MidiCoreWorkspaceOperationKind.IMPORT, "Importing source MIDI…", intent) { _ ->
             when (val result = useCases.importSource(ImportMidiCoreSource(current, intent.source))) {
                 is MidiCoreSourceImportResult.Imported -> success("Source MIDI imported and preserved.", result.session) {
+                    clearAuditionForProjectTransition()
                     hydrateSourceValidation(result.validation)
                 }
                 is MidiCoreSourceImportResult.Rejected -> failure(sourceBlocker(result.problem, result.validation), intent)
@@ -619,9 +622,11 @@ class MidiCoreWorkspaceViewModel(
             _state.value = _state.value.copy(notification = "Musical authority is already confirmed.")
             return
         }
+        clearAuditionForProjectTransition()
         startOperation(MidiCoreWorkspaceOperationKind.AUTHORITY, "Confirming musical authority…", MidiCoreWorkspaceIntent.ConfirmAuthority) { _ ->
             when (val result = useCases.confirmAuthority(state.value.authority.draft.toRequest(current))) {
                 is app.melotrail.application.MidiCoreAuthorityResult.Confirmed -> success("Musical authority confirmed.", result.session) {
+                    clearAuditionForProjectTransition()
                     _state.value = _state.value.copy(
                         authority = _state.value.authority.copy(
                             confirmed = result.session.project.authority,
@@ -640,9 +645,11 @@ class MidiCoreWorkspaceViewModel(
 
     private fun replaceStructure(intent: MidiCoreWorkspaceIntent.ReplaceStructure) {
         val current = requireSessionOrBlock() ?: return
+        clearAuditionForProjectTransition()
         startOperation(MidiCoreWorkspaceOperationKind.STRUCTURE, "Saving structure timeline…", intent) { _ ->
             when (val result = useCases.replaceStructure(ReplaceMidiCoreStructure(current, intent.definitions, intent.occurrences))) {
                 is app.melotrail.application.MidiCoreStructureTimelineResult.Updated -> success("Structure timeline saved.", result.session) {
+                    clearAuditionForProjectTransition()
                     _state.value = _state.value.copy(
                         authority = _state.value.authority.copy(lastInvalidation = result.invalidation),
                     )
@@ -654,9 +661,11 @@ class MidiCoreWorkspaceViewModel(
 
     private fun replaceHarmony(intent: MidiCoreWorkspaceIntent.ReplaceHarmony) {
         val current = requireSessionOrBlock() ?: return
+        clearAuditionForProjectTransition()
         startOperation(MidiCoreWorkspaceOperationKind.HARMONY, "Saving authoritative harmony…", intent) { _ ->
             when (val result = useCases.replaceHarmony(ReplaceMidiCoreHarmony(current, intent.events))) {
                 is app.melotrail.application.MidiCoreAuthoritativeHarmonyResult.Updated -> success("Authoritative harmony saved.", result.session) {
+                    clearAuditionForProjectTransition()
                     _state.value = _state.value.copy(
                         authority = _state.value.authority.copy(lastInvalidation = result.invalidation),
                     )
@@ -951,6 +960,12 @@ class MidiCoreWorkspaceViewModel(
             ),
             blockers = if (result is MidiAuditionResult.Failed) listOf(blocker(MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE, result.problem.message, result.problem.nextAction, result.problem.code.name)) else baseBlockers(session?.project),
         )
+    }
+
+    /** Stop and forget a selected view before a project transition can make it stale. */
+    private fun clearAuditionForProjectTransition() {
+        runCatching { useCases.audition.stop() }
+        _state.value = _state.value.copy(audition = MidiAuditionState())
     }
 
     private fun cancelOperation() {

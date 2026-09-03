@@ -14,7 +14,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -26,8 +25,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import app.melotrail.audition.MidiAuditionPlaybackState
-import app.melotrail.audition.MidiAuditionScope
 import app.melotrail.midi.domain.MidiFinding
 import app.melotrail.midi.domain.MidiFindingSeverity
 import app.melotrail.midi.domain.MidiTrackRoleHint
@@ -58,12 +55,7 @@ internal object MidiCoreMidiPageTags {
     const val AWAITING_FINDINGS = "midi-core-midi-findings-awaiting-authority"
     const val IMMUTABILITY = "midi-core-midi-immutability"
     const val UNSUPPORTED = "midi-core-midi-unsupported"
-    const val TRANSPORT = "midi-core-midi-transport"
     const val PLAY = "midi-core-midi-play-source"
-    const val PAUSE = "midi-core-midi-pause"
-    const val STOP = "midi-core-midi-stop"
-    const val SEEK = "midi-core-midi-seek"
-    const val LOOP = "midi-core-midi-loop"
     const val RECOVERY = "midi-core-midi-recovery"
     const val RETRY = "midi-core-midi-retry"
 
@@ -71,7 +63,7 @@ internal object MidiCoreMidiPageTags {
     fun channel(trackIndex: Int, channel: Int) = "$CHANNEL_PREFIX$trackIndex-$channel"
 }
 
-/** MIDI source import, automatically protected melody evidence, and MIDI transport page. */
+/** MIDI source import and automatically protected melody evidence page. */
 @Composable
 internal fun MidiCoreMidiPage(
     state: MidiCoreWorkspaceState,
@@ -106,7 +98,7 @@ internal fun MidiCoreMidiPage(
                 },
             )
             state.source.takeIf { it.status == MidiCoreSourceStatus.IMPORTED }?.let { source ->
-                MidiSourceTransport(state, onIntent)
+                MidiSourceAuditionAction(state, onIntent)
                 MidiSourceFacts(source)
                 MidiTrackTable(state)
                 MidiSelectionCard(state)
@@ -296,65 +288,19 @@ private fun FindingGroup(severity: MidiFindingSeverity, findings: List<MidiFindi
 }
 
 @Composable
-private fun MidiSourceTransport(state: MidiCoreWorkspaceState, onIntent: (MidiCoreWorkspaceIntent) -> Unit) {
-    val audition = state.audition
-    val sourceScope = audition.scope == MidiAuditionScope.SourceMelody
-    val sourceEnd = state.source.sourceEndTick ?: 0L
-    val position = if (sourceScope) audition.positionTick.coerceIn(0L, sourceEnd.coerceAtLeast(1L)) else 0L
-    MidiCard(MidiCoreMidiPageTags.TRANSPORT, "Listen to the imported melody") {
-        Text("The built-in synthesizer is used by default. You can choose an external MIDI output later in Review.", style = MaterialTheme.typography.bodyMedium, color = MusicWorkspaceTokens.TextSecondary)
-        Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-            Button(
-                onClick = { onIntent(MidiCoreWorkspaceIntent.PlaySourceMelody) },
-                enabled = !state.busy && state.melody.selected != null,
-                colors = workspacePrimaryButtonColors(),
-                modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget)
-                    .semantics { testTag = MidiCoreMidiPageTags.PLAY },
-            ) { Text("▶ Play MIDI") }
-            OutlinedButton(
-                onClick = { onIntent(MidiCoreWorkspaceIntent.PauseAudition) },
-                enabled = sourceScope && audition.playback == MidiAuditionPlaybackState.PLAYING,
-                modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget)
-                    .semantics { testTag = MidiCoreMidiPageTags.PAUSE },
-            ) { Text("Pause") }
-            TextButton(
-                onClick = { onIntent(MidiCoreWorkspaceIntent.StopAudition) },
-                enabled = sourceScope && audition.playback != MidiAuditionPlaybackState.STOPPED,
-                modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget)
-                    .semantics { testTag = MidiCoreMidiPageTags.STOP },
-            ) { Text("Stop") }
-        }
-        Text(
-            if (sourceScope) "${audition.playback.name.lowercase().replaceFirstChar(Char::uppercaseChar)} · $position / $sourceEnd" else "Ready to play through the built-in synthesizer.",
-            Modifier.semantics { contentDescription = "MIDI audition transport status" },
-            style = MaterialTheme.typography.bodySmall,
-            color = MusicWorkspaceTokens.TextSecondary,
-        )
-        Slider(
-            value = position.toFloat(),
-            onValueChange = { onIntent(MidiCoreWorkspaceIntent.SeekAudition(it.toLong().coerceIn(0L, sourceEnd))) },
-            valueRange = 0f..sourceEnd.coerceAtLeast(1L).toFloat(),
-            enabled = sourceScope && sourceEnd > 0L,
-            modifier = Modifier.fillMaxWidth().semantics {
-                testTag = MidiCoreMidiPageTags.SEEK
-                contentDescription = "Seek source MIDI audition"
-            },
-        )
-        OutlinedButton(
-            onClick = {
-                onIntent(
-                    MidiCoreWorkspaceIntent.SetAuditionLoop(
-                        if (audition.loop == null && sourceEnd > 0L) app.melotrail.audition.MidiAuditionLoop(0L, sourceEnd) else null,
-                    ),
-                )
-            },
-            enabled = sourceScope && sourceEnd > 0L,
+private fun MidiSourceAuditionAction(state: MidiCoreWorkspaceState, onIntent: (MidiCoreWorkspaceIntent) -> Unit) {
+    MidiCard(MidiCoreMidiPageTags.ROOT + "-source-audition-action", "Listen to the imported melody") {
+        Text("Choose the protected melody here. Playback, output, looping, and position stay in the persistent player below.", style = MaterialTheme.typography.bodyMedium, color = MusicWorkspaceTokens.TextSecondary)
+        Button(
+            onClick = { onIntent(MidiCoreWorkspaceIntent.PlaySourceMelody) },
+            enabled = !state.busy && state.melody.selected != null,
+            colors = workspacePrimaryButtonColors(),
             modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget)
                 .semantics {
-                    testTag = MidiCoreMidiPageTags.LOOP
-                    contentDescription = if (audition.loop == null) "Loop entire source melody" else "Disable source melody loop"
+                    testTag = MidiCoreMidiPageTags.PLAY
+                    contentDescription = "Play protected source melody in the persistent MIDI player"
                 },
-        ) { Text(if (audition.loop == null) "Loop source" else "Loop enabled") }
+        ) { Text("Play protected melody") }
     }
 }
 

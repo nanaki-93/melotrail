@@ -49,7 +49,7 @@ class MidiCoreProjectPageTest {
         onNodeWithTag(MidiCoreProjectPageTags.CREATE).assertIsEnabled().performClick()
         assertEquals(MidiCoreWorkspaceIntent.CreateProject(newRoot.toAbsolutePath().normalize(), "New song"), intents.last())
 
-        onNodeWithTag(MidiCoreProjectPageTags.OPEN).performClick()
+        onNodeWithTag(MidiCoreProjectPageTags.OPEN).performScrollTo().performClick()
         waitForIdle()
         assertEquals(MidiCoreWorkspaceIntent.OpenProject(openRoot.toAbsolutePath().normalize()), intents.last())
         onNodeWithTag(MidiCoreProjectPageTags.OPEN_RECENT).performClick()

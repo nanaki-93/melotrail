@@ -41,6 +41,12 @@ navigation rail, a fluid work area, and a contextual inspector when that
 context materially helps the current decision. At smaller widths, move context
 into the page and preserve an ordered, keyboard-accessible navigation path.
 
+One compact player dock belongs to this shell, outside page scrolling at both
+sizes. It shows the current target and section, source/current/accepted target
+switches where valid, play/pause, stop, position, and loop. Output, boundary
+seek, mute/solo, and recovery expand from the dock rather than duplicating
+controls in MIDI or Review.
+
 The only destinations are Project, MIDI, Structure & Harmony, Arrange, Review,
 and Export. Device and export preferences remain small contextual dialogs, not
 top-level pages.

@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -93,6 +94,7 @@ class MidiCoreFocusedWorkflowTest {
                 waitForIdle()
             }
             fun captureFixture(name: String) {
+                onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER).assertIsDisplayed()
                 val image = onRoot().captureToImage().toAwtImage()
                 assertTrue(image.width > 0 && image.height > 0, "$name visual fixture must be non-empty")
                 val target = visualFixtureRoot().resolve("$name.png")

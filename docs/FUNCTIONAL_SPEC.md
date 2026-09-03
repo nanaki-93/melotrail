@@ -137,6 +137,15 @@ Unavailable MIDI output, synth initialization failure, or device loss produces
 a recoverable message and resource cleanup. Project and acceptance state remain
 unchanged.
 
+### F-PLAY-005 — Keep one persistent player
+
+One shell-owned player remains visible while every destination scrolls or the
+musician navigates. Pages may choose a source, candidate, section, or accepted
+arrangement target, but only the player owns play/pause, stop, position, loop,
+output, boundary seek, mute, solo, and device recovery. Closing a project or
+making its audition target stale stops playback safely; navigation preserves a
+valid target, position, loop, and device selection.
+
 ## 6. Arrangement functions
 
 ### F-ARR-001 — Generate chord candidates
@@ -303,6 +312,13 @@ project evidence—MIDI events, authority timing, candidate state, and export
 validation—with clear hierarchy and never substitutes audio waveforms, video
 art, mixers, libraries, or settings pages. The visual contract is defined in
 `docs/MIDI_WORKSPACE_VISUAL_SPEC.md`.
+
+### F-UI-007 — Keep transport out of page flows
+
+The persistent player is outside each page scroll container at supported wide
+and compact sizes. It exposes source, current-audition, and accepted-arrangement
+target switches when available, and keeps advanced playback controls collapsed
+until requested. No destination renders a duplicate transport.
 
 ## 10. System functions
 
