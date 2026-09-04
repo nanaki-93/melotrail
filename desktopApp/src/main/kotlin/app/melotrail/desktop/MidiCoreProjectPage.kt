@@ -8,14 +8,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -123,23 +117,23 @@ private fun ProjectCreationCard(
     onOpenRecent: () -> Unit,
     busy: Boolean,
 ) {
-    ProjectCard(MidiCoreProjectPageTags.ROOT, "Start a MIDI Core project") {
+    WorkstationPanel(title = "Start a MIDI Core project", modifier = Modifier.semantics { testTag = MidiCoreProjectPageTags.ROOT }) {
         Text("Create a project or reopen a saved one.", style = MaterialTheme.typography.bodyLarge)
-        OutlinedTextField(
+        WorkstationCompactTextField(
             value = projectName,
             onValueChange = onProjectNameChanged,
             modifier = Modifier.fillMaxWidth().semantics { testTag = MidiCoreProjectPageTags.NAME },
-            label = { Text("Project name") },
-            supportingText = { Text("Use a short name for the project document.") },
-            singleLine = true,
+            label = "Project name",
+            supportingText = "Use a short name for the project document.",
             enabled = !busy,
         )
-        OutlinedButton(
+        WorkstationSecondaryButton(
+            label = if (selectedRoot == null) "Choose project folder" else "Change project folder",
             onClick = onChooseRoot,
             enabled = !busy,
-            modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget)
-                .semantics { testTag = MidiCoreProjectPageTags.CHOOSE_NEW_LOCATION },
-        ) { Text(if (selectedRoot == null) "Choose project folder" else "Change project folder") }
+            disabledReason = "A project action is in progress",
+            modifier = Modifier.fillMaxWidth().semantics { testTag = MidiCoreProjectPageTags.CHOOSE_NEW_LOCATION },
+        )
         Text(
             selectedRoot?.toString() ?: "No project folder selected.",
             modifier = Modifier.fillMaxWidth().semantics {
@@ -151,25 +145,31 @@ private fun ProjectCreationCard(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
-        Button(
+        WorkstationPrimaryButton(
+            label = "Create MIDI Core project",
             onClick = onCreate,
             enabled = !busy && projectName.isNotBlank() && selectedRoot != null,
-            modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget)
+            disabledReason = "Choose a project name and folder first",
+            modifier = Modifier.fillMaxWidth()
                 .semantics { testTag = MidiCoreProjectPageTags.CREATE },
-        ) { Text("Create MIDI Core project") }
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-            OutlinedButton(
+            WorkstationSecondaryButton(
+                label = "Open project",
                 onClick = onOpen,
                 enabled = !busy,
-                modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget)
+                disabledReason = "A project action is in progress",
+                modifier = Modifier.weight(1f)
                     .semantics { testTag = MidiCoreProjectPageTags.OPEN },
-            ) { Text("Open project") }
-            TextButton(
+            )
+            WorkstationSecondaryButton(
+                label = "Open recent",
                 onClick = onOpenRecent,
                 enabled = !busy,
-                modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget)
+                disabledReason = "A project action is in progress",
+                modifier = Modifier.weight(1f)
                     .semantics { testTag = MidiCoreProjectPageTags.OPEN_RECENT },
-            ) { Text("Open recent") }
+            )
         }
     }
 }
@@ -177,7 +177,7 @@ private fun ProjectCreationCard(
 @Composable
 private fun ProjectCurrentCard(state: MidiCoreWorkspaceState, onIntent: (MidiCoreWorkspaceIntent) -> Unit) {
     val project = state.project ?: return
-    ProjectCard(MidiCoreProjectPageTags.ROOT, "Current MIDI Core project") {
+    WorkstationPanel(title = "Current MIDI Core project", modifier = Modifier.semantics { testTag = MidiCoreProjectPageTags.ROOT }) {
         Text(project.metadata.name, style = MaterialTheme.typography.headlineSmall)
         Text(
             state.projectRoot?.toString() ?: "Project location unavailable.",
@@ -192,18 +192,22 @@ private fun ProjectCurrentCard(state: MidiCoreWorkspaceState, onIntent: (MidiCor
         )
         Text("Project revision ${project.revision}", style = MaterialTheme.typography.labelLarge, color = MusicWorkspaceTokens.Primary)
         Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-            OutlinedButton(
+            WorkstationSecondaryButton(
+                label = "Reload project",
                 onClick = { onIntent(MidiCoreWorkspaceIntent.ReloadProject) },
                 enabled = !state.busy,
-                modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget)
+                disabledReason = "A project action is in progress",
+                modifier = Modifier.weight(1f)
                     .semantics { testTag = MidiCoreProjectPageTags.RELOAD },
-            ) { Text("Reload project") }
-            TextButton(
+            )
+            WorkstationSecondaryButton(
+                label = "Close project",
                 onClick = { onIntent(MidiCoreWorkspaceIntent.CloseProject) },
                 enabled = !state.busy,
-                modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget)
+                disabledReason = "A project action is in progress",
+                modifier = Modifier.weight(1f)
                     .semantics { testTag = MidiCoreProjectPageTags.CLOSE },
-            ) { Text("Close project") }
+            )
         }
     }
 }
@@ -218,7 +222,7 @@ private fun ProjectReadinessCard(state: MidiCoreWorkspaceState) {
         "Candidate evidence" to project.candidates.isNotEmpty(),
         "MIDI export history" to project.exportSnapshots.isNotEmpty(),
     )
-    ProjectCard(MidiCoreProjectPageTags.SUMMARY, "Project readiness") {
+    WorkstationPanel(title = "Project readiness", modifier = Modifier.semantics { testTag = MidiCoreProjectPageTags.SUMMARY }) {
         Text("Persisted project state determines the available workflow actions.", style = MaterialTheme.typography.bodyMedium)
         checks.forEach { (label, complete) ->
             Text(
@@ -233,12 +237,13 @@ private fun ProjectReadinessCard(state: MidiCoreWorkspaceState) {
 @Composable
 private fun ProjectNextStepCard(state: MidiCoreWorkspaceState, onNavigate: (MidiCoreWorkspaceDestination) -> Unit) {
     val next = nextProjectStep(state)
-    ProjectCard(MidiCoreProjectPageTags.NEXT_STEP, "Next target step") {
+    WorkstationPanel(title = "Next target step", modifier = Modifier.semantics { testTag = MidiCoreProjectPageTags.NEXT_STEP }) {
         Text(next.message, style = MaterialTheme.typography.bodyMedium)
-        OutlinedButton(
+        WorkstationSecondaryButton(
+            label = "Go to ${next.destination.label}",
             onClick = { onNavigate(next.destination) },
-            modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget),
-        ) { Text("Go to ${next.destination.label}") }
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -268,21 +273,18 @@ private fun ProjectRecoveryCard(state: MidiCoreWorkspaceState, onIntent: (MidiCo
     val blockers = state.blockers
     val unsupported = blockers.firstOrNull { it.sourceCode == "UNSUPPORTED_PROJECT" }
     if (blockers.isEmpty() && state.operation.retry == null) return
-    ProjectCard(MidiCoreProjectPageTags.RECOVERY, "Project action status") {
+    WorkstationPanel(title = "Project action status", modifier = Modifier.semantics { testTag = MidiCoreProjectPageTags.RECOVERY }) {
         unsupported?.let {
-            Card(
-                Modifier.fillMaxWidth().semantics {
+            WorkstationInlineMessage(
+                title = "Unsupported project schema",
+                message = "This folder was not migrated or changed because it is not a current MIDI Core project.",
+                tone = WorkstationStatusTone.WARNING,
+                detail = "Choose another folder or create a new MIDI Core project.",
+                modifier = Modifier.semantics {
                     testTag = MidiCoreProjectPageTags.UNSUPPORTED
                     contentDescription = "Unsupported project explanation"
                 },
-                colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.DisabledSurface),
-            ) {
-                Column(Modifier.padding(MusicWorkspaceTokens.Spacing.Md), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-                    Text("Unsupported project schema", style = MaterialTheme.typography.titleMedium)
-                    Text("This folder was not migrated or changed because it is not a current MIDI Core project.", style = MaterialTheme.typography.bodyMedium)
-                    Text("Choose another folder or create a new MIDI Core project.", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.Warning)
-                }
-            }
+            )
         }
         blockers.filterNot { it === unsupported }.forEach { blocker ->
             Column(
@@ -295,32 +297,18 @@ private fun ProjectRecoveryCard(state: MidiCoreWorkspaceState, onIntent: (MidiCo
                 Text(blocker.message, style = MaterialTheme.typography.bodyMedium)
                 Text("Next: ${blocker.nextAction}", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.Warning)
                 blocker.action?.let { action ->
-                    TextButton(onClick = { onIntent(action) }) { Text("Take next action") }
+                    WorkstationSecondaryButton(label = "Take next action", onClick = { onIntent(action) })
                 }
             }
         }
         state.operation.retry?.let {
-            TextButton(
+            WorkstationSecondaryButton(
+                label = "Retry project action",
                 onClick = { onIntent(MidiCoreWorkspaceIntent.Retry) },
                 enabled = !state.busy,
+                disabledReason = "A project action is in progress",
                 modifier = Modifier.semantics { testTag = MidiCoreProjectPageTags.RETRY },
-            ) { Text("Retry project action") }
-        }
-    }
-}
-
-@Composable
-private fun ProjectCard(tag: String, title: String, content: @Composable () -> Unit) {
-    Card(
-        Modifier.fillMaxWidth().semantics { testTag = tag },
-        colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.Surface),
-    ) {
-        Column(
-            Modifier.fillMaxWidth().padding(MusicWorkspaceTokens.Spacing.Xl),
-            verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md),
-        ) {
-            Text(title, style = MaterialTheme.typography.titleLarge)
-            content()
+            )
         }
     }
 }

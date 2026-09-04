@@ -94,6 +94,12 @@ palette, compact shapes, explicit typography fallback and target-only vector
 role styles. The remaining legacy glyph/instrument helpers stay locally
 classified while MC-051 owns their callers' removal.
 
+UI-003 adds the fully documented compact workstation primitive source and
+refreshes the Project-page row after replacing its local card helper. Its
+focused desktop coverage keeps keyboard activation, visible focus, disabled
+explanations, long text, disclosure state, compact radii, and 48-dp action
+targets reviewable without introducing a second target component system.
+
 The 2026-09-05 documentation cleanup removes the test-only commercial-policy
 document reader and the uncalled legacy import-help component. Only their two
 source rows changed; existing MC-048I/generator inventory edits remain intact.

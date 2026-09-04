@@ -61,9 +61,9 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreProjectPage.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreProjectPage.kt has 9 callable declarations, 1 directly documented and 8 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-28 during MC-034; target project lifecycle actions, readiness summaries, recovery explanations, and blocker navigation are covered by focused Compose tests, and the remaining local presentation declarations must be reconsidered when their behavior or contract changes.",
-      "functionCount": 9,
-      "declarationDigest": "7f214c93abba0d051978a8b0576ad4b584af57444c8eea9e8e3b036f1fd7fc05",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreProjectPage.kt has 8 callable declarations, 1 directly documented and 7 still requiring focused KDoc/docstrings. UI-003 removed its local ProjectCard implementation in favour of fully documented compact workstation controls while preserving target project lifecycle actions, readiness summaries, recovery explanations, and blocker navigation under focused Compose coverage on 2026-09-05.",
+      "functionCount": 8,
+      "declarationDigest": "086c5a5409f624cf5fe973d88abfc369aa37c25eea1cb042af638660ed549b20",
       "documentedFunctionCount": 1
     },
     {
@@ -225,6 +225,14 @@
       "functionCount": 193,
       "declarationDigest": "7574aa629006b0e1320080f1f21fd9599fefade7cd296fa61395a10434a2d337",
       "documentedFunctionCount": 13
+    },
+    {
+      "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkstationPrimitives.kt",
+      "classification": "documented",
+      "reason": "UI-003 introduces the target compact workstation panel, action, navigation, status, field, table, message, and disclosure primitives. Every callable carries direct KDoc, and focused desktop tests cover accessible keyboard activation, disabled explanations, focus, long text, disclosure, target radii, and non-overlapping 48-dp hit targets on 2026-09-05.",
+      "functionCount": 14,
+      "declarationDigest": "d2b4ed04a4de3f1e97dc65ee3cc94b8cfde2115077a409fb5883a58b5024a08c",
+      "documentedFunctionCount": 14
     },
     {
       "path": "src/main/kotlin/app/melotrail/analysis/SongAnalysis.kt",

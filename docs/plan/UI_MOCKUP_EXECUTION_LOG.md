@@ -49,7 +49,7 @@ A planned commit subject is not proof that a commit exists.
 | UI-000 | DONE | `ui: UI-000 establish mockup redesign baseline` | Clean baseline at `d7aaf08`; manifest and validation are recorded below. |
 | UI-001 | DONE | `ui: UI-001 define measured visual targets` | Versioned geometry, palette, responsive and comparator policy recorded in `ui-evidence/`. |
 | UI-002 | DONE | `ui: UI-002 establish mockup visual foundations` | Target palette/type/shape/icon-role foundation, contrast and offline-resource tests committed. |
-| UI-003 | TODO | | |
+| UI-003 | DONE | `ui: UI-003 add compact workstation controls` | Fully documented shared compact controls plus focused keyboard, accessibility, density, radius, and hit-target coverage. |
 | UI-004 | TODO | | |
 | UI-005 | TODO | | |
 | UI-006 | TODO | | |
@@ -347,6 +347,102 @@ Commit verification (Git subject, parent, paths): recorded after commit in the
 UI-003 entry, to avoid self-referential evidence.
 
 Next task: UI-003 — Build compact workstation primitives.
+
+### UI-003 — Build compact workstation primitives
+
+Status / start / completion date: DONE / 2026-09-05 / 2026-09-05.
+
+Starting branch / commit: `main` after `cafa8708d1d0af9aab328a3cb92e018948009fa4`.
+
+Previous task verified commit: `cafa870` — `ui: UI-002 establish mockup visual
+foundations`; its parent is UI-001 and its paths establish only the measured
+theme, targeted theme tests, documentation inventory, and this execution log.
+
+Preserved pre-existing files and overlapping hunks: UI-002 left a clean
+worktree. This task did not adopt or alter the still-compiled legacy shell or
+old workspace router. It replaces only the Project page's local `ProjectCard`
+helper and direct Material action/field controls as a small proving surface.
+
+Contracts and actual implementation/test owners inspected: UI-001's measured
+geometry/palette contract; all six focused page sources' repeated
+Card/Button/OutlinedButton/field/status/disclosure helpers; `WorkspacePageHeading`;
+the existing focused Project and shell tests; Compose desktop focus/key test
+patterns; and the build-owned documentation inventory contract.
+
+Changes / removed target owners / recovery information: added fully documented
+`WorkstationPrimitives.kt` with compact bordered panel, heading/action row,
+primary/secondary/icon action, selected navigation item, metric tile, labelled
+status badge, text field, selector row, table row, inline message, and
+state-hoisted disclosure. The controls use the measured 6-dp control and 8-dp
+panel shapes, thin borders, target colours, Material interaction feedback,
+visible focus border/surface, disabled explanation, and 48-dp interactive
+minimums. `WorkspacePageHeading` delegates to the heading primitive. The
+Project page now proves the panel, field, primary/secondary actions, and inline
+message in its genuine lifecycle flow; its duplicated `ProjectCard` helper was
+removed. No MIDI input, candidate, project, export snapshot, or media file was
+changed; recovery remains the existing project/intent path.
+
+Reference regions and deliberate MIDI substitutions: the implementation uses
+UI-001's compact 6/8-dp control/panel geometry, `#26303E` border, elevated and
+selected dark surfaces, `#594080` primary fill, and `#D4B8FF` focus. The
+primitive gallery contains only genuine reusable target controls for test/local
+review; it does not introduce a mock route, a simulated music model, audio,
+Mix/Master, Library, Settings, or Video behavior.
+
+Focused commands / exit codes / results: `./gradlew :desktopApp:compileKotlin
+--console=plain` PASS after correcting only a gallery test-tag namespace;
+`./gradlew :desktopApp:test --tests 'app.melotrail.desktop.WorkstationPrimitivesTest'
+--rerun-tasks --console=plain` PASS; combined forced
+`WorkstationPrimitivesTest`/`MidiCoreProjectPageTest` PASS after preserving the
+former separate unsupported-project message text. The first Project-focused run
+correctly exposed that textual-regression issue and it was fixed rather than
+suppressed.
+
+make test / make build / documentation audit / diff check: `make test` PASS;
+`make build` PASS including `checkDocumentationCoverage`; direct
+`python3 tools/check_documentation_coverage.py --repository .`, Gradle
+documentation gate, and `git diff --check` PASS. The new primitive source is
+fully documented and the changed Project-page inventory digest/count is
+refreshed rather than masked by a broad exemption.
+
+Screenshot state / size / density / font / source fixture: this component task
+uses deterministic Compose semantic/control-state coverage, not an acceptance
+golden. It inherits the UI-002 system Sans Serif fallback and UI-001 1x target
+measurements. UI-017 remains the sole owner of expected/actual/diff PNGs and
+font/density pinning.
+
+Expected / actual / diff paths and hashes: no target screenshot is claimed by
+UI-003. The gallery test protects compact geometry through 48-dp bounds,
+non-overlap, direct 6/8-dp token checks, text alternatives, and interaction
+semantics until UI-017 installs raster comparisons.
+
+Geometry / contrast / keyboard / performance results: focused tests assert
+Enter and Space activation, focus acquisition, disabled blocker explanation,
+long text presence, disclosure expansion, role/status alternatives, compact
+radii and three adjacent non-overlapping 48-dp hit boxes. UI-002 owns the
+palette contrast matrix; UI-016 still owns full resize, accessibility sweep and
+performance profiling.
+
+Workflow or MIDI export impact classification and reason: presentation-only.
+Project intents, persistence, MIDI authority, playback, candidate decisions,
+and export behavior are unchanged, so no Logic Pro matrix rerun is applicable.
+
+Required manual evidence / reviewer / date / result: none for UI-003. UI-019
+still requires the user's visual approval; MC-048I still requires observed
+musician sessions.
+
+Known limitations / blocker / exact unblock action: only the Project proving
+surface consumes the primitives in this commit; UI-004 through UI-014 must
+replace their respective target defaults with these controls as they rebuild
+their owned shell/pages. No second target component system remains in the
+Project page; the untouched legacy route remains MC-051 deletion scope.
+
+Planned exact task commit subject: `ui: UI-003 add compact workstation controls`.
+
+Commit verification (Git subject, parent, paths): recorded after commit in the
+UI-004 entry, to avoid self-referential evidence.
+
+Next task: UI-004 — Rebuild the application shell.
 
 ## Final visual review
 

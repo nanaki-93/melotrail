@@ -349,11 +349,7 @@ internal fun workspaceSelectableButtonColors(selected: Boolean): ButtonColors = 
 /** Compact target-page heading shared by the six MIDI workspace destinations. */
 @Composable
 internal fun WorkspacePageHeading(eyebrow: String, title: String, summary: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-        Text(eyebrow, style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Primary)
-        Text(title, style = MaterialTheme.typography.headlineLarge, color = MusicWorkspaceTokens.TextPrimary)
-        Text(summary, style = MaterialTheme.typography.bodyMedium, color = MusicWorkspaceTokens.TextSecondary)
-    }
+    WorkstationHeadingActionRow(eyebrow = eyebrow, title = title, summary = summary)
 }
 
 object ThemeShowcaseTags {
