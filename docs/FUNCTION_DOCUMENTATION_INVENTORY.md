@@ -89,6 +89,11 @@ The current path is song-map style preview, complete-draft creation/listening,
 atomic use, and selected-section exception repair with persistent-player
 continuity.
 
+UI-002 refreshes the workspace-theme row after defining the measured dark MIDI
+palette, compact shapes, explicit typography fallback and target-only vector
+role styles. The remaining legacy glyph/instrument helpers stay locally
+classified while MC-051 owns their callers' removal.
+
 The 2026-09-05 documentation cleanup removes the test-only commercial-policy
 document reader and the uncalled legacy import-help component. Only their two
 source rows changed; existing MC-048I/generator inventory edits remain intact.

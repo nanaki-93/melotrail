@@ -213,10 +213,10 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspaceTheme.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspaceTheme.kt has 7 callable declarations, 2 directly documented and 5 focused presentation helpers. MC-048B reviewed the target navy/violet palette, contrast states, responsive MIDI-only layout tokens, primary/selectable controls, and shared six-page heading with focused theme and visual tests on 2026-09-03.",
-      "functionCount": 7,
-      "declarationDigest": "35f0feb660b06ff8adb9beef7ec31a2ca283133ba467ff25813a39a67a005e48",
-      "documentedFunctionCount": 2
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspaceTheme.kt has 10 callable declarations, 5 directly documented and 5 focused presentation helpers. UI-002 reviewed the measured target palette, compact shapes, explicit typography/fallback, vector-icon role registry, target-only Melody/Chords/Bass/Drums mapping, contrast matrix and preserved application identity on 2026-09-05. The legacy instrument glyph map remains isolated for still-compiled MC-051 deletion-scope callers.",
+      "functionCount": 10,
+      "declarationDigest": "7b357e740ef4cb5532581accbeb74f9c9c44be368ae7383cf49dcc5cd42efdae",
+      "documentedFunctionCount": 5
     },
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspaceViewModel.kt",

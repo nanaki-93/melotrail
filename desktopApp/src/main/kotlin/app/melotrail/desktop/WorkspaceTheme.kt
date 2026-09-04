@@ -11,18 +11,32 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Text
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.Album
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.RateReview
+import androidx.compose.material.icons.filled.UploadFile
+import androidx.compose.material.icons.filled.ViewWeek
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
+import app.melotrail.project.CandidateRole
 
 object MusicWorkspaceTokens {
     /** Transitional measurements retained only for the legacy shell until MC-051 removes it. */
@@ -103,30 +117,43 @@ object MusicWorkspaceTokens {
         val PartMetadata = 11.sp
         val HeaderProjectLabel = 10.sp
     }
-    /** Deep navy and violet language derived from the approved UI references. */
-    val Canvas = Color(0xFF070A14)
-    val Surface = Color(0xFF0E1422)
-    val ElevatedSurface = Color(0xFF151D2E)
-    val SelectedSurface = Color(0xFF2B2147)
-    val Border = Color(0xFF323A50)
-    val Primary = Color(0xFFA78BFA)
-    val Focus = Color(0xFFC4B5FD)
-    val WarmAccent = Color(0xFFF4BC64)
-    val TextPrimary = Color(0xFFF4F2FF)
-    val TextSecondary = Color(0xFFC2BED3)
-    val Disabled = Color(0xFF9892A8)
-    val DisabledSurface = Color(0xFF1B2030)
+    /** UI-001's measured target palette. Its bright accent is intentionally not a primary fill. */
+    val Canvas = Color(0xFF0B131E)
+    val Surface = Color(0xFF101923)
+    val ElevatedSurface = Color(0xFF151E2A)
+    val SelectedSurface = Color(0xFF2C2442)
+    val Border = Color(0xFF26303E)
+    val PrimaryFill = Color(0xFF594080)
+    val Primary = Color(0xFFB18ADE)
+    val Focus = Color(0xFFD4B8FF)
+    val WarmAccent = Color(0xFFD79A43)
+    val TextPrimary = Color(0xFFF1F2F4)
+    val TextSecondary = Color(0xFFAFB3BE)
+    val Disabled = Color(0xFFB5B8C0)
+    val DisabledSurface = Color(0xFF252B35)
     val Error = Color(0xFFFFB4AB)
     val Warning = Color(0xFFF0B356)
-    val Information = Color(0xFF8AB4F8)
-    val Success = Color(0xFF7BDBA5)
-    val Progress = Color(0xFF8DB8FF)
-    val Piano = Color(0xFF65D6CE)
-    val Bass = Color(0xFF86C979)
-    val Drums = Color(0xFFF0B356)
-    val Pad = Color(0xFFAB91EB)
-    val Strings = Color(0xFFF08262)
-    val ScenePlaceholder = Color(0xFF1A2032)
+    val Information = Color(0xFF9BC6FF)
+    val Success = Color(0xFF8FE0AF)
+    val Progress = Color(0xFFA9C8FF)
+    val ScenePlaceholder = Color(0xFF172331)
+
+    /** Four target roles only. Legacy Piano/Pad/Strings palette names do not belong to MIDI Core. */
+    object Role {
+        val Melody = Color(0xFFD77A9E)
+        val Chords = Color(0xFF9CAA61)
+        val Bass = Color(0xFF5A9DD2)
+        val Drums = Color(0xFFD79A43)
+    }
+
+    /** Stable section families are not validation severities and always carry textual labels. */
+    val SectionColors = listOf(
+        Color(0xFF6B7955),
+        Color(0xFF8D6331),
+        Color(0xFF685281),
+        Color(0xFF86515F),
+        Color(0xFF4D6682),
+    )
 
     object Spacing {
         val Xs = 4.dp
@@ -138,9 +165,9 @@ object MusicWorkspaceTokens {
 
     object Radius {
         val Compact = 6.dp
-        val Control = 8.dp
-        val Card = 12.dp
-        val Panel = 16.dp
+        val Control = 6.dp
+        val Card = 8.dp
+        val Panel = 8.dp
     }
 
     object Interaction {
@@ -151,31 +178,79 @@ object MusicWorkspaceTokens {
     }
 }
 
-/** A colour is always paired with a readable text label and a compact icon. */
+/**
+ * The old router still compiles while MC-051 removes it. Keep its role labels
+ * isolated from the target MIDI Core vocabulary so new UI never inherits Piano,
+ * Pad or Strings as an arrangement role.
+ */
+private object LegacyInstrumentPalette {
+    val Piano = Color(0xFF65D6CE)
+    val Bass = Color(0xFF86C979)
+    val Drums = Color(0xFFF0B356)
+    val Pad = Color(0xFFAB91EB)
+    val Strings = Color(0xFFF08262)
+}
+
+/** Legacy-only text-glyph style. New target components consume [MidiWorkspaceRoleStyle]. */
 internal data class InstrumentLaneStyle(val color: Color, val label: String, val icon: String)
 
 internal val instrumentLanes = mapOf(
-    "piano" to InstrumentLaneStyle(MusicWorkspaceTokens.Piano, "Piano", "♫"),
-    "bass" to InstrumentLaneStyle(MusicWorkspaceTokens.Bass, "Bass", "♩"),
-    "drums" to InstrumentLaneStyle(MusicWorkspaceTokens.Drums, "Drums", "▣"),
-    "pad" to InstrumentLaneStyle(MusicWorkspaceTokens.Pad, "Pad", "◇"),
-    "strings" to InstrumentLaneStyle(MusicWorkspaceTokens.Strings, "Strings", "♬")
+    "piano" to InstrumentLaneStyle(LegacyInstrumentPalette.Piano, "Piano", "♫"),
+    "bass" to InstrumentLaneStyle(LegacyInstrumentPalette.Bass, "Bass", "♩"),
+    "drums" to InstrumentLaneStyle(LegacyInstrumentPalette.Drums, "Drums", "▣"),
+    "pad" to InstrumentLaneStyle(LegacyInstrumentPalette.Pad, "Pad", "◇"),
+    "strings" to InstrumentLaneStyle(LegacyInstrumentPalette.Strings, "Strings", "♬")
 )
 
-/** Use [instrumentLane] for new UI so lanes retain their text/icon equivalent. */
 internal val instrumentLaneColors = instrumentLanes.mapValues { it.value.color }
 
 internal fun instrumentLane(instrument: String): InstrumentLaneStyle? = instrumentLanes[instrument.lowercase()]
 
-internal enum class WorkspaceSemanticState(val label: String, val icon: String) {
-    READY("Ready", "✓"),
-    WARNING("Review", "!"),
-    ERROR("Blocked", "×"),
-    INFORMATION("Information", "i"),
-    DISABLED("Unavailable", "—"),
-    SELECTED("Selected", "●"),
-    PROGRESS("In progress", "…"),
-    FOCUS("Focused", "◌")
+/** A single vector-icon registry gives every target icon a stable accessible name. */
+internal enum class WorkspaceVectorIcon(val image: ImageVector, val contentDescription: String) {
+    PROJECT(Icons.Default.Folder, "Project"),
+    MIDI(Icons.Default.LibraryMusic, "MIDI"),
+    STRUCTURE(Icons.Default.ViewWeek, "Structure and harmony"),
+    ARRANGE(Icons.AutoMirrored.Filled.QueueMusic, "Arrange"),
+    REVIEW(Icons.Default.RateReview, "Review"),
+    EXPORT(Icons.Default.UploadFile, "Export MIDI package"),
+    MELODY(Icons.Default.MusicNote, "Melody role"),
+    CHORDS(Icons.Default.LibraryMusic, "Chords role"),
+    BASS(Icons.AutoMirrored.Filled.QueueMusic, "Bass role"),
+    DRUMS(Icons.Default.Album, "Drums role"),
+}
+
+/** Target-only roles for all MIDI evidence lanes, never an instrument claim. */
+internal enum class MidiWorkspaceRoleStyle(
+    val label: String,
+    val color: Color,
+    val icon: WorkspaceVectorIcon,
+) {
+    MELODY("Melody", MusicWorkspaceTokens.Role.Melody, WorkspaceVectorIcon.MELODY),
+    CHORDS("Chords", MusicWorkspaceTokens.Role.Chords, WorkspaceVectorIcon.CHORDS),
+    BASS("Bass", MusicWorkspaceTokens.Role.Bass, WorkspaceVectorIcon.BASS),
+    DRUMS("Drums", MusicWorkspaceTokens.Role.Drums, WorkspaceVectorIcon.DRUMS),
+}
+
+/** Resolve a generated core role to its target-only MIDI evidence style. */
+internal fun midiWorkspaceRoleStyle(role: CandidateRole): MidiWorkspaceRoleStyle = when (role) {
+    CandidateRole.CHORDS -> MidiWorkspaceRoleStyle.CHORDS
+    CandidateRole.BASS -> MidiWorkspaceRoleStyle.BASS
+    CandidateRole.DRUMS -> MidiWorkspaceRoleStyle.DRUMS
+}
+
+/** Return one stable non-severity section family for the supplied zero-based occurrence index. */
+internal fun sectionColor(index: Int): Color = MusicWorkspaceTokens.SectionColors[index.mod(MusicWorkspaceTokens.SectionColors.size)]
+
+internal enum class WorkspaceSemanticState(val label: String) {
+    READY("Ready"),
+    WARNING("Review"),
+    ERROR("Blocked"),
+    INFORMATION("Information"),
+    DISABLED("Unavailable"),
+    SELECTED("Selected"),
+    PROGRESS("In progress"),
+    FOCUS("Focused")
 }
 
 internal val semanticStateColors = mapOf(
@@ -192,8 +267,8 @@ internal val semanticStateColors = mapOf(
 internal fun semanticColor(state: WorkspaceSemanticState): Color = semanticStateColors.getValue(state)
 
 internal val musicColorScheme = darkColorScheme(
-    primary = MusicWorkspaceTokens.Primary,
-    onPrimary = MusicWorkspaceTokens.Canvas,
+    primary = MusicWorkspaceTokens.PrimaryFill,
+    onPrimary = MusicWorkspaceTokens.TextPrimary,
     primaryContainer = MusicWorkspaceTokens.SelectedSurface,
     onPrimaryContainer = MusicWorkspaceTokens.TextPrimary,
     secondary = MusicWorkspaceTokens.WarmAccent,
@@ -222,22 +297,43 @@ private val workspaceShapes = Shapes(
     large = RoundedCornerShape(MusicWorkspaceTokens.Radius.Panel)
 )
 
-private val workspaceTypography = Typography(
-    displayLarge = androidx.compose.ui.text.TextStyle(fontSize = 34.sp, lineHeight = 40.sp, fontWeight = FontWeight.SemiBold),
-    headlineLarge = androidx.compose.ui.text.TextStyle(fontSize = 26.sp, lineHeight = 32.sp, fontWeight = FontWeight.SemiBold),
-    titleLarge = androidx.compose.ui.text.TextStyle(fontSize = 19.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold),
-    titleMedium = androidx.compose.ui.text.TextStyle(fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.Medium),
-    bodyLarge = androidx.compose.ui.text.TextStyle(fontSize = 15.sp, lineHeight = 22.sp),
-    bodyMedium = androidx.compose.ui.text.TextStyle(fontSize = 14.sp, lineHeight = 20.sp),
-    bodySmall = androidx.compose.ui.text.TextStyle(fontSize = 12.sp, lineHeight = 16.sp),
-    labelLarge = androidx.compose.ui.text.TextStyle(fontSize = 13.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium),
-    labelSmall = androidx.compose.ui.text.TextStyle(fontSize = 11.sp, lineHeight = 14.sp, fontWeight = FontWeight.Medium)
+/**
+ * System Sans Serif is deliberately the current fallback: no unknown font is
+ * bundled merely to mimic a supplied image. UI-017 pins the host/capture font;
+ * a redistributable bundled font can replace this only with license evidence.
+ */
+internal val workspaceFontFamily = FontFamily.SansSerif
+
+/** Build a fixed type slot from the target point-size, line-height and family contract. */
+private fun workspaceText(
+    size: Int,
+    lineHeight: Int,
+    weight: FontWeight = FontWeight.Normal,
+) = TextStyle(fontSize = size.sp, lineHeight = lineHeight.sp, fontWeight = weight, fontFamily = workspaceFontFamily)
+
+/** Every Material type slot used by the workspace is explicitly sized. */
+internal val workspaceTypography = Typography(
+    displayLarge = workspaceText(30, 36, FontWeight.SemiBold),
+    displayMedium = workspaceText(28, 34, FontWeight.SemiBold),
+    displaySmall = workspaceText(26, 32, FontWeight.SemiBold),
+    headlineLarge = workspaceText(24, 30, FontWeight.SemiBold),
+    headlineMedium = workspaceText(22, 28, FontWeight.SemiBold),
+    headlineSmall = workspaceText(20, 26, FontWeight.SemiBold),
+    titleLarge = workspaceText(18, 24, FontWeight.SemiBold),
+    titleMedium = workspaceText(16, 22, FontWeight.Medium),
+    titleSmall = workspaceText(14, 20, FontWeight.Medium),
+    bodyLarge = workspaceText(14, 20),
+    bodyMedium = workspaceText(13, 18),
+    bodySmall = workspaceText(12, 16),
+    labelLarge = workspaceText(13, 18, FontWeight.Medium),
+    labelMedium = workspaceText(12, 16, FontWeight.Medium),
+    labelSmall = workspaceText(11, 16, FontWeight.Medium),
 )
 
 @Composable
 internal fun workspacePrimaryButtonColors(): ButtonColors = ButtonDefaults.buttonColors(
-    containerColor = MusicWorkspaceTokens.Primary,
-    contentColor = MusicWorkspaceTokens.Canvas,
+    containerColor = MusicWorkspaceTokens.PrimaryFill,
+    contentColor = MusicWorkspaceTokens.TextPrimary,
     disabledContainerColor = MusicWorkspaceTokens.DisabledSurface,
     disabledContentColor = MusicWorkspaceTokens.Disabled
 )
@@ -263,6 +359,7 @@ internal fun WorkspacePageHeading(eyebrow: String, title: String, summary: Strin
 object ThemeShowcaseTags {
     const val ROOT = "theme-showcase"
     const val PALETTE = "theme-showcase-palette"
+    const val ROLE_PALETTE = "theme-showcase-role-palette"
     const val STATES = "theme-showcase-states"
 }
 
@@ -276,12 +373,23 @@ internal fun MusicWorkspaceThemeShowcase() {
     ) {
         Text("Workspace visual tokens", color = MusicWorkspaceTokens.TextPrimary, fontWeight = FontWeight.SemiBold)
         Row(modifier = androidx.compose.ui.Modifier.semantics { testTag = ThemeShowcaseTags.PALETTE }, horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-            listOf(MusicWorkspaceTokens.Canvas, MusicWorkspaceTokens.Surface, MusicWorkspaceTokens.SelectedSurface, MusicWorkspaceTokens.Primary, MusicWorkspaceTokens.Warning, MusicWorkspaceTokens.Error).forEach { color ->
+            listOf(MusicWorkspaceTokens.Canvas, MusicWorkspaceTokens.Surface, MusicWorkspaceTokens.SelectedSurface, MusicWorkspaceTokens.PrimaryFill, MusicWorkspaceTokens.Primary, MusicWorkspaceTokens.Warning, MusicWorkspaceTokens.Error).forEach { color ->
                 androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.width(MusicWorkspaceTokens.Interaction.MinimumHitTarget).height(MusicWorkspaceTokens.Interaction.MinimumHitTarget).background(color, RoundedCornerShape(MusicWorkspaceTokens.Radius.Control)))
             }
         }
+        Row(
+            modifier = androidx.compose.ui.Modifier.semantics { testTag = ThemeShowcaseTags.ROLE_PALETTE },
+            horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md),
+        ) {
+            MidiWorkspaceRoleStyle.entries.forEach { role ->
+                Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+                    Icon(role.icon.image, contentDescription = role.icon.contentDescription, tint = role.color)
+                    Text(role.label, color = MusicWorkspaceTokens.TextSecondary, style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        }
         Text(
-            "Ready ✓ · Review ! · Blocked × · Selected ● · text and icons remain available when colour is not.",
+            "Ready · Review · Blocked · Selected · text and vector icons remain available when colour is not.",
             modifier = androidx.compose.ui.Modifier.semantics { testTag = ThemeShowcaseTags.STATES },
             color = MusicWorkspaceTokens.TextSecondary,
             style = MaterialTheme.typography.bodySmall

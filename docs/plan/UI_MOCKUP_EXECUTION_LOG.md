@@ -48,7 +48,7 @@ A planned commit subject is not proof that a commit exists.
 | --- | --- | --- | --- |
 | UI-000 | DONE | `ui: UI-000 establish mockup redesign baseline` | Clean baseline at `d7aaf08`; manifest and validation are recorded below. |
 | UI-001 | DONE | `ui: UI-001 define measured visual targets` | Versioned geometry, palette, responsive and comparator policy recorded in `ui-evidence/`. |
-| UI-002 | TODO | | |
+| UI-002 | DONE | `ui: UI-002 establish mockup visual foundations` | Target palette/type/shape/icon-role foundation, contrast and offline-resource tests committed. |
 | UI-003 | TODO | | |
 | UI-004 | TODO | | |
 | UI-005 | TODO | | |
@@ -257,6 +257,96 @@ Commit verification (Git subject, parent, paths): recorded after commit in the
 UI-002 entry, to avoid self-referential evidence.
 
 Next task: UI-002 — Establish target typography, colors and assets.
+
+### UI-002 — Establish target typography, colors and assets
+
+Status / start / completion date: DONE / 2026-09-05 / 2026-09-05.
+
+Starting branch / commit: `main` after `ccb8e6b7823f016d147661f8807b30939d582635`.
+
+Previous task verified commit: `ccb8e6b` — `ui: UI-001 define measured visual
+targets`; its parent is UI-000 and its paths are the visual specification, UI
+log, and UI-001 evidence files only.
+
+Preserved pre-existing files and overlapping hunks: UI-001 left a clean
+worktree. The still-compiled legacy `WorkspaceApp.kt` had one direct reference
+to the removed target `Piano` token; it is changed only to consume the isolated
+legacy palette map, preserving legacy behavior while preventing a target-token
+compatibility alias. No other legacy owner was adopted or removed.
+
+Contracts and actual implementation/test owners inspected: UI-001 palette/type
+contract; `WorkspaceTheme.kt`; `WorkspaceThemeTest.kt`; all target-token
+callers; still-compiled legacy glyph callers; Compose Material Icons Extended;
+and `Melotrail.icns` / `arranger-icon.svg` packaging resources. No external
+font or artwork was added because no redistributable license/fallback evidence
+was available or needed for the system Sans Serif fallback.
+
+Changes / removed target owners / recovery information: `WorkspaceTheme.kt`
+now owns the target palette, dark `PrimaryFill`, bright `Primary` accent and
+`Focus`, 6-dp compact/controls and 8-dp cards/panels, explicit Material type
+slots, target Melody/Chords/Bass/Drums role palette, section family colors, and
+a named Material-vector icon registry. Target Piano/Pad/Strings tokens and
+Unicode semantic-state glyphs were removed. The old instrument glyph palette is
+private legacy data until MC-051; no assets or source MIDI were removed. The
+documentation-inventory JSON/ledger was refreshed because the build's existing
+coverage gate detects changed Kotlin callable declarations.
+
+Reference regions and deliberate MIDI substitutions: adopted UI-001's sampled
+canvas `#0B131E`, surfaces `#101923`/`#151E2A`, border `#26303E`, primary fill
+`#594080`, selected surface `#2C2442`, focus `#D4B8FF`, neutral text and the
+four stable role colors. The visual foundation uses no reference logo/avatar/
+illustration; the existing application icon remains. A current 1280 × 900
+Arrange capture was inspected after the theme pass: palette/contrast improved,
+while the old pill/map composition remains intentionally owned by UI-003–UI-012.
+
+Focused commands / exit codes / results: `./gradlew :desktopApp:test --tests
+app.melotrail.desktop.WorkspaceThemeTest --rerun-tasks --console=plain` PASS
+(after the expected documentation-inventory repair); focused tests verify
+palette contrast, 6/8-dp radii, type metrics/fallback, target role inventory,
+named vector descriptions, icon resources and non-colour semantic labels.
+
+make test / make build / documentation audit / diff check: `make test` PASS,
+`make build` PASS after refreshing the existing inventory, forced
+`DocumentationIntegrityTest` PASS, and `git diff --check` PASS. The first
+`make build` correctly failed before the inventory was refreshed; no unrelated
+failure was concealed.
+
+Screenshot state / size / density / font / source fixture: existing ignored
+real-service 1280 × 900 Arrange output was inspected after the token pass. It
+uses the current system Sans Serif fallback; UI-017 will pin that capture font
+and own expected/actual/diff fixtures. This task's showcase is semantic/token
+evidence rather than a visual acceptance golden.
+
+Expected / actual / diff paths and hashes: UI-017 remains owner of image
+comparison. UI-002's assertions prevent palette, contrast, role, control-radius
+and application-icon regressions independently of a screenshot.
+
+Geometry / contrast / keyboard / performance results: contrast assertions pass
+for normal text, state colors, disabled content, selected focus and primary-fill
+text. Vector icon descriptions are stable. Hit-target values remain 48 dp.
+Geometry, keyboard control behavior, resize and performance are not changed and
+remain UI-003/UI-004/UI-016 work.
+
+Workflow or MIDI export impact classification and reason: no domain/workflow or
+export behavior changed; only presentation tokens and a legacy color lookup
+were updated, so no Logic Pro matrix applies.
+
+Required manual evidence / reviewer / date / result: none for UI-002. UI-019
+still requires the user's visual decision; MC-048I still requires observed
+musician sessions.
+
+Known limitations / blocker / exact unblock action: system Sans Serif is an
+honest temporary fallback, not a claim of cross-platform pixel identity. UI-017
+must pin capture font/density; bundle a font only if that later evidence proves
+it necessary and its license can be recorded. Large legacy pill controls remain
+until the task-owned primitive/shell/page replacements.
+
+Planned exact task commit subject: `ui: UI-002 establish mockup visual foundations`.
+
+Commit verification (Git subject, parent, paths): recorded after commit in the
+UI-003 entry, to avoid self-referential evidence.
+
+Next task: UI-003 — Build compact workstation primitives.
 
 ## Final visual review
 

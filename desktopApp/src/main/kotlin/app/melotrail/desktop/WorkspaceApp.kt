@@ -394,7 +394,7 @@ internal fun PartsPanel(state: WorkspaceUiState, onIntent: (WorkspaceIntent) -> 
             ) {
                 Box(
                     Modifier.size(MusicWorkspaceTokens.Shell.PartThumbnailSize).clip(MaterialTheme.shapes.small)
-                        .background(if (part.sourceType == app.melotrail.application.PartSourceType.MIDI) MusicWorkspaceTokens.Piano.copy(alpha = 0.20f) else MusicWorkspaceTokens.Warning.copy(alpha = 0.20f)),
+                        .background(if (part.sourceType == app.melotrail.application.PartSourceType.MIDI) instrumentLaneColors.getValue("piano").copy(alpha = 0.20f) else MusicWorkspaceTokens.Warning.copy(alpha = 0.20f)),
                     contentAlignment = Alignment.Center
                 ) { Text(if (part.sourceType == app.melotrail.application.PartSourceType.MIDI) "♫" else "⌁", color = MaterialTheme.colorScheme.primary) }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
