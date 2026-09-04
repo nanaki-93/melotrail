@@ -158,12 +158,6 @@ class CommercialProvenanceTest {
         assertFalse(portable.source.contains("private"))
     }
 
-    @Test
-    fun `release documentation retains official links and dated review gate`() {
-        YoutubePolicyDocumentation.requireReviewed(Path.of("docs/COMMERCIAL_PROVENANCE.md"), "2026-08-25")
-        assertFalse(runCatching { YoutubePolicyDocumentation.requireReviewed(Path.of("docs/COMMERCIAL_PROVENANCE.md"), "2026-08-26") }.isSuccess)
-    }
-
     private fun aiReview(disclosureRequired: Boolean = true) = AiUseDisclosureReview("release-owner", "2026-08-25T00:00:00Z", disclosureRequired, "Reviewed against the selected release lineage.")
 
     private fun projectRoot(): Path {

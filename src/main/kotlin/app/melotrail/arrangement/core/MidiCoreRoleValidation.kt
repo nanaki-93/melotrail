@@ -298,7 +298,13 @@ object MidiCoreRoleValidator {
             CandidateRole.DRUMS -> 8.0
         }
         val maximum = ceil(beats * ceilingPerBeat * context.sectionPolicy.density).toInt()
-        if (notes.size > maximum) findings += finding(
+        val eventCount = when (context.role) {
+            // A simultaneous chord voicing is one harmonic attack; counting its individual voices
+            // would make extensions appear artificially denser than the selected rhythm.
+            CandidateRole.CHORDS -> notes.map(MidiCoreCandidateEvent.Note::startTick).distinct().size
+            CandidateRole.BASS, CandidateRole.DRUMS -> notes.size
+        }
+        if (eventCount > maximum) findings += finding(
             MidiCoreRoleFindingCode.DENSITY_EXCEEDED,
             MidiCoreRoleFindingSeverity.BLOCKING,
             context,

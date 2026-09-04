@@ -146,6 +146,9 @@ preview, or accepted arrangement target, but only the player owns play/pause,
 stop, position, loop, output, boundary seek, mute, solo, and device recovery.
 Closing a project or making its audition target stale stops playback safely;
 navigation preserves a valid target, position, loop, and device selection.
+Cold and warm preview preparation stays within the Plan 12.2 budget on the
+reference development machine. That automated preparation measure is distinct
+from observed audible onset, which is recorded by the MC-048I UX rubric.
 
 ## 6. Arrangement functions
 
@@ -223,6 +226,9 @@ style gallery and **Create full draft** its visible primary path; per-section
 or per-role repair is contextual to the selected occurrence. **Regenerate
 section** retains the selected global style, while profile/pattern controls and
 individual role regeneration remain behind explicit **Adjust roles** disclosure.
+The default first-draft path uses no more than three primary actions (choose
+style, create draft, play draft); advanced profile/pattern controls are never a
+prerequisite for it.
 
 ## 7. Review functions
 
@@ -368,6 +374,9 @@ toolbar. Arrange and Review replace generic wide context text with their
 selected-section inspector. Map labels, role states, selected/playing/loop
 states, progress, and blockers have text or semantic treatment in addition to
 colour, and the compact map remains horizontally keyboard reachable.
+The six destinations have ready-state wide/compact and compact blocked-state
+fixtures. Their automated evidence is necessary but not a substitute for the
+five observed authority-complete musician sessions required by Plan 12.3.
 
 ### F-UI-007 — Keep transport out of page flows
 
@@ -375,6 +384,18 @@ The persistent player is outside each page scroll container at supported wide
 and compact sizes. It exposes source, current-audition, and accepted-arrangement
 target switches when available, and keeps advanced playback controls collapsed
 until requested. No destination renders a duplicate transport.
+
+### Planned visual delivery refinement (2026-09-05)
+
+Root Plan 7.7 and `plan/UI_MOCKUP_REDESIGN_PLAN.md` require the existing six
+functions to use the supplied mockups' close visual composition, compact
+controls and evidence-led timelines. UI-000–UI-019 deliver this revision; it is
+not a claim that the current UI already matches. Read-only note/hit views do
+not authorize MIDI editing. Static licensed rail decoration is permitted only
+as non-musical atmosphere, never as video output or a replacement for evidence.
+All F-UI/F-PLAY semantics and immutable musical boundaries remain mandatory.
+`plan/FUTURE_VIDEO_CREATOR.md` describes a separate future proposal, not a new
+shipped F-EXP or F-MIDI function.
 
 ## 10. System functions
 

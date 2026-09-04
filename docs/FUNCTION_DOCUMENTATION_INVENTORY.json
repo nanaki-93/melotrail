@@ -197,9 +197,9 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspacePageRouter.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspacePageRouter.kt has 105 callable declarations, 13 directly documented and 92 still requiring focused KDoc/docstrings. QP-015 reviewed canonical melody evidence, readiness, and preview presentation on 2026-08-25; the remaining file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
-      "functionCount": 105,
-      "declarationDigest": "fdf39d86d7c5f0fc1218664bc13addfdc4034753d43581a980002aa9d0ed9e30",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/WorkspacePageRouter.kt has 104 callable declarations, 13 directly documented and 91 still requiring focused KDoc/docstrings. The 2026-09-05 documentation cleanup removed the uncalled ImportHelpLinks owner and its unused tags after a caller scan; no active MIDI workflow changed. The remaining legacy file-local, declaration-digest-pinned debt must be reconsidered when its behavior or contract changes.",
+      "functionCount": 104,
+      "declarationDigest": "b324f51d564616972d602668aa07e11b76580179ff35e2fe91dba2dc77ecfa12",
       "documentedFunctionCount": 13
     },
     {
@@ -653,10 +653,10 @@
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/core/MidiCoreChordGenerator.kt",
       "classification": "documented",
-      "reason": "All 17 callable declarations implement MC-022/MC-041 deterministic Chords generation from exact harmony windows, complete curated rhythms, movement-bounded common-tone voicings, section-aware register intent, seed, and protected melody/bass space; reviewed on 2026-08-28.",
-      "functionCount": 17,
-      "declarationDigest": "fed45995571aeaf2c114b89e64143411147d216056859eec1cf98604733a9b75",
-      "documentedFunctionCount": 17
+      "reason": "All 18 callable declarations implement MC-022/MC-041 deterministic Chords generation from exact harmony windows, complete curated rhythms, movement-bounded common-tone voicings, section-aware register intent, seed, and protected melody/bass space. A complete spelling remains preferred; when it would double a protected anchor, a bounded authoritative two-or-more-voice guide may be selected instead; reviewed on 2026-09-03.",
+      "functionCount": 18,
+      "declarationDigest": "c8b055e0c65ced2e06afd966b71a710ccf7a8b828fdcb369dcd130aae1e914ed",
+      "documentedFunctionCount": 18
     },
     {
       "path": "src/main/kotlin/app/melotrail/arrangement/core/MidiCoreBassGenerator.kt",
@@ -1321,14 +1321,6 @@
       "functionCount": 52,
       "declarationDigest": "957e9da01de019d45004d37baabb484d023bd5ada2d6c0340d9eb1b82fe83f19",
       "documentedFunctionCount": 8
-    },
-    {
-      "path": "src/main/kotlin/app/melotrail/commercial/YoutubePolicyDocumentation.kt",
-      "classification": "deferred-with-reason",
-      "reason": "src/main/kotlin/app/melotrail/commercial/YoutubePolicyDocumentation.kt has 1 callable declarations, 0 directly documented and 1 still requiring focused KDoc/docstrings. This file-local, declaration-digest-pinned debt was reviewed on 2026-08-24 and must be reconsidered when its behavior or contract changes.",
-      "functionCount": 1,
-      "declarationDigest": "47ce6ea28a7ff779d7a0b341df21fb7fd3e4454eba0b637aa1a8f07511dad8d7",
-      "documentedFunctionCount": 0
     },
     {
       "path": "src/main/kotlin/app/melotrail/config/AppConfig.kt",

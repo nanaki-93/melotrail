@@ -3,6 +3,14 @@
 Use this prompt with a coding agent at the Melotrail repository root after the
 approved documentation/planning baseline is present.
 
+2026-09-05 routing update: root Plan 7.7 inserts UI-000–UI-019 after MC-048H
+and before MC-048I completion. If that UI chain is incomplete, use
+[the UI execution prompt](EXECUTE_UI_MOCKUP_TASKS_PROMPT.md) for the bounded
+redesign first, then return here. Preserve MC-048I's existing preparation and
+pending human gate; do not execute it against superseded graphics. The nine
+`docs/pictures/UI` mockups are retained design inputs, excluded from blanket
+legacy asset deletion. The future VID backlog is not authorized by this prompt.
+
 ---
 
 You are the implementation agent for the Melotrail MIDI Core migration.
@@ -36,6 +44,13 @@ shape of the current audio-era implementation. Never execute a task or prompt
 recovered from Git history.
 
 ## Mandatory scope
+
+- Honor root Plan 7.7: route incomplete UI-000–UI-019 work to
+  `docs/plan/EXECUTE_UI_MOCKUP_TASKS_PROMPT.md` after MC-048H and before MC-048I
+  completion. Preserve pending MC-048I preparation and all human gates. Retain
+  the nine `docs/pictures/UI` design inputs during later cleanup. Do not execute
+  the future VID backlog. This exception supersedes ordinary ordering/deletion
+  wording below.
 
 - Execute MC-000 through MC-060 in numeric order, with MC-048A through MC-048I
   in letter order immediately after MC-048.

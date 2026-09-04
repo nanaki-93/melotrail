@@ -127,6 +127,22 @@ Before implementation tasks begin:
   Batch acceptance and its latest-batch undo are atomic: stale, locked,
   missing, or later-modified scopes leave every acceptance pointer unchanged,
   and accepted-arrangement playback/Export unlock only after strict readiness.
+- The automated suite captures all six destinations through a ready-state
+  real-service workflow at 1280 × 900 and 720 × 900, plus compact blocked
+  states. Fixture hashes, semantic assertions, and keyboard checks are recorded
+  in the execution log; they do not replace observed-musician evidence.
+
+The additional mockup-fidelity gates under root Plan 7.7 apply before MC-048I's
+final observed sessions: UI-001 freezes reference measurements; UI-017 adds
+repeatable 1536 × 1024, 1280 × 900 and 720 × 900 target baseline comparison
+with actual/expected/diff evidence and independent geometry/contrast checks;
+UI-019 requires genuine user visual approval against all six adapted pages.
+The detailed rubric is in `plan/UI_MOCKUP_REDESIGN_PLAN.md`. Writing a PNG or
+passing dimensions/semantics alone is not a visual fidelity pass. Intentional
+MIDI substitutions are documented, not hidden by permissive diff thresholds.
+These gates neither replace observed-musician/holdout evidence nor authorize
+the future video runtime. Retained design-only `docs/pictures/UI` inputs are
+an explicit cleanup exception; legacy executable consumers still must go.
 
 ## 5. Audition gates
 
@@ -141,6 +157,10 @@ Before implementation tasks begin:
   the old MIDI session without hanging notes.
 - Style preview produces no candidate, artifact, acceptance, project revision,
   exportable audio, or model invocation.
+- Cold and warm plan-preparation p95 measurements are repeatable through the
+  style-preview application service. They must meet the 1,000 ms cold and
+  300 ms warm reference-machine limits; participant-observed acoustic onset is
+  separately recorded by `plan/MC048I_ARRANGEMENT_UX_RUBRIC.md`.
 - Draft audition reads one persisted all-role draft with protected melody and
   validates current authority, every candidate digest, report, role/channel,
   and occurrence boundary before opening the shared player. It does not alter
@@ -240,5 +260,8 @@ The final MVP evidence bundle contains:
 - cleanup scan/result;
 - known limitations; and
 - user sign-off.
+
+Before MC-049, it also contains the anonymized five-session MC-048I UX rubric,
+validator result, and any focused fix/retest evidence for repeated confusion.
 
 The product is not called production-ready until all mandatory evidence exists.

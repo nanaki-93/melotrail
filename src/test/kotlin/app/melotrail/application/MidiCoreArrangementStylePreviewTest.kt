@@ -125,6 +125,34 @@ class MidiCoreArrangementStylePreviewTest {
         assertEquals(session.project, store.openProject(session.root))
     }
 
+    @Test
+    fun `style preview preparation stays within cold and warm p95 budgets`() = runBlocking {
+        val store = MidiCoreArtifactStore()
+        val session = readySession(store, "whole-song-three-bars.mid", 3)
+        val preview = MidiCoreArrangementStylePreview(artifacts = store)
+        val requests = (1L..8L).map { seed ->
+            PrepareMidiCoreArrangementStylePreview(session, "late-night", "verse-1", seed)
+        }
+
+        val coldMillis = requests.map { request ->
+            val elapsed = measureMillis { preview.prepare(request) }
+            assertEquals(MidiCoreArrangementStylePreviewCacheStatus.COLD, elapsed.value.cacheStatus)
+            elapsed.millis
+        }
+        val warmMillis = requests.map { request ->
+            val elapsed = measureMillis { preview.prepare(request) }
+            assertEquals(MidiCoreArrangementStylePreviewCacheStatus.WARM, elapsed.value.cacheStatus)
+            elapsed.millis
+        }
+        val coldP95 = p95(coldMillis)
+        val warmP95 = p95(warmMillis)
+
+        // This is end-to-end preparation through the in-memory audition plan, not a claim about a user's audio hardware.
+        println("MC-048I preview preparation: cold p95=${coldP95}ms $coldMillis; warm p95=${warmP95}ms $warmMillis")
+        assertTrue(coldP95 <= 1_000L, "Cold preview p95 was ${coldP95}ms; budget is 1000ms. Samples: $coldMillis")
+        assertTrue(warmP95 <= 300L, "Warm preview p95 was ${warmP95}ms; budget is 300ms. Samples: $warmMillis")
+    }
+
     private fun readySession(store: MidiCoreArtifactStore, fixtureName: String, bars: Int): MidiCoreProjectSession {
         val created = assertIs<MidiCoreProjectLifecycleResult.Opened>(
             MidiCoreProjectLifecycle(store, idFactory = { "style-preview-project" }).create(
@@ -163,4 +191,14 @@ class MidiCoreArrangementStylePreviewTest {
             ),
         ).session
     }
+
+    private suspend fun measureMillis(block: suspend () -> MidiCoreArrangementStylePreviewResult): TimedPreview {
+        val startedAt = System.nanoTime()
+        val result = assertIs<MidiCoreArrangementStylePreviewResult.Ready>(block())
+        return TimedPreview(result, (System.nanoTime() - startedAt) / 1_000_000L)
+    }
+
+    private fun p95(samples: List<Long>): Long = samples.sorted()[((samples.size * 95 + 99) / 100 - 1).coerceIn(0, samples.lastIndex)]
+
+    private data class TimedPreview(val value: MidiCoreArrangementStylePreviewResult.Ready, val millis: Long)
 }

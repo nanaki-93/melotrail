@@ -115,8 +115,6 @@ internal object WorkspacePageTags {
     const val VIDEO_PREVIEW_STATUS = "video-preview-status"
     const val IMPORT_DROP_SURFACE = "import-drop-surface"
     const val IMPORT_BROWSE = "import-browse"
-    const val IMPORT_WORKFLOW_HELP = "import-workflow-help"
-    const val IMPORT_MIDI_HELP = "import-midi-help"
     const val IMPORT_AUDIO_CHOOSER = "import-audio-chooser"
     const val IMPORT_MIDI_CHOOSER = "import-midi-chooser"
     const val IMPORT_HELP = "import-help"
@@ -2376,35 +2374,6 @@ private fun MidiLoFiFeelReview(state: WorkspaceUiState, onIntent: (WorkspaceInte
             }
         }
     }
-}
-
-@Composable
-private fun ImportHelpLinks() = Row(
-    Modifier.fillMaxWidth(),
-    horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Lg)
-) {
-    Text(
-        "Workflow guide · docs/TRACK_PROCESS_WORKFLOW.md",
-        modifier = Modifier.weight(1f).semantics {
-            testTag = WorkspacePageTags.IMPORT_WORKFLOW_HELP
-            contentDescription = "Workflow guide: docs/TRACK_PROCESS_WORKFLOW.md"
-        },
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.bodySmall,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis
-    )
-    Text(
-        "MIDI guide · docs/MIDI_IMPORT_PROCESS.md",
-        modifier = Modifier.weight(1f).semantics {
-            testTag = WorkspacePageTags.IMPORT_MIDI_HELP
-            contentDescription = "MIDI import guide: docs/MIDI_IMPORT_PROCESS.md"
-        },
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        style = MaterialTheme.typography.bodySmall,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis
-    )
 }
 
 @OptIn(ExperimentalComposeUiApi::class)

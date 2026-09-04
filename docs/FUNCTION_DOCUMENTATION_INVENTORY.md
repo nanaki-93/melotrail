@@ -6,7 +6,7 @@
 > product contract. Delete this inventory, its JSON, and its Python checker when
 > their build wiring is removed.
 
-Inventory reviewed: 2026-09-03
+Inventory reviewed: 2026-09-05
 
 [`FUNCTION_DOCUMENTATION_INVENTORY.json`](FUNCTION_DOCUMENTATION_INVENTORY.json)
 is the checked-in inventory for every Kotlin/Python production source under
@@ -83,6 +83,13 @@ MC-048B adds the authority-drafting conversion owner and refreshes the focused
 Structure & Harmony page, MIDI-only responsive shell, visual tokens, and typed
 BPM primitive rows after their 2026-09-03 contract and regression review.
 
-MC-048C refreshes the focused Arrange, Review, and workspace orchestration rows
-after replacing simultaneous control walls with the guided scope/feel/generate
-and play/accept/continue flows, plus automatic same-scope candidate refresh.
+MC-048G–MC-048I refresh the focused Arrange, Review, and workspace
+orchestration rows after retiring the temporary MC-048C dropdown-first journey.
+The current path is song-map style preview, complete-draft creation/listening,
+atomic use, and selected-section exception repair with persistent-player
+continuity.
+
+The 2026-09-05 documentation cleanup removes the test-only commercial-policy
+document reader and the uncalled legacy import-help component. Only their two
+source rows changed; existing MC-048I/generator inventory edits remain intact.
+This inventory still serves the Gradle gate until MC-058 removes its owner.

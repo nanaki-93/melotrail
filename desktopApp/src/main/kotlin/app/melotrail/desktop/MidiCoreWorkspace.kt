@@ -862,10 +862,21 @@ class MidiCoreWorkspaceViewModel(
                         ))
                     }
                 }
-                is MidiCoreCandidateGenerationResult.ValidationRejected -> failure(
-                    blocker(MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE, "The generated candidate failed typed role validation.", "Choose another curated profile or pattern and retry.", sourceCode = "VALIDATION_REJECTED", action = intent, occurrenceId = request.occurrenceId, role = request.role),
-                    intent,
-                )
+                is MidiCoreCandidateGenerationResult.ValidationRejected -> {
+                    val findings = result.validation.blockers.joinToString(" ") { it.message }
+                    failure(
+                        blocker(
+                            MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE,
+                            "The generated ${request.role.name.lowercase()} candidate was rejected: $findings",
+                            "Choose another curated profile or pattern and retry.",
+                            sourceCode = result.validation.blockers.joinToString(",") { it.code.name },
+                            action = intent,
+                            occurrenceId = request.occurrenceId,
+                            role = request.role,
+                        ),
+                        intent,
+                    )
+                }
                 is MidiCoreCandidateGenerationResult.Cancelled -> cancelled()
                 is MidiCoreCandidateGenerationResult.Rejected -> failure(candidateBlocker(result.problem), intent)
             }

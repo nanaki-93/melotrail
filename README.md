@@ -16,6 +16,12 @@ superseded audio-production runtime while the replacement vertical slice is
 built; that runtime and its Python worker are scheduled for complete removal
 and are not supported product directions.
 
+The automated arrangement UX evidence is maintained with the active task
+suite. Five observed authority-complete musician sessions, including three by
+musicians who did not implement the feature, remain a required manual gate
+before the separate musical holdout can start; see the
+[arrangement UX rubric](docs/plan/MC048I_ARRANGEMENT_UX_RUBRIC.md).
+
 [PLAN.md](PLAN.md) is the only active roadmap. Historical audio, quality-pipeline, and
 guided-arranger plans are superseded; Git history is their archive.
 
@@ -71,6 +77,15 @@ visuals must show real project evidence rather than audio waveforms, video
 art, or simulated mixer controls. The visual system and its acceptance rules
 are defined in [MIDI workspace visual specification](docs/MIDI_WORKSPACE_VISUAL_SPEC.md).
 
+A [mockup-faithful redesign plan](docs/plan/UI_MOCKUP_REDESIGN_PLAN.md) now
+specifies the next visual revision, adapting every supplied UI picture to the
+real MIDI workflow. Its [20 ordered tasks](docs/plan/UI_MOCKUP_TASKS.md) and
+[execution prompt](docs/plan/EXECUTE_UI_MOCKUP_TASKS_PROMPT.md) require one commit
+per completed task and visual comparison, not only functional tests. This
+redesign is planned, not yet implemented. A
+[future Create Video specification](docs/plan/FUTURE_VIDEO_CREATOR.md) is
+separately gated; video is not part of the current MIDI-only runtime.
+
 ## DAW relationship
 
 - Logic Pro is a supported Standard MIDI input and output workflow.
@@ -101,10 +116,6 @@ make build
 Obsolete worker, renderer, and live-audio commands may remain in the current
 Makefile until their owning implementation is deleted. Do not build new work on
 them.
-
-The legacy runtime still owns a transitional [MIDI import process](docs/MIDI_IMPORT_PROCESS.md)
-contract and source-level reader. It is not the focused MIDI page workflow and
-will be deleted with its remaining owners in MC-051.
 
 ## Safety and musical authority
 

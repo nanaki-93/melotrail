@@ -40,8 +40,9 @@ connection.
 
 ## Desktop looks incomplete or visually inconsistent
 
-The target UI uses the MIDI workspace visual specification, not the transitional
-audio-era reference screens. Confirm that the active page is one of Project,
+The target UI uses the MIDI workspace visual specification and the planned
+mockup-faithful redesign: the supplied pictures guide composition, not audio-era
+functionality. Confirm that the active page is one of Project,
 MIDI, Structure & Harmony, Arrange, Review, or Export; its timeline or event
 display must reflect current project evidence. Report the page, window width,
 theme/state, and a screenshot. Do not restore a mixer, waveform, library, video,

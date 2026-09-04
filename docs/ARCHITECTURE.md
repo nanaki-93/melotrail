@@ -185,6 +185,14 @@ Responsibilities:
 Preview timbre and loudness are non-authoritative. The audition adapter does not
 write audio files and is not used as release evidence.
 
+The style-preview application boundary measures cold and warm plan-preparation
+latency separately from acoustic onset: it prepares one immutable MIDI plan,
+then the existing player starts it. The cache key remains authority/style/
+occurrence/seed, requests are latest-wins, and cancellation or device failure
+cannot write project, candidate, acceptance, source, or export state. The
+repeatable MC-048I measurement and observed-onset procedure is recorded in
+`docs/plan/MC048I_ARRANGEMENT_UX_RUBRIC.md`.
+
 ### 4.7 DAW export
 
 Responsibilities:
@@ -223,6 +231,14 @@ state as the pages; they must not invent audio waveforms, video previews,
 instrument libraries, mixer state, or hidden navigation destinations. The
 authoritative visual contract is `docs/MIDI_WORKSPACE_VISUAL_SPEC.md`.
 
+The planned root Plan 7.7 redesign adds a verified read-only MIDI visualization
+projection through application boundaries, shared timeline geometry, and one
+bounded observation of the real audition position. These are not yet shipped
+by the UI task suite. Compose must not load MIDI artifacts or own another song
+clock. Static rail decoration, if used, is non-musical presentation with known
+asset provenance, never a video preview. The future video proposal is separately
+gated and adds no component or dependency to this current architecture.
+
 Musician-facing authority drafting uses BPM, named whole-bar sections, and one
 progression string per saved occurrence. The desktop converts those inputs into
 the canonical tempo, stable identities, contiguous tick ranges, and chord
@@ -254,6 +270,12 @@ The workspace shell, rather than a destination page, owns the one live MIDI
 transport presentation. Pages only prepare or select musical views. The dock
 is outside page scroll containers and projects the single audition-port state;
 project close and authority transitions stop and clear stale selected views.
+
+The desktop evidence suite exercises this boundary through ready-state wide and
+compact workflows, compact blocked states, semantic/keyboard checks, and the
+real application services. It records fixture hashes and performance samples;
+genuine observed-musician comprehension is deliberately recorded separately,
+not synthesized from a fake MIDI port or a screenshot.
 
 Target destinations:
 

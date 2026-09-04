@@ -133,8 +133,16 @@ object MidiCoreChordGenerator {
     ): List<Int>? {
         val all = voicingCandidates(context, window)
         if (all.isEmpty()) return null
-        val spaceSafe = all.filter { voicing ->
+        val completeSpaceSafe = all.filter { voicing ->
             !hasAnchorCollision(context, voicing, rhythm) && !hasBassCollision(context, voicing, rhythm)
+        }
+        val usesReducedVoicing = completeSpaceSafe.isEmpty()
+        val spaceSafe = completeSpaceSafe.ifEmpty {
+            all.flatMap { voicing -> reducedVoicings(voicing, retainLowestVoice = window.chord.bass != null) }
+                .distinct()
+                .filter { voicing ->
+                    !hasAnchorCollision(context, voicing, rhythm) && !hasBassCollision(context, voicing, rhythm)
+                }
         }
         if (spaceSafe.isEmpty()) return null
         val movementSafe = previous?.let { prior ->
@@ -142,12 +150,28 @@ object MidiCoreChordGenerator {
         }.orEmpty()
         val pool = movementSafe.ifEmpty { spaceSafe }
         val ranked = pool.sortedWith(
-            compareBy<List<Int>> { voiceLeadingScore(context, it, previous) }
+            compareBy<List<Int>> { if (usesReducedVoicing) -it.size else 0 }
+                .thenBy { voiceLeadingScore(context, it, previous) }
                 .thenBy { it.joinToString(",") },
         )
         val variationCount = minOf(3, ranked.size)
         val variation = Math.floorMod(context.seed + windowIndex.toLong(), variationCount.toLong()).toInt()
         return ranked[variation]
+    }
+
+    /**
+     * Retain a musically useful subset when every complete spelling would double a protected
+     * melody anchor. The generator first prefers every chord tone; this fallback is only for a
+     * collision-free two-or-more-voice guide built from the same authoritative chord tones.
+     */
+    private fun reducedVoicings(voicing: List<Int>, retainLowestVoice: Boolean): List<List<Int>> = buildList {
+        for (mask in 1 until (1 shl voicing.size) - 1) {
+            val candidate = voicing.filterIndexed { index, _ -> mask and (1 shl index) != 0 }
+            if ((!retainLowestVoice || candidate.first() == voicing.first()) && candidate.size >= 2 &&
+                candidate.zipWithNext().all { (low, high) -> high - low <= MAX_VOICE_SPACING }) {
+                add(candidate)
+            }
+        }
     }
 
     /** Enumerate all complete chord-tone inversions that fit the selected performance register. */

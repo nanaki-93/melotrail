@@ -3,7 +3,7 @@
 Status: MIDI Core execution in progress; product-acceptance holdout is paused for
 the arrangement UX remediation defined below
 
-Last updated: 2026-09-04
+Last updated: 2026-09-05
 
 Authority: this is the only active Melotrail roadmap
 
@@ -364,6 +364,36 @@ states need distinct text/icon treatment and must not rely on color alone.
 Spacing, typography, focus rings, contrast, truncation, and reduced-motion
 behavior must be covered by wide and compact visual fixtures.
 
+### 7.7 Mockup-faithful visual delivery
+
+The user's 2026-09-05 request strengthens visual fidelity beyond the existing
+dark-theme treatment. Execute the subordinate design workstream in
+[UI mockup redesign plan](docs/plan/UI_MOCKUP_REDESIGN_PLAN.md) and
+[UI-000–UI-019 tasks](docs/plan/UI_MOCKUP_TASKS.md). Reconstruct the supplied
+`docs/pictures/UI` composition, compact controls, typography, panels, aligned
+MIDI lanes and inspector as closely as practical, with explicit adaptations to
+real functions. Use measured reference comparison and deterministic accepted
+image regression; screenshot generation alone is not a visual pass.
+
+Keep the six MIDI destinations and one persistent player. Read-only MIDI-event
+lanes are presentation, not a piano-roll editor. A licensed/owned static lower
+rail illustration may provide decorative atmosphere, but no scenic image may
+substitute for musical evidence or imply working video playback. The nine
+requested UI reference PNGs are retained as design-only inputs, not runtime
+assets; their former blanket cleanup disposition is superseded.
+
+Insert UI-000 through UI-019 after completed MC-048H and before final MC-048I
+observations. Preserve MC-048I's uncommitted automated preparation and pending
+human evidence, then refresh it against the redesigned build. This is a narrow
+ordering exception, not permission to mark MC-048I complete or bypass MC-049.
+The UI prompt stops after UI-019 and hands back to MC-048I.
+
+The request also defines a [future Create Video proposal](docs/plan/FUTURE_VIDEO_CREATOR.md).
+UI-018 delivers that specification only. Video/audio production remains outside
+the MIDI Core runtime. Its proposed optional companion and VID tasks require
+separate explicit product/architecture approval after MC-060; no stub, renderer,
+video route, dependency or legacy video owner is retained now.
+
 ## 8. Export contract
 
 Each immutable export snapshot contains:
@@ -509,6 +539,10 @@ editing project files manually.
   compatibility matrix only after `MC-048I` passes.
 - Resolve blockers through targeted changes only.
 
+2026-09-05 insertion: complete UI-000–UI-019 after MC-048H, then refresh MC-048I's
+automated evidence and collect its observed sessions against the redesigned UI.
+Detailed scope and commit boundaries are owned by the linked UI task suite.
+
 Gate: the arrangement UX gates in section 12 pass, the supporting contracts are
 synchronized, and every criterion in `docs/QUALITY_GATES.md` passes.
 
@@ -518,7 +552,9 @@ synchronized, and every criterion in `docs/QUALITY_GATES.md` passes.
 - Delete old audio projects and obsolete bundled media.
 - First replace the legacy screenshot-measured UI with the six-page MIDI
   workspace visual system and its target visual regression fixtures. Delete the
-  old UI references only after the new fixtures and focused desktop smoke pass.
+  obsolete UI references only after the new fixtures and focused desktop smoke
+  pass. Preserve the nine `docs/pictures/UI` mockups as design-only references
+  under section 7.7; remove legacy executable readers, not these requested inputs.
 - Delete the Python worker, requirements, environments/contracts, HTTP client,
   and worker tests.
 - Delete audio import/transcription, DSP, renderer, mix/master, sound-library,
@@ -526,6 +562,13 @@ synchronized, and every criterion in `docs/QUALITY_GATES.md` passes.
 - Delete transitional documentation, fixtures, tools, tests, dependencies, and
   Make targets with their owners.
 - Remove empty packages and rename retained concepts to match the target domain.
+
+2026-09-05 documentation-only cleanup: at the user's explicit request, remove
+the five obsolete audio-era guides/records and their exclusive, unused or
+test-only documentation readers as recorded in Cleanup Scope 5.6. Preserve
+the active plans, acceptance evidence, mockup images and still-required build
+inventory. This narrow cleanup does not complete or bypass any runtime/data
+cleanup task or manual acceptance gate.
 
 Gate: source and build scans find no Python/audio-production runtime, and the
 desktop builds and tests using only the target commands.
@@ -652,3 +695,10 @@ against the superseded dropdown-first Arrange/Review flow.
 
 No implementation agent may execute an obsolete task suite, skip a task, hide
 a failed gate, or begin the optional enhancements before MIDI Core acceptance.
+
+The approved section 7.7 insertion extends that sequence with UI-000–UI-019
+between MC-048H and completion of MC-048I. Use
+`docs/plan/EXECUTE_UI_MOCKUP_TASKS_PROMPT.md` for this bounded workstream and
+`docs/plan/UI_MOCKUP_EXECUTION_LOG.md` for its one-commit-per-task evidence.
+The root roadmap remains authoritative; the UI plan is its detailed delivery
+specification, and the future video document is not an executable roadmap.

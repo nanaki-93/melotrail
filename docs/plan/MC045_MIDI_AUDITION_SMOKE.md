@@ -3,16 +3,20 @@
 MIDI audition is a non-authoritative local preview. Melotrail sends the
 authoritative MIDI timing, meter, channels, and note events to either its
 managed built-in synthesizer or an explicitly selected external MIDI receiver.
-The endpoint and any downstream DAW own the audible timbre. Audition never
-writes WAV, MP3, rendered audio, sound-library data, or project mutations.
+The one shell-owned player can audition source melody, selected-occurrence
+style preview, persisted complete draft before acceptance, candidates, and an
+accepted arrangement. The endpoint and any downstream DAW own the audible
+timbre. Audition never writes WAV, MP3, rendered audio, sound-library data, or
+project mutations.
 
 ## Supported output behavior
 
 - **Built-in synthesizer** is the audible fallback when no dedicated device is
   selected. The app opens and closes that device with the audition session.
 - Receiver-capable local devices are discovered on scope selection and can be
-  selected from Review. A live switch resumes only the transient audition at
-  the adapter's current tick with the selected loop, mute, and solo settings.
+  selected from the persistent player's expanded panel. A live switch resumes
+  only the transient audition at the adapter's current tick with the selected
+  loop, mute, and solo settings.
 - If a device is unavailable or lost, the transport closes its sequencer,
   transmitter, and receiver, sends best-effort all-notes-off messages, leaves
   project data unchanged, and gives the user a reconnect-or-select-another-
@@ -23,18 +27,31 @@ writes WAV, MP3, rendered audio, sound-library data, or project mutations.
 
 ## Local smoke procedure
 
-1. Start the desktop app with `./gradlew :desktopApp:run` and open a MIDI Core
-   project that has an auditionable source or accepted arrangement.
-2. In Review, start playback, seek, pause/resume, enable/clear a loop, and
-   toggle one mute and solo. Confirm no hanging note remains after each stop.
-3. Choose a discovered receiver, then choose **Use built-in synthesizer**. While
+1. Start the desktop app with `./gradlew :desktopApp:run` and open an
+   authority-complete MIDI Core project.
+2. In Arrange, choose a named style and confirm the persistent player receives
+   its bounded selected-occurrence all-role preview. Create a complete draft;
+   in Review play it before using it, then navigate back to Arrange and confirm
+   the selected section, loop, and target stay coherent.
+3. In the player's expanded panel, start playback, seek, pause/resume,
+   enable/clear a loop, and toggle one mute and solo. Confirm no hanging note
+   remains after each stop.
+4. Choose a discovered receiver, then choose **Use built-in synthesizer**. While
    playing, verify each switch continues from the same musical tick and only
    the audition session is replaced.
-4. Disconnect or make the chosen receiver unavailable when possible. Verify
+5. Disconnect or make the chosen receiver unavailable when possible. Verify
    the actionable error, reconnect or select the built-in fallback, retry, and
    confirm the source, project revision, and accepted candidates are unchanged.
-5. Close the desktop window while playback is active. Confirm output stops
+6. Close the desktop window while playback is active. Confirm output stops
    cleanly and reopening the project shows no transport-side project mutation.
+
+## MC-048I measurement boundary
+
+The automated `MidiCoreArrangementStylePreviewTest` measures cold/warm
+in-memory plan preparation; it cannot establish audible onset at a musician's
+device. The five observed onset, scope-comprehension, cancellation, scrolling,
+and navigation checks are therefore recorded through
+`MC048I_ARRANGEMENT_UX_RUBRIC.md` before MC-049 begins.
 
 ## Recorded local JVM smoke
 

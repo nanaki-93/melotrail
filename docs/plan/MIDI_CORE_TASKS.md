@@ -10,7 +10,8 @@ and complete removal of the superseded audio product
 
 ## 1. Authority
 
-These are the only executable Melotrail implementation tasks. They implement
+These are the core Melotrail implementation tasks. Together with the approved
+UI insertion below, they implement
 the root `PLAN.md` and the contracts in:
 
 - `docs/ARCHITECTURE.md`
@@ -43,6 +44,15 @@ the final reduction.
 ## 3. Execution contract
 
 ### 3.1 Ordering
+
+2026-09-05 approved insertion: after MC-048H, execute
+[UI-000–UI-019](UI_MOCKUP_TASKS.md) sequentially before completing MC-048I.
+Preserve MC-048I's existing automated preparation and AWAITING_HUMAN status;
+refresh evidence after the redesign and collect the required genuine sessions.
+An awaiting human-evidence task is parked, not a second IN_PROGRESS code task.
+This is the sole exception to the ordinary ordering rules below. The UI prompt
+ends after UI-019; future VID tasks are not authorized by either core or UI
+execution. Root Plan 7.7 owns this decision.
 
 - Execute tasks strictly in numeric order; MC-048A through MC-048I follow
   MC-048 in letter order and precede MC-049.
@@ -1408,7 +1418,7 @@ listening score, or sign-off.
 
 ### MC-048I — Prove the arrangement UX with musicians
 
-- **Depends on:** MC-048H.
+- **Depends on:** MC-048H and UI-000–UI-019 (2026-09-05 visual insertion).
 - **Contracts:** root Plan 7 and 12; all F-ARR/F-REV/F-PLAY/F-UI functions;
   Architecture 4.4–4.8; Quality Gates 4–8;
   `docs/MIDI_WORKSPACE_VISUAL_SPEC.md`; user decision dated 2026-09-04.
@@ -1508,19 +1518,23 @@ listening score, or sign-off.
   E2E, and all tests that assert removed behavior. Switch any useful visual
   coverage to the MC-048I target fixtures, then remove every reader of the old UI
   references.
-- **Delete:** tracked old page images and theme constants measured from them
-  only after consumer scans prove no target source or test reads them.
+- **Delete:** obsolete tracked page images outside `docs/pictures/UI` and
+  legacy-only theme constants after consumer scans prove they are no longer
+  used. Preserve the nine requested `docs/pictures/UI` images as design-only
+  references under root Plan 7.7; no production/golden-test dependency on them.
 - **Tests:** target screen/view-model/entrypoint/accessibility/visual suite;
-  absence searches for removed page labels/tags; no `docs/pictures` reader; and
+  absence searches for removed page labels/tags; no legacy executable
+  `docs/pictures` reader; and
   target fixture integrity.
 - **Validation:** focused UI tests, `make test`, `make build`, desktop smoke.
 - **Evidence:** exact deleted UI/source/test/fixture list, consumer scan,
   tracked-file recoverability note, six-page semantic tree, and target fixture
   hashes/sizes.
 - **Commit:** `midi-core: MC-051 remove legacy desktop UI`.
-- **Done when:** no hidden route, state, intent, tag, screenshot, test, or
-  reference-image reader for the old product remains, while all six target
-  pages retain passing MIDI-only visual fixtures.
+- **Done when:** no hidden route, state, intent, tag, legacy screen test, or
+  runtime reference-image reader for the old product remains, while all six
+  target pages retain passing MIDI-only visual fixtures. Retained design-only
+  `docs/pictures/UI` inputs are an explicit allowed exception, not old UI code.
 
 ### MC-052 — Remove audio, DSP, mastering models, and their tests
 
@@ -1618,8 +1632,10 @@ listening score, or sign-off.
 - **Work:** delete commercial/YouTube/policy/rights/monetization/release-
   similarity/selected-master/video/publishing code, tests, docs, UI tags, and
   dependencies. Retain only the small target technical manifest provenance.
-- **Delete:** commercial provenance and compatibility-retirement documents when
-  their executable readers are gone.
+- **Delete:** any remaining release-policy documentation with its readers.
+  The five obsolete audio-era guides/records and their exclusive documentation
+  readers were already retired by the user-requested 2026-09-05 cleanup
+  (Cleanup Scope 5.6); verify absence, do not recreate them for this task.
 - **Tests:** target manifest privacy/provenance, no commercial/video/publishing
   symbols/routes, and documentation-link audit.
 - **Validation:** `make test`, `make build`.
@@ -1640,8 +1656,9 @@ listening score, or sign-off.
 - **Work:** delete only the verified repository-local targets. Known baseline
   candidates include ignored old audio-project data, ignored sound-library
   bytes, tracked sound metadata, bundled rejected-product media, `.venv-worker`,
-  worker caches, obsolete Kotlin error logs, and old UI fixtures not already
-  removed. Update ignore rules only after inventory.
+  worker caches, obsolete Kotlin error logs, and obsolete UI fixtures not already
+  removed. Exclude the retained `docs/pictures/UI` design references under root
+  Plan 7.7. Update ignore rules only after inventory.
 - **Delete:** exact recorded paths; never a home/workspace root, external user
   project, unresolved variable, or broad glob.
 - **Tests:** absence/consumer scans and target fixture integrity.
@@ -1661,8 +1678,9 @@ listening score, or sign-off.
 - **Work:** reduce Make targets to help/build/test/check/desktop/clean as useful;
   remove Python documentation coverage and its inventory/JSON/tests/tool; remove
   unused OkHttp/Jackson/audio/worker dependencies; simplify configuration/
-  environment docs; delete transition import/workflow/compatibility/retirement
-  docs; reconcile README, AGENTS, PLAN, architecture, functional, MIDI, DAW,
+  environment docs; verify the previously retired audio-era guides/records
+  remain absent and delete any remaining obsolete docs; reconcile README,
+  AGENTS, PLAN, architecture, functional, MIDI, DAW,
   quality, cleanup, troubleshooting, and the MIDI workspace visual specification
   to shipped MIDI Core; index task/log/prompt as implementation history without
   adding competing plans.
@@ -1750,3 +1768,7 @@ task is not complete because its code compiles; its deletion, focused tests,
 full required gate, evidence, and exactly one task commit must all be recorded.
 Optional features require a new user-approved plan after MC-060 and may not be
 smuggled into this sequence.
+
+UI-000–UI-019 are additionally mandatory under root Plan 7.7 before MC-048I
+completion. Their own task/log/prompt files specify the exact serial commits;
+they do not reopen completed MC-048D–MC-048H tasks or waive later manual gates.

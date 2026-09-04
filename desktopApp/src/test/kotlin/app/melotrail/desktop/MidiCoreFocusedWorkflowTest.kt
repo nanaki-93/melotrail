@@ -57,7 +57,14 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalTestApi::class)
 class MidiCoreFocusedWorkflowTest {
     @Test
-    fun `six target pages complete a real MIDI Core workflow and reopen an immutable export`() = runSkikoComposeUiTest(size = Size(1280f, 900f)) {
+    fun `wide six target pages complete a real MIDI Core workflow and reopen an immutable export`() =
+        runFocusedWorkflow(Size(1280f, 900f), "wide")
+
+    @Test
+    fun `compact six target pages complete a real MIDI Core workflow and reopen an immutable export`() =
+        runFocusedWorkflow(Size(720f, 900f), "compact")
+
+    private fun runFocusedWorkflow(size: Size, fixtureSet: String) = runSkikoComposeUiTest(size = size) {
         val temporaryRoot = Files.createTempDirectory("melotrail-mc040-")
         val projectRoot = temporaryRoot.resolve("focused-project")
         val source = writeSourceMidi(temporaryRoot.resolve("input/source.mid"))
@@ -98,7 +105,7 @@ class MidiCoreFocusedWorkflowTest {
                 onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER).assertIsDisplayed()
                 val image = onRoot().captureToImage().toAwtImage()
                 assertTrue(image.width > 0 && image.height > 0, "$name visual fixture must be non-empty")
-                val target = visualFixtureRoot().resolve("$name.png")
+                val target = visualFixtureRoot(fixtureSet).resolve("$name.png")
                 Files.createDirectories(target.parent)
                 assertTrue(ImageIO.write(image, "png", target.toFile()), "$name visual fixture must be writable")
             }
@@ -189,7 +196,7 @@ class MidiCoreFocusedWorkflowTest {
 
             assertEquals(
                 listOf("arrange", "export", "midi", "project", "review", "structure-harmony"),
-                capturedFixtureNames(),
+                capturedFixtureNames(fixtureSet),
             )
         } finally {
             workspace.close()
@@ -197,13 +204,13 @@ class MidiCoreFocusedWorkflowTest {
         }
     }
 
-    private fun capturedFixtureNames(): List<String> = Files.list(visualFixtureRoot()).use { paths ->
+    private fun capturedFixtureNames(fixtureSet: String): List<String> = Files.list(visualFixtureRoot(fixtureSet)).use { paths ->
         paths.map { it.fileName.toString().removeSuffix(".png") }.sorted().toList()
     }
 
-    private fun visualFixtureRoot(): Path = Path.of(System.getProperty("user.dir"))
+    private fun visualFixtureRoot(fixtureSet: String): Path = Path.of(System.getProperty("user.dir"))
         .toAbsolutePath()
-        .resolve("build/test-results/midi-core-focused-workflow/wide")
+        .resolve("build/test-results/midi-core-focused-workflow/$fixtureSet")
 
     private fun deleteTree(root: Path) {
         if (Files.notExists(root)) return

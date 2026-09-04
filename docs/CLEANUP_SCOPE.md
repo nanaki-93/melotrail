@@ -1,9 +1,17 @@
 # MIDI Core cleanup scope
 
-Status: approved disposition; destructive work occurs only in the ordered
-implementation tasks after target replacements pass
+Status: approved disposition; runtime/data deletion occurs only in the ordered
+implementation tasks after target replacements pass. The user-requested
+documentation-only cleanup below is completed separately.
 
 Authority: what is kept, extracted, or deleted
+
+2026-09-05 exception: retain the nine PNGs under `docs/pictures/UI` as the
+user-requested mockup references for root Plan 7.7 and its future video design.
+They are design-only, never runtime assets or normal test goldens. This
+exception supersedes older blanket screenshot/media deletion wording in this
+document and MC-051/057/058; it does not preserve any legacy video/audio code,
+image-reader test, theme measurement owner, other media, or user project.
 
 ## 1. Cleanup decision
 
@@ -152,23 +160,57 @@ Delete:
 
 Keep Compose Desktop and reusable controls. Do not keep hidden legacy pages.
 
-The checked-in UI images are temporary style references, not target fixtures.
-MC-048B first proves the MIDI-only visual system and captures replacement
-fixtures; MC-048D–MC-048I prove and refresh the persistent-player,
-style-preview, full-draft, song-map, and exception-review flow. MC-051 then
-removes image readers, legacy measurements, and the old images after confirming
-that target tests no longer reference them.
+The checked-in `docs/pictures/UI` images are retained design references, not
+target fixtures. UI-000–UI-019 refines the MC-048B–MC-048H MIDI-only visuals and
+adds real deterministic image comparison before MC-048I's final observations.
+MC-051 removes legacy executable image readers and measurements and only those
+obsolete images outside the protected reference set after consumer checks.
+Retaining the design inputs does not authorize retaining their old runtime.
+
+MC-048I also removes active documentation claims that the superseded
+dropdown-first scope/feel/generate and play/accept/continue journey is the
+current workflow. Historical task evidence may remain in the execution log;
+it is not a current UI contract or direct reader.
 
 ### 5.6 Documentation and planning
 
-Delete with their executable owners:
+Completed by explicit user request on 2026-09-05, before the UI implementation:
 
-- transition import/workflow guides for audio;
-- commercial provenance and Spring-retirement test records;
+- `docs/MIDI_IMPORT_PROCESS.md` and `docs/TRACK_PROCESS_WORKFLOW.md`: obsolete
+  schema-v4 audio/transcription workflows. Removed their documentation test,
+  the uncalled `ImportHelpLinks` component/tags, its already-ignored UI test,
+  and the root README link. Current MIDI contracts and pages remain.
+- `docs/COMMERCIAL_PROVENANCE.md`: obsolete release/policy record. Removed its
+  test-only `YoutubePolicyDocumentation.kt` reader and that reader's test;
+  no production caller existed. Other commercial runtime/tests remain MC-056.
+- `docs/COMPATIBILITY_READERS.md`: obsolete compatibility inventory with no
+  executable reader; it described unsupported audio-era contracts.
+- `docs/SPRING_API_RETIREMENT.md`: historical record, removed with its
+  document-content assertion. The separate test preventing Spring server/build
+  reintroduction remains.
+
+All five documents and removed helpers were tracked and unchanged before this
+cleanup, so Git history preserves them. No project, MIDI, screenshot, DAW
+evidence, or other user data was deleted. Historical REST store names
+`data/projects/`, `data/audio/`, and `data/config/server-config.json` are only
+inventory context here: this documentation cleanup does not touch them,
+auto-import them, or approve deleting them without the exact-target checks.
+
+This is a narrow documentation-and-exclusive-reader retirement, not completion
+of MC-051/056/058 or permission to start broader runtime/data cleanup. Preserve
+the active core/UI plans, prompts, ledgers, manual rubrics and recorded evidence.
+`DocumentationIntegrityTest` guards local links, retained planning evidence,
+and absence of the retired guides/readers.
+
+Remaining documentation deletion must occur with its executable/build owner:
+
 - current function inventory/checker when its Python/build owner is removed;
-- old UI screenshots after replacement fixtures exist;
-- all audio troubleshooting and release acceptance material; and
-- any obsolete link or compatibility reader.
+- the worker README with its remaining worker/tool owners in MC-054;
+- old UI screenshots outside the retained `docs/pictures/UI` design set after
+  replacement fixtures exist;
+- any newly found obsolete audio troubleshooting/release acceptance material;
+  and
+- any remaining obsolete link or compatibility reader.
 
 Only the MIDI Core documentation indexed by `docs/README.md` remains at final
 completion.

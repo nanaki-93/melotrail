@@ -129,6 +129,58 @@ class MidiCoreChordGeneratorTest {
     }
 
     @Test
+    fun `uses a safe reduced voicing when every complete extension doubles protected melody anchors`() {
+        val melodyAnchors = listOf(48, 60, 72, 84).mapIndexed { index, pitch ->
+            MidiCoreProtectedMelodyNote(
+                id = "pmn-" + index.toString(16).repeat(64),
+                startTick = 0,
+                endTick = 1_920,
+                pitch = pitch,
+                velocity = 90,
+                anchor = true,
+            )
+        }
+        val result = MidiCoreChordGenerator.generate(
+            context(
+                chordSymbol = "Cmaj9",
+                profileId = "chords.pulsed",
+                patternId = MidiCoreChordRhythmPatternId.BRIDGE_HALF_TIME.id,
+                density = 0.5,
+                protectedMelodyNotes = melodyAnchors,
+            ),
+        )
+        val notes = result.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>()
+
+        assertTrue(result.accepted, "Expected an anchor-safe partial voicing, got ${result.validation.report.findings}")
+        assertTrue(notes.map { it.pitch % 12 }.toSet().let { it.size >= 2 && it.all { pitchClass -> pitchClass in setOf(2, 4, 7, 11) } })
+        assertEquals(2, notes.map { it.startTick }.distinct().size)
+        assertFalse(notes.any { it.pitch in melodyAnchors.map(MidiCoreProtectedMelodyNote::pitch) })
+        assertFalse(result.validation.report.findings.any { it.code == MidiCoreRoleFindingCode.DENSITY_EXCEEDED })
+    }
+
+    @Test
+    fun `retains the declared slash bass when reduced voicing is required`() {
+        val melodyAnchors = listOf(48, 60, 72, 84).mapIndexed { index, pitch ->
+            MidiCoreProtectedMelodyNote("pmn-" + index.toString(16).repeat(64), 0, 1_920, pitch, 90, anchor = true)
+        }
+        val result = MidiCoreChordGenerator.generate(
+            context(
+                chordSymbol = "C/E",
+                profileId = "chords.pulsed",
+                patternId = MidiCoreChordRhythmPatternId.BRIDGE_HALF_TIME.id,
+                density = 0.5,
+                protectedMelodyNotes = melodyAnchors,
+            ),
+        )
+
+        assertTrue(result.accepted, "Expected a safe slash-bass guide, got ${result.validation.report.findings}")
+        result.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>()
+            .groupBy(MidiCoreCandidateEvent.Note::startTick)
+            .values
+            .forEach { voicing -> assertEquals(4, voicing.minOf(MidiCoreCandidateEvent.Note::pitch) % 12) }
+    }
+
+    @Test
     fun `seed and curated pattern identity produce repeatable distinct alternatives`() {
         val generationContext = context(density = 1.0)
         val alternatives = MidiCoreChordGenerator.generateAlternatives(generationContext, count = 2)

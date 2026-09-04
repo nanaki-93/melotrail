@@ -1,6 +1,7 @@
 # MIDI Core execution log
 
-Status: MC-048H done; MC-048I is next; MC-049 holdout is deferred until the
+Status: MC-048I automated preparation is complete and awaiting genuine observed
+musician-session evidence; MC-049 holdout remains deferred until the
 arrangement UX tasks MC-048D through MC-048I pass
 
 Task authority: `MIDI_CORE_TASKS.md`
@@ -8,6 +9,39 @@ Task authority: `MIDI_CORE_TASKS.md`
 Execution prompt: `EXECUTE_MIDI_CORE_TASKS_PROMPT.md`
 
 This file is evidence, not a second plan. Update it after every task and commit.
+
+Planning update — 2026-09-05: the user requested a mockup-faithful graphics plan,
+ordered tasks and a serial one-commit-per-task prompt, plus a future video
+function. Root Plan 7.7 inserts UI-000–UI-019 after MC-048H and before final
+MC-048I observations. The new [UI log](UI_MOCKUP_EXECUTION_LOG.md) starts TODO;
+no implementation task or existing human gate was completed by this planning
+work. Preserve all MC-048I preparation and refresh it after the redesign. Its
+AWAITING_HUMAN state remains; the next implementation workstream is the UI
+insertion, not MC-049. The future VID backlog is specification-only.
+
+Documentation cleanup — 2026-09-05: the user explicitly requested removal of
+obsolete docs/plans. Removed the five audio-era documents and their exclusive
+dead/test-only readers listed in Cleanup Scope 5.6; all were clean tracked
+files before this cleanup and remain recoverable from Git history. Replaced
+the obsolete guide test with `DocumentationIntegrityTest`; retained the
+Spring-code absence test and all current MIDI behavior tests. Updated indexes
+and only the two affected function-inventory rows, preserving existing edits.
+Core/UI task suites, manual rubrics, DAW captures, mockups and active build
+inventories remain useful and are retained. No UI/core task is marked complete,
+no project/media data is deleted, and no commit is created by this cleanup.
+Validation:
+
+- `./gradlew :test --tests 'app.melotrail.documentation.DocumentationIntegrityTest' --tests 'app.melotrail.retirement.SpringApiRetirementTest' --tests 'app.melotrail.commercial.CommercialProvenanceTest' --rerun-tasks --console=plain`:
+  PASS, 12 focused tests; all six Gradle tasks executed.
+- `make test`: PASS, root and desktop tests freshly executed (40 seconds).
+  Root: 781 tests, no failures/errors. Desktop: 254 tests, 10 existing skips,
+  no failures/errors. The removed help-reference UI test was already ignored.
+- `make build`: PASS, documentation coverage executed; other tasks UP-TO-DATE.
+- `git diff --check`: PASS. Consumer scan finds retired guide names only in
+  explicit retirement evidence/absence assertions, not live code or links.
+- No active MIDI workflow or export behavior changed, so new manual Logic Pro
+  evidence is not required for this cleanup. All nine mockups and recorded DAW
+  images are unchanged.
 
 ## 1. Baseline
 
@@ -97,7 +131,7 @@ This file is evidence, not a second plan. Update it after every task and commit.
 | MC-048F | DONE | `midi-core: MC-048F orchestrate complete drafts` | PASS — focused draft/schema/generation/assembly/audition suites, documentation coverage, `git diff --check`, `make test`, `make build` | Complete drafts preserve all valid scoped work, can audition before acceptance, and apply every selected role atomically or not at all. |
 | MC-048G | DONE | `midi-core: MC-048G streamline song arrangement` | PASS — focused song-map/workspace/Arrange/real-workflow suites, documentation coverage, `git diff --check`, `make test`, `make build`, desktop smoke | Arrange now uses a shared bar-proportional song map, style-first full draft action, and selected-section repair without the old occurrence/role-first journey. |
 | MC-048H | DONE | `midi-core: MC-048H simplify draft review` | PASS — focused draft/Review/workspace/real-workflow suites, documentation coverage, `git diff --check`, `make test`, `make build`, desktop smoke | Review now shares the map, plays/uses one complete draft, exposes scoped exception evidence, and safely undoes the latest unchanged acceptance batch. |
-| MC-048I | TODO | | | Prove the UX gates, synchronize contracts, and obtain genuine observed-session evidence. |
+| MC-048I | AWAITING_HUMAN | pending — `midi-core: MC-048I validate arrangement UX` | PASS — automated D–H focused suites, p95, fixtures, documentation coverage, `make test`, `make build`, desktop startup; human rubric pending | Contracts, ready/blocked fixture matrix, and anonymized validator are prepared. Five observed authority-complete sessions (three by non-implementing musicians) remain required. |
 | MC-049 | TODO | | | Prior holdout preparation is preserved, but listening must not resume before MC-048I is DONE. |
 | MC-050 | TODO | | | |
 | MC-051 | TODO | | | Delete the legacy desktop UI and reference fixtures only after MC-048I refreshes the target fixtures and MC-050 removes its application owners. |
@@ -1375,6 +1409,82 @@ Decisions/deviations: Undo is intentionally a guarded application operation rath
 Known limitations: MC-048I still owns genuine observed-musician usability, broader performance, final accessibility-tree, and final contract synchronization evidence. No DAW check is needed for this UI/application task because export bytes and Logic Pro compatibility remain unchanged.
 Commit: `midi-core: MC-048H simplify draft review`.
 Next task: MC-048I after this commit.
+
+### MC-048I — Prove the arrangement UX with musicians
+
+Status: AWAITING_HUMAN
+Started: 2026-09-04
+Automated preparation completed: 2026-09-04
+Contracts read: root Plan 7 and 12; F-ARR/F-REV/F-PLAY/F-UI; Architecture
+4.4–4.8; Quality Gates 4–8; MIDI workspace visual specification; active
+README/cleanup/traceability/audition docs; and the MC-048I task contract.
+Behavior retained/extracted: The existing shell-owned player, ephemeral
+authority/style/occurrence/seed preview cache, persisted complete draft,
+atomic use/undo, bar-proportional shared map, and selected-section repair stay
+the product behavior. The tests now exercise those actual application services
+at both supported widths rather than treating a compact blocked shell as the
+only compact six-page fixture.
+Files added/changed: `tools/measure_arrangement_ux.py`; the anonymized
+`MC048I_ARRANGEMENT_UX_RUBRIC.md`; style-preview performance coverage;
+wide/compact real-service workflow fixtures; separate compact blocked fixtures;
+active README, architecture, functional, audition-smoke, visual, quality,
+cleanup, traceability, and execution documentation.
+Files/data deleted: Removed the active function-inventory statement that still
+described MC-048C's superseded dropdown-first scope/feel/generate and
+play/accept/continue journey. Historical execution evidence remains as history;
+no source MIDI, candidate, draft, acceptance, artifact, export snapshot, or
+user data was deleted.
+Focused tests: Forced reruns PASS — `MidiCoreArrangementStylePreviewTest` (five
+tests); `MidiCoreArrangementDraftTest` (two); `MidiCoreAcceptedSongAssemblyTest`
+(five); `MidiCoreCandidateGenerationTest` (nine); `MidiCoreCandidateLifecycleTest`
+(three); `MidiAuditionControllerTest` (six); `MidiCoreWorkspaceShellTest`
+(five); `MidiCoreWorkspaceTest` (13); `MidiCoreArrangePageTest` (12);
+`MidiCoreReviewPageTest` (seven); `MidiCoreVisualRegressionTest` (one); and
+`MidiCoreFocusedWorkflowTest` (two: complete real workflow at both widths).
+Automated measurements: On the reference development machine,
+`MidiCoreArrangementStylePreviewTest` recorded eight cold plan preparations
+with p95 **29 ms** (`[29, 6, 5, 6, 6, 4, 4, 5]`) and eight warm preparations
+with p95 **1 ms** (`[1, 1, 1, 1, 1, 1, 1, 1]`). These cover deterministic
+in-memory preparation, not a participant's hardware acoustic onset; the latter
+is a required observed-session field.
+Visual fixtures: Ready-state `desktopApp/build/test-results/midi-core-focused-workflow/wide/`
+SHA-256: `project` `15923cf5e386fe79cbc4288bcb2135ba1c61168490e29022d64ed95fdd04adf1`,
+`midi` `99418ddc323d85649b7641924c798e596fd471051c1837ef8faa6de3e703773d`,
+`structure-harmony` `2798e7ec23ce5dd8b1b730ca7084479116158068e1dfb37dad30eaa4f0088439`,
+`arrange` `f89ef46dd2340ad0b9e3d60dc61b4ab55748ce9c041e274c1b9b2af9c6f15afd`,
+`review` `e1adfcae40dfc182882dd146ca3ce1f5a06cfabf021dcf3abfb8d39f76227705`,
+`export` `9503b56619e823f3eb4eb2bf9948da5445a3d28876a9dc3f31e3a6c04f993be6`.
+Ready-state `.../compact/` SHA-256: `project`
+`933e4976919d7498c72bb715784ad97bd0e65978764da33c1704cc573ad54f88`,
+`midi` `b8a330914f3688f87ea547a5853ffbc33900aebb166efae655a7c8de94e9a6ba`,
+`structure-harmony` `c503a0ac8b70d8b8c29786dc87fb0fdd1deb130715967e9b75b60049d3df0e82`,
+`arrange` `cc04438b84a5e0baf5e33400b672923c42e08890bf8eb2892c83441749382f90`,
+`review` `276bab6a45262adccd1c942bd4c8ce64f4fabdd2bb95129a5681674682dcd406`,
+`export` `18ede1f1851d78d0300f5a045c87d1ec6944c9d1fa87a7c647a2ee9b56adf05b`.
+Compact blocked-state `.../compact-blocked/` SHA-256: `project`
+`653e12c932fe4ff3fb564b0924972ba614a351ebef8971acc18c1fba3f8b3c63`,
+`midi` `05787dbd2f4738ed800552bb9a93f76b955ba9f9e7d95592eb5f5053e63d9329`,
+`structure-harmony` `0ef1b69f963516febcef0b5a1861090e2169df5d0bd7c3d7fcb2a5119246fea1`,
+`arrange` `080fdd43e11ccc95d7887d57fdbfe55a80365ecbb1c02cc85e373d7cf628f359`,
+`review` `848200a1fa2e68ca79a86ce5c43e94bc282dfccffa13687bf3319f4e9c821704`,
+`export` `a78f42933ac33b37a0e6c11ffd6cf8e9f7684408b8c9e12e960038a62de344f8`.
+Full validation: `python3 tools/check_documentation_coverage.py` PASS;
+`git diff --check` PASS; forced focused tests PASS; `make test` PASS;
+`make build` PASS (15 Gradle tasks, documentation coverage included). `make
+desktop` compiled and reached the running Compose application, then its smoke
+process was terminated cleanly after startup.
+Manual evidence: Pending. The rubric requires five genuine observed,
+authority-complete sessions with at least three `musician-non-implementer`
+participants, an anonymized JSON record validated by
+`python3 tools/measure_arrangement_ux.py --input <file>`, a first-draft median
+at or below two minutes, and no repeated confusion. The validator and template
+are prepared; no test fixture, fake port, or agent observation is represented
+as a human session.
+Decision: Automated preparation passes. MC-048I remains `AWAITING_HUMAN`; do
+not begin MC-049 or mark this task `DONE` until the required observed evidence
+passes and any reproduced confusion has a focused fix/retest.
+Planned commit: `midi-core: MC-048I validate arrangement UX`.
+Next task: blocked at MC-048I's manual gate.
 
 ### MC-049 — Holdout musical acceptance
 

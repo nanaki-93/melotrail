@@ -4,7 +4,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
 class SpringApiRetirementTest {
     private val repository = Path.of(System.getProperty("user.dir")).toAbsolutePath().normalize()
@@ -37,13 +36,4 @@ class SpringApiRetirementTest {
         }
     }
 
-    @Test
-    fun `legacy store disposition remains explicit and non destructive`() {
-        val record = Files.readString(repository.resolve("docs/SPRING_API_RETIREMENT.md"))
-        assertTrue(record.contains("data/projects/"))
-        assertTrue(record.contains("data/audio/"))
-        assertTrue(record.contains("data/config/server-config.json"))
-        assertTrue(record.contains("never auto-imported"))
-        assertTrue(record.contains("does not delete or write"))
-    }
 }

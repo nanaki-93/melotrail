@@ -65,5 +65,5 @@ class MidiCoreVisualRegressionTest {
 
     private fun visualFixtureRoot(): Path = Path.of(System.getProperty("user.dir"))
         .toAbsolutePath()
-        .resolve("build/test-results/midi-core-focused-workflow/compact")
+        .resolve("build/test-results/midi-core-focused-workflow/compact-blocked")
 }

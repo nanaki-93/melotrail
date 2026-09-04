@@ -1,8 +1,8 @@
 # MIDI workspace visual specification
 
-Status: implemented target design contract; MC-048H extends the shared song
-map through the whole-draft Review decision and its wide/compact/accessibility
-validation
+Status: existing MIDI workspace contract plus planned mockup-faithful revision;
+UI-000–UI-019 are not yet implemented. MC-048I's observed-musician gate remains
+pending and must use the redesigned build after that insertion.
 
 Authority: visual language and visual acceptance for the Compose Desktop MIDI
 workspace
@@ -13,11 +13,13 @@ Melotrail is a focused MIDI-arrangement workstation. Its desktop visual design
 makes current musical authority, candidate decisions, and export safety easier
 to understand; it does not imitate a DAW or revive the rejected audio product.
 
-The temporary images under `docs/pictures/UI` are visual-language reference
-only. Their useful qualities are a calm dark workstation, compact navigation,
-clear primary-action hierarchy, dense but readable panels, and persistent
-context. Their branding, audio waveforms, video art, sound library, mixer,
-mastering, publishing, and settings workflows are out of scope.
+The retained images under `docs/pictures/UI` are the user's design references.
+Root Plan 7.7 requires a close match to their composition, density, typography,
+compact rectangular controls, panel details and musical timeline, not merely
+their dark mood. The [detailed adaptation](plan/UI_MOCKUP_REDESIGN_PLAN.md)
+maps every supplied image to real functions. Their account/branding, audio
+waveforms, sound library, mixer, mastering, publishing and settings workflows
+are not product authority. Video is a separately gated future specification.
 
 ## 2. Visual foundations
 
@@ -32,8 +34,10 @@ mastering, publishing, and settings workflows are out of scope.
   hierarchy. Avoid turning every field into an equally elevated card.
 - Use actual MIDI evidence: note events, section durations, chord windows,
   candidate findings, hashes, and export files. Never use an audio waveform,
-  generated scenic image, simulated mixer meter, or video control as a visual
-  substitute.
+  scenic image, simulated mixer meter, or video control as a visual substitute.
+  An owned/licensed static rail illustration may be purely decorative, with
+  provenance and a gradient fallback; it must not displace evidence or imply
+  video playback. No screenshot art is automatically a reusable production asset.
 
 ## 3. Workspace shell
 
@@ -92,11 +96,22 @@ selection.
 
 ## 6. Validation and reference retirement
 
-MC-048B produces target visual-regression fixtures for the six destinations at
-1280 × 900 wide and 720 × 900 compact widths, including representative ready
-and blocked states. The wide shell includes the compact navigation rail, fluid
-work area, and musical context rail; compact layouts retain horizontally
-scrollable navigation and place the page first.
-The fixtures are target test assets, not the old image set. MC-051 removes the
-old `docs/pictures` readers and assets only after target fixture integrity,
-accessibility, desktop smoke, and consumer scans pass.
+The target fixture matrix captures all six destinations at 1280 × 900 wide and
+720 × 900 compact widths through the real create/import/authority/preview/
+draft/use/undo/re-use/export workflow, plus compact blocked states. The wide
+shell includes the compact navigation rail, fluid work area, and musical
+context rail; compact layouts retain horizontally scrollable navigation and
+place the page first. Fixture coverage checks visual continuity, but the
+separate observed-session rubric checks musician comprehension.
+These existing generated captures do not yet prove pixel-level fidelity.
+UI-001 freezes measured targets; UI-017 adds deterministic versioned expected
+images, actual/expected/diff comparison, independent geometry checks and
+deliberately failing comparator tests. UI-019 requires user visual approval.
+Add 1536 × 1024 reference-size captures while retaining both existing sizes.
+Use the page/state, contrast, hit-target and fidelity rubric defined by the
+linked redesign plan; do not accept image-write success as visual regression.
+
+The target expected images are not the original mockups. MC-051 removes legacy
+executable image readers and obsolete assets after consumer/fixture checks, but
+preserves the nine `docs/pictures/UI` inputs as design-only references under
+root Plan 7.7. Production code and normal golden tests do not load them.

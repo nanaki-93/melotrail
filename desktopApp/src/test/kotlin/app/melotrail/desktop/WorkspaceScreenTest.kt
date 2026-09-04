@@ -1015,17 +1015,6 @@ class WorkspaceScreenTest {
 
     @Ignore("Replaced by the sequential Melody Parts pipeline")
     @Test
-    fun `Import exposes workflow and MIDI guide references`() = runComposeUiTest {
-        setContent { MelotrailTheme { WorkspaceScreen(importState(importPart("ready.mid")), onIntent = {}) } }
-
-        onNodeWithTag(WorkspacePageTags.IMPORT_WORKFLOW_HELP).assertExists()
-        onNodeWithTag(WorkspacePageTags.IMPORT_MIDI_HELP).assertExists()
-        onNodeWithText("Workflow guide · docs/TRACK_PROCESS_WORKFLOW.md").assertExists()
-        onNodeWithText("MIDI guide · docs/MIDI_IMPORT_PROCESS.md").assertExists()
-    }
-
-    @Ignore("Replaced by the sequential Melody Parts pipeline")
-    @Test
     fun `remaining Import primary actions dispatch review feel structure and transcription intents`() = runComposeUiTest {
         val intents = mutableListOf<WorkspaceIntent>()
         val current = importPart("current.mid", rawMidi = true, quality = app.melotrail.application.MidiQualityStatus.CURRENT, analyzed = true)
