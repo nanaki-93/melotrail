@@ -50,7 +50,7 @@ A planned commit subject is not proof that a commit exists.
 | UI-001 | DONE | `ui: UI-001 define measured visual targets` | Versioned geometry, palette, responsive and comparator policy recorded in `ui-evidence/`. |
 | UI-002 | DONE | `ui: UI-002 establish mockup visual foundations` | Target palette/type/shape/icon-role foundation, contrast and offline-resource tests committed. |
 | UI-003 | DONE | `ui: UI-003 add compact workstation controls` | Fully documented shared compact controls plus focused keyboard, accessibility, density, radius, and hit-target coverage. |
-| UI-004 | TODO | | |
+| UI-004 | DONE | `ui: UI-004 rebuild the desktop workspace shell` | Measured six-route shell, factual contextual inspectors, scoped page state, compact disclosure, and full workflow coverage. |
 | UI-005 | TODO | | |
 | UI-006 | TODO | | |
 | UI-007 | TODO | | |
@@ -443,6 +443,117 @@ Commit verification (Git subject, parent, paths): recorded after commit in the
 UI-004 entry, to avoid self-referential evidence.
 
 Next task: UI-004 — Rebuild the application shell.
+
+### UI-004 — Rebuild the application shell
+
+Status / start / completion date: DONE / 2026-09-05 / 2026-09-05.
+
+Starting branch / commit: `main` after `5d279a67dda8ef227aa7998b9fd03d808f62d0e1`.
+
+Previous task verified commit: `5d279a6` — `ui: UI-003 add compact workstation
+controls`; its parent is UI-002 and its exact seven-path component/proving
+surface/documents commit is verified in Git.
+
+Preserved pre-existing files and overlapping hunks: UI-003 left a clean
+worktree. No legacy route owner, source MIDI, project data, candidate evidence,
+export snapshot, or playback implementation was removed. The changed
+Arrange/Review assertions were stale expectations that their wide inspector be
+absent; the target shell now requires factual contextual evidence for every
+destination, so their selected-section page inspectors remain and the new
+side-context is verified separately.
+
+Contracts and actual implementation/test owners inspected: UI-001's shell
+measurements and region map; `MidiCoreWorkspaceShell.kt`; all six route/page
+owners; existing shell, Arrange, Review, workflow and visual-fixture tests;
+the persistent-player ownership contract; project close/reopen behavior; and
+the compact reference-density requirements.
+
+Changes / removed target owners / recovery information: rebuilt the shell with
+a 64-dp wide / 56-dp compact readable top band, measured responsive rail
+(224 at 1536, 196 at 1280) and per-page inspector widths (including 458/381/
+390/332/407 at reference width), project-summary sidebar, vector icon
+navigation, local-project footer, fluid page slot, and a compact contextual
+disclosure. It now renders factual Project/MIDI/Structure/Arrange/Review/Export
+inspector evidence instead of an unconditional generic instruction rail. The
+giant numbered navigation owner and generic `CURRENT STEP` card are deleted.
+`rememberSaveableStateHolder` scopes page UI state by actual project id and
+destination, resetting selection on project change/close without leaking a
+previous project's scroll. The shell remains the only owner/mounter of the
+one MIDI player; its existing implementation is intentionally restyled in
+UI-008. All changes are Compose presentation/state ownership only and recover
+by the usual project intent/route flow.
+
+Reference regions and deliberate MIDI substitutions: uses UI-001's 64/56-dp
+top bands, 24-dp wide content inset, 16-dp rhythm, 224/196-dp rail and
+page-specific right context measurements. The left project summary and right
+inspector carry only truthful MIDI project/state facts; no account/avatar,
+audio waveform, mixer, library, settings route, video, or invented project
+history is introduced. Compact navigation is horizontally traversable and the
+final Export item is explicitly brought into view before activation in the
+real workflow fixture.
+
+Focused commands / exit codes / results: forced shell tests PASS at
+1536 × 1024, 1280 × 900 and 720 × 900, verifying top band, rail/inspector
+bounds, header readability, exact route inventory, keyboard order, compact
+context disclosure, project switch/reset, scroll preservation and in-window
+player dock. Forced focused workflow/visual fixtures PASS for both wide and
+compact real MIDI flows. The initial full suite correctly surfaced old
+Arrange/Review context-absence assertions and a compact Export navigation test
+that clicked an off-screen horizontal item; those tests were updated to assert
+the target factual inspector and deliberate horizontal traversal. No failure
+was ignored.
+
+make test / make build / documentation audit / diff check: final `make test`
+PASS (261 tests, 10 skipped); final `make build` PASS including
+`checkDocumentationCoverage`; direct
+`python3 tools/check_documentation_coverage.py --repository .`, Gradle
+documentation gate and `git diff --check` PASS. The shell inventory row was
+refreshed to 21 callable declarations and its target-shell review reason.
+
+Screenshot state / size / density / font / source fixture: real-service
+workflow captures were regenerated as ignored evidence. Current wide Project
+at 1280 × 900 has SHA-256
+`b8ae71df364ae34bc33a1bc200ad52f206a4fdedeaa746df1d42175e0251c884`;
+current compact Export at 720 × 900 has SHA-256
+`122ccd5494eca4264b8fe055ad1138279d5164a4b1e78912f78b977c8793eab8`.
+They use the declared system Sans Serif fallback. They are implementation
+evidence only, not approved goldens; UI-017 owns target expected/actual/diff
+fixtures and font/density pinning.
+
+Expected / actual / diff paths and hashes: UI-004 updates ignored captures
+under `desktopApp/build/test-results/midi-core-focused-workflow/`; it creates
+no versioned expected images and makes no visual-approval claim. UI-017 remains
+the sole comparator owner.
+
+Geometry / contrast / keyboard / performance results: target shell landmarks
+are asserted at all three required sizes, with 64/56 top bands, 224/196 rails,
+458/352 Project inspectors and the player constrained to the compact window.
+Navigation retains focus/Enter activation and compact Export traversal. Target
+contrast/focus token tests remain UI-002/UI-003 evidence; full resize,
+accessibility and performance sweep remains UI-016.
+
+Workflow or MIDI export impact classification and reason: shell/layout and
+Compose UI-state change only. MIDI semantics, project persistence, candidate
+generation/acceptance, MIDI player command ownership and package/export bytes
+are unchanged; no Logic Pro matrix rerun is applicable.
+
+Required manual evidence / reviewer / date / result: none for UI-004. UI-019
+still requires the user's visual approval; MC-048I still requires observed
+musician sessions.
+
+Known limitations / blocker / exact unblock action: individual page density,
+actual MIDI projection, playhead/timeline, player-dock control density, and
+page-specific composition remain assigned to UI-005 through UI-014. The
+current player is deliberately the existing single owner until UI-008 replaces
+its arrangement without adding a second player. UI-017 must turn the generated
+workflow fixtures into thresholded visual regression evidence.
+
+Planned exact task commit subject: `ui: UI-004 rebuild the desktop workspace shell`.
+
+Commit verification (Git subject, parent, paths): recorded after commit in the
+UI-005 entry, to avoid self-referential evidence.
+
+Next task: UI-005 — Supply verified read-only MIDI visualization data.
 
 ## Final visual review
 

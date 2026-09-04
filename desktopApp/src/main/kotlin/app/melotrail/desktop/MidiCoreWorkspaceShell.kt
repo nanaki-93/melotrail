@@ -2,6 +2,7 @@ package app.melotrail.desktop
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -18,7 +20,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -31,10 +32,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -47,7 +48,6 @@ import app.melotrail.audition.MidiAuditionLoop
 import app.melotrail.audition.MidiAuditionPlaybackState
 import app.melotrail.audition.MidiAuditionScope
 import app.melotrail.midi.domain.MidiExportRole
-import java.util.Locale
 
 /** Stable semantic IDs for the target shell and its six reachable destinations. */
 internal object MidiCoreWorkspaceShellTags {
@@ -55,6 +55,8 @@ internal object MidiCoreWorkspaceShellTags {
     const val HEADER = "midi-core-workspace-header"
     const val CURRENT_PROJECT = "midi-core-current-project"
     const val OPERATION = "midi-core-workspace-operation"
+    const val PROJECT_RAIL = "midi-core-workspace-project-rail"
+    const val LOCAL_FOOTER = "midi-core-workspace-local-footer"
     const val NAVIGATION = "midi-core-workspace-navigation"
     const val WIDE_LAYOUT = "midi-core-workspace-layout-wide"
     const val COMPACT_LAYOUT = "midi-core-workspace-layout-compact"
@@ -62,6 +64,7 @@ internal object MidiCoreWorkspaceShellTags {
     const val COMPACT_NAVIGATION = "midi-core-workspace-navigation-compact"
     const val PAGE = "midi-core-workspace-page"
     const val CONTEXT = "midi-core-workspace-context"
+    const val COMPACT_CONTEXT = "midi-core-workspace-context-compact"
     const val BLOCKERS = "midi-core-workspace-blockers"
     const val PLAYER = "midi-core-workspace-player"
     const val PLAYER_TARGET = "midi-core-workspace-player-target"
@@ -94,13 +97,14 @@ internal enum class MidiCoreWorkspaceDestination(
     val route: String,
     val label: String,
     val summary: String,
+    val icon: WorkspaceVectorIcon,
 ) {
-    PROJECT("project", "Project", "Create or reopen a MIDI Core project and inspect its current authority."),
-    MIDI("midi", "MIDI", "Import one immutable Standard MIDI source and automatically protect its melody."),
-    STRUCTURE_HARMONY("structure-harmony", "Structure & Harmony", "Define the authoritative section timeline and chord windows."),
-    ARRANGE("arrange", "Arrange", "Preview one named style, create a complete draft, and repair only selected sections."),
-    REVIEW("review", "Review", "Listen to the complete draft and inspect detailed alternatives only for exceptions."),
-    EXPORT("export", "Export", "Publish a portable MIDI package for Logic Pro."),
+    PROJECT("project", "Project", "Create or reopen a MIDI Core project and inspect its current authority.", WorkspaceVectorIcon.PROJECT),
+    MIDI("midi", "MIDI", "Import one immutable Standard MIDI source and automatically protect its melody.", WorkspaceVectorIcon.MIDI),
+    STRUCTURE_HARMONY("structure-harmony", "Structure & Harmony", "Define the authoritative section timeline and chord windows.", WorkspaceVectorIcon.STRUCTURE),
+    ARRANGE("arrange", "Arrange", "Preview one named style, create a complete draft, and repair only selected sections.", WorkspaceVectorIcon.ARRANGE),
+    REVIEW("review", "Review", "Listen to the complete draft and inspect detailed alternatives only for exceptions.", WorkspaceVectorIcon.REVIEW),
+    EXPORT("export", "Export", "Publish a portable MIDI package for Logic Pro.", WorkspaceVectorIcon.EXPORT),
 }
 
 internal val midiCoreWorkspaceDestinations: List<MidiCoreWorkspaceDestination> = MidiCoreWorkspaceDestination.entries
@@ -134,7 +138,12 @@ internal fun MidiCoreWorkspaceShell(
     midiActions: MidiCoreMidiPageActions = MidiCoreMidiPageActions(),
     exportActions: MidiCoreExportPageActions = MidiCoreExportPageActions(),
 ) {
-    var selectedDestination by remember(initialDestination) { mutableStateOf(initialDestination) }
+    val projectKey = state.project?.id?.value
+    var selectedDestination by remember(projectKey, initialDestination) {
+        mutableStateOf(initialDestination)
+    }
+    var compactContextOpen by remember(projectKey, selectedDestination) { mutableStateOf(false) }
+    val pageStateHolder = rememberSaveableStateHolder()
     val onDestinationSelected: (MidiCoreWorkspaceDestination) -> Unit = { selectedDestination = it }
     BoxWithConstraints(
         modifier.fillMaxSize().background(MusicWorkspaceTokens.Canvas).semantics {
@@ -146,20 +155,41 @@ internal fun MidiCoreWorkspaceShell(
             "wide" -> MidiCoreWorkspaceShellLayout.WIDE
             else -> MidiCoreWorkspaceShellLayout.COMPACT
         }
-        Column(Modifier.fillMaxSize().padding(MusicWorkspaceTokens.Spacing.Md), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md)) {
-            MidiCoreWorkspaceHeader(state)
+        val compact = layout == MidiCoreWorkspaceShellLayout.COMPACT
+        val navigationWidth = if (maxWidth >= 1536.dp) 224.dp else 196.dp
+        val inspectorWidth = if (maxWidth >= 1536.dp) {
+            when (selectedDestination) {
+                MidiCoreWorkspaceDestination.PROJECT -> 458.dp
+                MidiCoreWorkspaceDestination.MIDI -> 381.dp
+                MidiCoreWorkspaceDestination.STRUCTURE_HARMONY -> 390.dp
+                MidiCoreWorkspaceDestination.ARRANGE,
+                MidiCoreWorkspaceDestination.REVIEW,
+                -> 332.dp
+                MidiCoreWorkspaceDestination.EXPORT -> 407.dp
+            }
+        } else if (selectedDestination == MidiCoreWorkspaceDestination.PROJECT) {
+            352.dp
+        } else {
+            320.dp
+        }
+        Column(Modifier.fillMaxSize()) {
+            MidiCoreWorkspaceHeader(state, compact)
             when (layout) {
                 MidiCoreWorkspaceShellLayout.WIDE -> Row(
-                    Modifier.fillMaxWidth().weight(1f).semantics { testTag = MidiCoreWorkspaceShellTags.WIDE_LAYOUT },
+                    Modifier.fillMaxWidth().weight(1f).padding(
+                        horizontal = MusicWorkspaceTokens.Shell.PageHorizontalInset,
+                        vertical = MusicWorkspaceTokens.Spacing.Lg,
+                    ).semantics { testTag = MidiCoreWorkspaceShellTags.WIDE_LAYOUT },
                     horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md),
                 ) {
                     MidiCoreWorkspaceNavigation(
+                        state = state,
                         selectedDestination = selectedDestination,
                         onDestinationSelected = onDestinationSelected,
                         compact = false,
-                        modifier = Modifier.width(MusicWorkspaceTokens.Layout.NavigationWidth).fillMaxHeight(),
+                        modifier = Modifier.width(navigationWidth).fillMaxHeight(),
                     )
-                    key(selectedDestination) {
+                    pageStateHolder.SaveableStateProvider("${projectKey ?: "empty"}:${selectedDestination.route}") {
                         MidiCoreWorkspacePage(
                             destination = selectedDestination,
                             state = state,
@@ -171,26 +201,28 @@ internal fun MidiCoreWorkspaceShell(
                             modifier = Modifier.weight(1f).fillMaxHeight(),
                         )
                     }
-                    if (selectedDestination !in setOf(MidiCoreWorkspaceDestination.ARRANGE, MidiCoreWorkspaceDestination.REVIEW)) {
-                        MidiCoreWorkspaceContext(
-                            destination = selectedDestination,
-                            state = state,
-                            modifier = Modifier.width(MusicWorkspaceTokens.Layout.ContextRailWidth).fillMaxHeight(),
-                        )
-                    }
+                    MidiCoreWorkspaceContext(
+                        destination = selectedDestination,
+                        state = state,
+                        modifier = Modifier.width(inspectorWidth).fillMaxHeight(),
+                    )
                 }
 
                 MidiCoreWorkspaceShellLayout.COMPACT -> Column(
-                    Modifier.fillMaxWidth().weight(1f).semantics { testTag = MidiCoreWorkspaceShellTags.COMPACT_LAYOUT },
+                    Modifier.fillMaxWidth().weight(1f).padding(
+                        horizontal = MusicWorkspaceTokens.Spacing.Lg,
+                        vertical = MusicWorkspaceTokens.Spacing.Md,
+                    ).semantics { testTag = MidiCoreWorkspaceShellTags.COMPACT_LAYOUT },
                     verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md),
                 ) {
                     MidiCoreWorkspaceNavigation(
+                        state = state,
                         selectedDestination = selectedDestination,
                         onDestinationSelected = onDestinationSelected,
                         compact = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    key(selectedDestination) {
+                    pageStateHolder.SaveableStateProvider("${projectKey ?: "empty"}:${selectedDestination.route}") {
                         MidiCoreWorkspacePage(
                             destination = selectedDestination,
                             state = state,
@@ -202,9 +234,28 @@ internal fun MidiCoreWorkspaceShell(
                             modifier = Modifier.weight(1f).fillMaxWidth(),
                         )
                     }
+                    WorkstationDisclosure(
+                        label = "${selectedDestination.label} context",
+                        expanded = compactContextOpen,
+                        onExpandedChange = { compactContextOpen = it },
+                        modifier = Modifier.semantics { testTag = MidiCoreWorkspaceShellTags.COMPACT_CONTEXT },
+                    ) {
+                        MidiCoreWorkspaceContext(
+                            destination = selectedDestination,
+                            state = state,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
             }
-            MidiCoreWorkspacePlaybackDock(state, onIntent)
+            Box(
+                Modifier.fillMaxWidth().padding(
+                    horizontal = if (compact) MusicWorkspaceTokens.Spacing.Lg else MusicWorkspaceTokens.Shell.PageHorizontalInset,
+                    vertical = MusicWorkspaceTokens.Spacing.Sm,
+                ),
+            ) {
+                MidiCoreWorkspacePlaybackDock(state, onIntent)
+            }
         }
     }
 }
@@ -462,23 +513,36 @@ private fun auditionRoles(scope: MidiAuditionScope?): List<MidiExportRole> = whe
 }
 
 @Composable
-private fun MidiCoreWorkspaceHeader(state: MidiCoreWorkspaceState) {
+private fun MidiCoreWorkspaceHeader(state: MidiCoreWorkspaceState, compact: Boolean) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = MusicWorkspaceTokens.Spacing.Sm, vertical = MusicWorkspaceTokens.Spacing.Xs)
+        Modifier.fillMaxWidth()
+            .height(if (compact) 56.dp else MusicWorkspaceTokens.Shell.TopBarHeight)
+            .background(MusicWorkspaceTokens.ElevatedSurface)
+            .border(1.dp, MusicWorkspaceTokens.Border)
+            .padding(horizontal = if (compact) MusicWorkspaceTokens.Spacing.Lg else MusicWorkspaceTokens.Shell.PageHorizontalInset)
             .semantics { testTag = MidiCoreWorkspaceShellTags.HEADER },
         horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md),
     ) {
-        Text("MELOTRAIL", style = MaterialTheme.typography.titleMedium, color = MusicWorkspaceTokens.Primary)
-        Text(
-            state.project?.metadata?.name ?: "No project open",
-            modifier = Modifier.weight(1f).semantics {
+        Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+            Text("MELOTRAIL", style = MaterialTheme.typography.titleMedium, color = MusicWorkspaceTokens.TextPrimary)
+            if (!compact) Text("MIDI ARRANGEMENT", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Primary)
+        }
+        Column(
+            Modifier.weight(1f).semantics {
                 testTag = MidiCoreWorkspaceShellTags.CURRENT_PROJECT
                 contentDescription = currentProjectDescription(state)
             },
-            style = MaterialTheme.typography.titleSmall,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+            verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs),
+        ) {
+            Text("CURRENT PROJECT", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.TextSecondary)
+            Text(
+                state.project?.metadata?.name ?: "No project open",
+                style = MaterialTheme.typography.titleSmall,
+                color = MusicWorkspaceTokens.TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         Text(
             operationLabel(state) + if (state.operation.active) " · ${state.operation.progress?.let { "${it.completed}/${it.total}" } ?: "working"}" else "",
             modifier = Modifier.widthIn(max = 180.dp).semantics {
@@ -506,70 +570,99 @@ private fun operationLabel(state: MidiCoreWorkspaceState): String = when {
 
 @Composable
 private fun MidiCoreWorkspaceNavigation(
+    state: MidiCoreWorkspaceState,
     selectedDestination: MidiCoreWorkspaceDestination,
     onDestinationSelected: (MidiCoreWorkspaceDestination) -> Unit,
     compact: Boolean,
     modifier: Modifier,
 ) {
     val navigationTag = if (compact) MidiCoreWorkspaceShellTags.COMPACT_NAVIGATION else MidiCoreWorkspaceShellTags.WIDE_NAVIGATION
-    Card(
-        modifier.semantics {
-            testTag = navigationTag
-            contentDescription = "MIDI Core navigation with six destinations"
-        },
-        colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface),
+    Column(
+        modifier = if (compact) Modifier else modifier.semantics { testTag = MidiCoreWorkspaceShellTags.PROJECT_RAIL },
     ) {
-        val navigationModifier = Modifier.semantics {
-            testTag = MidiCoreWorkspaceShellTags.NAVIGATION
-            contentDescription = "MIDI Core workspace navigation"
-        }
-        if (compact) {
-            Row(
-                navigationModifier.horizontalScroll(rememberScrollState()).padding(MusicWorkspaceTokens.Spacing.Sm),
-                horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs),
-            ) {
-                midiCoreWorkspaceDestinations.forEach { destination ->
-                    MidiCoreDestinationButton(destination, selectedDestination, onDestinationSelected, compact = true)
-                }
+        WorkstationPanel(
+            modifier = (if (compact) modifier else Modifier.fillMaxSize()).semantics {
+                testTag = navigationTag
+                contentDescription = "MIDI Core navigation with six destinations"
+            },
+        ) {
+            val navigationModifier = Modifier.semantics {
+                testTag = MidiCoreWorkspaceShellTags.NAVIGATION
+                contentDescription = "MIDI Core workspace navigation"
             }
-        } else {
-            Column(
-                navigationModifier.padding(MusicWorkspaceTokens.Spacing.Sm),
-                verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs),
-            ) {
-                midiCoreWorkspaceDestinations.forEach { destination ->
-                    MidiCoreDestinationButton(destination, selectedDestination, onDestinationSelected, compact = false)
+            if (compact) {
+                Row(
+                    navigationModifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs),
+                ) {
+                    midiCoreWorkspaceDestinations.forEach { destination ->
+                        MidiCoreDestinationItem(destination, selectedDestination, onDestinationSelected, compact = true)
+                    }
                 }
+            } else {
+                WorkspaceProjectRailSummary(state)
+                Column(
+                    navigationModifier,
+                    verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs),
+                ) {
+                    midiCoreWorkspaceDestinations.forEach { destination ->
+                        MidiCoreDestinationItem(destination, selectedDestination, onDestinationSelected, compact = false)
+                    }
+                }
+                WorkspaceLocalFooter(state)
             }
         }
     }
 }
 
 @Composable
-private fun MidiCoreDestinationButton(
+private fun MidiCoreDestinationItem(
     destination: MidiCoreWorkspaceDestination,
     selectedDestination: MidiCoreWorkspaceDestination,
     onDestinationSelected: (MidiCoreWorkspaceDestination) -> Unit,
     compact: Boolean,
 ) {
     val selected = destination == selectedDestination
-    val position = midiCoreWorkspaceDestinations.indexOf(destination) + 1
-    Button(
+    WorkstationNavigationItem(
+        label = destination.label,
+        summary = destination.summary,
+        icon = destination.icon,
+        selected = selected,
         onClick = { onDestinationSelected(destination) },
-        modifier = (if (compact) Modifier.widthIn(min = 116.dp) else Modifier.fillMaxWidth())
-            .heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget)
-            .semantics {
-                testTag = MidiCoreWorkspaceShellTags.destination(destination)
-                this.selected = selected
-                contentDescription = "Open ${destination.label}. ${destination.summary}${if (selected) " Selected." else ""}"
-            },
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (selected) MusicWorkspaceTokens.SelectedSurface else MusicWorkspaceTokens.Surface,
-            contentColor = MusicWorkspaceTokens.TextPrimary,
-        ),
-    ) {
-        Text(if (compact) destination.label else "${position.toString().padStart(2, '0')}  ${destination.label}", maxLines = 1, overflow = TextOverflow.Ellipsis)
+        compact = compact,
+        modifier = Modifier.semantics { testTag = MidiCoreWorkspaceShellTags.destination(destination) },
+    )
+}
+
+@Composable
+private fun WorkspaceProjectRailSummary(state: MidiCoreWorkspaceState) {
+    Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
+        Text("PROJECT", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Primary)
+        Text(state.project?.metadata?.name ?: "No project open", style = MaterialTheme.typography.titleMedium, color = MusicWorkspaceTokens.TextPrimary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(
+            state.projectRoot?.fileName?.toString() ?: "Choose a local project folder to begin.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MusicWorkspaceTokens.TextSecondary,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        WorkstationStatusBadge(
+            tone = if (state.blockers.isEmpty()) WorkstationStatusTone.READY else WorkstationStatusTone.WARNING,
+            label = if (state.blockers.isEmpty()) "Ready for the next MIDI step" else "${state.blockers.size} action${if (state.blockers.size == 1) "" else "s"} needed",
+        )
     }
+}
+
+@Composable
+private fun WorkspaceLocalFooter(state: MidiCoreWorkspaceState) {
+    Text(
+        if (state.projectRoot == null) "LOCAL DESKTOP · MIDI-ONLY" else "LOCAL PROJECT · ${state.projectRoot.fileName}",
+        modifier = Modifier.fillMaxWidth().semantics { testTag = MidiCoreWorkspaceShellTags.LOCAL_FOOTER },
+        style = MaterialTheme.typography.labelSmall,
+        color = MusicWorkspaceTokens.TextSecondary,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
 
 @Composable
@@ -578,36 +671,67 @@ private fun MidiCoreWorkspaceContext(
     state: MidiCoreWorkspaceState,
     modifier: Modifier,
 ) {
-    Card(
-        modifier.semantics {
+    WorkstationPanel(
+        modifier = modifier.semantics {
             testTag = MidiCoreWorkspaceShellTags.CONTEXT
-            contentDescription = "Current workspace context"
+            contentDescription = "${destination.label} contextual inspector"
         },
-        colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface),
     ) {
         Column(
-            Modifier.fillMaxSize().padding(MusicWorkspaceTokens.Spacing.Lg).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Lg),
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-                Text("CURRENT STEP", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Primary)
-                Text(destination.label, style = MaterialTheme.typography.titleLarge)
-                Text(destination.summary, style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
-            }
-            state.project?.authority?.let { authority ->
-                Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
-                    Text("SONG SETTINGS", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Primary)
-                    ContextFact("Key", "${authority.key.spelling.symbol} ${authority.key.mode.displayName}")
-                    ContextFact("Tempo", "${formatContextBpm(authority.tempo.beatsPerMinute)} BPM")
-                    ContextFact("Meter", "${authority.meter.numerator}/${authority.meter.denominator}")
-                    ContextFact("Sections", authority.occurrences.size.toString())
+            WorkstationHeadingActionRow(
+                eyebrow = "CONTEXT",
+                title = "${destination.label} inspector",
+                summary = "Factual project evidence for the current MIDI decision.",
+            )
+            when (destination) {
+                MidiCoreWorkspaceDestination.PROJECT -> {
+                    ContextFact("Project revision", state.project?.revision?.toString() ?: "No project")
+                    ContextFact("Source MIDI", if (state.source.status == MidiCoreSourceStatus.IMPORTED) "Bound" else "Required")
+                    ContextFact("Protected melody", if (state.melody.selected == null) "Required" else "Selected")
+                    ContextFact("Exports", state.project?.exportSnapshots?.size?.toString() ?: "0")
+                }
+                MidiCoreWorkspaceDestination.MIDI -> {
+                    ContextFact("Source file", state.source.originalFilename ?: "Not imported")
+                    ContextFact("Format", state.source.format?.let { "SMF $it" } ?: "Unavailable")
+                    ContextFact("Tracks", state.source.trackSummaries.size.toString())
+                    ContextFact("Melody", if (state.melody.selected == null) "Not selected" else "Protected")
+                }
+                MidiCoreWorkspaceDestination.STRUCTURE_HARMONY -> {
+                    val authority = state.project?.authority
+                    ContextFact("Authority", if (authority == null) "Not confirmed" else "Confirmed")
+                    ContextFact("Sections", authority?.occurrences?.size?.toString() ?: "0")
+                    ContextFact("Key", authority?.let { "${it.key.spelling.symbol} ${it.key.mode.displayName}" } ?: "Awaiting authority")
+                    ContextFact("Meter", authority?.let { "${it.meter.numerator}/${it.meter.denominator}" } ?: "Awaiting authority")
+                }
+                MidiCoreWorkspaceDestination.ARRANGE -> {
+                    val progress = state.project?.let(::midiCoreArrangementProgress)
+                    ContextFact("Selected section", state.arrangement.selectedOccurrenceId ?: "Choose from the song map")
+                    ContextFact("Style preview", state.stylePreview.selectedStyleId ?: "None")
+                    ContextFact("Accepted roles", progress?.let { "${it.accepted}/${it.total}" } ?: "0/0")
+                    ContextFact("Draft", state.arrangement.incompleteDraftId ?: "No active draft")
+                }
+                MidiCoreWorkspaceDestination.REVIEW -> {
+                    ContextFact("Review role", state.review.role?.displayName ?: "No exception selected")
+                    ContextFact("Selected candidate", state.review.selectedCandidateId ?: "None")
+                    ContextFact("Candidate evidence", state.review.candidates.size.toString())
+                    ContextFact("Accepted arrangement", if (state.project?.let(::midiCoreArrangementProgress)?.complete == true) "Complete" else "Pending")
+                }
+                MidiCoreWorkspaceDestination.EXPORT -> {
+                    ContextFact("Package status", if (state.export.latestSnapshot == null) "Not exported" else "Snapshot available")
+                    ContextFact("Snapshots", state.project?.exportSnapshots?.size?.toString() ?: "0")
+                    ContextFact("Destination", state.projectRoot?.fileName?.toString() ?: "Open a project")
+                    ContextFact("Logic Pro", "MIDI package only")
                 }
             }
             val blocker = state.blockers.firstOrNull()
-            Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-                Text(if (blocker == null) "READY" else "NEXT ACTION", style = MaterialTheme.typography.labelSmall, color = if (blocker == null) MusicWorkspaceTokens.Success else MusicWorkspaceTokens.Warning)
-                Text(blocker?.nextAction ?: "No current blockers.", style = MaterialTheme.typography.bodyMedium)
-            }
+            WorkstationInlineMessage(
+                title = if (blocker == null) "Ready" else "Next action",
+                message = blocker?.nextAction ?: "No current blockers.",
+                tone = if (blocker == null) WorkstationStatusTone.READY else WorkstationStatusTone.WARNING,
+            )
         }
     }
 }
@@ -619,9 +743,6 @@ private fun ContextFact(label: String, value: String) {
         Text(value, style = MaterialTheme.typography.bodySmall)
     }
 }
-
-private fun formatContextBpm(value: Double): String =
-    String.format(Locale.ROOT, "%.2f", value).trimEnd('0').trimEnd('.')
 
 @Composable
 private fun MidiCoreWorkspacePage(

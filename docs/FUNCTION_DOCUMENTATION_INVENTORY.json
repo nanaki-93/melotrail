@@ -53,9 +53,9 @@
     {
       "path": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspaceShell.kt",
       "classification": "deferred-with-reason",
-      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspaceShell.kt has 20 callable declarations, 3 directly documented and 17 focused presentation helpers. MC-048D gives the shell one accessible persistent player, target switching, basic transport, and expandable device/role/boundary controls outside every page scroll container; wide/compact fixtures and player semantics cover the changed paths on 2026-09-04.",
-      "functionCount": 20,
-      "declarationDigest": "fb099690145dd4d4f35aac7f89b3d791ecc1bf57591ca81e3e58f87482407066",
+      "reason": "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspaceShell.kt has 21 callable declarations, 3 directly documented and 18 focused presentation helpers. UI-004 rebuilds the six-route target shell around a 64/56-dp top band, project rail, vector navigation, project/destination-scoped page state, factual page-specific inspector, compact inspector disclosure, local footer, and the existing sole persistent MIDI player. Focused desktop tests cover target route inventory, measured 1536/1280/720 bounds, header readability, navigation keyboard order, project switch/reset, scroll preservation, inspector disclosure, and single-player ownership on 2026-09-05.",
+      "functionCount": 21,
+      "declarationDigest": "6f48b9ef43012cb415a6fc322398ed09be92451fe5a0d2c3337b352b90effa95",
       "documentedFunctionCount": 3
     },
     {

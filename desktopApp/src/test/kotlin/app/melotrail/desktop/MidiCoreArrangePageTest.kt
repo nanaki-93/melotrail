@@ -257,7 +257,7 @@ class MidiCoreArrangePageTest {
     }
 
     @Test
-    fun `wide Arrange uses its selected section inspector instead of the generic context rail`() =
+    fun `wide Arrange keeps its selected section inspector alongside factual contextual evidence`() =
         runSkikoComposeUiTest(size = Size(1280f, 900f)) {
             setContent {
                 MelotrailTheme {
@@ -268,7 +268,7 @@ class MidiCoreArrangePageTest {
                 }
             }
             onNodeWithTag(MidiCoreArrangePageTags.INSPECTOR).assertExists()
-            onNodeWithTag(MidiCoreWorkspaceShellTags.CONTEXT).assertDoesNotExist()
+            onNodeWithContentDescription("Arrange contextual inspector").assertExists()
             writeSongMapFixture("wide-song-map.png", onRoot().captureToImage().toAwtImage())
         }
 

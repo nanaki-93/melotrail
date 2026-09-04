@@ -1,16 +1,21 @@
 package app.melotrail.desktop
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.v2.runComposeUiTest
@@ -21,6 +26,7 @@ import app.melotrail.project.ProjectId
 import app.melotrail.project.ProjectMetadata
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -85,6 +91,10 @@ class MidiCoreWorkspaceShellTest {
         onNodeWithTag(MidiCoreWorkspaceShellTags.WIDE_NAVIGATION).assertExists()
         onNodeWithTag(MidiCoreWorkspaceShellTags.COMPACT_LAYOUT).assertDoesNotExist()
         onNodeWithTag(MidiCoreWorkspaceShellTags.PAGE + "-project").assertExists()
+        val rail = onNodeWithTag(MidiCoreWorkspaceShellTags.PROJECT_RAIL).getUnclippedBoundsInRoot()
+        val inspector = onNodeWithTag(MidiCoreWorkspaceShellTags.CONTEXT).getUnclippedBoundsInRoot()
+        assertEquals(196f, (rail.right - rail.left).value)
+        assertEquals(352f, (inspector.right - inspector.left).value)
     }
 
     @Test
@@ -97,6 +107,57 @@ class MidiCoreWorkspaceShellTest {
         midiCoreWorkspaceDestinations.forEach { destination ->
             onNodeWithTag(MidiCoreWorkspaceShellTags.destination(destination)).assertIsEnabled()
         }
+        onNodeWithTag(MidiCoreWorkspaceShellTags.destination(MidiCoreWorkspaceDestination.EXPORT)).performScrollTo().performClick()
+        onNodeWithContentDescription("Open Export. ${MidiCoreWorkspaceDestination.EXPORT.summary} Selected.").assertExists()
+    }
+
+    @Test
+    fun `wide target shell meets measured top-band rail and contextual-inspector bounds`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
+        setContent { MelotrailTheme { MidiCoreWorkspaceShell(targetState()) } }
+
+        val header = onNodeWithTag(MidiCoreWorkspaceShellTags.HEADER).getUnclippedBoundsInRoot()
+        val rail = onNodeWithTag(MidiCoreWorkspaceShellTags.PROJECT_RAIL).getUnclippedBoundsInRoot()
+        val inspector = onNodeWithTag(MidiCoreWorkspaceShellTags.CONTEXT).getUnclippedBoundsInRoot()
+        assertEquals(64f, (header.bottom - header.top).value)
+        assertEquals(224f, (rail.right - rail.left).value)
+        assertEquals(458f, (inspector.right - inspector.left).value)
+        onNodeWithTag(MidiCoreWorkspaceShellTags.LOCAL_FOOTER).assertExists()
+        onNodeWithContentDescription("Project contextual inspector").assertExists()
+        onNodeWithText("Project revision").assertExists()
+    }
+
+    @Test
+    fun `compact target shell uses a 56 dp top band and context disclosure`() = runSkikoComposeUiTest(size = Size(720f, 900f)) {
+        setContent { MelotrailTheme { MidiCoreWorkspaceShell(targetState()) } }
+
+        val header = onNodeWithTag(MidiCoreWorkspaceShellTags.HEADER).getUnclippedBoundsInRoot()
+        val player = onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER).getUnclippedBoundsInRoot()
+        assertEquals(56f, (header.bottom - header.top).value)
+        assertTrue(player.bottom.value <= 900f, "The persistent player dock must remain inside the compact window")
+        onNodeWithTag(MidiCoreWorkspaceShellTags.COMPACT_CONTEXT).assertExists()
+        onNodeWithContentDescription("Expand Project context").performClick()
+        onNodeWithContentDescription("Project contextual inspector").assertExists()
+    }
+
+    @Test
+    fun `page scroll and navigation selection are preserved by project destination and reset on project switch`() = runSkikoComposeUiTest(size = Size(720f, 900f)) {
+        var state by androidx.compose.runtime.mutableStateOf(targetState())
+        setContent { MelotrailTheme { MidiCoreWorkspaceShell(state) } }
+
+        onNodeWithTag(MidiCoreProjectPageTags.NEXT_STEP).performScrollTo()
+        val beforeNavigation = onNodeWithTag(MidiCoreProjectPageTags.NEXT_STEP).getUnclippedBoundsInRoot().top.value
+        onNodeWithTag(MidiCoreWorkspaceShellTags.destination(MidiCoreWorkspaceDestination.MIDI)).performClick()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.destination(MidiCoreWorkspaceDestination.PROJECT)).performClick()
+        val afterNavigation = onNodeWithTag(MidiCoreProjectPageTags.NEXT_STEP).getUnclippedBoundsInRoot().top.value
+        assertTrue(abs(beforeNavigation - afterNavigation) <= 1f, "Project scroll must survive destination changes")
+
+        state = state.copy(project = state.project?.copy(id = ProjectId("second-project")))
+        waitForIdle()
+        onNodeWithContentDescription("Open Project. ${MidiCoreWorkspaceDestination.PROJECT.summary} Selected.").assertExists()
+
+        state = MidiCoreWorkspaceState()
+        waitForIdle()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PAGE + "-project").assertExists()
     }
 
     @Test
@@ -113,6 +174,9 @@ class MidiCoreWorkspaceShellTest {
             "Settings",
         ).forEach { forbidden -> assertFalse(source.contains(forbidden), "Target shell must not contain $forbidden") }
         assertTrue(source.contains("Structure & Harmony"))
+        assertTrue(source.contains("MusicWorkspaceTokens.TextPrimary"), "Header text must explicitly remain readable on the dark top band")
+        assertFalse(source.contains("CURRENT STEP"), "Wide context must show destination evidence, not a generic tall instruction card")
+        assertEquals(2, Regex("\\bMidiCoreWorkspacePlaybackDock\\b").findAll(source).count(), "The shell must define and mount exactly one persistent player")
     }
 
     private fun targetState(): MidiCoreWorkspaceState = MidiCoreWorkspaceState(

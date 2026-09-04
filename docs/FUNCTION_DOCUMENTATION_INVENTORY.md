@@ -100,6 +100,13 @@ focused desktop coverage keeps keyboard activation, visible focus, disabled
 explanations, long text, disclosure state, compact radii, and 48-dp action
 targets reviewable without introducing a second target component system.
 
+UI-004 refreshes the focused MIDI workspace-shell row after replacing its
+generic, numbered shell with the measured target top band, project rail,
+vector navigation, factual destination inspector, compact disclosure and
+project/destination-scoped UI state. The existing one-player owner remains in
+that row; route, bounds, keyboard, project-switch and scroll coverage document
+the changed presentation helpers.
+
 The 2026-09-05 documentation cleanup removes the test-only commercial-policy
 document reader and the uncalled legacy import-help component. Only their two
 source rows changed; existing MC-048I/generator inventory edits remain intact.

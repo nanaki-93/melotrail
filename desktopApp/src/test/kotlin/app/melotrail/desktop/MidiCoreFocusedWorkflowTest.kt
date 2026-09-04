@@ -98,7 +98,9 @@ class MidiCoreFocusedWorkflowTest {
                 assertEquals(MidiCoreWorkspaceOperationPhase.SUCCEEDED, workspace.state.value.operation.phase, action)
             }
             fun navigateTo(destination: MidiCoreWorkspaceDestination) {
-                onNodeWithTag(MidiCoreWorkspaceShellTags.destination(destination)).performClick()
+                val destinationNode = onNodeWithTag(MidiCoreWorkspaceShellTags.destination(destination))
+                if (fixtureSet == "compact") destinationNode.performScrollTo()
+                destinationNode.performClick()
                 waitForIdle()
             }
             fun captureFixture(name: String) {

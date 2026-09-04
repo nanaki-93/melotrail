@@ -2,6 +2,7 @@ package app.melotrail.desktop
 
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -126,7 +127,7 @@ class MidiCoreReviewPageTest {
     }
 
     @Test
-    fun `wide Review uses its selected-section inspector instead of the generic context rail`() = runSkikoComposeUiTest(size = Size(1280f, 900f)) {
+    fun `wide Review keeps its selected-section inspector alongside factual contextual evidence`() = runSkikoComposeUiTest(size = Size(1280f, 900f)) {
         setContent {
             MelotrailTheme {
                 MidiCoreWorkspaceShell(
@@ -137,7 +138,7 @@ class MidiCoreReviewPageTest {
         }
         onNodeWithTag(MidiCoreSongMapTags.TRACK).assertExists()
         onNodeWithTag(MidiCoreReviewPageTags.INSPECTOR).assertExists()
-        onNodeWithTag(MidiCoreWorkspaceShellTags.CONTEXT).assertDoesNotExist()
+        onNodeWithContentDescription("Review contextual inspector").assertExists()
         writeReviewFixture("wide-review-draft.png", onRoot().captureToImage().toAwtImage())
     }
 
