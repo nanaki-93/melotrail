@@ -47,7 +47,7 @@ A planned commit subject is not proof that a commit exists.
 | Task | Status | Commit subject / verified hash | Evidence |
 | --- | --- | --- | --- |
 | UI-000 | DONE | `ui: UI-000 establish mockup redesign baseline` | Clean baseline at `d7aaf08`; manifest and validation are recorded below. |
-| UI-001 | TODO | | |
+| UI-001 | DONE | `ui: UI-001 define measured visual targets` | Versioned geometry, palette, responsive and comparator policy recorded in `ui-evidence/`. |
 | UI-002 | TODO | | |
 | UI-003 | TODO | | |
 | UI-004 | TODO | | |
@@ -177,6 +177,86 @@ Commit verification (Git subject, parent, paths): recorded after commit in the
 UI-001 entry, to avoid self-referential evidence.
 
 Next task: UI-001 — Freeze measurable visual targets.
+
+### UI-001 — Freeze measurable visual targets
+
+Status / start / completion date: DONE / 2026-09-05 / 2026-09-05.
+
+Starting branch / commit: `main` after `1073a4011a9939494732d98e732a115c9f11ea10`.
+
+Previous task verified commit: `1073a40` — `ui: UI-000 establish mockup redesign
+baseline`; its parent is `d7aaf08` and its only paths are the UI log and
+UI-000 baseline manifest.
+
+Preserved pre-existing files and overlapping hunks: the UI-000 commit left a
+clean worktree. No earlier committed application/test owners were changed here.
+
+Contracts and actual implementation/test owners inspected: all nine native-size
+references; `MIDI_WORKSPACE_VISUAL_SPEC.md`; the redesign plan/tasks; the
+existing `WorkspaceTheme.kt`, `MidiCoreWorkspaceShell.kt` and
+`MidiCoreSongMap.kt`; plus current visual-capture tests. The current shell's
+64-dp padded layout, 196-dp navigation width, 256-dp generic context rail,
+12/16-dp shapes and 132-dp song-map buttons are recorded as pre-redesign values,
+not copied into the new target contract.
+
+Changes / removed target owners / recovery information: added
+`docs/plan/ui-evidence/UI-001-reference-measurements.json` and
+`docs/plan/ui-evidence/UI-001-region-map.md`, then linked them from the MIDI
+workspace visual specification. No production owner was changed or removed.
+
+Reference regions and deliberate MIDI substitutions: every reference remains in
+the machine-readable manifest with its UI-000 digest. The region map resolves
+all six page compositions, explicitly maps Review to `04-arrange.png`, assigns
+the component-only references and excludes unsupported audio/video/library/
+settings functions. It freezes source landmarks: 62-pixel top band, 221–228-pixel
+rail, page-specific wide inspectors (Project 458; MIDI 381; Structure 390;
+Arrange/Review 332; Export 407), 64-pixel Arrange strip, 52-pixel role lane and
+reference-density transport.
+
+Focused commands / exit codes / results: native reference inspection and raster
+pixel sampling completed; `jq` JSON validation, manifest cardinality/mapping
+audit and `git diff --check` are recorded with the task validation.
+
+make test / make build / documentation audit / diff check: documentation-only
+task. UI-000's full baseline `make test` and `make build` remain passing. This
+task runs the explicit JSON/link audit and focused documentation test; it does
+not claim a product change or force unrelated desktop work.
+
+Screenshot state / size / density / font / source fixture: all references are
+1536 × 1024 at 1x coordinate density. The new responsive target preserves
+1536 × 1024, 1280 × 900 and 720 × 900 without bitmap scaling. System sans is
+the declared temporary deterministic fallback; UI-002 must record a license if
+it bundles a font.
+
+Expected / actual / diff paths and hashes: UI-017 will own target expected,
+actual and diff PNGs. UI-001 instead freezes independent partition, color,
+radius and anti-aliasing policy: shell ±8 px, content grid ±4 px, opaque
+surface/text/fill channel delta ≤8, border delta ≤12 and a narrowly scoped
+one-pixel glyph-edge allowance.
+
+Geometry / contrast / keyboard / performance results: no runtime geometry or
+behavior changed. The palette explicitly requires 4.5:1 normal-text and 3:1
+large-text/essential-boundary validation in UI-002/UI-016; keyboard/hit-target
+and performance gates remain owned by UI-003/UI-016.
+
+Workflow or MIDI export impact classification and reason: none; documentation
+and measurement contract only, so no DAW matrix applies.
+
+Required manual evidence / reviewer / date / result: none for UI-001. UI-019
+still requires real user visual approval and MC-048I still requires genuine
+observed musician sessions.
+
+Known limitations / blocker / exact unblock action: measurements describe a
+truthful MIDI adaptation rather than pixel-equating unsupported source screens.
+The current tests still write images/dimensions and legacy overlay readers;
+UI-017 must replace that behavior with the frozen comparator policy.
+
+Planned exact task commit subject: `ui: UI-001 define measured visual targets`.
+
+Commit verification (Git subject, parent, paths): recorded after commit in the
+UI-002 entry, to avoid self-referential evidence.
+
+Next task: UI-002 — Establish target typography, colors and assets.
 
 ## Final visual review
 

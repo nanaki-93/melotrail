@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "recordedOn": "2026-09-05",
+  "coordinateSystem": {
+    "unit": "logical pixel at 1x capture density",
+    "origin": "top-left",
+    "referenceViewport": { "width": 1536, "height": 1024 },
+    "rule": "Reference measurements describe composition, not a bitmap that may be scaled into a smaller viewport."
+  },
+  "referenceManifest": [
+    { "file": "01-dashboard-overview.png", "sha256": "a4b4b13a64f5db9a4bfe0133b98b2d441d00b0ce8d42a75b0185c4b1310dde0d", "purpose": "Project composition" },
+    { "file": "02-import.png", "sha256": "4f9133696c2da50cfc69a418c1127c6f3fd295bc46ddc4f464f8b22afc290564", "purpose": "MIDI import composition" },
+    { "file": "03-structure.png", "sha256": "997d0152dba4bb47cc6c45abf1cd7fd1ad7a46204ed639d11ebe404ff9b119a5", "purpose": "Structure composition" },
+    { "file": "04-arrange.png", "sha256": "ca2ed249b8f17e2814d35b1e219e06ed206e316e87912f84bfb15823c1b7b964", "purpose": "Arrange and Review composition" },
+    { "file": "06-mix-master.png", "sha256": "c47650effef5e699524612c64d6f460c0151877a3ac847185783e06246643d10", "purpose": "Component-density reference only" },
+    { "file": "07-library.png", "sha256": "ce9c284f5873a15cc45081cd88e339fa1c4243dad3a4ef42e0bf048f0123f6f2", "purpose": "Style/candidate gallery reference only" },
+    { "file": "08-video-preview.png", "sha256": "7712eec9adc442a267697610ef63cd94c6e900f5b942f65948a69c81b4bdb45b", "purpose": "Future video specification only" },
+    { "file": "09-export.png", "sha256": "b2f42b2b6d96bf43b32bfa21b79542741a229ca19bd765f5a11fc42d8d0732de", "purpose": "Export composition" },
+    { "file": "10-settings.png", "sha256": "ac402241d53176f570893d2f60d71452512e0bfc3f23fa0d70f9b7b2656cd888", "purpose": "Contextual panel and settings-row reference only" }
+  ],
+  "sharedReferenceLandmarks": {
+    "topBand": { "top": 0, "height": 62, "tolerance": 8 },
+    "wideRail": { "x": 0, "targetWidth": 224, "sourceRange": [221, 228], "tolerance": 8 },
+    "mainOuterInset": { "target": 24, "tolerance": 4 },
+    "columnGap": { "target": 16, "tolerance": 4 },
+    "panelRadius": { "target": 8, "tolerance": 1 },
+    "controlRadius": { "target": 6, "tolerance": 1 },
+    "panelBorder": { "target": 1, "tolerance": 0 },
+    "wideDock": { "height": 80, "range": [72, 88], "bottomInset": 16 },
+    "widePageGaps": { "vertical": 16, "horizontal": 16, "tolerance": 4 }
+  },
+  "referencePageLandmarks": {
+    "project": { "reference": "01-dashboard-overview.png", "railRight": 228, "mainLeft": 253, "inspectorLeft": 1078, "inspectorWidth": 458, "topContent": 80, "metricTileHeight": 96 },
+    "midi": { "reference": "02-import.png", "railRight": 223, "mainLeft": 254, "inspectorLeft": 1155, "inspectorWidth": 381, "topContent": 88, "importWellHeight": 144 },
+    "structure": { "reference": "03-structure.png", "railRight": 228, "mainLeft": 255, "inspectorLeft": 1146, "inspectorWidth": 390, "topContent": 92, "sectionStripHeight": 98 },
+    "arrange": { "reference": "04-arrange.png", "railRight": 222, "mainLeft": 232, "inspectorLeft": 1204, "inspectorWidth": 332, "topContent": 86, "sectionStripHeight": 64, "laneHeight": 52, "transportHeight": 70 },
+    "review": { "reference": "04-arrange.png", "railRight": 222, "mainLeft": 232, "inspectorLeft": 1204, "inspectorWidth": 332, "topContent": 86, "sectionStripHeight": 64, "laneHeight": 52, "transportHeight": 70 },
+    "export": { "reference": "09-export.png", "railRight": 228, "mainLeft": 252, "inspectorLeft": 1129, "inspectorWidth": 407, "topContent": 92, "summaryTileHeight": 70, "actionFooterHeight": 82 }
+  },
+  "targetPalette": {
+    "canvas": "#0B131E",
+    "surface": "#101923",
+    "raisedSurface": "#151E2A",
+    "border": "#26303E",
+    "primaryFill": "#594080",
+    "selectedSurface": "#2C2442",
+    "focus": "#D4B8FF",
+    "textPrimary": "#F1F2F4",
+    "textSecondary": "#AFB3BE",
+    "melody": "#D77A9E",
+    "chords": "#9CAA61",
+    "bass": "#5A9DD2",
+    "drums": "#D79A43",
+    "sectionOlive": "#6B7955",
+    "sectionAmber": "#8D6331",
+    "sectionViolet": "#685281",
+    "sectionRose": "#86515F",
+    "sectionBlue": "#4D6682"
+  },
+  "typography": {
+    "family": "System sans until UI-002 proves a bundled redistributable family and deterministic fallback",
+    "projectTitle": { "size": 26, "lineHeight": 32, "weight": "semibold" },
+    "pageTitle": { "size": 24, "lineHeight": 30, "weight": "semibold" },
+    "sectionTitle": { "size": 14, "lineHeight": 20, "weight": "medium" },
+    "body": { "size": 13, "lineHeight": 18, "weight": "regular" },
+    "metadata": { "size": 12, "lineHeight": 16, "weight": "regular" },
+    "tabularMetadata": { "size": 11, "lineHeight": 16, "weight": "medium" }
+  },
+  "responsiveTargets": {
+    "1536x1024": { "layout": "three-column", "topBand": 64, "rail": 224, "mainInset": 24, "dock": 80, "inspector": "page-specific wide inspector" },
+    "1280x900": { "layout": "three-column", "topBand": 64, "rail": 196, "mainInset": 20, "dock": 80, "inspector": "320 maximum, except project summary may use 352" },
+    "720x900": { "layout": "single-column", "topBand": 56, "mainInset": 16, "dock": 96, "inspector": "contextual drawer or disclosure", "timeline": "horizontal scroll is permitted only for the musical axis" }
+  },
+  "comparisonPolicy": {
+    "expectedImages": "UI-017 target-owned fixed-state captures; never an original reference PNG.",
+    "layout": "Independently assert shell partitions within 8 pixels and component/typographic grid anchors within 4 pixels.",
+    "flatColors": "Independently sample named opaque surface and border regions. The maximum absolute channel delta is 8 for surface/text/fill samples and 12 for anti-aliased border samples.",
+    "radii": "Independently assert 6-pixel controls and 8-pixel panels to within one pixel; no pill substitution is accepted.",
+    "textAntialiasing": "Only a declared one-pixel perimeter around fixed, known text glyph bounds may use a channel delta up to 24. It is not a mask for layout, surface, border or control differences.",
+    "imageDiff": "Same-size target captures fail when more than 0.15% of non-text pixels exceed a channel delta of 16, when any landmark check fails, or when an unapproved expected-image update is attempted.",
+    "selfTests": ["12-pixel shell-panel shift fails", "wrong flat primary color fails", "pill radius substituted for 6-pixel control fails", "unreviewed baseline update fails"]
+  }
+}

@@ -115,3 +115,11 @@ The target expected images are not the original mockups. MC-051 removes legacy
 executable image readers and obsolete assets after consumer/fixture checks, but
 preserves the nine `docs/pictures/UI` inputs as design-only references under
 root Plan 7.7. Production code and normal golden tests do not load them.
+
+UI-001's versioned [reference measurements](plan/ui-evidence/UI-001-reference-measurements.json)
+and [six-page region map](plan/ui-evidence/UI-001-region-map.md) are the
+measurable implementation contract. They define page-specific inspector widths,
+responsive geometry, palette/type targets, deliberate MIDI substitutions and
+the future expected/actual/diff policy. The originals remain design-only input;
+the JSON does not license a direct source-image comparison or an unsupported
+route.
