@@ -46,7 +46,7 @@ A planned commit subject is not proof that a commit exists.
 
 | Task | Status | Commit subject / verified hash | Evidence |
 | --- | --- | --- | --- |
-| UI-000 | TODO | | |
+| UI-000 | DONE | `ui: UI-000 establish mockup redesign baseline` | Clean baseline at `d7aaf08`; manifest and validation are recorded below. |
 | UI-001 | TODO | | |
 | UI-002 | TODO | | |
 | UI-003 | TODO | | |
@@ -94,6 +94,89 @@ Next task:
 Record the completed commit hash in the next task entry (or a later authorized
 log update). Do not create a second commit or amend merely to place a commit's
 own hash inside itself. Before continuing, independently verify it in Git.
+
+### UI-000 — Establish a safe redesign baseline
+
+Status / start / completion date: DONE / 2026-09-05 / 2026-09-05.
+
+Starting branch / commit: `main` at `d7aaf0839b2f229779dd9b10d1e714b5c8835dcc`
+(`cleaning and new pln for a better UI`), nine commits ahead of `origin/main`.
+
+Previous task verified commit: MC-048H is `bdf0080` (`midi-core: MC-048H
+simplify draft review`); the root-plan insertion after it is present.
+
+Preserved pre-existing files and overlapping hunks: `git status --short --branch`,
+index inspection, and both diff checks found a clean worktree and empty index.
+There were no uncommitted MC-048I, Chords/validator, documentation, or
+compiler-session-marker hunks to adopt. The planning handoff's broad committed
+changes are part of `d7aaf08`, not this UI task. The committed legacy visual
+test owner `desktopApp/src/test/kotlin/app/melotrail/desktop/WorkspaceScreenTest.kt`
+still reads old mockup references and exercises obsolete pages; it is recorded
+as an existing baseline/deletion-scope owner for UI-017/MC-051, not changed here.
+
+Contracts and actual implementation/test owners inspected: the required root
+and MIDI contracts; the UI redesign plan/tasks/prompt/future-video proposal;
+all nine reference PNGs; `MidiCoreWorkspace.kt`; `WorkspacePageRouter.kt`;
+`MidiCoreFocusedWorkflowTest.kt`; `MidiCoreVisualRegressionTest.kt`;
+`MidiCoreArrangePageTest.kt`; `MidiCoreReviewPageTest.kt`; and the pre-existing
+`WorkspaceScreenTest.kt` reference-overlay owner.
+
+Changes / removed target owners / recovery information: added the reproducible
+reference and existing-capture manifest at
+`docs/plan/ui-evidence/UI-000-baseline.md`. No production or test owner was
+removed, and no user project/media/build output was modified. `build/` captures
+are ignored and are evidence only, recoverable by the listed test fixture flow.
+
+Reference regions and deliberate MIDI substitutions: all nine 1536 × 1024
+references were inspected directly. Their exact filenames, dimensions and
+SHA-256 values, mapped MIDI substitutions, and the unapproved existing six-page
+wide/compact captures are recorded in the baseline manifest. Video, Mix &
+Master, Library and Settings are design references only; they do not authorize
+routes or runtime features.
+
+Focused commands / exit codes / results: `make test` exited 0 (14 tasks,
+up-to-date); `make build` exited 0 (15 tasks; documentation coverage executed);
+reference/capture manifest and `git diff --check`/cached diff checks exited 0.
+
+make test / make build / documentation audit / diff check: PASS, with the
+baseline caveat that the Gradle test tasks were up-to-date rather than a forced
+redesign rerun. Documentation links are covered by the current build's
+`checkDocumentationCoverage` and the committed documentation-integrity test.
+
+Screenshot state / size / density / font / source fixture: the stored existing
+real-service workflow captures are 1280 × 900 wide and 720 × 900 compact under
+`desktopApp/build/test-results/midi-core-focused-workflow/`; they are
+unapproved pre-redesign PNGs, with hashes in the manifest. They use the
+existing test fixture/density/font path. UI-017 replaces the write-only capture
+condition with deterministic target expected/actual/diff comparison.
+
+Expected / actual / diff paths and hashes: this baseline intentionally has no
+approved expected image or visual diff threshold. Reference and capture hashes
+are in `docs/plan/ui-evidence/UI-000-baseline.md`; future test artifacts remain
+ignored beneath `desktopApp/build/test-results/`.
+
+Geometry / contrast / keyboard / performance results: no presentation behavior
+changed. UI-001 owns exact geometry/contrast targets; UI-003/UI-016 own control
+semantics, keyboard, responsive and performance verification.
+
+Workflow or MIDI export impact classification and reason: none; this task is
+evidence/documentation only, so no Logic Pro matrix rerun is applicable.
+
+Required manual evidence / reviewer / date / result: none for UI-000. UI-019
+still requires real user visual acceptance and MC-048I still requires five
+observed musician sessions.
+
+Known limitations / blocker / exact unblock action: existing captures and
+legacy reference-overlay tests are not target goldens and do not prove visual
+fidelity. UI-001 must freeze measured targets before visual implementation;
+UI-017 must replace write-success-only visual assertions.
+
+Planned exact task commit subject: `ui: UI-000 establish mockup redesign baseline`.
+
+Commit verification (Git subject, parent, paths): recorded after commit in the
+UI-001 entry, to avoid self-referential evidence.
+
+Next task: UI-001 — Freeze measurable visual targets.
 
 ## Final visual review
 
