@@ -443,6 +443,14 @@
       "documentedFunctionCount": 5
     },
     {
+      "path": "src/main/kotlin/app/melotrail/application/MidiCoreVisualEvidenceProjection.kt",
+      "classification": "deferred-with-reason",
+      "reason": "src/main/kotlin/app/melotrail/application/MidiCoreVisualEvidenceProjection.kt has 9 callable declarations, 1 directly documented and 8 focused presentation helpers. This file implements stopped-state note-lane facts for Arrange/Review evidence and was added to support Java 25 verification.",
+      "functionCount": 9,
+      "declarationDigest": "38455f4bd9946a61bff029610876d013c02fdd5a0c13af1f4303c64468026fb3",
+      "documentedFunctionCount": 1
+    },
+    {
       "path": "src/main/kotlin/app/melotrail/application/MidiCoreAcceptedSongAssembly.kt",
       "classification": "inherited-contract",
       "reason": "The 11 callable declarations implement deterministic accepted-song and MC-048F persisted-complete-draft assembly from immutable protected melody and exact occurrence-scoped candidate evidence, including source identity, authority, digest, validation-report, channel, scope, gap, overflow, and stale-draft checks under F-REV-001 and F-REV-006; reviewed on 2026-09-04.",

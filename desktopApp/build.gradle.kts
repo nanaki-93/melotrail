@@ -1,11 +1,35 @@
 plugins {
     kotlin("jvm")
-    kotlin("plugin.compose") version "2.2.21"
+    kotlin("plugin.compose") version "2.1.0"
     id("org.jetbrains.compose") version "1.11.0"
 }
 
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(25)
+}
+
+tasks.withType<JavaExec>().configureEach {
+    val launcherProvider = javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(25))
+    }
+    javaLauncher.set(launcherProvider)
+    executable(launcherProvider.map { it.executablePath.asFile.absolutePath })
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_24)
+    }
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.release.set(24)
+}
+
+tasks.withType<Test>().configureEach {
+    javaLauncher.set(javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(25))
+    })
 }
 
 dependencies {

@@ -21,7 +21,7 @@ make test
 make build
 ```
 
-If Gradle reports a Java toolchain problem, verify that JDK 21 is installed and
+If Gradle reports a Java toolchain problem, verify that JDK 25 is installed and
 selected. If a failure comes only from an obsolete worker/documentation/audio
 contract during migration, do not add a compatibility fix; resolve it in the
 task that removes or replaces its owner.

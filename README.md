@@ -98,7 +98,7 @@ matrix.
 
 ## Target runtime
 
-- JDK 21
+- JDK 25
 - Kotlin/JVM
 - Compose Desktop
 - `javax.sound.midi` or a narrowly wrapped replacement proven by tests

@@ -51,7 +51,7 @@ A planned commit subject is not proof that a commit exists.
 | UI-002 | DONE | `ui: UI-002 establish mockup visual foundations` | Target palette/type/shape/icon-role foundation, contrast and offline-resource tests committed. |
 | UI-003 | DONE | `ui: UI-003 add compact workstation controls` | Fully documented shared compact controls plus focused keyboard, accessibility, density, radius, and hit-target coverage. |
 | UI-004 | DONE | `ui: UI-004 rebuild the desktop workspace shell` | Measured six-route shell, factual contextual inspectors, scoped page state, compact disclosure, and full workflow coverage. |
-| UI-005 | TODO | | |
+| UI-005 | IN_PROGRESS | `ui: UI-005 expose verified MIDI visual evidence` | Verified UI-004 commit `8261cf2235a87b3c8c812049c5a61985e6dc8cc2`; tracing audited source, review, draft, and accepted-song readers before implementation. |
 | UI-006 | TODO | | |
 | UI-007 | TODO | | |
 | UI-008 | TODO | | |
