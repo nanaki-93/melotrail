@@ -1,37 +1,13 @@
 plugins {
-    kotlin("jvm") version "2.1.0"
-    kotlin("plugin.serialization") version "2.1.0"
+    kotlin("jvm") version "2.2.21"
+    kotlin("plugin.serialization") version "2.2.21"
 }
 
 group = "app.melotrail"
 version = "0.1.0"
 
 kotlin {
-    jvmToolchain(25)
-}
-
-tasks.withType<JavaExec>().configureEach {
-    val launcherProvider = javaToolchains.launcherFor {
-        languageVersion.set(JavaLanguageVersion.of(25))
-    }
-    javaLauncher.set(launcherProvider)
-    executable(launcherProvider.map { it.executablePath.asFile.absolutePath })
-}
-
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_24)
-    }
-}
-
-tasks.withType<JavaCompile>().configureEach {
-    options.release.set(24)
-}
-
-tasks.withType<Test>().configureEach {
-    javaLauncher.set(javaToolchains.launcherFor {
-        languageVersion.set(JavaLanguageVersion.of(25))
-    })
+    jvmToolchain(21)
 }
 
 dependencies {
@@ -49,14 +25,7 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
-}
-
-tasks.register<Exec>("checkDocumentationCoverage") {
-    group = "verification"
-    description = "Validate the checked-in Kotlin/Python function documentation inventory"
-    commandLine("python3", "tools/check_documentation_coverage.py", "--repository", projectDir)
-}
-
-tasks.check {
-    dependsOn("checkDocumentationCoverage")
+    // Documentation integrity reads these files directly, so doc edits must invalidate test caching.
+    inputs.files("AGENTS.md", "README.md", "PLAN.md", "TASKS.md")
+    inputs.dir("docs")
 }

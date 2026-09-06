@@ -1,420 +1,129 @@
-# MIDI Core architecture
+# Architecture
 
-Status: target architecture; implementation in progress after task approval
+Owner: runtime boundaries and persistence. Product behavior and upcoming changes
+live in [PLAN](../PLAN.md); implementation status lives in [TASKS](../TASKS.md).
 
-Authority: component ownership and dependency direction
-
-## 1. Architectural goal
-
-Melotrail is one local Kotlin/JVM desktop application. It reads and writes MIDI,
-stores explicit musical authority, generates deterministic accompaniment
-candidates, lets the user review them in Compose Desktop, and exports a package
-for Logic Pro. GarageBand is unverified and outside the supported boundary.
-
-The architecture is intentionally smaller than the current repository. There
-is no service boundary, Python process, audio representation, renderer, mixer,
-mastering chain, publishing system, or general-purpose DAW abstraction.
-
-## 2. Context
+## Components and dependency direction
 
 ```text
-Musician
-  -> Melotrail Compose Desktop
-       -> local project/artifact store
-       -> Standard MIDI reader/writer
-       -> local MIDI audition output
-       -> deterministic arrangement engine
-       -> DAW MIDI export package
-  -> Logic Pro
-       -> instrument choice, recording, editing, mixing, mastering, release
+Compose Desktop
+  -> application use cases and immutable presentation state
+       -> project / music / structure / arrangement domain
+       <- project-store adapter
+       <- Standard MIDI reader/writer adapter
+       <- local MIDI audition adapter
+  -> immutable MIDI package -> Logic Pro
+
+Optional, separately installed TABI companion
+  <- finished Logic soundtrack + optional immutable MIDI export manifest
+  -> its own assets/jobs/provider/encoder -> local video file
 ```
 
-Melotrail owns arrangement intent and evidence. The DAW owns sound production.
+| Owner | Current path under `src/main/kotlin/app/melotrail` | Responsibility |
+| --- | --- | --- |
+| MIDI semantics | `midi/domain`, `midi/adapter` | SMF parsing/writing, canonical events, pairing and preservation |
+| Project | `project`, `project/adapter` | Schema, paths, identities, hashes, atomic store |
+| Musical authority | `music/core`, `structure` | Key/chords, exact occurrences, harmonic windows |
+| Generation | `arrangement/core` | Pure Chords/Bass/Drums engines, patterns, context, validation |
+| Orchestration | `application/MidiCore*` | Import, authority changes, generation, drafts, acceptance, export |
+| Playback | `audition`, `audition/adapter` | One MIDI session, managed synth/output, device/resource cleanup |
+| Presentation | `desktopApp/.../desktop/MidiCore*`, shared shell/theme/primitives | Six pages, intents, visual projections, one persistent dock |
 
-## 3. Dependency direction
+Names identify observed owners, not an instruction to keep/delete by prefix.
+`DesktopMain.main` already calls `MidiCoreDesktopEntrypoint`; obsolete factory
+code in the same file is removal scope. The existing visual-evidence provider
+is reusable work requiring verification, not an absent component to duplicate.
+
+Domain code has no Compose, filesystem, HTTP or MIDI-device dependency. Use cases
+coordinate ports; adapters translate I/O. UI dispatches intents and renders
+state; it never parses MIDI, mutates files or runs a generator directly.
+Architecture tests must cover real desktop paths, not an unused `target/` subtree.
+
+Keep the current root-engine plus desktop module structure unless a concrete
+boundary requires change. Do not create a framework, service mesh, plugin system
+or one module per small type to achieve a smaller repository.
+
+## Storage and safety
+
+Current logical project layout:
 
 ```text
-desktop UI
-  -> application use cases
-      -> domain contracts
-          <- MIDI adapter
-          <- project-store adapter
-          <- audition adapter
-          <- optional constrained-planner adapter
+project.json
+source/original.mid
+candidates/<role>/<occurrence>/<candidate>.mid
+reports/import.json
+reports/candidates/<candidate>.json
+exports/<snapshot>/complete-song.mid
+exports/<snapshot>/melody.mid, chords.mid, bass.mid, drums.mid, manifest.json
 ```
 
-Rules:
-
-- Domain code does not depend on Compose, filesystems, HTTP, or a MIDI device.
-- Application use cases coordinate domain services and ports; they do not parse
-  raw MIDI messages or draw UI.
-- Adapters translate external data into domain records and back.
-- The desktop layer observes application state and sends intents; it does not
-  mutate project files directly.
-- Optional AI implements a port and cannot bypass validation or authority.
-- No layer calls a Python worker or audio executable.
-
-## 4. Target components
-
-### 4.1 Project kernel
-
-Responsibilities:
-
-- create, open, validate, save, and close projects;
-- own schema version and atomic persistence;
-- preserve source identity and artifact confinement;
-- resolve current authority, candidate acceptance, and export snapshots;
-- invalidate derived state when an authority hash changes; and
-- reject unsupported legacy audio projects with a clear message.
-
-Key records:
-
-- `ProjectId`
-- `ProjectMetadata`
-- `SourceMidi`
-- `SelectedMelodyTrack`
-- `ProjectAuthority`
-- `SectionDefinition`
-- `SectionOccurrence`
-- `ChordEvent`
-- `CandidateRecord`
-- `ArrangementDraftRecord`
-- `AcceptedCandidateRef`
-- `ArrangementDraftAcceptanceHistory`
-- `ExportSnapshot`
-
-The implementation may choose different Kotlin type names, but every semantic
-record must have one owner and a stable serialized contract.
-
-### 4.2 MIDI core
-
-Responsibilities:
-
-- inspect SMF headers and tracks;
-- parse format 0 and 1 PPQ sequences;
-- pair note-on/note-off events safely;
-- preserve supported meta, controller, pitch, and channel information;
-- expose a canonical, immutable semantic event model;
-- verify exactly one note-bearing track/channel and extract its protected view
-  atomically with source import;
-- compare semantic event streams;
-- write deterministic SMF files; and
-- re-import generated output for validation.
-
-All Java MIDI usage is wrapped here. Arrangement engines consume musical events,
-not `javax.sound.midi` objects.
-
-### 4.3 Musical authority
-
-Responsibilities:
-
-- validate tempo, meter, key, and mode;
-- parse and realize authoritative chord symbols;
-- represent chord duration in beats/ticks, including sub-bar changes;
-- build a gap-free ordered occurrence timeline;
-- accept musician-authored occurrence lengths as whole-bar counts whose total
-  exactly matches the source, then resolve them to canonical ticks;
-- map melody and generated events to occurrences and chord windows; and
-- derive advisory scale/chord compatibility without replacing authority.
-
-Occurrence duration is explicit in whole bars. Contiguous tick boundaries are
-derived once from PPQ and confirmed meter; the required total comes from the
-immutable source end, never from competing service-specific inference.
-
-### 4.4 Arrangement engine
-
-Responsibilities:
-
-- create deterministic candidates for chords, bass, and drums;
-- consume an immutable authority snapshot and accepted or validated upstream
-  draft dependency context;
-- apply complete curated pattern variants;
-- validate range, timing, harmony, collision, density, and role-specific rules;
-- return candidate plus evidence without writing project state; and
-- support generation by one section occurrence and role.
-
-The engine also owns a versioned, four-to-six-item MIDI-only arrangement-style
-catalog. An application preview adapter may resolve one style to all three
-pure role engines for a two-to-four-bar occurrence loop. That adapter may read
-verified source evidence and hold a bounded in-memory cache keyed by
-authority/style/occurrence/seed, but must not publish candidates or artifacts,
-save project state, invoke a model, render audio, or create a second playback
-session.
-
-Role engines are separate but share timing, harmony, seed, pattern, and
-validation primitives. They must not create their own project-key or harmony
-interpretation.
-
-The full-draft application orchestrator runs all required scopes in deterministic
-Chords -> Bass -> Drums order. It retains each valid scoped candidate through
-the normal immutable publication boundary, permits cancellation between scopes,
-and only writes one draft record after the full ordered reference set validates.
-Unaccepted upstream draft dependencies are explicit candidate evidence, never
-implicit acceptance pointers.
-
-### 4.5 Candidate review
-
-Responsibilities:
-
-- list alternatives by role and occurrence;
-- provide semantic differences and validation findings;
-- accept, reject, lock, and restore candidate references;
-- assemble and audition a complete persisted draft before acceptance;
-- atomically use a complete draft after revalidating every reference, retaining
-  the prior acceptance set for restoration;
-- assemble the currently accepted song view;
-- identify stale candidates after authority changes; and
-- guarantee that regeneration never overwrites an artifact.
-
-Single acceptance is pointer movement in project state, followed by an atomic
-save. Complete-draft acceptance performs all pointer movement and batch history
-publication in one save or none; neither path is a destructive MIDI rewrite.
-
-### 4.6 MIDI audition
-
-Responsibilities:
-
-- play, pause, stop, seek, loop, mute, and solo MIDI views;
-- audition source, candidate, occurrence, all-role style preview, role, and
-  complete draft, role, and complete accepted arrangement;
-- open an audible JVM synthesizer as the managed default endpoint;
-- select a supported external local receiver when requested;
-- clean up sequencer/device resources deterministically; and
-- report unavailable devices without corrupting project state.
-
-Preview timbre and loudness are non-authoritative. The audition adapter does not
-write audio files and is not used as release evidence.
-
-The style-preview application boundary measures cold and warm plan-preparation
-latency separately from acoustic onset: it prepares one immutable MIDI plan,
-then the existing player starts it. The cache key remains authority/style/
-occurrence/seed, requests are latest-wins, and cancellation or device failure
-cannot write project, candidate, acceptance, source, or export state. The
-repeatable MC-048I measurement and observed-onset procedure is recorded in
-`docs/plan/MC048I_ARRANGEMENT_UX_RUBRIC.md`.
-
-### 4.7 DAW export
-
-Responsibilities:
-
-- capture an immutable export snapshot;
-- assemble conductor and role tracks;
-- apply the documented channel, marker, controller, and naming policy;
-- write complete and per-role MIDI files plus one manifest;
-- semantic-reimport every generated MIDI file;
-- stage output and publish it atomically; and
-- refuse silent overwrite.
-
-Export assembles only current accepted references. A complete draft is audible
-review evidence but can never be selected by the exporter directly.
-
-DAW patch names are suggestions in the manifest. Export does not depend on
-Logic Pro being installed.
-
-### 4.8 Compose Desktop
-
-Responsibilities:
-
-- present six focused destinations;
-- expose current authority and blocking findings;
-- dispatch user intents to application use cases;
-- render primary style selection, full-draft progress/retry, advanced scoped
-  correction, candidate, and audition state;
-- preserve useful keyboard and accessibility behavior; and
-- avoid direct filesystem, generator, or MIDI-device ownership.
-
-The desktop owns a small visual system and reusable presentation primitives,
-not a second domain model. Tokens and components may express responsive shell
-layout, panel hierarchy, state treatment, role identity, MIDI timeline/event
-rendering, and accessibility focus. They consume the same immutable workspace
-state as the pages; they must not invent audio waveforms, video previews,
-instrument libraries, mixer state, or hidden navigation destinations. The
-authoritative visual contract is `docs/MIDI_WORKSPACE_VISUAL_SPEC.md`.
-
-The planned root Plan 7.7 redesign adds a verified read-only MIDI visualization
-projection through application boundaries, shared timeline geometry, and one
-bounded observation of the real audition position. These are not yet shipped
-by the UI task suite. Compose must not load MIDI artifacts or own another song
-clock. Static rail decoration, if used, is non-musical presentation with known
-asset provenance, never a video preview. The future video proposal is separately
-gated and adds no component or dependency to this current architecture.
-
-Musician-facing authority drafting uses BPM, named whole-bar sections, and one
-progression string per saved occurrence. The desktop converts those inputs into
-the canonical tempo, stable identities, contiguous tick ranges, and chord
-windows required by application services; internal IDs and tick arithmetic are
-not exposed as editing controls.
-
-Arrange and Review are a guided presentation over the existing scoped
-application use cases, not new domain owners. Their shared song map derives
-bar-proportional occurrence blocks, duplicate-safe labels, harmony summaries,
-and textual per-role status from the persisted authority, candidates,
-acceptances, and drafts. Selecting a block records the workspace selection and
-sets the existing persistent player loop; neither the map nor a page owns a
-second timeline or playback session. Arrange derives acceptance progress and
-the next unused deterministic seed from the project, then can create one
-complete style draft or expose targeted correction. Its selected-section
-inspector supplies keyboard-accessible previous/next navigation and keeps
-profile/pattern controls behind the advanced local-repair disclosure. Review
-uses the same selected section/map context for complete-draft playback and its
-atomic **Use this draft** decision, reports known batch blockers at their
-scope, and retains comparison/lifecycle evidence behind a selected-section
-disclosure. A separate application service can undo only the latest unchanged
-draft-acceptance batch by restoring its captured prior pointers atomically;
-candidate artifacts and acceptance history remain immutable. After generation
-or a lifecycle mutation, the workspace reducer rehydrates the persisted project
-and reloads affected evidence before publishing success state, so the UI never
-depends on a manual refresh.
-
-The workspace shell, rather than a destination page, owns the one live MIDI
-transport presentation. Pages only prepare or select musical views. The dock
-is outside page scroll containers and projects the single audition-port state;
-project close and authority transitions stop and clear stale selected views.
-
-The desktop evidence suite exercises this boundary through ready-state wide and
-compact workflows, compact blocked states, semantic/keyboard checks, and the
-real application services. It records fixture hashes and performance samples;
-genuine observed-musician comprehension is deliberately recorded separately,
-not synthesized from a fake MIDI port or a screenshot.
-
-Target destinations:
-
-- Project
-- MIDI
-- Structure & Harmony
-- Arrange
-- Review
-- Export
-
-## 5. Suggested package boundaries
-
-```text
-app.melotrail.project
-app.melotrail.midi
-app.melotrail.music
-app.melotrail.structure
-app.melotrail.arrangement
-app.melotrail.review
-app.melotrail.audition
-app.melotrail.export
-app.melotrail.application
-app.melotrail.desktop
-```
-
-This is a dependency map, not permission for a bulk file move. Extract one
-behavior behind tests, switch callers, and delete its old owner. Empty or
-one-type packages are acceptable temporarily only while an active task is
-completing the extraction.
-
-## 6. Project storage
-
-Target logical layout:
-
-```text
-project-root/
-  project.json
-  source/
-    original.mid
-  candidates/
-    chords/<occurrence-id>/<candidate-id>.mid
-    bass/<occurrence-id>/<candidate-id>.mid
-    drums/<occurrence-id>/<candidate-id>.mid
-  reports/
-    import.json
-    candidates/<candidate-id>.json
-  exports/
-    <snapshot-id>/
-      complete-song.mid
-      melody.mid
-      chords.mid
-      bass.mid
-      drums.mid
-      manifest.json
-```
-
-Rules:
-
-- Paths are project-relative and confined beneath the project root.
-- Source and candidate files are immutable after their digest is recorded.
-- JSON writes use temporary files and atomic replacement where supported.
-- Export directories are immutable; a new export receives a new snapshot ID.
-- A missing referenced artifact is an error, not permission to select another
-  file implicitly.
-- Old schema-v4 audio project roots are rejected and may be deleted during the
-  explicit cleanup phase. They are never auto-migrated.
-
-## 7. State and invalidation
-
-Derived work binds to an authority hash containing at least:
-
-- source MIDI digest and protected melody identity;
-- tempo and meter;
-- key and mode;
-- occurrence order and exact boundaries;
-- chord events and durations;
-- role settings and generator version; and
-- relevant accepted or validated upstream draft dependency candidate IDs.
-
-When any member changes, affected candidates become stale but remain
-inspectable until cleanup. They cannot be exported as current. Invalidation is
-dependency-aware: changing chorus harmony does not invalidate an unrelated
-verse candidate.
-
-## 8. Determinism and concurrency
-
-- Seeds are explicit inputs and serialized in candidate records.
-- Event and track ordering is stable before writing.
-- Floating calculations that influence discrete MIDI output are rounded by one
-  documented policy.
-- Only one project-state write transaction is active at a time.
-- Generation can run off the UI thread, but completion is admitted only if its
-  authority hash still matches current state.
-- Cancellation cannot leave a partially current candidate, draft, acceptance
-  batch, or export. Completed immutable scoped candidates may remain available
-  for an explicit retry of the same incomplete draft.
-
-## 9. Error model
-
-Errors are classified as:
-
-- blocking input/authority errors;
-- recoverable device or filesystem errors;
-- candidate validation rejection;
-- stale-result rejection;
-- export compatibility failure; or
-- internal invariant failure.
-
-The UI presents the problem, affected scope, and next safe action. It never
-silently repairs authoritative harmony or replaces accepted work.
-
-## 10. AI boundary
-
-Qwen is absent from the deterministic MVP. A later adapter may return a
-constrained plan containing only allowed pattern IDs, density/energy choices,
-or bounded role settings. Deterministic code validates and applies that plan.
-
-The model cannot:
-
-- replace project key or harmony;
-- emit unrestricted MIDI events directly into the project;
-- edit the protected source melody;
-- accept its own output;
-- write project state; or
-- become required for opening, arranging, reviewing, or exporting a project.
-
-## 11. Transition architecture
-
-The current repository contains an audio-era schema, stage graph, Python worker,
-HTTP integrations, render/mix/release services, and UI pages. They do not become
-adapters in this architecture.
-
-The migration uses a vertical-slice cutover:
-
-1. characterize reusable behavior;
-2. implement the target contract;
-3. route the focused UI/use case to it;
-4. prove the replacement; and
-5. delete the old owner, tests, dependencies, docs, and assets in the same
-   cleanup task.
-
-`CLEANUP_SCOPE.md` is authoritative for disposition.
+Project-relative paths are confined beneath the project root; resolve and
+validate symlinks as well as textual traversal. External selected inputs remain
+read-only. Source, candidates and export packages bind immutable content digests.
+A missing/mismatched reference is an error, never a request to choose another file.
+
+Only one project-state write transaction runs at a time. Stage and validate
+writes, atomically replace project JSON, and preserve the last known-good state
+on cancellation/failure. New export snapshots use new destinations. Acceptance
+and undo change references, never candidate bytes. Batch acceptance revalidates
+all scopes and locks and commits all changes or none.
+
+Schema changes have one current writer. Do not maintain legacy audio readers,
+migrations or dual pipelines. If a current MIDI version becomes unsupported,
+reject it before writes and preserve its files; any conversion must be a
+separately authorized, explicit operation. New additive records must not
+reinterpret already accepted MIDI or silently upgrade artifacts.
+
+## Planned derived data and arrangement authority
+
+M02 adds a pure, versioned melody-context projection. It contains musical
+observations and uncertainty; it cannot edit source, chords or project authority.
+
+M06 adds one confirmed arrangement-plan record referencing authoritative
+occurrences. Per-occurrence purpose, repeat family, phrase group, energy, role
+activity, density, register, groove and boundary intent have one owner. An
+unconfirmed style proposal is session state; a confirmed plan is an explicit
+project mutation. Candidates record the plan/scoped settings they consumed.
+
+M07 introduces a typed planned-rest selection alongside generated candidates.
+A complete draft covers every required scope with one of these states; a failed
+or missing candidate cannot be recast as silence. Assembly, use/undo, currentness,
+audition and export consume the same scope-selection contract.
+
+Keep these records small. Do not persist duplicate UI lane events or copy the
+whole project into each candidate. Candidate fingerprints bind source, confirmed
+scope, generator/pattern/profile versions, plan inputs, seed and consumed
+upstream/boundary/repeat dependencies. Timestamps are provenance, not musical
+inputs. Stale async completion is rejected before publication.
+
+## Generation and playback
+
+Resolve the whole-song plan before Chords → Bass → Drums generation. Shared
+groove intent precedes both bass and drums; final drums may additionally consume
+validated bass evidence. No cyclic accepted-role dependency is allowed.
+
+Carry bounded previous/next-section summaries rather than an invisible global
+rewrite. Hash used neighbors and invalidate only the affected dependency set.
+Cancellation may preserve completed immutable scopes for exact retry, but never
+publish an incomplete draft as complete. A new generation run preserves accepted
+work until the user explicitly uses its result.
+
+A style preview is ephemeral and uses the same plan resolution and role engines
+as a full draft. Cache by authority, style/plan version, occurrence and seed;
+rapid requests are latest-wins. Preview cannot write candidates, revisions or
+acceptances. Draft audition is permitted before acceptance; export is accepted-only.
+
+One shell-owned MIDI session serves all pages. Use a managed built-in synthesizer
+by default or an explicitly selected receiver. Real position observation is
+bounded and lifecycle-managed; no page-local clock or second sequencer. Seek,
+pause, stop, loop, mute/solo and device loss release notes/resources predictably.
+Audition timbre is not authoritative and does not render audio files.
+
+## Optional video isolation
+
+[TABI_VIDEO](TABI_VIDEO.md) specifies a separate companion, preferably a separate
+repository. Its soundtrack, library, jobs, provider credentials and encoder never
+enter the MIDI schema/build/runtime. It reads immutable export manifests only,
+and remains optional for installation, offline use, audition and export.
+A future launch integration passes a snapshot identity; it does not create a
+second project authority or restore removed release/mastering code.
