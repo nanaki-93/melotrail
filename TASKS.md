@@ -43,7 +43,7 @@ an unrelated task. A failed dependent gate cannot be bypassed.
 
 | ID | Task | Depends on | State | Result / implementation commit |
 | --- | --- | --- | --- | --- |
-| F01 | Verify baseline and real dependency boundaries | — | TODO | Resume preserved candidate after authorized runner validation-handoff repair; prior evidence under ~/.codex/melotrail-terra/runs/2026-09-06T10-50-51-461Z-F01. |
+| F01 | Verify baseline and real dependency boundaries | — | BLOCKED | Run budget exhausted; preserved /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-06T14-24-40-750Z-F01 |
 | M01 | Freeze musical baseline and comparison harness | F01 | TODO | |
 | F02 | Delete legacy desktop | M01 | TODO | |
 | F03 | Delete legacy application workflow | F02 | TODO | |
