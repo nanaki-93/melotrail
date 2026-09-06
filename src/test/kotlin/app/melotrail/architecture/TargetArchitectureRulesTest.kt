@@ -16,6 +16,24 @@ class TargetArchitectureRulesTest {
     }
 
     @Test
+    fun `MIDI Core entrypoints do not depend on rejected application workflows`() {
+        val targetSources = TargetArchitectureRules.readProductionSources().filter { source ->
+            source.path.startsWith("desktopApp/src/main/kotlin/app/melotrail/desktop/") ||
+                source.path.startsWith("src/main/kotlin/app/melotrail/application/MidiCore")
+        }
+        val legacyImports = targetSources.flatMap { source ->
+            source.contents.lineSequence()
+                .filter { it.startsWith("import app.melotrail.application.") }
+                .map { it.removePrefix("import app.melotrail.application.").trim() }
+                .filterNot { it.contains("MidiCore") }
+                .map { "${source.path}: app.melotrail.application.$it" }
+                .toList()
+        }
+
+        assertEquals(emptyList(), legacyImports)
+    }
+
+    @Test
     fun `domain desktop and MIDI adapter violations are rejected`() {
         val violations = TargetArchitectureRules.violations(
             listOf(
