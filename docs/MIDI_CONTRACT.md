@@ -1,278 +1,141 @@
-# Standard MIDI contract
-
-Status: target V1 contract
-
-Authority: accepted input, semantic preservation, validation, and generated
-files
-
-## 1. Scope
-
-MIDI is Melotrail's only musical file representation. The source is preserved,
-arrangement candidates are MIDI, audition reads MIDI, and export produces MIDI.
-Audio is not a fallback or secondary canonical format.
-
-## 2. Accepted input
-
-V1 accepts:
-
-- filename extension `.mid` or `.midi`;
-- a valid Standard MIDI File header;
-- SMF format 0 or 1;
-- positive PPQ timing division;
-- exactly one safely pairable, note-bearing track;
-- exactly one note-bearing channel in that track;
-- any additional tracks contain no notes;
-- one fixed effective tempo;
-- one fixed effective time signature.
-
-V1 does not accept:
-
-- SMF format 2;
-- SMPTE timing division;
-- changing tempo maps;
-- changing time-signature maps;
-- MPE or other multi-channel-per-note expression as protected melody;
-- multiple note-bearing tracks or note-bearing channels;
-- files whose note pairing or tick ranges cannot be interpreted safely; or
-- several source files in one project.
-
-Missing tempo or meter metadata is not necessarily a malformed file. The user
-may provide the missing authoritative value before the project becomes ready
-for generation.
-
-## 3. Source preservation
-
-Import stores:
-
-- original bytes under the project source directory;
-- original filename;
-- SHA-256 digest;
-- SMF format and PPQ;
-- ordered track summaries;
-- parsed event counts and supported-event facts;
-- unsupported-event findings; and
-- automatically protected melody track/channel identity from the same atomic
-  import transaction.
-
-No import, normalization, generation, or export operation overwrites the source
-file. Melotrail may build canonical semantic views but does not claim binary
-round-trip identity.
-
-## 4. Canonical semantic model
-
-The MIDI adapter converts supported messages into immutable ordered events.
-The model distinguishes:
-
-- note events with start tick, end tick, pitch, onset velocity, release
-  velocity when present, and channel;
-- control changes;
-- pitch bend;
-- channel pressure;
-- tempo;
-- time signature;
-- track name;
-- marker and cue text;
-- lyric/text metadata when retained for reference; and
-- unsupported or intentionally omitted messages as findings.
-
-Stable event ordering uses tick, semantic event priority, source track index,
-source event index, and a deterministic generated-event key. The exact writer
-ordering is covered by golden tests.
-
-Project tick resolution is the accepted source PPQ. Generators use rational
-beat/subdivision calculations and must either produce exactly representable
-ticks or apply one documented deterministic rounding policy. They cannot
-silently change the project's PPQ.
-
-## 5. Note pairing
-
-- Note-on velocity zero is treated as note-off.
-- A note is paired within the same track, channel, and pitch.
-- End tick must be greater than start tick after the documented minimum-duration
-  policy.
-- An orphan note-off is a finding unless it makes interpretation ambiguous.
-- An unclosed note-on is blocking on every track because additional source
-  tracks cannot contain notes.
-- Overlapping notes of different pitches are ordinary polyphony.
-- Overlapping note-ons for the same track/channel/pitch are blocking until a
-  safe pairing policy is explicitly selected and tested.
-
-The importer never deletes an event merely to make a file pass.
-
-## 6. Event preservation policy
-
-### 6.1 Protected melody
-
-The canonical melody preserves note timing, pitch, and velocity. Supported
-source controllers, pitch bend, and channel pressure remain associated with the
-melody view when their channel/range is unambiguous.
-
-Program changes are captured as import hints but are not emitted by default;
-the destination DAW owns instrument selection. System Exclusive messages are
-not copied to generated output in V1. Their presence is reported.
-
-### 6.2 Generated roles
-
-Generated chord, bass, and drum candidates contain note events only, except a
-future explicitly tested sustain policy may allow CC64 for chord/keys. They do
-not emit program changes, pitch bend, aftertouch, SysEx, or arbitrary
-controllers in the MVP.
-
-### 6.3 Meta-only tracks
-
-Additional source tracks may carry conductor/meta events, but cannot contain
-notes. They remain preserved in source identity and are not included as musical
-roles in the arranged export.
-
-## 7. Validation classification
-
-### Blocking
-
-- unreadable/truncated file or invalid chunk structure;
-- unsupported SMF format or division;
-- unsafe or ambiguous protected-melody note pairing;
-- zero or multiple note-bearing source tracks/channels;
-- negative/overflowed semantic timing;
-- no complete melody notes available for automatic protection;
-- unsupported tempo/meter changes;
-- authority gaps or overlaps in the intended song timeline;
-- chord syntax that cannot be realized in an affected window;
-- generated role event outside its occurrence or allowed range;
-- digest mismatch for a referenced immutable artifact; or
-- semantic mismatch after generated-file re-import.
-
-### Advisory
-
-- polyphony;
-- chromatic melody notes or chords;
-- unusual pitch range or density;
-- repeated note events that are still unambiguous;
-- controller or text events omitted by export policy;
-- missing original tempo/meter that the user can confirm;
-- source program or bank selection; and
-- potential melody/accompaniment collision that remains within hard limits.
-
-Advisories are visible evidence. They do not grant a generator permission to
-rewrite project authority.
-
-## 8. Authority timing
-
-The project has one tempo and meter at tick zero. The UI accepts tempo as a
-positive finite BPM value and stores the nearest Standard MIDI tempo integer
-using `round(60,000,000 / BPM)`. The user enters each ordered section as a name
-and positive whole-bar count. Counts must total the source melody length exactly;
-the application derives stable occurrence identities and the contiguous tick
-timeline from PPQ and meter.
-
-The UI accepts one ordered chord-symbol progression per occurrence. Symbols are
-split into equal deterministic slots that cover the occurrence without gaps or
-overlap; repeated symbols represent a longer harmonic hold. Chord events retain
-explicit tick-exact durations in project authority so existing sub-bar harmony
-remains supported.
-
-Authoritative harmony may be chromatic. Generators use the resolved chord event
-for their current tick window and never substitute a scale-derived chord.
-
-## 9. Output files
-
-### 9.1 Complete song
-
-`complete-song.mid` is SMF format 1 with deterministic tracks:
-
-1. `Conductor`
-2. `Melody`
-3. `Chords`
-4. `Bass`
-5. `Drums`
-6. optional enabled roles in documented order
-
-The conductor track includes sequence name, one tempo, one time signature, and
-validated section markers. Each role track begins at song tick zero even if its
-first note occurs later.
-
-### 9.2 Role files
-
-Each per-role file is SMF format 1 containing a conductor track and exactly one
-named musical role track. It uses the same PPQ, song origin, tempo, meter,
-markers, role channel, and end-of-track boundary as the complete song.
-
-An enabled role with no accepted events is an export blocker. A disabled
-optional role is omitted and recorded as disabled in the manifest; no empty
-placeholder is written.
-
-## 10. Channel policy
-
-Channel numbers below use the musician-facing 1–16 convention:
-
-- Melody: channel 1
-- Chords: channel 2
-- Bass: channel 3
-- Drums: channel 10
-- Optional roles: assigned from the remaining documented channels
-
-Protected melody channel messages are remapped consistently to channel 1 in the
-arranged export. The original source remains unchanged. A melody that
-requires multiple note channels is unsupported in V1.
-
-## 11. Marker and naming policy
-
-- Track names are short, stable ASCII/Unicode text values shown above.
-- Section markers use `<ordinal>:<occurrence-label>` with a stable sanitized
-  label.
-- Duplicate visible section labels remain distinguishable by ordinal and
-  manifest occurrence ID.
-- Filenames use a sanitized project export name and fixed role filenames.
-- Marker behavior is tested in each destination DAW; unsupported marker display
-  is not treated as lost musical timing.
-
-## 12. Instrument suggestions
-
-MIDI files contain no program or bank changes by default. The manifest may
-include, per role:
-
-- performance-profile ID;
-- human-readable category;
-- optional General MIDI program suggestion;
-- optional free-text Logic Pro search suggestion; and
-- register/articulation notes.
-
-Suggestions are not exact patch identifiers and do not claim a particular DAW
-library is installed.
-
-## 13. Manifest minimum fields
-
-The JSON manifest contains:
-
-- manifest schema version;
-- project and export snapshot IDs;
-- export timestamp;
-- source filename and digest;
-- protected melody track identity;
-- project PPQ, tempo, meter, key, and mode;
-- ordered section occurrences and chord events;
-- role enablement and accepted candidate IDs/digests;
-- generator versions and seeds;
-- performance profiles and instrument suggestions;
-- generated filenames and SHA-256 digests;
-- validation summary; and
-- application version/build identity when available.
-
-Paths are relative and portable. Absolute local paths, tokens, device names,
-and private model configuration are excluded.
-
-## 14. Semantic re-import
-
-Before publishing an export, Melotrail re-imports every generated MIDI file and
-checks:
-
-- format and PPQ;
-- tempo and meter;
-- track count/order/names;
-- marker tick positions;
-- note pitch/start/end/velocity/channel;
-- allowed controllers;
-- song end boundary; and
-- agreement with the export snapshot.
-
-Binary byte equality is not required. Semantic equality under the writer's
-ordering and omission policy is required.
+# MIDI contract
+
+Owner: supported input, preserved semantics and output. Current behavior is
+separated from planned changes below. [Architecture](ARCHITECTURE.md) owns
+persistence; [Validation](VALIDATION.md) owns proof.
+
+## Current input
+
+One `.mid` or `.midi` Standard MIDI file per project: SMF 0 or 1, positive PPQ,
+exactly one note-bearing track using one note-bearing channel, with optional
+additional meta-only tracks. One fixed effective tempo and one fixed meter.
+Missing tempo/meter may be confirmed by the user before generation.
+
+Reject format 2, SMPTE division, changing tempo/meter maps, multiple sources,
+extra note-bearing tracks/channels, MPE, unsafe pairing, invalid/overflowed
+ranges or a source with no complete notes. Explain the actual cause. Polyphony,
+chromatic notes/chords, unusual density and controller use are not corruption.
+
+Import preserves original bytes, filename, SHA-256, format/PPQ, ordered track
+facts and findings. It atomically protects the only melody track/channel.
+There is no in-project source switch or silent source repair.
+
+## Semantic events and pairing
+
+Preserve supported melody note start/end, pitch, onset velocity, release
+velocity where represented, controllers, pitch bend and channel pressure with
+unambiguous channel/range ownership. Retain tempo, meter, track names, markers,
+cues and supported text as semantic/reference evidence. Unsupported messages
+produce findings. Program/bank changes are hints, omitted from generated exports
+by default; SysEx is not copied to arranged output.
+
+Note-on velocity zero is note-off. Pair by source track/channel/pitch. Unclosed
+note-on and overlapping same-pitch note-ons without a safe pairing policy are
+blocking. Orphan note-off is a finding unless interpretation becomes unsafe.
+Different-pitch overlap is valid polyphony. Notes have positive duration; do not
+delete events to pass validation. Musical analysis does not mutate this stream.
+
+Canonical ordering is stable by tick, semantic priority and original event
+identity, with stable keys for generated events. Writer goldens define actual
+same-tick ordering. Preserve source PPQ. Rational timing must be exactly
+representable or use the one documented deterministic adapter rounding policy;
+generators reject unsupported grids rather than silently changing PPQ.
+
+Generated Chords/Bass/Drums candidates contain notes only. No arbitrary
+controllers, program changes, bend, aftertouch or SysEx. Future generated sustain
+requires a separately tested policy. Audition device/timbre choices are never
+export authority.
+
+## Authority and currentness
+
+Tempo is a fixed microseconds-per-quarter value. BPM entry converts using
+`round(60,000,000 / BPM)` within the valid MIDI range. Meter, key/mode, ordered
+occurrences and explicit chord windows have one authoritative interpretation.
+Chromatic harmony is valid; generators cannot substitute a scale-derived chord.
+
+Current section entry uses positive whole bars whose total exactly matches the
+source extent. Current progression shorthand splits symbols into equal slots
+and preserves unchanged exact saved windows. M03 replaces editing ambiguity
+with explicit durations; until then these current restrictions still apply.
+
+Every candidate records role/occurrence, source/authority identity, generator,
+pattern/profile versions, seed, artifact digest and validation evidence. Used
+upstream dependencies are explicit. Generation creates a new artifact;
+acceptance changes pointers. Locked/stale/missing/rejected work cannot be silently
+admitted by a full-draft operation. A complete draft can be auditioned before use;
+only currently accepted scopes may be exported.
+
+## Validation categories
+
+Blocking: unreadable/unsupported SMF, unsafe pairing, invalid timing, authority
+gaps/overlaps, unrealizable chords, generated notes outside role/range/boundary,
+violations of hard role policy, stale/digest-mismatched evidence or failed
+semantic re-import. A generation failure stays a failure.
+
+Advisory: unusual density/range, chromaticism, intentionally omitted reference
+messages, missing source metadata to confirm, and musical tensions inside hard
+limits. Report location and musical context. Existing exact protected-anchor
+collision blocking remains until a specific tested musical-policy change;
+M02/M04 improve the treatment of proximity/tension without relaxing integrity.
+
+## Export package
+
+Each new immutable snapshot contains `complete-song.mid`, aligned role files
+`melody.mid`, `chords.mid`, `bass.mid`, `drums.mid`, and `manifest.json` for the
+current four-role workflow. Files use the same PPQ, fixed tempo/meter, song
+origin and end boundary. Individual role files must not shift their first note
+to tick zero. Initial silence is meaningful.
+
+| Track in complete SMF 1 | Musician-facing MIDI channel |
+| --- | --- |
+| Conductor | Meta only |
+| Melody | 1 |
+| Chords | 2 |
+| Bass | 3 |
+| Drums | 10 |
+
+Each role file is SMF 1 with conductor plus its named musical track. Consistently
+remap melody channel messages to channel 1 while preserving original source
+bytes. No default program/bank changes; instrument suggestions live in the
+manifest. Marker text uses `<ordinal>:<occurrence-label>` and exact boundary
+ticks. Duplicate names remain distinguishable. Marker display in Logic is
+best effort; note/bar alignment is mandatory.
+
+Manifest fields: schema/build/snapshot/project IDs, source and candidate hashes,
+PPQ/tempo/meter/key, occurrences and chord windows, role presence, generator
+versions/seeds/profiles, instrument suggestions, validation and file digests.
+Use relative portable paths. Exclude credentials, private device/config values
+and absolute local source paths.
+
+Stage all files, re-import them, compare with the frozen accepted snapshot, then
+publish atomically without overwriting an existing package. Check format/PPQ,
+track order/names, channels, tempo/meter, marker ticks, every note field, allowed
+expression and exact end boundary. Byte-identical round-trip is unnecessary;
+semantic identity under the documented omission/remapping policy is required.
+
+## Planned contract extensions
+
+These are requirements for M03/M06/M07, not claims of shipped support:
+
+- **Explicit harmonic rhythm:** symbol + rational beat/bar duration resolves to
+  canonical gap-free tick windows; unchanged saved durations stay exact. Reject
+  unrepresentable boundaries with a musical explanation, not hidden rounding.
+- **Source versus arrangement extent:** retain original source/end facts; the
+  user can confirm trailing silent padding to a whole-bar arrangement end.
+  End cannot precede any preserved note/controller event. Export all roles to
+  the confirmed arrangement boundary. No source rewrite, leading shift,
+  automatic trimming or melody repetition.
+- **Arrangement plan:** record versioned purpose, phrase/repeat relationships,
+  role activity and musical settings. Include consumed boundary/groove/neighbor
+  information in scoped fingerprints. Invalidation follows those dependencies.
+- **Planned rests:** each scope is a validated candidate or an explicit plan
+  rest. Assembly and atomic use/undo preserve that distinction. Export silence
+  in inactive sections while retaining global origin/end. Omit a generated role
+  inactive for the entire song and list it as inactive in the manifest; Melody
+  always remains. An active scope missing valid output blocks export. Never
+  write a placeholder to hide failure. Test changed track counts and role-file
+  omission in Q02 before claiming compatibility for this extension.
+
+A changed generator/catalog invalidates applicability of its earlier musical
+rating; a changed export policy requires fresh relevant Logic evidence. Stored
+old artifacts remain inspectable and unchanged even when no longer current.

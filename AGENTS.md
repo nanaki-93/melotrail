@@ -1,91 +1,66 @@
-# Melotrail Agent Instructions
+# Melotrail agent instructions
 
-## Product authority
+## Read before changing the project
 
-Melotrail is a local desktop MIDI-arrangement companion for musicians who finish
-their work in Logic Pro. The active product direction is defined
-by `PLAN.md`; the target architecture and behavior are defined under `docs/`.
+Read [PLAN.md](PLAN.md), [README.md](README.md), [TASKS.md](TASKS.md) and
+[Architecture](docs/ARCHITECTURE.md). Read the task's relevant owner:
+[MIDI contract](docs/MIDI_CONTRACT.md), [UI guideline](docs/UI_GUIDELINE.md),
+[Validation](docs/VALIDATION.md), or [TABI video](docs/TABI_VIDEO.md).
+PLAN is the only roadmap; TASKS is the only implementation queue. Do not resume
+retired MC/UI/VID plans from Git history.
 
-Before changing the project, read:
+## Product and musical authority
 
-- `PLAN.md`
-- `README.md`
-- `docs/README.md`
-- `docs/ARCHITECTURE.md`
-- `docs/FUNCTIONAL_SPEC.md`
-- `docs/MIDI_CONTRACT.md`
-- `docs/DAW_COMPATIBILITY.md`
-- `docs/CLEANUP_SCOPE.md`
-- `docs/QUALITY_GATES.md`
-- `docs/plan/MIDI_CORE_TASKS.md`
-- `docs/plan/MIDI_CORE_EXECUTION_LOG.md`
+- Kotlin/JVM owns domain, orchestration, MIDI, storage and Compose Desktop UI.
+- MIDI is the only musical representation in the arranger. Logic Pro owns
+  instruments, audio rendering, mixing, mastering and release sound.
+- Project tempo, meter, key, structure and chord durations are authoritative.
+  Chromatic chords are valid; key compatibility is advisory.
+- Preserve imported MIDI bytes and protected melody events. Never silently
+  overwrite accepted candidates, current MIDI projects or export snapshots.
+- Melody analysis and suggested plans cannot become authority without explicit
+  confirmation. Melody edits remain separate approved candidates, outside this plan.
+- Generation is deterministic for the same inputs/settings/versions/seed and
+  targeted by role/occurrence. Include all used dependencies in fingerprints.
+- Full-draft playback is allowed before acceptance; export is accepted-only.
+- Keep six MIDI destinations and one persistent MIDI player. No audio renderer,
+  Python service, sound library, model dependency, mixer or publishing page.
 
-## Target architecture
+## Development and removal
 
-- Kotlin/JVM owns the domain, orchestration, MIDI processing, persistence, and
-  Compose Desktop UI.
-- MIDI is the only musical interchange and generated-song representation.
-- The desktop UI remains a first-class tool; this is not a headless-only
-  rewrite.
-- Logic Pro performs instrument selection, audio rendering, mixing, mastering,
-  and release production. GarageBand is unverified and is not a supported
-  destination.
-- Python, audio ingestion, transcription, DSP, rendering, mastering, video,
-  publishing, and commercial-release workflows have no place in the target
-  architecture.
-- Qwen may later propose constrained musical choices, but it is not part of the
-  deterministic MVP and never owns project authority.
+Inspect current code, consumers and tests first. Reuse proven current behavior;
+replace a required helper behind tests before deleting its legacy owner. Remove
+exclusive tests/resources/config with deleted code. No compatibility modes,
+dead adapters, duplicate schemas, old-project migration or archived source trees.
+Current MIDI artifacts remain protected even when an unsupported schema is rejected.
 
-## Musical invariants
+Legacy removal can proceed after the current MIDI path is proven; it does not
+wait for the old participant/holdout gates. Resolve exact repository-owned data
+paths, consumers, symlinks and protected exclusions before deleting old audio
+projects, libraries or caches. Never delete external user projects or use broad
+workspace cleanup. Preserve supplied UI/TABI/video references and Logic evidence.
 
-- Project key, tempo, meter, structure, and section harmony are authoritative.
-- Chromatic authoritative chords are valid; key compatibility is advisory.
-- The selected source melody is immutable.
-- Optional melody-connection edits are separate, versioned candidates and
-  require explicit approval.
-- Never silently overwrite an imported MIDI file, accepted candidate, or export
-  snapshot.
-- Generated roles must be validated against authoritative harmony and protected
-  melody anchors.
-- Regeneration is targeted by section and role.
-- Candidate generation is deterministic for the same inputs, settings, and
-  seed.
+Make small task-scoped commits when implementation commits are authorized.
+Preserve unrelated working-tree changes, including existing Gradle/toolchain
+edits. Add regression tests for every fixed bug. Follow TASKS dependencies and
+status; do not add another plan, prompt, inventory or execution-log document.
 
-## Development rules
+## Validation and agent execution
 
-- Inspect existing behavior and tests before extracting reusable MIDI logic.
-- Reuse proven MIDI, harmony, pattern, artifact, and validation behavior where
-  it fits the new contracts.
-- Replace behavior behind the new architecture before deleting its old owner.
-- Once a replacement is proven, delete the old branch; do not keep compatibility
-  modes, dead adapters, duplicate schemas, or archived source trees.
-- Old audio projects do not require migration and may be deleted by the cleanup
-  tasks after their exact repository-owned locations are verified.
-- Make small, reviewable changes and add regression tests for every fixed bug.
-- Preserve original MIDI inputs and accepted candidates.
-- Do not introduce a Python service or an audio-production dependency.
+Run applicable focused tests, `make test`, `make build` and `git diff --check`.
+For MIDI/workflow/export changes prepare and complete applicable Logic checks
+from Validation; record real user evidence before release. Musical scores and
+visual/video approvals cannot be fabricated by an agent or inferred from tests.
+A missing human decision blocks that gate, not independent development work.
 
-## UI rules
+Use the bounded workflow and prompt in TASKS. Parallel agents are appropriate
+only when explicitly requested for an implementation run and file ownership is
+separate; one coordinator owns task status and integration.
 
-- Preserve Compose Desktop as the primary interaction surface.
-- Keep the UI focused on Project, MIDI, Structure & Harmony, Arrange, Review,
-  and Export.
-- Audition is MIDI playback, not an audio-rendering pipeline.
-- Remove Mix/Master, sound-library, video, publishing, and release pages when
-  their old runtime owners are removed.
+## TABI video boundary
 
-## Validation
-
-Run the applicable automated gates:
-
-```bash
-make test
-make build
-```
-
-For MIDI export or workflow changes, also complete the manual Logic Pro checks
-in `docs/DAW_COMPATIBILITY.md` and record the evidence required by
-`docs/QUALITY_GATES.md`.
-
-The current repository is in transition and still contains obsolete worker and
-audio targets. They are deletion scope, not target validation requirements.
+The planned optional companion has separate assets, jobs, provider/encoder
+runtime and finished soundtrack input. It must not render MIDI audio, alter the
+mix/master or write the MIDI project. Video implementation is a separate chosen
+workstream; do not revive the legacy release pipeline. Paid generation needs a
+bounded authorized budget. Public upload requires explicit user authorization.

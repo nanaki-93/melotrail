@@ -3,6 +3,11 @@ package app.melotrail.documentation
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
+import java.security.MessageDigest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.io.TempDir
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -18,7 +23,7 @@ class DocumentationIntegrityTest {
 
     @Test
     fun `all local Markdown links in the active documentation resolve`() {
-        val documents = listOf("AGENTS.md", "README.md", "PLAN.md").map(repository::resolve) +
+        val documents = listOf("AGENTS.md", "README.md", "PLAN.md", "TASKS.md").map(repository::resolve) +
             Files.walk(repository.resolve("docs")).use { paths ->
                 paths.filter { Files.isRegularFile(it) && it.toString().endsWith(".md") }.toList()
             }
@@ -63,17 +68,49 @@ class DocumentationIntegrityTest {
     }
 
     @Test
-    fun `active plans and acceptance evidence remain indexed`() {
-        val index = Files.readString(repository.resolve("docs/plan/README.md"))
+    fun `one task queue and concise reference set replace the retired planning suites`() {
+        val index = Files.readString(repository.resolve("README.md"))
         listOf(
-            "MIDI_CORE_TASKS.md", "EXECUTE_MIDI_CORE_TASKS_PROMPT.md", "MIDI_CORE_EXECUTION_LOG.md",
-            "UI_MOCKUP_REDESIGN_PLAN.md", "UI_MOCKUP_TASKS.md", "EXECUTE_UI_MOCKUP_TASKS_PROMPT.md",
-            "UI_MOCKUP_EXECUTION_LOG.md", "FUTURE_VIDEO_CREATOR.md", "MC040_DESKTOP_SMOKE_CHECKLIST.md",
-            "MC045_MIDI_AUDITION_SMOKE.md", "MC047_PROPERTY_EVIDENCE.md", "MC048_DAW_MATRIX.md",
-            "MC048I_ARRANGEMENT_UX_RUBRIC.md", "MC049_HOLDOUT_RUBRIC.md"
-        ).forEach { name ->
-            assertTrue(Files.isRegularFile(repository.resolve("docs/plan/$name")), "Missing active evidence: $name")
-            assertTrue(index.contains("]($name)"), "Active evidence not indexed: $name")
+            "PLAN.md", "TASKS.md", "docs/ARCHITECTURE.md", "docs/MIDI_CONTRACT.md",
+            "docs/UI_GUIDELINE.md", "docs/VALIDATION.md", "docs/TABI_VIDEO.md"
+        ).forEach { path ->
+            assertTrue(Files.isRegularFile(repository.resolve(path)), "Missing active reference: $path")
+            assertTrue(index.contains("]($path)"), "Active reference not indexed: $path")
+        }
+        val referenceDocuments = Files.walk(repository.resolve("docs")).use { paths ->
+            paths.filter { Files.isRegularFile(it) && it.toString().endsWith(".md") }
+                .map { repository.resolve("docs").relativize(it).toString() }.sorted().toList()
+        }
+        assertEquals(listOf("ARCHITECTURE.md", "MIDI_CONTRACT.md", "TABI_VIDEO.md", "UI_GUIDELINE.md", "VALIDATION.md"), referenceDocuments)
+        listOf("docs/FUNCTION_DOCUMENTATION_INVENTORY.json", "tools/check_documentation_coverage.py",
+            "tools/measure_arrangement_ux.py", "worker/tests/test_documentation_coverage.py").forEach { path ->
+            assertFalse(Files.exists(repository.resolve(path)), "Retired documentation machinery restored: $path")
+        }
+        assertFalse(Files.readString(repository.resolve("build.gradle.kts")).contains("checkDocumentationCoverage"))
+    }
+
+    @Test
+    fun `consolidation preserves original UI references and recorded Logic captures`() {
+        val referenceRoot = repository.resolve("docs/pictures/UI")
+        val manifest = Json.parseToJsonElement(Files.readString(referenceRoot.resolve("reference-measurements.json"))).jsonObject
+        val references = manifest.getValue("referenceManifest").jsonArray
+        assertEquals(9, references.size)
+        references.forEach { entry ->
+            val row = entry.jsonObject
+            val file = referenceRoot.resolve(row.getValue("file").jsonPrimitive.content)
+            val digest = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(file))
+                .joinToString("") { "%02x".format(it) }
+            assertEquals(row.getValue("sha256").jsonPrimitive.content, digest, "Changed reference: $file")
+        }
+        val evidence = Files.readString(repository.resolve("docs/VALIDATION.md"))
+        val captures = Regex("""\[([^\]]+\.png)]\(checks/[^)]+\) \| `([0-9a-f]{64})`""")
+            .findAll(evidence).toList()
+        assertEquals(6, captures.size)
+        captures.forEach { match ->
+            val file = repository.resolve("docs/checks/${match.groupValues[1]}")
+            val digest = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(file))
+                .joinToString("") { "%02x".format(it) }
+            assertEquals(match.groupValues[2], digest, "Changed Logic evidence: $file")
         }
     }
 
