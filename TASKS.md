@@ -43,7 +43,7 @@ an unrelated task. A failed dependent gate cannot be bypassed.
 
 | ID | Task | Depends on | State | Result / implementation commit |
 | --- | --- | --- | --- | --- |
-| F01 | Verify baseline and real dependency boundaries | — | TODO | Resume exact preserved candidate after the reviewed token-accounting repair. |
+| F01 | Verify baseline and real dependency boundaries | — | DONE | f8013adfe12f; Preserved the staged F01 repair. It makes the architecture guard scan the real desktop root and verifies raw MIDI imports with an actual MidiCore page path. Static review found no reproduced issue. Default desktop startup delegates to the MIDI Core composition; its target graph has no worker/model/mixer/renderer construction. No queue edits or commits made.; test/build + fresh Terra review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-06T15-14-51-831Z-F01 |
 | M01 | Freeze musical baseline and comparison harness | F01 | TODO | |
 | F02 | Delete legacy desktop | M01 | TODO | |
 | F03 | Delete legacy application workflow | F02 | TODO | |
