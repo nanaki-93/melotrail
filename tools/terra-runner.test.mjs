@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { queue, select, mark, effectiveStatus, checkResult, lock, atomic, permitted } from './terra-runner.mjs';
+import { queue, select, mark, effectiveStatus, checkResult, lock, atomic, permitted, reportedUsage } from './terra-runner.mjs';
 const md = '| F01 | Baseline | — | TODO | |\n| M01 | Music | F01 | TODO | |\n| A01 | Runner | F01 | TODO | |\n| V01 | Video | F01; selected | TODO | |';
 test('dependencies, bootstrap priority and selected video', () => {
   assert.equal(select(queue(md), false).id, 'F01');
@@ -74,7 +74,10 @@ process.stdin.on('end', () => {
   if (!review) fs.writeFileSync('probe.txt', 'actual new file');
   const result = { task, base, commit: base, candidate: input.match(/Candidate tree: ([A-Za-z0-9_]+)/)[1], status: review ? (fs.existsSync('review-fails') ? 'FAIL' : 'PASS') : (fs.existsSync('worker-blocked') ? 'BLOCKED' : fs.existsSync('worker-waiting') ? 'WAITING_USER' : 'READY_FOR_VALIDATION'), summary: 'Fixture only', blocker: review && fs.existsSync('review-fails') ? 'reproduced defect' : '', tests: ['PENDING_COORDINATOR: make test/build; worker local sockets unavailable'], artifacts: [] };
   fs.writeFileSync(process.argv[process.argv.indexOf('-o') + 1], JSON.stringify(result));
-  console.log(JSON.stringify({type:'turn.completed', usage:{input_tokens:10, output_tokens:2}}));
+  const usage = fs.existsSync('cached-context')
+    ? { input_tokens: 100000, cached_input_tokens: 99995, output_tokens: 2, reasoning_output_tokens: 1 }
+    : { input_tokens:10, output_tokens:2 };
+  console.log(JSON.stringify({type:'turn.completed', usage}));
 });`, { mode: 0o700 });
   git('add', '.'); git('commit', '-m', 'fixture'); git('branch', 'codex/terra');
   const config = path.join(root, 'config.json');
@@ -91,7 +94,7 @@ test('real coordinator validates, reviews new files, commits and advances only i
     assert.equal(f.git('status', '--porcelain'), '');
     assert.equal(f.git('show', 'codex/terra:probe.txt'), 'actual new file');
     assert.equal(queue(f.git('show', 'codex/terra:TASKS.md'))[0].state, 'DONE');
-    assert.equal(JSON.parse(fs.readFileSync(path.join(f.state, 'state.json'))).last.tokens, 24);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(f.state, 'state.json'))).last.modelTokens, 24);
   } finally { f.close(); }
 });
 test('failed review stops after two retries, preserves work, and explicit defer allows independent work', () => {
@@ -121,6 +124,20 @@ test('daily admission, token budget and pause prevent unintended work', () => {
     assert.equal(f.call('resume').status, 0);
   } finally { f.close(); }
 });
+
+test('cached context does not prevent local validation or a reviewer session', () => {
+  const f = fixture(); try {
+    marker(f, 'cached-context');
+    atomic(f.config, { ...f.cfg, maxReportedTokens: 16 });
+    const r = f.call('run');
+    assert.equal(r.status, 0, r.stderr);
+    const last = JSON.parse(fs.readFileSync(path.join(f.state, 'state.json'))).last;
+    assert.equal(last.modelTokens, 16);
+    assert.equal(last.cachedInputTokens, 199990);
+    assert.match(fs.readFileSync(path.join(last.dir, 'test-0.log'), 'utf8'), /coordinator-checked-test/);
+    assert.ok(fs.existsSync(path.join(last.dir, 'review-0.json')));
+  } finally { f.close(); }
+});
 test('refuse main or a checked-out integration branch and invalid limits', () => {
   const f = fixture(); try {
     atomic(f.config, { ...f.cfg, branch: 'main' });
@@ -148,6 +165,15 @@ test('task paths are exact or directory bounded', () => {
   assert.equal(permitted('src/main/file.kt', ['src/main/']), true);
   assert.equal(permitted('src/main-other/file.kt', ['src/main/']), false);
   assert.equal(permitted('README.md.bak', ['README.md']), false);
+});
+
+test('reported usage separates cached context from new model work', () => {
+  assert.deepEqual(reportedUsage({ input_tokens: 607494, cached_input_tokens: 515584, output_tokens: 6650, reasoning_output_tokens: 2813 }), {
+    input: 607494, cached: 515584, nonCachedInput: 91910, output: 6650, reasoning: 2813, modelTokens: 101373,
+  });
+  assert.deepEqual(reportedUsage({ input_tokens: 10, cached_input_tokens: 99 }), {
+    input: 10, cached: 10, nonCachedInput: 0, output: 0, reasoning: 0, modelTokens: 0,
+  });
 });
 
 import { createHash } from 'node:crypto';

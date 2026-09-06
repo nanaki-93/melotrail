@@ -46,6 +46,13 @@ export function effectiveStatus(id, reported) {
 export function permitted(file, paths) {
   return paths.some(p => p.endsWith('/') ? file.startsWith(p) : file === p);
 }
+export function reportedUsage(usage = {}) {
+  const input = Number.isFinite(usage.input_tokens) ? usage.input_tokens : 0;
+  const cached = Math.min(input, Math.max(0, Number.isFinite(usage.cached_input_tokens) ? usage.cached_input_tokens : 0));
+  const output = Math.max(0, Number.isFinite(usage.output_tokens) ? usage.output_tokens : 0);
+  const reasoning = Math.max(0, Number.isFinite(usage.reasoning_output_tokens) ? usage.reasoning_output_tokens : 0);
+  return { input, cached, nonCachedInput: input - cached, output, reasoning, modelTokens: input - cached + output + reasoning };
+}
 export function checkResult(r, task, base, review = false, candidate = 'UNCOMMITTED') {
   const allowed = review ? ['PASS', 'FAIL'] : ['READY_FOR_VALIDATION', 'WAITING_USER', 'BLOCKED'];
   if (r.task !== task || r.base !== base || !allowed.includes(r.status) ||
@@ -82,7 +89,7 @@ async function main() {
   fs.mkdirSync(root, { recursive: true });
   const lockDir = path.join(root, 'lock');
   const stateFile = path.join(root, 'state.json');
-  const loadState = () => fs.existsSync(stateFile) ? json(stateFile) : { runs: [], tokens: 0, paused: false };
+  const loadState = () => fs.existsSync(stateFile) ? json(stateFile) : { runs: [], modelTokens: 0, cachedInputTokens: 0, paused: false };
   if (command === 'pause' || command === 'resume') {
     if (command === 'resume' && fs.existsSync(lockDir)) throw Error('Wait for active process to stop before resuming');
     fs.writeFileSync(path.join(root, 'paused'), command === 'pause' ? 'paused\n' : '');
@@ -155,7 +162,9 @@ async function main() {
     fs.mkdirSync(runDir, { recursive: true });
     state.runs.push({ date: today, task: next.id, dir: runDir });
     state.active = { task: next.id, base: head, dir: runDir, worktree, phase: 'creating-worktree' };
-    state.tokens = 0;
+    state.modelTokens = 0;
+    state.cachedInputTokens = 0;
+    state.usage = { input: 0, cached: 0, nonCachedInput: 0, output: 0, reasoning: 0 };
     atomic(stateFile, state);
     git(cfg.repo, 'worktree', 'add', '--detach', worktree, head);
     const seed = cfg.seedPatches?.[next.id];
@@ -170,9 +179,10 @@ async function main() {
     state.active.phase = 'worker'; atomic(stateFile, state);
     const env = Object.fromEntries(['HOME', 'USER', 'LOGNAME', 'TMPDIR', 'LANG', 'LC_ALL', 'TERM', 'CODEX_HOME'].filter(k => process.env[k]).map(k => [k, process.env[k]]));
     Object.assign(env, { JAVA_HOME: cfg.javaHome, GRADLE_USER_HOME: cfg.gradleHome, PATH: `${cfg.javaHome}/bin:${process.env.PATH}` });
-    async function run(exe, args, label, input = '') {
+    async function run(exe, args, label, input = '', requiresModelBudget = false) {
       if (state.paused || (fs.existsSync(pauseFile) && read(pauseFile).trim())) throw Error('Paused');
-      if (Date.now() >= deadline || state.tokens >= cfg.maxReportedTokens) throw Error('Run budget exhausted');
+      if (Date.now() >= deadline) throw Error('Run deadline exhausted');
+      if (requiresModelBudget && state.modelTokens >= cfg.maxReportedTokens) throw Error('Terra-call budget exhausted');
       const out = fs.openSync(path.join(runDir, `${label}.log`), 'w');
       child = spawn(exe, args, { cwd: worktree, env, detached: true, stdio: ['pipe', out, out] });
       fs.closeSync(out);
@@ -218,9 +228,17 @@ Previous concrete feedback: ${feedback || 'None.'}`;
         '--sandbox', review ? 'read-only' : 'workspace-write', '-C', worktree, '--json', '--output-schema', schemaFile, '-o', resultFile];
       if (!review) args.push('--add-dir', cfg.gradleHome);
       args.push('-');
-      await run(cfg.codex, args, label, prompt);
+      await run(cfg.codex, args, label, prompt, true);
       for (const line of read(path.join(runDir, `${label}.log`)).split('\n')) {
-        try { const event = JSON.parse(line); if (event.type === 'turn.completed') state.tokens += (event.usage?.input_tokens || 0) + (event.usage?.output_tokens || 0); } catch {}
+        try {
+          const event = JSON.parse(line);
+          if (event.type === 'turn.completed') {
+            const usage = reportedUsage(event.usage);
+            for (const key of ['input', 'cached', 'nonCachedInput', 'output', 'reasoning']) state.usage[key] += usage[key];
+            state.modelTokens += usage.modelTokens;
+            state.cachedInputTokens += usage.cached;
+          }
+        } catch {}
       }
       atomic(stateFile, state);
       return checkResult(json(resultFile), next.id, head, review, candidate);
@@ -277,7 +295,7 @@ Previous concrete feedback: ${feedback || 'None.'}`;
     const integrated = git(worktree, 'rev-parse', 'HEAD');
     // Compare-and-swap prevents integrating against a changed base.
     git(cfg.repo, 'update-ref', `refs/heads/${cfg.branch}`, integrated, head);
-    state.last = { task: next.id, status, implementation, integrated, reviewedTree, dir: runDir, tokens: state.tokens };
+    state.last = { task: next.id, status, implementation, integrated, reviewedTree, dir: runDir, modelTokens: state.modelTokens, cachedInputTokens: state.cachedInputTokens, usage: state.usage };
     delete state.active; atomic(stateFile, state);
     console.log(JSON.stringify(state.last, null, 2));
   } catch (e) {

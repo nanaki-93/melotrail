@@ -43,7 +43,7 @@ an unrelated task. A failed dependent gate cannot be bypassed.
 
 | ID | Task | Depends on | State | Result / implementation commit |
 | --- | --- | --- | --- | --- |
-| F01 | Verify baseline and real dependency boundaries | — | BLOCKED | Run budget exhausted; preserved /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-06T14-24-40-750Z-F01 |
+| F01 | Verify baseline and real dependency boundaries | — | TODO | Resume exact preserved candidate after the reviewed token-accounting repair. |
 | M01 | Freeze musical baseline and comparison harness | F01 | TODO | |
 | F02 | Delete legacy desktop | M01 | TODO | |
 | F03 | Delete legacy application workflow | F02 | TODO | |
@@ -576,9 +576,11 @@ worktrees live there, outside the product. This is execution state, not a second
 queue. Read current TASKS from the integration ref, not the unchanged source copy.
 The control copy is updated only by the coordinator after reviewing/testing A01.
 The current settings are one task per wake, 45 minutes total per run, six admitted
-runs per UTC day, at most two repair retries, and 500,000 reported input/output
-tokens per run as an admission threshold. Cached input is included. Token usage
-is reported after a CLI response; this is **not a hard in-flight token/dollar cap**.
+runs per UTC day, at most two repair retries, and 500,000 non-cached input plus
+output/reasoning tokens across Terra calls. Cached input is recorded separately.
+The limit is checked before a new Terra call; once one returns, local validation
+and integration can finish. Usage is reported after a CLI response, so this is
+**not a hard in-flight token/dollar cap**.
 The wall deadline terminates owned processes. No automatic credit reset/purchase.
 The heartbeat also defers new work when either available account limit is below
 10% remaining. No authorized paid video budget or public push/upload exists.
