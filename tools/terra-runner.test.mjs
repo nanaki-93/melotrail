@@ -33,7 +33,7 @@ test('status updates preserve other rows and contain multiline output', () => {
   assert.ok(updated.endsWith(md.split('\n').slice(1).join('\n')));
 });
 test('reject false task/base/commit/status result reports', () => {
-  const r = { task: 'F01', base: 'abc', commit: 'abc', candidate: 'UNCOMMITTED', status: 'DONE', summary: 'good', blocker: '', tests: ['test'], artifacts: [] };
+  const r = { task: 'F01', base: 'abc', commit: 'abc', candidate: 'UNCOMMITTED', status: 'READY_FOR_VALIDATION', summary: 'good', blocker: '', tests: ['test'], artifacts: [] };
   assert.equal(checkResult(r, 'F01', 'abc'), r);
   for (const patch of [{ base: 'old' }, { task: 'M01' }, { commit: 'fabricated' }, { status: 'PASS' }, { tests: 'pass' }]) assert.throws(() => checkResult({ ...r, ...patch }, 'F01', 'abc'));
   assert.throws(() => checkResult(r, 'F01', 'abc', true));
@@ -63,7 +63,7 @@ function fixture() {
   git('init'); git('config', 'user.name', 'Test'); git('config', 'user.email', 'test@example.invalid');
   fs.writeFileSync(path.join(repo, 'TASKS.md'), md);
   fs.writeFileSync(path.join(repo, 'tools/terra-runner.test.mjs'), "import test from 'node:test'; test('fixture', () => {});\n");
-  fs.writeFileSync(path.join(bin, 'make'), '#!/bin/sh\nexit 0\n', { mode: 0o700 });
+  fs.writeFileSync(path.join(bin, 'make'), '#!/bin/sh\nif [ -f make-fails ]; then exit 1; fi\necho coordinator-checked-$1\n' , { mode: 0o700 });
   const fake = path.join(bin, 'codex');
   fs.writeFileSync(fake, `#!/usr/bin/env node
 const fs = require('fs'); let input = '';
@@ -72,7 +72,7 @@ process.stdin.on('end', () => {
   const task = input.match(/Assigned task: (\\w+)/)[1], base = input.match(/Base commit: (\\w+)/)[1];
   const review = input.includes('Mode: Fresh independent REVIEW');
   if (!review) fs.writeFileSync('probe.txt', 'actual new file');
-  const result = { task, base, commit: base, candidate: input.match(/Candidate tree: ([A-Za-z0-9_]+)/)[1], status: review ? (fs.existsSync('review-fails') ? 'FAIL' : 'PASS') : 'DONE', summary: 'Fixture only', blocker: review && process.env.FAKE_REVIEW_FAIL ? 'reproduced defect' : '', tests: ['fixture'], artifacts: [] };
+  const result = { task, base, commit: base, candidate: input.match(/Candidate tree: ([A-Za-z0-9_]+)/)[1], status: review ? (fs.existsSync('review-fails') ? 'FAIL' : 'PASS') : (fs.existsSync('worker-blocked') ? 'BLOCKED' : fs.existsSync('worker-waiting') ? 'WAITING_USER' : 'READY_FOR_VALIDATION'), summary: 'Fixture only', blocker: review && fs.existsSync('review-fails') ? 'reproduced defect' : '', tests: ['PENDING_COORDINATOR: make test/build; worker local sockets unavailable'], artifacts: [] };
   fs.writeFileSync(process.argv[process.argv.indexOf('-o') + 1], JSON.stringify(result));
   console.log(JSON.stringify({type:'turn.completed', usage:{input_tokens:10, output_tokens:2}}));
 });`, { mode: 0o700 });
@@ -148,4 +148,65 @@ test('task paths are exact or directory bounded', () => {
   assert.equal(permitted('src/main/file.kt', ['src/main/']), true);
   assert.equal(permitted('src/main-other/file.kt', ['src/main/']), false);
   assert.equal(permitted('README.md.bak', ['README.md']), false);
+});
+
+import { createHash } from 'node:crypto';
+function marker(f, name) {
+  fs.writeFileSync(path.join(f.repo, name), 'fixture');
+  f.git('add', '.'); f.git('commit', '-m', name); f.git('branch', '-f', 'codex/terra', 'HEAD');
+}
+test('pending sandbox validation reaches real coordinator gates and fresh review', () => {
+  const f = fixture(); try {
+    const r = f.call('run'); assert.equal(r.status, 0, r.stderr);
+    const last = JSON.parse(fs.readFileSync(path.join(f.state, 'state.json'))).last;
+    assert.match(fs.readFileSync(path.join(last.dir, 'test-0.log'), 'utf8'), /coordinator-checked-test/);
+    assert.match(fs.readFileSync(path.join(last.dir, 'build-0.log'), 'utf8'), /coordinator-checked-build/);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(last.dir, 'worker-0.json'))).status, 'READY_FOR_VALIDATION');
+    assert.equal(last.status, 'DONE');
+  } finally { f.close(); }
+});
+test('host validation failure cannot become completion or review approval', () => {
+  const f = fixture(); try {
+    marker(f, 'make-fails'); const head = f.git('rev-parse', 'codex/terra');
+    assert.notEqual(f.call('run').status, 0);
+    const s = JSON.parse(fs.readFileSync(path.join(f.state, 'state.json')));
+    assert.equal(f.git('rev-parse', 'codex/terra'), head);
+    assert.equal(fs.existsSync(path.join(s.active.dir, 'review-0.json')), false);
+    assert.ok(fs.existsSync(path.join(s.active.dir, 'worker-2.json')));
+  } finally { f.close(); }
+});
+test('implementation blockers stay blocked; real human waits stay waiting after gates', () => {
+  for (const [flag, expected] of [['worker-blocked', 'BLOCKED'], ['worker-waiting', 'WAITING_USER']]) {
+    const f = fixture(); try {
+      marker(f, flag); const r = f.call('run');
+      const s = JSON.parse(fs.readFileSync(path.join(f.state, 'state.json')));
+      if (expected === 'BLOCKED') { assert.notEqual(r.status, 0); assert.equal(s.active.phase, expected); }
+      else { assert.equal(r.status, 0, r.stderr); assert.equal(s.last.status, expected); }
+    } finally { f.close(); }
+  }
+});
+test('preserved patch binds base and bytes; valid seed survives fresh implementation', () => {
+  for (const mismatch of ['', 'digest', 'base']) {
+    const f = fixture(); try {
+      fs.writeFileSync(path.join(f.repo, 'preserved.txt'), 'previous work\n');
+      f.git('add', 'preserved.txt');
+      const patch = f.git('diff', '--cached', '--binary') + '\n';
+      f.git('restore', '--staged', 'preserved.txt'); fs.unlinkSync(path.join(f.repo, 'preserved.txt'));
+      const file = path.join(f.state, 'seed.patch'); fs.writeFileSync(file, patch);
+      const seed = { file, base: mismatch === 'base' ? 'stale' : f.git('rev-parse', 'codex/terra'), sha256: mismatch === 'digest' ? 'wrong' : createHash('sha256').update(patch).digest('hex'), priorRun: f.state };
+      atomic(f.config, { ...f.cfg, allowedPaths: { F01: ['probe.txt', 'preserved.txt'] }, seedPatches: { F01: seed } });
+      const r = f.call('run');
+      if (mismatch) assert.notEqual(r.status, 0);
+      else { assert.equal(r.status, 0, r.stderr); assert.equal(f.git('show', 'codex/terra:preserved.txt'), 'previous work'); }
+    } finally { f.close(); }
+  }
+});
+test('task-specific coordinator check failure blocks review and integration', () => {
+  const f = fixture(); try {
+    atomic(f.config, { ...f.cfg, taskChecks: { F01: [{ argv: [process.execPath, '-e', 'process.exit(1)'] }] } });
+    assert.notEqual(f.call('run').status, 0);
+    const s = JSON.parse(fs.readFileSync(path.join(f.state, 'state.json')));
+    assert.ok(fs.existsSync(path.join(s.active.dir, 'task-check-0-0.log')));
+    assert.equal(fs.existsSync(path.join(s.active.dir, 'review-0.json')), false);
+  } finally { f.close(); }
 });

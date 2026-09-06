@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { createHash } from 'node:crypto';
 import { spawn, execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -38,6 +39,7 @@ export function mark(md, id, state, result) {
   return md.replace(line, c.join('|'));
 }
 export function effectiveStatus(id, reported) {
+  if (reported === 'READY_FOR_VALIDATION') reported = 'DONE';
   // These contracts require a real user decision; code/tests cannot satisfy them.
   return reported === 'DONE' && ['U07', 'Q01', 'Q02', 'Q03', 'V01', 'V02', 'V03', 'V07'].includes(id) ? 'WAITING_USER' : reported;
 }
@@ -45,7 +47,7 @@ export function permitted(file, paths) {
   return paths.some(p => p.endsWith('/') ? file.startsWith(p) : file === p);
 }
 export function checkResult(r, task, base, review = false, candidate = 'UNCOMMITTED') {
-  const allowed = review ? ['PASS', 'FAIL'] : ['DONE', 'WAITING_USER', 'BLOCKED'];
+  const allowed = review ? ['PASS', 'FAIL'] : ['READY_FOR_VALIDATION', 'WAITING_USER', 'BLOCKED'];
   if (r.task !== task || r.base !== base || !allowed.includes(r.status) ||
       !Array.isArray(r.tests) || !Array.isArray(r.artifacts) || typeof r.summary !== 'string' ||
       !r.summary.trim() || typeof r.blocker !== 'string' || r.commit !== base || r.candidate !== candidate) throw Error('Invalid/stale agent result');
@@ -156,6 +158,15 @@ async function main() {
     state.tokens = 0;
     atomic(stateFile, state);
     git(cfg.repo, 'worktree', 'add', '--detach', worktree, head);
+    const seed = cfg.seedPatches?.[next.id];
+    if (seed) {
+      if (seed.base !== head) throw Error('Preserved patch has a stale integration base');
+      const patch = fs.readFileSync(seed.file);
+      if (createHash('sha256').update(patch).digest('hex') !== seed.sha256) throw Error('Preserved patch digest mismatch');
+      // No three-way merge or silent overwrite: conflicting seeds fail closed.
+      git(worktree, 'apply', '--index', seed.file);
+      state.active.seed = { file: seed.file, sha256: seed.sha256, priorRun: seed.priorRun };
+    }
     state.active.phase = 'worker'; atomic(stateFile, state);
     const env = Object.fromEntries(['HOME', 'USER', 'LOGNAME', 'TMPDIR', 'LANG', 'LC_ALL', 'TERM', 'CODEX_HOME'].filter(k => process.env[k]).map(k => [k, process.env[k]]));
     Object.assign(env, { JAVA_HOME: cfg.javaHome, GRADLE_USER_HOME: cfg.gradleHome, PATH: `${cfg.javaHome}/bin:${process.env.PATH}` });
@@ -193,10 +204,12 @@ async function main() {
     async function agent(review, attempt, feedback, candidate = 'UNCOMMITTED') {
       const label = `${review ? 'review' : 'worker'}-${attempt}`;
       const schemaFile = path.join(runDir, `${label}.schema.json`), resultFile = path.join(runDir, `${label}.json`);
-      atomic(schemaFile, schema(review ? ['PASS', 'FAIL'] : ['DONE', 'WAITING_USER', 'BLOCKED']));
+      atomic(schemaFile, schema(review ? ['PASS', 'FAIL'] : ['READY_FOR_VALIDATION', 'WAITING_USER', 'BLOCKED']));
       const prompt = `${read(path.join(worktree, 'TASKS.md')).split('## Reusable agent prompt')[1] || ''}
 Assigned task: ${next.id}: ${next.title}. Base commit: ${head}. Candidate tree: ${candidate}.
-Mode: ${review ? 'Fresh independent REVIEW. Read the complete staged and unstaged diff against the base, verify task acceptance and actual logs. Do not edit files. Return PASS only with no actionable defect or missing required evidence; otherwise FAIL with concrete fixes.' : 'IMPLEMENT only the assigned task. Inspect first; make focused regression tests. Leave all changes UNCOMMITTED. Do not edit the queue in TASKS.md; the coordinator owns statuses. Return DONE only if the task contract is satisfied, WAITING_USER for an actual human gate, BLOCKED for an unresolved technical blocker.'}
+Mode: ${review ? 'Fresh independent REVIEW. Read the complete staged and unstaged diff against the base, verify task acceptance and actual coordinator logs. Do not edit files or rerun Gradle in the read-only sandbox. Return PASS only with no actionable defect or missing required evidence; otherwise FAIL with concrete fixes.' : 'IMPLEMENT only the assigned task. Inspect first; make focused regression tests. Leave all changes UNCOMMITTED. Do not edit the queue in TASKS.md; the coordinator owns statuses. Return READY_FOR_VALIDATION when implementation is ready for independent checks, WAITING_USER for an actual human gate, BLOCKED for an unresolved implementation/product blocker. READY_FOR_VALIDATION is not completion and does not claim that tests passed.'}
+Validation ownership: the coordinator runs make test, make build and the fixed task-specific checks after the worker returns. Gradle local sockets are unavailable in the worker sandbox. Do not invoke Gradle/make or attempt to bypass/reconfigure the sandbox; do not retry a denied command. Run supported lightweight focused checks, add required regressions, and list unexecuted checks truthfully as PENDING_COORDINATOR in tests. A worker-only validation restriction is not an implementation blocker. If a coordinator check fails, inspect its actual log and fix the demonstrated defect; do not claim a pass or weaken its test. Native startup and human approvals require actual evidence.
+Allowed changed paths: ${JSON.stringify(cfg.allowedPaths[next.id])}. ${seed ? `Preserved candidate patch is already applied. Reuse it and inspect prior evidence at ${seed.priorRun}; do not restart the completed work.` : ''}
 The bounded runner replaces prompt instructions to select a task, create worktrees, review, commit, or continue. Do not launch other agents or tasks. Do not change ${next.id === 'A01' ? '' : 'tools/terra-runner*, '}AGENTS.md, PLAN.md, TASKS.md, docs/pictures, .git, automation/configuration or files outside this worktree. Preserve original MIDI and evidence. All optional V tasks are selected for unpaid implementation, with no authorized paid generation budget or publication. Do not use external connectors or services to send messages, push code, upload or spend money. Do not weaken tests. Use the current documented JDK. No legacy migration.
 For video: use independently built companion/ with no media dependency on the MIDI app; stop at actual asset, rights and budget decisions. Never invent approvals. Review logs are in ${runDir}. Run at most this task, within the remaining ${Math.max(1, Math.floor((deadline-Date.now())/60000))} minutes. Report task=${next.id}, base=${head}, commit=${head} (coordinator commits later), tests, artifacts, summary, blocker and status in the required JSON schema.
 Include candidate=${candidate} in your result; review approval applies only to that exact Git tree.
@@ -223,12 +236,18 @@ Previous concrete feedback: ${feedback || 'None.'}`;
       if (git(worktree, 'diff', head, '--', ...protectedPaths)) throw Error('Worker changed coordinator-owned files');
       if (result.status === 'BLOCKED') break;
       reviewedTree = git(worktree, 'write-tree');
-      if (result.status === 'DONE' && reviewedTree === git(worktree, 'rev-parse', `${head}^{tree}`)) throw Error('No-change DONE requires coordinator verification');
+      if (result.status === 'READY_FOR_VALIDATION' && reviewedTree === git(worktree, 'rev-parse', `${head}^{tree}`)) throw Error('No-change candidate requires coordinator verification');
       try {
         await run('git', ['diff', '--check', head], `whitespace-${attempt}`);
         await run(process.execPath, ['--test', 'tools/terra-runner.test.mjs'], `runner-test-${attempt}`);
         await run('make', ['test'], `test-${attempt}`);
         await run('make', ['build'], `build-${attempt}`);
+        // Configuration is coordinator-owned; workers cannot submit executable commands.
+        for (const [index, check] of (cfg.taskChecks?.[next.id] || []).entries()) {
+          if (!check || !Array.isArray(check.argv) || check.argv.some(v => typeof v !== 'string') ||
+              check.argv.length < 2 || !['./gradlew', process.execPath].includes(check.argv[0])) throw Error('Invalid configured task check');
+          await run(check.argv[0], check.argv.slice(1), `task-check-${index}-${attempt}`);
+        }
         const review = await agent(true, attempt, feedback, reviewedTree);
         git(worktree, 'add', '-A');
         if (git(worktree, 'write-tree') !== reviewedTree) throw Error('Candidate changed after validation/review');

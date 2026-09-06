@@ -43,14 +43,14 @@ an unrelated task. A failed dependent gate cannot be bypassed.
 
 | ID | Task | Depends on | State | Result / implementation commit |
 | --- | --- | --- | --- | --- |
-| F01 | Verify baseline and real dependency boundaries | — | BLOCKED | Gradle cannot configure in this sandbox: FileLockContentionHandler local socket fails with java.net.SocketException: Operation not permitted. Therefore required JVM tests, build, native package, and startup smoke could not run.; preserved /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-06T10-50-51-461Z-F01 |
+| F01 | Verify baseline and real dependency boundaries | — | TODO | Resume preserved candidate after authorized runner validation-handoff repair; prior evidence under ~/.codex/melotrail-terra/runs/2026-09-06T10-50-51-461Z-F01. |
 | M01 | Freeze musical baseline and comparison harness | F01 | TODO | |
 | F02 | Delete legacy desktop | M01 | TODO | |
 | F03 | Delete legacy application workflow | F02 | TODO | |
 | F04 | Delete obsolete musical generators and model paths | F03 | TODO | |
 | F05 | Delete audio/worker runtime and finish schema/build cleanup | F04 | TODO | |
 | F06 | Delete verified legacy data and measure repository reduction | F05 | TODO | |
-| A01 | Harden and verify bounded agent execution runner | F01 | TODO | Bootstrap runner prepared; validate remaining failure cases after F01. |
+| A01 | Harden and verify bounded agent execution runner | F01 | TODO | Worker/coordinator validation handoff repaired; full runner hardening still follows F01. |
 | U01 | Finish verified lanes and live timeline projection | F06 | TODO | |
 | U02 | Compact shell, player and inspector | U01 | TODO | |
 | U03 | Refine Project and MIDI import | U02 | TODO | |
@@ -597,6 +597,17 @@ node --test tools/terra-runner.test.mjs
 The runner stages candidate files, checks allowed/protected paths, runs the test
 and build gates, binds the fresh review to an exact Git tree, then commits the
 implementation and a separate queue update using the actual implementation hash.
+Workers report READY_FOR_VALIDATION, which is never a completed queue state.
+The coordinator owns Gradle test/build and configured task checks; workers add
+regressions and report unavailable checks as PENDING_COORDINATOR. The worker
+sandbox does not provide Gradle local sockets: do not repeatedly invoke Gradle
+there or change permissions to work around it. Actual implementation blockers
+remain BLOCKED. Failed coordinator checks receive bounded repair and fresh review;
+only passed checks plus review can produce DONE. Real human gates remain waiting.
+A coordinator-configured preserved patch binds the exact retry base and SHA-256;
+apply it to the new task worktree without rewriting its prior work/evidence.
+Fixed task checks live in local configuration, never executable model output.
+
 A compare-and-swap ref update rejects a changed integration base. It never pushes
 or modifies the source checkout. The scheduler owns integration and queue status;
 workers leave changes uncommitted. State records are private local files.
