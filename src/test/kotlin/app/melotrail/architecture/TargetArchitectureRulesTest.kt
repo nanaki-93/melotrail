@@ -25,7 +25,7 @@ class TargetArchitectureRulesTest {
                 SourceFile("src/main/kotlin/app/melotrail/structure/Planner.kt", "import java.net.URI"),
                 SourceFile("src/main/kotlin/app/melotrail/project/adapter/ProjectStore.kt", "import java.nio.file.Path"),
                 SourceFile("src/main/kotlin/app/melotrail/project/adapter/BadStore.kt", "import java.net.URI"),
-                SourceFile("desktopApp/src/main/kotlin/app/melotrail/desktop/target/MidiPage.kt", "import javax.sound.midi.MidiSystem"),
+                SourceFile("desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreMidiPage.kt", "import javax.sound.midi.MidiSystem"),
                 SourceFile("src/main/kotlin/app/melotrail/midi/adapter/JdkMidiReader.kt", "import javax.sound.midi.MidiSystem"),
             ),
         )
@@ -37,7 +37,7 @@ class TargetArchitectureRulesTest {
                 "src/main/kotlin/app/melotrail/review/ReviewState.kt: domain code may not import androidx.compose",
                 "src/main/kotlin/app/melotrail/structure/Planner.kt: domain code may not import java.net",
                 "src/main/kotlin/app/melotrail/project/adapter/BadStore.kt: project adapter may not import java.net",
-                "desktopApp/src/main/kotlin/app/melotrail/desktop/target/MidiPage.kt: desktop code may not parse raw MIDI",
+                "desktopApp/src/main/kotlin/app/melotrail/desktop/MidiCoreMidiPage.kt: desktop code may not parse raw MIDI",
             ),
             violations,
         )
@@ -56,7 +56,8 @@ private object TargetArchitectureRules {
         "src/main/kotlin/app/melotrail/review/",
         "src/main/kotlin/app/melotrail/export/domain/",
     )
-    private const val desktopTargetRoot = "desktopApp/src/main/kotlin/app/melotrail/desktop/target/"
+    // Target pages live directly in the desktop package; the retired target/ subtree never existed.
+    private const val desktopRoot = "desktopApp/src/main/kotlin/app/melotrail/desktop/"
     private const val projectAdapterRoot = "src/main/kotlin/app/melotrail/project/adapter/"
     private val forbiddenDomainImports = listOf("androidx.compose", "java.io", "java.net", "java.nio.file", "okhttp", "javax.sound.midi")
     private val forbiddenProjectAdapterImports = listOf("androidx.compose", "java.net", "okhttp", "javax.sound.midi")
@@ -80,7 +81,7 @@ private object TargetArchitectureRules {
                     add("${source.path}: project adapter may not import $forbidden")
                 }
             }
-            if (source.path.startsWith(desktopTargetRoot) && imports.any { it.startsWith("javax.sound.midi") }) {
+            if (source.path.startsWith(desktopRoot) && imports.any { it.startsWith("javax.sound.midi") }) {
                 add("${source.path}: desktop code may not parse raw MIDI")
             }
             if (!isDomainSource(source.path) && source.path.startsWith("src/main/kotlin/app/melotrail/midi/") &&
