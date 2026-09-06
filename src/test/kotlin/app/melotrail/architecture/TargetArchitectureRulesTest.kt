@@ -34,6 +34,42 @@ class TargetArchitectureRulesTest {
     }
 
     @Test
+    fun `only MIDI Core musical generation and no model adapters remain`() {
+        val sources = TargetArchitectureRules.readProductionSources()
+        val retiredSourcePaths = sources.map(SourceFile::path).filter { path ->
+            (path.startsWith("src/main/kotlin/app/melotrail/arrangement/") &&
+                !path.startsWith("src/main/kotlin/app/melotrail/arrangement/core/")) ||
+                listOf(
+                    "src/main/kotlin/app/melotrail/analysis/",
+                    "src/main/kotlin/app/melotrail/commercial/",
+                    "src/main/kotlin/app/melotrail/harmony/",
+                    "src/main/kotlin/app/melotrail/licensing/",
+                    "src/main/kotlin/app/melotrail/preparation/",
+                    "src/main/kotlin/app/melotrail/profile/",
+                ).any { prefix -> path.startsWith(prefix) } ||
+                path == "src/main/kotlin/app/melotrail/music/MusicalPrimitives.kt"
+        }
+        val modelReferences = sources.flatMap { source ->
+            listOf("LocalQwen", "LmStudioQwen", "okhttp3").mapNotNull { reference ->
+                reference.takeIf(source.contents::contains)?.let { "${source.path}: $it" }
+            }
+        }
+
+        assertEquals(emptyList(), retiredSourcePaths)
+        assertEquals(emptyList(), modelReferences)
+    }
+
+    @Test
+    fun `exclusive Qwen and schema V4 fixtures are removed with their owners`() {
+        val retiredFixtures = listOf(
+            Path.of("src/test/resources/fixtures/qwen"),
+            Path.of("src/test/resources/fixtures/project/v4-pending-run.json"),
+        )
+
+        assertEquals(emptyList(), retiredFixtures.filter(Files::exists).map(Path::toString))
+    }
+
+    @Test
     fun `domain desktop and MIDI adapter violations are rejected`() {
         val violations = TargetArchitectureRules.violations(
             listOf(

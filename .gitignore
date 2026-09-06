@@ -25,7 +25,6 @@ melotrail/.venv/
 .venv-transcription-spike/
 melotrail/__pycache__/
 melotrail/*.pyc
-melotrail/models/
 melotrail/cache/
 **/__pycache__/
 **/*.pyc
@@ -37,10 +36,6 @@ melotrail/cache/
 *.aiff
 *.m4a
 *.ogg
-
-# Models
-models/
-**/models/
 
 # Cache
 cache/
