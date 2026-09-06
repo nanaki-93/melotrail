@@ -39,24 +39,6 @@ import androidx.compose.ui.unit.dp
 import app.melotrail.project.CandidateRole
 
 object MusicWorkspaceTokens {
-    /** Transitional measurements retained only for the legacy shell until MC-051 removes it. */
-    object Reference {
-        val ViewportWidth = 1536.dp
-        val ViewportHeight = 1024.dp
-        val OuterPadding = 16.dp
-        val HeaderHeight = 56.dp
-        val FooterHeight = 104.dp
-        val ColumnGap = 12.dp
-        val LeftRailWidth = 254.dp
-        val CenterWidth = 698.dp
-        val RightRailWidth = 533.dp
-        val WideBreakpoint = 1180.dp
-        val MediumBreakpoint = 760.dp
-        /** At this width a page and two rails no longer fit without page-level scrolling. */
-        val NarrowBreakpoint = 760.dp
-        const val BorderAlpha = 0.78f
-    }
-
     /** Geometry for the focused MIDI-only workspace. */
     object Layout {
         val WideBreakpoint = 1240.dp
@@ -85,38 +67,6 @@ object MusicWorkspaceTokens {
         const val DividerAlpha = 0.45f
     }
 
-    /** Shared page-shell geometry measured from the focused page reference. */
-    object Pages {
-        val SidebarWidth = 168.dp
-        val NavigationHeight = 40.dp
-        val PageGap = 16.dp
-        val ContentInset = 20.dp
-        val OverviewTopHeight = 176.dp
-        val OverviewTrackHeight = 226.dp
-        val OverviewPreviewWidth = 420.dp
-        val OverviewTransportHeight = 86.dp
-        val CompactRowHeight = 38.dp
-        val ImportDropHeight = 154.dp
-        val VideoPreviewSceneHeight = 240.dp
-    }
-
-    /** Center workstation cards mirror the reference column without creating a second song clock. */
-    object Center {
-        val StructureHeight = 188.dp
-        val ArrangementHeight = 268.dp
-        val TimelineHeight = 315.dp
-        val SectionBlockHeight = 74.dp
-        val TimelineLaneHeight = 34.dp
-        val LaneLabelWidth = 72.dp
-        val ControlHeight = 28.dp
-    }
-
-    object Type {
-        val Eyebrow = 11.sp
-        val PartTitle = 13.sp
-        val PartMetadata = 11.sp
-        val HeaderProjectLabel = 10.sp
-    }
     /** UI-001's measured target palette. Its bright accent is intentionally not a primary fill. */
     val Canvas = Color(0xFF0B131E)
     val Surface = Color(0xFF101923)
@@ -177,34 +127,6 @@ object MusicWorkspaceTokens {
         const val DisabledAlpha = 0.38f
     }
 }
-
-/**
- * The old router still compiles while MC-051 removes it. Keep its role labels
- * isolated from the target MIDI Core vocabulary so new UI never inherits Piano,
- * Pad or Strings as an arrangement role.
- */
-private object LegacyInstrumentPalette {
-    val Piano = Color(0xFF65D6CE)
-    val Bass = Color(0xFF86C979)
-    val Drums = Color(0xFFF0B356)
-    val Pad = Color(0xFFAB91EB)
-    val Strings = Color(0xFFF08262)
-}
-
-/** Legacy-only text-glyph style. New target components consume [MidiWorkspaceRoleStyle]. */
-internal data class InstrumentLaneStyle(val color: Color, val label: String, val icon: String)
-
-internal val instrumentLanes = mapOf(
-    "piano" to InstrumentLaneStyle(LegacyInstrumentPalette.Piano, "Piano", "♫"),
-    "bass" to InstrumentLaneStyle(LegacyInstrumentPalette.Bass, "Bass", "♩"),
-    "drums" to InstrumentLaneStyle(LegacyInstrumentPalette.Drums, "Drums", "▣"),
-    "pad" to InstrumentLaneStyle(LegacyInstrumentPalette.Pad, "Pad", "◇"),
-    "strings" to InstrumentLaneStyle(LegacyInstrumentPalette.Strings, "Strings", "♬")
-)
-
-internal val instrumentLaneColors = instrumentLanes.mapValues { it.value.color }
-
-internal fun instrumentLane(instrument: String): InstrumentLaneStyle? = instrumentLanes[instrument.lowercase()]
 
 /** A single vector-icon registry gives every target icon a stable accessible name. */
 internal enum class WorkspaceVectorIcon(val image: ImageVector, val contentDescription: String) {

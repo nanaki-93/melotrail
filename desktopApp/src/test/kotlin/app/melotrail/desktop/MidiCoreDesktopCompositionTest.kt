@@ -61,6 +61,37 @@ class MidiCoreDesktopCompositionTest {
         assertFalse(targetSource.contains("LocalQwen"))
     }
 
+    @Test
+    fun `desktop production tree retains only the MIDI Core routes and no legacy composition`() {
+        val desktopRoot = sourceFile("src/main/kotlin/app/melotrail/desktop/DesktopMain.kt").parent
+        val productionFiles = Files.walk(desktopRoot).use { paths ->
+            paths.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".kt") }
+                .toList()
+        }
+        val names = productionFiles.map { it.fileName.toString() }.toSet()
+        setOf(
+            "WorkspaceApp.kt", "WorkspaceViewModel.kt", "WorkspacePageRouter.kt", "WorkspaceShellFrame.kt",
+            "CreationProgress.kt", "DesktopFileDialogs.kt", "HarmonyEditor.kt", "JvmAudioPlayer.kt",
+            "MelodyPartsPresentation.kt", "OperationFeedback.kt", "ProjectSetup.kt", "RuntimeReadiness.kt",
+            "SoundLibrarySettings.kt", "WorkflowPresentation.kt",
+        ).forEach { legacyFile -> assertFalse(legacyFile in names, "Legacy desktop file must be deleted: $legacyFile") }
+
+        val source = productionFiles.joinToString("\n") { Files.readString(it) }
+        listOf(
+            "DesktopServiceComposition", "DesktopBuildWorker", "DesktopReleaseMp3Exporter",
+            "WorkspaceSection", "WorkspaceDestination", "WorkspaceViewModel", "WorkspacePageRouter",
+            "OperationKind", "OperationPhase",
+            "Mix & Master", "Video Preview",
+        ).forEach { legacySymbol ->
+            assertFalse(Regex("\\b${Regex.escape(legacySymbol)}\\b").containsMatchIn(source), "Legacy desktop route must not remain: $legacySymbol")
+        }
+        listOf("\"wav\"", "\"mp3\"").forEach { legacyMediaToken ->
+            assertFalse(source.contains(legacyMediaToken), "Legacy desktop media route must not remain: $legacyMediaToken")
+        }
+        assertTrue(source.contains("MidiCoreDesktopEntrypoint"))
+        assertTrue(source.contains("MidiCoreWorkspaceDestination"))
+    }
+
     private fun sourceFile(relativePath: String): Path = sequenceOf(
         Path.of(relativePath),
         Path.of("desktopApp").resolve(relativePath),

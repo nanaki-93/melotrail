@@ -26,13 +26,13 @@ class LocalDesktopOperationLoggerTest {
         LocalDesktopOperationLogger(logger).event(
             operation = "open project",
             stage = "opened",
-            artifact = Path.of("/Users/artist/Private Songs/secret-title.wav")
+            artifact = Path.of("/Users/artist/Private Songs/secret-melody.mid")
         )
 
         val message = captured.single()
         assertContains(message, "operation=open_project")
-        assertContains(message, "artifact=\"wav\"")
+        assertContains(message, "artifact=\"midi\"")
         assertFalse(message.contains("/Users/artist"))
-        assertFalse(message.contains("secret-title"))
+        assertFalse(message.contains("secret-melody"))
     }
 }
