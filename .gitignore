@@ -18,17 +18,6 @@ Thumbs.db
 # Application output
 out/
 
-# Python
-.venv/
-.venv-worker/
-melotrail/.venv/
-.venv-transcription-spike/
-melotrail/__pycache__/
-melotrail/*.pyc
-melotrail/cache/
-**/__pycache__/
-**/*.pyc
-
 # Audio files (artifacts)
 *.wav
 *.mp3

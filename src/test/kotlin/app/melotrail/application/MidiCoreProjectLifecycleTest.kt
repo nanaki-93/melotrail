@@ -61,8 +61,8 @@ class MidiCoreProjectLifecycleTest {
     }
 
     @Test
-    fun `legacy project rejection never rewrites or migrates its document`() {
-        val legacy = """{"version":4,"name":"old-audio-project"}"""
+    fun `unsupported project rejection never rewrites its document`() {
+        val legacy = """{"schema":"retired-project","version":1,"project":{}}"""
         val file = root.resolve(MidiCoreArtifactStore.PROJECT_FILE)
         Files.writeString(file, legacy)
         val before = Files.readAllBytes(file)

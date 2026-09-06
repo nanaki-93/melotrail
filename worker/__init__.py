@@ -1,1 +1,0 @@
-"""Melotrail - Python Worker Package"""

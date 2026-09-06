@@ -22,8 +22,8 @@ class MidiCoreProjectSchemaTest {
     }
 
     @Test
-    fun `legacy and future project versions are classified unsupported without migration`() {
-        val legacy = """{"version":4,"name":"old-audio-project"}"""
+    fun `unsupported and future project versions are classified unsupported without migration`() {
+        val legacy = """{"schema":"retired-project","version":1,"project":{}}"""
         val future = """{"schema":"melotrail-midi-core","version":2,"project":{}}"""
         val unknown = """{"schema":"another-product","version":1,"project":{}}"""
 

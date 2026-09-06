@@ -4,6 +4,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.extension
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import org.junit.jupiter.api.Test
 
 /** Dependency policy for the target packages introduced by the MIDI Core migration. */
@@ -67,6 +68,47 @@ class TargetArchitectureRulesTest {
         )
 
         assertEquals(emptyList(), retiredFixtures.filter(Files::exists).map(Path::toString))
+    }
+
+    @Test
+    fun `MIDI application has no audio production or worker runtime`() {
+        val retiredOwners = listOf(
+            "src/main/kotlin/app/melotrail/audio",
+            "src/main/kotlin/app/melotrail/dsp",
+            "src/main/kotlin/app/melotrail/errors",
+            "src/main/kotlin/app/melotrail/logging",
+            "src/main/kotlin/app/melotrail/model",
+            "src/main/kotlin/app/melotrail/worker",
+            "src/test/kotlin/app/melotrail/audio",
+            "src/test/kotlin/app/melotrail/dsp",
+            "src/test/kotlin/app/melotrail/errors",
+            "src/test/kotlin/app/melotrail/logging",
+            "src/test/kotlin/app/melotrail/model",
+            "src/test/kotlin/app/melotrail/quality",
+            "src/test/kotlin/app/melotrail/worker",
+            "worker",
+            "tools/curate_sound_library.py",
+        )
+
+        assertEquals(emptyList(), retiredOwners.filter { Files.exists(Path.of(it)) })
+        val pythonSources = listOf("src", "desktopApp", "tools", "worker").flatMap { root ->
+            Path.of(root).takeIf { Files.isDirectory(it) }?.let { directory ->
+                Files.walk(directory).use { paths ->
+                    paths.filter { Files.isRegularFile(it) && it.extension == "py" }
+                        .map(Path::toString)
+                        .toList()
+                }
+            }.orEmpty()
+        }
+        assertEquals(emptyList(), pythonSources)
+        val makefile = Files.readString(Path.of("Makefile"))
+        listOf("worker-test", "python-install", "live-e2e", ".venv-worker", "sfizz_render").forEach { retiredTarget ->
+            assertFalse(makefile.contains(retiredTarget), "Retired Make wiring remains: $retiredTarget")
+        }
+        val rootBuild = Files.readString(Path.of("build.gradle.kts"))
+        listOf("kotlinx-coroutines-swing", "kotlinx-datetime").forEach { retiredDependency ->
+            assertFalse(rootBuild.contains(retiredDependency), "Unused root dependency remains: $retiredDependency")
+        }
     }
 
     @Test

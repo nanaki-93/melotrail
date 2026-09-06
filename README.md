@@ -10,8 +10,8 @@ The musician keeps control of the melody, harmony and final sound.
 Source protection, deterministic Chords/Bass/Drums generation, style previews,
 complete drafts, atomic acceptance/undo and validated MIDI export already exist.
 The current output averages **5/10 in the user's feedback**: timing works, but
-piano/melody fit and whole-song development need improvement. UI foundations are
-partly rebuilt; legacy audio/worker code is still scheduled for removal.
+piano/melody fit and whole-song development need improvement. The MIDI app has
+no audio-production or worker runtime.
 
 The new [PLAN](PLAN.md) and [task queue](TASKS.md) replace all previous plans.
 They cover musical quality, the supplied UI design and a smaller repository.
@@ -25,10 +25,8 @@ make test
 make build
 ```
 
-Use the JDK selected by the Gradle toolchain. At this planning handoff the
-existing local edits select JDK 21/Kotlin 2.2.21; native packaging/toolchain
-confirmation is F01. Python and sound libraries are unnecessary for the current
-MIDI workflow. Remaining worker/renderer Make targets are removal scope.
+Use the JDK selected by the Gradle toolchain. The project uses JDK 21 and Kotlin
+2.2.21. Python and sound libraries are not part of the MIDI workflow.
 
 Input: one SMF 0/1 file, one note-bearing track/channel, fixed tempo/meter.
 Additional meta-only tracks are allowed. Current structure uses whole bars.
