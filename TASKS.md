@@ -50,7 +50,7 @@ an unrelated task. A failed dependent gate cannot be bypassed.
 | F04 | Delete obsolete musical generators and model paths | F03 | TODO | |
 | F05 | Delete audio/worker runtime and finish schema/build cleanup | F04 | TODO | |
 | F06 | Delete verified legacy data and measure repository reduction | F05 | TODO | |
-| A01 | Harden and verify bounded agent execution runner | F01 | TODO | Worker/coordinator validation handoff repaired; full runner hardening still follows F01. |
+| A01 | Harden and verify bounded agent execution runner | F01 | DONE | a139773cdf8f; Requires a non-empty allowed-path policy for every allowlisted task before selection/admission. Added end-to-end coverage proving a now-next A01 with no policy creates no state, run directory, or worktree. Fresh diff review found no reproduced issue.; test/build + fresh Terra review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-06T15-42-09-677Z-A01 |
 | U01 | Finish verified lanes and live timeline projection | F06 | TODO | |
 | U02 | Compact shell, player and inspector | U01 | TODO | |
 | U03 | Refine Project and MIDI import | U02 | TODO | |
