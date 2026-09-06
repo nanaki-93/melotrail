@@ -9,6 +9,8 @@ import { fileURLToPath } from 'node:url';
 
 const read = p => fs.readFileSync(p, 'utf8');
 const json = p => JSON.parse(read(p));
+const taskStates = new Set(['TODO', 'DONE', 'RUNNING', 'REVIEW', 'WAITING_USER', 'BLOCKED', 'OPTIONAL']);
+const resultFields = new Set(['task', 'base', 'commit', 'candidate', 'summary', 'blocker', 'status', 'tests', 'artifacts']);
 export function atomic(p, value) {
   const tmp = `${p}.${process.pid}.tmp`;
   fs.writeFileSync(tmp, JSON.stringify(value, null, 2) + '\n', { mode: 0o600 });
@@ -17,6 +19,7 @@ export function atomic(p, value) {
 export function queue(md) {
   const rows = md.split('\n').filter(l => /^\| [FMUAQV]\d{2}(?:[a-z])? \|/.test(l)).map(l => {
     const c = l.split('|').map(s => s.trim());
+    if (c.length < 6 || !c[2] || !taskStates.has(c[4])) throw Error('Invalid task queue');
     return { id: c[1], title: c[2], deps: c[3].match(/[FMUAQV]\d{2}[a-z]?/g) || [], state: c[4] };
   });
   if (!rows.length || new Set(rows.map(t => t.id)).size !== rows.length) throw Error('Invalid task queue');
@@ -46,6 +49,18 @@ export function effectiveStatus(id, reported) {
 export function permitted(file, paths) {
   return paths.some(p => p.endsWith('/') ? file.startsWith(p) : file === p);
 }
+export function validateAllowedPaths(paths) {
+  if (!Array.isArray(paths) || !paths.length) throw Error('Missing task-specific allowed paths');
+  for (const allowed of paths) {
+    if (typeof allowed !== 'string') throw Error('Invalid task-specific allowed path');
+    const parts = allowed.split('/');
+    const finalEmpty = allowed.endsWith('/') && parts.at(-1) === '';
+    if (!allowed || allowed.startsWith('/') || allowed.includes('\0') ||
+        parts.some((part, index) => !part && !(finalEmpty && index === parts.length - 1) || part === '.' || part === '..') ||
+        allowed === '.git' || allowed.startsWith('.git/')) throw Error('Invalid task-specific allowed path');
+  }
+  if (new Set(paths).size !== paths.length) throw Error('Duplicate task-specific allowed path');
+}
 export function reportedUsage(usage = {}) {
   const input = Number.isFinite(usage.input_tokens) ? usage.input_tokens : 0;
   const cached = Math.min(input, Math.max(0, Number.isFinite(usage.cached_input_tokens) ? usage.cached_input_tokens : 0));
@@ -55,8 +70,10 @@ export function reportedUsage(usage = {}) {
 }
 export function checkResult(r, task, base, review = false, candidate = 'UNCOMMITTED') {
   const allowed = review ? ['PASS', 'FAIL'] : ['READY_FOR_VALIDATION', 'WAITING_USER', 'BLOCKED'];
-  if (r.task !== task || r.base !== base || !allowed.includes(r.status) ||
-      !Array.isArray(r.tests) || !Array.isArray(r.artifacts) || typeof r.summary !== 'string' ||
+  if (!r || typeof r !== 'object' || Array.isArray(r) || Object.keys(r).length !== resultFields.size ||
+      Object.keys(r).some(key => !resultFields.has(key)) || r.task !== task || r.base !== base || !allowed.includes(r.status) ||
+      !Array.isArray(r.tests) || !r.tests.every(test => typeof test === 'string') ||
+      !Array.isArray(r.artifacts) || !r.artifacts.every(artifact => typeof artifact === 'string') || typeof r.summary !== 'string' ||
       !r.summary.trim() || typeof r.blocker !== 'string' || r.commit !== base || r.candidate !== candidate) throw Error('Invalid/stale agent result');
   return r;
 }
@@ -133,13 +150,22 @@ async function main() {
   const head = git(cfg.repo, 'rev-parse', cfg.branch);
   const md = git(cfg.repo, 'show', `${head}:TASKS.md`);
   if (!Array.isArray(cfg.allowedTasks) || !cfg.allowedTasks.length) throw Error('Explicit task allowlist required');
-  const next = select(queue(md), cfg.video, cfg.allowedTasks);
+  const tasks = queue(md);
+  if (cfg.allowedTasks.some(id => typeof id !== 'string') || new Set(cfg.allowedTasks).size !== cfg.allowedTasks.length ||
+      cfg.allowedTasks.some(id => !tasks.some(task => task.id === id))) throw Error('Invalid task allowlist');
+  if (typeof cfg.video !== 'boolean') throw Error('Explicit video policy required');
+  if (!cfg.allowedPaths || typeof cfg.allowedPaths !== 'object' || Array.isArray(cfg.allowedPaths) ||
+      Object.keys(cfg.allowedPaths).some(id => !tasks.some(task => task.id === id))) throw Error('Invalid task path policy');
+  for (const id of cfg.allowedTasks)
+    if (!Object.hasOwn(cfg.allowedPaths, id)) throw Error(`Missing task-specific allowed paths: ${id}`);
+  for (const paths of Object.values(cfg.allowedPaths)) validateAllowedPaths(paths);
+  const next = select(tasks, cfg.video, cfg.allowedTasks);
   if (command === 'status' || command === 'dry-run') {
     console.log(JSON.stringify({ branch: cfg.branch, head, next: next || null, locked: fs.existsSync(lockDir),
       paused: fs.existsSync(path.join(root, 'paused')) && !!read(path.join(root, 'paused')).trim(),
       state: loadState() }, null, 2)); return;
   }
-  if (command !== 'run') throw Error('Use status, dry-run, run, pause, resume, or recover');
+  if (command !== 'run') throw Error('Use status, dry-run, run, pause, resume, recover, or defer');
   const release = lock(lockDir);
   let state = loadState();
   const start = Date.now(), deadline = start + cfg.minutes * 60000;
@@ -155,7 +181,7 @@ async function main() {
     const today = new Date().toISOString().slice(0, 10);
     if (state.runs.filter(r => r.date === today).length >= cfg.maxRunsPerDay) throw Error('Daily run admission limit reached');
     if (!next) { console.log('No dependency-ready task; inspect human gates.'); return; }
-    if (!Array.isArray(cfg.allowedPaths?.[next.id]) || !cfg.allowedPaths[next.id].length) throw Error('Missing task-specific allowed paths');
+    validateAllowedPaths(cfg.allowedPaths?.[next.id]);
     if (git(cfg.repo, 'rev-parse', cfg.branch) !== head) throw Error('Integration base changed');
     const runDir = path.join(root, 'runs', `${new Date().toISOString().replace(/[:.]/g, '-')}-${next.id}`);
     const worktree = path.join(runDir, 'worktree');
@@ -295,8 +321,16 @@ Previous concrete feedback: ${feedback || 'None.'}`;
     const integrated = git(worktree, 'rev-parse', 'HEAD');
     // Compare-and-swap prevents integrating against a changed base.
     git(cfg.repo, 'update-ref', `refs/heads/${cfg.branch}`, integrated, head);
-    state.last = { task: next.id, status, implementation, integrated, reviewedTree, dir: runDir, modelTokens: state.modelTokens, cachedInputTokens: state.cachedInputTokens, usage: state.usage };
+    state.last = { task: next.id, status, implementation, integrated, reviewedTree, dir: runDir, worktree, worktreeCleaned: false, modelTokens: state.modelTokens, cachedInputTokens: state.cachedInputTokens, usage: state.usage };
     delete state.active; atomic(stateFile, state);
+    // A completed candidate is committed and reviewable from `implementation`; retain
+    // logs but release its dedicated worktree. Interrupted worktrees stay preserved.
+    try {
+      git(cfg.repo, 'worktree', 'remove', '--force', worktree);
+      state.last.worktreeCleaned = true; atomic(stateFile, state);
+    } catch (e) {
+      state.last.worktreeCleanupError = e.message; atomic(stateFile, state);
+    }
     console.log(JSON.stringify(state.last, null, 2));
   } catch (e) {
     state.error = e.message; atomic(stateFile, state); throw e;
