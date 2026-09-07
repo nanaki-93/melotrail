@@ -21,6 +21,21 @@ class MidiCoreSourceAudition(
     /** Revalidate source identity and derive the one-role audition plan accepted by the MIDI port. */
     fun prepare(request: PrepareMidiCoreSourceAudition): MidiCoreSourceAuditionResult {
         val root = request.session.root.toAbsolutePath().normalize()
+        val expectedProject = request.session.project
+        val expectedSource = expectedProject.sourceMidi ?: return rejected(
+            MidiCoreSourceAuditionProblemCode.SOURCE_REQUIRED,
+            "An imported source MIDI is required before audition.",
+            "Import one Standard MIDI source first.",
+        )
+        try {
+            artifacts.verify(root, expectedSource.original)
+        } catch (error: Exception) {
+            return rejected(
+                MidiCoreSourceAuditionProblemCode.SOURCE_DIGEST_MISMATCH,
+                "The preserved source MIDI no longer matches project identity.",
+                "Restore the original source artifact and reopen the project.",
+            )
+        }
         val project = try {
             artifacts.openProject(root)
         } catch (error: Exception) {
@@ -37,11 +52,7 @@ class MidiCoreSourceAudition(
                 "Reload the project before starting source audition.",
             )
         }
-        val source = project.sourceMidi ?: return rejected(
-            MidiCoreSourceAuditionProblemCode.SOURCE_REQUIRED,
-            "An imported source MIDI is required before audition.",
-            "Import one Standard MIDI source first.",
-        )
+        val source = expectedSource
         val selectedMelody = project.selectedMelody ?: return rejected(
             MidiCoreSourceAuditionProblemCode.MELODY_REQUIRED,
             "A protected melody is required before source audition.",

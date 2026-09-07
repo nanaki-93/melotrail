@@ -43,6 +43,9 @@ import app.melotrail.application.PrepareMidiCoreCandidateAudition
 import app.melotrail.application.PrepareMidiCoreOccurrenceAudition
 import app.melotrail.application.PrepareMidiCoreSourceAudition
 import app.melotrail.application.MidiCoreStructureTimeline
+import app.melotrail.application.MidiCoreVisualEvidenceProjection
+import app.melotrail.application.MidiCoreVisualEvidenceProvider
+import app.melotrail.application.ProjectMidiCoreVisualEvidence
 import app.melotrail.application.RejectMidiCoreCandidate
 import app.melotrail.application.RegenerateMidiCoreCandidate
 import app.melotrail.application.ReplaceMidiCoreHarmony
@@ -90,6 +93,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -98,15 +102,22 @@ import kotlinx.coroutines.withContext
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
 
+private const val POSITION_OBSERVATION_INTERVAL_MILLIS = 66L
+
 /** Target-only dispatchers used by the focused workspace state machine. */
 data class MidiCoreWorkspaceDispatchers(
     val ui: CoroutineDispatcher = Dispatchers.Main.immediate,
     val io: CoroutineDispatcher = Dispatchers.IO,
+    /** Position polling stays off the UI dispatcher so test/UI work is never a transport clock. */
+    val position: CoroutineDispatcher = Dispatchers.Default,
 )
 
 /** Application boundaries used by the target workspace reducer and its tests. */
 interface MidiCoreWorkspaceUseCases {
     val audition: MidiAuditionPort
+
+    /** Read-only, digest-checked stopped-state evidence; it never mutates a project or playback. */
+    fun visualEvidence(request: ProjectMidiCoreVisualEvidence): MidiCoreVisualEvidenceProjection
 
     fun create(request: CreateMidiCoreProject): MidiCoreProjectLifecycleResult
     fun open(root: Path): MidiCoreProjectLifecycleResult
@@ -156,7 +167,9 @@ class DefaultMidiCoreWorkspaceUseCases(
     private val draftGeneration: MidiCoreArrangementDraftGeneration = MidiCoreArrangementDraftGeneration(),
     private val draftAcceptance: MidiCoreArrangementDraftAcceptance = MidiCoreArrangementDraftAcceptance(),
     private val draftAcceptanceUndo: MidiCoreArrangementDraftAcceptanceUndo = MidiCoreArrangementDraftAcceptanceUndo(),
+    private val visualEvidenceProvider: MidiCoreVisualEvidenceProvider = MidiCoreVisualEvidenceProvider(),
 ) : MidiCoreWorkspaceUseCases {
+    override fun visualEvidence(request: ProjectMidiCoreVisualEvidence): MidiCoreVisualEvidenceProjection = visualEvidenceProvider.project(request)
     override fun create(request: CreateMidiCoreProject): MidiCoreProjectLifecycleResult = project.create(request)
 
     override fun open(root: Path): MidiCoreProjectLifecycleResult = project.open(root)
@@ -394,6 +407,8 @@ data class MidiCoreWorkspaceState(
     val review: MidiCoreCandidateReviewUiState = MidiCoreCandidateReviewUiState(),
     val stylePreview: MidiCoreArrangementStyleUiState = MidiCoreArrangementStyleUiState(),
     val arrangement: MidiCoreArrangementUiState = MidiCoreArrangementUiState(),
+    /** Verified, immutable source/candidate/draft/accepted lane facts; Compose never reads artifacts itself. */
+    val visualEvidence: MidiCoreVisualEvidenceProjection? = null,
     val audition: MidiAuditionState = MidiAuditionState(),
     val export: MidiCoreExportUiState = MidiCoreExportUiState(),
     val operation: MidiCoreWorkspaceOperation = MidiCoreWorkspaceOperation.idle(),
@@ -529,6 +544,7 @@ class MidiCoreWorkspaceViewModel(
     private var nextOperationId = 0L
     private var activeJob: Job? = null
     private var activeCancellation: AtomicBoolean? = null
+    private var positionObservation: Job? = null
     private var closed = false
 
     /** Immutable state stream consumed by the focused Compose destinations. */
@@ -611,6 +627,7 @@ class MidiCoreWorkspaceViewModel(
         activeJob?.cancel()
         activeJob = null
         activeCancellation = null
+        stopPositionObservation()
         useCases.audition.close()
         scope.cancel()
     }
@@ -767,6 +784,7 @@ class MidiCoreWorkspaceViewModel(
     private fun selectReviewCandidate(intent: MidiCoreWorkspaceIntent.SelectReviewCandidate) {
         if (state.value.review.candidates.none { it.candidate.id == intent.candidateId }) return
         _state.value = _state.value.copy(review = _state.value.review.copy(selectedCandidateId = intent.candidateId, comparison = null))
+        session?.let { refreshVisualEvidence(it, intent.candidateId) }
     }
 
     private fun loadCandidates(intent: MidiCoreWorkspaceIntent.LoadCandidates) {
@@ -1347,10 +1365,12 @@ class MidiCoreWorkspaceViewModel(
             ),
             blockers = if (result is MidiAuditionResult.Failed) listOf(blocker(MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE, result.problem.message, result.problem.nextAction, result.problem.code.name)) else baseBlockers(session?.project),
         )
+        updatePositionObservation()
     }
 
     /** Stop and forget a selected view before a project transition can make it stale. */
     private fun clearAuditionForProjectTransition() {
+        stopPositionObservation()
         runCatching { useCases.audition.stop() }
         _state.value = _state.value.copy(audition = MidiAuditionState())
     }
@@ -1506,6 +1526,8 @@ class MidiCoreWorkspaceViewModel(
         }
         activeJob = null
         activeCancellation = null
+        updatePositionObservation()
+        session?.let { refreshVisualEvidence(it, state.value.review.selectedCandidateId) }
     }
 
     private fun finishFailure(operationId: Long, failure: MidiCoreWorkspaceBlocker, retry: MidiCoreWorkspaceIntent?, log: Boolean = true) {
@@ -1643,11 +1665,54 @@ class MidiCoreWorkspaceViewModel(
             review = reviewScope,
             stylePreview = previewScope,
             arrangement = arrangementScope,
+            visualEvidence = null,
             audition = useCases.audition.state,
             export = MidiCoreExportUiState(latestSnapshot = project.exportSnapshots.lastOrNull()),
             blockers = baseBlockers(project),
             dialog = null,
         )
+    }
+
+    /** Prepare visual facts outside Compose and admit them only for this exact project revision and selection. */
+    private fun refreshVisualEvidence(
+        evidenceSession: app.melotrail.application.MidiCoreProjectSession,
+        selectedCandidateId: String?,
+    ) {
+        if (!closed && session == evidenceSession && state.value.review.selectedCandidateId == selectedCandidateId) {
+            _state.value = _state.value.copy(visualEvidence = null)
+        }
+        scope.launch {
+            val projection = withContext(dispatchers.io) {
+                useCases.visualEvidence(ProjectMidiCoreVisualEvidence(evidenceSession, selectedCandidateId))
+            }
+            if (!closed && session == evidenceSession && state.value.review.selectedCandidateId == selectedCandidateId) {
+                _state.value = _state.value.copy(visualEvidence = projection)
+            }
+        }
+    }
+
+    /** Start at most one real-position observer and stop it immediately when playback leaves PLAYING. */
+    private fun updatePositionObservation() {
+        if (closed || state.value.audition.playback != app.melotrail.audition.MidiAuditionPlaybackState.PLAYING) {
+            stopPositionObservation()
+            return
+        }
+        if (positionObservation?.isActive == true) return
+        positionObservation = scope.launch(dispatchers.position) {
+            while (!closed && useCases.audition.state.playback == app.melotrail.audition.MidiAuditionPlaybackState.PLAYING) {
+                val observed = useCases.audition.observePosition()
+                withContext(dispatchers.ui) {
+                    if (!closed) _state.value = _state.value.copy(audition = observed)
+                }
+                if (observed.playback != app.melotrail.audition.MidiAuditionPlaybackState.PLAYING) break
+                delay(POSITION_OBSERVATION_INTERVAL_MILLIS)
+            }
+        }
+    }
+
+    private fun stopPositionObservation() {
+        positionObservation?.cancel()
+        positionObservation = null
     }
 
     private fun candidateReviewItems(

@@ -69,7 +69,9 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -147,6 +149,99 @@ class MidiCoreWorkspaceTest {
         assertEquals(beforeFailure, viewModel.state.value.audition)
         assertEquals(projectAfterPlay, viewModel.state.value.project)
         assertEquals(MidiCoreWorkspaceIntent.PlaySourceMelody, viewModel.state.value.operation.retry)
+        viewModel.close()
+    }
+
+    @Test
+    fun `real position observation updates only while playing and stops after pause`() = runTest {
+        val fake = FakeMidiCoreWorkspaceUseCases()
+        fake.sourceAuditionResult = app.melotrail.application.MidiCoreSourceAuditionResult.Ready(fakeSourcePlan())
+        fake.audition.observedPositionTick = 480L
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val viewModel = MidiCoreWorkspaceViewModel(
+            fake,
+            MemoryMidiCorePreferences(),
+            NoOpDesktopOperationLogger,
+            MidiCoreWorkspaceDispatchers(ui = dispatcher, io = dispatcher, position = dispatcher),
+        )
+        viewModel.accept(MidiCoreWorkspaceIntent.OpenProject(fake.session.root))
+        advanceUntilIdle()
+
+        viewModel.accept(MidiCoreWorkspaceIntent.PlaySourceMelody)
+        runCurrent()
+        assertEquals(480L, viewModel.state.value.audition.positionTick)
+        assertEquals(1, fake.audition.positionObservations)
+
+        viewModel.accept(MidiCoreWorkspaceIntent.PauseAudition)
+        runCurrent()
+        advanceTimeBy(2 * 66L)
+        runCurrent()
+        assertEquals(1, fake.audition.positionObservations)
+        assertEquals(MidiAuditionPlaybackState.PAUSED, viewModel.state.value.audition.playback)
+        viewModel.close()
+    }
+
+    @Test
+    fun `position observer stops after a device loss reported during playback`() = runTest {
+        val fake = FakeMidiCoreWorkspaceUseCases()
+        fake.sourceAuditionResult = app.melotrail.application.MidiCoreSourceAuditionResult.Ready(fakeSourcePlan())
+        fake.audition.observedProblem = app.melotrail.audition.MidiAuditionProblem(
+            app.melotrail.audition.MidiAuditionProblemCode.DEVICE_LOST,
+            "MIDI device disappeared",
+            "Reconnect the MIDI device and retry.",
+        )
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val viewModel = MidiCoreWorkspaceViewModel(
+            fake,
+            MemoryMidiCorePreferences(),
+            NoOpDesktopOperationLogger,
+            MidiCoreWorkspaceDispatchers(ui = dispatcher, io = dispatcher, position = dispatcher),
+        )
+        viewModel.accept(MidiCoreWorkspaceIntent.OpenProject(fake.session.root))
+        advanceUntilIdle()
+
+        viewModel.accept(MidiCoreWorkspaceIntent.PlaySourceMelody)
+        runCurrent()
+        advanceTimeBy(2 * 66L)
+        runCurrent()
+
+        assertEquals(1, fake.audition.positionObservations)
+        assertEquals(MidiAuditionPlaybackState.STOPPED, viewModel.state.value.audition.playback)
+        assertEquals(app.melotrail.audition.MidiAuditionProblemCode.DEVICE_LOST, viewModel.state.value.audition.lastProblem?.code)
+        viewModel.close()
+    }
+
+    @Test
+    fun `position observer remains single through section navigation and is disposed when the project closes`() = runTest {
+        val fake = FakeMidiCoreWorkspaceUseCases()
+        fake.seedPersistedSong()
+        fake.sourceAuditionResult = app.melotrail.application.MidiCoreSourceAuditionResult.Ready(fakeSourcePlan())
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val viewModel = MidiCoreWorkspaceViewModel(
+            fake,
+            MemoryMidiCorePreferences(),
+            NoOpDesktopOperationLogger,
+            MidiCoreWorkspaceDispatchers(ui = dispatcher, io = dispatcher, position = dispatcher),
+        )
+        viewModel.accept(MidiCoreWorkspaceIntent.OpenProject(fake.persistedSession().root))
+        advanceUntilIdle()
+
+        viewModel.accept(MidiCoreWorkspaceIntent.PlaySourceMelody)
+        runCurrent()
+        assertEquals(1, fake.audition.positionObservations)
+
+        viewModel.accept(MidiCoreWorkspaceIntent.SelectArrangementOccurrence("verse-1"))
+        runCurrent()
+        assertEquals(1, fake.audition.positionObservations)
+        advanceTimeBy(66L)
+        runCurrent()
+        assertEquals(2, fake.audition.positionObservations)
+
+        viewModel.accept(MidiCoreWorkspaceIntent.CloseProject)
+        runCurrent()
+        advanceTimeBy(2 * 66L)
+        runCurrent()
+        assertEquals(2, fake.audition.positionObservations)
         viewModel.close()
     }
 
@@ -448,6 +543,8 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
         ),
     )
     override val audition = FakeMidiAudition()
+    override fun visualEvidence(request: app.melotrail.application.ProjectMidiCoreVisualEvidence): app.melotrail.application.MidiCoreVisualEvidenceProjection =
+        app.melotrail.application.MidiCoreVisualEvidenceProvider().project(request)
     var sourceAuditionResult: app.melotrail.application.MidiCoreSourceAuditionResult =
         app.melotrail.application.MidiCoreSourceAuditionResult.Rejected(
             app.melotrail.application.MidiCoreSourceAuditionProblem(
@@ -648,6 +745,16 @@ private class FakeMidiAudition : MidiAuditionPort {
     override val state: MidiAuditionState get() = current
     override val stateHistory: List<MidiAuditionState> get() = history.toList()
     var playProblem: app.melotrail.audition.MidiAuditionProblem? = null
+    var observedProblem: app.melotrail.audition.MidiAuditionProblem? = null
+    var observedPositionTick: Long? = null
+    var positionObservations = 0
+
+    override fun observePosition(): MidiAuditionState {
+        positionObservations += 1
+        observedProblem?.let { record(current.copy(playback = MidiAuditionPlaybackState.STOPPED, sessionId = null, lastProblem = it)) }
+        observedPositionTick?.let { record(current.copy(positionTick = it)) }
+        return current
+    }
 
     override fun selectScope(plan: MidiAuditionPlaybackPlan): MidiAuditionResult {
         record(current.copy(scope = plan.view.scope, window = plan.view.window, positionTick = plan.startTick, mutedRoles = plan.mutedRoles, soloRoles = plan.soloRoles))

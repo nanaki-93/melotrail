@@ -138,6 +138,7 @@ internal fun MidiCoreArrangePage(
             title = "Shape the whole song",
             summary = "Select a section on the song map, preview a style, then create one complete MIDI draft.",
         )
+        MidiCoreVerifiedTimeline(project, state.visualEvidence, state.audition, selectedOccurrence.id)
         MidiCoreSongMap(
             project = project,
             selectedOccurrenceId = selectedOccurrence.id,

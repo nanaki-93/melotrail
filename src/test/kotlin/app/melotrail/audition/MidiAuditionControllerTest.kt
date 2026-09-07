@@ -66,6 +66,38 @@ class MidiAuditionControllerTest {
     }
 
     @Test
+    fun `observes the actual active transport position without creating another playback session`() {
+        val output = FakeOutput()
+        val controller = MidiAuditionController(output)
+        assertIs<MidiAuditionResult.Applied>(controller.play(MidiAuditionPlaybackPlan(MidiAuditionView.accepted(song()))))
+        val session = output.sessions.single()
+        session.playbackTick = 720L
+
+        assertEquals(720L, controller.observePosition().positionTick)
+        assertEquals(1, output.sessions.size)
+        assertEquals(MidiAuditionPlaybackState.PLAYING, controller.state.playback)
+
+        assertIs<MidiAuditionResult.Applied>(controller.stop())
+        assertEquals(0L, controller.observePosition().positionTick)
+    }
+
+    @Test
+    fun `position observation releases a lost device and leaves no active playback`() {
+        val output = FakeOutput()
+        val controller = MidiAuditionController(output)
+        assertIs<MidiAuditionResult.Applied>(controller.play(MidiAuditionPlaybackPlan(MidiAuditionView.accepted(song()))))
+        val session = output.sessions.single()
+        session.failure = MidiAuditionOutputException(MidiAuditionProblemCode.DEVICE_LOST, "MIDI device disappeared")
+
+        val observed = controller.observePosition()
+
+        assertEquals(MidiAuditionPlaybackState.STOPPED, observed.playback)
+        assertEquals(MidiAuditionProblemCode.DEVICE_LOST, observed.lastProblem?.code)
+        assertTrue(session.closed)
+        assertTrue(session.allNotesOffSent)
+    }
+
+    @Test
     fun `selects every supported scope and rejects seek and loop boundary violations`() {
         val full = song()
         assertEquals(listOf(MidiExportRole.MELODY), MidiAuditionView.sourceMelody(full).roles)
@@ -296,7 +328,10 @@ private class FakeSession(
         allNotesOffSent = true
     }
 
-    override fun positionTick(): Long? = playbackTick
+    override fun positionTick(): Long? {
+        failure?.let { throw it }
+        return playbackTick
+    }
 
     override fun seek(tick: Long) {
         operations += "seek:$tick"

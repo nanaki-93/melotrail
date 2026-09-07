@@ -259,6 +259,13 @@ interface MidiAuditionPort : AutoCloseable {
     val state: MidiAuditionState
     val stateHistory: List<MidiAuditionState>
 
+    /**
+     * Read the active output's actual transport position without changing the
+     * selected MIDI view. Callers use this at a bounded cadence while playing;
+     * implementations that cannot expose a position retain the last fact.
+     */
+    fun observePosition(): MidiAuditionState = state
+
     fun selectScope(plan: MidiAuditionPlaybackPlan): MidiAuditionResult
     fun play(plan: MidiAuditionPlaybackPlan): MidiAuditionResult
     fun play(): MidiAuditionResult
@@ -289,6 +296,20 @@ class MidiAuditionController(
 
     override val state: MidiAuditionState get() = current
     override val stateHistory: List<MidiAuditionState> get() = history.toList()
+
+    @Synchronized
+    override fun observePosition(): MidiAuditionState {
+        val activeSession = active ?: return current
+        if (current.playback != MidiAuditionPlaybackState.PLAYING) return current
+        return try {
+            val positionTick = transportPosition(activeSession)
+            if (positionTick != current.positionTick) record(current.copy(positionTick = positionTick))
+            current
+        } catch (error: Exception) {
+            failActive(error)
+            current
+        }
+    }
 
     @Synchronized
     override fun selectScope(plan: MidiAuditionPlaybackPlan): MidiAuditionResult {

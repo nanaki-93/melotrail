@@ -101,6 +101,7 @@ internal fun MidiCoreReviewPage(
             title = "Listen to the whole draft",
             summary = "Play the complete arrangement, use it in one decision, and inspect exceptions only when needed.",
         )
+        MidiCoreVerifiedTimeline(project, state.visualEvidence, state.audition, selectedOccurrence.id)
         MidiCoreSongMap(
             project = project,
             selectedOccurrenceId = selectedOccurrence.id,

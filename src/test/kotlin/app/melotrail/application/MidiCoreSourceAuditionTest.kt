@@ -50,7 +50,7 @@ class MidiCoreSourceAuditionTest {
         val changed = assertIs<MidiCoreSourceAuditionResult.Rejected>(
             MidiCoreSourceAudition(store).prepare(PrepareMidiCoreSourceAudition(imported)),
         )
-        assertEquals(MidiCoreSourceAuditionProblemCode.INVALID_PROJECT, changed.problem.code)
+        assertEquals(MidiCoreSourceAuditionProblemCode.SOURCE_DIGEST_MISMATCH, changed.problem.code)
     }
 
     @Test
