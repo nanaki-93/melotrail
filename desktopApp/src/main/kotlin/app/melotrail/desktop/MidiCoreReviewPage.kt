@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -71,6 +72,7 @@ internal fun MidiCoreReviewPage(
     state: MidiCoreWorkspaceState,
     onIntent: (MidiCoreWorkspaceIntent) -> Unit,
     onNavigate: (MidiCoreWorkspaceDestination) -> Unit,
+    showSelectedSectionInspector: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val project = state.project
@@ -84,7 +86,6 @@ internal fun MidiCoreReviewPage(
         return
     }
     val selectedOccurrence = occurrences.singleOrNull { it.id == state.arrangement.selectedOccurrenceId } ?: occurrences.first()
-    val selectedMapOccurrence = midiCoreSongMap(project).single { it.occurrence.id == selectedOccurrence.id }
     val progress = midiCoreArrangementProgress(project)
     val draft = currentArrangementDraft(project)
     var exceptionsOpen by remember(project.id.value) { mutableStateOf(false) }
@@ -109,11 +110,25 @@ internal fun MidiCoreReviewPage(
             onOccurrenceSelected = { onIntent(MidiCoreWorkspaceIntent.SelectArrangementOccurrence(it.occurrence.id)) },
         )
         ReviewDraftDecision(state, draft, progress, onIntent, onNavigate)
-        ReviewSelectedSectionInspector(state, selectedMapOccurrence, onNavigate)
+        if (showSelectedSectionInspector) MidiCoreReviewSelectedSectionInspector(state, onNavigate)
         ReviewExceptionDisclosure(exceptionsOpen, { exceptionsOpen = it }) {
             ReviewExceptionDetails(state, selectedOccurrence.id, onIntent)
         }
     }
+}
+
+/** The selected-section inspector has one owner and moves beside the page only at reference-wide layouts. */
+@Composable
+internal fun MidiCoreReviewSelectedSectionInspector(
+    state: MidiCoreWorkspaceState,
+    onNavigate: (MidiCoreWorkspaceDestination) -> Unit,
+) {
+    val project = state.project ?: return
+    val occurrences = project.authority?.occurrences.orEmpty()
+    if (occurrences.isEmpty()) return
+    val selectedOccurrence = occurrences.singleOrNull { it.id == state.arrangement.selectedOccurrenceId } ?: occurrences.first()
+    val selectedMapOccurrence = midiCoreSongMap(project).single { it.occurrence.id == selectedOccurrence.id }
+    ReviewSelectedSectionInspector(state, selectedMapOccurrence, onNavigate)
 }
 
 @Composable
@@ -139,25 +154,28 @@ private fun ReviewDraftDecision(
                 Text("Choose a style and create one complete draft in Arrange.", color = MusicWorkspaceTokens.TextSecondary)
                 Button(
                     onClick = { onNavigate(MidiCoreWorkspaceDestination.ARRANGE) },
+                    shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
                     modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                         contentDescription = "Open Arrange to create a complete draft"
                     },
                 ) { Text("Create a draft in Arrange") }
             }
             else -> {
-                Text("${friendlyToken(draft.styleId)} · ${draft.validation.scopeCount} validated parts", style = MaterialTheme.typography.titleMedium)
+                Text("${arrangementStyleDisplayName(draft.styleId)} · ${draft.validation.scopeCount} validated parts", style = MaterialTheme.typography.titleMedium)
                 Text("Playback does not require accepting each role first.", color = MusicWorkspaceTokens.TextSecondary)
                 Button(
                     onClick = { onIntent(MidiCoreWorkspaceIntent.PlayArrangementDraft(draft.id)) },
                     enabled = !state.busy,
+                    shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
                     modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                         testTag = MidiCoreReviewPageTags.PLAY_DRAFT
-                        contentDescription = "Play complete ${friendlyToken(draft.styleId)} MIDI draft"
+                        contentDescription = "Play complete ${arrangementStyleDisplayName(draft.styleId)} MIDI draft"
                     },
                 ) { Text("Play complete draft") }
                 Button(
                     onClick = { onIntent(MidiCoreWorkspaceIntent.UseArrangementDraft(draft.id)) },
                     enabled = !state.busy,
+                    shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
                     modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                         testTag = MidiCoreReviewPageTags.USE_DRAFT
                         contentDescription = "Use this complete draft as the accepted arrangement"
@@ -208,6 +226,7 @@ private fun ReviewSelectedSectionInspector(
         }
         Button(
             onClick = { onNavigate(MidiCoreWorkspaceDestination.ARRANGE) }, enabled = !state.busy,
+            shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
             modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                 testTag = MidiCoreReviewPageTags.REPAIR
                 contentDescription = "Repair ${occurrence.displayLabel} in Arrange"
@@ -269,7 +288,9 @@ private fun ReviewExceptionDetails(
     ReviewCandidateDetails(state, candidates, selected, onIntent)
     state.review.comparison?.let { comparison ->
         ReviewCard(MidiCoreReviewPageTags.DIFF, "Alternative comparison") {
-            Text("${comparison.first.candidate.id} compared with ${comparison.second.candidate.id}")
+            val first = candidates.indexOfFirst { it.candidate.id == comparison.first.candidate.id }.plus(1)
+            val second = candidates.indexOfFirst { it.candidate.id == comparison.second.candidate.id }.plus(1)
+            Text("Alternative $first compared with alternative $second")
             comparison.differences.forEach { difference -> Text("${difference.kind}: ${difference.first ?: "none"} → ${difference.second ?: "none"}") }
         }
     }
@@ -309,7 +330,7 @@ private fun ReviewCandidateDetails(
             }
             val blockers = selected.validation.findings.filter { it.severity == MidiCoreRoleFindingSeverity.BLOCKING }
             Text(
-                "${selected.candidate.profileId} · ${selected.candidate.patternId} · ${selected.validation.noteCount} notes. " +
+                "${selected.candidate.role.displayName} alternative · ${selected.validation.noteCount} notes. " +
                     if (!selected.authorityCurrent || selected.candidate.status == MidiCoreCandidateStatus.STALE) "Needs regeneration." else "${blockers.size} blocking findings.",
                 color = if (blockers.isEmpty() && selected.authorityCurrent) MusicWorkspaceTokens.TextSecondary else MusicWorkspaceTokens.Warning,
             )

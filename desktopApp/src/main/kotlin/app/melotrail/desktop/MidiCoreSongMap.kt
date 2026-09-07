@@ -49,6 +49,15 @@ internal enum class MidiCoreSongMapRoleState(val label: String) {
     ATTENTION("Needs attention"),
 }
 
+private val MidiCoreSongMapRoleState.compactLabel: String
+    get() = when (this) {
+        MidiCoreSongMapRoleState.NOT_GENERATED -> "new"
+        MidiCoreSongMapRoleState.DRAFT -> "draft"
+        MidiCoreSongMapRoleState.ACCEPTED -> "accepted"
+        MidiCoreSongMapRoleState.STALE -> "stale"
+        MidiCoreSongMapRoleState.ATTENTION -> "check"
+    }
+
 /** One presentational occurrence block derived solely from persisted project records. */
 internal data class MidiCoreSongMapOccurrence(
     val occurrence: ProjectSectionOccurrence,
@@ -135,7 +144,7 @@ internal fun MidiCoreSongMap(
                         onClick = { onOccurrenceSelected(item) },
                         colors = workspaceSelectableButtonColors(selected),
                         modifier = Modifier.width((item.barCount * 52).coerceAtLeast(148).dp)
-                            .heightIn(min = 132.dp)
+                            .heightIn(min = 64.dp)
                             .semantics {
                                 testTag = MidiCoreSongMapTags.occurrence(item.occurrence.id)
                                 this.selected = selected
@@ -150,19 +159,12 @@ internal fun MidiCoreSongMap(
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
                             Text(item.displayLabel)
-                            Text(item.barRange, color = MusicWorkspaceTokens.TextSecondary)
-                            Text(item.chordSummary, color = MusicWorkspaceTokens.TextSecondary, maxLines = 2)
-                            item.roleStates.forEach { (role, status) ->
-                                Text(
-                                    "${role.displayName}: ${status.label}",
-                                    modifier = Modifier.semantics { testTag = MidiCoreSongMapTags.status(item.occurrence.id, role) },
-                                    color = when (status) {
-                                        MidiCoreSongMapRoleState.ACCEPTED -> MusicWorkspaceTokens.Success
-                                        MidiCoreSongMapRoleState.STALE, MidiCoreSongMapRoleState.ATTENTION -> MusicWorkspaceTokens.Warning
-                                        else -> MusicWorkspaceTokens.TextSecondary
-                                    },
-                                )
-                            }
+                            Text(
+                                item.roleStates.entries.joinToString(" ") { (role, status) -> "${role.displayName.first()}:${status.compactLabel}" } +
+                                    " · ${item.barRange} · ${item.chordSummary}",
+                                color = MusicWorkspaceTokens.TextSecondary,
+                                maxLines = 1,
+                            )
                         }
                     }
                 }

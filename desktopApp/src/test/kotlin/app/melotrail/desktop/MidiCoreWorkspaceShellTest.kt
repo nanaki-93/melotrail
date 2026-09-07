@@ -8,11 +8,13 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performScrollTo
@@ -21,11 +23,21 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.test.v2.runSkikoComposeUiTest
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.graphics.toAwtImage
+import app.melotrail.audition.MidiAuditionPlaybackState
+import app.melotrail.audition.MidiAuditionProblem
+import app.melotrail.audition.MidiAuditionProblemCode
+import app.melotrail.audition.MidiAuditionScope
+import app.melotrail.audition.MidiAuditionState
+import app.melotrail.audition.MidiAuditionWindow
+import app.melotrail.midi.domain.MidiExportRole
 import app.melotrail.project.MidiCoreProject
 import app.melotrail.project.ProjectId
 import app.melotrail.project.ProjectMetadata
+import java.awt.image.BufferedImage
 import java.nio.file.Files
 import java.nio.file.Path
+import javax.imageio.ImageIO
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -124,6 +136,7 @@ class MidiCoreWorkspaceShellTest {
         onNodeWithTag(MidiCoreWorkspaceShellTags.LOCAL_FOOTER).assertExists()
         onNodeWithContentDescription("Project contextual inspector").assertExists()
         onNodeWithText("Project revision").assertExists()
+        writeShellFixture("wide-project.png", onRoot().captureToImage().toAwtImage())
     }
 
     @Test
@@ -137,6 +150,66 @@ class MidiCoreWorkspaceShellTest {
         onNodeWithTag(MidiCoreWorkspaceShellTags.COMPACT_CONTEXT).assertExists()
         onNodeWithContentDescription("Expand Project context").performClick()
         onNodeWithContentDescription("Project contextual inspector").assertExists()
+    }
+
+    @Test
+    fun `collapsed player keeps transport and position visible within the compact height and discloses target controls`() = runSkikoComposeUiTest(size = Size(720f, 900f)) {
+        val intents = mutableListOf<MidiCoreWorkspaceIntent>()
+        val audition = MidiAuditionState(
+            scope = MidiAuditionScope.SourceMelody,
+            window = MidiAuditionWindow(0L, 960L),
+            playback = MidiAuditionPlaybackState.PLAYING,
+            positionTick = 240L,
+            lastProblem = MidiAuditionProblem(
+                MidiAuditionProblemCode.DEVICE_LOST,
+                "MIDI device disappeared.",
+                "Reconnect the MIDI device and retry.",
+            ),
+        )
+        setContent { MelotrailTheme { MidiCoreWorkspaceShell(targetState().copy(audition = audition), intents::add) } }
+
+        val player = onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER).getUnclippedBoundsInRoot()
+        assertTrue(player.bottom.value - player.top.value <= 112f, "Collapsed player must reserve at most 112 dp")
+        listOf(
+            MidiCoreWorkspaceShellTags.PLAYER_PLAY_PAUSE,
+            MidiCoreWorkspaceShellTags.PLAYER_STOP,
+            MidiCoreWorkspaceShellTags.PLAYER_LOOP,
+            MidiCoreWorkspaceShellTags.PLAYER_OPTIONS,
+        ).forEach { tag ->
+            val control = onNodeWithTag(tag).getUnclippedBoundsInRoot()
+            assertTrue(control.bottom.value - control.top.value >= 48f, "$tag must keep a 48 dp hit target")
+        }
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_POSITION).assertExists()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_SOURCE).assertDoesNotExist()
+        val options = onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_OPTIONS)
+        options.performSemanticsAction(SemanticsActions.RequestFocus)
+        options.assertIsFocused()
+        options.performKeyInput { pressKey(Key.Enter) }
+        waitForIdle()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_SOURCE).assertExists()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_CURRENT).assertExists()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_ACCEPTED).assertExists()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_OUTPUT_MENU).assertExists()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.mute(MidiExportRole.MELODY)).assertExists()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.solo(MidiExportRole.MELODY)).assertExists()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER_RECOVERY).assertExists()
+        onNodeWithText("Retry playback").performClick()
+        assertEquals(MidiCoreWorkspaceIntent.Retry, intents.single())
+    }
+
+    @Test
+    fun `collapsed player remains outside page scrolling in short compact and wide windows`() {
+        assertShortWindowPlayerFit(Size(1024f, 768f))
+        assertShortWindowPlayerFit(Size(1280f, 720f))
+    }
+
+    @Test
+    fun `player controls use the workspace compact rectangular shape and occurrence target uses its real section name`() {
+        val source = Files.readString(sourceFile("src/main/kotlin/app/melotrail/desktop/MidiCoreWorkspaceShell.kt"))
+
+        assertTrue(source.contains("private val playerControlShape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control)"))
+        assertEquals(12, Regex("shape = playerControlShape").findAll(source).count())
+        assertTrue(source.contains("arrangementStyleDisplayName(scope.styleId)"))
     }
 
     @Test
@@ -195,8 +268,42 @@ class MidiCoreWorkspaceShellTest {
         ),
     )
 
+    private fun assertShortWindowPlayerFit(size: Size) = runSkikoComposeUiTest(size = size) {
+        var destination by androidx.compose.runtime.mutableStateOf(MidiCoreWorkspaceDestination.PROJECT)
+        val audition = MidiAuditionState(
+            scope = MidiAuditionScope.SourceMelody,
+            window = MidiAuditionWindow(0L, 960L),
+            positionTick = 240L,
+        )
+        setContent {
+            MelotrailTheme {
+                MidiCoreWorkspaceShell(
+                    state = targetState().copy(audition = audition),
+                    initialDestination = destination,
+                )
+            }
+        }
+
+        midiCoreWorkspaceDestinations.forEach { next ->
+            destination = next
+            waitForIdle()
+            val player = onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER).getUnclippedBoundsInRoot()
+            assertTrue(player.top.value >= 0f && player.bottom.value <= size.height, "Player must fit the $size window on ${next.label}")
+            assertTrue(player.bottom.value - player.top.value <= 112f, "Collapsed player must remain at most 112 dp on ${next.label}")
+        }
+    }
+
     private fun sourceFile(relativePath: String): Path = sequenceOf(
         Path.of(relativePath),
         Path.of("desktopApp").resolve(relativePath),
     ).first { Files.isRegularFile(it) }
+
+    private fun writeShellFixture(name: String, image: BufferedImage) {
+        assertEquals(1536, image.width)
+        assertEquals(1024, image.height)
+        val target = Path.of(System.getProperty("user.dir")).toAbsolutePath()
+            .resolve("build/test-results/midi-core-workspace-shell").resolve(name)
+        Files.createDirectories(target.parent)
+        assertTrue(ImageIO.write(image, "png", target.toFile()))
+    }
 }

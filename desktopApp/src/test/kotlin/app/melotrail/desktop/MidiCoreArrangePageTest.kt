@@ -4,6 +4,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -13,8 +14,23 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.test.v2.runSkikoComposeUiTest
+import app.melotrail.arrangement.core.MidiCoreArrangementStyleCatalog
 import app.melotrail.arrangement.core.MidiCoreRoleValidationReport
 import app.melotrail.application.MidiCoreCandidateReviewItem
+import app.melotrail.application.MidiCoreVisualEvidence
+import app.melotrail.application.MidiCoreVisualEvidenceAvailable
+import app.melotrail.application.MidiCoreVisualEvidenceCacheStatus
+import app.melotrail.application.MidiCoreVisualEvidenceCurrentness
+import app.melotrail.application.MidiCoreVisualEvidenceEvent
+import app.melotrail.application.MidiCoreVisualEvidenceIdentity
+import app.melotrail.application.MidiCoreVisualEvidenceLane
+import app.melotrail.application.MidiCoreVisualEvidenceProjection
+import app.melotrail.application.MidiCoreVisualEvidenceScope
+import app.melotrail.application.MidiCoreVisualEvidenceTiming
+import app.melotrail.audition.MidiAuditionScope
+import app.melotrail.audition.MidiAuditionState
+import app.melotrail.audition.MidiAuditionWindow
+import app.melotrail.midi.domain.MidiExportRole
 import app.melotrail.project.AuthoritativeChordEvent
 import app.melotrail.project.CandidateAcceptance
 import app.melotrail.project.CandidateRole
@@ -138,6 +154,23 @@ class MidiCoreArrangePageTest {
     }
 
     @Test
+    fun `persistent player exposes catalog style and distinct section names`() = runComposeUiTest {
+        val state = arrangeState(styleId = "late-night").copy(
+            audition = MidiAuditionState(
+                scope = MidiAuditionScope.StylePreview("late-night", "verse-1"),
+                window = MidiAuditionWindow(0L, 1920L),
+            ),
+        )
+        setContent {
+            MelotrailTheme {
+                MidiCoreWorkspaceShell(state, initialDestination = MidiCoreWorkspaceDestination.ARRANGE)
+            }
+        }
+
+        onNodeWithContentDescription("Current playback target: Late Night style preview · Verse 1").assertExists()
+    }
+
+    @Test
     fun `one full draft action remains visible for the selected style`() = runComposeUiTest {
         setContent {
             MelotrailTheme {
@@ -150,6 +183,7 @@ class MidiCoreArrangePageTest {
         }
         waitForIdle()
         onNodeWithTag(MidiCoreArrangePageTags.CREATE_DRAFT).assertIsEnabled()
+        onNodeWithContentDescription("Create full Late Night arrangement draft from Verse 2").assertExists()
     }
 
     @Test
@@ -199,6 +233,7 @@ class MidiCoreArrangePageTest {
                 )
             }
         }
+        onNodeWithContentDescription("Retry complete draft generation").assertExists()
         onNodeWithTag(MidiCoreArrangePageTags.RETRY_DRAFT).performScrollTo().performClick()
         assertEquals(listOf<MidiCoreWorkspaceIntent>(retry), intents)
     }
@@ -245,31 +280,68 @@ class MidiCoreArrangePageTest {
     }
 
     @Test
-    fun `Arrange source contains no superseded dropdown first flow`() {
-        val source = Files.readString(sourceFile("src/main/kotlin/app/melotrail/desktop/MidiCoreArrangePage.kt")).lowercase()
+    fun `Arrange source keeps compact rectangular actions and no superseded dropdown first flow`() {
+        val source = Files.readString(sourceFile("src/main/kotlin/app/melotrail/desktop/MidiCoreArrangePage.kt"))
         listOf(
             "numbered scope",
             "choose a section and role only",
             "generate next alternative",
             "listen and choose",
             "occurrence-menu",
-        ).forEach { forbidden -> assertFalse(source.contains(forbidden), "Arrange page must not contain $forbidden") }
+        ).forEach { forbidden -> assertFalse(source.lowercase().contains(forbidden), "Arrange page must not contain $forbidden") }
+        assertTrue(source.contains("contentPadding = PaddingValues(horizontal = MusicWorkspaceTokens.Spacing.Sm)"))
+        assertTrue(Regex("shape = RoundedCornerShape\\(MusicWorkspaceTokens.Radius.Control\\)").findAll(source).count() >= 7)
     }
 
     @Test
-    fun `wide Arrange keeps its selected section inspector alongside factual contextual evidence`() =
+    fun `wide Arrange keeps real four lanes and the full draft action above the persistent player`() =
         runSkikoComposeUiTest(size = Size(1280f, 900f)) {
             setContent {
                 MelotrailTheme {
                     MidiCoreWorkspaceShell(
-                        state = arrangeState(styleId = "late-night"),
+                        state = arrangeState(styleId = "late-night").copy(
+                            audition = MidiAuditionState(
+                                scope = MidiAuditionScope.Occurrence("verse-1"),
+                                window = MidiAuditionWindow(0L, 1920L),
+                            ),
+                            visualEvidence = arrangeVisualEvidence(),
+                        ),
                         initialDestination = MidiCoreWorkspaceDestination.ARRANGE,
                     )
                 }
             }
             onNodeWithTag(MidiCoreArrangePageTags.INSPECTOR).assertExists()
-            onNodeWithContentDescription("Arrange contextual inspector").assertExists()
+            onNodeWithTag(MidiCoreWorkspaceShellTags.CONTEXT).assertDoesNotExist()
+            MidiCoreArrangementStyleCatalog.styles.forEach { style ->
+                onNodeWithTag(MidiCoreArrangePageTags.style(style.id)).assertExists()
+            }
+            val draftAction = onNodeWithTag(MidiCoreArrangePageTags.CREATE_DRAFT).getUnclippedBoundsInRoot()
+            val player = onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER).getUnclippedBoundsInRoot()
+            MidiExportRole.entries.forEach { role ->
+                val lane = onNodeWithTag(MidiCoreVerifiedTimelineTags.lane(role)).getUnclippedBoundsInRoot()
+                assertTrue(lane.top.value >= 0f && lane.bottom.value <= player.top.value, "The real ${role.trackName} lane must remain visible above the persistent player")
+            }
+            assertTrue(draftAction.top.value >= 0f && draftAction.bottom.value <= player.top.value, "The full-draft action must remain visible above the persistent player")
+            onNodeWithContentDescription("Current playback target: Current Verse 1 section").assertExists()
             writeSongMapFixture("wide-song-map.png", onRoot().captureToImage().toAwtImage())
+        }
+
+    @Test
+    fun `reference wide Arrange moves its one selected-section inspector into the 332 dp shell column`() =
+        runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
+            setContent {
+                MelotrailTheme {
+                    MidiCoreWorkspaceShell(
+                        state = arrangeState(styleId = "late-night").copy(visualEvidence = arrangeVisualEvidence()),
+                        initialDestination = MidiCoreWorkspaceDestination.ARRANGE,
+                    )
+                }
+            }
+            val inspector = onNodeWithTag(MidiCoreWorkspaceShellTags.PAGE_INSPECTOR).getUnclippedBoundsInRoot()
+            assertEquals(332f, (inspector.right - inspector.left).value)
+            onNodeWithTag(MidiCoreArrangePageTags.INSPECTOR).assertExists()
+            onNodeWithTag(MidiCoreWorkspaceShellTags.CONTEXT).assertDoesNotExist()
+            writeSongMapFixture("reference-wide-song-map.png", onRoot().captureToImage().toAwtImage())
         }
 
     @Test
@@ -286,6 +358,7 @@ class MidiCoreArrangePageTest {
             onNodeWithTag(MidiCoreSongMapTags.TRACK).assertExists()
             onNodeWithTag(MidiCoreArrangePageTags.ADVANCED).performScrollTo().assertExists()
             onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER).assertExists()
+            onNodeWithTag(MidiCoreWorkspaceShellTags.COMPACT_CONTEXT).assertDoesNotExist()
             writeSongMapFixture("compact-song-map-scrolled.png", onRoot().captureToImage().toAwtImage())
         }
 
@@ -332,11 +405,42 @@ class MidiCoreArrangePageTest {
         )
     }
 
+    private fun arrangeVisualEvidence(): MidiCoreVisualEvidenceProjection {
+        fun available(scope: MidiCoreVisualEvidenceScope) = MidiCoreVisualEvidence.Available(
+            MidiCoreVisualEvidenceAvailable(
+                scope = scope,
+                identity = MidiCoreVisualEvidenceIdentity("arrange-project", "f".repeat(64), authorityHash = "a".repeat(64)),
+                timing = MidiCoreVisualEvidenceTiming(480, 3840L, 500_000, 4, 2, authoritative = true),
+                lanes = MidiExportRole.entries.map { role ->
+                    MidiCoreVisualEvidenceLane(
+                        role,
+                        listOf(MidiCoreVisualEvidenceEvent(0L, 960L, role.channel, 60 + role.ordinal, 96, role == MidiExportRole.DRUMS)),
+                    )
+                },
+                currentness = MidiCoreVisualEvidenceCurrentness.CURRENT,
+                cacheStatus = MidiCoreVisualEvidenceCacheStatus.WARM,
+            ),
+        )
+        return MidiCoreVisualEvidenceProjection(
+            source = available(MidiCoreVisualEvidenceScope.PROTECTED_SOURCE),
+            selectedCandidate = available(MidiCoreVisualEvidenceScope.SELECTED_CANDIDATE),
+            draft = available(MidiCoreVisualEvidenceScope.DRAFT),
+            accepted = available(MidiCoreVisualEvidenceScope.ACCEPTED),
+        )
+    }
+
     private fun sourceFile(relativePath: String): Path = sequenceOf(Path.of(relativePath), Path.of("desktopApp").resolve(relativePath)).first { Files.isRegularFile(it) }
 
     private fun writeSongMapFixture(name: String, image: BufferedImage) {
-        assertEquals(if (name.startsWith("wide")) 1280 else 720, image.width)
-        assertEquals(900, image.height)
+        assertEquals(
+            when {
+                name.startsWith("reference-wide") -> 1536
+                name.startsWith("wide") -> 1280
+                else -> 720
+            },
+            image.width,
+        )
+        assertEquals(if (name.startsWith("reference-wide")) 1024 else 900, image.height)
         val target = Path.of(System.getProperty("user.dir")).toAbsolutePath()
             .resolve("build/test-results/midi-core-arrange-song-map").resolve(name)
         Files.createDirectories(target.parent)

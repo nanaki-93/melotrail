@@ -6,6 +6,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
@@ -57,6 +58,10 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalTestApi::class)
 class MidiCoreFocusedWorkflowTest {
     @Test
+    fun `reference-wide six target pages complete a real MIDI Core workflow and reopen an immutable export`() =
+        runFocusedWorkflow(Size(1536f, 1024f), "reference-wide")
+
+    @Test
     fun `wide six target pages complete a real MIDI Core workflow and reopen an immutable export`() =
         runFocusedWorkflow(Size(1280f, 900f), "wide")
 
@@ -105,6 +110,8 @@ class MidiCoreFocusedWorkflowTest {
             }
             fun captureFixture(name: String) {
                 onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER).assertIsDisplayed()
+                val player = onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER).getUnclippedBoundsInRoot()
+                assertTrue(player.bottom.value <= size.height, "Persistent player must remain outside page scrolling on $name")
                 val image = onRoot().captureToImage().toAwtImage()
                 assertTrue(image.width > 0 && image.height > 0, "$name visual fixture must be non-empty")
                 val target = visualFixtureRoot(fixtureSet).resolve("$name.png")
@@ -155,11 +162,15 @@ class MidiCoreFocusedWorkflowTest {
             onNodeWithTag(MidiCoreArrangePageTags.CREATE_DRAFT).performScrollTo().assertIsEnabled().performClick()
             awaitWorkspaceSuccess("create complete arrangement draft")
             assertEquals(1, workspace.state.value.project?.arrangementDrafts?.size)
+            onNodeWithTag(MidiCoreVerifiedTimelineTags.ROOT).performScrollTo()
+            captureFixture("arrange-top")
             onNodeWithTag(MidiCoreArrangePageTags.REGENERATE_SECTION).performScrollTo().assertIsEnabled().performClick()
             awaitWorkspaceSuccess("regenerate selected section")
             captureFixture("arrange")
 
             navigateTo(MidiCoreWorkspaceDestination.REVIEW)
+            onNodeWithTag(MidiCoreVerifiedTimelineTags.ROOT).performScrollTo()
+            captureFixture("review-top")
             onNodeWithTag(MidiCoreReviewPageTags.PLAY_DRAFT).performScrollTo().assertIsEnabled().performClick()
             awaitWorkspaceSuccess("play complete draft before acceptance")
             assertEquals(MidiAuditionPlaybackState.PLAYING, audition.state.playback)
@@ -197,7 +208,7 @@ class MidiCoreFocusedWorkflowTest {
             assertTrue(Files.isRegularFile(packageDirectory.resolve("manifest.json")))
 
             assertEquals(
-                listOf("arrange", "export", "midi", "project", "review", "structure-harmony"),
+                listOf("arrange", "arrange-top", "export", "midi", "project", "review", "review-top", "structure-harmony"),
                 capturedFixtureNames(fixtureSet),
             )
         } finally {

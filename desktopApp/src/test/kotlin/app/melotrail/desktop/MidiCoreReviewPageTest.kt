@@ -2,6 +2,7 @@ package app.melotrail.desktop
 
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
@@ -119,15 +120,16 @@ class MidiCoreReviewPageTest {
     }
 
     @Test
-    fun `Review source contains no retired role first acceptance ladder`() {
-        val source = Files.readString(sourceFile("src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt")).lowercase()
+    fun `Review source keeps a compact inspector and no retired role first acceptance ladder`() {
+        val source = Files.readString(sourceFile("src/main/kotlin/app/melotrail/desktop/MidiCoreReviewPage.kt"))
         listOf("1. choose a part", "listen and decide", "continue to next", "play accepted arrangement").forEach { retired ->
-            assertFalse(source.contains(retired), "Review page must not contain $retired")
+            assertFalse(source.lowercase().contains(retired), "Review page must not contain $retired")
         }
+        assertTrue(Regex("shape = RoundedCornerShape\\(MusicWorkspaceTokens.Radius.Control\\)").findAll(source).count() >= 4)
     }
 
     @Test
-    fun `wide Review keeps its selected-section inspector alongside factual contextual evidence`() = runSkikoComposeUiTest(size = Size(1280f, 900f)) {
+    fun `wide Review owns one selected section inspector without a duplicate shell context`() = runSkikoComposeUiTest(size = Size(1280f, 900f)) {
         setContent {
             MelotrailTheme {
                 MidiCoreWorkspaceShell(
@@ -138,8 +140,25 @@ class MidiCoreReviewPageTest {
         }
         onNodeWithTag(MidiCoreSongMapTags.TRACK).assertExists()
         onNodeWithTag(MidiCoreReviewPageTags.INSPECTOR).assertExists()
-        onNodeWithContentDescription("Review contextual inspector").assertExists()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.CONTEXT).assertDoesNotExist()
         writeReviewFixture("wide-review-draft.png", onRoot().captureToImage().toAwtImage())
+    }
+
+    @Test
+    fun `reference wide Review moves its one selected-section inspector into the 332 dp shell column`() = runSkikoComposeUiTest(size = Size(1536f, 1024f)) {
+        setContent {
+            MelotrailTheme {
+                MidiCoreWorkspaceShell(
+                    state = reviewState(),
+                    initialDestination = MidiCoreWorkspaceDestination.REVIEW,
+                )
+            }
+        }
+        val inspector = onNodeWithTag(MidiCoreWorkspaceShellTags.PAGE_INSPECTOR).getUnclippedBoundsInRoot()
+        assertEquals(332f, (inspector.right - inspector.left).value)
+        onNodeWithTag(MidiCoreReviewPageTags.INSPECTOR).assertExists()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.CONTEXT).assertDoesNotExist()
+        writeReviewFixture("reference-wide-review-draft.png", onRoot().captureToImage().toAwtImage())
     }
 
     @Test
@@ -155,6 +174,7 @@ class MidiCoreReviewPageTest {
         onNodeWithTag(MidiCoreSongMapTags.TRACK).assertExists()
         onNodeWithTag(MidiCoreReviewPageTags.EXCEPTIONS).performScrollTo().assertExists()
         onNodeWithTag(MidiCoreWorkspaceShellTags.PLAYER).assertExists()
+        onNodeWithTag(MidiCoreWorkspaceShellTags.COMPACT_CONTEXT).assertDoesNotExist()
         writeReviewFixture("compact-review-draft-scrolled.png", onRoot().captureToImage().toAwtImage())
     }
 
@@ -213,8 +233,15 @@ class MidiCoreReviewPageTest {
     private fun sourceFile(relativePath: String): Path = sequenceOf(Path.of(relativePath), Path.of("desktopApp").resolve(relativePath)).first { Files.isRegularFile(it) }
 
     private fun writeReviewFixture(name: String, image: BufferedImage) {
-        assertEquals(if (name.startsWith("wide")) 1280 else 720, image.width)
-        assertEquals(900, image.height)
+        assertEquals(
+            when {
+                name.startsWith("reference-wide") -> 1536
+                name.startsWith("wide") -> 1280
+                else -> 720
+            },
+            image.width,
+        )
+        assertEquals(if (name.startsWith("reference-wide")) 1024 else 900, image.height)
         val target = Path.of(System.getProperty("user.dir")).toAbsolutePath().resolve("build/test-results/midi-core-review-draft").resolve(name)
         Files.createDirectories(target.parent)
         assertTrue(ImageIO.write(image, "png", target.toFile()))

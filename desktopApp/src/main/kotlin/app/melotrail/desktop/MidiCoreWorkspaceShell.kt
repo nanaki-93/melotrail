@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -65,6 +66,7 @@ internal object MidiCoreWorkspaceShellTags {
     const val PAGE = "midi-core-workspace-page"
     const val CONTEXT = "midi-core-workspace-context"
     const val COMPACT_CONTEXT = "midi-core-workspace-context-compact"
+    const val PAGE_INSPECTOR = "midi-core-workspace-page-inspector"
     const val BLOCKERS = "midi-core-workspace-blockers"
     const val PLAYER = "midi-core-workspace-player"
     const val PLAYER_TARGET = "midi-core-workspace-player-target"
@@ -108,6 +110,16 @@ internal enum class MidiCoreWorkspaceDestination(
 }
 
 internal val midiCoreWorkspaceDestinations: List<MidiCoreWorkspaceDestination> = MidiCoreWorkspaceDestination.entries
+
+/** Arrange and Review own their selected-section inspector; the shell must not duplicate it. */
+private val MidiCoreWorkspaceDestination.usesShellInspector: Boolean
+    get() = this != MidiCoreWorkspaceDestination.ARRANGE && this != MidiCoreWorkspaceDestination.REVIEW
+
+private val MidiCoreWorkspaceDestination.usesSelectedSectionInspector: Boolean
+    get() = this == MidiCoreWorkspaceDestination.ARRANGE || this == MidiCoreWorkspaceDestination.REVIEW
+
+/** The persistent player is dense but its controls remain rectangular and easy to hit. */
+private val playerControlShape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control)
 
 private enum class MidiCoreWorkspaceShellLayout { WIDE, COMPACT }
 
@@ -156,6 +168,7 @@ internal fun MidiCoreWorkspaceShell(
             else -> MidiCoreWorkspaceShellLayout.COMPACT
         }
         val compact = layout == MidiCoreWorkspaceShellLayout.COMPACT
+        val referenceWide = maxWidth >= 1440.dp
         val navigationWidth = if (maxWidth >= 1536.dp) 224.dp else 196.dp
         val inspectorWidth = if (maxWidth >= 1536.dp) {
             when (selectedDestination) {
@@ -198,14 +211,25 @@ internal fun MidiCoreWorkspaceShell(
                             projectActions = projectActions,
                             midiActions = midiActions,
                             exportActions = exportActions,
+                            showSelectedSectionInspector = !referenceWide,
                             modifier = Modifier.weight(1f).fillMaxHeight(),
                         )
                     }
-                    MidiCoreWorkspaceContext(
-                        destination = selectedDestination,
-                        state = state,
-                        modifier = Modifier.width(inspectorWidth).fillMaxHeight(),
-                    )
+                    if (referenceWide && selectedDestination.usesSelectedSectionInspector) {
+                        MidiCoreWorkspaceSelectedSectionInspector(
+                            destination = selectedDestination,
+                            state = state,
+                            onIntent = onIntent,
+                            onDestinationSelected = onDestinationSelected,
+                            modifier = Modifier.width(inspectorWidth).fillMaxHeight(),
+                        )
+                    } else if (selectedDestination.usesShellInspector) {
+                        MidiCoreWorkspaceContext(
+                            destination = selectedDestination,
+                            state = state,
+                            modifier = Modifier.width(inspectorWidth).fillMaxHeight(),
+                        )
+                    }
                 }
 
                 MidiCoreWorkspaceShellLayout.COMPACT -> Column(
@@ -231,20 +255,23 @@ internal fun MidiCoreWorkspaceShell(
                             projectActions = projectActions,
                             midiActions = midiActions,
                             exportActions = exportActions,
+                            showSelectedSectionInspector = true,
                             modifier = Modifier.weight(1f).fillMaxWidth(),
                         )
                     }
-                    WorkstationDisclosure(
-                        label = "${selectedDestination.label} context",
-                        expanded = compactContextOpen,
-                        onExpandedChange = { compactContextOpen = it },
-                        modifier = Modifier.semantics { testTag = MidiCoreWorkspaceShellTags.COMPACT_CONTEXT },
-                    ) {
-                        MidiCoreWorkspaceContext(
-                            destination = selectedDestination,
-                            state = state,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
+                    if (selectedDestination.usesShellInspector) {
+                        WorkstationDisclosure(
+                            label = "${selectedDestination.label} context",
+                            expanded = compactContextOpen,
+                            onExpandedChange = { compactContextOpen = it },
+                            modifier = Modifier.semantics { testTag = MidiCoreWorkspaceShellTags.COMPACT_CONTEXT },
+                        ) {
+                            MidiCoreWorkspaceContext(
+                                destination = selectedDestination,
+                                state = state,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
                     }
                 }
             }
@@ -288,60 +315,27 @@ private fun MidiCoreWorkspacePlaybackDock(
     ) {
         Column(
             Modifier.fillMaxWidth().padding(MusicWorkspaceTokens.Spacing.Sm),
-            verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm),
+            verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs),
         ) {
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm),
             ) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs)) {
-                    Text("PLAYER", style = MaterialTheme.typography.labelSmall, color = MusicWorkspaceTokens.Primary)
-                    Text(
-                        auditionTargetDescription(state),
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.semantics {
-                            testTag = MidiCoreWorkspaceShellTags.PLAYER_TARGET
-                            contentDescription = "Current playback target: ${auditionTargetDescription(state)}"
-                        },
-                    )
-                }
+                Text(
+                    auditionTargetDescription(state),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f).semantics {
+                        testTag = MidiCoreWorkspaceShellTags.PLAYER_TARGET
+                        contentDescription = "Current playback target: ${auditionTargetDescription(state)}"
+                    },
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
                 Text(
                     "${audition.playback.name.lowercase().replaceFirstChar(Char::uppercaseChar)} · $position${window?.let { " / ${it.endTick}" } ?: ""}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MusicWorkspaceTokens.TextSecondary,
                 )
-            }
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs),
-            ) {
-                OutlinedButton(
-                    onClick = { onIntent(MidiCoreWorkspaceIntent.PlaySourceMelody) },
-                    enabled = sourceAvailable && !state.busy,
-                    modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
-                        testTag = MidiCoreWorkspaceShellTags.PLAYER_SOURCE
-                        selected = audition.scope == MidiAuditionScope.SourceMelody
-                        contentDescription = "Play protected source melody"
-                    },
-                ) { Text("Source") }
-                OutlinedButton(
-                    onClick = { onIntent(MidiCoreWorkspaceIntent.PlayAudition()) },
-                    enabled = currentAvailable && !state.busy,
-                    modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
-                        testTag = MidiCoreWorkspaceShellTags.PLAYER_CURRENT
-                        selected = currentAvailable && audition.scope != MidiAuditionScope.SourceMelody && audition.scope != MidiAuditionScope.AcceptedArrangement
-                        contentDescription = "Play the current MIDI audition target"
-                    },
-                ) { Text("Current") }
-                OutlinedButton(
-                    onClick = { onIntent(MidiCoreWorkspaceIntent.PlayAcceptedArrangement) },
-                    enabled = acceptedAvailable && !state.busy,
-                    modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
-                        testTag = MidiCoreWorkspaceShellTags.PLAYER_ACCEPTED
-                        selected = audition.scope == MidiAuditionScope.AcceptedArrangement
-                        contentDescription = if (acceptedAvailable) "Play the accepted MIDI arrangement" else "Accept every required role before playing the accepted arrangement"
-                    },
-                ) { Text("Accepted") }
             }
             Row(
                 Modifier.fillMaxWidth(),
@@ -356,14 +350,16 @@ private fun MidiCoreWorkspacePlaybackDock(
                     },
                     enabled = currentAvailable && !state.busy,
                     colors = workspacePrimaryButtonColors(),
-                    modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                    shape = playerControlShape,
+                    modifier = Modifier.heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                         testTag = MidiCoreWorkspaceShellTags.PLAYER_PLAY_PAUSE
                         contentDescription = if (audition.playback == MidiAuditionPlaybackState.PLAYING) "Pause MIDI playback" else "Play current MIDI target"
                     },
                 ) { Text(if (audition.playback == MidiAuditionPlaybackState.PLAYING) "Pause" else "Play") }
-                TextButton(
+                OutlinedButton(
                     onClick = { onIntent(MidiCoreWorkspaceIntent.StopAudition) },
                     enabled = currentAvailable && audition.playback != MidiAuditionPlaybackState.STOPPED && !state.busy,
+                    shape = playerControlShape,
                     modifier = Modifier.heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                         testTag = MidiCoreWorkspaceShellTags.PLAYER_STOP
                         contentDescription = "Stop MIDI playback"
@@ -375,14 +371,28 @@ private fun MidiCoreWorkspacePlaybackDock(
                         onIntent(MidiCoreWorkspaceIntent.SetAuditionLoop(if (audition.loop == null) MidiAuditionLoop(currentWindow.startTick, currentWindow.endTick) else null))
                     },
                     enabled = window != null && currentAvailable && !state.busy,
+                    shape = playerControlShape,
                     modifier = Modifier.heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                         testTag = MidiCoreWorkspaceShellTags.PLAYER_LOOP
                         selected = audition.loop != null
                         contentDescription = if (audition.loop == null) "Loop current MIDI target" else "Disable MIDI loop"
                     },
                 ) { Text(if (audition.loop == null) "Loop" else "Loop on") }
+                if (window != null) {
+                    Slider(
+                        value = position.toFloat(),
+                        onValueChange = { onIntent(MidiCoreWorkspaceIntent.SeekAudition(it.toLong().coerceIn(window.startTick, window.endTick))) },
+                        valueRange = window.startTick.toFloat()..window.endTick.toFloat(),
+                        enabled = currentAvailable && !state.busy,
+                        modifier = Modifier.weight(1f).semantics {
+                            testTag = MidiCoreWorkspaceShellTags.PLAYER_POSITION
+                            contentDescription = "Seek current MIDI playback position"
+                        },
+                    )
+                }
                 OutlinedButton(
                     onClick = { optionsOpen = !optionsOpen },
+                    shape = playerControlShape,
                     modifier = Modifier.heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                         testTag = MidiCoreWorkspaceShellTags.PLAYER_OPTIONS
                         selected = optionsOpen
@@ -390,24 +400,48 @@ private fun MidiCoreWorkspacePlaybackDock(
                     },
                 ) { Text("Options") }
             }
-            if (window != null) {
-                Slider(
-                    value = position.toFloat(),
-                    onValueChange = { onIntent(MidiCoreWorkspaceIntent.SeekAudition(it.toLong().coerceIn(window.startTick, window.endTick))) },
-                    valueRange = window.startTick.toFloat()..window.endTick.toFloat(),
-                    enabled = currentAvailable && !state.busy,
-                    modifier = Modifier.fillMaxWidth().semantics {
-                        testTag = MidiCoreWorkspaceShellTags.PLAYER_POSITION
-                        contentDescription = "Seek current MIDI playback position"
-                    },
-                )
-            }
             if (optionsOpen) {
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs),
+                    ) {
+                        OutlinedButton(
+                            onClick = { onIntent(MidiCoreWorkspaceIntent.PlaySourceMelody) },
+                            enabled = sourceAvailable && !state.busy,
+                            shape = playerControlShape,
+                            modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                                testTag = MidiCoreWorkspaceShellTags.PLAYER_SOURCE
+                                selected = audition.scope == MidiAuditionScope.SourceMelody
+                                contentDescription = "Play protected source melody"
+                            },
+                        ) { Text("Source") }
+                        OutlinedButton(
+                            onClick = { onIntent(MidiCoreWorkspaceIntent.PlayAudition()) },
+                            enabled = currentAvailable && !state.busy,
+                            shape = playerControlShape,
+                            modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                                testTag = MidiCoreWorkspaceShellTags.PLAYER_CURRENT
+                                selected = currentAvailable && audition.scope != MidiAuditionScope.SourceMelody && audition.scope != MidiAuditionScope.AcceptedArrangement
+                                contentDescription = "Play the current MIDI audition target"
+                            },
+                        ) { Text("Current") }
+                        OutlinedButton(
+                            onClick = { onIntent(MidiCoreWorkspaceIntent.PlayAcceptedArrangement) },
+                            enabled = acceptedAvailable && !state.busy,
+                            shape = playerControlShape,
+                            modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                                testTag = MidiCoreWorkspaceShellTags.PLAYER_ACCEPTED
+                                selected = audition.scope == MidiAuditionScope.AcceptedArrangement
+                                contentDescription = if (acceptedAvailable) "Play the accepted MIDI arrangement" else "Accept every required role before playing the accepted arrangement"
+                            },
+                        ) { Text("Accepted") }
+                    }
                     Box {
                         OutlinedButton(
                             onClick = { outputOpen = true },
                             enabled = currentAvailable && !state.busy,
+                            shape = playerControlShape,
                             modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                                 testTag = MidiCoreWorkspaceShellTags.PLAYER_OUTPUT_MENU
                                 contentDescription = "Choose MIDI output. Current output: ${selectedOutput?.name ?: "Built-in synthesizer"}"
@@ -432,6 +466,7 @@ private fun MidiCoreWorkspacePlaybackDock(
                         OutlinedButton(
                             onClick = { onIntent(MidiCoreWorkspaceIntent.SeekAudition(currentWindow.startTick)) },
                             enabled = currentAvailable && !state.busy,
+                            shape = playerControlShape,
                             modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                                 testTag = MidiCoreWorkspaceShellTags.PLAYER_SEEK_START
                                 contentDescription = "Seek to current MIDI view boundary"
@@ -445,6 +480,7 @@ private fun MidiCoreWorkspacePlaybackDock(
                             OutlinedButton(
                                 onClick = { onIntent(MidiCoreWorkspaceIntent.MuteAuditionRole(role, !muted)) },
                                 enabled = currentAvailable && !state.busy,
+                                shape = playerControlShape,
                                 modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                                     testTag = MidiCoreWorkspaceShellTags.mute(role)
                                     selected = muted
@@ -453,6 +489,7 @@ private fun MidiCoreWorkspacePlaybackDock(
                             OutlinedButton(
                                 onClick = { onIntent(MidiCoreWorkspaceIntent.SoloAuditionRole(role, !solo)) },
                                 enabled = currentAvailable && !state.busy,
+                                shape = playerControlShape,
                                 modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                                     testTag = MidiCoreWorkspaceShellTags.solo(role)
                                     selected = solo
@@ -470,7 +507,13 @@ private fun MidiCoreWorkspacePlaybackDock(
                         ) {
                             Text(problem.message, style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.Warning)
                             Text("Next: ${problem.nextAction}", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
-                            if (!state.busy) TextButton(onClick = { onIntent(MidiCoreWorkspaceIntent.Retry) }) { Text("Retry playback") }
+                            if (!state.busy) {
+                                OutlinedButton(
+                                    onClick = { onIntent(MidiCoreWorkspaceIntent.Retry) },
+                                    shape = playerControlShape,
+                                    modifier = Modifier.heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget),
+                                ) { Text("Retry playback") }
+                            }
                         }
                     }
                 }
@@ -482,23 +525,23 @@ private fun MidiCoreWorkspacePlaybackDock(
 private fun auditionTargetDescription(state: MidiCoreWorkspaceState): String {
     val scope = state.audition.scope
     val target = when (scope) {
-    null -> "No MIDI target selected"
-    MidiAuditionScope.SourceMelody -> "Protected source melody"
-    is MidiAuditionScope.Candidate -> "Current ${scope.role.trackName} alternative"
-    is MidiAuditionScope.Occurrence -> "Current section ${scope.occurrenceId}"
-    is MidiAuditionScope.StylePreview -> "${scope.styleId.replace('-', ' ')} style preview"
-    is MidiAuditionScope.ArrangementDraft -> "Draft ${scope.draftId}"
-    is MidiAuditionScope.Role -> "Current accepted ${scope.role.trackName}"
-    MidiAuditionScope.AcceptedArrangement -> "Accepted full arrangement"
+        null -> "No MIDI target selected"
+        MidiAuditionScope.SourceMelody -> "Protected source melody"
+        is MidiAuditionScope.Candidate -> "Current ${scope.role.trackName} alternative"
+        is MidiAuditionScope.Occurrence -> occurrenceLabel(state, scope.occurrenceId)?.let { "Current $it section" } ?: "Current selected section"
+        is MidiAuditionScope.StylePreview -> "${arrangementStyleDisplayName(scope.styleId)} style preview"
+        is MidiAuditionScope.ArrangementDraft -> "Complete draft"
+        is MidiAuditionScope.Role -> "Current accepted ${scope.role.trackName}"
+        MidiAuditionScope.AcceptedArrangement -> "Accepted full arrangement"
     }
     val occurrenceId = when (scope) {
         is MidiAuditionScope.Candidate -> state.project?.candidates?.singleOrNull { it.id == scope.candidateId }?.occurrenceId
         is MidiAuditionScope.Occurrence -> scope.occurrenceId
-    is MidiAuditionScope.StylePreview -> scope.occurrenceId
+        is MidiAuditionScope.StylePreview -> scope.occurrenceId
         else -> null
     }
-    val occurrenceLabel = occurrenceId?.let { id -> state.project?.authority?.occurrences?.singleOrNull { it.id == id }?.label }
-    return occurrenceLabel?.let { "$target · $it" } ?: target
+    val selectedOccurrenceLabel = occurrenceId?.let { occurrenceLabel(state, it) }
+    return if (scope is MidiAuditionScope.Occurrence) target else selectedOccurrenceLabel?.let { "$target · $it" } ?: target
 }
 
 private fun auditionRoles(scope: MidiAuditionScope?): List<MidiExportRole> = when (scope) {
@@ -708,14 +751,17 @@ private fun MidiCoreWorkspaceContext(
                 }
                 MidiCoreWorkspaceDestination.ARRANGE -> {
                     val progress = state.project?.let(::midiCoreArrangementProgress)
-                    ContextFact("Selected section", state.arrangement.selectedOccurrenceId ?: "Choose from the song map")
-                    ContextFact("Style preview", state.stylePreview.selectedStyleId ?: "None")
+                    ContextFact(
+                        "Selected section",
+                        state.arrangement.selectedOccurrenceId?.let { occurrenceLabel(state, it) ?: "Selected section" } ?: "Choose from the song map",
+                    )
+                    ContextFact("Style preview", state.stylePreview.selectedStyleId?.let(::arrangementStyleDisplayName) ?: "None")
                     ContextFact("Accepted roles", progress?.let { "${it.accepted}/${it.total}" } ?: "0/0")
-                    ContextFact("Draft", state.arrangement.incompleteDraftId ?: "No active draft")
+                    ContextFact("Draft", if (state.arrangement.incompleteDraftId == null) "No active draft" else "In progress")
                 }
                 MidiCoreWorkspaceDestination.REVIEW -> {
                     ContextFact("Review role", state.review.role?.displayName ?: "No exception selected")
-                    ContextFact("Selected candidate", state.review.selectedCandidateId ?: "None")
+                    ContextFact("Selected candidate", selectedAlternativeLabel(state.review))
                     ContextFact("Candidate evidence", state.review.candidates.size.toString())
                     ContextFact("Accepted arrangement", if (state.project?.let(::midiCoreArrangementProgress)?.complete == true) "Complete" else "Pending")
                 }
@@ -736,6 +782,38 @@ private fun MidiCoreWorkspaceContext(
     }
 }
 
+/** At reference width, keep Arrange and Review's one selected-section inspector beside the musical workspace. */
+@Composable
+private fun MidiCoreWorkspaceSelectedSectionInspector(
+    destination: MidiCoreWorkspaceDestination,
+    state: MidiCoreWorkspaceState,
+    onIntent: (MidiCoreWorkspaceIntent) -> Unit,
+    onDestinationSelected: (MidiCoreWorkspaceDestination) -> Unit,
+    modifier: Modifier,
+) {
+    Column(
+        modifier.verticalScroll(rememberScrollState()).semantics {
+            testTag = MidiCoreWorkspaceShellTags.PAGE_INSPECTOR
+            contentDescription = "${destination.label} selected-section inspector"
+        },
+        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Md),
+    ) {
+        when (destination) {
+            MidiCoreWorkspaceDestination.ARRANGE -> MidiCoreArrangeSelectedSectionInspector(state, onIntent)
+            MidiCoreWorkspaceDestination.REVIEW -> MidiCoreReviewSelectedSectionInspector(state, onDestinationSelected)
+            else -> Unit
+        }
+    }
+}
+
+private fun occurrenceLabel(state: MidiCoreWorkspaceState, occurrenceId: String): String? =
+    state.project?.let(::midiCoreSongMap)?.singleOrNull { it.occurrence.id == occurrenceId }?.displayLabel
+
+private fun selectedAlternativeLabel(review: MidiCoreCandidateReviewUiState): String =
+    review.selectedCandidateId?.let { candidateId ->
+        review.candidates.indexOfFirst { it.candidate.id == candidateId }.takeIf { it >= 0 }?.let { "Alternative ${it + 1}" }
+    } ?: "None"
+
 @Composable
 private fun ContextFact(label: String, value: String) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -753,6 +831,7 @@ private fun MidiCoreWorkspacePage(
     projectActions: MidiCoreProjectPageActions,
     midiActions: MidiCoreMidiPageActions,
     exportActions: MidiCoreExportPageActions,
+    showSelectedSectionInspector: Boolean,
     modifier: Modifier,
 ) {
     if (destination == MidiCoreWorkspaceDestination.PROJECT) {
@@ -768,11 +847,11 @@ private fun MidiCoreWorkspacePage(
         return
     }
     if (destination == MidiCoreWorkspaceDestination.ARRANGE) {
-        MidiCoreArrangePage(state, onIntent, onDestinationSelected, modifier)
+        MidiCoreArrangePage(state, onIntent, onDestinationSelected, showSelectedSectionInspector, modifier)
         return
     }
     if (destination == MidiCoreWorkspaceDestination.REVIEW) {
-        MidiCoreReviewPage(state, onIntent, onDestinationSelected, modifier)
+        MidiCoreReviewPage(state, onIntent, onDestinationSelected, showSelectedSectionInspector, modifier)
         return
     }
     if (destination == MidiCoreWorkspaceDestination.EXPORT) {

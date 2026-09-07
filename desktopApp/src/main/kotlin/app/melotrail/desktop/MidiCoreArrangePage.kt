@@ -4,11 +4,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -109,6 +111,7 @@ internal fun MidiCoreArrangePage(
     state: MidiCoreWorkspaceState,
     onIntent: (MidiCoreWorkspaceIntent) -> Unit,
     onNavigate: (MidiCoreWorkspaceDestination) -> Unit,
+    showSelectedSectionInspector: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val project = state.project
@@ -121,9 +124,7 @@ internal fun MidiCoreArrangePage(
         return
     }
     val selectedOccurrence = occurrences.singleOrNull { it.id == state.arrangement.selectedOccurrenceId } ?: occurrences.first()
-    val mapOccurrences = midiCoreSongMap(project)
-    val selectedMapIndex = mapOccurrences.indexOfFirst { it.occurrence.id == selectedOccurrence.id }
-    val selectedMapOccurrence = mapOccurrences.getValueAt(selectedMapIndex)
+    val selectedMapOccurrence = midiCoreSongMap(project).single { it.occurrence.id == selectedOccurrence.id }
     var advancedOpen by remember(project.id.value) { mutableStateOf(false) }
     var role by remember(project.id.value) { mutableStateOf(CandidateRole.CHORDS) }
     var profileId by remember(project.id.value, role) { mutableStateOf(MidiCorePerformanceProfileCatalog.allowedProfileIds(role).first()) }
@@ -145,19 +146,15 @@ internal fun MidiCoreArrangePage(
             audition = state.audition,
             onOccurrenceSelected = { onIntent(MidiCoreWorkspaceIntent.SelectArrangementOccurrence(it.occurrence.id)) },
         )
-        ArrangeStyleGallery(state, selectedOccurrence) { style ->
-            onIntent(MidiCoreWorkspaceIntent.PreviewArrangementStyle(style.id, selectedOccurrence.id))
-        }
-        ArrangeDraftAction(state, selectedOccurrence, onIntent)
-        ArrangeSelectedSectionInspector(
-            mapOccurrence = selectedMapOccurrence,
-            previousOccurrence = mapOccurrences.getOrNull(selectedMapIndex - 1),
-            nextOccurrence = mapOccurrences.getOrNull(selectedMapIndex + 1),
-            styleId = state.stylePreview.selectedStyleId,
-            enabled = !state.busy,
-            onSelectOccurrence = { onIntent(MidiCoreWorkspaceIntent.SelectArrangementOccurrence(it.occurrence.id)) },
-            onRegenerate = { styleId -> onIntent(MidiCoreWorkspaceIntent.RegenerateArrangementSection(selectedOccurrence.id, styleId, state.arrangement.rootSeed)) },
+        ArrangeStyleGallery(
+            state = state,
+            occurrenceLabel = selectedMapOccurrence.displayLabel,
+            onPreview = { style -> onIntent(MidiCoreWorkspaceIntent.PreviewArrangementStyle(style.id, selectedOccurrence.id)) },
+            onDraft = { onIntent(MidiCoreWorkspaceIntent.CreateArrangementDraft(requireNotNull(state.stylePreview.selectedStyleId), state.arrangement.rootSeed)) },
+            onCancel = { onIntent(MidiCoreWorkspaceIntent.CancelOperation) },
+            onRetry = { retry -> onIntent(retry) },
         )
+        if (showSelectedSectionInspector) MidiCoreArrangeSelectedSectionInspector(state, onIntent)
         ArrangeAdvancedRoleAdjustment(advancedOpen, { advancedOpen = it }) {
             ArrangeRoleRepair(
                 project = project,
@@ -185,6 +182,30 @@ internal fun MidiCoreArrangePage(
     }
 }
 
+/** The selected-section inspector has one owner and moves beside the page only at reference-wide layouts. */
+@Composable
+internal fun MidiCoreArrangeSelectedSectionInspector(
+    state: MidiCoreWorkspaceState,
+    onIntent: (MidiCoreWorkspaceIntent) -> Unit,
+) {
+    val project = state.project ?: return
+    val occurrences = project.authority?.occurrences.orEmpty()
+    if (occurrences.isEmpty()) return
+    val selectedOccurrence = occurrences.singleOrNull { it.id == state.arrangement.selectedOccurrenceId } ?: occurrences.first()
+    val mapOccurrences = midiCoreSongMap(project)
+    val selectedMapIndex = mapOccurrences.indexOfFirst { it.occurrence.id == selectedOccurrence.id }
+    val selectedMapOccurrence = mapOccurrences.getValueAt(selectedMapIndex)
+    ArrangeSelectedSectionInspector(
+        mapOccurrence = selectedMapOccurrence,
+        previousOccurrence = mapOccurrences.getOrNull(selectedMapIndex - 1),
+        nextOccurrence = mapOccurrences.getOrNull(selectedMapIndex + 1),
+        styleId = state.stylePreview.selectedStyleId,
+        enabled = !state.busy,
+        onSelectOccurrence = { onIntent(MidiCoreWorkspaceIntent.SelectArrangementOccurrence(it.occurrence.id)) },
+        onRegenerate = { styleId -> onIntent(MidiCoreWorkspaceIntent.RegenerateArrangementSection(selectedOccurrence.id, styleId, state.arrangement.rootSeed)) },
+    )
+}
+
 @Composable
 private fun ArrangeEmptyState(state: MidiCoreWorkspaceState) {
     ArrangeCard(MidiCoreArrangePageTags.EMPTY, "Arrangement is not ready yet") {
@@ -198,77 +219,99 @@ private fun ArrangeEmptyState(state: MidiCoreWorkspaceState) {
 @Composable
 private fun ArrangeStyleGallery(
     state: MidiCoreWorkspaceState,
-    occurrence: ProjectSectionOccurrence,
+    occurrenceLabel: String,
     onPreview: (MidiCoreArrangementStyle) -> Unit,
+    onDraft: () -> Unit,
+    onCancel: () -> Unit,
+    onRetry: (MidiCoreWorkspaceIntent.CreateArrangementDraft) -> Unit,
 ) {
     val previewBusy = state.operation.active && state.operation.kind == MidiCoreWorkspaceOperationKind.AUDITION &&
         state.operation.retry is MidiCoreWorkspaceIntent.PreviewArrangementStyle
+    val generating = state.operation.active && state.operation.kind == MidiCoreWorkspaceOperationKind.DRAFT_GENERATION
+    val retry = state.operation.retry as? MidiCoreWorkspaceIntent.CreateArrangementDraft
     ArrangeCard(MidiCoreArrangePageTags.STYLES, "Choose a direction") {
-        Text("A style previews ${occurrence.label} as a short all-role MIDI loop. It does not save candidates.", color = MusicWorkspaceTokens.TextSecondary)
-        MidiCoreArrangementStyleCatalog.styles.forEach { style ->
-            val selected = state.stylePreview.selectedStyleId == style.id
-            OutlinedButton(
-                onClick = { onPreview(style) }, enabled = !state.busy || previewBusy,
-                colors = workspaceSelectableButtonColors(selected),
-                modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
-                    testTag = MidiCoreArrangePageTags.style(style.id); this.selected = selected
-                    contentDescription = "Preview ${style.displayName}${if (selected) ", selected" else ""} for ${occurrence.label}"
-                },
+        when {
+            generating -> ArrangeDraftProgress(state, onCancel)
+            retry != null -> ArrangeDraftRetry(state, retry, onRetry)
+            else -> Row(
+                Modifier.fillMaxWidth().semantics { testTag = MidiCoreArrangePageTags.DRAFT },
+                horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm),
             ) {
-                Column(Modifier.fillMaxWidth()) {
-                    Text(style.displayName, style = MaterialTheme.typography.titleSmall)
-                    Text(style.summary, style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
+                Text(
+                    state.stylePreview.cacheStatus?.let { "Preview ${it.name.lowercase()}" } ?: "Preview a style",
+                    modifier = Modifier.weight(0.4f),
+                    color = MusicWorkspaceTokens.TextSecondary,
+                    maxLines = 2,
+                )
+                MidiCoreArrangementStyleCatalog.styles.forEach { style ->
+                    val selected = state.stylePreview.selectedStyleId == style.id
+                    OutlinedButton(
+                        onClick = { onPreview(style) }, enabled = !state.busy || previewBusy,
+                        colors = workspaceSelectableButtonColors(selected),
+                        contentPadding = PaddingValues(horizontal = MusicWorkspaceTokens.Spacing.Sm),
+                        shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
+                        modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                            testTag = MidiCoreArrangePageTags.style(style.id); this.selected = selected
+                            contentDescription = "Preview ${style.displayName}: ${style.summary}${if (selected) ". Selected" else ""} for $occurrenceLabel"
+                        },
+                    ) { Text(style.displayName, maxLines = 1) }
                 }
+                val styleId = state.stylePreview.selectedStyleId
+                Button(
+                    onClick = onDraft,
+                    enabled = styleId != null && !state.busy,
+                    shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
+                    contentPadding = PaddingValues(horizontal = MusicWorkspaceTokens.Spacing.Sm),
+                    modifier = Modifier.weight(1.2f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                        testTag = MidiCoreArrangePageTags.CREATE_DRAFT
+                        contentDescription = styleId?.let { "Create full ${arrangementStyleDisplayName(it)} arrangement draft from $occurrenceLabel" }
+                            ?: "Choose a style before creating a full arrangement draft"
+                    },
+                ) { Text("Create full draft", maxLines = 1) }
             }
         }
-        state.stylePreview.cacheStatus?.let { Text("Preview ${it.name.lowercase()} from the current MIDI session.", color = MusicWorkspaceTokens.TextSecondary) }
     }
 }
 
 @Composable
-private fun ArrangeDraftAction(
+private fun ArrangeDraftProgress(
     state: MidiCoreWorkspaceState,
-    occurrence: ProjectSectionOccurrence,
-    onIntent: (MidiCoreWorkspaceIntent) -> Unit,
+    onCancel: () -> Unit,
 ) {
-    val styleId = state.stylePreview.selectedStyleId
-    val generating = state.operation.active && state.operation.kind == MidiCoreWorkspaceOperationKind.DRAFT_GENERATION
-    val retry = state.operation.retry as? MidiCoreWorkspaceIntent.CreateArrangementDraft
-    ArrangeCard(MidiCoreArrangePageTags.DRAFT, "Create the complete draft") {
-        Text(
-            styleId?.let { "${friendlyToken(it)} will generate Chords, Bass, and Drums for every section. Existing immutable work is preserved." }
-                ?: "Choose a style to preview it, then create a complete draft.",
-            color = MusicWorkspaceTokens.TextSecondary,
-        )
-        when {
-            generating -> {
-                state.operation.progress?.let { Text("${it.completed} of ${it.total} scopes complete", color = MusicWorkspaceTokens.Information) }
-                Text(state.operation.message, style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
-                OutlinedButton(
-                    onClick = { onIntent(MidiCoreWorkspaceIntent.CancelOperation) },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
-                        testTag = MidiCoreArrangePageTags.CANCEL; contentDescription = "Cancel complete draft generation"
-                    },
-                ) { Text("Cancel draft") }
-            }
-            retry != null -> {
-                Text(state.operation.message, color = MusicWorkspaceTokens.Warning)
-                Button(
-                    onClick = { onIntent(retry) },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
-                        testTag = MidiCoreArrangePageTags.RETRY_DRAFT; contentDescription = "Retry incomplete complete draft"
-                    },
-                ) { Text("Retry complete draft") }
-            }
-            else -> Button(
-                onClick = { onIntent(MidiCoreWorkspaceIntent.CreateArrangementDraft(requireNotNull(styleId), state.arrangement.rootSeed)) },
-                enabled = styleId != null && !state.busy,
-                modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
-                    testTag = MidiCoreArrangePageTags.CREATE_DRAFT
-                    contentDescription = styleId?.let { "Create full $it arrangement draft from ${occurrence.label}" } ?: "Choose a style before creating a full arrangement draft"
-                },
-            ) { Text("Create full draft") }
-        }
+    Column(
+        Modifier.fillMaxWidth().semantics { testTag = MidiCoreArrangePageTags.DRAFT },
+        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs),
+    ) {
+        state.operation.progress?.let { Text("${it.completed} of ${it.total} scopes complete", color = MusicWorkspaceTokens.Information) }
+        Text(state.operation.message, style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
+        OutlinedButton(
+            onClick = onCancel,
+            shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
+            modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                testTag = MidiCoreArrangePageTags.CANCEL; contentDescription = "Cancel complete draft generation"
+            },
+        ) { Text("Cancel draft") }
+    }
+}
+
+@Composable
+private fun ArrangeDraftRetry(
+    state: MidiCoreWorkspaceState,
+    retry: MidiCoreWorkspaceIntent.CreateArrangementDraft,
+    onRetry: (MidiCoreWorkspaceIntent.CreateArrangementDraft) -> Unit,
+) {
+    Column(
+        Modifier.fillMaxWidth().semantics { testTag = MidiCoreArrangePageTags.DRAFT },
+        verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs),
+    ) {
+        Text(state.operation.message, color = MusicWorkspaceTokens.Warning)
+        Button(
+            onClick = { onRetry(retry) },
+            shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
+            modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
+                testTag = MidiCoreArrangePageTags.RETRY_DRAFT; contentDescription = "Retry complete draft generation"
+            },
+        ) { Text("Retry complete draft") }
     }
 }
 
@@ -288,6 +331,7 @@ private fun ArrangeSelectedSectionInspector(
             OutlinedButton(
                 onClick = { previousOccurrence?.let(onSelectOccurrence) },
                 enabled = previousOccurrence != null,
+                shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
                 modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                     testTag = MidiCoreSongMapTags.PREVIOUS
                     contentDescription = previousOccurrence?.let { "Select previous section, ${it.displayLabel}" } ?: "No previous section"
@@ -296,6 +340,7 @@ private fun ArrangeSelectedSectionInspector(
             OutlinedButton(
                 onClick = { nextOccurrence?.let(onSelectOccurrence) },
                 enabled = nextOccurrence != null,
+                shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
                 modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                     testTag = MidiCoreSongMapTags.NEXT
                     contentDescription = nextOccurrence?.let { "Select next section, ${it.displayLabel}" } ?: "No next section"
@@ -305,6 +350,7 @@ private fun ArrangeSelectedSectionInspector(
         mapOccurrence.roleStates.forEach { (role, state) -> Text("${role.displayName}: ${state.label}") }
         Button(
             onClick = { onRegenerate(requireNotNull(styleId)) }, enabled = enabled && styleId != null,
+            shape = RoundedCornerShape(MusicWorkspaceTokens.Radius.Control),
             modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget).semantics {
                 testTag = MidiCoreArrangePageTags.REGENERATE_SECTION
                 contentDescription = if (styleId == null) "Choose a style before regenerating ${mapOccurrence.displayLabel}" else "Regenerate ${mapOccurrence.displayLabel} with the selected style"
@@ -416,5 +462,8 @@ private fun generationIntent(role: CandidateRole, occurrenceId: String, profileI
     MidiCoreWorkspaceIntent.GenerateCandidate(role, occurrenceId, profileId, patternId, MidiCoreGeneratorInput("midi-core-desktop", "midi-core-v1", patternId, seed))
 
 internal fun friendlyToken(value: String): String = value.substringAfterLast('.').replace('-', ' ').replace('_', ' ').replaceFirstChar(Char::uppercaseChar)
+
+internal fun arrangementStyleDisplayName(styleId: String): String =
+    MidiCoreArrangementStyleCatalog.styles.singleOrNull { it.id == styleId }?.displayName ?: friendlyToken(styleId)
 
 internal val CandidateRole.displayName: String get() = name.lowercase().replaceFirstChar(Char::uppercaseChar)
