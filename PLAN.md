@@ -1,6 +1,6 @@
 # Melotrail improvement plan
 
-Updated: 2026-09-06. Status: implementation backlog ready; musical acceptance pending.
+Updated: 2026-09-08. Status: implementation underway in bounded slices; musical acceptance pending.
 
 This is the only roadmap. [TASKS.md](TASKS.md) owns implementation order and
 status. It replaces the MIDI Core and UI task suites; their history stays in
@@ -380,49 +380,60 @@ review time at most ten minutes. These are new targets, not achieved results.
 First-draft playback should need at most three actions after authority is ready.
 See Validation for sample selection, failures, timings and Logic evidence.
 
-## 11. Recommended agent workflow
+## 11. Automatic delivery workflow
 
-Use **GPT-5.6 Terra as the default implementer** for bounded tasks, with a fresh
-context for each. Its official description emphasizes balanced intelligence
-and cost; successful work on this repository still depends on task boundaries,
-fixtures and review. This is a workflow recommendation, not a model-quality
-benchmark. [Model documentation](https://developers.openai.com/api/docs/models/gpt-5.6-terra).
+The bottlenecks found on 2026-09-08 were concrete: broad tasks consumed their
+budget before review; a budget stop looked like a code failure and replayed
+implementation; completed commits advanced a branch while the normal checkout
+kept older files. Success means tested code visible in the runnable project,
+not merely more agent activity.
 
-Start with one coordinator and one writer at a time. A fresh reviewer checks the
-diff and acceptance evidence. Parallel workers become useful only after file
-ownership is stable: for example isolated video work and a MIDI fixture task.
-Do not have multiple agents edit the workspace reducer, schema or TASKS at once.
+**Delivery unit:** one TASKS row is a bounded slice, normally one user behavior
+or one domain boundary with a few production owners. The 29 new suffixed rows
+split the remaining large features. Each unsuffixed row finishes its remaining
+slice and checks the combined parent acceptance criteria. Dependencies remain
+explicit; completed children are reused. No extra task or execution-log documents.
 
-For each task: select → inspect → implement → focused regression tests →
-`make test` / `make build` → independent review → integrate to an implementation
-branch → record compact evidence → select the next dependency-ready task.
-Retry a failing implementation/review at most twice automatically; then record
-the concrete blocker and continue independent ready work. Never relax a test,
-review threshold or musical gate merely to advance the queue.
+**Near-term order:** recover M03's retained candidate through current checks and
+fresh review; expose compact chord-duration/source-end editing in U04a; improve
+piano voicing/rhythm in M04/M05; persist the song plan in M06; then finish
+plan-aware drafts/rests, coordinated roles, scoped repairs and Arrange/Review/
+Export. Each slice produces an implementation commit and a queue update. UI
+slices supply actual captures at the three guideline sizes; engine milestones
+supply playable baseline/new MIDI packages.
 
-Use one worktree per implementation branch/task and a single coordinator to
-integrate approved commits. Keep task status in TASKS and short machine run
-records in ignored output. Record the implementation commit in the next
-coordinator update; do not invent a self-referential hash. Human feedback is
-batched at audible/visible milestones, not requested after every code task.
+**Execution:** the existing 20-minute heartbeat runs the tested local runner's
+`advance` command. One Terra High writer implements; the host coordinator runs
+focused checks, test/build and diff checks; a fresh Terra High reviewer inspects
+the exact tested tree. A failed attempt gets one Terra repair, then Sol High
+receives the original task, current diff and concrete terminal/test/review errors
+for one repair. Integrate only the reviewed tree. TASKS defines numeric bounds,
+paths, control commands and the reusable worker prompt.
 
-**Configured automation:** the prepared small bounded runner uses
-`codex exec`, not a custom multi-agent platform. The CLI supports structured
-final outputs and JSON event streams suitable for a queue runner.
-[Non-interactive documentation](https://learn.chatgpt.com/docs/non-interactive-mode).
-A scheduled task can resume the coordinator and notify only when a useful batch
-finishes or needs action; local scheduled work requires the computer on and the
-app running. [Scheduled-task documentation](https://learn.chatgpt.com/docs/automations?surface=app).
+**Resume correctly:** budget/deadline stops preserve the candidate and its
+stage. A completed implementation continues at validation/review in the next
+bounded batch, with prior token usage retained in history. It does not consume
+a code-repair attempt just because time or quota ran out. Continuations are
+bounded; exhausted failures become BLOCKED with evidence while independent
+ready slices continue. Locks, explicit pause, quota and scope are enforced;
+no reset loop or unbounded promise to finish everything in one run.
 
-The hourly workflow selected on 2026-09-06 uses the prepared developer runner,
-isolated worktrees and a local integration branch. Both worker and fresh reviewer
-use GPT-5.6 Terra with high reasoning. TASKS contains the reusable prompt, exact
-limits, paths and pause/recovery commands. F01 verifies the real environment;
-A01 then hardens the runner before the larger implementation sequence. The
-original checkout stays intact. Local implementation commits are authorized;
-public pushes, publication and paid media generation remain outside this policy.
+**Make improvements visible:** integrate into the un-checked-out
+`codex/terra-batched-implementation` branch, then fast-forward the normal
+`codex/terra-live` checkout only if its tracked files are clean and it has not
+diverged. Preserve existing edits and report a skipped sync. Never move a
+checked-out branch ref without updating its files/index. Restart `make desktop`
+to run the latest integrated app. Remove successful dedicated worker worktrees;
+keep unresolved work recoverable.
 
-Automate code and evidence preparation. Keep actual musical judgments, the
-final UI/video decision and public YouTube publication with the user. Once a
-bounded generation spend or integration policy is explicitly authorized, reuse
-that authorization; do not add repetitive confirmation steps.
+**Finish engineering without faking acceptance:** Q01a/Q02a/U07a–b/Q03a prepare
+musical, Logic, visual and clean-install evidence independently of the final user
+decisions. The selected unpaid companion work uses a separately built
+`companion/` directory, owned media and provider fakes until actual generation
+is budget-authorized. Asset/rights and paid-pilot gates apply to production media,
+not to independent job/preview/encoder code. Final listening, visuals, Logic and
+TABI pilot approvals remain real human decisions. Public upload is separate.
+
+The scheduler notifies on integrated changes, new failures or required input and
+stays quiet during unchanged activity. Local scheduled runs require the computer
+and app to be running. See the [official automation documentation](https://learn.chatgpt.com/docs/automations?surface=app).

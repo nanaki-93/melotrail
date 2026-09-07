@@ -11,6 +11,9 @@ const read = p => fs.readFileSync(p, 'utf8');
 const json = p => JSON.parse(read(p));
 const taskStates = new Set(['TODO', 'DONE', 'RUNNING', 'REVIEW', 'WAITING_USER', 'BLOCKED', 'OPTIONAL']);
 const resultFields = new Set(['task', 'base', 'commit', 'candidate', 'summary', 'blocker', 'status', 'tests', 'artifacts']);
+const interrupted = ctx => ['budget', 'deadline', 'pause'].includes(ctx?.interruptionReason);
+const continuable = ctx => interrupted(ctx) || ctx?.phase === 'READY_FOR_VALIDATION';
+const interruption = (message, reason) => Object.assign(new Error(message), { interruptionReason: reason });
 export function atomic(p, value) {
   const tmp = `${p}.${process.pid}.tmp`;
   fs.writeFileSync(tmp, JSON.stringify(value, null, 2) + '\n', { mode: 0o600 });
@@ -155,8 +158,10 @@ function validatePolicy(cfg, rows) {
 }
 
 async function main() {
-  const [command = 'status', configFile = path.join(os.homedir(), '.codex/melotrail-terra/config.json')] = process.argv.slice(2);
-  const cfg = { maxTasksPerBatch: 1, maxParallelWorkers: 1, maxRecoveryRetries: 1, parallelGroups: [], parallelPaths: {}, ...json(configFile) };
+  let [command = 'status', configFile = path.join(os.homedir(), '.codex/melotrail-terra/config.json')] = process.argv.slice(2);
+  const automatic = command === 'advance';
+  const cfg = { maxTasksPerBatch: 1, maxParallelWorkers: 1, maxRecoveryRetries: 1, maxContinuations: 3, parallelGroups: [], parallelPaths: {}, ...json(configFile) };
+  if (!Number.isInteger(cfg.maxContinuations) || cfg.maxContinuations < 0 || cfg.maxContinuations > 5) throw Error('Invalid continuation limit');
   const root = cfg.stateDir;
   for (const key of ['repo', 'stateDir', 'codex', 'javaHome', 'gradleHome'])
     if (typeof cfg[key] !== 'string' || !path.isAbsolute(cfg[key])) throw Error(`Absolute path required: ${key}`);
@@ -177,6 +182,14 @@ async function main() {
       catch (e) { if (e.code !== 'ESRCH') throw e; }
     }
   };
+  if (command === 'advance') {
+    const s = loadState();
+    if (fs.existsSync(lockDir) || s.paused || (fs.existsSync(pauseFile) && read(pauseFile).trim())) {
+      console.log('Already running or paused; no admission'); return;
+    }
+    command = !s.active ? 'run' : continuable(s.active) && (s.active.continuationCount ?? 0) < cfg.maxContinuations
+      ? 'continue' : !continuable(s.active) && !s.active.terminalFailure && !s.active.integrationConflict && (s.active.recoveryCount ?? 0) < cfg.maxRecoveryRetries ? 'retry' : 'defer';
+  }
   if (command === 'pause' || command === 'resume') {
     if (command === 'resume' && fs.existsSync(lockDir)) throw Error('Wait for active process to stop before resuming');
     fs.writeFileSync(pauseFile, command === 'pause' ? 'paused\n' : '');
@@ -197,17 +210,21 @@ async function main() {
     try {
       verifyBranch(); const s = loadState(); checkDeadChildren(s);
       if (!s.active) throw Error('No interrupted task to defer');
-      if (s.parallel?.length) throw Error('Resolve retained parallel candidates individually before deferring');
       const base = git(cfg.repo, 'rev-parse', cfg.branch);
-      if (base !== s.active.base) throw Error('Integration changed; reconcile manually');
+      if (git(cfg.repo, 'merge-base', base, s.active.base) !== s.active.base) throw Error('Integration changed incompatibly; reconcile manually');
       const dest = path.join(root, 'deferred', String(Date.now()));
       fs.mkdirSync(path.dirname(dest), { recursive: true });
       git(cfg.repo, 'worktree', 'add', '--detach', dest, base);
       const p = path.join(dest, 'TASKS.md');
-      fs.writeFileSync(p, mark(read(p), s.active.task, 'BLOCKED', `${s.active.feedback || s.active.blocker || s.error || 'Interrupted run'}; preserved ${s.active.dir}`));
+      fs.writeFileSync(p, mark(read(p), s.active.task, 'BLOCKED', `${s.active.feedback || s.active.blocker || s.active.result?.blocker || s.error || 'Interrupted run'}; preserved ${s.active.dir}`));
       git(dest, 'add', 'TASKS.md'); git(dest, 'commit', '-m', `queue: defer ${s.active.task} and preserve unfinished work`);
       git(cfg.repo, 'update-ref', `refs/heads/${cfg.branch}`, git(dest, 'rev-parse', 'HEAD'), base);
-      s.lastDeferred = s.active; delete s.active; atomic(stateFile, s);
+      s.lastDeferred = s.active;
+      const remaining = s.parallel ?? [];
+      s.active = remaining[0]; s.parallel = remaining.slice(1);
+      if (!s.active) delete s.active;
+      atomic(stateFile, s);
+      git(cfg.repo, 'worktree', 'remove', dest);
       console.log(JSON.stringify(s.lastDeferred));
     } finally { release(); }
     return;
@@ -220,8 +237,9 @@ async function main() {
       wave: selectWave(queue(md), cfg).map(t => t.id), locked: fs.existsSync(lockDir), paused: s.paused || (fs.existsSync(pauseFile) && !!read(pauseFile).trim()),
       limits: { minutes: cfg.minutes, tasks: cfg.maxTasksPerBatch, workers: cfg.maxParallelWorkers, tokens: cfg.maxReportedTokens, dailyAdmissions: cfg.maxRunsPerDay }, state: s }, null, 2)); return;
   }
-  if (!['run', 'retry'].includes(command)) throw Error('Use status, dry-run, run, retry, pause, resume, recover, or defer');
+  if (!['run', 'retry', 'continue'].includes(command)) throw Error('Use status, dry-run, advance, run, continue, retry, pause, resume, recover, or defer');
   const release = lock(lockDir), state = loadState();
+  const retainedEntries = () => automatic || command === 'continue' ? entries(state).slice(0, 1) : entries(state);
   let batchAdmitted = false;
   const deadline = Date.now() + cfg.minutes * 60000, children = new Set();
   const persist = () => atomic(stateFile, state);
@@ -229,9 +247,9 @@ async function main() {
   const interrupt = () => { state.paused = true; persist(); stop(); };
   process.on('SIGINT', interrupt); process.on('SIGTERM', interrupt);
   const guard = (model = false) => {
-    if (state.paused || (fs.existsSync(pauseFile) && read(pauseFile).trim())) throw Error('Paused; work preserved');
-    if (Date.now() >= deadline) throw Error('Run deadline exhausted; work preserved');
-    if (model && state.modelTokens >= cfg.maxReportedTokens) throw Error('Batch model-call budget exhausted; work preserved');
+    if (state.paused || (fs.existsSync(pauseFile) && read(pauseFile).trim())) throw interruption('Paused; work preserved', 'pause');
+    if (Date.now() >= deadline) throw interruption('Run deadline exhausted; work preserved', 'deadline');
+    if (model && state.modelTokens >= cfg.maxReportedTokens) throw interruption('Batch model-call budget exhausted; work preserved', 'budget');
   };
   const assertHead = () => {
     verifyBranch();
@@ -274,7 +292,7 @@ async function main() {
       poll = setInterval(() => { if (fs.existsSync(pauseFile) && read(pauseFile).trim()) interrupt(); }, 1000);
       const code = await new Promise((resolve, reject) => { p.on('error', reject); p.on('close', resolve); });
       if (model && buffer.trim()) { try { account(JSON.parse(buffer), ctx, worker); } catch {} }
-      if (timedOut) throw Error(`${label} exceeded batch deadline`);
+      if (timedOut) throw interruption(`${label} exceeded batch deadline`, 'deadline');
       guard();
       if (!model) ctx.checks.push({ label, argv: [exe, ...args], exitCode: code, durationMs: Date.now() - started, log: file, tail: boundedTail(file) });
       if (code !== 0) throw Error(`${label} failed (${code}); ${file}\n${model ? 'Inspect structured agent result; do not read transcript logs.' : boundedTail(file)}`);
@@ -345,7 +363,18 @@ Return the required JSON with task=${ctx.task} exactly, base=${ctx.base}, commit
     const newTree = path.join(ctx.dir, `integration-${ctx.attempt}`);
     git(cfg.repo, 'worktree', 'add', '--detach', newTree, head);
     // Applying to a fresh worktree leaves the original candidate intact on conflict.
-    git(newTree, 'apply', '--index', patchFile);
+    ctx.pendingIntegrationWorktree = newTree; persist();
+    try {
+      if (fs.statSync(patchFile).size) git(newTree, 'apply', '--index', patchFile);
+    } catch (e) {
+      ctx.rebaseFailure = { worktree: newTree, error: e.message, removed: false };
+      if (!git(newTree, 'status', '--porcelain')) {
+        git(cfg.repo, 'worktree', 'remove', newTree); ctx.rebaseFailure.removed = true;
+      }
+      delete ctx.pendingIntegrationWorktree; persist();
+      throw Object.assign(new Error(`Integration conflict applying preserved ${ctx.task}; original candidate retained: ${e.message}`), { integrationConflict: true });
+    }
+    delete ctx.pendingIntegrationWorktree;
     ctx.originalWorktrees = [...(ctx.originalWorktrees ?? []), ctx.worktree];
     ctx.worktree = newTree; ctx.originalBase ??= ctx.base; ctx.base = head;
     // A resumed session is bound to its original checkout. Repairs on the combined
@@ -393,6 +422,17 @@ Return the required JSON with task=${ctx.task} exactly, base=${ctx.base}, commit
     const remaining = entries(state).filter(c => c !== ctx);
     state.active = remaining[0]; state.parallel = remaining.slice(1); if (!state.active) delete state.active;
     delete state.error; persist();
+    // Only fast-forward an explicitly configured clean live checkout. Never
+    // update the ref under a checkout: that leaves the old index/files behind.
+    if (cfg.liveBranch) {
+      try {
+        if (git(cfg.repo, 'branch', '--show-current') !== cfg.liveBranch) throw Error('Live checkout is on another branch');
+        if (git(cfg.repo, 'status', '--porcelain', '--untracked-files=no')) throw Error('Live checkout has tracked edits');
+        git(cfg.repo, 'merge', '--ff-only', integrated);
+        state.last.liveHead = git(cfg.repo, 'rev-parse', 'HEAD');
+      } catch (e) { state.last.liveSyncError = e.message; }
+      persist();
+    }
     try {
       for (const wt of [ctx.worktree, ...(ctx.originalWorktrees ?? [])]) git(cfg.repo, 'worktree', 'remove', '--force', wt);
       state.last.worktreeCleaned = true; persist();
@@ -420,9 +460,10 @@ Return the required JSON with task=${ctx.task} exactly, base=${ctx.base}, commit
     return ctx;
   }
   async function implement(ctx, repair = false) {
+    ctx.resumeStage = 'implement'; persist();
     ctx.result = await agent(ctx, false, repair); stage(ctx);
     if (ctx.result.status === 'BLOCKED') throw Error(ctx.result.blocker || ctx.result.summary);
-    ctx.phase = 'READY_FOR_VALIDATION'; persist();
+    ctx.phase = 'READY_FOR_VALIDATION'; ctx.resumeStage = 'validate'; persist();
   }
   async function finish(ctx, alreadyImplemented, startingAttempt = 0) {
     for (let localAttempt = startingAttempt; localAttempt < 3; localAttempt++) {
@@ -431,19 +472,22 @@ Return the required JSON with task=${ctx.task} exactly, base=${ctx.base}, commit
         moveToIntegrationBase(ctx);
         await validate(ctx); integrate(ctx); return;
       } catch (e) {
-        ctx.feedback = e.message; ctx.blocker = failureReason(ctx.result, ctx.feedback); ctx.phase = 'BLOCKED'; persist();
-        if (ctx.result?.status === 'BLOCKED' || /budget|deadline|Paused|outside.*scope|coordinator-owned|Worker changed|Integration base changed|Candidate changed/.test(e.message)) throw e;
-        if (localAttempt === 2) throw e;
-        ctx.attempt++; persist();
+        ctx.interruptionReason = e.interruptionReason;
+        ctx.integrationConflict = e.integrationConflict;
+        ctx.feedback = e.message; ctx.blocker = failureReason(ctx.result, ctx.feedback); ctx.phase = 'BLOCKED';
+        if (localAttempt === 2 && !e.interruptionReason) ctx.terminalFailure = true;
+        persist();
+        if (ctx.result?.status === 'BLOCKED' || e.interruptionReason || e.integrationConflict || /outside.*scope|coordinator-owned|Worker changed|Integration base changed|Candidate changed/.test(e.message) || localAttempt === 2) throw e;
+        ctx.nextRepair = localAttempt + 1; ctx.resumeStage = 'implement'; ctx.attempt++; persist();
       }
     }
   }
   try {
     assertHead(); checkDeadChildren(state); delete state.childPid; state.childPids = [];
     if (command === 'run' && entries(state).length) throw Error(`Interrupted run retained at ${state.active.dir}; inspect and use bounded retry`);
-    if (command === 'retry' && !state.active) throw Error('No retained task to retry');
+    if (['retry', 'continue'].includes(command) && !state.active) throw Error('No retained task to retry');
     guard();
-    if (command === 'retry') for (const ctx of entries(state)) {
+    if (['retry', 'continue'].includes(command)) for (const ctx of retainedEntries()) {
       if (!cfg.allowedTasks.includes(ctx.task) || (!cfg.video && ctx.task.startsWith('V')))
         throw Error(`Retained task is no longer authorized by the current allowlist/video policy: ${ctx.task}`);
       const currentPaths = ctx.parallelOwner ? cfg.parallelPaths[ctx.task] : cfg.allowedPaths[ctx.task];
@@ -453,34 +497,61 @@ Return the required JSON with task=${ctx.task} exactly, base=${ctx.base}, commit
       // Never let a saved wider path policy override current authorization.
       ctx.paths ??= currentPaths;
     }
+    // Refused recovery is not a new failure of the saved candidate. Check
+    // admission before replacing its interruption checkpoint or batch usage.
+    if (['retry', 'continue'].includes(command)) {
+      const retained = retainedEntries(), rows = queue(md);
+      if (retained.length > cfg.maxTasksPerBatch) throw Error('Retained wave exceeds batch task limit');
+      const today = new Date().toISOString().slice(0, 10);
+      if (state.runs.filter(r => r.date === today).length + retained.length > cfg.maxRunsPerDay) throw Error('Daily run admission limit reached');
+      for (const ctx of retained) {
+        if (!fs.existsSync(ctx.worktree) || git(ctx.worktree, 'rev-parse', 'HEAD') !== ctx.base || git(cfg.repo, 'merge-base', ctx.base, head) !== ctx.base)
+          throw Error('Retained integration base changed; reconcile manually');
+        if (command === 'continue') {
+          if (!continuable(ctx) || (ctx.continuationCount ?? 0) >= cfg.maxContinuations) throw Error('Continuation limit reached or failure requires repair');
+        } else if ((ctx.recoveryCount ?? 0) >= cfg.maxRecoveryRetries) throw Error('Recovery retry limit reached; inspect/defer instead of recycling');
+        const row = rows.find(t => t.id === ctx.task);
+        if (!row || row.state !== 'TODO' || !row.deps.every(id => rows.find(t => t.id === id)?.state === 'DONE')) throw Error('Retained task is not dependency-ready');
+      }
+    }
     batchAdmitted = true;
-    state.batch = { started: new Date().toISOString(), deadline: new Date(deadline).toISOString(), maxTasks: cfg.maxTasksPerBatch, completed: 0 };
+    if (state.batch) (state.batchHistory ??= []).push({ ...state.batch, modelTokens: state.modelTokens, usage: state.usage });
+    state.batch = { started: new Date().toISOString(), command, deadline: new Date(deadline).toISOString(), maxTasks: cfg.maxTasksPerBatch, completed: 0 };
     state.modelTokens = 0; state.cachedInputTokens = 0;
     state.usage = { input: 0, cached: 0, nonCachedInput: 0, output: 0, reasoning: 0 }; persist();
     let admitted = 0;
-    if (command === 'retry') {
-      const retained = entries(state);
+    if (['retry', 'continue'].includes(command)) {
+      const retained = retainedEntries();
       if (retained.length > cfg.maxTasksPerBatch) throw Error('Retained wave exceeds batch task limit');
       // Check every retained base before the first integration advances head.
       for (const ctx of retained) {
-        if (!fs.existsSync(ctx.worktree) || git(ctx.worktree, 'rev-parse', 'HEAD') !== ctx.base || ctx.base !== head)
+        if (!fs.existsSync(ctx.worktree) || git(ctx.worktree, 'rev-parse', 'HEAD') !== ctx.base || git(cfg.repo, 'merge-base', ctx.base, head) !== ctx.base)
           throw Error('Retained integration base changed; reconcile manually');
       }
       for (const ctx of retained) {
-        if ((ctx.recoveryCount ?? 0) >= cfg.maxRecoveryRetries) throw Error('Recovery retry limit reached; inspect/defer instead of recycling');
-        const alreadyImplemented = ctx.phase === 'READY_FOR_VALIDATION' && ctx.result?.status !== 'BLOCKED';
+        if (command === 'continue') {
+          if (!continuable(ctx) || (ctx.continuationCount ?? 0) >= cfg.maxContinuations) throw Error('Continuation limit reached or failure requires repair');
+        } else if ((ctx.recoveryCount ?? 0) >= cfg.maxRecoveryRetries) throw Error('Recovery retry limit reached; inspect/defer instead of recycling');
+        const alreadyImplemented = ctx.result?.status !== 'BLOCKED' && (ctx.phase === 'READY_FOR_VALIDATION' ||
+          (command === 'continue' && (ctx.resumeStage === 'validate' || (!ctx.resumeStage && ctx.result?.status === 'READY_FOR_VALIDATION'))));
         const row = queue(md).find(t => t.id === ctx.task);
         if (!row || row.state !== 'TODO' || !row.deps.every(id => queue(md).find(t => t.id === id)?.state === 'DONE')) throw Error('Retained task is not dependency-ready');
         ctx.title = row.title; ctx.paths ??= cfg.allowedPaths[ctx.task]; ctx.checks = [];
-        ctx.recoveryCount = (ctx.recoveryCount ?? 0) + 1; ctx.attempt = (ctx.attempt ?? 2) + 1;
+        if (command === 'continue') ctx.continuationCount = (ctx.continuationCount ?? 0) + 1;
+        else ctx.recoveryCount = (ctx.recoveryCount ?? 0) + 1;
+        ctx.attempt = (ctx.attempt ?? 2) + 1;
         ctx.feedback = ctx.feedback || ctx.blocker || state.error || 'Resume the preserved candidate and validate it';
         const today = new Date().toISOString().slice(0, 10);
         if (state.runs.filter(r => r.date === today).length >= cfg.maxRunsPerDay) throw Error('Daily run admission limit reached');
-        state.runs.push({ date: today, task: ctx.task, dir: ctx.dir, recovery: ctx.recoveryCount }); persist();
-        await finish(ctx, alreadyImplemented); admitted++; state.batch.completed++; persist();
+        state.runs.push({ date: today, task: ctx.task, dir: ctx.dir, recovery: ctx.recoveryCount, continuation: ctx.continuationCount }); persist();
+        moveToIntegrationBase(ctx);
+        await finish(ctx, alreadyImplemented, command === 'continue' ? (ctx.nextRepair ?? 0) : 0); admitted++; state.batch.completed++; persist();
       }
     }
     while (admitted < cfg.maxTasksPerBatch) {
+      // A recovered owner may leave a peer with a different failure/stage.
+      // Its next wake gets its own admission policy; never abandon or replay it.
+      if (entries(state).length) break;
       // Reaching a batch budget after successful integration ends cleanly; a new wake gets a new bounded batch.
       if (Date.now() >= deadline || state.modelTokens >= cfg.maxReportedTokens) break;
       guard(); assertHead();
@@ -491,11 +562,19 @@ Return the required JSON with task=${ctx.task} exactly, base=${ctx.base}, commit
       const contexts = wave.map(t => prepare(t, wave.length > 1)); admitted += contexts.length;
       // Only implementation is parallel. Validation, review and integration stay serialized.
       const results = await Promise.allSettled(contexts.map(c => implement(c)));
+      // Persist every owner's outcome before one failure can return the batch.
+      // Otherwise a later interrupted peer loses the checkpoint needed to resume.
+      for (let i = 0; i < contexts.length; i++) if (results[i].status === 'rejected') {
+        contexts[i].interruptionReason = results[i].reason.interruptionReason;
+        contexts[i].feedback = results[i].reason.message;
+        contexts[i].blocker = contexts[i].feedback; contexts[i].phase = 'BLOCKED';
+      }
+      persist();
       for (let i = 0; i < contexts.length; i++) {
         if (results[i].status === 'rejected') {
-          contexts[i].feedback = results[i].reason.message; contexts[i].blocker = contexts[i].feedback; contexts[i].phase = 'BLOCKED'; persist();
-          if (contexts[i].result?.status === 'BLOCKED' || /budget|deadline|Paused|outside.*scope|coordinator-owned|Worker changed/.test(contexts[i].feedback)) throw results[i].reason;
+          if (contexts[i].result?.status === 'BLOCKED' || results[i].reason.interruptionReason || /outside.*scope|coordinator-owned|Worker changed/.test(contexts[i].feedback)) throw results[i].reason;
           contexts[i].attempt++; persist();
+          contexts[i].nextRepair = 1; persist();
           await finish(contexts[i], false, 1);
         } else {
           await finish(contexts[i], true);
@@ -510,7 +589,11 @@ Return the required JSON with task=${ctx.task} exactly, base=${ctx.base}, commit
     // Preserve the concrete test/review blocker for the recovery coordinator.
     if (!batchAdmitted && state.active) throw e;
     state.error = e.message;
-    if (state.active && state.active.phase !== 'INTEGRATED') { state.active.blocker = e.message; state.active.phase = 'BLOCKED'; }
+    if (state.active && state.active.phase !== 'INTEGRATED') {
+      state.active.interruptionReason = e.interruptionReason;
+      state.active.integrationConflict = e.integrationConflict;
+      state.active.feedback = e.message; state.active.blocker = e.message; state.active.phase = 'BLOCKED';
+    }
     persist(); throw e;
   } finally {
     stop(); release(); process.removeListener('SIGINT', interrupt); process.removeListener('SIGTERM', interrupt);

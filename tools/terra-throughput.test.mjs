@@ -55,7 +55,7 @@ process.stdin.on('end', () => {
     if (!review && scenario.extraWorkerPaths?.[task]) for (const file of scenario.extraWorkerPaths[task]) fs.writeFileSync(file, 'out-of-scope candidate edit\\n');
     const fail = review && ((scenario.failReviewTasks || []).includes(task) || count < (scenario.failFirstReviews || 0));
     const result = { task, base, commit: base, candidate,
-      status: review ? (fail ? 'FAIL' : 'PASS') : 'READY_FOR_VALIDATION',
+      status: review ? (fail ? 'FAIL' : 'PASS') : (scenario.workerStatuses?.[task] || scenario.workerStatus || 'READY_FOR_VALIDATION'),
       summary: fail ? 'Reproduced 6/8 accent defect' : 'Fixture candidate ' + task,
       blocker: fail ? 'Correct compound-meter accent weighting' : review ? '' : (scenario.workerBlocker || ''),
       tests: ['PENDING_COORDINATOR: required gates'], artifacts: [] };
@@ -91,6 +91,141 @@ else console.log('coordinator-checked-' + process.argv[2]);
 }
 const completed = f => queue(f.git('show', 'codex/terra:TASKS.md')).filter(t => t.state === 'DONE').map(t => t.id);
 const modelStarts = (f, kind) => f.events().filter(e => e.type === 'start' && (!kind || e.kind === kind));
+
+test('budget interruption resumes validation without replaying implementation or erasing usage', () => {
+  const f = fixture({ config: { maxReportedTokens: 12, maxRecoveryRetries: 0 } });
+  try {
+    assert.notEqual(f.call('advance').status, 0);
+    const retained = f.readState().active;
+    assert.equal(retained.resumeStage, 'validate');
+    assert.deepEqual(modelStarts(f).map(e => e.kind), ['worker']);
+    const patch = f.git('-C', retained.worktree, 'diff', '--binary', retained.base);
+    f.setConfig({ maxReportedTokens: 1000, maxRecoveryRetries: 0 });
+    assert.equal(f.call('advance').status, 0);
+    assert.deepEqual(modelStarts(f).map(e => e.kind), ['worker', 'review']);
+    assert.equal(f.readState().batchHistory[0].modelTokens, 12);
+    assert.equal(f.readState().runs.at(-1).continuation, 1);
+    assert.ok(patch.includes('implemented M01'));
+    assert.deepEqual(completed(f), ['F01', 'M01']);
+  } finally { f.close(); }
+});
+
+test('continuation reapplies preserved code onto a newer coordinator base and reviews that base', () => {
+  const f = fixture({ config: { maxReportedTokens: 12 } });
+  try {
+    f.call('run');
+    const old = f.git('rev-parse', 'codex/terra');
+    fs.writeFileSync(path.join(f.repo, 'README.md'), 'New coordinator instructions\n');
+    f.git('add', 'README.md'); f.git('commit', '-m', 'coordinator update');
+    const next = f.git('rev-parse', 'HEAD'); f.git('update-ref', 'refs/heads/codex/terra', next, old);
+    f.setConfig({ maxReportedTokens: 1000 });
+    const result = f.call('continue'); assert.equal(result.status, 0, result.stderr);
+    assert.equal(modelStarts(f, 'worker').length, 1);
+    assert.equal(modelStarts(f, 'review')[0].base, next);
+    assert.equal(f.git('show', 'codex/terra:README.md'), 'New coordinator instructions');
+  } finally { f.close(); }
+});
+
+test('advance defers an exhausted failure and admits unrelated work on its next wake', () => {
+  const f = fixture({ markdown: independent, scenario: { failReviewTasks: ['M01'] } });
+  try {
+    assert.notEqual(f.call('advance').status, 0);
+    const workers = modelStarts(f, 'worker');
+    assert.deepEqual(workers.map(e => e.args[e.args.indexOf('-m') + 1]), ['gpt-5.6-terra', 'gpt-5.6-terra', 'gpt-5.6-sol']);
+    const retained = f.readState().active;
+    assert.equal(retained.terminalFailure, true);
+    assert.equal(f.call('advance').status, 0);
+    assert.ok(fs.existsSync(retained.worktree));
+    assert.equal(queue(f.git('show', 'codex/terra:TASKS.md')).find(t => t.id === 'M01').state, 'BLOCKED');
+    f.setScenario({});
+    assert.equal(f.call('advance').status, 0);
+    assert.deepEqual(completed(f), ['F01', 'M02']);
+  } finally { f.close(); }
+});
+
+test('integration conflicts preserve the original without spending model repairs or leaking a worktree', () => {
+  const f = fixture({ config: { maxReportedTokens: 12 } });
+  try {
+    f.call('run'); const original = f.readState().active;
+    fs.writeFileSync(path.join(f.repo, 'src/M01.txt'), 'conflicting coordinator content\n');
+    f.git('add', 'src/M01.txt'); f.git('commit', '-m', 'overlapping integration change');
+    f.git('update-ref', 'refs/heads/codex/terra', f.git('rev-parse', 'HEAD'), original.base);
+    f.setConfig({ maxReportedTokens: 1000 });
+    const result = f.call('advance'); assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /Integration conflict/);
+    assert.equal(modelStarts(f).length, 1, 'no Terra or Sol repair runs against the stale base');
+    const retained = f.readState().active;
+    assert.equal(retained.integrationConflict, true);
+    assert.equal(retained.worktree, original.worktree);
+    assert.equal(fs.readFileSync(path.join(original.worktree, 'src/M01.txt'), 'utf8'), 'implemented M01\n');
+    assert.equal(retained.rebaseFailure.removed, true);
+    assert.equal(fs.existsSync(retained.rebaseFailure.worktree), false);
+    assert.equal(f.call('advance').status, 0, 'conflict is deferred rather than recycled');
+    assert.match(f.git('show', 'codex/terra:TASKS.md'), /M01.*BLOCKED.*Integration conflict/);
+    assert.ok(fs.existsSync(original.worktree));
+  } finally { f.close(); }
+});
+
+test('live checkout fast-forwards files and index; unrelated tracked edits are preserved', () => {
+  for (const dirty of [false, true]) {
+    const f = fixture();
+    try {
+      const branch = f.git('branch', '--show-current'); f.setConfig({ liveBranch: branch });
+      if (dirty) fs.writeFileSync(path.join(f.repo, 'src/baseline.txt'), 'user edit\n');
+      const result = f.call('run'); assert.equal(result.status, 0, result.stderr);
+      if (dirty) {
+        assert.equal(fs.readFileSync(path.join(f.repo, 'src/baseline.txt'), 'utf8'), 'user edit\n');
+        assert.match(f.readState().last.liveSyncError, /tracked edits/);
+      } else {
+        assert.equal(f.git('rev-parse', 'HEAD'), f.git('rev-parse', 'codex/terra'));
+        assert.equal(fs.readFileSync(path.join(f.repo, 'src/M01.txt'), 'utf8'), 'implemented M01\n');
+        assert.equal(f.git('status', '--porcelain'), '');
+      }
+    } finally { f.close(); }
+  }
+});
+
+test('continuation cap preserves the candidate instead of recycling budget failures forever', () => {
+  const f = fixture({ config: { maxReportedTokens: 12, maxContinuations: 0 } });
+  try {
+    f.call('run'); const retained = f.readState().active;
+    assert.notEqual(f.call('continue').status, 0);
+    assert.equal(modelStarts(f).length, 1);
+    assert.equal(f.call('advance').status, 0);
+    assert.ok(fs.existsSync(retained.worktree));
+    assert.equal(f.readState().active, undefined);
+  } finally { f.close(); }
+});
+
+test('explicit pause prevents admission and resumed validation does not consume a code retry', () => {
+  const f = fixture({ config: { maxReportedTokens: 12, maxRecoveryRetries: 0 } });
+  try {
+    f.call('run');
+    const state = f.readState(); state.active.feedback = 'Paused; work preserved'; state.active.interruptionReason = 'pause';
+    atomic(path.join(f.state, 'state.json'), state);
+    f.call('pause');
+    assert.equal(f.call('advance').status, 0);
+    assert.equal(modelStarts(f).length, 1);
+    f.call('resume'); f.setConfig({ maxReportedTokens: 1000, maxRecoveryRetries: 0 });
+    const result = f.call('advance'); assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(modelStarts(f).map(e => e.kind), ['worker', 'review']);
+    assert.equal(f.readState().runs.at(-1).recovery, undefined);
+  } finally { f.close(); }
+});
+
+test('worker blocker text cannot impersonate a coordinator interruption', () => {
+  const f = fixture({ config: { maxRecoveryRetries: 0 }, scenario: {
+    workerStatus: 'BLOCKED', workerBlocker: 'worker-0 exceeded batch deadline',
+  } });
+  try {
+    assert.notEqual(f.call('advance').status, 0);
+    assert.equal(f.readState().active.interruptionReason, undefined);
+    assert.notEqual(f.call('continue').status, 0);
+    assert.equal(modelStarts(f, 'worker').length, 1);
+    assert.equal(f.call('advance').status, 0);
+    assert.equal(f.readState().lastDeferred.task, 'M01');
+  } finally { f.close(); }
+});
 
 test('one admission immediately executes dependency-ready tasks up to the batch bound', () => {
   for (const [config, expected] of [[{}, ['M01']], [{ maxTasksPerBatch: 2 }, ['M01', 'M02']]]) {
@@ -212,6 +347,57 @@ test('retry preserves the existing candidate and every prior result and transcri
 
 const parallelConfig = { maxTasksPerBatch: 2, maxParallelWorkers: 2, parallelGroups: [['M01', 'M02']],
   parallelPaths: { M01: ['src/M01.txt'], M02: ['src/M02.txt'] } };
+test('blocked first owner cannot erase a later peer deadline checkpoint', () => {
+  const f = fixture({ markdown: independent,
+    config: { ...parallelConfig, minutes: 0.035, maxRecoveryRetries: 0 },
+    scenario: { workerStatuses: { M01: 'BLOCKED' }, workerBlocker: 'Missing input', workerDelays: { M02: 3000 } } });
+  try {
+    assert.notEqual(f.call('advance').status, 0);
+    assert.equal(f.readState().active.result.status, 'BLOCKED');
+    assert.equal(f.readState().parallel[0].interruptionReason, 'deadline');
+    assert.equal(f.call('advance').status, 0);
+    assert.equal(f.readState().active.task, 'M02');
+    f.setConfig({ minutes: 1, maxRecoveryRetries: 0 }); f.setScenario({});
+    const result = f.call('advance'); assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(completed(f), ['F01', 'M02']);
+    assert.equal(f.readState().runs.at(-1).continuation, 1);
+  } finally { f.close(); }
+});
+test('mixed interrupted and blocked parallel owners advance independently without deadlock', () => {
+  const f = fixture({ markdown: independent,
+    config: { ...parallelConfig, maxReportedTokens: 24, maxRecoveryRetries: 0 },
+    scenario: { workerStatuses: { M02: 'BLOCKED' }, workerBlocker: 'Required implementation input missing' } });
+  try {
+    assert.notEqual(f.call('advance').status, 0);
+    const original = f.readState();
+    assert.equal(original.active.interruptionReason, 'budget');
+    assert.equal(original.parallel[0].result.status, 'BLOCKED');
+    f.setConfig({ maxReportedTokens: 1000, maxRecoveryRetries: 0 });
+    const result = f.call('advance'); assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(completed(f), ['F01', 'M01']);
+    assert.equal(f.readState().active.task, 'M02');
+    assert.equal(modelStarts(f, 'worker').length, 2, 'neither preserved implementation is replayed');
+    assert.equal(f.call('advance').status, 0);
+    assert.equal(f.readState().active, undefined);
+    assert.ok(fs.existsSync(original.parallel[0].worktree));
+    assert.match(f.git('show', 'codex/terra:TASKS.md'), /M02.*BLOCKED.*Required implementation input missing/);
+  } finally { f.close(); }
+});
+test('advance defers a failed parallel owner then validates its ready peer without reimplementation', () => {
+  const f = fixture({ markdown: independent, config: parallelConfig, scenario: { failReviewTasks: ['M01'] } });
+  try {
+    assert.notEqual(f.call('advance').status, 0);
+    const failed = f.readState().active;
+    assert.equal(failed.terminalFailure, true);
+    assert.equal(f.call('advance').status, 0);
+    assert.equal(f.readState().active.task, 'M02');
+    assert.ok(fs.existsSync(failed.worktree));
+    f.setScenario({});
+    const result = f.call('advance'); assert.equal(result.status, 0, result.stderr);
+    assert.equal(modelStarts(f, 'worker').filter(e => e.task === 'M02').length, 1);
+    assert.deepEqual(completed(f), ['F01', 'M02']);
+  } finally { f.close(); }
+});
 test('explicit independent workers overlap, then integrate serially with fresh checks on the combined tree', () => {
   const f = fixture({ markdown: independent, config: parallelConfig, scenario: { workerDelay: 500 } });
   try {

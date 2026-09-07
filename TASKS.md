@@ -1,12 +1,14 @@
 # Implementation tasks
 
-Authority: [PLAN](PLAN.md). Updated: 2026-09-06. Task status is authoritative in the integration branch queue.
+Authority: [PLAN](PLAN.md). Updated: 2026-09-08. Task status is authoritative in the integration branch queue.
 The old MC/UI/VID queues are retired. Reuse existing code and tests; do not
 replay completed import, draft, acceptance, export or UI-foundation work.
 
 ## Execution contract
 
-- One task produces one reviewable implementation commit. Split an unexpectedly
+- One task produces one reviewable implementation commit. Suffixed rows are
+  executable slices; the unsuffixed row implements the final slice and validates
+  the combined parent contract. Aim for one behavior and a few production owners. Split an unexpectedly
   large task into suffixed subtasks here before editing; keep the parent pending
   until all children pass. Do not create another plan or log file.
 - Read AGENTS, PLAN, this task and its owning references. Inspect actual callers
@@ -57,26 +59,55 @@ an unrelated task. A failed dependent gate cannot be bypassed.
 | U03 | Refine Project and MIDI import | U02 | DONE | Native one-file MIDI drop, factual Project/MIDI facts, consistent fractional BPM, scoped accepted/rejected findings and honest recovery; Sol High fixes plus `make test`, `make build`, diff check and fresh Terra review passed. |
 | M02 | Derive melody context and harmony-tension evidence | M01, F06 | DONE | 07924ab04ef3; read-only melody/harmony context; fixed 6/8 accents, pickup slicing and PPQ25; 8 focused + 337 full tests, build and fresh review passed; recovered preserved candidate. Musical acceptance remains advisory. |
 | M03 | Add explicit harmony durations and source extent | M02 | TODO | |
-| M04 | Improve piano voicing against melody | M03 | TODO | |
-| M05 | Add phrase-aware, meter-aware comping | M04 | TODO | |
-| M06 | Persist a deliberate whole-song arrangement plan | M03 | TODO | |
-| M07 | Generate drafts from plan, boundaries and explicit rests | M05, M06 | TODO | |
-| M08 | Coordinate bass/drums and section transitions | M07 | TODO | |
-| M09 | Add meaningful alternatives and targeted musical repair | M08 | TODO | |
-| U04 | Build compact Structure & Harmony editing | U03, M06 | TODO | |
-| U05 | Build timeline-first Arrange with plan and repairs | U04, M09 | TODO | |
-| U06 | Finish whole-song Review and Logic export handoff | U05 | TODO | |
-| U07 | Prove visuals, accessibility and responsiveness | U06 | TODO | |
-| Q01 | Evaluate musical improvement and fix failures | U06, M09 | TODO | |
-| Q02 | Run the current Logic Pro matrix | U06, M03, M07, M08 | TODO | |
-| Q03 | Prove clean install and obtain MIDI release decision | F06, U07, Q01, Q02 | TODO | |
-| V01 | Prove the isolated video/media boundary | F01; video implementation selected | TODO | Selected for unpaid implementation; human/budget gates remain. |
-| V02 | Build the approved TABI asset library | V01 | TODO | Selected for unpaid implementation; human/budget gates remain. |
-| V03 | Add one cost-bounded generative-animation adapter | V02 | TODO | Selected for unpaid implementation; human/budget gates remain. |
-| V04 | Implement deterministic scene composition | V03 | TODO | Selected for unpaid implementation; human/budget gates remain. |
-| V05 | Build real video editor/preview | V04 | TODO | Selected for unpaid implementation; human/budget gates remain. |
-| V06 | Encode, validate and publish local video outputs | V05 | TODO | Selected for unpaid implementation; human/budget gates remain. |
-| V07 | Complete a TABI music-video pilot and optional handoff | V06, Q03 | TODO | Selected for unpaid implementation; human/budget gates remain. |
+| U04a | Expose compact chord-duration and source-end editing | U03, M03 | TODO | |
+| M04a | Build bounded legal piano voicing choices | M03 | TODO | |
+| M04b | Rank piano voicings against protected melody | M04a | TODO | |
+| M04 | Improve piano voicing against melody | M04b | TODO | |
+| M05a | Anchor comping to meter and chord windows | M04 | TODO | |
+| M05 | Add phrase-aware, meter-aware comping | M05a | TODO | |
+| M06a | Persist versioned arrangement-plan records | M03 | TODO | |
+| M06b | Create and confirm arrangement-plan proposals | M06a | TODO | |
+| M06 | Persist a deliberate whole-song arrangement plan | M06b | TODO | |
+| M07a | Resolve per-occurrence generation context | M05, M06 | TODO | |
+| M07b | Represent planned rests in draft and acceptance | M07a | TODO | |
+| M07 | Generate drafts from plan, boundaries and explicit rests | M07b | TODO | |
+| M08a | Coordinate bass support with chord and groove intent | M07 | TODO | |
+| M08b | Shape drum fills and section transitions | M08a | TODO | |
+| M08 | Coordinate bass/drums and section transitions | M08b | TODO | |
+| M09a | Define scoped deterministic musical repair intents | M08 | TODO | |
+| M09 | Add meaningful alternatives and targeted musical repair | M09a | TODO | |
+| U04b | Edit sections and confirmed arrangement purpose | U04a, M06 | TODO | |
+| U04 | Build compact Structure & Harmony editing | U04b | TODO | |
+| U05a | Make Arrange lanes and full-draft action dominant | U04, M07 | TODO | |
+| U05b | Wire bounded previews and contextual repair actions | U05a, M09 | TODO | |
+| U05 | Build timeline-first Arrange with plan and repairs | U05b | TODO | |
+| U06a | Finish whole-song review and atomic decisions | U05 | TODO | |
+| U06 | Finish whole-song Review and Logic export handoff | U06a | TODO | |
+| U07a | Pin visual comparisons and accessibility regressions | U06 | TODO | |
+| U07b | Measure responsiveness and prepare visual review | U07a | TODO | |
+| U07 | Prove visuals, accessibility and responsiveness | U07b | TODO | |
+| Q01a | Prepare frozen musical evaluation packages | U06, M09 | TODO | |
+| Q01 | Evaluate musical improvement and fix failures | Q01a | TODO | |
+| Q02a | Generate current Logic matrix and manifests | U06, M03, M07, M08 | TODO | |
+| Q02 | Run the current Logic Pro matrix | Q02a | TODO | |
+| Q03a | Prove clean native build and startup | F06, U06 | TODO | |
+| Q03 | Prove clean install and obtain MIDI release decision | Q03a, U07, Q01, Q02 | TODO | |
+| V01a | Prove an independently built companion boundary | F01 | TODO | |
+| V01 | Prove the isolated video/media boundary | V01a | TODO | Selected for unpaid implementation; human/budget gates remain. |
+| V02a | Implement immutable asset manifest and validation | V01a | TODO | |
+| V02b | Import and inspect the pilot asset kit | V02a | TODO | |
+| V02 | Build the approved TABI asset library | V02b | TODO | Selected for unpaid implementation; human/budget gates remain. |
+| V03a | Implement resumable cost-bounded animation jobs | V02b | TODO | |
+| V03b | Implement one provider adapter and manual clip import | V03a | TODO | |
+| V03 | Add one cost-bounded generative-animation adapter | V03b, V01, V02 | TODO | Selected for unpaid implementation; human/budget gates remain. |
+| V04a | Plan deterministic soundtrack and scene timing | V03a | TODO | |
+| V04 | Implement deterministic scene composition | V04a | TODO | Selected for unpaid implementation; human/budget gates remain. |
+| V05a | Build real scene preview and soundtrack transport | V04 | TODO | |
+| V05 | Build real video editor/preview | V05a | TODO | Selected for unpaid implementation; human/budget gates remain. |
+| V06a | Implement bounded encoder process and output staging | V01a | TODO | |
+| V06 | Encode, validate and publish local video outputs | V06a, V05 | TODO | Selected for unpaid implementation; human/budget gates remain. |
+| V07a | Add capability-checked optional Export handoff | V06, U06 | TODO | |
+| V07 | Complete a TABI music-video pilot and optional handoff | V07a, V03, V02, Q03 | TODO | Selected for unpaid implementation; human/budget gates remain. |
 
 ## Foundation and removal
 
@@ -220,7 +251,25 @@ reopen and scoped invalidation; export whole-song boundaries and source equality
 **Done:** services support musical duration editing without equal-slot ambiguity;
 Q02's updated Logic fixtures are prepared, not falsely signed off.
 
+### M04a — Build bounded legal piano voicing choices
+
+**Scope:** Add open, guide-tone and reduced voicing candidates behind the existing generator. Preserve chord/slash identity, bass space and deterministic fallback. Test legal ranges, required tones, voice crossing and bounded candidate count.
+**Inspect:** the M04 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
+### M04b — Rank piano voicings against protected melody
+
+**Scope:** Consume M02 overlap/accent/register evidence in deterministic voicing costs. Test sustained close clash versus passing tension and low melody; do not rewrite melody or harmony.
+**Inspect:** the M04 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
 ### M04 — Improve piano voicing against melody
+
+**Remaining parent slice:** Connect phrase-boundary continuity and stable lookahead to the new pool/ranker; generate the baseline/new listening pack and validate the complete M04 contract.
+The original contract below is the overall acceptance checklist. Reuse completed
+children; do not reimplement them or expand this task to the whole workstream.
 
 **Inspect:** chord generator/validator, M01 failures and M02 context.
 **Work:** bounded voicing pool with open/guide-tone/reduced choices, required
@@ -234,7 +283,18 @@ common-tone continuity, search limits and deterministic results across seeds.
 and generates a short baseline/new listening pack. Ask for milestone feedback
 when useful; do not stall independent tasks or award a subjective score.
 
+### M05a — Anchor comping to meter and chord windows
+
+**Scope:** Implement authored 4/4, 3/4 and 6/8 phase and exact clipping at harmonic boundaries. Test offbeat changes, odd PPQ, short sections and compound accents.
+**Inspect:** the M05 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
 ### M05 — Add phrase-aware, meter-aware comping
+
+**Remaining parent slice:** Add activity/phrase-based support, answer and rest selection, version the changed patterns and compare audible development fixtures.
+The original contract below is the overall acceptance checklist. Reuse completed
+children; do not reimplement them or expand this task to the whole workstream.
 
 **Inspect:** chord rhythm expansion, pattern catalog/tick grid and articulation.
 **Work:** anchor pattern phase to meter/song bars, clip notes at harmony changes,
@@ -247,7 +307,25 @@ rounding, no harmony-boundary overhang or source timing mutation.
 **Done:** the same melody/chords can receive audibly distinct useful comping;
 no forced 4/4 loop truncation masquerades as other-meter support.
 
+### M06a — Persist versioned arrangement-plan records
+
+**Scope:** Add purpose, phrase/repeat identity, role activity/settings, shared groove and boundary fields with exact persistence and fingerprints. Test reopen, malformed records, no-op identity and protected artifacts; do not add a migration mode.
+**Inspect:** the M06 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
+### M06b — Create and confirm arrangement-plan proposals
+
+**Scope:** Add deterministic style-derived proposal and explicit confirmation use cases. Separate suggestion from saved authority and draft. Test no writes before confirmation, rename-independent purpose and cancellation.
+**Inspect:** the M06 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
 ### M06 — Persist a deliberate whole-song arrangement plan
+
+**Remaining parent slice:** Implement affected-scope preview and dependency invalidation for confirmed plan edits; prove locked/accepted work is preserved and every consumed input is versioned.
+The original contract below is the overall acceptance checklist. Reuse completed
+children; do not reimplement them or expand this task to the whole workstream.
 
 **Inspect:** style catalog, project schema/fingerprint, occurrence identity,
 M02 phrase/repeat suggestions and generation context.
@@ -262,7 +340,25 @@ reopen, no-op hashes, locked work and plan-edit invalidation previews.
 **Done:** one versioned plan drives the full song and names every generation
 input. Changing it never silently rewrites melody, chords or acceptances.
 
+### M07a — Resolve per-occurrence generation context
+
+**Scope:** Resolve plan, shared groove, bounded neighbor and repeat inputs in Chords→Bass→Drums order. Test deterministic fingerprints and precise invalidation; keep unrelated accepted scopes intact.
+**Inspect:** the M07 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
+### M07b — Represent planned rests in draft and acceptance
+
+**Scope:** Make intentional rest distinct from missing/failed output through generation, audition and atomic use/undo. Test cancellation, retry, locked scopes and mixed candidate/rest batch acceptance.
+**Inspect:** the M07 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
 ### M07 — Generate drafts from plan, boundaries and explicit rests
+
+**Remaining parent slice:** Finish accepted-only assembly/export for rests, including all-song inactive-role omission and exact source/end boundaries; update contract and Logic fixtures.
+The original contract below is the overall acceptance checklist. Reuse completed
+children; do not reimplement them or expand this task to the whole workstream.
 
 **Inspect:** draft orchestration, generation context/publication, retry, accepted
 assembly, batch acceptance/undo, review/audition and export readiness.
@@ -277,7 +373,25 @@ all-song inactive role policy, source/role export origin/end and no overwrite.
 **Done:** draft playback and export agree on accepted activity; missing output
 cannot pass as silence. Update MIDI_CONTRACT and prepare Q02 fixtures.
 
+### M08a — Coordinate bass support with chord and groove intent
+
+**Scope:** Implement bounded bass approaches, chord space and shared kick intent without circular dependencies. Test low/held melody, resolution, deterministic fingerprints and 3/4/6/8.
+**Inspect:** the M08 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
+### M08b — Shape drum fills and section transitions
+
+**Scope:** Use phrase and next-section intent for complete authored grooves and fills. Test one/two-bar sections, quiet intros, repeat variation and harmony-edge behavior.
+**Inspect:** the M08 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
 ### M08 — Coordinate bass/drums and section transitions
+
+**Remaining parent slice:** Integrate intentional endings and cross-role boundary regressions; generate full-song baseline/new comparison packages.
+The original contract below is the overall acceptance checklist. Reuse completed
+children; do not reimplement them or expand this task to the whole workstream.
 
 **Inspect:** bass/drum generators, shared groove plan, current kick-support and
 fill policies, M01 whole-song fixture.
@@ -292,7 +406,18 @@ last-note/end behavior and stable previous/next dependency fingerprints.
 **Done:** assembled songs have demonstrable role coordination and transitions;
 M01 comparison packages show the changes without extra melody editing.
 
+### M09a — Define scoped deterministic musical repair intents
+
+**Scope:** Map the six PLAN repair intents to bounded versioned settings and affected role/occurrence sets. Test precise invalidation, locked work and no accepted/source mutation.
+**Inspect:** the M09 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
 ### M09 — Add meaningful alternatives and targeted musical repair
+
+**Remaining parent slice:** Rank up to three semantically distinct alternatives, reject cosmetic duplicates and wire real preview/apply intents with baseline context and honest no-result reasons.
+The original contract below is the overall acceptance checklist. Reuse completed
+children; do not reimplement them or expand this task to the whole workstream.
 
 **Inspect:** candidate diff/lifecycle, style preview cache, workspace intents,
 M04–M08 settings and validation findings.
@@ -347,7 +472,25 @@ rejection explanations, keyboard chooser, real track counts and responsive layou
 **Done:** create/open/import/listen is concise and truthful; no audio queue,
 cleaning options, fabricated history or source-replacement shortcut.
 
+### U04a — Expose compact chord-duration and source-end editing
+
+**Scope:** Use M03 services in a compact Structure & Harmony duration inspector with real melody/section context and explicit padding confirmation. Keep current plan behavior. Test unequal durations, cancel/save, non-bar source end and keyboard access; capture all three reference sizes.
+**Inspect:** the U04 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
+### U04b — Edit sections and confirmed arrangement purpose
+
+**Scope:** Add compact duplicate/move/split/remove section rows and purpose/phrase suggestion confirmation. Test repeated identity, source immutability and keyboard alternatives.
+**Inspect:** the U04 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
 ### U04 — Build compact Structure & Harmony editing
+
+**Remaining parent slice:** Finish unsaved/affected-work preview, total-mismatch recovery and responsive shared-strip layout; inspect reference 03 and the three-size captures.
+The original contract below is the overall acceptance checklist. Reuse completed
+children; do not reimplement them or expand this task to the whole workstream.
 
 **Inspect:** M03 duration/extent services, M06 plan/purpose, authority drafts and
 existing structure page; reference 03.
@@ -362,7 +505,25 @@ mismatch, scoped invalidation and first-viewport edit/save accessibility.
 **Done:** structure and harmonic rhythm are visible over the real melody, not
 hidden inside equal-slot text or multiple scrolling cards.
 
+### U05a — Make Arrange lanes and full-draft action dominant
+
+**Scope:** Build the reference 04 timeline composition, compact five-style gallery and selected-section plan/role inspector with factual rest/progress states. Test primary-action visibility and selection at all three sizes.
+**Inspect:** the U05 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
+### U05b — Wire bounded previews and contextual repair actions
+
+**Scope:** Wire actual plan/repair services, latest-wins cancellation and one-bar looping. Test ephemeral versus persisted state, retry scope and no duplicate player.
+**Inspect:** the U05 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
 ### U05 — Build timeline-first Arrange with plan and repairs
+
+**Remaining parent slice:** Complete real-service ready-authority→draft playback within three actions, recovery and keyboard flow; inspect actual images and validate full/preview plan parity.
+The original contract below is the overall acceptance checklist. Reuse completed
+children; do not reimplement them or expand this task to the whole workstream.
 
 **Inspect:** current Arrange/song map, M06 plan and M09 repair; references 04/07.
 **Work:** dominant map/lanes, compact five-style gallery, top-right Create full
@@ -377,7 +538,18 @@ confirmation boundary, exceptions retain style/section and no double playback.
 **Done:** the user can understand and hear the whole-song proposal and fix a
 selected part without a section/role generation ladder.
 
+### U06a — Finish whole-song review and atomic decisions
+
+**Scope:** Use shared lanes for clear Draft/Accepted identity, contextual repair comparison and Play/Use/Undo. Test batch atomicity, rests, selection/loop continuity and exact blocker routing.
+**Inspect:** the U06 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
 ### U06 — Finish whole-song Review and Logic export handoff
+
+**Remaining parent slice:** Finish accepted-only Export summary, immutable result/reveal and concise Logic handoff; prove real-service import→repair→use→undo→reuse→export at all three sizes.
+The original contract below is the overall acceptance checklist. Reuse completed
+children; do not reimplement them or expand this task to the whole workstream.
 
 **Inspect:** Review/Export pages, accepted assembly, batch undo and writer;
 reference 04 for Review and 09 for Export.
@@ -391,7 +563,25 @@ no overwrite, reopen and loop continuity between Arrange/Review.
 **Done:** real-service import→draft→repair→use→undo→reuse→export passes at all
 three sizes, with no project-file edits or fake settings required.
 
+### U07a — Pin visual comparisons and accessibility regressions
+
+**Scope:** Create deterministic actual/expected/diff image artifacts and independent geometry, color, focus and hit-bound checks. Prove comparator rejects shifted panels, wrong primary color/radius and missing lanes; do not auto-approve changed goldens.
+**Inspect:** the U07 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
+### U07b — Measure responsiveness and prepare visual review
+
+**Scope:** Exercise large songs, long names, short windows and native density; measure the specified preparation/cancellation timings on a recorded machine. Prepare six-page image comparison and report unmeasured acoustic onset honestly.
+**Inspect:** the U07 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
 ### U07 — Prove visuals, accessibility and responsiveness
+
+**Remaining parent slice:** Present the completed six-page evidence and record the actual user visual decision in Validation. If missing, record WAITING_USER; no new implementation is required merely to request this gate.
+The original contract below is the overall acceptance checklist. Reuse completed
+children; do not reimplement them or expand this task to the whole workstream.
 
 **Inspect:** fixture writers, UI_GUIDELINE measurement JSON, complete workflow
 and actual native font/density behavior.
@@ -408,7 +598,18 @@ Leave WAITING_USER if review is outstanding; Q01/Q02 preparation can continue.
 
 ## Product evidence
 
+### Q01a — Prepare frozen musical evaluation packages
+
+**Scope:** Build the comparison/evaluation export command and compact score forms with source/settings/version hashes. Freeze only supplied owned final cases; explicitly flag any missing three unseen songs and keep synthetic development cases separate. Test reproducibility and case integrity.
+**Inspect:** the Q01 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
 ### Q01 — Evaluate musical improvement and fix failures
+
+**Remaining parent slice:** Collect genuine scores against Validation thresholds; record specific failed bars as bounded corrective queue work. Missing songs or ratings are WAITING_USER and do not block independent engineering.
+The original contract below is the overall acceptance checklist. Reuse completed
+children; do not reimplement them or expand this task to the whole workstream.
 
 **Work:** prepare five varied full-song projects following Validation, with at
 least three unseen at evaluation start. Freeze the set before generating final
@@ -421,7 +622,18 @@ failure. Re-evaluate changed engines on all cases, retaining failed results.
 record failed bars/intents and add bounded corrective tasks. Never use automated
 metrics or the old 5/10 feedback as evidence of a new 8/10 score.
 
+### Q02a — Generate current Logic matrix and manifests
+
+**Scope:** Prepare deterministic import/extent/harmony/rest/controller/ending packages and semantic re-import checks with build/source/output identity. Produce concise import/play/reopen instructions; never claim actual Logic playback.
+**Inspect:** the Q02 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
 ### Q02 — Run the current Logic Pro matrix
+
+**Remaining parent slice:** Record real user Logic import/play/reopen results and exact versions against the frozen current packages, or WAITING_USER with the prepared artifacts.
+The original contract below is the overall acceptance checklist. Reuse completed
+children; do not reimplement them or expand this task to the whole workstream.
 
 **Work:** regenerate frozen packages covering current import, padding, chord
 windows, rests, patterns, expressive source and final boundaries. Record build,
@@ -433,7 +645,18 @@ then saves/closes/reopens. Preserve the 2026-08-28 record as historical evidence
 finding, musical corruption cannot. WAITING_USER is valid until evidence arrives;
 an export test alone cannot complete this task.
 
+### Q03a — Prove clean native build and startup
+
+**Scope:** Run isolated clean install/package/startup and the six-page MIDI path without worker/model/sound library. Record build identity, reduction and any concrete install regressions; preserve source media and prior evidence.
+**Inspect:** the Q03 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
 ### Q03 — Prove clean install and obtain MIDI release decision
+
+**Remaining parent slice:** Reconcile acceptance evidence with the final engine/UI/export versions, update README to shipped behavior and obtain the actual MIDI release decision.
+The original contract below is the overall acceptance checklist. Reuse completed
+children; do not reimplement them or expand this task to the whole workstream.
 
 **Work:** use an isolated clean checkout of the integrated result; run test/build
 and native install/startup without worker, sound library or model. Walk all six
@@ -487,7 +710,18 @@ or independently built/distributed companion chosen in V01. Do not put media
 runtime into MIDI Core or reuse the old release/renderer branch. Shared commands
 above apply to its equivalent tests/build; core tests apply to integration work.
 
+### V01a — Prove an independently built companion boundary
+
+**Scope:** Use the selected companion/ location with its own build. Prove a small owned-media encode/decode/preview sync spike, no MIDI runtime dependencies and exact local encoder/license facts. Research one current provider API without generating. Keep this a bounded spike, not a complete editor.
+**Inspect:** the V01 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
 ### V01 — Prove isolated video/media boundary
+
+**Remaining parent slice:** Present exact provider/encoder choices, rights inputs and a bounded paid-pilot proposal. Record missing budget or product decision as WAITING_USER; technical subtasks may proceed with owned fixtures.
+The original contract below is the overall acceptance checklist. Reuse completed
+children; do not reimplement them or expand this task to the whole workstream.
 
 **Work:** settle companion location and input/output presets; prove owned-media
 preview, encode/decode, audio synchronization and native packaging. Inspect one
@@ -500,7 +734,25 @@ short local encode probes first/final frames, streams and duration.
 **Done:** exact dependency choice and bounded pilot budget are reviewable; no
 unverified codec or generative-continuity promise. No full app scaffold yet.
 
+### V02a — Implement immutable asset manifest and validation
+
+**Scope:** Add asset identity/digest/provenance/rights/geometry/approval records in the companion. Test missing/hash-changed media, dimensions and approved-version selection using small owned fixtures.
+**Inspect:** the V02 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
+### V02b — Import and inspect the pilot asset kit
+
+**Scope:** Implement local asset import and inspection for masks/alpha/pivots/layers/scene compatibility. Preserve original references and large media outside Git; expose unresolved TABI identity differences for review, without paid generation.
+**Inspect:** the V02 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
 ### V02 — Build approved TABI asset library
+
+**Remaining parent slice:** Assemble the real owned pilot kit and record user approval of one coherent TABI/train identity. Missing production layers/rights/approval remain WAITING_USER.
+The original contract below is the overall acceptance checklist. Reuse completed
+children; do not reimplement them or expand this task to the whole workstream.
 
 **Work:** reconcile character-sheet versus scene details once into an approved
 identity bible; old “Moki” text never appears in output. Create a manifest with
@@ -512,7 +764,25 @@ scene compatibility, rights/provenance and approved-version selection.
 **Done:** user approves one coherent character/train kit; separate files are
 usable in composition, not merely a pretty collage or giant prompt output.
 
+### V03a — Implement resumable cost-bounded animation jobs
+
+**Scope:** Build provider-neutral job persistence, submission identity, budget admission and polling/cancel/restart with fake-provider contract tests. Reject unknown cost and do not issue live generation requests.
+**Inspect:** the V03 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
+### V03b — Implement one provider adapter and manual clip import
+
+**Scope:** Use the verified current API contract from V01a, secure credentials and explicit model/options. Test timeout, rate limits, uncertain submission, partial download and output digest quarantine without paid requests; support owned manual clips.
+**Inspect:** the V03 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
 ### V03 — Add one cost-bounded animation adapter
+
+**Remaining parent slice:** Run only an explicitly budget-authorized short TABI animation batch; record real costs and human identity/loop approval. No authorization means WAITING_USER.
+The original contract below is the overall acceptance checklist. Reuse completed
+children; do not reimplement them or expand this task to the whole workstream.
 
 **Work:** image-to-video jobs bind approved reference IDs, model/version,
 parameters, prompt, seed when supported, budget and provider job ID. Persist
@@ -525,7 +795,18 @@ unknown-cost admission, budget/retry cap and redacted credentials/logs.
 geometry; failed takes are rejected with real costs recorded. Silent visuals
 use the finished soundtrack later; no generated audio replaces the music.
 
+### V04a — Plan deterministic soundtrack and scene timing
+
+**Scope:** Resolve immutable finished soundtrack plus optional verified MIDI manifest to rational time/frame plans with explicit bounce offset/tail alignment. Test mismatches, rounding and no music/project writes using owned media.
+**Inspect:** the V04 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
 ### V04 — Implement deterministic scene composition
+
+**Remaining parent slice:** Implement layered/parallax/window-mask motion, loop scheduling and crossfades from pinned assets; prove deterministic frames and exact soundtrack timeline with owned fixture clips.
+The original contract below is the overall acceptance checklist. Reuse completed
+children; do not reimplement them or expand this task to the whole workstream.
 
 **Work:** immutable soundtrack + optional verified MIDI manifest become a
 video-job plan. Use explicit bounce offset/tail alignment, rational tick-to-time
@@ -537,7 +818,18 @@ changed tempo mismatch, stale assets, loop seams and no source/music writes.
 **Done:** same accepted assets/job produce the same frame plan; the soundtrack
 is neither trimmed/stretched nor remastered silently.
 
+### V05a — Build real scene preview and soundtrack transport
+
+**Scope:** Create a companion preview stage sharing output geometry/timing, with real playback/seek and one finished-soundtrack player. Test frame/audio alignment and crop/scene boundaries; no fake video frames.
+**Inspect:** the V05 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
 ### V05 — Build real video editor and preview
+
+**Remaining parent slice:** Add reference 08 scene strip/inspector, supported motion/crop/transition edits, approval/progress/cancel/reopen and keyboard flow; prepare an actual owned-media preview.
+The original contract below is the overall acceptance checklist. Reuse completed
+children; do not reimplement them or expand this task to the whole workstream.
 
 **Work:** adapt reference 08: preview stage, scene thumbnail strip, selected-scene
 inspector, supported crop/motion/transition settings and one soundtrack player.
@@ -548,7 +840,18 @@ soundtrack/assets, keyboard, compact layout and cancellation/reopen.
 **Done:** user can review an actual full-song pilot before encoding, including
 character consistency, loop seams and final scene/audio tail.
 
+### V06a — Implement bounded encoder process and output staging
+
+**Scope:** Build safe argv, owned temp/output paths, progress/timeouts/cancel/disk errors and atomic new-output publishing in companion. Test Unicode/spaces, crashes and collision preservation with owned media.
+**Inspect:** the V06 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
 ### V06 — Encode and validate local outputs
+
+**Remaining parent slice:** Probe first/final frames, streams, dimensions, duration, A/V sync and preview/output parity; produce a playable local file and compact provenance report.
+The original contract below is the overall acceptance checklist. Reuse completed
+children; do not reimplement them or expand this task to the whole workstream.
 
 **Work:** bounded owned encoder process with safe arguments, progress, timeout,
 cancel, disk-space/error handling; stage, probe and atomically publish to a new
@@ -560,7 +863,18 @@ stale input, destination collision and preservation of previous complete output.
 **Done:** playable video matches preview and keeps the exact soundtrack timeline;
 no partial output is labeled complete. Core remains independently installable.
 
+### V07a — Add capability-checked optional Export handoff
+
+**Scope:** Wire optional companion launch consuming an immutable export manifest and separately supplied finished soundtrack. Test installed/absent companion, stale snapshots and no MIDI project writes; keep independent packaging.
+**Inspect:** the V07 contract below and its relevant source/test owners.
+**Done:** this slice works through its real caller, focused regressions and required
+coordinator checks pass; leave later slices to their queue owners.
+
 ### V07 — Complete pilot and optional MIDI handoff
+
+**Remaining parent slice:** Complete the real full-song TABI pilot using approved assets/music, record costs and user visual/sound/rights decisions, then prepare a local upload package. Public upload and monetization remain separate decisions.
+The original contract below is the overall acceptance checklist. Reuse completed
+children; do not reimplement them or expand this task to the whole workstream.
 
 **Work:** finish one original full-song TABI episode with the owned music,
 controlled scene evolution and approved character assets. Human review checks
@@ -576,102 +890,77 @@ there is no fabricated YouTube-readiness score or promised revenue.
 
 ## Configured automatic execution
 
-Updated by user request on 2026-09-08. The existing heartbeat wakes every
-20 minutes. Each invocation runs up to three dependency-ready tasks immediately,
-within one 45-minute deadline and one 500,000-token admission budget. There are
-at most 24 admitted tasks/recoveries per UTC day. Cached input is recorded
-separately; reported non-cached input, output and reasoning count toward the
-budget. Limits are checked before model calls; simultaneous in-flight calls may
-cross the budget before usage is reported. No automatic credit reset/purchase.
-The heartbeat defers new work if an available account limit has less than 10%
-remaining. No paid media generation or public push/upload is authorized.
+The existing **Melotrail Terra autopilot** wakes every **20 minutes** and invokes
+`advance` once. It runs up to three ready slices within 45 minutes and 500,000
+reported non-cached input/output/reasoning tokens; up to 72 task/continuation
+admissions per UTC day. Cached input is recorded separately. Model usage is
+reported after a call, so an in-flight call may cross the admission limit.
+Before admission, the heartbeat checks actual account limits and defers below
+10% remaining. No credit purchase/reset is authorized.
 
-The source checkout and its staged changes stay intact. Automatic commits advance
-only the un-checked-out `codex/terra-batched-implementation` branch. TASKS on that
-branch owns current queue status; the source checkout can be older. Each candidate
-has an isolated detached worktree. Do not check out the integration branch while
-the runner is active.
+One Terra High implementer works at a time. A concrete failure gets one focused
+Terra retry, then one **Sol High** repair with the original task contract, current
+`git diff`, and exact terminal/test/review errors. Checks and fresh Terra High
+review are coordinator-owned. Every changed candidate needs focused checks,
+`make test`, `make build` and `git diff --check` before review/integration.
 
-Local control: `~/.codex/melotrail-terra/config.json`; installed runner:
-`~/.codex/melotrail-terra/terra-runner.mjs`. These are execution state outside the
-product, not another queue. The coordinator installs runner changes only after
-focused tests, `make test`, `make build`, diff checks and fresh review pass.
+A budget/deadline interruption is distinct from an implementation failure.
+`advance` continues the preserved stage under a new bounded batch, retaining
+prior usage and evidence. A ready candidate resumes validation/review, not
+implementation. At most three such continuations are admitted per task. A
+completed three-attempt failure, or exhausted continuation, is recorded BLOCKED
+with its preserved candidate; the next wake selects independent ready work.
+Never clear state, erase usage history, weaken a gate or recycle the same task
+forever. A live lock or explicit pause causes no admission. A dead lock requires
+verified PID/process-group recovery; a conflicting changed base preserves work.
 
-Terra High implements each task. Repairs resume its saved session and existing
-candidate. After the initial attempt and one repair fail, Sol High gets the task,
-current diff and concrete errors for one scoped repair. Reviews always use a
-fresh Terra High session and approve the exact tested Git tree. A changed tree
-invalidates checks/review. Workers cannot run Gradle in their sandbox; the
-coordinator runs fixed focused checks, `make test`, `make build` and diff checks.
-Unexecuted worker checks are PENDING_COORDINATOR, never a product blocker.
+Commits advance `codex/terra-batched-implementation`. The normal project checkout
+uses **codex/terra-live** and is fast-forwarded after each successful integration
+only when it is still on that branch and has no tracked edits. A dirty/diverged
+checkout is preserved and reported; do not reset it. Restart `make desktop` to
+see the new app. TASKS on the integration branch owns completion; runner status
+owns the active stage. Workers are CLI processes, not Scheduled-tab subagents.
 
-Current review evidence is a bounded JSON packet with the candidate identity,
-check commands/results, small output tails and explicit log paths. Worker/review
-transcripts are stored separately and must never be read back into agents or
-included in recursive log searches. Initial required docs are read once; repairs
-reuse that context and inspect only changed authority/docs and concrete feedback.
-
-At most two implementers run concurrently. Only M04 and M06 are selected for
-parallel work, after M03 completes, and only under the disjoint file ownership in
-local configuration. Overlapping owners run serially. The coordinator alone
-validates, reviews, commits and updates TASKS. The second candidate is applied to
-a fresh worktree on the first candidate's integrated result, then gets all checks
-and fresh review again; a conflict preserves the original work. Scope changes
-require coordinator review before expanding parallel ownership. All other tasks
-continue in dependency order; human waits do not block unrelated ready tasks.
-
-Commands (Node is developer tooling; the existing Codex login is reused):
+Local configuration/state: `~/.codex/melotrail-terra/`. The installed script must
+match tested `tools/terra-runner.mjs`. Only the coordinator updates TASKS and
+integrates. Successful dedicated worker worktrees are removed; failed candidates
+and evidence are retained. No new execution-log document belongs in this repo.
 
 ```bash
 node ~/.codex/melotrail-terra/terra-runner.mjs status
 node ~/.codex/melotrail-terra/terra-runner.mjs dry-run
-node ~/.codex/melotrail-terra/terra-runner.mjs run
+node ~/.codex/melotrail-terra/terra-runner.mjs advance
 node ~/.codex/melotrail-terra/terra-runner.mjs pause
 node ~/.codex/melotrail-terra/terra-runner.mjs resume
-node ~/.codex/melotrail-terra/terra-runner.mjs retry
 node --test tools/terra-runner.test.mjs tools/terra-throughput.test.mjs
 ```
 
-Interrupted worktrees and all prior evidence remain intact. After inspecting the
-actual failure and verifying no live owner/process group, `retry` resumes retained
-work with new evidence filenames and one new bounded recovery admission per task.
-At most one such recovery is configured; further failure needs coordinator
-resolution/defer. `recover` removes only a provably dead lock. A changed integration
-base, ambiguous owner, changed candidate or unexpected path requires reconciliation,
-never an age-based lock eviction, broad cleanup or blind restart. A crash after a
-ref update must be reconciled against the actual queue/commit before retrying.
-Success commits code and a separate queue update, then removes only its dedicated
-completed worktrees. Failed work remains recoverable.
-
-Human listening, visual approval, Logic checks, asset/rights approval and paid
-budgets remain real gates. Prepare evidence and mark WAITING_USER; continue only
-independent ready work. All listed unpaid video tasks remain selected, with a
-separate `companion/` project and no media dependencies in MIDI. The heartbeat
-stays quiet when nothing actionable changes and stops admitting work when the
-queue is complete or only external decisions remain. Local execution requires
-the computer and app to be running.
+Human musical ratings, visual/Logic decisions, asset rights/approval and paid
+pilot budget remain gates. Their evidence-preparation children run automatically.
+Unpaid companion plumbing uses owned fixtures and does not depend on a paid
+pilot or final MIDI release. V01/V02/V03/V07 keep their real human gates; public
+upload and paid generation are never inferred from a request to implement code.
+Continue until the selected queue is complete or only blocked/external decisions
+remain. Notify on actual integration, new failure, live-checkout sync failure or
+required input. Local scheduled execution needs this computer and app running.
 
 ## Reusable agent prompt
 
 ```text
-Implement the next dependency-ready mandatory task in TASKS.md for Melotrail,
-starting with F01 if none is done. Read AGENTS.md, PLAN.md, the task contract and
-its owning references. Inspect actual source and tests before changing anything.
-Preserve unrelated edits; use an isolated codex/ worktree from the approved base.
-Implement only this task and its necessary deletions. Preserve source MIDI,
-accepted candidates, exports and authoritative musical settings. No legacy
-compatibility, Python service or audio-production dependency in the MIDI app.
-Run focused regression checks, make test, make build and git diff --check.
-For UI changes inspect actual captures; for musical/export changes prepare the
-relevant comparison/Logic evidence. Do not invent human ratings or manual passes.
-Obtain fresh diff review, fix reproduced issues, then commit only task-owned work
-if commits are authorized for this implementation run. Report the actual commit,
-checks, artifact paths, limitations and next dependency-ready task. Mark a manual
-gate WAITING_USER while allowing independent ready work. Do not launch optional
-video/automation tasks, public pushes, uploads or paid jobs outside the run scope.
+Implement only the assigned dependency-ready TASKS row and its explicit slice.
+Read AGENTS, PLAN, README, Architecture and relevant task-owner references once.
+Inspect current callers/tests. Reuse completed child tasks and the preserved
+candidate; do not rebuild the whole parent feature. Do not edit PLAN/TASKS or
+run other agents. Work within the coordinator's allowed paths, without commits.
+Preserve source MIDI, authoritative settings, accepted candidates and exports.
+No legacy compatibility, audio-production runtime or paid/public media actions.
+Add regressions and call out exact focused test selectors. The host coordinator
+runs Gradle/make, diff checks and fresh review; unavailable worker sandbox sockets
+mean PENDING_COORDINATOR, not failure. UI work includes actual image inspection;
+musical/export work prepares comparison/Logic evidence, never fictional ratings.
+Return the runner's structured task/base/candidate/status/summary/tests/artifacts/
+blocker result. WAITING_USER describes an actual missing human decision.
+Repairs receive the same task, current diff and concrete errors, and remain scoped.
+Never read model transcripts or recursively search execution directories; use
+only the bounded current evidence packet and its named failed check logs.
 ```
-
-For a bounded automatic batch, add the selected task IDs, task/time/usage limits,
-integration/commit policy and permitted optional scope. Do not use “implement
-everything until done” without these boundaries. The installed runner and heartbeat use the configured policy above;
-A01 establishes safety controls; A02 verifies throughput and recovery.
