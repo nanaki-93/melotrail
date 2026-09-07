@@ -78,6 +78,27 @@ limits. Report location and musical context. Existing exact protected-anchor
 collision blocking remains until a specific tested musical-policy change;
 M02/M04 improve the treatment of proximity/tension without relaxing integrity.
 
+## Read-only melody and harmony evidence
+
+`melody-harmony-context-v1` derives deterministic, versioned context from the
+selected protected melody view and already-confirmed chord windows. It does not
+write a project, mutate source events, edit harmony, or classify a candidate as
+accepted/rejected. The model exposes active (key-held) and sounding notes,
+CC64-supported sustain extension, rests, register, metrical prominence,
+bar/beat/pickup location, phrase/rest hints, exact repeated-motif hints and
+protected anchors for each beat, bar, phrase and chord window.
+
+Tension evidence identifies its chord window, protected note, tick span,
+bar/beat, overlap duration, metrical weight, compound interval above a fixed
+root reference and nearest chord-tone distance. A sustained accented non-chord
+tone, short passing/neighbor candidate and held suspension remain advisory
+musical evidence, not automatic chord correction or a quality verdict.
+Chromatic chords remain authoritative. A non-zero pitch bend has no declared
+semitone range in the current contract; analysis reports that limitation and
+does not assert exact acoustic consonance for the affected overlap. CC64 is the
+only sustain interpretation: an unclosed pedal is represented only to the known
+analysis boundary.
+
 ## Export package
 
 Each new immutable snapshot contains `complete-song.mid`, aligned role files
