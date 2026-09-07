@@ -65,7 +65,7 @@ an unrelated task. A failed dependent gate cannot be bypassed.
 | M04 | Improve piano voicing against melody | M04b | TODO | |
 | M05a | Anchor comping to meter and chord windows | M04 | TODO | |
 | M05 | Add phrase-aware, meter-aware comping | M05a | TODO | |
-| M06a | Persist versioned arrangement-plan records | M03 | TODO | |
+| M06a | Persist versioned arrangement-plan records | M03 | DONE | 747e34385fcc; Added schema-v3 versioned arrangement-plan persistence, authority validation, role-scoped plan fingerprints, contract update, and reopen/malformed/no-op/protected-artifact regressions. No migration mode added.; test/build + fresh review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-07T22-48-30-296Z-M06a |
 | M06b | Create and confirm arrangement-plan proposals | M06a | TODO | |
 | M06 | Persist a deliberate whole-song arrangement plan | M06b | TODO | |
 | M07a | Resolve per-occurrence generation context | M05, M06 | TODO | |
