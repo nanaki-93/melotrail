@@ -18,26 +18,6 @@ Thumbs.db
 # Application output
 out/
 
-# Audio files (artifacts)
-*.wav
-*.mp3
-*.flac
-*.aiff
-*.m4a
-*.ogg
-
-# Cache
-cache/
-**/cache/
-
 # Exports
 exports/
 **/exports/
-
-# Renders
-renders/
-**/renders/
-
-sounds/
-**/sounds/
-/data/

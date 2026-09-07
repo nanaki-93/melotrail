@@ -108,11 +108,37 @@ class DocumentationIntegrityTest {
         assertEquals(6, captures.size)
         captures.forEach { match ->
             val file = repository.resolve("docs/checks/${match.groupValues[1]}")
-            val digest = MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(file))
-                .joinToString("") { "%02x".format(it) }
-            assertEquals(match.groupValues[2], digest, "Changed Logic evidence: $file")
+            assertEquals(match.groupValues[2], sha256(file), "Changed Logic evidence: $file")
+        }
+
+        mapOf(
+            "docs/pictures/App-pages.png" to "f8db766f5d19d9d4a6423da7575ac6a435789880d7dbf2590d8405f72b258afc",
+            "docs/pictures/tabi.png" to "8c790543d85bcd5d8b8a681e98c699816376e03561e8cf35f9e626cb75eb8d2a",
+            "docs/pictures/video/2135A4D8-3760-4F5F-989C-7EF5097ED4EE.jpeg" to "3743ec6b2ed2aeda45fb03a7da5173da21bd765cce86d9124dbecb0c011b0410",
+            "docs/pictures/video/2466F94A-C5D7-4792-9AAD-BF15C315ED47.jpeg" to "b49346d676469301aad5d7f8b43e9e7fd4dde546ad19d203ace07441624f6fb1",
+            "docs/pictures/video/925CC60E-0978-4AF3-8F34-70E412300B4C.jpeg" to "3ae878e3d00a286cb13bfe3bc56b30f702aded431f9cca514ffb07ae79d73fd5",
+            "docs/pictures/video/Morning Lo-Fi Train Ride with Tabi.png" to "dc9541450b2aafebe713801e7b84bf445022557fcdaa2a2b66146b5b167558f2",
+        ).forEach { (relativePath, digest) ->
+            assertEquals(digest, sha256(repository.resolve(relativePath)), "Changed supplied reference: $relativePath")
         }
     }
+
+    @Test
+    fun `owned MIDI fixtures remain byte exact`() {
+        mapOf(
+            "src/test/resources/fixtures/m01-baseline/packages.zip.base64" to "25a6b7752308bb9e083f1d1b7433e22933b8a823e0ce5adeb0a59a7005c718e5",
+            "src/test/resources/fixtures/midi-core/bass-golden.json" to "495351cab672565b9ffe5b5369ed9feacd360d66ddc26e862bfcd5e4e2f550e6",
+            "src/test/resources/fixtures/midi-core/chords-golden.json" to "0c1648ab1aa01a3e6d622fa1e32b1494592d3366aed4ff7fb3a59c2b6b207258",
+            "src/test/resources/fixtures/midi-core/drums-golden.json" to "5b6184ab6d86bbe6f7106e4010ea43746838751de55f183ad15d763858baaf8c",
+            "src/test/resources/fixtures/project/midi-core-v1.json" to "8c1cad55dbcacd4b10707a02e8d470aaecce5f82e59ab46e867c6c24a2584e1e",
+        ).forEach { (relativePath, digest) ->
+            assertEquals(digest, sha256(repository.resolve(relativePath)), "Changed owned fixture: $relativePath")
+        }
+    }
+
+    private fun sha256(file: Path): String =
+        MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(file))
+            .joinToString("") { "%02x".format(it) }
 
     private fun brokenLinks(document: Path): List<String> =
         Regex("""!?\[[^\]]*]\(([^)\r\n]+)\)""").findAll(Files.readString(document)).mapNotNull { match ->

@@ -194,6 +194,37 @@ measured repository reduction; final music set and ratings; six-page visual
 approval; current Logic matrix; exact remaining limitations; reviewer/date.
 Keep one concise record here rather than restoring the old task diaries.
 
+### F06 cleanup measurement (2026-09-07)
+
+F06 inspected only repository-owned candidates. `<repository-root>/sounds`
+resolved as a regular, non-symlink directory containing two tracked obsolete
+sound-library catalog files (253,314 bytes); its `sounds/` ignore rules were
+stale. The tracked, non-ignored root `Piano Song n.17.mp4` resolved as a regular,
+non-symlink, unreferenced legacy media file (5,001,765 bytes). Both targets were
+removed: 3 files / 5,255,079 tracked bytes (5.01 MiB).
+
+`<repository-root>/.kotlin` resolved as a regular, non-symlink directory with
+nine tracked, non-ignored compiler error-cache logs (49,613 bytes). The configured
+F06 coordinator path policy does not authorize `.kotlin/`, so those files were
+inspected but retained and are not counted as cleanup. `data/audio` and
+`.venv-worker` were absent at inspection, so no untracked sound-library,
+audio-project, or virtual-environment data was claimed as deleted. The obsolete
+audio, data, generic-cache, render, and sound-library ignore entries were
+removed.
+
+The F06 test, evidence, and ignore changes add 4,815 bytes, reducing tracked
+worktree payload from 32,610,480 to 27,360,216 bytes (16.1%).
+
+Against PLAN's 2026-09-06 tracked-source baseline, the current tree has 56
+production Kotlin files / 20,415 lines versus 236 / 73,677 (180 files and
+53,262 lines removed: 76.3% / 72.3%). It has 57 test Kotlin files / 12,855
+lines versus 187 / 34,912, and zero Python files / lines versus 33 / 4,782.
+The production-line reduction exceeds the 40% investigation target. The removed
+legacy data has no production consumer; guards preserve supplied UI/TABI/train
+references, Logic captures, and owned MIDI fixtures. F06 does not establish a
+clean-install/native-startup result, a human listening decision, or a new Logic
+run.
+
 ## Recovery notes
 
 For toolchain failure, inspect the JDK requested by Gradle and the actual launcher;

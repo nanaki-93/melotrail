@@ -112,6 +112,36 @@ class TargetArchitectureRulesTest {
     }
 
     @Test
+    fun `legacy data payloads and their application consumers remain removed`() {
+        val retiredData = listOf(
+            ".venv-worker",
+            "data/audio",
+            "sounds",
+            "Piano Song n.17.mp4",
+        )
+
+        assertEquals(emptyList(), retiredData.filter { Files.exists(Path.of(it)) })
+        val targetSources = TargetArchitectureRules.readProductionSources()
+        val staleConsumers = targetSources.flatMap { source ->
+            listOf(
+                "MUSIC_SOUNDS_ROOT",
+                "Piano Song n.17.mp4",
+                "sounds/instruments.json",
+                "sfizz_render",
+                "javax.imageio.ImageIO",
+            ).mapNotNull { reference ->
+                reference.takeIf(source.contents::contains)?.let { "${source.path}: $it" }
+            }
+        }
+
+        assertEquals(emptyList(), staleConsumers)
+        val ignores = Files.readString(Path.of(".gitignore"))
+        listOf(".venv-worker", "sounds/", "/data/", "*.wav", "renders/").forEach { retiredIgnore ->
+            assertFalse(ignores.contains(retiredIgnore), "Stale ignore entry remains: $retiredIgnore")
+        }
+    }
+
+    @Test
     fun `domain desktop and MIDI adapter violations are rejected`() {
         val violations = TargetArchitectureRules.violations(
             listOf(
