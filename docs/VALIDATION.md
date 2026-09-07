@@ -35,6 +35,19 @@ Keep deterministic fixtures small and owned. Test actual outcomes/invariants;
 source-text absence scans supplement behavior tests rather than replace them.
 Every fixed bug receives a regression that would fail before the fix.
 
+## Scheduled runner checks
+
+For runner changes, run `node --test tools/terra-runner.test.mjs
+tools/terra-throughput.test.mjs` in addition to the application gates. Fixtures
+use real Git worktrees, commits and child processes with fake model/build
+executables. They must prove shared task/time/token bounds, preserved retries,
+implementation-session reuse, fresh review, bounded evidence, disjoint parallel
+ownership, serial integration and validation of the combined candidate. A live
+CLI smoke check must confirm persistence/resume when its argument wiring changes.
+Keep full transcripts outside model input; review only the current candidate's
+explicit completed check logs. Passing runner checks does not approve MIDI music,
+Logic behavior or visual output.
+
 ## Musical evaluation
 
 The user's 2026-09-06 **5/10 average** is qualitative baseline feedback: timing

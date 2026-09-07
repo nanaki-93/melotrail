@@ -77,7 +77,7 @@ export function checkResult(r, task, base, review = false, candidate = 'UNCOMMIT
       !r.summary.trim() || typeof r.blocker !== 'string' || r.commit !== base || r.candidate !== candidate) throw Error('Invalid/stale agent result');
   return r;
 }
-const git = (cwd, ...args) => execFileSync('git', ['-C', cwd, '-c', 'core.hooksPath=/dev/null', ...args], { encoding: 'utf8' }).trim();
+const git = (cwd, ...args) => execFileSync('git', ['-C', cwd, '-c', 'core.hooksPath=/dev/null', ...args], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }).trim();
 export function lock(dir) {
   fs.mkdirSync(dir); // Atomic exclusion; stale locks never expire on a timer.
   atomic(path.join(dir, 'owner.json'), { pid: process.pid, host: os.hostname(), started: new Date().toISOString() });
@@ -90,56 +90,121 @@ const schema = statuses => ({ type: 'object', additionalProperties: false,
     ['artifacts', { type: 'array', items: { type: 'string' } }]])),
   required: ['task', 'base', 'commit', 'candidate', 'summary', 'blocker', 'status', 'tests', 'artifacts'] });
 
-async function main() {
-  const [command = 'status', configFile = path.join(os.homedir(), '.codex/melotrail-terra/config.json')] = process.argv.slice(2);
-  const cfg = json(configFile), root = cfg.stateDir;
+export function pathsOverlap(a, b) {
+  return a.some(x => b.some(y => x === y || (x.endsWith('/') && y.startsWith(x)) || (y.endsWith('/') && x.startsWith(y))));
+}
+export function selectWave(rows, cfg, slots = cfg.maxTasksPerBatch ?? 1) {
+  const first = select(rows, cfg.video, cfg.allowedTasks);
+  if (!first || slots < 1) return [];
+  const wave = [first];
+  if ((cfg.maxParallelWorkers ?? 1) < 2 || slots < 2) return wave;
+  const group = (cfg.parallelGroups ?? []).find(ids => ids.includes(first.id));
+  if (!group) return wave;
+  const done = new Set(rows.filter(t => t.state === 'DONE').map(t => t.id));
+  for (const t of rows) {
+    if (t.id === first.id || !group.includes(t.id) || !cfg.allowedTasks.includes(t.id) ||
+        t.state !== 'TODO' || (!cfg.video && t.id.startsWith('V')) || !t.deps.every(d => done.has(d))) continue;
+    const paths = cfg.parallelPaths?.[t.id], firstPaths = cfg.parallelPaths?.[first.id];
+    // Parallel execution is opt-in, with narrower, provably disjoint ownership.
+    if (!paths || !firstPaths || pathsOverlap(firstPaths, paths)) continue;
+    wave.push(t); break;
+  }
+  return wave;
+}
+export function boundedTail(file, limit = 4000) {
+  const fd = fs.openSync(file, 'r');
+  try {
+    const size = fs.fstatSync(fd).size, bytes = Math.min(size, limit);
+    const b = Buffer.alloc(bytes); fs.readSync(fd, b, 0, bytes, size - bytes);
+    return b.toString('utf8');
+  } finally { fs.closeSync(fd); }
+}
+export function failureReason(result, feedback) {
+  if (feedback?.trim()) return feedback;
+  if (result?.status === 'BLOCKED' && result.blocker?.trim()) return result.blocker;
+  return 'Implementation or independent review did not pass';
+}
+function validatePolicy(cfg, rows) {
   if (!/^codex\/[a-zA-Z0-9][a-zA-Z0-9/_-]*$/.test(cfg.branch)) throw Error('Integration requires a codex/ branch');
   for (const key of ['minutes', 'maxRunsPerDay', 'maxReportedTokens'])
     if (!Number.isFinite(cfg[key]) || cfg[key] < 0) throw Error(`Invalid numeric limit: ${key}`);
+  for (const [key, max] of [['maxTasksPerBatch', 10], ['maxParallelWorkers', 2], ['maxRecoveryRetries', 2]])
+    if (!Number.isInteger(cfg[key]) || cfg[key] < (key === 'maxRecoveryRetries' ? 0 : 1) || cfg[key] > max) throw Error(`Invalid numeric limit: ${key}`);
+  if (!Number.isInteger(cfg.maxRunsPerDay)) throw Error('Invalid numeric limit: maxRunsPerDay');
+  if (!Array.isArray(cfg.allowedTasks) || !cfg.allowedTasks.length || new Set(cfg.allowedTasks).size !== cfg.allowedTasks.length ||
+      cfg.allowedTasks.some(id => typeof id !== 'string' || !rows.some(t => t.id === id))) throw Error('Invalid task allowlist');
+  if (typeof cfg.video !== 'boolean') throw Error('Explicit video policy required');
+  if (!cfg.allowedPaths || typeof cfg.allowedPaths !== 'object' || Array.isArray(cfg.allowedPaths) ||
+      Object.keys(cfg.allowedPaths).some(id => !rows.some(t => t.id === id))) throw Error('Invalid task path policy');
+  for (const id of cfg.allowedTasks) {
+    if (!Object.hasOwn(cfg.allowedPaths, id)) throw Error(`Missing task-specific allowed paths: ${id}`);
+  }
+  for (const paths of Object.values(cfg.allowedPaths)) validateAllowedPaths(paths);
+  if (!Array.isArray(cfg.parallelGroups) || cfg.parallelGroups.some(ids => !Array.isArray(ids) || ids.length !== 2 ||
+      new Set(ids).size !== 2 || ids.some(id => !cfg.allowedTasks.includes(id)))) throw Error('Invalid parallel groups');
+  const grouped = cfg.parallelGroups.flat();
+  if (new Set(grouped).size !== grouped.length) throw Error('Task belongs to multiple parallel groups');
+  for (const id of grouped) {
+    validateAllowedPaths(cfg.parallelPaths[id]);
+    if (cfg.parallelPaths[id].some(p => !permitted(p, cfg.allowedPaths[id]))) throw Error(`Parallel ownership exceeds allowed paths: ${id}`);
+  }
+  for (const checks of Object.values(cfg.taskChecks ?? {})) for (const check of checks) {
+    if (!check || !Array.isArray(check.argv) || check.argv.some(v => typeof v !== 'string') || check.argv.length < 2 ||
+        !['./gradlew', process.execPath].includes(check.argv[0])) throw Error('Invalid configured task check');
+  }
+}
+
+async function main() {
+  const [command = 'status', configFile = path.join(os.homedir(), '.codex/melotrail-terra/config.json')] = process.argv.slice(2);
+  const cfg = { maxTasksPerBatch: 1, maxParallelWorkers: 1, maxRecoveryRetries: 1, parallelGroups: [], parallelPaths: {}, ...json(configFile) };
+  const root = cfg.stateDir;
   for (const key of ['repo', 'stateDir', 'codex', 'javaHome', 'gradleHome'])
     if (typeof cfg[key] !== 'string' || !path.isAbsolute(cfg[key])) throw Error(`Absolute path required: ${key}`);
   if (root === cfg.repo || root.startsWith(cfg.repo + path.sep)) throw Error('Keep control state outside the source checkout');
+  if (!/^codex\/[a-zA-Z0-9][a-zA-Z0-9/_-]*$/.test(cfg.branch)) throw Error('Integration requires a codex/ branch');
   const verifyBranch = () => {
     if (git(cfg.repo, 'worktree', 'list', '--porcelain').split('\n').includes(`branch refs/heads/${cfg.branch}`))
-      throw Error('Integration branch is checked out; detach its worktree before automatic integration');
+      throw Error('Integration branch is checked out; use an un-checked-out integration branch');
   };
   fs.mkdirSync(root, { recursive: true });
-  const lockDir = path.join(root, 'lock');
-  const stateFile = path.join(root, 'state.json');
-  const loadState = () => fs.existsSync(stateFile) ? json(stateFile) : { runs: [], modelTokens: 0, cachedInputTokens: 0, paused: false };
+  const lockDir = path.join(root, 'lock'), stateFile = path.join(root, 'state.json'), pauseFile = path.join(root, 'paused');
+  const loadState = () => fs.existsSync(stateFile) ? json(stateFile) : { runs: [], paused: false };
+  const entries = s => [s.active, ...(s.parallel ?? [])].filter(Boolean);
+  const checkDeadChildren = s => {
+    for (const pid of [...(s.childPids ?? []), ...(s.childPid ? [s.childPid] : [])]) {
+      if (!Number.isInteger(pid) || pid <= 0) throw Error('Invalid child PID; inspect before recovery');
+      try { process.kill(-pid, 0); throw Error('Child process group still alive'); }
+      catch (e) { if (e.code !== 'ESRCH') throw e; }
+    }
+  };
   if (command === 'pause' || command === 'resume') {
     if (command === 'resume' && fs.existsSync(lockDir)) throw Error('Wait for active process to stop before resuming');
-    fs.writeFileSync(path.join(root, 'paused'), command === 'pause' ? 'paused\n' : '');
+    fs.writeFileSync(pauseFile, command === 'pause' ? 'paused\n' : '');
     if (command === 'resume') { const s = loadState(); s.paused = false; atomic(stateFile, s); }
     console.log(command); return;
   }
   if (command === 'recover') {
     const owner = json(path.join(lockDir, 'owner.json'));
-    if (owner.host !== os.hostname()) throw Error('Lock belongs to another host');
+    if (owner.host !== os.hostname() || !Number.isInteger(owner.pid) || owner.pid <= 0) throw Error('Invalid or foreign lock owner');
     try { process.kill(owner.pid, 0); throw Error('Owner still alive; do not recover'); }
     catch (e) { if (e.code !== 'ESRCH') throw e; }
-    const s = loadState();
-    if (s.childPid) {
-      try { process.kill(-s.childPid, 0); throw Error('Child process group still alive'); }
-      catch (e) { if (e.code !== 'ESRCH') throw e; }
-    }
+    checkDeadChildren(loadState());
     fs.renameSync(lockDir, `${lockDir}.recovered.${Date.now()}`);
-    console.log('Recovered dead lock. Interrupted worktree is preserved; inspect state before running.'); return;
+    console.log('Recovered dead lock. Interrupted worktrees are preserved; inspect state before retry.'); return;
   }
   if (command === 'defer') {
     const release = lock(lockDir);
     try {
-      verifyBranch();
-      const s = loadState();
+      verifyBranch(); const s = loadState(); checkDeadChildren(s);
       if (!s.active) throw Error('No interrupted task to defer');
-      if (s.childPid) throw Error('Unresolved child PID; inspect before deferring');
+      if (s.parallel?.length) throw Error('Resolve retained parallel candidates individually before deferring');
       const base = git(cfg.repo, 'rev-parse', cfg.branch);
       if (base !== s.active.base) throw Error('Integration changed; reconcile manually');
       const dest = path.join(root, 'deferred', String(Date.now()));
       fs.mkdirSync(path.dirname(dest), { recursive: true });
       git(cfg.repo, 'worktree', 'add', '--detach', dest, base);
       const p = path.join(dest, 'TASKS.md');
-      fs.writeFileSync(p, mark(read(p), s.active.task, 'BLOCKED', `${s.active.blocker || s.error || 'Interrupted run'}; preserved ${s.active.dir}`));
+      fs.writeFileSync(p, mark(read(p), s.active.task, 'BLOCKED', `${s.active.feedback || s.active.blocker || s.error || 'Interrupted run'}; preserved ${s.active.dir}`));
       git(dest, 'add', 'TASKS.md'); git(dest, 'commit', '-m', `queue: defer ${s.active.task} and preserve unfinished work`);
       git(cfg.repo, 'update-ref', `refs/heads/${cfg.branch}`, git(dest, 'rev-parse', 'HEAD'), base);
       s.lastDeferred = s.active; delete s.active; atomic(stateFile, s);
@@ -147,195 +212,308 @@ async function main() {
     } finally { release(); }
     return;
   }
-  const head = git(cfg.repo, 'rev-parse', cfg.branch);
-  const md = git(cfg.repo, 'show', `${head}:TASKS.md`);
-  if (!Array.isArray(cfg.allowedTasks) || !cfg.allowedTasks.length) throw Error('Explicit task allowlist required');
-  const tasks = queue(md);
-  if (cfg.allowedTasks.some(id => typeof id !== 'string') || new Set(cfg.allowedTasks).size !== cfg.allowedTasks.length ||
-      cfg.allowedTasks.some(id => !tasks.some(task => task.id === id))) throw Error('Invalid task allowlist');
-  if (typeof cfg.video !== 'boolean') throw Error('Explicit video policy required');
-  if (!cfg.allowedPaths || typeof cfg.allowedPaths !== 'object' || Array.isArray(cfg.allowedPaths) ||
-      Object.keys(cfg.allowedPaths).some(id => !tasks.some(task => task.id === id))) throw Error('Invalid task path policy');
-  for (const id of cfg.allowedTasks)
-    if (!Object.hasOwn(cfg.allowedPaths, id)) throw Error(`Missing task-specific allowed paths: ${id}`);
-  for (const paths of Object.values(cfg.allowedPaths)) validateAllowedPaths(paths);
-  const next = select(tasks, cfg.video, cfg.allowedTasks);
+  let head = git(cfg.repo, 'rev-parse', cfg.branch), md = git(cfg.repo, 'show', `${head}:TASKS.md`);
+  validatePolicy(cfg, queue(md));
   if (command === 'status' || command === 'dry-run') {
-    console.log(JSON.stringify({ branch: cfg.branch, head, next: next || null, locked: fs.existsSync(lockDir),
-      paused: fs.existsSync(path.join(root, 'paused')) && !!read(path.join(root, 'paused')).trim(),
-      state: loadState() }, null, 2)); return;
+    const s = loadState();
+    console.log(JSON.stringify({ branch: cfg.branch, head, next: select(queue(md), cfg.video, cfg.allowedTasks) ?? null,
+      wave: selectWave(queue(md), cfg).map(t => t.id), locked: fs.existsSync(lockDir), paused: s.paused || (fs.existsSync(pauseFile) && !!read(pauseFile).trim()),
+      limits: { minutes: cfg.minutes, tasks: cfg.maxTasksPerBatch, workers: cfg.maxParallelWorkers, tokens: cfg.maxReportedTokens, dailyAdmissions: cfg.maxRunsPerDay }, state: s }, null, 2)); return;
   }
-  if (command !== 'run') throw Error('Use status, dry-run, run, pause, resume, recover, or defer');
-  const release = lock(lockDir);
-  let state = loadState();
-  const start = Date.now(), deadline = start + cfg.minutes * 60000;
-  let child;
-  const terminate = () => { if (child?.pid) { try { process.kill(-child.pid, 'SIGTERM'); } catch {} } };
-  const interrupted = () => { state.paused = true; atomic(stateFile, state); terminate(); };
-  process.on('SIGINT', interrupted); process.on('SIGTERM', interrupted);
-  try {
+  if (!['run', 'retry'].includes(command)) throw Error('Use status, dry-run, run, retry, pause, resume, recover, or defer');
+  const release = lock(lockDir), state = loadState();
+  let batchAdmitted = false;
+  const deadline = Date.now() + cfg.minutes * 60000, children = new Set();
+  const persist = () => atomic(stateFile, state);
+  const stop = () => { for (const p of children) { try { process.kill(-p.pid, 'SIGTERM'); } catch {} } };
+  const interrupt = () => { state.paused = true; persist(); stop(); };
+  process.on('SIGINT', interrupt); process.on('SIGTERM', interrupt);
+  const guard = (model = false) => {
+    if (state.paused || (fs.existsSync(pauseFile) && read(pauseFile).trim())) throw Error('Paused; work preserved');
+    if (Date.now() >= deadline) throw Error('Run deadline exhausted; work preserved');
+    if (model && state.modelTokens >= cfg.maxReportedTokens) throw Error('Batch model-call budget exhausted; work preserved');
+  };
+  const assertHead = () => {
     verifyBranch();
-    if (state.active) throw Error(`Interrupted run retained at ${state.active.dir}; coordinator must inspect and resolve it before retrying`);
-    const pauseFile = path.join(root, 'paused');
-    if (state.paused || (fs.existsSync(pauseFile) && read(pauseFile).trim())) throw Error('Paused');
+    if (git(cfg.repo, 'rev-parse', cfg.branch) !== head) throw Error('Integration base changed outside this batch; preserve work');
+  };
+  function account(event, ctx, worker) {
+    if (worker && event.type === 'thread.started' && typeof event.thread_id === 'string') { ctx.workerSession = event.thread_id; persist(); }
+    if (event.type === 'turn.completed' && event.usage) {
+      const u = reportedUsage(event.usage);
+      for (const key of ['input', 'cached', 'nonCachedInput', 'output', 'reasoning']) state.usage[key] += u[key];
+      state.modelTokens += u.modelTokens; state.cachedInputTokens += u.cached; persist();
+    }
+  }
+  async function run(ctx, exe, args, label, input = '', model = false, worker = false) {
+    guard(model);
+    const file = path.join(ctx.dir, model ? 'transcripts' : '', `${label}.log`);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    const fd = fs.openSync(file, 'wx', 0o600);
+    const env = Object.fromEntries(['HOME', 'USER', 'LOGNAME', 'TMPDIR', 'LANG', 'LC_ALL', 'TERM', 'CODEX_HOME'].filter(k => process.env[k]).map(k => [k, process.env[k]]));
+    Object.assign(env, { JAVA_HOME: cfg.javaHome, GRADLE_USER_HOME: cfg.gradleHome, PATH: `${cfg.javaHome}/bin:${process.env.PATH}` });
+    let p, timer, poll, timedOut = false, buffer = '';
+    const started = Date.now();
+    try {
+      p = spawn(exe, args, { cwd: ctx.worktree, env, detached: true, stdio: ['pipe', model ? 'pipe' : fd, fd] });
+      children.add(p); state.childPids = [...children].map(c => c.pid).filter(Boolean); persist();
+      if (model) p.stdout.on('data', chunk => {
+        fs.writeSync(fd, chunk); buffer += chunk.toString('utf8');
+        let end;
+        while ((end = buffer.indexOf('\n')) >= 0) {
+          const line = buffer.slice(0, end); buffer = buffer.slice(end + 1);
+          // Read protocol metadata only. Transcript content is never fed back to agents.
+          if (!line.includes('"turn.completed"') && !line.includes('"thread.started"')) continue;
+          try { account(JSON.parse(line), ctx, worker); } catch (e) { if (!(e instanceof SyntaxError)) throw e; }
+        }
+      });
+      p.stdin.on('error', () => {}); p.stdin.end(input);
+      timer = setTimeout(() => { timedOut = true; try { process.kill(-p.pid, 'SIGTERM'); } catch {}
+        setTimeout(() => { try { process.kill(-p.pid, 'SIGKILL'); } catch {} }, 5000).unref();
+      }, Math.max(1, deadline - Date.now()));
+      poll = setInterval(() => { if (fs.existsSync(pauseFile) && read(pauseFile).trim()) interrupt(); }, 1000);
+      const code = await new Promise((resolve, reject) => { p.on('error', reject); p.on('close', resolve); });
+      if (model && buffer.trim()) { try { account(JSON.parse(buffer), ctx, worker); } catch {} }
+      if (timedOut) throw Error(`${label} exceeded batch deadline`);
+      guard();
+      if (!model) ctx.checks.push({ label, argv: [exe, ...args], exitCode: code, durationMs: Date.now() - started, log: file, tail: boundedTail(file) });
+      if (code !== 0) throw Error(`${label} failed (${code}); ${file}\n${model ? 'Inspect structured agent result; do not read transcript logs.' : boundedTail(file)}`);
+      return file;
+    } finally {
+      clearTimeout(timer); clearInterval(poll);
+      if (p?.pid) { try { process.kill(-p.pid, 'SIGKILL'); } catch {} }
+      children.delete(p); state.childPids = [...children].map(c => c.pid).filter(Boolean); persist(); fs.closeSync(fd);
+    }
+  }
+  function evidence(ctx) {
+    const p = path.join(ctx.dir, 'evidence', `attempt-${ctx.attempt}.json`);
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    atomic(p, { task: ctx.task, base: ctx.base, candidate: ctx.tree ?? 'UNCOMMITTED', checks: ctx.checks.map(c => ({ ...c, tail: c.tail.slice(-2000) })), feedback: (ctx.feedback ?? '').slice(-8000) });
+    return p;
+  }
+  async function agent(ctx, review = false, repair = false) {
+    const label = `${review ? 'review' : 'worker'}-${ctx.attempt}`;
+    const schemaFile = path.join(ctx.dir, `${label}.schema.json`), resultFile = path.join(ctx.dir, `${label}.json`);
+    atomic(schemaFile, schema(review ? ['PASS', 'FAIL'] : ['READY_FOR_VALIDATION', 'WAITING_USER', 'BLOCKED']));
+    const candidate = review ? ctx.tree : 'UNCOMMITTED', packet = evidence(ctx);
+    const taskMd = read(path.join(ctx.worktree, 'TASKS.md'));
+    const contract = taskMd.match(new RegExp(`^### ${ctx.task} [\\s\\S]*?(?=^### |^## |$(?![\\s\\S]))`, 'm'))?.[0] ?? '';
+    const resume = !review && !repair && ctx.workerSession;
+    const prompt = `Assigned task: ${ctx.task}: ${ctx.title}. Base commit: ${ctx.base}. Candidate tree: ${candidate}.
+Mode: ${review ? 'Fresh independent REVIEW. Inspect the exact candidate diff and acceptance requirements; return PASS only with no actionable defect or missing required evidence. Do not edit files or rerun checks.' : 'IMPLEMENT only this assigned task. Leave changes uncommitted. Return READY_FOR_VALIDATION, WAITING_USER for an actual human decision, or BLOCKED for a real implementation blocker.'}
+${resume ? 'Continue your existing implementation context. Inspect only the new feedback and changed files; reuse the documentation and code already read. Re-read authority documents only if changed.' : 'Read AGENTS.md, PLAN.md, README.md, TASKS.md, docs/ARCHITECTURE.md and the task owner references before editing or reviewing. Read required documents once; use targeted source searches.'}
+Task contract:
+${contract}
+Allowed changed paths: ${JSON.stringify(ctx.paths)}. The coordinator owns TASKS status and integration. Preserve source MIDI, accepted candidates, exports, authority and unrelated files. No paid generation or public push/upload. Do not launch other agents. Do not edit AGENTS.md, PLAN.md, TASKS.md, docs/pictures, .git or runner/config files (runner source is allowed only for A01/A02). No legacy compatibility or audio-production runtime.
+Validation ownership: the coordinator runs focused checks, make test, make build and git diff --check. Gradle sockets are unavailable in your sandbox: do not run Gradle/make or change permissions. Add regressions and truthfully report PENDING_COORDINATOR. Pending coordinator checks are not an implementation blocker. Human listening/Logic/visual/video decisions require real evidence.
+Evidence: read only this completed packet: ${packet}. It names the exact check logs for this candidate. If a check failed, read only that named log as needed. Never read worker/review transcript logs, including your own; never recursively search the run directory or historical execution logs. Limit tool output to relevant ranges (about 200 lines per call). Keep the fresh review tied to this exact Git tree using git diff ${ctx.base} ${review ? candidate : ''}.
+${ctx.originalDir ? 'This candidate reuses preserved work; inspect its current diff rather than starting over.' : ''}
+${repair ? 'Two implementation/validation attempts failed. Diagnose the concrete failures below and make only scoped repairs. Reuse the existing implementation.' : ''}
+Previous concrete feedback: ${(ctx.feedback || 'None.').slice(-8000)}
+Return the required JSON with task=${ctx.task} exactly, base=${ctx.base}, commit=${ctx.base}, candidate=${candidate}, summary, blocker, status, tests, artifacts. Do not claim completion or a test pass without coordinator evidence. Remaining batch time: ${Math.max(1, Math.floor((deadline - Date.now()) / 60000))} minutes.`;
+    const modelName = repair ? (cfg.repairModel ?? 'gpt-5.6-sol') : 'gpt-5.6-terra';
+    const common = ['--ignore-user-config', '-m', modelName, '-c', 'model_reasoning_effort="high"', '-c', 'approval_policy="never"'];
+    const args = ['exec', '--sandbox', review ? 'read-only' : 'workspace-write', '-C', ctx.worktree];
+    if (resume) args.push('resume');
+    args.push(...common);
+    if (review) args.push('--ephemeral');
+    args.push('--json', '--output-schema', schemaFile, '-o', resultFile);
+    if (resume) args.push(ctx.workerSession);
+    args.push('-');
+    ctx.phase = review ? 'REVIEW' : 'worker'; persist();
+    await run(ctx, cfg.codex, args, label, prompt, true, !review);
+    return checkResult(json(resultFile), ctx.task, ctx.base, review, candidate);
+  }
+  function stage(ctx) {
+    if (git(ctx.worktree, 'rev-parse', 'HEAD') !== ctx.base) throw Error('Worker changed HEAD');
+    git(ctx.worktree, 'add', '-A');
+    const changed = git(ctx.worktree, 'diff', '--name-only', '--no-renames', '-z', ctx.base).split('\0').filter(Boolean);
+    ctx.runnerChanged = changed.some(file => file.startsWith('tools/terra-'));
+    if (changed.some(file => !permitted(file, ctx.paths))) throw Error(`Changes outside ${ctx.task} path scope: ${changed.filter(f => !permitted(f, ctx.paths)).join(', ')}`);
+    const protectedPaths = ['AGENTS.md', 'PLAN.md', 'TASKS.md', 'docs/pictures', ...(['A01', 'A02'].includes(ctx.task) ? [] : ['tools/terra-runner.mjs', 'tools/terra-runner.test.mjs', 'tools/terra-throughput.test.mjs'])];
+    if (git(ctx.worktree, 'diff', ctx.base, '--', ...protectedPaths)) throw Error('Worker changed coordinator-owned files');
+    ctx.tree = git(ctx.worktree, 'write-tree');
+    if (ctx.result?.status === 'READY_FOR_VALIDATION' && ctx.tree === git(ctx.worktree, 'rev-parse', `${ctx.base}^{tree}`)) throw Error('No-change candidate requires coordinator verification');
+    persist();
+  }
+  function moveToIntegrationBase(ctx) {
+    assertHead();
+    if (ctx.base === head) return;
+    stage(ctx);
+    const patchFile = path.join(ctx.dir, `candidate-${ctx.attempt}.patch`);
+    fs.writeFileSync(patchFile, execFileSync('git', ['-C', ctx.worktree, 'diff', '--binary', ctx.base], { maxBuffer: 16 * 1024 * 1024 }));
+    const newTree = path.join(ctx.dir, `integration-${ctx.attempt}`);
+    git(cfg.repo, 'worktree', 'add', '--detach', newTree, head);
+    // Applying to a fresh worktree leaves the original candidate intact on conflict.
+    git(newTree, 'apply', '--index', patchFile);
+    ctx.originalWorktrees = [...(ctx.originalWorktrees ?? []), ctx.worktree];
+    ctx.worktree = newTree; ctx.originalBase ??= ctx.base; ctx.base = head;
+    // A resumed session is bound to its original checkout. Repairs on the combined
+    // candidate need a new session in this checkout, never edits to the old tree.
+    delete ctx.workerSession;
+    ctx.result = { ...ctx.result, base: head, commit: head }; ctx.tree = undefined; ctx.checks = [];
+    ctx.feedback = 'The preceding independent task was integrated. Candidate applied onto the current integration base; all checks and fresh review must validate this combined tree.';
+    persist();
+  }
+  async function validate(ctx) {
+    ctx.checks = []; stage(ctx); const tree = ctx.tree;
+    await run(ctx, 'git', ['diff', '--check', ctx.base], `whitespace-${ctx.attempt}`);
+    for (const [i, check] of (cfg.taskChecks?.[ctx.task] ?? []).entries())
+      await run(ctx, check.argv[0], check.argv.slice(1), `task-check-${i}-${ctx.attempt}`);
+    if (ctx.runnerChanged || ['A01', 'A02'].includes(ctx.task)) {
+      await run(ctx, process.execPath, ['--test', 'tools/terra-runner.test.mjs'], `runner-test-${ctx.attempt}`);
+      if (fs.existsSync(path.join(ctx.worktree, 'tools/terra-throughput.test.mjs')))
+        await run(ctx, process.execPath, ['--test', 'tools/terra-throughput.test.mjs'], `throughput-test-${ctx.attempt}`);
+    }
+    await run(ctx, 'make', ['test'], `test-${ctx.attempt}`);
+    await run(ctx, 'make', ['build'], `build-${ctx.attempt}`);
+    stage(ctx); if (ctx.tree !== tree) throw Error('Candidate changed during validation');
+    const review = await agent(ctx, true);
+    stage(ctx); if (ctx.tree !== tree) throw Error('Candidate changed after validation/review');
+    if (review.status !== 'PASS') throw Error(`${review.summary}\n${review.blocker}`);
+    ctx.reviewedTree = tree; persist();
+  }
+  function integrate(ctx) {
+    guard(); assertHead(); stage(ctx);
+    if (ctx.base !== head || ctx.tree !== ctx.reviewedTree) throw Error('Stale or unreviewed candidate');
+    if (ctx.tree !== git(ctx.worktree, 'rev-parse', `${ctx.base}^{tree}`))
+      git(ctx.worktree, 'commit', '-m', `${ctx.task}: ${ctx.title}`);
+    const implementation = git(ctx.worktree, 'rev-parse', 'HEAD');
+    const status = effectiveStatus(ctx.task, ctx.result.status);
+    fs.writeFileSync(path.join(ctx.worktree, 'TASKS.md'), mark(md, ctx.task, status,
+      `${implementation.slice(0, 12)}; ${ctx.result.summary}; test/build + fresh review passed; ${status === 'WAITING_USER' ? ctx.result.blocker + '; ' : ''}evidence ${ctx.dir}`));
+    git(ctx.worktree, 'add', 'TASKS.md'); git(ctx.worktree, 'commit', '-m', `queue: record ${ctx.task} ${status}`);
+    const integrated = git(ctx.worktree, 'rev-parse', 'HEAD');
+    git(cfg.repo, 'update-ref', `refs/heads/${cfg.branch}`, integrated, head);
+    head = integrated; md = git(cfg.repo, 'show', `${head}:TASKS.md`);
+    state.last = { task: ctx.task, status, implementation, integrated, reviewedTree: ctx.tree, dir: ctx.dir, worktree: ctx.worktree,
+      worktreeCleaned: false, modelTokens: state.modelTokens, cachedInputTokens: state.cachedInputTokens, usage: { ...state.usage } };
+    ctx.phase = 'INTEGRATED'; ctx.integrated = integrated; ctx.implementation = implementation;
+    persist(); // A crash after ref update is reconciled from this commit and queue, never reimplemented.
+    const remaining = entries(state).filter(c => c !== ctx);
+    state.active = remaining[0]; state.parallel = remaining.slice(1); if (!state.active) delete state.active;
+    delete state.error; persist();
+    try {
+      for (const wt of [ctx.worktree, ...(ctx.originalWorktrees ?? [])]) git(cfg.repo, 'worktree', 'remove', '--force', wt);
+      state.last.worktreeCleaned = true; persist();
+    } catch (e) { state.last.worktreeCleanupError = e.message; persist(); }
+    console.log(JSON.stringify(state.last));
+  }
+  function prepare(task, parallel) {
+    assertHead(); guard();
     const today = new Date().toISOString().slice(0, 10);
     if (state.runs.filter(r => r.date === today).length >= cfg.maxRunsPerDay) throw Error('Daily run admission limit reached');
-    if (!next) { console.log('No dependency-ready task; inspect human gates.'); return; }
-    validateAllowedPaths(cfg.allowedPaths?.[next.id]);
-    if (git(cfg.repo, 'rev-parse', cfg.branch) !== head) throw Error('Integration base changed');
-    const runDir = path.join(root, 'runs', `${new Date().toISOString().replace(/[:.]/g, '-')}-${next.id}`);
-    const worktree = path.join(runDir, 'worktree');
-    fs.mkdirSync(runDir, { recursive: true });
-    state.runs.push({ date: today, task: next.id, dir: runDir });
-    state.active = { task: next.id, base: head, dir: runDir, worktree, phase: 'creating-worktree' };
-    state.modelTokens = 0;
-    state.cachedInputTokens = 0;
-    state.usage = { input: 0, cached: 0, nonCachedInput: 0, output: 0, reasoning: 0 };
-    atomic(stateFile, state);
+    const dir = path.join(root, 'runs', `${new Date().toISOString().replace(/[:.]/g, '-')}-${task.id}`), worktree = path.join(dir, 'worktree');
+    fs.mkdirSync(dir, { recursive: true });
+    const ctx = { task: task.id, title: task.title, base: head, dir, worktree, phase: 'creating-worktree', attempt: 0,
+      paths: parallel ? cfg.parallelPaths[task.id] : cfg.allowedPaths[task.id], parallelOwner: parallel, checks: [] };
+    if (state.active) (state.parallel ??= []).push(ctx); else state.active = ctx;
+    state.runs.push({ date: today, task: task.id, dir }); persist();
     git(cfg.repo, 'worktree', 'add', '--detach', worktree, head);
-    const seed = cfg.seedPatches?.[next.id];
+    const seed = cfg.seedPatches?.[task.id];
     if (seed) {
       if (seed.base !== head) throw Error('Preserved patch has a stale integration base');
       const patch = fs.readFileSync(seed.file);
       if (createHash('sha256').update(patch).digest('hex') !== seed.sha256) throw Error('Preserved patch digest mismatch');
-      // No three-way merge or silent overwrite: conflicting seeds fail closed.
-      git(worktree, 'apply', '--index', seed.file);
-      state.active.seed = { file: seed.file, sha256: seed.sha256, priorRun: seed.priorRun };
+      git(worktree, 'apply', '--index', seed.file); ctx.seed = seed; ctx.originalDir = seed.priorRun; persist();
     }
-    state.active.phase = 'worker'; atomic(stateFile, state);
-    const env = Object.fromEntries(['HOME', 'USER', 'LOGNAME', 'TMPDIR', 'LANG', 'LC_ALL', 'TERM', 'CODEX_HOME'].filter(k => process.env[k]).map(k => [k, process.env[k]]));
-    Object.assign(env, { JAVA_HOME: cfg.javaHome, GRADLE_USER_HOME: cfg.gradleHome, PATH: `${cfg.javaHome}/bin:${process.env.PATH}` });
-    async function run(exe, args, label, input = '', requiresModelBudget = false) {
-      if (state.paused || (fs.existsSync(pauseFile) && read(pauseFile).trim())) throw Error('Paused');
-      if (Date.now() >= deadline) throw Error('Run deadline exhausted');
-      if (requiresModelBudget && state.modelTokens >= cfg.maxReportedTokens) throw Error('Terra-call budget exhausted');
-      const out = fs.openSync(path.join(runDir, `${label}.log`), 'w');
-      child = spawn(exe, args, { cwd: worktree, env, detached: true, stdio: ['pipe', out, out] });
-      fs.closeSync(out);
-      state.childPid = child.pid; atomic(stateFile, state);
-      child.stdin.on('error', () => {}); child.stdin.end(input);
-      let timedOut = false;
-      const timer = setTimeout(() => {
-        timedOut = true;
-        terminate();
-        const pid = child?.pid;
-        const killer = setTimeout(() => { try { process.kill(-pid, 'SIGKILL'); } catch {} }, 5000);
-        killer.unref();
-      }, Math.max(1, deadline - Date.now()));
-      const poll = setInterval(() => {
-        if (fs.existsSync(pauseFile) && read(pauseFile).trim()) { state.paused = true; terminate(); }
-      }, 1000);
-      let code;
-      try { code = await new Promise((resolve, reject) => { child.on('error', reject); child.on('close', resolve); }); }
-      finally {
-        clearTimeout(timer); clearInterval(poll);
-        // A terminated parent may leave subprocesses behind; never release their lock.
-        try { process.kill(-child.pid, 'SIGKILL'); } catch {}
-        child = null; delete state.childPid; atomic(stateFile, state);
-      }
-      if (timedOut || Date.now() >= deadline) throw Error(`${label} exceeded run deadline`);
-      if (state.paused) throw Error('Run cancelled; work preserved');
-      if (code !== 0) throw Error(`${label} failed (${code}); see ${runDir}/${label}.log`);
-    }
-    async function agent(review, attempt, feedback, candidate = 'UNCOMMITTED') {
-      const label = `${review ? 'review' : 'worker'}-${attempt}`;
-      const schemaFile = path.join(runDir, `${label}.schema.json`), resultFile = path.join(runDir, `${label}.json`);
-      atomic(schemaFile, schema(review ? ['PASS', 'FAIL'] : ['READY_FOR_VALIDATION', 'WAITING_USER', 'BLOCKED']));
-      const prompt = `${read(path.join(worktree, 'TASKS.md')).split('## Reusable agent prompt')[1] || ''}
-Assigned task: ${next.id}: ${next.title}. Base commit: ${head}. Candidate tree: ${candidate}.
-Mode: ${review ? 'Fresh independent REVIEW. Read the complete staged and unstaged diff against the base, verify task acceptance and actual coordinator logs. Do not edit files or rerun Gradle in the read-only sandbox. Return PASS only with no actionable defect or missing required evidence; otherwise FAIL with concrete fixes.' : 'IMPLEMENT only the assigned task. Inspect first; make focused regression tests. Leave all changes UNCOMMITTED. Do not edit the queue in TASKS.md; the coordinator owns statuses. Return READY_FOR_VALIDATION when implementation is ready for independent checks, WAITING_USER for an actual human gate, BLOCKED for an unresolved implementation/product blocker. READY_FOR_VALIDATION is not completion and does not claim that tests passed.'}
-Validation ownership: the coordinator runs make test, make build and the fixed task-specific checks after the worker returns. Gradle local sockets are unavailable in the worker sandbox. Do not invoke Gradle/make or attempt to bypass/reconfigure the sandbox; do not retry a denied command. Run supported lightweight focused checks, add required regressions, and list unexecuted checks truthfully as PENDING_COORDINATOR in tests. A worker-only validation restriction is not an implementation blocker. If a coordinator check fails, inspect its actual log and fix the demonstrated defect; do not claim a pass or weaken its test. Native startup and human approvals require actual evidence.
-Allowed changed paths: ${JSON.stringify(cfg.allowedPaths[next.id])}. ${seed ? `Preserved candidate patch is already applied. Reuse it and inspect prior evidence at ${seed.priorRun}; do not restart the completed work.` : ''}
-The bounded runner replaces prompt instructions to select a task, create worktrees, review, commit, or continue. Do not launch other agents or tasks. Do not change ${next.id === 'A01' ? '' : 'tools/terra-runner*, '}AGENTS.md, PLAN.md, TASKS.md, docs/pictures, .git, automation/configuration or files outside this worktree. Preserve original MIDI and evidence. All optional V tasks are selected for unpaid implementation, with no authorized paid generation budget or publication. Do not use external connectors or services to send messages, push code, upload or spend money. Do not weaken tests. Use the current documented JDK. No legacy migration.
-For video: use independently built companion/ with no media dependency on the MIDI app; stop at actual asset, rights and budget decisions. Never invent approvals. Review logs are in ${runDir}. Run at most this task, within the remaining ${Math.max(1, Math.floor((deadline-Date.now())/60000))} minutes. Report task=${next.id}, base=${head}, commit=${head} (coordinator commits later), tests, artifacts, summary, blocker and status in the required JSON schema.
-Include candidate=${candidate} in your result; review approval applies only to that exact Git tree.
-Previous concrete feedback: ${feedback || 'None.'}`;
-      const args = ['exec', '--ignore-user-config', '--ephemeral', '-m', 'gpt-5.6-terra', '-c', 'model_reasoning_effort="high"', '-c', 'approval_policy="never"',
-        '--sandbox', review ? 'read-only' : 'workspace-write', '-C', worktree, '--json', '--output-schema', schemaFile, '-o', resultFile];
-      if (!review) args.push('--add-dir', cfg.gradleHome);
-      args.push('-');
-      await run(cfg.codex, args, label, prompt, true);
-      for (const line of read(path.join(runDir, `${label}.log`)).split('\n')) {
-        try {
-          const event = JSON.parse(line);
-          if (event.type === 'turn.completed') {
-            const usage = reportedUsage(event.usage);
-            for (const key of ['input', 'cached', 'nonCachedInput', 'output', 'reasoning']) state.usage[key] += usage[key];
-            state.modelTokens += usage.modelTokens;
-            state.cachedInputTokens += usage.cached;
-          }
-        } catch {}
-      }
-      atomic(stateFile, state);
-      return checkResult(json(resultFile), next.id, head, review, candidate);
-    }
-    let result, feedback = '', accepted = false, reviewedTree;
-    for (let attempt = 0; attempt <= 2; attempt++) {
-      result = await agent(false, attempt, feedback);
-      if (git(worktree, 'rev-parse', 'HEAD') !== head) throw Error('Worker changed HEAD');
-      git(worktree, 'add', '-A'); // Include new files in protection checks and review.
-      const changed = git(worktree, 'diff', '--name-only', '--no-renames', '-z', head).split('\0').filter(Boolean);
-      if (changed.some(file => !permitted(file, cfg.allowedPaths[next.id]))) throw Error(`Changes outside ${next.id} path scope: ${changed.filter(file => !permitted(file, cfg.allowedPaths[next.id])).join(', ')}`);
-      const protectedPaths = ['AGENTS.md', 'PLAN.md', 'TASKS.md', 'docs/pictures', ...(next.id === 'A01' ? [] : ['tools/terra-runner.mjs', 'tools/terra-runner.test.mjs'])];
-      if (git(worktree, 'diff', head, '--', ...protectedPaths)) throw Error('Worker changed coordinator-owned files');
-      if (result.status === 'BLOCKED') break;
-      reviewedTree = git(worktree, 'write-tree');
-      if (result.status === 'READY_FOR_VALIDATION' && reviewedTree === git(worktree, 'rev-parse', `${head}^{tree}`)) throw Error('No-change candidate requires coordinator verification');
+    return ctx;
+  }
+  async function implement(ctx, repair = false) {
+    ctx.result = await agent(ctx, false, repair); stage(ctx);
+    if (ctx.result.status === 'BLOCKED') throw Error(ctx.result.blocker || ctx.result.summary);
+    ctx.phase = 'READY_FOR_VALIDATION'; persist();
+  }
+  async function finish(ctx, alreadyImplemented, startingAttempt = 0) {
+    for (let localAttempt = startingAttempt; localAttempt < 3; localAttempt++) {
       try {
-        await run('git', ['diff', '--check', head], `whitespace-${attempt}`);
-        await run(process.execPath, ['--test', 'tools/terra-runner.test.mjs'], `runner-test-${attempt}`);
-        await run('make', ['test'], `test-${attempt}`);
-        await run('make', ['build'], `build-${attempt}`);
-        // Configuration is coordinator-owned; workers cannot submit executable commands.
-        for (const [index, check] of (cfg.taskChecks?.[next.id] || []).entries()) {
-          if (!check || !Array.isArray(check.argv) || check.argv.some(v => typeof v !== 'string') ||
-              check.argv.length < 2 || !['./gradlew', process.execPath].includes(check.argv[0])) throw Error('Invalid configured task check');
-          await run(check.argv[0], check.argv.slice(1), `task-check-${index}-${attempt}`);
+        if (!alreadyImplemented || localAttempt > startingAttempt) await implement(ctx, localAttempt === 2);
+        moveToIntegrationBase(ctx);
+        await validate(ctx); integrate(ctx); return;
+      } catch (e) {
+        ctx.feedback = e.message; ctx.blocker = failureReason(ctx.result, ctx.feedback); ctx.phase = 'BLOCKED'; persist();
+        if (ctx.result?.status === 'BLOCKED' || /budget|deadline|Paused|outside.*scope|coordinator-owned|Worker changed|Integration base changed|Candidate changed/.test(e.message)) throw e;
+        if (localAttempt === 2) throw e;
+        ctx.attempt++; persist();
+      }
+    }
+  }
+  try {
+    assertHead(); checkDeadChildren(state); delete state.childPid; state.childPids = [];
+    if (command === 'run' && entries(state).length) throw Error(`Interrupted run retained at ${state.active.dir}; inspect and use bounded retry`);
+    if (command === 'retry' && !state.active) throw Error('No retained task to retry');
+    guard();
+    if (command === 'retry') for (const ctx of entries(state)) {
+      if (!cfg.allowedTasks.includes(ctx.task) || (!cfg.video && ctx.task.startsWith('V')))
+        throw Error(`Retained task is no longer authorized by the current allowlist/video policy: ${ctx.task}`);
+      const currentPaths = ctx.parallelOwner ? cfg.parallelPaths[ctx.task] : cfg.allowedPaths[ctx.task];
+      validateAllowedPaths(currentPaths);
+      if ((ctx.paths ?? currentPaths).some(p => !permitted(p, currentPaths) || !permitted(p, cfg.allowedPaths[ctx.task])))
+        throw Error(`Retained path ownership was narrowed; reconcile the preserved candidate: ${ctx.task}`);
+      // Never let a saved wider path policy override current authorization.
+      ctx.paths ??= currentPaths;
+    }
+    batchAdmitted = true;
+    state.batch = { started: new Date().toISOString(), deadline: new Date(deadline).toISOString(), maxTasks: cfg.maxTasksPerBatch, completed: 0 };
+    state.modelTokens = 0; state.cachedInputTokens = 0;
+    state.usage = { input: 0, cached: 0, nonCachedInput: 0, output: 0, reasoning: 0 }; persist();
+    let admitted = 0;
+    if (command === 'retry') {
+      const retained = entries(state);
+      if (retained.length > cfg.maxTasksPerBatch) throw Error('Retained wave exceeds batch task limit');
+      // Check every retained base before the first integration advances head.
+      for (const ctx of retained) {
+        if (!fs.existsSync(ctx.worktree) || git(ctx.worktree, 'rev-parse', 'HEAD') !== ctx.base || ctx.base !== head)
+          throw Error('Retained integration base changed; reconcile manually');
+      }
+      for (const ctx of retained) {
+        if ((ctx.recoveryCount ?? 0) >= cfg.maxRecoveryRetries) throw Error('Recovery retry limit reached; inspect/defer instead of recycling');
+        const alreadyImplemented = ctx.phase === 'READY_FOR_VALIDATION' && ctx.result?.status !== 'BLOCKED';
+        const row = queue(md).find(t => t.id === ctx.task);
+        if (!row || row.state !== 'TODO' || !row.deps.every(id => queue(md).find(t => t.id === id)?.state === 'DONE')) throw Error('Retained task is not dependency-ready');
+        ctx.title = row.title; ctx.paths ??= cfg.allowedPaths[ctx.task]; ctx.checks = [];
+        ctx.recoveryCount = (ctx.recoveryCount ?? 0) + 1; ctx.attempt = (ctx.attempt ?? 2) + 1;
+        ctx.feedback = ctx.feedback || ctx.blocker || state.error || 'Resume the preserved candidate and validate it';
+        const today = new Date().toISOString().slice(0, 10);
+        if (state.runs.filter(r => r.date === today).length >= cfg.maxRunsPerDay) throw Error('Daily run admission limit reached');
+        state.runs.push({ date: today, task: ctx.task, dir: ctx.dir, recovery: ctx.recoveryCount }); persist();
+        await finish(ctx, alreadyImplemented); admitted++; state.batch.completed++; persist();
+      }
+    }
+    while (admitted < cfg.maxTasksPerBatch) {
+      // Reaching a batch budget after successful integration ends cleanly; a new wake gets a new bounded batch.
+      if (Date.now() >= deadline || state.modelTokens >= cfg.maxReportedTokens) break;
+      guard(); assertHead();
+      const today = new Date().toISOString().slice(0, 10), available = cfg.maxRunsPerDay - state.runs.filter(r => r.date === today).length;
+      if (available <= 0) { if (!admitted) throw Error('Daily run admission limit reached'); break; }
+      const wave = selectWave(queue(md), cfg, Math.min(cfg.maxTasksPerBatch - admitted, available));
+      if (!wave.length) break;
+      const contexts = wave.map(t => prepare(t, wave.length > 1)); admitted += contexts.length;
+      // Only implementation is parallel. Validation, review and integration stay serialized.
+      const results = await Promise.allSettled(contexts.map(c => implement(c)));
+      for (let i = 0; i < contexts.length; i++) {
+        if (results[i].status === 'rejected') {
+          contexts[i].feedback = results[i].reason.message; contexts[i].blocker = contexts[i].feedback; contexts[i].phase = 'BLOCKED'; persist();
+          if (contexts[i].result?.status === 'BLOCKED' || /budget|deadline|Paused|outside.*scope|coordinator-owned|Worker changed/.test(contexts[i].feedback)) throw results[i].reason;
+          contexts[i].attempt++; persist();
+          await finish(contexts[i], false, 1);
+        } else {
+          await finish(contexts[i], true);
         }
-        const review = await agent(true, attempt, feedback, reviewedTree);
-        git(worktree, 'add', '-A');
-        if (git(worktree, 'write-tree') !== reviewedTree) throw Error('Candidate changed after validation/review');
-        if (review.status === 'PASS') { accepted = true; break; }
-        feedback = review.summary + '\n' + review.blocker;
-      } catch (e) { feedback = e.message; }
+        state.batch.completed++; persist();
+      }
     }
-    if (!accepted) {
-      state.active.phase = 'BLOCKED'; state.active.blocker = result?.blocker || feedback || 'Review did not pass';
-      atomic(stateFile, state);
-      throw Error(`Task retained for coordinator resolution: ${state.active.blocker}`);
-    }
-    if (state.paused || Date.now() >= deadline || (fs.existsSync(pauseFile) && read(pauseFile).trim())) throw Error('Cancelled or timed out before integration');
-    if (git(cfg.repo, 'rev-parse', cfg.branch) !== head) throw Error('Integration base changed; preserve reviewed work');
-    verifyBranch();
-    git(worktree, 'add', '-A');
-    if (git(worktree, 'write-tree') !== reviewedTree) throw Error('Reviewed candidate changed before commit');
-    if (git(worktree, 'status', '--porcelain')) {
-      git(worktree, 'add', '-A');
-      git(worktree, 'commit', '-m', `${next.id}: ${next.title}`);
-    }
-    const implementation = git(worktree, 'rev-parse', 'HEAD');
-    const status = effectiveStatus(next.id, result.status);
-    const note = `${implementation.slice(0,12)}; ${result.summary}; ${status === 'WAITING_USER' ? result.blocker || 'Actual human approval/evidence required' : 'test/build + fresh Terra review passed'}; evidence ${runDir}`;
-    fs.writeFileSync(path.join(worktree, 'TASKS.md'), mark(md, next.id, status, note));
-    git(worktree, 'add', 'TASKS.md'); git(worktree, 'commit', '-m', `queue: record ${next.id} ${status}`);
-    const integrated = git(worktree, 'rev-parse', 'HEAD');
-    // Compare-and-swap prevents integrating against a changed base.
-    git(cfg.repo, 'update-ref', `refs/heads/${cfg.branch}`, integrated, head);
-    state.last = { task: next.id, status, implementation, integrated, reviewedTree, dir: runDir, worktree, worktreeCleaned: false, modelTokens: state.modelTokens, cachedInputTokens: state.cachedInputTokens, usage: state.usage };
-    delete state.active; atomic(stateFile, state);
-    // A completed candidate is committed and reviewable from `implementation`; retain
-    // logs but release its dedicated worktree. Interrupted worktrees stay preserved.
-    try {
-      git(cfg.repo, 'worktree', 'remove', '--force', worktree);
-      state.last.worktreeCleaned = true; atomic(stateFile, state);
-    } catch (e) {
-      state.last.worktreeCleanupError = e.message; atomic(stateFile, state);
-    }
-    console.log(JSON.stringify(state.last, null, 2));
+    state.batch.finished = new Date().toISOString(); delete state.error; persist();
+    console.log(JSON.stringify({ batch: state.batch, modelTokens: state.modelTokens, next: select(queue(md), cfg.video, cfg.allowedTasks)?.id ?? null }));
   } catch (e) {
-    state.error = e.message; atomic(stateFile, state); throw e;
+    // A refused heartbeat is not a new failure of the retained candidate.
+    // Preserve the concrete test/review blocker for the recovery coordinator.
+    if (!batchAdmitted && state.active) throw e;
+    state.error = e.message;
+    if (state.active && state.active.phase !== 'INTEGRATED') { state.active.blocker = e.message; state.active.phase = 'BLOCKED'; }
+    persist(); throw e;
   } finally {
-    terminate(); release(); process.removeListener('SIGINT', interrupted); process.removeListener('SIGTERM', interrupted);
+    stop(); release(); process.removeListener('SIGINT', interrupt); process.removeListener('SIGTERM', interrupt);
   }
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

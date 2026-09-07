@@ -79,7 +79,7 @@ process.stdin.on('data', b => input += b);
 process.stdin.on('end', () => {
   const task = input.match(/Assigned task: (\\w+)/)[1], base = input.match(/Base commit: (\\w+)/)[1];
   const review = input.includes('Mode: Fresh independent REVIEW');
-  if (!review) fs.writeFileSync('probe.txt', 'actual new file');
+  if (!review && !fs.existsSync('worker-waiting')) fs.writeFileSync('probe.txt', 'actual new file');
   const result = { task, base, commit: base, candidate: input.match(/Candidate tree: ([A-Za-z0-9_]+)/)[1], status: review ? (fs.existsSync('review-fails') ? 'FAIL' : 'PASS') : (fs.existsSync('worker-blocked') ? 'BLOCKED' : fs.existsSync('worker-waiting') ? 'WAITING_USER' : 'READY_FOR_VALIDATION'), summary: 'Fixture only', blocker: review && fs.existsSync('review-fails') ? 'reproduced defect' : '', tests: ['PENDING_COORDINATOR: make test/build; worker local sockets unavailable'], artifacts: [] };
   fs.writeFileSync(process.argv[process.argv.indexOf('-o') + 1], JSON.stringify(result));
   const usage = fs.existsSync('cached-context')
@@ -118,7 +118,9 @@ test('failed review stops after two retries, preserves work, and explicit defer 
     assert.ok(fs.existsSync(path.join(s.active.worktree, 'probe.txt')));
     assert.ok(fs.existsSync(path.join(s.active.dir, 'review-2.json')));
     assert.equal(fs.existsSync(path.join(s.active.dir, 'review-3.json')), false);
+    const retainedBlocker = s.active.blocker;
     assert.notEqual(f.call('run').status, 0);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(f.state, 'state.json'))).active.blocker, retainedBlocker);
     assert.equal(f.call('defer').status, 0);
     assert.equal(queue(f.git('show', 'codex/terra:TASKS.md'))[0].state, 'BLOCKED');
     assert.ok(fs.existsSync(path.join(s.active.worktree, 'probe.txt')));
@@ -246,7 +248,7 @@ test('host validation failure cannot become completion or review approval', () =
     assert.ok(fs.existsSync(path.join(s.active.dir, 'worker-2.json')));
   } finally { f.close(); }
 });
-test('implementation blockers stay blocked; real human waits stay waiting after gates', () => {
+test('implementation blockers stay blocked; human waits with no code change record WAITING_USER after gates', () => {
   for (const [flag, expected] of [['worker-blocked', 'BLOCKED'], ['worker-waiting', 'WAITING_USER']]) {
     const f = fixture(); try {
       marker(f, flag); const r = f.call('run');
