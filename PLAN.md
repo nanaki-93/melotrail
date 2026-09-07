@@ -343,7 +343,12 @@ of the requested generative character animation.
 
 Build one cohesive pilot before producing dozens of assets: approved TABI
 identity, one train interior, day/dusk/night scenery, a few props and several
-short restrained action loops. Use image-to-video with locked references for
+short restrained action loops. First compare the four pastel art directions in
+[TABI video](docs/TABI_VIDEO.md#pastel-style-exploration-and-reusable-generation-brief)
+against the newly supplied pastel references. The current visual direction is
+simple, cozy and zen, with sparse artistic scenery and a limited palette;
+TABI may be recolored to match. A chosen style still requires actual user review.
+Use image-to-video with locked references for
 blink/breath/write/look-out actions, and deterministic layered/parallax
 composition for most of the duration. Reject identity drift and unstable loops;
 do not ask a model to reinvent the entire character and train for every scene.

@@ -37,13 +37,246 @@ window/train/table geometry, passing Japanese city/countryside, layered depth,
 soft light and cozy cinematic 2D illustration. They are source references, not
 already separated, rigged, licensed-for-redistribution animation assets.
 
-There are visible differences between the sheet and the newer scene, including
-forehead-star color, body proportions and accessory arrangement. V02 resolves
-these into one approved identity version; do not average them unpredictably.
-Use the sheet for identity and the scenes for layout until that approval.
-Style: drawn/painterly 2D, rich navy/violet with warm amber/peach highlights,
-restrained grain/reflection. Exclude photorealism, 3D redesign, unstable text,
-extra characters, deformed anatomy and changing train geometry.
+The newer [pastel station](pictures/video/pastel-tabi.png) and
+[listening pose](pictures/video/patel-tabi-music.png) show dusty lilac TABI,
+blush gills, a pale sage scarf, seated stillness and headphones worn for music.
+The second filename is actually `patel-tabi-music.png`; preserve the supplied file.
+Their station surroundings remain detailed, amber-lit and strongly textured.
+The user's latest direction goes further: simple, cozy, zen, pastel, few colors,
+and scenery interpreted as art rather than naturalistic rendering.
+
+This direction supersedes the previous rich neon/navy palette. Recoloring TABI
+to fit a scene palette is explicitly allowed during style exploration. Preserve
+recognition through the axolotl silhouette, feathery gills, face, forehead star,
+curled tail and headphones. Jacket/scarf/accessory details may be simplified.
+V02 resolves proportions, markings, palette and costume into one approved
+identity version after visual comparison. No trial below is user-approved yet.
+Use the original train scenes for layout, and the pastel pair for softness and
+calm poses. Preserve the station's memorable arch, bench, lamps, central TABI EKI
+sign, train, plants and suitcase when it is used as the channel banner. Simplify
+surface texture and secondary writing without flattening the scene into an empty
+platform. Reduce glossy materials and heavy amber lighting.
+
+## Pastel style exploration and reusable generation brief
+
+Four proposed single-scene trials were generated on 2026-09-06 with the built-in
+image tool before expanding the asset kit. They compare the same seated listening
+pose, camera and train/window layout while varying the art medium and restrained
+palette: [Paper Moon Railway](pictures/video/style-trials/paper-moon-railway.png),
+[Apricot Quiet](pictures/video/style-trials/apricot-quiet.png),
+[Lilac Sunday](pictures/video/style-trials/lilac-sunday.png) and
+[Moonmilk Express](pictures/video/style-trials/moonmilk-express.png). They remain
+proposed style examples until the user chooses or rejects a direction. The prompts
+below reproduce their intent; they are not an authorization for paid jobs. Attach
+the actual reference images when using them in an image tool because filesystem
+paths alone do not transfer images.
+
+The first [channel-banner trial](pictures/video/tabi-channel-banner-master.png)
+was rejected because it removed too much of the station and omitted the channel
+name. The revised [banner master](pictures/video/tabi-channel-banner-v2-master.png)
+preserves the station composition and exact central **TABI EKI** sign. Its
+[upload-sized PNG](pictures/video/tabi-channel-banner-v2-2560x1440.png) and compact
+[upload JPEG](pictures/video/tabi-channel-banner-v2-upload.jpg) are 2560 × 1440.
+TABI's face, headphones and name remain in the centered cross-device area. This
+revision is proposed pending user review.
+
+The proposed [funky banner variant](pictures/video/tabi-channel-banner-v3-funky-master.png)
+keeps the v2 composition and adds restrained rhythm ribbons, rounded color blocks,
+checkerboard flooring, train-stripe motifs and small sparkles from the locked
+pastel palette. Its [2560 × 1440 PNG](pictures/video/tabi-channel-banner-v3-funky-2560x1440.png)
+and compact [upload JPEG](pictures/video/tabi-channel-banner-v3-funky-upload.jpg)
+were rejected because “funky” meant real physical objects, introduced gradually,
+rather than abstract graphic decoration.
+
+Three replacement banner trials add tangible music objects cumulatively while
+preserving the v2 composition and **TABI EKI** sign:
+
+1. [Step 1](pictures/video/banner-funky-steps/tabi-banner-real-funky-step-1.png):
+   portable record player, record sleeves, lava lamp, backpack pins and sunglasses.
+2. [Step 2](pictures/video/banner-funky-steps/tabi-banner-real-funky-step-2.png):
+   adds a vintage radio, small disco ball, vinyl stack, hand percussion and a
+   patterned ceramic pot.
+3. [Step 3](pictures/video/banner-funky-steps/tabi-banner-real-funky-step-3.png):
+   adds a small analog synthesizer, guitar case, spare headphones, mushroom lamp,
+   instant camera and floor cushions.
+
+All three remain proposed until the user selects the preferred object density.
+
+A further proposed [funky Tabi variant](pictures/video/banner-funky-steps/tabi-banner-step-2-funky-tabi-master.png)
+uses Step 2 as its composition and object-density starting point. Tabi gains a
+deep-plum beret, coral cat-eye sunglasses, a lilac striped scarf, brighter
+headphones and small animal-print accents on the jacket and luggage. The whole
+scene adopts a flat, lightly textured peach, lemon, yellow-green, coral, orange
+and plum treatment with restrained shading. The station, train, plants, record
+player, radio, disco ball, lava lamp, luggage, platform 7, 11:11 clock and exact
+**TABI EKI** sign remain visible. Use the [2560 × 1440 PNG](pictures/video/banner-funky-steps/tabi-banner-step-2-funky-tabi-2560x1440.png)
+or compact [upload JPEG](pictures/video/banner-funky-steps/tabi-banner-step-2-funky-tabi-upload.jpg)
+for review. This variant remains proposed pending explicit approval.
+
+The supplied visual references are preserved under
+[`pictures/video/inspiration/`](pictures/video/inspiration/) as inspiration-only
+material. Borrow only broad fashion attitude, tangible beatnik/pop accessories,
+flat palette and minimal-shading principles; do not reproduce their artwork,
+embedded text or watermarks.
+
+The latest proposed [green-coat revision](pictures/video/banner-funky-steps/tabi-banner-step-2-green-coat-master.png)
+removes Tabi's beret and sunglasses, restores the visible face, and replaces the
+brown jacket and scarf with a roomy emerald coat with a high pink collar, cuffs
+and trim. It also reduces the plant density and retains exactly two crescent
+motifs: the tall poster at far left and the lower-right luggage. The central
+sign, record sleeve and train no longer carry moons. The exact **TABI EKI** sign,
+11:11 clock, platform 7, music objects, train and Step 2 composition remain.
+Review the [2560 × 1440 PNG](pictures/video/banner-funky-steps/tabi-banner-step-2-green-coat-2560x1440.png)
+or compact [upload JPEG](pictures/video/banner-funky-steps/tabi-banner-step-2-green-coat-upload.jpg).
+The cheetah gallery reference is preserved as inspiration-only material; its
+characters, layout and individual artwork are not part of the TABI identity.
+
+The current proposed [funky-sign revision](pictures/video/banner-funky-steps/tabi-banner-green-coat-funky-sign-master.png)
+keeps that sparse green-coat scene, closes Tabi's eyes in a calm listening pose,
+restores the richer peach/lemon/yellow-green/lilac/plum balance, and adds a small
+closed-eye Tabi-head emblem in the station sign's crown. The exact **TABI EKI**
+lettering uses a more playful rounded 1970s-inspired display treatment while
+remaining clearly readable. The earlier two-moon limit and simplified plant
+density remain unchanged. Review the [2560 × 1440 PNG](pictures/video/banner-funky-steps/tabi-banner-green-coat-funky-sign-2560x1440.png)
+or compact [upload JPEG](pictures/video/banner-funky-steps/tabi-banner-green-coat-funky-sign-upload.jpg).
+The emblem and display lettering remain raster concepts pending explicit user
+approval and later deterministic reconstruction if adopted as reusable branding.
+
+Four isolated signature studies explore the **TABI EKI** wordmark and Tabi-head
+emblem without the station artwork: [A — Soul Loop](pictures/video/signature-concepts/tabi-eki-signature-a-soul-loop.png)
+uses connected soul-script lettering and a headphone portrait;
+[B — Tall Wiggle](pictures/video/signature-concepts/tabi-eki-signature-b-tall-wiggle.png)
+uses condensed organic capitals and a simple headphone-free stamp;
+[C — Soft Bounce](pictures/video/signature-concepts/tabi-eki-signature-c-soft-bounce.png)
+uses rounded stacked bubble letters and a three-quarter headphone portrait; and
+[D — Liquid Station](pictures/video/signature-concepts/tabi-eki-signature-d-liquid-station.png)
+uses dense liquid lettering with Tabi nested in a vinyl-record badge. These are
+raster direction studies, not approved logos or font identifications. The four
+supplied typography images are preserved under `pictures/video/inspiration/`
+and contribute only broad period traits; their phrases, glyph drawings, layouts
+and watermark are not to be reproduced.
+
+Four additional face-only line studies test a simplified Tabi symbol without
+wording or scenery: [A — Quiet Bloom](pictures/video/face-icon-concepts/tabi-face-line-a-quiet-bloom.png)
+is the balanced headphone-free portrait; [B — Listening Halo](pictures/video/face-icon-concepts/tabi-face-line-b-listening-halo.png)
+retains minimal headphones; [C — Side Drift](pictures/video/face-icon-concepts/tabi-face-line-c-side-drift.png)
+uses an asymmetric three-quarter headphone view; and [D — One-Line Rhythm](pictures/video/face-icon-concepts/tabi-face-line-d-one-line-rhythm.png)
+reduces the gills and head to a near-continuous flowing contour. All use only
+deep-plum linework on cream and remain raster direction studies pending selection
+and deterministic vector reconstruction.
+
+The user selected **B — Listening Halo** as the icon direction for the next
+banner comparison. Four otherwise matched raster banners place that line icon
+in the sign crown and test the earlier lettering directions in context:
+[A — Soul Loop](pictures/video/banner-font-comparisons/tabi-banner-listening-halo-a-soul-loop.png),
+[B — Tall Wiggle](pictures/video/banner-font-comparisons/tabi-banner-listening-halo-b-tall-wiggle.png),
+[C — Soft Bounce](pictures/video/banner-font-comparisons/tabi-banner-listening-halo-c-soft-bounce.png)
+and [D — Liquid Station](pictures/video/banner-font-comparisons/tabi-banner-listening-halo-d-liquid-station.png).
+The icon selection is authoritative for this comparison; the lettering and
+combined banner remain proposed until the user chooses a font direction.
+
+A subsequent proposed [Soul Loop detail revision](pictures/video/banner-font-comparisons/tabi-banner-soul-loop-cheetah-trim-pink-lamp-master.png)
+removes the headphone-cup star, left wall lantern and disco ball; replaces the
+central dome lamp with a pink pleated paper pendant; changes the coat's pink
+collar, cuffs and piping to a restrained golden-coral cheetah print; and removes
+the logo medallion so the Listening Halo symbol appears as inverted cream
+linework directly on the plum sign. The forehead star, exact **TABI EKI** name,
+11:11 clock, platform 7 and two approved crescent placements remain. Review the
+[2560 × 1440 PNG](pictures/video/banner-font-comparisons/tabi-banner-soul-loop-cheetah-trim-pink-lamp-2560x1440.png)
+or compact [upload JPEG](pictures/video/banner-font-comparisons/tabi-banner-soul-loop-cheetah-trim-pink-lamp-upload.jpg).
+
+The current [TABI EKI channel banner v3](pictures/video/tabi-eki-channel-banner-final-v3-master.png)
+uses the tightened dusty-lilac sign without side sprigs, the small Listening Halo
+icon and warm-yellow **TABI EKI** lettering. Tabi's headphone band and rim echo
+the pendant lamp's dusty pink family, while the ear-cup face matches the bench
+metal's deep plum. Broad station surfaces use cream, pale peach and dusty blush
+instead of the earlier saturated orange cast. This revision uses the sharper
+pre-sign-exploration station artwork as its drawing-quality and geometry master,
+then transfers the selected character, costume, sign, lamp and palette decisions
+onto it. Small props, train panels, luggage, bench scrollwork and character details
+therefore retain crisp contours, coherent internal lines and controlled paper
+grain. Use the [2560 × 1440 PNG](pictures/video/tabi-eki-channel-banner-final-v3-2560x1440.png)
+or compact [upload JPEG](pictures/video/tabi-eki-channel-banner-final-v3-upload.jpg).
+
+A fifth proposed [Paper Moon with Lilac window](pictures/video/style-trials/paper-moon-lilac-window.png)
+combines Paper Moon's character, cabin and tactile paper treatment with Lilac
+Sunday's pale limited-print Tokyo scenery. It is a hybrid comparison candidate,
+not a channel geography commitment or an approved production master. The channel
+theme is travel through music across imagined and varied places; shared branding
+must not use Japan-specific landmarks, scripts or symbols as its defining setting.
+
+Copy the common brief and append exactly one trial below per generation:
+
+```text
+Create one finished 16:9 illustration exploring a distinctive visual language
+for TABI's cozy music-and-travel channel. Deliver a single scene, without a
+collage, labels or palette swatches. Use the highest supported native quality;
+retain the original output for later animation work.
+
+References: tabi.png establishes recognizable axolotl anatomy; pastel-tabi.png
+and patel-tabi-music.png establish gentle character colors, resting posture
+and quiet listening; the earlier train images establish the window composition.
+Translate these references into the art medium specified in the selected trial.
+
+Scene: fixed eye-level three-quarter view inside a softly rounded train cabin.
+TABI sits in the left third, eyes peacefully closed, headphones on, small paws
+resting in the lap, curled tail visible. A large rounded rectangular window
+fills the right half. A simple table holds one cup and one closed notebook.
+Outside, suggest Tokyo through a few rounded architectural silhouettes and
+one simplified recognizable tower. Treat buildings, sky and distance as painted
+shapes; let the architecture feel like a quiet imagined travel illustration.
+Keep the same composition and pose across all four trials.
+
+Character: retain TABI's axolotl silhouette, soft branching gills, recognizable
+face, one forehead star, curled tail and round headphones. Adapt body, gills,
+scarf and coat to the selected palette. Simplify tiny costume decorations;
+use matte surfaces and soft tonal separation so TABI remains clearly readable.
+
+Signature visual grammar: repeat rounded window corners in the headphone cups,
+cup handle and architecture; place TABI's small star motif sparingly on the
+forehead and headphone badge; give every object a gentle, slightly imperfect
+handmade contour. Keep plenty of breathing room and broad quiet color fields.
+
+Use only the selected four-color family with subtle tonal variations. Suggested
+balance: 65 percent light base, 25 percent supporting color, 8 percent darker
+structural color and 2 percent accent. Hex values are visual targets, not a
+promise of exact generated pixels. Use muted dark color only for essential
+features. Favor diffuse light, restrained texture and clear large shapes.
+
+Avoid neon, rainbow accents, photographic detail, 3D rendering, glossy toy
+surfaces, heavy black outlines, dramatic bloom, dense foliage, brick textures,
+crowded shelves, ornate signs, extra passengers, floating decorations, readable
+text, logos and watermarks. The mood is warm, quiet, contemplative and welcoming.
+```
+
+| Trial | Palette targets | Append to common brief |
+| --- | --- | --- |
+| A — Paper Moon Railway | Oat `#F2EBDD`, sage `#B9C6B2`, dusty mauve `#A597AD`, warm charcoal `#625F59` | Flat illustration built from a few overlapping cut-paper shapes, gently irregular edges, subtle paper fibers and shallow contact shadows. Oat cabin, sage city silhouettes, dusty mauve TABI with pale oat gills. Three broad exterior layers. Airy, tactile and quietly playful; all elements including TABI share the paper treatment. |
+| B — Apricot Quiet | Cream `#F4EBDD`, pale apricot `#E6C2AD`, clay taupe `#B4A198`, muted umber `#6D625D` | Matte gouache illustration with broad opaque brush shapes and soft dry-brush edges. Cream TABI with pale apricot gills and taupe scarf, separated from the cream cabin by taupe seat and soft shading. Architecture dissolves into a few warm blocks. Diffuse afternoon light, minimal contours, gentle painted depth. |
+| C — Lilac Sunday | Rice paper `#F0EBE2`, mist lilac `#C1B8CE`, faded blue `#A7B7C1`, deep plum-gray `#665F73` | Limited-ink print illustration with restrained risograph-like grain and softly imperfect ink coverage. Flat shapes, sparse plum-gray pencil contours, no registration ghosting on face or hands. Lilac TABI, rice-paper gills, faded-blue cabin and graphic Tokyo silhouettes. Large unprinted areas and one small pale sun. |
+| D — Moonmilk Express | Milk `#EEEAE2`, fog `#CEC8D5`, dusty lavender `#A69AAF`, dusk plum `#696173` | Nearly monochrome pastel illustration using smooth chalky shapes, broad atmospheric bands and extremely sparse soft contours. Fog-colored TABI with lavender gills and dusk-plum headphones. A pale moon, a single stylized tower and two bands of buildings. Dreamlike proportions, spacious composition, cozy low-contrast evening with a readable face. |
+
+Recommendation for first comparison: A has a clear repeatable shape language
+and useful separable layers; D tests the most restrained palette. Distinctiveness
+comes from a consistent combination of character, shapes, palette and motion.
+
+After a direction is chosen, retain its composition and identity for three
+action studies: reading an open book, lifting the cup for a sip, and glancing
+outside. Then test the matching station-bench scene from the pastel references:
+one simple arch, bench, train silhouette and suitcase, with generous open space.
+Keep the station as an optional departure/arrival scene. These studies validate
+the style beyond one attractive frame before deriving the production assets.
+
+Apply the chosen style to the kit below. Create separate full-resolution assets
+from an approved master: cabin with transparent window opening, empty seat area,
+foreground table/occlusion, character actions, independent props and exterior
+layers. Keep a common canvas, placement anchors and window mask. Exterior-only
+plates contain no cabin/window frame; scenery scrolls behind the fixed opening.
+Keep paper/print grain stable during animation. Check actual layer alignment,
+alpha and scrolling seams; an image prompt cannot guarantee rig-ready output.
+Day/evening variations shift values within the same palette instead of adding
+new saturated hues. Use slow scenery drift, occasional blinks and gentle
+breathing; reserve larger gestures for reading, sipping and looking outside.
 
 The retired asset prompt requested 24 poses and many plates/props/views at once.
 That is a long-term library wish list, not the first batch. The retired future
@@ -59,9 +292,9 @@ Do not generate an hour of video or all possible character views first.
 | Group | Pilot contents | Required production properties |
 | --- | --- | --- |
 | Identity | One approved front/side/three-quarter reference set | Stable proportions, costume, markings, palette, scale and exclusions |
-| Character | Seated listening, holding cup, writing and looking out | Separate transparent files or masked approved clips; stable pivot/scale |
+| Character | Seated listening, reading, sipping and looking out | Separate transparent files or masked approved clips; stable pivot/scale |
 | Interior | One fixed train/table/window composition | Empty character area, foreground occlusion and window mask |
-| Scenery | Day, dusk and night versions of one journey | Skyline/midground/foreground layers suitable for seamless scrolling |
+| Scenery | Abstract Tokyo journey, then day/dusk variants within the chosen palette | Sparse skyline/midground/foreground layers suitable for seamless scrolling |
 | Props | Notebook/pencil, cup, ticket, camera and bag | Transparent independent files with placement anchors |
 | Atmosphere | Reflections, light, steam; rain only if needed | Separate layers and bounded opacity/motion |
 | Animation | Blink/breathe, writing/hand action, glance, steam | Short validated loops/takes with consistent camera and identity |
