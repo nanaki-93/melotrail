@@ -51,10 +51,11 @@ an unrelated task. A failed dependent gate cannot be bypassed.
 | F05 | Delete audio/worker runtime and finish schema/build cleanup | F04 | DONE | 9db46bd70a0f; Deleted obsolete audio/DSP/worker/Python runtime and exclusive tests, removed obsolete Make/Python wiring and root dependencies, retained MIDI storage/schema behavior, and added cleanup regression guards. Fixed the prior failure by removing empty retired directories from the worktree. Fresh diff review found no further issue. Next dependency-ready task: F06.; test/build + fresh Terra review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-06T23-17-34-111Z-F05 |
 | F06 | Delete verified legacy data and measure repository reduction | F05 | DONE | `d6adb18ce53c`; 5,250,264 bytes removed (16.1%); `make test`, `make build`, diff check, Sol debug, and fresh Terra review passed. |
 | A01 | Harden and verify bounded agent execution runner | F01 | DONE | a139773cdf8f; Requires a non-empty allowed-path policy for every allowlisted task before selection/admission. Added end-to-end coverage proving a now-next A01 with no policy creates no state, run directory, or worktree. Fresh diff review found no reproduced issue.; test/build + fresh Terra review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-06T15-42-09-677Z-A01 |
+| A02 | Reduce runner overhead and recover retained work | A01 | DONE | 87963895d3a1; bounded evidence, saved repair sessions, three-task batches, disjoint M04/M06 workers, safe retained recovery; 39 runner regressions + application test/build, live CLI resume and fresh review passed. |
 | U01 | Finish verified lanes and live timeline projection | F06 | DONE | `d983d2098d93`; factual shared lanes, real-position observation, stale evidence and device-loss lifecycle coverage; `make test`, `make build`, diff check, Sol debug, and fresh Terra review passed. |
 | U02 | Compact shell, player and inspector | U01 | DONE | 7d661a7a8eb1; Fixed review-reproduced U02 gaps: Arrange/Review use one 332dp selected-section inspector column at ≥1440px, retain inline inspectors below that width, and Review draft controls use rectangular shapes. Added reference-width regression coverage. No commit made.; test/build + fresh Terra review passed; evidence /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-07T10-37-44-445Z-U02 |
 | U03 | Refine Project and MIDI import | U02 | DONE | Native one-file MIDI drop, factual Project/MIDI facts, consistent fractional BPM, scoped accepted/rejected findings and honest recovery; Sol High fixes plus `make test`, `make build`, diff check and fresh Terra review passed. |
-| M02 | Derive melody context and harmony-tension evidence | M01, F06 | TODO | |
+| M02 | Derive melody context and harmony-tension evidence | M01, F06 | DONE | 07924ab04ef3; read-only melody/harmony context; fixed 6/8 accents, pickup slicing and PPQ25; 8 focused + 337 full tests, build and fresh review passed; recovered preserved candidate. Musical acceptance remains advisory. |
 | M03 | Add explicit harmony durations and source extent | M02 | TODO | |
 | M04 | Improve piano voicing against melody | M03 | TODO | |
 | M05 | Add phrase-aware, meter-aware comping | M04 | TODO | |
@@ -463,6 +464,22 @@ exhaustion and interrupted worktree cleanup. Keep logs out of tracked docs.
 **Done:** dry-run and one real low-risk task complete end-to-end; summary points
 to reviewable changes. Scheduling is configured only for the requested cadence.
 
+### A02 — Reduce runner overhead and recover retained work
+
+**Work:** bound review evidence to the current candidate and explicit check logs;
+keep transcripts out of prompts; resume implementation context for focused
+repairs, with fresh reviews and Sol High escalation after two failed attempts.
+Run bounded continuous batches with explicitly owned independent workers and
+serialized revalidation/integration. Preserve interrupted candidates and actual
+failure reasons; never reset budgets within a batch or recycle failures forever.
+Recover the retained M02 candidate after fresh review. Install only tested runner
+code and preserve the user's checked-out branch and staged changes.
+**Tests:** original runner gates plus real-process fixtures for session reuse,
+transcript isolation, bounded evidence, task/time/usage limits, retained retries,
+overlapping ownership, actual worker concurrency and combined-tree validation.
+**Done:** required checks and fresh reviews pass, installed script matches Git,
+M02 is recovered, and the existing heartbeat uses the tested bounded policy.
+
 ## Optional TABI video companion
 
 All V tasks use [TABI_VIDEO](docs/TABI_VIDEO.md). Build in a separate repository
@@ -559,33 +576,51 @@ there is no fabricated YouTube-readiness score or promised revenue.
 
 ## Configured automatic execution
 
-Selected on 2026-09-06: hourly execution, GPT-5.6 Terra with high reasoning for
-both implementation and fresh review. All listed tasks are selected, including
-A01 and unpaid video implementation. F01 runs first; A01 is prioritized as soon
-as F01 passes. A01 remains pending until its full hardening acceptance passes.
+Updated by user request on 2026-09-08. The existing heartbeat wakes every
+20 minutes. Each invocation runs up to three dependency-ready tasks immediately,
+within one 45-minute deadline and one 500,000-token admission budget. There are
+at most 24 admitted tasks/recoveries per UTC day. Cached input is recorded
+separately; reported non-cached input, output and reasoning count toward the
+budget. Limits are checked before model calls; simultaneous in-flight calls may
+cross the budget before usage is reported. No automatic credit reset/purchase.
+The heartbeat defers new work if an available account limit has less than 10%
+remaining. No paid media generation or public push/upload is authorized.
 
-The source checkout stays on its existing branch with its edits intact. A local
-snapshot includes the documentation revision and existing Gradle/toolchain edits.
-Automatic commits advance only the un-checked-out `codex/terra-implementation`
-branch. Each task has a detached worktree. Do not check out that branch while the
-runner is active; inspect a detached worktree or pause execution first.
+The source checkout and its staged changes stay intact. Automatic commits advance
+only the un-checked-out `codex/terra-batched-implementation` branch. TASKS on that
+branch owns current queue status; the source checkout can be older. Each candidate
+has an isolated detached worktree. Do not check out the integration branch while
+the runner is active.
 
-Local control: `~/.codex/melotrail-terra/config.json`; pinned reviewed runner:
-`~/.codex/melotrail-terra/terra-runner.mjs`. State, logs, JSON results and task
-worktrees live there, outside the product. This is execution state, not a second
-queue. Read current TASKS from the integration ref, not the unchanged source copy.
-The control copy is updated only by the coordinator after reviewing/testing A01.
-The current settings are one task per wake, 45 minutes total per run, six admitted
-runs per UTC day, at most two repair retries, and 500,000 non-cached input plus
-output/reasoning tokens across Terra calls. Cached input is recorded separately.
-The limit is checked before a new Terra call; once one returns, local validation
-and integration can finish. Usage is reported after a CLI response, so this is
-**not a hard in-flight token/dollar cap**.
-The wall deadline terminates owned processes. No automatic credit reset/purchase.
-The heartbeat also defers new work when either available account limit is below
-10% remaining. No authorized paid video budget or public push/upload exists.
+Local control: `~/.codex/melotrail-terra/config.json`; installed runner:
+`~/.codex/melotrail-terra/terra-runner.mjs`. These are execution state outside the
+product, not another queue. The coordinator installs runner changes only after
+focused tests, `make test`, `make build`, diff checks and fresh review pass.
 
-Commands (Node is developer tooling only; existing Codex login is reused):
+Terra High implements each task. Repairs resume its saved session and existing
+candidate. After the initial attempt and one repair fail, Sol High gets the task,
+current diff and concrete errors for one scoped repair. Reviews always use a
+fresh Terra High session and approve the exact tested Git tree. A changed tree
+invalidates checks/review. Workers cannot run Gradle in their sandbox; the
+coordinator runs fixed focused checks, `make test`, `make build` and diff checks.
+Unexecuted worker checks are PENDING_COORDINATOR, never a product blocker.
+
+Current review evidence is a bounded JSON packet with the candidate identity,
+check commands/results, small output tails and explicit log paths. Worker/review
+transcripts are stored separately and must never be read back into agents or
+included in recursive log searches. Initial required docs are read once; repairs
+reuse that context and inspect only changed authority/docs and concrete feedback.
+
+At most two implementers run concurrently. Only M04 and M06 are selected for
+parallel work, after M03 completes, and only under the disjoint file ownership in
+local configuration. Overlapping owners run serially. The coordinator alone
+validates, reviews, commits and updates TASKS. The second candidate is applied to
+a fresh worktree on the first candidate's integrated result, then gets all checks
+and fresh review again; a conflict preserves the original work. Scope changes
+require coordinator review before expanding parallel ownership. All other tasks
+continue in dependency order; human waits do not block unrelated ready tasks.
+
+Commands (Node is developer tooling; the existing Codex login is reused):
 
 ```bash
 node ~/.codex/melotrail-terra/terra-runner.mjs status
@@ -593,44 +628,28 @@ node ~/.codex/melotrail-terra/terra-runner.mjs dry-run
 node ~/.codex/melotrail-terra/terra-runner.mjs run
 node ~/.codex/melotrail-terra/terra-runner.mjs pause
 node ~/.codex/melotrail-terra/terra-runner.mjs resume
-node --test tools/terra-runner.test.mjs
+node ~/.codex/melotrail-terra/terra-runner.mjs retry
+node --test tools/terra-runner.test.mjs tools/terra-throughput.test.mjs
 ```
 
-The runner stages candidate files, checks allowed/protected paths, runs the test
-and build gates, binds the fresh review to an exact Git tree, then commits the
-implementation and a separate queue update using the actual implementation hash.
-Workers report READY_FOR_VALIDATION, which is never a completed queue state.
-The coordinator owns Gradle test/build and configured task checks; workers add
-regressions and report unavailable checks as PENDING_COORDINATOR. The worker
-sandbox does not provide Gradle local sockets: do not repeatedly invoke Gradle
-there or change permissions to work around it. Actual implementation blockers
-remain BLOCKED. Failed coordinator checks receive bounded repair and fresh review;
-only passed checks plus review can produce DONE. Real human gates remain waiting.
-A coordinator-configured preserved patch binds the exact retry base and SHA-256;
-apply it to the new task worktree without rewriting its prior work/evidence.
-Fixed task checks live in local configuration, never executable model output.
+Interrupted worktrees and all prior evidence remain intact. After inspecting the
+actual failure and verifying no live owner/process group, `retry` resumes retained
+work with new evidence filenames and one new bounded recovery admission per task.
+At most one such recovery is configured; further failure needs coordinator
+resolution/defer. `recover` removes only a provably dead lock. A changed integration
+base, ambiguous owner, changed candidate or unexpected path requires reconciliation,
+never an age-based lock eviction, broad cleanup or blind restart. A crash after a
+ref update must be reconciled against the actual queue/commit before retrying.
+Success commits code and a separate queue update, then removes only its dedicated
+completed worktrees. Failed work remains recoverable.
 
-A compare-and-swap ref update rejects a changed integration base. It never pushes
-or modifies the source checkout. The scheduler owns integration and queue status;
-workers leave changes uncommitted. State records are private local files.
-
-An interrupted/failed run retains its worktree and blocks duplicate selection.
-The coordinator inspects the recorded PID/process group and artifacts first.
-`recover` only removes a provably dead lock; an incomplete/ambiguous owner needs
-explicit inspection, never age-based eviction. `defer` records a BLOCKED queue
-row on the integration branch while preserving all unfinished files. Resume
-independent work next; never automatically recycle a failed task indefinitely.
-To retry after a real fix/decision, the coordinator updates only that task to
-TODO through a reviewed queue commit and preserves links to prior evidence.
-If a crash followed integration, reconcile TASKS and the exact committed ref
-before clearing state; do not re-run or overwrite an already integrated task.
-
-Human listening, UI approval, Logic Pro checks, asset approval/rights and paid
-budget gates remain real. Prepare their evidence, mark WAITING_USER and continue
-unrelated ready work. Missing input is not approval. V01 defaults to an independently
-built `companion/` project; media dependencies must not enter the MIDI app.
-The scheduler stops when the queue is complete and waits quietly when only
-external decisions remain. It runs locally while the computer and app are on.
+Human listening, visual approval, Logic checks, asset/rights approval and paid
+budgets remain real gates. Prepare evidence and mark WAITING_USER; continue only
+independent ready work. All listed unpaid video tasks remain selected, with a
+separate `companion/` project and no media dependencies in MIDI. The heartbeat
+stays quiet when nothing actionable changes and stops admitting work when the
+queue is complete or only external decisions remain. Local execution requires
+the computer and app to be running.
 
 ## Reusable agent prompt
 
@@ -654,5 +673,5 @@ video/automation tasks, public pushes, uploads or paid jobs outside the run scop
 
 For a bounded automatic batch, add the selected task IDs, task/time/usage limits,
 integration/commit policy and permitted optional scope. Do not use “implement
-everything until done” without these boundaries. The installed runner and hourly heartbeat use the configured policy above;
-A01 owns the remaining hardening and end-to-end acceptance.
+everything until done” without these boundaries. The installed runner and heartbeat use the configured policy above;
+A01 establishes safety controls; A02 verifies throughput and recovery.
