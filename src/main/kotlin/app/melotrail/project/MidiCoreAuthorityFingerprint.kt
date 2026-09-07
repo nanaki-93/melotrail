@@ -36,12 +36,14 @@ data class MidiCoreAuthorityScopeFingerprint(
     val key: MidiCoreAuthorityScopeKey,
     val structureSha256: String,
     val harmonySha256: String,
+    val arrangementPlanSha256: String,
     val settingsSha256: String,
     val sha256: String,
 ) {
     init {
         requireHash(structureSha256, "Scope structure hash")
         requireHash(harmonySha256, "Scope harmony hash")
+        requireHash(arrangementPlanSha256, "Scope arrangement-plan hash")
         requireHash(settingsSha256, "Scope settings hash")
         requireHash(sha256, "Scope hash")
     }
@@ -54,6 +56,7 @@ data class MidiCoreAuthorityFingerprint(
     val timingSha256: String,
     val structureSha256: String,
     val harmonySha256: String,
+    val arrangementPlanSha256: String,
     val settingsSha256: String,
     val scopes: List<MidiCoreAuthorityScopeFingerprint>,
 ) {
@@ -63,6 +66,7 @@ data class MidiCoreAuthorityFingerprint(
         requireHash(timingSha256, "Timing authority hash")
         requireHash(structureSha256, "Structure authority hash")
         requireHash(harmonySha256, "Harmony authority hash")
+        requireHash(arrangementPlanSha256, "Arrangement-plan authority hash")
         requireHash(settingsSha256, "Settings authority hash")
         require(scopes.map(MidiCoreAuthorityScopeFingerprint::key).distinct().size == scopes.size) {
             "Authority scope keys must be unique"
@@ -80,6 +84,7 @@ data class MidiCoreAuthorityFingerprint(
                 "timing" to timingSha256,
                 "structure" to structureSha256,
                 "harmony" to harmonySha256,
+                "arrangement-plan" to arrangementPlanSha256,
                 "settings" to settingsSha256,
                 "scopes" to scopes.joinToString(";") { scope ->
                     canonicalRecord(
@@ -89,6 +94,7 @@ data class MidiCoreAuthorityFingerprint(
                             "role" to scope.key.role.name,
                             "structure" to scope.structureSha256,
                             "harmony" to scope.harmonySha256,
+                            "arrangement-plan" to scope.arrangementPlanSha256,
                             "settings" to scope.settingsSha256,
                             "hash" to scope.sha256,
                         ),
@@ -169,6 +175,7 @@ object MidiCoreAuthorityHasher {
         )
         val structureSha256 = digest(structureSerialization)
         val harmonySha256 = digest(harmonySerialization)
+        val arrangementPlanSha256 = digest(project.arrangementPlan?.canonicalSerialization ?: "arrangement-plan=absent")
         val settingsSha256 = digest(settings.canonicalSerialization)
         val scopes = authority?.let { current ->
             val definitions = current.sectionDefinitions.associateBy(ProjectSectionDefinition::id)
@@ -209,6 +216,10 @@ object MidiCoreAuthorityHasher {
                 )
                 CandidateRole.entries.map { role ->
                     val key = MidiCoreAuthorityScopeKey(occurrence.id, role)
+                    val scopeArrangementPlanSha256 = digest(
+                        project.arrangementPlan?.scopeCanonicalSerialization(occurrence.id, role)
+                            ?: "arrangement-plan-scope=absent",
+                    )
                     val rolePrefix = "${role.name.lowercase()}."
                     val scopeSettingsSha256 = digest(
                         canonicalRecord(
@@ -229,13 +240,21 @@ object MidiCoreAuthorityHasher {
                                 "timing" to timingSha256,
                                 "structure" to scopeStructureSha256,
                                 "harmony" to scopeHarmonySha256,
+                                "arrangement-plan" to scopeArrangementPlanSha256,
                                 "settings" to scopeSettingsSha256,
                                 "occurrence" to occurrence.id,
                                 "role" to role.name,
                             ),
                         ),
                     )
-                    MidiCoreAuthorityScopeFingerprint(key, scopeStructureSha256, scopeHarmonySha256, scopeSettingsSha256, scopeSha256)
+                    MidiCoreAuthorityScopeFingerprint(
+                        key,
+                        scopeStructureSha256,
+                        scopeHarmonySha256,
+                        scopeArrangementPlanSha256,
+                        scopeSettingsSha256,
+                        scopeSha256,
+                    )
                 }
             }
         }.orEmpty().sortedWith(scopeOrder())
@@ -245,6 +264,7 @@ object MidiCoreAuthorityHasher {
             timingSha256,
             structureSha256,
             harmonySha256,
+            arrangementPlanSha256,
             settingsSha256,
             scopes,
         )

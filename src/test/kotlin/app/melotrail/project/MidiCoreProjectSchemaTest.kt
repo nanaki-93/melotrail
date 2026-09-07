@@ -15,20 +15,20 @@ import org.junit.jupiter.api.Test
 
 class MidiCoreProjectSchemaTest {
     @Test
-    fun `v2 project encodes and decodes all MIDI Core ownership records`() {
+    fun `v3 project encodes and decodes versioned arrangement authority`() {
         val project = completeProject()
         val serialized = MidiCoreProjectSchema.encode(project)
 
         assertEquals(project, MidiCoreProjectSchema.decode(serialized))
-        assertEquals(2, kotlinx.serialization.json.Json.parseToJsonElement(serialized).jsonObject["version"]?.jsonPrimitive?.int)
+        assertEquals(3, kotlinx.serialization.json.Json.parseToJsonElement(serialized).jsonObject["version"]?.jsonPrimitive?.int)
         assertEquals(serialized, MidiCoreProjectSchema.encode(MidiCoreProjectSchema.decode(serialized)))
     }
 
     @Test
     fun `unsupported and future project versions are classified unsupported without migration`() {
         val legacy = """{"schema":"retired-project","version":1,"project":{}}"""
-        val retired = """{"schema":"melotrail-midi-core","version":1,"project":{}}"""
-        val future = """{"schema":"melotrail-midi-core","version":3,"project":{}}"""
+        val retired = """{"schema":"melotrail-midi-core","version":2,"project":{}}"""
+        val future = """{"schema":"melotrail-midi-core","version":4,"project":{}}"""
         val unknown = """{"schema":"another-product","version":1,"project":{}}"""
 
         assertIs<MidiCoreProjectDocument.Unsupported>(MidiCoreProjectSchema.inspect(legacy))
@@ -42,7 +42,7 @@ class MidiCoreProjectSchemaTest {
 
     @Test
     fun `missing required fields and unconfined artifact paths are invalid`() {
-        assertIs<MidiCoreProjectDocument.Invalid>(MidiCoreProjectSchema.inspect("""{"schema":"melotrail-midi-core","version":2}"""))
+        assertIs<MidiCoreProjectDocument.Invalid>(MidiCoreProjectSchema.inspect("""{"schema":"melotrail-midi-core","version":3}"""))
         assertIs<MidiCoreProjectDocument.Invalid>(MidiCoreProjectSchema.inspect("""{"schema":{},"version":1}"""))
         assertFailsWith<IllegalArgumentException> { ProjectRelativePath("../outside.mid") }
         assertFailsWith<IllegalArgumentException> { ProjectRelativePath("/absolute.mid") }
@@ -53,6 +53,18 @@ class MidiCoreProjectSchemaTest {
 
         val unknown = MidiCoreProjectSchema.encode(completeProject()).replace("\"id\": \"project-1\"", "\"unknown\": true,\n        \"id\": \"project-1\"")
         assertIs<MidiCoreProjectDocument.Invalid>(MidiCoreProjectSchema.inspect(unknown))
+    }
+
+    @Test
+    fun `malformed arrangement plans fail before they can become authority`() {
+        val serialized = MidiCoreProjectSchema.encode(completeProject())
+
+        assertIs<MidiCoreProjectDocument.Invalid>(
+            MidiCoreProjectSchema.inspect(serialized.replace("\"density\": 48", "\"density\": 101")),
+        )
+        assertIs<MidiCoreProjectDocument.Invalid>(
+            MidiCoreProjectSchema.inspect(serialized.replace("\"version\": 1,", "\"version\": 2,")),
+        )
     }
 
     @Test
@@ -73,6 +85,16 @@ class MidiCoreProjectSchemaTest {
                 emptyList(),
             )
         }
+    }
+
+    @Test
+    fun `arrangement plans must retain the exact authoritative occurrence identity`() {
+        val project = completeProject()
+        val wrongOccurrence = requireNotNull(project.arrangementPlan).copy(
+            occurrences = requireNotNull(project.arrangementPlan).occurrences.map { it.copy(occurrenceId = "other-1") },
+        )
+
+        assertFailsWith<IllegalArgumentException> { project.copy(arrangementPlan = wrongOccurrence) }
     }
 
     @Test
@@ -120,6 +142,7 @@ class MidiCoreProjectSchemaTest {
                 listOf(ProjectSectionOccurrence("intro-1", "intro", "Intro", 0, 480)),
                 listOf(AuthoritativeChordEvent("chord-1", "intro-1", "C", 0, 480)),
             ),
+            arrangementPlan = arrangementPlan(),
             candidates = listOf(MidiCoreCandidate(
                 "candidate-1", CandidateRole.CHORDS, "intro-1", "chords-v1", authorityHash, 42,
                 artifact("candidates/chords/intro-1/candidate-1.mid", "d".repeat(64)),
@@ -138,6 +161,23 @@ class MidiCoreProjectSchemaTest {
     }
 
     private fun artifact(path: String, hash: String) = ProjectArtifact(ProjectRelativePath(path), hash)
+
+    private fun arrangementPlan() = MidiCoreArrangementPlan(
+        MidiCoreArrangementPlan.VERSION,
+        MidiCoreSharedGrooveIntent(MidiCoreGrooveFeel.STRAIGHT, MidiCoreGrooveSubdivision.EIGHTH, MidiCoreGrooveDrive.STEADY),
+        listOf(
+            MidiCoreOccurrenceArrangementPlan(
+                "intro-1", MidiCoreArrangementPurpose.INTRO, "phrase-a", "intro", 1, 24,
+                listOf(
+                    MidiCoreRolePlanSettings(CandidateRole.CHORDS, MidiCoreRoleActivity.SPARSE, 48, MidiCoreRegisterPreference.MID),
+                    MidiCoreRolePlanSettings(CandidateRole.BASS, MidiCoreRoleActivity.INACTIVE, 0, MidiCoreRegisterPreference.LOW),
+                    MidiCoreRolePlanSettings(CandidateRole.DRUMS, MidiCoreRoleActivity.INACTIVE, 0, MidiCoreRegisterPreference.OPEN),
+                ),
+                MidiCoreBoundaryIntent.GRADUAL_ENTRY,
+                MidiCoreBoundaryIntent.RELEASE,
+            ),
+        ),
+    )
 
     private fun goldenFixture(): String = requireNotNull(
         javaClass.getResource("/fixtures/project/midi-core-v1.json")

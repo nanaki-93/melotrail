@@ -144,6 +144,55 @@ class MidiCoreAuthorityFingerprintTest {
         assertTrue(first.canonicalSerialization.contains("root-quarter"))
     }
 
+    @Test
+    fun `arrangement plan inputs are role scoped and no-op stable`() {
+        val project = project().copy(arrangementPlan = arrangementPlan())
+        val baseline = MidiCoreAuthorityHasher.from(project)
+        val samePlan = MidiCoreAuthorityHasher.from(project.copy(arrangementPlan = requireNotNull(project.arrangementPlan).copy()))
+        val bassChanged = MidiCoreAuthorityHasher.from(
+            project.copy(
+                arrangementPlan = requireNotNull(project.arrangementPlan).copy(
+                    occurrences = requireNotNull(project.arrangementPlan).occurrences.map { occurrence ->
+                        occurrence.copy(
+                            roleSettings = occurrence.roleSettings.map { settings ->
+                                if (settings.role == CandidateRole.BASS) settings.copy(density = 71) else settings
+                            },
+                        )
+                    },
+                ),
+            ),
+        )
+        val grooveAndBoundaryChanged = MidiCoreAuthorityHasher.from(
+            project.copy(
+                arrangementPlan = requireNotNull(project.arrangementPlan).copy(
+                    sharedGroove = MidiCoreSharedGrooveIntent(
+                        MidiCoreGrooveFeel.HALF_TIME,
+                        MidiCoreGrooveSubdivision.EIGHTH,
+                        MidiCoreGrooveDrive.RESTRAINED,
+                    ),
+                    occurrences = requireNotNull(project.arrangementPlan).occurrences.map {
+                        it.copy(purpose = MidiCoreArrangementPurpose.CHORUS, exitIntent = MidiCoreBoundaryIntent.RELEASE)
+                    },
+                ),
+            ),
+        )
+
+        assertEquals(baseline, samePlan)
+        assertNotEquals(baseline.arrangementPlanSha256, bassChanged.arrangementPlanSha256)
+        assertEquals(
+            baseline.scopeHash("verse-1", CandidateRole.CHORDS),
+            bassChanged.scopeHash("verse-1", CandidateRole.CHORDS),
+        )
+        assertNotEquals(
+            baseline.scopeHash("verse-1", CandidateRole.BASS),
+            bassChanged.scopeHash("verse-1", CandidateRole.BASS),
+        )
+        assertNotEquals(
+            baseline.scopeHash("verse-1", CandidateRole.CHORDS),
+            grooveAndBoundaryChanged.scopeHash("verse-1", CandidateRole.CHORDS),
+        )
+    }
+
     private fun project(
         occurrences: List<ProjectSectionOccurrence> = listOf(ProjectSectionOccurrence("verse-1", "verse", "Verse", 0, 480)),
         chords: List<AuthoritativeChordEvent> = listOf(AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 480)),
@@ -171,5 +220,22 @@ class MidiCoreAuthorityFingerprintTest {
         ProjectArtifact(ProjectRelativePath("reports/import.json"), "c".repeat(64)),
         listOf(MidiTrackSummary(0, null, emptyList())),
         480,
+    )
+
+    private fun arrangementPlan() = MidiCoreArrangementPlan(
+        MidiCoreArrangementPlan.VERSION,
+        MidiCoreSharedGrooveIntent(MidiCoreGrooveFeel.STRAIGHT, MidiCoreGrooveSubdivision.EIGHTH, MidiCoreGrooveDrive.STEADY),
+        listOf(
+            MidiCoreOccurrenceArrangementPlan(
+                "verse-1", MidiCoreArrangementPurpose.VERSE, "phrase-a", "verse", 1, 42,
+                listOf(
+                    MidiCoreRolePlanSettings(CandidateRole.CHORDS, MidiCoreRoleActivity.SUPPORTING, 55, MidiCoreRegisterPreference.MID),
+                    MidiCoreRolePlanSettings(CandidateRole.BASS, MidiCoreRoleActivity.SUPPORTING, 42, MidiCoreRegisterPreference.LOW),
+                    MidiCoreRolePlanSettings(CandidateRole.DRUMS, MidiCoreRoleActivity.SPARSE, 30, MidiCoreRegisterPreference.OPEN),
+                ),
+                MidiCoreBoundaryIntent.NONE,
+                MidiCoreBoundaryIntent.HOLD,
+            ),
+        ),
     )
 }

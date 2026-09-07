@@ -5,6 +5,18 @@ import app.melotrail.project.CandidateAcceptance
 import app.melotrail.project.CandidateRole
 import app.melotrail.project.ExportedFileKind
 import app.melotrail.project.ExportedSnapshotFile
+import app.melotrail.project.MidiCoreArrangementPlan
+import app.melotrail.project.MidiCoreArrangementPurpose
+import app.melotrail.project.MidiCoreAuthorityHasher
+import app.melotrail.project.MidiCoreBoundaryIntent
+import app.melotrail.project.MidiCoreGrooveDrive
+import app.melotrail.project.MidiCoreGrooveFeel
+import app.melotrail.project.MidiCoreGrooveSubdivision
+import app.melotrail.project.MidiCoreOccurrenceArrangementPlan
+import app.melotrail.project.MidiCoreRegisterPreference
+import app.melotrail.project.MidiCoreRoleActivity
+import app.melotrail.project.MidiCoreRolePlanSettings
+import app.melotrail.project.MidiCoreSharedGrooveIntent
 import app.melotrail.project.MidiCoreCandidate
 import app.melotrail.project.MidiCoreExportSnapshot
 import app.melotrail.project.MidiCoreProject
@@ -43,7 +55,9 @@ class MidiCoreArtifactStoreTest {
 
         val projectFile = store.saveProject(root, project)
 
-        assertEquals(project, store.openProject(root))
+        val reopened = store.openProject(root)
+        assertEquals(project, reopened)
+        assertEquals(MidiCoreAuthorityHasher.from(project), MidiCoreAuthorityHasher.from(reopened))
         assertEquals(root.resolve("project.json"), projectFile)
         assertTrue(Files.isRegularFile(root.resolve("source/original.mid")))
         assertTrue(Files.isRegularFile(root.resolve("reports/import.json")))
@@ -51,6 +65,27 @@ class MidiCoreArtifactStoreTest {
         assertTrue(Files.isRegularFile(root.resolve("reports/candidates/candidate-1.json")))
         assertTrue(Files.isRegularFile(root.resolve("exports/export-1/complete-song.mid")))
         assertTrue(Files.isRegularFile(root.resolve("exports/export-1/manifest.json")))
+    }
+
+    @Test
+    fun `versioned arrangement plan reopens without changing protected artifacts`() {
+        val store = MidiCoreArtifactStore()
+        val project = completeProject(store).copy(arrangementPlan = arrangementPlan())
+        val protectedPaths = listOf(
+            "source/original.mid",
+            "candidates/chords/intro-1/candidate-1.mid",
+            "reports/candidates/candidate-1.json",
+            "exports/export-1/complete-song.mid",
+            "exports/export-1/manifest.json",
+        )
+        val before = protectedPaths.associateWith { Files.readAllBytes(root.resolve(it)) }
+
+        store.saveProject(root, project)
+
+        val reopened = store.openProject(root)
+        assertEquals(project, reopened)
+        assertEquals(MidiCoreAuthorityHasher.from(project), MidiCoreAuthorityHasher.from(reopened))
+        before.forEach { (path, bytes) -> assertContentEquals(bytes, Files.readAllBytes(root.resolve(path))) }
     }
 
     @Test
@@ -231,6 +266,23 @@ class MidiCoreArtifactStoreTest {
     private fun emptyProject(name: String) = MidiCoreProject(
         ProjectId("project-1"),
         ProjectMetadata(name, "2026-08-27T00:00:00Z"),
+    )
+
+    private fun arrangementPlan() = MidiCoreArrangementPlan(
+        MidiCoreArrangementPlan.VERSION,
+        MidiCoreSharedGrooveIntent(MidiCoreGrooveFeel.STRAIGHT, MidiCoreGrooveSubdivision.EIGHTH, MidiCoreGrooveDrive.RESTRAINED),
+        listOf(
+            MidiCoreOccurrenceArrangementPlan(
+                "intro-1", MidiCoreArrangementPurpose.INTRO, "phrase-a", "intro", 1, 20,
+                listOf(
+                    MidiCoreRolePlanSettings(CandidateRole.CHORDS, MidiCoreRoleActivity.SPARSE, 35, MidiCoreRegisterPreference.MID),
+                    MidiCoreRolePlanSettings(CandidateRole.BASS, MidiCoreRoleActivity.INACTIVE, 0, MidiCoreRegisterPreference.LOW),
+                    MidiCoreRolePlanSettings(CandidateRole.DRUMS, MidiCoreRoleActivity.INACTIVE, 0, MidiCoreRegisterPreference.OPEN),
+                ),
+                MidiCoreBoundaryIntent.GRADUAL_ENTRY,
+                MidiCoreBoundaryIntent.RELEASE,
+            ),
+        ),
     )
 
     private fun bytesFile(path: Path, value: String): Path = path.also { file ->

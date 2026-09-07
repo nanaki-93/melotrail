@@ -18,7 +18,7 @@ import kotlinx.serialization.json.jsonPrimitive
 /** Versioned JSON boundary for the target MIDI Core project. DTOs remain private to this file. */
 object MidiCoreProjectSchema {
     const val SCHEMA = "melotrail-midi-core"
-    const val VERSION = 2
+    const val VERSION = 3
 
     private val json = Json {
         prettyPrint = true
@@ -83,6 +83,7 @@ private data class ProjectDto(
     val sourceMidi: SourceMidiDto? = null,
     val selectedMelody: SelectedMelodyDto? = null,
     val authority: AuthorityDto? = null,
+    val arrangementPlan: ArrangementPlanDto? = null,
     val candidates: List<CandidateDto> = emptyList(),
     val arrangementDrafts: List<ArrangementDraftDto> = emptyList(),
     val acceptances: List<AcceptanceDto> = emptyList(),
@@ -156,6 +157,41 @@ private data class OccurrenceDto(val id: String, val definitionId: String, val l
 
 @Serializable
 private data class ChordEventDto(val id: String, val occurrenceId: String, val symbol: String, val startTick: Long, val endTick: Long)
+
+@Serializable
+private data class ArrangementPlanDto(
+    val version: Int,
+    val sharedGroove: SharedGrooveDto,
+    val occurrences: List<OccurrenceArrangementPlanDto>,
+)
+
+@Serializable
+private data class SharedGrooveDto(
+    val feel: MidiCoreGrooveFeel,
+    val subdivision: MidiCoreGrooveSubdivision,
+    val drive: MidiCoreGrooveDrive,
+)
+
+@Serializable
+private data class OccurrenceArrangementPlanDto(
+    val occurrenceId: String,
+    val purpose: MidiCoreArrangementPurpose,
+    val phraseGroupId: String,
+    val repeatFamilyId: String,
+    val repeatOrdinal: Int,
+    val energy: Int,
+    val roleSettings: List<RolePlanSettingsDto>,
+    val entryIntent: MidiCoreBoundaryIntent,
+    val exitIntent: MidiCoreBoundaryIntent,
+)
+
+@Serializable
+private data class RolePlanSettingsDto(
+    val role: CandidateRole,
+    val activity: MidiCoreRoleActivity,
+    val density: Int,
+    val registerPreference: MidiCoreRegisterPreference,
+)
 
 @Serializable
 private data class CandidateDto(
@@ -264,6 +300,7 @@ private fun MidiCoreProject.toDto() = ProjectDto(
     sourceMidi = sourceMidi?.toDto(),
     selectedMelody = selectedMelody?.toDto(),
     authority = authority?.toDto(),
+    arrangementPlan = arrangementPlan?.toDto(),
     candidates = candidates.map(MidiCoreCandidate::toDto),
     arrangementDrafts = arrangementDrafts.map(MidiCoreArrangementDraft::toDto),
     acceptances = acceptances.map(CandidateAcceptance::toDto),
@@ -279,6 +316,7 @@ private fun ProjectDto.toDomain() = MidiCoreProject(
     sourceMidi = sourceMidi?.toDomain(),
     selectedMelody = selectedMelody?.toDomain(),
     authority = authority?.toDomain(),
+    arrangementPlan = arrangementPlan?.toDomain(),
     candidates = candidates.map(CandidateDto::toDomain),
     arrangementDrafts = arrangementDrafts.map(ArrangementDraftDto::toDomain),
     acceptances = acceptances.map(AcceptanceDto::toDomain),
@@ -343,6 +381,18 @@ private fun ProjectSectionOccurrence.toDto() = OccurrenceDto(id, definitionId, l
 private fun OccurrenceDto.toDomain() = ProjectSectionOccurrence(id, definitionId, label, startTick, endTick)
 private fun AuthoritativeChordEvent.toDto() = ChordEventDto(id, occurrenceId, symbol, startTick, endTick)
 private fun ChordEventDto.toDomain() = AuthoritativeChordEvent(id, occurrenceId, symbol, startTick, endTick)
+private fun MidiCoreArrangementPlan.toDto() = ArrangementPlanDto(version, sharedGroove.toDto(), occurrences.map(MidiCoreOccurrenceArrangementPlan::toDto))
+private fun ArrangementPlanDto.toDomain() = MidiCoreArrangementPlan(version, sharedGroove.toDomain(), occurrences.map(OccurrenceArrangementPlanDto::toDomain))
+private fun MidiCoreSharedGrooveIntent.toDto() = SharedGrooveDto(feel, subdivision, drive)
+private fun SharedGrooveDto.toDomain() = MidiCoreSharedGrooveIntent(feel, subdivision, drive)
+private fun MidiCoreOccurrenceArrangementPlan.toDto() = OccurrenceArrangementPlanDto(
+    occurrenceId, purpose, phraseGroupId, repeatFamilyId, repeatOrdinal, energy, roleSettings.map(MidiCoreRolePlanSettings::toDto), entryIntent, exitIntent,
+)
+private fun OccurrenceArrangementPlanDto.toDomain() = MidiCoreOccurrenceArrangementPlan(
+    occurrenceId, purpose, phraseGroupId, repeatFamilyId, repeatOrdinal, energy, roleSettings.map(RolePlanSettingsDto::toDomain), entryIntent, exitIntent,
+)
+private fun MidiCoreRolePlanSettings.toDto() = RolePlanSettingsDto(role, activity, density, registerPreference)
+private fun RolePlanSettingsDto.toDomain() = MidiCoreRolePlanSettings(role, activity, density, registerPreference)
 private fun MidiCoreCandidate.toDto() = CandidateDto(
     id, role, occurrenceId, generatorVersion, authorityHash, seed, midi.toDto(), validationReport.toDto(), createdAt,
     profileId, patternId, status, rejectionReason, draftDependencyIds, acceptedDependencyIds,

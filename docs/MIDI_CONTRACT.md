@@ -148,10 +148,17 @@ semantic identity under the documented omission/remapping policy is required.
 
 ## Planned contract extensions
 
-These are requirements for M06/M07, not claims of shipped support:
-- **Arrangement plan:** record versioned purpose, phrase/repeat relationships,
-  role activity and musical settings. Include consumed boundary/groove/neighbor
-  information in scoped fingerprints. Invalidation follows those dependencies.
+M06a persists one versioned confirmed-plan record referencing every authoritative
+occurrence in order. Its purpose, phrase/repeat identities, energy, role activity/
+density/register settings, shared groove and entry/exit intent are exact
+authority inputs. The canonical per-role plan inputs are included in scoped
+fingerprints; no label supplies a purpose and no plan record rewrites protected
+MIDI, candidates, acceptances or exports. Proposal/confirmation workflow and
+bounded neighbor dependency resolution remain later M06/M07 work. This is the
+current project schema version; older project schemas are rejected before writes,
+with no automatic migration.
+
+The remaining requirements for M07 are not claims of shipped support:
 - **Planned rests:** each scope is a validated candidate or an explicit plan
   rest. Assembly and atomic use/undo preserve that distinction. Export silence
   in inactive sections while retaining global origin/end. Omit a generated role

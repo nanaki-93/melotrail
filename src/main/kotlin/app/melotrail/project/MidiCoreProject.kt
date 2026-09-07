@@ -23,20 +23,22 @@ data class MidiCoreProject(
     val arrangementDrafts: List<MidiCoreArrangementDraft> = emptyList(),
     /** Batch-acceptance restoration facts retained for one later whole-draft undo. */
     val arrangementDraftAcceptanceHistory: List<MidiCoreArrangementDraftAcceptanceHistory> = emptyList(),
+    /** Explicit, confirmed whole-song intent; unconfirmed style proposals are session state. */
+    val arrangementPlan: MidiCoreArrangementPlan? = null,
 ) {
     init {
         require(revision >= 0L) { "Project revision must not be negative" }
         require((sourceMidi == null) == (selectedMelody == null)) {
             "Source MIDI and its automatically protected melody identity must be bound atomically"
         }
-        require(sourceMidi != null || (candidates.isEmpty() && arrangementDrafts.isEmpty() && acceptances.isEmpty() && exportSnapshots.isEmpty() && acceptanceHistory.isEmpty() && arrangementDraftAcceptanceHistory.isEmpty())) {
-            "Candidates, drafts, acceptances, and exports require an imported source MIDI record"
+        require(sourceMidi != null || (arrangementPlan == null && candidates.isEmpty() && arrangementDrafts.isEmpty() && acceptances.isEmpty() && exportSnapshots.isEmpty() && acceptanceHistory.isEmpty() && arrangementDraftAcceptanceHistory.isEmpty())) {
+            "Arrangement plans, candidates, drafts, acceptances, and exports require an imported source MIDI record"
         }
-        require(selectedMelody != null || (candidates.isEmpty() && arrangementDrafts.isEmpty() && acceptances.isEmpty() && exportSnapshots.isEmpty() && acceptanceHistory.isEmpty() && arrangementDraftAcceptanceHistory.isEmpty())) {
-            "Candidates, drafts, acceptances, and exports require a selected melody"
+        require(selectedMelody != null || (arrangementPlan == null && candidates.isEmpty() && arrangementDrafts.isEmpty() && acceptances.isEmpty() && exportSnapshots.isEmpty() && acceptanceHistory.isEmpty() && arrangementDraftAcceptanceHistory.isEmpty())) {
+            "Arrangement plans, candidates, drafts, acceptances, and exports require a selected melody"
         }
-        require(authority != null || (candidates.isEmpty() && arrangementDrafts.isEmpty() && acceptances.isEmpty() && exportSnapshots.isEmpty() && acceptanceHistory.isEmpty() && arrangementDraftAcceptanceHistory.isEmpty())) {
-            "Candidates, drafts, acceptances, and exports require musical authority"
+        require(authority != null || (arrangementPlan == null && candidates.isEmpty() && arrangementDrafts.isEmpty() && acceptances.isEmpty() && exportSnapshots.isEmpty() && acceptanceHistory.isEmpty() && arrangementDraftAcceptanceHistory.isEmpty())) {
+            "Arrangement plans, candidates, drafts, acceptances, and exports require musical authority"
         }
         require(candidates.map(MidiCoreCandidate::id).distinct().size == candidates.size) {
             "Candidate IDs must be unique"
@@ -61,6 +63,7 @@ data class MidiCoreProject(
             }
         }
         authority?.let { currentAuthority ->
+            arrangementPlan?.requireMatches(currentAuthority)
             val occurrenceIds = currentAuthority.occurrences.map(ProjectSectionOccurrence::id).toSet()
             require(candidates.all { it.status == MidiCoreCandidateStatus.STALE || it.occurrenceId in occurrenceIds }) {
                 "Candidate references an unknown occurrence"
@@ -324,6 +327,141 @@ data class AuthoritativeChordEvent(
 
 enum class CandidateRole { CHORDS, BASS, DRUMS }
 
+/** Explicit musical purpose; display labels never infer this authority. */
+enum class MidiCoreArrangementPurpose { INTRO, VERSE, PRE_CHORUS, CHORUS, BRIDGE, OUTRO, OTHER }
+
+/** Planned activity is intent only. M07 will turn inactive scopes into typed planned rests. */
+enum class MidiCoreRoleActivity { INACTIVE, SPARSE, SUPPORTING, PROMINENT }
+
+enum class MidiCoreRegisterPreference { LOW, MID, HIGH, OPEN }
+
+enum class MidiCoreGrooveFeel { STRAIGHT, SWING, HALF_TIME }
+
+enum class MidiCoreGrooveSubdivision { QUARTER, EIGHTH, SIXTEENTH }
+
+enum class MidiCoreGrooveDrive { RESTRAINED, STEADY, DRIVING }
+
+enum class MidiCoreBoundaryIntent { NONE, GRADUAL_ENTRY, PICKUP, HOLD, RELEASE }
+
+/** Shared bass/drum rhythmic intent, established before either role is generated. */
+data class MidiCoreSharedGrooveIntent(
+    val feel: MidiCoreGrooveFeel,
+    val subdivision: MidiCoreGrooveSubdivision,
+    val drive: MidiCoreGrooveDrive,
+) {
+    internal val canonicalSerialization: String
+        get() = planRecord("groove", listOf("feel" to feel.name, "subdivision" to subdivision.name, "drive" to drive.name))
+}
+
+/** Per-role generator inputs for one authoritative occurrence. */
+data class MidiCoreRolePlanSettings(
+    val role: CandidateRole,
+    val activity: MidiCoreRoleActivity,
+    val density: Int,
+    val registerPreference: MidiCoreRegisterPreference,
+) {
+    init { require(density in 0..100) { "Role-plan density must be between zero and 100" } }
+
+    internal val canonicalSerialization: String
+        get() = planRecord(
+            "role-settings",
+            listOf("role" to role.name, "activity" to activity.name, "density" to density.toString(), "register" to registerPreference.name),
+        )
+}
+
+/** Purpose and bounded local/repeated-section inputs for a single occurrence. */
+data class MidiCoreOccurrenceArrangementPlan(
+    val occurrenceId: String,
+    val purpose: MidiCoreArrangementPurpose,
+    val phraseGroupId: String,
+    val repeatFamilyId: String,
+    val repeatOrdinal: Int,
+    val energy: Int,
+    val roleSettings: List<MidiCoreRolePlanSettings>,
+    val entryIntent: MidiCoreBoundaryIntent,
+    val exitIntent: MidiCoreBoundaryIntent,
+) {
+    init {
+        require(SAFE_ID.matches(occurrenceId) && SAFE_ID.matches(phraseGroupId) && SAFE_ID.matches(repeatFamilyId)) {
+            "Arrangement-plan occurrence and phrase/repeat identities must be safe stable identifiers"
+        }
+        require(repeatOrdinal >= 1) { "Arrangement-plan repeat ordinal must be positive" }
+        require(energy in 0..100) { "Arrangement-plan energy must be between zero and 100" }
+        require(roleSettings.map(MidiCoreRolePlanSettings::role) == CandidateRole.entries.toList()) {
+            "Arrangement-plan role settings must name every role once in canonical order"
+        }
+    }
+
+    internal val canonicalSerialization: String
+        get() = planRecord(
+            "occurrence-plan",
+            listOf(
+                "occurrence" to occurrenceId,
+                "purpose" to purpose.name,
+                "phrase-group" to phraseGroupId,
+                "repeat-family" to repeatFamilyId,
+                "repeat-ordinal" to repeatOrdinal.toString(),
+                "energy" to energy.toString(),
+                "entry" to entryIntent.name,
+                "exit" to exitIntent.name,
+            ) + roleSettings.mapIndexed { index, settings -> "role[$index]" to settings.canonicalSerialization },
+        )
+
+    internal fun scopeCanonicalSerialization(role: CandidateRole): String = planRecord(
+        "occurrence-plan-scope",
+        listOf(
+            "occurrence" to occurrenceId,
+            "purpose" to purpose.name,
+            "phrase-group" to phraseGroupId,
+            "repeat-family" to repeatFamilyId,
+            "repeat-ordinal" to repeatOrdinal.toString(),
+            "energy" to energy.toString(),
+            "entry" to entryIntent.name,
+            "exit" to exitIntent.name,
+            "role-settings" to roleSettings.single { it.role == role }.canonicalSerialization,
+        ),
+    )
+}
+
+/** One current, confirmed arrangement authority record for the complete song. */
+data class MidiCoreArrangementPlan(
+    val version: Int,
+    val sharedGroove: MidiCoreSharedGrooveIntent,
+    val occurrences: List<MidiCoreOccurrenceArrangementPlan>,
+) {
+    init {
+        require(version == VERSION) { "Unsupported arrangement-plan version '$version'" }
+        require(occurrences.isNotEmpty()) { "Arrangement plans require authoritative occurrences" }
+        require(occurrences.map(MidiCoreOccurrenceArrangementPlan::occurrenceId).distinct().size == occurrences.size) {
+            "Arrangement-plan occurrence identities must be unique"
+        }
+    }
+
+    internal val canonicalSerialization: String
+        get() = planRecord(
+            "arrangement-plan",
+            listOf("version" to version.toString(), "groove" to sharedGroove.canonicalSerialization) +
+                occurrences.mapIndexed { index, occurrence -> "occurrence[$index]" to occurrence.canonicalSerialization },
+        )
+
+    internal fun scopeCanonicalSerialization(occurrenceId: String, role: CandidateRole): String = planRecord(
+        "arrangement-plan-scope",
+        listOf(
+            "version" to version.toString(),
+            "groove" to sharedGroove.canonicalSerialization,
+            "occurrence" to occurrences.single { it.occurrenceId == occurrenceId }.scopeCanonicalSerialization(role),
+        ),
+    )
+
+    internal fun requireMatches(authority: ProjectAuthority) {
+        require(occurrences.map(MidiCoreOccurrenceArrangementPlan::occurrenceId) == authority.occurrences.map(ProjectSectionOccurrence::id)) {
+            "Arrangement-plan occurrences must exactly match authoritative occurrence identity and order"
+        }
+    }
+
+    companion object { const val VERSION = 1 }
+}
+
 enum class MidiCoreCandidateStatus { CURRENT, ACCEPTED, REJECTED, STALE }
 
 data class MidiCoreCandidate(
@@ -576,3 +714,8 @@ private val TOKEN = Regex("[A-Za-z0-9][A-Za-z0-9_.:-]{0,119}")
 private val SETTING_KEY = Regex("[A-Za-z0-9][A-Za-z0-9_.-]{0,119}")
 private val ISO_INSTANT = Regex("[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]{1,9})?Z")
 private val PORTABLE_PATH_FORBIDDEN = setOf('<', '>', ':', '"', '|', '?', '*')
+
+private fun planRecord(type: String, fields: List<Pair<String, String>>): String = buildString {
+    append(type)
+    fields.forEach { (name, value) -> append('|').append(name).append('=').append(value.length).append(':').append(value) }
+}
