@@ -53,6 +53,29 @@ class MidiCoreAuthorityFingerprintTest {
     }
 
     @Test
+    fun `arrangement end changes timing identity before sections are defined`() {
+        val unstructured = project().copy(
+            authority = ProjectAuthority(
+                ProjectKey(ProjectKeySpelling.C, ProjectScaleMode.MAJOR),
+                ProjectTempo(500_000),
+                ProjectMeter(4, 2),
+                emptyList(),
+                emptyList(),
+                emptyList(),
+                arrangementEndTick = 480,
+            ),
+        )
+
+        val before = MidiCoreAuthorityHasher.from(unstructured)
+        val after = MidiCoreAuthorityHasher.from(
+            unstructured.copy(authority = requireNotNull(unstructured.authority).copy(arrangementEndTick = 960)),
+        )
+
+        assertNotEquals(before.timingSha256, after.timingSha256)
+        assertNotEquals(before.sha256, after.sha256)
+    }
+
+    @Test
     fun `chorus harmony changes only chorus scoped hashes`() {
         val project = project(
             occurrences = listOf(

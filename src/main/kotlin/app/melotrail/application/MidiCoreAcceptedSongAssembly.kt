@@ -132,6 +132,7 @@ class MidiCoreAcceptedSongAssembly(
             require(inspected.sequence.source.format == source.format)
             require(inspected.sequence.source.ppq.value == source.ppq)
             require(inspected.sourceEndTick == source.sourceEndTick)
+            require(inspected.lastNoteEndTick == source.lastNoteEndTick)
             inspected
         } catch (error: Exception) {
             return rejected(
@@ -160,7 +161,7 @@ class MidiCoreAcceptedSongAssembly(
             )
         }
 
-        val songEndTick = authority.occurrences.last().endTick
+        val songEndTick = authority.arrangementEndTick
         if (protectedMelody.events.any { event ->
                 event.orderingKey.tick > songEndTick || (event is MidiNoteEvent && event.endTick > songEndTick)
             }) {

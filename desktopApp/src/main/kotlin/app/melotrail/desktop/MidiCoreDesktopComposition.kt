@@ -9,6 +9,7 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import app.melotrail.application.MidiCoreAcceptedSongAssembly
 import app.melotrail.application.MidiCoreAuthoritativeHarmony
+import app.melotrail.application.MidiCoreArrangementExtent
 import app.melotrail.application.MidiCoreCandidateGeneration
 import app.melotrail.application.MidiCoreCandidateLifecycle
 import app.melotrail.application.MidiCoreArrangementStylePreview
@@ -70,6 +71,7 @@ object MidiCoreDesktopComposition {
         val sourceImport = MidiCoreSourceImport(artifacts)
         val sourceAudition = MidiCoreSourceAudition(artifacts)
         val authority = MidiCoreMusicalAuthority(artifacts)
+        val arrangementExtent = MidiCoreArrangementExtent(artifacts)
         val structure = MidiCoreStructureTimeline(artifacts)
         val harmony = MidiCoreAuthoritativeHarmony(artifacts)
         val candidateLifecycle = MidiCoreCandidateLifecycle(artifacts)
@@ -92,6 +94,7 @@ object MidiCoreDesktopComposition {
             project = project,
             sourceImport = sourceImport,
             authority = authority,
+            arrangementExtent = arrangementExtent,
             structure = structure,
             harmony = harmony,
             generation = generation,

@@ -213,7 +213,7 @@ private fun MidiSourceFacts(source: MidiCoreSourceUiState) {
         FactLine(MidiCoreMidiPageTags.SOURCE_FILENAME, "Original filename", source.originalFilename ?: "Unavailable")
         FactLine(MidiCoreMidiPageTags.SOURCE_DIGEST, "Immutable SHA-256", source.sha256 ?: "Unavailable")
         FactLine(MidiCoreMidiPageTags.SOURCE_FORMAT, "Standard MIDI", "Format ${source.format ?: "?"} · PPQ ${source.ppq ?: "?"}")
-        FactLine(MidiCoreMidiPageTags.SOURCE_DURATION, "Source duration", "${source.sourceEndTick ?: 0L} ticks")
+        FactLine(MidiCoreMidiPageTags.SOURCE_DURATION, "Last note / source end", "${source.lastNoteEndTick ?: 0L} / ${source.sourceEndTick ?: 0L} ticks")
         Text(
             if (source.reportAvailable) "Import report is preserved with the source artifact." else "Import report is not available.",
             style = MaterialTheme.typography.bodySmall,

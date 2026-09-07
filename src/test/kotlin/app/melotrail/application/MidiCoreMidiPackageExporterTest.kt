@@ -18,6 +18,11 @@ import java.nio.file.Path
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
+import javax.sound.midi.MetaMessage
+import javax.sound.midi.MidiEvent
+import javax.sound.midi.MidiSystem
+import javax.sound.midi.Sequence
+import javax.sound.midi.ShortMessage
 import kotlin.io.path.name
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -267,6 +272,34 @@ class MidiCoreMidiPackageExporterTest {
         }
     }
 
+    @Test
+    fun `exports padded whole-song boundaries without changing preserved source bytes`() {
+        val store = MidiCoreArtifactStore()
+        val input = sourceWithTrailingEndOfTrack(root.resolve("padded-source.mid"))
+        val inputBytes = Files.readAllBytes(input)
+        val accepted = acceptAll(
+            store,
+            readySession(
+                store,
+                root.resolve("padded-export-project"),
+                sourcePath = input,
+                padToNextBar = true,
+            ),
+        )
+
+        val exported = assertIs<MidiCoreMidiPackageExportResult.Exported>(
+            exporter(store, "export-padded-boundary").export(ExportMidiCorePackage(accepted)),
+        ).packageResult
+
+        assertEquals(1_920L, requireNotNull(accepted.project.authority).arrangementEndTick)
+        assertTrue(exported.files.all { it.validation.songEndTick == 1_920L })
+        assertTrue(exported.files.all { file ->
+            JdkMidiReader().inspect(exported.directory.resolve(file.filename)).sourceEndTick == 1_920L
+        })
+        assertContentEquals(inputBytes, Files.readAllBytes(accepted.root.resolve(MidiCoreArtifactStore.SOURCE_MIDI.value)))
+        materializeDawMatrixPackage("padded-arrangement-end", exported)
+    }
+
     private fun exporter(store: MidiCoreArtifactStore, snapshotId: String) = MidiCoreMidiPackageExporter(
         artifacts = store,
         snapshotLifecycle = snapshotLifecycle(store),
@@ -359,13 +392,15 @@ class MidiCoreMidiPackageExporterTest {
         projectId: String = "exporter-${projectRoot.fileName}",
         sourceFixture: String = "whole-song-one-bar.mid",
         harmonySymbols: List<String> = listOf("C"),
+        sourcePath: Path? = null,
+        padToNextBar: Boolean = false,
     ): MidiCoreProjectSession {
         val created = assertIs<MidiCoreProjectLifecycleResult.Opened>(
             MidiCoreProjectLifecycle(artifacts = store).create(
                 CreateMidiCoreProject(projectRoot, "Exporter Test", projectId),
             ),
         ).session
-        val source = OwnedMidiFixtures.writeAll(root.resolve("fixture-${projectRoot.fileName}"))
+        val source = sourcePath ?: OwnedMidiFixtures.writeAll(root.resolve("fixture-${projectRoot.fileName}"))
             .single { it.fileName.toString() == sourceFixture }
         val imported = assertIs<MidiCoreSourceImportResult.Imported>(
             MidiCoreSourceImport(store).import(ImportMidiCoreSource(created, source)),
@@ -380,12 +415,19 @@ class MidiCoreMidiPackageExporterTest {
                 ),
             ),
         ).session
-        val songEndTick = requireNotNull(imported.project.sourceMidi).sourceEndTick
+        val extent = if (padToNextBar) {
+            assertIs<MidiCoreArrangementExtentResult.Confirmed>(
+                MidiCoreArrangementExtent(store).confirm(ConfirmMidiCoreArrangementExtent(authority, true)),
+            ).session
+        } else {
+            authority
+        }
+        val songEndTick = requireNotNull(extent.project.authority).arrangementEndTick
         val barCount = Math.toIntExact(songEndTick / 1_920L)
         val structured = assertIs<MidiCoreStructureTimelineResult.Updated>(
             MidiCoreStructureTimeline(store).replace(
                 ReplaceMidiCoreStructure(
-                    authority,
+                    extent,
                     listOf(ProjectSectionDefinition("verse", "Verse")),
                     listOf(app.melotrail.structure.MidiCoreBarOccurrencePlacement("verse-1", "verse", "Verse", barCount)),
                 ),
@@ -403,6 +445,16 @@ class MidiCoreMidiPackageExporterTest {
                 ),
             ),
         ).session
+    }
+
+    private fun sourceWithTrailingEndOfTrack(path: Path): Path {
+        val sequence = Sequence(Sequence.PPQ, 480)
+        val track = sequence.createTrack()
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, 60, 100), 0))
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, 60, 0), 1_700))
+        track.add(MidiEvent(MetaMessage(0x2f, byteArrayOf(), 0), 1_800))
+        require(MidiSystem.write(sequence, 1, path.toFile()) > 0)
+        return path
     }
 
     private fun materializeDawMatrixPackage(label: String, exported: MidiCoreExportedPackage) {

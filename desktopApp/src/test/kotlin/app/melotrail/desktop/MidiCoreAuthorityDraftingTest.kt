@@ -31,18 +31,23 @@ class MidiCoreAuthorityDraftingTest {
     }
 
     @Test
-    fun `progressions derive deterministic gap-free windows and repeated symbols hold longer`() {
+    fun `explicit 3 plus 1 plus 2 plus 2 beat rows derive deterministic gap-free windows`() {
         val authority = authority()
         val drafts = listOf(
-            MidiCoreProgressionDraft("verse-1", "Verse", "C | C | Am | F"),
-            MidiCoreProgressionDraft("chorus-1", "Chorus", "G | F"),
+            MidiCoreProgressionDraft("verse-1", "Verse", listOf(
+                MidiCoreChordRowDraft("verse-1-chord-1", "C", "3"),
+                MidiCoreChordRowDraft("verse-1-chord-2", "Am", "1"),
+                MidiCoreChordRowDraft("verse-1-chord-3", "Dm", "2"),
+                MidiCoreChordRowDraft("verse-1-chord-4", "G", "2"),
+            )),
+            MidiCoreProgressionDraft("chorus-1", "Chorus", listOf(MidiCoreChordRowDraft("chorus-1-chord-1", "C", "8"))),
         )
 
-        val events = MidiCoreAuthorityDrafting.parseHarmony(drafts, authority)
+        val events = MidiCoreAuthorityDrafting.parseHarmony(drafts, authority, 480)
 
-        assertEquals(listOf("C", "C", "Am", "F", "G", "F"), events.map(AuthoritativeChordEvent::symbol))
+        assertEquals(listOf("C", "Am", "Dm", "G", "C"), events.map(AuthoritativeChordEvent::symbol))
         assertEquals(
-            listOf(0L to 960L, 960L to 1_920L, 1_920L to 2_880L, 2_880L to 3_840L),
+            listOf(0L to 1_440L, 1_440L to 1_920L, 1_920L to 2_880L, 2_880L to 3_840L),
             events.filter { it.occurrenceId == "verse-1" }.map { it.startTick to it.endTick },
         )
         events.groupBy(AuthoritativeChordEvent::occurrenceId).forEach { (occurrenceId, windows) ->
@@ -54,7 +59,7 @@ class MidiCoreAuthorityDraftingTest {
     }
 
     @Test
-    fun `unchanged progression text preserves exact existing chord durations`() {
+    fun `unchanged explicit rows preserve exact existing chord durations`() {
         val authority = authority().copy(
             chordEvents = listOf(
                 AuthoritativeChordEvent("original-a", "verse-1", "C", 0, 480),
@@ -62,27 +67,28 @@ class MidiCoreAuthorityDraftingTest {
                 AuthoritativeChordEvent("original-c", "chorus-1", "F", 3_840, 7_680),
             ),
         )
-        val drafts = MidiCoreAuthorityDrafting.progressionDrafts(authority)
+        val drafts = MidiCoreAuthorityDrafting.progressionDrafts(authority, 480)
 
-        assertEquals(authority.chordEvents, MidiCoreAuthorityDrafting.parseHarmony(drafts, authority))
+        assertEquals(authority.chordEvents, MidiCoreAuthorityDrafting.parseHarmony(drafts, authority, 480))
     }
 
     @Test
-    fun `uneven progression windows cover a long occurrence without multiplication overflow`() {
-        val authority = authority().copy(
-            sectionDefinitions = listOf(ProjectSectionDefinition("long", "Long")),
-            occurrences = listOf(ProjectSectionOccurrence("long-1", "long", "Long", 0, Long.MAX_VALUE)),
+    fun `odd PPQ rejects unrepresentable durations and rejects gaps overlaps and overflow`() {
+        val short = authority().copy(
+            sectionDefinitions = listOf(ProjectSectionDefinition("short", "Short")),
+            occurrences = listOf(ProjectSectionOccurrence("short-1", "short", "Short", 0, 479)),
             chordEvents = emptyList(),
+            arrangementEndTick = 479,
         )
-
-        val events = MidiCoreAuthorityDrafting.parseHarmony(
-            listOf(MidiCoreProgressionDraft("long-1", "Long", "C | F | G")),
-            authority,
-        )
-
-        assertEquals(listOf(0L, Long.MAX_VALUE / 3, (Long.MAX_VALUE / 3) * 2), events.map(AuthoritativeChordEvent::startTick))
-        assertEquals(Long.MAX_VALUE, events.last().endTick)
-        assertEquals(true, events.zipWithNext().all { (left, right) -> left.endTick == right.startTick })
+        assertFailsWith<IllegalArgumentException> {
+            MidiCoreAuthorityDrafting.parseHarmony(listOf(MidiCoreProgressionDraft("short-1", "Short", listOf(MidiCoreChordRowDraft("a", "C", "1/2")))), short, 479)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            MidiCoreAuthorityDrafting.parseHarmony(listOf(MidiCoreProgressionDraft("short-1", "Short", listOf(MidiCoreChordRowDraft("a", "C", "2")))), short, 479)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            MidiCoreAuthorityDrafting.parseHarmony(listOf(MidiCoreProgressionDraft("short-1", "Short", listOf(MidiCoreChordRowDraft("a", "C", Long.MAX_VALUE.toString())))), short, 479)
+        }
     }
 
     private fun authority() = ProjectAuthority(

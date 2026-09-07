@@ -2,6 +2,7 @@ package app.melotrail.desktop
 
 import app.melotrail.application.AcceptMidiCoreCandidate
 import app.melotrail.application.CompareMidiCoreCandidates
+import app.melotrail.application.ConfirmMidiCoreArrangementExtent
 import app.melotrail.application.ConfirmMidiCoreAuthority
 import app.melotrail.application.CreateMidiCoreProject
 import app.melotrail.application.GenerateMidiCoreCandidate
@@ -10,6 +11,7 @@ import app.melotrail.application.ImportMidiCoreSource
 import app.melotrail.application.ListMidiCoreCandidates
 import app.melotrail.application.LockMidiCoreCandidate
 import app.melotrail.application.MidiCoreAuthoritativeHarmony
+import app.melotrail.application.MidiCoreArrangementExtent
 import app.melotrail.application.MidiCoreCandidateGeneration
 import app.melotrail.application.MidiCoreCandidateGenerationResult
 import app.melotrail.application.MidiCoreArrangementDraftGeneration
@@ -133,6 +135,7 @@ interface MidiCoreWorkspaceUseCases {
     fun prepareArrangementDraftAudition(request: PrepareMidiCoreArrangementDraftAudition): MidiCoreReviewAuditionResult
     suspend fun previewArrangementStyle(request: PrepareMidiCoreArrangementStylePreview): MidiCoreArrangementStylePreviewResult
     fun confirmAuthority(request: ConfirmMidiCoreAuthority): app.melotrail.application.MidiCoreAuthorityResult
+    fun confirmArrangementExtent(request: ConfirmMidiCoreArrangementExtent): app.melotrail.application.MidiCoreArrangementExtentResult
     fun replaceStructure(request: ReplaceMidiCoreStructure): app.melotrail.application.MidiCoreStructureTimelineResult
     fun replaceHarmony(request: ReplaceMidiCoreHarmony): app.melotrail.application.MidiCoreAuthoritativeHarmonyResult
     fun listCandidates(request: ListMidiCoreCandidates): MidiCoreCandidateReviewResult
@@ -155,6 +158,7 @@ class DefaultMidiCoreWorkspaceUseCases(
     private val project: MidiCoreProjectLifecycle,
     private val sourceImport: MidiCoreSourceImport,
     private val authority: MidiCoreMusicalAuthority,
+    private val arrangementExtent: MidiCoreArrangementExtent,
     private val structure: MidiCoreStructureTimeline,
     private val harmony: MidiCoreAuthoritativeHarmony,
     private val generation: MidiCoreCandidateGeneration,
@@ -201,6 +205,8 @@ class DefaultMidiCoreWorkspaceUseCases(
     override suspend fun previewArrangementStyle(request: PrepareMidiCoreArrangementStylePreview): MidiCoreArrangementStylePreviewResult = stylePreview.prepare(request)
 
     override fun confirmAuthority(request: ConfirmMidiCoreAuthority) = authority.confirm(request)
+
+    override fun confirmArrangementExtent(request: ConfirmMidiCoreArrangementExtent) = arrangementExtent.confirm(request)
 
     override fun replaceStructure(request: ReplaceMidiCoreStructure) = structure.replace(request)
 
@@ -305,6 +311,7 @@ data class MidiCoreSourceUiState(
     val sha256: String? = null,
     val format: Int? = null,
     val ppq: Int? = null,
+    val lastNoteEndTick: Long? = null,
     val sourceEndTick: Long? = null,
     val trackSummaries: List<MidiTrackSummary> = emptyList(),
     val validation: MidiImportValidationResult? = null,
@@ -455,6 +462,7 @@ sealed interface MidiCoreWorkspaceIntent {
     data class ImportSource(val source: Path) : MidiCoreWorkspaceIntent
     data class UpdateAuthorityDraft(val draft: MidiCoreAuthorityDraft) : MidiCoreWorkspaceIntent
     data object ConfirmAuthority : MidiCoreWorkspaceIntent
+    data class ConfirmArrangementExtent(val padToNextBar: Boolean) : MidiCoreWorkspaceIntent
     data class ReplaceStructure(
         val definitions: List<app.melotrail.project.ProjectSectionDefinition>,
         val occurrences: List<app.melotrail.structure.MidiCoreBarOccurrencePlacement>,
@@ -562,6 +570,7 @@ class MidiCoreWorkspaceViewModel(
             is MidiCoreWorkspaceIntent.ImportSource -> importSource(intent)
             is MidiCoreWorkspaceIntent.UpdateAuthorityDraft -> updateAuthorityDraft(intent.draft)
             MidiCoreWorkspaceIntent.ConfirmAuthority -> confirmAuthority()
+            is MidiCoreWorkspaceIntent.ConfirmArrangementExtent -> confirmArrangementExtent(intent)
             is MidiCoreWorkspaceIntent.ReplaceStructure -> replaceStructure(intent)
             is MidiCoreWorkspaceIntent.ReplaceHarmony -> replaceHarmony(intent)
             is MidiCoreWorkspaceIntent.SelectReviewScope -> selectReviewScope(intent)
@@ -742,6 +751,25 @@ class MidiCoreWorkspaceViewModel(
                     )
                 }
                 is app.melotrail.application.MidiCoreAuthorityResult.Rejected -> failure(authorityBlocker(result.problem, result.validation), MidiCoreWorkspaceIntent.ConfirmAuthority)
+            }
+        }
+    }
+
+    private fun confirmArrangementExtent(intent: MidiCoreWorkspaceIntent.ConfirmArrangementExtent) {
+        val current = requireSessionOrBlock() ?: return
+        clearAuditionForProjectTransition()
+        startOperation(MidiCoreWorkspaceOperationKind.AUTHORITY, "Confirming arrangement end…", intent) { _ ->
+            when (val result = useCases.confirmArrangementExtent(ConfirmMidiCoreArrangementExtent(current, intent.padToNextBar))) {
+                is app.melotrail.application.MidiCoreArrangementExtentResult.Confirmed -> success(
+                    if (result.paddingTicks > 0L) "Arrangement end padded with trailing silence." else "Arrangement end set to the source end.",
+                    result.session,
+                ) {
+                    clearAuditionForProjectTransition()
+                    _state.value = _state.value.copy(
+                        authority = _state.value.authority.copy(lastInvalidation = result.invalidation),
+                    )
+                }
+                is app.melotrail.application.MidiCoreArrangementExtentResult.Rejected -> failure(extentBlocker(result.problem), intent)
             }
         }
     }
@@ -1652,6 +1680,7 @@ class MidiCoreWorkspaceViewModel(
                     sha256 = it.sha256,
                     format = it.format,
                     ppq = it.ppq,
+                    lastNoteEndTick = it.lastNoteEndTick,
                     sourceEndTick = it.sourceEndTick,
                     trackSummaries = it.trackSummaries,
                     reportAvailable = true,
@@ -1832,6 +1861,17 @@ class MidiCoreWorkspaceViewModel(
 
     private fun authorityBlocker(problem: MidiCoreAuthorityProblem, validation: MidiImportValidationResult? = null) = blocker(
         MidiCoreWorkspaceBlockerCode.AUTHORITY_REQUIRED,
+        problem.message,
+        problem.nextAction,
+        problem.code.name,
+    )
+
+    private fun extentBlocker(problem: app.melotrail.application.MidiCoreArrangementExtentProblem) = blocker(
+        when (problem.code) {
+            app.melotrail.application.MidiCoreArrangementExtentProblemCode.AUTHORITY_REQUIRED -> MidiCoreWorkspaceBlockerCode.AUTHORITY_REQUIRED
+            app.melotrail.application.MidiCoreArrangementExtentProblemCode.STRUCTURE_PRESENT -> MidiCoreWorkspaceBlockerCode.STRUCTURE_REQUIRED
+            else -> MidiCoreWorkspaceBlockerCode.APPLICATION_FAILURE
+        },
         problem.message,
         problem.nextAction,
         problem.code.name,

@@ -136,6 +136,11 @@ data class MidiCoreProject(
             }) { "Arrangement draft history may only restore scopes from its draft" }
         }
         sourceMidi?.let { source ->
+            authority?.let { currentAuthority ->
+                require(currentAuthority.arrangementEndTick >= source.sourceEndTick) {
+                    "Confirmed arrangement end cannot precede preserved source events"
+                }
+            }
             require(exportSnapshots.all { it.sourceSha256 == source.sha256 }) {
                 "Every export snapshot must bind the imported source digest"
             }
@@ -188,6 +193,8 @@ data class SourceMidiRecord(
     val importReport: ProjectArtifact,
     val trackSummaries: List<MidiTrackSummary>,
     val sourceEndTick: Long,
+    /** Last protected source-note release; this is not inferred from end-of-track silence. */
+    val lastNoteEndTick: Long = sourceEndTick,
 ) {
     init {
         require(originalFilename.isNotBlank() && originalFilename.length <= 255 && originalFilename.none(Char::isISOControl)) {
@@ -201,6 +208,9 @@ data class SourceMidiRecord(
             "Source MIDI track summaries must be ordered from track zero"
         }
         require(sourceEndTick >= 0) { "Source MIDI end tick must not be negative" }
+        require(lastNoteEndTick >= 0 && lastNoteEndTick <= sourceEndTick) {
+            "Source MIDI last note end must fit inside the source end"
+        }
     }
 }
 
@@ -220,6 +230,8 @@ data class ProjectAuthority(
     val chordEvents: List<AuthoritativeChordEvent>,
     /** Explicit leading pickup length in project ticks; zero means no pickup. */
     val pickupTicks: Long = 0L,
+    /** Confirmed whole-song boundary; it may include explicit trailing silence after the immutable source. */
+    val arrangementEndTick: Long = occurrences.lastOrNull()?.endTick ?: 0L,
 ) {
     init {
         require(pickupTicks >= 0) { "Pickup length must not be negative" }
@@ -233,6 +245,10 @@ data class ProjectAuthority(
         require(occurrences.isEmpty() || occurrences.first().startTick == 0L) { "Occurrence timelines must begin at song tick zero" }
         occurrences.zipWithNext().forEach { (left, right) ->
             require(left.endTick == right.startTick) { "Occurrences must form a contiguous timeline" }
+        }
+        require(arrangementEndTick >= 0L) { "Arrangement end must not be negative" }
+        require(occurrences.isEmpty() || occurrences.last().endTick == arrangementEndTick) {
+            "Occurrences must end exactly at the confirmed arrangement end"
         }
         val occurrenceById = occurrences.associateBy(ProjectSectionOccurrence::id)
         require(chordEvents.map(AuthoritativeChordEvent::id).distinct().size == chordEvents.size) { "Chord event IDs must be unique" }
@@ -302,6 +318,8 @@ data class AuthoritativeChordEvent(
         require(symbol.isNotBlank() && symbol.length <= 80 && symbol.none(Char::isISOControl)) { "Chord symbol is invalid" }
         require(startTick >= 0 && endTick > startTick) { "Chord event timing is invalid" }
     }
+
+    val durationTicks: Long get() = endTick - startTick
 }
 
 enum class CandidateRole { CHORDS, BASS, DRUMS }

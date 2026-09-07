@@ -101,6 +101,42 @@ class MidiCoreStructureHarmonyPageTest {
     }
 
     @Test
+    fun `page exposes explicit pre-structure padding and cancellation controls`() = runComposeUiTest {
+        val intents = mutableListOf<MidiCoreWorkspaceIntent>()
+        setContent {
+            MelotrailTheme {
+                MidiCoreWorkspaceShell(
+                    state = unstructuredAuthorityState(padded = false),
+                    onIntent = intents::add,
+                    initialDestination = MidiCoreWorkspaceDestination.STRUCTURE_HARMONY,
+                )
+            }
+        }
+
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.PAD_ARRANGEMENT).performScrollTo().assertIsEnabled().performClick()
+        assertEquals(
+            listOf<MidiCoreWorkspaceIntent>(MidiCoreWorkspaceIntent.ConfirmArrangementExtent(true)),
+            intents,
+        )
+
+        intents.clear()
+        setContent {
+            MelotrailTheme {
+                MidiCoreWorkspaceShell(
+                    state = unstructuredAuthorityState(padded = true),
+                    onIntent = intents::add,
+                    initialDestination = MidiCoreWorkspaceDestination.STRUCTURE_HARMONY,
+                )
+            }
+        }
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.CANCEL_PADDING).performScrollTo().assertIsEnabled().performClick()
+        assertEquals(
+            listOf<MidiCoreWorkspaceIntent>(MidiCoreWorkspaceIntent.ConfirmArrangementExtent(false)),
+            intents,
+        )
+    }
+
+    @Test
     fun `tempo is edited as BPM and internal IDs and ticks are not musician-facing`() = runComposeUiTest {
         val intents = mutableListOf<MidiCoreWorkspaceIntent>()
         setContent {
@@ -246,6 +282,23 @@ class MidiCoreStructureHarmonyPageTest {
                 confirmed = authority,
                 draft = MidiCoreAuthorityDraft(authority.key, authority.tempo, authority.meter),
             ),
+        )
+    }
+
+    private fun unstructuredAuthorityState(padded: Boolean): MidiCoreWorkspaceState {
+        val base = authorityState()
+        val source = requireNotNull(base.project?.sourceMidi).copy(sourceEndTick = 5_700, lastNoteEndTick = 5_600)
+        val authority = requireNotNull(base.project?.authority).copy(
+            sectionDefinitions = emptyList(),
+            occurrences = emptyList(),
+            chordEvents = emptyList(),
+            arrangementEndTick = if (padded) 5_760 else 5_700,
+        )
+        val project = requireNotNull(base.project).copy(sourceMidi = source, authority = authority)
+        return base.copy(
+            project = project,
+            source = base.source.copy(sourceEndTick = source.sourceEndTick, lastNoteEndTick = source.lastNoteEndTick),
+            authority = base.authority.copy(confirmed = authority),
         )
     }
 }

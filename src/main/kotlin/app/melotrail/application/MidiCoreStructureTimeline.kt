@@ -39,7 +39,7 @@ class MidiCoreStructureTimeline(private val artifacts: MidiCoreArtifactStore = M
         if (current != request.session.project) return rejected(MidiCoreStructureTimelineProblemCode.STALE_PROJECT, "The project changed since this screen was opened.", "Reopen the project before editing structure.")
         val authority = current.authority ?: return rejected(MidiCoreStructureTimelineProblemCode.AUTHORITY_REQUIRED, "Confirm tempo, meter, key, and mode before defining structure.", "Complete musical authority first.")
         val ppq = MidiPpq(requireNotNull(current.sourceMidi).ppq)
-        val expectedEnd = requireNotNull(current.sourceMidi).sourceEndTick
+        val expectedEnd = authority.arrangementEndTick
         val timeline = try {
             MidiCoreOccurrenceTimeline.buildFromBars(ppq, authority.meter, request.definitions, request.occurrences, expectedEnd)
         } catch (error: IllegalArgumentException) {
@@ -50,6 +50,7 @@ class MidiCoreStructureTimeline(private val artifacts: MidiCoreArtifactStore = M
                 sectionDefinitions = request.definitions,
                 occurrences = timeline.occurrences,
                 pickupTicks = 0L,
+                arrangementEndTick = expectedEnd,
             )
         } catch (error: IllegalArgumentException) {
             return rejected(MidiCoreStructureTimelineProblemCode.INVALID_STRUCTURE, error.message ?: "Structure is invalid.", "Review the structure and authoritative harmony before retrying.")

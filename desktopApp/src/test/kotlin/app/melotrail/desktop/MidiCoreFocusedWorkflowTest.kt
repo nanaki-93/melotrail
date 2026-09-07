@@ -319,6 +319,7 @@ private fun newWorkspace(
         project = lifecycle,
         sourceImport = MidiCoreSourceImport(artifacts),
         authority = MidiCoreMusicalAuthority(artifacts),
+        arrangementExtent = app.melotrail.application.MidiCoreArrangementExtent(artifacts),
         structure = MidiCoreStructureTimeline(artifacts),
         harmony = MidiCoreAuthoritativeHarmony(artifacts),
         generation = generation,

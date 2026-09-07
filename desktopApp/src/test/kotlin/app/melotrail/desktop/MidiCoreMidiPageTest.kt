@@ -187,6 +187,7 @@ class MidiCoreMidiPageTest {
             sectionDefinitions = emptyList(),
             occurrences = emptyList(),
             chordEvents = emptyList(),
+            arrangementEndTick = 960,
         )
         setContent {
             MelotrailTheme {

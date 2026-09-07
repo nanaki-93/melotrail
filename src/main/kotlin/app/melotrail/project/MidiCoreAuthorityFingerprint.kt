@@ -124,6 +124,7 @@ object MidiCoreAuthorityHasher {
                     "meter-numerator" to authority.meter.numerator.toString(),
                     "meter-denominator-exponent" to authority.meter.denominatorExponent.toString(),
                     "pickup-ticks" to authority.pickupTicks.toString(),
+                    "arrangement-end-tick" to authority.arrangementEndTick.toString(),
                 ),
             ),
         )

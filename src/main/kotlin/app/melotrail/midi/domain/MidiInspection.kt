@@ -52,10 +52,14 @@ data class MidiInspectionResult(
     val trackSummaries: List<MidiTrackSummary>,
     val findings: List<MidiReaderIssue>,
     val sourceEndTick: Long,
+    /** Last completed note release, distinct from the file's end-of-track extent. */
+    val lastNoteEndTick: Long = sourceEndTick,
 ) {
     init {
         require(trackSummaries.size == sequence.tracks.size) { "Every semantic MIDI track must have one summary" }
         require(trackSummaries.map(MidiTrackSummary::trackIndex) == sequence.tracks.map(SemanticMidiTrack::index)) { "MIDI track summaries must follow semantic tracks" }
+        require(lastNoteEndTick >= 0L) { "MIDI last note end tick cannot be negative" }
+        require(lastNoteEndTick <= sourceEndTick) { "MIDI source end tick cannot precede the last note" }
         require(sourceEndTick >= sequence.endTick) { "MIDI source end tick cannot precede semantic events" }
     }
 }

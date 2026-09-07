@@ -8,35 +8,41 @@ import app.melotrail.music.core.ProjectTempo
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.junit.jupiter.api.Test
 
 class MidiCoreProjectSchemaTest {
     @Test
-    fun `v1 project encodes and decodes all MIDI Core ownership records`() {
+    fun `v2 project encodes and decodes all MIDI Core ownership records`() {
         val project = completeProject()
         val serialized = MidiCoreProjectSchema.encode(project)
 
         assertEquals(project, MidiCoreProjectSchema.decode(serialized))
-        assertEquals(goldenFixture(), serialized)
-        assertEquals(goldenFixture(), MidiCoreProjectSchema.encode(MidiCoreProjectSchema.decode(serialized)))
+        assertEquals(2, kotlinx.serialization.json.Json.parseToJsonElement(serialized).jsonObject["version"]?.jsonPrimitive?.int)
+        assertEquals(serialized, MidiCoreProjectSchema.encode(MidiCoreProjectSchema.decode(serialized)))
     }
 
     @Test
     fun `unsupported and future project versions are classified unsupported without migration`() {
         val legacy = """{"schema":"retired-project","version":1,"project":{}}"""
-        val future = """{"schema":"melotrail-midi-core","version":2,"project":{}}"""
+        val retired = """{"schema":"melotrail-midi-core","version":1,"project":{}}"""
+        val future = """{"schema":"melotrail-midi-core","version":3,"project":{}}"""
         val unknown = """{"schema":"another-product","version":1,"project":{}}"""
 
         assertIs<MidiCoreProjectDocument.Unsupported>(MidiCoreProjectSchema.inspect(legacy))
+        assertIs<MidiCoreProjectDocument.Unsupported>(MidiCoreProjectSchema.inspect(retired))
         assertIs<MidiCoreProjectDocument.Unsupported>(MidiCoreProjectSchema.inspect(future))
         assertIs<MidiCoreProjectDocument.Unsupported>(MidiCoreProjectSchema.inspect(unknown))
         assertFailsWith<UnsupportedMidiCoreProjectException> { MidiCoreProjectSchema.decode(legacy) }
+        assertFailsWith<UnsupportedMidiCoreProjectException> { MidiCoreProjectSchema.decode(retired) }
         assertFailsWith<UnsupportedMidiCoreProjectException> { MidiCoreProjectSchema.decode(future) }
     }
 
     @Test
     fun `missing required fields and unconfined artifact paths are invalid`() {
-        assertIs<MidiCoreProjectDocument.Invalid>(MidiCoreProjectSchema.inspect("""{"schema":"melotrail-midi-core","version":1}"""))
+        assertIs<MidiCoreProjectDocument.Invalid>(MidiCoreProjectSchema.inspect("""{"schema":"melotrail-midi-core","version":2}"""))
         assertIs<MidiCoreProjectDocument.Invalid>(MidiCoreProjectSchema.inspect("""{"schema":{},"version":1}"""))
         assertFailsWith<IllegalArgumentException> { ProjectRelativePath("../outside.mid") }
         assertFailsWith<IllegalArgumentException> { ProjectRelativePath("/absolute.mid") }

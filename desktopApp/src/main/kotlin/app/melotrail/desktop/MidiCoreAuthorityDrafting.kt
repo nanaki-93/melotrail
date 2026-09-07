@@ -8,6 +8,7 @@ import app.melotrail.project.ProjectSectionDefinition
 import app.melotrail.project.ProjectSectionOccurrence
 import app.melotrail.structure.MidiCoreBarOccurrencePlacement
 import app.melotrail.structure.MidiCoreOccurrenceTimeline
+import java.math.BigInteger
 
 /** Musician-facing section row. Persistence identifiers stay internal to the editor. */
 internal data class MidiCoreSectionDraft(
@@ -18,12 +19,19 @@ internal data class MidiCoreSectionDraft(
     val barsText: String,
 )
 
-/** One readable chord progression for one saved section occurrence. */
+/** One musician-facing harmonic row. Duration is a positive rational number of quarter-note beats. */
+internal data class MidiCoreChordRowDraft(
+    val id: String,
+    val symbol: String,
+    val durationBeats: String,
+)
+
+/** One readable, duration-explicit chord table for one saved section occurrence. */
 internal data class MidiCoreProgressionDraft(
     val occurrenceId: String,
     val sectionName: String,
-    val text: String,
-    val originalText: String = "",
+    val rows: List<MidiCoreChordRowDraft>,
+    val originalRows: List<MidiCoreChordRowDraft> = rows,
     val originalEvents: List<AuthoritativeChordEvent> = emptyList(),
 )
 
@@ -50,15 +58,17 @@ internal object MidiCoreAuthorityDrafting {
         }
     }
 
-    fun progressionDrafts(authority: ProjectAuthority?): List<MidiCoreProgressionDraft> {
+    fun progressionDrafts(authority: ProjectAuthority?, ppq: Int?): List<MidiCoreProgressionDraft> {
         if (authority == null) return emptyList()
         val eventsByOccurrence = authority.chordEvents.groupBy(AuthoritativeChordEvent::occurrenceId)
         return authority.occurrences.map { occurrence ->
             val events = eventsByOccurrence[occurrence.id].orEmpty().sortedWith(
                 compareBy<AuthoritativeChordEvent>(AuthoritativeChordEvent::startTick).thenBy(AuthoritativeChordEvent::id),
             )
-            val text = events.joinToString(" | ", transform = AuthoritativeChordEvent::symbol)
-            MidiCoreProgressionDraft(occurrence.id, occurrence.label, text, text, events)
+            val rows = events.map { event ->
+                MidiCoreChordRowDraft(event.id, event.symbol, formatBeatDuration(event.durationTicks, ppq))
+            }
+            MidiCoreProgressionDraft(occurrence.id, occurrence.label, rows, rows, events)
         }
     }
 
@@ -106,38 +116,45 @@ internal object MidiCoreAuthorityDrafting {
     fun parseHarmony(
         drafts: List<MidiCoreProgressionDraft>,
         authority: ProjectAuthority,
+        ppq: Int?,
     ): List<AuthoritativeChordEvent> {
+        requireNotNull(ppq) { "Import a source MIDI before entering chord durations." }
+        require(ppq > 0) { "Source PPQ must be positive." }
         val draftsByOccurrence = drafts.associateBy(MidiCoreProgressionDraft::occurrenceId)
         require(draftsByOccurrence.size == authority.occurrences.size && authority.occurrences.all { it.id in draftsByOccurrence }) {
             "Every saved section needs one chord progression."
         }
         return authority.occurrences.flatMap { occurrence ->
             val draft = requireNotNull(draftsByOccurrence[occurrence.id])
-            if (draft.text == draft.originalText && exactOriginalCoverage(draft.originalEvents, occurrence)) {
+            if (draft.rows == draft.originalRows && exactOriginalCoverage(draft.originalEvents, occurrence)) {
                 draft.originalEvents
             } else {
-                val symbols = progressionSymbols(draft.text)
-                require(symbols.isNotEmpty()) { "${occurrence.label} needs at least one chord." }
-                val duration = occurrence.endTick - occurrence.startTick
-                require(symbols.size.toLong() <= duration) { "${occurrence.label} has too many chord changes for its MIDI length." }
-                symbols.mapIndexed { index, symbol ->
-                    val start = occurrence.startTick + proportionalOffset(duration, index.toLong(), symbols.size.toLong())
-                    val end = occurrence.startTick + proportionalOffset(duration, index + 1L, symbols.size.toLong())
-                    AuthoritativeChordEvent(
-                        id = "${occurrence.id}-chord-${index + 1}",
+                require(draft.rows.isNotEmpty()) { "${occurrence.label} needs at least one chord row." }
+                var cursor = occurrence.startTick
+                draft.rows.mapIndexed { index, row ->
+                    val duration = durationTicks(row.durationBeats, ppq)
+                    val end = try { Math.addExact(cursor, duration) } catch (_: ArithmeticException) {
+                        throw IllegalArgumentException("${occurrence.label} chord durations overflow the project timeline.")
+                    }
+                    require(end <= occurrence.endTick) { "${occurrence.label} chord rows exceed the section length." }
+                    val event = AuthoritativeChordEvent(
+                        id = row.id.ifBlank { "${occurrence.id}-chord-${index + 1}" },
                         occurrenceId = occurrence.id,
-                        symbol = symbol,
-                        startTick = start,
+                        symbol = row.symbol.trim(),
+                        startTick = cursor,
                         endTick = end,
                     )
+                    cursor = end
+                    event
                 }
+                    .also { require(cursor == occurrence.endTick) { "${occurrence.label} chord durations must total the section length exactly." } }
             }
         }
     }
 
-    fun harmonyError(drafts: List<MidiCoreProgressionDraft>, authority: ProjectAuthority?): String? {
+    fun harmonyError(drafts: List<MidiCoreProgressionDraft>, authority: ProjectAuthority?, ppq: Int?): String? {
         if (authority == null || authority.occurrences.isEmpty()) return "Save the section structure before entering harmony."
-        return runCatching { parseHarmony(drafts, authority) }.exceptionOrNull()?.message
+        return runCatching { parseHarmony(drafts, authority, ppq) }.exceptionOrNull()?.message
     }
 
     fun sourceBarCount(expectedSongEndTick: Long?, ppq: Int?, meter: ProjectMeter): Int? {
@@ -180,10 +197,40 @@ internal object MidiCoreAuthorityDrafting {
         return drafts.toMutableList().also { it.add(index + 1, duplicate) }
     }
 
-    private fun progressionSymbols(text: String): List<String> = text.trim()
-        .split(Regex("[|,\\s]+"))
-        .map(String::trim)
-        .filter(String::isNotEmpty)
+    /** Converts legacy shorthand only into editable explicit rows; it is never persisted as authority. */
+    fun seedRowsFromShorthand(text: String, occurrence: ProjectSectionOccurrence, ppq: Int): List<MidiCoreChordRowDraft> {
+        val symbols = text.trim().split(Regex("[|,\\s]+")).map(String::trim).filter(String::isNotEmpty)
+        require(symbols.isNotEmpty()) { "${occurrence.label} needs at least one chord." }
+        val duration = occurrence.endTick - occurrence.startTick
+        require(symbols.size.toLong() <= duration) { "${occurrence.label} has too many chord changes for its MIDI length." }
+        return symbols.indices.map { index ->
+            val ticks = proportionalOffset(duration, index + 1L, symbols.size.toLong()) - proportionalOffset(duration, index.toLong(), symbols.size.toLong())
+            MidiCoreChordRowDraft("${occurrence.id}-chord-${index + 1}", symbols[index], formatBeatDuration(ticks, ppq))
+        }
+    }
+
+    private fun durationTicks(text: String, ppq: Int): Long {
+        val match = BEAT_DURATION.matchEntire(text.trim())
+            ?: throw IllegalArgumentException("Chord duration '$text' must be a positive number of beats, such as 3, 1/2, or 3/2.")
+        val numerator = match.groupValues[1].toBigInteger()
+        val denominator = match.groupValues[2].removePrefix("/").ifBlank { "1" }.toBigInteger()
+        require(numerator > BigInteger.ZERO && denominator > BigInteger.ZERO) { "Chord duration must be positive." }
+        val scaled = numerator * ppq.toBigInteger()
+        require(scaled % denominator == BigInteger.ZERO) {
+            "Chord duration '$text' cannot be represented exactly at PPQ $ppq; choose an exactly representable beat fraction."
+        }
+        return try { (scaled / denominator).longValueExact() } catch (_: ArithmeticException) {
+            throw IllegalArgumentException("Chord duration '$text' is too long for this project.")
+        }
+    }
+
+    private fun formatBeatDuration(ticks: Long, ppq: Int?): String {
+        if (ppq == null || ppq <= 0) return "$ticks ticks"
+        val divisor = ticks.toBigInteger().gcd(ppq.toBigInteger())
+        val numerator = ticks.toBigInteger() / divisor
+        val denominator = ppq.toBigInteger() / divisor
+        return if (denominator == BigInteger.ONE) numerator.toString() else "$numerator/$denominator"
+    }
 
     /** Calculate floor(duration * index / slots) without overflowing Long multiplication. */
     private fun proportionalOffset(duration: Long, index: Long, slots: Long): Long =
@@ -213,4 +260,6 @@ internal object MidiCoreAuthorityDrafting {
         } while (candidate in used)
         return candidate
     }
+
+    private val BEAT_DURATION = Regex("([0-9]+)(/[0-9]+)?")
 }

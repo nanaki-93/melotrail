@@ -63,7 +63,8 @@ class JdkMidiReader {
         val sequence = SemanticMidiSequence(source, translated.map(TranslatedTrack::track))
         val summaries = translated.map(TranslatedTrack::summary)
         val findings = translated.flatMap(TranslatedTrack::findings).sortedWith(MIDI_READER_ISSUE_ORDER)
-        return MidiInspectionResult(sequence, summaries, findings, jdkSequence.tickLength)
+        val lastNoteEndTick = sequence.orderedEvents().filterIsInstance<MidiNoteEvent>().maxOfOrNull(MidiNoteEvent::endTick) ?: 0L
+        return MidiInspectionResult(sequence, summaries, findings, jdkSequence.tickLength, lastNoteEndTick)
     }
 
     private fun translateTrack(trackIndex: Int, events: List<MidiEvent>): TranslatedTrack {

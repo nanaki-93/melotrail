@@ -231,7 +231,9 @@ private fun ProjectFactsCard(state: MidiCoreWorkspaceState) {
     val authority = project.authority
     val progress = midiCoreArrangementProgress(project)
     WorkstationPanel(title = "Project facts", modifier = Modifier.semantics { testTag = MidiCoreProjectPageTags.METRICS }) {
-        ProjectFact("Source-derived end", project.sourceMidi?.sourceEndTick?.let { "$it ticks" } ?: "—")
+        ProjectFact("Last source note", project.sourceMidi?.lastNoteEndTick?.let { "$it ticks" } ?: "—")
+        ProjectFact("Source end-of-track", project.sourceMidi?.sourceEndTick?.let { "$it ticks" } ?: "—")
+        ProjectFact("Arrangement end", authority?.arrangementEndTick?.let { "$it ticks" } ?: "—")
         ProjectFact(
             "Confirmed authority",
             authority?.let {

@@ -46,7 +46,50 @@ internal class MidiCoreComparisonHarness(private val workRoot: Path) {
 
     /** Copies and verifies the immutable M01 package snapshot for one fixture. */
     fun loadBaseline(case: M01ComparisonCase, outputRoot: Path): M01ComparisonCapture =
-        M01BaselinePackageResource.load(case, outputRoot)
+        M01BaselinePackageResource.load(case, outputRoot, currentAuthoritySha256(case))
+
+    /**
+     * The checked-in M01 package records the authority contract that existed
+     * when it was frozen. M03 adds the explicit arrangement end to that
+     * contract. Rebuild only the current authority digest from the same
+     * immutable fixture inputs so the comparison can continue to evaluate the
+     * MIDI package, without changing or re-publishing the M01 snapshot.
+     */
+    private fun currentAuthoritySha256(case: M01ComparisonCase): String {
+        val caseWorkRoot = workRoot.resolve("authority").resolve(case.id)
+        Files.createDirectories(caseWorkRoot)
+        val caseRoot = Files.createTempDirectory(caseWorkRoot, "projection-")
+        val input = caseRoot.resolve("input").resolve("${case.id}.mid")
+        Files.createDirectories(input.parent)
+        Files.write(input, case.sourceBytes)
+        val store = MidiCoreArtifactStore()
+        val projectRoot = caseRoot.resolve("project")
+        val created = MidiCoreProjectLifecycle(store, clock = FIXED_CLOCK, idFactory = { "comparison-${case.id}" })
+            .create(CreateMidiCoreProject(projectRoot, "M01 ${case.id}", "comparison-${case.id}", "m01"))
+        val session = (created as? MidiCoreProjectLifecycleResult.Opened)?.session
+            ?: error("M01 comparison authority projection could not create '${case.id}'.")
+        var current = (MidiCoreSourceImport(store).import(ImportMidiCoreSource(session, input)) as? MidiCoreSourceImportResult.Imported)?.session
+            ?: error("M01 comparison authority projection could not import '${case.id}'.")
+        current = (MidiCoreMusicalAuthority(store).confirm(
+            ConfirmMidiCoreAuthority(current, case.key, case.tempo, case.meter),
+        ) as? MidiCoreAuthorityResult.Confirmed)?.session
+            ?: error("M01 comparison authority projection could not confirm '${case.id}'.")
+        current = (MidiCoreStructureTimeline(store).replace(
+            ReplaceMidiCoreStructure(
+                current,
+                case.occurrences.map { ProjectSectionDefinition(it.sectionId, it.label) }.distinctBy(ProjectSectionDefinition::id),
+                case.occurrences.map { MidiCoreBarOccurrencePlacement(it.id, it.sectionId, it.label, it.bars) },
+            ),
+        ) as? MidiCoreStructureTimelineResult.Updated)?.session
+            ?: error("M01 comparison authority projection could not structure '${case.id}'.")
+        val chords = case.chords.map { chord ->
+            AuthoritativeChordEvent(chord.id, chord.occurrenceId, chord.symbol, chord.startTick, chord.endTick)
+        }
+        current = (MidiCoreAuthoritativeHarmony(store).replace(ReplaceMidiCoreHarmony(current, chords))
+            as? MidiCoreAuthoritativeHarmonyResult.Updated)?.session
+            ?: error("M01 comparison authority projection could not harmonize '${case.id}'.")
+        return MidiCoreAuthorityHasher.from(current.project).sha256
+    }
 
     private fun capture(case: M01ComparisonCase, label: String, outputRoot: Path): M01ComparisonCapture {
         val caseWorkRoot = workRoot.resolve(label).resolve(case.id)
@@ -254,7 +297,7 @@ internal object M01BaselinePackageResource {
         "exportManifestSha256",
     )
 
-    fun load(case: M01ComparisonCase, outputRoot: Path): M01ComparisonCapture {
+    fun load(case: M01ComparisonCase, outputRoot: Path, currentAuthoritySha256: String): M01ComparisonCapture {
         val target = outputRoot.resolve("baseline").resolve(case.id)
         val entries = resourceEntries(case.id)
         require(entries.keys == MIDI_FILES) { "M01 baseline '${case.id}' has an incomplete package." }
@@ -276,11 +319,19 @@ internal object M01BaselinePackageResource {
                 "M01 baseline semantic digest mismatch for '$filename'."
             }
         }
+        // Verify the historical M01 manifest above, then compare it with a
+        // current-contract authority digest. M03 makes arrangement extent an
+        // authority fact; its absence from the immutable M01 manifest must not
+        // turn unchanged MIDI output into a false semantic difference.
         return M01ComparisonCapture.Published(
             case = case,
             sourceSha256 = frozen.sourceSha256,
-            authoritySha256 = frozen.authoritySha256,
-            frozenInputsSha256 = frozen.frozenInputsSha256,
+            authoritySha256 = currentAuthoritySha256,
+            frozenInputsSha256 = m01FrozenInputsSha256(
+                frozen.sourceSha256,
+                currentAuthoritySha256,
+                frozen.engineInputs,
+            ),
             engineInputs = frozen.engineInputs,
             packageDirectory = target,
             midiSha256 = midiSha256,

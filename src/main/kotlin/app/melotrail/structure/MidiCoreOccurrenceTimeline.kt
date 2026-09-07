@@ -139,7 +139,12 @@ class MidiCoreOccurrenceTimeline private constructor(
 class MidiCoreStructureEditor(private val ppq: MidiPpq) {
     fun replace(authority: ProjectAuthority, definitions: List<ProjectSectionDefinition>, placements: List<MidiCoreOccurrencePlacement>, pickupTicks: Long? = null): ProjectAuthority {
         val timeline = MidiCoreOccurrenceTimeline.build(ppq, authority.meter, definitions, placements, pickupTicks ?: authority.pickupTicks)
-        return authority.copy(sectionDefinitions = definitions, occurrences = timeline.occurrences, pickupTicks = timeline.pickupTicks)
+        return authority.copy(
+            sectionDefinitions = definitions,
+            occurrences = timeline.occurrences,
+            pickupTicks = timeline.pickupTicks,
+            arrangementEndTick = timeline.totalTicks,
+        )
     }
 
     fun insert(authority: ProjectAuthority, index: Int, placement: MidiCoreOccurrencePlacement): ProjectAuthority {

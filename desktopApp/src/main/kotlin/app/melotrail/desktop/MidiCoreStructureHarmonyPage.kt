@@ -69,6 +69,9 @@ internal object MidiCoreStructureHarmonyPageTags {
     const val MODE = "midi-core-authority-mode"
     const val CONFIRM_AUTHORITY = "midi-core-authority-confirm"
     const val AUTHORITY_STATUS = "midi-core-authority-status"
+    const val ARRANGEMENT_EXTENT = "midi-core-arrangement-extent"
+    const val PAD_ARRANGEMENT = "midi-core-arrangement-extent-pad"
+    const val CANCEL_PADDING = "midi-core-arrangement-extent-cancel"
     const val STRUCTURE = "midi-core-structure"
     const val BAR_SUMMARY = "midi-core-structure-bar-summary"
     const val SECTION_PREFIX = "midi-core-structure-section-"
@@ -115,13 +118,13 @@ internal fun MidiCoreStructureHarmonyPage(
     val persistedAuthority = state.authority.confirmed ?: project?.authority
     val meter = state.authority.draft.meter
     val ppq = state.source.ppq ?: project?.sourceMidi?.ppq
-    val expectedSongEndTick = state.source.sourceEndTick ?: project?.sourceMidi?.sourceEndTick
+    val expectedSongEndTick = persistedAuthority?.arrangementEndTick ?: state.source.sourceEndTick ?: project?.sourceMidi?.sourceEndTick
     var bpmText by remember(state.projectRevision) { mutableStateOf(formatBpmInput(state.authority.draft.tempo)) }
     var sections by remember(state.projectRevision) {
         mutableStateOf(MidiCoreAuthorityDrafting.sectionDrafts(persistedAuthority, ppq))
     }
     var progressions by remember(state.projectRevision) {
-        mutableStateOf(MidiCoreAuthorityDrafting.progressionDrafts(persistedAuthority))
+        mutableStateOf(MidiCoreAuthorityDrafting.progressionDrafts(persistedAuthority, ppq))
     }
 
     val parsedTempo = parseBpm(bpmText)
@@ -135,10 +138,10 @@ internal fun MidiCoreStructureHarmonyPage(
             parsed.occurrences != persistedAuthority.occurrences || persistedAuthority.pickupTicks != 0L
     } ?: true
     val harmonyResult = persistedAuthority?.let { authority ->
-        runCatching { MidiCoreAuthorityDrafting.parseHarmony(progressions, authority) }
+        runCatching { MidiCoreAuthorityDrafting.parseHarmony(progressions, authority, ppq) }
     }
     val parsedHarmony = harmonyResult?.getOrNull()
-    val harmonyError = MidiCoreAuthorityDrafting.harmonyError(progressions, persistedAuthority)
+    val harmonyError = MidiCoreAuthorityDrafting.harmonyError(progressions, persistedAuthority, ppq)
         ?: harmonyResult?.exceptionOrNull()?.message
     val harmonyValidation = if (persistedAuthority != null && parsedHarmony != null) {
         MidiCoreHarmonyValidator.validate(persistedAuthority, parsedHarmony)
@@ -201,6 +204,13 @@ internal fun MidiCoreStructureHarmonyPage(
                 },
                 onConfirm = { onIntent(MidiCoreWorkspaceIntent.ConfirmAuthority) },
             )
+            ArrangementExtentCard(
+                state = state,
+                authority = persistedAuthority,
+                sourceEndTick = state.source.sourceEndTick ?: project.sourceMidi?.sourceEndTick,
+                onPad = { onIntent(MidiCoreWorkspaceIntent.ConfirmArrangementExtent(true)) },
+                onCancelPadding = { onIntent(MidiCoreWorkspaceIntent.ConfirmArrangementExtent(false)) },
+            )
             StructureCard(
                 state = state,
                 sections = sections,
@@ -232,11 +242,15 @@ internal fun MidiCoreStructureHarmonyPage(
                 error = harmonyError,
                 structureDirty = structureDirty,
                 defaultChord = state.authority.draft.key.spelling.symbol,
-                onProgressionChanged = { index, value ->
-                    progressions = progressions.updated(index, progressions[index].copy(text = value))
-                },
+                onRowsChanged = { index, rows -> progressions = progressions.updated(index, progressions[index].copy(rows = rows)) },
                 onUseOneChord = { index ->
-                    progressions = progressions.updated(index, progressions[index].copy(text = state.authority.draft.key.spelling.symbol))
+                    val occurrence = persistedAuthority?.occurrences?.singleOrNull { it.id == progressions[index].occurrenceId }
+                    if (occurrence != null && ppq != null) {
+                        progressions = progressions.updated(index, progressions[index].copy(rows = listOf(
+                            MidiCoreChordRowDraft("${occurrence.id}-chord-1", state.authority.draft.key.spelling.symbol,
+                                MidiCoreAuthorityDrafting.seedRowsFromShorthand(state.authority.draft.key.spelling.symbol, occurrence, ppq).single().durationBeats),
+                        )))
+                    }
                 },
                 onSave = { parsedHarmony?.let { onIntent(MidiCoreWorkspaceIntent.ReplaceHarmony(it)) } },
                 enabled = !state.busy && !structureDirty && harmonyDirty && harmonyValidation?.valid == true,
@@ -246,6 +260,48 @@ internal fun MidiCoreStructureHarmonyPage(
             RecoveryCard(state, onIntent)
         }
         Spacer(Modifier.height(MusicWorkspaceTokens.Spacing.Xl))
+    }
+}
+
+@Composable
+private fun ArrangementExtentCard(
+    state: MidiCoreWorkspaceState,
+    authority: ProjectAuthority?,
+    sourceEndTick: Long?,
+    onPad: () -> Unit,
+    onCancelPadding: () -> Unit,
+) {
+    val arrangementEndTick = authority?.arrangementEndTick
+    val canEdit = !state.busy && authority != null && sourceEndTick != null && authority.occurrences.isEmpty()
+    val padded = arrangementEndTick != null && sourceEndTick != null && arrangementEndTick > sourceEndTick
+    AuthorityPanel(MidiCoreStructureHarmonyPageTags.ARRANGEMENT_EXTENT, "2 · Song ending") {
+        Text("Keep the protected melody unchanged, then choose whether the arrangement includes trailing silence to the next bar.", color = MusicWorkspaceTokens.TextSecondary)
+        Text(
+            when {
+                authority == null -> "Confirm song settings before choosing the arrangement end."
+                sourceEndTick == null -> "Import a source MIDI before choosing the arrangement end."
+                authority.occurrences.isNotEmpty() -> "Sections already define this arrangement end. Edit sections to change it."
+                padded -> "Trailing silence is included after the source end. You can cancel it before defining sections."
+                else -> "The arrangement currently ends with the preserved source."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = if (canEdit) MusicWorkspaceTokens.TextSecondary else MusicWorkspaceTokens.Warning,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+            Button(
+                onClick = onPad,
+                enabled = canEdit && !padded,
+                colors = workspacePrimaryButtonColors(),
+                modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget)
+                    .semantics { testTag = MidiCoreStructureHarmonyPageTags.PAD_ARRANGEMENT },
+            ) { Text("Pad with silence to next bar") }
+            OutlinedButton(
+                onClick = onCancelPadding,
+                enabled = canEdit && padded,
+                modifier = Modifier.weight(1f).heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget)
+                    .semantics { testTag = MidiCoreStructureHarmonyPageTags.CANCEL_PADDING },
+            ) { Text("Use source end") }
+        }
     }
 }
 
@@ -381,7 +437,7 @@ private fun StructureCard(
 ) {
     val requiredBars = MidiCoreAuthorityDrafting.sourceBarCount(expectedSongEndTick, ppq, meter)
     val enteredBars = sections.sumOf { it.barsText.toIntOrNull()?.coerceAtLeast(0) ?: 0 }
-    AuthorityPanel(MidiCoreStructureHarmonyPageTags.STRUCTURE, "2 · Sections") {
+    AuthorityPanel(MidiCoreStructureHarmonyPageTags.STRUCTURE, "3 · Sections") {
         Text("Build the song from top to bottom. Each row needs only a name and its length in whole bars.", color = MusicWorkspaceTokens.TextSecondary)
         Card(
             Modifier.fillMaxWidth().semantics {
@@ -491,14 +547,14 @@ private fun HarmonyCard(
     error: String?,
     structureDirty: Boolean,
     defaultChord: String,
-    onProgressionChanged: (Int, String) -> Unit,
+    onRowsChanged: (Int, List<MidiCoreChordRowDraft>) -> Unit,
     onUseOneChord: (Int) -> Unit,
     onSave: () -> Unit,
     enabled: Boolean,
 ) {
-    AuthorityPanel(MidiCoreStructureHarmonyPageTags.HARMONY, "3 · Chord progressions") {
+    AuthorityPanel(MidiCoreStructureHarmonyPageTags.HARMONY, "4 · Chord progressions") {
         Text(
-            "Write chords in playing order, separated by |. They are spaced evenly across the section; repeat a chord to hold it longer.",
+            "Set each chord symbol and its exact duration in beats. Fractions must be exactly representable at this MIDI file's PPQ.",
             color = MusicWorkspaceTokens.TextSecondary,
         )
         if (structureDirty) Text("Save section changes first so each progression keeps the correct range.", color = MusicWorkspaceTokens.Warning)
@@ -507,20 +563,35 @@ private fun HarmonyCard(
             Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.ElevatedSurface)) {
                 Column(Modifier.fillMaxWidth().padding(MusicWorkspaceTokens.Spacing.Md), verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
                     Text(progression.sectionName, style = MaterialTheme.typography.titleMedium)
-                    OutlinedTextField(
-                        value = progression.text,
-                        onValueChange = { onProgressionChanged(index, it) },
-                        modifier = Modifier.fillMaxWidth().semantics {
-                            testTag = MidiCoreStructureHarmonyPageTags.progression(index)
-                            contentDescription = "Chord progression for ${progression.sectionName}"
+                    progression.rows.forEachIndexed { rowIndex, row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+                            OutlinedTextField(
+                                value = row.symbol,
+                                onValueChange = { value -> onRowsChanged(index, progression.rows.updated(rowIndex, row.copy(symbol = value))) },
+                                modifier = Modifier.weight(1f).semantics {
+                                    testTag = MidiCoreStructureHarmonyPageTags.progression(index)
+                                    contentDescription = "Chord ${rowIndex + 1} for ${progression.sectionName}"
+                                },
+                                label = { Text("Chord") }, placeholder = { Text("Cmaj7") }, singleLine = true,
+                                enabled = !state.busy && !structureDirty,
+                            )
+                            OutlinedTextField(
+                                value = row.durationBeats,
+                                onValueChange = { value -> onRowsChanged(index, progression.rows.updated(rowIndex, row.copy(durationBeats = value))) },
+                                modifier = Modifier.width(150.dp),
+                                label = { Text("Beats") }, placeholder = { Text("3 or 1/2") }, singleLine = true,
+                                enabled = !state.busy && !structureDirty,
+                            )
+                        }
+                    }
+                    TextButton(
+                        onClick = {
+                            val ordinal = progression.rows.size + 1
+                            onRowsChanged(index, progression.rows + MidiCoreChordRowDraft("${progression.occurrenceId}-chord-$ordinal", defaultChord, "1"))
                         },
-                        label = { Text("Chord progression") },
-                        placeholder = { Text("C | Am | F | G") },
-                        supportingText = { Text("Examples: C, Am7, F#dim, Bbmaj7, G/B") },
-                        singleLine = true,
                         enabled = !state.busy && !structureDirty,
-                    )
-                    if (progression.text.isBlank()) {
+                    ) { Text("+ Add chord row") }
+                    if (progression.rows.isEmpty()) {
                         TextButton(
                             onClick = { onUseOneChord(index) },
                             enabled = !state.busy && !structureDirty,

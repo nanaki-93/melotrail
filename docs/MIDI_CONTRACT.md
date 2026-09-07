@@ -17,7 +17,9 @@ ranges or a source with no complete notes. Explain the actual cause. Polyphony,
 chromatic notes/chords, unusual density and controller use are not corruption.
 
 Import preserves original bytes, filename, SHA-256, format/PPQ, ordered track
-facts and findings. It atomically protects the only melody track/channel.
+facts and findings. It records the last protected-note release separately from
+the source end-of-track extent; neither fact rewrites or trims source events.
+It atomically protects the only melody track/channel.
 There is no in-project source switch or silent source repair.
 
 ## Semantic events and pairing
@@ -53,10 +55,20 @@ Tempo is a fixed microseconds-per-quarter value. BPM entry converts using
 occurrences and explicit chord windows have one authoritative interpretation.
 Chromatic harmony is valid; generators cannot substitute a scale-derived chord.
 
-Current section entry uses positive whole bars whose total exactly matches the
-source extent. Current progression shorthand splits symbols into equal slots
-and preserves unchanged exact saved windows. M03 replaces editing ambiguity
-with explicit durations; until then these current restrictions still apply.
+Section entry uses positive whole bars whose total exactly matches the confirmed
+arrangement end. Source end and arrangement end are distinct: a musician may
+explicitly pad trailing silence to the next bar, or cancel that padding before
+sections are defined. The arrangement end cannot precede any preserved source
+event; padding does not add, shift, repeat, or otherwise rewrite melody data.
+An occurrence audition uses its confirmed arrangement boundary, so a final
+padded section plays its intended trailing silence without altering source bytes.
+
+Harmony is persisted as canonical gap-free tick windows, edited as one chord
+row per symbol plus a positive rational duration in quarter-note beats. A
+duration must resolve exactly at the imported PPQ; the editor rejects hidden
+rounding, gaps, overlaps, and totals outside the section. Reopening unchanged
+rows retains their original event identities and tick windows exactly. Legacy
+progression shorthand may seed editable rows but is never authority.
 
 Every candidate records role/occurrence, source/authority identity, generator,
 pattern/profile versions, seed, artifact digest and validation evidence. Used
@@ -136,16 +148,7 @@ semantic identity under the documented omission/remapping policy is required.
 
 ## Planned contract extensions
 
-These are requirements for M03/M06/M07, not claims of shipped support:
-
-- **Explicit harmonic rhythm:** symbol + rational beat/bar duration resolves to
-  canonical gap-free tick windows; unchanged saved durations stay exact. Reject
-  unrepresentable boundaries with a musical explanation, not hidden rounding.
-- **Source versus arrangement extent:** retain original source/end facts; the
-  user can confirm trailing silent padding to a whole-bar arrangement end.
-  End cannot precede any preserved note/controller event. Export all roles to
-  the confirmed arrangement boundary. No source rewrite, leading shift,
-  automatic trimming or melody repetition.
+These are requirements for M06/M07, not claims of shipped support:
 - **Arrangement plan:** record versioned purpose, phrase/repeat relationships,
   role activity and musical settings. Include consumed boundary/groove/neighbor
   information in scoped fingerprints. Invalidation follows those dependencies.

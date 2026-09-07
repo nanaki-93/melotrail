@@ -18,7 +18,7 @@ import kotlinx.serialization.json.jsonPrimitive
 /** Versioned JSON boundary for the target MIDI Core project. DTOs remain private to this file. */
 object MidiCoreProjectSchema {
     const val SCHEMA = "melotrail-midi-core"
-    const val VERSION = 1
+    const val VERSION = 2
 
     private val json = Json {
         prettyPrint = true
@@ -108,6 +108,7 @@ private data class SourceMidiDto(
     val importReport: ArtifactDto,
     val trackSummaries: List<TrackSummaryDto>,
     val sourceEndTick: Long,
+    val lastNoteEndTick: Long,
 )
 
 @Serializable
@@ -141,6 +142,7 @@ private data class AuthorityDto(
     val occurrences: List<OccurrenceDto>,
     val chordEvents: List<ChordEventDto>,
     val pickupTicks: Long = 0L,
+    val arrangementEndTick: Long,
 )
 
 @Serializable
@@ -291,25 +293,27 @@ private fun ProjectMetadataDto.toDomain() = ProjectMetadata(name, createdAt, app
 private fun ProjectArtifact.toDto() = ArtifactDto(path.value, sha256)
 private fun ArtifactDto.toDomain() = ProjectArtifact(ProjectRelativePath(path), sha256)
 private fun SourceMidiRecord.toDto() = SourceMidiDto(
-    originalFilename,
-    sha256,
-    format,
-    ppq,
-    original.toDto(),
-    importReport.toDto(),
-    trackSummaries.map(MidiTrackSummary::toDto),
-    sourceEndTick,
+    originalFilename = originalFilename,
+    sha256 = sha256,
+    format = format,
+    ppq = ppq,
+    original = original.toDto(),
+    importReport = importReport.toDto(),
+    trackSummaries = trackSummaries.map(MidiTrackSummary::toDto),
+    sourceEndTick = sourceEndTick,
+    lastNoteEndTick = lastNoteEndTick,
 )
 
 private fun SourceMidiDto.toDomain() = SourceMidiRecord(
-    originalFilename,
-    sha256,
-    format,
-    ppq,
-    original.toDomain(),
-    importReport.toDomain(),
-    trackSummaries.map(TrackSummaryDto::toDomain),
-    sourceEndTick,
+    originalFilename = originalFilename,
+    sha256 = sha256,
+    format = format,
+    ppq = ppq,
+    original = original.toDomain(),
+    importReport = importReport.toDomain(),
+    trackSummaries = trackSummaries.map(TrackSummaryDto::toDomain),
+    sourceEndTick = sourceEndTick,
+    lastNoteEndTick = lastNoteEndTick,
 )
 
 private fun MidiTrackSummary.toDto() = TrackSummaryDto(trackIndex, name, channels.map(MidiChannelSummary::toDto), durationTicks)
@@ -322,13 +326,13 @@ private fun SelectedMelodyDto.toDomain() = SelectedMelodyTrack(trackIndex, chann
 private fun ProjectAuthority.toDto() = AuthorityDto(
     key.toDto(), tempo.microsecondsPerQuarter, meter.numerator, meter.denominatorExponent,
     sectionDefinitions.map(ProjectSectionDefinition::toDto), occurrences.map(ProjectSectionOccurrence::toDto),
-    chordEvents.map(AuthoritativeChordEvent::toDto), pickupTicks,
+    chordEvents.map(AuthoritativeChordEvent::toDto), pickupTicks, arrangementEndTick,
 )
 
 private fun AuthorityDto.toDomain() = ProjectAuthority(
     key.toDomain(), ProjectTempo(tempoMicrosecondsPerQuarter), ProjectMeter(meterNumerator, meterDenominatorExponent),
     sectionDefinitions.map(SectionDefinitionDto::toDomain), occurrences.map(OccurrenceDto::toDomain),
-    chordEvents.map(ChordEventDto::toDomain), pickupTicks,
+    chordEvents.map(ChordEventDto::toDomain), pickupTicks, arrangementEndTick,
 )
 
 private fun ProjectKey.toDto() = KeyDto(tonic, modeId, spelling)

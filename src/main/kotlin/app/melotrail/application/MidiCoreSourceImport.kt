@@ -161,6 +161,7 @@ class MidiCoreSourceImport(
                     original = sourceArtifact,
                     importReport = reportArtifact,
                     trackSummaries = inspection.trackSummaries,
+                    lastNoteEndTick = inspection.lastNoteEndTick,
                     sourceEndTick = inspection.sourceEndTick,
                 ),
                 selectedMelody = SelectedMelodyTrack(
@@ -215,6 +216,7 @@ class MidiCoreSourceImport(
                     inspection.sequence.source.sha256,
                     inspection.sequence.source.format,
                     inspection.sequence.source.ppq.value,
+                    inspection.lastNoteEndTick,
                     inspection.sourceEndTick,
                 ),
                 trackSummaries = inspection.trackSummaries.map(MidiTrackSummary::toReportDto),
@@ -292,6 +294,7 @@ private data class ImportSourceDto(
     val sha256: String,
     val format: Int,
     val ppq: Int,
+    val lastNoteEndTick: Long,
     val sourceEndTick: Long,
 )
 

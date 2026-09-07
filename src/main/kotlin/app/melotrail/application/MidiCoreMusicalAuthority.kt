@@ -96,7 +96,10 @@ class MidiCoreMusicalAuthority(
         } catch (_: Exception) {
             return rejected(MidiCoreAuthorityProblemCode.INVALID_PROJECT, "The preserved source MIDI cannot be inspected safely.", "Restore the immutable source artifact and retry.")
         }
-        if (inspection.sequence.source.sha256 != source.sha256 || inspection.sequence.source.ppq.value != source.ppq) {
+        if (
+            inspection.sequence.source.sha256 != source.sha256 || inspection.sequence.source.ppq.value != source.ppq ||
+            inspection.sourceEndTick != source.sourceEndTick || inspection.lastNoteEndTick != source.lastNoteEndTick
+        ) {
             return rejected(MidiCoreAuthorityProblemCode.INVALID_PROJECT, "The preserved source MIDI no longer matches its project identity.", "Restore the immutable source artifact before changing authority.")
         }
 
@@ -124,6 +127,7 @@ class MidiCoreMusicalAuthority(
             existingAuthority?.occurrences.orEmpty(),
             existingAuthority?.chordEvents.orEmpty(),
             existingAuthority?.pickupTicks ?: 0L,
+            existingAuthority?.arrangementEndTick ?: source.sourceEndTick,
         )
         val updated = current.copy(authority = authority, revision = current.revision + 1L)
         val invalidation = MidiCoreInvalidationPlanner.preview(

@@ -97,11 +97,17 @@ class MidiCoreComparisonHarnessTest {
             MidiCoreComparisonHarness(root.resolve("work")).loadBaseline(case, root.resolve("output")),
         )
         val manifest = Files.readString(capture.packageDirectory.resolve("comparison.json"))
+        val legacyAuthoritySha256 = case.baselineAuthoritySha256
+        val legacyFrozenInputsSha256 = m01FrozenInputsSha256(
+            capture.sourceSha256,
+            legacyAuthoritySha256,
+            capture.engineInputs,
+        )
         val corruptions = mapOf(
             "scenario tags" to manifest.replace("\"held-close-melody-piano\"", "\"unowned-scenario\""),
             "source hash" to manifest.replace(capture.sourceSha256, "0".repeat(64)),
-            "authority hash" to manifest.replace(capture.authoritySha256, "0".repeat(64)),
-            "frozen inputs hash" to manifest.replace(capture.frozenInputsSha256, "0".repeat(64)),
+            "authority hash" to manifest.replace(legacyAuthoritySha256, "0".repeat(64)),
+            "frozen inputs hash" to manifest.replace(legacyFrozenInputsSha256, "0".repeat(64)),
             "engine ID" to manifest.replace("midi-core-style-v", "changed-engine-v"),
             "style catalog" to manifest.replace("\"styleCatalogVersion\": 1", "\"styleCatalogVersion\": 999"),
             "pattern catalog" to manifest.replace("\"patternCatalogVersion\": 1", "\"patternCatalogVersion\": 999"),
@@ -228,10 +234,20 @@ class MidiCoreComparisonHarnessTest {
     @Test
     fun `semantic comparison reports changed protected source independently of package paths`() {
         val harness = MidiCoreComparisonHarness(root.resolve("work"))
-        val baseline = harness.loadBaseline(M01ComparisonFixtures.cases.first(), root.resolve("output"))
-        val candidate = harness.captureCandidate(M01ComparisonFixtures.cases.first(), root.resolve("output"))
+        val fixture = M01ComparisonFixtures.cases.first()
+        val baseline = harness.loadBaseline(fixture, root.resolve("output"))
+        val candidate = harness.captureCandidate(fixture, root.resolve("output"))
+        val baselinePublished = baseline as M01ComparisonCapture.Published
+        val candidatePublished = candidate as M01ComparisonCapture.Published
+
+        // The immutable M01 manifest retains its original authority proof,
+        // while the comparison projection carries M03's arrangement-end fact.
+        assertTrue(Files.readString(baselinePublished.packageDirectory.resolve("comparison.json")).contains(fixture.baselineAuthoritySha256))
+        assertFalse(baselinePublished.authoritySha256 == fixture.baselineAuthoritySha256)
+        assertEquals(candidatePublished.authoritySha256, baselinePublished.authoritySha256)
+        assertEquals(candidatePublished.frozenInputsSha256, baselinePublished.frozenInputsSha256)
         assertTrue(harness.compare(baseline, candidate).equivalent)
-        val changedSource = (baseline as M01ComparisonCapture.Published).copy(sourceSha256 = "0".repeat(64))
+        val changedSource = baselinePublished.copy(sourceSha256 = "0".repeat(64))
         val comparison = harness.compare(changedSource, candidate)
         assertFalse(comparison.equivalent)
         assertTrue(comparison.differences.single().contains("Protected source"))

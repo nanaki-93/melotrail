@@ -1,6 +1,7 @@
 package app.melotrail.desktop
 
 import app.melotrail.application.ConfirmMidiCoreAuthority
+import app.melotrail.application.ConfirmMidiCoreArrangementExtent
 import app.melotrail.application.CreateMidiCoreProject
 import app.melotrail.application.ExportMidiCorePackage
 import app.melotrail.application.GenerateMidiCoreCandidate
@@ -155,6 +156,22 @@ class MidiCoreWorkspaceTest {
         assertEquals(beforeFailure, viewModel.state.value.audition)
         assertEquals(projectAfterPlay, viewModel.state.value.project)
         assertEquals(MidiCoreWorkspaceIntent.PlaySourceMelody, viewModel.state.value.operation.retry)
+        viewModel.close()
+    }
+
+    @Test
+    fun `arrangement extent intent is routed through the workspace use case`() = runTest {
+        val fake = FakeMidiCoreWorkspaceUseCases()
+        fake.seedPersistedSong()
+        val viewModel = MidiCoreWorkspaceViewModel(fake, MemoryMidiCorePreferences(), NoOpDesktopOperationLogger, testDispatchers(testScheduler))
+        viewModel.accept(MidiCoreWorkspaceIntent.OpenProject(fake.session.root))
+        advanceUntilIdle()
+
+        viewModel.accept(MidiCoreWorkspaceIntent.ConfirmArrangementExtent(padToNextBar = true))
+        advanceUntilIdle()
+
+        assertEquals(listOf(true), fake.arrangementExtentRequests.map(ConfirmMidiCoreArrangementExtent::padToNextBar))
+        assertEquals(MidiCoreWorkspaceOperationPhase.FAILED, viewModel.state.value.operation.phase)
         viewModel.close()
     }
 
@@ -671,6 +688,7 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
     val stylePreviewRequests = mutableListOf<app.melotrail.application.PrepareMidiCoreArrangementStylePreview>()
     var stylePreviewResult: app.melotrail.application.MidiCoreArrangementStylePreviewResult = fakeStylePreviewResult()
     var confirmAuthorityCalls = 0
+    val arrangementExtentRequests = mutableListOf<ConfirmMidiCoreArrangementExtent>()
     var occurrenceAuditionCalls = 0
     var closeCalls = 0
     var exportResult: MidiCoreMidiPackageExportResult = MidiCoreMidiPackageExportResult.Rejected(
@@ -749,6 +767,19 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
             MidiCoreAuthoritySuggestions(null, null),
             app.melotrail.midi.domain.MidiImportValidationResult(emptyList()),
             invalidation,
+        )
+    }
+
+    override fun confirmArrangementExtent(
+        request: ConfirmMidiCoreArrangementExtent,
+    ): app.melotrail.application.MidiCoreArrangementExtentResult {
+        arrangementExtentRequests += request
+        return app.melotrail.application.MidiCoreArrangementExtentResult.Rejected(
+            app.melotrail.application.MidiCoreArrangementExtentProblem(
+                app.melotrail.application.MidiCoreArrangementExtentProblemCode.STRUCTURE_PRESENT,
+                "Sections already define the arrangement boundary.",
+                "Edit sections first.",
+            ),
         )
     }
 

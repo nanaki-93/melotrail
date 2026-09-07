@@ -64,6 +64,7 @@ class MidiCoreSourceAudition(
             require(inspected.sequence.source.format == source.format)
             require(inspected.sequence.source.ppq.value == source.ppq)
             require(inspected.sourceEndTick == source.sourceEndTick)
+            require(inspected.lastNoteEndTick == source.lastNoteEndTick)
             inspected
         } catch (error: Exception) {
             return rejected(
@@ -150,18 +151,22 @@ class MidiCoreSourceAudition(
             "The requested section occurrence is not part of the current authority.",
             "Reload the structure timeline and choose a saved occurrence.",
         )
-        if (occurrence.endTick > prepared.plan.view.song.songEndTick) {
+        if (occurrence.endTick > authority.arrangementEndTick) {
             return rejected(
                 MidiCoreSourceAuditionProblemCode.OCCURRENCE_NOT_PLAYABLE,
-                "The selected occurrence extends beyond the preserved source playback range.",
-                "Save a contiguous structure that fits inside the imported source range.",
+                "The selected occurrence extends beyond the confirmed arrangement end.",
+                "Save a contiguous structure that fits inside the confirmed arrangement boundary.",
             )
         }
+        // Padding is an authority-only playback boundary. The immutable source
+        // melody events remain exactly as re-derived above; only this occurrence
+        // view retains its explicit trailing silence through arrangement end.
+        val occurrenceSong = prepared.plan.view.song.copy(songEndTick = authority.arrangementEndTick)
         return MidiCoreSourceAuditionResult.Ready(
             MidiAuditionPlaybackPlan(
                 MidiAuditionView.occurrence(
                     occurrence.id,
-                    prepared.plan.view.song,
+                    occurrenceSong,
                     occurrence.startTick,
                     occurrence.endTick,
                 ),

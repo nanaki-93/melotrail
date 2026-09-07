@@ -140,6 +140,12 @@ and fills at the exact end. Include the six historical fixtures below where
 still valid. Update fixtures for changed contracts rather than reusing old
 hashes as evidence of a new exporter.
 
+M03 requires the current Logic fixture preparation to include an unequal
+3+1+2+2-beat harmony case, an odd-PPQ case, a source whose end-of-track trails
+its last note, and an explicitly padded arrangement end. These fixtures are
+prepared by automated contract coverage only; no Logic import/playback/reopen
+result is claimed until a reviewer records it below.
+
 1. Record app build, source/export manifest hashes, exact macOS and Logic version.
 2. Import/open complete MIDI at song start; record adopt/retain tempo and meter.
 3. Import each role file at the same origin. Check names, role/channel separation,
