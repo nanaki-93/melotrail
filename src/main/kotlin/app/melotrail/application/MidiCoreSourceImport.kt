@@ -119,7 +119,7 @@ class MidiCoreSourceImport(
             return rejected(
                 MidiCoreSourceImportProblemCode.IMPORT_REJECTED,
                 "The MIDI source has blocking structural issues and was not imported.",
-                "Resolve the blocking findings in the import report preview and retry.",
+                "Resolve the blocking findings shown in MIDI, then retry the import.",
                 validation,
             )
         }

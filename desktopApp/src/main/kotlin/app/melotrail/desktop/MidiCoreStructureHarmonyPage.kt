@@ -713,7 +713,7 @@ private fun formatBpmInput(tempo: ProjectTempo): String {
     else String.format(Locale.ROOT, "%.2f", bpm).trimEnd('0').trimEnd('.')
 }
 
-private fun formatBpmDisplay(tempo: ProjectTempo): String = String.format(Locale.ROOT, "%.2f", tempo.beatsPerMinute).trimEnd('0').trimEnd('.')
+internal fun formatBpmDisplay(tempo: ProjectTempo): String = String.format(Locale.ROOT, "%.2f", tempo.beatsPerMinute).trimEnd('0').trimEnd('.')
 
 private fun barSummary(entered: Int, required: Int?): String = when {
     required == null -> "$entered bars entered"

@@ -107,6 +107,7 @@ class MidiCoreMusicalAuthorityTest {
         )
 
         assertEquals(MidiCoreSourceImportProblemCode.IMPORT_REJECTED, result.problem.code)
+        assertEquals("Resolve the blocking findings shown in MIDI, then retry the import.", result.problem.nextAction)
         assertTrue(requireNotNull(result.validation).findings.any { it.code == MidiFindingCode.TEMPO_MAP_UNSUPPORTED })
         assertContentEquals(before, Files.readAllBytes(created.root.resolve(MidiCoreArtifactStore.PROJECT_FILE)))
     }

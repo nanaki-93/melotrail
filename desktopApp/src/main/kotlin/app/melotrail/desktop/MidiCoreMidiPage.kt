@@ -1,6 +1,10 @@
+@file:OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+
 package app.melotrail.desktop
 
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,24 +22,65 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.DragData
+import androidx.compose.ui.draganddrop.dragData
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.melotrail.application.MidiCoreVisualEvidence
+import app.melotrail.application.MidiCoreVisualEvidenceAvailable
 import app.melotrail.midi.domain.MidiFinding
+import app.melotrail.midi.domain.MidiFindingScope
 import app.melotrail.midi.domain.MidiFindingSeverity
 import app.melotrail.midi.domain.MidiTrackRoleHint
 import app.melotrail.midi.domain.MidiTrackSummary
 import kotlinx.coroutines.launch
+import java.net.URI
+import java.nio.file.Files
 import java.nio.file.Path
 
 /** Target-only MIDI source chooser used by the MIDI page. */
 internal data class MidiCoreMidiPageActions(
     val chooseMidiSource: suspend () -> Path? = { null },
 )
+
+/** Native desktop drop adapter. Source admission still flows through the existing import intent. */
+internal class MidiCoreMidiDropTarget(
+    private val canImport: () -> Boolean,
+    private val onSource: (Path) -> Unit,
+) : DragAndDropTarget {
+    override fun onDrop(event: DragAndDropEvent): Boolean {
+        val files = runCatching { (event.dragData() as? DragData.FilesList)?.readFiles() }.getOrNull() ?: return false
+        return dropFileUris(files)
+    }
+
+    internal fun dropFileUris(files: List<String>): Boolean {
+        if (!canImport()) return false
+        val source = midiSourcePathFromDroppedFiles(files) ?: return false
+        onSource(source)
+        return true
+    }
+}
+
+/** Compose Desktop reports native file drops as file URIs. Accept exactly one existing MIDI file. */
+internal fun midiSourcePathFromDroppedFiles(files: List<String>): Path? {
+    if (files.size != 1) return null
+    val uri = runCatching { URI(files.single()) }.getOrNull() ?: return null
+    if (!uri.scheme.equals("file", ignoreCase = true)) return null
+    val source = runCatching { Path.of(uri).toAbsolutePath().normalize() }.getOrNull() ?: return null
+    val extension = source.fileName?.toString()?.substringAfterLast('.', missingDelimiterValue = "").orEmpty()
+    return source.takeIf { extension.equals("mid", ignoreCase = true) || extension.equals("midi", ignoreCase = true) }
+        ?.takeIf { Files.isRegularFile(it) }
+}
 
 internal object MidiCoreMidiPageTags {
     const val ROOT = "midi-core-midi-page"
@@ -45,7 +90,10 @@ internal object MidiCoreMidiPageTags {
     const val SOURCE_DIGEST = "midi-core-midi-source-digest"
     const val SOURCE_FORMAT = "midi-core-midi-source-format"
     const val SOURCE_DURATION = "midi-core-midi-source-duration"
+    const val NOTE_LANE = "midi-core-midi-protected-note-lane"
+    const val AUTHORITY_STATUS = "midi-core-midi-authority-status"
     const val TRACK_TABLE = "midi-core-midi-track-table"
+    const val TRACK_COUNT = "midi-core-midi-track-count"
     const val TRACK_PREFIX = "midi-core-midi-track-"
     const val CHANNEL_PREFIX = "midi-core-midi-channel-"
     const val SELECTION = "midi-core-midi-selection"
@@ -89,6 +137,8 @@ internal fun MidiCoreMidiPage(
                 Text("Open or create a MIDI Core project before importing a source.", style = MaterialTheme.typography.bodyLarge)
             }
         } else {
+            val canImport = !state.busy && state.project.sourceMidi == null && state.source.status != MidiCoreSourceStatus.IMPORTED
+            val importDroppedSource: (Path) -> Unit = { onIntent(MidiCoreWorkspaceIntent.ImportSource(it)) }
             MidiImportCard(
                 state = state,
                 onChooseSource = {
@@ -96,14 +146,20 @@ internal fun MidiCoreMidiPage(
                         actions.chooseMidiSource()?.toAbsolutePath()?.normalize()?.let { onIntent(MidiCoreWorkspaceIntent.ImportSource(it)) }
                     }
                 },
+                canImport = canImport,
+                onDropSource = importDroppedSource,
             )
             state.source.takeIf { it.status == MidiCoreSourceStatus.IMPORTED }?.let { source ->
                 MidiSourceAuditionAction(state, onIntent)
                 MidiSourceFacts(source)
+                MidiProtectedNoteLane(state.visualEvidence?.source)
                 MidiTrackTable(state)
                 MidiSelectionCard(state)
                 MidiFindingsCard(source.findings)
                 MidiExplanationCards()
+            }
+            state.source.takeIf { it.status == MidiCoreSourceStatus.REJECTED && it.findings.isNotEmpty() }?.let { source ->
+                MidiFindingsCard(source.findings)
             }
             MidiRecoveryCard(state, onIntent)
         }
@@ -111,19 +167,36 @@ internal fun MidiCoreMidiPage(
 }
 
 @Composable
-private fun MidiImportCard(state: MidiCoreWorkspaceState, onChooseSource: () -> Unit) {
-    MidiCard(MidiCoreMidiPageTags.ROOT + "-import", "Source MIDI") {
+private fun MidiImportCard(
+    state: MidiCoreWorkspaceState,
+    onChooseSource: () -> Unit,
+    canImport: Boolean,
+    onDropSource: (Path) -> Unit,
+) {
+    val dropTarget = remember(canImport, onDropSource) {
+        MidiCoreMidiDropTarget(canImport = { canImport }, onSource = onDropSource)
+    }
+    MidiCard(
+        tag = MidiCoreMidiPageTags.ROOT + "-import",
+        title = "Source MIDI",
+        modifier = Modifier.dragAndDropTarget(
+            shouldStartDragAndDrop = { event ->
+                canImport && runCatching { event.dragData() is DragData.FilesList }.getOrDefault(false)
+            },
+            target = dropTarget,
+        ),
+    ) {
         Text(
             if (state.source.status == MidiCoreSourceStatus.IMPORTED) {
                 "One immutable Standard MIDI source is bound to this project."
             } else {
-                "Choose one .mid or .midi file containing the complete song as one note-bearing melody track. Additional tracks cannot contain notes."
+                "Drop one .mid or .midi file here, or use the chooser. It must contain the complete song as one note-bearing melody track; additional tracks cannot contain notes."
             },
             style = MaterialTheme.typography.bodyLarge,
         )
         Button(
             onClick = onChooseSource,
-            enabled = !state.busy && state.source.status != MidiCoreSourceStatus.IMPORTED,
+            enabled = canImport,
             modifier = Modifier.fillMaxWidth().heightIn(min = MusicWorkspaceTokens.Interaction.MinimumHitTarget)
                 .semantics {
                     testTag = MidiCoreMidiPageTags.IMPORT
@@ -136,6 +209,7 @@ private fun MidiImportCard(state: MidiCoreWorkspaceState, onChooseSource: () -> 
 @Composable
 private fun MidiSourceFacts(source: MidiCoreSourceUiState) {
     MidiCard(MidiCoreMidiPageTags.SOURCE_FACTS, "Source facts") {
+        Text("SOURCE-DERIVED · preserved evidence", style = MaterialTheme.typography.labelLarge, color = MusicWorkspaceTokens.Information)
         FactLine(MidiCoreMidiPageTags.SOURCE_FILENAME, "Original filename", source.originalFilename ?: "Unavailable")
         FactLine(MidiCoreMidiPageTags.SOURCE_DIGEST, "Immutable SHA-256", source.sha256 ?: "Unavailable")
         FactLine(MidiCoreMidiPageTags.SOURCE_FORMAT, "Standard MIDI", "Format ${source.format ?: "?"} · PPQ ${source.ppq ?: "?"}")
@@ -148,15 +222,68 @@ private fun MidiSourceFacts(source: MidiCoreSourceUiState) {
     }
 }
 
+/** Draw only digest-checked source evidence; this compact lane has no edit or cleanup affordance. */
+@Composable
+private fun MidiProtectedNoteLane(sourceEvidence: MidiCoreVisualEvidence?) {
+    MidiCard(MidiCoreMidiPageTags.NOTE_LANE, "Protected melody note lane") {
+        when (sourceEvidence) {
+            is MidiCoreVisualEvidence.Available -> SourceNoteLane(sourceEvidence.value)
+            is MidiCoreVisualEvidence.Unavailable -> Text(
+                "${sourceEvidence.value.message} Next: ${sourceEvidence.value.nextAction}",
+                color = MusicWorkspaceTokens.Warning,
+            )
+            null -> Text("Verified source notes are preparing from the preserved MIDI artifact.", color = MusicWorkspaceTokens.TextSecondary)
+        }
+    }
+}
+
+@Composable
+private fun SourceNoteLane(evidence: MidiCoreVisualEvidenceAvailable) {
+    val notes = evidence.lanes.flatMap { it.events }
+    Text(
+        "Protected melody · ${notes.size} notes · global MIDI pitch 0–127 · source-derived",
+        style = MaterialTheme.typography.bodySmall,
+        color = MusicWorkspaceTokens.TextSecondary,
+    )
+    Canvas(
+        Modifier.fillMaxWidth().heightIn(min = 104.dp).semantics {
+            testTag = MidiCoreMidiPageTags.NOTE_LANE + "-canvas"
+            contentDescription = "Protected melody note lane with ${notes.size} verified notes on a global MIDI pitch scale"
+        },
+    ) {
+        val duration = evidence.timing.songEndTick.toFloat()
+        notes.forEach { note ->
+            val start = size.width * note.startTick / duration
+            val end = size.width * note.endTick / duration
+            val y = (127 - note.pitch) / 127f * (size.height - 8f)
+            drawRect(
+                color = MusicWorkspaceTokens.Role.Melody,
+                topLeft = Offset(start, y),
+                size = Size((end - start).coerceAtLeast(2f).coerceAtMost(size.width - start), 6f),
+            )
+        }
+    }
+}
+
 @Composable
 private fun MidiTrackTable(state: MidiCoreWorkspaceState) {
     MidiCard(MidiCoreMidiPageTags.TRACK_TABLE, "Tracks and channels") {
+        val tracks = state.source.trackSummaries
+        val channels = tracks.sumOf { it.channels.size }
+        val notes = tracks.sumOf { track -> track.channels.sumOf { it.noteCount } }
+        Text(
+            "${tracks.size} source ${if (tracks.size == 1) "track" else "tracks"} · " +
+                "$channels ${if (channels == 1) "channel" else "channels"} · " +
+                "$notes ${if (notes == 1) "note" else "notes"}",
+            modifier = Modifier.semantics { testTag = MidiCoreMidiPageTags.TRACK_COUNT },
+            style = MaterialTheme.typography.labelLarge,
+        )
         Text(
             "The only note-bearing track is protected automatically. Additional non-note tracks remain immutable source evidence.",
             style = MaterialTheme.typography.bodyMedium,
             color = MusicWorkspaceTokens.TextSecondary,
         )
-        state.source.trackSummaries.forEach { track ->
+        tracks.forEach { track ->
             MidiTrackRow(track, state)
         }
     }
@@ -239,6 +366,15 @@ private fun MidiSelectionCard(state: MidiCoreWorkspaceState) {
             style = MaterialTheme.typography.bodySmall,
             color = MusicWorkspaceTokens.TextSecondary,
         )
+        val authority = state.authority.confirmed
+        Text(
+            authority?.let {
+                "CONFIRMED AUTHORITY · ${formatBpmDisplay(it.tempo)} BPM · ${it.key.spelling.symbol} ${it.key.mode.displayName} · ${it.meter.numerator}/${it.meter.denominator}"
+            } ?: "AUTHORITY NOT CONFIRMED · imported MIDI facts and suggestions do not change project settings.",
+            modifier = Modifier.semantics { testTag = MidiCoreMidiPageTags.AUTHORITY_STATUS },
+            style = MaterialTheme.typography.bodySmall,
+            color = if (authority == null) MusicWorkspaceTokens.Warning else MusicWorkspaceTokens.Success,
+        )
     }
 }
 
@@ -273,13 +409,15 @@ private fun FindingGroup(severity: MidiFindingSeverity, findings: List<MidiFindi
     ) {
         Text(severityLabel(severity), style = MaterialTheme.typography.titleMedium, color = severityColor(severity))
         findings.forEachIndexed { index, finding ->
+            val location = midiFindingLocation(finding)
             Column(
                 Modifier.fillMaxWidth().semantics {
                     testTag = "$tag-$index"
-                    contentDescription = "${finding.message} Action: ${finding.action}"
+                    contentDescription = "$location. ${finding.message} Action: ${finding.action}"
                 },
                 verticalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Xs),
             ) {
+                Text(location, style = MaterialTheme.typography.labelLarge, color = severityColor(severity))
                 Text(finding.message, style = MaterialTheme.typography.bodyMedium)
                 Text("Action: ${finding.action}", style = MaterialTheme.typography.bodySmall, color = MusicWorkspaceTokens.TextSecondary)
             }
@@ -356,9 +494,14 @@ private fun FactLine(tag: String, label: String, value: String) {
 }
 
 @Composable
-private fun MidiCard(tag: String, title: String, content: @Composable () -> Unit) {
+private fun MidiCard(
+    tag: String,
+    title: String,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
     Card(
-        Modifier.fillMaxWidth().semantics { testTag = tag },
+        modifier.fillMaxWidth().semantics { testTag = tag },
         colors = CardDefaults.cardColors(containerColor = MusicWorkspaceTokens.Surface),
     ) {
         Column(
@@ -382,3 +525,21 @@ private fun severityColor(severity: MidiFindingSeverity) = when (severity) {
     MidiFindingSeverity.AWAITING_AUTHORITY -> MusicWorkspaceTokens.Warning
     MidiFindingSeverity.ADVISORY -> MusicWorkspaceTokens.Information
 }
+
+/** Human-facing scope plus every precise location supplied by the import validator. */
+private fun midiFindingLocation(finding: MidiFinding): String = buildList {
+    add(
+        "Scope: " + when (finding.scope) {
+            MidiFindingScope.SOURCE -> "Source"
+            MidiFindingScope.TEMPO -> "Tempo"
+            MidiFindingScope.METER -> "Meter"
+            MidiFindingScope.MELODY_SELECTION -> "Melody selection"
+            MidiFindingScope.TRACK -> "Track"
+            MidiFindingScope.CHANNEL -> "Channel"
+            MidiFindingScope.EVENT -> "Event"
+        },
+    )
+    finding.trackIndex?.let { add("Track $it") }
+    finding.channel?.let { add("MIDI channel ${it + 1}") }
+    finding.tick?.let { add("Tick $it") }
+}.joinToString(" · ")

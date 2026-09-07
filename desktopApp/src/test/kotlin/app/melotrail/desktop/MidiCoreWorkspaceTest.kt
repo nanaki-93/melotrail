@@ -21,6 +21,7 @@ import app.melotrail.application.MidiCoreAuthoritativeHarmonyResult
 import app.melotrail.application.MidiCoreCandidateProblem
 import app.melotrail.application.MidiCoreProjectProblem
 import app.melotrail.application.MidiCoreSourceImportProblem
+import app.melotrail.application.MidiCoreSourceImportProblemCode
 import app.melotrail.application.MidiCoreAuthorityProblem
 import app.melotrail.application.MidiCoreStructureTimelineProblem
 import app.melotrail.application.MidiCoreAuthoritativeHarmonyProblem
@@ -52,6 +53,11 @@ import app.melotrail.audition.MidiAuditionScope
 import app.melotrail.audition.MidiAuditionState
 import app.melotrail.arrangement.core.MidiCoreInvalidationPlanner
 import app.melotrail.midi.domain.MidiExportRole
+import app.melotrail.midi.domain.MidiFinding
+import app.melotrail.midi.domain.MidiFindingCode
+import app.melotrail.midi.domain.MidiFindingScope
+import app.melotrail.midi.domain.MidiFindingSeverity
+import app.melotrail.midi.domain.MidiImportValidationResult
 import app.melotrail.project.MidiCoreProject
 import app.melotrail.project.CandidateRole
 import app.melotrail.project.ProjectAuthority
@@ -496,6 +502,98 @@ class MidiCoreWorkspaceTest {
     }
 
     @Test
+    fun `missing last project explains recovery without manufacturing a project location`() = runTest {
+        val viewModel = MidiCoreWorkspaceViewModel(
+            FakeMidiCoreWorkspaceUseCases(),
+            MemoryMidiCorePreferences(),
+            NoOpDesktopOperationLogger,
+            testDispatchers(testScheduler),
+        )
+
+        viewModel.accept(MidiCoreWorkspaceIntent.OpenLastProject)
+
+        assertEquals(MidiCoreWorkspaceOperationPhase.FAILED, viewModel.state.value.operation.phase)
+        assertEquals(MidiCoreWorkspaceBlockerCode.PROJECT_REQUIRED, viewModel.state.value.blockers.single().code)
+        assertEquals(null, viewModel.state.value.blockers.single().action)
+        assertEquals("Create a project or choose a project folder.", viewModel.state.value.blockers.single().nextAction)
+        viewModel.close()
+    }
+
+    @Test
+    fun `rejected import keeps scoped validation in the workspace without changing the project`() = runTest {
+        val fake = FakeMidiCoreWorkspaceUseCases()
+        val finding = MidiFinding(
+            MidiFindingCode.TEMPO_MAP_UNSUPPORTED,
+            MidiFindingSeverity.BLOCKING,
+            MidiFindingScope.TEMPO,
+            "Tempo changes are not supported in MIDI Core V1.",
+            "Use one fixed tempo before importing.",
+        )
+        val validation = MidiImportValidationResult(listOf(finding))
+        fake.sourceImportResult = MidiCoreSourceImportResult.Rejected(
+            MidiCoreSourceImportProblem(
+                MidiCoreSourceImportProblemCode.IMPORT_REJECTED,
+                "The MIDI source has blocking structural issues and was not imported.",
+                "Resolve the blocking findings shown in MIDI, then retry the import.",
+            ),
+            validation,
+        )
+        val viewModel = MidiCoreWorkspaceViewModel(
+            fake,
+            MemoryMidiCorePreferences(),
+            NoOpDesktopOperationLogger,
+            testDispatchers(testScheduler),
+        )
+        viewModel.accept(MidiCoreWorkspaceIntent.OpenProject(fake.session.root))
+        advanceUntilIdle()
+        val projectBeforeImport = viewModel.state.value.project
+        val intent = MidiCoreWorkspaceIntent.ImportSource(Path.of("tempo-map.mid"))
+
+        viewModel.accept(intent)
+        advanceUntilIdle()
+
+        assertEquals(projectBeforeImport, viewModel.state.value.project)
+        assertEquals(MidiCoreSourceStatus.REJECTED, viewModel.state.value.source.status)
+        assertEquals(validation, viewModel.state.value.source.validation)
+        assertEquals(listOf(finding), viewModel.state.value.source.findings)
+        assertFalse(viewModel.state.value.source.reportAvailable)
+        assertEquals(intent, viewModel.state.value.operation.retry)
+        assertEquals("Resolve the blocking findings shown in MIDI, then retry the import.", viewModel.state.value.blockers.first().nextAction)
+        viewModel.close()
+    }
+
+    @Test
+    fun `rejected replacement attempt does not obscure the accepted source`() = runTest {
+        val fake = FakeMidiCoreWorkspaceUseCases()
+        fake.seedPersistedSong()
+        fake.sourceImportResult = MidiCoreSourceImportResult.Rejected(
+            MidiCoreSourceImportProblem(
+                MidiCoreSourceImportProblemCode.SOURCE_ALREADY_IMPORTED,
+                "This project already has an immutable source MIDI file.",
+                "Create a new project to import a different source MIDI file.",
+            ),
+        )
+        val viewModel = MidiCoreWorkspaceViewModel(
+            fake,
+            MemoryMidiCorePreferences(),
+            NoOpDesktopOperationLogger,
+            testDispatchers(testScheduler),
+        )
+        viewModel.accept(MidiCoreWorkspaceIntent.OpenProject(fake.persistedSession().root))
+        advanceUntilIdle()
+        val acceptedSource = viewModel.state.value.source
+        val projectBeforeAttempt = viewModel.state.value.project
+
+        viewModel.accept(MidiCoreWorkspaceIntent.ImportSource(Path.of("replacement.mid")))
+        advanceUntilIdle()
+
+        assertEquals(projectBeforeAttempt, viewModel.state.value.project)
+        assertEquals(acceptedSource, viewModel.state.value.source)
+        assertEquals(MidiCoreSourceStatus.IMPORTED, viewModel.state.value.source.status)
+        viewModel.close()
+    }
+
+    @Test
     fun `stale completion is rejected when the admitted project revision changes`() = runTest {
         val fake = FakeMidiCoreWorkspaceUseCases()
         val pending = CompletableDeferred<MidiCoreCandidateGenerationResult>()
@@ -553,6 +651,7 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
                 "not used",
             ),
         )
+    var sourceImportResult: MidiCoreSourceImportResult? = null
     val openResults = ArrayDeque<MidiCoreProjectLifecycleResult>()
     var pendingGeneration: CompletableDeferred<MidiCoreCandidateGenerationResult>? = null
     val draftRequests = mutableListOf<app.melotrail.application.GenerateMidiCoreArrangementDraft>()
@@ -596,7 +695,8 @@ private class FakeMidiCoreWorkspaceUseCases : MidiCoreWorkspaceUseCases {
         return MidiCoreProjectCloseResult.Closed(session.root, session.project.id)
     }
 
-    override fun importSource(request: ImportMidiCoreSource): MidiCoreSourceImportResult = error("not used")
+    override fun importSource(request: ImportMidiCoreSource): MidiCoreSourceImportResult =
+        requireNotNull(sourceImportResult) { "Source import result was not configured" }
 
     override fun prepareSourceAudition(request: app.melotrail.application.PrepareMidiCoreSourceAudition): app.melotrail.application.MidiCoreSourceAuditionResult = sourceAuditionResult
 

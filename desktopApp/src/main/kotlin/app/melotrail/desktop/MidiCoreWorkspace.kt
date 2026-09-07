@@ -663,7 +663,6 @@ class MidiCoreWorkspaceViewModel(
                 MidiCoreWorkspaceBlockerCode.PROJECT_REQUIRED,
                 "No previously opened MIDI Core project is available.",
                 "Create a project or choose a project folder.",
-                action = MidiCoreWorkspaceIntent.CreateProject(Path.of("."), "Untitled"),
             ))
         } else {
             open(root, MidiCoreWorkspaceIntent.OpenLastProject)
@@ -702,7 +701,9 @@ class MidiCoreWorkspaceViewModel(
                     clearAuditionForProjectTransition()
                     hydrateSourceValidation(result.validation)
                 }
-                is MidiCoreSourceImportResult.Rejected -> failure(sourceBlocker(result.problem, result.validation), intent)
+                is MidiCoreSourceImportResult.Rejected -> failure(sourceBlocker(result.problem, result.validation), intent) {
+                    hydrateRejectedSourceValidation(result.validation)
+                }
             }
         }
     }
@@ -1738,6 +1739,19 @@ class MidiCoreWorkspaceViewModel(
 
     private fun hydrateSourceValidation(validation: MidiImportValidationResult) {
         _state.value = _state.value.copy(source = _state.value.source.copy(validation = validation, findings = validation.findings, reportAvailable = true))
+    }
+
+    /** Keep rejected inspection evidence in memory without obscuring an already-bound immutable source. */
+    private fun hydrateRejectedSourceValidation(validation: MidiImportValidationResult?) {
+        if (_state.value.project?.sourceMidi != null) return
+        _state.value = _state.value.copy(
+            source = MidiCoreSourceUiState(
+                status = MidiCoreSourceStatus.REJECTED,
+                validation = validation,
+                findings = validation?.findings.orEmpty(),
+                reportAvailable = false,
+            ),
+        )
     }
 
     private fun authorityDraft(authority: ProjectAuthority?): MidiCoreAuthorityDraft = authority?.let { MidiCoreAuthorityDraft(it.key, it.tempo, it.meter) } ?: MidiCoreAuthorityDraft.defaults()

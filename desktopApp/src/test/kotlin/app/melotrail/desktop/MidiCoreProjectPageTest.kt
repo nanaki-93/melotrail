@@ -69,8 +69,10 @@ class MidiCoreProjectPageTest {
         }
 
         onNodeWithTag(MidiCoreProjectPageTags.SUMMARY).assertExists()
+        onNodeWithTag(MidiCoreProjectPageTags.METRICS).assertExists()
         onNodeWithTag(MidiCoreProjectPageTags.LOCATION).assertExists()
         onNodeWithText("Project revision 12").assertExists()
+        onNodeWithText("Not confirmed — imported source suggestions are not authority").assertExists()
         onNodeWithText("Go to MIDI").performScrollTo().performClick()
         onNodeWithContentDescription("Open MIDI. ${MidiCoreWorkspaceDestination.MIDI.summary} Selected.").assertExists()
         onNodeWithTag(MidiCoreWorkspaceShellTags.destination(MidiCoreWorkspaceDestination.PROJECT)).performClick()
@@ -115,6 +117,27 @@ class MidiCoreProjectPageTest {
         }
         assertTrue(source.contains("MIDI Core project"))
         assertFalse(source.contains("AudioPreparation"))
+    }
+
+    @Test
+    fun `project page calls the single persisted reopen action its actual name`() = runComposeUiTest {
+        setContent { MelotrailTheme { MidiCoreWorkspaceShell(state = MidiCoreWorkspaceState()) } }
+
+        onNodeWithText("Open last project").assertExists()
+    }
+
+    @Test
+    fun `long persisted project name remains contained by the factual project card`() = runComposeUiTest {
+        val longName = "M".repeat(120)
+        val state = currentProjectState().copy(
+            project = requireNotNull(currentProjectState().project).copy(
+                metadata = ProjectMetadata(longName, "2026-08-28T00:00:00Z"),
+            ),
+        )
+        setContent { MelotrailTheme { MidiCoreWorkspaceShell(state = state) } }
+
+        onNodeWithTag(MidiCoreProjectPageTags.CURRENT_NAME).assertExists()
+        onNodeWithContentDescription("Current project name $longName").assertExists()
     }
 
     private fun currentProjectState(): MidiCoreWorkspaceState = MidiCoreWorkspaceState(

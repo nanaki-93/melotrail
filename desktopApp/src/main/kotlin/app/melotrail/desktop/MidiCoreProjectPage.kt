@@ -34,6 +34,7 @@ internal data class MidiCoreProjectPageActions(
 internal object MidiCoreProjectPageTags {
     const val ROOT = "midi-core-project-page"
     const val NAME = "midi-core-project-name"
+    const val CURRENT_NAME = "midi-core-project-current-name"
     const val LOCATION = "midi-core-project-location"
     const val CHOOSE_NEW_LOCATION = "midi-core-project-choose-new-location"
     const val CREATE = "midi-core-project-create"
@@ -41,6 +42,7 @@ internal object MidiCoreProjectPageTags {
     const val OPEN_RECENT = "midi-core-project-open-recent"
     const val RELOAD = "midi-core-project-reload"
     const val CLOSE = "midi-core-project-close"
+    const val METRICS = "midi-core-project-facts"
     const val SUMMARY = "midi-core-project-readiness"
     const val NEXT_STEP = "midi-core-project-next-step"
     const val RECOVERY = "midi-core-project-recovery"
@@ -93,6 +95,7 @@ internal fun MidiCoreProjectPage(
             )
         } else {
             ProjectCurrentCard(state, onIntent)
+            ProjectFactsCard(state)
             ProjectReadinessCard(state)
             ProjectNextStepCard(state, onNavigate)
         }
@@ -118,7 +121,7 @@ private fun ProjectCreationCard(
     busy: Boolean,
 ) {
     WorkstationPanel(title = "Start a MIDI Core project", modifier = Modifier.semantics { testTag = MidiCoreProjectPageTags.ROOT }) {
-        Text("Create a project or reopen a saved one.", style = MaterialTheme.typography.bodyLarge)
+        Text("Create a project or reopen one saved project.", style = MaterialTheme.typography.bodyLarge)
         WorkstationCompactTextField(
             value = projectName,
             onValueChange = onProjectNameChanged,
@@ -163,7 +166,7 @@ private fun ProjectCreationCard(
                     .semantics { testTag = MidiCoreProjectPageTags.OPEN },
             )
             WorkstationSecondaryButton(
-                label = "Open recent",
+                label = "Open last project",
                 onClick = onOpenRecent,
                 enabled = !busy,
                 disabledReason = "A project action is in progress",
@@ -178,7 +181,16 @@ private fun ProjectCreationCard(
 private fun ProjectCurrentCard(state: MidiCoreWorkspaceState, onIntent: (MidiCoreWorkspaceIntent) -> Unit) {
     val project = state.project ?: return
     WorkstationPanel(title = "Current MIDI Core project", modifier = Modifier.semantics { testTag = MidiCoreProjectPageTags.ROOT }) {
-        Text(project.metadata.name, style = MaterialTheme.typography.headlineSmall)
+        Text(
+            project.metadata.name,
+            modifier = Modifier.fillMaxWidth().semantics {
+                testTag = MidiCoreProjectPageTags.CURRENT_NAME
+                contentDescription = "Current project name ${project.metadata.name}"
+            },
+            style = MaterialTheme.typography.headlineSmall,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
         Text(
             state.projectRoot?.toString() ?: "Project location unavailable.",
             Modifier.fillMaxWidth().semantics {
@@ -209,6 +221,37 @@ private fun ProjectCurrentCard(state: MidiCoreWorkspaceState, onIntent: (MidiCor
                     .semantics { testTag = MidiCoreProjectPageTags.CLOSE },
             )
         }
+    }
+}
+
+/** Persisted facts only: source values and confirmed authority never share an unlabeled value. */
+@Composable
+private fun ProjectFactsCard(state: MidiCoreWorkspaceState) {
+    val project = state.project ?: return
+    val authority = project.authority
+    val progress = midiCoreArrangementProgress(project)
+    WorkstationPanel(title = "Project facts", modifier = Modifier.semantics { testTag = MidiCoreProjectPageTags.METRICS }) {
+        ProjectFact("Source-derived end", project.sourceMidi?.sourceEndTick?.let { "$it ticks" } ?: "—")
+        ProjectFact(
+            "Confirmed authority",
+            authority?.let {
+                "${formatBpmDisplay(it.tempo)} BPM · ${it.key.spelling.symbol} ${it.key.mode.displayName} · ${it.meter.numerator}/${it.meter.denominator}"
+            } ?: "Not confirmed — imported source suggestions are not authority",
+        )
+        ProjectFact("Section occurrences", authority?.occurrences?.size?.toString() ?: "—")
+        ProjectFact(
+            "Arrangement acceptance",
+            if (progress.total == 0) "— until sections are confirmed" else "${progress.accepted} of ${progress.total} accompaniment roles accepted",
+        )
+        ProjectFact("Candidate evidence", project.candidates.size.toString())
+    }
+}
+
+@Composable
+private fun ProjectFact(label: String, value: String) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MusicWorkspaceTokens.Spacing.Sm)) {
+        Text(label, Modifier.weight(0.42f), style = MaterialTheme.typography.labelLarge, color = MusicWorkspaceTokens.TextSecondary)
+        Text(value, Modifier.weight(0.58f), style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 

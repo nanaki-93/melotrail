@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -34,6 +35,7 @@ import app.melotrail.audition.MidiAuditionPort
 import app.melotrail.audition.MidiAuditionResult
 import app.melotrail.audition.MidiAuditionState
 import app.melotrail.midi.domain.MidiExportRole
+import app.melotrail.midi.domain.MidiFindingCode
 import app.melotrail.project.AuthoritativeChordEvent
 import app.melotrail.project.CandidateRole
 import app.melotrail.project.ProjectSectionDefinition
@@ -68,6 +70,41 @@ class MidiCoreFocusedWorkflowTest {
     @Test
     fun `compact six target pages complete a real MIDI Core workflow and reopen an immutable export`() =
         runFocusedWorkflow(Size(720f, 900f), "compact")
+
+    @Test
+    fun `real rejected tempo map reaches scoped MIDI findings without binding source artifacts`() =
+        runSkikoComposeUiTest(size = Size(720f, 900f)) {
+            val temporaryRoot = Files.createTempDirectory("melotrail-u03-rejected-import-")
+            val projectRoot = temporaryRoot.resolve("project")
+            val source = writeTempoMapSourceMidi(temporaryRoot.resolve("input/tempo-map.mid"))
+            val workspace = newWorkspace(MidiCoreArtifactStore(), WorkflowFakeMidiAudition(), WorkflowPreferences())
+
+            try {
+                setContent { MelotrailTheme { MidiCoreWorkspaceShell(workspace = workspace) } }
+                workspace.accept(MidiCoreWorkspaceIntent.CreateProject(projectRoot, "Rejected import evidence"))
+                awaitWorkspaceCompletion(workspace, "create project")
+                workspace.accept(MidiCoreWorkspaceIntent.ImportSource(source))
+                awaitWorkspaceCompletion(workspace, "reject tempo-map source")
+
+                assertEquals(MidiCoreWorkspaceOperationPhase.FAILED, workspace.state.value.operation.phase)
+                assertEquals(MidiCoreSourceStatus.REJECTED, workspace.state.value.source.status)
+                assertTrue(workspace.state.value.source.findings.any { it.code == MidiFindingCode.TEMPO_MAP_UNSUPPORTED })
+                assertEquals(null, workspace.state.value.project?.sourceMidi)
+                assertTrue(Files.notExists(projectRoot.resolve(MidiCoreArtifactStore.SOURCE_MIDI.value)))
+                assertTrue(Files.notExists(projectRoot.resolve(MidiCoreArtifactStore.IMPORT_REPORT.value)))
+
+                onNodeWithTag(MidiCoreWorkspaceShellTags.destination(MidiCoreWorkspaceDestination.MIDI)).performScrollTo().performClick()
+                waitForIdle()
+                onNodeWithTag(MidiCoreMidiPageTags.FINDINGS).performScrollTo().assertIsDisplayed()
+                onNodeWithText("Scope: Tempo").assertIsDisplayed()
+                onNodeWithText("Tempo changes are not supported in MIDI Core V1.").assertIsDisplayed()
+                onNodeWithText("Next: Resolve the blocking findings shown in MIDI, then retry the import.").performScrollTo().assertIsDisplayed()
+                onNodeWithTag(MidiCoreMidiPageTags.IMPORT).assertIsEnabled()
+            } finally {
+                workspace.close()
+                deleteTree(temporaryRoot)
+            }
+        }
 
     private fun runFocusedWorkflow(size: Size, fixtureSet: String) = runSkikoComposeUiTest(size = size) {
         val temporaryRoot = Files.createTempDirectory("melotrail-mc040-")
@@ -241,6 +278,32 @@ class MidiCoreFocusedWorkflowTest {
         MidiSystem.write(sequence, 1, path.toFile())
         return path
     }
+
+    private fun writeTempoMapSourceMidi(path: Path): Path {
+        Files.createDirectories(path.parent)
+        val sequence = Sequence(Sequence.PPQ, 480)
+        val track = sequence.createTrack()
+        fun tempo(microsecondsPerQuarter: Int): ByteArray = byteArrayOf(
+            (microsecondsPerQuarter ushr 16).toByte(),
+            (microsecondsPerQuarter ushr 8).toByte(),
+            microsecondsPerQuarter.toByte(),
+        )
+        track.add(MidiEvent(MetaMessage(0x51, tempo(500_000), 3), 0L))
+        track.add(MidiEvent(MetaMessage(0x51, tempo(600_000), 3), 480L))
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_ON, 0, 60, 96), 0L))
+        track.add(MidiEvent(ShortMessage(ShortMessage.NOTE_OFF, 0, 60, 0), 960L))
+        MidiSystem.write(sequence, 1, path.toFile())
+        return path
+    }
+}
+
+private fun awaitWorkspaceCompletion(workspace: MidiCoreWorkspaceViewModel, action: String) {
+    var attempts = 0
+    while (workspace.state.value.operation.active && attempts < 3_000) {
+        Thread.sleep(10)
+        attempts += 1
+    }
+    assertTrue(!workspace.state.value.operation.active, "$action did not finish in time")
 }
 
 private fun newWorkspace(
