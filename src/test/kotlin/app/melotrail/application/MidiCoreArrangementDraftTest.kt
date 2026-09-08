@@ -24,6 +24,8 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
@@ -196,7 +198,94 @@ class MidiCoreArrangementDraftTest {
         assertTrue(retried.session.project.candidates.any { it.id == retained.id && it.generatorVersion == "midi-core-style-v1" })
         val currentChord = retried.session.project.candidates.single { it.id == retried.draft.candidateReferences.first().candidateId }
         assertTrue(currentChord.id != retained.id)
-        assertEquals("midi-core-style-v3", currentChord.generatorVersion)
+        assertEquals("midi-core-style-v4", currentChord.generatorVersion)
+    }
+
+    @Test
+    fun `multi-occurrence retry regenerates mismatched piano boundary and completed draft use rejects it`() = runBlocking {
+        val store = MidiCoreArtifactStore()
+        val cancellation = AtomicBoolean(false)
+        val cancelled = assertIs<MidiCoreArrangementDraftGenerationResult.Cancelled>(
+            MidiCoreArrangementDraftGeneration(artifacts = store).generate(
+                GenerateMidiCoreArrangementDraft(
+                    session = multiOccurrenceSession(store),
+                    styleId = "steady-road",
+                    rootSeed = 41L,
+                    draftId = "draft-boundary-retry",
+                    cancellation = MidiCoreGenerationCancellation { cancellation.get() },
+                    onProgress = { progress -> if (progress.completedCount == 2) cancellation.set(true) },
+                ),
+            ),
+        )
+        assertEquals(2, cancelled.progress.completedCount)
+        val reopened = store.openProject(cancelled.session.root)
+        val retained = reopened.candidates.single { it.role == CandidateRole.CHORDS && it.occurrenceId == "part-2" }
+        val correctBoundary = assertNotNull(retained.boundarySummarySha256)
+        assertEquals(reopened, MidiCoreProjectSchema.decode(MidiCoreProjectSchema.encode(reopened)))
+        val retainedPath = cancelled.session.root.resolve(retained.midi.path.value)
+        val retainedBytes = Files.readAllBytes(retainedPath)
+        val mismatch = if (correctBoundary == "f".repeat(64)) "e".repeat(64) else "f".repeat(64)
+        val mismatchedProject = reopened.copy(
+            candidates = reopened.candidates.map { candidate ->
+                if (candidate.id == retained.id) candidate.copy(boundarySummarySha256 = mismatch) else candidate
+            },
+            revision = reopened.revision + 1L,
+        )
+        store.saveProject(cancelled.session.root, mismatchedProject)
+        val retrySession = MidiCoreProjectSession(cancelled.session.root, store.openProject(cancelled.session.root))
+
+        val retryResult = MidiCoreArrangementDraftGeneration(artifacts = store).generate(
+            GenerateMidiCoreArrangementDraft(retrySession, "steady-road", 41L, draftId = cancelled.draftId),
+        )
+        val retried = assertIs<MidiCoreArrangementDraftGenerationResult.Completed>(
+            retryResult,
+            (retryResult as? MidiCoreArrangementDraftGenerationResult.Incomplete)?.problem.toString(),
+        )
+        val replacementId = retried.draft.candidateReferences.single {
+            it.role == CandidateRole.CHORDS && it.occurrenceId == "part-2"
+        }.candidateId
+        val replacement = retried.session.project.candidates.single { it.id == replacementId }
+
+        assertNotEquals(retained.id, replacement.id)
+        assertEquals(correctBoundary, replacement.boundarySummarySha256)
+        assertTrue(retried.session.project.candidates.any { it.id == retained.id && it.boundarySummarySha256 == mismatch })
+        assertContentEquals(retainedBytes, Files.readAllBytes(retainedPath))
+        assertEquals(retried.session.project, store.openProject(retried.session.root))
+
+        val missingBoundaryProject = retried.session.project.copy(
+            candidates = retried.session.project.candidates.map { candidate ->
+                if (candidate.id == replacement.id) candidate.copy(boundarySummarySha256 = null) else candidate
+            },
+        )
+        assertEquals(
+            MidiCoreArrangementDraftProblemCode.DRAFT_STALE,
+            validateDraft(retried.session.root, missingBoundaryProject, retried.draft, store)?.code,
+        )
+
+        val mismatchedDraftProject = retried.session.project.copy(
+            candidates = retried.session.project.candidates.map { candidate ->
+                if (candidate.id == replacement.id) candidate.copy(boundarySummarySha256 = mismatch) else candidate
+            },
+            revision = retried.session.project.revision + 1L,
+        )
+        store.saveProject(retried.session.root, mismatchedDraftProject)
+        val mismatchedSession = MidiCoreProjectSession(retried.session.root, store.openProject(retried.session.root))
+        val assembly = assertIs<MidiCoreArrangementDraftAssemblyResult.Rejected>(
+            MidiCoreAcceptedSongAssembly(artifacts = store).assembleDraft(
+                AssembleMidiCoreArrangementDraft(mismatchedSession, retried.draft.id),
+            ),
+        )
+        val beforeUse = Files.readAllBytes(mismatchedSession.root.resolve(MidiCoreArtifactStore.PROJECT_FILE))
+        val use = assertIs<MidiCoreArrangementDraftAcceptanceResult.Rejected>(
+            MidiCoreArrangementDraftAcceptance(artifacts = store).use(
+                UseMidiCoreArrangementDraft(mismatchedSession, retried.draft.id),
+            ),
+        )
+
+        assertEquals(MidiCoreSongAssemblyProblemCode.DRAFT_STALE, assembly.problem.code)
+        assertEquals(MidiCoreArrangementDraftProblemCode.DRAFT_STALE, use.problem.code)
+        assertTrue(store.openProject(mismatchedSession.root).acceptances.isEmpty())
+        assertContentEquals(beforeUse, Files.readAllBytes(mismatchedSession.root.resolve(MidiCoreArtifactStore.PROJECT_FILE)))
     }
 
     @Test
@@ -301,6 +390,55 @@ class MidiCoreArrangementDraftTest {
         return assertIs<MidiCoreAuthoritativeHarmonyResult.Updated>(
             MidiCoreAuthoritativeHarmony(store).replace(
                 ReplaceMidiCoreHarmony(structured, listOf(AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 5760))),
+            ),
+        ).session
+    }
+
+    private fun multiOccurrenceSession(store: MidiCoreArtifactStore): MidiCoreProjectSession {
+        val created = assertIs<MidiCoreProjectLifecycleResult.Opened>(
+            MidiCoreProjectLifecycle(store, idFactory = { "draft-multi-project" }).create(
+                CreateMidiCoreProject(root.resolve("multi-project"), "Multi Draft Test", "draft-multi-project"),
+            ),
+        ).session
+        val source = OwnedMidiFixtures.writeAll(root.resolve("multi-fixtures")).single {
+            it.fileName.toString() == "whole-song-three-bars.mid"
+        }
+        val imported = assertIs<MidiCoreSourceImportResult.Imported>(
+            MidiCoreSourceImport(store).import(ImportMidiCoreSource(created, source)),
+        ).session
+        val authority = assertIs<MidiCoreAuthorityResult.Confirmed>(
+            MidiCoreMusicalAuthority(store).confirm(
+                ConfirmMidiCoreAuthority(
+                    imported,
+                    ProjectKey(ProjectKeySpelling.C, ProjectScaleMode.MAJOR),
+                    ProjectTempo(500_000),
+                    ProjectMeter(4, 2),
+                ),
+            ),
+        ).session
+        val structured = assertIs<MidiCoreStructureTimelineResult.Updated>(
+            MidiCoreStructureTimeline(store).replace(
+                ReplaceMidiCoreStructure(
+                    authority,
+                    listOf(ProjectSectionDefinition("part", "Part")),
+                    listOf(
+                        MidiCoreBarOccurrencePlacement("part-1", "part", "Part 1", 1),
+                        MidiCoreBarOccurrencePlacement("part-2", "part", "Part 2", 1),
+                        MidiCoreBarOccurrencePlacement("part-3", "part", "Part 3", 1),
+                    ),
+                ),
+            ),
+        ).session
+        return assertIs<MidiCoreAuthoritativeHarmonyResult.Updated>(
+            MidiCoreAuthoritativeHarmony(store).replace(
+                ReplaceMidiCoreHarmony(
+                    structured,
+                    listOf(
+                        AuthoritativeChordEvent("chord-1", "part-1", "C", 0, 1_920),
+                        AuthoritativeChordEvent("chord-2", "part-2", "F", 1_920, 3_840),
+                        AuthoritativeChordEvent("chord-3", "part-3", "G", 3_840, 5_760),
+                    ),
+                ),
             ),
         ).session
     }

@@ -136,6 +136,33 @@ class MidiCoreGenerationContextTest {
     }
 
     @Test
+    fun `explicit piano boundary changes the chords context fingerprint without reading accepted state`() {
+        val sourceProject = project()
+        val snapshot = MidiCoreAuthoritySnapshot.from(sourceProject)
+        val profile = MidiCorePerformanceProfileCatalog.requireForRole(CandidateRole.CHORDS, "chords.sustained")
+        val plain = MidiCoreGenerationContext.forOccurrence(
+            snapshot,
+            CandidateRole.CHORDS,
+            "chorus-1",
+            profile,
+            MidiCoreChordRhythmPatternId.SUSTAINED.id,
+            MidiCoreGeneratorInput("midi-core", "chords-v4", MidiCoreChordRhythmPatternId.SUSTAINED.id, 7),
+        )
+        val boundary = MidiCorePianoVoicingBoundarySummary(
+            "verse-1",
+            1_920,
+            listOf(48, 52, 55),
+            snapshot.authorityHash,
+        )
+        val continued = plain.copy(pianoVoicingBoundary = boundary)
+
+        assertNotEquals(plain.contextSha256, continued.contextSha256)
+        assertNotEquals(plain.generationFingerprint.sha256, continued.generationFingerprint.sha256)
+        assertEquals(boundary.sha256, continued.generationFingerprint.boundarySummarySha256)
+        assertEquals(emptyList(), continued.acceptedDependencies)
+    }
+
+    @Test
     fun `context enforces role profile pattern and fill boundaries`() {
         val snapshot = MidiCoreAuthoritySnapshot.from(project())
 

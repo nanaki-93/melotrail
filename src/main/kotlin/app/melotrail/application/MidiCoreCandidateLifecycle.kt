@@ -72,7 +72,9 @@ class MidiCoreCandidateLifecycle(
             request.acceptedDependencyIds.any { !SAFE_ID.matches(it) } ||
             request.draftDependencyIds != request.draftDependencyIds.distinct() ||
             request.draftDependencyIds.any { !SAFE_ID.matches(it) } ||
-            request.draftDependencyIds.intersect(request.acceptedDependencyIds.toSet()).isNotEmpty()) {
+            request.draftDependencyIds.intersect(request.acceptedDependencyIds.toSet()).isNotEmpty() ||
+            (request.boundarySummarySha256 != null &&
+                (request.role != CandidateRole.CHORDS || !HASH.matches(request.boundarySummarySha256)))) {
             return rejected(MidiCoreCandidateProblemCode.INVALID_CANDIDATE, "Candidate identity or generator metadata is invalid.", "Correct the role, occurrence, profile, pattern, version, and dependency metadata and retry.")
         }
         if (!Files.isRegularFile(request.midi, LinkOption.NOFOLLOW_LINKS)) {
@@ -160,6 +162,7 @@ class MidiCoreCandidateLifecycle(
                 patternId = request.patternId,
                 draftDependencyIds = request.draftDependencyIds,
                 acceptedDependencyIds = request.acceptedDependencyIds,
+                boundarySummarySha256 = request.boundarySummarySha256,
             )
             if (request.beforeProjectSave?.invoke(candidate) == false) {
                 return rejected(
@@ -637,6 +640,8 @@ data class PublishMidiCoreCandidate(
     /** Current, validated upstream draft scopes consumed before they are accepted. */
     val draftDependencyIds: List<String> = emptyList(),
     val acceptedDependencyIds: List<String> = emptyList(),
+    /** Digest of the explicit immutable preceding-piano boundary actually consumed by generation. */
+    val boundarySummarySha256: String? = null,
     /** Optional checkpoint invoked after immutable files exist and before project-state append. */
     val beforeProjectSave: ((MidiCoreCandidate) -> Boolean)? = null,
 )

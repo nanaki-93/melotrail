@@ -9,6 +9,8 @@ data class MidiCoreChordGenerationResult(
     val context: MidiCoreGenerationContext,
     val candidate: MidiCoreRoleCandidate,
     val validation: MidiCoreRoleValidationResult,
+    /** Explicit output for a following Chords occurrence; never read from mutable accepted state. */
+    val outgoingPianoVoicingBoundary: MidiCorePianoVoicingBoundarySummary? = null,
 ) {
     init {
         require(context.role == CandidateRole.CHORDS) { "Chord generation context must select the Chords role" }
@@ -18,6 +20,12 @@ data class MidiCoreChordGenerationResult(
         require(validation.report.contextSha256 == context.contextSha256 && validation.report.role == CandidateRole.CHORDS) {
             "Chord validation evidence must bind the generation context"
         }
+        require(outgoingPianoVoicingBoundary == null || (
+            validation is MidiCoreRoleValidationResult.Accepted &&
+                outgoingPianoVoicingBoundary.sourceOccurrenceId == context.occurrence.id &&
+                outgoingPianoVoicingBoundary.boundaryTick == context.occurrence.endTick &&
+                outgoingPianoVoicingBoundary.authorityHash == context.authority.authorityHash
+            )) { "Chord boundary output must describe this accepted occurrence" }
     }
 
     /** True when this candidate passed every blocking target-role policy. */
@@ -32,13 +40,27 @@ object MidiCoreChordGenerator {
     /** Generate one semantic Chords candidate and validate it before publication. */
     fun generate(context: MidiCoreGenerationContext): MidiCoreChordGenerationResult {
         require(context.role == CandidateRole.CHORDS) { "Chord generation requires a Chords context" }
+        val plan = pianoVoicingPlan(context)
         val candidate = MidiCoreRoleCandidate(
             role = CandidateRole.CHORDS,
             occurrenceId = context.occurrence.id,
             channel = MIDI_CHANNEL,
-            events = generateNotes(context),
+            events = notesForPlan(context, plan),
         )
-        return MidiCoreChordGenerationResult(context, candidate, MidiCoreRoleValidator.validate(context, candidate))
+        val validation = MidiCoreRoleValidator.validate(context, candidate)
+        val boundary = if (validation is MidiCoreRoleValidationResult.Accepted) {
+            plan?.voicings?.lastOrNull()?.let { pitches ->
+                MidiCorePianoVoicingBoundarySummary(
+                    context.occurrence.id,
+                    context.occurrence.endTick,
+                    pitches,
+                    context.authority.authorityHash,
+                )
+            }
+        } else {
+            null
+        }
+        return MidiCoreChordGenerationResult(context, candidate, validation, boundary)
     }
 
     /** Generate a deterministic family of distinct curated-rhythm alternatives for one occurrence. */
@@ -66,17 +88,88 @@ object MidiCoreChordGenerator {
         }
     }
 
-    /** Expand every authoritative chord window into complete, clipped semantic note events. */
-    private fun generateNotes(context: MidiCoreGenerationContext): List<MidiCoreCandidateEvent.Note> {
-        if (context.sectionPolicy.density == 0.0) return emptyList()
-        val notes = mutableListOf<MidiCoreCandidateEvent.Note>()
-        var previousVoicing: List<Int>? = null
+    /**
+     * Search all chord windows as one bounded phrase. Each level retains at most
+     * [MAX_PIANO_VOICING_BEAM_WIDTH] stable paths; an empty safe pool is the
+     * deterministic generation failure, while an over-large movement falls back
+     * to the otherwise safe pool rather than silently rewriting the harmony.
+     */
+    internal fun pianoVoicingPlan(context: MidiCoreGenerationContext): MidiCorePianoVoicingPlan? {
+        if (context.sectionPolicy.density == 0.0) return MidiCorePianoVoicingPlan(emptyList(), emptyList(), emptyList())
+        val rhythms = context.chordWindows.map { window -> rhythmWindows(context, window) }
+        if (rhythms.any { it.isEmpty() }) return null
+        if (context.chordWindows.size == 1) {
+            return singleWindowPlan(context, context.chordWindows.single(), rhythms.single())
+        }
+        var beam = listOf(VoicingPath(0L, context.pianoVoicingBoundary?.pitches, emptyList()))
+        val widths = mutableListOf<Int>()
         context.chordWindows.forEachIndexed { windowIndex, window ->
-            val rhythm = rhythmWindows(context, window)
-            if (rhythm.isEmpty()) return emptyList()
-            val voicing = selectVoicing(context, window, rhythm, previousVoicing, windowIndex)
-            if (voicing == null) return emptyList()
-            rhythm.forEach { attack ->
+            val safe = legalVoicingCandidates(context, window).filter { candidate ->
+                !hasAnchorCollision(context, candidate.pitches, rhythms[windowIndex]) &&
+                    !hasBassCollision(context, candidate.pitches, rhythms[windowIndex])
+            }
+            if (safe.isEmpty()) return null
+            val next = beam.flatMap { path ->
+                val movementSafe = path.lastVoicing?.let { previous ->
+                    safe.filter { candidate -> voiceMovement(previous, candidate.pitches).maximumDistance <= MAX_VOICE_MOVEMENT }
+                }.orEmpty()
+                val pool = movementSafe.ifEmpty { safe }
+                pool.map { candidate ->
+                    path.advance(candidate, selectionScore(context, window, rhythms[windowIndex], candidate, path.lastVoicing))
+                }
+            }.sortedWith(VOICING_PATH_ORDER)
+                .take(MAX_PIANO_VOICING_BEAM_WIDTH)
+            if (next.isEmpty()) return null
+            widths += next.size
+            beam = next
+        }
+        val best = beam.firstOrNull() ?: return null
+        val variationPool = beam.takeWhile { path -> path.score <= best.score + MAX_SEED_VARIATION_COST }
+        val variationCount = minOf(MAX_SEED_VARIATIONS, variationPool.size)
+        val selected = variationPool[Math.floorMod(context.seed + context.chordWindows.size.toLong(), variationCount.toLong()).toInt()]
+        return MidiCorePianoVoicingPlan(selected.voicings, rhythms, widths)
+    }
+
+    /** Preserve the established one-window ranker exactly; lookahead changes only actual phrases. */
+    private fun singleWindowPlan(
+        context: MidiCoreGenerationContext,
+        window: app.melotrail.structure.MidiCoreResolvedChordWindow,
+        rhythm: List<RhythmWindow>,
+    ): MidiCorePianoVoicingPlan? {
+        val safe = legalVoicingCandidates(context, window).filter { candidate ->
+            !hasAnchorCollision(context, candidate.pitches, rhythm) && !hasBassCollision(context, candidate.pitches, rhythm)
+        }
+        if (safe.isEmpty()) return null
+        val previous = context.pianoVoicingBoundary?.pitches
+        val movementSafe = previous?.let { prior ->
+            safe.filter { candidate -> voiceMovement(prior, candidate.pitches).maximumDistance <= MAX_VOICE_MOVEMENT }
+        }.orEmpty()
+        val pool = movementSafe.ifEmpty { safe }
+        val ranked = pool.sortedWith(
+            compareBy<MidiCorePianoVoicingCandidate> { candidate -> selectionScore(context, window, rhythm, candidate, previous) }
+                .thenBy { it.kind.ordinal }
+                .thenBy { it.pitches.joinToString(",") },
+        )
+        val variationPool = if (context.melodyHarmonyAnalysis == null) {
+            ranked
+        } else {
+            val bestScore = selectionScore(context, window, rhythm, ranked.first(), previous)
+            ranked.takeWhile { candidate -> selectionScore(context, window, rhythm, candidate, previous) <= bestScore + MAX_SEED_VARIATION_COST }
+        }
+        val variationCount = minOf(MAX_SEED_VARIATIONS, variationPool.size)
+        val selected = variationPool[Math.floorMod(context.seed, variationCount.toLong()).toInt()]
+        return MidiCorePianoVoicingPlan(listOf(selected.pitches), listOf(rhythm), listOf(1))
+    }
+
+    /** Expand a bounded phrase plan into complete, clipped semantic note events. */
+    private fun notesForPlan(
+        context: MidiCoreGenerationContext,
+        plan: MidiCorePianoVoicingPlan?,
+    ): List<MidiCoreCandidateEvent.Note> {
+        if (plan == null || plan.voicings.isEmpty()) return emptyList()
+        val notes = mutableListOf<MidiCoreCandidateEvent.Note>()
+        plan.voicings.forEachIndexed { windowIndex, voicing ->
+            plan.rhythms[windowIndex].forEach { attack ->
                 val endTick = noteEnd(context, attack)
                 voicing.forEach { pitch ->
                     notes += MidiCoreCandidateEvent.Note(
@@ -87,7 +180,6 @@ object MidiCoreChordGenerator {
                     )
                 }
             }
-            previousVoicing = voicing
         }
         return notes.sortedWith(
             compareBy<MidiCoreCandidateEvent.Note> { it.startTick }
@@ -121,50 +213,6 @@ object MidiCoreChordGenerator {
                 barStart += barTicks
             }
         }
-    }
-
-    /** Select a bounded legal voicing using continuity plus read-only melody overlap, accent, and register evidence. */
-    private fun selectVoicing(
-        context: MidiCoreGenerationContext,
-        window: app.melotrail.structure.MidiCoreResolvedChordWindow,
-        rhythm: List<RhythmWindow>,
-        previous: List<Int>?,
-        windowIndex: Int,
-    ): List<Int>? {
-        val all = legalVoicingCandidates(context, window)
-        if (all.isEmpty()) return null
-        // Reduced choices share the bounded pool, so they remain available when complete
-        // spellings collide without a second, differently constrained fallback search.
-        val safeCandidates = all.filter { candidate ->
-            !hasAnchorCollision(context, candidate.pitches, rhythm) && !hasBassCollision(context, candidate.pitches, rhythm)
-        }
-        if (safeCandidates.isEmpty()) return null
-        val movementSafe = previous?.let { prior ->
-            safeCandidates.filter { candidate -> voiceMovement(prior, candidate.pitches).maximumDistance <= MAX_VOICE_MOVEMENT }
-        }.orEmpty()
-        val pool = movementSafe.ifEmpty { safeCandidates }
-        val ranked = pool.sortedWith(
-            compareBy<MidiCorePianoVoicingCandidate> { candidate ->
-                melodyEvidenceScore(context, window, rhythm, candidate.pitches) +
-                    voiceLeadingScore(context, candidate.pitches, previous) + candidate.kind.selectionPenalty
-            }
-                .thenBy { it.kind.ordinal }
-                .thenBy { it.pitches.joinToString(",") },
-        )
-        // Preserve M04a's existing variation when no M02 projection is supplied. With evidence,
-        // a seed may vary only similarly scored choices; it must not promote a sustained close
-        // clash merely because it happens to be third in the otherwise legal pool.
-        val variationPool = if (context.melodyHarmonyAnalysis == null) {
-            ranked
-        } else {
-            val bestScore = selectionScore(context, window, rhythm, ranked.first(), previous)
-            ranked.takeWhile { candidate ->
-                selectionScore(context, window, rhythm, candidate, previous) <= bestScore + MAX_SEED_VARIATION_COST
-            }
-        }
-        val variationCount = minOf(MAX_SEED_VARIATIONS, variationPool.size)
-        val variation = Math.floorMod(context.seed + windowIndex.toLong(), variationCount.toLong()).toInt()
-        return variationPool[variation].pitches
     }
 
     private fun selectionScore(
@@ -472,12 +520,33 @@ object MidiCoreChordGenerator {
     /** Place one chord pitch class at or above a previous voice without leaving an accidental duplicate. */
     private fun nextAtOrAbove(minimum: Int, pitchClass: Int): Int = minimum + Math.floorMod(pitchClass - minimum, 12)
 
-    private data class RhythmWindow(
+    internal data class RhythmWindow(
         val startTick: Long,
         val endTick: Long,
         val velocityOffset: Int,
         val phraseBoundary: Boolean,
     )
+
+    /** A fully selected bounded lookahead path, exposed to focused engine regressions only. */
+    internal data class MidiCorePianoVoicingPlan(
+        val voicings: List<List<Int>>,
+        internal val rhythms: List<List<RhythmWindow>>,
+        val beamWidths: List<Int>,
+    )
+
+    private data class VoicingPath(
+        val score: Long,
+        val lastVoicing: List<Int>?,
+        val voicings: List<List<Int>>,
+    ) {
+        fun advance(candidate: MidiCorePianoVoicingCandidate, addedScore: Long): VoicingPath = VoicingPath(
+            score = Math.addExact(score, addedScore),
+            lastVoicing = candidate.pitches,
+            voicings = voicings + listOf(candidate.pitches),
+        )
+
+        val stableKey: String get() = voicings.joinToString(";") { it.joinToString(",") }
+    }
 
     /** Candidate kind is internal to the generator so later ranking can remain explainable. */
     internal enum class MidiCorePianoVoicingKind(
@@ -525,6 +594,8 @@ object MidiCoreChordGenerator {
     private const val OPEN_VOICING_PENALTY = 16L
     private const val REDUCED_VOICING_PENALTY = 24L
     internal const val MAX_PIANO_VOICING_CANDIDATES = 48
+    /** Maximum retained paths per phrase window; expansion is at most 12 × 48 candidates. */
+    internal const val MAX_PIANO_VOICING_BEAM_WIDTH = 12
     private const val MAX_VOICINGS_PER_KIND = 12
     private const val ENERGY_VELOCITY_SPAN = 16.0
     private const val ENERGY_REGISTER_SPAN = 10.0
@@ -549,4 +620,7 @@ object MidiCoreChordGenerator {
     }.thenBy { it.maximumDistance }
         .thenByDescending { it.commonPitches }
         .thenBy { it.unmatchedVoices }
+
+    private val VOICING_PATH_ORDER = compareBy<VoicingPath> { it.score }
+        .thenBy { it.stableKey }
 }

@@ -210,6 +210,7 @@ private data class CandidateDto(
     val rejectionReason: String? = null,
     val draftDependencyIds: List<String> = emptyList(),
     val acceptedDependencyIds: List<String> = emptyList(),
+    val boundarySummarySha256: String? = null,
 )
 
 @Serializable
@@ -395,11 +396,11 @@ private fun MidiCoreRolePlanSettings.toDto() = RolePlanSettingsDto(role, activit
 private fun RolePlanSettingsDto.toDomain() = MidiCoreRolePlanSettings(role, activity, density, registerPreference)
 private fun MidiCoreCandidate.toDto() = CandidateDto(
     id, role, occurrenceId, generatorVersion, authorityHash, seed, midi.toDto(), validationReport.toDto(), createdAt,
-    profileId, patternId, status, rejectionReason, draftDependencyIds, acceptedDependencyIds,
+    profileId, patternId, status, rejectionReason, draftDependencyIds, acceptedDependencyIds, boundarySummarySha256,
 )
 private fun CandidateDto.toDomain() = MidiCoreCandidate(
     id, role, occurrenceId, generatorVersion, authorityHash, seed, midi.toDomain(), validationReport.toDomain(), createdAt,
-    profileId, patternId, status, rejectionReason, draftDependencyIds, acceptedDependencyIds,
+    profileId, patternId, status, rejectionReason, draftDependencyIds, acceptedDependencyIds, boundarySummarySha256,
 )
 private fun MidiCoreArrangementDraft.toDto() = ArrangementDraftDto(
     id, styleId, styleVersion, authorityHash, rootSeed, candidateReferences.map(MidiCoreArrangementDraftCandidateReference::toDto), validation.toDto(), createdAt,

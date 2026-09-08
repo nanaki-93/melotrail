@@ -329,11 +329,16 @@ data class MidiCoreGenerationFingerprint(
     val scope: MidiCoreAuthorityScopeKey,
     val generator: MidiCoreGeneratorInput,
     val acceptedDependencies: List<MidiCoreAcceptedDependency> = emptyList(),
+    /** Optional immutable non-candidate input, such as the M04 piano boundary summary digest. */
+    val boundarySummarySha256: String? = null,
 ) {
     init {
         authority.scope(scope.occurrenceId, scope.role)
         require(acceptedDependencies.map { it.role to it.occurrenceId }.distinct().size == acceptedDependencies.size) {
             "Accepted dependencies must have one input per role/occurrence"
+        }
+        require(boundarySummarySha256 == null || HASH.matches(boundarySummarySha256)) {
+            "Boundary summary hash must be a lowercase SHA-256 value"
         }
     }
 
@@ -362,6 +367,7 @@ data class MidiCoreGenerationFingerprint(
                         ),
                     )
                 },
+                "boundary-summary" to boundarySummarySha256.orEmpty(),
             ),
         )
 

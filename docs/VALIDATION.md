@@ -146,14 +146,27 @@ its last note, and an explicitly padded arrangement end. These fixtures are
 prepared by automated contract coverage only; no Logic import/playback/reopen
 result is claimed until a reviewer records it below.
 
-M04b prepares frozen v1/current v3 MIDI pairs in `build/m01-comparison` via
-`MidiCoreComparisonHarnessTest`. Engine v3 ranks the bounded M04a voicing pool
-using M02 overlap, register and per-finding metrical prominence, including
-held suspensions crossing onto a new chord’s downbeat. For Q02, import the complete and aligned role
+M04 prepares frozen v1/current v4 MIDI pairs in `build/m01-comparison` via
+`MidiCoreComparisonHarnessTest`. Engine v4 ranks the bounded M04a voicing pool
+with M02 overlap, register, per-finding metrical prominence, bounded phrase
+lookahead, and an explicit authority-bound piano boundary input. It includes
+held suspensions crossing onto a new chord’s downbeat. The generated `review.md`
+is the short baseline/new listening pack; use identical MIDI instruments and
+levels for each listed piano+melody and full-arrangement loop. For Q02, import the complete and aligned role
 files for repeated-chorus/bridge, 3/4 and 6/8; verify protected melody, chord
 boundaries and final notes, then compare the listed piano/melody loops with
 identical Logic instruments and levels. The unscored `review.md` records hashes
-and loop ranges. Automated checks pass; listening scores and Logic results remain pending.
+and loop ranges. Listening scores and Logic results remain pending human evidence.
+Automated state coverage cancels and reopens a multi-occurrence draft, rejects a
+retained Chords candidate whose persisted boundary digest no longer matches the
+preceding immutable MIDI, preserves its bytes, and publishes a distinct retry.
+Completed-draft assembly and Use must also reject missing or mismatched boundary
+evidence without changing acceptances.
+
+The M04 boundary-retry regression uses `steady-road` for its three one-bar
+occurrences. The same fixture with `open-sky`/seed 41 failed Drums role validation
+in the first occurrence; short-section groove validation remains M08b/M08 work.
+This does not count as a musical or Logic pass for that style.
 
 1. Record app build, source/export manifest hashes, exact macOS and Logic version.
 2. Import/open complete MIDI at song start; record adopt/retain tempo and meter.

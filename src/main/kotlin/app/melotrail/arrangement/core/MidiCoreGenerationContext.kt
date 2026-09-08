@@ -312,6 +312,46 @@ data class MidiCoreSectionPolicy(
         get() = listOf(purpose.name, energy.toString(), density.toString(), fillPatternId ?: "none").joinToString("|")
 }
 
+/**
+ * Immutable piano evidence at one completed occurrence boundary.
+ *
+ * This is an explicit generation input, rather than a lookup of an accepted
+ * candidate. A caller may carry it while resolving one bounded draft chain;
+ * the next occurrence validates both its immediate predecessor and full
+ * authority identity before it can influence voicing.
+ */
+data class MidiCorePianoVoicingBoundarySummary(
+    val sourceOccurrenceId: String,
+    val boundaryTick: Long,
+    val pitches: List<Int>,
+    val authorityHash: String,
+) {
+    init {
+        require(sourceOccurrenceId.isNotBlank() && sourceOccurrenceId.none(Char::isISOControl)) {
+            "Piano boundary source occurrence is invalid"
+        }
+        require(boundaryTick >= 0L && pitches.size >= 2 && pitches == pitches.sorted() &&
+            pitches.zipWithNext().all { (low, high) -> high > low } && pitches.all { it in 0..127 }) {
+            "Piano boundary pitches must be ordered MIDI voices"
+        }
+        requireHash(authorityHash, "Piano boundary authority")
+    }
+
+    /** Stable representation included in the requesting context and generation fingerprint. */
+    val canonicalSerialization: String
+        get() = canonicalRecord(
+            "piano-voicing-boundary",
+            listOf(
+                "source-occurrence" to sourceOccurrenceId,
+                "tick" to boundaryTick.toString(),
+                "pitches" to pitches.joinToString(","),
+                "authority" to authorityHash,
+            ),
+        )
+
+    val sha256: String get() = sha256(canonicalSerialization)
+}
+
 /** One immutable, occurrence-scoped request shared by the three core role engines. */
 data class MidiCoreGenerationContext(
     val authority: MidiCoreAuthoritySnapshot,
@@ -327,6 +367,8 @@ data class MidiCoreGenerationContext(
     val tickGrid: MidiCoreTickGrid = MidiCoreTickGrid(authority.ppq, authority.meter),
     /** Read-only M02 evidence used by melody-aware role ranking; it never changes authority or protected notes. */
     val melodyHarmonyAnalysis: MidiCoreMelodyHarmonyAnalysis? = null,
+    /** Explicit prior-Chords phrase boundary for M04 continuity; never inferred from accepted project state. */
+    val pianoVoicingBoundary: MidiCorePianoVoicingBoundarySummary? = null,
 ) {
     init {
         require(authority.occurrence(occurrence.id) == occurrence) { "Generation occurrence is not in the authority snapshot" }
@@ -362,6 +404,21 @@ data class MidiCoreGenerationContext(
             melodyHarmonyAnalysis.authorityHash == authority.authorityHash &&
                 melodyHarmonyAnalysis.melodySha256 == authority.melodySha256
             )) { "Melody/harmony evidence must match generation authority and melody identity" }
+        require(pianoVoicingBoundary == null || role == CandidateRole.CHORDS) {
+            "Only Chords generation may consume a piano voicing boundary"
+        }
+        pianoVoicingBoundary?.let { boundary ->
+            val occurrenceIndex = authority.occurrences.indexOf(occurrence)
+            require(occurrenceIndex > 0 && authority.occurrences[occurrenceIndex - 1].id == boundary.sourceOccurrenceId) {
+                "Piano boundary must come from the immediately preceding authoritative occurrence"
+            }
+            require(boundary.boundaryTick == occurrence.startTick && boundary.authorityHash == authority.authorityHash) {
+                "Piano boundary must match the current occurrence start and authority"
+            }
+            require(boundary.pitches.all(performanceProfile.register::contains)) {
+                "Piano boundary voices must fit the current Chords register"
+            }
+        }
         authority.fingerprint.scope(occurrence.id, role)
     }
 
@@ -384,6 +441,7 @@ data class MidiCoreGenerationContext(
             app.melotrail.project.MidiCoreAuthorityScopeKey(occurrence.id, role),
             generator,
             acceptedDependencies.map(MidiCoreAcceptedDependencyContext::dependency),
+            pianoVoicingBoundary?.sha256,
         )
 
     /** Stable context serialization excluding unrelated occurrences from its identity. */
@@ -415,6 +473,7 @@ data class MidiCoreGenerationContext(
                 "melody-harmony-evidence" to melodyHarmonyAnalysis?.let { analysis ->
                     "${analysis.version}|${analysis.analysisSha256}"
                 }.orEmpty(),
+                "piano-voicing-boundary" to pianoVoicingBoundary?.canonicalSerialization.orEmpty(),
             ),
         )
 
@@ -440,6 +499,7 @@ data class MidiCoreGenerationContext(
             sectionPolicy: MidiCoreSectionPolicy = MidiCoreSectionPolicy(),
             tickGrid: MidiCoreTickGrid = MidiCoreTickGrid(authority.ppq, authority.meter),
             melodyHarmonyAnalysis: MidiCoreMelodyHarmonyAnalysis? = null,
+            pianoVoicingBoundary: MidiCorePianoVoicingBoundarySummary? = null,
         ): MidiCoreGenerationContext {
             val occurrence = authority.occurrence(occurrenceId)
             return MidiCoreGenerationContext(
@@ -458,6 +518,7 @@ data class MidiCoreGenerationContext(
                 sectionPolicy = sectionPolicy,
                 tickGrid = tickGrid,
                 melodyHarmonyAnalysis = melodyHarmonyAnalysis,
+                pianoVoicingBoundary = pianoVoicingBoundary,
             )
         }
 
@@ -473,6 +534,7 @@ data class MidiCoreGenerationContext(
             acceptedDependencies: List<MidiCoreAcceptedDependencyContext> = emptyList(),
             sectionPolicy: MidiCoreSectionPolicy = MidiCoreSectionPolicy(),
             settings: MidiCoreAuthoritySettings = MidiCoreAuthoritySettings(),
+            pianoVoicingBoundary: MidiCorePianoVoicingBoundarySummary? = null,
         ): MidiCoreGenerationContext {
             val authority = MidiCoreAuthoritySnapshot.from(project, settings)
             val selected = project.selectedMelody
@@ -510,6 +572,7 @@ data class MidiCoreGenerationContext(
                 acceptedDependencies,
                 sectionPolicy,
                 melodyHarmonyAnalysis = analysis,
+                pianoVoicingBoundary = pianoVoicingBoundary,
             )
         }
     }

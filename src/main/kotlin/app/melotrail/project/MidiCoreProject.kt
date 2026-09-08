@@ -481,6 +481,8 @@ data class MidiCoreCandidate(
     /** Validated upstream draft inputs; unlike accepted dependencies they need not be accepted yet. */
     val draftDependencyIds: List<String> = emptyList(),
     val acceptedDependencyIds: List<String> = emptyList(),
+    /** Immutable digest of the explicit preceding piano boundary consumed by Chords generation. */
+    val boundarySummarySha256: String? = null,
 ) {
     init {
         require(SAFE_ID.matches(id) && SAFE_ID.matches(occurrenceId)) { "Candidate identity is invalid" }
@@ -501,6 +503,10 @@ data class MidiCoreCandidate(
         require(draftDependencyIds == draftDependencyIds.distinct() && draftDependencyIds.all(SAFE_ID::matches) &&
             draftDependencyIds.none { it == id } && draftDependencyIds.intersect(acceptedDependencyIds.toSet()).isEmpty()) {
             "Candidate draft dependency IDs must be distinct safe non-accepted identifiers"
+        }
+        require(boundarySummarySha256 == null ||
+            (role == CandidateRole.CHORDS && SHA_256.matches(boundarySummarySha256))) {
+            "Candidate boundary summary must be a lowercase SHA-256 value owned by Chords"
         }
     }
 }

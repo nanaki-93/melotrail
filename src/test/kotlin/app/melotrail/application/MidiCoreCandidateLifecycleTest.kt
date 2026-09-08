@@ -133,6 +133,37 @@ class MidiCoreCandidateLifecycleTest {
     }
 
     @Test
+    fun `candidate publication rejects malformed or non-chords boundary metadata`() {
+        val store = MidiCoreArtifactStore()
+        val session = project(store)
+        val lifecycle = lifecycle(store, "unused-history")
+        val midi = bytesFile(root.resolve("invalid-boundary.mid"), "candidate")
+        val base = PublishMidiCoreCandidate(
+            session = session,
+            role = CandidateRole.CHORDS,
+            occurrenceId = "intro-1",
+            generatorVersion = "chords-v1",
+            authorityHash = MidiCoreAuthorityHasher.from(session.project).scopeHash("intro-1", CandidateRole.CHORDS),
+            seed = 7,
+            midi = midi,
+            validationReportJson = "{\"valid\":true}",
+            candidateId = "invalid-boundary",
+            profileId = "sustained",
+            patternId = "quarter-chords",
+            boundarySummarySha256 = "not-a-digest",
+        )
+
+        val malformed = assertIs<MidiCoreCandidateLifecycleResult.Rejected>(lifecycle.publish(base))
+        val wrongRole = assertIs<MidiCoreCandidateLifecycleResult.Rejected>(
+            lifecycle.publish(base.copy(role = CandidateRole.BASS, boundarySummarySha256 = "f".repeat(64))),
+        )
+
+        assertEquals(MidiCoreCandidateProblemCode.INVALID_CANDIDATE, malformed.problem.code)
+        assertEquals(MidiCoreCandidateProblemCode.INVALID_CANDIDATE, wrongRole.problem.code)
+        assertTrue(store.openProject(session.root).candidates.isEmpty())
+    }
+
+    @Test
     fun `captures accepted candidate digests and reports old snapshot stale after authority change`() {
         val store = MidiCoreArtifactStore()
         var session = project(store)

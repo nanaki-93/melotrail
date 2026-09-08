@@ -29,23 +29,25 @@ import org.junit.jupiter.api.Test
 class MidiCoreChordDevelopmentFixtureTest {
     @Test
     fun `three development fixtures yield two valid distinct chord alternatives with exact harmony`() {
+        // Engine v4 selects a bounded whole-phrase path; pin its distinct legal alternatives.
         val expectedCandidateHashes = mapOf(
             "simple-diatonic-4-4" to listOf(
-                "e2c507647338097ba284c01899deecec8980baef1a05bd5e286fd4ff8d880691",
-                "d05f0c6845c608c5eaf284c03f8c008f9fab443de3c9adc5f1778e26dea9349d",
+                "a82ad64a62d063abf75cd947f8bcbc2e107117ee6eeb563c4f83780da75b3903",
+                "929e96310742bc42dc615a033ea111f17308d79e289bb4b5ea32b2c83ffd2826",
             ),
             "pickup-and-sub-bar-changes" to listOf(
-                "9f5bfa092d988655f379a9bff97b9089083e6ae19a7833a9b09b85e185896e60",
-                "fbcdae8ce66505667803e6902d0336e9923076211ac38653640ab787146788d2",
+                "19f1e04e657852de0ec6670e74e8e917785c7690654b751fd5a07b844d333f26",
+                "9c6ac5d8801ec3a6e83d8ba407e858f4e21381513fab00c011dfab1377567ece",
             ),
             "chromatic-expressive-controller-source" to listOf(
-                "d007f68c730c890b1dcafc7f3bc567ee36e74408e1c729ab8de679ab49e2c541",
-                "ddcd5070c2c667c79b07bafe0e18833550d14818f723e7672ed3a80564e08166",
+                "1af627756cd548d4336b831449a148454fb92676ec0018a1b6bdf38f206e370e",
+                "59b4c0fe07e2a0ea8c4f339748468e74b5fa4c214939457322c25166f02852f1",
             ),
         )
         developmentFixtures().forEach { fixture ->
             val alternatives = MidiCoreChordGenerator.generateAlternatives(fixture.context, count = 2)
 
+            assertEquals(alternatives, MidiCoreChordGenerator.generateAlternatives(fixture.context, count = 2), "${fixture.name}: deterministic replay")
             assertEquals(2, alternatives.size, fixture.name)
             assertTrue(alternatives.all(MidiCoreChordGenerationResult::accepted), "$fixture -> ${alternatives.map { it.validation.report.findings }}")
             assertEquals(expectedCandidateHashes.getValue(fixture.name), alternatives.map { it.validation.report.candidateSha256 }, fixture.name)

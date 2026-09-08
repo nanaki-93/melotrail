@@ -1,7 +1,11 @@
 package app.melotrail.application
 
 import app.melotrail.arrangement.core.MidiCoreArrangementStyleCatalog
+import app.melotrail.arrangement.core.MidiCoreChordGenerator
+import app.melotrail.arrangement.core.MidiCorePianoVoicingBoundarySummary
 import app.melotrail.arrangement.core.MidiCoreRoleValidationReportJson
+import app.melotrail.midi.adapter.JdkMidiReader
+import app.melotrail.midi.domain.MidiNoteEvent
 import app.melotrail.project.CandidateAcceptance
 import app.melotrail.project.CandidateAcceptanceHistory
 import app.melotrail.project.CandidateRole
@@ -175,6 +179,9 @@ class MidiCoreArrangementDraftGeneration(
         }
         val completed = mutableListOf<MidiCoreArrangementDraftScope>()
         val selected = linkedMapOf<MidiCoreArrangementDraftScope, MidiCoreCandidate>()
+        // This is deliberately an in-flight summary of the current draft's own
+        // immutable Chords scopes, never a lookup of accepted project work.
+        var pianoVoicingBoundary: MidiCorePianoVoicingBoundarySummary? = null
         orderedScopes.forEach { scope ->
             if (request.cancellation.isCancelled()) return cancelled(session, draftId, orderedScopes.size, completed)
             val active = MidiCoreArrangementDraftProgress(draftId, orderedScopes.size, completed.toList(), scope)
@@ -211,10 +218,22 @@ class MidiCoreArrangementDraftGeneration(
             }
             val seed = derivedSeed(request.rootSeed, scope)
             val generatorVersion = "midi-core-style-v${MidiCoreArrangementStyleCatalog.VERSION}"
+            val consumedBoundarySha256 = if (scope.role == CandidateRole.CHORDS) pianoVoicingBoundary?.sha256 else null
             var attempt = 0
             var candidateId = candidateId(draftId, scopeHash, scope, attempt)
             var existing = session.project.candidates.singleOrNull { it.id == candidateId }
-            while (existing != null && !validExisting(existing, scope, scopeHash, seed, generatorVersion, choice.performanceProfileId, choice.patternId, dependencies, session.root)) {
+            while (existing != null && !validExisting(
+                    existing,
+                    scope,
+                    scopeHash,
+                    seed,
+                    generatorVersion,
+                    choice.performanceProfileId,
+                    choice.patternId,
+                    dependencies,
+                    consumedBoundarySha256,
+                    session.root,
+                )) {
                 attempt += 1
                 if (attempt > MAXIMUM_SCOPE_ATTEMPTS) return incomplete(session, draftId, orderedScopes.size, completed, problem(
                     MidiCoreArrangementDraftProblemCode.CANDIDATE_FAILURE,
@@ -225,7 +244,18 @@ class MidiCoreArrangementDraftGeneration(
                 candidateId = candidateId(draftId, scopeHash, scope, attempt)
                 existing = session.project.candidates.singleOrNull { it.id == candidateId }
             }
-            val candidate = if (existing != null && validExisting(existing, scope, scopeHash, seed, generatorVersion, choice.performanceProfileId, choice.patternId, dependencies, session.root)) {
+            val candidate = if (existing != null && validExisting(
+                    existing,
+                    scope,
+                    scopeHash,
+                    seed,
+                    generatorVersion,
+                    choice.performanceProfileId,
+                    choice.patternId,
+                    dependencies,
+                    consumedBoundarySha256,
+                    session.root,
+                )) {
                 existing
             } else {
                 when (val generated = candidates.generate(
@@ -242,6 +272,7 @@ class MidiCoreArrangementDraftGeneration(
                             seed = seed,
                         ),
                         sectionPolicy = choice.sectionPolicy,
+                        pianoVoicingBoundary = if (scope.role == CandidateRole.CHORDS) pianoVoicingBoundary else null,
                         candidateId = candidateId,
                         draftDependencyIds = dependencies,
                         cancellation = request.cancellation,
@@ -266,7 +297,27 @@ class MidiCoreArrangementDraftGeneration(
                     ))
                 }
             }
+            if (candidate.boundarySummarySha256 != consumedBoundarySha256) {
+                return incomplete(session, draftId, orderedScopes.size, completed, problem(
+                    MidiCoreArrangementDraftProblemCode.DRAFT_STALE,
+                    "The ${scope.role.name.lowercase()} draft scope does not retain its consumed piano-boundary identity.",
+                    "Regenerate this scope from the current preceding Chords evidence.",
+                    scope,
+                ))
+            }
             selected[scope] = candidate
+            if (scope.role == CandidateRole.CHORDS) {
+                pianoVoicingBoundary = try {
+                    midiDerivedPianoBoundary(session.root, session.project, candidate, artifacts)
+                } catch (_: Exception) {
+                    return incomplete(session, draftId, orderedScopes.size, completed, problem(
+                        MidiCoreArrangementDraftProblemCode.DIGEST_MISMATCH,
+                        "The immutable Chords candidate cannot supply a verified piano boundary for the next occurrence.",
+                        "Restore its recorded MIDI bytes or regenerate this Chords scope.",
+                        scope,
+                    ))
+                }
+            }
             completed += scope
             request.onProgress(MidiCoreArrangementDraftProgress(draftId, orderedScopes.size, completed.toList()))
         }
@@ -318,11 +369,13 @@ class MidiCoreArrangementDraftGeneration(
         profileId: String,
         patternId: String,
         dependencies: List<String>,
+        boundarySummarySha256: String?,
         root: Path,
     ): Boolean = candidate.role == scope.role && candidate.occurrenceId == scope.occurrenceId &&
         candidate.authorityHash == authorityHash && candidate.seed == seed && candidate.generatorVersion == generatorVersion &&
         candidate.profileId == profileId &&
         candidate.patternId == patternId && candidate.draftDependencyIds == dependencies &&
+        candidate.boundarySummarySha256 == boundarySummarySha256 &&
         candidate.status !in setOf(MidiCoreCandidateStatus.REJECTED, MidiCoreCandidateStatus.STALE) &&
         runCatching {
             artifacts.verify(root, candidate.midi)
@@ -717,6 +770,31 @@ internal fun validateDraft(
             )
         }
     }
+    var precedingPianoBoundary: MidiCorePianoVoicingBoundarySummary? = null
+    requireNotNull(project.authority).occurrences.forEach { occurrence ->
+        val reference = draft.candidateReferences.single {
+            it.occurrenceId == occurrence.id && it.role == CandidateRole.CHORDS
+        }
+        val candidate = requireNotNull(candidates[reference.candidateId])
+        if (candidate.boundarySummarySha256 != precedingPianoBoundary?.sha256) {
+            return problem(
+                MidiCoreArrangementDraftProblemCode.DRAFT_STALE,
+                "The Chords candidate for '${occurrence.id}' does not match the preceding immutable piano boundary.",
+                "Regenerate this occurrence from the current preceding Chords candidate.",
+                MidiCoreArrangementDraftScope(occurrence.id, CandidateRole.CHORDS),
+            )
+        }
+        precedingPianoBoundary = try {
+            midiDerivedPianoBoundary(root, project, candidate, artifacts)
+        } catch (_: Exception) {
+            return problem(
+                MidiCoreArrangementDraftProblemCode.DIGEST_MISMATCH,
+                "The Chords candidate for '${occurrence.id}' cannot provide verified piano-boundary evidence.",
+                "Restore its immutable MIDI bytes or regenerate this Chords scope.",
+                MidiCoreArrangementDraftScope(occurrence.id, CandidateRole.CHORDS),
+            )
+        }
+    }
     return null
 }
 
@@ -741,6 +819,38 @@ internal fun validationSummary(
         reportDigestSha256 = sha256(references.joinToString("|") { it.validationReportSha256 }),
     )
 }.getOrNull()
+
+/** Derive the only continuity input from one verified immutable Chords artifact under current authority. */
+private fun midiDerivedPianoBoundary(
+    root: Path,
+    project: MidiCoreProject,
+    candidate: MidiCoreCandidate,
+    artifacts: MidiCoreArtifactStore,
+): MidiCorePianoVoicingBoundarySummary {
+    require(candidate.role == CandidateRole.CHORDS) { "Only Chords candidates provide a piano boundary" }
+    val authority = MidiCoreAuthorityHasher.from(project)
+    require(candidate.authorityHash == authority.scopeHash(candidate.occurrenceId, CandidateRole.CHORDS)) {
+        "Chords boundary candidate does not match current authority"
+    }
+    val occurrence = requireNotNull(project.authority).occurrences.single { it.id == candidate.occurrenceId }
+    val inspected = JdkMidiReader().inspect(artifacts.verify(root, candidate.midi))
+    require(inspected.sequence.source.format == 1 && inspected.sequence.source.ppq.value == project.sourceMidi?.ppq) {
+        "Chords boundary MIDI has incompatible format or PPQ"
+    }
+    val notes = inspected.sequence.tracks.flatMap { it.events }
+        .filterIsInstance<MidiNoteEvent>()
+        .filter { it.channel == MidiCoreChordGenerator.MIDI_CHANNEL }
+    require(notes.isNotEmpty() && notes.all {
+        it.orderingKey.tick >= occurrence.startTick && it.endTick <= occurrence.endTick
+    }) { "Chords boundary MIDI does not contain valid occurrence-scoped piano notes" }
+    val lastStart = notes.maxOf { it.orderingKey.tick }
+    return MidiCorePianoVoicingBoundarySummary(
+        occurrence.id,
+        occurrence.endTick,
+        notes.filter { it.orderingKey.tick == lastStart }.map(MidiNoteEvent::pitch).distinct().sorted(),
+        authority.sha256,
+    )
+}
 
 private fun reference(candidate: MidiCoreCandidate) = MidiCoreArrangementDraftCandidateReference(
     candidate.occurrenceId,

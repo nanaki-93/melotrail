@@ -67,6 +67,8 @@ data class GenerateMidiCoreCandidate(
     val generator: MidiCoreGeneratorInput,
     val sectionPolicy: app.melotrail.arrangement.core.MidiCoreSectionPolicy =
         app.melotrail.arrangement.core.MidiCoreSectionPolicy(),
+    /** Optional explicit preceding Chords boundary; callers must carry it rather than query accepted work. */
+    val pianoVoicingBoundary: app.melotrail.arrangement.core.MidiCorePianoVoicingBoundarySummary? = null,
     val candidateId: String? = null,
     /** Explicit current upstream draft scopes; they are validated but need not be accepted. */
     val draftDependencyIds: List<String> = emptyList(),
@@ -81,6 +83,7 @@ sealed interface MidiCoreCandidateGenerationResult {
         val candidate: MidiCoreCandidate,
         val context: MidiCoreGenerationContext,
         val validation: MidiCoreRoleValidationReport,
+        val outgoingPianoVoicingBoundary: app.melotrail.arrangement.core.MidiCorePianoVoicingBoundarySummary? = null,
     ) : MidiCoreCandidateGenerationResult
 
     data class ValidationRejected(
@@ -220,6 +223,7 @@ class MidiCoreCandidateGeneration(
                         } else {
                             emptyList()
                         },
+                        boundarySummarySha256 = context.generationFingerprint.boundarySummarySha256,
                         beforeProjectSave = { candidate ->
                             publishedCandidate = candidate
                             if (job?.isActive == false || request.cancellation.isCancelled()) return@PublishMidiCoreCandidate false
@@ -235,6 +239,7 @@ class MidiCoreCandidateGeneration(
                             publication.candidate,
                             context,
                             validation.report,
+                            generated.outgoingPianoVoicingBoundary,
                         )
                     }
 
@@ -390,6 +395,7 @@ class MidiCoreCandidateGeneration(
                 protectedMelody = protectedMelody,
                 acceptedDependencies = dependencies,
                 sectionPolicy = request.sectionPolicy,
+                pianoVoicingBoundary = request.pianoVoicingBoundary,
             )
         } catch (error: IllegalArgumentException) {
             val code = if (error.message.orEmpty().contains("Generation requires") ||
@@ -576,7 +582,9 @@ class MidiCoreCandidateGeneration(
     }
 
     private fun generateRole(context: MidiCoreGenerationContext): GeneratedRole = when (context.role) {
-        CandidateRole.CHORDS -> MidiCoreChordGenerator.generate(context).let { GeneratedRole(it.candidate, it.validation) }
+        CandidateRole.CHORDS -> MidiCoreChordGenerator.generate(context).let {
+            GeneratedRole(it.candidate, it.validation, it.outgoingPianoVoicingBoundary)
+        }
         CandidateRole.BASS -> MidiCoreBassGenerator.generate(context).let { GeneratedRole(it.candidate, it.validation) }
         CandidateRole.DRUMS -> MidiCoreDrumGenerator.generate(context).let { GeneratedRole(it.candidate, it.validation) }
     }
@@ -678,6 +686,7 @@ class MidiCoreCandidateGeneration(
     private data class GeneratedRole(
         val candidate: app.melotrail.arrangement.core.MidiCoreRoleCandidate,
         val validation: MidiCoreRoleValidationResult,
+        val outgoingPianoVoicingBoundary: app.melotrail.arrangement.core.MidiCorePianoVoicingBoundarySummary? = null,
     )
 
     private sealed interface ContextLoad {

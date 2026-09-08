@@ -37,6 +37,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.math.abs
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
@@ -393,6 +394,60 @@ class MidiCoreChordGeneratorTest {
     }
 
     @Test
+    fun `carries an explicit adjacent phrase boundary through the bounded lookahead search`() {
+        val boundaryProject = project(
+            chordEvents = listOf(
+                AuthoritativeChordEvent("verse-c", "verse-1", "C", 0, 1_920),
+                AuthoritativeChordEvent("chorus-g", "chorus-1", "G", 1_920, 3_840),
+                AuthoritativeChordEvent("chorus-c", "chorus-1", "C", 3_840, 5_760),
+            ),
+            occurrences = listOf(
+                ProjectSectionOccurrence("verse-1", "verse", "Verse", 0, 1_920),
+                ProjectSectionOccurrence("chorus-1", "chorus", "Chorus", 1_920, 5_760),
+            ),
+        )
+        val first = MidiCoreChordGenerator.generate(context(project = boundaryProject, occurrenceId = "verse-1"))
+        val boundary = requireNotNull(first.outgoingPianoVoicingBoundary)
+        val continuationContext = context(
+            project = boundaryProject,
+            occurrenceId = "chorus-1",
+            pianoVoicingBoundary = boundary,
+        )
+        val firstPlan = requireNotNull(MidiCoreChordGenerator.pianoVoicingPlan(continuationContext))
+        val secondPlan = requireNotNull(MidiCoreChordGenerator.pianoVoicingPlan(continuationContext))
+        val continued = MidiCoreChordGenerator.generate(continuationContext)
+
+        assertTrue(first.accepted)
+        assertTrue(continued.accepted, continued.validation.report.findings.toString())
+        assertEquals(firstPlan, secondPlan)
+        assertEquals(2, firstPlan.voicings.size)
+        assertEquals(2, firstPlan.beamWidths.size)
+        assertTrue(firstPlan.beamWidths.all { it in 1..MidiCoreChordGenerator.MAX_PIANO_VOICING_BEAM_WIDTH })
+        assertTrue(boundary.pitches.zip(firstPlan.voicings.first()).all { (before, after) -> abs(after - before) <= 12 })
+        assertEquals(continued, MidiCoreChordGenerator.generate(continuationContext))
+        assertEquals("chorus-1", requireNotNull(continued.outgoingPianoVoicingBoundary).sourceOccurrenceId)
+    }
+
+    @Test
+    fun `rejects a piano boundary that is not the adjacent current authority input`() {
+        val boundaryProject = project(
+            chordEvents = listOf(
+                AuthoritativeChordEvent("verse-c", "verse-1", "C", 0, 1_920),
+                AuthoritativeChordEvent("chorus-g", "chorus-1", "G", 1_920, 3_840),
+            ),
+            occurrences = listOf(
+                ProjectSectionOccurrence("verse-1", "verse", "Verse", 0, 1_920),
+                ProjectSectionOccurrence("chorus-1", "chorus", "Chorus", 1_920, 3_840),
+            ),
+        )
+        val wrongAuthority = MidiCorePianoVoicingBoundarySummary("verse-1", 1_920, listOf(48, 52, 55), "f".repeat(64))
+
+        assertFailsWith<IllegalArgumentException> {
+            context(project = boundaryProject, occurrenceId = "chorus-1", pianoVoicingBoundary = wrongAuthority)
+        }
+    }
+
+    @Test
     fun `seed and curated pattern identity produce repeatable distinct alternatives`() {
         val generationContext = context(density = 1.0)
         val alternatives = MidiCoreChordGenerator.generateAlternatives(generationContext, count = 2)
@@ -450,18 +505,21 @@ class MidiCoreChordGeneratorTest {
         density: Double = 1.0,
         chordSymbol: String = "C",
         project: MidiCoreProject = project(chordSymbol = chordSymbol),
+        occurrenceId: String = "verse-1",
         protectedMelodyNotes: List<MidiCoreProtectedMelodyNote> = emptyList(),
         acceptedDependencies: List<MidiCoreAcceptedDependencyContext> = emptyList(),
+        pianoVoicingBoundary: MidiCorePianoVoicingBoundarySummary? = null,
     ): MidiCoreGenerationContext = MidiCoreGenerationContext.forOccurrence(
         authority = MidiCoreAuthoritySnapshot.from(project),
         role = CandidateRole.CHORDS,
-        occurrenceId = "verse-1",
+        occurrenceId = occurrenceId,
         performanceProfile = MidiCorePerformanceProfileCatalog.requireForRole(CandidateRole.CHORDS, profileId),
         patternId = patternId,
         generator = MidiCoreGeneratorInput("test-generator", "test-v1", patternId, seed),
         protectedMelodyNotes = protectedMelodyNotes,
         acceptedDependencies = acceptedDependencies,
         sectionPolicy = MidiCoreSectionPolicy(density = density),
+        pianoVoicingBoundary = pianoVoicingBoundary,
     )
 
     private fun protectedNote(pitch: Int, anchor: Boolean): MidiCoreProtectedMelodyNote = MidiCoreProtectedMelodyNote(
@@ -566,6 +624,9 @@ class MidiCoreChordGeneratorTest {
         chordEvents: List<AuthoritativeChordEvent> = listOf(
             AuthoritativeChordEvent("verse-chord", "verse-1", chordSymbol, 0, 1_920),
         ),
+        occurrences: List<ProjectSectionOccurrence> = listOf(
+            ProjectSectionOccurrence("verse-1", "verse", "Verse", 0, chordEvents.maxOf(AuthoritativeChordEvent::endTick)),
+        ),
         sourceSha256: String = "a".repeat(64),
         melodyIdentitySha256: String = "c".repeat(64),
     ): MidiCoreProject = MidiCoreProject(
@@ -586,8 +647,8 @@ class MidiCoreChordGeneratorTest {
             key = ProjectKey(ProjectKeySpelling.C, ProjectScaleMode.MAJOR),
             tempo = ProjectTempo(500_000),
             meter = ProjectMeter(4, 2),
-            sectionDefinitions = listOf(ProjectSectionDefinition("verse", "Verse")),
-            occurrences = listOf(ProjectSectionOccurrence("verse-1", "verse", "Verse", 0, chordEvents.maxOf(AuthoritativeChordEvent::endTick))),
+            sectionDefinitions = occurrences.map { ProjectSectionDefinition(it.definitionId, it.label) }.distinctBy(ProjectSectionDefinition::id),
+            occurrences = occurrences,
             chordEvents = chordEvents,
         ),
     )

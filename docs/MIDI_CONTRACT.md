@@ -111,6 +111,32 @@ does not assert exact acoustic consonance for the affected overlap. CC64 is the
 only sustain interpretation: an unclosed pedal is represented only to the known
 analysis boundary.
 
+## Chords voicing continuity
+
+M04 ranks a bounded legal Chords pool over the complete requested occurrence:
+at most 48 legal voicings per chord window and 12 retained lookahead paths per
+window. It preserves required chord tones and slash bass semantics before
+ranking. A caller may explicitly provide the immediately preceding occurrence's
+immutable piano-boundary summary (authority hash, boundary tick, and ordered
+voices); it is included in the scoped context and generation fingerprint. The
+generator never discovers that input by consulting mutable accepted work.
+
+When complete-draft generation consumes that input, its summary digest is
+persisted on the resulting candidate and round-trips through the current project
+schema. The first Chords occurrence records no preceding digest; every later
+Chords occurrence must match the summary re-derived from the preceding draft
+candidate's verified immutable MIDI under current authority. Retry/reuse,
+completed-draft validation, audition, assembly, and Use reject missing or
+mismatched boundary evidence. A rejected retained candidate and its MIDI bytes
+remain inspectable while retry publishes a distinct candidate identity.
+
+When a prior-to-current movement within 12 semitones is available it is used;
+otherwise the generator deterministically ranks the remaining legal pool. If
+no anchor-safe and bass-spaced legal voicing exists, generation fails with its
+ordinary validation evidence rather than altering authority, melody, or chord
+identity. Stable score/path/pitch ordering resolves ties; a seed only chooses
+among paths within the documented near-best cost bound.
+
 ## Export package
 
 Each new immutable snapshot contains `complete-song.mid`, aligned role files

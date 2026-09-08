@@ -68,6 +68,19 @@ class MidiCoreProjectSchemaTest {
     }
 
     @Test
+    fun `candidate piano boundary digest round trips and malformed evidence is invalid`() {
+        val digest = "9".repeat(64)
+        val base = completeProject()
+        val project = base.copy(candidates = base.candidates.map { it.copy(boundarySummarySha256 = digest) })
+        val serialized = MidiCoreProjectSchema.encode(project)
+
+        assertEquals(digest, MidiCoreProjectSchema.decode(serialized).candidates.single().boundarySummarySha256)
+        assertIs<MidiCoreProjectDocument.Invalid>(
+            MidiCoreProjectSchema.inspect(serialized.replace(digest, "not-a-digest")),
+        )
+    }
+
+    @Test
     fun `derived records cannot exist before their source and authority`() {
         val project = completeProject()
 
