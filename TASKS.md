@@ -76,7 +76,7 @@ an unrelated task. A failed dependent gate cannot be bypassed.
 | M08 | Coordinate bass/drums and section transitions | M08b | TODO | |
 | M09a | Define scoped deterministic musical repair intents | M08 | TODO | |
 | M09 | Add meaningful alternatives and targeted musical repair | M09a | TODO | |
-| U04b | Edit sections and confirmed arrangement purpose | U04a, M06 | TODO | |
+| U04b | Edit sections and confirmed arrangement purpose | U04a, M06 | BLOCKED | test-2 failed (2); /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-08T17-51-40-295Z-U04b/test-2.log ./gradlew test > Task :checkKotlinGradlePluginConfigurationErrors SKIPPED > Task :processResources NO-SOURCE > Task :processTestResources UP-TO-DATE > Task :desktopApp:checkKotlinGradlePluginConfigurationErrors SKIPPED > Task :desktopApp:convertXmlValueResourcesForMain NO-SOURCE > Task :desktopApp:copyNonXmlValueResourcesForMain NO-SOURCE > Task :desktopApp:prepareComposeResourcesTaskForMain NO-SOURCE > Task :desktopApp:generateResourceA |
 | U04 | Build compact Structure & Harmony editing | U04b | TODO | |
 | U05a | Make Arrange lanes and full-draft action dominant | U04, M07 | TODO | |
 | U05b | Wire bounded previews and contextual repair actions | U05a, M09 | TODO | |
