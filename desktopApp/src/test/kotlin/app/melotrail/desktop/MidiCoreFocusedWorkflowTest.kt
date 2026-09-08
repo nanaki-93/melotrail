@@ -191,6 +191,10 @@ class MidiCoreFocusedWorkflowTest {
             awaitWorkspaceSuccess("save harmony")
             navigateTo(MidiCoreWorkspaceDestination.MIDI)
             navigateTo(MidiCoreWorkspaceDestination.STRUCTURE_HARMONY)
+            onNodeWithTag(MidiCoreStructureHarmonyPageTags.SAVE_HARMONY).performScrollTo().assertIsDisplayed()
+            onNodeWithTag(MidiCoreStructureHarmonyPageTags.SECTION_TABS).assertIsDisplayed()
+            onNodeWithTag(MidiCoreStructureHarmonyPageTags.SECTION_CONTEXT).assertIsDisplayed()
+            onNodeWithTag(MidiCoreStructureHarmonyPageTags.CHORD_SPANS).assertIsDisplayed()
             captureFixture("structure-harmony")
 
             navigateTo(MidiCoreWorkspaceDestination.ARRANGE)

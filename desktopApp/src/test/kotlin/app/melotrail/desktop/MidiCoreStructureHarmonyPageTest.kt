@@ -2,15 +2,33 @@ package app.melotrail.desktop
 
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.v2.runComposeUiTest
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.semantics.SemanticsActions
+import app.melotrail.application.MidiCoreVisualEvidence
+import app.melotrail.application.MidiCoreVisualEvidenceAvailable
+import app.melotrail.application.MidiCoreVisualEvidenceCacheStatus
+import app.melotrail.application.MidiCoreVisualEvidenceCurrentness
+import app.melotrail.application.MidiCoreVisualEvidenceEvent
+import app.melotrail.application.MidiCoreVisualEvidenceIdentity
+import app.melotrail.application.MidiCoreVisualEvidenceLane
+import app.melotrail.application.MidiCoreVisualEvidenceProjection
+import app.melotrail.application.MidiCoreVisualEvidenceScope
+import app.melotrail.application.MidiCoreVisualEvidenceTiming
+import app.melotrail.application.MidiCoreVisualEvidenceUnavailable
 import app.melotrail.arrangement.core.MidiCoreInvalidationPlanner
+import app.melotrail.midi.domain.MidiExportRole
 import app.melotrail.midi.domain.MidiTrackSummary
 import app.melotrail.music.core.ProjectKeySpelling
 import app.melotrail.music.core.ProjectMeter
@@ -103,16 +121,22 @@ class MidiCoreStructureHarmonyPageTest {
     @Test
     fun `page exposes explicit pre-structure padding and cancellation controls`() = runComposeUiTest {
         val intents = mutableListOf<MidiCoreWorkspaceIntent>()
+        val base = unstructuredAuthorityState(padded = false)
+        // Unsaved meter suggestions must not reinterpret the confirmed source-end position.
+        val pendingMeter = base.copy(authority = base.authority.copy(draft = base.authority.draft.copy(meter = ProjectMeter(6, 8))))
         setContent {
             MelotrailTheme {
                 MidiCoreWorkspaceShell(
-                    state = unstructuredAuthorityState(padded = false),
+                    state = pendingMeter,
                     onIntent = intents::add,
                     initialDestination = MidiCoreWorkspaceDestination.STRUCTURE_HARMONY,
                 )
             }
         }
 
+        onNodeWithText("Last melody note ends bar 3 · beat 4 + 2/3 beat. Source end-of-track is bar 3 · beat 4 + 7/8 beat.")
+            .performScrollTo()
+            .assertExists()
         onNodeWithTag(MidiCoreStructureHarmonyPageTags.PAD_ARRANGEMENT).performScrollTo().assertIsEnabled().performClick()
         assertEquals(
             listOf<MidiCoreWorkspaceIntent>(MidiCoreWorkspaceIntent.ConfirmArrangementExtent(true)),
@@ -129,11 +153,104 @@ class MidiCoreStructureHarmonyPageTest {
                 )
             }
         }
-        onNodeWithTag(MidiCoreStructureHarmonyPageTags.CANCEL_PADDING).performScrollTo().assertIsEnabled().performClick()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.CANCEL_PADDING)
+            .performScrollTo()
+            .assertIsEnabled()
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
         assertEquals(
             listOf<MidiCoreWorkspaceIntent>(MidiCoreWorkspaceIntent.ConfirmArrangementExtent(false)),
             intents,
         )
+    }
+
+    @Test
+    fun `duration inspector saves unequal chord rows with verified melody and section context`() = runComposeUiTest {
+        val intents = mutableListOf<MidiCoreWorkspaceIntent>()
+        val base = authorityState().copy(visualEvidence = sourceEvidence())
+        setContent {
+            MelotrailTheme {
+                MidiCoreWorkspaceShell(
+                    state = base,
+                    onIntent = intents::add,
+                    initialDestination = MidiCoreWorkspaceDestination.STRUCTURE_HARMONY,
+                )
+            }
+        }
+
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.SECTION_TABS).performScrollTo().assertExists()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.SECTION_CONTEXT).assertTextContains("Verse one · bar 1 · beat 1–bar 2 · beat 1")
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.MELODY_CONTEXT).assertTextContains("2 protected melody notes overlap this section.")
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.sectionTab(1)).performClick()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.SECTION_CONTEXT).assertTextContains("Chorus · bar 2 · beat 1–bar 3 · beat 1")
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.chordDuration(0, 0)).assertDoesNotExist()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.sectionTab(0)).performClick()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.chordDuration(0, 0)).performTextReplacement("3")
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.chordDuration(0, 1)).performTextReplacement("1")
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.CHORD_SPANS).assertTextContains("C bars 1.1–1.3  ·  Dbmaj9/F bars 1.4–1.4")
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.SAVE_HARMONY).performScrollTo().assertIsEnabled().performClick()
+
+        assertEquals(
+            listOf<MidiCoreWorkspaceIntent>(
+                MidiCoreWorkspaceIntent.ReplaceHarmony(
+                    listOf(
+                        AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 1440),
+                        AuthoritativeChordEvent("chord-2", "verse-1", "Dbmaj9/F", 1440, 1920),
+                        AuthoritativeChordEvent("chord-3", "chorus-1", "G", 1920, 3840),
+                        AuthoritativeChordEvent("chord-4", "verse-2", "C", 3840, 5760),
+                    ),
+                ),
+            ),
+            intents,
+        )
+    }
+
+    @Test
+    fun `removing a middle chord then adding preserves unique identities on save`() = runComposeUiTest {
+        val intents = mutableListOf<MidiCoreWorkspaceIntent>()
+        setContent {
+            MelotrailTheme {
+                MidiCoreWorkspaceShell(
+                    state = authorityState(),
+                    onIntent = intents::add,
+                    initialDestination = MidiCoreWorkspaceDestination.STRUCTURE_HARMONY,
+                )
+            }
+        }
+        repeat(3) { onNodeWithText("+ Add chord row").performScrollTo().performClick() }
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.removeChord(0, 3)).performScrollTo().performClick()
+        onNodeWithText("+ Add chord row").performScrollTo().performClick()
+        repeat(5) { index ->
+            onNodeWithTag(MidiCoreStructureHarmonyPageTags.chordDuration(0, index))
+                .performScrollTo().performTextReplacement(if (index == 0) "2" else "1/2")
+        }
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.SAVE_HARMONY).performScrollTo().assertIsEnabled().performClick()
+        val events = (intents.single() as MidiCoreWorkspaceIntent.ReplaceHarmony).events
+        assertEquals(events.size, events.map { it.id }.distinct().size)
+        assertEquals(1920L, events.filter { it.occurrenceId == "verse-1" }.last().endTick)
+    }
+
+    @Test
+    fun `duration and row removal controls are keyboard reachable`() = runComposeUiTest {
+        setContent {
+            MelotrailTheme {
+                MidiCoreWorkspaceShell(
+                    state = authorityState(),
+                    initialDestination = MidiCoreWorkspaceDestination.STRUCTURE_HARMONY,
+                )
+            }
+        }
+
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.chordDuration(0, 0))
+            .performScrollTo()
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.removeChord(0, 1))
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+        onNodeWithTag(MidiCoreStructureHarmonyPageTags.removeChord(0, 1)).assertDoesNotExist()
     }
 
     @Test
@@ -299,6 +416,37 @@ class MidiCoreStructureHarmonyPageTest {
             project = project,
             source = base.source.copy(sourceEndTick = source.sourceEndTick, lastNoteEndTick = source.lastNoteEndTick),
             authority = base.authority.copy(confirmed = authority),
+        )
+    }
+
+    private fun sourceEvidence(): MidiCoreVisualEvidenceProjection {
+        val source = MidiCoreVisualEvidence.Available(
+            MidiCoreVisualEvidenceAvailable(
+                scope = MidiCoreVisualEvidenceScope.PROTECTED_SOURCE,
+                identity = MidiCoreVisualEvidenceIdentity("authority-page-project", "a".repeat(64), "authority-hash"),
+                timing = MidiCoreVisualEvidenceTiming(480, 5760, 500_000, 4, 2, authoritative = true),
+                lanes = listOf(
+                    MidiCoreVisualEvidenceLane(
+                        MidiExportRole.MELODY,
+                        listOf(
+                            MidiCoreVisualEvidenceEvent(0, 480, 0, 60, 96, percussion = false),
+                            MidiCoreVisualEvidenceEvent(960, 1440, 0, 64, 96, percussion = false),
+                            MidiCoreVisualEvidenceEvent(1920, 2400, 0, 67, 96, percussion = false),
+                        ),
+                    ),
+                ),
+                currentness = MidiCoreVisualEvidenceCurrentness.CURRENT,
+                cacheStatus = MidiCoreVisualEvidenceCacheStatus.COLD,
+            ),
+        )
+        fun unavailable(scope: MidiCoreVisualEvidenceScope) = MidiCoreVisualEvidence.Unavailable(
+            MidiCoreVisualEvidenceUnavailable(scope, "NOT_REQUESTED", "Not needed for this inspector.", "Continue editing harmony."),
+        )
+        return MidiCoreVisualEvidenceProjection(
+            source = source,
+            selectedCandidate = unavailable(MidiCoreVisualEvidenceScope.SELECTED_CANDIDATE),
+            draft = unavailable(MidiCoreVisualEvidenceScope.DRAFT),
+            accepted = unavailable(MidiCoreVisualEvidenceScope.ACCEPTED),
         )
     }
 }
