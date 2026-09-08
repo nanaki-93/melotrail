@@ -77,7 +77,7 @@ an unrelated task. A failed dependent gate cannot be bypassed.
 | M09a | Define scoped deterministic musical repair intents | M08 | TODO | |
 | M09 | Add meaningful alternatives and targeted musical repair | M09a | TODO | |
 | U04b | Edit sections and confirmed arrangement purpose | U04a, M06 | DONE | Section duplicate/split/move/remove and separately reviewed purpose/phrase confirmation. Repaired canonical test publication, invalid phrase input, section/plan write race and removed-rest evidence preservation. 410 tests, build, diff check and fresh Terra High review PASS; three-size controls inspected. Evidence ~/.codex/melotrail-terra/u04b-recovery-evidence; U04 layout and human visual/Logic gates pending. |
-| U04 | Build compact Structure & Harmony editing | U04b | TODO | |
+| U04 | Build compact Structure & Harmony editing | U04b | BLOCKED | test-2 failed (2); /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-08T19-05-12-835Z-U04/test-2.log ./gradlew test > Task :checkKotlinGradlePluginConfigurationErrors SKIPPED > Task :compileKotlin UP-TO-DATE > Task :compileJava NO-SOURCE > Task :processResources NO-SOURCE > Task :classes UP-TO-DATE > Task :jar UP-TO-DATE > Task :compileTestKotlin UP-TO-DATE > Task :compileTestJava NO-SOURCE > Task :processTestResources UP-TO-DATE > Task :testClasses UP-TO-DATE > Task :test UP-TO-DATE > Task :desktopApp:checkKotlinGradlePluginConfiguratio |
 | U05a | Make Arrange lanes and full-draft action dominant | U04, M07 | TODO | |
 | U05b | Wire bounded previews and contextual repair actions | U05a, M09 | TODO | |
 | U05 | Build timeline-first Arrange with plan and repairs | U05b | TODO | |
