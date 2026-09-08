@@ -10,6 +10,7 @@ enum class MidiCoreAuthorityDimension {
     TIMING,
     STRUCTURE,
     HARMONY,
+    ARRANGEMENT_PLAN,
     SETTINGS,
 }
 

@@ -14,6 +14,7 @@ enum class MidiCoreInvalidationReason {
     TIMING_CHANGED,
     STRUCTURE_CHANGED,
     HARMONY_CHANGED,
+    ARRANGEMENT_PLAN_CHANGED,
     SETTINGS_CHANGED,
     ACCEPTED_DEPENDENCY_CHANGED,
 }
@@ -95,6 +96,7 @@ object MidiCoreInvalidationPlanner {
             MidiCoreAuthorityDimension.TIMING to (before.timingSha256 != after.timingSha256),
             MidiCoreAuthorityDimension.STRUCTURE to (before.structureSha256 != after.structureSha256),
             MidiCoreAuthorityDimension.HARMONY to (before.harmonySha256 != after.harmonySha256),
+            MidiCoreAuthorityDimension.ARRANGEMENT_PLAN to (before.arrangementPlanSha256 != after.arrangementPlanSha256),
             MidiCoreAuthorityDimension.SETTINGS to (before.settingsSha256 != after.settingsSha256),
         ).filter { it.second }.map { it.first }
         val beforeScopes = before.scopes.associateBy(MidiCoreAuthorityScopeFingerprint::key)
@@ -177,6 +179,9 @@ object MidiCoreInvalidationPlanner {
         if (beforeScope != null && afterScope != null && beforeScope.harmonySha256 != afterScope.harmonySha256) {
             add(MidiCoreInvalidationReason.HARMONY_CHANGED)
         }
+        if (beforeScope == null || afterScope == null || beforeScope.arrangementPlanSha256 != afterScope.arrangementPlanSha256) {
+            add(MidiCoreInvalidationReason.ARRANGEMENT_PLAN_CHANGED)
+        }
     }.ifEmpty { listOf(MidiCoreInvalidationReason.HARMONY_CHANGED) }
 
     private fun reasonFor(dimension: MidiCoreAuthorityDimension): MidiCoreInvalidationReason = when (dimension) {
@@ -185,6 +190,7 @@ object MidiCoreInvalidationPlanner {
         MidiCoreAuthorityDimension.TIMING -> MidiCoreInvalidationReason.TIMING_CHANGED
         MidiCoreAuthorityDimension.STRUCTURE -> MidiCoreInvalidationReason.STRUCTURE_CHANGED
         MidiCoreAuthorityDimension.HARMONY -> MidiCoreInvalidationReason.HARMONY_CHANGED
+        MidiCoreAuthorityDimension.ARRANGEMENT_PLAN -> MidiCoreInvalidationReason.ARRANGEMENT_PLAN_CHANGED
         MidiCoreAuthorityDimension.SETTINGS -> MidiCoreInvalidationReason.SETTINGS_CHANGED
     }
 }

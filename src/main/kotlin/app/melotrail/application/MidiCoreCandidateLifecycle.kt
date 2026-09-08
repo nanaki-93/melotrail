@@ -504,7 +504,11 @@ class MidiCoreExportSnapshotLifecycle(
     private val clock: Clock = Clock.systemUTC(),
     private val idFactory: () -> String = { "export-${UUID.randomUUID()}" },
 ) {
-    fun capture(request: CaptureMidiCoreExportSnapshot): MidiCoreExportSnapshotLifecycleResult {
+    fun capture(request: CaptureMidiCoreExportSnapshot): MidiCoreExportSnapshotLifecycleResult =
+        MidiCoreProjectWriteCoordinator.withLock(request.session.root) { captureLocked(request) }
+
+    /** Snapshot admission and project-state append share the same transaction boundary as plan edits. */
+    private fun captureLocked(request: CaptureMidiCoreExportSnapshot): MidiCoreExportSnapshotLifecycleResult {
         val root = request.session.root.toAbsolutePath().normalize()
         val current = try {
             artifacts.openProject(root)

@@ -182,10 +182,16 @@ fingerprints; no label supplies a purpose and no plan record rewrites protected
 MIDI, candidates, acceptances or exports. M06b derives a deterministic,
 session-only proposal from a current style and occurrence order; propose and
 cancel make no project or artifact writes. Only explicit confirmation persists
-the plan, after matching the proposal's authority snapshot. Bounded neighbor
-dependency resolution remains M07 work. This is the current project schema
-version; older project schemas are rejected before writes, with no automatic
-migration.
+the plan, after matching the proposal's authority snapshot. A confirmed-plan
+edit has a write-free affected-scope preview and requires a separate explicit
+confirmation. It marks only candidates whose scoped plan fingerprint changed
+(and their declared accepted dependents) stale; it preserves candidate MIDI,
+acceptance references, locks and export snapshots unchanged for inspection.
+A no-op edit is write-free. Its confirmation is one serialized project-state
+transaction with candidate review and snapshot capture, so a stale concurrent
+write is rejected rather than being overwritten. Bounded neighbor dependency
+resolution remains M07 work. This is the current project schema version; older
+project schemas are rejected before writes, with no automatic migration.
 
 The remaining requirements for M07 are not claims of shipped support:
 - **Planned rests:** each scope is a validated candidate or an explicit plan
