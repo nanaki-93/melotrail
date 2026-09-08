@@ -104,7 +104,7 @@ an unrelated task. A failed dependent gate cannot be bypassed.
 | V04 | Implement deterministic scene composition | V04a | TODO | Selected for unpaid implementation; human/budget gates remain. |
 | V05a | Build real scene preview and soundtrack transport | V04 | TODO | |
 | V05 | Build real video editor/preview | V05a | TODO | Selected for unpaid implementation; human/budget gates remain. |
-| V06a | Implement bounded encoder process and output staging | V01a | TODO | |
+| V06a | Implement bounded encoder process and output staging | V01a | BLOCKED | task-check-0-2 failed (1); /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-08T21-11-13-386Z-V06a/task-check-0-2.log  FAILURE: Build failed with an exception.  * What went wrong: 25.0.4.1  * Try: > Run with --stacktrace option to get the stack trace. > Run with --info or --debug option to get more log output. > Run with --scan to get full insights. > Get more help at https://help.gradle.org.  BUILD FAILED in 264ms ; preserved /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-08T21-11-13-386Z-V06a |
 | V06 | Encode, validate and publish local video outputs | V06a, V05 | TODO | Selected for unpaid implementation; human/budget gates remain. |
 | V07a | Add capability-checked optional Export handoff | V06, U06 | TODO | |
 | V07 | Complete a TABI music-video pilot and optional handoff | V07a, V03, V02, Q03 | TODO | Selected for unpaid implementation; human/budget gates remain. |
