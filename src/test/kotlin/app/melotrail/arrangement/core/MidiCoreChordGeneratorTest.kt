@@ -44,6 +44,20 @@ import org.junit.jupiter.api.Test
 
 class MidiCoreChordGeneratorTest {
     @Test
+    fun `unsupported comping meters never fall back to four-four`() {
+        listOf(ProjectMeter(5, 2), ProjectMeter(7, 3), ProjectMeter(2, 2)).forEach { meter ->
+            MidiCorePatternCatalog.chordRhythms.forEach { pattern ->
+                val error = assertFailsWith<IllegalArgumentException> {
+                    MidiCoreChordGenerator.generate(context(
+                        project = project(meter = meter), patternId = pattern.id.id,
+                    ))
+                }
+                assertTrue(error.message.orEmpty().contains("Piano comping does not support ${meter.numerator}/${meter.denominator}"))
+            }
+        }
+    }
+
+    @Test
     fun `generates every authoritative chord extension inside the bounded register`() {
         val result = MidiCoreChordGenerator.generate(
             context(chordSymbol = "Cmaj9", density = 1.0),
@@ -86,6 +100,92 @@ class MidiCoreChordGeneratorTest {
         generated.forEach { (pattern, result) ->
             assertEquals(golden.getValue(pattern.id), result.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>().map(::goldenNote))
         }
+    }
+
+    @Test
+    fun `sustained support clips offbeat harmony while retaining the next metrical bar`() {
+        val result = MidiCoreChordGenerator.generate(context(
+            project = project(chordEvents = listOf(
+                AuthoritativeChordEvent("c", "verse-1", "C", 0, 720),
+                AuthoritativeChordEvent("f", "verse-1", "F", 720, 3_840),
+            )),
+            patternId = MidiCoreChordRhythmPatternId.SUSTAINED.id,
+            density = 1.0,
+        ))
+        assertTrue(result.accepted, result.validation.report.findings.toString())
+        val spans = result.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>()
+            .map { it.startTick to it.endTick }.distinct()
+        assertEquals(listOf(0L to 720L, 720L to 1_920L, 1_920L to 3_840L), spans)
+        assertEquals(result, MidiCoreChordGenerator.generate(result.context))
+    }
+
+    @Test
+    fun `keeps four-four rhythm phase across an offbeat harmonic change and clips the outgoing chord`() {
+        val result = MidiCoreChordGenerator.generate(
+            context(
+                project = project(
+                    chordEvents = listOf(
+                        AuthoritativeChordEvent("c", "verse-1", "C", 0, 720),
+                        AuthoritativeChordEvent("f", "verse-1", "F", 720, 1_920),
+                    ),
+                ),
+                patternId = MidiCoreChordRhythmPatternId.BRIDGE_HALF_TIME.id,
+                profileId = "chords.sustained",
+                density = 1.0,
+            ),
+        )
+        val notes = result.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>()
+
+        assertTrue(result.accepted, result.validation.report.findings.toString())
+        assertEquals(listOf(0L, 960L), starts(result), "The F chord must wait for the next metrical attack")
+        assertFalse(notes.any { it.startTick == 720L }, "An offbeat chord change must not restart the pattern")
+        assertTrue(notes.filter { it.startTick == 0L }.all { it.endTick == 720L }, "The outgoing chord must clip exactly at its harmonic boundary")
+        assertTrue(notes.filter { it.startTick == 960L }.all { it.endTick <= 1_920L })
+    }
+
+    @Test
+    fun `uses authored three-four attacks without carrying a fourth four-four beat into the next bar`() {
+        val result = MidiCoreChordGenerator.generate(
+            context(
+                project = project(
+                    chordEvents = listOf(AuthoritativeChordEvent("c", "verse-1", "C", 0, 2_880)),
+                    meter = ProjectMeter(3, 2),
+                ),
+                patternId = MidiCoreChordRhythmPatternId.LAID_BACK_QUARTERS.id,
+                profileId = "chords.pulsed",
+                density = 1.0,
+            ),
+        )
+        val notes = result.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>()
+
+        assertTrue(result.accepted, result.validation.report.findings.toString())
+        assertEquals(listOf(0L, 480L, 960L, 1_440L, 1_920L, 2_400L), starts(result))
+        assertEquals(6, notes.groupBy(MidiCoreCandidateEvent.Note::startTick).size)
+        assertTrue(notes.all { it.endTick <= 2_880L })
+    }
+
+    @Test
+    fun `uses compound six-eight grouping at a nonstandard PPQ with bounded short sections`() {
+        val result = MidiCoreChordGenerator.generate(
+            context(
+                project = project(
+                    chordEvents = listOf(AuthoritativeChordEvent("c", "verse-1", "C", 0, 1_500)),
+                    ppq = 500,
+                    meter = ProjectMeter(6, 3),
+                ),
+                patternId = MidiCoreChordRhythmPatternId.LAID_BACK_QUARTERS.id,
+                profileId = "chords.pulsed",
+                density = 1.0,
+            ),
+        )
+        val notes = result.candidate.events.filterIsInstance<MidiCoreCandidateEvent.Note>()
+        val velocityAt = notes.groupBy(MidiCoreCandidateEvent.Note::startTick)
+            .mapValues { (_, grouped) -> grouped.first().velocity }
+
+        assertTrue(result.accepted, result.validation.report.findings.toString())
+        assertEquals(listOf(0L, 750L), starts(result))
+        assertTrue(velocityAt.getValue(0L) > velocityAt.getValue(750L), "6/8 must retain its dotted-quarter group accent")
+        assertTrue(notes.all { it.endTick <= 1_500L })
     }
 
     @Test
@@ -629,6 +729,8 @@ class MidiCoreChordGeneratorTest {
         ),
         sourceSha256: String = "a".repeat(64),
         melodyIdentitySha256: String = "c".repeat(64),
+        ppq: Int = 480,
+        meter: ProjectMeter = ProjectMeter(4, 2),
     ): MidiCoreProject = MidiCoreProject(
         id = ProjectId("chord-generator-project"),
         metadata = ProjectMetadata("Chord generator", "2026-08-27T00:00:00Z"),
@@ -636,7 +738,7 @@ class MidiCoreChordGeneratorTest {
             originalFilename = "source.mid",
             sha256 = sourceSha256,
             format = 1,
-            ppq = 480,
+            ppq = ppq,
             original = ProjectArtifact(ProjectRelativePath("source/original.mid"), sourceSha256),
             importReport = ProjectArtifact(ProjectRelativePath("reports/import.json"), "b".repeat(64)),
             trackSummaries = listOf(MidiTrackSummary(0, "Melody", emptyList())),
@@ -646,7 +748,7 @@ class MidiCoreChordGeneratorTest {
         authority = ProjectAuthority(
             key = ProjectKey(ProjectKeySpelling.C, ProjectScaleMode.MAJOR),
             tempo = ProjectTempo(500_000),
-            meter = ProjectMeter(4, 2),
+            meter = meter,
             sectionDefinitions = occurrences.map { ProjectSectionDefinition(it.definitionId, it.label) }.distinctBy(ProjectSectionDefinition::id),
             occurrences = occurrences,
             chordEvents = chordEvents,

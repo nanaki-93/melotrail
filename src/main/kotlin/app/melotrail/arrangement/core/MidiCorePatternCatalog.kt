@@ -1,5 +1,6 @@
 package app.melotrail.arrangement.core
 
+import app.melotrail.music.core.ProjectMeter
 import app.melotrail.project.CandidateRole
 
 /** Stable target pattern families; no family names identify an audio asset. */
@@ -45,7 +46,7 @@ enum class MidiCoreDrumFillPatternId(val id: String) {
     BRIDGE_HALF_TIME_BREAK("drums.fill.bridge-half-time-break"),
 }
 
-/** A reviewable beat-relative attack in a sixteen-step quarter-note bar. */
+/** A reviewable attack in sixteenth-note units relative to an authored meter bar. */
 data class MidiCoreChordRhythmStep(
     val sixteenth: Int,
     val durationSixteenths: Int,
@@ -79,16 +80,38 @@ enum class MidiCoreDrumHit {
     OPEN_HAT,
 }
 
-/** One complete authored chord-rhythm variant. */
+/** One complete authored chord-rhythm variant for the supported comping meters. */
 data class MidiCoreChordRhythmPattern(
     val id: MidiCoreChordRhythmPatternId,
     val displayName: String,
+    /** The established four-quarter-note bar realization. */
     val steps: List<MidiCoreChordRhythmStep>,
+    /** Explicit triple-meter realization; it must not be inferred by truncating four-four. */
+    val threeFourSteps: List<MidiCoreChordRhythmStep>,
+    /** Explicit compound-meter realization, grouped as two dotted-quarter pulses. */
+    val sixEightSteps: List<MidiCoreChordRhythmStep>,
 ) {
     init {
         require(displayName.isNotBlank()) { "Chord-rhythm display name must not be blank" }
-        require(steps.isNotEmpty() && steps == steps.sortedBy(MidiCoreChordRhythmStep::sixteenth)) {
-            "Chord-rhythm steps must be non-empty and ordered"
+        requireSteps(steps, 16, "4/4")
+        requireSteps(threeFourSteps, 12, "3/4")
+        requireSteps(sixEightSteps, 12, "6/8")
+    }
+
+    /** Return the authored realization when the project has a supported meter. */
+    fun stepsFor(meter: ProjectMeter): List<MidiCoreChordRhythmStep> = when {
+        meter.numerator == 4 && meter.denominator == 4L -> steps
+        meter.numerator == 3 && meter.denominator == 4L -> threeFourSteps
+        meter.numerator == 6 && meter.denominator == 8L -> sixEightSteps
+        else -> throw IllegalArgumentException(
+            "Piano comping does not support ${meter.numerator}/${meter.denominator}; authored meters are 4/4, 3/4 and 6/8.",
+        )
+    }
+
+    private fun requireSteps(steps: List<MidiCoreChordRhythmStep>, barSixteenths: Int, meter: String) {
+        require(steps.isNotEmpty() && steps == steps.sortedBy(MidiCoreChordRhythmStep::sixteenth) &&
+            steps.all { step -> step.sixteenth + step.durationSixteenths <= barSixteenths }) {
+            "Chord-rhythm $meter steps must be non-empty, ordered, and bar-bounded"
         }
     }
 }
@@ -126,7 +149,7 @@ data class MidiCorePatternInventoryEntry(
 /** The curated, deterministic MIDI-only pattern catalog for the three target roles. */
 object MidiCorePatternCatalog {
     /** Version of the in-code pattern inventory included in generator identity. */
-    const val VERSION = 1
+    const val VERSION = 2
 
     /** Complete chord-rhythm variants, copied as musical steps rather than legacy pattern objects. */
     val chordRhythms: List<MidiCoreChordRhythmPattern> = listOf(
@@ -134,6 +157,8 @@ object MidiCorePatternCatalog {
             MidiCoreChordRhythmPatternId.SUSTAINED,
             "Sustained",
             listOf(MidiCoreChordRhythmStep(0, 16, 0)),
+            listOf(MidiCoreChordRhythmStep(0, 12, 0)),
+            listOf(MidiCoreChordRhythmStep(0, 12, 0)),
         ),
         MidiCoreChordRhythmPattern(
             MidiCoreChordRhythmPatternId.LAID_BACK_QUARTERS,
@@ -141,6 +166,13 @@ object MidiCorePatternCatalog {
             listOf(
                 MidiCoreChordRhythmStep(0, 3, -2), MidiCoreChordRhythmStep(4, 3, -5),
                 MidiCoreChordRhythmStep(8, 3, 0), MidiCoreChordRhythmStep(12, 3, -4),
+            ),
+            listOf(
+                MidiCoreChordRhythmStep(0, 3, -2), MidiCoreChordRhythmStep(4, 3, -5),
+                MidiCoreChordRhythmStep(8, 3, 0),
+            ),
+            listOf(
+                MidiCoreChordRhythmStep(0, 3, 0), MidiCoreChordRhythmStep(6, 3, -2),
             ),
         ),
         MidiCoreChordRhythmPattern(
@@ -150,6 +182,8 @@ object MidiCorePatternCatalog {
                 MidiCoreChordRhythmStep(4, 3, -5), MidiCoreChordRhythmStep(8, 3, 0),
                 MidiCoreChordRhythmStep(12, 3, -4),
             ),
+            listOf(MidiCoreChordRhythmStep(4, 3, -5), MidiCoreChordRhythmStep(8, 3, 0)),
+            listOf(MidiCoreChordRhythmStep(6, 3, -2)),
         ),
         MidiCoreChordRhythmPattern(
             MidiCoreChordRhythmPatternId.DUSTY_OFFBEATS,
@@ -158,6 +192,11 @@ object MidiCorePatternCatalog {
                 MidiCoreChordRhythmStep(2, 2, -6), MidiCoreChordRhythmStep(6, 2, -3),
                 MidiCoreChordRhythmStep(10, 2, -5), MidiCoreChordRhythmStep(14, 2, -1),
             ),
+            listOf(
+                MidiCoreChordRhythmStep(2, 2, -6), MidiCoreChordRhythmStep(6, 2, -3),
+                MidiCoreChordRhythmStep(10, 2, -5),
+            ),
+            listOf(MidiCoreChordRhythmStep(3, 2, -5), MidiCoreChordRhythmStep(9, 2, -3)),
         ),
         MidiCoreChordRhythmPattern(
             MidiCoreChordRhythmPatternId.BROKEN_SYNCOPATION,
@@ -166,11 +205,21 @@ object MidiCorePatternCatalog {
                 MidiCoreChordRhythmStep(0, 3, 0), MidiCoreChordRhythmStep(6, 2, -5),
                 MidiCoreChordRhythmStep(10, 2, -3), MidiCoreChordRhythmStep(14, 2, -1),
             ),
+            listOf(
+                MidiCoreChordRhythmStep(0, 3, 0), MidiCoreChordRhythmStep(6, 2, -5),
+                MidiCoreChordRhythmStep(10, 2, -3),
+            ),
+            listOf(
+                MidiCoreChordRhythmStep(0, 3, 0), MidiCoreChordRhythmStep(5, 2, -5),
+                MidiCoreChordRhythmStep(9, 2, -3),
+            ),
         ),
         MidiCoreChordRhythmPattern(
             MidiCoreChordRhythmPatternId.BRIDGE_HALF_TIME,
             "Bridge half-time",
             listOf(MidiCoreChordRhythmStep(0, 6, -5), MidiCoreChordRhythmStep(8, 6, -2)),
+            listOf(MidiCoreChordRhythmStep(0, 6, -5), MidiCoreChordRhythmStep(6, 6, -2)),
+            listOf(MidiCoreChordRhythmStep(0, 5, -2), MidiCoreChordRhythmStep(6, 5, -4)),
         ),
     )
 

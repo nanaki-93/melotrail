@@ -78,6 +78,7 @@ import app.melotrail.audition.MidiAuditionState
 import app.melotrail.arrangement.core.MidiCoreSectionPolicy
 import app.melotrail.arrangement.core.MidiCoreInvalidationPreview
 import app.melotrail.arrangement.core.MidiCoreArrangementStyleCatalog
+import app.melotrail.arrangement.core.MidiCorePatternCatalog
 import app.melotrail.midi.domain.MidiFinding
 import app.melotrail.midi.domain.MidiImportValidationResult
 import app.melotrail.midi.domain.MidiTrackSummary
@@ -1373,7 +1374,7 @@ class MidiCoreWorkspaceViewModel(
                         patternId = choice.patternId,
                         generator = MidiCoreGeneratorInput(
                             generatorId = "midi-core-style-repair",
-                            generatorVersion = "midi-core-style-v${MidiCoreArrangementStyleCatalog.VERSION}",
+                            generatorVersion = "midi-core-style-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}",
                             patternId = choice.patternId,
                             seed = intent.rootSeed + index,
                         ),

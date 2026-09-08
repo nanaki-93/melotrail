@@ -566,7 +566,7 @@ internal data class M01EngineInputs(
             patternCatalogVersion = MidiCorePatternCatalog.VERSION.toLong(),
             performanceProfileCatalogVersion = MidiCorePerformanceProfileCatalog.VERSION.toLong(),
             seed = case.seed,
-            engineId = "midi-core-style-v${MidiCoreArrangementStyleCatalog.VERSION}",
+            engineId = "midi-core-style-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}",
         )
     }
 }

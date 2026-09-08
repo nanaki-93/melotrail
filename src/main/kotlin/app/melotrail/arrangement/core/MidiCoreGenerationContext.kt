@@ -394,6 +394,9 @@ data class MidiCoreGenerationContext(
         }
         require(generator.patternId == patternId) { "Generator identity pattern does not match the context pattern" }
         MidiCorePatternCatalog.requireAllowed(role, patternId)
+        if (role == CandidateRole.CHORDS) {
+            MidiCorePatternCatalog.chordRhythm(patternId).stepsFor(authority.meter)
+        }
         if (role != CandidateRole.DRUMS) {
             require(sectionPolicy.fillPatternId == null) { "Only drum generation may select a fill pattern" }
         }

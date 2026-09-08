@@ -29,19 +29,19 @@ import org.junit.jupiter.api.Test
 class MidiCoreChordDevelopmentFixtureTest {
     @Test
     fun `three development fixtures yield two valid distinct chord alternatives with exact harmony`() {
-        // Engine v4 selects a bounded whole-phrase path; pin its distinct legal alternatives.
+        // Meter-aware phase changes the semantic events at sub-bar harmony boundaries; pin the new legal alternatives.
         val expectedCandidateHashes = mapOf(
             "simple-diatonic-4-4" to listOf(
-                "a82ad64a62d063abf75cd947f8bcbc2e107117ee6eeb563c4f83780da75b3903",
-                "929e96310742bc42dc615a033ea111f17308d79e289bb4b5ea32b2c83ffd2826",
+                "4356bac849c24754aea47538ae69b9a2dda6b740eb96a07c2d5eab992abc617e",
+                "d6c6c06c34eb7de6a53d54efdb7211573b71a96f5ccb41d3414b64fd3952e7dc",
             ),
             "pickup-and-sub-bar-changes" to listOf(
-                "19f1e04e657852de0ec6670e74e8e917785c7690654b751fd5a07b844d333f26",
-                "9c6ac5d8801ec3a6e83d8ba407e858f4e21381513fab00c011dfab1377567ece",
+                "1a66539a6e9c1673d2c804b86e2c1a0dc85aa4123c7721fb94077620e6811937",
+                "92fe0607887496850303da388974cf7d4b95548a02ebcbdf94c0eb5be13aed70",
             ),
             "chromatic-expressive-controller-source" to listOf(
-                "1af627756cd548d4336b831449a148454fb92676ec0018a1b6bdf38f206e370e",
-                "59b4c0fe07e2a0ea8c4f339748468e74b5fa4c214939457322c25166f02852f1",
+                "cba7739689e26cb31a99c471d063676bf2e907180b26406b68b4a57ae1cf1dce",
+                "ce21aab8ab8af947d04c1c8cf64bb02a840488b58bef5b3a1308ca3c76c49bae",
             ),
         )
         developmentFixtures().forEach { fixture ->
@@ -79,7 +79,14 @@ class MidiCoreChordDevelopmentFixtureTest {
         assertEquals(patterns.size, patterns.map { it.id.id }.toSet().size)
         assertTrue(patterns.all { pattern ->
             pattern.steps.isNotEmpty() && pattern.steps == pattern.steps.sortedBy(MidiCoreChordRhythmStep::sixteenth) &&
-                pattern.steps.all { step -> step.sixteenth + step.durationSixteenths <= 16 }
+                pattern.steps.all { step -> step.sixteenth + step.durationSixteenths <= 16 } &&
+                pattern.threeFourSteps.isNotEmpty() &&
+                pattern.threeFourSteps.all { step -> step.sixteenth + step.durationSixteenths <= 12 } &&
+                pattern.sixEightSteps.isNotEmpty() &&
+                pattern.sixEightSteps.all { step -> step.sixteenth + step.durationSixteenths <= 12 } &&
+                pattern.stepsFor(ProjectMeter(4, 2)) == pattern.steps &&
+                pattern.stepsFor(ProjectMeter(3, 2)) == pattern.threeFourSteps &&
+                pattern.stepsFor(ProjectMeter(6, 3)) == pattern.sixEightSteps
         })
     }
 

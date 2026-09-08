@@ -199,3 +199,10 @@ The remaining requirements for M07 are not claims of shipped support:
 A changed generator/catalog invalidates applicability of its earlier musical
 rating; a changed export policy requires fresh relevant Logic evidence. Stored
 old artifacts remain inspectable and unchanged even when no longer current.
+
+Piano comping uses authored 4/4, 3/4 and 6/8 patterns on the song meter grid,
+clipped at exact chord boundaries. Sustained support changes voicing at an offbeat
+chord boundary and retains the next bar attack; pulsed patterns keep their authored
+attacks and may leave a rest after a chord change. Other meters remain valid musical authority
+and import data, but Chords generation and style preview reject them explicitly
+until authored comping is available; they never substitute a 4/4 pattern.

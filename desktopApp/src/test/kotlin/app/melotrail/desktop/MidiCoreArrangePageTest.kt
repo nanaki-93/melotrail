@@ -68,6 +68,18 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalTestApi::class)
 class MidiCoreArrangePageTest {
     @Test
+    fun `advanced role generation records current engine and pattern identity`() = runComposeUiTest {
+        val intents = mutableListOf<MidiCoreWorkspaceIntent>()
+        setContent { MelotrailTheme { MidiCoreArrangePage(arrangeState(), intents::add, {}) } }
+        onNodeWithContentDescription("Show advanced role adjustment").performScrollTo().performClick()
+        onNodeWithTag(MidiCoreArrangePageTags.GENERATE).performScrollTo().assertIsEnabled().performClick()
+        val request = kotlin.test.assertIs<MidiCoreWorkspaceIntent.GenerateCandidate>(intents.single())
+        assertEquals("midi-core-desktop", request.generator.generatorId)
+        assertEquals("midi-core-v5-patterns-v2", request.generator.generatorVersion)
+        assertEquals(request.patternId, request.generator.patternId)
+    }
+
+    @Test
     fun `Arrange renders one song map style gallery draft action and selected section inspector`() = runComposeUiTest {
         setContent { MelotrailTheme { MidiCoreArrangePage(arrangeState(), {}, {}) } }
 

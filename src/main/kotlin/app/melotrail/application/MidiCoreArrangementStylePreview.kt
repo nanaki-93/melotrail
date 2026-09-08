@@ -12,6 +12,7 @@ import app.melotrail.arrangement.core.MidiCoreChordGenerator
 import app.melotrail.arrangement.core.MidiCoreDrumGenerator
 import app.melotrail.arrangement.core.MidiCoreGenerationContext
 import app.melotrail.arrangement.core.MidiCoreGenerationNote
+import app.melotrail.arrangement.core.MidiCorePatternCatalog
 import app.melotrail.arrangement.core.MidiCorePerformanceProfileCatalog
 import app.melotrail.arrangement.core.MidiCoreRoleCandidate
 import app.melotrail.arrangement.core.MidiCoreRoleValidationReport
@@ -266,7 +267,7 @@ class MidiCoreArrangementStylePreview(
                     patternId = choice.patternId,
                     generator = MidiCoreGeneratorInput(
                         PREVIEW_GENERATOR_ID,
-                        "style-catalog-v${MidiCoreArrangementStyleCatalog.VERSION}",
+                        "style-catalog-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}",
                         choice.patternId,
                         derivedSeed(key, role),
                     ),

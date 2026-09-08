@@ -34,6 +34,8 @@ import app.melotrail.audition.MidiAuditionPlaybackState
 import app.melotrail.audition.MidiAuditionPort
 import app.melotrail.audition.MidiAuditionResult
 import app.melotrail.audition.MidiAuditionState
+import app.melotrail.arrangement.core.MidiCoreArrangementStyleCatalog
+import app.melotrail.arrangement.core.MidiCorePatternCatalog
 import app.melotrail.midi.domain.MidiExportRole
 import app.melotrail.midi.domain.MidiFindingCode
 import app.melotrail.project.AuthoritativeChordEvent
@@ -228,8 +230,14 @@ class MidiCoreFocusedWorkflowTest {
             assertEquals(1, workspace.state.value.project?.arrangementDrafts?.size)
             onNodeWithTag(MidiCoreVerifiedTimelineTags.ROOT).performScrollTo()
             captureFixture("arrange-top")
+            val candidateIdsBeforeRepair = workspace.state.value.project?.candidates.orEmpty().mapTo(mutableSetOf()) { it.id }
             onNodeWithTag(MidiCoreArrangePageTags.REGENERATE_SECTION).performScrollTo().assertIsEnabled().performClick()
             awaitWorkspaceSuccess("regenerate selected section")
+            val repairCandidates = workspace.state.value.project?.candidates.orEmpty().filterNot { it.id in candidateIdsBeforeRepair }
+            val expectedRepairGeneratorVersion =
+                "midi-core-style-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}"
+            assertEquals(CandidateRole.entries, repairCandidates.map { it.role })
+            assertTrue(repairCandidates.all { it.generatorVersion == expectedRepairGeneratorVersion })
             captureFixture("arrange")
 
             navigateTo(MidiCoreWorkspaceDestination.REVIEW)

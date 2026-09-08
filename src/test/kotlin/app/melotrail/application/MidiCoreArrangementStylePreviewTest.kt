@@ -27,10 +27,30 @@ class MidiCoreArrangementStylePreviewTest {
     @TempDir lateinit var root: Path
 
     @Test
+    fun `unsupported comping meter returns a preview rejection without writes`() = runBlocking {
+        val store = MidiCoreArtifactStore()
+        val original = readySession(store, "whole-song-three-bars.mid", 3)
+        val session = original.copy(project = original.project.copy(
+            authority = requireNotNull(original.project.authority).copy(meter = ProjectMeter(2, 2)),
+        ))
+        store.saveProject(session.root, session.project)
+        val projectFile = session.root.resolve(MidiCoreArtifactStore.PROJECT_FILE)
+        val before = Files.readAllBytes(projectFile)
+        val result = assertIs<MidiCoreArrangementStylePreviewResult.Rejected>(
+            MidiCoreArrangementStylePreview(artifacts = store).prepare(
+                PrepareMidiCoreArrangementStylePreview(session, "steady-road", "verse-1", 41L),
+            ),
+        )
+        assertTrue(result.toString().contains("Piano comping does not support 2/4"), result.toString())
+        assertContentEquals(before, Files.readAllBytes(projectFile))
+        assertEquals(session.project, store.openProject(session.root))
+    }
+
+    @Test
     fun `catalog has stable readable all-role bundles`() {
         val styles = MidiCoreArrangementStyleCatalog.styles
 
-        assertEquals(4, MidiCoreArrangementStyleCatalog.VERSION)
+        assertEquals(5, MidiCoreArrangementStyleCatalog.VERSION)
         assertEquals(listOf("open-sky", "late-night", "steady-road", "rising-room", "wide-bridge"), styles.map { it.id })
         styles.forEach { style ->
             assertEquals(app.melotrail.project.CandidateRole.entries, style.roles.map { it.role })

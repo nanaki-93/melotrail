@@ -541,7 +541,7 @@ internal fun ArrangeCard(tag: String, title: String, content: @Composable Column
 }
 
 private fun generationIntent(role: CandidateRole, occurrenceId: String, profileId: String, patternId: String, seed: Long) =
-    MidiCoreWorkspaceIntent.GenerateCandidate(role, occurrenceId, profileId, patternId, MidiCoreGeneratorInput("midi-core-desktop", "midi-core-v1", patternId, seed))
+    MidiCoreWorkspaceIntent.GenerateCandidate(role, occurrenceId, profileId, patternId, MidiCoreGeneratorInput("midi-core-desktop", "midi-core-v${MidiCoreArrangementStyleCatalog.VERSION}-patterns-v${MidiCorePatternCatalog.VERSION}", patternId, seed))
 
 internal fun friendlyToken(value: String): String = value.substringAfterLast('.').replace('-', ' ').replace('_', ' ').replaceFirstChar(Char::uppercaseChar)
 

@@ -189,30 +189,44 @@ object MidiCoreChordGenerator {
         )
     }
 
-    /** Repeat the selected authored rhythm from each window start without crossing harmony boundaries. */
+    /**
+     * Expand the selected meter realization on the song grid, never restarting it at a
+     * harmonic change. Pulsed attacks outside a chord window are rests. Sustained support
+     * intersects the bar span with each harmony window, changing voicing at an offbeat
+     * harmony boundary while retaining the next bar attack. Both ends are clipped.
+     */
     private fun rhythmWindows(
         context: MidiCoreGenerationContext,
         window: app.melotrail.structure.MidiCoreResolvedChordWindow,
     ): List<RhythmWindow> {
         val pattern = MidiCorePatternCatalog.chordRhythm(context.patternId)
-        if (pattern.id == MidiCoreChordRhythmPatternId.SUSTAINED) {
-            return listOf(RhythmWindow(window.startTick, window.endTick, 0, phraseBoundary = true))
-        }
         val stepTicks = context.tickGrid.ticksPerSubdivision
         val barTicks = context.tickGrid.ticksPerBar
+        val pickupTicks = context.authority.pickupTicks
+        val steps = pattern.stepsFor(context.authority.meter)
         return buildList {
-            var barStart = window.startTick
+            var barStart = metricalBarStart(window.startTick, pickupTicks, barTicks)
             while (barStart < window.endTick) {
-                pattern.steps.forEach { step ->
-                    val start = barStart + step.sixteenth.toLong() * stepTicks
-                    val end = minOf(window.endTick, start + step.durationSixteenths.toLong() * stepTicks)
-                    if (start >= window.startTick && start < window.endTick && end > start) {
-                        add(RhythmWindow(start, end, step.velocityOffset, phraseBoundary = step.sixteenth == 0))
+                val barEnd = if (barStart < pickupTicks) pickupTicks else barStart + barTicks
+                steps.forEach { step ->
+                    val metricalStart = barStart + step.sixteenth.toLong() * stepTicks
+                    val start = if (pattern.id == MidiCoreChordRhythmPatternId.SUSTAINED) {
+                        maxOf(window.startTick, metricalStart)
+                    } else metricalStart
+                    val end = minOf(window.endTick, barEnd, metricalStart + step.durationSixteenths.toLong() * stepTicks)
+                    if (start >= window.startTick && start < minOf(window.endTick, barEnd) && end > start) {
+                        add(RhythmWindow(start, end, step.velocityOffset, phraseBoundary = start == barStart))
                     }
                 }
-                barStart += barTicks
+                barStart = barEnd
             }
         }
+    }
+
+    /** The pickup is a partial leading bar; regular meter bars begin at its exact endpoint. */
+    private fun metricalBarStart(tick: Long, pickupTicks: Long, barTicks: Long): Long = when {
+        tick < pickupTicks -> 0L
+        else -> pickupTicks + Math.floorDiv(tick - pickupTicks, barTicks) * barTicks
     }
 
     private fun selectionScore(
