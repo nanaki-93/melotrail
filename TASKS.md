@@ -93,7 +93,7 @@ an unrelated task. A failed dependent gate cannot be bypassed.
 | Q03a | Prove clean native build and startup | F06, U06 | TODO | |
 | Q03 | Prove clean install and obtain MIDI release decision | Q03a, U07, Q01, Q02 | TODO | |
 | V01a | Prove an independently built companion boundary | F01 | DONE | Host ProRes/PCM encode, decoded preview timestamps and byte-preserved soundtrack proven; temporary-only outputs. Focused checks, Swift release build, 363 MIDI tests, absent-companion build/tests and fresh Terra review PASS. Evidence ~/.codex/melotrail-terra/v01a-repair-evidence. |
-| V01 | Prove the isolated video/media boundary | V01a | TODO | Selected for unpaid implementation; human/budget gates remain. |
+| V01 | Prove the isolated video/media boundary | V01a | BLOCKED | task-check-0-2 failed (1); /Users/marcoandreose/.codex/melotrail-terra/runs/2026-09-08T19-47-10-991Z-V01/task-check-0-2.log Starting a Gradle Daemon, 1 incompatible Daemon could not be reused, use --status for details  FAILURE: Build failed with an exception.  * What went wrong: 25.0.4.1  * Try: > Run with --stacktrace option to get the stack trace. > Run with --info or --debug option to get more log output. > Run with --scan to get full insights. > Get more help at https://help.gradle.org.  BUILD FAILED in 1s ; preserved /Users/marcoandreose/. |
 | V02a | Implement immutable asset manifest and validation | V01a | TODO | |
 | V02b | Import and inspect the pilot asset kit | V02a | TODO | |
 | V02 | Build the approved TABI asset library | V02b | TODO | Selected for unpaid implementation; human/budget gates remain. |
