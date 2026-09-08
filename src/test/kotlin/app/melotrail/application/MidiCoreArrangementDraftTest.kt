@@ -218,6 +218,10 @@ class MidiCoreArrangementDraftTest {
             ),
         )
         assertEquals(2, cancelled.progress.completedCount)
+        assertEquals(
+            listOf(CandidateRole.CHORDS, CandidateRole.CHORDS),
+            cancelled.progress.completedScopes.map(MidiCoreArrangementDraftScope::role),
+        )
         val reopened = store.openProject(cancelled.session.root)
         val retained = reopened.candidates.single { it.role == CandidateRole.CHORDS && it.occurrenceId == "part-2" }
         val correctBoundary = assertNotNull(retained.boundarySummarySha256)
@@ -306,6 +310,25 @@ class MidiCoreArrangementDraftTest {
     }
 
     @Test
+    fun `full draft requires an explicitly confirmed plan before any candidate is published`() = runBlocking {
+        val store = MidiCoreArtifactStore()
+        val planned = readySession(store)
+        val unplannedProject = planned.project.copy(arrangementPlan = null, revision = planned.project.revision + 1L)
+        store.saveProject(planned.root, unplannedProject)
+        val unplanned = MidiCoreProjectSession(planned.root, unplannedProject)
+        val before = Files.readAllBytes(unplanned.root.resolve(MidiCoreArtifactStore.PROJECT_FILE))
+
+        val result = MidiCoreArrangementDraftGeneration(artifacts = store).generate(
+            GenerateMidiCoreArrangementDraft(unplanned, "steady-road", 77L, draftId = "draft-needs-plan"),
+        )
+
+        val incomplete = assertIs<MidiCoreArrangementDraftGenerationResult.Incomplete>(result)
+        assertEquals(MidiCoreArrangementDraftProblemCode.AUTHORITY_REQUIRED, incomplete.problem.code)
+        assertTrue(store.openProject(unplanned.root).candidates.isEmpty())
+        assertContentEquals(before, Files.readAllBytes(unplanned.root.resolve(MidiCoreArtifactStore.PROJECT_FILE)))
+    }
+
+    @Test
     fun `locked replacement and changed authority reject draft acceptance without a partial write`() = runBlocking {
         val store = MidiCoreArtifactStore()
         val generated = assertIs<MidiCoreArrangementDraftGenerationResult.Completed>(
@@ -387,11 +410,12 @@ class MidiCoreArrangementDraftTest {
                 ),
             ),
         ).session
-        return assertIs<MidiCoreAuthoritativeHarmonyResult.Updated>(
+        val harmonic = assertIs<MidiCoreAuthoritativeHarmonyResult.Updated>(
             MidiCoreAuthoritativeHarmony(store).replace(
                 ReplaceMidiCoreHarmony(structured, listOf(AuthoritativeChordEvent("chord-1", "verse-1", "C", 0, 5760))),
             ),
         ).session
+        return confirmPlan(store, harmonic)
     }
 
     private fun multiOccurrenceSession(store: MidiCoreArtifactStore): MidiCoreProjectSession {
@@ -429,7 +453,7 @@ class MidiCoreArrangementDraftTest {
                 ),
             ),
         ).session
-        return assertIs<MidiCoreAuthoritativeHarmonyResult.Updated>(
+        val harmonic = assertIs<MidiCoreAuthoritativeHarmonyResult.Updated>(
             MidiCoreAuthoritativeHarmony(store).replace(
                 ReplaceMidiCoreHarmony(
                     structured,
@@ -440,6 +464,16 @@ class MidiCoreArrangementDraftTest {
                     ),
                 ),
             ),
+        ).session
+        return confirmPlan(store, harmonic)
+    }
+
+    private fun confirmPlan(store: MidiCoreArtifactStore, session: MidiCoreProjectSession): MidiCoreProjectSession {
+        val proposal = assertIs<MidiCoreArrangementPlanProposalResult.Proposed>(
+            MidiCoreArrangementPlanProposalUseCase(store).propose(ProposeMidiCoreArrangementPlan(session, "steady-road")),
+        ).proposal
+        return assertIs<MidiCoreArrangementPlanProposalResult.Confirmed>(
+            MidiCoreArrangementPlanProposalUseCase(store).confirm(ConfirmMidiCoreArrangementPlanProposal(session, proposal)),
         ).session
     }
 }

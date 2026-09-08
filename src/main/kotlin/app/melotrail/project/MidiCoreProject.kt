@@ -435,6 +435,9 @@ data class MidiCoreArrangementPlan(
         require(occurrences.map(MidiCoreOccurrenceArrangementPlan::occurrenceId).distinct().size == occurrences.size) {
             "Arrangement-plan occurrence identities must be unique"
         }
+        require(occurrences.groupBy(MidiCoreOccurrenceArrangementPlan::repeatFamilyId).values.all { family ->
+            family.map(MidiCoreOccurrenceArrangementPlan::repeatOrdinal).distinct().size == family.size
+        }) { "Arrangement-plan repeat ordinals must be unique within each repeat family" }
     }
 
     internal val canonicalSerialization: String
@@ -444,14 +447,35 @@ data class MidiCoreArrangementPlan(
                 occurrences.mapIndexed { index, occurrence -> "occurrence[$index]" to occurrence.canonicalSerialization },
         )
 
-    internal fun scopeCanonicalSerialization(occurrenceId: String, role: CandidateRole): String = planRecord(
-        "arrangement-plan-scope",
-        listOf(
-            "version" to version.toString(),
-            "groove" to sharedGroove.canonicalSerialization,
-            "occurrence" to occurrences.single { it.occurrenceId == occurrenceId }.scopeCanonicalSerialization(role),
-        ),
-    )
+    /**
+     * Exact bounded plan evidence consumed while generating one role occurrence.
+     *
+     * A scope can see its own intent, its immediate timeline neighbors, and the
+     * immediately preceding member of its repeat family.  It deliberately does
+     * not hash the rest of the song: unrelated plan edits must leave unrelated
+     * candidates current.  The same material is exposed to the generation
+     * resolver in arrangement/core.
+     */
+    internal fun resolvedScopeCanonicalSerialization(occurrenceId: String, role: CandidateRole): String {
+        val index = occurrences.indexOfFirst { it.occurrenceId == occurrenceId }
+        require(index >= 0) { "Arrangement plan has no occurrence '$occurrenceId'" }
+        val current = occurrences[index]
+        val repeatSource = occurrences.take(index)
+            .filter { it.repeatFamilyId == current.repeatFamilyId && it.repeatOrdinal < current.repeatOrdinal }
+            .maxByOrNull(MidiCoreOccurrenceArrangementPlan::repeatOrdinal)
+        fun scoped(occurrence: MidiCoreOccurrenceArrangementPlan?): String = occurrence?.scopeCanonicalSerialization(role).orEmpty()
+        return planRecord(
+            "arrangement-plan-generation-scope",
+            listOf(
+                "version" to version.toString(),
+                "shared-groove" to sharedGroove.takeUnless { role == CandidateRole.CHORDS }?.canonicalSerialization.orEmpty(),
+                "current" to scoped(current),
+                "previous-neighbor" to scoped(occurrences.getOrNull(index - 1)),
+                "next-neighbor" to scoped(occurrences.getOrNull(index + 1)),
+                "repeat-source" to scoped(repeatSource),
+            ),
+        )
+    }
 
     internal fun requireMatches(authority: ProjectAuthority) {
         require(occurrences.map(MidiCoreOccurrenceArrangementPlan::occurrenceId) == authority.occurrences.map(ProjectSectionOccurrence::id)) {

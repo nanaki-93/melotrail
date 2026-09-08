@@ -218,7 +218,7 @@ object MidiCoreAuthorityHasher {
                 CandidateRole.entries.map { role ->
                     val key = MidiCoreAuthorityScopeKey(occurrence.id, role)
                     val scopeArrangementPlanSha256 = digest(
-                        project.arrangementPlan?.scopeCanonicalSerialization(occurrence.id, role)
+                        project.arrangementPlan?.resolvedScopeCanonicalSerialization(occurrence.id, role)
                             ?: "arrangement-plan-scope=absent",
                     )
                     val rolePrefix = "${role.name.lowercase()}."

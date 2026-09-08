@@ -176,6 +176,17 @@ class MidiCoreAuthorityFingerprintTest {
                 ),
             ),
         )
+        val grooveOnlyChanged = MidiCoreAuthorityHasher.from(
+            project.copy(
+                arrangementPlan = requireNotNull(project.arrangementPlan).copy(
+                    sharedGroove = MidiCoreSharedGrooveIntent(
+                        MidiCoreGrooveFeel.HALF_TIME,
+                        MidiCoreGrooveSubdivision.EIGHTH,
+                        MidiCoreGrooveDrive.RESTRAINED,
+                    ),
+                ),
+            ),
+        )
 
         assertEquals(baseline, samePlan)
         assertNotEquals(baseline.arrangementPlanSha256, bassChanged.arrangementPlanSha256)
@@ -190,6 +201,18 @@ class MidiCoreAuthorityFingerprintTest {
         assertNotEquals(
             baseline.scopeHash("verse-1", CandidateRole.CHORDS),
             grooveAndBoundaryChanged.scopeHash("verse-1", CandidateRole.CHORDS),
+        )
+        assertEquals(
+            baseline.scopeHash("verse-1", CandidateRole.CHORDS),
+            grooveOnlyChanged.scopeHash("verse-1", CandidateRole.CHORDS),
+        )
+        assertNotEquals(
+            baseline.scopeHash("verse-1", CandidateRole.BASS),
+            grooveOnlyChanged.scopeHash("verse-1", CandidateRole.BASS),
+        )
+        assertNotEquals(
+            baseline.scopeHash("verse-1", CandidateRole.DRUMS),
+            grooveOnlyChanged.scopeHash("verse-1", CandidateRole.DRUMS),
         )
     }
 

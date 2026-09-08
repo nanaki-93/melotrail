@@ -157,6 +157,11 @@ class MidiCoreArrangementDraftGeneration(
             "At least one saved section occurrence is required before creating a full draft.",
             "Define a contiguous occurrence timeline, then try again.",
         ))
+        if (session.project.arrangementPlan == null) return incomplete(session, draftId, emptyList(), problem(
+            MidiCoreArrangementDraftProblemCode.AUTHORITY_REQUIRED,
+            "A confirmed arrangement plan is required before creating a full draft.",
+            "Choose a style, review its occurrence intent, and explicitly confirm the arrangement plan first.",
+        ))
         val orderedScopes = CandidateRole.entries.flatMap { role ->
             authority.occurrences.map { occurrence -> MidiCoreArrangementDraftScope(occurrence.id, role) }
         }
@@ -853,7 +858,7 @@ private fun midiDerivedPianoBoundary(
         occurrence.id,
         occurrence.endTick,
         notes.filter { it.orderingKey.tick == lastStart }.map(MidiNoteEvent::pitch).distinct().sorted(),
-        authority.sha256,
+        candidate.authorityHash,
     )
 }
 

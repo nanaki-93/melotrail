@@ -90,6 +90,14 @@ internal class MidiCoreComparisonHarness(private val workRoot: Path) {
         current = (MidiCoreAuthoritativeHarmony(store).replace(ReplaceMidiCoreHarmony(current, chords))
             as? MidiCoreAuthoritativeHarmonyResult.Updated)?.session
             ?: error("M01 comparison authority projection could not harmonize '${case.id}'.")
+        val proposal = MidiCoreArrangementPlanProposalUseCase(store).propose(
+            ProposeMidiCoreArrangementPlan(current, case.styleId),
+        ) as? MidiCoreArrangementPlanProposalResult.Proposed
+            ?: error("M01 comparison authority projection could not plan '${case.id}'.")
+        current = (MidiCoreArrangementPlanProposalUseCase(store).confirm(
+            ConfirmMidiCoreArrangementPlanProposal(current, proposal.proposal),
+        ) as? MidiCoreArrangementPlanProposalResult.Confirmed)?.session
+            ?: error("M01 comparison authority projection could not confirm a plan for '${case.id}'.")
         return MidiCoreAuthorityHasher.from(current.project).sha256
     }
 
@@ -135,6 +143,16 @@ internal class MidiCoreComparisonHarness(private val workRoot: Path) {
         val harmonized = MidiCoreAuthoritativeHarmony(store).replace(ReplaceMidiCoreHarmony(current, chords))
         current = (harmonized as? MidiCoreAuthoritativeHarmonyResult.Updated)?.session
             ?: return M01ComparisonCapture.Rejected(case.id, "HARMONY", harmonized.rejectionSummary(), emptyList())
+        val proposal = MidiCoreArrangementPlanProposalUseCase(store).propose(
+            ProposeMidiCoreArrangementPlan(current, case.styleId),
+        )
+        val proposed = (proposal as? MidiCoreArrangementPlanProposalResult.Proposed)?.proposal
+            ?: return M01ComparisonCapture.Rejected(case.id, "PLAN", proposal.toString(), emptyList())
+        val confirmedPlan = MidiCoreArrangementPlanProposalUseCase(store).confirm(
+            ConfirmMidiCoreArrangementPlanProposal(current, proposed),
+        )
+        current = (confirmedPlan as? MidiCoreArrangementPlanProposalResult.Confirmed)?.session
+            ?: return M01ComparisonCapture.Rejected(case.id, "PLAN", confirmedPlan.toString(), emptyList())
 
         val draft = runBlocking {
             MidiCoreArrangementDraftGeneration(store, draftIdFactory = { "draft-${case.id}" }).generate(

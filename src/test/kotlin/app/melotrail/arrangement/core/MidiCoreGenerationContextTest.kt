@@ -9,9 +9,20 @@ import app.melotrail.music.core.ProjectTempo
 import app.melotrail.project.AuthoritativeChordEvent
 import app.melotrail.project.CandidateRole
 import app.melotrail.project.MidiCoreAcceptedDependency
+import app.melotrail.project.MidiCoreArrangementPlan
+import app.melotrail.project.MidiCoreArrangementPurpose
 import app.melotrail.project.MidiCoreAuthorityHasher
+import app.melotrail.project.MidiCoreBoundaryIntent
 import app.melotrail.project.MidiCoreGeneratorInput
+import app.melotrail.project.MidiCoreGrooveDrive
+import app.melotrail.project.MidiCoreGrooveFeel
+import app.melotrail.project.MidiCoreGrooveSubdivision
+import app.melotrail.project.MidiCoreOccurrenceArrangementPlan
 import app.melotrail.project.MidiCoreProject
+import app.melotrail.project.MidiCoreRegisterPreference
+import app.melotrail.project.MidiCoreRoleActivity
+import app.melotrail.project.MidiCoreRolePlanSettings
+import app.melotrail.project.MidiCoreSharedGrooveIntent
 import app.melotrail.project.ProjectArtifact
 import app.melotrail.project.ProjectAuthority
 import app.melotrail.project.ProjectId
@@ -152,7 +163,7 @@ class MidiCoreGenerationContextTest {
             "verse-1",
             1_920,
             listOf(48, 52, 55),
-            snapshot.authorityHash,
+            snapshot.fingerprint.scopeHash("verse-1", CandidateRole.CHORDS),
         )
         val continued = plain.copy(pianoVoicingBoundary = boundary)
 
@@ -160,6 +171,129 @@ class MidiCoreGenerationContextTest {
         assertNotEquals(plain.generationFingerprint.sha256, continued.generationFingerprint.sha256)
         assertEquals(boundary.sha256, continued.generationFingerprint.boundarySummarySha256)
         assertEquals(emptyList(), continued.acceptedDependencies)
+    }
+
+    @Test
+    fun `confirmed plan resolves scoped groove neighbor and repeat inputs deterministically`() {
+        val planned = project().copy(arrangementPlan = repeatPlan())
+        val first = MidiCoreGenerationContext.from(
+            planned,
+            CandidateRole.BASS,
+            "verse-1",
+            MidiCorePerformanceProfileCatalog.requireForRole(CandidateRole.BASS, "bass.muted-plucked"),
+            MidiCoreBassPatternId.ROOT_FIFTH.id,
+            MidiCoreGeneratorInput("midi-core", "bass-v1", MidiCoreBassPatternId.ROOT_FIFTH.id, 7),
+        )
+        val repeated = MidiCoreGenerationContext.from(
+            planned,
+            CandidateRole.BASS,
+            "chorus-1",
+            MidiCorePerformanceProfileCatalog.requireForRole(CandidateRole.BASS, "bass.muted-plucked"),
+            MidiCoreBassPatternId.ROOT_FIFTH.id,
+            MidiCoreGeneratorInput("midi-core", "bass-v1", MidiCoreBassPatternId.ROOT_FIFTH.id, 7),
+        )
+        val changedUnconsumedRole = planned.copy(arrangementPlan = repeatPlan(chordsDensity = 99))
+        val unchanged = MidiCoreGenerationContext.from(
+            changedUnconsumedRole,
+            CandidateRole.BASS,
+            "chorus-1",
+            MidiCorePerformanceProfileCatalog.requireForRole(CandidateRole.BASS, "bass.muted-plucked"),
+            MidiCoreBassPatternId.ROOT_FIFTH.id,
+            MidiCoreGeneratorInput("midi-core", "bass-v1", MidiCoreBassPatternId.ROOT_FIFTH.id, 7),
+        )
+        val changedRepeatSource = MidiCoreGenerationContext.from(
+            planned.copy(arrangementPlan = repeatPlan(bassDensity = 49)),
+            CandidateRole.BASS,
+            "chorus-1",
+            MidiCorePerformanceProfileCatalog.requireForRole(CandidateRole.BASS, "bass.muted-plucked"),
+            MidiCoreBassPatternId.ROOT_FIFTH.id,
+            MidiCoreGeneratorInput("midi-core", "bass-v1", MidiCoreBassPatternId.ROOT_FIFTH.id, 7),
+        )
+        val changedGroove = MidiCoreGenerationContext.from(
+            planned.copy(arrangementPlan = repeatPlan(feel = MidiCoreGrooveFeel.HALF_TIME)),
+            CandidateRole.BASS,
+            "chorus-1",
+            MidiCorePerformanceProfileCatalog.requireForRole(CandidateRole.BASS, "bass.muted-plucked"),
+            MidiCoreBassPatternId.ROOT_FIFTH.id,
+            MidiCoreGeneratorInput("midi-core", "bass-v1", MidiCoreBassPatternId.ROOT_FIFTH.id, 7),
+        )
+
+        assertEquals(MidiCoreGrooveFeel.SWING, first.occurrencePlan?.sharedGroove?.feel)
+        assertEquals("chorus-1", first.occurrencePlan?.nextNeighbor?.occurrenceId)
+        assertEquals("verse-1", repeated.occurrencePlan?.previousNeighbor?.occurrenceId)
+        assertEquals("verse-1", repeated.occurrencePlan?.repeatSource?.occurrenceId)
+        assertEquals(61, repeated.occurrencePlan?.current?.energy)
+        assertEquals(48, repeated.occurrencePlan?.current?.roleSettings?.density)
+        assertEquals(MidiCoreSectionPolicy(), repeated.sectionPolicy)
+        assertEquals(repeated.contextSha256, MidiCoreGenerationContext.from(
+            planned,
+            CandidateRole.BASS,
+            "chorus-1",
+            MidiCorePerformanceProfileCatalog.requireForRole(CandidateRole.BASS, "bass.muted-plucked"),
+            MidiCoreBassPatternId.ROOT_FIFTH.id,
+            MidiCoreGeneratorInput("midi-core", "bass-v1", MidiCoreBassPatternId.ROOT_FIFTH.id, 7),
+        ).contextSha256)
+        assertEquals(repeated.generationFingerprint.sha256, unchanged.generationFingerprint.sha256)
+        assertNotEquals(repeated.generationFingerprint.sha256, changedRepeatSource.generationFingerprint.sha256)
+        assertNotEquals(repeated.generationFingerprint.sha256, changedGroove.generationFingerprint.sha256)
+        assertFailsWith<IllegalArgumentException> {
+            repeatPlan().copy(
+                occurrences = repeatPlan().occurrences.map { it.copy(repeatOrdinal = 1) },
+            )
+        }
+    }
+
+    @Test
+    fun `an unrelated plan edit preserves a reusable scoped piano boundary`() {
+        val planned = fourOccurrencePlannedProject()
+        val repeated = MidiCoreGenerationContext.from(
+            planned,
+            CandidateRole.BASS,
+            "part-3",
+            MidiCorePerformanceProfileCatalog.requireForRole(CandidateRole.BASS, "bass.muted-plucked"),
+            MidiCoreBassPatternId.ROOT_FIFTH.id,
+            MidiCoreGeneratorInput("midi-core", "bass-v1", MidiCoreBassPatternId.ROOT_FIFTH.id, 17),
+        )
+        assertEquals("part-2", repeated.occurrencePlan?.previousNeighbor?.occurrenceId)
+        assertEquals("part-4", repeated.occurrencePlan?.nextNeighbor?.occurrenceId)
+        assertEquals("part-1", repeated.occurrencePlan?.repeatSource?.occurrenceId)
+        val firstContext = MidiCoreGenerationContext.from(
+            planned,
+            CandidateRole.CHORDS,
+            "part-1",
+            MidiCorePerformanceProfileCatalog.requireForRole(CandidateRole.CHORDS, "chords.sustained"),
+            MidiCoreChordRhythmPatternId.SUSTAINED.id,
+            MidiCoreGeneratorInput("midi-core", "chords-v5", MidiCoreChordRhythmPatternId.SUSTAINED.id, 17),
+        )
+        val boundary = requireNotNull(MidiCoreChordGenerator.generate(firstContext).outgoingPianoVoicingBoundary)
+        assertEquals(null, firstContext.occurrencePlan?.sharedGroove)
+        val originalPlan = requireNotNull(planned.arrangementPlan)
+        val changedPlan = originalPlan.copy(
+            occurrences = originalPlan.occurrences.map { occurrence ->
+                if (occurrence.occurrenceId == "part-4") occurrence.copy(energy = occurrence.energy + 1) else occurrence
+            },
+        )
+        val changed = planned.copy(arrangementPlan = changedPlan)
+        val beforeAuthority = MidiCoreAuthoritySnapshot.from(planned)
+        val afterAuthority = MidiCoreAuthoritySnapshot.from(changed)
+
+        val continued = MidiCoreGenerationContext.from(
+            changed,
+            CandidateRole.CHORDS,
+            "part-2",
+            MidiCorePerformanceProfileCatalog.requireForRole(CandidateRole.CHORDS, "chords.sustained"),
+            MidiCoreChordRhythmPatternId.SUSTAINED.id,
+            MidiCoreGeneratorInput("midi-core", "chords-v5", MidiCoreChordRhythmPatternId.SUSTAINED.id, 17),
+            pianoVoicingBoundary = boundary,
+        )
+
+        assertNotEquals(beforeAuthority.authorityHash, afterAuthority.authorityHash)
+        assertEquals(
+            beforeAuthority.fingerprint.scopeHash("part-1", CandidateRole.CHORDS),
+            afterAuthority.fingerprint.scopeHash("part-1", CandidateRole.CHORDS),
+        )
+        assertEquals(afterAuthority.fingerprint.scopeHash("part-1", CandidateRole.CHORDS), boundary.authorityHash)
+        assertEquals(boundary, continued.pianoVoicingBoundary)
     }
 
     @Test
@@ -236,5 +370,65 @@ class MidiCoreGenerationContextTest {
                 AuthoritativeChordEvent("chorus-chord", "chorus-1", "F", 1_920, 3_840),
             ),
         ),
+    )
+
+    private fun repeatPlan(
+        chordsDensity: Int = 55,
+        bassDensity: Int = 48,
+        feel: MidiCoreGrooveFeel = MidiCoreGrooveFeel.SWING,
+    ) = MidiCoreArrangementPlan(
+        MidiCoreArrangementPlan.VERSION,
+        MidiCoreSharedGrooveIntent(feel, MidiCoreGrooveSubdivision.EIGHTH, MidiCoreGrooveDrive.STEADY),
+        listOf(
+            plannedOccurrence("verse-1", 42, chordsDensity, bassDensity, 1),
+            plannedOccurrence("chorus-1", 61, 64, 48, 2),
+        ),
+    )
+
+    private fun fourOccurrencePlannedProject(): MidiCoreProject {
+        val occurrences = (1..4).map { index ->
+            ProjectSectionOccurrence("part-$index", "verse", "Part $index", (index - 1) * 1_920L, index * 1_920L)
+        }
+        val authority = requireNotNull(project().authority).copy(
+            occurrences = occurrences,
+            chordEvents = occurrences.mapIndexed { index, occurrence ->
+                AuthoritativeChordEvent("part-${index + 1}-chord", occurrence.id, "C", occurrence.startTick, occurrence.endTick)
+            },
+            arrangementEndTick = occurrences.last().endTick,
+        )
+        val plan = MidiCoreArrangementPlan(
+            MidiCoreArrangementPlan.VERSION,
+            MidiCoreSharedGrooveIntent(MidiCoreGrooveFeel.STRAIGHT, MidiCoreGrooveSubdivision.EIGHTH, MidiCoreGrooveDrive.STEADY),
+            listOf(
+                plannedOccurrence("part-1", 40, 50, 45, 1, "family-a"),
+                plannedOccurrence("part-2", 50, 55, 50, 1, "family-b"),
+                plannedOccurrence("part-3", 60, 60, 55, 2, "family-a"),
+                plannedOccurrence("part-4", 35, 45, 40, 1, "family-d"),
+            ),
+        )
+        return project().copy(authority = authority, arrangementPlan = plan)
+    }
+
+    private fun plannedOccurrence(
+        id: String,
+        energy: Int,
+        chordsDensity: Int,
+        bassDensity: Int,
+        ordinal: Int,
+        repeatFamilyId: String = "repeat-family",
+    ) = MidiCoreOccurrenceArrangementPlan(
+        id,
+        MidiCoreArrangementPurpose.VERSE,
+        "phrase-repeat",
+        repeatFamilyId,
+        ordinal,
+        energy,
+        listOf(
+            MidiCoreRolePlanSettings(CandidateRole.CHORDS, MidiCoreRoleActivity.SUPPORTING, chordsDensity, MidiCoreRegisterPreference.MID),
+            MidiCoreRolePlanSettings(CandidateRole.BASS, MidiCoreRoleActivity.SUPPORTING, bassDensity, MidiCoreRegisterPreference.LOW),
+            MidiCoreRolePlanSettings(CandidateRole.DRUMS, MidiCoreRoleActivity.SPARSE, 30, MidiCoreRegisterPreference.OPEN),
+        ),
+        MidiCoreBoundaryIntent.NONE,
+        MidiCoreBoundaryIntent.HOLD,
     )
 }

@@ -47,6 +47,9 @@ class MidiCoreArrangementPlanEditTest {
             MidiCoreCandidateLifecycle(store).accept(AcceptMidiCoreCandidate(session, "verse-locked", locked = true)),
         ).session
         session = publish(store, session, CandidateRole.CHORDS, "verse-chords", "verse-1")
+        session = assertIs<MidiCoreCandidateLifecycleResult.Updated>(
+            MidiCoreCandidateLifecycle(store).accept(AcceptMidiCoreCandidate(session, "verse-chords")),
+        ).session
         session = publish(store, session, CandidateRole.BASS, "chorus-bass", "chorus-1")
         session = publish(
             store,
@@ -75,10 +78,10 @@ class MidiCoreArrangementPlanEditTest {
             edit.preview(PreviewMidiCoreArrangementPlanEdit(session, changedPlan)),
         ).invalidation
 
-        assertEquals(listOf("chorus-dependent", "verse-locked"), preview.staleCandidateIds)
+        assertEquals(listOf("chorus-bass", "chorus-dependent", "verse-locked"), preview.staleCandidateIds)
         assertTrue(preview.affects(CandidateRole.BASS, "verse-1"))
         assertFalse(preview.affects(CandidateRole.CHORDS, "verse-1"))
-        assertFalse(preview.affects(CandidateRole.BASS, "chorus-1"))
+        assertTrue(preview.affects(CandidateRole.BASS, "chorus-1"))
         assertEquals(listOf(MidiCoreAuthorityDimension.ARRANGEMENT_PLAN), preview.changedDimensions)
         assertEquals(
             listOf(MidiCoreInvalidationReason.ACCEPTED_DEPENDENCY_CHANGED),
@@ -97,11 +100,13 @@ class MidiCoreArrangementPlanEditTest {
         assertEquals(changedPlan, persisted.arrangementPlan)
         assertEquals(beforeAcceptances, persisted.acceptances)
         assertEquals(MidiCoreCandidateStatus.STALE, persisted.candidates.single { it.id == "verse-locked" }.status)
-        assertEquals(MidiCoreCandidateStatus.CURRENT, persisted.candidates.single { it.id == "verse-chords" }.status)
-        assertEquals(MidiCoreCandidateStatus.CURRENT, persisted.candidates.single { it.id == "chorus-bass" }.status)
+        assertEquals(MidiCoreCandidateStatus.ACCEPTED, persisted.candidates.single { it.id == "verse-chords" }.status)
+        assertEquals(MidiCoreCandidateStatus.STALE, persisted.candidates.single { it.id == "chorus-bass" }.status)
         assertEquals(MidiCoreCandidateStatus.STALE, persisted.candidates.single { it.id == "chorus-dependent" }.status)
-        assertEquals(beforeAcceptances.single().candidateId, persisted.acceptances.single().candidateId)
-        assertTrue(persisted.acceptances.single().locked)
+        assertEquals("verse-locked", persisted.acceptances.single { it.role == CandidateRole.BASS }.candidateId)
+        assertTrue(persisted.acceptances.single { it.role == CandidateRole.BASS }.locked)
+        assertEquals("verse-chords", persisted.acceptances.single { it.role == CandidateRole.CHORDS }.candidateId)
+        assertFalse(persisted.acceptances.single { it.role == CandidateRole.CHORDS }.locked)
         assertContentEquals(lockedBytes, Files.readAllBytes(store.verify(session.root, lockedMidi)))
         assertContentEquals(sourceBytes, Files.readAllBytes(store.verify(session.root, source.original)))
         assertEquals(confirmed.session.project, persisted)
@@ -207,7 +212,7 @@ class MidiCoreArrangementPlanEditTest {
     }
 
     @Test
-    fun `every changed plan input changes its scoped generation identity only where consumed`() {
+    fun `a shared occurrence-plan input invalidates that occurrence and its bounded neighbors for every role`() {
         val store = MidiCoreArtifactStore()
         val session = confirmedSession(store)
         val plan = requireNotNull(session.project.arrangementPlan)
@@ -222,7 +227,7 @@ class MidiCoreArrangementPlanEditTest {
         assertNotEquals(before.arrangementPlanSha256, after.arrangementPlanSha256)
         CandidateRole.entries.forEach { role ->
             assertNotEquals(before.scopeHash("verse-1", role), after.scopeHash("verse-1", role))
-            assertEquals(before.scopeHash("chorus-1", role), after.scopeHash("chorus-1", role))
+            assertNotEquals(before.scopeHash("chorus-1", role), after.scopeHash("chorus-1", role))
         }
     }
 

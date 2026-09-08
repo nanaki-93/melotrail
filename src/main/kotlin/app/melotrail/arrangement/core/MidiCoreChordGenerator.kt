@@ -24,7 +24,7 @@ data class MidiCoreChordGenerationResult(
             validation is MidiCoreRoleValidationResult.Accepted &&
                 outgoingPianoVoicingBoundary.sourceOccurrenceId == context.occurrence.id &&
                 outgoingPianoVoicingBoundary.boundaryTick == context.occurrence.endTick &&
-                outgoingPianoVoicingBoundary.authorityHash == context.authority.authorityHash
+                outgoingPianoVoicingBoundary.authorityHash == context.authorityHash
             )) { "Chord boundary output must describe this accepted occurrence" }
     }
 
@@ -54,7 +54,7 @@ object MidiCoreChordGenerator {
                     context.occurrence.id,
                     context.occurrence.endTick,
                     pitches,
-                    context.authority.authorityHash,
+                    context.authorityHash,
                 )
             }
         } else {

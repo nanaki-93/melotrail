@@ -318,7 +318,7 @@ data class MidiCoreSectionPolicy(
  * This is an explicit generation input, rather than a lookup of an accepted
  * candidate. A caller may carry it while resolving one bounded draft chain;
  * the next occurrence validates both its immediate predecessor and full
- * authority identity before it can influence voicing.
+ * source Chords scope identity before it can influence voicing.
  */
 data class MidiCorePianoVoicingBoundarySummary(
     val sourceOccurrenceId: String,
@@ -369,6 +369,8 @@ data class MidiCoreGenerationContext(
     val melodyHarmonyAnalysis: MidiCoreMelodyHarmonyAnalysis? = null,
     /** Explicit prior-Chords phrase boundary for M04 continuity; never inferred from accepted project state. */
     val pianoVoicingBoundary: MidiCorePianoVoicingBoundarySummary? = null,
+    /** Confirmed per-occurrence plan intent, including bounded neighbor and repeat summaries. */
+    val occurrencePlan: MidiCoreResolvedOccurrenceGenerationPlan? = null,
 ) {
     init {
         require(authority.occurrence(occurrence.id) == occurrence) { "Generation occurrence is not in the authority snapshot" }
@@ -415,11 +417,21 @@ data class MidiCoreGenerationContext(
             require(occurrenceIndex > 0 && authority.occurrences[occurrenceIndex - 1].id == boundary.sourceOccurrenceId) {
                 "Piano boundary must come from the immediately preceding authoritative occurrence"
             }
-            require(boundary.boundaryTick == occurrence.startTick && boundary.authorityHash == authority.authorityHash) {
+            val sourceScopeHash = authority.fingerprint.scopeHash(boundary.sourceOccurrenceId, CandidateRole.CHORDS)
+            require(boundary.boundaryTick == occurrence.startTick && boundary.authorityHash == sourceScopeHash) {
                 "Piano boundary must match the current occurrence start and authority"
             }
             require(boundary.pitches.all(performanceProfile.register::contains)) {
                 "Piano boundary voices must fit the current Chords register"
+            }
+        }
+        occurrencePlan?.let { plan ->
+            require(plan.current.occurrenceId == occurrence.id && plan.current.roleSettings.role == role) {
+                "Resolved generation plan must belong to the requested occurrence and role"
+            }
+            require(sha256(plan.fingerprintMaterial) ==
+                authority.fingerprint.scope(occurrence.id, role).arrangementPlanSha256) {
+                "Resolved generation plan must match the scoped authority fingerprint"
             }
         }
         authority.fingerprint.scope(occurrence.id, role)
@@ -477,6 +489,7 @@ data class MidiCoreGenerationContext(
                     "${analysis.version}|${analysis.analysisSha256}"
                 }.orEmpty(),
                 "piano-voicing-boundary" to pianoVoicingBoundary?.canonicalSerialization.orEmpty(),
+                "occurrence-plan" to occurrencePlan?.fingerprintMaterial.orEmpty(),
             ),
         )
 
@@ -503,6 +516,7 @@ data class MidiCoreGenerationContext(
             tickGrid: MidiCoreTickGrid = MidiCoreTickGrid(authority.ppq, authority.meter),
             melodyHarmonyAnalysis: MidiCoreMelodyHarmonyAnalysis? = null,
             pianoVoicingBoundary: MidiCorePianoVoicingBoundarySummary? = null,
+            occurrencePlan: MidiCoreResolvedOccurrenceGenerationPlan? = null,
         ): MidiCoreGenerationContext {
             val occurrence = authority.occurrence(occurrenceId)
             return MidiCoreGenerationContext(
@@ -522,6 +536,7 @@ data class MidiCoreGenerationContext(
                 tickGrid = tickGrid,
                 melodyHarmonyAnalysis = melodyHarmonyAnalysis,
                 pianoVoicingBoundary = pianoVoicingBoundary,
+                occurrencePlan = occurrencePlan,
             )
         }
 
@@ -564,6 +579,14 @@ data class MidiCoreGenerationContext(
             val analysis = protectedMelody?.let { view ->
                 MidiCoreMelodyHarmonyAnalyzer.analyze(authority, view)
             }
+            val occurrencePlan = project.arrangementPlan?.let { plan ->
+                MidiCoreResolvedOccurrenceGenerationPlan.resolve(
+                    plan,
+                    authority.occurrences,
+                    occurrenceId,
+                    role,
+                )
+            }
             return forOccurrence(
                 authority,
                 role,
@@ -576,6 +599,7 @@ data class MidiCoreGenerationContext(
                 sectionPolicy,
                 melodyHarmonyAnalysis = analysis,
                 pianoVoicingBoundary = pianoVoicingBoundary,
+                occurrencePlan = occurrencePlan,
             )
         }
     }

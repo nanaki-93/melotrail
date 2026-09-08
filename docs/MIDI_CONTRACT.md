@@ -117,9 +117,9 @@ M04 ranks a bounded legal Chords pool over the complete requested occurrence:
 at most 48 legal voicings per chord window and 12 retained lookahead paths per
 window. It preserves required chord tones and slash bass semantics before
 ranking. A caller may explicitly provide the immediately preceding occurrence's
-immutable piano-boundary summary (authority hash, boundary tick, and ordered
-voices); it is included in the scoped context and generation fingerprint. The
-generator never discovers that input by consulting mutable accepted work.
+immutable piano-boundary summary (source Chords scope hash, boundary tick, and
+ordered voices); it is included in the scoped context and generation fingerprint.
+The generator never discovers that input by consulting mutable accepted work.
 
 When complete-draft generation consumes that input, its summary digest is
 persisted on the resulting candidate and round-trips through the current project
